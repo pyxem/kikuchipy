@@ -4,7 +4,7 @@ Processing of electron backscatter patterns (EBSPs) using [HyperSpy](https://git
 
 ### bakcground_static.py
 
-Subtract static background from patterns by (1) a background image from NORDIF or (2) a calculated mean pattern.
+Subtract static background from patterns by (1) a background image from NORDIF.
 
 ### background_dynamic.py
 
