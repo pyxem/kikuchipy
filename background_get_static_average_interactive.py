@@ -136,13 +136,13 @@ if method == 'threshold-image':
     else:
         bkg_img = np.average(s.data[np.where(mask.data)], axis = 0)
     img4 = ax4.imshow(bkg_img)
-    cbar4 = fig.colorbar(img4, ax=ax4)
+    cbar4 = fig.colorbar(bkg_img, ax=ax4)
     ax4.axis('off')
     ax4.set_title('Background', fontsize=12)
     
     s_ij = s.inav[i,j].data
     img5 = ax5.imshow(s_ij)
-    cbar5 = fig.colorbar(img5, ax=ax5)
+    cbar5 = fig.colorbar(s_ij, ax=ax5)
     ax5.axis('off')
     ax5.set_title('Signal at i='+str(i)+' j='+str(j), fontsize=12)
     
