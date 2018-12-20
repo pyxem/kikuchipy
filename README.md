@@ -11,7 +11,21 @@ All functions provide
 [lazy](http://hyperspy.org/hyperspy-doc/current/user_guide/big_data.html)
 functionality.
 
-Below is a list of new functions.
+Example usage
+
+```python
+>>> import hyperspy.api as hs
+>>> from signals.electron_backscatter_diffraction import \
+ElectronBackscatterDiffraction
+>>> s = hs.load('/path/to/data.hdf5')
+>>> s = ElectronBackscatterDiffraction(s)
+>>> deadpixels = s.find_deadpixels()
+>>> s.remove_deadpixels(deadpixels)
+>>> s.remove_background(bgimg_path='/path/to/pattern.bmp', inplace=True,
+                        parallel=True, static=True, dynamic=True)
+```
+
+Below is a list of functions.
 
 ### [remove_background](https://github.com/hwagit/ebsp-pro/blob/master/signals/electron_backscatter_diffraction.py)
 
@@ -22,14 +36,26 @@ deviation set by you. The correction can either be done by subtraction or
 division. Relative intensities between patterns are lost after dynamic
 correction.
 
-Example usage
+If dead pixels are removed from the experimental patterns, the same pixels are
+also removed from the background pattern before the static correction is
+performed.
 
-```python
->>> import hyperspy.api as hs
->>> from signals.electron_backscatter_diffraction import \
-ElectronBackscatterDiffraction
->>> s = hs.load('/path/to/data.hdf5')
->>> s = ElectronBackscatterDiffraction(s)
->>> s.remove_background(bgimg_path='/path/to/pattern.bmp', inplace=True,
-                        parallel=True, static=True, dynamic=True)
-```
+### [set_experimental_parameters](https://github.com/hwagit/ebsp-pro/blob/master/signals/electron_backscatter_diffraction.py)
+
+Set useful experimental parameters in signal metadata. So far only data for
+dead detector pixels can be set.
+
+### [find_deadpixels](https://github.com/hwagit/ebsp-pro/blob/master/signals/electron_backscatter_diffraction.py)
+
+Find dead pixels in experimentally acquired diffraction patterns by comparing
+pixel values in a blurred version of a selected pattern to the original
+pattern. If the intensity difference is above a threshold the pixel is
+labeled as dead. The optimal threshold can be found by studying the returned
+plot (which can be muted by passing `to_plot=False`. The output is used as
+input for `remove_deadpixels()`.
+
+### [remove_deadpixels](https://github.com/hwagit/ebsp-pro/blob/master/signals/electron_backscatter_diffraction.py)
+
+Remove dead pixels from experimentally acquired diffraction patterns, either by
+averaging or setting to a certain value. Uses pyXem's `remove_deadpixels()`
+function.
