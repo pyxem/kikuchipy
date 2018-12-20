@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """Signal class for Electron Backscatter Diffraction (EBSD) data."""
 import numpy as np
-import skimage as ski
-import matplotlib.pyplot as plt
-import scipy.ndimage as scn
 
+from hyperspy.api import plot
 from hyperspy.signals import Signal2D, BaseSignal
+from skimage.exposure import rescale_intensity
+from scipy.ndimage import gaussian_filter, median_filter
+from matplotlib.pyplot import imread
+from pyxem.signals.electron_diffraction import ElectronDiffraction
 
 
 class ElectronBackscatterDiffraction(Signal2D):
@@ -13,14 +15,37 @@ class ElectronBackscatterDiffraction(Signal2D):
 
     def __init__(self, *args, **kwargs):
         Signal2D.__init__(self, *args, **kwargs)
-        self.decomposition.__func__.__doc__ = BaseSignal.decomposition.__doc__
+        self.set_experimental_parameters()
 
-    def remove_background(self, static=True, dynamic=False, bgimg_path=None,
+    def set_experimental_parameters(self, deadpixels_corrected=False,
+                                    deadpixels=None, deadvalue=None):
+        """Set experimental parameters in metadata.
+
+        Parameters
+        ----------
+        deadpixels_corrected : bool
+            If True (default is False), deadpixels in patterns are corrected.
+        deadpixels : list of tuple
+            List of tuples containing pattern indices for dead pixels.
+        deadvalue : string
+            Specifies how dead pixels have been corrected for (average or nan).
+
+        """
+
+        md = self.metadata
+        md.set_item('Acquisition_instrument.SEM.Detector.deadpixels_corrected',
+                    deadpixels_corrected)
+        md.set_item('Acquisition_instrument.SEM.Detector.deadpixels',
+                    deadpixels)
+        md.set_item('Acquisition_instrument.SEM.Detector.deadvalue',
+                    deadvalue)
+
+    def remove_background(self, static=True, dynamic=False, bg_path=None,
                           divide=False, sigma=None, *args, **kwargs):
         """Perform background correction, either static, dynamic or both. For
         the static correction, a background image is subtracted from all
         patterns. For the dynamic correction, each pattern is blurred using a
-        Gaussian kernel with a standard deviation set by you. The correction
+        Gaussian kernel with a standard deviation set by you. The corrections
         can either be done by subtraction or division. Relative intensities
         between patterns are lost after dynamic correction.
 
@@ -30,7 +55,7 @@ class ElectronBackscatterDiffraction(Signal2D):
             If True (default), static correction is performed.
         dynamic : bool
             If True (default is False), dynamic correction is performed.
-        bgimg_path : file path (default:None)
+        bg_path : file path (default:None)
             File path to background image for static correction. If None
             (default), only dynamic correction can be performed.
         divide : bool
@@ -43,6 +68,7 @@ class ElectronBackscatterDiffraction(Signal2D):
             Arguments to be passed to map().
         **kwargs:
             Arguments to be passed to map().
+
         """
 
         # Change data types (increase bit depth) to avoid negative intensities
@@ -51,18 +77,27 @@ class ElectronBackscatterDiffraction(Signal2D):
 
         if static:
             # Read and set up background image
-            if bgimg_path is not None:
-                bgimg = plt.imread(bgimg_path)
-                bgimg = Signal2D(bgimg)
-                bgimg.change_dtype('int16')
+            if bg_path is not None:
+                bg = imread(bg_path)
+                bg = ElectronBackscatterDiffraction(bg)
+                bg.data = bg.data.astype('int16')
             else:
                 raise ValueError("No background image provided")
 
+            # Check if dead pixels are corrected for, and if so, correct dead
+            # pixels in background pattern
+            if self.metadata.Acquisition_instrument.SEM.Detector\
+                    .deadpixels_corrected:
+                bg.remove_deadpixels(self.metadata.Acquisition_instrument.SEM\
+                                     .Detector.deadpixels, self.metadata\
+                                     .Acquisition_instrument.SEM.Detector\
+                                     .deadvalue)
+
             # Subtract by background pattern
             if divide:
-                self.data = self.data / bgimg.data
+                self.data = self.data / bg.data
             else:
-                self.data = self.data - bgimg.data
+                self.data = self.data - bg.data
 
             # Create new minimum and maximum intensities, keeping the ratios
             # First, get new maximums and minimums after background subtraction
@@ -86,25 +121,23 @@ class ElectronBackscatterDiffraction(Signal2D):
                 smin.compute()
                 smax.compute()
 
+            # Have to create a wrapper for rescale_intensity since values
+            # passed to out_range differs for all patterns
             def rescale_pattern(pattern, signal_min, signal_max):
-                return ski.exposure.rescale_intensity(pattern,
-                                                      out_range=(signal_min,
-                                                                 signal_max))
+                return rescale_intensity(pattern, out_range=(signal_min,
+                                                             signal_max))
 
             # Rescale each pattern according to its min. and max. intensity
             self.map(rescale_pattern, signal_min=smin, signal_max=smax, *args,
                      **kwargs)
-
-            # Finally, revert data type to save memory
-            self.data = self.data.astype(signal_dtype.dtype)
 
         if dynamic:
             if sigma is None:
                 sigma = self.axes_manager.signal_axes[0].size/20
 
             # Create signal with each pattern blurred by a Gaussian kernel
-            s_blur = self.map(scn.gaussian_filter, inplace=False, ragged=False,
-                           sigma=sigma)
+            s_blur = self.map(gaussian_filter, inplace=False, ragged=False,
+                              sigma=sigma)
             s_blur.change_dtype('int16')
 
             if divide:
@@ -114,7 +147,99 @@ class ElectronBackscatterDiffraction(Signal2D):
 
             # We don't care about relative intensities anymore since the
             # subtracted pattern is different for all patterns. We therefore
-            # rescale intensities according to the original datatype range
-            self.map(ski.exposure.rescale_intensity, ragged=False,
+            # rescale intensities according to the original data type range
+            self.map(rescale_intensity, ragged=False,
                      out_range=signal_dtype.dtype.name)
-            self.data = self.data.astype(signal_dtype.dtype)
+
+        # Revert data type
+        self.data = self.data.astype(signal_dtype.dtype)
+
+    def find_deadpixels(self, pattern=(0, 0), threshold=10, to_plot=True):
+        """Find dead pixels in experimentally acquired diffraction patterns by
+        comparing pixel values in a blurred version of a selected pattern to
+        the original pattern. If the intensity difference is above a threshold
+        the pixel is labeled as dead.
+
+        Parameters
+        ----------
+        pattern : tuple
+            Indices of pattern in which to search for dead pixels.
+        threshold : int
+            Threshold for difference in pixel intensities between blurred and
+            original pattern.
+        to_plot : bool
+            If True (default), a pattern with the dead pixels highlighted is
+            plotted.
+
+        Returns
+        -------
+        deadpixels : list of tuples
+            List of tuples containing pattern indices for dead pixels.
+
+        """
+
+        pat = self.inav[pattern].data.astype('int16')  # Avoid negative pixels
+        blurred = median_filter(pat, size=2)
+        difference = pat - blurred
+        threshold = threshold * np.std(difference)
+
+        # Find the dead pixels
+        deadpixels = np.nonzero((np.abs(difference) > threshold))
+        deadpixels = np.array(deadpixels)
+        deadpixels = list(map(tuple, deadpixels.T))  # List of tuples
+
+        if to_plot:
+            pat = self.inav[pattern]
+            for (y, x) in deadpixels:
+                m = plot.markers.point(x, y, color='red')
+                pat.add_marker(m)
+
+        return deadpixels
+
+
+    def remove_deadpixels(self, deadpixels, deadvalue='average', inplace=True,
+                          *args, **kwargs):
+        """Remove dead pixels from experimentally acquired diffraction
+        patterns, either by averaging or setting to a certain value.
+
+        Uses pyXem's remove_deadpixels() function.
+
+        Parameters
+        ----------
+        deadpixels : list of tuples
+            List of tuples of indices of dead pixels.
+        deadvalue : string
+            Specify how deadpixels should be treated. 'average' sets the dead
+            pixel value to the average of adjacent pixels. 'nan' sets the dead
+            pixel to nan
+        inplace : bool
+            If True (default), this signal is overwritten. Otherwise, returns a
+            new signal.
+        *args:
+            Arguments to be passed to map().
+        **kwargs:
+            Keyword arguments to be passed to map().
+
+        """
+
+        if inplace and deadpixels:
+            self.set_experimental_parameters(deadpixels_corrected=True,
+                                             deadpixels=deadpixels,
+                                             deadvalue=deadvalue)
+            return ElectronDiffraction.remove_deadpixels(self,
+                                                         deadpixels=deadpixels,
+                                                         deadvalue=deadvalue,
+                                                         inplace=inplace, *args,
+                                                         **kwargs)
+        elif not inplace and deadpixels:
+            s = ElectronDiffraction.remove_deadpixels(self,
+                                                      deadpixels=deadpixels,
+                                                      deadvalue=deadvalue,
+                                                      inplace=inplace, *args,
+                                                      **kwargs)
+            s.set_experimental_parameters(deadpixels_corrected=True,
+                                          deadpixels=deadpixels,
+                                          deadvalue=deadvalue)
+            return s
+        else:  # Inplace is passed, but there are no dead pixels detected
+            pass
