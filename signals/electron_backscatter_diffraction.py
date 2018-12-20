@@ -183,9 +183,9 @@ class ElectronBackscatterDiffraction(Signal2D):
         difference = pat - blurred
         threshold = threshold * np.std(difference)
 
-        # Find the dead pixels
-        deadpixels = np.nonzero((np.abs(difference) > threshold))
-        deadpixels = np.array(deadpixels)
+        # Find the dead pixels (ignoring border pixels)
+        deadpixels = np.nonzero((np.abs(difference[1:-1, 1:-1]) > threshold))
+        deadpixels = np.array(deadpixels) + 1
         deadpixels = list(map(tuple, deadpixels.T))  # List of tuples
 
         if to_plot:
@@ -193,6 +193,7 @@ class ElectronBackscatterDiffraction(Signal2D):
             for (y, x) in deadpixels:
                 m = plot.markers.point(x, y, color='red')
                 pat.add_marker(m)
+            self.inav[pattern].plot()
 
         return deadpixels
 
