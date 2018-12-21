@@ -17,8 +17,14 @@ class ElectronBackscatterDiffraction(Signal2D):
         Signal2D.__init__(self, *args, **kwargs)
         self.set_experimental_parameters()
 
-    def set_experimental_parameters(self, deadpixels_corrected=False,
-                                    deadpixels=None, deadvalue=None):
+    def set_experimental_parameters(self, 
+    								accelerating_voltage = None,
+    								condenser_aperture = None,
+    								deadpixels_corrected = False,
+    								working_distance = None,
+                                    deadpixels = None, deadvalue = None,
+                                    frame_rate = None,
+                                    ):
         """Set experimental parameters in metadata.
 
         Parameters
