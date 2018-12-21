@@ -302,7 +302,7 @@ class ElectronBackscatterDiffraction(Signal2D):
         else:  # Inplace is passed, but there are no dead pixels detected
             pass
 
- 	def get_virtual_image(self, roi = ):
+ 	def get_virtual_image(self, roi):
  		"""Method imported from pyXem.ElectronDiffraction.get_virtual_image(self, roi).
  		Obtains a virtual image associated with a specified ROI.
 
@@ -345,7 +345,7 @@ class ElectronBackscatterDiffraction(Signal2D):
 
             import hyperspy.api as hs
             roi = hs.roi.RectangularROI(left = 10, right = 20, top= 10, bottom = 20)
-            s.get_virtual_image(roi)
+            s.plot_interactive_virtual_image(roi)
 		"""
         return ElectronDiffraction.plot_interactive_virtual_image(self, roi)
     
