@@ -10,7 +10,7 @@ import warnings
 from scipy.ndimage import gaussian_filter, median_filter
 from matplotlib.pyplot import imread
 from pyxem.signals.electron_diffraction import ElectronDiffraction
-
+import radon_transform
 
 class ElectronBackscatterDiffraction(Signal2D):
     _signal_type = 'electron_backscatter_diffraction'
@@ -349,4 +349,43 @@ class ElectronBackscatterDiffraction(Signal2D):
 		"""
         return ElectronDiffraction.plot_interactive_virtual_image(self, roi)
     
+    def get_radon_transform(self, 
+                        theta = None, circle = True, 
+                        show_progressbar = True, inplace = False):
+        '''
+		Create a RadonTransform signal 
 
+		Parameters
+        ----------
+        theta : :obj:`hyperspy.roi.BaseInteractiveROI`
+            Projection angles in degrees. 
+            If None (defualt), the value is set to np.arange(180).
+		circle : bool
+			If True (default), assume that the image is zero outside the inscribed circle.
+			The width of each projection then becomes equal to the smallest signal shape.
+        
+        Returns
+        -------
+        sinograms: :obj:`ebsp-pro.signals.RadonTransform`
+            Corresponding radon transform 2d signal (sinograms) computed from 
+            the electron backscatter diffrcation 2d signal. The rotation axis
+            lie at index sinograms.data[0,0].shape[0]/2
+
+        References 
+        --------
+        http://scikit-image.org/docs/dev/auto_examples/transform/plot_radon_transform.html
+        http://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.radon
+        
+        '''
+        #TODO1: Remove diagonal articfact lines.
+        #TODO2: Can we get it to work faster?
+        
+        warnings.filterwarnings("ignore", message="The default of `circle` in `skimage.transform.radon` will change to `True` in version 0.15.")
+        # Ignore this warning, since this function is mapped and would otherwise slow 
+        # the function down by prininting many warning messages.
+
+        sinograms = self.map(radon, 
+        					 theta = theta, circle = circle,
+                             show_progressbar = show_progressbar, inplace = inplace)
+        
+        return RadonTransform(sinograms)

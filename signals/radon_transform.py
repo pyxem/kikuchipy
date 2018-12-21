@@ -10,6 +10,14 @@ class RadonTransform(Signal2D):
 
     def __init__(self, *args, **kwargs):
         Signal2D.__init__(self, *args, **kwargs)
+        dx = self.axes_manager.signal_axes[0]
+        dy = self.axes_manager.signal_axes[1]
+        #Projection angle axis
+        dx.name = 'theta'
+        dx.units = u'\u03B8'' degrees'
+        #Projection position axis
+        dy.name = 'projection'
+        dy.units = 'pixels'
 
     def get_virtual_image(self, roi):
  		"""Method imported from pyXem.ElectronDiffraction.get_virtual_image(self, roi).
