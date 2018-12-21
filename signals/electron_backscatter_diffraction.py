@@ -5,6 +5,8 @@ import numpy as np
 from hyperspy.api import plot
 from hyperspy.signals import Signal2D, BaseSignal
 from skimage.exposure import rescale_intensity
+from skimage.transform import radon
+import warnings
 from scipy.ndimage import gaussian_filter, median_filter
 from matplotlib.pyplot import imread
 from pyxem.signals.electron_diffraction import ElectronDiffraction
@@ -32,7 +34,7 @@ class ElectronBackscatterDiffraction(Signal2D):
         accelerating_voltage : float
         	Accelerating voltage in kV.
         condenser_aperture : float
-        	Condenser_aperture in micrometer.
+        	Condenser_aperture in µm.
         working_distance . float
         	Working distance in mm.
         deadpixels_corrected : bool
@@ -42,8 +44,11 @@ class ElectronBackscatterDiffraction(Signal2D):
         deadvalue : string
             Specifies how dead pixels have been corrected for (average or nan).
 		frame_rate : float
-        	Frame rate in ms.
+        	Frame rate in fps.
+		exposure_time : float
+        	Exposure time in µs.	
         """
+        # TODO: Fetch some of these directly from the settings.txt file for nordif2hdf5?
 
         md = self.metadata
         if accelerating_voltage is not None:
@@ -64,14 +69,16 @@ class ElectronBackscatterDiffraction(Signal2D):
         if frame_rate is not None:
             md.set_item('Acquisition_instrument.SEM.Detector.Diffraction.frame_rate',
                 frame_rate)
-
+        if exposure_time is not None:
+            md.set_item('Acquisition_instrument.SEM.Detector.Diffraction.exposure_time', exposure_time)
+    
     def set_scan_calibration(self, calibration):
-        """Set the step size in micrometer.
+        """Set the step size in µm.
 
         Parameters
         ----------
         calibration: float
-            Scan step size in micometer per pixel.
+            Scan step size in µm per pixel.
         """
         ElectronDiffraction.set_scan_calibration(self, calibration)  
         self.axes_manager.navigation_axes[0].units = u'\u03BC'+'m'
@@ -294,3 +301,52 @@ class ElectronBackscatterDiffraction(Signal2D):
             return s
         else:  # Inplace is passed, but there are no dead pixels detected
             pass
+
+ 	def get_virtual_image(self, roi = ):
+ 		"""Method imported from pyXem.ElectronDiffraction.get_virtual_image(self, roi).
+ 		Obtains a virtual image associated with a specified ROI.
+
+        Parameters
+        ----------
+        roi: :obj:`hyperspy.roi.BaseInteractiveROI`
+            Any interactive ROI detailed in HyperSpy.
+
+        Returns
+        -------
+        dark_field_sum: :obj:`hyperspy.signals.BaseSignal`
+            The virtual image signal associated with the specified roi.
+
+        Examples
+        --------
+        .. code-block:: python
+
+        	import hyperspy.api as hs
+            roi = hs.roi.RectangularROI(left = 10, right = 20, top= 10, bottom = 20)
+            s.get_virtual_image(roi)
+
+        """
+        return ElectronDiffraction.get_virtual_image(self, roi)
+    
+    def plot_interactive_virtual_image(self, roi):
+    	"""Method imported from pyXem.ElectronDiffraction.plot_interactive_virtual_image(self, roi).
+    	Plots an interactive virtual image formed with a specified and
+        adjustable roi.
+
+        Parameters
+        ----------
+        roi: :obj:`hyperspy.roi.BaseInteractiveROI`
+            Any interactive ROI detailed in HyperSpy.
+        **kwargs:
+            Keyword arguments to be passed to `ElectronDiffraction.plot`
+
+        Examples
+        --------
+        .. code-block:: python
+
+            import hyperspy.api as hs
+            roi = hs.roi.RectangularROI(left = 10, right = 20, top= 10, bottom = 20)
+            s.get_virtual_image(roi)
+		"""
+        return ElectronDiffraction.plot_interactive_virtual_image(self, roi)
+    
+
