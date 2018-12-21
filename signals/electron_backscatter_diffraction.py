@@ -23,22 +23,66 @@ class ElectronBackscatterDiffraction(Signal2D):
 
         Parameters
         ----------
+        accelerating_voltage : float
+        	Accelerating voltage in kV.
+        condenser_aperture : float
+        	Condenser_aperture in micrometer.
+        working_distance . float
+        	Working distance in mm.
         deadpixels_corrected : bool
             If True (default is False), deadpixels in patterns are corrected.
         deadpixels : list of tuple
             List of tuples containing pattern indices for dead pixels.
         deadvalue : string
             Specifies how dead pixels have been corrected for (average or nan).
-
+		frame_rate : float
+        	Frame rate in ms.
         """
 
         md = self.metadata
+        if accelerating_voltage is not None:
+            md.set_item('Acquisition_instrument.SEM.accelerating_voltage',
+                        accelerating_voltage)
+        if condenser_aperture is not None:
+            md.set_item('Acquisition_instrument.SEM.condenser_aperture',
+                        condenser_aperture)
+        if working_distance is not None:
+            md.set_item('Acquisition_instrument.SEM.working_distance',
+                        working_distance)
         md.set_item('Acquisition_instrument.SEM.Detector.deadpixels_corrected',
                     deadpixels_corrected)
         md.set_item('Acquisition_instrument.SEM.Detector.deadpixels',
                     deadpixels)
         md.set_item('Acquisition_instrument.SEM.Detector.deadvalue',
                     deadvalue)
+        if frame_rate is not None:
+            md.set_item('Acquisition_instrument.SEM.Detector.Diffraction.frame_rate',
+                frame_rate)
+
+    def set_scan_calibration(self, calibration):
+        """Set the step size in micrometer.
+
+        Parameters
+        ----------
+        calibration: float
+            Scan step size in micometer per pixel.
+        """
+        ElectronDiffraction.set_scan_calibration(self, calibration)  
+        self.axes_manager.navigation_axes[0].units = u'\u03BC'+'m'
+        self.axes_manager.navigation_axes[1].units = u'\u03BC'+'m'
+        
+    def set_diffraction_calibration(self, calibration):
+    	"""Set diffraction pattern pixel size in reciprocal Angstroms.
+    	The offset is set to 0 for signal_axes[0] and signal_axes[1]. 
+
+        Parameters
+        ----------
+        calibration: float
+            Diffraction pattern calibration in reciprocal Angstroms per pixel.
+        """
+        ElectronDiffraction.set_diffraction_calibration(self, calibration)
+        self.axes_manager.signal_axes[0].offset = 0
+        self.axes_manager.signal_axes[1].offset = 0
 
     def remove_background(self, static=True, dynamic=False, bg_path=None,
                           divide=False, sigma=None, *args, **kwargs):
