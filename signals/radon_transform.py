@@ -19,9 +19,9 @@ class RadonTransform(Signal2D):
         dy.units = 'pixel'
 
     def get_virtual_image(self, roi):
- 		"""Method imported from 
+        """Method imported from 
         pyXem.ElectronDiffraction.get_virtual_image(self, roi).
- 		Obtains a virtual image associated with a specified ROI.
+        Obtains a virtual image associated with a specified ROI.
 
         Parameters
         ----------
@@ -37,18 +37,18 @@ class RadonTransform(Signal2D):
         --------
         .. code-block:: python
 
-        	import hyperspy.api as hs
+            import hyperspy.api as hs
             roi = hs.roi.CircleROI(cx=10.,cy=10., r_inner=0., r=10.)
             rt.get_virtual_image(roi)
 
         """
-        
+
         return ElectronDiffraction.get_virtual_image(self, roi)
     
     def plot_interactive_virtual_image(self, roi, **kwargs):
-    	"""Method imported from 
+        """Method imported from 
         pyXem.ElectronDiffraction.plot_interactive_virtual_image(self, roi).
-    	Plots an interactive virtual image formed with a specified and
+        Plots an interactive virtual image formed with a specified and
         adjustable roi.
 
         Parameters

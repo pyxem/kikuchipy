@@ -20,18 +20,18 @@ class ElectronBackscatterDiffraction(Signal2D):
         self.set_experimental_parameters()
 
     def set_experimental_parameters(self, accelerating_voltage=None,
-    								condenser_aperture=None,
-    								deadpixels_corrected=False, deadvalue=None,
-    								deadpixels=None, exposure_time=None,
+                                    condenser_aperture=None,
+                                    deadpixels_corrected=False, deadvalue=None,
+                                    deadpixels=None, exposure_time=None,
                                     frame_rate=None, working_distance=None):
         """Set experimental parameters in metadata.
 
         Parameters
         ----------
         accelerating_voltage : float
-        	Accelerating voltage in kV.
+            Accelerating voltage in kV.
         condenser_aperture : float
-        	Condenser_aperture in µm.
+            Condenser_aperture in µm.
         deadpixels_corrected : bool
             If True (default is False), deadpixels in patterns are corrected.
         deadpixels : list of tuple
@@ -39,7 +39,7 @@ class ElectronBackscatterDiffraction(Signal2D):
         deadvalue : string
             Specifies how dead pixels have been corrected for (average or nan).
         exposure_time : float
-        	Exposure time in µs.
+            Exposure time in µs.
         frame_rate : float
             Frame rate in fps.
         working_distance : float
@@ -63,10 +63,10 @@ class ElectronBackscatterDiffraction(Signal2D):
                     deadvalue)
         if exposure_time is not None:
             md.set_item('Acquisition_instrument.SEM.Detector.Diffraction\
-            	.exposure_time', exposure_time)
+                .exposure_time', exposure_time)
         if frame_rate is not None:
             md.set_item('Acquisition_instrument.SEM.Detector.Diffraction\
-            	.frame_rate', frame_rate)
+                .frame_rate', frame_rate)
         if working_distance is not None:
             md.set_item('Acquisition_instrument.SEM.working_distance',
                 working_distance)
@@ -84,7 +84,7 @@ class ElectronBackscatterDiffraction(Signal2D):
         self.axes_manager.navigation_axes[1].units = u'\u03BC'+'m'
         
     def set_diffraction_calibration(self, calibration):
-    	"""Set diffraction pattern pixel size in reciprocal Angstroms. The 
+        """Set diffraction pattern pixel size in reciprocal Angstroms. The 
         offset is set to 0 for signal_axes[0] and signal_axes[1]. 
 
         Parameters
@@ -301,10 +301,10 @@ class ElectronBackscatterDiffraction(Signal2D):
         else:  # Inplace is passed, but there are no dead pixels detected
             pass
 
- 	def get_virtual_image(self, roi):
- 		"""Method imported from 
- 		pyXem.ElectronDiffraction.get_virtual_image(self, roi). Obtains a 
- 		virtual image associated with a specified ROI.
+    def get_virtual_image(self, roi):
+        """Method imported from 
+        pyXem.ElectronDiffraction.get_virtual_image(self, roi). Obtains a 
+        virtual image associated with a specified ROI.
 
         Parameters
         ----------
@@ -320,7 +320,7 @@ class ElectronBackscatterDiffraction(Signal2D):
         --------
         .. code-block:: python
 
-        	import hyperspy.api as hs
+            import hyperspy.api as hs
             roi = hs.roi.RectangularROI(left=10, right=20, top=10, bottom=20)
             s.get_virtual_image(roi)
 
@@ -328,9 +328,9 @@ class ElectronBackscatterDiffraction(Signal2D):
         return ElectronDiffraction.get_virtual_image(self, roi)
     
     def plot_interactive_virtual_image(self, roi, **kwargs):
-    	"""Method imported from 
-    	pyXem.ElectronDiffraction.plot_interactive_virtual_image(self, roi).
-    	Plots an interactive virtual image formed with a specified and
+        """Method imported from 
+        pyXem.ElectronDiffraction.plot_interactive_virtual_image(self, roi).
+        Plots an interactive virtual image formed with a specified and
         adjustable roi.
 
         Parameters
@@ -347,23 +347,23 @@ class ElectronBackscatterDiffraction(Signal2D):
             import hyperspy.api as hs
             roi = hs.roi.RectangularROI(left=10, right=20, top=10, bottom=20)
             s.plot_interactive_virtual_image(roi)
-		"""
+        """
         return ElectronDiffraction.plot_interactive_virtual_image(self, roi,
                                                                   **kwargs)
     
     def get_radon_transform(self, theta=None, circle=True, 
-    						show_progressbar=True, inplace=False):
+                            show_progressbar=True, inplace=False):
         '''Create a RadonTransform signal.
 
-		Parameters
+        Parameters
         ----------
         theta : array
             Projection angles in degrees. If None (defualt), the value is set 
             to np.arange(180).
-		circle : bool
-			If True (default), assume that the image is zero outside the 
-			inscribed circle. The width of each projection then becomes equal 
-			to the smallest signal shape.
+        circle : bool
+            If True (default), assume that the image is zero outside the 
+            inscribed circle. The width of each projection then becomes equal 
+            to the smallest signal shape.
         show_progressbar : bool
             If True (default), show progress bar during transformation.
         inplace : bool
