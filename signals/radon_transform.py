@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 """Signal class for radon transform of Electron Backscatter Diffraction (EBSD) data."""
-import numpy as np
 from hyperspy.api import plot
-from hyperspy.signals import Signal2D, BaseSignal
+from hyperspy.signals import Signal2D
 from pyxem.signals.electron_diffraction import ElectronDiffraction
 
 class RadonTransform(Signal2D):
@@ -14,13 +13,14 @@ class RadonTransform(Signal2D):
         dy = self.axes_manager.signal_axes[1]
         #Projection angle axis
         dx.name = 'theta'
-        dx.units = u'\u03B8'' degrees'
+        dx.units = 'degree'
         #Projection position axis
         dy.name = 'projection'
-        dy.units = 'pixels'
+        dy.units = 'pixel'
 
     def get_virtual_image(self, roi):
- 		"""Method imported from pyXem.ElectronDiffraction.get_virtual_image(self, roi).
+ 		"""Method imported from 
+        pyXem.ElectronDiffraction.get_virtual_image(self, roi).
  		Obtains a virtual image associated with a specified ROI.
 
         Parameters
@@ -42,10 +42,12 @@ class RadonTransform(Signal2D):
             rt.get_virtual_image(roi)
 
         """
+        
         return ElectronDiffraction.get_virtual_image(self, roi)
     
-    def plot_interactive_virtual_image(self, roi):
-    	"""Method imported from pyXem.ElectronDiffraction.plot_interactive_virtual_image(self, roi).
+    def plot_interactive_virtual_image(self, roi, **kwargs):
+    	"""Method imported from 
+        pyXem.ElectronDiffraction.plot_interactive_virtual_image(self, roi).
     	Plots an interactive virtual image formed with a specified and
         adjustable roi.
 
@@ -63,7 +65,8 @@ class RadonTransform(Signal2D):
             import hyperspy.api as hs
             roi = hs.roi.CircleROI(cx=10.,cy=10., r_inner=0., r=10.)
             rt.plot_interactive_virtual_image(roi)
-		"""
-        return ElectronDiffraction.plot_interactive_virtual_image(self, roi)
-    
+        """
+
+        return ElectronDiffraction.plot_interactive_virtual_image(self, roi,
+                                                                    **kwargs)
 
