@@ -5,10 +5,12 @@ import numpy as np
 from hyperspy.api import plot
 from hyperspy.signals import Signal2D, BaseSignal
 from skimage.exposure import rescale_intensity
+from skimage.transform import radon
+import warnings
 from scipy.ndimage import gaussian_filter, median_filter
 from matplotlib.pyplot import imread
 from pyxem.signals.electron_diffraction import ElectronDiffraction
-
+from signals.radon_transform import RadonTransform
 
 class ElectronBackscatterDiffraction(Signal2D):
     _signal_type = 'electron_backscatter_diffraction'
@@ -17,28 +19,82 @@ class ElectronBackscatterDiffraction(Signal2D):
         Signal2D.__init__(self, *args, **kwargs)
         self.set_experimental_parameters()
 
-    def set_experimental_parameters(self, deadpixels_corrected=False,
-                                    deadpixels=None, deadvalue=None):
+    def set_experimental_parameters(self, accelerating_voltage=None,
+                                    condenser_aperture=None,
+                                    deadpixels_corrected=False, deadvalue=None,
+                                    deadpixels=None, exposure_time=None,
+                                    frame_rate=None, working_distance=None):
         """Set experimental parameters in metadata.
 
         Parameters
         ----------
+        accelerating_voltage : float
+            Accelerating voltage in kV.
+        condenser_aperture : float
+            Condenser_aperture in µm.
         deadpixels_corrected : bool
             If True (default is False), deadpixels in patterns are corrected.
         deadpixels : list of tuple
             List of tuples containing pattern indices for dead pixels.
         deadvalue : string
             Specifies how dead pixels have been corrected for (average or nan).
-
+        exposure_time : float
+            Exposure time in µs.
+        frame_rate : float
+            Frame rate in fps.
+        working_distance : float
+            Working distance in mm.
         """
+        # TODO: Fetch some of these directly from the settings.txt file for 
+        # nordif2hdf5?
 
         md = self.metadata
+        if accelerating_voltage is not None:
+            md.set_item('Acquisition_instrument.SEM.accelerating_voltage',
+                        accelerating_voltage)
+        if condenser_aperture is not None:
+            md.set_item('Acquisition_instrument.SEM.condenser_aperture',
+                        condenser_aperture)
         md.set_item('Acquisition_instrument.SEM.Detector.deadpixels_corrected',
                     deadpixels_corrected)
         md.set_item('Acquisition_instrument.SEM.Detector.deadpixels',
                     deadpixels)
         md.set_item('Acquisition_instrument.SEM.Detector.deadvalue',
                     deadvalue)
+        if exposure_time is not None:
+            md.set_item('Acquisition_instrument.SEM.Detector.Diffraction\
+                .exposure_time', exposure_time)
+        if frame_rate is not None:
+            md.set_item('Acquisition_instrument.SEM.Detector.Diffraction\
+                .frame_rate', frame_rate)
+        if working_distance is not None:
+            md.set_item('Acquisition_instrument.SEM.working_distance',
+                working_distance)
+
+    def set_scan_calibration(self, calibration):
+        """Set the step size in µm.
+
+        Parameters
+        ----------
+        calibration: float
+            Scan step size in µm per pixel.
+        """
+        ElectronDiffraction.set_scan_calibration(self, calibration)  
+        self.axes_manager.navigation_axes[0].units = u'\u03BC'+'m'
+        self.axes_manager.navigation_axes[1].units = u'\u03BC'+'m'
+        
+    def set_diffraction_calibration(self, calibration):
+        """Set diffraction pattern pixel size in reciprocal Angstroms. The 
+        offset is set to 0 for signal_axes[0] and signal_axes[1]. 
+
+        Parameters
+        ----------
+        calibration: float
+            Diffraction pattern calibration in reciprocal Angstroms per pixel.
+        """
+        ElectronDiffraction.set_diffraction_calibration(self, calibration)
+        self.axes_manager.signal_axes[0].offset = 0
+        self.axes_manager.signal_axes[1].offset = 0
 
     def remove_background(self, static=True, dynamic=False, bg_path=None,
                           divide=False, sigma=None, *args, **kwargs):
@@ -244,3 +300,102 @@ class ElectronBackscatterDiffraction(Signal2D):
             return s
         else:  # Inplace is passed, but there are no dead pixels detected
             pass
+
+    def get_virtual_image(self, roi):
+        """Method imported from 
+        pyXem.ElectronDiffraction.get_virtual_image(self, roi). Obtains a 
+        virtual image associated with a specified ROI.
+
+        Parameters
+        ----------
+        roi: :obj:`hyperspy.roi.BaseInteractiveROI`
+            Any interactive ROI detailed in HyperSpy.
+
+        Returns
+        -------
+        dark_field_sum: :obj:`hyperspy.signals.BaseSignal`
+            The virtual image signal associated with the specified roi.
+
+        Examples
+        --------
+        .. code-block:: python
+
+            import hyperspy.api as hs
+            roi = hs.roi.RectangularROI(left=10, right=20, top=10, bottom=20)
+            s.get_virtual_image(roi)
+
+        """
+        return ElectronDiffraction.get_virtual_image(self, roi)
+    
+    def plot_interactive_virtual_image(self, roi, **kwargs):
+        """Method imported from 
+        pyXem.ElectronDiffraction.plot_interactive_virtual_image(self, roi).
+        Plots an interactive virtual image formed with a specified and
+        adjustable roi.
+
+        Parameters
+        ----------
+        roi: :obj:`hyperspy.roi.BaseInteractiveROI`
+            Any interactive ROI detailed in HyperSpy.
+        **kwargs:
+            Keyword arguments to be passed to `ElectronDiffraction.plot`
+
+        Examples
+        --------
+        .. code-block:: python
+
+            import hyperspy.api as hs
+            roi = hs.roi.RectangularROI(left=10, right=20, top=10, bottom=20)
+            s.plot_interactive_virtual_image(roi)
+        """
+        return ElectronDiffraction.plot_interactive_virtual_image(self, roi,
+                                                                  **kwargs)
+    
+    def get_radon_transform(self, theta=None, circle=True, 
+                            show_progressbar=True, inplace=False):
+        '''Create a RadonTransform signal.
+
+        Parameters
+        ----------
+        theta : array
+            Projection angles in degrees. If None (defualt), the value is set 
+            to np.arange(180).
+        circle : bool
+            If True (default), assume that the image is zero outside the 
+            inscribed circle. The width of each projection then becomes equal 
+            to the smallest signal shape.
+        show_progressbar : bool
+            If True (default), show progress bar during transformation.
+        inplace : bool
+            If True (default is False), the ElectronBackscatterDiffraction 
+            signal (self) is replaced by the RadonTransform signal (return). 
+
+        Returns
+        -------
+        sinograms: :obj:`ebsp-pro.signals.RadonTransform`
+            Corresponding RadonTransform signal (sinograms) computed from 
+            the ElectronBackscatterDiffraction signal. The rotation axis
+            lie at index sinograms.data[0,0].shape[0]/2
+
+        References 
+        --------
+        http://scikit-image.org/docs/dev/auto_examples/transform/
+        plot_radon_transform.html
+        http://scikit-image.org/docs/dev/api/skimage.transform.html
+        #skimage.transform.radon
+        
+        '''
+        #TODO1: Remove diagonal articfact lines.
+        #TODO2: Can we get it to work faster?
+        
+        warnings.filterwarnings("ignore", message="The default of `circle` \
+        in `skimage.transform.radon` will change to `True` in version 0.15.")
+        # Ignore this warning, since this function is mapped and would 
+        # otherwise slow down this function by prininting many warning 
+        # messages.
+
+        sinograms = self.map(radon, theta=theta, circle=circle,
+                             show_progressbar=show_progressbar, 
+                             inplace=inplace)
+        
+        return RadonTransform(sinograms)
