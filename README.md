@@ -1,6 +1,6 @@
-# ebsp-pro
+# KikuchiPy
 
-A class for PROcessing of Electron Backscatter Patterns (EBSPs) using and
+A class for processing of Kikuchi patterns in the form of Electron Backscatter Diffraction (EBSD) patterns using and
 inheriting functionality from [HyperSpy](http://hyperspy.org/hyperspy-doc/current/user_guide/intro.html#what-is-hyperspy)
 and [pyXem](http://pyxem.github.io/pyxem/). If you have a NORDIF .dat
 file, the patterns can be converted to a format readable by HyperSpy using the
