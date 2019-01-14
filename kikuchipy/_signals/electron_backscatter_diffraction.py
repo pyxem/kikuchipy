@@ -13,7 +13,7 @@ from matplotlib.pyplot import imread
 from pyxem.signals.electron_diffraction import ElectronDiffraction
 from pyxem.utils.expt_utils import remove_dead
 
-from kikuchipy.signals.radon_transform import RadonTransform
+from kikuchipy._signals.radon_transform import RadonTransform
 from kikuchipy.utils.expt_utils import correct_background
 
 
@@ -299,7 +299,7 @@ class EBSD(Signal2D):
 
         Returns
         -------
-        dark_field_sum: :obj:`hyperspy.signals.BaseSignal`
+        dark_field_sum: :obj:`hyperspy._signals.BaseSignal`
             The virtual image signal associated with the specified roi.
 
         Examples
@@ -357,7 +357,7 @@ class EBSD(Signal2D):
 
         Returns
         -------
-        sinograms: :obj:`ebsp-pro.signals.RadonTransform`
+        sinograms: :obj:`ebsp-pro._signals.RadonTransform`
             Corresponding RadonTransform signal (sinograms) computed from
             the ElectronBackscatterDiffraction signal. The rotation axis
             lie at index sinograms.data[0,0].shape[0]/2
