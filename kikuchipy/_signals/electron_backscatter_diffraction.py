@@ -13,11 +13,11 @@ from matplotlib.pyplot import imread
 from pyxem.signals.electron_diffraction import ElectronDiffraction
 from pyxem.utils.expt_utils import remove_dead
 
-from signals.radon_transform import RadonTransform
-from utils.expt_utils import correct_background
+from kikuchipy.signals.radon_transform import RadonTransform
+from kikuchipy.utils.expt_utils import correct_background
 
 
-class ElectronBackscatterDiffraction(Signal2D):
+class EBSD(Signal2D):
     _signal_type = 'electron_backscatter_diffraction'
     _lazy = False
 
@@ -385,8 +385,7 @@ class ElectronBackscatterDiffraction(Signal2D):
         return RadonTransform(sinograms)
 
 
-class LazyElectronBackscatterDiffraction(ElectronBackscatterDiffraction,
-                                         LazySignal2D):
+class LazyEBSD(EBSD, LazySignal2D):
 
     _lazy = True
 
