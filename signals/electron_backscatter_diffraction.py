@@ -1,75 +1,88 @@
 # -*- coding: utf-8 -*-
 """Signal class for Electron Backscatter Diffraction (EBSD) data."""
+import warnings
 import numpy as np
+import gc
 
 from hyperspy.api import plot
-from hyperspy.signals import Signal2D, BaseSignal
-from skimage.exposure import rescale_intensity
+from hyperspy.signals import Signal2D
+from hyperspy._lazy_signals import LazySignal2D
 from skimage.transform import radon
-import warnings
-from scipy.ndimage import gaussian_filter, median_filter
+from scipy.ndimage import median_filter
 from matplotlib.pyplot import imread
 from pyxem.signals.electron_diffraction import ElectronDiffraction
+from pyxem.utils.expt_utils import remove_dead
+
 from signals.radon_transform import RadonTransform
+from utils.expt_utils import correct_background
+
 
 class ElectronBackscatterDiffraction(Signal2D):
     _signal_type = 'electron_backscatter_diffraction'
+    _lazy = False
 
     def __init__(self, *args, **kwargs):
-        Signal2D.__init__(self, *args, **kwargs)
-        self.set_experimental_parameters()
+        if self._lazy and args:
+            Signal2D.__init__(self, data=args[0].data, **kwargs)
+        else:
+            Signal2D.__init__(self, *args, **kwargs)
+        self.set_experimental_parameters(deadpixels_corrected=False)
 
     def set_experimental_parameters(self, accelerating_voltage=None,
                                     condenser_aperture=None,
-                                    deadpixels_corrected=False, deadvalue=None,
-                                    deadpixels=None, exposure_time=None,
-                                    frame_rate=None, working_distance=None):
+                                    deadpixels_corrected=None, deadvalue=None,
+                                    deadpixels=None, deadthreshold=None,
+                                    exposure_time=None, frame_rate=None,
+                                    working_distance=None):
         """Set experimental parameters in metadata.
 
         Parameters
         ----------
-        accelerating_voltage : float
+        accelerating_voltage : float, optional
             Accelerating voltage in kV.
-        condenser_aperture : float
+        condenser_aperture : float, optional
             Condenser_aperture in µm.
-        deadpixels_corrected : bool
+        deadpixels_corrected : bool, optional
             If True (default is False), deadpixels in patterns are corrected.
-        deadpixels : list of tuple
+        deadpixels : list of tuple, optional
             List of tuples containing pattern indices for dead pixels.
-        deadvalue : string
+        deadvalue : string, optional
             Specifies how dead pixels have been corrected for (average or nan).
-        exposure_time : float
+        deadthreshold : int, optional
+            Threshold for detecting dead pixels.
+        exposure_time : float, optional
             Exposure time in µs.
-        frame_rate : float
+        frame_rate : float, optional
             Frame rate in fps.
-        working_distance : float
+        working_distance : float, optional
             Working distance in mm.
         """
-        # TODO: Fetch some of these directly from the settings.txt file for 
-        # nordif2hdf5?
+        # TODO: Fetch directly from the settings.txt file for nordif2hdf5?
+        # TODO: Not overwrite metadata stored in the file from before.
 
         md = self.metadata
+        md_str = 'Acquisition_instrument.SEM.'
+
         if accelerating_voltage is not None:
-            md.set_item('Acquisition_instrument.SEM.accelerating_voltage',
-                        accelerating_voltage)
+            md.set_item(md_str + 'accelerating_voltage', accelerating_voltage)
         if condenser_aperture is not None:
-            md.set_item('Acquisition_instrument.SEM.condenser_aperture',
-                        condenser_aperture)
-        md.set_item('Acquisition_instrument.SEM.Detector.deadpixels_corrected',
-                    deadpixels_corrected)
-        md.set_item('Acquisition_instrument.SEM.Detector.deadpixels',
-                    deadpixels)
-        md.set_item('Acquisition_instrument.SEM.Detector.deadvalue',
-                    deadvalue)
+            md.set_item(md_str + 'condenser_aperture', condenser_aperture)
+        if deadpixels_corrected is not None:
+            md.set_item(md_str + 'Detector.deadpixels_corrected',
+                        deadpixels_corrected)
+        if deadpixels is not None:
+            md.set_item(md_str + 'Detector.deadpixels', deadpixels)
+        if deadvalue is not None:
+            md.set_item(md_str + 'Detector.deadvalue', deadvalue)
+        if deadthreshold is not None:
+            md.set_item(md_str + 'Detector.deadthreshold', deadthreshold)
         if exposure_time is not None:
-            md.set_item('Acquisition_instrument.SEM.Detector.Diffraction\
-                .exposure_time', exposure_time)
+            md.set_item(md_str + 'Detector.Diffraction.exposure_time',
+                        exposure_time)
         if frame_rate is not None:
-            md.set_item('Acquisition_instrument.SEM.Detector.Diffraction\
-                .frame_rate', frame_rate)
+            md.set_item(md_str + 'Detector.Diffraction.frame_rate', frame_rate)
         if working_distance is not None:
-            md.set_item('Acquisition_instrument.SEM.working_distance',
-                working_distance)
+            md.set_item(md_str + 'working_distance', working_distance)
 
     def set_scan_calibration(self, calibration):
         """Set the step size in µm.
@@ -79,13 +92,13 @@ class ElectronBackscatterDiffraction(Signal2D):
         calibration: float
             Scan step size in µm per pixel.
         """
-        ElectronDiffraction.set_scan_calibration(self, calibration)  
+        ElectronDiffraction.set_scan_calibration(self, calibration)
         self.axes_manager.navigation_axes[0].units = u'\u03BC'+'m'
         self.axes_manager.navigation_axes[1].units = u'\u03BC'+'m'
-        
+
     def set_diffraction_calibration(self, calibration):
-        """Set diffraction pattern pixel size in reciprocal Angstroms. The 
-        offset is set to 0 for signal_axes[0] and signal_axes[1]. 
+        """Set diffraction pattern pixel size in reciprocal Angstroms. The
+        offset is set to 0 for signal_axes[0] and signal_axes[1].
 
         Parameters
         ----------
@@ -96,145 +109,121 @@ class ElectronBackscatterDiffraction(Signal2D):
         self.axes_manager.signal_axes[0].offset = 0
         self.axes_manager.signal_axes[1].offset = 0
 
-    def remove_background(self, static=True, dynamic=False, bg_path=None,
-                          divide=False, sigma=None, *args, **kwargs):
-        """Perform background correction, either static, dynamic or both. For
-        the static correction, a background image is subtracted from all
+    def remove_background(self, static=True, dynamic=True, bg=None,
+                          relative=False, sigma=None, *args, **kwargs):
+        """Perform background correction, either static, dynamic or both, on
+        a stack of electron backscatter diffraction patterns.
+
+        For the static correction, a background image is subtracted from all
         patterns. For the dynamic correction, each pattern is blurred using a
-        Gaussian kernel with a standard deviation set by you. The corrections
-        can either be done by subtraction or division. Relative intensities
-        between patterns are lost after dynamic correction.
+        Gaussian kernel with a standard deviation set by you.
+
+        Contrast stretching is done either according to a global or a local
+        intensity range, the former maintaining relative intensities between
+        patterns after static correction. Relative intensities are lost if
+        only dynamic correction is performed.
+
+        Input data is assumed to be a two-dimensional numpy array of patterns
+        of dtype uint8.
 
         Parameters
         ----------
-        static : bool
+        static : bool, optional
             If True (default), static correction is performed.
-        dynamic : bool
-            If True (default is False), dynamic correction is performed.
-        bg_path : file path (default:None)
-            File path to background image for static correction. If None
-            (default), only dynamic correction can be performed.
-        divide : bool
-            If True (default is False), static and dynamic correction is
-            performed by division and not subtraction.
-        sigma : int, float (default:None)
+        dynamic : bool, optional
+            If True (default), dynamic correction is performed.
+        bg : file path (default:None), optional
+            File path to background image for static correction.
+        relative : bool, optional
+            If True (default is False), relative intensities between patterns
+            are kept after static correction.
+        sigma : int, float (default:None), optional
             Standard deviation for the gaussian kernel for dynamic correction.
-            If None (default), a deviation of pattern width/20 is chosen.
+            If None (default), a deviation of pattern width/30 is chosen.
         *args
             Arguments to be passed to map().
         **kwargs:
             Arguments to be passed to map().
-
         """
+        if not static and not dynamic:
+            raise ValueError("No correction done, quitting.")
 
-        # Change data types (increase bit depth) to avoid negative intensities
-        signal_dtype = np.iinfo(self.data.dtype)
-        self.data = self.data.astype('int16')
+        lazy = self._lazy
+        if lazy:
+            kwargs['ragged'] = False
+
+        # Set default values for contrast stretching parameters, to be
+        # overwritten if 'relative' is passed
+        imin = None
+        scale = None
 
         if static:
             # Read and set up background image
-            if bg_path is not None:
-                bg = imread(bg_path)
-                bg = ElectronBackscatterDiffraction(bg)
-                bg.data = bg.data.astype('int16')
+            if bg is not None:
+                bg = imread(bg)
+                bg = Signal2D(bg)
             else:
                 raise ValueError("No background image provided")
 
-            # Check if dead pixels are corrected for, and if so, correct dead
-            # pixels in background pattern
-            if self.metadata.Acquisition_instrument.SEM.Detector\
-                    .deadpixels_corrected:
-                bg.remove_deadpixels(self.metadata.Acquisition_instrument.SEM\
-                                     .Detector.deadpixels, self.metadata\
-                                     .Acquisition_instrument.SEM.Detector\
-                                     .deadvalue)
+            # Correct dead pixels in background if they are corrected in signal
+            md = self.metadata.Acquisition_instrument.SEM.Detector
+            if md.deadpixels_corrected and md.deadpixels and md.deadvalue:
+                bg.data = remove_dead(bg.data, md.deadpixels, md.deadvalue)
 
-            # Subtract by background pattern
-            if divide:
-                self.data = self.data / bg.data
-            else:
-                self.data = self.data - bg.data
+            if relative and not dynamic:
+                # Get lowest intensity after subtraction
+                smin = self.min(self.axes_manager.navigation_axes)
+                smax = self.max(self.axes_manager.navigation_axes)
+                if lazy:
+                    smin.compute()
+                    smax.compute()
+                smin.change_dtype(np.int8)
+                bg.change_dtype(np.int8)
+                imin = (smin.data - bg.data).min()
 
-            # Create new minimum and maximum intensities, keeping the ratios
-            # First, get new maximums and minimums after background subtraction
-            smin = self.min(self.axes_manager.signal_axes)
-            smax = self.max(self.axes_manager.signal_axes)
+                # Get highest intensity after subtraction
+                bg.data = bg.data.astype(np.uint8)
+                imax = (smax.data - bg.data).max() + abs(imin)
 
-            # Set lowest intensity to zero
-            int_min = smin.data.min()
-            smin = smin - int_min
-            smax = smax - int_min
+                # Get global scaling factor, input dtype max. value in nominator
+                scale = float(np.iinfo(self.data.dtype).max / imax)
 
-            # Get scaling factor and scale intensities
-            scale = signal_dtype.max / smax.data.max()
-            smin = smin * scale
-            smax = smax * scale
+        if dynamic and sigma is None:
+            sigma = int(self.axes_manager.signal_axes[0].size/30)
 
-            # Convert to original data type and write to memory if lazy
-            smin.data = smin.data.astype(signal_dtype.dtype)
-            smax.data = smax.data.astype(signal_dtype.dtype)
-            if self._lazy:
-                smin.compute()
-                smax.compute()
+        self.map(correct_background, static=static, dynamic=dynamic, bg=bg,
+                 sigma=sigma, imin=imin, scale=scale, *args, **kwargs)
 
-            # Have to create a wrapper for rescale_intensity since values
-            # passed to out_range differs for all patterns
-            def rescale_pattern(pattern, signal_min, signal_max):
-                return rescale_intensity(pattern, out_range=(signal_min,
-                                                             signal_max))
+        gc.collect()
 
-            # Rescale each pattern according to its min. and max. intensity
-            self.map(rescale_pattern, signal_min=smin, signal_max=smax, *args,
-                     **kwargs)
-
-        if dynamic:
-            if sigma is None:
-                sigma = self.axes_manager.signal_axes[0].size/20
-
-            # Create signal with each pattern blurred by a Gaussian kernel
-            s_blur = self.map(gaussian_filter, inplace=False, ragged=False,
-                              sigma=sigma)
-            s_blur.change_dtype('int16')
-
-            if divide:
-                self.data = self.data / s_blur.data
-            else:
-                self.data = self.data - s_blur.data
-
-            # We don't care about relative intensities anymore since the
-            # subtracted pattern is different for all patterns. We therefore
-            # rescale intensities according to the original data type range
-            self.map(rescale_intensity, ragged=False,
-                     out_range=signal_dtype.dtype.name)
-
-        # Revert data type
-        self.data = self.data.astype(signal_dtype.dtype)
-
-    def find_deadpixels(self, pattern=(0, 0), threshold=10, to_plot=True):
+    def find_deadpixels(self, pattern=(0, 0), threshold=10, to_plot=False):
         """Find dead pixels in experimentally acquired diffraction patterns by
         comparing pixel values in a blurred version of a selected pattern to
         the original pattern. If the intensity difference is above a threshold
         the pixel is labeled as dead.
 
+        Assumes self has navigation axes, i.e. does not work on a single
+        pattern.
+
         Parameters
         ----------
-        pattern : tuple
+        pattern : tuple, optional
             Indices of pattern in which to search for dead pixels.
-        threshold : int
+        threshold : int, optional
             Threshold for difference in pixel intensities between blurred and
             original pattern.
-        to_plot : bool
-            If True (default), a pattern with the dead pixels highlighted is
-            plotted.
+        to_plot : bool, optional
+            If True (default is False), a pattern with the dead pixels
+            highlighted is plotted.
 
         Returns
         -------
         deadpixels : list of tuples
             List of tuples containing pattern indices for dead pixels.
-
         """
-
-        pat = self.inav[pattern].data.astype('int16')  # Avoid negative pixels
+        pat = self.inav[pattern].data.astype(np.int16)
+        if self._lazy:
+            pat = pat.compute(show_progressbar=False)
         blurred = median_filter(pat, size=2)
         difference = pat - blurred
         threshold = threshold * np.std(difference)
@@ -253,11 +242,13 @@ class ElectronBackscatterDiffraction(Signal2D):
 
         return deadpixels
 
-
     def remove_deadpixels(self, deadpixels, deadvalue='average', inplace=True,
                           *args, **kwargs):
         """Remove dead pixels from experimentally acquired diffraction
         patterns, either by averaging or setting to a certain value.
+
+        Assumes signal has navigation axes, i.e. does not work on a single
+        pattern.
 
         Uses pyXem's remove_deadpixels() function.
 
@@ -265,45 +256,40 @@ class ElectronBackscatterDiffraction(Signal2D):
         ----------
         deadpixels : list of tuples
             List of tuples of indices of dead pixels.
-        deadvalue : string
+        deadvalue : string, optional
             Specify how deadpixels should be treated. 'average' sets the dead
             pixel value to the average of adjacent pixels. 'nan' sets the dead
-            pixel to nan
-        inplace : bool
-            If True (default), this signal is overwritten. Otherwise, returns a
-            new signal.
+            pixel to nan.
+        inplace : bool, optional
+            If True (default), signal is overwritten. Otherwise, returns a new
+            signal.
         *args:
             Arguments to be passed to map().
         **kwargs:
             Keyword arguments to be passed to map().
-
         """
-
+        if self._lazy:
+            kwargs['ragged'] = False
         if inplace and deadpixels:
+            # TODO: make sure remove_dead() stop leaking memory
+            self.map(remove_dead, deadpixels=deadpixels, deadvalue=deadvalue,
+                     inplace=inplace, *args, **kwargs)
             self.set_experimental_parameters(deadpixels_corrected=True,
                                              deadpixels=deadpixels,
                                              deadvalue=deadvalue)
-            return ElectronDiffraction.remove_deadpixels(self,
-                                                         deadpixels=deadpixels,
-                                                         deadvalue=deadvalue,
-                                                         inplace=inplace, *args,
-                                                         **kwargs)
         elif not inplace and deadpixels:
-            s = ElectronDiffraction.remove_deadpixels(self,
-                                                      deadpixels=deadpixels,
-                                                      deadvalue=deadvalue,
-                                                      inplace=inplace, *args,
-                                                      **kwargs)
+            s = self.map(remove_dead, deadpixels=deadpixels,
+                         deadvalue=deadvalue, inplace=inplace, *args, **kwargs)
             s.set_experimental_parameters(deadpixels_corrected=True,
                                           deadpixels=deadpixels,
                                           deadvalue=deadvalue)
             return s
-        else:  # Inplace is passed, but there are no dead pixels detected
+        else:  # No dead pixels detected
             pass
 
     def get_virtual_image(self, roi):
-        """Method imported from 
-        pyXem.ElectronDiffraction.get_virtual_image(self, roi). Obtains a 
+        """Method imported from
+        pyXem.ElectronDiffraction.get_virtual_image(self, roi). Obtains a
         virtual image associated with a specified ROI.
 
         Parameters
@@ -323,12 +309,11 @@ class ElectronBackscatterDiffraction(Signal2D):
             import hyperspy.api as hs
             roi = hs.roi.RectangularROI(left=10, right=20, top=10, bottom=20)
             s.get_virtual_image(roi)
-
         """
         return ElectronDiffraction.get_virtual_image(self, roi)
-    
+
     def plot_interactive_virtual_image(self, roi, **kwargs):
-        """Method imported from 
+        """Method imported from
         pyXem.ElectronDiffraction.plot_interactive_virtual_image(self, roi).
         Plots an interactive virtual image formed with a specified and
         adjustable roi.
@@ -350,52 +335,60 @@ class ElectronBackscatterDiffraction(Signal2D):
         """
         return ElectronDiffraction.plot_interactive_virtual_image(self, roi,
                                                                   **kwargs)
-    
-    def get_radon_transform(self, theta=None, circle=True, 
+
+    def get_radon_transform(self, theta=None, circle=True,
                             show_progressbar=True, inplace=False):
-        '''Create a RadonTransform signal.
+        """Create a RadonTransform signal.
 
         Parameters
         ----------
-        theta : array
-            Projection angles in degrees. If None (defualt), the value is set 
+        theta : numpy array, optional
+            Projection angles in degrees. If None (default), the value is set
             to np.arange(180).
-        circle : bool
-            If True (default), assume that the image is zero outside the 
-            inscribed circle. The width of each projection then becomes equal 
+        circle : bool, optional
+            If True (default), assume that the image is zero outside the
+            inscribed circle. The width of each projection then becomes equal
             to the smallest signal shape.
-        show_progressbar : bool
-            If True (default), show progress bar during transformation.
-        inplace : bool
-            If True (default is False), the ElectronBackscatterDiffraction 
-            signal (self) is replaced by the RadonTransform signal (return). 
+        show_progressbar : bool, optional
+            If True (default), show progressbar during transformation.
+        inplace : bool, optional
+            If True (default is False), the ElectronBackscatterDiffraction
+            signal (self) is replaced by the RadonTransform signal (return).
 
         Returns
         -------
         sinograms: :obj:`ebsp-pro.signals.RadonTransform`
-            Corresponding RadonTransform signal (sinograms) computed from 
+            Corresponding RadonTransform signal (sinograms) computed from
             the ElectronBackscatterDiffraction signal. The rotation axis
             lie at index sinograms.data[0,0].shape[0]/2
 
-        References 
-        --------
+        References
+        ----------
         http://scikit-image.org/docs/dev/auto_examples/transform/
         plot_radon_transform.html
         http://scikit-image.org/docs/dev/api/skimage.transform.html
         #skimage.transform.radon
-        
-        '''
-        #TODO1: Remove diagonal articfact lines.
-        #TODO2: Can we get it to work faster?
-        
+        """
+        # TODO: Remove diagonal artifact lines.
+        # TODO: Can we get it to work faster?
+
         warnings.filterwarnings("ignore", message="The default of `circle` \
         in `skimage.transform.radon` will change to `True` in version 0.15.")
-        # Ignore this warning, since this function is mapped and would 
-        # otherwise slow down this function by prininting many warning 
+        # Ignore this warning, since this function is mapped and would
+        # otherwise slow down this function by printing many warning
         # messages.
 
         sinograms = self.map(radon, theta=theta, circle=circle,
-                             show_progressbar=show_progressbar, 
+                             show_progressbar=show_progressbar,
                              inplace=inplace)
-        
+
         return RadonTransform(sinograms)
+
+
+class LazyElectronBackscatterDiffraction(ElectronBackscatterDiffraction,
+                                         LazySignal2D):
+
+    _lazy = True
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
