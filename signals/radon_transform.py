@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Signal class for radon transform of Electron Backscatter Diffraction (EBSD) data."""
-from hyperspy.api import plot
+"""Signal class for radon transform of Electron Backscatter Diffraction (EBSD)
+data."""
 from hyperspy.signals import Signal2D
 from pyxem.signals.electron_diffraction import ElectronDiffraction
 
+
 class RadonTransform(Signal2D):
-    _signal_type = 'radon_transform_of_electron_backscatter_diffraction'
+    _signal_type = 'radon_transform'
 
     def __init__(self, *args, **kwargs):
         Signal2D.__init__(self, *args, **kwargs)
@@ -42,7 +43,6 @@ class RadonTransform(Signal2D):
             rt.get_virtual_image(roi)
 
         """
-
         return ElectronDiffraction.get_virtual_image(self, roi)
     
     def plot_interactive_virtual_image(self, roi, **kwargs):
@@ -66,7 +66,6 @@ class RadonTransform(Signal2D):
             roi = hs.roi.CircleROI(cx=10.,cy=10., r_inner=0., r=10.)
             rt.plot_interactive_virtual_image(roi)
         """
-
         return ElectronDiffraction.plot_interactive_virtual_image(self, roi,
-                                                                    **kwargs)
+                                                                  **kwargs)
 
