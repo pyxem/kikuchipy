@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from scipy.ndimage import gaussian_filter
+from copy import copy
+from scipy.ndimage import gaussian_filter, generic_filter
 
 
 def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
@@ -96,3 +97,44 @@ def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
         pattern = rescale_pattern_intensity(pattern)
 
     return pattern
+
+
+def remove_dead(pattern, deadpixels, deadvalue="average", d=1):
+    """Remove dead pixels from a pattern.
+
+    NB! This function is slow for lazy signals and leaks memory.
+
+    Parameters
+    ----------
+    pattern : numpy array or dask array
+        Two-dimensional data array containing signal.
+    deadpixels : numpy array
+        Array containing the array indices of dead pixels in the
+        pattern.
+    deadvalue : string
+        Specify how deadpixels should be treated, options are;
+            'average': takes the average of adjacent pixels
+            'nan':  sets the dead pixel to nan
+    d : int, optional
+        Number of adjacent pixels to average over.
+
+    Returns
+    -------
+    new_pattern : numpy array or dask array
+        Two-dimensional data array containing z with dead pixels
+        removed.
+    """
+    new_pattern = np.copy(pattern)
+    if deadvalue == 'average':
+        for (i, j) in deadpixels:
+            neighbours = pattern[i - d:i + d + 1, j - d:j + d + 1].flatten()
+            neighbours = np.delete(neighbours, 4)
+            new_pattern[i, j] = int(np.mean(neighbours))
+    elif deadvalue == 'nan':
+        for (i, j) in deadpixels:
+            new_pattern[i, j] = np.nan
+    else:
+        raise NotImplementedError("The method specified is not implemented. "
+                                  "See documentation for available "
+                                  "implementations.")
+    return new_pattern
