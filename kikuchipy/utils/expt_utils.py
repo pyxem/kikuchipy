@@ -8,9 +8,9 @@ def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
     """Rescale electron backscatter diffraction pattern intensities to
     specified range using contrast stretching.
 
-    If imin and scale is passed the pattern intensities are stretched to a
-    global min. and max. intensity. Otherwise they are stretched to between
-    zero and omax.
+    If imin and scale is passed the pattern intensities are stretched
+    to a global min. and max. intensity. Otherwise they are stretched
+    to between zero and omax.
 
     Parameters
     ----------
@@ -42,8 +42,8 @@ def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
 
 
 def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
-    """Perform background correction on an electron backscatter diffraction
-    patterns.
+    """Perform background correction on an electron backscatter
+    diffraction patterns.
 
     Parameters
     ----------
@@ -56,7 +56,8 @@ def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
     bg : numpy array
         Background image for static correction.
     sigma : int, float
-        Standard deviation for the gaussian kernel for dynamic correction.
+        Standard deviation for the gaussian kernel for dynamic
+        correction.
     imin : int
         Global min. intensity of patterns.
     scale : int, float
@@ -65,8 +66,8 @@ def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
     Returns
     -------
     pattern : numpy array
-        Output pattern with background corrected and intensities stretched to
-        a desired range.
+        Output pattern with background corrected and intensities
+        stretched to a desired range.
     """
     if static:
         # Change data types to avoid negative intensities in subtraction
@@ -96,3 +97,44 @@ def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
         pattern = rescale_pattern_intensity(pattern)
 
     return pattern
+
+
+def remove_dead(pattern, deadpixels, deadvalue="average", d=1):
+    """Remove dead pixels from a pattern.
+
+    NB! This function is slow for lazy signals and leaks memory.
+
+    Parameters
+    ----------
+    pattern : numpy array or dask array
+        Two-dimensional data array containing signal.
+    deadpixels : numpy array
+        Array containing the array indices of dead pixels in the
+        pattern.
+    deadvalue : string
+        Specify how deadpixels should be treated, options are;
+            'average': takes the average of adjacent pixels
+            'nan':  sets the dead pixel to nan
+    d : int, optional
+        Number of adjacent pixels to average over.
+
+    Returns
+    -------
+    new_pattern : numpy array or dask array
+        Two-dimensional data array containing z with dead pixels
+        removed.
+    """
+    new_pattern = np.copy(pattern)
+    if deadvalue == 'average':
+        for (i, j) in deadpixels:
+            neighbours = pattern[i - d:i + d + 1, j - d:j + d + 1].flatten()
+            neighbours = np.delete(neighbours, 4)  # Exclude dead pixel
+            new_pattern[i, j] = int(np.mean(neighbours))
+    elif deadvalue == 'nan':
+        for (i, j) in deadpixels:
+            new_pattern[i, j] = np.nan
+    else:
+        raise NotImplementedError("The method specified is not implemented. "
+                                  "See documentation for available "
+                                  "implementations.")
+    return new_pattern

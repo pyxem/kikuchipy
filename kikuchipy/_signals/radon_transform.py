@@ -31,7 +31,7 @@ class RadonTransform(Signal2D):
 
         Returns
         -------
-        dark_field_sum: :obj:`hyperspy.signals.BaseSignal`
+        dark_field_sum: :obj:`hyperspy._signals.BaseSignal`
             The virtual image signal associated with the specified roi.
 
         Examples
