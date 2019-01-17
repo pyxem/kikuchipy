@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from copy import copy
-from scipy.ndimage import gaussian_filter, generic_filter
+from scipy.ndimage import gaussian_filter
 
 
 def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
@@ -9,9 +8,9 @@ def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
     """Rescale electron backscatter diffraction pattern intensities to
     specified range using contrast stretching.
 
-    If imin and scale is passed the pattern intensities are stretched to a
-    global min. and max. intensity. Otherwise they are stretched to between
-    zero and omax.
+    If imin and scale is passed the pattern intensities are stretched
+    to a global min. and max. intensity. Otherwise they are stretched
+    to between zero and omax.
 
     Parameters
     ----------
@@ -43,8 +42,8 @@ def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
 
 
 def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
-    """Perform background correction on an electron backscatter diffraction
-    patterns.
+    """Perform background correction on an electron backscatter
+    diffraction patterns.
 
     Parameters
     ----------
@@ -57,7 +56,8 @@ def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
     bg : numpy array
         Background image for static correction.
     sigma : int, float
-        Standard deviation for the gaussian kernel for dynamic correction.
+        Standard deviation for the gaussian kernel for dynamic
+        correction.
     imin : int
         Global min. intensity of patterns.
     scale : int, float
@@ -66,8 +66,8 @@ def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
     Returns
     -------
     pattern : numpy array
-        Output pattern with background corrected and intensities stretched to
-        a desired range.
+        Output pattern with background corrected and intensities
+        stretched to a desired range.
     """
     if static:
         # Change data types to avoid negative intensities in subtraction
@@ -128,7 +128,7 @@ def remove_dead(pattern, deadpixels, deadvalue="average", d=1):
     if deadvalue == 'average':
         for (i, j) in deadpixels:
             neighbours = pattern[i - d:i + d + 1, j - d:j + d + 1].flatten()
-            neighbours = np.delete(neighbours, 4)
+            neighbours = np.delete(neighbours, 4)  # Exclude dead pixel
             new_pattern[i, j] = int(np.mean(neighbours))
     elif deadvalue == 'nan':
         for (i, j) in deadpixels:

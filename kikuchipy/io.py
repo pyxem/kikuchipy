@@ -70,7 +70,7 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
         Open the data lazily - i.e. without actually reading the data
         from the disk until required. Allows opening arbitrary-sized
         datasets. The default is `False`.
-    convert_units : {bool}
+    convert_units : bool, optional
         If True, convert the units using the `convert_to_units` method
         of the `axes_manager`. If False (default), nothing is done.
 
@@ -197,8 +197,29 @@ def load_single_file(filename, **kwargs):
 
 def load_with_reader(filename, reader, signal_type=None, convert_units=False,
                      **kwargs):
+    """Read data, axes, metadata and original metadata from specified reader.
+
+    Parameters
+    ----------
+    filename : str
+    reader : io_plugin
+    signal_type : {None, 'ElectronBackscatterDiffraction',
+    'RadonTransform', '', str}, optional
+    convert_units : bool, optional
+
+    Returns
+    -------
+    objects : signal instance or list of signal instances
+    """
     lazy = kwargs.get('lazy', False)
     file_data_list = reader.file_reader(filename, **kwargs)
+
+    # Pass axes to not slice when chunking in dict2signal called below, if lazy
+    axis = None
+    if lazy:
+        for signal_dict in file_data_list:
+            if 'axis' in signal_dict:
+                axis = signal_dict['axis']
 
     objects = []
 
@@ -208,7 +229,7 @@ def load_with_reader(filename, reader, signal_type=None, convert_units=False,
                 signal_dict['metadata']['Signal'] = {}
             if signal_type is not None:
                 signal_dict['metadata']['Signal']['signal_type'] = signal_type
-            objects.append(dict2signal(signal_dict, lazy=lazy))
+            objects.append(dict2signal(signal_dict, lazy=lazy, axis=axis))
             folder, filename = os.path.split(os.path.abspath(filename))
             filename, extension = os.path.splitext(filename)
             objects[-1].tmp_parameters.folder = folder
@@ -225,12 +246,19 @@ def load_with_reader(filename, reader, signal_type=None, convert_units=False,
     return objects
 
 
-def dict2signal(signal_dict, lazy=False):
+def dict2signal(signal_dict, axis=None, lazy=False):
     """Create a signal (or subclass) instance defined by a dictionary.
 
     Parameters
     ----------
     signal_dict : dictionary
+    axis : {int, string, None, axis, tuple}
+        If signal is lazy, axis dictates what axes should not be sliced
+        when chunking. If axis is None (default), chunks are returned
+        for current data shape so that at least one signal is in the
+        chunk. If an axis is specified, only that particular axis is
+        guaranteed to be "not sliced".
+    lazy : bool, optional
 
     Returns
     -------
@@ -242,9 +270,8 @@ def dict2signal(signal_dict, lazy=False):
         md = signal_dict['metadata']
         if 'Signal' in md and 'record_by' in md['Signal']:
             record_by = md['Signal']['record_by']
-            if record_by == 'spectrum':
-                signal_dimension = 1  # Throw ValueError here since KikuchiPy
-                                      # does not do spectra?
+            if record_by == 'spectrum':  # Throw ValueError here since KikuchiPy
+                signal_dimension = 1     # does not support spectra?
             elif record_by == 'image':
                 signal_dimension = 2
             del md['Signal']['record_by']
@@ -267,7 +294,7 @@ def dict2signal(signal_dict, lazy=False):
                                     dtype=signal_dict['data'].dtype,
                                     lazy=lazy)(**signal_dict)
     if signal._lazy:
-        signal._make_lazy()
+        signal._make_lazy(axis=axis)
     if signal.axes_manager.signal_dimension != signal_dimension:
         # This may happen when the signal dimension couldn't be matched with
         # any specialised subclass.
@@ -295,7 +322,8 @@ def dict2signal(signal_dict, lazy=False):
 
 def assign_signal_subclass(dtype, signal_dimension, signal_type='',
                            lazy=False):
-    """Given record_by and signal_type return the matching Signal subclass.
+    """Given record_by and signal_type return the matching Signal
+    subclass.
 
     Parameters
     ----------
@@ -356,6 +384,8 @@ def assign_signal_subclass(dtype, signal_dimension, signal_type='',
 
 
 def save(filename, signal, overwrite=None, **kwargs):
+    """Save EBSD or Radon Transform data.
+    """
     extension = os.path.splitext(filename)[1][1:]
     if extension == '':
         extension = 'hspy'

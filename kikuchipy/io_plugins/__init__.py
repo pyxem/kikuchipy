@@ -12,7 +12,7 @@ try:
     io_plugins.append(hspy)
 except ImportError:
     _logger.warning("The HDF5 IO features are not available. "
-                     "It is highly recommended to install h5py")
+                    "It is highly recommended to install h5py")
 
 try:
     from hyperspy.io_plugins import image

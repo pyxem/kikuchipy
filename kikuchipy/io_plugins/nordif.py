@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import os
 import re
 import warnings
@@ -21,6 +20,10 @@ default_extension = 0
 writes = [(2, 2), (2, 1), (2, 0)]
 magics = []
 
+# Set common strings
+SEM_str = 'Acquisition_instrument.SEM'
+EBSD_str = SEM_str + '.Detector.EBSD'
+
 
 def get_string(content, expression, lineno, file):
     """Get relevant part of binary string using regular expressions.
@@ -33,8 +36,7 @@ def get_string(content, expression, lineno, file):
         Binary string with regular expression.
     lineno : int
         Line number in content to search.
-    file :
-        File handle.
+    file : file handle
 
     Returns
     -------
@@ -79,57 +81,55 @@ def get_settings_from_file(filename):
     # Set up metadata and original_metadata structure
     md = DictionaryTreeBrowser()
     omd = DictionaryTreeBrowser()
-    sem = 'Acquisition_instrument.SEM'
-    ebsd = sem + '.Detector.EBSD'
 
     # Microscope
     manufacturer = get_string(content, 'Manufacturer\t(.*)\t', 4, f)
     model = get_string(content, 'Model\t(.*)\t', 5, f)
-    md.set_item(sem + '.microscope', manufacturer + ' ' + model)
+    md.set_item(SEM_str + '.microscope', manufacturer + ' ' + model)
 
     # Magnification
     magnification = get_string(content, 'Magnification\t(.*)\t#', 6, f)
-    md.set_item(sem + '.magnification', int(magnification))
+    md.set_item(SEM_str + '.magnification', int(magnification))
 
     # Beam energy
     beam_energy = get_string(content, 'Accelerating voltage\t(.*)\tkV', 8, f)
-    md.set_item(sem + '.beam_energy', float(beam_energy))
+    md.set_item(SEM_str + '.beam_energy', float(beam_energy))
 
     # Working distance
     working_distance = get_string(content, 'Working distance\t(.*)\tmm', 9, f)
-    md.set_item(sem + '.working_distance', float(working_distance))
+    md.set_item(SEM_str + '.working_distance', float(working_distance))
 
     # Tilt angle
     tilt_angle = get_string(content, 'Tilt angle\t(.*)\t', 10, f)
-    omd.set_item(ebsd + '.tilt_angle', float(tilt_angle))
+    omd.set_item(EBSD_str + '.tilt_angle', float(tilt_angle))
 
     # Acquisition frame rate
     frame_rate = get_string(content, 'Frame rate\t(.*)\tfps', 46, f)
-    omd.set_item(ebsd + '.frame_rate', int(frame_rate))
+    omd.set_item(EBSD_str + '.frame_rate', int(frame_rate))
 
     # Acquisition resolution (pattern size)
     pattern_size = get_string(content, 'Resolution\t(.*)\tpx', 47, f)
     SX, SY = [int(i) for i in pattern_size.split('x')]
-    omd.set_item(ebsd + '.SX', SX)
-    omd.set_item(ebsd + '.SY', SY)
+    omd.set_item(EBSD_str + '.SX', SX)
+    omd.set_item(EBSD_str + '.SY', SY)
 
     # Acquisition exposure time
     exposure_time = get_string(content, 'Exposure time\t(.*)\t', 48, f)
-    omd.set_item(ebsd + '.exposure_time', float(exposure_time) / 1e6)
+    omd.set_item(EBSD_str + '.exposure_time', float(exposure_time) / 1e6)
 
     # Acquisition gain
     gain = get_string(content, 'Gain\t(.*)\t', 49, f)
-    omd.set_item(ebsd + '.gain', int(gain))
+    omd.set_item(EBSD_str + '.gain', int(gain))
 
     # Scan size
     scan_size = get_string(content, 'Number of samples\t(.*)\t#', 79, f)
     NY, NX = [int(i) for i in scan_size.split('x')]
-    omd.set_item(ebsd + '.NX', NX)
-    omd.set_item(ebsd + '.NY', NY)
+    omd.set_item(EBSD_str + '.NX', NX)
+    omd.set_item(EBSD_str + '.NY', NY)
 
     # Step size
     step_size = get_string(content, 'Step size\t(.*)\t', 78, f)
-    omd.set_item(ebsd + '.step_size', float(step_size))
+    omd.set_item(EBSD_str + '.step_size', float(step_size))
 
     # Scan time
     scan_time = get_string(content, 'Scan time\t(.*)\t', 80, f)
@@ -137,13 +137,13 @@ def get_settings_from_file(filename):
     scan_time = datetime.timedelta(hours=scan_time.tm_hour,
                                    minutes=scan_time.tm_min,
                                    seconds=scan_time.tm_sec).total_seconds()
-    omd.set_item(ebsd + '.scan_time', int(scan_time))
+    omd.set_item(EBSD_str + '.scan_time', int(scan_time))
 
     return md, omd
 
 
 def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
-                pattern_size=None, settings_file='Setting.txt', **kwargs):
+                pattern_size=None, settings_file='Setting.txt'):
     """Read electron backscatter diffraction patterns from a NORDIF
     data file.
 
@@ -182,9 +182,10 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
     folder, filename = os.path.split(filename)
     try:
         md, omd = get_settings_from_file(os.path.join(folder, settings_file))
-        ebsd = 'Acquisition_instrument.SEM.Detector.EBSD'
-        scan_size = (omd.get_item(ebsd + '.NX'), omd.get_item(ebsd + '.NY'))
-        pattern_size = (omd.get_item(ebsd + '.SX'), omd.get_item(ebsd + '.SY'))
+        scan_size = (omd.get_item(EBSD_str + '.NX'),
+                     omd.get_item(EBSD_str + '.NY'))
+        pattern_size = (omd.get_item(EBSD_str + '.SX'),
+                        omd.get_item(EBSD_str + '.SY'))
     except BaseException:
         warnings.warn("Reading the NORDIF settings file failed")
 
@@ -236,7 +237,8 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
             'units': units[i], }
         for i in range(dim)]
 
-    dictionary = {'data': data,
+    dictionary = {'axis': ('x', 'dx', 'dy'),  # Only slice y axis if lazy
+                  'data': data,
                   'axes': axes,
                   'metadata': md.as_dictionary(),
                   'original_metadata': omd.as_dictionary()}
@@ -245,8 +247,23 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
     return [dictionary, ]
 
 
-def file_writer(filename, signal, **kwargs):
-    """Write electron backscatter diffraction patterns to a NORDIF data file.
+def file_writer(filename, signal):
+    """Write electron backscatter diffraction patterns to a NORDIF data
+    binary .dat file.
+
+    Writing dask arrays to a binary file is not yet supported.
+
+    Parameters
+    ----------
+    filename : str
+        Full file path of NORDIF data file.
+    signal : :obj:`kikuchipy.signals.EBSD` or
+             :obj:`kikuchipy.signals.LazyEBSD`
     """
     with open(filename, 'wb') as f:
-        pass
+        if signal._lazy:
+            raise ValueError("Writing to NORDIF .dat file is not yet "
+                             "supported")
+        else:
+            for pattern in signal._iterate_signal():
+                pattern.flatten().tofile(f)

@@ -2,7 +2,6 @@
 """Signal class for Electron Backscatter Diffraction (EBSD) data."""
 import warnings
 import numpy as np
-import gc
 import os
 
 from hyperspy.api import plot
@@ -18,6 +17,7 @@ from hyperspy.misc.utils import dummy_context_manager
 
 from kikuchipy._signals.radon_transform import RadonTransform
 from kikuchipy.utils.expt_utils import correct_background, remove_dead
+from kikuchipy import io
 
 
 class EBSD(Signal2D):
@@ -113,7 +113,7 @@ class EBSD(Signal2D):
         self.axes_manager.signal_axes[1].offset = 0
 
     def remove_background(self, static=True, dynamic=True, bg=None,
-                          relative=False, sigma=None, *args, **kwargs):
+                          relative=False, sigma=None, **kwargs):
         """Perform background correction, either static, dynamic or
         both, on a stack of electron backscatter diffraction patterns.
 
@@ -147,13 +147,11 @@ class EBSD(Signal2D):
             Standard deviation for the gaussian kernel for dynamic
             correction. If None (default), a deviation of pattern
             width/30 is chosen.
-        *args
-            Arguments to be passed to map().
         **kwargs:
             Arguments to be passed to map().
         """
         if not static and not dynamic:
-            raise ValueError("No correction done, quitting.")
+            raise ValueError("No correction done, quitting")
 
         lazy = self._lazy
         if lazy:
@@ -205,9 +203,7 @@ class EBSD(Signal2D):
             sigma = int(self.axes_manager.signal_axes[0].size/30)
 
         self.map(correct_background, static=static, dynamic=dynamic, bg=bg,
-                 sigma=sigma, imin=imin, scale=scale, *args, **kwargs)
-
-        gc.collect()
+                 sigma=sigma, imin=imin, scale=scale, **kwargs)
 
     def find_deadpixels(self, pattern=(0, 0), threshold=10, to_plot=False):
         """Find dead pixels in experimentally acquired diffraction
@@ -255,8 +251,6 @@ class EBSD(Signal2D):
                 m = plot.markers.point(x, y, color='red')
                 pat.add_marker(m)
             self.inav[pattern].plot()
-
-        gc.collect()
 
         return deadpixels
 
@@ -313,8 +307,6 @@ class EBSD(Signal2D):
             return s
         else:  # No dead pixels detected
             pass
-
-        gc.collect()
 
     def get_virtual_image(self, roi):
         """Method imported from
@@ -415,6 +407,56 @@ class EBSD(Signal2D):
 
         return RadonTransform(sinograms)
 
+    def save(self, filename=None, overwrite=None, extension=None, **kwargs):
+        """Saves the signal in the specified format.
+        The function gets the format from the extension:
+            - hspy for HyperSpy's HDF5 specification
+            - dat for NORDIF binary format
+        If no extension is provided the default file format as defined
+        in the `preferences` is used. Please note that not all the
+        formats supports saving datasets of arbitrary dimensions. Each
+        format accepts a different set of parameters. For details see
+        the specific format documentation.
+
+        Parameters
+        ----------
+        filename : str or None
+            If None (default) and `tmp_parameters.filename` and
+            `tmp_parameters.folder` are defined, the filename and path
+            will be taken from there. A valid extension can be provided
+            e.g. "Pattern.dat", see `extension`.
+        overwrite : None, bool
+            If None and the file exists, it will query the user. If
+            True (False) it (does not) overwrite the file if it exists.
+        extension : {None, 'hspy', 'hdf5', 'dat', common image
+                     extensions e.g. 'tiff', 'png'}
+            The extension of the file that defines the file format.
+            'hspy' and 'hdf5' are equivalent. Use 'hdf5' if
+            compatibility with HyperSpy versions older than 1.2 is
+            required. If None, the extension is determined from the
+            following list in this order:
+            i) the filename
+            ii)  `Signal.tmp_parameters.extension`
+            iii) `hspy` (the default extension)
+        """
+        if filename is None:
+            if (self.tmp_parameters.has_item('filename') and
+                    self.tmp_parameters.has_item('folder')):
+                filename = os.path.join(
+                    self.tmp_parameters.folder,
+                    self.tmp_parameters.filename)
+                extension = (self.tmp_parameters.extension
+                             if not extension
+                             else extension)
+            elif self.metadata.has_item('General.original_filename'):
+                filename = self.metadata.General.original_filename
+            else:
+                raise ValueError("File name not defined")
+        if extension is not None:
+            basename, ext = os.path.splitext(filename)
+            filename = basename + '.' + extension
+        io.save(filename, self, overwrite=overwrite, **kwargs)
+
 
 class LazyEBSD(EBSD, LazySignal2D):
 
@@ -443,5 +485,6 @@ class LazyEBSD(EBSD, LazySignal2D):
             data = data.compute()
             if close_file:
                 self.close_file()
+            self.data = data
         self._lazy = False
         self.__class__ = EBSD
