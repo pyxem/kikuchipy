@@ -217,7 +217,13 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
 
     units = [u'\u03BC'+'m', u'\u03BC'+'m', 'A^{-1}', 'A^{-1}']
     names = ['y', 'x', 'dx', 'dy']
-    scales = [1, 1, 1, 1]
+    scales = np.ones(4)
+
+    try:  # Calibrate scan dimension
+        scales[:2] = scales[:2]*omd.get_item(EBSD_str + '.step_size')
+    except BaseException:
+        warnings.warn("Could not calibrate scan dimension, this can be done "
+                      "using set_scan_calibration()")
 
     # Set relevant values in metadata and original_metadata
     md.set_item('General.original_filename', os.path.split(filename)[1])
@@ -237,8 +243,7 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
             'units': units[i], }
         for i in range(dim)]
 
-    dictionary = {'axis': ('x', 'dx', 'dy'),  # Only slice y axis if lazy
-                  'data': data,
+    dictionary = {'data': data,
                   'axes': axes,
                   'metadata': md.as_dictionary(),
                   'original_metadata': omd.as_dictionary()}
@@ -262,7 +267,7 @@ def file_writer(filename, signal):
     """
     with open(filename, 'wb') as f:
         if signal._lazy:
-            raise ValueError("Writing to NORDIF .dat file is not yet "
+            raise ValueError("Writing lazily to NORDIF .dat file is not yet "
                              "supported")
         else:
             for pattern in signal._iterate_signal():

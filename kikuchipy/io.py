@@ -214,13 +214,6 @@ def load_with_reader(filename, reader, signal_type=None, convert_units=False,
     lazy = kwargs.get('lazy', False)
     file_data_list = reader.file_reader(filename, **kwargs)
 
-    # Pass axes to not slice when chunking in dict2signal called below, if lazy
-    axis = None
-    if lazy:
-        for signal_dict in file_data_list:
-            if 'axis' in signal_dict:
-                axis = signal_dict['axis']
-
     objects = []
 
     for signal_dict in file_data_list:
@@ -229,7 +222,7 @@ def load_with_reader(filename, reader, signal_type=None, convert_units=False,
                 signal_dict['metadata']['Signal'] = {}
             if signal_type is not None:
                 signal_dict['metadata']['Signal']['signal_type'] = signal_type
-            objects.append(dict2signal(signal_dict, lazy=lazy, axis=axis))
+            objects.append(dict2signal(signal_dict, lazy=lazy))
             folder, filename = os.path.split(os.path.abspath(filename))
             filename, extension = os.path.splitext(filename)
             objects[-1].tmp_parameters.folder = folder
@@ -246,18 +239,12 @@ def load_with_reader(filename, reader, signal_type=None, convert_units=False,
     return objects
 
 
-def dict2signal(signal_dict, axis=None, lazy=False):
+def dict2signal(signal_dict, lazy=False):
     """Create a signal (or subclass) instance defined by a dictionary.
 
     Parameters
     ----------
     signal_dict : dictionary
-    axis : {int, string, None, axis, tuple}
-        If signal is lazy, axis dictates what axes should not be sliced
-        when chunking. If axis is None (default), chunks are returned
-        for current data shape so that at least one signal is in the
-        chunk. If an axis is specified, only that particular axis is
-        guaranteed to be "not sliced".
     lazy : bool, optional
 
     Returns
@@ -294,7 +281,7 @@ def dict2signal(signal_dict, axis=None, lazy=False):
                                     dtype=signal_dict['data'].dtype,
                                     lazy=lazy)(**signal_dict)
     if signal._lazy:
-        signal._make_lazy(axis=axis)
+        signal._make_lazy()
     if signal.axes_manager.signal_dimension != signal_dimension:
         # This may happen when the signal dimension couldn't be matched with
         # any specialised subclass.

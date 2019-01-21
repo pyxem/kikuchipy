@@ -32,10 +32,10 @@ def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
     """
     if imin is None and scale is None:  # Local contrast stretching
         imin = pattern.min()
-        scale = float(omax / (pattern.max() + abs(imin)))
+        scale = float(omax / (pattern.max() - imin))
 
     # Set lowest intensity to zero
-    pattern = pattern + abs(imin)
+    pattern = pattern - imin
 
     # Scale intensities
     return np.array(pattern * scale, dtype=dtype_out)
