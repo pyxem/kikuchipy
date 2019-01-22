@@ -2,8 +2,11 @@
 """Signal class for Electron Backscatter Diffraction (EBSD) data."""
 import warnings
 import numpy as np
+import dask.array as da
 import os
+import datetime
 
+from h5py import File
 from hyperspy.api import plot
 from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
@@ -15,9 +18,10 @@ from pyxem.signals.electron_diffraction import ElectronDiffraction
 from dask.diagnostics import ProgressBar
 from hyperspy.misc.utils import dummy_context_manager
 
-from kikuchipy._signals.radon_transform import RadonTransform
-from kikuchipy.utils.expt_utils import correct_background, remove_dead
 from kikuchipy import io
+from kikuchipy._signals.radon_transform import RadonTransform
+from kikuchipy.utils.expt_utils import (correct_background, remove_dead,
+                                        rescale_pattern_intensity)
 
 
 class EBSD(Signal2D):
@@ -456,6 +460,88 @@ class EBSD(Signal2D):
             basename, ext = os.path.splitext(filename)
             filename = basename + '.' + extension
         io.save(filename, self, overwrite=overwrite, **kwargs)
+
+    def decomposition_model_to_file(self, components=None):
+        """Get the signal generated from the principal components and
+        write to a .hspy file.
+
+        The function creates an HDF5 file to store data during
+        execution, and deletes it at the end.
+
+        Parameters
+        ----------
+        components : {None, int or list of ints}
+            If None (default), rebuilds the signal from all components.
+            If int, rebuilds signal from components in range 0-given
+            int. If list of ints, rebuilds signal from only components
+            in given list.
+        """
+        # Get learning results from signal and write to memory
+        target = self.learning_results
+        factors = np.array(target.factors)
+        loadings = np.array(target.loadings.T)
+
+        # Extract relevant components
+        if hasattr(components, '__iter__'):  # components is a list of ints
+            tfactors = np.zeros((factors.shape[0], len(components)))
+            tloadings = np.zeros((len(components), loadings.shape[1]))
+            for i in range(len(components)):
+                tfactors[:, i] = factors[:, components[i]]
+                tloadings[i, :] = loadings[components[i], :]
+            factors = tfactors
+            loadings = tloadings
+        else:  # components is an int
+            factors = factors[:, :components]
+            loadings = loadings[:components, :]
+
+        # Rescale factors and loadings to int16, keeping relative values
+        # within factors and loadings, and between factors and loadings.
+        # We assume that factors have higher values than loadings, and scale
+        # factors to fill the whole of int16 range. Rescale to int32 the
+        # following matrix multiplication (@) most likely gives values
+        # higher than the int16 range.
+        dtype_out = np.int32
+        scale = float(np.iinfo(np.int16).max / factors.max())
+        factors = np.array(factors * scale, dtype=dtype_out)
+        loadings = np.array(loadings * scale, dtype=dtype_out)
+
+        # Write learning results to HDF5 file
+        datadir = self.original_metadata.General.original_filepath
+        t_str = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
+        file = os.path.join(datadir, 'learn_' + t_str + '.h5')
+        with File(file, 'w') as f:
+            f.create_dataset(name='factors', data=factors)
+            f.create_dataset(name='loadings', data=loadings)
+
+        # Matrix multiplication
+        with File(file, 'r+') as d:
+            # Read learning results from HDF5 file
+            # TODO: Fix automatic chunking suited to file and available memory
+            factors = da.from_array(d['factors'], chunks=(-1, 'auto'))
+            loadings = da.from_array(d['loadings'], chunks=('auto', 500))
+
+            # Perform the matrix multiplication
+            res = factors @ loadings
+            res = res.T  # Transpose
+            res = res.reshape(self.data.shape)  # Reshape
+
+            # Write rebuilt signal to HDF5 file
+            da.to_hdf5(file, '/result', res)
+
+        # Create signal from multiplication results and rescale intensities,
+        # and write signal to file
+        with File(file, 'r') as d:
+            res = self.deepcopy()
+            res.data = da.from_array(d['result'], chunks=(1, 1, -1, -1))
+
+            # Rescale intensities
+            res.map(rescale_pattern_intensity, ragged=False)
+
+            # Write signal to .hspy file
+            res.save(os.path.join(datadir, 'model_' + t_str))
+
+        # Delete HDF5 file with learning results
+        os.remove(file)
 
 
 class LazyEBSD(EBSD, LazySignal2D):
