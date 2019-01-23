@@ -461,30 +461,44 @@ class EBSD(Signal2D):
             filename = basename + '.' + extension
         io.save(filename, self, overwrite=overwrite, **kwargs)
 
-    def decomposition_model_to_file(self, components=None):
-        """Get the signal generated from the principal components and
-        write to a .hspy file.
+    def get_decomposition_model(self, components=None, rescale=True,
+                                dtype=np.float16):
+        """Return the model signal generated with the selected number of
+        principal components.
 
-        The function creates an HDF5 file to store data during
-        execution, and deletes it at the end.
+        This function calls HyperSpy's ``get_decomposition_model``. If
+        the signal's learning results are lazy, the learning results are
+        preconditioned before this call, doing the following: (1) remove
+        unwanted components, (2) set data type to float16 and (3)
+        rechunk dask arrays to suitable chunksizes.
 
         Parameters
         ----------
-        components : {None, int or list of ints}
+        components : {None, int or list of ints}, optional
             If None (default), rebuilds the signal from all components.
             If int, rebuilds signal from components in range 0-given
             int. If list of ints, rebuilds signal from only components
             in given list.
+        rescale : bool, optional
+        dtype : numpy dtype, optional
+
+
+        Returns
+        -------
+        Signal instance
         """
-        # Get learning results from signal and write to memory
+        # Get learning results from signal
         target = self.learning_results
-        factors = np.array(target.factors)
-        loadings = np.array(target.loadings.T)
+        dtype_out = np.float16
+        factors = np.array(target.factors, dtype=dtype_out)
+        loadings = np.array(target.loadings.T, dtype=dtype_out)
 
         # Extract relevant components
         if hasattr(components, '__iter__'):  # components is a list of ints
-            tfactors = np.zeros((factors.shape[0], len(components)))
-            tloadings = np.zeros((len(components), loadings.shape[1]))
+            tfactors = np.zeros((factors.shape[0], len(components)),
+                                dtype=dtype_out)
+            tloadings = np.zeros((len(components), loadings.shape[1]),
+                                 dtype=dtype_out)
             for i in range(len(components)):
                 tfactors[:, i] = factors[:, components[i]]
                 tloadings[i, :] = loadings[components[i], :]
@@ -493,17 +507,6 @@ class EBSD(Signal2D):
         else:  # components is an int
             factors = factors[:, :components]
             loadings = loadings[:components, :]
-
-        # Rescale factors and loadings to int16, keeping relative values
-        # within factors and loadings, and between factors and loadings.
-        # We assume that factors have higher values than loadings, and scale
-        # factors to fill the whole of int16 range. Rescale to int32 the
-        # following matrix multiplication (@) most likely gives values
-        # higher than the int16 range.
-        dtype_out = np.int32
-        scale = float(np.iinfo(np.int16).max / factors.max())
-        factors = np.array(factors * scale, dtype=dtype_out)
-        loadings = np.array(loadings * scale, dtype=dtype_out)
 
         # Write learning results to HDF5 file
         datadir = self.original_metadata.General.original_filepath
@@ -514,11 +517,11 @@ class EBSD(Signal2D):
             f.create_dataset(name='loadings', data=loadings)
 
         # Matrix multiplication
-        with File(file, 'r+') as d:
+        with File(file, 'r+') as f:
             # Read learning results from HDF5 file
             # TODO: Fix automatic chunking suited to file and available memory
-            factors = da.from_array(d['factors'], chunks=(-1, 'auto'))
-            loadings = da.from_array(d['loadings'], chunks=('auto', 500))
+            factors = da.from_array(f['factors'], chunks=(-1, 'auto'))
+            loadings = da.from_array(f['loadings'], chunks=('auto', 'auto'))
 
             # Perform the matrix multiplication
             res = factors @ loadings
@@ -526,16 +529,20 @@ class EBSD(Signal2D):
             res = res.reshape(self.data.shape)  # Reshape
 
             # Write rebuilt signal to HDF5 file
-            da.to_hdf5(file, '/result', res)
+            res.to_hdf5(file, '/result')
 
         # Create signal from multiplication results and rescale intensities,
         # and write signal to file
-        with File(file, 'r') as d:
+        with File(file, 'r') as f:
             res = self.deepcopy()
-            res.data = da.from_array(d['result'], chunks=(1, 1, -1, -1))
+            res.data = da.from_array(f['result'], chunks=(1, 1, -1, -1))
 
             # Rescale intensities
             res.map(rescale_pattern_intensity, ragged=False)
+
+            # Remove learning results from model signal
+            a = EBSD(np.zeros((1, 1)))
+            res.learning_results = a.learning_results
 
             # Write signal to .hspy file
             res.save(os.path.join(datadir, 'model_' + t_str))
