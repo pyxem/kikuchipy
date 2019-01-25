@@ -4,12 +4,14 @@ import warnings
 import numpy as np
 import dask.array as da
 import os
+import gc
 import datetime
 
 from h5py import File
 from hyperspy.api import plot
 from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
+from hyperspy.learn.mva import LearningResults
 from skimage.transform import radon
 from scipy.ndimage import median_filter
 from matplotlib.pyplot import imread
@@ -298,7 +300,6 @@ class EBSD(Signal2D):
                 warnings.warn("No dead pixels provided.")
 
         if inplace:
-            # TODO: make sure remove_dead() stop leaking memory
             self.map(remove_dead, deadpixels=deadpixels, deadvalue=deadvalue,
                      inplace=inplace, *args, **kwargs)
             self.set_experimental_parameters(deadpixels_corrected=True,
@@ -461,16 +462,16 @@ class EBSD(Signal2D):
             filename = basename + '.' + extension
         io.save(filename, self, overwrite=overwrite, **kwargs)
 
-    def get_decomposition_model(self, components=None, rescale=True,
-                                dtype=np.float16):
+    def get_decomposition_model(self, components=None, dtype_out=np.float16,
+                                *args, **kwargs):
         """Return the model signal generated with the selected number of
         principal components.
 
-        This function calls HyperSpy's ``get_decomposition_model``. If
-        the signal's learning results are lazy, the learning results are
-        preconditioned before this call, doing the following: (1) remove
-        unwanted components, (2) set data type to float16 and (3)
-        rechunk dask arrays to suitable chunksizes.
+        This function calls HyperSpy's ``get_decomposition_model``. The
+        learning results are preconditioned before this call, doing the
+        following: (1) set data type to desired dtype, (2) remove
+        unwanted components, (3) rechunk, if dask arrays, to suitable
+        chunk.
 
         Parameters
         ----------
@@ -479,76 +480,231 @@ class EBSD(Signal2D):
             If int, rebuilds signal from components in range 0-given
             int. If list of ints, rebuilds signal from only components
             in given list.
-        rescale : bool, optional
-        dtype : numpy dtype, optional
-
+        dtype_out : numpy dtype, optional
+            Data type of learning results. Default is float16.
+            HyperSpy's ``decomposition`` returns them in float64, which
+            here is assumed to be overkill.
+        *args
+            Passed to Hyperspy's ``get_decomposition_model``.
+        **kwargs
+            Passed to Hyperspy's ``get_decomposition_model``.
 
         Returns
         -------
-        Signal instance
+        Signal instance from components
         """
-        # Get learning results from signal
+        # Change dtype
         target = self.learning_results
-        dtype_out = np.float16
-        factors = np.array(target.factors, dtype=dtype_out)
-        loadings = np.array(target.loadings.T, dtype=dtype_out)
+        factors_orig = target.factors.copy()  # Keep to revert target in the end
+        loadings_orig = target.loadings.copy()
+        factors = target.factors.astype(dtype_out)
+        loadings = target.loadings.astype(dtype_out)
 
         # Extract relevant components
         if hasattr(components, '__iter__'):  # components is a list of ints
-            tfactors = np.zeros((factors.shape[0], len(components)),
-                                dtype=dtype_out)
-            tloadings = np.zeros((len(components), loadings.shape[1]),
-                                 dtype=dtype_out)
-            for i in range(len(components)):
-                tfactors[:, i] = factors[:, components[i]]
-                tloadings[i, :] = loadings[components[i], :]
-            factors = tfactors
-            loadings = tloadings
+            # TODO: This should be implemented in HyperSpy
+            factors = factors[:, components]
+            loadings = loadings[:, components]
         else:  # components is an int
             factors = factors[:, :components]
-            loadings = loadings[:components, :]
+            loadings = loadings[:, :components]
+
+        # Update learning results
+        self.learning_results.factors = factors
+        self.learning_results.loadings = loadings
+
+        # Rechunk
+        if isinstance(factors, da.Array):
+            chunks = self._rechunk_learning_results()
+            self.learning_results.factors = factors.rechunk(chunks=chunks[0])
+            self.learning_results.loadings = loadings.rechunk(chunks=chunks[1])
+
+        # Call HyperSpy's function
+        s_model = super(Signal2D, self).get_decomposition_model(*args, **kwargs)
+
+        # Revert learning results to original results
+        self.learning_results.factors = factors_orig
+        self.learning_results.loadings = loadings_orig
+
+        # Revert class
+        if self._lazy:
+            assign_class = LazyEBSD
+        else:
+            assign_class = EBSD
+        self.__class__ = assign_class
+        s_model.__class__ = assign_class
+
+        # Remove learning results from model signal
+        s_model.learning_results = LearningResults()
+
+        return s_model
+
+    def get_decomposition_model_write(self, components=None,
+                                      dtype_learn=np.float16):
+        """Write the model signal generated from the selected number of
+        principal components directly to a .hspy file. The model signal
+        intensities are rescaled to the original signals' data type
+        range.
+
+        Notes
+        -----
+        Multiplying the learning results' factors and loadings in memory
+        to create the model signal can sometimes not be done due to too
+        large matrices. Here, instead, learning results are written to
+        file, read into dask arrays and multiplied using dask's
+        ``matmul``, out of core.
+
+        Due to memory leakage (please help) when calling the function
+        ``rescale_pattern_intensity`` in ``map`` the model signal is
+        written to a temporary file before rescaling and written to a
+        .hspy file. Be aware that this temporary file is typically twice
+        the size of the original data set file.
+
+        Parameters
+        ----------
+        components : {None, int or list of ints}, optional
+            If None (default), rebuilds the signal from all components.
+            If int, rebuilds signal from components in range 0-given
+            int. If list of ints, rebuilds signal from only components
+            in given list.
+        dtype_learn : data-type, optional
+            Data type to set learning results to (default is float16).
+        """
+        if self._lazy is False:
+            raise ValueError("This function assumes the model signal is too "
+                             "large to compute in memory, use "
+                             "get_decomposition_model() instead")
+
+        # Change dtype
+        target = self.learning_results
+        factors = np.array(target.factors, dtype=dtype_learn)
+        loadings = np.array(target.loadings, dtype=dtype_learn)
+
+        # Extract relevant components
+        if hasattr(components, '__iter__'):  # components is a list of ints
+            # TODO: This should be implemented in HyperSpy
+            factors = factors[:, components]
+            loadings = loadings[:, components]
+        else:  # components is an int
+            factors = factors[:, :components]
+            loadings = loadings[:, :components]
 
         # Write learning results to HDF5 file
         datadir = self.original_metadata.General.original_filepath
         t_str = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
-        file = os.path.join(datadir, 'learn_' + t_str + '.h5')
-        with File(file, 'w') as f:
+        file_learn = os.path.join(datadir, 'learn_' + t_str + '.h5')
+        with File(file_learn, 'w') as f:
             f.create_dataset(name='factors', data=factors)
             f.create_dataset(name='loadings', data=loadings)
 
         # Matrix multiplication
-        with File(file, 'r+') as f:
+        with File(file_learn, 'r') as f:
             # Read learning results from HDF5 file
-            # TODO: Fix automatic chunking suited to file and available memory
-            factors = da.from_array(f['factors'], chunks=(-1, 'auto'))
-            loadings = da.from_array(f['loadings'], chunks=('auto', 'auto'))
+            chunks = self._rechunk_learning_results()
+            factors = da.from_array(f['factors'], chunks=chunks[0])
+            loadings = da.from_array(f['loadings'], chunks=chunks[1])
 
             # Perform the matrix multiplication
+            loadings = loadings.T
             res = factors @ loadings
             res = res.T  # Transpose
             res = res.reshape(self.data.shape)  # Reshape
 
-            # Write rebuilt signal to HDF5 file
-            res.to_hdf5(file, '/result')
+            # TODO: Avoid write to file, and directly rescale with no mem. leak?
+            # Write model data to file
+            file_model = os.path.join(datadir, 'model_' + t_str + '.hdf5')
+            res.to_hdf5(file_model, '/result')
 
-        # Create signal from multiplication results and rescale intensities,
-        # and write signal to file
-        with File(file, 'r') as f:
-            res = self.deepcopy()
-            res.data = da.from_array(f['result'], chunks=(1, 1, -1, -1))
+        # TODO: Find out where we leak memory and make this line unnecessary
+        # Collect garbage (so we don't sink!)
+        gc.collect()
+
+        # Write model signal to .hspy file
+        with File(file_model, 'r') as f:
+            # Create signal from results
+            s_model = self.deepcopy()
+            s_model.learning_results = LearningResults()
+            s_model.data = da.from_array(f['result'], chunks=(1, 1, -1, -1))
 
             # Rescale intensities
-            res.map(rescale_pattern_intensity, ragged=False)
+            s_model.map(rescale_pattern_intensity, ragged=False)
+            s_model.data = s_model.data.astype(self.data.dtype)
 
-            # Remove learning results from model signal
-            a = EBSD(np.zeros((1, 1)))
-            res.learning_results = a.learning_results
+            # Write signal to file (rechunking saves a little time?)
+            file_model2 = os.path.join(datadir, 'model2_' + t_str)
+            chunks = s_model._get_dask_chunks()
+            s_model.data = s_model.data.rechunk(chunks=chunks)
+            gc.collect()
+            s_model.save(file_model2)
 
-            # Write signal to .hspy file
-            res.save(os.path.join(datadir, 'model_' + t_str))
+        # Delete temporary files
+        os.remove(file_learn)
+        os.remove(file_model)
 
-        # Delete HDF5 file with learning results
-        os.remove(file)
+        gc.collect()  # Don't sink
+
+    def _rechunk_learning_results(self, mbytes_chunk=100):
+        """Return suggested data chunks for learning results. It is
+        assumed that the loadings are not transposed. The last axes of
+        factors and loadings are not chunked. The aims in prioritised
+        order:
+            1. Split into at least as many chunks as available CPUs.
+            2. Limit chunks to around input MB (mbytes).
+            3. Keep first axis of factors.
+
+        Adapted from HyperSpy's ``_get_dask_chunks``.
+
+        Parameters
+        ----------
+        mbytes_chunk : int, optional
+            Size of chunks in MB, default is 100 MB as suggested in the
+            Dask documentation.
+
+        Returns
+        -------
+        List of two tuples
+            First/second tuple is suggested chunks to pass to
+            ``dask.array.rechunk`` for factors/loadings, respectively.
+        """
+        target = self.learning_results
+        if target.decomposition_algorithm is None:
+            raise ValueError("No learning results were found.")
+
+        # Get dask chunks
+        factors = target.factors
+        loadings = target.loadings
+        tshape = factors.shape + loadings.shape
+
+        # Make sure the last factors/loading axes have the same shapes
+        # TODO: Should also handle the case where the first axes are the same
+        if tshape[1] != tshape[3]:
+            raise ValueError("The last dimensions in factors and loadings are "
+                             "not the same.")
+
+        # Determine max. number of (strictly necessary) chunks
+        suggested_size = mbytes_chunk * 2**20  # 100 MB default
+        factors_size = factors.nbytes
+        loadings_size = loadings.nbytes
+        total_size = factors_size + loadings_size
+        num_chunks = np.ceil(total_size / suggested_size)
+
+        # Get chunk sizes
+        cpus = os.cpu_count()
+        if num_chunks <= cpus:  # Return approx. as many chunks as CPUs
+            chunks = [(-1, -1), (int(tshape[2]/cpus), -1)]  # -1 = don't chunk
+        elif factors.nbytes <= suggested_size:  # Chunk first axis in loadings
+            chunks = [(-1, -1), (int(tshape[2]/num_chunks), -1)]
+        else:  # Chunk both first axes
+            sizes = [factors_size, loadings_size]
+            while (sizes[0] + sizes[1]) >= suggested_size:
+                i = np.argmax(sizes)
+                sizes[i] = np.floor(sizes[i] / 2)
+            factors_chunks = int(np.ceil(factors_size/sizes[0]))
+            loadings_chunks = int(np.ceil(loadings_size/sizes[1]))
+            chunks = [(int(tshape[0]/factors_chunks), -1),
+                      (int(tshape[2]/loadings_chunks), -1)]
+
+        return chunks
 
 
 class LazyEBSD(EBSD, LazySignal2D):
@@ -581,3 +737,6 @@ class LazyEBSD(EBSD, LazySignal2D):
             self.data = data
         self._lazy = False
         self.__class__ = EBSD
+
+        # Collect garbage (coming from where?)
+        gc.collect()

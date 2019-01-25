@@ -3,14 +3,14 @@ import numpy as np
 from scipy.ndimage import gaussian_filter
 
 
-def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
+def rescale_pattern_intensity(pattern, imin=None, scale=None,
                               dtype_out=np.uint8):
     """Rescale electron backscatter diffraction pattern intensities to
-    specified range using contrast stretching.
-
-    If imin and scale is passed the pattern intensities are stretched
-    to a global min. and max. intensity. Otherwise they are stretched
-    to between zero and omax.
+    unsigned integer range or desired unsigned range specified by imin
+    and scale. If imin and scale are passed the pattern intensities are
+    stretched to a global min. and max. intensity according to these
+    values. Otherwise they are stretched to between zero and maximum of
+    dtype_out.
 
     Parameters
     ----------
@@ -20,8 +20,6 @@ def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
         Global min. intensity of patterns.
     scale : float, optional
         Global scaling factor for intensities of output pattern.
-    omax : int, optional
-        Max. intensity of output pattern (default = 255).
     dtype_out : numpy dtype
         Data type of output pattern.
 
@@ -30,7 +28,12 @@ def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
     pattern : numpy array
         Output pattern rescaled to specified range.
     """
+    # TODO: Stop function from leaking memory when used with map
+    if np.issubdtype(dtype_out, np.unsignedinteger) is False:
+        raise ValueError("Data type is not unsigned integer.")
+
     if imin is None and scale is None:  # Local contrast stretching
+        omax = np.iinfo(dtype_out).max
         imin = pattern.min()
         scale = float(omax / (pattern.max() - imin))
 
@@ -124,6 +127,7 @@ def remove_dead(pattern, deadpixels, deadvalue="average", d=1):
         Two-dimensional data array containing z with dead pixels
         removed.
     """
+    # TODO: Stop function from leaking memory when used with map
     new_pattern = np.copy(pattern)
     if deadvalue == 'average':
         for (i, j) in deadpixels:
