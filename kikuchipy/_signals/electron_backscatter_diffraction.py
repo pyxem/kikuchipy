@@ -360,13 +360,14 @@ class EBSD(Signal2D):
         if pattern_coordinates is not None:
             pass
         elif pattern_locations == 'random':
-            pattern_coordinates_x = np.random.rand(1, pattern_number) * \
-                                    (s.axes_manager.navigation_shape[0]-1)
-            pattern_coordinates_y = np.random.rand(1, pattern_number) * \
-                                    (s.axes_manager.navigation_shape[1]-1)
-            pattern_coordinates = np.concatenate((pattern_coordinates_x.T,
-                                                  pattern_coordinates_y.T),
-                                                 axis=1)
+            nav_shape = self.axes_manager.navigation_shape
+            pattern_coordinates_x = np.random.randint(nav_shape[0],
+                                                      size=pattern_number)
+            pattern_coordinates_y = np.random.randint(nav_shape[1],
+                                                      size=pattern_number)
+
+            pattern_coordinates = np.array(
+                list(zip(pattern_coordinates_x, pattern_coordinates_y)))
         pattern_coordinates = pattern_coordinates.astype('int16')
         deadpixels_list = self.find_deadpixels(pattern=pattern_coordinates[0],
                                                threshold=threshold_range[1]+1,
@@ -401,14 +402,14 @@ class EBSD(Signal2D):
                 if to_plot:
                     pat = self.inav[pattern_coordinates[0]]
                     pat.plot()
-                    for (y, x) in deadpixels:
+                    for (y, x) in deadpixels_list:
                         m = plot.markers.point(x, y, color='red')
                         pat.add_marker(m, permanent=False)
                 return deadpixels_list, threshold
         if to_plot:
             pat = self.inav[pattern_coordinates[0]]
             pat.plot()
-            for (y, x) in deadpixels:
+            for (y, x) in deadpixels_list:
                 m = plot.markers.point(x, y, color='red')
                 pat.add_marker(m, permanent=False)
 
