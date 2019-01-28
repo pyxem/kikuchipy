@@ -218,7 +218,9 @@ class EBSD(Signal2D):
             Indices of pattern in which to search for dead pixels.
         threshold : int, optional
             Threshold for difference in pixel intensities between
-            blurred and original pattern.
+            blurred and original pattern. The actual threshold is given
+            as threshold*(standard deviation of the difference between
+            blurred and original pattern).
         to_plot : bool, optional
             If True (default is False), a pattern with the dead pixels
             highlighted is plotted.
@@ -293,8 +295,7 @@ class EBSD(Signal2D):
         return deadpixels
 
     def find_deadpixels_and_threshold(self, pattern_number=10,
-                                      threshold_range=(1, 10),
-                                      pattern_locations='random',
+                                      threshold=2,
                                       pattern_coordinates=None,
                                       to_plot=False, mask=None,
                                       pattern_number_threshold=0.75):
@@ -302,22 +303,19 @@ class EBSD(Signal2D):
         diffraction patterns by comparing pixel values in a blurred
         version of a selected pattern with the original pattern. If the
         intensity difference is above a threshold the pixel is labeled
-        as dead. Only deadpixels occuring in more than a number of
-        patterns given by pattern_number_threshold*pattern_number will
-        be kept. A range of thresholds will be used to search for
-        deadpixels.
+        as dead. Deadpixels are searched for in several patterns. Only
+        deadpixels occurring in more than a certain number of patterns
+        will be kept.
 
         Parameters
         ----------
         pattern_number : int, optional
             Number of patterns to find deadpixels in.
-        threshold_range : tuple of int, optional
-            Threshold range defined as (min,max) for difference in pixel
-            intensities between blurred and original pattern.
-        pattern_locations : string, optional
-            Method to determine the pattern coordinates. 'random'
-            (default) defines random pattern coordinates within the
-            navigation shape.
+        threshold : int, optional
+            Threshold for difference in pixel intensities between
+            blurred and original pattern. The actual threshold is given
+            as threshold*(standard deviation of the difference between
+            blurred and original pattern).
         pattern_coordinates : np.array, optional
             Array of selected coordinates [[x,y]] for all the patterns
             where deadpixels will be searched for. If given, it
@@ -339,8 +337,6 @@ class EBSD(Signal2D):
         -------
         deadpixels : list of tuples
             List of tuples containing pattern indices for dead pixels.
-        threshold: int
-            The smallest threshold used to look for deadpixels.
 
         Examples
         --------
@@ -354,66 +350,46 @@ class EBSD(Signal2D):
             # below 60 will be masked.
             mask[np.where(s.inav[0,0].data<60)]=True
             hs.signals.Signal2D(mask).plot()
-            deadpixels, threshold = s.find_deadpixels_and_threshold(
-                threshold=5, to_plot=True, mask=mask)
+            deadpixels = s.find_deadpixels_and_threshold(threshold=5,
+                to_plot=True, mask=mask)
         """
-        if pattern_coordinates is not None:
-            pass
-        elif pattern_locations == 'random':
+        if pattern_coordinates is None:
             nav_shape = self.axes_manager.navigation_shape
             pattern_coordinates_x = np.random.randint(nav_shape[0],
                                                       size=pattern_number)
             pattern_coordinates_y = np.random.randint(nav_shape[1],
                                                       size=pattern_number)
-
             pattern_coordinates = np.array(
                 list(zip(pattern_coordinates_x, pattern_coordinates_y)))
         pattern_coordinates = pattern_coordinates.astype('int16')
-        deadpixels_list = self.find_deadpixels(pattern=pattern_coordinates[0],
-                                               threshold=threshold_range[1]+1,
-                                               to_plot=False, mask=mask)
-        for threshold in np.arange(threshold_range[1], threshold_range[0], -1):
-            deadpixels_new = self.find_deadpixels(
-                pattern=pattern_coordinates[0], threshold=threshold,
-                to_plot=False, mask=mask)
-            for i in range(1, pattern_number):
-                deadpixels_new = np.append(deadpixels_new,
-                                           self.find_deadpixels(
-                                               pattern=pattern_coordinates[i],
-                                               threshold=threshold,
-                                               to_plot=False, mask=mask),
-                                           axis=0)
-            # Count the number of occurrence of each deadpixel found in all
-            # checked patterns.
-            deadpixels_new, count_list = np.unique(deadpixels_new,
-                return_counts=True, axis=0)
-            # Only keep deadpixel if it occurs in more than an amount given by
-            # pattern_number_threshold of the patterns. Otherwise discard.
-            keep_list = [True if y > int(pattern_number_threshold *
-                                         pattern_number)
-                         else False for y in count_list]
-            # If new deadpixels have been found, these are kept, and else, the
-            # correct threshold is threshold+1, and the deadpixels found with
-            # threshold+1 is returned.
-            if len(keep_list) >= np.shape(deadpixels_list)[0]:
-                deadpixels_list = deadpixels_new[np.where(keep_list)]
-            else:
-                threshold = threshold+1
-                if to_plot:
-                    pat = self.inav[pattern_coordinates[0]]
-                    pat.plot()
-                    for (y, x) in deadpixels_list:
-                        m = plot.markers.point(x, y, color='red')
-                        pat.add_marker(m, permanent=False)
-                return deadpixels_list, threshold
+
+        deadpixels_new = self.find_deadpixels(
+            pattern=pattern_coordinates[0], threshold=threshold, to_plot=False,
+            mask=mask)
+        for i in range(1, pattern_number):
+            deadpixels_new = np.append(deadpixels_new,
+                                       self.find_deadpixels(
+                                           pattern=pattern_coordinates[i],
+                                           threshold=threshold,
+                                           to_plot=False, mask=mask),
+                                       axis=0)
+        # Count the number of occurrence of each deadpixel found in all
+        # checked patterns.
+        deadpixels_new, count_list = np.unique(deadpixels_new,
+                                               return_counts=True, axis=0)
+        # Only keep deadpixel if it occurs in more than an amount given by
+        # pattern_number_threshold of the patterns. Otherwise discard.
+        keep_list = [True if y > int(pattern_number_threshold * pattern_number)
+                     else False for y in count_list]
+        deadpixels = deadpixels_new[np.where(keep_list)]
         if to_plot:
             pat = self.inav[pattern_coordinates[0]]
             pat.plot()
-            for (y, x) in deadpixels_list:
+            for (y, x) in deadpixels:
                 m = plot.markers.point(x, y, color='red')
                 pat.add_marker(m, permanent=False)
 
-        return deadpixels_list, threshold
+        return deadpixels
 
     def remove_deadpixels(self, deadpixels=None, deadvalue='average',
                           inplace=True, *args, **kwargs):
