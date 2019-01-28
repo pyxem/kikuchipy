@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter, median_filter
 
 
 def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
@@ -138,3 +138,91 @@ def remove_dead(pattern, deadpixels, deadvalue="average", d=1):
                                   "See documentation for available "
                                   "implementations.")
     return new_pattern
+
+
+def find_deadpixels_single_pattern(signal, pattern=(0, 0), threshold=2,
+                                   to_plot=False, mask=None):
+    """Find dead pixels in one experimentally acquired diffraction
+    patterns by comparing pixel values in a blurred version of the
+    selected pattern to the original pattern. If the intensity
+    difference is above a threshold the pixel is labeled as dead.
+
+    Parameters
+    ----------
+    signal : EBSD or Signal2D
+        EBSD or Signal2D class instance.
+    pattern : tuple, optional
+        Indices of pattern in which to search for dead pixels.
+    threshold : int, optional
+        Threshold for difference in pixel intensities between
+        blurred and original pattern. The actual threshold is given
+        as threshold*(standard deviation of the difference between
+        blurred and original pattern).
+    to_plot : bool, optional
+        If True (default is False), a pattern with the dead pixels
+        highlighted is plotted.
+    mask : array of bool, optional
+        No deadpixels are found where mask is True. The shape must
+        be equal to the shape of each pattern.
+
+    Returns
+    -------
+    deadpixels : list of tuples
+        List of tuples containing pattern indices for dead pixels.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        import hyperspy as hs
+        import kikuchipy as kp
+        mask = np.zeros(s.axes_manager.signal_shape)
+        # Threshold the first DP, so that pixels with an intensity
+        below 60 will be masked.
+        mask[np.where(s.inav[0,0].data<60)]=True
+        hs.signals.Signal2D(mask).plot()
+        deadpixels = s.find_deadpixels(threshold=5, to_plot=True,
+                                       mask=mask)
+    """
+    pat = signal.inav[pattern].data.astype(np.int16)
+    if signal._lazy:
+        pat = pat.compute(show_progressbar=False)
+    blurred = median_filter(pat, size=2)
+    difference = pat - blurred
+    threshold = threshold * np.std(difference)
+
+    # Find the dead pixels (ignoring border pixels)
+    deadpixels = np.nonzero((np.abs(difference[1:-1, 1:-1]) > threshold))
+    deadpixels = np.array(deadpixels) + 1
+    deadpixels = list(map(tuple, deadpixels.T))  # List of tuples
+
+    # If a mask is given, check if any of the deadpixels are also found
+    # within the mask, and if so, delete those.
+    if mask is not None:
+        deadpixels = np.array(deadpixels)
+        mask_indices = np.concatenate(([np.where(mask)[0]],
+                                       [np.where(mask)[1]]), axis=0).T
+        for deadpixel in deadpixels:
+            common_indices = np.intersect1d(
+                np.where(mask_indices[:, 0] == deadpixel[0]),
+                np.where(mask_indices[:, 1] == deadpixel[1]))
+            if common_indices.size:
+                where_indices = np.where(np.array(
+                    deadpixels == mask_indices[common_indices]))
+                w_ind_x, w_ind_y = where_indices[:][0], where_indices[:][1]
+                delete_indices = np.array([], dtype='int16')
+                for n in range(1, len(w_ind_x)):
+                    if (w_ind_x[n - 1] == w_ind_x[n] and w_ind_y[n - 1] == 0
+                            and w_ind_y[n] == 1):
+                        delete_indices = np.append(delete_indices, w_ind_x[n])
+                deadpixels = np.delete(deadpixels, delete_indices, axis=0)
+        deadpixels = tuple(map(tuple, deadpixels))
+
+    if to_plot:
+        pat = signal.inav[pattern]
+        pat.plot()
+        for (y, x) in deadpixels:
+            m = plot.markers.point(x, y, color='red')
+            pat.add_marker(m, permanent=False)
+
+    return deadpixels

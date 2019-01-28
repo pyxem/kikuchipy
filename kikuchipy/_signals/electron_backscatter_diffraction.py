@@ -8,7 +8,6 @@ from hyperspy.api import plot
 from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from skimage.transform import radon
-from scipy.ndimage import median_filter
 from matplotlib.pyplot import imread
 from pyxem.signals.electron_diffraction import ElectronDiffraction
 
@@ -16,7 +15,8 @@ from dask.diagnostics import ProgressBar
 from hyperspy.misc.utils import dummy_context_manager
 
 from kikuchipy._signals.radon_transform import RadonTransform
-from kikuchipy.utils.expt_utils import correct_background, remove_dead
+from kikuchipy.utils.expt_utils import correct_background, remove_dead,\
+    find_deadpixels_single_pattern
 from kikuchipy import io
 
 
@@ -205,100 +205,9 @@ class EBSD(Signal2D):
         self.map(correct_background, static=static, dynamic=dynamic, bg=bg,
                  sigma=sigma, imin=imin, scale=scale, **kwargs)
 
-    def find_deadpixels(self, pattern=(0, 0), threshold=10, to_plot=False,
-                        mask=None):
-        """Find dead pixels in one experimentally acquired diffraction
-        patterns by comparing pixel values in a blurred version of the
-        selected pattern to the original pattern. If the intensity
-        difference is above a threshold the pixel is labeled as dead.
-
-        Parameters
-        ----------
-        pattern : tuple, optional
-            Indices of pattern in which to search for dead pixels.
-        threshold : int, optional
-            Threshold for difference in pixel intensities between
-            blurred and original pattern. The actual threshold is given
-            as threshold*(standard deviation of the difference between
-            blurred and original pattern).
-        to_plot : bool, optional
-            If True (default is False), a pattern with the dead pixels
-            highlighted is plotted.
-        mask : array of bool, optional
-            No deadpixels are found where mask is True. The shape must
-            be equal to the shape of each pattern.
-
-        Returns
-        -------
-        deadpixels : list of tuples
-            List of tuples containing pattern indices for dead pixels.
-
-        Examples
-        --------
-        .. code-block:: python
-
-            import hyperspy as hs
-            import kikuchipy as kp
-            mask = np.zeros(s.axes_manager.signal_shape)
-            # Threshold the first DP, so that pixels with an intensity
-            below 60 will be masked.
-            mask[np.where(s.inav[0,0].data<60)]=True
-            hs.signals.Signal2D(mask).plot()
-            deadpixels = s.find_deadpixels(threshold=5, to_plot=True,
-                                           mask=mask)
-        """
-        pat = self.inav[pattern].data.astype(np.int16)
-        if self._lazy:
-            pat = pat.compute(show_progressbar=False)
-        blurred = median_filter(pat, size=2)
-        difference = pat - blurred
-        threshold = threshold * np.std(difference)
-
-        # Find the dead pixels (ignoring border pixels)
-        deadpixels = np.nonzero((np.abs(difference[1:-1, 1:-1]) > threshold))
-        deadpixels = np.array(deadpixels) + 1
-        deadpixels = list(map(tuple, deadpixels.T))  # List of tuples
-
-        # If a mask is given, check if any of the deadpixels are also found
-        # within the mask, and if so, delete those.
-        if mask is not None:
-            deadpixels = np.array(deadpixels)
-            mask_indices = np.concatenate(([np.where(mask)[0]],
-                                           [np.where(mask)[1]]), axis=0).T
-            for deadpixel in deadpixels:
-                common_indices = np.intersect1d(
-                    np.where(mask_indices[:, 0] == deadpixel[0]),
-                    np.where(mask_indices[:, 1] == deadpixel[1]))
-                if common_indices.size:
-                    where_indices = np.where(np.array(
-                        deadpixels == mask_indices[common_indices]))
-                    w_ind_x, w_ind_y = where_indices[:][0], where_indices[:][1]
-                    delete_indices = np.array([], dtype='int16')
-                    for n in range(1, len(w_ind_x)):
-                        if (w_ind_x[n - 1] == w_ind_x[n] and w_ind_y[n - 1] == 0
-                                and w_ind_y[n] == 1):
-                            delete_indices = np.append(delete_indices,
-                                                       w_ind_x[n])
-                    deadpixels = np.delete(deadpixels, delete_indices, axis=0)
-            deadpixels = tuple(map(tuple, deadpixels))
-
-        # Update original_metadata
-        self.set_experimental_parameters(deadpixels=deadpixels)
-
-        if to_plot:
-            pat = self.inav[pattern]
-            pat.plot()
-            for (y, x) in deadpixels:
-                m = plot.markers.point(x, y, color='red')
-                pat.add_marker(m, permanent=False)
-
-        return deadpixels
-
-    def find_deadpixels_and_threshold(self, pattern_number=10,
-                                      threshold=2,
-                                      pattern_coordinates=None,
-                                      to_plot=False, mask=None,
-                                      pattern_number_threshold=0.75):
+    def find_deadpixels(self, pattern_number=10, threshold=2,
+                        pattern_coordinates=None, to_plot=False,
+                        mask=None, pattern_number_threshold=0.75):
         """Find dead pixels in several experimentally acquired
         diffraction patterns by comparing pixel values in a blurred
         version of a selected pattern with the original pattern. If the
@@ -318,9 +227,7 @@ class EBSD(Signal2D):
             blurred and original pattern).
         pattern_coordinates : np.array, optional
             Array of selected coordinates [[x,y]] for all the patterns
-            where deadpixels will be searched for. If given, it
-            overrides pattern_locations, and pattern_coordinates will be
-            used.
+            where deadpixels will be searched for.
         to_plot : bool, optional
             If True (default is False), a pattern with the dead pixels
             marked is plotted.
@@ -363,12 +270,12 @@ class EBSD(Signal2D):
                 list(zip(pattern_coordinates_x, pattern_coordinates_y)))
         pattern_coordinates = pattern_coordinates.astype('int16')
 
-        deadpixels_new = self.find_deadpixels(
+        deadpixels_new = find_deadpixels_single_pattern(self,
             pattern=pattern_coordinates[0], threshold=threshold, to_plot=False,
             mask=mask)
         for i in range(1, pattern_number):
             deadpixels_new = np.append(deadpixels_new,
-                                       self.find_deadpixels(
+                                       find_deadpixels_single_pattern(self,
                                            pattern=pattern_coordinates[i],
                                            threshold=threshold,
                                            to_plot=False, mask=mask),
@@ -388,6 +295,9 @@ class EBSD(Signal2D):
             for (y, x) in deadpixels:
                 m = plot.markers.point(x, y, color='red')
                 pat.add_marker(m, permanent=False)
+
+        # Update original_metadata
+        self.set_experimental_parameters(deadpixels=deadpixels)
 
         return deadpixels
 
