@@ -4,11 +4,15 @@ import warnings
 import numpy as np
 import os
 
+#import matplotlib.pyplot as plt
+
+
 from hyperspy.api import plot
 from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from skimage.transform import radon
-from matplotlib.pyplot import imread
+from matplotlib.pyplot import imread, axes, subplots, imshow, show
+from matplotlib.widgets import Slider, TextBox
 from pyxem.signals.electron_diffraction import ElectronDiffraction
 
 from dask.diagnostics import ProgressBar
@@ -205,6 +209,115 @@ class EBSD(Signal2D):
 
         self.map(correct_background, static=static, dynamic=dynamic, bg=bg,
                  sigma=sigma, imin=imin, scale=scale, **kwargs)
+
+    def remove_background_static_interactive(self, img_to_threshold=None):
+        threshold_min, threshold_max = 0.00, 1.01
+        if self._lazy:
+            raise TypeError('This method is not yet implemented for lazy.')
+
+        def update_imgs(val):
+
+            th_i = int(txt_i.text)
+            th_j = int(txt_j.text)
+
+            th_min = slider_th_min.val
+            th_max = slider_th_max.val
+
+            mark_ij.set_data([th_i], [th_j])
+
+            mask = np.choose(a=(img_th >= th_min), choices=[0, 1])
+            mask = np.choose(a=(img_th < th_max), choices=[0, mask])
+            img2.set_data(mask)
+
+            img_masked = img_th.data * mask
+            img3.set_data(img_masked)
+            img3.set_clim(vmin=np.min(img_masked.data[img_masked.data != 0.]),
+                          vmax=np.max(img_masked.data[img_masked.data != 1.]))
+
+            bkg_img = np.average(self.data[np.where(mask.data)], axis=0)
+            img4.set_data(bkg_img)
+            img4.set_clim(vmin=np.min(bkg_img), vmax=np.max(bkg_img))
+
+            s_ij = self.inav[th_i, th_j].data
+            img5.set_data(s_ij)
+            img5.set_clim(vmin=np.min(s_ij), vmax=np.max(s_ij))
+            ax5.set_title('Signal at i=' + str(th_i) + ' j=' + str(th_j),
+                          fontsize=12)
+
+            s_ij_bkg = s_ij - bkg_img
+            img6.set_data(s_ij_bkg)
+            cbar6.set_clim(vmin=np.min(s_ij_bkg), vmax=np.max(s_ij_bkg))
+            cbar6.draw_all()
+
+            fig.canvas.draw_idle()
+
+        fig, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = subplots(nrows=2, ncols=3,
+                                                           sharex=False,
+                                                           sharey=False)
+        if img_to_threshold:
+            img_th = hs.load(os.path.join(datadir, img_to_threshold))
+        else:
+            img_th = self.sum(self.axes_manager.signal_axes).T
+        if img_th.min(axis=(0, 1)).data[0] != 0.0:
+            img_th = img_th.copy() - img_th.min(axis=(0, 1)).data[0]
+        if img_th.max(axis=(0, 1)).data[0] != 1.0:
+            img_th = img_th.copy() / img_th.max(axis=(0, 1)).data[0]
+
+        i, j = 0, 0
+        ax1.imshow(img_th.data)
+        mark_ij, = ax1.plot(i, j, marker='x', color='blue')
+        ax1.axis('off')
+        ax1.set_title('Image to threshold', fontsize=12)
+
+        mask = np.choose(a=(img_th >= threshold_min), choices=[0, 1])
+        mask = np.choose(a=(img_th < threshold_max), choices=[0, mask])
+        img2 = ax2.imshow(mask, vmin=0, vmax=1)
+        ax2.axis('off')
+        ax2.set_title('Mask', fontsize=12)
+
+        img_masked = img_th.data * mask
+        img3 = ax3.imshow(img_masked, vmin=img_th.min(axis=(0, 1)).data[0])
+        img3.cmap.set_under('k')
+        ax3.axis('off')
+        ax3.set_title('Image x Mask', fontsize=12)
+
+        bkg_img = np.average(self.data[np.where(mask.data)], axis=0)
+        img4 = ax4.imshow(bkg_img)
+        ax4.axis('off')
+        ax4.set_title('Background', fontsize=12)
+
+        s_ij = self.inav[i, j].data
+        img5 = ax5.imshow(s_ij)
+        ax5.axis('off')
+        ax5.set_title('Signal at i=' + str(i) + ' j=' + str(j), fontsize=12)
+
+        s_ij_bkg = s_ij - bkg_img
+        img6 = ax6.imshow(s_ij_bkg)
+        cbar6 = fig.colorbar(img6, ax=ax6, fraction=0.046, pad=0.04)
+        ax6.axis('off')
+        ax6.set_title('Signal - Background', fontsize=12)
+
+        # Axes : [x from left, y from bottom, length in x, length in y]
+        ax_i = axes([0.70, 0.04, 0.06, 0.05])
+        ax_j = axes([0.80, 0.04, 0.06, 0.05])
+        txt_i = TextBox(ax_i, 'i', initial='0')
+        txt_j = TextBox(ax_j, 'j', initial='0')
+
+        ax_th_min = axes([0.25, 0.02, 0.25, 0.03])
+        ax_th_max = axes([0.25, 0.06, 0.25, 0.03])
+        slider_th_min = Slider(ax_th_min, 'threshold_min', -0.01, 1.01,
+                               valinit=0.00)
+        slider_th_max = Slider(ax_th_max, 'threshold_max', -0.01, 1.01,
+                               valinit=1.01)
+
+        slider_th_min.on_changed(update_imgs)
+        slider_th_max.on_changed(update_imgs)
+        txt_i.on_submit(update_imgs)
+        txt_j.on_submit(update_imgs)
+
+        show()
+
+        return None
 
     def find_deadpixels(self, pattern_number=10, threshold=2,
                         pattern_coordinates=None, to_plot=False,
