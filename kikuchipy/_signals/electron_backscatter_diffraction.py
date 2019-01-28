@@ -252,13 +252,11 @@ class EBSD(Signal2D):
         --------
         .. code-block:: python
 
-            import hyperspy as hs
             import numpy as np
             mask = np.zeros(s.axes_manager.signal_shape)
             # Threshold the first pattern, so that pixels with an
             # intensity below 60 will be masked
             mask[np.where(s.inav[0, 0].data < 60)] = True
-            hs.signals.Signal2D(mask).plot()
             deadpixels = s.find_deadpixels(threshold=5, to_plot=True,
                                            mask=mask)
         """
@@ -275,13 +273,15 @@ class EBSD(Signal2D):
 
         pattern_coordinates = pattern_coordinates.astype(np.int16)
 
-        deadpixels_new = find_deadpixels_single_pattern(self,
-            pattern=pattern_coordinates[0], threshold=threshold, mask=mask)
-        for pattern in pattern_coordinates[1:]:
+        first_pattern = self.inav[pattern_coordinates[0]].data
+        deadpixels_new = find_deadpixels_single_pattern(first_pattern,
+                                                        threshold=threshold,
+                                                        mask=mask)
+        for coordinates in pattern_coordinates[1:]:
+            pattern = self.inav[coordinates].data
             deadpixels_new = np.append(deadpixels_new,
-                                       find_deadpixels_single_pattern(self,
-                                           pattern=pattern,
-                                           threshold=threshold, mask=mask),
+                                       find_deadpixels_single_pattern(pattern,
+                                        threshold=threshold, mask=mask),
                                        axis=0)
         # Count the number of occurrences of each deadpixel found in all
         # checked patterns.
@@ -293,8 +293,7 @@ class EBSD(Signal2D):
                      else False for y in count_list]
         deadpixels = deadpixels_new[np.where(keep_list)]
         if to_plot:
-            plot_markers_single_pattern(self.inav[pattern_coordinates[0]],
-                                        deadpixels)
+            plot_markers_single_pattern(first_pattern, deadpixels)
 
         # Update original_metadata
         self.set_experimental_parameters(deadpixels=deadpixels)

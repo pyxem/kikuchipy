@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-import kikuchipy as kp
+import dask.array as da
 from scipy.ndimage import gaussian_filter, median_filter
 from hyperspy.api import plot
+import kikuchipy as kp
 
 
 def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
@@ -142,8 +143,8 @@ def remove_dead(pattern, deadpixels, deadvalue="average", d=1):
     return new_pattern
 
 
-def find_deadpixels_single_pattern(signal, pattern=(0, 0), threshold=2,
-                                   to_plot=False, mask=None):
+def find_deadpixels_single_pattern(pattern, threshold=5, to_plot=False,
+                                   mask=None):
     """Find dead pixels in one experimentally acquired diffraction
     patterns by comparing pixel values in a blurred version of the
     selected pattern to the original pattern. If the intensity
@@ -151,21 +152,19 @@ def find_deadpixels_single_pattern(signal, pattern=(0, 0), threshold=2,
 
     Parameters
     ----------
-    signal : EBSD or Signal2D
-        EBSD or Signal2D class instance.
-    pattern : tuple, optional
-        Indices of pattern in which to search for dead pixels.
+    pattern : array
+        EBSD pattern to search for dead pixels in.
     threshold : int, optional
         Threshold for difference in pixel intensities between
         blurred and original pattern. The actual threshold is given
         as threshold*(standard deviation of the difference between
         blurred and original pattern).
     to_plot : bool, optional
-        If True (default is False), a pattern with the dead pixels
+        If True (default is False), the pattern with the dead pixels
         highlighted is plotted.
     mask : array of bool, optional
-        No deadpixels are found where mask is True. The shape must
-        be equal to the shape of each pattern.
+        No deadpixels are found where mask is True. The shape of pattern
+        and mask must be the same.
 
     Returns
     -------
@@ -176,21 +175,22 @@ def find_deadpixels_single_pattern(signal, pattern=(0, 0), threshold=2,
     --------
     .. code-block:: python
 
-        import hyperspy as hs
-        import kikuchipy as kp
+        import numpy as np
+        from kikuchipy.utils.expt_utils import \
+            find_deadpixels_single_pattern
+        # Threshold the first pattern, so that pixels with an intensity
+        # below 60 will be masked.
+        pattern = s.inav[0, 0].data
         mask = np.zeros(s.axes_manager.signal_shape)
-        # Threshold the first DP, so that pixels with an intensity
-        below 60 will be masked.
-        mask[np.where(s.inav[0,0].data<60)]=True
-        hs.signals.Signal2D(mask).plot()
-        deadpixels = s.find_deadpixels(threshold=5, to_plot=True,
-                                       mask=mask)
+        mask[np.where(pattern < 60)] = True
+        deadpixels = find_deadpixels_single_pattern(pattern, mask=mask)
     """
-    pat = signal.inav[pattern].data.astype(np.int16)
-    if signal._lazy:
-        pat = pat.compute(show_progressbar=False)
-    blurred = median_filter(pat, size=2)
-    difference = pat - blurred
+    if isinstance(pattern, da.Array):
+        pattern = pattern.compute(show_progressbar=False)
+
+    pattern = pattern.astype(np.int16)
+    blurred = median_filter(pattern, size=2)
+    difference = pattern - blurred
     threshold = threshold * np.std(difference)
 
     # Find the dead pixels (ignoring border pixels)
@@ -221,7 +221,7 @@ def find_deadpixels_single_pattern(signal, pattern=(0, 0), threshold=2,
         deadpixels = tuple(map(tuple, deadpixels))
 
     if to_plot:
-        plot_markers_single_pattern(signal.inav[pattern], deadpixels)
+        plot_markers_single_pattern(pattern, deadpixels)
 
     return deadpixels
 
