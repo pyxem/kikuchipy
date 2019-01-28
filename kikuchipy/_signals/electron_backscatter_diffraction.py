@@ -549,7 +549,7 @@ class EBSD(Signal2D):
         Notes
         -----
         Multiplying the learning results' factors and loadings in memory
-        to create the model signal can sometimes not be done due to too
+        to create the model signal cannot sometimes be done due to too
         large matrices. Here, instead, learning results are written to
         file, read into dask arrays and multiplied using dask's
         ``matmul``, out of core.
@@ -649,10 +649,8 @@ class EBSD(Signal2D):
         factors and loadings are not chunked. The aims in prioritised
         order:
             1. Split into at least as many chunks as available CPUs.
-            2. Limit chunks to around input MB (mbytes).
-            3. Keep first axis of factors.
-
-        Adapted from HyperSpy's ``_get_dask_chunks``.
+            2. Limit chunks to around input MB (mbytes_chunk).
+            3. Keep first axis of factors (detector pixels).
 
         Parameters
         ----------
@@ -663,7 +661,7 @@ class EBSD(Signal2D):
         Returns
         -------
         List of two tuples
-            First/second tuple is suggested chunks to pass to
+            The first/second tuple are suggested chunks to pass to
             ``dask.array.rechunk`` for factors/loadings, respectively.
         """
         target = self.learning_results
@@ -681,7 +679,7 @@ class EBSD(Signal2D):
             raise ValueError("The last dimensions in factors and loadings are "
                              "not the same.")
 
-        # Determine max. number of (strictly necessary) chunks
+        # Determine maximum number of (strictly necessary) chunks
         suggested_size = mbytes_chunk * 2**20  # 100 MB default
         factors_size = factors.nbytes
         loadings_size = loadings.nbytes
