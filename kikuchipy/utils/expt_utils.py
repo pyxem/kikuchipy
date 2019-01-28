@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from scipy.ndimage import gaussian_filter
+import dask.array as da
+from scipy.ndimage import gaussian_filter, median_filter
+from hyperspy.api import plot
+import kikuchipy as kp
 
 
 def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
@@ -138,3 +141,101 @@ def remove_dead(pattern, deadpixels, deadvalue="average", d=1):
                                   "See documentation for available "
                                   "implementations.")
     return new_pattern
+
+
+def find_deadpixels_single_pattern(pattern, threshold=5, to_plot=False,
+                                   mask=None):
+    """Find dead pixels in one experimentally acquired diffraction
+    patterns by comparing pixel values in a blurred version of the
+    selected pattern to the original pattern. If the intensity
+    difference is above a threshold the pixel is labeled as dead.
+
+    Parameters
+    ----------
+    pattern : array
+        EBSD pattern to search for dead pixels in.
+    threshold : int, optional
+        Threshold for difference in pixel intensities between
+        blurred and original pattern. The actual threshold is given
+        as threshold*(standard deviation of the difference between
+        blurred and original pattern).
+    to_plot : bool, optional
+        If True (default is False), the pattern with the dead pixels
+        highlighted is plotted.
+    mask : array of bool, optional
+        No deadpixels are found where mask is True. The shape of pattern
+        and mask must be the same.
+
+    Returns
+    -------
+    deadpixels : list of tuples
+        List of tuples containing pattern indices for dead pixels.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        import numpy as np
+        from kikuchipy.utils.expt_utils import \
+            find_deadpixels_single_pattern
+        # Threshold the first pattern, so that pixels with an intensity
+        # below 60 will be masked.
+        pattern = s.inav[0, 0].data
+        mask = np.zeros(s.axes_manager.signal_shape)
+        mask[np.where(pattern < 60)] = True
+        deadpixels = find_deadpixels_single_pattern(pattern, mask=mask)
+    """
+    if isinstance(pattern, da.Array):
+        pattern = pattern.compute(show_progressbar=False)
+
+    pattern = pattern.astype(np.int16)
+    blurred = median_filter(pattern, size=2)
+    difference = pattern - blurred
+    threshold = threshold * np.std(difference)
+
+    # Find the dead pixels (ignoring border pixels)
+    deadpixels = np.nonzero((np.abs(difference[1:-1, 1:-1]) > threshold))
+    deadpixels = np.array(deadpixels) + 1
+    deadpixels = list(map(tuple, deadpixels.T))  # List of tuples
+
+    # If a mask is given, check if any of the deadpixels are also found
+    # within the mask, and if so, delete those.
+    if mask is not None:
+        deadpixels = np.array(deadpixels)
+        mask_indices = np.concatenate(([np.where(mask)[0]],
+                                       [np.where(mask)[1]]), axis=0).T
+        for deadpixel in deadpixels:
+            common_indices = np.intersect1d(
+                np.where(mask_indices[:, 0] == deadpixel[0]),
+                np.where(mask_indices[:, 1] == deadpixel[1]))
+            if common_indices.size:
+                where_indices = np.where(np.array(
+                    deadpixels == mask_indices[common_indices]))
+                w_ind_x, w_ind_y = where_indices[:][0], where_indices[:][1]
+                delete_indices = np.array([], dtype=np.int16)
+                for n in range(1, len(w_ind_x)):
+                    if (w_ind_x[n - 1] == w_ind_x[n] and w_ind_y[n - 1] == 0
+                            and w_ind_y[n] == 1):
+                        delete_indices = np.append(delete_indices, w_ind_x[n])
+                deadpixels = np.delete(deadpixels, delete_indices, axis=0)
+        deadpixels = tuple(map(tuple, deadpixels))
+
+    if to_plot:
+        plot_markers_single_pattern(pattern, deadpixels)
+
+    return deadpixels
+
+
+def plot_markers_single_pattern(pattern, markers):
+    """Plot markers on an EBSD pattern.
+
+    Parameters
+    ----------
+    pattern : numpy array
+    markers : list of tuples
+    """
+    pat = kp.signals.EBSD(pattern)
+    pat.plot()
+    for (y, x) in markers:
+        m = plot.markers.point(x, y, color='red')
+        pat.add_marker(m, permanent=False)
