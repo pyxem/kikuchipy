@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+import kikuchipy as kp
 from scipy.ndimage import gaussian_filter, median_filter
+from hyperspy.api import plot
 
 
 def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
@@ -210,7 +212,7 @@ def find_deadpixels_single_pattern(signal, pattern=(0, 0), threshold=2,
                 where_indices = np.where(np.array(
                     deadpixels == mask_indices[common_indices]))
                 w_ind_x, w_ind_y = where_indices[:][0], where_indices[:][1]
-                delete_indices = np.array([], dtype='int16')
+                delete_indices = np.array([], dtype=np.int16)
                 for n in range(1, len(w_ind_x)):
                     if (w_ind_x[n - 1] == w_ind_x[n] and w_ind_y[n - 1] == 0
                             and w_ind_y[n] == 1):
@@ -219,10 +221,21 @@ def find_deadpixels_single_pattern(signal, pattern=(0, 0), threshold=2,
         deadpixels = tuple(map(tuple, deadpixels))
 
     if to_plot:
-        pat = signal.inav[pattern]
-        pat.plot()
-        for (y, x) in deadpixels:
-            m = plot.markers.point(x, y, color='red')
-            pat.add_marker(m, permanent=False)
+        plot_markers_single_pattern(signal.inav[pattern], deadpixels)
 
     return deadpixels
+
+
+def plot_markers_single_pattern(pattern, markers):
+    """Plot markers on an EBSD pattern.
+
+    Parameters
+    ----------
+    pattern : numpy array
+    markers : list of tuples
+    """
+    pat = kp.signals.EBSD(pattern)
+    pat.plot()
+    for (y, x) in markers:
+        m = plot.markers.point(x, y, color='red')
+        pat.add_marker(m, permanent=False)

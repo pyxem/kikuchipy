@@ -15,8 +15,9 @@ from dask.diagnostics import ProgressBar
 from hyperspy.misc.utils import dummy_context_manager
 
 from kikuchipy._signals.radon_transform import RadonTransform
-from kikuchipy.utils.expt_utils import correct_background, remove_dead,\
-    find_deadpixels_single_pattern
+from kikuchipy.utils.expt_utils import (correct_background, remove_dead,
+                                        find_deadpixels_single_pattern,
+                                        plot_markers_single_pattern)
 from kikuchipy import io
 
 
@@ -219,7 +220,9 @@ class EBSD(Signal2D):
         Parameters
         ----------
         pattern_number : int, optional
-            Number of patterns to find deadpixels in.
+            Number of patterns to find deadpixels in. If
+            pattern_coordinates is passed, pattern_number is set to
+            len(pattern_coordinates).
         threshold : int, optional
             Threshold for difference in pixel intensities between
             blurred and original pattern. The actual threshold is given
@@ -250,15 +253,14 @@ class EBSD(Signal2D):
         .. code-block:: python
 
             import hyperspy as hs
-            import kikuchipy as kp
             import numpy as np
             mask = np.zeros(s.axes_manager.signal_shape)
-            # Threshold the first DP, so that pixels with an intensity
-            # below 60 will be masked.
-            mask[np.where(s.inav[0,0].data<60)]=True
+            # Threshold the first pattern, so that pixels with an
+            # intensity below 60 will be masked
+            mask[np.where(s.inav[0, 0].data < 60)] = True
             hs.signals.Signal2D(mask).plot()
-            deadpixels = s.find_deadpixels_and_threshold(threshold=5,
-                to_plot=True, mask=mask)
+            deadpixels = s.find_deadpixels(threshold=5, to_plot=True,
+                                           mask=mask)
         """
         if pattern_coordinates is None:
             nav_shape = self.axes_manager.navigation_shape
@@ -268,19 +270,20 @@ class EBSD(Signal2D):
                                                       size=pattern_number)
             pattern_coordinates = np.array(
                 list(zip(pattern_coordinates_x, pattern_coordinates_y)))
-        pattern_coordinates = pattern_coordinates.astype('int16')
+        else:
+            pattern_number = len(pattern_coordinates)
+
+        pattern_coordinates = pattern_coordinates.astype(np.int16)
 
         deadpixels_new = find_deadpixels_single_pattern(self,
-            pattern=pattern_coordinates[0], threshold=threshold, to_plot=False,
-            mask=mask)
-        for i in range(1, pattern_number):
+            pattern=pattern_coordinates[0], threshold=threshold, mask=mask)
+        for pattern in pattern_coordinates[1:]:
             deadpixels_new = np.append(deadpixels_new,
                                        find_deadpixels_single_pattern(self,
-                                           pattern=pattern_coordinates[i],
-                                           threshold=threshold,
-                                           to_plot=False, mask=mask),
+                                           pattern=pattern,
+                                           threshold=threshold, mask=mask),
                                        axis=0)
-        # Count the number of occurrence of each deadpixel found in all
+        # Count the number of occurrences of each deadpixel found in all
         # checked patterns.
         deadpixels_new, count_list = np.unique(deadpixels_new,
                                                return_counts=True, axis=0)
@@ -290,11 +293,8 @@ class EBSD(Signal2D):
                      else False for y in count_list]
         deadpixels = deadpixels_new[np.where(keep_list)]
         if to_plot:
-            pat = self.inav[pattern_coordinates[0]]
-            pat.plot()
-            for (y, x) in deadpixels:
-                m = plot.markers.point(x, y, color='red')
-                pat.add_marker(m, permanent=False)
+            plot_markers_single_pattern(self.inav[pattern_coordinates[0]],
+                                        deadpixels)
 
         # Update original_metadata
         self.set_experimental_parameters(deadpixels=deadpixels)
