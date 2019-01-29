@@ -4,11 +4,8 @@ import warnings
 import numpy as np
 import os
 
-#import matplotlib.pyplot as plt
-
-
 from hyperspy.api import plot
-from hyperspy.signals import Signal2D
+from hyperspy.signals import BaseSignal, Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from skimage.transform import radon
 from matplotlib.pyplot import imread, axes, subplots, imshow, show
@@ -19,7 +16,9 @@ from dask.diagnostics import ProgressBar
 from hyperspy.misc.utils import dummy_context_manager
 
 from kikuchipy._signals.radon_transform import RadonTransform
-from kikuchipy.utils.expt_utils import (correct_background, remove_dead,
+from kikuchipy.utils.expt_utils import (correct_background,
+                                        correct_background_with_masks,
+                                        remove_dead,
                                         find_deadpixels_single_pattern,
                                         plot_markers_single_pattern)
 from kikuchipy import io
@@ -210,7 +209,44 @@ class EBSD(Signal2D):
         self.map(correct_background, static=static, dynamic=dynamic, bg=bg,
                  sigma=sigma, imin=imin, scale=scale, **kwargs)
 
+    def remove_background_with_masks(self, masks, dynamic=True, sigma=None,
+                                     **kwargs):
+        if self._lazy:
+            raise TypeError('This method is not yet implemented for lazy.')
+
+        if dynamic and sigma is None:
+            sigma = int(self.axes_manager.signal_axes[0].size / 30)
+
+        number_of_masks = masks.axes_manager.navigation_size
+
+        bgs = np.zeros((self.axes_manager.signal_axes[0].size,
+                        self.axes_manager.signal_axes[1].size, number_of_masks),
+                       dtype=np.uint32)
+
+        masks_sum = np.zeros((masks.axes_manager.signal_axes[0].size,
+                              masks.axes_manager.signal_axes[1].size),
+                             dtype=np.int32).T
+
+        for i in range(number_of_masks):
+            masks_sum[np.where(masks.inav[i].data)] = i
+
+            bgs[:, :, i] = np.average(self.data[np.where(masks.inav[i].data)],
+                                      axis=0)
+            # Correct dead pixels in background if they are corrected in signal
+            omd = self.original_metadata.Acquisition_instrument.SEM. \
+                Detector.EBSD
+            if omd.deadpixels_corrected and omd.deadpixels and omd.deadvalue:
+                bgs[:, :, i] = remove_dead(bgs[:, :, i], omd.deadpixels,
+                                           omd.deadvalue)
+
+        masks_sum = BaseSignal(masks_sum)
+
+        self.map(correct_background_with_masks, masks=masks_sum.T, bgs=bgs,
+                 dynamic=dynamic, sigma=sigma, **kwargs)
+
     def remove_background_static_interactive(self, img_to_threshold=None):
+        """
+        """
         threshold_min, threshold_max = 0.00, 1.01
         if self._lazy:
             raise TypeError('This method is not yet implemented for lazy.')

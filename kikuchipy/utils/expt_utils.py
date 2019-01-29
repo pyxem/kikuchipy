@@ -3,6 +3,7 @@ import numpy as np
 import dask.array as da
 from scipy.ndimage import gaussian_filter, median_filter
 from hyperspy.api import plot
+from hyperspy.signals import Signal2D
 import kikuchipy as kp
 
 
@@ -101,6 +102,66 @@ def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
 
     return pattern
 
+
+def correct_background_with_masks(pattern, masks, bgs, dynamic, sigma):
+    """
+    """
+    # Change data types to avoid negative intensities in subtraction
+    dtype = np.int8
+    pattern = pattern.astype(dtype)
+    bg = bgs[:, :, masks].astype(dtype)
+
+    # Subtract static background
+    pattern = pattern - bg
+
+    # Rescale intensities, loosing relative intensities
+    pattern = rescale_pattern_intensity(pattern)
+
+    if dynamic:
+        # Create gaussian blurred version of pattern
+        blurred = gaussian_filter(pattern, sigma, truncate=2.0)
+
+        # Change data types to avoid negative intensities in subtraction
+        dtype = np.int16
+        pattern = pattern.astype(dtype)
+        blurred = blurred.astype(dtype)
+
+        # Subtract blurred background
+        pattern = pattern - blurred
+
+        # rescale intensities, loosing relative intensities
+        pattern = rescale_pattern_intensity(pattern)
+
+    return pattern
+
+
+def get_masks(image, thresholds, to_plot=False):
+    """
+    """
+    if image.min(axis=(0, 1)) != 0.0:
+        image = image.copy() - image.min(axis=(0, 1))
+    if image.max(axis=(0, 1)) != 1.0:
+        image = image.copy() / image.max(axis=(0, 1))
+
+    thresholds = np.array(thresholds)
+    number_of_masks = np.shape(thresholds)[0]
+    masks = np.zeros((number_of_masks, np.shape(image)[0], np.shape(image)[1]),
+                     dtype='bool')
+
+    for i in range(number_of_masks):
+        masks[i] = np.choose(a=(image >= thresholds[i][0]), choices=[0, 1])
+        masks[i] = np.choose(a=(image < thresholds[i][1]),
+                             choices=[0, masks[i]])
+
+    if to_plot:
+        Signal2D(masks).plot()
+        # To easily see if masks overlap, plot also the sum as a colored image:
+        masks_sum = masks.copy().astype('int32')
+        for i in range(number_of_masks):
+            masks_sum[i][np.where(masks[i])] += i
+        Signal2D(np.sum(masks_sum, axis = 0)).plot(cmap='gnuplot2')
+
+    return Signal2D(masks)
 
 def remove_dead(pattern, deadpixels, deadvalue="average", d=1):
     """Remove dead pixels from a pattern.
