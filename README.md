@@ -13,16 +13,22 @@ Coming soon.
 
 Use
 -----
-Example usage:
+Typical workflow:
 
 ```python
 >>> import kikuchipy as kp
 >>> s = kp.load('/path/to/Pattern.dat')
+>>> s.plot()  # Have a look at your data!
 >>> s.find_deadpixels()
 >>> s.remove_deadpixels()
 >>> s.remove_background(bg='/path/to/background_pattern.bmp', static=True,
                         dynamic=True)  # Static and dynamic corrections
->>> s.save('/path/to/Pattern_bgsd.dat')  # Background subtracted patterns
+>>> s.decomposition()  # Assuming you can keep all computations in memory
+>>> components = s.classify_decomposition_components()
+# Inspect learning results, comparing them to suggested components to keep
+>>> s.plot_decomposition_results()
+>>> sc = s.get_decomposition_model(components)
+>>> sc.save('/path/to/Pattern_denoised.dat')
 ```
 
 Supported formats

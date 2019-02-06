@@ -45,6 +45,7 @@ from kikuchipy.utils.learn_utils import (texture_features_glcm,
                                          cluster_texture_features,
                                          detect_noisy_components)
 
+
 class EBSD(Signal2D):
     _signal_type = 'electron_backscatter_diffraction'
     _lazy = False
