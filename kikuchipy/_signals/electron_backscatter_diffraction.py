@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+# Copyright 2019 The KikuchiPy developers
+#
+# This file is part of KikuchiPy.
+#
+# KikuchiPy is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# KikuchiPy is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
+
 """Signal class for Electron Backscatter Diffraction (EBSD) data."""
 import warnings
 import numpy as np
@@ -24,7 +41,9 @@ from kikuchipy import io
 from kikuchipy._signals.radon_transform import RadonTransform
 from kikuchipy.utils.expt_utils import (correct_background, remove_dead,
                                         rescale_pattern_intensity)
-
+from kikuchipy.utils.learn_utils import (texture_features_glcm,
+                                         cluster_texture_features,
+                                         detect_noisy_components)
 
 class EBSD(Signal2D):
     _signal_type = 'electron_backscatter_diffraction'
@@ -643,13 +662,61 @@ class EBSD(Signal2D):
 
         gc.collect()  # Don't sink
 
+    def classify_decomposition_components(self):
+        """Classify components from a decomposition into two classes,
+        signal or noise. This can be useful before denoising a data set,
+        i.e. reconstructing it from a subset of components.
+
+        Returns
+        -------
+        signal_components : array_like of bool
+            Array with indices of components in the learning results
+            considered to contain sufficient signal to use in denoising.
+
+        Notes
+        -----
+        This is an experimental function and should be used with care.
+        """
+        target = self.learning_results
+        if target.decomposition_algorithm is None:
+            raise ValueError("No learning results were found.")
+
+        # Set up components to determine texture features from the grey level
+        # co-occurrence matrix (GLCM)
+        nx, ny, sx, sy = self.axes_manager.shape
+        output_dim = target.output_dimension
+        factors = target.factors.T.reshape((output_dim, sx, sy))
+        loadings = target.loadings.T.reshape((output_dim, ny, nx))
+
+        # Determine texture features from GLCMs
+        features = ['contrast', 'correlation', 'dissimilarity']
+        feat_fact = texture_features_glcm(factors, features)
+        feat_load = texture_features_glcm(loadings, features[1])
+        feature_values = np.column_stack((feat_fact, feat_load))
+
+        # Cluster components based upon texture values for relevant GLCM
+        # features using t-distributed stochastic neighbour embedding (t-SNE)
+        # and k-means++ clustering
+        signal = cluster_texture_features(feature_values)
+
+        # Remove too noisy components wrongly classified, if any
+        too_noisy = detect_noisy_components(factors)
+        good_components = np.where(signal)
+        signal[np.intersect1d(good_components, too_noisy)] = False
+
+        # Return signal components
+        signal_components = np.arange(output_dim)
+        signal_components = signal_components[signal]
+
+        return signal_components
+
     def _rechunk_learning_results(self, mbytes_chunk=100):
         """Return suggested data chunks for learning results. It is
         assumed that the loadings are not transposed. The last axes of
         factors and loadings are not chunked. The aims in prioritised
         order:
             1. Split into at least as many chunks as available CPUs.
-            2. Limit chunks to around input MB (mbytes_chunk).
+            2. Limit chunks to approx. input MB (`mbytes_chunk`).
             3. Keep first axis of factors (detector pixels).
 
         Parameters
