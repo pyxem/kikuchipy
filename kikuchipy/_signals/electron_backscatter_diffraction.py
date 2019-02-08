@@ -3,6 +3,7 @@
 import warnings
 import numpy as np
 import os
+import numbers
 
 from hyperspy.api import plot
 from hyperspy.signals import Signal2D
@@ -218,10 +219,13 @@ class EBSD(Signal2D):
         Parameters
         ----------
         kernel_size : integer or list-like, optional
-            Defines the shape of contextual regions used in the algorithm.
+            Defines the shape of contextual regions used in the
+            algorithm. By default, ``kernel_size`` is 1/8 of ``pattern``
+            height by 1/8 of its width, or a minimum of 20 in either
+            direction.
         clip_limit : float, optional
-            Clipping limit, normalised between 0 and 1 (higher values give
-            more contrast).
+            Clipping limit, normalised between 0 and 1 (higher values
+            give more contrast).
         nbins : int, optional
             Number of gray bins for histogram ("data range").
         **kwargs
@@ -236,6 +240,21 @@ class EBSD(Signal2D):
         """
         if self._lazy:
             kwargs['ragged'] = False
+
+        # Set kernel size, ensuring it is at least 20 in each direction
+        sdim = 2
+        kernel_size_min = 20
+        if kernel_size is None:
+            sx, sy = self.axes_manager.signal_shape
+            kernel_size = (sx // 8, sy // 8)
+        elif isinstance(kernel_size, numbers.Number):
+            kernel_size = (kernel_size,) * sdim
+        elif len(kernel_size) != sdim:
+            ValueError(
+                "Incorrect value of `kernel_size`: {}".format(kernel_size))
+        kernel_size = [int(k) for k in kernel_size]
+        kernel_size = [20 if i < 20 else i for i in kernel_size]
+
         return self.map(equalize_adapthist_pattern, kernel_size=kernel_size,
                         clip_limit=clip_limit, nbins=nbins, **kwargs)
 

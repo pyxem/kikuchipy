@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import dask.array as da
-import numbers
 import kikuchipy as kp
 from scipy.ndimage import gaussian_filter, median_filter
 from hyperspy.api import plot
 from skimage.exposure._adapthist import _clahe
-from skimage.exposure import equalize_adapthist
 
 
 def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
@@ -105,7 +103,7 @@ def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
     return pattern
 
 
-def equalize_adapthist_pattern(pattern, kernel_size=None, clip_limit=0.01,
+def equalize_adapthist_pattern(pattern, kernel_size, clip_limit=0.01,
                                nbins=256):
     """Local contrast enhancement of an electron backscatter diffraction
     pattern using contrast limited adaptive histogram equalisation
@@ -115,7 +113,7 @@ def equalize_adapthist_pattern(pattern, kernel_size=None, clip_limit=0.01,
     ----------
     pattern : array_like
         Two-dimensional array containing signal.
-    kernel_size : integer or list-like, optional
+    kernel_size : integer or list-like
         Defines the shape of contextual regions used in the algorithm.
     clip_limit : float, optional
         Clipping limit, normalised between 0 and 1 (higher values give
@@ -137,15 +135,6 @@ def equalize_adapthist_pattern(pattern, kernel_size=None, clip_limit=0.01,
     # Rescale pattern to 16-bit [0, 2**14 - 1]
     pattern = rescale_pattern_intensity(pattern, omax=2**14 - 1,
                                         dtype_out=np.uint16)
-
-    # Set kernel size
-    if kernel_size is None:
-        kernel_size = (pattern.shape[0] // 8, pattern.shape[1] // 8)
-    elif isinstance(kernel_size, numbers.Number):
-        kernel_size = (kernel_size,) * pattern.ndim
-    elif len(kernel_size) != pattern.ndim:
-        ValueError("Incorrect value of `kernel_size`: {}".format(kernel_size))
-    kernel_size = [int(k) for k in kernel_size]
 
     # Perform CLAHE and rescale to 8-bit unsigned [0, 255]
     pattern = _clahe(pattern, kernel_size, clip_limit * nbins, nbins)
