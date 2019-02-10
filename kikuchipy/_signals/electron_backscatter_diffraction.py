@@ -22,7 +22,8 @@ from kikuchipy import io
 
 
 class EBSD(Signal2D):
-    _signal_type = 'electron_backscatter_diffraction'
+    _signal_type = 'EBSD'
+    _alias_signal_types = ['electron_backscatter_diffraction']
     _lazy = False
 
     def __init__(self, *args, **kwargs):
