@@ -61,7 +61,7 @@ def rescale_pattern_intensity(pattern, imin=None, scale=None,
     pattern = pattern - imin
 
     # Scale intensities
-    return np.array(pattern * scale, dtype=dtype_out)
+    return (pattern * scale).astype(dtype_out)
 
 
 def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):

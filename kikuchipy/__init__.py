@@ -18,3 +18,4 @@
 
 from kikuchipy.io import load, save
 from kikuchipy.signals import EBSD, RadonTransform
+from kikuchipy.lazy_signals import LazyEBSD
