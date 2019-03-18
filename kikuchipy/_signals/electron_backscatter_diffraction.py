@@ -170,7 +170,7 @@ class EBSD(Signal2D):
                     bg_fname = 'Background acquisition pattern.bmp'
                     omd = self.original_metadata
                     bg = os.path.join(omd.General.original_filepath, bg_fname)
-                except ValueError:
+                except (ValueError, AttributeError):
                     raise ValueError("No background image provided")
 
             # Read and setup background
@@ -180,7 +180,8 @@ class EBSD(Signal2D):
             # Correct dead pixels in background if they are corrected in signal
             omd = self.original_metadata.Acquisition_instrument.SEM.\
                 Detector.EBSD
-            if omd.deadpixels_corrected and omd.deadpixels and omd.deadvalue:
+            if (omd.deadpixels_corrected and omd.deadpixels.any() and
+                    omd.deadvalue):
                 bg.data = remove_dead(bg.data, omd.deadpixels, omd.deadvalue)
 
             if relative and not dynamic:
