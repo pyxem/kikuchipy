@@ -57,11 +57,10 @@ def rescale_pattern_intensity(pattern, imin=None, scale=None,
         imin = pattern.min()
         scale = float(omax / (pattern.max() - imin))
 
-    # Set lowest intensity to zero
-    pattern = pattern - imin
+    # Set lowest intensity to zero and scale intensities
+    pattern = (pattern - imin) * scale
 
-    # Scale intensities
-    return (pattern * scale).astype(dtype_out)
+    return pattern.astype(dtype_out)
 
 
 def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):

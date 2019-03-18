@@ -41,9 +41,6 @@ from kikuchipy.utils.expt_utils import (correct_background, remove_dead,
                                         find_deadpixels_single_pattern,
                                         plot_markers_single_pattern,
                                         rescale_pattern_intensity)
-from kikuchipy.utils.learn_utils import (texture_features_glcm,
-                                         cluster_texture_features,
-                                         detect_noisy_components)
 
 
 class EBSD(Signal2D):
@@ -52,7 +49,8 @@ class EBSD(Signal2D):
 
     def __init__(self, *args, **kwargs):
         if self._lazy and args:
-            Signal2D.__init__(self, data=args[0].data, **kwargs)
+#            Signal2D.__init__(self, data=args[0].data, **kwargs)
+            Signal2D.__init__(self, data=args[0], **kwargs)
         else:
             Signal2D.__init__(self, *args, **kwargs)
         self.set_experimental_parameters(deadpixels_corrected=False)
@@ -162,14 +160,14 @@ class EBSD(Signal2D):
             If True (default), static correction is performed.
         dynamic : bool, optional
             If True (default), dynamic correction is performed.
-        bg : file path (default:None), optional
+        bg : file path (default is None), optional
             File path to background image for static correction. If
             None, we try to read 'Background acquisition pattern.bmp'
             from signal directory.
         relative : bool, optional
             If True (default is False), relative intensities between
             patterns are kept after static correction.
-        sigma : int, float (default:None), optional
+        sigma : int, float (default is None), optional
             Standard deviation for the gaussian kernel for dynamic
             correction. If None (default), a deviation of pattern
             width/30 is chosen.
@@ -232,7 +230,7 @@ class EBSD(Signal2D):
                  sigma=sigma, imin=imin, scale=scale, **kwargs)
 
     def find_deadpixels(self, pattern_number=10, threshold=2,
-                        pattern_coordinates=None, to_plot=False,
+                        pattern_coordinates=None, plot=False,
                         mask=None, pattern_number_threshold=0.75):
         """Find dead pixels in several experimentally acquired
         diffraction patterns by comparing pixel values in a blurred
@@ -256,7 +254,7 @@ class EBSD(Signal2D):
         pattern_coordinates : np.array, optional
             Array of selected coordinates [[x,y]] for all the patterns
             where deadpixels will be searched for.
-        to_plot : bool, optional
+        plot : bool, optional
             If True (default is False), a pattern with the dead pixels
             marked is plotted.
         mask : array of bool, optional
@@ -317,7 +315,7 @@ class EBSD(Signal2D):
         keep_list = [True if y > int(pattern_number_threshold * pattern_number)
                      else False for y in count_list]
         deadpixels = deadpixels_new[np.where(keep_list)]
-        if to_plot:
+        if plot:
             plot_markers_single_pattern(first_pattern, deadpixels)
 
         # Update original_metadata
@@ -545,8 +543,8 @@ class EBSD(Signal2D):
             If int, rebuilds signal from components in range 0-given
             int. If list of ints, rebuilds signal from only components
             in given list.
-        dtype_out : numpy dtype, optional
-            Data type of learning results. Default is float16.
+        dtype_out : {np.float16, np.float32, np.float64}, optional
+            Data type of learning results (default is float16).
             HyperSpy's ``decomposition`` returns them in float64, which
             here is assumed to be overkill.
         *args
@@ -592,10 +590,9 @@ class EBSD(Signal2D):
         self.learning_results.loadings = loadings_orig
 
         # Revert class
+        assign_class = EBSD
         if self._lazy:
             assign_class = LazyEBSD
-        else:
-            assign_class = EBSD
         self.__class__ = assign_class
         s_model.__class__ = assign_class
 
@@ -603,219 +600,6 @@ class EBSD(Signal2D):
         s_model.learning_results = LearningResults()
 
         return s_model
-
-    def get_decomposition_model_write(self, components=None,
-                                      dtype_learn=np.float16):
-        """Write the model signal generated from the selected number of
-        principal components directly to a .hspy file. The model signal
-        intensities are rescaled to the original signals' data type
-        range.
-
-        Notes
-        -----
-        Multiplying the learning results' factors and loadings in memory
-        to create the model signal cannot sometimes be done due to too
-        large matrices. Here, instead, learning results are written to
-        file, read into dask arrays and multiplied using dask's
-        ``matmul``, out of core.
-
-        Due to memory leakage (please help) when calling the function
-        ``rescale_pattern_intensity`` in ``map`` the model signal is
-        written to a temporary file before rescaling and written to a
-        .hspy file. Be aware that this temporary file is typically twice
-        the size of the original data set file.
-
-        Parameters
-        ----------
-        components : {None, int or list of ints}, optional
-            If None (default), rebuilds the signal from all components.
-            If int, rebuilds signal from components in range 0-given
-            int. If list of ints, rebuilds signal from only components
-            in given list.
-        dtype_learn : data-type, optional
-            Data type to set learning results to (default is float16).
-        """
-        if self._lazy is False:
-            raise ValueError("This function assumes the model signal is too "
-                             "large to compute in memory, use "
-                             "get_decomposition_model() instead")
-
-        # Change dtype
-        target = self.learning_results
-        factors = np.array(target.factors, dtype=dtype_learn)
-        loadings = np.array(target.loadings, dtype=dtype_learn)
-
-        # Extract relevant components
-        if hasattr(components, '__iter__'):  # components is a list of ints
-            # TODO: This should be implemented in HyperSpy
-            factors = factors[:, components]
-            loadings = loadings[:, components]
-        else:  # components is an int
-            factors = factors[:, :components]
-            loadings = loadings[:, :components]
-
-        # Write learning results to HDF5 file
-        datadir = self.original_metadata.General.original_filepath
-        t_str = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
-        file_learn = os.path.join(datadir, 'learn_' + t_str + '.h5')
-        with File(file_learn, 'w') as f:
-            f.create_dataset(name='factors', data=factors)
-            f.create_dataset(name='loadings', data=loadings)
-
-        # Matrix multiplication
-        with File(file_learn, 'r') as f:
-            # Read learning results from HDF5 file
-            chunks = self._rechunk_learning_results()
-            factors = da.from_array(f['factors'], chunks=chunks[0])
-            loadings = da.from_array(f['loadings'], chunks=chunks[1])
-
-            # Perform the matrix multiplication
-            loadings = loadings.T
-            res = factors @ loadings
-            res = res.T  # Transpose
-            res = res.reshape(self.data.shape)  # Reshape
-
-            # TODO: Avoid write to file, and directly rescale with no mem. leak?
-            # Write model data to file
-            file_model = os.path.join(datadir, 'model_' + t_str + '.hdf5')
-            res.to_hdf5(file_model, '/result')
-
-        # TODO: Find out where we leak memory and make this line unnecessary
-        # Collect garbage (so we don't sink!)
-        gc.collect()
-
-        # Write model signal to .hspy file
-        with File(file_model, 'r') as f:
-            # Create signal from results
-            s_model = self.deepcopy()
-            s_model.learning_results = LearningResults()
-            s_model.data = da.from_array(f['result'], chunks=(1, 1, -1, -1))
-
-            # Rescale intensities
-            s_model.map(rescale_pattern_intensity, ragged=False)
-            s_model.data = s_model.data.astype(self.data.dtype)
-
-            # Write signal to file (rechunking saves a little time?)
-            file_model2 = os.path.join(datadir, 'model2_' + t_str)
-            chunks = s_model._get_dask_chunks()
-            s_model.data = s_model.data.rechunk(chunks=chunks)
-            gc.collect()
-            s_model.save(file_model2)
-
-        # Delete temporary files
-        os.remove(file_learn)
-        os.remove(file_model)
-
-        gc.collect()  # Don't sink
-
-    def classify_decomposition_components(self):
-        """Classify components from a decomposition into two classes,
-        signal or noise. This can be useful before denoising a data set,
-        i.e. reconstructing it from a subset of components.
-
-        Returns
-        -------
-        signal_components : array_like of bool
-            Array with indices of components in the learning results
-            considered to contain sufficient signal to use in denoising.
-
-        Notes
-        -----
-        This is an experimental function and should be used with care.
-        """
-        target = self.learning_results
-        if target.decomposition_algorithm is None:
-            raise ValueError("No learning results were found.")
-
-        # Set up components to determine texture features from the grey level
-        # co-occurrence matrix (GLCM)
-        nx, ny, sx, sy = self.axes_manager.shape
-        output_dim = target.output_dimension
-        factors = target.factors.T.reshape((output_dim, sx, sy))
-        loadings = target.loadings.T.reshape((output_dim, ny, nx))
-
-        # Determine texture features from GLCMs
-        features = ['contrast', 'correlation', 'dissimilarity']
-        feat_fact = texture_features_glcm(factors, features)
-        feat_load = texture_features_glcm(loadings, features[1])
-        feature_values = np.column_stack((feat_fact, feat_load))
-
-        # Cluster components based upon texture values for relevant GLCM
-        # features using t-distributed stochastic neighbour embedding (t-SNE)
-        # and k-means++ clustering
-        signal = cluster_texture_features(feature_values)
-
-        # Remove too noisy components wrongly classified, if any
-        too_noisy = detect_noisy_components(factors)
-        good_components = np.where(signal)
-        signal[np.intersect1d(good_components, too_noisy)] = False
-
-        # Return signal components
-        signal_components = np.arange(output_dim)
-        signal_components = signal_components[signal]
-
-        return signal_components
-
-    def _rechunk_learning_results(self, mbytes_chunk=100):
-        """Return suggested data chunks for learning results. It is
-        assumed that the loadings are not transposed. The last axes of
-        factors and loadings are not chunked. The aims in prioritised
-        order:
-            1. Split into at least as many chunks as available CPUs.
-            2. Limit chunks to approx. input MB (`mbytes_chunk`).
-            3. Keep first axis of factors (detector pixels).
-
-        Parameters
-        ----------
-        mbytes_chunk : int, optional
-            Size of chunks in MB, default is 100 MB as suggested in the
-            Dask documentation.
-
-        Returns
-        -------
-        List of two tuples
-            The first/second tuple are suggested chunks to pass to
-            ``dask.array.rechunk`` for factors/loadings, respectively.
-        """
-        target = self.learning_results
-        if target.decomposition_algorithm is None:
-            raise ValueError("No learning results were found.")
-
-        # Get dask chunks
-        factors = target.factors
-        loadings = target.loadings
-        tshape = factors.shape + loadings.shape
-
-        # Make sure the last factors/loading axes have the same shapes
-        # TODO: Should also handle the case where the first axes are the same
-        if tshape[1] != tshape[3]:
-            raise ValueError("The last dimensions in factors and loadings are "
-                             "not the same.")
-
-        # Determine maximum number of (strictly necessary) chunks
-        suggested_size = mbytes_chunk * 2**20  # 100 MB default
-        factors_size = factors.nbytes
-        loadings_size = loadings.nbytes
-        total_size = factors_size + loadings_size
-        num_chunks = np.ceil(total_size / suggested_size)
-
-        # Get chunk sizes
-        cpus = os.cpu_count()
-        if num_chunks <= cpus:  # Return approx. as many chunks as CPUs
-            chunks = [(-1, -1), (int(tshape[2]/cpus), -1)]  # -1 = don't chunk
-        elif factors.nbytes <= suggested_size:  # Chunk first axis in loadings
-            chunks = [(-1, -1), (int(tshape[2]/num_chunks), -1)]
-        else:  # Chunk both first axes
-            sizes = [factors_size, loadings_size]
-            while (sizes[0] + sizes[1]) >= suggested_size:
-                i = np.argmax(sizes)
-                sizes[i] = np.floor(sizes[i] / 2)
-            factors_chunks = int(np.ceil(factors_size/sizes[0]))
-            loadings_chunks = int(np.ceil(loadings_size/sizes[1]))
-            chunks = [(int(tshape[0]/factors_chunks), -1),
-                      (int(tshape[2]/loadings_chunks), -1)]
-
-        return chunks
 
 
 class LazyEBSD(EBSD, LazySignal2D):
@@ -851,3 +635,146 @@ class LazyEBSD(EBSD, LazySignal2D):
 
         # Collect garbage (coming from where?)
         gc.collect()
+
+    def get_decomposition_model_write(self, components=None,
+                                      dtype_learn=np.float16):
+        """Write the model signal generated from the selected number of
+        principal components directly to a .hspy file. The model signal
+        intensities are rescaled to the original signals' data type
+        range.
+
+        Notes
+        -----
+        Multiplying the learning results' factors and loadings in memory
+        to create the model signal cannot sometimes be done due to too
+        large matrices. Here, instead, learning results are written to
+        file, read into dask arrays and multiplied using dask's
+        ``matmul``, out of core.
+
+        Due to memory leakage (please help) when calling the function
+        ``rescale_pattern_intensity`` in ``map`` the model signal is
+        written to a temporary file before rescaling and written to a
+        .hspy file. Be aware that this temporary file is typically twice
+        the size of the original data set file.
+
+        Parameters
+        ----------
+        components : {None, int or list of ints}, optional
+            If None (default), rebuilds the signal from all components.
+            If int, rebuilds signal from components in range 0-given
+            int. If list of ints, rebuilds signal from only components
+            in given list.
+        dtype_learn : {np.float16, np.float32, np.float64}, optional
+            Data type to set learning results to (default is float16).
+        """
+
+        # Change dtype
+        target = self.learning_results
+        factors = np.array(target.factors, dtype=dtype_learn)
+        loadings = np.array(target.loadings, dtype=dtype_learn)
+
+        # Extract relevant components
+        if hasattr(components, '__iter__'):  # components is a list of ints
+            # TODO: This should be implemented in HyperSpy
+            factors = factors[:, components]
+            loadings = loadings[:, components]
+        else:  # components is an int
+            factors = factors[:, :components]
+            loadings = loadings[:, :components]
+
+        # Write learning results to HDF5 file
+        datadir = self.original_metadata.General.original_filepath
+        t_str = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
+        file_learn = os.path.join(datadir, 'learn_' + t_str + '.h5')
+        with File(file_learn, 'w') as f:
+            f.create_dataset(name='factors', data=factors)
+            f.create_dataset(name='loadings', data=loadings)
+
+        # Matrix multiplication
+        with File(file_learn, 'r') as f:
+            # Read learning results from HDF5 file
+            chunks = self._rechunk_learning_results()
+            factors = da.from_array(f['factors'], chunks=chunks[0])
+            loadings = da.from_array(f['loadings'], chunks=chunks[1])
+
+            # Perform the matrix multiplication
+            loadings = loadings.T
+            res = factors @ loadings
+            res = res.T  # Transpose
+
+            # Create new signal from multiplied matrix
+            s_model = self.deepcopy()
+            s_model.learning_results = LearningResults()
+            s_model.data = res.reshape(s_model.data.shape)
+            s_model.data = s_model.data.rechunk(chunks=(1, 1, -1, -1))
+
+            # Rescale intensities and revert data type
+            s_model.map(rescale_pattern_intensity, ragged=False)
+            s_model.data = s_model.data.astype(self.data.dtype)
+
+            # Write signal to file (rechunking saves a little time?)
+            file_model = os.path.join(datadir, 'model2' + t_str)
+            s_model.save(file_model)
+
+        # Delete temporary files
+        os.remove(file_learn)
+        gc.collect()  # Don't sink
+
+    def _rechunk_learning_results(self, mbytes_chunk=100):
+        """Return suggested data chunks for learning results. It is
+        assumed that the loadings are not transposed. The last axes of
+        factors and loadings are not chunked. The aims in prioritised
+        order:
+            1. Split into at least as many chunks as available CPUs.
+            2. Limit chunks to approx. input MB (`mbytes_chunk`).
+            3. Keep first axis of factors (detector pixels).
+
+        Parameters
+        ----------
+        mbytes_chunk : int, optional
+            Size of chunks in MB, default is 100 MB as suggested in the
+            Dask documentation.
+
+        Returns
+        -------
+        List of two tuples
+            The first/second tuple are suggested chunks to pass to
+            ``dask.array.rechunk`` for factors/loadings, respectively.
+        """
+        target = self.learning_results
+        if target.decomposition_algorithm is None:
+            raise ValueError("No learning results were found.")
+
+        # Get dask chunks
+        tshape = target.factors.shape + target.loadings.shape
+
+        # Make sure the last factors/loading axes have the same shapes
+        # TODO: Should also handle the case where the first axes are the same
+        if tshape[1] != tshape[3]:
+            raise ValueError("The last dimensions in factors and loadings are "
+                             "not the same.")
+
+        # Determine maximum number of (strictly necessary) chunks
+        suggested_size = mbytes_chunk * 2**20  # 100 MB default
+        factors_size = target.factors.nbytes
+        loadings_size = target.loadings.nbytes
+        total_size = factors_size + loadings_size
+        num_chunks = np.ceil(total_size / suggested_size)
+
+        # Get chunk sizes
+        cpus = os.cpu_count()
+        if num_chunks <= cpus:  # Return approx. as many chunks as CPUs
+            chunks = [(-1, -1), (int(tshape[2]/cpus), -1)]  # -1 = don't chunk
+        elif factors_size <= suggested_size:  # Chunk first axis in loadings
+            chunks = [(-1, -1), (int(tshape[2]/num_chunks), -1)]
+        else:  # Chunk both first axes
+            sizes = [factors_size, loadings_size]
+            while (sizes[0] + sizes[1]) >= suggested_size:
+                i = np.argmax(sizes)
+                sizes[i] = np.floor(sizes[i] / 2)
+            factors_chunks = int(np.ceil(factors_size/sizes[0]))
+            loadings_chunks = int(np.ceil(loadings_size/sizes[1]))
+            chunks = [(int(tshape[0]/factors_chunks), -1),
+                      (int(tshape[2]/loadings_chunks), -1)]
+
+        return chunks
