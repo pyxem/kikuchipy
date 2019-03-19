@@ -75,7 +75,7 @@ def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
     """
     if static:
         # Change data types to avoid negative intensities in subtraction
-        dtype = np.int8
+        dtype = np.int16
         pattern = pattern.astype(dtype)
         bg = bg.astype(dtype)
 

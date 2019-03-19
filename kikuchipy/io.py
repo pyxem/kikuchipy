@@ -42,8 +42,7 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
         files can be loaded by using simple shell-style wildcards,
         e.g. 'my_file*.dat' loads all the files that starts
         by 'my_file' and has the '.dat' extension.
-    signal_type : {None, 'ElectronBackscatterDiffraction',
-    'RadonTransform', '', str}, optional
+    signal_type : {None, 'EBSD', 'RadonTransform', '', str}, optional
         The name or acronym that identifies the signal type. The value
         provided may determine the Signal subclass assigned to the
         data. If None the value is read/guessed from the file. Any
@@ -320,8 +319,7 @@ def dict2signal(signal_dict, axis=None, lazy=False):
     return signal
 
 
-def assign_signal_subclass(dtype, signal_dimension, signal_type='',
-                           lazy=False):
+def assign_signal_subclass(dtype, signal_dimension, signal_type='', lazy=False):
     """Given record_by and signal_type return the matching Signal
     subclass.
 
@@ -329,8 +327,8 @@ def assign_signal_subclass(dtype, signal_dimension, signal_type='',
     ----------
     dtype : :class:`~.numpy.dtype`
     signal_dimension : int
-    signal_type : {'EBSD', 'RadonTransform', '', str}
-    lazy : bool
+    signal_type : {'', 'EBSD', 'RadonTransform', str}, optional
+    lazy : bool, optional
 
     Returns
     -------
@@ -339,7 +337,8 @@ def assign_signal_subclass(dtype, signal_dimension, signal_type='',
     import kikuchipy.signals
     import kikuchipy.lazy_signals
     from hyperspy.signal import BaseSignal
-    from hyperspy._lazy_signals import LazySignal
+    from hyperspy.signals import Signal1D, Signal2D
+    from hyperspy._lazy_signals import LazySignal, LazySignal1D, LazySignal2D
 
     # Check if parameter values are allowed:
     if np.issubdtype(dtype, np.complexfloating):
@@ -356,6 +355,13 @@ def assign_signal_subclass(dtype, signal_dimension, signal_type='',
 
     base_signals = find_subclasses(kikuchipy.signals, BaseSignal)
     lazy_signals = find_subclasses(kikuchipy.lazy_signals, LazySignal)
+
+    # Add HyperSpy's BaseSignal, Signal1D, Signal2D and their lazy partners for
+    # when signal_type = ''
+    base_signals.update({'BaseSignal': BaseSignal, 'Signal1D': Signal1D,
+                         'Signal2D': Signal2D})
+    lazy_signals.update({'LazySignal1D': LazySignal1D,
+                         'LazySignal2D': LazySignal2D})
 
     if lazy:
         signals = lazy_signals
