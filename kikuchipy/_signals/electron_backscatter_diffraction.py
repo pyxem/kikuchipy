@@ -3,6 +3,7 @@
 import warnings
 import numpy as np
 import os
+import numbers
 
 from hyperspy.api import plot
 from hyperspy.signals import Signal2D
@@ -17,7 +18,8 @@ from hyperspy.misc.utils import dummy_context_manager
 from kikuchipy._signals.radon_transform import RadonTransform
 from kikuchipy.utils.expt_utils import (correct_background, remove_dead,
                                         find_deadpixels_single_pattern,
-                                        plot_markers_single_pattern)
+                                        plot_markers_single_pattern,
+                                        equalize_adapthist_pattern)
 from kikuchipy import io
 
 
@@ -93,7 +95,7 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        calibration: float
+        calibration : float
             Scan step size in µm per pixel.
         """
         ElectronDiffraction.set_scan_calibration(self, calibration)
@@ -106,7 +108,7 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        calibration: float
+        calibration : float
             Diffraction pattern calibration in reciprocal Angstroms per
             pixel.
         """
@@ -116,8 +118,7 @@ class EBSD(Signal2D):
 
     def remove_background(self, static=True, dynamic=True, bg=None,
                           relative=False, sigma=None, **kwargs):
-        """Perform background correction, either static, dynamic or
-        both, on a stack of electron backscatter diffraction patterns.
+        """Background correction, either static, dynamic or both.
 
         For the static correction, a background image is subtracted
         from all patterns. For the dynamic correction, each pattern is
@@ -153,7 +154,7 @@ class EBSD(Signal2D):
             Arguments to be passed to map().
         """
         if not static and not dynamic:
-            raise ValueError("No correction done, quitting")
+            raise ValueError("No correction done")
 
         lazy = self._lazy
         if lazy:
@@ -207,6 +208,55 @@ class EBSD(Signal2D):
 
         self.map(correct_background, static=static, dynamic=dynamic, bg=bg,
                  sigma=sigma, imin=imin, scale=scale, **kwargs)
+
+    def equalize_adapthist(self, kernel_size=None, clip_limit=0.01, nbins=256,
+                           **kwargs):
+        """Local contrast enhancement using contrast limited adaptive
+        histogram equalisation (CLAHE).
+
+        Input data is assumed to be a two-dimensional numpy array of
+        patterns of dtype uint8.
+
+        Parameters
+        ----------
+        kernel_size : integer or list-like, optional
+            Defines the shape of contextual regions used in the
+            algorithm. By default, ``kernel_size`` is 1/8 of ``pattern``
+            height by 1/8 of its width, or a minimum of 20 in either
+            direction.
+        clip_limit : float, optional
+            Clipping limit, normalised between 0 and 1 (higher values
+            give more contrast).
+        nbins : int, optional
+            Number of gray bins for histogram ("data range").
+        **kwargs
+            Arguments to be passed to map().
+
+        Notes
+        -----
+        Adapted from scikit-image, without rescaling the pattern before
+        equalisation and returning it with correct data type. See
+        ``skimage.exposure.equalize_adapthist`` documentation for more
+        details.
+        """
+        if self._lazy:
+            kwargs['ragged'] = False
+
+        # Set kernel size, ensuring it is at least 20 in each direction
+        sdim = 2
+        if kernel_size is None:
+            sx, sy = self.axes_manager.signal_shape
+            kernel_size = (sx // 8, sy // 8)
+        elif isinstance(kernel_size, numbers.Number):
+            kernel_size = (kernel_size,) * sdim
+        elif len(kernel_size) != sdim:
+            ValueError(
+                "Incorrect value of `kernel_size`: {}".format(kernel_size))
+        kernel_size = [int(k) for k in kernel_size]
+        kernel_size = [20 if i < 20 else i for i in kernel_size]
+
+        self.map(equalize_adapthist_pattern, kernel_size=kernel_size,
+                 clip_limit=clip_limit, nbins=nbins, **kwargs)
 
     def find_deadpixels(self, pattern_number=10, threshold=2,
                         pattern_coordinates=None, to_plot=False,

@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import dask.array as da
+import kikuchipy as kp
 from scipy.ndimage import gaussian_filter, median_filter
 from hyperspy.api import plot
-import kikuchipy as kp
+from skimage.exposure._adapthist import _clahe
 
 
 def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
@@ -17,8 +18,8 @@ def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
 
     Parameters
     ----------
-    pattern : numpy array of unsigned integer dtype
-        Input pattern.
+    pattern : array_like
+        Two-dimensional array containing signal.
     imin : int, optional
         Global min. intensity of patterns.
     scale : float, optional
@@ -30,7 +31,7 @@ def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
 
     Returns
     -------
-    pattern : numpy array
+    pattern : array_like
         Output pattern rescaled to specified range.
     """
     if imin is None and scale is None:  # Local contrast stretching
@@ -45,18 +46,18 @@ def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
 
 
 def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
-    """Perform background correction on an electron backscatter
-    diffraction patterns.
+    """Static and dynamic background correction on an electron
+    backscatter diffraction pattern.
 
     Parameters
     ----------
-    pattern : numpy array of unsigned integer dtype
-        Input pattern.
+    pattern : array_like
+        Two-dimensional array containing signal.
     static : bool, optional
         If True, static correction is performed.
     dynamic : bool, optional
         If True, dynamic correction is performed.
-    bg : numpy array
+    bg : array_like
         Background image for static correction.
     sigma : int, float
         Standard deviation for the gaussian kernel for dynamic
@@ -68,7 +69,7 @@ def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
 
     Returns
     -------
-    pattern : numpy array
+    pattern : array_like
         Output pattern with background corrected and intensities
         stretched to a desired range.
     """
@@ -102,16 +103,54 @@ def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
     return pattern
 
 
-def remove_dead(pattern, deadpixels, deadvalue="average", d=1):
-    """Remove dead pixels from a pattern.
-
-    NB! This function is slow for lazy signals and leaks memory.
+def equalize_adapthist_pattern(pattern, kernel_size, clip_limit=0.01,
+                               nbins=256):
+    """Local contrast enhancement of an electron backscatter diffraction
+    pattern using contrast limited adaptive histogram equalisation
+    (CLAHE).
 
     Parameters
     ----------
-    pattern : numpy array or dask array
-        Two-dimensional data array containing signal.
-    deadpixels : numpy array
+    pattern : array_like
+        Two-dimensional array containing signal.
+    kernel_size : integer or list-like
+        Defines the shape of contextual regions used in the algorithm.
+    clip_limit : float, optional
+        Clipping limit, normalised between 0 and 1 (higher values give
+        more contrast).
+    nbins : int, optional
+        Number of gray bins for histogram ("data range").
+
+    Returns
+    -------
+    pattern : array_like
+        Equalised pattern.
+
+    Notes
+    -----
+    Adapted from scikit-image, returning the pattern with correct data
+    type. See ``skimage.exposure.equalize_adapthist`` documentation for
+    more details.
+    """
+    # Rescale pattern to 16-bit [0, 2**14 - 1]
+    pattern = rescale_pattern_intensity(pattern, omax=2**14 - 1,
+                                        dtype_out=np.uint16)
+
+    # Perform CLAHE and rescale to 8-bit [0, 255]
+    pattern = _clahe(pattern, kernel_size, clip_limit * nbins, nbins)
+    pattern = rescale_pattern_intensity(pattern)
+
+    return pattern
+
+
+def remove_dead(pattern, deadpixels, deadvalue="average", d=1):
+    """Remove dead pixels from a pattern.
+
+    Parameters
+    ----------
+    pattern : array_like
+        Two-dimensional array containing signal.
+    deadpixels : array_like
         Array containing the array indices of dead pixels in the
         pattern.
     deadvalue : string
@@ -123,9 +162,12 @@ def remove_dead(pattern, deadpixels, deadvalue="average", d=1):
 
     Returns
     -------
-    new_pattern : numpy array or dask array
-        Two-dimensional data array containing z with dead pixels
-        removed.
+    new_pattern : array_like
+        Two-dimensional array containing z with dead pixels removed.
+
+    Notes
+    -----
+    This function is slow for lazy signals and leaks memory.
     """
     new_pattern = np.copy(pattern)
     if deadvalue == 'average':
@@ -152,8 +194,8 @@ def find_deadpixels_single_pattern(pattern, threshold=5, to_plot=False,
 
     Parameters
     ----------
-    pattern : array
-        EBSD pattern to search for dead pixels in.
+    pattern : array_like
+        Two-dimensional array containing signal.
     threshold : int, optional
         Threshold for difference in pixel intensities between
         blurred and original pattern. The actual threshold is given
@@ -227,11 +269,11 @@ def find_deadpixels_single_pattern(pattern, threshold=5, to_plot=False,
 
 
 def plot_markers_single_pattern(pattern, markers):
-    """Plot markers on an EBSD pattern.
+    """Plot markers on an electron backscatter diffraction pattern.
 
     Parameters
     ----------
-    pattern : numpy array
+    pattern : array_like
     markers : list of tuples
     """
     pat = kp.signals.EBSD(pattern)
