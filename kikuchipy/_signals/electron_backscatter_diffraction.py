@@ -254,8 +254,8 @@ class EBSD(Signal2D):
         kernel_size = [int(k) for k in kernel_size]
         kernel_size = [20 if i < 20 else i for i in kernel_size]
 
-        return self.map(equalize_adapthist_pattern, kernel_size=kernel_size,
-                        clip_limit=clip_limit, nbins=nbins, **kwargs)
+        self.map(equalize_adapthist_pattern, kernel_size=kernel_size,
+                 clip_limit=clip_limit, nbins=nbins, **kwargs)
 
     def find_deadpixels(self, pattern_number=10, threshold=2,
                         pattern_coordinates=None, to_plot=False,
