@@ -57,7 +57,7 @@ def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
         If True, static correction is performed.
     dynamic : bool, optional
         If True, dynamic correction is performed.
-    bg : numpy array
+    bg : array_like
         Background image for static correction.
     sigma : int, float
         Standard deviation for the gaussian kernel for dynamic
@@ -136,7 +136,7 @@ def equalize_adapthist_pattern(pattern, kernel_size, clip_limit=0.01,
     pattern = rescale_pattern_intensity(pattern, omax=2**14 - 1,
                                         dtype_out=np.uint16)
 
-    # Perform CLAHE and rescale to 8-bit unsigned [0, 255]
+    # Perform CLAHE and rescale to 8-bit [0, 255]
     pattern = _clahe(pattern, kernel_size, clip_limit * nbins, nbins)
     pattern = rescale_pattern_intensity(pattern)
 

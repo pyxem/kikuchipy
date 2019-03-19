@@ -243,7 +243,6 @@ class EBSD(Signal2D):
 
         # Set kernel size, ensuring it is at least 20 in each direction
         sdim = 2
-        kernel_size_min = 20
         if kernel_size is None:
             sx, sy = self.axes_manager.signal_shape
             kernel_size = (sx // 8, sy // 8)
