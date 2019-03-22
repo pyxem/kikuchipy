@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+# Copyright 2019 The KikuchiPy developers
+#
+# This file is part of KikuchiPy.
+#
+# KikuchiPy is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# KikuchiPy is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
+
 import numpy as np
 import dask.array as da
 import kikuchipy as kp
@@ -7,14 +24,14 @@ from hyperspy.api import plot
 from skimage.exposure._adapthist import _clahe
 
 
-def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
+def rescale_pattern_intensity(pattern, imin=None, scale=None,
                               dtype_out=np.uint8):
     """Rescale electron backscatter diffraction pattern intensities to
-    specified range using contrast stretching.
-
-    If imin and scale is passed the pattern intensities are stretched
-    to a global min. and max. intensity. Otherwise they are stretched
-    to between zero and omax.
+    unsigned integer range or desired unsigned range specified by imin
+    and scale. If imin and scale are passed the pattern intensities are
+    stretched to a global min. and max. intensity according to these
+    values. Otherwise they are stretched to between zero and maximum of
+    dtype_out.
 
     Parameters
     ----------
@@ -24,8 +41,6 @@ def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
         Global min. intensity of patterns.
     scale : float, optional
         Global scaling factor for intensities of output pattern.
-    omax : int, optional
-        Max. intensity of output pattern (default = 255).
     dtype_out : numpy dtype
         Data type of output pattern.
 
@@ -34,15 +49,19 @@ def rescale_pattern_intensity(pattern, imin=None, scale=None, omax=255,
     pattern : array_like
         Output pattern rescaled to specified range.
     """
+    # TODO: Stop function from leaking memory when used with map
+    if np.issubdtype(dtype_out, np.unsignedinteger) is False:
+        raise ValueError("Data type is not unsigned integer.")
+
     if imin is None and scale is None:  # Local contrast stretching
+        omax = np.iinfo(dtype_out).max
         imin = pattern.min()
-        scale = float(omax / (pattern.max() + abs(imin)))
+        scale = float(omax / (pattern.max() - imin))
 
-    # Set lowest intensity to zero
-    pattern = pattern + abs(imin)
+    # Set lowest intensity to zero and scale intensities
+    pattern = (pattern - imin) * scale
 
-    # Scale intensities
-    return np.array(pattern * scale, dtype=dtype_out)
+    return pattern.astype(dtype_out)
 
 
 def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
@@ -169,6 +188,7 @@ def remove_dead(pattern, deadpixels, deadvalue="average", d=1):
     -----
     This function is slow for lazy signals and leaks memory.
     """
+    # TODO: Stop function from leaking memory when used with map
     new_pattern = np.copy(pattern)
     if deadvalue == 'average':
         for (i, j) in deadpixels:

@@ -1,4 +1,21 @@
 # -*- coding: utf-8 -*-
+# Copyright 2019 The KikuchiPy developers
+#
+# This file is part of KikuchiPy.
+#
+# KikuchiPy is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# KikuchiPy is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import re
 import warnings
@@ -217,7 +234,13 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
 
     units = [u'\u03BC'+'m', u'\u03BC'+'m', 'A^{-1}', 'A^{-1}']
     names = ['y', 'x', 'dx', 'dy']
-    scales = [1, 1, 1, 1]
+    scales = np.ones(4)
+
+    try:  # Calibrate scan dimension
+        scales[:2] = scales[:2]*omd.get_item(EBSD_str + '.step_size')
+    except BaseException:
+        warnings.warn("Could not calibrate scan dimension, this can be done "
+                      "using set_scan_calibration()")
 
     # Set relevant values in metadata and original_metadata
     md.set_item('General.original_filename', os.path.split(filename)[1])
@@ -237,8 +260,7 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
             'units': units[i], }
         for i in range(dim)]
 
-    dictionary = {'axis': ('x', 'dx', 'dy'),  # Only slice y axis if lazy
-                  'data': data,
+    dictionary = {'data': data,
                   'axes': axes,
                   'metadata': md.as_dictionary(),
                   'original_metadata': omd.as_dictionary()}
@@ -262,7 +284,7 @@ def file_writer(filename, signal):
     """
     with open(filename, 'wb') as f:
         if signal._lazy:
-            raise ValueError("Writing to NORDIF .dat file is not yet "
+            raise ValueError("Writing lazily to NORDIF .dat file is not yet "
                              "supported")
         else:
             for pattern in signal._iterate_signal():
