@@ -162,7 +162,7 @@ def equalize_adapthist_pattern(pattern, kernel_size, clip_limit=0.01,
     return pattern
 
 
-def remove_dead(pattern, deadpixels, deadvalue="average", d=1):
+def remove_dead(pattern, deadpixels, deadvalue='average', d=1):
     """Remove dead pixels from a pattern.
 
     Parameters
