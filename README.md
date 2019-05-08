@@ -1,4 +1,4 @@
-Introduction
+KikuchiPy
 ------------
 KikuchiPy is an open-source Python library for processing of electron
 backscatter diffraction (EBSD) patterns. It builds upon the tools for
@@ -7,33 +7,32 @@ of experimental EBSD data.
 
 KikuchiPy is released under the GPL v3 license.
 
-Install
+Installation
 ------------
-Coming soon.
+KikuchiPy requires Python 3 and conda – we suggest using the Python 3 version of [Miniconda](https://conda.io/miniconda.html) and creating a new environment for KikuchiPy using the following commands in the Anaconda Prompt within the top directory with the `setup.py` file:
 
-Use
------
-Typical workflow:
-
-```python
->>> import kikuchipy as kp
->>> s = kp.load('/path/to/Pattern.dat')
->>> s.plot()  # Have a look at your data!
->>> s.find_deadpixels()
->>> s.remove_deadpixels()
->>> s.remove_background(bg='/path/to/background_pattern.bmp', static=True,
-                        dynamic=True)  # Static and dynamic corrections
->>> s.decomposition()  # Assuming you can keep all computations in memory
->>> components = s.classify_decomposition_components()
-# Inspect learning results, comparing them to suggested components to keep
->>> s.plot_decomposition_results()
->>> sc = s.get_decomposition_model(components)
->>> sc.save('/path/to/Pattern_denoised.dat')
+```bash
+$ conda create -n kikuchi python=3.7
+$ conda activate kikuchi
+$ conda install -c conda-forge pyxem
+$ python setup.py install
 ```
 
-Supported formats
--------
-So far it is possible to import patterns stored in:
+KikuchiPy depends on pyXem. pyXem depends on DiffPy, and while KikuchiPy does not depend on DiffPy, pyXem must be installed first for the installation to be successful.
+
+Use
+---
+Jupyter Notebooks explaining typical workflows will be made available in a separate repository in the near future.
+
+Supported EBSD formats
+----------------------
+So far it is possible to read/write patterns stored in:
 * NORDIF .dat binary files
 * HDF5 files
 * HyperSpy's .hspy files
+
+with plans to support:
+* .h5ebsd
+* EMEBSD (EMsoft's HDF5 format)
+* EDAX/TSL HDF5 format
+* Bruker HDF5 format
