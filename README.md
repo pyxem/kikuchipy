@@ -9,10 +9,10 @@ KikuchiPy is released under the GPL v3 license.
 
 Installation
 ------------
-KikuchiPy requires Python 3 and conda -- we suggest using the Python 3 version of [Miniconda](https://conda.io/miniconda.html) and creating a new environment for KikuchiPy using the following commands in the Anaconda Prompt within the top directory with the `setup.py` file:
+KikuchiPy requires Python 3 and conda – we suggest using the Python 3 version of [Miniconda](https://conda.io/miniconda.html) and creating a new environment for KikuchiPy using the following commands in the Anaconda Prompt within the top directory with the `setup.py` file:
 
 ```bash
-$ conda create -n kikuchi
+$ conda create -n kikuchi python=3.7
 $ conda activate kikuchi
 $ conda install -c conda-forge pyxem
 $ python setup.py install
