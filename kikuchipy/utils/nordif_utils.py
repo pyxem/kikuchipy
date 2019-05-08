@@ -22,10 +22,11 @@ import dask.array as da
 
 def fix_pattern_order(data, shift=-1, overwrite=False, corrupt_idx=(0, 0),
                       overwrite_idx=(-1, -1)):
-    """Shift the pattern order a number of steps equal to `shift` using
-    `numpy.roll`. If a pattern specified by `corrupt_idx` is corrupted
-    this pattern can be written over by another pattern specified by
-    `overwrite_idx`.
+    """Shift the patterns a number of steps equal to `shift` using
+    `numpy.roll` or the dask equivalent. If a pattern specified by
+    `corrupt_idx` is corrupted this pattern can be overwritten by
+    another pattern specified by `overwrite_idx` before shifting, if
+    the data is not lazy.
 
     Parameters
     ----------
