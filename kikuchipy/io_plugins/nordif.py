@@ -31,11 +31,10 @@ format_name = 'NORDIF'
 description = 'Read/write support for NORDIF Pattern.dat files'
 full_support = False
 # Recognised file extension
-file_extensions = ['dat', 'DAT']
+file_extensions = ['dat']
 default_extension = 0
 # Writing capabilities
 writes = [(2, 2), (2, 1), (2, 0)]
-magics = []
 
 # Set common strings
 SEM_str = 'Acquisition_instrument.SEM'
@@ -160,8 +159,7 @@ def get_settings_from_file(filename):
 
 
 def file_reader(filename, mmap_mode=None, lazy=False, **kwargs):
-    """Read electron backscatter diffraction patterns from a NORDIF
-    data file.
+    """Read electron backscatter patterns from a NORDIF data file.
 
     Parameters
     ----------
@@ -190,7 +188,7 @@ def file_reader(filename, mmap_mode=None, lazy=False, **kwargs):
     if mmap_mode is None:
         mmap_mode = 'r' if lazy else 'c'
 
-    # Make sure we open in right mode
+    # Make sure we open in correct mode
     if '+' in mmap_mode or ('write' in mmap_mode and
                             'copyonwrite' != mmap_mode):
         if lazy:
