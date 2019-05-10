@@ -63,8 +63,8 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
         The name or acronym that identifies the signal type. The value
         provided may determine the Signal subclass assigned to the
         data. If None the value is read/guessed from the file. Any
-        other value overrides the value stored in the file if any. For
-        If '' (empty string) the value is not read from the file and is
+        other value overrides the value stored in the file if any. If ''
+        (empty string) the value is not read from the file and is
         considered undefined.
     stack : bool, optional
         If True and multiple filenames are passed in, stacking all
@@ -89,6 +89,8 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
     convert_units : bool, optional
         If True, convert the units using the `convert_to_units` method
         of the `axes_manager`. If False (default), nothing is done.
+    **kwargs :
+            Keyword arguments to be passed to the file reader.
 
     Returns
     -------
@@ -97,14 +99,14 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
     Examples
     --------
     Loading a single file providing the signal type:
-    >>> d = kp.load('Pattern.dat', signal_type='EBSD')
+    >>> s = kp.load('Pattern.dat', signal_type='EBSD')
     Loading multiple files:
-    >>> d = kp.load('Pattern1.dat','Pattern2.dat')
+    >>> s = kp.load(['Pattern1.dat', 'Pattern2.dat'])
     Loading multiple files matching the pattern:
-    >>> d = kp.load('Pattern*.dat')
+    >>> s = kp.load('Pattern*.dat')
     Loading (potentially larger than the available memory) files lazily
     and stacking:
-    >>> d = hs.load('Pattern*.dat', lazy=True, stack=True)
+    >>> s = kp.load('Pattern*.dat', lazy=True, stack=True)
     """
     kwargs['signal_type'] = signal_type
     kwargs['convert_units'] = convert_units
@@ -133,9 +135,9 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
     else:
         if stack is True:
             # We are loading a stack!
-            # Note that while each file might contain several _signals, all
-            # files are required to contain the same number of _signals. We
-            # therefore use the first file to determine the number of _signals.
+            # Note that while each file might contain several signals, all
+            # files are required to contain the same number of signals. We
+            # therefore use the first file to determine the number of signals.
             for i, filename in enumerate(filenames):
                 obj = load_single_file(filename, lazy=lazy, **kwargs)
                 if i == 0:
@@ -151,7 +153,7 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
                     if isinstance(obj, (list, tuple)):
                         if n != len(obj):
                             raise ValueError(
-                                "The number of sub-_signals per file does not "
+                                "The number of signals per file does not "
                                 "match:\n" +
                                 (f_error_fmt % (1, n, filenames[0])) +
                                 (f_error_fmt % (i, len(obj), filename)))
@@ -161,8 +163,8 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
                 elif n > 1:
                     for j in range(n):
                         signals[j].append(obj[j])
-            # Next, merge the _signals in the `stack_axis` direction.
-            # When each file has N _signals, we create N stacks.
+            # Next, merge the signals in the `stack_axis` direction.
+            # When each file has N signals, we create N stacks.
             objects = []
             for i in range(n):
                 signal = signals[i]  # Sublist, with len = len(filenames)
@@ -220,7 +222,7 @@ def load_with_reader(filename, reader, signal_type=None, convert_units=False,
     filename : str
     reader : io_plugin
     signal_type : {None, 'ElectronBackscatterDiffraction',
-    'RadonTransform', '', str}, optional
+        'RadonTransform', '', str}, optional
     convert_units : bool, optional
 
     Returns
@@ -324,7 +326,7 @@ def dict2signal(signal_dict, lazy=False):
 
 
 def assign_signal_subclass(dtype, signal_dimension, signal_type='', lazy=False):
-    """Given record_by and signal_type return the matching Signal
+    """Given record_by and signal_type return the matching signal
     subclass.
 
     Parameters
