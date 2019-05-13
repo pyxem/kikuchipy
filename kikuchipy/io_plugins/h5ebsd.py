@@ -122,14 +122,15 @@ def get_header(file, headername='Scan 1/EBSD/Header/'):
         if dataset in header_file:
             entry = header_file[dataset][:]
             if isinstance(entry[0], np.bytes_):
-                entry = entry[0].decode()
+                entry = entry[0].decode()  # Don't want byte strings, b''
             elif isinstance(entry, np.ndarray) and len(entry) == 1:
-                entry = entry[0]
+                entry = entry[0]  # Don't want all entries as lists
             header[dataset] = entry
 
     # Populate `metadata` and `original_metadata` with appropriate values
+    original_metadata = {'ebsd_header': header}
 
-    return header
+    return original_metadata
 
 
 def file_reader(filename, dataname='Scan 1/EBSD/Data/Pattern',
