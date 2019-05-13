@@ -223,6 +223,10 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
 
     try:
         data = data.reshape((NY, NX, SX, SY), order='C').squeeze()
+
+        # Last pattern is stored first, so roll all rows one step to the
+        # left
+        data = np.roll(data, shift=-1, axis=1)
     except ValueError:
         warnings.warn("Pattern size and scan size larger than file size! "
                       "Will attempt to load by zero padding incomplete "
@@ -231,6 +235,7 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
         pw = [(0, NY * NX * SX * SY - data.size)]
         data = np.pad(data, pw, mode='constant')
         data = data.reshape((NY, NX, SX, SY))
+
 
     units = [u'\u03BC'+'m', u'\u03BC'+'m', 'A^{-1}', 'A^{-1}']
     names = ['y', 'x', 'dx', 'dy']
