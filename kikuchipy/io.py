@@ -45,7 +45,8 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
     Supported formats: hspy or hdf5 (HDF5) and NORDIF dat.
 
     Any extra keyword is passed to the corresponding reader. For
-    available options see their individual documentation.
+    available options see their individual documentation, which may be
+    found in either KikuchiPy or HyperSpy.
 
     Parameters
     ----------
@@ -89,6 +90,8 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
     convert_units : bool, optional
         If True, convert the units using the `convert_to_units` method
         of the `axes_manager`. If False (default), nothing is done.
+    **kwargs :
+        Keyword arguments to be passed to the corresponding reader.
 
     Returns
     -------

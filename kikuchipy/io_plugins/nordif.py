@@ -159,8 +159,7 @@ def get_settings_from_file(filename):
     return md, omd
 
 
-def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
-                pattern_size=None, settings_file='Setting.txt'):
+def file_reader(filename, mmap_mode=None, lazy=False, **kwargs):
     """Read electron backscatter diffraction patterns from a NORDIF
     data file.
 
@@ -175,7 +174,7 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
         (patterns), width x height.
     pattern_size : {None, tuple}, optional
         Tuple with size of patterns in pixels, width x height.
-    settings_file : {'Setting.txt', str}, optional
+    setting_file : {'Setting.txt', str}, optional
         File name of NORDIF settings file (default is Setting.txt).
 
     Returns
@@ -183,6 +182,11 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
     dictionary : dict
         Data, axes, metadata and original metadata from settings file.
     """
+    # Get key word arguments if any
+    scan_size = kwargs.get('scan_size', None)
+    pattern_size = kwargs.get('pattern_size', None)
+    setting_file = kwargs.get('setting_file', 'Setting.txt')
+
     if mmap_mode is None:
         mmap_mode = 'r' if lazy else 'c'
 
@@ -198,11 +202,13 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
     # Get original metadata, scan size and pattern size from settings file
     folder, filename = os.path.split(filename)
     try:
-        md, omd = get_settings_from_file(os.path.join(folder, settings_file))
-        scan_size = (omd.get_item(EBSD_str + '.NX'),
-                     omd.get_item(EBSD_str + '.NY'))
-        pattern_size = (omd.get_item(EBSD_str + '.SX'),
-                        omd.get_item(EBSD_str + '.SY'))
+        md, omd = get_settings_from_file(os.path.join(folder, setting_file))
+        if scan_size is None:
+            scan_size = (omd.get_item(EBSD_str + '.NX'),
+                         omd.get_item(EBSD_str + '.NY'))
+        if pattern_size is None:
+            pattern_size = (omd.get_item(EBSD_str + '.SX'),
+                            omd.get_item(EBSD_str + '.SY'))
     except BaseException:
         warnings.warn("Reading the NORDIF settings file failed")
 
@@ -216,13 +222,14 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
     # Read data from file
     data_size = NY * NX * SX * SY
     if not lazy:
-        f.seek(-data_size, 2)
-        data = np.fromfile(f, dtype='uint8')
+        f.seek(0)
+        data = np.fromfile(f, dtype='uint8', count=data_size)
     else:
         data = np.memmap(f, mode=mmap_mode, dtype='uint8')
 
     try:
         data = data.reshape((NY, NX, SX, SY), order='C').squeeze()
+
     except ValueError:
         warnings.warn("Pattern size and scan size larger than file size! "
                       "Will attempt to load by zero padding incomplete "
