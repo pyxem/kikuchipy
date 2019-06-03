@@ -294,6 +294,5 @@ def file_writer(filename, signal):
             raise ValueError("Writing lazily to NORDIF .dat file is not yet "
                              "supported")
         else:
-            signal.data = np.roll(signal.data, shift=1, axis=1)
             for pattern in signal._iterate_signal():
                 pattern.flatten().tofile(f)
