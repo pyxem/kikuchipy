@@ -169,9 +169,9 @@ def file_reader(filename, dataname='Scan 1/EBSD/Data/Pattern',
     for dsetname in [dataname, headername]:
         if dsetname not in f:
             raise IOError("Could not find dataset '{}' in file '{}'. Set "
-                             "HDF dataset paths with the `dataname` and "
-                             "`headername` parameters"
-                             .format(dsetname, filename))
+                          "HDF dataset paths with the `dataname` and "
+                          "`headername` parameters"
+                          .format(dsetname, filename))
 
     # Write header into `metadata` and `original_metadata`
     header = get_header(f, headername)
