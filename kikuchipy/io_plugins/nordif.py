@@ -34,7 +34,7 @@ full_support = False
 file_extensions = ['dat', 'DAT']
 default_extension = 0
 # Writing capabilities
-writes = [(2, 2), (2, 1), (2, 0)]
+writes = [(2, 2)]
 magics = []
 
 # Set common strings
@@ -42,16 +42,16 @@ SEM_str = 'Acquisition_instrument.SEM'
 EBSD_str = SEM_str + '.Detector.EBSD'
 
 
-def get_string(content, expression, lineno, file):
+def get_string(content, expression, line_no, file):
     """Get relevant part of binary string using regular expressions.
 
     Parameters
     ----------
-    content : str
+    content : list of str
         Input file content to search through for expression.
-    expression : binary str
-        Binary string with regular expression.
-    lineno : int
+    expression : str
+        String with regular expression.
+    line_no : int
         Line number in content to search.
     file : file handle
 
@@ -61,24 +61,23 @@ def get_string(content, expression, lineno, file):
         Output string with relevant value.
     """
     try:
-        match = re.search(expression.encode('ascii'), content[lineno])
-        string_out = match.group(1).decode('ascii')
+        match = re.search(expression, content[line_no])
+        string_out = match.group(1)
     except AttributeError:
         raise ValueError("Failed to read line no '{}' (0 indexing) in "
                          "settings file '{}' using the regular expression "
-                         "'{}'".format(lineno, file, expression))
+                         "'{}'".format(line_no, file, expression))
     return string_out
 
 
 def get_settings_from_file(filename):
     """Get scan size, pattern size and other relevant parameters from
-    the NORDIF Setting.txt file.
+    the NORDIF setting file.
 
     Parameters
     ----------
     filename : str
-        Full file path of NORDIF settings file (default is
-        Setting.txt).
+        Full file path of NORDIF setting file.
 
     Returns
     -------
@@ -89,7 +88,7 @@ def get_settings_from_file(filename):
         structure.
     """
     try:
-        f = open(filename, 'rb')
+        f = open(filename, 'r', encoding='latin-1')
     except ValueError:
         warnings.warn("Settings file '{}' does not exist".format(filename))
 
@@ -99,57 +98,72 @@ def get_settings_from_file(filename):
     md = DictionaryTreeBrowser()
     omd = DictionaryTreeBrowser()
 
+    # Get line numbers of setting blocks
+    blocks = {'[Microscope]': -1, '[Acquisition settings]': -1, '[Area]': -1}
+    for i, line in enumerate(content):
+        for block in blocks:
+            if block in line:
+                blocks[block] = i
+    line_mic = blocks['[Microscope]']
+    line_acq = blocks['[Acquisition settings]']
+    line_area = blocks['[Area]']
+
     # Microscope
-    manufacturer = get_string(content, 'Manufacturer\t(.*)\t', 4, f)
-    model = get_string(content, 'Model\t(.*)\t', 5, f)
+    manufacturer = get_string(content, 'Manufacturer\t(.*)\t', line_mic + 1, f)
+    model = get_string(content, 'Model\t(.*)\t', line_mic + 2, f)
     md.set_item(SEM_str + '.microscope', manufacturer + ' ' + model)
 
     # Magnification
-    magnification = get_string(content, 'Magnification\t(.*)\t#', 6, f)
+    magnification = get_string(content, 'Magnification\t(.*)\t#', line_mic + 3,
+                               f)
     md.set_item(SEM_str + '.magnification', int(magnification))
 
     # Beam energy
-    beam_energy = get_string(content, 'Accelerating voltage\t(.*)\tkV', 8, f)
+    beam_energy = get_string(content, 'Accelerating voltage\t(.*)\tkV',
+                             line_mic + 5, f)
     md.set_item(SEM_str + '.beam_energy', float(beam_energy))
 
     # Working distance
-    working_distance = get_string(content, 'Working distance\t(.*)\tmm', 9, f)
+    working_distance = get_string(content, 'Working distance\t(.*)\tmm',
+                                  line_mic + 6, f)
     md.set_item(SEM_str + '.working_distance', float(working_distance))
 
     # Tilt angle
-    tilt_angle = get_string(content, 'Tilt angle\t(.*)\t', 10, f)
+    tilt_angle = get_string(content, 'Tilt angle\t(.*)\t', line_mic + 7, f)
     omd.set_item(EBSD_str + '.tilt_angle', float(tilt_angle))
 
     # Acquisition frame rate
-    frame_rate = get_string(content, 'Frame rate\t(.*)\tfps', 46, f)
+    frame_rate = get_string(content, 'Frame rate\t(.*)\tfps', line_acq + 1, f)
     omd.set_item(EBSD_str + '.frame_rate', int(frame_rate))
 
     # Acquisition resolution (pattern size)
-    pattern_size = get_string(content, 'Resolution\t(.*)\tpx', 47, f)
+    pattern_size = get_string(content, 'Resolution\t(.*)\tpx', line_acq + 2, f)
     SX, SY = [int(i) for i in pattern_size.split('x')]
     omd.set_item(EBSD_str + '.SX', SX)
     omd.set_item(EBSD_str + '.SY', SY)
 
     # Acquisition exposure time
-    exposure_time = get_string(content, 'Exposure time\t(.*)\t', 48, f)
+    exposure_time = get_string(content, 'Exposure time\t(.*)\t', line_acq + 3,
+                               f)
     omd.set_item(EBSD_str + '.exposure_time', float(exposure_time) / 1e6)
 
     # Acquisition gain
-    gain = get_string(content, 'Gain\t(.*)\t', 49, f)
+    gain = get_string(content, 'Gain\t(.*)\t', line_acq + 4, f)
     omd.set_item(EBSD_str + '.gain', int(gain))
 
     # Scan size
-    scan_size = get_string(content, 'Number of samples\t(.*)\t#', 79, f)
+    scan_size = get_string(content, 'Number of samples\t(.*)\t#',
+                           line_area + 6, f)
     NY, NX = [int(i) for i in scan_size.split('x')]
     omd.set_item(EBSD_str + '.NX', NX)
     omd.set_item(EBSD_str + '.NY', NY)
 
     # Step size
-    step_size = get_string(content, 'Step size\t(.*)\t', 78, f)
+    step_size = get_string(content, 'Step size\t(.*)\t', line_area + 5, f)
     omd.set_item(EBSD_str + '.step_size', float(step_size))
 
     # Scan time
-    scan_time = get_string(content, 'Scan time\t(.*)\t', 80, f)
+    scan_time = get_string(content, 'Scan time\t(.*)\t', line_area + 7, f)
     scan_time = time.strptime(scan_time, '%H:%M:%S')
     scan_time = datetime.timedelta(hours=scan_time.tm_hour,
                                    minutes=scan_time.tm_min,
