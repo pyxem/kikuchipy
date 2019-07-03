@@ -35,7 +35,7 @@ from matplotlib.pyplot import imread
 from pyxem.signals.electron_diffraction import ElectronDiffraction
 
 from dask.diagnostics import ProgressBar
-from hyperspy.misc.utils import dummy_context_manager
+from hyperspy.misc.utils import dummy_context_manager, DictionaryTreeBrowser
 
 from kikuchipy import io
 from kikuchipy._signals.radon_transform import RadonTransform
@@ -58,20 +58,72 @@ class EBSD(Signal2D):
             Signal2D.__init__(self, *args, **kwargs)
         self.set_experimental_parameters(deadpixels_corrected=False)
 
-    def set_experimental_parameters(self, accelerating_voltage=None,
-                                    condenser_aperture=None,
-                                    deadpixels_corrected=None, deadvalue=None,
-                                    deadpixels=None, deadthreshold=None,
-                                    exposure_time=None, frame_rate=None,
-                                    working_distance=None):
-        """Set experimental parameters in metadata.
+    def set_experimental_parameters(self, detector=None,
+                                    azimuth_angle=None,
+                                    elevation_angle=None,
+                                    sample_tilt=None,
+                                    working_distance=None, binning=None,
+                                    detector_pixel_size=None,
+                                    exposure_time=None, grid_type=None,
+                                    step_x=None, step_y=None, gain=None,
+                                    frame_number=None, frame_rate=None,
+                                    scan_time=None,
+                                    scan_reference_directions=None,
+                                    crystal_reference_directions=None,
+                                    pattern_centre=None,
+                                    accelerating_voltage=None,
+                                    deadpixels_corrected=None,
+                                    deadvalue=None, deadpixels=None,
+                                    deadthreshold=None):
+        """Set experimental parameters in metadata and original
+        metadata.
 
         Parameters
         ----------
+        detector : str, optional
+            Detector manufacturer and model.
+        azimuth_angle : float, optional
+            Azimuth angle of the detector in degrees. If the azimuth is
+            zero, the detector is perpendicular to the tilt axis.
+        elevation_angle : float, optional
+            Elevation angle of the detector in degrees. If the elevation
+            is zero, the detector is perpendicular to the incident beam.
+        sample_tilt : float, optional
+            Sample tilt angle from horizontal in degrees.
+        working_distance : float, optional
+            Working distance in mm.
+        binning : int, optional
+            Camera binning.
+        detector_pixel_size : float, optional
+            Camera pixel size on the scintillator surface in µm.
+        exposure_time : float, optional
+            Camera exposure time in µs.
+        frame_number : float, optional
+            Number of patterns integrated during acquisition.
+        frame_rate : float, optional
+            Frames per s.
+        scan_time : float, optional
+            Scan time in s.
+        gain : float, optional
+            Camera gain in dB.
+        grid_type : str, optional
+            Scan grid type, only square grid is supported.
+        pattern_centre : array_like, optional
+            Pattern centre in units used by EMsoft, (xpc, ypc, L). xpc,
+            ypc are the pattern centre in units of pixel size, while L
+            is the distance from scintillator to the detector in µm.
+        step_x : float, optional
+            Scan step size in fast scan direction (east).
+        step_y : float, optional
+            Scan step size in slow scan direction (south).
+        scan_reference_directions : numpy array, optional
+            (3 x 3) transformation matrix describing how to transform
+            the scan coordinate system into a global reference frame.
+        crystal_reference_directions : numpy array, optional
+            (3 x 3) transformation matrix describing how to transform
+            the crystal coordinate system into a global reference frame.
         accelerating_voltage : float, optional
             Accelerating voltage in kV.
-        condenser_aperture : float, optional
-            Condenser_aperture in µm.
         deadpixels_corrected : bool, optional
             If True (default is False), deadpixels in patterns are
             corrected.
@@ -82,22 +134,54 @@ class EBSD(Signal2D):
             or nan).
         deadthreshold : int, optional
             Threshold for detecting dead pixels.
-        exposure_time : float, optional
-            Exposure time in µs.
-        frame_rate : float, optional
-            Frame rate in fps.
-        working_distance : float, optional
-            Working distance in mm.
         """
         md = self.metadata
         omd = self.original_metadata
         sem = 'Acquisition_instrument.SEM.'
         ebsd = sem + 'Detector.EBSD.'
 
+        if detector is not None:
+            omd.set_item(ebsd + 'detector', detector)
+        if azimuth_angle is not None:
+            omd.set_item(ebsd + 'azimuth_angle', azimuth_angle)
+        if elevation_angle is not None:
+            omd.set_item(ebsd + 'elevation_angle', elevation_angle)
+        if sample_tilt is not None:
+            omd.set_item(ebsd + 'sample_tilt', sample_tilt)
+        if working_distance is not None:
+            omd.set_item(ebsd + 'working_distance', working_distance)
+        if working_distance is not None:
+            omd.set_item(ebsd + 'working_distance', working_distance)
+        if binning is not None:
+            omd.set_item(ebsd + 'binning', binning)
+        if detector_pixel_size is not None:
+            omd.set_item(ebsd + 'detector_pixel_size', detector_pixel_size)
+        if exposure_time is not None:
+            omd.set_item(ebsd + 'exposure_time', exposure_time)
+        if frame_number is not None:
+            omd.set_item(ebsd + 'frame_number', frame_number)
+        if frame_rate is not None:
+            omd.set_item(ebsd + 'frame_rate', frame_rate)
+        if scan_time is not None:
+            md.set_item(ebsd + 'scan_time', scan_time)
+        if gain is not None:
+            md.set_item(ebsd + 'gain', gain)
+        if grid_type is not None:
+            md.set_item(ebsd + 'grid_type', grid_type)
+        if pattern_centre is not None:
+            md.set_item(ebsd + 'pattern_centre', pattern_centre)
+        if step_x is not None:
+            md.set_item(ebsd + 'step_x', step_x)
+        if step_y is not None:
+            md.set_item(ebsd + 'step_y', step_y)
+        if scan_reference_directions is not None:
+            md.set_item(ebsd + 'scan_reference_directions',
+                        scan_reference_directions)
+        if crystal_reference_directions is not None:
+            md.set_item(ebsd + 'crystal_reference_directions',
+                        crystal_reference_directions)
         if accelerating_voltage is not None:
             md.set_item(sem + 'accelerating_voltage', accelerating_voltage)
-        if condenser_aperture is not None:
-            omd.set_item(sem + 'condenser_aperture', condenser_aperture)
         if deadpixels_corrected is not None:
             omd.set_item(ebsd + 'deadpixels_corrected', deadpixels_corrected)
         if deadpixels is not None:
@@ -106,12 +190,6 @@ class EBSD(Signal2D):
             omd.set_item(ebsd + 'deadvalue', deadvalue)
         if deadthreshold is not None:
             omd.set_item(ebsd + 'deadthreshold', deadthreshold)
-        if exposure_time is not None:
-            omd.set_item(ebsd + 'exposure_time', exposure_time)
-        if frame_rate is not None:
-            omd.set_item(ebsd + 'frame_rate', frame_rate)
-        if working_distance is not None:
-            omd.set_item(ebsd + 'working_distance', working_distance)
 
     def set_scan_calibration(self, calibration):
         """Set the step size in µm.
@@ -192,8 +270,9 @@ class EBSD(Signal2D):
             if bg is None:
                 try:  # Try to load from signal directory
                     bg_fname = 'Background acquisition pattern.bmp'
-                    omd = self.original_metadata
-                    bg = os.path.join(omd.General.original_filepath, bg_fname)
+                    md = self.metadata
+                    filepath = os.path.split(md.General.original_filename)
+                    bg = os.path.join(filepath, bg_fname)
                 except (ValueError, AttributeError):
                     raise ValueError("No background image provided")
 

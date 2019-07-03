@@ -30,7 +30,11 @@ full_support = False
 file_extensions = ['h5ebsd', 'h5', 'hdf5']
 default_extension = 0
 # Writing capabilities
-writes = [(2, 2), (2, 1), (2, 0)]
+writes = [(2, 2)]
+
+# Set common strings
+SEM_str = 'Acquisition_instrument.SEM'
+EBSD_str = SEM_str + '.Detector.EBSD'
 
 
 def get_default_header():
@@ -127,17 +131,40 @@ def get_header(file, headername='Scan 1/EBSD/Header/'):
                 entry = entry[0]  # Don't want all entries as lists
             header[dataset] = entry
 
-    # Populate `metadata` and `original_metadata` with appropriate values
-    original_metadata = {'ebsd_header': header}
+    # Populate metadata and original metadata structures
+    md = DictionaryTreeBrowser()
+    omd = DictionaryTreeBrowser()
 
-    return original_metadata
+    # General
+    md.set_item('General.authors', header['Operator'])
+    md.set_item('General.notes', header['Notes'])
+    md.set_item('General.title', header['Sample ID'] + ' ' + header['Scan ID'])
+    md.set_item('Sample.elements', header['Phase/1/Formula'])
+
+    # SEM
+    md.set_item(SEM_str + '.working_distance', header['Working Distance'])
+
+    # EBSD
+    omd.set_item(EBSD_str + '.header', header)
+    omd.set_item(EBSD_str + '.azimuth_angle', header['Camera Azimuthal Angle'])
+    omd.set_item(EBSD_str + '.elevation_angle',
+                 header['Camera Elevation Angle'])
+    omd.set_item(EBSD_str + '.grid_type', header['Grid Type'])
+    omd.set_item(EBSD_str + '.sample_tilt', header['Sample Tilt'])
+    omd.set_item(EBSD_str + '.SX', header['Pattern Width'])
+    omd.set_item(EBSD_str + '.SY', header['Pattern Height'])
+    omd.set_item(EBSD_str + '.NX', header['nColumns'])
+    omd.set_item(EBSD_str + '.NY', header['nRows'])
+    omd.set_item(EBSD_str + '.step_x', header['Step X'])
+    omd.set_item(EBSD_str + '.step_y', header['Step Y'])
+
+    return header
 
 
 def file_reader(filename, dataname='Scan 1/EBSD/Data/Pattern',
                 headername='Scan 1/EBSD/Header', lazy=False):
     """Read electron backscatter patterns from an HDF5 file in the
-    h5ebsd format [1]_. The patterns and settings are assumed to reside
-    in datasets named 'Pattern' and 'Header', respectively.
+    h5ebsd format [1]_.
 
     Parameters
     ----------
@@ -175,6 +202,10 @@ def file_reader(filename, dataname='Scan 1/EBSD/Data/Pattern',
 
     # Write header into `metadata` and `original_metadata`
     header = get_header(f, headername)
+
+#    md.set_item('General.original_filename', filename)
+#    md.set_item('Signal.signal_type', 'electron_backscatter_diffraction')
+#    md.set_item('Signal.record_by', 'image')
 
     if not lazy:
         f.close()
