@@ -18,9 +18,9 @@
 
 import logging
 
-from kikuchipy.io_plugins import nordif, h5ebsd
+from kikuchipy.io_plugins import nordif, tslhdf
 
-io_plugins = [nordif, h5ebsd]
+io_plugins = [nordif, tslhdf]
 
 _logger = logging.getLogger(__name__)
 

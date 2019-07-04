@@ -71,7 +71,7 @@ class EBSD(Signal2D):
                                     scan_reference_directions=None,
                                     crystal_reference_directions=None,
                                     pattern_centre=None,
-                                    accelerating_voltage=None,
+                                    beam_energy=None,
                                     deadpixels_corrected=None,
                                     deadvalue=None, deadpixels=None,
                                     deadthreshold=None):
@@ -109,9 +109,7 @@ class EBSD(Signal2D):
         grid_type : str, optional
             Scan grid type, only square grid is supported.
         pattern_centre : array_like, optional
-            Pattern centre in units used by EMsoft, (xpc, ypc, L). xpc,
-            ypc are the pattern centre in units of pixel size, while L
-            is the distance from scintillator to the detector in µm.
+            Pattern centre.
         step_x : float, optional
             Scan step size in fast scan direction (east).
         step_y : float, optional
@@ -122,8 +120,8 @@ class EBSD(Signal2D):
         crystal_reference_directions : numpy array, optional
             (3 x 3) transformation matrix describing how to transform
             the crystal coordinate system into a global reference frame.
-        accelerating_voltage : float, optional
-            Accelerating voltage in kV.
+        beam_energy : float, optional
+            Energy of the electron beam in kV.
         deadpixels_corrected : bool, optional
             If True (default is False), deadpixels in patterns are
             corrected.
@@ -141,27 +139,27 @@ class EBSD(Signal2D):
         ebsd = sem + 'Detector.EBSD.'
 
         if detector is not None:
-            omd.set_item(ebsd + 'detector', detector)
+            md.set_item(ebsd + 'detector', detector)
         if azimuth_angle is not None:
-            omd.set_item(ebsd + 'azimuth_angle', azimuth_angle)
+            md.set_item(ebsd + 'azimuth_angle', azimuth_angle)
         if elevation_angle is not None:
-            omd.set_item(ebsd + 'elevation_angle', elevation_angle)
+            md.set_item(ebsd + 'elevation_angle', elevation_angle)
         if sample_tilt is not None:
-            omd.set_item(ebsd + 'sample_tilt', sample_tilt)
+            md.set_item(ebsd + 'sample_tilt', sample_tilt)
         if working_distance is not None:
-            omd.set_item(ebsd + 'working_distance', working_distance)
+            md.set_item(ebsd + 'working_distance', working_distance)
         if working_distance is not None:
-            omd.set_item(ebsd + 'working_distance', working_distance)
+            md.set_item(ebsd + 'working_distance', working_distance)
         if binning is not None:
-            omd.set_item(ebsd + 'binning', binning)
+            md.set_item(ebsd + 'binning', binning)
         if detector_pixel_size is not None:
-            omd.set_item(ebsd + 'detector_pixel_size', detector_pixel_size)
+            md.set_item(ebsd + 'detector_pixel_size', detector_pixel_size)
         if exposure_time is not None:
-            omd.set_item(ebsd + 'exposure_time', exposure_time)
+            md.set_item(ebsd + 'exposure_time', exposure_time)
         if frame_number is not None:
-            omd.set_item(ebsd + 'frame_number', frame_number)
+            md.set_item(ebsd + 'frame_number', frame_number)
         if frame_rate is not None:
-            omd.set_item(ebsd + 'frame_rate', frame_rate)
+            md.set_item(ebsd + 'frame_rate', frame_rate)
         if scan_time is not None:
             md.set_item(ebsd + 'scan_time', scan_time)
         if gain is not None:
@@ -180,8 +178,8 @@ class EBSD(Signal2D):
         if crystal_reference_directions is not None:
             md.set_item(ebsd + 'crystal_reference_directions',
                         crystal_reference_directions)
-        if accelerating_voltage is not None:
-            md.set_item(sem + 'accelerating_voltage', accelerating_voltage)
+        if beam_energy is not None:
+            md.set_item(sem + 'beam_energy', beam_energy)
         if deadpixels_corrected is not None:
             omd.set_item(ebsd + 'deadpixels_corrected', deadpixels_corrected)
         if deadpixels is not None:
@@ -271,7 +269,7 @@ class EBSD(Signal2D):
                 try:  # Try to load from signal directory
                     bg_fname = 'Background acquisition pattern.bmp'
                     md = self.metadata
-                    filepath = os.path.split(md.General.original_filename)
+                    filepath, _ = os.path.split(md.General.original_filename)
                     bg = os.path.join(filepath, bg_fname)
                 except (ValueError, AttributeError):
                     raise ValueError("No background image provided")
@@ -1033,9 +1031,9 @@ class LazyEBSD(EBSD, LazySignal2D):
 
     def _normalize_poissonian_noise(self, navigation_mask=None,
                                     signal_mask=None):
-        """Scales the patterns following
-        Surf. Interface Anal. 2004; 36: 203–212 to "normalize" the
-        Poissonian noise for decomposition analysis.
+        """Scales the patterns following [1]_.
+
+        Adapted from HyperSpy.
 
         Parameters
         ----------
@@ -1050,6 +1048,13 @@ class LazyEBSD(EBSD, LazySignal2D):
         rbH : array_like
             Matrix corresponding to square root of bH in referenced
             paper.
+
+        References
+        ----------
+        .. [1] Keenan, Michael R, Kotula, Paul G: Accounting for Poisson
+               noise in the multivariate analysis of ToF-SIMS spectrum
+               images, Surface and Interface Analysis 36(3), Wiley
+               Online Library, 203–212, 2004.
         """
         from hyperspy._signals.lazy import to_array
         data = self._data_aligned_with_axes

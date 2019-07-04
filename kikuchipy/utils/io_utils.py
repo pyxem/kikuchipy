@@ -17,7 +17,11 @@
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
+import dask.array as da
+import h5py
+import warnings
 from hyperspy.misc.utils import DictionaryTreeBrowser
+from hyperspy.io_plugins.hspy import overwrite_dataset
 
 
 def _ebsd_metadata():
@@ -40,7 +44,9 @@ def _ebsd_metadata():
               'grid_type': None,
               'n_columns': None,
               'n_rows': None,
-              'pattern_centre': None,
+              'xpc': None,
+              'ypc': None,
+              'zpc': None,
               'pattern_height': None,
               'pattern_width': None,
               'step_x': None,
@@ -51,3 +57,34 @@ def _ebsd_metadata():
     md.Acquisition_instrument.SEM.Detector.EBSD.add_dictionary(params)
 
     return md
+
+
+def dict2hdfgroup(dictionary, group, **kwargs):
+    """Write a metadata dictionary to an HDF group.
+
+    Adapted from HyperSpy.
+
+    Parameters
+    ----------
+    dictionary : dict
+    group : HDF group handle
+    """
+    for key, value in dictionary.items():
+        if isinstance(value, dict):
+            dict2hdfgroup(value, group.create_group(key), **kwargs)
+        elif isinstance(value, DictionaryTreeBrowser):
+            dict2hdfgroup(value.as_dictionary(), group.create_group(key),
+                          **kwargs)
+        elif isinstance(value, (np.ndarray, h5py.Dataset, da.Array)):
+            overwrite_dataset(group, value, key, **kwargs)
+        elif isinstance(value, str):
+            value = np.string_(value)  # TSL uses NumPy U string?
+            group.create_dataset(key, data=value, **kwargs)
+        elif value is None:
+            group.attrs[key] = '_None_'
+        else:
+            try:
+                group.create_dataset(key, data=value, **kwargs)
+            except BaseException:
+                warnings.warn("The h5py writer could not write the following "
+                              "information in the file: %s : %s", key, value)
