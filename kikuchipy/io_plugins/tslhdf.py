@@ -90,19 +90,16 @@ def get_header(file, headername='Scan 1/EBSD/Header/'):
     ----------
     file : file object
     headername : {str, 'Scan 1/EBSD/Header'}, optional
-        A string containing the full EDAX TSL HDF dataset path with
-        group names and the dataset name with the the header as the
-        last name.
+        String with full EDAX TSL HDF dataset path with group names and
+        the dataset name with the the header as the last name.
 
     Returns
     -------
     md : DictionaryTreeBrowser
         Metadata complying with HyperSpy's metadata structure.
     omd : DictionaryTreeBrowser
-        Original metadata that does not fit into HyperSpy's metadata
-        structure.
+        Metadata that does not fit into HyperSpy's metadata structure.
     """
-
     # Get header with default values
     header_match = tsl_metadata()
     header = {key: value[1] for key, value in header_match.items()}
@@ -147,16 +144,15 @@ def file_reader(filename, dataname='Scan 1/EBSD/Data/Pattern',
     filename : str
         Full file path of the EDAX TSL HDF file.
     dataname : {str, 'Scan 1/EBSD/Data/Pattern'}, optional
-        A string containing the full HDF dataset path with group names
-        and the dataset name with the patterns as the last name.
+        String with full EDAX TSL HDF dataset path with group names and
+        the dataset name with the patterns as the last name.
     headername : {str, 'Scan 1/EBSD/Header'}, optional
-        A string containing the full HDF dataset path with group names
-        and the dataset name with the the header as the last name.
+        String with full EDAX TSL HDF dataset path with group names and
+        the dataset name with the the header as the last name.
     scan_size : {None, tuple}, optional
-        Tuple with size of scan region of interest in pixels
-        (patterns), width x height.
+        Scan size in number of patterns in width and height.
     pattern_size : {None, tuple}, optional
-        Tuple with size of patterns in pixels, width x height.
+        Pattern size in detector pixels in width and height.
     lazy : bool, optional
 
     Returns
@@ -181,7 +177,7 @@ def file_reader(filename, dataname='Scan 1/EBSD/Data/Pattern',
                           "`headername` parameters"
                           .format(dsetname, filename))
 
-    # Write header to `metadata` and `original_metadata`
+    # Write header to metadata and original metadata
     try:
         md, omd = get_header(f, headername)  # Overwrite empty dictionaries
         scan_size = (md.get_item(EBSD_str + 'n_columns'),
