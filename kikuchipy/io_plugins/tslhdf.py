@@ -21,7 +21,7 @@ import dask.array as da
 import h5py
 import warnings
 from hyperspy.misc.utils import DictionaryTreeBrowser
-from kikuchipy.utils.io_utils import _ebsd_metadata
+from kikuchipy.utils.io_utils import ebsd_metadata
 
 
 # Plugin characteristics
@@ -39,7 +39,7 @@ writes = False
 EBSD_str = 'Acquisition_instrument.SEM.Detector.EBSD.'
 
 
-def tslmetadata():
+def tsl_metadata():
     """Return dictionary relating parameters in EDAX's TSL HDF file data
     header to KikuchiPy's internal EBSD metadata, also specifying TSL
     data type and default value.
@@ -104,10 +104,10 @@ def get_header(file, headername='Scan 1/EBSD/Header/'):
     """
 
     # Get header with default values
-    header_match = tslmetadata()
+    header_match = tsl_metadata()
     header = {key: value[1] for key, value in header_match.items()}
 
-    # Overwrite default values
+    # Overwrite default values if found in TSL HDF file
     header_group = file[headername]
     for dataset in header.keys():
         if dataset in header_group:
@@ -118,8 +118,8 @@ def get_header(file, headername='Scan 1/EBSD/Header/'):
                 entry = entry[0]  # Don't want all entries as lists
             header[dataset] = entry
 
-    # Populate metadata and original metadata structures
-    md = _ebsd_metadata()
+    # Create metadata and original metadata structures
+    md = ebsd_metadata()
     omd = DictionaryTreeBrowser()
 
     # General info and all metadata
@@ -182,25 +182,26 @@ def file_reader(filename, dataname='Scan 1/EBSD/Data/Pattern',
                           .format(dsetname, filename))
 
     # Write header to `metadata` and `original_metadata`
-    md = DictionaryTreeBrowser()
-    omd = DictionaryTreeBrowser()
     try:
         md, omd = get_header(f, headername)  # Overwrite empty dictionaries
         scan_size = (md.get_item(EBSD_str + 'n_columns'),
                      md.get_item(EBSD_str + 'n_rows'))
         pattern_size = (md.get_item(EBSD_str + 'pattern_width'),
                         md.get_item(EBSD_str + 'pattern_height'))
-        # Set general parameters in metadata
-        md.set_item('General.original_filename', filename)
-        md.set_item('Signal.signal_type', 'electron_backscatter_diffraction')
-        md.set_item('Signal.record_by', 'image')
         if 'EBSD/Data/Pattern' in dataname:
             md.set_item('General.title',
                         dataname[:dataname.find('/EBSD/Data/Pattern')])
         else:
             md.set_item('General.title', dataname)
     except BaseException:
+        md = ebsd_metadata()
+        omd = DictionaryTreeBrowser()
         warnings.warn("Reading the HDF5 file header failed")
+
+    # Set required parameters in metadata
+    md.set_item('General.original_filename', filename)
+    md.set_item('Signal.signal_type', 'electron_backscatter_diffraction')
+    md.set_item('Signal.record_by', 'image')
 
     if scan_size is None and pattern_size is None:
         raise ValueError("No scan size and pattern size provided")

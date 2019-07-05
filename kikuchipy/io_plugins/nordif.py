@@ -24,7 +24,7 @@ import datetime
 
 import numpy as np
 from hyperspy.misc.utils import DictionaryTreeBrowser
-from kikuchipy.utils.io_utils import _ebsd_metadata
+from kikuchipy.utils.io_utils import ebsd_metadata
 
 # Plugin characteristics
 # ----------------------
@@ -43,7 +43,7 @@ EBSD_str = SEM_str + 'Detector.EBSD.'
 
 
 def get_string(content, expression, line_no, file):
-    """Get relevant part of binary string using regular expressions.
+    """Get relevant part of string using regular expressions.
 
     Parameters
     ----------
@@ -83,6 +83,9 @@ def get_settings_from_file(filename):
     -------
     md : DictionaryTreeBrowser
         Metadata complying with HyperSpy's metadata structure.
+    omd : DictionaryTreeBrowser
+        Original metadata that does not fit into HyperSpy's metadata
+        structure.
     """
     try:
         f = open(filename, 'r', encoding='latin-1')
@@ -105,8 +108,10 @@ def get_settings_from_file(filename):
     line_acq = blocks['[Acquisition settings]']
     line_area = blocks['[Area]']
 
-    # Populate EBSD metadata structure
-    md = _ebsd_metadata()
+    # Create metadata and original metadata structures
+    md = ebsd_metadata()
+    omd = DictionaryTreeBrowser()
+    omd.set_item('nordif_header', content)
 
     # Microscope
     manufacturer = get_string(content, 'Manufacturer\t(.*)\t', line_mic + 1, f)
@@ -187,7 +192,7 @@ def get_settings_from_file(filename):
     # Grid type
     md.set_item(EBSD_str + 'grid_type', 'SqrGrid')
 
-    return md
+    return md, omd
 
 
 def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
@@ -229,7 +234,9 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
     # Get metadata with scan size and pattern size from settings file
     folder, _ = os.path.split(filename)
     try:
-        md = get_settings_from_file(os.path.join(folder, setting_file))
+        md, omd = get_settings_from_file(os.path.join(folder, setting_file))
+        # Since it might be desirable to overwrite scan and pattern sizes
+        # defined in NORDIF setting file
         if scan_size is None:
             scan_size = (md.get_item(EBSD_str + 'n_columns'),
                          md.get_item(EBSD_str + 'n_rows'))
@@ -237,17 +244,24 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
             pattern_size = (md.get_item(EBSD_str + 'pattern_width'),
                             md.get_item(EBSD_str + 'pattern_height'))
     except BaseException:
+        md = ebsd_metadata()
+        omd = DictionaryTreeBrowser()
         warnings.warn("Reading the NORDIF settings file failed")
+
+    # Set required parameters in metadata
+    md.set_item('General.original_filename', filename)
+    md.set_item('Signal.signal_type', 'electron_backscatter_diffraction')
+    md.set_item('Signal.record_by', 'image')
 
     if scan_size is None and pattern_size is None:
         raise ValueError("No scan size and pattern size provided")
 
     # Set scan size and pattern size
-    (NX, NY) = scan_size
-    (SX, SY) = pattern_size
+    (nx, ny) = scan_size
+    (sx, sy) = pattern_size
 
     # Read data from file
-    data_size = NY * NX * SX * SY
+    data_size = ny * nx * sx * sy
     if not lazy:
         f.seek(0)
         data = np.fromfile(f, dtype='uint8', count=data_size)
@@ -255,15 +269,15 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
         data = np.memmap(f, mode=mmap_mode, dtype='uint8')
 
     try:
-        data = data.reshape((NY, NX, SX, SY), order='C').squeeze()
+        data = data.reshape((ny, nx, sx, sy), order='C').squeeze()
     except ValueError:
         warnings.warn("Pattern size and scan size larger than file size! "
                       "Will attempt to load by zero padding incomplete "
                       "frames.")
         # Data is stored pattern by pattern
-        pw = [(0, NY * NX * SX * SY - data.size)]
+        pw = [(0, ny * nx * sx * sy - data.size)]
         data = np.pad(data, pw, mode='constant')
-        data = data.reshape((NY, NX, SX, SY))
+        data = data.reshape((ny, nx, sx, sy))
 
     units = [u'\u03BC'+'m', u'\u03BC'+'m', 'A^{-1}', 'A^{-1}']
     names = ['y', 'x', 'dx', 'dy']
@@ -275,11 +289,6 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
     except BaseException:
         warnings.warn("Could not calibrate scan dimension, this can be done "
                       "using set_scan_calibration()")
-
-    # Set relevant values in metadata
-    md.set_item('General.original_filename', filename)
-    md.set_item('Signal.signal_type', 'electron_backscatter_diffraction')
-    md.set_item('Signal.record_by', 'image')
 
     # Create axis objects for each axis
     dim = data.ndim
@@ -295,7 +304,9 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
 
     dictionary = {'data': data,
                   'axes': axes,
-                  'metadata': md.as_dictionary()}
+                  'metadata': md.as_dictionary(),
+                  'original_metadata': omd.as_dictionary()}
+
     f.close()
 
     return [dictionary, ]

@@ -24,7 +24,7 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 from hyperspy.io_plugins.hspy import overwrite_dataset
 
 
-def _ebsd_metadata():
+def ebsd_metadata():
     """Create an empty metadata node for an EBSD dataset."""
 
     md = DictionaryTreeBrowser()
