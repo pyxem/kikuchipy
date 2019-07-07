@@ -18,7 +18,7 @@
 
 import os
 import glob
-
+import h5py
 import numpy as np
 from natsort import natsorted
 from hyperspy.ui_registry import get_gui
@@ -142,7 +142,7 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
             for i, filename in enumerate(filenames):
                 obj = load_single_file(filename, lazy=lazy, **kwargs)
                 if i == 0:
-                    # First iteration, determine number of _signals, if several
+                    # First iteration, determine number of signals, if several
                     n = 1
                     if isinstance(obj, (list, tuple)):
                         n = len(obj)
@@ -187,8 +187,6 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
 def load_single_file(filename, **kwargs):
     """Load any supported file into a KikuchiPy structure.
 
-    Supported formats: hspy or hdf5 (HDF5) and NORDIF dat.
-
     Parameters
     ----------
     filename : str
@@ -196,22 +194,46 @@ def load_single_file(filename, **kwargs):
     """
     extension = os.path.splitext(filename)[1][1:]
 
-    i = 0
-    while extension.lower() not in io_plugins[i].file_extensions and \
-            i < len(io_plugins) - 1:
-        i += 1
-    if i == len(io_plugins):
+    # Get plugins matching the extension
+    plugins = []
+    for plugin in io_plugins:
+        if extension.lower() in plugin.file_extensions:
+            plugins.append(plugin)
+
+    # Return reader or raise an error
+    if len(plugins) == 0:
         # Try to load it with the Python Image Library (PIL)
         try:
             from hyperspy.io_plugins import image
-            reader = image
-            return load_with_reader(filename, reader, **kwargs)
+            return load_with_reader(filename, reader=image, **kwargs)
         except BaseException:
-            raise IOError("If the file format is supported please report "
-                          "this error.")
+            raise IOError("Could not read '{}'. If the file format is "
+                          "supported please report this "
+                          "error.".format(filename))
+    elif h5py.is_hdf5(filename):
+        # Get manufacturer from file. Need to take into account that TSL has a
+        # preceding space in their ' Manufacturer' dataset name.
+        try:
+            with h5py.File(filename, mode='r') as f:
+                keys = list(f.keys())
+                man_str = 'manufacturer'
+                for key in keys:
+                    if man_str in key.lower():
+                        man_key = key
+                manufacturer = f[man_key][()]
+                if isinstance(manufacturer, np.ndarray):
+                    manufacturer = manufacturer[0]
+                manufacturer = manufacturer.decode()
+        except BaseException:
+            raise IOError("Could not read manufacturer from file.")
+        for plugin in plugins:
+            format_name = plugin.format_name.split('HDF')[0]
+            if format_name.lower() in manufacturer.lower():
+                return load_with_reader(filename, reader=plugin, **kwargs)
+        raise IOError("Could not read '{}'. If the file format is "
+                      "supported please report this error.".format(filename))
     else:
-        reader = io_plugins[i]
-        return load_with_reader(filename=filename, reader=reader, **kwargs)
+        return load_with_reader(filename, reader=plugins[0], **kwargs)
 
 
 def load_with_reader(filename, reader, signal_type=None, convert_units=False,

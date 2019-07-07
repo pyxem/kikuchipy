@@ -26,11 +26,12 @@ from kikuchipy.utils.io_utils import ebsd_metadata
 
 # Plugin characteristics
 # ----------------------
-format_name = 'TSLHDF'
+# EDAX and not TSL since Manufacturer is set to 'EDAX' in their HDF5 file
+format_name = 'EDAXHDF'
 description = 'Read support for EDAX TSL\'s HDF format'
-full_support = False  # Does not write, and phases are not read
+full_support = False
 # Recognised file extension
-file_extensions = ['h5', 'hdf5']
+file_extensions = ['h5', 'hdf5', 'h5ebsd']
 default_extension = 0
 # Writing capabilities
 writes = False

@@ -20,11 +20,12 @@ import h5py
 
 # Plugin characteristics
 # ----------------------
-format_name = 'KIPY'
-description = 'Read/write support for KikuchiPy\'s default format based on the HDF5 standard'
+format_name = 'KikuchiPyHDF'
+description = 'Read/write support for KikuchiPy\'s default format based on '\
+    'the HDF5 standard'
 full_support = False
 # Recognised file extension
-file_extensions = ['kipy', 'KIPY']
+file_extensions = ['h5', 'hdf5', 'h5ebsd']
 default_extension = 1
 # Writing capabilities
 writes = False
