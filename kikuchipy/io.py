@@ -18,16 +18,13 @@
 
 import os
 import glob
-import h5py
 import numpy as np
 from natsort import natsorted
 from hyperspy.ui_registry import get_gui
 from hyperspy.misc.utils import stack as stack_method
 from hyperspy.misc.io.tools import ensure_directory
-from hyperspy.misc.io.tools import overwrite as overwrite_method
 from hyperspy.drawing.marker import markers_metadata_dict_to_markers
 from hyperspy.misc.utils import strlist2enumeration, find_subclasses
-
 from kikuchipy.io_plugins import io_plugins, default_write_ext
 
 f_error_fmt = (
@@ -42,16 +39,14 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
     """Load potentially multiple supported files into a KikuchiPy
     structure.
 
-    Supported formats: hspy or hdf5 (HDF5) and NORDIF dat.
-
     Any extra keyword is passed to the corresponding reader. For
     available options see their individual documentation, which may be
     found in either KikuchiPy or HyperSpy.
 
     Parameters
     ----------
-    filenames : None, str or list of strings, optional
-        The filename to be loaded. If None, a window will open to
+    filenames : {None, str or list of strings}, optional
+        The filenames to be loaded. If None, a window will open to
         select a file to load. If a valid filename is passed in that
         single file is loaded. If multiple file names are passed in a
         list, a list of objects or a single object containing the data
@@ -60,7 +55,7 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
         files can be loaded by using simple shell-style wildcards,
         e.g. 'my_file*.dat' loads all the files that starts
         by 'my_file' and has the '.dat' extension.
-    signal_type : {None, 'EBSD', 'RadonTransform', '', str}, optional
+    signal_type : {None, 'EBSD', str}, optional
         The name or acronym that identifies the signal type. The value
         provided may determine the Signal subclass assigned to the
         data. If None the value is read/guessed from the file. Any
@@ -79,11 +74,11 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
         over the axis given by its integer index or its name. The data
         must have the same shape, except in the dimension corresponding
         to `axis`.
-    new_axis_name : string, optional
+    new_axis_name : str, optional
         The name of the new axis when `axis` is None. If an axis with
         this name already exists it automatically appends '-i', where
         `i` are integers, until it finds a name that is not yet in use.
-    lazy : {None, bool}, optional
+    lazy : bool, optional
         Open the data lazily - i.e. without actually reading the data
         from the disk until required. Allows opening arbitrary-sized
         datasets. The default is `False`.
@@ -91,7 +86,7 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
         If True, convert the units using the `convert_to_units` method
         of the `axes_manager`. If False (default), nothing is done.
     **kwargs :
-        Keyword arguments to be passed to the corresponding reader.
+        Keyword arguments passed to the corresponding reader.
 
     Returns
     -------
@@ -100,14 +95,9 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
     Examples
     --------
     Loading a single file providing the signal type:
-    >>> s = kp.load('Pattern.dat', signal_type='EBSD')
-    Loading multiple files:
-    >>> s = kp.load(['Pattern1.dat', 'Pattern2.dat'])
-    Loading multiple files matching the pattern:
-    >>> s = kp.load('Pattern*.dat')
-    Loading (potentially larger than the available memory) files lazily
-    and stacking:
-    >>> s = kp.load('Pattern*.dat', lazy=True, stack=True)
+    >>> s = kp.load('Pattern.h5', signal_type='EBSD')
+    Loading multiple scans from single file:
+    >>> s1, s2 = kp.load('Pattern.h5', scans=[1, 2])
     """
     kwargs['signal_type'] = signal_type
     kwargs['convert_units'] = convert_units
@@ -120,19 +110,19 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
             filenames = load_ui.filename
             lazy = load_ui.lazy
         if filenames is None:
-            raise ValueError("No file provided to reader")
+            raise ValueError("No file provided to reader.")
 
     if isinstance(filenames, str):
         filenames = natsorted([f for f in glob.glob(filenames)
                                if os.path.isfile(f)])
         if not filenames:
-            raise ValueError("No file name matches this pattern")
+            raise ValueError("No file name matches this pattern.")
     elif not isinstance(filenames, (list, tuple)):
         raise ValueError("The filenames parameter must be a list, tuple, "
-                         "string or None")
+                         "string or None.")
 
     if not filenames:
-        raise ValueError("No file provided to reader")
+        raise ValueError("No file provided to reader.")
     else:
         if stack is True:
             # We are loading a stack!
@@ -191,17 +181,16 @@ def load_single_file(filename, **kwargs):
     ----------
     filename : str
         File name with extension.
+    **kwargs :
+        Keyword arguments passed to the corresponding reader.
     """
     extension = os.path.splitext(filename)[1][1:]
 
-    # Get plugins matching the extension
-    plugins = []
-    for plugin in io_plugins:
-        if extension.lower() in plugin.file_extensions:
-            plugins.append(plugin)
-
-    # Return reader or raise an error
-    if len(plugins) == 0:
+    i = 0
+    while extension.lower() not in io_plugins[i].file_extensions and \
+            i < len(io_plugins) - 1:
+        i += 1
+    if i == len(io_plugins):
         # Try to load it with the Python Image Library (PIL)
         try:
             from hyperspy.io_plugins import image
@@ -210,43 +199,22 @@ def load_single_file(filename, **kwargs):
             raise IOError("Could not read '{}'. If the file format is "
                           "supported please report this "
                           "error.".format(filename))
-    elif h5py.is_hdf5(filename):
-        # Get manufacturer from file. Need to take into account that TSL has a
-        # preceding space in their ' Manufacturer' dataset name.
-        try:
-            with h5py.File(filename, mode='r') as f:
-                keys = list(f.keys())
-                man_str = 'manufacturer'
-                for key in keys:
-                    if man_str in key.lower():
-                        man_key = key
-                manufacturer = f[man_key][()]
-                if isinstance(manufacturer, np.ndarray):
-                    manufacturer = manufacturer[0]
-                manufacturer = manufacturer.decode()
-        except BaseException:
-            raise IOError("Could not read manufacturer from file.")
-        for plugin in plugins:
-            format_name = plugin.format_name.split('HDF')[0]
-            if format_name.lower() in manufacturer.lower():
-                return load_with_reader(filename, reader=plugin, **kwargs)
-        raise IOError("Could not read '{}'. If the file format is "
-                      "supported please report this error.".format(filename))
     else:
-        return load_with_reader(filename, reader=plugins[0], **kwargs)
+        return load_with_reader(filename, reader=io_plugins[i], **kwargs)
 
 
-def load_with_reader(filename, reader, signal_type=None, convert_units=False,
-                     **kwargs):
-    """Read data, axes, metadata and original metadata from specified reader.
+def load_with_reader(filename, reader, signal_type=None,
+                     convert_units=False, **kwargs):
+    """Read data, axes, metadata and original metadata from reader.
 
     Parameters
     ----------
     filename : str
-    reader : io_plugin
-    signal_type : {None, 'ElectronBackscatterDiffraction',
-        'RadonTransform', '', str}, optional
+    reader : io_plugins
+    signal_type : {None, 'EBSD'}, optional
     convert_units : bool, optional
+    **kwargs :
+        Keyword arguments passed to the corresponding reader.
 
     Returns
     -------
@@ -256,7 +224,6 @@ def load_with_reader(filename, reader, signal_type=None, convert_units=False,
     file_data_list = reader.file_reader(filename, **kwargs)
 
     objects = []
-
     for signal_dict in file_data_list:
         if 'metadata' in signal_dict:
             if 'Signal' not in signal_dict['metadata']:
@@ -285,12 +252,12 @@ def dict2signal(signal_dict, lazy=False):
 
     Parameters
     ----------
-    signal_dict : dictionary
+    signal_dict : dict
     lazy : bool, optional
 
     Returns
     -------
-    s : Signal or subclass
+    signal : Signal or subclass
     """
     signal_dimension = -1  # Undefined
     signal_type = ''
@@ -377,7 +344,7 @@ def assign_signal_subclass(dtype, signal_dimension, signal_type='', lazy=False):
           'object' in dtype.name):
         dtype = 'real'
     else:
-        raise ValueError("Data type '{}' not understood!".format(dtype.name))
+        raise ValueError("Data type '{}' not understood.".format(dtype.name))
 
     if not isinstance(signal_dimension, int) or signal_dimension < 0:
         raise ValueError("signal_dimension must be a positive integer.")
@@ -419,15 +386,27 @@ def assign_signal_subclass(dtype, signal_dimension, signal_type='', lazy=False):
 
 
 def save(filename, signal, overwrite=None, **kwargs):
-    """Save EBSD or Radon Transform data.
+    """Write electron backscatter patterns to file.
+
+    Parameters
+    ----------
+    filename : str
+        File path including name of new file.
+    signal : {kikuchipy.signals.EBSD, kikuchipy.signals.LazyEBSD}
+        Signal instance.
+    overwrite : {bool, None}, optional
+    **kwargs :
+        Keyword arguments passed to the writer.
     """
-    extension = os.path.splitext(filename)[1][1:]
-    if extension == '':
-        extension = 'hspy'
-        filename = filename + '.' + extension
+    from hyperspy.misc.io.tools import overwrite as overwrite_method
+    ext = os.path.splitext(filename)[1][1:]
+    if ext == '':  # Will write to HyperSpy's HDF5 format
+        ext = 'hspy'
+        filename = filename + '.' + ext
+
     writer = None
     for plugin in io_plugins:
-        if extension.lower() in plugin.file_extensions:
+        if ext.lower() in plugin.file_extensions:
             writer = plugin
             break
 
@@ -435,7 +414,7 @@ def save(filename, signal, overwrite=None, **kwargs):
         raise ValueError(
             (".%s does not correspond to any supported format. Supported "
              "file extensions are: %s") %
-            (extension, strlist2enumeration(default_write_ext)))
+            (ext, strlist2enumeration(default_write_ext)))
     else:  # Check if the writer can write
         sd = signal.axes_manager.signal_dimension
         nd = signal.axes_manager.navigation_dimension
@@ -449,8 +428,8 @@ def save(filename, signal, overwrite=None, **kwargs):
                           plugin.writes is not False and
                           (sd, nd) in plugin.writes]
             raise IOError("This file format cannot write this data. "
-                          "The following formats can: %s" %
-                          strlist2enumeration(yes_we_can))
+                          "The following formats "
+                          "can: {}".format(strlist2enumeration(yes_we_can)))
         ensure_directory(filename)
         is_file = os.path.isfile(filename)
         if overwrite is None:
@@ -461,11 +440,11 @@ def save(filename, signal, overwrite=None, **kwargs):
             write = False  # Don't write the file
         else:
             raise ValueError("`overwrite` parameter can only be None, True or "
-                             "False")
+                             "False, and not {}".format(overwrite))
         if write:
             writer.file_writer(filename, signal, **kwargs)
             folder, filename = os.path.split(os.path.abspath(filename))
             signal.tmp_parameters.set_item('folder', folder)
             signal.tmp_parameters.set_item('filename',
                                            os.path.splitext(filename)[0])
-            signal.tmp_parameters.set_item('extension', extension)
+            signal.tmp_parameters.set_item('extension', ext)
