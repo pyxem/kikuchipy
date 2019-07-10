@@ -26,6 +26,7 @@ from hyperspy.misc.io.tools import ensure_directory
 from hyperspy.drawing.marker import markers_metadata_dict_to_markers
 from hyperspy.misc.utils import strlist2enumeration, find_subclasses
 from kikuchipy.io_plugins import io_plugins, default_write_ext
+from kikuchipy.utils.io_utils import user_input
 
 f_error_fmt = (
     "\tFile %d:\n"
@@ -385,16 +386,21 @@ def assign_signal_subclass(dtype, signal_dimension, signal_type='', lazy=False):
                 and s._signal_type == ''][0]
 
 
-def save(filename, signal, overwrite=None, **kwargs):
+def save(filename, signal, overwrite=None, add_scan=None, **kwargs):
     """Write electron backscatter patterns to file.
 
     Parameters
     ----------
     filename : str
         File path including name of new file.
-    signal : {kikuchipy.signals.EBSD, kikuchipy.signals.LazyEBSD}
+    signal : {kikuchipy.signals.EBSD, kikuchipy.lazy_signals.LazyEBSD}
         Signal instance.
     overwrite : {bool, None}, optional
+        Whether to overwrite file or not if it already exists.
+    add_scan : {bool, None}, optional
+        Whether to add the signal to an already existing h5ebsd file or
+        not. If the file does not exist the signal is written to a new
+        file.
     **kwargs :
         Keyword arguments passed to the writer.
     """
@@ -430,8 +436,17 @@ def save(filename, signal, overwrite=None, **kwargs):
             raise IOError("This file format cannot write this data. "
                           "The following formats "
                           "can: {}".format(strlist2enumeration(yes_we_can)))
+
+        # Check possibilities for overwriting file and/or datasets within file
         ensure_directory(filename)
         is_file = os.path.isfile(filename)
+        if writer.format_name == 'h5ebsd' and overwrite is not True and is_file:
+            if add_scan is None:
+                q = "Add scan to '{}' (y/n)?\n".format(filename)
+                add_scan = user_input(q)
+            if add_scan:
+                overwrite = True  # So that the 2nd statement below triggers
+            kwargs['add_scan'] = add_scan
         if overwrite is None:
             write = overwrite_method(filename)  # Ask what to do
         elif overwrite is True or (overwrite is False and not is_file):

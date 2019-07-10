@@ -604,37 +604,40 @@ class EBSD(Signal2D):
 
         return RadonTransform(sinograms)
 
-    def save(self, filename=None, overwrite=None, extension=None, **kwargs):
+    def save(self, filename=None, overwrite=None, extension=None,
+             **kwargs):
         """Saves the signal in the specified format.
-        The function gets the format from the extension:
-            - hspy for HyperSpy's HDF5 specification
-            - dat for NORDIF binary format
-        If no extension is provided the default file format as defined
-        in the `preferences` is used. Please note that not all the
-        formats supports saving datasets of arbitrary dimensions. Each
-        format accepts a different set of parameters. For details see
-        the specific format documentation.
+
+        The function gets the format from the extension: `h5`, `hdf5` or
+        `h5ebsd` for KikuchiPy's specification of the the h5ebsd format
+        `dat` for the NORDIF binary format or `hspy` for HyperSpy's
+        HDF5 specification. If no extension is provided the default
+        file format as defined in the `preferences` is used. Please note
+        that not all formats support saving datasets of arbitrary
+        dimensions. Each format accepts a different set of parameters.
+
+        For details see the specific format documentation in
+        `kikuchipy.io_plugins.<format>.file_writer`.
 
         Parameters
         ----------
-        filename : str or None
+        filename : {str or None}, optional
             If None (default) and `tmp_parameters.filename` and
             `tmp_parameters.folder` are defined, the filename and path
             will be taken from there. A valid extension can be provided
-            e.g. "Pattern.dat", see `extension`.
-        overwrite : None, bool
+            e.g. "data.h5", see `extension`.
+        overwrite : {None, bool}, optional
             If None and the file exists, it will query the user. If
             True (False) it (does not) overwrite the file if it exists.
-        extension : {None, 'hspy', 'hdf5', 'dat', common image
-                     extensions e.g. 'tiff', 'png'}
-            The extension of the file that defines the file format.
-            'hspy' and 'hdf5' are equivalent. Use 'hdf5' if
-            compatibility with HyperSpy versions older than 1.2 is
-            required. If None, the extension is determined from the
-            following list in this order:
-            i) the filename
-            ii)  `Signal.tmp_parameters.extension`
-            iii) `hspy` (the default extension)
+        extension : {None, 'h5', 'hdf5', 'h5ebsd', 'hspy', 'dat',
+                     'png', 'tiff', etc.}, optional
+            Extension of the file that defines the file format. 'h5',
+            'hdf5' and 'h5ebsd' are equivalent. If None, the extension
+            is determined from the following list in this order: i) the
+            filename, ii)  `Signal.tmp_parameters.extension` or iii)
+            `hspy` (HyperSpy's default extension)
+        **kwargs :
+            Keyword arguments passed to writer.
         """
         if filename is None:
             if (self.tmp_parameters.has_item('filename') and
@@ -648,7 +651,7 @@ class EBSD(Signal2D):
             elif self.metadata.has_item('General.original_filename'):
                 filename = self.metadata.General.original_filename
             else:
-                raise ValueError("File name not defined")
+                raise ValueError("Filename not defined.")
         if extension is not None:
             basename, ext = os.path.splitext(filename)
             filename = basename + '.' + extension

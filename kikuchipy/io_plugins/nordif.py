@@ -62,11 +62,13 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
 
     Returns
     -------
-    dictionary : dict
+    scan : dict
         Data, axes, metadata and original metadata.
     """
     if mmap_mode is None:
         mmap_mode = 'r' if lazy else 'c'
+
+    scan = {'attributes': {}}
 
     # Make sure we open in correct mode
     if '+' in mmap_mode or ('write' in mmap_mode and
@@ -74,11 +76,12 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
         if lazy:
             raise ValueError("Lazy loading does not support in-place writing")
         f = open(filename, 'r+b')
+        scan['attributes']['_lazy'] = True
     else:
         f = open(filename, 'rb')
 
     # Get metadata from setting file
-    folder, _ = os.path.split(filename)
+    folder, fname = os.path.split(filename)
     if setting_file is None:
         setting_file = os.path.join(folder, 'Setting.txt')
     setting_file_exists = os.path.isfile(setting_file)
@@ -104,8 +107,12 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
 
     # Set required and other parameters in metadata
     md.set_item('General.original_filename', filename)
+    md.set_item('General.title',
+                os.path.splitext(os.path.split(filename)[1])[0])
     md.set_item('Signal.signal_type', 'EBSD')
     md.set_item('Signal.record_by', 'image')
+    scan['metadata'] = md.as_dictionary()
+    scan['original_metadata'] = omd.as_dictionary()
 
     # Set scan size and pattern size
     nx, ny = scan_size
@@ -129,6 +136,7 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
         pw = [(0, ny * nx * sy * sx - data.size)]
         data = np.pad(data, pw, mode='constant')
         data = data.reshape((ny, nx, sy, sx))
+    scan['data'] = data
 
     units = [u'\u03BC'+'m', u'\u03BC'+'m', 'A^{-1}', 'A^{-1}']
     names = ['x', 'y', 'dx', 'dy']
@@ -145,13 +153,11 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
     axes = [{'size': data.shape[i], 'index_in_array': i, 'name': names[i],
              'scale': scales[i], 'offset': 0.0, 'units': units[i]}
             for i in range(data.ndim)]
-
-    dictionary = {'data': data, 'axes': axes, 'metadata': md.as_dictionary(),
-                  'original_metadata': omd.as_dictionary()}
+    scan['axes'] = axes
 
     f.close()
 
-    return [dictionary, ]
+    return [scan, ]
 
 
 def get_settings_from_file(filename):
@@ -229,15 +235,15 @@ def get_settings_from_file(filename):
     md.set_item(EBSD_str + 'version', version)
     md.set_item(EBSD_str + 'sample_tilt', float(sample_tilt))
     md.set_item(EBSD_str + 'detector', 'NORDIF ' + detector)
-    md.set_item(EBSD_str + 'azimuth_angle', azimuth_angle)
-    md.set_item(EBSD_str + 'elevation_angle', elevation_angle)
+    md.set_item(EBSD_str + 'azimuth_angle', float(azimuth_angle))
+    md.set_item(EBSD_str + 'elevation_angle', float(elevation_angle))
     md.set_item(EBSD_str + 'frame_rate', int(frame_rate))
-    md.set_item(EBSD_str + 'pattern_width', sx)
-    md.set_item(EBSD_str + 'pattern_height', sy)
+    md.set_item(EBSD_str + 'pattern_width', int(sx))
+    md.set_item(EBSD_str + 'pattern_height', int(sy))
     md.set_item(EBSD_str + 'exposure_time', float(exposure_time) / 1e6)
     md.set_item(EBSD_str + 'gain', int(gain))
-    md.set_item(EBSD_str + 'n_columns', nx)
-    md.set_item(EBSD_str + 'n_rows', ny)
+    md.set_item(EBSD_str + 'n_columns', int(nx))
+    md.set_item(EBSD_str + 'n_rows', int(ny))
     md.set_item(EBSD_str + 'step_x', float(step_size))
     md.set_item(EBSD_str + 'step_y', float(step_size))
     md.set_item(EBSD_str + 'scan_time', int(scan_time))
