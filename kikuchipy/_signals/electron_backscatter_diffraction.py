@@ -25,18 +25,14 @@ import gc
 import datetime
 import tqdm
 import numbers
-
 from h5py import File
 from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
 from skimage.transform import radon
-from matplotlib.pyplot import imread
 from pyxem.signals.electron_diffraction import ElectronDiffraction
-
 from dask.diagnostics import ProgressBar
-from hyperspy.misc.utils import dummy_context_manager, DictionaryTreeBrowser
-
+from hyperspy.misc.utils import dummy_context_manager
 from kikuchipy import io
 from kikuchipy._signals.radon_transform import RadonTransform
 from kikuchipy.utils.expt_utils import (correct_background, remove_dead,
@@ -44,6 +40,7 @@ from kikuchipy.utils.expt_utils import (correct_background, remove_dead,
                                         plot_markers_single_pattern,
                                         rescale_pattern_intensity,
                                         equalize_adapthist_pattern)
+from kikuchipy.utils.io_utils import metadata_nodes
 
 
 class EBSD(Signal2D):
@@ -67,127 +64,104 @@ class EBSD(Signal2D):
                                     exposure_time=None, grid_type=None,
                                     step_x=None, step_y=None, gain=None,
                                     frame_number=None, frame_rate=None,
-                                    scan_time=None,
-                                    scan_reference_directions=None,
-                                    crystal_reference_directions=None,
-                                    pattern_centre=None,
-                                    beam_energy=None,
+                                    scan_time=None, beam_energy=None,
+                                    xpc=None, ypc=None, zpc=None,
                                     deadpixels_corrected=None,
                                     deadvalue=None, deadpixels=None,
-                                    deadthreshold=None):
-        """Set experimental parameters in metadata and original
-        metadata.
+                                    deadthreshold=None, static_background=None,
+                                    manufacturer=None, version=None,
+                                    microscope=None, magnification=None):
+        """Set experimental parameters in metadata.
 
         Parameters
         ----------
-        detector : str, optional
-            Detector manufacturer and model.
         azimuth_angle : float, optional
             Azimuth angle of the detector in degrees. If the azimuth is
             zero, the detector is perpendicular to the tilt axis.
+        beam_energy : float, optional
+            Energy of the electron beam in kV.
+        binning : int, optional
+            Camera binning.
+        deadpixels_corrected : bool, optional
+            Whether deadpixels in patterns have been corrected.
+        deadpixels : list of tuple, optional
+            Pattern indices for dead pixels.
+        deadvalue : string, optional
+            How dead pixels have been corrected for (average or nan).
+        deadthreshold : int, optional
+            Threshold for detecting dead pixels.
+        detector : str, optional
+            Detector manufacturer and model.
+        detector_pixel_size : float, optional
+            Camera pixel size on the scintillator surface in µm.
         elevation_angle : float, optional
             Elevation angle of the detector in degrees. If the elevation
             is zero, the detector is perpendicular to the incident beam.
-        sample_tilt : float, optional
-            Sample tilt angle from horizontal in degrees.
-        working_distance : float, optional
-            Working distance in mm.
-        binning : int, optional
-            Camera binning.
-        detector_pixel_size : float, optional
-            Camera pixel size on the scintillator surface in µm.
         exposure_time : float, optional
             Camera exposure time in µs.
         frame_number : float, optional
             Number of patterns integrated during acquisition.
         frame_rate : float, optional
             Frames per s.
-        scan_time : float, optional
-            Scan time in s.
         gain : float, optional
             Camera gain in dB.
         grid_type : str, optional
             Scan grid type, only square grid is supported.
-        pattern_centre : array_like, optional
-            Pattern centre.
+        manufacturer : str, optional
+            Manufacturer used to collect patterns.
+        microscope : str, optional
+            Microscope used to collect patterns.
+        magnification : int, optional
+            Microscope magnification at which patterns were collected.
+        sample_tilt : float, optional
+            Sample tilt angle from horizontal in degrees.
+        scan_time : float, optional
+            Scan time in s.
+        static_background : np.ndarray, optional
+            Static background pattern.
         step_x : float, optional
             Scan step size in fast scan direction (east).
         step_y : float, optional
             Scan step size in slow scan direction (south).
-        scan_reference_directions : numpy array, optional
-            (3 x 3) transformation matrix describing how to transform
-            the scan coordinate system into a global reference frame.
-        crystal_reference_directions : numpy array, optional
-            (3 x 3) transformation matrix describing how to transform
-            the crystal coordinate system into a global reference frame.
-        beam_energy : float, optional
-            Energy of the electron beam in kV.
-        deadpixels_corrected : bool, optional
-            If True (default is False), deadpixels in patterns are
-            corrected.
-        deadpixels : list of tuple, optional
-            List of tuples containing pattern indices for dead pixels.
-        deadvalue : string, optional
-            Specifies how dead pixels have been corrected for (average
-            or nan).
-        deadthreshold : int, optional
-            Threshold for detecting dead pixels.
+        version : str, optional
+            Version of manufacturer software used to collect patterns.
+        working_distance : float, optional
+            Working distance in mm.
+        xpc : float, optional
+            Pattern centre horizontal coordinate with respect to
+            detector centre.
+        ypc : float, optional
+            Pattern centre horizontal coordinate with respect to
+            detector centre.
+        zpc : float, optional
+            Specimen to scintillator distance.
         """
+        def _write_params(params, metadata, node):
+            for key, val in params.items():
+                if val is not None:
+                    metadata.set_item(node + '.' + key, val)
         md = self.metadata
         omd = self.original_metadata
-        sem = 'Acquisition_instrument.SEM.'
-        ebsd = sem + 'Detector.EBSD.'
-
-        if detector is not None:
-            md.set_item(ebsd + 'detector', detector)
-        if azimuth_angle is not None:
-            md.set_item(ebsd + 'azimuth_angle', azimuth_angle)
-        if elevation_angle is not None:
-            md.set_item(ebsd + 'elevation_angle', elevation_angle)
-        if sample_tilt is not None:
-            md.set_item(ebsd + 'sample_tilt', sample_tilt)
-        if working_distance is not None:
-            md.set_item(ebsd + 'working_distance', working_distance)
-        if working_distance is not None:
-            md.set_item(ebsd + 'working_distance', working_distance)
-        if binning is not None:
-            md.set_item(ebsd + 'binning', binning)
-        if detector_pixel_size is not None:
-            md.set_item(ebsd + 'detector_pixel_size', detector_pixel_size)
-        if exposure_time is not None:
-            md.set_item(ebsd + 'exposure_time', exposure_time)
-        if frame_number is not None:
-            md.set_item(ebsd + 'frame_number', frame_number)
-        if frame_rate is not None:
-            md.set_item(ebsd + 'frame_rate', frame_rate)
-        if scan_time is not None:
-            md.set_item(ebsd + 'scan_time', scan_time)
-        if gain is not None:
-            md.set_item(ebsd + 'gain', gain)
-        if grid_type is not None:
-            md.set_item(ebsd + 'grid_type', grid_type)
-        if pattern_centre is not None:
-            md.set_item(ebsd + 'pattern_centre', pattern_centre)
-        if step_x is not None:
-            md.set_item(ebsd + 'step_x', step_x)
-        if step_y is not None:
-            md.set_item(ebsd + 'step_y', step_y)
-        if scan_reference_directions is not None:
-            md.set_item(ebsd + 'scan_reference_directions',
-                        scan_reference_directions)
-        if crystal_reference_directions is not None:
-            md.set_item(ebsd + 'crystal_reference_directions',
-                        crystal_reference_directions)
-        if beam_energy is not None:
-            md.set_item(sem + 'beam_energy', beam_energy)
-        if deadpixels_corrected is not None:
-            omd.set_item(ebsd + 'deadpixels_corrected', deadpixels_corrected)
-        if deadpixels is not None:
-            omd.set_item(ebsd + 'deadpixels', deadpixels)
-        if deadvalue is not None:
-            omd.set_item(ebsd + 'deadvalue', deadvalue)
-        if deadthreshold is not None:
-            omd.set_item(ebsd + 'deadthreshold', deadthreshold)
+        sem_node, ebsd_node = metadata_nodes()
+        _write_params({'beam_energy': beam_energy,
+                       'magnification': magnification, 'microscope': microscope,
+                       'working_distance': working_distance}, md, sem_node)
+        _write_params({'azimuth_angle': azimuth_angle,
+                       'binning': binning, 'detector': detector,
+                       'detector_pixel_size': detector_pixel_size,
+                       'elevation_angle': elevation_angle,
+                       'exposure_time': exposure_time,
+                       'frame_number': frame_number,
+                       'frame_rate': frame_rate, 'gain': gain,
+                       'grid_type': grid_type,
+                       'manufacturer': manufacturer, 'version': version,
+                       'sample_tilt': sample_tilt, 'scan_time': scan_time,
+                       'step_x': step_x, 'step_y': step_y,
+                       'xpc': xpc, 'ypc': ypc, 'zpc': zpc,
+                       'static_background': static_background}, md, ebsd_node)
+        _write_params({'deadpixels_corrected': deadpixels_corrected,
+                       'deadpixels': deadpixels, 'deadvalue': deadvalue,
+                       'deadthreshold': deadthreshold}, omd, ebsd_node)
 
     def set_scan_calibration(self, calibration):
         """Set the step size in µm.
@@ -215,7 +189,7 @@ class EBSD(Signal2D):
         self.axes_manager.signal_axes[0].offset = 0
         self.axes_manager.signal_axes[1].offset = 0
 
-    def remove_background(self, static=True, dynamic=True, bg=None,
+    def remove_background(self, static=True, dynamic=True, static_bg=None,
                           relative=False, sigma=None, **kwargs):
         """Background correction, either static, dynamic or both.
 
@@ -238,22 +212,23 @@ class EBSD(Signal2D):
             If True (default), static correction is performed.
         dynamic : bool, optional
             If True (default), dynamic correction is performed.
-        bg : file path (default is None), optional
-            File path to background image for static correction. If
-            None, we try to read 'Background acquisition pattern.bmp'
-            from signal directory.
+        static_bg : {str, None}, optional
+            File path to static background pattern. If None (default),
+            an attempt to read the pattern from the signal metadata is
+            made.
         relative : bool, optional
             If True (default is False), relative intensities between
             patterns are kept after static correction.
-        sigma : int, float (default is None), optional
+        sigma : {int, float, None}, optional
             Standard deviation for the gaussian kernel for dynamic
             correction. If None (default), a deviation of pattern
             width/30 is chosen.
         **kwargs:
-            Arguments to be passed to map().
+            Keyword arguments passed to map().
         """
-        if not static and not dynamic:
-            raise ValueError("No correction done")
+        if static is False and dynamic is False:
+            warnings.warn("No correction done.")
+            return
 
         lazy = self._lazy
         if lazy:
@@ -264,26 +239,26 @@ class EBSD(Signal2D):
         imin = None
         scale = None
 
+        ebsd_node = metadata_nodes(sem=False)
+        md = self.metadata
         if static:
-            if bg is None:
-                try:  # Try to load from signal directory
-                    bg_fname = 'Background acquisition pattern.bmp'
-                    md = self.metadata
-                    filepath, _ = os.path.split(md.General.original_filename)
-                    bg = os.path.join(filepath, bg_fname)
-                except (ValueError, AttributeError):
-                    raise ValueError("No background image provided")
+            if static_bg is None:
+                static_bg = md.get_item(ebsd_node + '.static_background')
+                if not isinstance(static_bg, int) and static_bg.all() == -1:
+                    raise ValueError("No static background pattern provided.")
 
             # Read and setup background
-            bg = imread(bg)
-            bg = Signal2D(bg)
+            static_bg = Signal2D(static_bg)
 
-            # Correct dead pixels in background if they are corrected in signal
-            omd = self.original_metadata.Acquisition_instrument.SEM.\
-                Detector.EBSD
-            if (omd.deadpixels_corrected and omd.deadpixels.any() and
-                    omd.deadvalue):
-                bg.data = remove_dead(bg.data, omd.deadpixels, omd.deadvalue)
+            # Correct dead pixels in static background pattern if they are
+            # corrected in experimental patterns
+            omd_ebsd = self.original_metadata.get_item(ebsd_node)
+            if (omd_ebsd.has_item('deadpixels_corrected') and
+                    omd_ebsd.has_item('deadpixels') and
+                    omd_ebsd.has_item('deadvalue')):
+                static_bg.data = remove_dead(static_bg.data,
+                                             omd_ebsd.deadpixels,
+                                             omd_ebsd.deadvalue)
 
             if relative and not dynamic:
                 # Get lowest intensity after subtraction
@@ -293,12 +268,12 @@ class EBSD(Signal2D):
                     smin.compute()
                     smax.compute()
                 smin.change_dtype(np.int8)
-                bg.change_dtype(np.int8)
-                imin = (smin.data - bg.data).min()
+                static_bg.change_dtype(np.int8)
+                imin = (smin.data - static_bg.data).min()
 
                 # Get highest intensity after subtraction
-                bg.data = bg.data.astype(np.uint8)
-                imax = (smax.data - bg.data).max() + abs(imin)
+                static_bg.data = static_bg.data.astype(np.uint8)
+                imax = (smax.data - static_bg.data).max() + abs(imin)
 
                 # Get global scaling factor, input dtype max. value in nominator
                 scale = float(np.iinfo(self.data.dtype).max / imax)
@@ -306,8 +281,8 @@ class EBSD(Signal2D):
         if dynamic and sigma is None:
             sigma = int(self.axes_manager.signal_axes[0].size/30)
 
-        self.map(correct_background, static=static, dynamic=dynamic, bg=bg,
-                 sigma=sigma, imin=imin, scale=scale, **kwargs)
+        self.map(correct_background, static=static, dynamic=dynamic,
+                 bg=static_bg, sigma=sigma, imin=imin, scale=scale, **kwargs)
 
     def equalize_adapthist(self, kernel_size=None, clip_limit=0.01, nbins=256,
                            **kwargs):
@@ -433,7 +408,7 @@ class EBSD(Signal2D):
             pattern = self.inav[coordinates].data
             deadpixels_new = np.append(deadpixels_new,
                                        find_deadpixels_single_pattern(pattern,
-                                        threshold=threshold, mask=mask),
+                                                                      threshold=threshold, mask=mask),
                                        axis=0)
         # Count the number of occurrences of each deadpixel found in all
         # checked patterns.
@@ -606,7 +581,7 @@ class EBSD(Signal2D):
 
     def save(self, filename=None, overwrite=None, extension=None,
              **kwargs):
-        """Saves the signal in the specified format.
+        """Save signal in the specified format.
 
         The function gets the format from the extension: `h5`, `hdf5` or
         `h5ebsd` for KikuchiPy's specification of the the h5ebsd format
@@ -657,12 +632,12 @@ class EBSD(Signal2D):
             filename = basename + '.' + extension
         io.save(filename, self, overwrite=overwrite, **kwargs)
 
-    def get_decomposition_model(self, components=None, dtype_out=np.float16,
-                                *args, **kwargs):
+    def get_decomposition_model(self, components=None,
+                                dtype_out=np.float16, *args, **kwargs):
         """Return the model signal generated with the selected number of
         principal components.
 
-        This function calls HyperSpy's ``get_decomposition_model``. The
+        This function calls HyperSpy's get_decomposition_model. The
         learning results are preconditioned before this call, doing the
         following: (1) set data type to desired dtype, (2) remove
         unwanted components, (3) rechunk, if dask arrays, to suitable
@@ -680,13 +655,13 @@ class EBSD(Signal2D):
             HyperSpy's ``decomposition`` returns them in float64, which
             here is assumed to be overkill.
         *args
-            Passed to Hyperspy's ``get_decomposition_model``.
+            Passed to Hyperspy's `get_decomposition_model`.
         **kwargs
-            Passed to Hyperspy's ``get_decomposition_model``.
+            Passed to Hyperspy's `get_decomposition_model`.
 
         Returns
         -------
-        Signal instance from components
+        s_model : {kikuchipy.signals.EBSD, kikuchipy.signals.LazyEBSD}
         """
         # Change dtype
         target = self.learning_results
@@ -927,7 +902,7 @@ class LazyEBSD(EBSD, LazySignal2D):
         """Decomposition with a choice of algorithms.
 
         For a full description of parameters see
-        :meth:`hyperspy._signals.lazy.decomposition()`.
+        :func:`hyperspy._signals.lazy.decomposition()`.
 
         This is a wrapper for HyperSpy's ``decomposition()`` function,
         except for an alternative use of scikit-image's IncrementalPCA

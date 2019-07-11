@@ -26,41 +26,28 @@ def kikuchipy_metadata():
     """Return a dictionary in HyperSpy's DictionaryTreeBrowser format
     with the default KikuchiPy metadata.
 
+    See :func:`kikuchipy.signals.EBSD.set_experimental_parameters` for
+    an explanation of the parameters.
+
     Returns
     -------
-    DictionaryTreeBrowser
+    md : DictionaryTreeBrowser
     """
-    ebsd = {'manufacturer': '',  # File manufacturer
-            'version': '',  # File version
-            'detector': '',  # Detector used to acquire the data
-            'azimuth_angle': -1,  # Detector azimuth angle
-            'elevation_angle': -1,  # Detector elevation angle
-            'sample_tilt': -1,  # Sample tilt
-            'binning': -1,  # Camera binning
-            'detector_pixel_size': -1,  # [um]
-            'exposure_time': -1,  # [us]
-            'frame_number': -1,  # Number of frames averaged
-            'frame_rate': -1,  # Frames per second
-            'scan_time': -1,  # Total scan time [s]
-            'gain': -1,  # Camera gain [dB]
-            'grid_type': '',  # In which patterns are acquired (only square)
-            'n_columns': -1,  # Number of patterns in horizontal direction
-            'n_rows': -1,  # Number of patterns in vertical direction
-            'xpc': -1,  # Pattern centre horizontal coordinate with respect to
-                        # detector centre
-            'ypc': -1,  # Pattern centre vertical coordinate with respect to
-                        # detector centre
-            'zpc': -1,  # Specimen to scintillator distance
-            'pattern_height': -1,  # In pixels
-            'pattern_width': -1,  # In pixels
-            'step_x': -1,  # Beam step in horizontal direction on sample [um]
-            'step_y': -1}  # Beam step in vertical direction on sample [um]
-    sem = {'microscope': '',
-           'magnification': -1,  # Microscope magnification [x]
-           'beam_energy': -1,  # Acceleration voltage [kV]
-           'working_distance': -1,  # Distance from pole piece to sample
-           'Detector': {'EBSD': ebsd}}
-    return DictionaryTreeBrowser({'Acquisition_instrument': {'SEM': sem}})
+    md = DictionaryTreeBrowser()
+    sem_node, ebsd_node = metadata_nodes()
+    ebsd = {'azimuth_angle': -1, 'binning': -1, 'detector': '',
+            'detector_pixel_size': -1, 'elevation_angle': -1,
+            'exposure_time': -1, 'frame_number': -1, 'frame_rate': -1,
+            'gain': -1, 'grid_type': '', 'manufacturer': '', 'n_columns': -1,
+            'n_rows': -1, 'pattern_height': -1, 'pattern_width': -1,
+            'sample_tilt': -1, 'scan_time': -1, 'step_x': -1, 'step_y': -1,
+            'static_background': -1, 'version': '', 'xpc': -1, 'ypc': -1,
+            'zpc': -1}
+    sem = {'microscope': '', 'magnification': -1, 'beam_energy': -1,
+           'working_distance': -1}
+    md.set_item(sem_node, sem)
+    md.set_item(ebsd_node, ebsd)
+    return md
 
 
 def user_input(question):
@@ -88,3 +75,30 @@ def user_input(question):
         return False
     else:
         return True
+
+
+def metadata_nodes(sem=True, ebsd=True):
+    """Return SEM and EBSD metadata nodes.
+
+    This is a convenience function so that we only have to define these
+    node strings here.
+
+    Parameters
+    ----------
+    sem, ebsd : bool, optional
+        Whether to return the node string (default is True).
+
+    Returns
+    -------
+    sem_node, ebsd_node : str
+    """
+    sem_node = 'Acquisition_instrument.SEM'
+    ebsd_node = sem_node + '.Detector.EBSD'
+    if sem and ebsd:
+        return sem_node, ebsd_node
+    elif sem:
+        return sem_node
+    elif ebsd:
+        return ebsd_node
+
+

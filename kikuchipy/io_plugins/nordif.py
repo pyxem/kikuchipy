@@ -22,8 +22,9 @@ import warnings
 import time
 import datetime
 import numpy as np
+import matplotlib.pyplot as plt
 from hyperspy.misc.utils import DictionaryTreeBrowser
-from kikuchipy.utils.io_utils import kikuchipy_metadata
+from kikuchipy.utils.io_utils import kikuchipy_metadata, metadata_nodes
 
 
 # Plugin characteristics
@@ -37,13 +38,9 @@ default_extension = 0
 # Writing capabilities
 writes = [(2, 2), (2, 1), (2, 0)]
 
-# DictionaryTreeBrowser nodes used by multiple functions
-SEM_str = 'Acquisition_instrument.SEM.'
-EBSD_str = SEM_str + 'Detector.EBSD.'
 
-
-def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
-                pattern_size=None, setting_file=None):
+def file_reader(filename, mmap_mode=None, scan_size=None,
+                pattern_size=None, setting_file=None, lazy=False):
     """Read electron backscatter patterns from a NORDIF data file.
 
     Parameters
@@ -51,7 +48,6 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
     filename : str
         File path to NORDIF data file.
     mmap_mode : str, optional
-    lazy : bool, optional
     scan_size : {None, tuple}, optional
         Scan size in number of patterns in width and height.
     pattern_size : {None, tuple}, optional
@@ -59,6 +55,7 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
     setting_file : {None, str}, optional
         File path to NORDIF setting file (default is Setting.txt in
         same directory as `filename`).
+    lazy : bool, optional
 
     Returns
     -------
@@ -81,29 +78,40 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
         f = open(filename, 'rb')
 
     # Get metadata from setting file
+    sem_node, ebsd_node = metadata_nodes()
     folder, fname = os.path.split(filename)
     if setting_file is None:
         setting_file = os.path.join(folder, 'Setting.txt')
     setting_file_exists = os.path.isfile(setting_file)
     if setting_file_exists:
         md, omd = get_settings_from_file(setting_file)
-        scan_size = (md.get_item(EBSD_str + 'n_columns'),
-                     md.get_item(EBSD_str + 'n_rows'))
-        pattern_size = (md.get_item(EBSD_str + 'pattern_width'),
-                        md.get_item(EBSD_str + 'pattern_height'))
+        scan_size = (md.get_item(ebsd_node + '.n_columns'),
+                     md.get_item(ebsd_node + '.n_rows'))
+        pattern_size = (md.get_item(ebsd_node + '.pattern_width'),
+                        md.get_item(ebsd_node + '.pattern_height'))
     else:
         warnings.warn("No setting file found, will attempt to use values for "
                       "scan_size and pattern_size from input arguments.")
         md = kikuchipy_metadata()
         omd = DictionaryTreeBrowser()
         try:
-            md.set_item(EBSD_str + 'n_columns', scan_size[0])
-            md.set_item(EBSD_str + 'n_rows', scan_size[1])
-            md.set_item(EBSD_str + 'pattern_width', pattern_size[0])
-            md.set_item(EBSD_str + 'pattern_height', pattern_size[1])
-        except BaseException:
-            raise ValueError("No setting file found, and no scan_size and "
-                             "pattern_size provided in input arguments.")
+            md.set_item(ebsd_node + '.n_columns', scan_size[0])
+            md.set_item(ebsd_node + '.n_rows', scan_size[1])
+            md.set_item(ebsd_node + '.pattern_width', pattern_size[0])
+            md.set_item(ebsd_node + '.pattern_height', pattern_size[1])
+        except (NameError, IndexError):
+            raise IOError("No setting file found, and no scan_size and "
+                          "pattern_size provided in input arguments.")
+
+    # Read static background pattern into metadata
+    static_bg_file = os.path.join(folder, 'Background acquisition pattern.bmp')
+    try:
+        md.set_item(ebsd_node + '.static_background',
+                    plt.imread(static_bg_file))
+    except FileNotFoundError:
+        warnings.warn("Could not read static background pattern '{}', however "
+                      "it can be added using set_experimental_parameters()."
+                      "".format(static_bg_file))
 
     # Set required and other parameters in metadata
     md.set_item('General.original_filename', filename)
@@ -144,7 +152,7 @@ def file_reader(filename, mmap_mode=None, lazy=False, scan_size=None,
 
     # Calibrate scan dimension
     try:
-        scales[:2] = scales[:2]*md.get_item(EBSD_str + 'step_x')
+        scales[:2] = scales[:2]*md.get_item(ebsd_node + '.step_x')
     except BaseException:
         warnings.warn("Could not calibrate scan dimensions, this can be done "
                       "using set_scan_calibration()")
@@ -199,55 +207,56 @@ def get_settings_from_file(filename):
     omd.set_item('nordif_header', content)
 
     # Get values
-    version = get_string(content, 'Software version\t(.*)\t', l_nordif + 1, f)
-    mic_manufacturer = get_string(content, 'Manufacturer\t(.*)\t', l_mic + 1, f)
-    mic_model = get_string(content, 'Model\t(.*)\t', l_mic + 2, f)
-    magnification = get_string(content, 'Magnification\t(.*)\t#', l_mic + 3, f)
+    azimuth_angle = get_string(content, 'Azimuthal\t(.*)\t', l_ang + 4, f)
     beam_energy = get_string(content, 'Accelerating voltage\t(.*)\tkV',
                              l_mic + 5, f)
-    working_distance = get_string(content, 'Working distance\t(.*)\tmm',
-                                  l_mic + 6, f)
-    sample_tilt = get_string(content, 'Tilt angle\t(.*)\t', l_mic + 7, f)
     detector = get_string(content, 'Model\t(.*)\t', l_det + 1, f)
     detector = re.sub('[^a-zA-Z0-9]', repl='', string=detector)
-    azimuth_angle = get_string(content, 'Azimuthal\t(.*)\t', l_ang + 4, f)
     elevation_angle = get_string(content, 'Elevation\t(.*)\t', l_ang + 5, f)
-    frame_rate = get_string(content, 'Frame rate\t(.*)\tfps', l_acq + 1, f)
-    pattern_size = get_string(content, 'Resolution\t(.*)\tpx', l_acq + 2, f)
-    sx, sy = [int(i) for i in pattern_size.split('x')]
     exposure_time = get_string(content, 'Exposure time\t(.*)\t', l_acq + 3, f)
+    frame_rate = get_string(content, 'Frame rate\t(.*)\tfps', l_acq + 1, f)
     gain = get_string(content, 'Gain\t(.*)\t', l_acq + 4, f)
+    magnification = get_string(content, 'Magnification\t(.*)\t#', l_mic + 3, f)
+    mic_manufacturer = get_string(content, 'Manufacturer\t(.*)\t', l_mic + 1, f)
+    mic_model = get_string(content, 'Model\t(.*)\t', l_mic + 2, f)
+    pattern_size = get_string(content, 'Resolution\t(.*)\tpx', l_acq + 2, f)
     scan_size = get_string(content, 'Number of samples\t(.*)\t#', l_area + 6, f)
     ny, nx = [int(i) for i in scan_size.split('x')]
     step_size = get_string(content, 'Step size\t(.*)\t', l_area + 5, f)
+    sample_tilt = get_string(content, 'Tilt angle\t(.*)\t', l_mic + 7, f)
     scan_time = get_string(content, 'Scan time\t(.*)\t', l_area + 7, f)
     scan_time = time.strptime(scan_time, '%H:%M:%S')
     scan_time = datetime.timedelta(hours=scan_time.tm_hour,
                                    minutes=scan_time.tm_min,
                                    seconds=scan_time.tm_sec).total_seconds()
+    sx, sy = [int(i) for i in pattern_size.split('x')]
+    version = get_string(content, 'Software version\t(.*)\t', l_nordif + 1, f)
+    working_distance = get_string(content, 'Working distance\t(.*)\tmm',
+                                  l_mic + 6, f)
 
     # Populate metadata
-    md.set_item(SEM_str + 'microscope', mic_manufacturer + ' ' + mic_model)
-    md.set_item(SEM_str + 'magnification', int(magnification))
-    md.set_item(SEM_str + 'beam_energy', float(beam_energy))
-    md.set_item(SEM_str + 'working_distance', float(working_distance))
-    md.set_item(EBSD_str + 'manufacturer', 'NORDIF')
-    md.set_item(EBSD_str + 'version', version)
-    md.set_item(EBSD_str + 'sample_tilt', float(sample_tilt))
-    md.set_item(EBSD_str + 'detector', 'NORDIF ' + detector)
-    md.set_item(EBSD_str + 'azimuth_angle', float(azimuth_angle))
-    md.set_item(EBSD_str + 'elevation_angle', float(elevation_angle))
-    md.set_item(EBSD_str + 'frame_rate', int(frame_rate))
-    md.set_item(EBSD_str + 'pattern_width', int(sx))
-    md.set_item(EBSD_str + 'pattern_height', int(sy))
-    md.set_item(EBSD_str + 'exposure_time', float(exposure_time) / 1e6)
-    md.set_item(EBSD_str + 'gain', int(gain))
-    md.set_item(EBSD_str + 'n_columns', int(nx))
-    md.set_item(EBSD_str + 'n_rows', int(ny))
-    md.set_item(EBSD_str + 'step_x', float(step_size))
-    md.set_item(EBSD_str + 'step_y', float(step_size))
-    md.set_item(EBSD_str + 'scan_time', int(scan_time))
-    md.set_item(EBSD_str + 'grid_type', 'square')
+    sem_node, ebsd_node = metadata_nodes()
+    md.set_item(ebsd_node + '.azimuth_angle', float(azimuth_angle))
+    md.set_item(sem_node + '.beam_energy', float(beam_energy))
+    md.set_item(ebsd_node + '.detector', 'NORDIF ' + detector)
+    md.set_item(ebsd_node + '.elevation_angle', float(elevation_angle))
+    md.set_item(ebsd_node + '.exposure_time', float(exposure_time) / 1e6)
+    md.set_item(ebsd_node + '.frame_rate', int(frame_rate))
+    md.set_item(ebsd_node + '.gain', int(gain))
+    md.set_item(ebsd_node + '.grid_type', 'square')
+    md.set_item(sem_node + '.magnification', int(magnification))
+    md.set_item(ebsd_node + '.manufacturer', 'NORDIF')
+    md.set_item(sem_node + '.microscope', mic_manufacturer + ' ' + mic_model)
+    md.set_item(ebsd_node + '.n_columns', int(nx))
+    md.set_item(ebsd_node + '.n_rows', int(ny))
+    md.set_item(ebsd_node + '.pattern_width', int(sx))
+    md.set_item(ebsd_node + '.pattern_height', int(sy))
+    md.set_item(ebsd_node + '.sample_tilt', float(sample_tilt))
+    md.set_item(ebsd_node + '.scan_time', int(scan_time))
+    md.set_item(ebsd_node + '.step_x', float(step_size))
+    md.set_item(ebsd_node + '.step_y', float(step_size))
+    md.set_item(ebsd_node + '.version', version)
+    md.set_item(sem_node + '.working_distance', float(working_distance))
 
     return md, omd
 
@@ -262,40 +271,36 @@ def get_string(content, expression, line_no, file):
     expression : str
         Regular expression.
     line_no : int
-        Content line number to search in. Need this because setting file
-        contains many similar lines.
+        Line number to search in.
     file : file handle
 
     Returns
     -------
-    string_out : str
+    str
         Output string with relevant value.
     """
     match = re.search(expression, content[line_no])
     if match is None:
-        string_out = '-1'
         warnings.warn("Failed to read line {} in settings file '{}' using "
                       "regular expression '{}'".format(line_no - 1,
                                                        file.name, expression))
+        return '-1'
     else:
-        string_out = match.group(1)
-    return string_out
+        return match.group(1)
 
 
 def file_writer(filename, signal):
     """Write electron backscatter patterns to NORDIF binary file.
 
-    Writing dask arrays to a binary file is not yet supported.
-
     Parameters
     ----------
     filename : str
-        Full file path of NORDIF data file.
+        File path of NORDIF data file.
     signal : kikuchipy.signals.EBSD
     """
     with open(filename, 'wb') as f:
         if signal._lazy:
-            raise ValueError("Writing lazily to NORDIF .dat file is not yet "
+            raise ValueError("Writing lazily to NORDIF file format is not yet "
                              "supported")
         else:
             for pattern in signal._iterate_signal():

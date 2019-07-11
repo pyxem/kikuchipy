@@ -111,7 +111,7 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
             filenames = load_ui.filename
             lazy = load_ui.lazy
         if filenames is None:
-            raise ValueError("No file provided to reader.")
+            raise IOError("No file provided to reader.")
 
     if isinstance(filenames, str):
         filenames = natsorted([f for f in glob.glob(filenames)
@@ -122,55 +122,51 @@ def load(filenames=None, signal_type=None, stack=False, stack_axis=None,
         raise ValueError("The filenames parameter must be a list, tuple, "
                          "string or None.")
 
-    if not filenames:
-        raise ValueError("No file provided to reader.")
-    else:
-        if stack is True:
-            # We are loading a stack!
-            # Note that while each file might contain several signals, all
-            # files are required to contain the same number of signals. We
-            # therefore use the first file to determine the number of signals.
-            for i, filename in enumerate(filenames):
-                obj = load_single_file(filename, lazy=lazy, **kwargs)
-                if i == 0:
-                    # First iteration, determine number of signals, if several
-                    n = 1
-                    if isinstance(obj, (list, tuple)):
-                        n = len(obj)
-                    # Initialize signal 2D list
-                    signals = [[] for j in range(n)]
-                else:
-                    # Check tat number of _signals per file doesn't change for
-                    # other files
-                    if isinstance(obj, (list, tuple)):
-                        if n != len(obj):
-                            raise ValueError(
-                                "The number of signals per file does not "
-                                "match:\n" +
-                                (f_error_fmt % (1, n, filenames[0])) +
-                                (f_error_fmt % (i, len(obj), filename)))
-                # Append loaded _signals to 2D list
-                if n == 1:
-                    signals[0].append(obj)
-                elif n > 1:
-                    for j in range(n):
-                        signals[j].append(obj[j])
-            # Next, merge the signals in the `stack_axis` direction.
-            # When each file has N signals, we create N stacks.
-            objects = []
-            for i in range(n):
-                signal = signals[i]  # Sublist, with len = len(filenames)
-                signal = stack_method(signal, axis=stack_axis,
-                                      new_axis_name=new_axis_name, lazy=lazy)
-                signal.metadata.General.title = os.path.split(
-                    os.path.split(os.path.abspath(filenames[0]))[0])[1]
-                objects.append(signal)
-        else:  # No stack, so simply load all _signals in all files separately
-            objects = [load_single_file(filename, lazy=lazy, **kwargs)
-                       for filename in filenames]
+    if stack is True:
+        # We are loading a stack!
+        # Note that while each file might contain several signals, all
+        # files are required to contain the same number of signals. We
+        # therefore use the first file to determine the number of signals.
+        for i, filename in enumerate(filenames):
+            obj = load_single_file(filename, lazy=lazy, **kwargs)
+            if i == 0:
+                # First iteration, determine number of signals, if several
+                n = 1
+                if isinstance(obj, (list, tuple)):
+                    n = len(obj)
+                # Initialize signal 2D list
+                signals = [[] for j in range(n)]
+            else:
+                # Check that number of signals per file doesn't change for other
+                # files
+                if isinstance(obj, (list, tuple)):
+                    if n != len(obj):
+                        raise ValueError(
+                            "The number of signals per file does not match:\n" +
+                            (f_error_fmt % (1, n, filenames[0])) +
+                            (f_error_fmt % (i, len(obj), filename)))
+            # Append loaded _signals to 2D list
+            if n == 1:
+                signals[0].append(obj)
+            elif n > 1:
+                for j in range(n):
+                    signals[j].append(obj[j])
+        # Next, merge the signals in the `stack_axis` direction.
+        # When each file has N signals, we create N stacks.
+        objects = []
+        for i in range(n):
+            signal = signals[i]  # Sublist, with len = len(filenames)
+            signal = stack_method(signal, axis=stack_axis,
+                                  new_axis_name=new_axis_name, lazy=lazy)
+            signal.metadata.General.title = os.path.split(
+                os.path.split(os.path.abspath(filenames[0]))[0])[1]
+            objects.append(signal)
+    else:  # No stack, so simply load all signals in all files separately
+        objects = [load_single_file(filename, lazy=lazy, **kwargs)
+                   for filename in filenames]
 
-        if len(objects) == 1:
-            objects = objects[0]
+    if len(objects) == 1:
+        objects = objects[0]
 
     return objects
 

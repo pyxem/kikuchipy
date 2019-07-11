@@ -18,7 +18,7 @@
 
 from setuptools import setup, find_packages
 
-# Grab version info
+# Grab version, author, and email info
 exec(open('kikuchipy/version.py').read())
 
 setup(
@@ -46,13 +46,7 @@ setup(
     packages=find_packages(),
     install_requires=[
         'hyperspy >= 1.4',
-        'pyxem >= 0.7',
-        'scikit-learn >= 0.19',
-        'scikit-image < 0.15',
-        'natsort >= 6.0.0',
-        'numpy >= 1.16.3',
-        'h5py >= 2.9.0',
-        'dask >= 1.2.2',
+        'pyxem >= 0.8',
     ],
     package_data={
         '': ['LICENSE', 'README.md'],
