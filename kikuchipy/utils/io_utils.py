@@ -50,7 +50,7 @@ def kikuchipy_metadata():
     return md
 
 
-def user_input(question):
+def get_input_bool(question):
     """Get input from user on boolean choice, returning the answer.
 
     Parameters
@@ -75,6 +75,29 @@ def user_input(question):
         return False
     else:
         return True
+
+
+def get_input_variable(question, var_type):
+    """Get variable input from user, returning the variable.
+
+    Parameters
+    ----------
+    question : str
+        Question to ask user.
+    var_type : type
+        Type of variable to return.
+    """
+    try:
+        answer = input(question)
+        while type(answer) != var_type:
+            print("Please enter a variable of type {}:\n".format(var_type))
+            answer = input(question)
+        return answer
+    except BaseException:
+        # Running in an IPython notebook that does not support raw_input
+        _logger.info("Your terminal does not support raw input. Not adding "
+                     "scan. To add the scan use `add_scan=True`")
+        return None
 
 
 def metadata_nodes(sem=True, ebsd=True):

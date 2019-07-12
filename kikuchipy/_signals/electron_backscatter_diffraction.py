@@ -108,7 +108,7 @@ class EBSD(Signal2D):
         grid_type : str, optional
             Scan grid type, only square grid is supported.
         manufacturer : str, optional
-            Manufacturer used to collect patterns.
+            Manufacturer of software used to collect patterns.
         microscope : str, optional
             Microscope used to collect patterns.
         magnification : int, optional
@@ -124,7 +124,7 @@ class EBSD(Signal2D):
         step_y : float, optional
             Scan step size in slow scan direction (south).
         version : str, optional
-            Version of manufacturer software used to collect patterns.
+            Version of software used to collect patterns.
         working_distance : float, optional
             Working distance in mm.
         xpc : float, optional

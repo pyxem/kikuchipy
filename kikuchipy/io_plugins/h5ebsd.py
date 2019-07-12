@@ -23,7 +23,7 @@ import numpy as np
 import dask.array as da
 from hyperspy.misc.utils import DictionaryTreeBrowser
 from hyperspy.io_plugins.hspy import overwrite_dataset, get_signal_chunks
-from kikuchipy.utils.io_utils import (kikuchipy_metadata, user_input,
+from kikuchipy.utils.io_utils import (kikuchipy_metadata, get_input_variable,
                                       metadata_nodes)
 
 
@@ -272,10 +272,7 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
         data = np.asanyarray(data)
 
     try:
-        if lazy:
-            data = data.reshape((ny, nx, sy, sx)).squeeze()
-        else:
-            data = data.reshape((ny, nx, sy, sx), order='C').squeeze()
+        data = data.reshape((ny, nx, sy, sx)).squeeze()
     except ValueError:
         warnings.warn("Pattern size ({} x {}) and scan size ({} x {}) larger "
                       "than file size. Will attempt to load by zero padding "
@@ -295,8 +292,8 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
 
     # Calibrate scan dimension
     try:
-        scales[0] = scales[0]*md.get_item(ebsd_node + 'step_x')
-        scales[1] = scales[1]*md.get_item(ebsd_node + 'step_y')
+        scales[0] = scales[0]*md.get_item(ebsd_node + '.step_x')
+        scales[1] = scales[1]*md.get_item(ebsd_node + '.step_y')
     except BaseException:
         warnings.warn("Could not calibrate scan dimension, this can be done "
                       "using set_scan_calibration()")
@@ -344,8 +341,8 @@ def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
         md, omd = kikuchipyheader2dicts(scan_group, md, lazy)
 
     ebsd_node = metadata_nodes(sem=False)
-    md.set_item(ebsd_node + 'manufacturer', manufacturer)
-    md.set_item(ebsd_node + 'version', version)
+    md.set_item(ebsd_node + '.manufacturer', manufacturer)
+    md.set_item(ebsd_node + '.version', version)
 
     return md, omd
 
@@ -494,76 +491,73 @@ def file_writer(filename, signal, add_scan=None, scan_number=1,
     signal : {kikuchipy.signals.EBSD, kikuchipy.lazy_signals.LazyEBSD}
         Signal instance.
     add_scan : {bool, None}, optional
-        Whether to add the signal to an already existing h5ebsd file or
-        not. If the file does not exist the signal is written to a new
-        file.
+        Add signal to an already existing h5ebsd file. If the file does
+        not exist it is created and the signal is written to it.
     scan_number : int, optional
         Scan number in name of HDF dataset when writing to an already
         existing h5ebsd file.
     **kwargs :
         Keyword arguments passed to h5py.
     """
-    from kikuchipy.version import __version__ as ver_signal
-    md = signal.metadata
-    sem_node, ebsd_node = metadata_nodes()
+    if 'compression' not in kwargs:
+        kwargs['compression'] = 'gzip'
 
     # Set manufacturer and version to use in file
-    man_signal = 'KikuchiPy'
-    man_ver_dict = {'manufacturer': man_signal, 'version': ver_signal}
-    for key, value in man_ver_dict.items():
-        md.set_item(ebsd_node + '.' + key, value)
+    from kikuchipy.version import __version__ as ver_signal
+    man_ver_dict = {'manufacturer': 'KikuchiPy', 'version': ver_signal}
 
-    # Open file in correct mode for writing data, also checking if already
-    # opened file has the same manufacturer and version as signal, and can thus
-    # be written to
+    # Create or open file, also checking if already opened file has the same
+    # manufacturer and version as signal, and can thus be written to
+    scan_str = 'Scan ' + str(scan_number)
+    f = h5py.File(filename)
     if os.path.isfile(filename) and add_scan:
-        f = h5py.File(filename, mode='r+')
         check_h5ebsd(f)
-        man, ver = manufacturer_version(f)
-        if man_ver_dict['manufacturer'].lower() != man.lower():
+        man_file, ver_file = manufacturer_version(f)
+        if man_ver_dict['manufacturer'].lower() != man_file.lower():
             f.close()
             raise IOError("Only writing to KikuchiPy's (and not {}'s) h5ebsd "
-                          "format is supported.".format(man))
-        if man_ver_dict['version'] != ver:
+                          "format is supported.".format(man_file))
+        if man_ver_dict['version'] != ver_file:
             warnings.warn("Signal version '{}' and file version '{}' are not "
                           "the same, using file version when writing "
-                          "scan".format(man_ver_dict['version'], ver))
-            md.set_item(ebsd_node + 'version', ver)
+                          "scan".format(man_ver_dict['version'], ver_file))
+            man_ver_dict['version'] = ver_file
+
+        # Scan numbers of scan in file
         scans_file = [f[k] for k in f['/'].keys() if 'Scan' in k]
         scan_nos = [int(i.name.split()[-1]) for i in scans_file]
+
         for i in scan_nos:
-            if scan_number == i:
-                q = "Overwrite 'Scan {}' (y/n)?\n".format(i)
-                if user_input(q):
-                    del f['Scan ' + str(i)]
-                    break
-                else:
-                    f.close()
-                    exit()
-    else:  # Create file
-        f = h5py.File(filename, mode='w')
+            if i == scan_number:
+                q = "Scan {} already in file, enter another scan "\
+                    "number:\n".format(i)
+                new_scan_number = get_input_variable(q, int)
+                if new_scan_number is None:
+                    raise IOError("Incorrect scan number.")
+
+    scan_group = f.require_group(scan_str)
 
     # Write manufacturer and version to file
     dict2h5ebsdgroup(man_ver_dict, f['/'], **kwargs)
 
-    # Create groups
-    scan_group = f.require_group('Scan ' + str(scan_number))
-    ebsd_group = scan_group.require_group('EBSD')
-    sem_group = scan_group.require_group('SEM')
-
-    # Write metadata to file
-    md_ebsd = md.get_item(ebsd_node)
-    dict2h5ebsdgroup(md_ebsd.as_dictionary(),
-                     ebsd_group.require_group('Header'))
-    md_sem = md.get_item(sem_node)
-    del md_sem.Detector
-    dict2h5ebsdgroup(md_sem.as_dictionary(), sem_group.require_group('Header'))
+    # Create scan dictionary with (updated) EBSD and SEM metadata
+    md = signal.metadata
+    ny, nx, sy, sx = signal.axes_manager.shape
+    sem_node, ebsd_node = metadata_nodes()
+    md.set_item(ebsd_node + '.n_columns', nx)
+    md.set_item(ebsd_node + '.n_rows', nx)
+    md.set_item(ebsd_node + '.pattern_width', sx)
+    md.set_item(ebsd_node + '.pattern_height', sy)
+    det_str, ebsd_str = ebsd_node.split('.')[-2:]
+    md_sem = signal.metadata.get_item(sem_node).copy().as_dictionary()
+    md_det = md_sem.pop(det_str)
+    scan = {'EBSD': {'Header': md_det.pop(ebsd_str)}, 'SEM': {'Header': md_sem}}
+    dict2h5ebsdgroup(scan, scan_group)
 
     # Write signal to file
     man_pats = manufacturer_pattern_names()
-    ny, nx, sy, sx = signal.axes_manager.shape
     dset_pattern_name = man_pats['KikuchiPy']
-    overwrite_dataset(ebsd_group.require_group('Data'),
+    overwrite_dataset(scan_group.require_group('EBSD/Data'),
                       signal.data.reshape(nx * ny, sx, sy), dset_pattern_name,
                       **kwargs)
 
@@ -579,29 +573,30 @@ def dict2h5ebsdgroup(dictionary, group, **kwargs):
     dictionary : dict
         Metadata, with keys as dataset names.
     group : h5py.Group
-        HDF group name to write datasets to.
+        HDF group to write dictionary to.
     **kwargs :
         Keyword arguments passed to h5py.
     """
     for key, val in dictionary.items():
         ddtype = type(val)
         dshape = (1, )
-        print(key, val, ddtype, dshape)
-        if isinstance(val, dict):
-            dict2h5ebsdgroup(val, group.create_group(key), **kwargs)
-        elif isinstance(val, DictionaryTreeBrowser):
-            dict2h5ebsdgroup(val.as_dictionary(), group.create_group(key),
-                             **kwargs)
+
+        if isinstance(val, (dict, DictionaryTreeBrowser)):
+            if isinstance(val, DictionaryTreeBrowser):
+                val = val.as_dictionary()
+            dict2h5ebsdgroup(val, group.require_group(key), **kwargs)
         elif isinstance(val, str):
             ddtype = 'S' + str(len(val) + 1)
             val = val.encode()
         elif ddtype == np.dtype('O'):
-            dshape = np.shape(val)
             ddtype = h5py.special_dtype(vlen=val[0].dtype)
+            dshape = np.shape(val)
+
+        if isinstance(val, (dict, DictionaryTreeBrowser)):
+            continue  # Jump to next item in dictionary
         try:
-            group.require_dataset(key, shape=dshape, dtype=ddtype)
+            group.create_dataset(key, shape=dshape, dtype=ddtype, **kwargs)
             group[key][()] = val
-        except TypeError as e:
-            print(e)
+        except (TypeError, IndexError):
             warnings.warn("The hdf5 writer could not write the following "
                           "information to the file '{} : {}'.".format(key, val))

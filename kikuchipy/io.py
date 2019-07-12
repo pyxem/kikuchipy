@@ -26,7 +26,7 @@ from hyperspy.misc.io.tools import ensure_directory
 from hyperspy.drawing.marker import markers_metadata_dict_to_markers
 from hyperspy.misc.utils import strlist2enumeration, find_subclasses
 from kikuchipy.io_plugins import io_plugins, default_write_ext
-from kikuchipy.utils.io_utils import user_input
+from kikuchipy.utils.io_utils import get_input_bool
 
 f_error_fmt = (
     "\tFile %d:\n"
@@ -439,7 +439,7 @@ def save(filename, signal, overwrite=None, add_scan=None, **kwargs):
         if writer.format_name == 'h5ebsd' and overwrite is not True and is_file:
             if add_scan is None:
                 q = "Add scan to '{}' (y/n)?\n".format(filename)
-                add_scan = user_input(q)
+                add_scan = get_input_bool(q)
             if add_scan:
                 overwrite = True  # So that the 2nd statement below triggers
             kwargs['add_scan'] = add_scan
