@@ -147,13 +147,13 @@ def file_reader(filename, mmap_mode=None, scan_size=None,
     scan['data'] = data
 
     units = [u'\u03BC'+'m', u'\u03BC'+'m', 'A^{-1}', 'A^{-1}']
-    names = ['x', 'y', 'dx', 'dy']
+    names = ['y', 'x', 'dy', 'dx']
     scales = np.ones(4)
 
     # Calibrate scan dimension
     try:
-        scales[:2] = scales[:2]*md.get_item(ebsd_node + '.step_x')
-    except BaseException:
+        scales[:2] = scales[:2] * md.get_item(ebsd_node + '.step_x')
+    except TypeError:
         warnings.warn("Could not calibrate scan dimensions, this can be done "
                       "using set_scan_calibration()")
 

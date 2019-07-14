@@ -90,8 +90,11 @@ def get_input_variable(question, var_type):
     try:
         answer = input(question)
         while type(answer) != var_type:
-            print("Please enter a variable of type {}:\n".format(var_type))
-            answer = input(question)
+            try:
+                answer = var_type(answer)
+            except ValueError:
+                print("Please enter a variable of type {}:\n".format(var_type))
+                answer = input(question)
         return answer
     except BaseException:
         # Running in an IPython notebook that does not support raw_input
