@@ -16,75 +16,115 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-import numpy as np
-import dask.array as da
-import h5py
-import warnings
+import logging
 from hyperspy.misc.utils import DictionaryTreeBrowser
-from hyperspy.io_plugins.hspy import overwrite_dataset
+
+_logger = logging.getLogger(__name__)
 
 
-def ebsd_metadata():
-    """Create an empty metadata node for an EBSD dataset."""
+def kikuchipy_metadata():
+    """Return a dictionary in HyperSpy's DictionaryTreeBrowser format
+    with the default KikuchiPy metadata.
 
+    See :func:`kikuchipy.signals.EBSD.set_experimental_parameters` for
+    an explanation of the parameters.
+
+    Returns
+    -------
+    md : DictionaryTreeBrowser
+    """
     md = DictionaryTreeBrowser()
-    ebsd_str = 'Acquisition_instrument.SEM.Detector.EBSD'
-    md.add_node(ebsd_str)
-    params = {'detector': None,
-              'azimuth_angle': None,
-              'elevation_angle': None,
-              'sample_tilt': None,
-              'binning': None,
-              'detector_pixel_size': None,
-              'exposure_time': None,
-              'frame_number': None,
-              'frame_rate': None,
-              'scan_time': None,
-              'gain': None,
-              'grid_type': None,
-              'n_columns': None,
-              'n_rows': None,
-              'xpc': None,
-              'ypc': None,
-              'zpc': None,
-              'pattern_height': None,
-              'pattern_width': None,
-              'step_x': None,
-              'step_y': None,
-              'scan_reference_directions': None,
-              'crystal_reference_directions': None,
-              }
-    md.Acquisition_instrument.SEM.Detector.EBSD.add_dictionary(params)
-
+    sem_node, ebsd_node = metadata_nodes()
+    ebsd = {'azimuth_angle': -1, 'binning': -1, 'detector': '',
+            'detector_pixel_size': -1, 'elevation_angle': -1,
+            'exposure_time': -1, 'frame_number': -1, 'frame_rate': -1,
+            'gain': -1, 'grid_type': '', 'manufacturer': '', 'n_columns': -1,
+            'n_rows': -1, 'pattern_height': -1, 'pattern_width': -1,
+            'sample_tilt': -1, 'scan_time': -1, 'step_x': -1, 'step_y': -1,
+            'static_background': -1, 'version': '', 'xpc': -1, 'ypc': -1,
+            'zpc': -1}
+    sem = {'microscope': '', 'magnification': -1, 'beam_energy': -1,
+           'working_distance': -1}
+    md.set_item(sem_node, sem)
+    md.set_item(ebsd_node, ebsd)
     return md
 
 
-def dict2hdfgroup(dictionary, group, **kwargs):
-    """Write a metadata dictionary to an HDF group.
-
-    Adapted from HyperSpy.
+def get_input_bool(question):
+    """Get input from user on boolean choice, returning the answer.
 
     Parameters
     ----------
-    dictionary : dict
-    group : HDF group handle
+    question : str
+        Question to ask user.
     """
-    for key, value in dictionary.items():
-        if isinstance(value, dict):
-            dict2hdfgroup(value, group.create_group(key), **kwargs)
-        elif isinstance(value, DictionaryTreeBrowser):
-            dict2hdfgroup(value.as_dictionary(), group.create_group(key),
-                          **kwargs)
-        elif isinstance(value, (np.ndarray, h5py.Dataset, da.Array)):
-            overwrite_dataset(group, value, key, **kwargs)
-        elif isinstance(value, str):
-            value = np.string_(value)  # TSL uses NumPy U string?
-            group.create_dataset(key, data=value, **kwargs)
-        elif value is None:
-            group.attrs[key] = '_None_'
-        else:
+    try:
+        answer = input(question)
+        answer = answer.lower()
+        while (answer != 'y') and (answer != 'n'):
+            print("Please answer y or n.")
+            answer = input(question)
+        if answer.lower() == 'y':
+            return True
+        elif answer.lower() == 'n':
+            return False
+    except BaseException:
+        # Running in an IPython notebook that does not support raw_input
+        _logger.info("Your terminal does not support raw input. Not adding "
+                     "scan. To add the scan use `add_scan=True`")
+        return False
+    else:
+        return True
+
+
+def get_input_variable(question, var_type):
+    """Get variable input from user, returning the variable.
+
+    Parameters
+    ----------
+    question : str
+        Question to ask user.
+    var_type : type
+        Type of variable to return.
+    """
+    try:
+        answer = input(question)
+        while type(answer) != var_type:
             try:
-                group.create_dataset(key, data=value, **kwargs)
-            except BaseException:
-                warnings.warn("The h5py writer could not write the following "
-                              "information in the file: %s : %s", key, value)
+                answer = var_type(answer)
+            except ValueError:
+                print("Please enter a variable of type {}:\n".format(var_type))
+                answer = input(question)
+        return answer
+    except BaseException:
+        # Running in an IPython notebook that does not support raw_input
+        _logger.info("Your terminal does not support raw input. Not adding "
+                     "scan. To add the scan use `add_scan=True`")
+        return None
+
+
+def metadata_nodes(sem=True, ebsd=True):
+    """Return SEM and EBSD metadata nodes.
+
+    This is a convenience function so that we only have to define these
+    node strings here.
+
+    Parameters
+    ----------
+    sem, ebsd : bool, optional
+        Whether to return the node string (default is True).
+
+    Returns
+    -------
+    sem_node, ebsd_node : str
+    """
+    sem_node = 'Acquisition_instrument.SEM'
+    ebsd_node = sem_node + '.Detector.EBSD'
+    if sem and ebsd:
+        return sem_node, ebsd_node
+    elif sem:
+        return sem_node
+    elif ebsd:
+        return ebsd_node
+
+
