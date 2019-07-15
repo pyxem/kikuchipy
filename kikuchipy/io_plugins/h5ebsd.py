@@ -563,6 +563,10 @@ def file_writer(filename, signal, add_scan=None, scan_number=1,
     overwrite_dataset(scan_group.create_group('EBSD/Data'),
                       signal.data.reshape(nx * ny, sx, sy),
                       dset_pattern_name, signal_axes=(2, 1), **kwargs)
+    nx_start, nx_stop, ny_start, ny_stop = signal.axes_manager.navigation_extent
+    sample_pos = {'x_sample': np.tile(np.linspace(nx_start, nx_stop, nx), ny),
+                  'y_sample': np.tile(np.linspace(ny_start, ny_stop, ny), nx)}
+    dict2h5ebsdgroup(sample_pos, scan_group['EBSD/Data'])
 
     f.close()
     _logger.info("File closed.")
@@ -584,19 +588,23 @@ def dict2h5ebsdgroup(dictionary, group, **kwargs):
     for key, val in dictionary.items():
         ddtype = type(val)
         dshape = (1, )
-
+        written = False
         if isinstance(val, (dict, DictionaryTreeBrowser)):
             if isinstance(val, DictionaryTreeBrowser):
                 val = val.as_dictionary()
             dict2h5ebsdgroup(val, group.create_group(key), **kwargs)
+            written = True
         elif isinstance(val, str):
             ddtype = 'S' + str(len(val) + 1)
             val = val.encode()
+        elif isinstance(val, (np.ndarray, da.Array)):
+            overwrite_dataset(group, val, key, **kwargs)
+            written = True
         elif ddtype == np.dtype('O'):
             ddtype = h5py.special_dtype(vlen=val[0].dtype)
             dshape = np.shape(val)
 
-        if isinstance(val, (dict, DictionaryTreeBrowser)):
+        if written:
             continue  # Jump to next item in dictionary
         try:
             group.create_dataset(key, shape=dshape, dtype=ddtype, **kwargs)
