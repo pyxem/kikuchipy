@@ -26,13 +26,12 @@ Jupyter Notebooks explaining typical workflows will be made available in a separ
 
 Supported EBSD formats
 ----------------------
-Read/write:
-* NORDIF .dat binary files
-* HyperSpy's .hspy files
-
-Read:
-* EDAX TSL HDF5 format
+* NORDIF .dat binary files (read/write)
+* HyperSpy's .hspy files (read/write)
+* h5ebsd files, specifically EDAX's and Bruker's formats (read) and KikuchiPy's own format (read/write)
 
 With plans to support:
 * EMEBSD (EMsoft's HDF5 format)
+* Oxford's h5ebsd format
+* Patterns stored as image files in a directory
 * EDAX TSL up1 and up2 formats
