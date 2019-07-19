@@ -50,10 +50,12 @@ def rescale_pattern_intensity(signal, out_range=np.uint8,
 
     # Get valid intensity range and data type for rescaled patterns
     omin, omax = intensity_range(out_range)
-    dtype = np.float32
-    if np.issubdtype(out_range, np.integer) \
-            or np.issubdtype(out_range, np.float):
+    if not isinstance(out_range, tuple) and (
+            np.issubdtype(out_range, np.integer) or
+            np.issubdtype(out_range, np.float)):
         dtype = out_range
+    else:
+        dtype = np.float32
 
     patterns = signal.data
     if relative:  # Get min. and max. intensity in scan
