@@ -35,16 +35,16 @@ def kikuchipy_metadata():
     """
     md = DictionaryTreeBrowser()
     sem_node, ebsd_node = metadata_nodes()
-    ebsd = {'azimuth_angle': -1, 'binning': -1, 'detector': '',
-            'detector_pixel_size': -1, 'elevation_angle': -1,
+    ebsd = {'azimuth_angle': -1., 'binning': -1, 'detector': '',
+            'detector_pixel_size': -1., 'elevation_angle': -1.,
             'exposure_time': -1, 'frame_number': -1, 'frame_rate': -1,
-            'gain': -1, 'grid_type': '', 'manufacturer': '', 'n_columns': -1,
+            'gain': -1., 'grid_type': '', 'manufacturer': '', 'n_columns': -1,
             'n_rows': -1, 'pattern_height': -1, 'pattern_width': -1,
-            'sample_tilt': -1, 'scan_time': -1, 'step_x': -1, 'step_y': -1,
-            'static_background': -1, 'version': '', 'xpc': -1, 'ypc': -1,
-            'zpc': -1}
-    sem = {'microscope': '', 'magnification': -1, 'beam_energy': -1,
-           'working_distance': -1}
+            'sample_tilt': -1., 'scan_time': -1, 'step_x': -1., 'step_y': -1.,
+            'static_background': -1, 'version': '', 'xpc': -1., 'ypc': -1.,
+            'zpc': -1.}
+    sem = {'microscope': '', 'magnification': -1, 'beam_energy': -1.,
+           'working_distance': -1.}
     md.set_item(sem_node, sem)
     md.set_item(ebsd_node, ebsd)
     return md

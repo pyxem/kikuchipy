@@ -19,107 +19,148 @@
 import numpy as np
 import dask.array as da
 import kikuchipy as kp
-from scipy.ndimage import gaussian_filter, median_filter
+import scipy.ndimage as scn
 from hyperspy.api import plot
 from skimage.exposure._adapthist import _clahe
 
 
-def rescale_pattern_intensity(pattern, imin=None, scale=None,
-                              dtype_out=np.uint8):
-    """Rescale electron backscatter diffraction pattern intensities to
-    unsigned integer range or desired unsigned range specified by imin
-    and scale. If imin and scale are passed the pattern intensities are
-    stretched to a global min. and max. intensity according to these
-    values. Otherwise they are stretched to between zero and maximum of
-    dtype_out.
+def rescale_pattern_intensity(signal, out_range=np.uint8,
+                              relative=False):
+    """Scale pattern intensities in an EBSD signal inplace.
+
+    Relative intensities between patterns can be maintained by passing
+    `relative=True`. The desired `output_range` can be specified by a
+    tuple of (min., max.) intensity or a data type.
 
     Parameters
     ----------
-    pattern : array_like
-        Two-dimensional array containing signal.
-    imin : int, optional
-        Global min. intensity of patterns.
-    scale : float, optional
-        Global scaling factor for intensities of output pattern.
-    dtype_out : numpy dtype
-        Data type of output pattern.
+    signal : kp.signals.EBSD or kp.lazy_signals.LazyEBSD
+        Signal instance with four-dimensional data.
+    out_range : dtype or tuple, optional
+        Output intensity range. If a tuple is passed, the output data
+        type is np.float32.
+    relative : bool, optional
+        Keep relative intensities between patterns.
 
     Returns
     -------
-    pattern : array_like
-        Output pattern rescaled to specified range.
+    rescaled_patterns : np.array or da.Array
+        Rescaled EBSD patterns.
     """
-    # TODO: Stop function from leaking memory when used with map
-    if np.issubdtype(dtype_out, np.unsignedinteger) is False:
-        raise ValueError("Data type is not unsigned integer.")
 
-    if imin is None and scale is None:  # Local contrast stretching
-        omax = np.iinfo(dtype_out).max
-        imin = pattern.min()
-        scale = float(omax / (pattern.max() - imin))
+    # Get valid intensity range and data type for rescaled patterns
+    omin, omax = intensity_range(out_range)
+    if not isinstance(out_range, tuple) and (
+            np.issubdtype(out_range, np.integer) or
+            np.issubdtype(out_range, np.float)):
+        dtype = out_range
+    else:
+        dtype = np.float32
 
-    # Set lowest intensity to zero and scale intensities
-    pattern = (pattern - imin) * scale
+    patterns = signal.data
+    if relative:  # Get min. and max. intensity in scan
+        imin = patterns.min()
+        imax = patterns.max()
+        if isinstance(patterns, da.Array):
+            imin = imin.compute(show_progressbar=False)
+            imax = imax.compute(show_progressbar=False)
+        scale = omax / imax
+        rescaled_patterns = ((patterns-imin)*scale + omin).astype(dtype)
+    else:  # Get min. and max. intensity per pattern
+        signal_axes = signal.axes_manager.signal_axes
+        imin = signal.min(signal_axes).data[:, :, np.newaxis, np.newaxis]
+        imax = signal.max(signal_axes).data[:, :, np.newaxis, np.newaxis]
+        rescaled_patterns = (patterns-imin) / (imax-imin)
+        rescaled_patterns = (rescaled_patterns*(omax-omin) + omin).astype(dtype)
 
-    return pattern.astype(dtype_out)
+    return rescaled_patterns
 
 
-def correct_background(pattern, static, dynamic, bg, sigma, imin, scale):
-    """Static and dynamic background correction on an electron
-    backscatter diffraction pattern.
+def intensity_range(in_range):
+    """Return intensity range (min, max) based on desired value type.
 
     Parameters
     ----------
-    pattern : array_like
-        Two-dimensional array containing signal.
-    static : bool, optional
-        If True, static correction is performed.
-    dynamic : bool, optional
-        If True, dynamic correction is performed.
-    bg : array_like
-        Background image for static correction.
-    sigma : int, float
-        Standard deviation for the gaussian kernel for dynamic
-        correction.
+    in_range : dtype or tuple
+        Instance to return (min, max) from.
+
+    Returns
+    -------
+    imin, imax : int or float
+        Intensity range of `range`.
+    """
+
+    if isinstance(in_range, tuple):
+        imin, imax = in_range
+    elif np.issubdtype(in_range, np.integer):
+        imin, imax = np.iinfo(in_range).min, np.iinfo(in_range).max
+    elif np.issubdtype(in_range, np.float):
+        imin, imax = np.finfo(in_range).min, np.finfo(in_range).max
+    else:
+        raise ValueError("{} is not a valid in_range".format(in_range))
+
+    return imin, imax
+
+
+def static_correction(pattern, operation, static_bg, imin, scale):
+    """Correct static background using a static background pattern.
+
+    Parameters
+    ----------
+    pattern : {np.ndarray, da.Array}
+        Signal pattern.
+    operation : {'divide', 'static'}
+        Divide or subtract by static background pattern.
+    static_bg : {np.ndarray, da.Array}
+        Static background pattern.
     imin : int
-        Global min. intensity of patterns.
+        Minimum intensity of input pattern.
     scale : int, float
-        Global scaling factor for intensities of output pattern.
+        Scaling factor for intensities of output pattern.
 
     Returns
     -------
-    pattern : array_like
-        Output pattern with background corrected and intensities
-        stretched to a desired range.
+    corrected_pattern : {np.ndarray, da.Array}
+        Static background corrected pattern.
     """
-    if static:
-        # Change data types to avoid negative intensities in subtraction
-        dtype = np.int16
-        pattern = pattern.astype(dtype)
-        bg = bg.astype(dtype)
+    pattern = pattern.astype(float)
 
-        # Subtract static background
-        pattern = pattern - bg
+    if operation == 'divide':
+        corrected_pattern = pattern / static_bg
+    else:
+        corrected_pattern = pattern - static_bg
 
-        # Rescale intensities, either keeping relative intensities or not
-        pattern = rescale_pattern_intensity(pattern, imin=imin, scale=scale)
+    return rescale_pattern_intensity(corrected_pattern, imin=imin, scale=scale)
 
-    if dynamic:
-        # Create gaussian blurred version of pattern
-        blurred = gaussian_filter(pattern, sigma, truncate=2.0)
 
-        # Change data types to avoid negative intensities in subtraction
-        dtype = np.int16
-        pattern = pattern.astype(dtype)
-        blurred = blurred.astype(dtype)
+def dynamic_correction(pattern, operation, sigma):
+    """Correct dynamic background using a gaussian blurred version of
+    the pattern.
 
-        # Subtract blurred background
-        pattern = pattern - blurred
+    Parameters
+    ----------
+    pattern : {np.ndarray, da.Array}
+        Signal pattern.
+    operation : {'divide', 'subtract'}
+        Divide or subtract by dynamic pattern.
+    sigma : {int, float}
+        Standard deviation of the gaussian kernel. If None
+        (default), a deviation of pattern width/30 is chosen.
 
-        # Rescale intensities, loosing relative intensities
-        pattern = rescale_pattern_intensity(pattern)
+    Returns
+    -------
+    corrected_pattern : {np.ndarray, da.Array}
+        Dynamic background corrected pattern.
+    """
+    pattern = pattern.astype(float)
+    blurred_pattern = scn.gaussian_filter(pattern, sigma, truncate=2.0)
 
-    return pattern
+    if operation == 'divide':
+        corrected_pattern = pattern / blurred_pattern
+    else:
+        corrected_pattern = pattern - blurred_pattern
+
+    return rescale_pattern_intensity(corrected_pattern)
 
 
 def equalize_adapthist_pattern(pattern, kernel_size, clip_limit=0.01,
@@ -251,7 +292,7 @@ def find_deadpixels_single_pattern(pattern, threshold=5, to_plot=False,
         pattern = pattern.compute(show_progressbar=False)
 
     pattern = pattern.astype(np.int16)
-    blurred = median_filter(pattern, size=2)
+    blurred = scn.median_filter(pattern, size=2)
     difference = pattern - blurred
     threshold = threshold * np.std(difference)
 
@@ -301,3 +342,38 @@ def plot_markers_single_pattern(pattern, markers):
     for (y, x) in markers:
         m = plot.markers.point(x, y, color='red')
         pat.add_marker(m, permanent=False)
+
+
+def normalised_correlation_coefficient(pattern, template,
+                                       zero_normalised=True):
+    """Calculate the normalised or zero-normalised correlation
+    coefficient between a pattern and a template following [1]_.
+
+    Parameters
+    ----------
+    pattern : {np.ndarray, da.Array}
+        Pattern to compare to template to.
+    template : {np.ndarray, da.Array}
+        Template pattern.
+    zero_normalised : bool, optional
+        Subtract local mean value of intensities.
+
+    Returns
+    -------
+    coefficient : float
+        Correlation coefficient in range [-1, 1] if zero normalised,
+        otherwise [0, 1].
+
+    References
+    ----------
+        .. [1] Gonzalez, Rafael C, Woods, Richard E: Digital Image
+               Processing, 3rd edition, Pearson Education, 954, 2008.
+    """
+    pattern = pattern.astype(float)
+    template = template.astype(float)
+    if zero_normalised:
+        pattern = pattern - pattern.mean()
+        template = template - template.mean()
+    coefficient = np.sum(pattern * template) / np.sqrt(np.sum(pattern**2) *
+                                                       np.sum(template**2))
+    return coefficient

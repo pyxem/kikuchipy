@@ -16,17 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Signal class for Electron Backscatter Diffraction (EBSD) data."""
-import warnings
-import numpy as np
-import dask.array as da
 import os
 import gc
-import datetime
-import tqdm
 import numbers
+import datetime
+import warnings
+import tqdm
+import numpy as np
+import dask.array as da
+import scipy.ndimage as scn
 from h5py import File
-from hyperspy.signals import Signal2D
+from hyperspy.signals import Signal2D, BaseSignal
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
 from skimage.transform import radon
@@ -35,7 +35,7 @@ from dask.diagnostics import ProgressBar
 from hyperspy.misc.utils import dummy_context_manager
 from kikuchipy import io
 from kikuchipy._signals.radon_transform import RadonTransform
-from kikuchipy.utils.expt_utils import (correct_background, remove_dead,
+from kikuchipy.utils.expt_utils import (remove_dead,
                                         find_deadpixels_single_pattern,
                                         plot_markers_single_pattern,
                                         rescale_pattern_intensity,
@@ -163,17 +163,24 @@ class EBSD(Signal2D):
                        'deadpixels': deadpixels, 'deadvalue': deadvalue,
                        'deadthreshold': deadthreshold}, omd, ebsd_node)
 
-    def set_scan_calibration(self, calibration):
+    def set_scan_calibration(self, step_x=1., step_y=1.):
         """Set the step size in µm.
 
         Parameters
         ----------
-        calibration : float
-            Scan step size in µm per pixel.
+        step_x, step_y : float
+            Scan step size in µm per pixel in horizontal, x and
+            vertical, y direction.
         """
-        ElectronDiffraction.set_scan_calibration(self, calibration)
-        self.axes_manager.navigation_axes[0].units = u'\u03BC'+'m'
-        self.axes_manager.navigation_axes[1].units = u'\u03BC'+'m'
+        x, y = self.axes_manager.navigation_axes
+        x.name, y.name = ('x', 'y')
+        x.scale, y.scale = (step_x, step_y)
+        x.units, y.units = (u'\u03BC'+'m', u'\u03BC'+'m')
+
+        md = self.metadata
+        ebsd_node = metadata_nodes(sem=False)
+        md.set_item(ebsd_node + '.step_x', step_x)
+        md.set_item(ebsd_node + '.step_y', step_y)
 
     def set_diffraction_calibration(self, calibration):
         """Set diffraction pattern pixel size in reciprocal Angstroms.
@@ -189,103 +196,92 @@ class EBSD(Signal2D):
         self.axes_manager.signal_axes[0].offset = 0
         self.axes_manager.signal_axes[1].offset = 0
 
-    def remove_background(self, static=True, dynamic=True, static_bg=None,
-                          relative=False, sigma=None, **kwargs):
-        """Background correction, either static, dynamic or both.
+    def static_background_correction(self, operation='divide',
+                                     relative=False, static_bg=None,
+                                     out_range=np.uint8):
+        """Correct static background using a static background pattern.
 
-        For the static correction, a background image is subtracted
-        from all patterns. For the dynamic correction, each pattern is
-        blurred using a Gaussian kernel with a standard deviation set
-        by you.
-
-        Contrast stretching is done either according to a global or a
-        local intensity range, the former maintaining relative
-        intensities between patterns after static correction. Relative
-        intensities are lost if only dynamic correction is performed.
-
-        Input data is assumed to be a two-dimensional numpy array of
-        patterns of dtype uint8.
+        Pattern intensities are rescaled according to specified
+        intensity range.
 
         Parameters
         ----------
-        static : bool, optional
-            If True (default), static correction is performed.
-        dynamic : bool, optional
-            If True (default), dynamic correction is performed.
-        static_bg : {str, None}, optional
-            File path to static background pattern. If None (default),
-            an attempt to read the pattern from the signal metadata is
-            made.
+        operation : {'divide', 'subtract'}, optional
+            Divide or subtract by static background pattern.
         relative : bool, optional
-            If True (default is False), relative intensities between
-            patterns are kept after static correction.
-        sigma : {int, float, None}, optional
-            Standard deviation for the gaussian kernel for dynamic
-            correction. If None (default), a deviation of pattern
-            width/30 is chosen.
-        **kwargs:
-            Keyword arguments passed to map().
+            Keep relative intensities between patterns.
+        static_bg : {np.ndarray, da.Array, None}, optional
+            Static background pattern. If not passed we try to read it
+            from the signal metadata.
+        out_range : dtype or tuple, optional
+            Output intensity range given by data type or (min, max). If
+            a tuple is passed, the output data type is np.float32.
         """
-        if static is False and dynamic is False:
-            warnings.warn("No correction done.")
-            return
 
-        lazy = self._lazy
-        if lazy:
-            kwargs['ragged'] = False
-
-        # Set default values for contrast stretching parameters, to be
-        # overwritten if 'relative' is passed
-        imin = None
-        scale = None
-
+        # Make sure static background pattern is valid
         ebsd_node = metadata_nodes(sem=False)
         md = self.metadata
-        if static:
-            if static_bg is None:
+        if not isinstance(static_bg, (np.ndarray, da.Array)):
+            try:
                 static_bg = md.get_item(ebsd_node + '.static_background')
-                if not isinstance(static_bg, int) and static_bg.all() == -1:
-                    raise ValueError("No static background pattern provided.")
+            except TypeError:
+                raise TypeError("Static background is not a numpy array or "
+                                "could not be read from signal metadata.")
+        pat_shape = self.axes_manager.signal_shape
+        if static_bg.shape != pat_shape:
+            raise IOError("Pattern {} and static background {} shapes must be "
+                          "identical.".format(pat_shape, static_bg.shape))
+        dtype = np.float16
+        static_bg = static_bg.astype(dtype)
 
-            # Read and setup background
-            static_bg = Signal2D(static_bg)
+        if operation == 'divide':
+            self.data = self.data / static_bg
+        else:
+            self.data = self.data - static_bg
 
-            # Correct dead pixels in static background pattern if they are
-            # corrected in experimental patterns
-            omd_ebsd = self.original_metadata.get_item(ebsd_node)
-            if (omd_ebsd.has_item('deadpixels_corrected') and
-                    omd_ebsd.has_item('deadpixels') and
-                    omd_ebsd.has_item('deadvalue')):
-                static_bg.data = remove_dead(static_bg.data,
-                                             omd_ebsd.deadpixels,
-                                             omd_ebsd.deadvalue)
+        self.data = rescale_pattern_intensity(self, out_range=out_range,
+                                              relative=relative)
 
-            if relative and not dynamic:
-                # Get lowest intensity after subtraction
-                smin = self.min(self.axes_manager.navigation_axes)
-                smax = self.max(self.axes_manager.navigation_axes)
-                if lazy:
-                    smin.compute()
-                    smax.compute()
-                smin.change_dtype(np.int8)
-                static_bg.change_dtype(np.int8)
-                imin = (smin.data - static_bg.data).min()
+    def dynamic_background_correction(self, operation='divide',
+                                      sigma=None, out_range=np.uint8,
+                                      **kwargs):
+        """Correct dynamic background.
 
-                # Get highest intensity after subtraction
-                static_bg.data = static_bg.data.astype(np.uint8)
-                imax = (smax.data - static_bg.data).max() + abs(imin)
+        Parameters
+        ----------
+        operation : {'divide', 'subtract'}, optional
+            Divide or subtract by dynamic background pattern.
+        sigma : {int, float, None}, optional
+            Standard deviation of the gaussian kernel. If None
+            (default), a deviation of pattern width/30 is chosen.
+        out_range : dtype or tuple, optional
+            Output intensity range given by data type or (min, max). If
+            a tuple is passed, the output data type is np.float32.
+        **kwargs :
+            Keyword arguments passed to map and map_blocks.
+        """
 
-                # Get global scaling factor, input dtype max. value in nominator
-                scale = float(np.iinfo(self.data.dtype).max / imax)
+        if sigma is None:
+            sigma = self.axes_manager.signal_axes[0].size/30
+        dtype = np.int16
+        self.data = self.data.astype(dtype)
+        if self._lazy:
+            def func(block, sigma):
+                return scn.gaussian_filter(block, sigma=sigma, truncate=2.0)
+            blurred = self.data.map_blocks(func, sigma=sigma, **kwargs)
+        else:
+            blurred = self.map(scn.gaussian_filter, sigma=sigma, truncate=2.0,
+                               inplace=False, show_progressbar=False, **kwargs)
 
-        if dynamic and sigma is None:
-            sigma = int(self.axes_manager.signal_axes[0].size/30)
+        if operation == 'divide':
+            self.data = self.data / blurred
+        else:
+            self.data = self.data - blurred
 
-        self.map(correct_background, static=static, dynamic=dynamic,
-                 bg=static_bg, sigma=sigma, imin=imin, scale=scale, **kwargs)
+        self.data = rescale_pattern_intensity(self, out_range=out_range)
 
-    def equalize_adapthist(self, kernel_size=None, clip_limit=0.01, nbins=256,
-                           **kwargs):
+    def equalize_adapthist(self, kernel_size=None, clip_limit=0.01,
+                           nbins=256, **kwargs):
         """Local contrast enhancement using contrast limited adaptive
         histogram equalisation (CLAHE).
 
@@ -406,10 +402,11 @@ class EBSD(Signal2D):
                                                         mask=mask)
         for coordinates in pattern_coordinates[1:]:
             pattern = self.inav[coordinates].data
-            deadpixels_new = np.append(deadpixels_new,
-                                       find_deadpixels_single_pattern(pattern,
-                                                                      threshold=threshold, mask=mask),
-                                       axis=0)
+            deadpixels_new = np.append(
+                deadpixels_new,
+                find_deadpixels_single_pattern(pattern, threshold=threshold,
+                                               mask=mask),
+                axis=0)
         # Count the number of occurrences of each deadpixel found in all
         # checked patterns.
         deadpixels_new, count_list = np.unique(deadpixels_new,
@@ -708,6 +705,10 @@ class EBSD(Signal2D):
 
         return s_model
 
+    def decomposition(self, *args, **kwargs):
+        super().decomposition(*args, **kwargs)
+        self.__class__ = EBSD
+
 
 class LazyEBSD(EBSD, LazySignal2D):
 
@@ -935,10 +936,10 @@ class LazyEBSD(EBSD, LazySignal2D):
         The results are stored in self.learning_results.
         """
         if self.data.dtype.char not in ['e', 'f', 'd']:  # If not float
-            raise TypeError(
-                'To perform a decomposition the data must be of the float '
-                'type, but the current type is \'{}\'. '
-                'No decomposition was performed.'.format(self.data.dtype))
+            raise TypeError("To perform a decomposition the data must be of "
+                            "float type, but the current type is '{}'. No "
+                            "decomposition was "
+                            "performed.".format(self.data.dtype))
 
         if algorithm == 'IPCA':
             if output_dimension is None:
@@ -1005,7 +1006,9 @@ class LazyEBSD(EBSD, LazySignal2D):
                 target.loadings = target.loadings * raG.ravel()[:, np.newaxis]
 
         else:  # Call HyperSpy's implementation
-            super(self).decomposition(*args, **kwargs)
+            super().decomposition(*args, **kwargs)
+
+        self.__class__ = LazyEBSD
 
     def _normalize_poissonian_noise(self, navigation_mask=None,
                                     signal_mask=None):

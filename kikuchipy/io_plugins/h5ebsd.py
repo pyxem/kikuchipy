@@ -294,12 +294,14 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
     scales = np.ones(4)
 
     # Calibrate scan dimension
-    try:
-        scales[0] = scales[0] * md.get_item(ebsd_node + '.step_x')
-        scales[1] = scales[1] * md.get_item(ebsd_node + '.step_y')
-    except TypeError:
+    step_x = md.get_item(ebsd_node + '.step_x')
+    step_y = md.get_item(ebsd_node + '.step_y')
+    if step_x == -1. or step_y == -1.:
         warnings.warn("Could not calibrate scan dimension, this can be done "
                       "using set_scan_calibration()")
+    else:
+        scales[0] = scales[0] * step_x
+        scales[1] = scales[1] * step_y
 
     # Create axis objects for each axis
     axes = [{'size': data.shape[i], 'index_in_array': i, 'name': names[i],
@@ -502,9 +504,6 @@ def file_writer(filename, signal, add_scan=None, scan_number=1,
     **kwargs :
         Keyword arguments passed to h5py.
     """
-    if 'compression' not in kwargs:
-        kwargs['compression'] = 'gzip'
-
     # Set manufacturer and version to use in file
     from kikuchipy.version import __version__ as ver_signal
     man_ver_dict = {'manufacturer': 'KikuchiPy', 'version': ver_signal}
