@@ -22,6 +22,7 @@ import warnings
 import time
 import datetime
 import numpy as np
+import dask.array as da
 import matplotlib.pyplot as plt
 from hyperspy.misc.utils import DictionaryTreeBrowser
 from kikuchipy.utils.io_utils import kikuchipy_metadata, metadata_nodes
@@ -290,18 +291,19 @@ def get_string(content, expression, line_no, file):
 
 
 def file_writer(filename, signal):
-    """Write electron backscatter patterns to NORDIF binary file.
+    """Write an EBSD signal to a NORDIF binary file.
 
     Parameters
     ----------
     filename : str
-        File path of NORDIF data file.
-    signal : kikuchipy.signals.EBSD
+        Full path of HDF file.
+    signal : kikuchipy.signals.EBSD or kikuchipy.lazy_signals.LazyEBSD
+        Signal instance.
     """
     with open(filename, 'wb') as f:
         if signal._lazy:
-            raise ValueError("Writing lazily to NORDIF file format is not yet "
-                             "supported")
+            for pattern in signal._iterate_signal():
+                np.array(pattern.flatten()).tofile(f)
         else:
             for pattern in signal._iterate_signal():
                 pattern.flatten().tofile(f)
