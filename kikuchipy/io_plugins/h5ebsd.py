@@ -330,8 +330,7 @@ def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
 
     Returns
     -------
-    md : DictionaryTreeBrowser
-    omd : DictionaryTreeBrowser
+    md, omd : DictionaryTreeBrowser
     """
     md = kikuchipy_metadata()
     title = (scan_group.file.filename.split('/')[-1].split('.')[0] + ' ' +
@@ -392,8 +391,7 @@ def tslheader2dicts(scan_group, md, lazy=False):
 
     Returns
     -------
-    md : DictionaryTreeBrowser
-    omd : DictionaryTreeBrowser
+    md, omd : DictionaryTreeBrowser
     """
     # Get all metadata from file
     hg = scan_group['EBSD/Header']  # Header group
@@ -493,9 +491,9 @@ def file_writer(filename, signal, add_scan=None, scan_number=1,
     ----------
     filename : str
         Full path of HDF file.
-    signal : {kikuchipy.signals.EBSD, kikuchipy.lazy_signals.LazyEBSD}
+    signal : kikuchipy.signals.EBSD or kikuchipy.lazy_signals.LazyEBSD
         Signal instance.
-    add_scan : {bool, None}, optional
+    add_scan : bool or None, optional
         Add signal to an existing, but not open, h5ebsd file. If it does
         not exist it is created and the signal is written to it.
     scan_number : int, optional
