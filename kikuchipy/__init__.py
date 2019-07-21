@@ -17,5 +17,5 @@
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
 from kikuchipy.io import load, save
-from kikuchipy.signals import EBSD, RadonTransform
+from kikuchipy.signals import EBSD
 from kikuchipy.lazy_signals import LazyEBSD
