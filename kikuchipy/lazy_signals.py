@@ -18,8 +18,5 @@
 
 """
 All classes inherits from LazySignal2D from HyperSpy.
-
-The Signal class and its specialised subclasses:
-    LazyEBSD
 """
 from kikuchipy._signals.electron_backscatter_diffraction import LazyEBSD

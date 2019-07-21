@@ -20,25 +20,19 @@ import os
 import gc
 import numbers
 import datetime
-import warnings
 import tqdm
 import numpy as np
 import dask.array as da
 import scipy.ndimage as scn
 from h5py import File
-from hyperspy.signals import Signal2D, BaseSignal
+from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
-from skimage.transform import radon
 from pyxem.signals.electron_diffraction import ElectronDiffraction
 from dask.diagnostics import ProgressBar
 from hyperspy.misc.utils import dummy_context_manager
 from kikuchipy import io
-from kikuchipy._signals.radon_transform import RadonTransform
-from kikuchipy.utils.expt_utils import (remove_dead,
-                                        find_deadpixels_single_pattern,
-                                        plot_markers_single_pattern,
-                                        rescale_pattern_intensity,
+from kikuchipy.utils.expt_utils import (rescale_pattern_intensity,
                                         equalize_adapthist_pattern)
 from kikuchipy.utils.io_utils import metadata_nodes
 
@@ -53,7 +47,6 @@ class EBSD(Signal2D):
             Signal2D.__init__(self, data=args[0], **kwargs)
         else:
             Signal2D.__init__(self, *args, **kwargs)
-        self.set_experimental_parameters(deadpixels_corrected=False)
 
     def set_experimental_parameters(self, detector=None,
                                     azimuth_angle=None,
@@ -66,9 +59,7 @@ class EBSD(Signal2D):
                                     frame_number=None, frame_rate=None,
                                     scan_time=None, beam_energy=None,
                                     xpc=None, ypc=None, zpc=None,
-                                    deadpixels_corrected=None,
-                                    deadvalue=None, deadpixels=None,
-                                    deadthreshold=None, static_background=None,
+                                    static_background=None,
                                     manufacturer=None, version=None,
                                     microscope=None, magnification=None):
         """Set experimental parameters in metadata.
@@ -82,14 +73,6 @@ class EBSD(Signal2D):
             Energy of the electron beam in kV.
         binning : int, optional
             Camera binning.
-        deadpixels_corrected : bool, optional
-            Whether deadpixels in patterns have been corrected.
-        deadpixels : list of tuple, optional
-            Pattern indices for dead pixels.
-        deadvalue : string, optional
-            How dead pixels have been corrected for (average or nan).
-        deadthreshold : int, optional
-            Threshold for detecting dead pixels.
         detector : str, optional
             Detector manufacturer and model.
         detector_pixel_size : float, optional
@@ -141,7 +124,6 @@ class EBSD(Signal2D):
                 if val is not None:
                     metadata.set_item(node + '.' + key, val)
         md = self.metadata
-        omd = self.original_metadata
         sem_node, ebsd_node = metadata_nodes()
         _write_params({'beam_energy': beam_energy,
                        'magnification': magnification, 'microscope': microscope,
@@ -159,9 +141,6 @@ class EBSD(Signal2D):
                        'step_x': step_x, 'step_y': step_y,
                        'xpc': xpc, 'ypc': ypc, 'zpc': zpc,
                        'static_background': static_background}, md, ebsd_node)
-        _write_params({'deadpixels_corrected': deadpixels_corrected,
-                       'deadpixels': deadpixels, 'deadvalue': deadvalue,
-                       'deadthreshold': deadthreshold}, omd, ebsd_node)
 
     def set_scan_calibration(self, step_x=1., step_y=1.):
         """Set the step size in µm.
@@ -329,154 +308,6 @@ class EBSD(Signal2D):
         self.map(equalize_adapthist_pattern, kernel_size=kernel_size,
                  clip_limit=clip_limit, nbins=nbins, **kwargs)
 
-    def find_deadpixels(self, pattern_number=10, threshold=2,
-                        pattern_coordinates=None, plot=False,
-                        mask=None, pattern_number_threshold=0.75):
-        """Find dead pixels in several experimentally acquired
-        diffraction patterns by comparing pixel values in a blurred
-        version of a selected pattern with the original pattern. If the
-        intensity difference is above a threshold the pixel is labeled
-        as dead. Deadpixels are searched for in several patterns. Only
-        deadpixels occurring in more than a certain number of patterns
-        will be kept.
-
-        Parameters
-        ----------
-        pattern_number : int, optional
-            Number of patterns to find deadpixels in. If
-            pattern_coordinates is passed, pattern_number is set to
-            len(pattern_coordinates).
-        threshold : int, optional
-            Threshold for difference in pixel intensities between
-            blurred and original pattern. The actual threshold is given
-            as threshold*(standard deviation of the difference between
-            blurred and original pattern).
-        pattern_coordinates : np.array, optional
-            Array of selected coordinates [[x,y]] for all the patterns
-            where deadpixels will be searched for.
-        plot : bool, optional
-            If True (default is False), a pattern with the dead pixels
-            marked is plotted.
-        mask : array of bool, optional
-            No deadpixels are found where mask is True. The shape must
-            be equal to the signal shape.
-        pattern_number_threshold : float, optional
-            One deadpixel is only considered correct if it is found in a
-            number of patterns that is more than
-            pattern_number_threshold*pattern_number. Otherwise, the
-            deadpixel is discarded.
-
-        Returns
-        -------
-        deadpixels : list of tuples
-            List of tuples containing pattern indices for dead pixels.
-
-        Examples
-        --------
-        .. code-block:: python
-
-            import numpy as np
-            mask = np.zeros(s.axes_manager.signal_shape)
-            # Threshold the first pattern, so that pixels with an
-            # intensity below 60 will be masked
-            mask[np.where(s.inav[0, 0].data < 60)] = True
-            deadpixels = s.find_deadpixels(threshold=5, to_plot=True,
-                                           mask=mask)
-        """
-        if pattern_coordinates is None:
-            nav_shape = self.axes_manager.navigation_shape
-            pattern_coordinates_x = np.random.randint(nav_shape[0],
-                                                      size=pattern_number)
-            pattern_coordinates_y = np.random.randint(nav_shape[1],
-                                                      size=pattern_number)
-            pattern_coordinates = np.array(
-                list(zip(pattern_coordinates_x, pattern_coordinates_y)))
-        else:
-            pattern_number = len(pattern_coordinates)
-
-        pattern_coordinates = pattern_coordinates.astype(np.int16)
-
-        first_pattern = self.inav[pattern_coordinates[0]].data
-        deadpixels_new = find_deadpixels_single_pattern(first_pattern,
-                                                        threshold=threshold,
-                                                        mask=mask)
-        for coordinates in pattern_coordinates[1:]:
-            pattern = self.inav[coordinates].data
-            deadpixels_new = np.append(
-                deadpixels_new,
-                find_deadpixels_single_pattern(pattern, threshold=threshold,
-                                               mask=mask),
-                axis=0)
-        # Count the number of occurrences of each deadpixel found in all
-        # checked patterns.
-        deadpixels_new, count_list = np.unique(deadpixels_new,
-                                               return_counts=True, axis=0)
-        # Only keep deadpixel if it occurs in more than an amount given by
-        # pattern_number_threshold of the patterns. Otherwise discard.
-        keep_list = [True if y > int(pattern_number_threshold * pattern_number)
-                     else False for y in count_list]
-        deadpixels = deadpixels_new[np.where(keep_list)]
-        if plot:
-            plot_markers_single_pattern(first_pattern, deadpixels)
-
-        # Update original_metadata
-        self.set_experimental_parameters(deadpixels=deadpixels)
-
-        return deadpixels
-
-    def remove_deadpixels(self, deadpixels=None, deadvalue='average',
-                          inplace=True, *args, **kwargs):
-        """Remove dead pixels from experimentally acquired diffraction
-        patterns, either by averaging or setting to a certain value.
-
-        Assumes signal has navigation axes, i.e. does not work on a
-        single pattern.
-
-        Uses pyXem's remove_deadpixels() function.
-
-        Parameters
-        ----------
-        deadpixels : list of tuples, optional
-            List of tuples of indices of dead pixels. If None (default),
-            indices of dead pixels are read from
-        deadvalue : string, optional
-            Specify how deadpixels should be treated. 'average' sets
-            the dead pixel value to the average of adjacent pixels.
-            'nan'  sets the dead pixel to nan.
-        inplace : bool, optional
-            If True (default), signal is overwritten. Otherwise,
-            returns a new signal.
-        *args:
-            Arguments to be passed to map().
-        **kwargs:
-            Keyword arguments to be passed to map().
-        """
-        if self._lazy:
-            kwargs['ragged'] = False
-
-        # Get detected dead pixels, if any
-        if deadpixels is None:
-            try:
-                omd = self.original_metadata
-                deadpixels = omd.get_item(
-                    'Acquisition_instrument.SEM.Detector.EBSD.deadpixels')
-            except ValueError:
-                warnings.warn("No dead pixels provided.")
-
-        if inplace:
-            self.map(remove_dead, deadpixels=deadpixels, deadvalue=deadvalue,
-                     inplace=inplace, *args, **kwargs)
-            self.set_experimental_parameters(deadpixels_corrected=True,
-                                             deadvalue=deadvalue)
-        elif not inplace:
-            s = self.map(remove_dead, deadpixels=deadpixels,
-                         deadvalue=deadvalue, inplace=inplace, *args, **kwargs)
-            s.set_experimental_parameters(deadpixels_corrected=True,
-                                          deadvalue=deadvalue)
-            return s
-        else:  # No dead pixels detected
-            pass
-
     def get_virtual_image(self, roi):
         """Method imported from
         pyXem.ElectronDiffraction.get_virtual_image(self, roi). Obtains
@@ -527,54 +358,6 @@ class EBSD(Signal2D):
         """
         return ElectronDiffraction.plot_interactive_virtual_image(self, roi,
                                                                   **kwargs)
-
-    def get_radon_transform(self, theta=None, circle=True,
-                            show_progressbar=True, inplace=False):
-        """Create a RadonTransform signal.
-
-        Parameters
-        ----------
-        theta : numpy array, optional
-            Projection angles in degrees. If None (default), the value
-            is set to np.arange(180).
-        circle : bool, optional
-            If True (default), assume that the image is zero outside the
-            inscribed circle. The width of each projection then becomes
-            equal to the smallest signal shape.
-        show_progressbar : bool, optional
-            If True (default), show progressbar during transformation.
-        inplace : bool, optional
-            If True (default is False), the EBSD signal (self) is
-            replaced by the RadonTransform signal (return).
-
-        Returns
-        -------
-        sinograms: :obj:`kikuchipy.signals.RadonTransform`
-            Corresponding RadonTransform signal (sinograms) computed
-            from the EBSD signal. The rotation axis lie at index
-            sinograms.data[0,0].shape[0]/2
-
-        References
-        ----------
-        http://scikit-image.org/docs/dev/auto_examples/transform/
-        plot_radon_transform.html
-        http://scikit-image.org/docs/dev/api/skimage.transform.html
-        #skimage.transform.radon
-        """
-        # TODO: Remove diagonal artifact lines.
-        # TODO: Can we get it to work faster?
-
-        warnings.filterwarnings("ignore", message="The default of `circle` \
-        in `skimage.transform.radon` will change to `True` in version 0.15.")
-        # Ignore this warning, since this function is mapped and would
-        # otherwise slow down this function by printing many warning
-        # messages.
-
-        sinograms = self.map(radon, theta=theta, circle=circle,
-                             show_progressbar=show_progressbar,
-                             inplace=inplace)
-
-        return RadonTransform(sinograms)
 
     def save(self, filename=None, overwrite=None, extension=None,
              **kwargs):
