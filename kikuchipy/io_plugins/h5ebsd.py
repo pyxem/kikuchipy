@@ -182,7 +182,7 @@ def manufacturer_pattern_names():
 def h5ebsdgroup2dict(group, dictionary=None, recursive=False,
                      lazy=False):
     """Return a dictionary with values from datasets in a group in an
-    opened HDF5 file.
+    opened h5ebsd file.
 
     Parameters
     ----------
@@ -246,12 +246,8 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
     scan : dict
         Dictionary with patterns, metadata and original metadata.
     """
-    ebsd_node = metadata_nodes(sem=False)
-    md, omd = h5ebsdheader2dicts(scan_group, manufacturer, version, lazy)
-    nx = md.get_item(ebsd_node + '.n_columns')
-    ny = md.get_item(ebsd_node + '.n_rows')
-    sx = md.get_item(ebsd_node + '.pattern_width')
-    sy = md.get_item(ebsd_node + '.pattern_height')
+    md, omd, scan_size = h5ebsdheader2dicts(scan_group, manufacturer, version,
+                                            lazy)
     md.set_item('Signal.signal_type', 'EBSD')
     md.set_item('Signal.record_by', 'image')
 
@@ -264,7 +260,7 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
         if manufacturer.lower() == man.lower():
             data = scan_group['EBSD/Data/' + pats]
 
-    # Fetch data from group
+    # Get data from group
     if lazy:
         chunks = data.chunks
         if chunks is None:
@@ -274,6 +270,8 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
     else:
         data = np.asanyarray(data)
 
+    sx, sy = scan_size.sx, scan_size.sy
+    nx, ny = scan_size.nx, scan_size.ny
     try:
         data = data.reshape((ny, nx, sy, sx)).squeeze()
     except ValueError:
@@ -294,14 +292,8 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
     scales = np.ones(4)
 
     # Calibrate scan dimension
-    step_x = md.get_item(ebsd_node + '.step_x')
-    step_y = md.get_item(ebsd_node + '.step_y')
-    if step_x == -1. or step_y == -1.:
-        warnings.warn("Could not calibrate scan dimension, this can be done "
-                      "using set_scan_calibration()")
-    else:
-        scales[0] = scales[0] * step_x
-        scales[1] = scales[1] * step_y
+    scales[0] = scales[0] * scan_size.step_x
+    scales[1] = scales[1] * scan_size.step_y
 
     # Create axis objects for each axis
     axes = [{'size': data.shape[i], 'index_in_array': i, 'name': names[i],
@@ -330,7 +322,7 @@ def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
 
     Returns
     -------
-    md, omd : DictionaryTreeBrowser
+    md, omd, scan_size : DictionaryTreeBrowser
     """
     md = kikuchipy_metadata()
     title = (scan_group.file.filename.split('/')[-1].split('.')[0] + ' ' +
@@ -338,23 +330,21 @@ def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
     md.set_item('General.title', title)
 
     if 'edax' in manufacturer.lower():
-        md, omd = tslheader2dicts(scan_group, md, lazy)
+        md, omd, scan_size = tslheader2dicts(scan_group, md, lazy)
     elif 'bruker' in manufacturer.lower():
-        md, omd = brukerheader2dicts(scan_group, md, lazy)
+        md, omd, scan_size = brukerheader2dicts(scan_group, md, lazy)
     else:  # KikuchiPy
-        md, omd = kikuchipyheader2dicts(scan_group, md, lazy)
+        md, omd, scan_size = kikuchipyheader2dicts(scan_group, md, lazy)
 
     ebsd_node = metadata_nodes(sem=False)
     md.set_item(ebsd_node + '.manufacturer', manufacturer)
     md.set_item(ebsd_node + '.version', version)
 
-    return md, omd
+    return md, omd, scan_size
 
 
 def kikuchipyheader2dicts(scan_group, md, lazy=False):
-    """Return metadata and original metadata as dictionaries in
-    HyperSpy's `DictionaryTreeBrowser` format populated with values
-    from KikuchiPy's h5ebsd implementation.
+    """Return scan metadata dictionaries from a KikuchiPy h5ebsd file.
 
     Parameters
     ----------
@@ -366,20 +356,38 @@ def kikuchipyheader2dicts(scan_group, md, lazy=False):
 
     Returns
     -------
-    md, omd : DictionaryTreeBrowser
+    md : DictionaryTreeBrowser
+        Metadata used in KikuchiPy.
+    omd : DictionaryTreeBrowser
+        All metadata in scan header.
+    scan_size : DictionaryTreeBrowser
+        Information on pattern size, scan size and scan steps.
     """
+
     omd = DictionaryTreeBrowser()
     sem_node, ebsd_node = metadata_nodes()
     md.set_item(ebsd_node, h5ebsdgroup2dict(scan_group['EBSD/Header'],
                                             lazy=lazy))
     md.set_item(sem_node, h5ebsdgroup2dict(scan_group['SEM/Header'], lazy=lazy))
-    return md, omd
+
+    # Get scan size info and then remove it from metadata
+    scan_size = dict()
+    md = md.as_dictionary()
+    enl = ebsd_node.split('.')  # List of EBSD nodes
+    scan_size['sy'] = md[enl[0]][enl[1]][enl[2]][enl[3]].pop('pattern_height')
+    scan_size['sx'] = md[enl[0]][enl[1]][enl[2]][enl[3]].pop('pattern_width')
+    scan_size['nx'] = md[enl[0]][enl[1]][enl[2]][enl[3]].pop('n_columns')
+    scan_size['ny'] = md[enl[0]][enl[1]][enl[2]][enl[3]].pop('n_rows')
+    scan_size['step_x'] = md[enl[0]][enl[1]][enl[2]][enl[3]].pop('step_x')
+    scan_size['step_y'] = md[enl[0]][enl[1]][enl[2]][enl[3]].pop('step_y')
+    md = DictionaryTreeBrowser(md)
+    scan_size = DictionaryTreeBrowser(scan_size)
+
+    return md, omd, scan_size
 
 
 def tslheader2dicts(scan_group, md, lazy=False):
-    """Return metadata and original metadata as dictionaries in
-    HyperSpy's `DictionaryTreeBrowser` format populated with values
-    from EDAX TSL's h5ebsd implementation.
+    """Return scan metadata dictionaries from an EDAX TSL h5ebsd file.
 
     Parameters
     ----------
@@ -391,47 +399,53 @@ def tslheader2dicts(scan_group, md, lazy=False):
 
     Returns
     -------
-    md, omd : DictionaryTreeBrowser
+    md : DictionaryTreeBrowser
+        Metadata used in KikuchiPy.
+    omd : DictionaryTreeBrowser
+        All (original) metadata in scan header.
+    scan_size : DictionaryTreeBrowser
+        Information on pattern size, scan size and scan steps.
     """
-    # Get all metadata from file
-    hg = scan_group['EBSD/Header']  # Header group
-    omd = DictionaryTreeBrowser({
-        'tsl_header': h5ebsdgroup2dict(hg, recursive=True, lazy=lazy)})
 
-    # Populate dictionary
+    # Get header group as dictionary
+    hd = h5ebsdgroup2dict(scan_group['EBSD/Header'], recursive=True)
+
+    # Populate metadata dictionary
     sem_node, ebsd_node = metadata_nodes()
-    md.set_item(ebsd_node + '.azimuth_angle', hg['Camera Azimuthal Angle'][0])
-    md.set_item(ebsd_node + '.elevation_angle', hg['Camera Elevation Angle'][0])
-    grid_type = hg['Grid Type'][0].decode()
+    md.set_item(ebsd_node + '.azimuth_angle', hd['Camera Azimuthal Angle'])
+    md.set_item(ebsd_node + '.elevation_angle', hd['Camera Elevation Angle'])
+    grid_type = hd['Grid Type']
     if grid_type == 'SqrGrid':
         md.set_item(ebsd_node + '.grid_type', 'square')
     else:
         raise IOError("Only square grids are supported, however a {} grid was "
                       "passed".format(grid_type))
-    md.set_item(ebsd_node + '.pattern_height', hg['Pattern Height'][0])
-    md.set_item(ebsd_node + '.pattern_width', hg['Pattern Width'][0])
-    md.set_item(ebsd_node + '.sample_tilt', hg['Sample Tilt'][0])
-    md.set_item(ebsd_node + '.step_x', hg['Step X'][0])
-    md.set_item(ebsd_node + '.step_y', hg['Step Y'][0])
-    md.set_item(ebsd_node + '.n_rows', hg['nRows'][0])
-    md.set_item(ebsd_node + '.n_columns', hg['nColumns'][0])
-    md.set_item('General.authors', hg['Operator'][0].decode())
-    md.set_item('General.notes', hg['Notes'][0].decode())
-    md.set_item(ebsd_node + '.xpc', hg['Pattern Center Calibration/x-star'][0])
-    md.set_item(ebsd_node + '.ypc', hg['Pattern Center Calibration/y-star'][0])
-    md.set_item(ebsd_node + '.zpc', hg['Pattern Center Calibration/z-star'][0])
-    md.set_item(sem_node + '.working_distance', hg['Working Distance'][0])
+    md.set_item(ebsd_node + '.sample_tilt', hd['Sample Tilt'])
+    md.set_item('General.authors', hd['Operator'])
+    md.set_item('General.notes', hd['Notes'])
+    md.set_item(ebsd_node + '.xpc', hd['Pattern Center Calibration']['x-star'])
+    md.set_item(ebsd_node + '.ypc', hd['Pattern Center Calibration']['y-star'])
+    md.set_item(ebsd_node + '.zpc', hd['Pattern Center Calibration']['z-star'])
+    md.set_item(sem_node + '.working_distance', hd['Working Distance'])
     if 'SEM-PRIAS Images' in scan_group.keys():
         md.set_item(sem_node + '.magnification',
                     scan_group['SEM-PRIAS Images/Header/Mag'][0])
 
-    return md, omd
+    # Populate original metadata dictionary
+    omd = DictionaryTreeBrowser({'tsl_header': hd})
+
+    # Populate scan size dictionary
+    scan_size = dict()
+    scan_size['sx'], scan_size['sy'] = hd['Pattern Width'], hd['Pattern Height']
+    scan_size['nx'], scan_size['ny'] = hd['nColumns'], hd['nRows']
+    scan_size['step_x'], scan_size['step_y'] = hd['Step X'], hd['Step Y']
+    scan_size = DictionaryTreeBrowser(scan_size)
+
+    return md, omd, scan_size
 
 
 def brukerheader2dicts(scan_group, md, lazy=False):
-    """Return metadata and original metadata as dictionaries in
-    HyperSpy's `DictionaryTreeBrowser` format populated with
-    values from Bruker's h5ebsd implementation.
+    """Return scan metadata dictionaries from a Bruker h5ebsd file.
 
     Parameters
     ----------
@@ -443,43 +457,50 @@ def brukerheader2dicts(scan_group, md, lazy=False):
 
     Returns
     -------
-    md, omd : DictionaryTreeBrowser
+    md : DictionaryTreeBrowser
+        Metadata used in KikuchiPy.
+    omd : DictionaryTreeBrowser
+        All metadata in scan header.
+    scan_size : DictionaryTreeBrowser
+        Information on pattern size, scan size and scan steps.
     """
-    # Get all metadata from file
-    hg = scan_group['EBSD/Header']  # Header group
-    dg = scan_group['EBSD/Data']  # Data group with microscope info
-    omd = DictionaryTreeBrowser({
-        'bruker_header': h5ebsdgroup2dict(hg, recursive=True, lazy=lazy)})
 
-    # Populate dictionary
+    # Get header group and data group as dictionaries
+    hd = h5ebsdgroup2dict(scan_group['EBSD/Header'], recursive=True)
+    dd = h5ebsdgroup2dict(scan_group['EBSD/Data'])
+
+    # Populate metadata dictionary
     sem_node, ebsd_node = metadata_nodes()
-    md.set_item(ebsd_node + '.elevation_angle', hg['CameraTilt'][()])
-    grid_type = hg['Grid Type'][()].decode()
+    md.set_item(ebsd_node + '.elevation_angle', hd['CameraTilt'])
+    grid_type = hd['Grid Type']
     if grid_type == 'isometric':
         md.set_item(ebsd_node + '.grid_type', 'square')
     else:
         raise IOError("Only square grids are supported, however a {} grid was "
                       "passed".format(grid_type))
-    md.set_item(ebsd_node + '.pattern_height', hg['PatternHeight'][()])
-    md.set_item(ebsd_node + '.pattern_width', hg['PatternWidth'][()])
-    md.set_item(ebsd_node + '.sample_tilt', hg['SampleTilt'][()])
-    md.set_item(ebsd_node + '.step_x', hg['XSTEP'][()])
-    md.set_item(ebsd_node + '.step_y', hg['YSTEP'][()])
-    md.set_item(ebsd_node + '.n_rows', hg['NROWS'][()])
-    md.set_item(ebsd_node + '.n_columns', hg['NCOLS'][()])
-    md.set_item(ebsd_node + '.xpc', np.mean(dg['PCX'][()]))
-    md.set_item(ebsd_node + '.ypc', np.mean(dg['PCY'][()]))
-    md.set_item(ebsd_node + '.zpc', np.mean(dg['DD']))
+    md.set_item(ebsd_node + '.sample_tilt', hd['SampleTilt'])
+    md.set_item(ebsd_node + '.xpc', np.mean(dd['PCX']))
+    md.set_item(ebsd_node + '.ypc', np.mean(dd['PCY']))
+    md.set_item(ebsd_node + '.zpc', np.mean(dd['DD']))
     md.set_item(ebsd_node + '.detector_pixel_size',
-                hg['DetectorFullHeightMicrons'][()] /
-                hg['UnClippedPatternHeight'][()])
-    md.set_item(ebsd_node + '.static_background',
-                hg['StaticBackground'][()][0, :, :])
-    md.set_item(sem_node + '.working_distance', hg['WD'][()])
-    md.set_item(sem_node + '.beam_energy', hg['KV'][()])
-    md.set_item(sem_node + '.magnification', hg['Magnification'][()])
+                hd['DetectorFullHeightMicrons'] /
+                hd['UnClippedPatternHeight'])
+    md.set_item(ebsd_node + '.static_background', hd['StaticBackground'])
+    md.set_item(sem_node + '.working_distance', hd['WD'])
+    md.set_item(sem_node + '.beam_energy', hd['KV'])
+    md.set_item(sem_node + '.magnification', hd['Magnification'])
 
-    return md, omd
+    # Populate original metadata dictionary
+    omd = DictionaryTreeBrowser({'bruker_header': hd})
+
+    # Populate scan size dictionary
+    scan_size = dict()
+    scan_size['sx'], scan_size['sy'] = hd['PatternWidth'], hd['PatternHeight']
+    scan_size['nx'], scan_size['ny'] = hd['NCOLS'], hd['NROWS']
+    scan_size['step_x'], scan_size['step_y'] = hd['XSTEP'], hd['YSTEP']
+    scan_size = DictionaryTreeBrowser(scan_size)
+
+    return md, omd, scan_size
 
 
 def file_writer(filename, signal, add_scan=None, scan_number=1,
@@ -502,6 +523,7 @@ def file_writer(filename, signal, add_scan=None, scan_number=1,
     **kwargs :
         Keyword arguments passed to h5py.
     """
+
     # Set manufacturer and version to use in file
     from kikuchipy.version import __version__ as ver_signal
     man_ver_dict = {'manufacturer': 'KikuchiPy', 'version': ver_signal}
@@ -541,13 +563,19 @@ def file_writer(filename, signal, add_scan=None, scan_number=1,
     scan_group = f.create_group('Scan ' + str(scan_number))
 
     # Create scan dictionary with (updated) EBSD and SEM metadata
-    md = signal.metadata
-    nx, ny, sx, sy = signal.axes_manager.shape
+    sx, sy = signal.axes_manager.signal_shape
+    nx, ny = signal.axes_manager.navigation_shape
+    nav_indices = signal.axes_manager.navigation_indices_in_array
+    md = signal.metadata.deepcopy()
     sem_node, ebsd_node = metadata_nodes()
-    md.set_item(ebsd_node + '.n_columns', nx)
-    md.set_item(ebsd_node + '.n_rows', ny)
     md.set_item(ebsd_node + '.pattern_width', sx)
     md.set_item(ebsd_node + '.pattern_height', sy)
+    md.set_item(ebsd_node + '.n_columns', nx)
+    md.set_item(ebsd_node + '.n_rows', ny)
+    md.set_item(ebsd_node + '.step_x',
+                signal.axes_manager[nav_indices[0]].scale)
+    md.set_item(ebsd_node + '.step_y',
+                signal.axes_manager[nav_indices[1]].scale)
     det_str, ebsd_str = ebsd_node.split('.')[-2:]
     md_sem = signal.metadata.get_item(sem_node).copy().as_dictionary()
     md_det = md_sem.pop(det_str)
@@ -582,6 +610,7 @@ def dict2h5ebsdgroup(dictionary, group, **kwargs):
     **kwargs :
         Keyword arguments passed to h5py.
     """
+
     for key, val in dictionary.items():
         ddtype = type(val)
         dshape = (1, )

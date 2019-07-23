@@ -55,10 +55,10 @@ class EBSD(Signal2D):
                                     working_distance=None, binning=None,
                                     detector_pixel_size=None,
                                     exposure_time=None, grid_type=None,
-                                    step_x=None, step_y=None, gain=None,
-                                    frame_number=None, frame_rate=None,
-                                    scan_time=None, beam_energy=None,
-                                    xpc=None, ypc=None, zpc=None,
+                                    gain=None, frame_number=None,
+                                    frame_rate=None, scan_time=None,
+                                    beam_energy=None, xpc=None,
+                                    ypc=None, zpc=None,
                                     static_background=None,
                                     manufacturer=None, version=None,
                                     microscope=None, magnification=None):
@@ -102,10 +102,6 @@ class EBSD(Signal2D):
             Scan time in s.
         static_background : np.ndarray, optional
             Static background pattern.
-        step_x : float, optional
-            Scan step size in fast scan direction (east).
-        step_y : float, optional
-            Scan step size in slow scan direction (south).
         version : str, optional
             Version of software used to collect patterns.
         working_distance : float, optional
@@ -119,6 +115,7 @@ class EBSD(Signal2D):
         zpc : float, optional
             Specimen to scintillator distance.
         """
+
         def _write_params(params, metadata, node):
             for key, val in params.items():
                 if val is not None:
@@ -138,7 +135,6 @@ class EBSD(Signal2D):
                        'grid_type': grid_type,
                        'manufacturer': manufacturer, 'version': version,
                        'sample_tilt': sample_tilt, 'scan_time': scan_time,
-                       'step_x': step_x, 'step_y': step_y,
                        'xpc': xpc, 'ypc': ypc, 'zpc': zpc,
                        'static_background': static_background}, md, ebsd_node)
 
@@ -151,6 +147,7 @@ class EBSD(Signal2D):
             Scan step size in µm per pixel in horizontal, x and
             vertical, y direction.
         """
+
         x, y = self.axes_manager.navigation_axes
         x.name, y.name = ('x', 'y')
         x.scale, y.scale = (step_x, step_y)
@@ -161,19 +158,23 @@ class EBSD(Signal2D):
         md.set_item(ebsd_node + '.step_x', step_x)
         md.set_item(ebsd_node + '.step_y', step_y)
 
-    def set_diffraction_calibration(self, calibration):
-        """Set diffraction pattern pixel size in reciprocal Angstroms.
+    def set_detector_calibration(self, delta):
+        """Set detector pixel size in microns.
         The offset is set to 0 for signal_axes[0] and signal_axes[1].
 
         Parameters
         ----------
-        calibration : float
-            Diffraction pattern calibration in reciprocal Angstroms per
-            pixel.
+        delta : float
+            Detector pixel size in microns.
         """
-        ElectronDiffraction.set_diffraction_calibration(self, calibration)
-        self.axes_manager.signal_axes[0].offset = 0
-        self.axes_manager.signal_axes[1].offset = 0
+
+        centre = np.array(self.axes_manager.signal_shape) / 2 * delta
+        dx, dy = self.axes_manager.signal_axes
+        dx.units, dy.units = (u'\u03BC'+'m', u'\u03BC'+'m')
+        dx.scale = delta
+        dx.offset = -centre[0]
+        dy.scale = delta
+        dy.offset = -centre[1]
 
     def static_background_correction(self, operation='divide',
                                      relative=False, static_bg=None,

@@ -285,7 +285,7 @@ def get_string(content, expression, line_no, file):
         warnings.warn("Failed to read line {} in settings file '{}' using "
                       "regular expression '{}'".format(line_no - 1,
                                                        file.name, expression))
-        return '-1'
+        return 0
     else:
         return match.group(1)
 
