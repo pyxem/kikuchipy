@@ -22,10 +22,10 @@ import warnings
 import time
 import datetime
 import numpy as np
-import dask.array as da
 import matplotlib.pyplot as plt
 from hyperspy.misc.utils import DictionaryTreeBrowser
-from kikuchipy.utils.io_utils import kikuchipy_metadata, metadata_nodes
+from kikuchipy.utils.io_utils import (kikuchipy_metadata, metadata_nodes,
+                                      phase_metadata)
 
 
 # Plugin characteristics
@@ -49,11 +49,11 @@ def file_reader(filename, mmap_mode=None, scan_size=None,
     filename : str
         File path to NORDIF data file.
     mmap_mode : str, optional
-    scan_size : {None, tuple}, optional
+    scan_size : None or tuple, optional
         Scan size in number of patterns in width and height.
-    pattern_size : {None, tuple}, optional
+    pattern_size : None or tuple, optional
         Pattern size in detector pixels in width and height.
-    setting_file : {None, str}, optional
+    setting_file : None or str, optional
         File path to NORDIF setting file (default is Setting.txt in
         same directory as `filename`).
     lazy : bool, optional
@@ -63,6 +63,7 @@ def file_reader(filename, mmap_mode=None, scan_size=None,
     scan : dict
         Data, axes, metadata and original metadata.
     """
+
     if mmap_mode is None:
         mmap_mode = 'r' if lazy else 'c'
 
@@ -85,24 +86,14 @@ def file_reader(filename, mmap_mode=None, scan_size=None,
         setting_file = os.path.join(folder, 'Setting.txt')
     setting_file_exists = os.path.isfile(setting_file)
     if setting_file_exists:
-        md, omd = get_settings_from_file(setting_file)
-        scan_size = (md.get_item(ebsd_node + '.n_columns'),
-                     md.get_item(ebsd_node + '.n_rows'))
-        pattern_size = (md.get_item(ebsd_node + '.pattern_width'),
-                        md.get_item(ebsd_node + '.pattern_height'))
+        md, omd, scan_size_file = get_settings_from_file(setting_file)
+        scan_size = (scan_size_file.nx, scan_size_file.ny)
+        pattern_size = (scan_size_file.sx, scan_size_file.sy)
     else:
         warnings.warn("No setting file found, will attempt to use values for "
                       "scan_size and pattern_size from input arguments.")
         md = kikuchipy_metadata()
         omd = DictionaryTreeBrowser()
-        try:
-            md.set_item(ebsd_node + '.n_columns', scan_size[0])
-            md.set_item(ebsd_node + '.n_rows', scan_size[1])
-            md.set_item(ebsd_node + '.pattern_width', pattern_size[0])
-            md.set_item(ebsd_node + '.pattern_height', pattern_size[1])
-        except (NameError, IndexError):
-            raise IOError("No setting file found, and no scan_size and "
-                          "pattern_size provided in input arguments.")
 
     # Read static background pattern into metadata
     static_bg_file = os.path.join(folder, 'Background acquisition pattern.bmp')
@@ -147,13 +138,13 @@ def file_reader(filename, mmap_mode=None, scan_size=None,
         data = data.reshape((ny, nx, sy, sx))
     scan['data'] = data
 
-    units = [u'\u03BC'+'m', u'\u03BC'+'m', 'A^{-1}', 'A^{-1}']
+    units = np.repeat(u'\u03BC'+'m', 4)
     names = ['y', 'x', 'dy', 'dx']
     scales = np.ones(4)
 
     # Calibrate scan dimension
     try:
-        scales[:2] = scales[:2] * md.get_item(ebsd_node + '.step_x')
+        scales[:2] = scales[:2] * scan_size_file.step_x
     except TypeError:
         warnings.warn("Could not calibrate scan dimensions, this can be done "
                       "using set_scan_calibration()")
@@ -183,14 +174,17 @@ def get_settings_from_file(filename):
         Metadata complying with HyperSpy's metadata structure.
     omd : DictionaryTreeBrowser
         Metadata that does not fit into HyperSpy's metadata structure.
+    scan_size : DictionaryTreeBrowser
+        Information on pattern size, scan size and scan steps.
     """
+
     f = open(filename, 'r', encoding='latin-1')  # Avoid byte strings
     content = f.read().splitlines()
 
     # Get line numbers of setting blocks
     blocks = {'[NORDIF]': -1, '[Microscope]': -1, '[EBSD detector]': -1,
               '[Detector angles]': -1, '[Acquisition settings]': -1,
-              '[Area]': -1}
+              '[Area]': -1, '[Specimen]' : -1}
     for i, line in enumerate(content):
         for block in blocks:
             if block in line:
@@ -201,65 +195,71 @@ def get_settings_from_file(filename):
     l_ang = blocks['[Detector angles]']
     l_acq = blocks['[Acquisition settings]']
     l_area = blocks['[Area]']
+    l_specimen = blocks['[Specimen]']
 
     # Create metadata and original metadata structures
     md = kikuchipy_metadata()
+    sem_node, ebsd_node = metadata_nodes()
     omd = DictionaryTreeBrowser()
     omd.set_item('nordif_header', content)
 
-    # Get values
+    # Get metadata values from settings file using regular expressions
     azimuth_angle = get_string(content, 'Azimuthal\t(.*)\t', l_ang + 4, f)
+    md.set_item(ebsd_node + '.azimuth_angle', float(azimuth_angle))
     beam_energy = get_string(content, 'Accelerating voltage\t(.*)\tkV',
                              l_mic + 5, f)
+    md.set_item(sem_node + '.beam_energy', float(beam_energy))
     detector = get_string(content, 'Model\t(.*)\t', l_det + 1, f)
     detector = re.sub('[^a-zA-Z0-9]', repl='', string=detector)
+    md.set_item(ebsd_node + '.detector', 'NORDIF ' + detector)
     elevation_angle = get_string(content, 'Elevation\t(.*)\t', l_ang + 5, f)
+    md.set_item(ebsd_node + '.elevation_angle', float(elevation_angle))
     exposure_time = get_string(content, 'Exposure time\t(.*)\t', l_acq + 3, f)
+    md.set_item(ebsd_node + '.exposure_time', float(exposure_time) / 1e6)
     frame_rate = get_string(content, 'Frame rate\t(.*)\tfps', l_acq + 1, f)
+    md.set_item(ebsd_node + '.frame_rate', int(frame_rate))
     gain = get_string(content, 'Gain\t(.*)\t', l_acq + 4, f)
+    md.set_item(ebsd_node + '.gain', float(gain))
     magnification = get_string(content, 'Magnification\t(.*)\t#', l_mic + 3, f)
+    md.set_item(sem_node + '.magnification', int(magnification))
     mic_manufacturer = get_string(content, 'Manufacturer\t(.*)\t', l_mic + 1, f)
     mic_model = get_string(content, 'Model\t(.*)\t', l_mic + 2, f)
-    pattern_size = get_string(content, 'Resolution\t(.*)\tpx', l_acq + 2, f)
-    scan_size = get_string(content, 'Number of samples\t(.*)\t#', l_area + 6, f)
-    ny, nx = [int(i) for i in scan_size.split('x')]
-    step_size = get_string(content, 'Step size\t(.*)\t', l_area + 5, f)
+    md.set_item(sem_node + '.microscope', mic_manufacturer + ' ' + mic_model)
     sample_tilt = get_string(content, 'Tilt angle\t(.*)\t', l_mic + 7, f)
+    md.set_item(ebsd_node + '.sample_tilt', float(sample_tilt))
     scan_time = get_string(content, 'Scan time\t(.*)\t', l_area + 7, f)
     scan_time = time.strptime(scan_time, '%H:%M:%S')
     scan_time = datetime.timedelta(hours=scan_time.tm_hour,
                                    minutes=scan_time.tm_min,
                                    seconds=scan_time.tm_sec).total_seconds()
-    sx, sy = [int(i) for i in pattern_size.split('x')]
+    md.set_item(ebsd_node + '.scan_time', int(scan_time))
     version = get_string(content, 'Software version\t(.*)\t', l_nordif + 1, f)
+    md.set_item(ebsd_node + '.version', version)
     working_distance = get_string(content, 'Working distance\t(.*)\tmm',
                                   l_mic + 6, f)
-
-    # Populate metadata
-    sem_node, ebsd_node = metadata_nodes()
-    md.set_item(ebsd_node + '.azimuth_angle', float(azimuth_angle))
-    md.set_item(sem_node + '.beam_energy', float(beam_energy))
-    md.set_item(ebsd_node + '.detector', 'NORDIF ' + detector)
-    md.set_item(ebsd_node + '.elevation_angle', float(elevation_angle))
-    md.set_item(ebsd_node + '.exposure_time', float(exposure_time) / 1e6)
-    md.set_item(ebsd_node + '.frame_rate', int(frame_rate))
-    md.set_item(ebsd_node + '.gain', int(gain))
-    md.set_item(ebsd_node + '.grid_type', 'square')
-    md.set_item(sem_node + '.magnification', int(magnification))
-    md.set_item(ebsd_node + '.manufacturer', 'NORDIF')
-    md.set_item(sem_node + '.microscope', mic_manufacturer + ' ' + mic_model)
-    md.set_item(ebsd_node + '.n_columns', int(nx))
-    md.set_item(ebsd_node + '.n_rows', int(ny))
-    md.set_item(ebsd_node + '.pattern_width', int(sx))
-    md.set_item(ebsd_node + '.pattern_height', int(sy))
-    md.set_item(ebsd_node + '.sample_tilt', float(sample_tilt))
-    md.set_item(ebsd_node + '.scan_time', int(scan_time))
-    md.set_item(ebsd_node + '.step_x', float(step_size))
-    md.set_item(ebsd_node + '.step_y', float(step_size))
-    md.set_item(ebsd_node + '.version', version)
     md.set_item(sem_node + '.working_distance', float(working_distance))
+    md.set_item(ebsd_node + '.grid_type', 'square')
+    md.set_item(ebsd_node + '.manufacturer', 'NORDIF')
+    specimen = get_string(content, 'Name\t(.*)\t', l_specimen + 1, f)
+    pmd = phase_metadata()
+    pmd['material_name'] = specimen
+    md.set_item('Sample.Phases.1', pmd)
 
-    return md, omd
+    # Get scan size values
+    scan_size = DictionaryTreeBrowser()
+    num_samp = get_string(content, 'Number of samples\t(.*)\t#', l_area + 6, f)
+    ny, nx = [int(i) for i in num_samp.split('x')]
+    scan_size.set_item('nx', int(nx))
+    scan_size.set_item('ny', int(ny))
+    pattern_size = get_string(content, 'Resolution\t(.*)\tpx', l_acq + 2, f)
+    sx, sy = [int(i) for i in pattern_size.split('x')]
+    scan_size.set_item('sx', int(sx))
+    scan_size.set_item('sy', int(sy))
+    step_size = get_string(content, 'Step size\t(.*)\t', l_area + 5, f)
+    scan_size.set_item('step_x', float(step_size))
+    scan_size.set_item('step_y', float(step_size))
+
+    return md, omd, scan_size
 
 
 def get_string(content, expression, line_no, file):
@@ -280,6 +280,7 @@ def get_string(content, expression, line_no, file):
     str
         Output string with relevant value.
     """
+
     match = re.search(expression, content[line_no])
     if match is None:
         warnings.warn("Failed to read line {} in settings file '{}' using "
@@ -300,6 +301,7 @@ def file_writer(filename, signal):
     signal : kikuchipy.signals.EBSD or kikuchipy.lazy_signals.LazyEBSD
         Signal instance.
     """
+
     with open(filename, 'wb') as f:
         if signal._lazy:
             for pattern in signal._iterate_signal():

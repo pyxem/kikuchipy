@@ -33,19 +33,38 @@ def kikuchipy_metadata():
     -------
     md : DictionaryTreeBrowser
     """
+
     md = DictionaryTreeBrowser()
     sem_node, ebsd_node = metadata_nodes()
-    ebsd = {'azimuth_angle': -1., 'binning': -1, 'detector': '',
-            'detector_pixel_size': -1., 'elevation_angle': -1.,
-            'exposure_time': -1, 'frame_number': -1, 'frame_rate': -1,
-            'gain': -1., 'grid_type': '', 'manufacturer': '',
-            'sample_tilt': -1., 'scan_time': -1, 'static_background': -1,
-            'version': '', 'xpc': -1., 'ypc': -1., 'zpc': -1.}
-    sem = {'microscope': '', 'magnification': -1, 'beam_energy': -1.,
-           'working_distance': -1.}
+    ebsd = {'azimuth_angle': 1., 'binning': 1, 'detector': '',
+            'elevation_angle': 1., 'exposure_time': 1, 'frame_number': 1,
+            'frame_rate': 1, 'gain': 1., 'grid_type': '', 'manufacturer': '',
+            'sample_tilt': 1., 'scan_time': 1., 'static_background': 1,
+            'version': '', 'xpc': 1., 'ypc': 1., 'zpc': 1.}
+    sem = {'microscope': '', 'magnification': 1, 'beam_energy': 1.,
+           'working_distance': 1.}
     md.set_item(sem_node, sem)
     md.set_item(ebsd_node, ebsd)
     return md
+
+
+def phase_metadata():
+    """Return a dictionary with a default KikuchiPy phase structure.
+
+    Returns
+    -------
+    pd : dictionary
+    """
+
+    pd = {'atom_positions': {'1': {'atom': '', 'coord1': 0, 'coord2': 0,
+                                   'coord3': 0, 'site_occupation': 0,
+                                   'debye_waller_factor': 0}},
+          'formula': '', 'info': '', 'lattice_constant_a': 0.,
+          'lattice_constant_b': 0., 'lattice_constant_c': 0.,
+          'lattice_constant_alpha': 0., 'lattice_constant_beta': 0.,
+          'lattice_constant_gamma': 0., 'laue_group': '', 'material_name': '',
+          'point_group': '', 'symmetry': 0, 'space_group': 0, 'setting': 0}
+    return pd
 
 
 def get_input_bool(question):
@@ -56,6 +75,7 @@ def get_input_bool(question):
     question : str
         Question to ask user.
     """
+
     try:
         answer = input(question)
         answer = answer.lower()
@@ -85,6 +105,7 @@ def get_input_variable(question, var_type):
     var_type : type
         Type of variable to return.
     """
+
     try:
         answer = input(question)
         while type(answer) != var_type:
@@ -116,6 +137,7 @@ def metadata_nodes(sem=True, ebsd=True):
     -------
     sem_node, ebsd_node : str
     """
+
     sem_node = 'Acquisition_instrument.SEM'
     ebsd_node = sem_node + '.Detector.EBSD'
     if sem and ebsd:
