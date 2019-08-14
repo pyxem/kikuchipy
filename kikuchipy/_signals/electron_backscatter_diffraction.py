@@ -21,6 +21,7 @@ import gc
 import numbers
 import datetime
 import tqdm
+import logging
 import numpy as np
 import dask.array as da
 import scipy.ndimage as scn
@@ -35,6 +36,8 @@ from kikuchipy import io
 from kikuchipy.utils.expt_utils import (rescale_pattern_intensity,
                                         equalize_adapthist_pattern)
 from kikuchipy.utils.io_utils import metadata_nodes
+
+_logger = logging.getLogger(__name__)
 
 
 class EBSD(Signal2D):
@@ -53,7 +56,6 @@ class EBSD(Signal2D):
                                     elevation_angle=None,
                                     sample_tilt=None,
                                     working_distance=None, binning=None,
-                                    detector_pixel_size=None,
                                     exposure_time=None, grid_type=None,
                                     gain=None, frame_number=None,
                                     frame_rate=None, scan_time=None,
@@ -75,8 +77,6 @@ class EBSD(Signal2D):
             Camera binning.
         detector : str, optional
             Detector manufacturer and model.
-        detector_pixel_size : float, optional
-            Camera pixel size on the scintillator surface in µm.
         elevation_angle : float, optional
             Elevation angle of the detector in degrees. If the elevation
             is zero, the detector is perpendicular to the incident beam.
@@ -127,7 +127,6 @@ class EBSD(Signal2D):
                        'working_distance': working_distance}, md, sem_node)
         _write_params({'azimuth_angle': azimuth_angle,
                        'binning': binning, 'detector': detector,
-                       'detector_pixel_size': detector_pixel_size,
                        'elevation_angle': elevation_angle,
                        'exposure_time': exposure_time,
                        'frame_number': frame_number,
@@ -151,16 +150,11 @@ class EBSD(Signal2D):
         x, y = self.axes_manager.navigation_axes
         x.name, y.name = ('x', 'y')
         x.scale, y.scale = (step_x, step_y)
-        x.units, y.units = (u'\u03BC'+'m', u'\u03BC'+'m')
-
-        md = self.metadata
-        ebsd_node = metadata_nodes(sem=False)
-        md.set_item(ebsd_node + '.step_x', step_x)
-        md.set_item(ebsd_node + '.step_y', step_y)
+        x.units, y.units = np.repeat(u'\u03BC'+'m', 2)
 
     def set_detector_calibration(self, delta):
-        """Set detector pixel size in microns.
-        The offset is set to 0 for signal_axes[0] and signal_axes[1].
+        """Set detector pixel size in microns. The offset is set to the
+        the detector centre.
 
         Parameters
         ----------
@@ -171,10 +165,8 @@ class EBSD(Signal2D):
         centre = np.array(self.axes_manager.signal_shape) / 2 * delta
         dx, dy = self.axes_manager.signal_axes
         dx.units, dy.units = (u'\u03BC'+'m', u'\u03BC'+'m')
-        dx.scale = delta
-        dx.offset = -centre[0]
-        dy.scale = delta
-        dy.offset = -centre[1]
+        dx.scale, dy.scale = (delta, delta)
+        dx.offset, dy.offset = -centre
 
     def static_background_correction(self, operation='divide',
                                      relative=False, static_bg=None,
@@ -186,11 +178,11 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        operation : {'divide', 'subtract'}, optional
+        operation : 'divide' or 'subtract', optional
             Divide or subtract by static background pattern.
         relative : bool, optional
             Keep relative intensities between patterns.
-        static_bg : {np.ndarray, da.Array, None}, optional
+        static_bg : {np.ndarray, da.Array or None}, optional
             Static background pattern. If not passed we try to read it
             from the signal metadata.
         out_range : dtype or tuple, optional
@@ -229,9 +221,9 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        operation : {'divide', 'subtract'}, optional
+        operation : 'divide' or 'subtract', optional
             Divide or subtract by dynamic background pattern.
-        sigma : {int, float, None}, optional
+        sigma : {int, float or None}, optional
             Standard deviation of the gaussian kernel. If None
             (default), a deviation of pattern width/30 is chosen.
         out_range : dtype or tuple, optional
@@ -290,6 +282,7 @@ class EBSD(Signal2D):
         ``skimage.exposure.equalize_adapthist`` documentation for more
         details.
         """
+
         if self._lazy:
             kwargs['ragged'] = False
 
@@ -316,12 +309,12 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        roi: :obj:`hyperspy.roi.BaseInteractiveROI`
+        roi: hyperspy.roi.BaseInteractiveROI
             Any interactive ROI detailed in HyperSpy.
 
         Returns
         -------
-        dark_field_sum: :obj:`hyperspy._signals.BaseSignal`
+        dark_field_sum: hyperspy.signals.BaseSignal
             The virtual image signal associated with the specified roi.
 
         Examples
@@ -343,7 +336,7 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        roi: :obj:`hyperspy.roi.BaseInteractiveROI`
+        roi: hyperspy.roi.BaseInteractiveROI
             Any interactive ROI detailed in HyperSpy.
         **kwargs:
             Keyword arguments to be passed to `ElectronDiffraction.plot`
@@ -357,6 +350,7 @@ class EBSD(Signal2D):
                 bottom=20)
             s.plot_interactive_virtual_image(roi)
         """
+
         return ElectronDiffraction.plot_interactive_virtual_image(self, roi,
                                                                   **kwargs)
 
@@ -395,6 +389,7 @@ class EBSD(Signal2D):
         **kwargs :
             Keyword arguments passed to writer.
         """
+
         if filename is None:
             if (self.tmp_parameters.has_item('filename') and
                     self.tmp_parameters.has_item('folder')):
@@ -442,8 +437,9 @@ class EBSD(Signal2D):
 
         Returns
         -------
-        s_model : {kikuchipy.signals.EBSD, kikuchipy.signals.LazyEBSD}
+        s_model : kikuchipy.signals.EBSD or kikuchipy.signals.LazyEBSD
         """
+
         # Change dtype
         target = self.learning_results
         factors_orig = target.factors.copy()  # Keep to revert target in the end
@@ -471,7 +467,7 @@ class EBSD(Signal2D):
             self.learning_results.loadings = loadings.rechunk(chunks=chunks[1])
 
         # Call HyperSpy's function
-        s_model = super(Signal2D, self).get_decomposition_model(*args, **kwargs)
+        s_model = super().get_decomposition_model(*args, **kwargs)
 
         # Revert learning results to original results
         self.learning_results.factors = factors_orig
@@ -489,9 +485,34 @@ class EBSD(Signal2D):
 
         return s_model
 
-    def decomposition(self, *args, **kwargs):
-        super().decomposition(*args, **kwargs)
+    def decomposition(self, normalize_poissonian_noise=False,
+                      algorithm='svd', output_dimension=None,
+                      centre=None, auto_transpose=True,
+                      navigation_mask=None, signal_mask=None,
+                      var_array=None, var_func=None,
+                      polyfit=None, reproject=None, return_info=False, *args,
+                      **kwargs):
+        super().decomposition(normalize_poissonian_noise, algorithm,
+                              output_dimension, centre, auto_transpose,
+                              navigation_mask, signal_mask, var_array, var_func,
+                              polyfit, reproject, return_info, *args, **kwargs)
         self.__class__ = EBSD
+
+    def rebin(self, new_shape=None, scale=None, crop=True, out=None):
+        out = super().rebin(new_shape=new_shape, scale=scale, crop=crop,
+                            out=out)
+        _logger.info("Rebinning changed data type to {}".format(out.data.dtype))
+
+        # Update binning in metadata
+        md = out.metadata
+        ebsd_node = metadata_nodes(sem=False)
+        if scale is None:
+            sx = self.axes_manager.signal_shape[0]
+            scale = [sx / new_shape[2]]
+        old_binning = md.get_item(ebsd_node + '.binning')
+        md.set_item(ebsd_node + '.binning', scale[2] * old_binning)
+
+        return out
 
 
 class LazyEBSD(EBSD, LazySignal2D):
@@ -512,6 +533,7 @@ class LazyEBSD(EBSD, LazySignal2D):
             array data if any. Note that closing the file will make all
             other associated lazy signals inoperative.
         """
+
         if progressbar:
             cm = ProgressBar
         else:
@@ -524,9 +546,6 @@ class LazyEBSD(EBSD, LazySignal2D):
             self.data = data
         self._lazy = False
         self.__class__ = EBSD
-
-        # Collect garbage (coming from where?)
-        gc.collect()
 
     def get_decomposition_model_write(self, components=None,
                                       dtype_learn=np.float16,
@@ -552,7 +571,7 @@ class LazyEBSD(EBSD, LazySignal2D):
             If int, rebuilds signal from components in range 0-given
             int. If list of ints, rebuilds signal from only components
             in given list.
-        dtype_learn : {np.float16, np.float32, np.float64}, optional
+        dtype_learn : {np.float16, np.float32 or np.float64}, optional
             Data type to set learning results to (default is float16).
         mbytes_chunk : int, optional
             Size of learning results chunks in MB, default is 100 MB as
@@ -562,6 +581,7 @@ class LazyEBSD(EBSD, LazySignal2D):
         out_fname : str, optional
             Name of output signal file.
         """
+
         # Change dtype
         target = self.learning_results
         factors = np.array(target.factors, dtype=dtype_learn)
@@ -642,6 +662,7 @@ class LazyEBSD(EBSD, LazySignal2D):
             The first/second tuple are suggested chunks to pass to
             ``dask.array.rechunk`` for factors/loadings, respectively.
         """
+
         target = self.learning_results
         if target.decomposition_algorithm is None:
             raise ValueError("No learning results were found.")
@@ -698,7 +719,7 @@ class LazyEBSD(EBSD, LazySignal2D):
         normalize_poissonian_noise : bool
             If True (default is False), scale the patterns to normalise
             Poissonian noise.
-        algorithm : {'svd', 'IPCA', 'PCA', 'ORPCA', 'ONMF'}, optional
+        algorithm : {'svd', 'IPCA', 'PCA', 'ORPCA' or 'ONMF'}, optional
             Default is 'svd', lazy SVD decomposition from dask. 'PCA'
             gives HyperSpy's use of scikit-learn's IncrementalPCA,
             while 'IPCA' gives our use of IncrementalPCA.
@@ -708,8 +729,7 @@ class LazyEBSD(EBSD, LazySignal2D):
         mbytes_chunk : int, optional
             Size of chunks in MB, default is 100 MB as suggested in the
             Dask documentation.
-        navigation_mask : boolean array_like
-        signal_mask : boolean array_like
+        navigation_mask, signal_mask : boolean array_like
         *args :
             Arguments to be passed to ``decomposition()``.
         **kwargs :
@@ -719,6 +739,7 @@ class LazyEBSD(EBSD, LazySignal2D):
         -------
         The results are stored in self.learning_results.
         """
+
         if self.data.dtype.char not in ['e', 'f', 'd']:  # If not float
             raise TypeError("To perform a decomposition the data must be of "
                             "float type, but the current type is '{}'. No "
@@ -790,7 +811,9 @@ class LazyEBSD(EBSD, LazySignal2D):
                 target.loadings = target.loadings * raG.ravel()[:, np.newaxis]
 
         else:  # Call HyperSpy's implementation
-            super().decomposition(*args, **kwargs)
+            super().decomposition(normalize_poissonian_noise, algorithm,
+                                  output_dimension, navigation_mask,
+                                  signal_mask, *args, **kwargs)
 
         self.__class__ = LazyEBSD
 
@@ -802,8 +825,7 @@ class LazyEBSD(EBSD, LazySignal2D):
 
         Parameters
         ----------
-        navigation_mask : boolean array_like
-        signal_mask : boolean array_like
+        navigation_mask, signal_mask : boolean array_like
 
         Returns
         -------
@@ -821,6 +843,7 @@ class LazyEBSD(EBSD, LazySignal2D):
                images, Surface and Interface Analysis 36(3), Wiley
                Online Library, 203–212, 2004.
         """
+
         from hyperspy._signals.lazy import to_array
         data = self._data_aligned_with_axes
         ndim = self.axes_manager.navigation_dimension
