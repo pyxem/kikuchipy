@@ -626,7 +626,7 @@ def file_writer(filename, signal, add_scan=None, scan_number=1,
     man_pats = manufacturer_pattern_names()
     dset_pattern_name = man_pats['KikuchiPy']
     overwrite_dataset(scan_group.create_group('EBSD/Data'),
-                      signal.data.reshape(nx * ny, sx, sy),
+                      signal.data.reshape(nx * ny, sy, sx),
                       dset_pattern_name, signal_axes=(2, 1), **kwargs)
     nx_start, nx_stop, ny_start, ny_stop = signal.axes_manager.navigation_extent
     sample_pos = {'x_sample': np.tile(np.linspace(nx_start, nx_stop, nx), ny),
