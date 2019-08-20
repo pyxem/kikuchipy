@@ -25,7 +25,8 @@ import dask.array as da
 from hyperspy.misc.utils import DictionaryTreeBrowser
 from hyperspy.io_plugins.hspy import overwrite_dataset, get_signal_chunks
 from kikuchipy.utils.io_utils import (kikuchipy_metadata, get_input_variable,
-                                      metadata_nodes, phase_metadata)
+                                      metadata_nodes)
+from kikuchipy.utils.phase_utils import phase_metadata, update_phase_info
 
 _logger = logging.getLogger(__name__)
 
@@ -371,26 +372,29 @@ def kikuchipyheader2dicts(scan_group, md, lazy=False):
     md, omd, scan_size : DictionaryTreeBrowser
     """
 
+    from kikuchipy.utils.general_utils import (delete_from_nested_dictionary,
+                                               get_nested_dictionary)
+
     omd = DictionaryTreeBrowser()
     sem_node, ebsd_node = metadata_nodes()
     md.set_item(ebsd_node, h5ebsdgroup2dict(scan_group['EBSD/Header'],
                                             lazy=lazy))
+    md = delete_from_nested_dictionary(md, 'Phases')
+    phase_node = 'Sample.Phases'
     md.set_item(sem_node, h5ebsdgroup2dict(scan_group['SEM/Header'], lazy=lazy))
+    md.set_item(phase_node, h5ebsdgroup2dict(scan_group['EBSD/Header/Phases'],
+                                             recursive=True))
 
-    # Remove scan info values from metadata
+    # Get and remove scan info values from metadata
+    mapping = {'sx': 'pattern_height', 'sy': 'pattern_width', 'nx': 'n_columns',
+               'ny': 'n_rows', 'step_x': 'step_x', 'step_y': 'step_y',
+               'delta': 'detector_pixel_size'}
     scan_size = DictionaryTreeBrowser()
-    enl = ebsd_node.split('.')
-    md = md.as_dictionary()
-    md_ebsd = md[enl[0]][enl[1]][enl[2]][enl[3]]
-    scan_size.set_item('sx', md_ebsd.pop('pattern_width'))
-    scan_size.set_item('sy', md_ebsd.pop('pattern_height'))
-    scan_size.set_item('nx', md_ebsd.pop('n_columns'))
-    scan_size.set_item('ny', md_ebsd.pop('n_rows'))
-    scan_size.set_item('step_x', md_ebsd.pop('step_x'))
-    scan_size.set_item('step_y', md_ebsd.pop('step_y'))
-    scan_size.set_item('delta', md_ebsd.pop('detector_pixel_size'))
+    for k, v in mapping.items():
+        scan_size.set_item(k, get_nested_dictionary(md, ebsd_node + '.' + v))
+    md = delete_from_nested_dictionary(md, mapping.values())
 
-    return DictionaryTreeBrowser(md), omd, scan_size
+    return md, omd, scan_size
 
 
 def tslheader2dicts(scan_group, md):
@@ -431,17 +435,14 @@ def tslheader2dicts(scan_group, md):
     if 'SEM-PRIAS Images' in scan_group.keys():
         md.set_item(sem_node + '.magnification',
                     scan_group['SEM-PRIAS Images/Header/Mag'][0])
-    # Loop over phases in group
-    md.add_node('Sample.Phases')
+    # Loop over phases in group and add to metadata
     for phase_no, phase in hd['Phase'].items():
         phase['material_name'] = phase['MaterialName']
-        [phase.pop(i) for i in ['hkl Families', 'NumberFamilies',
-                                'MaterialName']]
-        phase = {key.lower().replace(' ', '_'): value
-                 for key, value in phase.items()}
-        pmd = phase_metadata()
-        pmd.update(phase)  # Overwrite default values
-        md.Sample.Phases.add_dictionary({phase_no: pmd})
+        phase['lattice_constants'] = [
+            phase['Lattice Constant a'], phase['Lattice Constant b'],
+            phase['Lattice Constant c'], phase['Lattice Constant alpha'],
+            phase['Lattice Constant beta'], phase['Lattice Constant gamma']]
+        md = update_phase_info(md, phase, phase_no)
 
     # Populate original metadata dictionary
     omd = DictionaryTreeBrowser({'tsl_header': hd})
@@ -496,25 +497,17 @@ def brukerheader2dicts(scan_group, md):
     md.set_item(sem_node + '.beam_energy', hd['KV'])
     md.set_item(sem_node + '.magnification', hd['Magnification'])
     # Loop over phases
-    md.add_node('Sample.Phases')
     for phase_no, phase in hd['Phases'].items():
-        pmd = phase_metadata()
-        pmd['material_name'] = phase['Name']
-        pmd['setting'] = phase['Setting']
-        pmd['formula'] = phase['Formula']
-        pmd['space_group'] = phase['IT']
-        (pmd['lattice_constant_a'], pmd['lattice_constant_b'],
-         pmd['lattice_constant_c'], pmd['lattice_constant_alpha'],
-         pmd['lattice_constant_beta'],
-         pmd['lattice_constant_gamma']) = phase['LatticeConstants']
-        atom_keys = list(pmd['atom_positions']['1'].keys())
-        pmd['atom_positions'].pop('1')
-        for atom_no, atom in phase['AtomPositions'].items():
-            atom = atom.split(',')  # Make list from string
-            atom[1:] = list(map(float, atom[1:]))  # Numbers as float, not str
-            pmd['atom_positions'][atom_no] = {atom_keys[i]: atom[i]
-                                              for i in range(len(atom_keys))}
-        md.Sample.Phases.add_dictionary({phase_no: pmd})
+        phase['material_name'] = phase['Name']
+        phase['space_group'] = phase['IT']
+        phase['atom_coordinates'] = {}
+        for key, val in phase['AtomPositions'].items():
+            atom = val.split(',')
+            atom[1:] = list(map(float, atom[1:]))
+            phase['atom_coordinates'][key] = {
+                'atom': atom[0], 'coordinates': atom[1:4],
+                'site_occupation': atom[4], 'debye_waller_factor': atom[5]}
+        md = update_phase_info(md, phase, phase_no)
 
     # Populate original metadata dictionary
     omd = DictionaryTreeBrowser({'bruker_header': hd})
@@ -615,7 +608,15 @@ def file_writer(filename, signal, add_scan=None, scan_number=1,
     md_sem = md.get_item(sem_node).copy().as_dictionary()  # SEM node as dict
     md_det = md_sem.pop(det_str)  # Remove/assign detector node from SEM node
     md_ebsd = md_det.pop(ebsd_str)
-    md_ebsd['Phases'] = md.Sample.Phases.as_dictionary()  # Phases in metadata
+    # Phases
+    if md.get_item('Sample.Phases') is None:
+        md = update_phase_info(md, phase_metadata())  # Add default phase
+    md_ebsd['Phases'] = md.Sample.Phases.as_dictionary()
+    for phase in md_ebsd['Phases'].keys():  # Ensure coordinates are arrays
+        atom_coordinates = md_ebsd['Phases'][phase]['atom_coordinates']
+        for atom in atom_coordinates.keys():
+            atom_coordinates[atom]['coordinates'] = np.array(
+                atom_coordinates[atom]['coordinates'])
     scan = {'EBSD': {'Header': md_ebsd}, 'SEM': {'Header': md_sem}}
 
     # Write scan dictionary to HDF groups
@@ -651,7 +652,6 @@ def dict2h5ebsdgroup(dictionary, group, **kwargs):
     """
 
     for key, val in dictionary.items():
-        print(val)
         ddtype = type(val)
         dshape = (1, )
         written = False

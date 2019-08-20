@@ -24,8 +24,8 @@ import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 from hyperspy.misc.utils import DictionaryTreeBrowser
-from kikuchipy.utils.io_utils import (kikuchipy_metadata, metadata_nodes,
-                                      phase_metadata)
+from kikuchipy.utils.io_utils import kikuchipy_metadata, metadata_nodes
+from kikuchipy.utils.phase_utils import phase_metadata
 
 
 # Plugin characteristics

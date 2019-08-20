@@ -29,13 +29,14 @@ from h5py import File
 from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
-from pyxem.signals.electron_diffraction import ElectronDiffraction
+from pyxem.signals.electron_diffraction2d import ElectronDiffraction2D
 from dask.diagnostics import ProgressBar
-from hyperspy.misc.utils import dummy_context_manager
+from hyperspy.misc.utils import (dummy_context_manager, DictionaryTreeBrowser)
 from kikuchipy import io
 from kikuchipy.utils.expt_utils import (rescale_pattern_intensity,
                                         equalize_adapthist_pattern)
-from kikuchipy.utils.io_utils import metadata_nodes
+from kikuchipy.utils.io_utils import (metadata_nodes, kikuchipy_metadata)
+from kikuchipy.utils.phase_utils import update_phase_info
 
 _logger = logging.getLogger(__name__)
 
@@ -46,10 +47,21 @@ class EBSD(Signal2D):
     _lazy = False
 
     def __init__(self, *args, **kwargs):
+        """Create an EBSD object from a hyperspy.signals.Signal2D or a
+        numpy array."""
+
         if self._lazy and args:
             Signal2D.__init__(self, data=args[0], **kwargs)
         else:
             Signal2D.__init__(self, *args, **kwargs)
+
+        # Update metadata if object is initialised from numpy array
+        if not self.metadata.has_item(metadata_nodes(sem=False)):
+            md = self.metadata.as_dictionary()
+            md.update(kikuchipy_metadata().as_dictionary())
+            self.metadata = DictionaryTreeBrowser(md)
+        if not self.metadata.has_item('Sample.Phases'):
+            self.set_phase_parameters()
 
     def set_experimental_parameters(self, detector=None,
                                     azimuth_angle=None,
@@ -106,36 +118,85 @@ class EBSD(Signal2D):
             Version of software used to collect patterns.
         working_distance : float, optional
             Working distance in mm.
-        xpc : float, optional
-            Pattern centre horizontal coordinate with respect to
-            detector centre.
-        ypc : float, optional
-            Pattern centre horizontal coordinate with respect to
-            detector centre.
+        xpc, ypc : float, optional
+            Pattern centre horizontal and vertical coordinate with
+            respect to detector centre.
         zpc : float, optional
             Specimen to scintillator distance.
         """
 
-        def _write_params(params, metadata, node):
-            for key, val in params.items():
-                if val is not None:
-                    metadata.set_item(node + '.' + key, val)
+        from kikuchipy.utils.general_utils import \
+            write_parameters_to_dictionary
+
         md = self.metadata
         sem_node, ebsd_node = metadata_nodes()
-        _write_params({'beam_energy': beam_energy,
-                       'magnification': magnification, 'microscope': microscope,
-                       'working_distance': working_distance}, md, sem_node)
-        _write_params({'azimuth_angle': azimuth_angle,
-                       'binning': binning, 'detector': detector,
-                       'elevation_angle': elevation_angle,
-                       'exposure_time': exposure_time,
-                       'frame_number': frame_number,
-                       'frame_rate': frame_rate, 'gain': gain,
-                       'grid_type': grid_type,
-                       'manufacturer': manufacturer, 'version': version,
-                       'sample_tilt': sample_tilt, 'scan_time': scan_time,
-                       'xpc': xpc, 'ypc': ypc, 'zpc': zpc,
-                       'static_background': static_background}, md, ebsd_node)
+        write_parameters_to_dictionary(
+            {'beam_energy': beam_energy, 'magnification': magnification,
+             'microscope': microscope, 'working_distance': working_distance},
+            md, sem_node)
+        write_parameters_to_dictionary(
+            {'azimuth_angle': azimuth_angle, 'binning': binning,
+             'detector': detector, 'elevation_angle': elevation_angle,
+             'exposure_time': exposure_time, 'frame_number': frame_number,
+             'frame_rate': frame_rate, 'gain': gain, 'grid_type': grid_type,
+             'manufacturer': manufacturer, 'version': version,
+             'sample_tilt': sample_tilt, 'scan_time': scan_time, 'xpc': xpc,
+             'ypc': ypc, 'zpc': zpc, 'static_background': static_background},
+            md, ebsd_node)
+
+    def set_phase_parameters(self, number=1, atom_coordinates=None,
+                             formula=None, info=None,
+                             lattice_constants=None,
+                             laue_group=None, material_name=None,
+                             point_group=None, setting=None,
+                             space_group=None, symmetry=None):
+        """Set parameters for one phase in metadata, using the
+        International Tables for Crystallography, Volume A. A phase node
+        with default values is created if none is present in the
+        metadata.
+
+        Parameters
+        ----------
+        number : int, optional
+            Phase number.
+        atom_coordinates : dict, optional
+            Dictionary of dictionaries one or more of the atoms in the
+            unit cell, on the form {'1': {'atom': 'Ni', 'coordinates':
+            [0, 0, 0], 'site_occupation': 1, 'debye_waller_factor': 0},
+            '2': {'atom': 'O',... etc. `debye_waller_factor` in units of
+            nm^2, `site_occupation` in range [0, 1].
+        formula : str, optional
+            Phase formula, e.g. Fe2 or Ni.
+        info : str, optional
+            Whatever phase info the user finds relevant.
+        lattice_constants : array_like of floats, optional
+            Six lattice constants a, b, c, alpha, beta, gamma.
+        laue_group : str, optional
+        material_name : str, optional
+        point_group : str, optional
+        setting : int, optional
+            Space group's origin setting.
+        space_group : int, optional
+            Number between 1 and 230.
+        symmetry : int, optional
+        """
+
+        # Ensure atom coordinates are numpy arrays
+        if atom_coordinates is not None:
+            for phase, val in atom_coordinates.items():
+                atom_coordinates[phase]['coordinates'] = np.array(
+                    atom_coordinates[phase]['coordinates']
+                )
+
+        inputs = {'atom_coordinates': atom_coordinates, 'formula': formula,
+                  'info': info, 'lattice_constants': lattice_constants,
+                  'laue_group': laue_group, 'material_name': material_name,
+                  'point_group': point_group, 'setting': setting,
+                  'space_group': space_group, 'symmetry': symmetry}
+
+        # Remove None values
+        phase = {k: v for k, v in inputs.items() if v is not None}
+        update_phase_info(self.metadata, phase, number)
 
     def set_scan_calibration(self, step_x=1., step_y=1.):
         """Set the step size in µm.
@@ -304,7 +365,7 @@ class EBSD(Signal2D):
 
     def get_virtual_image(self, roi):
         """Method imported from
-        pyXem.ElectronDiffraction.get_virtual_image(self, roi). Obtains
+        pyxem.signals.ElectronDiffraction2D.get_virtual_image. Obtains
         a virtual image associated with a specified ROI.
 
         Parameters
@@ -326,7 +387,7 @@ class EBSD(Signal2D):
                 bottom=20)
             s.get_virtual_image(roi)
         """
-        return ElectronDiffraction.get_virtual_image(self, roi)
+        return ElectronDiffraction2D.get_virtual_image(self, roi)
 
     def plot_interactive_virtual_image(self, roi, **kwargs):
         """Method imported from
@@ -351,8 +412,8 @@ class EBSD(Signal2D):
             s.plot_interactive_virtual_image(roi)
         """
 
-        return ElectronDiffraction.plot_interactive_virtual_image(self, roi,
-                                                                  **kwargs)
+        return ElectronDiffraction2D.plot_interactive_virtual_image(self, roi,
+                                                                    **kwargs)
 
     def save(self, filename=None, overwrite=None, extension=None,
              **kwargs):
