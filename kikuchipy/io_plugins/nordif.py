@@ -25,7 +25,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from hyperspy.misc.utils import DictionaryTreeBrowser
 from kikuchipy.utils.io_utils import kikuchipy_metadata, metadata_nodes
-from kikuchipy.utils.phase_utils import phase_metadata
+from kikuchipy.utils.phase_utils import _phase_metadata
 
 
 # Plugin characteristics
@@ -241,7 +241,7 @@ def get_settings_from_file(filename):
     md.set_item(ebsd_node + '.grid_type', 'square')
     md.set_item(ebsd_node + '.manufacturer', 'NORDIF')
     specimen = get_string(content, 'Name\t(.*)\t', l_specimen + 1, f)
-    pmd = phase_metadata()
+    pmd = _phase_metadata()
     pmd['material_name'] = specimen
     md.set_item('Sample.Phases.1', pmd)
 

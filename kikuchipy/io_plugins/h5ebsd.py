@@ -26,7 +26,7 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 from hyperspy.io_plugins.hspy import overwrite_dataset, get_signal_chunks
 from kikuchipy.utils.io_utils import (kikuchipy_metadata, get_input_variable,
                                       metadata_nodes)
-from kikuchipy.utils.phase_utils import phase_metadata, update_phase_info
+from kikuchipy.utils.phase_utils import _phase_metadata, _update_phase_info
 
 _logger = logging.getLogger(__name__)
 
@@ -386,7 +386,7 @@ def kikuchipyheader2dicts(scan_group, md, lazy=False):
                                              recursive=True))
 
     # Get and remove scan info values from metadata
-    mapping = {'sx': 'pattern_height', 'sy': 'pattern_width', 'nx': 'n_columns',
+    mapping = {'sx': 'pattern_width', 'sy': 'pattern_height', 'nx': 'n_columns',
                'ny': 'n_rows', 'step_x': 'step_x', 'step_y': 'step_y',
                'delta': 'detector_pixel_size'}
     scan_size = DictionaryTreeBrowser()
@@ -442,7 +442,7 @@ def tslheader2dicts(scan_group, md):
             phase['Lattice Constant a'], phase['Lattice Constant b'],
             phase['Lattice Constant c'], phase['Lattice Constant alpha'],
             phase['Lattice Constant beta'], phase['Lattice Constant gamma']]
-        md = update_phase_info(md, phase, phase_no)
+        md = _update_phase_info(md, phase, phase_no)
 
     # Populate original metadata dictionary
     omd = DictionaryTreeBrowser({'tsl_header': hd})
@@ -507,7 +507,7 @@ def brukerheader2dicts(scan_group, md):
             phase['atom_coordinates'][key] = {
                 'atom': atom[0], 'coordinates': atom[1:4],
                 'site_occupation': atom[4], 'debye_waller_factor': atom[5]}
-        md = update_phase_info(md, phase, phase_no)
+        md = _update_phase_info(md, phase, phase_no)
 
     # Populate original metadata dictionary
     omd = DictionaryTreeBrowser({'bruker_header': hd})
@@ -610,7 +610,7 @@ def file_writer(filename, signal, add_scan=None, scan_number=1,
     md_ebsd = md_det.pop(ebsd_str)
     # Phases
     if md.get_item('Sample.Phases') is None:
-        md = update_phase_info(md, phase_metadata())  # Add default phase
+        md = _update_phase_info(md, _phase_metadata())  # Add default phase
     md_ebsd['Phases'] = md.Sample.Phases.as_dictionary()
     for phase in md_ebsd['Phases'].keys():  # Ensure coordinates are arrays
         atom_coordinates = md_ebsd['Phases'][phase]['atom_coordinates']
