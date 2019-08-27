@@ -337,7 +337,7 @@ class EBSD(Signal2D):
         the `static_bg` parameter.
         """
 
-        dtype_out = self.data.dtype
+        dtype_out = self.data.dtype.type
 
         # Set up background pattern
         if not isinstance(static_bg, (np.ndarray, da.Array)):
@@ -405,7 +405,7 @@ class EBSD(Signal2D):
                 sigma=2.0)
         """
 
-        dtype_out = self.data.dtype
+        dtype_out = self.data.dtype.type
         dtype = np.int16
         dask_array = kpud._get_dask_array(signal=self, dtype=dtype)
 
@@ -437,7 +437,8 @@ class EBSD(Signal2D):
             Keep relative intensities between patterns, default is
             False.
         dtype_out : np.dtype, optional
-            Data type of rescaled patterns.
+            Data type of rescaled patterns, default is input patterns'
+            data type.
 
         See Also
         --------
@@ -477,7 +478,7 @@ class EBSD(Signal2D):
             imin, imax = None, None
 
         # Rescale patterns and overwrite signal patterns
-        dask_array = kpud._get_dask_array(signal=self, dtype=dtype_out)
+        dask_array = kpud._get_dask_array(signal=self)
         rescaled_patterns = da.map_blocks(
             kpue._rescale_pattern_chunk, dask_array, imin, imax, dtype_out)
         if not self._lazy:

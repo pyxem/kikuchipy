@@ -18,7 +18,7 @@
 
 import numpy as np
 import dask.array as da
-from skimage.util import img_as_uint, img_as_float
+from skimage.util import img_as_uint
 from skimage.exposure import rescale_intensity
 from skimage.exposure._adapthist import _clahe
 
