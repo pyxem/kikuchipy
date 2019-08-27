@@ -18,25 +18,30 @@
 
 import os
 import gc
-import numbers
 import datetime
 import tqdm
 import logging
 import numpy as np
 import dask.array as da
-import scipy.ndimage as scn
+import numbers
+from dask.diagnostics import ProgressBar
+import warnings
+from sklearn.decomposition import IncrementalPCA
+from scipy.ndimage import gaussian_filter
 from h5py import File
 from hyperspy.signals import Signal2D
-from hyperspy._lazy_signals import LazySignal2D
+from hyperspy._lazy_signals import LazySignal, LazySignal2D
+from hyperspy._signals.lazy import to_array
 from hyperspy.learn.mva import LearningResults
+from hyperspy.misc.utils import DictionaryTreeBrowser
+from hyperspy.misc.array_tools import rebin
 from pyxem.signals.electron_diffraction2d import ElectronDiffraction2D
-from dask.diagnostics import ProgressBar
-from hyperspy.misc.utils import (dummy_context_manager, DictionaryTreeBrowser)
-from kikuchipy import io
-from kikuchipy.utils.expt_utils import (rescale_pattern_intensity,
-                                        equalize_adapthist_pattern)
-from kikuchipy.utils.io_utils import (metadata_nodes, kikuchipy_metadata)
-from kikuchipy.utils.phase_utils import update_phase_info
+import kikuchipy.io as kpio
+import kikuchipy.utils.io_utils as kpui
+import kikuchipy.utils.phase_utils as kpup
+import kikuchipy.utils.general_utils as kpug
+import kikuchipy.utils.expt_utils as kpue
+import kikuchipy.utils.dask_utils as kpud
 
 _logger = logging.getLogger(__name__)
 
@@ -56,26 +61,22 @@ class EBSD(Signal2D):
             Signal2D.__init__(self, *args, **kwargs)
 
         # Update metadata if object is initialised from numpy array
-        if not self.metadata.has_item(metadata_nodes(sem=False)):
+        if not self.metadata.has_item(kpui.metadata_nodes(sem=False)):
             md = self.metadata.as_dictionary()
-            md.update(kikuchipy_metadata().as_dictionary())
+            md.update(kpui.kikuchipy_metadata().as_dictionary())
             self.metadata = DictionaryTreeBrowser(md)
         if not self.metadata.has_item('Sample.Phases'):
             self.set_phase_parameters()
 
-    def set_experimental_parameters(self, detector=None,
-                                    azimuth_angle=None,
-                                    elevation_angle=None,
-                                    sample_tilt=None,
-                                    working_distance=None, binning=None,
-                                    exposure_time=None, grid_type=None,
-                                    gain=None, frame_number=None,
-                                    frame_rate=None, scan_time=None,
-                                    beam_energy=None, xpc=None,
-                                    ypc=None, zpc=None,
-                                    static_background=None,
-                                    manufacturer=None, version=None,
-                                    microscope=None, magnification=None):
+    def set_experimental_parameters(
+            self, detector=None, azimuth_angle=None,
+            elevation_angle=None, sample_tilt=None,
+            working_distance=None, binning=None, exposure_time=None,
+            grid_type=None, gain=None, frame_number=None,
+            frame_rate=None, scan_time=None, beam_energy=None, xpc=None,
+            ypc=None, zpc=None, static_background=None,
+            manufacturer=None, version=None, microscope=None,
+            magnification=None):
         """Set experimental parameters in metadata.
 
         Parameters
@@ -123,18 +124,29 @@ class EBSD(Signal2D):
             respect to detector centre.
         zpc : float, optional
             Specimen to scintillator distance.
+
+        See Also
+        --------
+        set_phase_parameters
+
+        Examples
+        --------
+        >>> import kikuchipy as kp
+        >>> ebsd_node = kp.utils.io_utils.metadata_nodes(sem=False)
+        >>> print(s.metadata.get_item(ebsd_node + '.xpc')
+        1.0
+        >>> s.set_experimental_parameters(xpc=0.50726)
+        >>> print(s.metadata.get_item(ebsd_node + '.xpc'))
+        0.50726
         """
 
-        from kikuchipy.utils.general_utils import \
-            write_parameters_to_dictionary
-
         md = self.metadata
-        sem_node, ebsd_node = metadata_nodes()
-        write_parameters_to_dictionary(
+        sem_node, ebsd_node = kpui.metadata_nodes()
+        kpug.write_parameters_to_dictionary(
             {'beam_energy': beam_energy, 'magnification': magnification,
              'microscope': microscope, 'working_distance': working_distance},
             md, sem_node)
-        write_parameters_to_dictionary(
+        kpug.write_parameters_to_dictionary(
             {'azimuth_angle': azimuth_angle, 'binning': binning,
              'detector': detector, 'elevation_angle': elevation_angle,
              'exposure_time': exposure_time, 'frame_number': frame_number,
@@ -144,12 +156,11 @@ class EBSD(Signal2D):
              'ypc': ypc, 'zpc': zpc, 'static_background': static_background},
             md, ebsd_node)
 
-    def set_phase_parameters(self, number=1, atom_coordinates=None,
-                             formula=None, info=None,
-                             lattice_constants=None,
-                             laue_group=None, material_name=None,
-                             point_group=None, setting=None,
-                             space_group=None, symmetry=None):
+    def set_phase_parameters(
+            self, number=1, atom_coordinates=None, formula=None,
+            info=None, lattice_constants=None, laue_group=None,
+            material_name=None, point_group=None, setting=None,
+            space_group=None, symmetry=None):
         """Set parameters for one phase in metadata, using the
         International Tables for Crystallography, Volume A. A phase node
         with default values is created if none is present in the
@@ -179,6 +190,30 @@ class EBSD(Signal2D):
         space_group : int, optional
             Number between 1 and 230.
         symmetry : int, optional
+
+        See Also
+        --------
+        set_experimental_parameters
+
+        Examples
+        --------
+        >>> print(s.metadata.Sample.Phases.Number_1.atom_coordinates.\
+                Number_1)
+        ├── atom =
+        ├── coordinates = array([0., 0., 0.])
+        ├── debye_waller_factor = 0.0
+        └── site_occupation = 0.0
+        >>> s.set_phase_parameters(
+                number=1, atom_coordinates={
+                    '1': {'atom': 'Ni', 'coordinates': [0, 0, 0],
+                    'site_occupation': 1,
+                    'debye_waller_factor': 0.0035}})
+        >>> print(s.metadata.Sample.Phases.Number_1.atom_coordinates.\
+                Number_1)
+        ├── atom = Ni
+        ├── coordinates = array([0, 0, 0])
+        ├── debye_waller_factor = 0.0035
+        └── site_occupation = 1
         """
 
         # Ensure atom coordinates are numpy arrays
@@ -196,7 +231,7 @@ class EBSD(Signal2D):
 
         # Remove None values
         phase = {k: v for k, v in inputs.items() if v is not None}
-        update_phase_info(self.metadata, phase, number)
+        kpup._update_phase_info(self.metadata, phase, number)
 
     def set_scan_calibration(self, step_x=1., step_y=1.):
         """Set the step size in µm.
@@ -206,6 +241,18 @@ class EBSD(Signal2D):
         step_x, step_y : float
             Scan step size in µm per pixel in horizontal, x and
             vertical, y direction.
+
+        See Also
+        --------
+        set_detector_calibration
+
+        Examples
+        --------
+        >>> print(s.axes_manager.['x'].scale)  # Default value
+        1.0
+        >>> s.set_scan_calibration(step_x=1.5)  # Microns
+        >>> print(s.axes_manager['x'].scale)
+        1.5
         """
 
         x, y = self.axes_manager.navigation_axes
@@ -221,6 +268,18 @@ class EBSD(Signal2D):
         ----------
         delta : float
             Detector pixel size in microns.
+
+        See Also
+        --------
+        set_scan_calibration
+
+        Examples
+        --------
+        >>> print(s.axes_manager['dx'].scale)  # Default value
+        1.0
+        >>> s.set_detector_calibration(delta=70.)
+        >>> print(s.axes_manager['dx'].scale)
+        70.0
         """
 
         centre = np.array(self.axes_manager.signal_shape) / 2 * delta
@@ -229,139 +288,284 @@ class EBSD(Signal2D):
         dx.scale, dy.scale = (delta, delta)
         dx.offset, dy.offset = -centre
 
-    def static_background_correction(self, operation='divide',
-                                     relative=False, static_bg=None,
-                                     out_range=np.uint8):
-        """Correct static background using a static background pattern.
-
-        Pattern intensities are rescaled according to specified
-        intensity range.
+    def static_background_correction(
+            self, operation='subtract', relative=False, static_bg=None):
+        """Correct static background inplace by subtracting/dividing by
+        a static background pattern. Returned pattern intensities are
+        rescaled keeping relative intensities or not and stretched to
+        fill the input data type range.
 
         Parameters
         ----------
-        operation : 'divide' or 'subtract', optional
-            Divide or subtract by static background pattern.
+        operation : 'subtract' or 'divide', optional
+            Subtract (default) or divide by static background pattern.
         relative : bool, optional
             Keep relative intensities between patterns.
         static_bg : {np.ndarray, da.Array or None}, optional
             Static background pattern. If not passed we try to read it
             from the signal metadata.
-        out_range : dtype or tuple, optional
-            Output intensity range given by data type or (min, max). If
-            a tuple is passed, the output data type is np.float32.
+
+        See Also
+        --------
+        dynamic_background_correction
+
+        Examples
+        --------
+        Assuming that a static background pattern with same shape and
+        data type (e.g. 8-bit unsigned integer, uint8) as patterns is
+        available in signal metadata:
+
+        >>> import kikuchipy as kp
+        >>> ebsd_node = kp.utils.io_utils.metadata_nodes(sem=False)
+        >>> print(s.metadata.get_item(ebsd_node + '.static_background'))
+        [[84 87 90 ... 27 29 30]
+        [87 90 93 ... 27 28 30]
+        [92 94 97 ... 39 28 29]
+        ...
+        [80 82 84 ... 36 30 26]
+        [79 80 82 ... 28 26 26]
+        [76 78 80 ... 26 26 25]]
+
+        Static background can be corrected by subtract this background
+        from each pattern while keeping relative intensities between
+        patterns
+
+        >>> s.static_background_correction(operation='subtract',
+                relative=True)
+
+        If metadata has no background pattern, this must be passed in
+        the `static_bg` parameter.
         """
 
-        # Make sure static background pattern is valid
-        ebsd_node = metadata_nodes(sem=False)
-        md = self.metadata
+        dtype_out = self.data.dtype
+
+        # Set up background pattern
         if not isinstance(static_bg, (np.ndarray, da.Array)):
             try:
+                md = self.metadata
+                ebsd_node = kpui.metadata_nodes(sem=False)
                 static_bg = md.get_item(ebsd_node + '.static_background')
             except TypeError:
                 raise TypeError("Static background is not a numpy array or "
                                 "could not be read from signal metadata.")
-        pat_shape = self.axes_manager.signal_shape
-        if static_bg.shape != pat_shape:
-            raise IOError("Pattern {} and static background {} shapes must be "
-                          "identical.".format(pat_shape, static_bg.shape))
-        dtype = np.float16
+        if self.data.dtype != static_bg.dtype:
+            raise ValueError("Static background dtype {} is not the same as "
+                             "pattern dtype {}".format(static_bg.dtype,
+                                                       self.data.dtype))
+        pat_shape = self.axes_manager.signal_shape[::-1]
+        bg_shape = static_bg.shape
+        if bg_shape != pat_shape:
+            warnings.warn("Pattern {} and static background {} shapes are not "
+                          "identical, will reshape background to pattern "
+                          "shape".format(pat_shape, bg_shape))
+            static_bg = rebin(static_bg, pat_shape)
+        dtype = np.int16
         static_bg = static_bg.astype(dtype)
 
+        dask_array = kpud._get_dask_array(signal=self, dtype=dtype)
+
+        # Correct static background, overwrite signal patterns and rescale
         if operation == 'divide':
-            self.data = self.data / static_bg
+            corrected_patterns = da.divide(dask_array, static_bg)
         else:
-            self.data = self.data - static_bg
+            corrected_patterns = da.subtract(dask_array, static_bg)
+        if not self._lazy:
+            with ProgressBar():
+                corrected_patterns = corrected_patterns.compute()
+        self.data = corrected_patterns
+        self.rescale_intensities(relative=relative, dtype_out=dtype_out)
 
-        self.data = rescale_pattern_intensity(self, out_range=out_range,
-                                              relative=relative)
-
-    def dynamic_background_correction(self, operation='divide',
-                                      sigma=None, out_range=np.uint8,
-                                      **kwargs):
-        """Correct dynamic background.
+    def dynamic_background_correction(
+            self, operation='subtract', sigma=None):
+        """Correct dynamic background inplace by subtracting/dividing
+        by a blurred version of each pattern. Returned pattern
+        intensities are stretched to fill the input data type range.
 
         Parameters
         ----------
-        operation : 'divide' or 'subtract', optional
-            Divide or subtract by dynamic background pattern.
+        operation : 'subtract' or 'divide', optional
+            Subtract (default) or divide by dynamic background pattern.
         sigma : {int, float or None}, optional
             Standard deviation of the gaussian kernel. If None
             (default), a deviation of pattern width/30 is chosen.
-        out_range : dtype or tuple, optional
-            Output intensity range given by data type or (min, max). If
-            a tuple is passed, the output data type is np.float32.
-        **kwargs :
-            Keyword arguments passed to map and map_blocks.
+
+        See Also
+        --------
+        static_background_correction
+
+        Examples
+        --------
+        Traditional background correction includes static and dynamic
+        corrections, loosing relative intensities between patterns after
+        dynamic corrections (whether `relative` is set to `True` or
+        `False` in `static_background_correction`):
+
+        >>> s.static_background_correction(operation='subtract')
+        >>> s.dynamic_background_correction(operation='subtract',
+                sigma=2.0)
         """
 
+        dtype_out = self.data.dtype
+        dtype = np.int16
+        dask_array = kpud._get_dask_array(signal=self, dtype=dtype)
+
+        # Create dynamic background patterns
         if sigma is None:
             sigma = self.axes_manager.signal_axes[0].size/30
-        dtype = np.int16
-        self.data = self.data.astype(dtype)
-        if self._lazy:
-            def func(block, sigma):
-                return scn.gaussian_filter(block, sigma=sigma, truncate=2.0)
-            blurred = self.data.map_blocks(func, sigma=sigma, **kwargs)
-        else:
-            blurred = self.map(scn.gaussian_filter, sigma=sigma, truncate=2.0,
-                               inplace=False, show_progressbar=False, **kwargs)
+        blurred = da.map_blocks(gaussian_filter, dask_array, sigma=sigma)
 
+        # Correct dynamic background, overwrite signal patterns and rescale
         if operation == 'divide':
-            self.data = self.data / blurred
+            corrected_patterns = da.divide(dask_array, blurred)
         else:
-            self.data = self.data - blurred
+            corrected_patterns = da.subtract(dask_array, blurred)
+        if not self._lazy:
+            with ProgressBar():
+                corrected_patterns = corrected_patterns.compute()
+        self.data = corrected_patterns
+        self.rescale_intensities(relative=False, dtype_out=dtype_out)
 
-        self.data = rescale_pattern_intensity(self, out_range=out_range)
-
-    def equalize_adapthist(self, kernel_size=None, clip_limit=0.01,
-                           nbins=256, **kwargs):
-        """Local contrast enhancement using contrast limited adaptive
-        histogram equalisation (CLAHE).
-
-        Input data is assumed to be a two-dimensional numpy array of
-        patterns of dtype uint8.
+    def rescale_intensities(self, relative=False, dtype_out=None):
+        """Rescale pattern intensities inplace to desired data type
+        range specified by `dtype_out` using
+        `skimage.exposure.rescale_intensity`, keeping relative
+        intensities or not.
 
         Parameters
         ----------
-        kernel_size : integer or list-like, optional
-            Defines the shape of contextual regions used in the
-            algorithm. By default, ``kernel_size`` is 1/8 of ``pattern``
-            height by 1/8 of its width, or a minimum of 20 in either
-            direction.
-        clip_limit : float, optional
-            Clipping limit, normalised between 0 and 1 (higher values
-            give more contrast).
-        nbins : int, optional
-            Number of gray bins for histogram ("data range").
+        relative : bool, optional
+            Keep relative intensities between patterns, default is
+            False.
+        dtype_out : np.dtype, optional
+            Data type of rescaled patterns.
+
+        See Also
+        --------
+        adaptive_histogram_equalization
+
+        Examples
+        --------
+        Pattern intensities are stretched to fill input pattern's data
+        type range or any data type range passed with `dtype_out`,
+        either keeping relative intensities between patterns or not:
+
+        >>> print(s.data.dtype, s.data.min(), s.data.max(),
+                  s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
+        uint8 20 254 24 233
+        >>> s2 = s.deepcopy()
+        >>> s.rescale_intensities(dtype_out=np.uint16)
+        >>> print(s.data.dtype, s.data.min(), s.data.max(),
+                  s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
+        uint16 0 65535 0 65535
+        >>> s2.rescale_intensities(relative=True)
+        >>> print(s2.data.dtype, s2.data.min(), s2.data.max(),
+                  s2.inav[0, 0].data.min(), s2.inav[0, 0].data.max())
+        uint8 0 255 4 232
+        """
+
+        if dtype_out is None:
+            dtype_out = self.data.dtype.type
+
+        # Determine in_range variable for skimage.exposure.rescale_intensity
+        if relative:  # Scale relative to min./max. intensity in scan
+            imin = self.data.min()
+            imax = self.data.max()
+            if self._lazy:
+                imin = imin.compute()
+                imax = imax.compute()
+        else:  # Scale relative to min./max. intensity in each pattern
+            imin, imax = None, None
+
+        # Rescale patterns and overwrite signal patterns
+        dask_array = kpud._get_dask_array(signal=self, dtype=dtype_out)
+        rescaled_patterns = da.map_blocks(
+            kpue._rescale_pattern_chunk, dask_array, imin, imax, dtype_out)
+        if not self._lazy:
+            with ProgressBar():
+                rescaled_patterns = rescaled_patterns.compute()
+        self.data = rescaled_patterns
+
+    def adaptive_histogram_equalization(
+            self, kernel_size=None, **kwargs):
+        """Local contrast enhancement inplace through adaptive histogram
+        equalization as implemented in `scikit-image` based on [1]_.
+
+        Parameters
+        ----------
+        kernel_size : int or list-like, optional
+            Shape of contextual regions for adaptive histogram
+            equalization, default is 1/8 of pattern height and 1/8 of
+            pattern width.
         **kwargs
-            Arguments to be passed to map().
+            Key word arguments passed to
+            skimage.exposure._adapthist._clahe.
+
+        See also
+        --------
+        rescale_intensities
+
+        Examples
+        --------
+        To best understand how adaptive histogram equalization works,
+        we plot the histogram of the same pattern before and after
+        equalization:
+
+        >>> import numpy as np
+        >>> import matplotlib.pyplot as plt
+        >>> s2 = s.inav[:1, :1]
+        >>> s2.adaptive_histogram_equalization()
+        >>> imin = np.iinfo(s.data.dtype).min
+        >>> imax = np.iinfo(s.data.dtype).max + 1
+        >>> hist, _ = np.histogram(s.inav[0, 0].data, bins=imax,
+                          range=(imin, imax))
+        >>> hist2, _ = np.histogram(s2.inav[0, 0].data, bins=imax,
+                           range=(imin, imax))
+        >>> fig, ax = plt.subplots(nrows=2, ncols=2)
+        >>> ax[0, 0].imshow(s.inav[0, 0].data)
+        >>> ax[1, 0].plot(hist)
+        >>> ax[0, 1].imshow(s2.inav[0, 0].data)
+        >>> ax[1, 1].plot(hist2)
 
         Notes
         -----
-        Adapted from scikit-image, without rescaling the pattern before
-        equalisation and returning it with correct data type. See
-        ``skimage.exposure.equalize_adapthist`` documentation for more
-        details.
+        * It is recommended to perform adaptive histogram equalization
+          only *after* static and dynamic background corrections,
+          otherwise some unwanted darkening towards the edges might
+          occur.
+        * The default kernel size might not fit all pattern sizes, so it
+          might be necessary to search for the optimal kernel size.
+
+        References
+        ----------
+        .. [1] Pizer SM, Amburn EP, Austin JD, Cromartie R,
+               Geselowitz A, Greer T, ter Haar Romeny B, Zimmerman JB,
+               Zuiderveld K: Adaptive histogram equalization and its
+               variations, Computer vision, graphics, and image
+               processing 39(3), Elsevier, 355–368, 1987.
         """
 
-        if self._lazy:
-            kwargs['ragged'] = False
-
-        # Set kernel size, ensuring it is at least 20 in each direction
-        sdim = 2
+        # Determine shape of contextual region
+        sig_shape = self.axes_manager.signal_shape
         if kernel_size is None:
-            sx, sy = self.axes_manager.signal_shape
-            kernel_size = (sx // 8, sy // 8)
+            kernel_size = (sig_shape[0] // 10, sig_shape[1] // 10)
         elif isinstance(kernel_size, numbers.Number):
-            kernel_size = (kernel_size,) * sdim
-        elif len(kernel_size) != sdim:
+            kernel_size = (kernel_size,) * self.axes_manager.signal_dimension
+        elif len(kernel_size) != self.axes_manager.signal_dimension:
             ValueError(
                 "Incorrect value of `kernel_size`: {}".format(kernel_size))
         kernel_size = [int(k) for k in kernel_size]
-        kernel_size = [20 if i < 20 else i for i in kernel_size]
 
-        self.map(equalize_adapthist_pattern, kernel_size=kernel_size,
-                 clip_limit=clip_limit, nbins=nbins, **kwargs)
+        # Local contrast enhancement and overwrite signal patterns
+        dask_array = kpud._get_dask_array(signal=self)
+        clip_limit = kwargs.pop('clip_limit', 0.)
+        nbins = kwargs.pop('nbins', 256)
+        equalized_patterns = da.map_blocks(
+            kpue._adaptive_histogram_equalization_chunk, patterns=dask_array,
+            kernel_size=kernel_size, clip_limit=clip_limit, nbins=nbins)
+        if not self._lazy:
+            with ProgressBar():
+                equalized_patterns = equalized_patterns.compute()
+        self.data = equalized_patterns
 
     def get_virtual_image(self, roi):
         """Method imported from
@@ -415,8 +619,9 @@ class EBSD(Signal2D):
         return ElectronDiffraction2D.plot_interactive_virtual_image(self, roi,
                                                                     **kwargs)
 
-    def save(self, filename=None, overwrite=None, extension=None,
-             **kwargs):
+    def save(
+            self, filename=None, overwrite=None, extension=None,
+            **kwargs):
         """Save signal in the specified format.
 
         The function gets the format from the extension: `h5`, `hdf5` or
@@ -467,10 +672,11 @@ class EBSD(Signal2D):
         if extension is not None:
             basename, ext = os.path.splitext(filename)
             filename = basename + '.' + extension
-        io.save(filename, self, overwrite=overwrite, **kwargs)
+        kpio.save(filename, self, overwrite=overwrite, **kwargs)
 
-    def get_decomposition_model(self, components=None,
-                                dtype_out=np.float16, *args, **kwargs):
+    def get_decomposition_model(
+            self, components=None, dtype_out=np.float16, *args,
+            **kwargs):
         """Return the model signal generated with the selected number of
         principal components.
 
@@ -546,27 +752,26 @@ class EBSD(Signal2D):
 
         return s_model
 
-    def decomposition(self, normalize_poissonian_noise=False,
-                      algorithm='svd', output_dimension=None,
-                      centre=None, auto_transpose=True,
-                      navigation_mask=None, signal_mask=None,
-                      var_array=None, var_func=None,
-                      polyfit=None, reproject=None, return_info=False, *args,
-                      **kwargs):
-        super().decomposition(normalize_poissonian_noise, algorithm,
-                              output_dimension, centre, auto_transpose,
-                              navigation_mask, signal_mask, var_array, var_func,
-                              polyfit, reproject, return_info, *args, **kwargs)
+    def decomposition(
+            self, normalize_poissonian_noise=False, algorithm='svd',
+            output_dimension=None, centre=None, auto_transpose=True,
+            navigation_mask=None, signal_mask=None, var_array=None,
+            var_func=None, polyfit=None, reproject=None,
+            return_info=False, *args, **kwargs):
+        super().decomposition(
+            normalize_poissonian_noise, algorithm, output_dimension, centre,
+            auto_transpose, navigation_mask, signal_mask, var_array, var_func,
+            polyfit, reproject, return_info, *args, **kwargs)
         self.__class__ = EBSD
 
     def rebin(self, new_shape=None, scale=None, crop=True, out=None):
-        out = super().rebin(new_shape=new_shape, scale=scale, crop=crop,
-                            out=out)
+        out = super().rebin(
+            new_shape=new_shape, scale=scale, crop=crop, out=out)
         _logger.info("Rebinning changed data type to {}".format(out.data.dtype))
 
         # Update binning in metadata
         md = out.metadata
-        ebsd_node = metadata_nodes(sem=False)
+        ebsd_node = kpui.metadata_nodes(sem=False)
         if scale is None:
             sx = self.axes_manager.signal_shape[0]
             scale = [sx / new_shape[2]]
@@ -583,35 +788,13 @@ class LazyEBSD(EBSD, LazySignal2D):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def compute(self, progressbar=True, close_file=False):
-        """Attempt to store the full signal in memory.
-
-        Parameters
-        ----------
-        progressbar : bool, optional
-        close_file: bool, optional
-            If True, attempt to close the file associated with the dask
-            array data if any. Note that closing the file will make all
-            other associated lazy signals inoperative.
-        """
-
-        if progressbar:
-            cm = ProgressBar
-        else:
-            cm = dummy_context_manager
-        with cm():
-            data = self.data
-            data = data.compute()
-            if close_file:
-                self.close_file()
-            self.data = data
-        self._lazy = False
+    def compute(self, *args, **kwargs):
+        super().compute(*args, **kwargs)
         self.__class__ = EBSD
 
-    def get_decomposition_model_write(self, components=None,
-                                      dtype_learn=np.float16,
-                                      mbytes_chunk=100, out_dir=None,
-                                      out_fname=None):
+    def get_decomposition_model_write(
+            self, components=None, dtype_learn=np.float16,
+            mbytes_chunk=100, out_dir=None, out_fname=None):
         """Write the model signal generated from the selected number of
         principal components directly to a .hspy file. The model signal
         intensities are rescaled to the original signals' data type
@@ -689,7 +872,7 @@ class LazyEBSD(EBSD, LazySignal2D):
             s_model.data = s_model.data.rechunk(chunks=(1, 1, -1, -1))
 
             # Rescale intensities and revert data type
-            s_model.map(rescale_pattern_intensity, ragged=False)
+            s_model.rescale_intensities()
             s_model.data = s_model.data.astype(self.data.dtype)
 
             # Write signal to file (rechunking saves a little time?)
@@ -762,10 +945,10 @@ class LazyEBSD(EBSD, LazySignal2D):
 
         return chunks
 
-    def decomposition(self, normalize_poissonian_noise=False,
-                      algorithm=None, output_dimension=None,
-                      mbytes_chunk=100, navigation_mask=None,
-                      signal_mask=None, *args, **kwargs):
+    def decomposition(
+            self, normalize_poissonian_noise=False, algorithm=None,
+            output_dimension=None, mbytes_chunk=100,
+            navigation_mask=None, signal_mask=None, *args, **kwargs):
         """Decomposition with a choice of algorithms.
 
         For a full description of parameters see
@@ -811,8 +994,6 @@ class LazyEBSD(EBSD, LazySignal2D):
             if output_dimension is None:
                 raise ValueError("With the IncrementalPCA algorithm, "
                                  "output_dimension must be specified")
-
-            from sklearn.decomposition import IncrementalPCA
 
             # Normalise Poissonian noise
             original_data = self.data
@@ -878,8 +1059,8 @@ class LazyEBSD(EBSD, LazySignal2D):
 
         self.__class__ = LazyEBSD
 
-    def _normalize_poissonian_noise(self, navigation_mask=None,
-                                    signal_mask=None):
+    def _normalize_poissonian_noise(
+            self, navigation_mask=None, signal_mask=None):
         """Scales the patterns following [1]_.
 
         Adapted from HyperSpy.
@@ -905,7 +1086,6 @@ class LazyEBSD(EBSD, LazySignal2D):
                Online Library, 203–212, 2004.
         """
 
-        from hyperspy._signals.lazy import to_array
         data = self._data_aligned_with_axes
         ndim = self.axes_manager.navigation_dimension
         sdim = self.axes_manager.signal_dimension

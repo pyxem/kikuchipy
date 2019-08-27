@@ -21,7 +21,7 @@ import re
 from hyperspy.misc.utils import DictionaryTreeBrowser
 
 
-def phase_metadata():
+def _phase_metadata():
     """Return a dictionary with a default KikuchiPy phase structure.
 
     Returns
@@ -39,7 +39,7 @@ def phase_metadata():
     return pd
 
 
-def update_phase_info(metadata, dictionary, phase_number=1):
+def _update_phase_info(metadata, dictionary, phase_number=1):
     """Update information of phase in metadata, adding it if it doesn't
     already exist.
 
@@ -65,7 +65,7 @@ def update_phase_info(metadata, dictionary, phase_number=1):
     # Check if phase number is already in metadata
     phase = metadata.Sample.Phases.get_item(str(phase_number))
     if phase is None:
-        phase = phase_metadata()
+        phase = _phase_metadata()
     phase = dict(phase)
 
     # Loop over input dictionary and update items in phase dictionary

@@ -18,192 +18,114 @@
 
 import numpy as np
 import dask.array as da
-import kikuchipy as kp
-import scipy.ndimage as scn
+from skimage.util import img_as_uint, img_as_float
+from skimage.exposure import rescale_intensity
 from skimage.exposure._adapthist import _clahe
 
 
-def rescale_pattern_intensity(signal, out_range=np.uint8,
-                              relative=False):
-    """Scale pattern intensities in an EBSD signal inplace.
-
-    Relative intensities between patterns can be maintained by passing
-    `relative=True`. The desired `output_range` can be specified by a
-    tuple of (min., max.) intensity or a data type.
+def _rescale_pattern_chunk(patterns, imin, imax, dtype_out):
+    """Rescale patterns in chunk to fill the data type range using
+    `skimage.exposure.rescale_intensity`, keeping relative intensities
+    or not.
 
     Parameters
     ----------
-    signal : kp.signals.EBSD or kp.lazy_signals.LazyEBSD
-        Signal instance with four-dimensional data.
-    out_range : dtype or tuple, optional
-        Output intensity range. If a tuple is passed, the output data
-        type is np.float32.
-    relative : bool, optional
-        Keep relative intensities between patterns.
+    patterns : da.Array
+        Patterns to rescale.
+    imin, imax : {None, int, float}
+        Min./max. intensity values of input patterns.
+    dtype_out : np.dtype
+        Data type of output patterns.
 
     Returns
     -------
-    rescaled_patterns : np.array or da.Array
-        Rescaled EBSD patterns.
+    rescaled_patterns : da.Array
+        Rescaled patterns.
     """
 
-    # Get valid intensity range and data type for rescaled patterns
-    omin, omax = intensity_range(out_range)
-    if not isinstance(out_range, tuple) and (
-            np.issubdtype(out_range, np.integer) or
-            np.issubdtype(out_range, np.float)):
-        dtype = out_range
-    else:
-        dtype = np.float32
-
-    patterns = signal.data
-    if relative:  # Get min. and max. intensity in scan
-        imin = patterns.min()
-        imax = patterns.max()
-        if isinstance(patterns, da.Array):
-            imin = imin.compute(show_progressbar=False)
-            imax = imax.compute(show_progressbar=False)
-        scale = omax / imax
-        rescaled_patterns = ((patterns-imin)*scale + omin).astype(dtype)
-    else:  # Get min. and max. intensity per pattern
-        signal_axes = signal.axes_manager.signal_axes
-        imin = signal.min(signal_axes).data[:, :, np.newaxis, np.newaxis]
-        imax = signal.max(signal_axes).data[:, :, np.newaxis, np.newaxis]
-        rescaled_patterns = (patterns-imin) / (imax-imin)
-        rescaled_patterns = (rescaled_patterns*(omax-omin) + omin).astype(dtype)
-
+    rescaled_patterns = np.zeros_like(patterns, dtype=dtype_out)
+    in_range = (imin, imax)  # Scale relative to min./max. intensity in scan
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        if imin is None:  # Scale relative to min./max. intensity in pattern
+            in_range = (patterns[nav_idx].min(), patterns[nav_idx].max())
+        rescaled_patterns[nav_idx] = rescale_intensity(
+            patterns[nav_idx], in_range=in_range, out_range=dtype_out)
     return rescaled_patterns
 
 
-def intensity_range(in_range):
-    """Return intensity range (min, max) based on desired value type.
+def _adaptive_histogram_equalization_pattern(
+        pattern, kernel_size, clip_limit, nbins):
+    """Local contrast enhancement of a pattern using adaptive histogram
+    equalization as implemented in `scikit-image`.
 
     Parameters
     ----------
-    in_range : dtype or tuple
-        Instance to return (min, max) from.
-
-    Returns
-    -------
-    imin, imax : int or float
-        Intensity range of `range`.
-    """
-
-    if isinstance(in_range, tuple):
-        imin, imax = in_range
-    elif np.issubdtype(in_range, np.integer):
-        imin, imax = np.iinfo(in_range).min, np.iinfo(in_range).max
-    elif np.issubdtype(in_range, np.float):
-        imin, imax = np.finfo(in_range).min, np.finfo(in_range).max
-    else:
-        raise ValueError("{} is not a valid in_range".format(in_range))
-
-    return imin, imax
-
-
-def static_correction(pattern, operation, static_bg, imin, scale):
-    """Correct static background using a static background pattern.
-
-    Parameters
-    ----------
-    pattern : {np.ndarray, da.Array}
-        Signal pattern.
-    operation : {'divide', 'static'}
-        Divide or subtract by static background pattern.
-    static_bg : {np.ndarray, da.Array}
-        Static background pattern.
-    imin : int
-        Minimum intensity of input pattern.
-    scale : int, float
-        Scaling factor for intensities of output pattern.
-
-    Returns
-    -------
-    corrected_pattern : {np.ndarray, da.Array}
-        Static background corrected pattern.
-    """
-    pattern = pattern.astype(float)
-
-    if operation == 'divide':
-        corrected_pattern = pattern / static_bg
-    else:
-        corrected_pattern = pattern - static_bg
-
-    return rescale_pattern_intensity(corrected_pattern, imin=imin, scale=scale)
-
-
-def dynamic_correction(pattern, operation, sigma):
-    """Correct dynamic background using a gaussian blurred version of
-    the pattern.
-
-    Parameters
-    ----------
-    pattern : {np.ndarray, da.Array}
-        Signal pattern.
-    operation : {'divide', 'subtract'}
-        Divide or subtract by dynamic pattern.
-    sigma : {int, float}
-        Standard deviation of the gaussian kernel. If None
-        (default), a deviation of pattern width/30 is chosen.
-
-    Returns
-    -------
-    corrected_pattern : {np.ndarray, da.Array}
-        Dynamic background corrected pattern.
-    """
-    pattern = pattern.astype(float)
-    blurred_pattern = scn.gaussian_filter(pattern, sigma, truncate=2.0)
-
-    if operation == 'divide':
-        corrected_pattern = pattern / blurred_pattern
-    else:
-        corrected_pattern = pattern - blurred_pattern
-
-    return rescale_pattern_intensity(corrected_pattern)
-
-
-def equalize_adapthist_pattern(pattern, kernel_size, clip_limit=0.01,
-                               nbins=256):
-    """Local contrast enhancement of an electron backscatter diffraction
-    pattern using contrast limited adaptive histogram equalisation
-    (CLAHE).
-
-    Parameters
-    ----------
-    pattern : array_like
-        Two-dimensional array containing signal.
-    kernel_size : integer or list-like
-        Defines the shape of contextual regions used in the algorithm.
+    pattern : da.Array
+        Pattern to enhance.
+    kernel_size : int or list-like, optional
+        Shape of contextual regions for adaptive histogram equalization.
+    nbins : int, optional
+        Number of gray bins for histogram ("data range").
     clip_limit : float, optional
-        Clipping limit, normalised between 0 and 1 (higher values give
+        Clipping limit, normalized between 0 and 1 (higher values give
+        more contrast).
+
+    Returns
+    -------
+    equalized_pattern : da.Array
+        Enhanced pattern.
+    """
+
+    # Necessary preparations of pattern intensity for _clahe (range 2**14 is
+    # hard-coded in scikit-image)
+    dtype_in = pattern.dtype.type
+    pattern = img_as_uint(pattern)
+    pattern = rescale_intensity(pattern, out_range=(0, 2**14 - 1))
+
+    # Perform adaptive histogram equalization
+    equalized_pattern = _clahe(
+        pattern, kernel_size=kernel_size, clip_limit=clip_limit * nbins,
+        nbins=nbins)
+
+    # Rescale intensity to fill input data type range
+    equalized_pattern = rescale_intensity(equalized_pattern, out_range=dtype_in)
+
+    return equalized_pattern
+
+
+def _adaptive_histogram_equalization_chunk(
+        patterns, kernel_size, clip_limit, nbins):
+    """Local contrast enhancement on chunk of patterns using adaptive
+    histogram equalization as implemented in `scikit-image`.
+
+    Parameters
+    ----------
+    patterns : da.Array
+        Patterns to enhance.
+    kernel_size : int or list-like, optional
+        Shape of contextual regions for adaptive histogram equalization.
+    clip_limit : float, optional
+        Clipping limit, normalized between 0 and 1 (higher values give
         more contrast).
     nbins : int, optional
         Number of gray bins for histogram ("data range").
 
     Returns
     -------
-    pattern : array_like
-        Equalised pattern.
-
-    Notes
-    -----
-    Adapted from scikit-image, returning the pattern with correct data
-    type. See ``skimage.exposure.equalize_adapthist`` documentation for
-    more details.
+    equalized_patterns : da.Array
+        Chunk of enhanced patterns.
     """
-    # Rescale pattern to 16-bit [0, 2**14 - 1]
-    pattern = rescale_pattern_intensity(pattern, omax=2**14 - 1,
-                                        dtype_out=np.uint16)
 
-    # Perform CLAHE and rescale to 8-bit [0, 255]
-    pattern = _clahe(pattern, kernel_size, clip_limit * nbins, nbins)
-    pattern = rescale_pattern_intensity(pattern)
-
-    return pattern
+    equalized_patterns = np.zeros_like(patterns)
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        equalized_patterns[nav_idx] = _adaptive_histogram_equalization_pattern(
+            patterns[nav_idx], kernel_size=kernel_size, clip_limit=clip_limit,
+            nbins=nbins)
+    return equalized_patterns
 
 
-def normalised_correlation_coefficient(pattern, template,
-                                       zero_normalised=True):
+def normalised_correlation_coefficient(
+        pattern, template, zero_normalised=True):
     """Calculate the normalised or zero-normalised correlation
     coefficient between a pattern and a template following [1]_.
 
@@ -227,6 +149,7 @@ def normalised_correlation_coefficient(pattern, template,
         .. [1] Gonzalez, Rafael C, Woods, Richard E: Digital Image
                Processing, 3rd edition, Pearson Education, 954, 2008.
     """
+
     pattern = pattern.astype(float)
     template = template.astype(float)
     if zero_normalised:

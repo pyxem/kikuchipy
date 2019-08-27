@@ -46,7 +46,8 @@ setup(
     packages=find_packages(),
     install_requires=[
         'hyperspy >= 1.4',
-        'pyxem >= 0.8',
+        'pyxem >= 0.9',
+        'numpy >= 1.16, != 1.17',
     ],
     package_data={
         '': ['LICENSE', 'README.md'],
