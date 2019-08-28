@@ -45,7 +45,7 @@ setup(
     ],
     packages=find_packages(),
     install_requires=[
-        'numpy>= 1.16,!= 1.17.*',
+        'numpy>=1.16,!=1.17.*',
         'hyperspy>=1.5',
         'pyxem>=0.9',
         'h5py',
