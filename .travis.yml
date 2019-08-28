@@ -3,7 +3,7 @@ language: python
 env:
   global:
     - DEPS="hyperspy pyxem"
-#    - TEST_DEPS="pytest pytest-cov coveralls"
+    - TEST_DEPS="pytest pytest-cov coveralls"
 
 matrix:
   include:
@@ -27,12 +27,12 @@ before_install:
   - df -h
 
 install:
-  - conda install --yes $DEPS #$TEST_DEPS;
+  - conda install --yes $DEPS $TEST_DEPS
   - pip install .
 
 script:
   - export MPLBACKEND=Agg
-#  - pytest --pyargs kikuchipy --cov=kikuchipy
+  - pytest --pyargs kikuchipy --cov=kikuchipy
 
 after_success:
-  -coveralls
+  - coveralls
