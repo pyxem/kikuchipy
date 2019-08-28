@@ -45,8 +45,14 @@ setup(
     ],
     packages=find_packages(),
     install_requires=[
-        'hyperspy >= 1.5', 'pyxem >= 0.9', 'numpy >= 1.16, != 1.17',
-        'h5py', 'scikit-image', 'scipy', 'dask', ],
+        'numpy>=1.16,!=1.17.*',
+        'hyperspy>=1.5',
+        'pyxem>=0.9',
+        'h5py',
+        'scikit-image',
+        'scipy',
+        'dask[array]',
+    ],
     package_data={
         '': ['LICENSE', 'README.md'],
         'kikuchipy': ['*.py'],
