@@ -211,7 +211,7 @@ class EBSD(Signal2D):
         >>> print(s.metadata.Sample.Phases.Number_1.atom_coordinates.\
                 Number_1)
         ├── atom = Ni
-        ├── coordinates = array([0, 0, 0])
+        ├── coordinates = array([0., 0., 0.])
         ├── debye_waller_factor = 0.0035
         └── site_occupation = 1
         """
@@ -326,9 +326,9 @@ class EBSD(Signal2D):
         [79 80 82 ... 28 26 26]
         [76 78 80 ... 26 26 25]]
 
-        Static background can be corrected by subtract this background
-        from each pattern while keeping relative intensities between
-        patterns
+        Static background can be corrected by subtracting or dividing
+        this background from each pattern while keeping relative
+        intensities between patterns.
 
         >>> s.static_background_correction(operation='subtract',
                 relative=True)
@@ -487,7 +487,7 @@ class EBSD(Signal2D):
     def adaptive_histogram_equalization(
             self, kernel_size=None, **kwargs):
         """Local contrast enhancement inplace through adaptive histogram
-        equalization as implemented in `scikit-image` based on [1]_.
+        equalization as implemented in `scikit-image`.
 
         Parameters
         ----------
@@ -511,7 +511,7 @@ class EBSD(Signal2D):
 
         >>> import numpy as np
         >>> import matplotlib.pyplot as plt
-        >>> s2 = s.inav[:1, :1]
+        >>> s2 = s.inav[0, 0]
         >>> s2.adaptive_histogram_equalization()
         >>> imin = np.iinfo(s.data.dtype).min
         >>> imax = np.iinfo(s.data.dtype).max + 1
@@ -533,20 +533,12 @@ class EBSD(Signal2D):
           occur.
         * The default kernel size might not fit all pattern sizes, so it
           might be necessary to search for the optimal kernel size.
-
-        References
-        ----------
-        .. [1] Pizer SM, Amburn EP, Austin JD, Cromartie R,
-               Geselowitz A, Greer T, ter Haar Romeny B, Zimmerman JB,
-               Zuiderveld K: Adaptive histogram equalization and its
-               variations, Computer vision, graphics, and image
-               processing 39(3), Elsevier, 355–368, 1987.
         """
 
         # Determine shape of contextual region
         sig_shape = self.axes_manager.signal_shape
         if kernel_size is None:
-            kernel_size = (sig_shape[0] // 10, sig_shape[1] // 10)
+            kernel_size = (sig_shape[0] // 8, sig_shape[1] // 8)
         elif isinstance(kernel_size, numbers.Number):
             kernel_size = (kernel_size,) * self.axes_manager.signal_dimension
         elif len(kernel_size) != self.axes_manager.signal_dimension:
