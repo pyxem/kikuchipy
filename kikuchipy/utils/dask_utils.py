@@ -88,10 +88,10 @@ def _get_dask_array(signal, dtype=None):
     if dtype is None:
         dtype = signal.data.dtype
     if signal._lazy:
-        dask_array = signal.data.astype(dtype)
+        dask_array = signal.data
     else:
         sig_chunks = list(signal.axes_manager.signal_shape)[::-1]
         chunks = [8] * len(signal.axes_manager.navigation_shape)
         chunks.extend(sig_chunks)
-        dask_array = da.from_array(signal.data.astype(dtype), chunks=chunks)
-    return dask_array
+        dask_array = da.from_array(signal.data, chunks=chunks)
+    return dask_array.astype(dtype)
