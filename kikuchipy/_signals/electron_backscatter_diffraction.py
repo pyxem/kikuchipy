@@ -366,9 +366,9 @@ class EBSD(Signal2D):
 
         # Correct static background, overwrite signal patterns and rescale
         if operation == 'divide':
-            corrected_patterns = da.divide(dask_array, static_bg)#, dtype=dtype)
+            corrected_patterns = da.divide(dask_array, static_bg, dtype=dtype)
         else:
-            corrected_patterns = da.subtract(dask_array, static_bg)#, dtype=dtype)
+            corrected_patterns = da.subtract(dask_array, static_bg, dtype=dtype)
         if not self._lazy:
             with ProgressBar():
                 corrected_patterns = corrected_patterns.compute()
