@@ -366,9 +366,9 @@ class EBSD(Signal2D):
 
         # Correct static background, overwrite signal patterns and rescale
         if operation == 'divide':
-            corrected_patterns = da.divide(dask_array, static_bg)
+            corrected_patterns = da.divide(dask_array, static_bg, dtype=dtype)
         else:
-            corrected_patterns = da.subtract(dask_array, static_bg)
+            corrected_patterns = da.subtract(dask_array, static_bg, dtype=dtype)
         if not self._lazy:
             with ProgressBar():
                 corrected_patterns = corrected_patterns.compute()
@@ -416,9 +416,9 @@ class EBSD(Signal2D):
 
         # Correct dynamic background, overwrite signal patterns and rescale
         if operation == 'divide':
-            corrected_patterns = da.divide(dask_array, blurred)
+            corrected_patterns = da.divide(dask_array, blurred, dtype=dtype)
         else:
-            corrected_patterns = da.subtract(dask_array, blurred)
+            corrected_patterns = da.subtract(dask_array, blurred, dtype=dtype)
         if not self._lazy:
             with ProgressBar():
                 corrected_patterns = corrected_patterns.compute()
@@ -471,16 +471,14 @@ class EBSD(Signal2D):
         if relative:  # Scale relative to min./max. intensity in scan
             imin = self.data.min()
             imax = self.data.max()
-            if self._lazy:
-                imin = imin.compute()
-                imax = imax.compute()
         else:  # Scale relative to min./max. intensity in each pattern
             imin, imax = None, None
 
         # Rescale patterns and overwrite signal patterns
         dask_array = kpud._get_dask_array(signal=self)
         rescaled_patterns = da.map_blocks(
-            kpue._rescale_pattern_chunk, dask_array, imin, imax, dtype_out)
+            kpue._rescale_pattern_chunk, dask_array, imin, imax, dtype_out,
+            dtype=dtype_out)
         if not self._lazy:
             with ProgressBar():
                 rescaled_patterns = rescaled_patterns.compute()
@@ -561,8 +559,8 @@ class EBSD(Signal2D):
         clip_limit = kwargs.pop('clip_limit', 0.)
         nbins = kwargs.pop('nbins', 256)
         equalized_patterns = da.map_blocks(
-            kpue._adaptive_histogram_equalization_chunk, patterns=dask_array,
-            kernel_size=kernel_size, clip_limit=clip_limit, nbins=nbins)
+            kpue._adaptive_histogram_equalization_chunk, dask_array,
+            kernel_size, clip_limit, nbins, dtype=self.data.dtype)
         if not self._lazy:
             with ProgressBar():
                 equalized_patterns = equalized_patterns.compute()
@@ -792,6 +790,7 @@ class LazyEBSD(EBSD, LazySignal2D):
     def compute(self, *args, **kwargs):
         super().compute(*args, **kwargs)
         self.__class__ = EBSD
+        gc.collect()
 
     def get_decomposition_model_write(
             self, components=None, dtype_learn=np.float16,
