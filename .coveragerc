@@ -1,6 +1,6 @@
 [run]
 source = kikuchipy
-include = */kikuchipy/*
 omit =
-    */setup.py
-
+    kikuchipy/setup.py
+    kikuchipy/version.py
+    kikuchipy/tests/*
