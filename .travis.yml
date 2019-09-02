@@ -32,7 +32,7 @@ install:
 
 script:
   - export MPLBACKEND=Agg
-  - pytest --pyargs kikuchipy --cov=kikuchipy
+  - pytest --cov=kikuchipy
 
 after_success:
   - coveralls
