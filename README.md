@@ -22,7 +22,7 @@ Anaconda Prompt within the top directory with the `setup.py` file:
 
 ```bash
 $ conda create --name kikuchi python=3
-$ conda activate kikuchipy
+$ conda activate kikuchi
 $ conda install hyperspy pyxem --channel conda-forge
 $ pip install https://github.com/kikuchipy/kikuchipy/archive/master.zip
 ```
