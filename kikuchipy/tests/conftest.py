@@ -16,29 +16,31 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import pytest
 import numpy as np
 import kikuchipy as kp
-import matplotlib.pyplot as plt
-
-DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 @pytest.fixture
-def signal():
-    """Signal with shape <3, 3|60, 60> initialised from a NumPy array of
-    shape (3, 3, 60, 60) to be used in tests.
-    """
+def dummy_signal():
+    """Dummy signal of shape <3, 3|3, 3>. If this is changed, all tests
+    using this signal will fail since those tests compare the output
+    from methods using this signal as input to hard-coded outputs."""
 
-    return kp.signals.EBSD(
-        np.load(os.path.join(DIR_PATH, 'test_data/numpy/patterns.npy')))
+    dummy_array = np.array(
+        [5, 6, 5, 7, 6, 5, 6, 1, 0, 9, 7, 8, 7, 0, 8, 8, 7, 6, 0, 3, 3, 5, 2, 9,
+         3, 3, 9, 8, 1, 7, 6, 4, 8, 8, 2, 2, 4, 0, 9, 0, 1, 0, 2, 2, 5, 8, 6, 0,
+         4, 7, 7, 7, 6, 0, 4, 1, 6, 3, 4, 0, 1, 1, 0, 5, 9, 8, 4, 6, 0, 2, 9, 2,
+         9, 4, 3, 6, 5, 6, 2, 5, 9], dtype=np.uint8).reshape((3, 3, 3, 3))
+    return kp.signals.EBSD(dummy_array)
 
 
 @pytest.fixture
-def background_pattern():
-    """Static background pattern of shape (60, 60)."""
+def dummy_background():
+    """Dummy static background pattern for the dummy signal. If this
+    is changed, all tests using this background will fail since those
+    tests compare the output from methods using this background as input
+    to hard-coded outputs."""
 
-    return plt.imread(
-        os.path.join(
-            DIR_PATH, 'test_data/nordif/Background acquisition pattern.bmp'))
+    return np.array(
+        [5, 4, 5, 4, 3, 4, 4, 4, 3], dtype=np.uint8).reshape((3, 3))
