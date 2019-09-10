@@ -46,10 +46,11 @@ def _rescale_pattern_chunk(patterns, imin, imax, dtype_out):
     rescaled_patterns = np.zeros_like(patterns, dtype=dtype_out)
     in_range = (imin, imax)  # Scale relative to min./max. intensity in scan
     for nav_idx in np.ndindex(patterns.shape[:-2]):
+        pattern = patterns[nav_idx].astype(dtype_out)
         if imin is None:  # Scale relative to min./max. intensity in pattern
-            in_range = (patterns[nav_idx].min(), patterns[nav_idx].max())
+            in_range = (pattern.min(), pattern.max())
         rescaled_patterns[nav_idx] = rescale_intensity(
-            patterns[nav_idx], in_range=in_range, out_range=dtype_out)
+            pattern, in_range=in_range, out_range=dtype_out)
     return rescaled_patterns
 
 

@@ -17,12 +17,16 @@
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
 from kikuchipy.signals import EBSD
-from kikuchipy.utils.io_utils import metadata_nodes
+from kikuchipy.utils.io_utils import metadata_nodes, kikuchipy_metadata
+from hyperspy.misc.utils import DictionaryTreeBrowser
 import numpy as np
 import pytest
 
 
 def assert_dictionary(input_dict, output_dict):
+    if isinstance(input_dict, DictionaryTreeBrowser):
+        input_dict = input_dict.as_dictionary()
+        output_dict = output_dict.as_dictionary()
     for key in output_dict.keys():
         if isinstance(output_dict[key], dict):
             assert_dictionary(input_dict[key], output_dict[key])
@@ -40,19 +44,26 @@ def assert_dictionary(input_dict, output_dict):
 class TestEBSD:
 
     def test_init(self):
+        # Signal shape
         array0 = np.zeros(shape=(10, 10, 10, 10))
         s0 = EBSD(array0)
         assert array0.shape == s0.axes_manager.shape
-
+        # Cannot initialise signal with one signal dimension
         with pytest.raises(ValueError):
             EBSD(np.zeros(10))
-
+        # Shape of one-pattern signal
         array1 = np.zeros(shape=(10, 10))
         s1 = EBSD(array1)
         assert array1.shape == s1.axes_manager.shape
+        # SEM metadata
+        kp_md = kikuchipy_metadata()
+        sem_node = metadata_nodes(ebsd=False)
+        assert_dictionary(kp_md.get_item(sem_node),
+                          s1.metadata.get_item(sem_node))
+        # Phases metadata
+        assert s1.metadata.has_item('Sample.Phases')
 
-    def test_set_experimental_parameters(self):
-        s = EBSD(np.zeros((10, 10, 10, 10)))
+    def test_set_experimental_parameters(self, dummy_signal):
         p = {'detector': 'NORDIF UF-1100', 'azimuth_angle': 1.0,
              'elevation_angle': 1.0, 'sample_tilt': 70.0,
              'working_distance': 23.2, 'binning': 8, 'exposure_time': 0.01,
@@ -62,13 +73,12 @@ class TestEBSD:
              'static_background': np.ones(shape=(10, 10)),
              'manufacturer': 'NORDIF', 'version': '3.1.2',
              'microscope': 'Hitachi SU-6600', 'magnification': 500}
-        s.set_experimental_parameters(**p)
+        dummy_signal.set_experimental_parameters(**p)
         ebsd_node = metadata_nodes(sem=False)
-        md_dict = s.metadata.get_item(ebsd_node).as_dictionary()
+        md_dict = dummy_signal.metadata.get_item(ebsd_node).as_dictionary()
         assert_dictionary(p, md_dict)
 
-    def test_set_phase_parameters(self):
-        s = EBSD(np.zeros((10, 10, 10, 10)))
+    def test_set_phase_parameters(self, dummy_signal):
         p = {'number': 1,
              'atom_coordinates': {
                  '1': {'atom': 'Ni',
@@ -84,7 +94,193 @@ class TestEBSD:
              'space_group': 225,
              'setting': 1,
              'symmetry': 43}
-        s.set_phase_parameters(**p)
-        md_dict = s.metadata.get_item('Sample.Phases.1').as_dictionary()
+        dummy_signal.set_phase_parameters(**p)
+        md_dict = dummy_signal.metadata.get_item('Sample.Phases.1').as_dictionary()
         p.pop('number')
         assert_dictionary(p, md_dict)
+
+    def test_set_scan_calibration(self, dummy_signal):
+        (new_step_x, new_step_y) = (2, 3)
+        dummy_signal.set_scan_calibration(step_x=new_step_x, step_y=new_step_y)
+        x, y = dummy_signal.axes_manager.navigation_axes
+        assert (x.name, y.name) == ('x', 'y')
+        assert (x.scale, y.scale) == (new_step_x, new_step_y)
+        assert x.units, y.units == u'\u03BC' + 'm'
+
+    def test_set_detector_calibration(self, dummy_signal):
+        delta = 70
+        dummy_signal.set_detector_calibration(delta=delta)
+        dx, dy = dummy_signal.axes_manager.signal_axes
+        centre = np.array(dummy_signal.axes_manager.signal_shape) / 2 * delta
+        assert dx.units, dy.units == u'\u03BC' + 'm'
+        assert dx.scale, dy.scale == delta
+        assert dx.offset, dy.offset == -centre
+
+    @pytest.mark.parametrize(
+        'operation, relative', [('subtract', False), ('subtract', True),
+                                ('divide', False), ('divide', True)])
+    def test_static_background_correction(
+            self, dummy_signal, dummy_background, operation, relative):
+        """This test uses a hard-coded answer. If specifically
+        improvements to the intensities produced by this correction is
+        to be made, these hard-coded answers will have to be commented
+        out.
+        """
+
+        dummy_signal.static_background_correction(
+            operation=operation, relative=relative,
+            static_bg=dummy_background)
+        if operation == 'subtract' and relative is True:
+            answer = np.array(
+                [115, 162, 115, 185, 185, 139, 162, 255, 255, 208, 185, 185,
+                 185, 255, 208, 208, 185, 185, 255, 255, 255, 139, 255, 231,
+                 255, 255, 255, 185, 255, 162, 162, 139, 208, 208, 255, 255,
+                 255, 255, 208, 255, 255, 255, 255, 255, 162, 185, 162, 255,
+                 115, 208, 185, 185, 162, 255, 255, 255, 139, 255, 139, 255,
+                 255, 255, 255, 115, 231, 185, 115, 185, 255, 255, 231, 255,
+                 208, 115, 255, 162, 162, 162, 255, 139, 255],
+                dtype=np.uint8).reshape((3, 3, 3, 3))
+        elif operation == 'subtract' and relative is False:
+            answer = np.array(
+                [127, 212, 127, 255, 255, 170, 212, 0, 0, 255, 218, 218, 218, 0,
+                 255, 255, 218, 218, 0, 92, 69, 139, 92, 231, 92, 92, 255, 218,
+                 0, 182, 182, 145, 255, 255, 36, 72, 95, 0, 255, 0, 63, 0, 63,
+                 63, 191, 226, 198, 0, 141, 255, 226, 226, 198, 56, 153, 51,
+                 255, 153, 255, 0, 51, 51, 51, 113, 255, 198, 113, 198, 0, 56,
+                 255, 85, 191, 63, 0, 127, 127, 127, 0, 95, 255],
+                dtype=np.uint8).reshape((3, 3, 3, 3))
+        elif operation == 'divide' and relative is True:
+            answer = np.array(
+                [127, 191, 127, 223, 255, 159, 191, 31, 0, 229, 223, 204, 223,
+                 0, 255, 255, 223, 255, 0, 63, 50, 106, 56, 191, 63, 63, 255,
+                 196, 0, 167, 182, 157, 255, 255, 36, 60, 113, 0, 255, 0, 47, 0,
+                 70, 70, 236, 174, 163, 0, 109, 255, 191, 191, 163, 0, 153, 47,
+                 229, 143, 255, 0, 47, 47, 0, 113, 255, 181, 113, 226, 0, 56,
+                 255, 75, 132, 51, 10, 102, 119, 102, 0, 76, 255],
+                dtype=np.uint8).reshape((3, 3, 3, 3))
+        else:  # operation == 'divide' and relative is False
+            answer = np.array(
+                [85, 127, 85, 148, 170, 106, 127, 21, 0, 153, 148, 136, 148, 0,
+                 170, 170, 148, 170, 0, 63, 50, 106, 56, 191, 63, 63, 255, 136,
+                 21, 118, 127, 113, 170, 170, 42, 56, 68, 0, 153, 0, 28, 0, 42,
+                 42, 141, 136, 127, 0, 85, 198, 148, 148, 127, 0, 68, 21, 101,
+                 63, 113, 0, 21, 21, 0, 85, 191, 136, 85, 170, 0, 42, 191, 56,
+                 153, 85, 50, 127, 141, 127, 42, 106, 255],
+                dtype=np.uint8).reshape((3, 3, 3, 3))
+        assert dummy_signal.data.all() == answer.all()
+
+    @pytest.mark.parametrize(
+        'operation, sigma', [('subtract', 1), ('subtract', 2),
+                             ('divide', 1), ('divide', 2)])
+    def test_dynamic_background_correction(
+            self, dummy_signal, operation, sigma):
+        """This test uses a hard-coded answer. If specifically
+        improvements to the intensities produced by this correction is
+        to be made, these hard-coded answers will have to be commented
+        out.
+        """
+
+        dummy_signal.dynamic_background_correction(
+            operation=operation, sigma=sigma)
+        if operation == 'subtract' and sigma == 1:
+            answer = np.array(
+                [153, 255, 204, 255, 255, 204, 255, 51, 0, 255, 198, 226, 198,
+                 0, 226, 226, 226, 198, 0, 95, 63, 159, 63, 255, 63, 63, 223,
+                 223, 0, 191, 159, 127, 255, 223, 63, 95, 113, 0, 255, 0, 28, 0,
+                 56, 56, 141, 255, 191, 0, 127, 223, 223, 223, 191, 0, 204, 51,
+                 255, 153, 204, 0, 102, 102, 51, 127, 229, 204, 102, 153, 0, 76,
+                 255, 76, 212, 0, 0, 127, 85, 127, 0, 85, 255],
+                dtype=np.uint8).reshape((3, 3, 3, 3))
+        elif operation == 'subtract' and sigma == 2:
+            answer = np.array(
+                [182, 218, 182, 255, 218, 182, 218, 36, 0, 255, 191, 223, 223,
+                 0, 223, 255, 223, 191, 0, 85, 85, 141, 56, 255, 85, 85, 255,
+                 255, 0, 218, 182, 109, 255, 255, 36, 36, 113, 0, 255, 0, 28, 0,
+                 56, 56, 141, 255, 191, 0, 127, 223, 223, 223, 191, 0, 170, 42,
+                 255, 127, 170, 0, 42, 42, 0, 141, 255, 226, 113, 170, 0, 56,
+                 255, 56, 255, 72, 36, 145, 109, 145, 0, 109, 255],
+                dtype=np.uint8).reshape((3, 3, 3, 3))
+        elif operation == 'divide' and sigma == 1:
+            answer = np.array(
+                [159, 255, 212, 223, 255, 212, 255, 63, 0, 218, 170, 194, 170,
+                 0, 194, 194, 255, 218, 0, 127, 85, 212, 85, 255, 85, 85, 191,
+                 162, 0, 139, 115, 115, 255, 162, 46, 115, 113, 0, 255, 0, 28,
+                 0, 56, 56, 141, 255, 191, 0, 127, 223, 223, 223, 191, 0, 255,
+                 63, 255, 191, 255, 0, 127, 127, 0, 94, 170, 151, 75, 113, 0,
+                 56, 255, 56, 159, 0, 0, 127, 85, 127, 0, 85, 255],
+                dtype=np.uint8).reshape((3, 3, 3, 3))
+        else:  # operation == 'divide' and sigma == 2
+            answer = np.array(
+                [182, 218, 182, 255, 218, 182, 218, 36, 0, 191, 148, 170, 223,
+                 0, 170, 255, 223, 191, 0, 85, 85, 141, 56, 255, 85, 85, 255,
+                 255, 0, 218, 182, 109, 255, 255, 36, 36, 113, 0, 255, 0, 28,
+                 0, 56, 56, 141, 255, 191, 0, 127, 223, 223, 223, 191, 0, 170,
+                 42, 255, 127, 170, 0, 42, 42, 0, 141, 255, 226, 113, 170, 0,
+                 56, 255, 56, 255, 72, 36, 145, 109, 145, 0, 109, 255],
+                dtype=np.uint8).reshape((3, 3, 3, 3))
+        assert dummy_signal.data.all() == answer.all()
+        assert dummy_signal.data.dtype == answer.dtype
+
+    @pytest.mark.parametrize(
+        'relative, dtype_out', [(True, None), (True, np.float32),
+                                (False, None), (False, np.float32)])
+    def test_rescale_intensities(
+            self, dummy_signal, relative, dtype_out):
+        """This test uses a hard-coded answer. If specifically
+        improvements to the intensities produced by this correction is
+        to be made, these hard-coded answers will have to be commented
+        out.
+        """
+
+        dummy_signal.rescale_intensities(relative=relative, dtype_out=dtype_out)
+        if relative is True and dtype_out is None:
+            answer = np.array([
+                141, 170, 141, 198, 170, 141, 170, 28, 0, 255, 198, 226, 198, 0,
+                226, 226, 198, 170, 0, 85, 85, 141, 56, 255, 85, 85, 255, 226,
+                28, 198, 170, 113, 226, 226, 56, 56, 113, 0, 255, 0, 28, 0, 56,
+                56, 141, 226, 170, 0, 113, 198, 198, 198, 170, 0, 113, 28, 170,
+                85, 113, 0, 28, 28, 0, 141, 255, 226, 113, 170, 0, 56, 255, 56,
+                255, 113, 85, 170, 141, 170, 56, 141, 255],
+                dtype=np.uint8).reshape((3, 3, 3, 3))
+        elif relative is True and dtype_out == np.float32:
+            answer = np.array([
+                0.5555556, 0.6666667, 0.5555556, 0.7777778, 0.6666667,
+                0.5555556, 0.6666667, 0.11111111, 0., 1., 0.7777778, 0.8888889,
+                0.7777778, 0., 0.8888889, 0.8888889, 0.7777778, 0.6666667, 0.,
+                0.33333334, 0.33333334, 0.5555556, 0.22222222, 1., 0.33333334,
+                0.33333334, 1., 0.8888889, 0.11111111, 0.7777778, 0.6666667,
+                0.44444445, 0.8888889, 0.8888889, 0.22222222, 0.22222222,
+                0.44444445, 0., 1., 0., 0.11111111, 0., 0.22222222, 0.22222222,
+                0.5555556, 0.8888889, 0.6666667, 0., 0.44444445, 0.7777778,
+                0.7777778, 0.7777778, 0.6666667, 0., 0.44444445, 0.11111111,
+                0.6666667, 0.33333334, 0.44444445, 0., 0.11111111, 0.11111111,
+                0., 0.5555556, 1., 0.8888889, 0.44444445, 0.6666667, 0.,
+                0.22222222, 1., 0.22222222, 1., 0.44444445, 0.33333334,
+                0.6666667, 0.5555556, 0.6666667, 0.22222222, 0.5555556, 1.],
+                dtype=np.float32).reshape((3, 3, 3, 3))
+        elif relative is False and dtype_out is None:
+            answer = np.array([
+                182, 218, 182, 255, 218, 182, 218, 36, 0, 255, 198, 226, 198, 0,
+                226, 226, 198, 170, 0, 85, 85, 141, 56, 255, 85, 85, 255, 255,
+                0, 218, 182, 109, 255, 255, 36, 36, 113, 0, 255, 0, 28, 0, 56,
+                56, 141, 255, 191, 0, 127, 223, 223, 223, 191, 0, 170, 42, 255,
+                127, 170, 0, 42, 42, 0, 141, 255, 226, 113, 170, 0, 56, 255, 56,
+                255, 72, 36, 145, 109, 145, 0, 109, 255],
+                dtype=np.uint8).reshape((3, 3, 3, 3))
+        else:  # relative is False and dtype_out == np.float32
+            answer = np.array([
+                0.71428573, 0.85714287, 0.71428573, 1., 0.85714287, 0.71428573,
+                0.85714287, 0.14285715, 0., 1., 0.7777778, 0.8888889, 0.7777778,
+                0., 0.8888889, 0.8888889, 0.7777778, 0.6666667, 0., 0.33333334,
+                0.33333334, 0.5555556, 0.22222222, 1., 0.33333334, 0.33333334,
+                1., 1., 0., 0.85714287, 0.71428573, 0.42857143, 1., 1.,
+                0.14285715, 0.14285715, 0.44444445, 0., 1., 0., 0.11111111, 0.,
+                0.22222222, 0.22222222, 0.5555556, 1., 0.75, 0., 0.5, 0.875,
+                0.875, 0.875, 0.75, 0., 0.6666667, 0.16666667, 1., 0.5,
+                0.6666667, 0., 0.16666667, 0.16666667, 0., 0.5555556, 1.,
+                0.8888889, 0.44444445, 0.6666667, 0., 0.22222222, 1.,
+                0.22222222, 1., 0.2857143, 0.14285715, 0.5714286, 0.42857143,
+                0.5714286, 0., 0.42857143, 1.],
+                dtype=np.float32).reshape((3, 3, 3, 3))
+        assert dummy_signal.data.all() == answer.all()
+        assert dummy_signal.data.dtype == answer.dtype
