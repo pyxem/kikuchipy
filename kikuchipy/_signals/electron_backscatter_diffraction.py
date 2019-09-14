@@ -28,6 +28,7 @@ from dask.diagnostics import ProgressBar
 import warnings
 from sklearn.decomposition import IncrementalPCA
 from scipy.ndimage import gaussian_filter
+from skimage.util.dtype import dtype_range
 from h5py import File
 from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal, LazySignal2D
@@ -467,18 +468,26 @@ class EBSD(Signal2D):
         if dtype_out is None:
             dtype_out = self.data.dtype.type
 
-        # Determine in_range variable for skimage.exposure.rescale_intensity
+        # Determine min./max. intensity of input pattern to rescale to
         if relative:  # Scale relative to min./max. intensity in scan
-            imin = self.data.min()
-            imax = self.data.max()
+            in_range = (self.data.min(), self.data.max())
         else:  # Scale relative to min./max. intensity in each pattern
-            imin, imax = None, None
+            in_range = (None, None)
+
+        # Min./max intensity of output patterns, determined by dtype_out
+        omin = 0
+        try:
+            _, omax = dtype_range[dtype_out]
+        except KeyError:
+            raise KeyError("Data type {} not recognised, use any of {}".format(
+                dtype_out, dtype_range))
+        out_range = (omin, omax)
 
         # Rescale patterns and overwrite signal patterns
         dask_array = kpud._get_dask_array(signal=self)
         rescaled_patterns = da.map_blocks(
-            kpue._rescale_pattern_chunk, dask_array, imin, imax, dtype_out,
-            dtype=dtype_out)
+            kpue._rescale_pattern_chunk, dask_array, in_range, out_range,
+            dtype_out, relative, dtype=dtype_out)
         if not self._lazy:
             with ProgressBar():
                 rescaled_patterns = rescaled_patterns.compute()

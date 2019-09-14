@@ -23,19 +23,22 @@ from skimage.exposure import rescale_intensity
 from skimage.exposure._adapthist import _clahe
 
 
-def _rescale_pattern_chunk(patterns, imin, imax, dtype_out):
-    """Rescale patterns in chunk to fill the data type range using
-    `skimage.exposure.rescale_intensity`, keeping relative intensities
-    or not.
+def _rescale_pattern_chunk(
+        patterns, in_range, out_range, dtype_out, relative):
+    """Rescale patterns in chunk to fill the data type range using an
+    approach inspired by `skimage.exposure.rescale_intensity`, keeping
+    relative intensities or not.
 
     Parameters
     ----------
     patterns : da.Array
         Patterns to rescale.
-    imin, imax : {None, int, float}
-        Min./max. intensity values of input patterns.
+    in_range, out_range : tuple of {None, int, float}
+        Min./max. intensity values of input and output patterns.
     dtype_out : np.dtype
         Data type of output patterns.
+    relative : bool
+        Keep relative intensities between patterns or not.
 
     Returns
     -------
@@ -44,13 +47,16 @@ def _rescale_pattern_chunk(patterns, imin, imax, dtype_out):
     """
 
     rescaled_patterns = np.zeros_like(patterns, dtype=dtype_out)
-    in_range = (imin, imax)  # Scale relative to min./max. intensity in scan
+    imin, imax = in_range
+    omin, omax = out_range
     for nav_idx in np.ndindex(patterns.shape[:-2]):
-        pattern = patterns[nav_idx].astype(dtype_out)
-        if imin is None:  # Scale relative to min./max. intensity in pattern
-            in_range = (pattern.min(), pattern.max())
-        rescaled_patterns[nav_idx] = rescale_intensity(
-            pattern, in_range=in_range, out_range=dtype_out)
+        pattern = patterns[nav_idx]
+        if not relative:  # Scale relative to min./max. intensity in pattern
+            imin, imax = (pattern.min(), pattern.max())
+        pattern = np.clip(pattern, imin, imax)
+        rescaled_pattern = (pattern - imin) / float(imax - imin)
+        rescaled_pattern = rescaled_pattern * (omax - omin) + omin
+        rescaled_patterns[nav_idx] = rescaled_pattern.astype(dtype_out)
     return rescaled_patterns
 
 

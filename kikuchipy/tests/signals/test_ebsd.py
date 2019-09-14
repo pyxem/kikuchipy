@@ -123,8 +123,8 @@ class TestEBSD:
             self, dummy_signal, dummy_background, operation, relative):
         """This test uses a hard-coded answer. If specifically
         improvements to the intensities produced by this correction is
-        to be made, these hard-coded answers will have to be commented
-        out.
+        to be made, these hard-coded answers will have to be
+        recalculated for the tests to pass.
         """
 
         dummy_signal.static_background_correction(
@@ -132,13 +132,12 @@ class TestEBSD:
             static_bg=dummy_background)
         if operation == 'subtract' and relative is True:
             answer = np.array(
-                [115, 162, 115, 185, 185, 139, 162, 255, 255, 208, 185, 185,
-                 185, 255, 208, 208, 185, 185, 255, 255, 255, 139, 255, 231,
-                 255, 255, 255, 185, 255, 162, 162, 139, 208, 208, 255, 255,
-                 255, 255, 208, 255, 255, 255, 255, 255, 162, 185, 162, 255,
-                 115, 208, 185, 185, 162, 255, 255, 255, 139, 255, 139, 255,
-                 255, 255, 255, 115, 231, 185, 115, 185, 255, 255, 231, 255,
-                 208, 115, 255, 162, 162, 162, 255, 139, 255],
+                [115, 162, 115, 185, 185, 139, 162, 46, 46, 208, 185, 185, 185,
+                 46, 208, 208, 185, 185, 0, 92, 69, 139, 92, 231, 92, 92, 255,
+                 185, 46, 162, 162, 139, 208, 208, 69, 92, 92, 23, 208, 23, 69,
+                 23, 69, 69, 162, 185, 162, 0, 115, 208, 185, 185, 162, 46, 92,
+                 46, 139, 92, 139, 23, 46, 46, 46, 115, 231, 185, 115, 185, 23,
+                 69, 231, 92, 208, 115, 69, 162, 162, 162, 69, 139, 255],
                 dtype=np.uint8).reshape((3, 3, 3, 3))
         elif operation == 'subtract' and relative is False:
             answer = np.array(
@@ -176,8 +175,8 @@ class TestEBSD:
             self, dummy_signal, operation, sigma):
         """This test uses a hard-coded answer. If specifically
         improvements to the intensities produced by this correction is
-        to be made, these hard-coded answers will have to be commented
-        out.
+        to be made, these hard-coded answers will have to be
+        recalculated for the tests to pass.
         """
 
         dummy_signal.dynamic_background_correction(
@@ -228,8 +227,8 @@ class TestEBSD:
             self, dummy_signal, relative, dtype_out):
         """This test uses a hard-coded answer. If specifically
         improvements to the intensities produced by this correction is
-        to be made, these hard-coded answers will have to be commented
-        out.
+        to be made, these hard-coded answers will have to be
+        recalculated for the tests to pass.
         """
 
         dummy_signal.rescale_intensities(relative=relative, dtype_out=dtype_out)
