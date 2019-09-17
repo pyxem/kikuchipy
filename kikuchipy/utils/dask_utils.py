@@ -75,7 +75,7 @@ def _get_dask_array(signal, dtype=None):
     ----------
     signal : kp.signals.EBSD or kp.signals.LazyEBSD
         Signal with data to return dask array from.
-    dtype : np.dtype, optional
+    dtype : np.dtype_out, optional
         Data type of returned dask array.
 
     Returns
@@ -87,7 +87,7 @@ def _get_dask_array(signal, dtype=None):
 
     if dtype is None:
         dtype = signal.data.dtype
-    if signal._lazy:
+    if signal._lazy or isinstance(signal.data, da.Array):
         dask_array = signal.data
     else:
         sig_chunks = list(signal.axes_manager.signal_shape)[::-1]

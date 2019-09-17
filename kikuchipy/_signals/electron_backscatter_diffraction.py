@@ -17,6 +17,7 @@
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 import gc
 import datetime
 import tqdm
@@ -24,7 +25,7 @@ import logging
 import numpy as np
 import dask.array as da
 import numbers
-from dask.diagnostics import ProgressBar
+import dask.diagnostics as dd
 import warnings
 from sklearn.decomposition import IncrementalPCA
 from scipy.ndimage import gaussian_filter
@@ -331,8 +332,8 @@ class EBSD(Signal2D):
         this background from each pattern while keeping relative
         intensities between patterns.
 
-        >>> s.static_background_correction(operation='subtract',
-                relative=True)
+        >>> s.static_background_correction(
+                operation='subtract', relative=True)
 
         If metadata has no background pattern, this must be passed in
         the `static_bg` parameter.
@@ -345,36 +346,59 @@ class EBSD(Signal2D):
             try:
                 md = self.metadata
                 ebsd_node = kpui.metadata_nodes(sem=False)
-                static_bg = md.get_item(ebsd_node + '.static_background')
+                static_bg = da.from_array(
+                    md.get_item(ebsd_node + '.static_background'))
             except TypeError:
-                raise TypeError("Static background is not a numpy array or "
-                                "could not be read from signal metadata.")
-        if self.data.dtype != static_bg.dtype:
-            raise ValueError("Static background dtype {} is not the same as "
-                             "pattern dtype {}".format(static_bg.dtype,
-                                                       self.data.dtype))
+                raise TypeError(
+                    "Static background is not a numpy array or could not be "
+                    "read from signal metadata.")
+        if dtype_out != static_bg.dtype:
+            raise ValueError(
+                "Static background dtype_out {} is not the same as pattern "
+                "dtype_out {}".format(static_bg.dtype, dtype_out))
         pat_shape = self.axes_manager.signal_shape[::-1]
         bg_shape = static_bg.shape
         if bg_shape != pat_shape:
-            warnings.warn("Pattern {} and static background {} shapes are not "
-                          "identical, will reshape background to pattern "
-                          "shape".format(pat_shape, bg_shape))
+            warnings.warn(
+                "Pattern {} and static background {} shapes are not identical, "
+                "will reshape background to pattern shape".format(
+                    pat_shape, bg_shape))
             static_bg = rebin(static_bg, pat_shape)
         dtype = np.int16
         static_bg = static_bg.astype(dtype)
 
         dask_array = kpud._get_dask_array(signal=self, dtype=dtype)
 
-        # Correct static background, overwrite signal patterns and rescale
-        if operation == 'divide':
-            corrected_patterns = da.divide(dask_array, static_bg, dtype=dtype)
-        else:
-            corrected_patterns = da.subtract(dask_array, static_bg, dtype=dtype)
+        # Get min./max. input patterns intensity after correction
+        if relative:  # Scale relative to min./max. intensity in scan
+            signal_min = dask_array.min(axis=(0, 1))
+            signal_max = dask_array.max(axis=(0, 1))
+            if operation == 'subtract':
+                imin = da.subtract(signal_min, static_bg, dtype=dtype).min()
+                imax = da.subtract(signal_max, static_bg, dtype=dtype).max()
+            else:  # Divide
+                imin = da.divide(signal_min, static_bg, dtype=dtype).min()
+                imax = da.divide(signal_max, static_bg, dtype=dtype).max()
+            in_range = (imin, imax)
+        else:  # Scale relative to min./max. intensity in each pattern
+            in_range = None
+
+        # Correct static background and rescale intensities chunk by chunk
+        corrected_patterns = dask_array.map_blocks(
+            kpue._static_background_correction_chunk, static_bg=static_bg,
+            operation=operation, in_range=in_range, dtype_out=dtype_out,
+            dtype=dtype_out)
+
+        # Overwrite signal patterns
         if not self._lazy:
-            with ProgressBar():
-                corrected_patterns = corrected_patterns.compute()
-        self.data = corrected_patterns
-        self.rescale_intensities(relative=relative, dtype_out=dtype_out)
+            with dd.ProgressBar():
+                print("Static background correction:", file=sys.stdout)
+                if corrected_patterns.dtype.type == dtype_out:
+                    corrected_patterns.store(self.data, compute=True)
+                else:
+                    self.data = corrected_patterns.compute()
+        else:
+            self.data = corrected_patterns
 
     def dynamic_background_correction(
             self, operation='subtract', sigma=None):
@@ -402,8 +426,8 @@ class EBSD(Signal2D):
         `False` in `static_background_correction`):
 
         >>> s.static_background_correction(operation='subtract')
-        >>> s.dynamic_background_correction(operation='subtract',
-                sigma=2.0)
+        >>> s.dynamic_background_correction(
+                operation='subtract', sigma=2.0)
         """
 
         dtype_out = self.data.dtype.type
@@ -417,13 +441,9 @@ class EBSD(Signal2D):
 
         # Correct dynamic background, overwrite signal patterns and rescale
         if operation == 'divide':
-            corrected_patterns = da.divide(dask_array, blurred, dtype=dtype)
+            self.data = da.divide(dask_array, blurred, dtype=dtype)
         else:
-            corrected_patterns = da.subtract(dask_array, blurred, dtype=dtype)
-        if not self._lazy:
-            with ProgressBar():
-                corrected_patterns = corrected_patterns.compute()
-        self.data = corrected_patterns
+            self.data = da.subtract(dask_array, blurred, dtype=dtype)
         self.rescale_intensities(relative=False, dtype_out=dtype_out)
 
     def rescale_intensities(self, relative=False, dtype_out=None):
@@ -437,7 +457,7 @@ class EBSD(Signal2D):
         relative : bool, optional
             Keep relative intensities between patterns, default is
             False.
-        dtype_out : np.dtype, optional
+        dtype_out : np.dtype_out, optional
             Data type of rescaled patterns, default is input patterns'
             data type.
 
@@ -451,16 +471,16 @@ class EBSD(Signal2D):
         type range or any data type range passed with `dtype_out`,
         either keeping relative intensities between patterns or not:
 
-        >>> print(s.data.dtype, s.data.min(), s.data.max(),
+        >>> print(s.data.dtype_out, s.data.min(), s.data.max(),
                   s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
         uint8 20 254 24 233
         >>> s2 = s.deepcopy()
         >>> s.rescale_intensities(dtype_out=np.uint16)
-        >>> print(s.data.dtype, s.data.min(), s.data.max(),
+        >>> print(s.data.dtype_out, s.data.min(), s.data.max(),
                   s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
         uint16 0 65535 0 65535
         >>> s2.rescale_intensities(relative=True)
-        >>> print(s2.data.dtype, s2.data.min(), s2.data.max(),
+        >>> print(s2.data.dtype_out, s2.data.min(), s2.data.max(),
                   s2.inav[0, 0].data.min(), s2.inav[0, 0].data.max())
         uint8 0 255 4 232
         """
@@ -468,30 +488,29 @@ class EBSD(Signal2D):
         if dtype_out is None:
             dtype_out = self.data.dtype.type
 
+        dask_array = kpud._get_dask_array(signal=self)
+
         # Determine min./max. intensity of input pattern to rescale to
         if relative:  # Scale relative to min./max. intensity in scan
-            in_range = (self.data.min(), self.data.max())
+            in_range = (dask_array.min(), dask_array.max())
         else:  # Scale relative to min./max. intensity in each pattern
-            in_range = (None, None)
+            in_range = None
 
-        # Min./max intensity of output patterns, determined by dtype_out
-        omin = 0
-        try:
-            _, omax = dtype_range[dtype_out]
-        except KeyError:
-            raise KeyError("Data type {} not recognised, use any of {}".format(
-                dtype_out, dtype_range))
-        out_range = (omin, omax)
+        # Rescale patterns
+        rescaled_patterns = dask_array.map_blocks(
+            kpue._rescale_pattern_chunk, in_range=in_range, dtype_out=dtype_out,
+            dtype=dtype_out)
 
-        # Rescale patterns and overwrite signal patterns
-        dask_array = kpud._get_dask_array(signal=self)
-        rescaled_patterns = da.map_blocks(
-            kpue._rescale_pattern_chunk, dask_array, in_range, out_range,
-            dtype_out, relative, dtype=dtype_out)
+        # Overwrite signal patterns
         if not self._lazy:
-            with ProgressBar():
-                rescaled_patterns = rescaled_patterns.compute()
-        self.data = rescaled_patterns
+            with dd.ProgressBar():
+                if rescaled_patterns.dtype.type == dtype_out:
+                    rescaled_patterns.store(self.data, compute=True)
+                else:
+                    self.data = rescaled_patterns.compute()
+        else:
+            self.data = rescaled_patterns
+        gc.collect()
 
     def adaptive_histogram_equalization(
             self, kernel_size=None, **kwargs):
@@ -522,8 +541,8 @@ class EBSD(Signal2D):
         >>> import matplotlib.pyplot as plt
         >>> s2 = s.inav[0, 0]
         >>> s2.adaptive_histogram_equalization()
-        >>> imin = np.iinfo(s.data.dtype).min
-        >>> imax = np.iinfo(s.data.dtype).max + 1
+        >>> imin = np.iinfo(s.data.dtype_out).min
+        >>> imax = np.iinfo(s.data.dtype_out).max + 1
         >>> hist, _ = np.histogram(s.inav[0, 0].data, bins=imax,
                           range=(imin, imax))
         >>> hist2, _ = np.histogram(s2.inav[0, 0].data, bins=imax,
@@ -565,6 +584,7 @@ class EBSD(Signal2D):
         if not self._lazy:
             with ProgressBar():
                 equalized_patterns = equalized_patterns.compute()
+                gc.collect()
         self.data = equalized_patterns
 
     def get_virtual_image(self, roi):
@@ -682,7 +702,7 @@ class EBSD(Signal2D):
 
         This function calls HyperSpy's get_decomposition_model. The
         learning results are preconditioned before this call, doing the
-        following: (1) set data type to desired dtype, (2) remove
+        following: (1) set data type to desired dtype_out, (2) remove
         unwanted components, (3) rechunk, if dask arrays, to suitable
         chunk.
 
@@ -707,7 +727,7 @@ class EBSD(Signal2D):
         s_model : kikuchipy.signals.EBSD or kikuchipy.signals.LazyEBSD
         """
 
-        # Change dtype
+        # Change dtype_out
         target = self.learning_results
         factors_orig = target.factors.copy()  # Keep to revert target in the end
         loadings_orig = target.loadings.copy()
@@ -827,7 +847,7 @@ class LazyEBSD(EBSD, LazySignal2D):
             Name of output signal file.
         """
 
-        # Change dtype
+        # Change dtype_out
         target = self.learning_results
         factors = np.array(target.factors, dtype=dtype_learn)
         loadings = np.array(target.loadings, dtype=dtype_learn)
