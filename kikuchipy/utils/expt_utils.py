@@ -18,13 +18,59 @@
 
 import numpy as np
 import dask.array as da
-from skimage.util import img_as_uint
-from skimage.exposure import rescale_intensity
-from skimage.exposure._adapthist import _clahe
+from skimage.exposure import rescale_intensity, equalize_adapthist
+from skimage.util.dtype import dtype_range
+
+
+def _rescale_pattern(
+        pattern, in_range=None, out_range=None, dtype_out=None):
+    """Rescale pattern intensities to fill the data type range using an
+    approach inspired by `skimage.exposure.rescale_intensity`.
+
+    Parameters
+    ----------
+    pattern : da.Array
+        Pattern to rescale.
+    in_range, out_range : tuple of int or float, optional
+        Min./max. intensity values of input and output pattern. If None,
+        (default) `in_range` is set to pattern min./max. If None
+        (default), `out_range` is set to `dtype_out` min./max
+        according to `skimage.util.dtype.dtype_range`, with min. equal
+        to zero.
+    dtype_out : np.dtype
+        Data type of rescaled pattern. If None (default), it is set to
+        the same data type as the input pattern.
+
+    Returns
+    -------
+    rescaled_pattern : da.Array
+        Rescaled pattern.
+    """
+
+    if dtype_out is None:
+        dtype_out = pattern.dtype.type
+    if in_range is None:
+        imin, imax = (pattern.min(), pattern.max())
+    else:
+        imin, imax = in_range
+        pattern.clip(imin, imax)
+    if out_range is None or out_range in dtype_range:
+        omin = 0
+        try:
+            _, omax = dtype_range[dtype_out]
+        except KeyError:
+            raise KeyError("Could not set ouput intensity range, since data "
+                           "type {} is not recognised. Use any of {}".format(
+                dtype_out, dtype_range))
+    else:
+        omin, omax = out_range
+
+    rescaled_pattern = (pattern - imin) / float(imax - imin)
+    return (rescaled_pattern * (omax - omin) + omin).astype(dtype_out)
 
 
 def _rescale_pattern_chunk(
-        patterns, in_range, out_range, dtype_out, relative):
+        patterns, in_range=None, out_range=None, dtype_out=None):
     """Rescale patterns in chunk to fill the data type range using an
     approach inspired by `skimage.exposure.rescale_intensity`, keeping
     relative intensities or not.
@@ -33,12 +79,15 @@ def _rescale_pattern_chunk(
     ----------
     patterns : da.Array
         Patterns to rescale.
-    in_range, out_range : tuple of {None, int, float}
-        Min./max. intensity values of input and output patterns.
+    in_range, out_range : tuple of int or float, optional
+        Min./max. intensity values of input and output pattern. If None,
+        (default) `in_range` is set to pattern min./max. If None
+        (default), `out_range` is set to `dtype_out` min./max
+        according to `skimage.util.dtype_out.dtype_range`, with min. equal
+        to zero.
     dtype_out : np.dtype
-        Data type of output patterns.
-    relative : bool
-        Keep relative intensities between patterns or not.
+        Data type of rescaled patterns. If None (default), it is set to
+        the same data type as the input patterns.
 
     Returns
     -------
@@ -46,58 +95,57 @@ def _rescale_pattern_chunk(
         Rescaled patterns.
     """
 
-    rescaled_patterns = np.zeros_like(patterns, dtype=dtype_out)
-    imin, imax = in_range
-    omin, omax = out_range
+    rescaled_patterns = np.empty_like(patterns, dtype=dtype_out)
     for nav_idx in np.ndindex(patterns.shape[:-2]):
-        pattern = patterns[nav_idx]
-        if not relative:  # Scale relative to min./max. intensity in pattern
-            imin, imax = (pattern.min(), pattern.max())
-        pattern = np.clip(pattern, imin, imax)
-        rescaled_pattern = (pattern - imin) / float(imax - imin)
-        rescaled_pattern = rescaled_pattern * (omax - omin) + omin
-        rescaled_patterns[nav_idx] = rescaled_pattern.astype(dtype_out)
+        rescaled_patterns[nav_idx] = _rescale_pattern(
+            patterns[nav_idx], in_range=in_range, out_range=out_range,
+            dtype_out=dtype_out)
     return rescaled_patterns
 
 
-def _adaptive_histogram_equalization_pattern(
-        pattern, kernel_size, clip_limit, nbins):
-    """Local contrast enhancement of a pattern using adaptive histogram
-    equalization as implemented in `scikit-image`.
+def _static_background_correction_chunk(
+        patterns, static_bg, operation='subtract', in_range=None,
+        dtype_out=None):
+    """Correct static background in patterns in chunk by subtracting or
+    dividing by a static background pattern. Returned pattern
+    intensities are rescaled keeping relative intensities or not and
+    stretched to fill the input data type range.
 
     Parameters
     ----------
-    pattern : da.Array
-        Pattern to enhance.
-    kernel_size : int or list-like, optional
-        Shape of contextual regions for adaptive histogram equalization.
-    nbins : int, optional
-        Number of gray bins for histogram ("data range").
-    clip_limit : float, optional
-        Clipping limit, normalized between 0 and 1 (higher values give
-        more contrast).
+    patterns : da.Array
+        Patterns to correct static background in.
+    static_bg : np.ndarray or  da.Array, optional
+        Static background pattern. If not passed we try to read it
+        from the signal metadata.
+    operation : 'subtract' or 'divide', optional
+        Subtract (default) or divide by static background pattern.
+    in_range : tuple of int or float, optional
+        Min./max. intensity values of input and output patterns. If
+        None, (default) `in_range` is set to pattern min./max, losing
+        relative intensities between patterns.
+    dtype_out : np.dtype
+        Data type of corrected patterns. If None (default), it is set to
+        the same data type as the input patterns.
 
     Returns
     -------
-    equalized_pattern : da.Array
-        Enhanced pattern.
+    corrected_patterns : da.Array
+        Patterns with static background corrected.
     """
 
-    # Necessary preparations of pattern intensity for _clahe (range 2**14 is
-    # hard-coded in scikit-image)
-    dtype_in = pattern.dtype.type
-    pattern = img_as_uint(pattern)
-    pattern = rescale_intensity(pattern, out_range=(0, 2**14 - 1))
-
-    # Perform adaptive histogram equalization
-    equalized_pattern = _clahe(
-        pattern, kernel_size=kernel_size, clip_limit=clip_limit * nbins,
-        nbins=nbins)
-
-    # Rescale intensity to fill input data type range
-    equalized_pattern = rescale_intensity(equalized_pattern, out_range=dtype_in)
-
-    return equalized_pattern
+    dtype_in = patterns.dtype.type
+    corrected_patterns = np.empty_like(patterns, dtype=dtype_in)
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        if operation == 'subtract':
+            corrected_pattern = da.subtract(
+                patterns[nav_idx], static_bg, dtype=dtype_in)
+        else:  # Divide
+            corrected_pattern = da.divide(
+                patterns[nav_idx], static_bg, dtype=dtype_in)
+        corrected_patterns[nav_idx] = _rescale_pattern(
+            corrected_pattern, in_range=in_range, dtype_out=dtype_out)
+    return corrected_patterns
 
 
 def _adaptive_histogram_equalization_chunk(
@@ -124,10 +172,13 @@ def _adaptive_histogram_equalization_chunk(
     """
 
     equalized_patterns = np.zeros_like(patterns)
+    dtype_in = patterns.dtype.type
     for nav_idx in np.ndindex(patterns.shape[:-2]):
-        equalized_patterns[nav_idx] = _adaptive_histogram_equalization_pattern(
+        equalized_pattern = equalize_adapthist(
             patterns[nav_idx], kernel_size=kernel_size, clip_limit=clip_limit,
             nbins=nbins)
+        equalized_patterns[nav_idx] = rescale_intensity(
+            equalized_pattern, out_range=dtype_in)
     return equalized_patterns
 
 
@@ -162,6 +213,6 @@ def normalised_correlation_coefficient(
     if zero_normalised:
         pattern = pattern - pattern.mean()
         template = template - template.mean()
-    coefficient = np.sum(pattern * template) / np.sqrt(np.sum(pattern**2) *
-                                                       np.sum(template**2))
+    coefficient = np.sum(pattern * template) / np.sqrt(np.sum(pattern ** 2) *
+                                                       np.sum(template ** 2))
     return coefficient
