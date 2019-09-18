@@ -32,10 +32,12 @@ jobs:
         df -h
     - name: Install dependencies
       run: |
+        conda activate testenv
         conda install --yes hyperspy pyxem pytest pytest-cov coveralls
         pip install .
     - name: Run tests with pytest
       run: |
+        conda activate testenv
         export MPLBACKEND=Agg
         pytest --cov=kikuchipy
     - name: Ask Coveralls to look at pull request
