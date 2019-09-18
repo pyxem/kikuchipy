@@ -11,34 +11,27 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: 3.7
+        python-version: [3.7]
+
     steps:
-    - uses: actions/checkout@v1
-    - name: Install Miniconda
-      run: |
-        wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-        chmod +x miniconda.sh
-        ./miniconda.sh -b -p $HOME/miniconda
-        hash -r
-    - name: Setup environment
-      run: |
-        source $HOME/miniconda/bin/activate root
-        conda update --yes conda
-        conda config --append channels conda-forge
-        conda create --name testenv --yes python=$PYTHON
-        conda activate testenv
-        conda info -a
-        df -h
-    - name: Install dependencies
-      run: |
-        conda init
-        conda activate testenv
-        conda install --yes hyperspy pyxem pytest pytest-cov coveralls
-        pip install .
-    - name: Run tests with pytest
-      run: |
-        conda activate testenv
-        export MPLBACKEND=Agg
-        pytest --cov=kikuchipy
-    - name: Ask Coveralls to look at pull request
-      run: coveralls
+      - name: Pull repo and install Miniconda
+        uses: actions/checkout@v1
+        run: |
+          wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+          chmod +x miniconda.sh
+          ./miniconda.sh -b -p $HOME/miniconda
+          hash -r
+      - name: Setup environment, install dependencies, run tests and tell Coveralls
+        run: |
+          source $HOME/miniconda/bin/activate root
+          conda update --yes conda
+          conda config --append channels conda-forge
+          conda create --name testenv --yes python=$PYTHON
+          conda activate testenv
+          conda info -a
+          df -h
+          conda install --yes hyperspy pyxem pytest pytest-cov coveralls
+          pip install .
+          export MPLBACKEND=Agg
+          pytest --cov=kikuchipy
+          coveralls
