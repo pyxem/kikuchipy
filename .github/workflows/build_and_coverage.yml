@@ -9,19 +9,18 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: 3.7
     steps:
     - uses: actions/checkout@v1
     - name: Install Miniconda
-      with:
-        python-version: 3.7
       run: |
         wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
         chmod +x miniconda.sh
         ./miniconda.sh -b -p $HOME/miniconda
         hash -r
     - name: Setup environment
-      with:
-        python-version: 3.7
       run: |
         source $HOME/miniconda/bin/activate root
         conda update --yes conda
@@ -31,21 +30,15 @@ jobs:
         conda info -a
         df -h
     - name: Install dependencies
-      with:
-        python-version: 3.7
       run: |
         conda init
         conda activate testenv
         conda install --yes hyperspy pyxem pytest pytest-cov coveralls
         pip install .
     - name: Run tests with pytest
-      with:
-        python-version: 3.7
       run: |
         conda activate testenv
         export MPLBACKEND=Agg
         pytest --cov=kikuchipy
     - name: Ask Coveralls to look at pull request
-      with:
-        python-version: 3.7
       run: coveralls
