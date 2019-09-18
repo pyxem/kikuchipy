@@ -24,9 +24,9 @@ import numpy as np
 import dask.array as da
 from hyperspy.misc.utils import DictionaryTreeBrowser
 from hyperspy.io_plugins.hspy import overwrite_dataset, get_signal_chunks
-from kikuchipy.utils.io_utils import (kikuchipy_metadata, get_input_variable,
-                                      metadata_nodes)
-from kikuchipy.utils.phase_utils import _phase_metadata, _update_phase_info
+from kikuchipy.util.io import (kikuchipy_metadata, get_input_variable,
+                               metadata_nodes)
+from kikuchipy.util.phase import _phase_metadata, _update_phase_info
 
 _logger = logging.getLogger(__name__)
 
@@ -372,8 +372,8 @@ def kikuchipyheader2dicts(scan_group, md, lazy=False):
     md, omd, scan_size : DictionaryTreeBrowser
     """
 
-    from kikuchipy.utils.general_utils import (delete_from_nested_dictionary,
-                                               get_nested_dictionary)
+    from kikuchipy.util.general import (delete_from_nested_dictionary,
+                                        get_nested_dictionary)
 
     omd = DictionaryTreeBrowser()
     sem_node, ebsd_node = metadata_nodes()

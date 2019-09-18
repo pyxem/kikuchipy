@@ -22,14 +22,13 @@ import gc
 import datetime
 import tqdm
 import logging
+import numbers
 import numpy as np
 import dask.array as da
-import numbers
 import dask.diagnostics as dd
+import dask
 import warnings
 from sklearn.decomposition import IncrementalPCA
-from scipy.ndimage import gaussian_filter
-from skimage.util.dtype import dtype_range
 from h5py import File
 from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal, LazySignal2D
@@ -39,11 +38,11 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 from hyperspy.misc.array_tools import rebin
 from pyxem.signals.electron_diffraction2d import ElectronDiffraction2D
 import kikuchipy.io as kpio
-import kikuchipy.utils.io_utils as kpui
-import kikuchipy.utils.phase_utils as kpup
-import kikuchipy.utils.general_utils as kpug
-import kikuchipy.utils.expt_utils as kpue
-import kikuchipy.utils.dask_utils as kpud
+import kikuchipy.util.io as kpui
+import kikuchipy.util.phase as kpup
+import kikuchipy.util.general as kpug
+import kikuchipy.util.experimental as kpue
+import kikuchipy.util.dask as kpud
 
 _logger = logging.getLogger(__name__)
 
@@ -134,7 +133,7 @@ class EBSD(Signal2D):
         Examples
         --------
         >>> import kikuchipy as kp
-        >>> ebsd_node = kp.utils.io_utils.metadata_nodes(sem=False)
+        >>> ebsd_node = kp.util.io_utils.metadata_nodes(sem=False)
         >>> print(s.metadata.get_item(ebsd_node + '.xpc')
         1.0
         >>> s.set_experimental_parameters(xpc=0.50726)
@@ -302,7 +301,8 @@ class EBSD(Signal2D):
         operation : 'subtract' or 'divide', optional
             Subtract (default) or divide by static background pattern.
         relative : bool, optional
-            Keep relative intensities between patterns.
+            Keep relative intensities between patterns (default is
+            False).
         static_bg : {np.ndarray, da.Array or None}, optional
             Static background pattern. If not passed we try to read it
             from the signal metadata.
@@ -318,7 +318,7 @@ class EBSD(Signal2D):
         available in signal metadata:
 
         >>> import kikuchipy as kp
-        >>> ebsd_node = kp.utils.io_utils.metadata_nodes(sem=False)
+        >>> ebsd_node = kp.util.io_utils.metadata_nodes(sem=False)
         >>> print(s.metadata.get_item(ebsd_node + '.static_background'))
         [[84 87 90 ... 27 29 30]
         [87 90 93 ... 27 28 30]
@@ -330,13 +330,13 @@ class EBSD(Signal2D):
 
         Static background can be corrected by subtracting or dividing
         this background from each pattern while keeping relative
-        intensities between patterns.
+        intensities between patterns (or not).
 
         >>> s.static_background_correction(
                 operation='subtract', relative=True)
 
         If metadata has no background pattern, this must be passed in
-        the `static_bg` parameter.
+        the `static_bg` parameter as a numpy or dask array.
         """
 
         dtype_out = self.data.dtype.type
@@ -393,10 +393,7 @@ class EBSD(Signal2D):
         if not self._lazy:
             with dd.ProgressBar():
                 print("Static background correction:", file=sys.stdout)
-                if corrected_patterns.dtype.type == dtype_out:
-                    corrected_patterns.store(self.data, compute=True)
-                else:
-                    self.data = corrected_patterns.compute()
+                corrected_patterns.store(self.data, compute=True)
         else:
             self.data = corrected_patterns
 
@@ -432,19 +429,23 @@ class EBSD(Signal2D):
 
         dtype_out = self.data.dtype.type
         dtype = np.int16
+
         dask_array = kpud._get_dask_array(signal=self, dtype=dtype)
 
-        # Create dynamic background patterns
         if sigma is None:
             sigma = self.axes_manager.signal_axes[0].size/30
-        blurred = da.map_blocks(gaussian_filter, dask_array, sigma=sigma)
 
-        # Correct dynamic background, overwrite signal patterns and rescale
-        if operation == 'divide':
-            self.data = da.divide(dask_array, blurred, dtype=dtype)
+        corrected_patterns = dask_array.map_blocks(
+            kpue._dynamic_background_correction_chunk, operation=operation,
+            sigma=sigma, dtype_out=dtype_out, dtype=dtype_out)
+
+        # Overwrite signal patterns
+        if not self._lazy:
+            with dd.ProgressBar():
+                print("Dynamic background correction:", file=sys.stdout)
+                corrected_patterns.store(self.data, compute=True)
         else:
-            self.data = da.subtract(dask_array, blurred, dtype=dtype)
-        self.rescale_intensities(relative=False, dtype_out=dtype_out)
+            self.data = corrected_patterns
 
     def rescale_intensities(self, relative=False, dtype_out=None):
         """Rescale pattern intensities inplace to desired data type
@@ -505,15 +506,15 @@ class EBSD(Signal2D):
         if not self._lazy:
             with dd.ProgressBar():
                 if rescaled_patterns.dtype.type == dtype_out:
+                    print("Rescaling patterns:", file=sys.stdout)
                     rescaled_patterns.store(self.data, compute=True)
                 else:
                     self.data = rescaled_patterns.compute()
         else:
             self.data = rescaled_patterns
-        gc.collect()
 
     def adaptive_histogram_equalization(
-            self, kernel_size=None, **kwargs):
+            self, kernel_size=None, clip_limit=0, nbins=128):
         """Local contrast enhancement inplace through adaptive histogram
         equalization as implemented in `scikit-image`.
 
@@ -523,9 +524,12 @@ class EBSD(Signal2D):
             Shape of contextual regions for adaptive histogram
             equalization, default is 1/8 of pattern height and 1/8 of
             pattern width.
-        **kwargs
-            Key word arguments passed to
-            skimage.exposure._adapthist._clahe.
+        clip_limit : float, optional
+            Clipping limit, normalized between 0 and 1 (higher values
+            give more contrast). Default is 0.
+        nbins : int, optional
+            Number of gray bins for histogram ("data range"), default is
+            128.
 
         See also
         --------
@@ -563,7 +567,7 @@ class EBSD(Signal2D):
           might be necessary to search for the optimal kernel size.
         """
 
-        # Determine shape of contextual region
+        # Determine kernel size (shape of contextual region)
         sig_shape = self.axes_manager.signal_shape
         if kernel_size is None:
             kernel_size = (sig_shape[0] // 8, sig_shape[1] // 8)
@@ -574,18 +578,20 @@ class EBSD(Signal2D):
                 "Incorrect value of `kernel_size`: {}".format(kernel_size))
         kernel_size = [int(k) for k in kernel_size]
 
-        # Local contrast enhancement and overwrite signal patterns
+        # Local contrast enhancement
         dask_array = kpud._get_dask_array(signal=self)
-        clip_limit = kwargs.pop('clip_limit', 0.)
-        nbins = kwargs.pop('nbins', 256)
-        equalized_patterns = da.map_blocks(
-            kpue._adaptive_histogram_equalization_chunk, dask_array,
-            kernel_size, clip_limit, nbins, dtype=self.data.dtype)
+        equalized_patterns = dask_array.map_blocks(
+            kpue._adaptive_histogram_equalization_chunk,
+            kernel_size=kernel_size, clip_limit=clip_limit, nbins=nbins,
+            dtype=self.data.dtype)
+
+        # Overwrite signal patterns
         if not self._lazy:
-            with ProgressBar():
-                equalized_patterns = equalized_patterns.compute()
-                gc.collect()
-        self.data = equalized_patterns
+            with dd.ProgressBar():
+                print("Adaptive histogram equalization:", file=sys.stdout)
+                equalized_patterns.store(self.data, compute=True)
+        else:
+            self.data = equalized_patterns
 
     def get_virtual_image(self, roi):
         """Method imported from
@@ -653,7 +659,7 @@ class EBSD(Signal2D):
         dimensions. Each format accepts a different set of parameters.
 
         For details see the specific format documentation in
-        `kikuchipy.io_plugins.<format>.file_writer`.
+        `kikuchipy.io.<format>.file_writer`.
 
         Parameters
         ----------
@@ -809,9 +815,10 @@ class LazyEBSD(EBSD, LazySignal2D):
         super().__init__(*args, **kwargs)
 
     def compute(self, *args, **kwargs):
-        super().compute(*args, **kwargs)
-        self.__class__ = EBSD
+        with dd.ProgressBar(*args, **kwargs):
+            self.data = self.data.compute(*args, **kwargs)
         gc.collect()
+        self.__class__ = EBSD
 
     def get_decomposition_model_write(
             self, components=None, dtype_learn=np.float16,

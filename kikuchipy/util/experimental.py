@@ -20,6 +20,7 @@ import numpy as np
 import dask.array as da
 from skimage.exposure import rescale_intensity, equalize_adapthist
 from skimage.util.dtype import dtype_range
+from scipy.ndimage import gaussian_filter
 
 
 def _rescale_pattern(
@@ -48,7 +49,7 @@ def _rescale_pattern(
     """
 
     if dtype_out is None:
-        dtype_out = pattern.dtype.type
+        dtype_out = pattern.dtype
     if in_range is None:
         imin, imax = (pattern.min(), pattern.max())
     else:
@@ -59,9 +60,9 @@ def _rescale_pattern(
         try:
             _, omax = dtype_range[dtype_out]
         except KeyError:
-            raise KeyError("Could not set ouput intensity range, since data "
-                           "type {} is not recognised. Use any of {}".format(
-                dtype_out, dtype_range))
+            raise KeyError(
+                "Could not set ouput intensity range, since data type {} is "
+                "not recognised. Use any of {}".format(dtype_out, dtype_range))
     else:
         omin, omax = out_range
 
@@ -124,61 +125,105 @@ def _static_background_correction_chunk(
         Min./max. intensity values of input and output patterns. If
         None, (default) `in_range` is set to pattern min./max, losing
         relative intensities between patterns.
-    dtype_out : np.dtype
+    dtype_out : np.dtype, optional
         Data type of corrected patterns. If None (default), it is set to
         the same data type as the input patterns.
 
     Returns
     -------
     corrected_patterns : da.Array
-        Patterns with static background corrected.
+        Static background corrected patterns.
     """
 
-    dtype_in = patterns.dtype.type
-    corrected_patterns = np.empty_like(patterns, dtype=dtype_in)
+    if dtype_out is None:
+        dtype_out = patterns.dtype
+
+    corrected_patterns = np.empty_like(patterns, dtype=dtype_out)
     for nav_idx in np.ndindex(patterns.shape[:-2]):
         if operation == 'subtract':
-            corrected_pattern = da.subtract(
-                patterns[nav_idx], static_bg, dtype=dtype_in)
+            corrected_pattern = patterns[nav_idx] - static_bg
         else:  # Divide
-            corrected_pattern = da.divide(
-                patterns[nav_idx], static_bg, dtype=dtype_in)
+            corrected_pattern = patterns[nav_idx] / static_bg
         corrected_patterns[nav_idx] = _rescale_pattern(
             corrected_pattern, in_range=in_range, dtype_out=dtype_out)
+
+    return corrected_patterns
+
+
+def _dynamic_background_correction_chunk(
+        patterns, sigma, operation='subtract', dtype_out=None):
+    """Correct dynamic background in patterns in chunk by subtracting
+    or dividing by a blurred version of each pattern. Returned pattern
+    intensities are stretched to fill the input data type range.
+
+    Parameters
+    ----------
+    patterns : da.Array
+        Patterns to correct dynamic background in.
+    sigma : {int, float or None}
+        Standard deviation of the gaussian kernel.
+    operation : 'subtract' or 'divide', optional
+        Subtract (default) or divide by dynamic background pattern.
+    dtype_out : np.dtype, optional
+        Data type of corrected patterns. If None (default), it is set to
+        the same data type as the input patterns.
+
+    Returns
+    -------
+    corrected_patterns : da.Array
+        Dynamic background corrected patterns.
+    """
+
+    if dtype_out is None:
+        dtype_out = patterns.dtype
+
+    corrected_patterns = np.empty_like(patterns, dtype=dtype_out)
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        pattern = patterns[nav_idx]
+        blurred = gaussian_filter(pattern, sigma=sigma)
+        if operation == 'subtract':
+            corrected_pattern = pattern - blurred
+        else:  # Divide
+            corrected_pattern = pattern / blurred
+        corrected_patterns[nav_idx] = _rescale_pattern(
+            corrected_pattern, dtype_out=dtype_out)
+
     return corrected_patterns
 
 
 def _adaptive_histogram_equalization_chunk(
-        patterns, kernel_size, clip_limit, nbins):
+        patterns, kernel_size, clip_limit=0, nbins=128):
     """Local contrast enhancement on chunk of patterns using adaptive
-    histogram equalization as implemented in `scikit-image`.
+    histogram equalization as implemented in
+    `skimage.exposure.equalize_adapthist`.
 
     Parameters
     ----------
     patterns : da.Array
         Patterns to enhance.
-    kernel_size : int or list-like, optional
+    kernel_size : int or list-like
         Shape of contextual regions for adaptive histogram equalization.
     clip_limit : float, optional
         Clipping limit, normalized between 0 and 1 (higher values give
-        more contrast).
+        more contrast). Default is 0.
     nbins : int, optional
-        Number of gray bins for histogram ("data range").
+        Number of gray bins for histogram ("data range"), default is
+        128.
 
     Returns
     -------
     equalized_patterns : da.Array
-        Chunk of enhanced patterns.
+        Patterns with enhanced contrast.
     """
 
-    equalized_patterns = np.zeros_like(patterns)
     dtype_in = patterns.dtype.type
+    equalized_patterns = np.empty_like(patterns)
     for nav_idx in np.ndindex(patterns.shape[:-2]):
         equalized_pattern = equalize_adapthist(
             patterns[nav_idx], kernel_size=kernel_size, clip_limit=clip_limit,
             nbins=nbins)
-        equalized_patterns[nav_idx] = rescale_intensity(
-            equalized_pattern, out_range=dtype_in)
+        equalized_patterns[nav_idx] = _rescale_pattern(
+            equalized_pattern, dtype_out=dtype_in)
     return equalized_patterns
 
 
