@@ -19,4 +19,4 @@
 """
 All classes inherits from Signal2D from HyperSpy.
 """
-from kikuchipy._signals.electron_backscatter_diffraction import EBSD
+from kikuchipy._signals.ebsd import EBSD
