@@ -12,11 +12,17 @@ jobs:
         uses: actions/setup-python@master
         with:
           python-version: 3.7
+      - name: Install Miniconda
+        run: |
+          wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+          chmod +x miniconda.sh
+          ./miniconda.sh -b -p $HOME/miniconda
+          hash -r
       - name: Setup environment and install dependencies
         run: |
+          source $HOME/miniconda/bin/activate root
           conda config --append channels conda-forge
           conda create --name testenv --yes
-          conda init bash
           conda activate testenv
           conda info -a
           df -h
