@@ -1,4 +1,4 @@
-![build status](https://github.com/kikuchipy/kikuchipy/workflows/Build/badge.svg) [![codecov](https://codecov.io/gh/kikuchipy/kikuchipy/branch/master/graph/badge.svg)](https://codecov.io/gh/kikuchipy/kikuchipy)
+[![build status](https://github.com/kikuchipy/kikuchipy/workflows/Build/badge.svg)](https://github.com/kikuchipy/kikuchipy/actions) [![codecov](https://codecov.io/gh/kikuchipy/kikuchipy/branch/master/graph/badge.svg)](https://codecov.io/gh/kikuchipy/kikuchipy)
 
 KikuchiPy
 ------------
