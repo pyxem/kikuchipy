@@ -207,7 +207,7 @@ def load_with_reader(filename, reader, signal_type=None,
     Parameters
     ----------
     filename : str
-    reader : io
+    reader : io_plugins
     signal_type : {None, 'EBSD'}, optional
     convert_units : bool, optional
     **kwargs :
