@@ -18,7 +18,7 @@
 
 import numpy as np
 import dask.array as da
-from skimage.exposure import rescale_intensity, equalize_adapthist
+from skimage.exposure import equalize_adapthist
 from skimage.util.dtype import dtype_range
 from scipy.ndimage import gaussian_filter
 

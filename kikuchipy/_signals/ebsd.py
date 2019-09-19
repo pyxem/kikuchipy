@@ -26,7 +26,6 @@ import numbers
 import numpy as np
 import dask.array as da
 import dask.diagnostics as dd
-import dask
 import warnings
 from sklearn.decomposition import IncrementalPCA
 from h5py import File
@@ -367,6 +366,7 @@ class EBSD(Signal2D):
         dtype = np.int16
         static_bg = static_bg.astype(dtype)
 
+        # Create dask array of signal patterns and do processing on this
         dask_array = kpud._get_dask_array(signal=self, dtype=dtype)
 
         # Get min./max. input patterns intensity after correction
@@ -430,6 +430,7 @@ class EBSD(Signal2D):
         dtype_out = self.data.dtype.type
         dtype = np.int16
 
+        # Create dask array of signal patterns and do processing on this
         dask_array = kpud._get_dask_array(signal=self, dtype=dtype)
 
         if sigma is None:
@@ -489,6 +490,7 @@ class EBSD(Signal2D):
         if dtype_out is None:
             dtype_out = self.data.dtype.type
 
+        # Create dask array of signal patterns and do processing on this
         dask_array = kpud._get_dask_array(signal=self)
 
         # Determine min./max. intensity of input pattern to rescale to
@@ -505,11 +507,10 @@ class EBSD(Signal2D):
         # Overwrite signal patterns
         if not self._lazy:
             with dd.ProgressBar():
-                if rescaled_patterns.dtype.type == dtype_out:
-                    print("Rescaling patterns:", file=sys.stdout)
-                    rescaled_patterns.store(self.data, compute=True)
-                else:
-                    self.data = rescaled_patterns.compute()
+                if self.data.dtype != rescaled_patterns.dtype:
+                    self.data = self.data.astype(dtype_out)
+                print("Rescaling patterns:", file=sys.stdout)
+                rescaled_patterns.store(self.data, compute=True)
         else:
             self.data = rescaled_patterns
 
@@ -578,8 +579,10 @@ class EBSD(Signal2D):
                 "Incorrect value of `kernel_size`: {}".format(kernel_size))
         kernel_size = [int(k) for k in kernel_size]
 
-        # Local contrast enhancement
+        # Create dask array of signal patterns and do processing on this
         dask_array = kpud._get_dask_array(signal=self)
+
+        # Local contrast enhancement
         equalized_patterns = dask_array.map_blocks(
             kpue._adaptive_histogram_equalization_chunk,
             kernel_size=kernel_size, clip_limit=clip_limit, nbins=nbins,
