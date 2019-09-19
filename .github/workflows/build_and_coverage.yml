@@ -1,21 +1,17 @@
 name: Build and coverage
-
 on:
   pull_request:
     branches:
       - master
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-
       - name: Setup Python
         uses: actions/setup-python@master
         with:
           version: 3.7
-
       - name: Setup environment and install dependencies
         run: |
           conda config --append channels conda-forge
@@ -23,13 +19,11 @@ jobs:
           df -h
           conda install --yes hyperspy pyxem pytest pytest-cov
           pip install .
-
-        - name: Generate coverage report
-          run: |
-            export MPLBACKEND=Agg
-            pytest --cov=kikuchipy --cov-report=xml
-
-        - name: Upload coverage to Codecov
-          uses: codecov/codecov-action@v1.0.2
-          with:
-            token: ${{ secrets.CODECOV_TOKEN }}
+      - name: Generate coverage report
+        run: |
+          export MPLBACKEND=Agg
+          pytest --cov=kikuchipy --cov-report=xml
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v1.0.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
