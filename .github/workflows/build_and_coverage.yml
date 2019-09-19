@@ -16,6 +16,7 @@ jobs:
         run: |
           conda config --append channels conda-forge
           conda create --name testenv --yes
+          conda init bash
           conda activate testenv
           conda info -a
           df -h
@@ -23,6 +24,7 @@ jobs:
           pip install .
       - name: Generate coverage report
         run: |
+          conda init bash
           conda activate testenv
           export MPLBACKEND=Agg
           pytest --cov=kikuchipy --cov-report=xml
