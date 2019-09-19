@@ -3,7 +3,3 @@ comment:
   behavior: default
   require_changes: no
   branches: null
-
-coverage:
-  status:
-    project: yes
