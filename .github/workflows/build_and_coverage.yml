@@ -11,16 +11,19 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@master
         with:
-          version: 3.7
+          python-version: 3.7
       - name: Setup environment and install dependencies
         run: |
           conda config --append channels conda-forge
+          conda create --name testenv --yes
+          conda activate testenv
           conda info -a
           df -h
           conda install --yes hyperspy pyxem pytest pytest-cov
           pip install .
       - name: Generate coverage report
         run: |
+          conda activate testenv
           export MPLBACKEND=Agg
           pytest --cov=kikuchipy --cov-report=xml
       - name: Upload coverage to Codecov
