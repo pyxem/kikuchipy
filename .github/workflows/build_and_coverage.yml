@@ -8,8 +8,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - env:
-        ENV_NAME: testenv
       - name: Setup Python
         uses: actions/setup-python@master
         with:
@@ -21,6 +19,8 @@ jobs:
           ./miniconda.sh -b -p $HOME/miniconda
           hash -r
       - name: Setup environment and install dependencies
+        env:
+          ENV_NAME: testenv
         run: |
           source $HOME/miniconda/bin/activate root
           conda config --append channels conda-forge
@@ -31,6 +31,8 @@ jobs:
           conda install --yes hyperspy pyxem pytest pytest-cov
           pip install .
       - name: Run pytests and generate coverage report
+        env:
+          ENV_NAME: testenv
         run: |
           source $HOME/miniconda/bin/activate $ENV_NAME
           export MPLBACKEND=Agg
