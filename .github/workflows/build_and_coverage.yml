@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
+      - env:
+        ENV_NAME: testenv
       - name: Setup Python
         uses: actions/setup-python@master
         with:
@@ -22,19 +24,18 @@ jobs:
         run: |
           source $HOME/miniconda/bin/activate root
           conda config --append channels conda-forge
-          conda create --name testenv --yes
-          conda activate testenv
+          conda create --name $ENV_NAME --yes
+          conda activate $ENV_NAME
           conda info -a
           df -h
           conda install --yes hyperspy pyxem pytest pytest-cov
           pip install .
-      - name: Generate coverage report
+      - name: Run pytests and generate coverage report
         run: |
-          conda init bash
-          conda activate testenv
+          source $HOME/miniconda/bin/activate $ENV_NAME
           export MPLBACKEND=Agg
           pytest --cov=kikuchipy --cov-report=xml
-      - name: Upload coverage to Codecov
+      - name: Upload coverage report to Codecov
         uses: codecov/codecov-action@v1.0.2
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
