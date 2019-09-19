@@ -75,7 +75,7 @@ def _get_dask_array(signal, dtype=None):
     ----------
     signal : kp.signals.EBSD or kp.signals.LazyEBSD
         Signal with data to return dask array from.
-    dtype : np.dtype_out, optional
+    dtype : np.dtype, optional
         Data type of returned dask array.
 
     Returns

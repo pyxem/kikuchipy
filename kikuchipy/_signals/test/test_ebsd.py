@@ -124,7 +124,7 @@ class TestEBSD:
         """This test uses a hard-coded answer. If specifically
         improvements to the intensities produced by this correction is
         to be made, these hard-coded answers will have to be
-        recalculated for the test to pass.
+        recalculated for the tests to pass.
         """
 
         dummy_signal.static_background_correction(
@@ -176,7 +176,7 @@ class TestEBSD:
         """This test uses a hard-coded answer. If specifically
         improvements to the intensities produced by this correction is
         to be made, these hard-coded answers will have to be
-        recalculated for the test to pass.
+        recalculated for the tests to pass.
         """
 
         dummy_signal.dynamic_background_correction(
@@ -228,7 +228,7 @@ class TestEBSD:
         """This test uses a hard-coded answer. If specifically
         improvements to the intensities produced by this correction is
         to be made, these hard-coded answers will have to be
-        recalculated for the test to pass.
+        recalculated for the tests to pass.
         """
 
         dummy_signal.rescale_intensities(relative=relative, dtype_out=dtype_out)
