@@ -23,8 +23,8 @@ import kikuchipy as kp
 
 @pytest.fixture
 def dummy_signal():
-    """Dummy signal of shape <3, 3|3, 3>. If this is changed, all tests
-    using this signal will fail since those tests compare the output
+    """Dummy signal of shape <3, 3|3, 3>. If this is changed, all test
+    using this signal will fail since those test compare the output
     from methods using this signal as input to hard-coded outputs."""
 
     dummy_array = np.array(
@@ -38,8 +38,8 @@ def dummy_signal():
 @pytest.fixture
 def dummy_background():
     """Dummy static background pattern for the dummy signal. If this
-    is changed, all tests using this background will fail since those
-    tests compare the output from methods using this background as input
+    is changed, all test using this background will fail since those
+    test compare the output from methods using this background as input
     to hard-coded outputs."""
 
     return np.array(
