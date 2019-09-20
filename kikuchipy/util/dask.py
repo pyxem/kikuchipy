@@ -87,7 +87,7 @@ def _get_dask_array(signal, dtype=None):
 
     if dtype is None:
         dtype = signal.data.dtype
-    if signal._lazy:
+    if signal._lazy or isinstance(signal.data, da.Array):
         dask_array = signal.data
     else:
         sig_chunks = list(signal.axes_manager.signal_shape)[::-1]

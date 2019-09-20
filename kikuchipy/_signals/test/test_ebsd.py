@@ -17,7 +17,7 @@
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
 from kikuchipy.signals import EBSD
-from kikuchipy.utils.io_utils import metadata_nodes, kikuchipy_metadata
+from kikuchipy.util.io import metadata_nodes, kikuchipy_metadata
 from hyperspy.misc.utils import DictionaryTreeBrowser
 import numpy as np
 import pytest
@@ -169,8 +169,8 @@ class TestEBSD:
         assert dummy_signal.data.all() == answer.all()
 
     @pytest.mark.parametrize(
-        'operation, sigma', [('subtract', 1), ('subtract', 2),
-                             ('divide', 1), ('divide', 2)])
+        'operation, sigma', [('subtract', 2), ('subtract', 3),
+                             ('divide', 2), ('divide', 3)])
     def test_dynamic_background_correction(
             self, dummy_signal, operation, sigma):
         """This test uses a hard-coded answer. If specifically

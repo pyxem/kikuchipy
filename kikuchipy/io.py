@@ -26,7 +26,7 @@ from hyperspy.misc.io.tools import ensure_directory
 from hyperspy.drawing.marker import markers_metadata_dict_to_markers
 from hyperspy.misc.utils import strlist2enumeration, find_subclasses
 from kikuchipy.io_plugins import io_plugins, default_write_ext
-from kikuchipy.utils.io_utils import get_input_bool
+from kikuchipy.util.io import get_input_bool
 
 f_error_fmt = (
     "\tFile %d:\n"
