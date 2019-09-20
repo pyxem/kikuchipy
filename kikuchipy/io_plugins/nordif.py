@@ -87,8 +87,10 @@ def file_reader(filename, mmap_mode=None, scan_size=None,
     setting_file_exists = os.path.isfile(setting_file)
     if setting_file_exists:
         md, omd, scan_size_file = get_settings_from_file(setting_file)
-        scan_size = (scan_size_file.nx, scan_size_file.ny)
-        pattern_size = (scan_size_file.sx, scan_size_file.sy)
+        if not scan_size:
+            scan_size = (scan_size_file.nx, scan_size_file.ny)
+        if not pattern_size:
+            pattern_size = (scan_size_file.sx, scan_size_file.sy)
     else:
         warnings.warn("No setting file found, will attempt to use values for "
                       "scan_size and pattern_size from input arguments.")
@@ -145,7 +147,7 @@ def file_reader(filename, mmap_mode=None, scan_size=None,
     # Calibrate scan dimension
     try:
         scales[:2] = scales[:2] * scan_size_file.step_x
-    except TypeError:
+    except (TypeError, UnboundLocalError):
         warnings.warn("Could not calibrate scan dimensions, this can be done "
                       "using set_scan_calibration()")
 
@@ -283,9 +285,9 @@ def get_string(content, expression, line_no, file):
 
     match = re.search(expression, content[line_no])
     if match is None:
-        warnings.warn("Failed to read line {} in settings file '{}' using "
-                      "regular expression '{}'".format(line_no - 1,
-                                                       file.name, expression))
+        warnings.warn(
+            "Failed to read line {} in settings file '{}' using regular "
+            "expression '{}'".format(line_no - 1, file.name, expression))
         return 0
     else:
         return match.group(1)
