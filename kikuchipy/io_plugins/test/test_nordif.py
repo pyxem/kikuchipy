@@ -16,17 +16,28 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
+# Many of these tests are inspired by the tests written for the block_file
+# reader/writer available in HyperSpy: https://github.com/hyperspy/hyperspy/
+# blob/RELEASE_next_minor/hyperspy/tests/io/test_blockfile.py
+
 import os
 import pytest
 import tempfile
 import gc
+import time
+import datetime
 import numpy as np
-from kikuchipy.io_plugins.nordif import (
-    file_reader, get_settings_from_file, get_string, file_writer)
+import dask.array as da
+import matplotlib.pyplot as plt
+import kikuchipy as kp
+from kikuchipy.io_plugins.nordif import get_settings_from_file
 
 
 DIR_PATH = os.path.dirname(__file__)
-NORDIF_PATH = os.path.join(DIR_PATH, '../../data/nordif')
+PATTERN_FILE = os.path.join(DIR_PATH, '../../data/nordif/Pattern.dat')
+SETTING_FILE = os.path.join(DIR_PATH, '../../data/nordif/Setting.txt')
+BG_FILE = os.path.join(
+    DIR_PATH, '../../data/nordif/Background acquisition pattern.bmp')
 
 # Settings content
 METADATA = {
@@ -96,8 +107,22 @@ ORIGINAL_METADATA = {
         'Calibration (704,668)\t704,668\tpx',
         'Calibration (696,269)\t696,269\tpx',
         'Calibration (152,247)\t152,247\tpx']}
-AXES_MANAGER = {
+SCAN_SIZE_FILE = {
     'nx': 3, 'ny': 3, 'sx': 60, 'sy': 60, 'step_x': 1.5, 'step_y': 1.5}
+
+AXES_MANAGER = {
+    'axis-0': {
+        'name': 'y', 'scale': 1.5, 'offset': 0.0, 'size': 3, 'units': 'μm',
+        'navigate': True},
+    'axis-1': {
+        'name': 'x', 'scale': 1.5, 'offset': 0.0, 'size': 3, 'units': 'μm',
+        'navigate': True},
+    'axis-2': {
+        'name': 'dy', 'scale': 1.0, 'offset': 0.0, 'size': 60, 'units': 'μm',
+        'navigate': False},
+    'axis-3': {
+        'name': 'dx', 'scale': 1.0, 'offset': 0.0, 'size': 60, 'units': 'μm',
+        'navigate': False}}
 
 
 @pytest.fixture()
@@ -111,9 +136,123 @@ def save_path():
 class TestNORDIF:
 
     def test_get_settings_from_file(self):
-        setting_file = os.path.join(NORDIF_PATH, 'Setting.txt')
-        settings = get_settings_from_file(setting_file)
-        answers = [METADATA, ORIGINAL_METADATA, AXES_MANAGER]
+        settings = get_settings_from_file(SETTING_FILE)
+
+        answers = [METADATA, ORIGINAL_METADATA, SCAN_SIZE_FILE]
         assert len(settings) == len(answers)
         for setting_read, answer in zip(settings, answers):
             np.testing.assert_equal(setting_read.as_dictionary(), answer)
+
+    @pytest.mark.parametrize('setting_file', (None, SETTING_FILE))
+    def test_load(self, setting_file):
+        s = kp.load(PATTERN_FILE, setting_file=SETTING_FILE)
+
+        assert s.data.shape == (3, 3, 60, 60)
+        assert s.axes_manager.as_dictionary() == AXES_MANAGER
+
+        static_bg = plt.imread(BG_FILE)
+        assert s.metadata.Acquisition_instrument.SEM.Detector.EBSD\
+            .static_background.all() == static_bg.all()
+
+    @pytest.mark.parametrize('nav_shape, sig_shape', [
+        ((3, 3), (60, 60)), ((3, 4), (50, 50))])
+    def test_load_parameters(self, nav_shape, sig_shape):
+        if sum(nav_shape + sig_shape) > 126:
+            # Check if zero padding user warning is raised if sum of data shape
+            # is bigger than file size
+            with pytest.warns(UserWarning):
+                s = kp.load(
+                    PATTERN_FILE, scan_size=nav_shape, pattern_size=sig_shape)
+        else:
+            s = kp.load(
+                PATTERN_FILE, scan_size=nav_shape, pattern_size=sig_shape)
+
+        assert s.data.shape == nav_shape[::-1] + sig_shape
+
+    def test_load_save_cycle(self, save_path):
+        s_reload = None
+        s = kp.load(PATTERN_FILE)
+
+        scan_time_string = s.original_metadata['nordif_header'][80][10:18]
+        scan_time = time.strptime(scan_time_string, '%H:%M:%S')
+        scan_time = datetime.timedelta(
+            hours=scan_time.tm_hour, minutes=scan_time.tm_min,
+            seconds=scan_time.tm_sec).total_seconds()
+        assert s.metadata.Acquisition_instrument.SEM.Detector.EBSD.scan_time\
+            == scan_time
+        assert s.metadata.General.title == 'Pattern'
+
+        s.save(save_path, overwrite=True)
+        with pytest.warns(UserWarning):  # No background pattern in directory
+            s_reload = kp.load(save_path, setting_file=SETTING_FILE)
+        np.testing.assert_equal(s.data, s_reload.data)
+
+        # Add static background and change filename to make metadata equal
+        s_reload.metadata.Acquisition_instrument.SEM.Detector.EBSD\
+            .static_background = plt.imread(BG_FILE)
+        s_reload.metadata.General\
+            .original_filename = s.metadata.General.original_filename
+        s_reload.metadata.General.title = s.metadata.General.title
+        np.testing.assert_equal(
+            s_reload.metadata.as_dictionary(), s.metadata.as_dictionary())
+
+        # Delete reference to close np.memmap file
+        del s_reload
+
+    def test_load_lazy(self):
+        s = kp.load(PATTERN_FILE, lazy=True)
+        assert isinstance(s.data, da.Array)
+
+    def test_load_to_memory(self):
+        s = kp.load(PATTERN_FILE, lazy=False)
+        assert isinstance(s.data, np.ndarray)
+        assert not isinstance(s.data, np.memmap)
+
+    def test_load_readonly(self):
+        s = kp.load(PATTERN_FILE, lazy=True)
+        k = next(filter(lambda x: isinstance(x, str) and
+                        x.startswith("array-original"),
+                        s.data.dask.keys()))
+        mm = s.data.dask[k]
+        assert isinstance(mm, np.memmap)
+        assert not mm.flags["WRITEABLE"]
+        with pytest.raises(NotImplementedError):
+            s.data[:] = 23
+
+    def test_load_inplace(self):
+        with pytest.raises(ValueError):
+            kp.load(PATTERN_FILE, lazy=True, mmap_mode='r+')
+
+    def test_save_fresh(self, save_path):
+        scan_size = (10, 3)
+        pattern_size = (5, 5)
+        data_shape = scan_size + pattern_size
+        s = kp.signals.EBSD(
+            (255 * np.random.rand(*data_shape)).astype(np.uint8))
+        s.save(save_path, overwrite=True)
+        with pytest.warns(UserWarning):  # No background or setting files
+            s_reload = kp.load(
+                save_path, scan_size=scan_size[::-1], pattern_size=pattern_size)
+        np.testing.assert_equal(s.data, s_reload.data)
+
+    def test_write_data_line(self, save_path):
+        scan_size = 3
+        pattern_size = (5, 5)
+        data_shape = (scan_size, ) + pattern_size
+        s = kp.signals.EBSD(
+            (255 * np.random.rand(*data_shape)).astype(np.uint8))
+        s.save(save_path, overwrite=True)
+        with pytest.warns(UserWarning):  # No background or setting files
+            s_reload = kp.load(
+                save_path, scan_size=scan_size, pattern_size=pattern_size)
+        np.testing.assert_equal(s.data, s_reload.data)
+
+    def test_write_data_single(self, save_path):
+        pattern_size = (5, 5)
+        s = kp.signals.EBSD(
+            (255 * np.random.rand(*pattern_size)).astype(np.uint8))
+        s.save(save_path, overwrite=True)
+        with pytest.warns(UserWarning):  # No background or setting files
+            s_reload = kp.load(
+                save_path, scan_size=1, pattern_size=pattern_size)
+        np.testing.assert_equal(s.data, s_reload.data)
