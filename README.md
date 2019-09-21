@@ -1,4 +1,4 @@
-[![build status](https://github.com/kikuchipy/kikuchipy/workflows/Build/badge.svg)](https://github.com/kikuchipy/kikuchipy/actions) [![codecov](https://codecov.io/gh/kikuchipy/kikuchipy/branch/master/graph/badge.svg)](https://codecov.io/gh/kikuchipy/kikuchipy)
+[![Build Status](https://api.travis-ci.org/kikuchipy/kikuchipy.svg?branch=master)](https://travis-ci.org/kikuchipy/kikuchipy) [![Coverage Status](https://coveralls.io/repos/github/kikuchipy/kikuchipy/badge.svg?branch=master)](https://coveralls.io/github/kikuchipy/kikuchipy?branch=master)
 
 KikuchiPy
 ------------
