@@ -171,19 +171,25 @@ class TestNORDIF:
             .static_background.all() == static_bg.all()
 
     @pytest.mark.parametrize('nav_shape, sig_shape', [
-        ((3, 3), (60, 60)), ((3, 4), (50, 50))])
+        ((3, 3), (60, 60)), ((3, 4), (60, 60)), (None, None)])
     def test_load_parameters(self, nav_shape, sig_shape):
-        if sum(nav_shape + sig_shape) > 126:
-            # Check if zero padding user warning is raised if sum of data shape
-            # is bigger than file size
-            with pytest.warns(UserWarning):
+        if nav_shape is None and sig_shape is None:
+            with pytest.raises(ValueError):
+                kp.load(
+                    PATTERN_FILE, setting_file='Setting.txt',
+                    scan_size=nav_shape, pattern_size=sig_shape)
+        else:
+            if sum(nav_shape + sig_shape) > 126:
+                # Check if zero padding user warning is raised if sum of data
+                # shape is bigger than file size
+                with pytest.warns(UserWarning):
+                    s = kp.load(
+                        PATTERN_FILE, scan_size=nav_shape,
+                        pattern_size=sig_shape)
+            else:
                 s = kp.load(
                     PATTERN_FILE, scan_size=nav_shape, pattern_size=sig_shape)
-        else:
-            s = kp.load(
-                PATTERN_FILE, scan_size=nav_shape, pattern_size=sig_shape)
-
-        assert s.data.shape == nav_shape[::-1] + sig_shape
+            assert s.data.shape == nav_shape[::-1] + sig_shape
 
     def test_load_save_cycle(self, save_path):
         s = kp.load(PATTERN_FILE)
@@ -238,9 +244,14 @@ class TestNORDIF:
         with pytest.raises(NotImplementedError):
             s.data[:] = 23
 
-    def test_load_inplace(self):
-        with pytest.raises(ValueError):
-            kp.load(PATTERN_FILE, lazy=True, mmap_mode='r+')
+    @pytest.mark.parametrize('lazy', [True, False])
+    def test_load_inplace(self, lazy):
+        if lazy:
+            with pytest.raises(ValueError):
+                s = kp.load(PATTERN_FILE, lazy=lazy, mmap_mode='r+')
+        else:
+            s = kp.load(PATTERN_FILE, lazy=lazy, mmap_mode='r+')
+            assert s.axes_manager.as_dictionary() == AXES_MANAGER
 
     def test_save_fresh(self, save_path):
         scan_size = (10, 3)

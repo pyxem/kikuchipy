@@ -75,10 +75,9 @@ def file_reader(
             'write' in mmap_mode and 'copyonwrite' != mmap_mode):
         if lazy:
             raise ValueError("Lazy loading does not support in-place writing")
-        f = open(filename, 'r+b')
-        scan['attributes']['_lazy'] = True
+        f = open(filename, mode='r+b')
     else:
-        f = open(filename, 'rb')
+        f = open(filename, mode='rb')
 
     # Get metadata from setting file
     sem_node, ebsd_node = metadata_nodes()
