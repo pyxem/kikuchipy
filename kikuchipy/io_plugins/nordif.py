@@ -40,8 +40,9 @@ default_extension = 0
 writes = [(2, 2), (2, 1), (2, 0)]
 
 
-def file_reader(filename, mmap_mode=None, scan_size=None,
-                pattern_size=None, setting_file=None, lazy=False):
+def file_reader(
+        filename, mmap_mode=None, scan_size=None, pattern_size=None,
+        setting_file=None, lazy=False):
     """Read electron backscatter patterns from a NORDIF data file.
 
     Parameters
@@ -49,7 +50,7 @@ def file_reader(filename, mmap_mode=None, scan_size=None,
     filename : str
         File path to NORDIF data file.
     mmap_mode : str, optional
-    scan_size : None or tuple, optional
+    scan_size : {None, int, or tuple}, optional
         Scan size in number of patterns in width and height.
     pattern_size : None or tuple, optional
         Pattern size in detector pixels in width and height.
@@ -70,14 +71,13 @@ def file_reader(filename, mmap_mode=None, scan_size=None,
     scan = {'attributes': {}}
 
     # Make sure we open in correct mode
-    if '+' in mmap_mode or ('write' in mmap_mode and
-                            'copyonwrite' != mmap_mode):
+    if '+' in mmap_mode or (
+            'write' in mmap_mode and 'copyonwrite' != mmap_mode):
         if lazy:
             raise ValueError("Lazy loading does not support in-place writing")
-        f = open(filename, 'r+b')
-        scan['attributes']['_lazy'] = True
+        f = open(filename, mode='r+b')
     else:
-        f = open(filename, 'rb')
+        f = open(filename, mode='rb')
 
     # Get metadata from setting file
     sem_node, ebsd_node = metadata_nodes()
@@ -87,11 +87,16 @@ def file_reader(filename, mmap_mode=None, scan_size=None,
     setting_file_exists = os.path.isfile(setting_file)
     if setting_file_exists:
         md, omd, scan_size_file = get_settings_from_file(setting_file)
-        scan_size = (scan_size_file.nx, scan_size_file.ny)
-        pattern_size = (scan_size_file.sx, scan_size_file.sy)
+        if not scan_size:
+            scan_size = (scan_size_file.nx, scan_size_file.ny)
+        if not pattern_size:
+            pattern_size = (scan_size_file.sx, scan_size_file.sy)
     else:
-        warnings.warn("No setting file found, will attempt to use values for "
-                      "scan_size and pattern_size from input arguments.")
+        if scan_size is None and pattern_size is None:
+            raise ValueError(
+                "No setting file found and no scan_size or pattern_size "
+                "detected in input arguments. These must be set if no setting "
+                "file is provided.")
         md = kikuchipy_metadata()
         omd = DictionaryTreeBrowser()
 
@@ -101,21 +106,25 @@ def file_reader(filename, mmap_mode=None, scan_size=None,
         md.set_item(ebsd_node + '.static_background',
                     plt.imread(static_bg_file))
     except FileNotFoundError:
-        warnings.warn("Could not read static background pattern '{}', however "
-                      "it can be added using set_experimental_parameters()."
-                      "".format(static_bg_file))
+        warnings.warn(
+            "Could not read static background pattern '{}', however it can be "
+            "added using set_experimental_parameters().".format(static_bg_file))
 
     # Set required and other parameters in metadata
     md.set_item('General.original_filename', filename)
-    md.set_item('General.title',
-                os.path.splitext(os.path.split(filename)[1])[0])
+    md.set_item(
+        'General.title', os.path.splitext(os.path.split(filename)[1])[0])
     md.set_item('Signal.signal_type', 'EBSD')
     md.set_item('Signal.record_by', 'image')
     scan['metadata'] = md.as_dictionary()
     scan['original_metadata'] = omd.as_dictionary()
 
     # Set scan size and pattern size
-    nx, ny = scan_size
+    if isinstance(scan_size, int):
+        nx = scan_size
+        ny = 1
+    else:
+        nx, ny = scan_size
     sx, sy = pattern_size
 
     # Read data from file
@@ -129,9 +138,9 @@ def file_reader(filename, mmap_mode=None, scan_size=None,
     try:
         data = data.reshape((ny, nx, sy, sx), order='C').squeeze()
     except ValueError:
-        warnings.warn("Pattern size and scan size larger than file size! "
-                      "Will attempt to load by zero padding incomplete "
-                      "frames.")
+        warnings.warn(
+            "Pattern size and scan size larger than file size! Will attempt to "
+            "load by zero padding incomplete frames.")
         # Data is stored pattern by pattern
         pw = [(0, ny * nx * sy * sx - data.size)]
         data = np.pad(data, pw, mode='constant')
@@ -145,14 +154,16 @@ def file_reader(filename, mmap_mode=None, scan_size=None,
     # Calibrate scan dimension
     try:
         scales[:2] = scales[:2] * scan_size_file.step_x
-    except TypeError:
-        warnings.warn("Could not calibrate scan dimensions, this can be done "
-                      "using set_scan_calibration()")
+    except (TypeError, UnboundLocalError):
+        warnings.warn(
+            "Could not calibrate scan dimensions, this can be done using "
+            "set_scan_calibration()")
 
     # Create axis objects for each axis
-    axes = [{'size': data.shape[i], 'index_in_array': i, 'name': names[i],
-             'scale': scales[i], 'offset': 0.0, 'units': units[i]}
-            for i in range(data.ndim)]
+    axes = [{
+        'size': data.shape[i], 'index_in_array': i, 'name': names[i],
+        'scale': scales[i], 'offset': 0.0, 'units': units[i]}
+        for i in range(data.ndim)]
     scan['axes'] = axes
 
     f.close()
@@ -182,9 +193,10 @@ def get_settings_from_file(filename):
     content = f.read().splitlines()
 
     # Get line numbers of setting blocks
-    blocks = {'[NORDIF]': -1, '[Microscope]': -1, '[EBSD detector]': -1,
-              '[Detector angles]': -1, '[Acquisition settings]': -1,
-              '[Area]': -1, '[Specimen]' : -1}
+    blocks = {
+        '[NORDIF]': -1, '[Microscope]': -1, '[EBSD detector]': -1,
+        '[Detector angles]': -1, '[Acquisition settings]': -1, '[Area]': -1,
+        '[Specimen]' : -1}
     for i, line in enumerate(content):
         for block in blocks:
             if block in line:
@@ -206,8 +218,8 @@ def get_settings_from_file(filename):
     # Get metadata values from settings file using regular expressions
     azimuth_angle = get_string(content, 'Azimuthal\t(.*)\t', l_ang + 4, f)
     md.set_item(ebsd_node + '.azimuth_angle', float(azimuth_angle))
-    beam_energy = get_string(content, 'Accelerating voltage\t(.*)\tkV',
-                             l_mic + 5, f)
+    beam_energy = get_string(
+        content, 'Accelerating voltage\t(.*)\tkV', l_mic + 5, f)
     md.set_item(sem_node + '.beam_energy', float(beam_energy))
     detector = get_string(content, 'Model\t(.*)\t', l_det + 1, f)
     detector = re.sub('[^a-zA-Z0-9]', repl='', string=detector)
@@ -229,14 +241,14 @@ def get_settings_from_file(filename):
     md.set_item(ebsd_node + '.sample_tilt', float(sample_tilt))
     scan_time = get_string(content, 'Scan time\t(.*)\t', l_area + 7, f)
     scan_time = time.strptime(scan_time, '%H:%M:%S')
-    scan_time = datetime.timedelta(hours=scan_time.tm_hour,
-                                   minutes=scan_time.tm_min,
-                                   seconds=scan_time.tm_sec).total_seconds()
+    scan_time = datetime.timedelta(
+        hours=scan_time.tm_hour, minutes=scan_time.tm_min,
+        seconds=scan_time.tm_sec).total_seconds()
     md.set_item(ebsd_node + '.scan_time', int(scan_time))
     version = get_string(content, 'Software version\t(.*)\t', l_nordif + 1, f)
     md.set_item(ebsd_node + '.version', version)
-    working_distance = get_string(content, 'Working distance\t(.*)\tmm',
-                                  l_mic + 6, f)
+    working_distance = get_string(
+        content, 'Working distance\t(.*)\tmm', l_mic + 6, f)
     md.set_item(sem_node + '.working_distance', float(working_distance))
     md.set_item(ebsd_node + '.grid_type', 'square')
     md.set_item(ebsd_node + '.manufacturer', 'NORDIF')
@@ -283,9 +295,9 @@ def get_string(content, expression, line_no, file):
 
     match = re.search(expression, content[line_no])
     if match is None:
-        warnings.warn("Failed to read line {} in settings file '{}' using "
-                      "regular expression '{}'".format(line_no - 1,
-                                                       file.name, expression))
+        warnings.warn(
+            "Failed to read line {} in settings file '{}' using regular "
+            "expression '{}'".format(line_no - 1, file.name, expression))
         return 0
     else:
         return match.group(1)
