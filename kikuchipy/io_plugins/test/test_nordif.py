@@ -31,7 +31,7 @@ import numpy as np
 import dask.array as da
 import matplotlib.pyplot as plt
 import kikuchipy as kp
-from kikuchipy.io_plugins.nordif import get_settings_from_file
+from kikuchipy.io_plugins.nordif import get_settings_from_file, get_string
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -144,6 +144,21 @@ class TestNORDIF:
         for setting_read, answer in zip(settings, answers):
             np.testing.assert_equal(setting_read.as_dictionary(), answer)
 
+    @pytest.mark.parametrize('line_no, correct', [(10, True), (11, False)])
+    def test_get_string(self, line_no, correct):
+        f = open(SETTING_FILE, 'r', encoding='latin-1')
+        content = f.read().splitlines()
+        exp = 'Tilt angle\t(.*)\t'
+        if correct:
+            sample_tilt = get_string(
+                content=content, expression=exp, line_no=line_no, file=f)
+            assert sample_tilt == str(70)
+        else:
+            with pytest.warns(UserWarning):
+                sample_tilt = get_string(
+                    content=content, expression=exp, line_no=line_no, file=f)
+            assert sample_tilt == 0
+
     @pytest.mark.parametrize('setting_file', (None, SETTING_FILE))
     def test_load(self, setting_file):
         s = kp.load(PATTERN_FILE, setting_file=SETTING_FILE)
@@ -171,7 +186,6 @@ class TestNORDIF:
         assert s.data.shape == nav_shape[::-1] + sig_shape
 
     def test_load_save_cycle(self, save_path):
-        s_reload = None
         s = kp.load(PATTERN_FILE)
 
         scan_time_string = s.original_metadata['nordif_header'][80][10:18]
@@ -200,9 +214,13 @@ class TestNORDIF:
         # Delete reference to close np.memmap file
         del s_reload
 
-    def test_load_lazy(self):
+    def test_load_save_lazy(self, save_path):
         s = kp.load(PATTERN_FILE, lazy=True)
         assert isinstance(s.data, da.Array)
+        s.save(save_path, overwrite=True)
+        with pytest.warns(UserWarning):  # No background pattern in directory
+            s_reload = kp.load(save_path, lazy=True, setting_file=SETTING_FILE)
+        assert s.data.shape == s_reload.data.shape
 
     def test_load_to_memory(self):
         s = kp.load(PATTERN_FILE, lazy=False)
