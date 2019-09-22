@@ -26,6 +26,7 @@ import tempfile
 import gc
 import time
 import datetime
+import warnings
 import numpy as np
 import dask.array as da
 import matplotlib.pyplot as plt
@@ -256,3 +257,28 @@ class TestNORDIF:
             s_reload = kp.load(
                 save_path, scan_size=1, pattern_size=pattern_size)
         np.testing.assert_equal(s.data, s_reload.data)
+
+    def test_read_cutoff(self, save_path):
+        scan_size = (10, 3)
+        scan_size_reloaded = (10, 20)
+        pattern_size = (5, 5)
+        data_shape = scan_size + pattern_size
+        s = kp.signals.EBSD(
+            (255 * np.random.rand(*data_shape)).astype(np.uint8))
+        s.save(save_path, overwrite=True)
+
+        # Reload data but with a scan_size bigger than available file bytes,
+        # so that the data has to be padded
+        with pytest.warns(UserWarning):  # No background or setting files
+            s_reload = kp.load(
+                save_path, scan_size=scan_size_reloaded[::-1],
+                pattern_size=pattern_size)
+
+        # To check if the data padding works as expected, the original data is
+        # padded and compared to the reloaded data
+        cut_data = s.data.flatten()
+        pw = [(0, (scan_size_reloaded[1] - scan_size[1]) * scan_size[0]
+               * np.prod(pattern_size))]
+        cut_data = np.pad(cut_data, pw, mode='constant')
+        cut_data = cut_data.reshape(scan_size_reloaded + pattern_size)
+        np.testing.assert_equal(cut_data, s_reload.data)
