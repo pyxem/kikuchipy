@@ -366,22 +366,22 @@ class EBSD(Signal2D):
         dtype = np.int16
         static_bg = static_bg.astype(dtype)
 
-        # Create dask array of signal patterns and do processing on this
-        dask_array = kpud._get_dask_array(signal=self, dtype=dtype)
-
         # Get min./max. input patterns intensity after correction
         if relative:  # Scale relative to min./max. intensity in scan
-            signal_min = dask_array.min(axis=(0, 1))
-            signal_max = dask_array.max(axis=(0, 1))
+            signal_min = self.data.min(axis=(0, 1))
+            signal_max = self.data.max(axis=(0, 1))
             if operation == 'subtract':
-                imin = da.subtract(signal_min, static_bg, dtype=dtype).min()
-                imax = da.subtract(signal_max, static_bg, dtype=dtype).max()
+                imin = (signal_min - static_bg).astype(dtype).min()
+                imax = (signal_max - static_bg).astype(dtype).max()
             else:  # Divide
-                imin = da.divide(signal_min, static_bg, dtype=dtype).min()
-                imax = da.divide(signal_max, static_bg, dtype=dtype).max()
+                imin = (signal_min / static_bg).astype(dtype).min()
+                imax = (signal_max / static_bg).astype(dtype).max()
             in_range = (imin, imax)
         else:  # Scale relative to min./max. intensity in each pattern
             in_range = None
+
+        # Create dask array of signal patterns and do processing on this
+        dask_array = kpud._get_dask_array(signal=self, dtype=dtype)
 
         # Correct static background and rescale intensities chunk by chunk
         corrected_patterns = dask_array.map_blocks(
@@ -490,14 +490,14 @@ class EBSD(Signal2D):
         if dtype_out is None:
             dtype_out = self.data.dtype.type
 
-        # Create dask array of signal patterns and do processing on this
-        dask_array = kpud._get_dask_array(signal=self)
-
         # Determine min./max. intensity of input pattern to rescale to
         if relative:  # Scale relative to min./max. intensity in scan
-            in_range = (dask_array.min(), dask_array.max())
+            in_range = (self.data.min(), self.data.max())
         else:  # Scale relative to min./max. intensity in each pattern
             in_range = None
+
+        # Create dask array of signal patterns and do processing on this
+        dask_array = kpud._get_dask_array(signal=self)
 
         # Rescale patterns
         rescaled_patterns = dask_array.map_blocks(
