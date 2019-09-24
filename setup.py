@@ -54,8 +54,8 @@ setup(
         'dask[array]',
     ],
     package_data={
-        '': ['LICENSE', 'README.md', 'hyperspy_extension.yml'],
-        'kikuchipy': ['*.py'],
+        '': ['LICENSE', 'README.md'],
+        'kikuchipy': ['*.py', 'hyperspy_extension.yaml'],
     },
-    entry_points={'hyperspy.extensions': ['kikuchipy = kikuchipy']},
+    entry_points={'hyperspy.extensions': 'kikuchipy = kikuchipy'},
 )
