@@ -55,6 +55,7 @@ setup(
     ],
     package_data={
         '': ['LICENSE', 'README.md'],
-        'kikuchipy': ['*.py'],
-    }
+        'kikuchipy': ['*.py', 'hyperspy_extension.yaml'],
+    },
+    entry_points={'hyperspy.extensions': 'kikuchipy = kikuchipy'},
 )
