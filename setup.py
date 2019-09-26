@@ -24,14 +24,24 @@ exec(open('kikuchipy/version.py').read())
 setup(
     name='kikuchipy',
     version=__version__,
-    description='Processing of Electron Backscatter Diffraction Patterns in'
+    description='Processing of Electron Backscatter Diffraction Patterns in '
                 'Python',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     author=__author__,
     author_email=__email__,
+    maintainer='Håkon Wiik Ånes',
+    maintainer_email='hakon.w.anes@ntnu.no',
+    keywords=[
+        'EBSD', 'electron backscatter diffraction',
+        'EBSP', 'electron backscatter pattern',
+        'BKD', 'backscatter kikuchi diffraction'
+        'TKD', 'transmission kikuchi diffraction',
+        'SEM', 'scanning electron microscopy',
+        'kikuchi pattern'],
     license='GPLv3',
-    url='https://github.com/hwagit/kikuchipy',
+    url='https://github.com/kikuchipy/kikuchipy',
+    package_dir={'kikuchipy': 'kikuchipy'},
     classifiers=[
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.7',
@@ -41,21 +51,21 @@ setup(
         'Natural Language :: English',
         'Operation System :: OS Independent',
         'Topic :: Scientific/Engineering',
-        'Topic :: Scientific/Engineering :: Physics',
-    ],
+        'Topic :: Scientific/Engineering :: Physics'],
     packages=find_packages(),
     install_requires=[
-        'numpy>=1.16,!=1.17.*',
-        'hyperspy>=1.5',
-        'pyxem>=0.9',
+        'numpy',
+        'hyperspy >= 1.5.2',
+        'pyxem',
         'h5py',
         'scikit-image',
         'scipy',
         'dask[array]',
-    ],
+        'sklearn',
+        'matplotlib'],
+    tests_require=['pytest pytest-cov'],
     package_data={
         '': ['LICENSE', 'README.md'],
-        'kikuchipy': ['*.py', 'hyperspy_extension.yaml'],
-    },
+        'kikuchipy': ['*.py', 'hyperspy_extension.yaml']},
     entry_points={'hyperspy.extensions': 'kikuchipy = kikuchipy'},
 )
