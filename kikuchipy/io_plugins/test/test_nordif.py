@@ -26,13 +26,11 @@ import tempfile
 import gc
 import time
 import datetime
-import warnings
 import numpy as np
 import dask.array as da
 import matplotlib.pyplot as plt
 import kikuchipy as kp
 from kikuchipy.io_plugins.nordif import get_settings_from_file, get_string
-
 
 DIR_PATH = os.path.dirname(__file__)
 PATTERN_FILE = os.path.join(DIR_PATH, '../../data/nordif/Pattern.dat')
@@ -110,7 +108,6 @@ ORIGINAL_METADATA = {
         'Calibration (152,247)\t152,247\tpx']}
 SCAN_SIZE_FILE = {
     'nx': 3, 'ny': 3, 'sx': 60, 'sy': 60, 'step_x': 1.5, 'step_y': 1.5}
-
 AXES_MANAGER = {
     'axis-0': {
         'name': 'y', 'scale': 1.5, 'offset': 0.0, 'size': 3, 'units': 'μm',
