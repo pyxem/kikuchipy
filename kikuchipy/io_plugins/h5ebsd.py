@@ -29,6 +29,7 @@ from kikuchipy.util.io import (
 from kikuchipy.util.phase import _phase_metadata, _update_phase_info
 from kikuchipy.util.general import (
     delete_from_nested_dictionary, get_nested_dictionary)
+from kikuchipy.util.dask import _get_chunks
 
 _logger = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ def file_reader(filename, scans=None, lazy=False, **kwargs):
     ----------
     filename : str
         Full file path of the HDF file.
-    scans : list of ints
+    scans : int or list of ints
         List of scan numbers to return. If None is passed the first
         scan in the file is returned.
     lazy : bool, optional
@@ -99,7 +100,7 @@ def file_reader(filename, scans=None, lazy=False, **kwargs):
         scans_return.append(scans_file[0])
     else:
         if isinstance(scans, int):
-            scans = [scans, ]
+            scans = list(np.arange(scans) + 1)
         for scan_no in scans:  # Wanted scans
             scan_is_here = False
             for scan in scans_file:
@@ -216,10 +217,6 @@ def h5ebsdgroup2dict(
     man_pats = manufacturer_pattern_names()
     if dictionary is None:
         dictionary = {}
-    elif isinstance(dictionary, DictionaryTreeBrowser):
-        dictionary = dictionary.as_dictionary()
-    if not isinstance(group, h5py.Group):
-        return dictionary
     for key, val in group.items():
         # Prepare value for entry in dictionary
         if isinstance(val, h5py.Dataset):
@@ -227,7 +224,7 @@ def h5ebsdgroup2dict(
                 val = val[()]
             if isinstance(val, np.ndarray) and len(val) == 1:
                 val = val[0]
-                key = key.lstrip()  # TSL has some leading whitespaces
+                key = key.lstrip()  # EDAX has some leading whitespaces
             if val.dtype.char == 'S':
                 val = val.decode()
         # Check whether to extract subgroup or write value to dictionary
@@ -277,11 +274,7 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
 
     # Get data from group
     if lazy:
-        chunks = data.chunks
-        if chunks is None:
-            chunks = get_signal_chunks(data.shape, data.dtype, [1, 2])
-        data = da.from_array(data, chunks=chunks)
-        scan['attributes']['_lazy'] = True
+        data = da.from_array(data, chunks=data.chunks)
     else:
         data = np.asanyarray(data)
 
@@ -297,9 +290,9 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
         # Data is stored pattern by pattern
         pw = [(0, ny * nx * sy * sx - data.size)]
         if lazy:
-            data = da.pad(data, pw, mode='constant')
+            data = da.pad(data.flatten(), pw, mode='constant')
         else:
-            data = np.pad(data, pw, mode='constant')
+            data = np.pad(data.flatten(), pw, mode='constant')
         data = data.reshape((ny, nx, sy, sx))
     scan['data'] = data
 
@@ -354,7 +347,7 @@ def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
     md.set_item('General.title', title)
 
     if 'edax' in manufacturer.lower():
-        md, omd, scan_size = tslheader2dicts(scan_group, md)
+        md, omd, scan_size = edaxheader2dicts(scan_group, md)
     elif 'bruker' in manufacturer.lower():
         md, omd, scan_size = brukerheader2dicts(scan_group, md)
     else:  # KikuchiPy
@@ -408,7 +401,7 @@ def kikuchipyheader2dicts(scan_group, md, lazy=False):
     return md, omd, scan_size
 
 
-def tslheader2dicts(scan_group, md):
+def edaxheader2dicts(scan_group, md):
     """Return scan metadata dictionaries from an EDAX TSL h5ebsd file.
 
     Parameters
@@ -458,7 +451,7 @@ def tslheader2dicts(scan_group, md):
         md = _update_phase_info(md, phase, phase_no)
 
     # Populate original metadata dictionary
-    omd = DictionaryTreeBrowser({'tsl_header': hd})
+    omd = DictionaryTreeBrowser({'edax_header': hd})
 
     # Populate scan size dictionary
     scan_size = DictionaryTreeBrowser()
