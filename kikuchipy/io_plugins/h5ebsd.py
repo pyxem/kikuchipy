@@ -679,15 +679,15 @@ def dict2h5ebsdgroup(dictionary, group, **kwargs):
             overwrite_dataset(group, val, key, **kwargs)
             written = True
         elif ddtype == np.dtype('O'):
-            ddtype = h5py.special_dtype(vlen=val[0].dtype)
-            dshape = np.shape(val)
-
+            try:
+                ddtype = h5py.special_dtype(vlen=val[0].dtype)
+                dshape = np.shape(val)
+            except TypeError:
+                warnings.warn(
+                    "The hdf5 writer could not write the following information "
+                    "to the file '{} : {}'.".format(key, val))
+                break
         if written:
             continue  # Jump to next item in dictionary
-        try:
-            group.create_dataset(key, shape=dshape, dtype=ddtype, **kwargs)
-            group[key][()] = val
-        except (TypeError, IndexError):
-            warnings.warn(
-                "The hdf5 writer could not write the following information to "
-                "the file '{} : {}'.".format(key, val))
+        group.create_dataset(key, shape=dshape, dtype=ddtype, **kwargs)
+        group[key][()] = val

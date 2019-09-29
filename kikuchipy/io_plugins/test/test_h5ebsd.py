@@ -130,19 +130,25 @@ class Testh5ebsd:
         AXES_MANAGER['axis-1']['size'] = new_n_columns
         assert s_reload.axes_manager.as_dictionary() == AXES_MANAGER
 
-    def test_load_save_cycle(self, save_path):
+    @pytest.mark.parametrize('remove_phases', (True, False))
+    def test_load_save_cycle(self, save_path, remove_phases):
         s = kp.load(KIKUCHIPY_FILE)
 
         # Check that metadata is read correctly
         assert s.metadata.Acquisition_instrument.SEM.Detector.EBSD.xpc == -5.64
         assert s.metadata.General.title == 'patterns Scan 1'
 
+        if remove_phases:
+            del s.metadata.Sample.Phases
         s.save(save_path, overwrite=True)
         s_reload = kp.load(save_path)
         np.testing.assert_equal(s.data, s_reload.data)
 
-        # Change data set name to make metadata equal
+        # Change data set name to make metadata equal and redo phases delete
         s_reload.metadata.General.title = s.metadata.General.title
+        if remove_phases:
+            s.metadata.Sample.set_item(
+                'Phases', s_reload.metadata.Sample.Phases)
         np.testing.assert_equal(
             s_reload.metadata.as_dictionary(), s.metadata.as_dictionary())
 
@@ -175,6 +181,8 @@ class Testh5ebsd:
         s.save(save_path, overwrite=True)
         s_reload = kp.load(save_path, lazy=True)
         assert s.data.shape == s_reload.data.shape
+        with pytest.raises(OSError, match='Cannot write to an already open'):
+            s_reload.save(save_path, add_scan=2)
 
     def test_load_readonly(self):
         s = kp.load(KIKUCHIPY_FILE, lazy=True)
@@ -218,7 +226,8 @@ class Testh5ebsd:
         dictionary = {
             'a': [np.array(24.5)],
             'b': DictionaryTreeBrowser(),
-            'c': np.empty((1,))}
+            'c': set(),}
         with h5py.File(save_path, mode='w') as f:
             group = f.create_group(name='a_group')
-            dict2h5ebsdgroup(dictionary, group)
+            with pytest.warns(UserWarning, match='The hdf5 writer could not'):
+                dict2h5ebsdgroup(dictionary, group)
