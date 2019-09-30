@@ -24,7 +24,7 @@ import dask.array as da
 _logger = logging.getLogger(__name__)
 
 
-def _get_chunks(signal, mbytes_chunk=100):
+def _get_chunks(data_shape, data_nbytes, mbytes_chunk=100):
     """Return suggested data chunks for patterns. Signal axes are not
     chunked. Goals in prioritised order are (i) split into at least as
     many chunks as available CPUs, (ii) limit chunks to approximately
@@ -33,8 +33,10 @@ def _get_chunks(signal, mbytes_chunk=100):
 
     Parameters
     ----------
-    signal : kp.signals.EBSD or kp.lazy_signals.LazyEBSD
-        Signal with data to chunk.
+    data_shape : tuple of ints
+        Shape of data to chunk.
+    data_nbytes : int
+        Data size in number of bytes.
     mbytes_chunk : int, optional
         Size of chunks in MB, default is 100 MB as suggested in the
         Dask documentation.
@@ -46,11 +48,10 @@ def _get_chunks(signal, mbytes_chunk=100):
     """
 
     suggested_size = mbytes_chunk * 2 ** 20
-    sig_chunks = signal.axes_manager.signal_shape[::-1]
-    nav_chunks = np.array(signal.axes_manager.navigation_shape[::-1])
-    data_size = signal.data.nbytes
-    pattern_size = data_size / nav_chunks.prod()
-    num_chunks = np.ceil(data_size / suggested_size)
+    sig_chunks = data_shape[-2:]
+    nav_chunks = data_shape[:-2]
+    pattern_size = data_nbytes / nav_chunks.prod()
+    num_chunks = np.ceil(data_nbytes / suggested_size)
     i_min, i_max = np.argmin(nav_chunks), np.argmax(nav_chunks)
     cpus = os.cpu_count()
     if num_chunks <= cpus:  # Return approx. as many chunks as CPUs

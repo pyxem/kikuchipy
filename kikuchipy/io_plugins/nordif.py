@@ -68,7 +68,7 @@ def file_reader(
     if mmap_mode is None:
         mmap_mode = 'r' if lazy else 'c'
 
-    scan = {'attributes': {}}
+    scan = {}
 
     # Make sure we open in correct mode
     if '+' in mmap_mode or (
