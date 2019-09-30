@@ -67,7 +67,10 @@ setup(
         'scipy',
         'tqdm',
     ],
-    tests_require=['pytest pytest-cov'],
+    tests_require=[
+        'pytest',
+        'pytest-cov',
+    ],
     package_data={
         '': ['LICENSE', 'README.md'],
         'kikuchipy': ['*.py', 'hyperspy_extension.yaml']},
