@@ -30,6 +30,7 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, '../../data/kikuchipy/patterns.h5')
 EDAX_FILE = os.path.join(DIR_PATH, '../../data/edax/patterns.h5')
+BRUKER_FILE = os.path.join(DIR_PATH, '../../data/bruker/patterns.h5')
 BG_FILE = os.path.join(
     DIR_PATH, '../../data/nordif/Background acquisition pattern.bmp')
 AXES_MANAGER = {
@@ -63,25 +64,33 @@ class Testh5ebsd:
         assert s.data.shape == (3, 3, 60, 60)
         assert s.axes_manager.as_dictionary() == AXES_MANAGER
 
-    @pytest.mark.parametrize('grid_type', ('square', 'hexagonal'))
-    def test_load_edax(self, grid_type):
-        if grid_type == 'hexagonal':
-            with h5py.File(EDAX_FILE, mode='r+') as f:
-                grid = f['Scan 1/EBSD/Header/Grid Type']
-                grid[()] = 'HexGrid'.encode()
-            with pytest.raises(IOError, match='Only square grids are'):
-                s = kp.load(EDAX_FILE)
-            with h5py.File(EDAX_FILE, mode='r+') as f:
-                grid = f['Scan 1/EBSD/Header/Grid Type']
-                grid[()] = 'SqrGrid'.encode()
-        else:
+    def test_load_edax(self):
+        with h5py.File(EDAX_FILE, mode='r+') as f:
+            grid = f['Scan 1/EBSD/Header/Grid Type']
+            grid[()] = 'HexGrid'.encode()
+        with pytest.raises(IOError, match='Only square grids are'):
             s = kp.load(EDAX_FILE)
+        with h5py.File(EDAX_FILE, mode='r+') as f:
+            grid = f['Scan 1/EBSD/Header/Grid Type']
+            grid[()] = 'SqrGrid'.encode()
 
-            assert s.data.shape == (3, 3, 60, 60)
-            assert s.axes_manager.as_dictionary() == AXES_MANAGER
+        s = kp.load(EDAX_FILE)
+        assert s.data.shape == (3, 3, 60, 60)
+        assert s.axes_manager.as_dictionary() == AXES_MANAGER
 
-    #    def test_load_bruker(self):
-    #        return 0
+    def test_load_bruker(self):
+        with h5py.File(BRUKER_FILE, mode='r+') as f:
+            grid = f['Scan 0/EBSD/Header/Grid Type']
+            grid[()] = 'hexagonal'.encode()
+        with pytest.raises(IOError, match='Only square grids are'):
+            s = kp.load(BRUKER_FILE)
+        with h5py.File(BRUKER_FILE, mode='r+') as f:
+            grid = f['Scan 0/EBSD/Header/Grid Type']
+            grid[()] = 'isometric'.encode()
+
+        s = kp.load(BRUKER_FILE)
+        assert s.data.shape == (3, 3, 60, 60)
+        assert s.axes_manager.as_dictionary() == AXES_MANAGER
 
     def test_load_manufacturer(self, save_path):
         s = kp.signals.EBSD(
