@@ -16,7 +16,4 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-"""
-All classes inherits from LazySignal2D from HyperSpy.
-"""
-from kikuchipy._signals.ebsd import LazyEBSD
+from kikuchipy.signals.ebsd import EBSD, LazyEBSD

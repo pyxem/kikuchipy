@@ -17,15 +17,16 @@
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import gc
-import tempfile
-import pytest
+
+import dask.array as da
+from hyperspy.misc.utils import DictionaryTreeBrowser
 import h5py
 import numpy as np
-import dask.array as da
+import pytest
+
+from kikuchipy.io.plugins.h5ebsd import (check_h5ebsd, dict2h5ebsdgroup)
 import kikuchipy as kp
-from kikuchipy.io_plugins.h5ebsd import (check_h5ebsd, dict2h5ebsdgroup)
-from hyperspy.misc.utils import DictionaryTreeBrowser
+
 
 DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, '../../data/kikuchipy/patterns.h5')
@@ -48,14 +49,6 @@ AXES_MANAGER = {
         'navigate': False}}
 
 
-@pytest.fixture()
-def save_path():
-    with tempfile.TemporaryDirectory() as tmp:
-        file_path = os.path.join(tmp, 'patterns_temp.h5')
-        yield file_path
-        gc.collect()
-
-
 class Testh5ebsd:
 
     def test_load_kikuchipy(self):
@@ -69,7 +62,7 @@ class Testh5ebsd:
             grid = f['Scan 1/EBSD/Header/Grid Type']
             grid[()] = 'HexGrid'.encode()
         with pytest.raises(IOError, match='Only square grids are'):
-            s = kp.load(EDAX_FILE)
+            kp.load(EDAX_FILE)
         with h5py.File(EDAX_FILE, mode='r+') as f:
             grid = f['Scan 1/EBSD/Header/Grid Type']
             grid[()] = 'SqrGrid'.encode()
@@ -83,7 +76,7 @@ class Testh5ebsd:
             grid = f['Scan 0/EBSD/Header/Grid Type']
             grid[()] = 'hexagonal'.encode()
         with pytest.raises(IOError, match='Only square grids are'):
-            s = kp.load(BRUKER_FILE)
+            kp.load(BRUKER_FILE)
         with h5py.File(BRUKER_FILE, mode='r+') as f:
             grid = f['Scan 0/EBSD/Header/Grid Type']
             grid[()] = 'isometric'.encode()
@@ -92,30 +85,30 @@ class Testh5ebsd:
         assert s.data.shape == (3, 3, 60, 60)
         assert s.axes_manager.as_dictionary() == AXES_MANAGER
 
-    def test_load_manufacturer(self, save_path):
+    def test_load_manufacturer(self, save_path_h5ebsd):
         s = kp.signals.EBSD(
             (255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
-        s.save(save_path)
+        s.save(save_path_h5ebsd)
 
         # Change manufacturer
-        with h5py.File(save_path, mode='r+') as f:
+        with h5py.File(save_path_h5ebsd, mode='r+') as f:
             manufacturer = f['manufacturer']
             manufacturer[()] = 'Nope'.encode()
 
         with pytest.raises(
                 OSError,
                 match='Manufacturer Nope not among recognised manufacturers'):
-            s_reload = kp.load(save_path)
+            kp.load(save_path_h5ebsd)
 
     @pytest.mark.parametrize(
         'delete, error', [('man_ver', 'not an h5ebsd file, as manufacturer'),
                           ('scans', 'not an h5ebsd file, as no scans')])
-    def test_check_h5ebsd(self, save_path, delete, error):
+    def test_check_h5ebsd(self, save_path_h5ebsd, delete, error):
         s = kp.signals.EBSD(
             (255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
-        s.save(save_path)
+        s.save(save_path_h5ebsd)
 
-        with h5py.File(save_path, mode='r+') as f:
+        with h5py.File(save_path_h5ebsd, mode='r+') as f:
             if delete == 'man_ver':
                 del f['manufacturer']
                 del f['version']
@@ -126,21 +119,30 @@ class Testh5ebsd:
                 with pytest.raises(OSError, match=error):
                     check_h5ebsd(f)
 
+    def test_read_patterns(self, save_path_h5ebsd):
+        s = kp.signals.EBSD(
+            (255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
+        s.save(save_path_h5ebsd)
+        with h5py.File(save_path_h5ebsd, mode='r+') as f:
+            del f['Scan 1/EBSD/Data/patterns']
+            with pytest.raises(KeyError, match='Could not find patterns'):
+                kp.load(save_path_h5ebsd)
+
     @pytest.mark.parametrize('lazy', (True, False))
-    def test_load_with_padding(self, save_path, lazy):
+    def test_load_with_padding(self, save_path_h5ebsd, lazy):
         s = kp.load(KIKUCHIPY_FILE)
-        s.save(save_path)
+        s.save(save_path_h5ebsd)
 
         new_n_columns = 4
-        with h5py.File(save_path, mode='r+') as f:
+        with h5py.File(save_path_h5ebsd, mode='r+') as f:
             f['Scan 1/EBSD/Header/n_columns'][()] = new_n_columns
         with pytest.warns(UserWarning, match='Will attempt to load by zero'):
-            s_reload = kp.load(save_path, lazy=lazy)
+            s_reload = kp.load(save_path_h5ebsd, lazy=lazy)
         AXES_MANAGER['axis-1']['size'] = new_n_columns
         assert s_reload.axes_manager.as_dictionary() == AXES_MANAGER
 
     @pytest.mark.parametrize('remove_phases', (True, False))
-    def test_load_save_cycle(self, save_path, remove_phases):
+    def test_load_save_cycle(self, save_path_h5ebsd, remove_phases):
         s = kp.load(KIKUCHIPY_FILE)
 
         # Check that metadata is read correctly
@@ -149,8 +151,8 @@ class Testh5ebsd:
 
         if remove_phases:
             del s.metadata.Sample.Phases
-        s.save(save_path, overwrite=True)
-        s_reload = kp.load(save_path)
+        s.save(save_path_h5ebsd, overwrite=True)
+        s_reload = kp.load(save_path_h5ebsd)
         np.testing.assert_equal(s.data, s_reload.data)
 
         # Change data set name to make metadata equal and redo phases delete
@@ -161,17 +163,21 @@ class Testh5ebsd:
         np.testing.assert_equal(
             s_reload.metadata.as_dictionary(), s.metadata.as_dictionary())
 
-    @pytest.mark.parametrize('scans', ([1, 2], [1, 2, 3], [3, ], 2, 3))
+    @pytest.mark.parametrize('scans', ([1, 2], [1, 2, 3], [3, ], 2))
     def test_load_multiple(self, scans):
-        if scans == [1, 2, 3] or scans == 3:
+        if scans == [1, 2, 3]:
             with pytest.warns(UserWarning, match='Scan 3 is not among the'):
                 s1, s2 = kp.load(KIKUCHIPY_FILE, scans=scans)
         elif scans == [3, ]:
             with pytest.raises(OSError, match='Scan 3 is not among the'):
-                s1 = kp.load(KIKUCHIPY_FILE, scans=scans)
+                kp.load(KIKUCHIPY_FILE, scans=scans)
             return 0
-        else:
+        elif scans == [1, 2]:
             s1, s2 = kp.load(KIKUCHIPY_FILE, scans=scans)
+        else:  # scans == 2
+            s2 = kp.load(KIKUCHIPY_FILE, scans=2)
+            assert s2.metadata.General.title == 'patterns Scan 2'
+            s1 = kp.load(KIKUCHIPY_FILE)
 
         np.testing.assert_equal(s1.data, s2.data)
         with pytest.raises(
@@ -184,59 +190,59 @@ class Testh5ebsd:
         np.testing.assert_equal(
             s1.metadata.as_dictionary(), s2.metadata.as_dictionary())
 
-    def test_load_save_lazy(self, save_path):
+    def test_load_save_lazy(self, save_path_h5ebsd):
         s = kp.load(KIKUCHIPY_FILE, lazy=True)
         assert isinstance(s.data, da.Array)
-        s.save(save_path, overwrite=True)
-        s_reload = kp.load(save_path, lazy=True)
+        s.save(save_path_h5ebsd)
+        s_reload = kp.load(save_path_h5ebsd, lazy=True)
         assert s.data.shape == s_reload.data.shape
         with pytest.raises(OSError, match='Cannot write to an already open'):
-            s_reload.save(save_path, add_scan=2)
+            s_reload.save(save_path_h5ebsd, add_scan=True, scan_number=2)
 
     def test_load_readonly(self):
         s = kp.load(KIKUCHIPY_FILE, lazy=True)
-        k = next(filter(lambda x: isinstance(x, str) and
-                        x.startswith("array-original"),
-                        s.data.dask.keys()))
+        k = next(filter(
+            lambda x: isinstance(x, str) and x.startswith("array-original"),
+            s.data.dask.keys()))
         mm = s.data.dask[k]
         assert isinstance(mm, h5py.Dataset)
         with pytest.raises(NotImplementedError):
             s.data[:] = 23
 
-    def test_save_fresh(self, save_path):
+    def test_save_fresh(self, save_path_h5ebsd):
         scan_size = (10, 3)
         pattern_size = (5, 5)
         data_shape = scan_size + pattern_size
         s = kp.signals.EBSD(
             (255 * np.random.rand(*data_shape)).astype(np.uint8))
-        s.save(save_path, overwrite=True)
-        s_reload = kp.load(save_path)
+        s.save(save_path_h5ebsd, overwrite=True)
+        s_reload = kp.load(save_path_h5ebsd)
         np.testing.assert_equal(s.data, s_reload.data)
 
     @pytest.mark.parametrize('scan_number', (1, 2))
-    def test_save_multiple(self, save_path, scan_number):
+    def test_save_multiple(self, save_path_h5ebsd, scan_number):
         s1, s2 = kp.load(KIKUCHIPY_FILE, scans=[1, 2])
-        s1.save(save_path)
+        s1.save(save_path_h5ebsd)
         error = 'Invalid scan number'
         with pytest.raises(OSError, match=error):
-            s2.save(save_path, add_scan=True)
+            s2.save(save_path_h5ebsd, add_scan=True)
         if scan_number == 1:
             with pytest.raises(OSError, match=error):
-                s2.save(save_path, add_scan=True, scan_number=scan_number)
+                s2.save(save_path_h5ebsd, add_scan=True, scan_number=scan_number)
         else:
-            s2.save(save_path, add_scan=True, scan_number=scan_number)
+            s2.save(save_path_h5ebsd, add_scan=True, scan_number=scan_number)
 
     def test_save_edax(self):
         s = kp.load(EDAX_FILE)
         with pytest.raises(OSError, match='Only writing to KikuchiPy\'s'):
             s.save(EDAX_FILE, add_scan=True)
 
-    def test_dict2h5ebsdgroup(self, save_path):
+    def test_dict2h5ebsdgroup(self, save_path_h5ebsd):
         dictionary = {
             'a': [np.array(24.5)],
             'b': DictionaryTreeBrowser(),
             'c': set(),}
-        with h5py.File(save_path, mode='w') as f:
+        with h5py.File(save_path_h5ebsd, mode='w') as f:
             group = f.create_group(name='a_group')
             with pytest.warns(UserWarning, match='The hdf5 writer could not'):
                 dict2h5ebsdgroup(dictionary, group)

@@ -16,6 +16,4 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-"""
-Functions that operate on Signal instances.
-"""
+from kikuchipy.util import dask, experimental, general, io, nordif, phase

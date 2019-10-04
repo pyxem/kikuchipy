@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-from kikuchipy.io import load, save
-from kikuchipy.signals import EBSD
-from kikuchipy.lazy_signals import LazyEBSD
+from kikuchipy import signals
+from kikuchipy import util
+from kikuchipy import io
+from kikuchipy.io._io import load

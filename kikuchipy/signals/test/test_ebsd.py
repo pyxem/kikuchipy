@@ -16,11 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-from kikuchipy.signals import EBSD
-from kikuchipy.util.io import metadata_nodes, kikuchipy_metadata
 from hyperspy.misc.utils import DictionaryTreeBrowser
 import numpy as np
 import pytest
+
+from kikuchipy.signals import EBSD
+from kikuchipy.util.io import metadata_nodes, kikuchipy_metadata
 
 
 def assert_dictionary(input_dict, output_dict):
@@ -95,7 +96,8 @@ class TestEBSD:
              'setting': 1,
              'symmetry': 43}
         dummy_signal.set_phase_parameters(**p)
-        md_dict = dummy_signal.metadata.get_item('Sample.Phases.1').as_dictionary()
+        md_dict = dummy_signal.metadata.get_item('Sample.Phases.1').\
+            as_dictionary()
         p.pop('number')
         assert_dictionary(p, md_dict)
 

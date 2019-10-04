@@ -30,7 +30,7 @@ import numpy as np
 import dask.array as da
 import matplotlib.pyplot as plt
 import kikuchipy as kp
-from kikuchipy.io_plugins.nordif import get_settings_from_file, get_string
+from kikuchipy.io.plugins.nordif import get_settings_from_file, get_string
 
 DIR_PATH = os.path.dirname(__file__)
 PATTERN_FILE = os.path.join(DIR_PATH, '../../data/nordif/Pattern.dat')
@@ -124,7 +124,7 @@ AXES_MANAGER = {
 
 
 @pytest.fixture()
-def save_path():
+def save_path_nordif():
     with tempfile.TemporaryDirectory() as tmp:
         file_path = os.path.join(tmp, 'nordif', 'save_temp.dat')
         yield file_path
@@ -180,15 +180,14 @@ class TestNORDIF:
                 # Check if zero padding user warning is raised if sum of data
                 # shape is bigger than file size
                 with pytest.warns(UserWarning):
-                    s = kp.load(
-                        PATTERN_FILE, scan_size=nav_shape,
-                        pattern_size=sig_shape)
+                    s = kp.load(PATTERN_FILE, scan_size=nav_shape,
+                                pattern_size=sig_shape)
             else:
                 s = kp.load(
                     PATTERN_FILE, scan_size=nav_shape, pattern_size=sig_shape)
             assert s.data.shape == nav_shape[::-1] + sig_shape
 
-    def test_load_save_cycle(self, save_path):
+    def test_load_save_cycle(self, save_path_nordif):
         s = kp.load(PATTERN_FILE)
 
         scan_time_string = s.original_metadata['nordif_header'][80][10:18]
@@ -200,9 +199,9 @@ class TestNORDIF:
             == scan_time
         assert s.metadata.General.title == 'Pattern'
 
-        s.save(save_path, overwrite=True)
+        s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background pattern in directory
-            s_reload = kp.load(save_path, setting_file=SETTING_FILE)
+            s_reload = kp.load(save_path_nordif, setting_file=SETTING_FILE)
         np.testing.assert_equal(s.data, s_reload.data)
 
         # Add static background and change filename to make metadata equal
@@ -217,12 +216,13 @@ class TestNORDIF:
         # Delete reference to close np.memmap file
         del s_reload
 
-    def test_load_save_lazy(self, save_path):
+    def test_load_save_lazy(self, save_path_nordif):
         s = kp.load(PATTERN_FILE, lazy=True)
         assert isinstance(s.data, da.Array)
-        s.save(save_path, overwrite=True)
+        s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background pattern in directory
-            s_reload = kp.load(save_path, lazy=True, setting_file=SETTING_FILE)
+            s_reload = kp.load(
+                save_path_nordif, lazy=True, setting_file=SETTING_FILE)
         assert s.data.shape == s_reload.data.shape
 
     def test_load_to_memory(self):
@@ -245,59 +245,59 @@ class TestNORDIF:
     def test_load_inplace(self, lazy):
         if lazy:
             with pytest.raises(ValueError):
-                s = kp.load(PATTERN_FILE, lazy=lazy, mmap_mode='r+')
+                kp.load(PATTERN_FILE, lazy=lazy, mmap_mode='r+')
         else:
             s = kp.load(PATTERN_FILE, lazy=lazy, mmap_mode='r+')
             assert s.axes_manager.as_dictionary() == AXES_MANAGER
 
-    def test_save_fresh(self, save_path):
+    def test_save_fresh(self, save_path_nordif):
         scan_size = (10, 3)
         pattern_size = (5, 5)
         data_shape = scan_size + pattern_size
         s = kp.signals.EBSD(
             (255 * np.random.rand(*data_shape)).astype(np.uint8))
-        s.save(save_path, overwrite=True)
+        s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background or setting files
-            s_reload = kp.load(
-                save_path, scan_size=scan_size[::-1], pattern_size=pattern_size)
+            s_reload = kp.load(save_path_nordif, scan_size=scan_size[::-1],
+                               pattern_size=pattern_size)
         np.testing.assert_equal(s.data, s_reload.data)
 
-    def test_write_data_line(self, save_path):
+    def test_write_data_line(self, save_path_nordif):
         scan_size = 3
         pattern_size = (5, 5)
         data_shape = (scan_size, ) + pattern_size
         s = kp.signals.EBSD(
             (255 * np.random.rand(*data_shape)).astype(np.uint8))
-        s.save(save_path, overwrite=True)
+        s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background or setting files
-            s_reload = kp.load(
-                save_path, scan_size=scan_size, pattern_size=pattern_size)
+            s_reload = kp.load(save_path_nordif, scan_size=scan_size,
+                               pattern_size=pattern_size)
         np.testing.assert_equal(s.data, s_reload.data)
 
-    def test_write_data_single(self, save_path):
+    def test_write_data_single(self, save_path_nordif):
         pattern_size = (5, 5)
         s = kp.signals.EBSD(
             (255 * np.random.rand(*pattern_size)).astype(np.uint8))
-        s.save(save_path, overwrite=True)
+        s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background or setting files
             s_reload = kp.load(
-                save_path, scan_size=1, pattern_size=pattern_size)
+                save_path_nordif, scan_size=1, pattern_size=pattern_size)
         np.testing.assert_equal(s.data, s_reload.data)
 
-    def test_read_cutoff(self, save_path):
+    def test_read_cutoff(self, save_path_nordif):
         scan_size = (10, 3)
         scan_size_reloaded = (10, 20)
         pattern_size = (5, 5)
         data_shape = scan_size + pattern_size
         s = kp.signals.EBSD(
             (255 * np.random.rand(*data_shape)).astype(np.uint8))
-        s.save(save_path, overwrite=True)
+        s.save(save_path_nordif, overwrite=True)
 
         # Reload data but with a scan_size bigger than available file bytes,
         # so that the data has to be padded
         with pytest.warns(UserWarning):  # No background or setting files
             s_reload = kp.load(
-                save_path, scan_size=scan_size_reloaded[::-1],
+                save_path_nordif, scan_size=scan_size_reloaded[::-1],
                 pattern_size=pattern_size)
 
         # To check if the data padding works as expected, the original data is
