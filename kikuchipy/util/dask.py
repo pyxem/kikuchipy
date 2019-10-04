@@ -24,7 +24,7 @@ import dask.array as da
 _logger = logging.getLogger(__name__)
 
 
-def _get_chunks(data_shape, data_nbytes, mbytes_chunk=100):
+def _get_chunks(data_shape, data_type, mbytes_chunk=100):
     """Return suggested data chunks for patterns. Signal axes are not
     chunked. Goals in prioritised order are (i) split into at least as
     many chunks as available CPUs, (ii) limit chunks to approximately
@@ -35,8 +35,8 @@ def _get_chunks(data_shape, data_nbytes, mbytes_chunk=100):
     ----------
     data_shape : tuple of ints
         Shape of data to chunk.
-    data_nbytes : int
-        Data size in number of bytes.
+    data_type : type
+        Type of data.
     mbytes_chunk : int, optional
         Size of chunks in MB, default is 100 MB as suggested in the
         Dask documentation.
@@ -47,9 +47,13 @@ def _get_chunks(data_shape, data_nbytes, mbytes_chunk=100):
         Suggested chunk size.
     """
 
+    if isinstance(data_shape, tuple):
+        data_shape = np.array(data_shape)
+
     suggested_size = mbytes_chunk * 2 ** 20
     sig_chunks = data_shape[-2:]
     nav_chunks = data_shape[:-2]
+    data_nbytes = data_shape.prod() * np.dtype(data_type).itemsize
     pattern_size = data_nbytes / nav_chunks.prod()
     num_chunks = np.ceil(data_nbytes / suggested_size)
     i_min, i_max = np.argmin(nav_chunks), np.argmax(nav_chunks)

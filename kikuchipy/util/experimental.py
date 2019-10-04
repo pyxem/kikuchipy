@@ -16,11 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-import numpy as np
 import dask.array as da
+import numpy as np
+from scipy.ndimage import gaussian_filter
 from skimage.exposure import equalize_adapthist
 from skimage.util.dtype import dtype_range
-from scipy.ndimage import gaussian_filter
 
 
 def _rescale_pattern(

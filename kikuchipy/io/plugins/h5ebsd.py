@@ -16,20 +16,21 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import h5py
-import warnings
 import logging
-import numpy as np
+import os
+import warnings
+
 import dask.array as da
 from hyperspy.misc.utils import DictionaryTreeBrowser
-from hyperspy.io_plugins.hspy import overwrite_dataset, get_signal_chunks
-from kikuchipy.util.io import (
-    kikuchipy_metadata, get_input_variable, metadata_nodes)
+from hyperspy.io_plugins.hspy import overwrite_dataset
+import h5py
+import numpy as np
+
 from kikuchipy.util.phase import _phase_metadata, _update_phase_info
+from kikuchipy.util.io import (
+    kikuchipy_metadata, metadata_nodes, _get_input_variable)
 from kikuchipy.util.general import (
-    delete_from_nested_dictionary, get_nested_dictionary)
-from kikuchipy.util.dask import _get_chunks
+    _delete_from_nested_dictionary, _get_nested_dictionary)
 
 _logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ description = 'Read/write support for electron backscatter patterns stored in '\
 full_support = False
 # Recognised file extension
 file_extensions = ['h5', 'hdf5', 'h5ebsd']
-default_extension = 0
+default_extension = 1
 # Writing capabilities
 writes = [(2, 2), (2, 1)]
 
@@ -62,8 +63,8 @@ def file_reader(filename, scans=None, lazy=False, **kwargs):
     filename : str
         Full file path of the HDF file.
     scans : int or list of ints
-        List of scan numbers to return. If None is passed the first
-        scan in the file is returned.
+        Integer of scan to return, or list of integers of scans to
+        return. If None is passed the first scan in the file is returned.
     lazy : bool, optional
 
     Returns
@@ -100,7 +101,7 @@ def file_reader(filename, scans=None, lazy=False, **kwargs):
         scans_return.append(scans_file[0])
     else:
         if isinstance(scans, int):
-            scans = list(np.arange(scans) + 1)
+            scans = [scans, ]
         for scan_no in scans:  # Wanted scans
             scan_is_here = False
             for scan in scans_file:
@@ -266,17 +267,24 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
         'metadata': md.as_dictionary(),
         'original_metadata': omd.as_dictionary(), 'attributes': {}}
 
-    # Get data group
+    # Get data dataset
     man_pats = manufacturer_pattern_names()
+    data_dset = None
     for man, pats in man_pats.items():
         if manufacturer.lower() == man.lower():
-            data = scan_group['EBSD/Data/' + pats]
+            try:
+                data_dset = scan_group['EBSD/Data/' + pats]
+            except KeyError:
+                raise KeyError(
+                    "Could not find patterns in the expected dataset '{}'"
+                    "".format('EBSD/Data/' + pats))
+            break
 
     # Get data from group
     if lazy:
-        data = da.from_array(data, chunks=data.chunks)
+        data = da.from_array(data_dset, chunks=data_dset.chunks)
     else:
-        data = np.asanyarray(data)
+        data = np.asanyarray(data_dset)
 
     sx, sy = scan_size.sx, scan_size.sy
     nx, ny = scan_size.nx, scan_size.ny
@@ -376,12 +384,11 @@ def kikuchipyheader2dicts(scan_group, md, lazy=False):
     md, omd, scan_size : DictionaryTreeBrowser
     """
 
-
     omd = DictionaryTreeBrowser()
     sem_node, ebsd_node = metadata_nodes()
     md.set_item(
         ebsd_node, h5ebsdgroup2dict(scan_group['EBSD/Header'], lazy=lazy))
-    md = delete_from_nested_dictionary(md, 'Phases')
+    md = _delete_from_nested_dictionary(md, 'Phases')
     phase_node = 'Sample.Phases'
     md.set_item(sem_node, h5ebsdgroup2dict(scan_group['SEM/Header'], lazy=lazy))
     md.set_item(
@@ -395,8 +402,8 @@ def kikuchipyheader2dicts(scan_group, md, lazy=False):
         'delta': 'detector_pixel_size'}
     scan_size = DictionaryTreeBrowser()
     for k, v in mapping.items():
-        scan_size.set_item(k, get_nested_dictionary(md, ebsd_node + '.' + v))
-    md = delete_from_nested_dictionary(md, mapping.values())
+        scan_size.set_item(k, _get_nested_dictionary(md, ebsd_node + '.' + v))
+    md = _delete_from_nested_dictionary(md, mapping.values())
 
     return md, omd, scan_size
 
@@ -542,9 +549,9 @@ def file_writer(
     ----------
     filename : str
         Full path of HDF file.
-    signal : kikuchipy.signals.EBSD or kikuchipy.lazy_signals.LazyEBSD
+    signal : kikuchipy.signals.EBSD or kikuchipy.signals.LazyEBSD
         Signal instance.
-    add_scan : bool or None, optional
+    add_scan : {None, bool}, optional
         Add signal to an existing, but not open, h5ebsd file. If it does
         not exist it is created and the signal is written to it.
     scan_number : int, optional
@@ -565,9 +572,7 @@ def file_writer(
     try:
         f = h5py.File(filename, mode=mode)
     except OSError:
-        raise OSError(
-            "Cannot write to an already open file (e.g. a file from which data"
-            " has been read lazily).")
+        raise OSError("Cannot write to an already open file.")
 
     if os.path.isfile(filename) and add_scan:
         check_h5ebsd(f)
@@ -586,7 +591,7 @@ def file_writer(
             if i == scan_number:
                 q = "Scan {} already in file, enter another scan "\
                     "number:\n".format(i)
-                scan_number = get_input_variable(q, int)
+                scan_number = _get_input_variable(q, int)
                 if scan_number is None:
                     raise IOError("Invalid scan number.")
     else:  # File did not exist

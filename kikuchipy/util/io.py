@@ -17,7 +17,10 @@
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
+import warnings
+
 from hyperspy.misc.utils import DictionaryTreeBrowser
+
 
 _logger = logging.getLogger(__name__)
 
@@ -36,71 +39,18 @@ def kikuchipy_metadata():
 
     md = DictionaryTreeBrowser()
     sem_node, ebsd_node = metadata_nodes()
-    ebsd = {'azimuth_angle': 1., 'binning': 1, 'detector': '',
-            'elevation_angle': 1., 'exposure_time': 1, 'frame_number': 1,
-            'frame_rate': 1, 'gain': 1., 'grid_type': '', 'sample_tilt': 1.,
-            'scan_time': 1., 'static_background': 1, 'xpc': 1., 'ypc': 1.,
-            'zpc': 1.}
-    sem = {'microscope': '', 'magnification': 1, 'beam_energy': 1.,
-           'working_distance': 1.}
+    ebsd = {
+        'azimuth_angle': 1., 'binning': 1, 'detector': '',
+        'elevation_angle': 1., 'exposure_time': 1, 'frame_number': 1,
+        'frame_rate': 1, 'gain': 1., 'grid_type': '', 'sample_tilt': 1.,
+        'scan_time': 1., 'static_background': 1, 'xpc': 1., 'ypc': 1.,
+        'zpc': 1.}
+    sem = {
+        'microscope': '', 'magnification': 1, 'beam_energy': 1.,
+        'working_distance': 1.}
     md.set_item(sem_node, sem)
     md.set_item(ebsd_node, ebsd)
     return md
-
-
-def get_input_bool(question):
-    """Get input from user on boolean choice, returning the answer.
-
-    Parameters
-    ----------
-    question : str
-        Question to ask user.
-    """
-
-    try:
-        answer = input(question)
-        answer = answer.lower()
-        while (answer != 'y') and (answer != 'n'):
-            print("Please answer y or n.")
-            answer = input(question)
-        if answer.lower() == 'y':
-            return True
-        elif answer.lower() == 'n':
-            return False
-    except BaseException:
-        # Running in an IPython notebook that does not support raw_input
-        _logger.info("Your terminal does not support raw input. Not adding "
-                     "scan. To add the scan use `add_scan=True`")
-        return False
-    else:
-        return True
-
-
-def get_input_variable(question, var_type):
-    """Get variable input from user, returning the variable.
-
-    Parameters
-    ----------
-    question : str
-        Question to ask user.
-    var_type : type
-        Type of variable to return.
-    """
-
-    try:
-        answer = input(question)
-        while type(answer) != var_type:
-            try:
-                answer = var_type(answer)
-            except ValueError:
-                print("Please enter a variable of type {}:\n".format(var_type))
-                answer = input(question)
-        return answer
-    except BaseException:
-        # Running in an IPython notebook that does not support raw_input
-        _logger.info("Your terminal does not support raw input. Not adding "
-                     "scan. To add the scan use `add_scan=True`")
-        return None
 
 
 def metadata_nodes(sem=True, ebsd=True):
@@ -129,3 +79,57 @@ def metadata_nodes(sem=True, ebsd=True):
         return ebsd_node
 
 
+def _get_input_bool(question):
+    """Get input from user on boolean choice, returning the answer.
+
+    Parameters
+    ----------
+    question : str
+        Question to ask user.
+    """
+
+    try:
+        answer = input(question)
+        answer = answer.lower()
+        while (answer != 'y') and (answer != 'n'):
+            print("Please answer y or n.")
+            answer = input(question)
+        if answer.lower() == 'y':
+            return True
+        elif answer.lower() == 'n':
+            return False
+    except OSError:
+        warnings.warn(
+            "Your terminal does not support raw input. Not adding scan. To add "
+            "the scan use `add_scan=True`")
+        return False
+    else:
+        return True
+
+
+def _get_input_variable(question, var_type):
+    """Get variable input from user, returning the variable.
+
+    Parameters
+    ----------
+    question : str
+        Question to ask user.
+    var_type : type
+        Type of variable to return.
+    """
+
+    try:
+        answer = input(question)
+        while type(answer) != var_type:
+            try:
+                answer = var_type(answer)
+            except ValueError:
+                print("Please enter a variable of type {}:\n".format(var_type))
+                answer = input(question)
+        return answer
+    except BaseException:
+        # Running in an IPython notebook that does not support raw_input
+        _logger.info(
+            "Your terminal does not support raw input. Not adding scan. To add "
+            "the scan use `add_scan=True`")
+        return None

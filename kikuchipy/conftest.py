@@ -16,8 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-import pytest
+import gc
+import os
+import tempfile
+
 import numpy as np
+import pytest
+
 import kikuchipy as kp
 
 
@@ -44,3 +49,14 @@ def dummy_background():
 
     return np.array(
         [5, 4, 5, 4, 3, 4, 4, 4, 3], dtype=np.uint8).reshape((3, 3))
+
+
+@pytest.fixture()
+def save_path_h5ebsd():
+    """Temporary file in a temporary directory to use when tests need
+    to write (and sometimes read again) a signal to file."""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        file_path = os.path.join(tmp, 'patterns_temp.h5')
+        yield file_path
+        gc.collect()

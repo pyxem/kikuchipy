@@ -16,32 +16,30 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import sys
-import gc
 import datetime
-import tqdm
+import gc
 import logging
 import numbers
-import numpy as np
+import os
+import sys
+import warnings
+
 import dask.array as da
 import dask.diagnostics as dd
-import warnings
-from sklearn.decomposition import IncrementalPCA
-from h5py import File
-from hyperspy.signals import Signal2D
-from hyperspy._lazy_signals import LazySignal, LazySignal2D
+from hyperspy._signals.signal2d import Signal2D
+from hyperspy._lazy_signals import LazySignal2D
 from hyperspy._signals.lazy import to_array
 from hyperspy.learn.mva import LearningResults
 from hyperspy.misc.utils import DictionaryTreeBrowser
 from hyperspy.misc.array_tools import rebin
+from h5py import File
+import numpy as np
 from pyxem.signals.electron_diffraction2d import ElectronDiffraction2D
-import kikuchipy.io as kpio
-import kikuchipy.util.io as kpui
-import kikuchipy.util.phase as kpup
-import kikuchipy.util.general as kpug
-import kikuchipy.util.experimental as kpue
-import kikuchipy.util.dask as kpud
+from sklearn.decomposition import IncrementalPCA
+import tqdm
+
+from kikuchipy.io._io import save
+import kikuchipy.util as kpu
 
 _logger = logging.getLogger(__name__)
 
@@ -61,9 +59,9 @@ class EBSD(Signal2D):
             Signal2D.__init__(self, *args, **kwargs)
 
         # Update metadata if object is initialised from numpy array
-        if not self.metadata.has_item(kpui.metadata_nodes(sem=False)):
+        if not self.metadata.has_item(kpu.io.metadata_nodes(sem=False)):
             md = self.metadata.as_dictionary()
-            md.update(kpui.kikuchipy_metadata().as_dictionary())
+            md.update(kpu.io.kikuchipy_metadata().as_dictionary())
             self.metadata = DictionaryTreeBrowser(md)
         if not self.metadata.has_item('Sample.Phases'):
             self.set_phase_parameters()
@@ -132,7 +130,7 @@ class EBSD(Signal2D):
         Examples
         --------
         >>> import kikuchipy as kp
-        >>> ebsd_node = kp.util.io_utils.metadata_nodes(sem=False)
+        >>> ebsd_node = kp.util.io.metadata_nodes(sem=False)
         >>> print(s.metadata.get_item(ebsd_node + '.xpc')
         1.0
         >>> s.set_experimental_parameters(xpc=0.50726)
@@ -141,12 +139,12 @@ class EBSD(Signal2D):
         """
 
         md = self.metadata
-        sem_node, ebsd_node = kpui.metadata_nodes()
-        kpug.write_parameters_to_dictionary(
+        sem_node, ebsd_node = kpu.io.metadata_nodes()
+        kpu.general._write_parameters_to_dictionary(
             {'beam_energy': beam_energy, 'magnification': magnification,
              'microscope': microscope, 'working_distance': working_distance},
             md, sem_node)
-        kpug.write_parameters_to_dictionary(
+        kpu.general._write_parameters_to_dictionary(
             {'azimuth_angle': azimuth_angle, 'binning': binning,
              'detector': detector, 'elevation_angle': elevation_angle,
              'exposure_time': exposure_time, 'frame_number': frame_number,
@@ -231,7 +229,7 @@ class EBSD(Signal2D):
 
         # Remove None values
         phase = {k: v for k, v in inputs.items() if v is not None}
-        kpup._update_phase_info(self.metadata, phase, number)
+        kpu.phase._update_phase_info(self.metadata, phase, number)
 
     def set_scan_calibration(self, step_x=1., step_y=1.):
         """Set the step size in µm.
@@ -317,7 +315,7 @@ class EBSD(Signal2D):
         available in signal metadata:
 
         >>> import kikuchipy as kp
-        >>> ebsd_node = kp.util.io_utils.metadata_nodes(sem=False)
+        >>> ebsd_node = kp.util.io.metadata_nodes(sem=False)
         >>> print(s.metadata.get_item(ebsd_node + '.static_background'))
         [[84 87 90 ... 27 29 30]
         [87 90 93 ... 27 28 30]
@@ -344,7 +342,7 @@ class EBSD(Signal2D):
         if not isinstance(static_bg, (np.ndarray, da.Array)):
             try:
                 md = self.metadata
-                ebsd_node = kpui.metadata_nodes(sem=False)
+                ebsd_node = kpu.io.metadata_nodes(sem=False)
                 static_bg = da.from_array(
                     md.get_item(ebsd_node + '.static_background'))
             except TypeError:
@@ -381,13 +379,13 @@ class EBSD(Signal2D):
             in_range = None
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kpud._get_dask_array(signal=self, dtype=dtype)
+        dask_array = kpu.dask._get_dask_array(signal=self, dtype=dtype)
 
         # Correct static background and rescale intensities chunk by chunk
         corrected_patterns = dask_array.map_blocks(
-            kpue._static_background_correction_chunk, static_bg=static_bg,
-            operation=operation, in_range=in_range, dtype_out=dtype_out,
-            dtype=dtype_out)
+            kpu.experimental._static_background_correction_chunk,
+            static_bg=static_bg, operation=operation, in_range=in_range,
+            dtype_out=dtype_out, dtype=dtype_out)
 
         # Overwrite signal patterns
         if not self._lazy:
@@ -431,14 +429,15 @@ class EBSD(Signal2D):
         dtype = np.int16
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kpud._get_dask_array(signal=self, dtype=dtype)
+        dask_array = kpu.dask._get_dask_array(signal=self, dtype=dtype)
 
         if sigma is None:
             sigma = self.axes_manager.signal_axes[0].size/30
 
         corrected_patterns = dask_array.map_blocks(
-            kpue._dynamic_background_correction_chunk, operation=operation,
-            sigma=sigma, dtype_out=dtype_out, dtype=dtype_out)
+            kpu.experimental._dynamic_background_correction_chunk,
+            operation=operation, sigma=sigma, dtype_out=dtype_out,
+            dtype=dtype_out)
 
         # Overwrite signal patterns
         if not self._lazy:
@@ -497,12 +496,12 @@ class EBSD(Signal2D):
             in_range = None
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kpud._get_dask_array(signal=self)
+        dask_array = kpu.dask._get_dask_array(signal=self)
 
         # Rescale patterns
         rescaled_patterns = dask_array.map_blocks(
-            kpue._rescale_pattern_chunk, in_range=in_range, dtype_out=dtype_out,
-            dtype=dtype_out)
+            kpu.experimental._rescale_pattern_chunk, in_range=in_range,
+            dtype_out=dtype_out, dtype=dtype_out)
 
         # Overwrite signal patterns
         if not self._lazy:
@@ -580,11 +579,11 @@ class EBSD(Signal2D):
         kernel_size = [int(k) for k in kernel_size]
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kpud._get_dask_array(signal=self)
+        dask_array = kpu.dask._get_dask_array(signal=self)
 
         # Local contrast enhancement
         equalized_patterns = dask_array.map_blocks(
-            kpue._adaptive_histogram_equalization_chunk,
+            kpu.experimental._adaptive_histogram_equalization_chunk,
             kernel_size=kernel_size, clip_limit=clip_limit, nbins=nbins,
             dtype=self.data.dtype)
 
@@ -651,18 +650,20 @@ class EBSD(Signal2D):
     def save(
             self, filename=None, overwrite=None, extension=None,
             **kwargs):
-        """Save signal in the specified format.
+        """Write signal to the specified format .
 
         The function gets the format from the extension: `h5`, `hdf5` or
         `h5ebsd` for KikuchiPy's specification of the the h5ebsd format
         `dat` for the NORDIF binary format or `hspy` for HyperSpy's
-        HDF5 specification. If no extension is provided the default
-        file format as defined in the `preferences` is used. Please note
-        that not all formats support saving datasets of arbitrary
-        dimensions. Each format accepts a different set of parameters.
+        HDF5 specification. If no extension is provided the signal is
+        written to a file in KikuchiPy's h5ebsd format. Each format
+        accepts a different set of parameters.
 
         For details see the specific format documentation in
-        `kikuchipy.io.<format>.file_writer`.
+        `kikuchipy.io.plugins.<format>.file_writer`.
+
+        This method is a modified version of HyperSpy's function
+        `hyperspy.signals.BaseSignal.save()`.
 
         Parameters
         ----------
@@ -674,13 +675,13 @@ class EBSD(Signal2D):
         overwrite : {None, bool}, optional
             If None and the file exists, it will query the user. If
             True (False) it (does not) overwrite the file if it exists.
-        extension : {None, 'h5', 'hdf5', 'h5ebsd', 'hspy', 'dat',
-                     'png', 'tiff', etc.}, optional
+        extension : {None, 'h5', 'hdf5', 'h5ebsd', 'dat', 'hspy'},
+                optional
             Extension of the file that defines the file format. 'h5',
             'hdf5' and 'h5ebsd' are equivalent. If None, the extension
             is determined from the following list in this order: i) the
             filename, ii)  `Signal.tmp_parameters.extension` or iii)
-            `hspy` (HyperSpy's default extension)
+            `h5` (KikuchiPy's h5ebsd format).
         **kwargs :
             Keyword arguments passed to writer.
         """
@@ -691,9 +692,9 @@ class EBSD(Signal2D):
                 filename = os.path.join(
                     self.tmp_parameters.folder,
                     self.tmp_parameters.filename)
-                extension = (self.tmp_parameters.extension
-                             if not extension
-                             else extension)
+                extension = (
+                    self.tmp_parameters.extension if not extension
+                    else extension)
             elif self.metadata.has_item('General.original_filename'):
                 filename = self.metadata.General.original_filename
             else:
@@ -701,7 +702,7 @@ class EBSD(Signal2D):
         if extension is not None:
             basename, ext = os.path.splitext(filename)
             filename = basename + '.' + extension
-        kpio.save(filename, self, overwrite=overwrite, **kwargs)
+        save(filename, self, overwrite=overwrite, **kwargs)
 
     def get_decomposition_model(
             self, components=None, dtype_out=np.float16, *args,
@@ -800,7 +801,7 @@ class EBSD(Signal2D):
 
         # Update binning in metadata
         md = out.metadata
-        ebsd_node = kpui.metadata_nodes(sem=False)
+        ebsd_node = kp.util.io.metadata_nodes(sem=False)
         if scale is None:
             sx = self.axes_manager.signal_shape[0]
             scale = [sx / new_shape[2]]

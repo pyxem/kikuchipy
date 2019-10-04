@@ -16,14 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
+import datetime
 import os
 import re
-import warnings
 import time
-import datetime
+import warnings
+
+from hyperspy.misc.utils import DictionaryTreeBrowser
 import numpy as np
 import matplotlib.pyplot as plt
-from hyperspy.misc.utils import DictionaryTreeBrowser
+
 from kikuchipy.util.io import kikuchipy_metadata, metadata_nodes
 from kikuchipy.util.phase import _phase_metadata
 

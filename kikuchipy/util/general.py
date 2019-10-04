@@ -16,11 +16,31 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-from hyperspy.misc.utils import DictionaryTreeBrowser
 from functools import reduce
 
+from hyperspy.misc.utils import DictionaryTreeBrowser
 
-def delete_from_nested_dictionary(dictionary, keys):
+
+def _write_parameters_to_dictionary(parameters, dictionary, node):
+    """Write dictionary of parameters to DictionaryTreeBrowser.
+
+    Parameters
+    ----------
+    parameters : dictionary
+        Dictionary of parameters to write to dictionary.
+    dictionary : DictionaryTreeBrowser
+        Dictionary to write parameters to.
+    node : str
+        String like 'Acquisition_instrument.SEM' etc. with dictionary
+        nodes to write parameters to.
+    """
+
+    for key, val in parameters.items():
+        if val is not None:
+            dictionary.set_item(node + '.' + key, val)
+
+
+def _delete_from_nested_dictionary(dictionary, keys):
     """Delete key(s) from a nested dictionary.
 
     Parameters
@@ -43,7 +63,7 @@ def delete_from_nested_dictionary(dictionary, keys):
     for key, val in dictionary.items():
         if key not in keys:
             if isinstance(val, dict):
-                modified_dict[key] = delete_from_nested_dictionary(val, keys)
+                modified_dict[key] = _delete_from_nested_dictionary(val, keys)
             else:
                 modified_dict[key] = val
     if dict_type != dict:  # Revert to DictionaryTreeBrowser
@@ -51,26 +71,7 @@ def delete_from_nested_dictionary(dictionary, keys):
     return modified_dict
 
 
-def write_parameters_to_dictionary(parameters, dictionary, node):
-    """Write dictionary of parameters to DictionaryTreeBrowser.
-
-    Parameters
-    ----------
-    parameters : dictionary
-        Dictionary of parameters to write to dictionary.
-    dictionary : DictionaryTreeBrowser
-        Dictionary to write parameters to.
-    node : str
-        String like 'Acquisition_instrument.SEM' etc. with dictionary
-        nodes to write parameters to.
-    """
-
-    for key, val in parameters.items():
-        if val is not None:
-            dictionary.set_item(node + '.' + key, val)
-
-
-def get_nested_dictionary(dictionary, keys, default=None):
+def _get_nested_dictionary(dictionary, keys, default=None):
     """Get key from a nested dictionary, returning a default value if
     not found.
 
@@ -86,5 +87,5 @@ def get_nested_dictionary(dictionary, keys, default=None):
 
     if isinstance(dictionary, DictionaryTreeBrowser):
         dictionary = dictionary.as_dictionary()
-    return reduce(lambda d, key: d.get(key, default) if isinstance(d, dict)
-        else default, keys.split("."), dictionary)
+    return reduce(lambda d, key: d.get(key, default)\
+        if isinstance(d, dict) else default, keys.split("."), dictionary)

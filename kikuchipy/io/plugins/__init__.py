@@ -16,7 +16,4 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-"""
-All classes inherits from Signal2D from HyperSpy.
-"""
-from kikuchipy._signals.ebsd import EBSD
+from kikuchipy.io.plugins import h5ebsd, nordif
