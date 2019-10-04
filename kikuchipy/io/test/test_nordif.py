@@ -180,9 +180,8 @@ class TestNORDIF:
                 # Check if zero padding user warning is raised if sum of data
                 # shape is bigger than file size
                 with pytest.warns(UserWarning):
-                    s = kp.load(
-                        PATTERN_FILE, scan_size=nav_shape,
-                        pattern_size=sig_shape)
+                    s = kp.load(PATTERN_FILE, scan_size=nav_shape,
+                                pattern_size=sig_shape)
             else:
                 s = kp.load(
                     PATTERN_FILE, scan_size=nav_shape, pattern_size=sig_shape)
@@ -222,7 +221,8 @@ class TestNORDIF:
         assert isinstance(s.data, da.Array)
         s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background pattern in directory
-            s_reload = kp.load(save_path_nordif, lazy=True, setting_file=SETTING_FILE)
+            s_reload = kp.load(
+                save_path_nordif, lazy=True, setting_file=SETTING_FILE)
         assert s.data.shape == s_reload.data.shape
 
     def test_load_to_memory(self):
@@ -245,7 +245,7 @@ class TestNORDIF:
     def test_load_inplace(self, lazy):
         if lazy:
             with pytest.raises(ValueError):
-                s = kp.load(PATTERN_FILE, lazy=lazy, mmap_mode='r+')
+                kp.load(PATTERN_FILE, lazy=lazy, mmap_mode='r+')
         else:
             s = kp.load(PATTERN_FILE, lazy=lazy, mmap_mode='r+')
             assert s.axes_manager.as_dictionary() == AXES_MANAGER
@@ -258,8 +258,8 @@ class TestNORDIF:
             (255 * np.random.rand(*data_shape)).astype(np.uint8))
         s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background or setting files
-            s_reload = kp.load(
-                save_path_nordif, scan_size=scan_size[::-1], pattern_size=pattern_size)
+            s_reload = kp.load(save_path_nordif, scan_size=scan_size[::-1],
+                               pattern_size=pattern_size)
         np.testing.assert_equal(s.data, s_reload.data)
 
     def test_write_data_line(self, save_path_nordif):
@@ -270,8 +270,8 @@ class TestNORDIF:
             (255 * np.random.rand(*data_shape)).astype(np.uint8))
         s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background or setting files
-            s_reload = kp.load(
-                save_path_nordif, scan_size=scan_size, pattern_size=pattern_size)
+            s_reload = kp.load(save_path_nordif, scan_size=scan_size,
+                               pattern_size=pattern_size)
         np.testing.assert_equal(s.data, s_reload.data)
 
     def test_write_data_single(self, save_path_nordif):

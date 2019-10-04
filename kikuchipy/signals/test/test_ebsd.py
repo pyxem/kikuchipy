@@ -96,7 +96,8 @@ class TestEBSD:
              'setting': 1,
              'symmetry': 43}
         dummy_signal.set_phase_parameters(**p)
-        md_dict = dummy_signal.metadata.get_item('Sample.Phases.1').as_dictionary()
+        md_dict = dummy_signal.metadata.get_item('Sample.Phases.1').\
+            as_dictionary()
         p.pop('number')
         assert_dictionary(p, md_dict)
 

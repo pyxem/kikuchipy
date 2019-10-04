@@ -62,7 +62,7 @@ class Testh5ebsd:
             grid = f['Scan 1/EBSD/Header/Grid Type']
             grid[()] = 'HexGrid'.encode()
         with pytest.raises(IOError, match='Only square grids are'):
-            s = kp.load(EDAX_FILE)
+            kp.load(EDAX_FILE)
         with h5py.File(EDAX_FILE, mode='r+') as f:
             grid = f['Scan 1/EBSD/Header/Grid Type']
             grid[()] = 'SqrGrid'.encode()
@@ -76,7 +76,7 @@ class Testh5ebsd:
             grid = f['Scan 0/EBSD/Header/Grid Type']
             grid[()] = 'hexagonal'.encode()
         with pytest.raises(IOError, match='Only square grids are'):
-            s = kp.load(BRUKER_FILE)
+            kp.load(BRUKER_FILE)
         with h5py.File(BRUKER_FILE, mode='r+') as f:
             grid = f['Scan 0/EBSD/Header/Grid Type']
             grid[()] = 'isometric'.encode()
@@ -98,7 +98,7 @@ class Testh5ebsd:
         with pytest.raises(
                 OSError,
                 match='Manufacturer Nope not among recognised manufacturers'):
-            s_reload = kp.load(save_path_h5ebsd)
+            kp.load(save_path_h5ebsd)
 
     @pytest.mark.parametrize(
         'delete, error', [('man_ver', 'not an h5ebsd file, as manufacturer'),
@@ -126,8 +126,7 @@ class Testh5ebsd:
         with h5py.File(save_path_h5ebsd, mode='r+') as f:
             del f['Scan 1/EBSD/Data/patterns']
             with pytest.raises(KeyError, match='Could not find patterns'):
-                s_reload = kp.load(save_path_h5ebsd)
-
+                kp.load(save_path_h5ebsd)
 
     @pytest.mark.parametrize('lazy', (True, False))
     def test_load_with_padding(self, save_path_h5ebsd, lazy):

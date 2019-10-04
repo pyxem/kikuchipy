@@ -20,7 +20,6 @@ import os
 import logging
 
 from hyperspy.io_plugins import hspy
-from hyperspy._lazy_signals import LazySignal
 from hyperspy.misc.io.tools import ensure_directory
 from hyperspy.misc.io.tools import overwrite as overwrite_method
 from hyperspy.misc.utils import strlist2enumeration, find_subclasses

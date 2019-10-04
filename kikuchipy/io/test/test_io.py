@@ -45,7 +45,7 @@ class TestIO:
                 new_file_path = os.path.join(tmp, filename)
                 os.rename(file_path, new_file_path)
                 with pytest.raises(IOError, match='Could not read'):
-                    s_reload = kp.load(new_file_path)
+                    kp.load(new_file_path)
             gc.collect()
 
     def test_dict2signal(self):
