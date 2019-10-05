@@ -30,4 +30,4 @@ signals:
     signal_dimension: 2
     dtype: real
     lazy: True
-    module: kikuchipy.lazy_signals
+    module: kikuchipy.signals
