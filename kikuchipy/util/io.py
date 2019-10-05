@@ -103,8 +103,6 @@ def _get_input_bool(question):
             "Your terminal does not support raw input. Not adding scan. To add "
             "the scan use `add_scan=True`")
         return False
-    else:
-        return True
 
 
 def _get_input_variable(question, var_type):
