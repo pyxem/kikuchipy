@@ -224,11 +224,12 @@ class Testh5ebsd:
         s1, s2 = kp.load(KIKUCHIPY_FILE, scans=[1, 2])
         s1.save(save_path_h5ebsd)
         error = 'Invalid scan number'
-        with pytest.raises(OSError, match=error):
+        with pytest.raises(OSError, match=error), pytest.warns(UserWarning):
             s2.save(save_path_h5ebsd, add_scan=True)
         if scan_number == 1:
-            with pytest.raises(OSError, match=error):
-                s2.save(save_path_h5ebsd, add_scan=True, scan_number=scan_number)
+            with pytest.raises(OSError, match=error), pytest.warns(UserWarning):
+                s2.save(
+                    save_path_h5ebsd, add_scan=True, scan_number=scan_number)
         else:
             s2.save(save_path_h5ebsd, add_scan=True, scan_number=scan_number)
 

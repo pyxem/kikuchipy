@@ -61,3 +61,16 @@ class TestIO:
             with replace_stdin(io.StringIO(answer)):
                 returns = kp.util.io._get_input_bool(question)
         assert returns == should_return
+
+    @pytest.mark.parametrize('var_type', (int, 1))
+    def test_get_input_variable(self, var_type):
+        question = "How few are too few coffee cups?"
+        answer = '1'
+        with replace_stdin(io.StringIO(answer)):
+            if isinstance(var_type, int):
+                with pytest.raises(EOFError):
+                    kp.util.io._get_input_variable(question, var_type)
+                return 0
+            else:
+                returns = kp.util.io._get_input_variable(question, var_type)
+        assert returns == var_type(answer)
