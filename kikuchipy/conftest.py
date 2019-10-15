@@ -30,7 +30,7 @@ import kikuchipy as kp
 def dummy_signal():
     """Dummy signal of shape <3, 3|3, 3>. If this is changed, all tests
     using this signal will fail since they compare the output from
-    methods using this signal as input to hard-coded outputs."""
+    methods using this signal (as input) to hard-coded outputs."""
 
     dummy_array = np.array(
         [5, 6, 5, 7, 6, 5, 6, 1, 0, 9, 7, 8, 7, 0, 8, 8, 7, 6, 0, 3, 3, 5, 2, 9,
@@ -44,7 +44,7 @@ def dummy_signal():
 def dummy_background():
     """Dummy static background pattern for the dummy signal. If this
     is changed, all tests using this background will fail since they
-    compare the output from methods using this background as input to
+    compare the output from methods using this background (as input) to
     hard-coded outputs."""
 
     return np.array(

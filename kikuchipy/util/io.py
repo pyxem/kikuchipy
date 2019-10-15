@@ -16,13 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 import warnings
 
 from hyperspy.misc.utils import DictionaryTreeBrowser
-
-
-_logger = logging.getLogger(__name__)
 
 
 def kikuchipy_metadata():
@@ -103,8 +99,6 @@ def _get_input_bool(question):
             "Your terminal does not support raw input. Not adding scan. To add "
             "the scan use `add_scan=True`")
         return False
-    else:
-        return True
 
 
 def _get_input_variable(question, var_type):
@@ -123,13 +117,12 @@ def _get_input_variable(question, var_type):
         while type(answer) != var_type:
             try:
                 answer = var_type(answer)
-            except ValueError:
+            except (TypeError, ValueError):
                 print("Please enter a variable of type {}:\n".format(var_type))
                 answer = input(question)
         return answer
-    except BaseException:
-        # Running in an IPython notebook that does not support raw_input
-        _logger.info(
+    except OSError:
+        warnings.warn(
             "Your terminal does not support raw input. Not adding scan. To add "
             "the scan use `add_scan=True`")
         return None

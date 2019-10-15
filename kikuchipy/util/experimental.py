@@ -38,7 +38,7 @@ def _rescale_pattern(
         (default), `out_range` is set to `dtype_out` min./max
         according to `skimage.util.dtype.dtype_range`, with min. equal
         to zero.
-    dtype_out : np.dtype
+    dtype_out : np.dtype, optional
         Data type of rescaled pattern. If None (default), it is set to
         the same data type as the input pattern.
 
@@ -50,19 +50,24 @@ def _rescale_pattern(
 
     if dtype_out is None:
         dtype_out = pattern.dtype
+
     if in_range is None:
         imin, imax = (pattern.min(), pattern.max())
     else:
         imin, imax = in_range
         pattern.clip(imin, imax)
+
     if out_range is None or out_range in dtype_range:
         omin = 0
         try:
+            if isinstance(dtype_out, np.dtype):
+                dtype_out = dtype_out.type
             _, omax = dtype_range[dtype_out]
         except KeyError:
             raise KeyError(
-                "Could not set ouput intensity range, since data type {} is "
-                "not recognised. Use any of {}".format(dtype_out, dtype_range))
+                "Could not set output intensity range, since data type '{}' is "
+                "not recognised. Use any of '{}'".format(
+                    dtype_out, dtype_range))
     else:
         omin, omax = out_range
 
@@ -86,7 +91,7 @@ def _rescale_pattern_chunk(
         (default), `out_range` is set to `dtype_out` min./max
         according to `skimage.util.dtype_out.dtype_range`, with min. equal
         to zero.
-    dtype_out : np.dtype
+    dtype_out : np.dtype, optional
         Data type of rescaled patterns. If None (default), it is set to
         the same data type as the input patterns.
 
@@ -116,7 +121,7 @@ def _static_background_correction_chunk(
     ----------
     patterns : da.Array
         Patterns to correct static background in.
-    static_bg : np.ndarray or  da.Array, optional
+    static_bg : np.ndarray or da.Array
         Static background pattern. If not passed we try to read it
         from the signal metadata.
     operation : 'subtract' or 'divide', optional
@@ -253,8 +258,8 @@ def normalised_correlation_coefficient(
                Processing, 3rd edition, Pearson Education, 954, 2008.
     """
 
-    pattern = pattern.astype(float)
-    template = template.astype(float)
+    pattern = pattern.astype(np.float32)
+    template = template.astype(np.float32)
     if zero_normalised:
         pattern = pattern - pattern.mean()
         template = template - template.mean()

@@ -15,19 +15,3 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
-
-signals:
-  EBSD:
-    signal_type: "EBSD"
-    signal_type_aliases:
-      - electron_backscatter_diffraction
-    signal_dimension: 2
-    dtype: real
-    lazy: False
-    module: kikuchipy.signals
-  LazyEBSD:
-    signal_type: "LazyEBSD"
-    signal_dimension: 2
-    dtype: real
-    lazy: True
-    module: kikuchipy.signals
