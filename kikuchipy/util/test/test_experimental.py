@@ -16,11 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 import numpy as np
 import pytest
 
 import kikuchipy as kp
 
+# Expected output intensities from various pattern processing methods
 RESCALED_UINT8 = np.array(
     [[182, 218, 182], [255, 218, 182], [218, 36, 0]], dtype=np.uint8)
 RESCALED_FLOAT32 = np.array(
@@ -32,6 +35,8 @@ STATIC_CORR_UINT8 = np.array(
     [[0, 2, 0],[3, 3, 1], [2, 255, 255]], dtype=np.uint8)
 DYNAMIC_CORR_UINT8 = np.array(
     [[0, 1, 1], [2, 1, 0], [1, 255, 253]], dtype=np.uint8)
+ADAPT_EQ_UINT8 = np.array(
+    [[127, 223, 127], [255, 223, 31], [223, 31, 0]], dtype=np.uint8)
 
 
 class TestExperimental:
@@ -45,17 +50,21 @@ class TestExperimental:
             self, dummy_signal, dtype_out, out_range, answer):
         pattern = dummy_signal.inav[0, 0]
         pattern_dask = kp.util.dask._get_dask_array(pattern)
+
+        # Check for accepted data types
         if dtype_out == np.complex:
             with pytest.raises(KeyError, match='Could not set output'):
                 kp.util.experimental._rescale_pattern(
                     pattern_dask, in_range=None, out_range=out_range,
                     dtype_out=dtype_out)
-            return 0
+            return 0  # So that the test ends here
         else:
             rescaled_pattern = kp.util.experimental._rescale_pattern(
                 pattern_dask, in_range=None, out_range=out_range,
                 dtype_out=dtype_out)
-        if dtype_out != None:
+
+        # Check for correct data type and gives expected output intensities
+        if dtype_out is not None:
             assert rescaled_pattern.dtype == dtype_out
         np.testing.assert_almost_equal(
             rescaled_pattern.compute(), answer, decimal=6)
@@ -68,6 +77,7 @@ class TestExperimental:
             kp.util.experimental._static_background_correction_chunk,
             static_bg=dummy_background, operation='subtract', dtype=dtype_out)
 
+        # Check for correct data type and gives expected output intensities
         assert corrected_patterns.dtype == dtype_out
         np.testing.assert_almost_equal(
             corrected_patterns[0, 0].compute(), STATIC_CORR_UINT8)
@@ -79,6 +89,32 @@ class TestExperimental:
             kp.util.experimental._dynamic_background_correction_chunk,
             sigma=2, operation='subtract', dtype=dtype_out)
 
+        # Check for correct data type and gives expected output intensities
         assert corrected_patterns.dtype == dtype_out
         np.testing.assert_almost_equal(
             corrected_patterns[0, 0].compute(), DYNAMIC_CORR_UINT8)
+
+    def test_adaptive_histogram_equalization_chunk(self, dummy_signal):
+        dask_array = kp.util.dask._get_dask_array(dummy_signal)
+        dtype_out = dask_array.dtype
+        kernel_size = (10, 10)
+        nbins = 128
+        equalized_patterns = dask_array.map_blocks(
+            kp.util.experimental._adaptive_histogram_equalization_chunk,
+            kernel_size=kernel_size, nbins=nbins)
+
+        # Check for correct data type and gives expected output intensities
+        assert equalized_patterns.dtype == dtype_out
+        np.testing.assert_almost_equal(
+            equalized_patterns[0, 0].compute(), ADAPT_EQ_UINT8)
+
+    @pytest.mark.parametrize(
+        'pattern_idx, template_idx, answer',
+        [((0, 0), (0, 1), 0.4935737), ((0, 0), (0, 0), 1.0000000)])
+    def test_normalised_correlation_coefficient(
+            self, dummy_signal, pattern_idx, template_idx, answer):
+        coefficient = kp.util.experimental.normalised_correlation_coefficient(
+            pattern=dummy_signal.inav[pattern_idx].data,
+            template=dummy_signal.inav[template_idx].data,
+            zero_normalised=True)
+        np.testing.assert_almost_equal(coefficient, answer, decimal=7)

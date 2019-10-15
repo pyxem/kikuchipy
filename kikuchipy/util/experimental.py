@@ -258,8 +258,8 @@ def normalised_correlation_coefficient(
                Processing, 3rd edition, Pearson Education, 954, 2008.
     """
 
-    pattern = pattern.astype(float)
-    template = template.astype(float)
+    pattern = pattern.astype(np.float32)
+    template = template.astype(np.float32)
     if zero_normalised:
         pattern = pattern - pattern.mean()
         template = template - template.mean()
