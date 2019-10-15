@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 import numpy as np
 import pytest
 
@@ -37,9 +39,12 @@ class TestDask:
         elif mbytes_chunk == 50:
             nx, ny = (66, 200)
         else:  # mbytes_chunk == 100
-            # Here I assume that the computer running the tests have four CPUs
+            # Here we assume that the computer running the tests have four CPUs
             # or more... don't know how to test functions using os.cpu_counts().
-            nx, ny = (74, 200)
+            if os.cpu_count() >= 4:
+                nx, ny = (74, 200)
+            else:
+                nx, ny = (136, 200)
         assert chunks == [ny, nx, 60, 60]
 
     def test_get_dask_array(self):
