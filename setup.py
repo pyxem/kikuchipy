@@ -18,20 +18,18 @@
 
 from setuptools import setup, find_packages
 
-# Grab version, author, and email info
-exec(open('kikuchipy/version.py').read())
+import kikuchipy.release as release
 
 setup(
     name='kikuchipy',
-    version=__version__,
+    version=release.version,
     description='Processing of Electron Backscatter Diffraction Patterns in '
                 'Python',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
-    author=__author__,
-    author_email=__email__,
-    maintainer='Håkon Wiik Ånes',
-    maintainer_email='hakon.w.anes@ntnu.no',
+    author=release.author,
+    maintainer=release.maintainer,
+    maintainer_email=release.maintainer_email,
     keywords=[
         'EBSD', 'electron backscatter diffraction',
         'EBSP', 'electron backscatter pattern',
@@ -40,7 +38,7 @@ setup(
         'SEM', 'scanning electron microscopy',
         'kikuchi pattern',
     ],
-    license='GPLv3',
+    license=release.license,
     url='https://github.com/kikuchipy/kikuchipy',
     package_dir={'kikuchipy': 'kikuchipy'},
     classifiers=[

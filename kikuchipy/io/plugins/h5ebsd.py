@@ -562,7 +562,7 @@ def file_writer(
     """
 
     # Set manufacturer and version to use in file
-    from kikuchipy.version import __version__ as ver_signal
+    from kikuchipy.release import version as ver_signal
     man_ver_dict = {'manufacturer': 'KikuchiPy', 'version': ver_signal}
 
     # Open file in correct mode
