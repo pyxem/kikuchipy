@@ -155,8 +155,12 @@ class Testh5ebsd:
         s_reload = kp.load(save_path_h5ebsd)
         np.testing.assert_equal(s.data, s_reload.data)
 
-        # Change data set name to make metadata equal and redo phases delete
+        # Change data set name and package version to make metadata equal, and
+        # redo deleting of phases
         s_reload.metadata.General.title = s.metadata.General.title
+        ebsd_node = kp.util.io.metadata_nodes(sem=False)
+        s_reload.metadata.set_item(
+            ebsd_node + '.version', s.metadata.get_item(ebsd_node + '.version'))
         if remove_phases:
             s.metadata.Sample.set_item(
                 'Phases', s_reload.metadata.Sample.Phases)
