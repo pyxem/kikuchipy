@@ -20,6 +20,7 @@ import gc
 import os
 import tempfile
 
+import dask.array as da
 import numpy as np
 import pytest
 

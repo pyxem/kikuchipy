@@ -53,10 +53,7 @@ class EBSD(Signal2D):
         """Create an EBSD object from a hyperspy.signals.Signal2D or a
         numpy array."""
 
-        if self._lazy and args:
-            Signal2D.__init__(self, data=args[0], **kwargs)
-        else:
-            Signal2D.__init__(self, *args, **kwargs)
+        Signal2D.__init__(self, *args, **kwargs)
 
         # Update metadata if object is initialised from numpy array
         if not self.metadata.has_item(kpu.io.metadata_nodes(sem=False)):
@@ -345,10 +342,10 @@ class EBSD(Signal2D):
                 ebsd_node = kpu.io.metadata_nodes(sem=False)
                 static_bg = da.from_array(
                     md.get_item(ebsd_node + '.static_background'))
-            except TypeError:
-                raise TypeError(
-                    "Static background is not a numpy array or could not be "
-                    "read from signal metadata.")
+            except AttributeError:
+                raise OSError(
+                    "Static background is not a numpy or dask array or could "
+                    "not be read from signal metadata.")
         if dtype_out != static_bg.dtype:
             raise ValueError(
                 "Static background dtype_out {} is not the same as pattern "
@@ -356,11 +353,9 @@ class EBSD(Signal2D):
         pat_shape = self.axes_manager.signal_shape[::-1]
         bg_shape = static_bg.shape
         if bg_shape != pat_shape:
-            warnings.warn(
-                "Pattern {} and static background {} shapes are not identical, "
-                "will reshape background to pattern shape".format(
-                    pat_shape, bg_shape))
-            static_bg = rebin(static_bg, pat_shape)
+            raise OSError(
+                "Pattern {} and static background {} shapes are not "
+                "identical.".format(pat_shape, bg_shape))
         dtype = np.int16
         static_bg = static_bg.astype(dtype)
 
@@ -791,7 +786,7 @@ class EBSD(Signal2D):
         super().decomposition(
             normalize_poissonian_noise, algorithm, output_dimension, centre,
             auto_transpose, navigation_mask, signal_mask, var_array, var_func,
-            polyfit, reproject, return_info, *args, **kwargs)
+            polyfit, reproject, return_info, **kwargs)
         self.__class__ = EBSD
 
     def rebin(self, new_shape=None, scale=None, crop=True, out=None):
@@ -809,6 +804,21 @@ class EBSD(Signal2D):
         md.set_item(ebsd_node + '.binning', scale[2] * old_binning)
 
         return out
+
+    def as_lazy(self, *args, **kwargs):
+        """Create a `kp.signals.LazyEBSD` object from a
+        `kp.signals.EBSD` object.
+
+        Returns
+        -------
+        lazy_signal : kp.signals.LazyEBSD
+            Lazy signal.
+        """
+
+        lazy_signal = super().as_lazy(*args, **kwargs)
+        lazy_signal.__class__ = LazyEBSD
+        lazy_signal.__init__(**lazy_signal._to_dictionary())
+        return lazy_signal
 
 
 class LazyEBSD(EBSD, LazySignal2D):
