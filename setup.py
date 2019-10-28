@@ -23,8 +23,7 @@ import kikuchipy.release as release
 setup(
     name='kikuchipy',
     version=release.version,
-    description='Processing of Electron Backscatter Diffraction Patterns in '
-                'Python',
+    description='Processing of electron backscatter diffraction patterns',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     author=release.author,
@@ -33,12 +32,10 @@ setup(
     keywords=[
         'EBSD', 'electron backscatter diffraction',
         'EBSP', 'electron backscatter pattern',
-        'BKD', 'backscatter kikuchi diffraction'
-        'TKD', 'transmission kikuchi diffraction',
+        'BKD', 'backscatter kikuchi diffraction',
         'SEM', 'scanning electron microscopy',
         'kikuchi pattern',
     ],
-    license=release.license,
     url='https://github.com/kikuchipy/kikuchipy',
     package_dir={'kikuchipy': 'kikuchipy'},
     classifiers=[
