@@ -12,7 +12,10 @@ KikuchiPy is released under the GPL v3 license.
 
 #### Installation
 ```bash
-$ pip install kikuchipy
+$ conda create --name kikuchi python=3
+$ conda activate kikuchi
+$ conda install hyperspy pyxem --channel conda-forge
+$ pip install https://github.com/kikuchipy/kikuchipy/archive/master.zip
 ```
 
 #### Use
