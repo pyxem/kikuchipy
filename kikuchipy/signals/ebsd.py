@@ -22,7 +22,6 @@ import logging
 import numbers
 import os
 import sys
-import warnings
 
 import dask.array as da
 import dask.diagnostics as dd
@@ -31,7 +30,6 @@ from hyperspy._lazy_signals import LazySignal2D
 from hyperspy._signals.lazy import to_array
 from hyperspy.learn.mva import LearningResults
 from hyperspy.misc.utils import DictionaryTreeBrowser
-from hyperspy.misc.array_tools import rebin
 from h5py import File
 import numpy as np
 from pyxem.signals.electron_diffraction2d import ElectronDiffraction2D
@@ -796,7 +794,7 @@ class EBSD(Signal2D):
 
         # Update binning in metadata
         md = out.metadata
-        ebsd_node = kp.util.io.metadata_nodes(sem=False)
+        ebsd_node = kpu.io.metadata_nodes(sem=False)
         if scale is None:
             sx = self.axes_manager.signal_shape[0]
             scale = [sx / new_shape[2]]
