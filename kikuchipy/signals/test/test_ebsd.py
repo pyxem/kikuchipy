@@ -16,12 +16,20 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 import dask.array as da
+import hyperspy.api as hs
 from hyperspy.misc.utils import DictionaryTreeBrowser
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
 import kikuchipy as kp
+
+
+DIR_PATH = os.path.dirname(__file__)
+KIKUCHIPY_FILE = os.path.join(DIR_PATH, '../../data/kikuchipy/patterns.h5')
 
 
 def assert_dictionary(input_dict, output_dict):
@@ -63,6 +71,16 @@ class TestEBSD:
                           s1.metadata.get_item(sem_node))
         # Phases metadata
         assert s1.metadata.has_item('Sample.Phases')
+
+    def test_as_lazy(self, dummy_signal):
+        lazy_signal = dummy_signal.as_lazy()
+
+        # Assert that lazy attribute and class changed, while metadata was not
+        # changed
+        assert lazy_signal._lazy is True
+        assert lazy_signal.__class__ == kp.signals.LazyEBSD
+        assert_dictionary(dummy_signal.metadata.as_dictionary(),
+                          lazy_signal.metadata.as_dictionary())
 
     def test_set_experimental_parameters(self, dummy_signal):
         p = {'detector': 'NORDIF UF-1100', 'azimuth_angle': 1.0,
@@ -117,6 +135,9 @@ class TestEBSD:
         assert dx.units, dy.units == u'\u03BC' + 'm'
         assert dx.scale, dy.scale == delta
         assert dx.offset, dy.offset == -centre
+
+
+class TestIntensityCorrection:
 
     @pytest.mark.parametrize(
         'operation, relative', [('subtract', False), ('subtract', True),
@@ -318,3 +339,38 @@ class TestEBSD:
         dummy_signal = dummy_signal.as_lazy()
         dummy_signal.rescale_intensities()
         assert isinstance(dummy_signal.data, da.Array)
+
+    def test_adaptive_histogram_equalization(self):
+        """Test setup of equalization only. Tests of the result of the
+        actual equalization are found elsewhere.
+        """
+
+        s = kp.load(KIKUCHIPY_FILE)
+
+        # These kernel sizes should work without issue
+        for kernel_size in [None, 10]:
+            s.adaptive_histogram_equalization(kernel_size=kernel_size)
+
+        # These kernel sizes should throw errors
+        with pytest.raises(ValueError, match='invalid literal for int()'):
+            s.adaptive_histogram_equalization(kernel_size=('wrong', 'size'))
+        with pytest.raises(ValueError, match='Incorrect value of `kernel_size'):
+            s.adaptive_histogram_equalization(kernel_size=(10, 10, 10))
+
+    def test_lazy_adaptive_histogram_equalization(self):
+        s = kp.load(KIKUCHIPY_FILE, lazy=True)
+        s.adaptive_histogram_equalization()
+        assert isinstance(s.data, da.Array)
+
+
+class TestVirtualDetectorImaging:
+
+    def test_virtual_forward_scatter_detector(self, dummy_signal):
+        roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
+        dummy_signal.virtual_forward_scatter_detector(roi)
+
+    def test_virtual_detector_image(self, dummy_signal):
+        roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
+        virtual_image_signal = dummy_signal.get_virtual_detector_image(roi)
+        assert (virtual_image_signal.data.shape ==
+                dummy_signal.axes_manager.navigation_shape)

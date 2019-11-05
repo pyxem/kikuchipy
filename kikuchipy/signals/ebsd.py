@@ -32,7 +32,7 @@ from hyperspy.learn.mva import LearningResults
 from hyperspy.misc.utils import DictionaryTreeBrowser
 from h5py import File
 import numpy as np
-from pyxem.signals.electron_diffraction2d import ElectronDiffraction2D
+from pyxem.signals.diffraction2d import Diffraction2D
 from sklearn.decomposition import IncrementalPCA
 import tqdm
 
@@ -557,7 +557,7 @@ class EBSD(Signal2D):
           otherwise some unwanted darkening towards the edges might
           occur.
         * The default kernel size might not fit all pattern sizes, so it
-          might be necessary to search for the optimal kernel size.
+          may be necessary to search for the optimal kernel size.
         """
 
         # Determine kernel size (shape of contextual region)
@@ -567,7 +567,7 @@ class EBSD(Signal2D):
         elif isinstance(kernel_size, numbers.Number):
             kernel_size = (kernel_size,) * self.axes_manager.signal_dimension
         elif len(kernel_size) != self.axes_manager.signal_dimension:
-            ValueError(
+            raise ValueError(
                 "Incorrect value of `kernel_size`: {}".format(kernel_size))
         kernel_size = [int(k) for k in kernel_size]
 
@@ -588,57 +588,59 @@ class EBSD(Signal2D):
         else:
             self.data = equalized_patterns
 
-    def get_virtual_image(self, roi):
-        """Method imported from
-        pyxem.signals.ElectronDiffraction2D.get_virtual_image. Obtains
-        a virtual image associated with a specified ROI.
+    def virtual_forward_scatter_detector(self, roi, **kwargs):
+        """Plot an interactive virtual forward scatter detector (VFSD)
+        image formed from detector intensities within a specified and
+        adjustable region of interest (ROI).
+
+        Adapted from pyxem.signals.diffraction2d.Diffraction2D.\
+        plot_interactive_virtual_image().
 
         Parameters
         ----------
-        roi: hyperspy.roi.BaseInteractiveROI
+        roi : hyperspy.roi.BaseInteractiveROI
+            Any interactive ROI detailed in HyperSpy.
+        **kwargs:
+            Keyword arguments to be passed to `plot()`.
+
+        Examples
+        --------
+        >>> import hyperspy.api as hs
+        >>> roi = hs.roi.RectangularROI(
+                left=0, right=5, top=0, bottom=5)
+            s.virtual_forward_scatter_detector(roi)
+        """
+
+        return Diffraction2D.plot_interactive_virtual_image(
+            self, roi, **kwargs)
+
+    def get_virtual_detector_image(self, roi):
+        """Return a virtual forward scatter detector (VFSD) image
+        formed from detector intensities within a region of interest
+        (ROI).
+
+        Adapted from pyxem.signals.diffraction2d.Diffraction2D.\
+        get_virtual_image().
+
+        Parameters
+        ----------
+        roi : hyperspy.roi.BaseInteractiveROI
             Any interactive ROI detailed in HyperSpy.
 
         Returns
         -------
-        dark_field_sum: hyperspy.signals.BaseSignal
-            The virtual image signal associated with the specified roi.
+        virtual_detector_image : hyperspy.signals.BaseSignal
+            VFSD image formed from detector intensities within an ROI.
 
         Examples
         --------
-        .. code-block:: python
-
-            import hyperspy.api as hs
-            roi = hs.roi.RectangularROI(left=10, right=20, top=10,
-                bottom=20)
-            s.get_virtual_image(roi)
-        """
-        return ElectronDiffraction2D.get_virtual_image(self, roi)
-
-    def plot_interactive_virtual_image(self, roi, **kwargs):
-        """Method imported from
-        pyXem.ElectronDiffraction.plot_interactive_virtual_image(self,
-        roi). Plots an interactive virtual image formed with a
-        specified and adjustable roi.
-
-        Parameters
-        ----------
-        roi: hyperspy.roi.BaseInteractiveROI
-            Any interactive ROI detailed in HyperSpy.
-        **kwargs:
-            Keyword arguments to be passed to `ElectronDiffraction.plot`
-
-        Examples
-        --------
-        .. code-block:: python
-
-            import hyperspy.api as hs
-            roi = hs.roi.RectangularROI(left=10, right=20, top=10,
-                bottom=20)
-            s.plot_interactive_virtual_image(roi)
+        >>> import hyperspy.api as hs
+        >>> roi = hs.roi.RectangularROI(
+                left=0, right=5, top=0, bottom=5)
+            vfsd_image = s.get_virtual_detector_image(roi)
         """
 
-        return ElectronDiffraction2D.plot_interactive_virtual_image(self, roi,
-                                                                    **kwargs)
+        return Diffraction2D.get_virtual_image(self, roi)
 
     def save(
             self, filename=None, overwrite=None, extension=None,
