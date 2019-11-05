@@ -22,7 +22,6 @@ import logging
 import numbers
 import os
 import sys
-import warnings
 
 import dask.array as da
 import dask.diagnostics as dd
@@ -31,10 +30,9 @@ from hyperspy._lazy_signals import LazySignal2D
 from hyperspy._signals.lazy import to_array
 from hyperspy.learn.mva import LearningResults
 from hyperspy.misc.utils import DictionaryTreeBrowser
-from hyperspy.misc.array_tools import rebin
 from h5py import File
 import numpy as np
-from pyxem.signals.electron_diffraction2d import ElectronDiffraction2D
+from pyxem.signals.diffraction2d import Diffraction2D
 from sklearn.decomposition import IncrementalPCA
 import tqdm
 
@@ -53,10 +51,7 @@ class EBSD(Signal2D):
         """Create an EBSD object from a hyperspy.signals.Signal2D or a
         numpy array."""
 
-        if self._lazy and args:
-            Signal2D.__init__(self, data=args[0], **kwargs)
-        else:
-            Signal2D.__init__(self, *args, **kwargs)
+        Signal2D.__init__(self, *args, **kwargs)
 
         # Update metadata if object is initialised from numpy array
         if not self.metadata.has_item(kpu.io.metadata_nodes(sem=False)):
@@ -345,10 +340,10 @@ class EBSD(Signal2D):
                 ebsd_node = kpu.io.metadata_nodes(sem=False)
                 static_bg = da.from_array(
                     md.get_item(ebsd_node + '.static_background'))
-            except TypeError:
-                raise TypeError(
-                    "Static background is not a numpy array or could not be "
-                    "read from signal metadata.")
+            except AttributeError:
+                raise OSError(
+                    "Static background is not a numpy or dask array or could "
+                    "not be read from signal metadata.")
         if dtype_out != static_bg.dtype:
             raise ValueError(
                 "Static background dtype_out {} is not the same as pattern "
@@ -356,11 +351,9 @@ class EBSD(Signal2D):
         pat_shape = self.axes_manager.signal_shape[::-1]
         bg_shape = static_bg.shape
         if bg_shape != pat_shape:
-            warnings.warn(
-                "Pattern {} and static background {} shapes are not identical, "
-                "will reshape background to pattern shape".format(
-                    pat_shape, bg_shape))
-            static_bg = rebin(static_bg, pat_shape)
+            raise OSError(
+                "Pattern {} and static background {} shapes are not "
+                "identical.".format(pat_shape, bg_shape))
         dtype = np.int16
         static_bg = static_bg.astype(dtype)
 
@@ -564,7 +557,7 @@ class EBSD(Signal2D):
           otherwise some unwanted darkening towards the edges might
           occur.
         * The default kernel size might not fit all pattern sizes, so it
-          might be necessary to search for the optimal kernel size.
+          may be necessary to search for the optimal kernel size.
         """
 
         # Determine kernel size (shape of contextual region)
@@ -574,7 +567,7 @@ class EBSD(Signal2D):
         elif isinstance(kernel_size, numbers.Number):
             kernel_size = (kernel_size,) * self.axes_manager.signal_dimension
         elif len(kernel_size) != self.axes_manager.signal_dimension:
-            ValueError(
+            raise ValueError(
                 "Incorrect value of `kernel_size`: {}".format(kernel_size))
         kernel_size = [int(k) for k in kernel_size]
 
@@ -595,57 +588,59 @@ class EBSD(Signal2D):
         else:
             self.data = equalized_patterns
 
-    def get_virtual_image(self, roi):
-        """Method imported from
-        pyxem.signals.ElectronDiffraction2D.get_virtual_image. Obtains
-        a virtual image associated with a specified ROI.
+    def virtual_forward_scatter_detector(self, roi, **kwargs):
+        """Plot an interactive virtual forward scatter detector (VFSD)
+        image formed from detector intensities within a specified and
+        adjustable region of interest (ROI).
+
+        Adapted from pyxem.signals.diffraction2d.Diffraction2D.\
+        plot_interactive_virtual_image().
 
         Parameters
         ----------
-        roi: hyperspy.roi.BaseInteractiveROI
+        roi : hyperspy.roi.BaseInteractiveROI
+            Any interactive ROI detailed in HyperSpy.
+        **kwargs:
+            Keyword arguments to be passed to `plot()`.
+
+        Examples
+        --------
+        >>> import hyperspy.api as hs
+        >>> roi = hs.roi.RectangularROI(
+                left=0, right=5, top=0, bottom=5)
+            s.virtual_forward_scatter_detector(roi)
+        """
+
+        return Diffraction2D.plot_interactive_virtual_image(
+            self, roi, **kwargs)
+
+    def get_virtual_detector_image(self, roi):
+        """Return a virtual forward scatter detector (VFSD) image
+        formed from detector intensities within a region of interest
+        (ROI).
+
+        Adapted from pyxem.signals.diffraction2d.Diffraction2D.\
+        get_virtual_image().
+
+        Parameters
+        ----------
+        roi : hyperspy.roi.BaseInteractiveROI
             Any interactive ROI detailed in HyperSpy.
 
         Returns
         -------
-        dark_field_sum: hyperspy.signals.BaseSignal
-            The virtual image signal associated with the specified roi.
+        virtual_detector_image : hyperspy.signals.BaseSignal
+            VFSD image formed from detector intensities within an ROI.
 
         Examples
         --------
-        .. code-block:: python
-
-            import hyperspy.api as hs
-            roi = hs.roi.RectangularROI(left=10, right=20, top=10,
-                bottom=20)
-            s.get_virtual_image(roi)
-        """
-        return ElectronDiffraction2D.get_virtual_image(self, roi)
-
-    def plot_interactive_virtual_image(self, roi, **kwargs):
-        """Method imported from
-        pyXem.ElectronDiffraction.plot_interactive_virtual_image(self,
-        roi). Plots an interactive virtual image formed with a
-        specified and adjustable roi.
-
-        Parameters
-        ----------
-        roi: hyperspy.roi.BaseInteractiveROI
-            Any interactive ROI detailed in HyperSpy.
-        **kwargs:
-            Keyword arguments to be passed to `ElectronDiffraction.plot`
-
-        Examples
-        --------
-        .. code-block:: python
-
-            import hyperspy.api as hs
-            roi = hs.roi.RectangularROI(left=10, right=20, top=10,
-                bottom=20)
-            s.plot_interactive_virtual_image(roi)
+        >>> import hyperspy.api as hs
+        >>> roi = hs.roi.RectangularROI(
+                left=0, right=5, top=0, bottom=5)
+            vfsd_image = s.get_virtual_detector_image(roi)
         """
 
-        return ElectronDiffraction2D.plot_interactive_virtual_image(self, roi,
-                                                                    **kwargs)
+        return Diffraction2D.get_virtual_image(self, roi)
 
     def save(
             self, filename=None, overwrite=None, extension=None,
@@ -791,7 +786,7 @@ class EBSD(Signal2D):
         super().decomposition(
             normalize_poissonian_noise, algorithm, output_dimension, centre,
             auto_transpose, navigation_mask, signal_mask, var_array, var_func,
-            polyfit, reproject, return_info, *args, **kwargs)
+            polyfit, reproject, return_info, **kwargs)
         self.__class__ = EBSD
 
     def rebin(self, new_shape=None, scale=None, crop=True, out=None):
@@ -801,7 +796,7 @@ class EBSD(Signal2D):
 
         # Update binning in metadata
         md = out.metadata
-        ebsd_node = kp.util.io.metadata_nodes(sem=False)
+        ebsd_node = kpu.io.metadata_nodes(sem=False)
         if scale is None:
             sx = self.axes_manager.signal_shape[0]
             scale = [sx / new_shape[2]]
@@ -809,6 +804,21 @@ class EBSD(Signal2D):
         md.set_item(ebsd_node + '.binning', scale[2] * old_binning)
 
         return out
+
+    def as_lazy(self, *args, **kwargs):
+        """Create a `kp.signals.LazyEBSD` object from a
+        `kp.signals.EBSD` object.
+
+        Returns
+        -------
+        lazy_signal : kp.signals.LazyEBSD
+            Lazy signal.
+        """
+
+        lazy_signal = super().as_lazy(*args, **kwargs)
+        lazy_signal.__class__ = LazyEBSD
+        lazy_signal.__init__(**lazy_signal._to_dictionary())
+        return lazy_signal
 
 
 class LazyEBSD(EBSD, LazySignal2D):

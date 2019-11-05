@@ -16,12 +16,19 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
+import dask.array as da
+import hyperspy.api as hs
 from hyperspy.misc.utils import DictionaryTreeBrowser
 import numpy as np
 import pytest
 
-from kikuchipy.signals import EBSD
-from kikuchipy.util.io import metadata_nodes, kikuchipy_metadata
+import kikuchipy as kp
+
+
+DIR_PATH = os.path.dirname(__file__)
+KIKUCHIPY_FILE = os.path.join(DIR_PATH, '../../data/kikuchipy/patterns.h5')
 
 
 def assert_dictionary(input_dict, output_dict):
@@ -47,22 +54,32 @@ class TestEBSD:
     def test_init(self):
         # Signal shape
         array0 = np.zeros(shape=(10, 10, 10, 10))
-        s0 = EBSD(array0)
+        s0 = kp.signals.EBSD(array0)
         assert array0.shape == s0.axes_manager.shape
         # Cannot initialise signal with one signal dimension
         with pytest.raises(ValueError):
-            EBSD(np.zeros(10))
+            kp.signals.EBSD(np.zeros(10))
         # Shape of one-pattern signal
         array1 = np.zeros(shape=(10, 10))
-        s1 = EBSD(array1)
+        s1 = kp.signals.EBSD(array1)
         assert array1.shape == s1.axes_manager.shape
         # SEM metadata
-        kp_md = kikuchipy_metadata()
-        sem_node = metadata_nodes(ebsd=False)
+        kp_md = kp.util.io.kikuchipy_metadata()
+        sem_node = kp.util.io.metadata_nodes(ebsd=False)
         assert_dictionary(kp_md.get_item(sem_node),
                           s1.metadata.get_item(sem_node))
         # Phases metadata
         assert s1.metadata.has_item('Sample.Phases')
+
+    def test_as_lazy(self, dummy_signal):
+        lazy_signal = dummy_signal.as_lazy()
+
+        # Assert that lazy attribute and class changed, while metadata was not
+        # changed
+        assert lazy_signal._lazy is True
+        assert lazy_signal.__class__ == kp.signals.LazyEBSD
+        assert_dictionary(dummy_signal.metadata.as_dictionary(),
+                          lazy_signal.metadata.as_dictionary())
 
     def test_set_experimental_parameters(self, dummy_signal):
         p = {'detector': 'NORDIF UF-1100', 'azimuth_angle': 1.0,
@@ -75,7 +92,7 @@ class TestEBSD:
              'manufacturer': 'NORDIF', 'version': '3.1.2',
              'microscope': 'Hitachi SU-6600', 'magnification': 500}
         dummy_signal.set_experimental_parameters(**p)
-        ebsd_node = metadata_nodes(sem=False)
+        ebsd_node = kp.util.io.metadata_nodes(sem=False)
         md_dict = dummy_signal.metadata.get_item(ebsd_node).as_dictionary()
         assert_dictionary(p, md_dict)
 
@@ -117,6 +134,9 @@ class TestEBSD:
         assert dx.units, dy.units == u'\u03BC' + 'm'
         assert dx.scale, dy.scale == delta
         assert dx.offset, dy.offset == -centre
+
+
+class TestIntensityCorrection:
 
     @pytest.mark.parametrize(
         'operation, relative', [('subtract', False), ('subtract', True),
@@ -170,6 +190,29 @@ class TestEBSD:
                 dtype=np.uint8).reshape((3, 3, 3, 3))
         assert dummy_signal.data.all() == answer.all()
 
+    @pytest.mark.parametrize('static_bg, error, match', [
+        (np.ones((3, 3), dtype=np.int8), ValueError,
+         'Static background dtype_out'),
+        (None, OSError, 'Static background is not a numpy or dask array'),
+        (np.ones((3, 2), dtype=np.uint8), OSError, 'Pattern')])
+    def test_incorrect_static_background_pattern(
+            self, dummy_signal, static_bg, error, match):
+        """Test for expected error messages when passing an incorrect
+        static background pattern to `static_background_correction().`
+        """
+
+        ebsd_node = kp.util.io.metadata_nodes(sem=False)
+        dummy_signal.metadata.set_item(
+            ebsd_node + '.static_background', static_bg)
+        with pytest.raises(error, match=match):
+            dummy_signal.static_background_correction()
+
+    def test_lazy_static_background_correction(
+            self, dummy_signal, dummy_background):
+        dummy_signal = dummy_signal.as_lazy()
+        dummy_signal.static_background_correction(static_bg=dummy_background)
+        assert isinstance(dummy_signal.data, da.Array)
+
     @pytest.mark.parametrize(
         'operation, sigma', [('subtract', 2), ('subtract', 3),
                              ('divide', 2), ('divide', 3)])
@@ -221,6 +264,11 @@ class TestEBSD:
                 dtype=np.uint8).reshape((3, 3, 3, 3))
         assert dummy_signal.data.all() == answer.all()
         assert dummy_signal.data.dtype == answer.dtype
+
+    def test_lazy_dynamic_background_correction(self, dummy_signal):
+        dummy_signal = dummy_signal.as_lazy()
+        dummy_signal.dynamic_background_correction()
+        assert isinstance(dummy_signal.data, da.Array)
 
     @pytest.mark.parametrize(
         'relative, dtype_out', [(True, None), (True, np.float32),
@@ -285,3 +333,43 @@ class TestEBSD:
                 dtype=np.float32).reshape((3, 3, 3, 3))
         assert dummy_signal.data.all() == answer.all()
         assert dummy_signal.data.dtype == answer.dtype
+
+    def test_lazy_rescale_intensities(self, dummy_signal):
+        dummy_signal = dummy_signal.as_lazy()
+        dummy_signal.rescale_intensities()
+        assert isinstance(dummy_signal.data, da.Array)
+
+    def test_adaptive_histogram_equalization(self):
+        """Test setup of equalization only. Tests of the result of the
+        actual equalization are found elsewhere.
+        """
+
+        s = kp.load(KIKUCHIPY_FILE)
+
+        # These kernel sizes should work without issue
+        for kernel_size in [None, 10]:
+            s.adaptive_histogram_equalization(kernel_size=kernel_size)
+
+        # These kernel sizes should throw errors
+        with pytest.raises(ValueError, match='invalid literal for int()'):
+            s.adaptive_histogram_equalization(kernel_size=('wrong', 'size'))
+        with pytest.raises(ValueError, match='Incorrect value of `kernel_size'):
+            s.adaptive_histogram_equalization(kernel_size=(10, 10, 10))
+
+    def test_lazy_adaptive_histogram_equalization(self):
+        s = kp.load(KIKUCHIPY_FILE, lazy=True)
+        s.adaptive_histogram_equalization()
+        assert isinstance(s.data, da.Array)
+
+
+class TestVirtualDetectorImaging:
+
+    def test_virtual_forward_scatter_detector(self, dummy_signal):
+        roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
+        dummy_signal.virtual_forward_scatter_detector(roi)
+
+    def test_virtual_detector_image(self, dummy_signal):
+        roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
+        virtual_image_signal = dummy_signal.get_virtual_detector_image(roi)
+        assert (virtual_image_signal.data.shape ==
+                dummy_signal.axes_manager.navigation_shape)
