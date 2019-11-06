@@ -21,11 +21,13 @@ import os
 import dask.array as da
 import hyperspy.api as hs
 from hyperspy.misc.utils import DictionaryTreeBrowser
+import matplotlib
 import numpy as np
 import pytest
 
 import kikuchipy as kp
 
+matplotlib.use('Agg')  # For plotting
 
 DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, '../../data/kikuchipy/patterns.h5')
@@ -373,3 +375,17 @@ class TestVirtualDetectorImaging:
         virtual_image_signal = dummy_signal.get_virtual_detector_image(roi)
         assert (virtual_image_signal.data.shape ==
                 dummy_signal.axes_manager.navigation_shape)
+
+
+class TestDecomposition:
+
+    def test_decomposition(self, dummy_signal):
+        dummy_signal.change_dtype(np.float64)
+        dummy_signal.decomposition()
+        assert isinstance(dummy_signal, kp.signals.EBSD)
+
+    def test_lazy_decomposition(self, dummy_signal):
+        lazy_signal = dummy_signal.as_lazy()
+        lazy_signal.change_dtype(np.float64)
+        lazy_signal.decomposition()
+        assert isinstance(lazy_signal, kp.signals.LazyEBSD)

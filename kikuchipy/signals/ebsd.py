@@ -699,6 +699,18 @@ class EBSD(Signal2D):
             filename = basename + '.' + extension
         save(filename, self, overwrite=overwrite, **kwargs)
 
+    def decomposition(
+            self, normalize_poissonian_noise=False, algorithm='svd',
+            output_dimension=None, centre=None, auto_transpose=True,
+            navigation_mask=None, signal_mask=None, var_array=None,
+            var_func=None, polyfit=None, reproject=None,
+            return_info=False, *args, **kwargs):
+        super().decomposition(
+            normalize_poissonian_noise, algorithm, output_dimension, centre,
+            auto_transpose, navigation_mask, signal_mask, var_array, var_func,
+            polyfit, reproject, return_info, **kwargs)
+        self.__class__ = EBSD
+
     def get_decomposition_model(
             self, components=None, dtype_out=np.float16, *args,
             **kwargs):
@@ -753,7 +765,7 @@ class EBSD(Signal2D):
         self.learning_results.loadings = loadings
 
         # Rechunk
-        if isinstance(factors, da.Array):
+        if isinstance(factors, da.Array) and self._lazy is True:
             chunks = self._rechunk_learning_results()
             self.learning_results.factors = factors.rechunk(chunks=chunks[0])
             self.learning_results.loadings = loadings.rechunk(chunks=chunks[1])
@@ -776,18 +788,6 @@ class EBSD(Signal2D):
         s_model.learning_results = LearningResults()
 
         return s_model
-
-    def decomposition(
-            self, normalize_poissonian_noise=False, algorithm='svd',
-            output_dimension=None, centre=None, auto_transpose=True,
-            navigation_mask=None, signal_mask=None, var_array=None,
-            var_func=None, polyfit=None, reproject=None,
-            return_info=False, *args, **kwargs):
-        super().decomposition(
-            normalize_poissonian_noise, algorithm, output_dimension, centre,
-            auto_transpose, navigation_mask, signal_mask, var_array, var_func,
-            polyfit, reproject, return_info, **kwargs)
-        self.__class__ = EBSD
 
     def rebin(self, new_shape=None, scale=None, crop=True, out=None):
         out = super().rebin(
@@ -820,19 +820,143 @@ class EBSD(Signal2D):
         lazy_signal.__init__(**lazy_signal._to_dictionary())
         return lazy_signal
 
+    def change_dtype(self, dtype, rechunk=True):
+        super().change_dtype(dtype=dtype, rechunk=rechunk)
+        self.__class__ = EBSD
 
-class LazyEBSD(EBSD, LazySignal2D):
+
+class LazyEBSD(LazySignal2D, EBSD):
 
     _lazy = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def change_dtype(self, dtype, rechunk=True):
+        super().change_dtype(dtype=dtype, rechunk=rechunk)
+        self.__class__ = LazyEBSD
+
     def compute(self, *args, **kwargs):
         with dd.ProgressBar(*args, **kwargs):
             self.data = self.data.compute(*args, **kwargs)
         gc.collect()
         self.__class__ = EBSD
+
+    def decomposition(
+            self, normalize_poissonian_noise=False, algorithm='svd',
+            output_dimension=None, mbytes_chunk=100,
+            navigation_mask=None, signal_mask=None, *args, **kwargs):
+        """Decomposition with a choice of algorithms.
+
+        For a full description of parameters see
+        :func:`hyperspy._signals.lazy.decomposition()`.
+
+        This is a wrapper for HyperSpy's ``decomposition()`` function,
+        except for an alternative use of scikit-image's IncrementalPCA
+        algorithm.
+
+        Parameters
+        ----------
+        normalize_poissonian_noise : bool
+            If True (default is False), scale the patterns to normalise
+            Poissonian noise.
+        algorithm : {'svd', 'IPCA', 'PCA', 'ORPCA' or 'ONMF'}, optional
+            Default is 'svd', lazy SVD decomposition from dask. 'PCA'
+            gives HyperSpy's use of scikit-learn's IncrementalPCA,
+            while 'IPCA' gives our use of IncrementalPCA.
+        output_dimension : int
+            Number of significant components to keep. If None, keep all
+            (only valid for SVD).
+        mbytes_chunk : int, optional
+            Size of chunks in MB, default is 100 MB as suggested in the
+            Dask documentation.
+        navigation_mask, signal_mask : boolean array_like
+        *args :
+            Arguments to be passed to ``decomposition()``.
+        **kwargs :
+            Keyword arguments to be passed to ``decomposition()``.
+
+        Returns
+        -------
+        The results are stored in self.learning_results.
+        """
+
+        if self.data.dtype.char not in ['e', 'f', 'd']:  # If not float
+            raise TypeError("To perform a decomposition the data must be of "
+                            "float type, but the current type is '{}'. No "
+                            "decomposition was "
+                            "performed.".format(self.data.dtype))
+
+        if algorithm == 'IPCA':
+            if output_dimension is None:
+                raise ValueError("With the IncrementalPCA algorithm, "
+                                 "output_dimension must be specified")
+
+            # Normalise Poissonian noise
+            original_data = self.data
+            if normalize_poissonian_noise:
+                rbH, raG = self._normalize_poissonian_noise(
+                    navigation_mask=navigation_mask, signal_mask=signal_mask)
+
+            # Prepare data matrix
+            nx, ny, sx, sy = self.data.shape
+            n, s = nx * ny, sx * sy
+            X = self.data.reshape((n, s))
+
+            # Determine number of chunks
+            suggested_size = mbytes_chunk * 2 ** 20
+            num_chunks = int(np.ceil(X.nbytes / suggested_size))
+            cpus = os.cpu_count()
+            if num_chunks <= cpus:
+                num_chunks = cpus
+            chunk_size = n // num_chunks
+
+            # Get principal components (factors)
+            ipca = IncrementalPCA(n_components=output_dimension)
+            for i in tqdm.tqdm(iterable=range(0, num_chunks), total=num_chunks,
+                               leave=True, desc='Learn'):
+                start = i * chunk_size
+                end = (i + 1) * chunk_size
+                if i == (num_chunks - 1):  # Last iteration
+                    end = None
+                ipca.partial_fit(X[start:end])  # Fit
+            factors = ipca.components_.T
+
+            # Reproject data on the principal components (loadings)
+            loadings = []
+            for j in tqdm.tqdm(iterable=range(0, num_chunks), total=num_chunks,
+                               leave=True, desc='Project'):
+                start = j * chunk_size
+                end = (j + 1) * chunk_size
+                if j == (num_chunks - 1):  # Last iteration
+                    end = None
+                loadings.append(ipca.transform(X[start:end]))  # Reproject
+            loadings = np.concatenate(loadings, axis=0)
+
+            # Set signal's learning results
+            target = self.learning_results
+            target.decomposition_algorithm = algorithm
+            target.output_dimension = output_dimension
+            target.factors = factors
+            target.loadings = loadings
+            target.explained_variance = ipca.explained_variance_
+            target.explained_variance_ratio = ipca.explained_variance_ratio_
+
+            # Revert data
+            self.data = original_data
+
+            if normalize_poissonian_noise is True:
+                target.factors = target.factors * rbH.ravel()[:, np.newaxis]
+                target.loadings = target.loadings * raG.ravel()[:, np.newaxis]
+
+        else:  # Call HyperSpy's implementation
+            super().decomposition(
+                normalize_poissonian_noise=normalize_poissonian_noise,
+                algorithm=algorithm, output_dimension=output_dimension,
+                navigation_mask=navigation_mask, signal_mask=signal_mask,
+                *args, **kwargs)
+
+        self.__class__ = LazyEBSD
 
     def get_decomposition_model_write(
             self, components=None, dtype_learn=np.float16,
@@ -986,120 +1110,6 @@ class LazyEBSD(EBSD, LazySignal2D):
                       (int(tshape[2]/loadings_chunks), -1)]
 
         return chunks
-
-    def decomposition(
-            self, normalize_poissonian_noise=False, algorithm=None,
-            output_dimension=None, mbytes_chunk=100,
-            navigation_mask=None, signal_mask=None, *args, **kwargs):
-        """Decomposition with a choice of algorithms.
-
-        For a full description of parameters see
-        :func:`hyperspy._signals.lazy.decomposition()`.
-
-        This is a wrapper for HyperSpy's ``decomposition()`` function,
-        except for an alternative use of scikit-image's IncrementalPCA
-        algorithm.
-
-        Parameters
-        ----------
-        normalize_poissonian_noise : bool
-            If True (default is False), scale the patterns to normalise
-            Poissonian noise.
-        algorithm : {'svd', 'IPCA', 'PCA', 'ORPCA' or 'ONMF'}, optional
-            Default is 'svd', lazy SVD decomposition from dask. 'PCA'
-            gives HyperSpy's use of scikit-learn's IncrementalPCA,
-            while 'IPCA' gives our use of IncrementalPCA.
-        output_dimension : int
-            Number of significant components to keep. If None, keep all
-            (only valid for SVD).
-        mbytes_chunk : int, optional
-            Size of chunks in MB, default is 100 MB as suggested in the
-            Dask documentation.
-        navigation_mask, signal_mask : boolean array_like
-        *args :
-            Arguments to be passed to ``decomposition()``.
-        **kwargs :
-            Keyword arguments to be passed to ``decomposition()``.
-
-        Returns
-        -------
-        The results are stored in self.learning_results.
-        """
-
-        if self.data.dtype.char not in ['e', 'f', 'd']:  # If not float
-            raise TypeError("To perform a decomposition the data must be of "
-                            "float type, but the current type is '{}'. No "
-                            "decomposition was "
-                            "performed.".format(self.data.dtype))
-
-        if algorithm == 'IPCA':
-            if output_dimension is None:
-                raise ValueError("With the IncrementalPCA algorithm, "
-                                 "output_dimension must be specified")
-
-            # Normalise Poissonian noise
-            original_data = self.data
-            if normalize_poissonian_noise:
-                rbH, raG = self._normalize_poissonian_noise(
-                    navigation_mask=navigation_mask, signal_mask=signal_mask)
-
-            # Prepare data matrix
-            nx, ny, sx, sy = self.data.shape
-            n, s = nx * ny, sx * sy
-            X = self.data.reshape((n, s))
-
-            # Determine number of chunks
-            suggested_size = mbytes_chunk * 2 ** 20
-            num_chunks = int(np.ceil(X.nbytes / suggested_size))
-            cpus = os.cpu_count()
-            if num_chunks <= cpus:
-                num_chunks = cpus
-            chunk_size = n // num_chunks
-
-            # Get principal components (factors)
-            ipca = IncrementalPCA(n_components=output_dimension)
-            for i in tqdm.tqdm(iterable=range(0, num_chunks), total=num_chunks,
-                               leave=True, desc='Learn'):
-                start = i * chunk_size
-                end = (i + 1) * chunk_size
-                if i == (num_chunks - 1):  # Last iteration
-                    end = None
-                ipca.partial_fit(X[start:end])  # Fit
-            factors = ipca.components_.T
-
-            # Reproject data on the principal components (loadings)
-            loadings = []
-            for j in tqdm.tqdm(iterable=range(0, num_chunks), total=num_chunks,
-                               leave=True, desc='Project'):
-                start = j * chunk_size
-                end = (j + 1) * chunk_size
-                if j == (num_chunks - 1):  # Last iteration
-                    end = None
-                loadings.append(ipca.transform(X[start:end]))  # Reproject
-            loadings = np.concatenate(loadings, axis=0)
-
-            # Set signal's learning results
-            target = self.learning_results
-            target.decomposition_algorithm = algorithm
-            target.output_dimension = output_dimension
-            target.factors = factors
-            target.loadings = loadings
-            target.explained_variance = ipca.explained_variance_
-            target.explained_variance_ratio = ipca.explained_variance_ratio_
-
-            # Revert data
-            self.data = original_data
-
-            if normalize_poissonian_noise is True:
-                target.factors = target.factors * rbH.ravel()[:, np.newaxis]
-                target.loadings = target.loadings * raG.ravel()[:, np.newaxis]
-
-        else:  # Call HyperSpy's implementation
-            super().decomposition(normalize_poissonian_noise, algorithm,
-                                  output_dimension, navigation_mask,
-                                  signal_mask, *args, **kwargs)
-
-        self.__class__ = LazyEBSD
 
     def _normalize_poissonian_noise(
             self, navigation_mask=None, signal_mask=None):
