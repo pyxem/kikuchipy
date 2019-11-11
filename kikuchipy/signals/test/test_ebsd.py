@@ -372,7 +372,7 @@ class TestVirtualDetectorImaging:
 
     def test_virtual_detector_image(self, dummy_signal):
         roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
-        virtual_image_signal = dummy_signal.get_virtual_detector_image(roi)
+        virtual_image_signal = dummy_signal.get_virtual_image(roi)
         assert (virtual_image_signal.data.shape ==
                 dummy_signal.axes_manager.navigation_shape)
 
@@ -412,8 +412,8 @@ class TestDecomposition:
             model_signal.data.mean(), mean, decimal=3)
 
     @pytest.mark.parametrize('components, dtype_out, mean', [
-        (None, np.float16, -0.0001929), (None, np.float32, -1.17e-8),
-        (3, np.float16, -9.64e-5), ([0, 1, 3], np.float16, 0.0001929)])
+        (None, np.float16, -0.0001808), (None, np.float32, -1.17e-8),
+        (3, np.float16, -9.19e-5), ([0, 1, 3], np.float16, 5.58e-5)])
     def test_get_decomposition_model_lazy(
             self, dummy_signal, components, dtype_out, mean):
 
@@ -438,17 +438,3 @@ class TestDecomposition:
         assert isinstance(model_signal, kp.signals.LazyEBSD)
         model_mean = model_signal.data.mean().compute()
         np.testing.assert_almost_equal(model_mean, mean, decimal=7)
-
-    def test_rechunk_learning_results(self, dummy_signal):
-        lazy_signal = dummy_signal.as_lazy()
-        lazy_signal.change_dtype(np.float32)
-
-        with pytest.raises(ValueError, match='No learning results were found'):
-            lazy_signal._rechunk_learning_results()
-
-        lazy_signal.decomposition(algorithm='PCA', output_dimension=5)
-        lazy_signal.learning_results.loadings = \
-            lazy_signal.learning_results.loadings.T
-
-        with pytest.raises(ValueError, match='The last dimensions in factors'):
-            lazy_signal._rechunk_learning_results()

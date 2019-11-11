@@ -34,7 +34,7 @@ import numpy as np
 from pyxem.signals.diffraction2d import Diffraction2D
 
 from kikuchipy.io._io import save
-import kikuchipy.util as kpu
+import kikuchipy as kp
 
 _logger = logging.getLogger(__name__)
 
@@ -51,9 +51,9 @@ class EBSD(Signal2D):
         Signal2D.__init__(self, *args, **kwargs)
 
         # Update metadata if object is initialised from numpy array
-        if not self.metadata.has_item(kpu.io.metadata_nodes(sem=False)):
+        if not self.metadata.has_item(kp.util.io.metadata_nodes(sem=False)):
             md = self.metadata.as_dictionary()
-            md.update(kpu.io.kikuchipy_metadata().as_dictionary())
+            md.update(kp.util.io.kikuchipy_metadata().as_dictionary())
             self.metadata = DictionaryTreeBrowser(md)
         if not self.metadata.has_item('Sample.Phases'):
             self.set_phase_parameters()
@@ -131,12 +131,12 @@ class EBSD(Signal2D):
         """
 
         md = self.metadata
-        sem_node, ebsd_node = kpu.io.metadata_nodes()
-        kpu.general._write_parameters_to_dictionary(
+        sem_node, ebsd_node = kp.util.io.metadata_nodes()
+        kp.util.general._write_parameters_to_dictionary(
             {'beam_energy': beam_energy, 'magnification': magnification,
              'microscope': microscope, 'working_distance': working_distance},
             md, sem_node)
-        kpu.general._write_parameters_to_dictionary(
+        kp.util.general._write_parameters_to_dictionary(
             {'azimuth_angle': azimuth_angle, 'binning': binning,
              'detector': detector, 'elevation_angle': elevation_angle,
              'exposure_time': exposure_time, 'frame_number': frame_number,
@@ -220,7 +220,7 @@ class EBSD(Signal2D):
 
         # Remove None values
         phase = {k: v for k, v in inputs.items() if v is not None}
-        kpu.phase._update_phase_info(self.metadata, phase, number)
+        kp.util.phase._update_phase_info(self.metadata, phase, number)
 
     def set_scan_calibration(self, step_x=1., step_y=1.):
         """Set the step size in µm.
@@ -333,7 +333,7 @@ class EBSD(Signal2D):
         if not isinstance(static_bg, (np.ndarray, da.Array)):
             try:
                 md = self.metadata
-                ebsd_node = kpu.io.metadata_nodes(sem=False)
+                ebsd_node = kp.util.io.metadata_nodes(sem=False)
                 static_bg = da.from_array(
                     md.get_item(ebsd_node + '.static_background'))
             except AttributeError:
@@ -368,11 +368,11 @@ class EBSD(Signal2D):
             in_range = None
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kpu.dask._get_dask_array(signal=self, dtype=dtype)
+        dask_array = kp.util.dask._get_dask_array(signal=self, dtype=dtype)
 
         # Correct static background and rescale intensities chunk by chunk
         corrected_patterns = dask_array.map_blocks(
-            kpu.experimental._static_background_correction_chunk,
+            kp.util.experimental._static_background_correction_chunk,
             static_bg=static_bg, operation=operation, in_range=in_range,
             dtype_out=dtype_out, dtype=dtype_out)
 
@@ -418,13 +418,13 @@ class EBSD(Signal2D):
         dtype = np.int16
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kpu.dask._get_dask_array(signal=self, dtype=dtype)
+        dask_array = kp.util.dask._get_dask_array(signal=self, dtype=dtype)
 
         if sigma is None:
             sigma = self.axes_manager.signal_axes[0].size/30
 
         corrected_patterns = dask_array.map_blocks(
-            kpu.experimental._dynamic_background_correction_chunk,
+            kp.util.experimental._dynamic_background_correction_chunk,
             operation=operation, sigma=sigma, dtype_out=dtype_out,
             dtype=dtype_out)
 
@@ -485,11 +485,11 @@ class EBSD(Signal2D):
             in_range = None
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kpu.dask._get_dask_array(signal=self)
+        dask_array = kp.util.dask._get_dask_array(signal=self)
 
         # Rescale patterns
         rescaled_patterns = dask_array.map_blocks(
-            kpu.experimental._rescale_pattern_chunk, in_range=in_range,
+            kp.util.experimental._rescale_pattern_chunk, in_range=in_range,
             dtype_out=dtype_out, dtype=dtype_out)
 
         # Overwrite signal patterns
@@ -568,11 +568,11 @@ class EBSD(Signal2D):
         kernel_size = [int(k) for k in kernel_size]
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kpu.dask._get_dask_array(signal=self)
+        dask_array = kp.util.dask._get_dask_array(signal=self)
 
         # Local contrast enhancement
         equalized_patterns = dask_array.map_blocks(
-            kpu.experimental._adaptive_histogram_equalization_chunk,
+            kp.util.experimental._adaptive_histogram_equalization_chunk,
             kernel_size=kernel_size, clip_limit=clip_limit, nbins=nbins,
             dtype=self.data.dtype)
 
@@ -610,10 +610,10 @@ class EBSD(Signal2D):
         return Diffraction2D.plot_interactive_virtual_image(
             self, roi, **kwargs)
 
-    def get_virtual_detector_image(self, roi):
+    def get_virtual_image(self, roi):
         """Return a virtual forward scatter detector (VFSD) image
         formed from detector intensities within a region of interest
-        (ROI).
+        (ROI) on the detector.
 
         Adapted from pyxem.signals.diffraction2d.Diffraction2D.\
         get_virtual_image().
@@ -625,15 +625,16 @@ class EBSD(Signal2D):
 
         Returns
         -------
-        virtual_detector_image : hyperspy.signals.BaseSignal
-            VFSD image formed from detector intensities within an ROI.
+        virtual_image : hyperspy.signals.BaseSignal
+            VFSD image formed from detector intensities within an ROI
+            on the detector.
 
         Examples
         --------
         >>> import hyperspy.api as hs
         >>> roi = hs.roi.RectangularROI(
                 left=0, right=5, top=0, bottom=5)
-            vfsd_image = s.get_virtual_detector_image(roi)
+            vfsd_image = s.get_virtual_image(roi)
         """
 
         return Diffraction2D.get_virtual_image(self, roi)
@@ -746,7 +747,7 @@ class EBSD(Signal2D):
 
         # Update learning results and rechunk if lazy
         if isinstance(factors, da.Array):
-            chunks = self._rechunk_learning_results()
+            chunks = kp.util.dask._rechunk_learning_results(signal=self)
             self.learning_results.factors = factors.rechunk(chunks=chunks[0])
             self.learning_results.loadings = loadings.rechunk(chunks=chunks[1])
         else:
@@ -779,7 +780,7 @@ class EBSD(Signal2D):
 
         # Update binning in metadata
         md = out.metadata
-        ebsd_node = kpu.io.metadata_nodes(sem=False)
+        ebsd_node = kp.util.io.metadata_nodes(sem=False)
         if scale is None:
             sx = self.axes_manager.signal_shape[0]
             scale = [sx / new_shape[2]]
@@ -871,7 +872,6 @@ class LazyEBSD(LazySignal2D, EBSD):
 
         # Extract relevant components
         if hasattr(components, '__iter__'):  # components is a list of ints
-            # TODO: This should be implemented in HyperSpy
             factors = factors[:, components]
             loadings = loadings[:, components]
         else:  # components is an int
@@ -887,14 +887,15 @@ class LazyEBSD(LazySignal2D, EBSD):
 
         t_str = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
         file_learn = os.path.join(out_dir, 'learn_' + t_str + '.h5')
-        with File(file_learn, 'w') as f:
+        with File(file_learn, mode='w') as f:
             f.create_dataset(name='factors', data=factors)
             f.create_dataset(name='loadings', data=loadings)
 
         # Matrix multiplication
-        with File(file_learn, 'r') as f:
+        with File(file_learn, mode='r') as f:
             # Read learning results from HDF5 file
-            chunks = self._rechunk_learning_results(mbytes_chunk=mbytes_chunk)
+            chunks = kp.util.dask._rechunk_learning_results(
+                signal=self, mbytes_chunk=mbytes_chunk)
             factors = da.from_array(f['factors'], chunks=chunks[0])
             loadings = da.from_array(f['loadings'], chunks=chunks[1])
 
@@ -922,63 +923,3 @@ class LazyEBSD(LazySignal2D, EBSD):
         # Delete temporary files
         os.remove(file_learn)
         gc.collect()  # Don't sink
-
-    def _rechunk_learning_results(self, mbytes_chunk=100):
-        """Return suggested data chunks for learning results. It is
-        assumed that the loadings are not transposed. The last axes of
-        factors and loadings are not chunked. The aims in prioritised
-        order:
-            1. Split into at least as many chunks as available CPUs.
-            2. Limit chunks to approx. input MB (`mbytes_chunk`).
-            3. Keep first axis of factors (detector pixels).
-
-        Parameters
-        ----------
-        mbytes_chunk : int, optional
-            Size of chunks in MB, default is 100 MB as suggested in the
-            Dask documentation.
-
-        Returns
-        -------
-        List of two tuples
-            The first/second tuple are suggested chunks to pass to
-            ``dask.array.rechunk`` for factors/loadings, respectively.
-        """
-
-        target = self.learning_results
-        if target.decomposition_algorithm is None:
-            raise ValueError("No learning results were found.")
-
-        # Get dask chunks
-        tshape = target.factors.shape + target.loadings.shape
-
-        # Make sure the last factors/loading axes have the same shapes
-        # TODO: Should also handle the case where the first axes are the same
-        if tshape[1] != tshape[3]:
-            raise ValueError("The last dimensions in factors and loadings are "
-                             "not the same.")
-
-        # Determine maximum number of (strictly necessary) chunks
-        suggested_size = mbytes_chunk * 2**20
-        factors_size = target.factors.nbytes
-        loadings_size = target.loadings.nbytes
-        total_size = factors_size + loadings_size
-        num_chunks = np.ceil(total_size / suggested_size)
-
-        # Get chunk sizes
-        cpus = os.cpu_count()
-        if num_chunks <= cpus:  # Return approx. as many chunks as CPUs
-            chunks = [(-1, -1), (int(tshape[2]/cpus), -1)]  # -1 = don't chunk
-        elif factors_size <= suggested_size:  # Chunk first axis in loadings
-            chunks = [(-1, -1), (int(tshape[2]/num_chunks), -1)]
-        else:  # Chunk both first axes
-            sizes = [factors_size, loadings_size]
-            while (sizes[0] + sizes[1]) >= suggested_size:
-                i = np.argmax(sizes)
-                sizes[i] = np.floor(sizes[i] / 2)
-            factors_chunks = int(np.ceil(factors_size/sizes[0]))
-            loadings_chunks = int(np.ceil(loadings_size/sizes[1]))
-            chunks = [(int(tshape[0]/factors_chunks), -1),
-                      (int(tshape[2]/loadings_chunks), -1)]
-
-        return chunks
