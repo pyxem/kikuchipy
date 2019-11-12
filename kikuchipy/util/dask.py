@@ -100,17 +100,19 @@ def _get_dask_array(signal, dtype=None):
     return dask_array.astype(dtype)
 
 
-def _rechunk_learning_results(signal, mbytes_chunk=100):
+def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
     """Return suggested data chunks for learning results. It is assumed
     that the loadings are not transposed. The last axes of factors and
     loadings are not chunked. The aims in prioritised order:
-        1. Limit chunks to approx. input MB (`mbytes_chunk`).
+        1. Limit chunks to approximately input MB (`mbytes_chunk`).
         2. Keep first axis of factors (detector pixels).
 
     Parameters
     ----------
-    signal : kp.signals.LazyEBSD
-        Signal with learning results.
+    factors : hyperspy.learn.mva.LearningResults.factors
+        Component patterns in learning results.
+    loadings : hyperspy.learn.mva.LearningResults.loadings
+        Component loadings in learning results.
     mbytes_chunk : int, optional
         Size of chunks in MB, default is 100 MB as suggested in the Dask
         documentation.
@@ -122,22 +124,18 @@ def _rechunk_learning_results(signal, mbytes_chunk=100):
         ``dask.array.rechunk`` for factors/loadings, respectively.
     """
 
-    target = signal.learning_results
-    if target.decomposition_algorithm is None:
-        raise ValueError("No learning results were found.")
-
-    # Get shape of learning results
-    learning_results_shape = target.factors.shape + target.loadings.shape
-
     # Make sure the last factors/loading axes have the same shapes
-    if learning_results_shape[1] != learning_results_shape[3]:
+    if factors.shape[-1] != loadings.shape[-1]:
         raise ValueError(
             "The last dimensions in factors and loadings are not the same.")
 
+    # Get shape of learning results
+    learning_results_shape = factors.shape + loadings.shape
+
     # Determine maximum number of (strictly necessary) chunks
     suggested_size = mbytes_chunk * 2**20
-    factors_size = target.factors.nbytes
-    loadings_size = target.loadings.nbytes
+    factors_size = factors.nbytes
+    loadings_size = loadings.nbytes
     total_size = factors_size + loadings_size
     num_chunks = np.ceil(total_size / suggested_size)
 

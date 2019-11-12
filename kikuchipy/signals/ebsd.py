@@ -706,11 +706,10 @@ class EBSD(Signal2D):
         """Return the model signal generated with the selected number of
         principal components.
 
-        This function calls HyperSpy's get_decomposition_model. The
-        learning results are preconditioned before this call, doing the
-        following: (1) set data type to desired dtype_out, (2) remove
-        unwanted components, (3) rechunk, if dask arrays, to suitable
-        chunks.
+        Calls HyperSpy's get_decomposition_model. Learning results
+        are preconditioned before this call, doing the following: (1)
+        set data type to desired dtype_out, (2) remove unwanted
+        components, (3) rechunk, if dask arrays, to suitable chunks.
 
         Parameters
         ----------
@@ -720,8 +719,8 @@ class EBSD(Signal2D):
             int. If list of ints, rebuilds signal from only components
             in given list.
         dtype_out : {np.float16, np.float32, np.float64}, optional
-            Data type of learning results (default is np.float16). Note
-            that HyperSpy returns them as np.float64.
+            Data to cast learning results to (default is np.float16).
+            Note that HyperSpy casts them to np.float64.
         *args, **kwargs :
             Passed to Hyperspy's `get_decomposition_model()`.
 
@@ -730,29 +729,16 @@ class EBSD(Signal2D):
         s_model : kikuchipy.signals.EBSD or kikuchipy.signals.LazyEBSD
         """
 
-        # Change dtype_out
-        target = self.learning_results
-        factors_orig = target.factors.copy()  # Keep to revert target in the end
-        loadings_orig = target.loadings.copy()
-        factors = target.factors.astype(dtype_out)
-        loadings = target.loadings.astype(dtype_out)
+        # Keep original results to revert back after updating
+        factors_orig = self.learning_results.factors.copy()
+        loadings_orig = self.learning_results.loadings.copy()
 
-        # Extract relevant components
-        if hasattr(components, '__iter__'):  # components is a list of ints
-            factors = factors[:, components]
-            loadings = loadings[:, components]
-        else:  # components is an int
-            factors = factors[:, :components]
-            loadings = loadings[:, :components]
-
-        # Update learning results and rechunk if lazy
-        if isinstance(factors, da.Array):
-            chunks = kp.util.dask._rechunk_learning_results(signal=self)
-            self.learning_results.factors = factors.rechunk(chunks=chunks[0])
-            self.learning_results.loadings = loadings.rechunk(chunks=chunks[1])
-        else:
-            self.learning_results.factors = factors
-            self.learning_results.loadings = loadings
+        # Change data type, keep desired components and rechunk if lazy
+        (self.learning_results.factors,
+         self.learning_results.loadings) = kp.util.decomposition.\
+            _update_learning_results(
+            learning_results=self.learning_results,
+            dtype_out=dtype_out, components=components)
 
         # Call HyperSpy's function
         s_model = super().get_decomposition_model(*args, **kwargs)
@@ -833,19 +819,11 @@ class LazyEBSD(LazySignal2D, EBSD):
 
     def get_decomposition_model_write(
             self, components=None, dtype_learn=np.float16,
-            mbytes_chunk=100, out_dir=None, out_fname=None):
+            mbytes_chunk=100, dir_out=None, fname_out=None):
         """Write the model signal generated from the selected number of
         principal components directly to a .hspy file. The model signal
         intensities are rescaled to the original signals' data type
-        range.
-
-        Notes
-        -----
-        Multiplying the learning results' factors and loadings in memory
-        to create the model signal cannot sometimes be done due to too
-        large matrices. Here, instead, learning results are written to
-        file, read into dask arrays and multiplied using dask's
-        ``matmul``, out of core.
+        range, keeping relative intensities.
 
         Parameters
         ----------
@@ -855,38 +833,38 @@ class LazyEBSD(LazySignal2D, EBSD):
             int. If list of ints, rebuilds signal from only components
             in given list.
         dtype_learn : {np.float16, np.float32 or np.float64}, optional
-            Data type to set learning results to (default is float16).
+            Data type to set learning results to (default is float16)
+            before multiplication.
         mbytes_chunk : int, optional
             Size of learning results chunks in MB, default is 100 MB as
             suggested in the Dask documentation.
-        out_dir : str, optional
+        dir_out : str, optional
             Directory to place output signal in.
-        out_fname : str, optional
+        fname_out : str, optional
             Name of output signal file.
+
+        Notes
+        -----
+        Multiplying the learning results' factors and loadings in memory
+        to create the model signal cannot sometimes be done due to too
+        large matrices. Here, instead, learning results are written to
+        file, read into dask arrays and multiplied using dask's
+        ``matmul``, out of core.
         """
 
-        # Change dtype_out
-        target = self.learning_results
-        factors = np.array(target.factors, dtype=dtype_learn)
-        loadings = np.array(target.loadings, dtype=dtype_learn)
-
-        # Extract relevant components
-        if hasattr(components, '__iter__'):  # components is a list of ints
-            factors = factors[:, components]
-            loadings = loadings[:, components]
-        else:  # components is an int
-            factors = factors[:, :components]
-            loadings = loadings[:, :components]
+        # Change data type, keep desired components and rechunk if lazy
+        factors, loadings = kp.util.decomposition._update_learning_results(
+            self.learning_results, components=components, dtype_out=dtype_learn)
 
         # Write learning results to HDF5 file
-        if out_dir is None:
+        if dir_out is None:
             try:
-                out_dir = self.original_metadata.General.original_filepath
+                dir_out = self.original_metadata.General.original_filepath
             except AttributeError:
                 raise AttributeError("Output directory has to be specified")
 
         t_str = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
-        file_learn = os.path.join(out_dir, 'learn_' + t_str + '.h5')
+        file_learn = os.path.join(dir_out, 'learn_' + t_str + '.h5')
         with File(file_learn, mode='w') as f:
             f.create_dataset(name='factors', data=factors)
             f.create_dataset(name='loadings', data=loadings)
@@ -895,29 +873,29 @@ class LazyEBSD(LazySignal2D, EBSD):
         with File(file_learn, mode='r') as f:
             # Read learning results from HDF5 file
             chunks = kp.util.dask._rechunk_learning_results(
-                signal=self, mbytes_chunk=mbytes_chunk)
+                factors=factors, loadings=loadings, mbytes_chunk=mbytes_chunk)
             factors = da.from_array(f['factors'], chunks=chunks[0])
             loadings = da.from_array(f['loadings'], chunks=chunks[1])
 
-            # Perform the matrix multiplication
+            # Perform matrix multiplication
             loadings = loadings.T
             res = factors @ loadings
             res = res.T  # Transpose
 
-            # Create new signal from multiplied matrix
+            # Create new signal from result of matrix multiplication
             s_model = self.deepcopy()
             s_model.learning_results = LearningResults()
             s_model.data = res.reshape(s_model.data.shape)
             s_model.data = s_model.data.rechunk(chunks=(1, 1, -1, -1))
 
-            # Rescale intensities and revert data type
-            s_model.rescale_intensities()
-            s_model.data = s_model.data.astype(self.data.dtype)
+            # Rescale intensities
+            s_model.rescale_intensities(
+                dtype_out=self.data.dtype, relative=True)
 
-            # Write signal to file (rechunking saves a little time?)
-            if out_fname is None:
-                out_fname = 'model_' + t_str
-            file_model = os.path.join(out_dir, out_fname)
+            # Write signal to file
+            if fname_out is None:
+                fname_out = 'model_' + t_str
+            file_model = os.path.join(dir_out, fname_out)
             s_model.save(file_model)
 
         # Delete temporary files

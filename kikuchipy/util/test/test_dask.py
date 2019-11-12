@@ -58,27 +58,22 @@ class TestDask:
         data = da.from_array(np.random.rand(10, 100, 100, 5).astype(np.float32))
         lazy_signal = kp.signals.LazyEBSD(data)
 
-        # Raise error when signal has no learning result
-        with pytest.raises(ValueError, match='No learning results were found'):
-            kp.util.dask._rechunk_learning_results(signal=lazy_signal)
+        # Decomposition
+        lazy_signal.decomposition(algorithm='PCA', output_dimension=10)
+        factors = lazy_signal.learning_results.factors
+        loadings = lazy_signal.learning_results.loadings
 
         # Raise error when last dimension in factors/loadings are not identical
-        lazy_signal.decomposition(algorithm='PCA', output_dimension=10)
-        lazy_signal.learning_results.loadings = \
-            lazy_signal.learning_results.loadings.T
         with pytest.raises(ValueError, match='The last dimensions in factors'):
-            kp.util.dask._rechunk_learning_results(signal=lazy_signal)
-
-        # Revert to correct learning results shape
-        lazy_signal.learning_results.loadings = \
-            lazy_signal.learning_results.loadings.T
+            kp.util.dask._rechunk_learning_results(
+                factors=factors, loadings=loadings.T)
 
         # Only chunk first axis in loadings
         chunks = kp.util.dask._rechunk_learning_results(
-            signal=lazy_signal, mbytes_chunk=0.02)
+            factors=factors, loadings=loadings, mbytes_chunk=0.02)
         assert chunks == [(-1, -1), (200, -1)]
 
         # Chunk first axis in both loadings and factors
         chunks = kp.util.dask._rechunk_learning_results(
-            signal=lazy_signal, mbytes_chunk=0.01)
+            factors=factors, loadings=loadings, mbytes_chunk=0.01)
         assert chunks == [(125, -1), (62, -1)]

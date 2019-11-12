@@ -438,3 +438,35 @@ class TestDecomposition:
         assert isinstance(model_signal, kp.signals.LazyEBSD)
         model_mean = model_signal.data.mean().compute()
         np.testing.assert_almost_equal(model_mean, mean, decimal=7)
+
+    @pytest.mark.parametrize('components, mean_intensity', [
+        (None, 132.1975), (3, 123.0987)])
+    def test_get_decomposition_model_write(
+            self, dummy_signal, temporary_dir, components,
+            mean_intensity):
+
+        lazy_signal = dummy_signal.as_lazy()
+        dtype_in = lazy_signal.data.dtype
+
+        # Decomposition
+        lazy_signal.change_dtype(np.float32)
+        lazy_signal.decomposition(algorithm='PCA', output_dimension=9)
+        lazy_signal.change_dtype(dtype_in)
+
+        with pytest.raises(AttributeError, match='Output directory has to be'):
+            lazy_signal.get_decomposition_model_write()
+
+        # Current time stamp is added to output file name
+        lazy_signal.get_decomposition_model_write(dir_out=temporary_dir)
+
+        # Reload file to check...
+        fname_out = 'test.h5'
+        lazy_signal.get_decomposition_model_write(
+            components=components, dir_out=temporary_dir, fname_out=fname_out)
+        s_reload = kp.load(os.path.join(temporary_dir, fname_out))
+
+        # ... data type, data shape and mean intensity
+        assert s_reload.data.dtype == lazy_signal.data.dtype
+        assert s_reload.data.shape == lazy_signal.data.shape
+        np.testing.assert_almost_equal(
+            s_reload.data.mean(), mean_intensity, decimal=4)

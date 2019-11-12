@@ -16,4 +16,5 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-from kikuchipy.util import dask, experimental, general, io, nordif, phase
+from kikuchipy.util import (
+    dask, decomposition, experimental, general, io, nordif, phase)

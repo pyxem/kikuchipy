@@ -53,10 +53,20 @@ def dummy_background():
 
 @pytest.fixture()
 def save_path_h5ebsd():
-    """Temporary file in a temporary directory to use when tests need
+    """Temporary file in a temporary directory for use when tests need
     to write (and sometimes read again) a signal to file."""
 
     with tempfile.TemporaryDirectory() as tmp:
         file_path = os.path.join(tmp, 'patterns_temp.h5')
         yield file_path
+        gc.collect()
+
+
+@pytest.fixture()
+def temporary_dir():
+    """Temporary directory to use when tests need
+    to write (and sometimes read again) stuff to a directory."""
+
+    with tempfile.TemporaryDirectory() as tmp:
+        yield tmp
         gc.collect()
