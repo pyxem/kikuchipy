@@ -27,17 +27,14 @@ import dask.array as da
 import dask.diagnostics as dd
 from hyperspy._signals.signal2d import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
-from hyperspy._signals.lazy import to_array
 from hyperspy.learn.mva import LearningResults
 from hyperspy.misc.utils import DictionaryTreeBrowser
 from h5py import File
 import numpy as np
 from pyxem.signals.diffraction2d import Diffraction2D
-from sklearn.decomposition import IncrementalPCA
-import tqdm
 
 from kikuchipy.io._io import save
-import kikuchipy.util as kpu
+import kikuchipy as kp
 
 _logger = logging.getLogger(__name__)
 
@@ -54,9 +51,9 @@ class EBSD(Signal2D):
         Signal2D.__init__(self, *args, **kwargs)
 
         # Update metadata if object is initialised from numpy array
-        if not self.metadata.has_item(kpu.io.metadata_nodes(sem=False)):
+        if not self.metadata.has_item(kp.util.io.metadata_nodes(sem=False)):
             md = self.metadata.as_dictionary()
-            md.update(kpu.io.kikuchipy_metadata().as_dictionary())
+            md.update(kp.util.io.kikuchipy_metadata().as_dictionary())
             self.metadata = DictionaryTreeBrowser(md)
         if not self.metadata.has_item('Sample.Phases'):
             self.set_phase_parameters()
@@ -134,12 +131,12 @@ class EBSD(Signal2D):
         """
 
         md = self.metadata
-        sem_node, ebsd_node = kpu.io.metadata_nodes()
-        kpu.general._write_parameters_to_dictionary(
+        sem_node, ebsd_node = kp.util.io.metadata_nodes()
+        kp.util.general._write_parameters_to_dictionary(
             {'beam_energy': beam_energy, 'magnification': magnification,
              'microscope': microscope, 'working_distance': working_distance},
             md, sem_node)
-        kpu.general._write_parameters_to_dictionary(
+        kp.util.general._write_parameters_to_dictionary(
             {'azimuth_angle': azimuth_angle, 'binning': binning,
              'detector': detector, 'elevation_angle': elevation_angle,
              'exposure_time': exposure_time, 'frame_number': frame_number,
@@ -213,8 +210,7 @@ class EBSD(Signal2D):
         if atom_coordinates is not None:
             for phase, val in atom_coordinates.items():
                 atom_coordinates[phase]['coordinates'] = np.array(
-                    atom_coordinates[phase]['coordinates']
-                )
+                    atom_coordinates[phase]['coordinates'])
 
         inputs = {'atom_coordinates': atom_coordinates, 'formula': formula,
                   'info': info, 'lattice_constants': lattice_constants,
@@ -224,7 +220,7 @@ class EBSD(Signal2D):
 
         # Remove None values
         phase = {k: v for k, v in inputs.items() if v is not None}
-        kpu.phase._update_phase_info(self.metadata, phase, number)
+        kp.util.phase._update_phase_info(self.metadata, phase, number)
 
     def set_scan_calibration(self, step_x=1., step_y=1.):
         """Set the step size in µm.
@@ -337,7 +333,7 @@ class EBSD(Signal2D):
         if not isinstance(static_bg, (np.ndarray, da.Array)):
             try:
                 md = self.metadata
-                ebsd_node = kpu.io.metadata_nodes(sem=False)
+                ebsd_node = kp.util.io.metadata_nodes(sem=False)
                 static_bg = da.from_array(
                     md.get_item(ebsd_node + '.static_background'))
             except AttributeError:
@@ -372,11 +368,11 @@ class EBSD(Signal2D):
             in_range = None
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kpu.dask._get_dask_array(signal=self, dtype=dtype)
+        dask_array = kp.util.dask._get_dask_array(signal=self, dtype=dtype)
 
         # Correct static background and rescale intensities chunk by chunk
         corrected_patterns = dask_array.map_blocks(
-            kpu.experimental._static_background_correction_chunk,
+            kp.util.experimental._static_background_correction_chunk,
             static_bg=static_bg, operation=operation, in_range=in_range,
             dtype_out=dtype_out, dtype=dtype_out)
 
@@ -422,13 +418,13 @@ class EBSD(Signal2D):
         dtype = np.int16
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kpu.dask._get_dask_array(signal=self, dtype=dtype)
+        dask_array = kp.util.dask._get_dask_array(signal=self, dtype=dtype)
 
         if sigma is None:
             sigma = self.axes_manager.signal_axes[0].size/30
 
         corrected_patterns = dask_array.map_blocks(
-            kpu.experimental._dynamic_background_correction_chunk,
+            kp.util.experimental._dynamic_background_correction_chunk,
             operation=operation, sigma=sigma, dtype_out=dtype_out,
             dtype=dtype_out)
 
@@ -489,11 +485,11 @@ class EBSD(Signal2D):
             in_range = None
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kpu.dask._get_dask_array(signal=self)
+        dask_array = kp.util.dask._get_dask_array(signal=self)
 
         # Rescale patterns
         rescaled_patterns = dask_array.map_blocks(
-            kpu.experimental._rescale_pattern_chunk, in_range=in_range,
+            kp.util.experimental._rescale_pattern_chunk, in_range=in_range,
             dtype_out=dtype_out, dtype=dtype_out)
 
         # Overwrite signal patterns
@@ -572,11 +568,11 @@ class EBSD(Signal2D):
         kernel_size = [int(k) for k in kernel_size]
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kpu.dask._get_dask_array(signal=self)
+        dask_array = kp.util.dask._get_dask_array(signal=self)
 
         # Local contrast enhancement
         equalized_patterns = dask_array.map_blocks(
-            kpu.experimental._adaptive_histogram_equalization_chunk,
+            kp.util.experimental._adaptive_histogram_equalization_chunk,
             kernel_size=kernel_size, clip_limit=clip_limit, nbins=nbins,
             dtype=self.data.dtype)
 
@@ -614,10 +610,10 @@ class EBSD(Signal2D):
         return Diffraction2D.plot_interactive_virtual_image(
             self, roi, **kwargs)
 
-    def get_virtual_detector_image(self, roi):
+    def get_virtual_image(self, roi):
         """Return a virtual forward scatter detector (VFSD) image
         formed from detector intensities within a region of interest
-        (ROI).
+        (ROI) on the detector.
 
         Adapted from pyxem.signals.diffraction2d.Diffraction2D.\
         get_virtual_image().
@@ -629,15 +625,16 @@ class EBSD(Signal2D):
 
         Returns
         -------
-        virtual_detector_image : hyperspy.signals.BaseSignal
-            VFSD image formed from detector intensities within an ROI.
+        virtual_image : hyperspy.signals.BaseSignal
+            VFSD image formed from detector intensities within an ROI
+            on the detector.
 
         Examples
         --------
         >>> import hyperspy.api as hs
         >>> roi = hs.roi.RectangularROI(
                 left=0, right=5, top=0, bottom=5)
-            vfsd_image = s.get_virtual_detector_image(roi)
+            vfsd_image = s.get_virtual_image(roi)
         """
 
         return Diffraction2D.get_virtual_image(self, roi)
@@ -645,17 +642,17 @@ class EBSD(Signal2D):
     def save(
             self, filename=None, overwrite=None, extension=None,
             **kwargs):
-        """Write signal to the specified format .
+        """Write signal to the specified format.
 
         The function gets the format from the extension: `h5`, `hdf5` or
-        `h5ebsd` for KikuchiPy's specification of the the h5ebsd format
-        `dat` for the NORDIF binary format or `hspy` for HyperSpy's
-        HDF5 specification. If no extension is provided the signal is
-        written to a file in KikuchiPy's h5ebsd format. Each format
-        accepts a different set of parameters.
+        `h5ebsd` for KikuchiPy's specification of the the h5ebsd
+        format, `dat` for the NORDIF binary format or `hspy` for
+        HyperSpy's HDF5 specification. If no extension is provided the
+        signal is written to a file in KikuchiPy's h5ebsd format. Each
+        format accepts a different set of parameters.
 
         For details see the specific format documentation in
-        `kikuchipy.io.plugins.<format>.file_writer`.
+        `kikuchipy.io.plugins.<format>.file_writer()`.
 
         This method is a modified version of HyperSpy's function
         `hyperspy.signals.BaseSignal.save()`.
@@ -699,17 +696,20 @@ class EBSD(Signal2D):
             filename = basename + '.' + extension
         save(filename, self, overwrite=overwrite, **kwargs)
 
+    def decomposition(self, *args, **kwargs):
+        super().decomposition(*args, **kwargs)
+        self.__class__ = EBSD
+
     def get_decomposition_model(
             self, components=None, dtype_out=np.float16, *args,
             **kwargs):
         """Return the model signal generated with the selected number of
         principal components.
 
-        This function calls HyperSpy's get_decomposition_model. The
-        learning results are preconditioned before this call, doing the
-        following: (1) set data type to desired dtype_out, (2) remove
-        unwanted components, (3) rechunk, if dask arrays, to suitable
-        chunk.
+        Calls HyperSpy's get_decomposition_model. Learning results
+        are preconditioned before this call, doing the following: (1)
+        set data type to desired dtype_out, (2) remove unwanted
+        components, (3) rechunk, if dask arrays, to suitable chunks.
 
         Parameters
         ----------
@@ -719,44 +719,26 @@ class EBSD(Signal2D):
             int. If list of ints, rebuilds signal from only components
             in given list.
         dtype_out : {np.float16, np.float32, np.float64}, optional
-            Data type of learning results (default is float16).
-            HyperSpy's ``decomposition`` returns them in float64, which
-            here is assumed to be overkill.
-        *args
-            Passed to Hyperspy's `get_decomposition_model`.
-        **kwargs
-            Passed to Hyperspy's `get_decomposition_model`.
+            Data to cast learning results to (default is np.float16).
+            Note that HyperSpy casts them to np.float64.
+        *args, **kwargs :
+            Passed to Hyperspy's `get_decomposition_model()`.
 
         Returns
         -------
         s_model : kikuchipy.signals.EBSD or kikuchipy.signals.LazyEBSD
         """
 
-        # Change dtype_out
-        target = self.learning_results
-        factors_orig = target.factors.copy()  # Keep to revert target in the end
-        loadings_orig = target.loadings.copy()
-        factors = target.factors.astype(dtype_out)
-        loadings = target.loadings.astype(dtype_out)
+        # Keep original results to revert back after updating
+        factors_orig = self.learning_results.factors.copy()
+        loadings_orig = self.learning_results.loadings.copy()
 
-        # Extract relevant components
-        if hasattr(components, '__iter__'):  # components is a list of ints
-            # TODO: This should be implemented in HyperSpy
-            factors = factors[:, components]
-            loadings = loadings[:, components]
-        else:  # components is an int
-            factors = factors[:, :components]
-            loadings = loadings[:, :components]
-
-        # Update learning results
-        self.learning_results.factors = factors
-        self.learning_results.loadings = loadings
-
-        # Rechunk
-        if isinstance(factors, da.Array):
-            chunks = self._rechunk_learning_results()
-            self.learning_results.factors = factors.rechunk(chunks=chunks[0])
-            self.learning_results.loadings = loadings.rechunk(chunks=chunks[1])
+        # Change data type, keep desired components and rechunk if lazy
+        (self.learning_results.factors,
+         self.learning_results.loadings) = kp.util.decomposition.\
+            _update_learning_results(
+            learning_results=self.learning_results,
+            dtype_out=dtype_out, components=components)
 
         # Call HyperSpy's function
         s_model = super().get_decomposition_model(*args, **kwargs)
@@ -777,18 +759,6 @@ class EBSD(Signal2D):
 
         return s_model
 
-    def decomposition(
-            self, normalize_poissonian_noise=False, algorithm='svd',
-            output_dimension=None, centre=None, auto_transpose=True,
-            navigation_mask=None, signal_mask=None, var_array=None,
-            var_func=None, polyfit=None, reproject=None,
-            return_info=False, *args, **kwargs):
-        super().decomposition(
-            normalize_poissonian_noise, algorithm, output_dimension, centre,
-            auto_transpose, navigation_mask, signal_mask, var_array, var_func,
-            polyfit, reproject, return_info, **kwargs)
-        self.__class__ = EBSD
-
     def rebin(self, new_shape=None, scale=None, crop=True, out=None):
         out = super().rebin(
             new_shape=new_shape, scale=scale, crop=crop, out=out)
@@ -796,7 +766,7 @@ class EBSD(Signal2D):
 
         # Update binning in metadata
         md = out.metadata
-        ebsd_node = kpu.io.metadata_nodes(sem=False)
+        ebsd_node = kp.util.io.metadata_nodes(sem=False)
         if scale is None:
             sx = self.axes_manager.signal_shape[0]
             scale = [sx / new_shape[2]]
@@ -820,35 +790,40 @@ class EBSD(Signal2D):
         lazy_signal.__init__(**lazy_signal._to_dictionary())
         return lazy_signal
 
+    def change_dtype(self, dtype, rechunk=True):
+        super().change_dtype(dtype=dtype, rechunk=rechunk)
+        self.__class__ = EBSD
 
-class LazyEBSD(EBSD, LazySignal2D):
+
+class LazyEBSD(LazySignal2D, EBSD):
 
     _lazy = True
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def change_dtype(self, dtype, rechunk=True):
+        super().change_dtype(dtype=dtype, rechunk=rechunk)
+        self.__class__ = LazyEBSD
+
     def compute(self, *args, **kwargs):
         with dd.ProgressBar(*args, **kwargs):
             self.data = self.data.compute(*args, **kwargs)
         gc.collect()
         self.__class__ = EBSD
+        self._lazy = False
+
+    def decomposition(self, *args, **kwargs):
+        super().decomposition(*args, **kwargs)
+        self.__class__ = LazyEBSD
 
     def get_decomposition_model_write(
             self, components=None, dtype_learn=np.float16,
-            mbytes_chunk=100, out_dir=None, out_fname=None):
+            mbytes_chunk=100, dir_out=None, fname_out=None):
         """Write the model signal generated from the selected number of
         principal components directly to a .hspy file. The model signal
         intensities are rescaled to the original signals' data type
-        range.
-
-        Notes
-        -----
-        Multiplying the learning results' factors and loadings in memory
-        to create the model signal cannot sometimes be done due to too
-        large matrices. Here, instead, learning results are written to
-        file, read into dask arrays and multiplied using dask's
-        ``matmul``, out of core.
+        range, keeping relative intensities.
 
         Parameters
         ----------
@@ -858,306 +833,71 @@ class LazyEBSD(EBSD, LazySignal2D):
             int. If list of ints, rebuilds signal from only components
             in given list.
         dtype_learn : {np.float16, np.float32 or np.float64}, optional
-            Data type to set learning results to (default is float16).
+            Data type to set learning results to (default is float16)
+            before multiplication.
         mbytes_chunk : int, optional
             Size of learning results chunks in MB, default is 100 MB as
             suggested in the Dask documentation.
-        out_dir : str, optional
+        dir_out : str, optional
             Directory to place output signal in.
-        out_fname : str, optional
+        fname_out : str, optional
             Name of output signal file.
+
+        Notes
+        -----
+        Multiplying the learning results' factors and loadings in memory
+        to create the model signal cannot sometimes be done due to too
+        large matrices. Here, instead, learning results are written to
+        file, read into dask arrays and multiplied using dask's
+        ``matmul``, out of core.
         """
 
-        # Change dtype_out
-        target = self.learning_results
-        factors = np.array(target.factors, dtype=dtype_learn)
-        loadings = np.array(target.loadings, dtype=dtype_learn)
-
-        # Extract relevant components
-        if hasattr(components, '__iter__'):  # components is a list of ints
-            # TODO: This should be implemented in HyperSpy
-            factors = factors[:, components]
-            loadings = loadings[:, components]
-        else:  # components is an int
-            factors = factors[:, :components]
-            loadings = loadings[:, :components]
+        # Change data type, keep desired components and rechunk if lazy
+        factors, loadings = kp.util.decomposition._update_learning_results(
+            self.learning_results, components=components, dtype_out=dtype_learn)
 
         # Write learning results to HDF5 file
-        if out_dir is None:
+        if dir_out is None:
             try:
-                out_dir = self.original_metadata.General.original_filepath
+                dir_out = self.original_metadata.General.original_filepath
             except AttributeError:
                 raise AttributeError("Output directory has to be specified")
 
         t_str = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
-        file_learn = os.path.join(out_dir, 'learn_' + t_str + '.h5')
-        with File(file_learn, 'w') as f:
+        file_learn = os.path.join(dir_out, 'learn_' + t_str + '.h5')
+        with File(file_learn, mode='w') as f:
             f.create_dataset(name='factors', data=factors)
             f.create_dataset(name='loadings', data=loadings)
 
         # Matrix multiplication
-        with File(file_learn, 'r') as f:
+        with File(file_learn, mode='r') as f:
             # Read learning results from HDF5 file
-            chunks = self._rechunk_learning_results(mbytes_chunk=mbytes_chunk)
+            chunks = kp.util.dask._rechunk_learning_results(
+                factors=factors, loadings=loadings, mbytes_chunk=mbytes_chunk)
             factors = da.from_array(f['factors'], chunks=chunks[0])
             loadings = da.from_array(f['loadings'], chunks=chunks[1])
 
-            # Perform the matrix multiplication
+            # Perform matrix multiplication
             loadings = loadings.T
             res = factors @ loadings
             res = res.T  # Transpose
 
-            # Create new signal from multiplied matrix
+            # Create new signal from result of matrix multiplication
             s_model = self.deepcopy()
             s_model.learning_results = LearningResults()
             s_model.data = res.reshape(s_model.data.shape)
             s_model.data = s_model.data.rechunk(chunks=(1, 1, -1, -1))
 
-            # Rescale intensities and revert data type
-            s_model.rescale_intensities()
-            s_model.data = s_model.data.astype(self.data.dtype)
+            # Rescale intensities
+            s_model.rescale_intensities(
+                dtype_out=self.data.dtype, relative=True)
 
-            # Write signal to file (rechunking saves a little time?)
-            if out_fname is None:
-                out_fname = 'model_' + t_str
-            file_model = os.path.join(out_dir, out_fname)
+            # Write signal to file
+            if fname_out is None:
+                fname_out = 'model_' + t_str
+            file_model = os.path.join(dir_out, fname_out)
             s_model.save(file_model)
 
         # Delete temporary files
         os.remove(file_learn)
         gc.collect()  # Don't sink
-
-    def _rechunk_learning_results(self, mbytes_chunk=100):
-        """Return suggested data chunks for learning results. It is
-        assumed that the loadings are not transposed. The last axes of
-        factors and loadings are not chunked. The aims in prioritised
-        order:
-            1. Split into at least as many chunks as available CPUs.
-            2. Limit chunks to approx. input MB (`mbytes_chunk`).
-            3. Keep first axis of factors (detector pixels).
-
-        Parameters
-        ----------
-        mbytes_chunk : int, optional
-            Size of chunks in MB, default is 100 MB as suggested in the
-            Dask documentation.
-
-        Returns
-        -------
-        List of two tuples
-            The first/second tuple are suggested chunks to pass to
-            ``dask.array.rechunk`` for factors/loadings, respectively.
-        """
-
-        target = self.learning_results
-        if target.decomposition_algorithm is None:
-            raise ValueError("No learning results were found.")
-
-        # Get dask chunks
-        tshape = target.factors.shape + target.loadings.shape
-
-        # Make sure the last factors/loading axes have the same shapes
-        # TODO: Should also handle the case where the first axes are the same
-        if tshape[1] != tshape[3]:
-            raise ValueError("The last dimensions in factors and loadings are "
-                             "not the same.")
-
-        # Determine maximum number of (strictly necessary) chunks
-        suggested_size = mbytes_chunk * 2**20
-        factors_size = target.factors.nbytes
-        loadings_size = target.loadings.nbytes
-        total_size = factors_size + loadings_size
-        num_chunks = np.ceil(total_size / suggested_size)
-
-        # Get chunk sizes
-        cpus = os.cpu_count()
-        if num_chunks <= cpus:  # Return approx. as many chunks as CPUs
-            chunks = [(-1, -1), (int(tshape[2]/cpus), -1)]  # -1 = don't chunk
-        elif factors_size <= suggested_size:  # Chunk first axis in loadings
-            chunks = [(-1, -1), (int(tshape[2]/num_chunks), -1)]
-        else:  # Chunk both first axes
-            sizes = [factors_size, loadings_size]
-            while (sizes[0] + sizes[1]) >= suggested_size:
-                i = np.argmax(sizes)
-                sizes[i] = np.floor(sizes[i] / 2)
-            factors_chunks = int(np.ceil(factors_size/sizes[0]))
-            loadings_chunks = int(np.ceil(loadings_size/sizes[1]))
-            chunks = [(int(tshape[0]/factors_chunks), -1),
-                      (int(tshape[2]/loadings_chunks), -1)]
-
-        return chunks
-
-    def decomposition(
-            self, normalize_poissonian_noise=False, algorithm=None,
-            output_dimension=None, mbytes_chunk=100,
-            navigation_mask=None, signal_mask=None, *args, **kwargs):
-        """Decomposition with a choice of algorithms.
-
-        For a full description of parameters see
-        :func:`hyperspy._signals.lazy.decomposition()`.
-
-        This is a wrapper for HyperSpy's ``decomposition()`` function,
-        except for an alternative use of scikit-image's IncrementalPCA
-        algorithm.
-
-        Parameters
-        ----------
-        normalize_poissonian_noise : bool
-            If True (default is False), scale the patterns to normalise
-            Poissonian noise.
-        algorithm : {'svd', 'IPCA', 'PCA', 'ORPCA' or 'ONMF'}, optional
-            Default is 'svd', lazy SVD decomposition from dask. 'PCA'
-            gives HyperSpy's use of scikit-learn's IncrementalPCA,
-            while 'IPCA' gives our use of IncrementalPCA.
-        output_dimension : int
-            Number of significant components to keep. If None, keep all
-            (only valid for SVD).
-        mbytes_chunk : int, optional
-            Size of chunks in MB, default is 100 MB as suggested in the
-            Dask documentation.
-        navigation_mask, signal_mask : boolean array_like
-        *args :
-            Arguments to be passed to ``decomposition()``.
-        **kwargs :
-            Keyword arguments to be passed to ``decomposition()``.
-
-        Returns
-        -------
-        The results are stored in self.learning_results.
-        """
-
-        if self.data.dtype.char not in ['e', 'f', 'd']:  # If not float
-            raise TypeError("To perform a decomposition the data must be of "
-                            "float type, but the current type is '{}'. No "
-                            "decomposition was "
-                            "performed.".format(self.data.dtype))
-
-        if algorithm == 'IPCA':
-            if output_dimension is None:
-                raise ValueError("With the IncrementalPCA algorithm, "
-                                 "output_dimension must be specified")
-
-            # Normalise Poissonian noise
-            original_data = self.data
-            if normalize_poissonian_noise:
-                rbH, raG = self._normalize_poissonian_noise(
-                    navigation_mask=navigation_mask, signal_mask=signal_mask)
-
-            # Prepare data matrix
-            nx, ny, sx, sy = self.data.shape
-            n, s = nx * ny, sx * sy
-            X = self.data.reshape((n, s))
-
-            # Determine number of chunks
-            suggested_size = mbytes_chunk * 2 ** 20
-            num_chunks = int(np.ceil(X.nbytes / suggested_size))
-            cpus = os.cpu_count()
-            if num_chunks <= cpus:
-                num_chunks = cpus
-            chunk_size = n // num_chunks
-
-            # Get principal components (factors)
-            ipca = IncrementalPCA(n_components=output_dimension)
-            for i in tqdm.tqdm(iterable=range(0, num_chunks), total=num_chunks,
-                               leave=True, desc='Learn'):
-                start = i * chunk_size
-                end = (i + 1) * chunk_size
-                if i == (num_chunks - 1):  # Last iteration
-                    end = None
-                ipca.partial_fit(X[start:end])  # Fit
-            factors = ipca.components_.T
-
-            # Reproject data on the principal components (loadings)
-            loadings = []
-            for j in tqdm.tqdm(iterable=range(0, num_chunks), total=num_chunks,
-                               leave=True, desc='Project'):
-                start = j * chunk_size
-                end = (j + 1) * chunk_size
-                if j == (num_chunks - 1):  # Last iteration
-                    end = None
-                loadings.append(ipca.transform(X[start:end]))  # Reproject
-            loadings = np.concatenate(loadings, axis=0)
-
-            # Set signal's learning results
-            target = self.learning_results
-            target.decomposition_algorithm = algorithm
-            target.output_dimension = output_dimension
-            target.factors = factors
-            target.loadings = loadings
-            target.explained_variance = ipca.explained_variance_
-            target.explained_variance_ratio = ipca.explained_variance_ratio_
-
-            # Revert data
-            self.data = original_data
-
-            if normalize_poissonian_noise is True:
-                target.factors = target.factors * rbH.ravel()[:, np.newaxis]
-                target.loadings = target.loadings * raG.ravel()[:, np.newaxis]
-
-        else:  # Call HyperSpy's implementation
-            super().decomposition(normalize_poissonian_noise, algorithm,
-                                  output_dimension, navigation_mask,
-                                  signal_mask, *args, **kwargs)
-
-        self.__class__ = LazyEBSD
-
-    def _normalize_poissonian_noise(
-            self, navigation_mask=None, signal_mask=None):
-        """Scales the patterns following [1]_.
-
-        Adapted from HyperSpy.
-
-        Parameters
-        ----------
-        navigation_mask, signal_mask : boolean array_like
-
-        Returns
-        -------
-        raG : array_like
-            Matrix corresponding to square root of aG in referenced
-            paper.
-        rbH : array_like
-            Matrix corresponding to square root of bH in referenced
-            paper.
-
-        References
-        ----------
-        .. [1] Keenan, Michael R, Kotula, Paul G: Accounting for Poisson
-               noise in the multivariate analysis of ToF-SIMS spectrum
-               images, Surface and Interface Analysis 36(3), Wiley
-               Online Library, 203–212, 2004.
-        """
-
-        data = self._data_aligned_with_axes
-        ndim = self.axes_manager.navigation_dimension
-        sdim = self.axes_manager.signal_dimension
-        nav_chunks = data.chunks[:ndim]
-        sig_chunks = data.chunks[ndim:]
-        nm = da.logical_not(
-            da.zeros(self.axes_manager.navigation_shape[::-1],
-                     chunks=nav_chunks)
-            if navigation_mask is None else to_array(
-                navigation_mask, chunks=nav_chunks))
-        sm = da.logical_not(
-            da.zeros(
-                self.axes_manager.signal_shape[::-1],
-                chunks=sig_chunks)
-            if signal_mask is None else to_array(
-                signal_mask, chunks=sig_chunks))
-        bH, aG = da.compute(
-            data.sum(axis=tuple(range(ndim))),
-            data.sum(axis=tuple(range(ndim, ndim + sdim))))
-        bH = da.where(sm, bH, 1)
-        aG = da.where(nm, aG, 1)
-
-        raG = da.sqrt(aG)
-        rbH = da.sqrt(bH)
-
-        coeff = raG[(...,) + (None,) * rbH.ndim] * \
-                rbH[(None,) * raG.ndim + (...,)]
-        coeff.map_blocks(np.nan_to_num)
-        coeff = da.where(coeff == 0, 1, coeff)
-        data = data / coeff
-        self.data = data
-
-        return rbH, raG

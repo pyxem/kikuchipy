@@ -18,6 +18,7 @@
 
 import os
 
+import dask.array as da
 import numpy as np
 import pytest
 
@@ -39,12 +40,7 @@ class TestDask:
         elif mbytes_chunk == 50:
             nx, ny = (66, 200)
         else:  # mbytes_chunk == 100
-            # Here we assume that the computer running the tests have four CPUs
-            # or more... don't know how to test functions using os.cpu_counts().
-            if os.cpu_count() >= 4:
-                nx, ny = (74, 200)
-            else:
-                nx, ny = (136, 200)
+            nx, ny = (136, 200)
         assert chunks == [ny, nx, 60, 60]
 
     def test_get_dask_array(self):
@@ -57,3 +53,27 @@ class TestDask:
         s.data = dask_array.rechunk((5, 5, 120, 120))
         dask_array = kp.util.dask._get_dask_array(s)
         assert dask_array.chunksize == (5, 5, 120, 120)
+
+    def test_rechunk_learning_results(self):
+        data = da.from_array(np.random.rand(10, 100, 100, 5).astype(np.float32))
+        lazy_signal = kp.signals.LazyEBSD(data)
+
+        # Decomposition
+        lazy_signal.decomposition(algorithm='PCA', output_dimension=10)
+        factors = lazy_signal.learning_results.factors
+        loadings = lazy_signal.learning_results.loadings
+
+        # Raise error when last dimension in factors/loadings are not identical
+        with pytest.raises(ValueError, match='The last dimensions in factors'):
+            kp.util.dask._rechunk_learning_results(
+                factors=factors, loadings=loadings.T)
+
+        # Only chunk first axis in loadings
+        chunks = kp.util.dask._rechunk_learning_results(
+            factors=factors, loadings=loadings, mbytes_chunk=0.02)
+        assert chunks == [(-1, -1), (200, -1)]
+
+        # Chunk first axis in both loadings and factors
+        chunks = kp.util.dask._rechunk_learning_results(
+            factors=factors, loadings=loadings, mbytes_chunk=0.01)
+        assert chunks == [(125, -1), (62, -1)]

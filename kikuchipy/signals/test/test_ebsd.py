@@ -21,11 +21,13 @@ import os
 import dask.array as da
 import hyperspy.api as hs
 from hyperspy.misc.utils import DictionaryTreeBrowser
+import matplotlib
 import numpy as np
 import pytest
 
 import kikuchipy as kp
 
+matplotlib.use('Agg')  # For plotting
 
 DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, '../../data/kikuchipy/patterns.h5')
@@ -370,6 +372,101 @@ class TestVirtualDetectorImaging:
 
     def test_virtual_detector_image(self, dummy_signal):
         roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
-        virtual_image_signal = dummy_signal.get_virtual_detector_image(roi)
+        virtual_image_signal = dummy_signal.get_virtual_image(roi)
         assert (virtual_image_signal.data.shape ==
                 dummy_signal.axes_manager.navigation_shape)
+
+
+class TestDecomposition:
+
+    def test_decomposition(self, dummy_signal):
+        dummy_signal.change_dtype(np.float32)
+        dummy_signal.decomposition()
+        assert isinstance(dummy_signal, kp.signals.EBSD)
+
+    def test_lazy_decomposition(self, dummy_signal):
+        lazy_signal = dummy_signal.as_lazy()
+        lazy_signal.change_dtype(np.float32)
+        lazy_signal.decomposition()
+        assert isinstance(lazy_signal, kp.signals.LazyEBSD)
+
+    @pytest.mark.parametrize('components, dtype_out, mean', [
+        (None, np.float16, 4.520), (None, np.float32, 4.518695),
+        (3, np.float16, 4.516), ([0, 1, 3], np.float16, 4.504)])
+    def test_get_decomposition_model(
+            self, dummy_signal, components, dtype_out, mean):
+
+        # Decomposition
+        dummy_signal.change_dtype(np.float32)
+        dummy_signal.decomposition(algorithm='svd')
+
+        # Get decomposition model
+        model_signal = dummy_signal.get_decomposition_model(
+            components=components, dtype_out=dtype_out)
+
+        # Check data shape, signal class and pattern intensities in model
+        # signal
+        assert model_signal.data.shape == dummy_signal.data.shape
+        assert isinstance(model_signal, kp.signals.EBSD)
+        np.testing.assert_almost_equal(
+            model_signal.data.mean(), mean, decimal=3)
+
+    @pytest.mark.parametrize('components, intensity_mean', [
+        (None, 132.1358), (3, 122.9629), ([0, 1, 3], 116.8148)])
+    def test_get_decomposition_model_lazy(
+            self, dummy_signal, components, intensity_mean):
+
+        # Decomposition
+        lazy_signal = dummy_signal.as_lazy()
+        lazy_signal.change_dtype(np.float32)
+        lazy_signal.decomposition(algorithm='PCA', output_dimension=9)
+
+        # Turn factors and loadings into dask arrays
+        lazy_signal.learning_results.factors = da.from_array(
+            lazy_signal.learning_results.factors)
+        lazy_signal.learning_results.loadings = da.from_array(
+            lazy_signal.learning_results.loadings)
+
+        # Get decomposition model
+        model_signal = lazy_signal.get_decomposition_model(
+            components=components, dtype_out=np.float32)
+
+        # Check data shape, signal class and pattern intensities in model
+        # signal after rescaling to 8 bit unsigned integer
+        assert model_signal.data.shape == lazy_signal.data.shape
+        assert isinstance(model_signal, kp.signals.LazyEBSD)
+        model_signal.rescale_intensities(relative=True, dtype_out=np.uint8)
+        model_mean = model_signal.data.mean().compute()
+        np.testing.assert_almost_equal(model_mean, intensity_mean, decimal=4)
+
+    @pytest.mark.parametrize('components, mean_intensity', [
+        (None, 132.1975), (3, 123.0987)])
+    def test_get_decomposition_model_write(
+            self, dummy_signal, temporary_dir, components,
+            mean_intensity):
+
+        lazy_signal = dummy_signal.as_lazy()
+        dtype_in = lazy_signal.data.dtype
+
+        # Decomposition
+        lazy_signal.change_dtype(np.float32)
+        lazy_signal.decomposition(algorithm='PCA', output_dimension=9)
+        lazy_signal.change_dtype(dtype_in)
+
+        with pytest.raises(AttributeError, match='Output directory has to be'):
+            lazy_signal.get_decomposition_model_write()
+
+        # Current time stamp is added to output file name
+        lazy_signal.get_decomposition_model_write(dir_out=temporary_dir)
+
+        # Reload file to check...
+        fname_out = 'test.h5'
+        lazy_signal.get_decomposition_model_write(
+            components=components, dir_out=temporary_dir, fname_out=fname_out)
+        s_reload = kp.load(os.path.join(temporary_dir, fname_out))
+
+        # ... data type, data shape and mean intensity
+        assert s_reload.data.dtype == lazy_signal.data.dtype
+        assert s_reload.data.shape == lazy_signal.data.shape
+        np.testing.assert_almost_equal(
+            s_reload.data.mean(), mean_intensity, decimal=4)

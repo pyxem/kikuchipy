@@ -17,7 +17,6 @@
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-import os
 
 import dask.array as da
 import numpy as np
@@ -27,10 +26,9 @@ _logger = logging.getLogger(__name__)
 
 def _get_chunks(data_shape, dtype, mbytes_chunk=100):
     """Return suggested data chunks for patterns. Signal axes are not
-    chunked. Goals in prioritised order are (i) split into at least as
-    many chunks as available CPUs if convenient, (ii) limit chunks to
-    approximately input mega bytes, `mbytes_chunk`, and (iii) chunk only
-    one navigation axis.
+    chunked. Goals in prioritised order are (i) limit chunks to
+    approximately input mega bytes in `mbytes_chunk`, and (ii) chunk
+    only one navigation axis.
 
     Parameters
     ----------
@@ -56,14 +54,8 @@ def _get_chunks(data_shape, dtype, mbytes_chunk=100):
     nav_chunks = data_shape[:-2]
     data_nbytes = data_shape.prod() * dtype.itemsize
     pattern_size = data_nbytes / nav_chunks.prod()
-    num_chunks = np.ceil(data_nbytes / suggested_size)
     i_min, i_max = np.argmin(nav_chunks), np.argmax(nav_chunks)
-    cpus = os.cpu_count()
-    if num_chunks <= cpus:  # Return approx. as many chunks as CPUs
-        if cpus >= 4:  # But not too many chunks
-            cpus = 4
-        nav_chunks[i_max] = nav_chunks[i_max] // cpus
-    elif (nav_chunks[i_min] * pattern_size) < suggested_size:
+    if (nav_chunks[i_min] * pattern_size) < suggested_size:
         # Chunk longest navigation axis
         while (nav_chunks.prod() * pattern_size) >= suggested_size:
             nav_chunks[i_max] = np.floor(nav_chunks[i_max] / 1.1)
@@ -72,7 +64,9 @@ def _get_chunks(data_shape, dtype, mbytes_chunk=100):
             i_max = np.argmax(nav_chunks)
             nav_chunks[i_max] = np.floor(nav_chunks[i_max] / 1.1)
     chunks = list(nav_chunks) + list(sig_chunks)
+
     _logger.info("Suggested chunk size {}".format(chunks))
+
     return chunks
 
 
@@ -102,4 +96,60 @@ def _get_dask_array(signal, dtype=None):
         chunks = [8] * len(signal.axes_manager.navigation_shape)
         chunks.extend(sig_chunks)
         dask_array = da.from_array(signal.data, chunks=chunks)
+
     return dask_array.astype(dtype)
+
+
+def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
+    """Return suggested data chunks for learning results. It is assumed
+    that the loadings are not transposed. The last axes of factors and
+    loadings are not chunked. The aims in prioritised order:
+        1. Limit chunks to approximately input MB (`mbytes_chunk`).
+        2. Keep first axis of factors (detector pixels).
+
+    Parameters
+    ----------
+    factors : hyperspy.learn.mva.LearningResults.factors
+        Component patterns in learning results.
+    loadings : hyperspy.learn.mva.LearningResults.loadings
+        Component loadings in learning results.
+    mbytes_chunk : int, optional
+        Size of chunks in MB, default is 100 MB as suggested in the Dask
+        documentation.
+
+    Returns
+    -------
+    List of two tuples :
+        The first/second tuple are suggested chunks to pass to
+        ``dask.array.rechunk`` for factors/loadings, respectively.
+    """
+
+    # Make sure the last factors/loading axes have the same shapes
+    if factors.shape[-1] != loadings.shape[-1]:
+        raise ValueError(
+            "The last dimensions in factors and loadings are not the same.")
+
+    # Get shape of learning results
+    learning_results_shape = factors.shape + loadings.shape
+
+    # Determine maximum number of (strictly necessary) chunks
+    suggested_size = mbytes_chunk * 2**20
+    factors_size = factors.nbytes
+    loadings_size = loadings.nbytes
+    total_size = factors_size + loadings_size
+    num_chunks = np.ceil(total_size / suggested_size)
+
+    # Get chunk sizes
+    if factors_size <= suggested_size:  # Chunk first axis in loadings
+        chunks = [(-1, -1), (int(learning_results_shape[2]/num_chunks), -1)]
+    else:  # Chunk both first axes
+        sizes = [factors_size, loadings_size]
+        while (sizes[0] + sizes[1]) >= suggested_size:
+            max_idx = int(np.argmax(sizes))
+            sizes[max_idx] = np.floor(sizes[max_idx] / 2)
+        factors_chunks = int(np.ceil(factors_size/sizes[0]))
+        loadings_chunks = int(np.ceil(loadings_size/sizes[1]))
+        chunks = [(int(learning_results_shape[0]/factors_chunks), -1),
+                  (int(learning_results_shape[2]/loadings_chunks), -1)]
+
+    return chunks
