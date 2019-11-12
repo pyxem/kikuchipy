@@ -412,7 +412,7 @@ class TestDecomposition:
             model_signal.data.mean(), mean, decimal=3)
 
     @pytest.mark.parametrize('components, intensity_mean', [
-        (None, -3.53e-08), (3, -1.17e-08), ([0, 1, 3], -5.8e-09)])
+        (None, 132.1358), (3, 122.9629), ([0, 1, 3], 116.8148)])
     def test_get_decomposition_model_lazy(
             self, dummy_signal, components, intensity_mean):
 
@@ -432,11 +432,12 @@ class TestDecomposition:
             components=components, dtype_out=np.float32)
 
         # Check data shape, signal class and pattern intensities in model
-        # signal
+        # signal after rescaling to 8 bit unsigned integer
         assert model_signal.data.shape == lazy_signal.data.shape
         assert isinstance(model_signal, kp.signals.LazyEBSD)
+        model_signal.rescale_intensities(relative=True, dtype_out=np.uint8)
         model_mean = model_signal.data.mean().compute()
-        np.testing.assert_almost_equal(model_mean, intensity_mean, decimal=8)
+        np.testing.assert_almost_equal(model_mean, intensity_mean, decimal=4)
 
     @pytest.mark.parametrize('components, mean_intensity', [
         (None, 132.1975), (3, 123.0987)])
