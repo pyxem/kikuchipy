@@ -415,7 +415,6 @@ class TestDecomposition:
         (None, 132.1358), (3, 122.9629), ([0, 1, 3], 116.8148)])
     def test_get_decomposition_model_lazy(
             self, dummy_signal, components, mean_intensity):
-
         # Decomposition
         lazy_signal = dummy_signal.as_lazy()
         lazy_signal.change_dtype(np.float32)
@@ -443,7 +442,6 @@ class TestDecomposition:
         (None, 132.1975), (3, 123.0987)])
     def test_get_decomposition_model_write(
             self, dummy_signal, components, mean_intensity, tmp_path):
-
         lazy_signal = dummy_signal.as_lazy()
         dtype_in = lazy_signal.data.dtype
 
@@ -469,3 +467,32 @@ class TestDecomposition:
         assert s_reload.data.shape == lazy_signal.data.shape
         np.testing.assert_almost_equal(
             s_reload.data.mean(), mean_intensity, decimal=4)
+
+    def test_rebin(self, dummy_signal):
+        ebsd_node = kp.util.io.metadata_nodes(sem=False)
+
+        # Passing new_shape, only scaling in signal space
+        new_shape = (3, 3, 2, 1)
+        new_binning = dummy_signal.axes_manager.shape[3] / new_shape[3]
+        s2 = dummy_signal.rebin(new_shape=new_shape)
+        assert s2.axes_manager.shape == new_shape
+        assert s2.metadata.get_item(ebsd_node + '.binning') == new_binning
+
+        # Passing scale, also scaling in navigation space
+        scale = (3, 1, 3, 2)
+        s2 = dummy_signal.rebin(scale=scale)
+        expected_new_shape = [int(i / j) for i, j in zip(
+            dummy_signal.axes_manager.shape, scale)]
+        assert s2.axes_manager.shape == tuple(expected_new_shape)
+        assert s2.metadata.get_item(ebsd_node + '.binning') == float(scale[2])
+
+        # Passing lazy signal to out parameter, only scaling in signal space but
+        # upscaling
+        scale = (1, 1, 1, 0.5)
+        expected_new_shape = [int(i / j) for i, j in zip(
+            dummy_signal.axes_manager.shape, scale)]
+        s2 = dummy_signal.copy().as_lazy()
+        s3 = dummy_signal.rebin(scale=scale, out=s2)
+        assert s2.axes_manager.shape == tuple(expected_new_shape)
+        assert s2.metadata.get_item(ebsd_node + '.binning') == float(scale[3])
+        assert s3 is None
