@@ -2,4 +2,4 @@
 source = kikuchipy
 omit =
     kikuchipy/setup.py
-    kikuchipy/version.py
+    kikuchipy/release.py

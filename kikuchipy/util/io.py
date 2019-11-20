@@ -36,7 +36,7 @@ def kikuchipy_metadata():
     md = DictionaryTreeBrowser()
     sem_node, ebsd_node = metadata_nodes()
     ebsd = {
-        'azimuth_angle': 1., 'binning': 1, 'detector': '',
+        'azimuth_angle': 1., 'binning': 1., 'detector': '',
         'elevation_angle': 1., 'exposure_time': 1, 'frame_number': 1,
         'frame_rate': 1, 'gain': 1., 'grid_type': '', 'sample_tilt': 1.,
         'scan_time': 1., 'static_background': 1, 'xpc': 1., 'ypc': 1.,

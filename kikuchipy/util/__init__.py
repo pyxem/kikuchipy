@@ -17,4 +17,4 @@
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
 from kikuchipy.util import (
-    dask, decomposition, experimental, general, io, nordif, phase)
+    dask, decomposition, experimental, general, io, phase)

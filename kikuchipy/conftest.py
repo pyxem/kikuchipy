@@ -30,7 +30,8 @@ import kikuchipy as kp
 def dummy_signal():
     """Dummy signal of shape <3, 3|3, 3>. If this is changed, all tests
     using this signal will fail since they compare the output from
-    methods using this signal (as input) to hard-coded outputs."""
+    methods using this signal (as input) to hard-coded outputs.
+    """
 
     dummy_array = np.array(
         [5, 6, 5, 7, 6, 5, 6, 1, 0, 9, 7, 8, 7, 0, 8, 8, 7, 6, 0, 3, 3, 5, 2, 9,
@@ -45,7 +46,8 @@ def dummy_background():
     """Dummy static background pattern for the dummy signal. If this
     is changed, all tests using this background will fail since they
     compare the output from methods using this background (as input) to
-    hard-coded outputs."""
+    hard-coded outputs.
+    """
 
     return np.array(
         [5, 4, 5, 4, 3, 4, 4, 4, 3], dtype=np.uint8).reshape((3, 3))
@@ -54,19 +56,10 @@ def dummy_background():
 @pytest.fixture()
 def save_path_h5ebsd():
     """Temporary file in a temporary directory for use when tests need
-    to write (and sometimes read again) a signal to file."""
+    to write, and sometimes read again, a signal to, and from, a file.
+    """
 
     with tempfile.TemporaryDirectory() as tmp:
         file_path = os.path.join(tmp, 'patterns_temp.h5')
         yield file_path
-        gc.collect()
-
-
-@pytest.fixture()
-def temporary_dir():
-    """Temporary directory to use when tests need
-    to write (and sometimes read again) stuff to a directory."""
-
-    with tempfile.TemporaryDirectory() as tmp:
-        yield tmp
         gc.collect()

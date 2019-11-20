@@ -760,20 +760,33 @@ class EBSD(Signal2D):
         return s_model
 
     def rebin(self, new_shape=None, scale=None, crop=True, out=None):
-        out = super().rebin(
+        s_out = super().rebin(
             new_shape=new_shape, scale=scale, crop=crop, out=out)
-        _logger.info("Rebinning changed data type to {}".format(out.data.dtype))
 
-        # Update binning in metadata
-        md = out.metadata
+        return_signal = True
+        if s_out is None:
+            s_out = out
+            return_signal = False
+
+        # Update binning in metadata to signal dimension with largest or lowest
+        # binning if downscaling or upscaling, respectively
+        md = s_out.metadata
         ebsd_node = kp.util.io.metadata_nodes(sem=False)
         if scale is None:
-            sx = self.axes_manager.signal_shape[0]
-            scale = [sx / new_shape[2]]
-        old_binning = md.get_item(ebsd_node + '.binning')
-        md.set_item(ebsd_node + '.binning', scale[2] * old_binning)
+            sx, sy = self.axes_manager.signal_shape
+            signal_idx = self.axes_manager.signal_indices_in_array
+            scale = (sx / new_shape[signal_idx[0]],
+                     sy / new_shape[signal_idx[1]])
+        upscaled_dimensions = np.where(np.array(scale) < 1)[0]
+        if len(upscaled_dimensions):
+            new_binning = np.min(scale)
+        else:
+            new_binning = np.max(scale)
+        original_binning = md.get_item(ebsd_node + '.binning')
+        md.set_item(ebsd_node + '.binning', original_binning * new_binning)
 
-        return out
+        if return_signal:
+            return s_out
 
     def as_lazy(self, *args, **kwargs):
         """Create a `kp.signals.LazyEBSD` object from a
@@ -795,7 +808,7 @@ class EBSD(Signal2D):
         self.__class__ = EBSD
 
 
-class LazyEBSD(LazySignal2D, EBSD):
+class LazyEBSD(EBSD, LazySignal2D):
 
     _lazy = True
 
