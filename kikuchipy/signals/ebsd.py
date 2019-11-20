@@ -25,7 +25,6 @@ import sys
 
 import dask.array as da
 import dask.diagnostics as dd
-from hyperspy.signal import BaseSignal
 from hyperspy._signals.signal2d import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
