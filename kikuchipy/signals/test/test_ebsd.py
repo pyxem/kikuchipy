@@ -493,6 +493,14 @@ class TestDecomposition:
             dummy_signal.axes_manager.shape, scale)]
         s2 = dummy_signal.copy().as_lazy()
         s3 = dummy_signal.rebin(scale=scale, out=s2)
+        assert isinstance(s2, kp.signals.LazyEBSD)
         assert s2.axes_manager.shape == tuple(expected_new_shape)
         assert s2.metadata.get_item(ebsd_node + '.binning') == float(scale[3])
         assert s3 is None
+
+    def test_compute(self, dummy_signal):
+        lazy_signal = dummy_signal.as_lazy()
+
+        lazy_signal.compute()
+        assert isinstance(lazy_signal, kp.signals.EBSD)
+        assert lazy_signal._lazy is False
