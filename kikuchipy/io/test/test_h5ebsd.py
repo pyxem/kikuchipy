@@ -213,7 +213,7 @@ class Testh5ebsd:
         with pytest.raises(NotImplementedError):
             s.data[:] = 23
 
-    def test_save_fresh(self, save_path_h5ebsd):
+    def test_save_fresh(self, save_path_h5ebsd, tmp_path):
         scan_size = (10, 3)
         pattern_size = (5, 5)
         data_shape = scan_size + pattern_size
@@ -222,6 +222,15 @@ class Testh5ebsd:
         s.save(save_path_h5ebsd, overwrite=True)
         s_reload = kp.load(save_path_h5ebsd)
         np.testing.assert_equal(s.data, s_reload.data)
+
+        # Test writing of signal to file when no file name is passed to save()
+        del s.tmp_parameters.filename
+        with pytest.raises(ValueError, match='Filename not defined'):
+            s.save(overwrite=True)
+
+        s.metadata.General.original_filename = 'an_original_filename'
+        os.chdir(tmp_path)
+        s.save(overwrite=True)
 
     @pytest.mark.parametrize('scan_number', (1, 2))
     def test_save_multiple(self, save_path_h5ebsd, scan_number):

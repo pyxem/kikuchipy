@@ -390,11 +390,11 @@ class TestDecomposition:
         lazy_signal.decomposition()
         assert isinstance(lazy_signal, kp.signals.LazyEBSD)
 
-    @pytest.mark.parametrize('components, dtype_out, mean', [
+    @pytest.mark.parametrize('components, dtype_out, mean_intensity', [
         (None, np.float16, 4.520), (None, np.float32, 4.518695),
         (3, np.float16, 4.516), ([0, 1, 3], np.float16, 4.504)])
     def test_get_decomposition_model(
-            self, dummy_signal, components, dtype_out, mean):
+            self, dummy_signal, components, dtype_out, mean_intensity):
 
         # Decomposition
         dummy_signal.change_dtype(np.float32)
@@ -409,12 +409,12 @@ class TestDecomposition:
         assert model_signal.data.shape == dummy_signal.data.shape
         assert isinstance(model_signal, kp.signals.EBSD)
         np.testing.assert_almost_equal(
-            model_signal.data.mean(), mean, decimal=3)
+            model_signal.data.mean(), mean_intensity, decimal=3)
 
-    @pytest.mark.parametrize('components, intensity_mean', [
+    @pytest.mark.parametrize('components, mean_intensity', [
         (None, 132.1358), (3, 122.9629), ([0, 1, 3], 116.8148)])
     def test_get_decomposition_model_lazy(
-            self, dummy_signal, components, intensity_mean):
+            self, dummy_signal, components, mean_intensity):
 
         # Decomposition
         lazy_signal = dummy_signal.as_lazy()
@@ -437,13 +437,12 @@ class TestDecomposition:
         assert isinstance(model_signal, kp.signals.LazyEBSD)
         model_signal.rescale_intensities(relative=True, dtype_out=np.uint8)
         model_mean = model_signal.data.mean().compute()
-        np.testing.assert_almost_equal(model_mean, intensity_mean, decimal=4)
+        np.testing.assert_almost_equal(model_mean, mean_intensity, decimal=4)
 
     @pytest.mark.parametrize('components, mean_intensity', [
         (None, 132.1975), (3, 123.0987)])
     def test_get_decomposition_model_write(
-            self, dummy_signal, temporary_dir, components,
-            mean_intensity):
+            self, dummy_signal, components, mean_intensity, tmp_path):
 
         lazy_signal = dummy_signal.as_lazy()
         dtype_in = lazy_signal.data.dtype
@@ -457,13 +456,13 @@ class TestDecomposition:
             lazy_signal.get_decomposition_model_write()
 
         # Current time stamp is added to output file name
-        lazy_signal.get_decomposition_model_write(dir_out=temporary_dir)
+        lazy_signal.get_decomposition_model_write(dir_out=tmp_path)
 
         # Reload file to check...
         fname_out = 'test.h5'
         lazy_signal.get_decomposition_model_write(
-            components=components, dir_out=temporary_dir, fname_out=fname_out)
-        s_reload = kp.load(os.path.join(temporary_dir, fname_out))
+            components=components, dir_out=tmp_path, fname_out=fname_out)
+        s_reload = kp.load(os.path.join(tmp_path, fname_out))
 
         # ... data type, data shape and mean intensity
         assert s_reload.data.dtype == lazy_signal.data.dtype
