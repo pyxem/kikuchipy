@@ -504,8 +504,8 @@ class EBSD(Signal2D):
 
     def adaptive_histogram_equalization(
             self, kernel_size=None, clip_limit=0, nbins=128):
-        """Local contrast enhancement inplace through adaptive histogram
-        equalization as implemented in `scikit-image`.
+        """Local contrast enhancement inplace with adaptive histogram
+        equalization.
 
         Parameters
         ----------
@@ -522,7 +522,8 @@ class EBSD(Signal2D):
 
         See also
         --------
-        rescale_intensities
+        dynamic_background_correction, rescale_intensities,
+        static_background_correction
 
         Examples
         --------
@@ -721,7 +722,7 @@ class EBSD(Signal2D):
         dtype_out : {np.float16, np.float32, np.float64}, optional
             Data to cast learning results to (default is np.float16).
             Note that HyperSpy casts them to np.float64.
-        *args, **kwargs :
+        *args, **kwargs
             Passed to Hyperspy's `get_decomposition_model()`.
 
         Returns
@@ -789,12 +790,12 @@ class EBSD(Signal2D):
             return s_out
 
     def as_lazy(self, *args, **kwargs):
-        """Create a `kp.signals.LazyEBSD` object from a
-        `kp.signals.EBSD` object.
+        """Create a :py:class:`~kikuchipy.signals.ebsd.LazyEBSD` object
+        from a :py:class:`~kikuchipy.signals.ebsd.EBSD` object.
 
         Returns
         -------
-        lazy_signal : kp.signals.LazyEBSD
+        lazy_signal : :py:class:`~kikuchipy.signals.ebsd.LazyEBSD`
             Lazy signal.
         """
 

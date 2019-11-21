@@ -25,10 +25,11 @@ _logger = logging.getLogger(__name__)
 
 
 def _get_chunks(data_shape, dtype, mbytes_chunk=100):
-    """Return suggested data chunks for patterns. Signal axes are not
-    chunked. Goals in prioritised order are (i) limit chunks to
-    approximately input mega bytes in `mbytes_chunk`, and (ii) chunk
-    only one navigation axis.
+    """Return suggested data chunks for patterns.
+
+    Signal axes are not chunked. Goals in prioritised order are (i) limit chunks
+    to approximately input mega bytes in `mbytes_chunk`, and (ii) chunk only one
+    navigation axis.
 
     Parameters
     ----------
@@ -101,11 +102,12 @@ def _get_dask_array(signal, dtype=None):
 
 
 def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
-    """Return suggested data chunks for learning results. It is assumed
-    that the loadings are not transposed. The last axes of factors and
-    loadings are not chunked. The aims in prioritised order:
-        1. Limit chunks to approximately input MB (`mbytes_chunk`).
-        2. Keep first axis of factors (detector pixels).
+    """Return suggested data chunks for learning results.
+
+    It is assumed that the loadings are not transposed. The last axes of factors
+    and loadings are not chunked. The aims in prioritised order: 1. Limit chunks
+    to approximately input MB (`mbytes_chunk`). 2. Keep first axis of factors
+    (detector pixels).
 
     Parameters
     ----------
