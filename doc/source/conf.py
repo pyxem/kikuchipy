@@ -77,4 +77,4 @@ master_doc = 'index'
 pygments_style = 'solarized-light'
 
 # Logo
-html_logo = '_static/'
+#html_logo = '_static/'

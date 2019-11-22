@@ -2,21 +2,24 @@
 KikuchiPy reference
 ===================
 
-This reference manual details all EBSD class methods and utility functions
-included in KikuchiPy, as generated from their docstrings. For learning how to
-use KikuchiPy, see the user guide pages in the sidebar.
+This reference manual details all EBSD class methods, readers of EBSD formats
+and utility functions included in KikuchiPy, as generated from their docstrings.
+For learning how to use KikuchiPy, see the user guide pages in the sidebar.
 
-Note that while also private functions, i.e. functions that starts with an
-underscore, are listed, their input parameters and behaviours may change between
-minor package updates.
+.. note::
+    Private functions that start with an underscore are listed in the reference
+    for completeness. However, they may be removed, moved or their input
+    parameters and behaviour may change between minor package updates. You
+    should take care if you use them directly.
 
 EBSD class and methods
 ======================
 
-While some methods listed here are only available to LazyEBSD objects, almost
-all methods available to EBSD objects, apart from
+While some methods listed here are only available to
+:py:class:`~kikuchipy.signals.ebsd.LazyEBSD` objects, all methods available to
+:py:class:`~kikuchipy.signals.ebsd.EBSD` objects, apart from
 :py:meth:`~kikuchipy.signals.ebsd.EBSD.as_lazy()`, are also available to
-LazyEBSD objects.
+:py:class:`~kikuchipy.signals.ebsd.LazyEBSD` objects.
 
 .. autoclass:: kikuchipy.signals.ebsd.EBSD
     :members:

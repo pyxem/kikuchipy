@@ -291,7 +291,7 @@ class EBSD(Signal2D):
         relative : bool, optional
             Keep relative intensities between patterns (default is
             False).
-        static_bg : {np.ndarray, da.Array or None}, optional
+        static_bg : np.ndarray, da.Array or None, optional
             Static background pattern. If not passed we try to read it
             from the signal metadata.
 
@@ -386,15 +386,18 @@ class EBSD(Signal2D):
 
     def dynamic_background_correction(
             self, operation='subtract', sigma=None):
-        """Correct dynamic background inplace by subtracting/dividing
-        by a blurred version of each pattern. Returned pattern
-        intensities are stretched to fill the input data type range.
+        """Correct dynamic background inplace by subtracting or dividing
+        by a blurred version of each pattern.
+
+        Resulting pattern intensities are stretched to fill the
+        available grey levels in the patterns'
+        :py:class:`numpy.dtype` range.
 
         Parameters
         ----------
         operation : 'subtract' or 'divide', optional
             Subtract (default) or divide by dynamic background pattern.
-        sigma : {int, float or None}, optional
+        sigma : int, float or None, optional
             Standard deviation of the gaussian kernel. If None
             (default), a deviation of pattern width/30 is chosen.
 
@@ -406,8 +409,8 @@ class EBSD(Signal2D):
         --------
         Traditional background correction includes static and dynamic
         corrections, loosing relative intensities between patterns after
-        dynamic corrections (whether `relative` is set to `True` or
-        `False` in `static_background_correction`):
+        dynamic corrections (whether ``relative`` is set to ``True`` or
+        ``False`` in :py:meth:`~static_background_correction`):
 
         >>> s.static_background_correction(operation='subtract')
         >>> s.dynamic_background_correction(
@@ -616,8 +619,8 @@ class EBSD(Signal2D):
         formed from detector intensities within a region of interest
         (ROI) on the detector.
 
-        Adapted from pyxem.signals.diffraction2d.Diffraction2D.\
-        get_virtual_image().
+        Adapted from
+        :py:meth:`pyxem.signals.diffraction2d.Diffraction2D.get_virtual_image`.
 
         Parameters
         ----------
@@ -626,7 +629,7 @@ class EBSD(Signal2D):
 
         Returns
         -------
-        virtual_image : hyperspy.signals.BaseSignal
+        virtual_image : :py:class:`hyperspy.signal.BaseSignal`
             VFSD image formed from detector intensities within an ROI
             on the detector.
 
@@ -635,7 +638,7 @@ class EBSD(Signal2D):
         >>> import hyperspy.api as hs
         >>> roi = hs.roi.RectangularROI(
                 left=0, right=5, top=0, bottom=5)
-            vfsd_image = s.get_virtual_image(roi)
+        >>> vfsd_image = s.get_virtual_image(roi)
         """
 
         return Diffraction2D.get_virtual_image(self, roi)
@@ -660,15 +663,15 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        filename : {str or None}, optional
+        filename : str or None, optional
             If None (default) and `tmp_parameters.filename` and
             `tmp_parameters.folder` are defined, the filename and path
             will be taken from there. A valid extension can be provided
             e.g. "data.h5", see `extension`.
-        overwrite : {None, bool}, optional
+        overwrite : None or bool, optional
             If None and the file exists, it will query the user. If
             True (False) it (does not) overwrite the file if it exists.
-        extension : {None, 'h5', 'hdf5', 'h5ebsd', 'dat', 'hspy'},
+        extension : None, 'h5', 'hdf5', 'h5ebsd', 'dat' or 'hspy',
                 optional
             Extension of the file that defines the file format. 'h5',
             'hdf5' and 'h5ebsd' are equivalent. If None, the extension
@@ -702,32 +705,35 @@ class EBSD(Signal2D):
         self.__class__ = EBSD
 
     def get_decomposition_model(
-            self, components=None, dtype_out=np.float16, *args,
-            **kwargs):
+            self, components=None, dtype_out=np.float16):
         """Return the model signal generated with the selected number of
-        principal components.
+        principal components from a decomposition.
 
-        Calls HyperSpy's get_decomposition_model. Learning results
-        are preconditioned before this call, doing the following: (1)
-        set data type to desired dtype_out, (2) remove unwanted
-        components, (3) rechunk, if dask arrays, to suitable chunks.
+        Calls HyperSpy's
+        :py:meth:`hyperspy.learn.mva.MVA.get_decomposition_model`.
+        Learning results are preconditioned before this call, doing the
+        following: (1) set :py:class:`numpy.dtype` to desired
+        ``dtype_out``, (2) remove unwanted components, and (3) rechunk,
+        if :py:class:`dask.array.Array`, to suitable chunks.
 
         Parameters
         ----------
-        components : {None, int or list of ints}, optional
-            If None (default), rebuilds the signal from all components.
-            If int, rebuilds signal from components in range 0-given
-            int. If list of ints, rebuilds signal from only components
-            in given list.
-        dtype_out : {np.float16, np.float32, np.float64}, optional
-            Data to cast learning results to (default is np.float16).
-            Note that HyperSpy casts them to np.float64.
-        *args, **kwargs
-            Passed to Hyperspy's `get_decomposition_model()`.
+        components : None, int or list of ints, optional
+            If ``None`` (default), rebuilds the signal from all
+            components. If ``int``, rebuilds signal from ``components``
+            in range 0-given ``int``. If list of ``ints``, rebuilds
+            signal from only ``components`` in given list.
+        dtype_out : :py:obj:`numpy.float16`,\
+                :py:class:`numpy.float32`, :py:class:`numpy.float64`,\
+                optional
+            Data to cast learning results to (default is
+            :py:class:`numpy.float16`). Note that HyperSpy casts them
+            to :py:class:`numpy.float64`.
 
         Returns
         -------
-        s_model : kikuchipy.signals.EBSD or kikuchipy.signals.LazyEBSD
+        s_model : :py:class:`~kikuchipy.signals.ebsd.EBSD` or \
+                :py:class:`~kikuchipy.signals.ebsd.LazyEBSD`
         """
 
         # Keep original results to revert back after updating
@@ -742,7 +748,7 @@ class EBSD(Signal2D):
             dtype_out=dtype_out, components=components)
 
         # Call HyperSpy's function
-        s_model = super().get_decomposition_model(*args, **kwargs)
+        s_model = super().get_decomposition_model()
 
         # Revert learning results to original results
         self.learning_results.factors = factors_orig
@@ -841,12 +847,12 @@ class LazyEBSD(EBSD, LazySignal2D):
 
         Parameters
         ----------
-        components : {None, int or list of ints}, optional
+        components : None, int or list of ints, optional
             If None (default), rebuilds the signal from all components.
             If int, rebuilds signal from components in range 0-given
             int. If list of ints, rebuilds signal from only components
             in given list.
-        dtype_learn : {np.float16, np.float32 or np.float64}, optional
+        dtype_learn : np.float16, np.float32 or np.float64, optional
             Data type to set learning results to (default is float16)
             before multiplication.
         mbytes_chunk : int, optional
