@@ -9,8 +9,8 @@ __pycache__/
 # Distribution / packaging
 .Python
 env/
-doc/build/
-doc/Makefile
+#doc/build/
+#doc/Makefile
 develop-eggs/
 dist/
 downloads/
