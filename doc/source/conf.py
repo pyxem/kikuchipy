@@ -32,9 +32,11 @@ release = release.version
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx_copybutton',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.mathjax',
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
 ]
@@ -78,3 +80,4 @@ pygments_style = 'solarized-light'
 
 # Logo
 #html_logo = '_static/'
+#html_favicon = '_static/icon.ico'

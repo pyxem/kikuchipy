@@ -22,27 +22,28 @@ import kikuchipy as kp
 
 
 def _update_learning_results(learning_results, components, dtype_out):
-    """Update learning results before calling HyperSpy's
-    get_decomposition_model() by changing data type, keeping only
-    desired components and rechunking them into suitable chunks if they
-    are lazy.
+    """Update learning results before calling
+    :py:meth:`hyperspy.learn.mva.MVA.get_decomposition_model` by
+    changing data type, keeping only desired components and rechunking
+    them into suitable chunks if they are lazy.
 
     Parameters
     ----------
     learning_results : hyperspy.learn.mva.LearningResults
         Learning results with component patterns and loadings.
-    components : {None, int or list of ints}
-        If None, rebuilds the signal from all components. If int,
-        rebuilds signal from components in range 0-given int. If list of
-        ints, rebuilds signal from only components in given list.
-    dtype_out : {np.float16, np.float32, np.float64}
+    components : None, int or list of ints
+        If ``None``, rebuilds the signal from all ``components``. If
+        ``int``, rebuilds signal from ``components`` in range 0-given
+        ``int``. If list of ``int``, rebuilds signal from only
+        ``components`` in given list.
+    dtype_out : numpy.float16, numpy.float32 or numpy.float64
         Data type to cast learning results to.
 
     Returns
     -------
-    factors : hyperspy.learn.mva.LearningResults.factors
+    factors : :py:attr:`hyperspy.learn.mva.LearningResults.factors`
         Updated component patterns in learning results.
-    loadings : hyperspy.learn.mva.LearningResults.loadings
+    loadings : :py:attr:`hyperspy.learn.mva.LearningResults.loadings`
         Updated component loadings in learning results.
     """
 

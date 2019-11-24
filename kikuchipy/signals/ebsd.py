@@ -45,8 +45,10 @@ class EBSD(Signal2D):
     _lazy = False
 
     def __init__(self, *args, **kwargs):
-        """Create an EBSD object from a hyperspy.signals.Signal2D or a
-        numpy array."""
+        """Create an :py:class:`~kikuchipy.signals.ebsd.EBSD` object
+        from a :py:class:`hyperspy.signals.Signal2D` or a
+        :py:class:`numpy.ndarray`.
+        """
 
         Signal2D.__init__(self, *args, **kwargs)
 
@@ -67,7 +69,7 @@ class EBSD(Signal2D):
             ypc=None, zpc=None, static_background=None,
             manufacturer=None, version=None, microscope=None,
             magnification=None):
-        """Set experimental parameters in metadata.
+        """Set experimental parameters in signal ``metadata``.
 
         Parameters
         ----------
@@ -90,7 +92,7 @@ class EBSD(Signal2D):
         frame_rate : float, optional
             Frames per s.
         gain : float, optional
-            Camera gain in dB.
+            Camera gain, typically in dB.
         grid_type : str, optional
             Scan grid type, only square grid is supported.
         manufacturer : str, optional
@@ -103,15 +105,18 @@ class EBSD(Signal2D):
             Sample tilt angle from horizontal in degrees.
         scan_time : float, optional
             Scan time in s.
-        static_background : np.ndarray, optional
+        static_background : :py:class:`numpy.ndarray`, optional
             Static background pattern.
         version : str, optional
             Version of software used to collect patterns.
         working_distance : float, optional
             Working distance in mm.
-        xpc, ypc : float, optional
-            Pattern centre horizontal and vertical coordinate with
-            respect to detector centre.
+        xpc : float, optional
+            Pattern centre horizontal coordinate with respect to
+            detector centre, as viewed from the detector to the sample.
+        ypc : float, optional
+            Pattern centre vertical coordinate with respect to
+            detector centre, as viewed from the detector to the sample.
         zpc : float, optional
             Specimen to scintillator distance.
 
@@ -151,35 +156,42 @@ class EBSD(Signal2D):
             info=None, lattice_constants=None, laue_group=None,
             material_name=None, point_group=None, setting=None,
             space_group=None, symmetry=None):
-        """Set parameters for one phase in metadata, using the
-        International Tables for Crystallography, Volume A. A phase node
-        with default values is created if none is present in the
-        metadata.
+        """Set parameters for one phase in signal ``metadata``, using
+        the International Tables for Crystallography, Volume A.
+
+        A phase node with default values is created if none is present
+        in the ``metadata`` when this method is called.
 
         Parameters
         ----------
         number : int, optional
             Phase number.
         atom_coordinates : dict, optional
-            Dictionary of dictionaries one or more of the atoms in the
-            unit cell, on the form {'1': {'atom': 'Ni', 'coordinates':
-            [0, 0, 0], 'site_occupation': 1, 'debye_waller_factor': 0},
-            '2': {'atom': 'O',... etc. `debye_waller_factor` in units of
-            nm^2, `site_occupation` in range [0, 1].
+            Dictionary of dictionaries with one or more of the atoms in
+            the unit cell, on the form `{'1': {'atom': 'Ni',
+            'coordinates': [0, 0, 0], 'site_occupation': 1,
+            'debye_waller_factor': 0}, '2': {'atom': 'O',... etc.`
+            `debye_waller_factor` in units of nm^2, and
+            `site_occupation` in range [0, 1].
         formula : str, optional
-            Phase formula, e.g. Fe2 or Ni.
+            Phase formula, e.g. 'Fe2' or 'Ni'.
         info : str, optional
             Whatever phase info the user finds relevant.
-        lattice_constants : array_like of floats, optional
+        lattice_constants : :py:class:`numpy.ndarray` or list of\
+                floats, optional
             Six lattice constants a, b, c, alpha, beta, gamma.
         laue_group : str, optional
+            Phase Laue group.
         material_name : str, optional
+            Name of material.
         point_group : str, optional
+            Phase point group.
         setting : int, optional
             Space group's origin setting.
         space_group : int, optional
             Number between 1 and 230.
         symmetry : int, optional
+            Phase symmetry.
 
         See Also
         --------
@@ -187,7 +199,7 @@ class EBSD(Signal2D):
 
         Examples
         --------
-        >>> print(s.metadata.Sample.Phases.Number_1.atom_coordinates.\
+        >>> print(s.metadata.Sample.Phases.Number_1.atom_coordinates.
                 Number_1)
         ├── atom =
         ├── coordinates = array([0., 0., 0.])
@@ -198,7 +210,7 @@ class EBSD(Signal2D):
                     '1': {'atom': 'Ni', 'coordinates': [0, 0, 0],
                     'site_occupation': 1,
                     'debye_waller_factor': 0.0035}})
-        >>> print(s.metadata.Sample.Phases.Number_1.atom_coordinates.\
+        >>> print(s.metadata.Sample.Phases.Number_1.atom_coordinates.
                 Number_1)
         ├── atom = Ni
         ├── coordinates = array([0., 0., 0.])
@@ -227,9 +239,10 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        step_x, step_y : float
-            Scan step size in µm per pixel in horizontal, x and
-            vertical, y direction.
+        step_x : float
+            Scan step size in µm per pixel in horizontal direction.
+        step_y : float
+            Scan step size in µm per pixel in vertical direction.
 
         See Also
         --------
@@ -280,9 +293,11 @@ class EBSD(Signal2D):
     def static_background_correction(
             self, operation='subtract', relative=False, static_bg=None):
         """Correct static background inplace by subtracting/dividing by
-        a static background pattern. Returned pattern intensities are
-        rescaled keeping relative intensities or not and stretched to
-        fill the input data type range.
+        a static background pattern.
+
+        Resulting pattern intensities are rescaled keeping relative
+        intensities or not and stretched to fill the available grey
+        levels in the patterns' :py:class:`numpy.dtype` range.
 
         Parameters
         ----------
@@ -290,8 +305,9 @@ class EBSD(Signal2D):
             Subtract (default) or divide by static background pattern.
         relative : bool, optional
             Keep relative intensities between patterns (default is
-            False).
-        static_bg : np.ndarray, da.Array or None, optional
+            ``False``).
+        static_bg : :py:class:`numpy.ndarray`,\
+                :py:class:`dask.array.Array` or None, optional
             Static background pattern. If not passed we try to read it
             from the signal metadata.
 
@@ -302,8 +318,8 @@ class EBSD(Signal2D):
         Examples
         --------
         Assuming that a static background pattern with same shape and
-        data type (e.g. 8-bit unsigned integer, uint8) as patterns is
-        available in signal metadata:
+        data type (e.g. 8-bit unsigned integer, ``uint8``) as patterns
+        is available in signal metadata:
 
         >>> import kikuchipy as kp
         >>> ebsd_node = kp.util.io.metadata_nodes(sem=False)
@@ -324,7 +340,7 @@ class EBSD(Signal2D):
                 operation='subtract', relative=True)
 
         If metadata has no background pattern, this must be passed in
-        the `static_bg` parameter as a numpy or dask array.
+        the ``static_bg`` parameter as a numpy or dask array.
         """
 
         dtype_out = self.data.dtype.type
@@ -389,7 +405,7 @@ class EBSD(Signal2D):
         """Correct dynamic background inplace by subtracting or dividing
         by a blurred version of each pattern.
 
-        Resulting pattern intensities are stretched to fill the
+        Resulting pattern intensities are rescaled to fill the
         available grey levels in the patterns'
         :py:class:`numpy.dtype` range.
 
@@ -440,17 +456,19 @@ class EBSD(Signal2D):
             self.data = corrected_patterns
 
     def rescale_intensities(self, relative=False, dtype_out=None):
-        """Rescale pattern intensities inplace to desired data type
-        range specified by `dtype_out` using
-        `skimage.exposure.rescale_intensity`, keeping relative
-        intensities or not.
+        """Rescale pattern intensities inplace to desired
+        :py:class:`numpy.dtype` range specified by ``dtype_out`` keeping
+        relative intensities or not.
+
+        This method makes use of
+        :py:func:`skimage.exposure.rescale_intensity`.
 
         Parameters
         ----------
         relative : bool, optional
             Keep relative intensities between patterns, default is
-            False.
-        dtype_out : np.dtype_out, optional
+            ``False``.
+        dtype_out : numpy.dtype, optional
             Data type of rescaled patterns, default is input patterns'
             data type.
 
@@ -460,9 +478,10 @@ class EBSD(Signal2D):
 
         Examples
         --------
-        Pattern intensities are stretched to fill input pattern's data
-        type range or any data type range passed with `dtype_out`,
-        either keeping relative intensities between patterns or not:
+        Pattern intensities are stretched to fill the available grey
+        levels in the input patterns' data type range or any
+        :py:class:`numpy.dtype` range passed to ``dtype_out``, either
+        keeping relative intensities between patterns or not:
 
         >>> print(s.data.dtype_out, s.data.min(), s.data.max(),
                   s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
@@ -509,6 +528,9 @@ class EBSD(Signal2D):
             self, kernel_size=None, clip_limit=0, nbins=128):
         """Local contrast enhancement inplace with adaptive histogram
         equalization.
+
+        This method makes use of
+        :py:func:`skimage.exposure.equalize_adapthist`.
 
         Parameters
         ----------
@@ -593,22 +615,23 @@ class EBSD(Signal2D):
         image formed from detector intensities within a specified and
         adjustable region of interest (ROI).
 
-        Adapted from pyxem.signals.diffraction2d.Diffraction2D.\
-        plot_interactive_virtual_image().
+        Adapted from
+        :py:meth:`pyxem.signals.diffraction2d.Diffraction2D.plot_interactive_virtual_image`.
 
         Parameters
         ----------
         roi : hyperspy.roi.BaseInteractiveROI
             Any interactive ROI detailed in HyperSpy.
         **kwargs:
-            Keyword arguments to be passed to `plot()`.
+            Keyword arguments to be passed to
+            :py:meth:`hyperspy.signal.BaseSignal.plot`.
 
         Examples
         --------
         >>> import hyperspy.api as hs
         >>> roi = hs.roi.RectangularROI(
                 left=0, right=5, top=0, bottom=5)
-            s.virtual_forward_scatter_detector(roi)
+        >>> s.virtual_forward_scatter_detector(roi)
         """
 
         return Diffraction2D.plot_interactive_virtual_image(
@@ -629,7 +652,7 @@ class EBSD(Signal2D):
 
         Returns
         -------
-        virtual_image : :py:class:`hyperspy.signal.BaseSignal`
+        virtual_image : hyperspy.signal.BaseSignal
             VFSD image formed from detector intensities within an ROI
             on the detector.
 
@@ -655,31 +678,37 @@ class EBSD(Signal2D):
         signal is written to a file in KikuchiPy's h5ebsd format. Each
         format accepts a different set of parameters.
 
-        For details see the specific format documentation in
-        `kikuchipy.io.plugins.<format>.file_writer()`.
+        For details see the specific format documentation under "See
+        Also" below.
 
         This method is a modified version of HyperSpy's function
-        `hyperspy.signals.BaseSignal.save()`.
+        :py:meth:`hyperspy.signal.BaseSignal.save`.
 
         Parameters
         ----------
         filename : str or None, optional
-            If None (default) and `tmp_parameters.filename` and
-            `tmp_parameters.folder` are defined, the filename and path
-            will be taken from there. A valid extension can be provided
-            e.g. "data.h5", see `extension`.
+            If ``None`` (default) and ``tmp_parameters.filename`` and
+            ``tmp_parameters.folder`` in signal metadata are defined,
+            the filename and path will be taken from there. A valid
+            extension can be provided e.g. "data.h5", see ``extension``.
         overwrite : None or bool, optional
-            If None and the file exists, it will query the user. If
-            True (False) it (does not) overwrite the file if it exists.
-        extension : None, 'h5', 'hdf5', 'h5ebsd', 'dat' or 'hspy',
+            If ``None`` and the file exists, it will query the user. If
+            ``True`` (``False``) it (does not) overwrite the file if it
+            exists.
+        extension : None, 'h5', 'hdf5', 'h5ebsd', 'dat' or 'hspy',\
                 optional
             Extension of the file that defines the file format. 'h5',
-            'hdf5' and 'h5ebsd' are equivalent. If None, the extension
-            is determined from the following list in this order: i) the
-            filename, ii)  `Signal.tmp_parameters.extension` or iii)
-            `h5` (KikuchiPy's h5ebsd format).
+            'hdf5' and 'h5ebsd' are equivalent. If ``None``, the
+            extension is determined from the following list in this
+            order: i) the filename, ii) ``tmp_parameters.extension`` or
+            iii) 'h5' (KikuchiPy's h5ebsd format).
         **kwargs :
             Keyword arguments passed to writer.
+
+        See Also
+        --------
+        kikuchipy.io.plugins.h5ebsd.file_writer,\
+        kikuchipy.io.plugins.nordif.file_writer
         """
 
         if filename is None:
@@ -723,8 +752,7 @@ class EBSD(Signal2D):
             components. If ``int``, rebuilds signal from ``components``
             in range 0-given ``int``. If list of ``ints``, rebuilds
             signal from only ``components`` in given list.
-        dtype_out : :py:obj:`numpy.float16`,\
-                :py:class:`numpy.float32`, :py:class:`numpy.float64`,\
+        dtype_out : numpy.float16, numpy.float32, numpy.float64,\
                 optional
             Data to cast learning results to (default is
             :py:class:`numpy.float16`). Note that HyperSpy casts them
@@ -797,7 +825,7 @@ class EBSD(Signal2D):
 
     def as_lazy(self, *args, **kwargs):
         """Create a :py:class:`~kikuchipy.signals.ebsd.LazyEBSD` object
-        from a :py:class:`~kikuchipy.signals.ebsd.EBSD` object.
+        from an :py:class:`~kikuchipy.signals.ebsd.EBSD` object.
 
         Returns
         -------
@@ -841,20 +869,23 @@ class LazyEBSD(EBSD, LazySignal2D):
             self, components=None, dtype_learn=np.float16,
             mbytes_chunk=100, dir_out=None, fname_out=None):
         """Write the model signal generated from the selected number of
-        principal components directly to a .hspy file. The model signal
-        intensities are rescaled to the original signals' data type
-        range, keeping relative intensities.
+        principal components directly to a .hspy file.
+
+        The model signal intensities are rescaled to the original
+        signals' data type range, keeping relative intensities.
 
         Parameters
         ----------
         components : None, int or list of ints, optional
-            If None (default), rebuilds the signal from all components.
-            If int, rebuilds signal from components in range 0-given
-            int. If list of ints, rebuilds signal from only components
-            in given list.
-        dtype_learn : np.float16, np.float32 or np.float64, optional
-            Data type to set learning results to (default is float16)
-            before multiplication.
+            If ``None`` (default), rebuilds the signal from all
+            ``components``. If ``int``, rebuilds signal from
+            ``components`` in range 0-given ``int``. If list of ints,
+            rebuilds signal from only ``components`` in given list.
+        dtype_learn : :py:class:`numpy.float16`,\
+                :py:class:`numpy.float32` or :py:class:`numpy.float64`,\
+                optional
+            Data type to set learning results to (default is
+            :py:class:`numpy.float16`) before multiplication.
         mbytes_chunk : int, optional
             Size of learning results chunks in MB, default is 100 MB as
             suggested in the Dask documentation.
@@ -868,8 +899,8 @@ class LazyEBSD(EBSD, LazySignal2D):
         Multiplying the learning results' factors and loadings in memory
         to create the model signal cannot sometimes be done due to too
         large matrices. Here, instead, learning results are written to
-        file, read into dask arrays and multiplied using dask's
-        ``matmul``, out of core.
+        file, read into dask arrays and multiplied using
+        :py:func:`dask.array.matmul`, out of core.
         """
 
         # Change data type, keep desired components and rechunk if lazy

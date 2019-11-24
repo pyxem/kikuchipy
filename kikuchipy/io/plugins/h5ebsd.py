@@ -74,10 +74,10 @@ def file_reader(filename, scans=None, lazy=False, **kwargs):
 
     References
     ----------
-    .. [1] Jackson et al.: h5ebsd: an archival data format for electron
-           back-scatter diffraction data sets. Integrating Materials and
-           Manufacturing Innovation 2014 3:4, doi:
-           https://dx.doi.org/10.1186/2193-9772-3-4.
+    .. [1] Jackson et al.: h5ebsd: an archival data format\
+        for electron back-scatter diffraction data sets. Integrating\
+        Materials and Manufacturing Innovation 2014 3:4, doi:\
+        https://dx.doi.org/10.1186/2193-9772-3-4.
     """
 
     mode = kwargs.pop('mode', 'r')

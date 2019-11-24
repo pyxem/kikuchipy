@@ -2,9 +2,10 @@
 KikuchiPy reference
 ===================
 
-This reference manual details all EBSD class methods, readers of EBSD formats
-and utility functions included in KikuchiPy, as generated from their docstrings.
-For learning how to use KikuchiPy, see the user guide pages in the sidebar.
+This reference manual details all EBSD class methods, utility functions and
+readers of EBSD patterns included in KikuchiPy, as generated from their
+docstrings. For learning how to use KikuchiPy, see the user guide pages in the
+sidebar.
 
 .. note::
     Private functions that start with an underscore are listed in the reference
@@ -12,13 +13,13 @@ For learning how to use KikuchiPy, see the user guide pages in the sidebar.
     parameters and behaviour may change between minor package updates. You
     should take care if you use them directly.
 
-EBSD class and methods
-======================
+EBSD
+====
 
 While some methods listed here are only available to
 :py:class:`~kikuchipy.signals.ebsd.LazyEBSD` objects, all methods available to
 :py:class:`~kikuchipy.signals.ebsd.EBSD` objects, apart from
-:py:meth:`~kikuchipy.signals.ebsd.EBSD.as_lazy()`, are also available to
+:py:meth:`~kikuchipy.signals.ebsd.EBSD.as_lazy`, are also available to
 :py:class:`~kikuchipy.signals.ebsd.LazyEBSD` objects.
 
 .. autoclass:: kikuchipy.signals.ebsd.EBSD
@@ -33,8 +34,8 @@ While some methods listed here are only available to
     :private-members:
     :show-inheritance:
 
-Utility functions
-=================
+Utilities
+=========
 
 These functions are included here for completeness and are not intended for
 direct use.
@@ -62,6 +63,11 @@ Experimental utilities
 
 Input/output utilities
 ----------------------
+.. automodule:: kikuchipy.io._io
+    :members:
+    :undoc-members:
+    :private-members:
+
 .. automodule:: kikuchipy.util.io
     :members:
     :undoc-members:
@@ -77,6 +83,23 @@ Other utilities
 Phase utilities
 ---------------
 .. automodule:: kikuchipy.util.phase
+    :members:
+    :undoc-members:
+    :private-members:
+
+Input/Output plugins
+====================
+
+h5ebsd
+------
+.. automodule:: kikuchipy.io.plugins.h5ebsd
+    :members:
+    :undoc-members:
+    :private-members:
+
+NORDIF
+------
+.. automodule:: kikuchipy.io.plugins.nordif
     :members:
     :undoc-members:
     :private-members:
