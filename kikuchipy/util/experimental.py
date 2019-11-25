@@ -248,12 +248,12 @@ def normalised_correlation_coefficient(
 
     Parameters
     ----------
-    pattern : np.ndarray or da.Array
+    pattern : numpy.ndarray or dask.array.Array
         Pattern to compare the template to.
-    template : np.ndarray or da.Array
+    template : numpy.ndarray or dask.array.Array
         Template pattern.
     zero_normalised : bool, optional
-        Subtract local mean value of intensities (default is True).
+        Subtract local mean value of intensities (default is ``True``).
 
     Returns
     -------

@@ -53,6 +53,7 @@ intersphinx_mapping = {
     'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
     'skimage': ('https://scikit-image.org/docs/stable', None),
     'sklearn': ('https://scikit-learn.org/stable', None),
+    'h5py': ('http://docs.h5py.org/en/stable/', None),
 }
 
 # Add any paths that contain templates here, relative to this directory.

@@ -52,18 +52,21 @@ def file_reader(
     filename : str
         File path to NORDIF data file.
     mmap_mode : str, optional
-    scan_size : {None, int, or tuple}, optional
+    scan_size : None, int, or tuple, optional
         Scan size in number of patterns in width and height.
     pattern_size : None or tuple, optional
         Pattern size in detector pixels in width and height.
     setting_file : None or str, optional
         File path to NORDIF setting file (default is Setting.txt in
-        same directory as `filename`).
+        same directory as ``filename``).
     lazy : bool, optional
+        Open the data lazily without actually reading the data from disk
+        until required. Allows opening arbitrary sized datasets. Default
+        is ``False``.
 
     Returns
     -------
-    scan : dict
+    scan : list of dicts
         Data, axes, metadata and original metadata.
     """
 
@@ -183,11 +186,11 @@ def get_settings_from_file(filename):
 
     Returns
     -------
-    md : DictionaryTreeBrowser
+    md : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         Metadata complying with HyperSpy's metadata structure.
-    omd : DictionaryTreeBrowser
+    omd : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         Metadata that does not fit into HyperSpy's metadata structure.
-    scan_size : DictionaryTreeBrowser
+    scan_size : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         Information on pattern size, scan size and scan steps.
     """
 
@@ -287,7 +290,8 @@ def get_string(content, expression, line_no, file):
         Regular expression.
     line_no : int
         Line number to search in.
-    file : file handle
+    file : file object
+        File handle of open setting file.
 
     Returns
     -------
@@ -306,13 +310,16 @@ def get_string(content, expression, line_no, file):
 
 
 def file_writer(filename, signal):
-    """Write an EBSD signal to a NORDIF binary file.
+    """Write an :py:class:`~kikuchipy.signals.ebsd.EBSD` or
+    :py:class:`~kikuchipy.signals.ebsd.LazyEBSD` signal to a NORDIF
+    binary file.
 
     Parameters
     ----------
     filename : str
         Full path of HDF file.
-    signal : kikuchipy.signals.EBSD or kikuchipy.lazy_signals.LazyEBSD
+    signal : kikuchipy.signals.ebsd.EBSD or\
+            kikuchipy.signals.ebsd.LazyEBSD
         Signal instance.
     """
 
