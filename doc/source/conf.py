@@ -77,7 +77,7 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static', ]
 
 master_doc = 'index'
-pygments_style = 'solarized-light'
+pygments_style = 'sphinx'
 
 # Logo
 #html_logo = '_static/'

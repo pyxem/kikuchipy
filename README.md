@@ -6,7 +6,8 @@ backscatter diffraction (EBSD) patterns.
 Processing builds upon the tools for multi-dimensional data analysis
 provided by the [HyperSpy](https://hyperspy.org/) library. This means that the
 `EBSD` class, which has several common methods for processing of EBSD patterns,
-also inherits all methods from HyperSpy's `Signal2D` and `Signal` classes.
+also inherits all applicable methods from HyperSpy's `Signal2D` and `Signal`
+classes.
 
 KikuchiPy is released under the GPL v3 license.
 
