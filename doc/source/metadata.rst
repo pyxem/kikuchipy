@@ -59,3 +59,27 @@ format <h5ebsd-format>`.
                 ├── space_group
                 └── symmetry
 
+The utility function :py:func:`~kikuchipy.util.io.metadata_nodes` returns the
+node strings for the ``SEM`` and ``EBSD`` nodes for convenience.
+
+.. note::
+
+    If you regularly use information relevant to EBSD scans and phases not
+    included in the metadata structure, you can make a request for this in our
+    `code repository <https://github.com/kikuchipy/kikuchipy/issues>`_.
+
+EBSD
+====
+
+This node contains relevant information to EBSD scans. All parameters can be set
+with the method
+:py:meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`. An
+explanation of each parameter is given in the method's docstring.
+
+Phases
+======
+
+This node contains relevant information to an EBSD scans phases. All parameters
+can be set with the method
+:py:meth:`~kikuchipy.signals.ebsd.EBSD.set_phase_parameters`. An explanation of
+each parameter is given in the method's dostring.

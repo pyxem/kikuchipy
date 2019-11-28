@@ -31,6 +31,7 @@ methods from HyperSpy's `Signal2D`_ and `Signal`_ classes.
     background_corrections.rst
     visualizing_patterns.rst
     virtual_forward_scatter_detector.rst
+    multivariate_analysis.rst
     metadata.rst
     bibliography.rst
     reference.rst
@@ -48,5 +49,5 @@ methods from HyperSpy's `Signal2D`_ and `Signal`_ classes.
 Acknowledgement
 ===============
 
-Initial work from Håkon Wiik Ånes funded by the NAPIC project (NTNU Aluminium
-Product Innovation Center).
+Initial work from Håkon Wiik Ånes was funded by the NAPIC project (NTNU
+Aluminium Product Innovation Center).
