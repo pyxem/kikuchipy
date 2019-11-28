@@ -20,3 +20,7 @@ from kikuchipy import signals
 from kikuchipy import util
 from kikuchipy import io
 from kikuchipy.io._io import load
+
+from . import release
+
+__version__ = release.version

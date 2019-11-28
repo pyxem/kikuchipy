@@ -311,7 +311,7 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
         data = data.reshape((ny, nx, sy, sx))
     scan['data'] = data
 
-    units = np.repeat(u'\u03BC'+'m', 4)
+    units = [u'\u03BC'+'m'] * 4
     names = ['y', 'x', 'dy', 'dx']
     scales = np.ones(4)
 

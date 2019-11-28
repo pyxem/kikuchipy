@@ -57,7 +57,7 @@ def file_reader(
     pattern_size : None or tuple, optional
         Pattern size in detector pixels in width and height.
     setting_file : None or str, optional
-        File path to NORDIF setting file (default is Setting.txt in
+        File path to NORDIF setting file (default is `Setting.txt` in
         same directory as ``filename``).
     lazy : bool, optional
         Open the data lazily without actually reading the data from disk
@@ -152,7 +152,7 @@ def file_reader(
         data = data.reshape((ny, nx, sy, sx))
     scan['data'] = data
 
-    units = np.repeat(u'\u03BC'+'m', 4)
+    units = [u'\u03BC'+'m'] * 4
     names = ['y', 'x', 'dy', 'dx']
     scales = np.ones(4)
 

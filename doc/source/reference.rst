@@ -48,8 +48,8 @@ Input/output utilities
 Input/output plugins
 ====================
 
-These plugin functions imports patterns and parameters from vendor file formats
-into KikuchiPy :py:class:`~kikuchipy.signals.ebsd.EBSD` (or
+These plugin functions import patterns and parameters from vendor file formats
+into :py:class:`~kikuchipy.signals.ebsd.EBSD` (or
 :py:class:`~kikuchipy.signals.ebsd.LazyEBSD` if loading lazily) objects.
 
 h5ebsd

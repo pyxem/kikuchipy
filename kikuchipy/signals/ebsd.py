@@ -235,14 +235,14 @@ class EBSD(Signal2D):
         kp.util.phase._update_phase_info(self.metadata, phase, number)
 
     def set_scan_calibration(self, step_x=1., step_y=1.):
-        """Set the step size in µm.
+        """Set the step size in um.
 
         Parameters
         ----------
         step_x : float
-            Scan step size in µm per pixel in horizontal direction.
+            Scan step size in um per pixel in horizontal direction.
         step_y : float
-            Scan step size in µm per pixel in vertical direction.
+            Scan step size in um per pixel in vertical direction.
 
         See Also
         --------
@@ -260,7 +260,7 @@ class EBSD(Signal2D):
         x, y = self.axes_manager.navigation_axes
         x.name, y.name = ('x', 'y')
         x.scale, y.scale = (step_x, step_y)
-        x.units, y.units = np.repeat(u'\u03BC'+'m', 2)
+        x.units, y.units = [u'\u03BC'+'m'] * 2
 
     def set_detector_calibration(self, delta):
         """Set detector pixel size in microns. The offset is set to the
@@ -286,7 +286,7 @@ class EBSD(Signal2D):
 
         centre = np.array(self.axes_manager.signal_shape) / 2 * delta
         dx, dy = self.axes_manager.signal_axes
-        dx.units, dy.units = (u'\u03BC'+'m', u'\u03BC'+'m')
+        dx.units, dy.units = [u'\u03BC'+'m'] * 2
         dx.scale, dy.scale = (delta, delta)
         dx.offset, dy.offset = -centre
 
@@ -536,7 +536,7 @@ class EBSD(Signal2D):
         ----------
         kernel_size : int or list-like, optional
             Shape of contextual regions for adaptive histogram
-            equalization, default is 1/8 of pattern height and 1/8 of
+            equalization, default is 1/4 of pattern height and 1/4 of
             pattern width.
         clip_limit : float, optional
             Clipping limit, normalized between 0 and 1 (higher values
@@ -585,7 +585,7 @@ class EBSD(Signal2D):
         # Determine kernel size (shape of contextual region)
         sig_shape = self.axes_manager.signal_shape
         if kernel_size is None:
-            kernel_size = (sig_shape[0] // 8, sig_shape[1] // 8)
+            kernel_size = (sig_shape[0] // 4, sig_shape[1] // 4)
         elif isinstance(kernel_size, numbers.Number):
             kernel_size = (kernel_size,) * self.axes_manager.signal_dimension
         elif len(kernel_size) != self.axes_manager.signal_dimension:

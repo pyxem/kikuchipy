@@ -19,6 +19,7 @@
 import os
 
 import dask.array as da
+import hyperspy.api as hs
 from hyperspy.misc.utils import DictionaryTreeBrowser
 import h5py
 import numpy as np
@@ -166,6 +167,29 @@ class Testh5ebsd:
                 'Phases', s_reload.metadata.Sample.Phases)
         np.testing.assert_equal(
             s_reload.metadata.as_dictionary(), s.metadata.as_dictionary())
+
+    def test_load_save_hyperspy_cycle(self, tmp_path):
+        s = kp.load(KIKUCHIPY_FILE)
+
+        # Perform decomposition to test if learning results are maintained after
+        # saving, reloading and using set_signal_type
+        s.change_dtype(np.float32)
+        s.decomposition()
+
+        # Write both patterns and learning results to the HSpy file format
+        os.chdir(tmp_path)
+        fname = 'patterns.hspy'
+        s.save(fname)
+
+        # Reload data and use HyperSpy's set_signal_type function
+        s_reload = hs.load(fname)
+        s_reload.set_signal_type('EBSD')
+
+        # Check signal type, patterns and learning results
+        assert isinstance(s_reload, kp.signals.EBSD)
+        np.testing.assert_equal(s.data, s_reload.data)
+        np.testing.assert_equal(
+            s.learning_results.factors, s_reload.learning_results.factors)
 
     @pytest.mark.parametrize('scans', ([1, 2], [1, 2, 3], [3, ], 2))
     def test_load_multiple(self, scans):

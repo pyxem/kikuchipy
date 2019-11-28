@@ -28,11 +28,11 @@ which can be useful when processing large scans:
 
     >>> s = kp.load('patterns.h5', lazy=True)
 
-Note that this also means that processing will take longer, and some care needs
-to be taken when performing the processing. See the relevant
-`HyperSpy documentation`_ for information on how to do this.
-
-.. _`HyperSpy documentation`: http://hyperspy.org/hyperspy-doc/current/user_guide/big_data.html
+When loading lazily patterns are processed chunk by chunk which in many cases
+leads to longer processing times, so processing should be done with some care.
+See the relevant `HyperSpy documentation
+<http://hyperspy.org/hyperspy-doc/current/user_guide/big_data.html>`_ for
+information on how to do this.
 
 To visualise the data:
 
@@ -40,8 +40,8 @@ To visualise the data:
 
     >>> s.plot()
 
-KikuchiPy tries to read extra information about the EBSD scan and stores
-everything it can read in the ``original_metadata`` attribute. Also, some
+Upon loading KikuchiPy tries to read all scan information from the file and
+stores everything it can read in the ``original_metadata`` attribute. Also, some
 information may be stored in a standard location in the ``metadata`` attribute
 where it can be used by some routines. The number of patterns in horizontal and
 vertical direction, pattern size in pixels, scan step size and detector pixel
@@ -53,19 +53,21 @@ size is stored in the ``axes_manager`` attribute. To access this information:
     >>> s.original_metadata
     >>> s.axes_manager
 
-This information can be modified directly, while information in ``metadata`` and
+This information can be modified directly, and information in ``metadata`` and
 ``axes_manager`` can also be modified by the
 :py:class:`~kikuchipy.signals.ebsd.EBSD` class methods
-:py:class:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`,
-:py:class:`~kikuchipy.signals.ebsd.EBSD.set_phase_parameters`,
-:py:class:`~kikuchipy.signals.ebsd.EBSD.set_scan_calibration` and
-:py:class:`~kikuchipy.signals.ebsd.EBSD.set_detector_calibration`. For example,
-to set or change the accelerating voltage and horizontal pattern centre
-coordinate:
+:py:meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`,
+:py:meth:`~kikuchipy.signals.ebsd.EBSD.set_phase_parameters`,
+:py:meth:`~kikuchipy.signals.ebsd.EBSD.set_scan_calibration` and
+:py:meth:`~kikuchipy.signals.ebsd.EBSD.set_detector_calibration`. For example,
+to set or change the accelerating voltage, horizontal pattern centre
+coordinate and static background pattern (stored as a
+:py:class:`numpy.ndarray`):
 
 .. code-block:: python
 
-    >>> s.set_experimental_parameters(beam_energy=15, xpc=0.5073)
+    >>> s.set_experimental_parameters(
+            beam_energy=15, xpc=0.5073, static_bg=static_bg)
 
 .. _from-numpy-array:
 
@@ -91,12 +93,10 @@ From Dask array
 ---------------
 
 When processing large scans it is useful to load data lazily, e.g. with the
-`Dask library`_. This can be done when reading patterns
-:ref:`from a file <from-file>` by setting ``lazy=True`` when using
-:py:func:`~kikuchipy.io._io.load`, or directly from a
+`Dask library <https://docs.dask.org/en/latest/>`_. This can be done when
+reading patterns :ref:`from a file <from-file>` by setting ``lazy=True`` when
+using :py:func:`~kikuchipy.io._io.load`, or directly from a
 :py:class:`dask.array.Array`:
-
-.. _`Dask library`: https://docs.dask.org/en/latest/
 
 .. code-block:: python
 
@@ -146,17 +146,30 @@ method. For example, to save an :py:class:`~kikuchipy.signals.ebsd.EBSD` object
 
 .. danger::
 
-    If you want to overwrite an existing h5ebsd file:
+    If you want to overwrite an existing file:
 
     .. code-block:: python
 
-        >>> s.save('patterns.dat', overwrite=True)
+        >>> s.save('patterns.h5', overwrite=True)
 
 If you want to save patterns in NORDIF's binary .dat format instead:
 
 .. code-block:: python
 
     >>> s.save('patterns.dat')
+
+.. note::
+
+    To save results from statistical decomposition (machine learning) of
+    patterns to file see the section `Saving and loading results
+    <http://hyperspy.org/hyperspy-doc/current/user_guide/mva.html#saving-and-
+    loading-results>`_ in HyperSpy's user guide. Note that the file extension
+    ``.hspy`` must be used upon saving, ``s.save('patterns.hspy')``, as the
+    default extension in KikuchiPy, ``.h5``, yields a KikuchiPy h5ebsd file. The
+    saved patterns can be then reloaded using HyperSpy's
+    :py:func:`~hyperspy.io.load` function followed by
+    ``set_signal_type('EBSD')`` :ref:`as explained above
+    <from-hyperspy-signal>`.
 
 .. _supported-ebsd-formats:
 
@@ -185,7 +198,7 @@ Currently, KikuchiPy has readers and writers for the following file formats:
 
     If you want to process your patterns with KikuchiPy, but use an unsupported
     EBSD vendor software, or if you want to write your processed patterns to a
-    vendor format that does not support writing, please request the feature
+    vendor format that does not support writing, please request this feature
     in our `code repository <https://github.com/kikuchipy/kikuchipy/issues>`_.
 
 .. _h5ebsd-format:
@@ -195,34 +208,74 @@ h5ebsd
 
 The h5ebsd format :ref:`[Jackson2014] <[Jackson2014]>` is based on the `HDF5
 open standard <http://www.hdfgroup.org/HDF5/>`_ (Hierarchical Data Format
-version 5). When reading an HDF5 file with extension ``.h5``, ``.hdf5`` or
-``.h5ebsd``, the correct reader is determined from the file. Supported h5ebsd
-formats are listed in the :ref:`table above <supported-formats-table>`.
+version 5). HDF5 files can be read and edited using e.g. the HDF Group's reader
+`HDFView <https://www.hdfgroup.org/downloads/hdfview/>`_. Upon loading an HDF5
+file with extension ``.h5``, ``.hdf5`` or ``.h5ebsd``, the correct reader is
+determined from the file. Supported h5ebsd formats are listed in the
+:ref:`table above <supported-formats-table>`.
 
 If an h5ebsd file contains multiple scans, as many scans as desirable can be
 read from the file. For example, if the file contains three scans with names
-``Scan 1``, ``Scan 4`` and ``Scan 6``:
+``Scan 2``, ``Scan 4`` and ``Scan 6``:
 
 .. code-block:: python
 
-    >>> s1, s4, s6 = kp.load('patterns.h5', scans=[1, 4, 6])
+    >>> s2, s4, s6 = kp.load('patterns.h5', scans=[2, 4, 6])
 
+Here the h5ebsd :py:func:`~kikuchipy.io.plugins.h5ebsd.file_reader` is called.
 If only ``Scan 4`` is to be read, ``scans=4`` can be passed. The ``scans``
-parameter is unnecessary if only ``Scan 1`` is to be read since reading the
+parameter is unnecessary if only ``Scan 2`` is to be read since reading the
 first scan in the file is the default behaviour.
 
 So far, only :ref:`saving patterns <save-patterns>` to KikuchiPy's own h5ebsd
 format is supported. It is possible to write a new scan with a new scan number
-to an existing h5ebsd file in the KikuchiPy format, e.g. one containing only
-``Scan 1``, by passing:
+to an existing, but closed, h5ebsd file in the KikuchiPy format, e.g. one
+containing only ``Scan 1``, by passing:
 
 .. code-block:: python
 
     >>> s.save('patterns.h5', add_scan=True, scan_number=2)
+
+Here the h5ebsd :py:func:`~kikuchipy.io.plugins.h5ebsd.file_writer` is called.
 
 .. _nordif-format:
 
 NORDIF binary
 -------------
 
-This is NORDIF's binary file format.
+Patterns acquired using NORDIF's acquisition software are stored in a binary
+file usually named `Pattern.dat`. Scan information is stored in a separate text
+file usually named `Setting.txt`, and both files usually reside in the same
+directory. If this is the case, the patterns can be loaded by passing the file
+name as the only parameter. If this is not the case, the setting file can be
+passed upon loading:
+
+.. code-block:: python
+
+    >>> s = kp.load('Pattern.dat', setting_file='/somewhere/Setting_new.txt')
+
+Here the NORDIF :py:func:`~kikuchipy.io.plugins.nordif.file_reader` is called.
+If the scan information, i.e. scan and pattern size, in the setting file is
+incorrect or the setting file is lost, patterns can be loaded by passing:
+
+.. code-block:: python
+
+    >>> s = kp.load('filename.dat', scan_size=(10, 20), pattern_size=(60, 60))
+
+If a static background pattern named `Background acquisition.bmp` is stored in
+the same directory as the pattern file, this is stored in ``metadata`` upon
+loading.
+
+Patterns can also be :ref:`saved to a NORDIF binary file <save-patterns>`, upon
+which the NORDIF :py:func:`~kikuchipy.io.plugins.nordif.file_writer` is called.
+Note, however, that so far no new setting file is created upon saving.
+
+.. _from-kikuchipy-into-other-software:
+
+From KikuchiPy into other software
+==================================
+
+Patterns saved in the :ref:`h5ebsd format <h5ebsd-format>` can be read by the
+dictionary indexing and related routines in
+`EMsoft <https://github.com/EMsoft-org/EMsoft>`_ using the `EMEBSD` reader.
+Those routines in EMsoft also have a `NORDIF` reader.

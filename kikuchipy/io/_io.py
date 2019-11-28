@@ -24,7 +24,6 @@ from hyperspy.misc.io.tools import ensure_directory
 from hyperspy.misc.io.tools import overwrite as overwrite_method
 from hyperspy.misc.utils import strlist2enumeration, find_subclasses
 from hyperspy.signal import BaseSignal
-import numpy as np
 
 import kikuchipy.signals
 from kikuchipy.io.plugins import h5ebsd, nordif
@@ -238,7 +237,7 @@ def save(filename, signal, overwrite=None, add_scan=None, **kwargs):
     else:
         sd = signal.axes_manager.signal_dimension
         nd = signal.axes_manager.navigation_dimension
-        if (sd, nd) not in writer.writes:
+        if writer.writes is not True and (sd, nd) not in writer.writes:
             # Get writers that can write this data
             writing_plugins = []
             for plugin in plugins:

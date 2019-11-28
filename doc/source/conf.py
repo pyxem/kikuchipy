@@ -20,7 +20,7 @@ sys.path.append('../')
 # -- Project information -----------------------------------------------------
 
 project = 'KikuchiPy'
-copyright = str(datetime.now().year) + ', ' + release.author
+copyright = str(datetime.now().year) + ', ' + release.author + '.'
 author = release.author
 
 # The full version, including alpha/beta/rc tags
