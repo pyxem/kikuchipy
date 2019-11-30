@@ -30,7 +30,7 @@ which can be useful when processing large scans:
 
 When loading lazily patterns are processed chunk by chunk which in many cases
 leads to longer processing times, so processing should be done with some care.
-See the relevant `HyperSpy documentation
+See the relevant `HyperSpy user guide
 <http://hyperspy.org/hyperspy-doc/current/user_guide/big_data.html>`_ for
 information on how to do this.
 
@@ -206,13 +206,13 @@ Currently, KikuchiPy has readers and writers for the following file formats:
 h5ebsd
 ------
 
-The h5ebsd format :ref:`[Jackson2014] <[Jackson2014]>` is based on the `HDF5
-open standard <http://www.hdfgroup.org/HDF5/>`_ (Hierarchical Data Format
-version 5). HDF5 files can be read and edited using e.g. the HDF Group's reader
-`HDFView <https://www.hdfgroup.org/downloads/hdfview/>`_. Upon loading an HDF5
-file with extension ``.h5``, ``.hdf5`` or ``.h5ebsd``, the correct reader is
-determined from the file. Supported h5ebsd formats are listed in the
-:ref:`table above <supported-formats-table>`.
+The h5ebsd format [Jackson2014]_ is based on the `HDF5 open standard
+<http://www.hdfgroup.org/HDF5/>`_ (Hierarchical Data Format version 5). HDF5
+files can be read and edited using e.g. the HDF Group's reader `HDFView
+<https://www.hdfgroup.org/downloads/hdfview/>`_. Upon loading an HDF5 file with
+extension ``.h5``, ``.hdf5`` or ``.h5ebsd``, the correct reader is determined
+from the file. Supported h5ebsd formats are listed in the :ref:`table above
+<supported-formats-table>`.
 
 If an h5ebsd file contains multiple scans, as many scans as desirable can be
 read from the file. For example, if the file contains three scans with names
@@ -237,6 +237,11 @@ containing only ``Scan 1``, by passing:
     >>> s.save('patterns.h5', add_scan=True, scan_number=2)
 
 Here the h5ebsd :py:func:`~kikuchipy.io.plugins.h5ebsd.file_writer` is called.
+
+.. [Jackson2014] M. A. Jackson, M. A. Groeber, M. D. Uchic, D. J. Rowenhorst
+    and M. De Graef, "h5ebsd: an archival data format for electron back-scatter
+    diffraction data sets," *Integrating Materials and Manufacturing Innovation*
+    **3** (2014) [`link <https://doi.org/10.1186/2193-9772-3-4>`_].
 
 .. _nordif-format:
 

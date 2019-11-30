@@ -28,12 +28,11 @@ methods from HyperSpy's `Signal2D`_ and `Signal`_ classes.
 
     load_save_patterns.rst
     change_scan_pattern_size.rst
-    background_corrections.rst
+    background_correction.rst
     visualizing_patterns.rst
     virtual_forward_scatter_detector.rst
     multivariate_analysis.rst
     metadata.rst
-    bibliography.rst
     reference.rst
 
 .. toctree::

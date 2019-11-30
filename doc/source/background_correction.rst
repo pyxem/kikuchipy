@@ -1,6 +1,6 @@
-======================
-Background corrections
-======================
+=====================
+Background correction
+=====================
 
 The raw EBSD signal can be empirically evaluated as a superposition of a Kikuchi
 diffraction pattern and a smooth background intensity. For pattern indexing, the
@@ -23,10 +23,14 @@ subtracting or dividing by a static background via
 
     >>> s.static_background_correction(operation='subtract', relative=True)
 
-.. image:: _static/image/background_corrections/pattern_raw.jpg
+.. _fig-static-background-correction:
+
+.. figure:: _static/image/background_correction/static_correction.jpg
+    :align: center
     :scale: 50%
-.. image:: _static/image/background_corrections/pattern_static.jpg
-    :scale: 50%
+
+    The same pattern as acquired (left) and after static background correction
+    (right).
 
 Here the static background pattern is assumed to be stored as part of the signal
 ``metadata``, which can be loaded via
@@ -52,10 +56,14 @@ Gaussian kernel, ``sigma``:
 
     >>> s.dynamic_background_correction(operation='subtract', sigma=2)
 
-.. image:: _static/image/background_corrections/pattern_static.jpg
+.. _fig-dynamic-background-correction:
+
+.. figure:: _static/image/background_correction/dynamic_correction.jpg
+    :align: center
     :scale: 50%
-.. image:: _static/image/background_corrections/pattern_dynamic.jpg
-    :scale: 50%
+
+    The same pattern after static correction (left) followed by dynamic
+    background correction (right).
 
 Patterns are rescaled to fill the available data type range.
 
@@ -65,7 +73,7 @@ Adaptive histogram equalization
 ===============================
 
 Adaptive histogram equalization has been found to significantly enhance pattern
-contrast :ref:`[Marquardt2017] <[Marquardt2017]>`. With
+contrast [Marquardt2017]_. With
 :py:meth:`~kikuchipy.signals.ebsd.EBSD.adaptive_histogram_equalization`, the
 intensities in the pattern histogram are spread to cover the available range,
 e.g. [0, 255] for patterns of ``uint8`` data type:
@@ -74,16 +82,34 @@ e.g. [0, 255] for patterns of ``uint8`` data type:
 
     >>> s.adaptive_histogram_equalization(kernel_size=(15, 15))
 
-.. image:: _static/image/background_corrections/pattern_dynamic.jpg
-    :scale: 50%
-.. image:: _static/image/background_corrections/pattern_adapthist.jpg
+.. _fig-adapthist:
+
+.. figure:: _static/image/background_correction/adapthist.jpg
+    :align: center
     :scale: 50%
 
+    The same pattern after dynamic correction (left) followed by adaptive
+    histogram equalization (right).
+
 The ``kernel_size`` parameter determines the size of the contextual regions. See
-e.g. Fig. 5 in :ref:`[Jackson2019] <[Jackson2019]>`, also available via
-`EMsoft's GitHub repository wiki
+e.g. Fig. 5 in [Jackson2019]_, also available via `EMsoft's GitHub repository
+wiki
 <https://github.com/EMsoft-org/EMsoft/wiki/DItutorial#52-determination-of-pattern-pre-processing-parameters>`_,
 for the effect of varying ``kernel_size``.
+
+.. [Marquardt2017]
+    K. Marquardt, M. De Graef, S. Singh, H. Marquardt, A. Rosenthal,
+    S. Koizuimi, "Quantitative electron backscatter diffraction (EBSD) data
+    analyses using the dictionary indexing (DI) approach: Overcoming indexing
+    difficulties on geological materials," *American Mineralogist* **102**
+    (2017) [`link <https://doi.org/10.2138/am-2017-6062>`_].
+
+
+.. [Jackson2019]
+    M. A. Jackson, E. Pascal, M. De Graef, "Dictionary Indexing of Electron
+    Back-Scatter Diffraction Patterns: a Hands-On Tutorial," *Integrating
+    Materials and Manufacturing Innovation* **8** (2019) [`link
+    <https://doi.org/10.1007/s40192-019-00137-4>`_].
 
 .. _rescale-intensities:
 
@@ -104,9 +130,13 @@ e.g. [0, 65535] for ``uint16``:
     uint16 255
     >>> s.plot(vmax=1000)
 
-.. image:: _static/image/background_corrections/pattern_adapthist_uint16.jpg
+.. _fig-pattern-adapthist-uint16:
+
+.. figure:: _static/image/background_correction/pattern_adapthist_uint16.jpg
     :align: center
     :scale: 50%
+
+    A pattern, initially with ``uint8`` data type, cast to ``uint16``.
 
 In these cases it is convenient to rescale intensities to a desired data type
 range, either keeping relative intensities between patterns or not, by using
@@ -119,6 +149,11 @@ range, either keeping relative intensities between patterns or not, by using
     uint16 65535
     >>> s.plot(vmax=65535)
 
-.. image:: _static/image/background_corrections/pattern_adapthist_uint16_rescaled.jpg
+.. _fig-pattern-adapthist-uint16-rescaled:
+
+.. figure:: _static/image/background_correction/pattern_adapthist_uint16_rescaled.jpg
     :align: center
     :scale: 50%
+
+    Same pattern as in :ref:`the above figure <fig-pattern-adapthist-uint16>` with
+    intensities rescaled to fill the full ``uint16`` data range.
