@@ -50,3 +50,21 @@ wanted to remove the ten outermost pixels in our (60 x 60) pixel patterns:
 
 Binning
 =======
+
+A new signal with patterns binned e.g. by 2 can be obtained using the
+:py:meth:`~kikuchipy.signals.ebsd.EBSD.rebin` method provided by HyperSpy,
+explained further in `their user guide
+<http://hyperspy.org/hyperspy-doc/current/user_guide/tools.html#rebinning>`_, by
+passing in either the ``scale`` or ``new_shape`` parameter:
+
+.. code-block:: python
+
+    >>> print(s, s.data.dtype)
+    <EBSD, title: , dimensions: (200, 149|60, 60)> uint8
+    >>> s3 = s.rebin(scale=(1, 1, 2, 2))
+    >>> print(s3, s.data.dtype)
+    <EBSD, title: , dimensions: (200, 149|30, 30)> uint64
+
+Note that :py:meth:`~kikuchipy-signals.ebsd.EBSD.rebin` casts the data to
+``uint64``, in the example above making the binned scan ``s3`` take up eight
+times the memory size of the original scan ``s``.

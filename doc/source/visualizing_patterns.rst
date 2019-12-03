@@ -38,16 +38,17 @@ corresponding to the sum of all detector intensities within that pattern:
 
 However, any :py:class:`~hyperspy.signal.BaseSignal` object with a
 two-dimensional ``signal_shape`` corresponding to the scan ``navigation_shape``
-can be passed in to the ``navgiator`` parameter, including a virtual image
-showing compositional contrast, any quality metric map, or an orientation map or
-a phase map.
+can be passed in to the ``navgiator`` parameter in
+:py:meth:`~hyperspy.signal.BaseSignal.plot`, including a virtual image showing
+compositional contrast, any quality metric map, or an orientation map or a phase
+map.
 
 .. _navigate-in-virtual-image:
 
 Virtual image
 -------------
 
-A virtual image created from any custom aperture with the
+A virtual image created from any aperture with the
 :py:meth:`~kikuchipy.signals.ebsd.EBSD.get_virtual_image` method, explained in
 the :doc:`virtual_forward_scatter_detector` (VFSD) section, can be used as a
 navigator for a scan ``s``:
@@ -78,15 +79,16 @@ navigator for a scan ``s``:
 Any image
 ---------
 
-Images loaded into a :py:class:`~hyperspy.signals.Signal2D` can be used as
-navigators. E.g. a quality metric map, like the orientation similarity obtained
-from dictionary indexing with `EMsoft <https://github.com/EMsoft-org/EMsoft>`_
-(see e.g. [Marquardt2017]_):
+Images loaded into a :py:class:`~hyperspy.signals.Signal2D` object can be used
+as navigators. E.g. a quality metric map, like the orientation similarity
+obtained from dictionary indexing with `EMsoft
+<https://github.com/EMsoft-org/EMsoft>`_ (see e.g. [Marquardt2017]_):
 
 .. code-block:: python
 
     >>> import matplotlib.pyplot as plt
-    >>> osm = plt.imread(os.path.join(datadir, '../emsoft/orig/quality_osm.png'))
+    >>> import hyperspy.api as hs
+    >>> osm = plt.imread('path/to/orientation_similarity_map.png'))
     >>> s_osm = hs.signals.Signal2D(osm)
     >>> s_osm
     <Signal2D, title: , dimensions: (|2140, 1603)>
@@ -97,20 +99,64 @@ from dictionary indexing with `EMsoft <https://github.com/EMsoft-org/EMsoft>`_
 
 .. _fig-navigate-quality-metric:
 
-.. figure:: _static/image/visualizing_patterns/osm_navigator.jpg
+.. figure:: _static/image/visualizing_patterns/orientation_similarity_map_navigator.jpg
     :align: center
     :scale: 70%
 
     A quality metric map ``s_osm``, in this case an orientation similarity map
     from dictionary indexing with EMsoft, as navigator map.
 
-Using colour images, e.g. an orientation or phase map, is a bit more involved:
+Using colour images, e.g. an orientation ``om`` or phase map, is a bit more
+involved:
 
 .. code-block:: python
 
+    >>> om = plt.imread('/path/to/orientation_map.jpg')
+    >>> om_scaled = ske.rescale_intensity(om, out_range=np.uint8)
+    >>> s_om = hs.signals.Signal2D(om_scaled)
+    >>> s_om
+    <Signal2D, title: , dimensions: (149|3, 200)>
+    >>> s_om = s_om.transpose(signal_axes=1)
+    >>> print(s_om, s_om.data.dtype)
+    <Signal1D, title: , dimensions: (200, 149|3)> uint8
+    >>> s_om.change_dtype('rgb8')
+    <Signal2D, title: , dimensions: (|200, 149)> [('R', 'u1'), ('G', 'u1'), ('B', 'u1')]
+    >>> s.plot(navigator=s_om)
 
+.. _fig-orientation-map-navigator:
+
+.. figure:: _static/image/visualizing_patterns/orientation_map_navigator.jpg
+    :align: center
+    :scale: 70%
+
+    An orientation map map ``s_om`` as a navigator map.
 
 .. _plot-multiple-scans:
 
 Plot multiple scans
 ===================
+
+HyperSpy provides the function :py:func:`~hyperspy.misc.utils.plot_signals` to
+plot multiple signals with the same navigator, as explained in the `HyperSpy
+user guide <http://hyperspy.org/hyperspy-doc/current/user_guide/visualisation.html#plotting-several-signals>`_.
+This enables e.g. plotting of experimental and simulated patterns side by side
+as a visual inspection of the indexing results:
+
+.. code-block:: python
+
+    >>> import hyperspy.api as hs
+    >>> import h5py
+    >>> with h5py.File('/path/to/simulated_patterns/sim.h5', mode='r') as f:
+            patterns = f['EMData/EBSD/EBSDPatterns'][()]
+    >>> s_sim = kp.signals.EBSD(patterns.reshape(s.axes_manager.shape))
+    >>> hs.plot.plot_signals([s, s_sim])
+
+.. _fig-plot-multiple-scans:
+
+.. figure:: _static/image/visualizing_patterns/plot_multiple_scans.gif
+    :align: center
+    :width: 100%
+
+    Plotting of experimental and simulated patterns side by side for visual
+    inspection, using an :ref:`orientation map as navigator
+    <fig-orientation-map-navigator>`.
