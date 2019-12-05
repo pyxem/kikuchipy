@@ -364,13 +364,13 @@ class TestIntensityCorrection:
         assert isinstance(s.data, da.Array)
 
 
-class TestVirtualDetectorImaging:
+class TestVirtualBackscatterElectronImaging:
 
-    def test_virtual_forward_scatter_detector(self, dummy_signal):
+    def test_virtual_backscatter_electron_imaging(self, dummy_signal):
         roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
-        dummy_signal.virtual_forward_scatter_detector(roi)
+        dummy_signal.virtual_backscatter_electron_imaging(roi)
 
-    def test_virtual_detector_image(self, dummy_signal):
+    def test_virtual_image(self, dummy_signal):
         roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
         virtual_image_signal = dummy_signal.get_virtual_image(roi)
         assert (virtual_image_signal.data.shape ==

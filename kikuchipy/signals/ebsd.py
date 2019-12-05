@@ -610,8 +610,8 @@ class EBSD(Signal2D):
         else:
             self.data = equalized_patterns
 
-    def virtual_forward_scatter_detector(self, roi, **kwargs):
-        """Plot an interactive virtual forward scatter detector (VFSD)
+    def virtual_backscatter_electron_imaging(self, roi, **kwargs):
+        """Plot an interactive virtual backscatter electron (VBSE)
         image formed from detector intensities within a specified and
         adjustable region of interest (ROI).
 
@@ -631,14 +631,14 @@ class EBSD(Signal2D):
         >>> import hyperspy.api as hs
         >>> roi = hs.roi.RectangularROI(
                 left=0, right=5, top=0, bottom=5)
-        >>> s.virtual_forward_scatter_detector(roi)
+        >>> s.virtual_backscatter_electron_imaging(roi)
         """
 
         return Diffraction2D.plot_interactive_virtual_image(
             self, roi, **kwargs)
 
     def get_virtual_image(self, roi):
-        """Return a virtual forward scatter detector (VFSD) image
+        """Return a virtual backscatter electron (VBSE) image
         formed from detector intensities within a region of interest
         (ROI) on the detector.
 
@@ -653,7 +653,7 @@ class EBSD(Signal2D):
         Returns
         -------
         virtual_image : hyperspy.signal.BaseSignal
-            VFSD image formed from detector intensities within an ROI
+            VBSE image formed from detector intensities within an ROI
             on the detector.
 
         Examples
@@ -661,7 +661,7 @@ class EBSD(Signal2D):
         >>> import hyperspy.api as hs
         >>> roi = hs.roi.RectangularROI(
                 left=0, right=5, top=0, bottom=5)
-        >>> vfsd_image = s.get_virtual_image(roi)
+        >>> vbse_image = s.get_virtual_image(roi)
         """
 
         return Diffraction2D.get_virtual_image(self, roi)

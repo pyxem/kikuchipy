@@ -30,7 +30,7 @@ methods from HyperSpy's `Signal2D`_ and `Signal`_ classes.
     change_scan_pattern_size.rst
     background_correction.rst
     visualizing_patterns.rst
-    virtual_forward_scatter_detector.rst
+    virtual_backscatter_electron_imaging.rst
     multivariate_analysis.rst
     metadata.rst
     reference.rst

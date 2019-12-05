@@ -48,9 +48,9 @@ map.
 Virtual image
 -------------
 
-A virtual image created from any aperture with the
+A virtual backscatter electron (VBSE) image created from any aperture with the
 :py:meth:`~kikuchipy.signals.ebsd.EBSD.get_virtual_image` method, explained in
-the :doc:`virtual_forward_scatter_detector` (VFSD) section, can be used as a
+the :doc:`virtual_backscatter_electron_imaging` section, can be used as a
 navigator for a scan ``s``:
 
 .. code-block:: python
@@ -129,7 +129,7 @@ involved:
     :align: center
     :scale: 70%
 
-    An orientation map map ``s_om`` as a navigator map.
+    An orientation map ``s_om`` as a navigator map.
 
 .. _plot-multiple-scans:
 
