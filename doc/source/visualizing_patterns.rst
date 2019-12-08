@@ -40,7 +40,7 @@ However, any :py:class:`~hyperspy.signal.BaseSignal` object with a
 two-dimensional ``signal_shape`` corresponding to the scan ``navigation_shape``
 can be passed in to the ``navgiator`` parameter in
 :py:meth:`~hyperspy.signal.BaseSignal.plot`, including a virtual image showing
-compositional contrast, any quality metric map, or an orientation map or a phase
+diffraction contrast, any quality metric map, or an orientation map or a phase
 map.
 
 .. _navigate-in-virtual-image:
@@ -120,6 +120,7 @@ involved:
     >>> print(s_om, s_om.data.dtype)
     <Signal1D, title: , dimensions: (200, 149|3)> uint8
     >>> s_om.change_dtype('rgb8')
+    >>> s_om
     <Signal2D, title: , dimensions: (|200, 149)> [('R', 'u1'), ('G', 'u1'), ('B', 'u1')]
     >>> s.plot(navigator=s_om)
 

@@ -66,5 +66,6 @@ passing in either the ``scale`` or ``new_shape`` parameter:
     <EBSD, title: , dimensions: (200, 149|30, 30)> uint64
 
 Note that :py:meth:`~kikuchipy-signals.ebsd.EBSD.rebin` casts the data to
-``uint64``, in the example above making the binned scan ``s3`` take up eight
-times the memory size of the original scan ``s``.
+``uint64``. This means that in this example, each pixel in the binned scan
+``s3`` takes up eight times the memory size of pixels in the original scan
+``s``.

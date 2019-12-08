@@ -15,14 +15,12 @@ methods from HyperSpy's `Signal2D`_ and `Signal`_ classes.
 .. _`Signal`: https://hyperspy.org/hyperspy-doc/current/user_guide/tools.html
 
 .. toctree::
-    :maxdepth: 1
     :hidden:
     :caption: Getting started
 
     install.rst
 
 .. toctree::
-    :maxdepth: 1
     :hidden:
     :caption: User guide
 
@@ -36,7 +34,6 @@ methods from HyperSpy's `Signal2D`_ and `Signal`_ classes.
     reference.rst
 
 .. toctree::
-    :maxdepth: 1
     :hidden:
     :caption: Help & reference
 

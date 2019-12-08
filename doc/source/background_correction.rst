@@ -4,8 +4,8 @@ Background correction
 
 The raw EBSD signal can be empirically evaluated as a superposition of a Kikuchi
 diffraction pattern and a smooth background intensity. For pattern indexing, the
-latter intensity is undesirable, while for so-called :doc:`virtual forward
-scatter detector (VFSD) imaging <virtual_forward_scatter_detector>`, this
+latter intensity is undesirable, while for so-called :doc:`virtual backscatter
+electron (VBSE) imaging <virtual_backscatter_electron_imaging>`, this
 intensity can reveal important topographical, compositional or diffraction
 contrast. This section details methods to enhance the Kikuchi diffraction
 pattern.
@@ -72,11 +72,11 @@ Patterns are rescaled to fill the available data type range.
 Adaptive histogram equalization
 ===============================
 
-Adaptive histogram equalization has been found to significantly enhance pattern
-contrast [Marquardt2017]_. With
-:py:meth:`~kikuchipy.signals.ebsd.EBSD.adaptive_histogram_equalization`, the
-intensities in the pattern histogram are spread to cover the available range,
-e.g. [0, 255] for patterns of ``uint8`` data type:
+Enhancing the pattern contrast with adaptive histogram equalization has been
+found useful when comparing patterns for dictionary indexing [Marquardt2017]_.
+With :py:meth:`~kikuchipy.signals.ebsd.EBSD.adaptive_histogram_equalization`,
+the intensities in the pattern histogram are spread to cover the available
+range, e.g. [0, 255] for patterns of ``uint8`` data type:
 
 .. code-block:: python
 
