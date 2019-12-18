@@ -49,7 +49,7 @@ full_support = False
 file_extensions = ['h5', 'hdf5', 'h5ebsd']
 default_extension = 1
 # Writing capabilities
-writes = [(2, 2), (2, 1)]
+writes = [(2, 2), (2, 1), (1, 1)]
 
 
 def file_reader(filename, scans=None, lazy=False, **kwargs):

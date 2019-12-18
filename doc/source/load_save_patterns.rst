@@ -209,7 +209,8 @@ h5ebsd
 The h5ebsd format [Jackson2014]_ is based on the `HDF5 open standard
 <http://www.hdfgroup.org/HDF5/>`_ (Hierarchical Data Format version 5). HDF5
 files can be read and edited using e.g. the HDF Group's reader `HDFView
-<https://www.hdfgroup.org/downloads/hdfview/>`_. Upon loading an HDF5 file with
+<https://www.hdfgroup.org/downloads/hdfview/>`_ or the Python packed used here,
+`h5py <http://docs.h5py.org/en/stable/>`_. Upon loading an HDF5 file with
 extension ``.h5``, ``.hdf5`` or ``.h5ebsd``, the correct reader is determined
 from the file. Supported h5ebsd formats are listed in the :ref:`table above
 <supported-formats-table>`.
@@ -282,5 +283,14 @@ From KikuchiPy into other software
 
 Patterns saved in the :ref:`h5ebsd format <h5ebsd-format>` can be read by the
 dictionary indexing and related routines in
-`EMsoft <https://github.com/EMsoft-org/EMsoft>`_ using the `EMEBSD` reader.
+`EMsoft <http://vbff.materials.cmu.edu/EMsoft>`_ using the `EMEBSD` reader.
 Those routines in EMsoft also have a `NORDIF` reader.
+
+Patterns saved in the :ref:`h5ebsd format <h5ebsd-format>` can of course be read
+in Python like any other HDF5 data set:
+
+.. code-block:: python
+
+    >>> import h5py
+    >>> with h5py.File('/path/to/patterns.h5', mode='r') as f:
+            patterns = f['Scan 1/EBSD/Data/patterns'][()]
