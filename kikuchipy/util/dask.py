@@ -25,16 +25,17 @@ _logger = logging.getLogger(__name__)
 
 
 def _get_chunks(data_shape, dtype, mbytes_chunk=100):
-    """Return suggested data chunks for patterns. Signal axes are not
-    chunked. Goals in prioritised order are (i) limit chunks to
-    approximately input mega bytes in `mbytes_chunk`, and (ii) chunk
-    only one navigation axis.
+    """Return suggested data chunks for patterns.
+
+    Signal axes are not chunked. Goals in prioritised order are (i)
+    limit chunks to approximately input mega bytes in ``mbytes_chunk``,
+    and (ii) chunk only one navigation axis.
 
     Parameters
     ----------
     data_shape : tuple of ints
         Shape of data to chunk.
-    dtype : np.dtype
+    dtype : :class:`numpy.dtype`
         Data type.
     mbytes_chunk : int, optional
         Size of chunks in MB, default is 100 MB as suggested in the
@@ -75,14 +76,15 @@ def _get_dask_array(signal, dtype=None):
 
     Parameters
     ----------
-    signal : kp.signals.EBSD or kp.signals.LazyEBSD
+    signal : :class:`~kikuchipy.signals.ebsd.EBSD` or\
+            :class:`~kikuchipy.signals.ebsd.LazyEBSD`
         Signal with data to return dask array from.
-    dtype : np.dtype, optional
+    dtype : :class:`numpy.dtype`, optional
         Data type of returned dask array.
 
     Returns
     -------
-    dask_array : da.array
+    dask_array : :class:`dask.array.Array`
         Dask array with signal data with appropriate chunking and data
         type.
     """
@@ -101,17 +103,18 @@ def _get_dask_array(signal, dtype=None):
 
 
 def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
-    """Return suggested data chunks for learning results. It is assumed
-    that the loadings are not transposed. The last axes of factors and
-    loadings are not chunked. The aims in prioritised order:
-        1. Limit chunks to approximately input MB (`mbytes_chunk`).
-        2. Keep first axis of factors (detector pixels).
+    """Return suggested data chunks for learning results.
+
+    It is assumed that the loadings are not transposed. The last axes of
+    factors and loadings are not chunked. The aims in prioritised order:
+    1. Limit chunks to approximately input MB (``mbytes_chunk``). 2.
+    Keep first axis of factors (detector pixels).
 
     Parameters
     ----------
-    factors : hyperspy.learn.mva.LearningResults.factors
+    factors : :attr:`hyperspy.learn.mva.LearningResults.factors`
         Component patterns in learning results.
-    loadings : hyperspy.learn.mva.LearningResults.loadings
+    loadings : :attr:`hyperspy.learn.mva.LearningResults.loadings`
         Component loadings in learning results.
     mbytes_chunk : int, optional
         Size of chunks in MB, default is 100 MB as suggested in the Dask
@@ -121,7 +124,8 @@ def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
     -------
     List of two tuples :
         The first/second tuple are suggested chunks to pass to
-        ``dask.array.rechunk`` for factors/loadings, respectively.
+        :func:`dask.array.rechunk` for factors/loadings,
+        respectively.
     """
 
     # Make sure the last factors/loading axes have the same shapes

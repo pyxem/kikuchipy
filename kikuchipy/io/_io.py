@@ -24,7 +24,6 @@ from hyperspy.misc.io.tools import ensure_directory
 from hyperspy.misc.io.tools import overwrite as overwrite_method
 from hyperspy.misc.utils import strlist2enumeration, find_subclasses
 from hyperspy.signal import BaseSignal
-import numpy as np
 
 import kikuchipy.signals
 from kikuchipy.io.plugins import h5ebsd, nordif
@@ -43,8 +42,7 @@ for plugin in plugins:
 def load(filename, lazy=False, **kwargs):
     """Load an EBSD object from a supported file.
 
-    This function is a modified version of HyperSpy's function
-    `hyperspy.io.load()`.
+    This function is a modified version of :func:`hyperspy.io.load`.
 
     Parameters
     ----------
@@ -53,7 +51,7 @@ def load(filename, lazy=False, **kwargs):
     lazy : bool, optional
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
-        is False.
+        is ``False``.
     **kwargs :
         Keyword arguments passed to the corresponding KikuchiPy reader.
         See their individual documentation for available options.
@@ -94,23 +92,24 @@ def load(filename, lazy=False, **kwargs):
 def _dict2signal(signal_dict, lazy=False):
     """Create a signal instance from a dictionary.
 
-    This function is a modified version of HyperSpy's function
-    `hyperspy.io.dict2signal()`.
+    This function is a modified version :func:`hyperspy.io.dict2signal`.
 
     Parameters
     ----------
     signal_dict : dict
-        Signal dictionary with data, metadata and original metadata.
+        Signal dictionary with ``data``, ``metadata`` and
+        ``original_metadata``.
     lazy : bool, optional
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
-        is False.
+        is ``False``.
 
     Returns
     -------
-    signal : kikuchipy.signals.EBSD or kikuchipy.lazy_signals.LazyEBSD
-        Signal instance with data, metadata and original metadata from
-        dictionary.
+    signal : kikuchipy.signals.ebsd.EBSD or\
+            kikuchipy.signals.ebsd.LazyEBSD
+        Signal instance with ``data``, ``metadata`` and
+        ``original_metadata`` from dictionary.
     """
 
     signal_type = ''
@@ -138,24 +137,24 @@ def _dict2signal(signal_dict, lazy=False):
 
 def _assign_signal_subclass(
         dtype, signal_dimension, signal_type='', lazy=False):
-    """Given record_by and signal_type return the matching signal
-    subclass.
+    """Given ``record_by`` and ``signal_type`` return the matching
+    signal subclass.
 
-    This function is a modified version of HyperSpy's function
-    `hyperspy.io.assign_signal_subclass()`.
+    This function is a modified version of
+    :func:`hyperspy.io.assign_signal_subclass`.
 
     Parameters
     ----------
-    dtype : np.dtype
+    dtype : numpy.dtype
         Data type of signal data.
     signal_dimension : int
         Number of signal dimensions.
-    signal_type : {'', 'EBSD'}, optional
+    signal_type : '' or 'EBSD', optional
         Signal type.
     lazy : bool, optional
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
-        is False.
+        is ``False``.
 
     Returns
     -------
@@ -199,18 +198,18 @@ def _assign_signal_subclass(
 def save(filename, signal, overwrite=None, add_scan=None, **kwargs):
     """Write signal to a file in a supported format.
 
-    This function is a modified version of HyperSpy's function
-    `hyperspy.io.save()`.
+    This function is a modified version of :func:`hyperspy.io.save`.
 
     Parameters
     ----------
     filename : str
         File path including name of new file.
-    signal : kikuchipy.signals.EBSD or kikuchipy.lazy_signals.LazyEBSD}
+    signal : kikuchipy.signals.ebsd.EBSD or\
+            kikuchipy.signals.ebsd.LazyEBSD
         Signal instance.
-    overwrite : {bool, None}, optional
+    overwrite : bool or None, optional
         Whether to overwrite file or not if it already exists.
-    add_scan : {bool, None}, optional
+    add_scan : bool or None, optional
         Whether to add the signal to an already existing h5ebsd file or
         not. If the file does not exist the signal is written to a new
         file.
@@ -237,7 +236,7 @@ def save(filename, signal, overwrite=None, add_scan=None, **kwargs):
     else:
         sd = signal.axes_manager.signal_dimension
         nd = signal.axes_manager.navigation_dimension
-        if (sd, nd) not in writer.writes:
+        if writer.writes is not True and (sd, nd) not in writer.writes:
             # Get writers that can write this data
             writing_plugins = []
             for plugin in plugins:

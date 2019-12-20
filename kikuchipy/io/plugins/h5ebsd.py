@@ -49,14 +49,14 @@ full_support = False
 file_extensions = ['h5', 'hdf5', 'h5ebsd']
 default_extension = 1
 # Writing capabilities
-writes = [(2, 2), (2, 1)]
+writes = [(2, 2), (2, 1), (1, 1)]
 
 
 def file_reader(filename, scans=None, lazy=False, **kwargs):
     """Read electron backscatter patterns from an h5ebsd file [1]_. A
     valid h5ebsd file has at least one group with the name
     '/Scan x/EBSD' with the groups 'Data' (patterns etc.) and 'Header'
-    (metadata etc.) , where 'x' is the scan_number.
+    (``metadata`` etc.) , where 'x' is the scan_number.
 
     Parameters
     ----------
@@ -66,18 +66,21 @@ def file_reader(filename, scans=None, lazy=False, **kwargs):
         Integer of scan to return, or list of integers of scans to
         return. If None is passed the first scan in the file is returned.
     lazy : bool, optional
+        Open the data lazily without actually reading the data from disk
+        until required. Allows opening arbitrary sized datasets. Default
+        is ``False``.
 
     Returns
     -------
-    dictionary : dict
+    scan_dict_list : list of dicts
         Data, axes, metadata and original metadata.
 
     References
     ----------
-    .. [1] Jackson et al.: h5ebsd: an archival data format for electron
-           back-scatter diffraction data sets. Integrating Materials and
-           Manufacturing Innovation 2014 3:4, doi:
-           https://dx.doi.org/10.1186/2193-9772-3-4.
+    .. [1] Jackson et al.: h5ebsd: an archival data format\
+        for electron back-scatter diffraction data sets. Integrating\
+        Materials and Manufacturing Innovation 2014 3:4, doi:\
+        https://dx.doi.org/10.1186/2193-9772-3-4.
     """
 
     mode = kwargs.pop('mode', 'r')
@@ -136,7 +139,7 @@ def check_h5ebsd(file):
 
     Parameters
     ----------
-    file : h5py.File
+    file : h5py:File
         File where manufacturer, version and scan datasets should
         reside in the top group.
     """
@@ -161,12 +164,13 @@ def manufacturer_version(file):
 
     Parameters
     ----------
-    file : h5py.File
+    file : h5py:File
         File with manufacturer and version datasets in the top group.
 
     Returns
     -------
-    manufacturer, version : str
+    manufacturer : str
+    version : str
     """
 
     manufacturer = None
@@ -185,7 +189,7 @@ def manufacturer_pattern_names():
 
     Returns
     -------
-    dictionary
+    dict
     """
 
     return {'KikuchiPy': 'patterns',
@@ -200,9 +204,10 @@ def h5ebsdgroup2dict(
 
     Parameters
     ----------
-    group : h5py.Group
+    group : h5py:Group
         HDF group object.
-    dictionary : {dict, DictionaryTreeBrowser, None}, optional
+    dictionary : dict, hyperspy.misc.utils.DictionaryTreeBrowser or\
+            None, optional
         To fill dataset values into.
     recursive : bool, optional
         Whether to add subgroups to dictionary.
@@ -211,8 +216,8 @@ def h5ebsdgroup2dict(
 
     Returns
     -------
-    dictionary : dictionary
-        Dataset values in group (and subgroups if `recursive` is True).
+    dictionary : dict
+        Dataset values in group (and subgroups if ``recursive=True``).
     """
 
     man_pats = manufacturer_pattern_names()
@@ -239,23 +244,25 @@ def h5ebsdgroup2dict(
 
 
 def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
-    """Return a dictionary with signal, metadata and original metadata
-    from an h5ebsd scan.
+    """Return a dictionary with ``signal``, ``metadata`` and
+    ``original_metadata`` from an h5ebsd scan.
 
     Parameters
     ----------
-    scan_group : h5py.Group
+    scan_group : h5py:Group
         HDF group of scan.
-    manufacturer : {'KikuchiPy', 'EDAX', 'Bruker Nano'}
+    manufacturer : 'KikuchiPy', 'EDAX' or 'Bruker Nano'
         Manufacturer of file.
     version : str
         Version of manufacturer software.
     lazy : bool, optional
+        Read dataset lazily.
 
     Returns
     -------
-    scan : dictionary
-        Dictionary with patterns, metadata and original metadata.
+    scan : dict
+        Dictionary with patterns, ``metadata`` and
+        ``original_metadata``.
     """
 
     md, omd, scan_size = h5ebsdheader2dicts(
@@ -304,7 +311,7 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
         data = data.reshape((ny, nx, sy, sx))
     scan['data'] = data
 
-    units = np.repeat(u'\u03BC'+'m', 4)
+    units = [u'\u03BC'+'m'] * 4
     names = ['y', 'x', 'dy', 'dx']
     scales = np.ones(4)
 
@@ -327,25 +334,32 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
 
 
 def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
-    """Return three dictionaries in HyperSpy's DictionaryTreeBrowser
-    format, one with the h5ebsd scan header parameters as KikuchiPy
-    metadata, another with all datasets in the header as original
-    metadata, and the last with info about scan size, pattern size and
-    detector pixel size.
+    """Return three dictionaries in HyperSpy's
+    :class:`hyperspy.misc.utils.DictionaryTreeBrowser` format, one
+    with the h5ebsd scan header parameters as KikuchiPy metadata,
+    another with all datasets in the header as original metadata, and
+    the last with info about scan size, pattern size and detector pixel
+    size.
 
     Parameters
     ----------
-    scan_group : h5py.Group
+    scan_group : h5py:Group
         HDF group of scan data and header.
-    manufacturer : {'KikuchiPy', 'EDAX', 'Bruker Nano'}
+    manufacturer : 'KikuchiPy', 'EDAX' or 'Bruker Nano'
         Manufacturer of file.
     version : str
         Version of manufacturer software used to create file.
     lazy : bool, optional
+        Read dataset lazily.
 
     Returns
     -------
-    md, omd, scan_size : DictionaryTreeBrowser
+    md : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+        KikuchiPy ``metadata`` elements available in file.
+    omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+        All metadata available in file.
+    scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+        Scan, pattern, step and detector pixel size available in file.
     """
 
     md = kikuchipy_metadata()
@@ -373,15 +387,22 @@ def kikuchipyheader2dicts(scan_group, md, lazy=False):
 
     Parameters
     ----------
-    scan_group : h5py.Group
+    scan_group : h5py:Group
         HDF group of scan data and header.
-    md : DictionaryTreeBrowser
+    md : hyperspy.misc.utils.DictionaryTreeBrowser
         Dictionary with empty fields from KikuchiPy's metadata.
     lazy : bool, optional
+        Read dataset lazily.
 
     Returns
     -------
-    md, omd, scan_size : DictionaryTreeBrowser
+    md : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+        KikuchiPy ``metadata`` elements available in KikuchiPy file.
+    omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+        All metadata available in KikuchiPy file.
+    scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+        Scan, pattern, step and detector pixel size available in
+        KikuchiPy file.
     """
 
     omd = DictionaryTreeBrowser()
@@ -413,14 +434,20 @@ def edaxheader2dicts(scan_group, md):
 
     Parameters
     ----------
-    scan_group : h5py.Group
+    scan_group : h5py:Group
         HDF group of scan data and header.
-    md : DictionaryTreeBrowser
+    md : hyperspy.misc.utils.DictionaryTreeBrowser
         Dictionary with empty fields from KikuchiPy's metadata.
 
     Returns
     -------
-    md, omd, scan_size : DictionaryTreeBrowser
+    md : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+        KikuchiPy ``metadata`` elements available in EDAX file.
+    omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+        All metadata available in EDAX file.
+    scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+        Scan, pattern, step and detector pixel size available in EDAX
+        file.
     """
 
     # Get header group as dictionary
@@ -478,14 +505,20 @@ def brukerheader2dicts(scan_group, md):
 
     Parameters
     ----------
-    scan_group : h5py.Group
+    scan_group : h5py:Group
         HDF group of scan data and header.
-    md : DictionaryTreeBrowser
+    md : hyperspy.misc.utils.DictionaryTreeBrowser
         Dictionary with empty fields from KikuchiPy's metadata.
 
     Returns
     -------
-    md, omd, scan_size : DictionaryTreeBrowser
+    md : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+        KikuchiPy ``metadata`` elements available in Bruker file.
+    omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+        All metadata available in Bruker file.
+    scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+        Scan, pattern, step and detector pixel size available in Bruker
+        file.
     """
 
     # Get header group and data group as dictionaries
@@ -542,23 +575,27 @@ def brukerheader2dicts(scan_group, md):
 
 def file_writer(
         filename, signal, add_scan=None, scan_number=1, **kwargs):
-    """Write an EBSD signal to an existing, but not open, or new h5ebsd
-    file. Only writing to KikuchiPy's h5ebsd format is supported.
+    """Write an :class:`~kikuchipy.signals.ebsd.EBSD` or
+    :class:`~kikuchipy.signals.ebsd.LazyEBSD` signal to an existing,
+    but not open, or new h5ebsd file.
+
+    Only writing to KikuchiPy's h5ebsd format is supported.
 
     Parameters
     ----------
     filename : str
         Full path of HDF file.
-    signal : kikuchipy.signals.EBSD or kikuchipy.signals.LazyEBSD
+    signal : kikuchipy.signals.ebsd.EBSD or\
+            kikuchipy.signals.ebsd.LazyEBSD
         Signal instance.
-    add_scan : {None, bool}, optional
+    add_scan : None, bool, optional
         Add signal to an existing, but not open, h5ebsd file. If it does
         not exist it is created and the signal is written to it.
     scan_number : int, optional
         Scan number in name of HDF dataset when writing to an existing,
         but not open, h5ebsd file.
     **kwargs :
-        Keyword arguments passed to h5py.
+        Keyword arguments passed to :meth:`h5py:Group.require_dataset`.
     """
 
     # Set manufacturer and version to use in file
@@ -655,17 +692,17 @@ def file_writer(
 
 
 def dict2h5ebsdgroup(dictionary, group, **kwargs):
-    """Write a dictionary from metadata to datasets in a new group in an
-    opened HDF file in the h5ebsd format.
+    """Write a dictionary from ``metadata`` to datasets in a new group
+    in an opened HDF file in the h5ebsd format.
 
     Parameters
     ----------
     dictionary : dict
-        Metadata, with keys as dataset names.
-    group : h5py.Group
+        ``Metadata``, with keys as dataset names.
+    group : h5py:Group
         HDF group to write dictionary to.
     **kwargs :
-        Keyword arguments passed to h5py.
+        Keyword arguments passed to :meth:`h5py:Group.require_dataset`.
     """
 
     for key, val in dictionary.items():

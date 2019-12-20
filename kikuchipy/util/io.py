@@ -25,12 +25,12 @@ def kikuchipy_metadata():
     """Return a dictionary in HyperSpy's DictionaryTreeBrowser format
     with the default KikuchiPy metadata.
 
-    See :func:`kikuchipy.signals.EBSD.set_experimental_parameters` for
-    an explanation of the parameters.
+    See :meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`
+    for an explanation of the parameters.
 
     Returns
     -------
-    md : DictionaryTreeBrowser
+    md : hyperspy.misc.utils.DictionaryTreeBrowser
     """
 
     md = DictionaryTreeBrowser()
@@ -57,12 +57,15 @@ def metadata_nodes(sem=True, ebsd=True):
 
     Parameters
     ----------
-    sem, ebsd : bool, optional
-        Whether to return the node string (default is True).
+    sem : bool, optional
+        Whether to return the SEM node string (default is ``True``).
+    ebsd : bool, optional
+        Whether to return the EBSD node string (default is ``True``).
 
     Returns
     -------
-    sem_node, ebsd_node : str
+    sem_node : str
+    ebsd_node : str
     """
 
     sem_node = 'Acquisition_instrument.SEM'

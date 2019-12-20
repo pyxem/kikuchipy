@@ -25,12 +25,15 @@ from skimage.util.dtype import dtype_range
 
 def _rescale_pattern(
         pattern, in_range=None, out_range=None, dtype_out=None):
-    """Rescale pattern intensities to fill the data type range using an
-    approach inspired by `skimage.exposure.rescale_intensity`.
+    """Rescale pattern intensities inplace to desired
+    :class:`numpy.dtype` range specified by ``dtype_out`` keeping
+    relative intensities or not.
+
+    This method makes use of :func:`skimage.exposure.rescale_intensity`.
 
     Parameters
     ----------
-    pattern : da.Array
+    pattern : dask.array.Array
         Pattern to rescale.
     in_range, out_range : tuple of int or float, optional
         Min./max. intensity values of input and output pattern. If None,
@@ -157,25 +160,27 @@ def _static_background_correction_chunk(
 
 def _dynamic_background_correction_chunk(
         patterns, sigma, operation='subtract', dtype_out=None):
-    """Correct dynamic background in patterns in chunk by subtracting
-    or dividing by a blurred version of each pattern. Returned pattern
-    intensities are stretched to fill the input data type range.
+    """Correct dynamic background in chunk of patterns by subtracting
+    or dividing by a blurred version of each pattern.
+
+    Returned pattern intensities are stretched to fill the input data
+    type range.
 
     Parameters
     ----------
-    patterns : da.Array
+    patterns : dask.array.Array
         Patterns to correct dynamic background in.
-    sigma : {int, float or None}
+    sigma : int, float or None
         Standard deviation of the gaussian kernel.
     operation : 'subtract' or 'divide', optional
         Subtract (default) or divide by dynamic background pattern.
-    dtype_out : np.dtype, optional
-        Data type of corrected patterns. If None (default), it is set to
-        the same data type as the input patterns.
+    dtype_out : numpy.dtype, optional
+        Data type of corrected patterns. If ``None`` (default), it is
+        set to the same data type as the input patterns.
 
     Returns
     -------
-    corrected_patterns : da.Array
+    corrected_patterns : dask.array.Array
         Dynamic background corrected patterns.
     """
 
@@ -198,13 +203,16 @@ def _dynamic_background_correction_chunk(
 
 def _adaptive_histogram_equalization_chunk(
         patterns, kernel_size, clip_limit=0, nbins=128):
-    """Local contrast enhancement on chunk of patterns using adaptive
-    histogram equalization as implemented in
-    `skimage.exposure.equalize_adapthist`.
+    """Local contrast enhancement on chunk of patterns with adaptive
+    histogram equalization.
+
+    This method makes use of
+    :func:`skimage.exposure.equalize_adapthist`.
+
 
     Parameters
     ----------
-    patterns : da.Array
+    patterns : dask.array.Array
         Patterns to enhance.
     kernel_size : int or list-like
         Shape of contextual regions for adaptive histogram equalization.
@@ -217,7 +225,7 @@ def _adaptive_histogram_equalization_chunk(
 
     Returns
     -------
-    equalized_patterns : da.Array
+    equalized_patterns : dask.array.Array
         Patterns with enhanced contrast.
     """
 
@@ -239,12 +247,12 @@ def normalised_correlation_coefficient(
 
     Parameters
     ----------
-    pattern : np.ndarray or da.Array
+    pattern : numpy.ndarray or dask.array.Array
         Pattern to compare the template to.
-    template : np.ndarray or da.Array
+    template : numpy.ndarray or dask.array.Array
         Template pattern.
     zero_normalised : bool, optional
-        Subtract local mean value of intensities (default is True).
+        Subtract local mean value of intensities (default is ``True``).
 
     Returns
     -------
@@ -254,8 +262,8 @@ def normalised_correlation_coefficient(
 
     References
     ----------
-        .. [1] Gonzalez, Rafael C, Woods, Richard E: Digital Image
-               Processing, 3rd edition, Pearson Education, 954, 2008.
+    .. [1] Gonzalez, Rafael C, Woods, Richard E: Digital Image\
+        Processing, 3rd edition, Pearson Education, 954, 2008.
     """
 
     pattern = pattern.astype(np.float32)

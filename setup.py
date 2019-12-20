@@ -23,7 +23,8 @@ import kikuchipy.release as release
 setup(
     name='kikuchipy',
     version=release.version,
-    description='Processing of electron backscatter diffraction patterns',
+    description=(
+        'Processing of electron backscatter diffraction (EBSD) patterns'),
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     author=release.author,
@@ -51,23 +52,12 @@ setup(
     ],
     packages=find_packages(),
     install_requires=[
-        'dask',
-        'hyperspy >= 1.5.2',
-        'h5py',
-        'matplotlib',
-        'numpy',
-        'pyxem',
-        'scikit-image',
-        'scikit-learn',
-        'scipy',
-        'tqdm',
-    ],
-    tests_require=[
-        'pytest',
-        'pytest-cov',
-    ],
+        'dask', 'hyperspy >= 1.5.2', 'h5py', 'matplotlib', 'numpy', 'pyxem',
+        'scikit-image', 'scikit-learn', 'scipy'],
+    tests_require=['pytest', 'pytest-cov'],
     package_data={
         '': ['LICENSE', 'README.md'],
-        'kikuchipy': ['*.py', 'hyperspy_extension.yaml']},
+        'kikuchipy': ['*.py', 'hyperspy_extension.yaml', 'data']},
     entry_points={'hyperspy.extensions': 'kikuchipy = kikuchipy'},
+    python_requires=">=3.7",
 )
