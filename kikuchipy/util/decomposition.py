@@ -23,7 +23,7 @@ import kikuchipy as kp
 
 def _update_learning_results(learning_results, components, dtype_out):
     """Update learning results before calling
-    :py:meth:`hyperspy.learn.mva.MVA.get_decomposition_model` by
+    :meth:`hyperspy.learn.mva.MVA.get_decomposition_model` by
     changing data type, keeping only desired components and rechunking
     them into suitable chunks if they are lazy.
 
@@ -41,9 +41,9 @@ def _update_learning_results(learning_results, components, dtype_out):
 
     Returns
     -------
-    factors : :py:attr:`hyperspy.learn.mva.LearningResults.factors`
+    factors : :attr:`hyperspy.learn.mva.LearningResults.factors`
         Updated component patterns in learning results.
-    loadings : :py:attr:`hyperspy.learn.mva.LearningResults.loadings`
+    loadings : :attr:`hyperspy.learn.mva.LearningResults.loadings`
         Updated component loadings in learning results.
     """
 

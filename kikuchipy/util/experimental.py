@@ -26,11 +26,10 @@ from skimage.util.dtype import dtype_range
 def _rescale_pattern(
         pattern, in_range=None, out_range=None, dtype_out=None):
     """Rescale pattern intensities inplace to desired
-    :py:class:`numpy.dtype` range specified by ``dtype_out`` keeping
+    :class:`numpy.dtype` range specified by ``dtype_out`` keeping
     relative intensities or not.
 
-    This method makes use of
-    :py:func:`skimage.exposure.rescale_intensity`.
+    This method makes use of :func:`skimage.exposure.rescale_intensity`.
 
     Parameters
     ----------
@@ -208,7 +207,7 @@ def _adaptive_histogram_equalization_chunk(
     histogram equalization.
 
     This method makes use of
-    :py:func:`skimage.exposure.equalize_adapthist`.
+    :func:`skimage.exposure.equalize_adapthist`.
 
 
     Parameters

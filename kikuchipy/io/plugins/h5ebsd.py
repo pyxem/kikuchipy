@@ -335,7 +335,7 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
 
 def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
     """Return three dictionaries in HyperSpy's
-    :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser` format, one
+    :class:`hyperspy.misc.utils.DictionaryTreeBrowser` format, one
     with the h5ebsd scan header parameters as KikuchiPy metadata,
     another with all datasets in the header as original metadata, and
     the last with info about scan size, pattern size and detector pixel
@@ -354,11 +354,11 @@ def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
 
     Returns
     -------
-    md : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    md : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         KikuchiPy ``metadata`` elements available in file.
-    omd : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         All metadata available in file.
-    scan_size : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         Scan, pattern, step and detector pixel size available in file.
     """
 
@@ -396,11 +396,11 @@ def kikuchipyheader2dicts(scan_group, md, lazy=False):
 
     Returns
     -------
-    md : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    md : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         KikuchiPy ``metadata`` elements available in KikuchiPy file.
-    omd : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         All metadata available in KikuchiPy file.
-    scan_size : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         Scan, pattern, step and detector pixel size available in
         KikuchiPy file.
     """
@@ -441,11 +441,11 @@ def edaxheader2dicts(scan_group, md):
 
     Returns
     -------
-    md : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    md : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         KikuchiPy ``metadata`` elements available in EDAX file.
-    omd : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         All metadata available in EDAX file.
-    scan_size : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         Scan, pattern, step and detector pixel size available in EDAX
         file.
     """
@@ -512,11 +512,11 @@ def brukerheader2dicts(scan_group, md):
 
     Returns
     -------
-    md : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    md : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         KikuchiPy ``metadata`` elements available in Bruker file.
-    omd : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         All metadata available in Bruker file.
-    scan_size : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         Scan, pattern, step and detector pixel size available in Bruker
         file.
     """
@@ -575,8 +575,8 @@ def brukerheader2dicts(scan_group, md):
 
 def file_writer(
         filename, signal, add_scan=None, scan_number=1, **kwargs):
-    """Write an :py:class:`~kikuchipy.signals.ebsd.EBSD` or
-    :py:class:`~kikuchipy.signals.ebsd.LazyEBSD` signal to an existing,
+    """Write an :class:`~kikuchipy.signals.ebsd.EBSD` or
+    :class:`~kikuchipy.signals.ebsd.LazyEBSD` signal to an existing,
     but not open, or new h5ebsd file.
 
     Only writing to KikuchiPy's h5ebsd format is supported.
@@ -595,8 +595,7 @@ def file_writer(
         Scan number in name of HDF dataset when writing to an existing,
         but not open, h5ebsd file.
     **kwargs :
-        Keyword arguments passed to
-        :py:meth:`h5py:Group.require_dataset`.
+        Keyword arguments passed to :meth:`h5py:Group.require_dataset`.
     """
 
     # Set manufacturer and version to use in file
@@ -703,8 +702,7 @@ def dict2h5ebsdgroup(dictionary, group, **kwargs):
     group : h5py:Group
         HDF group to write dictionary to.
     **kwargs :
-        Keyword arguments passed to
-        :py:meth:`h5py:Group.require_dataset`.
+        Keyword arguments passed to :meth:`h5py:Group.require_dataset`.
     """
 
     for key, val in dictionary.items():

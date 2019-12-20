@@ -186,11 +186,11 @@ def get_settings_from_file(filename):
 
     Returns
     -------
-    md : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    md : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         Metadata complying with HyperSpy's metadata structure.
-    omd : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         Metadata that does not fit into HyperSpy's metadata structure.
-    scan_size : :py:class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         Information on pattern size, scan size and scan steps.
     """
 
@@ -310,8 +310,8 @@ def get_string(content, expression, line_no, file):
 
 
 def file_writer(filename, signal):
-    """Write an :py:class:`~kikuchipy.signals.ebsd.EBSD` or
-    :py:class:`~kikuchipy.signals.ebsd.LazyEBSD` signal to a NORDIF
+    """Write an :class:`~kikuchipy.signals.ebsd.EBSD` or
+    :class:`~kikuchipy.signals.ebsd.LazyEBSD` signal to a NORDIF
     binary file.
 
     Parameters

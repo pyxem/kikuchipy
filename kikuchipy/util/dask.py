@@ -35,7 +35,7 @@ def _get_chunks(data_shape, dtype, mbytes_chunk=100):
     ----------
     data_shape : tuple of ints
         Shape of data to chunk.
-    dtype : :py:class:`numpy.dtype`
+    dtype : :class:`numpy.dtype`
         Data type.
     mbytes_chunk : int, optional
         Size of chunks in MB, default is 100 MB as suggested in the
@@ -76,15 +76,15 @@ def _get_dask_array(signal, dtype=None):
 
     Parameters
     ----------
-    signal : :py:class:`~kikuchipy.signals.ebsd.EBSD` or\
-            :py:class:`~kikuchipy.signals.ebsd.LazyEBSD`
+    signal : :class:`~kikuchipy.signals.ebsd.EBSD` or\
+            :class:`~kikuchipy.signals.ebsd.LazyEBSD`
         Signal with data to return dask array from.
-    dtype : :py:class:`numpy.dtype`, optional
+    dtype : :class:`numpy.dtype`, optional
         Data type of returned dask array.
 
     Returns
     -------
-    dask_array : :py:class:`dask.array.Array`
+    dask_array : :class:`dask.array.Array`
         Dask array with signal data with appropriate chunking and data
         type.
     """
@@ -112,9 +112,9 @@ def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
 
     Parameters
     ----------
-    factors : :py:attr:`hyperspy.learn.mva.LearningResults.factors`
+    factors : :attr:`hyperspy.learn.mva.LearningResults.factors`
         Component patterns in learning results.
-    loadings : :py:attr:`hyperspy.learn.mva.LearningResults.loadings`
+    loadings : :attr:`hyperspy.learn.mva.LearningResults.loadings`
         Component loadings in learning results.
     mbytes_chunk : int, optional
         Size of chunks in MB, default is 100 MB as suggested in the Dask
@@ -124,7 +124,7 @@ def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
     -------
     List of two tuples :
         The first/second tuple are suggested chunks to pass to
-        :py:func:`dask.array.rechunk` for factors/loadings,
+        :func:`dask.array.rechunk` for factors/loadings,
         respectively.
     """
 

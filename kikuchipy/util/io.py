@@ -25,8 +25,7 @@ def kikuchipy_metadata():
     """Return a dictionary in HyperSpy's DictionaryTreeBrowser format
     with the default KikuchiPy metadata.
 
-    See
-    :py:meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`
+    See :meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`
     for an explanation of the parameters.
 
     Returns

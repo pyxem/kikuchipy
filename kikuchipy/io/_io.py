@@ -42,7 +42,7 @@ for plugin in plugins:
 def load(filename, lazy=False, **kwargs):
     """Load an EBSD object from a supported file.
 
-    This function is a modified version of :py:func:`hyperspy.io.load`.
+    This function is a modified version of :func:`hyperspy.io.load`.
 
     Parameters
     ----------
@@ -92,8 +92,7 @@ def load(filename, lazy=False, **kwargs):
 def _dict2signal(signal_dict, lazy=False):
     """Create a signal instance from a dictionary.
 
-    This function is a modified version
-    :py:func:`hyperspy.io.dict2signal`.
+    This function is a modified version :func:`hyperspy.io.dict2signal`.
 
     Parameters
     ----------
@@ -142,7 +141,7 @@ def _assign_signal_subclass(
     signal subclass.
 
     This function is a modified version of
-    :py:func:`hyperspy.io.assign_signal_subclass`.
+    :func:`hyperspy.io.assign_signal_subclass`.
 
     Parameters
     ----------
@@ -199,7 +198,7 @@ def _assign_signal_subclass(
 def save(filename, signal, overwrite=None, add_scan=None, **kwargs):
     """Write signal to a file in a supported format.
 
-    This function is a modified version of :py:func:`hyperspy.io.save`.
+    This function is a modified version of :func:`hyperspy.io.save`.
 
     Parameters
     ----------

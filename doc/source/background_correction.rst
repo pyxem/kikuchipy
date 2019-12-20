@@ -17,7 +17,7 @@ Static background correction
 
 The slowly varying diffuse background in raw patterns can be removed by either
 subtracting or dividing by a static background via
-:py:meth:`~kikuchipy.signals.ebsd.EBSD.static_background_correction`:
+:meth:`~kikuchipy.signals.ebsd.EBSD.static_background_correction`:
 
 .. code-block:: python
 
@@ -34,7 +34,7 @@ subtracting or dividing by a static background via
 
 Here the static background pattern is assumed to be stored as part of the signal
 ``metadata``, which can be loaded via
-:py:meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`. The static
+:meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`. The static
 background pattern can also be passed to the ``static_bg`` parameter. Passing
 ``relative=True`` ensures that relative intensities between patterns are kept
 when the patterns are scaled after correction to fill the intensity range
@@ -48,7 +48,7 @@ Dynamic background correction
 Uneven intensity in a static background subtracted pattern can be corrected by
 subtracting or dividing by a dynamic background obtained by Gaussian blurring.
 This so-called flat fielding is done with
-:py:meth:`~kikuchipy.signals.ebsd.EBSD.dynamic_background_correction`, with
+:meth:`~kikuchipy.signals.ebsd.EBSD.dynamic_background_correction`, with
 possibilities of setting the ``operation`` and standard deviation of the
 Gaussian kernel, ``sigma``:
 
@@ -74,9 +74,9 @@ Adaptive histogram equalization
 
 Enhancing the pattern contrast with adaptive histogram equalization has been
 found useful when comparing patterns for dictionary indexing [Marquardt2017]_.
-With :py:meth:`~kikuchipy.signals.ebsd.EBSD.adaptive_histogram_equalization`,
-the intensities in the pattern histogram are spread to cover the available
-range, e.g. [0, 255] for patterns of ``uint8`` data type:
+With :meth:`~kikuchipy.signals.ebsd.EBSD.adaptive_histogram_equalization`, the
+intensities in the pattern histogram are spread to cover the available range,
+e.g. [0, 255] for patterns of ``uint8`` data type:
 
 .. code-block:: python
 
@@ -117,7 +117,7 @@ Rescale intensities
 ===================
 
 Only changing the data type using
-:py:meth:`~kikuchipy.signals.ebsd.EBSD.change_dtype` does not rescale pattern
+:meth:`~kikuchipy.signals.ebsd.EBSD.change_dtype` does not rescale pattern
 intensities, leading to patterns not using the full available data type range,
 e.g. [0, 65535] for ``uint16``:
 
@@ -140,7 +140,7 @@ e.g. [0, 65535] for ``uint16``:
 
 In these cases it is convenient to rescale intensities to a desired data type
 range, either keeping relative intensities between patterns or not, by using
-:py:meth:`~kikuchipy.signals.ebsd.EBSD.rescale_intensities`:
+:meth:`~kikuchipy.signals.ebsd.EBSD.rescale_intensities`:
 
 .. code-block:: python
 
