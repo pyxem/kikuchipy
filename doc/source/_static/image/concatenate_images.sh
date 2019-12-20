@@ -16,5 +16,5 @@ VIS=visualizing_patterns
 #convert ${BGCORR}/pattern_dynamic.jpg ${CHANGES}/pattern_cropped.jpg +append ${CHANGES}/change_pattern_size.jpg
 
 # Virtual image
-convert ${VIS}/vfsd_navigator.jpg -resize 860x581 ${VIS}/vfsd_navigator_rescaled.jpg
-convert ${VIS}/vfsd_navigator_rescaled.jpg ${VIS}/pattern_roi.jpg -gravity center +append ${VIS}/roi_vfsd_navigator.jpg
+convert ${VIS}/vbse_navigator.jpg -resize 860x581 ${VIS}/vbse_navigator_rescaled.jpg
+convert ${VIS}/vbse_navigator_rescaled.jpg ${VIS}/pattern_roi.jpg -gravity center +append ${VIS}/roi_vbse_navigator.jpg
