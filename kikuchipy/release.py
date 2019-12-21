@@ -22,6 +22,6 @@ credits = ["Håkon Wiik Ånes", "Tina Bergh"]
 license = "GPLv3"
 maintainer = "Håkon Wiik Ånes"
 maintainer_email = "hakon.w.anes@ntnu.no"
-name = 'kikuchipy'
+name = "kikuchipy"
 status = "Development"
 version = "0.1.0"
