@@ -55,6 +55,8 @@ setup(
         'dask', 'hyperspy >= 1.5.2', 'h5py', 'matplotlib', 'numpy', 'pyxem',
         'scikit-image', 'scikit-learn', 'scipy'],
     tests_require=['pytest', 'pytest-cov'],
+    extras_require={'doc': [
+        'sphinx >= 1.8', 'sphinx-rtd-theme', 'sphinx-copybutton']},
     package_data={
         '': ['LICENSE', 'README.md'],
         'kikuchipy': ['*.py', 'hyperspy_extension.yaml', 'data']},
