@@ -18,18 +18,30 @@
 
 from setuptools import setup, find_packages
 
-import kikuchipy.release as release
+# Get release information
+with open('kikuchipy/release.py') as fid:
+    for line in fid:
+        if line.startswith('author'):
+            author = line.strip().split(' = ')[-1][1:-1]
+        elif line.startswith('maintainer_email'):  # Must be before 'maintainer'
+            maintainer_email = line.strip(' = ').split()[-1][1:-1]
+        elif line.startswith('maintainer'):
+            maintainer = line.strip().split(' = ')[-1][1:-1]
+        elif line.startswith('name'):
+            name = line.strip().split()[-1][1:-1]
+        elif line.startswith('version'):
+            version = line.strip().split(' = ')[-1][1:-1]
 
 setup(
-    name='kikuchipy',
-    version=release.version,
+    name=name,
+    version=version,
     description=(
         'Processing of electron backscatter diffraction (EBSD) patterns'),
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
-    author=release.author,
-    maintainer=release.maintainer,
-    maintainer_email=release.maintainer_email,
+    author=author,
+    maintainer=maintainer,
+    maintainer_email=maintainer_email,
     keywords=[
         'EBSD', 'electron backscatter diffraction',
         'EBSP', 'electron backscatter pattern',
@@ -52,8 +64,8 @@ setup(
     ],
     packages=find_packages(),
     install_requires=[
-        'dask', 'hyperspy >= 1.5.2', 'h5py', 'matplotlib', 'numpy', 'pyxem',
-        'scikit-image', 'scikit-learn', 'scipy'],
+        'dask[array]', 'hyperspy >= 1.5.2', 'h5py', 'matplotlib', 'numpy',
+        'pyxem >= 0.10', 'scikit-image', 'scikit-learn', 'scipy'],
     tests_require=['pytest', 'pytest-cov'],
     extras_require={'doc': [
         'sphinx >= 1.8', 'sphinx-rtd-theme', 'sphinx-copybutton']},
