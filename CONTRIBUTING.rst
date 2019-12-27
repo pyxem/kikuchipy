@@ -1,6 +1,6 @@
-======================
-Development guidelines
-======================
+============
+Contributing
+============
 
 KikuchiPy is meant to be a community maintained project. We welcome
 contributions in the form of bug reports, documentation, code, feature requests,
@@ -39,10 +39,10 @@ Code formatting
 All code in KikuchiPy is formatted according to the `Style Guide for Python Code
 <https://www.python.org/dev/peps/pep-0008/>`_.
 
-.. _contributing-to-documentation:
+.. _writing-documentation:
 
-Contributing to documentation
-=============================
+Writing documentation
+=====================
 
 KikuchiPy uses `Sphinx <https://www.sphinx-doc.org/en/master/>`_ for
-documentation.
+documenting functionality.

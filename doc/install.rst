@@ -8,7 +8,7 @@ Pip
 ---
 
 This installs both KikuchiPy and dependencies like HyperSpy, pyXem, and so on
-that are necessary for different functionality::
+that are necessary for different functionalities::
 
     pip install kikuchipy
 
