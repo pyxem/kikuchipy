@@ -2,7 +2,7 @@
 # systems is based upon HyperSpy:
 # https://github.com/hyperspy/hyperspy/blob/RELEASE_next_minor/.travis.yml
 
-language: shell
+language: python
 
 env:
   global:
@@ -21,6 +21,7 @@ matrix:
 #    - os: osx
 #      env: export ENV=pip
     - os: windows
+      language: shell
 #    - os: windows
 #      env: export ENV=pip
 
