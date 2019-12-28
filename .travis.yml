@@ -9,16 +9,15 @@ matrix:
   include:
     - env: export PYTHON=3.7
       os: linux
+    - env: export PYTHON=3.7
+      os: osx
 #    - env: export PYTHON=3.7
 #      os: windows
-#      language: shell
-#    - env: export PYTHON=3.7
-#      os: osx
 
 sudo: True # for Miniconda
 
 before_install:
-  - source ./ci/travis_setup_conda_linux.sh
+  - source ./ci/travis_setup_conda_$TRAVIS_OS_NAME.sh
 
 install:
   - source ./ci/travis_install_with_conda.sh
