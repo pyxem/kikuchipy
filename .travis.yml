@@ -31,9 +31,9 @@ matrix:
 #            - python3
 
     # Windows
-    - os: windows
 #    - os: windows
-#      env: export ENV=pip
+    - os: windows
+      env: export ENV=pip
 
 sudo: True # for Miniconda
 
