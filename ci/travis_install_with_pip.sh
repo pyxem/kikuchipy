@@ -23,7 +23,7 @@ if [[ "$TRAVIS_OS_NAME" =~ ^(linux|osx)$ ]]; then
   python3 -m pip3 install --upgrade virtualenv
   virtualenv -p python3 --system-site-packages $HOME/testenv
 else # windows
-  python -m pip3 install --upgrade virtualenv
+  python -m pip install --upgrade virtualenv
   virtualenv -p python --system-site-packages $HOME/testenv
 fi
 source $HOME/testenv/bin/activate
