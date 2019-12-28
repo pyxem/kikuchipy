@@ -13,15 +13,21 @@ env:
 
 matrix:
   include:
-    - os: linux
-    - os: linux
-      language: python
-      python: 3.7
-      env: export ENV=pip
-    - os: osx
-#    - os: osx
+
+    # Linux (Ubuntu)
+#    - os: linux
+#    - os: linux
+#      language: python
+#      python: 3.7
 #      env: export ENV=pip
-    - os: windows
+
+    # macOS
+#    - os: osx
+    - os: osx
+      env: export ENV=pip
+
+    # Windows
+#    - os: windows
 #    - os: windows
 #      env: export ENV=pip
 
