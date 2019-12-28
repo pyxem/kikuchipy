@@ -66,7 +66,7 @@ setup(
     install_requires=[
         'dask[array]', 'hyperspy >= 1.5.2', 'h5py', 'matplotlib', 'numpy',
         'pyxem >= 0.10', 'scikit-image', 'scikit-learn', 'scipy'],
-    tests_require=['pytest >= 3.6', 'pytest-cov'],
+    tests_require=['pytest', 'pytest-cov', 'coverage == 4.5.4'],
     extras_require={'doc': [
         'sphinx >= 1.8', 'sphinx-rtd-theme', 'sphinx-copybutton']},
     package_data={

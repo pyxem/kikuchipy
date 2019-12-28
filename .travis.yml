@@ -23,12 +23,12 @@ matrix:
 
     # macOS
 #    - os: osx
-    - os: osx
-      env: export ENV=pip
-      addons:
-        homebrew:
-          packages:
-            - python3
+#    - os: osx
+#      env: export ENV=pip
+#      addons:
+#        homebrew:
+#          packages:
+#            - python3
 
     # Windows
 #    - os: windows
