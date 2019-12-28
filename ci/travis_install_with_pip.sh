@@ -9,5 +9,4 @@ source $HOME/testenv/bin/activate
 
 # Install package with pip
 pip install --upgrade $DEPS $TEST_DEPS
-#pip install --upgrade pip # To solve coverage conflict between python-coveralls and pytest-cov
 pip list installed
