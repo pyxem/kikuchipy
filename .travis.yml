@@ -9,8 +9,8 @@ matrix:
   include:
     - env: export PYTHON=3.7
       os: linux
-#    - env: export PYTHON=3.7
-#      os: windows
+    - env: export PYTHON=3.7
+      os: windows
 #    - env: export PYTHON=3.7
 #      os: osx
 
