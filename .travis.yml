@@ -39,7 +39,7 @@ sudo: True # for Miniconda
 
 before_install:
   # Set up conda for the different operating systems
-  - if [ $ENV == conda ]; then
+  - if [ "$ENV" == conda ]; then
       source ./ci/travis_setup_conda_$TRAVIS_OS_NAME.sh;
     fi
 
