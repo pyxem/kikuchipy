@@ -2,6 +2,7 @@
 if [[ "$TRAVIS_OS_NAME" =~ ^(linux|osx)$ ]]; then
   source $HOME/miniconda/bin/activate root
 fi
+
 conda update --yes conda
 conda config --append channels conda-forge
 conda create --name testenv --yes python=$PYTHON

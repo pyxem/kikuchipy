@@ -24,7 +24,7 @@ before_install:
 
 install:
   - source ./ci/travis_install_with_conda.sh
-  - pip install .
+  - pip install -e .
 
 script:
   - export MPLBACKEND=Agg
