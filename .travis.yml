@@ -25,6 +25,11 @@ matrix:
 #    - os: osx
     - os: osx
       env: export ENV=pip
+      addons:
+        homebrew:
+          update: true # Takes time, might not be necessary
+          packages:
+            - python3
 
     # Windows
 #    - os: windows
