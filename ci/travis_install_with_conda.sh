@@ -5,7 +5,7 @@ fi
 
 conda update --yes conda
 conda config --append channels conda-forge
-conda create --name testenv --yes python=$PYTHON
+conda create --name testenv --yes python=$PYTHON_CONDA
 
 if [[ "$TRAVIS_OS_NAME" =~ ^(linux|osx)$ ]]; then
   conda activate testenv

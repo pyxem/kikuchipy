@@ -20,4 +20,4 @@ To install KikuchiPy from source, clone the repository from `GitHub
 
     git clone https://github.com/kikuchipy/kikuchipy.git
     cd kikuchipy
-    pip install .
+    pip install -e .

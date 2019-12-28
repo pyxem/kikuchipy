@@ -1,29 +1,40 @@
-language: generic
+# The setup of different files for installation and tests on different operating
+# systems is based upon HyperSpy:
+# https://github.com/hyperspy/hyperspy/blob/RELEASE_next_minor/.travis.yml
+
+language: shell
 
 env:
   global:
+    - ENV=conda
     - DEPS="hyperspy pyxem dask[array] h5py matplotlib numpy scikit-image scikit-learn scipy"
     - TEST_DEPS="pytest pytest-cov coveralls"
+    - PYTHON_CONDA=3.7
 
 matrix:
   include:
     - os: linux
-      env: export PYTHON=3.7
-      language: python
+    - os: linux
+      env: export ENV=pip
+      python: 3.7
     - os: osx
-      env: export PYTHON=3.7
-      language: shell
+#    - os: osx
+#      env: export ENV=pip
     - os: windows
-      env: export PYTHON=3.7
-      language: shell
+#    - os: windows
+#      env: export ENV=pip
 
 sudo: True # for Miniconda
 
 before_install:
-  - source ./ci/travis_setup_conda_$TRAVIS_OS_NAME.sh
+  # Set up conda for the different operating systems
+  - if [ $ENV == conda ]; then
+      source ./ci/travis_setup_conda_$TRAVIS_OS_NAME.sh
+    fi
 
 install:
-  - source ./ci/travis_install_with_conda.sh
+  # Install dependencies with conda or pip
+  - source ./ci/travis_install_with_$ENV.sh
   - pip install -e .
 
 script:
