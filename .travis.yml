@@ -27,7 +27,7 @@ matrix:
       env: export ENV=pip
       addons:
         homebrew:
-          update: true # Takes time, might not be necessary
+#          update: true # Takes time, might not be necessary
           packages:
             - python3
 
