@@ -31,9 +31,10 @@ matrix:
 #            - python3
 
     # Windows
-#    - os: windows
     - os: windows
-      env: export ENV=pip
+      env: PATH="/c/tools/miniconda3/:/c/tools/miniconda3/Scripts:$PATH"
+    - os: windows
+      env: export ENV=pip; PATH="/c/Python37:/c/Python37/Scripts:$PATH"
 
 sudo: True # for Miniconda
 

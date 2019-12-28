@@ -3,9 +3,8 @@
 # 'python' points to Python 2.7 on macOS, but points to Python 3.7 on Linux and Windows
 # 'python3' is a 'command not found' error on Windows, but 'python' works on Windows only
 
-# Install Python3 on Windows
+# Install Python on Windows
 if [ "$TRAVIS_OS_NAME" == windows ]; then
-  PATH="/c/Python37:/c/Python37/Scripts:$PATH"
   choco install -y python --version=3.7.5 --allow-downgrades
   python -m pip install --upgrade pip
 fi
@@ -18,7 +17,7 @@ else # windows
 fi
 pip3 --version
 
-# Create virtual environment
+# Create and activate virtual environment
 if [[ "$TRAVIS_OS_NAME" =~ ^(linux|osx)$ ]]; then
   python3 -m pip3 install --upgrade virtualenv
   virtualenv -p python3 --system-site-packages $HOME/testenv

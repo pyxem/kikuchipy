@@ -4,4 +4,3 @@
 # Install Miniconda
 # pip needs OpenSSL
 choco install -y miniconda3 openssl.light
-PATH="/c/tools/miniconda3/:/c/tools/miniconda3/Scripts:$PATH"
