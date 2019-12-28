@@ -1,7 +1,7 @@
 # Install Python3
-if [ "$TRAVIS_OS_NAME" == windows ]; then
-  choco install -y python3 --version=3.7.5 --allow-downgrades
-fi
+#if [ "$TRAVIS_OS_NAME" == windows ]; then
+#  choco install -y python3 --version=3.7.5 --allow-downgrades
+#fi
 
 # Check Python and pip version
 python3 --version
