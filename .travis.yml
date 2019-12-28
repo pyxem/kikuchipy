@@ -8,7 +8,7 @@ env:
   global:
     - ENV=conda
     - DEPS="hyperspy pyxem dask[array] h5py matplotlib numpy scikit-image scikit-learn scipy"
-    - TEST_DEPS="pytest pytest-cov coveralls"
+    - TEST_DEPS="pytest pytest-cov coveralls==4.5.4"
     - PYTHON_CONDA=3.7
 
 matrix:
