@@ -25,6 +25,7 @@ matrix:
     # macOS
     # conda
     - os: osx
+      osx_image: xcode11.2
     # pip
     - os: osx
       env: export ENV=pip
