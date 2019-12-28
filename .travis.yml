@@ -13,28 +13,33 @@ env:
 
 matrix:
   include:
-
     # Linux (Ubuntu)
+    # conda
 #    - os: linux
-#    - os: linux
-#      language: python
-#      python: 3.7
-#      env: export ENV=pip
+    # pip
+    - os: linux
+      language: python
+      python: 3.7
+      env: export ENV=pip
 
     # macOS
+    # conda
 #    - os: osx
-#    - os: osx
-#      env: export ENV=pip
-#      addons:
-#        homebrew:
-#          packages:
-#            - python3
+    # pip
+    - os: osx
+      env: export ENV=pip
+      addons:
+        homebrew:
+          packages:
+            - python3
 
     # Windows
-    - os: windows
-      env: PATH="/c/tools/miniconda3/:/c/tools/miniconda3/Scripts:$PATH"
-    - os: windows
-      env: export ENV=pip; PATH="/c/Python37:/c/Python37/Scripts:$PATH"
+    # conda
+#    - os: windows
+#      env: PATH="/c/tools/miniconda3/:/c/tools/miniconda3/Scripts:$PATH"
+    # pip
+#    - os: windows
+#      env: export ENV=pip; PATH="/c/Python37:/c/Python37/Scripts:$PATH"
 
 sudo: True # for Miniconda
 

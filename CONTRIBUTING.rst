@@ -44,5 +44,16 @@ All code in KikuchiPy is formatted according to the `Style Guide for Python Code
 Writing documentation
 =====================
 
-KikuchiPy uses `Sphinx <https://www.sphinx-doc.org/en/master/>`_ for
-documenting functionality.
+We use `Sphinx <https://www.sphinx-doc.org/en/master/>`_ for documenting
+functionality.
+
+.. _continuous-integration:
+
+Continuous integration (CI)
+===========================
+
+We use `Travis CI <https://travis-ci.org/kikuchipy/kikuchipy>`_ to ensure that
+KikuchiPy can be installed on Windows, macOS and Linux (Ubuntu) with both
+``conda`` and ``pip``. After a successful installation, the CI server runs the
+tests. After the tests return no errors, code coverage is reported to
+`Coveralls <https://coveralls.io/github/kikuchipy/kikuchipy?branch=master>`_.
