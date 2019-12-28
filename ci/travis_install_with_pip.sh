@@ -18,13 +18,13 @@ fi
 pip3 --version
 
 # Create and activate virtual environment
-#if [ "$TRAVIS_OS_NAME" == linux ]; then
-#  python3 -m pip3 install --upgrade virtualenv
-#  virtualenv -p python3 --system-site-packages $HOME/testenv
-#else # windows/osx
-python -m pip install --upgrade virtualenv
-virtualenv -p python --system-site-packages $HOME/testenv
-#fi
+if [[ "$TRAVIS_OS_NAME" =~ ^(linux|windows)$ ]]; then
+  python -m pip install --upgrade virtualenv
+  virtualenv -p python --system-site-packages $HOME/testenv
+else # osx
+  python3 -m pip3 install --upgrade virtualenv
+  virtualenv -p python3 --system-site-packages $HOME/testenv
+fi
 source $HOME/testenv/bin/activate
 
 # Install package with pip
