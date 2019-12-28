@@ -24,7 +24,7 @@ matrix:
 
     # macOS
     # conda
-#    - os: osx
+    - os: osx
     # pip
     - os: osx
       env: export ENV=pip
@@ -35,11 +35,11 @@ matrix:
 
     # Windows
     # conda
-#    - os: windows
-#      env: PATH="/c/tools/miniconda3/:/c/tools/miniconda3/Scripts:$PATH"
+    - os: windows
+      env: PATH="/c/tools/miniconda3/:/c/tools/miniconda3/Scripts:$PATH"
     # pip
-#    - os: windows
-#      env: export ENV=pip; PATH="/c/Python37:/c/Python37/Scripts:$PATH"
+    - os: windows
+      env: export ENV=pip; PATH="/c/Python37:/c/Python37/Scripts:$PATH"
 
 sudo: True # for Miniconda
 
