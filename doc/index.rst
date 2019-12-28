@@ -11,6 +11,8 @@ class, which has several common methods for processing of EBSD patterns, also
 inherits all relevant methods from HyperSpy's Signal2D and `Signal
 <https://hyperspy.org/hyperspy-doc/current/user_guide/tools.html>`_ classes.
 
+KikuchiPy is released under the GPL v3 license.
+
 .. toctree::
     :hidden:
     :caption: Getting started
@@ -34,7 +36,7 @@ inherits all relevant methods from HyperSpy's Signal2D and `Signal
     :hidden:
     :caption: Help & reference
 
-    develop.rst
+    Contributing <contributing.rst>
     open_datasets.rst
     changelog.rst
     cite.rst

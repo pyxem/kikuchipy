@@ -1,6 +1,6 @@
-======================
-Development guidelines
-======================
+============
+Contributing
+============
 
 KikuchiPy is meant to be a community maintained project. We welcome
 contributions in the form of bug reports, documentation, code, feature requests,
@@ -39,10 +39,21 @@ Code formatting
 All code in KikuchiPy is formatted according to the `Style Guide for Python Code
 <https://www.python.org/dev/peps/pep-0008/>`_.
 
-.. _contributing-to-documentation:
+.. _writing-documentation:
 
-Contributing to documentation
-=============================
+Writing documentation
+=====================
 
-KikuchiPy uses `Sphinx <https://www.sphinx-doc.org/en/master/>`_ for
-documentation.
+We use `Sphinx <https://www.sphinx-doc.org/en/master/>`_ for documenting
+functionality.
+
+.. _continuous-integration:
+
+Continuous integration (CI)
+===========================
+
+We use `Travis CI <https://travis-ci.org/kikuchipy/kikuchipy>`_ to ensure that
+KikuchiPy can be installed on Windows, macOS and Linux (Ubuntu) with both
+``conda`` and ``pip``. After a successful installation, the CI server runs the
+tests. After the tests return no errors, code coverage is reported to
+`Coveralls <https://coveralls.io/github/kikuchipy/kikuchipy?branch=master>`_.

@@ -10,37 +10,18 @@ inherits all relevant methods from HyperSpy's `Signal2D` and `Signal` classes.
 
 KikuchiPy is released under the GPL v3 license.
 
-#### Installation
-```bash
-$ conda create --name kikuchi python=3
-$ conda activate kikuchi
-$ conda install hyperspy pyxem --channel conda-forge
-$ pip install https://github.com/kikuchipy/kikuchipy/archive/master.zip
-```
+##### User guide
 
-#### Use
-```python
-import kikuchipy as kp
-s = kp.load('/some/data.h5')
-s.static_background_correction()
-s.dynamic_background_correction()
-s.adaptive_histogram_equalization()
-s.save('/some/processed_data.h5')  # E.g. for subsequent indexing with EMsoft
-```
+Installation instructions, a user guide and the full API reference is available
+[here](https://kikuchipy.readthedocs.io) via Read the Docs.
 
-#### Supported EBSD formats
-* NORDIF .dat binary files (read/write)
-* HyperSpy's .hspy files (read/write)
-* h5ebsd files, specifically EDAX's and Bruker's formats (read) and
-KikuchiPy's own format (read/write)
+##### Contributing
 
-Readers for more formats will be added.
+Everyone is welcome to contribute. Please read our
+[contributor guide](https://kikuchipy.readthedocs.io/contributing.html) to get
+started!
 
-#### Contribute
-Everyone is welcome to contribute, if it is by raising issues in the
-[issue tracker](https://github.com/kikuchipy/kikuchipy/issues) or by
-contributing code in [pull requests](https://github.com/kikuchipy/kikuchipy/pulls).
+##### Cite
 
-#### Cite
-If analysis using KikuchiPy forms a part of published work please consider
+If analysis using KikuchiPy forms a part of published work, please consider
 recognizing the code development, by for now citing HyperSpy.
