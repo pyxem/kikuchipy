@@ -2,12 +2,17 @@ language: python
 
 env:
   global:
-    - DEPS="hyperspy pyxem"
+    - DEPS="hyperspy pyxem dask[array] h5py matplotlib numpy scikit-image scikit-learn scipy"
     - TEST_DEPS="pytest pytest-cov coveralls"
 
 matrix:
   include:
     - env: export PYTHON=3.7
+      os: linux
+#    - env: export PYTHON=3.7
+#      os: windows
+#    - env: export PYTHON=3.7
+#      os: osx
 
 sudo: True # for Miniconda
 
