@@ -16,10 +16,10 @@ matrix:
 
     # Linux (Ubuntu)
 #    - os: linux
-#    - os: linux
-#      language: python
-#      python: 3.7
-#      env: export ENV=pip
+    - os: linux
+      language: python
+      python: 3.7
+      env: export ENV=pip
 
     # macOS
 #    - os: osx
@@ -27,7 +27,6 @@ matrix:
       env: export ENV=pip
       addons:
         homebrew:
-#          update: true # Takes time, might not be necessary
           packages:
             - python3
 
@@ -47,6 +46,8 @@ before_install:
 install:
   # Install dependencies with conda or pip
   - source ./ci/travis_install_with_$ENV.sh
+
+  # Install KikuchiPy
   - pip install -e .
 
 script:
