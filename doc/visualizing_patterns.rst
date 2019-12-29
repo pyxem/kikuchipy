@@ -32,7 +32,7 @@ corresponding to the sum of all detector intensities within that pattern:
 
 .. figure:: _static/image/visualizing_patterns/standard_navigator.jpg
     :align: center
-    :scale: 70%
+    :width: 450
 
     Example of a standard navigator map.
 
@@ -101,7 +101,7 @@ from dictionary indexing with `EMsoft <https://github.com/EMsoft-org/EMsoft>`_
 
 .. figure:: _static/image/visualizing_patterns/orientation_similarity_map_navigator.jpg
     :align: center
-    :scale: 70%
+    :width: 450
 
     A quality metric map ``s_osm``, in this case an orientation similarity map
     from dictionary indexing with EMsoft, as navigator map.
@@ -128,7 +128,7 @@ involved:
 
 .. figure:: _static/image/visualizing_patterns/orientation_map_navigator.jpg
     :align: center
-    :scale: 70%
+    :width: 450
 
     An orientation map ``s_om`` as a navigator map.
 

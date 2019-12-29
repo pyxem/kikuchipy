@@ -23,7 +23,7 @@ of EBSD patterns:
 
 .. figure:: _static/image/virtual_backscatter_electron_imaging/virtual_backscatter_electron_imaging.gif
     :align: center
-    :scale: 85%
+    :width: 100%
 
     Interactive virtual backscatter electron imaging with.
 
