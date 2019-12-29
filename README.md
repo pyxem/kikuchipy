@@ -10,18 +10,18 @@ inherits all relevant methods from HyperSpy's `Signal2D` and `Signal` classes.
 
 KikuchiPy is released under the GPL v3 license.
 
-##### User guide
+#### User guide
 
 Installation instructions, a user guide and the full API reference is available
 [here](https://kikuchipy.readthedocs.io) via Read the Docs.
 
-##### Contributing
+#### Contributing
 
 Everyone is welcome to contribute. Please read our
-[contributor guide](https://kikuchipy.readthedocs.io/contributing.html) to get
-started!
+[contributor guide](https://kikuchipy.readthedocs.io/en/latest/contributing.html)
+to get started!
 
-##### Cite
+#### Cite
 
 If analysis using KikuchiPy forms a part of published work, please consider
 recognizing the code development, by for now citing HyperSpy.
