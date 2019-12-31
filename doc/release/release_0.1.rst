@@ -10,7 +10,8 @@ tools for multi-dimensional data analysis provided by the HyperSpy library.
 For more information, a user guide, and the full reference API documentation,
 please visit: https://kikuchipy.readthedocs.io
 
-This is the initial pre-release, where things start to get serious...
+This is the initial pre-release, where things start to get serious... seriously
+fun!
 
 Features
 --------
@@ -22,6 +23,9 @@ Features
 - Save EBSD patterns to the NORDIF binary format (.dat) and our own h5ebsd
   format (.h5), using ``s.save()``. Both formats are readable by EMsoft's NORDIF
   and EMEBSD readers, respectively.
+- Lazy alternative for all functionality (except some multivariate analysis
+  algorithsm), meaning all operations on a scan, including plotting, can be done
+  loading only necessary parts of the scan into memory at a time.
 - Visualize patterns easily with HyperSpy's powerful and versatile ``s.plot()``.
   Any image, e.g. a virtual backscatter electron image, quality map, phase map
   or orientation map, can be used to navigate in. Multiple scans of the same
