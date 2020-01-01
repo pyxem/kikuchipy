@@ -1,5 +1,5 @@
-# The setup of different files for installation and tests on different operating
-# systems are based upon HyperSpy:
+# The setup of different files for installation and tests on different
+# operating systems are based upon how HyperSpy does it:
 # https://github.com/hyperspy/hyperspy/blob/RELEASE_next_minor/.travis.yml
 
 language: shell
@@ -74,6 +74,7 @@ after_success:
 before_deploy:
   - export DISTRIBUTIONS=$(ls ./dist/*)
 
+# Source: https://docs.travis-ci.com/user/deployment/pypi/
 deploy:
   provider: pypi
   user: "__token__"

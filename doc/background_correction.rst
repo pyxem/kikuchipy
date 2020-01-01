@@ -102,14 +102,13 @@ for the effect of varying ``kernel_size``.
     S. Koizuimi, "Quantitative electron backscatter diffraction (EBSD) data
     analyses using the dictionary indexing (DI) approach: Overcoming indexing
     difficulties on geological materials," *American Mineralogist* **102**
-    (2017) [`link <https://doi.org/10.2138/am-2017-6062>`_].
-
+    (2017), doi: https://doi.org/10.2138/am-2017-6062.
 
 .. [Jackson2019]
     M. A. Jackson, E. Pascal, M. De Graef, "Dictionary Indexing of Electron
     Back-Scatter Diffraction Patterns: a Hands-On Tutorial," *Integrating
-    Materials and Manufacturing Innovation* **8** (2019) [`link
-    <https://doi.org/10.1007/s40192-019-00137-4>`_].
+    Materials and Manufacturing Innovation* **8** (2019), doi:
+    https://doi.org/10.1007/s40192-019-00137-4.
 
 .. _rescale-intensities:
 

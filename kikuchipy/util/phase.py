@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The KikuchiPy developers
+# Copyright 2019-2020 The KikuchiPy developers
 #
 # This file is part of KikuchiPy.
 #
@@ -29,13 +29,25 @@ def _phase_metadata():
     pd : dict
     """
 
-    pd = {'atom_coordinates': {'1': {'atom': '',
-                                     'coordinates': np.zeros(3),
-                                     'site_occupation': 0.,
-                                     'debye_waller_factor': 0.}},
-          'formula': '', 'info': '', 'lattice_constants': np.zeros(6),
-          'laue_group': '', 'material_name': '', 'point_group': '',
-          'setting': 0, 'space_group': 0, 'symmetry': 0}
+    pd = {
+        "atom_coordinates": {
+            "1": {
+                "atom": "",
+                "coordinates": np.zeros(3),
+                "site_occupation": 0.0,
+                "debye_waller_factor": 0.0,
+            }
+        },
+        "formula": "",
+        "info": "",
+        "lattice_constants": np.zeros(6),
+        "laue_group": "",
+        "material_name": "",
+        "point_group": "",
+        "setting": 0,
+        "space_group": 0,
+        "symmetry": 0,
+    }
     return pd
 
 
@@ -59,8 +71,8 @@ def _update_phase_info(metadata, dictionary, phase_number=1):
     """
 
     # Check if metadata has phases
-    if not metadata.has_item('Sample.Phases'):
-        metadata.add_node('Sample.Phases')
+    if not metadata.has_item("Sample.Phases"):
+        metadata.add_node("Sample.Phases")
 
     # Check if phase number is already in metadata
     phase = metadata.Sample.Phases.get_item(str(phase_number))
@@ -70,9 +82,9 @@ def _update_phase_info(metadata, dictionary, phase_number=1):
 
     # Loop over input dictionary and update items in phase dictionary
     for key, val in dictionary.items():
-        key = re.sub(r'(\w)([A-Z])', r'\1 \2', key)  # Space before UPPERCASE
+        key = re.sub(r"(\w)([A-Z])", r"\1 \2", key)  # Space before UPPERCASE
         key = key.lower()
-        key = key.replace(' ', '_')
+        key = key.replace(" ", "_")
         if key in phase:
             if isinstance(val, list):
                 val = np.array(val)

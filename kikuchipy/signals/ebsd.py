@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The KikuchiPy developers
+# Copyright 2019-2020 The KikuchiPy developers
 #
 # This file is part of KikuchiPy.
 #
@@ -40,8 +40,8 @@ _logger = logging.getLogger(__name__)
 
 
 class EBSD(Signal2D):
-    _signal_type = 'EBSD'
-    _alias_signal_types = ['electron_backscatter_diffraction']
+    _signal_type = "EBSD"
+    _alias_signal_types = ["electron_backscatter_diffraction"]
     _lazy = False
 
     def __init__(self, *args, **kwargs):
@@ -56,18 +56,33 @@ class EBSD(Signal2D):
             md = self.metadata.as_dictionary()
             md.update(kp.util.io.kikuchipy_metadata().as_dictionary())
             self.metadata = DictionaryTreeBrowser(md)
-        if not self.metadata.has_item('Sample.Phases'):
+        if not self.metadata.has_item("Sample.Phases"):
             self.set_phase_parameters()
 
     def set_experimental_parameters(
-            self, detector=None, azimuth_angle=None,
-            elevation_angle=None, sample_tilt=None,
-            working_distance=None, binning=None, exposure_time=None,
-            grid_type=None, gain=None, frame_number=None,
-            frame_rate=None, scan_time=None, beam_energy=None, xpc=None,
-            ypc=None, zpc=None, static_background=None,
-            manufacturer=None, version=None, microscope=None,
-            magnification=None):
+        self,
+        detector=None,
+        azimuth_angle=None,
+        elevation_angle=None,
+        sample_tilt=None,
+        working_distance=None,
+        binning=None,
+        exposure_time=None,
+        grid_type=None,
+        gain=None,
+        frame_number=None,
+        frame_rate=None,
+        scan_time=None,
+        beam_energy=None,
+        xpc=None,
+        ypc=None,
+        zpc=None,
+        static_background=None,
+        manufacturer=None,
+        version=None,
+        microscope=None,
+        magnification=None,
+    ):
         """Set experimental parameters in signal ``metadata``.
 
         Parameters
@@ -137,24 +152,53 @@ class EBSD(Signal2D):
         md = self.metadata
         sem_node, ebsd_node = kp.util.io.metadata_nodes()
         kp.util.general._write_parameters_to_dictionary(
-            {'beam_energy': beam_energy, 'magnification': magnification,
-             'microscope': microscope, 'working_distance': working_distance},
-            md, sem_node)
+            {
+                "beam_energy": beam_energy,
+                "magnification": magnification,
+                "microscope": microscope,
+                "working_distance": working_distance,
+            },
+            md,
+            sem_node,
+        )
         kp.util.general._write_parameters_to_dictionary(
-            {'azimuth_angle': azimuth_angle, 'binning': binning,
-             'detector': detector, 'elevation_angle': elevation_angle,
-             'exposure_time': exposure_time, 'frame_number': frame_number,
-             'frame_rate': frame_rate, 'gain': gain, 'grid_type': grid_type,
-             'manufacturer': manufacturer, 'version': version,
-             'sample_tilt': sample_tilt, 'scan_time': scan_time, 'xpc': xpc,
-             'ypc': ypc, 'zpc': zpc, 'static_background': static_background},
-            md, ebsd_node)
+            {
+                "azimuth_angle": azimuth_angle,
+                "binning": binning,
+                "detector": detector,
+                "elevation_angle": elevation_angle,
+                "exposure_time": exposure_time,
+                "frame_number": frame_number,
+                "frame_rate": frame_rate,
+                "gain": gain,
+                "grid_type": grid_type,
+                "manufacturer": manufacturer,
+                "version": version,
+                "sample_tilt": sample_tilt,
+                "scan_time": scan_time,
+                "xpc": xpc,
+                "ypc": ypc,
+                "zpc": zpc,
+                "static_background": static_background,
+            },
+            md,
+            ebsd_node,
+        )
 
     def set_phase_parameters(
-            self, number=1, atom_coordinates=None, formula=None,
-            info=None, lattice_constants=None, laue_group=None,
-            material_name=None, point_group=None, setting=None,
-            space_group=None, symmetry=None):
+        self,
+        number=1,
+        atom_coordinates=None,
+        formula=None,
+        info=None,
+        lattice_constants=None,
+        laue_group=None,
+        material_name=None,
+        point_group=None,
+        setting=None,
+        space_group=None,
+        symmetry=None,
+    ):
         """Set parameters for one phase in signal ``metadata``, using
         the International Tables for Crystallography, Volume A.
 
@@ -220,20 +264,28 @@ class EBSD(Signal2D):
         # Ensure atom coordinates are numpy arrays
         if atom_coordinates is not None:
             for phase, val in atom_coordinates.items():
-                atom_coordinates[phase]['coordinates'] = np.array(
-                    atom_coordinates[phase]['coordinates'])
+                atom_coordinates[phase]["coordinates"] = np.array(
+                    atom_coordinates[phase]["coordinates"]
+                )
 
-        inputs = {'atom_coordinates': atom_coordinates, 'formula': formula,
-                  'info': info, 'lattice_constants': lattice_constants,
-                  'laue_group': laue_group, 'material_name': material_name,
-                  'point_group': point_group, 'setting': setting,
-                  'space_group': space_group, 'symmetry': symmetry}
+        inputs = {
+            "atom_coordinates": atom_coordinates,
+            "formula": formula,
+            "info": info,
+            "lattice_constants": lattice_constants,
+            "laue_group": laue_group,
+            "material_name": material_name,
+            "point_group": point_group,
+            "setting": setting,
+            "space_group": space_group,
+            "symmetry": symmetry,
+        }
 
         # Remove None values
         phase = {k: v for k, v in inputs.items() if v is not None}
         kp.util.phase._update_phase_info(self.metadata, phase, number)
 
-    def set_scan_calibration(self, step_x=1., step_y=1.):
+    def set_scan_calibration(self, step_x=1.0, step_y=1.0):
         """Set the step size in um.
 
         Parameters
@@ -257,9 +309,9 @@ class EBSD(Signal2D):
         """
 
         x, y = self.axes_manager.navigation_axes
-        x.name, y.name = ('x', 'y')
+        x.name, y.name = ("x", "y")
         x.scale, y.scale = (step_x, step_y)
-        x.units, y.units = [u'\u03BC'+'m'] * 2
+        x.units, y.units = ["\u03BC" + "m"] * 2
 
     def set_detector_calibration(self, delta):
         """Set detector pixel size in microns. The offset is set to the
@@ -285,12 +337,13 @@ class EBSD(Signal2D):
 
         centre = np.array(self.axes_manager.signal_shape) / 2 * delta
         dx, dy = self.axes_manager.signal_axes
-        dx.units, dy.units = [u'\u03BC'+'m'] * 2
+        dx.units, dy.units = ["\u03BC" + "m"] * 2
         dx.scale, dy.scale = (delta, delta)
         dx.offset, dy.offset = -centre
 
     def static_background_correction(
-            self, operation='subtract', relative=False, static_bg=None):
+        self, operation="subtract", relative=False, static_bg=None
+    ):
         """Correct static background inplace by subtracting/dividing by
         a static background pattern.
 
@@ -350,21 +403,25 @@ class EBSD(Signal2D):
                 md = self.metadata
                 ebsd_node = kp.util.io.metadata_nodes(sem=False)
                 static_bg = da.from_array(
-                    md.get_item(ebsd_node + '.static_background'))
+                    md.get_item(ebsd_node + ".static_background")
+                )
             except AttributeError:
                 raise OSError(
                     "Static background is not a numpy or dask array or could "
-                    "not be read from signal metadata.")
+                    "not be read from signal metadata."
+                )
         if dtype_out != static_bg.dtype:
             raise ValueError(
-                "Static background dtype_out {} is not the same as pattern "
-                "dtype_out {}".format(static_bg.dtype, dtype_out))
+                f"Static background dtype_out {static_bg.dtype} is not the "
+                f"same as pattern dtype_out {dtype_out}."
+            )
         pat_shape = self.axes_manager.signal_shape[::-1]
         bg_shape = static_bg.shape
         if bg_shape != pat_shape:
             raise OSError(
-                "Pattern {} and static background {} shapes are not "
-                "identical.".format(pat_shape, bg_shape))
+                f"Pattern {pat_shape} and static background {bg_shape} shapes "
+                "are not identical."
+            )
         dtype = np.int16
         static_bg = static_bg.astype(dtype)
 
@@ -372,7 +429,7 @@ class EBSD(Signal2D):
         if relative:  # Scale relative to min./max. intensity in scan
             signal_min = self.data.min(axis=(0, 1))
             signal_max = self.data.max(axis=(0, 1))
-            if operation == 'subtract':
+            if operation == "subtract":
                 imin = (signal_min - static_bg).astype(dtype).min()
                 imax = (signal_max - static_bg).astype(dtype).max()
             else:  # Divide
@@ -388,8 +445,12 @@ class EBSD(Signal2D):
         # Correct static background and rescale intensities chunk by chunk
         corrected_patterns = dask_array.map_blocks(
             kp.util.experimental._static_background_correction_chunk,
-            static_bg=static_bg, operation=operation, in_range=in_range,
-            dtype_out=dtype_out, dtype=dtype_out)
+            static_bg=static_bg,
+            operation=operation,
+            in_range=in_range,
+            dtype_out=dtype_out,
+            dtype=dtype_out,
+        )
 
         # Overwrite signal patterns
         if not self._lazy:
@@ -399,8 +460,7 @@ class EBSD(Signal2D):
         else:
             self.data = corrected_patterns
 
-    def dynamic_background_correction(
-            self, operation='subtract', sigma=None):
+    def dynamic_background_correction(self, operation="subtract", sigma=None):
         """Correct dynamic background inplace by subtracting or dividing
         by a blurred version of each pattern.
 
@@ -439,12 +499,15 @@ class EBSD(Signal2D):
         dask_array = kp.util.dask._get_dask_array(signal=self, dtype=dtype)
 
         if sigma is None:
-            sigma = self.axes_manager.signal_axes[0].size/30
+            sigma = self.axes_manager.signal_axes[0].size / 30
 
         corrected_patterns = dask_array.map_blocks(
             kp.util.experimental._dynamic_background_correction_chunk,
-            operation=operation, sigma=sigma, dtype_out=dtype_out,
-            dtype=dtype_out)
+            operation=operation,
+            sigma=sigma,
+            dtype_out=dtype_out,
+            dtype=dtype_out,
+        )
 
         # Overwrite signal patterns
         if not self._lazy:
@@ -510,8 +573,11 @@ class EBSD(Signal2D):
 
         # Rescale patterns
         rescaled_patterns = dask_array.map_blocks(
-            kp.util.experimental._rescale_pattern_chunk, in_range=in_range,
-            dtype_out=dtype_out, dtype=dtype_out)
+            kp.util.experimental._rescale_pattern_chunk,
+            in_range=in_range,
+            dtype_out=dtype_out,
+            dtype=dtype_out,
+        )
 
         # Overwrite signal patterns
         if not self._lazy:
@@ -524,7 +590,8 @@ class EBSD(Signal2D):
             self.data = rescaled_patterns
 
     def adaptive_histogram_equalization(
-            self, kernel_size=None, clip_limit=0, nbins=128):
+        self, kernel_size=None, clip_limit=0, nbins=128
+    ):
         """Local contrast enhancement inplace with adaptive histogram
         equalization.
 
@@ -588,8 +655,7 @@ class EBSD(Signal2D):
         elif isinstance(kernel_size, numbers.Number):
             kernel_size = (kernel_size,) * self.axes_manager.signal_dimension
         elif len(kernel_size) != self.axes_manager.signal_dimension:
-            raise ValueError(
-                "Incorrect value of `kernel_size`: {}".format(kernel_size))
+            raise ValueError(f"Incorrect value of `kernel_size`: {kernel_size}")
         kernel_size = [int(k) for k in kernel_size]
 
         # Create dask array of signal patterns and do processing on this
@@ -598,8 +664,11 @@ class EBSD(Signal2D):
         # Local contrast enhancement
         equalized_patterns = dask_array.map_blocks(
             kp.util.experimental._adaptive_histogram_equalization_chunk,
-            kernel_size=kernel_size, clip_limit=clip_limit, nbins=nbins,
-            dtype=self.data.dtype)
+            kernel_size=kernel_size,
+            clip_limit=clip_limit,
+            nbins=nbins,
+            dtype=self.data.dtype,
+        )
 
         # Overwrite signal patterns
         if not self._lazy:
@@ -633,8 +702,7 @@ class EBSD(Signal2D):
         >>> s.virtual_backscatter_electron_imaging(roi)
         """
 
-        return Diffraction2D.plot_interactive_virtual_image(
-            self, roi, **kwargs)
+        return Diffraction2D.plot_interactive_virtual_image(self, roi, **kwargs)
 
     def get_virtual_image(self, roi):
         """Return a virtual backscatter electron (VBSE) image
@@ -665,9 +733,7 @@ class EBSD(Signal2D):
 
         return Diffraction2D.get_virtual_image(self, roi)
 
-    def save(
-            self, filename=None, overwrite=None, extension=None,
-            **kwargs):
+    def save(self, filename=None, overwrite=None, extension=None, **kwargs):
         """Write signal to the specified format.
 
         The function gets the format from the extension: `h5`, `hdf5` or
@@ -711,29 +777,31 @@ class EBSD(Signal2D):
         """
 
         if filename is None:
-            if (self.tmp_parameters.has_item('filename') and
-                    self.tmp_parameters.has_item('folder')):
+            if self.tmp_parameters.has_item(
+                "filename"
+            ) and self.tmp_parameters.has_item("folder"):
                 filename = os.path.join(
-                    self.tmp_parameters.folder,
-                    self.tmp_parameters.filename)
+                    self.tmp_parameters.folder, self.tmp_parameters.filename
+                )
                 extension = (
-                    self.tmp_parameters.extension if not extension
-                    else extension)
-            elif self.metadata.has_item('General.original_filename'):
+                    self.tmp_parameters.extension
+                    if not extension
+                    else extension
+                )
+            elif self.metadata.has_item("General.original_filename"):
                 filename = self.metadata.General.original_filename
             else:
                 raise ValueError("Filename not defined.")
         if extension is not None:
             basename, ext = os.path.splitext(filename)
-            filename = basename + '.' + extension
+            filename = basename + "." + extension
         save(filename, self, overwrite=overwrite, **kwargs)
 
     def decomposition(self, *args, **kwargs):
         super().decomposition(*args, **kwargs)
         self.__class__ = EBSD
 
-    def get_decomposition_model(
-            self, components=None, dtype_out=np.float16):
+    def get_decomposition_model(self, components=None, dtype_out=np.float16):
         """Return the model signal generated with the selected number of
         principal components from a decomposition.
 
@@ -768,11 +836,14 @@ class EBSD(Signal2D):
         loadings_orig = self.learning_results.loadings.copy()
 
         # Change data type, keep desired components and rechunk if lazy
-        (self.learning_results.factors,
-         self.learning_results.loadings) = kp.util.decomposition.\
-            _update_learning_results(
+        (
+            self.learning_results.factors,
+            self.learning_results.loadings,
+        ) = kp.util.decomposition._update_learning_results(
             learning_results=self.learning_results,
-            dtype_out=dtype_out, components=components)
+            dtype_out=dtype_out,
+            components=components,
+        )
 
         # Call HyperSpy's function
         s_model = super().get_decomposition_model()
@@ -795,7 +866,8 @@ class EBSD(Signal2D):
 
     def rebin(self, new_shape=None, scale=None, crop=True, out=None):
         s_out = super().rebin(
-            new_shape=new_shape, scale=scale, crop=crop, out=out)
+            new_shape=new_shape, scale=scale, crop=crop, out=out
+        )
 
         return_signal = True
         if s_out is None:
@@ -809,15 +881,17 @@ class EBSD(Signal2D):
         if scale is None:
             sx, sy = self.axes_manager.signal_shape
             signal_idx = self.axes_manager.signal_indices_in_array
-            scale = (sx / new_shape[signal_idx[0]],
-                     sy / new_shape[signal_idx[1]])
+            scale = (
+                sx / new_shape[signal_idx[0]],
+                sy / new_shape[signal_idx[1]],
+            )
         upscaled_dimensions = np.where(np.array(scale) < 1)[0]
         if len(upscaled_dimensions):
             new_binning = np.min(scale)
         else:
             new_binning = np.max(scale)
-        original_binning = md.get_item(ebsd_node + '.binning')
-        md.set_item(ebsd_node + '.binning', original_binning * new_binning)
+        original_binning = md.get_item(ebsd_node + ".binning")
+        md.set_item(ebsd_node + ".binning", original_binning * new_binning)
 
         if return_signal:
             return s_out
@@ -865,8 +939,13 @@ class LazyEBSD(EBSD, LazySignal2D):
         self.__class__ = LazyEBSD
 
     def get_decomposition_model_write(
-            self, components=None, dtype_learn=np.float16,
-            mbytes_chunk=100, dir_out=None, fname_out=None):
+        self,
+        components=None,
+        dtype_learn=np.float16,
+        mbytes_chunk=100,
+        dir_out=None,
+        fname_out=None,
+    ):
         """Write the model signal generated from the selected number of
         principal components directly to a .hspy file.
 
@@ -904,7 +983,8 @@ class LazyEBSD(EBSD, LazySignal2D):
 
         # Change data type, keep desired components and rechunk if lazy
         factors, loadings = kp.util.decomposition._update_learning_results(
-            self.learning_results, components=components, dtype_out=dtype_learn)
+            self.learning_results, components=components, dtype_out=dtype_learn
+        )
 
         # Write learning results to HDF5 file
         if dir_out is None:
@@ -913,19 +993,20 @@ class LazyEBSD(EBSD, LazySignal2D):
             except AttributeError:
                 raise AttributeError("Output directory has to be specified")
 
-        t_str = datetime.datetime.now().strftime('%y%m%d_%H%M%S')
-        file_learn = os.path.join(dir_out, 'learn_' + t_str + '.h5')
-        with File(file_learn, mode='w') as f:
-            f.create_dataset(name='factors', data=factors)
-            f.create_dataset(name='loadings', data=loadings)
+        t_str = datetime.datetime.now().strftime("%y%m%d_%H%M%S")
+        file_learn = os.path.join(dir_out, "learn_" + t_str + ".h5")
+        with File(file_learn, mode="w") as f:
+            f.create_dataset(name="factors", data=factors)
+            f.create_dataset(name="loadings", data=loadings)
 
         # Matrix multiplication
-        with File(file_learn, mode='r') as f:
+        with File(file_learn, mode="r") as f:
             # Read learning results from HDF5 file
             chunks = kp.util.dask._rechunk_learning_results(
-                factors=factors, loadings=loadings, mbytes_chunk=mbytes_chunk)
-            factors = da.from_array(f['factors'], chunks=chunks[0])
-            loadings = da.from_array(f['loadings'], chunks=chunks[1])
+                factors=factors, loadings=loadings, mbytes_chunk=mbytes_chunk
+            )
+            factors = da.from_array(f["factors"], chunks=chunks[0])
+            loadings = da.from_array(f["loadings"], chunks=chunks[1])
 
             # Perform matrix multiplication
             loadings = loadings.T
@@ -940,11 +1021,12 @@ class LazyEBSD(EBSD, LazySignal2D):
 
             # Rescale intensities
             s_model.rescale_intensities(
-                dtype_out=self.data.dtype, relative=True)
+                dtype_out=self.data.dtype, relative=True
+            )
 
             # Write signal to file
             if fname_out is None:
-                fname_out = 'model_' + t_str
+                fname_out = "model_" + t_str
             file_model = os.path.join(dir_out, fname_out)
             s_model.save(file_model)
 

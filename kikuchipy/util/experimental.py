@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The KikuchiPy developers
+# Copyright 2019-2020 The KikuchiPy developers
 #
 # This file is part of KikuchiPy.
 #
@@ -23,8 +23,7 @@ from skimage.exposure import equalize_adapthist
 from skimage.util.dtype import dtype_range
 
 
-def _rescale_pattern(
-        pattern, in_range=None, out_range=None, dtype_out=None):
+def _rescale_pattern(pattern, in_range=None, out_range=None, dtype_out=None):
     """Rescale pattern intensities inplace to desired
     :class:`numpy.dtype` range specified by ``dtype_out`` keeping
     relative intensities or not.
@@ -68,9 +67,9 @@ def _rescale_pattern(
             _, omax = dtype_range[dtype_out]
         except KeyError:
             raise KeyError(
-                "Could not set output intensity range, since data type '{}' is "
-                "not recognised. Use any of '{}'".format(
-                    dtype_out, dtype_range))
+                "Could not set output intensity range, since data type "
+                f"'{dtype_out}' is not recognised. Use any of '{dtype_range}'."
+            )
     else:
         omin, omax = out_range
 
@@ -79,7 +78,8 @@ def _rescale_pattern(
 
 
 def _rescale_pattern_chunk(
-        patterns, in_range=None, out_range=None, dtype_out=None):
+    patterns, in_range=None, out_range=None, dtype_out=None
+):
     """Rescale patterns in chunk to fill the data type range using an
     approach inspired by `skimage.exposure.rescale_intensity`, keeping
     relative intensities or not.
@@ -107,14 +107,17 @@ def _rescale_pattern_chunk(
     rescaled_patterns = np.empty_like(patterns, dtype=dtype_out)
     for nav_idx in np.ndindex(patterns.shape[:-2]):
         rescaled_patterns[nav_idx] = _rescale_pattern(
-            patterns[nav_idx], in_range=in_range, out_range=out_range,
-            dtype_out=dtype_out)
+            patterns[nav_idx],
+            in_range=in_range,
+            out_range=out_range,
+            dtype_out=dtype_out,
+        )
     return rescaled_patterns
 
 
 def _static_background_correction_chunk(
-        patterns, static_bg, operation='subtract', in_range=None,
-        dtype_out=None):
+    patterns, static_bg, operation="subtract", in_range=None, dtype_out=None
+):
     """Correct static background in patterns in chunk by subtracting or
     dividing by a static background pattern. Returned pattern
     intensities are rescaled keeping relative intensities or not and
@@ -148,18 +151,20 @@ def _static_background_correction_chunk(
 
     corrected_patterns = np.empty_like(patterns, dtype=dtype_out)
     for nav_idx in np.ndindex(patterns.shape[:-2]):
-        if operation == 'subtract':
+        if operation == "subtract":
             corrected_pattern = patterns[nav_idx] - static_bg
         else:  # Divide
             corrected_pattern = patterns[nav_idx] / static_bg
         corrected_patterns[nav_idx] = _rescale_pattern(
-            corrected_pattern, in_range=in_range, dtype_out=dtype_out)
+            corrected_pattern, in_range=in_range, dtype_out=dtype_out
+        )
 
     return corrected_patterns
 
 
 def _dynamic_background_correction_chunk(
-        patterns, sigma, operation='subtract', dtype_out=None):
+    patterns, sigma, operation="subtract", dtype_out=None
+):
     """Correct dynamic background in chunk of patterns by subtracting
     or dividing by a blurred version of each pattern.
 
@@ -191,18 +196,20 @@ def _dynamic_background_correction_chunk(
     for nav_idx in np.ndindex(patterns.shape[:-2]):
         pattern = patterns[nav_idx]
         blurred = gaussian_filter(pattern, sigma=sigma)
-        if operation == 'subtract':
+        if operation == "subtract":
             corrected_pattern = pattern - blurred
         else:  # Divide
             corrected_pattern = pattern / blurred
         corrected_patterns[nav_idx] = _rescale_pattern(
-            corrected_pattern, dtype_out=dtype_out)
+            corrected_pattern, dtype_out=dtype_out
+        )
 
     return corrected_patterns
 
 
 def _adaptive_histogram_equalization_chunk(
-        patterns, kernel_size, clip_limit=0, nbins=128):
+    patterns, kernel_size, clip_limit=0, nbins=128
+):
     """Local contrast enhancement on chunk of patterns with adaptive
     histogram equalization.
 
@@ -233,17 +240,21 @@ def _adaptive_histogram_equalization_chunk(
     equalized_patterns = np.empty_like(patterns)
     for nav_idx in np.ndindex(patterns.shape[:-2]):
         equalized_pattern = equalize_adapthist(
-            patterns[nav_idx], kernel_size=kernel_size, clip_limit=clip_limit,
-            nbins=nbins)
+            patterns[nav_idx],
+            kernel_size=kernel_size,
+            clip_limit=clip_limit,
+            nbins=nbins,
+        )
         equalized_patterns[nav_idx] = _rescale_pattern(
-            equalized_pattern, dtype_out=dtype_in)
+            equalized_pattern, dtype_out=dtype_in
+        )
     return equalized_patterns
 
 
-def normalised_correlation_coefficient(
-        pattern, template, zero_normalised=True):
+def normalised_correlation_coefficient(pattern, template, zero_normalised=True):
     """Calculate the normalised or zero-normalised correlation
-    coefficient between a pattern and a template following [1]_.
+    coefficient between a pattern and a template following
+    [Gonzalez2008]_.
 
     Parameters
     ----------
@@ -262,8 +273,8 @@ def normalised_correlation_coefficient(
 
     References
     ----------
-    .. [1] Gonzalez, Rafael C, Woods, Richard E: Digital Image\
-        Processing, 3rd edition, Pearson Education, 954, 2008.
+    .. [Gonzalez2008] Gonzalez, Rafael C, Woods, Richard E: Digital\
+        Image Processing, 3rd edition, Pearson Education, 954, 2008.
     """
 
     pattern = pattern.astype(np.float32)
@@ -271,6 +282,7 @@ def normalised_correlation_coefficient(
     if zero_normalised:
         pattern = pattern - pattern.mean()
         template = template - template.mean()
-    coefficient = np.sum(pattern * template) / np.sqrt(np.sum(pattern ** 2) *
-                                                       np.sum(template ** 2))
+    coefficient = np.sum(pattern * template) / np.sqrt(
+        np.sum(pattern ** 2) * np.sum(template ** 2)
+    )
     return coefficient

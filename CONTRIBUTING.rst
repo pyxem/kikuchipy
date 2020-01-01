@@ -36,8 +36,9 @@ standard.
 Code formatting
 ===============
 
-All code in KikuchiPy is formatted according to the `Style Guide for Python Code
-<https://www.python.org/dev/peps/pep-0008/>`_.
+The code making up KikuchiPy is formatted closely following the `Style Guide for
+Python Code <https://www.python.org/dev/peps/pep-0008/>`_ with `The *Black* Code
+style <https://black.readthedocs.io/en/stable/the_black_code_style.html>`_.
 
 .. _writing-documentation:
 

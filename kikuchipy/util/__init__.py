@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The KikuchiPy developers
+# Copyright 2019-2020 The KikuchiPy developers
 #
 # This file is part of KikuchiPy.
 #
@@ -17,4 +17,10 @@
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
 from kikuchipy.util import (
-    dask, decomposition, experimental, general, io, phase)
+    dask,
+    decomposition,
+    experimental,
+    general,
+    io,
+    phase,
+)

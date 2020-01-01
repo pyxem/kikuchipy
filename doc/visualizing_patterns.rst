@@ -4,7 +4,7 @@ Visualizing patterns
 
 The :class:`~kikuchipy.signals.ebsd.EBSD` object has a powerful and versatile
 :meth:`~hyperspy.signal.BaseSignal.plot` method provided by HyperSpy, and its
-uses are greatly detailed in the `HyperSpy user guide
+uses are greatly detailed in HyperSpy's `visualisation user guide
 <http://hyperspy.org/hyperspy-doc/current/user_guide/visualisation.html>`_. This
 section details example uses specific to
 :class:`~kikuchipy.signals.ebsd.EBSD` objects.

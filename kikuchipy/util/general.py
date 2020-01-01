@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The KikuchiPy developers
+# Copyright 2019-2020 The KikuchiPy developers
 #
 # This file is part of KikuchiPy.
 #
@@ -37,7 +37,7 @@ def _write_parameters_to_dictionary(parameters, dictionary, node):
 
     for key, val in parameters.items():
         if val is not None:
-            dictionary.set_item(node + '.' + key, val)
+            dictionary.set_item(node + "." + key, val)
 
 
 def _delete_from_nested_dictionary(dictionary, keys):
@@ -87,5 +87,8 @@ def _get_nested_dictionary(dictionary, keys, default=None):
 
     if isinstance(dictionary, DictionaryTreeBrowser):
         dictionary = dictionary.as_dictionary()
-    return reduce(lambda d, key: d.get(key, default)\
-        if isinstance(d, dict) else default, keys.split("."), dictionary)
+    return reduce(
+        lambda d, key: d.get(key, default) if isinstance(d, dict) else default,
+        keys.split("."),
+        dictionary,
+    )

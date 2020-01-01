@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The KikuchiPy developers
+# Copyright 2019-2020 The KikuchiPy developers
 #
 # This file is part of KikuchiPy.
 #
@@ -28,35 +28,41 @@ import numpy as np
 
 from kikuchipy.util.phase import _phase_metadata, _update_phase_info
 from kikuchipy.util.io import (
-    kikuchipy_metadata, metadata_nodes, _get_input_variable)
+    kikuchipy_metadata,
+    metadata_nodes,
+    _get_input_variable,
+)
 from kikuchipy.util.general import (
-    _delete_from_nested_dictionary, _get_nested_dictionary)
+    _delete_from_nested_dictionary,
+    _get_nested_dictionary,
+)
 
 _logger = logging.getLogger(__name__)
 
-
 # Plugin characteristics
 # ----------------------
-format_name = 'h5ebsd'
-description = 'Read/write support for electron backscatter patterns stored in '\
-    'an HDF5 file formatted in the h5ebsd format introduced in '\
-    'Jackson et al.: h5ebsd: an archival data format for electron'\
-    'back-scatter diffraction data sets. Integrating Materials and'\
-    'Manufacturing Innovation 2014 3:4, doi: '\
-    'https://dx.doi.org/10.1186/2193-9772-3-4.'
+format_name = "h5ebsd"
+description = (
+    "Read/write support for electron backscatter patterns stored in "
+    "an HDF5 file formatted in the h5ebsd format introduced in "
+    "Jackson et al.: h5ebsd: an archival data format for electron"
+    "back-scatter diffraction data sets. Integrating Materials and"
+    "Manufacturing Innovation 2014 3:4, doi: "
+    "https://dx.doi.org/10.1186/2193-9772-3-4."
+)
 full_support = False
 # Recognised file extension
-file_extensions = ['h5', 'hdf5', 'h5ebsd']
+file_extensions = ["h5", "hdf5", "h5ebsd"]
 default_extension = 1
 # Writing capabilities
 writes = [(2, 2), (2, 1), (1, 1)]
 
 
 def file_reader(filename, scans=None, lazy=False, **kwargs):
-    """Read electron backscatter patterns from an h5ebsd file [1]_. A
-    valid h5ebsd file has at least one group with the name
-    '/Scan x/EBSD' with the groups 'Data' (patterns etc.) and 'Header'
-    (``metadata`` etc.) , where 'x' is the scan_number.
+    """Read electron backscatter patterns from an h5ebsd file
+    [Jackson2014]_. A valid h5ebsd file has at least one group with the
+    name '/Scan x/EBSD' with the groups 'Data' (patterns etc.) and
+    'Header' (``metadata`` etc.) , where 'x' is the scan_number.
 
     Parameters
     ----------
@@ -77,13 +83,14 @@ def file_reader(filename, scans=None, lazy=False, **kwargs):
 
     References
     ----------
-    .. [1] Jackson et al.: h5ebsd: an archival data format\
-        for electron back-scatter diffraction data sets. Integrating\
-        Materials and Manufacturing Innovation 2014 3:4, doi:\
-        https://dx.doi.org/10.1186/2193-9772-3-4.
+    .. [Jackson2014] M. A. Jackson, M. A. Groeber, M. D. Uchic, D. J.
+        Rowenhorst and M. De Graef, "h5ebsd: an archival data format for
+        electron back-scatter diffraction data sets," *Integrating
+        Materials and Manufacturing Innovation* **3** (2014), doi:
+        https://doi.org/10.1186/2193-9772-3-4.
     """
 
-    mode = kwargs.pop('mode', 'r')
+    mode = kwargs.pop("mode", "r")
     f = h5py.File(filename, mode=mode, **kwargs)
 
     # Check if h5ebsd file
@@ -94,17 +101,20 @@ def file_reader(filename, scans=None, lazy=False, **kwargs):
     man_pats = manufacturer_pattern_names()
     if any(man == s for s in man_pats.keys()) is not True:
         raise IOError(
-            "Manufacturer {} not among recognised manufacturers {}.".format(
-                man, list(man_pats.keys())))
+            f"Manufacturer {man} not among recognised manufacturers "
+            f"{list(man_pats.keys())}."
+        )
 
     # Get scans to return
-    scans_file = [f[k] for k in f['/'].keys() if 'Scan' in k]
+    scans_file = [f[k] for k in f["/"].keys() if "Scan" in k]
     scans_return = []
     if scans is None:  # Return first scan
         scans_return.append(scans_file[0])
     else:
         if isinstance(scans, int):
-            scans = [scans, ]
+            scans = [
+                scans,
+            ]
         for scan_no in scans:  # Wanted scans
             scan_is_here = False
             for scan in scans_file:
@@ -115,8 +125,9 @@ def file_reader(filename, scans=None, lazy=False, **kwargs):
             if not scan_is_here:
                 scan_nos = [int(i.name.split()[-1]) for i in scans_file]
                 error_str = (
-                    "Scan {} is not among the available scans {} in '{}'"
-                    "".format(scan_no, scan_nos, filename))
+                    f"Scan {scan_no} is not among the available scans "
+                    f"{scan_nos} in '{filename}'."
+                )
                 if len(scans) == 1:
                     raise IOError(error_str)
                 else:
@@ -144,19 +155,24 @@ def check_h5ebsd(file):
         reside in the top group.
     """
 
-    file_keys_lower = [key.lstrip().lower() for key in file['/'].keys()]
-    if not any(s in file_keys_lower for s in ['manufacturer', 'version']):
+    file_keys_lower = [key.lstrip().lower() for key in file["/"].keys()]
+    if not any(s in file_keys_lower for s in ["manufacturer", "version"]):
         raise IOError(
-            "'{}' is not an h5ebsd file, as manufacturer and/or version could "
-            "not be read from its top group.".format(file.filename))
+            f"'{file.filename}' is not an h5ebsd file, as manufacturer and/or"
+            " version could not be read from its top group."
+        )
 
     if not any(
-            'Scan' in key and 'EBSD/Data' in file[key]
-            and 'EBSD/Header' in file[key] for key in file['/'].keys()):
+        "Scan" in key
+        and "EBSD/Data" in file[key]
+        and "EBSD/Header" in file[key]
+        for key in file["/"].keys()
+    ):
         raise IOError(
-            "'{}' is not an h5ebsd file, as no scans in a group with name 'Scan"
-            " <scan_number>/EBSD' with groups 'Data' and 'Header' could be "
-            "read.".format(file.filename))
+            f"'{file.filename}' is not an h5ebsd file, as no scans in a group "
+            "with name 'Scan <scan_number>/EBSD' with groups 'Data' and "
+            "'Header' could be read."
+        )
 
 
 def manufacturer_version(file):
@@ -175,10 +191,10 @@ def manufacturer_version(file):
 
     manufacturer = None
     version = None
-    for key, val in h5ebsdgroup2dict(file['/']).items():
-        if key.lower() == 'manufacturer':
+    for key, val in h5ebsdgroup2dict(file["/"]).items():
+        if key.lower() == "manufacturer":
             manufacturer = val
-        if key.lower() == 'version':
+        if key.lower() == "version":
             version = val
     return manufacturer, version
 
@@ -192,13 +208,14 @@ def manufacturer_pattern_names():
     dict
     """
 
-    return {'KikuchiPy': 'patterns',
-            'EDAX': 'Pattern',
-            'Bruker Nano': 'RawPatterns'}
+    return {
+        "KikuchiPy": "patterns",
+        "EDAX": "Pattern",
+        "Bruker Nano": "RawPatterns",
+    }
 
 
-def h5ebsdgroup2dict(
-        group, dictionary=None, recursive=False, lazy=False):
+def h5ebsdgroup2dict(group, dictionary=None, recursive=False, lazy=False):
     """Return a dictionary with values from datasets in a group in an
     opened h5ebsd file.
 
@@ -231,13 +248,14 @@ def h5ebsdgroup2dict(
             if isinstance(val, np.ndarray) and len(val) == 1:
                 val = val[0]
                 key = key.lstrip()  # EDAX has some leading whitespaces
-            if val.dtype.char == 'S':
+            if val.dtype.char == "S":
                 val = val.decode()
         # Check whether to extract subgroup or write value to dictionary
         if isinstance(val, h5py.Group) and recursive:
             dictionary[key] = {}
             h5ebsdgroup2dict(
-                group[key], dictionary[key], recursive=recursive, lazy=lazy)
+                group[key], dictionary[key], recursive=recursive, lazy=lazy
+            )
         else:
             dictionary[key] = val
     return dictionary
@@ -266,13 +284,16 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
     """
 
     md, omd, scan_size = h5ebsdheader2dicts(
-        scan_group, manufacturer, version, lazy)
-    md.set_item('Signal.signal_type', 'EBSD')
-    md.set_item('Signal.record_by', 'image')
+        scan_group, manufacturer, version, lazy
+    )
+    md.set_item("Signal.signal_type", "EBSD")
+    md.set_item("Signal.record_by", "image")
 
     scan = {
-        'metadata': md.as_dictionary(),
-        'original_metadata': omd.as_dictionary(), 'attributes': {}}
+        "metadata": md.as_dictionary(),
+        "original_metadata": omd.as_dictionary(),
+        "attributes": {},
+    }
 
     # Get data dataset
     man_pats = manufacturer_pattern_names()
@@ -280,11 +301,12 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
     for man, pats in man_pats.items():
         if manufacturer.lower() == man.lower():
             try:
-                data_dset = scan_group['EBSD/Data/' + pats]
+                data_dset = scan_group["EBSD/Data/" + pats]
             except KeyError:
                 raise KeyError(
-                    "Could not find patterns in the expected dataset '{}'"
-                    "".format('EBSD/Data/' + pats))
+                    "Could not find patterns in the expected dataset "
+                    f"'EBSD/Data/{pats}'"
+                )
             break
 
     # Get data from group
@@ -299,20 +321,21 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
         data = data.reshape((ny, nx, sy, sx)).squeeze()
     except ValueError:
         warnings.warn(
-            "Pattern size ({} x {}) and scan size ({} x {}) larger than file "
-            "size. Will attempt to load by zero padding incomplete frames."
-            "".format(sx, sy, nx, ny))
+            f"Pattern size ({sx} x {sy}) and scan size ({nx} x {ny}) larger "
+            "than file size. Will attempt to load by zero padding incomplete "
+            "frames."
+        )
         # Data is stored pattern by pattern
         pw = [(0, ny * nx * sy * sx - data.size)]
         if lazy:
-            data = da.pad(data.flatten(), pw, mode='constant')
+            data = da.pad(data.flatten(), pw, mode="constant")
         else:
-            data = np.pad(data.flatten(), pw, mode='constant')
+            data = np.pad(data.flatten(), pw, mode="constant")
         data = data.reshape((ny, nx, sy, sx))
-    scan['data'] = data
+    scan["data"] = data
 
-    units = [u'\u03BC'+'m'] * 4
-    names = ['y', 'x', 'dy', 'dx']
+    units = ["\u03BC" + "m"] * 4
+    names = ["y", "x", "dy", "dx"]
     scales = np.ones(4)
 
     # Calibrate scan dimension and detector dimension
@@ -325,10 +348,17 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
 
     # Create axis objects for each axis
     axes = [
-        {'size': data.shape[i], 'index_in_array': i, 'name': names[i],
-         'scale': scales[i], 'offset': 0.0, 'units': units[i]}
-        for i in range(data.ndim)]
-    scan['axes'] = axes
+        {
+            "size": data.shape[i],
+            "index_in_array": i,
+            "name": names[i],
+            "scale": scales[i],
+            "offset": 0.0,
+            "units": units[i],
+        }
+        for i in range(data.ndim)
+    ]
+    scan["axes"] = axes
 
     return scan
 
@@ -364,20 +394,22 @@ def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
 
     md = kikuchipy_metadata()
     title = (
-            scan_group.file.filename.split('/')[-1].split('.')[0] + ' ' +
-            scan_group.name[1:].split('/')[0])
-    md.set_item('General.title', title)
+        scan_group.file.filename.split("/")[-1].split(".")[0]
+        + " "
+        + scan_group.name[1:].split("/")[0]
+    )
+    md.set_item("General.title", title)
 
-    if 'edax' in manufacturer.lower():
+    if "edax" in manufacturer.lower():
         md, omd, scan_size = edaxheader2dicts(scan_group, md)
-    elif 'bruker' in manufacturer.lower():
+    elif "bruker" in manufacturer.lower():
         md, omd, scan_size = brukerheader2dicts(scan_group, md)
     else:  # KikuchiPy
         md, omd, scan_size = kikuchipyheader2dicts(scan_group, md, lazy)
 
     ebsd_node = metadata_nodes(sem=False)
-    md.set_item(ebsd_node + '.manufacturer', manufacturer)
-    md.set_item(ebsd_node + '.version', version)
+    md.set_item(ebsd_node + ".manufacturer", manufacturer)
+    md.set_item(ebsd_node + ".version", version)
 
     return md, omd, scan_size
 
@@ -408,22 +440,29 @@ def kikuchipyheader2dicts(scan_group, md, lazy=False):
     omd = DictionaryTreeBrowser()
     sem_node, ebsd_node = metadata_nodes()
     md.set_item(
-        ebsd_node, h5ebsdgroup2dict(scan_group['EBSD/Header'], lazy=lazy))
-    md = _delete_from_nested_dictionary(md, 'Phases')
-    phase_node = 'Sample.Phases'
-    md.set_item(sem_node, h5ebsdgroup2dict(scan_group['SEM/Header'], lazy=lazy))
+        ebsd_node, h5ebsdgroup2dict(scan_group["EBSD/Header"], lazy=lazy)
+    )
+    md = _delete_from_nested_dictionary(md, "Phases")
+    phase_node = "Sample.Phases"
+    md.set_item(sem_node, h5ebsdgroup2dict(scan_group["SEM/Header"], lazy=lazy))
     md.set_item(
-        phase_node, h5ebsdgroup2dict(
-            scan_group['EBSD/Header/Phases'], recursive=True))
+        phase_node,
+        h5ebsdgroup2dict(scan_group["EBSD/Header/Phases"], recursive=True),
+    )
 
     # Get and remove scan info values from metadata
     mapping = {
-        'sx': 'pattern_width', 'sy': 'pattern_height', 'nx': 'n_columns',
-        'ny': 'n_rows', 'step_x': 'step_x', 'step_y': 'step_y',
-        'delta': 'detector_pixel_size'}
+        "sx": "pattern_width",
+        "sy": "pattern_height",
+        "nx": "n_columns",
+        "ny": "n_rows",
+        "step_x": "step_x",
+        "step_y": "step_y",
+        "delta": "detector_pixel_size",
+    }
     scan_size = DictionaryTreeBrowser()
     for k, v in mapping.items():
-        scan_size.set_item(k, _get_nested_dictionary(md, ebsd_node + '.' + v))
+        scan_size.set_item(k, _get_nested_dictionary(md, ebsd_node + "." + v))
     md = _delete_from_nested_dictionary(md, mapping.values())
 
     return md, omd, scan_size
@@ -451,51 +490,57 @@ def edaxheader2dicts(scan_group, md):
     """
 
     # Get header group as dictionary
-    hd = h5ebsdgroup2dict(scan_group['EBSD/Header'], recursive=True)
+    hd = h5ebsdgroup2dict(scan_group["EBSD/Header"], recursive=True)
 
     # Populate metadata dictionary
     sem_node, ebsd_node = metadata_nodes()
-    md.set_item(ebsd_node + '.azimuth_angle', hd['Camera Azimuthal Angle'])
-    md.set_item(ebsd_node + '.elevation_angle', hd['Camera Elevation Angle'])
-    grid_type = hd['Grid Type']
-    if grid_type == 'SqrGrid':
-        md.set_item(ebsd_node + '.grid_type', 'square')
+    md.set_item(ebsd_node + ".azimuth_angle", hd["Camera Azimuthal Angle"])
+    md.set_item(ebsd_node + ".elevation_angle", hd["Camera Elevation Angle"])
+    grid_type = hd["Grid Type"]
+    if grid_type == "SqrGrid":
+        md.set_item(ebsd_node + ".grid_type", "square")
     else:
         raise IOError(
-            "Only square grids are supported, however a {} grid was passed"
-            "".format(grid_type))
-    md.set_item(ebsd_node + '.sample_tilt', hd['Sample Tilt'])
-    md.set_item('General.authors', hd['Operator'])
-    md.set_item('General.notes', hd['Notes'])
-    md.set_item(ebsd_node + '.xpc', hd['Pattern Center Calibration']['x-star'])
-    md.set_item(ebsd_node + '.ypc', hd['Pattern Center Calibration']['y-star'])
-    md.set_item(ebsd_node + '.zpc', hd['Pattern Center Calibration']['z-star'])
-    md.set_item(sem_node + '.working_distance', hd['Working Distance'])
-    if 'SEM-PRIAS Images' in scan_group.keys():
+            f"Only square grids are supported, however a {grid_type} grid was "
+            "passed."
+        )
+    md.set_item(ebsd_node + ".sample_tilt", hd["Sample Tilt"])
+    md.set_item("General.authors", hd["Operator"])
+    md.set_item("General.notes", hd["Notes"])
+    md.set_item(ebsd_node + ".xpc", hd["Pattern Center Calibration"]["x-star"])
+    md.set_item(ebsd_node + ".ypc", hd["Pattern Center Calibration"]["y-star"])
+    md.set_item(ebsd_node + ".zpc", hd["Pattern Center Calibration"]["z-star"])
+    md.set_item(sem_node + ".working_distance", hd["Working Distance"])
+    if "SEM-PRIAS Images" in scan_group.keys():
         md.set_item(
-            sem_node + '.magnification',
-            scan_group['SEM-PRIAS Images/Header/Mag'][0])
+            sem_node + ".magnification",
+            scan_group["SEM-PRIAS Images/Header/Mag"][0],
+        )
     # Loop over phases in group and add to metadata
-    for phase_no, phase in hd['Phase'].items():
-        phase['material_name'] = phase['MaterialName']
-        phase['lattice_constants'] = [
-            phase['Lattice Constant a'], phase['Lattice Constant b'],
-            phase['Lattice Constant c'], phase['Lattice Constant alpha'],
-            phase['Lattice Constant beta'], phase['Lattice Constant gamma']]
+    for phase_no, phase in hd["Phase"].items():
+        phase["material_name"] = phase["MaterialName"]
+        phase["lattice_constants"] = [
+            phase["Lattice Constant a"],
+            phase["Lattice Constant b"],
+            phase["Lattice Constant c"],
+            phase["Lattice Constant alpha"],
+            phase["Lattice Constant beta"],
+            phase["Lattice Constant gamma"],
+        ]
         md = _update_phase_info(md, phase, phase_no)
 
     # Populate original metadata dictionary
-    omd = DictionaryTreeBrowser({'edax_header': hd})
+    omd = DictionaryTreeBrowser({"edax_header": hd})
 
     # Populate scan size dictionary
     scan_size = DictionaryTreeBrowser()
-    scan_size.set_item('sx', hd['Pattern Width'])
-    scan_size.set_item('sy', hd['Pattern Height'])
-    scan_size.set_item('nx', hd['nColumns'])
-    scan_size.set_item('ny', hd['nRows'])
-    scan_size.set_item('step_x', hd['Step X'])
-    scan_size.set_item('step_y', hd['Step Y'])
-    scan_size.set_item('delta', 1.)
+    scan_size.set_item("sx", hd["Pattern Width"])
+    scan_size.set_item("sy", hd["Pattern Height"])
+    scan_size.set_item("nx", hd["nColumns"])
+    scan_size.set_item("ny", hd["nRows"])
+    scan_size.set_item("step_x", hd["Step X"])
+    scan_size.set_item("step_y", hd["Step Y"])
+    scan_size.set_item("delta", 1.0)
 
     return md, omd, scan_size
 
@@ -522,59 +567,63 @@ def brukerheader2dicts(scan_group, md):
     """
 
     # Get header group and data group as dictionaries
-    hd = h5ebsdgroup2dict(scan_group['EBSD/Header'], recursive=True)
-    dd = h5ebsdgroup2dict(scan_group['EBSD/Data'])
+    hd = h5ebsdgroup2dict(scan_group["EBSD/Header"], recursive=True)
+    dd = h5ebsdgroup2dict(scan_group["EBSD/Data"])
 
     # Populate metadata dictionary
     sem_node, ebsd_node = metadata_nodes()
-    md.set_item(ebsd_node + '.elevation_angle', hd['CameraTilt'])
-    grid_type = hd['Grid Type']
-    if grid_type == 'isometric':
-        md.set_item(ebsd_node + '.grid_type', 'square')
+    md.set_item(ebsd_node + ".elevation_angle", hd["CameraTilt"])
+    grid_type = hd["Grid Type"]
+    if grid_type == "isometric":
+        md.set_item(ebsd_node + ".grid_type", "square")
     else:
         raise IOError(
-            "Only square grids are supported, however a {} grid was passed"
-            "".format(grid_type))
-    md.set_item(ebsd_node + '.sample_tilt', hd['SampleTilt'])
-    md.set_item(ebsd_node + '.xpc', np.mean(dd['PCX']))
-    md.set_item(ebsd_node + '.ypc', np.mean(dd['PCY']))
-    md.set_item(ebsd_node + '.zpc', np.mean(dd['DD']))
-    md.set_item(ebsd_node + '.static_background', hd['StaticBackground'])
-    md.set_item(sem_node + '.working_distance', hd['WD'])
-    md.set_item(sem_node + '.beam_energy', hd['KV'])
-    md.set_item(sem_node + '.magnification', hd['Magnification'])
+            f"Only square grids are supported, however a {grid_type} grid was "
+            "passed."
+        )
+    md.set_item(ebsd_node + ".sample_tilt", hd["SampleTilt"])
+    md.set_item(ebsd_node + ".xpc", np.mean(dd["PCX"]))
+    md.set_item(ebsd_node + ".ypc", np.mean(dd["PCY"]))
+    md.set_item(ebsd_node + ".zpc", np.mean(dd["DD"]))
+    md.set_item(ebsd_node + ".static_background", hd["StaticBackground"])
+    md.set_item(sem_node + ".working_distance", hd["WD"])
+    md.set_item(sem_node + ".beam_energy", hd["KV"])
+    md.set_item(sem_node + ".magnification", hd["Magnification"])
     # Loop over phases
-    for phase_no, phase in hd['Phases'].items():
-        phase['material_name'] = phase['Name']
-        phase['space_group'] = phase['IT']
-        phase['atom_coordinates'] = {}
-        for key, val in phase['AtomPositions'].items():
-            atom = val.split(',')
+    for phase_no, phase in hd["Phases"].items():
+        phase["material_name"] = phase["Name"]
+        phase["space_group"] = phase["IT"]
+        phase["atom_coordinates"] = {}
+        for key, val in phase["AtomPositions"].items():
+            atom = val.split(",")
             atom[1:] = list(map(float, atom[1:]))
-            phase['atom_coordinates'][key] = {
-                'atom': atom[0], 'coordinates': atom[1:4],
-                'site_occupation': atom[4], 'debye_waller_factor': atom[5]}
+            phase["atom_coordinates"][key] = {
+                "atom": atom[0],
+                "coordinates": atom[1:4],
+                "site_occupation": atom[4],
+                "debye_waller_factor": atom[5],
+            }
         md = _update_phase_info(md, phase, phase_no)
 
     # Populate original metadata dictionary
-    omd = DictionaryTreeBrowser({'bruker_header': hd})
+    omd = DictionaryTreeBrowser({"bruker_header": hd})
 
     # Populate scan size dictionary
     scan_size = DictionaryTreeBrowser()
-    scan_size.set_item('sx', hd['PatternWidth'])
-    scan_size.set_item('sy', hd['PatternHeight'])
-    scan_size.set_item('nx', hd['NCOLS'])
-    scan_size.set_item('ny', hd['NROWS'])
-    scan_size.set_item('step_x', hd['XSTEP'])
-    scan_size.set_item('step_y', hd['YSTEP'])
+    scan_size.set_item("sx", hd["PatternWidth"])
+    scan_size.set_item("sy", hd["PatternHeight"])
+    scan_size.set_item("nx", hd["NCOLS"])
+    scan_size.set_item("ny", hd["NROWS"])
+    scan_size.set_item("step_x", hd["XSTEP"])
+    scan_size.set_item("step_y", hd["YSTEP"])
     scan_size.set_item(
-        'delta', hd['DetectorFullHeightMicrons'] / hd['UnClippedPatternHeight'])
+        "delta", hd["DetectorFullHeightMicrons"] / hd["UnClippedPatternHeight"]
+    )
 
     return md, omd, scan_size
 
 
-def file_writer(
-        filename, signal, add_scan=None, scan_number=1, **kwargs):
+def file_writer(filename, signal, add_scan=None, scan_number=1, **kwargs):
     """Write an :class:`~kikuchipy.signals.ebsd.EBSD` or
     :class:`~kikuchipy.signals.ebsd.LazyEBSD` signal to an existing,
     but not open, or new h5ebsd file.
@@ -600,12 +649,13 @@ def file_writer(
 
     # Set manufacturer and version to use in file
     from kikuchipy.release import version as ver_signal
-    man_ver_dict = {'manufacturer': 'KikuchiPy', 'version': ver_signal}
+
+    man_ver_dict = {"manufacturer": "KikuchiPy", "version": ver_signal}
 
     # Open file in correct mode
-    mode = 'w'
+    mode = "w"
     if os.path.isfile(filename) and add_scan:
-        mode = 'r+'
+        mode = "r+"
     try:
         f = h5py.File(filename, mode=mode)
     except OSError:
@@ -614,27 +664,27 @@ def file_writer(
     if os.path.isfile(filename) and add_scan:
         check_h5ebsd(f)
         man_file, ver_file = manufacturer_version(f)
-        if man_ver_dict['manufacturer'].lower() != man_file.lower():
+        if man_ver_dict["manufacturer"].lower() != man_file.lower():
             f.close()
             raise IOError(
-                "Only writing to KikuchiPy's (and not {}'s) h5ebsd format is "
-                "supported.".format(man_file))
-        man_ver_dict['version'] = ver_file
+                f"Only writing to KikuchiPy's (and not {man_file}'s) h5ebsd "
+                "format is supported."
+            )
+        man_ver_dict["version"] = ver_file
 
         # Get valid scan number
-        scans_file = [f[k] for k in f['/'].keys() if 'Scan' in k]
+        scans_file = [f[k] for k in f["/"].keys() if "Scan" in k]
         scan_nos = [int(i.name.split()[-1]) for i in scans_file]
         for i in scan_nos:
             if i == scan_number:
-                q = "Scan {} already in file, enter another scan "\
-                    "number:\n".format(i)
+                q = f"Scan {i} already in file, enter another scan number:\n"
                 scan_number = _get_input_variable(q, int)
                 if scan_number is None:
                     raise IOError("Invalid scan number.")
     else:  # File did not exist
-        dict2h5ebsdgroup(man_ver_dict, f['/'], **kwargs)
+        dict2h5ebsdgroup(man_ver_dict, f["/"], **kwargs)
 
-    scan_group = f.create_group('Scan ' + str(scan_number))
+    scan_group = f.create_group("Scan " + str(scan_number))
 
     # Create scan dictionary with EBSD and SEM metadata
     # Add scan size, pattern size and detector pixel size to dictionary to write
@@ -644,48 +694,61 @@ def file_writer(
     sig_indices = signal.axes_manager.signal_indices_in_array
     md = signal.metadata.deepcopy()
     sem_node, ebsd_node = metadata_nodes()
-    md.set_item(ebsd_node + '.pattern_width', sx)
-    md.set_item(ebsd_node + '.pattern_height', sy)
-    md.set_item(ebsd_node + '.n_columns', nx)
-    md.set_item(ebsd_node + '.n_rows', ny)
+    md.set_item(ebsd_node + ".pattern_width", sx)
+    md.set_item(ebsd_node + ".pattern_height", sy)
+    md.set_item(ebsd_node + ".n_columns", nx)
+    md.set_item(ebsd_node + ".n_rows", ny)
     md.set_item(
-        ebsd_node + '.step_x', signal.axes_manager[nav_indices[0]].scale)
+        ebsd_node + ".step_x", signal.axes_manager[nav_indices[0]].scale
+    )
     md.set_item(
-        ebsd_node + '.step_y', signal.axes_manager[nav_indices[1]].scale)
+        ebsd_node + ".step_y", signal.axes_manager[nav_indices[1]].scale
+    )
     md.set_item(
-        ebsd_node + '.detector_pixel_size',
-        signal.axes_manager[sig_indices[1]].scale)
+        ebsd_node + ".detector_pixel_size",
+        signal.axes_manager[sig_indices[1]].scale,
+    )
     # Separate EBSD and SEM metadata
-    det_str, ebsd_str = ebsd_node.split('.')[-2:]  # Detector and EBSD nodes
+    det_str, ebsd_str = ebsd_node.split(".")[-2:]  # Detector and EBSD nodes
     md_sem = md.get_item(sem_node).copy().as_dictionary()  # SEM node as dict
     md_det = md_sem.pop(det_str)  # Remove/assign detector node from SEM node
     md_ebsd = md_det.pop(ebsd_str)
     # Phases
-    if md.get_item('Sample.Phases') is None:
+    if md.get_item("Sample.Phases") is None:
         md = _update_phase_info(md, _phase_metadata())  # Add default phase
-    md_ebsd['Phases'] = md.Sample.Phases.as_dictionary()
-    for phase in md_ebsd['Phases'].keys():  # Ensure coordinates are arrays
-        atom_coordinates = md_ebsd['Phases'][phase]['atom_coordinates']
+    md_ebsd["Phases"] = md.Sample.Phases.as_dictionary()
+    for phase in md_ebsd["Phases"].keys():  # Ensure coordinates are arrays
+        atom_coordinates = md_ebsd["Phases"][phase]["atom_coordinates"]
         for atom in atom_coordinates.keys():
-            atom_coordinates[atom]['coordinates'] = np.array(
-                atom_coordinates[atom]['coordinates'])
-    scan = {'EBSD': {'Header': md_ebsd}, 'SEM': {'Header': md_sem}}
+            atom_coordinates[atom]["coordinates"] = np.array(
+                atom_coordinates[atom]["coordinates"]
+            )
+    scan = {"EBSD": {"Header": md_ebsd}, "SEM": {"Header": md_sem}}
 
     # Write scan dictionary to HDF groups
     dict2h5ebsdgroup(scan, scan_group)
 
     # Write signal to file
     man_pats = manufacturer_pattern_names()
-    dset_pattern_name = man_pats['KikuchiPy']
+    dset_pattern_name = man_pats["KikuchiPy"]
     overwrite_dataset(
-        scan_group.create_group('EBSD/Data'),
-        signal.data.reshape(nx * ny, sy, sx), dset_pattern_name,
-        signal_axes=(2, 1), **kwargs)
-    nx_start, nx_stop, ny_start, ny_stop = signal.axes_manager.navigation_extent
+        scan_group.create_group("EBSD/Data"),
+        signal.data.reshape(nx * ny, sy, sx),
+        dset_pattern_name,
+        signal_axes=(2, 1),
+        **kwargs,
+    )
+    (
+        nx_start,
+        nx_stop,
+        ny_start,
+        ny_stop,
+    ) = signal.axes_manager.navigation_extent
     sample_pos = {
-        'x_sample': np.tile(np.linspace(nx_start, nx_stop, nx), ny),
-        'y_sample': np.tile(np.linspace(ny_start, ny_stop, ny), nx)}
-    dict2h5ebsdgroup(sample_pos, scan_group['EBSD/Data'])
+        "x_sample": np.tile(np.linspace(nx_start, nx_stop, nx), ny),
+        "y_sample": np.tile(np.linspace(ny_start, ny_stop, ny), nx),
+    }
+    dict2h5ebsdgroup(sample_pos, scan_group["EBSD/Data"])
 
     f.close()
     _logger.info("File closed.")
@@ -707,7 +770,7 @@ def dict2h5ebsdgroup(dictionary, group, **kwargs):
 
     for key, val in dictionary.items():
         ddtype = type(val)
-        dshape = (1, )
+        dshape = (1,)
         written = False
         if isinstance(val, (dict, DictionaryTreeBrowser)):
             if isinstance(val, DictionaryTreeBrowser):
@@ -715,19 +778,20 @@ def dict2h5ebsdgroup(dictionary, group, **kwargs):
             dict2h5ebsdgroup(val, group.create_group(key), **kwargs)
             written = True
         elif isinstance(val, str):
-            ddtype = 'S' + str(len(val) + 1)
+            ddtype = "S" + str(len(val) + 1)
             val = val.encode()
         elif isinstance(val, (np.ndarray, da.Array)):
             overwrite_dataset(group, val, key, **kwargs)
             written = True
-        elif ddtype == np.dtype('O'):
+        elif ddtype == np.dtype("O"):
             try:
                 ddtype = h5py.special_dtype(vlen=val[0].dtype)
                 dshape = np.shape(val)
             except TypeError:
                 warnings.warn(
                     "The hdf5 writer could not write the following information "
-                    "to the file '{} : {}'.".format(key, val))
+                    "to the file '{} : {}'.".format(key, val)
+                )
                 break
         if written:
             continue  # Jump to next item in dictionary
