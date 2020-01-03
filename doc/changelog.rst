@@ -37,11 +37,11 @@ Features
   operate on scans larger than memory using all of our cores.
 
 * Visualize patterns easily with HyperSpy's powerful and versatile ``s.plot()``.
-  Any image, e.g. a virtual backscatter electron image, quality map, phase map
-  or orientation map, can be used to navigate in. Multiple scans of the same
-  size, e.g. a scan of experimental patterns and the best matching simulated
-  patterns to that scan, can be plotted simultaneously with HyperSpy's
-  ``plot_signals()``.
+  Any image of the same navigation size, e.g. a virtual backscatter electron
+  image, quality map, phase map, or orientation map, can be used to navigate in.
+  Multiple scans of the same size, e.g. a scan of experimental patterns and the
+  best matching simulated patterns to that scan, can be plotted simultaneously
+  with HyperSpy's ``plot_signals()``.
 
 * Virtual backscatter electron (VBSE) imaging is easily performed with
   ``s.virtual_backscatter_electron_imaging()`` based upon similar functionality

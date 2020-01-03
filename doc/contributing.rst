@@ -97,7 +97,7 @@ Switch to the ``master`` branch::
 
 Fetch changes and update ``master``::
 
-   git pull upstream master
+   git pull upstream master --tags
 
 Update your feature branch::
 
@@ -146,8 +146,8 @@ Running and writing tests
 
 All functionality in KikuchiPy is tested via the `pytest
 <https://docs.pytest.org>`_ framework. The tests reside in a ``test`` directory
-within each module. Tests are short methods that calls functions
-in KikuchiPy and compare output values with known answers. Install necessary
+within each module. Tests are short methods that call functions in KikuchiPy
+and compare resulting output values with known answers. Install necessary
 dependencies to run the tests::
 
    pip install -e .[tests]
