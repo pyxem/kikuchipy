@@ -16,9 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
+from itertools import chain
 from setuptools import setup, find_packages
 
-# Get release information
+# Get release information without importing anything from the project
 with open("kikuchipy/release.py") as fid:
     for line in fid:
         if line.startswith("author"):
@@ -31,6 +32,18 @@ with open("kikuchipy/release.py") as fid:
             name = line.strip().split()[-1][1:-1]
         elif line.startswith("version"):
             version = line.strip().split(" = ")[-1][1:-1]
+
+# Projects with optional features for building the documentation, running tests,
+# and combining these in a development project. From setuptools:
+# https://setuptools.readthedocs.io/en/latest/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
+extra_feature_requirements = {
+    "doc": ["sphinx", "sphinx-rtd-theme", "sphinx-copybutton",],
+    "tests": ["pytest", "pytest-cov", "coverage == 4.5.4",],
+}
+extra_feature_requirements["dev"] = [
+    "black >= 19.3b0",
+    "pre-commit >= 1.16",
+] + list(chain(*list(extra_feature_requirements.values())))
 
 setup(
     name=name,
@@ -74,17 +87,13 @@ setup(
         "hyperspy >= 1.5.2",
         "h5py",
         "matplotlib",
-        "numpy",
+        "numpy >= 1.17",
         "pyxem >= 0.10",
         "scikit-image",
         "scikit-learn",
         "scipy",
     ],
-    tests_require=["pytest", "pytest-cov", "coverage == 4.5.4"],
-    extras_require={
-        "doc": ["sphinx >= 1.8", "sphinx-rtd-theme", "sphinx-copybutton"],
-        "dev": ["black >= 19.3b0", "pre-commit >= 1.20"],
-    },
+    extras_require=extra_feature_requirements,
     package_data={
         "": ["LICENSE", "README.md"],
         "kikuchipy": ["*.py", "hyperspy_extension.yaml", "data"],

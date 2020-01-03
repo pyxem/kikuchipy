@@ -1,5 +1,5 @@
 [run]
 source = kikuchipy
 omit =
-    kikuchipy/setup.py
+    setup.py
     kikuchipy/release.py
