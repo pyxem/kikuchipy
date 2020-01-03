@@ -73,5 +73,5 @@ html_static_path = [
 pygments_style = "sphinx"
 
 # Logo
-# html_logo = '_static/'
-# html_favicon = '_static/icon.ico'
+html_logo = "_static/icon/icon_v0.1.0.svg"
+html_favicon = "_static/icon/icon_v0.1.0.png"
