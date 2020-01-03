@@ -33,13 +33,23 @@ with open("kikuchipy/release.py") as fid:
         elif line.startswith("version"):
             version = line.strip().split(" = ")[-1][1:-1]
 
-# Projects with optional features for building the documentation, running tests,
-# and combining these in a development project. From setuptools:
+# Projects with optional features for building the documentation and running
+# tests. From setuptools:
 # https://setuptools.readthedocs.io/en/latest/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
 extra_feature_requirements = {
-    "doc": ["sphinx", "sphinx-rtd-theme", "sphinx-copybutton",],
-    "tests": ["pytest", "pytest-cov", "coverage == 4.5.4",],
+    "doc": [
+        "sphinx >= 2.3.1",
+        "sphinx-rtd-theme >= 0.4.3",
+        "sphinx-copybutton >= 0.2.5",
+    ],
+    "tests": [
+        "pytest >= 5.3.2",
+        "pytest-cov >= 2.8.1",
+        "coverage == 4.5.4",  # 5.0 have some issues with reporting to Coveralls
+    ],
 }
+
+# Create a development project, including both the doc and tests projects
 extra_feature_requirements["dev"] = [
     "black >= 19.3b0",
     "pre-commit >= 1.16",

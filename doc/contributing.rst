@@ -30,8 +30,16 @@ Set the ``upstream`` remote to the main KikuchiPy repository::
 
     git remote add upstream https://github.com/kikuchipy/kikuchipy.git
 
-Install the required dependencies while making the development version available
-globally::
+We recommend installing in a `conda environment
+<https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`_
+with the `Miniconda distribution
+<https://docs.conda.io/en/latest/miniconda.html>`_::
+
+   conda create -n kikuchipy python=3.7
+   conda activate kikuchipy
+
+Then, install the required dependencies while making the development version
+available globally (in the ``conda`` environment)::
 
     pip install -e .[dev]
 
@@ -64,7 +72,7 @@ Create a new feature branch::
 
     git checkout master -b your-awesome-feature-name
 
-When you've made some changes, with them with::
+When you've made some changes you can view them with::
 
     git status
 
@@ -89,9 +97,9 @@ Switch to the ``master`` branch::
 
 Fetch changes and update ``master``::
 
-   git pull upstream master --tags
+   git pull upstream master
 
-Update your feature branch and/or branches::
+Update your feature branch::
 
    git checkout your-awesome-feature-name
    git merge master
@@ -107,7 +115,7 @@ Update your remote branch::
 
 You can then make a `pull request
 <https://guides.github.com/activities/forking/#making-a-pull-request>`_ to
-KikuchiPy's ``master`` branch!
+KikuchiPy's ``master`` branch. Good job!
 
 .. _building-the-documentation:
 
@@ -115,8 +123,7 @@ Building the documentation
 ==========================
 
 We use `Sphinx <https://www.sphinx-doc.org/en/master/>`_ for documenting
-functionality. Install necessary dependencies to build the documentation from
-the project root::
+functionality. Install necessary dependencies to build the documentation::
 
    pip install -e .[doc]
 
@@ -139,9 +146,9 @@ Running and writing tests
 
 All functionality in KikuchiPy is tested via the `pytest
 <https://docs.pytest.org>`_ framework. The tests reside in a ``test`` directory
-within each module. Tests are short methods calling functions
-in KikuchiPy and checkout output values against known answers. From the project
-root, install necessary dependencies to run the tests::
+within each module. Tests are short methods that calls functions
+in KikuchiPy and compare output values with known answers. Install necessary
+dependencies to run the tests::
 
    pip install -e .[tests]
 
@@ -149,7 +156,7 @@ Some useful `fixtures <https://docs.pytest.org/en/latest/fixture.html>`_, like a
 dummy scan and corresponding background pattern, are available in the
 ``conftest.py`` file.
 
-From the project root, the tests are run::
+To run the tests::
 
    pytest --cov
 

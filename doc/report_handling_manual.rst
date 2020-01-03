@@ -211,7 +211,7 @@ Possible responses may include:
 
 * A permanent or temporary ban from some or all KikuchiPy spaces (mailing lists,
   forum, etc.). The committee will maintain records of all such bans so that
-  they may be review in the future or otherwise maintained.
+  they may be reviewed in the future or otherwise maintained.
 
 Once a resolution is agreed upon, but before it is enacted, the committee will
 contact the original reporter and any other affected parties and explain the

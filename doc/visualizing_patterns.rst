@@ -30,11 +30,12 @@ corresponding to the sum of all detector intensities within that pattern:
 
 .. _fig-standard-navigator:
 
-.. figure:: _static/image/visualizing_patterns/standard_navigator.jpg
+.. figure:: _static/image/visualizing_patterns/s_plot.png
     :align: center
-    :width: 450
+    :width: 100%
 
-    Example of a standard navigator map.
+    Example of a standard navigator map (right), and the detector (right). This
+    is the standard view when calling ``s.plot()``.
 
 However, any :class:`~hyperspy.signal.BaseSignal` object with a
 two-dimensional ``signal_shape`` corresponding to the scan ``navigation_shape``

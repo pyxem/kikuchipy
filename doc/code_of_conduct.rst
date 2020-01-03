@@ -134,7 +134,7 @@ in* :doc:`report_handling_manual`.
 
 We will investigate and respond to all complaints. The KikuchiPy Code of Conduct
 Committee will protect the identity of the reporter, and treat the content of
-complaints as confidential (unless the report agrees otherwise).
+complaints as confidential (unless the reporter agrees otherwise).
 
 In case of severe and obvious breaches, e.g. personal threat or violent,
 sexist or racist language, we will immediately disconnect the originator from

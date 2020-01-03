@@ -4,6 +4,14 @@ Install KikuchiPy
 
 You can install KikuchiPy with ``pip``, or by installing from source.
 
+We recommend installing in a `conda environment
+<https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`_
+with the `Miniconda distribution
+<https://docs.conda.io/en/latest/miniconda.html>`_::
+
+   conda create -n kikuchipy python=3.7
+   conda activate kikuchipy
+
 Pip
 ---
 
