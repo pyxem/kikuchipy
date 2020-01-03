@@ -2,7 +2,7 @@
 Changelog
 =========
 
-0.1.0 / 2020-01-04
+0.1.0 (2020-01-03)
 ==================
 
 We're happy to announce the release of KikuchiPy v0.1.0!
