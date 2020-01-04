@@ -42,11 +42,11 @@ matrix:
 
     - name: "Python 3.7 with conda on Windows Server, version 1803"
       os: windows
-      env: PATH="/c/tools/miniconda3/:/c/tools/miniconda3/Scripts:$PATH"
+      env: PATH="/c/tools/miniconda3/:/c/tools/miniconda3/Scripts:$PATH"; DEPLOY=true
 
     - name: "Python 3.7 with pip on Windows Server, version 1803"
       os: windows
-      env: export ENV=pip; PATH="/c/Python37:/c/Python37/Scripts:$PATH"; DEPLOY=true
+      env: export ENV=pip; PATH="/c/Python37:/c/Python37/Scripts:$PATH";
 
 sudo: True # for Miniconda
 
