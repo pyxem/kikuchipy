@@ -34,7 +34,7 @@ matrix:
     - name: "Python 3.7 with pip on macOS 10.14"
       os: osx
       osx_image: xcode11.3
-      env: export ENV=pip; DEPLOY=true
+      env: export ENV=pip
       addons:
         homebrew:
           packages:
@@ -42,7 +42,7 @@ matrix:
 
     - name: "Python 3.7 with conda on Windows Server, version 1803"
       os: windows
-      env: PATH="/c/tools/miniconda3/:/c/tools/miniconda3/Scripts:$PATH"; DEPLOY=true
+      env: PATH="/c/tools/miniconda3/:/c/tools/miniconda3/Scripts:$PATH"
 
     - name: "Python 3.7 with pip on Windows Server, version 1803"
       os: windows
@@ -81,6 +81,6 @@ deploy:
   distributions: "sdist bdist_wheel"
   skip_existing: true
   on:
-#    tags: true
+    tags: true
     condition: $DEPLOY = true
-  edge: true  # v2 of dpl
+  edge: true  # v2 of Travis CI's deployment tool dpl
