@@ -2,6 +2,12 @@
 Changelog
 =========
 
+0.1.1 (2020-01-04)
+==================
+
+This is a bug fix release that ensures that necessary files are uploaded to
+PyPI.
+
 0.1.0 (2020-01-04)
 ==================
 
