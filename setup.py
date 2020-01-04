@@ -78,7 +78,7 @@ setup(
         "scanning electron microscopy",
         "kikuchi pattern",
     ],
-    url="https://github.com/kikuchipy/kikuchipy",
+    url="https://kikuchipy.readthedocs.io",
     package_dir={"kikuchipy": "kikuchipy"},
     classifiers=[
         "Programming Language :: Python :: 3",
