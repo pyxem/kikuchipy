@@ -32,6 +32,8 @@ with open("kikuchipy/release.py") as fid:
             name = line.strip().split()[-1][1:-1]
         elif line.startswith("version"):
             version = line.strip().split(" = ")[-1][1:-1]
+        elif line.startswith("license"):
+            license = line.strip().split(" = ")[-1][1:-1]
 
 # Projects with optional features for building the documentation and running
 # tests. From setuptools:
@@ -79,7 +81,6 @@ setup(
         "kikuchi pattern",
     ],
     url="https://kikuchipy.readthedocs.io",
-    package_dir={"kikuchipy": "kikuchipy"},
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
@@ -91,7 +92,6 @@ setup(
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    packages=find_packages(),
     install_requires=[
         "dask[array]",
         "hyperspy >= 1.5.2",
@@ -104,10 +104,9 @@ setup(
         "scipy",
     ],
     extras_require=extra_feature_requirements,
-    package_data={
-        "": ["LICENSE", "README.md"],
-        "kikuchipy": ["*.py", "hyperspy_extension.yaml", "data"],
-    },
+    packages=find_packages(),
+    package_dir={"kikuchipy": "kikuchipy"},
+    license=license,
     entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},
     python_requires=">=3.7",
 )
