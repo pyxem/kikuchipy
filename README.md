@@ -1,4 +1,4 @@
-[![Build Status](https://api.travis-ci.org/kikuchipy/kikuchipy.svg?branch=master)](https://travis-ci.org/kikuchipy/kikuchipy) [![Coverage Status](https://coveralls.io/repos/github/kikuchipy/kikuchipy/badge.svg?branch=master)](https://coveralls.io/github/kikuchipy/kikuchipy?branch=master) [![Documentation Status](https://readthedocs.org/projects/kikuchipy/badge/?version=latest)](https://kikuchipy.readthedocs.io/en/latest/?badge=latest) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Build Status](https://api.travis-ci.org/kikuchipy/kikuchipy.svg?branch=master)](https://travis-ci.org/kikuchipy/kikuchipy) [![Coverage Status](https://coveralls.io/repos/github/kikuchipy/kikuchipy/badge.svg?branch=master)](https://coveralls.io/github/kikuchipy/kikuchipy?branch=master) [![Documentation Status](https://readthedocs.org/projects/kikuchipy/badge/?version=latest)](https://kikuchipy.readthedocs.io/en/latest/?badge=latest) [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black) [![DOI](https://zenodo.org/badge/160169099.svg)](https://zenodo.org/badge/latestdoi/160169099)
 
 *KikuchiPy is an open-source Python library for processing and analysis of
 electron backscatter diffraction (EBSD) patterns.*
@@ -27,4 +27,4 @@ to get started!
 #### Cite
 
 If analysis using KikuchiPy forms a part of published work, please consider
-recognizing the code development, by for now citing HyperSpy.
+recognizing the code development by citing the DOI above.
