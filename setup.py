@@ -23,17 +23,17 @@ from setuptools import setup, find_packages
 with open("kikuchipy/release.py") as fid:
     for line in fid:
         if line.startswith("author"):
-            author = line.strip().split(" = ")[-1][1:-1]
+            AUTHOR = line.strip().split(" = ")[-1][1:-1]
         elif line.startswith("maintainer_email"):  # Must be before 'maintainer'
-            maintainer_email = line.strip(" = ").split()[-1][1:-1]
+            MAINTAINER_EMAIL = line.strip(" = ").split()[-1][1:-1]
         elif line.startswith("maintainer"):
-            maintainer = line.strip().split(" = ")[-1][1:-1]
+            MAINTAINER = line.strip().split(" = ")[-1][1:-1]
         elif line.startswith("name"):
-            name = line.strip().split()[-1][1:-1]
+            NAME = line.strip().split()[-1][1:-1]
         elif line.startswith("version"):
-            version = line.strip().split(" = ")[-1][1:-1]
+            VERSION = line.strip().split(" = ")[-1][1:-1]
         elif line.startswith("license"):
-            license = line.strip().split(" = ")[-1][1:-1]
+            LICENSE = line.strip().split(" = ")[-1][1:-1]
 
 # Projects with optional features for building the documentation and running
 # tests. From setuptools:
@@ -58,17 +58,17 @@ extra_feature_requirements["dev"] = [
 ] + list(chain(*list(extra_feature_requirements.values())))
 
 setup(
-    name=name,
-    version=version,
+    name=NAME,
+    version=VERSION,
     description=(
         "Processing of electron backscatter diffraction (EBSD) patterns"
     ),
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
-    author=author,
-    author_email=maintainer_email,
-    maintainer=maintainer,
-    maintainer_email=maintainer_email,
+    author=AUTHOR,
+    author_email=MAINTAINER_EMAIL,
+    maintainer=MAINTAINER,
+    maintainer_email=MAINTAINER_EMAIL,
     keywords=[
         "EBSD",
         "electron backscatter diffraction",
@@ -106,7 +106,7 @@ setup(
     extras_require=extra_feature_requirements,
     packages=find_packages(),
     package_dir={"kikuchipy": "kikuchipy"},
-    license=license,
+    license=LICENSE,
     entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},
     python_requires=">=3.7",
 )
