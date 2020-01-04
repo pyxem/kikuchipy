@@ -36,11 +36,12 @@ KikuchiPy is released under the GPL v3 license.
     :hidden:
     :caption: Help & reference
 
-    Contributing <contributing.rst>
+    contributing.rst
     open_datasets.rst
     changelog.rst
     cite.rst
     related_projects.rst
+    Code of Conduct <code_of_conduct.rst>
 
 Acknowledgement
 ===============

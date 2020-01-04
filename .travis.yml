@@ -1,5 +1,5 @@
-# The setup of different files for installation and tests on different operating
-# systems are based upon HyperSpy:
+# The setup of different files for installation and tests on different
+# operating systems are based upon how HyperSpy does it:
 # https://github.com/hyperspy/hyperspy/blob/RELEASE_next_minor/.travis.yml
 
 language: shell
@@ -10,6 +10,7 @@ env:
     - DEPS="hyperspy pyxem dask[array] h5py matplotlib numpy scikit-image scikit-learn scipy"
     - TEST_DEPS="pytest pytest-cov coveralls coverage==4.5.4"
     - PYTHON_CONDA=3.7
+    - DEPLOY=false
 
 matrix:
   include:
@@ -24,7 +25,7 @@ matrix:
       dist: bionic
       language: python
       python: 3.7
-      env: export ENV=pip
+      env: export ENV=pip; DEPLOY=true
 
     - name: "Python 3.7 with conda on macOS 10.14"
       os: osx
@@ -33,7 +34,7 @@ matrix:
     - name: "Python 3.7 with pip on macOS 10.14"
       os: osx
       osx_image: xcode11.3
-      env: export ENV=pip
+      env: export ENV=pip; DEPLOY=true
       addons:
         homebrew:
           packages:
@@ -45,7 +46,7 @@ matrix:
 
     - name: "Python 3.7 with pip on Windows Server, version 1803"
       os: windows
-      env: export ENV=pip; PATH="/c/Python37:/c/Python37/Scripts:$PATH"
+      env: export ENV=pip; PATH="/c/Python37:/c/Python37/Scripts:$PATH"; DEPLOY=true
 
 sudo: True # for Miniconda
 
@@ -68,3 +69,20 @@ script:
 
 after_success:
   - coveralls
+  - python setup.py sdist bdist_wheel
+
+before_deploy:
+  - export DISTRIBUTIONS=$(ls ./dist/*)
+
+# Source: https://docs.travis-ci.com/user/deployment/pypi/
+deploy:
+  provider: pypi
+  user: "__token__"
+  password:
+    # For username hakonanes
+    secure: "gJHlUERp8w1HYbJfVw0FNIpYzeBkUsg6qKu62FTYd2finjPCkaLauX6ZbmA4dtyi0H8ydoIXUFg8NcBntNYgSNmdNDO5DzsTI1VKhoiKUjbEIOhzEOT9sdrLgj9C2pa7AoSC1L9TQ8iy+YxsZVF/blm3DMeEQ9eTAmJvbEiEd3Xgqy1CqxTJ6jfV/YXHbVyBFwCY5/Q9ckYqqdePJrCJRK/ozGVLJu5a3apetZeGVZF28Ma5/dMSAClei4JqaWE2ULSUsUgZeLEY/SbtyO+/kDgy0MM7Zjpc2p3rLiLVmWwOSQQWQTvm4jGD7v/3QRl5DiaVFT9J7RD//tzlzXroYe5lkZ6wKExnEB2hUU6yW7czAi+Z2g49OSVG0HKaMj9ihfg+PIIJ/Dqf1Fz7HwBC93cW/Co/1DAF8sB2VfbrVfUQs+4XE1nj1c+60l0xq+5cnDcCwvhLc8GYc+GxxsK1UNM/off4HGIbKn2pj0v16grhqL9rSNTZ2UB2R6NUUdQCXH3JNbORPRgbdUdi+xNwB3b3T1M5U4VVWN/ElXH0Kw1dJ6jQt61j7ZMnVKl1NM9H4+dJ6SpgH3IKn3XD7SRSxXLF1RleJ59YpDLdo/AYKC5iesJJCTgil1ODOI0yEPF77V9/XJp0bHIeHtROtSIpWErgte+JYWLt4Wc3LLRkbNI="
+  file: "${DISTRIBUTIONS}"
+  skip_existing: true
+  on:
+    tags: true
+    condition: $DEPLOY = true

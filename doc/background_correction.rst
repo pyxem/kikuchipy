@@ -27,7 +27,7 @@ subtracting or dividing by a static background via
 
 .. figure:: _static/image/background_correction/static_correction.jpg
     :align: center
-    :scale: 50%
+    :width: 100%
 
     The same pattern as acquired (left) and after static background correction
     (right).
@@ -60,7 +60,7 @@ Gaussian kernel, ``sigma``:
 
 .. figure:: _static/image/background_correction/dynamic_correction.jpg
     :align: center
-    :scale: 50%
+    :width: 100%
 
     The same pattern after static correction (left) followed by dynamic
     background correction (right).
@@ -86,7 +86,7 @@ e.g. [0, 255] for patterns of ``uint8`` data type:
 
 .. figure:: _static/image/background_correction/adapthist.jpg
     :align: center
-    :scale: 50%
+    :width: 100%
 
     The same pattern after dynamic correction (left) followed by adaptive
     histogram equalization (right).
@@ -102,14 +102,13 @@ for the effect of varying ``kernel_size``.
     S. Koizuimi, "Quantitative electron backscatter diffraction (EBSD) data
     analyses using the dictionary indexing (DI) approach: Overcoming indexing
     difficulties on geological materials," *American Mineralogist* **102**
-    (2017) [`link <https://doi.org/10.2138/am-2017-6062>`_].
-
+    (2017), doi: https://doi.org/10.2138/am-2017-6062.
 
 .. [Jackson2019]
     M. A. Jackson, E. Pascal, M. De Graef, "Dictionary Indexing of Electron
     Back-Scatter Diffraction Patterns: a Hands-On Tutorial," *Integrating
-    Materials and Manufacturing Innovation* **8** (2019) [`link
-    <https://doi.org/10.1007/s40192-019-00137-4>`_].
+    Materials and Manufacturing Innovation* **8** (2019), doi:
+    https://doi.org/10.1007/s40192-019-00137-4.
 
 .. _rescale-intensities:
 
@@ -134,7 +133,7 @@ e.g. [0, 65535] for ``uint16``:
 
 .. figure:: _static/image/background_correction/pattern_adapthist_uint16.jpg
     :align: center
-    :scale: 50%
+    :width: 350
 
     A pattern, initially with ``uint8`` data type, cast to ``uint16``.
 
@@ -153,7 +152,7 @@ range, either keeping relative intensities between patterns or not, by using
 
 .. figure:: _static/image/background_correction/pattern_adapthist_uint16_rescaled.jpg
     :align: center
-    :scale: 50%
+    :width: 350
 
     Same pattern as in :ref:`the above figure <fig-pattern-adapthist-uint16>` with
     intensities rescaled to fill the full ``uint16`` data range.

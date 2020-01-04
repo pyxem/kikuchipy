@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The KikuchiPy developers
+# Copyright 2019-2020 The KikuchiPy developers
 #
 # This file is part of KikuchiPy.
 #
@@ -52,7 +52,7 @@ def _update_learning_results(learning_results, components, dtype_out):
     loadings = learning_results.loadings.astype(dtype_out)
 
     # Keep desired components
-    if hasattr(components, '__iter__'):  # components is a list of ints
+    if hasattr(components, "__iter__"):  # components is a list of ints
         factors = factors[:, components]
         loadings = loadings[:, components]
     else:  # components is an int
@@ -62,7 +62,8 @@ def _update_learning_results(learning_results, components, dtype_out):
     # Rechunk if learning results are lazy
     if isinstance(factors, da.Array) and isinstance(loadings, da.Array):
         chunks = kp.util.dask._rechunk_learning_results(
-            factors=factors, loadings=loadings)
+            factors=factors, loadings=loadings
+        )
         factors = factors.rechunk(chunks=chunks[0])
         loadings = loadings.rechunk(chunks=chunks[1])
 

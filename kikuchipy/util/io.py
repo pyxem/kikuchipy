@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The KikuchiPy developers
+# Copyright 2019-2020 The KikuchiPy developers
 #
 # This file is part of KikuchiPy.
 #
@@ -36,14 +36,28 @@ def kikuchipy_metadata():
     md = DictionaryTreeBrowser()
     sem_node, ebsd_node = metadata_nodes()
     ebsd = {
-        'azimuth_angle': 1., 'binning': 1., 'detector': '',
-        'elevation_angle': 1., 'exposure_time': 1, 'frame_number': 1,
-        'frame_rate': 1, 'gain': 1., 'grid_type': '', 'sample_tilt': 1.,
-        'scan_time': 1., 'static_background': 1, 'xpc': 1., 'ypc': 1.,
-        'zpc': 1.}
+        "azimuth_angle": 1.0,
+        "binning": 1.0,
+        "detector": "",
+        "elevation_angle": 1.0,
+        "exposure_time": 1,
+        "frame_number": 1,
+        "frame_rate": 1,
+        "gain": 1.0,
+        "grid_type": "",
+        "sample_tilt": 1.0,
+        "scan_time": 1.0,
+        "static_background": 1,
+        "xpc": 1.0,
+        "ypc": 1.0,
+        "zpc": 1.0,
+    }
     sem = {
-        'microscope': '', 'magnification': 1, 'beam_energy': 1.,
-        'working_distance': 1.}
+        "microscope": "",
+        "magnification": 1,
+        "beam_energy": 1.0,
+        "working_distance": 1.0,
+    }
     md.set_item(sem_node, sem)
     md.set_item(ebsd_node, ebsd)
     return md
@@ -68,8 +82,8 @@ def metadata_nodes(sem=True, ebsd=True):
     ebsd_node : str
     """
 
-    sem_node = 'Acquisition_instrument.SEM'
-    ebsd_node = sem_node + '.Detector.EBSD'
+    sem_node = "Acquisition_instrument.SEM"
+    ebsd_node = sem_node + ".Detector.EBSD"
     if sem and ebsd:
         return sem_node, ebsd_node
     elif sem:
@@ -90,17 +104,18 @@ def _get_input_bool(question):
     try:
         answer = input(question)
         answer = answer.lower()
-        while (answer != 'y') and (answer != 'n'):
+        while (answer != "y") and (answer != "n"):
             print("Please answer y or n.")
             answer = input(question)
-        if answer.lower() == 'y':
+        if answer.lower() == "y":
             return True
-        elif answer.lower() == 'n':
+        elif answer.lower() == "n":
             return False
     except OSError:
         warnings.warn(
             "Your terminal does not support raw input. Not adding scan. To add "
-            "the scan use `add_scan=True`")
+            "the scan use `add_scan=True`"
+        )
         return False
 
 
@@ -121,11 +136,12 @@ def _get_input_variable(question, var_type):
             try:
                 answer = var_type(answer)
             except (TypeError, ValueError):
-                print("Please enter a variable of type {}:\n".format(var_type))
+                print(f"Please enter a variable of type {var_type}:\n")
                 answer = input(question)
         return answer
     except OSError:
         warnings.warn(
             "Your terminal does not support raw input. Not adding scan. To add "
-            "the scan use `add_scan=True`")
+            "the scan use `add_scan=True`"
+        )
         return None

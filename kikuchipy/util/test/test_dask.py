@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The KikuchiPy developers
+# Copyright 2019-2020 The KikuchiPy developers
 #
 # This file is part of KikuchiPy.
 #
@@ -26,13 +26,13 @@ import kikuchipy as kp
 
 
 class TestDask:
-
-    @pytest.mark.parametrize('mbytes_chunk', (0.5, 50, 100))
+    @pytest.mark.parametrize("mbytes_chunk", (0.5, 50, 100))
     def test_get_chunks(self, mbytes_chunk):
         data_shape = (200, 298, 60, 60)
-        data_type = np.dtype('uint8')
+        data_type = np.dtype("uint8")
         chunks = kp.util.dask._get_chunks(
-            data_shape=data_shape, dtype=data_type, mbytes_chunk=mbytes_chunk)
+            data_shape=data_shape, dtype=data_type, mbytes_chunk=mbytes_chunk
+        )
 
         # Determine chunking of longest axis
         if mbytes_chunk == 0.5:
@@ -45,7 +45,8 @@ class TestDask:
 
     def test_get_dask_array(self):
         s = kp.signals.EBSD(
-            (255 * np.random.rand(10, 10, 120, 120)).astype(np.uint8))
+            (255 * np.random.rand(10, 10, 120, 120)).astype(np.uint8)
+        )
         dask_array = kp.util.dask._get_dask_array(s)
         assert dask_array.chunksize == (8, 8, 120, 120)
 
@@ -59,21 +60,24 @@ class TestDask:
         lazy_signal = kp.signals.LazyEBSD(data)
 
         # Decomposition
-        lazy_signal.decomposition(algorithm='PCA', output_dimension=10)
+        lazy_signal.decomposition(algorithm="PCA", output_dimension=10)
         factors = lazy_signal.learning_results.factors
         loadings = lazy_signal.learning_results.loadings
 
         # Raise error when last dimension in factors/loadings are not identical
-        with pytest.raises(ValueError, match='The last dimensions in factors'):
+        with pytest.raises(ValueError, match="The last dimensions in factors"):
             kp.util.dask._rechunk_learning_results(
-                factors=factors, loadings=loadings.T)
+                factors=factors, loadings=loadings.T
+            )
 
         # Only chunk first axis in loadings
         chunks = kp.util.dask._rechunk_learning_results(
-            factors=factors, loadings=loadings, mbytes_chunk=0.02)
+            factors=factors, loadings=loadings, mbytes_chunk=0.02
+        )
         assert chunks == [(-1, -1), (200, -1)]
 
         # Chunk first axis in both loadings and factors
         chunks = kp.util.dask._rechunk_learning_results(
-            factors=factors, loadings=loadings, mbytes_chunk=0.01)
+            factors=factors, loadings=loadings, mbytes_chunk=0.01
+        )
         assert chunks == [(125, -1), (62, -1)]

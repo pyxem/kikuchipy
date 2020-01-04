@@ -237,11 +237,6 @@ containing only ``Scan 1``, by passing:
 
 Here the h5ebsd :func:`~kikuchipy.io.plugins.h5ebsd.file_writer` is called.
 
-.. [Jackson2014] M. A. Jackson, M. A. Groeber, M. D. Uchic, D. J. Rowenhorst
-    and M. De Graef, "h5ebsd: an archival data format for electron back-scatter
-    diffraction data sets," *Integrating Materials and Manufacturing Innovation*
-    **3** (2014) [`link <https://doi.org/10.1186/2193-9772-3-4>`_].
-
 .. _nordif-format:
 
 NORDIF binary

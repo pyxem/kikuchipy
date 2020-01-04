@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The KikuchiPy developers
+# Copyright 2019-2020 The KikuchiPy developers
 #
 # This file is part of KikuchiPy.
 #
@@ -34,25 +34,25 @@ def replace_stdin(target):
 
 
 class TestIO:
-
     def test_kikuchipy_metadata(self):
         sem_node, ebsd_node = kp.util.io.metadata_nodes()
         md = kp.util.io.kikuchipy_metadata()
-        assert md.get_item(sem_node + '.microscope') == ''
-        assert md.get_item(ebsd_node + '.xpc') == 1.0
+        assert md.get_item(sem_node + ".microscope") == ""
+        assert md.get_item(ebsd_node + ".xpc") == 1.0
 
     def test_metadata_nodes(self):
         sem_node = kp.util.io.metadata_nodes(ebsd=False)
-        assert sem_node == 'Acquisition_instrument.SEM'
+        assert sem_node == "Acquisition_instrument.SEM"
         ebsd_node = kp.util.io.metadata_nodes(sem=False)
-        assert ebsd_node == sem_node + '.Detector.EBSD'
+        assert ebsd_node == sem_node + ".Detector.EBSD"
         sem_node, ebsd_node = kp.util.io.metadata_nodes()
 
     @pytest.mark.parametrize(
-        'answer, should_return', [('y', True), ('n', False), ('m', True)])
+        "answer, should_return", [("y", True), ("n", False), ("m", True)]
+    )
     def test_get_input_bool(self, answer, should_return):
         question = "Ehm, hello? ... is, is there anybody out there?"
-        if answer == 'm':
+        if answer == "m":
             with replace_stdin(io.StringIO(answer)):
                 with pytest.raises(EOFError):
                     kp.util.io._get_input_bool(question)
@@ -62,10 +62,10 @@ class TestIO:
                 returns = kp.util.io._get_input_bool(question)
         assert returns == should_return
 
-    @pytest.mark.parametrize('var_type', (int, 1))
+    @pytest.mark.parametrize("var_type", (int, 1))
     def test_get_input_variable(self, var_type):
         question = "How few are too few coffee cups?"
-        answer = '1'
+        answer = "1"
         with replace_stdin(io.StringIO(answer)):
             if isinstance(var_type, int):
                 with pytest.raises(EOFError):

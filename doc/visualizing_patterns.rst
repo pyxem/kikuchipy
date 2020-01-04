@@ -4,7 +4,7 @@ Visualizing patterns
 
 The :class:`~kikuchipy.signals.ebsd.EBSD` object has a powerful and versatile
 :meth:`~hyperspy.signal.BaseSignal.plot` method provided by HyperSpy, and its
-uses are greatly detailed in the `HyperSpy user guide
+uses are greatly detailed in HyperSpy's `visualisation user guide
 <http://hyperspy.org/hyperspy-doc/current/user_guide/visualisation.html>`_. This
 section details example uses specific to
 :class:`~kikuchipy.signals.ebsd.EBSD` objects.
@@ -30,11 +30,12 @@ corresponding to the sum of all detector intensities within that pattern:
 
 .. _fig-standard-navigator:
 
-.. figure:: _static/image/visualizing_patterns/standard_navigator.jpg
+.. figure:: _static/image/visualizing_patterns/s_plot.png
     :align: center
-    :scale: 70%
+    :width: 100%
 
-    Example of a standard navigator map.
+    Example of a standard navigator map (right), and the detector (right). This
+    is the standard view when calling ``s.plot()``.
 
 However, any :class:`~hyperspy.signal.BaseSignal` object with a
 two-dimensional ``signal_shape`` corresponding to the scan ``navigation_shape``
@@ -101,7 +102,7 @@ from dictionary indexing with `EMsoft <https://github.com/EMsoft-org/EMsoft>`_
 
 .. figure:: _static/image/visualizing_patterns/orientation_similarity_map_navigator.jpg
     :align: center
-    :scale: 70%
+    :width: 450
 
     A quality metric map ``s_osm``, in this case an orientation similarity map
     from dictionary indexing with EMsoft, as navigator map.
@@ -128,7 +129,7 @@ involved:
 
 .. figure:: _static/image/visualizing_patterns/orientation_map_navigator.jpg
     :align: center
-    :scale: 70%
+    :width: 450
 
     An orientation map ``s_om`` as a navigator map.
 

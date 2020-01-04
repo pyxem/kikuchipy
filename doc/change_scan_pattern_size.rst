@@ -41,7 +41,7 @@ wanted to remove the ten outermost pixels in our (60 x 60) pixel patterns:
 
 .. figure:: _static/image/change_scan_pattern_size/change_pattern_size.jpg
     :align: center
-    :scale: 50%
+    :width: 100%
 
     The same pattern in scan ``s`` before cropping (left) and in scan ``s3``
     after cropping (right).

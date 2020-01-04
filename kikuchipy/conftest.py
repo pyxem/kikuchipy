@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The KikuchiPy developers
+# Copyright 2019-2020 The KikuchiPy developers
 #
 # This file is part of KikuchiPy.
 #
@@ -33,24 +33,28 @@ def dummy_signal():
     methods using this signal (as input) to hard-coded outputs.
     """
 
+    # fmt: off
     dummy_array = np.array(
         [5, 6, 5, 7, 6, 5, 6, 1, 0, 9, 7, 8, 7, 0, 8, 8, 7, 6, 0, 3, 3, 5, 2, 9,
          3, 3, 9, 8, 1, 7, 6, 4, 8, 8, 2, 2, 4, 0, 9, 0, 1, 0, 2, 2, 5, 8, 6, 0,
          4, 7, 7, 7, 6, 0, 4, 1, 6, 3, 4, 0, 1, 1, 0, 5, 9, 8, 4, 6, 0, 2, 9, 2,
-         9, 4, 3, 6, 5, 6, 2, 5, 9], dtype=np.uint8).reshape((3, 3, 3, 3))
+         9, 4, 3, 6, 5, 6, 2, 5, 9],
+        dtype=np.uint8
+    ).reshape((3, 3, 3, 3))
+    # fmt: on
+
     return kp.signals.EBSD(dummy_array)
 
 
 @pytest.fixture
 def dummy_background():
-    """Dummy static background pattern for the dummy signal. If this
-    is changed, all tests using this background will fail since they
+    """Dummy static background pattern for the dummy signal. If this is
+    changed, all tests using this background will fail since they
     compare the output from methods using this background (as input) to
     hard-coded outputs.
     """
 
-    return np.array(
-        [5, 4, 5, 4, 3, 4, 4, 4, 3], dtype=np.uint8).reshape((3, 3))
+    return np.array([5, 4, 5, 4, 3, 4, 4, 4, 3], dtype=np.uint8).reshape((3, 3))
 
 
 @pytest.fixture()
@@ -60,6 +64,6 @@ def save_path_h5ebsd():
     """
 
     with tempfile.TemporaryDirectory() as tmp:
-        file_path = os.path.join(tmp, 'patterns_temp.h5')
+        file_path = os.path.join(tmp, "patterns_temp.h5")
         yield file_path
         gc.collect()

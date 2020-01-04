@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The KikuchiPy developers
+# Copyright 2019-2020 The KikuchiPy developers
 #
 # This file is part of KikuchiPy.
 #
@@ -17,11 +17,11 @@
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
 author = "KikuchiPy developers"
-copyright = "Copyright 2019, KikuchiPy"
+copyright = "Copyright 2019-2020, KikuchiPy"
 credits = ["Håkon Wiik Ånes", "Tina Bergh"]
 license = "GPLv3"
 maintainer = "Håkon Wiik Ånes"
 maintainer_email = "hakon.w.anes@ntnu.no"
 name = "kikuchipy"
 status = "Development"
-version = "0.1.0"
+version = "0.1.0dev"

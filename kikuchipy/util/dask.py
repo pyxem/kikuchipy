@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The KikuchiPy developers
+# Copyright 2019-2020 The KikuchiPy developers
 #
 # This file is part of KikuchiPy.
 #
@@ -66,7 +66,7 @@ def _get_chunks(data_shape, dtype, mbytes_chunk=100):
             nav_chunks[i_max] = np.floor(nav_chunks[i_max] / 1.1)
     chunks = list(nav_chunks) + list(sig_chunks)
 
-    _logger.info("Suggested chunk size {}".format(chunks))
+    _logger.info(f"Suggested chunk size {chunks}")
 
     return chunks
 
@@ -131,13 +131,14 @@ def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
     # Make sure the last factors/loading axes have the same shapes
     if factors.shape[-1] != loadings.shape[-1]:
         raise ValueError(
-            "The last dimensions in factors and loadings are not the same.")
+            "The last dimensions in factors and loadings are not the same."
+        )
 
     # Get shape of learning results
     learning_results_shape = factors.shape + loadings.shape
 
     # Determine maximum number of (strictly necessary) chunks
-    suggested_size = mbytes_chunk * 2**20
+    suggested_size = mbytes_chunk * 2 ** 20
     factors_size = factors.nbytes
     loadings_size = loadings.nbytes
     total_size = factors_size + loadings_size
@@ -145,15 +146,17 @@ def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
 
     # Get chunk sizes
     if factors_size <= suggested_size:  # Chunk first axis in loadings
-        chunks = [(-1, -1), (int(learning_results_shape[2]/num_chunks), -1)]
+        chunks = [(-1, -1), (int(learning_results_shape[2] / num_chunks), -1)]
     else:  # Chunk both first axes
         sizes = [factors_size, loadings_size]
         while (sizes[0] + sizes[1]) >= suggested_size:
             max_idx = int(np.argmax(sizes))
             sizes[max_idx] = np.floor(sizes[max_idx] / 2)
-        factors_chunks = int(np.ceil(factors_size/sizes[0]))
-        loadings_chunks = int(np.ceil(loadings_size/sizes[1]))
-        chunks = [(int(learning_results_shape[0]/factors_chunks), -1),
-                  (int(learning_results_shape[2]/loadings_chunks), -1)]
+        factors_chunks = int(np.ceil(factors_size / sizes[0]))
+        loadings_chunks = int(np.ceil(loadings_size / sizes[1]))
+        chunks = [
+            (int(learning_results_shape[0] / factors_chunks), -1),
+            (int(learning_results_shape[2] / loadings_chunks), -1),
+        ]
 
     return chunks

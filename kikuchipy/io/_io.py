@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019 The KikuchiPy developers
+# Copyright 2019-2020 The KikuchiPy developers
 #
 # This file is part of KikuchiPy.
 #
@@ -58,7 +58,7 @@ def load(filename, lazy=False, **kwargs):
     """
 
     if not os.path.isfile(filename):
-        raise IOError("No filename matches '{}'.".format(filename))
+        raise IOError(f"No filename matches '{filename}'.")
 
     # Find matching reader for file extension
     extension = os.path.splitext(filename)[1][1:]
@@ -69,8 +69,9 @@ def load(filename, lazy=False, **kwargs):
             break
     if reader is None:
         raise IOError(
-            "Could not read '{}'. If the file format is supported, please "
-            "report this error.".format(filename))
+            f"Could not read '{filename}'. If the file format is supported, "
+            "please report this error."
+        )
 
     # Get data and metadata (from potentially multiple scans if an h5ebsd file)
     scan_dicts = reader.file_reader(filename, lazy=lazy, **kwargs)
@@ -81,7 +82,7 @@ def load(filename, lazy=False, **kwargs):
         filename, extension = os.path.splitext(filename)
         scans[-1].tmp_parameters.folder = directory
         scans[-1].tmp_parameters.filename = filename
-        scans[-1].tmp_parameters.extension = extension.replace('.', '')
+        scans[-1].tmp_parameters.extension = extension.replace(".", "")
 
     if len(scans) == 1:
         scans = scans[0]
@@ -112,22 +113,26 @@ def _dict2signal(signal_dict, lazy=False):
         ``original_metadata`` from dictionary.
     """
 
-    signal_type = ''
-    if 'metadata' in signal_dict:
-        md = signal_dict['metadata']
-        if 'Signal' in md and 'record_by' in md['Signal']:
-            record_by = md['Signal']['record_by']
-            if record_by != 'image':
+    signal_type = ""
+    if "metadata" in signal_dict:
+        md = signal_dict["metadata"]
+        if "Signal" in md and "record_by" in md["Signal"]:
+            record_by = md["Signal"]["record_by"]
+            if record_by != "image":
                 raise ValueError(
-                    "KikuchiPy only supports `record_by = image`, not {}."
-                    "Use `hspy_load()` instead.".format(record_by))
-            del md['Signal']['record_by']
-        if 'Signal' in md and 'signal_type' in md['Signal']:
-            signal_type = md['Signal']['signal_type']
+                    "KikuchiPy only supports `record_by = image`, not "
+                    f"{record_by}."
+                )
+            del md["Signal"]["record_by"]
+        if "Signal" in md and "signal_type" in md["Signal"]:
+            signal_type = md["Signal"]["signal_type"]
 
     signal = _assign_signal_subclass(
-        signal_dimension=2, signal_type=signal_type,
-        dtype=signal_dict['data'].dtype, lazy=lazy)(**signal_dict)
+        signal_dimension=2,
+        signal_type=signal_type,
+        dtype=signal_dict["data"].dtype,
+        lazy=lazy,
+    )(**signal_dict)
 
     if signal._lazy:
         signal._make_lazy()
@@ -136,7 +141,8 @@ def _dict2signal(signal_dict, lazy=False):
 
 
 def _assign_signal_subclass(
-        dtype, signal_dimension, signal_type='', lazy=False):
+    dtype, signal_dimension, signal_type="", lazy=False
+):
     """Given ``record_by`` and ``signal_type`` return the matching
     signal subclass.
 
@@ -162,35 +168,47 @@ def _assign_signal_subclass(
     """
 
     # Check if parameter values are allowed
-    if ('float' in dtype.name or 'int' in dtype.name or 'void' in dtype.name or
-            'bool' in dtype.name or 'object' in dtype.name):
-        dtype = 'real'
+    if (
+        "float" in dtype.name
+        or "int" in dtype.name
+        or "void" in dtype.name
+        or "bool" in dtype.name
+        or "object" in dtype.name
+    ):
+        dtype = "real"
     else:
-        raise ValueError("Data type '{}' not understood.".format(dtype.name))
+        raise ValueError(f"Data type '{dtype.name}' not understood.")
     if not isinstance(signal_dimension, int) or signal_dimension < 0:
         raise ValueError(
-            "Signal dimension must be a positive integer and not '{}'.".format(
-                signal_dimension))
+            "Signal dimension must be a positive integer and not "
+            f"'{signal_dimension}'."
+        )
 
     # Get possible signal classes
     signals = {
-        key: value for key, value in find_subclasses(
-            kikuchipy.signals, BaseSignal).items() if value._lazy == lazy}
+        key: value
+        for key, value in find_subclasses(kikuchipy.signals, BaseSignal).items()
+        if value._lazy == lazy
+    }
 
     # Get signals matching both input signal's dtype and signal dimension
     dtype_matches = [s for s in signals.values() if s._dtype == dtype]
     dtype_dim_matches = [
-        s for s in dtype_matches if s._signal_dimension == signal_dimension]
+        s for s in dtype_matches if s._signal_dimension == signal_dimension
+    ]
     dtype_dim_type_matches = [
-        s for s in dtype_dim_matches if signal_type == s._signal_type
-                                        or signal_type in s._alias_signal_types]
+        s
+        for s in dtype_dim_matches
+        if signal_type == s._signal_type or signal_type in s._alias_signal_types
+    ]
 
     if len(dtype_dim_type_matches) == 1:
         matches = dtype_dim_type_matches
     else:
         raise ValueError(
-            "No KikuchiPy signals match dtype '{}', signal dimension '{}' and "
-            "signal_type '{}'.".format(dtype, signal_dimension, signal_type))
+            f"No KikuchiPy signals match dtype '{dtype}', signal dimension "
+            f"'{signal_dimension}' and signal_type '{signal_type}'."
+        )
 
     return matches[0]
 
@@ -218,9 +236,9 @@ def save(filename, signal, overwrite=None, add_scan=None, **kwargs):
     """
 
     ext = os.path.splitext(filename)[1][1:]
-    if ext == '':  # Will write to KikuchiPy's h5ebsd format
-        ext = 'h5'
-        filename = filename + '.' + ext
+    if ext == "":  # Will write to KikuchiPy's h5ebsd format
+        ext = "h5"
+        filename = filename + "." + ext
 
     writer = None
     for plugin in plugins:
@@ -230,9 +248,9 @@ def save(filename, signal, overwrite=None, add_scan=None, **kwargs):
 
     if writer is None:
         raise ValueError(
-            "'{}' does not correspond to any supported format. Supported file "
-            "extensions are: '{}'".format(
-                ext, strlist2enumeration(default_write_ext)))
+            f"'{ext}' does not correspond to any supported format. Supported "
+            f"file extensions are: '{strlist2enumeration(default_write_ext)}'"
+        )
     else:
         sd = signal.axes_manager.signal_dimension
         nd = signal.axes_manager.navigation_dimension
@@ -240,24 +258,28 @@ def save(filename, signal, overwrite=None, add_scan=None, **kwargs):
             # Get writers that can write this data
             writing_plugins = []
             for plugin in plugins:
-                if (plugin.writes is True or plugin.writes is not False and
-                        (sd, nd) in plugin.writes):
+                if (
+                    plugin.writes is True
+                    or plugin.writes is not False
+                    and (sd, nd) in plugin.writes
+                ):
                     writing_plugins.append(plugin)
             raise ValueError(
-                "This file format cannot write this data. The following formats"
-                " can: {}".format(strlist2enumeration(writing_plugins)))
+                "This file format cannot write this data. The following "
+                f"formats can: {strlist2enumeration(writing_plugins)}"
+            )
 
         ensure_directory(filename)
         is_file = os.path.isfile(filename)
 
         # Check if we are to add signal to an already existing h5ebsd file
-        if writer.format_name == 'h5ebsd' and overwrite is not True and is_file:
+        if writer.format_name == "h5ebsd" and overwrite is not True and is_file:
             if add_scan is None:
                 q = "Add scan to '{}' (y/n)?\n".format(filename)
                 add_scan = _get_input_bool(q)
             if add_scan:
                 overwrite = True  # So that the 2nd statement below triggers
-            kwargs['add_scan'] = add_scan
+            kwargs["add_scan"] = add_scan
 
         # Determine if signal is to be written to file or not
         if overwrite is None:
@@ -269,13 +291,15 @@ def save(filename, signal, overwrite=None, add_scan=None, **kwargs):
         else:
             raise ValueError(
                 "overwrite parameter can only be None, True or False, and "
-                "not {}".format(overwrite))
+                f"not {overwrite}"
+            )
 
         # Finally, write file
         if write:
             writer.file_writer(filename, signal, **kwargs)
             directory, filename = os.path.split(os.path.abspath(filename))
-            signal.tmp_parameters.set_item('folder', directory)
+            signal.tmp_parameters.set_item("folder", directory)
             signal.tmp_parameters.set_item(
-                'filename', os.path.splitext(filename)[0])
-            signal.tmp_parameters.set_item('extension', ext)
+                "filename", os.path.splitext(filename)[0]
+            )
+            signal.tmp_parameters.set_item("extension", ext)
