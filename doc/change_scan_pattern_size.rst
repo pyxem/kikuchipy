@@ -68,4 +68,5 @@ passing in either the ``scale`` or ``new_shape`` parameter:
 Note that :meth:`~kikuchipy-signals.ebsd.EBSD.rebin` casts the data to
 ``uint64``. This means that in this example, each pixel in the binned scan
 ``s3`` takes up eight times the memory size of pixels in the original scan
-``s``.
+``s``. If you want, you can :ref:`rescale the intensities <rescale-intensities>`
+to e.g. the ``uint8`` data type range.

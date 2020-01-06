@@ -29,6 +29,11 @@ Everyone is welcome to contribute. Please read our
 [contributor guide](https://kikuchipy.readthedocs.io/en/latest/contributing.html)
 to get started!
 
+### Code of Conduct
+
+KikuchiPy has a [Code of Conduct](https://github.com/kikuchipy/kikuchipy/blob/master/doc/code_of_conduct.rst)
+that should be honoured by everyone who participates in the KikuchiPy community.
+
 ### Cite
 
 If analysis using KikuchiPy forms a part of published work, please consider

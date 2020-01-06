@@ -34,7 +34,7 @@ corresponding to the sum of all detector intensities within that pattern:
     :align: center
     :width: 100%
 
-    Example of a standard navigator map (right), and the detector (right). This
+    Example of a standard navigator map (right), and the detector (left). This
     is the standard view when calling ``s.plot()``.
 
 However, any :class:`~hyperspy.signal.BaseSignal` object with a
@@ -151,7 +151,7 @@ as a visual inspection of the indexing results:
     >>> with h5py.File('/path/to/simulated_patterns/sim.h5', mode='r') as f:
             patterns = f['EMData/EBSD/EBSDPatterns'][()]
     >>> s_sim = kp.signals.EBSD(patterns.reshape(s.axes_manager.shape))
-    >>> hs.plot.plot_signals([s, s_sim])
+    >>> hs.plot.plot_signals([s, s_sim], navigator=s_om)
 
 .. _fig-plot-multiple-scans:
 
