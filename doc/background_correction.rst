@@ -154,5 +154,5 @@ range, either keeping relative intensities between patterns or not, by using
     :align: center
     :width: 350
 
-    Same pattern as in :ref:`the above figure <fig-pattern-adapthist-uint16>` with
-    intensities rescaled to fill the full ``uint16`` data range.
+    Same pattern as in :ref:`the above figure <fig-pattern-adapthist-uint16>`
+    with intensities rescaled to fill the full ``uint16`` data range.
