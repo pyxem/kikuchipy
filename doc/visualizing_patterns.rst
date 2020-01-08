@@ -150,7 +150,7 @@ as a visual inspection of the indexing results:
     >>> import h5py
     >>> with h5py.File('/path/to/simulated_patterns/sim.h5', mode='r') as f:
             patterns = f['EMData/EBSD/EBSDPatterns'][()]
-    >>> s_sim = kp.signals.EBSD(patterns.reshape(s.axes_manager.shape))
+    >>> s_sim = kp.signals.EBSD(patterns.reshape(s.data.shape))
     >>> hs.plot.plot_signals([s, s_sim], navigator=s_om)
 
 .. _fig-plot-multiple-scans:
