@@ -127,6 +127,6 @@ setup(
             "readthedocs.yml",
             "setup.py",
         ],
-        "kikuchipy": ["*.py", "hyperspy_extension.yaml",],
+        "kikuchipy": ["*.py", "hyperspy_extension.yaml", "data/*"],
     },
 )
