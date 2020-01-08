@@ -1,10 +1,13 @@
 include LICENSE
-include README.md
+include MANIFEST.in
+include pyproject.toml
 include pytest.ini
+include README.rst
+include readthedocs.yml
+include setup.py
 include kikuchipy/hyperspy_extension.yaml
 
-recursive-include kikuchipy/data *
-
-include doc/Makefile
-include doc/make.bat
+recursive-include doc Makefile make.bat
 recursive-include doc *.rst *.py
+recursive-include doc/_static *.png *.jpg *.svg *.gif *.sh
+recursive-include kikuchipy/data *
