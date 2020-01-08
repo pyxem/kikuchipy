@@ -158,7 +158,7 @@ dummy scan and corresponding background pattern, are available in the
 
 To run the tests::
 
-   pytest --cov
+   pytest --cov --pyargs kikuchipy
 
 The ``--cov`` flag makes `coverage.py
 <https://coverage.readthedocs.io/en/latest/>`_ print a nice report in the

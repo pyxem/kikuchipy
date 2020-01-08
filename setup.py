@@ -34,6 +34,8 @@ with open("kikuchipy/release.py") as fid:
             VERSION = line.strip().split(" = ")[-1][1:-1]
         elif line.startswith("license"):
             LICENSE = line.strip().split(" = ")[-1][1:-1]
+        elif line.startswith("platforms"):
+            PLATFORMS = line.strip().split(" = ")[-1][1:-1]
 
 # Projects with optional features for building the documentation and running
 # tests. From setuptools:
@@ -58,29 +60,17 @@ extra_feature_requirements["dev"] = [
 ] + list(chain(*list(extra_feature_requirements.values())))
 
 setup(
+    # Package description
     name=NAME,
     version=VERSION,
+    license=LICENSE,
+    url="https://kikuchipy.readthedocs.io",
+    python_requires=">=3.7",
     description=(
         "Processing of electron backscatter diffraction (EBSD) patterns"
     ),
-    long_description=open("README.md").read(),
-    long_description_content_type="text/markdown",
-    author=AUTHOR,
-    author_email=MAINTAINER_EMAIL,
-    maintainer=MAINTAINER,
-    maintainer_email=MAINTAINER_EMAIL,
-    keywords=[
-        "EBSD",
-        "electron backscatter diffraction",
-        "EBSP",
-        "electron backscatter pattern",
-        "BKD",
-        "backscatter kikuchi diffraction",
-        "SEM",
-        "scanning electron microscopy",
-        "kikuchi pattern",
-    ],
-    url="https://kikuchipy.readthedocs.io",
+    long_description=open("README.rst").read(),
+    long_description_content_type="text/x-rst",
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
@@ -92,6 +82,26 @@ setup(
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Physics",
     ],
+    platforms=PLATFORMS,
+    keywords=[
+        "EBSD",
+        "electron backscatter diffraction",
+        "EBSP",
+        "electron backscatter pattern",
+        "BKD",
+        "backscatter kikuchi diffraction",
+        "SEM",
+        "scanning electron microscopy",
+        "kikuchi pattern",
+    ],
+    zip_safe=True,
+    # Contact
+    author=AUTHOR,
+    author_email=MAINTAINER_EMAIL,
+    maintainer=MAINTAINER,
+    maintainer_email=MAINTAINER_EMAIL,
+    # Dependencies
+    extras_require=extra_feature_requirements,
     install_requires=[
         "dask[array]",
         "hyperspy >= 1.5.2",
@@ -103,10 +113,20 @@ setup(
         "scikit-learn",
         "scipy",
     ],
-    extras_require=extra_feature_requirements,
+    entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},
+    # Files to include when distributing package
     packages=find_packages(),
     package_dir={"kikuchipy": "kikuchipy"},
-    license=LICENSE,
-    entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},
-    python_requires=">=3.7",
+    include_package_data=True,
+    package_data={
+        "": [
+            "LICENSE",
+            "README.rst",
+            "pyproject.toml",
+            "pytest.ini",
+            "readthedocs.yml",
+            "setup.py",
+        ],
+        "kikuchipy": ["*.py", "hyperspy_extension.yaml", "data/*"],
+    },
 )
