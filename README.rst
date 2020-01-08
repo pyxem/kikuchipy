@@ -1,22 +1,32 @@
-|travis-ci|_ |coveralls|_ |doc|_  |pypi_version|_  |doi|_ |black|_
+.. Travis CI
+.. image:: https://travis-ci.org/kikuchipy/kikuchipy.svg?branch=master
+    :target: https://travis-ci.org/kikuchipy/kikuchipy
+    :alt: Build status
 
-.. |travis-ci| image:: https://api.travis-ci.org/kikuchipy/kikuchipy.svg?branch=master
-.. _travis-ci: https://travis-ci.org/kikuchipy/kikuchipy
+.. Coveralls
+.. image:: https://img.shields.io/coveralls/github/kikuchipy/kikuchipy.svg
+    :target: https://coveralls.io/github/kikuchipy/kikuchipy?branch=master
+    :alt: Coveralls status
 
-.. |coveralls| image:: https://coveralls.io/repos/github/kikuchipy/kikuchipy/badge.svg?branch=master
-.. _coveralls: https://coveralls.io/github/kikuchipy/kikuchipy?branch=master
+.. Read the Docs
+.. image:: https://readthedocs.org/projects/kikuchipy/badge/?version=latest
+    :target: https://kikuchipy.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation status
 
-.. |doc| image:: https://readthedocs.org/projects/kikuchipy/badge/?version=latest
-.. _doc: https://kikuchipy.readthedocs.io
+.. PyPI version
+.. image:: https://img.shields.io/pypi/v/kikuchipy.svg
+    :target: https://pypi.python.org/pypi/kikuchipy
+    :alt: PyPI version
 
-.. |pypi_version| image:: http://img.shields.io/pypi/v/kikuchipy.svg?style=flat
-.. _pypi_version: https://pypi.python.org/pypi/kikuchipy
+.. Zenodo DOI
+.. image:: https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg
+    :target: https://doi.org/10.5281/zenodo.3597646
+    :alt: DOI
 
-.. |doi| image:: https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg
-.. _doi: https://doi.org/10.5281/zenodo.3597646
-
-.. |black| image:: https://img.shields.io/badge/code%20style-black-000000.svg?style=flat
-.. _black: https://black.readthedocs.io
+.. Black code style
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://black.readthedocs.io
+    :alt: Code style: black
 
 *KikuchiPy is an open-source Python library for processing and analysis of
 electron backscatter diffraction (EBSD) patterns.*
