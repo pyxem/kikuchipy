@@ -1,27 +1,32 @@
 ---
 name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
-assignees: ''
-
+about: Create a report to help us improve 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+#### Description
+<!-- A clear and concise description of what the bug is. -->
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+#### Way to reproduce
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+```python
+>>> import kikuchipy as kp
+>>> import numpy as np
+>>> s = kp.signals.EBSD(np.zeros((10, 10, 10, 10)))
+>>> # The bug here...
+```
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+#### Version information
 
-**Additional context**
-Add any other context about the problem here.
+```python
+# Paste the output of the following python commands
+import sys; print(sys.version)
+import platform; print(platform.platform())
+import kikuchipy; print("kikuchipy version: {}".format(kikuchipy.__version__))
+```
+
+```python
+# Your output here
+```
+
+#### Expected behaviour
+<!-- A clear and concise description of what you expected to happen. -->
