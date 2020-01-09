@@ -2,6 +2,15 @@
 Changelog
 =========
 
+0.1.2 (2020-01-09)
+==================
+
+KikuchiPy is an open-source Python library for processing and analysis of
+electron backscatter diffraction patterns: https://kikuchipy.readthedocs.io
+
+This is a bug-fix release that ensures, unlike the previous bug-fix release,
+that necessary files are downloaded when installing from PyPI.
+
 0.1.1 (2020-01-04)
 ==================
 
