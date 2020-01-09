@@ -678,6 +678,34 @@ class EBSD(Signal2D):
         else:
             self.data = equalized_patterns
 
+    def average_patterns(self, neighbours=1, exclude_corners=True):
+        """Average nearest neighbour patterns intensities inplace.
+
+        Parameters
+        ----------
+        neighbours : int, optional
+            Number of neighbours to average with, default is 1.
+        exclude_corners : bool, optional
+            Whether to exclude corners in averaging kernel, default is
+            True.
+        """
+
+        # Averaging kernel
+        size = neighbours * 2 + 1
+        centre = (size // 2, size // 2)
+        kernel = np.ones((size, size))
+
+        # Exclude corners
+        if exclude_corners:
+            y, x = np.ogrid[:size, :size]
+            centre_distance = np.sqrt(
+                (x - centre[0]) ** 2 + (y - centre[0]) ** 2
+            )
+            mask = centre_distance > centre[0]
+            kernel[mask] = 0
+
+        dask_array = kp.util.dask._get_dask_array(signal=self)
+
     def virtual_backscatter_electron_imaging(self, roi, **kwargs):
         """Plot an interactive virtual backscatter electron (VBSE)
         image formed from detector intensities within a specified and
