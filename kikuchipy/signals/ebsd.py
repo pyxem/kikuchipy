@@ -32,6 +32,7 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 from h5py import File
 import numpy as np
 from pyxem.signals.diffraction2d import Diffraction2D
+from scipy.ndimage import convolve
 
 from kikuchipy.io._io import save
 import kikuchipy as kp
@@ -678,33 +679,53 @@ class EBSD(Signal2D):
         else:
             self.data = equalized_patterns
 
-    def average_patterns(self, neighbours=1, exclude_corners=True):
+    def average_patterns(self, n_neighbours=1, exclude_corners=True):
         """Average nearest neighbour patterns intensities inplace.
 
         Parameters
         ----------
-        neighbours : int, optional
+        n_neighbours : int, optional
             Number of neighbours to average with, default is 1.
         exclude_corners : bool, optional
             Whether to exclude corners in averaging kernel, default is
             True.
         """
 
-        # Averaging kernel
-        size = neighbours * 2 + 1
-        centre = (size // 2, size // 2)
-        kernel = np.ones((size, size))
+        # Create averaging kernel, taking into account the possibility of a scan
+        # with only one navigation axis
+        n_navigation_dimensions = self.axes_manager.navigation_dimension
+        n_signal_dimensions = self.axes_manager.signal_dimension
+        kernel_size = n_neighbours * 2 + 1
+        kernel_centre = (kernel_size // 2,) * n_navigation_dimensions
+        kernel = np.ones(
+            (kernel_size,) * n_navigation_dimensions
+            + (1,) * n_signal_dimensions
+        )
 
-        # Exclude corners
-        if exclude_corners:
-            y, x = np.ogrid[:size, :size]
+        # Exclude corners in kernel
+        if exclude_corners and n_navigation_dimensions > 1:
+            y, x = np.ogrid[:kernel_size, :kernel_size]
             centre_distance = np.sqrt(
-                (x - centre[0]) ** 2 + (y - centre[0]) ** 2
+                (x - kernel_centre[0]) ** 2 + (y - kernel_centre[0]) ** 2
             )
-            mask = centre_distance > centre[0]
+            mask = centre_distance > kernel_centre[0]
             kernel[mask] = 0
 
-        dask_array = kp.util.dask._get_dask_array(signal=self)
+        # First, sum nearest neighbour intensities
+        sum_neighbours = convolve(
+            input=self.data, weights=kernel, mode="constant"
+        )
+
+        # Divide by number of nearest neighbours averaged with (including
+        # itself)
+        n_averaged = kernel_size ** 2
+        if exclude_corners:
+            n_averaged -= 4 * (2 * n_neighbours - 1)
+        n_averaged_array = (
+            np.ones(self.axes_manager.navigation_shape) * n_averaged
+        )
+        # Subtract on borders and corners
+        # Subtract if corners of kernel were excluded
 
     def virtual_backscatter_electron_imaging(self, roi, **kwargs):
         """Plot an interactive virtual backscatter electron (VBSE)
