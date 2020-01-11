@@ -18,15 +18,15 @@
     :target: https://pypi.python.org/pypi/kikuchipy
     :alt: PyPI version
 
+.. conda-forge version
+.. image:: https://img.shields.io/conda/vn/conda-forge/kikuchipy
+    :target: https://anaconda.org/conda-forge/kikuchipy
+    :alt: conda-forge version
+
 .. Zenodo DOI
 .. image:: https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg
     :target: https://doi.org/10.5281/zenodo.3597646
     :alt: DOI
-
-.. Black code style
-.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
-    :target: https://black.readthedocs.io
-    :alt: Code style: black
 
 *KikuchiPy is an open-source Python library for processing and analysis of
 electron backscatter diffraction (EBSD) patterns.*
