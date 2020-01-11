@@ -679,14 +679,16 @@ class EBSD(Signal2D):
         else:
             self.data = equalized_patterns
 
-    def average_patterns(self, n_neighbours=1, exclude_corners=True):
-        """Average nearest neighbour patterns intensities inplace.
+    def average_neighbour_patterns(
+        self, n_neighbours=1, exclude_kernel_corners=True
+    ):
+        """Average neighbour patterns intensities inplace.
 
         Parameters
         ----------
         n_neighbours : int, optional
             Number of neighbours to average with, default is 1.
-        exclude_corners : bool, optional
+        exclude_kernel_corners : bool, optional
             Whether to exclude corners in averaging kernel, default is
             True.
         """
@@ -702,8 +704,8 @@ class EBSD(Signal2D):
             + (1,) * n_signal_dimensions
         )
 
-        # Exclude corners in kernel
-        if exclude_corners and n_navigation_dimensions > 1:
+        # If desired, exclude corners in kernel
+        if exclude_kernel_corners and n_navigation_dimensions > 1:
             y, x = np.ogrid[:kernel_size, :kernel_size]
             centre_distance = np.sqrt(
                 (x - kernel_centre[0]) ** 2 + (y - kernel_centre[0]) ** 2
@@ -711,21 +713,38 @@ class EBSD(Signal2D):
             mask = centre_distance > kernel_centre[0]
             kernel[mask] = 0
 
-        # First, sum nearest neighbour intensities
+        # Scale to 16 bit
+        self.data = self.data.astype(np.uint16)
+
+        # Sum nearest neighbour intensities
         sum_neighbours = convolve(
             input=self.data, weights=kernel, mode="constant"
         )
 
-        # Divide by number of nearest neighbours averaged with (including
-        # itself)
+        # Divide by number of considered nearest neighbours (including itself)
         n_averaged = kernel_size ** 2
-        if exclude_corners:
+        # Extra neighbours to exclude on borders and corners
+        n_exclude_borders = 3
+        n_exclude_corners = 2
+        if exclude_kernel_corners:
             n_averaged -= 4 * (2 * n_neighbours - 1)
+            n_exclude_borders -= 2
+            n_exclude_corners -= 1
         n_averaged_array = (
-            np.ones(self.axes_manager.navigation_shape) * n_averaged
+            np.ones(self.axes_manager.navigation_shape, dtype=np.uint8)
+            * n_averaged
         )
-        # Subtract on borders and corners
-        # Subtract if corners of kernel were excluded
+        # Subtract number of neighbours on borders and corners
+        borders = np.ones(n_averaged_array.shape, dtype=bool)
+        borders[n_averaged_array.ndim * (slice(1, -1),)] = False
+        n_averaged_array[borders] -= n_exclude_borders
+        n_averaged_array[
+            tuple(slice(None, None, j - 1) for j in n_averaged_array.shape)
+        ] -= n_exclude_corners
+
+        self.data = (
+            sum_neighbours  # / n_averaged_array[:, :, np.newaxis, np.newaxis]
+        )
 
     def virtual_backscatter_electron_imaging(self, roi, **kwargs):
         """Plot an interactive virtual backscatter electron (VBSE)
