@@ -35,13 +35,13 @@ We recommend installing in a `conda environment
 with the `Miniconda distribution
 <https://docs.conda.io/en/latest/miniconda.html>`_::
 
-   conda create -n kikuchipy python=3.7
+   conda create --name kikuchipy python=3.7
    conda activate kikuchipy
 
 Then, install the required dependencies while making the development version
 available globally (in the ``conda`` environment)::
 
-    pip install -e .[dev]
+    pip install --editable .[dev]
 
 This installs all necessary development dependencies, including those for
 running tests and building documentation.
@@ -125,7 +125,7 @@ Building the documentation
 We use `Sphinx <https://www.sphinx-doc.org/en/master/>`_ for documenting
 functionality. Install necessary dependencies to build the documentation::
 
-   pip install -e .[doc]
+   pip install --editable .[doc]
 
 Then, build the documentation from the ``doc`` directory::
 
@@ -150,7 +150,7 @@ within each module. Tests are short methods that call functions in KikuchiPy
 and compare resulting output values with known answers. Install necessary
 dependencies to run the tests::
 
-   pip install -e .[tests]
+   pip install --editable .[tests]
 
 Some useful `fixtures <https://docs.pytest.org/en/latest/fixture.html>`_, like a
 dummy scan and corresponding background pattern, are available in the
