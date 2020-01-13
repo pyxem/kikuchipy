@@ -89,8 +89,8 @@ def _rescale_pattern_chunk(
     patterns : da.Array
         Patterns to rescale.
     in_range, out_range : tuple of int or float, optional
-        Min./max. intensity values of input and output pattern. If None,
-        (default) `in_range` is set to pattern min./max. If None
+        Min./max. intensity values of input and output pattern. If None
+        (default), `in_range` is set to pattern min./max. If None
         (default), `out_range` is set to `dtype_out` min./max
         according to `skimage.util.dtype_out.dtype_range`, with min. equal
         to zero.
@@ -215,7 +215,6 @@ def _adaptive_histogram_equalization_chunk(
 
     This method makes use of
     :func:`skimage.exposure.equalize_adapthist`.
-
 
     Parameters
     ----------

@@ -25,6 +25,7 @@ import sys
 
 import dask.array as da
 import dask.diagnostics as dd
+import dask_image.ndfilters as din
 from hyperspy._signals.signal2d import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
@@ -32,7 +33,6 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 from h5py import File
 import numpy as np
 from pyxem.signals.diffraction2d import Diffraction2D
-from scipy.ndimage import convolve
 
 from kikuchipy.io._io import save
 import kikuchipy as kp
@@ -445,7 +445,7 @@ class EBSD(Signal2D):
 
         # Correct static background and rescale intensities chunk by chunk
         corrected_patterns = dask_array.map_blocks(
-            kp.util.experimental._static_background_correction_chunk,
+            func=kp.util.experimental._static_background_correction_chunk,
             static_bg=static_bg,
             operation=operation,
             in_range=in_range,
@@ -503,7 +503,7 @@ class EBSD(Signal2D):
             sigma = self.axes_manager.signal_axes[0].size / 30
 
         corrected_patterns = dask_array.map_blocks(
-            kp.util.experimental._dynamic_background_correction_chunk,
+            func=kp.util.experimental._dynamic_background_correction_chunk,
             operation=operation,
             sigma=sigma,
             dtype_out=dtype_out,
@@ -574,7 +574,7 @@ class EBSD(Signal2D):
 
         # Rescale patterns
         rescaled_patterns = dask_array.map_blocks(
-            kp.util.experimental._rescale_pattern_chunk,
+            func=kp.util.experimental._rescale_pattern_chunk,
             in_range=in_range,
             dtype_out=dtype_out,
             dtype=dtype_out,
@@ -664,7 +664,7 @@ class EBSD(Signal2D):
 
         # Local contrast enhancement
         equalized_patterns = dask_array.map_blocks(
-            kp.util.experimental._adaptive_histogram_equalization_chunk,
+            func=kp.util.experimental._adaptive_histogram_equalization_chunk,
             kernel_size=kernel_size,
             clip_limit=clip_limit,
             nbins=nbins,
@@ -713,17 +713,9 @@ class EBSD(Signal2D):
             mask = centre_distance > kernel_centre[0]
             kernel[mask] = 0
 
-        # Scale to 16 bit
-        self.data = self.data.astype(np.uint16)
-
-        # Sum nearest neighbour intensities
-        sum_neighbours = convolve(
-            input=self.data, weights=kernel, mode="constant"
-        )
-
-        # Divide by number of considered nearest neighbours (including itself)
+        # Create array with number of considered nearest neighbours (including
+        # itself), excluding extra neighbours on borders and corners
         n_averaged = kernel_size ** 2
-        # Extra neighbours to exclude on borders and corners
         n_exclude_borders = 3
         n_exclude_corners = 2
         if exclude_kernel_corners:
@@ -734,17 +726,42 @@ class EBSD(Signal2D):
             np.ones(self.axes_manager.navigation_shape, dtype=np.uint8)
             * n_averaged
         )
-        # Subtract number of neighbours on borders and corners
+
+        # Subtract number of neighbours on borders
         borders = np.ones(n_averaged_array.shape, dtype=bool)
         borders[n_averaged_array.ndim * (slice(1, -1),)] = False
         n_averaged_array[borders] -= n_exclude_borders
+
+        # Subtract number of neighbours on corners
         n_averaged_array[
             tuple(slice(None, None, j - 1) for j in n_averaged_array.shape)
         ] -= n_exclude_corners
 
-        self.data = (
-            sum_neighbours  # / n_averaged_array[:, :, np.newaxis, np.newaxis]
+        # Create dask array of signal patterns and do processing on this
+        dtype_out = self.data.dtype
+        dask_array = kp.util.dask._get_dask_array(signal=self, dtype=np.float32)
+
+        # Sum neighbour patterns within kernel
+        sum_neighbour_patterns = din.convolve(
+            input=dask_array, weights=kernel, mode="constant", cval=0.0,
         )
+
+        # Divide by number of neighbour patterns that were averaged with
+        n_averaged_array = da.from_array(
+            n_averaged_array.T[:, :, np.newaxis, np.newaxis],
+            chunks=sum_neighbour_patterns.chunksize,
+        )
+        averaged_patterns = sum_neighbour_patterns.map_blocks(
+            np.divide, n_averaged_array, dtype=dtype_out,
+        )
+
+        # Overwrite signal patterns
+        if not self._lazy:
+            with dd.ProgressBar():
+                print("Average neighbour patterns:", file=sys.stdout)
+                averaged_patterns.store(self.data, compute=True)
+        else:
+            self.data = averaged_patterns
 
     def virtual_backscatter_electron_imaging(self, roi, **kwargs):
         """Plot an interactive virtual backscatter electron (VBSE)
