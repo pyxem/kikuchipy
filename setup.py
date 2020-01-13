@@ -104,6 +104,7 @@ setup(
     extras_require=extra_feature_requirements,
     install_requires=[
         "dask[array]",
+        "dask-image",
         "hyperspy >= 1.5.2",
         "h5py",
         "matplotlib",
