@@ -161,7 +161,7 @@ class TestEBSD:
         assert dx.offset, dy.offset == -centre
 
 
-class TestIntensityCorrection:
+class TestPatternProcessing:
     @pytest.mark.parametrize(
         "operation, relative",
         [
@@ -466,6 +466,62 @@ class TestIntensityCorrection:
         s = kp.load(KIKUCHIPY_FILE, lazy=True)
         s.adaptive_histogram_equalization()
         assert isinstance(s.data, da.Array)
+
+    @pytest.mark.parametrize(
+        "n_neighbours, exclude_kernel_corners, match, lazy",
+        [
+            (1, True, None, False),
+            (1, False, None, True),
+            (2, True, "Kernel size (", False),
+            (0.5, True, "n_neighbours must be an integer, however", False),
+        ],
+    )
+    def test_average_neighbour_patterns(
+        self, dummy_signal, n_neighbours, exclude_kernel_corners, match, lazy,
+    ):
+        if match is None:
+            if lazy:
+                dummy_signal = dummy_signal.as_lazy()
+            dummy_signal.average_neighbour_patterns(
+                n_neighbours=n_neighbours,
+                exclude_kernel_corners=exclude_kernel_corners,
+            )
+
+            if n_neighbours == 1 and exclude_kernel_corners is True:
+                # fmt: off
+                answer = np.array(
+                    [
+                        7, 4, 6, 6, 3, 7, 7, 3, 2, 4, 4, 6, 4, 2, 5, 4, 3, 5, 5,
+                        5, 3, 5, 3, 8, 6, 5, 5, 5, 2, 6, 4, 3, 3, 4, 1, 1, 6, 4,
+                        6, 4, 3, 4, 5, 5, 3, 5, 3, 3, 3, 3, 5, 3, 4, 5, 5, 3, 7,
+                        4, 4, 2, 3, 4, 1, 5, 3, 6, 3, 4, 1, 1, 4, 4, 7, 6, 3, 4,
+                        6, 4, 3, 6, 3,
+                    ],
+                    dtype=np.uint8
+                )
+                # fmt: on
+            else:  # n_neighbours == 1 and exclude_kernel_corners is False
+                # fmt: off
+                answer = np.array(
+                    [
+                        6, 3, 7, 5, 2, 5, 6, 3, 3, 5, 3, 5, 4, 3, 6, 5, 3, 3, 5,
+                        4, 5, 4, 2, 6, 5, 4, 5, 5, 4, 7, 4, 3, 3, 4, 3, 2, 5, 4,
+                        5, 4, 3, 4, 4, 4, 3, 5, 4, 5, 4, 3, 5, 4, 5, 5, 5, 2, 7,
+                        3, 3, 2, 3, 3, 2, 6, 3, 5, 3, 4, 3, 3, 4, 3, 6, 4, 5, 3,
+                        4, 3, 3, 5, 4,
+                    ],
+                    dtype=np.uint8
+                )
+                # fmt: on
+            answer = answer.reshape((3, 3, 3, 3))
+            assert dummy_signal.data.all() == answer.all()
+            assert dummy_signal.data.dtype == answer.dtype
+        else:
+            with pytest.raises(ValueError):
+                dummy_signal.average_neighbour_patterns(
+                    n_neighbours=n_neighbours,
+                    exclude_kernel_corners=exclude_kernel_corners,
+                )
 
 
 class TestVirtualBackscatterElectronImaging:

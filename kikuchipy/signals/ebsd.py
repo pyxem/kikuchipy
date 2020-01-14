@@ -244,7 +244,7 @@ class EBSD(Signal2D):
         Examples
         --------
         >>> print(s.metadata.Sample.Phases.Number_1.atom_coordinates.
-                Number_1)
+                  Number_1)
         ├── atom =
         ├── coordinates = array([0., 0., 0.])
         ├── debye_waller_factor = 0.0
@@ -255,7 +255,7 @@ class EBSD(Signal2D):
                     'site_occupation': 1,
                     'debye_waller_factor': 0.0035}})
         >>> print(s.metadata.Sample.Phases.Number_1.atom_coordinates.
-                Number_1)
+                  Number_1)
         ├── atom = Ni
         ├── coordinates = array([0., 0., 0.])
         ├── debye_waller_factor = 0.0035
@@ -630,9 +630,9 @@ class EBSD(Signal2D):
         >>> imin = np.iinfo(s.data.dtype_out).min
         >>> imax = np.iinfo(s.data.dtype_out).max + 1
         >>> hist, _ = np.histogram(s.inav[0, 0].data, bins=imax,
-                          range=(imin, imax))
+                                   range=(imin, imax))
         >>> hist2, _ = np.histogram(s2.inav[0, 0].data, bins=imax,
-                           range=(imin, imax))
+                                    range=(imin, imax))
         >>> fig, ax = plt.subplots(nrows=2, ncols=2)
         >>> ax[0, 0].imshow(s.inav[0, 0].data)
         >>> ax[1, 0].plot(hist)
@@ -682,55 +682,94 @@ class EBSD(Signal2D):
     def average_neighbour_patterns(
         self, n_neighbours=1, exclude_kernel_corners=True
     ):
-        """Average neighbour patterns intensities inplace.
+        """Average neighbour patterns intensities inplace within a
+        square kernel.
 
         Parameters
         ----------
         n_neighbours : int, optional
-            Number of neighbours to average with, default is 1.
+            Number of neighbours on each side to average with, default
+            is 1.
         exclude_kernel_corners : bool, optional
             Whether to exclude corners in averaging kernel, default is
             True.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import kikuchipy as kp
+        >>> s = kp.signals.EBSD(np.ones((4, 4, 2, 2)))
+        >>> k = 1
+        >>> for i in range(4):
+                for j in range(4):
+                    s.inav[j, i].data *= k
+                    k += 1
+        >>> print(s.mean(s.axes_manager.signal_axes).data)
+        [[ 1.  2.  3.  4.]
+         [ 5.  6.  7.  8.]
+         [ 9. 10. 11. 12.]
+         [13. 14. 15. 16.]]
+        >>> s.average_neighbour_patterns(
+                n_neighbours=1, exclude_kernel_corners=True)
+        >>> print(s.mean(s.axes_manager.signal_axes).data)
+        [[ 2.  3.  4.  5.]
+         [ 5.  6.  7.  7.]
+         [ 9. 10. 11. 11.]
+         [12. 13. 14. 14.]]
         """
+
+        # Number of neighbours must be integer
+        if not isinstance(n_neighbours, int):
+            raise ValueError(
+                f"n_neighbours must be an integer, however {n_neighbours} was "
+                "passed."
+            )
 
         # Create averaging kernel, taking into account the possibility of a scan
         # with only one navigation axis
-        n_navigation_dimensions = self.axes_manager.navigation_dimension
-        n_signal_dimensions = self.axes_manager.signal_dimension
-        kernel_size = n_neighbours * 2 + 1
-        kernel_centre = (kernel_size // 2,) * n_navigation_dimensions
-        kernel = np.ones(
-            (kernel_size,) * n_navigation_dimensions
-            + (1,) * n_signal_dimensions
-        )
+        n_nav_dim = self.axes_manager.navigation_dimension
+        n_sig_dim = self.axes_manager.signal_dimension
+        ny, nx = self.axes_manager.navigation_shape
+        kernel_size = 1 + n_neighbours * 2
+        # Check if kernel size is bigger than scan
+        if (kernel_size > ny) or (kernel_size > nx):
+            largest_n_neighbours = max([ny, nx]) // 2
+            raise ValueError(
+                f"Kernel size ({kernel_size} x {kernel_size}) is larger than "
+                f"scan size ({ny} x {nx}). n_neighbours={largest_n_neighbours} "
+                "is the largest possible value."
+            )
+        kernel_centre = (kernel_size // 2,) * n_nav_dim
+        kernel = np.ones((kernel_size,) * n_nav_dim + (1,) * n_sig_dim)
 
         # If desired, exclude corners in kernel
-        if exclude_kernel_corners and n_navigation_dimensions > 1:
-            y, x = np.ogrid[:kernel_size, :kernel_size]
-            centre_distance = np.sqrt(
+        if exclude_kernel_corners and n_nav_dim > 1:
+            # Create an 'open' mesh-grid of same size as the kernel
+            y, x = np.ogrid[0:kernel_size, 0:kernel_size]
+            distance_to_centre = np.sqrt(
                 (x - kernel_centre[0]) ** 2 + (y - kernel_centre[0]) ** 2
             )
-            mask = centre_distance > kernel_centre[0]
+            mask = distance_to_centre > kernel_centre[0]
             kernel[mask] = 0
 
         # Create array with number of considered nearest neighbours (including
-        # itself), excluding extra neighbours on borders and corners
+        # itself), excluding extra neighbours on edges and corners
         n_averaged = kernel_size ** 2
-        n_exclude_borders = 3
+        n_exclude_edges = 3
         n_exclude_corners = 2
         if exclude_kernel_corners:
             n_averaged -= 4 * (2 * n_neighbours - 1)
-            n_exclude_borders -= 2
+            n_exclude_edges -= 2
             n_exclude_corners -= 1
         n_averaged_array = (
             np.ones(self.axes_manager.navigation_shape, dtype=np.uint8)
             * n_averaged
         )
 
-        # Subtract number of neighbours on borders
-        borders = np.ones(n_averaged_array.shape, dtype=bool)
-        borders[n_averaged_array.ndim * (slice(1, -1),)] = False
-        n_averaged_array[borders] -= n_exclude_borders
+        # Subtract number of neighbours on edges
+        edges = np.ones(n_averaged_array.shape, dtype=bool)
+        edges[n_averaged_array.ndim * (slice(1, -1),)] = False
+        n_averaged_array[edges] -= n_exclude_edges
 
         # Subtract number of neighbours on corners
         n_averaged_array[
@@ -742,16 +781,16 @@ class EBSD(Signal2D):
         dask_array = kp.util.dask._get_dask_array(signal=self, dtype=np.float32)
 
         # Sum neighbour patterns within kernel
-        sum_neighbour_patterns = din.convolve(
+        neighbour_pattern_sum = din.convolve(
             input=dask_array, weights=kernel, mode="constant", cval=0.0,
         )
 
         # Divide by number of neighbour patterns that were averaged with
         n_averaged_array = da.from_array(
             n_averaged_array.T[:, :, np.newaxis, np.newaxis],
-            chunks=sum_neighbour_patterns.chunksize,
+            chunks=neighbour_pattern_sum.chunksize,
         )
-        averaged_patterns = sum_neighbour_patterns.map_blocks(
+        averaged_patterns = neighbour_pattern_sum.map_blocks(
             np.divide, n_averaged_array, dtype=dtype_out,
         )
 
