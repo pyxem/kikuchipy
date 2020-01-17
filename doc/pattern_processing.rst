@@ -1,6 +1,6 @@
-=====================
-Background correction
-=====================
+==================
+Pattern processing
+==================
 
 The raw EBSD signal can be empirically evaluated as a superposition of a Kikuchi
 diffraction pattern and a smooth background intensity. For pattern indexing, the
@@ -10,10 +10,15 @@ intensity can reveal important topographical, compositional or diffraction
 contrast. This section details methods to enhance the Kikuchi diffraction
 pattern.
 
+.. _background-correction:
+
+Background correction
+=====================
+
 .. _static-background-correction:
 
 Static background correction
-============================
+----------------------------
 
 The slowly varying diffuse background in raw patterns can be removed by either
 subtracting or dividing by a static background via
@@ -43,7 +48,7 @@ available for the data type, e.g. [0, 255] for ``uint8``.
 .. _dynamic-background-correction:
 
 Dynamic background correction
-=============================
+-----------------------------
 
 Uneven intensity in a static background subtracted pattern can be corrected by
 subtracting or dividing by a dynamic background obtained by Gaussian blurring.
@@ -66,6 +71,22 @@ Gaussian kernel, ``sigma``:
     background correction (right).
 
 Patterns are rescaled to fill the available data type range.
+
+.. _pattern-averaging:
+
+Average neighbour patterns
+==========================
+
+With :meth:`~kikuchipy.signals.ebsd.EBSD.average_neighbour_patterns`, the
+signal-to-noise ratio in a pattern can be improved by averaging it with its
+closest neighbours within a kernel:
+
+.. code-block:: python
+
+    >>> s.average_neighbour_patterns(
+            n_neighbours=2, exclude_kernel_corners=True)
+
+
 
 .. _adaptive-histogram-equalization:
 

@@ -33,6 +33,7 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 from h5py import File
 import numpy as np
 from pyxem.signals.diffraction2d import Diffraction2D
+from scipy.ndimage import convolve
 
 from kikuchipy.io._io import save
 import kikuchipy as kp
@@ -727,71 +728,45 @@ class EBSD(Signal2D):
 
         # Create averaging kernel, taking into account the possibility of a scan
         # with only one navigation axis
-        n_nav_dim = self.axes_manager.navigation_dimension
-        n_sig_dim = self.axes_manager.signal_dimension
-        ny, nx = self.axes_manager.navigation_shape
-        kernel_size = 1 + n_neighbours * 2
-        # Check if kernel size is bigger than scan
-        if (kernel_size > ny) or (kernel_size > nx):
-            largest_n_neighbours = max([ny, nx]) // 2
-            raise ValueError(
-                f"Kernel size ({kernel_size} x {kernel_size}) is larger than "
-                f"scan size ({ny} x {nx}). n_neighbours={largest_n_neighbours} "
-                "is the largest possible value."
-            )
-        kernel_centre = (kernel_size // 2,) * n_nav_dim
-        kernel = np.ones((kernel_size,) * n_nav_dim + (1,) * n_sig_dim)
-
-        # If desired, exclude corners in kernel
-        if exclude_kernel_corners and n_nav_dim > 1:
-            # Create an 'open' mesh-grid of same size as the kernel
-            y, x = np.ogrid[0:kernel_size, 0:kernel_size]
-            distance_to_centre = np.sqrt(
-                (x - kernel_centre[0]) ** 2 + (y - kernel_centre[0]) ** 2
-            )
-            mask = distance_to_centre > kernel_centre[0]
-            kernel[mask] = 0
-
-        # Create array with number of considered nearest neighbours (including
-        # itself), excluding extra neighbours on edges and corners
-        n_averaged = kernel_size ** 2
-        n_exclude_edges = 3
-        n_exclude_corners = 2
-        if exclude_kernel_corners:
-            n_averaged -= 4 * (2 * n_neighbours - 1)
-            n_exclude_edges -= 2
-            n_exclude_corners -= 1
-        n_averaged_array = (
-            np.ones(self.axes_manager.navigation_shape, dtype=np.uint8)
-            * n_averaged
+        kernel = kp.util.experimental._pattern_kernel(
+            self.axes_manager,
+            n_neighbours=n_neighbours,
+            exclude_kernel_corners=exclude_kernel_corners,
         )
 
-        # Subtract number of neighbours on edges
-        edges = np.ones(n_averaged_array.shape, dtype=bool)
-        edges[n_averaged_array.ndim * (slice(1, -1),)] = False
-        n_averaged_array[edges] -= n_exclude_edges
-
-        # Subtract number of neighbours on corners
-        n_averaged_array[
-            tuple(slice(None, None, j - 1) for j in n_averaged_array.shape)
-        ] -= n_exclude_corners
+        # Create array with number of considered nearest neighbours (including
+        # itself) for each pattern
+        n_averaged = convolve(
+            input=np.ones(self.axes_manager.navigation_shape[::-1]),
+            weights=kernel,
+            mode="constant",
+            cval=0,
+        )
 
         # Create dask array of signal patterns and do processing on this
         dtype_out = self.data.dtype
         dask_array = kp.util.dask._get_dask_array(signal=self, dtype=np.float32)
 
         # Sum neighbour patterns within kernel
+        expanded_kernel = kernel.reshape(
+            kernel.shape + (1,) * self.axes_manager.signal_dimension
+        )
         neighbour_pattern_sum = din.convolve(
-            input=dask_array, weights=kernel, mode="constant", cval=0.0,
+            input=dask_array,
+            weights=expanded_kernel,
+            mode="constant",
+            cval=0.0,
         )
 
         # Divide by number of neighbour patterns that were averaged with
-        n_averaged_array = da.from_array(
-            n_averaged_array.T[:, :, np.newaxis, np.newaxis],
+        n_averaged_expanded = da.from_array(
+            n_averaged.reshape(
+                n_averaged.shape + (1,) * self.axes_manager.signal_dimension
+            ),
             chunks=neighbour_pattern_sum.chunksize,
         )
         averaged_patterns = neighbour_pattern_sum.map_blocks(
-            np.divide, n_averaged_array, dtype=dtype_out,
+            np.divide, n_averaged_expanded, dtype=dtype_out,
         )
 
         # Overwrite signal patterns

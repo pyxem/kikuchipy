@@ -250,6 +250,59 @@ def _adaptive_histogram_equalization_chunk(
     return equalized_patterns
 
 
+def _pattern_kernel(axes, n_neighbours=1, exclude_kernel_corners=True):
+    """Create a pattern kernel with a given number of neighbours,
+    possibly excluding corner patterns.
+
+    Parameters
+    ----------
+    axes : hyperspy.axes.AxesManager
+        A HyperSpy signal axes manager containing navigation and signal
+        dimensions and shapes.
+    n_neighbours : int, optional
+        Number of neighbours on each side to average with, default
+        is 1.
+    exclude_kernel_corners : bool, optional
+        Whether to exclude corners in averaging kernel, default is
+        True.
+
+    Returns
+    -------
+    kernel : numpy.ndarray
+        Pattern kernel with same shape as navigation shape in the input
+        axes manager.
+    """
+
+    n_nav_dim = axes.navigation_dimension
+    ny, nx = axes.navigation_shape
+
+    kernel_size = 1 + n_neighbours * 2
+
+    # Check if kernel size is bigger than scan
+    if (kernel_size > ny) or (kernel_size > nx):
+        largest_n_neighbours = (max([ny, nx]) - 1) // 2
+        raise ValueError(
+            f"Kernel size ({kernel_size} x {kernel_size}) is larger than "
+            f"scan size ({ny} x {nx}). n_neighbours={largest_n_neighbours} "
+            "is the largest possible value."
+        )
+    kernel = np.ones((kernel_size,) * n_nav_dim)
+
+    # If desired, exclude corners in kernel
+    if exclude_kernel_corners and n_nav_dim > 1:
+        kernel_centre = (kernel_size // 2,) * n_nav_dim
+
+        # Create an 'open' mesh-grid of the same size as the kernel
+        y, x = np.ogrid[:kernel_size, :kernel_size]
+        distance_to_centre = np.sqrt(
+            (x - kernel_centre[0]) ** 2 + (y - kernel_centre[0]) ** 2
+        )
+        mask = distance_to_centre > kernel_centre[0]
+        kernel[mask] = 0
+
+    return kernel
+
+
 def normalised_correlation_coefficient(pattern, template, zero_normalised=True):
     """Calculate the normalised or zero-normalised correlation
     coefficient between a pattern and a template following
