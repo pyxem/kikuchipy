@@ -7,7 +7,7 @@ language: shell
 env:
   global:
     - ENV=conda
-    - DEPS="dask[array] dask-image hyperspy h5py matplotlib numpy pyxem scikit-image scikit-learn scipy"
+    - DEPS="dask[array] hyperspy h5py matplotlib numpy pyxem scikit-image scikit-learn scipy"
     - TEST_DEPS="pytest pytest-cov coveralls coverage==4.5.4"
     - PYTHON_CONDA=3.7
     - DEPLOY=false
