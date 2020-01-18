@@ -319,17 +319,23 @@ def _pattern_kernel(axes, n_neighbours=1, exclude_kernel_corners=True):
     """
 
     n_nav_dim = axes.navigation_dimension
-    ny, nx = axes.navigation_shape
+    nav_shape = axes.navigation_shape
 
+    # Number of neighbours must be integer
+    if not isinstance(n_neighbours, int) or n_neighbours < 0:
+        raise ValueError(
+            f"n_neighbours must be a positive integer, however {n_neighbours} "
+            "was passed."
+        )
     kernel_size = 1 + n_neighbours * 2
 
-    # Check if kernel size is bigger than scan
-    if (kernel_size > ny) or (kernel_size > nx):
-        largest_n_neighbours = (max([ny, nx]) - 1) // 2
+    # Check if kernel size is bigger than any dimension in scan
+    if any(kernel_size > nav_dim for nav_dim in nav_shape):
+        largest_n_neighbours = (max(nav_shape) - 1) // 2
         raise ValueError(
-            f"Kernel size ({kernel_size} x {kernel_size}) is larger than "
-            f"scan size ({ny} x {nx}). n_neighbours={largest_n_neighbours} "
-            "is the largest possible value."
+            f"Kernel size {kernel_size} is larger than one or more of scan "
+            f"dimensions {nav_shape}. n_neighbours={largest_n_neighbours} is "
+            "the largest possible value."
         )
     kernel = np.ones((kernel_size,) * n_nav_dim)
 

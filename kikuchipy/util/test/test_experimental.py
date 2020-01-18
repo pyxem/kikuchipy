@@ -16,10 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
+import dask.array as da
 import numpy as np
 import pytest
+from scipy.ndimage import convolve
 
 import kikuchipy as kp
 
@@ -138,6 +138,137 @@ class TestExperimental:
         assert equalized_patterns.dtype == dtype_out
         np.testing.assert_almost_equal(
             equalized_patterns[0, 0].compute(), ADAPT_EQ_UINT8
+        )
+
+    @pytest.mark.parametrize(
+        "n_neighbours, exclude_kernel_corners, answer, match",
+        [
+            (0, True, [1], None),
+            (1, True, [0, 1, 0, 1, 1, 1, 0, 1, 0], None),
+            (2, True, None, "Kernel size 5 is larger than one or more of"),
+            (0.5, True, None, "n_neighbours must be a positive integer"),
+            (-1, True, None, "n_neighbours must be a positive integer"),
+        ],
+    )
+    def test_pattern_kernel(
+        self, dummy_signal, n_neighbours, exclude_kernel_corners, answer, match
+    ):
+        if match is None:
+            kernel = kp.util.experimental._pattern_kernel(
+                dummy_signal.axes_manager,
+                n_neighbours=n_neighbours,
+                exclude_kernel_corners=exclude_kernel_corners,
+            )
+            np.testing.assert_equal(
+                kernel, np.array(answer).reshape(kernel.shape)
+            )
+        else:
+            with pytest.raises(ValueError, match=match):
+                kp.util.experimental._pattern_kernel(
+                    dummy_signal.axes_manager,
+                    n_neighbours=n_neighbours,
+                    exclude_kernel_corners=exclude_kernel_corners,
+                )
+
+    @pytest.mark.parametrize(
+        "n_neighbours, exclude_kernel_corners, answer",
+        [
+            (
+                2,
+                True,
+                # fmt: off
+                np.array(
+                    [
+                        0, 0, 1, 0, 0,
+                        0, 1, 1, 1, 0,
+                        1, 1, 1, 1, 1,
+                        0, 1, 1, 1, 0,
+                        0, 0, 1, 0, 0,
+                    ]
+                ),
+                # fmt: on
+            ),
+            (2, False, np.ones((1 + 2 * 2) ** 2)),
+            (
+                3,
+                True,
+                # fmt: off
+                np.array(
+                    [
+                        0, 0, 0, 1, 0, 0, 0,
+                        0, 1, 1, 1, 1, 1, 0,
+                        0, 1, 1, 1, 1, 1, 0,
+                        1, 1, 1, 1, 1, 1, 1,
+                        0, 1, 1, 1, 1, 1, 0,
+                        0, 1, 1, 1, 1, 1, 0,
+                        0, 0, 0, 1, 0, 0, 0,
+                    ]
+                ),
+                # fmt: on
+            ),
+        ],
+    )
+    def test_pattern_kernel_more_than_one_neighbour(
+        self, n_neighbours, exclude_kernel_corners, answer
+    ):
+        dummy_signal = kp.signals.EBSD(
+            np.ones((10, 10, 10, 10)), dtype=np.uint8
+        )
+        kernel = kp.util.experimental._pattern_kernel(
+            dummy_signal.axes_manager,
+            n_neighbours=n_neighbours,
+            exclude_kernel_corners=exclude_kernel_corners,
+        )
+        expected_kernel_shape = (1 + n_neighbours * 2,) * 2
+        np.testing.assert_equal(kernel, answer.reshape(expected_kernel_shape))
+
+    @pytest.mark.parametrize("dtype_in", [None, np.uint8])
+    def test_average_neighbour_patterns_chunk(self, dummy_signal, dtype_in):
+        # Get averaging kernel
+        kernel = kp.util.experimental._pattern_kernel(
+            dummy_signal.axes_manager,
+            n_neighbours=1,
+            exclude_kernel_corners=True,
+        )
+        expanded_kernel = kernel.reshape(
+            kernel.shape + (1,) * dummy_signal.axes_manager.signal_dimension
+        )
+
+        # Get array to operate on
+        dask_array = kp.util.dask._get_dask_array(dummy_signal)
+        dtype_out = dask_array.dtype
+
+        # Get number of patterns averaged with
+        n_averaged = convolve(
+            input=np.ones(dummy_signal.axes_manager.navigation_shape[::-1]),
+            weights=kernel,
+            mode="constant",
+            cval=0,
+        )
+        n_averaged_expanded = da.from_array(
+            n_averaged.reshape(
+                n_averaged.shape
+                + (1,) * dummy_signal.axes_manager.signal_dimension
+            ),
+            chunks=dask_array.chunksize,
+        )
+
+        averaged_patterns = dask_array.map_blocks(
+            kp.util.experimental._average_neighbour_patterns_chunk,
+            n_averaged=n_averaged_expanded,
+            kernel=expanded_kernel,
+            dtype_out=dtype_in,
+            dtype=dtype_out,
+        )
+
+        answer = np.array([7, 4, 6, 6, 3, 7, 7, 3, 2], dtype=np.uint8).reshape(
+            (3, 3)
+        )
+
+        # Check for correct data type and gives expected output intensities
+        assert averaged_patterns.dtype == dtype_out
+        np.testing.assert_almost_equal(
+            averaged_patterns[0, 0].compute(), answer
         )
 
     @pytest.mark.parametrize(

@@ -718,13 +718,6 @@ class EBSD(Signal2D):
          [12. 13. 14. 14.]]
         """
 
-        # Number of neighbours must be integer
-        if not isinstance(n_neighbours, int):
-            raise ValueError(
-                f"n_neighbours must be an integer, however {n_neighbours} was "
-                "passed."
-            )
-
         # Create averaging kernel, taking into account the possibility of a scan
         # with only one navigation axis
         kernel = kp.util.experimental._pattern_kernel(
