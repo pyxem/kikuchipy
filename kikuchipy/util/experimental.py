@@ -18,7 +18,7 @@
 
 import dask.array as da
 import numpy as np
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter, convolve
 from skimage.exposure import equalize_adapthist
 from skimage.util.dtype import dtype_range
 
@@ -74,6 +74,7 @@ def _rescale_pattern(pattern, in_range=None, out_range=None, dtype_out=None):
         omin, omax = out_range
 
     rescaled_pattern = (pattern - imin) / float(imax - imin)
+
     return (rescaled_pattern * (omax - omin) + omin).astype(dtype_out)
 
 
@@ -112,6 +113,7 @@ def _rescale_pattern_chunk(
             out_range=out_range,
             dtype_out=dtype_out,
         )
+
     return rescaled_patterns
 
 
@@ -247,7 +249,50 @@ def _adaptive_histogram_equalization_chunk(
         equalized_patterns[nav_idx] = _rescale_pattern(
             equalized_pattern, dtype_out=dtype_in
         )
+
     return equalized_patterns
+
+
+def _average_neighbour_patterns_chunk(
+    patterns, n_averaged, kernel, dtype_out=None
+):
+    """Average neighbour pattern intensities inplace within a
+    square kernel, within a chunk.
+
+    Parameters
+    ----------
+    patterns : dask.array.Array
+        Patterns to average, with some overlap with surrounding chunks.
+    n_averaged : dask.array.Array
+        Number of neighbour patterns that will be averaged with
+    kernel : numpy.ndarray
+        Averaging kernel.
+    dtype_out : numpy.dtype, optional
+        Data type of corrected patterns. If ``None`` (default), it is
+        set to the same data type as the input patterns.
+
+    Returns
+    -------
+    averaged_patterns : dask.array.Array
+        Averaged patterns.
+    """
+
+    if dtype_out is None:
+        dtype_out = patterns.dtype
+
+    # Convolve patterns with averaging kernel
+    convolved_patterns = convolve(
+        patterns.astype(np.float32), weights=kernel, mode="constant", cval=0,
+    )
+
+    # Divide convolved patterns by number of neighbours averaged with
+    averaged_patterns = np.empty_like(convolved_patterns, dtype=dtype_out)
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        averaged_patterns[nav_idx] = (
+            convolved_patterns[nav_idx] / n_averaged[nav_idx]
+        ).astype(dtype_out)
+
+    return averaged_patterns
 
 
 def _pattern_kernel(axes, n_neighbours=1, exclude_kernel_corners=True):
@@ -337,4 +382,5 @@ def normalised_correlation_coefficient(pattern, template, zero_normalised=True):
     coefficient = np.sum(pattern * template) / np.sqrt(
         np.sum(pattern ** 2) * np.sum(template ** 2)
     )
+
     return coefficient

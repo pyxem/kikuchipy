@@ -25,7 +25,6 @@ import sys
 
 import dask.array as da
 import dask.diagnostics as dd
-import dask_image.ndfilters as din
 from hyperspy._signals.signal2d import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
@@ -683,7 +682,7 @@ class EBSD(Signal2D):
     def average_neighbour_patterns(
         self, n_neighbours=1, exclude_kernel_corners=True
     ):
-        """Average neighbour patterns intensities inplace within a
+        """Average neighbour pattern intensities inplace within a
         square kernel.
 
         Parameters
@@ -734,39 +733,62 @@ class EBSD(Signal2D):
             exclude_kernel_corners=exclude_kernel_corners,
         )
 
-        # Create array with number of considered nearest neighbours (including
-        # itself) for each pattern
+        # Create expanded array, adding signal dimensions to be able to use with
+        # Dask's map_blocks
+        expanded_kernel = kernel.reshape(
+            kernel.shape + (1,) * self.axes_manager.signal_dimension
+        )
+
+        # Create dask array of signal patterns and do processing on this
+        dtype_out = self.data.dtype
+        dask_array = kp.util.dask._get_dask_array(signal=self)
+
+        # Get number of neighbour patterns that will be averaged with, to
+        # divide by these after convolution with the kernel
         n_averaged = convolve(
             input=np.ones(self.axes_manager.navigation_shape[::-1]),
             weights=kernel,
             mode="constant",
             cval=0,
         )
-
-        # Create dask array of signal patterns and do processing on this
-        dtype_out = self.data.dtype
-        dask_array = kp.util.dask._get_dask_array(signal=self, dtype=np.float32)
-
-        # Sum neighbour patterns within kernel
-        expanded_kernel = kernel.reshape(
-            kernel.shape + (1,) * self.axes_manager.signal_dimension
-        )
-        neighbour_pattern_sum = din.convolve(
-            input=dask_array,
-            weights=expanded_kernel,
-            mode="constant",
-            cval=0.0,
-        )
-
-        # Divide by number of neighbour patterns that were averaged with
+        # Create expanded array, adding signal dimensions to be able to use with
+        # Dask's map_blocks
         n_averaged_expanded = da.from_array(
             n_averaged.reshape(
                 n_averaged.shape + (1,) * self.axes_manager.signal_dimension
             ),
-            chunks=neighbour_pattern_sum.chunksize,
+            chunks=dask_array.chunksize,
         )
-        averaged_patterns = neighbour_pattern_sum.map_blocks(
-            np.divide, n_averaged_expanded, dtype=dtype_out,
+
+        # Create overlap between chunks to enable convolution with the kernel
+        # using Dask's map_blocks
+        overlap_depth = {0: n_neighbours, 1: n_neighbours}
+        overlap_boundary = {0: "none", 1: "none"}
+        overlapped_dask_array = da.overlap.overlap(
+            dask_array, depth=overlap_depth, boundary=overlap_boundary
+        )
+
+        # Must also be overlapped, since the patterns are overlapped
+        overlapped_n_averaged_expanded = da.overlap.overlap(
+            n_averaged_expanded, depth=overlap_depth, boundary=overlap_boundary
+        )
+
+        # Finally, average patterns by convolution with the kernel and
+        # subsequent division by the number of neighbours convolved with
+        overlapped_averaged_patterns = da.map_blocks(
+            kp.util.experimental._average_neighbour_patterns_chunk,
+            overlapped_dask_array,
+            overlapped_n_averaged_expanded,
+            kernel=expanded_kernel,
+            dtype_out=dtype_out,
+            dtype=dtype_out,
+        )
+
+        # Trim overlapping patterns
+        averaged_patterns = da.overlap.trim_overlap(
+            overlapped_averaged_patterns,
+            depth=overlap_depth,
+            boundary=overlap_boundary,
         )
 
         # Overwrite signal patterns
