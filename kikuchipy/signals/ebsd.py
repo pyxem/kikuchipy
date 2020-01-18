@@ -143,10 +143,10 @@ class EBSD(Signal2D):
         --------
         >>> import kikuchipy as kp
         >>> ebsd_node = kp.util.io.metadata_nodes(sem=False)
-        >>> print(s.metadata.get_item(ebsd_node + '.xpc')
+        >>> s.metadata.get_item(ebsd_node + '.xpc')
         1.0
         >>> s.set_experimental_parameters(xpc=0.50726)
-        >>> print(s.metadata.get_item(ebsd_node + '.xpc'))
+        >>> s.metadata.get_item(ebsd_node + '.xpc')
         0.50726
         """
 
@@ -243,8 +243,7 @@ class EBSD(Signal2D):
 
         Examples
         --------
-        >>> print(s.metadata.Sample.Phases.Number_1.atom_coordinates.
-                  Number_1)
+        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
         ├── atom =
         ├── coordinates = array([0., 0., 0.])
         ├── debye_waller_factor = 0.0
@@ -254,8 +253,7 @@ class EBSD(Signal2D):
                     '1': {'atom': 'Ni', 'coordinates': [0, 0, 0],
                     'site_occupation': 1,
                     'debye_waller_factor': 0.0035}})
-        >>> print(s.metadata.Sample.Phases.Number_1.atom_coordinates.
-                  Number_1)
+        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
         ├── atom = Ni
         ├── coordinates = array([0., 0., 0.])
         ├── debye_waller_factor = 0.0035
@@ -302,10 +300,10 @@ class EBSD(Signal2D):
 
         Examples
         --------
-        >>> print(s.axes_manager.['x'].scale)  # Default value
+        >>> s.axes_manager.['x'].scale  # Default value
         1.0
         >>> s.set_scan_calibration(step_x=1.5)  # Microns
-        >>> print(s.axes_manager['x'].scale)
+        >>> s.axes_manager['x'].scale
         1.5
         """
 
@@ -329,10 +327,10 @@ class EBSD(Signal2D):
 
         Examples
         --------
-        >>> print(s.axes_manager['dx'].scale)  # Default value
+        >>> s.axes_manager['dx'].scale  # Default value
         1.0
         >>> s.set_detector_calibration(delta=70.)
-        >>> print(s.axes_manager['dx'].scale)
+        >>> s.axes_manager['dx'].scale
         70.0
         """
 
@@ -343,7 +341,7 @@ class EBSD(Signal2D):
         dx.offset, dy.offset = -centre
 
     def static_background_correction(
-        self, operation="subtract", relative=False, static_bg=None
+        self, operation="subtract", relative=True, static_bg=None
     ):
         """Correct static background inplace by subtracting/dividing by
         a static background pattern.
@@ -358,7 +356,7 @@ class EBSD(Signal2D):
             Subtract (default) or divide by static background pattern.
         relative : bool, optional
             Keep relative intensities between patterns (default is
-            ``False``).
+            ``True``).
         static_bg : :class:`numpy.ndarray`,\
                 :class:`dask.array.Array` or None, optional
             Static background pattern. If not passed we try to read it
@@ -376,7 +374,7 @@ class EBSD(Signal2D):
 
         >>> import kikuchipy as kp
         >>> ebsd_node = kp.util.io.metadata_nodes(sem=False)
-        >>> print(s.metadata.get_item(ebsd_node + '.static_background'))
+        >>> s.metadata.get_item(ebsd_node + '.static_background')
         [[84 87 90 ... 27 29 30]
         [87 90 93 ... 27 28 30]
         [92 94 97 ... 39 28 29]
@@ -490,7 +488,7 @@ class EBSD(Signal2D):
 
         >>> s.static_background_correction(operation='subtract')
         >>> s.dynamic_background_correction(
-                operation='subtract', sigma=2.0)
+                operation='subtract', sigma=2)
         """
 
         dtype_out = self.data.dtype.type
@@ -685,6 +683,9 @@ class EBSD(Signal2D):
         """Average neighbour pattern intensities inplace within a
         square kernel.
 
+        The number of neighbours to average with, and whether to average
+        with patterns in the kernel corners, can be set.
+
         Parameters
         ----------
         n_neighbours : int, optional
@@ -698,24 +699,24 @@ class EBSD(Signal2D):
         --------
         >>> import numpy as np
         >>> import kikuchipy as kp
-        >>> s = kp.signals.EBSD(np.ones((4, 4, 2, 2)))
+        >>> s = kp.signals.EBSD(np.ones((4, 4, 1, 1)))
         >>> k = 1
         >>> for i in range(4):
                 for j in range(4):
                     s.inav[j, i].data *= k
                     k += 1
-        >>> print(s.mean(s.axes_manager.signal_axes).data)
+        >>> s.data[:, :, 0, 0]
         [[ 1.  2.  3.  4.]
          [ 5.  6.  7.  8.]
          [ 9. 10. 11. 12.]
          [13. 14. 15. 16.]]
         >>> s.average_neighbour_patterns(
-                n_neighbours=1, exclude_kernel_corners=True)
-        >>> print(s.mean(s.axes_manager.signal_axes).data)
-        [[ 2.  3.  4.  5.]
-         [ 5.  6.  7.  7.]
-         [ 9. 10. 11. 11.]
-         [12. 13. 14. 14.]]
+                n_neighbours=1, exclude_kernel_corners=False)
+        >>> s.data
+        [[ 3.5  4.   5.   5.5]
+         [ 5.5  6.   7.   7.5]
+         [ 9.5 10.  11.  11.5]
+         [11.5 12.  13.  13.5]]
         """
 
         # Create averaging kernel, taking into account the possibility of a scan
@@ -787,7 +788,7 @@ class EBSD(Signal2D):
         # Overwrite signal patterns
         if not self._lazy:
             with dd.ProgressBar():
-                print("Average neighbour patterns:", file=sys.stdout)
+                print("Averaging neighbour patterns:", file=sys.stdout)
                 averaged_patterns.store(self.data, compute=True)
         else:
             self.data = averaged_patterns

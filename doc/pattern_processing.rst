@@ -30,7 +30,7 @@ subtracting or dividing by a static background via
 
 .. _fig-static-background-correction:
 
-.. figure:: _static/image/background_correction/static_correction.jpg
+.. figure:: _static/image/pattern_processing/static_correction.jpg
     :align: center
     :width: 100%
 
@@ -41,9 +41,12 @@ Here the static background pattern is assumed to be stored as part of the signal
 ``metadata``, which can be loaded via
 :meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`. The static
 background pattern can also be passed to the ``static_bg`` parameter. Passing
-``relative=True`` ensures that relative intensities between patterns are kept
-when the patterns are scaled after correction to fill the intensity range
-available for the data type, e.g. [0, 255] for ``uint8``.
+``relative=True`` (default) ensures that relative intensities between patterns
+are kept when they are rescaled after correction to fill the available data
+range. In this case, for a scan of data type ``uint8`` with data range [0, 255],
+the highest pixel intensity in a scan is stretched to 255 (and the lowest to 0),
+while the rest is rescaled keeping relative intensities between patterns. With
+``relative=False``, all patterns are equally stretched to [0, 255].
 
 .. _dynamic-background-correction:
 
@@ -63,7 +66,7 @@ Gaussian kernel, ``sigma``:
 
 .. _fig-dynamic-background-correction:
 
-.. figure:: _static/image/background_correction/dynamic_correction.jpg
+.. figure:: _static/image/pattern_processing/dynamic_correction.jpg
     :align: center
     :width: 100%
 
@@ -78,15 +81,30 @@ Average neighbour patterns
 ==========================
 
 With :meth:`~kikuchipy.signals.ebsd.EBSD.average_neighbour_patterns`, the
-signal-to-noise ratio in a pattern can be improved by averaging it with its
-closest neighbours within a kernel:
+signal-to-noise ratio in patterns in an EBSD scan ``s`` can be improved by
+averaging patterns with their closest neighbours within a square kernel:
 
 .. code-block:: python
 
     >>> s.average_neighbour_patterns(
-            n_neighbours=2, exclude_kernel_corners=True)
+            n_neighbours=1, exclude_kernel_corners=True)
 
+The number of nearest neighbours to average with can be set with
+``n_neighbours`` (default is 1), and whether to exclude patterns in corners of
+the averaging kernel can be set with ``exclude_kernel_corners`` (default is
+``True``). Whether a pattern is considered to be in a kernel corner is
+determined by its radial distance to the kernel origin, with the maximum allowed
+distance equal to the kernel half width.
 
+.. _fig-average-neighbour-patterns:
+
+.. figure:: _static/image/pattern_processing/average_neighbour_pattern.jpg
+    :align: center
+    :width: 100%
+
+    The same pattern before (left) and after (right) averaging with the nearest
+    neighbour patterns in a (3 x 3) kernel, excluding patterns in the kernel
+    corners.
 
 .. _adaptive-histogram-equalization:
 
@@ -105,7 +123,7 @@ e.g. [0, 255] for patterns of ``uint8`` data type:
 
 .. _fig-adapthist:
 
-.. figure:: _static/image/background_correction/adapthist.jpg
+.. figure:: _static/image/pattern_processing/adapthist.jpg
     :align: center
     :width: 100%
 
@@ -152,7 +170,7 @@ e.g. [0, 65535] for ``uint16``:
 
 .. _fig-pattern-adapthist-uint16:
 
-.. figure:: _static/image/background_correction/pattern_adapthist_uint16.jpg
+.. figure:: _static/image/pattern_processing/pattern_adapthist_uint16.jpg
     :align: center
     :width: 350
 
@@ -171,7 +189,7 @@ range, either keeping relative intensities between patterns or not, by using
 
 .. _fig-pattern-adapthist-uint16-rescaled:
 
-.. figure:: _static/image/background_correction/pattern_adapthist_uint16_rescaled.jpg
+.. figure:: _static/image/pattern_processing/pattern_adapthist_uint16_rescaled.jpg
     :align: center
     :width: 350
 

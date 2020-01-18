@@ -28,7 +28,8 @@ def _rescale_pattern(pattern, in_range=None, out_range=None, dtype_out=None):
     :class:`numpy.dtype` range specified by ``dtype_out`` keeping
     relative intensities or not.
 
-    This method makes use of :func:`skimage.exposure.rescale_intensity`.
+    This method is based upon
+    :func:`skimage.exposure.rescale_intensity`.
 
     Parameters
     ----------

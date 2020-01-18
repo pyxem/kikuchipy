@@ -16,7 +16,7 @@ KikuchiPy
 
     load_save_patterns.rst
     change_scan_pattern_size.rst
-    background_correction.rst
+    pattern_processing.rst
     visualizing_patterns.rst
     virtual_backscatter_electron_imaging.rst
     multivariate_analysis.rst
