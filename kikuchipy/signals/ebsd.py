@@ -689,11 +689,10 @@ class EBSD(Signal2D):
         Parameters
         ----------
         n_neighbours : int, optional
-            Number of neighbours on each side to average with, default
-            is 1.
+            Number of nearest neighbours to average with (default is 1).
         exclude_kernel_corners : bool, optional
-            Whether to exclude corners in averaging kernel, default is
-            True.
+            Whether to exclude corners in averaging kernel (default is
+            ``True``).
 
         Examples
         --------
@@ -719,16 +718,14 @@ class EBSD(Signal2D):
          [11.5 12.  13.  13.5]]
         """
 
-        # Create averaging kernel, taking into account the possibility of a scan
-        # with only one navigation axis
+        # Create averaging kernel
         kernel = kp.util.experimental._pattern_kernel(
             self.axes_manager,
             n_neighbours=n_neighbours,
             exclude_kernel_corners=exclude_kernel_corners,
         )
-
-        # Create expanded array, adding signal dimensions to be able to use with
-        # Dask's map_blocks
+        # Add signal dimensions to kernel array to be able to use with Dask's
+        # map_blocks()
         expanded_kernel = kernel.reshape(
             kernel.shape + (1,) * self.axes_manager.signal_dimension
         )
@@ -745,8 +742,7 @@ class EBSD(Signal2D):
             mode="constant",
             cval=0,
         )
-        # Create expanded array, adding signal dimensions to be able to use with
-        # Dask's map_blocks
+        # Add signal dimensions to array be able to use with Dask's map_blocks()
         n_averaged_expanded = da.from_array(
             n_averaged.reshape(
                 n_averaged.shape + (1,) * self.axes_manager.signal_dimension
@@ -755,7 +751,7 @@ class EBSD(Signal2D):
         )
 
         # Create overlap between chunks to enable convolution with the kernel
-        # using Dask's map_blocks
+        # using Dask's map_blocks()
         overlap_depth = {0: n_neighbours, 1: n_neighbours}
         overlap_boundary = {0: "none", 1: "none"}
         overlapped_dask_array = da.overlap.overlap(
