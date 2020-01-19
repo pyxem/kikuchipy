@@ -106,6 +106,20 @@ distance equal to the kernel half width.
     neighbour patterns in a (3 x 3) kernel, excluding patterns in the kernel
     corners.
 
+.. note::
+
+    Neighbour pattern averaging increases the virtual interaction volume of the
+    electron beam with the sample, leading to a potential loss in spatial
+    resolution. Averaging may in some cases, like on grain boundaries, mix two
+    or more different diffraction patterns, which might be unwanted. See
+    [Wright2015]_ for a discussion of this concern.
+
+.. [Wright2015]
+    S. I. Wright, M. M. Nowell, S. P. Lindeman, P. P. Camus, M. De Graef, M. A.
+    Jackson, "Introduction and comparison of new EBSD post-processing
+    methodologies," *Ultramicroscopy* **159** (2015), doi:
+    https://doi.org/10.1016/j.ultramic.2015.08.001.
+
 .. _adaptive-histogram-equalization:
 
 Adaptive histogram equalization
