@@ -403,7 +403,8 @@ class EBSD(Signal2D):
                 md = self.metadata
                 ebsd_node = kp.util.io.metadata_nodes(sem=False)
                 static_bg = da.from_array(
-                    md.get_item(ebsd_node + ".static_background")
+                    md.get_item(ebsd_node + ".static_background"),
+                    chunks="auto",
                 )
             except AttributeError:
                 raise OSError(
