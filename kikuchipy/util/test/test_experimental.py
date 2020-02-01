@@ -141,20 +141,20 @@ class TestExperimental:
         )
 
     @pytest.mark.parametrize(
-        "n_neighbours, exclude_kernel_corners, answer, match",
+        "kernel_size, exclude_kernel_corners, answer, match",
         [
             (0, True, [1], None),
             (1, True, [0, 1, 0, 1, 1, 1, 0, 1, 0], None),
             (2, True, None, "Kernel size 5 is larger than one or more of"),
-            (0.5, True, None, "n_neighbours must be a positive integer"),
-            (-1, True, None, "n_neighbours must be a positive integer"),
+            (0.5, True, None, "kernel_size must be a positive integer"),
+            (-1, True, None, "kernel_size must be a positive integer"),
         ],
     )
     def test_pattern_kernel(
         self, dummy_signal, n_neighbours, exclude_kernel_corners, answer, match
     ):
         if match is None:
-            kernel = kp.util.experimental._pattern_kernel(
+            kernel = kp.util.experimental.pattern_kernel(
                 dummy_signal.axes_manager,
                 n_neighbours=n_neighbours,
                 exclude_kernel_corners=exclude_kernel_corners,
@@ -164,14 +164,14 @@ class TestExperimental:
             )
         else:
             with pytest.raises(ValueError, match=match):
-                kp.util.experimental._pattern_kernel(
+                kp.util.experimental.pattern_kernel(
                     dummy_signal.axes_manager,
                     n_neighbours=n_neighbours,
                     exclude_kernel_corners=exclude_kernel_corners,
                 )
 
     @pytest.mark.parametrize(
-        "n_neighbours, exclude_kernel_corners, answer",
+        "kernel_size, exclude_kernel_corners, answer",
         [
             (
                 2,
@@ -214,7 +214,7 @@ class TestExperimental:
         dummy_signal = kp.signals.EBSD(
             np.ones((10, 10, 10, 10)), dtype=np.uint8
         )
-        kernel = kp.util.experimental._pattern_kernel(
+        kernel = kp.util.experimental.pattern_kernel(
             dummy_signal.axes_manager,
             n_neighbours=n_neighbours,
             exclude_kernel_corners=exclude_kernel_corners,
@@ -225,7 +225,7 @@ class TestExperimental:
     @pytest.mark.parametrize("dtype_in", [None, np.uint8])
     def test_average_neighbour_patterns_chunk(self, dummy_signal, dtype_in):
         # Get averaging kernel
-        kernel = kp.util.experimental._pattern_kernel(
+        kernel = kp.util.experimental.pattern_kernel(
             dummy_signal.axes_manager,
             n_neighbours=1,
             exclude_kernel_corners=True,

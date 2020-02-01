@@ -499,8 +499,13 @@ class TestPatternProcessing:
         s.adaptive_histogram_equalization()
         assert isinstance(s.data, da.Array)
 
+    # Test different kernel coefficients
+    # Test different kernel sizes
+    # Test dimensions
+    # Test warnings/errors
+
     @pytest.mark.parametrize(
-        "n_neighbours, exclude_kernel_corners, lazy, answer",
+        "kernel_size, exclude_kernel_corners, lazy, answer",
         [
             (
                 0,
@@ -558,7 +563,7 @@ class TestPatternProcessing:
         if lazy:
             dummy_signal = dummy_signal.as_lazy()
         dummy_signal.average_neighbour_patterns(
-            n_neighbours=n_neighbours,
+            kernel_size=n_neighbours,
             exclude_kernel_corners=exclude_kernel_corners,
         )
         answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)

@@ -22,6 +22,7 @@ import logging
 import numbers
 import os
 import sys
+import warnings
 
 import dask.array as da
 import dask.diagnostics as dd
@@ -48,6 +49,7 @@ class EBSD(Signal2D):
     def __init__(self, *args, **kwargs):
         """Create an :class:`~kikuchipy.signals.ebsd.EBSD` object from a
         :class:`hyperspy.signals.Signal2D` or a :class:`numpy.ndarray`.
+
         """
 
         Signal2D.__init__(self, *args, **kwargs)
@@ -148,6 +150,7 @@ class EBSD(Signal2D):
         >>> s.set_experimental_parameters(xpc=0.50726)
         >>> s.metadata.get_item(ebsd_node + '.xpc')
         0.50726
+
         """
 
         md = self.metadata
@@ -258,6 +261,7 @@ class EBSD(Signal2D):
         ├── coordinates = array([0., 0., 0.])
         ├── debye_waller_factor = 0.0035
         └── site_occupation = 1
+
         """
 
         # Ensure atom coordinates are numpy arrays
@@ -305,6 +309,7 @@ class EBSD(Signal2D):
         >>> s.set_scan_calibration(step_x=1.5)  # Microns
         >>> s.axes_manager['x'].scale
         1.5
+
         """
 
         x, y = self.axes_manager.navigation_axes
@@ -332,6 +337,7 @@ class EBSD(Signal2D):
         >>> s.set_detector_calibration(delta=70.)
         >>> s.axes_manager['dx'].scale
         70.0
+
         """
 
         centre = np.array(self.axes_manager.signal_shape) / 2 * delta
@@ -358,7 +364,7 @@ class EBSD(Signal2D):
             Keep relative intensities between patterns (default is
             ``True``).
         static_bg : :class:`numpy.ndarray`,\
-                :class:`dask.array.Array` or None, optional
+                :class:`dask.array.Array`, or None, optional
             Static background pattern. If not passed we try to read it
             from the signal metadata.
 
@@ -392,6 +398,7 @@ class EBSD(Signal2D):
 
         If metadata has no background pattern, this must be passed in
         the ``static_bg`` parameter as a numpy or dask array.
+
         """
 
         dtype_out = self.data.dtype.type
@@ -471,7 +478,7 @@ class EBSD(Signal2D):
         ----------
         operation : 'subtract' or 'divide', optional
             Subtract (default) or divide by dynamic background pattern.
-        sigma : int, float or None, optional
+        sigma : int, float, or None, optional
             Standard deviation of the gaussian kernel. If None
             (default), a deviation of pattern width/30 is chosen.
 
@@ -489,6 +496,7 @@ class EBSD(Signal2D):
         >>> s.static_background_correction(operation='subtract')
         >>> s.dynamic_background_correction(
                 operation='subtract', sigma=2)
+
         """
 
         dtype_out = self.data.dtype.type
@@ -556,6 +564,7 @@ class EBSD(Signal2D):
         >>> print(s2.data.dtype_out, s2.data.min(), s2.data.max(),
                   s2.inav[0, 0].data.min(), s2.inav[0, 0].data.max())
         uint8 0 255 4 232
+
         """
 
         if dtype_out is None:
@@ -645,6 +654,7 @@ class EBSD(Signal2D):
           occur.
         * The default kernel size might not fit all pattern sizes, so it
           may be necessary to search for the optimal kernel size.
+
         """
 
         # Determine kernel size (shape of contextual region)
@@ -678,21 +688,35 @@ class EBSD(Signal2D):
             self.data = equalized_patterns
 
     def average_neighbour_patterns(
-        self, n_neighbours=1, exclude_kernel_corners=True
+        self, kernel="circular", kernel_size=(3, 3), **kwargs
     ):
-        """Average neighbour pattern intensities inplace within a
-        square kernel.
+        """Average intensities in each pattern inplace with its
+        nearest neighbours given by a kernel and its coefficients.
 
-        The number of neighbours to average with, and whether to average
-        with patterns in the kernel corners, can be set.
+        All patterns are averaged with the same kernel. Map borders are
+        extended with zeros.
+
+        See :func:`scipy.signal.windows.get_window` for available
+        kernels and required arguments for that specific kernel.
 
         Parameters
         ----------
-        n_neighbours : int, optional
-            Number of nearest neighbours to average with (default is 1).
-        exclude_kernel_corners : bool, optional
-            Whether to exclude corners in averaging kernel (default is
-            ``True``).
+        kernel : 'circular', 'rectangular', 'gaussian', str, or
+                :class:`numpy.ndarray`, optional
+            Averaging kernel. Available kernel types are
+            listed in :func:`scipy.signal.windows.get_window`, in
+            addition to a circular kernel (default) filled with ones in
+            which corners are excluded from averaging. A pattern is
+            considered to be in a corner if its radial distance to the
+            origin is shorter or equal to the kernel half width. A 1D or
+            2D numpy array with kernel coefficients can also be passed.
+        kernel_size : int or tuple of ints, optional
+            Size of averaging kernel if not a custom kernel is passed to
+            `kernel`. This can be either 1D or 2D, and does not have to
+            be symmetrical. Default is (3, 3).
+        **kwargs :
+            Keyword arguments passed to the available kernel type listed
+            in :func:`scipy.signal.windows.get_window`.
 
         Examples
         --------
@@ -709,50 +733,87 @@ class EBSD(Signal2D):
          [ 5.  6.  7.  8.]
          [ 9. 10. 11. 12.]
          [13. 14. 15. 16.]]
+        >>> s2 = s.deepcopy()
         >>> s.average_neighbour_patterns(
-                n_neighbours=1, exclude_kernel_corners=False)
-        >>> s.data
-        [[ 3.5  4.   5.   5.5]
-         [ 5.5  6.   7.   7.5]
-         [ 9.5 10.  11.  11.5]
-         [11.5 12.  13.  13.5]]
+                kernel="circular", kernel_size=(3, 3))
+        >>> s.data[:, :, 0, 0]
+        [[ 2.66666667  3.          4.          5.        ]
+         [ 5.25        6.          7.          7.75      ]
+         [ 9.25       10.         11.         11.75      ]
+         [12.         13.         14.         14.33333333]]
+        >>> s2.average_neighbour_patterns(
+                kernel="gaussian", std=2)
+        >>> s2.data[:, :, 0, 0]
+        [[ 3.34395304  3.87516243  4.87516264  5.40637176]
+         [ 5.46879047  5.99999985  6.99999991  7.53120901]
+         [ 9.46879095  9.99999959 11.00000015 11.53120913]
+         [11.59362845 12.12483732 13.1248368  13.65604717]]
+
+        To get the kernels used
+
+        >>> kp.util.experimental.pattern_kernel(
+                kernel="circular", kernel_size=(3, 3))
+        array([[0., 1., 0.],
+               [1., 1., 1.],
+               [0., 1., 0.]])
+        >>> kp.util.experimental.pattern_kernel(
+                kernel="gaussian", kernel_size=(3, 3), std=1)
+        array([[0.77880078, 0.8824969 , 0.77880078],
+               [0.8824969 , 1.        , 0.8824969 ],
+               [0.77880078, 0.8824969 , 0.77880078]])
+
+        See Also
+        --------
+        scipy.signal.windows.get_window
+
         """
 
-        # Create averaging kernel
-        kernel = kp.util.experimental._pattern_kernel(
-            self.axes_manager,
-            n_neighbours=n_neighbours,
-            exclude_kernel_corners=exclude_kernel_corners,
+        # Get averaging kernel
+        averaging_kernel = kp.util.experimental.pattern_kernel(
+            kernel=kernel,
+            kernel_size=kernel_size,
+            axes=self.axes_manager,
+            **kwargs,
         )
+        kernel_size = averaging_kernel.shape
+
+        # Do nothing if a kernel of shape (1, ) or (1, 1) is passed
+        if kernel_size == (1,) or kernel_size == (1, 1):
+            return warnings.warn(
+                f"A kernel of shape {kernel_size} was passed, no "
+                "averaging is therefore performed."
+            )
+
         # Add signal dimensions to kernel array to be able to use with Dask's
         # map_blocks()
-        expanded_kernel = kernel.reshape(
-            kernel.shape + (1,) * self.axes_manager.signal_dimension
+        expanded_kernel = averaging_kernel.reshape(
+            kernel_size + (1,) * self.axes_manager.signal_dimension
         )
 
         # Create dask array of signal patterns and do processing on this
         dtype_out = self.data.dtype
         dask_array = kp.util.dask._get_dask_array(signal=self)
 
-        # Get number of neighbour patterns that will be averaged with, to
-        # divide by these after convolution with the kernel
-        n_averaged = convolve(
+        # Get sum of kernel coefficients for each pattern, to normalize with
+        # after convolution
+        kernel_sum = convolve(
             input=np.ones(self.axes_manager.navigation_shape[::-1]),
-            weights=kernel,
+            weights=averaging_kernel,
             mode="constant",
             cval=0,
         )
+
         # Add signal dimensions to array be able to use with Dask's map_blocks()
         n_averaged_expanded = da.from_array(
-            n_averaged.reshape(
-                n_averaged.shape + (1,) * self.axes_manager.signal_dimension
+            kernel_sum.reshape(
+                kernel_sum.shape + (1,) * self.axes_manager.signal_dimension
             ),
             chunks=dask_array.chunksize,
         )
 
         # Create overlap between chunks to enable convolution with the kernel
         # using Dask's map_blocks()
-        overlap_depth = {0: n_neighbours, 1: n_neighbours}
+        overlap_depth = {0: np.max(kernel_size), 1: np.max(kernel_size)}
         overlap_boundary = {0: "none", 1: "none"}
         overlapped_dask_array = da.overlap.overlap(
             dask_array, depth=overlap_depth, boundary=overlap_boundary
@@ -811,6 +872,7 @@ class EBSD(Signal2D):
         >>> roi = hs.roi.RectangularROI(
                 left=0, right=5, top=0, bottom=5)
         >>> s.virtual_backscatter_electron_imaging(roi)
+
         """
 
         return Diffraction2D.plot_interactive_virtual_image(self, roi, **kwargs)
@@ -840,6 +902,7 @@ class EBSD(Signal2D):
         >>> roi = hs.roi.RectangularROI(
                 left=0, right=5, top=0, bottom=5)
         >>> vbse_image = s.get_virtual_image(roi)
+
         """
 
         return Diffraction2D.get_virtual_image(self, roi)
@@ -885,6 +948,7 @@ class EBSD(Signal2D):
         --------
         kikuchipy.io.plugins.h5ebsd.file_writer,\
         kikuchipy.io.plugins.nordif.file_writer
+
         """
 
         if filename is None:
@@ -940,6 +1004,7 @@ class EBSD(Signal2D):
         -------
         s_model : :class:`~kikuchipy.signals.ebsd.EBSD` or \
                 :class:`~kikuchipy.signals.ebsd.LazyEBSD`
+
         """
 
         # Keep original results to revert back after updating
@@ -1015,6 +1080,7 @@ class EBSD(Signal2D):
         -------
         lazy_signal : :class:`~kikuchipy.signals.ebsd.LazyEBSD`
             Lazy signal.
+
         """
 
         lazy_signal = super().as_lazy(*args, **kwargs)
@@ -1090,6 +1156,7 @@ class LazyEBSD(EBSD, LazySignal2D):
         large matrices. Here, instead, learning results are written to
         file, read into dask arrays and multiplied using
         :func:`dask.array.matmul`, out of core.
+
         """
 
         # Change data type, keep desired components and rechunk if lazy
