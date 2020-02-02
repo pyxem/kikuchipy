@@ -141,94 +141,211 @@ class TestExperimental:
         )
 
     @pytest.mark.parametrize(
-        "kernel_size, exclude_kernel_corners, answer, match",
+        "kernel, kernel_size, answer, match, error_type, kwargs",
         [
-            (0, True, [1], None),
-            (1, True, [0, 1, 0, 1, 1, 1, 0, 1, 0], None),
-            (2, True, None, "Kernel size 5 is larger than one or more of"),
-            (0.5, True, None, "kernel_size must be a positive integer"),
-            (-1, True, None, "kernel_size must be a positive integer"),
+            # Standard circular kernel
+            (
+                "circular",
+                (3, 3),
+                # fmt: off
+                np.array(
+                    [
+                        [0, 1, 0],
+                        [1, 1, 1],
+                        [0, 1, 0],
+                    ],
+                ),
+                # fmt: on
+                None,
+                None,
+                None,
+            ),
+            # Circular kernel with first dimension even
+            (
+                "circular",
+                (2, 3),
+                # fmt: off
+                np.array(
+                    [
+                        [0, 1, 0],
+                        [1, 1, 1],
+                    ],
+                ),
+                # fmt: on
+                None,
+                None,
+                None,
+            ),
+            # Circular kernel with second dimension even
+            (
+                "circular",
+                (3, 2),
+                # fmt: off
+                np.array(
+                    [
+                        [0, 1],
+                        [1, 1],
+                        [0, 1],
+                    ],
+                ),
+                # fmt: on
+                None,
+                None,
+                None,
+            ),
+            # Rectangular kernel
+            ("rectangular", (2, 2), np.ones((2, 2)), None, None, None),
+            # One keyword argument to scipy.signal.windows.get_window
+            (
+                "gaussian",
+                (3, 3),
+                # fmt: off
+                np.array(
+                    [
+                        [0.77880078, 0.8824969, 0.77880078],
+                        [0.8824969, 1., 0.8824969],
+                        [0.77880078, 0.8824969, 0.77880078]
+                    ]
+                ),
+                # fmt: on
+                None,
+                None,
+                {"std": 2},
+            ),
+            # Two keyword arguments to scipy.signal.windows.get_window
+            (
+                "general_gaussian",
+                (3, 2),
+                # fmt: off
+                np.array(
+                    [
+                        [0.96734205, 0.96734205],
+                        [0.99804878, 0.99804878],
+                        [0.96734205, 0.96734205]
+                    ],
+                ),
+                # fmt: on
+                None,
+                None,
+                {"sig": 2, "p": 2},
+            ),
+            # Integer kernel size
+            ("rectangular", 3, np.ones(3), None, None, None),
+            # Custom kernel
+            (
+                np.arange(9).reshape((3, 3)),
+                (4, 2),  # Kernel size shouldn't matter with custom kernel
+                np.arange(9).reshape((3, 3)),
+                None,
+                None,
+                None,
+            ),
+            # Invalid custom kernel
+            (
+                [0, 1, 2, 3, 4, 5, 6, 7, 8],
+                (9,),
+                np.arange(9),
+                "Kernel must be of type numpy.ndarray, however a kernel of ",
+                ValueError,
+                None,
+            ),
+            # Negative number as invalid kernel dimensions
+            (
+                "circular",
+                (3, -3),
+                # fmt: off
+                np.array(
+                    [
+                        [0, 1, 0],
+                        [1, 1, 1],
+                        [0, 1, 0],
+                    ],
+                ),
+                # fmt: on
+                "Kernel dimensions must be positive, however .* was passed.",
+                ValueError,
+                None,
+            ),
+            # String as invalid kernel dimensions
+            (
+                "circular",
+                "(3, -3)",
+                # fmt: off
+                np.array(
+                    [
+                        [0, 1, 0],
+                        [1, 1, 1],
+                        [0, 1, 0],
+                    ],
+                ),
+                # fmt: on
+                "Kernel dimensions must be an int or a tuple of ints, however ",
+                TypeError,
+                None,
+            ),
+            # Greater kernel dimension than scan dimension as invalid kernel
+            # dimensions
+            (
+                "rectangular",
+                (3, 4),
+                np.ones(12).reshape((3, 4)),
+                "Kernel size .* is too large for a scan of dimensions .*",
+                ValueError,
+                None,
+            ),
         ],
     )
-    def test_pattern_kernel(
-        self, dummy_signal, n_neighbours, exclude_kernel_corners, answer, match
+    def test_get_pattern_kernel(
+        self,
+        dummy_signal,
+        kernel,
+        kernel_size,
+        answer,
+        match,
+        error_type,
+        kwargs,
     ):
         if match is None:
-            kernel = kp.util.experimental.pattern_kernel(
-                dummy_signal.axes_manager,
-                n_neighbours=n_neighbours,
-                exclude_kernel_corners=exclude_kernel_corners,
-            )
-            np.testing.assert_equal(
-                kernel, np.array(answer).reshape(kernel.shape)
-            )
+            if kwargs is None:
+                kernel = kp.util.experimental.get_pattern_kernel(
+                    kernel=kernel,
+                    kernel_size=kernel_size,
+                    axes=dummy_signal.axes_manager,
+                )
+            else:
+                kernel = kp.util.experimental.get_pattern_kernel(
+                    kernel=kernel,
+                    kernel_size=kernel_size,
+                    axes=dummy_signal.axes_manager,
+                    **kwargs,
+                )
+            np.testing.assert_array_almost_equal(kernel, answer)
         else:
-            with pytest.raises(ValueError, match=match):
-                kp.util.experimental.pattern_kernel(
-                    dummy_signal.axes_manager,
-                    n_neighbours=n_neighbours,
-                    exclude_kernel_corners=exclude_kernel_corners,
+            with pytest.raises(error_type, match=match):
+                kp.util.experimental.get_pattern_kernel(
+                    kernel=kernel,
+                    kernel_size=kernel_size,
+                    axes=dummy_signal.axes_manager,
                 )
 
-    @pytest.mark.parametrize(
-        "kernel_size, exclude_kernel_corners, answer",
-        [
-            (
-                2,
-                True,
-                # fmt: off
-                np.array(
-                    [
-                        0, 0, 1, 0, 0,
-                        0, 1, 1, 1, 0,
-                        1, 1, 1, 1, 1,
-                        0, 1, 1, 1, 0,
-                        0, 0, 1, 0, 0,
-                    ]
-                ),
-                # fmt: on
-            ),
-            (2, False, np.ones((1 + 2 * 2) ** 2)),
-            (
-                3,
-                True,
-                # fmt: off
-                np.array(
-                    [
-                        0, 0, 0, 1, 0, 0, 0,
-                        0, 1, 1, 1, 1, 1, 0,
-                        0, 1, 1, 1, 1, 1, 0,
-                        1, 1, 1, 1, 1, 1, 1,
-                        0, 1, 1, 1, 1, 1, 0,
-                        0, 1, 1, 1, 1, 1, 0,
-                        0, 0, 0, 1, 0, 0, 0,
-                    ]
-                ),
-                # fmt: on
-            ),
-        ],
-    )
-    def test_pattern_kernel_more_than_one_neighbour(
-        self, n_neighbours, exclude_kernel_corners, answer
-    ):
-        dummy_signal = kp.signals.EBSD(
-            np.ones((10, 10, 10, 10)), dtype=np.uint8
-        )
-        kernel = kp.util.experimental.pattern_kernel(
-            dummy_signal.axes_manager,
-            n_neighbours=n_neighbours,
-            exclude_kernel_corners=exclude_kernel_corners,
-        )
-        expected_kernel_shape = (1 + n_neighbours * 2,) * 2
-        np.testing.assert_equal(kernel, answer.reshape(expected_kernel_shape))
+    def test_get_pattern_kernel_warns_kernel_dimensions(self, dummy_signal):
+        with pytest.warns(
+            UserWarning,
+            match="Creates kernel of size .*, since input kernel size .* has",
+        ):
+            kp.util.experimental.get_pattern_kernel(
+                kernel_size=(3, 3, 3), axes=dummy_signal.axes_manager
+            )
+
+    def test_get_pattern_kernel_invalid_axes_manager(self):
+        with pytest.raises(AttributeError, match="A hyperspy.axes.AxesManager"):
+            kp.util.experimental.get_pattern_kernel("circular", (3, 3), axes=1)
 
     @pytest.mark.parametrize("dtype_in", [None, np.uint8])
     def test_average_neighbour_patterns_chunk(self, dummy_signal, dtype_in):
         # Get averaging kernel
-        kernel = kp.util.experimental.pattern_kernel(
-            dummy_signal.axes_manager,
-            n_neighbours=1,
-            exclude_kernel_corners=True,
+        kernel = kp.util.experimental.get_pattern_kernel(
+            axes=dummy_signal.axes_manager,
         )
         expanded_kernel = kernel.reshape(
             kernel.shape + (1,) * dummy_signal.axes_manager.signal_dimension
@@ -238,16 +355,16 @@ class TestExperimental:
         dask_array = kp.util.dask._get_dask_array(dummy_signal)
         dtype_out = dask_array.dtype
 
-        # Get number of patterns averaged with
-        n_averaged = convolve(
+        # Get sum of kernel coefficients for each pattern
+        kernel_sums = convolve(
             input=np.ones(dummy_signal.axes_manager.navigation_shape[::-1]),
             weights=kernel,
             mode="constant",
             cval=0,
         )
-        n_averaged_expanded = da.from_array(
-            n_averaged.reshape(
-                n_averaged.shape
+        kernel_sums_expanded = da.from_array(
+            kernel_sums.reshape(
+                kernel_sums.shape
                 + (1,) * dummy_signal.axes_manager.signal_dimension
             ),
             chunks=dask_array.chunksize,
@@ -255,7 +372,7 @@ class TestExperimental:
 
         averaged_patterns = dask_array.map_blocks(
             kp.util.experimental._average_neighbour_patterns_chunk,
-            n_averaged=n_averaged_expanded,
+            kernel_sums=kernel_sums_expanded,
             kernel=expanded_kernel,
             dtype_out=dtype_in,
             dtype=dtype_out,

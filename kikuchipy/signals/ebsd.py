@@ -734,15 +734,13 @@ class EBSD(Signal2D):
          [ 9. 10. 11. 12.]
          [13. 14. 15. 16.]]
         >>> s2 = s.deepcopy()
-        >>> s.average_neighbour_patterns(
-                kernel="circular", kernel_size=(3, 3))
+        >>> s.average_neighbour_patterns(kernel="circular", kernel_size=(3, 3))
         >>> s.data[:, :, 0, 0]
         [[ 2.66666667  3.          4.          5.        ]
          [ 5.25        6.          7.          7.75      ]
          [ 9.25       10.         11.         11.75      ]
          [12.         13.         14.         14.33333333]]
-        >>> s2.average_neighbour_patterns(
-                kernel="gaussian", std=2)
+        >>> s2.average_neighbour_patterns(kernel="gaussian", std=2)
         >>> s2.data[:, :, 0, 0]
         [[ 3.34395304  3.87516243  4.87516264  5.40637176]
          [ 5.46879047  5.99999985  6.99999991  7.53120901]
@@ -751,13 +749,12 @@ class EBSD(Signal2D):
 
         To get the kernels used
 
-        >>> kp.util.experimental.pattern_kernel(
+        >>> kp.util.experimental.get_pattern_kernel(
                 kernel="circular", kernel_size=(3, 3))
         array([[0., 1., 0.],
                [1., 1., 1.],
                [0., 1., 0.]])
-        >>> kp.util.experimental.pattern_kernel(
-                kernel="gaussian", kernel_size=(3, 3), std=1)
+        >>> kp.util.experimental.get_pattern_kernel(kernel="gaussian", std=2)
         array([[0.77880078, 0.8824969 , 0.77880078],
                [0.8824969 , 1.        , 0.8824969 ],
                [0.77880078, 0.8824969 , 0.77880078]])
@@ -765,11 +762,12 @@ class EBSD(Signal2D):
         See Also
         --------
         scipy.signal.windows.get_window
+        scipy.ndimage.convolve
 
         """
 
         # Get averaging kernel
-        averaging_kernel = kp.util.experimental.pattern_kernel(
+        averaging_kernel = kp.util.experimental.get_pattern_kernel(
             kernel=kernel,
             kernel_size=kernel_size,
             axes=self.axes_manager,
@@ -796,7 +794,7 @@ class EBSD(Signal2D):
 
         # Get sum of kernel coefficients for each pattern, to normalize with
         # after convolution
-        kernel_sum = convolve(
+        kernel_sums = convolve(
             input=np.ones(self.axes_manager.navigation_shape[::-1]),
             weights=averaging_kernel,
             mode="constant",
@@ -804,24 +802,26 @@ class EBSD(Signal2D):
         )
 
         # Add signal dimensions to array be able to use with Dask's map_blocks()
-        n_averaged_expanded = da.from_array(
-            kernel_sum.reshape(
-                kernel_sum.shape + (1,) * self.axes_manager.signal_dimension
+        kernel_sums_expanded = da.from_array(
+            kernel_sums.reshape(
+                kernel_sums.shape + (1,) * self.axes_manager.signal_dimension
             ),
             chunks=dask_array.chunksize,
         )
 
         # Create overlap between chunks to enable convolution with the kernel
         # using Dask's map_blocks()
-        overlap_depth = {0: np.max(kernel_size), 1: np.max(kernel_size)}
+        overlap_depth = {0: 0, 1: 0}
+        for i, kernel_dim in enumerate(kernel_size):
+            overlap_depth[i] = kernel_dim
         overlap_boundary = {0: "none", 1: "none"}
         overlapped_dask_array = da.overlap.overlap(
             dask_array, depth=overlap_depth, boundary=overlap_boundary
         )
 
         # Must also be overlapped, since the patterns are overlapped
-        overlapped_n_averaged_expanded = da.overlap.overlap(
-            n_averaged_expanded, depth=overlap_depth, boundary=overlap_boundary
+        overlapped_kernel_sums_expanded = da.overlap.overlap(
+            kernel_sums_expanded, depth=overlap_depth, boundary=overlap_boundary
         )
 
         # Finally, average patterns by convolution with the kernel and
@@ -829,7 +829,7 @@ class EBSD(Signal2D):
         overlapped_averaged_patterns = da.map_blocks(
             kp.util.experimental._average_neighbour_patterns_chunk,
             overlapped_dask_array,
-            overlapped_n_averaged_expanded,
+            overlapped_kernel_sums_expanded,
             kernel=expanded_kernel,
             dtype_out=dtype_out,
             dtype=dtype_out,

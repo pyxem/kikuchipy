@@ -237,7 +237,7 @@ class TestPatternProcessing:
             )
             # fmt: on
         answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
-        np.testing.assert_equal(dummy_signal.data, answer)
+        np.testing.assert_array_equal(dummy_signal.data, answer)
 
     @pytest.mark.parametrize(
         "static_bg, error, match",
@@ -358,7 +358,7 @@ class TestPatternProcessing:
             operation=operation, sigma=sigma
         )
         answer = answer.reshape((3,) * 4).astype(np.uint8)
-        np.testing.assert_equal(dummy_signal.data, answer)
+        np.testing.assert_array_equal(dummy_signal.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
 
     def test_lazy_dynamic_background_correction(self, dummy_signal):
@@ -469,7 +469,7 @@ class TestPatternProcessing:
 
         dummy_signal.rescale_intensities(relative=relative, dtype_out=dtype_out)
         answer = answer.reshape((3, 3, 3, 3))
-        np.testing.assert_equal(dummy_signal.data, answer)
+        np.testing.assert_array_equal(dummy_signal.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
 
     def test_lazy_rescale_intensities(self, dummy_signal):
@@ -500,32 +500,12 @@ class TestPatternProcessing:
         assert isinstance(s.data, da.Array)
 
     # Test different kernel coefficients
-    # Test different kernel sizes
-    # Test dimensions
-    # Test warnings/errors
-
     @pytest.mark.parametrize(
-        "kernel_size, exclude_kernel_corners, lazy, answer",
+        "kernel, kernel_size, lazy, answer, kwargs",
         [
             (
-                0,
-                True,
-                False,
-                # fmt: off
-                np.array(
-                    [
-                        5, 6, 5, 7, 6, 5, 6, 1, 0, 9, 7, 8, 7, 0, 8, 8, 7, 6, 0,
-                        3, 3, 5, 2, 9, 3, 3, 9, 8, 1, 7, 6, 4, 8, 8, 2, 2, 4, 0,
-                        9, 0, 1, 0, 2, 2, 5, 8, 6, 0, 4, 7, 7, 7, 6, 0, 4, 1, 6,
-                        3, 4, 0, 1, 1, 0, 5, 9, 8, 4, 6, 0, 2, 9, 2, 9, 4, 3, 6,
-                        5, 6, 2, 5, 9,
-                    ],
-                ),
-                # fmt: on
-            ),
-            (
-                1,
-                True,
+                "circular",
+                (3, 3),
                 False,
                 # fmt: off
                 np.array(
@@ -538,39 +518,70 @@ class TestPatternProcessing:
                     ],
                 ),
                 # fmt: on
+                None,
             ),
             (
-                1,
+                "rectangular",
+                (2, 3),
                 False,
-                True,
                 # fmt: off
                 np.array(
                     [
                         6, 3, 7, 5, 2, 5, 6, 3, 3, 5, 3, 5, 4, 3, 6, 5, 3, 3, 5,
-                        4, 5, 4, 2, 6, 5, 4, 5, 5, 4, 7, 4, 3, 3, 4, 3, 2, 5, 4,
-                        5, 4, 3, 4, 4, 4, 3, 5, 4, 5, 4, 3, 5, 4, 5, 5, 5, 2, 7,
-                        3, 3, 2, 3, 3, 2, 6, 3, 5, 3, 4, 3, 3, 4, 3, 6, 4, 5, 3,
+                        4, 5, 4, 2, 6, 5, 4, 5, 5, 2, 7, 3, 3, 2, 3, 3, 2, 6, 3,
+                        5, 3, 4, 3, 3, 4, 3, 6, 4, 5, 3, 4, 3, 3, 5, 4, 4, 5, 7,
+                        3, 5, 0, 1, 5, 1, 6, 4, 5, 4, 5, 2, 1, 5, 3, 7, 6, 5, 5,
+                        5, 3, 2, 7, 5,
+                    ],
+                ),
+                # fmt: on
+                None,
+            ),
+            (
+                "gaussian",
+                (3, 3),
+                True,
+                # fmt: off
+                np.array(
+                    [
+                        6, 3, 7, 5, 2, 5, 6, 2, 3, 5, 3, 5, 4, 3, 6, 5, 3, 3, 5,
+                        4, 4, 4, 2, 6, 5, 4, 5, 5, 3, 7, 4, 3, 3, 4, 3, 2, 5, 4,
+                        5, 4, 3, 4, 4, 4, 3, 5, 4, 4, 4, 3, 5, 4, 5, 5, 5, 2, 7,
+                        3, 3, 1, 3, 3, 2, 6, 3, 5, 3, 4, 3, 3, 4, 3, 6, 4, 4, 3,
                         4, 3, 3, 5, 4,
                     ],
                 ),
                 # fmt: on
+                {"std": 2},  # standard deviation
             ),
         ],
     )
     def test_average_neighbour_patterns(
-        self, dummy_signal, n_neighbours, exclude_kernel_corners, lazy, answer,
+        self, dummy_signal, kernel, kernel_size, lazy, answer, kwargs,
     ):
         if lazy:
             dummy_signal = dummy_signal.as_lazy()
-        dummy_signal.average_neighbour_patterns(
-            kernel_size=n_neighbours,
-            exclude_kernel_corners=exclude_kernel_corners,
-        )
+
+        if kwargs is None:
+            dummy_signal.average_neighbour_patterns(
+                kernel=kernel, kernel_size=kernel_size,
+            )
+        else:
+            dummy_signal.average_neighbour_patterns(
+                kernel=kernel, kernel_size=kernel_size, **kwargs,
+            )
+
         answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
-        np.testing.assert_equal(dummy_signal.data, answer)
+        np.testing.assert_array_equal(dummy_signal.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
 
-    def test_average_neighbour_pattern_one_nav_dim(self, dummy_signal):
+    def test_average_neighbour_patterns_no_averaging(self, dummy_signal):
+        with pytest.warns(UserWarning, match="A kernel of shape .* was "):
+            dummy_signal.average_neighbour_patterns(
+                kernel="rectangular", kernel_size=(1, 1),
+            )
+
+    def test_average_neighbour_patterns_one_nav_dim(self, dummy_signal):
         dummy_signal_1d = dummy_signal.inav[0, :]
         dummy_signal_1d.average_neighbour_patterns()
         # fmt: off
@@ -582,7 +593,7 @@ class TestPatternProcessing:
             dtype=np.uint8
         ).reshape(dummy_signal_1d.axes_manager.shape)
         # fmt: on
-        np.testing.assert_equal(dummy_signal_1d.data, answer)
+        np.testing.assert_array_equal(dummy_signal_1d.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
 
 

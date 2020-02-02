@@ -15,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
+import warnings
 
 import dask.array as da
 import numpy as np
@@ -263,7 +264,7 @@ def _adaptive_histogram_equalization_chunk(
 
 
 def _average_neighbour_patterns_chunk(
-    patterns, n_averaged, kernel, dtype_out=None
+    patterns, kernel_sums, kernel, dtype_out=None
 ):
     """Average neighbour pattern intensities within a kernel, within a
     chunk.
@@ -272,12 +273,12 @@ def _average_neighbour_patterns_chunk(
     ----------
     patterns : dask.array.Array
         Patterns to average, with some overlap with surrounding chunks.
-    n_averaged : dask.array.Array
-        Number of neighbour patterns that will be averaged with.
+    kernel_sums : dask.array.Array
+        Sum of kernel coefficients for each pattern.
     kernel : numpy.ndarray
         Averaging kernel.
     dtype_out : numpy.dtype, optional
-        Data type of corrected patterns. If ``None`` (default), it is
+        Data type of averaged patterns. If ``None`` (default), it is
         set to the same data type as the input patterns.
 
     Returns
@@ -299,20 +300,25 @@ def _average_neighbour_patterns_chunk(
     averaged_patterns = np.empty_like(convolved_patterns, dtype=dtype_out)
     for nav_idx in np.ndindex(patterns.shape[:-2]):
         averaged_patterns[nav_idx] = (
-            convolved_patterns[nav_idx] / n_averaged[nav_idx]
+            convolved_patterns[nav_idx] / kernel_sums[nav_idx]
         ).astype(dtype_out)
 
     return averaged_patterns
 
 
-def pattern_kernel(kernel="circular", kernel_size=(3, 3), axes=None, **kwargs):
+def get_pattern_kernel(
+    kernel="circular", kernel_size=(3, 3), axes=None, **kwargs
+):
     """Return a pattern kernel of a given shape with specified
     coefficients.
+
+    See :func:`scipy.signal.windows.get_window` for available kernels
+    and required arguments for that specific kernel.
 
     Parameters
     ----------
     kernel : 'circular', 'rectangular', 'gaussian', str, or
-            numpy.ndarray, optional
+            :class:`numpy.ndarray`, optional
         Averaging kernel. Available kernel types are listed in
         :func:`scipy.signal.windows.get_window`, in addition to a
         circular kernel (default) filled with ones in which corners are
@@ -329,7 +335,7 @@ def pattern_kernel(kernel="circular", kernel_size=(3, 3), axes=None, **kwargs):
         dimensions and shapes can be passed to ensure that the averaging
         kernel is compatible with the signal.
     **kwargs :
-        Keyword arguments passed to the kernel type listed in
+        Keyword arguments passed to the available kernel type listed in
         :func:`scipy.signal.windows.get_window`.
 
     Returns
@@ -340,16 +346,19 @@ def pattern_kernel(kernel="circular", kernel_size=(3, 3), axes=None, **kwargs):
     Examples
     --------
     >>> import kikuchipy as kp
-    >>> s = kp.load('/some/data.h5')
-    >>> kp.util.experimental.pattern_kernel(
-            s.axes_manager, kernel="circular", kernel_size=(3, 3))
-    [[0. 0. 1. 0. 0.]
-     [0. 1. 1. 1. 0.]
-     [1. 1. 1. 1. 1.]
-     [0. 1. 1. 1. 0.]
-     [0. 0. 1. 0. 0.]]
-     >>> kp.util.experimental.pattern_kernel(
-            s.axes_manager, kernel="gaussian", kernel_size=(3, 3), std=1)
+    >>> kp.util.experimental.get_pattern_kernel(
+            kernel="circular", kernel_size=(3, 3))
+    array([[0., 1., 0.],
+           [1., 1., 1.],
+           [0., 1., 0.]])
+    >>> kp.util.experimental.get_pattern_kernel(kernel="gaussian", std=2)
+    array([[0.77880078, 0.8824969 , 0.77880078],
+           [0.8824969 , 1.        , 0.8824969 ],
+           [0.77880078, 0.8824969 , 0.77880078]])
+
+    See Also
+    --------
+    scipy.signal.windows.get_window
 
     """
 
@@ -361,7 +370,7 @@ def pattern_kernel(kernel="circular", kernel_size=(3, 3), axes=None, **kwargs):
     if not isinstance(kernel, str):
         try:
             kernel_size = kernel.shape
-        except ValueError:
+        except AttributeError:
             raise ValueError(
                 "Kernel must be of type numpy.ndarray, however a kernel of type"
                 f" {type(kernel)} was passed."
@@ -372,10 +381,16 @@ def pattern_kernel(kernel="circular", kernel_size=(3, 3), axes=None, **kwargs):
         kernel_size = (kernel_size,)
 
     # Kernel dimensions must be positive
-    if any(np.array(kernel_size) < 0):
-        raise ValueError(
-            f"Kernel dimensions must be positive, however {kernel_size} was "
-            "passed."
+    try:
+        if any(np.array(kernel_size) < 0):
+            raise ValueError(
+                f"Kernel dimensions must be positive, however {kernel_size} was"
+                " passed."
+            )
+    except TypeError:
+        raise TypeError(
+            "Kernel dimensions must be an int or a tuple of ints, however "
+            f"kernel dimensions of type {type(kernel_size)} was passed."
         )
 
     if axes is not None:
@@ -389,12 +404,16 @@ def pattern_kernel(kernel="circular", kernel_size=(3, 3), axes=None, **kwargs):
 
         # Number of kernel dimensions cannot be greater than scan dimensions
         if len(kernel_size) > len(nav_shape):
-            raise ValueError(
-                f"Kernel size {kernel_size} cannot have more dimensions than "
-                f"scan dimensions {nav_shape}."
-            )
+            if kernel_size != (3, 3):
+                warnings.warn(
+                    f"Creates kernel of size {kernel_size[:len(nav_shape)]}, "
+                    f"since input kernel size {kernel_size} has more dimensions"
+                    f" than scan dimensions {nav_shape}."
+                )
+            kernel_size = kernel_size[: len(nav_shape)]
+
         # Kernel dimension cannot be greater than corresponding scan dimension
-        elif any(np.array(kernel_size) > np.array(nav_shape)):
+        if any(np.array(kernel_size) > np.array(nav_shape)):
             raise ValueError(
                 f"Kernel size {kernel_size} is too large for a scan of "
                 f"dimensions {nav_shape}."
