@@ -252,10 +252,10 @@ class EBSD(Signal2D):
         ├── debye_waller_factor = 0.0
         └── site_occupation = 0.0
         >>> s.set_phase_parameters(
-                number=1, atom_coordinates={
-                    '1': {'atom': 'Ni', 'coordinates': [0, 0, 0],
-                    'site_occupation': 1,
-                    'debye_waller_factor': 0.0035}})
+        ...     number=1, atom_coordinates={
+        ...         '1': {'atom': 'Ni', 'coordinates': [0, 0, 0],
+        ...         'site_occupation': 1,
+        ...         'debye_waller_factor': 0.0035}})
         >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
         ├── atom = Ni
         ├── coordinates = array([0., 0., 0.])
@@ -394,7 +394,7 @@ class EBSD(Signal2D):
         intensities between patterns (or not).
 
         >>> s.static_background_correction(
-                operation='subtract', relative=True)
+        ...     operation='subtract', relative=True)
 
         If metadata has no background pattern, this must be passed in
         the ``static_bg`` parameter as a numpy or dask array.
@@ -495,7 +495,7 @@ class EBSD(Signal2D):
 
         >>> s.static_background_correction(operation='subtract')
         >>> s.dynamic_background_correction(
-                operation='subtract', sigma=2)
+        ...     operation='subtract', sigma=2)
 
         """
 
@@ -553,16 +553,16 @@ class EBSD(Signal2D):
         keeping relative intensities between patterns or not:
 
         >>> print(s.data.dtype_out, s.data.min(), s.data.max(),
-                  s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
+        ...       s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
         uint8 20 254 24 233
         >>> s2 = s.deepcopy()
         >>> s.rescale_intensities(dtype_out=np.uint16)
         >>> print(s.data.dtype_out, s.data.min(), s.data.max(),
-                  s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
+        ...       s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
         uint16 0 65535 0 65535
         >>> s2.rescale_intensities(relative=True)
         >>> print(s2.data.dtype_out, s2.data.min(), s2.data.max(),
-                  s2.inav[0, 0].data.min(), s2.inav[0, 0].data.max())
+        ...       s2.inav[0, 0].data.min(), s2.inav[0, 0].data.max())
         uint8 0 255 4 232
 
         """
@@ -636,10 +636,10 @@ class EBSD(Signal2D):
         >>> s2.adaptive_histogram_equalization()
         >>> imin = np.iinfo(s.data.dtype_out).min
         >>> imax = np.iinfo(s.data.dtype_out).max + 1
-        >>> hist, _ = np.histogram(s.inav[0, 0].data, bins=imax,
-                                   range=(imin, imax))
-        >>> hist2, _ = np.histogram(s2.inav[0, 0].data, bins=imax,
-                                    range=(imin, imax))
+        >>> hist, _ = np.histogram(
+        ...     s.inav[0, 0].data, bins=imax, range=(imin, imax))
+        >>> hist2, _ = np.histogram(
+        ...     s2.inav[0, 0].data, bins=imax, range=(imin, imax))
         >>> fig, ax = plt.subplots(nrows=2, ncols=2)
         >>> ax[0, 0].imshow(s.inav[0, 0].data)
         >>> ax[1, 0].plot(hist)
@@ -718,6 +718,11 @@ class EBSD(Signal2D):
             Keyword arguments passed to the available kernel type listed
             in :func:`scipy.signal.windows.get_window`.
 
+        See Also
+        --------
+        scipy.signal.windows.get_window
+        scipy.ndimage.convolve
+
         Examples
         --------
         >>> import numpy as np
@@ -725,16 +730,17 @@ class EBSD(Signal2D):
         >>> s = kp.signals.EBSD(np.ones((4, 4, 1, 1)))
         >>> k = 1
         >>> for i in range(4):
-                for j in range(4):
-                    s.inav[j, i].data *= k
-                    k += 1
+        ...     for j in range(4):
+        ...         s.inav[j, i].data *= k
+        ...         k += 1
         >>> s.data[:, :, 0, 0]
         [[ 1.  2.  3.  4.]
          [ 5.  6.  7.  8.]
          [ 9. 10. 11. 12.]
          [13. 14. 15. 16.]]
         >>> s2 = s.deepcopy()
-        >>> s.average_neighbour_patterns(kernel="circular", kernel_size=(3, 3))
+        >>> s.average_neighbour_patterns(
+        ...     kernel="circular", kernel_size=(3, 3))
         >>> s.data[:, :, 0, 0]
         [[ 2.66666667  3.          4.          5.        ]
          [ 5.25        6.          7.          7.75      ]
@@ -749,25 +755,20 @@ class EBSD(Signal2D):
 
         To get the kernels used
 
-        >>> kp.util.experimental.get_pattern_kernel(
-                kernel="circular", kernel_size=(3, 3))
+        >>> kp.util.kernel.get_kernel(
+        ...     kernel="circular", kernel_size=(3, 3))
         array([[0., 1., 0.],
                [1., 1., 1.],
                [0., 1., 0.]])
-        >>> kp.util.experimental.get_pattern_kernel(kernel="gaussian", std=2)
+        >>> kp.util.kernel.get_kernel(kernel="gaussian", std=2)
         array([[0.77880078, 0.8824969 , 0.77880078],
                [0.8824969 , 1.        , 0.8824969 ],
                [0.77880078, 0.8824969 , 0.77880078]])
 
-        See Also
-        --------
-        scipy.signal.windows.get_window
-        scipy.ndimage.convolve
-
         """
 
         # Get averaging kernel
-        averaging_kernel = kp.util.experimental.get_pattern_kernel(
+        averaging_kernel = kp.util.kernel.get_kernel(
             kernel=kernel,
             kernel_size=kernel_size,
             axes=self.axes_manager,
@@ -870,7 +871,7 @@ class EBSD(Signal2D):
         --------
         >>> import hyperspy.api as hs
         >>> roi = hs.roi.RectangularROI(
-                left=0, right=5, top=0, bottom=5)
+        ...     left=0, right=5, top=0, bottom=5)
         >>> s.virtual_backscatter_electron_imaging(roi)
 
         """
@@ -900,7 +901,7 @@ class EBSD(Signal2D):
         --------
         >>> import hyperspy.api as hs
         >>> roi = hs.roi.RectangularROI(
-                left=0, right=5, top=0, bottom=5)
+        ...     left=0, right=5, top=0, bottom=5)
         >>> vbse_image = s.get_virtual_image(roi)
 
         """

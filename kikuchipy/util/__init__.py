@@ -22,5 +22,6 @@ from kikuchipy.util import (
     experimental,
     general,
     io,
+    kernel,
     phase,
 )

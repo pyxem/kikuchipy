@@ -15,14 +15,10 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
-import warnings
 
 import dask.array as da
 import numpy as np
-import numbers
-from hyperspy.axes import AxesManager
 from scipy.ndimage import gaussian_filter, convolve
-from scipy.signal.windows import get_window
 from skimage.exposure import equalize_adapthist
 from skimage.util.dtype import dtype_range
 
@@ -304,154 +300,6 @@ def _average_neighbour_patterns_chunk(
         ).astype(dtype_out)
 
     return averaged_patterns
-
-
-def get_pattern_kernel(
-    kernel="circular", kernel_size=(3, 3), axes=None, **kwargs
-):
-    """Return a pattern kernel of a given shape with specified
-    coefficients.
-
-    See :func:`scipy.signal.windows.get_window` for available kernels
-    and required arguments for that specific kernel.
-
-    Parameters
-    ----------
-    kernel : 'circular', 'rectangular', 'gaussian', str, or
-            :class:`numpy.ndarray`, optional
-        Averaging kernel. Available kernel types are listed in
-        :func:`scipy.signal.windows.get_window`, in addition to a
-        circular kernel (default) filled with ones in which corners are
-        excluded from averaging. A pattern is considered to be in a
-        corner if its radial distance to the origin is shorter or equal
-        to the kernel half width. A 1D or 2D numpy array with kernel
-        coefficients can also be passed.
-    kernel_size : int or tuple of ints, optional
-        Size of averaging kernel if not a custom kernel is passed to
-        `kernel`. This can be either 1D or 2D, and does not have to be
-        symmetrical. Default is (3, 3).
-    axes : None or hyperspy.axes.AxesManager, optional
-        A HyperSpy signal axes manager containing navigation and signal
-        dimensions and shapes can be passed to ensure that the averaging
-        kernel is compatible with the signal.
-    **kwargs :
-        Keyword arguments passed to the available kernel type listed in
-        :func:`scipy.signal.windows.get_window`.
-
-    Returns
-    -------
-    returned_kernel : numpy.ndarray
-        The pattern kernel of given shape with specified coefficients.
-
-    Examples
-    --------
-    >>> import kikuchipy as kp
-    >>> kp.util.experimental.get_pattern_kernel(
-            kernel="circular", kernel_size=(3, 3))
-    array([[0., 1., 0.],
-           [1., 1., 1.],
-           [0., 1., 0.]])
-    >>> kp.util.experimental.get_pattern_kernel(kernel="gaussian", std=2)
-    array([[0.77880078, 0.8824969 , 0.77880078],
-           [0.8824969 , 1.        , 0.8824969 ],
-           [0.77880078, 0.8824969 , 0.77880078]])
-
-    See Also
-    --------
-    scipy.signal.windows.get_window
-
-    """
-
-    # Overwrite towards the end if no custom kernel is passed
-    returned_kernel = kernel
-
-    # Get kernel size if a custom kernel is passed, at the same time checking
-    # if the custom kernel's shape is valid
-    if not isinstance(kernel, str):
-        try:
-            kernel_size = kernel.shape
-        except AttributeError:
-            raise ValueError(
-                "Kernel must be of type numpy.ndarray, however a kernel of type"
-                f" {type(kernel)} was passed."
-            )
-
-    # Make kernel_size a tuple if an integer was passed
-    if isinstance(kernel_size, numbers.Number):
-        kernel_size = (kernel_size,)
-
-    # Kernel dimensions must be positive
-    try:
-        if any(np.array(kernel_size) < 0):
-            raise ValueError(
-                f"Kernel dimensions must be positive, however {kernel_size} was"
-                " passed."
-            )
-    except TypeError:
-        raise TypeError(
-            "Kernel dimensions must be an int or a tuple of ints, however "
-            f"kernel dimensions of type {type(kernel_size)} was passed."
-        )
-
-    if axes is not None:
-        try:
-            nav_shape = axes.navigation_shape
-        except AttributeError:
-            raise AttributeError(
-                "A hyperspy.axes.AxesManager object must be passed to the "
-                f"'axes' parameter, however a {type(axes)} was passed."
-            )
-
-        # Number of kernel dimensions cannot be greater than scan dimensions
-        if len(kernel_size) > len(nav_shape):
-            if kernel_size != (3, 3):
-                warnings.warn(
-                    f"Creates kernel of size {kernel_size[:len(nav_shape)]}, "
-                    f"since input kernel size {kernel_size} has more dimensions"
-                    f" than scan dimensions {nav_shape}."
-                )
-            kernel_size = kernel_size[: len(nav_shape)]
-
-        # Kernel dimension cannot be greater than corresponding scan dimension
-        if any(np.array(kernel_size) > np.array(nav_shape)):
-            raise ValueError(
-                f"Kernel size {kernel_size} is too large for a scan of "
-                f"dimensions {nav_shape}."
-            )
-
-    # Get kernel from SciPy
-    exclude_kernel_corners = False
-    if isinstance(kernel, str):
-        if kernel == "circular":
-            exclude_kernel_corners = True
-            kernel = "rectangular"
-
-        # Pass any extra necessary parameters for kernel from SciPy
-        window = (kernel,) + tuple(kwargs.values())
-        returned_kernel = get_window(
-            window=window, Nx=kernel_size[0], fftbins=False
-        )
-
-        # Add second dimension to kernel if kernel_size has two dimensions
-        if len(kernel_size) == 2:
-            returned_kernel = np.outer(
-                returned_kernel,
-                get_window(window=window, Nx=kernel_size[1], fftbins=False),
-            )
-
-    # If circular kernel, exclude kernel corners
-    if exclude_kernel_corners and len(kernel_size) == 2:
-        kernel_centre = np.array(kernel_size) // 2
-
-        # Create an 'open' mesh-grid of the same size as the kernel
-        y, x = np.ogrid[: kernel_size[0], : kernel_size[1]]
-        distance_to_centre = np.sqrt(
-            (x - kernel_centre[0]) ** 2 + (y - kernel_centre[0]) ** 2
-        )
-        mask = distance_to_centre > kernel_centre[0]
-        returned_kernel[mask] = 0
-
-    return returned_kernel
 
 
 def normalised_correlation_coefficient(pattern, template, zero_normalised=True):
