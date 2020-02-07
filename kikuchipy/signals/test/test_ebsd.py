@@ -161,7 +161,7 @@ class TestEBSD:
         assert dx.offset, dy.offset == -centre
 
 
-class TestPatternProcessing:
+class TestStaticBackgroundCorrection:
     @pytest.mark.parametrize(
         "operation, relative",
         [
@@ -272,6 +272,8 @@ class TestPatternProcessing:
         dummy_signal.static_background_correction(static_bg=dummy_background)
         assert isinstance(dummy_signal.data, da.Array)
 
+
+class TestDynamicBackgroundCorrection:
     @pytest.mark.parametrize(
         "operation, sigma, answer",
         [
@@ -366,6 +368,8 @@ class TestPatternProcessing:
         dummy_signal.dynamic_background_correction()
         assert isinstance(dummy_signal.data, da.Array)
 
+
+class TestRescaleIntensities:
     @pytest.mark.parametrize(
         "relative, dtype_out, answer",
         [
@@ -477,6 +481,8 @@ class TestPatternProcessing:
         dummy_signal.rescale_intensities()
         assert isinstance(dummy_signal.data, da.Array)
 
+
+class TestAdaptiveHistogramEqualization:
     def test_adaptive_histogram_equalization(self):
         """Test setup of equalization only. Tests of the result of the
         actual equalization are found elsewhere.
@@ -499,6 +505,8 @@ class TestPatternProcessing:
         s.adaptive_histogram_equalization()
         assert isinstance(s.data, da.Array)
 
+
+class TestAverageNeighbourPatterns:
     # Test different kernel coefficients
     @pytest.mark.parametrize(
         "kernel, kernel_size, lazy, answer, kwargs",
@@ -527,11 +535,11 @@ class TestPatternProcessing:
                 # fmt: off
                 np.array(
                     [
-                        6, 3, 7, 5, 2, 5, 6, 3, 3, 5, 3, 5, 4, 3, 6, 5, 3, 3, 5,
-                        4, 5, 4, 2, 6, 5, 4, 5, 5, 2, 7, 3, 3, 2, 3, 3, 2, 6, 3,
-                        5, 3, 4, 3, 3, 4, 3, 6, 4, 5, 3, 4, 3, 3, 5, 4, 4, 5, 7,
-                        3, 5, 0, 1, 5, 1, 6, 4, 5, 4, 5, 2, 1, 5, 3, 7, 6, 5, 5,
-                        5, 3, 2, 7, 5,
+                        7, 6, 6, 7, 3, 6, 7, 4, 3, 4, 5, 5, 6, 2, 7, 5, 3, 5, 4,
+                        5, 5, 6, 1, 8, 5, 5, 7, 6, 3, 7, 5, 2, 5, 6, 3, 3, 5, 3,
+                        5, 4, 3, 6, 5, 3, 3, 5, 4, 5, 4, 2, 6, 5, 4, 5, 5, 2, 7,
+                        3, 3, 2, 3, 3, 2, 6, 3, 5, 3, 4, 3, 3, 4, 3, 6, 4, 5, 3,
+                        4, 3, 3, 5, 4,
                     ],
                 ),
                 # fmt: on
@@ -572,29 +580,99 @@ class TestPatternProcessing:
             )
 
         answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
-        np.testing.assert_array_equal(dummy_signal.data, answer)
+        np.testing.assert_array_almost_equal(dummy_signal.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
 
     def test_average_neighbour_patterns_no_averaging(self, dummy_signal):
+        answer = dummy_signal.data.copy()
         with pytest.warns(UserWarning, match="A kernel of shape .* was "):
             dummy_signal.average_neighbour_patterns(
                 kernel="rectangular", kernel_size=(1, 1),
             )
+        np.testing.assert_array_equal(dummy_signal.data, answer)
+        assert dummy_signal.data.dtype == answer.dtype
 
     def test_average_neighbour_patterns_one_nav_dim(self, dummy_signal):
-        dummy_signal_1d = dummy_signal.inav[0, :]
-        dummy_signal_1d.average_neighbour_patterns()
+        dummy_signal_1d = dummy_signal.inav[:, 0]
+        dummy_signal_1d.average_neighbour_patterns(kernel_size=(3,))
         # fmt: off
         answer = np.array(
             [
-                6, 3, 6, 6, 5, 6, 7, 1, 1, 5, 2, 6, 5, 4, 4, 5, 1, 0, 6, 1, 6,
-                4, 4, 4, 4, 1, 1
+                7, 6, 6, 7, 3, 6, 7, 4, 3, 4, 5, 5, 6, 2, 7, 5, 3, 5, 4, 5, 5,
+                6, 1, 8, 5, 5, 7,
             ],
             dtype=np.uint8
         ).reshape(dummy_signal_1d.axes_manager.shape)
         # fmt: on
         np.testing.assert_array_equal(dummy_signal_1d.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_neighbour_patterns_kernel_1d(self, dummy_signal):
+        dummy_signal.average_neighbour_patterns(kernel_size=(3,))
+        # fmt: off
+        answer = np.array(
+            [
+                6, 3, 6, 6, 5, 6, 7, 1, 1, 6, 3, 8, 3, 0, 4, 5, 4, 5, 4, 4, 1,
+                4, 4, 8, 5, 4, 4, 5, 2, 6, 5, 4, 4, 5, 1, 0, 6, 5, 8, 3, 2, 2,
+                4, 6, 4, 5, 4, 2, 5, 4, 7, 4, 4, 6, 6, 1, 6, 4, 4, 4, 4, 1, 1,
+                4, 4, 8, 2, 3, 0, 2, 5, 3, 8, 5, 1, 5, 6, 6, 4, 5, 4,
+            ],
+            dtype=np.uint8
+        ).reshape(dummy_signal.axes_manager.shape)
+        # fmt: on
+        np.testing.assert_array_equal(dummy_signal.data, answer)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_neighbour_patterns_pass_kernel(self, dummy_signal):
+        k = kp.util.kernel.Kernel()
+        dummy_signal.average_neighbour_patterns(k)
+        # fmt: off
+        answer = np.array(
+            [
+                7, 4, 6, 6, 3, 7, 7, 3, 2, 4, 4, 6, 4, 2, 5, 4, 3, 5, 5, 5, 3,
+                5, 3, 8, 6, 5, 5, 5, 2, 6, 4, 3, 3, 4, 1, 1, 6, 4, 6, 4, 3, 4,
+                5, 5, 3, 5, 3, 3, 3, 3, 5, 3, 4, 5, 5, 3, 7, 4, 4, 2, 3, 4, 1,
+                5, 3, 6, 3, 4, 1, 1, 4, 4, 7, 6, 3, 4, 6, 4, 3, 6, 3,
+            ],
+            dtype=np.uint8
+        ).reshape(dummy_signal.axes_manager.shape)
+        # fmt: on
+        np.testing.assert_array_equal(dummy_signal.data, answer)
+        assert dummy_signal.data.dtype == answer.dtype
+
+
+class TestRebin:
+    def test_rebin(self, dummy_signal):
+        ebsd_node = kp.util.io.metadata_nodes(sem=False)
+
+        # Passing new_shape, only scaling in signal space
+        new_shape = (3, 3, 2, 1)
+        new_binning = dummy_signal.axes_manager.shape[3] / new_shape[3]
+        s2 = dummy_signal.rebin(new_shape=new_shape)
+        assert s2.axes_manager.shape == new_shape
+        assert s2.metadata.get_item(ebsd_node + ".binning") == new_binning
+
+        # Passing scale, also scaling in navigation space
+        scale = (3, 1, 3, 2)
+        s2 = dummy_signal.rebin(scale=scale)
+        expected_new_shape = [
+            int(i / j) for i, j in zip(dummy_signal.axes_manager.shape, scale)
+        ]
+        assert s2.axes_manager.shape == tuple(expected_new_shape)
+        assert s2.metadata.get_item(ebsd_node + ".binning") == float(scale[2])
+
+        # Passing lazy signal to out parameter, only scaling in signal space but
+        # upscaling
+        scale = (1, 1, 1, 0.5)
+        expected_new_shape = [
+            int(i / j) for i, j in zip(dummy_signal.axes_manager.shape, scale)
+        ]
+        s2 = dummy_signal.copy().as_lazy()
+        s3 = dummy_signal.rebin(scale=scale, out=s2)
+        assert isinstance(s2, kp.signals.LazyEBSD)
+        assert s2.axes_manager.shape == tuple(expected_new_shape)
+        assert s2.metadata.get_item(ebsd_node + ".binning") == float(scale[3])
+        assert s3 is None
 
 
 class TestVirtualBackscatterElectronImaging:
@@ -720,38 +798,8 @@ class TestDecomposition:
             s_reload.data.mean(), mean_intensity, decimal=4
         )
 
-    def test_rebin(self, dummy_signal):
-        ebsd_node = kp.util.io.metadata_nodes(sem=False)
 
-        # Passing new_shape, only scaling in signal space
-        new_shape = (3, 3, 2, 1)
-        new_binning = dummy_signal.axes_manager.shape[3] / new_shape[3]
-        s2 = dummy_signal.rebin(new_shape=new_shape)
-        assert s2.axes_manager.shape == new_shape
-        assert s2.metadata.get_item(ebsd_node + ".binning") == new_binning
-
-        # Passing scale, also scaling in navigation space
-        scale = (3, 1, 3, 2)
-        s2 = dummy_signal.rebin(scale=scale)
-        expected_new_shape = [
-            int(i / j) for i, j in zip(dummy_signal.axes_manager.shape, scale)
-        ]
-        assert s2.axes_manager.shape == tuple(expected_new_shape)
-        assert s2.metadata.get_item(ebsd_node + ".binning") == float(scale[2])
-
-        # Passing lazy signal to out parameter, only scaling in signal space but
-        # upscaling
-        scale = (1, 1, 1, 0.5)
-        expected_new_shape = [
-            int(i / j) for i, j in zip(dummy_signal.axes_manager.shape, scale)
-        ]
-        s2 = dummy_signal.copy().as_lazy()
-        s3 = dummy_signal.rebin(scale=scale, out=s2)
-        assert isinstance(s2, kp.signals.LazyEBSD)
-        assert s2.axes_manager.shape == tuple(expected_new_shape)
-        assert s2.metadata.get_item(ebsd_node + ".binning") == float(scale[3])
-        assert s3 is None
-
+class TestLazy:
     def test_compute(self, dummy_signal):
         lazy_signal = dummy_signal.as_lazy()
 

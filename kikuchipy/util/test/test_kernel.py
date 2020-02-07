@@ -16,237 +16,249 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
+import dask.array as da
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+from scipy.signal.windows import gaussian, general_gaussian
 
 import kikuchipy as kp
+
+# Kernel coefficients used to check results in tests
+CIRCULAR33 = np.array([0, 1, 0, 1, 1, 1, 0, 1, 0]).reshape(3, 3)
+# fmt: off
+CIRCULAR54 = np.array(
+    [0., 0., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 0., 1., 1., 1., 0., 0.,
+     1., 0.]
+).reshape(5, 4)
+# fmt: on
+RECTANGULAR33 = np.ones(9).reshape(3, 3)
+RECTANGULAR3 = np.ones(3)
+GAUSS33_STD1 = np.outer(gaussian(3, 1), gaussian(3, 1))
+GAUSS55_STD2 = np.outer(gaussian(5, 2), gaussian(5, 2))
+GAUSS33_CIRCULAR = np.array(
+    [0.0, 0.60653066, 0.0, 0.60653066, 1.0, 0.60653066, 0.0, 0.60653066, 0.0]
+).reshape(3, 3)
+GAUSS5_STD2 = gaussian(5, 2)
+GENERAL_GAUSS55_PWR05_STD2 = np.outer(
+    general_gaussian(5, 0.5, 2), general_gaussian(5, 0.5, 2)
+)
+CUSTOM = np.arange(25).reshape(5, 5)
 
 
 class TestKernel:
     @pytest.mark.parametrize(
-        "kernel, kernel_size, answer, match, error_type, kwargs",
+        (
+            "kernel, kernel_type, kernel_size, kwargs, answer_size, "
+            "answer_coeff, answer_circular"
+        ),
         [
-            # Standard circular kernel
+            ("circular", "circular", (3, 3), None, (3, 3), CIRCULAR33, True),
+            (CUSTOM, "custom", (10, 20), None, CUSTOM.shape, CUSTOM, False),
+            ("gaussian", "gaussian", (5, 5), 2, (5, 5), GAUSS55_STD2, False),
+        ],
+    )
+    def test_init(
+        self,
+        kernel,
+        kernel_type,
+        kernel_size,
+        kwargs,
+        answer_size,
+        answer_coeff,
+        answer_circular,
+    ):
+        if kwargs is None:
+            k = kp.util.kernel.Kernel(kernel=kernel, kernel_size=kernel_size)
+        else:
+            k = kp.util.kernel.Kernel(
+                kernel=kernel, kernel_size=kernel_size, kwargs=kwargs
+            )
+
+        assert k.is_valid()
+        assert k.type == kernel_type
+        assert k.coefficients.shape == answer_size
+        assert k.circular is answer_circular
+        np.testing.assert_array_almost_equal(k.coefficients, answer_coeff)
+
+    def test_init_general_gaussian(self):
+        kernel_type = "general_gaussian"
+        kernel_size = (5, 5)
+        k = kp.util.kernel.Kernel(
+            kernel=kernel_type, kernel_size=kernel_size, p=0.5, std=2,
+        )
+        assert k.is_valid()
+        np.testing.assert_array_almost_equal(
+            k.coefficients, GENERAL_GAUSS55_PWR05_STD2
+        )
+        assert k.type == kernel_type
+        assert k.coefficients.shape == kernel_size
+
+    @pytest.mark.parametrize(
+        "kernel, kernel_size, error_type, match",
+        [
             (
-                "circular",
-                (3, 3),
-                # fmt: off
-                np.array(
-                    [
-                        [0, 1, 0],
-                        [1, 1, 1],
-                        [0, 1, 0],
-                    ],
-                ),
-                # fmt: on
-                None,
-                None,
-                None,
-            ),
-            # Circular kernel with first dimension even
-            (
-                "circular",
-                (2, 3),
-                # fmt: off
-                np.array(
-                    [
-                        [0, 1, 0],
-                        [1, 1, 1],
-                    ],
-                ),
-                # fmt: on
-                None,
-                None,
-                None,
-            ),
-            # Circular kernel with second dimension even
-            (
-                "circular",
-                (3, 2),
-                # fmt: off
-                np.array(
-                        [
-                            [0, 1],
-                            [1, 1],
-                            [0, 1],
-                        ],
-                    ),
-                # fmt: on
-                None,
-                None,
-                None,
-            ),
-            # Rectangular kernel
-            ("rectangular", (2, 2), np.ones((2, 2)), None, None, None),
-            # One keyword argument to scipy.signal.windows.get_window
-            (
-                "gaussian",
-                (3, 3),
-                # fmt: off
-                    np.array(
-                        [
-                            [0.77880078, 0.8824969, 0.77880078],
-                            [0.8824969, 1., 0.8824969],
-                            [0.77880078, 0.8824969, 0.77880078]
-                        ]
-                    ),
-                # fmt: on
-                None,
-                None,
-                {"std": 2},
-            ),
-            # Two keyword arguments to scipy.signal.windows.get_window
-            (
-                "general_gaussian",
-                (3, 2),
-                # fmt: off
-                    np.array(
-                        [
-                            [0.96734205, 0.96734205],
-                            [0.99804878, 0.99804878],
-                            [0.96734205, 0.96734205]
-                        ],
-                    ),
-                # fmt: on
-                None,
-                None,
-                {"sig": 2, "p": 2},
-            ),
-            # Integer kernel size
-            ("rectangular", 3, np.ones(3), None, None, None),
-            # Custom kernel
-            (
-                np.arange(9).reshape((3, 3)),
-                (4, 2),  # Kernel size shouldn't matter with custom kernel
-                np.arange(9).reshape((3, 3)),
-                None,
-                None,
-                None,
-            ),
-            # Invalid custom kernel
-            (
-                [0, 1, 2, 3, 4, 5, 6, 7, 8],
-                (9,),
-                np.arange(9),
-                "Kernel must be of type numpy.ndarray, however a kernel of ",
+                [[0, 1, 0], [1, 1, 1], [0, 1, 0]],
+                (5, 5),
                 ValueError,
-                None,
+                "Kernel <class 'list'> must be of type numpy.ndarray or dask.",
             ),
-            # Negative number as invalid kernel dimensions
+            ("boxcar", (5, -5), ValueError, "All kernel axes .* must be > 0",),
             (
-                "circular",
-                (3, -3),
-                # fmt: off
-                    np.array(
-                        [
-                            [0, 1, 0],
-                            [1, 1, 1],
-                            [0, 1, 0],
-                        ],
-                    ),
-                # fmt: on
-                "Kernel dimensions must be positive, however .* was passed.",
-                ValueError,
-                None,
-            ),
-            # String as invalid kernel dimensions
-            (
-                "circular",
-                "(3, -3)",
-                # fmt: off
-                    np.array(
-                        [
-                            [0, 1, 0],
-                            [1, 1, 1],
-                            [0, 1, 0],
-                        ],
-                    ),
-                # fmt: on
-                "Kernel dimensions must be an int or a tuple of ints, however ",
+                "boxcar",
+                (5, 5.1),
                 TypeError,
-                None,
-            ),
-            # Greater kernel dimension than scan dimension as invalid kernel
-            # dimensions
-            (
-                "rectangular",
-                (3, 4),
-                np.ones(12).reshape((3, 4)),
-                "Kernel size .* is too large for a scan of dimensions .*",
-                ValueError,
-                None,
+                "Kernel size .* must be a sequence of ints.",
             ),
         ],
     )
-    def test_get_pattern_kernel(
-        self,
-        dummy_signal,
-        kernel,
-        kernel_size,
-        answer,
-        match,
-        error_type,
-        kwargs,
+    def test_init_raises_errors(self, kernel, kernel_size, error_type, match):
+        with pytest.raises(error_type, match=match):
+            kp.util.kernel.Kernel(kernel=kernel, kernel_size=kernel_size)
+
+    def test_representation(self):
+        k = kp.util.kernel.Kernel()
+        assert k.__repr__() == f"{k.type}, {k.coefficients.shape}"
+
+    def test_is_valid(self):
+        change_attribute = np.array([0, 0, 0, 0, 1])
+
+        # Change one attribute at a time and check whether the kernel is valid
+        for i in range(5):  # Four attributes to change + one with valid kernel
+            k = kp.util.kernel.Kernel()
+
+            valid_kernel = True
+            if sum(change_attribute[:4]) == 1:
+                valid_kernel = False
+
+            if change_attribute[0]:  # Set type from str to int
+                k.type = 1
+            elif change_attribute[1]:  # Change coefficients object to int
+                k.coefficients = 1
+            elif change_attribute[2]:  # Add a third axis
+                k.coefficients = np.expand_dims(k.coefficients, 1)
+            elif change_attribute[3]:  # Change circular boolean value to str
+                k.circular = "True"
+
+            # Roll axis to change which attribute to change next time
+            change_attribute = np.roll(change_attribute, 1)
+
+            assert k.is_valid() == valid_kernel
+
+    @pytest.mark.parametrize(
+        "kernel, kernel_size, answer_coeff, answer_circular, answer_type",
+        [
+            # Changes type as well
+            ("rectangular", (3, 3), CIRCULAR33, True, "circular"),
+            ("boxcar", (3, 3), CIRCULAR33, True, "circular"),
+            # Does nothing since kernel has only one axis
+            ("rectangular", (3,), RECTANGULAR3, False, "rectangular"),
+            # Behaves as expected
+            ("gaussian", (3, 3), GAUSS33_CIRCULAR, True, "gaussian"),
+            # Even axis
+            ("rectangular", (5, 4), CIRCULAR54, True, "circular"),
+        ],
+    )
+    def test_make_circular(
+        self, kernel, kernel_size, answer_coeff, answer_circular, answer_type
     ):
-        if match is None:
-            if kwargs is None:
-                kernel = kp.util.kernel.get_kernel(
-                    kernel=kernel,
-                    kernel_size=kernel_size,
-                    axes=dummy_signal.axes_manager,
-                )
-            else:
-                kernel = kp.util.kernel.get_kernel(
-                    kernel=kernel,
-                    kernel_size=kernel_size,
-                    axes=dummy_signal.axes_manager,
-                    **kwargs,
-                )
-            np.testing.assert_array_almost_equal(kernel, answer)
-        else:
-            with pytest.raises(error_type, match=match):
-                kp.util.kernel.get_kernel(
-                    kernel=kernel,
-                    kernel_size=kernel_size,
-                    axes=dummy_signal.axes_manager,
-                )
+        k = kp.util.kernel.Kernel(kernel=kernel, kernel_size=kernel_size)
+        k.make_circular()
 
-    def test_get_pattern_kernel_warns_kernel_dimensions(self, dummy_signal):
-        with pytest.warns(
-            UserWarning,
-            match="Creates kernel of size .*, since input kernel size .* has",
-        ):
-            kp.util.kernel.get_kernel(
-                kernel_size=(3, 3, 3), axes=dummy_signal.axes_manager
-            )
+        np.testing.assert_array_almost_equal(k.coefficients, answer_coeff)
+        assert k.type == answer_type
+        assert k.circular is answer_circular
 
-    def test_get_pattern_kernel_invalid_axes_manager(self):
-        with pytest.raises(AttributeError, match="A hyperspy.axes.AxesManager"):
-            kp.util.kernel.get_kernel("circular", (3, 3), axes=1)
+    @pytest.mark.parametrize(
+        "kernel_size, raises_error",
+        [((3,), False), ((3, 3), False), ((3, 4), True),],
+    )
+    def test_scan_compatible(self, dummy_signal, kernel_size, raises_error):
+        k = kp.util.kernel.Kernel(kernel_size=kernel_size)
+        if raises_error:
+            with pytest.raises(ValueError, match="Kernel of size .* is "):
+                k.scan_compatible(dummy_signal)
 
-    def test_plot_kernel(self):
-        kernel = kp.util.kernel.get_kernel()
-        fig, im, cbar = kp.util.kernel.plot_kernel(kernel)
+    def test_scan_compatible_raises(self):
+        k = kp.util.kernel.Kernel(kernel_size=(3, 4))
+        with pytest.raises(AttributeError, match="Scan <class 'int'> must be"):
+            k.scan_compatible(1)
 
+    def test_scan_compatible_1d_signal_2d_kernel(self, dummy_signal):
+        k = kp.util.kernel.Kernel(kernel_size=(3, 3))
+        with pytest.raises(ValueError):
+            k.scan_compatible(dummy_signal.inav[:, 0])
+
+    @pytest.mark.parametrize(
+        "kernel_size, n_dims, new_shape",
+        [
+            ((5,), 2, (5, 1, 1)),
+            ((3, 3), 4, (3, 3, 1, 1, 1, 1)),
+            ((5, 10), 1, (5, 10, 1)),
+        ],
+    )
+    def test_add_axes(self, kernel_size, n_dims, new_shape):
+        k = kp.util.kernel.Kernel(kernel_size=kernel_size)
+        k._add_axes(n_dims)
+        assert k.is_valid() is False
+        assert k.coefficients.shape == new_shape
+
+    def test_plot_default_values(self):
+        k = kp.util.kernel.Kernel()
+        fig, im, cbar = k.plot()
+
+        np.testing.assert_array_almost_equal(
+            k.coefficients, im.get_array().data
+        )
+        assert im.cmap.name == "viridis"
         assert isinstance(fig, mpl.figure.Figure)
         assert isinstance(im, mpl.image.AxesImage)
         assert isinstance(cbar, mpl.colorbar.Colorbar)
-        np.testing.assert_array_equal(kernel, im.get_array().data)
 
-    def test_plot_kernel_invalid_dimensions(self):
-        kernel = np.arange(3 ** 3).reshape((3, 3, 3))
-        with pytest.raises(ValueError, match="Can only plot a kernel of max. "):
-            kp.util.kernel.plot_kernel(kernel)
+    def test_plot_invalid_kernel(self):
+        k = kp.util.kernel.Kernel()
+        k.type = 1
+        assert k.is_valid() is False
+        with pytest.raises(ValueError, match="Kernel is invalid."):
+            k.plot()
 
-    @pytest.mark.parametrize("cmap", ["inferno", "viridis"])
-    def test_plot_kernel_cmap(self, cmap):
-        kernel = kp.util.kernel.get_kernel(kernel_size=(4, 3))
-        _, im, _ = kp.util.kernel.plot_kernel(kernel, cmap=cmap)
+    @pytest.mark.parametrize(
+        "kernel, answer_coeff, cmap, textcolors, cmap_label",
+        [
+            ("circular", CIRCULAR33, "viridis", ["k", "w"], "Coefficient",),
+            ("rectangular", RECTANGULAR33, "inferno", ["b", "r"], "Coeff.",),
+        ],
+    )
+    def test_plot(
+        self, kernel, answer_coeff, cmap, textcolors, cmap_label, tmp_path
+    ):
+        k = kp.util.kernel.Kernel(kernel=kernel)
 
-        assert im.cmap.name == cmap
+        fig, im, cbar = k.plot(
+            cmap=cmap, textcolors=textcolors, cmap_label=cmap_label
+        )
 
-    @pytest.mark.parametrize("textcolors", [["red", "blue"], ["r", "b"]])
-    def test_plot_kernel_textcolors(self, textcolors):
-        kernel = kp.util.kernel.get_kernel(kernel_size=(2, 4))
-        _, _, _ = kp.util.kernel.plot_kernel(kernel, textcolors=textcolors)
+        np.testing.assert_array_almost_equal(k.coefficients, answer_coeff)
+        np.testing.assert_array_almost_equal(im.get_array().data, answer_coeff)
+        assert isinstance(fig, mpl.figure.Figure)
+        assert isinstance(im, mpl.image.AxesImage)
+        assert isinstance(cbar, mpl.colorbar.Colorbar)
+
+        # Check that the figure can be written to and read from file
+        os.chdir(tmp_path)
+        fname = "test.png"
+        fig.savefig(fname)
+        fig_read = plt.imread(fname)
+
+    def test_plot_one_axis(self):
+        k = kp.util.kernel.Kernel(kernel="gaussian", kernel_size=(5,), std=2)
+        fig, im, cbar = k.plot()
+
+        # Compare to global kernel GAUSS5_STD2
+        np.testing.assert_array_almost_equal(k.coefficients, GAUSS5_STD2)
+        np.testing.assert_array_almost_equal(
+            im.get_array().data[:, 0], GAUSS5_STD2
+        )

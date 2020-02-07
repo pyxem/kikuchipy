@@ -142,35 +142,34 @@ class TestExperimental:
 
     @pytest.mark.parametrize("dtype_in", [None, np.uint8])
     def test_average_neighbour_patterns_chunk(self, dummy_signal, dtype_in):
-        # Get averaging kernel
-        kernel = kp.util.kernel.get_kernel(axes=dummy_signal.axes_manager,)
-        expanded_kernel = kernel.reshape(
-            kernel.shape + (1,) * dummy_signal.axes_manager.signal_dimension
-        )
+        averaging_kernel = kp.util.kernel.Kernel()
+        kernel_size = averaging_kernel.coefficients.shape
 
         # Get array to operate on
         dask_array = kp.util.dask._get_dask_array(dummy_signal)
         dtype_out = dask_array.dtype
 
         # Get sum of kernel coefficients for each pattern
+        nav_shape = dummy_signal.axes_manager.navigation_shape
         kernel_sums = convolve(
-            input=np.ones(dummy_signal.axes_manager.navigation_shape[::-1]),
-            weights=kernel,
+            input=np.ones(nav_shape[::-1]),
+            weights=averaging_kernel.coefficients,
             mode="constant",
             cval=0,
         )
-        kernel_sums_expanded = da.from_array(
-            kernel_sums.reshape(
-                kernel_sums.shape
-                + (1,) * dummy_signal.axes_manager.signal_dimension
-            ),
-            chunks=dask_array.chunksize,
-        )
+
+        for i in range(dummy_signal.axes_manager.signal_dimension):
+            kernel_sums = np.expand_dims(kernel_sums, axis=kernel_sums.ndim)
+        kernel_sums = da.from_array(kernel_sums, chunks=dask_array.chunksize)
+
+        # Add signal dimensions to kernel array to enable its use with Dask's
+        # map_blocks()
+        averaging_kernel._add_axes(dummy_signal.axes_manager.signal_dimension)
 
         averaged_patterns = dask_array.map_blocks(
             kp.util.experimental._average_neighbour_patterns_chunk,
-            kernel_sums=kernel_sums_expanded,
-            kernel=expanded_kernel,
+            kernel_sums=kernel_sums,
+            kernel=averaging_kernel.coefficients,
             dtype_out=dtype_in,
             dtype=dtype_out,
         )

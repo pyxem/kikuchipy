@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
+import copy
 import datetime
 import gc
 import logging
@@ -25,7 +26,7 @@ import sys
 import warnings
 
 import dask.array as da
-import dask.diagnostics as dd
+from dask.diagnostics import ProgressBar
 from hyperspy._signals.signal2d import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
@@ -33,7 +34,7 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 from h5py import File
 import numpy as np
 from pyxem.signals.diffraction2d import Diffraction2D
-from scipy.ndimage import convolve
+from scipy.ndimage import correlate
 
 from kikuchipy.io._io import save
 import kikuchipy as kp
@@ -460,7 +461,7 @@ class EBSD(Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with dd.ProgressBar():
+            with ProgressBar():
                 print("Static background correction:", file=sys.stdout)
                 corrected_patterns.store(self.data, compute=True)
         else:
@@ -518,7 +519,7 @@ class EBSD(Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with dd.ProgressBar():
+            with ProgressBar():
                 print("Dynamic background correction:", file=sys.stdout)
                 corrected_patterns.store(self.data, compute=True)
         else:
@@ -589,7 +590,7 @@ class EBSD(Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with dd.ProgressBar():
+            with ProgressBar():
                 if self.data.dtype != rescaled_patterns.dtype:
                     self.data = self.data.astype(dtype_out)
                 print("Rescaling patterns:", file=sys.stdout)
@@ -681,7 +682,7 @@ class EBSD(Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with dd.ProgressBar():
+            with ProgressBar():
                 print("Adaptive histogram equalization:", file=sys.stdout)
                 equalized_patterns.store(self.data, compute=True)
         else:
@@ -690,38 +691,40 @@ class EBSD(Signal2D):
     def average_neighbour_patterns(
         self, kernel="circular", kernel_size=(3, 3), **kwargs
     ):
-        """Average intensities in each pattern inplace with its
-        nearest neighbours given by a kernel and its coefficients.
+        """Average patterns with its neighbours within a kernel.
 
+        The amount of averaging is specified by the kernel coefficients.
         All patterns are averaged with the same kernel. Map borders are
-        extended with zeros.
-
-        See :func:`scipy.signal.windows.get_window` for available
-        kernels and required arguments for that specific kernel.
+        extended with zeros. The method operates inplace.
 
         Parameters
         ----------
-        kernel : 'circular', 'rectangular', 'gaussian', str, or
-                :class:`numpy.ndarray`, optional
-            Averaging kernel. Available kernel types are
-            listed in :func:`scipy.signal.windows.get_window`, in
-            addition to a circular kernel (default) filled with ones in
-            which corners are excluded from averaging. A pattern is
-            considered to be in a corner if its radial distance to the
-            origin is shorter or equal to the kernel half width. A 1D or
-            2D numpy array with kernel coefficients can also be passed.
-        kernel_size : int or tuple of ints, optional
-            Size of averaging kernel if not a custom kernel is passed to
-            `kernel`. This can be either 1D or 2D, and does not have to
-            be symmetrical. Default is (3, 3).
+        kernel : :class:`kikuchipy.util.kernel.Kernel`, 'circular',
+                'rectangular', 'gaussian', str, :class:`numpy.ndarray`, or
+                :class:`dask.Array`, optional
+            Averaging kernel. Available types are listed in
+            :func:`scipy.signal.windows.get_window`, in addition to a
+            circular kernel (default) filled with ones in which corner
+            coefficients are set to zero. A kernel element is considered to
+            be in a corner if its radial distance to the origin is shorter
+            or equal to the half width of the kernel's longest axis. A 1D
+            or 2D :class:`numpy.ndarray`, :class:`dask.Array` or
+            :class:`kikuchipy.util.kernel.Kernel` can also be passed.
+        kernel_size : sequence of ints, optional
+            Size of averaging kernel. Not used if a custom kernel or
+            :class:`kikuchipy.util.kernel.Kernel` object is passed to
+            `kernel`. This can be either 1D or 2D, and can be asymmetrical.
+            Default is (3, 3).
         **kwargs :
-            Keyword arguments passed to the available kernel type listed
-            in :func:`scipy.signal.windows.get_window`.
+            Keyword arguments passed to the available kernel type listed in
+            :func:`scipy.signal.windows.get_window`. If none are passed,
+            the default values of that particular kernel are used.
 
         See Also
         --------
+        kikuchipy.util.kernel.Kernel
         scipy.signal.windows.get_window
-        scipy.ndimage.convolve
+        scipy.ndimage.correlate
 
         Examples
         --------
@@ -734,83 +737,86 @@ class EBSD(Signal2D):
         ...         s.inav[j, i].data *= k
         ...         k += 1
         >>> s.data[:, :, 0, 0]
-        [[ 1.  2.  3.  4.]
-         [ 5.  6.  7.  8.]
-         [ 9. 10. 11. 12.]
-         [13. 14. 15. 16.]]
-        >>> s2 = s.deepcopy()
+        array([[ 1.,  2.,  3.,  4.],
+               [ 5.,  6.,  7.,  8.],
+               [ 9., 10., 11., 12.],
+               [13., 14., 15., 16.]])
+        >>> s2 = s.deepcopy()  # For use below
         >>> s.average_neighbour_patterns(
         ...     kernel="circular", kernel_size=(3, 3))
         >>> s.data[:, :, 0, 0]
-        [[ 2.66666667  3.          4.          5.        ]
-         [ 5.25        6.          7.          7.75      ]
-         [ 9.25       10.         11.         11.75      ]
-         [12.         13.         14.         14.33333333]]
-        >>> s2.average_neighbour_patterns(kernel="gaussian", std=2)
-        >>> s2.data[:, :, 0, 0]
-        [[ 3.34395304  3.87516243  4.87516264  5.40637176]
-         [ 5.46879047  5.99999985  6.99999991  7.53120901]
-         [ 9.46879095  9.99999959 11.00000015 11.53120913]
-         [11.59362845 12.12483732 13.1248368  13.65604717]]
+        array([[ 2.66666667,  3.        ,  4.        ,  5.        ],
+               [ 5.25      ,  6.        ,  7.        ,  7.75      ],
+               [ 9.25      , 10.        , 11.        , 11.75      ],
+               [12.        , 13.        , 14.        , 14.33333333]])
 
-        To get the kernels used
+        A kernel object can also be passed
 
-        >>> kp.util.kernel.get_kernel(
-        ...     kernel="circular", kernel_size=(3, 3))
-        array([[0., 1., 0.],
-               [1., 1., 1.],
-               [0., 1., 0.]])
-        >>> kp.util.kernel.get_kernel(kernel="gaussian", std=2)
+        >>> kernel = kp.util.kernel.Kernel(kernel="gaussian", std=2)
+        >>> kernel
+        gaussian, (3, 3)
+        >>> kernel.coefficients
         array([[0.77880078, 0.8824969 , 0.77880078],
                [0.8824969 , 1.        , 0.8824969 ],
                [0.77880078, 0.8824969 , 0.77880078]])
+        >>> s2.average_neighbour_patterns(kernel)
+        >>> s2.data[:, :, 0, 0]
+        array([[ 3.34395304,  3.87516243,  4.87516264,  5.40637176],
+               [ 5.46879047,  5.99999985,  6.99999991,  7.53120901],
+               [ 9.46879095,  9.99999959, 11.00000015, 11.53120913],
+               [11.59362845, 12.12483732, 13.1248368 , 13.65604717]])
+
+        This kernel can subsequently be plotted and saved
+
+        >>> figure, image, colorbar = kernel.plot()
+        >>> figure.savefig('my_kernel.png')
+
+        See Also
+        --------
+        kikuchipy.util.kernel.Kernel
 
         """
-
-        # Get averaging kernel
-        averaging_kernel = kp.util.kernel.get_kernel(
-            kernel=kernel,
-            kernel_size=kernel_size,
-            axes=self.axes_manager,
-            **kwargs,
-        )
-        kernel_size = averaging_kernel.shape
+        if isinstance(kernel, kp.util.kernel.Kernel) and kernel.is_valid():
+            averaging_kernel = copy.copy(kernel)
+        else:
+            averaging_kernel = kp.util.kernel.Kernel(
+                kernel=kernel, kernel_size=kernel_size, **kwargs,
+            )
+        averaging_kernel.scan_compatible(self)
 
         # Do nothing if a kernel of shape (1, ) or (1, 1) is passed
-        if kernel_size == (1,) or kernel_size == (1, 1):
+        kernel_size = averaging_kernel.coefficients.shape
+        if kernel_size in [(1,), (1, 1)]:
             return warnings.warn(
-                f"A kernel of shape {kernel_size} was passed, no "
-                "averaging is therefore performed."
+                f"A kernel of shape {kernel_size} was passed, no averaging is "
+                "therefore performed."
             )
 
-        # Add signal dimensions to kernel array to be able to use with Dask's
-        # map_blocks()
-        expanded_kernel = averaging_kernel.reshape(
-            kernel_size + (1,) * self.axes_manager.signal_dimension
-        )
-
         # Create dask array of signal patterns and do processing on this
-        dtype_out = self.data.dtype
         dask_array = kp.util.dask._get_dask_array(signal=self)
 
         # Get sum of kernel coefficients for each pattern, to normalize with
-        # after convolution
-        kernel_sums = convolve(
+        # after correlation
+        nav_shape = self.axes_manager.navigation_shape
+        if len(nav_shape) > len(kernel_size):
+            averaging_kernel._add_axes(1)
+        kernel_sums = correlate(
             input=np.ones(self.axes_manager.navigation_shape[::-1]),
-            weights=averaging_kernel,
+            weights=averaging_kernel.coefficients,
             mode="constant",
             cval=0,
         )
 
-        # Add signal dimensions to array be able to use with Dask's map_blocks()
-        kernel_sums_expanded = da.from_array(
-            kernel_sums.reshape(
-                kernel_sums.shape + (1,) * self.axes_manager.signal_dimension
-            ),
-            chunks=dask_array.chunksize,
-        )
+        # Add signal dimensions to kernel array to enable its use with Dask's
+        # map_blocks()
+        averaging_kernel._add_axes(self.axes_manager.signal_dimension)
 
-        # Create overlap between chunks to enable convolution with the kernel
+        # Add signal dimensions to array be able to use with Dask's map_blocks()
+        for i in range(self.axes_manager.signal_dimension):
+            kernel_sums = np.expand_dims(kernel_sums, axis=kernel_sums.ndim)
+        kernel_sums = da.from_array(kernel_sums, chunks=dask_array.chunksize)
+
+        # Create overlap between chunks to enable correlation with the kernel
         # using Dask's map_blocks()
         overlap_depth = {0: 0, 1: 0}
         for i, kernel_dim in enumerate(kernel_size):
@@ -821,17 +827,18 @@ class EBSD(Signal2D):
         )
 
         # Must also be overlapped, since the patterns are overlapped
-        overlapped_kernel_sums_expanded = da.overlap.overlap(
-            kernel_sums_expanded, depth=overlap_depth, boundary=overlap_boundary
+        overlapped_kernel_sums = da.overlap.overlap(
+            kernel_sums, depth=overlap_depth, boundary=overlap_boundary
         )
 
-        # Finally, average patterns by convolution with the kernel and
-        # subsequent division by the number of neighbours convolved with
+        # Finally, average patterns by correlation with the kernel and
+        # subsequent division by the number of neighbours correlated with
+        dtype_out = self.data.dtype
         overlapped_averaged_patterns = da.map_blocks(
             kp.util.experimental._average_neighbour_patterns_chunk,
             overlapped_dask_array,
-            overlapped_kernel_sums_expanded,
-            kernel=expanded_kernel,
+            overlapped_kernel_sums,
+            kernel=averaging_kernel.coefficients,
             dtype_out=dtype_out,
             dtype=dtype_out,
         )
@@ -845,7 +852,7 @@ class EBSD(Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with dd.ProgressBar():
+            with ProgressBar():
                 print("Averaging neighbour patterns:", file=sys.stdout)
                 averaged_patterns.store(self.data, compute=True)
         else:
@@ -991,15 +998,15 @@ class EBSD(Signal2D):
         Parameters
         ----------
         components : None, int or list of ints, optional
-            If ``None`` (default), rebuilds the signal from all
-            components. If ``int``, rebuilds signal from ``components``
-            in range 0-given ``int``. If list of ``ints``, rebuilds
-            signal from only ``components`` in given list.
+            If ``None`` (default), rebuilds the signal from all components.
+            If ``int``, rebuilds signal from ``components`` in range
+            0-given ``int``. If list of ``ints``, rebuilds signal from only
+            ``components`` in given list.
         dtype_out : numpy.float16, numpy.float32, numpy.float64,\
                 optional
-            Data to cast learning results to (default is
-            :class:`numpy.float16`). Note that HyperSpy casts them
-            to :class:`numpy.float64`.
+            Data type to cast learning results to (default is
+            :class:`numpy.float16`). Note that HyperSpy casts them to
+            :class:`numpy.float64`.
 
         Returns
         -------
@@ -1106,7 +1113,7 @@ class LazyEBSD(EBSD, LazySignal2D):
         self.__class__ = LazyEBSD
 
     def compute(self, *args, **kwargs):
-        with dd.ProgressBar(*args, **kwargs):
+        with ProgressBar(*args, **kwargs):
             self.data = self.data.compute(*args, **kwargs)
         gc.collect()
         self.__class__ = EBSD
