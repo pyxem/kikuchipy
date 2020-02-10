@@ -25,17 +25,21 @@ from scipy.signal.windows import get_window
 class Kernel:
     """A kernel or mask of a given shape with coefficients.
 
+    This class is a thin wrapper around a NumPy or Dask array with some
+    additional convenience methods.
+
     Parameters
     ----------
-    kernel : 'circular', 'rectangular', 'gaussian', str,
-            :class:`numpy.ndarray`, or :class:`dask.Array`, optional
+    kernel : 'circular', 'rectangular', 'gaussian', str, \
+            numpy.ndarray or dask.array.Array, optional
         Kernel type to create. Available types are listed in
         :func:`scipy.signal.windows.get_window`, in addition to a
         circular kernel (default) filled with ones in which corner
         coefficients are set to zero. A kernel element is considered to be
-        in a corner if its radial distance to the origin is shorter or
-        equal to the half width of the kernel's longest axis. A 1D or 2D
-        :class:`numpy.ndarray` or :class:`dask.Array` can also be passed.
+        in a corner if its radial distance to the origin (kernel centre) is
+        shorter or equal to the half width of the kernel's longest axis. A
+        1D or 2D :class:`numpy.ndarray` or :class:`dask.array.Array` can
+        also be passed.
     kernel_size : sequence of ints, optional
         Size of the kernel. Not used if a custom kernel is passed to
         `kernel`. This can be either 1D or 2D, and can be asymmetrical.
@@ -48,10 +52,10 @@ class Kernel:
     Attributes
     ----------
     type : str
-        Name of kernel type. Can be either 'circular', 'rectangular',
-        'gaussian', or any other kernel type available via
+        Name of kernel type. Can be either 'custom', 'circular',
+        'rectangular', 'gaussian', or any other kernel type available via
         :func:`scipy.signal.windows.get_window`.
-    coefficients : :class:`numpy.ndarray` or :class:`dask.Array`
+    coefficients : numpy.ndarray or dask.array.Array
         Kernel coefficients.
     circular : bool
         Whether the kernel is circular, with corner coefficients set to
@@ -64,48 +68,48 @@ class Kernel:
 
     The following passed parameters are the default
 
-    >>> k = kp.util.kernel.Kernel(kernel="circular", kernel_size=(3, 3))
-    >>> k
+    >>> w = kp.util.Kernel(kernel="circular", kernel_size=(3, 3))
+    >>> w
     circular, (3, 3)
-    >>> k.coefficients
+    >>> w.coefficients
     array([[0., 1., 0.],
            [1., 1., 1.],
            [0., 1., 0.]])
 
     A kernel can be made circular
 
-    >>> k = kp.util.kernel.Kernel(kernel="rectangular")
-    >>> k
+    >>> w = kp.util.Kernel(kernel="rectangular")
+    >>> w
     rectangular, (3, 3)
-    >>> k.coefficients
+    >>> w.coefficients
     array([[1., 1., 1.],
            [1., 1., 1.],
            [1., 1., 1.]])
-    >>> k.make_circular()
-    >>> k
+    >>> w.make_circular()
+    >>> w
     circular, (3, 3)
-    >>> k.coefficients
+    >>> w.coefficients
     array([[0., 1., 0.],
            [1., 1., 1.],
            [0., 1., 0.]])
 
     A custom kernel can be created
 
-    >>> k = kp.util.kernel.Kernel(np.arange(6).reshape(3, 2))
-    >>> k
+    >>> w = kp.util.Kernel(np.arange(6).reshape(3, 2))
+    >>> w
     custom, (3, 2)
-    >>> k.coefficients
+    >>> w.coefficients
     array([[0, 1],
            [2, 3],
            [4, 5]])
 
-    To create a gaussian kernel with a standard deviation of 2, obtained
-    from scipy.signal.windows.gaussian
+    To create a Gaussian kernel with a standard deviation of 2, obtained
+    from :func:`scipy.signal.windows.gaussian`
 
-    >>> k = kp.util.kernel.Kernel(kernel="gaussian", std=2)
-    >>> k
+    >>> w = kp.util.Kernel(kernel="gaussian", std=2)
+    >>> w
     gaussian, (3, 3)
-    >>> k.coefficients
+    >>> w.coefficients
     array([[0.77880078, 0.8824969 , 0.77880078],
            [0.8824969 , 1.        , 0.8824969 ],
            [0.77880078, 0.8824969 , 0.77880078]])
@@ -113,12 +117,12 @@ class Kernel:
     A plot of the kernel coefficients, with indices relative to the origin,
     can be produced and written to file
 
-    >>> figure, image, colorbar = k.plot(cmap="inferno")
+    >>> figure, image, colorbar = w.plot(cmap="inferno")
     >>> figure.savefig('my_kernel.png')
 
     See Also
     --------
-    scipy.signal.windows.get_window
+    :func:`scipy.signal.windows.get_window`
 
     """
 
@@ -228,7 +232,7 @@ class Kernel:
         Parameters
         ----------
         scan : EBSD or LazyEBSD
-            A :class:`~kikuchipy.signals.ebsd.EBSD` or
+            An :class:`~kikuchipy.signals.ebsd.EBSD` or
             :class:`~kikuchipy.signals.ebsd.LazyEBSD` object.
 
         """
@@ -271,14 +275,16 @@ class Kernel:
 
         Parameters
         ----------
-        cmap : :class:`matplotlib.colors.ListedColormap`, optional
-            Colormap to color coefficients with. Default is "viridis".
+        cmap : str, optional
+            A color map to color coefficients with, available in
+            :class:`matplotlib.colors.ListedColormap`. Default is
+            'viridis'.
         textcolors : list, optional
             A list of two color specifications. The first is used for
             values below a threshold, the second for those above. If None
             (default), these are set to white and black.
         cmap_label : str
-            Colormap label.
+            Color map label.
 
         Returns
         -------

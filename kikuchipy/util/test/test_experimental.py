@@ -142,8 +142,7 @@ class TestExperimental:
 
     @pytest.mark.parametrize("dtype_in", [None, np.uint8])
     def test_average_neighbour_patterns_chunk(self, dummy_signal, dtype_in):
-        averaging_kernel = kp.util.kernel.Kernel()
-        kernel_size = averaging_kernel.coefficients.shape
+        averaging_kernel = kp.util.Kernel()
 
         # Get array to operate on
         dask_array = kp.util.dask._get_dask_array(dummy_signal)

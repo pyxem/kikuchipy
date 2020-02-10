@@ -8,7 +8,7 @@ latter intensity is undesirable, while for so-called :doc:`virtual backscatter
 electron (VBSE) imaging <virtual_backscatter_electron_imaging>`, this
 intensity can reveal important topographical, compositional or diffraction
 contrast. This section details methods to enhance the Kikuchi diffraction
-pattern.
+pattern in patterns in an :class:`~kikuchipy.signals.ebsd.EBSD` object.
 
 .. _background-correction:
 
@@ -20,8 +20,8 @@ Background correction
 Static background correction
 ----------------------------
 
-The slowly varying diffuse background in raw patterns can be removed by either
-subtracting or dividing by a static background via
+Effects which are constant, like hot pixels or dirt on the detector, can be
+removed by either subtracting or dividing by a static background via
 :meth:`~kikuchipy.signals.ebsd.EBSD.static_background_correction`:
 
 .. code-block:: python
@@ -80,21 +80,14 @@ Patterns are rescaled to fill the available data type range.
 Average neighbour patterns
 ==========================
 
-With :meth:`~kikuchipy.signals.ebsd.EBSD.average_neighbour_patterns`, the
-signal-to-noise ratio in patterns in an EBSD scan ``s`` can be improved by
-averaging patterns with their closest neighbours within a square kernel:
+The signal-to-noise ratio in patterns in an EBSD scan ``s`` can be improved by
+averaging patterns with their closest neighbours within a kernel or mask with
+:meth:`~kikuchipy.signals.ebsd.EBSD.average_neighbour_patterns`:
 
 .. code-block:: python
 
     >>> s.average_neighbour_patterns(
-            n_neighbours=1, exclude_kernel_corners=True)
-
-The number of nearest neighbours to average with can be set with
-``n_neighbours`` (default is 1), and whether to exclude patterns in corners of
-the averaging kernel can be set with ``exclude_kernel_corners`` (default is
-``True``). Whether a pattern is considered to be in a kernel corner is
-determined by its radial distance to the kernel origin, with the maximum allowed
-distance equal to the kernel half width.
+            kernel="gaussian", kernel_size=(3, 3), std=1)
 
 .. _fig-average-neighbour-patterns:
 
@@ -102,9 +95,76 @@ distance equal to the kernel half width.
     :align: center
     :width: 100%
 
-    The same pattern before (left) and after (right) averaging with the nearest
-    neighbour patterns in a (3 x 3) kernel, excluding patterns in the kernel
-    corners.
+    An example pattern before (left) and after (right) averaging with the
+    nearest neighbour patterns in a (3 x 3) Gaussian kernel with :math:`\sigma`
+    = 1.
+
+The array of averaged patterns :math:`g(n_{\mathrm{x}}, n_{\mathrm{y}})` is
+obtained by spatially correlating a kernel :math:`w(s, t)` with the array of
+patterns :math:`f(n_{\mathrm{x}}, n_{\mathrm{y}})`, here 4D, which is padded
+with zeros at the edges. As coordinates :math:`n_{\mathrm{x}}` and
+:math:`n_{\mathrm{y}}` are varied, the kernel origin moves from pattern to
+pattern, computing the sum of products of the kernel coefficients with the
+neighbour pattern intensities, defined by the kernel size, followed by
+normalising by the sum of the kernel coefficients. For a symmetrical kernel of
+size :math:`m \times n`, this becomes [Gonzalez2017]_
+
+.. math::
+
+    g(n_{\mathrm{x}}, n_{\mathrm{y}}) =
+    \frac{\sum_{s=-a}^a\sum_{t=-b}^b{w(s, t)
+    f(n_{\mathrm{x}} + s, n_{\mathrm{y}} + t)}}
+    {\sum_{s=-a}^a\sum_{t=-b}^b{w(s, t)}},
+
+where :math:`a = (m - 1)/2` and :math:`b = (n - 1)/2`. The kernel :math:`w`, a
+:class:`~kikuchipy.util.kernel.Kernel` object, can be plotted:
+
+.. code-block:: python
+
+    >>> w = kp.util.Kernel(kernel="gaussian", kernel_size=(3, 3), std=1)
+    >>> w.plot(cmap="inferno")
+
+.. _fig-averaging-kernel:
+
+.. figure:: _static/image/pattern_processing/kernel_gaussian_std1.png
+    :align: center
+    :width: 50%
+
+    A Gaussian averaging kernel with :math:`\sigma` = 1 and the origin in the
+    kernel centre.
+
+Any 1D or 2D kernel with desired coefficients can be used. This custom kernel
+can be passed to the ``kernel`` parameter in
+:meth:`~kikuchipy.signals.ebsd.EBSD.average_neighbour_patterns` or
+:class:`~kikuchipy.util.kernel.Kernel` as a :class:`numpy.ndarray` or
+:class:`dask.array.Array`. Additionally, any kernel listed in
+:func:`scipy.signal.windows.get_window` passed as a string via ``kernel`` with
+the necessary parameters as keyword arguments (like ``std=1`` for
+``kernel="gaussian"``) can be used. To demonstrate the creation and use of an
+asymmetrical circular kernel:
+
+.. code-block:: python
+
+    >>> w = kp.util.Kernel(kernel="rectangular", kernel_size=(5, 4))
+    >>> w
+    rectangular, (5, 4)
+    >>> w.coefficients
+    array([[1., 1., 1., 1.],
+       [1., 1., 1., 1.],
+       [1., 1., 1., 1.],
+       [1., 1., 1., 1.],
+       [1., 1., 1., 1.]])
+    >>> w.make_circular()
+    >>> w
+    circular, (5, 4)
+    >>> s.average_neighbour_patterns(w)
+    >>> w.plot()
+
+.. figure:: _static/image/pattern_processing/kernel_circular_54.png
+    :align: center
+    :width: 50%
+
+    A circular averaging kernel. Note the location of the origin (0, 0).
 
 .. note::
 

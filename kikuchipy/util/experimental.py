@@ -299,7 +299,7 @@ def _average_neighbour_patterns_chunk(
 
 def normalised_correlation_coefficient(pattern, template, zero_normalised=True):
     """Calculate the normalised or zero-normalised correlation coefficient
-    between a pattern and a template following [Gonzalez2008]_.
+    between a pattern and a template following [Gonzalez2017]_.
 
     Parameters
     ----------
@@ -318,8 +318,8 @@ def normalised_correlation_coefficient(pattern, template, zero_normalised=True):
 
     References
     ----------
-    .. [Gonzalez2008] Gonzalez, Rafael C, Woods, Richard E: Digital Image\
-        Processing, 3rd edition, Pearson Education, 954, 2008.
+    .. [Gonzalez2017] R. C. Gonzalez, R. E. Woods, "Digital Image\
+        Processing," 4th edition, Pearson Education Limited, 2017.
 
     """
 

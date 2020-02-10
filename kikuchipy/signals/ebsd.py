@@ -48,7 +48,7 @@ class EBSD(Signal2D):
     _lazy = False
 
     def __init__(self, *args, **kwargs):
-        """Create an :class:`~kikuchipy.signals.ebsd.EBSD` object from a
+        """Create an :class:`~kikuchipy.signals.EBSD` object from a
         :class:`hyperspy.signals.Signal2D` or a :class:`numpy.ndarray`.
 
         """
@@ -123,7 +123,7 @@ class EBSD(Signal2D):
             Sample tilt angle from horizontal in degrees.
         scan_time : float, optional
             Scan time in s.
-        static_background : :class:`numpy.ndarray`, optional
+        static_background : numpy.ndarray, optional
             Static background pattern.
         version : str, optional
             Version of software used to collect patterns.
@@ -225,8 +225,7 @@ class EBSD(Signal2D):
             Phase formula, e.g. 'Fe2' or 'Ni'.
         info : str, optional
             Whatever phase info the user finds relevant.
-        lattice_constants : :class:`numpy.ndarray` or list of\
-                floats, optional
+        lattice_constants : numpy.ndarray or list of floats, optional
             Six lattice constants a, b, c, alpha, beta, gamma.
         laue_group : str, optional
             Phase Laue group.
@@ -364,8 +363,7 @@ class EBSD(Signal2D):
         relative : bool, optional
             Keep relative intensities between patterns (default is
             ``True``).
-        static_bg : :class:`numpy.ndarray`,\
-                :class:`dask.array.Array`, or None, optional
+        static_bg : numpy.ndarray, dask.array.Array, or None, optional
             Static background pattern. If not passed we try to read it
             from the signal metadata.
 
@@ -480,7 +478,7 @@ class EBSD(Signal2D):
         operation : 'subtract' or 'divide', optional
             Subtract (default) or divide by dynamic background pattern.
         sigma : int, float, or None, optional
-            Standard deviation of the gaussian kernel. If None
+            Standard deviation of the Gaussian kernel. If None
             (default), a deviation of pattern width/30 is chosen.
 
         See Also
@@ -530,8 +528,7 @@ class EBSD(Signal2D):
         :class:`numpy.dtype` range specified by ``dtype_out`` keeping
         relative intensities or not.
 
-        This method makes use of
-        :func:`skimage.exposure.rescale_intensity`.
+        This method uses :func:`skimage.exposure.rescale_intensity`.
 
         Parameters
         ----------
@@ -544,6 +541,7 @@ class EBSD(Signal2D):
 
         See Also
         --------
+        :func:`skimage.exposure.rescale_intensity`
         adaptive_histogram_equalization
 
         Examples
@@ -604,8 +602,7 @@ class EBSD(Signal2D):
         """Local contrast enhancement inplace with adaptive histogram
         equalization.
 
-        This method makes use of
-        :func:`skimage.exposure.equalize_adapthist`.
+        This method uses :func:`skimage.exposure.equalize_adapthist`.
 
         Parameters
         ----------
@@ -697,22 +694,26 @@ class EBSD(Signal2D):
         All patterns are averaged with the same kernel. Map borders are
         extended with zeros. The method operates inplace.
 
+        Averaging is accomplished by correlating the kernel with the
+        extended array of patterns using :func:`scipy.ndimage.correlate`.
+
         Parameters
         ----------
-        kernel : :class:`kikuchipy.util.kernel.Kernel`, 'circular',
-                'rectangular', 'gaussian', str, :class:`numpy.ndarray`, or
-                :class:`dask.Array`, optional
+        kernel : kikuchipy.util.kernel.Kernel, 'circular', 'rectangular',\
+                'gaussian', str, numpy.ndarray, or dask.array.Array,\
+                optional
             Averaging kernel. Available types are listed in
             :func:`scipy.signal.windows.get_window`, in addition to a
             circular kernel (default) filled with ones in which corner
             coefficients are set to zero. A kernel element is considered to
-            be in a corner if its radial distance to the origin is shorter
-            or equal to the half width of the kernel's longest axis. A 1D
-            or 2D :class:`numpy.ndarray`, :class:`dask.Array` or
-            :class:`kikuchipy.util.kernel.Kernel` can also be passed.
+            be in a corner if its radial distance to the origin (kernel
+            centre) is shorter or equal to the half width of the kernel's
+            longest axis. A 1D or 2D :class:`numpy.ndarray`,
+            :class:`dask.array.Array` or
+            :class:`~kikuchipy.util.kernel.Kernel` can also be passed.
         kernel_size : sequence of ints, optional
             Size of averaging kernel. Not used if a custom kernel or
-            :class:`kikuchipy.util.kernel.Kernel` object is passed to
+            :class:`~kikuchipy.util.kernel.Kernel` object is passed to
             `kernel`. This can be either 1D or 2D, and can be asymmetrical.
             Default is (3, 3).
         **kwargs :
@@ -722,9 +723,9 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        kikuchipy.util.kernel.Kernel
-        scipy.signal.windows.get_window
-        scipy.ndimage.correlate
+        :class:`~kikuchipy.util.kernel.Kernel`
+        :func:`scipy.signal.windows.get_window`
+        :func:`scipy.ndimage.correlate`
 
         Examples
         --------
@@ -752,14 +753,14 @@ class EBSD(Signal2D):
 
         A kernel object can also be passed
 
-        >>> kernel = kp.util.kernel.Kernel(kernel="gaussian", std=2)
-        >>> kernel
+        >>> w = kp.util.Kernel(kernel="gaussian", std=2)
+        >>> w
         gaussian, (3, 3)
-        >>> kernel.coefficients
+        >>> w.coefficients
         array([[0.77880078, 0.8824969 , 0.77880078],
                [0.8824969 , 1.        , 0.8824969 ],
                [0.77880078, 0.8824969 , 0.77880078]])
-        >>> s2.average_neighbour_patterns(kernel)
+        >>> s2.average_neighbour_patterns(w)
         >>> s2.data[:, :, 0, 0]
         array([[ 3.34395304,  3.87516243,  4.87516264,  5.40637176],
                [ 5.46879047,  5.99999985,  6.99999991,  7.53120901],
@@ -768,18 +769,14 @@ class EBSD(Signal2D):
 
         This kernel can subsequently be plotted and saved
 
-        >>> figure, image, colorbar = kernel.plot()
+        >>> figure, image, colorbar = w.plot()
         >>> figure.savefig('my_kernel.png')
 
-        See Also
-        --------
-        kikuchipy.util.kernel.Kernel
-
         """
-        if isinstance(kernel, kp.util.kernel.Kernel) and kernel.is_valid():
+        if isinstance(kernel, kp.util.Kernel) and kernel.is_valid():
             averaging_kernel = copy.copy(kernel)
         else:
-            averaging_kernel = kp.util.kernel.Kernel(
+            averaging_kernel = kp.util.Kernel(
                 kernel=kernel, kernel_size=kernel_size, **kwargs,
             )
         averaging_kernel.scan_compatible(self)
@@ -864,7 +861,7 @@ class EBSD(Signal2D):
         adjustable region of interest (ROI).
 
         Adapted from
-        meth:`pyxem.signals.diffraction2d.Diffraction2D.plot_interactive_virtual_image`.
+        :meth:`pyxem.signals.diffraction2d.Diffraction2D.plot_interactive_virtual_image`.
 
         Parameters
         ----------
@@ -1010,8 +1007,8 @@ class EBSD(Signal2D):
 
         Returns
         -------
-        s_model : :class:`~kikuchipy.signals.ebsd.EBSD` or \
-                :class:`~kikuchipy.signals.ebsd.LazyEBSD`
+        s_model : kikuchipy.signals.ebsd.EBSD or \
+                kikuchipy.signals.ebsd.LazyEBSD
 
         """
 
@@ -1081,12 +1078,12 @@ class EBSD(Signal2D):
             return s_out
 
     def as_lazy(self, *args, **kwargs):
-        """Create a :class:`~kikuchipy.signals.ebsd.LazyEBSD` object
-        from an :class:`~kikuchipy.signals.ebsd.EBSD` object.
+        """Create a :class:`~kikuchipy.signals.ebsd.LazyEBSD` object from an
+        :class:`~kikuchipy.signals.ebsd.EBSD` object.
 
         Returns
         -------
-        lazy_signal : :class:`~kikuchipy.signals.ebsd.LazyEBSD`
+        lazy_signal : kikuchipy.signals.ebsd.LazyEBSD
             Lazy signal.
 
         """
@@ -1144,8 +1141,7 @@ class LazyEBSD(EBSD, LazySignal2D):
             ``components``. If ``int``, rebuilds signal from
             ``components`` in range 0-given ``int``. If list of ints,
             rebuilds signal from only ``components`` in given list.
-        dtype_learn : :class:`numpy.float16`,\
-                :class:`numpy.float32` or :class:`numpy.float64`,\
+        dtype_learn : numpy.float16, numpy.float32, or numpy.float64,\
                 optional
             Data type to set learning results to (default is
             :class:`numpy.float16`) before multiplication.

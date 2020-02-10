@@ -624,7 +624,7 @@ class TestAverageNeighbourPatterns:
         assert dummy_signal.data.dtype == answer.dtype
 
     def test_average_neighbour_patterns_pass_kernel(self, dummy_signal):
-        k = kp.util.kernel.Kernel()
+        k = kp.util.Kernel()
         dummy_signal.average_neighbour_patterns(k)
         # fmt: off
         answer = np.array(

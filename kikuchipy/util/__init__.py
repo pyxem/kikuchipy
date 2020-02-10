@@ -22,6 +22,6 @@ from kikuchipy.util import (
     experimental,
     general,
     io,
-    kernel,
     phase,
 )
+from kikuchipy.util.kernel import Kernel

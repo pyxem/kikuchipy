@@ -18,7 +18,6 @@
 
 import os
 
-import dask.array as da
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -72,9 +71,9 @@ class TestKernel:
         answer_circular,
     ):
         if kwargs is None:
-            k = kp.util.kernel.Kernel(kernel=kernel, kernel_size=kernel_size)
+            k = kp.util.Kernel(kernel=kernel, kernel_size=kernel_size)
         else:
-            k = kp.util.kernel.Kernel(
+            k = kp.util.Kernel(
                 kernel=kernel, kernel_size=kernel_size, kwargs=kwargs
             )
 
@@ -87,7 +86,7 @@ class TestKernel:
     def test_init_general_gaussian(self):
         kernel_type = "general_gaussian"
         kernel_size = (5, 5)
-        k = kp.util.kernel.Kernel(
+        k = kp.util.Kernel(
             kernel=kernel_type, kernel_size=kernel_size, p=0.5, std=2,
         )
         assert k.is_valid()
@@ -117,10 +116,10 @@ class TestKernel:
     )
     def test_init_raises_errors(self, kernel, kernel_size, error_type, match):
         with pytest.raises(error_type, match=match):
-            kp.util.kernel.Kernel(kernel=kernel, kernel_size=kernel_size)
+            kp.util.Kernel(kernel=kernel, kernel_size=kernel_size)
 
     def test_representation(self):
-        k = kp.util.kernel.Kernel()
+        k = kp.util.Kernel()
         assert k.__repr__() == f"{k.type}, {k.coefficients.shape}"
 
     def test_is_valid(self):
@@ -128,7 +127,7 @@ class TestKernel:
 
         # Change one attribute at a time and check whether the kernel is valid
         for i in range(5):  # Four attributes to change + one with valid kernel
-            k = kp.util.kernel.Kernel()
+            k = kp.util.Kernel()
 
             valid_kernel = True
             if sum(change_attribute[:4]) == 1:
@@ -165,7 +164,7 @@ class TestKernel:
     def test_make_circular(
         self, kernel, kernel_size, answer_coeff, answer_circular, answer_type
     ):
-        k = kp.util.kernel.Kernel(kernel=kernel, kernel_size=kernel_size)
+        k = kp.util.Kernel(kernel=kernel, kernel_size=kernel_size)
         k.make_circular()
 
         np.testing.assert_array_almost_equal(k.coefficients, answer_coeff)
@@ -177,18 +176,18 @@ class TestKernel:
         [((3,), False), ((3, 3), False), ((3, 4), True),],
     )
     def test_scan_compatible(self, dummy_signal, kernel_size, raises_error):
-        k = kp.util.kernel.Kernel(kernel_size=kernel_size)
+        k = kp.util.Kernel(kernel_size=kernel_size)
         if raises_error:
             with pytest.raises(ValueError, match="Kernel of size .* is "):
                 k.scan_compatible(dummy_signal)
 
     def test_scan_compatible_raises(self):
-        k = kp.util.kernel.Kernel(kernel_size=(3, 4))
+        k = kp.util.Kernel(kernel_size=(3, 4))
         with pytest.raises(AttributeError, match="Scan <class 'int'> must be"):
             k.scan_compatible(1)
 
     def test_scan_compatible_1d_signal_2d_kernel(self, dummy_signal):
-        k = kp.util.kernel.Kernel(kernel_size=(3, 3))
+        k = kp.util.Kernel(kernel_size=(3, 3))
         with pytest.raises(ValueError):
             k.scan_compatible(dummy_signal.inav[:, 0])
 
@@ -201,13 +200,13 @@ class TestKernel:
         ],
     )
     def test_add_axes(self, kernel_size, n_dims, new_shape):
-        k = kp.util.kernel.Kernel(kernel_size=kernel_size)
+        k = kp.util.Kernel(kernel_size=kernel_size)
         k._add_axes(n_dims)
         assert k.is_valid() is False
         assert k.coefficients.shape == new_shape
 
     def test_plot_default_values(self):
-        k = kp.util.kernel.Kernel()
+        k = kp.util.Kernel()
         fig, im, cbar = k.plot()
 
         np.testing.assert_array_almost_equal(
@@ -219,7 +218,7 @@ class TestKernel:
         assert isinstance(cbar, mpl.colorbar.Colorbar)
 
     def test_plot_invalid_kernel(self):
-        k = kp.util.kernel.Kernel()
+        k = kp.util.Kernel()
         k.type = 1
         assert k.is_valid() is False
         with pytest.raises(ValueError, match="Kernel is invalid."):
@@ -235,7 +234,7 @@ class TestKernel:
     def test_plot(
         self, kernel, answer_coeff, cmap, textcolors, cmap_label, tmp_path
     ):
-        k = kp.util.kernel.Kernel(kernel=kernel)
+        k = kp.util.Kernel(kernel=kernel)
 
         fig, im, cbar = k.plot(
             cmap=cmap, textcolors=textcolors, cmap_label=cmap_label
@@ -254,7 +253,7 @@ class TestKernel:
         fig_read = plt.imread(fname)
 
     def test_plot_one_axis(self):
-        k = kp.util.kernel.Kernel(kernel="gaussian", kernel_size=(5,), std=2)
+        k = kp.util.Kernel(kernel="gaussian", kernel_size=(5,), std=2)
         fig, im, cbar = k.plot()
 
         # Compare to global kernel GAUSS5_STD2

@@ -384,11 +384,11 @@ def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
 
     Returns
     -------
-    md : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    md : hyperspy.misc.utils.DictionaryTreeBrowser
         KikuchiPy ``metadata`` elements available in file.
-    omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    omd : hyperspy.misc.utils.DictionaryTreeBrowser
         All metadata available in file.
-    scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    scan_size : hyperspy.misc.utils.DictionaryTreeBrowser
         Scan, pattern, step and detector pixel size available in file.
     """
 
@@ -428,11 +428,11 @@ def kikuchipyheader2dicts(scan_group, md, lazy=False):
 
     Returns
     -------
-    md : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    md : hyperspy.misc.utils.DictionaryTreeBrowser
         KikuchiPy ``metadata`` elements available in KikuchiPy file.
-    omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    omd : hyperspy.misc.utils.DictionaryTreeBrowser
         All metadata available in KikuchiPy file.
-    scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    scan_size : hyperspy.misc.utils.DictionaryTreeBrowser
         Scan, pattern, step and detector pixel size available in
         KikuchiPy file.
     """
@@ -480,11 +480,11 @@ def edaxheader2dicts(scan_group, md):
 
     Returns
     -------
-    md : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    md : hyperspy.misc.utils.DictionaryTreeBrowser
         KikuchiPy ``metadata`` elements available in EDAX file.
-    omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    omd : hyperspy.misc.utils.DictionaryTreeBrowser
         All metadata available in EDAX file.
-    scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    scan_size : hyperspy.misc.utils.DictionaryTreeBrowser
         Scan, pattern, step and detector pixel size available in EDAX
         file.
     """
@@ -557,11 +557,11 @@ def brukerheader2dicts(scan_group, md):
 
     Returns
     -------
-    md : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    md : hyperspy.misc.utils.DictionaryTreeBrowser
         KikuchiPy ``metadata`` elements available in Bruker file.
-    omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    omd : hyperspy.misc.utils.DictionaryTreeBrowser
         All metadata available in Bruker file.
-    scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    scan_size : hyperspy.misc.utils.DictionaryTreeBrowser
         Scan, pattern, step and detector pixel size available in Bruker
         file.
     """
