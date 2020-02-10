@@ -65,7 +65,7 @@ install:
 
 script:
   - export MPLBACKEND=Agg
-  - pytest --cov=kikuchipy --pyargs kikuchipy
+  - python -m pytest --cov=kikuchipy --pyargs kikuchipy
 
 after_success:
   - coveralls
