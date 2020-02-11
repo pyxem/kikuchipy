@@ -311,7 +311,11 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
 
     # Get data from group
     if lazy:
-        data = da.from_array(data_dset, chunks=data_dset.chunks)
+        if data_dset.chunks is None:
+            chunks = "auto"
+        else:
+            chunks = data_dset.chunks
+        data = da.from_array(data_dset, chunks=chunks)
     else:
         data = np.asanyarray(data_dset)
 
