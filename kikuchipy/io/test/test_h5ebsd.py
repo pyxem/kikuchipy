@@ -30,6 +30,9 @@ import kikuchipy as kp
 
 DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy/patterns.h5")
+KIKUCHIPY_FILE_NO_CHUNKS = os.path.join(
+    DIR_PATH, "../../data/kikuchipy/patterns_nochunks.h5"
+)
 EDAX_FILE = os.path.join(DIR_PATH, "../../data/edax/patterns.h5")
 BRUKER_FILE = os.path.join(DIR_PATH, "../../data/bruker/patterns.h5")
 BG_FILE = os.path.join(
@@ -327,3 +330,14 @@ class Testh5ebsd:
             group = f.create_group(name="a_group")
             with pytest.warns(UserWarning, match="The hdf5 writer could not"):
                 dict2h5ebsdgroup(dictionary, group)
+
+    def test_read_lazily_no_chunks(self):
+        # First, make sure the data pattern dataset is not actually chunked
+        f = h5py.File(KIKUCHIPY_FILE_NO_CHUNKS, mode="r")
+        data_dset = f["Scan 1/EBSD/Data/patterns"]
+        assert data_dset.chunks is None
+        f.close()
+
+        # Then, make sure it can be read correctly
+        s = kp.load(KIKUCHIPY_FILE_NO_CHUNKS, lazy=True)
+        assert s.data.chunks == ((60,), (60,))
