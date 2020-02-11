@@ -7,7 +7,7 @@
 import sys
 from datetime import datetime
 
-from kikuchipy import release
+from kikuchipy import release as kp_release
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -16,9 +16,10 @@ sys.path.append("../")
 
 # Project information
 project = "KikuchiPy"
-copyright = "2019-" + str(datetime.now().year) + ", " + release.author + "."
-author = release.author
-release = release.version
+copyright = "2019-" + str(datetime.now().year) + ", " + kp_release.author + "."
+author = kp_release.author
+version = kp_release.version
+release = kp_release.version
 
 master_doc = "index"
 
@@ -77,3 +78,8 @@ pygments_style = "sphinx"
 # Logo
 html_logo = "_static/icon/icon_v0.1.0.svg"
 html_favicon = "_static/icon/icon_v0.1.0.png"
+
+# Read the Docs theme options
+html_theme_options = {
+    "display_version": True,
+}
