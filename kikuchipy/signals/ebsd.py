@@ -423,7 +423,7 @@ class EBSD(Signal2D):
                 f"Pattern {pat_shape} and static background {bg_shape} shapes "
                 "are not identical."
             )
-        dtype = np.int16
+        dtype = np.float32
         static_bg = static_bg.astype(dtype)
 
         # Get min./max. input patterns intensity after correction
@@ -494,7 +494,7 @@ class EBSD(Signal2D):
         """
 
         dtype_out = self.data.dtype.type
-        dtype = np.int16
+        dtype = np.float32
 
         # Create dask array of signal patterns and do processing on this
         dask_array = kp.util.dask._get_dask_array(signal=self, dtype=dtype)
