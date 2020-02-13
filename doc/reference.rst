@@ -35,6 +35,10 @@ Experimental utilities
     :members:
     :undoc-members:
 
+.. autoclass:: kikuchipy.util.kernel.Kernel
+    :members:
+    :undoc-members:
+
 Input/output utilities
 ----------------------
 .. automodule:: kikuchipy.io._io

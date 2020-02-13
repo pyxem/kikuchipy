@@ -24,3 +24,4 @@ from kikuchipy.util import (
     io,
     phase,
 )
+from kikuchipy.util.kernel import Kernel

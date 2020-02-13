@@ -18,17 +18,17 @@
 
 import dask.array as da
 import numpy as np
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter, correlate
 from skimage.exposure import equalize_adapthist
 from skimage.util.dtype import dtype_range
 
 
 def _rescale_pattern(pattern, in_range=None, out_range=None, dtype_out=None):
     """Rescale pattern intensities inplace to desired
-    :class:`numpy.dtype` range specified by ``dtype_out`` keeping
-    relative intensities or not.
+    :class:`numpy.dtype` range specified by ``dtype_out`` keeping relative
+    intensities or not.
 
-    This method makes use of :func:`skimage.exposure.rescale_intensity`.
+    This method is based upon :func:`skimage.exposure.rescale_intensity`.
 
     Parameters
     ----------
@@ -36,18 +36,18 @@ def _rescale_pattern(pattern, in_range=None, out_range=None, dtype_out=None):
         Pattern to rescale.
     in_range, out_range : tuple of int or float, optional
         Min./max. intensity values of input and output pattern. If None,
-        (default) `in_range` is set to pattern min./max. If None
-        (default), `out_range` is set to `dtype_out` min./max
-        according to `skimage.util.dtype.dtype_range`, with min. equal
-        to zero.
+        (default) `in_range` is set to pattern min./max. If None (default),
+        `out_range` is set to `dtype_out` min./max according to
+        :func:`skimage.util.dtype.dtype_range`, with min. equal to zero.
     dtype_out : np.dtype, optional
-        Data type of rescaled pattern. If None (default), it is set to
-        the same data type as the input pattern.
+        Data type of rescaled pattern. If None (default), it is set to the
+        same data type as the input pattern.
 
     Returns
     -------
     rescaled_pattern : da.Array
         Rescaled pattern.
+
     """
 
     if dtype_out is None:
@@ -74,6 +74,7 @@ def _rescale_pattern(pattern, in_range=None, out_range=None, dtype_out=None):
         omin, omax = out_range
 
     rescaled_pattern = (pattern - imin) / float(imax - imin)
+
     return (rescaled_pattern * (omax - omin) + omin).astype(dtype_out)
 
 
@@ -89,19 +90,20 @@ def _rescale_pattern_chunk(
     patterns : da.Array
         Patterns to rescale.
     in_range, out_range : tuple of int or float, optional
-        Min./max. intensity values of input and output pattern. If None,
-        (default) `in_range` is set to pattern min./max. If None
-        (default), `out_range` is set to `dtype_out` min./max
-        according to `skimage.util.dtype_out.dtype_range`, with min. equal
-        to zero.
+        Min./max. intensity values of input and output pattern. If None
+        (default), `in_range` is set to pattern min./max. If None
+        (default), `out_range` is set to `dtype_out` min./max according to
+        :func:`skimage.util.dtype_out.dtype_range`, with min. equal to
+        zero.
     dtype_out : np.dtype, optional
-        Data type of rescaled patterns. If None (default), it is set to
-        the same data type as the input patterns.
+        Data type of rescaled patterns. If None (default), it is set to the
+        same data type as the input patterns.
 
     Returns
     -------
     rescaled_patterns : da.Array
         Rescaled patterns.
+
     """
 
     rescaled_patterns = np.empty_like(patterns, dtype=dtype_out)
@@ -112,6 +114,7 @@ def _rescale_pattern_chunk(
             out_range=out_range,
             dtype_out=dtype_out,
         )
+
     return rescaled_patterns
 
 
@@ -119,23 +122,23 @@ def _static_background_correction_chunk(
     patterns, static_bg, operation="subtract", in_range=None, dtype_out=None
 ):
     """Correct static background in patterns in chunk by subtracting or
-    dividing by a static background pattern. Returned pattern
-    intensities are rescaled keeping relative intensities or not and
-    stretched to fill the input data type range.
+    dividing by a static background pattern. Returned pattern intensities
+    are rescaled keeping relative intensities or not and stretched to fill
+    the input data type range.
 
     Parameters
     ----------
     patterns : da.Array
         Patterns to correct static background in.
     static_bg : np.ndarray or da.Array
-        Static background pattern. If not passed we try to read it
-        from the signal metadata.
+        Static background pattern. If not passed we try to read it from the
+        signal metadata.
     operation : 'subtract' or 'divide', optional
         Subtract (default) or divide by static background pattern.
     in_range : tuple of int or float, optional
-        Min./max. intensity values of input and output patterns. If
-        None, (default) `in_range` is set to pattern min./max, losing
-        relative intensities between patterns.
+        Min./max. intensity values of input and output patterns. If None,
+        (default) `in_range` is set to pattern min./max, losing relative
+        intensities between patterns.
     dtype_out : np.dtype, optional
         Data type of corrected patterns. If None (default), it is set to
         the same data type as the input patterns.
@@ -144,6 +147,7 @@ def _static_background_correction_chunk(
     -------
     corrected_patterns : da.Array
         Static background corrected patterns.
+
     """
 
     if dtype_out is None:
@@ -165,11 +169,11 @@ def _static_background_correction_chunk(
 def _dynamic_background_correction_chunk(
     patterns, sigma, operation="subtract", dtype_out=None
 ):
-    """Correct dynamic background in chunk of patterns by subtracting
-    or dividing by a blurred version of each pattern.
+    """Correct dynamic background in chunk of patterns by subtracting or
+    dividing by a blurred version of each pattern.
 
-    Returned pattern intensities are stretched to fill the input data
-    type range.
+    Returned pattern intensities are stretched to fill the input data type
+    range.
 
     Parameters
     ----------
@@ -180,13 +184,14 @@ def _dynamic_background_correction_chunk(
     operation : 'subtract' or 'divide', optional
         Subtract (default) or divide by dynamic background pattern.
     dtype_out : numpy.dtype, optional
-        Data type of corrected patterns. If ``None`` (default), it is
-        set to the same data type as the input patterns.
+        Data type of corrected patterns. If ``None`` (default), it is set
+        to the same data type as the input patterns.
 
     Returns
     -------
     corrected_patterns : dask.array.Array
         Dynamic background corrected patterns.
+
     """
 
     if dtype_out is None:
@@ -213,9 +218,7 @@ def _adaptive_histogram_equalization_chunk(
     """Local contrast enhancement on chunk of patterns with adaptive
     histogram equalization.
 
-    This method makes use of
-    :func:`skimage.exposure.equalize_adapthist`.
-
+    This method makes use of :func:`skimage.exposure.equalize_adapthist`.
 
     Parameters
     ----------
@@ -224,16 +227,16 @@ def _adaptive_histogram_equalization_chunk(
     kernel_size : int or list-like
         Shape of contextual regions for adaptive histogram equalization.
     clip_limit : float, optional
-        Clipping limit, normalized between 0 and 1 (higher values give
-        more contrast). Default is 0.
+        Clipping limit, normalized between 0 and 1 (higher values give more
+        contrast). Default is 0.
     nbins : int, optional
-        Number of gray bins for histogram ("data range"), default is
-        128.
+        Number of gray bins for histogram ("data range"), default is 128.
 
     Returns
     -------
     equalized_patterns : dask.array.Array
         Patterns with enhanced contrast.
+
     """
 
     dtype_in = patterns.dtype.type
@@ -248,13 +251,55 @@ def _adaptive_histogram_equalization_chunk(
         equalized_patterns[nav_idx] = _rescale_pattern(
             equalized_pattern, dtype_out=dtype_in
         )
+
     return equalized_patterns
 
 
+def _average_neighbour_patterns_chunk(
+    patterns, kernel_sums, kernel, dtype_out=None
+):
+    """Average a chunk of patterns with its neighbours within a kernel.
+
+    Parameters
+    ----------
+    patterns : dask.array.Array
+        Patterns to average, with some overlap with surrounding chunks.
+    kernel_sums : dask.array.Array
+        Sum of kernel coefficients for each pattern.
+    kernel : numpy.ndarray
+        Averaging kernel.
+    dtype_out : numpy.dtype, optional
+        Data type of averaged patterns. If ``None`` (default), it is set to
+        the same data type as the input patterns.
+
+    Returns
+    -------
+    averaged_patterns : dask.array.Array
+        Averaged patterns.
+
+    """
+
+    if dtype_out is None:
+        dtype_out = patterns.dtype
+
+    # Correlate patterns with kernel
+    correlated_patterns = correlate(
+        patterns.astype(np.float32), weights=kernel, mode="constant", cval=0,
+    )
+
+    # Divide convolved patterns by number of neighbours averaged with
+    averaged_patterns = np.empty_like(correlated_patterns, dtype=dtype_out)
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        averaged_patterns[nav_idx] = (
+            correlated_patterns[nav_idx] / kernel_sums[nav_idx]
+        ).astype(dtype_out)
+
+    return averaged_patterns
+
+
 def normalised_correlation_coefficient(pattern, template, zero_normalised=True):
-    """Calculate the normalised or zero-normalised correlation
-    coefficient between a pattern and a template following
-    [Gonzalez2008]_.
+    """Calculate the normalised or zero-normalised correlation coefficient
+    between a pattern and a template following [Gonzalez2017]_.
 
     Parameters
     ----------
@@ -273,8 +318,9 @@ def normalised_correlation_coefficient(pattern, template, zero_normalised=True):
 
     References
     ----------
-    .. [Gonzalez2008] Gonzalez, Rafael C, Woods, Richard E: Digital\
-        Image Processing, 3rd edition, Pearson Education, 954, 2008.
+    .. [Gonzalez2017] R. C. Gonzalez, R. E. Woods, "Digital Image\
+        Processing," 4th edition, Pearson Education Limited, 2017.
+
     """
 
     pattern = pattern.astype(np.float32)
@@ -285,4 +331,5 @@ def normalised_correlation_coefficient(pattern, template, zero_normalised=True):
     coefficient = np.sum(pattern * template) / np.sqrt(
         np.sum(pattern ** 2) * np.sum(template ** 2)
     )
+
     return coefficient

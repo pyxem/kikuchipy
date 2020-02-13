@@ -161,7 +161,7 @@ class TestEBSD:
         assert dx.offset, dy.offset == -centre
 
 
-class TestIntensityCorrection:
+class TestStaticBackgroundCorrection:
     @pytest.mark.parametrize(
         "operation, relative",
         [
@@ -214,19 +214,6 @@ class TestIntensityCorrection:
             # fmt: off
             answer = np.array(
                 [
-                    127, 191, 127, 223, 255, 159, 191, 31, 0, 229, 223, 204,
-                    223, 0, 255, 255, 223, 255, 0, 63, 50, 106, 56, 191, 63, 63,
-                    255, 196, 0, 167, 182, 157, 255, 255, 36, 60, 113, 0, 255,
-                    0, 47, 0, 70, 70, 236, 174, 163, 0, 109, 255, 191, 191, 163,
-                    0, 153, 47, 229, 143, 255, 0, 47, 47, 0, 113, 255, 181, 113,
-                    226, 0, 56, 255, 75, 132, 51, 10, 102, 119, 102, 0, 76, 255
-                ]
-            )
-            # fmt: on
-        else:  # operation == 'divide' and relative is False
-            # fmt: off
-            answer = np.array(
-                [
                     85, 127, 85, 148, 170, 106, 127, 21, 0, 153, 148, 136, 148,
                     0, 170, 170, 148, 170, 0, 63, 50, 106, 56, 191, 63, 63, 255,
                     136, 21, 118, 127, 113, 170, 170, 42, 56, 68, 0, 153, 0, 28,
@@ -236,8 +223,21 @@ class TestIntensityCorrection:
                 ]
             )
             # fmt: on
+        else:  # operation == 'divide' and relative is False
+            # fmt: off
+            answer = np.array(
+                [
+                    127, 191, 127, 223, 255, 159, 191, 31, 0, 229, 223, 204,
+                    223, 0, 255, 255, 223, 255, 0, 63, 50, 106, 56, 191, 63, 63,
+                    255, 196, 0, 167, 182, 157, 255, 255, 36, 60, 113, 0, 255,
+                    0, 47, 0, 70, 70, 236, 174, 163, 0, 109, 255, 191, 191, 163,
+                    0, 153, 47, 229, 143, 255, 0, 47, 47, 0, 113, 255, 181, 113,
+                    226, 0, 56, 255, 75, 132, 51, 10, 102, 119, 102, 0, 76, 255
+                ]
+            )
+            # fmt: on
         answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
-        assert dummy_signal.data.all() == answer.all()
+        np.testing.assert_array_equal(dummy_signal.data, answer)
 
     @pytest.mark.parametrize(
         "static_bg, error, match",
@@ -272,12 +272,83 @@ class TestIntensityCorrection:
         dummy_signal.static_background_correction(static_bg=dummy_background)
         assert isinstance(dummy_signal.data, da.Array)
 
+
+class TestDynamicBackgroundCorrection:
     @pytest.mark.parametrize(
-        "operation, sigma",
-        [("subtract", 2), ("subtract", 3), ("divide", 2), ("divide", 3)],
+        "operation, sigma, answer",
+        [
+            (
+                "subtract",
+                2,
+                # fmt: off
+                np.array(
+                    [
+                        182, 218, 218, 255, 218, 182, 218, 36, 0, 255, 191, 223,
+                        191, 0, 223, 223, 223, 159, 0, 85, 85, 141, 56, 255, 85,
+                        85, 255, 255, 0, 218, 182, 109, 255, 255, 36, 36, 141,
+                        28, 255, 28, 56, 0, 85, 85, 141, 255, 191, 0, 127, 223,
+                        223, 223, 191, 0, 170, 42, 255, 127, 170, 0, 42, 42, 0,
+                        141, 255, 226, 113, 170, 0, 56, 255, 56, 255, 85, 42,
+                        170, 127, 127, 0, 127, 255
+                    ],
+                ),
+                # fmt: on
+            ),
+            (
+                "subtract",
+                3,
+                # fmt: off
+                np.array(
+                    [
+                        182, 218, 218, 255, 218, 182, 218, 36, 0, 255, 191, 223,
+                        191, 0, 223, 223, 223, 159, 0, 85, 85, 141, 56, 255, 85,
+                        85, 255, 255, 0, 218, 182, 109, 255, 255, 36, 36, 141,
+                        28, 255, 28, 56, 0, 85, 85, 141, 255, 191, 0, 127, 223,
+                        223, 223, 191, 0, 170, 42, 255, 127, 170, 0, 42, 42, 0,
+                        141, 255, 226, 113, 170, 0, 56, 255, 56, 255, 72, 36,
+                        145, 109, 109, 0, 109, 218
+                    ],
+                ),
+                # fmt: on
+            ),
+            (
+                "divide",
+                2,
+                # fmt: off
+                np.array(
+                    [
+                        182, 218, 242, 255, 218, 182, 218, 36, 0, 255, 198, 226,
+                        198, 0, 226, 226, 237, 170, 0, 85, 85, 141, 56, 255, 85,
+                        85, 255, 255, 0, 218, 182, 109, 255, 255, 36, 36, 226,
+                        0, 255, 0, 56, 0, 113, 113, 141, 255, 191, 0, 127, 223,
+                        223, 223, 191, 0, 170, 42, 255, 127, 170, 0, 42, 42, 0,
+                        141, 255, 226, 113, 170, 0, 56, 255, 56, 255, 98, 49,
+                        196, 147, 137, 0, 147, 255
+                    ],
+                ),
+                # fmt: on
+            ),
+            (
+                "divide",
+                3,
+                # fmt: off
+                np.array(
+                    [
+                        182, 218, 242, 255, 218, 182, 218, 36, 0, 255, 198, 226,
+                        198, 0, 226, 226, 237, 170, 0, 85, 85, 141, 56, 255, 85,
+                        85, 255, 255, 0, 218, 182, 109, 255, 255, 36, 36, 226,
+                        0, 255, 0, 56, 0, 113, 113, 141, 255, 191, 0, 127, 223,
+                        223, 223, 191, 0, 170, 42, 255, 127, 170, 0, 42, 42, 0,
+                        141, 255, 226, 113, 170, 0, 56, 255, 56, 255, 72, 36,
+                        145, 109, 101, 0, 109, 189
+                    ],
+                ),
+                # fmt: on
+            ),
+        ],
     )
     def test_dynamic_background_correction(
-        self, dummy_signal, operation, sigma
+        self, dummy_signal, operation, sigma, answer
     ):
         """This test uses a hard-coded answer. If specifically
         improvements to the intensities produced by this correction is
@@ -288,62 +359,8 @@ class TestIntensityCorrection:
         dummy_signal.dynamic_background_correction(
             operation=operation, sigma=sigma
         )
-        if operation == "subtract" and sigma == 2:
-            # fmt: off
-            answer = np.array(
-                [
-                    182, 218, 182, 255, 218, 182, 218, 36, 0, 255, 191, 223,
-                    223, 0, 223, 255, 223, 191, 0, 85, 85, 141, 56, 255, 85, 85,
-                    255, 255, 0, 218, 182, 109, 255, 255, 36, 36, 113, 0, 255,
-                    0, 28, 0, 56, 56, 141, 255, 191, 0, 127, 223, 223, 223, 191,
-                    0, 170, 42, 255, 127, 170, 0, 42, 42, 0, 141, 255, 226, 113,
-                    170, 0, 56, 255, 56, 255, 72, 36, 145, 109, 145, 0, 109, 255
-                ]
-            )
-            # fmt: on
-        elif operation == "subtract" and sigma == 3:
-            # fmt: off
-            answer = np.array(
-                [
-                    182, 218, 218, 255, 218, 182, 218, 36, 0, 255, 191, 223,
-                    191, 0, 223, 223, 223, 159, 0, 85, 85, 141, 56, 255, 85, 85,
-                    255, 255, 0, 218, 182, 109, 255, 255, 36, 36, 141, 28, 255,
-                    28, 56, 0, 85, 85, 141, 255, 191, 0, 127, 223, 223, 223,
-                    191, 0, 170, 42, 255, 127, 170, 0, 42, 42, 0, 141, 255, 226,
-                    113, 170, 0, 56, 255, 56, 255, 72, 36, 145, 109, 109, 0,
-                    109, 218
-                ]
-            )
-            # fmt: on
-        elif operation == "divide" and sigma == 2:
-            # fmt: off
-            answer = np.array(
-                [
-                    182, 218, 182, 255, 218, 182, 218, 36, 0, 191, 148, 170,
-                    223, 0, 170, 255, 223, 191, 0, 85, 85, 141, 56, 255, 85, 85,
-                    255, 255, 0, 218, 182, 109, 255, 255, 36, 36, 113, 0, 255,
-                    0, 28, 0, 56, 56, 141, 255, 191, 0, 127, 223, 223, 223, 191,
-                    0, 170, 42, 255, 127, 170, 0, 42, 42, 0, 141, 255, 226, 113,
-                    170, 0, 56, 255, 56, 255, 72, 36, 145, 109, 145, 0, 109, 255
-                ],
-            )
-            # fmt: on
-        else:  # operation == 'divide' and sigma == 3:
-            # fmt: off
-            answer = np.array(
-                [
-                    182, 218, 242, 255, 218, 182, 218, 36, 0, 255, 198, 226,
-                    198, 0, 226, 226, 237, 170, 0, 85, 85, 141, 56, 255, 85, 85,
-                    255, 255, 0, 218, 182, 109, 255, 255, 36, 36, 226, 0, 255,
-                    0, 56, 0, 113, 113, 141, 255, 191, 0, 127, 223, 223, 223,
-                    191, 0, 170, 42, 255, 127, 170, 0, 42, 42, 0, 141, 255, 226,
-                    113, 170, 0, 56, 255, 56, 255, 72, 36, 145, 109, 101, 0,
-                    109, 189
-                ]
-            )
-            # fmt: on
-        answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
-        assert dummy_signal.data.all() == answer.all()
+        answer = answer.reshape((3,) * 4).astype(np.uint8)
+        np.testing.assert_array_equal(dummy_signal.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
 
     def test_lazy_dynamic_background_correction(self, dummy_signal):
@@ -351,11 +368,103 @@ class TestIntensityCorrection:
         dummy_signal.dynamic_background_correction()
         assert isinstance(dummy_signal.data, da.Array)
 
+
+class TestRescaleIntensities:
     @pytest.mark.parametrize(
-        "relative, dtype_out",
-        [(True, None), (True, np.float32), (False, None), (False, np.float32)],
+        "relative, dtype_out, answer",
+        [
+            (
+                True,
+                None,
+                # fmt: off
+                np.array(
+                    [
+                        141, 170, 141, 198, 170, 141, 170, 28, 0, 255, 198, 226,
+                        198, 0, 226, 226, 198, 170, 0, 85, 85, 141, 56, 255, 85,
+                        85, 255, 226, 28, 198, 170, 113, 226, 226, 56, 56, 113,
+                        0, 255, 0, 28, 0, 56, 56, 141, 226, 170, 0, 113, 198,
+                        198, 198, 170, 0, 113, 28, 170, 85, 113, 0, 28, 28, 0,
+                        141, 255, 226, 113, 170, 0, 56, 255, 56, 255, 113, 85,
+                        170, 141, 170, 56, 141, 255
+                    ],
+                    dtype=np.uint8,
+                ),
+                # fmt: on
+            ),
+            (
+                True,
+                np.float32,
+                # fmt: off
+                np.array(
+                    [
+                        0.5555556, 0.6666667, 0.5555556, 0.7777778, 0.6666667,
+                        0.5555556, 0.6666667, 0.11111111, 0., 1., 0.7777778,
+                        0.8888889, 0.7777778, 0., 0.8888889, 0.8888889,
+                        0.7777778, 0.6666667, 0., 0.33333334, 0.33333334,
+                        0.5555556, 0.22222222, 1., 0.33333334, 0.33333334, 1.,
+                        0.8888889, 0.11111111, 0.7777778, 0.6666667, 0.44444445,
+                        0.8888889, 0.8888889, 0.22222222, 0.22222222,
+                        0.44444445, 0., 1., 0., 0.11111111, 0., 0.22222222,
+                        0.22222222, 0.5555556, 0.8888889, 0.6666667, 0.,
+                        0.44444445, 0.7777778, 0.7777778, 0.7777778, 0.6666667,
+                        0., 0.44444445, 0.11111111, 0.6666667, 0.33333334,
+                        0.44444445, 0., 0.11111111, 0.11111111, 0., 0.5555556,
+                        1., 0.8888889, 0.44444445, 0.6666667, 0., 0.22222222,
+                        1., 0.22222222, 1., 0.44444445, 0.33333334, 0.6666667,
+                        0.5555556, 0.6666667, 0.22222222, 0.5555556, 1.
+                    ],
+                    dtype=np.float32,
+                ),
+                # fmt: on
+            ),
+            (
+                False,
+                None,
+                # fmt: off
+                np.array(
+                    [
+                        182, 218, 182, 255, 218, 182, 218, 36, 0, 255, 198, 226,
+                        198, 0, 226, 226, 198, 170, 0, 85, 85, 141, 56, 255, 85,
+                        85, 255, 255, 0, 218, 182, 109, 255, 255, 36, 36, 113,
+                        0, 255, 0, 28, 0, 56, 56, 141, 255, 191, 0, 127, 223,
+                        223, 223, 191, 0, 170, 42, 255, 127, 170, 0, 42, 42, 0,
+                        141, 255, 226, 113, 170, 0, 56, 255, 56, 255, 72, 36,
+                        145, 109, 145, 0, 109, 255
+                    ],
+                    dtype=np.uint8,
+                ),
+                # fmt: on
+            ),
+            (
+                False,
+                np.float32,
+                # fmt: off
+                np.array(
+                    [
+                        0.71428573, 0.85714287, 0.71428573, 1., 0.85714287,
+                        0.71428573, 0.85714287, 0.14285715, 0., 1., 0.7777778,
+                        0.8888889, 0.7777778, 0., 0.8888889, 0.8888889,
+                        0.7777778, 0.6666667, 0., 0.33333334, 0.33333334,
+                        0.5555556, 0.22222222, 1., 0.33333334, 0.33333334, 1.,
+                        1., 0., 0.85714287, 0.71428573, 0.42857143, 1., 1.,
+                        0.14285715, 0.14285715, 0.44444445, 0., 1., 0.,
+                        0.11111111, 0., 0.22222222, 0.22222222, 0.5555556, 1.,
+                        0.75, 0., 0.5, 0.875, 0.875, 0.875, 0.75, 0., 0.6666667,
+                        0.16666667, 1., 0.5, 0.6666667, 0., 0.16666667,
+                        0.16666667, 0., 0.5555556, 1., 0.8888889, 0.44444445,
+                        0.6666667, 0., 0.22222222, 1., 0.22222222, 1.,
+                        0.2857143, 0.14285715, 0.5714286, 0.42857143, 0.5714286,
+                        0., 0.42857143, 1.,
+                    ],
+                    dtype=np.float32,
+                ),
+                # fmt: on
+            ),
+        ],
     )
-    def test_rescale_intensities(self, dummy_signal, relative, dtype_out):
+    def test_rescale_intensities(
+        self, dummy_signal, relative, dtype_out, answer
+    ):
         """This test uses a hard-coded answer. If specifically
         improvements to the intensities produced by this correction is
         to be made, these hard-coded answers will have to be
@@ -363,81 +472,8 @@ class TestIntensityCorrection:
         """
 
         dummy_signal.rescale_intensities(relative=relative, dtype_out=dtype_out)
-        if relative is True and dtype_out is None:
-            # fmt: off
-            answer = np.array(
-                [
-                    141, 170, 141, 198, 170, 141, 170, 28, 0, 255, 198, 226,
-                    198, 0, 226, 226, 198, 170, 0, 85, 85, 141, 56, 255, 85, 85,
-                    255, 226, 28, 198, 170, 113, 226, 226, 56, 56, 113, 0, 255,
-                    0, 28, 0, 56, 56, 141, 226, 170, 0, 113, 198, 198, 198, 170,
-                    0, 113, 28, 170, 85, 113, 0, 28, 28, 0, 141, 255, 226, 113,
-                    170, 0, 56, 255, 56, 255, 113, 85, 170, 141, 170, 56, 141,
-                    255
-                ],
-                dtype=np.uint8,
-            )
-            # fmt: on
-        elif relative is True and dtype_out == np.float32:
-            # fmt: off
-            answer = np.array(
-                [
-                    0.5555556, 0.6666667, 0.5555556, 0.7777778, 0.6666667,
-                    0.5555556, 0.6666667, 0.11111111, 0., 1., 0.7777778,
-                    0.8888889, 0.7777778, 0., 0.8888889, 0.8888889, 0.7777778,
-                    0.6666667, 0., 0.33333334, 0.33333334, 0.5555556,
-                    0.22222222, 1., 0.33333334, 0.33333334, 1., 0.8888889,
-                    0.11111111, 0.7777778, 0.6666667, 0.44444445, 0.8888889,
-                    0.8888889, 0.22222222, 0.22222222, 0.44444445, 0., 1., 0.,
-                    0.11111111, 0., 0.22222222, 0.22222222, 0.5555556,
-                    0.8888889, 0.6666667, 0., 0.44444445, 0.7777778, 0.7777778,
-                    0.7777778, 0.6666667, 0., 0.44444445, 0.11111111, 0.6666667,
-                    0.33333334, 0.44444445, 0., 0.11111111, 0.11111111, 0.,
-                    0.5555556, 1., 0.8888889, 0.44444445, 0.6666667, 0.,
-                    0.22222222, 1., 0.22222222, 1., 0.44444445, 0.33333334,
-                    0.6666667, 0.5555556, 0.6666667, 0.22222222, 0.5555556, 1.
-                ],
-                dtype=np.float32
-            )
-            # fmt: on
-        elif relative is False and dtype_out is None:
-            # fmt: off
-            answer = np.array(
-                [
-                    182, 218, 182, 255, 218, 182, 218, 36, 0, 255, 198, 226,
-                    198, 0, 226, 226, 198, 170, 0, 85, 85, 141, 56, 255, 85, 85,
-                    255, 255, 0, 218, 182, 109, 255, 255, 36, 36, 113, 0, 255,
-                    0, 28, 0, 56, 56, 141, 255, 191, 0, 127, 223, 223, 223, 191,
-                    0, 170, 42, 255, 127, 170, 0, 42, 42, 0, 141, 255, 226, 113,
-                    170, 0, 56, 255, 56, 255, 72, 36, 145, 109, 145, 0, 109,
-                    255
-                ],
-                dtype=np.uint8
-            )
-            # fmt: on
-        else:  # relative is False and dtype_out == np.float32
-            # fmt: off
-            answer = np.array(
-                [
-                    0.71428573, 0.85714287, 0.71428573, 1., 0.85714287,
-                    0.71428573, 0.85714287, 0.14285715, 0., 1., 0.7777778,
-                    0.8888889, 0.7777778, 0., 0.8888889, 0.8888889, 0.7777778,
-                    0.6666667, 0., 0.33333334, 0.33333334, 0.5555556,
-                    0.22222222, 1., 0.33333334, 0.33333334, 1., 1., 0.,
-                    0.85714287, 0.71428573, 0.42857143, 1., 1., 0.14285715,
-                    0.14285715, 0.44444445, 0., 1., 0., 0.11111111, 0.,
-                    0.22222222, 0.22222222, 0.5555556, 1., 0.75, 0., 0.5,
-                    0.875, 0.875, 0.875, 0.75, 0., 0.6666667, 0.16666667, 1.,
-                    0.5, 0.6666667, 0., 0.16666667, 0.16666667, 0., 0.5555556,
-                    1., 0.8888889, 0.44444445, 0.6666667, 0., 0.22222222, 1.,
-                    0.22222222, 1., 0.2857143, 0.14285715, 0.5714286,
-                    0.42857143, 0.5714286, 0., 0.42857143, 1.
-                ],
-                dtype=np.float32
-            )
-            # fmt: on
         answer = answer.reshape((3, 3, 3, 3))
-        assert dummy_signal.data.all() == answer.all()
+        np.testing.assert_array_equal(dummy_signal.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
 
     def test_lazy_rescale_intensities(self, dummy_signal):
@@ -445,6 +481,8 @@ class TestIntensityCorrection:
         dummy_signal.rescale_intensities()
         assert isinstance(dummy_signal.data, da.Array)
 
+
+class TestAdaptiveHistogramEqualization:
     def test_adaptive_histogram_equalization(self):
         """Test setup of equalization only. Tests of the result of the
         actual equalization are found elsewhere.
@@ -466,6 +504,175 @@ class TestIntensityCorrection:
         s = kp.load(KIKUCHIPY_FILE, lazy=True)
         s.adaptive_histogram_equalization()
         assert isinstance(s.data, da.Array)
+
+
+class TestAverageNeighbourPatterns:
+    # Test different kernel coefficients
+    @pytest.mark.parametrize(
+        "kernel, kernel_size, lazy, answer, kwargs",
+        [
+            (
+                "circular",
+                (3, 3),
+                False,
+                # fmt: off
+                np.array(
+                    [
+                        7, 4, 6, 6, 3, 7, 7, 3, 2, 4, 4, 6, 4, 2, 5, 4, 3, 5, 5,
+                        5, 3, 5, 3, 8, 6, 5, 5, 5, 2, 6, 4, 3, 3, 4, 1, 1, 6, 4,
+                        6, 4, 3, 4, 5, 5, 3, 5, 3, 3, 3, 3, 5, 3, 4, 5, 5, 3, 7,
+                        4, 4, 2, 3, 4, 1, 5, 3, 6, 3, 4, 1, 1, 4, 4, 7, 6, 3, 4,
+                        6, 4, 3, 6, 3,
+                    ],
+                ),
+                # fmt: on
+                None,
+            ),
+            (
+                "rectangular",
+                (2, 3),
+                False,
+                # fmt: off
+                np.array(
+                    [
+                        7, 6, 6, 7, 3, 6, 7, 4, 3, 4, 5, 5, 6, 2, 7, 5, 3, 5, 4,
+                        5, 5, 6, 1, 8, 5, 5, 7, 6, 3, 7, 5, 2, 5, 6, 3, 3, 5, 3,
+                        5, 4, 3, 6, 5, 3, 3, 5, 4, 5, 4, 2, 6, 5, 4, 5, 5, 2, 7,
+                        3, 3, 2, 3, 3, 2, 6, 3, 5, 3, 4, 3, 3, 4, 3, 6, 4, 5, 3,
+                        4, 3, 3, 5, 4,
+                    ],
+                ),
+                # fmt: on
+                None,
+            ),
+            (
+                "gaussian",
+                (3, 3),
+                True,
+                # fmt: off
+                np.array(
+                    [
+                        6, 3, 7, 5, 2, 5, 6, 2, 3, 5, 3, 5, 4, 3, 6, 5, 3, 3, 5,
+                        4, 4, 4, 2, 6, 5, 4, 5, 5, 3, 7, 4, 3, 3, 4, 3, 2, 5, 4,
+                        5, 4, 3, 4, 4, 4, 3, 5, 4, 4, 4, 3, 5, 4, 5, 5, 5, 2, 7,
+                        3, 3, 1, 3, 3, 2, 6, 3, 5, 3, 4, 3, 3, 4, 3, 6, 4, 4, 3,
+                        4, 3, 3, 5, 4,
+                    ],
+                ),
+                # fmt: on
+                {"std": 2},  # standard deviation
+            ),
+        ],
+    )
+    def test_average_neighbour_patterns(
+        self, dummy_signal, kernel, kernel_size, lazy, answer, kwargs,
+    ):
+        if lazy:
+            dummy_signal = dummy_signal.as_lazy()
+
+        if kwargs is None:
+            dummy_signal.average_neighbour_patterns(
+                kernel=kernel, kernel_size=kernel_size,
+            )
+        else:
+            dummy_signal.average_neighbour_patterns(
+                kernel=kernel, kernel_size=kernel_size, **kwargs,
+            )
+
+        answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
+        np.testing.assert_array_almost_equal(dummy_signal.data, answer)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_neighbour_patterns_no_averaging(self, dummy_signal):
+        answer = dummy_signal.data.copy()
+        with pytest.warns(UserWarning, match="A kernel of shape .* was "):
+            dummy_signal.average_neighbour_patterns(
+                kernel="rectangular", kernel_size=(1, 1),
+            )
+        np.testing.assert_array_equal(dummy_signal.data, answer)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_neighbour_patterns_one_nav_dim(self, dummy_signal):
+        dummy_signal_1d = dummy_signal.inav[:, 0]
+        dummy_signal_1d.average_neighbour_patterns(kernel_size=(3,))
+        # fmt: off
+        answer = np.array(
+            [
+                7, 6, 6, 7, 3, 6, 7, 4, 3, 4, 5, 5, 6, 2, 7, 5, 3, 5, 4, 5, 5,
+                6, 1, 8, 5, 5, 7,
+            ],
+            dtype=np.uint8
+        ).reshape(dummy_signal_1d.axes_manager.shape)
+        # fmt: on
+        np.testing.assert_array_equal(dummy_signal_1d.data, answer)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_neighbour_patterns_kernel_1d(self, dummy_signal):
+        dummy_signal.average_neighbour_patterns(kernel_size=(3,))
+        # fmt: off
+        answer = np.array(
+            [
+                6, 3, 6, 6, 5, 6, 7, 1, 1, 6, 3, 8, 3, 0, 4, 5, 4, 5, 4, 4, 1,
+                4, 4, 8, 5, 4, 4, 5, 2, 6, 5, 4, 4, 5, 1, 0, 6, 5, 8, 3, 2, 2,
+                4, 6, 4, 5, 4, 2, 5, 4, 7, 4, 4, 6, 6, 1, 6, 4, 4, 4, 4, 1, 1,
+                4, 4, 8, 2, 3, 0, 2, 5, 3, 8, 5, 1, 5, 6, 6, 4, 5, 4,
+            ],
+            dtype=np.uint8
+        ).reshape(dummy_signal.axes_manager.shape)
+        # fmt: on
+        np.testing.assert_array_equal(dummy_signal.data, answer)
+        assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_neighbour_patterns_pass_kernel(self, dummy_signal):
+        k = kp.util.Kernel()
+        dummy_signal.average_neighbour_patterns(k)
+        # fmt: off
+        answer = np.array(
+            [
+                7, 4, 6, 6, 3, 7, 7, 3, 2, 4, 4, 6, 4, 2, 5, 4, 3, 5, 5, 5, 3,
+                5, 3, 8, 6, 5, 5, 5, 2, 6, 4, 3, 3, 4, 1, 1, 6, 4, 6, 4, 3, 4,
+                5, 5, 3, 5, 3, 3, 3, 3, 5, 3, 4, 5, 5, 3, 7, 4, 4, 2, 3, 4, 1,
+                5, 3, 6, 3, 4, 1, 1, 4, 4, 7, 6, 3, 4, 6, 4, 3, 6, 3,
+            ],
+            dtype=np.uint8
+        ).reshape(dummy_signal.axes_manager.shape)
+        # fmt: on
+        np.testing.assert_array_equal(dummy_signal.data, answer)
+        assert dummy_signal.data.dtype == answer.dtype
+
+
+class TestRebin:
+    def test_rebin(self, dummy_signal):
+        ebsd_node = kp.util.io.metadata_nodes(sem=False)
+
+        # Passing new_shape, only scaling in signal space
+        new_shape = (3, 3, 2, 1)
+        new_binning = dummy_signal.axes_manager.shape[3] / new_shape[3]
+        s2 = dummy_signal.rebin(new_shape=new_shape)
+        assert s2.axes_manager.shape == new_shape
+        assert s2.metadata.get_item(ebsd_node + ".binning") == new_binning
+
+        # Passing scale, also scaling in navigation space
+        scale = (3, 1, 3, 2)
+        s2 = dummy_signal.rebin(scale=scale)
+        expected_new_shape = [
+            int(i / j) for i, j in zip(dummy_signal.axes_manager.shape, scale)
+        ]
+        assert s2.axes_manager.shape == tuple(expected_new_shape)
+        assert s2.metadata.get_item(ebsd_node + ".binning") == float(scale[2])
+
+        # Passing lazy signal to out parameter, only scaling in signal space but
+        # upscaling
+        scale = (1, 1, 1, 0.5)
+        expected_new_shape = [
+            int(i / j) for i, j in zip(dummy_signal.axes_manager.shape, scale)
+        ]
+        s2 = dummy_signal.copy().as_lazy()
+        s3 = dummy_signal.rebin(scale=scale, out=s2)
+        assert isinstance(s2, kp.signals.LazyEBSD)
+        assert s2.axes_manager.shape == tuple(expected_new_shape)
+        assert s2.metadata.get_item(ebsd_node + ".binning") == float(scale[3])
+        assert s3 is None
 
 
 class TestVirtualBackscatterElectronImaging:
@@ -591,38 +798,8 @@ class TestDecomposition:
             s_reload.data.mean(), mean_intensity, decimal=4
         )
 
-    def test_rebin(self, dummy_signal):
-        ebsd_node = kp.util.io.metadata_nodes(sem=False)
 
-        # Passing new_shape, only scaling in signal space
-        new_shape = (3, 3, 2, 1)
-        new_binning = dummy_signal.axes_manager.shape[3] / new_shape[3]
-        s2 = dummy_signal.rebin(new_shape=new_shape)
-        assert s2.axes_manager.shape == new_shape
-        assert s2.metadata.get_item(ebsd_node + ".binning") == new_binning
-
-        # Passing scale, also scaling in navigation space
-        scale = (3, 1, 3, 2)
-        s2 = dummy_signal.rebin(scale=scale)
-        expected_new_shape = [
-            int(i / j) for i, j in zip(dummy_signal.axes_manager.shape, scale)
-        ]
-        assert s2.axes_manager.shape == tuple(expected_new_shape)
-        assert s2.metadata.get_item(ebsd_node + ".binning") == float(scale[2])
-
-        # Passing lazy signal to out parameter, only scaling in signal space but
-        # upscaling
-        scale = (1, 1, 1, 0.5)
-        expected_new_shape = [
-            int(i / j) for i, j in zip(dummy_signal.axes_manager.shape, scale)
-        ]
-        s2 = dummy_signal.copy().as_lazy()
-        s3 = dummy_signal.rebin(scale=scale, out=s2)
-        assert isinstance(s2, kp.signals.LazyEBSD)
-        assert s2.axes_manager.shape == tuple(expected_new_shape)
-        assert s2.metadata.get_item(ebsd_node + ".binning") == float(scale[3])
-        assert s3 is None
-
+class TestLazy:
     def test_compute(self, dummy_signal):
         lazy_signal = dummy_signal.as_lazy()
 
