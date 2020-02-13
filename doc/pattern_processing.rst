@@ -141,7 +141,10 @@ can be passed to the ``kernel`` parameter in
 :func:`scipy.signal.windows.get_window` passed as a string via ``kernel`` with
 the necessary parameters as keyword arguments (like ``std=1`` for
 ``kernel="gaussian"``) can be used. To demonstrate the creation and use of an
-asymmetrical circular kernel:
+asymmetrical circular kernel (and the use of
+:meth:`~kikuchipy.util.kernel.Kernel.make_circular`, although we could create a
+circular kernel directly by calling ``kernel="circular"`` upon kernel
+initialization):
 
 .. code-block:: python
 

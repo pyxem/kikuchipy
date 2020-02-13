@@ -200,10 +200,10 @@ class Kernel:
     def make_circular(self):
         """Make kernel circular.
 
-        A kernel element is considered to be in a corner if its radial
-        distance to the origin is shorter or equal to the half width of the
-        kernel's longest axis. This has no effect if the kernel has only
-        one axis.
+        The coefficients of kernel elements who's radial distance to the
+        kernel origin is shorter or equal to the half width of the kernel's
+        longest axis are set to zero. This has no effect if the kernel has
+        only one axis.
 
         """
         if self.coefficients.ndim == 1:
