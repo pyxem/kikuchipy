@@ -500,7 +500,7 @@ class EBSD(Signal2D):
         dask_array = kp.util.dask._get_dask_array(signal=self, dtype=dtype)
 
         if sigma is None:
-            sigma = self.axes_manager.signal_axes[0].size / 30
+            sigma = self.axes_manager.signal_axes[0].size / 8
 
         corrected_patterns = dask_array.map_blocks(
             kp.util.experimental._dynamic_background_correction_chunk,
@@ -678,6 +678,105 @@ class EBSD(Signal2D):
                 equalized_patterns.store(self.data, compute=True)
         else:
             self.data = equalized_patterns
+
+    def image_quality(
+        self, normalize=False, divide_square_root=False, method=1,
+    ):
+        """Return an image quality map.
+
+        Image quality is calculated based upon the procedure defined by
+        Lassen [Lassen1994]_.
+
+        References
+        ----------
+        .. [Lassen1994] N. C. K. Lassen, "Automated Determination of \
+            Crystal Orientations from Electron Backscattering Patterns," \
+            Institute of Mathematical Modelling, (1994).
+
+        """
+
+        # Data set to operate on
+        dtype_out = np.float32
+        dask_array = kp.util.dask._get_dask_array(self, dtype=dtype_out)
+
+        # Frequency vectors
+        sx, sy = self.axes_manager.signal_shape
+        frequency_vectors = kp.util.experimental._frequency_vectors(
+            (sx, sy), method=method,
+        )
+        inertia_max = np.sum(frequency_vectors) / (sy * sx)
+
+        # Operate per pattern
+        image_quality_map = dask_array.map_blocks(
+            func=kp.util.experimental._image_quality_map,
+            frequency_vectors=frequency_vectors,
+            inertia_max=inertia_max,
+            normalize=normalize,
+            divide_square_root=divide_square_root,
+            method=method,
+            dtype_out=dtype_out,
+            dtype=dtype_out,
+            drop_axis=[2, 3],
+        )
+
+        if not self._lazy:
+            with dd.ProgressBar():
+                print("Calculate image quality:", file=sys.stdout)
+                image_quality_map = image_quality_map.compute()
+
+        return image_quality_map
+
+    def fft_spectrum(self, normalize=False, divide_square_root=False):
+
+        # Data set to operate on
+        dtype_out = np.float32
+        dask_array = kp.util.dask._get_dask_array(self, dtype=dtype_out)
+
+        fft_spectra = dask_array.map_blocks(
+            func=kp.util.experimental._fft_spectrum_chunk,
+            normalize=normalize,
+            divide_square_root=divide_square_root,
+            dtype_out=dtype_out,
+            dtype=dtype_out,
+        )
+
+        if not self._lazy:
+            fft_spectra_return = np.empty(
+                shape=fft_spectra.shape, dtype=dtype_out,
+            )
+            with dd.ProgressBar():
+                print("Calculate FFT spectra:", file=sys.stdout)
+                fft_spectra.store(fft_spectra_return, compute=True)
+                fft_spectra_signal = Signal2D(fft_spectra_return)
+        else:
+            fft_spectra_signal = LazySignal2D(fft_spectra)
+
+        return fft_spectra_signal
+
+    def normalize(self, num_std=1, divide_square_root=False, dtype_out=None):
+        if dtype_out is None:
+            dtype_out = self.data.dtype
+        dtype = np.float32
+        dask_array = kp.util.dask._get_dask_array(self, dtype=dtype)
+
+        normalized_patterns = dask_array.map_blocks(
+            func=kp.util.experimental._normalize_pattern_chunk,
+            num_std=num_std,
+            divide_square_root=divide_square_root,
+            dtype_out=dtype_out,
+            dtype=dtype_out,
+        )
+
+        if dtype_out != self.data.dtype:
+            self.change_dtype(dtype_out)
+
+        # Overwrite signal patterns
+        if not self._lazy:
+            with dd.ProgressBar():
+                print("Normalizing patterns:", file=sys.stdout)
+                normalized_patterns.store(self.data, compute=True)
+        else:
+            self.data = normalized_patterns
 
     def virtual_backscatter_electron_imaging(self, roi, **kwargs):
         """Plot an interactive virtual backscatter electron (VBSE)

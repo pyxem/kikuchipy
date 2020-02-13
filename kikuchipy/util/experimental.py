@@ -201,7 +201,7 @@ def _dynamic_background_correction_chunk(
         else:  # Divide
             corrected_pattern = pattern / blurred
         corrected_patterns[nav_idx] = _rescale_pattern(
-            corrected_pattern, dtype_out=dtype_out
+            corrected_pattern, dtype_out=dtype_out,
         )
 
     return corrected_patterns
@@ -249,6 +249,106 @@ def _adaptive_histogram_equalization_chunk(
             equalized_pattern, dtype_out=dtype_in
         )
     return equalized_patterns
+
+
+def _image_quality_map(
+    patterns,
+    frequency_vectors,
+    inertia_max,
+    normalize,
+    divide_square_root,
+    method,
+    dtype_out=None,
+):
+    if dtype_out is None:
+        dtype_out = patterns.dtype
+    image_quality_map_chunk = np.empty(patterns.shape[:-2], dtype=dtype_out)
+
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        pattern = patterns[nav_idx]
+
+        if normalize:
+            # Normalize pattern
+            pattern = _normalize_pattern(
+                pattern, divide_square_root=divide_square_root
+            )
+
+        # Get FFT spectrum
+        spectrum = _fft_spectrum_pattern(pattern, method)
+
+        # Get image quality
+        inertia = np.sum(spectrum * frequency_vectors) / np.sum(spectrum)
+        image_quality_map_chunk[nav_idx] = 1 - (inertia / inertia_max)
+
+    return image_quality_map_chunk
+
+
+def _frequency_vectors(signal_shape, method):
+    sx, sy = signal_shape
+    if method == 1:
+        linex = np.arange(sx)
+        linex[sx // 2 + 1 : sx] -= sx
+        liney = np.arange(sy)
+        liney[sy // 2 + 1 : sy] -= sy
+    else:
+        linex = np.arange(-sx // 2, sx // 2)
+        liney = np.arange(-sy // 2, sy // 2)
+
+    frequency_vectors = np.empty(shape=(sy, sx))
+    for i in range(sx):
+        frequency_vectors[i] = linex[i] ** 2 + liney ** 2
+
+    return frequency_vectors
+
+
+def _fft_spectrum_pattern(pattern, method):
+    fft_pattern = np.fft.fft2(pattern)
+    if method == 1:
+        fft_shifted = fft_pattern
+    else:
+        fft_shifted = np.fft.fftshift(fft_pattern)
+    fft_spectrum = np.sqrt(fft_shifted.real ** 2 + fft_shifted.imag ** 2)
+    return fft_spectrum
+
+
+def _fft_spectrum_chunk(
+    patterns, dtype_out=None, normalize=False, divide_square_root=False
+):
+    if dtype_out is None:
+        dtype_out = patterns.dtype
+    fft_spectra = np.empty_like(patterns, dtype=dtype_out)
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        pattern = patterns[nav_idx]
+        if normalize:
+            pattern = _normalize_pattern(
+                pattern, divide_square_root=divide_square_root
+            )
+        fft_spectra[nav_idx] = _fft_spectrum_pattern(pattern)
+    return fft_spectra
+
+
+def _normalize_pattern_chunk(
+    patterns, num_std=1, divide_square_root=False, dtype_out=None
+):
+    if dtype_out is None:
+        dtype_out = patterns.dtype
+    normalized_patterns = np.empty_like(patterns, dtype=dtype_out)
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        normalized_patterns[nav_idx] = _normalize_pattern(
+            pattern=patterns[nav_idx],
+            num_std=num_std,
+            divide_square_root=divide_square_root,
+        )
+    return normalized_patterns
+
+
+def _normalize_pattern(pattern, num_std=1, divide_square_root=False):
+    pattern_mean = np.mean(pattern)
+    pattern_std = np.std(pattern)
+    normalized_pattern = (pattern - pattern_mean) / (num_std * pattern_std)
+    if divide_square_root:
+        normalized_pattern = normalized_pattern / np.sqrt(pattern.size)
+    return normalized_pattern
 
 
 def normalised_correlation_coefficient(pattern, template, zero_normalised=True):
