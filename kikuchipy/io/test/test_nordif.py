@@ -283,9 +283,9 @@ class TestNORDIF:
         assert s.axes_manager.as_dictionary() == AXES_MANAGER
 
         static_bg = plt.imread(BG_FILE)
-        assert (
-            s.metadata.Acquisition_instrument.SEM.Detector.EBSD.static_background.all()
-            == static_bg.all()
+        np.testing.assert_equal(
+            s.metadata.Acquisition_instrument.SEM.Detector.EBSD.static_background,
+            static_bg,
         )
 
     @pytest.mark.parametrize(

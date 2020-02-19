@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
+# Import order must not be changed
 from kikuchipy import signals
 from kikuchipy import util
 from kikuchipy import io

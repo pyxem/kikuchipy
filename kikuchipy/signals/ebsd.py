@@ -16,15 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
+import copy
 import datetime
 import gc
 import logging
 import numbers
 import os
 import sys
+import warnings
 
 import dask.array as da
-import dask.diagnostics as dd
+from dask.diagnostics import ProgressBar
 from hyperspy._signals.signal2d import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
@@ -32,6 +34,7 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 from h5py import File
 import numpy as np
 from pyxem.signals.diffraction2d import Diffraction2D
+from scipy.ndimage import correlate
 
 from kikuchipy.io._io import save
 import kikuchipy as kp
@@ -45,8 +48,9 @@ class EBSD(Signal2D):
     _lazy = False
 
     def __init__(self, *args, **kwargs):
-        """Create an :class:`~kikuchipy.signals.ebsd.EBSD` object from a
+        """Create an :class:`~kikuchipy.signals.EBSD` object from a
         :class:`hyperspy.signals.Signal2D` or a :class:`numpy.ndarray`.
+
         """
 
         Signal2D.__init__(self, *args, **kwargs)
@@ -119,7 +123,7 @@ class EBSD(Signal2D):
             Sample tilt angle from horizontal in degrees.
         scan_time : float, optional
             Scan time in s.
-        static_background : :class:`numpy.ndarray`, optional
+        static_background : numpy.ndarray, optional
             Static background pattern.
         version : str, optional
             Version of software used to collect patterns.
@@ -142,11 +146,12 @@ class EBSD(Signal2D):
         --------
         >>> import kikuchipy as kp
         >>> ebsd_node = kp.util.io.metadata_nodes(sem=False)
-        >>> print(s.metadata.get_item(ebsd_node + '.xpc')
+        >>> s.metadata.get_item(ebsd_node + '.xpc')
         1.0
         >>> s.set_experimental_parameters(xpc=0.50726)
-        >>> print(s.metadata.get_item(ebsd_node + '.xpc'))
+        >>> s.metadata.get_item(ebsd_node + '.xpc')
         0.50726
+
         """
 
         md = self.metadata
@@ -220,8 +225,7 @@ class EBSD(Signal2D):
             Phase formula, e.g. 'Fe2' or 'Ni'.
         info : str, optional
             Whatever phase info the user finds relevant.
-        lattice_constants : :class:`numpy.ndarray` or list of\
-                floats, optional
+        lattice_constants : numpy.ndarray or list of floats, optional
             Six lattice constants a, b, c, alpha, beta, gamma.
         laue_group : str, optional
             Phase Laue group.
@@ -242,23 +246,22 @@ class EBSD(Signal2D):
 
         Examples
         --------
-        >>> print(s.metadata.Sample.Phases.Number_1.atom_coordinates.
-                Number_1)
+        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
         ├── atom =
         ├── coordinates = array([0., 0., 0.])
         ├── debye_waller_factor = 0.0
         └── site_occupation = 0.0
         >>> s.set_phase_parameters(
-                number=1, atom_coordinates={
-                    '1': {'atom': 'Ni', 'coordinates': [0, 0, 0],
-                    'site_occupation': 1,
-                    'debye_waller_factor': 0.0035}})
-        >>> print(s.metadata.Sample.Phases.Number_1.atom_coordinates.
-                Number_1)
+        ...     number=1, atom_coordinates={
+        ...         '1': {'atom': 'Ni', 'coordinates': [0, 0, 0],
+        ...         'site_occupation': 1,
+        ...         'debye_waller_factor': 0.0035}})
+        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
         ├── atom = Ni
         ├── coordinates = array([0., 0., 0.])
         ├── debye_waller_factor = 0.0035
         └── site_occupation = 1
+
         """
 
         # Ensure atom coordinates are numpy arrays
@@ -301,11 +304,12 @@ class EBSD(Signal2D):
 
         Examples
         --------
-        >>> print(s.axes_manager.['x'].scale)  # Default value
+        >>> s.axes_manager.['x'].scale  # Default value
         1.0
         >>> s.set_scan_calibration(step_x=1.5)  # Microns
-        >>> print(s.axes_manager['x'].scale)
+        >>> s.axes_manager['x'].scale
         1.5
+
         """
 
         x, y = self.axes_manager.navigation_axes
@@ -328,11 +332,12 @@ class EBSD(Signal2D):
 
         Examples
         --------
-        >>> print(s.axes_manager['dx'].scale)  # Default value
+        >>> s.axes_manager['dx'].scale  # Default value
         1.0
         >>> s.set_detector_calibration(delta=70.)
-        >>> print(s.axes_manager['dx'].scale)
+        >>> s.axes_manager['dx'].scale
         70.0
+
         """
 
         centre = np.array(self.axes_manager.signal_shape) / 2 * delta
@@ -342,7 +347,7 @@ class EBSD(Signal2D):
         dx.offset, dy.offset = -centre
 
     def static_background_correction(
-        self, operation="subtract", relative=False, static_bg=None
+        self, operation="subtract", relative=True, static_bg=None
     ):
         """Correct static background inplace by subtracting/dividing by
         a static background pattern.
@@ -357,9 +362,8 @@ class EBSD(Signal2D):
             Subtract (default) or divide by static background pattern.
         relative : bool, optional
             Keep relative intensities between patterns (default is
-            ``False``).
-        static_bg : :class:`numpy.ndarray`,\
-                :class:`dask.array.Array` or None, optional
+            ``True``).
+        static_bg : numpy.ndarray, dask.array.Array, or None, optional
             Static background pattern. If not passed we try to read it
             from the signal metadata.
 
@@ -375,7 +379,7 @@ class EBSD(Signal2D):
 
         >>> import kikuchipy as kp
         >>> ebsd_node = kp.util.io.metadata_nodes(sem=False)
-        >>> print(s.metadata.get_item(ebsd_node + '.static_background'))
+        >>> s.metadata.get_item(ebsd_node + '.static_background')
         [[84 87 90 ... 27 29 30]
         [87 90 93 ... 27 28 30]
         [92 94 97 ... 39 28 29]
@@ -389,10 +393,11 @@ class EBSD(Signal2D):
         intensities between patterns (or not).
 
         >>> s.static_background_correction(
-                operation='subtract', relative=True)
+        ...     operation='subtract', relative=True)
 
         If metadata has no background pattern, this must be passed in
         the ``static_bg`` parameter as a numpy or dask array.
+
         """
 
         dtype_out = self.data.dtype.type
@@ -445,7 +450,7 @@ class EBSD(Signal2D):
 
         # Correct static background and rescale intensities chunk by chunk
         corrected_patterns = dask_array.map_blocks(
-            kp.util.experimental._static_background_correction_chunk,
+            func=kp.util.experimental._static_background_correction_chunk,
             static_bg=static_bg,
             operation=operation,
             in_range=in_range,
@@ -455,7 +460,7 @@ class EBSD(Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with dd.ProgressBar():
+            with ProgressBar():
                 print("Static background correction:", file=sys.stdout)
                 corrected_patterns.store(self.data, compute=True)
         else:
@@ -473,8 +478,8 @@ class EBSD(Signal2D):
         ----------
         operation : 'subtract' or 'divide', optional
             Subtract (default) or divide by dynamic background pattern.
-        sigma : int, float or None, optional
-            Standard deviation of the gaussian kernel. If None
+        sigma : int, float, or None, optional
+            Standard deviation of the Gaussian kernel. If None
             (default), a deviation of pattern width/30 is chosen.
 
         See Also
@@ -490,7 +495,8 @@ class EBSD(Signal2D):
 
         >>> s.static_background_correction(operation='subtract')
         >>> s.dynamic_background_correction(
-                operation='subtract', sigma=2.0)
+        ...     operation='subtract', sigma=2)
+
         """
 
         dtype_out = self.data.dtype.type
@@ -503,7 +509,7 @@ class EBSD(Signal2D):
             sigma = self.axes_manager.signal_axes[0].size / 8
 
         corrected_patterns = dask_array.map_blocks(
-            kp.util.experimental._dynamic_background_correction_chunk,
+            func=kp.util.experimental._dynamic_background_correction_chunk,
             operation=operation,
             sigma=sigma,
             dtype_out=dtype_out,
@@ -512,7 +518,7 @@ class EBSD(Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with dd.ProgressBar():
+            with ProgressBar():
                 print("Dynamic background correction:", file=sys.stdout)
                 corrected_patterns.store(self.data, compute=True)
         else:
@@ -523,8 +529,7 @@ class EBSD(Signal2D):
         :class:`numpy.dtype` range specified by ``dtype_out`` keeping
         relative intensities or not.
 
-        This method makes use of
-        :func:`skimage.exposure.rescale_intensity`.
+        This method uses :func:`skimage.exposure.rescale_intensity`.
 
         Parameters
         ----------
@@ -537,6 +542,7 @@ class EBSD(Signal2D):
 
         See Also
         --------
+        :func:`skimage.exposure.rescale_intensity`
         adaptive_histogram_equalization
 
         Examples
@@ -547,17 +553,18 @@ class EBSD(Signal2D):
         keeping relative intensities between patterns or not:
 
         >>> print(s.data.dtype_out, s.data.min(), s.data.max(),
-                  s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
+        ...       s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
         uint8 20 254 24 233
         >>> s2 = s.deepcopy()
         >>> s.rescale_intensities(dtype_out=np.uint16)
         >>> print(s.data.dtype_out, s.data.min(), s.data.max(),
-                  s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
+        ...       s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
         uint16 0 65535 0 65535
         >>> s2.rescale_intensities(relative=True)
         >>> print(s2.data.dtype_out, s2.data.min(), s2.data.max(),
-                  s2.inav[0, 0].data.min(), s2.inav[0, 0].data.max())
+        ...       s2.inav[0, 0].data.min(), s2.inav[0, 0].data.max())
         uint8 0 255 4 232
+
         """
 
         if dtype_out is None:
@@ -574,7 +581,7 @@ class EBSD(Signal2D):
 
         # Rescale patterns
         rescaled_patterns = dask_array.map_blocks(
-            kp.util.experimental._rescale_pattern_chunk,
+            func=kp.util.experimental._rescale_pattern_chunk,
             in_range=in_range,
             dtype_out=dtype_out,
             dtype=dtype_out,
@@ -582,7 +589,7 @@ class EBSD(Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with dd.ProgressBar():
+            with ProgressBar():
                 if self.data.dtype != rescaled_patterns.dtype:
                     self.data = self.data.astype(dtype_out)
                 print("Rescaling patterns:", file=sys.stdout)
@@ -596,8 +603,7 @@ class EBSD(Signal2D):
         """Local contrast enhancement inplace with adaptive histogram
         equalization.
 
-        This method makes use of
-        :func:`skimage.exposure.equalize_adapthist`.
+        This method uses :func:`skimage.exposure.equalize_adapthist`.
 
         Parameters
         ----------
@@ -629,10 +635,10 @@ class EBSD(Signal2D):
         >>> s2.adaptive_histogram_equalization()
         >>> imin = np.iinfo(s.data.dtype_out).min
         >>> imax = np.iinfo(s.data.dtype_out).max + 1
-        >>> hist, _ = np.histogram(s.inav[0, 0].data, bins=imax,
-                          range=(imin, imax))
-        >>> hist2, _ = np.histogram(s2.inav[0, 0].data, bins=imax,
-                           range=(imin, imax))
+        >>> hist, _ = np.histogram(
+        ...     s.inav[0, 0].data, bins=imax, range=(imin, imax))
+        >>> hist2, _ = np.histogram(
+        ...     s2.inav[0, 0].data, bins=imax, range=(imin, imax))
         >>> fig, ax = plt.subplots(nrows=2, ncols=2)
         >>> ax[0, 0].imshow(s.inav[0, 0].data)
         >>> ax[1, 0].plot(hist)
@@ -647,6 +653,7 @@ class EBSD(Signal2D):
           occur.
         * The default kernel size might not fit all pattern sizes, so it
           may be necessary to search for the optimal kernel size.
+
         """
 
         # Determine kernel size (shape of contextual region)
@@ -664,7 +671,7 @@ class EBSD(Signal2D):
 
         # Local contrast enhancement
         equalized_patterns = dask_array.map_blocks(
-            kp.util.experimental._adaptive_histogram_equalization_chunk,
+            func=kp.util.experimental._adaptive_histogram_equalization_chunk,
             kernel_size=kernel_size,
             clip_limit=clip_limit,
             nbins=nbins,
@@ -673,7 +680,7 @@ class EBSD(Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with dd.ProgressBar():
+            with ProgressBar():
                 print("Adaptive histogram equalization:", file=sys.stdout)
                 equalized_patterns.store(self.data, compute=True)
         else:
@@ -720,7 +727,7 @@ class EBSD(Signal2D):
         )
 
         if not self._lazy:
-            with dd.ProgressBar():
+            with ProgressBar():
                 print("Calculate image quality:", file=sys.stdout)
                 image_quality_map = image_quality_map.compute()
 
@@ -744,7 +751,7 @@ class EBSD(Signal2D):
             fft_spectra_return = np.empty(
                 shape=fft_spectra.shape, dtype=dtype_out,
             )
-            with dd.ProgressBar():
+            with ProgressBar():
                 print("Calculate FFT spectra:", file=sys.stdout)
                 fft_spectra.store(fft_spectra_return, compute=True)
                 fft_spectra_signal = Signal2D(fft_spectra_return)
@@ -763,8 +770,6 @@ class EBSD(Signal2D):
             func=kp.util.experimental._normalize_pattern_chunk,
             num_std=num_std,
             divide_square_root=divide_square_root,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
         )
 
         if dtype_out != self.data.dtype:
@@ -772,11 +777,181 @@ class EBSD(Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with dd.ProgressBar():
+            with ProgressBar():
                 print("Normalizing patterns:", file=sys.stdout)
                 normalized_patterns.store(self.data, compute=True)
         else:
             self.data = normalized_patterns
+
+    def average_neighbour_patterns(
+        self, kernel="circular", kernel_size=(3, 3), **kwargs
+    ):
+        """Average patterns with its neighbours within a kernel.
+
+        The amount of averaging is specified by the kernel coefficients.
+        All patterns are averaged with the same kernel. Map borders are
+        extended with zeros. The method operates inplace.
+
+        Averaging is accomplished by correlating the kernel with the
+        extended array of patterns using :func:`scipy.ndimage.correlate`.
+
+        Parameters
+        ----------
+        kernel : kikuchipy.util.kernel.Kernel, 'circular', 'rectangular',\
+                'gaussian', str, numpy.ndarray, or dask.array.Array,\
+                optional
+            Averaging kernel. Available types are listed in
+            :func:`scipy.signal.windows.get_window`, in addition to a
+            circular kernel (default) filled with ones in which corner
+            coefficients are set to zero. A kernel element is considered to
+            be in a corner if its radial distance to the origin (kernel
+            centre) is shorter or equal to the half width of the kernel's
+            longest axis. A 1D or 2D :class:`numpy.ndarray`,
+            :class:`dask.array.Array` or
+            :class:`~kikuchipy.util.kernel.Kernel` can also be passed.
+        kernel_size : sequence of ints, optional
+            Size of averaging kernel. Not used if a custom kernel or
+            :class:`~kikuchipy.util.kernel.Kernel` object is passed to
+            `kernel`. This can be either 1D or 2D, and can be asymmetrical.
+            Default is (3, 3).
+        **kwargs :
+            Keyword arguments passed to the available kernel type listed in
+            :func:`scipy.signal.windows.get_window`. If none are passed,
+            the default values of that particular kernel are used.
+
+        See Also
+        --------
+        :class:`~kikuchipy.util.kernel.Kernel`
+        :func:`scipy.signal.windows.get_window`
+        :func:`scipy.ndimage.correlate`
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import kikuchipy as kp
+        >>> s = kp.signals.EBSD(np.ones((4, 4, 1, 1)))
+        >>> k = 1
+        >>> for i in range(4):
+        ...     for j in range(4):
+        ...         s.inav[j, i].data *= k
+        ...         k += 1
+        >>> s.data[:, :, 0, 0]
+        array([[ 1.,  2.,  3.,  4.],
+               [ 5.,  6.,  7.,  8.],
+               [ 9., 10., 11., 12.],
+               [13., 14., 15., 16.]])
+        >>> s2 = s.deepcopy()  # For use below
+        >>> s.average_neighbour_patterns(
+        ...     kernel="circular", kernel_size=(3, 3))
+        >>> s.data[:, :, 0, 0]
+        array([[ 2.66666667,  3.        ,  4.        ,  5.        ],
+               [ 5.25      ,  6.        ,  7.        ,  7.75      ],
+               [ 9.25      , 10.        , 11.        , 11.75      ],
+               [12.        , 13.        , 14.        , 14.33333333]])
+
+        A kernel object can also be passed
+
+        >>> w = kp.util.Kernel(kernel="gaussian", std=2)
+        >>> w
+        gaussian, (3, 3)
+        >>> w.coefficients
+        array([[0.77880078, 0.8824969 , 0.77880078],
+               [0.8824969 , 1.        , 0.8824969 ],
+               [0.77880078, 0.8824969 , 0.77880078]])
+        >>> s2.average_neighbour_patterns(w)
+        >>> s2.data[:, :, 0, 0]
+        array([[ 3.34395304,  3.87516243,  4.87516264,  5.40637176],
+               [ 5.46879047,  5.99999985,  6.99999991,  7.53120901],
+               [ 9.46879095,  9.99999959, 11.00000015, 11.53120913],
+               [11.59362845, 12.12483732, 13.1248368 , 13.65604717]])
+
+        This kernel can subsequently be plotted and saved
+
+        >>> figure, image, colorbar = w.plot()
+        >>> figure.savefig('my_kernel.png')
+
+        """
+        if isinstance(kernel, kp.util.Kernel) and kernel.is_valid():
+            averaging_kernel = copy.copy(kernel)
+        else:
+            averaging_kernel = kp.util.Kernel(
+                kernel=kernel, kernel_size=kernel_size, **kwargs,
+            )
+        averaging_kernel.scan_compatible(self)
+
+        # Do nothing if a kernel of shape (1, ) or (1, 1) is passed
+        kernel_size = averaging_kernel.coefficients.shape
+        if kernel_size in [(1,), (1, 1)]:
+            return warnings.warn(
+                f"A kernel of shape {kernel_size} was passed, no averaging is "
+                "therefore performed."
+            )
+
+        # Create dask array of signal patterns and do processing on this
+        dask_array = kp.util.dask._get_dask_array(signal=self)
+
+        # Get sum of kernel coefficients for each pattern, to normalize with
+        # after correlation
+        nav_shape = self.axes_manager.navigation_shape
+        if len(nav_shape) > len(kernel_size):
+            averaging_kernel._add_axes(1)
+        kernel_sums = correlate(
+            input=np.ones(self.axes_manager.navigation_shape[::-1]),
+            weights=averaging_kernel.coefficients,
+            mode="constant",
+            cval=0,
+        )
+
+        # Add signal dimensions to kernel array to enable its use with Dask's
+        # map_blocks()
+        averaging_kernel._add_axes(self.axes_manager.signal_dimension)
+
+        # Add signal dimensions to array be able to use with Dask's map_blocks()
+        for i in range(self.axes_manager.signal_dimension):
+            kernel_sums = np.expand_dims(kernel_sums, axis=kernel_sums.ndim)
+        kernel_sums = da.from_array(kernel_sums, chunks=dask_array.chunksize)
+
+        # Create overlap between chunks to enable correlation with the kernel
+        # using Dask's map_blocks()
+        overlap_depth = {0: 0, 1: 0}
+        for i, kernel_dim in enumerate(kernel_size):
+            overlap_depth[i] = kernel_dim
+        overlap_boundary = {0: "none", 1: "none"}
+        overlapped_dask_array = da.overlap.overlap(
+            dask_array, depth=overlap_depth, boundary=overlap_boundary
+        )
+
+        # Must also be overlapped, since the patterns are overlapped
+        overlapped_kernel_sums = da.overlap.overlap(
+            kernel_sums, depth=overlap_depth, boundary=overlap_boundary
+        )
+
+        # Finally, average patterns by correlation with the kernel and
+        # subsequent division by the number of neighbours correlated with
+        dtype_out = self.data.dtype
+        overlapped_averaged_patterns = da.map_blocks(
+            kp.util.experimental._average_neighbour_patterns_chunk,
+            overlapped_dask_array,
+            overlapped_kernel_sums,
+            kernel=averaging_kernel.coefficients,
+            dtype_out=dtype_out,
+            dtype=dtype_out,
+        )
+
+        # Trim overlapping patterns
+        averaged_patterns = da.overlap.trim_overlap(
+            overlapped_averaged_patterns,
+            depth=overlap_depth,
+            boundary=overlap_boundary,
+        )
+
+        # Overwrite signal patterns
+        if not self._lazy:
+            with ProgressBar():
+                print("Averaging neighbour patterns:", file=sys.stdout)
+                averaged_patterns.store(self.data, compute=True)
+        else:
+            self.data = averaged_patterns
 
     def virtual_backscatter_electron_imaging(self, roi, **kwargs):
         """Plot an interactive virtual backscatter electron (VBSE)
@@ -784,7 +959,7 @@ class EBSD(Signal2D):
         adjustable region of interest (ROI).
 
         Adapted from
-        meth:`pyxem.signals.diffraction2d.Diffraction2D.plot_interactive_virtual_image`.
+        :meth:`pyxem.signals.diffraction2d.Diffraction2D.plot_interactive_virtual_image`.
 
         Parameters
         ----------
@@ -798,8 +973,9 @@ class EBSD(Signal2D):
         --------
         >>> import hyperspy.api as hs
         >>> roi = hs.roi.RectangularROI(
-                left=0, right=5, top=0, bottom=5)
+        ...     left=0, right=5, top=0, bottom=5)
         >>> s.virtual_backscatter_electron_imaging(roi)
+
         """
 
         return Diffraction2D.plot_interactive_virtual_image(self, roi, **kwargs)
@@ -827,8 +1003,9 @@ class EBSD(Signal2D):
         --------
         >>> import hyperspy.api as hs
         >>> roi = hs.roi.RectangularROI(
-                left=0, right=5, top=0, bottom=5)
+        ...     left=0, right=5, top=0, bottom=5)
         >>> vbse_image = s.get_virtual_image(roi)
+
         """
 
         return Diffraction2D.get_virtual_image(self, roi)
@@ -874,6 +1051,7 @@ class EBSD(Signal2D):
         --------
         kikuchipy.io.plugins.h5ebsd.file_writer,\
         kikuchipy.io.plugins.nordif.file_writer
+
         """
 
         if filename is None:
@@ -915,20 +1093,21 @@ class EBSD(Signal2D):
         Parameters
         ----------
         components : None, int or list of ints, optional
-            If ``None`` (default), rebuilds the signal from all
-            components. If ``int``, rebuilds signal from ``components``
-            in range 0-given ``int``. If list of ``ints``, rebuilds
-            signal from only ``components`` in given list.
+            If ``None`` (default), rebuilds the signal from all components.
+            If ``int``, rebuilds signal from ``components`` in range
+            0-given ``int``. If list of ``ints``, rebuilds signal from only
+            ``components`` in given list.
         dtype_out : numpy.float16, numpy.float32, numpy.float64,\
                 optional
-            Data to cast learning results to (default is
-            :class:`numpy.float16`). Note that HyperSpy casts them
-            to :class:`numpy.float64`.
+            Data type to cast learning results to (default is
+            :class:`numpy.float16`). Note that HyperSpy casts them to
+            :class:`numpy.float64`.
 
         Returns
         -------
-        s_model : :class:`~kikuchipy.signals.ebsd.EBSD` or \
-                :class:`~kikuchipy.signals.ebsd.LazyEBSD`
+        s_model : kikuchipy.signals.ebsd.EBSD or \
+                kikuchipy.signals.ebsd.LazyEBSD
+
         """
 
         # Keep original results to revert back after updating
@@ -997,13 +1176,14 @@ class EBSD(Signal2D):
             return s_out
 
     def as_lazy(self, *args, **kwargs):
-        """Create a :class:`~kikuchipy.signals.ebsd.LazyEBSD` object
-        from an :class:`~kikuchipy.signals.ebsd.EBSD` object.
+        """Create a :class:`~kikuchipy.signals.ebsd.LazyEBSD` object from an
+        :class:`~kikuchipy.signals.ebsd.EBSD` object.
 
         Returns
         -------
-        lazy_signal : :class:`~kikuchipy.signals.ebsd.LazyEBSD`
+        lazy_signal : kikuchipy.signals.ebsd.LazyEBSD
             Lazy signal.
+
         """
 
         lazy_signal = super().as_lazy(*args, **kwargs)
@@ -1028,7 +1208,7 @@ class LazyEBSD(EBSD, LazySignal2D):
         self.__class__ = LazyEBSD
 
     def compute(self, *args, **kwargs):
-        with dd.ProgressBar(*args, **kwargs):
+        with ProgressBar(*args, **kwargs):
             self.data = self.data.compute(*args, **kwargs)
         gc.collect()
         self.__class__ = EBSD
@@ -1059,8 +1239,7 @@ class LazyEBSD(EBSD, LazySignal2D):
             ``components``. If ``int``, rebuilds signal from
             ``components`` in range 0-given ``int``. If list of ints,
             rebuilds signal from only ``components`` in given list.
-        dtype_learn : :class:`numpy.float16`,\
-                :class:`numpy.float32` or :class:`numpy.float64`,\
+        dtype_learn : numpy.float16, numpy.float32, or numpy.float64,\
                 optional
             Data type to set learning results to (default is
             :class:`numpy.float16`) before multiplication.
@@ -1079,6 +1258,7 @@ class LazyEBSD(EBSD, LazySignal2D):
         large matrices. Here, instead, learning results are written to
         file, read into dask arrays and multiplied using
         :func:`dask.array.matmul`, out of core.
+
         """
 
         # Change data type, keep desired components and rechunk if lazy

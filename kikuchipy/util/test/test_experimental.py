@@ -16,10 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
+import dask.array as da
 import numpy as np
 import pytest
+from scipy.ndimage import convolve
 
 import kikuchipy as kp
 
@@ -138,6 +138,49 @@ class TestExperimental:
         assert equalized_patterns.dtype == dtype_out
         np.testing.assert_almost_equal(
             equalized_patterns[0, 0].compute(), ADAPT_EQ_UINT8
+        )
+
+    @pytest.mark.parametrize("dtype_in", [None, np.uint8])
+    def test_average_neighbour_patterns_chunk(self, dummy_signal, dtype_in):
+        averaging_kernel = kp.util.Kernel()
+
+        # Get array to operate on
+        dask_array = kp.util.dask._get_dask_array(dummy_signal)
+        dtype_out = dask_array.dtype
+
+        # Get sum of kernel coefficients for each pattern
+        nav_shape = dummy_signal.axes_manager.navigation_shape
+        kernel_sums = convolve(
+            input=np.ones(nav_shape[::-1]),
+            weights=averaging_kernel.coefficients,
+            mode="constant",
+            cval=0,
+        )
+
+        for i in range(dummy_signal.axes_manager.signal_dimension):
+            kernel_sums = np.expand_dims(kernel_sums, axis=kernel_sums.ndim)
+        kernel_sums = da.from_array(kernel_sums, chunks=dask_array.chunksize)
+
+        # Add signal dimensions to kernel array to enable its use with Dask's
+        # map_blocks()
+        averaging_kernel._add_axes(dummy_signal.axes_manager.signal_dimension)
+
+        averaged_patterns = dask_array.map_blocks(
+            kp.util.experimental._average_neighbour_patterns_chunk,
+            kernel_sums=kernel_sums,
+            kernel=averaging_kernel.coefficients,
+            dtype_out=dtype_in,
+            dtype=dtype_out,
+        )
+
+        answer = np.array([7, 4, 6, 6, 3, 7, 7, 3, 2], dtype=np.uint8).reshape(
+            (3, 3)
+        )
+
+        # Check for correct data type and gives expected output intensities
+        assert averaged_patterns.dtype == dtype_out
+        np.testing.assert_almost_equal(
+            averaged_patterns[0, 0].compute(), answer
         )
 
     @pytest.mark.parametrize(
