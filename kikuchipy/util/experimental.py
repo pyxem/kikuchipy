@@ -269,8 +269,8 @@ def _average_neighbour_patterns_chunk(
     kernel : numpy.ndarray
         Averaging kernel.
     dtype_out : numpy.dtype, optional
-        Data type of corrected patterns. If ``None`` (default), it is set
-        to the same data type as the input patterns.
+        Data type of averaged patterns. If ``None`` (default), it is set to
+        the same data type as the input patterns.
 
     Returns
     -------
