@@ -256,7 +256,7 @@ def _adaptive_histogram_equalization_chunk(
 
 
 def _average_neighbour_patterns_chunk(
-    patterns, kernel_sums, kernel, dtype_out=None
+    patterns, kernel_sums, kernel, dtype_out=None,
 ):
     """Average a chunk of patterns with its neighbours within a kernel.
 
@@ -280,11 +280,11 @@ def _average_neighbour_patterns_chunk(
     """
 
     if dtype_out is None:
-        dtype_out = patterns.dtype
+        dtype_out = patterns.dtype.type
 
     # Correlate patterns with kernel
     correlated_patterns = correlate(
-        patterns.astype(np.float32), weights=kernel, mode="constant", cval=0,
+        patterns, weights=kernel, mode="constant", cval=0,
     )
 
     # Divide convolved patterns by number of neighbours averaged with
@@ -292,7 +292,7 @@ def _average_neighbour_patterns_chunk(
     for nav_idx in np.ndindex(patterns.shape[:-2]):
         averaged_patterns[nav_idx] = (
             correlated_patterns[nav_idx] / kernel_sums[nav_idx]
-        ).astype(dtype_out)
+        )
 
     return averaged_patterns
 
