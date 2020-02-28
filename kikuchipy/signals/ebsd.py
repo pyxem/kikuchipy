@@ -723,7 +723,7 @@ class EBSD(Signal2D):
             method=method,
             dtype_out=dtype_out,
             dtype=dtype_out,
-            drop_axis=[2, 3],
+            drop_axis=self.axes_manager.signal_indices_in_array,
         )
 
         if not self._lazy:
