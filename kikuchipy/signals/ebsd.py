@@ -791,7 +791,7 @@ class EBSD(Signal2D):
             )
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kp.util.dask._get_dask_array(signal=self)
+        dask_array = kp.util.dask._get_dask_array(signal=self, dtype=np.float32)
 
         # Get sum of kernel coefficients for each pattern, to normalize with
         # after correlation
@@ -810,18 +810,26 @@ class EBSD(Signal2D):
         averaging_kernel._add_axes(self.axes_manager.signal_dimension)
 
         # Add signal dimensions to array be able to use with Dask's map_blocks()
-        for i in range(self.axes_manager.signal_dimension):
+        nav_dim = self.axes_manager.navigation_dimension
+        sig_dim = self.axes_manager.signal_dimension
+        for i in range(sig_dim):
             kernel_sums = np.expand_dims(kernel_sums, axis=kernel_sums.ndim)
-        kernel_sums = da.from_array(kernel_sums, chunks=dask_array.chunksize)
+        kernel_sums = da.from_array(
+            kernel_sums, chunks=dask_array.chunksize[:nav_dim] + (1,) * sig_dim
+        )
 
         # Create overlap between chunks to enable correlation with the kernel
         # using Dask's map_blocks()
-        overlap_depth = {0: 0, 1: 0}
-        for i, kernel_dim in enumerate(kernel_size):
-            overlap_depth[i] = kernel_dim
-        overlap_boundary = {0: "none", 1: "none"}
+        data_dim = len(self.axes_manager.shape)
+        overlap_depth = {}
+        for i in range(data_dim):
+            if i < len(kernel_size):
+                overlap_depth[i] = kernel_size[i] // 2
+            else:
+                overlap_depth[i] = 0
+        overlap_boundary = {i: "none" for i in range(data_dim)}
         overlapped_dask_array = da.overlap.overlap(
-            dask_array, depth=overlap_depth, boundary=overlap_boundary
+            dask_array, depth=overlap_depth, boundary=overlap_boundary,
         )
 
         # Must also be overlapped, since the patterns are overlapped
