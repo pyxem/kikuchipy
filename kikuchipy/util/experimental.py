@@ -384,7 +384,7 @@ def _average_neighbour_patterns_chunk(
 
     # Correlate patterns with kernel
     correlated_patterns = correlate(
-        patterns, weights=kernel, mode="constant", cval=0,
+        patterns.astype(np.float32), weights=kernel, mode="constant", cval=0,
     )
 
     # Divide convolved patterns by number of neighbours averaged with

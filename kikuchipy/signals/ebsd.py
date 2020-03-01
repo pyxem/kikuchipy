@@ -887,9 +887,6 @@ class EBSD(Signal2D):
                 "therefore performed."
             )
 
-        # Create dask array of signal patterns and do processing on this
-        dask_array = kp.util.dask._get_dask_array(signal=self, dtype=np.float32)
-
         # Get sum of kernel coefficients for each pattern, to normalize with
         # after correlation
         nav_shape = self.axes_manager.navigation_shape
@@ -905,6 +902,9 @@ class EBSD(Signal2D):
         # Add signal dimensions to kernel array to enable its use with Dask's
         # map_blocks()
         averaging_kernel._add_axes(self.axes_manager.signal_dimension)
+
+        # Create dask array of signal patterns and do processing on this
+        dask_array = kp.util.dask._get_dask_array(signal=self)
 
         # Add signal dimensions to array be able to use with Dask's map_blocks()
         nav_dim = self.axes_manager.navigation_dimension
