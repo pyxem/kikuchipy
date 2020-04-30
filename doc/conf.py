@@ -15,7 +15,7 @@ from kikuchipy import release as kp_release
 sys.path.append("../")
 
 # Project information
-project = "KikuchiPy"
+project = "kikuchipy"
 copyright = "2019-" + str(datetime.now().year) + ", " + kp_release.author + "."
 author = kp_release.author
 version = kp_release.version
@@ -26,16 +26,18 @@ master_doc = "index"
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = [
-    "sphinx_copybutton",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    "sphinx.ext.viewcode",
+    #    "sphinx.ext.viewcode",
+    "sphinx.ext.linkcode",
+    "sphinx_autodoc_typehints",
+    "sphinx_copybutton",
 ]
 
-# Create links to references within KikuchiPy's documentation to these packages.
+# Create links to references within kikuchipy's documentation to these packages.
 intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/latest", None),
     "hyperspy": ("http://hyperspy.org/hyperspy-doc/current", None),
@@ -55,7 +57,7 @@ templates_path = [
 ]
 
 # List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files. This pattern also affects
+# directories to ignore when looking for source files. This image also affects
 # html_static_path and html_extra_path.
 exclude_patterns = [
     "_build",
@@ -71,15 +73,29 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = [
     "_static",
 ]
+html_css_files = [
+    "style.css",
+]
 
 # Syntax highlighting
-pygments_style = "sphinx"
+# solarized-dark, solarized-light
+# default, friendly, colorful, sphinx
+pygments_style = "friendly"
 
 # Logo
-html_logo = "_static/icon/icon_v0.1.0.svg"
-html_favicon = "_static/icon/icon_v0.1.0.png"
+html_logo = "_static/icon/icon_v0.2.0.svg"
+html_favicon = "_static/icon/icon_v0.2.0.png"
 
 # Read the Docs theme options
 html_theme_options = {
-    "display_version": True,
+    "prev_next_buttons_location": None,
 }
+
+
+def linkcode_resolve(domain, info):
+    if domain != "py":
+        return None
+    if not info["module"]:
+        return None
+    filename = info["module"].replace(".", "/")
+    return "https://github.com/kikuchipy/kikuchipy/tree/master/%s.py" % filename

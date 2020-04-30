@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The KikuchiPy developers
+# Copyright 2019-2020 The kikuchipy developers
 #
-# This file is part of KikuchiPy.
+# This file is part of kikuchipy.
 #
-# KikuchiPy is free software: you can redistribute it and/or modify
+# kikuchipy is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# KikuchiPy is distributed in the hope that it will be useful,
+# kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import logging
@@ -53,7 +53,7 @@ def load(filename, lazy=False, **kwargs):
         until required. Allows opening arbitrary sized datasets. Default
         is ``False``.
     **kwargs :
-        Keyword arguments passed to the corresponding KikuchiPy reader.
+        Keyword arguments passed to the corresponding kikuchipy reader.
         See their individual documentation for available options.
     """
 
@@ -120,7 +120,7 @@ def _dict2signal(signal_dict, lazy=False):
             record_by = md["Signal"]["record_by"]
             if record_by != "image":
                 raise ValueError(
-                    "KikuchiPy only supports `record_by = image`, not "
+                    "kikuchipy only supports `record_by = image`, not "
                     f"{record_by}."
                 )
             del md["Signal"]["record_by"]
@@ -206,7 +206,7 @@ def _assign_signal_subclass(
         matches = dtype_dim_type_matches
     else:
         raise ValueError(
-            f"No KikuchiPy signals match dtype '{dtype}', signal dimension "
+            f"No kikuchipy signals match dtype '{dtype}', signal dimension "
             f"'{signal_dimension}' and signal_type '{signal_type}'."
         )
 
@@ -236,7 +236,7 @@ def save(filename, signal, overwrite=None, add_scan=None, **kwargs):
     """
 
     ext = os.path.splitext(filename)[1][1:]
-    if ext == "":  # Will write to KikuchiPy's h5ebsd format
+    if ext == "":  # Will write to kikuchipy's h5ebsd format
         ext = "h5"
         filename = filename + "." + ext
 

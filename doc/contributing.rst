@@ -2,7 +2,7 @@
 Contributing
 ============
 
-KikuchiPy is meant to be a community maintained project. We welcome
+kikuchipy is meant to be a community maintained project. We welcome
 contributions in the form of bug reports, documentation, code, feature requests,
 and more. These guidelines provide resources on how best to contribute.
 
@@ -19,14 +19,14 @@ Setting up a development installation
 
 You need a `fork <https://guides.github.com/activities/forking/#fork>`_ of the
 `repository <https://github.com/kikuchipy/kikuchipy>`_ in order to make changes
-to KikuchiPy.
+to kikuchipy.
 
 Make a local copy of your forked repository and change directories::
 
     git clone https://github.com/your-username/kikuchipy.git
     cd kikuchipy
 
-Set the ``upstream`` remote to the main KikuchiPy repository::
+Set the ``upstream`` remote to the main kikuchipy repository::
 
     git remote add upstream https://github.com/kikuchipy/kikuchipy.git
 
@@ -46,7 +46,7 @@ available globally (in the ``conda`` environment)::
 This installs all necessary development dependencies, including those for
 running tests and building documentation.
 
-The code making up KikuchiPy is formatted closely following the `Style Guide for
+The code making up kikuchipy is formatted closely following the `Style Guide for
 Python Code <https://www.python.org/dev/peps/pep-0008/>`_ with `The Black Code
 style <https://black.readthedocs.io/en/stable/the_black_code_style.html>`_. We
 use `pre-commit <https://pre-commit.com>`_ to run ``black`` automatically prior
@@ -115,7 +115,7 @@ Update your remote branch::
 
 You can then make a `pull request
 <https://guides.github.com/activities/forking/#making-a-pull-request>`_ to
-KikuchiPy's ``master`` branch. Good job!
+kikuchipy's ``master`` branch. Good job!
 
 .. _building-the-documentation:
 
@@ -144,9 +144,9 @@ address bar.
 Running and writing tests
 =========================
 
-All functionality in KikuchiPy is tested via the `pytest
+All functionality in kikuchipy is tested via the `pytest
 <https://docs.pytest.org>`_ framework. The tests reside in a ``test`` directory
-within each module. Tests are short methods that call functions in KikuchiPy
+within each module. Tests are short methods that call functions in kikuchipy
 and compare resulting output values with known answers. Install necessary
 dependencies to run the tests::
 
@@ -174,8 +174,8 @@ the coverage in more detail.
 Code of Conduct
 ===============
 
-KikuchiPy has a :doc:`Code of Conduct <code_of_conduct>` that should be honoured
-by everyone who participates in the KikuchiPy community.
+kikuchipy has a :doc:`Code of Conduct <code_of_conduct>` that should be honoured
+by everyone who participates in the kikuchipy community.
 
 .. _questions-comments-and-feedback:
 
@@ -192,7 +192,7 @@ Continuous integration (CI)
 ===========================
 
 We use `Travis CI <https://travis-ci.org/kikuchipy/kikuchipy>`_ to ensure that
-KikuchiPy can be installed on Windows, macOS and Linux (Ubuntu). After a
+kikuchipy can be installed on Windows, macOS and Linux (Ubuntu). After a
 successful installation, the CI server runs the tests. After the tests return no
 errors, code coverage is reported to `Coveralls
 <https://coveralls.io/github/kikuchipy/kikuchipy?branch=master>`_.

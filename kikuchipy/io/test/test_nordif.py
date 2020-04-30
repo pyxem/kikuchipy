@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The KikuchiPy developers
+# Copyright 2019-2020 The kikuchipy developers
 #
-# This file is part of KikuchiPy.
+# This file is part of kikuchipy.
 #
-# KikuchiPy is free software: you can redistribute it and/or modify
+# kikuchipy is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# KikuchiPy is distributed in the hope that it will be useful,
+# kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 # Many of these tests are inspired by the tests written for the block_file
 # reader/writer available in HyperSpy: https://github.com/hyperspy/hyperspy/
@@ -283,7 +283,7 @@ class TestNORDIF:
         assert s.axes_manager.as_dictionary() == AXES_MANAGER
 
         static_bg = plt.imread(BG_FILE)
-        np.testing.assert_equal(
+        assert np.allclose(
             s.metadata.Acquisition_instrument.SEM.Detector.EBSD.static_background,
             static_bg,
         )
@@ -336,7 +336,8 @@ class TestNORDIF:
         s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background pattern in directory
             s_reload = kp.load(save_path_nordif, setting_file=SETTING_FILE)
-        np.testing.assert_equal(s.data, s_reload.data)
+
+        assert np.allclose(s.data, s_reload.data)
 
         # Add static background and change filename to make metadata equal
         s_reload.metadata.Acquisition_instrument.SEM.Detector.EBSD.static_background = plt.imread(
@@ -405,7 +406,7 @@ class TestNORDIF:
                 scan_size=scan_size[::-1],
                 pattern_size=pattern_size,
             )
-        np.testing.assert_equal(s.data, s_reload.data)
+        assert np.allclose(s.data, s_reload.data)
 
     def test_write_data_line(self, save_path_nordif):
         scan_size = 3
@@ -421,7 +422,7 @@ class TestNORDIF:
                 scan_size=scan_size,
                 pattern_size=pattern_size,
             )
-        np.testing.assert_equal(s.data, s_reload.data)
+        assert np.allclose(s.data, s_reload.data)
 
     def test_write_data_single(self, save_path_nordif):
         pattern_size = (5, 5)
@@ -433,7 +434,7 @@ class TestNORDIF:
             s_reload = kp.load(
                 save_path_nordif, scan_size=1, pattern_size=pattern_size
             )
-        np.testing.assert_equal(s.data, s_reload.data)
+        assert np.allclose(s.data, s_reload.data)
 
     def test_read_cutoff(self, save_path_nordif):
         scan_size = (10, 3)
@@ -467,4 +468,4 @@ class TestNORDIF:
         ]
         cut_data = np.pad(cut_data, pw, mode="constant")
         cut_data = cut_data.reshape(scan_size_reloaded + pattern_size)
-        np.testing.assert_equal(cut_data, s_reload.data)
+        assert np.allclose(cut_data, s_reload.data)

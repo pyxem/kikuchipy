@@ -3,7 +3,7 @@ Related projects
 ================
 
 This is a non-exhaustive list of related, open-source projects for analysis of
-EBSD data that users of KikuchiPy might find useful:
+EBSD data that users of kikuchipy might find useful:
 
 - `EMsoft <http://vbff.materials.cmu.edu/EMsoft>`_: Series of Fortran programs
   which, among numerous other tasks, can perform dictionary indexing of EBSD and

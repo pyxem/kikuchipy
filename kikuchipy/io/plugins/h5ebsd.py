@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The KikuchiPy developers
+# Copyright 2019-2020 The kikuchipy developers
 #
-# This file is part of KikuchiPy.
+# This file is part of kikuchipy.
 #
-# KikuchiPy is free software: you can redistribute it and/or modify
+# kikuchipy is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# KikuchiPy is distributed in the hope that it will be useful,
+# kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
 import os
@@ -99,7 +99,7 @@ def file_reader(filename, scans=None, lazy=False, **kwargs):
     # Get manufacturer and version and check if reading the file is supported
     man, ver = manufacturer_version(f)
     man_pats = manufacturer_pattern_names()
-    if any(man == s for s in man_pats.keys()) is not True:
+    if any(man.lower() == s for s in man_pats.keys()) is not True:
         raise IOError(
             f"Manufacturer {man} not among recognised manufacturers "
             f"{list(man_pats.keys())}."
@@ -209,9 +209,9 @@ def manufacturer_pattern_names():
     """
 
     return {
-        "KikuchiPy": "patterns",
-        "EDAX": "Pattern",
-        "Bruker Nano": "RawPatterns",
+        "kikuchipy": "patterns",
+        "edax": "Pattern",
+        "bruker nano": "RawPatterns",
     }
 
 
@@ -269,7 +269,7 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
     ----------
     scan_group : h5py:Group
         HDF group of scan.
-    manufacturer : 'KikuchiPy', 'EDAX' or 'Bruker Nano'
+    manufacturer : 'kikuchipy', 'EDAX' or 'Bruker Nano'
         Manufacturer of file.
     version : str
         Version of manufacturer software.
@@ -329,7 +329,7 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
             "than file size. Will attempt to load by zero padding incomplete "
             "frames."
         )
-        # Data is stored pattern by pattern
+        # Data is stored image by image
         pw = [(0, ny * nx * sy * sx - data.size)]
         if lazy:
             data = da.pad(data.flatten(), pw, mode="constant")
@@ -370,16 +370,16 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
 def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
     """Return three dictionaries in HyperSpy's
     :class:`hyperspy.misc.utils.DictionaryTreeBrowser` format, one
-    with the h5ebsd scan header parameters as KikuchiPy metadata,
+    with the h5ebsd scan header parameters as kikuchipy metadata,
     another with all datasets in the header as original metadata, and
-    the last with info about scan size, pattern size and detector pixel
+    the last with info about scan size, image size and detector pixel
     size.
 
     Parameters
     ----------
     scan_group : h5py:Group
         HDF group of scan data and header.
-    manufacturer : 'KikuchiPy', 'EDAX' or 'Bruker Nano'
+    manufacturer : 'kikuchipy', 'EDAX' or 'Bruker Nano'
         Manufacturer of file.
     version : str
         Version of manufacturer software used to create file.
@@ -389,11 +389,11 @@ def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
     Returns
     -------
     md : hyperspy.misc.utils.DictionaryTreeBrowser
-        KikuchiPy ``metadata`` elements available in file.
+        kikuchipy ``metadata`` elements available in file.
     omd : hyperspy.misc.utils.DictionaryTreeBrowser
         All metadata available in file.
     scan_size : hyperspy.misc.utils.DictionaryTreeBrowser
-        Scan, pattern, step and detector pixel size available in file.
+        Scan, image, step and detector pixel size available in file.
     """
 
     md = kikuchipy_metadata()
@@ -408,7 +408,7 @@ def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
         md, omd, scan_size = edaxheader2dicts(scan_group, md)
     elif "bruker" in manufacturer.lower():
         md, omd, scan_size = brukerheader2dicts(scan_group, md)
-    else:  # KikuchiPy
+    else:  # kikuchipy
         md, omd, scan_size = kikuchipyheader2dicts(scan_group, md, lazy)
 
     ebsd_node = metadata_nodes(sem=False)
@@ -419,26 +419,26 @@ def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
 
 
 def kikuchipyheader2dicts(scan_group, md, lazy=False):
-    """Return scan metadata dictionaries from a KikuchiPy h5ebsd file.
+    """Return scan metadata dictionaries from a kikuchipy h5ebsd file.
 
     Parameters
     ----------
     scan_group : h5py:Group
         HDF group of scan data and header.
     md : hyperspy.misc.utils.DictionaryTreeBrowser
-        Dictionary with empty fields from KikuchiPy's metadata.
+        Dictionary with empty fields from kikuchipy's metadata.
     lazy : bool, optional
         Read dataset lazily.
 
     Returns
     -------
     md : hyperspy.misc.utils.DictionaryTreeBrowser
-        KikuchiPy ``metadata`` elements available in KikuchiPy file.
+        kikuchipy ``metadata`` elements available in kikuchipy file.
     omd : hyperspy.misc.utils.DictionaryTreeBrowser
-        All metadata available in KikuchiPy file.
+        All metadata available in kikuchipy file.
     scan_size : hyperspy.misc.utils.DictionaryTreeBrowser
-        Scan, pattern, step and detector pixel size available in
-        KikuchiPy file.
+        Scan, image, step and detector pixel size available in
+        kikuchipy file.
     """
 
     omd = DictionaryTreeBrowser()
@@ -480,16 +480,16 @@ def edaxheader2dicts(scan_group, md):
     scan_group : h5py:Group
         HDF group of scan data and header.
     md : hyperspy.misc.utils.DictionaryTreeBrowser
-        Dictionary with empty fields from KikuchiPy's metadata.
+        Dictionary with empty fields from kikuchipy's metadata.
 
     Returns
     -------
     md : hyperspy.misc.utils.DictionaryTreeBrowser
-        KikuchiPy ``metadata`` elements available in EDAX file.
+        kikuchipy ``metadata`` elements available in EDAX file.
     omd : hyperspy.misc.utils.DictionaryTreeBrowser
         All metadata available in EDAX file.
     scan_size : hyperspy.misc.utils.DictionaryTreeBrowser
-        Scan, pattern, step and detector pixel size available in EDAX
+        Scan, image, step and detector pixel size available in EDAX
         file.
     """
 
@@ -557,16 +557,16 @@ def brukerheader2dicts(scan_group, md):
     scan_group : h5py:Group
         HDF group of scan data and header.
     md : hyperspy.misc.utils.DictionaryTreeBrowser
-        Dictionary with empty fields from KikuchiPy's metadata.
+        Dictionary with empty fields from kikuchipy's metadata.
 
     Returns
     -------
     md : hyperspy.misc.utils.DictionaryTreeBrowser
-        KikuchiPy ``metadata`` elements available in Bruker file.
+        kikuchipy ``metadata`` elements available in Bruker file.
     omd : hyperspy.misc.utils.DictionaryTreeBrowser
         All metadata available in Bruker file.
     scan_size : hyperspy.misc.utils.DictionaryTreeBrowser
-        Scan, pattern, step and detector pixel size available in Bruker
+        Scan, image, step and detector pixel size available in Bruker
         file.
     """
 
@@ -632,7 +632,7 @@ def file_writer(filename, signal, add_scan=None, scan_number=1, **kwargs):
     :class:`~kikuchipy.signals.ebsd.LazyEBSD` signal to an existing,
     but not open, or new h5ebsd file.
 
-    Only writing to KikuchiPy's h5ebsd format is supported.
+    Only writing to kikuchipy's h5ebsd format is supported.
 
     Parameters
     ----------
@@ -654,7 +654,7 @@ def file_writer(filename, signal, add_scan=None, scan_number=1, **kwargs):
     # Set manufacturer and version to use in file
     from kikuchipy.release import version as ver_signal
 
-    man_ver_dict = {"manufacturer": "KikuchiPy", "version": ver_signal}
+    man_ver_dict = {"manufacturer": "kikuchipy", "version": ver_signal}
 
     # Open file in correct mode
     mode = "w"
@@ -671,7 +671,7 @@ def file_writer(filename, signal, add_scan=None, scan_number=1, **kwargs):
         if man_ver_dict["manufacturer"].lower() != man_file.lower():
             f.close()
             raise IOError(
-                f"Only writing to KikuchiPy's (and not {man_file}'s) h5ebsd "
+                f"Only writing to kikuchipy's (and not {man_file}'s) h5ebsd "
                 "format is supported."
             )
         man_ver_dict["version"] = ver_file
@@ -691,7 +691,7 @@ def file_writer(filename, signal, add_scan=None, scan_number=1, **kwargs):
     scan_group = f.create_group("Scan " + str(scan_number))
 
     # Create scan dictionary with EBSD and SEM metadata
-    # Add scan size, pattern size and detector pixel size to dictionary to write
+    # Add scan size, image size and detector pixel size to dictionary to write
     sx, sy = signal.axes_manager.signal_shape
     nx, ny = signal.axes_manager.navigation_shape
     nav_indices = signal.axes_manager.navigation_indices_in_array
@@ -734,7 +734,7 @@ def file_writer(filename, signal, add_scan=None, scan_number=1, **kwargs):
 
     # Write signal to file
     man_pats = manufacturer_pattern_names()
-    dset_pattern_name = man_pats["KikuchiPy"]
+    dset_pattern_name = man_pats["kikuchipy"]
     overwrite_dataset(
         scan_group.create_group("EBSD/Data"),
         signal.data.reshape(nx * ny, sy, sx),

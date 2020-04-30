@@ -5,7 +5,7 @@ Changelog
 0.1.2 (2020-01-09)
 ==================
 
-KikuchiPy is an open-source Python library for processing and analysis of
+kikuchipy is an open-source Python library for processing and analysis of
 electron backscatter diffraction patterns: https://kikuchipy.readthedocs.io
 
 This is a bug-fix release that ensures, unlike the previous bug-fix release,
@@ -20,9 +20,9 @@ PyPI.
 0.1.0 (2020-01-04)
 ==================
 
-We're happy to announce the release of KikuchiPy v0.1.0!
+We're happy to announce the release of kikuchipy v0.1.0!
 
-KikuchiPy is an open-source Python library for processing and analysis of
+kikuchipy is an open-source Python library for processing and analysis of
 electron backscatter diffraction (EBSD) patterns. The library builds upon the
 tools for multi-dimensional data analysis provided by the HyperSpy library.
 
@@ -45,7 +45,7 @@ Features
   format (.h5), using ``s.save()``. Both formats are readable by EMsoft's NORDIF
   and EMEBSD readers, respectively.
 
-* All functionality in KikuchiPy can be performed both directly and lazily
+* All functionality in kikuchipy can be performed both directly and lazily
   (except some multivariate analysis algorithms). The latter means that all
   operations on a scan, including plotting, can be done by loading only
   necessary parts of the scan into memory at a time. Ultimately, this lets us

@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The KikuchiPy developers
+# Copyright 2019-2020 The kikuchipy developers
 #
-# This file is part of KikuchiPy.
+# This file is part of kikuchipy.
 #
-# KikuchiPy is free software: you can redistribute it and/or modify
+# kikuchipy is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# KikuchiPy is distributed in the hope that it will be useful,
+# kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
 
@@ -36,7 +36,7 @@ KIKUCHIPY_FILE_NO_CHUNKS = os.path.join(
 EDAX_FILE = os.path.join(DIR_PATH, "../../data/edax/patterns.h5")
 BRUKER_FILE = os.path.join(DIR_PATH, "../../data/bruker/patterns.h5")
 BG_FILE = os.path.join(
-    DIR_PATH, "../../data/nordif/Background acquisition pattern.bmp"
+    DIR_PATH, "../../data/nordif/Background acquisition image.bmp"
 )
 AXES_MANAGER = {
     "axis-0": {
@@ -317,7 +317,7 @@ class Testh5ebsd:
 
     def test_save_edax(self):
         s = kp.load(EDAX_FILE)
-        with pytest.raises(OSError, match="Only writing to KikuchiPy's"):
+        with pytest.raises(OSError, match="Only writing to kikuchipy's"):
             s.save(EDAX_FILE, add_scan=True)
 
     def test_dict2h5ebsdgroup(self, save_path_h5ebsd):
@@ -332,7 +332,7 @@ class Testh5ebsd:
                 dict2h5ebsdgroup(dictionary, group)
 
     def test_read_lazily_no_chunks(self):
-        # First, make sure the data pattern dataset is not actually chunked
+        # First, make sure the data image dataset is not actually chunked
         f = h5py.File(KIKUCHIPY_FILE_NO_CHUNKS, mode="r")
         data_dset = f["Scan 1/EBSD/Data/patterns"]
         assert data_dset.chunks is None

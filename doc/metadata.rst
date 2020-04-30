@@ -3,14 +3,14 @@ Metadata structure
 ==================
 
 The :py:class:`~kikuchipy.signals.ebsd.EBSD` class stores metadata in the
-``metadata`` attribute provided by HyperSpy. While KikuchiPy's metadata
+``metadata`` attribute provided by HyperSpy. While kikuchipy's metadata
 structure (:py:func:`~kikuchipy.util.io.kikuchipy_metadata`) is based on
 `HyperSpy's metadata structure
 <http://hyperspy.org/hyperspy-doc/current/user_guide/metadata_structure.html>`_,
 it includes the two extra nodes ``Acquisition_instrument.SEM.Detector.EBSD`` and
 ``Acquisition_instrument.Sample.Phases``. The following metadata structure is,
 along with the patterns, saved to file when saving an
-:py:class:`~kikuchipy.signals.ebsd.EBSD` object in the :ref:`KikuchiPy h5ebsd
+:py:class:`~kikuchipy.signals.ebsd.EBSD` object in the :ref:`kikuchipy h5ebsd
 format <h5ebsd-format>`.
 
 ::

@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The KikuchiPy developers
+# Copyright 2019-2020 The kikuchipy developers
 #
-# This file is part of KikuchiPy.
+# This file is part of kikuchipy.
 #
-# KikuchiPy is free software: you can redistribute it and/or modify
+# kikuchipy is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# KikuchiPy is distributed in the hope that it will be useful,
+# kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import datetime
 import os
@@ -111,7 +111,7 @@ def file_reader(
         md = kikuchipy_metadata()
         omd = DictionaryTreeBrowser()
 
-    # Read static background pattern into metadata
+    # Read static background image into metadata
     static_bg_file = os.path.join(folder, "Background acquisition pattern.bmp")
     try:
         md.set_item(
@@ -133,7 +133,7 @@ def file_reader(
     scan["metadata"] = md.as_dictionary()
     scan["original_metadata"] = omd.as_dictionary()
 
-    # Set scan size and pattern size
+    # Set scan size and image size
     if isinstance(scan_size, int):
         nx = scan_size
         ny = 1
@@ -156,7 +156,7 @@ def file_reader(
             "Pattern size and scan size larger than file size! Will attempt to "
             "load by zero padding incomplete frames."
         )
-        # Data is stored pattern by pattern
+        # Data is stored image by image
         pw = [(0, ny * nx * sy * sx - data.size)]
         data = np.pad(data, pw, mode="constant")
         data = data.reshape((ny, nx, sy, sx))
@@ -211,7 +211,7 @@ def get_settings_from_file(filename):
     omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
         Metadata that does not fit into HyperSpy's metadata structure.
     scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
-        Information on pattern size, scan size and scan steps.
+        Information on image size, scan size and scan steps.
     """
 
     f = open(filename, "r", encoding="latin-1")  # Avoid byte strings

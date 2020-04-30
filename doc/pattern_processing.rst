@@ -4,20 +4,113 @@ Pattern processing
 
 The raw EBSD signal can be empirically evaluated as a superposition of a Kikuchi
 diffraction pattern and a smooth background intensity. For pattern indexing, the
-latter intensity is undesirable, while for so-called :doc:`virtual backscatter
-electron (VBSE) imaging <virtual_backscatter_electron_imaging>`, this
-intensity can reveal important topographical, compositional or diffraction
-contrast. This section details methods to enhance the Kikuchi diffraction
-pattern in patterns in an :class:`~kikuchipy.signals.ebsd.EBSD` object.
+latter intensity is usually undesirable, while for :doc:`virtual backscatter
+electron (VBSE) imaging <virtual_backscatter_electron_imaging>`, this intensity
+can reveal topographical, compositional or diffraction contrast. This section
+details methods to enhance the Kikuchi diffraction pattern and manipulate
+detector intensities in patterns in an :class:`~kikuchipy.signals.ebsd.EBSD`
+object.
+
+.. note::
+
+    The functions operating on individual patterns (:class:`numpy.ndarray`) are
+    available in the :mod:`kikuchipy.util.pattern` module when possible.
+
+.. _rescale-intensity:
+
+Rescale intensity
+=================
+
+Vendors usually write patterns to file with 8 (``uint8``) or 16 (``uint16``) bit
+integer depth, holding [0, 2^8] or [0, 2^16] gray levels, respectively. To avoid
+loosing intensity information when processing, we often change data types to
+e.g. 32 bit floating point (``float32``). However, only changing the data type
+with :meth:`~hyperspy.signal.BaseSignal.change_dtype` does not rescale pattern
+intensities, leading to patterns not using the full available data type range:
+
+.. code-block::
+
+    >>> print(s.data.dtype, s.data.max())
+    uint8 255
+    >>> s.change_dtype(np.uint16)
+    >>> print(s.data.dtype, s.data.max())
+    uint16 255
+    >>> s.plot(vmax=1000)
+
+In these cases it is convenient to rescale intensities to a desired data type
+range, either keeping relative intensities between patterns in a scan or not. We
+can do this for all patterns in a scan (:class:`~kikuchipy.signals.ebsd.EBSD`
+object) with :meth:`kikuchipy.signals.ebsd.EBSD.rescale_intensity`:
+
+.. code-block::
+
+    >>> s.rescale_intensity(relative=True)
+    >>> print(s.data.dtype, s.data.max())
+    uint16 65535
+    >>> s.plot(vmax=65535)
+
+Or, we can do it for a single pattern (:class:`numpy.ndarray`) with
+:func:`kikuchipy.util.pattern.rescale_intensity`:
+
+.. code-block::
+
+    >>> p = s.inav[0, 0].data
+    >>> p2 = kp.util.pattern.rescale_intensity(p)
+
+.. _fig-rescale-intensities:
+
+.. figure:: _static/image/pattern_processing/rescale_intensities.jpg
+    :align: center
+    :width: 100%
+
+    A pattern, initially with ``uint8`` data type, cast to ``uint16`` (left),
+    with intensities not filling the available gray levels (left). The same
+    pattern after rescaling (right).
+
+We can also stretch the pattern contrast by removing intensities outside a range
+passed to ``in_range`` or at certain percentiles by passing percents to
+``percentiles``:
+
+.. code-block::
+
+    >>> s.rescale_intensity(in_range=(5, 250))
+    >>> print(s.data.min(), s.data.max())
+    5 250
+    >>> s.rescale_intensity(percentiles=(0.5, 99.5))
+    >>> print(s.data.min(), s.data.max())
+    0 255
+
+.. _fig-contrast-stretching:
+
+.. figure:: _static/image/pattern_processing/contrast_stretching.jpg
+    :align: center
+    :width: 100%
+
+    A pattern before (left) and after (right) stretching its contrast to a range
+    given by the lowest 0.5% and highest 0.5% intensities.
+
+This can reduce the influence of outliers with exceptionally high or low
+intensities, like hot or dead pixels.
+
+.. _normalize-intensity:
+
+Normalize intensity
+===================
+
+It can be useful to normalize pattern intensities to a mean value of
+:math:`\mu = 0.0` and a standard deviation of e.g. :math:`\sigma = 1.0` when
+e.g. comparing patterns or calculating :ref:`image quality <image-quality>`.
+This can be
+
 
 .. _background-correction:
 
 Background correction
 =====================
 
-.. _static-background-correction:
+.. _remove-static-background:
 
-Static background correction
+Remove the static background
 ----------------------------
 
 Effects which are constant, like hot pixels or dirt on the detector, can be
@@ -48,9 +141,9 @@ the highest pixel intensity in a scan is stretched to 255 (and the lowest to 0),
 while the rest is rescaled keeping relative intensities between patterns. With
 ``relative=False``, all patterns are equally stretched to [0, 255].
 
-.. _dynamic-background-correction:
+.. _remove-dynamic-background:
 
-Dynamic background correction
+Remove the dynamic background
 -----------------------------
 
 Uneven intensity in a static background subtracted pattern can be corrected by
@@ -74,6 +167,11 @@ Gaussian kernel, ``sigma``:
     background correction (right).
 
 Patterns are rescaled to fill the available data type range.
+
+.. _get-dynamic-background:
+
+Get the dynamic background
+==========================
 
 .. _pattern-averaging:
 
@@ -226,49 +324,7 @@ for the effect of varying ``kernel_size``.
     Materials and Manufacturing Innovation* **8** (2019), doi:
     https://doi.org/10.1007/s40192-019-00137-4.
 
-.. _rescale-intensities:
+.. _fft-filtering:
 
-Rescale intensities
-===================
-
-Only changing the data type using
-:meth:`~kikuchipy.signals.ebsd.EBSD.change_dtype` does not rescale pattern
-intensities, leading to patterns not using the full available data type range,
-e.g. [0, 65535] for ``uint16``:
-
-.. code-block:: python
-
-    >>> print(s.data.dtype, s.data.max())
-    uint8 255
-    >>> s.change_dtype(np.uint16)
-    >>> print(s.data.dtype, s.data.max())
-    uint16 255
-    >>> s.plot(vmax=1000)
-
-.. _fig-pattern-adapthist-uint16:
-
-.. figure:: _static/image/pattern_processing/pattern_adapthist_uint16.jpg
-    :align: center
-    :width: 350
-
-    A pattern, initially with ``uint8`` data type, cast to ``uint16``.
-
-In these cases it is convenient to rescale intensities to a desired data type
-range, either keeping relative intensities between patterns or not, by using
-:meth:`~kikuchipy.signals.ebsd.EBSD.rescale_intensities`:
-
-.. code-block:: python
-
-    >>> s.rescale_intensities(relative=True)
-    >>> print(s.data.dtype, s.data.max())
-    uint16 65535
-    >>> s.plot(vmax=65535)
-
-.. _fig-pattern-adapthist-uint16-rescaled:
-
-.. figure:: _static/image/pattern_processing/pattern_adapthist_uint16_rescaled.jpg
-    :align: center
-    :width: 350
-
-    Same pattern as in :ref:`the above figure <fig-pattern-adapthist-uint16>`
-    with intensities rescaled to fill the full ``uint16`` data range.
+Filtering in the frequency domain
+=================================
