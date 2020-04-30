@@ -797,7 +797,7 @@ class TestDecomposition:
         assert np.allclose(model_mean, mean_intensity, atol=0.1)
 
     @pytest.mark.parametrize(
-        "components, mean_intensity", [(None, 132.1358), (3, 122.962)]
+        "components, mean_intensity", [(None, 132.1), (3, 122.9)]
     )
     def test_get_decomposition_model_write(
         self, dummy_signal, components, mean_intensity, tmp_path
@@ -826,7 +826,7 @@ class TestDecomposition:
         # ... data type, data shape and mean intensity
         assert s_reload.data.dtype == lazy_signal.data.dtype
         assert s_reload.data.shape == lazy_signal.data.shape
-        assert np.allclose(s_reload.data.mean(), mean_intensity, atol=1e-4)
+        assert np.allclose(s_reload.data.mean(), mean_intensity, atol=1e-1)
 
 
 class TestLazy:
