@@ -37,14 +37,14 @@ from .window import Window
 
 def rescale_intensity(
     pattern: np.ndarray,
-    in_range: Optional[Tuple[int, float]] = None,
-    out_range: Optional[Tuple[int, float]] = None,
+    in_range: Optional[Tuple[Union[int, float], ...]] = None,
+    out_range: Optional[Tuple[Union[int, float], ...]] = None,
     dtype_out: Optional[np.dtype] = None,
 ) -> np.ndarray:
     """Rescale intensities in an EBSD pattern.
 
-    Pattern max./min. intensity is determined from the data type range
-    of :class:`numpy.dtype` passed to `dtype_out`.
+    Pattern max./min. intensity is determined from `out_range` or the
+    data type range of :class:`numpy.dtype` passed to `dtype_out`.
 
     This method is based on :func:`skimage.exposure.rescale_intensity`.
 
@@ -56,8 +56,7 @@ def rescale_intensity(
         Min./max. intensity values of input and output pattern. If None,
         (default) `in_range` is set to image min./max. If None
         (default), `out_range` is set to `dtype_out` min./max according
-        to :func:`skimage.util.dtype.dtype_range`, with min. equal to
-        zero.
+        to :func:`skimage.util.dtype.dtype_range`.
     dtype_out
         Data type of rescaled pattern. If None (default), it is set to
         the same data type as the input pattern.
@@ -80,7 +79,9 @@ def rescale_intensity(
 
     if out_range is None or out_range in dtype_range:
         try:
-            omin, omax = (0, dtype_range[dtype_out][-1])
+            if isinstance(dtype_out, np.dtype):
+                dtype_out = dtype_out.type
+            omin, omax = dtype_range[dtype_out]
         except KeyError:
             raise KeyError(
                 "Could not set output intensity range, since data type "
@@ -110,7 +111,9 @@ def remove_dynamic_background(
     filter_domain: str = "frequency",
     std: Union[None, int, float] = None,
     truncate: Union[int, float] = 4.0,
-    dtype_out: Optional[np.dtype] = None,
+    dtype_out: Union[
+        None, np.dtype, Tuple[int, int], Tuple[float, float]
+    ] = None,
 ) -> np.ndarray:
     """Remove the dynamic background in an EBSD pattern.
 
@@ -473,10 +476,12 @@ def normalize_intensity(
     """Normalize image intensities to a mean of zero and a given
     standard deviation.
 
+    Data type is preserved.
+
     Parameters
     ----------
     pattern
-        2D experimental EBSD image.
+        EBSD pattern.
     num_std
         Number of standard deviations of the output intensities (default
         is 1).
@@ -487,7 +492,13 @@ def normalize_intensity(
     Returns
     -------
     normalized_pattern
-        Normalized image.
+        Normalized pattern.
+
+    Notes
+    -----
+    Data type should always be changed to floating point, e.g.
+    ``np.float32`` with :meth:`np.ndarray.astype`, before normalizing
+    the intensities.
 
     """
 

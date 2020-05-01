@@ -22,7 +22,7 @@ import gc
 import numbers
 import os
 import sys
-from typing import Union
+from typing import Union, List, Optional, Tuple, NoReturn
 import warnings
 
 import dask.array as da
@@ -98,7 +98,7 @@ class EBSD(Signal2D):
         version=None,
         microscope=None,
         magnification=None,
-    ):
+    ) -> NoReturn:
         """Set experimental parameters in signal metadata.
 
         Parameters
@@ -215,7 +215,7 @@ class EBSD(Signal2D):
         setting=None,
         space_group=None,
         symmetry=None,
-    ):
+    ) -> NoReturn:
         """Set parameters for one phase in signal metadata.
 
         A phase node with default values is created if none is present
@@ -299,14 +299,16 @@ class EBSD(Signal2D):
         phase = {k: v for k, v in inputs.items() if v is not None}
         kp.util.phase._update_phase_info(self.metadata, phase, number)
 
-    def set_scan_calibration(self, step_x=1.0, step_y=1.0):
+    def set_scan_calibration(
+        self, step_x: Union[int, float] = 1.0, step_y: Union[int, float] = 1.0
+    ) -> NoReturn:
         """Set the step size in microns.
 
         Parameters
         ----------
-        step_x : float
+        step_x
             Scan step size in um per pixel in horizontal direction.
-        step_y : float
+        step_y
             Scan step size in um per pixel in vertical direction.
 
         See Also
@@ -328,13 +330,13 @@ class EBSD(Signal2D):
         x.scale, y.scale = (step_x, step_y)
         x.units, y.units = ["\u03BC" + "m"] * 2
 
-    def set_detector_calibration(self, delta):
+    def set_detector_calibration(self, delta: Union[int, float]) -> NoReturn:
         """Set detector pixel size in microns. The offset is set to the
         the detector centre.
 
         Parameters
         ----------
-        delta : float
+        delta
             Detector pixel size in microns.
 
         See Also
@@ -359,11 +361,11 @@ class EBSD(Signal2D):
 
     def remove_static_background(
         self,
-        operation="subtract",
-        relative=True,
-        static_bg=None,
-        scale_bg=False,
-    ):
+        operation: str = "subtract",
+        relative: bool = True,
+        static_bg: Union[None, np.ndarray, da.Array] = None,
+        scale_bg: bool = False,
+    ) -> NoReturn:
         """Remove the static background in an EBSD scan inplace.
 
         The removal is performed by subtracting or dividing by a static
@@ -373,19 +375,19 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        operation : "subtract" or "divide", optional
-            Whether to subtract (default) or divide by the static
+        operation
+            Whether to "subtract" (default) or "divide" by the static
             background pattern.
-        relative : bool, optional
-            Keep relative intensities between patterns (default is
-            True).
-        static_bg : None, numpy.ndarray, or dask.array.Array, optional
+        relative
+            Keep relative intensities between patterns. Default is
+            True.
+        static_bg
             Static background pattern. If None is passed (default) we
             try to read it from the signal metadata.
-        scale_bg : bool, optional
+        scale_bg
             Whether to scale the static background pattern to each
-            individual pattern's data range before removal (default is
-            False). Must be False if `relative` is True.
+            individual pattern's data range before removal. Must be
+            False if `relative` is True. Default is False.
 
         See Also
         --------
@@ -499,7 +501,7 @@ class EBSD(Signal2D):
         std: Union[None, int, float] = None,
         truncate: Union[int, float] = 4.0,
         **kwargs,
-    ):
+    ) -> NoReturn:
         """Remove the dynamic background in an EBSD scan inplace.
 
         The removal is performed by subtracting or dividing by a
@@ -557,8 +559,8 @@ class EBSD(Signal2D):
             filter_func = kp.util.barnes_fftfilter._fft_filter
             (
                 kwargs["fft_shape"],
-                kwargs["kernel_shape"],
-                kwargs["kernel_fft"],
+                kwargs["window_shape"],
+                kwargs["window_fft"],
                 kwargs["offset_before_fft"],
                 kwargs["offset_after_ifft"],
             ) = kp.util.pattern._dynamic_background_frequency_space_setup(
@@ -583,7 +585,7 @@ class EBSD(Signal2D):
 
         # Get output data type and output data type intensity range
         dtype_out = self.data.dtype.type
-        out_range = (0, dtype_range[dtype_out][-1])
+        out_range = dtype_range[dtype_out]
 
         corrected_patterns = dask_array.map_blocks(
             func=kp.util.chunk.remove_dynamic_background,
@@ -605,26 +607,28 @@ class EBSD(Signal2D):
 
     def get_dynamic_background(
         self,
-        std=None,
-        filter_domain="frequency",
-        truncate=4.0,
-        dtype_out=None,
+        filter_domain: str = "frequency",
+        std: Union[None, int, float] = None,
+        truncate: Union[int, float] = 4.0,
+        dtype_out: Union[
+            None, np.dtype, Tuple[int, int], Tuple[float, float]
+        ] = None,
         **kwargs,
     ):
         """Get the dynamic background per EBSD pattern in a scan.
 
         Parameters
         ----------
-        std : None, int or float, optional
+        filter_domain
+            Whether to apply a Gaussian convolution filter in the
+            "frequency" (default) or "spatial" domain.
+        std
             Standard deviation of the Gaussian window. If None
             (default), it is set to width/8.
-        filter_domain : "frequency", "spatial", optional
-            Whether to apply a Gaussian convolution filter in the
-            frequency (default) or spatial domain.
-        truncate : float, optional
+        truncate
             Truncate the Gaussian filter at this many standard
             deviations. Default is 4.0.
-        dtype_out : np.dtype, optional
+        dtype_out
             Data type of the background patterns. If None (default), it
             is set to the same data type as the input pattern.
         kwargs :
@@ -633,8 +637,7 @@ class EBSD(Signal2D):
 
         Returns
         -------
-        background_signal : kikuchipy.signals.ebsd.EBSD or \
-                kikuchipy.signals.ebsd.LazyEBSD
+        background_signal : EBSD or LazyEBSD
             Signal with the large scale variations across the detector.
 
         """
@@ -648,8 +651,8 @@ class EBSD(Signal2D):
             # FFT filter setup for Connelly Barnes' algorithm
             (
                 kwargs["fft_shape"],
-                kwargs["kernel_shape"],
-                kwargs["kernel_fft"],
+                kwargs["window_shape"],
+                kwargs["window_fft"],
                 kwargs["offset_before_fft"],
                 kwargs["offset_after_ifft"],
             ) = kp.util.pattern._dynamic_background_frequency_space_setup(
@@ -694,12 +697,14 @@ class EBSD(Signal2D):
 
     def rescale_intensity(
         self,
-        relative=False,
-        in_range=None,
-        out_range=None,
-        dtype_out=None,
-        percentiles=None,
-    ):
+        relative: bool = False,
+        in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        dtype_out: Union[
+            None, np.dtype, Tuple[int, int], Tuple[float, float]
+        ] = None,
+        percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+    ) -> NoReturn:
         """Rescale pattern intensities in an EBSD scan inplace.
 
         Output min./max. intensity is determined from `out_range` or the
@@ -711,25 +716,25 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        relative : bool, optional
+        relative
             Whether to keep relative intensities between patterns
             (default is False). If True, `in_range` must be None,
             because `in_range` is in this case set to the global
             min./max. intensity.
-        in_range : None or tuple of int or float, optional
+        in_range
             Min./max. intensity of input patterns. If None (default),
             stretching is performed when `in_range` is set to a narrower
             `in_range` is set to pattern min./max intensity. Contrast
             intensity range than the input patterns. Must be None if
             `relative` is True or `percentiles` are passed.
-        out_range : None or tuple of int or float, optional
+        out_range
             Min./max. intensity of output patterns. If None (default),
             `out_range` is set to `dtype_out` min./max according to
-            `skimage.util.dtype.dtype_range`, with min. equal to zero.
-        dtype_out : None or numpy.dtype, optional
+            `skimage.util.dtype.dtype_range`.
+        dtype_out
             Data type of rescaled patterns, default is input patterns'
             data type.
-        percentiles : None or tuple of int or float, optional
+        percentiles
             Disregard intensities outside these percentiles. Calculated
             per pattern. Must be None if `in_range` or `relative` is
             passed (default is None).
@@ -781,7 +786,7 @@ class EBSD(Signal2D):
             dtype_out_pass = dtype_out
             if isinstance(dtype_out, np.dtype):
                 dtype_out_pass = dtype_out.type
-            out_range = (0, dtype_range[dtype_out_pass][-1])
+            out_range = dtype_range[dtype_out_pass]
 
         # Create dask array of signal patterns and do processing on this
         dask_array = kp.util.dask._get_dask_array(signal=self)
@@ -807,8 +812,11 @@ class EBSD(Signal2D):
             self.data = rescaled_patterns
 
     def adaptive_histogram_equalization(
-        self, kernel_size=None, clip_limit=0, nbins=128
-    ):
+        self,
+        kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
+        clip_limit: Union[int, float] = 0,
+        nbins: int = 128,
+    ) -> NoReturn:
         """Enhance the local contrast in an EBSD scan inplace using
         adaptive histogram equalization.
 
@@ -816,14 +824,14 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        kernel_size : int or list-like, optional
+        kernel_size
             Shape of contextual regions for adaptive histogram
             equalization, default is 1/4 of image height and 1/4 of
             image width.
-        clip_limit : float, optional
+        clip_limit
             Clipping limit, normalized between 0 and 1 (higher values
             give more contrast). Default is 0.
-        nbins : int, optional
+        nbins
             Number of gray bins for histogram ("data range"), default is
             128.
 
@@ -896,7 +904,7 @@ class EBSD(Signal2D):
         else:
             self.data = equalized_patterns
 
-    def get_image_quality(self, normalize=True):
+    def get_image_quality(self, normalize: bool = True) -> np.ndarray:
         """Compute the image quality map of patterns in an EBSD scan.
 
         The image quality is calculated based on the procedure defined
@@ -904,14 +912,14 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        normalize : bool, optional
+        normalize
             Whether to normalize patterns to a mean of zero and standard
             deviation of 1 before calculating the image quality (default
             is True).
 
         Returns
         -------
-        image_quality_map : np.ndarray
+        image_quality_map
             Image quality map of same shape as signal navigation axes.
 
         References
@@ -928,7 +936,7 @@ class EBSD(Signal2D):
 
         # Calculate frequency vectors
         sx, sy = self.axes_manager.signal_shape
-        frequency_vectors = kp.util.experimental.fft_frequency_vectors((sy, sx))
+        frequency_vectors = kp.util.pattern.fft_frequency_vectors((sy, sx))
         inertia_max = np.sum(frequency_vectors) / (sy * sx)
 
         # Calculate image quality per chunk
@@ -937,7 +945,6 @@ class EBSD(Signal2D):
             frequency_vectors=frequency_vectors,
             inertia_max=inertia_max,
             normalize=normalize,
-            dtype_out=dtype_out,
             dtype=dtype_out,
             drop_axis=self.axes_manager.signal_indices_in_array,
         )
@@ -949,7 +956,12 @@ class EBSD(Signal2D):
 
         return image_quality_map
 
-    def fft_filter(self, transfer_function, shift=False, **kwargs):
+    def fft_filter(
+        self,
+        transfer_function: Union[np.ndarray, kp.util.Window],
+        shift: bool = False,
+        **kwargs,
+    ) -> NoReturn:
         """Filter an EBSD scan inplace in the frequency domain.
 
         Patterns are transformed via the Fast Fourier Transform (FFT) to
@@ -961,10 +973,10 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        transfer_function : numpy.ndarray or kikuchipy.util.Window
+        transfer_function
             Filter transfer function in the frequency domain of pattern
             shape.
-        shift : bool, optional
+        shift
             Whether to shift the zero-frequency component to the centre
             (default is False).
         kwargs :
@@ -982,7 +994,7 @@ class EBSD(Signal2D):
             transfer_function=transfer_function,
             shift=shift,
             dtype_out=dtype_out,
-            dtype=dtype,
+            dtype=dtype_out,
             **kwargs,
         )
 
@@ -995,22 +1007,25 @@ class EBSD(Signal2D):
             self.data = filtered_patterns
 
     def normalize_intensity(
-        self, num_std=1, divide_by_square_root=False, dtype_out=None
-    ):
+        self,
+        num_std: int = 1,
+        divide_by_square_root: bool = False,
+        dtype_out: Optional[np.dtype] = None,
+    ) -> NoReturn:
         """Normalize pattern intensities in an EBSD scan inplace to a
         mean of zero with a given standard deviation.
 
         Parameters
         ----------
-        num_std : int, optional
-            Number of standard deviations of the output intensities
-            (default is 1).
-        divide_by_square_root : bool, optional
+        num_std
+            Number of standard deviations of the output intensities.
+            Default is 1.
+        divide_by_square_root
             Whether to divide output intensities by the square root of
-            the image size (default is False).
-        dtype_out : None or np.dtype, optional
-            Output data type of normalized patterns. If None (default),
-            the patterns' data type is used.
+            the pattern size. Default is False.
+        dtype_out
+            Data type of normalized patterns. If None (default), the
+            input patterns' data type is used.
 
         Notes
         -----

@@ -29,6 +29,29 @@ import scipy
 from kikuchipy.util.window import Window
 
 
+def _fft_filter_setup(
+    image_shape: Tuple[int, ...], window: Union[np.ndarray, Window],
+) -> Tuple[Tuple[int, ...], np.ndarray, Tuple[int, ...], Tuple[int, ...]]:
+    # Optimal FFT shape
+    image_shape = np.array(image_shape)
+    window_shape = np.array(window.shape)
+    fft_shape = tuple(
+        [scipy.fft.next_fast_len(i) for i in (image_shape + window_shape - 1)]
+    )
+
+    # Pad window to optimal FFT size
+    window_pad = _pad_window(window, fft_shape)
+
+    # Compute real valued FFT of window
+    window_rfft = scipy.fft.rfft2(window_pad)
+
+    # Image offset before FFT and after IFFT
+    offset_before = _offset_before_fft(window_shape)
+    offset_after = _offset_after_ifft(window_shape)
+
+    return fft_shape, window_rfft, offset_before, offset_after
+
+
 def fft_filter(
     image: np.ndarray, window: Union[np.ndarray, Window],
 ) -> np.ndarray:
@@ -73,29 +96,6 @@ def fft_filter(
     )
 
     return filtered_image
-
-
-def _fft_filter_setup(
-    image_shape: Tuple[int, ...], window: Union[np.ndarray, Window],
-) -> Tuple[Tuple[int, ...], np.ndarray, Tuple[int, ...], Tuple[int, ...]]:
-    # Optimal FFT shape
-    image_shape = np.array(image_shape)
-    window_shape = np.array(window.shape)
-    fft_shape = tuple(
-        [scipy.fft.next_fast_len(i) for i in (image_shape + window_shape - 1)]
-    )
-
-    # Pad window to optimal FFT size
-    window_pad = _pad_window(window, fft_shape)
-
-    # Compute real valued FFT of window
-    window_rfft = scipy.fft.rfft2(window_pad)
-
-    # Image offset before FFT and after IFFT
-    offset_before = _offset_before_fft(window_shape)
-    offset_after = _offset_after_ifft(window_shape)
-
-    return fft_shape, window_rfft, offset_before, offset_after
 
 
 def _pad_window(

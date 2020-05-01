@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Union, Tuple, Any
 import warnings
 
 from hyperspy.misc.utils import DictionaryTreeBrowser
@@ -63,7 +64,9 @@ def kikuchipy_metadata():
     return md
 
 
-def metadata_nodes(sem=True, ebsd=True):
+def metadata_nodes(
+    sem: bool = True, ebsd: bool = True
+) -> Union[Tuple[str, str], str]:
     """Return SEM and EBSD metadata nodes.
 
     This is a convenience function so that we only have to define these
@@ -71,15 +74,16 @@ def metadata_nodes(sem=True, ebsd=True):
 
     Parameters
     ----------
-    sem : bool, optional
+    sem
         Whether to return the SEM node string (default is ``True``).
-    ebsd : bool, optional
+    ebsd
         Whether to return the EBSD node string (default is ``True``).
 
     Returns
     -------
-    sem_node : str
-    ebsd_node : str
+    sem_node
+    ebsd_node
+
     """
 
     sem_node = "Acquisition_instrument.SEM"
@@ -92,13 +96,14 @@ def metadata_nodes(sem=True, ebsd=True):
         return ebsd_node
 
 
-def _get_input_bool(question):
+def _get_input_bool(question: str) -> bool:
     """Get input from user on boolean choice, returning the answer.
 
     Parameters
     ----------
-    question : str
+    question
         Question to ask user.
+
     """
 
     try:
@@ -119,15 +124,16 @@ def _get_input_bool(question):
         return False
 
 
-def _get_input_variable(question, var_type):
+def _get_input_variable(question: str, var_type: Any) -> Union[None, Any]:
     """Get variable input from user, returning the variable.
 
     Parameters
     ----------
-    question : str
+    question
         Question to ask user.
-    var_type : type
+    var_type
         Type of variable to return.
+
     """
 
     try:

@@ -20,25 +20,32 @@
 Utilities for computing similarities between EBSD patterns.
 """
 
+from typing import Union
+
+import dask.array as da
 import numpy as np
 
 
-def normalized_correlation_coefficient(pattern, template, zero_normalised=True):
+def normalized_correlation_coefficient(
+    pattern: Union[np.ndarray, da.Array],
+    template: Union[np.ndarray, da.Array],
+    zero_normalised: bool = True,
+) -> float:
     """Calculate the normalised or zero-normalised correlation coefficient
     between a image and a template following [Gonzalez2017]_.
 
     Parameters
     ----------
-    pattern : numpy.ndarray or dask.array.Array
+    pattern
         Pattern to compare the template to.
-    template : numpy.ndarray or dask.array.Array
+    template
         Template image.
-    zero_normalised : bool, optional
-        Subtract local mean value of intensities (default is ``True``).
+    zero_normalised
+        Subtract local mean value of intensities. Default is True.
 
     Returns
     -------
-    coefficient : float
+    coefficient
         Correlation coefficient in range [-1, 1] if zero normalised,
         otherwise [0, 1].
 
@@ -51,9 +58,11 @@ def normalized_correlation_coefficient(pattern, template, zero_normalised=True):
 
     pattern = pattern.astype(np.float32)
     template = template.astype(np.float32)
+
     if zero_normalised:
         pattern = pattern - pattern.mean()
         template = template - template.mean()
+
     coefficient = np.sum(pattern * template) / np.sqrt(
         np.sum(pattern ** 2) * np.sum(template ** 2)
     )

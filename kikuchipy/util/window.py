@@ -45,10 +45,10 @@ class Window(np.ndarray):
         :func:`scipy.signal.windows.get_window` and includes
         "rectangular" and "gaussian", in addition to a
         "circular" window (default) filled with ones in which corner
-        data are set to zero, a modified Hann window and lowpass and
-        highpass FFT windows. A window element is considered to be in a
-        corner if its radial distance to the origin (window centre) is
-        shorter or equal to the half width of the windows's longest
+        data are set to zero, a "modified_hann" window and "lowpass"
+        and "highpass" FFT windows. A window element is considered to be
+        in a corner if its radial distance to the origin (window centre)
+        is shorter or equal to the half width of the windows's longest
         axis. A 1D or 2D :class:`numpy.ndarray` or
         :class:`dask.array.Array` can also be passed.
     shape : sequence of int, optional

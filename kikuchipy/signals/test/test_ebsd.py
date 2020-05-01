@@ -166,7 +166,7 @@ class TestEBSD:
         assert dx.offset, dy.offset == -centre
 
 
-class TestRemoveStaticBackground:
+class TestRemoveStaticBackgroundEBSD:
     @pytest.mark.parametrize(
         "operation, relative, answer",
         [
@@ -288,11 +288,37 @@ class TestRemoveStaticBackground:
         dummy_signal.remove_static_background(static_bg=dummy_background)
         assert isinstance(dummy_signal.data, da.Array)
 
-    def test_remove_static_background_scalebg(self):
-        pass
+    def test_remove_static_background_scalebg(
+        self, dummy_signal, dummy_background
+    ):
+        dummy_signal2 = dummy_signal.deepcopy()
+
+        dummy_signal.remove_static_background(
+            scale_bg=True, relative=False, static_bg=dummy_background,
+        )
+
+        dummy_signal2.remove_static_background(
+            scale_bg=False, relative=False, static_bg=dummy_background,
+        )
+
+        p1 = dummy_signal.inav[0, 0].data
+        p2 = dummy_signal2.inav[0, 0].data
+
+        assert not np.allclose(p1, p2, atol=0.1)
+        assert np.allclose(
+            p1, np.array([[15, 150, 15], [180, 255, 120], [150, 0, 75]])
+        )
+
+    def test_remove_static_background_relative_and_scalebg_raises(
+        self, dummy_signal, dummy_background
+    ):
+        with pytest.raises(ValueError, match="'scale_bg' must be False"):
+            dummy_signal.remove_static_background(
+                relative=True, scale_bg=True, static_bg=dummy_background,
+            )
 
 
-class TestRemoveDynamicBackground:
+class TestRemoveDynamicBackgroundEBSD:
     @pytest.mark.parametrize(
         "operation, std, answer",
         [
@@ -387,8 +413,68 @@ class TestRemoveDynamicBackground:
         dummy_signal.remove_dynamic_background(filter_domain="spatial")
         assert isinstance(dummy_signal.data, da.Array)
 
-    def test_remove_dynamic_background_frequency(self):
-        pass
+    @pytest.mark.parametrize(
+        "operation, std, answer",
+        [
+            (
+                "subtract",
+                2,
+                np.array(
+                    [
+                        [0.2518, 0.6835, 0.4054],
+                        [1, 0.7815, 0.5793],
+                        [0.6947, -0.8867, -1],
+                    ],
+                    dtype=np.float64,
+                ),
+            ),
+            (
+                "subtract",
+                3,
+                np.array(
+                    [
+                        [42133, 55527, 47066],
+                        [65535, 58072, 50768],
+                        [56305, 6059, 0],
+                    ],
+                    dtype=np.uint16,
+                ),
+            ),
+            (
+                "divide",
+                2,
+                np.array(
+                    [
+                        [0.4119, 0.7575, 0.5353],
+                        [1, 0.8562, 0.7038],
+                        [0.7683, -0.6622, -1],
+                    ],
+                    dtype=np.float32,
+                ),
+            ),
+            (
+                "divide",
+                3,
+                np.array(
+                    [[177, 222, 195], [255, 234, 210], [226, 41, 0]],
+                    dtype=np.uint8,
+                ),
+            ),
+        ],
+    )
+    def test_remove_dynamic_background_frequency(
+        self, dummy_signal, operation, std, answer
+    ):
+        dtype_out = answer.dtype
+        dummy_signal.data = dummy_signal.data.astype(dtype_out)
+
+        filter_domain = "frequency"
+        dummy_signal.remove_dynamic_background(
+            operation=operation, std=std, filter_domain=filter_domain,
+        )
+
+        assert dummy_signal.data.dtype == dtype_out
+        assert np.allclose(dummy_signal.inav[0, 0].data, answer, atol=1e-4)
 
     def test_remove_dynamic_background_raises(self, dummy_signal):
         filter_domain = "wildmount"
@@ -396,96 +482,49 @@ class TestRemoveDynamicBackground:
             dummy_signal.remove_dynamic_background(filter_domain=filter_domain)
 
 
-class TestRescaleIntensity:
+class TestRescaleIntensityEBSD:
     @pytest.mark.parametrize(
         "relative, dtype_out, answer",
         [
             (
                 True,
                 None,
-                # fmt: off
                 np.array(
-                    [
-                        141, 170, 141, 198, 170, 141, 170, 28, 0, 255, 198, 226,
-                        198, 0, 226, 226, 198, 170, 0, 85, 85, 141, 56, 255, 85,
-                        85, 255, 226, 28, 198, 170, 113, 226, 226, 56, 56, 113,
-                        0, 255, 0, 28, 0, 56, 56, 141, 226, 170, 0, 113, 198,
-                        198, 198, 170, 0, 113, 28, 170, 85, 113, 0, 28, 28, 0,
-                        141, 255, 226, 113, 170, 0, 56, 255, 56, 255, 113, 85,
-                        170, 141, 170, 56, 141, 255
-                    ],
+                    [[141, 170, 141], [198, 170, 141], [170, 28, 0]],
                     dtype=np.uint8,
                 ),
-                # fmt: on
             ),
             (
                 True,
                 np.float32,
-                # fmt: off
                 np.array(
                     [
-                        0.5555556, 0.6666667, 0.5555556, 0.7777778, 0.6666667,
-                        0.5555556, 0.6666667, 0.11111111, 0., 1., 0.7777778,
-                        0.8888889, 0.7777778, 0., 0.8888889, 0.8888889,
-                        0.7777778, 0.6666667, 0., 0.33333334, 0.33333334,
-                        0.5555556, 0.22222222, 1., 0.33333334, 0.33333334, 1.,
-                        0.8888889, 0.11111111, 0.7777778, 0.6666667, 0.44444445,
-                        0.8888889, 0.8888889, 0.22222222, 0.22222222,
-                        0.44444445, 0., 1., 0., 0.11111111, 0., 0.22222222,
-                        0.22222222, 0.5555556, 0.8888889, 0.6666667, 0.,
-                        0.44444445, 0.7777778, 0.7777778, 0.7777778, 0.6666667,
-                        0., 0.44444445, 0.11111111, 0.6666667, 0.33333334,
-                        0.44444445, 0., 0.11111111, 0.11111111, 0., 0.5555556,
-                        1., 0.8888889, 0.44444445, 0.6666667, 0., 0.22222222,
-                        1., 0.22222222, 1., 0.44444445, 0.33333334, 0.6666667,
-                        0.5555556, 0.6666667, 0.22222222, 0.5555556, 1.
+                        [0.1111, 0.3333, 0.1111],
+                        [0.5555, 0.3333, 0.1111],
+                        [0.3333, -0.7777, -1],
                     ],
                     dtype=np.float32,
                 ),
-                # fmt: on
             ),
             (
                 False,
                 None,
-                # fmt: off
                 np.array(
-                    [
-                        182, 218, 182, 255, 218, 182, 218, 36, 0, 255, 198, 226,
-                        198, 0, 226, 226, 198, 170, 0, 85, 85, 141, 56, 255, 85,
-                        85, 255, 255, 0, 218, 182, 109, 255, 255, 36, 36, 113,
-                        0, 255, 0, 28, 0, 56, 56, 141, 255, 191, 0, 127, 223,
-                        223, 223, 191, 0, 170, 42, 255, 127, 170, 0, 42, 42, 0,
-                        141, 255, 226, 113, 170, 0, 56, 255, 56, 255, 72, 36,
-                        145, 109, 145, 0, 109, 255
-                    ],
+                    [[182, 218, 182], [255, 218, 182], [218, 36, 0]],
                     dtype=np.uint8,
                 ),
-                # fmt: on
             ),
             (
                 False,
                 np.float32,
-                # fmt: off
                 np.array(
                     [
-                        0.71428573, 0.85714287, 0.71428573, 1., 0.85714287,
-                        0.71428573, 0.85714287, 0.14285715, 0., 1., 0.7777778,
-                        0.8888889, 0.7777778, 0., 0.8888889, 0.8888889,
-                        0.7777778, 0.6666667, 0., 0.33333334, 0.33333334,
-                        0.5555556, 0.22222222, 1., 0.33333334, 0.33333334, 1.,
-                        1., 0., 0.85714287, 0.71428573, 0.42857143, 1., 1.,
-                        0.14285715, 0.14285715, 0.44444445, 0., 1., 0.,
-                        0.11111111, 0., 0.22222222, 0.22222222, 0.5555556, 1.,
-                        0.75, 0., 0.5, 0.875, 0.875, 0.875, 0.75, 0., 0.6666667,
-                        0.16666667, 1., 0.5, 0.6666667, 0., 0.16666667,
-                        0.16666667, 0., 0.5555556, 1., 0.8888889, 0.44444445,
-                        0.6666667, 0., 0.22222222, 1., 0.22222222, 1.,
-                        0.2857143, 0.14285715, 0.5714286, 0.42857143, 0.5714286,
-                        0., 0.42857143, 1.,
+                        [0.4285, 0.7142, 0.4285],
+                        [1, 0.7142, 0.4285],
+                        [0.7142, -0.7142, -1],
                     ],
                     dtype=np.float32,
                 ),
-                # fmt: on
             ),
         ],
     )
@@ -497,23 +536,62 @@ class TestRescaleIntensity:
         """
 
         dummy_signal.rescale_intensity(relative=relative, dtype_out=dtype_out)
-        answer = answer.reshape((3, 3, 3, 3))
-        assert np.allclose(dummy_signal.data, answer)
+
         assert dummy_signal.data.dtype == answer.dtype
+        assert np.allclose(dummy_signal.inav[0, 0].data, answer, atol=1e-4)
 
     def test_lazy_rescale_intensity(self, dummy_signal):
         dummy_signal = dummy_signal.as_lazy()
         dummy_signal.rescale_intensity()
         assert isinstance(dummy_signal.data, da.Array)
 
-    def test_rescale_intensity_percentiles(self):
-        pass
+    @pytest.mark.parametrize(
+        "percentiles, answer",
+        [
+            (
+                (10, 90),
+                np.array([[198, 245, 198], [254, 245, 198], [245, 9, 0]]),
+            ),
+            (
+                (1, 99),
+                np.array([[183, 220, 183], [255, 220, 183], [220, 34, 0]]),
+            ),
+        ],
+    )
+    def test_rescale_intensity_percentiles(
+        self, dummy_signal, percentiles, answer
+    ):
+        dummy_signal.data = dummy_signal.data.astype(np.float32)
+        dtype_out = np.uint8
+        dummy_signal.rescale_intensity(
+            percentiles=percentiles, dtype_out=dtype_out
+        )
 
-    def test_rescale_intensity_in_range(self):
-        pass
+        assert dummy_signal.data.dtype == dtype_out
+        assert np.allclose(dummy_signal.inav[0, 0].data, answer)
+
+    def test_rescale_intensity_in_range(self, dummy_signal):
+        dummy_data = dummy_signal.deepcopy().data
+
+        dummy_signal.rescale_intensity()
+
+        assert dummy_signal.data.dtype == dummy_data.dtype
+        assert not np.allclose(dummy_signal.data, dummy_data, atol=1)
+
+    def test_rescale_intensity_raises_in_range_percentiles(self, dummy_signal):
+        with pytest.raises(ValueError, match="'percentiles' must be None"):
+            dummy_signal.rescale_intensity(
+                in_range=(1, 254), percentiles=(1, 99),
+            )
+
+    def test_rescale_intensity_raises_in_range_relative(self, dummy_signal):
+        with pytest.raises(ValueError, match="'in_range' must be None if "):
+            dummy_signal.rescale_intensity(
+                in_range=(1, 254), relative=True,
+            )
 
 
-class TestAdaptiveHistogramEqualization:
+class TestAdaptiveHistogramEqualizationEBSD:
     def test_adaptive_histogram_equalization(self):
         """Test setup of equalization only. Tests of the result of the
         actual equalization are found elsewhere.
@@ -537,7 +615,7 @@ class TestAdaptiveHistogramEqualization:
         assert isinstance(s.data, da.Array)
 
 
-class TestAverageNeighbourPatterns:
+class TestAverageNeighbourPatternsEBSD:
     # Test different window data
     @pytest.mark.parametrize(
         "window, window_shape, lazy, answer, kwargs",
@@ -845,17 +923,199 @@ class TestLazy:
         assert isinstance(lazy_signal, kp.signals.LazyEBSD)
 
 
-class TestGetDynamicBackground:
-    pass
+class TestGetDynamicBackgroundEBSD:
+    def test_get_dynamic_background_spatial(self, dummy_signal):
+        dtype_out = dummy_signal.data.dtype
+        bg = dummy_signal.get_dynamic_background(
+            filter_domain="spatial", std=2, truncate=3,
+        )
+
+        assert bg.data.dtype == dtype_out
+        assert isinstance(bg, kp.signals.ebsd.EBSD)
+
+    def test_get_dynamic_background_frequency(self, dummy_signal):
+        dtype_out = np.float32
+        bg = dummy_signal.get_dynamic_background(
+            filter_domain="frequency", std=2, truncate=3, dtype_out=dtype_out,
+        )
+
+        assert bg.data.dtype == dtype_out
+        assert isinstance(bg, kp.signals.ebsd.EBSD)
+
+    def test_get_dynamic_background_raises(self, dummy_signal):
+        filter_domain = "Vasselheim"
+        with pytest.raises(ValueError, match=f"{filter_domain} must be"):
+            _ = dummy_signal.get_dynamic_background(filter_domain=filter_domain)
+
+    def test_get_dynamic_background_lazy(self, dummy_signal):
+        lazy_signal = dummy_signal.as_lazy()
+
+        bg = lazy_signal.get_dynamic_background()
+
+        assert isinstance(bg, kp.signals.ebsd.LazyEBSD)
+
+        bg.compute()
+
+        assert isinstance(bg, kp.signals.ebsd.EBSD)
 
 
-class TestGetImageQuality:
-    pass
+class TestGetImageQualityEBSD:
+    @pytest.mark.parametrize(
+        "normalize, lazy, answer",
+        [
+            (
+                True,
+                False,
+                np.array(
+                    [
+                        [-0.0241, -0.0625, -0.0052],
+                        [-0.0317, -0.0458, -0.0956],
+                        [-0.1253, 0.0120, -0.2385],
+                    ],
+                    dtype=np.float64,
+                ),
+            ),
+            (
+                False,
+                True,
+                np.array(
+                    [
+                        [0.2694, 0.2926, 0.2299],
+                        [0.2673, 0.1283, 0.2032],
+                        [0.1105, 0.2671, 0.2159],
+                    ],
+                    dtype=np.float64,
+                ),
+            ),
+        ],
+    )
+    def test_get_image_quality(self, dummy_signal, normalize, lazy, answer):
+        if lazy:
+            dummy_signal = dummy_signal.as_lazy()
+
+        iq = dummy_signal.get_image_quality(normalize=normalize)
+
+        if lazy:
+            iq = iq.compute()
+
+        assert np.allclose(iq, answer, atol=1e-4)
 
 
-class TestFFTFilter:
-    pass
+class TestFFTFilterEBSD:
+    @pytest.mark.parametrize(
+        "shift, transfer_function, kwargs, dtype_out, expected_spectrum_sum",
+        [
+            (True, "modified_hann", {}, None, 5.2000),
+            (True, "lowpass", {"c": 30, "w_c": 15}, np.float64, 6.1428),
+            (False, "highpass", {"c": 2, "w_c": 1}, np.float32, 5.4155),
+            (False, "gaussian", {"sigma": 2}, None, 6.2621),
+        ],
+    )
+    def test_fft_filter(
+        self,
+        dummy_signal,
+        shift,
+        transfer_function,
+        kwargs,
+        dtype_out,
+        expected_spectrum_sum,
+    ):
+        if dtype_out is None:
+            dtype_out = np.float32
+        dummy_signal.data = dummy_signal.data.astype(dtype_out)
+
+        shape = dummy_signal.axes_manager.signal_shape
+        w = kp.util.Window(transfer_function, shape=shape, **kwargs)
+
+        dummy_signal.fft_filter(transfer_function=w, shift=shift)
+
+        assert isinstance(dummy_signal, kp.signals.ebsd.EBSD)
+        assert dummy_signal.data.dtype == dtype_out
+        assert np.allclose(
+            np.sum(kp.util.pattern.fft_spectrum(dummy_signal.inav[0, 0].data)),
+            expected_spectrum_sum,
+            atol=1e-4,
+        )
+
+    def test_fft_filter_lazy(self, dummy_signal):
+        lazy_signal = dummy_signal.as_lazy()
+        w = np.arange(9).reshape(lazy_signal.axes_manager.signal_shape)
+        lazy_signal.fft_filter(transfer_function=w, shift=False)
+
+        assert isinstance(lazy_signal, kp.signals.ebsd.LazyEBSD)
+        assert lazy_signal.data.dtype == dummy_signal.data.dtype
 
 
-class TestNormalizeIntensity:
-    pass
+class TestNormalizeIntensityEBSD:
+    @pytest.mark.parametrize(
+        "num_std, divide_by_square_root, dtype_out, answer",
+        [
+            (
+                1,
+                True,
+                np.float32,
+                np.array(
+                    [
+                        [0.0653, 0.2124, 0.0653],
+                        [0.3595, 0.2124, 0.0653],
+                        [0.2124, -0.5229, -0.6700],
+                    ]
+                ),
+            ),
+            (
+                2,
+                True,
+                np.float32,
+                np.array(
+                    [
+                        [0.0326, 0.1062, 0.0326],
+                        [0.1797, 0.1062, 0.0326],
+                        [0.1062, -0.2614, -0.3350],
+                    ]
+                ),
+            ),
+            (
+                1,
+                False,
+                np.float32,
+                np.array(
+                    [
+                        [0.1961, 0.6373, 0.1961],
+                        [1.0786, 0.6373, 0.1961],
+                        [0.6373, -1.5689, -2.0101],
+                    ]
+                ),
+            ),
+            (1, False, None, np.array([[0, 0, 0], [1, 0, 0], [0, -1, -2]])),
+        ],
+    )
+    def test_normalize_intensity(
+        self, dummy_signal, num_std, divide_by_square_root, dtype_out, answer
+    ):
+        int16 = np.int16
+        if dtype_out is None:
+            dummy_signal.data = dummy_signal.data.astype(int16)
+
+        dummy_signal.normalize_intensity(
+            num_std=num_std,
+            divide_by_square_root=divide_by_square_root,
+            dtype_out=dtype_out,
+        )
+
+        if dtype_out is None:
+            dtype_out = int16
+        else:
+            assert np.allclose(np.mean(dummy_signal.data), 0, atol=1e-6)
+
+        assert isinstance(dummy_signal, kp.signals.ebsd.EBSD)
+        assert dummy_signal.data.dtype == dtype_out
+        assert np.allclose(dummy_signal.inav[0, 0].data, answer, atol=1e-4)
+
+    def test_normalize_intensity_lazy(self, dummy_signal):
+        dummy_signal.data = dummy_signal.data.astype(np.float32)
+        lazy_signal = dummy_signal.as_lazy()
+
+        lazy_signal.normalize_intensity()
+
+        assert isinstance(lazy_signal, kp.signals.ebsd.LazyEBSD)
+        assert np.allclose(np.mean(lazy_signal.data.compute()), 0, atol=1e-6)

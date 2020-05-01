@@ -14,5 +14,5 @@ else # windows
 fi
 
 # Install package with conda
-conda install --yes $DEPS $TEST_DEPS
+conda install --yes $TEST_DEPS
 conda info

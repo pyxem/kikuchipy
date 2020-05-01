@@ -65,7 +65,8 @@ install:
   - source ./ci/travis_install_with_$ENV.sh
 
   # Install kikuchipy
-  - pip install --editable .
+#  - pip install --editable .
+  - pip install .
 
 script:
   - export MPLBACKEND=Agg

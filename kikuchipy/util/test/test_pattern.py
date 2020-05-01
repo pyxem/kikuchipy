@@ -27,11 +27,7 @@ RESCALED_UINT8 = np.array(
     [[182, 218, 182], [255, 218, 182], [218, 36, 0]], dtype=np.uint8
 )
 RESCALED_FLOAT32 = np.array(
-    [
-        [0.714286, 0.857143, 0.714286],
-        [1.0, 0.857143, 0.714286],
-        [0.857143, 0.142857, 0.0],
-    ],
+    [[0.4285, 0.7142, 0.4285], [1, 0.7142, 0.4285], [0.7142, -0.7142, -1]],
     dtype=np.float32,
 )
 RESCALED_UINT8_0100 = np.array(
@@ -47,7 +43,7 @@ DYN_CORR_UINT8_SPATIAL_STD1 = np.array(
     [[120, 197, 156], [255, 241, 223], [226, 0, 9]], dtype=np.uint8
 )
 DYN_CORR_FLOAT32_SPATIAL_DIV_STD0375 = np.array(
-    [[0.9624, 0.9863, 0.9724], [0.9932, 1, 0.9993], [0.9951, 0.7883, 0]],
+    [[0.9248, 0.9727, 0.9449], [0.9865, 1, 0.9986], [0.9903, 0.5766, -1]],
     dtype=np.float32,
 )
 DYN_CORR_UINT8_FREQUENCY_STD1_TRUNCATE3 = np.array(
@@ -68,7 +64,7 @@ ADAPT_EQ_UINT8 = np.array(
 )
 
 
-class TestRescalePattern:
+class TestRescaleIntensityPattern:
     @pytest.mark.parametrize(
         "dtype_out, out_range, answer",
         [
@@ -79,7 +75,9 @@ class TestRescalePattern:
             (np.uint8, (0, 100), RESCALED_UINT8_0100),
         ],
     )
-    def test_rescale_pattern(self, dummy_signal, dtype_out, out_range, answer):
+    def test_rescale_intensity(
+        self, dummy_signal, dtype_out, out_range, answer
+    ):
         pattern = dummy_signal.inav[0, 0].data
 
         # Check for accepted data types
@@ -104,9 +102,9 @@ class TestRescalePattern:
         if dtype_out is not None:
             assert rescaled_pattern.dtype == dtype_out
 
-        assert np.allclose(rescaled_pattern, answer, atol=1e-6)
+        assert np.allclose(rescaled_pattern, answer, atol=1e-4)
 
-    def test_rescale_pattern_py_func(self, dummy_signal):
+    def test_rescale_intensity_py_func(self, dummy_signal):
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
         imin, imax = np.min(p), np.max(p)
         omin, omax = -3, 300.15
@@ -127,7 +125,7 @@ class TestRemoveDynamicBackgroundPattern:
             (None, "divide", np.float32, DYN_CORR_FLOAT32_SPATIAL_DIV_STD0375),
         ],
     )
-    def test_remove_dynamic_background_pattern_spatial(
+    def test_remove_dynamic_background_spatial(
         self, dummy_signal, std, operation, dtype_out, answer
     ):
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
@@ -149,7 +147,7 @@ class TestRemoveDynamicBackgroundPattern:
             (2, 4, DYN_CORR_UINT8_FREQUENCY_STD2_TRUNCATE4),
         ],
     )
-    def test_remove_dynamic_background_pattern_frequency(
+    def test_remove_dynamic_background_frequency(
         self, dummy_signal, std, truncate, answer
     ):
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
