@@ -11,10 +11,6 @@ env:
     - TEST_DEPS="pytest pytest-cov coveralls coverage" # ==4.5.4
     - DEPLOY=false
 
-# https://docs.travis-ci.com/user/customizing-the-build/#git-clone-depth
-git:
-  depth: 1
-
 jobs:
   include:
     - name: "Python 3.8.2 with conda on Linux Ubuntu 18.04"
