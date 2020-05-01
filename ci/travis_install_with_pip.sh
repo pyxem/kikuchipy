@@ -5,7 +5,7 @@
 
 # Install Python version 3.7 on Windows
 if [ "$TRAVIS_OS_NAME" == windows ]; then
-  choco install -y python --version=$PYTHON_VERSION --allow-downgrades
+  choco install -y python --version="$PYTHON_VERSION" --allow-downgrades
   python -m pip install --upgrade pip
 fi
 
@@ -20,13 +20,13 @@ pip3 --version
 # Create and activate virtual environment
 if [[ "$TRAVIS_OS_NAME" =~ ^(linux|windows)$ ]]; then
   python -m pip install --upgrade virtualenv
-  virtualenv -p python --system-site-packages $HOME/testenv
+  virtualenv -p python --system-site-packages "$HOME/testenv"
 else # osx
   python3 -m pip install --upgrade virtualenv
-  virtualenv -p python3 --system-site-packages $HOME/testenv
+  virtualenv -p python3 --system-site-packages "$HOME/testenv"
 fi
-source $HOME/testenv/bin/activate
+source "$HOME/testenv/bin/activate"
 
 # Install package with pip
-pip3 install --upgrade $DEPS $TEST_DEPS
+pip3 install --upgrade "$DEPS" "$TEST_DEPS"
 pip3 list installed
