@@ -51,7 +51,7 @@ extra_feature_requirements = {
     "test": [
         "pytest >= 5.4",
         "pytest-cov >= 2.8.1",
-        "coverage == 4.5.4",  # 5.0 have some issues with reporting to Coveralls
+        "coverage >= 5.0",  # == 4.5.4",  # 5.0 have some issues with reporting to Coveralls
     ],
 }
 
