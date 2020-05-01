@@ -47,14 +47,15 @@ extra_feature_requirements = {
         "sphinx-copybutton >= 0.2.5",
         "sphinx-autodoc-typehints >= 1.10.3",
     ],
-    "tests": [
+    # Update in .travis.yml if this list is updated!
+    "test": [
         "pytest >= 5.4",
         "pytest-cov >= 2.8.1",
         "coverage == 4.5.4",  # 5.0 have some issues with reporting to Coveralls
     ],
 }
 
-# Create a development project, including both the doc and tests projects
+# Create a development project, including both the doc and test projects
 extra_feature_requirements["dev"] = [
     "black >= 19.3b0",
     "pre-commit >= 1.16",
@@ -75,6 +76,7 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -88,12 +90,12 @@ setup(
         "EBSD",
         "electron backscatter diffraction",
         "EBSP",
-        "electron backscatter image",
+        "electron backscatter pattern",
         "BKD",
         "backscatter kikuchi diffraction",
         "SEM",
         "scanning electron microscopy",
-        "kikuchi image",
+        "kikuchi pattern",
     ],
     zip_safe=True,
     # Contact
@@ -102,6 +104,7 @@ setup(
     maintainer=MAINTAINER,
     maintainer_email=MAINTAINER_EMAIL,
     # Dependencies
+    # Update in .travis.yml if this list is updated!
     extras_require=extra_feature_requirements,
     install_requires=[
         "dask[array] >= 2.14",

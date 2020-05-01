@@ -23,25 +23,25 @@ to kikuchipy.
 
 Make a local copy of your forked repository and change directories::
 
-    git clone https://github.com/your-username/kikuchipy.git
-    cd kikuchipy
+    $ git clone https://github.com/your-username/kikuchipy.git
+    $ cd kikuchipy
 
 Set the ``upstream`` remote to the main kikuchipy repository::
 
-    git remote add upstream https://github.com/kikuchipy/kikuchipy.git
+    $ git remote add upstream https://github.com/kikuchipy/kikuchipy.git
 
 We recommend installing in a `conda environment
 <https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`_
 with the `Miniconda distribution
 <https://docs.conda.io/en/latest/miniconda.html>`_::
 
-   conda create --name kikuchipy python=3.7
-   conda activate kikuchipy
+   $ conda create --name kikuchipy python=3.8
+   $ conda activate kikuchipy
 
 Then, install the required dependencies while making the development version
 available globally (in the ``conda`` environment)::
 
-    pip install --editable .[dev]
+   $ pip install --editable .[dev]
 
 This installs all necessary development dependencies, including those for
 running tests and building documentation.
@@ -52,7 +52,7 @@ style <https://black.readthedocs.io/en/stable/the_black_code_style.html>`_. We
 use `pre-commit <https://pre-commit.com>`_ to run ``black`` automatically prior
 to each local commit. Please install it in your environment::
 
-    pre-commit install
+    $ pre-commit install
 
 Next time you commit some code, your code will be formatted inplace according
 to our `black configuration
@@ -70,16 +70,16 @@ Making changes
 
 Create a new feature branch::
 
-    git checkout master -b your-awesome-feature-name
+    $ git checkout master -b your-awesome-feature-name
 
 When you've made some changes you can view them with::
 
-    git status
+    $ git status
 
 Add and commit your created, modified or deleted files::
 
-   git add my-file-or-directory
-   git commit -s -m "An explanatory commit message"
+   $ git add my-file-or-directory
+   $ git commit -s -m "An explanatory commit message"
 
 The ``-s`` makes sure that you sign your commit with your `GitHub-registered
 email <https://github.com/settings/emails>`_ as the author. You can set this up
@@ -93,16 +93,16 @@ Keeping your branch up-to-date
 
 Switch to the ``master`` branch::
 
-   git checkout master
+   $ git checkout master
 
 Fetch changes and update ``master``::
 
-   git pull upstream master --tags
+   $ git pull upstream master --tags
 
 Update your feature branch::
 
-   git checkout your-awesome-feature-name
-   git merge master
+   $ git checkout your-awesome-feature-name
+   $ git merge master
 
 .. _sharing-your-changes:
 
@@ -111,7 +111,7 @@ Sharing your changes
 
 Update your remote branch::
 
-   git push -u origin your-awesome-feature-name
+   $ git push -u origin your-awesome-feature-name
 
 You can then make a `pull request
 <https://guides.github.com/activities/forking/#making-a-pull-request>`_ to
@@ -125,12 +125,12 @@ Building the documentation
 We use `Sphinx <https://www.sphinx-doc.org/en/master/>`_ for documenting
 functionality. Install necessary dependencies to build the documentation::
 
-   pip install --editable .[doc]
+   $ pip install --editable .[doc]
 
 Then, build the documentation from the ``doc`` directory::
 
-   cd doc
-   make html
+   $ cd doc
+   $ make html
 
 The documentation's ``html`` pages are built in the ``doc/build/html`` directory
 from files in the `reStructuredText
@@ -150,7 +150,7 @@ within each module. Tests are short methods that call functions in kikuchipy
 and compare resulting output values with known answers. Install necessary
 dependencies to run the tests::
 
-   pip install --editable .[tests]
+   $ pip install --editable .[test]
 
 Some useful `fixtures <https://docs.pytest.org/en/latest/fixture.html>`_, like a
 dummy scan and corresponding background pattern, are available in the
@@ -158,13 +158,13 @@ dummy scan and corresponding background pattern, are available in the
 
 To run the tests::
 
-   pytest --cov --pyargs kikuchipy
+   $ pytest --cov --pyargs kikuchipy
 
 The ``--cov`` flag makes `coverage.py
 <https://coverage.readthedocs.io/en/latest/>`_ print a nice report in the
 terminal. For an even nicer presentation, you can use ``coverage.py`` directly::
 
-   coverage html
+   $ coverage html
 
 Then, you can open the created ``htmlcov/index.html`` in the browser and inspect
 the coverage in more detail.

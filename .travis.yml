@@ -1,57 +1,62 @@
 # The setup of different files for installation and tests on different
 # operating systems are based upon how HyperSpy did it.
 
-language: shell
-
 env:
   global:
     - ENV=conda
     # TODO: Get dependencies from setup.py
-    - DEPS="dask[array] hyperspy h5py matplotlib numpy pyxem scikit-image scikit-learn scipy"
-    - TEST_DEPS="pytest pytest-cov coveralls coverage==4.5.4"
+    - DEPS="dask[array]>=2.14 hyperspy>=1.5.2 h5py>=2.10 matplotlib>=3.2 numpy>=1.18 numba>=0.48 pyxem>=0.10 scikit-image>=0.16 scikit-learn>=0.22 scipy>=1.4"
+    - TEST_DEPS="pytest>=5.4 pytest-cov>=2.8.1 coveralls coverage==4.5.4"
     - PYTHON_CONDA=3.7
     - DEPLOY=false
 
+# https://docs.travis-ci.com/user/customizing-the-build/#git-clone-depth
+git:
+  depth: 1
+
 jobs:
   include:
-    - name: "Python 3.8 with conda on Linux Ubuntu 18.04"
+    - name: "Python 3.8.2 with conda on Linux Ubuntu 18.04"
       os: linux
       dist: bionic
-      python: 3.8
-      language: python
+      python: "3.8"
+      language: python # Virtualenv will be created
 
-    - name: "Python 3.7 with pip on Linux Ubuntu 18.04"
+    - name: "Python 3.7.6 with pip on Linux Ubuntu 18.04"
       os: linux
       dist: bionic
-      python: 3.7
-      env: export ENV=pip; DEPLOY=true
+      python: "3.7"
+      env:
+        - ENV=pip
+        - DEPLOY=true
       language: python
 
-    - name: "Python 3.7 with conda on macOS 10.14"
+    - name: "Python 3.8 with conda on macOS 10.14"
       os: osx
       osx_image: xcode11.3
-      python: 3.7
-      language: shell
+      env:
+        - PYTHON_CONDA=3.8
+      language: shell # python is not recognised on osx or windows
 
-    - name: "Python 3.8 with pip on macOS 10.14"
+    - name: "Python 3.7 with pip on macOS 10.14"
       os: osx
       osx_image: xcode11.3
-      env: export ENV=pip
-      python: 3.8
+      env:
+        - ENV=pip
       language: shell
-#      addons:
-#        homebrew:
-#          packages:
-#            - python3
 
     - name: "Python 3.8 with conda on Windows Server, version 1803"
       os: windows
-      env: PATH="/c/tools/miniconda3/:/c/tools/miniconda3/Scripts:$PATH"
+      env:
+        - PYTHON_CONDA=3.8
+        - PATH="/c/tools/miniconda3/:/c/tools/miniconda3/Scripts:$PATH"
       language: shell
 
-    - name: "Python 3.7 with pip on Windows Server, version 1803"
+    - name: "Python 3.7.5 with pip on Windows Server, version 1803"
       os: windows
-      env: export ENV=pip; PATH="/c/Python37:/c/Python37/Scripts:$PATH";
+      env:
+        - ENV=pip
+        - PATH="/c/Python37:/c/Python37/Scripts:$PATH"
       language: shell
 
 before_install:
@@ -65,7 +70,7 @@ install:
   - source ./ci/travis_install_with_$ENV.sh
 
   # Install kikuchipy
-  - pip install -e .
+  - pip install --editable .
 
 script:
   - export MPLBACKEND=Agg
