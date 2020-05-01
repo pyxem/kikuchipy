@@ -1,6 +1,6 @@
 .. Travis CI
-.. image:: https://travis-ci.org/kikuchipy/kikuchipy.svg?branch=master
-    :target: https://travis-ci.org/kikuchipy/kikuchipy
+.. image:: https://travis-ci.com/kikuchipy/kikuchipy.svg?branch=master
+    :target: https://travis-ci.com/kikuchipy/kikuchipy
     :alt: Build status
 
 .. Coveralls

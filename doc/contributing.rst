@@ -191,7 +191,7 @@ Tracker <https://github.com/kikuchipy/kikuchipy/issues>`_.
 Continuous integration (CI)
 ===========================
 
-We use `Travis CI <https://travis-ci.org/kikuchipy/kikuchipy>`_ to ensure that
+We use `Travis CI <https://travis-ci.com/kikuchipy/kikuchipy>`_ to ensure that
 kikuchipy can be installed on Windows, macOS and Linux (Ubuntu). After a
 successful installation, the CI server runs the tests. After the tests return no
 errors, code coverage is reported to `Coveralls
