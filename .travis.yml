@@ -5,8 +5,8 @@ env:
   global:
     - ENV=conda
     # TODO: Get dependencies from setup.py
-    - DEPS="dask[array]>=2.14 hyperspy>=1.5.2 h5py>=2.10 matplotlib>=3.2 numpy>=1.18 numba>=0.48 pyxem>=0.10 scikit-image>=0.16 scikit-learn>=0.22 scipy>=1.4"
-    - TEST_DEPS="pytest>=5.4 pytest-cov>=2.8.1 coveralls coverage==4.5.4"
+    - DEPS="dask[array] hyperspy h5py matplotlib numpy numba pyxem scikit-image scikit-learn scipy"
+    - TEST_DEPS="pytest pytest-cov coveralls coverage" # ==4.5.4
     - PYTHON_CONDA=3.7
     - DEPLOY=false
 
@@ -38,7 +38,7 @@ jobs:
         - PYTHON_CONDA=3.8
       language: shell # python is not recognised on osx or windows
 
-    - name: "Python 3.7 with pip on macOS 10.14"
+    - name: "Python 3.7.6 with pip on macOS 10.14"
       os: osx
       osx_image: xcode11.3
       env:

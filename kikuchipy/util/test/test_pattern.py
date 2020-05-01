@@ -292,13 +292,13 @@ class TestGetImageQuality:
         p = np.random.random((1001, 1001))
         iq = kp.util.pattern.get_image_quality(pattern=p, normalize=True)
 
-        assert np.allclose(iq, 0, atol=1e-3)
+        assert np.allclose(iq, 0, atol=1e-2)
 
     def test_get_image_quality_flat(self):
         p = np.ones((1001, 1001)) * 5
         iq = kp.util.pattern.get_image_quality(pattern=p, normalize=False)
 
-        assert np.allclose(iq, 1, atol=1e-3)
+        assert np.allclose(iq, 1, atol=1e-2)
 
     @pytest.mark.parametrize(
         "shape, answer",
