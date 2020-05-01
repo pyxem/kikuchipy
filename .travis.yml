@@ -24,7 +24,7 @@ jobs:
       os: linux
       dist: bionic
       language: python # virtualenv needed
-#      python: "3.7"
+      python: "3.7"
       env:
         - ENV=pip
         - DEPLOY=true
