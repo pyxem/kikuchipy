@@ -699,8 +699,20 @@ class TestFFTFilterChunk:
         "shift, transfer_function, kwargs, dtype_out, expected_spectrum_sum",
         [
             (True, "modified_hann", {}, None, 8924.0208),
-            (True, "lowpass", {"c": 30, "w_c": 15}, np.float64, 8231.9982),
-            (False, "highpass", {"c": 2, "w_c": 1}, np.float32, 10188.1395),
+            (
+                True,
+                "lowpass",
+                {"cutoff": 30, "cutoff_width": 15},
+                np.float64,
+                8231.9982,
+            ),
+            (
+                False,
+                "highpass",
+                {"cutoff": 2, "cutoff_width": 1},
+                np.float32,
+                10188.1395,
+            ),
             (False, "gaussian", {"sigma": 2}, None, 414.7418),
         ],
     )

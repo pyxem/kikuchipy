@@ -1008,8 +1008,20 @@ class TestFFTFilterEBSD:
         "shift, transfer_function, kwargs, dtype_out, expected_spectrum_sum",
         [
             (True, "modified_hann", {}, None, 5.2000),
-            (True, "lowpass", {"c": 30, "w_c": 15}, np.float64, 6.1428),
-            (False, "highpass", {"c": 2, "w_c": 1}, np.float32, 5.4155),
+            (
+                True,
+                "lowpass",
+                {"cutoff": 30, "cutoff_width": 15},
+                np.float64,
+                6.1428,
+            ),
+            (
+                False,
+                "highpass",
+                {"cutoff": 2, "cutoff_width": 1},
+                np.float32,
+                5.4155,
+            ),
             (False, "gaussian", {"sigma": 2}, None, 6.2621),
         ],
     )

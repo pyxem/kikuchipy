@@ -28,12 +28,12 @@ from scipy.signal.windows import get_window
 
 
 class Window(np.ndarray):
-    """A window/window of a given shape with some values.
+    """A window/kernel/mask/filter of a given shape with some values.
 
     This class is a subclass of :class:`numpy.ndarray` with some
     additional convenience methods.
 
-    It can be used to create a windowing function for filtering in the
+    It can be used to create a transfer function for filtering in the
     frequency domain, create an averaging window for averaging patterns
     with their nearest neighbours, and so on.
 
@@ -165,8 +165,8 @@ class Window(np.ndarray):
 
                 window_kwargs = {
                     "shape": shape,
-                    "c": kwargs["c"],
-                    "w_c": kwargs.pop("w_c", None),
+                    "cutoff": kwargs["cutoff"],
+                    "cutoff_width": kwargs.pop("cutoff_width", None),
                 }
             else:  # Get window from SciPy
                 if window == "circular":
@@ -452,8 +452,8 @@ def modified_hann(Nx: int) -> np.ndarray:
 
 def lowpass_fft_filter(
     shape: Tuple[int, int],
-    c: Union[int, float],
-    w_c: Union[None, int, float] = None,
+    cutoff: Union[int, float],
+    cutoff_width: Union[None, int, float] = None,
 ) -> np.ndarray:
     r"""Frequency domain low-pass filter transfer function in 2D.
 
@@ -463,9 +463,9 @@ def lowpass_fft_filter(
     ----------
     shape
         Shape of function.
-    c
+    cutoff
         Cut-off frequency.
-    w_c
+    cutoff_width
         Width of cut-off region. If None (default), it is set to half of
         the cutoff frequency.
 
@@ -487,12 +487,16 @@ def lowpass_fft_filter(
         1, & r < c,
         \end{cases}
 
-    where :math:`r` is the radial distance to the window centre.
+    where :math:`r` is the radial distance to the window centre,
+    :math:`c` is the cut-off frequency, and :math:`w_c` is the width of
+    the cut-off region.
 
     Examples
     --------
-    >>> w1 = kp.util.Window("lowpass", c=30, w_c=15, shape=(96, 96))
-    >>> w2 = kp.util.window.lowpass_fft_filter(shape=(96, 96), c=30, w_c=15)
+    >>> w1 = kp.util.Window(
+    ...     "lowpass", cutoff=30, cutoff_width=15, shape=(96, 96))
+    >>> w2 = kp.util.window.lowpass_fft_filter(
+            shape=(96, 96), cutoff=30, cutoff_width=15)
     >>> np.allclose(w1, w2)
     True
 
@@ -500,20 +504,20 @@ def lowpass_fft_filter(
 
     r = distance_to_origin(shape)
 
-    if w_c is None:
-        w_c = c / 2
+    if cutoff_width is None:
+        cutoff_width = cutoff / 2
 
-    w = np.exp(-(((r - c) / (np.sqrt(2) * w_c / 2)) ** 2))
-    w[r > (c + (2 * w_c))] = 0
-    w[r < c] = 1
+    w = np.exp(-(((r - cutoff) / (np.sqrt(2) * cutoff_width / 2)) ** 2))
+    w[r > (cutoff + (2 * cutoff_width))] = 0
+    w[r < cutoff] = 1
 
     return w
 
 
 def highpass_fft_filter(
     shape: Tuple[int, int],
-    c: Union[int, float],
-    w_c: Union[None, int, float] = None,
+    cutoff: Union[int, float],
+    cutoff_width: Union[None, int, float] = None,
 ) -> np.ndarray:
     r"""Frequency domain high-pass filter transfer function in 2D.
 
@@ -523,9 +527,9 @@ def highpass_fft_filter(
     ----------
     shape
         Shape of function.
-    c
+    cutoff
         Cut-off frequency.
-    w_c
+    cutoff_width
         Width of cut-off region. If None (default), it is set to half of
         the cutoff frequency.
 
@@ -547,12 +551,16 @@ def highpass_fft_filter(
         1, & r > c,
         \end{cases}
 
-    where :math:`r` is the radial distance to the window centre.
+    where :math:`r` is the radial distance to the window centre,
+    :math:`c` is the cut-off frequency, and :math:`w_c` is the width of
+    the cut-off region.
 
     Examples
     --------
-    >>> w1 = kp.util.Window("highpass", c=1, w_c=0.5, shape=(96, 96))
-    >>> w2 = kp.util.window.highpass_fft_filter(shape=(96, 96), c=1, w_c=0.5)
+    >>> w1 = kp.util.Window(
+    ...     "highpass", cutoff=1, cutoff_width=0.5, shape=(96, 96))
+    >>> w2 = kp.util.window.highpass_fft_filter(
+    ...     shape=(96, 96), cutoff=1, cutoff_width=0.5)
     >>> np.allclose(w1, w2)
     True
 
@@ -560,11 +568,11 @@ def highpass_fft_filter(
 
     r = distance_to_origin(shape)
 
-    if w_c is None:
-        w_c = c / 2
+    if cutoff_width is None:
+        cutoff_width = cutoff / 2
 
-    w = np.exp(-(((c - r) / (np.sqrt(2) * w_c / 2)) ** 2))
-    w[r < (c - (2 * w_c))] = 0
-    w[r > c] = 1
+    w = np.exp(-(((cutoff - r) / (np.sqrt(2) * cutoff_width / 2)) ** 2))
+    w[r < (cutoff - (2 * cutoff_width))] = 0
+    w[r > cutoff] = 1
 
     return w

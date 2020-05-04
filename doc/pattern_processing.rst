@@ -18,9 +18,8 @@ These single pattern functions are available in the
 
 Almost all methods operate inplace (indicated in their docstrings), meaning it
 overwrites the patterns in the :class:`~kikuchipy.signals.ebsd.EBSD` object. If
-a new object is desired, the solution is to create a
-:class:`~hyperspy._signals.signal2d.Signal2D.deepcopy` of the original object
-and perform the operation on this:
+a new object is desired, create a :meth:`~hyperspy.signal.BaseSignal.deepcopy`
+of the original object and perform the operation on this:
 
 .. code-block::
 
@@ -399,6 +398,91 @@ for the effect of varying ``kernel_size``.
 Filtering in the frequency domain
 =================================
 
-Filtering of patterns in the frequency domain can be done by passing a desired
-transfer function to ``transfer_function``, and whether or not to shift the zero-frequency terms to the
-centre of the array,
+Filtering of patterns in the frequency domain can be done with
+:meth:`~kikuchipy.signals.ebsd.EBSD.fft_filter`. This method takes a spatial
+kernel defined in the spatial domain, or a transfer function defined in the
+frequency domain, in the ``transfer_function`` argument as a
+:class:`numpy.ndarray` or a :class:`~kikuchipy.util.window.Window`. Which domain
+the transfer function is defined in must be passed to the ``function_domain``
+argument. Whether to shift zero-frequency components to the centre of the FFT
+can also be controlled via ``shift``, but note that this is only used when
+``function_domain="frequency"``.
+
+Popular uses of filtering of EBSD patterns in the frequency domain include
+removing large scale variations across the detector with a Gaussian high pass
+filter, or removing high frequency noise with a Gaussian low pass filter. These
+particular functions are readily available via
+:class:`~kikuchipy.util.window.Window`:
+
+.. code-block::
+
+    >>> pattern_shape = s.axes_manager.signal_shape[::-1]
+    >>> w_low = kp.util.Window("lowpass", c=22, w_c=10, shape=pattern_shape)
+    >>> w_high = kp.util.Window("highpass", c=3, w_c=2, shape=pattern_shape)
+    >>> w = w_low * w_high
+    >>> import matplotlib.pyplot as plt
+    >>> plt.imshow(w)
+    >>> plt.colorbar()
+    >>> plt.figure()
+    >>> plt.plot(w[pattern_shape[0] // 2:, :])
+
+.. _fig-fft-filter-highlowpass:
+
+.. figure:: _static/image/pattern_processing/fft_filter_highlowpass.jpg
+    :align: center
+    :width: 80%
+
+    The product of the combined high and low pass transfer functions defined in
+    the frequency domain (left), and the intensity profile across its centre
+    (right).
+
+Then, to multiply the FFT of each pattern with this transfer function, and
+subsequently computing the inverse FFT (IFFT), we use
+:meth:`~kikuchipy.signals.ebsd.EBSD.fft_filter`, and remember to shift the
+zero-frequency components to the centre of the FFT:
+
+.. code-block::
+
+    >>> s.fft_filter(
+    ...     transfer_function=w, function_domain="frequency", shift=True)
+
+.. _fig-fft-filter-highlowpass-result:
+
+.. figure:: _static/image/pattern_processing/fft_filter_highlowpass_result.jpg
+    :align: center
+    :width: 100%
+
+    The same pattern before (left) and after (right) filtering with a
+    :ref:`combined high and low pass Gaussian transfer function
+    <fig-fft-filter-highlowpass>`.
+
+Note filtering with a spatial kernel in the frequency domain, after creating the
+kernel's transfer function via FFT, and computing the IFFT, is, in this case,
+the same as spatially correlating the kernel with the pattern. Let's demonstrate
+this by attempting to sharpen a pattern with a Laplacian kernel in both the
+spatial and frequency domains and comparing the results:
+
+.. code-block::
+
+    >>> w_laplacian = np.array([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
+    >>> p = s.inav[0, 0].deepcopy().data.astype(np.float32)
+    >>> s.fft_filter(transfer_function=w_laplacian, function_domain="spatial")
+
+    >>> from scipy.ndimage import correlate
+    >>> p_filt = correlate(w, weights=w_laplacian)
+    >>> p_filt_resc = kp.util.pattern.rescale_intensity(
+    ...     p_filt, dtype_out=np.uint8)
+
+.. _fig-fft-filter-laplacian:
+
+.. figure:: _static/image/pattern_processing/fft_filter_laplacian.jpg
+    :align: center
+    :width: 100%
+
+    The result correlating a pattern with a Laplacian sharpening kernel (left).
+    The exact same result is obtained by filtering in the frequency domain with
+    the kernel's transfer function and subsequently computing the IFFT (right).
+
+:meth:`~kikuchipy.signals.ebsd.EBSD.fft_filter` performs the filtering on the
+patterns with data type ``np.float32``, and therefore have to rescale back to
+the pattern's original data type if necessary.

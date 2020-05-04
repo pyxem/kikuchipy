@@ -302,7 +302,9 @@ class TestWindow:
         ],
     )
     def test_lowpass_fft_filter_direct(self, shape, c, w_c, answer):
-        w = kp.util.window.lowpass_fft_filter(shape=shape, c=c, w_c=w_c)
+        w = kp.util.window.lowpass_fft_filter(
+            shape=shape, cutoff=c, cutoff_width=w_c
+        )
 
         assert w.shape == answer.shape
         assert np.allclose(w, answer, atol=1e-4)
@@ -311,8 +313,8 @@ class TestWindow:
         shape = (96, 96)
         c = 30
         w_c = c // 2
-        w1 = kp.util.Window("lowpass", c=c, w_c=w_c, shape=shape)
-        w2 = kp.util.window.lowpass_fft_filter(shape=shape, c=c)
+        w1 = kp.util.Window("lowpass", cutoff=c, cutoff_width=w_c, shape=shape)
+        w2 = kp.util.window.lowpass_fft_filter(shape=shape, cutoff=c)
 
         assert np.allclose(w1, w2)
 
@@ -351,7 +353,9 @@ class TestWindow:
         ],
     )
     def test_highpass_fft_filter_direct(self, shape, c, w_c, answer):
-        w = kp.util.window.highpass_fft_filter(shape=shape, c=c, w_c=w_c)
+        w = kp.util.window.highpass_fft_filter(
+            shape=shape, cutoff=c, cutoff_width=w_c
+        )
 
         assert w.shape == answer.shape
         assert np.allclose(w, answer, atol=1e-4)
@@ -360,8 +364,8 @@ class TestWindow:
         shape = (96, 96)
         c = 30
         w_c = c // 2
-        w1 = kp.util.Window("highpass", c=c, w_c=w_c, shape=shape)
-        w2 = kp.util.window.highpass_fft_filter(shape=shape, c=c)
+        w1 = kp.util.Window("highpass", cutoff=c, cutoff_width=w_c, shape=shape)
+        w2 = kp.util.window.highpass_fft_filter(shape=shape, cutoff=c)
 
         assert np.allclose(w1, w2)
 

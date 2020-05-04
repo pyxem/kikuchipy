@@ -16,6 +16,9 @@ convert ${PATPROC}/pattern_scan_static.png ${PATPROC}/pattern_scan_averaged.png 
 convert ${PATPROC}/contrast_stretching_before.png ${PATPROC}/contrast_stretching_after.png +append ${PATPROC}/contrast_stretching.jpg
 convert ${PATPROC}/rescale_intensities_before.png ${PATPROC}/rescale_intensities_after.png +append ${PATPROC}/rescale_intensities.jpg
 convert ${PATPROC}/normalize_intensity_before.png ${PATPROC}/normalize_intensity_after.png +append ${PATPROC}/normalize_intensity.jpg
+convert ${PATPROC}/pattern_dynamic.png ${PATPROC}/fft_filter_highlowpass_after.png +append ${PATPROC}/fft_filter_highlowpass_result.jpg
+convert ${PATPROC}/fft_filter_highlowpass2d.png ${PATPROC}/fft_filter_highlowpass1d.png +append ${PATPROC}/fft_filter_highlowpass.jpg
+convert ${PATPROC}/fft_filter_laplacian_correlate.png ${PATPROC}/fft_filter_laplacian_spatial.png -gravity center +append ${PATPROC}/fft_filter_laplacian.jpg
 
 # Change image size
 convert ${PATPROC}/pattern_dynamic.jpg ${CHANGES}/pattern_cropped.jpg +append ${CHANGES}/change_pattern_size.jpg
