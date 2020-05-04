@@ -11,10 +11,21 @@ details methods to enhance the Kikuchi diffraction pattern and manipulate
 detector intensities in patterns in an :class:`~kikuchipy.signals.ebsd.EBSD`
 object.
 
-.. note::
+Most of the methods operating on :class:`~kikuchipy.signals.ebsd.EBSD` objects
+use functions that operate on the individual patterns (:class:`numpy.ndarray`).
+These single pattern functions are available in the
+:mod:`kikuchipy.util.pattern` module.
 
-    The functions operating on individual patterns (:class:`numpy.ndarray`) are
-    available in the :mod:`kikuchipy.util.pattern` module when possible.
+Almost all methods operate inplace (indicated in their docstrings), meaning it
+overwrites the patterns in the :class:`~kikuchipy.signals.ebsd.EBSD` object. If
+a new object is desired, the solution is to create a
+:class:`~hyperspy._signals.signal2d.Signal2D.deepcopy` of the original object
+and perform the operation on this:
+
+.. code-block::
+
+    >>> s2 = s.deepcopy()
+    >>> s2.remove_static_background()
 
 .. _rescale-intensity:
 
@@ -99,9 +110,25 @@ Normalize intensity
 
 It can be useful to normalize pattern intensities to a mean value of
 :math:`\mu = 0.0` and a standard deviation of e.g. :math:`\sigma = 1.0` when
-e.g. comparing patterns or calculating :ref:`image quality <image-quality>`.
-This can be
+e.g. comparing patterns or calculating the :ref:`image quality <image-quality>`.
+Patterns can be normalized with
+:meth:`~kikuchipy.signals.ebsd.EBSD.normalize_intensity`:
 
+.. code-block::
+
+    >>> np.mean(s.data)
+    146.0670987654321
+    >>> s.change_dtype(np.float32)  # Or passing dtype_out=np.float32 to s.no...
+    >>> s.normalize_intensity(num_std=1)  # Default
+    >>> np.mean(s.data)
+    2.6373216e-08
+
+.. figure:: _static/image/pattern_processing/normalize_intensity.jpg
+    :align: center
+    :width: 100%
+
+    Histogram of pattern intensities in a scan before normalization (left) and
+    after normalization (right).
 
 .. _background-correction:
 
@@ -115,11 +142,11 @@ Remove the static background
 
 Effects which are constant, like hot pixels or dirt on the detector, can be
 removed by either subtracting or dividing by a static background via
-:meth:`~kikuchipy.signals.ebsd.EBSD.static_background_correction`:
+:meth:`~kikuchipy.signals.ebsd.EBSD.remove_static_background`:
 
-.. code-block:: python
+.. code-block::
 
-    >>> s.static_background_correction(operation='subtract', relative=True)
+    >>> s.remove_static_background(operation='subtract', relative=True)
 
 .. _fig-static-background-correction:
 
@@ -127,11 +154,11 @@ removed by either subtracting or dividing by a static background via
     :align: center
     :width: 100%
 
-    The same pattern as acquired (left) and after static background correction
+    The same pattern as acquired (left) and after removing the static background
     (right).
 
-Here the static background pattern is assumed to be stored as part of the signal
-``metadata``, which can be loaded via
+Here, the static background pattern is assumed to be stored as part of the
+signal ``metadata``, which can be loaded via
 :meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`. The static
 background pattern can also be passed to the ``static_bg`` parameter. Passing
 ``relative=True`` (default) ensures that relative intensities between patterns
@@ -139,7 +166,12 @@ are kept when they are rescaled after correction to fill the available data
 range. In this case, for a scan of data type ``uint8`` with data range [0, 255],
 the highest pixel intensity in a scan is stretched to 255 (and the lowest to 0),
 while the rest is rescaled keeping relative intensities between patterns. With
-``relative=False``, all patterns are equally stretched to [0, 255].
+``relative=False``, all patterns are stretched to [0, 255].
+
+The static background pattern intensities can be rescaled to each individual
+pattern's intensity range before removal by passing ``scale_bg=True``, which
+will result in the relative intensity between patterns to be lost (passing
+``relative=True`` along with ``scale_bg=True`` is not allowed).
 
 .. _remove-dynamic-background:
 
@@ -149,13 +181,22 @@ Remove the dynamic background
 Uneven intensity in a static background subtracted pattern can be corrected by
 subtracting or dividing by a dynamic background obtained by Gaussian blurring.
 This so-called flat fielding is done with
-:meth:`~kikuchipy.signals.ebsd.EBSD.dynamic_background_correction`, with
-possibilities of setting the ``operation`` and standard deviation of the
-Gaussian kernel, ``sigma``:
+:meth:`~kikuchipy.signals.ebsd.EBSD.remove_dynamic_background`. A Gaussian
+window with a standard deviation set by ``std`` is used to blur each pattern
+individually (dynamic) either in the spatial or frequency domain, set by
+``filter_domain``. Blurring in the frequency domain is effectively accomplished
+by a low-pass :ref:`Fast Fourier Transform (FFT) filter <fft-filtering>`. The
+individual Gaussian blurred dynamic backgrounds are then subtracted or divided
+from the respective patterns, set by ``operation``:
 
-.. code-block:: python
+.. code-block::
 
-    >>> s.dynamic_background_correction(operation='subtract', sigma=2)
+    >>> s.remove_dynamic_background(
+    ...     operation='subtract',  # Default
+    ...     filter_domain="frequency",  # Default
+    ...     std=8,  # Default is 1/8 of pattern width
+    ...     truncate=4.0  # Default
+    ... )
 
 .. _fig-dynamic-background-correction:
 
@@ -163,15 +204,41 @@ Gaussian kernel, ``sigma``:
     :align: center
     :width: 100%
 
-    The same pattern after static correction (left) followed by dynamic
-    background correction (right).
+    The same pattern after removal of the static background (left), followed by
+    removing the dynamic background pattern produced by Gaussian blurring in the
+    frequency domain (right).
 
-Patterns are rescaled to fill the available data type range.
+The width of the Gaussian window is truncated at the ``truncated`` number of
+standard deviations. Output patterns are rescaled to fill the input patterns'
+data type range.
 
 .. _get-dynamic-background:
 
 Get the dynamic background
 ==========================
+
+The Gaussian blurred pattern removed during dynamic background correction can
+be obtained as it's own :class:`~kikuchipy.signals.ebsd.EBSD` object:
+
+.. code-block::
+
+    >>> s
+    <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
+    >>> bg = s.get_dynamic_background(
+    ...     filter_domain="frequency",
+    ...     std=8,
+    ...     truncate=4,
+    ... )
+    >>> bg
+    <EBSD, title: , dimensions: (3, 3|60, 60)>
+
+.. figure:: _static/image/pattern_processing/get_dynamic_background.jpg
+    :align: center
+    :width: 100%
+
+    The pattern as acquired (left) and the same pattern after Gaussian blurring
+    in the frequency domain, showing only the large scale variations and no
+    Kikuchi pattern features.
 
 .. _pattern-averaging:
 
@@ -179,13 +246,12 @@ Average neighbour patterns
 ==========================
 
 The signal-to-noise ratio in patterns in an EBSD scan ``s`` can be improved by
-averaging patterns with their closest neighbours within a kernel or mask with
-:meth:`~kikuchipy.signals.ebsd.EBSD.average_neighbour_patterns`:
+averaging patterns with their closest neighbours within a window/kernel/mask
+with :meth:`~kikuchipy.signals.ebsd.EBSD.average_neighbour_patterns`:
 
-.. code-block:: python
+.. code-block::
 
-    >>> s.average_neighbour_patterns(
-            kernel="gaussian", kernel_size=(3, 3), std=1)
+    >>> s.average_neighbour_patterns(window="gaussian", shape=(3, 3), std=1)
 
 .. _fig-average-neighbour-patterns:
 
@@ -194,18 +260,18 @@ averaging patterns with their closest neighbours within a kernel or mask with
     :width: 100%
 
     An example pattern before (left) and after (right) averaging with the
-    nearest neighbour patterns in a (3 x 3) Gaussian kernel with :math:`\sigma`
+    nearest neighbour patterns in a (3 x 3) Gaussian window with :math:`\sigma`
     = 1.
 
 The array of averaged patterns :math:`g(n_{\mathrm{x}}, n_{\mathrm{y}})` is
-obtained by spatially correlating a kernel :math:`w(s, t)` with the array of
+obtained by spatially correlating a window :math:`w(s, t)` with the array of
 patterns :math:`f(n_{\mathrm{x}}, n_{\mathrm{y}})`, here 4D, which is padded
 with zeros at the edges. As coordinates :math:`n_{\mathrm{x}}` and
-:math:`n_{\mathrm{y}}` are varied, the kernel origin moves from pattern to
-pattern, computing the sum of products of the kernel coefficients with the
-neighbour pattern intensities, defined by the kernel size, followed by
-normalising by the sum of the kernel coefficients. For a symmetrical kernel of
-size :math:`m \times n`, this becomes [Gonzalez2017]_
+:math:`n_{\mathrm{y}}` are varied, the window origin moves from pattern to
+pattern, computing the sum of products of the window coefficients with the
+neighbour pattern intensities, defined by the window shape, followed by
+normalizing by the sum of the window coefficients. For a symmetrical window of
+shape :math:`m \times n`, this becomes [Gonzalez2017]_
 
 .. math::
 
@@ -214,58 +280,62 @@ size :math:`m \times n`, this becomes [Gonzalez2017]_
     f(n_{\mathrm{x}} + s, n_{\mathrm{y}} + t)}}
     {\sum_{s=-a}^a\sum_{t=-b}^b{w(s, t)}},
 
-where :math:`a = (m - 1)/2` and :math:`b = (n - 1)/2`. The kernel :math:`w`, a
-:class:`~kikuchipy.util.kernel.Kernel` object, can be plotted:
+where :math:`a = (m - 1)/2` and :math:`b = (n - 1)/2`. The window :math:`w`, a
+:class:`~kikuchipy.util.window.Window` object, can be plotted:
 
-.. code-block:: python
+.. code-block::
 
-    >>> w = kp.util.Kernel(kernel="gaussian", kernel_size=(3, 3), std=1)
+    >>> w = kp.util.Window(window="gaussian", shape=(3, 3), std=1)
     >>> w.plot(cmap="inferno")
 
-.. _fig-averaging-kernel:
+.. _fig-averaging-window:
 
-.. figure:: _static/image/pattern_processing/kernel_gaussian_std1.png
+.. figure:: _static/image/pattern_processing/window_gaussian_std1.png
     :align: center
     :width: 50%
 
-    A Gaussian averaging kernel with :math:`\sigma` = 1 and the origin in the
-    kernel centre.
+    A Gaussian averaging window with :math:`\sigma` = 1 and the origin in the
+    window centre.
 
-Any 1D or 2D kernel with desired coefficients can be used. This custom kernel
-can be passed to the ``kernel`` parameter in
+Any 1D or 2D window with desired coefficients can be used. This custom window
+can be passed to the ``window`` parameter in
 :meth:`~kikuchipy.signals.ebsd.EBSD.average_neighbour_patterns` or
-:class:`~kikuchipy.util.kernel.Kernel` as a :class:`numpy.ndarray` or
-:class:`dask.array.Array`. Additionally, any kernel listed in
-:func:`scipy.signal.windows.get_window` passed as a string via ``kernel`` with
+:class:`~kikuchipy.util.window.Window` as a :class:`numpy.ndarray` or
+:class:`dask.array.Array`. Additionally, any window in
+:func:`scipy.signal.windows.get_window` passed as a string via ``window`` with
 the necessary parameters as keyword arguments (like ``std=1`` for
-``kernel="gaussian"``) can be used. To demonstrate the creation and use of an
-asymmetrical circular kernel (and the use of
-:meth:`~kikuchipy.util.kernel.Kernel.make_circular`, although we could create a
-circular kernel directly by calling ``kernel="circular"`` upon kernel
+``window="gaussian"``) can be used. To demonstrate the creation and use of an
+asymmetrical circular window (and the use of
+:meth:`~kikuchipy.util.window.Window.make_circular`, although we could create a
+circular window directly by calling ``window="circular"`` upon window
 initialization):
 
-.. code-block:: python
+.. code-block::
 
-    >>> w = kp.util.Kernel(kernel="rectangular", kernel_size=(5, 4))
+    >>> w = kp.util.Window(window="rectangular", shape=(5, 4))
     >>> w
-    rectangular, (5, 4)
-    >>> w.coefficients
-    array([[1., 1., 1., 1.],
-       [1., 1., 1., 1.],
-       [1., 1., 1., 1.],
-       [1., 1., 1., 1.],
-       [1., 1., 1., 1.]])
+    Window (5, 4) rectangular
+    [[1. 1. 1. 1.]
+     [1. 1. 1. 1.]
+     [1. 1. 1. 1.]
+     [1. 1. 1. 1.]
+     [1. 1. 1. 1.]]
     >>> w.make_circular()
     >>> w
-    circular, (5, 4)
+    Window (5, 4) circular
+    [[0. 0. 1. 0.]
+     [0. 1. 1. 1.]
+     [1. 1. 1. 1.]
+     [0. 1. 1. 1.]
+     [0. 0. 1. 0.]]
     >>> s.average_neighbour_patterns(w)
-    >>> w.plot()
+    >>> figure, image, colorbar = w.plot()
 
-.. figure:: _static/image/pattern_processing/kernel_circular_54.png
+.. figure:: _static/image/pattern_processing/window_circular_54.png
     :align: center
-    :width: 50%
+    :width: 40%
 
-    A circular averaging kernel. Note the location of the origin (0, 0).
+    A circular averaging window. Note the location of the origin (0, 0).
 
 .. note::
 
@@ -328,3 +398,7 @@ for the effect of varying ``kernel_size``.
 
 Filtering in the frequency domain
 =================================
+
+Filtering of patterns in the frequency domain can be done by passing a desired
+transfer function to ``transfer_function``, and whether or not to shift the zero-frequency terms to the
+centre of the array,

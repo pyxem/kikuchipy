@@ -83,8 +83,9 @@ html_css_files = [
 pygments_style = "friendly"
 
 # Logo
-html_logo = "_static/icon/icon_v0.2.0.svg"
-html_favicon = "_static/icon/icon_v0.2.0.png"
+cmap = "plasma"  # viridis, magma, inferno, plasma
+html_logo = f"_static/icon/{cmap}_logo.svg"
+html_favicon = f"_static/icon/{cmap}_favicon.png"
 
 # Read the Docs theme options
 html_theme_options = {

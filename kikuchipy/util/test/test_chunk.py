@@ -319,9 +319,7 @@ class TestRemoveDynamicBackgroundChunk:
         "std, answer",
         [(1, DYN_CORR_UINT8_SPATIAL_STD1), (2, DYN_CORR_UINT8_SPATIAL_STD2)],
     )
-    def test_remove_dynamic_background_chunk_spatial(
-        self, dummy_signal, std, answer
-    ):
+    def test_remove_dynamic_background_spatial(self, dummy_signal, std, answer):
         dtype_out = dummy_signal.data.dtype.type
 
         dask_array = kp.util.dask._get_dask_array(
@@ -343,7 +341,7 @@ class TestRemoveDynamicBackgroundChunk:
         assert corrected_patterns.dtype == dtype_out
         assert np.allclose(corrected_patterns[0, 0].compute(), answer)
 
-    def test_remove_dynamic_background_chunk_spatial_uint16(self, dummy_signal):
+    def test_remove_dynamic_background_spatial_uint16(self, dummy_signal):
         dtype_out = np.uint16
 
         dask_array = kp.util.dask._get_dask_array(
@@ -372,7 +370,7 @@ class TestRemoveDynamicBackgroundChunk:
             (2, 4, DYN_CORR_UINT8_FREQUENCY_STD2_TRUNCATE4),
         ],
     )
-    def test_remove_dynamic_background_chunk_frequency(
+    def test_remove_dynamic_background_frequency(
         self, dummy_signal, std, truncate, answer
     ):
         dtype_out = dummy_signal.data.dtype.type
@@ -385,7 +383,7 @@ class TestRemoveDynamicBackgroundChunk:
         (
             kwargs["fft_shape"],
             kwargs["window_shape"],
-            kwargs["window_fft"],
+            kwargs["transfer_function"],
             kwargs["offset_before_fft"],
             kwargs["offset_after_ifft"],
         ) = kp.util.pattern._dynamic_background_frequency_space_setup(
@@ -414,7 +412,7 @@ class TestRemoveDynamicBackgroundChunk:
             (250, DYN_CORR_UINT8_SPATIAL_STD2_OMAX250),
         ],
     )
-    def test_remove_dynamic_background_chunk_out_range(
+    def test_remove_dynamic_background_out_range(
         self, dummy_signal, omax, answer
     ):
         dtype_out = dummy_signal.data.dtype.type
@@ -527,7 +525,7 @@ class TestGetDynamicBackgroundChunk:
         (
             kwargs["fft_shape"],
             kwargs["window_shape"],
-            kwargs["window_fft"],
+            kwargs["transfer_function"],
             kwargs["offset_before_fft"],
             kwargs["offset_after_ifft"],
         ) = kp.util.pattern._dynamic_background_frequency_space_setup(
@@ -570,7 +568,7 @@ class TestGetDynamicBackgroundChunk:
         (
             kwargs["fft_shape"],
             kwargs["window_shape"],
-            kwargs["window_fft"],
+            kwargs["transfer_function"],
             kwargs["offset_before_fft"],
             kwargs["offset_after_ifft"],
         ) = kp.util.pattern._dynamic_background_frequency_space_setup(
@@ -718,8 +716,14 @@ class TestFFTFilterChunk:
 
         w = kp.util.Window(transfer_function, shape=shape, **kwargs)
 
+        filter_func = kp.util.pattern.fft_filter
+
         p_fft = kp.util.chunk.fft_filter(
-            patterns=p, transfer_function=w, shift=shift, dtype_out=dtype_out,
+            patterns=p,
+            filter_func=filter_func,
+            transfer_function=w,
+            shift=shift,
+            dtype_out=dtype_out,
         )
 
         this_fft = p_fft[this_id]

@@ -26,6 +26,11 @@ yellow: #fde725
 	white-space: pre-wrap;
 }
 
+.rst-content code {
+    font-family: "Inconsolata", monospace !important;
+    font-size: 14px !important;
+}
+
 /* All page */
 body {
     font-family: "Fira Sans", sans-serif;
@@ -88,11 +93,6 @@ p {
     color: #24292e;
 }
 .wy-side-nav-search a:hover {
-    background-color: #ffffff;
-}
-
-/* Sidebar search */
-.wy-side-nav-search {
     background-color: #ffffff;
 }
 
@@ -175,6 +175,17 @@ p {
 /* Sidebar toc links hover */
 .wy-side-nav-search a:hover {
     background-color: #fde725;
+}
+
+/* Sidebar search */
+.wy-side-nav-search {
+    background-color: #ffffff;
+}
+
+/* Icon hover */
+
+.wy-side-nav-search a.icon:hover {
+    background-color: #f6f8fa;
 }
 
 /* Sidebar toc links hover background */

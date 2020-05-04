@@ -341,11 +341,7 @@ class TestFFTPattern:
         kwargs = {}
 
         p_fft = kp.util.pattern.fft(
-            pattern=p,
-            shift=shift,
-            apodization=False,
-            real_fft_only=real_fft_only,
-            **kwargs,
+            pattern=p, shift=shift, real_fft_only=real_fft_only, **kwargs,
         )
 
         assert np.allclose(
@@ -354,9 +350,21 @@ class TestFFTPattern:
             atol=1e-3,
         )
 
-    def test_fft_pattern_apodization_raises(self):
-        with pytest.raises(NotImplementedError):
-            _ = kp.util.pattern.fft(np.arange(10), apodization=True)
+    @pytest.mark.parametrize(
+        "window", ["modified_hann", "tukey", "hamming"],
+    )
+    def test_fft_pattern_apodization_window(self, dummy_signal, window):
+        p = dummy_signal.inav[0, 0].data
+        w = kp.util.Window(window, shape=p.shape)
+        p2 = kp.util.pattern.fft(pattern=p, apodization_window=w, shift=True,)
+        p3 = kp.util.pattern.fft(pattern=p * w, shift=True)
+        p4 = kp.util.pattern.fft(pattern=p, shift=True)
+
+        assert p2.shape == p.shape
+        assert p3.shape == p.shape
+        assert np.allclose(p2, p3)
+        assert not np.allclose(p2, p4, atol=1e-1)
+        assert not np.allclose(p3, p4, atol=1e-1)
 
     @pytest.mark.parametrize("shift", [True, False])
     def test_ifft_pattern(self, shift):
@@ -365,6 +373,20 @@ class TestFFTPattern:
         p_ifft = kp.util.pattern.ifft(p_fft, shift=shift)
 
         assert np.allclose(p_ifft, p)
+
+    @pytest.mark.parametrize("shift", [True, False])
+    def test_ifft_pattern_real(self, shift):
+        # Odd second dimension becomes even with only real valued FFT
+        p = np.random.random((101, 100))
+        p_fft = kp.util.pattern.fft(p, shift=shift, real_fft_only=False)
+        p_ifft = kp.util.pattern.ifft(p_fft, shift=shift, real_fft_only=False)
+
+        p_rfft = kp.util.pattern.fft(p, shift=shift, real_fft_only=True)
+        p_irfft = kp.util.pattern.ifft(p_rfft, shift=shift, real_fft_only=True)
+
+        assert p_ifft.shape == p.shape
+        assert p_irfft.shape == p.shape
+        assert np.allclose(p_ifft, p_irfft)
 
 
 class TestNormalizeIntensityPattern:

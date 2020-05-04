@@ -24,6 +24,8 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 import matplotlib
 import numpy as np
 import pytest
+from scipy.ndimage import correlate
+from skimage.exposure import rescale_intensity
 
 import kikuchipy as kp
 
@@ -1011,7 +1013,7 @@ class TestFFTFilterEBSD:
             (False, "gaussian", {"sigma": 2}, None, 6.2621),
         ],
     )
-    def test_fft_filter(
+    def test_fft_filter_frequency(
         self,
         dummy_signal,
         shift,
@@ -1027,7 +1029,9 @@ class TestFFTFilterEBSD:
         shape = dummy_signal.axes_manager.signal_shape
         w = kp.util.Window(transfer_function, shape=shape, **kwargs)
 
-        dummy_signal.fft_filter(transfer_function=w, shift=shift)
+        dummy_signal.fft_filter(
+            transfer_function=w, function_domain="frequency", shift=shift,
+        )
 
         assert isinstance(dummy_signal, kp.signals.ebsd.EBSD)
         assert dummy_signal.data.dtype == dtype_out
@@ -1037,10 +1041,44 @@ class TestFFTFilterEBSD:
             atol=1e-4,
         )
 
+    def test_fft_filter_spatial(self, dummy_signal):
+        dummy_signal.change_dtype(np.float32)
+        p = dummy_signal.inav[0, 0].deepcopy().data
+
+        # Sobel operator
+        w = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
+
+        dummy_signal.fft_filter(
+            transfer_function=w, function_domain="spatial", shift=False,
+        )
+        p2 = dummy_signal.inav[0, 0].data
+        assert not np.allclose(p, p2, atol=1e-1)
+
+        # What Barnes' FFT filter does is the same as correlating the
+        # spatial kernel with the pattern, using
+        # scipy.ndimage.correlate()
+        p3 = correlate(input=p, weights=w)
+
+        # We rescale intensities afterwards, so the same must be done
+        # here, using skimage.exposure.rescale_intensity()
+        p3 = rescale_intensity(p3, out_range=p3.dtype.type)
+
+        assert np.allclose(p2, p3)
+
+    def test_fft_filter_raises(self, dummy_signal):
+        function_domain = "Underdark"
+        with pytest.raises(ValueError, match=f"{function_domain} must be "):
+            dummy_signal.fft_filter(
+                transfer_function=np.arange(9).reshape((3, 3)) / 9,
+                function_domain=function_domain,
+            )
+
     def test_fft_filter_lazy(self, dummy_signal):
         lazy_signal = dummy_signal.as_lazy()
         w = np.arange(9).reshape(lazy_signal.axes_manager.signal_shape)
-        lazy_signal.fft_filter(transfer_function=w, shift=False)
+        lazy_signal.fft_filter(
+            transfer_function=w, function_domain="frequency", shift=False
+        )
 
         assert isinstance(lazy_signal, kp.signals.ebsd.LazyEBSD)
         assert lazy_signal.data.dtype == dummy_signal.data.dtype

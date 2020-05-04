@@ -177,7 +177,7 @@ def remove_dynamic_background(
             image=pattern,
             fft_shape=fft_shape,
             window_shape=kernel_shape,
-            window_fft=kernel_fft,
+            transfer_function=kernel_fft,
             offset_before_fft=offset_before_fft,
             offset_after_ifft=offset_after_ifft,
         )
@@ -204,15 +204,15 @@ def remove_dynamic_background(
 
 
 def _dynamic_background_frequency_space_setup(
-    pattern_shape: Union[List[int], Tuple[int, ...]],
+    pattern_shape: Union[List[int], Tuple[int, int]],
     std: Union[int, float],
     truncate: Union[int, float],
 ) -> Tuple[
-    Tuple[int, ...],
-    Tuple[int, ...],
+    Tuple[int, int],
+    Tuple[int, int],
     np.ndarray,
-    Tuple[int, ...],
-    Tuple[int, ...],
+    Tuple[int, int],
+    Tuple[int, int],
 ]:
     # Get Gaussian filtering window
     shape = (int(truncate * std),) * 2
@@ -223,7 +223,7 @@ def _dynamic_background_frequency_space_setup(
     # FFT filter setup
     (
         fft_shape,
-        kernel_rfft,
+        transfer_function,
         offset_before_fft,
         offset_after_ifft,
     ) = _fft_filter_setup(pattern_shape, window)
@@ -231,7 +231,7 @@ def _dynamic_background_frequency_space_setup(
     return (
         fft_shape,
         window.shape,
-        kernel_rfft,
+        transfer_function,
         offset_before_fft,
         offset_after_ifft,
     )
@@ -290,7 +290,7 @@ def get_dynamic_background(
             image=pattern,
             fft_shape=fft_shape,
             window_shape=kernel_shape,
-            window_fft=kernel_fft,
+            transfer_function=kernel_fft,
             offset_before_fft=offset_before_fft,
             offset_after_ifft=offset_after_ifft,
         )
@@ -357,7 +357,8 @@ def get_image_quality(
         pattern = normalize_intensity(pattern)
 
     # Compute FFT
-    fft_pattern = fft(pattern)
+    # TODO: Reduce frequency vectors to real part only to enable real part FFT
+    fft_pattern = scipy.fft.fft2(pattern)
 
     # Obtain (un-shifted) FFT spectrum
     spectrum = fft_spectrum(fft_pattern)
@@ -370,26 +371,28 @@ def get_image_quality(
 
 def fft(
     pattern: np.ndarray,
+    apodization_window: Union[None, np.ndarray, Window] = None,
     shift: bool = False,
-    apodization: Union[bool, str] = False,
     real_fft_only: bool = False,
     **kwargs,
 ) -> np.ndarray:
     """Compute the discrete Fast Fourier Transform (FFT) of an EBSD
     pattern.
 
-    This function is adapted from HyperSpy.
+    Very light wrapper around routines in `scipy.fft`. The routines are
+    wrapped instead of used directly to accommodate easy setting of
+    `shift` and `real_fft_only`.
 
     Parameters
     ----------
     pattern
         EBSD pattern.
+    apodization_window
+        An apodization window to apply before the FFT in order to
+        suppress streaks.
     shift
         Whether to shift the zero-frequency component to the centre of
         the spectrum (default is False).
-    apodization
-        Apply an apodization window before the FFT in order to suppress
-        streaks. This is not implemented yet.
     real_fft_only
         If True, the discrete FFT is computed for real input using
         :func:`scipy.fft.rfft2`. If False (default), it is computed
@@ -405,8 +408,8 @@ def fft(
 
     """
 
-    if apodization:
-        raise NotImplementedError()
+    if apodization_window is not None:
+        pattern = pattern * apodization_window
 
     if real_fft_only:
         fft_use = scipy.fft.rfft2
@@ -421,9 +424,18 @@ def fft(
     return out
 
 
-def ifft(fft_pattern: np.ndarray, shift: bool = False, **kwargs) -> np.ndarray:
+def ifft(
+    fft_pattern: np.ndarray,
+    shift: bool = False,
+    real_fft_only: bool = False,
+    **kwargs,
+) -> np.ndarray:
     """Compute the inverse Fast Fourier Transform (IFFT) of an FFT of an
     EBSD pattern.
+
+    Very light wrapper around routines in `scipy.fft`. The routines are
+    wrapped instead of used directly to accommodate easy setting of
+    `shift` and `real_fft_only`.
 
     Parameters
     ----------
@@ -432,6 +444,10 @@ def ifft(fft_pattern: np.ndarray, shift: bool = False, **kwargs) -> np.ndarray:
     shift
         Whether to shift the zero-frequency component back to the
         corners of the spectrum (default is False).
+    real_fft_only
+        If True, the discrete FFT is computed for real input using
+        :func:`scipy.fft.rfft2`. If False (default), it is computed
+        using :func:`scipy.fft.fft2`.
     kwargs :
         Keyword arguments pass to :func:`scipy.fft.ifft`.
 
@@ -442,12 +458,57 @@ def ifft(fft_pattern: np.ndarray, shift: bool = False, **kwargs) -> np.ndarray:
 
     """
 
-    if shift:
-        pattern = scipy.fft.ifft2(scipy.fft.ifftshift(fft_pattern, **kwargs))
+    if real_fft_only:
+        fft_use = scipy.fft.irfft2
     else:
-        pattern = scipy.fft.ifft2(fft_pattern, **kwargs)
+        fft_use = scipy.fft.ifft2
 
-    return pattern.real
+    if shift:
+        pattern = fft_use(scipy.fft.ifftshift(fft_pattern, **kwargs))
+    else:
+        pattern = fft_use(fft_pattern, **kwargs)
+
+    return np.real(pattern)
+
+
+def fft_filter(
+    pattern: np.ndarray,
+    transfer_function: Union[np.ndarray, Window],
+    apodization_window: Union[None, np.ndarray, Window] = None,
+    shift: bool = False,
+) -> np.ndarray:
+    """Filter an EBSD patterns in the frequency domain.
+
+    Parameters
+    ----------
+    pattern
+        EBSD pattern.
+    transfer_function
+        Filter transfer function in the frequency domain.
+    apodization_window
+        An apodization window to apply before the FFT in order to
+        suppress streaks.
+    shift
+        Whether to shift the zero-frequency component to the centre of
+        the spectrum. Default is False.
+
+    Returns
+    -------
+    filtered_pattern
+        Filtered EBSD pattern.
+
+    """
+
+    # Get the FFT
+    pattern_fft = fft(
+        pattern, shift=shift, apodization_window=apodization_window
+    )
+
+    # Apply the transfer function to the FFT
+    filtered_fft = pattern_fft * transfer_function
+
+    # Get real part of IFFT of the filtered FFT
+    return np.real(ifft(filtered_fft, shift=shift))
 
 
 @njit

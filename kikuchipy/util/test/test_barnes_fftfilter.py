@@ -27,7 +27,7 @@ from kikuchipy.util.window import Window
 
 class TestBarnesFFTFilter:
     @pytest.mark.parametrize(
-        "shape, expected_offset", [((10, 10), (5, 5)), ((17, 31), (15, 8))],
+        "shape, expected_offset", [((10, 10), (5, 5)), ((17, 31), (8, 15))],
     )
     def test_offset_before_fft(self, shape, expected_offset):
         offset = barnes._offset_before_fft(shape)
@@ -51,9 +51,9 @@ class TestBarnesFFTFilter:
     @pytest.mark.parametrize(
         "image_shape, expected_shape",
         [
-            ((60, 60), (80, 84)),
+            ((60, 60), (80, 90)),
             ((96, 96), (120, 120)),
-            ((800, 600), (825, 625)),
+            ((800, 600), (864, 625)),
         ],
     )
     def test_pad_image(self, image_shape, expected_shape):
@@ -98,7 +98,7 @@ class TestBarnesFFTFilter:
         )
 
         assert isinstance(fft_shape, tuple)
-        assert fft_shape == (70, 70)
+        assert fft_shape == (72, 72)
 
         assert np.sum(window_rfft.imag) != 0
 
@@ -122,7 +122,7 @@ class TestBarnesFFTFilter:
             image=p,
             fft_shape=fft_shape,
             window_shape=w.shape,
-            window_fft=window_rfft,
+            transfer_function=window_rfft,
             offset_before_fft=off1,
             offset_after_ifft=off2,
         )

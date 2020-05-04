@@ -32,7 +32,8 @@ from skimage.exposure import equalize_adapthist
 from skimage.util.dtype import dtype_range
 
 import kikuchipy.util.pattern as pattern_processing
-from kikuchipy.util.barnes_fftfilter import fft_filter
+from kikuchipy.util.barnes_fftfilter import _fft_filter
+from kikuchipy.util.barnes_fftfilter import fft_filter as b_fft_filter
 from kikuchipy.util.window import Window
 
 
@@ -182,7 +183,7 @@ def remove_static_background(
 
 def get_dynamic_background(
     patterns: Union[np.ndarray, da.Array],
-    filter_func: Union[gaussian_filter, fft_filter],
+    filter_func: Union[gaussian_filter, b_fft_filter],
     dtype_out: Union[
         None, np.dtype, Tuple[int, int], Tuple[float, float]
     ] = None,
@@ -224,7 +225,7 @@ def get_dynamic_background(
 
 def remove_dynamic_background(
     patterns: Union[np.ndarray, da.Array],
-    filter_func: Union[fft_filter, gaussian_filter],
+    filter_func: Union[b_fft_filter, gaussian_filter],
     operation_func: Union[np.subtract, np.divide],
     out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
     dtype_out: Union[
@@ -417,8 +418,8 @@ def get_image_quality(
 
 def fft_filter(
     patterns: np.ndarray,
+    filter_func: Union[pattern_processing.fft_filter, _fft_filter],
     transfer_function: Union[np.ndarray, Window],
-    shift: bool = False,
     dtype_out: Union[
         None, np.dtype, Tuple[int, int], Tuple[float, float]
     ] = None,
@@ -430,23 +431,23 @@ def fft_filter(
     frequency domain, where their spectrum is multiplied by a filter
     `transfer_function`, and the filtered spectrum is subsequently
     transformed to the spatial domain via the inverse FFT (IFFT).
-    Filtered patterns are rescaled to input data type range.
+
+    Filtered patterns are rescaled to the data type range of
+    `dtype_out`.
 
     Parameters
     ----------
     patterns
         EBSD patterns.
+    filter_func
+        Function to filter
     transfer_function
-        Filter transfer function in the frequency domain of pattern
-        shape.
-    shift
-        Whether to shift the zero-frequency component to the centre.
-        Default is False.
+        Filter transfer function in the frequency domain.
     dtype_out
         Data type of output patterns. If None (default), it is set to
         the input patterns' dtype.
     kwargs :
-        Keyword arguments passed to func:`scipy.fft.fft2`.
+        Keyword arguments passed to the `filter_func`.
 
     Returns
     -------
@@ -461,17 +462,8 @@ def fft_filter(
     filtered_patterns = np.empty_like(patterns, dtype=dtype_out)
 
     for nav_idx in np.ndindex(patterns.shape[:-2]):
-        # Get the FFT
-        pattern_spectrum = pattern_processing.fft(
-            patterns[nav_idx], shift=shift, **kwargs
-        )
-
-        # Apply transfer function to the FFT spectrum
-        filtered_spectrum = pattern_spectrum * transfer_function
-
-        # Get IFFT of filtered spectrum
-        filtered_pattern = pattern_processing.ifft(
-            filtered_spectrum, shift=shift
+        filtered_pattern = filter_func(
+            patterns[nav_idx], transfer_function=transfer_function, **kwargs
         )
 
         # Rescale the pattern intensity

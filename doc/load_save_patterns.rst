@@ -117,7 +117,7 @@ HyperSpy provides the method
 :class:`~hyperspy.signal.BaseSignal` subclasses, of which
 :class:`~kikuchipy.signals.ebsd.EBSD` is one. To create an
 :class:`~kikuchipy.signals.ebsd.EBSD` object from a
-:class:`~hyperspy.signals.Signal2D` object:
+:class:`~hyperspy._signals.signal2d.Signal2D` object:
 
 .. code-block::
 
@@ -199,7 +199,7 @@ Currently, kikuchipy has readers and writers for the following file formats:
     If you want to process your patterns with kikuchipy, but use an unsupported
     EBSD vendor software, or if you want to write your processed patterns to a
     vendor format that does not support writing, please request this feature
-    in our `code repository <https://github.com/kikuchipy/kikuchipy/issues>`_.
+    in our `issue tracker <https://github.com/kikuchipy/kikuchipy/issues>`_.
 
 .. _h5ebsd-format:
 
@@ -223,7 +223,7 @@ read from the file. For example, if the file contains three scans with names
 
     >>> s2, s4, s6 = kp.load('patterns.h5', scans=[2, 4, 6])
 
-Here the h5ebsd :func:`~kikuchipy.io.plugins.h5ebsd.file_reader` is called. If
+Here, the h5ebsd :func:`~kikuchipy.io.plugins.h5ebsd.file_reader` is called. If
 only ``Scan 4`` is to be read, ``scans=4`` can be passed. The ``scans``
 parameter is unnecessary if only ``Scan 2`` is to be read since reading the
 first scan in the file is the default behaviour.
@@ -237,7 +237,7 @@ containing only ``Scan 1``, by passing:
 
     >>> s.save('patterns.h5', add_scan=True, scan_number=2)
 
-Here the h5ebsd :func:`~kikuchipy.io.plugins.h5ebsd.file_writer` is called.
+Here, the h5ebsd :func:`~kikuchipy.io.plugins.h5ebsd.file_writer` is called.
 
 .. _nordif-format:
 

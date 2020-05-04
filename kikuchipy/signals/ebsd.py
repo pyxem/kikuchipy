@@ -22,7 +22,7 @@ import gc
 import numbers
 import os
 import sys
-from typing import Union, List, Optional, Tuple, NoReturn
+from typing import Union, List, Optional, Tuple
 import warnings
 
 import dask.array as da
@@ -98,7 +98,7 @@ class EBSD(Signal2D):
         version=None,
         microscope=None,
         magnification=None,
-    ) -> NoReturn:
+    ):
         """Set experimental parameters in signal metadata.
 
         Parameters
@@ -215,7 +215,7 @@ class EBSD(Signal2D):
         setting=None,
         space_group=None,
         symmetry=None,
-    ) -> NoReturn:
+    ):
         """Set parameters for one phase in signal metadata.
 
         A phase node with default values is created if none is present
@@ -301,7 +301,7 @@ class EBSD(Signal2D):
 
     def set_scan_calibration(
         self, step_x: Union[int, float] = 1.0, step_y: Union[int, float] = 1.0
-    ) -> NoReturn:
+    ):
         """Set the step size in microns.
 
         Parameters
@@ -330,7 +330,7 @@ class EBSD(Signal2D):
         x.scale, y.scale = (step_x, step_y)
         x.units, y.units = ["\u03BC" + "m"] * 2
 
-    def set_detector_calibration(self, delta: Union[int, float]) -> NoReturn:
+    def set_detector_calibration(self, delta: Union[int, float]):
         """Set detector pixel size in microns. The offset is set to the
         the detector centre.
 
@@ -365,7 +365,7 @@ class EBSD(Signal2D):
         relative: bool = True,
         static_bg: Union[None, np.ndarray, da.Array] = None,
         scale_bg: bool = False,
-    ) -> NoReturn:
+    ):
         """Remove the static background in an EBSD scan inplace.
 
         The removal is performed by subtracting or dividing by a static
@@ -501,12 +501,13 @@ class EBSD(Signal2D):
         std: Union[None, int, float] = None,
         truncate: Union[int, float] = 4.0,
         **kwargs,
-    ) -> NoReturn:
+    ):
         """Remove the dynamic background in an EBSD scan inplace.
 
         The removal is performed by subtracting or dividing by a
         Gaussian blurred version of each pattern. Resulting pattern
-        intensities are rescaled to fill the input data type range.
+        intensities are rescaled to fill the input patterns' data type
+        range.
 
         Parameters
         ----------
@@ -560,7 +561,7 @@ class EBSD(Signal2D):
             (
                 kwargs["fft_shape"],
                 kwargs["window_shape"],
-                kwargs["window_fft"],
+                kwargs["transfer_function"],
                 kwargs["offset_before_fft"],
                 kwargs["offset_after_ifft"],
             ) = kp.util.pattern._dynamic_background_frequency_space_setup(
@@ -643,7 +644,7 @@ class EBSD(Signal2D):
         """
 
         if std is None:
-            std = self.axes_manager.signal_shape[0] / 8
+            std = self.axes_manager.signal_shape[-1] / 8
 
         # Get filter function and set up necessary keyword arguments
         if filter_domain == "frequency":
@@ -652,7 +653,7 @@ class EBSD(Signal2D):
             (
                 kwargs["fft_shape"],
                 kwargs["window_shape"],
-                kwargs["window_fft"],
+                kwargs["transfer_function"],
                 kwargs["offset_before_fft"],
                 kwargs["offset_after_ifft"],
             ) = kp.util.pattern._dynamic_background_frequency_space_setup(
@@ -704,7 +705,7 @@ class EBSD(Signal2D):
             None, np.dtype, Tuple[int, int], Tuple[float, float]
         ] = None,
         percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-    ) -> NoReturn:
+    ):
         """Rescale pattern intensities in an EBSD scan inplace.
 
         Output min./max. intensity is determined from `out_range` or the
@@ -816,7 +817,7 @@ class EBSD(Signal2D):
         kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
         clip_limit: Union[int, float] = 0,
         nbins: int = 128,
-    ) -> NoReturn:
+    ):
         """Enhance the local contrast in an EBSD scan inplace using
         adaptive histogram equalization.
 
@@ -959,28 +960,36 @@ class EBSD(Signal2D):
     def fft_filter(
         self,
         transfer_function: Union[np.ndarray, kp.util.Window],
+        function_domain: str,
         shift: bool = False,
-        **kwargs,
-    ) -> NoReturn:
+    ):
         """Filter an EBSD scan inplace in the frequency domain.
 
         Patterns are transformed via the Fast Fourier Transform (FFT) to
-        the frequency domain, where their spectrum is multiplied by a
-        filter `transfer_function`, and the filtered spectrum is
-        subsequently transformed to the spatial domain via the inverse
-        FFT (IFFT). Filtered patterns are rescaled to input data type
-        range.
+        the frequency domain, where their spectrum is multiplied by the
+        `transfer_function`, and the filtered spectrum is subsequently
+        transformed to the spatial domain via the inverse FFT (IFFT).
+        Filtered patterns are rescaled to input data type range.
+
+        Note that if `function_domain` is "spatial", only real valued
+        FFT and IFFT is used.
 
         Parameters
         ----------
         transfer_function
-            Filter transfer function in the frequency domain of pattern
-            shape.
+            Filter to apply to patterns. This can either be a transfer
+            function in the frequency domain of pattern shape or a
+            kernel in the spatial domain. What is passed is determined
+            from `function_domain`.
+        function_domain
+            Options are "frequency" and "spatial", indicating,
+            respectively, whether the filter function passed to
+            `filter_function` is a transfer function in the frequency
+            domain or a kernel in the spatial domain.
         shift
-            Whether to shift the zero-frequency component to the centre
-            (default is False).
-        kwargs :
-            Keyword arguments passed to func:`scipy.fft.fft2`.
+            Whether to shift the zero-frequency component to the centre.
+            Default is False. This is only used when
+            `function_domain="frequency"`.
 
         """
 
@@ -989,10 +998,34 @@ class EBSD(Signal2D):
         dtype = np.float32
         dask_array = kp.util.dask._get_dask_array(signal=self, dtype=dtype)
 
+        kwargs = {}
+        if function_domain == "frequency":
+            filter_func = kp.util.pattern.fft_filter
+            kwargs["shift"] = shift
+        elif function_domain == "spatial":
+            filter_func = kp.util.barnes_fftfilter._fft_filter
+            kwargs["window_shape"] = transfer_function.shape
+
+            # FFT filter setup
+            (
+                kwargs["fft_shape"],
+                transfer_function,  # Padded
+                kwargs["offset_before_fft"],
+                kwargs["offset_after_ifft"],
+            ) = kp.util.barnes_fftfilter._fft_filter_setup(
+                image_shape=self.axes_manager.signal_shape[::-1],
+                window=transfer_function,
+            )
+        else:
+            function_domains = ["frequency", "spatial"]
+            raise ValueError(
+                f"{function_domain} must be either of {function_domains}."
+            )
+
         filtered_patterns = dask_array.map_blocks(
             func=kp.util.chunk.fft_filter,
+            filter_func=filter_func,
             transfer_function=transfer_function,
-            shift=shift,
             dtype_out=dtype_out,
             dtype=dtype_out,
             **kwargs,
@@ -1011,7 +1044,7 @@ class EBSD(Signal2D):
         num_std: int = 1,
         divide_by_square_root: bool = False,
         dtype_out: Optional[np.dtype] = None,
-    ) -> NoReturn:
+    ):
         """Normalize pattern intensities in an EBSD scan inplace to a
         mean of zero with a given standard deviation.
 
@@ -1032,6 +1065,15 @@ class EBSD(Signal2D):
         Data type should always be changed to floating point, e.g.
         ``np.float32`` with :meth:`~change_dtype`, before normalizing
         the intensities.
+
+        Examples
+        --------
+        >>> np.mean(s.data)
+        146.0670987654321
+        >>> s.change_dtype(np.float32)  # Or passing dtype_out=np.float32
+        >>> s.normalize_intensity()
+        >>> np.mean(s.data)
+        2.6373216e-08
 
         """
 
