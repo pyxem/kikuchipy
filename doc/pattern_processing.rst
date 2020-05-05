@@ -456,11 +456,12 @@ zero-frequency components to the centre of the FFT:
     :ref:`combined high and low pass Gaussian transfer function
     <fig-fft-filter-highlowpass>`.
 
-Note filtering with a spatial kernel in the frequency domain, after creating the
-kernel's transfer function via FFT, and computing the IFFT, is, in this case,
-the same as spatially correlating the kernel with the pattern. Let's demonstrate
-this by attempting to sharpen a pattern with a Laplacian kernel in both the
-spatial and frequency domains and comparing the results:
+Note that filtering with a spatial kernel in the frequency domain, after
+creating the kernel's transfer function via FFT, and computing the IFFT, is, in
+this case, the same as spatially correlating the kernel with the pattern. Let's
+demonstrate this by attempting to sharpen a pattern with a Laplacian kernel in
+both the spatial and frequency domains and comparing the results (this is a
+purely illustrative example, and perhaps not that practically useful):
 
 .. code-block::
 
@@ -479,10 +480,11 @@ spatial and frequency domains and comparing the results:
     :align: center
     :width: 100%
 
-    The result correlating a pattern with a Laplacian sharpening kernel (left).
-    The exact same result is obtained by filtering in the frequency domain with
-    the kernel's transfer function and subsequently computing the IFFT (right).
+    The result of correlating a pattern with a Laplacian sharpening kernel
+    (left). The exact same result is obtained by filtering in the frequency
+    domain with the kernel's transfer function and subsequently computing the
+    IFFT (right).
 
-:meth:`~kikuchipy.signals.ebsd.EBSD.fft_filter` performs the filtering on the
-patterns with data type ``np.float32``, and therefore have to rescale back to
-the pattern's original data type if necessary.
+Note also that :meth:`~kikuchipy.signals.ebsd.EBSD.fft_filter` performs the
+filtering on the patterns with data type ``np.float32``, and therefore have to
+rescale back to the pattern's original data type if necessary.
