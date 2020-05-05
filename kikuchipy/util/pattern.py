@@ -52,18 +52,20 @@ def rescale_intensity(
     ----------
     pattern
         EBSD pattern.
-    in_range, out_range
-        Min./max. intensity values of input and output pattern. If None,
-        (default) `in_range` is set to image min./max. If None
-        (default), `out_range` is set to `dtype_out` min./max according
-        to :func:`skimage.util.dtype.dtype_range`.
+    in_range
+        Min./max. intensity values of the input pattern. If None
+        (default), it is set to the pattern's min./max intensity.
+    out_range
+        Min./max. intensity values of the rescaled pattern. If None
+        (default), it is set to `dtype_out` min./max according to
+        `skimage.util.dtype.dtype_range`.
     dtype_out
-        Data type of rescaled pattern. If None (default), it is set to
-        the same data type as the input pattern.
+        Data type of the rescaled pattern. If None (default), it is set
+        to the same data type as the input pattern.
 
     Returns
     -------
-    rescaled_pattern
+    rescaled_pattern : numpy.ndarray
         Rescaled pattern.
 
     """
@@ -147,7 +149,7 @@ def remove_dynamic_background(
 
     Returns
     -------
-    corrected_pattern
+    corrected_pattern : numpy.ndarray
         Pattern with the dynamic background removed.
 
     See Also
@@ -268,7 +270,7 @@ def get_dynamic_background(
 
     Returns
     -------
-    dynamic_bg
+    dynamic_bg : numpy.ndarray
         The dynamic background.
 
     """
@@ -327,21 +329,18 @@ def get_image_quality(
     frequency_vectors
         Integer 2D array assigning each FFT spectrum frequency component
         a weight. If None (default), these are calculated from
-        :func:`~kikuchipy.util.experimental.fft_frequency_vectors`.
+        :func:`~kikuchipy.util.experimental.fft_frequency_vectors`. This
+        only depends on the pattern shape.
     inertia_max
-        Maximum inertia of the FFT power spectrum of the image. If None
-        (default), this is calculated from the `frequency_vectors`,
-        which in this case *must* be passed.
+        Maximum possible inertia of the FFT power spectrum of the image.
+        If None (default), this is calculated from the
+        `frequency_vectors`, which in this case *must* be passed. This
+        only depends on the pattern shape.
 
     Returns
     -------
-    image_quality
-        Image quality of the image.
-
-    Notes
-    -----
-    The parameters `frequency_vectors` and `inertia_max` depend only on
-    the image shape in pixels.
+    image_quality : numpy.ndarray
+        Image quality of the pattern.
 
     """
 
@@ -379,8 +378,8 @@ def fft(
     """Compute the discrete Fast Fourier Transform (FFT) of an EBSD
     pattern.
 
-    Very light wrapper around routines in `scipy.fft`. The routines are
-    wrapped instead of used directly to accommodate easy setting of
+    Very light wrapper around routines in :mod:`scipy.fft`. The routines
+    are wrapped instead of used directly to accommodate easy setting of
     `shift` and `real_fft_only`.
 
     Parameters
@@ -403,7 +402,7 @@ def fft(
 
     Returns
     -------
-    out
+    out : numpy.ndarray
         The result of the 2D FFT.
 
     """
@@ -433,8 +432,8 @@ def ifft(
     """Compute the inverse Fast Fourier Transform (IFFT) of an FFT of an
     EBSD pattern.
 
-    Very light wrapper around routines in `scipy.fft`. The routines are
-    wrapped instead of used directly to accommodate easy setting of
+    Very light wrapper around routines in :mod:`scipy.fft`. The routines
+    are wrapped instead of used directly to accommodate easy setting of
     `shift` and `real_fft_only`.
 
     Parameters
@@ -445,15 +444,15 @@ def ifft(
         Whether to shift the zero-frequency component back to the
         corners of the spectrum (default is False).
     real_fft_only
-        If True, the discrete FFT is computed for real input using
-        :func:`scipy.fft.rfft2`. If False (default), it is computed
-        using :func:`scipy.fft.fft2`.
+        If True, the discrete IFFT is computed for real input using
+        :func:`scipy.fft.irfft2`. If False (default), it is computed
+        using :func:`scipy.fft.ifft2`.
     kwargs :
         Keyword arguments pass to :func:`scipy.fft.ifft`.
 
     Returns
     -------
-    pattern
+    pattern : numpy.ndarray
         Real part of the IFFT of the EBSD pattern.
 
     """
@@ -494,7 +493,7 @@ def fft_filter(
 
     Returns
     -------
-    filtered_pattern
+    filtered_pattern : numpy.ndarray
         Filtered EBSD pattern.
 
     """
@@ -513,7 +512,7 @@ def fft_filter(
 
 @njit
 def fft_spectrum(fft_pattern: np.ndarray) -> np.ndarray:
-    """Compute FFT spectrum of a Fourier transformed EBSD pattern.
+    """Compute the FFT spectrum of a Fourier transformed EBSD pattern.
 
     Parameters
     ----------
@@ -522,7 +521,7 @@ def fft_spectrum(fft_pattern: np.ndarray) -> np.ndarray:
 
     Returns
     -------
-    fft_spectrum
+    fft_spectrum : numpy.ndarray
         2D FFT spectrum of the EBSD pattern.
 
     """
@@ -552,13 +551,13 @@ def normalize_intensity(
 
     Returns
     -------
-    normalized_pattern
+    normalized_pattern : numpy.ndarray
         Normalized pattern.
 
     Notes
     -----
     Data type should always be changed to floating point, e.g.
-    ``np.float32`` with :meth:`np.ndarray.astype`, before normalizing
+    ``np.float32`` with :meth:`numpy.ndarray.astype`, before normalizing
     the intensities.
 
     """
@@ -575,6 +574,20 @@ def normalize_intensity(
 
 
 def fft_frequency_vectors(shape: Tuple[int, int]) -> np.ndarray:
+    """Get the frequency vectors in a Fourier Transform spectrum.
+
+    Parameters
+    ----------
+    shape
+        Fourier transform shape.
+
+    Returns
+    -------
+    frequency_vectors : numpy.ndarray
+        Frequency vectors.
+
+    """
+
     sy, sx = shape
 
     linex = np.arange(sx) + 1

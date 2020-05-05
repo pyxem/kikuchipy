@@ -31,8 +31,9 @@ def normalized_correlation_coefficient(
     template: Union[np.ndarray, da.Array],
     zero_normalised: bool = True,
 ) -> float:
-    """Calculate the normalised or zero-normalised correlation coefficient
-    between a image and a template following [Gonzalez2017]_.
+    """Calculate the normalized or zero-normalized correlation
+    coefficient between a pattern and a template following
+    [Gonzalez2017]_.
 
     Parameters
     ----------
@@ -45,7 +46,7 @@ def normalized_correlation_coefficient(
 
     Returns
     -------
-    coefficient
+    coefficient : float
         Correlation coefficient in range [-1, 1] if zero normalised,
         otherwise [0, 1].
 

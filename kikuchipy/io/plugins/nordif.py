@@ -20,6 +20,7 @@ import datetime
 import os
 import re
 import time
+from typing import Union, List, Dict, Optional, Tuple
 import warnings
 
 from hyperspy.misc.utils import DictionaryTreeBrowser
@@ -42,36 +43,37 @@ writes = [(2, 2), (2, 1), (2, 0)]
 
 
 def file_reader(
-    filename,
-    mmap_mode=None,
-    scan_size=None,
-    pattern_size=None,
-    setting_file=None,
-    lazy=False,
-):
+    filename: str,
+    mmap_mode: Optional[str] = None,
+    scan_size: Union[None, int, Tuple[int, ...]] = None,
+    pattern_size: Optional[Tuple[int, ...]] = None,
+    setting_file: Optional[str] = None,
+    lazy: bool = False,
+) -> List[Dict]:
     """Read electron backscatter patterns from a NORDIF data file.
 
     Parameters
     ----------
-    filename : str
+    filename
         File path to NORDIF data file.
-    mmap_mode : str, optional
-    scan_size : None, int, or tuple, optional
+    mmap_mode
+    scan_size
         Scan size in number of patterns in width and height.
-    pattern_size : None or tuple, optional
+    pattern_size
         Pattern size in detector pixels in width and height.
-    setting_file : None or str, optional
+    setting_file
         File path to NORDIF setting file (default is `Setting.txt` in
         same directory as ``filename``).
-    lazy : bool, optional
+    lazy
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
-        is ``False``.
+        is False.
 
     Returns
     -------
     scan : list of dicts
         Data, axes, metadata and original metadata.
+
     """
 
     if mmap_mode is None:
@@ -196,22 +198,25 @@ def file_reader(
     ]
 
 
-def get_settings_from_file(filename):
+def get_settings_from_file(
+    filename: str,
+) -> Tuple[DictionaryTreeBrowser, DictionaryTreeBrowser, DictionaryTreeBrowser]:
     """Return metadata with parameters from NORDIF setting file.
 
     Parameters
     ----------
-    filename : str
+    filename
         File path of NORDIF setting file.
 
     Returns
     -------
-    md : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    md
         Metadata complying with HyperSpy's metadata structure.
-    omd : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    omd
         Metadata that does not fit into HyperSpy's metadata structure.
-    scan_size : :class:`hyperspy.misc.utils.DictionaryTreeBrowser`
+    scan_size
         Information on image size, scan size and scan steps.
+
     """
 
     f = open(filename, "r", encoding="latin-1")  # Avoid byte strings
@@ -308,16 +313,16 @@ def get_settings_from_file(filename):
     return md, omd, scan_size
 
 
-def get_string(content, expression, line_no, file):
+def get_string(content: list, expression: str, line_no: int, file) -> str:
     """Get relevant part of string using regular expression.
 
     Parameters
     ----------
-    content : list
+    content
         File content to search in for the regular expression.
-    expression : str
+    expression
         Regular expression.
-    line_no : int
+    line_no
         Line number to search in.
     file : file object
         File handle of open setting file.
@@ -326,6 +331,7 @@ def get_string(content, expression, line_no, file):
     -------
     str
         Output string with relevant value.
+
     """
 
     match = re.search(expression, content[line_no])
@@ -339,18 +345,19 @@ def get_string(content, expression, line_no, file):
         return match.group(1)
 
 
-def file_writer(filename, signal):
+def file_writer(filename: str, signal):
     """Write an :class:`~kikuchipy.signals.ebsd.EBSD` or
-    :class:`~kikuchipy.signals.ebsd.LazyEBSD` signal to a NORDIF
-    binary file.
+    :class:`~kikuchipy.signals.ebsd.LazyEBSD` object to a NORDIF binary
+    file.
 
     Parameters
     ----------
-    filename : str
+    filename
         Full path of HDF file.
     signal : kikuchipy.signals.ebsd.EBSD or\
             kikuchipy.signals.ebsd.LazyEBSD
         Signal instance.
+
     """
 
     with open(filename, "wb") as f:

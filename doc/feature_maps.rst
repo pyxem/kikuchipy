@@ -10,7 +10,7 @@ pattern intensities, called feature maps (for lack of a better description).
 Image quality
 =============
 
-The image quality metric presented by Krieger Lassen [Lassen1994]_, :math:`Q`,
+The image quality metric :math:`Q` presented by Krieger Lassen [Lassen1994]_
 can be calculated for an :class:`~kikuchipy.signals.ebsd.EBSD` object with
 :meth:`~kikuchipy.signals.ebsd.EBSD.get_image_quality`, or, for a single pattern
 (:class:`numpy.ndarray`), with
@@ -32,10 +32,10 @@ The function :math:`w(h, k)` is the Fast Fourier Transform (FFT) power spectrum
 of the EBSD pattern, and the vectors :math:`\mathbf{q}` are the frequency
 vectors with components :math:`(h, k)`. The sharper the Kikuchi bands, the
 higher the high frequency content of the power spectrum, and thus the closer
-:math:`Q` will be to unity. To demonstrate, we compute the power spectrum of a
-pattern in an :class:`~kikuchipy.signals.ebsd.EBSD` object ``s`` and the
-frequency vectors, shift the zero-frequency components to the centre, and plot
-them:
+:math:`Q` will be to unity. To visualize parts of the computation, we compute
+the power spectrum of a pattern in an :class:`~kikuchipy.signals.ebsd.EBSD`
+object ``s`` and the frequency vectors, shift the zero-frequency components to
+the centre, and plot them:
 
 .. code-block::
 

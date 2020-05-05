@@ -18,6 +18,7 @@
 
 import logging
 import os
+from typing import Union, List, Tuple, Optional, Dict
 import warnings
 
 import dask.array as da
@@ -58,7 +59,12 @@ default_extension = 1
 writes = [(2, 2), (2, 1), (1, 1)]
 
 
-def file_reader(filename, scans=None, lazy=False, **kwargs):
+def file_reader(
+    filename: str,
+    scans: Union[None, int, List[int]] = None,
+    lazy: bool = False,
+    **kwargs,
+) -> List[dict]:
     """Read electron backscatter patterns from an h5ebsd file
     [Jackson2014]_. A valid h5ebsd file has at least one group with the
     name '/Scan x/EBSD' with the groups 'Data' (patterns etc.) and
@@ -66,19 +72,19 @@ def file_reader(filename, scans=None, lazy=False, **kwargs):
 
     Parameters
     ----------
-    filename : str
+    filename
         Full file path of the HDF file.
-    scans : int or list of ints
+    scans
         Integer of scan to return, or list of integers of scans to
         return. If None is passed the first scan in the file is returned.
-    lazy : bool, optional
+    lazy
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
-        is ``False``.
+        is False.
 
     Returns
     -------
-    scan_dict_list : list of dicts
+    scan_dict_list: list of dicts
         Data, axes, metadata and original metadata.
 
     References
@@ -88,6 +94,7 @@ def file_reader(filename, scans=None, lazy=False, **kwargs):
         electron back-scatter diffraction data sets," *Integrating
         Materials and Manufacturing Innovation* **3** (2014), doi:
         https://doi.org/10.1186/2193-9772-3-4.
+
     """
 
     mode = kwargs.pop("mode", "r")
@@ -144,15 +151,16 @@ def file_reader(filename, scans=None, lazy=False, **kwargs):
     return scan_dict_list
 
 
-def check_h5ebsd(file):
+def check_h5ebsd(file: h5py.File):
     """Check if HDF file is an h5ebsd file by searching for datasets
     containing manufacturer, version and scans in the top group.
 
     Parameters
     ----------
-    file : h5py:File
+    file: h5py:File
         File where manufacturer, version and scan datasets should
         reside in the top group.
+
     """
 
     file_keys_lower = [key.lstrip().lower() for key in file["/"].keys()]
@@ -175,7 +183,7 @@ def check_h5ebsd(file):
         )
 
 
-def manufacturer_version(file):
+def manufacturer_version(file: h5py.File) -> Tuple[str, str]:
     """Get manufacturer and version from h5ebsd file.
 
     Parameters
@@ -187,6 +195,7 @@ def manufacturer_version(file):
     -------
     manufacturer : str
     version : str
+
     """
 
     manufacturer = None
@@ -199,13 +208,14 @@ def manufacturer_version(file):
     return manufacturer, version
 
 
-def manufacturer_pattern_names():
+def manufacturer_pattern_names() -> Dict[str, str]:
     """Return mapping of string of supported manufacturers to the names
     of their HDF dataset where the patterns are stored.
 
     Returns
     -------
     dict
+
     """
 
     return {
@@ -215,7 +225,12 @@ def manufacturer_pattern_names():
     }
 
 
-def h5ebsdgroup2dict(group, dictionary=None, recursive=False, lazy=False):
+def h5ebsdgroup2dict(
+    group: h5py.Group,
+    dictionary: Union[None, dict, DictionaryTreeBrowser] = None,
+    recursive: bool = False,
+    lazy: bool = False,
+) -> dict:
     """Return a dictionary with values from datasets in a group in an
     opened h5ebsd file.
 
@@ -223,12 +238,11 @@ def h5ebsdgroup2dict(group, dictionary=None, recursive=False, lazy=False):
     ----------
     group : h5py:Group
         HDF group object.
-    dictionary : dict, hyperspy.misc.utils.DictionaryTreeBrowser or\
-            None, optional
+    dictionary
         To fill dataset values into.
-    recursive : bool, optional
+    recursive
         Whether to add subgroups to dictionary.
-    lazy : bool, optional
+    lazy
         Read dataset lazily.
 
     Returns
@@ -261,7 +275,9 @@ def h5ebsdgroup2dict(group, dictionary=None, recursive=False, lazy=False):
     return dictionary
 
 
-def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
+def h5ebsd2signaldict(
+    scan_group: h5py.Group, manufacturer: str, version: str, lazy: bool = False,
+) -> dict:
     """Return a dictionary with ``signal``, ``metadata`` and
     ``original_metadata`` from an h5ebsd scan.
 
@@ -269,11 +285,12 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
     ----------
     scan_group : h5py:Group
         HDF group of scan.
-    manufacturer : 'kikuchipy', 'EDAX' or 'Bruker Nano'
-        Manufacturer of file.
-    version : str
+    manufacturer
+        Manufacturer of file. Options are
+        "kikuchipy"/"EDAX"/"Bruker Nano".
+    version
         Version of manufacturer software.
-    lazy : bool, optional
+    lazy
         Read dataset lazily.
 
     Returns
@@ -281,6 +298,7 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
     scan : dict
         Dictionary with patterns, ``metadata`` and
         ``original_metadata``.
+
     """
 
     md, omd, scan_size = h5ebsdheader2dicts(
@@ -367,7 +385,9 @@ def h5ebsd2signaldict(scan_group, manufacturer, version, lazy=False):
     return scan
 
 
-def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
+def h5ebsdheader2dicts(
+    scan_group: h5py.Group, manufacturer: str, version: str, lazy: bool = False
+) -> Tuple[DictionaryTreeBrowser, DictionaryTreeBrowser, DictionaryTreeBrowser]:
     """Return three dictionaries in HyperSpy's
     :class:`hyperspy.misc.utils.DictionaryTreeBrowser` format, one
     with the h5ebsd scan header parameters as kikuchipy metadata,
@@ -379,21 +399,23 @@ def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
     ----------
     scan_group : h5py:Group
         HDF group of scan data and header.
-    manufacturer : 'kikuchipy', 'EDAX' or 'Bruker Nano'
-        Manufacturer of file.
-    version : str
+    manufacturer
+        Manufacturer of file. Options are
+        "kikuchipy"/"EDAX"/"Bruker Nano"
+    version
         Version of manufacturer software used to create file.
-    lazy : bool, optional
+    lazy
         Read dataset lazily.
 
     Returns
     -------
-    md : hyperspy.misc.utils.DictionaryTreeBrowser
+    md
         kikuchipy ``metadata`` elements available in file.
-    omd : hyperspy.misc.utils.DictionaryTreeBrowser
+    omd
         All metadata available in file.
-    scan_size : hyperspy.misc.utils.DictionaryTreeBrowser
+    scan_size
         Scan, image, step and detector pixel size available in file.
+
     """
 
     md = kikuchipy_metadata()
@@ -418,27 +440,30 @@ def h5ebsdheader2dicts(scan_group, manufacturer, version, lazy=False):
     return md, omd, scan_size
 
 
-def kikuchipyheader2dicts(scan_group, md, lazy=False):
+def kikuchipyheader2dicts(
+    scan_group: h5py.Group, md: DictionaryTreeBrowser, lazy: bool = False
+) -> Tuple[DictionaryTreeBrowser, DictionaryTreeBrowser, DictionaryTreeBrowser]:
     """Return scan metadata dictionaries from a kikuchipy h5ebsd file.
 
     Parameters
     ----------
     scan_group : h5py:Group
         HDF group of scan data and header.
-    md : hyperspy.misc.utils.DictionaryTreeBrowser
+    md
         Dictionary with empty fields from kikuchipy's metadata.
-    lazy : bool, optional
+    lazy
         Read dataset lazily.
 
     Returns
     -------
-    md : hyperspy.misc.utils.DictionaryTreeBrowser
+    md
         kikuchipy ``metadata`` elements available in kikuchipy file.
-    omd : hyperspy.misc.utils.DictionaryTreeBrowser
+    omd
         All metadata available in kikuchipy file.
-    scan_size : hyperspy.misc.utils.DictionaryTreeBrowser
+    scan_size
         Scan, image, step and detector pixel size available in
         kikuchipy file.
+
     """
 
     omd = DictionaryTreeBrowser()
@@ -472,25 +497,28 @@ def kikuchipyheader2dicts(scan_group, md, lazy=False):
     return md, omd, scan_size
 
 
-def edaxheader2dicts(scan_group, md):
+def edaxheader2dicts(
+    scan_group: h5py.Group, md: DictionaryTreeBrowser
+) -> Tuple[DictionaryTreeBrowser, DictionaryTreeBrowser, DictionaryTreeBrowser]:
     """Return scan metadata dictionaries from an EDAX TSL h5ebsd file.
 
     Parameters
     ----------
     scan_group : h5py:Group
         HDF group of scan data and header.
-    md : hyperspy.misc.utils.DictionaryTreeBrowser
+    md
         Dictionary with empty fields from kikuchipy's metadata.
 
     Returns
     -------
-    md : hyperspy.misc.utils.DictionaryTreeBrowser
+    md
         kikuchipy ``metadata`` elements available in EDAX file.
-    omd : hyperspy.misc.utils.DictionaryTreeBrowser
+    omd
         All metadata available in EDAX file.
-    scan_size : hyperspy.misc.utils.DictionaryTreeBrowser
+    scan_size
         Scan, image, step and detector pixel size available in EDAX
         file.
+
     """
 
     # Get header group as dictionary
@@ -549,7 +577,9 @@ def edaxheader2dicts(scan_group, md):
     return md, omd, scan_size
 
 
-def brukerheader2dicts(scan_group, md):
+def brukerheader2dicts(
+    scan_group: h5py.Group, md: DictionaryTreeBrowser
+) -> Tuple[DictionaryTreeBrowser, DictionaryTreeBrowser, DictionaryTreeBrowser]:
     """Return scan metadata dictionaries from a Bruker h5ebsd file.
 
     Parameters
@@ -561,13 +591,14 @@ def brukerheader2dicts(scan_group, md):
 
     Returns
     -------
-    md : hyperspy.misc.utils.DictionaryTreeBrowser
+    md
         kikuchipy ``metadata`` elements available in Bruker file.
-    omd : hyperspy.misc.utils.DictionaryTreeBrowser
+    omd
         All metadata available in Bruker file.
-    scan_size : hyperspy.misc.utils.DictionaryTreeBrowser
+    scan_size
         Scan, image, step and detector pixel size available in Bruker
         file.
+
     """
 
     # Get header group and data group as dictionaries
@@ -627,7 +658,13 @@ def brukerheader2dicts(scan_group, md):
     return md, omd, scan_size
 
 
-def file_writer(filename, signal, add_scan=None, scan_number=1, **kwargs):
+def file_writer(
+    filename: str,
+    signal,
+    add_scan: Optional[bool] = None,
+    scan_number: int = 1,
+    **kwargs,
+):
     """Write an :class:`~kikuchipy.signals.ebsd.EBSD` or
     :class:`~kikuchipy.signals.ebsd.LazyEBSD` signal to an existing,
     but not open, or new h5ebsd file.
@@ -636,19 +673,20 @@ def file_writer(filename, signal, add_scan=None, scan_number=1, **kwargs):
 
     Parameters
     ----------
-    filename : str
+    filename
         Full path of HDF file.
     signal : kikuchipy.signals.ebsd.EBSD or\
             kikuchipy.signals.ebsd.LazyEBSD
         Signal instance.
-    add_scan : None, bool, optional
+    add_scan
         Add signal to an existing, but not open, h5ebsd file. If it does
         not exist it is created and the signal is written to it.
-    scan_number : int, optional
+    scan_number
         Scan number in name of HDF dataset when writing to an existing,
         but not open, h5ebsd file.
     **kwargs :
         Keyword arguments passed to :meth:`h5py:Group.require_dataset`.
+
     """
 
     # Set manufacturer and version to use in file
@@ -758,18 +796,19 @@ def file_writer(filename, signal, add_scan=None, scan_number=1, **kwargs):
     _logger.info("File closed.")
 
 
-def dict2h5ebsdgroup(dictionary, group, **kwargs):
+def dict2h5ebsdgroup(dictionary: dict, group: h5py.Group, **kwargs):
     """Write a dictionary from ``metadata`` to datasets in a new group
     in an opened HDF file in the h5ebsd format.
 
     Parameters
     ----------
-    dictionary : dict
+    dictionary
         ``Metadata``, with keys as dataset names.
     group : h5py:Group
         HDF group to write dictionary to.
     **kwargs :
         Keyword arguments passed to :meth:`h5py:Group.require_dataset`.
+
     """
 
     for key, val in dictionary.items():

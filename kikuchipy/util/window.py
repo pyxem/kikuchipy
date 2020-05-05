@@ -226,7 +226,7 @@ class Window(np.ndarray):
 
     @property
     def distance_to_origin(self) -> np.ndarray:
-        """Radial distance to origin."""
+        """Radial distance to the window origin."""
         return distance_to_origin(self.shape, self.origin)
 
     def make_circular(self) -> NoReturn:
@@ -419,7 +419,7 @@ def modified_hann(Nx: int) -> np.ndarray:
 
     Returns
     -------
-    w
+    w : numpy.ndarray
         1D Hann window.
 
     Notes
@@ -471,7 +471,7 @@ def lowpass_fft_filter(
 
     Returns
     -------
-    w
+    w : numpy.ndarray
         2D transfer function.
 
     Notes
@@ -535,7 +535,7 @@ def highpass_fft_filter(
 
     Returns
     -------
-    w
+    w : numpy.ndarray
         2D transfer function.
 
     Notes

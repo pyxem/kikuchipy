@@ -21,6 +21,7 @@ import os
 import dask.array as da
 import hyperspy.api as hs
 from hyperspy.misc.utils import DictionaryTreeBrowser
+from hyperspy.exceptions import VisibleDeprecationWarning
 import matplotlib
 import numpy as np
 import pytest
@@ -52,6 +53,26 @@ def assert_dictionary(input_dict, output_dict):
                 assert input_dict[key].all() == output_dict[key].all()
             else:
                 assert input_dict[key] == output_dict[key]
+
+
+class TestEBSDDeprecations:
+    def test_static_background_correction_deprecated(self, dummy_signal):
+        with pytest.warns(VisibleDeprecationWarning, match="Renamed to "):
+            dummy_signal.static_background_correction(
+                operation="subtract", relative=True,
+            )
+
+    def test_dynamic_background_correction_deprecated(self, dummy_signal):
+        with pytest.warns(VisibleDeprecationWarning, match="Renamed to "):
+            dummy_signal.dynamic_background_correction(
+                operation="subtract", sigma=3,
+            )
+
+    def test_rescale_intensities_deprecated(self, dummy_signal):
+        with pytest.warns(VisibleDeprecationWarning, match="Renamed to "):
+            dummy_signal.rescale_intensities(
+                relative=True, dtype_out=np.float32,
+            )
 
 
 class TestEBSD:

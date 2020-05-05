@@ -31,6 +31,8 @@ from hyperspy._signals.signal2d import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
 from hyperspy.misc.utils import DictionaryTreeBrowser
+from hyperspy.roi import BaseInteractiveROI
+from hyperspy.exceptions import VisibleDeprecationWarning
 from h5py import File
 import numpy as np
 from pyxem.signals.diffraction2d import Diffraction2D
@@ -50,8 +52,8 @@ class EBSD(Signal2D):
     Methods inherited from HyperSpy can be found in the HyperSpy user
     guide.
 
-    See the docstring of :meth:`hyperspy.signal.BaseSignal.__init__` for
-    a list of attributes.
+    See the docstring of :class:`hyperspy.signal.BaseSignal` for a list
+    of attributes.
 
     """
 
@@ -359,6 +361,13 @@ class EBSD(Signal2D):
         dx.scale, dy.scale = (delta, delta)
         dx.offset, dy.offset = -centre
 
+    def static_background_correction(self, **kwargs):
+        warnings.warn(
+            "Renamed to remove_static_background(). Will be removed in v0.3. "
+            "Deprecations will be handled better going forward...",
+            VisibleDeprecationWarning,
+        )
+
     def remove_static_background(
         self,
         operation: str = "subtract",
@@ -391,8 +400,8 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        remove_dynamic_background
-        kikuchipy.util.chunk.remove_static_background
+        remove_dynamic_background,
+        :func:`kikuchipy.util.chunk.remove_static_background`
 
         Examples
         --------
@@ -413,7 +422,7 @@ class EBSD(Signal2D):
 
         The static background can be removed by subtracting or dividing
         this background from each pattern while keeping relative
-        intensities between patterns (or not).
+        intensities between patterns (or not):
 
         >>> s.remove_static_background(
         ...     operation='subtract', relative=True)
@@ -494,6 +503,13 @@ class EBSD(Signal2D):
         else:
             self.data = corrected_patterns
 
+    def dynamic_background_correction(self, **kwargs):
+        warnings.warn(
+            "Renamed to remove_dynamic_background(). Will be removed in v0.3. "
+            "Deprecations will be handled better going forward...",
+            VisibleDeprecationWarning,
+        )
+
     def remove_dynamic_background(
         self,
         operation: str = "subtract",
@@ -530,10 +546,9 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        dynamic_background
-        remove_static_background
-        kikuchipy.util.chunk.remove_dynamic_background
-        kikuchipy.util.pattern.remove_dynamic_background
+        remove_static_background, get_dynamic_background,
+        kikuchipy.util.pattern.remove_dynamic_background,
+        kikuchipy.util.pattern.get_dynamic_background
 
         Examples
         --------
@@ -543,7 +558,12 @@ class EBSD(Signal2D):
         False in :meth:`~remove_static_background`):
 
         >>> s.remove_static_background(operation="subtract")
-        >>> s.remove_dynamic_background(operation="subtract", std=2)
+        >>> s.remove_dynamic_background(
+        ...     operation="subtract",  # Default
+        ...     filter_domain="frequency",  # Default
+        ...     truncate=4.0,  # Default
+        ...     std=5,
+        ... )
 
         """
 
@@ -611,9 +631,7 @@ class EBSD(Signal2D):
         filter_domain: str = "frequency",
         std: Union[None, int, float] = None,
         truncate: Union[int, float] = 4.0,
-        dtype_out: Union[
-            None, np.dtype, Tuple[int, int], Tuple[float, float]
-        ] = None,
+        dtype_out: Optional[np.dtype] = None,
         **kwargs,
     ):
         """Get the dynamic background per EBSD pattern in a scan.
@@ -696,6 +714,13 @@ class EBSD(Signal2D):
 
         return background_signal
 
+    def rescale_intensities(self, **kwargs):
+        warnings.warn(
+            "Renamed to rescale_intensity(). Will be removed in v0.3. "
+            "Deprecations will be handled better going forward...",
+            VisibleDeprecationWarning,
+        )
+
     def rescale_intensity(
         self,
         relative: bool = False,
@@ -738,14 +763,12 @@ class EBSD(Signal2D):
         percentiles
             Disregard intensities outside these percentiles. Calculated
             per pattern. Must be None if `in_range` or `relative` is
-            passed (default is None).
+            passed. Default is None.
 
         See Also
         --------
-        adaptive_histogram_equalization
         normalize_intensity
         :func:`skimage.exposure.rescale_intensity`
-        kikuchipy.util.chunk.rescale_intensity
         kikuchipy.util.pattern.rescale_intensity
 
         Examples
@@ -767,6 +790,14 @@ class EBSD(Signal2D):
         >>> print(s2.data.dtype_out, s2.data.min(), s2.data.max(),
         ...       s2.inav[0, 0].data.min(), s2.inav[0, 0].data.max())
         uint8 0 255 4 232
+
+        Contrast stretching can be performed by passing percentiles:
+
+        >>> s.rescale_intensity(percentiles=(1, 99))
+
+        Here, the darkest and brighets within the 1% percentile are set
+        to the ends of the data type range, e.g. 0 and 255 respectively
+        for patterns of ``uint8`` data type.
 
         """
 
@@ -838,9 +869,7 @@ class EBSD(Signal2D):
 
         See also
         --------
-        remove_static_background
-        remove_dynamic_background
-        rescale_intensity
+        rescale_intensity, normalize_intensity
 
         Examples
         --------
@@ -915,12 +944,12 @@ class EBSD(Signal2D):
         ----------
         normalize
             Whether to normalize patterns to a mean of zero and standard
-            deviation of 1 before calculating the image quality (default
-            is True).
+            deviation of 1 before calculating the image quality. Default
+            is True.
 
         Returns
         -------
-        image_quality_map
+        image_quality_map : numpy.ndarray
             Image quality map of same shape as signal navigation axes.
 
         References
@@ -928,6 +957,15 @@ class EBSD(Signal2D):
         .. [Lassen1994] N. C. K. Lassen, "Automated Determination of \
             Crystal Orientations from Electron Backscattering \
             Patterns," Institute of Mathematical Modelling, (1994).
+
+        Examples
+        --------
+        >>> iq = s.get_image_quality(normalize=True)  # Default
+        >>> plt.imshow(iq)
+
+        See Also
+        --------
+        kikuchipy.util.pattern.get_image_quality
 
         """
 
@@ -990,6 +1028,23 @@ class EBSD(Signal2D):
             Whether to shift the zero-frequency component to the centre.
             Default is False. This is only used when
             `function_domain="frequency"`.
+
+        Examples
+        --------
+        Applying a Gaussian low pass filter with a cutoff frequency of
+        20 to an EBSD object ``s``:
+
+        >>> pattern_shape = s.axes_manager.signal_shape[::-1]
+        >>> w = kp.util.Window("lowpass", cutoff=20, shape=pattern_shape)
+        >>> s.fft_filter(
+        ...     transfer_function=w,
+        ...     function_domain="frequency",
+        ...     shift=True,
+        ... )
+
+        See Also
+        --------
+        kikuchipy.util.window.Window
 
         """
 
@@ -1063,8 +1118,9 @@ class EBSD(Signal2D):
         Notes
         -----
         Data type should always be changed to floating point, e.g.
-        ``np.float32`` with :meth:`~change_dtype`, before normalizing
-        the intensities.
+        ``np.float32`` with
+        :meth:`~hyperspy.signal.BaseSignal.change_dtype`, before
+        normalizing the intensities.
 
         Examples
         --------
@@ -1103,33 +1159,35 @@ class EBSD(Signal2D):
             self.data = normalized_patterns
 
     def average_neighbour_patterns(
-        self, window="circular", window_shape=(3, 3), **kwargs
+        self,
+        window: Union[str, np.ndarray, da.Array, kp.util.Window] = "circular",
+        window_shape: Tuple[int, ...] = (3, 3),
+        **kwargs,
     ):
-        """Average patterns in an EBSD scan with its neighbours within a
-        window.
+        """Average patterns in an EBSD scan inplace with its neighbours
+        within a window.
 
         The amount of averaging is specified by the window coefficients.
         All patterns are averaged with the same window. Map borders are
-        extended with zeros. The method operates inplace.
+        extended with zeros.
 
         Averaging is accomplished by correlating the window with the
-        extended array of patterns using :func:`scipy.ndimage.correlate`.
+        extended array of patterns using
+        :func:`scipy.ndimage.correlate`.
 
         Parameters
         ----------
-        window : kikuchipy.util.window.Window, "circular",\
-                "rectangular", "gaussian", str, numpy.ndarray, or\
-                dask.array.Array, optional
-            Averaging window. Available types are listed in
-            :func:`scipy.signal.windows.get_window`, in addition to a
-            circular window (default) filled with ones in which corner
-            coefficients are set to zero. A window element is
-            considered to be in a corner if its radial distance to the
-            origin (window centre) is shorter or equal to the half width
-            of the window's longest axis. A 1D or 2D
+        window
+            Name of averaging window or an array. Available types are
+            listed in :func:`scipy.signal.windows.get_window`, in
+            addition to a "circular" window (default) filled with ones
+            in which corner coefficients are set to zero. A window
+            element is considered to be in a corner if its radial
+            distance to the origin (window centre) is shorter or equal
+            to the half width of the window's longest axis. A 1D or 2D
             :class:`numpy.ndarray`, :class:`dask.array.Array` or
             :class:`~kikuchipy.util.window.Window` can also be passed.
-        window_shape : sequence of ints, optional
+        window_shape
             Shape of averaging window. Not used if a custom window or
             :class:`~kikuchipy.util.window.Window` object is passed to
             `window`. This can be either 1D or 2D, and can be
@@ -1141,7 +1199,7 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        :class:`~kikuchipy.util.window.Window`
+        kikuchipy.util.window.Window
         :func:`scipy.signal.windows.get_window`
         :func:`scipy.ndimage.correlate`
 
@@ -1284,7 +1342,9 @@ class EBSD(Signal2D):
         else:
             self.data = averaged_patterns
 
-    def virtual_backscatter_electron_imaging(self, roi, **kwargs):
+    def virtual_backscatter_electron_imaging(
+        self, roi: BaseInteractiveROI, **kwargs,
+    ):
         """Plot an interactive virtual backscatter electron (VBSE)
         image formed from intensities within a specified and adjustable
         region of interest (ROI) on the detector.
@@ -1294,7 +1354,7 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        roi : hyperspy.roi.BaseInteractiveROI
+        roi
             Any interactive ROI detailed in HyperSpy.
         **kwargs:
             Keyword arguments to be passed to
@@ -1311,7 +1371,7 @@ class EBSD(Signal2D):
 
         return Diffraction2D.plot_interactive_virtual_image(self, roi, **kwargs)
 
-    def get_virtual_image(self, roi):
+    def get_virtual_image(self, roi: BaseInteractiveROI) -> Signal2D:
         """Get a virtual backscatter electron (VBSE) image formed from
         intensities within a region of interest (ROI) on the detector.
 
@@ -1320,12 +1380,12 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        roi : hyperspy.roi.BaseInteractiveROI
+        roi
             Any interactive ROI detailed in HyperSpy.
 
         Returns
         -------
-        virtual_image : hyperspy.signal.BaseSignal
+        virtual_image : hyperspy._signals.signal2d.Signal2D
             VBSE image formed from detector intensities within an ROI
             on the detector.
 
@@ -1340,7 +1400,13 @@ class EBSD(Signal2D):
 
         return Diffraction2D.get_virtual_image(self, roi)
 
-    def save(self, filename=None, overwrite=None, extension=None, **kwargs):
+    def save(
+        self,
+        filename: Optional[str] = None,
+        overwrite: Optional[bool] = None,
+        extension: Optional[str] = None,
+        **kwargs,
+    ):
         """Write the signal to file in the specified format.
 
         The function gets the format from the extension: `h5`, `hdf5` or
@@ -1358,22 +1424,21 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        filename : str or None, optional
-            If ``None`` (default) and ``tmp_parameters.filename`` and
-            ``tmp_parameters.folder`` in signal metadata are defined,
-            the filename and path will be taken from there. A valid
-            extension can be provided e.g. "data.h5", see ``extension``.
-        overwrite : None or bool, optional
-            If ``None`` and the file exists, it will query the user. If
-            ``True`` (``False``) it (does not) overwrite the file if it
-            exists.
-        extension : None, 'h5', 'hdf5', 'h5ebsd', 'dat' or 'hspy',\
-                optional
-            Extension of the file that defines the file format. 'h5',
-            'hdf5' and 'h5ebsd' are equivalent. If ``None``, the
-            extension is determined from the following list in this
-            order: i) the filename, ii) ``tmp_parameters.extension`` or
-            iii) 'h5' (kikuchipy's h5ebsd format).
+        filename
+            If None (default) and `tmp_parameters.filename` and
+            `tmp_parameters.folder` in signal metadata are defined, the
+            filename and path will be taken from there. A valid
+            extension can be provided e.g. "data.h5", see `extension`.
+        overwrite
+            If None and the file exists, it will query the user. If
+            True (False) it (does not) overwrite the file if it exists.
+        extension
+            Extension of the file that defines the file format. Options
+            are "h5"/"hdf5"/"h5ebsd"/"dat"/"hspy". "h5"/"hdf5"/"h5ebsd"
+            are equivalent. If None, the extension is determined from
+            the following list in this order: i) the filename, ii)
+            `tmp_parameters.extension` or iii) "h5" (kikuchipy's h5ebsd
+            format).
         **kwargs :
             Keyword arguments passed to writer.
 
@@ -1405,7 +1470,11 @@ class EBSD(Signal2D):
             filename = basename + "." + extension
         save(filename, self, overwrite=overwrite, **kwargs)
 
-    def get_decomposition_model(self, components=None, dtype_out=np.float32):
+    def get_decomposition_model(
+        self,
+        components: Union[None, int, List[int]] = None,
+        dtype_out: np.dtype = np.float32,
+    ):
         """Get the model signal generated with the selected number of
         principal components from a decomposition.
 
@@ -1418,21 +1487,19 @@ class EBSD(Signal2D):
 
         Parameters
         ----------
-        components : None, int or list of ints, optional
+        components
             If None (default), rebuilds the signal from all components.
             If int, rebuilds signal from `components` in range 0-given
             int. If list of ints, rebuilds signal from only `components`
             in given list.
-        dtype_out : numpy.float16, numpy.float32, numpy.float64,\
-                optional
+        dtype_out
             Data type to cast learning results to (default is
             :class:`numpy.float32`). Note that HyperSpy casts them to
             :class:`numpy.float64`.
 
         Returns
         -------
-        s_model : kikuchipy.signals.ebsd.EBSD or \
-                kikuchipy.signals.ebsd.LazyEBSD
+        s_model : EBSD or LazyEBSD
 
         """
 
@@ -1514,11 +1581,11 @@ class LazyEBSD(EBSD, LazySignal2D):
 
     def get_decomposition_model_write(
         self,
-        components=None,
-        dtype_learn=np.float32,
-        mbytes_chunk=100,
-        dir_out=None,
-        fname_out=None,
+        components: Union[None, int, List[int]] = None,
+        dtype_learn: np.dtype = np.float32,
+        mbytes_chunk: int = 100,
+        dir_out: Optional[str] = None,
+        fname_out: Optional[str] = None,
     ):
         """Write the model signal generated from the selected number of
         principal components directly to an .hspy file.
@@ -1528,21 +1595,20 @@ class LazyEBSD(EBSD, LazySignal2D):
 
         Parameters
         ----------
-        components : None, int or list of ints, optional
+        components
             If None (default), rebuilds the signal from all
             `components`. If int, rebuilds signal from `components` in
             range 0-given int. If list of ints, rebuilds signal from
             only `components` in given list.
-        dtype_learn : numpy.float16, numpy.float32, or numpy.float64,\
-                optional
+        dtype_learn
             Data type to set learning results to (default is
             :class:`numpy.float32`) before multiplication.
-        mbytes_chunk : int, optional
+        mbytes_chunk
             Size of learning results chunks in MB, default is 100 MB as
             suggested in the Dask documentation.
-        dir_out : str, optional
+        dir_out
             Directory to place output signal in.
-        fname_out : str, optional
+        fname_out
             Name of output signal file.
 
         Notes
