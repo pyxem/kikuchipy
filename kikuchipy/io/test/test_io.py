@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The KikuchiPy developers
+# Copyright 2019-2020 The kikuchipy developers
 #
-# This file is part of KikuchiPy.
+# This file is part of kikuchipy.
 #
-# KikuchiPy is free software: you can redistribute it and/or modify
+# kikuchipy is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# KikuchiPy is distributed in the hope that it will be useful,
+# kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import gc
 import os
@@ -49,7 +49,7 @@ class TestIO:
     def test_dict2signal(self):
         scan_dict = kp.io.plugins.h5ebsd.file_reader(KIKUCHIPY_FILE)[0]
         scan_dict["metadata"]["Signal"]["record_by"] = "not-image"
-        with pytest.raises(ValueError, match="KikuchiPy only supports"):
+        with pytest.raises(ValueError, match="kikuchipy only supports"):
             kp.io._io._dict2signal(scan_dict)
 
     @pytest.mark.parametrize(
@@ -82,7 +82,7 @@ class TestIO:
                     lazy=lazy,
                 )
         elif signal_type == "":
-            with pytest.raises(ValueError, match="No KikuchiPy signals match"):
+            with pytest.raises(ValueError, match="No kikuchipy signals match"):
                 kp.io._io._assign_signal_subclass(
                     dtype=dtype,
                     signal_dimension=signal_dimension,

@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The KikuchiPy developers
+# Copyright 2019-2020 The kikuchipy developers
 #
-# This file is part of KikuchiPy.
+# This file is part of kikuchipy.
 #
-# KikuchiPy is free software: you can redistribute it and/or modify
+# kikuchipy is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# KikuchiPy is distributed in the hope that it will be useful,
+# kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from itertools import chain
 from setuptools import setup, find_packages
@@ -42,18 +42,20 @@ with open("kikuchipy/release.py") as fid:
 # https://setuptools.readthedocs.io/en/latest/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
 extra_feature_requirements = {
     "doc": [
-        "sphinx >= 2.3.1",
+        "sphinx >= 3.0.2",
         "sphinx-rtd-theme >= 0.4.3",
         "sphinx-copybutton >= 0.2.5",
+        "sphinx-autodoc-typehints >= 1.10.3",
     ],
-    "tests": [
-        "pytest >= 5.3.2",
+    # Update in .travis.yml if this list is updated!
+    "test": [
+        "pytest >= 5.4",
         "pytest-cov >= 2.8.1",
-        "coverage == 4.5.4",  # 5.0 have some issues with reporting to Coveralls
+        "coverage >= 5.0",  # == 4.5.4",  # 5.0 have some issues with reporting to Coveralls
     ],
 }
 
-# Create a development project, including both the doc and tests projects
+# Create a development project, including both the doc and test projects
 extra_feature_requirements["dev"] = [
     "black >= 19.3b0",
     "pre-commit >= 1.16",
@@ -74,6 +76,7 @@ setup(
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
@@ -101,17 +104,19 @@ setup(
     maintainer=MAINTAINER,
     maintainer_email=MAINTAINER_EMAIL,
     # Dependencies
+    # Update in .travis.yml if this list is updated!
     extras_require=extra_feature_requirements,
     install_requires=[
-        "dask[array]",
+        "dask[array] >= 2.14",
         "hyperspy >= 1.5.2",
-        "h5py",
-        "matplotlib",
-        "numpy >= 1.17",
+        "h5py >= 2.10",
+        "matplotlib >= 3.2",
+        "numpy >= 1.18",
+        "numba >= 0.48",
         "pyxem >= 0.10",
-        "scikit-image",
-        "scikit-learn",
-        "scipy",
+        "scikit-image >= 0.16",
+        "scikit-learn >= 0.22",
+        "scipy >= 1.4",
     ],
     entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},
     # Files to include when distributing package

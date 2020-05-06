@@ -1,5 +1,5 @@
 =========================
-KikuchiPy Code of Conduct
+kikuchipy Code of Conduct
 =========================
 
 .. _code-of-conduct-introduction:
@@ -7,14 +7,14 @@ KikuchiPy Code of Conduct
 Introduction
 ============
 
-This code of conduct applies to all spaces managed by the KikuchiPy project,
+This code of conduct applies to all spaces managed by the kikuchipy project,
 including all public and private mailing lists, issue trackers, wikis, blogs,
 Twitter, and any other communication channel used by our community. The
-KikuchiPy project does not organise in-person events, however events related to
+kikuchipy project does not organise in-person events, however events related to
 our community should have a code of conduct similar in spirit to this one.
 
 This code of conduct should be honoured by everyone who participates in the
-KikuchiPy community formally or informally, or claims any affiliation with the
+kikuchipy community formally or informally, or claims any affiliation with the
 project, in any project-related activities and especially when representing the
 project, in any role.
 
@@ -81,7 +81,7 @@ We strive to:
 Diversity statement
 ===================
 
-The KikuchiPy project welcomes and encourages participation by everyone. We are
+The kikuchipy project welcomes and encourages participation by everyone. We are
 committed to being a community that everyone enjoys being part of. Although we
 may not always be able to accommodate each individual's preferences, we try our
 best to treat everyone kindly.
@@ -93,10 +93,10 @@ national origin, neurotype, phenotype, political beliefs, profession, race,
 religion, sexual orientation, socioeconomic status, subculture and technical
 ability, to the extent that these do not conflict with this code of conduct.
 
-Though we welcome people fluent in all languages, KikuchiPy development is
+Though we welcome people fluent in all languages, kikuchipy development is
 conducted in English.
 
-Standards for behaviour in the KikuchiPy community are detailed in the Code of
+Standards for behaviour in the kikuchipy community are detailed in the Code of
 Conduct above. Participants in our community should uphold these standards in
 all their interactions and help others to do so as well (see next section).
 
@@ -118,7 +118,7 @@ most appropriate). If you would prefer not to do that, please feel free to
 report to the code of conduct committee directly, or ask the committee for
 advice, in confidence.
 
-You can report issues to the KikuchiPy Code of Conduct Committee, at
+You can report issues to the kikuchipy Code of Conduct Committee, at
 kikuchipy-conduct@googlegroups.com. Currently, the committee consists of:
 
 * `Håkon Wiik Ånes <https://github.com/hakonanes>`_ (chair)
@@ -132,13 +132,13 @@ Incident reporting resolution & Code of Conduct enforcement
 *This section summarizes the most important points, more details can be found
 in* :doc:`report_handling_manual`.
 
-We will investigate and respond to all complaints. The KikuchiPy Code of Conduct
+We will investigate and respond to all complaints. The kikuchipy Code of Conduct
 Committee will protect the identity of the reporter, and treat the content of
 complaints as confidential (unless the reporter agrees otherwise).
 
 In case of severe and obvious breaches, e.g. personal threat or violent,
 sexist or racist language, we will immediately disconnect the originator from
-KikuchiPy communication channels; please see the manual for details.
+kikuchipy communication channels; please see the manual for details.
 
 In cases not involving clear severe and obvious breaches of this code of
 conduct, the process for acting on any received code of conduct violation report

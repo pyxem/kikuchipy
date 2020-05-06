@@ -1,6 +1,6 @@
 .. Travis CI
-.. image:: https://travis-ci.org/kikuchipy/kikuchipy.svg?branch=master
-    :target: https://travis-ci.org/kikuchipy/kikuchipy
+.. image:: https://travis-ci.com/kikuchipy/kikuchipy.svg?branch=master
+    :target: https://travis-ci.com/kikuchipy/kikuchipy
     :alt: Build status
 
 .. Coveralls
@@ -28,7 +28,7 @@
     :target: https://doi.org/10.5281/zenodo.3597646
     :alt: DOI
 
-*KikuchiPy is an open-source Python library for processing and analysis of
+*kikuchipy is an open-source Python library for processing and analysis of
 electron backscatter diffraction (EBSD) patterns.*
 
 The library builds upon the tools for multi-dimensional data analysis provided
@@ -40,7 +40,7 @@ inherits all relevant methods from HyperSpy's Signal2D and `Signal
 Note that the project is in an alpha stage, and there will likely be breaking
 changes with each release.
 
-KikuchiPy is released under the GPL v3 license.
+kikuchipy is released under the GPL v3 license.
 
 User guide
 ----------
@@ -57,12 +57,12 @@ Everyone is welcome to contribute. Please read our `contributor guide
 Code of Conduct
 ---------------
 
-KikuchiPy has a `Code of Conduct
+kikuchipy has a `Code of Conduct
 <https://kikuchipy.readthedocs.io/en/latest/code_of_conduct.html>`_
-that should be honoured by everyone who participates in the KikuchiPy community.
+that should be honoured by everyone who participates in the kikuchipy community.
 
 Cite
 ----
 
-If analysis using KikuchiPy forms a part of published work, please consider
+If analysis using kikuchipy forms a part of published work, please consider
 recognizing the code development by citing the DOI above.

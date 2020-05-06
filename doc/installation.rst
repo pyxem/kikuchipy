@@ -1,8 +1,8 @@
-=================
-Install KikuchiPy
-=================
+============
+Installation
+============
 
-KikuchiPy can be installed from `Anaconda
+kikuchipy can be installed from `Anaconda
 <https://anaconda.org/conda-forge/kikuchipy>`_, the `Python Package Index
 <https://pypi.org/project/kikuchipy/>`_ (``pip``), or from source, and only
 supports Python >= 3.7.
@@ -11,8 +11,8 @@ We recommend you install it in a `conda environment
 <https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`_
 with the `Miniconda distribution`_::
 
-   conda create --name kikuchipy python=3.7
-   conda activate kikuchipy
+   $ conda create --name kikuchipy python=3.7
+   $ conda activate kikuchipy
 
 If you prefer a graphical interface to manage packages and environments, install
 the `Anaconda distribution`_ instead.
@@ -25,33 +25,33 @@ the `Anaconda distribution`_ instead.
 Anaconda
 --------
 
-Anaconda provides the easiest installation. Within the Anaconda Prompt, terminal
-or Command Prompt, install with::
+Anaconda provides the easiest installation. In the Anaconda Prompt, terminal or
+Command Prompt, install with::
 
-    conda install kikuchipy --channel conda-forge
+    $ conda install kikuchipy --channel conda-forge
 
 If you at a later time need to update the package::
 
-    conda update kikuchipy
+    $ conda update kikuchipy
 
 .. _install-with-pip:
 
 Pip
 ---
 
-Anaconda provides the easiest installation. Within the Anaconda Prompt, terminal
-or Command Prompt, install with::
+To install with ``pip``, run the following in the Anaconda Prompt, terminal or
+Command Prompt::
 
-    pip install kikuchipy
+    $ pip install kikuchipy
 
 If you at a later time need to update the package::
 
-    pip install --upgrade kikuchipy
+    $ pip install --upgrade kikuchipy
 
 .. note::
 
-    KikuchiPy builds upon HyperSpy, which depends upon a number of libraries
-    that usually need to be compiled. Installing KikuchiPy with ``pip`` may
+    kikuchipy builds upon HyperSpy, which depends upon a number of libraries
+    that usually need to be compiled. Installing kikuchipy with ``pip`` may
     therefore require some development tools.
 
 .. _install-from-source:
@@ -59,12 +59,12 @@ If you at a later time need to update the package::
 Install from source
 -------------------
 
-To install KikuchiPy from source, clone the repository from `GitHub
+To install kikuchipy from source, clone the repository from `GitHub
 <https://github.com/kikuchipy/kikuchipy>`_::
 
-    git clone https://github.com/kikuchipy/kikuchipy.git
-    cd kikuchipy
-    pip install --editable .
+    $ git clone https://github.com/kikuchipy/kikuchipy.git
+    $ cd kikuchipy
+    $ pip install --editable .
 
 See the :ref:`contributing guidelines <setting-up-a-development-installation>`
 for how to set up a development installation.

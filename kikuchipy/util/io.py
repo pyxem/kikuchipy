@@ -1,21 +1,22 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The KikuchiPy developers
+# Copyright 2019-2020 The kikuchipy developers
 #
-# This file is part of KikuchiPy.
+# This file is part of kikuchipy.
 #
-# KikuchiPy is free software: you can redistribute it and/or modify
+# kikuchipy is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# KikuchiPy is distributed in the hope that it will be useful,
+# kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with KikuchiPy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Union, Tuple, Any
 import warnings
 
 from hyperspy.misc.utils import DictionaryTreeBrowser
@@ -23,7 +24,7 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 
 def kikuchipy_metadata():
     """Return a dictionary in HyperSpy's DictionaryTreeBrowser format
-    with the default KikuchiPy metadata.
+    with the default kikuchipy metadata.
 
     See :meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`
     for an explanation of the parameters.
@@ -63,7 +64,9 @@ def kikuchipy_metadata():
     return md
 
 
-def metadata_nodes(sem=True, ebsd=True):
+def metadata_nodes(
+    sem: bool = True, ebsd: bool = True
+) -> Union[Tuple[str, str], str]:
     """Return SEM and EBSD metadata nodes.
 
     This is a convenience function so that we only have to define these
@@ -71,15 +74,16 @@ def metadata_nodes(sem=True, ebsd=True):
 
     Parameters
     ----------
-    sem : bool, optional
+    sem
         Whether to return the SEM node string (default is ``True``).
-    ebsd : bool, optional
+    ebsd
         Whether to return the EBSD node string (default is ``True``).
 
     Returns
     -------
-    sem_node : str
-    ebsd_node : str
+    sem_node
+    ebsd_node
+
     """
 
     sem_node = "Acquisition_instrument.SEM"
@@ -92,13 +96,14 @@ def metadata_nodes(sem=True, ebsd=True):
         return ebsd_node
 
 
-def _get_input_bool(question):
+def _get_input_bool(question: str) -> bool:
     """Get input from user on boolean choice, returning the answer.
 
     Parameters
     ----------
-    question : str
+    question
         Question to ask user.
+
     """
 
     try:
@@ -119,15 +124,16 @@ def _get_input_bool(question):
         return False
 
 
-def _get_input_variable(question, var_type):
+def _get_input_variable(question: str, var_type: Any) -> Union[None, Any]:
     """Get variable input from user, returning the variable.
 
     Parameters
     ----------
-    question : str
+    question
         Question to ask user.
-    var_type : type
+    var_type
         Type of variable to return.
+
     """
 
     try:

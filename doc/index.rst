@@ -1,5 +1,5 @@
 =========
-KikuchiPy
+kikuchipy
 =========
 
 .. include:: ../README.rst
@@ -8,7 +8,7 @@ KikuchiPy
     :hidden:
     :caption: Getting started
 
-    install.rst
+    installation.rst
 
 .. toctree::
     :hidden:
@@ -17,8 +17,9 @@ KikuchiPy
     load_save_patterns.rst
     change_scan_pattern_size.rst
     pattern_processing.rst
-    visualizing_patterns.rst
+    feature_maps.rst
     virtual_backscatter_electron_imaging.rst
+    visualizing_patterns.rst
     multivariate_analysis.rst
     metadata.rst
     reference.rst

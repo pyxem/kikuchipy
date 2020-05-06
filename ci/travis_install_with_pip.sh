@@ -5,7 +5,7 @@
 
 # Install Python version 3.7 on Windows
 if [ "$TRAVIS_OS_NAME" == windows ]; then
-  choco install -y python --version=3.7.5 --allow-downgrades
+  choco install -y python --version=$PYTHON_VERSION --allow-downgrades
   python -m pip install --upgrade pip
 fi
 

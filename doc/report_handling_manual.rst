@@ -1,10 +1,10 @@
 :orphan:
 
 ========================================================
-KikuchiPy Code of Conduct - How to follow up on a report
+kikuchipy Code of Conduct - How to follow up on a report
 ========================================================
 
-This is the manual followed by KikuchiPy's Code of Conduct Committee. It's used
+This is the manual followed by kikuchipy's Code of Conduct Committee. It's used
 when we respond to an issue to make sure we're consistent and fair.
 
 Enforcing the Code of Conduct impacts our community today and for the future.
@@ -102,7 +102,7 @@ severe breaches like personal threats, violent, sexist or racist language.
 When a member of the Code of Conduct Committee becomes aware of a clear and
 severe breach, they will do the following:
 
-* Immediately disconnect the originator from all KikuchiPy communication
+* Immediately disconnect the originator from all kikuchipy communication
   channels.
   
 * Reply to the reporter that their report has been received and that the
@@ -112,7 +112,7 @@ severe breach, they will do the following:
   originator, and tell them specifically how their language or actions qualify
   as a "clear and severe breach". The moderator should say that, if the
   originator believes this is unfair or they want to be reconnected to
-  KikuchiPy, they have the right to ask for a review, as below, by the Code of
+  kikuchipy, they have the right to ask for a review, as below, by the Code of
   Conduct Committee. The moderator should copy this explanation to the Code of
   Conduct Committee.
 
@@ -158,7 +158,7 @@ committee. If the committee finds the need to use off-list communications (.e.g
 phone calls for early/rapid response), it should in all cases summarize these
 back to the list so there is a good record of the process.
 
-The KikuchiPy Code of Conduct Committee should aim to have a resolution agreed
+The kikuchipy Code of Conduct Committee should aim to have a resolution agreed
 upon within two weeks. In the event that a resolution can't be determined in
 that time, the committee will respond to the reporter(s) with an update and
 projected timeline for resolution.
@@ -209,7 +209,7 @@ Possible responses may include:
   not to take a temporary break voluntarily, the committee may issue a
   "mandatory cooling off period".
 
-* A permanent or temporary ban from some or all KikuchiPy spaces (mailing lists,
+* A permanent or temporary ban from some or all kikuchipy spaces (mailing lists,
   forum, etc.). The committee will maintain records of all such bans so that
   they may be reviewed in the future or otherwise maintained.
 
@@ -218,11 +218,11 @@ contact the original reporter and any other affected parties and explain the
 proposed resolution. The committee will ask if this resolution is acceptable,
 and must note feedback for the record.
 
-Finally, the committee will make a report to the KikuchiPy core team in the
+Finally, the committee will make a report to the kikuchipy core team in the
 event of an ongoing resolution, such as a ban.
 
 The committee will never publicly discuss the issue; all public statements will
-be made by the chair of the KikuchiPy Code of Conduct Committee.
+be made by the chair of the kikuchipy Code of Conduct Committee.
 
 .. _conflict-of-interest:
 
