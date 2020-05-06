@@ -14,10 +14,8 @@ formats: all
 
 # Python environment for building the docs
 python:
-  version: 3.7
+  version: 3.8
   install:
-    - method: setuptools
-      path: .
     - method: pip
       path: .
       extra_requirements:
