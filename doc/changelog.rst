@@ -54,6 +54,8 @@ Changed
 
 Fixed
 -----
+- RtD builds documentation with Python 3.8 (fixed problem of missing .egg
+  leading build to fail).
 - Chunking of static background pattern.
 - Chunking of patterns in the h5ebsd reader.
 
