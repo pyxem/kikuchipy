@@ -23,6 +23,7 @@ import warnings
 
 import dask.array as da
 from hyperspy.misc.utils import DictionaryTreeBrowser
+from hyperspy.exceptions import VisibleDeprecationWarning
 from hyperspy.io_plugins.hspy import overwrite_dataset
 import h5py
 import numpy as np
@@ -44,9 +45,9 @@ _logger = logging.getLogger(__name__)
 # ----------------------
 format_name = "h5ebsd"
 description = (
-    "Read/write support for electron backscatter patterns stored in "
-    "an HDF5 file formatted in the h5ebsd format introduced in "
-    "Jackson et al.: h5ebsd: an archival data format for electron"
+    "Read/write support for electron backscatter diffraction patterns "
+    "stored in an HDF5 file formatted in the h5ebsd format introduced "
+    "in Jackson et al.: h5ebsd: an archival data format for electron"
     "back-scatter diffraction data sets. Integrating Materials and"
     "Manufacturing Innovation 2014 3:4, doi: "
     "https://dx.doi.org/10.1186/2193-9772-3-4."
@@ -56,7 +57,10 @@ full_support = False
 file_extensions = ["h5", "hdf5", "h5ebsd"]
 default_extension = 1
 # Writing capabilities
-writes = [(2, 2), (2, 1), (1, 1)]
+writes = [(2, 2), (2, 1), (1, 2)]
+
+# Unique HDF5 footprint
+footprint = "manufacturer version scan"
 
 
 def file_reader(
@@ -65,9 +69,9 @@ def file_reader(
     lazy: bool = False,
     **kwargs,
 ) -> List[dict]:
-    """Read electron backscatter patterns from an h5ebsd file
-    [Jackson2014]_. A valid h5ebsd file has at least one group with the
-    name '/Scan x/EBSD' with the groups 'Data' (patterns etc.) and
+    """Read electron backscatter diffraction patterns from an h5ebsd
+    file [Jackson2014]_. A valid h5ebsd file has at least one group with
+    the name '/Scan x/EBSD' with the groups 'Data' (patterns etc.) and
     'Header' (``metadata`` etc.) , where 'x' is the scan_number.
 
     Parameters
@@ -81,6 +85,8 @@ def file_reader(
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
         is False.
+    kwargs :
+        Key word arguments passed to h5py.File.
 
     Returns
     -------
@@ -200,7 +206,7 @@ def manufacturer_version(file: h5py.File) -> Tuple[str, str]:
 
     manufacturer = None
     version = None
-    for key, val in h5ebsdgroup2dict(file["/"]).items():
+    for key, val in hdf5group2dict(group=file["/"]).items():
         if key.lower() == "manufacturer":
             manufacturer = val
         if key.lower() == "version":
@@ -225,14 +231,23 @@ def manufacturer_pattern_names() -> Dict[str, str]:
     }
 
 
-def h5ebsdgroup2dict(
+def h5ebsdgroup2dict(**kwargs):
+    warnings.warn(
+        "Renamed to hdf5group2dict(). Will be removed in v0.3. "
+        "Deprecations will be handled better going forward...",
+        VisibleDeprecationWarning,
+    )
+
+
+def hdf5group2dict(
     group: h5py.Group,
     dictionary: Union[None, dict, DictionaryTreeBrowser] = None,
     recursive: bool = False,
-    lazy: bool = False,
+    data_dset_names: Optional[list] = None,
+    **kwargs,
 ) -> dict:
     """Return a dictionary with values from datasets in a group in an
-    opened h5ebsd file.
+    opened HDF5 file.
 
     Parameters
     ----------
@@ -242,33 +257,46 @@ def h5ebsdgroup2dict(
         To fill dataset values into.
     recursive
         Whether to add subgroups to dictionary.
-    lazy
-        Read dataset lazily.
+    data_dset_names
+        List of names of HDF data sets with data to not read.
 
     Returns
     -------
     dictionary : dict
-        Dataset values in group (and subgroups if ``recursive=True``).
+        Dataset values in group (and subgroups if recursive=True).
+
     """
 
-    man_pats = manufacturer_pattern_names()
+    if "lazy" in kwargs.keys():
+        warnings.warn(
+            "The 'lazy' parameter is not used in this method. Passing it will "
+            "raise an error from v0.3.",
+            VisibleDeprecationWarning,
+        )
+
+    if data_dset_names is None:
+        data_dset_names = []
     if dictionary is None:
         dictionary = {}
     for key, val in group.items():
         # Prepare value for entry in dictionary
         if isinstance(val, h5py.Dataset):
-            if key not in man_pats.values():
+            if key not in data_dset_names:
                 val = val[()]
             if isinstance(val, np.ndarray) and len(val) == 1:
                 val = val[0]
                 key = key.lstrip()  # EDAX has some leading whitespaces
-            if val.dtype.char == "S":
+            #            if val.dtype.char == "S":
+            if isinstance(val, bytes):
                 val = val.decode()
         # Check whether to extract subgroup or write value to dictionary
         if isinstance(val, h5py.Group) and recursive:
             dictionary[key] = {}
-            h5ebsdgroup2dict(
-                group[key], dictionary[key], recursive=recursive, lazy=lazy
+            hdf5group2dict(
+                group=group[key],
+                dictionary=dictionary[key],
+                data_dset_names=data_dset_names,
+                recursive=recursive,
             )
         else:
             dictionary[key] = val
@@ -466,17 +494,32 @@ def kikuchipyheader2dicts(
 
     """
 
+    # Data sets to not read via hdf5group2dict
+    pattern_dset_names = list(manufacturer_pattern_names().values())
+
     omd = DictionaryTreeBrowser()
     sem_node, ebsd_node = metadata_nodes()
     md.set_item(
-        ebsd_node, h5ebsdgroup2dict(scan_group["EBSD/Header"], lazy=lazy)
+        ebsd_node,
+        hdf5group2dict(
+            group=scan_group["EBSD/Header"], data_dset_names=pattern_dset_names,
+        ),
     )
     md = _delete_from_nested_dictionary(md, "Phases")
     phase_node = "Sample.Phases"
-    md.set_item(sem_node, h5ebsdgroup2dict(scan_group["SEM/Header"], lazy=lazy))
+    md.set_item(
+        sem_node,
+        hdf5group2dict(
+            group=scan_group["SEM/Header"], data_dset_names=pattern_dset_names,
+        ),
+    )
     md.set_item(
         phase_node,
-        h5ebsdgroup2dict(scan_group["EBSD/Header/Phases"], recursive=True),
+        hdf5group2dict(
+            group=scan_group["EBSD/Header/Phases"],
+            data_dset_names=pattern_dset_names,
+            recursive=True,
+        ),
     )
 
     # Get and remove scan info values from metadata
@@ -522,7 +565,12 @@ def edaxheader2dicts(
     """
 
     # Get header group as dictionary
-    hd = h5ebsdgroup2dict(scan_group["EBSD/Header"], recursive=True)
+    pattern_dset_names = list(manufacturer_pattern_names().values())
+    hd = hdf5group2dict(
+        group=scan_group["EBSD/Header"],
+        data_dset_names=pattern_dset_names,
+        recursive=True,
+    )
 
     # Populate metadata dictionary
     sem_node, ebsd_node = metadata_nodes()
@@ -602,8 +650,15 @@ def brukerheader2dicts(
     """
 
     # Get header group and data group as dictionaries
-    hd = h5ebsdgroup2dict(scan_group["EBSD/Header"], recursive=True)
-    dd = h5ebsdgroup2dict(scan_group["EBSD/Data"])
+    pattern_dset_names = list(manufacturer_pattern_names().values())
+    hd = hdf5group2dict(
+        group=scan_group["EBSD/Header"],
+        data_dset_names=pattern_dset_names,
+        recursive=True,
+    )
+    dd = hdf5group2dict(
+        group=scan_group["EBSD/Data"], data_dset_names=pattern_dset_names,
+    )
 
     # Populate metadata dictionary
     sem_node, ebsd_node = metadata_nodes()
@@ -814,29 +869,26 @@ def dict2h5ebsdgroup(dictionary: dict, group: h5py.Group, **kwargs):
     for key, val in dictionary.items():
         ddtype = type(val)
         dshape = (1,)
-        written = False
         if isinstance(val, (dict, DictionaryTreeBrowser)):
             if isinstance(val, DictionaryTreeBrowser):
                 val = val.as_dictionary()
             dict2h5ebsdgroup(val, group.create_group(key), **kwargs)
-            written = True
+            continue  # Jump to next item in dictionary
         elif isinstance(val, str):
             ddtype = "S" + str(len(val) + 1)
             val = val.encode()
-        elif isinstance(val, (np.ndarray, da.Array)):
-            overwrite_dataset(group, val, key, **kwargs)
-            written = True
         elif ddtype == np.dtype("O"):
             try:
-                ddtype = h5py.special_dtype(vlen=val[0].dtype)
+                if isinstance(val, (np.ndarray, da.Array)):
+                    ddtype = val.dtype
+                else:
+                    ddtype = val[0].dtype
                 dshape = np.shape(val)
             except TypeError:
                 warnings.warn(
                     "The hdf5 writer could not write the following information "
                     "to the file '{} : {}'.".format(key, val)
                 )
-                break
-        if written:
-            continue  # Jump to next item in dictionary
+                break  # or continue?
         group.create_dataset(key, shape=dshape, dtype=ddtype, **kwargs)
         group[key][()] = val

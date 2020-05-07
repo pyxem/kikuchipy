@@ -16,8 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from kikuchipy.signals.ebsd import EBSD, LazyEBSD
-from kikuchipy.signals.ebsd_masterpattern import (
-    EBSDMasterPattern,
-    LazyEBSDMasterPattern,
-)
+
+class TestEMsoftMasterPatternReader:
+    def test_file_reader(self):
+        pass
+
+    def test_check_file_format(self):
+        pass
+
+    def test_masterdataset2signaldict(self):
+        pass

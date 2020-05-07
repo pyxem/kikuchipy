@@ -21,6 +21,7 @@ import os
 import dask.array as da
 import hyperspy.api as hs
 from hyperspy.misc.utils import DictionaryTreeBrowser
+from hyperspy.exceptions import VisibleDeprecationWarning
 import h5py
 import numpy as np
 import pytest
@@ -341,3 +342,12 @@ class Testh5ebsd:
         # Then, make sure it can be read correctly
         s = kp.load(KIKUCHIPY_FILE_NO_CHUNKS, lazy=True)
         assert s.data.chunks == ((60,), (60,))
+
+    def test_h5ebsdgroup2dict(self):
+        with pytest.warns(VisibleDeprecationWarning, match="Renamed to "):
+            kp.io.plugins.h5ebsd.h5ebsdgroup2dict(a=1)
+
+    def test_hdf5group2dict_raises_deprecation_warning(self):
+        f = h5py.File(KIKUCHIPY_FILE, mode="r")
+        with pytest.warns(VisibleDeprecationWarning, match="The 'lazy' "):
+            _ = kp.io.plugins.h5ebsd.hdf5group2dict(group=f["/"], lazy=True)
