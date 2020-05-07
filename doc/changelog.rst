@@ -16,6 +16,8 @@ Unreleased
 
 Added
 -----
+- EBSD master pattern class and reader of master patterns from EMsoft's EBSD
+  master pattern file.
 - Python 3.8 support.
 - Public APIs of underlying processing of a chunk of patterns and single
   patterns, used indirectly via the EBSD class.

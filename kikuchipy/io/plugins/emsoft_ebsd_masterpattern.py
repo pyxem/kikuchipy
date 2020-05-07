@@ -22,11 +22,9 @@ import dask.array as da
 from h5py import File, Group, Dataset
 import numpy as np
 
-from kikuchipy.io.plugins.h5ebsd import hdf5group2dict
-
 # Plugin characteristics
 # ----------------------
-format_name = "emsoft_masterpattern"
+format_name = "emsoft_ebsd_masterpattern"
 description = (
     "Read support for electron backscatter diffraction master patterns "
     "stored in EMsoft's HDF5 file format."
@@ -102,7 +100,7 @@ def file_reader(
 
     # Account for the Lambert projections being stored as having a 1-dimension
     # before the energy dimension
-    if projection == "lambert":
+    if projection.lower() == "lambert":
         data_slices = (slice(None, None),) + data_slices
 
     # Get HDF5 data sets
@@ -229,9 +227,8 @@ def get_data_shape_slices(
         data_slices = (slice(None, None),) + data_slices
         data_shape = (len(energies),) + data_shape
     else:
-        i_min, i_max = [
-            np.argwhere(energies == i)[0][0] + 1 for i in energy_range
-        ]
+        i_min = np.argwhere(energies >= energy_range[0])[0][0]
+        i_max = np.argwhere(energies <= energy_range[1])[-1][0] + 1
         data_slices = (slice(i_min, i_max),) + data_slices
         data_shape = (i_max - i_min,) + data_shape
 
@@ -259,22 +256,32 @@ def get_datasets(
 
     """
 
-    mapping_p = {"spherical": "masterSP", "lambert": "mLP"}
-    mapping_h = {"north": "NH", "south": "SH"}
-    hemispheres = ["north", "south"]
     hemisphere = hemisphere.lower()
+    projection = projection.lower()
+
+    projections = {"spherical": "masterSP", "lambert": "mLP"}
+    hemispheres = {"north": "NH", "south": "SH"}
+
+    if projection not in projections.keys():
+        raise ValueError(
+            f"'projection' argument {projection} must be one of "
+            f"{projections.keys()}"
+        )
 
     if hemisphere == "both":
-        dset_names = [mapping_p[projection] + mapping_h[h] for h in hemispheres]
+        dset_names = [
+            projections[projection] + hemispheres[h] for h in hemispheres.keys()
+        ]
         datasets = [data_group[n] for n in dset_names]
     elif hemisphere in hemispheres:
-        dset_name = mapping_p[projection] + mapping_h[hemisphere]
+        dset_name = projections[projection] + hemispheres[hemisphere]
         datasets = [
             data_group[dset_name],
         ]
     else:
         raise ValueError(
-            f"'hemisphere' argument {hemisphere} must be one of {hemispheres}."
+            f"'hemisphere' argument {hemisphere} must be one of "
+            f"{hemispheres.keys()}."
         )
 
     return datasets

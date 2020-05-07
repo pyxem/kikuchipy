@@ -60,7 +60,7 @@ def dummy_background():
 
 
 @pytest.fixture()
-def save_path_h5ebsd():
+def save_path_hdf5():
     """Temporary file in a temporary directory for use when tests need
     to write, and sometimes read again, a signal to, and from, a file.
     """

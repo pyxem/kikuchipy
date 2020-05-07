@@ -28,14 +28,14 @@ from h5py import File, is_hdf5
 import numpy as np
 
 import kikuchipy.signals
-from kikuchipy.io.plugins import h5ebsd, nordif, emsoft_masterpattern
+from kikuchipy.io.plugins import h5ebsd, nordif, emsoft_ebsd_masterpattern
 from kikuchipy.util.io import _get_input_bool
 
 plugins = [
     hspy,
     h5ebsd,
     nordif,
-    emsoft_masterpattern,
+    emsoft_ebsd_masterpattern,
 ]
 
 default_write_ext = set()

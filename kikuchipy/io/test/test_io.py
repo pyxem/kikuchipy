@@ -120,18 +120,18 @@ class TestIO:
         with pytest.raises(ValueError, match="This file format cannot write"):
             s.save()
 
-    def test_save_to_existing_file(self, save_path_h5ebsd):
+    def test_save_to_existing_file(self, save_path_hdf5):
         s = kp.load(KIKUCHIPY_FILE)
-        s.save(save_path_h5ebsd)
+        s.save(save_path_hdf5)
         with pytest.warns(UserWarning, match="Your terminal does not"):
-            s.save(save_path_h5ebsd, scan_number=2)
+            s.save(save_path_hdf5, scan_number=2)
         with pytest.raises(ValueError, match="overwrite parameter can"):
             s.save(
-                save_path_h5ebsd,
+                save_path_hdf5,
                 scan_number=2,
                 overwrite="False",
                 add_scan=False,
             )
-        s.save(save_path_h5ebsd, scan_number=2, overwrite=False, add_scan=False)
+        s.save(save_path_hdf5, scan_number=2, overwrite=False, add_scan=False)
         with pytest.raises(OSError, match="Scan 2 is not among the"):
-            kp.load(save_path_h5ebsd, scans=2)
+            kp.load(save_path_hdf5, scans=2)
