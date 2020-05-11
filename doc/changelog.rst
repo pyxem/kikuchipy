@@ -2,6 +2,27 @@
 Changelog
 =========
 
+0.1.3 (2020-05-11)
+==================
+
+KikuchiPy is an open-source Python library for processing and analysis of
+electron backscatter diffraction patterns: https://kikuchipy.readthedocs.io
+
+This is a patch release. It is anticipated to be the final release in the
+`0.1.x` series.
+
+Added
+-----
+- Package installation with Anaconda via the `conda-forge channel
+  <https://anaconda.org/conda-forge/kikuchipy/>`_.
+
+Fixed
+-----
+- Static and dynamic background corrections are done at float 32-bit precision,
+  and not integer 16-bit.
+- Chunking of static background pattern.
+- Chunking of patterns in the h5ebsd reader.
+
 0.1.2 (2020-01-09)
 ==================
 

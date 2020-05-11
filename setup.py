@@ -109,7 +109,7 @@ setup(
         "matplotlib",
         "numpy >= 1.17",
         "pyxem >= 0.10",
-        "scikit-image",
+        "scikit-image >= 0.16, < 0.17",  # Due to HyperSpy PR #2393
         "scikit-learn",
         "scipy",
     ],
