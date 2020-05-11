@@ -2,16 +2,20 @@
 Metadata structure
 ==================
 
-The :py:class:`~kikuchipy.signals.ebsd.EBSD` class stores metadata in the
-``metadata`` attribute provided by HyperSpy. While kikuchipy's metadata
-structure (:py:func:`~kikuchipy.util.io.kikuchipy_metadata`) is based on
-`HyperSpy's metadata structure
+The :class:`~kikuchipy.signals.ebsd.EBSD` and
+:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` classes store
+metadata in the ``metadata`` attribute provided by HyperSpy. While kikuchipy's
+EBSD (:func:`~kikuchipy.util.io.ebsd_metadata`) and EBSDMasterPattern
+(:func:`~kikuchipy.util.io.ebsd_master_pattern_metadata`) metadata structures
+are based on `HyperSpy's metadata structure
 <http://hyperspy.org/hyperspy-doc/current/user_guide/metadata_structure.html>`_,
-it includes the two extra nodes ``Acquisition_instrument.SEM.Detector.EBSD`` and
-``Acquisition_instrument.Sample.Phases``. The following metadata structure is,
-along with the patterns, saved to file when saving an
-:py:class:`~kikuchipy.signals.ebsd.EBSD` object in the :ref:`kikuchipy h5ebsd
-format <h5ebsd-format>`.
+they each include a node ``Acquisition_instrument.Sample.Phases`` to store
+phase information, and ``Acquisition_instrument.SEM.Detector.EBSD`` or
+``Simulation.EBSD_master_pattern``, respectively. The information in these nodes
+are written, along with the patterns, to file when saving an EBSD object in the
+:ref:`kikuchipy h5ebsd format <h5ebsd-format>` or an EBSDMasterPattern object in
+`the HyperSpy HDF5 format
+<http://hyperspy.org/hyperspy-doc/current/user_guide/io.html#hspy-hyperspy-s-hdf5-specification>`_.
 
 ::
 
@@ -40,46 +44,78 @@ format <h5ebsd-format>`.
     │       ├── magnification
     │       ├── microscope
     │       └── working_distance [mm]
-    └── Sample
-        └── Phases
-            └── 1
-                ├── atom_coordinates
-                │   └── 1
-                │       ├── atom
-                │       ├── coordinates (x0, y0, z0)
-                │       ├── debye_waller_factor [nm^2]
-                │       └── site_occupation
-                ├── formula
-                ├── info
-                ├── lattice_constants (a, b, c and alfa, beta, gamma) [nm and º]
-                ├── laue_group
-                ├── material_name
-                ├── point_group
-                ├── setting
-                ├── space_group
-                └── symmetry
+    ├── Sample
+    │   └── Phases
+    │       └── 1
+    │           ├── atom_coordinates
+    │           │   └── 1
+    │           │       ├── atom
+    │           │       ├── coordinates (x0, y0, z0)
+    │           │       ├── debye_waller_factor [nm^2]
+    │           │       └── site_occupation
+    │           ├── formula
+    │           ├── info
+    │           ├── lattice_constants (a, b, c and alfa, beta, gamma) [nm and º]
+    │           ├── laue_group
+    │           ├── material_name
+    │           ├── point_group
+    │           ├── setting
+    │           ├── source
+    │           ├── space_group
+    │           └── symmetry
+    └── Simulation
+        └── EBSD_master_pattern
+            ├── BSE_simulation
+            │   ├── depth_step [nm]
+            │   ├── energy_step [keV]
+            │   ├── incident_beam_energy [keV]
+            │   ├── max_depth [nm]
+            │   ├── min_beam_energy [keV]
+            │   ├── mode
+            │   ├── number_of_electrons
+            │   ├── pixels_along_x
+            │   └── sample_tilt [º]
+            └── Master_pattern
+                ├── Bethe_parameters
+                │   ├── complete_cutoff
+                │   ├── strong_beam_cutoff
+                │   └── weak_beam_cutoff
+                ├── projection
+                ├── hemisphere
+                └── smallest_interplanar_spacing [nm]
 
-The utility function :py:func:`~kikuchipy.util.io.metadata_nodes` returns the
-node strings for the ``SEM`` and ``EBSD`` nodes for convenience.
+The utility function :func:`~kikuchipy.util.io.metadata_nodes` returns the
+node strings for the ``SEM``, ``EBSD`` and ``EBSD_master_pattern`` nodes for
+convenience.
 
 .. note::
 
-    If you regularly use information relevant to EBSD scans and phases not
-    included in the metadata structure, you can make a request for this in our
-    `code repository <https://github.com/kikuchipy/kikuchipy/issues>`_.
+    If you regularly use information relevant to EBSD data not included in the
+    metadata structure, you can request this in our `issue tracker
+    <https://github.com/kikuchipy/kikuchipy/issues>`_.
 
 EBSD
 ====
 
-This node contains relevant information to EBSD scans. All parameters can be set
-with the method
-:py:meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`. An
-explanation of each parameter is given in the method's docstring.
+This node contains information relevant for EBSD data. All parameters can be
+set with the method
+:meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`. An explanation
+of each parameter is given in the method's docstring.
+
+EBSD master pattern
+===================
+
+This node contains information relevant for simulated EBSD master patterns. All
+parameters can be set with the method
+:meth:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern.set_simulation_parameters`.
+An explanation of each parameter is given in the method's docstring.
 
 Phases
 ======
 
-This node contains relevant information to an EBSD scans phases. All parameters
-can be set with the method
-:py:meth:`~kikuchipy.signals.ebsd.EBSD.set_phase_parameters`. An explanation of
-each parameter is given in the method's dostring.
+This node contains information relevant for EBSD scans or simulated patterns'
+phases. All parameters can be set with the :class:`~kikuchipy.signals.ebsd.EBSD`
+method :meth:`~kikuchipy.signals.ebsd.EBSD.set_phase_parameters` or the
+:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` method
+:meth:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern.set_phase_parameters`.
+An explanation of each parameter is given in the methods' docstring.

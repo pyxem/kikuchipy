@@ -2,10 +2,10 @@
 kikuchipy reference
 ===================
 
-This reference manual details all EBSD class methods, utility functions and
-readers of EBSD patterns included in kikuchipy, as generated from their
-docstrings. For learning how to use kikuchipy, see the user guide pages in the
-sidebar.
+This reference manual details all methods for the EBSD and EBSDMasterPattern
+classes, utility functions, and readers of EBSD patterns and EBSD master
+patterns included in kikuchipy, as generated from their docstrings. For learning
+how to use kikuchipy, see the user guide pages in the sidebar.
 
 EBSD
 ====
@@ -50,6 +50,36 @@ These methods are exclusive to LazyEBSD objects.
     get_decomposition_model_write
 
 .. autoclass:: kikuchipy.signals.ebsd.LazyEBSD
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+....
+
+EBSDMasterPattern
+=================
+
+All methods listed here are also available to
+:class:`~kikuchipy.signals.ebsd_master_pattern.LazyEBSDMasterPattern` objects.
+
+.. currentmodule:: kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern
+
+.. autosummary::
+    set_simulation_parameters
+    set_phase_parameters
+
+.. autoclass:: kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+....
+
+There are no methods exclusive to LazyEBSDMasterPattern objects.
+
+.. currentmodule:: kikuchipy.signals.ebsd_master_pattern.LazyEBSDMasterPattern
+
+.. autoclass:: kikuchipy.signals.ebsd_master_pattern.LazyEBSDMasterPattern
     :members:
     :undoc-members:
     :show-inheritance:
@@ -102,8 +132,8 @@ Chunk processing
 
 ....
 
-Window/kernel
--------------
+Window
+------
 
 .. automodule:: kikuchipy.util.window
     :members:
@@ -136,9 +166,12 @@ Input/output
 Input/output plugins
 ====================
 
-These plugin functions import patterns and parameters from vendor file formats
-into :py:class:`~kikuchipy.signals.ebsd.EBSD` (or
-:py:class:`~kikuchipy.signals.ebsd.LazyEBSD` if loading lazily) objects.
+These plugin functions import patterns and parameters from file formats into
+:class:`~kikuchipy.signals.ebsd.EBSD` or
+:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` (or
+:class:`~kikuchipy.signals.ebsd.LazyEBSD` or
+:class:`~kikuchipy.signals.ebsd_master_pattern.LazyEBSDMasterPattern` if loading
+lazily) objects.
 
 h5ebsd
 ------
@@ -153,5 +186,12 @@ NORDIF
 ------
 
 .. automodule:: kikuchipy.io.plugins.nordif
+    :members:
+    :undoc-members:
+
+EMsoft EBSD master pattern HDF5
+-------------------------------
+
+.. automodule:: kikuchipy.io.plugins.emsoft_ebsd_master_pattern
     :members:
     :undoc-members:

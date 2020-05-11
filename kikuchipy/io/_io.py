@@ -24,13 +24,19 @@ from hyperspy.misc.io.tools import ensure_directory
 from hyperspy.misc.io.tools import overwrite as overwrite_method
 from hyperspy.misc.utils import strlist2enumeration, find_subclasses
 from hyperspy.signal import BaseSignal
+from h5py import File, is_hdf5
 import numpy as np
 
 import kikuchipy.signals
-from kikuchipy.io.plugins import h5ebsd, nordif
+from kikuchipy.io.plugins import h5ebsd, nordif, emsoft_ebsd_master_pattern
 from kikuchipy.util.io import _get_input_bool
 
-plugins = [hspy, h5ebsd, nordif]
+plugins = [
+    hspy,
+    h5ebsd,
+    nordif,
+    emsoft_ebsd_master_pattern,
+]
 
 default_write_ext = set()
 for plugin in plugins:
@@ -39,7 +45,8 @@ for plugin in plugins:
 
 
 def load(filename: str, lazy: bool = False, **kwargs):
-    """Load an EBSD object from a supported file.
+    """Load an :class:`EBSD` or :class:`EBSDMasterPattern` object from a
+    supported file.
 
     This function is a modified version of :func:`hyperspy.io.load`.
 
@@ -51,7 +58,7 @@ def load(filename: str, lazy: bool = False, **kwargs):
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
         is False.
-    **kwargs :
+    kwargs :
         Keyword arguments passed to the corresponding kikuchipy reader.
         See their individual documentation for available options.
 
@@ -62,32 +69,37 @@ def load(filename: str, lazy: bool = False, **kwargs):
 
     # Find matching reader for file extension
     extension = os.path.splitext(filename)[1][1:]
-    reader = None
+    readers = []
     for plugin in plugins:
+        # TODO: Differentiate between EMsoft's h5ebsd formats
         if extension.lower() in plugin.file_extensions:
-            reader = plugin
-            break
-    if reader is None:
+            readers.append(plugin)
+    if len(readers) == 0:
         raise IOError(
             f"Could not read '{filename}'. If the file format is supported, "
             "please report this error."
         )
+    elif len(readers) > 1 and is_hdf5(filename):
+        reader = _plugin_from_footprints(filename, plugins=readers)
+    else:
+        reader = readers[0]
 
-    # Get data and metadata (from potentially multiple scans if an h5ebsd file)
-    scan_dicts = reader.file_reader(filename, lazy=lazy, **kwargs)
-    scans = []
-    for scan in scan_dicts:
-        scans.append(_dict2signal(scan, lazy=lazy))
+    # Get data and metadata (from potentially multiple signals if an h5ebsd
+    # file)
+    signal_dicts = reader.file_reader(filename, lazy=lazy, **kwargs)
+    signals = []
+    for signal in signal_dicts:
+        signals.append(_dict2signal(signal, lazy=lazy))
         directory, filename = os.path.split(os.path.abspath(filename))
         filename, extension = os.path.splitext(filename)
-        scans[-1].tmp_parameters.folder = directory
-        scans[-1].tmp_parameters.filename = filename
-        scans[-1].tmp_parameters.extension = extension.replace(".", "")
+        signals[-1].tmp_parameters.folder = directory
+        signals[-1].tmp_parameters.filename = filename
+        signals[-1].tmp_parameters.extension = extension.replace(".", "")
 
-    if len(scans) == 1:
-        scans = scans[0]
+    if len(signals) == 1:
+        signals = signals[0]
 
-    return scans
+    return signals
 
 
 def _dict2signal(signal_dict: dict, lazy: bool = False):
@@ -107,8 +119,7 @@ def _dict2signal(signal_dict: dict, lazy: bool = False):
 
     Returns
     -------
-    signal : kikuchipy.signals.ebsd.EBSD or\
-            kikuchipy.signals.ebsd.LazyEBSD
+    signal : EBSD, LazyEBSD, EBSDMasterPattern or LazyEBSDMasterPattern
         Signal instance with ``data``, ``metadata`` and
         ``original_metadata`` from dictionary.
 
@@ -141,6 +152,66 @@ def _dict2signal(signal_dict: dict, lazy: bool = False):
     return signal
 
 
+def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
+    """Get HDF5 correct plugin from a list of potential plugins based on
+    their unique footprints.
+
+    The unique footprint is a string that can take on two formats:
+        * group/dataset names separated by "/", indicating nested
+          groups/datasets
+        * group/dataset names separated by " ", indicating that the
+          groups/datasets are in the top group
+
+    Parameters
+    ----------
+    filename
+        Input file name.
+    plugins
+        Potential plugins.
+
+    Returns
+    -------
+    plugin
+        One of the potential plugins, or None if no footprint was found.
+
+    """
+
+    f = File(filename, mode="r")
+
+    plugin = None
+
+    for p in plugins:
+        if hasattr(p, "footprint"):
+            footprint = p.footprint
+
+            # Determine if footprint consists of nested groups or
+            # multiple groups/datasets in the top group
+            space = " "
+            slash = "/"
+            splitter = space if space in footprint else slash
+
+            footprint = footprint.lower().split(splitter)
+            groups = f["/"]
+            match = False
+            for fp in footprint:
+                for g in groups.keys():
+                    if fp in g.lower():
+                        match = True
+                        if splitter == slash:
+                            groups = groups[g]
+                        break
+
+                if match is False:
+                    break
+
+            if match is True:
+                plugin = p
+
+    f.close()
+
+    return plugin
+
+
 def _assign_signal_subclass(
     dtype: np.dtype,
     signal_dimension: int,
@@ -160,7 +231,7 @@ def _assign_signal_subclass(
     signal_dimension
         Number of signal dimensions.
     signal_type
-        Signal type. Options are ""/"EBSD".
+        Signal type. Options are ""/"EBSD"/"EBSDMasterPattern".
     lazy
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default

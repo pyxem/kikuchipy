@@ -20,7 +20,7 @@ can be calculated for an :class:`~kikuchipy.signals.ebsd.EBSD` object with
 .. math::
 
     \begin{align}
-    Q &= 1 - \frac{J}{J_{\mathrm{res}}w},\\
+    Q &= 1 - \frac{J}{J_{\mathrm{res}}w_{\mathrm{tot}}},\\
     J &= \sum_{h = -N/2}^{N/2} \sum_{k = -N/2}^{N/2} w(h, k)
     \left|\mathbf{q}\right|^2,\\
     J_{\mathrm{res}} &= \frac{1}{N^2} \sum_{h = -N/2}^{N/2}

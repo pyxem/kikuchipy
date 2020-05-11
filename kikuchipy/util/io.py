@@ -16,15 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Union, Tuple, Any
+from typing import Union, Tuple, Any, List
 import warnings
 
 from hyperspy.misc.utils import DictionaryTreeBrowser
+from hyperspy.exceptions import VisibleDeprecationWarning
 
 
-def kikuchipy_metadata():
+def ebsd_metadata() -> DictionaryTreeBrowser:
     """Return a dictionary in HyperSpy's DictionaryTreeBrowser format
-    with the default kikuchipy metadata.
+    with the default kikuchipy EBSD metadata.
 
     See :meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`
     for an explanation of the parameters.
@@ -32,68 +33,136 @@ def kikuchipy_metadata():
     Returns
     -------
     md : hyperspy.misc.utils.DictionaryTreeBrowser
+
     """
 
     md = DictionaryTreeBrowser()
-    sem_node, ebsd_node = metadata_nodes()
+    sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     ebsd = {
-        "azimuth_angle": 1.0,
-        "binning": 1.0,
+        "azimuth_angle": -1.0,
+        "binning": -1.0,
         "detector": "",
-        "elevation_angle": 1.0,
-        "exposure_time": 1,
-        "frame_number": 1,
-        "frame_rate": 1,
-        "gain": 1.0,
+        "elevation_angle": -1.0,
+        "exposure_time": -1,
+        "frame_number": -1,
+        "frame_rate": -1,
+        "gain": -1.0,
         "grid_type": "",
-        "sample_tilt": 1.0,
-        "scan_time": 1.0,
-        "static_background": 1,
-        "xpc": 1.0,
-        "ypc": 1.0,
-        "zpc": 1.0,
+        "sample_tilt": -1.0,
+        "scan_time": -1.0,
+        "static_background": -1,
+        "xpc": -1.0,
+        "ypc": -1.0,
+        "zpc": -1.0,
     }
     sem = {
         "microscope": "",
-        "magnification": 1,
-        "beam_energy": 1.0,
-        "working_distance": 1.0,
+        "magnification": -1,
+        "beam_energy": -1.0,
+        "working_distance": -1.0,
     }
     md.set_item(sem_node, sem)
     md.set_item(ebsd_node, ebsd)
     return md
 
 
+def kikuchipy_metadata() -> DictionaryTreeBrowser:
+    warnings.warn(
+        "This function is deprecated in favor of 'ebsd_metadata()' due to more "
+        "signals being added, and will be removed in v0.3.",
+        VisibleDeprecationWarning,
+    )
+    return ebsd_metadata()
+
+
+def ebsd_master_pattern_metadata() -> DictionaryTreeBrowser:
+    """Return a dictionary in HyperSpy's DictionaryTreeBrowser format
+    with the default kikuchipy EBSD master pattern metadata.
+
+    The parameters are chosen based on the contents in EMsoft's EBSD
+    master pattern HDF5 file.
+
+    See
+    :meth:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern.set_simulation_parameters`
+    for an explanation of the parameters.
+
+    Returns
+    -------
+    md : DictionaryTreeBrowser
+
+    """
+
+    ebsd_master_pattern = {
+        "BSE_simulation": {
+            "depth_step": -1.0,
+            "energy_step": -1.0,
+            "incident_beam_energy": -1.0,
+            "max_depth": -1.0,
+            "min_beam_energy": -1.0,
+            "mode": "",
+            "number_of_electrons": -1,
+            "pixels_along_x": -1,
+            "sample_tilt": -1.0,
+        },
+        "Master_pattern": {
+            "Bethe_parameters": {
+                "complete_cutoff": -1.0,
+                "strong_beam_cutoff": -1.0,
+                "weak_beam_cutoff": -1.0,
+            },
+            "smallest_interplanar_spacing": -1.0,
+            "projection": "",
+            "hemisphere": "",
+        },
+    }
+
+    md = DictionaryTreeBrowser()
+    md.set_item(metadata_nodes("ebsd_master_pattern"), ebsd_master_pattern)
+
+    return md
+
+
 def metadata_nodes(
-    sem: bool = True, ebsd: bool = True
-) -> Union[Tuple[str, str], str]:
-    """Return SEM and EBSD metadata nodes.
+    nodes: Union[None, str, List[str]] = None
+) -> Union[List[str], str, List]:
+    """Return SEM, EBSD and/or EBSD master pattern metadata nodes.
 
     This is a convenience function so that we only have to define these
     node strings here.
 
     Parameters
     ----------
-    sem
-        Whether to return the SEM node string (default is ``True``).
-    ebsd
-        Whether to return the EBSD node string (default is ``True``).
+    nodes
+        Metadata nodes to return. Options are "sem", "ebsd",
+        "ebsd_master_pattern" or None. If None (default) is passed, all
+        nodes are returned.
 
     Returns
     -------
-    sem_node
-    ebsd_node
+    nodes_to_return
 
     """
 
-    sem_node = "Acquisition_instrument.SEM"
-    ebsd_node = sem_node + ".Detector.EBSD"
-    if sem and ebsd:
-        return sem_node, ebsd_node
-    elif sem:
-        return sem_node
-    elif ebsd:
-        return ebsd_node
+    available_nodes = {
+        "sem": "Acquisition_instrument.SEM",
+        "ebsd": "Acquisition_instrument.SEM.Detector.EBSD",
+        "ebsd_master_pattern": "Simulation.EBSD_master_pattern",
+    }
+
+    if nodes is None:
+        nodes_to_return = list(available_nodes.values())
+    else:
+        if not hasattr(nodes, "__iter__") or isinstance(nodes, str):
+            nodes = (nodes,)  # Make iterable
+        nodes_to_return = []
+        for n in nodes:
+            for name, node in available_nodes.items():
+                if n == name:
+                    nodes_to_return.append(node)
+
+    if len(nodes_to_return) == 1:
+        nodes_to_return = nodes_to_return[0]
+    return nodes_to_return
 
 
 def _get_input_bool(question: str) -> bool:

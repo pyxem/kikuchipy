@@ -20,9 +20,11 @@ import io
 import sys
 from contextlib import contextmanager
 
+from hyperspy.exceptions import VisibleDeprecationWarning
 import pytest
 
 import kikuchipy as kp
+from kikuchipy.signals.test.test_ebsd import assert_dictionary
 
 
 @contextmanager
@@ -34,18 +36,33 @@ def replace_stdin(target):
 
 
 class TestIO:
-    def test_kikuchipy_metadata(self):
-        sem_node, ebsd_node = kp.util.io.metadata_nodes()
-        md = kp.util.io.kikuchipy_metadata()
+    def test_ebsd_metadata(self):
+        sem_node, ebsd_node = kp.util.io.metadata_nodes(["sem", "ebsd"])
+        md = kp.util.io.ebsd_metadata()
         assert md.get_item(sem_node + ".microscope") == ""
-        assert md.get_item(ebsd_node + ".xpc") == 1.0
+        assert md.get_item(ebsd_node + ".xpc") == -1.0
 
     def test_metadata_nodes(self):
-        sem_node = kp.util.io.metadata_nodes(ebsd=False)
-        assert sem_node == "Acquisition_instrument.SEM"
-        ebsd_node = kp.util.io.metadata_nodes(sem=False)
-        assert ebsd_node == sem_node + ".Detector.EBSD"
-        sem_node, ebsd_node = kp.util.io.metadata_nodes()
+        sem_node = "Acquisition_instrument.SEM"
+        ebsd_node = sem_node + ".Detector.EBSD"
+        simulation_node = "Simulation"
+        ebsd_master_pattern_node = simulation_node + ".EBSD_master_pattern"
+
+        assert kp.util.io.metadata_nodes("sem") == sem_node
+        assert kp.util.io.metadata_nodes("ebsd") == ebsd_node
+        assert kp.util.io.metadata_nodes() == [
+            sem_node,
+            ebsd_node,
+            ebsd_master_pattern_node,
+        ]
+        assert kp.util.io.metadata_nodes(["ebsd", "sem"]) == [
+            ebsd_node,
+            sem_node,
+        ]
+        assert kp.util.io.metadata_nodes(("sem", "ebsd_master_pattern")) == [
+            sem_node,
+            ebsd_master_pattern_node,
+        ]
 
     @pytest.mark.parametrize(
         "answer, should_return", [("y", True), ("n", False), ("m", True)]
@@ -74,3 +91,21 @@ class TestIO:
             else:
                 returns = kp.util.io._get_input_variable(question, var_type)
         assert returns == var_type(answer)
+
+    def test_kikuchipy_metadata_deprecation(self):
+        with pytest.warns(VisibleDeprecationWarning):
+            md_kp = kp.util.io.kikuchipy_metadata()
+        md_ebsd = kp.util.io.ebsd_metadata()
+        assert_dictionary(md_kp, md_ebsd)
+
+    def test_ebsd_masterpattern_metadata(self):
+        ebsd_mp_node = kp.util.io.metadata_nodes("ebsd_master_pattern")
+        md = kp.util.io.ebsd_master_pattern_metadata()
+
+        assert md.get_item(ebsd_mp_node + ".BSE_simulation.mode") == ""
+        assert (
+            md.get_item(
+                ebsd_mp_node + ".Master_pattern.smallest_interplanar_spacing"
+            )
+            == -1.0
+        )

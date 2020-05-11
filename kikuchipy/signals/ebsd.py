@@ -70,9 +70,9 @@ class EBSD(Signal2D):
         Signal2D.__init__(self, *args, **kwargs)
 
         # Update metadata if object is initialised from numpy array
-        if not self.metadata.has_item(kp.util.io.metadata_nodes(sem=False)):
+        if not self.metadata.has_item(kp.util.io.metadata_nodes("ebsd")):
             md = self.metadata.as_dictionary()
-            md.update(kp.util.io.kikuchipy_metadata().as_dictionary())
+            md.update(kp.util.io.ebsd_metadata().as_dictionary())
             self.metadata = DictionaryTreeBrowser(md)
         if not self.metadata.has_item("Sample.Phases"):
             self.set_phase_parameters()
@@ -159,7 +159,7 @@ class EBSD(Signal2D):
         Examples
         --------
         >>> import kikuchipy as kp
-        >>> ebsd_node = kp.util.io.metadata_nodes(sem=False)
+        >>> ebsd_node = kp.util.io.metadata_nodes("ebsd")
         >>> s.metadata.get_item(ebsd_node + '.xpc')
         1.0
         >>> s.set_experimental_parameters(xpc=0.50726)
@@ -169,7 +169,7 @@ class EBSD(Signal2D):
         """
 
         md = self.metadata
-        sem_node, ebsd_node = kp.util.io.metadata_nodes()
+        sem_node, ebsd_node = kp.util.io.metadata_nodes(["sem", "ebsd"])
         kp.util.general._write_parameters_to_dictionary(
             {
                 "beam_energy": beam_energy,
@@ -215,6 +215,7 @@ class EBSD(Signal2D):
         material_name=None,
         point_group=None,
         setting=None,
+        source=None,
         space_group=None,
         symmetry=None,
     ):
@@ -248,6 +249,8 @@ class EBSD(Signal2D):
             Phase point group.
         setting : int, optional
             Space group's origin setting.
+        source : str, optional
+            Literature reference for phase data.
         space_group : int, optional
             Number between 1 and 230.
         symmetry : int, optional
@@ -293,6 +296,7 @@ class EBSD(Signal2D):
             "material_name": material_name,
             "point_group": point_group,
             "setting": setting,
+            "source": source,
             "space_group": space_group,
             "symmetry": symmetry,
         }
@@ -410,7 +414,7 @@ class EBSD(Signal2D):
         patterns is available in signal metadata:
 
         >>> import kikuchipy as kp
-        >>> ebsd_node = kp.util.io.metadata_nodes(sem=False)
+        >>> ebsd_node = kp.util.io.metadata_nodes("ebsd")
         >>> s.metadata.get_item(ebsd_node + '.static_background')
         [[84 87 90 ... 27 29 30]
         [87 90 93 ... 27 28 30]
@@ -438,7 +442,7 @@ class EBSD(Signal2D):
         if not isinstance(static_bg, (np.ndarray, da.Array)):
             try:
                 md = self.metadata
-                ebsd_node = kp.util.io.metadata_nodes(sem=False)
+                ebsd_node = kp.util.io.metadata_nodes("ebsd")
                 static_bg = da.from_array(
                     md.get_item(ebsd_node + ".static_background"),
                     chunks="auto",
@@ -1542,7 +1546,7 @@ class EBSD(Signal2D):
         # Update binning in metadata to signal dimension with largest or lowest
         # binning if downscaling or upscaling, respectively
         md = s_out.metadata
-        ebsd_node = kp.util.io.metadata_nodes(sem=False)
+        ebsd_node = kp.util.io.metadata_nodes("ebsd")
         if scale is None:
             sx, sy = self.axes_manager.signal_shape
             signal_idx = self.axes_manager.signal_indices_in_array
@@ -1555,7 +1559,7 @@ class EBSD(Signal2D):
             new_binning = np.min(scale)
         else:
             new_binning = np.max(scale)
-        original_binning = md.get_item(ebsd_node + ".binning")
+        original_binning = abs(md.get_item(ebsd_node + ".binning"))
         md.set_item(ebsd_node + ".binning", original_binning * new_binning)
 
         if return_signal:

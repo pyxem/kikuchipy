@@ -27,7 +27,7 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 import numpy as np
 import matplotlib.pyplot as plt
 
-from kikuchipy.util.io import kikuchipy_metadata, metadata_nodes
+from kikuchipy.util.io import ebsd_metadata, metadata_nodes
 from kikuchipy.util.phase import _phase_metadata
 
 # Plugin characteristics
@@ -92,7 +92,7 @@ def file_reader(
         f = open(filename, mode="rb")
 
     # Get metadata from setting file
-    sem_node, ebsd_node = metadata_nodes()
+    sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     folder, fname = os.path.split(filename)
     if setting_file is None:
         setting_file = os.path.join(folder, "Setting.txt")
@@ -110,7 +110,7 @@ def file_reader(
                 "detected in input arguments. These must be set if no setting "
                 "file is provided."
             )
-        md = kikuchipy_metadata()
+        md = ebsd_metadata()
         omd = DictionaryTreeBrowser()
 
     # Read static background image into metadata
@@ -245,8 +245,8 @@ def get_settings_from_file(
     l_specimen = blocks["[Specimen]"]
 
     # Create metadata and original metadata structures
-    md = kikuchipy_metadata()
-    sem_node, ebsd_node = metadata_nodes()
+    md = ebsd_metadata()
+    sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     omd = DictionaryTreeBrowser()
     omd.set_item("nordif_header", content)
 

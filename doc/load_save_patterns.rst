@@ -12,14 +12,26 @@ Load patterns
 From a file
 -----------
 
-kikuchipy can read and write EBSD patterns from/to multiple formats (see
-:ref:`supported-ebsd-formats`). To load patterns from file use the
-:func:`~kikuchipy.io._io.load` function. For example, to load the first scan
-from an `EDAX TSL` .h5 file into memory:
+kikuchipy can read and write experimental EBSD patterns and EBSD master patterns
+from/to multiple formats (see :ref:`supported-ebsd-formats`). To load patterns
+from file use the :func:`~kikuchipy.io._io.load` function. For example, to load
+the first scan from an EDAX TSL .h5 file into memory:
 
 .. code-block::
 
     >>> s = kp.load('patterns.h5')
+    >>> s
+    <EBSD, title: , dimensions: (10, 20|60, 60)>
+
+Or, load the spherical projection of the northern hemisphere of an EBSD master
+pattern for beam energies from 10 to 20 keV from EMsoft's master pattern file,
+returned from the their ``EMEBSDmaster.f90`` program:
+
+.. code-block::
+
+    >>> s = kp.load("master_patterns.h5")
+    >>> s
+    <EBSDMasterPattern, title: , dimensions: (11|1001, 1001)>
 
 All file readers support accessing the data without loading it into memory (with
 the `Dask library`_), which can be useful when processing large data sets:
@@ -30,9 +42,9 @@ the `Dask library`_), which can be useful when processing large data sets:
 
     >>> s = kp.load('patterns.h5', lazy=True)
 
-When loaded lazily, patterns are processed chunk by chunk which in many cases
-leads to longer processing times, so processing should be done with some care.
-See the relevant `HyperSpy user guide
+When loaded lazily, EBSD patterns are processed chunk by chunk, which in many
+cases leads to longer processing times, so processing should be done with some
+care. See the relevant `HyperSpy user guide
 <http://hyperspy.org/hyperspy-doc/current/user_guide/big_data.html>`_ for
 information on how to do this.
 
@@ -61,9 +73,14 @@ This information can be modified directly, and information in ``metadata`` and
 :meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`,
 :meth:`~kikuchipy.signals.ebsd.EBSD.set_phase_parameters`,
 :meth:`~kikuchipy.signals.ebsd.EBSD.set_scan_calibration` and
-:meth:`~kikuchipy.signals.ebsd.EBSD.set_detector_calibration`. For example, to
-set or change the accelerating voltage, horizontal pattern centre coordinate and
-static background pattern (stored as a :class:`numpy.ndarray`):
+:meth:`~kikuchipy.signals.ebsd.EBSD.set_detector_calibration`, or
+the :class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` class
+methods
+:meth:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern.set_simulation_parameters` or
+:meth:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern.set_phase_parameters`.
+For example, to set or change the accelerating voltage, horizontal pattern
+centre coordinate and static background pattern (stored as a
+:class:`numpy.ndarray`):
 
 .. code-block::
 
@@ -75,10 +92,11 @@ static background pattern (stored as a :class:`numpy.ndarray`):
 From a NumPy array
 ------------------
 
-An :class:`~kikuchipy.signals.ebsd.EBSD` object can also be created directly
-from a :class:`numpy.ndarray`. To create a data set of (60 x 60) pixel patterns
-in a (10 x 20) grid, i.e. 10 and 20 patterns in the horizontal and vertical scan
-directions respectively, of random intensities:
+An :class:`~kikuchipy.signals.ebsd.EBSD` or
+:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` object can
+also be created directly from a :class:`numpy.ndarray`. To create a data set of
+(60 x 60) pixel patterns in a (10 x 20) grid, i.e. 10 and 20 patterns in the
+horizontal and vertical scan directions respectively, of random intensities:
 
 .. code-block::
 
@@ -115,8 +133,9 @@ From a HyperSpy signal
 HyperSpy provides the method
 :meth:`~hyperspy.signal.BaseSignal.set_signal_type` to change between
 :class:`~hyperspy.signal.BaseSignal` subclasses, of which
-:class:`~kikuchipy.signals.ebsd.EBSD` is one. To create an
-:class:`~kikuchipy.signals.ebsd.EBSD` object from a
+:class:`~kikuchipy.signals.ebsd.EBSD` and
+:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` are two. To
+create an EBSD or EBSDMasterPattern object from a
 :class:`~hyperspy._signals.signal2d.Signal2D` object:
 
 .. code-block::
@@ -127,19 +146,22 @@ HyperSpy provides the method
     >>> s = hs.signals.Signal2D(np.random.random((20, 10, 60, 60)))
     >>> s
     <Signal2D, title: , dimensions: (10, 20|60, 60)>
-    >>> s.set_signal_type('EBSD')
+    >>> s.set_signal_type("EBSD")
     >>> s
     <EBSD, title: , dimensions: (10, 20|60, 60)>
+    >>> s.set_signal_type("EBSDMasterPattern")
+    >>> s
+    <EBSDMasterPattern, title: , dimensions: (10, 20|60, 60)>
 
 .. _save-patterns:
 
 Save patterns
 =============
 
-To save patterns to file use the :meth:`~kikuchipy.signals.ebsd.EBSD.save`
-method. For example, to save an :class:`~kikuchipy.signals.ebsd.EBSD` object
-``s`` in an HDF5 file, with file name `patterns.h5`, in our default
-:ref:`h5ebsd-format` format:
+To save experimental EBSD patterns to file use the
+:meth:`~kikuchipy.signals.ebsd.EBSD.save` method. For example, to save an
+:class:`~kikuchipy.signals.ebsd.EBSD` object ``s`` in an HDF5 file, with file
+name `patterns.h5`, in our default :ref:`h5ebsd-format` format:
 
 .. code-block::
 
@@ -158,6 +180,27 @@ If you want to save patterns in NORDIF's binary .dat format instead:
 .. code-block::
 
     >>> s.save('patterns.dat')
+
+To save an :class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern`
+object to an HDF5 file, use the :meth:`~hyperspy.signal.BaseSignal.save` method
+inherited from HyperSpy to write to `their HDF5 specification
+<http://hyperspy.org/hyperspy-doc/current/user_guide/io.html#hspy-hyperspy-s-hdf5-specification>`_:
+
+.. code-block::
+
+    >>> s
+    <EBSDMasterPattern, title: , dimensions: (10, 20|60, 60)>
+    >>> s.save("master_patterns.hspy")
+
+These master patterns can then be read into an EBSDMasterPattern object again
+via HyperSpy's :func:`~hyperspy.io.load`:
+
+.. code-block::
+
+    >>> s = hs.load("master_patterns.hspy")
+    <Signal2D, title: , dimensions: (10, 20|60, 60)>
+    >>> s.set_signal_type("EBSDMasterPattern")
+    <EBSDMasterPattern, title: , dimensions: (10, 20|60, 60)>
 
 .. note::
 
@@ -182,17 +225,19 @@ Currently, kikuchipy has readers and writers for the following file formats:
 
 .. table::
 
-    +--------------------+------+-------+
-    | Format             | Read | Write |
-    +====================+======+=======+
-    | Bruker Nano h5ebsd | Yes  | No    |
-    +--------------------+------+-------+
-    | EDAX TSL h5ebsd    | Yes  | No    |
-    +--------------------+------+-------+
-    | kikuchipy h5ebsd   | Yes  | Yes   |
-    +--------------------+------+-------+
-    | NORDIF binary      | Yes  | Yes   |
-    +--------------------+------+-------+
+    +---------------------------------+------+-------+
+    | Format                          | Read | Write |
+    +=================================+======+=======+
+    | Bruker Nano h5ebsd              | Yes  | No    |
+    +---------------------------------+------+-------+
+    | EDAX TSL h5ebsd                 | Yes  | No    |
+    +---------------------------------+------+-------+
+    | kikuchipy h5ebsd                | Yes  | Yes   |
+    +---------------------------------+------+-------+
+    | NORDIF binary                   | Yes  | Yes   |
+    +---------------------------------+------+-------+
+    | EMsoft EBSD master pattern HDF5 | Yes  | Yes   |
+    +---------------------------------+------+-------+
 
 .. note::
 
@@ -255,7 +300,7 @@ passed upon loading:
 
     >>> s = kp.load('Pattern.dat', setting_file='/somewhere/Setting_new.txt')
 
-Here the NORDIF :func:`~kikuchipy.io.plugins.nordif.file_reader` is called. If
+Here, the NORDIF :func:`~kikuchipy.io.plugins.nordif.file_reader` is called. If
 the scan information, i.e. scan and pattern size, in the setting file is
 incorrect or the setting file is not available, patterns can be loaded by
 passing:
@@ -272,6 +317,49 @@ Patterns can also be :ref:`saved to a NORDIF binary file <save-patterns>`, upon
 which the NORDIF :func:`~kikuchipy.io.plugins.nordif.file_writer` is called.
 Note, however, that so far no new setting file, background pattern, or
 calibration patterns is created upon saving.
+
+.. _emsoft-ebsd-master-pattern-format:
+
+EMsoft EBSD master pattern HDF5
+-------------------------------
+
+Master patterns returned by EMsoft's ``EMEBSDmaster.f90`` program as HDF5 files
+can be read into an
+:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` object:
+
+.. code-block::
+
+    >>> s = kp.load("master_patterns.h5")
+    >>> s
+    <EBSDMasterPattern, title: , dimensions: (16|1001, 1001)>
+
+Here, the EMsoft EBSD master pattern
+:func:`~kikuchipy.io.plugins.emsoft_ebsd_master_pattern.file_reader` is called,
+which takes the optional arguments ``projection``, ``hemisphere`` and
+``energy_range``. The spherical projection is read by default. Passing
+``projection="lambert"`` will read the square Lambert projection instead. The
+northern hemisphere is read by default. Passing ``hemisphere="south"`` or
+``hemisphere="both"`` will read the southern hemisphere projection or both,
+respectively. Master patterns for all beam energies are read by default. Passing
+``energy_range=(10, 20)`` will read the master patterns with beam energies from
+10 to 20 keV.
+
+.. code-block::
+
+    >>> s = kp.load(
+    ...     "master_patterns.h5",
+    ...     projection="lambert",
+    ...     hemisphere="both",
+    ...     energy_range=(10, 20)
+    ... )
+    >>> s
+    <EBSDMasterPattern, title: , dimensions: (2, 11|1001, 1001)>
+
+Master patterns can be written to HDF5 files using HyperSpy's HDF5 specification
+as :ref:`explained above <save-patterns>`.
+
+See [Jackson2019]_ for a hands-on tutorial explaining how to simulate these
+patterns with EMsoft, and [Callahan2013]_ for details of the underlying theory.
 
 .. _from-kikuchipy-into-other-software:
 

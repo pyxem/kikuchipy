@@ -2,12 +2,13 @@
 Visualizing patterns
 ====================
 
-The :class:`~kikuchipy.signals.ebsd.EBSD` object has a powerful and versatile
-:meth:`~hyperspy.signal.BaseSignal.plot` method provided by HyperSpy, and its
-uses are greatly detailed in HyperSpy's `visualisation user guide
+The :class:`~kikuchipy.signals.ebsd.EBSD` and
+:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` object has a
+powerful and versatile :meth:`~hyperspy.signal.BaseSignal.plot` method provided
+by HyperSpy. Its uses are greatly detailed in HyperSpy's `visualisation user
+guide
 <http://hyperspy.org/hyperspy-doc/current/user_guide/visualisation.html>`_. This
-section details example uses specific to
-:class:`~kikuchipy.signals.ebsd.EBSD` objects.
+section details example uses specific to EBSD and EBSDMasterPattern objects.
 
 .. note::
 
@@ -35,7 +36,7 @@ corresponding to the sum of all detector intensities within that pattern:
     :width: 100%
 
     Example of a standard navigator map (right), and the detector (left). This
-    is the standard view when calling ``s.plot()``.
+    is the standard view when calling ``s.plot()`` for EBSD objects.
 
 However, any :class:`~hyperspy.signal.BaseSignal` object with a
 two-dimensional ``signal_shape`` corresponding to the scan ``navigation_shape``
@@ -162,3 +163,38 @@ as a visual inspection of the indexing results:
     Plotting of experimental and simulated patterns side by side for visual
     inspection, using an :ref:`orientation map as navigator
     <fig-orientation-map-navigator>`.
+
+.. _plot-master-pattern:
+
+Plot master patterns
+====================
+
+:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` objects can
+be navigated along their energy axis and/or the their northern/southern
+hemisphere:
+
+.. code-block:: python
+
+    >>> s
+    <EBSDMasterPattern, title: , dimensions: (2, 11|1001, 1001)>
+    >>> s.axes_manager
+    <Axes manager, axes: (11, 2|1001, 1001)>
+                Name |   size |  index |  offset |   scale |  units
+    ================ | ====== | ====== | ======= | ======= | ======
+              energy |     11 |      9 |      10 |       1 |    keV
+                   y |      2 |      0 |       0 |       1 | hemisphere
+    ---------------- | ------ | ------ | ------- | ------- | ------
+               width |   1001 |        |  -5e+02 |       1 |     px
+              height |   1001 |        |  -5e+02 |       1 |     px
+    >>> s.plot()
+
+.. _fig-master-pattern-plot:
+
+.. figure:: _static/image/visualizing_patterns/master_pattern_plot.png
+    :align: center
+    :width: 450
+
+    A spherical projection of the northern hemisphere at 19 keV for Ni (top)
+    from an EMsoft simulation. A navigator (bottom) for EBSDMasterPattern
+    objects, with the beam energy along the horizontal axis and the northern and
+    southern hemispheres along the vertical axis, is also shown.

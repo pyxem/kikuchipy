@@ -114,7 +114,7 @@ setup(
         "numpy >= 1.18",
         "numba >= 0.48",
         "pyxem >= 0.10",
-        "scikit-image >= 0.16",
+        "scikit-image >= 0.16, < 0.17",
         "scikit-learn >= 0.22",
         "scipy >= 1.4",
     ],

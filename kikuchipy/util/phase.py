@@ -22,12 +22,13 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 import numpy as np
 
 
-def _phase_metadata():
+def _phase_metadata() -> dict:
     """Return a dictionary with a default kikuchipy phase structure.
 
     Returns
     -------
     pd : dict
+
     """
 
     pd = {
@@ -48,27 +49,31 @@ def _phase_metadata():
         "setting": 0,
         "space_group": 0,
         "symmetry": 0,
+        "source": "",
     }
     return pd
 
 
-def _update_phase_info(metadata, dictionary, phase_number=1):
+def _update_phase_info(
+    metadata: DictionaryTreeBrowser, dictionary: dict, phase_number: int = 1
+) -> DictionaryTreeBrowser:
     """Update information of phase in metadata, adding it if it doesn't
     already exist.
 
     Parameters
     ----------
-    metadata : DictionaryTreeBrowser
+    metadata
         Metadata to update.
-    dictionary : dict
+    dictionary
         Dictionary with only values to update.
-    phase_number : int, optional
+    phase_number
         Number of phase to update.
 
     Returns
     -------
     metadata : DictionaryTreeBrowser
         Updated metadata.
+
     """
 
     # Check if metadata has phases
