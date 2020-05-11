@@ -11,15 +11,14 @@ details methods to enhance the Kikuchi diffraction pattern and manipulate
 detector intensities in patterns in an :class:`~kikuchipy.signals.ebsd.EBSD`
 object.
 
-Most of the methods operating on :class:`~kikuchipy.signals.ebsd.EBSD` objects
-use functions that operate on the individual patterns (:class:`numpy.ndarray`).
-These single pattern functions are available in the
-:mod:`kikuchipy.util.pattern` module.
+Most of the methods operating on EBSD objects use functions that operate on the
+individual patterns (:class:`numpy.ndarray`). These single pattern functions are
+available in the :mod:`kikuchipy.util.pattern` module.
 
 Almost all methods operate inplace (indicated in their docstrings), meaning it
-overwrites the patterns in the :class:`~kikuchipy.signals.ebsd.EBSD` object. If
-a new object is desired, create a :meth:`~hyperspy.signal.BaseSignal.deepcopy`
-of the original object and perform the operation on this:
+overwrites the patterns in the EBSD object. If a new object is desired, create a
+:meth:`~hyperspy.signal.BaseSignal.deepcopy` of the original object and perform
+the operation on this:
 
 .. code-block::
 

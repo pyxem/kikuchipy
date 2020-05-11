@@ -2,16 +2,20 @@
 Metadata structure
 ==================
 
-The :class:`~kikuchipy.signals.ebsd.EBSD` class stores metadata in the
-``metadata`` attribute provided by HyperSpy. While kikuchipy's metadata
-structure (:py:func:`~kikuchipy.util.io.kikuchipy_metadata`) is based on
-`HyperSpy's metadata structure
+The :class:`~kikuchipy.signals.ebsd.EBSD` and
+:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` classes store
+metadata in the ``metadata`` attribute provided by HyperSpy. While kikuchipy's
+EBSD (:func:`~kikuchipy.util.io.ebsd_metadata`) and EBSDMasterPattern
+(:func:`~kikuchipy.util.io.ebsd_master_pattern_metadata`) metadata structures
+are based on `HyperSpy's metadata structure
 <http://hyperspy.org/hyperspy-doc/current/user_guide/metadata_structure.html>`_,
-it includes the two extra nodes ``Acquisition_instrument.SEM.Detector.EBSD`` and
-``Acquisition_instrument.Sample.Phases``. The following metadata structure is,
-along with the patterns, saved to file when saving an
-:py:class:`~kikuchipy.signals.ebsd.EBSD` object in the :ref:`kikuchipy h5ebsd
-format <h5ebsd-format>`.
+they each include a node ``Acquisition_instrument.Sample.Phases`` to store
+phase information, and ``Acquisition_instrument.SEM.Detector.EBSD`` or
+``Simulation.EBSD_master_pattern``, respectively. The information in these nodes
+are written, along with the patterns, to file when saving an EBSD object in the
+:ref:`kikuchipy h5ebsd format <h5ebsd-format>` or an EBSDMasterPattern object in
+`the HyperSpy HDF5 format
+<http://hyperspy.org/hyperspy-doc/current/user_guide/io.html#hspy-hyperspy-s-hdf5-specification>`_.
 
 ::
 
@@ -81,7 +85,8 @@ format <h5ebsd-format>`.
                 └── smallest_interplanar_spacing [nm]
 
 The utility function :func:`~kikuchipy.util.io.metadata_nodes` returns the
-node strings for the ``SEM`` and ``EBSD`` nodes for convenience.
+node strings for the ``SEM``, ``EBSD`` and ``EBSD_master_pattern`` nodes for
+convenience.
 
 .. note::
 

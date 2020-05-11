@@ -52,7 +52,7 @@ def file_reader(
     **kwargs,
 ) -> List[dict]:
     """Read electron backscatter diffraction master patterns from
-    EMsoft's HDF5 file format.
+    EMsoft's HDF5 file format [Callahan2013]_.
 
     Parameters
     ----------
@@ -75,11 +75,17 @@ def file_reader(
     kwargs :
         Keyword arguments passed to h5py.File.
 
-
     Returns
     -------
     signal_dict_list: list of dicts
         Data, axes, metadata and original metadata.
+
+    References
+    ----------
+    .. [Callahan2013] P. G. Callahan and M. De Graef, "Dynamical\
+        Electron Backscatter Diffraction Patterns. Part I: Pattern\
+        Simulations," *Microscopy and Microanalysis* **19** (2013), doi:
+        https://doi.org/10.1017/S1431927613001840.
 
     """
 
