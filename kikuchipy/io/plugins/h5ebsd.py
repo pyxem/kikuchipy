@@ -30,7 +30,7 @@ import numpy as np
 
 from kikuchipy.util.phase import _phase_metadata, _update_phase_info
 from kikuchipy.util.io import (
-    kikuchipy_metadata,
+    ebsd_metadata,
     metadata_nodes,
     _get_input_variable,
 )
@@ -286,9 +286,8 @@ def hdf5group2dict(
             if isinstance(val, np.ndarray) and len(val) == 1:
                 val = val[0]
                 key = key.lstrip()  # EDAX has some leading whitespaces
-            #            if val.dtype.char == "S":
             if isinstance(val, bytes):
-                val = val.decode()
+                val = val.decode("latin-1")
         # Check whether to extract subgroup or write value to dictionary
         if isinstance(val, h5py.Group) and recursive:
             dictionary[key] = {}
@@ -446,7 +445,7 @@ def h5ebsdheader2dicts(
 
     """
 
-    md = kikuchipy_metadata()
+    md = ebsd_metadata()
     title = (
         scan_group.file.filename.split("/")[-1].split(".")[0]
         + " "
@@ -461,7 +460,7 @@ def h5ebsdheader2dicts(
     else:  # kikuchipy
         md, omd, scan_size = kikuchipyheader2dicts(scan_group, md, lazy)
 
-    ebsd_node = metadata_nodes(sem=False)
+    ebsd_node = metadata_nodes("ebsd")
     md.set_item(ebsd_node + ".manufacturer", manufacturer)
     md.set_item(ebsd_node + ".version", version)
 
@@ -498,7 +497,7 @@ def kikuchipyheader2dicts(
     pattern_dset_names = list(manufacturer_pattern_names().values())
 
     omd = DictionaryTreeBrowser()
-    sem_node, ebsd_node = metadata_nodes()
+    sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     md.set_item(
         ebsd_node,
         hdf5group2dict(
@@ -573,7 +572,7 @@ def edaxheader2dicts(
     )
 
     # Populate metadata dictionary
-    sem_node, ebsd_node = metadata_nodes()
+    sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     md.set_item(ebsd_node + ".azimuth_angle", hd["Camera Azimuthal Angle"])
     md.set_item(ebsd_node + ".elevation_angle", hd["Camera Elevation Angle"])
     grid_type = hd["Grid Type"]
@@ -661,7 +660,7 @@ def brukerheader2dicts(
     )
 
     # Populate metadata dictionary
-    sem_node, ebsd_node = metadata_nodes()
+    sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     md.set_item(ebsd_node + ".elevation_angle", hd["CameraTilt"])
     grid_type = hd["Grid Type"]
     if grid_type == "isometric":
@@ -790,7 +789,7 @@ def file_writer(
     nav_indices = signal.axes_manager.navigation_indices_in_array
     sig_indices = signal.axes_manager.signal_indices_in_array
     md = signal.metadata.deepcopy()
-    sem_node, ebsd_node = metadata_nodes()
+    sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     md.set_item(ebsd_node + ".pattern_width", sx)
     md.set_item(ebsd_node + ".pattern_height", sy)
     md.set_item(ebsd_node + ".n_columns", nx)

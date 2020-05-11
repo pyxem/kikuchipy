@@ -17,7 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from kikuchipy.signals.ebsd import EBSD, LazyEBSD
-from kikuchipy.signals.ebsd_masterpattern import (
+from kikuchipy.signals.ebsd_master_pattern import (
     EBSDMasterPattern,
     LazyEBSDMasterPattern,
 )

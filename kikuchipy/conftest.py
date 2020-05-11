@@ -59,13 +59,14 @@ def dummy_background():
     return np.array([5, 4, 5, 4, 3, 4, 4, 4, 3], dtype=np.uint8).reshape((3, 3))
 
 
-@pytest.fixture()
-def save_path_hdf5():
+@pytest.fixture(params=["h5"])
+def save_path_hdf5(request):
     """Temporary file in a temporary directory for use when tests need
     to write, and sometimes read again, a signal to, and from, a file.
     """
 
+    ext = request.param
     with tempfile.TemporaryDirectory() as tmp:
-        file_path = os.path.join(tmp, "patterns_temp.h5")
+        file_path = os.path.join(tmp, "patterns_temp." + ext)
         yield file_path
         gc.collect()

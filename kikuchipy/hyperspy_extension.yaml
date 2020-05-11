@@ -39,10 +39,10 @@ signals:
     signal_dimension: 2
     dtype: real
     lazy: False
-    module: kikuchipy.signals.ebsd_masterpattern
+    module: kikuchipy.signals.ebsd_master_pattern
   LazyEBSDMasterPattern:
     signal_type: LazyEBSDMasterPattern
     signal_dimension: 2
     dtype: real
     lazy: True
-    module: kikuchipy.signals.ebsd_masterpattern
+    module: kikuchipy.signals.ebsd_master_pattern

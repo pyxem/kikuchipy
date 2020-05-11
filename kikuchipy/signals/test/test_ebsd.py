@@ -17,6 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+from numbers import Number
 
 import dask.array as da
 import hyperspy.api as hs
@@ -49,8 +50,8 @@ def assert_dictionary(input_dict, output_dict):
             ):
                 output_dict[key] = np.array(output_dict[key])
                 input_dict[key] = np.array(input_dict[key])
-            if isinstance(output_dict[key], np.ndarray):
-                assert input_dict[key].all() == output_dict[key].all()
+            if isinstance(output_dict[key], (np.ndarray, Number)):
+                assert np.allclose(input_dict[key], output_dict[key])
             else:
                 assert input_dict[key] == output_dict[key]
 
@@ -93,8 +94,8 @@ class TestEBSD:
         assert array1.shape == s1.axes_manager.shape
 
         # SEM metadata
-        kp_md = kp.util.io.kikuchipy_metadata()
-        sem_node = kp.util.io.metadata_nodes(ebsd=False)
+        kp_md = kp.util.io.ebsd_metadata()
+        sem_node = kp.util.io.metadata_nodes("sem")
         assert_dictionary(
             kp_md.get_item(sem_node), s1.metadata.get_item(sem_node)
         )
@@ -139,7 +140,7 @@ class TestEBSD:
             "magnification": 500,
         }
         dummy_signal.set_experimental_parameters(**p)
-        ebsd_node = kp.util.io.metadata_nodes(sem=False)
+        ebsd_node = kp.util.io.metadata_nodes("ebsd")
         md_dict = dummy_signal.metadata.get_item(ebsd_node).as_dictionary()
         assert_dictionary(p, md_dict)
 
@@ -162,6 +163,7 @@ class TestEBSD:
             "point_group": "432",
             "space_group": 225,
             "setting": 1,
+            "source": "Peng",
             "symmetry": 43,
         }
         dummy_signal.set_phase_parameters(**p)
@@ -297,7 +299,7 @@ class TestRemoveStaticBackgroundEBSD:
         static background pattern to `remove_static_background().`
         """
 
-        ebsd_node = kp.util.io.metadata_nodes(sem=False)
+        ebsd_node = kp.util.io.metadata_nodes("ebsd")
         dummy_signal.metadata.set_item(
             ebsd_node + ".static_background", static_bg
         )
@@ -775,7 +777,7 @@ class TestAverageNeighbourPatternsEBSD:
 
 class TestRebin:
     def test_rebin(self, dummy_signal):
-        ebsd_node = kp.util.io.metadata_nodes(sem=False)
+        ebsd_node = kp.util.io.metadata_nodes("ebsd")
 
         # Passing new_shape, only scaling in signal space
         new_shape = (3, 3, 2, 1)
