@@ -8,7 +8,7 @@ dist: bionic
 env:
   global:
     - DEPS="dask[array] hyperspy h5py matplotlib numpy pyxem scikit-image scikit-learn scipy"
-    - TEST_DEPS="pytest pytest-cov coveralls coverage" # ==4.5.4
+    - TEST_DEPS="pytest pytest-cov coveralls coverage"
     - DEPLOY=false
 
 jobs:
