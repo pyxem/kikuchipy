@@ -810,17 +810,30 @@ class TestRebin:
 
 
 class TestVirtualBackscatterElectronImaging:
-    def test_virtual_backscatter_electron_imaging(self, dummy_signal):
-        roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
-        dummy_signal.virtual_backscatter_electron_imaging(roi)
+    @pytest.mark.parametrize("out_signal_axes", [None, (0, 1), ("x", "y")])
+    def test_virtual_backscatter_electron_imaging(
+        self, dummy_signal, out_signal_axes
+    ):
+        dummy_signal.axes_manager.navigation_axes[0].name = "x"
+        dummy_signal.axes_manager.navigation_axes[1].name = "y"
 
-    def test_virtual_image(self, dummy_signal):
+        roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
+        dummy_signal.virtual_backscatter_electron_imaging(
+            roi, out_signal_axes=out_signal_axes
+        )
+
+    def test_get_virtual_image(self, dummy_signal):
         roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
         virtual_image_signal = dummy_signal.get_virtual_image(roi)
         assert (
             virtual_image_signal.data.shape
             == dummy_signal.axes_manager.navigation_shape
         )
+
+    def test_virtual_backscatter_electron_imaging_raises(self, dummy_signal):
+        roi = hs.roi.RectangularROI(0, 0, 1, 1)
+        with pytest.raises(ValueError):
+            _ = dummy_signal.get_virtual_image(roi, out_signal_axes=(0, 1, 2))
 
 
 class TestDecomposition:

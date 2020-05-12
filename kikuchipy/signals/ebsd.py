@@ -22,7 +22,7 @@ import gc
 import numbers
 import os
 import sys
-from typing import Union, List, Optional, Tuple
+from typing import Union, List, Optional, Tuple, Iterable
 import warnings
 
 import dask.array as da
@@ -32,10 +32,10 @@ from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
 from hyperspy.misc.utils import DictionaryTreeBrowser
 from hyperspy.roi import BaseInteractiveROI
+from hyperspy.api import interactive
 from hyperspy.exceptions import VisibleDeprecationWarning
 from h5py import File
 import numpy as np
-from pyxem.signals.diffraction2d import Diffraction2D
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
@@ -54,7 +54,6 @@ class EBSD(Signal2D):
 
     See the docstring of :class:`hyperspy.signal.BaseSignal` for a list
     of attributes.
-
     """
 
     _signal_type = "EBSD"
@@ -64,9 +63,7 @@ class EBSD(Signal2D):
     def __init__(self, *args, **kwargs):
         """Create an :class:`~kikuchipy.signals.EBSD` object from a
         :class:`hyperspy.signals.Signal2D` or a :class:`numpy.ndarray`.
-
         """
-
         Signal2D.__init__(self, *args, **kwargs)
 
         # Update metadata if object is initialised from numpy array
@@ -165,9 +162,7 @@ class EBSD(Signal2D):
         >>> s.set_experimental_parameters(xpc=0.50726)
         >>> s.metadata.get_item(ebsd_node + '.xpc')
         0.50726
-
         """
-
         md = self.metadata
         sem_node, ebsd_node = kp.util.io.metadata_nodes(["sem", "ebsd"])
         kp.util.general._write_parameters_to_dictionary(
@@ -277,9 +272,7 @@ class EBSD(Signal2D):
         ├── coordinates = array([0., 0., 0.])
         ├── debye_waller_factor = 0.0035
         └── site_occupation = 1
-
         """
-
         # Ensure atom coordinates are numpy arrays
         if atom_coordinates is not None:
             for phase, val in atom_coordinates.items():
@@ -328,9 +321,7 @@ class EBSD(Signal2D):
         >>> s.set_scan_calibration(step_x=1.5)  # Microns
         >>> s.axes_manager['x'].scale
         1.5
-
         """
-
         x, y = self.axes_manager.navigation_axes
         x.name, y.name = ("x", "y")
         x.scale, y.scale = (step_x, step_y)
@@ -356,9 +347,7 @@ class EBSD(Signal2D):
         >>> s.set_detector_calibration(delta=70.)
         >>> s.axes_manager['dx'].scale
         70.0
-
         """
-
         centre = delta * np.array(self.axes_manager.signal_shape) / 2
         dx, dy = self.axes_manager.signal_axes
         dx.units, dy.units = ["\u03BC" + "m"] * 2
@@ -433,9 +422,7 @@ class EBSD(Signal2D):
 
         If the metadata has no background pattern, this must be passed
         in the `static_bg` parameter as a numpy or dask array.
-
         """
-
         dtype_out = self.data.dtype.type
 
         # Get background pattern
@@ -568,9 +555,7 @@ class EBSD(Signal2D):
         ...     truncate=4.0,  # Default
         ...     std=5,
         ... )
-
         """
-
         # Create a dask array of signal patterns and do the processing on this
         dtype = np.float32
         dask_array = kp.util.dask._get_dask_array(signal=self, dtype=dtype)
@@ -662,9 +647,7 @@ class EBSD(Signal2D):
         -------
         background_signal : EBSD or LazyEBSD
             Signal with the large scale variations across the detector.
-
         """
-
         if std is None:
             std = self.axes_manager.signal_shape[-1] / 8
 
@@ -802,9 +785,7 @@ class EBSD(Signal2D):
         Here, the darkest and brighets within the 1% percentile are set
         to the ends of the data type range, e.g. 0 and 255 respectively
         for patterns of ``uint8`` data type.
-
         """
-
         # Determine min./max. intensity of input pattern to rescale to
         if in_range is not None and percentiles is not None:
             raise ValueError(
@@ -905,9 +886,7 @@ class EBSD(Signal2D):
           occur.
         * The default window size might not fit all image sizes, so it
           may be necessary to search for the optimal window size.
-
         """
-
         # Determine window size (shape of contextual region)
         sig_shape = self.axes_manager.signal_shape
         if kernel_size is None:
@@ -970,9 +949,7 @@ class EBSD(Signal2D):
         See Also
         --------
         kikuchipy.util.pattern.get_image_quality
-
         """
-
         # Data set to operate on
         dtype_out = np.float32
         dask_array = kp.util.dask._get_dask_array(self, dtype=dtype_out)
@@ -1049,9 +1026,7 @@ class EBSD(Signal2D):
         See Also
         --------
         kikuchipy.util.window.Window
-
         """
-
         dtype_out = self.data.dtype
 
         dtype = np.float32
@@ -1134,9 +1109,7 @@ class EBSD(Signal2D):
         >>> s.normalize_intensity()
         >>> np.mean(s.data)
         2.6373216e-08
-
         """
-
         if dtype_out is None:
             dtype_out = self.data.dtype
 
@@ -1250,9 +1223,7 @@ class EBSD(Signal2D):
 
         >>> figure, image, colorbar = w.plot()
         >>> figure.savefig('averaging_window.png')
-
         """
-
         if isinstance(window, kp.util.Window) and window.is_valid():
             averaging_window = copy.copy(window)
         else:
@@ -1347,22 +1318,29 @@ class EBSD(Signal2D):
             self.data = averaged_patterns
 
     def virtual_backscatter_electron_imaging(
-        self, roi: BaseInteractiveROI, **kwargs,
+        self,
+        roi: BaseInteractiveROI,
+        out_signal_axes: Union[None, Iterable[int], Iterable[str]] = None,
+        **kwargs,
     ):
         """Plot an interactive virtual backscatter electron (VBSE)
         image formed from intensities within a specified and adjustable
         region of interest (ROI) on the detector.
 
         Adapted from
-        :meth:`pyxem.signals.diffraction2d.Diffraction2D.plot_interactive_virtual_image`.
+        :meth:`pyxem.signals.common_diffraction.CommonDiffraction.plot_integrated_intensity`.
 
         Parameters
         ----------
         roi
             Any interactive ROI detailed in HyperSpy.
+        out_signal_axes
+            Which navigation axes to use as signal axes in the virtual
+            image. If None (default), the first two navigation axes are
+            used.
         **kwargs:
-            Keyword arguments to be passed to
-            :meth:`hyperspy.signal.BaseSignal.plot`.
+            Keyword arguments passed to the `plot` method of the virtual
+            image.
 
         Examples
         --------
@@ -1371,21 +1349,70 @@ class EBSD(Signal2D):
         ...     left=0, right=5, top=0, bottom=5)
         >>> s.virtual_backscatter_electron_imaging(roi)
 
+        See Also
+        --------
+        get_virtual_image
         """
+        # Plot signal if necessary
+        if self._plot is None or not self._plot.is_active:
+            self.plot()
 
-        return Diffraction2D.plot_interactive_virtual_image(self, roi, **kwargs)
+        # Get the sliced signal from the ROI
+        sliced_signal = roi.interactive(
+            self, axes=self.axes_manager.signal_axes
+        )
 
-    def get_virtual_image(self, roi: BaseInteractiveROI) -> Signal2D:
+        # Create an output signal for the virtual backscatter electron
+        # calculation
+        out = self._get_sum_signal(self, out_signal_axes)
+        out.metadata.General.title = "Integrated backscatter electron intensity"
+
+        # Create the interactive signal
+        interactive(
+            f=sliced_signal.sum,
+            axis=sliced_signal.axes_manager.signal_axes,
+            event=roi.events.changed,
+            recompute_out_event=None,
+            out=out,
+        )
+
+        # Plot the result
+        out.plot(**kwargs)
+
+    @staticmethod
+    def _get_sum_signal(signal, out_signal_axes=None):
+        out = signal.sum(signal.axes_manager.signal_axes)
+        if out_signal_axes is None:
+            out_signal_axes = list(
+                np.arange(min(signal.axes_manager.navigation_dimension, 2))
+            )
+        if len(out_signal_axes) > signal.axes_manager.navigation_dimension:
+            raise ValueError(
+                "The length of 'out_signal_axes' cannot be longer than the "
+                "navigation dimension of the signal."
+            )
+        out.set_signal_type("")
+        return out.transpose(out_signal_axes)
+
+    def get_virtual_image(
+        self,
+        roi: BaseInteractiveROI,
+        out_signal_axes: Union[None, Iterable[int], Iterable[str]] = None,
+    ) -> Signal2D:
         """Get a virtual backscatter electron (VBSE) image formed from
         intensities within a region of interest (ROI) on the detector.
 
         Adapted from
-        :meth:`pyxem.signals.diffraction2d.Diffraction2D.get_virtual_image`.
+        :meth:`pyxem.signals.common_diffraction.CommonDiffraction.get_integrated_intensity`.
 
         Parameters
         ----------
         roi
             Any interactive ROI detailed in HyperSpy.
+        out_signal_axes
+            Which navigation axes to use as signal axes in the virtual
+            image. If None (default), the first two navigation axes are
+            used.
 
         Returns
         -------
@@ -1400,9 +1427,14 @@ class EBSD(Signal2D):
         ...     left=0, right=5, top=0, bottom=5)
         >>> vbse_image = s.get_virtual_image(roi)
 
+        See Also
+        --------
+        virtual_backscatter_electron_imaging
         """
-
-        return Diffraction2D.get_virtual_image(self, roi)
+        vbse = roi(self, axes=self.axes_manager.signal_axes)
+        vbse_sum = self._get_sum_signal(vbse, out_signal_axes)
+        vbse_sum.metadata.General.title = "Virtual backscatter electron image"
+        return vbse_sum
 
     def save(
         self,
@@ -1450,9 +1482,7 @@ class EBSD(Signal2D):
         --------
         kikuchipy.io.plugins.h5ebsd.file_writer,\
         kikuchipy.io.plugins.nordif.file_writer
-
         """
-
         if filename is None:
             if self.tmp_parameters.has_item(
                 "filename"
@@ -1504,9 +1534,7 @@ class EBSD(Signal2D):
         Returns
         -------
         s_model : EBSD or LazyEBSD
-
         """
-
         # Keep original results to revert back after updating
         factors_orig = self.learning_results.factors.copy()
         loadings_orig = self.learning_results.loadings.copy()
@@ -1575,7 +1603,6 @@ class LazyEBSD(EBSD, LazySignal2D):
     guide.
 
     See docstring of :class:`EBSD` for attributes and methods.
-
     """
 
     _lazy = True
@@ -1622,9 +1649,7 @@ class LazyEBSD(EBSD, LazySignal2D):
         large matrices. Here, instead, learning results are written to
         file, read into dask arrays and multiplied using
         :func:`dask.array.matmul`, out of core.
-
         """
-
         # Change data type, keep desired components and rechunk if lazy
         factors, loadings = kp.util.decomposition._update_learning_results(
             self.learning_results, components=components, dtype_out=dtype_learn
