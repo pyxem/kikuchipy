@@ -108,7 +108,7 @@ setup(
     extras_require=extra_feature_requirements,
     install_requires=[
         "dask[array] >= 2.14",
-        "hyperspy >= 1.5.2",
+        "hyperspy[learning] >= 1.5.2",
         "h5py >= 2.10",
         "matplotlib >= 3.2",
         "numpy >= 1.18",
