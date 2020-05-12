@@ -95,7 +95,7 @@ html_favicon = f"_static/icon/{shape}/{cmap}_favicon.png"
 
 # Read the Docs theme options
 html_theme_options = {
-    "prev_next_buttons_location": None,
+    "prev_next_buttons_location": "bottom",
 }
 
 
