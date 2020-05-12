@@ -1,31 +1,19 @@
-<!-- Requirements -->
-<!-- * Read the contributor guide: https://kikuchipy.readthedocs.io/en/latest/contributing.html -->
-<!-- * Fill out the template. It helps the review process and is useful to summarise the PR. -->
-<!-- * This template can be updated during the progression of the PR to summarise its status -->
+## Description
 
-#### Description
-<!-- What does this pull request (PR) do? Why is it necessary? -->
-<!-- A few sentences and/or a bullet list. -->
+<!-- If this is a bug-fix or enhancement, state the issue # it closes -->
+<!-- If this is a new feature, reference what paper it implements. -->
 
-#### Type of change
-<!-- Please delete options that are not relevant. -->
-- [ ] Bug-fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] This change requires a documentation update
+## Checklist
 
-#### Progress
-- [ ] Change(s) implemented (can be split into several points)
-- [ ] Docstrings updated (if appropriate)
-- [ ] Code is commented, particularly in hard-to-understand areas (if appropriate)
-- [ ] Documentation and/or user guide updated (if appropriate)
-- [ ] Tests have been written
-- [ ] Ready for review!
+<!-- It's fine to submit PRs which are a work in progress! -->
+<!-- But before they are merged, all PRs should provide: -->
+- [ ] [Docstrings for all functions](https://github.com/numpy/numpy/blob/master/doc/example.py)
+- [ ] Unit tests with pytest for all lines
+- [ ] Clean style in [as per black](https://black.readthedocs.io/en/stable/the_black_code_style.html)
 
-#### How has this been tested?
-<!-- Please describe the tests that you ran to verify your changes. -->
-- [ ] example: the test suite for my feature covers cases x, y, and z
-- [ ] example: all tests pass with my change
+<!-- For detailed information on these and other aspects see -->
+<!-- the kikuchipy contribution guidelines. -->
+<!-- https://kikuchipy.readthedocs.io/en/latest/contributing.html -->
 
 #### Minimal example of the bug fix or new feature
 <!-- Note that this example can be useful to update the user guide with! -->
@@ -37,6 +25,11 @@
 >>> # Your new feature...
 ```
 
-#### References
-<!-- What resources, documentation, and guides were used in the creation of this PR? -->
-<!-- If this is a bug-fix or otherwise resolves an issue, reference it here with "closes #(issue)" -->
+## For reviewers
+
+<!-- Don't remove the checklist below. -->
+- [ ] Check that the PR title is short, concise, and will make sense 1 year
+  later.
+- [ ] Check that new functions are imported in corresponding `__init__.py`.
+- [ ] Check that new features, API changes, and deprecations are mentioned in
+      the unreleased section in `doc/changelog.rst`.
