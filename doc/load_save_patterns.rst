@@ -236,7 +236,7 @@ Currently, kikuchipy has readers and writers for the following file formats:
     +---------------------------------+------+-------+
     | NORDIF binary                   | Yes  | Yes   |
     +---------------------------------+------+-------+
-    | EMsoft EBSD master pattern HDF5 | Yes  | Yes   |
+    | EMsoft EBSD master pattern HDF5 | Yes  | No    |
     +---------------------------------+------+-------+
 
 .. note::
