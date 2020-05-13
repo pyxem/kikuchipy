@@ -5,7 +5,7 @@ Virtual backscatter electron imaging
 Angle resolved backscatter electron (BSE) imaging can be performed interactively
 with the method
 :meth:`~kikuchipy.signals.ebsd.EBSD.virtual_backscatter_electron_imaging`,
-adopted from `pyXem <http://pyxem.org/>`_, by integrating the intensities within
+adopted from `pyxem <http://pyxem.org/>`_, by integrating the intensities within
 a part, e.g. a (10 x 10) pixel rectangular region of interest (ROI), of the stack
 of EBSD patterns:
 
@@ -23,9 +23,9 @@ of EBSD patterns:
 
 .. figure:: _static/image/virtual_backscatter_electron_imaging/virtual_backscatter_electron_imaging.gif
     :align: center
-    :width: 100%
+    :width: 800
 
-    Interactive virtual backscatter electron imaging with.
+    Interactive virtual backscatter electron imaging.
 
 Note that the position of the ROI on the detector is updated during the
 interactive plotting. See `HyperSpy's ROI user guide
@@ -34,7 +34,7 @@ for more detailed use of these.
 
 The virtual image, created from integrating the intensities within the ROI, can
 then be written to an image file using
-:py:meth:`~kikuchipy.signals.ebsd.EBSD.get_virtual_image`:
+:meth:`~kikuchipy.signals.ebsd.EBSD.get_virtual_image`:
 
 .. code-block:: python
 

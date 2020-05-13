@@ -79,7 +79,10 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
-        "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+        (
+            "License :: OSI Approved :: GNU General Public License v3 or later "
+            "(GPLv3+)"
+        ),
         "Natural Language :: English",
         "Operating System :: OS Independent",
         "Topic :: Scientific/Engineering",
@@ -108,14 +111,12 @@ setup(
     extras_require=extra_feature_requirements,
     install_requires=[
         "dask[array] >= 2.14",
-        "hyperspy >= 1.5.2",
+        "hyperspy[learning] >= 1.5.2",
         "h5py >= 2.10",
         "matplotlib >= 3.2",
         "numpy >= 1.18",
         "numba >= 0.48",
-        "pyxem >= 0.10",
         "scikit-image >= 0.16, < 0.17",
-        "scikit-learn >= 0.22",
         "scipy >= 1.4",
     ],
     entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},

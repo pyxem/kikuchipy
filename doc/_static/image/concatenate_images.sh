@@ -25,6 +25,7 @@ convert ${PATPROC}/fft_filter_laplacian_correlate.png ${PATPROC}/fft_filter_lapl
 convert ${PATPROC}/pattern_dynamic.jpg ${CHANGES}/pattern_cropped.jpg +append ${CHANGES}/change_pattern_size.jpg
 
 # Virtual image
+#
 convert ${VIS}/vbse_navigator.jpg -resize 860x581 ${VIS}/vbse_navigator_rescaled.jpg
 convert ${VIS}/vbse_navigator_rescaled.jpg ${VIS}/pattern_roi.jpg -gravity center +append ${VIS}/roi_vbse_navigator.jpg
 

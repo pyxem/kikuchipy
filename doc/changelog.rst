@@ -54,6 +54,12 @@ Changed
 - Dynamic background correction can be done faster due to Gaussian blurring in
   the frequency domain to get the dynamic background to remove.
 
+Removed
+-------
+- Explicit dependency on scikit-learn (it is imported via HyperSpy).
+- Dependency on pyxem. Their virtual imaging methods are reimplemented here---a
+  big thank you to the pyxem/HyperSpy team!
+
 Fixed
 -----
 - RtD builds documentation with Python 3.8 (fixed problem of missing .egg
