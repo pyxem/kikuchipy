@@ -16,13 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""
-EBSD pattern chunk processing.
-
-This module includes functions for operating on :class:`numpy.ndarray`
-or :class:`dask.array.Array` chunks of EBSD patterns.
-"""
-
 from typing import Union, Optional, Tuple, List
 
 import dask.array as da
@@ -31,9 +24,9 @@ from scipy.ndimage import correlate, gaussian_filter
 from skimage.exposure import equalize_adapthist
 from skimage.util.dtype import dtype_range
 
-import kikuchipy.util.pattern as pattern_processing
-import kikuchipy.util.barnes_fftfilter as barnes
-from kikuchipy.util.window import Window
+import kikuchipy.pattern._pattern as pattern_processing
+import kikuchipy.filters.fft_barnes as barnes
+from kikuchipy.filters.window import Window
 
 
 def rescale_intensity(
@@ -62,7 +55,7 @@ def rescale_intensity(
     out_range
         Min./max. intensity of output patterns. If None (default),
         `out_range` is set to `dtype_out` min./max according to
-        `skimage.util.dtype.dtype_range`.
+        `skimage._util.dtype.dtype_range`.
     dtype_out
         Data type of rescaled patterns. If None (default), it is set to
         the same data type as the input patterns.
@@ -75,9 +68,7 @@ def rescale_intensity(
     -------
     rescaled_patterns : numpy.ndarray
         Rescaled patterns.
-
     """
-
     rescaled_patterns = np.empty_like(patterns, dtype=dtype_out)
 
     for nav_idx in np.ndindex(patterns.shape[:-2]):
@@ -135,7 +126,7 @@ def remove_static_background(
     out_range
         Min./max. intensity values of the output patterns. If None
         (default), `out_range` is set to `dtype_out` min./max according
-        to `skimage.util.dtype.dtype_range`.
+        to `skimage._util.dtype.dtype_range`.
     dtype_out
         Data type of corrected patterns. If None (default), it is set to
         input patterns' data type.
@@ -144,9 +135,7 @@ def remove_static_background(
     -------
     corrected_patterns : numpy.ndarray
         Patterns with the static background removed.
-
     """
-
     if dtype_out is None:
         dtype_out = patterns.dtype.type
 
@@ -198,7 +187,7 @@ def get_dynamic_background(
         Function where a Gaussian convolution filter is applied, in the
         frequency or spatial domain. Either
         :func:`scipy.ndimage.gaussian_filter` or
-        :func:`kikuchipy.util.barnes_fftfilter.fft_filter`.
+        :func:`kikuchipy._util.barnes_fftfilter.fft_filter`.
     dtype_out
         Data type of background patterns. If None (default), it is set
         to input patterns' data type.
@@ -210,9 +199,7 @@ def get_dynamic_background(
     -------
     background : numpy.ndarray
         Large scale variations in the input EBSD patterns.
-
     """
-
     if dtype_out is None:
         dtype_out = patterns.dtype.type
 
@@ -248,14 +235,14 @@ def remove_dynamic_background(
         Function where a Gaussian convolution filter is applied, in the
         frequency or spatial domain. Either
         :func:`scipy.ndimage.gaussian_filter` or
-        :func:`kikuchipy.util.barnes_fftfilter.fft_filter`.
+        :func:`kikuchipy._util.barnes_fftfilter.fft_filter`.
     operation_func
         Function to subtract or divide by the dynamic background
         pattern.
     out_range
         Min./max. intensity values of the output patterns. If None
         (default), `out_range` is set to `dtype_out` min./max according
-        to `skimage.util.dtype.dtype_range`.
+        to `skimage._util.dtype.dtype_range`.
     dtype_out
         Data type of corrected patterns. If None (default), it is set to
         input patterns' data type.
@@ -271,10 +258,8 @@ def remove_dynamic_background(
     See Also
     --------
     kikuchipy.signals.ebsd.EBSD.remove_dynamic_background
-    kikuchipy.util.pattern.remove_dynamic_background
-
+    kikuchipy._util.pattern.remove_dynamic_background
     """
-
     if dtype_out is None:
         dtype_out = patterns.dtype.type
 
@@ -329,9 +314,7 @@ def adaptive_histogram_equalization(
     -------
     equalized_patterns : numpy.ndarray
         Patterns with enhanced contrast.
-
     """
-
     dtype_in = patterns.dtype.type
 
     equalized_patterns = np.empty_like(patterns)
@@ -373,7 +356,7 @@ def get_image_quality(
         Integer 2D array with values corresponding to the weight given
         each FFT spectrum frequency component. If None (default), these
         are calculated from
-        :func:`~kikuchipy.util.pattern.fft_frequency_vectors`.
+        :func:`~kikuchipy._util.pattern.fft_frequency_vectors`.
     inertia_max
         Maximum inertia of the FFT power spectrum of the image. If None
         (default), this is calculated from the `frequency_vectors`.
@@ -386,9 +369,7 @@ def get_image_quality(
     -------
     image_quality_chunk : numpy.ndarray
         Image quality of patterns.
-
     """
-
     dtype_out = np.float64
 
     image_quality_chunk = np.empty(patterns.shape[:-2], dtype=dtype_out)
@@ -450,9 +431,7 @@ def fft_filter(
     -------
     filtered_patterns : numpy.ndarray
         Filtered EBSD patterns.
-
     """
-
     if dtype_out is None:
         dtype_out = patterns.dtype.type
 
@@ -504,9 +483,7 @@ def normalize_intensity(
     Data type should always be changed to floating point, e.g.
     ``np.float32`` with :meth:`numpy.ndarray.astype`, before normalizing
     the intensities.
-
     """
-
     if dtype_out is None:
         dtype_out = patterns.dtype.type
 
@@ -548,9 +525,7 @@ def average_neighbour_patterns(
     -------
     averaged_patterns : numpy.ndarray
         Averaged patterns.
-
     """
-
     if dtype_out is None:
         dtype_out = patterns.dtype.type
 

@@ -18,13 +18,21 @@
 
 import os
 
-import matplotlib as mpl
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.image import AxesImage
+from matplotlib.colorbar import Colorbar
+from matplotlib.pyplot import imread
 import numpy as np
 import pytest
 from scipy.signal.windows import gaussian, general_gaussian
 
-import kikuchipy as kp
+from kikuchipy.filters.window import (
+    highpass_fft_filter,
+    lowpass_fft_filter,
+    modified_hann,
+    distance_to_origin,
+    Window,
+)
 
 # Window data used to check results in tests
 CIRCULAR33 = np.array([0, 1, 0, 1, 1, 1, 0, 1, 0]).reshape(3, 3)
@@ -71,9 +79,9 @@ class TestWindow:
         answer_circular,
     ):
         if kwargs is None:
-            w = kp.util.Window(window=window, shape=shape)
+            w = Window(window=window, shape=shape)
         else:
-            w = kp.util.Window(window=window, shape=shape, kwargs=kwargs)
+            w = Window(window=window, shape=shape, kwargs=kwargs)
 
         assert w.is_valid()
         assert w.name == window_type
@@ -101,47 +109,47 @@ class TestWindow:
     )
     def test_init_raises_errors(self, window, shape, error_type, match):
         with pytest.raises(error_type, match=match):
-            kp.util.Window(window=window, shape=shape)
+            _ = Window(window=window, shape=shape)
 
     @pytest.mark.parametrize("Nx", [3, 5, 7, 8])
     def test_init_passing_nx(self, Nx):
-        w = kp.util.Window(Nx=Nx)
+        w = Window(Nx=Nx)
         assert w.shape == (Nx,)
 
     def test_init_from_array(self):
         a = np.arange(5)
-        w = kp.util.Window(a)
+        w = Window(a)
 
-        assert isinstance(w, kp.util.Window)
+        assert isinstance(w, Window)
         assert w.name == "custom"
         assert w.circular is False
         assert np.sum(a) == np.sum(w)
 
         w2 = w[1:]
-        assert isinstance(w2, kp.util.Window)
+        assert isinstance(w2, Window)
         assert w2.name == "custom"
         assert np.sum(a[1:]) == np.sum(w2)
 
     def test_init_cast_with_view(self):
         a = np.arange(5)
-        w = a.view(kp.util.Window)
-        assert isinstance(w, kp.util.Window)
+        w = a.view(Window)
+        assert isinstance(w, Window)
 
     def test_array_finalize_returns_none(self):
-        w = kp.util.Window()
+        w = Window()
         assert w.__array_finalize__(None) is None
 
     def test_init_general_gaussian(self):
         window = "general_gaussian"
         shape = (5, 5)
-        w = kp.util.Window(window=window, shape=shape, p=0.5, std=2,)
+        w = Window(window=window, shape=shape, p=0.5, std=2,)
         assert w.is_valid()
         np.testing.assert_array_almost_equal(w.data, GENERAL_GAUSS55_PWR05_STD2)
         assert w.name == window
         assert w.shape == shape
 
     def test_representation(self):
-        w = kp.util.Window()
+        w = Window()
         object_type = str(type(w)).strip(">'").split(".")[-1]
         assert w.__repr__() == (
             f"{object_type} {w.shape} {w.name}\n"
@@ -153,7 +161,7 @@ class TestWindow:
 
         # Change one attribute at a time and check whether the window is valid
         for i in range(len(change_attribute)):
-            w = kp.util.Window()
+            w = Window()
 
             valid_window = True
             if sum(change_attribute[:3]) == 1:
@@ -188,7 +196,7 @@ class TestWindow:
     def test_make_circular(
         self, window, shape, answer_coeff, answer_circular, answer_type
     ):
-        k = kp.util.Window(window=window, shape=shape)
+        k = Window(window=window, shape=shape)
         k.make_circular()
 
         np.testing.assert_array_almost_equal(k, answer_coeff)
@@ -206,24 +214,24 @@ class TestWindow:
         ],
     )
     def test_shape_compatible(self, dummy_signal, shape, compatible):
-        w = kp.util.Window(shape=shape)
+        w = Window(shape=shape)
         assert (
             w.shape_compatible(dummy_signal.axes_manager.navigation_shape)
             == compatible
         )
 
     def test_plot_default_values(self):
-        w = kp.util.Window()
+        w = Window()
         fig, im, cbar = w.plot()
 
         np.testing.assert_array_almost_equal(w, im.get_array().data)
         assert im.cmap.name == "viridis"
-        assert isinstance(fig, mpl.figure.Figure)
-        assert isinstance(im, mpl.image.AxesImage)
-        assert isinstance(cbar, mpl.colorbar.Colorbar)
+        assert isinstance(fig, Figure)
+        assert isinstance(im, AxesImage)
+        assert isinstance(cbar, Colorbar)
 
     def test_plot_invalid_window(self):
-        w = kp.util.Window()
+        w = Window()
         w.name = 1
         assert w.is_valid() is False
         with pytest.raises(ValueError, match="Window is invalid."):
@@ -239,7 +247,7 @@ class TestWindow:
     def test_plot(
         self, window, answer_coeff, cmap, textcolors, cmap_label, tmp_path
     ):
-        w = kp.util.Window(window=window)
+        w = Window(window=window)
 
         fig, im, cbar = w.plot(
             cmap=cmap, textcolors=textcolors, cmap_label=cmap_label
@@ -247,18 +255,18 @@ class TestWindow:
 
         np.testing.assert_array_almost_equal(w, answer_coeff)
         np.testing.assert_array_almost_equal(im.get_array().data, answer_coeff)
-        assert isinstance(fig, mpl.figure.Figure)
-        assert isinstance(im, mpl.image.AxesImage)
-        assert isinstance(cbar, mpl.colorbar.Colorbar)
+        assert isinstance(fig, Figure)
+        assert isinstance(im, AxesImage)
+        assert isinstance(cbar, Colorbar)
 
         # Check that the figure can be written to and read from file
         os.chdir(tmp_path)
-        fname = "test.png"
+        fname = "tests.png"
         fig.savefig(fname)
-        _ = plt.imread(fname)
+        _ = imread(fname)
 
     def test_plot_one_axis(self):
-        w = kp.util.Window(window="gaussian", shape=(5,), std=2)
+        w = Window(window="gaussian", shape=(5,), std=2)
         fig, im, cbar = w.plot()
 
         # Compare to global window GAUSS5_STD2
@@ -302,9 +310,7 @@ class TestWindow:
         ],
     )
     def test_lowpass_fft_filter_direct(self, shape, c, w_c, answer):
-        w = kp.util.window.lowpass_fft_filter(
-            shape=shape, cutoff=c, cutoff_width=w_c
-        )
+        w = lowpass_fft_filter(shape=shape, cutoff=c, cutoff_width=w_c)
 
         assert w.shape == answer.shape
         assert np.allclose(w, answer, atol=1e-4)
@@ -313,8 +319,8 @@ class TestWindow:
         shape = (96, 96)
         c = 30
         w_c = c // 2
-        w1 = kp.util.Window("lowpass", cutoff=c, cutoff_width=w_c, shape=shape)
-        w2 = kp.util.window.lowpass_fft_filter(shape=shape, cutoff=c)
+        w1 = Window("lowpass", cutoff=c, cutoff_width=w_c, shape=shape)
+        w2 = lowpass_fft_filter(shape=shape, cutoff=c)
 
         assert np.allclose(w1, w2)
 
@@ -353,9 +359,7 @@ class TestWindow:
         ],
     )
     def test_highpass_fft_filter_direct(self, shape, c, w_c, answer):
-        w = kp.util.window.highpass_fft_filter(
-            shape=shape, cutoff=c, cutoff_width=w_c
-        )
+        w = highpass_fft_filter(shape=shape, cutoff=c, cutoff_width=w_c)
 
         assert w.shape == answer.shape
         assert np.allclose(w, answer, atol=1e-4)
@@ -364,8 +368,8 @@ class TestWindow:
         shape = (96, 96)
         c = 30
         w_c = c // 2
-        w1 = kp.util.Window("highpass", cutoff=c, cutoff_width=w_c, shape=shape)
-        w2 = kp.util.window.highpass_fft_filter(shape=shape, cutoff=c)
+        w1 = Window("highpass", cutoff=c, cutoff_width=w_c, shape=shape)
+        w2 = highpass_fft_filter(shape=shape, cutoff=c)
 
         assert np.allclose(w1, w2)
 
@@ -384,7 +388,7 @@ class TestWindow:
         ],
     )
     def test_modified_hann_direct(self, Nx, answer):
-        w = kp.util.window.modified_hann.py_func(Nx)
+        w = modified_hann.py_func(Nx)
 
         assert np.allclose(w, answer, atol=1e-4)
 
@@ -393,13 +397,13 @@ class TestWindow:
     )
     def test_modified_hann_direct_sum(self, Nx, answer):
         # py_func ensures coverage for a Numba decorated function
-        w = kp.util.window.modified_hann.py_func(Nx)
+        w = modified_hann.py_func(Nx)
 
         assert np.allclose(np.sum(w), answer, atol=1e-4)
 
     def test_modified_hann_equal(self):
-        w1 = kp.util.Window("modified_hann", shape=(30,))
-        w2 = kp.util.window.modified_hann(Nx=30)
+        w1 = Window("modified_hann", shape=(30,))
+        w2 = modified_hann(Nx=30)
 
         assert np.allclose(w1, w2)
 
@@ -435,18 +439,18 @@ class TestWindow:
         ],
     )
     def test_distance_to_origin(self, shape, origin, answer):
-        r = kp.util.window.distance_to_origin(shape=shape, origin=origin)
+        r = distance_to_origin(shape=shape, origin=origin)
         assert np.allclose(r, answer, atol=1e-4)
 
     @pytest.mark.parametrize(
         "std, shape, answer",
         [
             (0.001, (1,), np.array([[1]])),
-            (-0.5, (1,), kp.util.Window("gaussian", std=0.5, shape=(1,))),
+            (-0.5, (1,), Window("gaussian", std=0.5, shape=(1,))),
             (
                 0.5,
                 (3, 3),
-                kp.util.Window(
+                Window(
                     np.array(
                         [
                             [0.01134374, 0.08381951, 0.01134374],
@@ -459,7 +463,7 @@ class TestWindow:
         ],
     )
     def test_gaussian(self, std, shape, answer):
-        w = kp.util.Window("gaussian", std=std, shape=shape)
+        w = Window("gaussian", std=std, shape=shape)
         w = w / (2 * np.pi * std ** 2)
         w = w / np.sum(w)
 

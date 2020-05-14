@@ -27,12 +27,19 @@ from typing import Union, Tuple, Optional, List
 
 from numba import njit
 import numpy as np
-import scipy.fft
+from scipy.fft import (
+    fft2,
+    rfft2,
+    ifft2,
+    irfft2,
+    fftshift,
+    ifftshift,
+)
 from scipy.ndimage import gaussian_filter
 from skimage.util.dtype import dtype_range
 
-from .barnes_fftfilter import _fft_filter, _fft_filter_setup
-from .window import Window
+from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
+from kikuchipy.filters.window import Window
 
 
 def rescale_intensity(
@@ -58,7 +65,7 @@ def rescale_intensity(
     out_range
         Min./max. intensity values of the rescaled pattern. If None
         (default), it is set to `dtype_out` min./max according to
-        `skimage.util.dtype.dtype_range`.
+        `skimage._util.dtype.dtype_range`.
     dtype_out
         Data type of the rescaled pattern. If None (default), it is set
         to the same data type as the input pattern.
@@ -67,9 +74,7 @@ def rescale_intensity(
     -------
     rescaled_pattern : numpy.ndarray
         Rescaled pattern.
-
     """
-
     if dtype_out is None:
         dtype_out = pattern.dtype.type
 
@@ -154,11 +159,9 @@ def remove_dynamic_background(
 
     See Also
     --------
-    kikuchipy.signals.ebsd.EBSD.remove_dynamic_background
-    kikuchipy.util.chunk.remove_dynamic_background
-
+    kikuchipy.signals.EBSD.remove_dynamic_background,
+    kikuchipy.pattern.remove_dynamic_background
     """
-
     if std is None:
         std = pattern.shape[1] / 8
 
@@ -272,9 +275,7 @@ def get_dynamic_background(
     -------
     dynamic_bg : numpy.ndarray
         The dynamic background.
-
     """
-
     if std is None:
         std = pattern.shape[1] / 8
 
@@ -329,8 +330,8 @@ def get_image_quality(
     frequency_vectors
         Integer 2D array assigning each FFT spectrum frequency component
         a weight. If None (default), these are calculated from
-        :func:`~kikuchipy.util.experimental.fft_frequency_vectors`. This
-        only depends on the pattern shape.
+        :func:`~kikuchipy.pattern.fft_frequency_vectors`. This only
+        depends on the pattern shape.
     inertia_max
         Maximum possible inertia of the FFT power spectrum of the image.
         If None (default), this is calculated from the
@@ -341,9 +342,7 @@ def get_image_quality(
     -------
     image_quality : numpy.ndarray
         Image quality of the pattern.
-
     """
-
     if frequency_vectors is None:
         sy, sx = pattern.shape
         frequency_vectors = fft_frequency_vectors((sy, sx))
@@ -357,7 +356,7 @@ def get_image_quality(
 
     # Compute FFT
     # TODO: Reduce frequency vectors to real part only to enable real part FFT
-    fft_pattern = scipy.fft.fft2(pattern)
+    fft_pattern = fft2(pattern)
 
     # Obtain (un-shifted) FFT spectrum
     spectrum = fft_spectrum(fft_pattern)
@@ -404,19 +403,17 @@ def fft(
     -------
     out : numpy.ndarray
         The result of the 2D FFT.
-
     """
-
     if apodization_window is not None:
         pattern = pattern * apodization_window
 
     if real_fft_only:
-        fft_use = scipy.fft.rfft2
+        fft_use = rfft2
     else:
-        fft_use = scipy.fft.fft2
+        fft_use = fft2
 
     if shift:
-        out = scipy.fft.fftshift(fft_use(pattern, **kwargs))
+        out = fftshift(fft_use(pattern, **kwargs))
     else:
         out = fft_use(pattern, **kwargs)
 
@@ -454,16 +451,14 @@ def ifft(
     -------
     pattern : numpy.ndarray
         Real part of the IFFT of the EBSD pattern.
-
     """
-
     if real_fft_only:
-        fft_use = scipy.fft.irfft2
+        fft_use = irfft2
     else:
-        fft_use = scipy.fft.ifft2
+        fft_use = ifft2
 
     if shift:
-        pattern = fft_use(scipy.fft.ifftshift(fft_pattern, **kwargs))
+        pattern = fft_use(ifftshift(fft_pattern, **kwargs))
     else:
         pattern = fft_use(fft_pattern, **kwargs)
 
@@ -495,9 +490,7 @@ def fft_filter(
     -------
     filtered_pattern : numpy.ndarray
         Filtered EBSD pattern.
-
     """
-
     # Get the FFT
     pattern_fft = fft(
         pattern, shift=shift, apodization_window=apodization_window
@@ -523,9 +516,7 @@ def fft_spectrum(fft_pattern: np.ndarray) -> np.ndarray:
     -------
     fft_spectrum : numpy.ndarray
         2D FFT spectrum of the EBSD pattern.
-
     """
-
     return np.sqrt(fft_pattern.real ** 2 + fft_pattern.imag ** 2)
 
 
@@ -559,9 +550,7 @@ def normalize_intensity(
     Data type should always be changed to floating point, e.g.
     ``np.float32`` with :meth:`numpy.ndarray.astype`, before normalizing
     the intensities.
-
     """
-
     pattern_mean = np.mean(pattern)
     pattern_std = np.std(pattern)
 
@@ -585,9 +574,7 @@ def fft_frequency_vectors(shape: Tuple[int, int]) -> np.ndarray:
     -------
     frequency_vectors : numpy.ndarray
         Frequency vectors.
-
     """
-
     sy, sx = shape
 
     linex = np.arange(sx) + 1

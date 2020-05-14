@@ -2,8 +2,8 @@
 Visualizing patterns
 ====================
 
-The :class:`~kikuchipy.signals.ebsd.EBSD` and
-:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` object has a
+The :class:`~kikuchipy.signals.EBSD` and
+:class:`~kikuchipy.signals.EBSDMasterPattern` object has a
 powerful and versatile :meth:`~hyperspy.signal.BaseSignal.plot` method provided
 by HyperSpy. Its uses are greatly detailed in HyperSpy's `visualisation user
 guide
@@ -25,7 +25,7 @@ calling :meth:`~hyperspy.signal.BaseSignal.plot` without any input
 parameters, the navigator map is a grey scale image with pixel values
 corresponding to the sum of all detector intensities within that pattern:
 
-.. code-block:: python
+.. code-block::
 
     >>> s.plot()
 
@@ -51,7 +51,7 @@ Virtual image
 -------------
 
 A virtual backscatter electron (VBSE) image created from any detector region of
-interest with the :meth:`~kikuchipy.signals.ebsd.EBSD.get_virtual_image`
+interest with the :meth:`~kikuchipy.signals.EBSD.get_virtual_image`
 method, explained in the :doc:`virtual_backscatter_electron_imaging` section,
 can be used as a navigator for a scan ``s``:
 
@@ -86,7 +86,7 @@ navigators. E.g. a quality metric map, like the orientation similarity obtained
 from dictionary indexing with `EMsoft <https://github.com/EMsoft-org/EMsoft>`_
 (see e.g. [Marquardt2017]_):
 
-.. code-block:: python
+.. code-block::
 
     >>> import matplotlib.pyplot as plt
     >>> import hyperspy.api as hs
@@ -108,10 +108,19 @@ from dictionary indexing with `EMsoft <https://github.com/EMsoft-org/EMsoft>`_
     A quality metric map ``s_osm``, in this case an orientation similarity map
     from dictionary indexing with EMsoft, as navigator map.
 
+Or, an :ref:`image quality map <image-quality>` calculated using
+:meth:`~kikuchipy.signals.EBSD.get_image_quality`:
+
+.. code-block::
+
+    >>> iq = s.get_image_quality()
+    >>> s_iq = hs.signals.Signal2D(iq)
+    >>> s.plot(navigator=s_iq)
+
 Using colour images, e.g. an orientation ``om`` or phase map, is a bit more
 involved:
 
-.. code-block:: python
+.. code-block::
 
     >>> om = plt.imread('/path/to/orientation_map.jpg')
     >>> om_scaled = ske.rescale_intensity(om, out_range=np.uint8)
@@ -139,9 +148,10 @@ involved:
 Plot multiple scans
 ===================
 
-HyperSpy provides the function :func:`~hyperspy.misc.utils.plot_signals` to plot
-multiple signals with the same navigator, as explained in the `HyperSpy user
-guide <http://hyperspy.org/hyperspy-doc/current/user_guide/visualisation.html#plotting-several-signals>`_.
+HyperSpy provides the function :func:`~hyperspy.drawing.utils.plot_signals` to
+plot multiple signals with the same navigator, as explained in the `HyperSpy
+user guide
+<http://hyperspy.org/hyperspy-doc/current/user_guide/visualisation.html#plotting-several-signals>`_.
 This enables e.g. plotting of experimental and simulated patterns side by side
 as a visual inspection of the indexing results:
 
@@ -169,9 +179,8 @@ as a visual inspection of the indexing results:
 Plot master patterns
 ====================
 
-:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` objects can
-be navigated along their energy axis and/or the their northern/southern
-hemisphere:
+:class:`~kikuchipy.signals.EBSDMasterPattern` objects can be navigated along
+their energy axis and/or the their northern/southern hemisphere:
 
 .. code-block:: python
 

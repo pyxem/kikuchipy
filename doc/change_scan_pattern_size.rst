@@ -2,9 +2,9 @@
 Change scan and pattern size
 ============================
 
-Patterns in an :class:`~kikuchipy.signals.ebsd.EBSD` or
-:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` signal ``s``
-are stored in the ``s.data`` attribute as either :class:`numpy.ndarray` or
+Patterns in an :class:`~kikuchipy.signals.EBSD` or
+:class:`~kikuchipy.signals.EBSDMasterPattern` signal ``s`` are stored in the
+``s.data`` attribute as either :class:`numpy.ndarray` or
 :class:`dask.array.Array`. `HyperSpy's user guide <http://hyperspy.org/
 hyperspy-doc/current/user_guide/tools.html#indexing>`_ explains how to access,
 i.e. index, the data. This section details example uses of scan and pattern
@@ -15,14 +15,14 @@ indexing specific to EBSD and EBSDMasterPattern objects.
 Crop a scan or pattern
 ======================
 
-A new :class:`~kikuchipy.signals.ebsd.EBSD` or
-:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` signal ``s2``
-can be created from a region of interest in another EBSD or EBSDMasterPattern
-signal ``s`` by using HyperSpy's navigation indexing method ``inav``. The new
-signal keeps the ``metadata`` and ``original_metadata`` of ``s``. Say we,
-after plotting and inspecting the an EBSD scan, want to create a new, smaller
-scan of the patterns within a rectangle defined by the upper left pattern
-with index ``(53, 82)`` and the bottom right pattern with index ``(74, 105)``:
+A new :class:`~kikuchipy.signals.EBSD` or
+:class:`~kikuchipy.signals.EBSDMasterPattern` signal ``s2`` can be created from
+a region of interest in another EBSD or EBSDMasterPattern signal ``s`` by using
+HyperSpy's navigation indexing method ``inav``. The new signal keeps the
+``metadata`` and ``original_metadata`` of ``s``. Say we, after plotting and
+inspecting the an EBSD scan, want to create a new, smaller scan of the patterns
+within a rectangle defined by the upper left pattern with index ``(53, 82)`` and
+the bottom right pattern with index ``(74, 105)``:
 
 .. code-block::
 
@@ -66,8 +66,8 @@ Binning
 =======
 
 A new EBSD scan with patterns binned e.g. by 2 can be obtained using the
-:meth:`~kikuchipy.signals.ebsd.EBSD.rebin` method provided by HyperSpy,
-explained further in `their user guide
+:meth:`~kikuchipy.signals.EBSD.rebin` method provided by HyperSpy, explained
+further in `their user guide
 <http://hyperspy.org/hyperspy-doc/current/user_guide/tools.html#rebinning>`_, by
 passing in either the ``scale`` or ``new_shape`` parameter:
 
@@ -79,11 +79,10 @@ passing in either the ``scale`` or ``new_shape`` parameter:
     >>> print(s3, s.data.dtype)
     <EBSD, title: , dimensions: (200, 149|30, 30)> uint64
 
-Note that :meth:`~kikuchipy.signals.ebsd.EBSD.rebin` casts the data to
-``uint64``. This means that in this example, each pixel in the binned scan
-``s3`` takes up eight times the memory size of pixels in the original scan
-``s``. If you want, you can :ref:`rescale the intensities <rescale-intensity>`
-to e.g. the ``uint8`` data type range.
+Note that :meth:`~kikuchipy.signals.EBSD.rebin` casts the data to ``uint64``.
+This means that in this example, each pixel in the binned scan ``s3`` takes up
+eight times the memory size of pixels in the original scan ``s``. If you want,
+you can :ref:`rescale the intensities <rescale-intensity>` to e.g. the ``uint8``
+data type range.
 
-This also works for
-:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` signals.
+This also works for :class:`~kikuchipy.signals.EBSDMasterPattern` signals.

@@ -13,8 +13,6 @@ with `record-number` named `data.zip`, can be downloaded:
             filename='./downloaded_data.zip')
 
 .. [Anes2019]
-    Håkon Wiik Ånes, Jarle Hjelen, Antonius T. J. van Helvoort, & Knut
-    Marthinsen. (2019). Electron backscatter patterns from Nickel acquired with
-    varying camera gain [Data set]. Zenodo.
-    `http://doi.org/10.5281/zenodo.3265037
-    <http://doi.org/10.5281/zenodo.3265037>`_
+    H. W. Ånes, J. Hjelen, A. T. J. van Helvoort, & K. Marthinsen, "Electron
+    backscatter patterns from Nickel acquired with varying camera gain," [Data
+    set], (2015), Zenodo: http://doi.org/10.5281/zenodo.3265037.

@@ -3,7 +3,7 @@ Changelog
 =========
 
 kikuchipy is an open-source Python library for processing and analysis of
-electron backscatter diffraction patterns: https://kikuchipy.readthedocs.io
+electron backscatter diffraction patterns: https://kikuchipy.org.
 
 All notable changes to this project will be documented in this file.
 
@@ -19,8 +19,10 @@ Added
 - EBSD master pattern class and reader of master patterns from EMsoft's EBSD
   master pattern file.
 - Python 3.8 support.
-- Public APIs of underlying processing of a chunk of patterns and single
-  patterns, used indirectly via the EBSD class.
+- The public API has been restructured. The pattern processing used by the EBSD
+  class is available in the ``kikuchipy.pattern`` subpackage, and
+  filters/kernels used in frequency domain filtering and pattern averaging are
+  available in the ``kikuchipy.filters`` SUBPACKAGE.
 - Intensity normalization of scan or single patterns.
 - Fast Fourier Transform (FFT) filtering of scan or single patterns using
   SciPy's fft routines and `Connelly Barnes' filterfft
@@ -35,9 +37,8 @@ Added
   for reviewing!).
 - Window/kernel/filter/mask class to handle such things, e.g. for pattern
   averaging or filtering in the frequency or spatial domain (thanks to `Tina
-  Bergh <https://github.com/tinabe>`_ for reviewing!).
-- Package installation with Anaconda via the `conda-forge channel
-  <https://anaconda.org/conda-forge/kikuchipy/>`_.
+  Bergh <https://github.com/tinabe>`_ for reviewing!). Available in the
+  ``kikuchipy.filters`` module.
 
 Changed
 -------
@@ -45,12 +46,12 @@ Changed
   ``remove_static_background``, ``dynamic_background_correction`` to
   ``remove_dynamic_background``, and ``rescale_intensities`` to
   ``rescale_intensity``.
+- Renamed ``kikuchipy_metadata`` to ``ebsd_metadata``.
 - Source code link in the documentation should point to proper GitHub line. This
   `linkcode_resolve` in the `conf.py` file is taken from SciPy.
 - Read the Docs CSS style.
 - New logo with a gradient from experimental to simulated pattern (with EMsoft),
-  with a color gradient from either the plasma, viridis, inferno, or magma color
-  maps.
+  with a color gradient from the plasma color maps.
 - Dynamic background correction can be done faster due to Gaussian blurring in
   the frequency domain to get the dynamic background to remove.
 
@@ -64,6 +65,25 @@ Fixed
 -----
 - RtD builds documentation with Python 3.8 (fixed problem of missing .egg
   leading build to fail).
+
+0.1.3 (2020-05-11)
+==================
+
+kikuchipy is an open-source Python library for processing and analysis of
+electron backscatter diffraction patterns: https://kikuchipy.org.
+
+This is a patch release. It is anticipated to be the final release in the
+`0.1.x` series.
+
+Added
+-----
+- Package installation with Anaconda via the `conda-forge channel
+  <https://anaconda.org/conda-forge/kikuchipy/>`_.
+
+Fixed
+-----
+- Static and dynamic background corrections are done at float 32-bit precision,
+  and not integer 16-bit.
 - Chunking of static background pattern.
 - Chunking of patterns in the h5ebsd reader.
 
@@ -71,7 +91,7 @@ Fixed
 ==================
 
 kikuchipy is an open-source Python library for processing and analysis of
-electron backscatter diffraction patterns: https://kikuchipy.readthedocs.io
+electron backscatter diffraction patterns: https://kikuchipy.org.
 
 This is a bug-fix release that ensures, unlike the previous bug-fix release,
 that necessary files are downloaded when installing from PyPI.
@@ -92,7 +112,7 @@ electron backscatter diffraction (EBSD) patterns. The library builds upon the
 tools for multi-dimensional data analysis provided by the HyperSpy library.
 
 For more information, a user guide, and the full reference API documentation,
-please visit: https://kikuchipy.readthedocs.io
+please visit: https://kikuchipy.org.
 
 This is the initial pre-release, where things start to get serious... seriously
 fun!

@@ -19,8 +19,20 @@
 import numpy as np
 import pytest
 
-import kikuchipy as kp
-
+from kikuchipy.filters.window import Window
+from kikuchipy.pattern._pattern import (
+    fft,
+    fft_frequency_vectors,
+    fft_spectrum,
+    get_dynamic_background,
+    get_image_quality,
+    ifft,
+    normalize_intensity,
+    rescale_intensity,
+    remove_dynamic_background,
+    _rescale,
+    _dynamic_background_frequency_space_setup,
+)
 
 # Expected output intensities from various image processing methods
 RESCALED_UINT8 = np.array(
@@ -83,15 +95,15 @@ class TestRescaleIntensityPattern:
         # Check for accepted data types
         if dtype_out == np.complex:
             with pytest.raises(KeyError, match="Could not set output"):
-                kp.util.pattern.rescale_intensity(
+                _ = rescale_intensity(
                     pattern=pattern,
                     in_range=None,
                     out_range=out_range,
                     dtype_out=dtype_out,
                 )
-            return 0  # So that the test ends here
+            return 0  # So that the tests ends here
         else:
-            rescaled_pattern = kp.util.pattern.rescale_intensity(
+            rescaled_pattern = rescale_intensity(
                 pattern=pattern,
                 in_range=None,
                 out_range=out_range,
@@ -108,7 +120,7 @@ class TestRescaleIntensityPattern:
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
         imin, imax = np.min(p), np.max(p)
         omin, omax = -3, 300.15
-        p2 = kp.util.pattern._rescale.py_func(
+        p2 = _rescale.py_func(
             pattern=p, imin=imin, imax=imax, omin=omin, omax=omax,
         )
 
@@ -130,7 +142,7 @@ class TestRemoveDynamicBackgroundPattern:
     ):
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
 
-        p2 = kp.util.pattern.remove_dynamic_background(
+        p2 = remove_dynamic_background(
             pattern=p,
             operation=operation,
             filter_domain="spatial",
@@ -152,7 +164,7 @@ class TestRemoveDynamicBackgroundPattern:
     ):
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
 
-        p2 = kp.util.pattern.remove_dynamic_background(
+        p2 = remove_dynamic_background(
             pattern=p,
             operation="subtract",
             filter_domain="frequency",
@@ -167,7 +179,7 @@ class TestRemoveDynamicBackgroundPattern:
         p = dummy_signal.inav[0, 0].data
         filter_domain = "Taldorei"
         with pytest.raises(ValueError, match=f"{filter_domain} must be "):
-            _ = kp.util.pattern.remove_dynamic_background(
+            _ = remove_dynamic_background(
                 pattern=p, filter_domain=filter_domain,
             )
 
@@ -183,7 +195,7 @@ class TestRemoveDynamicBackgroundPattern:
             window_fft,
             offset_before_fft,
             offset_after_ifft,
-        ) = kp.util.pattern._dynamic_background_frequency_space_setup(
+        ) = _dynamic_background_frequency_space_setup(
             pattern_shape=dummy_signal.axes_manager.signal_shape[::-1],
             std=std,
             truncate=truncate,
@@ -213,7 +225,7 @@ class TestGetDynamicBackgroundPattern:
         self, dummy_signal, std, truncate, answer
     ):
         p = dummy_signal.inav[0, 0].data
-        bg = kp.util.pattern.get_dynamic_background(
+        bg = get_dynamic_background(
             pattern=p, filter_domain="spatial", std=std, truncate=truncate,
         )
 
@@ -243,7 +255,7 @@ class TestGetDynamicBackgroundPattern:
 
         p = dummy_signal.inav[0, 0].data.astype(answer.dtype)
 
-        bg = kp.util.pattern.get_dynamic_background(
+        bg = get_dynamic_background(
             pattern=p, filter_domain="frequency", std=std,
         )
 
@@ -253,9 +265,7 @@ class TestGetDynamicBackgroundPattern:
         p = dummy_signal.inav[0, 0].data
         filter_domain = "emon"
         with pytest.raises(ValueError, match=f"{filter_domain} must be either"):
-            _ = kp.util.pattern.get_dynamic_background(
-                pattern=p, filter_domain=filter_domain,
-            )
+            _ = get_dynamic_background(pattern=p, filter_domain=filter_domain)
 
 
 class TestGetImageQuality:
@@ -277,7 +287,7 @@ class TestGetImageQuality:
         answer,
     ):
         p = dummy_signal.inav[idx].data.astype(np.float32)
-        iq = kp.util.pattern.get_image_quality(
+        iq = get_image_quality(
             pattern=p,
             normalize=normalize,
             frequency_vectors=frequency_vectors,
@@ -288,13 +298,13 @@ class TestGetImageQuality:
 
     def test_get_image_quality_white_noise(self):
         p = np.random.random((1001, 1001))
-        iq = kp.util.pattern.get_image_quality(pattern=p, normalize=True)
+        iq = get_image_quality(pattern=p, normalize=True)
 
         assert np.allclose(iq, 0, atol=1e-2)
 
     def test_get_image_quality_flat(self):
         p = np.ones((1001, 1001)) * 5
-        iq = kp.util.pattern.get_image_quality(pattern=p, normalize=False)
+        iq = get_image_quality(pattern=p, normalize=False)
 
         assert np.allclose(iq, 1, atol=1e-2)
 
@@ -319,7 +329,7 @@ class TestGetImageQuality:
         ],
     )
     def test_fft_frequency_vectors(self, shape, answer):
-        vec = kp.util.pattern.fft_frequency_vectors(shape=shape)
+        vec = fft_frequency_vectors(shape=shape)
 
         assert np.allclose(vec, answer)
 
@@ -340,12 +350,12 @@ class TestFFTPattern:
 
         kwargs = {}
 
-        p_fft = kp.util.pattern.fft(
+        p_fft = fft(
             pattern=p, shift=shift, real_fft_only=real_fft_only, **kwargs,
         )
 
         assert np.allclose(
-            np.sum(kp.util.pattern.fft_spectrum.py_func(p_fft)),
+            np.sum(fft_spectrum.py_func(p_fft)),
             expected_spectrum_sum,
             atol=1e-3,
         )
@@ -355,10 +365,10 @@ class TestFFTPattern:
     )
     def test_fft_pattern_apodization_window(self, dummy_signal, window):
         p = dummy_signal.inav[0, 0].data
-        w = kp.util.Window(window, shape=p.shape)
-        p2 = kp.util.pattern.fft(pattern=p, apodization_window=w, shift=True,)
-        p3 = kp.util.pattern.fft(pattern=p * w, shift=True)
-        p4 = kp.util.pattern.fft(pattern=p, shift=True)
+        w = Window(window, shape=p.shape)
+        p2 = fft(pattern=p, apodization_window=w, shift=True,)
+        p3 = fft(pattern=p * w, shift=True)
+        p4 = fft(pattern=p, shift=True)
 
         assert p2.shape == p.shape
         assert p3.shape == p.shape
@@ -369,8 +379,8 @@ class TestFFTPattern:
     @pytest.mark.parametrize("shift", [True, False])
     def test_ifft_pattern(self, shift):
         p = np.random.random((101, 101))
-        p_fft = kp.util.pattern.fft(p, shift=shift)
-        p_ifft = kp.util.pattern.ifft(p_fft, shift=shift)
+        p_fft = fft(p, shift=shift)
+        p_ifft = ifft(p_fft, shift=shift)
 
         assert np.allclose(p_ifft, p)
 
@@ -378,11 +388,11 @@ class TestFFTPattern:
     def test_ifft_pattern_real(self, shift):
         # Odd second dimension becomes even with only real valued FFT
         p = np.random.random((101, 100))
-        p_fft = kp.util.pattern.fft(p, shift=shift, real_fft_only=False)
-        p_ifft = kp.util.pattern.ifft(p_fft, shift=shift, real_fft_only=False)
+        p_fft = fft(p, shift=shift, real_fft_only=False)
+        p_ifft = ifft(p_fft, shift=shift, real_fft_only=False)
 
-        p_rfft = kp.util.pattern.fft(p, shift=shift, real_fft_only=True)
-        p_irfft = kp.util.pattern.ifft(p_rfft, shift=shift, real_fft_only=True)
+        p_rfft = fft(p, shift=shift, real_fft_only=True)
+        p_irfft = ifft(p_rfft, shift=shift, real_fft_only=True)
 
         assert p_ifft.shape == p.shape
         assert p_irfft.shape == p.shape
@@ -432,7 +442,7 @@ class TestNormalizeIntensityPattern:
         self, dummy_signal, num_std, divide_by_square_root, answer
     ):
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
-        p2 = kp.util.pattern.normalize_intensity.py_func(
+        p2 = normalize_intensity.py_func(
             pattern=p,
             num_std=num_std,
             divide_by_square_root=divide_by_square_root,

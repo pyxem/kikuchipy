@@ -20,16 +20,19 @@ import os
 from numbers import Number
 
 import dask.array as da
-import hyperspy.api as hs
+from hyperspy.utils.roi import RectangularROI
 from hyperspy.misc.utils import DictionaryTreeBrowser
-from hyperspy.exceptions import VisibleDeprecationWarning
 import matplotlib
 import numpy as np
 import pytest
 from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
 
-import kikuchipy as kp
+from kikuchipy import load
+from kikuchipy.filters.window import Window
+from kikuchipy.pattern._pattern import fft_spectrum
+from kikuchipy.signals.ebsd import EBSD, LazyEBSD
+from kikuchipy.signals.util._metadata import ebsd_metadata, metadata_nodes
 
 matplotlib.use("Agg")  # For plotting
 
@@ -56,46 +59,26 @@ def assert_dictionary(input_dict, output_dict):
                 assert input_dict[key] == output_dict[key]
 
 
-class TestEBSDDeprecations:
-    def test_static_background_correction_deprecated(self, dummy_signal):
-        with pytest.warns(VisibleDeprecationWarning, match="Renamed to "):
-            dummy_signal.static_background_correction(
-                operation="subtract", relative=True,
-            )
-
-    def test_dynamic_background_correction_deprecated(self, dummy_signal):
-        with pytest.warns(VisibleDeprecationWarning, match="Renamed to "):
-            dummy_signal.dynamic_background_correction(
-                operation="subtract", sigma=3,
-            )
-
-    def test_rescale_intensities_deprecated(self, dummy_signal):
-        with pytest.warns(VisibleDeprecationWarning, match="Renamed to "):
-            dummy_signal.rescale_intensities(
-                relative=True, dtype_out=np.float32,
-            )
-
-
 class TestEBSD:
     def test_init(self):
 
         # Signal shape
         array0 = np.zeros(shape=(10, 10, 10, 10))
-        s0 = kp.signals.EBSD(array0)
+        s0 = EBSD(array0)
         assert array0.shape == s0.axes_manager.shape
 
         # Cannot initialise signal with one signal dimension
         with pytest.raises(ValueError):
-            kp.signals.EBSD(np.zeros(10))
+            _ = EBSD(np.zeros(10))
 
         # Shape of one-image signal
         array1 = np.zeros(shape=(10, 10))
-        s1 = kp.signals.EBSD(array1)
+        s1 = EBSD(array1)
         assert array1.shape == s1.axes_manager.shape
 
         # SEM metadata
-        kp_md = kp.util.io.ebsd_metadata()
-        sem_node = kp.util.io.metadata_nodes("sem")
+        kp_md = ebsd_metadata()
+        sem_node = metadata_nodes("sem")
         assert_dictionary(
             kp_md.get_item(sem_node), s1.metadata.get_item(sem_node)
         )
@@ -109,7 +92,7 @@ class TestEBSD:
         # Assert that lazy attribute and class changed, while metadata was not
         # changed
         assert lazy_signal._lazy is True
-        assert lazy_signal.__class__ == kp.signals.LazyEBSD
+        assert lazy_signal.__class__ == LazyEBSD
         assert_dictionary(
             dummy_signal.metadata.as_dictionary(),
             lazy_signal.metadata.as_dictionary(),
@@ -140,7 +123,7 @@ class TestEBSD:
             "magnification": 500,
         }
         dummy_signal.set_experimental_parameters(**p)
-        ebsd_node = kp.util.io.metadata_nodes("ebsd")
+        ebsd_node = metadata_nodes("ebsd")
         md_dict = dummy_signal.metadata.get_item(ebsd_node).as_dictionary()
         assert_dictionary(p, md_dict)
 
@@ -268,7 +251,7 @@ class TestRemoveStaticBackgroundEBSD:
     def test_remove_static_background(
         self, dummy_signal, dummy_background, operation, relative, answer
     ):
-        """This test uses a hard-coded answer. If specifically
+        """This tests uses a hard-coded answer. If specifically
         improvements to the intensities produced by this correction is
         to be made, these hard-coded answers will have to be
         recalculated for the tests to pass.
@@ -299,7 +282,7 @@ class TestRemoveStaticBackgroundEBSD:
         static background pattern to `remove_static_background().`
         """
 
-        ebsd_node = kp.util.io.metadata_nodes("ebsd")
+        ebsd_node = metadata_nodes("ebsd")
         dummy_signal.metadata.set_item(
             ebsd_node + ".static_background", static_bg
         )
@@ -420,7 +403,7 @@ class TestRemoveDynamicBackgroundEBSD:
     def test_remove_dynamic_background_spatial(
         self, dummy_signal, operation, std, answer
     ):
-        """This test uses a hard-coded answer. If specifically
+        """This tests uses a hard-coded answer. If specifically
         improvements to the intensities produced by this correction is
         to be made, these hard-coded answers will have to be
         recalculated for the tests to pass.
@@ -554,7 +537,7 @@ class TestRescaleIntensityEBSD:
         ],
     )
     def test_rescale_intensity(self, dummy_signal, relative, dtype_out, answer):
-        """This test uses a hard-coded answer. If specifically
+        """This tests uses a hard-coded answer. If specifically
         improvements to the intensities produced by this correction is
         to be made, these hard-coded answers will have to be
         recalculated for the tests to pass.
@@ -622,7 +605,7 @@ class TestAdaptiveHistogramEqualizationEBSD:
         actual equalization are found elsewhere.
         """
 
-        s = kp.load(KIKUCHIPY_FILE)
+        s = load(KIKUCHIPY_FILE)
 
         # These window sizes should work without issue
         for kernel_size in [None, 10]:
@@ -635,7 +618,7 @@ class TestAdaptiveHistogramEqualizationEBSD:
             s.adaptive_histogram_equalization(kernel_size=(10, 10, 10))
 
     def test_lazy_adaptive_histogram_equalization(self):
-        s = kp.load(KIKUCHIPY_FILE, lazy=True)
+        s = load(KIKUCHIPY_FILE, lazy=True)
         s.adaptive_histogram_equalization()
         assert isinstance(s.data, da.Array)
 
@@ -758,7 +741,7 @@ class TestAverageNeighbourPatternsEBSD:
         assert dummy_signal.data.dtype == answer.dtype
 
     def test_average_neighbour_patterns_pass_window(self, dummy_signal):
-        w = kp.util.Window()
+        w = Window()
         dummy_signal.average_neighbour_patterns(w)
         # fmt: off
         answer = np.array(
@@ -777,7 +760,7 @@ class TestAverageNeighbourPatternsEBSD:
 
 class TestRebin:
     def test_rebin(self, dummy_signal):
-        ebsd_node = kp.util.io.metadata_nodes("ebsd")
+        ebsd_node = metadata_nodes("ebsd")
 
         # Passing new_shape, only scaling in signal space
         new_shape = (3, 3, 2, 1)
@@ -803,7 +786,7 @@ class TestRebin:
         ]
         s2 = dummy_signal.copy().as_lazy()
         s3 = dummy_signal.rebin(scale=scale, out=s2)
-        assert isinstance(s2, kp.signals.LazyEBSD)
+        assert isinstance(s2, LazyEBSD)
         assert s2.axes_manager.shape == tuple(expected_new_shape)
         assert s2.metadata.get_item(ebsd_node + ".binning") == float(scale[3])
         assert s3 is None
@@ -817,13 +800,13 @@ class TestVirtualBackscatterElectronImaging:
         dummy_signal.axes_manager.navigation_axes[0].name = "x"
         dummy_signal.axes_manager.navigation_axes[1].name = "y"
 
-        roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
+        roi = RectangularROI(left=0, top=0, right=1, bottom=1)
         dummy_signal.virtual_backscatter_electron_imaging(
             roi, out_signal_axes=out_signal_axes
         )
 
     def test_get_virtual_image(self, dummy_signal):
-        roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
+        roi = RectangularROI(left=0, top=0, right=1, bottom=1)
         virtual_image_signal = dummy_signal.get_virtual_image(roi)
         assert (
             virtual_image_signal.data.shape
@@ -831,7 +814,7 @@ class TestVirtualBackscatterElectronImaging:
         )
 
     def test_virtual_backscatter_electron_imaging_raises(self, dummy_signal):
-        roi = hs.roi.RectangularROI(0, 0, 1, 1)
+        roi = RectangularROI(0, 0, 1, 1)
         with pytest.raises(ValueError):
             _ = dummy_signal.get_virtual_image(roi, out_signal_axes=(0, 1, 2))
 
@@ -840,13 +823,13 @@ class TestDecomposition:
     def test_decomposition(self, dummy_signal):
         dummy_signal.change_dtype(np.float32)
         dummy_signal.decomposition()
-        assert isinstance(dummy_signal, kp.signals.EBSD)
+        assert isinstance(dummy_signal, EBSD)
 
     def test_lazy_decomposition(self, dummy_signal):
         lazy_signal = dummy_signal.as_lazy()
         lazy_signal.change_dtype(np.float32)
         lazy_signal.decomposition()
-        assert isinstance(lazy_signal, kp.signals.LazyEBSD)
+        assert isinstance(lazy_signal, LazyEBSD)
 
     @pytest.mark.parametrize(
         "components, dtype_out, mean_intensity",
@@ -873,7 +856,7 @@ class TestDecomposition:
         # Check data shape, signal class and image intensities in model
         # signal
         assert model_signal.data.shape == dummy_signal.data.shape
-        assert isinstance(model_signal, kp.signals.EBSD)
+        assert isinstance(model_signal, EBSD)
         assert np.allclose(model_signal.data.mean(), mean_intensity, atol=1e-3)
 
     @pytest.mark.parametrize(
@@ -889,7 +872,7 @@ class TestDecomposition:
         lazy_signal.decomposition(algorithm="PCA", output_dimension=9)
 
         # Signal type
-        assert isinstance(lazy_signal, kp.signals.LazyEBSD)
+        assert isinstance(lazy_signal, LazyEBSD)
 
         # Turn factors and loadings into dask arrays
         lazy_signal.learning_results.factors = da.from_array(
@@ -907,7 +890,7 @@ class TestDecomposition:
         # Check data shape, signal class and image intensities in model
         # signal after rescaling to 8 bit unsigned integer
         assert model_signal.data.shape == lazy_signal.data.shape
-        assert isinstance(model_signal, kp.signals.LazyEBSD)
+        assert isinstance(model_signal, LazyEBSD)
         model_signal.rescale_intensity(relative=True, dtype_out=np.uint8)
         model_mean = model_signal.data.mean().compute()
         assert np.allclose(model_mean, mean_intensity, atol=0.1)
@@ -933,11 +916,11 @@ class TestDecomposition:
         lazy_signal.get_decomposition_model_write(dir_out=tmp_path)
 
         # Reload file to check...
-        fname_out = "test.h5"
+        fname_out = "tests.h5"
         lazy_signal.get_decomposition_model_write(
             components=components, dir_out=tmp_path, fname_out=fname_out
         )
-        s_reload = kp.load(os.path.join(tmp_path, fname_out))
+        s_reload = load(os.path.join(tmp_path, fname_out))
 
         # ... data type, data shape and mean intensity
         assert s_reload.data.dtype == lazy_signal.data.dtype
@@ -950,15 +933,15 @@ class TestLazy:
         lazy_signal = dummy_signal.as_lazy()
 
         lazy_signal.compute()
-        assert isinstance(lazy_signal, kp.signals.EBSD)
+        assert isinstance(lazy_signal, EBSD)
         assert lazy_signal._lazy is False
 
     def test_change_dtype(self, dummy_signal):
         lazy_signal = dummy_signal.as_lazy()
 
-        assert isinstance(lazy_signal, kp.signals.LazyEBSD)
+        assert isinstance(lazy_signal, LazyEBSD)
         lazy_signal.change_dtype("uint16")
-        assert isinstance(lazy_signal, kp.signals.LazyEBSD)
+        assert isinstance(lazy_signal, LazyEBSD)
 
 
 class TestGetDynamicBackgroundEBSD:
@@ -969,7 +952,7 @@ class TestGetDynamicBackgroundEBSD:
         )
 
         assert bg.data.dtype == dtype_out
-        assert isinstance(bg, kp.signals.ebsd.EBSD)
+        assert isinstance(bg, EBSD)
 
     def test_get_dynamic_background_frequency(self, dummy_signal):
         dtype_out = np.float32
@@ -978,7 +961,7 @@ class TestGetDynamicBackgroundEBSD:
         )
 
         assert bg.data.dtype == dtype_out
-        assert isinstance(bg, kp.signals.ebsd.EBSD)
+        assert isinstance(bg, EBSD)
 
     def test_get_dynamic_background_raises(self, dummy_signal):
         filter_domain = "Vasselheim"
@@ -990,11 +973,11 @@ class TestGetDynamicBackgroundEBSD:
 
         bg = lazy_signal.get_dynamic_background()
 
-        assert isinstance(bg, kp.signals.ebsd.LazyEBSD)
+        assert isinstance(bg, LazyEBSD)
 
         bg.compute()
 
-        assert isinstance(bg, kp.signals.ebsd.EBSD)
+        assert isinstance(bg, EBSD)
 
 
 class TestGetImageQualityEBSD:
@@ -1075,16 +1058,16 @@ class TestFFTFilterEBSD:
         dummy_signal.data = dummy_signal.data.astype(dtype_out)
 
         shape = dummy_signal.axes_manager.signal_shape
-        w = kp.util.Window(transfer_function, shape=shape, **kwargs)
+        w = Window(transfer_function, shape=shape, **kwargs)
 
         dummy_signal.fft_filter(
             transfer_function=w, function_domain="frequency", shift=shift,
         )
 
-        assert isinstance(dummy_signal, kp.signals.ebsd.EBSD)
+        assert isinstance(dummy_signal, EBSD)
         assert dummy_signal.data.dtype == dtype_out
         assert np.allclose(
-            np.sum(kp.util.pattern.fft_spectrum(dummy_signal.inav[0, 0].data)),
+            np.sum(fft_spectrum(dummy_signal.inav[0, 0].data)),
             expected_spectrum_sum,
             atol=1e-4,
         )
@@ -1128,7 +1111,7 @@ class TestFFTFilterEBSD:
             transfer_function=w, function_domain="frequency", shift=False
         )
 
-        assert isinstance(lazy_signal, kp.signals.ebsd.LazyEBSD)
+        assert isinstance(lazy_signal, LazyEBSD)
         assert lazy_signal.data.dtype == dummy_signal.data.dtype
 
 
@@ -1193,7 +1176,7 @@ class TestNormalizeIntensityEBSD:
         else:
             assert np.allclose(np.mean(dummy_signal.data), 0, atol=1e-6)
 
-        assert isinstance(dummy_signal, kp.signals.ebsd.EBSD)
+        assert isinstance(dummy_signal, EBSD)
         assert dummy_signal.data.dtype == dtype_out
         assert np.allclose(dummy_signal.inav[0, 0].data, answer, atol=1e-4)
 
@@ -1203,5 +1186,5 @@ class TestNormalizeIntensityEBSD:
 
         lazy_signal.normalize_intensity()
 
-        assert isinstance(lazy_signal, kp.signals.ebsd.LazyEBSD)
+        assert isinstance(lazy_signal, LazyEBSD)
         assert np.allclose(np.mean(lazy_signal.data.compute()), 0, atol=1e-6)

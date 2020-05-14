@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 import os
 from typing import Union, List, Tuple, Optional, Dict
 import warnings
@@ -28,18 +27,18 @@ from hyperspy.io_plugins.hspy import overwrite_dataset
 import h5py
 import numpy as np
 
-from kikuchipy.util.phase import _phase_metadata, _update_phase_info
-from kikuchipy.util.io import (
+from kikuchipy.io._util import (
+    _get_input_variable,
+    _get_nested_dictionary,
+    _delete_from_nested_dictionary,
+)
+from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
     metadata_nodes,
-    _get_input_variable,
-)
-from kikuchipy.util.general import (
-    _delete_from_nested_dictionary,
-    _get_nested_dictionary,
+    _phase_metadata,
+    _update_phase_info,
 )
 
-_logger = logging.getLogger(__name__)
 
 # Plugin characteristics
 # ----------------------
@@ -100,9 +99,7 @@ def file_reader(
         electron back-scatter diffraction data sets," *Integrating
         Materials and Manufacturing Innovation* **3** (2014), doi:
         https://doi.org/10.1186/2193-9772-3-4.
-
     """
-
     mode = kwargs.pop("mode", "r")
     f = h5py.File(filename, mode=mode, **kwargs)
 
@@ -166,9 +163,7 @@ def check_h5ebsd(file: h5py.File):
     file: h5py:File
         File where manufacturer, version and scan datasets should
         reside in the top group.
-
     """
-
     file_keys_lower = [key.lstrip().lower() for key in file["/"].keys()]
     if not any(s in file_keys_lower for s in ["manufacturer", "version"]):
         raise IOError(
@@ -201,9 +196,7 @@ def manufacturer_version(file: h5py.File) -> Tuple[str, str]:
     -------
     manufacturer : str
     version : str
-
     """
-
     manufacturer = None
     version = None
     for key, val in hdf5group2dict(group=file["/"]).items():
@@ -221,22 +214,12 @@ def manufacturer_pattern_names() -> Dict[str, str]:
     Returns
     -------
     dict
-
     """
-
     return {
         "kikuchipy": "patterns",
         "edax": "Pattern",
         "bruker nano": "RawPatterns",
     }
-
-
-def h5ebsdgroup2dict(**kwargs):
-    warnings.warn(
-        "Renamed to hdf5group2dict(). Will be removed in v0.3. "
-        "Deprecations will be handled better going forward...",
-        VisibleDeprecationWarning,
-    )
 
 
 def hdf5group2dict(
@@ -264,9 +247,7 @@ def hdf5group2dict(
     -------
     dictionary : dict
         Dataset values in group (and subgroups if recursive=True).
-
     """
-
     if "lazy" in kwargs.keys():
         warnings.warn(
             "The 'lazy' parameter is not used in this method. Passing it will "
@@ -325,9 +306,7 @@ def h5ebsd2signaldict(
     scan : dict
         Dictionary with patterns, ``metadata`` and
         ``original_metadata``.
-
     """
-
     md, omd, scan_size = h5ebsdheader2dicts(
         scan_group, manufacturer, version, lazy
     )
@@ -442,9 +421,7 @@ def h5ebsdheader2dicts(
         All metadata available in file.
     scan_size
         Scan, image, step and detector pixel size available in file.
-
     """
-
     md = ebsd_metadata()
     title = (
         scan_group.file.filename.split("/")[-1].split(".")[0]
@@ -490,9 +467,7 @@ def kikuchipyheader2dicts(
     scan_size
         Scan, image, step and detector pixel size available in
         kikuchipy file.
-
     """
-
     # Data sets to not read via hdf5group2dict
     pattern_dset_names = list(manufacturer_pattern_names().values())
 
@@ -560,9 +535,7 @@ def edaxheader2dicts(
     scan_size
         Scan, image, step and detector pixel size available in EDAX
         file.
-
     """
-
     # Get header group as dictionary
     pattern_dset_names = list(manufacturer_pattern_names().values())
     hd = hdf5group2dict(
@@ -645,9 +618,7 @@ def brukerheader2dicts(
     scan_size
         Scan, image, step and detector pixel size available in Bruker
         file.
-
     """
-
     # Get header group and data group as dictionaries
     pattern_dset_names = list(manufacturer_pattern_names().values())
     hd = hdf5group2dict(
@@ -719,8 +690,8 @@ def file_writer(
     scan_number: int = 1,
     **kwargs,
 ):
-    """Write an :class:`~kikuchipy.signals.ebsd.EBSD` or
-    :class:`~kikuchipy.signals.ebsd.LazyEBSD` signal to an existing,
+    """Write an :class:`~kikuchipy.signals.EBSD` or
+    :class:`~kikuchipy.signals.LazyEBSD` signal to an existing,
     but not open, or new h5ebsd file.
 
     Only writing to kikuchipy's h5ebsd format is supported.
@@ -729,8 +700,7 @@ def file_writer(
     ----------
     filename
         Full path of HDF file.
-    signal : kikuchipy.signals.ebsd.EBSD or\
-            kikuchipy.signals.ebsd.LazyEBSD
+    signal : kikuchipy.signals.EBSD or kikuchipy.signals.LazyEBSD
         Signal instance.
     add_scan
         Add signal to an existing, but not open, h5ebsd file. If it does
@@ -740,9 +710,7 @@ def file_writer(
         but not open, h5ebsd file.
     **kwargs :
         Keyword arguments passed to :meth:`h5py:Group.require_dataset`.
-
     """
-
     # Set manufacturer and version to use in file
     from kikuchipy.release import version as ver_signal
 
@@ -847,7 +815,6 @@ def file_writer(
     dict2h5ebsdgroup(sample_pos, scan_group["EBSD/Data"])
 
     f.close()
-    _logger.info("File closed.")
 
 
 def dict2h5ebsdgroup(dictionary: dict, group: h5py.Group, **kwargs):
@@ -862,9 +829,7 @@ def dict2h5ebsdgroup(dictionary: dict, group: h5py.Group, **kwargs):
         HDF group to write dictionary to.
     **kwargs :
         Keyword arguments passed to :meth:`h5py:Group.require_dataset`.
-
     """
-
     for key, val in dictionary.items():
         ddtype = type(val)
         dshape = (1,)

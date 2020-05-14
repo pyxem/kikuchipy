@@ -16,32 +16,64 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import NoReturn, Union, List, Optional, Any
 from functools import reduce
+from typing import Union, Any, List, Optional
+import warnings
 
 from hyperspy.misc.utils import DictionaryTreeBrowser
 
 
-def _write_parameters_to_dictionary(
-    parameters: dict, dictionary: DictionaryTreeBrowser, node: str
-) -> NoReturn:
-    """Write dictionary of parameters to DictionaryTreeBrowser.
+def _get_input_bool(question: str) -> bool:
+    """Get input from user on boolean choice, returning the answer.
 
     Parameters
     ----------
-    parameters
-        Dictionary of parameters to write to dictionary.
-    dictionary
-        Dictionary to write parameters to.
-    node
-        String like 'Acquisition_instrument.SEM' etc. with dictionary
-        nodes to write parameters to.
-
+    question
+        Question to ask user.
     """
+    try:
+        answer = input(question)
+        answer = answer.lower()
+        while (answer != "y") and (answer != "n"):
+            print("Please answer y or n.")
+            answer = input(question)
+        if answer.lower() == "y":
+            return True
+        elif answer.lower() == "n":
+            return False
+    except OSError:
+        warnings.warn(
+            "Your terminal does not support raw input. Not adding scan. To add "
+            "the scan use `add_scan=True`"
+        )
+        return False
 
-    for key, val in parameters.items():
-        if val is not None:
-            dictionary.set_item(node + "." + key, val)
+
+def _get_input_variable(question: str, var_type: Any) -> Union[None, Any]:
+    """Get variable input from user, returning the variable.
+
+    Parameters
+    ----------
+    question
+        Question to ask user.
+    var_type
+        Type of variable to return.
+    """
+    try:
+        answer = input(question)
+        while type(answer) != var_type:
+            try:
+                answer = var_type(answer)
+            except (TypeError, ValueError):
+                print(f"Please enter a variable of type {var_type}:\n")
+                answer = input(question)
+        return answer
+    except OSError:
+        warnings.warn(
+            "Your terminal does not support raw input. Not adding scan. To add "
+            "the scan use `add_scan=True`"
+        )
+        return None
 
 
 def _delete_from_nested_dictionary(
@@ -60,9 +92,7 @@ def _delete_from_nested_dictionary(
     -------
     modified_dict
         Dictionary without deleted keys.
-
     """
-
     dict_type = type(dictionary)
     if isinstance(dictionary, DictionaryTreeBrowser):
         dictionary = dictionary.as_dictionary()
@@ -94,9 +124,7 @@ def _get_nested_dictionary(
         List of keys to get values from.
     default
         Default value to return if `keys` are not found.
-
     """
-
     if isinstance(dictionary, DictionaryTreeBrowser):
         dictionary = dictionary.as_dictionary()
     return reduce(

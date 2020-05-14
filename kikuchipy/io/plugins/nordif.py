@@ -25,10 +25,14 @@ import warnings
 
 from hyperspy.misc.utils import DictionaryTreeBrowser
 import numpy as np
-import matplotlib.pyplot as plt
+from matplotlib.pyplot import imread
 
-from kikuchipy.util.io import ebsd_metadata, metadata_nodes
-from kikuchipy.util.phase import _phase_metadata
+from kikuchipy.signals.util._metadata import (
+    ebsd_metadata,
+    metadata_nodes,
+    _phase_metadata,
+)
+
 
 # Plugin characteristics
 # ----------------------
@@ -73,9 +77,7 @@ def file_reader(
     -------
     scan : list of dicts
         Data, axes, metadata and original metadata.
-
     """
-
     if mmap_mode is None:
         mmap_mode = "r" if lazy else "c"
 
@@ -116,9 +118,7 @@ def file_reader(
     # Read static background image into metadata
     static_bg_file = os.path.join(folder, "Background acquisition pattern.bmp")
     try:
-        md.set_item(
-            ebsd_node + ".static_background", plt.imread(static_bg_file)
-        )
+        md.set_item(ebsd_node + ".static_background", imread(static_bg_file))
     except FileNotFoundError:
         warnings.warn(
             f"Could not read static background pattern '{static_bg_file}', "
@@ -216,9 +216,7 @@ def get_settings_from_file(
         Metadata that does not fit into HyperSpy's metadata structure.
     scan_size
         Information on image size, scan size and scan steps.
-
     """
-
     f = open(filename, "r", encoding="latin-1")  # Avoid byte strings
     content = f.read().splitlines()
 
@@ -331,9 +329,7 @@ def get_string(content: list, expression: str, line_no: int, file) -> str:
     -------
     str
         Output string with relevant value.
-
     """
-
     match = re.search(expression, content[line_no])
     if match is None:
         warnings.warn(
@@ -346,20 +342,17 @@ def get_string(content: list, expression: str, line_no: int, file) -> str:
 
 
 def file_writer(filename: str, signal):
-    """Write an :class:`~kikuchipy.signals.ebsd.EBSD` or
-    :class:`~kikuchipy.signals.ebsd.LazyEBSD` object to a NORDIF binary
+    """Write an :class:`~kikuchipy.signals.EBSD` or
+    :class:`~kikuchipy.signals.LazyEBSD` object to a NORDIF binary
     file.
 
     Parameters
     ----------
     filename
         Full path of HDF file.
-    signal : kikuchipy.signals.ebsd.EBSD or\
-            kikuchipy.signals.ebsd.LazyEBSD
+    signal : kikuchipy.signals.EBSD or kikuchipy.signals.LazyEBSD
         Signal instance.
-
     """
-
     with open(filename, "wb") as f:
         if signal._lazy:
             for pattern in signal._iterate_signal():

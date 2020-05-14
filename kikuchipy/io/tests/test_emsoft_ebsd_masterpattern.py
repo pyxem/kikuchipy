@@ -18,11 +18,11 @@
 
 import os
 
-import h5py
+from h5py import File
 import numpy as np
 import pytest
 
-import kikuchipy as kp
+from kikuchipy.io._io import load
 from kikuchipy.io.plugins.emsoft_ebsd_master_pattern import (
     _check_file_format,
     _crystal_data_2_metadata,
@@ -30,7 +30,11 @@ from kikuchipy.io.plugins.emsoft_ebsd_master_pattern import (
     _get_data_shape_slices,
     _get_datasets,
 )
-from kikuchipy.signals.test.test_ebsd import assert_dictionary
+from kikuchipy.signals.ebsd_master_pattern import (
+    EBSDMasterPattern,
+    LazyEBSDMasterPattern,
+)
+from kikuchipy.signals.tests.test_ebsd import assert_dictionary
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -148,7 +152,7 @@ def setup_axes_manager(axes=None):
 
 class TestEMsoftEBSDMasterPatternReader:
     def test_file_reader(self):
-        s = kp.load(EMSOFT_FILE)
+        s = load(EMSOFT_FILE)
 
         axes_manager = setup_axes_manager(["energy", "height", "width"])
 
@@ -157,7 +161,7 @@ class TestEMsoftEBSDMasterPatternReader:
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
     def test_projection_lambert(self):
-        s = kp.load(EMSOFT_FILE, projection="lambert", hemisphere="both",)
+        s = load(EMSOFT_FILE, projection="lambert", hemisphere="both",)
 
         axes_manager = setup_axes_manager()
 
@@ -165,7 +169,7 @@ class TestEMsoftEBSDMasterPatternReader:
         assert s.axes_manager.as_dictionary() == axes_manager
 
     def test_check_file_format(self, save_path_hdf5):
-        with h5py.File(save_path_hdf5, mode="w") as f:
+        with File(save_path_hdf5, mode="w") as f:
             g1 = f.create_group("EMheader")
             g2 = g1.create_group("EBSDmaster")
             g2.create_dataset(
@@ -227,15 +231,15 @@ class TestEMsoftEBSDMasterPatternReader:
 
         """
 
-        s = kp.load(
+        s = load(
             EMSOFT_FILE, projection=projection, hemisphere="south", lazy=True
         )
 
-        assert isinstance(s, kp.signals.LazyEBSDMasterPattern)
+        assert isinstance(s, LazyEBSDMasterPattern)
 
         s.compute()
 
-        assert isinstance(s, kp.signals.EBSDMasterPattern)
+        assert isinstance(s, EBSDMasterPattern)
 
     @pytest.mark.parametrize(
         "projection, hemisphere, dataset_names",
@@ -247,7 +251,7 @@ class TestEMsoftEBSDMasterPatternReader:
         ],
     )
     def test_get_datasets(self, projection, hemisphere, dataset_names):
-        with h5py.File(EMSOFT_FILE, mode="r") as f:
+        with File(EMSOFT_FILE, mode="r") as f:
             datasets = _get_datasets(
                 data_group=f["EMData/EBSDmaster"],
                 projection=projection,
@@ -263,7 +267,7 @@ class TestEMsoftEBSDMasterPatternReader:
         ],
     )
     def test_get_datasets_raises(self, projection, hemisphere, error_msg):
-        with h5py.File(EMSOFT_FILE, mode="r") as f:
+        with File(EMSOFT_FILE, mode="r") as f:
             with pytest.raises(ValueError, match=error_msg):
                 _ = _get_datasets(
                     data_group=f["EMData/EBSDmaster"],
@@ -272,7 +276,7 @@ class TestEMsoftEBSDMasterPatternReader:
                 )
 
     def test_dict2dict_via_mapping(self):
-        with h5py.File(EMSOFT_FILE, mode="r") as f:
+        with File(EMSOFT_FILE, mode="r") as f:
             mc_mapping = [
                 ("MCmode", "mode"),
                 ("sig", "sample_tilt"),

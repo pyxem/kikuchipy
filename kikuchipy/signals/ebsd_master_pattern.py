@@ -23,9 +23,12 @@ from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.misc.utils import DictionaryTreeBrowser
 import numpy as np
 
-from kikuchipy.util.io import metadata_nodes, ebsd_master_pattern_metadata
-from kikuchipy.util.general import _write_parameters_to_dictionary
-from kikuchipy.util.phase import _update_phase_info
+from kikuchipy.signals.util._metadata import (
+    ebsd_master_pattern_metadata,
+    metadata_nodes,
+    _update_phase_info,
+    _write_parameters_to_dictionary,
+)
 
 
 class EBSDMasterPattern(Signal2D):
@@ -127,16 +130,14 @@ class EBSDMasterPattern(Signal2D):
         Examples
         --------
         >>> import kikuchipy as kp
-        >>> ebsd_mp_node = kp.util.io.metadata_nodes(
+        >>> ebsd_mp_node = kp.signals.util.metadata_nodes(
         ...     "ebsd_master_pattern")
         >>> s.metadata.get_item(ebsd_mp_node + '.incident_beam_energy')
         15.0
         >>> s.set_simulated_parameters(incident_beam_energy=20.5)
         >>> s.metadata.get_item(ebsd_mp_node + '.incident_beam_energy')
         20.5
-
         """
-
         md = self.metadata
         ebsd_mp_node = metadata_nodes("ebsd_master_pattern")
         _write_parameters_to_dictionary(
@@ -223,7 +224,7 @@ class EBSDMasterPattern(Signal2D):
 
         See Also
         --------
-        set_experimental_parameters
+        set_simulation_parameters
 
         Examples
         --------
@@ -242,9 +243,7 @@ class EBSDMasterPattern(Signal2D):
         ├── coordinates = array([0., 0., 0.])
         ├── debye_waller_factor = 0.0035
         └── site_occupation = 1
-
         """
-
         # Ensure atom coordinates are numpy arrays
         if atom_coordinates is not None:
             for phase, val in atom_coordinates.items():

@@ -19,16 +19,22 @@
 import os
 
 import dask.array as da
-import hyperspy.api as hs
+from hyperspy.api import load as hs_load
+from hyperspy._signals.signal2d import Signal2D
 import numpy as np
 import pytest
 
-import kikuchipy as kp
-from kikuchipy.io.test.test_emsoft_ebsd_masterpattern import (
+from kikuchipy import load
+from kikuchipy.io.tests.test_emsoft_ebsd_masterpattern import (
     METADATA,
     setup_axes_manager,
 )
-from kikuchipy.signals.test.test_ebsd import assert_dictionary
+from kikuchipy.signals.tests.test_ebsd import assert_dictionary
+from kikuchipy.signals.ebsd_master_pattern import (
+    EBSDMasterPattern,
+    LazyEBSDMasterPattern,
+)
+from kikuchipy.signals.util._metadata import metadata_nodes
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -39,21 +45,21 @@ EMSOFT_FILE = os.path.join(
 
 class TestEBSDMasterPatternInit:
     def test_init_no_metadata(self):
-        s = kp.signals.EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
+        s = EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
 
         assert s.metadata.has_item("Simulation.EBSD_master_pattern")
         assert s.metadata.has_item("Sample.Phases")
 
     def test_ebsd_masterpattern_lazy_data_init(self):
-        s = kp.signals.EBSDMasterPattern(da.zeros((2, 10, 11, 11)))
+        s = EBSDMasterPattern(da.zeros((2, 10, 11, 11)))
 
-        assert isinstance(s, kp.signals.EBSDMasterPattern)
+        assert isinstance(s, EBSDMasterPattern)
         assert isinstance(s.data, da.Array)
 
     def test_ebsd_masterpattern_lazy_init(self):
-        s = kp.signals.LazyEBSDMasterPattern(da.zeros((2, 10, 11, 11)))
+        s = LazyEBSDMasterPattern(da.zeros((2, 10, 11, 11)))
 
-        assert isinstance(s, kp.signals.LazyEBSDMasterPattern)
+        assert isinstance(s, LazyEBSDMasterPattern)
         assert isinstance(s.data, da.Array)
 
 
@@ -62,32 +68,32 @@ class TestIO:
         "save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"]
     )
     def test_save_load_hspy(self, save_path_hdf5):
-        s = kp.load(EMSOFT_FILE)
+        s = load(EMSOFT_FILE)
 
         axes_manager = setup_axes_manager(["energy", "height", "width"])
 
-        assert isinstance(s, kp.signals.EBSDMasterPattern)
+        assert isinstance(s, EBSDMasterPattern)
         assert s.axes_manager.as_dictionary() == axes_manager
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
         s.save(save_path_hdf5)
 
-        s2 = hs.load(save_path_hdf5, signal_type="EBSDMasterPattern")
-        assert isinstance(s2, kp.signals.EBSDMasterPattern)
+        s2 = hs_load(save_path_hdf5, signal_type="EBSDMasterPattern")
+        assert isinstance(s2, EBSDMasterPattern)
         assert s2.axes_manager.as_dictionary() == axes_manager
         assert_dictionary(s2.metadata.as_dictionary(), METADATA)
 
-        s3 = hs.load(save_path_hdf5)
-        assert isinstance(s3, hs.signals.Signal2D)
+        s3 = hs_load(save_path_hdf5)
+        assert isinstance(s3, Signal2D)
         s3.set_signal_type("EBSDMasterPattern")
-        assert isinstance(s3, kp.signals.EBSDMasterPattern)
+        assert isinstance(s3, EBSDMasterPattern)
         assert s3.axes_manager.as_dictionary() == axes_manager
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
 
 class TestMetadata:
     def test_set_simulation_parameters(self):
-        s = kp.signals.EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
+        s = EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
         p_desired = {
             "BSE_simulation": {
                 "depth_step": 1.0,
@@ -129,12 +135,12 @@ class TestMetadata:
             "weak_beam_cutoff": 8.0,
         }
         s.set_simulation_parameters(**p_in)
-        ebsd_mp_node = kp.util.io.metadata_nodes("ebsd_master_pattern")
+        ebsd_mp_node = metadata_nodes("ebsd_master_pattern")
         md_dict = s.metadata.get_item(ebsd_mp_node).as_dictionary()
         assert_dictionary(p_desired, md_dict)
 
     def test_set_phase_parameters(self):
-        s = kp.signals.EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
+        s = EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
         p = {
             "number": 1,
             "atom_coordinates": {

@@ -24,9 +24,9 @@ via FFT written by Connelly Barnes (public domain, 2007).
 from typing import Union, Tuple, List
 
 import numpy as np
-import scipy
+from scipy.fft import next_fast_len, rfft2, irfft2
 
-from kikuchipy.util.window import Window
+from kikuchipy.filters.window import Window
 
 
 def _fft_filter_setup(
@@ -37,19 +37,15 @@ def _fft_filter_setup(
     # Optimal FFT shape
     real_fft_only = True
     fft_shape = (
-        scipy.fft.next_fast_len(
-            image_shape[0] + window_shape[0] - 1, real_fft_only
-        ),
-        scipy.fft.next_fast_len(
-            image_shape[1] + window_shape[1] - 1, real_fft_only
-        ),
+        next_fast_len(image_shape[0] + window_shape[0] - 1, real_fft_only),
+        next_fast_len(image_shape[1] + window_shape[1] - 1, real_fft_only),
     )
 
     # Pad window to optimal FFT size
     window_pad = _pad_window(window, fft_shape)
 
     # Obtain the transfer function via the real valued FFT
-    transfer_function = scipy.fft.rfft2(window_pad)
+    transfer_function = rfft2(window_pad)
 
     # Image offset before FFT and after IFFT
     offset_before = _offset_before_fft(window_shape)
@@ -77,9 +73,7 @@ def fft_filter(
     -------
     filtered_image
         Filtered image.
-
     """
-
     # Get optimal FFT shape, window padded with zeros in the optimal FFT
     # shape, transfer function of padded window, and image offsets
     # before FFT and after IFFT
@@ -182,10 +176,10 @@ def _fft_filter(
     image_pad = _pad_image(image, fft_shape, window_shape, offset_before_fft)
 
     # Compute real valued FFT of image
-    image_pad_fft = scipy.fft.rfft2(image_pad)
+    image_pad_fft = rfft2(image_pad)
 
     # Compute inverse FFT of product between FFTs
-    result_fft = scipy.fft.irfft2(image_pad_fft * transfer_function, fft_shape)
+    result_fft = irfft2(image_pad_fft * transfer_function, fft_shape)
 
     # Return filtered image without padding
     iy, ix = image.shape
