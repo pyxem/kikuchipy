@@ -20,9 +20,9 @@ Added
   master pattern file.
 - Python 3.8 support.
 - The public API has been restructured. The pattern processing used by the EBSD
-  class is available in the ``kikuchipy.pattern`` module, and filters/kernels
-  used in frequency domain filtering and pattern averaging are available in the
-  ``kikuchipy.filters`` module.
+  class is available in the ``kikuchipy.pattern`` subpackage, and
+  filters/kernels used in frequency domain filtering and pattern averaging are
+  available in the ``kikuchipy.filters`` SUBPACKAGE.
 - Intensity normalization of scan or single patterns.
 - Fast Fourier Transform (FFT) filtering of scan or single patterns using
   SciPy's fft routines and `Connelly Barnes' filterfft
