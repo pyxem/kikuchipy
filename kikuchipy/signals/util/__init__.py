@@ -15,3 +15,15 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+
+from kikuchipy.signals.util._metadata import (
+    ebsd_master_pattern_metadata,
+    ebsd_metadata,
+    metadata_nodes,
+)
+
+__all__ = [
+    "ebsd_master_pattern_metadata",
+    "ebsd_metadata",
+    "metadata_nodes",
+]

@@ -16,14 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import copy
-from typing import List, Tuple, Optional, NoReturn, Sequence, Union
+from copy import copy
+from typing import List, Tuple, Optional, Sequence, Union
 
-import dask.array as da
+from dask.array import Array
 from numba import njit
 import numpy as np
-import matplotlib as mpl
-import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
+from matplotlib.image import AxesImage
+from matplotlib.colorbar import Colorbar
+from matplotlib.pyplot import subplots
 from scipy.signal.windows import get_window
 
 
@@ -66,7 +68,7 @@ class Window(np.ndarray):
 
     The following passed parameters are the default
 
-    >>> w = kp.util.Window(window="circular", shape=(3, 3))
+    >>> w = kp.filters.Window(window="circular", shape=(3, 3))
     >>> w
     Window (3, 3) circular
     [[0. 1. 0.]
@@ -75,7 +77,7 @@ class Window(np.ndarray):
 
     A window can be made circular
 
-    >>> w = kp.util.Window(window="rectangular")
+    >>> w = kp.filters.Window(window="rectangular")
     >>> w
     Window (3, 3) rectangular
     [[1. 1. 1.]
@@ -90,7 +92,7 @@ class Window(np.ndarray):
 
     A custom window can be created
 
-    >>> w = kp.util.Window(np.arange(6).reshape(3, 2))
+    >>> w = kp.filters.Window(np.arange(6).reshape(3, 2))
     >>> w
     Window (3, 2) custom
     [[0, 1]
@@ -100,7 +102,7 @@ class Window(np.ndarray):
     To create a Gaussian window with a standard deviation of 2, obtained
     from :func:`scipy.signal.windows.gaussian`
 
-    >>> w = kp.util.Window(window="gaussian", std=2)
+    >>> w = kp.filters.Window(window="gaussian", std=2)
     >>> w
     Window (3, 3) gaussian
     [[0.77880078, 0.8824969 , 0.77880078]
@@ -109,11 +111,10 @@ class Window(np.ndarray):
 
     See Also
     --------
-    :func:`scipy.signal.windows.get_window`
-    :func:`~kikuchipy.util.window.modified_hann`
-    :func:`~kikuchipy.util.window.highpass_fft_filter`
-    :func:`~kikuchipy.util.window.lowpass_fft_filter`
-
+    :func:`scipy.signal.windows.get_window`,
+    kikuchipy.filters.modified_hann,
+    kikuchipy.filters.highpass_fft_filter,
+    kikuchipy.filters.lowpass_fft_filter
     """
 
     name: str = None
@@ -121,7 +122,7 @@ class Window(np.ndarray):
 
     def __new__(
         cls,
-        window: Union[None, str, np.ndarray, da.Array] = None,
+        window: Union[None, str, np.ndarray, Array] = None,
         shape: Optional[Sequence[int]] = None,
         **kwargs,
     ):
@@ -145,7 +146,7 @@ class Window(np.ndarray):
                 )
 
         exclude_window_corners = False
-        if isinstance(window, np.ndarray) or isinstance(window, da.Array):
+        if isinstance(window, np.ndarray) or isinstance(window, Array):
             name = "custom"
             data = window
         elif isinstance(window, str):
@@ -229,16 +230,14 @@ class Window(np.ndarray):
         """Radial distance to the window origin."""
         return distance_to_origin(self.shape, self.origin)
 
-    def make_circular(self) -> NoReturn:
+    def make_circular(self):
         """Make window circular.
 
         The data of window elements who's radial distance to the
         window origin is shorter or equal to the half width of the
         window's longest axis are set to zero. This has no effect if the
         window has only one axis.
-
         """
-
         if self.ndim == 1:
             return
 
@@ -258,7 +257,7 @@ class Window(np.ndarray):
 
         return (
             isinstance(self.name, str)
-            and (isinstance(self, np.ndarray) or isinstance(self, da.Array))
+            and (isinstance(self, np.ndarray) or isinstance(self, Array))
             and self.ndim < 3
             and isinstance(self.circular, bool)
         )
@@ -291,7 +290,7 @@ class Window(np.ndarray):
         cmap: str = "viridis",
         textcolors: Optional[List[str]] = None,
         cmap_label: str = "Value",
-    ) -> Tuple[mpl.figure.Figure, mpl.image.AxesImage, mpl.colorbar.Colorbar]:
+    ) -> Tuple[Figure, AxesImage, Colorbar]:
         """Plot window values with indices relative to the origin.
 
         Parameters
@@ -328,20 +327,18 @@ class Window(np.ndarray):
         >>> figure, image, colorbar = w.plot(
         ...     cmap="inferno", grid=True, show_values=True)
         >>> figure.savefig('my_kernel.png')
-
         """
-
         if not self.is_valid():
             raise ValueError("Window is invalid.")
 
         # Copy and use this object
-        w = copy.copy(self)
+        w = copy(self)
 
         # Add axis if 1D
         if w.ndim == 1:
             w = np.expand_dims(w, axis=w.ndim)
 
-        fig, ax = plt.subplots()
+        fig, ax = subplots()
         image = ax.imshow(w, cmap=cmap, interpolation=None)
 
         colorbar = ax.figure.colorbar(image, ax=ax)
@@ -391,9 +388,7 @@ def distance_to_origin(
     origin
         Window origin. If None, half the shape is used as origin for
         each axis.
-
     """
-
     if origin is None:
         origin = tuple(i // 2 for i in shape)
 
@@ -440,13 +435,12 @@ def modified_hann(Nx: int) -> np.ndarray:
 
     Examples
     --------
-    >>> w1 = kp.util.window.modified_hann(Nx=30)
-    >>> w2 = kp.util.Window("modified_hann", shape=(30,))
+    >>> import kikuchipy as kp
+    >>> w1 = kp.filters.modified_hann(Nx=30)
+    >>> w2 = kp.filters.Window("modified_hann", shape=(30,))
     >>> np.allclose(w1, w2)
     True
-
     """
-
     return np.cos(np.pi * (np.arange(Nx) - (Nx / 2) + 0.5) / Nx)
 
 
@@ -455,7 +449,8 @@ def lowpass_fft_filter(
     cutoff: Union[int, float],
     cutoff_width: Union[None, int, float] = None,
 ) -> np.ndarray:
-    r"""Frequency domain low-pass filter transfer function in 2D.
+    r"""Return a frequency domain low-pass filter transfer function in
+    2D.
 
     Used in [Wilkinson2006]_.
 
@@ -493,15 +488,14 @@ def lowpass_fft_filter(
 
     Examples
     --------
-    >>> w1 = kp.util.Window(
+    >>> import kikuchipy as kp
+    >>> w1 = kp.filters.Window(
     ...     "lowpass", cutoff=30, cutoff_width=15, shape=(96, 96))
-    >>> w2 = kp.util.window.lowpass_fft_filter(
+    >>> w2 = kp.filters.lowpass_fft_filter(
             shape=(96, 96), cutoff=30, cutoff_width=15)
     >>> np.allclose(w1, w2)
     True
-
     """
-
     r = distance_to_origin(shape)
 
     if cutoff_width is None:
@@ -519,7 +513,8 @@ def highpass_fft_filter(
     cutoff: Union[int, float],
     cutoff_width: Union[None, int, float] = None,
 ) -> np.ndarray:
-    r"""Frequency domain high-pass filter transfer function in 2D.
+    r"""Return a frequency domain high-pass filter transfer function in
+    2D.
 
     Used in [Wilkinson2006]_.
 
@@ -557,15 +552,14 @@ def highpass_fft_filter(
 
     Examples
     --------
-    >>> w1 = kp.util.Window(
+    >>> import kikuchipy as kp
+    >>> w1 = kp.filters.Window(
     ...     "highpass", cutoff=1, cutoff_width=0.5, shape=(96, 96))
-    >>> w2 = kp.util.window.highpass_fft_filter(
+    >>> w2 = kp.filters.highpass_fft_filter(
     ...     shape=(96, 96), cutoff=1, cutoff_width=0.5)
     >>> np.allclose(w1, w2)
     True
-
     """
-
     r = distance_to_origin(shape)
 
     if cutoff_width is None:

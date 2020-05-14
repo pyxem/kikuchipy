@@ -86,9 +86,7 @@ def file_reader(
         Electron Backscatter Diffraction Patterns. Part I: Pattern\
         Simulations," *Microscopy and Microanalysis* **19** (2013), doi:
         https://doi.org/10.1017/S1431927613001840.
-
     """
-
     mode = kwargs.pop("mode", "r")
     f = File(filename, mode=mode, **kwargs)
 
@@ -217,9 +215,7 @@ def _check_file_format(file: File):
     Parameters
     ----------
     file: h5py:File
-
     """
-
     try:
         program_name = file["EMheader/EBSDmaster/ProgramName"][:][0].decode()
         if program_name != "EMEBSDmaster.f90":
@@ -286,9 +282,7 @@ def _get_datasets(
     -------
     datasets
         List of HDF5 data sets.
-
     """
-
     hemisphere = hemisphere.lower()
     projection = projection.lower()
 

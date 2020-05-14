@@ -28,14 +28,19 @@ from h5py import File, is_hdf5
 import numpy as np
 
 import kikuchipy.signals
-from kikuchipy.io.plugins import h5ebsd, nordif, emsoft_ebsd_master_pattern
-from kikuchipy.util.io import _get_input_bool
+from kikuchipy.io.plugins import (
+    emsoft_ebsd_master_pattern,
+    h5ebsd,
+    nordif,
+)
+from kikuchipy.io._util import _get_input_bool
+
 
 plugins = [
+    emsoft_ebsd_master_pattern,
     hspy,
     h5ebsd,
     nordif,
-    emsoft_ebsd_master_pattern,
 ]
 
 default_write_ext = set()
@@ -45,7 +50,8 @@ for plugin in plugins:
 
 
 def load(filename: str, lazy: bool = False, **kwargs):
-    """Load an :class:`EBSD` or :class:`EBSDMasterPattern` object from a
+    """Load an :class:`~kikuchipy.signals.EBSD` or
+    :class:`~kikuchipy.signals.EBSDMasterPattern` object from a
     supported file.
 
     This function is a modified version of :func:`hyperspy.io.load`.
@@ -61,9 +67,7 @@ def load(filename: str, lazy: bool = False, **kwargs):
     kwargs :
         Keyword arguments passed to the corresponding kikuchipy reader.
         See their individual documentation for available options.
-
     """
-
     if not os.path.isfile(filename):
         raise IOError(f"No filename matches '{filename}'.")
 
@@ -122,9 +126,7 @@ def _dict2signal(signal_dict: dict, lazy: bool = False):
     signal : EBSD, LazyEBSD, EBSDMasterPattern or LazyEBSDMasterPattern
         Signal instance with ``data``, ``metadata`` and
         ``original_metadata`` from dictionary.
-
     """
-
     signal_type = ""
     if "metadata" in signal_dict:
         md = signal_dict["metadata"]
@@ -173,9 +175,7 @@ def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
     -------
     plugin
         One of the potential plugins, or None if no footprint was found.
-
     """
-
     f = File(filename, mode="r")
 
     plugin = None
@@ -240,9 +240,7 @@ def _assign_signal_subclass(
     Returns
     -------
     Signal or subclass
-
     """
-
     # Check if parameter values are allowed
     if (
         "float" in dtype.name
@@ -289,7 +287,7 @@ def _assign_signal_subclass(
     return matches[0]
 
 
-def save(
+def _save(
     filename: str,
     signal,
     overwrite: Optional[bool] = None,
@@ -304,8 +302,7 @@ def save(
     ----------
     filename
         File path including name of new file.
-    signal : kikuchipy.signals.ebsd.EBSD or\
-            kikuchipy.signals.ebsd.LazyEBSD
+    signal : EBSD or LazyEBSD
         Signal instance.
     overwrite
         Whether to overwrite file or not if it already exists.
@@ -315,9 +312,7 @@ def save(
         file.
     **kwargs :
         Keyword arguments passed to the writer.
-
     """
-
     ext = os.path.splitext(filename)[1][1:]
     if ext == "":  # Will write to kikuchipy's h5ebsd format
         ext = "h5"
@@ -325,7 +320,7 @@ def save(
 
     writer = None
     for plugin in plugins:
-        if ext.lower() in plugin.file_extensions:
+        if ext.lower() in plugin.file_extensions and plugin.writes:
             writer = plugin
             break
 

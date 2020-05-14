@@ -16,4 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from kikuchipy.io.plugins import h5ebsd, nordif, emsoft_ebsd_master_pattern
+from kikuchipy.io.plugins import (
+    emsoft_ebsd_master_pattern,
+    h5ebsd,
+    nordif,
+)
+
+__all__ = [
+    "emsoft_ebsd_master_pattern",
+    "h5ebsd",
+    "nordif",
+]

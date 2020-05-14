@@ -15,3 +15,33 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+
+from kikuchipy.pattern._pattern import (
+    fft,
+    fft_filter,
+    fft_frequency_vectors,
+    fft_spectrum,
+    get_dynamic_background,
+    get_image_quality,
+    ifft,
+    normalize_intensity,
+    remove_dynamic_background,
+    rescale_intensity,
+)
+from kikuchipy.pattern import chunk
+from kikuchipy.pattern import correlate
+
+__all__ = [
+    "chunk",
+    "correlate",
+    "fft",
+    "fft_filter",
+    "fft_frequency_vectors",
+    "fft_spectrum",
+    "get_dynamic_background",
+    "get_image_quality",
+    "ifft",
+    "normalize_intensity",
+    "remove_dynamic_background",
+    "rescale_intensity",
+]

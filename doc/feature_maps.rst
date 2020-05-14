@@ -2,8 +2,8 @@
 Feature maps
 ============
 
-This section details methods for extracting quantitative information from
-pattern intensities, called feature maps (for lack of a better description).
+This section details methods for extracting information from pattern
+intensities, called feature maps (for lack of a better description).
 
 .. _image-quality:
 
@@ -11,11 +11,10 @@ Image quality
 =============
 
 The image quality metric :math:`Q` presented by Krieger Lassen [Lassen1994]_
-can be calculated for an :class:`~kikuchipy.signals.ebsd.EBSD` object with
-:meth:`~kikuchipy.signals.ebsd.EBSD.get_image_quality`, or, for a single pattern
-(:class:`numpy.ndarray`), with
-:func:`~kikuchipy.util.pattern.get_image_quality`. Following the notation in
-[Marquardt2017]_, it is given by
+can be calculated for an :class:`~kikuchipy.signals.EBSD` object with
+:meth:`~kikuchipy.signals.EBSD.get_image_quality`, or, for a single pattern
+(:class:`numpy.ndarray`), with :func:`~kikuchipy.pattern.get_image_quality`.
+Following the notation in [Marquardt2017]_, it is given by
 
 .. math::
 
@@ -33,9 +32,9 @@ of the EBSD pattern, and the vectors :math:`\mathbf{q}` are the frequency
 vectors with components :math:`(h, k)`. The sharper the Kikuchi bands, the
 higher the high frequency content of the power spectrum, and thus the closer
 :math:`Q` will be to unity. To visualize parts of the computation, we compute
-the power spectrum of a pattern in an :class:`~kikuchipy.signals.ebsd.EBSD`
-object ``s`` and the frequency vectors, shift the zero-frequency components to
-the centre, and plot them:
+the power spectrum of a pattern in an :class:`~kikuchipy.signals.EBSD` object
+``s`` and the frequency vectors, shift the zero-frequency components to the
+centre, and plot them:
 
 .. code-block::
 
@@ -48,9 +47,9 @@ the centre, and plot them:
     >>> plt.imshow(p)
     >>> plt.colorbar()
 
-    >>> p_fft = kp.util.pattern.fft(p, shift=True)
+    >>> p_fft = kp.pattern.fft(p, shift=True)
     >>> plt.figure()
-    >>> plt.imshow(np.log(kp.util.pattern.fft_spectrum(p_fft)))
+    >>> plt.imshow(np.log(kp.pattern.fft_spectrum(p_fft)))
     >>> plt.colorbar()
 
     >>> q = kp.util.pattern.fft_frequency_vectors(shape=p.shape)

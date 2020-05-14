@@ -10,7 +10,7 @@
 
 .. Read the Docs
 .. image:: https://readthedocs.org/projects/kikuchipy/badge/?version=latest
-    :target: https://kikuchipy.readthedocs.io/en/latest/?badge=latest
+    :target: https://kikuchipy.org/en/latest/
     :alt: Documentation status
 
 .. PyPI version
@@ -40,8 +40,8 @@ inherits all relevant methods from HyperSpy's Signal2D and `Signal
 An effort is made to keep memory usage in check and enable scalability by using
 the `Dask <https://dask.org>`_ library for pattern processing.
 
-Note that the project is in an alpha stage, and there will likely be breaking
-changes with each release.
+The project is in an alpha stage, and there will likely be breaking changes with
+each release.
 
 kikuchipy is released under the GPL v3 license.
 
@@ -49,20 +49,20 @@ User guide
 ----------
 
 Installation instructions, a user guide and the full API reference is available
-`here <https://kikuchipy.readthedocs.io>`_ via Read the Docs.
+via Read the Docs at https://kikuchipy.org.
 
 Contributing
 ------------
 
 Everyone is welcome to contribute. Please read our `contributor guide
-<https://kikuchipy.readthedocs.io/en/latest/contributing.html>`_ to get started!
+<https://kikuchipy.org/en/latest/contributing.html>`_ to get started!
 
 Code of Conduct
 ---------------
 
 kikuchipy has a `Code of Conduct
-<https://kikuchipy.readthedocs.io/en/latest/code_of_conduct.html>`_
-that should be honoured by everyone who participates in the kikuchipy community.
+<https://kikuchipy.org/en/latest/code_of_conduct.html>`_ that should be honoured
+by everyone who participates in the kikuchipy community.
 
 Cite
 ----

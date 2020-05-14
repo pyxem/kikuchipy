@@ -16,26 +16,25 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Union, Tuple, Any, List
-import warnings
+import re
+from typing import Union, List
+
+import numpy as np
 
 from hyperspy.misc.utils import DictionaryTreeBrowser
-from hyperspy.exceptions import VisibleDeprecationWarning
 
 
 def ebsd_metadata() -> DictionaryTreeBrowser:
     """Return a dictionary in HyperSpy's DictionaryTreeBrowser format
     with the default kikuchipy EBSD metadata.
 
-    See :meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`
-    for an explanation of the parameters.
+    See :meth:`~kikuchipy.signals.EBSD.set_experimental_parameters` for
+    an explanation of the parameters.
 
     Returns
     -------
     md : hyperspy.misc.utils.DictionaryTreeBrowser
-
     """
-
     md = DictionaryTreeBrowser()
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     ebsd = {
@@ -66,15 +65,6 @@ def ebsd_metadata() -> DictionaryTreeBrowser:
     return md
 
 
-def kikuchipy_metadata() -> DictionaryTreeBrowser:
-    warnings.warn(
-        "This function is deprecated in favor of 'ebsd_metadata()' due to more "
-        "signals being added, and will be removed in v0.3.",
-        VisibleDeprecationWarning,
-    )
-    return ebsd_metadata()
-
-
 def ebsd_master_pattern_metadata() -> DictionaryTreeBrowser:
     """Return a dictionary in HyperSpy's DictionaryTreeBrowser format
     with the default kikuchipy EBSD master pattern metadata.
@@ -83,15 +73,13 @@ def ebsd_master_pattern_metadata() -> DictionaryTreeBrowser:
     master pattern HDF5 file.
 
     See
-    :meth:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern.set_simulation_parameters`
+    :meth:`~kikuchipy.signals.EBSDMasterPattern.set_simulation_parameters`
     for an explanation of the parameters.
 
     Returns
     -------
-    md : DictionaryTreeBrowser
-
+    md : hyperspy.misc.utils.DictionaryTreeBrowser
     """
-
     ebsd_master_pattern = {
         "BSE_simulation": {
             "depth_step": -1.0,
@@ -139,10 +127,8 @@ def metadata_nodes(
 
     Returns
     -------
-    nodes_to_return
-
+    nodes_to_return : list of str or str
     """
-
     available_nodes = {
         "sem": "Acquisition_instrument.SEM",
         "ebsd": "Acquisition_instrument.SEM.Detector.EBSD",
@@ -165,58 +151,97 @@ def metadata_nodes(
     return nodes_to_return
 
 
-def _get_input_bool(question: str) -> bool:
-    """Get input from user on boolean choice, returning the answer.
+def _phase_metadata() -> dict:
+    """Return a dictionary with a default kikuchipy phase structure.
+
+    Returns
+    -------
+    pd : dict
+    """
+    pd = {
+        "atom_coordinates": {
+            "1": {
+                "atom": "",
+                "coordinates": np.zeros(3),
+                "site_occupation": 0.0,
+                "debye_waller_factor": 0.0,
+            }
+        },
+        "formula": "",
+        "info": "",
+        "lattice_constants": np.zeros(6),
+        "laue_group": "",
+        "material_name": "",
+        "point_group": "",
+        "setting": 0,
+        "space_group": 0,
+        "symmetry": 0,
+        "source": "",
+    }
+    return pd
+
+
+def _update_phase_info(
+    metadata: DictionaryTreeBrowser, dictionary: dict, phase_number: int = 1
+) -> DictionaryTreeBrowser:
+    """Update information of phase in metadata, adding it if it doesn't
+    already exist.
 
     Parameters
     ----------
-    question
-        Question to ask user.
+    metadata
+        Metadata to update.
+    dictionary
+        Dictionary with only values to update.
+    phase_number
+        Number of phase to update.
 
+    Returns
+    -------
+    metadata : DictionaryTreeBrowser
+        Updated metadata.
     """
+    # Check if metadata has phases
+    if not metadata.has_item("Sample.Phases"):
+        metadata.add_node("Sample.Phases")
 
-    try:
-        answer = input(question)
-        answer = answer.lower()
-        while (answer != "y") and (answer != "n"):
-            print("Please answer y or n.")
-            answer = input(question)
-        if answer.lower() == "y":
-            return True
-        elif answer.lower() == "n":
-            return False
-    except OSError:
-        warnings.warn(
-            "Your terminal does not support raw input. Not adding scan. To add "
-            "the scan use `add_scan=True`"
-        )
-        return False
+    # Check if phase number is already in metadata
+    phase = metadata.Sample.Phases.get_item(str(phase_number))
+    if phase is None:
+        phase = _phase_metadata()
+    phase = dict(phase)
+
+    # Loop over input dictionary and update items in phase dictionary
+    for key, val in dictionary.items():
+        key = re.sub(r"(\w)([A-Z])", r"\1 \2", key)  # Space before UPPERCASE
+        key = key.lower()
+        key = key.replace(" ", "_")
+        if key in phase:
+            if isinstance(val, list):
+                val = np.array(val)
+            phase[key] = val
+
+    # Update phase info in metadata
+    metadata.Sample.Phases.add_dictionary({str(phase_number): phase})
+
+    return metadata
 
 
-def _get_input_variable(question: str, var_type: Any) -> Union[None, Any]:
-    """Get variable input from user, returning the variable.
+def _write_parameters_to_dictionary(
+    parameters: dict, dictionary: DictionaryTreeBrowser, node: str
+):
+    """Write dictionary of parameters to DictionaryTreeBrowser.
 
     Parameters
     ----------
-    question
-        Question to ask user.
-    var_type
-        Type of variable to return.
-
+    parameters
+        Dictionary of parameters to write to dictionary.
+    dictionary
+        Dictionary to write parameters to.
+    node
+        String like 'Acquisition_instrument.SEM' etc. with dictionary
+        nodes to write parameters to.
     """
-
-    try:
-        answer = input(question)
-        while type(answer) != var_type:
-            try:
-                answer = var_type(answer)
-            except (TypeError, ValueError):
-                print(f"Please enter a variable of type {var_type}:\n")
-                answer = input(question)
-        return answer
-    except OSError:
-        warnings.warn(
-            "Your terminal does not support raw input. Not adding scan. To add "
-            "the scan use `add_scan=True`"
-        )
-        return None
+    for key, val in parameters.items():
+        if val is not None:
+            dictionary.set_item(node + "." + key, val)

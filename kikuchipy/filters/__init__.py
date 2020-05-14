@@ -15,3 +15,19 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+
+from kikuchipy.filters.window import (
+    distance_to_origin,
+    modified_hann,
+    lowpass_fft_filter,
+    highpass_fft_filter,
+    Window,
+)
+
+__all__ = [
+    "distance_to_origin",
+    "highpass_fft_filter",
+    "lowpass_fft_filter",
+    "modified_hann",
+    "Window",
+]

@@ -16,13 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 import numpy as np
 import pytest
 
-import kikuchipy.util.barnes_fftfilter as barnes
-from kikuchipy.util.window import Window
+import kikuchipy.filters.fft_barnes as barnes
+from kikuchipy.filters.window import Window
 
 
 class TestBarnesFFTFilter:

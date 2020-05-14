@@ -16,14 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import logging
-
 import dask.array as da
 import numpy as np
 
-_logger = logging.getLogger(__name__)
 
-
+# This function is not used, but might be useful!
 def _get_chunks(data_shape, dtype, mbytes_chunk=100):
     """Return suggested data chunks for patterns.
 
@@ -46,7 +43,6 @@ def _get_chunks(data_shape, dtype, mbytes_chunk=100):
     chunks : list
         Suggested chunk size.
     """
-
     if isinstance(data_shape, tuple):
         data_shape = np.array(data_shape)
 
@@ -65,8 +61,6 @@ def _get_chunks(data_shape, dtype, mbytes_chunk=100):
             i_max = np.argmax(nav_chunks)
             nav_chunks[i_max] = np.floor(nav_chunks[i_max] / 1.1)
     chunks = list(nav_chunks) + list(sig_chunks)
-
-    _logger.info(f"Suggested chunk size {chunks}")
 
     return chunks
 
@@ -88,7 +82,6 @@ def _get_dask_array(signal, dtype=None):
         Dask array with signal data with appropriate chunking and data
         type.
     """
-
     if dtype is None:
         dtype = signal.data.dtype
     if signal._lazy or isinstance(signal.data, da.Array):
@@ -127,7 +120,6 @@ def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
         :func:`dask.array.rechunk` for factors/loadings,
         respectively.
     """
-
     # Make sure the last factors/loading axes have the same shapes
     if factors.shape[-1] != loadings.shape[-1]:
         raise ValueError(
@@ -160,3 +152,49 @@ def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
         ]
 
     return chunks
+
+
+def _update_learning_results(learning_results, components, dtype_out):
+    """Update learning results before calling
+    :meth:`hyperspy.learn.mva.MVA.get_decomposition_model` by
+    changing data type, keeping only desired components and rechunking
+    them into suitable chunks if they are lazy.
+
+    Parameters
+    ----------
+    learning_results : hyperspy.learn.mva.LearningResults
+        Learning results with component patterns and loadings.
+    components : None, int or list of ints
+        If ``None``, rebuilds the signal from all ``components``. If
+        ``int``, rebuilds signal from ``components`` in range 0-given
+        ``int``. If list of ``int``, rebuilds signal from only
+        ``components`` in given list.
+    dtype_out : numpy.float16, numpy.float32 or numpy.float64
+        Data type to cast learning results to.
+
+    Returns
+    -------
+    factors : :attr:`hyperspy.learn.mva.LearningResults.factors`
+        Updated component patterns in learning results.
+    loadings : :attr:`hyperspy.learn.mva.LearningResults.loadings`
+        Updated component loadings in learning results.
+    """
+    # Change data type
+    factors = learning_results.factors.astype(dtype_out)
+    loadings = learning_results.loadings.astype(dtype_out)
+
+    # Keep desired components
+    if hasattr(components, "__iter__"):  # components is a list of ints
+        factors = factors[:, components]
+        loadings = loadings[:, components]
+    else:  # components is an int
+        factors = factors[:, :components]
+        loadings = loadings[:, :components]
+
+    # Rechunk if learning results are lazy
+    if isinstance(factors, da.Array) and isinstance(loadings, da.Array):
+        chunks = _rechunk_learning_results(factors=factors, loadings=loadings)
+        factors = factors.rechunk(chunks=chunks[0])
+        loadings = loadings.rechunk(chunks=chunks[1])
+
+    return factors, loadings

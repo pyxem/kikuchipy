@@ -8,12 +8,11 @@ latter intensity is usually undesirable, while for :doc:`virtual backscatter
 electron (VBSE) imaging <virtual_backscatter_electron_imaging>`, this intensity
 can reveal topographical, compositional or diffraction contrast. This section
 details methods to enhance the Kikuchi diffraction pattern and manipulate
-detector intensities in patterns in an :class:`~kikuchipy.signals.ebsd.EBSD`
-object.
+detector intensities in patterns in an :class:`~kikuchipy.signals.EBSD` object.
 
 Most of the methods operating on EBSD objects use functions that operate on the
 individual patterns (:class:`numpy.ndarray`). These single pattern functions are
-available in the :mod:`kikuchipy.util.pattern` module.
+available in the :mod:`kikuchipy.pattern` module.
 
 Almost all methods operate inplace (indicated in their docstrings), meaning it
 overwrites the patterns in the EBSD object. If a new object is desired, create a
@@ -48,8 +47,8 @@ intensities, leading to patterns not using the full available data type range:
 
 In these cases it is convenient to rescale intensities to a desired data type
 range, either keeping relative intensities between patterns in a scan or not. We
-can do this for all patterns in a scan (:class:`~kikuchipy.signals.ebsd.EBSD`
-object) with :meth:`kikuchipy.signals.ebsd.EBSD.rescale_intensity`:
+can do this for all patterns in a scan (:class:`~kikuchipy.signals.EBSD`
+object) with :meth:`kikuchipy.signals.EBSD.rescale_intensity`:
 
 .. code-block::
 
@@ -59,12 +58,12 @@ object) with :meth:`kikuchipy.signals.ebsd.EBSD.rescale_intensity`:
     >>> s.plot(vmax=65535)
 
 Or, we can do it for a single pattern (:class:`numpy.ndarray`) with
-:func:`kikuchipy.util.pattern.rescale_intensity`:
+:func:`kikuchipy.pattern.rescale_intensity`:
 
 .. code-block::
 
     >>> p = s.inav[0, 0].data
-    >>> p2 = kp.util.pattern.rescale_intensity(p)
+    >>> p2 = kp.pattern.rescale_intensity(p)
 
 .. _fig-rescale-intensities:
 
@@ -110,7 +109,7 @@ It can be useful to normalize pattern intensities to a mean value of
 :math:`\mu = 0.0` and a standard deviation of e.g. :math:`\sigma = 1.0` when
 e.g. comparing patterns or calculating the :ref:`image quality <image-quality>`.
 Patterns can be normalized with
-:meth:`~kikuchipy.signals.ebsd.EBSD.normalize_intensity`:
+:meth:`~kikuchipy.signals.EBSD.normalize_intensity`:
 
 .. code-block::
 
@@ -140,7 +139,7 @@ Remove the static background
 
 Effects which are constant, like hot pixels or dirt on the detector, can be
 removed by either subtracting or dividing by a static background via
-:meth:`~kikuchipy.signals.ebsd.EBSD.remove_static_background`:
+:meth:`~kikuchipy.signals.EBSD.remove_static_background`:
 
 .. code-block::
 
@@ -157,7 +156,7 @@ removed by either subtracting or dividing by a static background via
 
 Here, the static background pattern is assumed to be stored as part of the
 signal ``metadata``, which can be loaded via
-:meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`. The static
+:meth:`~kikuchipy.signals.EBSD.set_experimental_parameters`. The static
 background pattern can also be passed to the ``static_bg`` parameter. Passing
 ``relative=True`` (default) ensures that relative intensities between patterns
 are kept when they are rescaled after correction to fill the available data
@@ -179,7 +178,7 @@ Remove the dynamic background
 Uneven intensity in a static background subtracted pattern can be corrected by
 subtracting or dividing by a dynamic background obtained by Gaussian blurring.
 This so-called flat fielding is done with
-:meth:`~kikuchipy.signals.ebsd.EBSD.remove_dynamic_background`. A Gaussian
+:meth:`~kikuchipy.signals.EBSD.remove_dynamic_background`. A Gaussian
 window with a standard deviation set by ``std`` is used to blur each pattern
 individually (dynamic) either in the spatial or frequency domain, set by
 ``filter_domain``. Blurring in the frequency domain is effectively accomplished
@@ -216,7 +215,7 @@ Get the dynamic background
 ==========================
 
 The Gaussian blurred pattern removed during dynamic background correction can
-be obtained as it's own :class:`~kikuchipy.signals.ebsd.EBSD` object:
+be obtained as it's own :class:`~kikuchipy.signals.EBSD` object:
 
 .. code-block::
 
@@ -245,7 +244,7 @@ Average neighbour patterns
 
 The signal-to-noise ratio in patterns in an EBSD scan ``s`` can be improved by
 averaging patterns with their closest neighbours within a window/kernel/mask
-with :meth:`~kikuchipy.signals.ebsd.EBSD.average_neighbour_patterns`:
+with :meth:`~kikuchipy.signals.EBSD.average_neighbour_patterns`:
 
 .. code-block::
 
@@ -279,11 +278,11 @@ shape :math:`m \times n`, this becomes [Gonzalez2017]_
     {\sum_{s=-a}^a\sum_{t=-b}^b{w(s, t)}},
 
 where :math:`a = (m - 1)/2` and :math:`b = (n - 1)/2`. The window :math:`w`, a
-:class:`~kikuchipy.util.window.Window` object, can be plotted:
+:class:`~kikuchipy.filters.Window` object, can be plotted:
 
 .. code-block::
 
-    >>> w = kp.util.Window(window="gaussian", shape=(3, 3), std=1)
+    >>> w = kp.filters.Window(window="gaussian", shape=(3, 3), std=1)
     >>> w.plot(cmap="inferno")
 
 .. _fig-averaging-window:
@@ -297,20 +296,20 @@ where :math:`a = (m - 1)/2` and :math:`b = (n - 1)/2`. The window :math:`w`, a
 
 Any 1D or 2D window with desired coefficients can be used. This custom window
 can be passed to the ``window`` parameter in
-:meth:`~kikuchipy.signals.ebsd.EBSD.average_neighbour_patterns` or
-:class:`~kikuchipy.util.window.Window` as a :class:`numpy.ndarray` or
+:meth:`~kikuchipy.signals.EBSD.average_neighbour_patterns` or
+:class:`~kikuchipy.filters.Window` as a :class:`numpy.ndarray` or
 :class:`dask.array.Array`. Additionally, any window in
 :func:`scipy.signal.windows.get_window` passed as a string via ``window`` with
 the necessary parameters as keyword arguments (like ``std=1`` for
 ``window="gaussian"``) can be used. To demonstrate the creation and use of an
 asymmetrical circular window (and the use of
-:meth:`~kikuchipy.util.window.Window.make_circular`, although we could create a
+:meth:`~kikuchipy.filters.Window.make_circular`, although we could create a
 circular window directly by calling ``window="circular"`` upon window
 initialization):
 
 .. code-block::
 
-    >>> w = kp.util.Window(window="rectangular", shape=(5, 4))
+    >>> w = kp.filters.Window(window="rectangular", shape=(5, 4))
     >>> w
     Window (5, 4) rectangular
     [[1. 1. 1. 1.]
@@ -356,7 +355,7 @@ Adaptive histogram equalization
 
 Enhancing the pattern contrast with adaptive histogram equalization has been
 found useful when comparing patterns for dictionary indexing [Marquardt2017]_.
-With :meth:`~kikuchipy.signals.ebsd.EBSD.adaptive_histogram_equalization`, the
+With :meth:`~kikuchipy.signals.EBSD.adaptive_histogram_equalization`, the
 intensities in the pattern histogram are spread to cover the available range,
 e.g. [0, 255] for patterns of ``uint8`` data type:
 
@@ -398,10 +397,10 @@ Filtering in the frequency domain
 =================================
 
 Filtering of patterns in the frequency domain can be done with
-:meth:`~kikuchipy.signals.ebsd.EBSD.fft_filter`. This method takes a spatial
+:meth:`~kikuchipy.signals.EBSD.fft_filter`. This method takes a spatial
 kernel defined in the spatial domain, or a transfer function defined in the
 frequency domain, in the ``transfer_function`` argument as a
-:class:`numpy.ndarray` or a :class:`~kikuchipy.util.window.Window`. Which domain
+:class:`numpy.ndarray` or a :class:`~kikuchipy.filters.Window`. Which domain
 the transfer function is defined in must be passed to the ``function_domain``
 argument. Whether to shift zero-frequency components to the centre of the FFT
 can also be controlled via ``shift``, but note that this is only used when
@@ -411,13 +410,13 @@ Popular uses of filtering of EBSD patterns in the frequency domain include
 removing large scale variations across the detector with a Gaussian high pass
 filter, or removing high frequency noise with a Gaussian low pass filter. These
 particular functions are readily available via
-:class:`~kikuchipy.util.window.Window`:
+:class:`~kikuchipy.filters.Window`:
 
 .. code-block::
 
     >>> pattern_shape = s.axes_manager.signal_shape[::-1]
-    >>> w_low = kp.util.Window("lowpass", c=22, w_c=10, shape=pattern_shape)
-    >>> w_high = kp.util.Window("highpass", c=3, w_c=2, shape=pattern_shape)
+    >>> w_low = kp.filters.Window("lowpass", c=22, w_c=10, shape=pattern_shape)
+    >>> w_high = kp.filters.Window("highpass", c=3, w_c=2, shape=pattern_shape)
     >>> w = w_low * w_high
     >>> import matplotlib.pyplot as plt
     >>> plt.imshow(w)
@@ -437,7 +436,7 @@ particular functions are readily available via
 
 Then, to multiply the FFT of each pattern with this transfer function, and
 subsequently computing the inverse FFT (IFFT), we use
-:meth:`~kikuchipy.signals.ebsd.EBSD.fft_filter`, and remember to shift the
+:meth:`~kikuchipy.signals.EBSD.fft_filter`, and remember to shift the
 zero-frequency components to the centre of the FFT:
 
 .. code-block::
@@ -484,6 +483,6 @@ purely illustrative example, and perhaps not that practically useful):
     domain with the kernel's transfer function and subsequently computing the
     IFFT (right).
 
-Note also that :meth:`~kikuchipy.signals.ebsd.EBSD.fft_filter` performs the
+Note also that :meth:`~kikuchipy.signals.EBSD.fft_filter` performs the
 filtering on the patterns with data type ``np.float32``, and therefore have to
 rescale back to the pattern's original data type if necessary.

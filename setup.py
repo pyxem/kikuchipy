@@ -48,14 +48,10 @@ extra_feature_requirements = {
         "sphinx-autodoc-typehints >= 1.10.3",
     ],
     # Update in .travis.yml if this list is updated!
-    "test": [
-        "pytest >= 5.4",
-        "pytest-cov >= 2.8.1",
-        "coverage >= 5.0",  # == 4.5.4",  # 5.0 have some issues with reporting to Coveralls
-    ],
+    "tests": ["pytest >= 5.4", "pytest-cov >= 2.8.1", "coverage >= 5.0",],
 }
 
-# Create a development project, including both the doc and test projects
+# Create a development project, including both the doc and tests projects
 extra_feature_requirements["dev"] = [
     "black >= 19.3b0",
     "pre-commit >= 1.16",

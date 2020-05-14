@@ -2,12 +2,12 @@
 Metadata structure
 ==================
 
-The :class:`~kikuchipy.signals.ebsd.EBSD` and
-:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` classes store
-metadata in the ``metadata`` attribute provided by HyperSpy. While kikuchipy's
-EBSD (:func:`~kikuchipy.util.io.ebsd_metadata`) and EBSDMasterPattern
-(:func:`~kikuchipy.util.io.ebsd_master_pattern_metadata`) metadata structures
-are based on `HyperSpy's metadata structure
+The :class:`~kikuchipy.signals.EBSD` and
+:class:`~kikuchipy.signals.EBSDMasterPattern` classes store metadata in the
+``metadata`` attribute provided by HyperSpy. While kikuchipy's EBSD
+(:func:`~kikuchipy.signals.util.ebsd_metadata`) and EBSDMasterPattern
+(:func:`~kikuchipy.signals.util.ebsd_master_pattern_metadata`) metadata
+structures are based on `HyperSpy's metadata structure
 <http://hyperspy.org/hyperspy-doc/current/user_guide/metadata_structure.html>`_,
 they each include a node ``Acquisition_instrument.Sample.Phases`` to store
 phase information, and ``Acquisition_instrument.SEM.Detector.EBSD`` or
@@ -84,7 +84,7 @@ are written, along with the patterns, to file when saving an EBSD object in the
                 ├── hemisphere
                 └── smallest_interplanar_spacing [nm]
 
-The utility function :func:`~kikuchipy.util.io.metadata_nodes` returns the
+The utility function :func:`~kikuchipy.signals.util.metadata_nodes` returns the
 node strings for the ``SEM``, ``EBSD`` and ``EBSD_master_pattern`` nodes for
 convenience.
 
@@ -98,24 +98,23 @@ EBSD
 ====
 
 This node contains information relevant for EBSD data. All parameters can be
-set with the method
-:meth:`~kikuchipy.signals.ebsd.EBSD.set_experimental_parameters`. An explanation
-of each parameter is given in the method's docstring.
+set with the method :meth:`~kikuchipy.signals.EBSD.set_experimental_parameters`.
+An explanation of each parameter is given in the method's docstring.
 
 EBSD master pattern
 ===================
 
 This node contains information relevant for simulated EBSD master patterns. All
 parameters can be set with the method
-:meth:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern.set_simulation_parameters`.
-An explanation of each parameter is given in the method's docstring.
+:meth:`~kikuchipy.signals.EBSDMasterPattern.set_simulation_parameters`. An
+explanation of each parameter is given in the method's docstring.
 
 Phases
 ======
 
 This node contains information relevant for EBSD scans or simulated patterns'
-phases. All parameters can be set with the :class:`~kikuchipy.signals.ebsd.EBSD`
-method :meth:`~kikuchipy.signals.ebsd.EBSD.set_phase_parameters` or the
-:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` method
-:meth:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern.set_phase_parameters`.
+phases. All parameters can be set with the :class:`~kikuchipy.signals.EBSD`
+method :meth:`~kikuchipy.signals.EBSD.set_phase_parameters` or the
+:class:`~kikuchipy.signals.EBSDMasterPattern` method
+:meth:`~kikuchipy.signals.EBSDMasterPattern.set_phase_parameters`.
 An explanation of each parameter is given in the methods' docstring.

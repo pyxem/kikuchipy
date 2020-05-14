@@ -22,13 +22,13 @@ Utilities for computing similarities between EBSD patterns.
 
 from typing import Union
 
-import dask.array as da
+from dask.array import Array
 import numpy as np
 
 
 def normalized_correlation_coefficient(
-    pattern: Union[np.ndarray, da.Array],
-    template: Union[np.ndarray, da.Array],
+    pattern: Union[np.ndarray, Array],
+    template: Union[np.ndarray, Array],
     zero_normalised: bool = True,
 ) -> float:
     """Calculate the normalized or zero-normalized correlation
@@ -54,9 +54,7 @@ def normalized_correlation_coefficient(
     ----------
     .. [Gonzalez2017] R. C. Gonzalez, R. E. Woods, "Digital Image\
         Processing," 4th edition, Pearson Education Limited, 2017.
-
     """
-
     pattern = pattern.astype(np.float32)
     template = template.astype(np.float32)
 

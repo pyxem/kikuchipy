@@ -1,19 +1,27 @@
-===================
-kikuchipy reference
-===================
+=============
+API reference
+=============
 
-This reference manual details all methods for the EBSD and EBSDMasterPattern
-classes, utility functions, and readers of EBSD patterns and EBSD master
-patterns included in kikuchipy, as generated from their docstrings. For learning
-how to use kikuchipy, see the user guide pages in the sidebar.
+This reference manual details the public classes, modules and functions in
+kikuchipy, as generated from their docstrings. Many of the docstrings contain
+examples, however, for learning how to use kikuchipy, see the user guide pages
+in the sidebar.
+
+.. caution::
+
+    kikuchipy is in an alpha stage, and there will likely be breaking changes
+    with each release.
+
+Signals
+=======
 
 EBSD
-====
+----
 
 All methods listed here are also available to
-:class:`~kikuchipy.signals.ebsd.LazyEBSD` objects.
+:class:`~kikuchipy.signals.LazyEBSD` objects.
 
-.. currentmodule:: kikuchipy.signals.ebsd.EBSD
+.. currentmodule:: kikuchipy.signals.EBSD
 
 .. autosummary::
     adaptive_histogram_equalization
@@ -35,7 +43,7 @@ All methods listed here are also available to
     set_scan_calibration
     virtual_backscatter_electron_imaging
 
-.. autoclass:: kikuchipy.signals.ebsd.EBSD
+.. autoclass:: kikuchipy.signals.EBSD
     :members:
     :undoc-members:
     :show-inheritance:
@@ -44,12 +52,12 @@ All methods listed here are also available to
 
 These methods are exclusive to LazyEBSD objects.
 
-.. currentmodule:: kikuchipy.signals.ebsd.LazyEBSD
+.. currentmodule:: kikuchipy.signals.LazyEBSD
 
 .. autosummary::
     get_decomposition_model_write
 
-.. autoclass:: kikuchipy.signals.ebsd.LazyEBSD
+.. autoclass:: kikuchipy.signals.LazyEBSD
     :members:
     :undoc-members:
     :show-inheritance:
@@ -57,18 +65,18 @@ These methods are exclusive to LazyEBSD objects.
 ....
 
 EBSDMasterPattern
-=================
+-----------------
 
 All methods listed here are also available to
-:class:`~kikuchipy.signals.ebsd_master_pattern.LazyEBSDMasterPattern` objects.
+:class:`~kikuchipy.signals.LazyEBSDMasterPattern` objects.
 
-.. currentmodule:: kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern
+.. currentmodule:: kikuchipy.signals.EBSDMasterPattern
 
 .. autosummary::
     set_simulation_parameters
     set_phase_parameters
 
-.. autoclass:: kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern
+.. autoclass:: kikuchipy.signals.EBSDMasterPattern
     :members:
     :undoc-members:
     :show-inheritance:
@@ -77,9 +85,7 @@ All methods listed here are also available to
 
 There are no methods exclusive to LazyEBSDMasterPattern objects.
 
-.. currentmodule:: kikuchipy.signals.ebsd_master_pattern.LazyEBSDMasterPattern
-
-.. autoclass:: kikuchipy.signals.ebsd_master_pattern.LazyEBSDMasterPattern
+.. autoclass:: kikuchipy.signals.LazyEBSDMasterPattern
     :members:
     :undoc-members:
     :show-inheritance:
@@ -87,12 +93,26 @@ There are no methods exclusive to LazyEBSDMasterPattern objects.
 ....
 
 Utilities
-=========
+---------
+
+.. currentmodule:: kikuchipy.signals.util
+
+.. automodule:: kikuchipy.signals.util
+    :members:
+    :undoc-members:
+
+....
+
+Pattern
+=======
 
 Single pattern processing
 -------------------------
 
-.. currentmodule:: kikuchipy.util.pattern
+This module mainly includes functions operating on single EBSD patterns as
+:class:`numpy.ndarray`.
+
+.. currentmodule:: kikuchipy.pattern
 
 .. autosummary::
     fft
@@ -106,15 +126,19 @@ Single pattern processing
     remove_dynamic_background
     rescale_intensity
 
-.. automodule:: kikuchipy.util.pattern
+.. automodule:: kikuchipy.pattern
     :members:
+    :undoc-members:
 
 ....
 
 Chunk processing
 ----------------
 
-.. currentmodule:: kikuchipy.util.chunk
+This module includes functions for operating on :class:`numpy.ndarray` or
+:class:`dask.array.Array` chunks of EBSD patterns.
+
+.. currentmodule:: kikuchipy.pattern.chunk
 
 .. autosummary::
     adaptive_histogram_equalization
@@ -127,51 +151,48 @@ Chunk processing
     remove_static_background
     rescale_intensity
 
-.. automodule:: kikuchipy.util.chunk
-    :members:
-
-....
-
-Window
-------
-
-.. automodule:: kikuchipy.util.window
+.. automodule:: kikuchipy.pattern.chunk
     :members:
     :undoc-members:
 
 ....
 
-Pattern similarity
-------------------
+Correlate
+---------
 
-.. automodule:: kikuchipy.util.pattern_similarity
+.. currentmodule:: kikuchipy.pattern.correlate
+
+.. automodule:: kikuchipy.pattern.correlate
+    :members:
+    :undoc-members:
+
+....
+
+Filters
+=======
+
+.. currentmodule:: kikuchipy.filters
+
+.. automodule:: kikuchipy.filters
     :members:
     :undoc-members:
 
 ....
 
 Input/output
-------------
+============
 
 .. automodule:: kikuchipy.io._io
     :members:
     :undoc-members:
 
-.. automodule:: kikuchipy.util.io
-    :members:
-    :undoc-members:
+These plugin functions import patterns and parameters from file formats into
+:class:`~kikuchipy.signals.EBSD` or
+:class:`~kikuchipy.signals.EBSDMasterPattern` (or
+:class:`~kikuchipy.signals.LazyEBSD` or
+:class:`~kikuchipy.signals.LazyEBSDMasterPattern` if loading lazily) objects.
 
 ....
-
-Input/output plugins
-====================
-
-These plugin functions import patterns and parameters from file formats into
-:class:`~kikuchipy.signals.ebsd.EBSD` or
-:class:`~kikuchipy.signals.ebsd_master_pattern.EBSDMasterPattern` (or
-:class:`~kikuchipy.signals.ebsd.LazyEBSD` or
-:class:`~kikuchipy.signals.ebsd_master_pattern.LazyEBSDMasterPattern` if loading
-lazily) objects.
 
 h5ebsd
 ------
@@ -188,6 +209,8 @@ NORDIF
 .. automodule:: kikuchipy.io.plugins.nordif
     :members:
     :undoc-members:
+
+....
 
 EMsoft EBSD master pattern HDF5
 -------------------------------

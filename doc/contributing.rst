@@ -150,7 +150,7 @@ within each module. Tests are short methods that call functions in kikuchipy
 and compare resulting output values with known answers. Install necessary
 dependencies to run the tests::
 
-   $ pip install --editable .[test]
+   $ pip install --editable .[tests]
 
 Some useful `fixtures <https://docs.pytest.org/en/latest/fixture.html>`_, like a
 dummy scan and corresponding background pattern, are available in the

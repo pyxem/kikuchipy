@@ -33,14 +33,34 @@ from hyperspy.learn.mva import LearningResults
 from hyperspy.misc.utils import DictionaryTreeBrowser
 from hyperspy.roi import BaseInteractiveROI
 from hyperspy.api import interactive
-from hyperspy.exceptions import VisibleDeprecationWarning
 from h5py import File
 import numpy as np
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
-from kikuchipy.io._io import save
-import kikuchipy as kp
+from kikuchipy.io._io import _save
+from kikuchipy.filters.fft_barnes import (
+    _fft_filter,
+    _fft_filter_setup,
+)
+from kikuchipy.filters.window import Window
+from kikuchipy.pattern import chunk
+from kikuchipy.pattern._pattern import (
+    fft_frequency_vectors,
+    fft_filter,
+    _dynamic_background_frequency_space_setup,
+)
+from kikuchipy.signals.util._metadata import (
+    ebsd_metadata,
+    metadata_nodes,
+    _update_phase_info,
+    _write_parameters_to_dictionary,
+)
+from kikuchipy.signals.util._dask import (
+    _get_dask_array,
+    _rechunk_learning_results,
+    _update_learning_results,
+)
 
 
 class EBSD(Signal2D):
@@ -67,9 +87,9 @@ class EBSD(Signal2D):
         Signal2D.__init__(self, *args, **kwargs)
 
         # Update metadata if object is initialised from numpy array
-        if not self.metadata.has_item(kp.util.io.metadata_nodes("ebsd")):
+        if not self.metadata.has_item(metadata_nodes("ebsd")):
             md = self.metadata.as_dictionary()
-            md.update(kp.util.io.ebsd_metadata().as_dictionary())
+            md.update(ebsd_metadata().as_dictionary())
             self.metadata = DictionaryTreeBrowser(md)
         if not self.metadata.has_item("Sample.Phases"):
             self.set_phase_parameters()
@@ -151,12 +171,12 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        set_phase_parameters
+        kikuchipy.signals.EBSD.set_phase_parameters
 
         Examples
         --------
         >>> import kikuchipy as kp
-        >>> ebsd_node = kp.util.io.metadata_nodes("ebsd")
+        >>> ebsd_node = metadata_nodes("ebsd")
         >>> s.metadata.get_item(ebsd_node + '.xpc')
         1.0
         >>> s.set_experimental_parameters(xpc=0.50726)
@@ -164,8 +184,8 @@ class EBSD(Signal2D):
         0.50726
         """
         md = self.metadata
-        sem_node, ebsd_node = kp.util.io.metadata_nodes(["sem", "ebsd"])
-        kp.util.general._write_parameters_to_dictionary(
+        sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
+        _write_parameters_to_dictionary(
             {
                 "beam_energy": beam_energy,
                 "magnification": magnification,
@@ -175,7 +195,7 @@ class EBSD(Signal2D):
             md,
             sem_node,
         )
-        kp.util.general._write_parameters_to_dictionary(
+        _write_parameters_to_dictionary(
             {
                 "azimuth_angle": azimuth_angle,
                 "binning": binning,
@@ -253,7 +273,7 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        set_experimental_parameters
+        kikuchipy.signals.EBSD.set_experimental_parameters
 
         Examples
         --------
@@ -296,7 +316,7 @@ class EBSD(Signal2D):
 
         # Remove None values
         phase = {k: v for k, v in inputs.items() if v is not None}
-        kp.util.phase._update_phase_info(self.metadata, phase, number)
+        _update_phase_info(self.metadata, phase, number)
 
     def set_scan_calibration(
         self, step_x: Union[int, float] = 1.0, step_y: Union[int, float] = 1.0
@@ -312,7 +332,7 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        set_detector_calibration
+        kikuchipy.signals.EBSD.set_detector_calibration
 
         Examples
         --------
@@ -338,7 +358,7 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        set_scan_calibration
+        kikuchipy.signals.EBSD.set_scan_calibration
 
         Examples
         --------
@@ -353,13 +373,6 @@ class EBSD(Signal2D):
         dx.units, dy.units = ["\u03BC" + "m"] * 2
         dx.scale, dy.scale = (delta, delta)
         dx.offset, dy.offset = -centre
-
-    def static_background_correction(self, **kwargs):
-        warnings.warn(
-            "Renamed to remove_static_background(). Will be removed in v0.3. "
-            "Deprecations will be handled better going forward...",
-            VisibleDeprecationWarning,
-        )
 
     def remove_static_background(
         self,
@@ -393,8 +406,7 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        remove_dynamic_background,
-        :func:`kikuchipy.util.chunk.remove_static_background`
+        kikuchipy.signals.EBSD.remove_dynamic_background,
 
         Examples
         --------
@@ -403,7 +415,7 @@ class EBSD(Signal2D):
         patterns is available in signal metadata:
 
         >>> import kikuchipy as kp
-        >>> ebsd_node = kp.util.io.metadata_nodes("ebsd")
+        >>> ebsd_node = kp.signals.util.metadata_nodes("ebsd")
         >>> s.metadata.get_item(ebsd_node + '.static_background')
         [[84 87 90 ... 27 29 30]
         [87 90 93 ... 27 28 30]
@@ -429,7 +441,7 @@ class EBSD(Signal2D):
         if not isinstance(static_bg, (np.ndarray, da.Array)):
             try:
                 md = self.metadata
-                ebsd_node = kp.util.io.metadata_nodes("ebsd")
+                ebsd_node = metadata_nodes("ebsd")
                 static_bg = da.from_array(
                     md.get_item(ebsd_node + ".static_background"),
                     chunks="auto",
@@ -473,11 +485,11 @@ class EBSD(Signal2D):
             in_range = None
 
         # Create a dask array of signal patterns and do the processing on this
-        dask_array = kp.util.dask._get_dask_array(signal=self, dtype=dtype)
+        dask_array = _get_dask_array(signal=self, dtype=dtype)
 
         # Remove the static background and rescale intensities chunk by chunk
         corrected_patterns = dask_array.map_blocks(
-            func=kp.util.chunk.remove_static_background,
+            func=chunk.remove_static_background,
             static_bg=static_bg,
             operation_func=operation_func,
             scale_bg=scale_bg,
@@ -493,13 +505,6 @@ class EBSD(Signal2D):
                 corrected_patterns.store(self.data, compute=True)
         else:
             self.data = corrected_patterns
-
-    def dynamic_background_correction(self, **kwargs):
-        warnings.warn(
-            "Renamed to remove_dynamic_background(). Will be removed in v0.3. "
-            "Deprecations will be handled better going forward...",
-            VisibleDeprecationWarning,
-        )
 
     def remove_dynamic_background(
         self,
@@ -537,9 +542,10 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        remove_static_background, get_dynamic_background,
-        kikuchipy.util.pattern.remove_dynamic_background,
-        kikuchipy.util.pattern.get_dynamic_background
+        kikuchipy.signals.EBSD.remove_static_background,
+        kikuchipy.signals.EBSD.get_dynamic_background,
+        kikuchipy.pattern.remove_dynamic_background,
+        kikuchipy.pattern.get_dynamic_background
 
         Examples
         --------
@@ -558,7 +564,7 @@ class EBSD(Signal2D):
         """
         # Create a dask array of signal patterns and do the processing on this
         dtype = np.float32
-        dask_array = kp.util.dask._get_dask_array(signal=self, dtype=dtype)
+        dask_array = _get_dask_array(signal=self, dtype=dtype)
 
         if std is None:
             std = self.axes_manager.signal_shape[0] / 8
@@ -566,14 +572,14 @@ class EBSD(Signal2D):
         # Get filter function and set up necessary keyword arguments
         if filter_domain == "frequency":
             # FFT filter setup for Connelly Barnes' algorithm
-            filter_func = kp.util.barnes_fftfilter._fft_filter
+            filter_func = _fft_filter
             (
                 kwargs["fft_shape"],
                 kwargs["window_shape"],
                 kwargs["transfer_function"],
                 kwargs["offset_before_fft"],
                 kwargs["offset_after_ifft"],
-            ) = kp.util.pattern._dynamic_background_frequency_space_setup(
+            ) = _dynamic_background_frequency_space_setup(
                 pattern_shape=self.axes_manager.signal_shape[::-1],
                 std=std,
                 truncate=truncate,
@@ -598,7 +604,7 @@ class EBSD(Signal2D):
         out_range = dtype_range[dtype_out]
 
         corrected_patterns = dask_array.map_blocks(
-            func=kp.util.chunk.remove_dynamic_background,
+            func=chunk.remove_dynamic_background,
             filter_func=filter_func,
             operation_func=operation_func,
             dtype_out=dtype_out,
@@ -653,7 +659,7 @@ class EBSD(Signal2D):
 
         # Get filter function and set up necessary keyword arguments
         if filter_domain == "frequency":
-            filter_func = kp.util.barnes_fftfilter._fft_filter
+            filter_func = _fft_filter
             # FFT filter setup for Connelly Barnes' algorithm
             (
                 kwargs["fft_shape"],
@@ -661,7 +667,7 @@ class EBSD(Signal2D):
                 kwargs["transfer_function"],
                 kwargs["offset_before_fft"],
                 kwargs["offset_after_ifft"],
-            ) = kp.util.pattern._dynamic_background_frequency_space_setup(
+            ) = _dynamic_background_frequency_space_setup(
                 pattern_shape=self.axes_manager.signal_shape[::-1],
                 std=std,
                 truncate=truncate,
@@ -678,10 +684,10 @@ class EBSD(Signal2D):
 
         if dtype_out is None:
             dtype_out = self.data.dtype.type
-        dask_array = kp.util.dask._get_dask_array(self, dtype=dtype_out)
+        dask_array = _get_dask_array(self, dtype=dtype_out)
 
         background_patterns = dask_array.map_blocks(
-            func=kp.util.chunk.get_dynamic_background,
+            func=chunk.get_dynamic_background,
             filter_func=filter_func,
             dtype_out=dtype_out,
             dtype=dtype_out,
@@ -695,18 +701,11 @@ class EBSD(Signal2D):
             with ProgressBar():
                 print("Getting the dynamic background:", file=sys.stdout)
                 background_patterns.store(background_return, compute=True)
-                background_signal = kp.signals.EBSD(background_return)
+                background_signal = EBSD(background_return)
         else:
-            background_signal = kp.signals.LazyEBSD(background_patterns)
+            background_signal = LazyEBSD(background_patterns)
 
         return background_signal
-
-    def rescale_intensities(self, **kwargs):
-        warnings.warn(
-            "Renamed to rescale_intensity(). Will be removed in v0.3. "
-            "Deprecations will be handled better going forward...",
-            VisibleDeprecationWarning,
-        )
 
     def rescale_intensity(
         self,
@@ -743,7 +742,7 @@ class EBSD(Signal2D):
         out_range
             Min./max. intensity of output patterns. If None (default),
             `out_range` is set to `dtype_out` min./max according to
-            `skimage.util.dtype.dtype_range`.
+            `skimage._util.dtype.dtype_range`.
         dtype_out
             Data type of rescaled patterns, default is input patterns'
             data type.
@@ -754,9 +753,9 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        normalize_intensity
+        kikuchipy.signals.EBSD.normalize_intensity,
+        kikuchipy.pattern.rescale_intensity,
         :func:`skimage.exposure.rescale_intensity`
-        kikuchipy.util.pattern.rescale_intensity
 
         Examples
         --------
@@ -806,11 +805,11 @@ class EBSD(Signal2D):
             out_range = dtype_range[dtype_out_pass]
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kp.util.dask._get_dask_array(signal=self)
+        dask_array = _get_dask_array(signal=self)
 
         # Rescale patterns
         rescaled_patterns = dask_array.map_blocks(
-            func=kp.util.chunk.rescale_intensity,
+            func=chunk.rescale_intensity,
             in_range=in_range,
             out_range=out_range,
             dtype_out=dtype_out,
@@ -854,7 +853,8 @@ class EBSD(Signal2D):
 
         See also
         --------
-        rescale_intensity, normalize_intensity
+        kikuchipy.signals.EBSD.rescale_intensity,
+        kikuchipy.signals.EBSD.normalize_intensity
 
         Examples
         --------
@@ -898,11 +898,11 @@ class EBSD(Signal2D):
         kernel_size = [int(k) for k in kernel_size]
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kp.util.dask._get_dask_array(signal=self)
+        dask_array = _get_dask_array(signal=self)
 
         # Local contrast enhancement
         equalized_patterns = dask_array.map_blocks(
-            func=kp.util.chunk.adaptive_histogram_equalization,
+            func=chunk.adaptive_histogram_equalization,
             kernel_size=kernel_size,
             clip_limit=clip_limit,
             nbins=nbins,
@@ -948,20 +948,20 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        kikuchipy.util.pattern.get_image_quality
+        kikuchipy.pattern.get_image_quality
         """
         # Data set to operate on
         dtype_out = np.float32
-        dask_array = kp.util.dask._get_dask_array(self, dtype=dtype_out)
+        dask_array = _get_dask_array(self, dtype=dtype_out)
 
         # Calculate frequency vectors
         sx, sy = self.axes_manager.signal_shape
-        frequency_vectors = kp.util.pattern.fft_frequency_vectors((sy, sx))
+        frequency_vectors = fft_frequency_vectors((sy, sx))
         inertia_max = np.sum(frequency_vectors) / (sy * sx)
 
         # Calculate image quality per chunk
         image_quality_map = dask_array.map_blocks(
-            func=kp.util.chunk.get_image_quality,
+            func=chunk.get_image_quality,
             frequency_vectors=frequency_vectors,
             inertia_max=inertia_max,
             normalize=normalize,
@@ -978,7 +978,7 @@ class EBSD(Signal2D):
 
     def fft_filter(
         self,
-        transfer_function: Union[np.ndarray, kp.util.Window],
+        transfer_function: Union[np.ndarray, Window],
         function_domain: str,
         shift: bool = False,
     ):
@@ -1016,7 +1016,8 @@ class EBSD(Signal2D):
         20 to an EBSD object ``s``:
 
         >>> pattern_shape = s.axes_manager.signal_shape[::-1]
-        >>> w = kp.util.Window("lowpass", cutoff=20, shape=pattern_shape)
+        >>> w = kp.filters.Window(
+        ...     "lowpass", cutoff=20, shape=pattern_shape)
         >>> s.fft_filter(
         ...     transfer_function=w,
         ...     function_domain="frequency",
@@ -1025,19 +1026,19 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        kikuchipy.util.window.Window
+        kikuchipy.filters.Window
         """
         dtype_out = self.data.dtype
 
         dtype = np.float32
-        dask_array = kp.util.dask._get_dask_array(signal=self, dtype=dtype)
+        dask_array = _get_dask_array(signal=self, dtype=dtype)
 
         kwargs = {}
         if function_domain == "frequency":
-            filter_func = kp.util.pattern.fft_filter
+            filter_func = fft_filter
             kwargs["shift"] = shift
         elif function_domain == "spatial":
-            filter_func = kp.util.barnes_fftfilter._fft_filter
+            filter_func = _fft_filter  # Barnes
             kwargs["window_shape"] = transfer_function.shape
 
             # FFT filter setup
@@ -1046,7 +1047,7 @@ class EBSD(Signal2D):
                 transfer_function,  # Padded
                 kwargs["offset_before_fft"],
                 kwargs["offset_after_ifft"],
-            ) = kp.util.barnes_fftfilter._fft_filter_setup(
+            ) = _fft_filter_setup(
                 image_shape=self.axes_manager.signal_shape[::-1],
                 window=transfer_function,
             )
@@ -1057,7 +1058,7 @@ class EBSD(Signal2D):
             )
 
         filtered_patterns = dask_array.map_blocks(
-            func=kp.util.chunk.fft_filter,
+            func=chunk.fft_filter,
             filter_func=filter_func,
             transfer_function=transfer_function,
             dtype_out=dtype_out,
@@ -1113,10 +1114,10 @@ class EBSD(Signal2D):
         if dtype_out is None:
             dtype_out = self.data.dtype
 
-        dask_array = kp.util.dask._get_dask_array(self, dtype=np.float32)
+        dask_array = _get_dask_array(self, dtype=np.float32)
 
         normalized_patterns = dask_array.map_blocks(
-            func=kp.util.chunk.normalize_intensity,
+            func=chunk.normalize_intensity,
             num_std=num_std,
             divide_by_square_root=divide_by_square_root,
             dtype_out=dtype_out,
@@ -1137,7 +1138,7 @@ class EBSD(Signal2D):
 
     def average_neighbour_patterns(
         self,
-        window: Union[str, np.ndarray, da.Array, kp.util.Window] = "circular",
+        window: Union[str, np.ndarray, da.Array, Window] = "circular",
         window_shape: Tuple[int, ...] = (3, 3),
         **kwargs,
     ):
@@ -1163,10 +1164,10 @@ class EBSD(Signal2D):
             distance to the origin (window centre) is shorter or equal
             to the half width of the window's longest axis. A 1D or 2D
             :class:`numpy.ndarray`, :class:`dask.array.Array` or
-            :class:`~kikuchipy.util.window.Window` can also be passed.
+            :class:`~kikuchipy.filters.Window` can also be passed.
         window_shape
             Shape of averaging window. Not used if a custom window or
-            :class:`~kikuchipy.util.window.Window` object is passed to
+            :class:`~kikuchipy._util.window.Window` object is passed to
             `window`. This can be either 1D or 2D, and can be
             asymmetrical. Default is (3, 3).
         **kwargs :
@@ -1176,8 +1177,8 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        kikuchipy.util.window.Window
-        :func:`scipy.signal.windows.get_window`
+        kikuchipy.filters.Window,
+        :func:`scipy.signal.windows.get_window`,
         :func:`scipy.ndimage.correlate`
 
         Examples
@@ -1206,7 +1207,7 @@ class EBSD(Signal2D):
 
         A window object can also be passed
 
-        >>> w = kp.util.Window(window="gaussian", std=2)
+        >>> w = kp.filters.Window(window="gaussian", std=2)
         >>> w
         Window (3, 3) gaussian
         [[0.7788 0.8825 0.7788]
@@ -1224,10 +1225,10 @@ class EBSD(Signal2D):
         >>> figure, image, colorbar = w.plot()
         >>> figure.savefig('averaging_window.png')
         """
-        if isinstance(window, kp.util.Window) and window.is_valid():
+        if isinstance(window, Window) and window.is_valid():
             averaging_window = copy.copy(window)
         else:
-            averaging_window = kp.util.Window(
+            averaging_window = Window(
                 window=window, shape=window_shape, **kwargs,
             )
         averaging_window.shape_compatible(self.axes_manager.signal_shape)
@@ -1261,7 +1262,7 @@ class EBSD(Signal2D):
         #        averaging_window._add_axes(self.axes_manager.signal_dimension)
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = kp.util.dask._get_dask_array(signal=self)
+        dask_array = _get_dask_array(signal=self)
 
         # Add signal dimensions to array be able to use with Dask's map_blocks()
         nav_dim = self.axes_manager.navigation_dimension
@@ -1294,7 +1295,7 @@ class EBSD(Signal2D):
         # subsequent division by the number of neighbours correlated with
         dtype_out = self.data.dtype
         overlapped_averaged_patterns = da.map_blocks(
-            kp.util.chunk.average_neighbour_patterns,
+            chunk.average_neighbour_patterns,
             overlapped_dask_array,
             overlapped_window_sums,
             window=averaging_window,
@@ -1351,7 +1352,7 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        get_virtual_image
+        kikuchipy.signals.EBSD.get_virtual_image
         """
         # Plot signal if necessary
         if self._plot is None or not self._plot.is_active:
@@ -1429,7 +1430,7 @@ class EBSD(Signal2D):
 
         See Also
         --------
-        virtual_backscatter_electron_imaging
+        kikuchipy.signals.EBSD.virtual_backscatter_electron_imaging
         """
         vbse = roi(self, axes=self.axes_manager.signal_axes)
         vbse_sum = self._get_sum_signal(vbse, out_signal_axes)
@@ -1502,7 +1503,7 @@ class EBSD(Signal2D):
         if extension is not None:
             basename, ext = os.path.splitext(filename)
             filename = basename + "." + extension
-        save(filename, self, overwrite=overwrite, **kwargs)
+        _save(filename, self, overwrite=overwrite, **kwargs)
 
     def get_decomposition_model(
         self,
@@ -1543,7 +1544,7 @@ class EBSD(Signal2D):
         (
             self.learning_results.factors,
             self.learning_results.loadings,
-        ) = kp.util.decomposition._update_learning_results(
+        ) = _update_learning_results(
             learning_results=self.learning_results,
             dtype_out=dtype_out,
             components=components,
@@ -1574,7 +1575,7 @@ class EBSD(Signal2D):
         # Update binning in metadata to signal dimension with largest or lowest
         # binning if downscaling or upscaling, respectively
         md = s_out.metadata
-        ebsd_node = kp.util.io.metadata_nodes("ebsd")
+        ebsd_node = metadata_nodes("ebsd")
         if scale is None:
             sx, sy = self.axes_manager.signal_shape
             signal_idx = self.axes_manager.signal_indices_in_array
@@ -1651,7 +1652,7 @@ class LazyEBSD(EBSD, LazySignal2D):
         :func:`dask.array.matmul`, out of core.
         """
         # Change data type, keep desired components and rechunk if lazy
-        factors, loadings = kp.util.decomposition._update_learning_results(
+        factors, loadings = _update_learning_results(
             self.learning_results, components=components, dtype_out=dtype_learn
         )
 
@@ -1671,7 +1672,7 @@ class LazyEBSD(EBSD, LazySignal2D):
         # Matrix multiplication
         with File(file_learn, mode="r") as f:
             # Read learning results from HDF5 file
-            chunks = kp.util.dask._rechunk_learning_results(
+            chunks = _rechunk_learning_results(
                 factors=factors, loadings=loadings, mbytes_chunk=mbytes_chunk
             )
             factors = da.from_array(f["factors"], chunks=chunks[0])
