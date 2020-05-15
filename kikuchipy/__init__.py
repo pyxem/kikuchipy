@@ -47,6 +47,7 @@ load
 
 # Import order must not be changed
 from kikuchipy import filters
+from kikuchipy import generators
 from kikuchipy import pattern
 from kikuchipy import signals
 from kikuchipy.io._io import load
@@ -57,6 +58,7 @@ __version__ = release.version
 
 __all__ = [
     "filters",
+    "generators",
     "load",
     "pattern",
     "signals",

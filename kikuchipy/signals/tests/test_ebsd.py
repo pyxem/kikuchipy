@@ -162,14 +162,14 @@ class TestEBSD:
         x, y = dummy_signal.axes_manager.navigation_axes
         assert (x.name, y.name) == ("x", "y")
         assert (x.scale, y.scale) == (new_step_x, new_step_y)
-        assert x.units, y.units == "\u03BC" + "m"
+        assert x.units, y.units == "um"
 
     def test_set_detector_calibration(self, dummy_signal):
         delta = 70
         dummy_signal.set_detector_calibration(delta=delta)
         dx, dy = dummy_signal.axes_manager.signal_axes
         centre = np.array(dummy_signal.axes_manager.signal_shape) / 2 * delta
-        assert dx.units, dy.units == "\u03BC" + "m"
+        assert dx.units, dy.units == "um"
         assert dx.scale, dy.scale == delta
         assert dx.offset, dy.offset == -centre
 
@@ -801,13 +801,11 @@ class TestVirtualBackscatterElectronImaging:
         dummy_signal.axes_manager.navigation_axes[1].name = "y"
 
         roi = RectangularROI(left=0, top=0, right=1, bottom=1)
-        dummy_signal.virtual_backscatter_electron_imaging(
-            roi, out_signal_axes=out_signal_axes
-        )
+        dummy_signal.virtual_bse_imaging(roi, out_signal_axes=out_signal_axes)
 
     def test_get_virtual_image(self, dummy_signal):
         roi = RectangularROI(left=0, top=0, right=1, bottom=1)
-        virtual_image_signal = dummy_signal.get_virtual_image(roi)
+        virtual_image_signal = dummy_signal.get_virtual_bse_image(roi)
         assert (
             virtual_image_signal.data.shape
             == dummy_signal.axes_manager.navigation_shape
@@ -816,7 +814,9 @@ class TestVirtualBackscatterElectronImaging:
     def test_virtual_backscatter_electron_imaging_raises(self, dummy_signal):
         roi = RectangularROI(0, 0, 1, 1)
         with pytest.raises(ValueError):
-            _ = dummy_signal.get_virtual_image(roi, out_signal_axes=(0, 1, 2))
+            _ = dummy_signal.get_virtual_bse_image(
+                roi, out_signal_axes=(0, 1, 2)
+            )
 
 
 class TestDecomposition:

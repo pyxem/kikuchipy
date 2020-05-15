@@ -20,14 +20,14 @@ s = kp.load(data, lazy=False)
 
 # VBSE
 roi = hs.roi.RectangularROI(left=18, top=20, right=23, bottom=25)
-s.virtual_backscatter_electron_imaging(roi)
+s.virtual_bse_imaging(roi)
 s._plot.navigator_plot.figure.savefig(
     os.path.join(visdir, "standard_navigator.jpg")
 )
 s._plot.signal_plot.figure.savefig(os.path.join(visdir, "pattern_roi.jpg"))
 
 # Virtual image
-vbse = s.get_virtual_image(roi)
+vbse = s.get_virtual_bse_image(roi)
 s.plot(navigator=vbse)
 s._plot.navigator_plot.figure.savefig(
     os.path.join(visdir, "vbse_navigator.jpg")

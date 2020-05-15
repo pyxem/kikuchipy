@@ -65,7 +65,7 @@ def rescale_intensity(
     out_range
         Min./max. intensity values of the rescaled pattern. If None
         (default), it is set to `dtype_out` min./max according to
-        `skimage._util.dtype.dtype_range`.
+        `skimage.util.dtype.dtype_range`.
     dtype_out
         Data type of the rescaled pattern. If None (default), it is set
         to the same data type as the input pattern.

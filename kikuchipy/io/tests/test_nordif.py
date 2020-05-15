@@ -215,7 +215,7 @@ AXES_MANAGER = {
         "scale": 1.5,
         "offset": 0.0,
         "size": 3,
-        "units": "μm",
+        "units": "um",
         "navigate": True,
     },
     "axis-1": {
@@ -223,7 +223,7 @@ AXES_MANAGER = {
         "scale": 1.5,
         "offset": 0.0,
         "size": 3,
-        "units": "μm",
+        "units": "um",
         "navigate": True,
     },
     "axis-2": {
@@ -231,7 +231,7 @@ AXES_MANAGER = {
         "scale": 1.0,
         "offset": 0.0,
         "size": 60,
-        "units": "μm",
+        "units": "um",
         "navigate": False,
     },
     "axis-3": {
@@ -239,7 +239,7 @@ AXES_MANAGER = {
         "scale": 1.0,
         "offset": 0.0,
         "size": 60,
-        "units": "μm",
+        "units": "um",
         "navigate": False,
     },
 }

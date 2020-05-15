@@ -61,13 +61,14 @@ from kikuchipy.signals.util._dask import (
     _rechunk_learning_results,
     _update_learning_results,
 )
+from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 
 
 class EBSD(Signal2D):
     """Scan of Electron Backscatter Diffraction (EBSD) patterns.
 
     This class extends HyperSpy's Signal2D class for EBSD patterns, with
-    many common intensity processing methods and some analysis methods.
+    common intensity processing methods and some analysis methods.
 
     Methods inherited from HyperSpy can be found in the HyperSpy user
     guide.
@@ -345,7 +346,7 @@ class EBSD(Signal2D):
         x, y = self.axes_manager.navigation_axes
         x.name, y.name = ("x", "y")
         x.scale, y.scale = (step_x, step_y)
-        x.units, y.units = ["\u03BC" + "m"] * 2
+        x.units, y.units = ["um"] * 2
 
     def set_detector_calibration(self, delta: Union[int, float]):
         """Set detector pixel size in microns. The offset is set to the
@@ -370,7 +371,7 @@ class EBSD(Signal2D):
         """
         centre = delta * np.array(self.axes_manager.signal_shape) / 2
         dx, dy = self.axes_manager.signal_axes
-        dx.units, dy.units = ["\u03BC" + "m"] * 2
+        dx.units, dy.units = ["um"] * 2
         dx.scale, dy.scale = (delta, delta)
         dx.offset, dy.offset = -centre
 
@@ -742,7 +743,7 @@ class EBSD(Signal2D):
         out_range
             Min./max. intensity of output patterns. If None (default),
             `out_range` is set to `dtype_out` min./max according to
-            `skimage._util.dtype.dtype_range`.
+            `skimage.util.dtype.dtype_range`.
         dtype_out
             Data type of rescaled patterns, default is input patterns'
             data type.
@@ -1167,7 +1168,7 @@ class EBSD(Signal2D):
             :class:`~kikuchipy.filters.Window` can also be passed.
         window_shape
             Shape of averaging window. Not used if a custom window or
-            :class:`~kikuchipy._util.window.Window` object is passed to
+            :class:`~kikuchipy.util.window.Window` object is passed to
             `window`. This can be either 1D or 2D, and can be
             asymmetrical. Default is (3, 3).
         **kwargs :
@@ -1318,7 +1319,7 @@ class EBSD(Signal2D):
         else:
             self.data = averaged_patterns
 
-    def virtual_backscatter_electron_imaging(
+    def virtual_bse_imaging(
         self,
         roi: BaseInteractiveROI,
         out_signal_axes: Union[None, Iterable[int], Iterable[str]] = None,
@@ -1348,7 +1349,7 @@ class EBSD(Signal2D):
         >>> import hyperspy.api as hs
         >>> roi = hs.roi.RectangularROI(
         ...     left=0, right=5, top=0, bottom=5)
-        >>> s.virtual_backscatter_electron_imaging(roi)
+        >>> s.virtual_bse_imaging(roi)
 
         See Also
         --------
@@ -1395,11 +1396,11 @@ class EBSD(Signal2D):
         out.set_signal_type("")
         return out.transpose(out_signal_axes)
 
-    def get_virtual_image(
+    def get_virtual_bse_image(
         self,
         roi: BaseInteractiveROI,
         out_signal_axes: Union[None, Iterable[int], Iterable[str]] = None,
-    ) -> Signal2D:
+    ) -> VirtualBSEImage:
         """Get a virtual backscatter electron (VBSE) image formed from
         intensities within a region of interest (ROI) on the detector.
 
@@ -1417,7 +1418,7 @@ class EBSD(Signal2D):
 
         Returns
         -------
-        virtual_image : hyperspy._signals.signal2d.Signal2D
+        virtual_image : kikuchipy.signals.VirtualBSEImage
             VBSE image formed from detector intensities within an ROI
             on the detector.
 
@@ -1426,15 +1427,16 @@ class EBSD(Signal2D):
         >>> import hyperspy.api as hs
         >>> roi = hs.roi.RectangularROI(
         ...     left=0, right=5, top=0, bottom=5)
-        >>> vbse_image = s.get_virtual_image(roi)
+        >>> vbse_image = s.get_virtual_bse_image(roi)
 
         See Also
         --------
-        kikuchipy.signals.EBSD.virtual_backscatter_electron_imaging
+        kikuchipy.signals.EBSD.virtual_bse_imaging
         """
         vbse = roi(self, axes=self.axes_manager.signal_axes)
         vbse_sum = self._get_sum_signal(vbse, out_signal_axes)
         vbse_sum.metadata.General.title = "Virtual backscatter electron image"
+        vbse_sum.set_signal_type("VirtualBSEImage")
         return vbse_sum
 
     def save(
