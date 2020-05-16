@@ -23,6 +23,7 @@ from hyperspy.roi import BaseInteractiveROI, RectangularROI
 from hyperspy.drawing._markers.horizontal_line import HorizontalLine
 from hyperspy.drawing._markers.vertical_line import VerticalLine
 from hyperspy.drawing._markers.rectangle import Rectangle
+from hyperspy.drawing._markers.text import Text
 import numpy as np
 
 from kikuchipy.signals import EBSD, LazyEBSD
@@ -75,9 +76,9 @@ class VirtualBSEGenerator:
         dtype_out: Union[np.uint8, np.uint16] = np.uint8,
         **kwargs,
     ) -> VirtualBSEImage:
-        """Return an in-memory RGB(A) virtual BSE image from three
-        regions of interest (ROIs) on the EBSD detector, with a
-        potential alpha channel.
+        """Return an in-memory RGB virtual BSE image from three regions
+        of interest (ROIs) on the EBSD detector, with a potential "alpha
+        channel" in which all three arrays are multiplied by a fourth.
 
         Parameters
         ----------
@@ -89,8 +90,8 @@ class VirtualBSEGenerator:
             Whether to normalize the individual images (channels) before
             RGB image creation.
         alpha
-            Potential alpha channel. If None (default), no alpha channel
-            is added to the image.
+            "Alpha channel". If None (default), no "alpha channel" is
+            added to the image.
         percentile
             Whether to apply contrast stretching with a given percentile
             tuple with percentages, e.g. (0.5, 99.5), after creating the
@@ -228,6 +229,7 @@ class VirtualBSEGenerator:
         self,
         pattern_idx: Optional[Tuple[int, ...]] = None,
         rgb_channels: Optional[List[Tuple]] = None,
+        visible_indices: bool = True,
         **kwargs,
     ):
         """Plot a pattern with the detector grid superimposed,
@@ -243,33 +245,60 @@ class VirtualBSEGenerator:
             A list of tuple indices defining three detector grid tiles
             which edges to color red, green and blue. If None (default),
             no tiles' edges are colored.
+        visible_indices
+            Whether to show grid indices. Default is True.
         kwargs :
             Keyword arguments passed to
-            :func:`matplotlib.pyplot.axhline` and `axvline`.
+            :func:`matplotlib.pyplot.axhline` and `axvline`, used by
+            HyperSpy to draw lines.
+
+        Returns
+        -------
+        pattern : kikuchipy.signals.EBSD
+            A single pattern with the markers added.
         """
-        if pattern_idx is None:
-            pattern_idx = (0,) * self.signal.axes_manager.navigation_dimension
-        pattern = self.signal.inav[pattern_idx]
-
         # Get detector scales
-        dx, dy = [i.scale for i in self.signal.axes_manager.signal_axes]
-        markers = [HorizontalLine(i * dy, **kwargs) for i in self.grid_rows[1:]]
-        markers += [VerticalLine(i * dx, **kwargs) for i in self.grid_cols[1:]]
+        axes_manager = self.signal.axes_manager
+        dx, dy = [i.scale for i in axes_manager.signal_axes]
 
+        # Set lines
+        rows = self.grid_rows
+        cols = self.grid_cols
+        markers = [HorizontalLine((i - 0.5) * dy, **kwargs) for i in rows]
+        markers += [VerticalLine((j - 0.5) * dx, **kwargs) for j in cols]
+
+        # Set grid tile indices
+        if visible_indices:
+            color = kwargs.pop("color", "r")
+            for row, col in np.ndindex(self.grid_shape):
+                markers.append(
+                    Text(
+                        x=cols[col],
+                        y=rows[row] + (0.1 * rows[1]),
+                        text=f"{row,col}",
+                        color=color,
+                    )
+                )
+
+        # Color RGB tiles
         if rgb_channels is not None:
-            for (r, c), color in zip(rgb_channels, ["r", "g", "b"]):
+            for (row, col), color in zip(rgb_channels, ["r", "g", "b"]):
                 kwargs.update({"color": color, "zorder": 3, "linewidth": 2})
-                roi = self.roi_from_grid(r, c)
+                roi = self.roi_from_grid(row, col)
                 markers += [
                     Rectangle(
-                        x1=roi.left * dx,
-                        y1=roi.top * dx,
-                        x2=roi.right * dy,
-                        y2=roi.bottom * dy,
+                        x1=(roi.left - 0.5) * dx,
+                        y1=(roi.top - 0.5) * dx,
+                        x2=(roi.right - 0.5) * dy,
+                        y2=(roi.bottom - 0.5) * dy,
                         **kwargs,
                     )
                 ]
 
+        # Get pattern and add list of markers
+        if pattern_idx is None:
+            pattern_idx = (0,) * axes_manager.navigation_dimension
+        pattern = self.signal.inav[pattern_idx]
         pattern.add_marker(markers, permanent=True)
 
         return pattern

@@ -36,11 +36,10 @@ from kikuchipy.io.plugins.nordif import get_settings_from_file, get_string
 from kikuchipy.signals.ebsd import EBSD
 
 DIR_PATH = os.path.dirname(__file__)
-PATTERN_FILE = os.path.join(DIR_PATH, "../../data/nordif/Pattern.dat")
-SETTING_FILE = os.path.join(DIR_PATH, "../../data/nordif/Setting.txt")
-BG_FILE = os.path.join(
-    DIR_PATH, "../../data/nordif/Background acquisition pattern.bmp"
-)
+NORDIF_PATH = os.path.join(DIR_PATH, "../../../data/nordif")
+PATTERN_FILE = os.path.join(NORDIF_PATH, "Pattern.dat")
+SETTING_FILE = os.path.join(NORDIF_PATH, "Setting.txt")
+BG_FILE = os.path.join(NORDIF_PATH, "Background acquisition pattern.bmp")
 
 # Settings content
 METADATA = {

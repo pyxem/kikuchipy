@@ -25,7 +25,7 @@ import numpy as np
 import pytest
 
 from kikuchipy import load
-from kikuchipy.io.tests.test_emsoft_ebsd_masterpattern import (
+from kikuchipy.io.plugins.tests.test_emsoft_ebsd_masterpattern import (
     METADATA,
     setup_axes_manager,
 )

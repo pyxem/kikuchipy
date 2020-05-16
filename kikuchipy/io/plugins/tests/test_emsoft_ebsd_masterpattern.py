@@ -39,7 +39,7 @@ from kikuchipy.signals.tests.test_ebsd import assert_dictionary
 
 DIR_PATH = os.path.dirname(__file__)
 EMSOFT_FILE = os.path.join(
-    DIR_PATH, "../../data/emsoft_ebsd_master_pattern/master_patterns.h5"
+    DIR_PATH, "../../../data/emsoft_ebsd_master_pattern/master_patterns.h5"
 )
 
 # Settings content

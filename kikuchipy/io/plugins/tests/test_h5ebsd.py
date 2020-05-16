@@ -37,15 +37,14 @@ from kikuchipy.signals.util._metadata import metadata_nodes
 
 
 DIR_PATH = os.path.dirname(__file__)
-KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy/patterns.h5")
+DATA_PATH = os.path.join(DIR_PATH, "../../../data")
+KIKUCHIPY_FILE = os.path.join(DATA_PATH, "kikuchipy/patterns.h5")
 KIKUCHIPY_FILE_NO_CHUNKS = os.path.join(
-    DIR_PATH, "../../data/kikuchipy/patterns_nochunks.h5"
+    DATA_PATH, "kikuchipy/patterns_nochunks.h5"
 )
-EDAX_FILE = os.path.join(DIR_PATH, "../../data/edax/patterns.h5")
-BRUKER_FILE = os.path.join(DIR_PATH, "../../data/bruker/patterns.h5")
-BG_FILE = os.path.join(
-    DIR_PATH, "../../data/nordif/Background acquisition image.bmp"
-)
+EDAX_FILE = os.path.join(DATA_PATH, "edax/patterns.h5")
+BRUKER_FILE = os.path.join(DATA_PATH, "bruker/patterns.h5")
+BG_FILE = os.path.join(DATA_PATH, "nordif/Background acquisition image.bmp")
 AXES_MANAGER = {
     "axis-0": {
         "name": "y",
