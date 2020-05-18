@@ -1201,7 +1201,7 @@ class EBSD(CommonImage, Signal2D):
         out.plot(**kwargs)
 
     @staticmethod
-    def _get_sum_signal(signal, out_signal_axes=None):
+    def _get_sum_signal(signal, out_signal_axes: Optional[List] = None):
         out = signal.sum(signal.axes_manager.signal_axes)
         if out_signal_axes is None:
             out_signal_axes = list(

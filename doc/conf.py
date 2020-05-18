@@ -36,7 +36,6 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    #    "sphinx.ext.viewcode",
     "sphinx.ext.linkcode",
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
@@ -49,7 +48,7 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org", None),
     "numpy": ("https://docs.scipy.org/doc/numpy", None),
     "python": ("https://docs.python.org/3", None),
-    "pyxem": ("https://pyxem.github.io/pyxem-website/docstring", None),
+    "pyxem": ("https://pyxem.github.io/pyxem-website/", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
     "skimage": ("https://scikit-image.org/docs/stable", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
@@ -83,15 +82,13 @@ html_css_files = [
 ]
 
 # Syntax highlighting
-# solarized-dark, solarized-light
-# default, friendly, colorful, sphinx
 pygments_style = "friendly"
 
 # Logo
-shape = "shape"
-cmap = "plasma"  # viridis, magma, inferno, plasma*
-html_logo = f"_static/icon/{shape}/{cmap}_logo.svg"
-html_favicon = f"_static/icon/{shape}/{cmap}_favicon.png"
+cmap = "plasma"
+version = "v0.2.0"
+html_logo = f"_static/icon/{version}/{cmap}_logo.svg"
+html_favicon = f"_static/icon/{version}/{cmap}_favicon.png"
 
 # Read the Docs theme options
 html_theme_options = {
@@ -170,12 +167,3 @@ def linkcode_resolve(domain, info):
             )
     else:
         return None
-
-
-def linkcode_resolve2(domain, info):
-    if domain != "py":
-        return None
-    if not info["module"]:
-        return None
-    filename = info["module"].replace(".", "/")
-    return "https://github.com/kikuchipy/kikuchipy/tree/master/%s.py" % filename

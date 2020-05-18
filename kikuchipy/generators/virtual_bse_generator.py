@@ -118,7 +118,7 @@ class VirtualBSEGenerator:
             performed.
         dtype_out
             Output data type, either np.uint16 or np.uint8 (default).
-        kwargs :
+        kwargs
             Keyword arguments passed to
             :func:` ~kikuchipy.generators.util.virtual_bse.get_rgb_image`.
 
@@ -171,13 +171,14 @@ class VirtualBSEGenerator:
 
         rgb_image = rgb_image.astype(dtype_out)
         vbse_rgb_image = VirtualBSEImage(rgb_image).transpose(signal_axes=1)
+
+        dtype_rgb = "rgb" + str(8 * np.iinfo(dtype_out).dtype.itemsize)
+        vbse_rgb_image.change_dtype(dtype_rgb)
+
         vbse_rgb_image.axes_manager = _transfer_navigation_axes_to_signal_axes(
             new_axes=vbse_rgb_image.axes_manager,
             old_axes=self.signal.axes_manager,
         )
-
-        dtype_rgb = "rgb" + str(8 * np.iinfo(dtype_out).dtype.itemsize)
-        vbse_rgb_image.change_dtype(dtype_rgb)
 
         return vbse_rgb_image
 
@@ -217,13 +218,15 @@ class VirtualBSEGenerator:
             images[row, col] = self.signal.get_virtual_bse_intensity(roi).data
 
         vbse_images = VirtualBSEImage(images)
+        # TODO: Transfer signal's detector axes to new navigation axes with
+        #  proper binning
         vbse_images.axes_manager = _transfer_navigation_axes_to_signal_axes(
             new_axes=vbse_images.axes_manager, old_axes=self.signal.axes_manager
         )
 
         return vbse_images
 
-    def roi_from_grid(self, index: Union[Tuple, List[Tuple]]):
+    def roi_from_grid(self, index: Union[Tuple, List[Tuple]]) -> RectangularROI:
         """Return a rectangular region of interest (ROI) on the EBSD
         detector from one or multiple generator grid tile indices as
         row(s) and column(s).
@@ -261,7 +264,7 @@ class VirtualBSEGenerator:
         rgb_channels: Union[None, List[Tuple], List[List[Tuple]]] = None,
         visible_indices: bool = True,
         **kwargs,
-    ):
+    ) -> EBSD:
         """Plot a pattern with the detector grid superimposed,
         potentially coloring the edges of three grid tiles red, green
         and blue.
@@ -277,7 +280,7 @@ class VirtualBSEGenerator:
             no tiles' edges are colored.
         visible_indices
             Whether to show grid indices. Default is True.
-        kwargs :
+        kwargs
             Keyword arguments passed to
             :func:`matplotlib.pyplot.axhline` and `axvline`, used by
             HyperSpy to draw lines.

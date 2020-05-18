@@ -126,6 +126,24 @@ class TestGetImagesFromGrid:
 
         assert vbse_images.data.dtype == dtype_out
 
+    def test_axes_manager_transfer(self):
+        s = load(KIKUCHIPY_FILE)
+        vbse_gen = VirtualBSEGenerator(s)
+        vbse_img = vbse_gen.get_images_from_grid()
+
+        s_nav_axes = s.axes_manager.navigation_axes
+        vbse_sig_axes = vbse_img.axes_manager.signal_axes
+
+        assert all(
+            [vbse_sig_axes[i].scale == s_nav_axes[i].scale for i in range(2)]
+        )
+        assert all(
+            [vbse_sig_axes[i].name == s_nav_axes[i].name for i in range(2)]
+        )
+        assert all(
+            [vbse_sig_axes[i].units == s_nav_axes[i].units for i in range(2)]
+        )
+
 
 class TestGetRGBImage:
     def test_get_rgb_image_rois(self):

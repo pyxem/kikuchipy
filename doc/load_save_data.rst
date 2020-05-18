@@ -1,6 +1,6 @@
-======================
-Load and save patterns
-======================
+==================
+Load and save data
+==================
 
 .. _load-patterns-from-file:
 
@@ -132,10 +132,10 @@ From a HyperSpy signal
 HyperSpy provides the method
 :meth:`~hyperspy.signal.BaseSignal.set_signal_type` to change between
 :class:`~hyperspy.signal.BaseSignal` subclasses, of which
-:class:`~kikuchipy.signals.EBSD` and
-:class:`~kikuchipy.signals.EBSDMasterPattern` are two. To
-create an EBSD or EBSDMasterPattern object from a
-:class:`~hyperspy._signals.signal2d.Signal2D` object:
+:class:`~kikuchipy.signals.EBSD`,
+:class:`~kikuchipy.signals.EBSDMasterPattern` and
+:class:`~kikuchipy.signals.VirtualBSEImage` are three. To one of these objects
+from a :class:`~hyperspy._signals.signal2d.Signal2D` object:
 
 .. code-block::
 
@@ -151,6 +151,8 @@ create an EBSD or EBSDMasterPattern object from a
     >>> s.set_signal_type("EBSDMasterPattern")
     >>> s
     <EBSDMasterPattern, title: , dimensions: (10, 20|60, 60)>
+    >>> s.set_signal_type("VirtualBSEImage")
+    <VirtualBSEImage, title: , dimensions: (10, 20|60, 60)>
 
 .. _save-patterns:
 
@@ -164,25 +166,21 @@ name `patterns.h5`, in our default :ref:`h5ebsd-format` format:
 
 .. code-block::
 
-    >>> s._save('patterns')
+    >>> s.save('patterns')
 
 .. danger::
 
-    If you want to overwrite an existing file:
+    If we want to overwrite an existing file:
 
     .. code-block::
 
-        >>> s._save('patterns.h5', overwrite=True)
+        >>> s.save('patterns.h5', overwrite=True)
 
-        If you want to save patterns in NORDIF's binary .dat format instead:
-
-If you want to save patterns in NORDIF's binary .dat format instead:
+If we want to save patterns in NORDIF's binary .dat format instead:
 
 .. code-block::
 
-    >>> s._save('patterns.dat')
-
-    To save an
+    >>> s.save('patterns.dat')
 
 To save an :class:`~kikuchipy.signals.EBSDMasterPattern` object to an HDF5 file,
 use the :meth:`~hyperspy.signal.BaseSignal.save` method inherited from HyperSpy
@@ -192,16 +190,6 @@ to write to `their HDF5 specification
 .. code-block::
 
     >>> s
-        <EBSDMasterPattern, title: , dimensions: (10, 20|60, 60)>
-        >>> s._save("master_patterns.hspy")
-
-    These master patterns can then be read into an EBSDMasterPattern object again
-    via HyperSpy's
-        <EBSDMasterPattern, title: , dimensions: (10, 20|60, 60)>
-        >>> s._save("master_patterns.hspy")
-
-    These master patterns can then be read into an EBSDMasterPattern object again
-    via HyperSpy's
     <EBSDMasterPattern, title: , dimensions: (10, 20|60, 60)>
     >>> s.save("master_patterns.hspy")
 
@@ -210,9 +198,7 @@ via HyperSpy's :func:`~hyperspy.io.load`:
 
 .. code-block::
 
-    >>> s = hs.load("master_patterns.hspy")
-    <Signal2D, title: , dimensions: (10, 20|60, 60)>
-    >>> s.set_signal_type("EBSDMasterPattern")
+    >>> s = hs.load("master_patterns.hspy", signal_type="EBSDMasterPattern")
     <EBSDMasterPattern, title: , dimensions: (10, 20|60, 60)>
 
 .. note::
@@ -293,7 +279,7 @@ containing only ``Scan 1``, by passing:
 
 .. code-block::
 
-    >>> s._save('patterns.h5', add_scan=True, scan_number=2)
+    >>> s.save('patterns.h5', add_scan=True, scan_number=2)
 
     Here, the h5ebsd
 
@@ -370,7 +356,7 @@ respectively. Master patterns for all beam energies are read by default. Passing
     <EBSDMasterPattern, title: , dimensions: (2, 11|1001, 1001)>
 
 Master patterns can be written to HDF5 files using HyperSpy's HDF5 specification
-as :ref:`explained above <save-patterns>`.
+:ref:`as explained above <save-patterns>`.
 
 See [Jackson2019]_ for a hands-on tutorial explaining how to simulate these
 patterns with EMsoft, and [Callahan2013]_ for details of the underlying theory.
@@ -393,3 +379,50 @@ in Python like any other HDF5 data set:
     >>> import h5py
     >>> with h5py.File('/path/to/patterns.h5', mode='r') as f:
     ...     patterns = f['Scan 1/EBSD/Data/patterns'][()]
+
+.. _load-save-virtual-images:
+
+Load and save virtual BSE image
+===============================
+
+One or more virtual backscatter electron (BSE) images in a
+:class:`~kikuchipy.signals.VirtualBSEImage` object can be read and written to
+file using one of HyperSpy's many readers and writers. If they are only to be
+used internally in HyperSpy, they can be written to and read back from
+HyperSpy's HDF5 specification :ref:`as explained above for EBSD master patterns
+<save-patterns>`.
+
+If we want to write the images to image files, HyperSpy also provides a series
+of image readers/writers, as explained in their `user guide
+<http://hyperspy.org/hyperspy-doc/current/user_guide/io.html#images>`_. If we
+wanted to write them as a stack of TIFF images:
+
+.. code-block::
+
+    >>> vbse
+    <VirtualBSEImage, title: , dimensions: (5, 5|200, 149)>
+    >>> vbse.rescale_intensity()  # Fill available data type range
+    >>> vbse.unfold_navigation_shape()  # 1D navigation space required for TIFF
+    >>> vbse
+    <VirtualBSEImage, title: , dimensions: (25|200, 149)>
+    >>> vbse.save("vbse.tif")  # Easilly read into e.g. ImageJ
+
+We can also write them to e.g. ``png`` or ``bmp`` files with Matplotlib:
+
+.. code-block::
+
+    >>> import matplotlib.pyplot as plt
+    >>> nav_size = vbse.axes_manager.navigation_size
+    >>> _ = [
+    ...     plt.imsave(
+    ...         f"vbse{i}.png", vbse.inav[i].data) for i in range(nav_size))
+    ... ]
+
+Read the TIFF stack back into a VirtualBSEImage object:
+
+.. code-block::
+
+    >>> import hyperspy.api as hs
+    >>> vbse = hs.load("vbse.tif", signal_type="VirtualBSEImage")
+    >>> vbse
+    <VirtualBSEImage, title: , dimensions: (25|200, 149)>

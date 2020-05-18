@@ -7,6 +7,7 @@ PATPROC=pattern_processing
 CHANGES=change_scan_pattern_size
 VIS=visualizing_patterns
 FEATMAP=feature_maps
+VIRTUAL=virtual_backscatter_electron_imaging
 
 # Pattern processing
 convert ${PATPROC}/pattern_raw.png ${PATPROC}/pattern_static.png +append ${PATPROC}/static_correction.jpg
@@ -24,10 +25,19 @@ convert ${PATPROC}/fft_filter_laplacian_correlate.png ${PATPROC}/fft_filter_lapl
 # Change image size
 convert ${PATPROC}/pattern_dynamic.jpg ${CHANGES}/pattern_cropped.jpg +append ${CHANGES}/change_pattern_size.jpg
 
-# Virtual image
-#
+# Visualizing patterns
+# Rescale navigators
 convert ${VIS}/vbse_navigator.jpg -resize 860x581 ${VIS}/vbse_navigator_rescaled.jpg
-convert ${VIS}/vbse_navigator_rescaled.jpg ${VIS}/pattern_roi.jpg -gravity center +append ${VIS}/roi_vbse_navigator.jpg
+convert ${VIS}/orientation_similarity_map_navigator.jpg -resize 860x581 ${VIS}/osm_navigator_rescaled.jpg
+convert ${VIS}/orientation_map_navigator.jpg -resize 860x581 ${VIS}/om_navigator_rescaled.jpg
+# Concatenate images
+convert ${VIS}/vbse_signal.png ${VIS}/vbse_navigator_rescaled.jpg -gravity center +append ${VIS}/vbse_navigation.jpg
+convert ${VIS}/vbse_signal.png ${VIS}/osm_navigator_rescaled.jpg -gravity center +append ${VIS}/osm_navigation.jpg
+convert ${VIS}/vbse_signal.png ${VIS}/om_navigator_rescaled.jpg -gravity center +append ${VIS}/om_navigation.jpg
 
 # Feature maps
 convert ${FEATMAP}/image_quality_pattern.png ${FEATMAP}/fft_spectrum.png ${FEATMAP}/fft_frequency_vectors.png +append ${FEATMAP}/image_quality_pattern.jpg
+
+# Virtual imaging
+convert ${VIRTUAL}/images_nav.jpg -resize 477x433 ${VIRTUAL}/images_nav_rescaled.jpg
+convert ${VIRTUAL}/images_nav_rescaled.jpg ${VIRTUAL}/images_sig.jpg -gravity center +append ${VIRTUAL}/images.jpg

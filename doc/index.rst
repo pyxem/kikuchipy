@@ -14,7 +14,7 @@ kikuchipy
     :hidden:
     :caption: User guide
 
-    load_save_patterns.rst
+    load_save_data.rst
     change_scan_pattern_size.rst
     pattern_processing.rst
     feature_maps.rst

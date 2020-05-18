@@ -17,6 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from hyperspy._signals.signal2d import Signal2D
+import numpy as np
 
 from kikuchipy.signals._common_image import CommonImage
 

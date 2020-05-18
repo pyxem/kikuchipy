@@ -71,7 +71,7 @@ def get_rgb_image(
     dtype_out: Union[np.uint8, np.uint16] = np.uint8,
     **kwargs,
 ) -> np.ndarray:
-    """Return an RGB(A) image from three numpy arrays, with a potential
+    """Return an RGB image from three numpy arrays, with a potential
     alpha channel.
 
     Parameters

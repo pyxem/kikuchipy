@@ -51,30 +51,26 @@ Virtual image
 -------------
 
 A virtual backscatter electron (VBSE) image created from any detector region of
-interest with the :meth:`~kikuchipy.signals.EBSD.get_virtual_image`
-method, explained in the :doc:`virtual_backscatter_electron_imaging` section,
-can be used as a navigator for a scan ``s``:
+interest with the :meth:`~kikuchipy.signals.EBSD.get_virtual_bse_intensity`
+method or :meth:`~kikuchipy.generators.VirtualBSEGenerator.get_rgb_image`
+explained in the :doc:`virtual_backscatter_electron_imaging` section, can be
+used as a navigator for a scan ``s``:
 
 .. code-block:: python
 
-    >>> import hyperspy.api as hs
-    >>> roi = hs.roi.RectangularROI(left=18, top=20, right=23, bottom=25)
-    >>> vbse = s.get_virtual_image(roi)
-    >>> s
-    <EBSD, title: Pattern_c, dimensions: (200, 149|60, 60)>
-    >>> vbse
-    <EBSD, title: Virtual Dark Field, dimensions: (|200, 149)>
-    >>> s.plot(navigator=vbse)
+    >>> vbse_gen = kp.generators.VirtualBSEGenerator(s)
+    >>> vbse_rgb = vbse_gen.get_rgb_image(r=(4, 1), g=(4, 2), b=(4, 3))
+    >>> vbse_rgb
+    <VirtualBSEImage, title: , dimensions: (|200, 149)>
+    >>> s.plot(navigator=vbse_rgb)
 
 .. _fig-vbse-navigator:
 
-.. figure:: _static/image/visualizing_patterns/roi_vbse_navigator.jpg
+.. figure:: _static/image/visualizing_patterns/vbse_navigation.jpg
     :align: center
     :width: 100%
 
-    Navigator map ``vbse`` (left) with pixel values corresponding to the sum
-    of the intensities within the rectangular, green aperture (``roi``) in the
-    pattern (right).
+    Navigating EBSD patterns (left) in an RGB virtual BSE image (right).
 
 .. _image-map:
 
@@ -101,12 +97,12 @@ from dictionary indexing with `EMsoft <https://github.com/EMsoft-org/EMsoft>`_
 
 .. _fig-navigate-quality-metric:
 
-.. figure:: _static/image/visualizing_patterns/orientation_similarity_map_navigator.jpg
+.. figure:: _static/image/visualizing_patterns/osm_navigation.jpg
     :align: center
-    :width: 450
+    :width: 100%
 
-    A quality metric map ``s_osm``, in this case an orientation similarity map
-    from dictionary indexing with EMsoft, as navigator map.
+    Navigating EBSD patterns (left) in a quality metric map ``s_osm``, in this
+    case an orientation similarity map from dictionary indexing with EMsoft.
 
 Or, an :ref:`image quality map <image-quality>` calculated using
 :meth:`~kikuchipy.signals.EBSD.get_image_quality`:
@@ -117,8 +113,8 @@ Or, an :ref:`image quality map <image-quality>` calculated using
     >>> s_iq = hs.signals.Signal2D(iq)
     >>> s.plot(navigator=s_iq)
 
-Using colour images, e.g. an orientation ``om`` or phase map, is a bit more
-involved:
+Using colour images (apart from creating RGB virtual BSE images, as shown
+above), e.g. an orientation ``om`` or phase map, is a bit more involved:
 
 .. code-block::
 
@@ -137,11 +133,11 @@ involved:
 
 .. _fig-orientation-map-navigator:
 
-.. figure:: _static/image/visualizing_patterns/orientation_map_navigator.jpg
+.. figure:: _static/image/visualizing_patterns/om_navigation.jpg
     :align: center
-    :width: 450
+    :width: 100%
 
-    An orientation map ``s_om`` as a navigator map.
+    Navigating EBSD patterns (left) in an orientation map ``s_om`` (right).
 
 .. _plot-multiple-scans:
 
