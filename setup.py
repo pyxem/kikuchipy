@@ -62,10 +62,11 @@ setup(
     name=NAME,
     version=VERSION,
     license=LICENSE,
-    url="https://kikuchipy.readthedocs.io",
+    url="https://kikuchipy.org",
     python_requires=">=3.7",
     description=(
-        "Processing of electron backscatter diffraction (EBSD) patterns"
+        "Processing and analysis of electron backscatter diffraction (EBSD) "
+        "patterns."
     ),
     long_description=open("README.rst").read(),
     long_description_content_type="text/x-rst",
@@ -100,8 +101,14 @@ setup(
     # Contact
     author=AUTHOR,
     author_email=MAINTAINER_EMAIL,
+    download_url="https://pypi.python.org/pypi/kikuchipy",
     maintainer=MAINTAINER,
     maintainer_email=MAINTAINER_EMAIL,
+    project_urls={
+        "Bug Tracker": "https://github.com/kikuchipy/kikuchipy/issues",
+        "Documentation": "https://kikuchipy.org",
+        "Source Code": "https://github.com/kikuchipy/kikuchipy",
+    },
     # Dependencies
     # Update in .travis.yml if this list is updated!
     extras_require=extra_feature_requirements,
