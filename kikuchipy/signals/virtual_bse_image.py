@@ -16,19 +16,27 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from kikuchipy.signals import util
-from kikuchipy.signals.ebsd import EBSD, LazyEBSD
-from kikuchipy.signals.ebsd_master_pattern import (
-    EBSDMasterPattern,
-    LazyEBSDMasterPattern,
-)
-from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
+from hyperspy._signals.signal2d import Signal2D
+import numpy as np
 
-__all__ = [
-    "EBSD",
-    "EBSDMasterPattern",
-    "LazyEBSD",
-    "LazyEBSDMasterPattern",
-    "util",
-    "VirtualBSEImage",
-]
+from kikuchipy.signals._common_image import CommonImage
+
+
+class VirtualBSEImage(CommonImage, Signal2D):
+    """Virtual backscatter electron (BSE) image(s).
+
+    This class extends HyperSpy's Signal2D class for virtual BSE images.
+
+    Methods inherited from HyperSpy can be found in the HyperSpy user
+    guide.
+
+    See the docstring of :class:`hyperspy.signal.BaseSignal` for a list
+    of attributes.
+    """
+
+    _signal_type = "VirtualBSEImage"
+    _alias_signal_types = ["virtual_backscatter_electron_image"]
+    _lazy = False
+
+    def __init__(self, *args, **kwargs):
+        Signal2D.__init__(self, *args, **kwargs)

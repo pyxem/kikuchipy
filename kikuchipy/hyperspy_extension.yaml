@@ -41,8 +41,16 @@ signals:
     lazy: False
     module: kikuchipy.signals.ebsd_master_pattern
   LazyEBSDMasterPattern:
-    signal_type: LazyEBSDMasterPattern
+    signal_type: EBSDMasterPattern
     signal_dimension: 2
     dtype: real
     lazy: True
     module: kikuchipy.signals.ebsd_master_pattern
+  VirtualBSEImage:
+    signal_type: VirtualBSEImage
+    signal_type_aliases:
+      - virtual_backscatter_electron_image
+    signal_dimension: 2
+    dtype: real
+    lazy: False
+    module: kikuchipy.signals.virtual_bse_image

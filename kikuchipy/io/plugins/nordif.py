@@ -164,7 +164,7 @@ def file_reader(
         data = data.reshape((ny, nx, sy, sx))
     scan["data"] = data
 
-    units = ["\u03BC" + "m"] * 4
+    units = ["um"] * 4
     names = ["y", "x", "dy", "dx"]
     scales = np.ones(4)
 

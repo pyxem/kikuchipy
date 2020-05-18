@@ -29,9 +29,10 @@ from kikuchipy.signals.util._metadata import (
     _update_phase_info,
     _write_parameters_to_dictionary,
 )
+from kikuchipy.signals._common_image import CommonImage
 
 
-class EBSDMasterPattern(Signal2D):
+class EBSDMasterPattern(CommonImage, Signal2D):
     """Simulated Electron Backscatter Diffraction (EBSD) master pattern.
 
     This class extends HyperSpy's Signal2D class for EBSD master

@@ -15,20 +15,3 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
-
-from kikuchipy.signals import util
-from kikuchipy.signals.ebsd import EBSD, LazyEBSD
-from kikuchipy.signals.ebsd_master_pattern import (
-    EBSDMasterPattern,
-    LazyEBSDMasterPattern,
-)
-from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
-
-__all__ = [
-    "EBSD",
-    "EBSDMasterPattern",
-    "LazyEBSD",
-    "LazyEBSDMasterPattern",
-    "util",
-    "VirtualBSEImage",
-]

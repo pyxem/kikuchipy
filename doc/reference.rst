@@ -4,8 +4,7 @@ API reference
 
 This reference manual details the public classes, modules and functions in
 kikuchipy, as generated from their docstrings. Many of the docstrings contain
-examples, however, for learning how to use kikuchipy, see the user guide pages
-in the sidebar.
+examples, however, see the user guide for how to use kikuchipy.
 
 .. caution::
 
@@ -30,8 +29,9 @@ All methods listed here are also available to
     get_decomposition_model
     get_dynamic_background
     get_image_quality
-    get_virtual_image
+    get_virtual_bse_intensity
     normalize_intensity
+    plot_virtual_bse_intensity
     rebin
     remove_dynamic_background
     remove_static_background
@@ -41,11 +41,11 @@ All methods listed here are also available to
     set_experimental_parameters
     set_phase_parameters
     set_scan_calibration
-    virtual_backscatter_electron_imaging
 
 .. autoclass:: kikuchipy.signals.EBSD
     :members:
     :undoc-members:
+    :inherited-members: Signal2D
     :show-inheritance:
 
 ....
@@ -73,12 +73,15 @@ All methods listed here are also available to
 .. currentmodule:: kikuchipy.signals.EBSDMasterPattern
 
 .. autosummary::
+    normalize_intensity
+    rescale_intensity
     set_simulation_parameters
     set_phase_parameters
 
 .. autoclass:: kikuchipy.signals.EBSDMasterPattern
     :members:
     :undoc-members:
+    :inherited-members: Signal2D
     :show-inheritance:
 
 ....
@@ -92,12 +95,60 @@ There are no methods exclusive to LazyEBSDMasterPattern objects.
 
 ....
 
+VirtualBSEImage
+---------------
+
+.. currentmodule:: kikuchipy.signals.VirtualBSEImage
+
+.. autosummary::
+    normalize_intensity
+    rescale_intensity
+
+.. autoclass:: kikuchipy.signals.VirtualBSEImage
+    :members:
+    :undoc-members:
+    :inherited-members: Signal2D
+
+....
+
 Utilities
 ---------
 
 .. currentmodule:: kikuchipy.signals.util
 
 .. automodule:: kikuchipy.signals.util
+    :members:
+    :undoc-members:
+
+....
+
+Generators
+==========
+
+Generators producing signals. This workflow with generators is adopted from
+`pyxem <http://github.com/pyxem/pyxem>`_.
+
+VirtualBSEGenerator
+-------------------
+
+.. currentmodule:: kikuchipy.generators.VirtualBSEGenerator
+
+.. autosummary::
+    get_images_from_grid
+    get_rgb_image
+    plot_grid
+    roi_from_grid
+
+.. autoclass:: kikuchipy.generators.VirtualBSEGenerator
+    :members:
+    :undoc-members:
+
+Utilities
+---------
+
+.. currentmodule:: kikuchipy.generators.util
+
+.. automodule:: kikuchipy.generators.util
     :members:
     :undoc-members:
 

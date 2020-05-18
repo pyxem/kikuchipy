@@ -55,7 +55,7 @@ def rescale_intensity(
     out_range
         Min./max. intensity of output patterns. If None (default),
         `out_range` is set to `dtype_out` min./max according to
-        `skimage._util.dtype.dtype_range`.
+        `skimage.util.dtype.dtype_range`.
     dtype_out
         Data type of rescaled patterns. If None (default), it is set to
         the same data type as the input patterns.
@@ -126,7 +126,7 @@ def remove_static_background(
     out_range
         Min./max. intensity values of the output patterns. If None
         (default), `out_range` is set to `dtype_out` min./max according
-        to `skimage._util.dtype.dtype_range`.
+        to `skimage.util.dtype.dtype_range`.
     dtype_out
         Data type of corrected patterns. If None (default), it is set to
         input patterns' data type.
@@ -187,7 +187,7 @@ def get_dynamic_background(
         Function where a Gaussian convolution filter is applied, in the
         frequency or spatial domain. Either
         :func:`scipy.ndimage.gaussian_filter` or
-        :func:`kikuchipy._util.barnes_fftfilter.fft_filter`.
+        :func:`kikuchipy.util.barnes_fftfilter.fft_filter`.
     dtype_out
         Data type of background patterns. If None (default), it is set
         to input patterns' data type.
@@ -235,14 +235,14 @@ def remove_dynamic_background(
         Function where a Gaussian convolution filter is applied, in the
         frequency or spatial domain. Either
         :func:`scipy.ndimage.gaussian_filter` or
-        :func:`kikuchipy._util.barnes_fftfilter.fft_filter`.
+        :func:`kikuchipy.util.barnes_fftfilter.fft_filter`.
     operation_func
         Function to subtract or divide by the dynamic background
         pattern.
     out_range
         Min./max. intensity values of the output patterns. If None
         (default), `out_range` is set to `dtype_out` min./max according
-        to `skimage._util.dtype.dtype_range`.
+        to `skimage.util.dtype.dtype_range`.
     dtype_out
         Data type of corrected patterns. If None (default), it is set to
         input patterns' data type.
@@ -258,7 +258,7 @@ def remove_dynamic_background(
     See Also
     --------
     kikuchipy.signals.ebsd.EBSD.remove_dynamic_background
-    kikuchipy._util.pattern.remove_dynamic_background
+    kikuchipy.util.pattern.remove_dynamic_background
     """
     if dtype_out is None:
         dtype_out = patterns.dtype.type
@@ -356,7 +356,7 @@ def get_image_quality(
         Integer 2D array with values corresponding to the weight given
         each FFT spectrum frequency component. If None (default), these
         are calculated from
-        :func:`~kikuchipy._util.pattern.fft_frequency_vectors`.
+        :func:`~kikuchipy.util.pattern.fft_frequency_vectors`.
     inertia_max
         Maximum inertia of the FFT power spectrum of the image. If None
         (default), this is calculated from the `frequency_vectors`.

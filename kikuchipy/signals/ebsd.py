@@ -61,13 +61,15 @@ from kikuchipy.signals.util._dask import (
     _rechunk_learning_results,
     _update_learning_results,
 )
+from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
+from kikuchipy.signals._common_image import CommonImage
 
 
-class EBSD(Signal2D):
+class EBSD(CommonImage, Signal2D):
     """Scan of Electron Backscatter Diffraction (EBSD) patterns.
 
     This class extends HyperSpy's Signal2D class for EBSD patterns, with
-    many common intensity processing methods and some analysis methods.
+    common intensity processing methods and some analysis methods.
 
     Methods inherited from HyperSpy can be found in the HyperSpy user
     guide.
@@ -345,7 +347,7 @@ class EBSD(Signal2D):
         x, y = self.axes_manager.navigation_axes
         x.name, y.name = ("x", "y")
         x.scale, y.scale = (step_x, step_y)
-        x.units, y.units = ["\u03BC" + "m"] * 2
+        x.units, y.units = ["um"] * 2
 
     def set_detector_calibration(self, delta: Union[int, float]):
         """Set detector pixel size in microns. The offset is set to the
@@ -370,7 +372,7 @@ class EBSD(Signal2D):
         """
         centre = delta * np.array(self.axes_manager.signal_shape) / 2
         dx, dy = self.axes_manager.signal_axes
-        dx.units, dy.units = ["\u03BC" + "m"] * 2
+        dx.units, dy.units = ["um"] * 2
         dx.scale, dy.scale = (delta, delta)
         dx.offset, dy.offset = -centre
 
@@ -707,126 +709,6 @@ class EBSD(Signal2D):
 
         return background_signal
 
-    def rescale_intensity(
-        self,
-        relative: bool = False,
-        in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-        out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-        dtype_out: Union[
-            None, np.dtype, Tuple[int, int], Tuple[float, float]
-        ] = None,
-        percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-    ):
-        """Rescale pattern intensities in an EBSD scan inplace.
-
-        Output min./max. intensity is determined from `out_range` or the
-        data type range of the :class:`numpy.dtype` passed to
-        `dtype_out` if `out_range` is None.
-
-        This method is based on
-        :func:`skimage.exposure.rescale_intensity`.
-
-        Parameters
-        ----------
-        relative
-            Whether to keep relative intensities between patterns
-            (default is False). If True, `in_range` must be None,
-            because `in_range` is in this case set to the global
-            min./max. intensity.
-        in_range
-            Min./max. intensity of input patterns. If None (default),
-            stretching is performed when `in_range` is set to a narrower
-            `in_range` is set to pattern min./max intensity. Contrast
-            intensity range than the input patterns. Must be None if
-            `relative` is True or `percentiles` are passed.
-        out_range
-            Min./max. intensity of output patterns. If None (default),
-            `out_range` is set to `dtype_out` min./max according to
-            `skimage._util.dtype.dtype_range`.
-        dtype_out
-            Data type of rescaled patterns, default is input patterns'
-            data type.
-        percentiles
-            Disregard intensities outside these percentiles. Calculated
-            per pattern. Must be None if `in_range` or `relative` is
-            passed. Default is None.
-
-        See Also
-        --------
-        kikuchipy.signals.EBSD.normalize_intensity,
-        kikuchipy.pattern.rescale_intensity,
-        :func:`skimage.exposure.rescale_intensity`
-
-        Examples
-        --------
-        Pattern intensities are stretched to fill the available grey
-        levels in the input patterns' data type range or any
-        :class:`numpy.dtype` range passed to `dtype_out`, either
-        keeping relative intensities between patterns or not:
-
-        >>> print(s.data.dtype_out, s.data.min(), s.data.max(),
-        ...       s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
-        uint8 20 254 24 233
-        >>> s2 = s.deepcopy()
-        >>> s.rescale_intensity(dtype_out=np.uint16)
-        >>> print(s.data.dtype_out, s.data.min(), s.data.max(),
-        ...       s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
-        uint16 0 65535 0 65535
-        >>> s2.rescale_intensity(relative=True)
-        >>> print(s2.data.dtype_out, s2.data.min(), s2.data.max(),
-        ...       s2.inav[0, 0].data.min(), s2.inav[0, 0].data.max())
-        uint8 0 255 4 232
-
-        Contrast stretching can be performed by passing percentiles:
-
-        >>> s.rescale_intensity(percentiles=(1, 99))
-
-        Here, the darkest and brighets within the 1% percentile are set
-        to the ends of the data type range, e.g. 0 and 255 respectively
-        for patterns of ``uint8`` data type.
-        """
-        # Determine min./max. intensity of input pattern to rescale to
-        if in_range is not None and percentiles is not None:
-            raise ValueError(
-                "'percentiles' must be None if 'in_range' is not None."
-            )
-        elif relative is True and in_range is not None:
-            raise ValueError("'in_range' must be None if 'relative' is True.")
-        elif relative:  # Scale relative to min./max. intensity in scan
-            in_range = (self.data.min(), self.data.max())
-
-        if dtype_out is None:
-            dtype_out = self.data.dtype.type
-
-        if out_range is None:
-            dtype_out_pass = dtype_out
-            if isinstance(dtype_out, np.dtype):
-                dtype_out_pass = dtype_out.type
-            out_range = dtype_range[dtype_out_pass]
-
-        # Create dask array of signal patterns and do processing on this
-        dask_array = _get_dask_array(signal=self)
-
-        # Rescale patterns
-        rescaled_patterns = dask_array.map_blocks(
-            func=chunk.rescale_intensity,
-            in_range=in_range,
-            out_range=out_range,
-            dtype_out=dtype_out,
-            percentiles=percentiles,
-            dtype=dtype_out,
-        )
-
-        # Overwrite signal patterns
-        if not self._lazy:
-            with ProgressBar():
-                if self.data.dtype != rescaled_patterns.dtype:
-                    self.change_dtype(dtype_out)
-                print("Rescaling the pattern intensities:", file=sys.stdout)
-                rescaled_patterns.store(self.data, compute=True)
-        else:
-            self.data = rescaled_patterns
-
     def adaptive_histogram_equalization(
         self,
         kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
@@ -1074,68 +956,6 @@ class EBSD(Signal2D):
         else:
             self.data = filtered_patterns
 
-    def normalize_intensity(
-        self,
-        num_std: int = 1,
-        divide_by_square_root: bool = False,
-        dtype_out: Optional[np.dtype] = None,
-    ):
-        """Normalize pattern intensities in an EBSD scan inplace to a
-        mean of zero with a given standard deviation.
-
-        Parameters
-        ----------
-        num_std
-            Number of standard deviations of the output intensities.
-            Default is 1.
-        divide_by_square_root
-            Whether to divide output intensities by the square root of
-            the pattern size. Default is False.
-        dtype_out
-            Data type of normalized patterns. If None (default), the
-            input patterns' data type is used.
-
-        Notes
-        -----
-        Data type should always be changed to floating point, e.g.
-        ``np.float32`` with
-        :meth:`~hyperspy.signal.BaseSignal.change_dtype`, before
-        normalizing the intensities.
-
-        Examples
-        --------
-        >>> np.mean(s.data)
-        146.0670987654321
-        >>> s.change_dtype(np.float32)  # Or passing dtype_out=np.float32
-        >>> s.normalize_intensity()
-        >>> np.mean(s.data)
-        2.6373216e-08
-        """
-        if dtype_out is None:
-            dtype_out = self.data.dtype
-
-        dask_array = _get_dask_array(self, dtype=np.float32)
-
-        normalized_patterns = dask_array.map_blocks(
-            func=chunk.normalize_intensity,
-            num_std=num_std,
-            divide_by_square_root=divide_by_square_root,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-        )
-
-        # Change data type if requested
-        if dtype_out != self.data.dtype:
-            self.change_dtype(dtype_out)
-
-        # Overwrite signal patterns
-        if not self._lazy:
-            with ProgressBar():
-                print("Normalizing the pattern intensities:", file=sys.stdout)
-                normalized_patterns.store(self.data, compute=True)
-        else:
-            self.data = normalized_patterns
-
     def average_neighbour_patterns(
         self,
         window: Union[str, np.ndarray, da.Array, Window] = "circular",
@@ -1167,7 +987,7 @@ class EBSD(Signal2D):
             :class:`~kikuchipy.filters.Window` can also be passed.
         window_shape
             Shape of averaging window. Not used if a custom window or
-            :class:`~kikuchipy._util.window.Window` object is passed to
+            :class:`~kikuchipy.util.window.Window` object is passed to
             `window`. This can be either 1D or 2D, and can be
             asymmetrical. Default is (3, 3).
         **kwargs :
@@ -1318,7 +1138,7 @@ class EBSD(Signal2D):
         else:
             self.data = averaged_patterns
 
-    def virtual_backscatter_electron_imaging(
+    def plot_virtual_bse_intensity(
         self,
         roi: BaseInteractiveROI,
         out_signal_axes: Union[None, Iterable[int], Iterable[str]] = None,
@@ -1348,11 +1168,11 @@ class EBSD(Signal2D):
         >>> import hyperspy.api as hs
         >>> roi = hs.roi.RectangularROI(
         ...     left=0, right=5, top=0, bottom=5)
-        >>> s.virtual_backscatter_electron_imaging(roi)
+        >>> s.plot_virtual_bse_intensity(roi)
 
         See Also
         --------
-        kikuchipy.signals.EBSD.get_virtual_image
+        kikuchipy.signals.EBSD.get_virtual_bse_intensity
         """
         # Plot signal if necessary
         if self._plot is None or not self._plot.is_active:
@@ -1366,7 +1186,7 @@ class EBSD(Signal2D):
         # Create an output signal for the virtual backscatter electron
         # calculation
         out = self._get_sum_signal(self, out_signal_axes)
-        out.metadata.General.title = "Integrated backscatter electron intensity"
+        out.metadata.General.title = "Virtual backscatter electron intensity"
 
         # Create the interactive signal
         interactive(
@@ -1381,7 +1201,7 @@ class EBSD(Signal2D):
         out.plot(**kwargs)
 
     @staticmethod
-    def _get_sum_signal(signal, out_signal_axes=None):
+    def _get_sum_signal(signal, out_signal_axes: Optional[List] = None):
         out = signal.sum(signal.axes_manager.signal_axes)
         if out_signal_axes is None:
             out_signal_axes = list(
@@ -1395,11 +1215,11 @@ class EBSD(Signal2D):
         out.set_signal_type("")
         return out.transpose(out_signal_axes)
 
-    def get_virtual_image(
+    def get_virtual_bse_intensity(
         self,
         roi: BaseInteractiveROI,
         out_signal_axes: Union[None, Iterable[int], Iterable[str]] = None,
-    ) -> Signal2D:
+    ) -> VirtualBSEImage:
         """Get a virtual backscatter electron (VBSE) image formed from
         intensities within a region of interest (ROI) on the detector.
 
@@ -1417,7 +1237,7 @@ class EBSD(Signal2D):
 
         Returns
         -------
-        virtual_image : hyperspy._signals.signal2d.Signal2D
+        virtual_image : kikuchipy.signals.VirtualBSEImage
             VBSE image formed from detector intensities within an ROI
             on the detector.
 
@@ -1426,15 +1246,16 @@ class EBSD(Signal2D):
         >>> import hyperspy.api as hs
         >>> roi = hs.roi.RectangularROI(
         ...     left=0, right=5, top=0, bottom=5)
-        >>> vbse_image = s.get_virtual_image(roi)
+        >>> vbse_image = s.get_virtual_bse_intensity(roi)
 
         See Also
         --------
-        kikuchipy.signals.EBSD.virtual_backscatter_electron_imaging
+        kikuchipy.signals.EBSD.plot_virtual_bse_intensity
         """
         vbse = roi(self, axes=self.axes_manager.signal_axes)
         vbse_sum = self._get_sum_signal(vbse, out_signal_axes)
         vbse_sum.metadata.General.title = "Virtual backscatter electron image"
+        vbse_sum.set_signal_type("VirtualBSEImage")
         return vbse_sum
 
     def save(
