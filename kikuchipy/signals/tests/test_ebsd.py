@@ -23,6 +23,7 @@ import dask.array as da
 from hyperspy.utils.roi import RectangularROI
 from hyperspy.misc.utils import DictionaryTreeBrowser
 import matplotlib
+from matplotlib.pyplot import close
 import numpy as np
 import pytest
 from scipy.ndimage import correlate
@@ -801,11 +802,15 @@ class TestVirtualBackscatterElectronImaging:
         dummy_signal.axes_manager.navigation_axes[1].name = "y"
 
         roi = RectangularROI(left=0, top=0, right=1, bottom=1)
-        dummy_signal.virtual_bse_imaging(roi, out_signal_axes=out_signal_axes)
+        dummy_signal.plot_virtual_bse_intensity(
+            roi, out_signal_axes=out_signal_axes
+        )
+
+        close("all")
 
     def test_get_virtual_image(self, dummy_signal):
         roi = RectangularROI(left=0, top=0, right=1, bottom=1)
-        virtual_image_signal = dummy_signal.get_virtual_bse_image(roi)
+        virtual_image_signal = dummy_signal.get_virtual_bse_intensity(roi)
         assert (
             virtual_image_signal.data.shape
             == dummy_signal.axes_manager.navigation_shape
@@ -814,7 +819,7 @@ class TestVirtualBackscatterElectronImaging:
     def test_virtual_backscatter_electron_imaging_raises(self, dummy_signal):
         roi = RectangularROI(0, 0, 1, 1)
         with pytest.raises(ValueError):
-            _ = dummy_signal.get_virtual_bse_image(
+            _ = dummy_signal.get_virtual_bse_intensity(
                 roi, out_signal_axes=(0, 1, 2)
             )
 

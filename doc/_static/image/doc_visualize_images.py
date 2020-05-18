@@ -27,7 +27,7 @@ s._plot.navigator_plot.figure.savefig(
 s._plot.signal_plot.figure.savefig(os.path.join(visdir, "pattern_roi.jpg"))
 
 # Virtual image
-vbse = s.get_virtual_bse_image(roi)
+vbse = s.get_virtual_bse_intensity(roi)
 s.plot(navigator=vbse)
 s._plot.navigator_plot.figure.savefig(
     os.path.join(visdir, "vbse_navigator.jpg")

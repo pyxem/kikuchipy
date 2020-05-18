@@ -46,6 +46,7 @@ All methods listed here are also available to
 .. autoclass:: kikuchipy.signals.EBSD
     :members:
     :undoc-members:
+    :inherited-members: Signal2D
     :show-inheritance:
 
 ....
@@ -73,12 +74,15 @@ All methods listed here are also available to
 .. currentmodule:: kikuchipy.signals.EBSDMasterPattern
 
 .. autosummary::
+    normalize_intensity
+    rescale_intensity
     set_simulation_parameters
     set_phase_parameters
 
 .. autoclass:: kikuchipy.signals.EBSDMasterPattern
     :members:
     :undoc-members:
+    :inherited-members: Signal2D
     :show-inheritance:
 
 ....
@@ -89,6 +93,22 @@ There are no methods exclusive to LazyEBSDMasterPattern objects.
     :members:
     :undoc-members:
     :show-inheritance:
+
+....
+
+VirtualBSEImage
+---------------
+
+.. currentmodule:: kikuchipy.signals.VirtualBSEImage
+
+.. autosummary::
+    normalize_intensity
+    rescale_intensity
+
+.. autoclass:: kikuchipy.signals.VirtualBSEImage
+    :members:
+    :undoc-members:
+    :inherited-members: Signal2D
 
 ....
 

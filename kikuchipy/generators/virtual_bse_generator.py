@@ -19,11 +19,12 @@
 from typing import List, Optional, Tuple, Union
 
 from dask.array import Array
-from hyperspy.roi import BaseInteractiveROI, RectangularROI
 from hyperspy.drawing._markers.horizontal_line import HorizontalLine
 from hyperspy.drawing._markers.vertical_line import VerticalLine
 from hyperspy.drawing._markers.rectangle import Rectangle
 from hyperspy.drawing._markers.text import Text
+from hyperspy.roi import BaseInteractiveROI, RectangularROI
+from hyperspy._signals.signal2d import Signal2D
 import numpy as np
 
 from kikuchipy.signals import EBSD, LazyEBSD
@@ -32,7 +33,6 @@ from kikuchipy.generators.util import (
     get_rgb_image as get_rgb_image_from_arrays,
     _transfer_navigation_axes_to_signal_axes,
 )
-from kikuchipy.pattern import rescale_intensity
 
 
 class VirtualBSEGenerator:
@@ -69,10 +69,18 @@ class VirtualBSEGenerator:
 
     def get_rgb_image(
         self,
-        rois: Union[List[BaseInteractiveROI], List[Tuple]],
-        percentile: Optional[Tuple] = None,
+        r: Union[
+            BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple],
+        ],
+        g: Union[
+            BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple],
+        ],
+        b: Union[
+            BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple],
+        ],
+        percentiles: Optional[Tuple] = None,
         normalize: bool = True,
-        alpha: Optional[np.ndarray] = None,
+        alpha: Union[None, np.ndarray, VirtualBSEImage] = None,
         dtype_out: Union[np.uint8, np.uint16] = np.uint8,
         **kwargs,
     ) -> VirtualBSEImage:
@@ -82,17 +90,28 @@ class VirtualBSEGenerator:
 
         Parameters
         ----------
-        rois
-            A list of three ROIs or tuples with detector grid indices to
-            integrate the intensity within for the red, green and blue
-            channel, respectively.
+        r
+            One ROI or a list of ROIs, or one tuple or a list of tuples
+            with detector grid indices specifying one or more ROI(s).
+            Intensities within the specified ROI(s) are summed up to
+            form the red color channel.
+        g
+            One ROI or a list of ROIs, or one tuple or a list of tuples
+            with detector grid indices specifying one or more ROI(s).
+            Intensities within the specified ROI(s) are summed up to
+            form the green color channel.
+        b
+            One ROI or a list of ROIs, or one tuple or a list of tuples
+            with detector grid indices specifying one or more ROI(s).
+            Intensities within the specified ROI(s) are summed up to
+            form the blue color channel.
         normalize
             Whether to normalize the individual images (channels) before
             RGB image creation.
         alpha
             "Alpha channel". If None (default), no "alpha channel" is
             added to the image.
-        percentile
+        percentiles
             Whether to apply contrast stretching with a given percentile
             tuple with percentages, e.g. (0.5, 99.5), after creating the
             RGB image. If None (default), no contrast stretching is
@@ -101,7 +120,7 @@ class VirtualBSEGenerator:
             Output data type, either np.uint16 or np.uint8 (default).
         kwargs :
             Keyword arguments passed to
-            :func:` ~kikuchipy.generators.util.virtual_bse.normalize_image`.
+            :func:` ~kikuchipy.generators.util.virtual_bse.get_rgb_image`.
 
         Returns
         -------
@@ -110,25 +129,42 @@ class VirtualBSEGenerator:
 
         See Also
         --------
-        kikuchipy.signals.EBSD.virtual_bse_imaging,
-        kikuchipy.signals.EBSD.get_virtual_bse_image,
+        kikuchipy.signals.EBSD.plot_virtual_bse_intensity,
+        kikuchipy.signals.EBSD.get_virtual_bse_intensity,
         kikuchipy.generators.util.get_rgb_image
-        """
-        if isinstance(rois[0], tuple):
-            rois = [self.roi_from_grid(row, col) for row, col in rois]
 
+        Notes
+        -----
+        HyperSpy only allows for RGB signal dimensions with data types
+        unsigned 8 or 16 bit.
+        """
         channels = []
-        for roi in rois[:3]:
-            image = self.signal.get_virtual_bse_image(roi).data
-            if isinstance(image, Array):
-                image = image.compute()
+        for rois in [r, g, b]:
+            if isinstance(rois, tuple) or hasattr(rois, "__iter__") is False:
+                rois = (rois,)
+
+            image = np.zeros(
+                self.signal.axes_manager.navigation_shape[::-1],
+                dtype=np.float64,
+            )
+            for roi in rois:
+                if isinstance(roi, tuple):
+                    roi = self.roi_from_grid(roi)
+                roi_image = self.signal.get_virtual_bse_intensity(roi).data
+                if isinstance(roi_image, Array):
+                    roi_image = roi_image.compute()
+                image += roi_image
+
             channels.append(image)
+
+        if alpha is not None and isinstance(alpha, Signal2D):
+            alpha = alpha.data
 
         rgb_image = get_rgb_image_from_arrays(
             channels=channels,
             normalize=normalize,
             alpha=alpha,
-            percentile=percentile,
+            percentiles=percentiles,
             dtype_out=dtype_out,
             **kwargs,
         )
@@ -146,7 +182,7 @@ class VirtualBSEGenerator:
         return vbse_rgb_image
 
     def get_images_from_grid(
-        self, normalize: bool = True, dtype_out: np.dtype = np.uint32,
+        self, dtype_out: np.dtype = np.float32,
     ) -> VirtualBSEImage:
         """Return an in-memory signal with a stack of virtual
         backscatter electron (BSE) images by integrating the intensities
@@ -155,11 +191,8 @@ class VirtualBSEGenerator:
 
         Parameters
         ----------
-        normalize
-            Whether to normalize the images, keeping relative
-            intensities. Default is True.
         dtype_out
-            Output data type, default is uint32.
+            Output data type, default is float32.
 
         Returns
         -------
@@ -180,36 +213,26 @@ class VirtualBSEGenerator:
         new_shape = grid_shape + self.signal.axes_manager.navigation_shape[::-1]
         images = np.zeros(new_shape, dtype=dtype_out)
         for row, col in np.ndindex(grid_shape):
-            roi = self.roi_from_grid(row, col)
-            images[row, col] = self.signal.get_virtual_bse_image(roi).data
+            roi = self.roi_from_grid((row, col))
+            images[row, col] = self.signal.get_virtual_bse_intensity(roi).data
 
         vbse_images = VirtualBSEImage(images)
         vbse_images.axes_manager = _transfer_navigation_axes_to_signal_axes(
             new_axes=vbse_images.axes_manager, old_axes=self.signal.axes_manager
         )
-        vbse_images.change_dtype(dtype_out)
-
-        if normalize:
-            images_min = vbse_images.data.min()
-            images_max = vbse_images.data.max()
-            for idx in np.ndindex(grid_shape):
-                img = vbse_images.data[idx]
-                vbse_images.data[idx] = rescale_intensity(
-                    img, in_range=(images_min, images_max), dtype_out=dtype_out,
-                )
 
         return vbse_images
 
-    def roi_from_grid(self, row: int = 0, col: int = 0):
+    def roi_from_grid(self, index: Union[Tuple, List[Tuple]]):
         """Return a rectangular region of interest (ROI) on the EBSD
-        detector from giving the row and column in the generator grid.
+        detector from one or multiple generator grid tile indices as
+        row(s) and column(s).
 
         Parameters
         ----------
-        row
-            Detector grid row index.
-        col
-            Detector grid column index.
+        index
+            Row and column of one or multiple grid tiles as a tuple or a
+            list of tuples.
 
         Returns
         -------
@@ -218,17 +241,24 @@ class VirtualBSEGenerator:
         """
         rows = self.grid_rows
         cols = self.grid_cols
+
+        if isinstance(index, tuple):
+            index = (index,)
+        index = np.array(index)
+
+        min_col = cols[min(index[:, 1])]
+        max_col = cols[max(index[:, 1])] + cols[1]
+        min_row = rows[min(index[:, 0])]
+        max_row = rows[max(index[:, 0])] + rows[1]
+
         return RectangularROI(
-            left=cols[col],
-            top=rows[row],
-            right=cols[col] + cols[1],
-            bottom=rows[row] + rows[1],
+            left=min_col, top=min_row, right=max_col, bottom=max_row,
         )
 
     def plot_grid(
         self,
         pattern_idx: Optional[Tuple[int, ...]] = None,
-        rgb_channels: Optional[List[Tuple]] = None,
+        rgb_channels: Union[None, List[Tuple], List[List[Tuple]]] = None,
         visible_indices: bool = True,
         **kwargs,
     ):
@@ -242,8 +272,8 @@ class VirtualBSEGenerator:
             A tuple of integers defining the pattern to superimpose the
             grid on. If None (default), the first pattern is used.
         rgb_channels
-            A list of tuple indices defining three detector grid tiles
-            which edges to color red, green and blue. If None (default),
+            A list of tuple indices defining three or more detector grid
+            tiles which edges to color red, green and blue. If None (default),
             no tiles' edges are colored.
         visible_indices
             Whether to show grid indices. Default is True.
@@ -261,13 +291,11 @@ class VirtualBSEGenerator:
         axes_manager = self.signal.axes_manager
         dx, dy = [i.scale for i in axes_manager.signal_axes]
 
-        # Set lines
         rows = self.grid_rows
         cols = self.grid_cols
-        markers = [HorizontalLine((i - 0.5) * dy, **kwargs) for i in rows]
-        markers += [VerticalLine((j - 0.5) * dx, **kwargs) for j in cols]
 
         # Set grid tile indices
+        markers = []
         if visible_indices:
             color = kwargs.pop("color", "r")
             for row, col in np.ndindex(self.grid_shape):
@@ -280,20 +308,28 @@ class VirtualBSEGenerator:
                     )
                 )
 
+        # Set lines
+        kwargs.setdefault("color", "w")
+        markers += [HorizontalLine((i - 0.5) * dy, **kwargs) for i in rows]
+        markers += [VerticalLine((j - 0.5) * dx, **kwargs) for j in cols]
+
         # Color RGB tiles
         if rgb_channels is not None:
-            for (row, col), color in zip(rgb_channels, ["r", "g", "b"]):
-                kwargs.update({"color": color, "zorder": 3, "linewidth": 2})
-                roi = self.roi_from_grid(row, col)
-                markers += [
-                    Rectangle(
-                        x1=(roi.left - 0.5) * dx,
-                        y1=(roi.top - 0.5) * dx,
-                        x2=(roi.right - 0.5) * dy,
-                        y2=(roi.bottom - 0.5) * dy,
-                        **kwargs,
-                    )
-                ]
+            for channels, color in zip(rgb_channels, ["r", "g", "b"]):
+                if isinstance(channels, tuple):
+                    channels = (channels,)
+                for (row, col) in channels:
+                    kwargs.update({"color": color, "zorder": 3, "linewidth": 2})
+                    roi = self.roi_from_grid((row, col))
+                    markers += [
+                        Rectangle(
+                            x1=(roi.left - 0.5) * dx,
+                            y1=(roi.top - 0.5) * dx,
+                            x2=(roi.right - 0.5) * dy,
+                            y2=(roi.bottom - 0.5) * dy,
+                            **kwargs,
+                        )
+                    ]
 
         # Get pattern and add list of markers
         if pattern_idx is None:

@@ -65,7 +65,7 @@ def normalize_image(
 
 def get_rgb_image(
     channels: List[np.ndarray],
-    percentile: Optional[Tuple] = None,
+    percentiles: Optional[Tuple] = None,
     normalize: bool = True,
     alpha: Optional[np.ndarray] = None,
     dtype_out: Union[np.uint8, np.uint16] = np.uint8,
@@ -85,7 +85,7 @@ def get_rgb_image(
     alpha
         Potential alpha channel. If None (default), no alpha channel
         is added to the image.
-    percentile
+    percentiles
         Whether to apply contrast stretching with a given percentile
         tuple with percentages, e.g. (0.5, 99.5), after creating the
         RGB image. If None (default), no contrast stretching is
@@ -103,7 +103,7 @@ def get_rgb_image(
 
     See Also
     --------
-    kikuchipy.generators.VirtualBSEGenerator.get_virtual_image
+    kikuchipy.generators.VirtualBSEGenerator.get_rgb_image
     """
     n_channels = 3
     rgb_image = np.zeros(channels[0].shape + (n_channels,), np.float32)
@@ -114,16 +114,20 @@ def get_rgb_image(
             )
         rgb_image[..., i] = channel
 
+    # Apply alpha channel if desired
     if alpha is not None:
         alpha_min = np.nanmin(alpha)
         rescaled_alpha = (alpha - alpha_min) / (np.nanmax(alpha) - alpha_min)
         for i in range(n_channels):
             rgb_image[..., i] *= rescaled_alpha
 
-    if percentile is not None:
-        in_range = tuple(np.percentile(rgb_image, q=percentile))
-        rgb_image = rescale_intensity(
-            rgb_image, in_range=in_range, dtype_out=dtype_out
-        )
+    # Rescale to fit data type range
+    if percentiles is not None:
+        in_range = tuple(np.percentile(rgb_image, q=percentiles))
+    else:
+        in_range = None
+    rgb_image = rescale_intensity(
+        rgb_image, in_range=in_range, dtype_out=dtype_out
+    )
 
     return rgb_image.astype(dtype_out)

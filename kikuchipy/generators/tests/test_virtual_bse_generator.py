@@ -18,6 +18,9 @@
 
 import os
 
+from hyperspy.roi import RectangularROI
+import matplotlib
+from matplotlib.pyplot import close
 import numpy as np
 import pytest
 
@@ -27,6 +30,8 @@ from kikuchipy.signals import EBSD, LazyEBSD, VirtualBSEImage
 
 DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy/patterns.h5")
+
+matplotlib.use("Agg")  # For plotting
 
 
 class TestVirtualBSEGenerator:
@@ -65,18 +70,61 @@ class TestVirtualBSEGenerator:
             "VirtualBSEGenerator for <EBSD, title: , dimensions: (3, 3|3, 3)>"
         )
 
-    def test_get_images_from_grid(self):
-        pass
+    @pytest.mark.parametrize(
+        "grid_shape, desired_n_markers",
+        [((3, 3), 9 + 3 + 8), ((1, 1), 1 + 3 + 4), ((2, 3), 6 + 3 + 7),],
+    )
+    def test_plot_grid(self, grid_shape, desired_n_markers):
+        s = load(KIKUCHIPY_FILE)
+        vbse_gen = VirtualBSEGenerator(s)
+        vbse_gen.grid_shape = grid_shape
+        rgb_channels = [(0, 0), (0, 1), (1, 0)]
+        pattern_idx = (2, 2)
+        p = vbse_gen.plot_grid(
+            pattern_idx=pattern_idx, rgb_channels=rgb_channels,
+        )
+        p2 = vbse_gen.plot_grid()
 
-    def test_plot_grid(self):
-        pass
+        # Check data type and values
+        assert isinstance(p, EBSD)
+        assert np.allclose(p.data, s.inav[pattern_idx].data)
+        assert np.allclose(p2.data, s.inav[0, 0].data)
 
-    def test_roi_from_grid(self):
-        pass
+        # Check markers
+        assert len(p.metadata.Markers) == desired_n_markers
+        assert p.metadata.Markers.has_item("text")
+        assert p.metadata.Markers["text"].marker._color == "r"
+        assert p.metadata.Markers["horizontal_line"].marker._color == "w"
+        assert p.metadata.Markers["rectangle"].marker._edgecolor == (1, 0, 0, 1)
+
+        close("all")
+
+    @pytest.mark.parametrize("color", ["c", "m", "k"])
+    def test_plot_grid_text_color(self, color):
+        s = load(KIKUCHIPY_FILE)
+        vbse_gen = VirtualBSEGenerator(s)
+        p = vbse_gen.plot_grid(color=color)
+
+        assert p.metadata.Markers["text"].marker._color == color
+
+        close("all")
 
 
 class TestGetImagesFromGrid:
-    pass
+    def test_get_single_image_from_grid(self, dummy_signal):
+        vbse_gen = VirtualBSEGenerator(dummy_signal)
+        vbse_gen.grid_shape = (1, 1)
+        vbse_img = vbse_gen.get_images_from_grid()
+
+        assert np.allclose(vbse_img.data.mean(), 40.666668)
+
+    @pytest.mark.parametrize("dtype_out", [np.float32, np.float64])
+    def test_dtype_out(self, dummy_signal, dtype_out):
+        vbse_gen = VirtualBSEGenerator(dummy_signal)
+        vbse_gen.grid_shape = (1, 1)
+        vbse_images = vbse_gen.get_images_from_grid(dtype_out=dtype_out)
+
+        assert vbse_images.data.dtype == dtype_out
 
 
 class TestGetRGBImage:
@@ -86,14 +134,17 @@ class TestGetRGBImage:
 
         # Get channels by ROIs
         rois1 = [
-            vbse_gen.roi_from_grid(row=r, col=c)
-            for r, c in np.ndindex(vbse_gen.grid_shape)
+            vbse_gen.roi_from_grid(i) for i in np.ndindex(vbse_gen.grid_shape)
         ][:3]
-        vbse_rgb_img1 = vbse_gen.get_rgb_image(rois=rois1)
+        vbse_rgb_img1 = vbse_gen.get_rgb_image(
+            r=rois1[0], g=rois1[1], b=rois1[2]
+        )
 
         # Get channels from grid tile indices
         rois2 = [(0, 0), (0, 1), (0, 2)]
-        vbse_rgb_img2 = vbse_gen.get_rgb_image(rois=rois2)
+        vbse_rgb_img2 = vbse_gen.get_rgb_image(
+            r=rois2[0], g=rois2[1], b=rois2[2]
+        )
 
         assert isinstance(vbse_rgb_img1, VirtualBSEImage)
         assert vbse_rgb_img1.data.dtype == np.dtype(
@@ -108,7 +159,7 @@ class TestGetRGBImage:
         s = load(KIKUCHIPY_FILE)
         vbse_gen = VirtualBSEGenerator(s)
         vbse_rgb_img = vbse_gen.get_rgb_image(
-            rois=[(0, 0), (0, 1), (0, 2)], dtype_out=np.uint16,
+            r=(0, 0), g=(0, 1), b=(0, 2), dtype_out=np.uint16,
         )
 
         assert vbse_rgb_img.data.dtype == np.dtype(
@@ -117,7 +168,7 @@ class TestGetRGBImage:
 
     @pytest.mark.parametrize(
         "percentile, desired_mean_intensity",
-        [(None, 140.14814), ((1, 99), 134.740740),],
+        [(None, 136.481481), ((1, 99), 134.740740),],
     )
     def test_get_rgb_image_contrast_stretching(
         self, percentile, desired_mean_intensity
@@ -125,14 +176,14 @@ class TestGetRGBImage:
         s = load(KIKUCHIPY_FILE)
         vbse_gen = VirtualBSEGenerator(s)
         vbse_rgb_img = vbse_gen.get_rgb_image(
-            rois=[(0, 0), (0, 1), (0, 2)], percentile=percentile,
+            r=(0, 0), g=(0, 1), b=(0, 2), percentiles=percentile,
         )
         vbse_rgb_img.change_dtype(np.uint8)
 
         assert np.allclose(vbse_rgb_img.data.mean(), desired_mean_intensity)
 
     @pytest.mark.parametrize(
-        "alpha_add, desired_mean_intensity", [(0, 88.481481), (10, 59.703703),]
+        "alpha_add, desired_mean_intensity", [(0, 88.481481), (10, 107.851851),]
     )
     def test_get_rgb_alpha(self, alpha_add, desired_mean_intensity):
         s = load(KIKUCHIPY_FILE)
@@ -142,11 +193,28 @@ class TestGetRGBImage:
         alpha[0] += alpha_add
 
         vbse_rgb_img = vbse_gen.get_rgb_image(
-            rois=[(0, 0), (0, 1), (0, 2)], alpha=alpha
+            r=(0, 0), g=(0, 1), b=(0, 2), alpha=alpha
         )
         vbse_rgb_img.change_dtype(np.uint8)
 
         assert np.allclose(vbse_rgb_img.data.mean(), desired_mean_intensity)
+
+    def test_get_rgb_alpha_signal(self):
+        s = load(KIKUCHIPY_FILE)
+        vbse_gen = VirtualBSEGenerator(s)
+
+        vbse_img = s.get_virtual_bse_intensity(roi=RectangularROI(0, 0, 10, 10))
+
+        vbse_rgb_img1 = vbse_gen.get_rgb_image(
+            r=(0, 1), g=(0, 2), b=(0, 3), alpha=vbse_img
+        )
+        vbse_rgb_img2 = vbse_gen.get_rgb_image(
+            r=(0, 1), g=(0, 2), b=(0, 3), alpha=vbse_img.data,
+        )
+        vbse_rgb_img1.change_dtype(np.uint8)
+        vbse_rgb_img2.change_dtype(np.uint8)
+
+        assert np.allclose(vbse_rgb_img1.data, vbse_rgb_img2.data)
 
     def test_get_rgb_image_lazy(self):
         s = load(KIKUCHIPY_FILE, lazy=True)
@@ -154,7 +222,7 @@ class TestGetRGBImage:
 
         assert isinstance(vbse_gen.signal, LazyEBSD)
 
-        vbse_rgb_img = vbse_gen.get_rgb_image(rois=[(0, 0), (0, 1), (0, 2)])
+        vbse_rgb_img = vbse_gen.get_rgb_image(r=(0, 0), g=(0, 1), b=(0, 2))
 
         assert isinstance(vbse_rgb_img.data, np.ndarray)
 
@@ -163,4 +231,30 @@ class TestGetRGBImage:
         vbse_gen = VirtualBSEGenerator(s)
 
         with pytest.raises(ValueError, match="The signal dimension cannot be "):
-            _ = vbse_gen.get_rgb_image(rois=[(0, 0), (0, 1), (0, 2)])
+            _ = vbse_gen.get_rgb_image(r=(0, 0), g=(0, 1), b=(0, 2))
+
+    @pytest.mark.parametrize(
+        "r, g, b, desired_mean_intensity",
+        [
+            ([(0, 1), (0, 2)], [(1, 1), (1, 2)], [(2, 1), (2, 2)], 125.148148),
+            ([(2, 1), (2, 2)], [(3, 1), (3, 2)], [(4, 1), (4, 2)], 109.037037),
+        ],
+    )
+    def test_get_rgb_multiple_rois_per_channel(
+        self, r, g, b, desired_mean_intensity
+    ):
+        s = load(KIKUCHIPY_FILE)
+        vbse_gen = VirtualBSEGenerator(s)
+
+        vbse_rgb_img1 = vbse_gen.get_rgb_image(r=r, g=g, b=b)
+        vbse_rgb_img1.change_dtype(np.uint8)
+
+        assert np.allclose(vbse_rgb_img1.data.mean(), desired_mean_intensity)
+
+        roi_r = vbse_gen.roi_from_grid(r)
+        roi_g = vbse_gen.roi_from_grid(g)
+        roi_b = vbse_gen.roi_from_grid(b)
+        vbse_rgb_img2 = vbse_gen.get_rgb_image(r=roi_r, g=roi_g, b=roi_b)
+        vbse_rgb_img2.change_dtype(np.uint8)
+
+        assert np.allclose(vbse_rgb_img1.data, vbse_rgb_img2.data)

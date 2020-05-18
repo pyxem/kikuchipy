@@ -18,12 +18,13 @@
 
 from hyperspy._signals.signal2d import Signal2D
 
+from kikuchipy.signals._common_image import CommonImage
 
-class VirtualBSEImage(Signal2D):
-    """Virtual backscatter electron (BSE) image.
 
-    This class extends HyperSpy's Signal2D class for virtual BSE images,
-    with common intensity processing methods and some analysis methods.
+class VirtualBSEImage(CommonImage, Signal2D):
+    """Virtual backscatter electron (BSE) image(s).
+
+    This class extends HyperSpy's Signal2D class for virtual BSE images.
 
     Methods inherited from HyperSpy can be found in the HyperSpy user
     guide.
