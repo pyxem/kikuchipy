@@ -415,8 +415,18 @@ particular functions are readily available via
 .. code-block::
 
     >>> pattern_shape = s.axes_manager.signal_shape[::-1]
-    >>> w_low = kp.filters.Window("lowpass", c=22, w_c=10, shape=pattern_shape)
-    >>> w_high = kp.filters.Window("highpass", c=3, w_c=2, shape=pattern_shape)
+    >>> w_low = kp.filters.Window(
+    ...     "lowpass",
+    ...     cutoff=22,
+    ...     cutoff_width=10,
+    ...     shape=pattern_shape
+    ... )
+    >>> w_high = kp.filters.Window(
+    ...     "highpass",
+    ...     cutoff=3,
+    ...     cutoff_width=2,
+    ...     shape=pattern_shape
+    ... )
     >>> w = w_low * w_high
     >>> import matplotlib.pyplot as plt
     >>> plt.imshow(w)
