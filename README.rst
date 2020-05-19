@@ -42,8 +42,15 @@ kikuchipy is released under the GPLv3+ license.
 
 User guide
 ----------
-Installation instructions, a user guide and the full API reference is available
-here: https://kikuchipy.org.
+Installation instructions, a user guide and the full API reference are available
+from `our webpage <https://kikuchipy.org>`_.
+
+Tutorials and example workflows
+-------------------------------
+Jupyter Notebooks that you can work through and modify to perform processing and
+analyses of EBSD patterns are available `here
+<https://github.com/kikuchipy/kikuchipy-demos>`_. For learning purposes, we
+recommend to use them alongside our user guide.
 
 Contributing
 ------------
