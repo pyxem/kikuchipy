@@ -30,7 +30,7 @@ Following the notation in [Marquardt2017]_, it is given by
 The function :math:`w(h, k)` is the Fast Fourier Transform (FFT) power spectrum
 of the EBSD pattern, and the vectors :math:`\mathbf{q}` are the frequency
 vectors with components :math:`(h, k)`. The sharper the Kikuchi bands, the
-higher the high frequency content of the power spectrum, and thus the closer
+greater the high frequency content of the power spectrum, and thus the closer
 :math:`Q` will be to unity. To visualize parts of the computation, we compute
 the power spectrum of a pattern in an :class:`~kikuchipy.signals.EBSD` object
 ``s`` and the frequency vectors, shift the zero-frequency components to the
