@@ -24,6 +24,8 @@ Contributors
 
 Added
 -----
+- Jupyter Notebooks with tutorials and example workflows available via
+  https://github.com/kikuchipy/kikuchipy-demos.
 - Grey scale and RGB virtual backscatter electron (BSE) images can be easily
   generated with the VirtualBSEGenerator class. The generator return objects of
   the new signal class VirtualBSEImage, which inherit functionality from
