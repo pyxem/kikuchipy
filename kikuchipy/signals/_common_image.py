@@ -21,6 +21,7 @@ from typing import Union, Tuple, Optional
 
 from dask.diagnostics import ProgressBar
 from hyperspy._signals.signal2d import Signal2D
+from hyperspy.misc.rgb_tools import rgb_dtypes
 import numpy as np
 from skimage.util.dtype import dtype_range
 
@@ -113,10 +114,20 @@ class CommonImage(Signal2D):
 
         >>> s.rescale_intensity(percentiles=(1, 99))
 
-        Here, the darkest and brighets within the 1% percentile are set
-        to the ends of the data type range, e.g. 0 and 255 respectively
-        for images of ``uint8`` data type.
+        Here, the darkest and brightest pixels within the 1% percentile
+        are set to the ends of the data type range, e.g. 0 and 255
+        respectively for images of ``uint8`` data type.
+
+        Notes
+        -----
+        Rescaling RGB images is not possible. Use RGB channel
+        normalization when creating the image instead.
         """
+        if self.data.dtype in rgb_dtypes.values():
+            raise NotImplementedError(
+                "Use RGB channel normalization when creating the image instead."
+            )
+
         # Determine min./max. intensity of input image to rescale to
         if in_range is not None and percentiles is not None:
             raise ValueError(
@@ -195,7 +206,17 @@ class CommonImage(Signal2D):
         >>> s.normalize_intensity()
         >>> np.mean(s.data)
         2.6373216e-08
+
+        Notes
+        -----
+        Rescaling RGB images is not possible. Use RGB channel
+        normalization when creating the image instead.
         """
+        if self.data.dtype in rgb_dtypes.values():
+            raise NotImplementedError(
+                "Use RGB channel normalization when creating the image instead."
+            )
+
         if dtype_out is None:
             dtype_out = self.data.dtype
 

@@ -60,7 +60,7 @@ Sometimes we want to get many images from parts of the detector, e.g. like what
 is demonstrated in the `xcdskd project
 <https://xcdskd.readthedocs.io/en/latest/bse_imaging.html>`_ with the angle
 resolved virtual backscatter electron array (arbse/vbse array). Instead of
-keeping control of multiple :class:`hyperspy.roi.BaseInteractiveROI` objects, we
+keeping track of multiple :class:`hyperspy.roi.BaseInteractiveROI` objects, we
 can create a detector grid of a certain shape, e.g. (5, 5), and obtain gray
 scale images, or combine multiple grid tiles in red, green and channels to
 obtain RGB images.
