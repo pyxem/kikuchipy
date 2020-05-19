@@ -11,8 +11,8 @@ project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
 Contributors to each release are listed in alphabetical order.
 
-Unreleased
-==========
+0.2.0 (2020-05-19)
+==================
 
 Details of all development associated with this release are available `here
 <https://github.com/kikuchipy/kikuchipy/milestone/2?closed=1>`_.
