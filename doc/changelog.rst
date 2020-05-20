@@ -11,13 +11,27 @@ project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
 Contributors to each release are listed in alphabetical order.
 
-Unreleased
-==========
+0.2.1 (2020-05-20)
+==================
+
+This is a patch release that enables installing kikuchipy 0.2 from Anaconda and
+not just PyPI.
+
+Contributors
+------------
+- Håkon Wiik Ånes
 
 Changed
 -------
 - Use numpy.fft instead of scipy.fft because HyperSpy requires scipy < 1.4 on
   conda-forge, while scipy.fft was introduced in scipy 1.4.
+  (`#180 <https://github.com/kikuchipy/kikuchipy/pull/180>`_)
+
+Fixed
+-----
+- With the change above, kikuchipy 0.2 should be installable from Anaconda and
+  not just PyPI.
+  (`#180 <https://github.com/kikuchipy/kikuchipy/pull/180>`_)
 
 0.2.0 (2020-05-19)
 ==================
