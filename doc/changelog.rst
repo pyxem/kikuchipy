@@ -11,6 +11,14 @@ project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
 Contributors to each release are listed in alphabetical order.
 
+Unreleased
+==========
+
+Changed
+-------
+- Use numpy.fft instead of scipy.fft because HyperSpy requires scipy < 1.4 on
+  conda-forge, while scipy.fft was introduced in scipy 1.4.
+
 0.2.0 (2020-05-19)
 ==================
 

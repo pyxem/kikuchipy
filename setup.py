@@ -114,13 +114,14 @@ setup(
     extras_require=extra_feature_requirements,
     install_requires=[
         "dask[array] >= 2.14",
-        "hyperspy[learning] >= 1.5.2",
+        "hyperspy >= 1.5.2",
         "h5py >= 2.10",
         "matplotlib >= 3.2",
         "numpy >= 1.18",
         "numba >= 0.48",
         "scikit-image >= 0.16, < 0.17",
-        "scipy >= 1.4",
+        "scikit-learn",
+        "scipy",
     ],
     entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},
     # Files to include when distributing package
