@@ -24,7 +24,10 @@ via FFT written by Connelly Barnes (public domain, 2007).
 from typing import Union, Tuple, List
 
 import numpy as np
-from scipy.fft import next_fast_len, rfft2, irfft2
+from numpy.fft import rfft2, irfft2
+from scipy.fftpack import next_fast_len
+
+# from scipy.fft import next_fast_len, rfft2, irfft2
 
 from kikuchipy.filters.window import Window
 
@@ -35,10 +38,14 @@ def _fft_filter_setup(
     window_shape = window.shape
 
     # Optimal FFT shape
-    real_fft_only = True
+    #    real_fft_only = True
     fft_shape = (
-        next_fast_len(image_shape[0] + window_shape[0] - 1, real_fft_only),
-        next_fast_len(image_shape[1] + window_shape[1] - 1, real_fft_only),
+        next_fast_len(
+            image_shape[0] + window_shape[0] - 1
+        ),  # , real_fft_only),
+        next_fast_len(
+            image_shape[1] + window_shape[1] - 1
+        ),  # , real_fft_only),
     )
 
     # Pad window to optimal FFT size

@@ -40,7 +40,7 @@ centre, and plot them:
 
     >>> import kikuchipy as kp
     >>> import matplotlib.pyplot as plt
-    >>> import scipy
+    >>> import numpy as np
 
     >>> p = s.inav[0, 0].data
     >>> plt.figure()
@@ -54,7 +54,7 @@ centre, and plot them:
 
     >>> q = kp.util.pattern.fft_frequency_vectors(shape=p.shape)
     >>> plt.figure()
-    >>> plt.imshow(scipy.fft.fftshift(q))
+    >>> plt.imshow(np.fft.fftshift(q))
     >>> plt.colorbar()
 
 .. _fig-image-quality-pattern:
