@@ -27,7 +27,7 @@ from typing import Union, Tuple, Optional, List
 
 from numba import njit
 import numpy as np
-from scipy.fft import (
+from numpy.fft import (
     fft2,
     rfft2,
     ifft2,

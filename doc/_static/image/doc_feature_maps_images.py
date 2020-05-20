@@ -23,7 +23,7 @@ import matplotlib
 matplotlib.rcParams["backend"] = "qt5agg"
 import matplotlib.pyplot as plt
 import numpy as np
-import scipy
+from numpy.fft import fftshift
 
 import kikuchipy as kp
 
@@ -75,7 +75,7 @@ plt.savefig(
 # Frequency vectors
 q = kp.util.pattern.fft_frequency_vectors(shape=p.shape)
 plt.figure()
-plt.imshow(scipy.fft.fftshift(q))
+plt.imshow(fftshift(q))
 plt.colorbar()
 plt.savefig(
     os.path.join(featdir, "fft_frequency_vectors.png"),
