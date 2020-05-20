@@ -113,7 +113,7 @@ setup(
     # Update in .travis.yml if this list is updated!
     extras_require=extra_feature_requirements,
     install_requires=[
-        "dask >= 2.14",
+        "dask[array] >= 2.14",
         "hyperspy >= 1.5.2",
         "h5py >= 2.10",
         "matplotlib >= 3.2",
