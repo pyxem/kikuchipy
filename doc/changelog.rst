@@ -25,11 +25,13 @@ Changed
 -------
 - Use numpy.fft instead of scipy.fft because HyperSpy requires scipy < 1.4 on
   conda-forge, while scipy.fft was introduced in scipy 1.4.
+  (`#180 <https://github.com/kikuchipy/kikuchipy/pull/180<`_)
 
 Fixed
 -----
 - With the change above, kikuchipy 0.2 should be installable from Anaconda and
   not just PyPI.
+  (`#180 <https://github.com/kikuchipy/kikuchipy/pull/180<`_)
 
 0.2.0 (2020-05-19)
 ==================
