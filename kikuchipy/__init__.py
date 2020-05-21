@@ -46,6 +46,7 @@ load
 """
 
 # Import order must not be changed
+from kikuchipy import detectors
 from kikuchipy import filters
 from kikuchipy import pattern
 from kikuchipy import signals
@@ -57,6 +58,7 @@ from kikuchipy import release
 __version__ = release.version
 
 __all__ = [
+    "detectors",
     "filters",
     "generators",
     "load",
