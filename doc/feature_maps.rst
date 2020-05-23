@@ -52,7 +52,7 @@ centre, and plot them:
     >>> plt.imshow(np.log(kp.pattern.fft_spectrum(p_fft)))
     >>> plt.colorbar()
 
-    >>> q = kp.util.pattern.fft_frequency_vectors(shape=p.shape)
+    >>> q = kp.pattern.fft_frequency_vectors(shape=p.shape)
     >>> plt.figure()
     >>> plt.imshow(np.fft.fftshift(q))
     >>> plt.colorbar()

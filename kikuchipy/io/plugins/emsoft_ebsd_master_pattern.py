@@ -40,7 +40,7 @@ default_extension = 0
 writes = False
 
 # Unique HDF5 footprint
-footprint = "emdata/ebsdmaster"
+footprint = ["emdata/ebsdmaster"]
 
 
 def file_reader(
