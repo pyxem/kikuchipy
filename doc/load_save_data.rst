@@ -15,7 +15,7 @@ From a file
 kikuchipy can read and write experimental EBSD patterns and EBSD master patterns
 from/to multiple formats (see :ref:`supported-ebsd-formats`). To load patterns
 from file use the :func:`~kikuchipy.io._io.load` function. For example, to load
-the first scan from an EDAX TSL .h5 file into memory:
+the first scan from an EDAX TSL or Bruker Nano HDF5 file into memory:
 
 .. code-block::
 
@@ -261,16 +261,19 @@ from the file. Supported h5ebsd formats are listed in the :ref:`table above
 
 If an h5ebsd file contains multiple scans, as many scans as desirable can be
 read from the file. For example, if the file contains three scans with names
-``Scan 2``, ``Scan 4`` and ``Scan 6``:
+``Scan 1``, ``Hello, C3PO!`` and ``The best patterns`` in that order:
 
 .. code-block::
 
-    >>> s2, s4, s6 = kp.load('patterns.h5', scans=[2, 4, 6])
+    >>> s1, s2, s3 = kp.load(
+    ...     'patterns.h5',
+    ...     scan_group_names=["Scan 1", "Hello, C3PO!", "The best patterns"]
+    ... )
 
 Here, the h5ebsd :func:`~kikuchipy.io.plugins.h5ebsd.file_reader` is called. If
-only ``Scan 4`` is to be read, ``scans=4`` can be passed. The ``scans``
-parameter is unnecessary if only ``Scan 2`` is to be read since reading the
-first scan in the file is the default behaviour.
+only ``Hello, C3PO!`` is to be read, ``scan_group_names="Hello, C3PO!"`` can be
+passed. The ``scan_group_names`` parameter is unnecessary if only ``Scan 1`` is
+to be read since reading the first scan in the file is the default behaviour.
 
 So far, only :ref:`saving patterns <save-patterns>` to kikuchipy's own h5ebsd
 format is supported. It is possible to write a new scan with a new scan number
@@ -280,8 +283,6 @@ containing only ``Scan 1``, by passing:
 .. code-block::
 
     >>> s.save('patterns.h5', add_scan=True, scan_number=2)
-
-    Here, the h5ebsd
 
 Here, the h5ebsd :func:`~kikuchipy.io.plugins.h5ebsd.file_writer` is called.
 

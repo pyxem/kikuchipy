@@ -59,32 +59,33 @@ default_extension = 1
 writes = [(2, 2), (2, 1), (1, 2)]
 
 # Unique HDF5 footprint
-footprint = "manufacturer version scan"
+footprint = ["manufacturer", "version"]
 
 
 def file_reader(
     filename: str,
-    scans: Union[None, int, List[int]] = None,
+    scan_group_names: Union[None, str, List[str]] = None,
     lazy: bool = False,
     **kwargs,
 ) -> List[dict]:
     """Read electron backscatter diffraction patterns from an h5ebsd
-    file [Jackson2014]_. A valid h5ebsd file has at least one group with
-    the name '/Scan x/EBSD' with the groups 'Data' (patterns etc.) and
-    'Header' (``metadata`` etc.) , where 'x' is the scan_number.
+    file [Jackson2014]_. A valid h5ebsd file has at least one top group
+    with the subgroup 'EBSD' with the subgroups 'Data' (patterns etc.)
+    and 'Header' (``metadata`` etc.).
 
     Parameters
     ----------
     filename
         Full file path of the HDF file.
-    scans
-        Integer of scan to return, or list of integers of scans to
-        return. If None is passed the first scan in the file is returned.
+    scan_group_names
+        Name or a list of names of HDF5 top group(s) containing the
+        scan(s) to return. If None, the first scan in the file is
+        returned.
     lazy
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
         is False.
-    kwargs :
+    kwargs
         Key word arguments passed to h5py.File.
 
     Returns
@@ -103,7 +104,7 @@ def file_reader(
     mode = kwargs.pop("mode", "r")
     f = h5py.File(filename, mode=mode, **kwargs)
 
-    # Check if h5ebsd file
+    # Check if h5ebsd file, and get all scan groups
     check_h5ebsd(f)
 
     # Get manufacturer and version and check if reading the file is supported
@@ -116,32 +117,9 @@ def file_reader(
         )
 
     # Get scans to return
-    scans_file = [f[k] for k in f["/"].keys() if "Scan" in k]
-    scans_return = []
-    if scans is None:  # Return first scan
-        scans_return.append(scans_file[0])
-    else:
-        if isinstance(scans, int):
-            scans = [
-                scans,
-            ]
-        for scan_no in scans:  # Wanted scans
-            scan_is_here = False
-            for scan in scans_file:
-                if scan_no == int(scan.name.split()[-1]):
-                    scans_return.append(scan)
-                    scan_is_here = True
-                    break
-            if not scan_is_here:
-                scan_nos = [int(i.name.split()[-1]) for i in scans_file]
-                error_str = (
-                    f"Scan {scan_no} is not among the available scans "
-                    f"{scan_nos} in '{filename}'."
-                )
-                if len(scans) == 1:
-                    raise IOError(error_str)
-                else:
-                    warnings.warn(error_str)
+    scans_return = get_desired_scan_groups(
+        file=f, scan_group_names=scan_group_names
+    )
 
     # Parse file
     scan_dict_list = []
@@ -164,24 +142,45 @@ def check_h5ebsd(file: h5py.File):
         File where manufacturer, version and scan datasets should
         reside in the top group.
     """
-    file_keys_lower = [key.lstrip().lower() for key in file["/"].keys()]
-    if not any(s in file_keys_lower for s in ["manufacturer", "version"]):
+    top_groups = list(file["/"].keys())
+    scan_groups = get_scan_groups(file)
+    n_groups = len(top_groups)
+    if len(scan_groups) != n_groups - 2:
         raise IOError(
             f"'{file.filename}' is not an h5ebsd file, as manufacturer and/or"
             " version could not be read from its top group."
         )
 
     if not any(
-        "Scan" in key
-        and "EBSD/Data" in file[key]
-        and "EBSD/Header" in file[key]
-        for key in file["/"].keys()
+        "EBSD/Data" in group and "EBSD/Header" in group for group in scan_groups
     ):
         raise IOError(
-            f"'{file.filename}' is not an h5ebsd file, as no scans in a group "
-            "with name 'Scan <scan_number>/EBSD' with groups 'Data' and "
-            "'Header' could be read."
+            f"'{file.filename}' is not an h5ebsd file, as no top groups with "
+            "subgroup name 'EBSD' with subgroups 'Data' and 'Header' was "
+            "detected."
         )
+
+
+def get_scan_groups(file: h5py.File) -> List[h5py.Group]:
+    """Return a list of the scan group names from an h5ebsd file.
+
+    Parameters
+    ----------
+    file : h5py:file
+        File where manufacturer, version and scan datasets should reside
+        in the top group.
+
+    Returns
+    -------
+    scan_groups : h5py:Group
+        List of available scan groups.
+    """
+    scan_groups = []
+    for key in file["/"].keys():
+        if key.lstrip().lower() not in ["manufacturer", "version"]:
+            scan_groups.append(file[key])
+
+    return scan_groups
 
 
 def manufacturer_version(file: h5py.File) -> Tuple[str, str]:
@@ -220,6 +219,55 @@ def manufacturer_pattern_names() -> Dict[str, str]:
         "edax": "Pattern",
         "bruker nano": "RawPatterns",
     }
+
+
+def get_desired_scan_groups(
+    file: h5py.File, scan_group_names: Union[None, str, List[str]] = None,
+) -> List[h5py.Group]:
+    """Get the desired HDF5 groups with scans within them.
+
+    Parameters
+    ----------
+    file: h5py:File
+        File where manufacturer, version and scan datasets should
+        reside in the top group.
+    scan_group_names
+        Name or a list of names of the desired top HDF5 group(s). If
+        None, the first scan group is returned.
+
+    Returns
+    -------
+    scan_groups
+        A list of the desired scan group(s) in the file.
+    """
+    # Get available scan group names in the file
+    scan_groups_file = get_scan_groups(file)
+
+    # Get desired scan groups
+    scan_groups = []
+    if scan_group_names is None:  # Return the first scan group
+        scan_groups.append(scan_groups_file[0])
+    else:
+        if isinstance(scan_group_names, str):
+            scan_group_names = [scan_group_names]
+        for desired_scan in scan_group_names:
+            scan_is_here = False
+            for scan in scan_groups_file:
+                if desired_scan == scan.name.lstrip("/"):
+                    scan_groups.append(scan)
+                    scan_is_here = True
+                    break
+            if not scan_is_here:
+                error_str = (
+                    f"Scan '{desired_scan}' is not among the available scans "
+                    f"{scan_groups_file} in '{file.name}'."
+                )
+                if len(scan_group_names) == 1:
+                    raise IOError(error_str)
+                else:
+                    warnings.warn(error_str)
+
+    return scan_groups
 
 
 def hdf5group2dict(
@@ -428,6 +476,8 @@ def h5ebsdheader2dicts(
         + " "
         + scan_group.name[1:].split("/")[0]
     )
+    if len(title) > 20:
+        title = "{:.20}...".format(title)
     md.set_item("General.title", title)
 
     if "edax" in manufacturer.lower():
