@@ -11,6 +11,19 @@ project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
 Contributors to each release are listed in alphabetical order.
 
+Unreleased
+==========
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Fixed
+-------
+- Allow reading of EBSD patterns from h5ebsd files with arbitrary scan group
+  names, not just "Scan 1", "Scan 2", etc., like was the case before.
+  (`#188 <https://github.com/kikuchipy/kikuchipy/pull/188>`_)
+
 0.2.1 (2020-05-20)
 ==================
 

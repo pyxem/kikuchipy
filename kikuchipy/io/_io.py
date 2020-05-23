@@ -24,7 +24,7 @@ from hyperspy.misc.io.tools import ensure_directory
 from hyperspy.misc.io.tools import overwrite as overwrite_method
 from hyperspy.misc.utils import strlist2enumeration, find_subclasses
 from hyperspy.signal import BaseSignal
-from h5py import File, is_hdf5
+from h5py import File, is_hdf5, Group
 import numpy as np
 
 import kikuchipy.signals
@@ -158,11 +158,12 @@ def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
     """Get HDF5 correct plugin from a list of potential plugins based on
     their unique footprints.
 
-    The unique footprint is a string that can take on two formats:
+    The unique footprint is a list of strings that can take on either of
+    two formats:
         * group/dataset names separated by "/", indicating nested
           groups/datasets
-        * group/dataset names separated by " ", indicating that the
-          groups/datasets are in the top group
+        * single group/dataset name indicating that the groups/datasets
+          are in the top group
 
     Parameters
     ----------
@@ -176,36 +177,36 @@ def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
     plugin
         One of the potential plugins, or None if no footprint was found.
     """
+
+    def _hdfgroups2dict(group):
+        d = {}
+        for key, val in group.items():
+            key = key.lstrip().lower()
+            if isinstance(val, Group):
+                d[key] = _hdfgroups2dict(val)
+            else:
+                d[key] = 1
+        return d
+
+    def _exists(obj, chain):
+        key = chain.pop(0)
+        if key in obj:
+            return _exists(obj[key], chain) if chain else obj[key]
+
     f = File(filename, mode="r")
+    d = _hdfgroups2dict(f["/"])
 
     plugin = None
-
-    for p in plugins:
-        if hasattr(p, "footprint"):
-            footprint = p.footprint
-
-            # Determine if footprint consists of nested groups or
-            # multiple groups/datasets in the top group
-            space = " "
-            slash = "/"
-            splitter = space if space in footprint else slash
-
-            footprint = footprint.lower().split(splitter)
-            groups = f["/"]
-            match = False
-            for fp in footprint:
-                for g in groups.keys():
-                    if fp in g.lower():
-                        match = True
-                        if splitter == slash:
-                            groups = groups[g]
-                        break
-
-                if match is False:
-                    break
-
-            if match is True:
-                plugin = p
+    plugins_with_footprints = [p for p in plugins if hasattr(p, "footprint")]
+    for p in plugins_with_footprints:
+        n_matches = 0
+        n_desired_matches = len(p.footprint)
+        for fp in p.footprint:
+            fp = fp.lower().split("/")
+            if _exists(d, fp) is not None:
+                n_matches += 1
+        if n_matches == n_desired_matches:
+            plugin = p
 
     f.close()
 

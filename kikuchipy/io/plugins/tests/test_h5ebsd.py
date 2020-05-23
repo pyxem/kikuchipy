@@ -42,6 +42,10 @@ KIKUCHIPY_FILE = os.path.join(DATA_PATH, "kikuchipy/patterns.h5")
 KIKUCHIPY_FILE_NO_CHUNKS = os.path.join(
     DATA_PATH, "kikuchipy/patterns_nochunks.h5"
 )
+KIKUCHIPY_FILE_GROUP_NAMES = [
+    "My awes0m4 Xcan #! with a long title",
+    "Scan 2",
+]
 EDAX_FILE = os.path.join(DATA_PATH, "edax/patterns.h5")
 BRUKER_FILE = os.path.join(DATA_PATH, "bruker/patterns.h5")
 BG_FILE = os.path.join(DATA_PATH, "nordif/Background acquisition image.bmp")
@@ -134,8 +138,8 @@ class Testh5ebsd:
     @pytest.mark.parametrize(
         "delete, error",
         [
-            ("man_ver", "not an h5ebsd file, as manufacturer"),
-            ("scans", "not an h5ebsd file, as no scans"),
+            ("man_ver", ".* is not an h5ebsd file, as manufacturer"),
+            ("scans", ".* is not an h5ebsd file, as no top groups with "),
         ],
     )
     def test_check_h5ebsd(self, save_path_hdf5, delete, error):
@@ -180,7 +184,7 @@ class Testh5ebsd:
 
         # Check that metadata is read correctly
         assert s.metadata.Acquisition_instrument.SEM.Detector.EBSD.xpc == -5.64
-        assert s.metadata.General.title == "patterns Scan 1"
+        assert s.metadata.General.title == "patterns My awes0m4 ..."
 
         if remove_phases:
             del s.metadata.Sample.Phases
@@ -223,34 +227,42 @@ class Testh5ebsd:
 
         # Check signal type, patterns and learning results
         assert isinstance(s_reload, EBSD)
-        np.testing.assert_equal(s.data, s_reload.data)
-        np.testing.assert_equal(
+        assert np.allclose(s.data, s_reload.data)
+        assert np.allclose(
             s.learning_results.factors, s_reload.learning_results.factors
         )
 
-    @pytest.mark.parametrize("scans", ([1, 2], [1, 2, 3], [3,], 2))
-    def test_load_multiple(self, scans):
-        if scans == [1, 2, 3]:
-            with pytest.warns(UserWarning, match="Scan 3 is not among the"):
-                s1, s2 = load(KIKUCHIPY_FILE, scans=scans)
-        elif scans == [
-            3,
-        ]:
-            with pytest.raises(OSError, match="Scan 3 is not among the"):
-                _ = load(KIKUCHIPY_FILE, scans=scans)
+    @pytest.mark.parametrize(
+        "scan_group_names",
+        (
+            KIKUCHIPY_FILE_GROUP_NAMES,
+            KIKUCHIPY_FILE_GROUP_NAMES + ["Scan 3"],
+            ["Scan 3"],
+            KIKUCHIPY_FILE_GROUP_NAMES[1],
+        ),
+    )
+    def test_load_multiple(self, scan_group_names):
+        if scan_group_names == KIKUCHIPY_FILE_GROUP_NAMES + ["Scan 3"]:
+            with pytest.warns(UserWarning, match="Scan 'Scan 3' is not among "):
+                s1, s2 = load(KIKUCHIPY_FILE, scan_group_names=scan_group_names)
+        elif scan_group_names == ["Scan 3"]:
+            with pytest.raises(OSError, match="Scan 'Scan 3' is not among the"):
+                _ = load(KIKUCHIPY_FILE, scan_group_names=scan_group_names)
             return 0
-        elif scans == [1, 2]:
-            s1, s2 = load(KIKUCHIPY_FILE, scans=scans)
-        else:  # scans == 2
-            s2 = load(KIKUCHIPY_FILE, scans=2)
+        elif scan_group_names == KIKUCHIPY_FILE_GROUP_NAMES:
+            s1, s2 = load(
+                KIKUCHIPY_FILE, scan_group_names=KIKUCHIPY_FILE_GROUP_NAMES
+            )
+        else:  # scan_group_names == "Scan 2"
+            s2 = load(KIKUCHIPY_FILE, scan_group_names=scan_group_names)
             assert s2.metadata.General.title == "patterns Scan 2"
             s1 = load(KIKUCHIPY_FILE)
 
-        np.testing.assert_equal(s1.data, s2.data)
+        assert np.allclose(s1.data, s2.data)
         with pytest.raises(
             AssertionError,
             match="\nItems are not equal:\nkey='title'\nkey='General'\n\n "
-            "ACTUAL: 'patterns Scan 1'\n DESIRED: 'patterns Scan 2'",
+            "ACTUAL: 'patterns My awes0m4 ...'\n DESIRED: 'patterns Scan 2'",
         ):
             np.testing.assert_equal(
                 s1.metadata.as_dictionary(), s2.metadata.as_dictionary()
@@ -302,7 +314,9 @@ class Testh5ebsd:
 
     @pytest.mark.parametrize("scan_number", (1, 2))
     def test_save_multiple(self, save_path_hdf5, scan_number):
-        s1, s2 = load(KIKUCHIPY_FILE, scans=[1, 2])
+        s1, s2 = load(
+            KIKUCHIPY_FILE, scan_group_names=KIKUCHIPY_FILE_GROUP_NAMES
+        )
         s1.save(save_path_hdf5)
         error = "Invalid scan number"
         with pytest.raises(OSError, match=error), pytest.warns(UserWarning):
