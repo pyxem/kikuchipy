@@ -136,5 +136,5 @@ class TestIO:
                 add_scan=False,
             )
         s.save(save_path_hdf5, scan_number=2, overwrite=False, add_scan=False)
-        with pytest.raises(OSError, match="Scan 2 is not among the"):
-            _ = load(save_path_hdf5, scans=2)
+        with pytest.raises(OSError, match="Scan 'Scan 2' is not among the"):
+            _ = load(save_path_hdf5, scan_group_names="Scan 2")

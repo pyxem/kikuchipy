@@ -59,7 +59,7 @@ default_extension = 1
 writes = [(2, 2), (2, 1), (1, 2)]
 
 # Unique HDF5 footprint
-footprint = "manufacturer version scan"
+footprint = ["manufacturer", "version"]
 
 
 def file_reader(
@@ -78,7 +78,7 @@ def file_reader(
     filename
         Full file path of the HDF file.
     scan_group_names
-        Name or a list of names of top HDF5 group(s) containing the
+        Name or a list of names of HDF5 top group(s) containing the
         scan(s) to return. If None, the first scan in the file is
         returned.
     lazy
@@ -476,6 +476,8 @@ def h5ebsdheader2dicts(
         + " "
         + scan_group.name[1:].split("/")[0]
     )
+    if len(title) > 20:
+        title = "{:.20}...".format(title)
     md.set_item("General.title", title)
 
     if "edax" in manufacturer.lower():
