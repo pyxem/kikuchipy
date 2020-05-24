@@ -11,8 +11,11 @@ project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
 Contributors to each release are listed in alphabetical order.
 
-Unreleased
-==========
+0.2.2 (2020-05-24)
+==================
+
+This is a patch release that fixes reading of EBSD data sets from h5ebsd files
+with arbitrary scan group names.
 
 Contributors
 ------------
