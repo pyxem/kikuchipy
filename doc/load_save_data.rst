@@ -276,9 +276,9 @@ passed. The ``scan_group_names`` parameter is unnecessary if only ``Scan 1`` is
 to be read since reading the first scan in the file is the default behaviour.
 
 So far, only :ref:`saving patterns <save-patterns>` to kikuchipy's own h5ebsd
-format is supported. It is possible to write a new scan with a new scan number
-to an existing, but closed, h5ebsd file in the kikuchipy format, e.g. one
-containing only ``Scan 1``, by passing:
+format is supported. It is possible to write a new scan with a scan name
+``Scan x``, where ``x`` is a number, to an existing, but closed, h5ebsd file in
+the kikuchipy format, e.g. one containing only ``Scan 1``, by passing:
 
 .. code-block::
 
