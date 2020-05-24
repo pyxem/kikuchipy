@@ -86,7 +86,7 @@ def file_reader(
         until required. Allows opening arbitrary sized datasets. Default
         is False.
     kwargs
-        Key word arguments passed to h5py.File.
+        Key word arguments passed to :obj:`h5py:File`.
 
     Returns
     -------
@@ -166,7 +166,7 @@ def get_scan_groups(file: h5py.File) -> List[h5py.Group]:
 
     Parameters
     ----------
-    file : h5py:file
+    file : h5py:File
         File where manufacturer, version and scan datasets should reside
         in the top group.
 
@@ -228,7 +228,7 @@ def get_desired_scan_groups(
 
     Parameters
     ----------
-    file: h5py:File
+    file : h5py:File
         File where manufacturer, version and scan datasets should
         reside in the top group.
     scan_group_names
@@ -485,7 +485,7 @@ def h5ebsdheader2dicts(
     elif "bruker" in manufacturer.lower():
         md, omd, scan_size = brukerheader2dicts(scan_group, md)
     else:  # kikuchipy
-        md, omd, scan_size = kikuchipyheader2dicts(scan_group, md, lazy)
+        md, omd, scan_size = kikuchipyheader2dicts(scan_group, md)
 
     ebsd_node = metadata_nodes("ebsd")
     md.set_item(ebsd_node + ".manufacturer", manufacturer)
@@ -495,7 +495,7 @@ def h5ebsdheader2dicts(
 
 
 def kikuchipyheader2dicts(
-    scan_group: h5py.Group, md: DictionaryTreeBrowser, lazy: bool = False
+    scan_group: h5py.Group, md: DictionaryTreeBrowser
 ) -> Tuple[DictionaryTreeBrowser, DictionaryTreeBrowser, DictionaryTreeBrowser]:
     """Return scan metadata dictionaries from a kikuchipy h5ebsd file.
 
@@ -505,8 +505,6 @@ def kikuchipyheader2dicts(
         HDF group of scan data and header.
     md
         Dictionary with empty fields from kikuchipy's metadata.
-    lazy
-        Read dataset lazily.
 
     Returns
     -------
@@ -758,7 +756,7 @@ def file_writer(
     scan_number
         Scan number in name of HDF dataset when writing to an existing,
         but not open, h5ebsd file.
-    **kwargs :
+    kwargs
         Keyword arguments passed to :meth:`h5py:Group.require_dataset`.
     """
     # Set manufacturer and version to use in file
@@ -877,7 +875,7 @@ def dict2h5ebsdgroup(dictionary: dict, group: h5py.Group, **kwargs):
         ``Metadata``, with keys as dataset names.
     group : h5py:Group
         HDF group to write dictionary to.
-    **kwargs :
+    kwargs
         Keyword arguments passed to :meth:`h5py:Group.require_dataset`.
     """
     for key, val in dictionary.items():
