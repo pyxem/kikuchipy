@@ -11,6 +11,18 @@ project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
 Contributors to each release are listed in alphabetical order.
 
+Unreleased
+==========
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Changed
+-------
+- Removed `language_version` in `pre-commit` config file.
+  (`#195 <https://github.com/kikuchipy/kikuchipy/pull/195>`_)
+
 0.2.2 (2020-05-24)
 ==================
 
