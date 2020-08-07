@@ -15,13 +15,3 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
-
-"""Generation of HKL reflectors for a crystal structure."""
-
-from kikuchipy.diffraction.scattering_factors import (
-    atomic_scattering_parameters
-)
-
-__all__ = [
-    "atomic_scattering_parameters",
-]
