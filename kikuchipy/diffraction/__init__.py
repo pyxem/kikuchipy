@@ -17,4 +17,3 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 """Generation of HKL reflectors for a crystal structure."""
-
