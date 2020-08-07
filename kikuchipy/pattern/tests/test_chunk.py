@@ -20,6 +20,7 @@ import dask.array as da
 import numpy as np
 import pytest
 from scipy.ndimage import convolve, gaussian_filter
+from skimage import __version__ as skimage_version
 from skimage.util.dtype import dtype_range
 
 from kikuchipy.filters.fft_barnes import _fft_filter
@@ -76,9 +77,15 @@ DYN_CORR_UINT16_SPATIAL_STD2 = np.array(
 DYN_CORR_UINT8_SPATIAL_STD2_OMAX250 = np.array(
     [[167, 210, 177], [250, 217, 184], [217, 31, 0]], dtype=np.uint8,
 )
-ADAPT_EQ_UINT8 = np.array(
+ADAPT_EQ_UINT8_SKIMAGE16 = np.array(
     [[127, 223, 127], [255, 223, 31], [223, 31, 0]], dtype=np.uint8
 )
+ADAPT_EQ_UINT8_SKIMAGE17 = np.array(
+    [[92, 215, 92], [255, 215, 92], [215, 26, 0]], dtype=np.uint8
+)
+ADAPT_EQ_UINT8 = ADAPT_EQ_UINT8_SKIMAGE16
+if skimage_version[2:4] == str(17):
+    ADAPT_EQ_UINT8 = ADAPT_EQ_UINT8_SKIMAGE17
 
 
 class TestRescaleIntensityChunk:
