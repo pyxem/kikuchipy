@@ -20,7 +20,9 @@ Contributors
 
 Changed
 -------
-- Removed `language_version` in `pre-commit` config file.
+- Allow scikit-image >= 0.16.
+  (`#196 <https://github.com/kikuchipy/kikuchipy/pull/196>`_)
+- Removed language_version in pre-commit config file.
   (`#195 <https://github.com/kikuchipy/kikuchipy/pull/195>`_)
 
 0.2.2 (2020-05-24)
