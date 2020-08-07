@@ -28,6 +28,8 @@ HyperSpy's Signal2D and Signal classes.
 
 Sub-packages
 -----------
+diffraction
+    Generation of HKL reflectors for a crystal structure.
 filters
     Transfer functions, spatial kernels, etc.
 pattern
@@ -46,6 +48,7 @@ load
 """
 
 # Import order must not be changed
+from kikuchipy import diffraction
 from kikuchipy import filters
 from kikuchipy import pattern
 from kikuchipy import signals
@@ -57,6 +60,7 @@ from kikuchipy import release
 __version__ = release.version
 
 __all__ = [
+    "diffraction",
     "filters",
     "generators",
     "load",
