@@ -21,12 +21,13 @@ from typing import Optional, Tuple, Union
 import numpy as np
 
 
-def atomic_scattering_parameters(
-    element : Union[int, str], unit : Optional[str] = None,
+def get_atomic_scattering_parameters(
+    element: Union[int, str], unit: Optional[str] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Return the eight atomic scattering parameters a_1-4, b_1-4 for
     elements with atomic numbers Z = 1-98 from Table 12.1 in
-    [DeGraef2007]_.
+    [DeGraef2007]_, which are themselves from [Doyle1968]_ and
+    [Smith1962]_.
 
     Parameters
     ----------
@@ -35,7 +36,7 @@ def atomic_scattering_parameters(
         letter string or integer atomic number.
     unit
         Either "nm" or "Å"/"A". Whether to return parameters in terms
-        of 1 / Å^2 or 1 / nm^2. If None (default), 1 / Å^2 is used.
+        of Å^-2 or nm^-2. If None (default), Å^-2 is used.
 
     Returns
     -------
@@ -47,7 +48,13 @@ def atomic_scattering_parameters(
     References
     ----------
     .. [DeGraef2007] M. De Graef, M. E. McHenry, "Structure of
-        \Materials," Cambridge University Press, 2007.
+        \Materials," Cambridge University Press (2007).
+    .. [Doyle1968] P. A. Doyle, P. S. Turner, "Relativistic Hartree-Fock
+        X-ray and electron scattering factors," *Acta Cryst.* **24**
+        (1968), doi: https://doi.org/10.1107/S0567739468000756.
+    .. [Smith1962] G. Smith, R. Burge, "The analytical representation
+        of atomic scattering amplitudes for electrons," *Acta Cryst.*
+        **A15** (1962), doi: https://doi.org/10.1107/S0365110X62000481.
     """
     # fmt: off
     all_parameters = np.array([
@@ -152,37 +159,54 @@ def atomic_scattering_parameters(
     ]).reshape(98, 8)  # 1 / Å^2
     # fmt: on
 
-    if isinstance(element, int):
-        element_id = element
+    if isinstance(element, str):
+        element_id = get_element_id_from_string(element)
     else:
-        # List of elements Z = 1-98
-        # fmt: off
-        elements = [
-            "h", "he", "li", "be", "b", "c", "n", "o", "f", "ne", "na", "mg",
-            "al", "si", "p", "s", "cl", "ar", "k", "ca", "sc", "ti", "v", "cr",
-            "mn", "fe", "co", "ni", "cu", "zn", "ga", "ge", "as", "se", "br",
-            "kr", "rb", "sr", "y", "zr", "nb", "mo", "tc", "ru", "rh", "pd",
-            "ag", "cd", "in", "sn", "sb", "te", "i", "xe", "cs", "ba", "la",
-            "ce", "pr", "nd", "pm", "sm", "eu", "gd", "tb", "dy", "ho", "er",
-            "tm", "yb", "lu", "hf", "ta", "w", "re", "os", "ir", "pt", "au",
-            "hg", "tl", "pb", "bi", "po", "at", "rn", "fr", "ra", "ac", "th",
-            "pa", "u", "np", "pu", "am", "cm", "bk", "cf", "es", "fm", "md",
-            "no", "lr", "rf", "db", "sg", "bh", "hs", "mt", "ds", "rg", "cn",
-            "nh", "fl", "mc", "lv", "ts", "og"
-        ]
-        # fmt: on
+        element_id = int(element)
 
-        n_elements = len(elements)
-        element2periodic = dict(
-            zip(elements[:n_elements], np.arange(1, n_elements)))
-        element_id = element2periodic[element.lower()]
-
-    if unit.lower() == "nm":
-        factor = 1e-2
-    else:  # Ångstrøm
-        factor = 1
+    factor = 1  # Ångstrøm
+    if unit is not None:
+        if unit.lower() == "nm":
+            factor = 1e-2
 
     a = all_parameters[element_id - 1, :4] * factor
     b = all_parameters[element_id - 1, 4:] * factor
 
     return a, b
+
+
+def get_element_id_from_string(element_str: str) -> int:
+    """Get periodic element ID for elements Z = 1-98 from one-two letter
+    string.
+
+    Parameters
+    ----------
+    element_str
+        One-two letter string.
+
+    Returns
+    -------
+    element_id
+        Integer ID in the periodic table of elements.
+    """
+    # List of elements Z = 1-98
+    # fmt: off
+    elements = [
+        "h", "he", "li", "be", "b", "c", "n", "o", "f", "ne", "na", "mg", "al",
+        "si", "p", "s", "cl", "ar", "k", "ca", "sc", "ti", "v", "cr", "mn",
+        "fe", "co", "ni", "cu", "zn", "ga", "ge", "as", "se", "br", "kr", "rb",
+        "sr", "y", "zr", "nb", "mo", "tc", "ru", "rh", "pd", "ag", "cd", "in",
+        "sn", "sb", "te", "i", "xe", "cs", "ba", "la", "ce", "pr", "nd", "pm",
+        "sm", "eu", "gd", "tb", "dy", "ho", "er", "tm", "yb", "lu", "hf", "ta",
+        "w", "re", "os", "ir", "pt", "au", "hg", "tl", "pb", "bi", "po", "at",
+        "rn", "fr", "ra", "ac", "th", "pa", "u", "np", "pu", "am", "cm", "bk",
+        "cf", "es", "fm", "md", "no", "lr", "rf", "db", "sg", "bh", "hs", "mt",
+        "ds", "rg", "cn", "nh", "fl", "mc", "lv", "ts", "og"
+    ]
+    # fmt: on
+    n_elements = len(elements)
+    element2periodic = dict(
+        zip(elements[:n_elements], np.arange(1, n_elements))
+    )
+    element_id = element2periodic[element_str.lower()]
+    return element_id

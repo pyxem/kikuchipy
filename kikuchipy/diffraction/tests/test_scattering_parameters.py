@@ -19,25 +19,34 @@
 import numpy as np
 import pytest
 
-from kikuchipy.diffraction import atomic_scattering_parameters
+from kikuchipy.diffraction import (
+    get_atomic_scattering_parameters,
+    get_element_id_from_string,
+)
 
 
-class TestScatteringFactors:
+class TestScatteringParameters:
     @pytest.mark.parametrize("element", ["Ni", "ni", 28])
-    def test_atomic_scattering_parameters(self, element):
+    def test_get_atomic_scattering_parameters(self, element):
         desired_a = np.array([2.210, 2.134, 1.689, 0.524])
         desired_b = np.array([58.727, 13.553, 2.609, 0.339])
-        a, b = atomic_scattering_parameters(element=element)
+        a, b = get_atomic_scattering_parameters(element=element)
         assert np.allclose(a, desired_a)
         assert np.allclose(b, desired_b)
 
     @pytest.mark.parametrize(
-        "unit, factor",
-        [("Å", 1), ("a", 1), ("nm", 1e-2), ("NM", 1e-2)],
+        "unit, factor", [("Å", 1), ("a", 1), ("nm", 1e-2), ("NM", 1e-2)],
     )
-    def test_atomic_scattering_parameters(self, unit, factor):
-        a, b = atomic_scattering_parameters(element="Tc", unit=unit)
+    def test_get_atomic_scattering_parameters_unit(self, unit, factor):
+        a, b = get_atomic_scattering_parameters(element="Tc", unit=unit)
         desired_a = np.array([4.318, 3.270, 1.287, 0]) * factor
         desired_b = np.array([28.246, 5.148, 0.59, 0]) * factor
         assert np.allclose(a, desired_a)
         assert np.allclose(b, desired_b)
+
+    @pytest.mark.parametrize(
+        "element_str, desired_id",
+        [("Ga", 31), ("lu", 71), ("Zr", 40), ("Tc", 43)],
+    )
+    def test_get_element_id_from_string(self, element_str, desired_id):
+        assert get_element_id_from_string(element_str) == desired_id

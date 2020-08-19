@@ -18,10 +18,30 @@
 
 """Generation of HKL reflectors for a crystal structure."""
 
-from kikuchipy.diffraction.scattering_factors import (
-    atomic_scattering_parameters
+from kikuchipy.diffraction.atomic_scattering_parameters import (
+    get_atomic_scattering_parameters,
+    get_element_id_from_string,
+)
+from kikuchipy.diffraction.reciprocal_lattice_point import (
+    ReciprocalLatticePoint,
+    get_equivalent_hkl,
+    get_highest_hkl,
+    get_hkl,
+)
+from kikuchipy.diffraction.structure_factor import (
+    find_asymmetric_positions,
+    get_atomic_scattering_factor,
+    get_xray_structure_factor,
 )
 
 __all__ = [
-    "atomic_scattering_parameters",
+    "get_atomic_scattering_parameters",
+    "get_element_id_from_string",
+    "ReciprocalLatticePoint",
+    "get_equivalent_hkl",
+    "get_highest_hkl",
+    "get_hkl",
+    "find_asymmetric_positions",
+    "get_atomic_scattering_factor",
+    "get_xray_structure_factor",
 ]
