@@ -64,6 +64,8 @@ from kikuchipy.signals.util._dask import (
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 from kikuchipy.signals._common_image import CommonImage
 
+# Hei
+
 
 class EBSD(CommonImage, Signal2D):
     """Scan of Electron Backscatter Diffraction (EBSD) patterns.
@@ -1049,7 +1051,9 @@ class EBSD(CommonImage, Signal2D):
             averaging_window = copy.copy(window)
         else:
             averaging_window = Window(
-                window=window, shape=window_shape, **kwargs,
+                window=window,
+                shape=window_shape,
+                **kwargs,
             )
         averaging_window.shape_compatible(self.axes_manager.signal_shape)
 
@@ -1103,7 +1107,9 @@ class EBSD(CommonImage, Signal2D):
                 overlap_depth[i] = 0
         overlap_boundary = {i: "none" for i in range(data_dim)}
         overlapped_dask_array = da.overlap.overlap(
-            dask_array, depth=overlap_depth, boundary=overlap_boundary,
+            dask_array,
+            depth=overlap_depth,
+            boundary=overlap_boundary,
         )
 
         # Must also be overlapped, since the patterns are overlapped
