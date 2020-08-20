@@ -105,9 +105,9 @@ setup(
     maintainer=MAINTAINER,
     maintainer_email=MAINTAINER_EMAIL,
     project_urls={
-        "Bug Tracker": "https://github.com/kikuchipy/kikuchipy/issues",
+        "Bug Tracker": "https://github.com/pyxem/kikuchipy/issues",
         "Documentation": "https://kikuchipy.org",
-        "Source Code": "https://github.com/kikuchipy/kikuchipy",
+        "Source Code": "https://github.com/pyxem/kikuchipy",
     },
     # Dependencies
     # Update in .travis.yml if this list is updated!

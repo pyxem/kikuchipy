@@ -86,9 +86,9 @@ pygments_style = "friendly"
 
 # Logo
 cmap = "plasma"
-version = "v0.2.0"
-html_logo = f"_static/icon/{version}/{cmap}_logo.svg"
-html_favicon = f"_static/icon/{version}/{cmap}_favicon.png"
+logo_version = "v0.2.0"
+html_logo = f"_static/icon/{logo_version}/{cmap}_logo.svg"
+html_favicon = f"_static/icon/{logo_version}/{cmap}_favicon.png"
 
 # Read the Docs theme options
 html_theme_options = {
@@ -101,9 +101,7 @@ def linkcode_resolve(domain, info):
 
     This is taken from SciPy's conf.py:
     https://github.com/scipy/scipy/blob/master/doc/source/conf.py.
-
     """
-
     if domain != "py":
         return None
 
@@ -148,22 +146,12 @@ def linkcode_resolve(domain, info):
 
     if fn.startswith("kikuchipy/"):
         m = re.match(r"^.*dev0\+([a-f0-9]+)$", kikuchipy.__version__)
+        pre_link = "https://github.com/pyxem/kikuchipy/blob/"
         if m:
-            return "https://github.com/kikuchipy/kikuchipy/blob/%s/%s%s" % (
-                m.group(1),
-                fn,
-                linespec,
-            )
+            return pre_link + "%s/%s%s" % (m.group(1), fn, linespec)
         elif "dev" in kikuchipy.__version__:
-            return "https://github.com/kikuchipy/kikuchipy/blob/master/%s%s" % (
-                fn,
-                linespec,
-            )
+            return pre_link + "master/%s%s" % (fn, linespec)
         else:
-            return "https://github.com/kikuchipy/kikuchipy/blob/v%s/%s%s" % (
-                kikuchipy.__version__,
-                fn,
-                linespec,
-            )
+            return pre_link + "v%s/%s%s" % (kikuchipy.__version__, fn, linespec)
     else:
         return None

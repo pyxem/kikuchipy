@@ -1,11 +1,11 @@
 .. Travis CI
-.. image:: https://travis-ci.com/kikuchipy/kikuchipy.svg?branch=master
-    :target: https://travis-ci.com/kikuchipy/kikuchipy
+.. image:: https://travis-ci.com/pyxem/kikuchipy.svg?branch=master
+    :target: https://travis-ci.com/pyxem/kikuchipy
     :alt: Build status
 
 .. Coveralls
-.. image:: https://img.shields.io/coveralls/github/kikuchipy/kikuchipy.svg
-    :target: https://coveralls.io/github/kikuchipy/kikuchipy?branch=master
+.. image:: https://img.shields.io/coveralls/github/pyxem/kikuchipy.svg
+    :target: https://coveralls.io/github/pyxem/kikuchipy?branch=master
     :alt: Coveralls status
 
 .. Read the Docs
@@ -49,7 +49,7 @@ Tutorials and example workflows
 -------------------------------
 Jupyter Notebooks that you can work through and modify to perform processing and
 analyses of EBSD patterns are available `here
-<https://github.com/kikuchipy/kikuchipy-demos>`_. For learning purposes, we
+<https://github.com/pyxem/kikuchipy-demos>`_. For learning purposes, we
 recommend to use them alongside our user guide.
 
 Contributing
