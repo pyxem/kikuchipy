@@ -64,7 +64,7 @@ from kikuchipy.signals.util._dask import (
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 from kikuchipy.signals._common_image import CommonImage
 
-# Hei
+# Hey first comment
 
 
 class EBSD(CommonImage, Signal2D):
