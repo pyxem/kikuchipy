@@ -29,6 +29,7 @@ import numpy as np
 
 import kikuchipy.signals
 from kikuchipy.io.plugins import (
+    emsoft_ebsd,
     emsoft_ebsd_master_pattern,
     h5ebsd,
     nordif,
@@ -37,6 +38,7 @@ from kikuchipy.io._util import _get_input_bool
 
 
 plugins = [
+    emsoft_ebsd,
     emsoft_ebsd_master_pattern,
     hspy,
     h5ebsd,
@@ -75,7 +77,6 @@ def load(filename: str, lazy: bool = False, **kwargs):
     extension = os.path.splitext(filename)[1][1:]
     readers = []
     for plugin in plugins:
-        # TODO: Differentiate between EMsoft's h5ebsd formats
         if extension.lower() in plugin.file_extensions:
             readers.append(plugin)
     if len(readers) == 0:

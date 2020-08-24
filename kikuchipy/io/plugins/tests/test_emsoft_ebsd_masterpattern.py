@@ -142,11 +142,9 @@ AXES_MANAGER = {
 def setup_axes_manager(axes=None):
     if axes is None:
         axes = ["y", "energy", "height", "width"]
-
     d = {}
     for i, a in enumerate(axes):
         d["axis-" + str(i)] = AXES_MANAGER[a]
-
     return d
 
 
