@@ -1523,4 +1523,3 @@ class LazyEBSD(EBSD, LazySignal2D):
         os.remove(file_learn)
         gc.collect()  # Don't sink
 
-# Dummy comment
