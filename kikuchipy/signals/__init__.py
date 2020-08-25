@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Module for experimental and simulated diffraction patterns."""
+
 from kikuchipy.signals import util
 from kikuchipy.signals.ebsd import EBSD, LazyEBSD
 from kikuchipy.signals.ebsd_master_pattern import (

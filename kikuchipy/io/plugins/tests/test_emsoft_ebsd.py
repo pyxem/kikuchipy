@@ -83,5 +83,5 @@ class TestEMsoftEBSDReader:
             g2.create_dataset(
                 "ProgramName", data=np.array([b"EMEBSDD.f90"], dtype="S11"),
             )
-            with pytest.raises(IOError, match=".* is not in EMsoft's h5ebsd "):
+            with pytest.raises(IOError, match=".* is not in EMsoft's format "):
                 _ = _check_file_format(f)

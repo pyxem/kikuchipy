@@ -235,6 +235,8 @@ Currently, kikuchipy has readers and writers for the following file formats:
     +---------------------------------+------+-------+
     | NORDIF binary                   | Yes  | Yes   |
     +---------------------------------+------+-------+
+    | EMsoft simulated EBSD HDF5      | Yes  | No    |
+    +---------------------------------+------+-------+
     | EMsoft EBSD master pattern HDF5 | Yes  | No    |
     +---------------------------------+------+-------+
 
@@ -320,6 +322,37 @@ which the NORDIF :func:`~kikuchipy.io.plugins.nordif.file_writer` is called.
 Note, however, that so far no new setting file, background pattern, or
 calibration patterns is created upon saving.
 
+.. _emsoft-simulated-ebsd-hdf5:
+
+EMsoft simulated EBSD HDF5
+--------------------------
+
+Dynamically simulated EBSD patterns returned by EMsoft's ``EMEBSD.f90`` program
+as HDF5 files can be read into an :class:`~kikuchipy.signals.EBSD` object:
+
+.. code-block::
+
+    >>> s = kp.load("simulated_ebsd.h5")
+    >>> s
+    <EBSD, title: simulated_ebsd, dimensions: (29800|60, 60)>
+
+Here, the EMsoft simulated EBSD
+:func:`~kikuchipy.io.plugins.emsoft_ebsd.file_reader` is called,
+which takes the optional argument `scan_size`. Passing ``scan_size=(149, 200)``
+will reshape the pattern data shape from ``(29800, 60, 60)`` to
+``(149, 200, 60, 60)``:
+
+.. code-block::
+
+    >>> s = kp.load("simulated_ebsd.h5", scan_size=(149, 200))
+    >>> s
+    <EBSD, title: simulated_ebsd, dimensions: (200, 149|60, 60)>
+
+Simulated EBSD patterns can be written to the
+:ref:`kikuchipy h5ebsd format <h5ebsd-format>`, the
+:ref:`NORDIF binary format <nordif-format>` or to HDF5 files using HyperSpy's
+HDF5 specification :ref:`as explained above <save-patterns>`.
+
 .. _emsoft-ebsd-master-pattern-format:
 
 EMsoft EBSD master pattern HDF5
@@ -332,7 +365,7 @@ can be read into an :class:`~kikuchipy.signals.EBSDMasterPattern` object:
 
     >>> s = kp.load("master_patterns.h5")
     >>> s
-    <EBSDMasterPattern, title: , dimensions: (16|1001, 1001)>
+    <EBSDMasterPattern, title: master_patterns, dimensions: (16|1001, 1001)>
 
 Here, the EMsoft EBSD master pattern
 :func:`~kikuchipy.io.plugins.emsoft_ebsd_master_pattern.file_reader` is called,

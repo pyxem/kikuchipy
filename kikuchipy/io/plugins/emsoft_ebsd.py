@@ -38,7 +38,8 @@ from kikuchipy.signals.util._metadata import (
 format_name = "emsoft_ebsd"
 description = (
     "Read support for dynamically simulated electron backscatter diffraction "
-    "patterns stored in EMsoft's h5ebsd file format."
+    "patterns stored in EMsoft's HDF5 file format produced by their EMEBSD.f90 "
+    "program."
 )
 full_support = False
 # Recognised file extension
@@ -58,7 +59,7 @@ def file_reader(
     **kwargs,
 ) -> List[dict]:
     """Read dynamically simulated electron backscatter diffraction
-    patterns from EMsoft's h5ebsd file format [Jackson2014]_.
+    patterns from EMsoft's format produced by their EMEBSD.f90 program.
 
     Parameters
     ----------
@@ -157,7 +158,7 @@ def file_reader(
 
 
 def _check_file_format(file: File):
-    """Return whether the HDF file is in EMsoft's h5ebsd file format.
+    """Return whether the HDF file is in EMsoft's format.
 
     Parameters
     ----------
@@ -168,7 +169,10 @@ def _check_file_format(file: File):
         if program_name != "EMEBSD.f90":
             raise KeyError
     except KeyError:
-        raise IOError(f"'{file.filename}' is not in EMsoft's h5ebsd format.")
+        raise IOError(
+            f"'{file.filename}' is not in EMsoft's format returned by their "
+            "EMEBSD.f90 program."
+        )
 
 
 def _get_metadata(omd: dict) -> dict:

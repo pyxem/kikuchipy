@@ -154,10 +154,10 @@ as a visual inspection of the indexing results:
 .. code-block:: python
 
     >>> import hyperspy.api as hs
-    >>> import h5py
-    >>> with h5py.File('/path/to/simulated_patterns/sim.h5', mode='r') as f:
-            patterns = f['EMData/EBSD/EBSDPatterns'][()]
-    >>> s_sim = kp.signals.EBSD(patterns.reshape(s.data.shape))
+    >>> nav_shape = s.axes_manager.navigation_shape[::-1]
+    >>> s_sim = kp.load("simulated_patterns.h5", scan_size=nav_shape)
+    >>> s_sim
+    <EBSD, title: simulated_patterns, dimensions: (200, 149|60, 60)>
     >>> hs.plot.plot_signals([s, s_sim], navigator=s_om)
 
 .. _fig-plot-multiple-scans:

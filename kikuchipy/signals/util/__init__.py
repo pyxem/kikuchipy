@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Signal utilities, mostly for handling signal metadata and attributes."""
+
 from kikuchipy.signals.util._metadata import (
     ebsd_master_pattern_metadata,
     ebsd_metadata,

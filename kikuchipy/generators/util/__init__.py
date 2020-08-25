@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Generator utilities, for transferring of axes to new signals."""
+
 from kikuchipy.generators.util.virtual_bse import get_rgb_image, normalize_image
 
 __all__ = [
