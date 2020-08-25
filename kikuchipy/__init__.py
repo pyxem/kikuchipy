@@ -42,7 +42,6 @@ Utility functions
 load
     Reading of EBSD patterns and master patterns from file into signal
     objects.
-
 """
 
 # Import order must not be changed

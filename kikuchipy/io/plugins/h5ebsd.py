@@ -326,6 +326,8 @@ def hdf5group2dict(
                 data_dset_names=data_dset_names,
                 recursive=recursive,
             )
+        elif key in data_dset_names:
+            pass
         else:
             dictionary[key] = val
     return dictionary

@@ -16,13 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""
-Single EBSD pattern processing.
-
-This module mainly includes functions operating on single EBSD patterns
-as :class:`numpy.ndarray`.
-"""
-
 from typing import Union, Tuple, Optional, List
 
 from numba import njit

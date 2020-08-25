@@ -8,11 +8,13 @@ examples, however, see the user guide for how to use kikuchipy.
 
 .. caution::
 
-    kikuchipy is in an alpha stage, and there will likely be breaking changes
-    with each release.
+    kikuchipy is in an alpha stage, and there will be breaking changes with each
+    release.
 
-Signals
+signals
 =======
+
+.. automodule:: kikuchipy.signals
 
 EBSD
 ----
@@ -111,8 +113,8 @@ VirtualBSEImage
 
 ....
 
-Utilities
----------
+util
+----
 
 .. currentmodule:: kikuchipy.signals.util
 
@@ -122,11 +124,10 @@ Utilities
 
 ....
 
-Generators
+generators
 ==========
 
-Generators producing signals. This workflow with generators is adopted from
-`pyxem <http://github.com/pyxem/pyxem>`_.
+.. automodule:: kikuchipy.generators
 
 VirtualBSEGenerator
 -------------------
@@ -143,8 +144,8 @@ VirtualBSEGenerator
     :members:
     :undoc-members:
 
-Utilities
----------
+util
+----
 
 .. currentmodule:: kikuchipy.generators.util
 
@@ -154,14 +155,12 @@ Utilities
 
 ....
 
-Pattern
+pattern
 =======
 
-Single pattern processing
--------------------------
+Module for single and chunk pattern processing, used by signals.
 
-This module mainly includes functions operating on single EBSD patterns as
-:class:`numpy.ndarray`.
+Functions operating on single EBSD patterns as :class:`numpy.ndarray`.
 
 .. currentmodule:: kikuchipy.pattern
 
@@ -183,11 +182,11 @@ This module mainly includes functions operating on single EBSD patterns as
 
 ....
 
-Chunk processing
-----------------
+chunk
+-----
 
-This module includes functions for operating on :class:`numpy.ndarray` or
-:class:`dask.array.Array` chunks of EBSD patterns.
+Functions for operating on :class:`numpy.ndarray` or :class:`dask.array.Array`
+chunks of EBSD patterns.
 
 .. currentmodule:: kikuchipy.pattern.chunk
 
@@ -208,7 +207,7 @@ This module includes functions for operating on :class:`numpy.ndarray` or
 
 ....
 
-Correlate
+correlate
 ---------
 
 .. currentmodule:: kikuchipy.pattern.correlate
@@ -219,7 +218,7 @@ Correlate
 
 ....
 
-Filters
+filters
 =======
 
 .. currentmodule:: kikuchipy.filters
@@ -230,8 +229,10 @@ Filters
 
 ....
 
-Input/output
-============
+io
+==
+
+.. automodule:: kikuchipy.io
 
 .. automodule:: kikuchipy.io._io
     :members:
@@ -254,7 +255,7 @@ h5ebsd
 
 ....
 
-NORDIF
+nordif
 ------
 
 .. automodule:: kikuchipy.io.plugins.nordif
@@ -263,8 +264,17 @@ NORDIF
 
 ....
 
-EMsoft EBSD master pattern HDF5
--------------------------------
+emsoft_ebsd
+-----------
+
+.. automodule:: kikuchipy.io.plugins.emsoft_ebsd
+    :members:
+    :undoc-members:
+
+....
+
+emsoft_ebsd_master_pattern
+--------------------------
 
 .. automodule:: kikuchipy.io.plugins.emsoft_ebsd_master_pattern
     :members:

@@ -17,12 +17,14 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from kikuchipy.io.plugins import (
+    emsoft_ebsd,
     emsoft_ebsd_master_pattern,
     h5ebsd,
     nordif,
 )
 
 __all__ = [
+    "emsoft_ebsd",
     "emsoft_ebsd_master_pattern",
     "h5ebsd",
     "nordif",

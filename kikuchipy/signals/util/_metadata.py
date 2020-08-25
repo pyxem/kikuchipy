@@ -18,10 +18,12 @@
 
 import re
 from typing import Union, List
+import warnings
 
 import numpy as np
-
 from hyperspy.misc.utils import DictionaryTreeBrowser
+
+from kikuchipy.io._util import _get_nested_dictionary
 
 
 def ebsd_metadata() -> DictionaryTreeBrowser:
@@ -245,3 +247,29 @@ def _write_parameters_to_dictionary(
     for key, val in parameters.items():
         if val is not None:
             dictionary.set_item(node + "." + key, val)
+
+
+def _set_metadata_from_mapping(
+    omd: dict, md: DictionaryTreeBrowser, mapping: dict,
+):
+    """Update metadata dictionary inplace from original metadata
+    dictionary via a mapping.
+
+    Parameters
+    ----------
+    omd
+        Dictionary with original metadata.
+    md
+        Dictionary with metadata to update.
+    mapping
+        Mapping between `omd` and `md`.
+    """
+    for key_out, key_in in mapping.items():
+        try:
+            if isinstance(key_in, list):
+                value = _get_nested_dictionary(omd, key_in)
+            else:
+                value = omd[key_in]
+            md.set_item(key_out, value)
+        except KeyError:
+            warnings.warn(f"Could not read {key_in} from file.")

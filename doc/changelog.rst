@@ -18,13 +18,18 @@ Contributors
 ------------
 - Håkon Wiik Ånes
 
+Added
+-----
+- Reader for EMsoft's simulated EBSD patterns returned by their ``EMEBSD.f90``
+  program. (`#202 <https://github.com/pyxem/kikuchipy/pull/202>`_)
+
 Changed
 -------
 - Move GitHub repository to the pyxem organization. Update relevant URLs.
   (`#198 <https://github.com/pyxem/kikuchipy/pull/198>`_)
 - Allow scikit-image >= 0.16.
   (`#196 <https://github.com/pyxem/kikuchipy/pull/196>`_)
-- Removed language_version in pre-commit config file.
+- Remove language_version in pre-commit config file.
   (`#195 <https://github.com/pyxem/kikuchipy/pull/195>`_)
 
 0.2.2 (2020-05-24)
