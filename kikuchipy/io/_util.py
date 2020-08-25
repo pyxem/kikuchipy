@@ -110,7 +110,7 @@ def _delete_from_nested_dictionary(
 
 def _get_nested_dictionary(
     dictionary: Union[dict, DictionaryTreeBrowser],
-    keys: List[str],
+    keys: Union[str, List[str]],
     default: Optional[Any] = None,
 ) -> dict:
     """Get key from a nested dictionary, returning a default value if
@@ -127,8 +127,10 @@ def _get_nested_dictionary(
     """
     if isinstance(dictionary, DictionaryTreeBrowser):
         dictionary = dictionary.as_dictionary()
+    if not isinstance(keys, list):
+        keys = keys.split(".")
     return reduce(
         lambda d, key: d.get(key, default) if isinstance(d, dict) else default,
-        keys.split("."),
+        keys,
         dictionary,
     )

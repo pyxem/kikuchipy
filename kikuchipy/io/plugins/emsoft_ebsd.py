@@ -26,6 +26,12 @@ from kikuchipy.io.plugins.h5ebsd import hdf5group2dict
 from kikuchipy.io.plugins.emsoft_ebsd_master_pattern import (
     _crystal_data_2_metadata,
 )
+from kikuchipy.signals.util._metadata import (
+    ebsd_metadata,
+    metadata_nodes,
+    _set_metadata_from_mapping,
+)
+
 
 # Plugin characteristics
 # ----------------------
@@ -77,24 +83,30 @@ def file_reader(
 
     _check_file_format(f)
 
-    # Set metadata and original metadata dictionaries
-    md = {
-        "Signal": {"signal_type": "EBSD", "record_by": "image"},
-        "General": {
-            "title": f.filename.split("/")[-1].split(".")[0],
-            "original_filename": f.filename.split("/")[-1],
-        },
-        "Sample": {
-            "Phases": {
-                "1": _crystal_data_2_metadata(hdf5group2dict(f["CrystalData"]))
-            },
-        },
-    }
-    # Read all data except patterns
-    contents = hdf5group2dict(
+    # Read original metadata
+    omd = hdf5group2dict(
         f["/"], data_dset_names=["EBSDPatterns"], recursive=True
     )
-    scan = {"metadata": md, "original_metadata": contents}
+
+    # Set metadata and original metadata dictionaries
+    md = _get_metadata(omd)
+    md.update(
+        {
+            "Signal": {"signal_type": "EBSD", "record_by": "image"},
+            "General": {
+                "title": f.filename.split("/")[-1].split(".")[0],
+                "original_filename": f.filename.split("/")[-1],
+            },
+            "Sample": {
+                "Phases": {
+                    "1": _crystal_data_2_metadata(
+                        hdf5group2dict(f["CrystalData"])
+                    )
+                }
+            },
+        }
+    )
+    scan = {"metadata": md, "original_metadata": omd}
 
     # Read patterns
     dataset = f["EMData/EBSD/EBSDPatterns"]
@@ -105,8 +117,8 @@ def file_reader(
         patterns = np.asanyarray(dataset)
 
     # Reshape data if desired
-    sy = contents["NMLparameters"]["EBSDNameList"]["numsy"]
-    sx = contents["NMLparameters"]["EBSDNameList"]["numsx"]
+    sy = omd["NMLparameters"]["EBSDNameList"]["numsy"]
+    sx = omd["NMLparameters"]["EBSDNameList"]["numsx"]
     if scan_size is not None:
         if isinstance(scan_size, int):
             new_shape = (scan_size, sy, sx)
@@ -117,7 +129,7 @@ def file_reader(
     scan["data"] = patterns
 
     # Set navigation and signal axes
-    pixel_size = contents["NMLparameters"]["EBSDNameList"]["delta"]
+    pixel_size = omd["NMLparameters"]["EBSDNameList"]["delta"]
     ndim = patterns.ndim
     units = ["px", "um", "um"]
     names = ["x", "dy", "dx"]
@@ -157,3 +169,45 @@ def _check_file_format(file: File):
             raise KeyError
     except KeyError:
         raise IOError(f"'{file.filename}' is not in EMsoft's h5ebsd format.")
+
+
+def _get_metadata(omd: dict) -> dict:
+    """Return metadata dictionary from original metadata dictionary.
+
+    Parameters
+    ----------
+    omd
+        Dictionary with original metadata.
+
+    Returns
+    -------
+    md
+        Dictionary with metadata.
+    """
+    md = ebsd_metadata()
+    sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
+    md.set_item(f"{ebsd_node}.manufacturer", "EMsoft")
+    mapping = {
+        f"{ebsd_node}.version": ["EMheader", "EBSD", "Version"],
+        f"{ebsd_node}.binning": ["NMLparameters", "EBSDNameList", "binning"],
+        f"{ebsd_node}.elevation_angle": [
+            "NMLparameters",
+            "EBSDNameList",
+            "thetac",
+        ],
+        f"{ebsd_node}.exposure_time": [
+            "NMLparameters",
+            "EBSDNameList",
+            "dwelltime",
+        ],
+        f"{ebsd_node}.xpc": ["NMLparameters", "EBSDNameList", "xpc"],
+        f"{ebsd_node}.ypc": ["NMLparameters", "EBSDNameList", "ypc"],
+        f"{ebsd_node}.zpc": ["NMLparameters", "EBSDNameList", "L"],
+        f"{sem_node}.beam_energy": [
+            "NMLparameters",
+            "EBSDNameList",
+            "energymax",
+        ],
+    }
+    _set_metadata_from_mapping(omd, md, mapping)
+    return md.as_dictionary()

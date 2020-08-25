@@ -11,6 +11,7 @@ f = h5py.File(os.path.join(ddir, fname), mode="w")
 
 data_shape = (10, 10, 10)
 data = {
+    "Manufacturer": "EMsoft",
     "CrystalData": {
         "AtomData": np.array(
             [[0.1587, 0], [0.6587, 0], [0, 0.25], [1, 1], [0.005, 0.005]],
@@ -75,7 +76,10 @@ data = {
         }
     },
     "EMheader": {
-        "EBSD": {"ProgramName": np.array([b"EMEBSD.f90"], dtype="S10")},
+        "EBSD": {
+            "ProgramName": np.array([b"EMEBSD.f90"], dtype="S10"),
+            "Version": np.array([b"5_0_20200217_0"], dtype="S14"),
+        },
     },
 }
 

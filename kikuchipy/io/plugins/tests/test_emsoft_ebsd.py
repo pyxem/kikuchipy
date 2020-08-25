@@ -25,101 +25,40 @@ import pytest
 
 from kikuchipy.io._io import load
 from kikuchipy.io.plugins.emsoft_ebsd import _check_file_format
-from kikuchipy.signals.tests.test_ebsd import assert_dictionary
+from kikuchipy.signals.util._metadata import metadata_nodes
 
 DIR_PATH = os.path.dirname(__file__)
 EMSOFT_FILE = os.path.join(
     DIR_PATH, "../../../data/emsoft_ebsd/simulated_ebsd.h5"
 )
 
-METADATA = {
-    "General": {
-        "original_filename": "simulated_ebsd.h5",
-        "title": "simulated_ebsd",
-    },
-    "Sample": {
-        "Phases": {
-            "1": {
-                "atom_coordinates": {
-                    "1": {
-                        "atom": 13,
-                        "coordinates": np.array([0.1587, 0.6587, 0]),
-                        "site_occupation": 1.0,
-                        "debye_waller_factor": 0.005,
-                    },
-                    "2": {
-                        "atom": 29,
-                        "coordinates": np.array([0, 0, 0.25]),
-                        "site_occupation": 1.0,
-                        "debye_waller_factor": 0.005,
-                    },
-                },
-                "lattice_constants": np.array(
-                    [0.5949, 0.5949, 0.5821, 90, 90, 90]
-                ),
-                "setting": 1,
-                "source": "Su Y.C., Yan J., Lu P.T., Su J.T.: Thermodynamic...",
-                "space_group": 140,
-            }
-        }
-    },
-    "Signal": {"binned": False, "signal_type": "EBSD"},
-}
-
-AXES_MANAGER = {
-    "y": {
-        "name": "y",
-        "scale": 1.0,
-        "offset": 0.0,
-        "size": 1,
-        "units": "px",
-        "navigate": True,
-    },
-    "x": {
-        "name": "x",
-        "scale": 1.0,
-        "offset": 0.0,
-        "size": 10,
-        "units": "px",
-        "navigate": True,
-    },
-    "dy": {
-        "name": "dy",
-        "scale": 70,
-        "offset": 0,
-        "size": 10,
-        "units": "um",
-        "navigate": False,
-    },
-    "dx": {
-        "name": "dx",
-        "scale": 70,
-        "offset": 0,
-        "size": 10,
-        "units": "um",
-        "navigate": False,
-    },
-}
-
-
-def setup_axes_manager(axes=None):
-    if axes is None:
-        axes = ["y", "x", "dy", "dx"]
-    d = {}
-    for i, a in enumerate(axes):
-        d["axis-" + str(i)] = AXES_MANAGER[a]
-    return d
-
 
 class TestEMsoftEBSDReader:
     def test_file_reader(self):
+        """Test correct data shape, axes properties and metadata."""
         s = load(EMSOFT_FILE)
 
         assert s.data.shape == (10, 10, 10)
-        assert_dictionary(s.metadata.as_dictionary(), METADATA)
+
+        assert s.axes_manager["dx"].scale == 70
+        assert s.axes_manager["dx"].units == "um"
+        assert s.axes_manager["x"].units == "px"
+
+        sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
+        phase_node = "Sample.Phases.1"
+        desired_dict = {
+            f"{sem_node}.beam_energy": 20,
+            f"{ebsd_node}.manufacturer": "EMsoft",
+            f"{ebsd_node}.xpc": 4.86,
+            f"{phase_node}.space_group": 140,
+            f"{phase_node}.atom_coordinates.1.atom": 13,
+        }
+        for key, value in desired_dict.items():
+            assert s.metadata.get_item(key) == value
 
     @pytest.mark.parametrize("scan_size", [10, (1, 10), (5, 2)])
     def test_scan_size(self, scan_size):
+        """Scan size parameter works as expected."""
         s = load(EMSOFT_FILE, scan_size=scan_size)
 
         sy, sx = (10, 10)
@@ -130,23 +69,14 @@ class TestEMsoftEBSDReader:
 
         assert s.data.shape == desired_shape
 
-        if len(desired_shape) == 3:
-            axes_manager = setup_axes_manager(["x", "dy", "dx"])
-            axes_manager["axis-0"]["size"] = desired_shape[0]
-        else:
-            axes_manager = setup_axes_manager()
-            axes_manager["axis-0"]["size"] = desired_shape[0]
-            axes_manager["axis-1"]["size"] = desired_shape[1]
-
-        assert s.axes_manager.as_dictionary() == axes_manager
-        assert_dictionary(s.metadata.as_dictionary(), METADATA)
-
     def test_read_lazy(self):
+        """Lazy parameter works as expected."""
         s = load(EMSOFT_FILE, lazy=True)
 
         assert isinstance(s.data, da.Array)
 
     def test_check_file_format(self, save_path_hdf5):
+        """Wrong file format raises an error."""
         with File(save_path_hdf5, mode="w") as f:
             g1 = f.create_group("EMheader")
             g2 = g1.create_group("EBSD")

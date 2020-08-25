@@ -16,10 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import pytest
+
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
     ebsd_master_pattern_metadata,
     metadata_nodes,
+    _set_metadata_from_mapping,
 )
 
 
@@ -47,7 +50,7 @@ class TestMetadata:
             ebsd_node,
             sem_node,
         ]
-        assert metadata_nodes(("sem", "ebsd_master_pattern")) == [
+        assert metadata_nodes(["sem", "ebsd_master_pattern"]) == [
             sem_node,
             ebsd_master_pattern_node,
         ]
@@ -63,3 +66,26 @@ class TestMetadata:
             )
             == -1.0
         )
+
+    def test_set_metadata_from_mapping(self):
+        """Updating DictionaryTreeBrowser with values from a dictionary
+        via a mapping.
+        """
+        sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
+        md = ebsd_metadata()
+
+        old_val1, new_val1 = (-1, 20)
+        old_val2, new_val2 = (-1, 2)
+        omd = {"V": new_val1, "xpc": {"xpc2": {"xpc3": new_val2}}}
+        key1 = f"{sem_node}.beam_energy"
+        key2 = f"{ebsd_node}.xpc"
+        assert md.get_item(key1) == old_val1
+        assert md.get_item(key2) == old_val2
+
+        mapping = {key1: "V", key2: ["xpc", "xpc2", "xpc3"]}
+        _set_metadata_from_mapping(omd, md, mapping)
+        assert md.get_item(key1) == new_val1
+        assert md.get_item(key2) == new_val2
+
+        with pytest.warns(UserWarning, match="Could not read"):
+            _ = _set_metadata_from_mapping(omd, md, {"a": "b"})
