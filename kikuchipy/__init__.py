@@ -47,6 +47,7 @@ load
 # Import order must not be changed
 from kikuchipy import filters
 from kikuchipy import pattern
+from kikuchipy import projections
 from kikuchipy import signals
 from kikuchipy import generators
 from kikuchipy import detectors
@@ -62,5 +63,6 @@ __all__ = [
     "generators",
     "load",
     "pattern",
+    "projections",
     "signals",
 ]

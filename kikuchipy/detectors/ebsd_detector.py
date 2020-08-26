@@ -16,88 +16,248 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
+
+from kikuchipy.projections import GnomonicProjection
 
 
 class EBSDDetector:
     def __init__(
         self,
-        rows: int,
-        cols: int,
+        shape: Tuple[int, int] = (1, 1),
         pixel_size: float = 1,
         binning: int = 1,
-        model: Optional[str] = None,
+        tilt: float = 0,
+        pcx: Union[np.ndarray, float] = 1.0,
+        pcy: Union[np.ndarray, float] = 1.0,
+        pcz: Union[np.ndarray, float] = 1.0,
+        convention: Optional[str] = None,
     ):
-        """Create an EBSD detector with a shape, pixel size and pixel
-        binning.
-
+        """Create an EBSD detector with a shape, pixel size, binning,
+        and projection/pattern center (PC).
 
         Parameters
         ----------
-        rows
-            Number of rows, i.e. detector height, in pixels.
-        cols
-            Number of columns, i.e. detector width, in pixels.
+        shape
+            Number of detector rows and columns in pixels. Default is
+            (1, 1).
         pixel_size
-            Size of binned detector pixel in microns.
+            Size of binned detector pixel in um, assuming a square pixel
+            shape. Default is 1 um.
         binning
             Detector binning, i.e. how many pixels are binned into one.
-        model
-            Detector model.
-
-        Examples
-        --------
-        >>> from kikuchipy import detectors
-        >>> det = detectors.EBSDDetector(
-        ...     rows=60,
-        ...     cols=60,
-        ...     pixel_size=70 * 8,
-        ...     binning=8,
-        ... )
-        >>> det
-        EBSDDetector (60, 60) px, px size 560.0 um, binning 8
-        >>> det.shape_unbinned
-        (480, 480)
-        >>> det.aspect_ratio
-        1.0
-        >>> (det.height, det.width)
-        (33600, 33600)
+            Default is 1, i.e. no binning.
+        tilt
+            Detector tilt from horizontal in degrees. Default is 0.
+        pcx
+            X coordinate(s) of the PC, from detector left, describing
+            the location of the beam on the sample measured relative to
+            the detection screen. Default is 1, i.e. at the right edge.
+        pcy
+            Y coordinate(s) of the PC, from detector top. Default is 1,
+            i.e. at the bottom edge.
+        pcz
+            Z coordinate(s) of the PC, distance from sample to detection
+            screen. Default is 1.
+        convention
+            PC convention. If None (default), Bruker's convention is
+            assumed.
         """
-        self.rows = rows
-        self.cols = cols
+        self.shape = shape
         self.pixel_size = pixel_size
         self.binning = binning
-        self.model = model
+        self.tilt = tilt
+        self.pcx = pcx
+        self.pcy = pcy
+        self.pcz = pcz
+        self._set_pc_convention(convention)
 
     @property
-    def shape(self) -> Tuple[int, int]:
-        """Detector shape in pixels."""
-        return self.rows, self.cols
+    def nrows(self) -> int:
+        """Number of rows in pixels."""
+        return self.shape[0]
+
+    @property
+    def ncols(self) -> int:
+        """Number of columns in pixels."""
+        return self.shape[1]
+
+    @property
+    def projection(self):
+        """The projection of the EBSD pattern of the detector."""
+        return GnomonicProjection
+
+    @property
+    def size(self) -> int:
+        """Number of pixels."""
+        return self.nrows * self.ncols
 
     @property
     def height(self) -> float:
         """Detector height in microns."""
-        return self.rows * self.pixel_size
+        return self.nrows * self.pixel_size
 
     @property
     def width(self) -> float:
         """Detector width in microns."""
-        return self.cols * self.pixel_size
+        return self.ncols * self.pixel_size
 
     @property
     def aspect_ratio(self) -> float:
         """Number of detector rows divided by columns."""
-        return self.rows / self.cols
+        return self.nrows / self.ncols
 
     @property
     def shape_unbinned(self) -> Tuple[int, int]:
         """Unbinned detector shape in pixels."""
         return tuple(np.array(self.shape) * self.binning)
 
+    @property
+    def pc(self) -> np.ndarray:
+        """All PC coordinates."""
+        return np.stack((self.pcx, self.pcy, self.pcz))
+
+    @pc.setter
+    def pc(self, value: Union[np.ndarray, List, Tuple]):
+        """Set all PC coordinates."""
+        self.pcx, self.pcy, self.pcz = value
+
+    @property
+    def x_min(self) -> Union[np.ndarray, float]:
+        """Left bound of detector in gnomonic projection."""
+        return -self.aspect_ratio * (self.pcx / self.pcz)
+
+    @property
+    def x_max(self) -> Union[np.ndarray, float]:
+        """Right bound of detector in gnomonic projection."""
+        return self.aspect_ratio * (1 - self.pcx) / self.pcz
+
+    @property
+    def x_range(self) -> np.ndarray:
+        """X detector limits in gnomonic projection."""
+        return np.stack((self.x_min, self.x_max))
+
+    @property
+    def y_min(self) -> Union[np.ndarray, float]:
+        """Top bound of detector in gnomonic projection."""
+        return -(1 - self.pcy) / self.pcz
+
+    @property
+    def y_max(self) -> Union[np.ndarray, float]:
+        """Bottom bound of detector in gnomonic projection."""
+        return self.pcy / self.pcz
+
+    @property
+    def y_range(self) -> np.ndarray:
+        """Y detector limits in gnomonic projection."""
+        return np.stack((self.y_min, self.y_max))
+
+    def _set_pc_convention(self, convention: str):
+        """Set appropriate PC based on vendor convention."""
+        if convention is None or convention == "bruker":
+            pass
+        elif convention.lower() == "tsl":
+            self.pcx, self.pcy, self.pcz = self._tsl2bruker()
+        elif convention.lower() == "oxford":
+            self.pcx, self.pcy, self.pcz = self._oxford2emsoft()
+            self.pcx, self.pcy, self.pcz = self._emsoft2bruker()
+        elif convention.lower() == "emsoft":
+            self.pcx, self.pcy, self.pcz = self._emsoft2bruker()
+        else:
+            conventions = ["bruker", "emsoft", "oxford", "tsl"]
+            raise ValueError(
+                f"Projection center convention '{convention}' not among the "
+                f"recognised conventions {conventions}."
+            )
+
+    def _bruker2emsoft(self):
+        """Convert PC from Bruker to EMsoft convention."""
+        new_x = self.width * (self.pcx - 0.5)
+        new_y = self.height * (0.5 - self.pcy)
+        new_z = self.height * self.pixel_size * self.pcz
+        return new_x, new_y, new_z
+
+    def _emsoft2bruker(self):
+        """Convert PC from EMsoft to Bruker convention."""
+        new_x = (self.pcx / self.width) + 0.5
+        new_y = 0.5 - (self.pcy / self.height)
+        new_z = self.pcz / (self.height * self.pixel_size)
+        return new_x, new_y, new_z
+
+    def _tsl2emsoft(self):
+        """Convert PC from EDAX TSL to EMsoft convention."""
+        new_x = self.width * (self.pcx - 0.5)
+        new_y = self.height * (0.5 - self.pcy)
+        new_z = self.width * self.pixel_size * self.pcz
+        return new_x, new_y, new_z
+
+    def _emsoft2tsl(self):
+        """Convert PC from EMsoft to EDAX TSL convention."""
+        new_x = (self.pcx / self.width) + 0.5
+        new_y = 0.5 - (self.pcy / self.height)
+        new_z = self.pcz / (self.width * self.pixel_size)
+        return new_x, new_y, new_z
+
+    def _tsl2bruker(self):
+        """Convert PC from EDAX TSL to Bruker convention."""
+        return 1 - self.pcx, self.pcy, self.pcz
+
+    def _bruker2tsl(self):
+        """Convert PC from Bruker to EDAX TSL convention."""
+        return 1 - self.pcx, self.pcy, self.pcz
+
+    def _oxford2emsoft(self):
+        """Convert PC from Oxford to EMsoft convention."""
+        new_x = self.width * (self.pcx - 0.5)
+        new_y = self.height * (self.pcy - 0.5)
+        new_z = self.width * self.pixel_size * self.pcz
+        return new_x, new_y, new_z
+
+    def to_emsoft(
+        self,
+    ) -> Tuple[
+        Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]
+    ]:
+        """Return PC in the EMsoft convention."""
+        return self._bruker2emsoft()
+
+    def to_bruker(
+        self,
+    ) -> Tuple[
+        Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]
+    ]:
+        """Return PC in the Bruker convention."""
+        return self.pcx, self.pcy, self.pcz
+
+    def to_tsl(
+        self,
+    ) -> Tuple[
+        Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]
+    ]:
+        """Return PC in the EDAX TSL convention."""
+        return self._emsoft2tsl()
+
+    def to_oxford(
+        self,
+    ) -> Tuple[
+        Optional[np.ndarray], Optional[np.ndarray], Optional[np.ndarray]
+    ]:
+        """Return PC in the Oxford convention."""
+        raise NotImplementedError
+
     def __repr__(self):
+        pc_mean = np.zeros(3)
+        for i, pc in enumerate([self.pcx, self.pcy, self.pcz]):
+            if isinstance(pc, np.ndarray):
+                pc_mean[i] = pc.mean()
+            elif pc is not None:
+                pc_mean[i] = pc
         return (
-            f"{self.__class__.__name__} {self.shape} px, px size "
-            f"{self.pixel_size:.1f} um, binning {self.binning}"
+            f"EBSDDetector {self.shape}\n  "
+            f"pixel_size {self.pixel_size} um, "
+            f"binning {self.binning}, "
+            f"tilt {self.tilt}\n  "
+            f"pcx {pc_mean[0]}, pcy {pc_mean[1]}, pcz {pc_mean[2]}"
         )
