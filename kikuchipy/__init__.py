@@ -25,32 +25,17 @@ analysis provided by the HyperSpy library. This means that the EBSD and
 EBSDMasterPattern classes, which have several common methods for
 processing of EBSD patterns, also inherits all relevant methods from
 HyperSpy's Signal2D and Signal classes.
-
-Sub-packages
------------
-filters
-    Transfer functions, spatial kernels, etc.
-pattern
-    Processing of a single pattern or chunks of patterns. Used by the
-    signal classes.
-signals
-    Classes to store, process, analyze and save EBSD patterns and master
-    patterns.
-
-Utility functions
------------------
-load
-    Reading of EBSD patterns and master patterns from file into signal
-    objects.
 """
 
 # Import order must not be changed
+from kikuchipy import crystallography
+from kikuchipy import detectors
 from kikuchipy import filters
 from kikuchipy import pattern
 from kikuchipy import projections
 from kikuchipy import signals
 from kikuchipy import generators
-from kikuchipy import detectors
+from kikuchipy import simulations
 from kikuchipy.io._io import load
 
 from kikuchipy import release
@@ -58,6 +43,7 @@ from kikuchipy import release
 __version__ = release.version
 
 __all__ = [
+    "crystallography",
     "detectors",
     "filters",
     "generators",
@@ -65,4 +51,5 @@ __all__ = [
     "pattern",
     "projections",
     "signals",
+    "simulations",
 ]

@@ -15,23 +15,3 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
-
-from kikuchipy.projections.gnomonic_projection import GnomonicProjection
-from kikuchipy.projections.ebsd_projections import (
-    detector2sample,
-    detector2direct_lattice,
-    detector2reciprocal_lattice,
-)
-from kikuchipy.projections.spherical_projection import (
-    get_polar,
-    SphericalProjection,
-)
-
-__all__ = [
-    "GnomonicProjection",
-    "get_polar",
-    "detector2sample",
-    "detector2direct_lattice",
-    "detector2reciprocal_lattice",
-    "SphericalProjection",
-]

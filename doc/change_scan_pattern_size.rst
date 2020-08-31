@@ -37,6 +37,22 @@ Or, we want a new EBSDMasterPattern signal with only the 20 keV beam energy:
 .. code-block::
 
     >>> s
+        <EBSDMasterPattern, title: , dimensions: (11|1001, 1001)>
+        >>> s.axes_manager["energy"].zone_axes
+        array([10., 11., 12., 13., 14., 15., 16., 17., 18., 19., 20.])
+        >>> s2 = s.inav[-1]
+        >>> s2
+        <EBSDMasterPattern, title: , dimensions: (|1001, 1001)>
+
+    Patterns can also be cropped with the signal indexing method
+        <EBSDMasterPattern, title: , dimensions: (11|1001, 1001)>
+        >>> s.axes_manager["energy"].zone_axes
+        array([10., 11., 12., 13., 14., 15., 16., 17., 18., 19., 20.])
+        >>> s2 = s.inav[-1]
+        >>> s2
+        <EBSDMasterPattern, title: , dimensions: (|1001, 1001)>
+
+    Patterns can also be cropped with the signal indexing method
     <EBSDMasterPattern, title: , dimensions: (11|1001, 1001)>
     >>> s.axes_manager["energy"].axis
     array([10., 11., 12., 13., 14., 15., 16., 17., 18., 19., 20.])

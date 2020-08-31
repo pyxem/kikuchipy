@@ -28,7 +28,9 @@ class SphericalProjection:
 
     spherical_region = SphericalRegion([0, 0, 1])
 
-    def project(self, v: Vector3d) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def project(
+        self, v: Union[Vector3d, np.ndarray]
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Convert from cartesian to spherical coordinates."""
         phi, theta, r = get_polar(v)
 
@@ -46,7 +48,7 @@ def get_polar(
     if isinstance(v, Vector3d):
         x, y, z = v.xyz
     else:
-        x, y, z = v[:, 0], v[:, 1], v[:, 2]
+        x, y, z = v[..., 0], v[..., 1], v[..., 2]
     phi = np.arctan2(y, x)
     phi += (phi < 0) * 2 * np.pi
     r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
