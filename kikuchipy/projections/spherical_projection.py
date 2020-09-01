@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Tuple, Union
+from typing import Union
 
 import numpy as np
 from orix.vector import Vector3d
@@ -28,22 +28,18 @@ class SphericalProjection:
 
     spherical_region = SphericalRegion([0, 0, 1])
 
-    def project(
-        self, v: Union[Vector3d, np.ndarray]
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def project(self, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
         """Convert from cartesian to spherical coordinates."""
-        phi, theta, r = get_polar(v)
+        polar = get_polar(v)
 
         # Restrict to plotable domain
         is_antipodal = v < self.spherical_region
-        phi[is_antipodal] += np.pi
+        polar[is_antipodal, 1] += np.pi
 
-        return theta, phi, r
+        return polar
 
 
-def get_polar(
-    v: Union[Vector3d, np.ndarray]
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     """Convert from cartesian to spherical coordinates."""
     if isinstance(v, Vector3d):
         x, y, z = v.xyz
@@ -53,4 +49,4 @@ def get_polar(
     phi += (phi < 0) * 2 * np.pi
     r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
     theta = np.arccos(z / r)
-    return theta, phi, r
+    return np.column_stack((theta, phi, r))

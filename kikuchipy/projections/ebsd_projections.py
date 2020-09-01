@@ -39,12 +39,10 @@ def detector2sample(
     -------
     np.ndarray
     """
-    return quaternion.Rotation.from_neo_euler(
-        vector.neo_euler.AxAngle.from_axes_angles(
-            axes=vector.Vector3d.xvector(),
-            angles=-np.deg2rad((sample_tilt - 90) - detector_tilt),
-        )
-    ).to_matrix()[0]
+    x_axis = vector.Vector3d.xvector()
+    tilt = -np.deg2rad((sample_tilt - 90) - detector_tilt)
+    ax_angle = vector.neo_euler.AxAngle.from_axes_angles(x_axis, tilt)
+    return quaternion.Rotation.from_neo_euler(ax_angle).to_matrix()[0]
 
 
 def detector2direct_lattice(

@@ -153,6 +153,22 @@ class EBSDDetector:
         """Y detector limits in gnomonic projection."""
         return np.stack((self.y_min, self.y_max))
 
+    @property
+    def r_max(self):
+        """Maximum distance from PC to detector edge."""
+        x_min, x_max = self.x_range
+        y_min, y_max = self.y_range
+        return np.sqrt(
+            np.max(
+                [
+                    x_min ** 2 + y_min ** 2,
+                    x_min ** 2 + y_max ** 2,
+                    x_max ** 2 + y_min ** 2,
+                    x_max ** 2 + y_max ** 2,
+                ]
+            )
+        )
+
     def __repr__(self) -> str:
         pc_mean = np.zeros(3)
         for i, pc in enumerate([self.pcx, self.pcy, self.pcz]):

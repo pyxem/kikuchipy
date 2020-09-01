@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Tuple
+from typing import Union
 
 import numpy as np
 from orix.vector import Vector3d
@@ -27,11 +27,15 @@ from kikuchipy.projections.spherical_projection import SphericalProjection
 class GnomonicProjection(SphericalProjection):
     """Gnomonic projection of a vector as implemented in MTEX."""
 
-    def project(self, v: Vector3d) -> Tuple[np.ndarray, np.ndarray]:
-        theta, phi, _ = super().project(v)
+    def project(self, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
+        polar = super().project(v)
+        theta, phi = polar[..., 0], polar[..., 1]
 
         # Map to upper hemisphere
-        is_upper = v.z > 0
+        if isinstance(v, Vector3d):
+            is_upper = v.z > 0
+        else:
+            is_upper = v[..., 2] > 0
         theta[is_upper] -= np.pi
 
         # Turn around antipodal vectors
@@ -45,7 +49,7 @@ class GnomonicProjection(SphericalProjection):
         x = np.cos(phi) * r
         y = np.sin(phi) * r
 
-        return x, y
+        return np.column_stack((x, y))
 
     @staticmethod
     def iproject(x: np.ndarray, y: np.ndarray) -> Vector3d:

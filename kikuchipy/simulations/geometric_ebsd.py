@@ -51,15 +51,13 @@ class GeometricEBSD:
             orientation=orientation,
         )
         band_coordinates = det2recip.T.dot(hkl_transposed).T
-        upper_hemisphere = band_coordinates[..., 2] > 0  # To include zero
+        upper_hemisphere = band_coordinates[..., 2] > 0
         upper_hkl = hkl[upper_hemisphere]
         self.bands = KikuchiBand(
             phase=phase,
             hkl=upper_hkl,
             coordinates=band_coordinates[upper_hemisphere],
         )
-        structure_factor = reciprocal_lattice_point.structure_factor
-        self.bands._structure_factor = structure_factor
 
         # Get zone axes
         # U_K, transformation from detector frame D to direct crystal lattice
@@ -75,12 +73,33 @@ class GeometricEBSD:
         self.zone_axes = ZoneAxis(
             phase=phase, hkl=upper_hkl, coordinates=axis_coordinates,
         )
+
+        structure_factor = reciprocal_lattice_point.structure_factor
+        self.bands._structure_factor = structure_factor
         self.zone_axes._structure_factor = structure_factor
+
+    @property
+    def plane_trace_detector_coordinates(self):
+        x_g = self.bands.plane_trace_x_g
+        y_g = self.bands.plane_trace_y_g
+        pcx, pcy, pcz = self.detector.pc
+        ncols, nrows = self.detector.shape
+        x_d = (x_g + pcx) * ncols * pcz + 15  # ?
+        y_d = (1 - pcy - y_g) * nrows * pcz
+        return np.row_stack((x_d[0], y_d[0], x_d[1], y_d[1]))
+
+    @property
+    def zone_axes_detector_coordinates(self):
+        x_g = self.zone_axes.x_g
+        y_g = self.zone_axes.y_g
+        pcx, pcy, pcz = self.detector.pc
+        ncols, nrows = self.detector.shape
+        x_d = (x_g + pcx) * ncols * pcz + 15
+        y_d = (1 - pcy - y_g) * nrows * pcz
+        return np.row_stack((x_d, y_d))
 
 
 class KikuchiBand(CrystalPlane):
-    hesse_radius = 2
-
     def __init__(self, phase, hkl, coordinates=None):
         super().__init__(phase=phase, hkl=hkl)
         self._coordinates = coordinates
@@ -124,17 +143,64 @@ class KikuchiBand(CrystalPlane):
 
     @property
     def hesse_distance(self):
-        """Distance from origin is right-angle component of distance of
-        pole.
+        """Distance from origin, i.e. the right-angle component of
+        distance of the pole.
         """
-        theta, _, _ = self.polar_coordinates
+        theta = self.polar_coordinates[..., 0]
         return np.tan(0.5 * np.pi - theta)
+
+    @property
+    def hesse_radius(self):
+        theta = self.polar_coordinates[..., 0]
+        arbitrary_factor = 0.25
+        return arbitrary_factor * np.tan(np.max(theta))
+
+    @property
+    def hesse_alpha(self):
+        return np.arccos(self.hesse_distance / self.hesse_radius)
+
+    @property
+    def alpha_g(self):
+        """Angle from PC (0, 0) to point on circle where the line cuts
+        the circle.
+        """
+        phi = self.polar_coordinates[..., 1]
+        return np.row_stack(
+            (phi - np.pi + self.hesse_alpha, phi - np.pi - self.hesse_alpha)
+        )
 
     @property
     def within_hesse_radius(self):
         is_full_upper = self.z_d > -1e-5
         in_circle = np.abs(self.hesse_distance) < self.hesse_radius
         return np.logical_and(in_circle, is_full_upper)
+
+    @property
+    def plane_trace_x_g(self):
+        a1, a2 = self.alpha_g
+        return self.hesse_radius * np.row_stack((np.cos(a1), np.cos(a2)))
+
+    @property
+    def plane_trace_y_g(self):
+        a1, a2 = self.alpha_g
+        return self.hesse_radius * np.row_stack((np.sin(a1), np.sin(a2)))
+
+    @property
+    def plane_trace_g(self):
+        a1, a2 = self.alpha_g
+        return self.hesse_radius * np.row_stack(
+            (np.cos(a1), np.sin(a1), np.cos(a2), np.sin(a2))
+        )
+
+    @property
+    def hesse_line_x(self):
+        phi = self.polar_coordinates[..., 1]
+        return -self.hesse_distance * np.cos(phi)
+
+    @property
+    def hesse_line_y(self):
+        phi = self.polar_coordinates[..., 1]
+        return -self.hesse_distance * np.sin(phi)
 
 
 class ZoneAxis(KikuchiBand):
