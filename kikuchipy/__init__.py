@@ -30,6 +30,7 @@ HyperSpy's Signal2D and Signal classes.
 # Import order must not be changed
 from kikuchipy import crystallography
 from kikuchipy import detectors
+from kikuchipy import draw
 from kikuchipy import filters
 from kikuchipy import pattern
 from kikuchipy import projections
@@ -45,6 +46,7 @@ __version__ = release.version
 __all__ = [
     "crystallography",
     "detectors",
+    "draw",
     "filters",
     "generators",
     "load",

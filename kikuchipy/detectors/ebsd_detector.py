@@ -20,8 +20,6 @@ from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
-from kikuchipy.projections import detector2reciprocal_lattice
-
 
 class EBSDDetector:
     def __init__(
