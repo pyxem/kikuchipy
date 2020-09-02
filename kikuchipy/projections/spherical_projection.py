@@ -50,3 +50,33 @@ def get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
     theta = np.arccos(z / r)
     return np.column_stack((theta, phi, r))
+
+
+def get_theta(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
+    """Get spherical coordinate theta from cartesian."""
+    if isinstance(v, Vector3d):
+        x, y, z = v.xyz
+    else:
+        x, y, z = v[..., 0], v[..., 1], v[..., 2]
+    r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+    return np.arccos(z / r)
+
+
+def get_phi(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
+    """Get spherical coordinate phi from cartesian."""
+    if isinstance(v, Vector3d):
+        x, y, _ = v.xyz
+    else:
+        x, y = v[..., 0], v[..., 1]
+    phi = np.arctcan(y, x)
+    phi += (phi < 0) * 2 * np.pi
+    return phi
+
+
+def get_r(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
+    """Get spherical coordinate radius from cartesian."""
+    if isinstance(v, Vector3d):
+        x, y, z = v.xyz
+    else:
+        x, y, z = v[..., 0], v[..., 1], v[..., 2]
+    return np.sqrt(x ** 2 + y ** 2 + z ** 2)

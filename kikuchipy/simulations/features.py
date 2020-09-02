@@ -47,35 +47,35 @@ class KikuchiBand(CrystalPlane):
         pass
 
     @property
-    def coordinates(self):
+    def coordinates(self) -> np.ndarray:
         return self._coordinates
 
     @property
-    def x_d(self):
+    def x_detector(self) -> np.ndarray:
         return self.coordinates[..., 0]
 
     @property
-    def y_d(self):
+    def y_detector(self) -> np.ndarray:
         return self.coordinates[..., 1]
 
     @property
-    def z_d(self):
+    def z_detector(self) -> np.ndarray:
         return self.coordinates[..., 2]
 
     @property
-    def x_g(self):
-        return self.x_d / self.z_d
+    def x_gnomonic(self) -> np.ndarray:
+        return self.x_detector / self.z_detector
 
     @property
-    def y_g(self):
-        return self.y_d / self.z_d
+    def y_gnomonic(self) -> np.ndarray:
+        return self.y_detector / self.z_detector
 
     @property
-    def polar_coordinates(self):
+    def polar_coordinates(self) -> np.ndarray:
         return get_polar(self.coordinates)
 
     @property
-    def hesse_distance(self):
+    def hesse_distance(self) -> np.ndarray:
         """Distance from origin, i.e. the right-angle component of
         distance of the pole.
         """
@@ -83,11 +83,11 @@ class KikuchiBand(CrystalPlane):
         return np.tan(0.5 * np.pi - theta)
 
     @property
-    def hesse_alpha(self):
+    def hesse_alpha(self) -> np.ndarray:
         return np.arccos(self.hesse_distance / self.hesse_radius)
 
     @property
-    def alpha_g(self):
+    def alpha_g(self) -> np.ndarray:
         """Angle from PC (0, 0) to point on circle where the line cuts
         the circle.
         """
@@ -97,35 +97,35 @@ class KikuchiBand(CrystalPlane):
         )
 
     @property
-    def within_hesse_radius(self):
-        is_full_upper = self.z_d > -1e-5
+    def within_hesse_radius(self) -> np.ndarray:
+        is_full_upper = self.z_detector > -1e-5
         in_circle = np.abs(self.hesse_distance) < self.hesse_radius
         return np.logical_and(in_circle, is_full_upper)
 
     @property
-    def plane_trace_x_g(self):
+    def plane_trace_x_g(self) -> np.ndarray:
         a1, a2 = self.alpha_g
-        return self.hesse_radius * np.row_stack((np.cos(a1), np.cos(a2)))
+        return self.hesse_radius * np.column_stack((np.cos(a1), np.cos(a2)))
 
     @property
-    def plane_trace_y_g(self):
+    def plane_trace_y_g(self) -> np.ndarray:
         a1, a2 = self.alpha_g
-        return self.hesse_radius * np.row_stack((np.sin(a1), np.sin(a2)))
+        return self.hesse_radius * np.column_stack((np.sin(a1), np.sin(a2)))
 
     @property
-    def plane_trace_g(self):
+    def plane_trace_g(self) -> np.ndarray:
         a1, a2 = self.alpha_g
-        return self.hesse_radius * np.row_stack(
+        return self.hesse_radius * np.column_stack(
             (np.cos(a1), np.sin(a1), np.cos(a2), np.sin(a2))
         )
 
     @property
-    def hesse_line_x(self):
+    def hesse_line_x(self) -> np.ndarray:
         phi = self.polar_coordinates[..., 1]
         return -self.hesse_distance * np.cos(phi)
 
     @property
-    def hesse_line_y(self):
+    def hesse_line_y(self) -> np.ndarray:
         phi = self.polar_coordinates[..., 1]
         return -self.hesse_distance * np.sin(phi)
 

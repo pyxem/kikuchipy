@@ -24,14 +24,22 @@ from kikuchipy.projections.ebsd_projections import (
 )
 from kikuchipy.projections.spherical_projection import (
     get_polar,
+    get_theta,
+    get_phi,
+    get_r,
     SphericalProjection,
 )
+from kikuchipy.projections.hesse_normal_form import HesseNormalForm
 
 __all__ = [
     "GnomonicProjection",
     "get_polar",
+    "get_theta",
+    "get_phi",
+    "get_r",
     "detector2sample",
     "detector2direct_lattice",
     "detector2reciprocal_lattice",
     "SphericalProjection",
+    "HesseNormalForm",
 ]
