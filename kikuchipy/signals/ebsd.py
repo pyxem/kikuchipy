@@ -94,7 +94,7 @@ class EBSD(CommonImage, Signal2D):
         else:
             self.detector = EBSDDetector(
                 shape=self.axes_manager.signal_shape,
-                pixel_size=self.axes_manager.signal_axes[0].scale,
+                px_size=self.axes_manager.signal_axes[0].scale,
             )
 
         # Update metadata if object is initialised from numpy array

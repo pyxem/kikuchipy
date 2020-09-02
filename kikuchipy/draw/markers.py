@@ -18,7 +18,7 @@
 
 from typing import Union
 
-from hyperspy.utils.markers import line_segment, point, text, rectangle
+from hyperspy.utils.markers import line_segment, point, text
 import numpy as np
 
 
@@ -38,7 +38,10 @@ def get_line_segment_list(lines: Union[list, np.ndarray], **kwargs) -> list:
         List of :class:`hyperspy.utils.markers.line_segment`.
     """
     lines = np.atleast_2d(lines)
-    return [line_segment(x1, y1, x2, y2, **kwargs) for x1, y1, x2, y2 in lines]
+    return [
+        line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kwargs)
+        for x1, y1, x2, y2 in lines
+    ]
 
 
 def get_point_list(points: Union[list, np.ndarray], **kwargs) -> list:

@@ -25,7 +25,7 @@ class EBSDDetector:
     def __init__(
         self,
         shape: Tuple[int, int] = (1, 1),
-        pixel_size: float = 1,
+        px_size: float = 1,
         binning: int = 1,
         tilt: float = 0,
         sample_tilt: float = 70,
@@ -42,7 +42,7 @@ class EBSDDetector:
         shape
             Number of detector rows and columns in pixels. Default is
             (1, 1).
-        pixel_size
+        px_size
             Size of binned detector pixel in um, assuming a square pixel
             shape. Default is 1 um.
         binning
@@ -67,7 +67,7 @@ class EBSDDetector:
             assumed.
         """
         self.shape = shape
-        self.pixel_size = pixel_size
+        self.px_size = px_size
         self.binning = binning
         self.tilt = tilt
         self.sample_tilt = sample_tilt
@@ -94,12 +94,12 @@ class EBSDDetector:
     @property
     def height(self) -> float:
         """Detector height in microns."""
-        return self.nrows * self.pixel_size
+        return self.nrows * self.px_size
 
     @property
     def width(self) -> float:
         """Detector width in microns."""
-        return self.ncols * self.pixel_size
+        return self.ncols * self.px_size
 
     @property
     def aspect_ratio(self) -> float:
@@ -120,6 +120,16 @@ class EBSDDetector:
     def pc(self, value: Union[np.ndarray, List, Tuple]):
         """Set all PC coordinates."""
         self.pcx, self.pcy, self.pcz = value
+
+    @property
+    def pc_average(self) -> tuple:
+        pc_mean = np.zeros(3)
+        for i, pc in enumerate([self.pcx, self.pcy, self.pcz]):
+            if isinstance(pc, np.ndarray):
+                pc_mean[i] = pc.mean()
+            elif pc is not None:
+                pc_mean[i] = pc
+        return tuple(pc_mean.round(3))
 
     @property
     def x_min(self) -> Union[np.ndarray, float]:
@@ -153,11 +163,17 @@ class EBSDDetector:
 
     @property
     def x_scale(self) -> np.ndarray:
-        return np.diff(self.x_range) / (self.ncols - 1)  # Off-by-1 correct?
+        if self.ncols == 1:
+            return np.ones(self.pcx.size)
+        else:
+            return np.diff(self.x_range) / (self.ncols - 1)  # Off-by-1 correct?
 
     @property
     def y_scale(self) -> np.ndarray:
-        return np.diff(self.y_range) / (self.nrows - 1)  # Off-by-1 correct?
+        if self.nrows == 1:
+            return np.ones(self.pcy.size)
+        else:
+            return np.diff(self.y_range) / (self.nrows - 1)  # Off-by-1 correct?
 
     @property
     def r_max(self):
@@ -176,18 +192,10 @@ class EBSDDetector:
         )
 
     def __repr__(self) -> str:
-        pc_mean = np.zeros(3)
-        for i, pc in enumerate([self.pcx, self.pcy, self.pcz]):
-            if isinstance(pc, np.ndarray):
-                pc_mean[i] = pc.mean()
-            elif pc is not None:
-                pc_mean[i] = pc
         return (
-            f"EBSDDetector {self.shape}\n  "
-            f"pixel_size {self.pixel_size} um, "
-            f"binning {self.binning}, "
-            f"tilt {self.tilt}\n  "
-            f"pcx {pc_mean[0]}, pcy {pc_mean[1]}, pcz {pc_mean[2]}"
+            f"{self.__class__.__name__} {self.shape}, "
+            f"px_size {self.px_size} um, binning {self.binning}, "
+            f"tilt {self.tilt}, pc {self.pc_average}"
         )
 
     def _set_pc_convention(self, convention: str):
@@ -212,28 +220,28 @@ class EBSDDetector:
         """Convert PC from Bruker to EMsoft convention."""
         new_x = self.width * (self.pcx - 0.5)
         new_y = self.height * (0.5 - self.pcy)
-        new_z = self.height * self.pixel_size * self.pcz
+        new_z = self.height * self.px_size * self.pcz
         return new_x, new_y, new_z
 
     def _emsoft2bruker(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Convert PC from EMsoft to Bruker convention."""
         new_x = (self.pcx / self.width) + 0.5
         new_y = 0.5 - (self.pcy / self.height)
-        new_z = self.pcz / (self.height * self.pixel_size)
+        new_z = self.pcz / (self.height * self.px_size)
         return new_x, new_y, new_z
 
     def _tsl2emsoft(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Convert PC from EDAX TSL to EMsoft convention."""
         new_x = self.width * (self.pcx - 0.5)
         new_y = self.height * (0.5 - self.pcy)
-        new_z = self.width * self.pixel_size * self.pcz
+        new_z = self.width * self.px_size * self.pcz
         return new_x, new_y, new_z
 
     def _emsoft2tsl(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Convert PC from EMsoft to EDAX TSL convention."""
         new_x = (self.pcx / self.width) + 0.5
         new_y = 0.5 - (self.pcy / self.height)
-        new_z = self.pcz / (self.width * self.pixel_size)
+        new_z = self.pcz / (self.width * self.px_size)
         return new_x, new_y, new_z
 
     def _tsl2bruker(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -248,7 +256,7 @@ class EBSDDetector:
         """Convert PC from Oxford to EMsoft convention."""
         new_x = self.width * (self.pcx - 0.5)
         new_y = self.height * (self.pcy - 0.5)
-        new_z = self.width * self.pixel_size * self.pcz
+        new_z = self.width * self.px_size * self.pcz
         return new_x, new_y, new_z
 
     def to_emsoft(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:

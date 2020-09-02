@@ -30,7 +30,7 @@ class TestEBSDDetector:
         det = EBSDDetector(
             nrows=nrows,
             ncols=ncols,
-            pixel_size=pixel_size,
+            px_size=pixel_size,
             binning=binning,
             tilt=tilt,
         )

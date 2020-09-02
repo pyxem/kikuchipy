@@ -19,92 +19,21 @@
 from diffsims.crystallography import CrystalPlane
 import numpy as np
 
-from kikuchipy.projections import (
-    detector2reciprocal_lattice,
-    detector2direct_lattice,
-    get_polar,
-)
-
-
-class GeometricEBSD:
-    def __init__(
-        self, detector, reciprocal_lattice_point, orientation,
-    ):
-        self.detector = detector
-        self.orientation = orientation
-
-        sample_tilt = detector.sample_tilt
-        detector_tilt = detector.tilt
-
-        phase = reciprocal_lattice_point.phase
-        hkl = reciprocal_lattice_point._hkldata
-        hkl_transposed = hkl.T
-        lattice = phase.structure.lattice
-
-        # Get Kikuchi bands
-        # U_Kstar, transformation from detector frame D to reciprocal crystal
-        # lattice frame Kstar
-        det2recip = detector2reciprocal_lattice(
-            sample_tilt=sample_tilt,
-            detector_tilt=detector_tilt,
-            lattice=lattice,
-            orientation=orientation,
-        )
-        band_coordinates = det2recip.T.dot(hkl_transposed).T
-        upper_hemisphere = band_coordinates[..., 2] > 0
-        upper_hkl = hkl[upper_hemisphere]
-        self.bands = KikuchiBand(
-            phase=phase,
-            hkl=upper_hkl,
-            coordinates=band_coordinates[upper_hemisphere],
-        )
-
-        # Get zone axes
-        # U_K, transformation from detector frame D to direct crystal lattice
-        # frame K
-        det2direct = detector2direct_lattice(
-            sample_tilt=sample_tilt,
-            detector_tilt=detector_tilt,
-            lattice=lattice,
-            orientation=orientation,
-        )
-        hkl_transposed_upper = hkl_transposed[..., upper_hemisphere]
-        axis_coordinates = det2direct.T.dot(hkl_transposed_upper).T
-        self.zone_axes = ZoneAxis(
-            phase=phase, hkl=upper_hkl, coordinates=axis_coordinates,
-        )
-
-        structure_factor = reciprocal_lattice_point.structure_factor
-        self.bands._structure_factor = structure_factor
-        self.zone_axes._structure_factor = structure_factor
-
-    @property
-    def plane_trace_detector_coordinates(self):
-        pcx, pcy, pcz = self.detector.pc
-        x_g = self.bands.plane_trace_x_g
-        x_g = (x_g + (pcx / pcz)) / self.detector.x_scale
-        y_g = -self.bands.plane_trace_y_g
-        y_g = (y_g + (pcy / pcz)) / self.detector.y_scale
-        return np.row_stack((x_g[0], y_g[0], x_g[1], y_g[1]))
-
-    @property
-    def zone_axes_detector_coordinates(self):
-        pcx, pcy, pcz = self.detector.pc
-        x_g = self.zone_axes.x_g
-        x_g = (x_g + (pcx / pcz)) / self.detector.x_scale
-        y_g = -self.zone_axes.y_g
-        y_g = (y_g + (pcy / pcz)) / self.detector.y_scale
-        return np.row_stack((x_g, y_g))
-
-    @property
-    def zone_axes_label_detector_coordinates(self):
-        zone_axes_coords = self.zone_axes_detector_coordinates
-        zone_axes_coords[1] -= 0.02 * self.detector.nrows
-        return zone_axes_coords
+from kikuchipy.projections import get_polar
 
 
 class KikuchiBand(CrystalPlane):
+    hesse_radius = 10
+
     def __init__(self, phase, hkl, coordinates=None):
+        """Center position of a Kikuchi band on a detector.
+
+        Parameters
+        ----------
+        phase
+        hkl
+        coordinates
+        """
         super().__init__(phase=phase, hkl=hkl)
         self._coordinates = coordinates
 
@@ -152,12 +81,6 @@ class KikuchiBand(CrystalPlane):
         """
         theta = self.polar_coordinates[..., 0]
         return np.tan(0.5 * np.pi - theta)
-
-    @property
-    def hesse_radius(self):
-        theta = self.polar_coordinates[..., 0]
-        arbitrary_factor = 0.5
-        return arbitrary_factor * np.tan(np.max(theta))
 
     @property
     def hesse_alpha(self):
@@ -208,4 +131,13 @@ class KikuchiBand(CrystalPlane):
 
 
 class ZoneAxis(KikuchiBand):
-    pass
+    def __init__(self, phase, hkl, coordinates=None):
+        """Position of a zone axis on a detector.
+
+        Parameters
+        ----------
+        phase
+        hkl
+        coordinates
+        """
+        super().__init__(phase=phase, hkl=hkl, coordinates=coordinates)

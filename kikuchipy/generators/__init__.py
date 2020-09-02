@@ -24,8 +24,12 @@ This generator workflow is adopted from
 
 from kikuchipy.generators.virtual_bse_generator import VirtualBSEGenerator
 from kikuchipy.generators import util
+from kikuchipy.generators.ebsd_simulation_generator import (
+    EBSDSimulationGenerator,
+)
 
 __all__ = [
+    "EBSDSimulationGenerator",
     "util",
     "VirtualBSEGenerator",
 ]

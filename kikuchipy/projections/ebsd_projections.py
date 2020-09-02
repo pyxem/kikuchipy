@@ -49,7 +49,7 @@ def detector2direct_lattice(
     sample_tilt: float,
     detector_tilt: float,
     lattice: Lattice,
-    orientation: quaternion.Orientation,
+    orientation: quaternion.Rotation,
 ) -> np.ndarray:
     """Rotation U_K from detector frame D to direct crystal lattice
     frame K.
@@ -86,7 +86,7 @@ def detector2reciprocal_lattice(
     sample_tilt: float,
     detector_tilt: float,
     lattice: Lattice,
-    orientation: quaternion.Orientation,
+    orientation: quaternion.Rotation,
 ) -> np.ndarray:
     """Rotation U_Kstar from detector to reciprocal crystal lattice
     frame Kstar.
