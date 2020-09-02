@@ -18,7 +18,7 @@
 
 from typing import Union
 
-from hyperspy.utils.markers import line_segment, point
+from hyperspy.utils.markers import line_segment, point, text, rectangle
 import numpy as np
 
 
@@ -58,6 +58,30 @@ def get_point_list(points: Union[list, np.ndarray], **kwargs) -> list:
     """
     points = np.atleast_2d(points)
     return [point(x=x, y=y, **kwargs) for x, y in points]
+
+
+def get_text_list(texts: list, coordinates: np.ndarray, **kwargs) -> list:
+    """Return a list of text markers.
+
+    Parameters
+    ----------
+    texts :
+        A list of texts.
+    coordinates :
+        On the form [[x0, y0], [x1, y1], ...].
+    kwargs :
+        Keyword arguments allowed by :class:`matplotlib.pyplot.axvline.`
+
+    Returns
+    -------
+    marker_list :
+        List of :class:`hyperspy.utils.markers.text`.
+    """
+    coordinates = np.atleast_2d(coordinates)
+    return [
+        text(x=x, y=y, text=t, **kwargs)
+        for t, (x, y) in zip(texts, coordinates)
+    ]
 
 
 def permanent_on_signal(signal, marker_list: list):

@@ -96,6 +96,12 @@ class GeometricEBSD:
         y_g = (y_g + (pcy / pcz)) / self.detector.y_scale
         return np.row_stack((x_g, y_g))
 
+    @property
+    def zone_axes_label_detector_coordinates(self):
+        zone_axes_coords = self.zone_axes_detector_coordinates
+        zone_axes_coords[1] -= 0.02 * self.detector.nrows
+        return zone_axes_coords
+
 
 class KikuchiBand(CrystalPlane):
     def __init__(self, phase, hkl, coordinates=None):
