@@ -37,6 +37,7 @@ def get_line_segment_list(lines: Union[list, np.ndarray], **kwargs) -> list:
     marker_list :
         List of :class:`hyperspy.utils.markers.line_segment`.
     """
+    lines = np.atleast_2d(lines)
     return [line_segment(x1, y1, x2, y2, **kwargs) for x1, y1, x2, y2 in lines]
 
 
@@ -55,6 +56,7 @@ def get_point_list(points: Union[list, np.ndarray], **kwargs) -> list:
     marker_list :
         List of :class:`hyperspy.utils.markers.point`.
     """
+    points = np.atleast_2d(points)
     return [point(x=x, y=y, **kwargs) for x, y in points]
 
 

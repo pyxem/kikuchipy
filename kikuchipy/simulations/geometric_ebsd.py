@@ -80,23 +80,21 @@ class GeometricEBSD:
 
     @property
     def plane_trace_detector_coordinates(self):
-        x_g = self.bands.plane_trace_x_g
-        y_g = self.bands.plane_trace_y_g
         pcx, pcy, pcz = self.detector.pc
-        ncols, nrows = self.detector.shape
-        x_d = (x_g + pcx) * ncols * pcz + 15  # ?
-        y_d = (1 - pcy - y_g) * nrows * pcz
-        return np.row_stack((x_d[0], y_d[0], x_d[1], y_d[1]))
+        x_g = self.bands.plane_trace_x_g
+        x_g = (x_g + (pcx / pcz)) / self.detector.x_scale
+        y_g = -self.bands.plane_trace_y_g
+        y_g = (y_g + (pcy / pcz)) / self.detector.y_scale
+        return np.row_stack((x_g[0], y_g[0], x_g[1], y_g[1]))
 
     @property
     def zone_axes_detector_coordinates(self):
-        x_g = self.zone_axes.x_g
-        y_g = self.zone_axes.y_g
         pcx, pcy, pcz = self.detector.pc
-        ncols, nrows = self.detector.shape
-        x_d = (x_g + pcx) * ncols * pcz + 15
-        y_d = (1 - pcy - y_g) * nrows * pcz
-        return np.row_stack((x_d, y_d))
+        x_g = self.zone_axes.x_g
+        x_g = (x_g + (pcx / pcz)) / self.detector.x_scale
+        y_g = -self.zone_axes.y_g
+        y_g = (y_g + (pcy / pcz)) / self.detector.y_scale
+        return np.row_stack((x_g, y_g))
 
 
 class KikuchiBand(CrystalPlane):
@@ -152,7 +150,7 @@ class KikuchiBand(CrystalPlane):
     @property
     def hesse_radius(self):
         theta = self.polar_coordinates[..., 0]
-        arbitrary_factor = 0.25
+        arbitrary_factor = 0.5
         return arbitrary_factor * np.tan(np.max(theta))
 
     @property

@@ -152,6 +152,14 @@ class EBSDDetector:
         return np.stack((self.y_min, self.y_max))
 
     @property
+    def x_scale(self) -> np.ndarray:
+        return np.diff(self.x_range) / (self.ncols - 1)  # Off-by-1 correct?
+
+    @property
+    def y_scale(self) -> np.ndarray:
+        return np.diff(self.y_range) / (self.nrows - 1)  # Off-by-1 correct?
+
+    @property
     def r_max(self):
         """Maximum distance from PC to detector edge."""
         x_min, x_max = self.x_range
