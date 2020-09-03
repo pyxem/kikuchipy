@@ -27,15 +27,16 @@ from kikuchipy.projections.spherical import get_phi, get_theta, get_r
 
 
 class KikuchiBand(CrystalPlane):
-    gnomonic_radius = 10
-
     def __init__(
         self,
         phase: Phase,
         hkl: Union[Vector3d, np.ndarray, list, tuple],
-        coordinates: Optional[np.ndarray] = None,
+        coordinates: np.ndarray,
+        in_pattern: np.ndarray,
+        gnomonic_radius: Union[float, np.ndarray] = 10,
     ):
-        """Center positions of Kikuchi bands on the detector.
+        """Center positions of Kikuchi bands on the detector for n
+        simulated patterns.
 
         Parameters
         ----------
@@ -43,19 +44,59 @@ class KikuchiBand(CrystalPlane):
             A phase container with a crystal structure and a space and
             point group describing the allowed symmetry operations.
         hkl
-            Miller indices.
+            All Miller indices present in any of the n patterns.
         coordinates
-            Kikuchi band coordinates on the detector.
+            Detector coordinates per pattern for each hkl, in the shape
+            (n, n_hkl, 3).
+        in_pattern
+            Boolean array of shape (n, n_hkl) indicating whether an hkl
+            is visible in a pattern.
+        gnomonic_radius
+            Only plane trace coordinates of bands with Hesse normal
+            form distances below this radius is returned when called
+            for.
         """
         super().__init__(phase=phase, hkl=hkl)
-        self._coordinates = coordinates
+        if coordinates.ndim == 2:
+            self._coordinates = coordinates[np.newaxis, ...]
+        else:  # ndim == 3
+            self._coordinates = coordinates
+        self._in_pattern = np.atleast_2d(in_pattern)
+        self.gnomonic_radius = gnomonic_radius
 
     def __getitem__(self, key, **kwargs):
-        return super().__getitem__(key, coordinates=self.coordinates[key])
+        # TODO: Index by patterns or bands, not only bands!
+        return super().__getitem__(
+            key,
+            coordinates=self.coordinates[key],
+            in_pattern=self.in_pattern[key],
+        )
 
     @property
     def coordinates(self) -> np.ndarray:
         return self._coordinates
+
+    @property
+    def gnomonic_radius(self) -> np.ndarray:
+        """Only plane trace coordinates of bands with Hesse normal form
+        distances below this radius is returned when called for.
+        """
+        return self._gnomonic_radius
+
+    @gnomonic_radius.setter
+    def gnomonic_radius(self, value: Union[float, np.ndarray]):
+        """Only plane trace coordinates of bands with Hesse normal form
+        distances below this radius is returned when called for.
+        """
+        self._gnomonic_radius = np.asarray(value)
+
+    @property
+    def n_patterns(self) -> int:
+        return self.coordinates.shape[0]
+
+    @property
+    def in_pattern(self) -> np.ndarray:
+        return self._in_pattern
 
     @property
     def x_detector(self) -> np.ndarray:
@@ -94,41 +135,46 @@ class KikuchiBand(CrystalPlane):
 
     @property
     def within_gnomonic_radius(self) -> np.ndarray:
+        """Return whether a plane trace is within the `gnomonic_radius`
+        as a boolean array.
+        """
         is_full_upper = self.z_detector > -1e-5
-        in_circle = np.abs(self.hesse_distance) < self.gnomonic_radius
+        gnomonic_radius = self.gnomonic_radius[:, np.newaxis]
+        in_circle = np.abs(self.hesse_distance) < gnomonic_radius
         return np.logical_and(in_circle, is_full_upper)
 
     @property
     def hesse_alpha(self) -> np.ndarray:
-        """Only angles for the planes within the Gnomonic radius are
-        returned.
+        """Hesse angle alpha. Only angles for the planes within the
+        `gnomonic_radius` are returned.
         """
-        within = self.within_gnomonic_radius
-        return np.arccos(self.hesse_distance[within] / self.gnomonic_radius)
+        hesse_distance = self.hesse_distance
+        hesse_distance[~self.within_gnomonic_radius] = np.nan
+        return np.arccos(hesse_distance / self.gnomonic_radius[:, np.newaxis])
 
     @property
     def plane_trace_coordinates(self) -> np.ndarray:
         """Plane trace coordinates P1, P2 in the plane of the detector.
 
-        Only coordinates for the planes within the Gnomonic radius are
+        Only coordinates for the planes within the `gnomonic_radius` are
         returned.
         """
-        within = self.within_gnomonic_radius
-
-        phi = self.phi_polar[within]
+        # Get alpha1 and alpha2 angles
+        phi = self.phi_polar
         hesse_alpha = self.hesse_alpha
-
-        size = hesse_alpha.size
-        plane_trace = np.zeros((size, 4), dtype=np.float32)
+        plane_trace = np.zeros((self.n_patterns, self.size, 4))
         alpha1 = phi - np.pi + hesse_alpha
         alpha2 = phi - np.pi - hesse_alpha
 
-        plane_trace[:, 0] = np.cos(alpha1)
-        plane_trace[:, 1] = np.cos(alpha2)
-        plane_trace[:, 2] = np.sin(alpha1)
-        plane_trace[:, 3] = np.sin(alpha2)
+        # Calculate start and end points for the plane traces
+        plane_trace[..., 0] = np.cos(alpha1)
+        plane_trace[..., 1] = np.cos(alpha2)
+        plane_trace[..., 2] = np.sin(alpha1)
+        plane_trace[..., 3] = np.sin(alpha2)
 
-        return self.gnomonic_radius * plane_trace
+        # And remember to multiply by the gnomonic radius
+        # TODO: Surely, this can be done better!
+        return (self.gnomonic_radius * plane_trace.T).T
 
     @property
     def hesse_line_x(self) -> np.ndarray:
@@ -140,13 +186,13 @@ class KikuchiBand(CrystalPlane):
 
 
 class ZoneAxis(CrystalPlane):
-    gnomonic_radius = 10
-
     def __init__(
         self,
         phase: Phase,
         hkl: Union[Vector3d, np.ndarray, list, tuple],
-        coordinates: Optional[np.ndarray] = None,
+        coordinates: np.ndarray,
+        in_pattern: np.ndarray,
+        gnomonic_radius: Union[float, np.ndarray] = 10,
     ):
         """Positions of zone axes on the detector.
 
@@ -159,9 +205,39 @@ class ZoneAxis(CrystalPlane):
             Miller indices.
         coordinates
             Zone axes coordinates on the detector.
+        in_pattern
+            Boolean array of shape (n, n_hkl) indicating whether an hkl
+            is visible in a pattern.
+        gnomonic_radius
+            Only plane trace coordinates of bands with Hesse normal
+            form distances below this radius is returned when called
+            for.
         """
         super().__init__(phase=phase, hkl=hkl)
-        self._coordinates = coordinates
+        if coordinates.ndim == 2:
+            self._coordinates = coordinates[np.newaxis, ...]
+        else:  # ndim == 3
+            self._coordinates = coordinates
+        self._in_pattern = np.atleast_2d(in_pattern)
+        self.gnomonic_radius = gnomonic_radius
+
+    @property
+    def gnomonic_radius(self) -> np.ndarray:
+        """Only plane trace coordinates of bands with Hesse normal form
+        distances below this radius is returned when called for.
+        """
+        return self._gnomonic_radius
+
+    @gnomonic_radius.setter
+    def gnomonic_radius(self, value: Union[float, np.ndarray]):
+        """Only plane trace coordinates of bands with Hesse normal form
+        distances below this radius is returned when called for.
+        """
+        r = np.asarray(value)
+        if r.ndim == 1:
+            self._gnomonic_radius = r[:, np.newaxis]
+        else:
+            self._gnomonic_radius = r
 
     def __getitem__(self, key, **kwargs):
         return super().__getitem__(key, coordinates=self.coordinates[key])

@@ -38,7 +38,7 @@ class GeometricalEBSDSimulation:
         detector: EBSDDetector,
         reciprocal_lattice_point: CrystalPlane,
         orientations: quaternion.Rotation,
-        bands: KikuchiBand,
+        bands: Optional[KikuchiBand] = None,
         zone_axes: Optional[ZoneAxis] = None,
     ):
         """Create a geometrical EBSD simulation storing a set of center
@@ -68,10 +68,6 @@ class GeometricalEBSDSimulation:
         self.reciprocal_lattice_point = reciprocal_lattice_point
         self.bands = bands
         self.zone_axes = zone_axes
-
-        # Set outer plotting radius
-        self.bands.gnomonic_radius = detector.r_max
-        self.zone_axes.gnomonic_radius = detector.r_max
 
     @property
     def bands_detector_coordinates(self) -> np.ndarray:

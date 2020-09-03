@@ -72,7 +72,7 @@ def detector2direct_lattice(
     _detector2sample = detector2sample(sample_tilt, detector_tilt)
 
     # Rotation U_O from S to the Cartesian crystal frame C
-    sample2cartesian = orientation.to_matrix()[0]
+    sample2cartesian = orientation.to_matrix()
 
     # Rotation U_A from C to the direct crystal lattice frame K
     structure_matrix = get_direct_structure_matrix(lattice)

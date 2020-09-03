@@ -90,10 +90,7 @@ class EBSDSimulationGenerator:
         hkl = rlp._hkldata
         hkl_transposed = hkl.T
 
-        # Number of orientations
-        n = self.orientations.size
-
-        # Get Kikuchi band coordinates
+        # Get Kikuchi band coordinates for all bands in all patterns
         # U_Kstar, transformation from detector frame D to reciprocal crystal
         # lattice frame Kstar
         # TODO: Possible bottleneck due to large dot products! Room for
@@ -105,36 +102,49 @@ class EBSDSimulationGenerator:
             orientation=self.orientations,
         )  # (3, n, 3)
         band_coordinates = det2recip.T.dot(hkl_transposed).T  # (n hkl, n, 3)
+
+        # Determine whether a band is visible in a pattern
         upper_hemisphere = band_coordinates[..., 2] > 0
-        all_hkl = np.tile(hkl[:, np.newaxis, :], (1, n, 1))
-        upper_hkl = all_hkl[upper_hemisphere]
+        is_in_some_pattern = np.sum(upper_hemisphere, axis=1) != 0
+
+        # Get bands that were in some pattern and their coordinates in the
+        # proper shape
+        hkl = hkl[is_in_some_pattern]
+        hkl_in_pattern = upper_hemisphere[is_in_some_pattern].T
+        band_coordinates = np.rollaxis(
+            band_coordinates[is_in_some_pattern], axis=1
+        )
+
+        # And store it all
         bands = KikuchiBand(
             phase=phase,
-            hkl=upper_hkl,
-            coordinates=band_coordinates[upper_hemisphere],
+            hkl=hkl,
+            coordinates=band_coordinates,
+            in_pattern=hkl_in_pattern,
+            gnomonic_radius=self.detector.r_max,
         )
 
         # Get zone axes coordinates
         # U_K, transformation from detector frame D to direct crystal lattice
         # frame K
-        det2direct = detector2direct_lattice(
-            sample_tilt=self.detector.sample_tilt,
-            detector_tilt=self.detector.tilt,
-            lattice=phase.structure.lattice,
-            orientation=self.orientations,
-        )
-        hkl_transposed_upper = hkl_transposed[..., upper_hemisphere]
-        axis_coordinates = det2direct.T.dot(hkl_transposed_upper).T
-        zone_axes = ZoneAxis(
-            phase=phase, hkl=upper_hkl, coordinates=axis_coordinates
-        )
+        #        det2direct = detector2direct_lattice(
+        #            sample_tilt=self.detector.sample_tilt,
+        #            detector_tilt=self.detector.tilt,
+        #            lattice=phase.structure.lattice,
+        #            orientation=self.orientations,
+        #        )
+        #        hkl_transposed_upper = hkl_transposed[..., upper_hemisphere]
+        #        axis_coordinates = det2direct.T.dot(hkl_transposed_upper).T
+        #        zone_axes = ZoneAxis(
+        #            phase=phase, hkl=upper_hkl, coordinates=axis_coordinates
+        #        )
 
         return GeometricalEBSDSimulation(
             detector=self.detector,
             reciprocal_lattice_point=rlp,
             orientations=self.orientations,
             bands=bands,
-            zone_axes=zone_axes,
+            #            zone_axes=zone_axes,
         )
 
     def _rlp_phase_is_compatible(self, rlp: CrystalPlane):
