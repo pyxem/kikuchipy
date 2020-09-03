@@ -18,14 +18,13 @@
 
 from diffpy.structure import Lattice
 import numpy as np
-from orix import quaternion, vector
+from orix.quaternion import Rotation
+from orix.vector import neo_euler, Vector3d
 
 from kikuchipy.crystallography import get_direct_structure_matrix
 
 
-def detector2sample(
-    sample_tilt: float, detector_tilt: float
-) -> quaternion.Rotation:
+def detector2sample(sample_tilt: float, detector_tilt: float) -> Rotation:
     """Rotation U_S to align detector frame D with sample frame S.
 
     Parameters
@@ -39,17 +38,17 @@ def detector2sample(
     -------
     np.ndarray
     """
-    x_axis = vector.Vector3d.xvector()
+    x_axis = Vector3d.xvector()
     tilt = -np.deg2rad((sample_tilt - 90) - detector_tilt)
-    ax_angle = vector.neo_euler.AxAngle.from_axes_angles(x_axis, tilt)
-    return quaternion.Rotation.from_neo_euler(ax_angle).to_matrix()[0]
+    ax_angle = neo_euler.AxAngle.from_axes_angles(x_axis, tilt)
+    return Rotation.from_neo_euler(ax_angle).to_matrix()[0]
 
 
 def detector2direct_lattice(
     sample_tilt: float,
     detector_tilt: float,
     lattice: Lattice,
-    orientation: quaternion.Rotation,
+    orientation: Rotation,
 ) -> np.ndarray:
     """Rotation U_K from detector frame D to direct crystal lattice
     frame K.
@@ -86,7 +85,7 @@ def detector2reciprocal_lattice(
     sample_tilt: float,
     detector_tilt: float,
     lattice: Lattice,
-    orientation: quaternion.Rotation,
+    orientation: Rotation,
 ) -> np.ndarray:
     """Rotation U_Kstar from detector to reciprocal crystal lattice
     frame Kstar.

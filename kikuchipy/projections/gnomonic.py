@@ -21,7 +21,7 @@ from typing import Union
 import numpy as np
 from orix.vector import Vector3d
 
-from kikuchipy.projections.spherical_projection import SphericalProjection
+from kikuchipy.projections.spherical import SphericalProjection
 
 
 class GnomonicProjection(SphericalProjection):

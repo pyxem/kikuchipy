@@ -16,30 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from kikuchipy.projections.gnomonic_projection import GnomonicProjection
-from kikuchipy.projections.ebsd_projections import (
-    detector2sample,
-    detector2direct_lattice,
-    detector2reciprocal_lattice,
-)
-from kikuchipy.projections.spherical_projection import (
-    get_polar,
-    get_theta,
-    get_phi,
-    get_r,
-    SphericalProjection,
-)
-from kikuchipy.projections.hesse_normal_form import HesseNormalForm
+from kikuchipy.projections import ebsd, gnomonic, hesse_normal_form, spherical
 
 __all__ = [
-    "GnomonicProjection",
-    "get_polar",
-    "get_theta",
-    "get_phi",
-    "get_r",
-    "detector2sample",
-    "detector2direct_lattice",
-    "detector2reciprocal_lattice",
-    "SphericalProjection",
-    "HesseNormalForm",
+    "ebsd",
+    "gnomonic",
+    "hesse_normal_form",
+    "spherical",
 ]

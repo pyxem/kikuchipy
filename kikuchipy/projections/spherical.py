@@ -68,7 +68,7 @@ def get_phi(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
         x, y, _ = v.xyz
     else:
         x, y = v[..., 0], v[..., 1]
-    phi = np.arctcan(y, x)
+    phi = np.arctan2(y, x)
     phi += (phi < 0) * 2 * np.pi
     return phi
 

@@ -20,7 +20,7 @@ from typing import Optional
 
 import numpy as np
 
-from kikuchipy.projections import get_theta
+from kikuchipy.projections.spherical import get_theta
 
 
 class HesseNormalForm:
@@ -71,7 +71,7 @@ class HesseNormalForm:
             Hesse normal form coordinates distance and angle.
         """
         theta = get_theta(cartesian)
-        hesse = np.zeros(theta.shape[0:-1] + (2,))
+        hesse = np.zeros((theta.size, 2))
         hesse_distance = np.tan(0.5 * np.pi - theta)
         hesse[..., 0] = hesse_distance
         hesse[..., 1] = np.arccos(hesse_distance / radius)

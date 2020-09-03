@@ -69,6 +69,10 @@ class GeometricalEBSDSimulation:
         self.bands = bands
         self.zone_axes = zone_axes
 
+        # Set outer plotting radius
+        self.bands.gnomonic_radius = detector.r_max
+        self.zone_axes.gnomonic_radius = detector.r_max
+
     @property
     def bands_detector_coordinates(self) -> np.ndarray:
         """Start and end point coordinates of bands in uncalibrated
@@ -80,13 +84,15 @@ class GeometricalEBSDSimulation:
             On the form [[x00, y00, x01, y01], [x10, y10, x11, y11],
             ...].
         """
-        band_coords = np.zeros((self.bands.size, 4), dtype=np.float32)
+        plane_trace_coords = self.bands.plane_trace_coordinates
+        size = plane_trace_coords.shape[0]
+        band_coords = np.zeros((size, 4), dtype=np.float32)
         pcx, pcy, pcz = self.detector.pc
         band_coords[:, ::2] = (
-            self.bands.plane_trace_x_g + pcx / pcz
+            plane_trace_coords[:, :2] + pcx / pcz
         ) / self.detector.x_scale
         band_coords[:, 1::2] = (
-            -self.bands.plane_trace_y_g + pcy / pcz
+            -plane_trace_coords[:, 2:] + pcy / pcz
         ) / self.detector.y_scale
         return band_coords
 
@@ -100,13 +106,16 @@ class GeometricalEBSDSimulation:
         zone_axes_coords
             Column sorted, on the form [[x0, y0], [x1, y1], ...].
         """
-        zone_axes_coords = np.zeros((self.zone_axes.size, 2), dtype=np.float32)
+        x_gnomonic = self.zone_axes.x_gnomonic
+        y_gnomonic = self.zone_axes.y_gnomonic
+        size = x_gnomonic.size
+        zone_axes_coords = np.zeros((size, 2), dtype=np.float32)
         pcx, pcy, pcz = self.detector.pc
         zone_axes_coords[:, 0] = (
-            self.zone_axes.x_gnomonic + pcx / pcz
+            x_gnomonic + pcx / pcz
         ) / self.detector.x_scale
         zone_axes_coords[:, 1] = (
-            -self.zone_axes.y_gnomonic + pcy / pcz
+            -y_gnomonic + pcy / pcz
         ) / self.detector.y_scale
         return zone_axes_coords
 
@@ -121,34 +130,74 @@ class GeometricalEBSDSimulation:
             Column sorted, on the form [[x0, y0], [x1, y1], ...].
         """
         zone_axes_coords = self.zone_axes_detector_coordinates
-        zone_axes_coords[1] -= 0.05 * self.detector.nrows
+        zone_axes_coords[:, 1] -= 0.02 * self.detector.nrows
         return zone_axes_coords
 
     def bands_as_markers(self, **kwargs) -> list:
+        """Return a list of Kikuchi band line segment markers.
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments passed to
+            :func:`~kikuchipy.draw.markers.get_line_segment_list`.
+
+        Returns
+        -------
+        list
+        """
         return get_line_segment_list(
             lines=self.bands_detector_coordinates,
             linewidth=kwargs.pop("linewidth", 2),
             color=kwargs.pop("color", "lime"),
+            alpha=kwargs.pop("alpha", 0.7),
+            zorder=kwargs.pop("zorder", 1),
             **kwargs,
         )
 
     def zone_axes_as_markers(self, **kwargs) -> list:
+        """Return a list of zone axes point markers.
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments passed to
+            :func:`~kikuchipy.draw.markers.get_point_list`.
+
+        Returns
+        -------
+        list
+        """
         return get_point_list(
             points=self.zone_axes_detector_coordinates,
             size=kwargs.pop("size", 40),
             marker=kwargs.pop("marker", "o"),
             facecolor=kwargs.pop("facecolor", "w"),
             edgecolor=kwargs.pop("edgecolor", "k"),
-            zorder=kwargs.pop("zorder", 500),
+            zorder=kwargs.pop("zorder", 5),
+            alpha=kwargs.pop("alpha", 0.7),
             **kwargs,
         )
 
     def zone_axes_labels_as_markers(self, **kwargs) -> list:
+        """Return a list of zone axes label text markers.
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments passed to
+            :func:`~kikuchipy.draw.markers.get_text_list`.
+
+        Returns
+        -------
+        list
+        """
+        zone_axes = self.zone_axes[self.zone_axes.within_gnomonic_radius]
         return get_text_list(
-            texts=sub("[][ ]", "", str(self.zone_axes._hkldata)).split("\n"),
+            texts=sub("[][ ]", "", str(zone_axes._hkldata)).split("\n"),
             coordinates=self.zone_axes_label_detector_coordinates,
             color=kwargs.pop("color", "k"),
-            zorder=kwargs.pop("zorder", 600),
+            zorder=kwargs.pop("zorder", 5),
             ha=kwargs.pop("ha", "center"),
             bbox=kwargs.pop(
                 "bbox",
@@ -157,11 +206,24 @@ class GeometricalEBSDSimulation:
                     edgecolor="k",
                     boxstyle="round, rounding_size=0.2",
                     pad=0.1,
+                    alpha=0.7,
                 ),
             ),
         )
 
     def pc_as_markers(self, **kwargs) -> list:
+        """Return a list of projection center point markers.
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments passed to
+            :func:`~kikuchipy.draw.markers.get_point_list`.
+
+        Returns
+        -------
+        list
+        """
         pcxy = self.detector.pc[:2]
         pcxy[0, ...] *= self.detector.ncols - 1
         pcxy[1, ...] *= self.detector.nrows - 1
@@ -173,3 +235,67 @@ class GeometricalEBSDSimulation:
             edgecolor=kwargs.pop("edgecolor", "k"),
             zorder=kwargs.pop("zorder", 6),
         )
+
+    def as_markers(
+        self,
+        bands: bool = True,
+        zone_axes: bool = True,
+        zone_axes_labels: bool = True,
+        pc: bool = True,
+        bands_kwargs: Optional[dict] = None,
+        zone_axes_kwargs: Optional[dict] = None,
+        zone_axes_labels_kwargs: Optional[dict] = None,
+        pc_kwargs: Optional[dict] = None,
+    ) -> list:
+        """Return a list of all or some of the available simulation
+        markers.
+
+        Parameters
+        ----------
+        bands
+            Whether to return band markers. Default is True.
+        zone_axes
+            Whether to return zone axes markers. Default is True.
+        zone_axes_labels
+            Whether to return zone axes label markers. Default is True.
+        pc
+            Whether to return projection center markers. Default is
+            True.
+        bands_kwargs
+            Keyword arguments passed to
+            :func:`kikuchipy.draw.markers.get_line_segment_list`.
+        zone_axes_kwargs
+            Keyword arguments passed to
+            :func:`kikuchipy.draw.markers.get_point_list`.
+        zone_axes_labels_kwargs
+            Keyword arguments passed to
+            :func:`kikuchipy.draw.markers.get_text_list`.
+        pc_kwargs
+            Keyword arguments passed to
+            :func:`kikuchipy.draw.markers.get_point_list`.
+
+        Returns
+        -------
+        markers
+            A list with all markers.
+        """
+        markers = []
+        if bands:
+            if bands_kwargs is None:
+                bands_kwargs = {}
+            markers += self.bands_as_markers(**bands_kwargs)
+        if zone_axes:
+            if zone_axes_kwargs is None:
+                zone_axes_kwargs = {}
+            markers += self.zone_axes_as_markers(**zone_axes_kwargs)
+        if zone_axes_labels:
+            if zone_axes_labels_kwargs is None:
+                zone_axes_labels_kwargs = {}
+            markers += self.zone_axes_labels_as_markers(
+                **zone_axes_labels_kwargs
+            )
+        if pc:
+            if pc_kwargs is None:
+                pc_kwargs = {}
+            markers += self.pc_as_markers(**pc_kwargs)
+        return markers

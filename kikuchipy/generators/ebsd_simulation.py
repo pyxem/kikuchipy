@@ -23,7 +23,7 @@ from orix.crystal_map import Phase
 from orix.quaternion import Rotation
 
 from kikuchipy.detectors import EBSDDetector
-from kikuchipy.projections import (
+from kikuchipy.projections.ebsd import (
     detector2reciprocal_lattice,
     detector2direct_lattice,
 )

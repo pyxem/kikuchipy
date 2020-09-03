@@ -18,4 +18,4 @@
 
 from kikuchipy.draw import markers
 
-__all__ = ["markers"]
+__all__ = ["markers.py"]
