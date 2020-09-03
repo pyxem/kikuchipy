@@ -19,6 +19,7 @@
 from typing import Optional
 
 from diffsims.crystallography import CrystalPlane
+import numpy as np
 from orix.crystal_map import Phase
 from orix.quaternion import Rotation
 
@@ -48,9 +49,9 @@ class EBSDSimulationGenerator:
 
     def __repr__(self):
         return (
-            f"{self.__class__.__name__}\n  "
-            f"{self.detector}\n  {self.phase}\n  "
-            f"{self.orientations}\n  "
+            f"{self.__class__.__name__}\n"
+            f"{self.detector}\n  {self.phase}\n"
+            f"{self.orientations}\n"
         )
 
     def geometrical_simulation(
@@ -89,18 +90,24 @@ class EBSDSimulationGenerator:
         hkl = rlp._hkldata
         hkl_transposed = hkl.T
 
+        # Number of orientations
+        n = self.orientations.size
+
         # Get Kikuchi band coordinates
         # U_Kstar, transformation from detector frame D to reciprocal crystal
         # lattice frame Kstar
+        # TODO: Possible bottleneck due to large dot products! Room for
+        #  lots of improvements with dask.
         det2recip = detector2reciprocal_lattice(
             sample_tilt=self.detector.sample_tilt,
             detector_tilt=self.detector.tilt,
             lattice=phase.structure.lattice,
             orientation=self.orientations,
-        )
-        band_coordinates = det2recip.T.dot(hkl_transposed).T
+        )  # (3, n, 3)
+        band_coordinates = det2recip.T.dot(hkl_transposed).T  # (n hkl, n, 3)
         upper_hemisphere = band_coordinates[..., 2] > 0
-        upper_hkl = hkl[upper_hemisphere]
+        all_hkl = np.tile(hkl[:, np.newaxis, :], (1, n, 1))
+        upper_hkl = all_hkl[upper_hemisphere]
         bands = KikuchiBand(
             phase=phase,
             hkl=upper_hkl,

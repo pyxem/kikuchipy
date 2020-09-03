@@ -17,7 +17,9 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from kikuchipy.simulations.geometrical_ebsd import GeometricalEBSDSimulation
+from kikuchipy.simulations import features
 
 __all__ = [
     "GeometricalEBSDSimulation",
+    "features",
 ]

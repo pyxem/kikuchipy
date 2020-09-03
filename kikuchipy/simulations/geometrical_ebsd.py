@@ -89,10 +89,10 @@ class GeometricalEBSDSimulation:
         band_coords = np.zeros((size, 4), dtype=np.float32)
         pcx, pcy, pcz = self.detector.pc
         band_coords[:, ::2] = (
-            plane_trace_coords[:, :2] + pcx / pcz
+            plane_trace_coords[:, :2] + (pcx / pcz)
         ) / self.detector.x_scale
         band_coords[:, 1::2] = (
-            -plane_trace_coords[:, 2:] + pcy / pcz
+            -plane_trace_coords[:, 2:] + (pcy / pcz)
         ) / self.detector.y_scale
         return band_coords
 
@@ -112,10 +112,10 @@ class GeometricalEBSDSimulation:
         zone_axes_coords = np.zeros((size, 2), dtype=np.float32)
         pcx, pcy, pcz = self.detector.pc
         zone_axes_coords[:, 0] = (
-            x_gnomonic + pcx / pcz
+            x_gnomonic + (pcx / pcz)
         ) / self.detector.x_scale
         zone_axes_coords[:, 1] = (
-            -y_gnomonic + pcy / pcz
+            -y_gnomonic + (pcy / pcz)
         ) / self.detector.y_scale
         return zone_axes_coords
 
@@ -225,8 +225,11 @@ class GeometricalEBSDSimulation:
         list
         """
         pcxy = self.detector.pc[:2]
-        pcxy[0, ...] *= self.detector.ncols - 1
-        pcxy[1, ...] *= self.detector.nrows - 1
+        nrows, ncols = self.detector.shape
+        x_scale = ncols - 1 if ncols > 1 else 1
+        y_scale = nrows - 1 if nrows > 1 else 1
+        pcxy[0, ...] *= x_scale
+        pcxy[1, ...] *= y_scale
         return get_point_list(
             points=pcxy,
             size=kwargs.pop("size", 150),

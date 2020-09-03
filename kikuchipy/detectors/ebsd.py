@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from copy import deepcopy
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
@@ -43,8 +44,8 @@ class EBSDDetector:
             Number of detector rows and columns in pixels. Default is
             (1, 1).
         px_size
-            Size of binned detector pixel in um, assuming a square pixel
-            shape. Default is 1 um.
+            Size of unbinned detector pixel in um, assuming a square
+            pixel shape. Default is 1 um.
         binning
             Detector binning, i.e. how many pixels are binned into one.
             Default is 1, i.e. no binning.
@@ -77,6 +78,11 @@ class EBSDDetector:
         self._set_pc_convention(convention)
 
     @property
+    def specimen_scintillator_distance(self) -> float:
+        """Specimen to scintillator distance (SSD), also known as L."""
+        return self.pcz * self.height
+
+    @property
     def nrows(self) -> int:
         """Number of rows in pixels."""
         return self.shape[0]
@@ -94,12 +100,12 @@ class EBSDDetector:
     @property
     def height(self) -> float:
         """Detector height in microns."""
-        return self.nrows * self.px_size
+        return self.nrows * self.px_size * self.binning
 
     @property
     def width(self) -> float:
         """Detector width in microns."""
-        return self.ncols * self.px_size
+        return self.ncols * self.px_size * self.binning
 
     @property
     def aspect_ratio(self) -> float:
@@ -112,24 +118,31 @@ class EBSDDetector:
         return tuple(np.array(self.shape) * self.binning)
 
     @property
+    def px_size_binned(self) -> float:
+        """Binned pixel size in microns."""
+        return self.px_size * self.binning
+
+    @property
     def pc(self) -> np.ndarray:
         """All PC coordinates."""
-        return np.stack((self.pcx, self.pcy, self.pcz))
+        return np.column_stack((self.pcx, self.pcy, self.pcz))
 
     @pc.setter
     def pc(self, value: Union[np.ndarray, List, Tuple]):
         """Set all PC coordinates."""
-        self.pcx, self.pcy, self.pcz = value
+        self.pcx = value[..., 0]
+        self.pcy = value[..., 1]
+        self.pcz = value[..., 2]
 
     @property
-    def pc_average(self) -> tuple:
-        pc_mean = np.zeros(3)
-        for i, pc in enumerate([self.pcx, self.pcy, self.pcz]):
-            if isinstance(pc, np.ndarray):
-                pc_mean[i] = pc.mean()
-            elif pc is not None:
-                pc_mean[i] = pc
-        return tuple(pc_mean.round(3))
+    def pc_average(self) -> np.ndarray:
+        pc_ave = self.pc if self.pc_size == 1 else np.mean(self.pc, axis=0)
+        return pc_ave.round(3)
+
+    @property
+    def pc_size(self) -> int:
+        """Number of sets of PC coordinates."""
+        return self.pcx.size
 
     @property
     def x_min(self) -> Union[np.ndarray, float]:
@@ -144,7 +157,7 @@ class EBSDDetector:
     @property
     def x_range(self) -> np.ndarray:
         """X detector limits in gnomonic projection."""
-        return np.stack((self.x_min, self.x_max))
+        return np.column_stack((self.x_min, self.x_max))
 
     @property
     def y_min(self) -> Union[np.ndarray, float]:
@@ -159,43 +172,37 @@ class EBSDDetector:
     @property
     def y_range(self) -> np.ndarray:
         """Y detector limits in gnomonic projection."""
-        return np.stack((self.y_min, self.y_max))
+        return np.column_stack((self.y_min, self.y_max))
 
     @property
     def x_scale(self) -> np.ndarray:
         if self.ncols == 1:
-            return np.ones(self.pcx.size)
+            return np.diff(self.x_range)
         else:
-            return np.diff(self.x_range) / (self.ncols - 1)  # Off-by-1 correct?
+            return np.diff(self.x_range) / (self.ncols - 1)
 
     @property
     def y_scale(self) -> np.ndarray:
         if self.nrows == 1:
-            return np.ones(self.pcy.size)
+            return np.diff(self.y_range)
         else:
-            return np.diff(self.y_range) / (self.nrows - 1)  # Off-by-1 correct?
+            return np.diff(self.y_range) / (self.nrows - 1)
 
     @property
     def r_max(self):
         """Maximum distance from PC to detector edge."""
-        x_min, x_max = self.x_range
-        y_min, y_max = self.y_range
-        return np.sqrt(
-            np.max(
-                [
-                    x_min ** 2 + y_min ** 2,
-                    x_min ** 2 + y_max ** 2,
-                    x_max ** 2 + y_min ** 2,
-                    x_max ** 2 + y_max ** 2,
-                ]
-            )
-        )
+        corners = np.zeros((self.pc_size, 4))
+        corners[:, 0] = self.x_min ** 2 + self.y_min ** 2  # Upper left
+        corners[:, 1] = self.x_max ** 2 + self.y_min ** 2  # Upper right
+        corners[:, 2] = self.x_max ** 2 + self.y_max ** 2  # Lower right
+        corners[:, 3] = self.x_min ** 2 + self.y_min ** 2  # Lower left
+        return np.sqrt(np.max(corners, axis=1))
 
     def __repr__(self) -> str:
         return (
             f"{self.__class__.__name__} {self.shape}, "
             f"px_size {self.px_size} um, binning {self.binning}, "
-            f"tilt {self.tilt}, pc {self.pc_average}"
+            f"tilt {self.tilt}, pc {tuple(self.pc_average)}"
         )
 
     def _set_pc_convention(self, convention: str):
@@ -203,12 +210,12 @@ class EBSDDetector:
         if convention is None or convention == "bruker":
             pass
         elif convention.lower() == "tsl":
-            self.pcx, self.pcy, self.pcz = self._tsl2bruker()
+            self.pc = self._tsl2bruker()
         elif convention.lower() == "oxford":
-            self.pcx, self.pcy, self.pcz = self._oxford2emsoft()
-            self.pcx, self.pcy, self.pcz = self._emsoft2bruker()
+            self.pc = self._oxford2emsoft()
+            self.pc = self._emsoft2bruker()
         elif convention.lower() == "emsoft":
-            self.pcx, self.pcy, self.pcz = self._emsoft2bruker()
+            self.pc = self._emsoft2bruker()
         else:
             conventions = ["bruker", "emsoft", "oxford", "tsl"]
             raise ValueError(
@@ -216,61 +223,74 @@ class EBSDDetector:
                 f"recognised conventions {conventions}."
             )
 
-    def _bruker2emsoft(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _bruker2emsoft(self) -> np.ndarray:
         """Convert PC from Bruker to EMsoft convention."""
-        new_x = self.width * (self.pcx - 0.5)
-        new_y = self.height * (0.5 - self.pcy)
-        new_z = self.height * self.px_size * self.pcz
-        return new_x, new_y, new_z
+        new_pc = np.zeros((self.pc_size, 3))
+        new_pc[:, 0] = -self.ncols * (self.pcx - 0.5)
+        new_pc[:, 1] = self.nrows * (0.5 - self.pcy)
+        new_pc[:, 2] = self.nrows * self.px_size * self.pcz
+        return new_pc
 
-    def _emsoft2bruker(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _emsoft2bruker(self) -> np.ndarray:
         """Convert PC from EMsoft to Bruker convention."""
-        new_x = (self.pcx / self.width) + 0.5
-        new_y = 0.5 - (self.pcy / self.height)
-        new_z = self.pcz / (self.height * self.px_size)
-        return new_x, new_y, new_z
+        new_pc = np.zeros((self.pc_size, 3))
+        new_pc[:, 0] = (self.pcx / self.ncols) + 0.5
+        new_pc[:, 1] = 0.5 - (self.pcy / self.nrows)
+        new_pc[:, 2] = self.pcz / (self.ncols * self.px_size)
+        return new_pc
 
-    def _tsl2emsoft(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _tsl2emsoft(self) -> np.ndarray:
         """Convert PC from EDAX TSL to EMsoft convention."""
-        new_x = self.width * (self.pcx - 0.5)
-        new_y = self.height * (0.5 - self.pcy)
-        new_z = self.width * self.px_size * self.pcz
-        return new_x, new_y, new_z
+        new_pc = np.zeros((self.pc_size, 3))
+        new_pc[:, 0] = -self.ncols * (self.pcx - 0.5)
+        new_pc[:, 1] = self.nrows * (0.5 - self.pcy)
+        new_pc[:, 2] = self.ncols * self.px_size * self.pcz
+        return new_pc
 
-    def _emsoft2tsl(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _emsoft2tsl(self) -> np.ndarray:
         """Convert PC from EMsoft to EDAX TSL convention."""
-        new_x = (self.pcx / self.width) + 0.5
-        new_y = 0.5 - (self.pcy / self.height)
-        new_z = self.pcz / (self.width * self.px_size)
-        return new_x, new_y, new_z
+        new_pc = np.zeros((self.pc_size, 3))
+        new_pc[:, 0] = (self.pcx / self.ncols) + 0.5
+        new_pc[:, 1] = 0.5 - (self.pcy / self.nrows)
+        new_pc[:, 2] = self.pcz / (self.ncols * self.px_size)
+        return new_pc
 
-    def _tsl2bruker(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _tsl2bruker(self) -> np.ndarray:
         """Convert PC from EDAX TSL to Bruker convention."""
-        return self.pcx, 1 - self.pcy, self.pcz
+        new_pc = self.pc[:]
+        new_pc[:, 1] = 1 - new_pc[:, 1]
+        return new_pc
 
-    def _bruker2tsl(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _bruker2tsl(self) -> np.ndarray:
         """Convert PC from Bruker to EDAX TSL convention."""
-        return self.pcx, 1 - self.pcy, self.pcz
+        new_pc = self.pc[:]
+        new_pc[:, 1] = 1 - new_pc[:, 1]
+        return new_pc
 
-    def _oxford2emsoft(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _oxford2emsoft(self) -> np.ndarray:
         """Convert PC from Oxford to EMsoft convention."""
-        new_x = self.width * (self.pcx - 0.5)
-        new_y = self.height * (self.pcy - 0.5)
-        new_z = self.width * self.px_size * self.pcz
-        return new_x, new_y, new_z
+        new_pc = np.zeros((self.pc_size, 3))
+        new_pc[:, 0] = -self.ncols * (self.pcx - 0.5)
+        new_pc[:, 1] = self.nrows * (self.pcy - 0.5)
+        new_pc[:, 2] = self.ncols * self.px_size * self.pcz
+        return new_pc
 
-    def to_emsoft(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def to_emsoft(self) -> np.ndarray:
         """Return PC in the EMsoft convention."""
         return self._bruker2emsoft()
 
-    def to_bruker(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def to_bruker(self) -> np.ndarray:
         """Return PC in the Bruker convention."""
-        return self.pcx, self.pcy, self.pcz
+        return self.pc
 
-    def to_tsl(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def to_tsl(self) -> np.ndarray:
         """Return PC in the EDAX TSL convention."""
         return self._bruker2tsl()
 
-    def to_oxford(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def to_oxford(self) -> np.ndarray:
         """Return PC in the Oxford convention."""
         raise NotImplementedError
+
+    def deepcopy(self):
+        """Return a deep copy using :func:`copy.deepcopy`."""
+        return deepcopy(self)
