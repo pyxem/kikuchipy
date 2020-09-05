@@ -22,9 +22,11 @@ This generator workflow is adopted from
 `pyxem <http://github.com/pyxem/pyxem>`_.
 """
 
-from kikuchipy.generators.virtual_bse import VirtualBSEGenerator
+from kikuchipy.generators.virtual_bse_generator import VirtualBSEGenerator
 from kikuchipy.generators import util
-from kikuchipy.generators.ebsd_simulation import EBSDSimulationGenerator
+from kikuchipy.generators.ebsd_simulation_generator import (
+    EBSDSimulationGenerator,
+)
 
 __all__ = [
     "EBSDSimulationGenerator",

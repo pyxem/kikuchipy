@@ -18,6 +18,6 @@
 
 """Module for defining an EBSD detector and related quantities."""
 
-from kikuchipy.detectors.ebsd import EBSDDetector
+from kikuchipy.detectors.ebsd_detector import EBSDDetector
 
 __all__ = ["EBSDDetector"]

@@ -20,7 +20,7 @@ from typing import Optional
 
 import numpy as np
 
-from kikuchipy.projections.spherical import get_theta
+from kikuchipy.projections.spherical_projection import get_theta
 
 
 class HesseNormalForm:

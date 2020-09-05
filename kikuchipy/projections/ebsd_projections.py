@@ -36,7 +36,7 @@ def detector2sample(sample_tilt: float, detector_tilt: float) -> Rotation:
 
     Returns
     -------
-    np.ndarray
+    Rotation
     """
     x_axis = Vector3d.xvector()
     tilt = -np.deg2rad((sample_tilt - 90) - detector_tilt)

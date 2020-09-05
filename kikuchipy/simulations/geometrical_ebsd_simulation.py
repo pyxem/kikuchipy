@@ -72,7 +72,7 @@ class GeometricalEBSDSimulation:
     @property
     def bands_detector_coordinates(self) -> np.ndarray:
         """Start and end point coordinates of bands in uncalibrated
-        detector coordinates.
+        detector coordinates (a scale of 1 and offset of 0).
 
         Returns
         -------
@@ -80,17 +80,26 @@ class GeometricalEBSDSimulation:
             On the form [[x00, y00, x01, y01], [x10, y10, x11, y11],
             ...].
         """
-        plane_trace_coords = self.bands.plane_trace_coordinates
-        size = plane_trace_coords.shape[0]
-        band_coords = np.zeros((size, 4), dtype=np.float32)
-        pcx, pcy, pcz = self.detector.pc
-        band_coords[:, ::2] = (
-            plane_trace_coords[:, :2] + (pcx / pcz)
-        ) / self.detector.x_scale
-        band_coords[:, 1::2] = (
-            -plane_trace_coords[:, 2:] + (pcy / pcz)
-        ) / self.detector.y_scale
-        return band_coords
+        # Get start and end points for the plane traces in gnomonic coordinates
+        # and set up output array in uncalibrated detector coordinates
+        band_coords_gnomonic = self.bands.plane_trace_coordinates
+        band_coords_detector = np.zeros_like(band_coords_gnomonic)
+
+        # Get projection center coordinates, and add two axis to get the shape
+        # (navigation shape, 1, 1)
+        pcx = self.detector.pcx[..., np.newaxis, np.newaxis]
+        pcy = self.detector.pcy[..., np.newaxis, np.newaxis]
+        pcz = self.detector.pcz[..., np.newaxis, np.newaxis]
+
+        # X and Y coordinates are now in place (0, 2) and (1, 3) respectively
+        band_coords_detector[..., ::2] = (
+            band_coords_gnomonic[..., :2] + (pcx / pcz)
+        ) / self.detector.x_scale[..., np.newaxis]
+        band_coords_detector[..., 1::2] = (
+            -band_coords_gnomonic[..., 2:] + (pcy / pcz)
+        ) / self.detector.y_scale[..., np.newaxis]
+
+        return band_coords_detector
 
     @property
     def zone_axes_detector_coordinates(self) -> np.ndarray:

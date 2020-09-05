@@ -30,9 +30,7 @@ class EBSDDetector:
         binning: int = 1,
         tilt: float = 0,
         sample_tilt: float = 70,
-        pcx: Union[np.ndarray, float] = 1.0,
-        pcy: Union[np.ndarray, float] = 1.0,
-        pcz: Union[np.ndarray, float] = 1.0,
+        pc: Union[np.ndarray, list, tuple, float] = (1, 1, 1),
         convention: Optional[str] = None,
     ):
         """Create an EBSD detector with a shape, pixel size, binning,
@@ -53,16 +51,13 @@ class EBSDDetector:
             Detector tilt from horizontal in degrees. Default is 0.
         sample_tilt
             Sample tilt from horizontal in degrees. Default is 70.
-        pcx
-            X coordinate(s) of the PC(s), from detector left, describing
-            the location of the beam on the sample measured relative to
-            the detection screen. Default is 1, i.e. at the right edge.
-        pcy
-            Y coordinate(s) of the PC(s), from detector top. Default is
-            1, i.e. at the bottom edge.
-        pcz
-            Z coordinate(s) of the PC(s), distance from sample to
-            detection screen. Default is 1.
+        pc
+            X, Y and Z coordinates of the projection/pattern centers
+            (PCs), describing the location of the beam on the sample
+            measured relative to the detection screen. X and Y are
+            measured from the detector left and top, respectively, while
+            Z is the distance from the sample to the detection screen
+            divided by the detector height. Default is (1, 1, 1).
         convention
             PC convention. If None (default), Bruker's convention is
             assumed.
@@ -72,9 +67,7 @@ class EBSDDetector:
         self.binning = binning
         self.tilt = tilt
         self.sample_tilt = sample_tilt
-        self.pcx = pcx
-        self.pcy = pcy
-        self.pcz = pcz
+        self.pc = pc
         self._set_pc_convention(convention)
 
     @property
@@ -124,25 +117,76 @@ class EBSDDetector:
 
     @property
     def pc(self) -> np.ndarray:
-        """All PC coordinates."""
-        return np.column_stack((self.pcx, self.pcy, self.pcz))
+        """All projection center coordinates."""
+        return self._pc
 
     @pc.setter
     def pc(self, value: Union[np.ndarray, List, Tuple]):
-        """Set all PC coordinates."""
-        self.pcx = value[..., 0]
-        self.pcy = value[..., 1]
-        self.pcz = value[..., 2]
+        """Set all projection center coordinates."""
+        self._pc = np.asarray(value)
+
+    @property
+    def pcx(self) -> np.ndarray:
+        """Projection center x coordinates."""
+        return self.pc[..., 0]
+
+    @pcx.setter
+    def pcx(self, value: Union[np.ndarray, list, tuple, float]):
+        """Set the x projection center coordinates."""
+        self._pc[..., 0] = np.asarray(value)
+
+    @property
+    def pcy(self) -> np.ndarray:
+        """Projection center y coordinates."""
+        return self.pc[..., 1]
+
+    @pcy.setter
+    def pcy(self, value: Union[np.ndarray, list, tuple, float]):
+        """Set y projection center coordinates."""
+        self._pc[..., 1] = np.asarray(value)
+
+    @property
+    def pcz(self) -> np.ndarray:
+        """Projection center z coordinates."""
+        return self.pc[..., 2]
+
+    @pcz.setter
+    def pcz(self, value: Union[np.ndarray, list, tuple, float]):
+        """Set z projection center coordinates."""
+        self._pc[..., 2] = np.asarray(value)
 
     @property
     def pc_average(self) -> np.ndarray:
-        pc_ave = self.pc if self.pc_size == 1 else np.mean(self.pc, axis=0)
-        return pc_ave.round(3)
+        """Return the overall average projection center."""
+        ndim = self.pc.ndim
+        axis = ()
+        if ndim == 2:
+            axis += (0,)
+        elif ndim == 3:
+            axis += (0, 1)
+        return np.mean(self.pc, axis=axis).round(3)
 
     @property
-    def pc_size(self) -> int:
-        """Number of sets of PC coordinates."""
-        return self.pcx.size
+    def navigation_shape(self) -> tuple:
+        """Navigation shape of the projection center array."""
+        if self.pc.ndim == 1:
+            return (1,)
+        else:
+            return self.pc.shape[: self.pc.ndim - 1]
+
+    @navigation_shape.setter
+    def navigation_shape(self, value: tuple):
+        """Set navigation shape of the projection center array."""
+        ndim = len(value)
+        if ndim > 2:
+            raise ValueError(f"A maximum dimension of 2 is allowed, 2 < {ndim}")
+        else:
+            self.pc = self.pc.reshape(value + (3,))
+
+    @property
+    def navigation_dimension(self) -> int:
+        """Number of navigation dimensions (a maximum of 2)."""
+        return len(self.navigation_shape)
 
     @property
     def x_min(self) -> Union[np.ndarray, float]:
@@ -157,7 +201,7 @@ class EBSDDetector:
     @property
     def x_range(self) -> np.ndarray:
         """X detector limits in gnomonic projection."""
-        return np.column_stack((self.x_min, self.x_max))
+        return np.dstack((self.x_min, self.x_max))
 
     @property
     def y_min(self) -> Union[np.ndarray, float]:
@@ -172,7 +216,7 @@ class EBSDDetector:
     @property
     def y_range(self) -> np.ndarray:
         """Y detector limits in gnomonic projection."""
-        return np.column_stack((self.y_min, self.y_max))
+        return np.dstack((self.y_min, self.y_max))
 
     @property
     def x_scale(self) -> np.ndarray:
@@ -191,12 +235,12 @@ class EBSDDetector:
     @property
     def r_max(self):
         """Maximum distance from PC to detector edge."""
-        corners = np.zeros((self.pc_size, 4))
-        corners[:, 0] = self.x_min ** 2 + self.y_min ** 2  # Upper left
-        corners[:, 1] = self.x_max ** 2 + self.y_min ** 2  # Upper right
-        corners[:, 2] = self.x_max ** 2 + self.y_max ** 2  # Lower right
-        corners[:, 3] = self.x_min ** 2 + self.y_min ** 2  # Lower left
-        return np.sqrt(np.max(corners, axis=1))
+        corners = np.zeros(self.navigation_shape + (4,))
+        corners[..., 0] = self.x_min ** 2 + self.y_min ** 2  # Upper left
+        corners[..., 1] = self.x_max ** 2 + self.y_min ** 2  # Upper right
+        corners[..., 2] = self.x_max ** 2 + self.y_max ** 2  # Lower right
+        corners[..., 3] = self.x_min ** 2 + self.y_min ** 2  # Lower left
+        return np.sqrt(np.max(corners, axis=-1))
 
     def __repr__(self) -> str:
         return (
@@ -225,54 +269,54 @@ class EBSDDetector:
 
     def _bruker2emsoft(self) -> np.ndarray:
         """Convert PC from Bruker to EMsoft convention."""
-        new_pc = np.zeros((self.pc_size, 3))
-        new_pc[:, 0] = -self.ncols * (self.pcx - 0.5)
-        new_pc[:, 1] = self.nrows * (0.5 - self.pcy)
-        new_pc[:, 2] = self.nrows * self.px_size * self.pcz
+        new_pc = np.zeros_like(self.pc)
+        new_pc[..., 0] = -self.ncols * (self.pcx - 0.5)
+        new_pc[..., 1] = self.nrows * (0.5 - self.pcy)
+        new_pc[..., 2] = self.nrows * self.px_size * self.pcz
         return new_pc
 
     def _emsoft2bruker(self) -> np.ndarray:
         """Convert PC from EMsoft to Bruker convention."""
-        new_pc = np.zeros((self.pc_size, 3))
-        new_pc[:, 0] = (self.pcx / self.ncols) + 0.5
-        new_pc[:, 1] = 0.5 - (self.pcy / self.nrows)
-        new_pc[:, 2] = self.pcz / (self.ncols * self.px_size)
+        new_pc = np.zeros_like(self.pc)
+        new_pc[..., 0] = (self.pcx / self.ncols) + 0.5
+        new_pc[..., 1] = 0.5 - (self.pcy / self.nrows)
+        new_pc[..., 2] = self.pcz / (self.ncols * self.px_size)
         return new_pc
 
     def _tsl2emsoft(self) -> np.ndarray:
         """Convert PC from EDAX TSL to EMsoft convention."""
-        new_pc = np.zeros((self.pc_size, 3))
-        new_pc[:, 0] = -self.ncols * (self.pcx - 0.5)
-        new_pc[:, 1] = self.nrows * (0.5 - self.pcy)
-        new_pc[:, 2] = self.ncols * self.px_size * self.pcz
+        new_pc = np.zeros_like(self.pc)
+        new_pc[..., 0] = -self.ncols * (self.pcx - 0.5)
+        new_pc[..., 1] = self.nrows * (0.5 - self.pcy)
+        new_pc[..., 2] = self.ncols * self.px_size * self.pcz
         return new_pc
 
     def _emsoft2tsl(self) -> np.ndarray:
         """Convert PC from EMsoft to EDAX TSL convention."""
-        new_pc = np.zeros((self.pc_size, 3))
-        new_pc[:, 0] = (self.pcx / self.ncols) + 0.5
-        new_pc[:, 1] = 0.5 - (self.pcy / self.nrows)
-        new_pc[:, 2] = self.pcz / (self.ncols * self.px_size)
+        new_pc = np.zeros_like(self.pc)
+        new_pc[..., 0] = (self.pcx / self.ncols) + 0.5
+        new_pc[..., 1] = 0.5 - (self.pcy / self.nrows)
+        new_pc[..., 2] = self.pcz / (self.ncols * self.px_size)
         return new_pc
 
     def _tsl2bruker(self) -> np.ndarray:
         """Convert PC from EDAX TSL to Bruker convention."""
         new_pc = self.pc[:]
-        new_pc[:, 1] = 1 - new_pc[:, 1]
+        new_pc[..., 1] = 1 - new_pc[..., 1]
         return new_pc
 
     def _bruker2tsl(self) -> np.ndarray:
         """Convert PC from Bruker to EDAX TSL convention."""
         new_pc = self.pc[:]
-        new_pc[:, 1] = 1 - new_pc[:, 1]
+        new_pc[..., 1] = 1 - new_pc[..., 1]
         return new_pc
 
     def _oxford2emsoft(self) -> np.ndarray:
         """Convert PC from Oxford to EMsoft convention."""
-        new_pc = np.zeros((self.pc_size, 3))
-        new_pc[:, 0] = -self.ncols * (self.pcx - 0.5)
-        new_pc[:, 1] = self.nrows * (self.pcy - 0.5)
-        new_pc[:, 2] = self.ncols * self.px_size * self.pcz
+        new_pc = np.zeros_like(self.pc)
+        new_pc[..., 0] = -self.ncols * (self.pcx - 0.5)
+        new_pc[..., 1] = self.nrows * (self.pcy - 0.5)
+        new_pc[..., 2] = self.ncols * self.px_size * self.pcz
         return new_pc
 
     def to_emsoft(self) -> np.ndarray:

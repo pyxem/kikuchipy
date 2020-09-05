@@ -16,14 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Optional, Union
+from typing import Union
 
 from diffsims.crystallography import CrystalPlane
 import numpy as np
 from orix.crystal_map import Phase
 from orix.vector import Vector3d
 
-from kikuchipy.projections.spherical import get_phi, get_theta, get_r
+from kikuchipy.projections.spherical_projection import get_phi, get_theta, get_r
 
 
 class KikuchiBand(CrystalPlane):
@@ -65,11 +65,13 @@ class KikuchiBand(CrystalPlane):
         self.gnomonic_radius = gnomonic_radius
 
     def __getitem__(self, key, **kwargs):
-        # TODO: Index by patterns or bands, not only bands!
-        return super().__getitem__(
-            key,
+        # TODO: Index by patterns or bands, not only patterns!
+        return KikuchiBand(
+            phase=self.phase,
+            hkl=self.hkl,
             coordinates=self.coordinates[key],
             in_pattern=self.in_pattern[key],
+            gnomonic_radius=self.gnomonic_radius,
         )
 
     @property
@@ -79,23 +81,38 @@ class KikuchiBand(CrystalPlane):
     @property
     def gnomonic_radius(self) -> np.ndarray:
         """Only plane trace coordinates of bands with Hesse normal form
-        distances below this radius is returned when called for.
+        distances below this radius are returned when called for.
         """
         return self._gnomonic_radius
 
     @gnomonic_radius.setter
-    def gnomonic_radius(self, value: Union[float, np.ndarray]):
+    def gnomonic_radius(self, value: Union[np.ndarray, list, float]):
         """Only plane trace coordinates of bands with Hesse normal form
-        distances below this radius is returned when called for.
+        distances below this radius are returned when called for.
         """
-        self._gnomonic_radius = np.asarray(value)
+        r = np.asarray(value)
+        if r.size == 1:
+            self._gnomonic_radius = r * np.ones(self.navigation_shape)
+        else:
+            self._gnomonic_radius = r.reshape(self.navigation_shape)
 
     @property
-    def n_patterns(self) -> int:
-        return self.coordinates.shape[0]
+    def navigation_shape(self) -> tuple:
+        """Navigation shape."""
+        coordinate_shape = self.coordinates.shape
+        if len(coordinate_shape) == 2:
+            return (1,)
+        else:
+            return coordinate_shape[:-2]
+
+    @property
+    def navigation_dimension(self) -> int:
+        """Number of navigation dimensions (a maximum of 2)."""
+        return len(self.navigation_shape)
 
     @property
     def in_pattern(self) -> np.ndarray:
+        """Which bands are visible in which patterns."""
         return self._in_pattern
 
     @property
@@ -139,7 +156,7 @@ class KikuchiBand(CrystalPlane):
         as a boolean array.
         """
         is_full_upper = self.z_detector > -1e-5
-        gnomonic_radius = self.gnomonic_radius[:, np.newaxis]
+        gnomonic_radius = self.gnomonic_radius[..., np.newaxis]
         in_circle = np.abs(self.hesse_distance) < gnomonic_radius
         return np.logical_and(in_circle, is_full_upper)
 
@@ -150,11 +167,12 @@ class KikuchiBand(CrystalPlane):
         """
         hesse_distance = self.hesse_distance
         hesse_distance[~self.within_gnomonic_radius] = np.nan
-        return np.arccos(hesse_distance / self.gnomonic_radius[:, np.newaxis])
+        return np.arccos(hesse_distance / self.gnomonic_radius[..., np.newaxis])
 
     @property
     def plane_trace_coordinates(self) -> np.ndarray:
-        """Plane trace coordinates P1, P2 in the plane of the detector.
+        """Plane trace coordinates P1, P2 in the plane of the detector
+        in gnomonic coordinates.
 
         Only coordinates for the planes within the `gnomonic_radius` are
         returned.
@@ -162,7 +180,7 @@ class KikuchiBand(CrystalPlane):
         # Get alpha1 and alpha2 angles
         phi = self.phi_polar
         hesse_alpha = self.hesse_alpha
-        plane_trace = np.zeros((self.n_patterns, self.size, 4))
+        plane_trace = np.zeros(self.navigation_shape + (self.size, 4))
         alpha1 = phi - np.pi + hesse_alpha
         alpha2 = phi - np.pi - hesse_alpha
 
@@ -173,8 +191,8 @@ class KikuchiBand(CrystalPlane):
         plane_trace[..., 3] = np.sin(alpha2)
 
         # And remember to multiply by the gnomonic radius
-        # TODO: Surely, this can be done better!
-        return (self.gnomonic_radius * plane_trace.T).T
+        gnomonic_radius = self.gnomonic_radius[..., np.newaxis, np.newaxis]
+        return gnomonic_radius * plane_trace
 
     @property
     def hesse_line_x(self) -> np.ndarray:

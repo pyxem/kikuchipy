@@ -16,11 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from kikuchipy.projections import ebsd, gnomonic, hesse_normal_form, spherical
+from kikuchipy.projections import (
+    ebsd_projections,
+    gnomonic_projection,
+    hesse_normal_form,
+    spherical_projection,
+)
 
 __all__ = [
-    "ebsd",
-    "gnomonic",
+    "ebsd_projections",
+    "gnomonic_projection.py",
     "hesse_normal_form",
-    "spherical",
+    "spherical_projection.py",
 ]

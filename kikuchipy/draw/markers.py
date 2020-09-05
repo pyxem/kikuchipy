@@ -37,11 +37,27 @@ def get_line_segment_list(lines: Union[list, np.ndarray], **kwargs) -> list:
     marker_list :
         List of :class:`hyperspy.utils.markers.line_segment`.
     """
-    lines = np.atleast_2d(lines)
-    return [
-        line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kwargs)
-        for x1, y1, x2, y2 in lines
-    ]
+    lines = np.asarray(lines)
+
+    ndim = lines.ndim
+    # Note that np.atleast_3d appends axes last
+    if ndim == 1:
+        lines = lines[np.newaxis, np.newaxis, np.newaxis, ...]
+    elif ndim == 2:
+        lines = lines[np.newaxis, np.newaxis, ...]
+    elif ndim == 3:
+        lines = lines[np.newaxis, ...]
+
+    marker_list = []
+    for i in range(lines.shape[-2]):  # Iterate over bands
+        # TODO: Exclude np.nan bands (not visible in that pattern)
+        x1 = lines[..., i, 0]
+        y1 = lines[..., i, 1]
+        x2 = lines[..., i, 2]
+        y2 = lines[..., i, 3]
+        marker_list.append(line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kwargs))
+
+    return marker_list
 
 
 def get_point_list(points: Union[list, np.ndarray], **kwargs) -> list:
