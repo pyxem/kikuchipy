@@ -30,7 +30,7 @@ class EBSDDetector:
         binning: int = 1,
         tilt: float = 0,
         sample_tilt: float = 70,
-        pc: Union[np.ndarray, list, tuple, float] = (1, 1, 1),
+        pc: Union[np.ndarray, list, tuple] = (1, 1, 1),
         convention: Optional[str] = None,
     ):
         """Create an EBSD detector with a shape, pixel size, binning,
@@ -123,7 +123,7 @@ class EBSDDetector:
     @pc.setter
     def pc(self, value: Union[np.ndarray, List, Tuple]):
         """Set all projection center coordinates."""
-        self._pc = np.asarray(value)
+        self._pc = np.atleast_2d(value)
 
     @property
     def pcx(self) -> np.ndarray:
@@ -133,7 +133,7 @@ class EBSDDetector:
     @pcx.setter
     def pcx(self, value: Union[np.ndarray, list, tuple, float]):
         """Set the x projection center coordinates."""
-        self._pc[..., 0] = np.asarray(value)
+        self._pc[..., 0] = np.atleast_2d(value)
 
     @property
     def pcy(self) -> np.ndarray:
@@ -143,7 +143,7 @@ class EBSDDetector:
     @pcy.setter
     def pcy(self, value: Union[np.ndarray, list, tuple, float]):
         """Set y projection center coordinates."""
-        self._pc[..., 1] = np.asarray(value)
+        self._pc[..., 1] = np.atleast_2d(value)
 
     @property
     def pcz(self) -> np.ndarray:
@@ -153,7 +153,7 @@ class EBSDDetector:
     @pcz.setter
     def pcz(self, value: Union[np.ndarray, list, tuple, float]):
         """Set z projection center coordinates."""
-        self._pc[..., 2] = np.asarray(value)
+        self._pc[..., 2] = np.atleast_2d(value)
 
     @property
     def pc_average(self) -> np.ndarray:
@@ -170,7 +170,7 @@ class EBSDDetector:
     def navigation_shape(self) -> tuple:
         """Navigation shape of the projection center array."""
         if self.pc.ndim == 1:
-            return (1,)
+            return ()
         else:
             return self.pc.shape[: self.pc.ndim - 1]
 

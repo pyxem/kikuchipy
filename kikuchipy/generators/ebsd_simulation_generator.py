@@ -22,7 +22,7 @@ from typing import Optional
 from kikuchipy.crystallography import ReciprocalLatticePoint
 import numpy as np
 from orix.crystal_map import Phase
-from orix.quaternion.rotation import Rotation
+from orix.quaternion.orientation import Orientation
 
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.projections.ebsd_projections import (
@@ -38,7 +38,7 @@ class EBSDSimulationGenerator:
         self,
         detector: Optional[EBSDDetector] = None,
         phase: Optional[Phase] = None,
-        orientations: Optional[Rotation] = None,
+        orientations: Optional[Orientation] = None,
     ):
         """A generator storing necessary parameters to simulate
         geometrical EBSD patterns.
@@ -67,11 +67,11 @@ class EBSDSimulationGenerator:
         self._align_navigation_shape()
 
     @property
-    def orientations(self) -> Rotation:
+    def orientations(self) -> Orientation:
         return self._orientations
 
     @orientations.setter
-    def orientations(self, value: Rotation):
+    def orientations(self, value: Orientation):
         ndim = len(value.shape)
         if ndim > 2:
             raise ValueError(f"A maximum dimension of 2 is allowed, 2 < {ndim}")
