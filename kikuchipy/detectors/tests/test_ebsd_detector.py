@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import pytest
+
 from kikuchipy.detectors import EBSDDetector
 
 
@@ -33,3 +35,6 @@ class TestEBSDDetector:
 
         assert det.shape == (nrows, ncols)
         assert det.aspect_ratio == 0.5
+
+
+#    def test_nav_shape(self):

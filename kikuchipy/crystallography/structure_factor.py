@@ -23,7 +23,7 @@ from diffpy.structure.symmetryutilities import (
 import numpy as np
 from scipy.constants import c, e, h, physical_constants
 
-from diffsims.diffraction.atomic_scattering_factor import (
+from kikuchipy.crystallography.atomic_scattering_factor import (
     get_kinematical_atomic_scattering_factor,
     get_doyleturner_atomic_scattering_factor,
 )
