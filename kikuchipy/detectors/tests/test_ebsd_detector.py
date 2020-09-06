@@ -24,15 +24,11 @@ class TestEBSDDetector:
         """Initialization is OK."""
         nrows = 1
         ncols = 2
-        pixel_size = 3
+        px_size = 3
         binning = 4
         tilt = 5
         det = EBSDDetector(
-            nrows=nrows,
-            ncols=ncols,
-            px_size=pixel_size,
-            binning=binning,
-            tilt=tilt,
+            shape=(nrows, ncols), px_size=px_size, binning=binning, tilt=tilt,
         )
 
         assert det.shape == (nrows, ncols)

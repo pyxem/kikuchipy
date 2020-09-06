@@ -19,7 +19,7 @@
 from copy import deepcopy
 from typing import Optional
 
-from diffsims.crystallography import CrystalPlane
+from kikuchipy.crystallography import ReciprocalLatticePoint
 import numpy as np
 from orix.crystal_map import Phase
 from orix.quaternion import Rotation
@@ -64,7 +64,7 @@ class EBSDSimulationGenerator:
         self.phase = phase.deepcopy()
         self.orientations = deepcopy(orientations)
 
-        self._align_nav_shape()
+        self._align_navigation_shape()
 
     @property
     def orientations(self) -> Rotation:
@@ -105,7 +105,7 @@ class EBSDSimulationGenerator:
         )
 
     def geometrical_simulation(
-        self, reciprocal_lattice_point: Optional[CrystalPlane] = None,
+        self, reciprocal_lattice_point: Optional[ReciprocalLatticePoint] = None,
     ) -> GeometricalEBSDSimulation:
         """Project a set of center positions of Kikuchi bands on the
         detector, one set for each orientation of the unit cell.
@@ -128,7 +128,9 @@ class EBSDSimulationGenerator:
             hasattr(self.phase.point_group, "name")
             and hasattr(self.phase.structure.lattice, "abcABG")
         ):
-            rlp = CrystalPlane.from_min_dspacing(self.phase, min_dspacing=1)
+            rlp = ReciprocalLatticePoint.from_min_dspacing(
+                self.phase, min_dspacing=1
+            )
             rlp.calculate_structure_factor(voltage=15e3)
             rlp = rlp[rlp.allowed].symmetrise()
         elif rlp is None:
@@ -201,7 +203,7 @@ class EBSDSimulationGenerator:
             #            zone_axes=zone_axes,
         )
 
-    def _rlp_phase_is_compatible(self, rlp: CrystalPlane):
+    def _rlp_phase_is_compatible(self, rlp: ReciprocalLatticePoint):
         if (
             rlp.phase.structure.lattice.abcABG()
             != self.phase.structure.lattice.abcABG()
@@ -212,9 +214,9 @@ class EBSDSimulationGenerator:
                 f"is not the same as {self.phase}"
             )
 
-    def _align_nav_shape(self):
+    def _align_navigation_shape(self):
         """Ensure that the PC and orientation arrays have matching
-        shapes, e.g. (2, 5, 3) and (2, 5, 4), respectively.
+        navigation shapes, e.g. (2, 5, 3) and (2, 5, 4), respectively.
         """
         first_dim = self.detector.navigation_shape[0]
         nav_dim = len(self.detector.navigation_shape)

@@ -19,7 +19,7 @@
 from re import sub
 from typing import Optional
 
-from diffsims.crystallography import CrystalPlane
+from kikuchipy.crystallography import ReciprocalLatticePoint
 import numpy as np
 from orix import quaternion
 
@@ -36,7 +36,7 @@ class GeometricalEBSDSimulation:
     def __init__(
         self,
         detector: EBSDDetector,
-        reciprocal_lattice_point: CrystalPlane,
+        reciprocal_lattice_point: ReciprocalLatticePoint,
         orientations: quaternion.Rotation,
         bands: Optional[KikuchiBand] = None,
         zone_axes: Optional[ZoneAxis] = None,

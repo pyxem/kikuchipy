@@ -18,7 +18,7 @@
 
 from typing import Union
 
-from diffsims.crystallography import CrystalPlane
+from kikuchipy.crystallography import ReciprocalLatticePoint
 import numpy as np
 from orix.crystal_map import Phase
 from orix.vector import Vector3d
@@ -26,7 +26,7 @@ from orix.vector import Vector3d
 from kikuchipy.projections.spherical_projection import get_phi, get_theta, get_r
 
 
-class KikuchiBand(CrystalPlane):
+class KikuchiBand(ReciprocalLatticePoint):
     def __init__(
         self,
         phase: Phase,
@@ -64,7 +64,7 @@ class KikuchiBand(CrystalPlane):
         self._in_pattern = np.atleast_2d(in_pattern)
         self.gnomonic_radius = gnomonic_radius
 
-    def __getitem__(self, key, **kwargs):
+    def __getitem__(self, key):
         # TODO: Index by patterns or bands, not only patterns!
         return KikuchiBand(
             phase=self.phase,
@@ -203,7 +203,7 @@ class KikuchiBand(CrystalPlane):
         return -self.hesse_distance * np.sin(self.phi_polar)
 
 
-class ZoneAxis(CrystalPlane):
+class ZoneAxis(ReciprocalLatticePoint):
     def __init__(
         self,
         phase: Phase,
@@ -257,8 +257,19 @@ class ZoneAxis(CrystalPlane):
         else:
             self._gnomonic_radius = r
 
+    @property
+    def in_pattern(self) -> np.ndarray:
+        """Which bands are visible in which patterns."""
+        return self._in_pattern
+
     def __getitem__(self, key, **kwargs):
-        return super().__getitem__(key, coordinates=self.coordinates[key])
+        return ZoneAxis(
+            phase=self.phase,
+            hkl=self.hkl,
+            coordinates=self.coordinates[key],
+            in_pattern=self.in_pattern[key],
+            gnomonic_radius=self.gnomonic_radius,
+        )
 
     @property
     def coordinates(self) -> np.ndarray:

@@ -1421,10 +1421,6 @@ class EBSD(CommonImage, Signal2D):
         original_binning = abs(md.get_item(ebsd_node + ".binning"))
         md.set_item(ebsd_node + ".binning", original_binning * new_binning)
 
-        self.detector = EBSDDetector.from_metadata_axes_manager(
-            metadata=self.metadata, axes_manager=self.axes_manager,
-        )
-
         if return_signal:
             return s_out
 
