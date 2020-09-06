@@ -38,7 +38,7 @@ Or, we want a new EBSDMasterPattern signal with only the 20 keV beam energy:
 
     >>> s
     <EBSDMasterPattern, title: , dimensions: (11|1001, 1001)>
-    >>> s.axes_manager["energy"].zone_axes
+    >>> s.axes_manager["energy"].axis
     array([10., 11., 12., 13., 14., 15., 16., 17., 18., 19., 20.])
     >>> s2 = s.inav[-1]
     >>> s2

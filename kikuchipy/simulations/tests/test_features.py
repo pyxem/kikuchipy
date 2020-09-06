@@ -25,30 +25,4 @@ from kikuchipy.generators import EBSDSimulationGenerator
 
 
 class TestKikuchiBand:
-    @pytest.mark.parametrize(
-        "nordif_detector, nav_shape",
-        [((5, 5), (5, 5))],
-        indirect=["nordif_detector"],
-    )
-    def test_init_kikuchiband_from_simulation_generator(
-        self,
-        nickel_phase,
-        nordif_detector,
-        nickel_rotations,
-        r_tsl2bruker,
-        nav_shape,
-        nickel_rlp,
-    ):
-        """From generator works as expected overall."""
-        assert isinstance(nordif_detector, EBSDDetector)
-        o = Orientation(r_tsl2bruker).set_symmetry(
-            nickel_phase.point_group
-        ) * nickel_rotations.reshape(*nav_shape)
-        sim_gen = EBSDSimulationGenerator(
-            phase=nickel_phase, detector=nordif_detector, orientations=o
-        )
-        assert sim_gen.navigation_shape == (5, 5)
-
-        sim = sim_gen.geometrical_simulation(nickel_rlp)
-        assert np.allclose(sim.detector.pc, nordif_detector.pc)
-        assert sim.detector.shape == nordif_detector.shape
+    pass

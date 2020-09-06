@@ -17,7 +17,6 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
-from orix.quaternion.orientation import Orientation
 import pytest
 
 from kikuchipy.detectors import EBSDDetector
@@ -25,30 +24,17 @@ from kikuchipy.generators import EBSDSimulationGenerator
 
 
 class TestGeometricalEBSDSimulation:
-    @pytest.mark.parametrize(
-        "nordif_detector, nav_shape",
-        [((5, 5), (5, 5))],
-        indirect=["nordif_detector"],
-    )
-    def test_get_geometrical_ebsd_simulation_from_generator(
-        self,
-        nickel_phase,
-        nordif_detector,
-        nickel_rotations,
-        r_tsl2bruker,
-        nav_shape,
-        nickel_rlp,
+    @pytest.mark.parametrize("nav_shape", [(5, 5), (25,), (1, 25), (25, 1)])
+    def test_ebsd_simulation_navigation_shape(
+        self, nickel_ebsd_simulation_generator, nickel_rlp, nav_shape,
     ):
-        """From generator works as expected overall."""
-        assert isinstance(nordif_detector, EBSDDetector)
-        o = Orientation(r_tsl2bruker).set_symmetry(
-            nickel_phase.point_group
-        ) * nickel_rotations.reshape(*nav_shape)
-        sim_gen = EBSDSimulationGenerator(
-            phase=nickel_phase, detector=nordif_detector, orientations=o
-        )
-        assert sim_gen.navigation_shape == (5, 5)
-
+        """Setting the navigation shape changes all derived navigation
+        shapes.
+        """
+        sim_gen = nickel_ebsd_simulation_generator
+        sim_gen.navigation_shape = nav_shape
         sim = sim_gen.geometrical_simulation(nickel_rlp)
-        assert np.allclose(sim.detector.pc, nordif_detector.pc)
-        assert sim.detector.shape == nordif_detector.shape
+
+        assert sim.detector.navigation_shape == nav_shape
+        assert sim.rotations.shape == nav_shape
+        assert sim.bands.navigation_shape == nav_shape

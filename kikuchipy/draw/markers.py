@@ -38,14 +38,7 @@ def get_line_segment_list(lines: Union[list, np.ndarray], **kwargs) -> list:
         List of :class:`hyperspy.utils.markers.line_segment`.
     """
     lines = np.asarray(lines)
-
-    ndim = lines.ndim
-    # Note that np.atleast_3d appends axes last
-    if ndim == 1:
-        lines = lines[np.newaxis, np.newaxis, np.newaxis, ...]
-    elif ndim == 2:
-        lines = lines[np.newaxis, np.newaxis, ...]
-    elif ndim == 3:
+    if lines.ndim == 1:
         lines = lines[np.newaxis, ...]
 
     marker_list = []

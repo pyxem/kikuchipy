@@ -48,7 +48,7 @@ def detector2direct_lattice(
     sample_tilt: float,
     detector_tilt: float,
     lattice: Lattice,
-    orientation: Rotation,
+    rotation: Rotation,
 ) -> np.ndarray:
     """Rotation U_K from detector frame D to direct crystal lattice
     frame K.
@@ -61,8 +61,8 @@ def detector2direct_lattice(
         Detector tilt in degrees.
     lattice
         Crystal lattice.
-    orientation
-        Unit cell orientation in the sample frame S.
+    rotation
+        Unit cell rotation from the sample frame S.
 
     Returns
     -------
@@ -72,7 +72,7 @@ def detector2direct_lattice(
     _detector2sample = detector2sample(sample_tilt, detector_tilt)
 
     # Rotation U_O from S to the Cartesian crystal frame C
-    sample2cartesian = orientation.to_matrix()
+    sample2cartesian = rotation.to_matrix()
 
     # Rotation U_A from C to the direct crystal lattice frame K
     structure_matrix = get_direct_structure_matrix(lattice)
@@ -85,7 +85,7 @@ def detector2reciprocal_lattice(
     sample_tilt: float,
     detector_tilt: float,
     lattice: Lattice,
-    orientation: Rotation,
+    rotation: Rotation,
 ) -> np.ndarray:
     """Rotation U_Kstar from detector to reciprocal crystal lattice
     frame Kstar.
@@ -98,8 +98,8 @@ def detector2reciprocal_lattice(
         Detector tilt in degrees.
     lattice
         Crystal lattice.
-    orientation
-        Unit cell orientation in the sample frame S.
+    rotation
+        Unit cell rotation from the sample frame S.
 
     Returns
     -------
@@ -109,7 +109,7 @@ def detector2reciprocal_lattice(
     _detector2sample = detector2sample(sample_tilt, detector_tilt)
 
     # Rotation U_O from S to the Cartesian crystal frame C
-    sample2cartesian = orientation.to_matrix()
+    sample2cartesian = rotation.to_matrix()
 
     # Rotation U_A from C to the reciprocal crystal lattice frame Kstar
     structure_matrix = get_direct_structure_matrix(lattice)

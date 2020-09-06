@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import numpy as np
-from orix.quaternion.orientation import Orientation
 import pytest
 
 from kikuchipy.generators import EBSDSimulationGenerator
@@ -33,20 +31,30 @@ class TestEBSDSimulationGenerator:
         r_tsl2bruker,
         nav_shape,
     ):
-        """Check that initialization of a detector with orientations of
-        a certain shape also reshapes the varying PCs, i.e. the detector
+        """Initialization of a detector with orientations of a certain
+        shape also reshapes the varying PCs, i.e. the detector
         navigation shape, if the detector has more than one PC.
         """
         assert nordif_detector.navigation_shape == (1,)
-        nordif_detector.pc = np.ones((25, 3)) * nordif_detector.pc
-        assert nordif_detector.navigation_shape == (25,)
-
-        o_nickel = Orientation(r_tsl2bruker).set_symmetry(
-            nickel_phase.point_group
-        ) * nickel_rotations.reshape(*nav_shape)
+        o_nickel = r_tsl2bruker * nickel_rotations.reshape(*nav_shape)
         assert o_nickel.shape == nav_shape
-
         sim_gen = EBSDSimulationGenerator(
-            phase=nickel_phase, detector=nordif_detector, orientations=o_nickel,
+            phase=nickel_phase, detector=nordif_detector, rotations=o_nickel,
         )
-        assert sim_gen.detector.navigation_shape == sim_gen.orientations.shape
+        assert sim_gen.detector.navigation_shape == sim_gen.rotations.shape
+
+    @pytest.mark.parametrize("nav_shape", [(5, 5), (25,), (1, 25), (25, 1)])
+    def test_ebsd_simulation_generator_navigation_shape(
+        self, nickel_ebsd_simulation_generator, nickel_rlp, nav_shape,
+    ):
+        """Setting the navigation shape changes all derived navigation
+        shapes.
+        """
+        sim_gen = nickel_ebsd_simulation_generator
+        assert sim_gen.navigation_shape == (25,)
+        assert sim_gen.navigation_dimension == 1
+
+        sim_gen.navigation_shape = nav_shape
+        # sim_gen.navigation_shape is derived from sim.orientations.shape
+        assert sim_gen.navigation_shape == nav_shape
+        assert sim_gen.detector.navigation_shape == nav_shape

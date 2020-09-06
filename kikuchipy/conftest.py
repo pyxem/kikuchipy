@@ -29,6 +29,7 @@ import pytest
 
 from kikuchipy.crystallography import ReciprocalLatticePoint
 from kikuchipy.detectors import EBSDDetector
+from kikuchipy.generators import EBSDSimulationGenerator
 from kikuchipy.signals import EBSD
 
 
@@ -168,4 +169,18 @@ def r_tsl2bruker():
     """A rotation from the TSL to bruker sample reference frame."""
     return Rotation.from_neo_euler(
         neo_euler.AxAngle.from_axes_angles(Vector3d.zvector(), np.pi / 2)
+    )
+
+
+@pytest.fixture
+def nickel_ebsd_simulation_generator(
+    nickel_phase, nordif_detector, nickel_rotations, r_tsl2bruker,
+):
+    """Generator for EBSD simulations of Kikuchi bands for the Nickel
+    data set referenced above.
+    """
+    return EBSDSimulationGenerator(
+        phase=nickel_phase,
+        detector=nordif_detector,
+        rotations=r_tsl2bruker * nickel_rotations,
     )

@@ -37,7 +37,7 @@ class GeometricalEBSDSimulation:
         self,
         detector: EBSDDetector,
         reciprocal_lattice_point: ReciprocalLatticePoint,
-        orientations: Rotation,
+        rotations: Rotation,
         bands: Optional[KikuchiBand] = None,
         zone_axes: Optional[ZoneAxis] = None,
     ):
@@ -52,7 +52,7 @@ class GeometricalEBSDSimulation:
             projection center(s) (PC(s)).
         reciprocal_lattice_point
             Crystal planes projected onto the detector.
-        orientations
+        rotations
             Orientations of the unit cell.
         bands
             Kikuchi band(s) projected onto the detector.
@@ -64,7 +64,7 @@ class GeometricalEBSDSimulation:
         GeometricalEBSDSimulation
         """
         self.detector = detector
-        self.orientations = orientations
+        self.rotations = rotations
         self.reciprocal_lattice_point = reciprocal_lattice_point
         self.bands = bands
         self.zone_axes = zone_axes
@@ -151,8 +151,12 @@ class GeometricalEBSDSimulation:
         -------
         list
         """
+        if self.bands.navigation_shape == (1,):
+            lines = np.squeeze(self.bands_detector_coordinates)
+        else:
+            lines = self.bands_detector_coordinates
         return get_line_segment_list(
-            lines=self.bands_detector_coordinates,
+            lines=lines,
             linewidth=kwargs.pop("linewidth", 2),
             color=kwargs.pop("color", "lime"),
             alpha=kwargs.pop("alpha", 0.7),

@@ -30,7 +30,7 @@ class EBSDDetector:
         binning: int = 1,
         tilt: float = 0,
         sample_tilt: float = 70,
-        pc: Union[np.ndarray, list, tuple] = (1, 1, 1),
+        pc: Union[np.ndarray, list, tuple] = (0.5, 0.5, 0.5),
         convention: Optional[str] = None,
     ):
         """Create an EBSD detector with a shape, pixel size, binning,
@@ -57,7 +57,7 @@ class EBSDDetector:
             measured relative to the detection screen. X and Y are
             measured from the detector left and top, respectively, while
             Z is the distance from the sample to the detection screen
-            divided by the detector height. Default is (1, 1, 1).
+            divided by the detector height. Default is (0.5, 0.5, 0.5).
         convention
             PC convention. If None (default), Bruker's convention is
             assumed.
@@ -169,10 +169,7 @@ class EBSDDetector:
     @property
     def navigation_shape(self) -> tuple:
         """Navigation shape of the projection center array."""
-        if self.pc.ndim == 1:
-            return ()
-        else:
-            return self.pc.shape[: self.pc.ndim - 1]
+        return self.pc.shape[: self.pc.ndim - 1]
 
     @navigation_shape.setter
     def navigation_shape(self, value: tuple):
