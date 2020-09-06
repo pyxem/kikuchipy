@@ -63,7 +63,6 @@ class EBSDSimulationGenerator:
         self.detector = detector.deepcopy()
         self.phase = phase.deepcopy()
         self.orientations = deepcopy(orientations)
-
         self._align_navigation_shape()
 
     @property

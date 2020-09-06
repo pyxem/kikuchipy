@@ -88,13 +88,13 @@ venv/
 testenv/
 ENV/
 
-# Spyder projections settings
+# Spyder project settings
 .spyderproject
 
-# Rope projections settings
+# Rope project settings
 .ropeproject
 
-# PyCharm projections settings
+# PyCharm project settings
 .idea/
 
 #auto changing files

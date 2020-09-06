@@ -107,14 +107,14 @@ def pc1():
     return [0.4210, 0.7794, 0.5049]
 
 
-@pytest.fixture
-def nordif_detector(pc1):
+@pytest.fixture(params=[(1,)])
+def nordif_detector(request, pc1):
     """A NORDIF UF1100 EBSD detector with a TSL PC."""
     return EBSDDetector(
         shape=(60, 60),
         binning=8,
         px_size=70,
-        pc=pc1,
+        pc=np.ones(request.param + (3,)) * pc1,
         sample_tilt=70,
         tilt=0,
         convention="tsl",
