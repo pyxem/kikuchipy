@@ -23,7 +23,7 @@ import tempfile
 import numpy as np
 import pytest
 
-import kikuchipy as kp
+from kikuchipy.signals import EBSD
 
 
 @pytest.fixture
@@ -45,7 +45,7 @@ def dummy_signal():
     ).reshape((3, 3, 3, 3))
     # fmt: on
 
-    return kp.signals.EBSD(dummy_array)
+    return EBSD(dummy_array)
 
 
 @pytest.fixture

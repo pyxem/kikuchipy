@@ -18,7 +18,7 @@
 
 from diffpy.structure import Lattice
 import numpy as np
-from orix.quaternion import Rotation
+from orix.quaternion.rotation import Rotation
 from orix.vector import neo_euler, Vector3d
 
 from kikuchipy.crystallography import get_direct_structure_matrix

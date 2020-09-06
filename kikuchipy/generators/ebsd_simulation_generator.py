@@ -22,7 +22,7 @@ from typing import Optional
 from kikuchipy.crystallography import ReciprocalLatticePoint
 import numpy as np
 from orix.crystal_map import Phase
-from orix.quaternion import Rotation
+from orix.quaternion.rotation import Rotation
 
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.projections.ebsd_projections import (

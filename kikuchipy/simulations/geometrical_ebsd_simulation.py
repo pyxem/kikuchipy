@@ -21,7 +21,7 @@ from typing import Optional
 
 from kikuchipy.crystallography import ReciprocalLatticePoint
 import numpy as np
-from orix import quaternion
+from orix.quaternion.rotation import Rotation
 
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.draw.markers import (
@@ -37,7 +37,7 @@ class GeometricalEBSDSimulation:
         self,
         detector: EBSDDetector,
         reciprocal_lattice_point: ReciprocalLatticePoint,
-        orientations: quaternion.Rotation,
+        orientations: Rotation,
         bands: Optional[KikuchiBand] = None,
         zone_axes: Optional[ZoneAxis] = None,
     ):
