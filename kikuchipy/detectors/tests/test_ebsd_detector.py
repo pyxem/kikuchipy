@@ -57,3 +57,52 @@ class TestEBSDDetector:
         """Initialize PC of valid types."""
         det = EBSDDetector(pc=pc_type(pc1))
         assert isinstance(det.pc, np.ndarray)
+
+    @pytest.mark.parametrize(
+        (
+            "shape, px_size, binning, pc, ssd, width, height, size, "
+            "shape_unbinned, px_size_binned"
+        ),
+        [
+            # fmt: off
+            (
+                (60, 60), 70, 8, [1, 1, 0.5], 16800, 33600, 33600, 3600,
+                (480, 480), 560,
+            ),
+            (
+                (60, 60), 70, 8, [1, 1, 0.7], 23520, 33600, 33600, 3600,
+                (480, 480), 560,
+            ),
+            (
+                (480, 460), 70, 0.5, [1, 1, 0.7], 11760, 16100, 16800, 220800,
+                (240, 230), 35,
+            ),
+            (
+                (340, 680), 40, 2, [1, 1, 0.7], 19040, 54400, 27200, 231200,
+                (680, 1360), 80,
+            ),
+            # fmt: on
+        ],
+    )
+    def test_detector_dimensions(
+        self,
+        shape,
+        px_size,
+        binning,
+        pc,
+        ssd,
+        width,
+        height,
+        size,
+        shape_unbinned,
+        px_size_binned,
+    ):
+        detector = EBSDDetector(
+            shape=shape, px_size=px_size, binning=binning, pc=pc
+        )
+        assert detector.specimen_scintillator_distance == ssd
+        assert detector.width == width
+        assert detector.height == height
+        assert detector.size == size
+        assert detector.shape_unbinned == shape_unbinned
+        assert detector.px_size_binned == px_size_binned
