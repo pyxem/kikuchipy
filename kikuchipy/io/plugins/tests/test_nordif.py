@@ -52,7 +52,7 @@ METADATA = {
             "Detector": {
                 "EBSD": {
                     "azimuth_angle": 0.0,
-                    "binning": -1,
+                    "binning": 1,
                     "detector": "NORDIF UF1100",
                     "elevation_angle": 0.0,
                     "exposure_time": 0.0035,

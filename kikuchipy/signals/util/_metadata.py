@@ -41,7 +41,7 @@ def ebsd_metadata() -> DictionaryTreeBrowser:
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     ebsd = {
         "azimuth_angle": -1.0,
-        "binning": -1.0,
+        "binning": 1,
         "detector": "",
         "elevation_angle": -1.0,
         "exposure_time": -1,

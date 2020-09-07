@@ -19,7 +19,7 @@
 from itertools import chain
 from setuptools import setup, find_packages
 
-# Get release information without importing anything from the project
+# Get release information without importing anything from the projections
 with open("kikuchipy/release.py") as fid:
     for line in fid:
         if line.startswith("author"):
@@ -51,7 +51,7 @@ extra_feature_requirements = {
     "tests": ["pytest >= 5.4", "pytest-cov >= 2.8.1", "coverage >= 5.0",],
 }
 
-# Create a development project, including both the doc and tests projects
+# Create a development projections, including both the doc and tests projects
 extra_feature_requirements["dev"] = [
     "black >= 19.3b0",
     "pre-commit >= 1.16",
@@ -119,6 +119,7 @@ setup(
         "matplotlib >= 3.2",
         "numpy >= 1.18",
         "numba >= 0.48",
+        "orix <= 0.4",
         "scikit-image >= 0.16",
         "scikit-learn",
         "scipy",

@@ -16,20 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Module for generating signals from signals.
+import numpy as np
+from orix.quaternion.orientation import Orientation
+import pytest
 
-This generator workflow is adopted from
-`pyxem <http://github.com/pyxem/pyxem>`_.
-"""
+from kikuchipy.detectors import EBSDDetector
+from kikuchipy.generators import EBSDSimulationGenerator
 
-from kikuchipy.generators.virtual_bse_generator import VirtualBSEGenerator
-from kikuchipy.generators import util
-from kikuchipy.generators.ebsd_simulation_generator import (
-    EBSDSimulationGenerator,
-)
 
-__all__ = [
-    "EBSDSimulationGenerator",
-    "util",
-    "VirtualBSEGenerator",
-]
+class TestKikuchiBand:
+    pass
