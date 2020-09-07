@@ -1,6 +1,6 @@
-#### Description
+#### Description of the change
 
-#### Checklist
+#### Progress of the PR
 
 - [ ] [Docstrings for all functions](https://github.com/numpy/numpy/blob/master/doc/example.py)
 - [ ] Unit tests with pytest for all lines
