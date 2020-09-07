@@ -6,7 +6,7 @@
 - [ ] Unit tests with pytest for all lines
 - [ ] Clean style in [as per black](https://black.readthedocs.io/en/stable/the_black_code_style.html)
 
-### Minimal example of the bug fix or new feature
+#### Minimal example of the bug fix or new feature
 
 ```python
 >>> import kikuchipy as kp
