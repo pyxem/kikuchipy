@@ -1,22 +1,12 @@
-## Description
+#### Description of the change
 
-<!-- If this is a bug-fix or enhancement, state the issue # it closes -->
-<!-- If this is a new feature, reference what paper it implements. -->
+#### Progress of the PR
 
-## Checklist
-
-<!-- It's fine to submit PRs which are a work in progress! -->
-<!-- But before they are merged, all PRs should provide: -->
 - [ ] [Docstrings for all functions](https://github.com/numpy/numpy/blob/master/doc/example.py)
 - [ ] Unit tests with pytest for all lines
 - [ ] Clean style in [as per black](https://black.readthedocs.io/en/stable/the_black_code_style.html)
 
-<!-- For detailed information on these and other aspects see -->
-<!-- the kikuchipy contribution guidelines. -->
-<!-- https://kikuchipy.readthedocs.io/en/latest/contributing.html -->
-
 #### Minimal example of the bug fix or new feature
-<!-- Note that this example can be useful to update the user guide with! -->
 
 ```python
 >>> import kikuchipy as kp
@@ -25,7 +15,7 @@
 >>> # Your new feature...
 ```
 
-## For reviewers
+#### For reviewers
 
 <!-- Don't remove the checklist below. -->
 - [ ] Check that the PR title is short, concise, and will make sense 1 year
