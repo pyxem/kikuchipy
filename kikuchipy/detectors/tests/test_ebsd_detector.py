@@ -24,7 +24,7 @@ from kikuchipy.detectors import EBSDDetector
 
 class TestEBSDDetector:
     def test_init(self, pc1):
-        """Initialization is OK."""
+        """Initialization works."""
         shape = (1, 2)
         px_size = 3
         binning = 4
@@ -97,6 +97,7 @@ class TestEBSDDetector:
         shape_unbinned,
         px_size_binned,
     ):
+        """Initialization yields expected derived values."""
         detector = EBSDDetector(
             shape=shape, px_size=px_size, binning=binning, pc=pc
         )
@@ -106,3 +107,37 @@ class TestEBSDDetector:
         assert detector.size == size
         assert detector.shape_unbinned == shape_unbinned
         assert detector.px_size_binned == px_size_binned
+
+    @pytest.mark.parametrize(
+        "pc, convention, bruker, tsl, oxford, emsoft",
+        # fmt: off
+        [
+            (
+                [3.4848, 114.2016, 15767.7], "emsoft",
+                [0.50726, 0.26208, 0.55489], [0.50726, 0.73792, 0.55489],
+                [0.50726, 0.73792, 0.55489], [3.4848, 114.2016, 15767.7],
+            )
+        ],
+        # fmt: on
+    )
+    def test_pc_conversions(self, pc, convention, bruker, tsl, oxford, emsoft):
+        """Conversions between PC conventions."""
+        detector = EBSDDetector(
+            shape=(480, 480),
+            binning=1,
+            px_size=59.2,
+            pc=pc,
+            convention=convention,
+        )
+        assert np.allclose(detector.pc, bruker, atol=1e-4)
+        assert np.allclose(detector.to_bruker(), bruker, atol=1e-4)
+        assert np.allclose(detector.to_emsoft(), emsoft, atol=1e-4)
+        assert np.allclose(detector.to_tsl(), tsl, atol=1e-4)
+
+    def test_repr(self):
+        """Expected string representation."""
+        pass
+
+    def test_deepcopy(self):
+        """Yields the expected parameters and an actual deep copy."""
+        pass

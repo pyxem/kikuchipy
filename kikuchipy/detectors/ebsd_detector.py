@@ -217,6 +217,7 @@ class EBSDDetector:
 
     @property
     def x_scale(self) -> np.ndarray:
+        """Width of a pixel in gnomonic projection."""
         if self.ncols == 1:
             return np.diff(self.x_range)
         else:
@@ -224,6 +225,7 @@ class EBSDDetector:
 
     @property
     def y_scale(self) -> np.ndarray:
+        """Height of a pixel in gnomonic projection."""
         if self.nrows == 1:
             return np.diff(self.y_range)
         else:
@@ -231,7 +233,9 @@ class EBSDDetector:
 
     @property
     def r_max(self):
-        """Maximum distance from PC to detector edge."""
+        """Maximum distance from PC to detector edge in gnomonic
+        projection.
+        """
         corners = np.zeros(self.navigation_shape + (4,))
         corners[..., 0] = self.x_min ** 2 + self.y_min ** 2  # Upper left
         corners[..., 1] = self.x_max ** 2 + self.y_min ** 2  # Upper right
@@ -240,6 +244,7 @@ class EBSDDetector:
         return np.sqrt(np.max(corners, axis=-1))
 
     def __repr__(self) -> str:
+        """Nice string representation."""
         return (
             f"{self.__class__.__name__} {self.shape}, "
             f"px_size {self.px_size} um, binning {self.binning}, "
@@ -267,10 +272,22 @@ class EBSDDetector:
     def _bruker2emsoft(self) -> np.ndarray:
         """Convert PC from Bruker to EMsoft convention."""
         new_pc = np.zeros_like(self.pc)
-        new_pc[..., 0] = -self.ncols * (self.pcx - 0.5)
+        new_pc[..., 0] = self.ncols * (self.pcx - 0.5)
         new_pc[..., 1] = self.nrows * (0.5 - self.pcy)
         new_pc[..., 2] = self.nrows * self.px_size * self.pcz
         return new_pc
+
+    def _tsl2emsoft(self) -> np.ndarray:
+        """Convert PC from EDAX TSL to EMsoft convention."""
+        new_pc = np.zeros_like(self.pc)
+        new_pc[..., 0] = self.ncols * (self.pcx - 0.5)
+        new_pc[..., 1] = self.nrows * (self.pcy - 0.5)
+        new_pc[..., 2] = self.ncols * self.px_size * self.pcz
+        return new_pc
+
+    def _oxford2emsoft(self) -> np.ndarray:
+        """Convert PC from Oxford to EMsoft convention."""
+        return self._tsl2emsoft()
 
     def _emsoft2bruker(self) -> np.ndarray:
         """Convert PC from EMsoft to Bruker convention."""
@@ -278,14 +295,6 @@ class EBSDDetector:
         new_pc[..., 0] = (self.pcx / self.ncols) + 0.5
         new_pc[..., 1] = 0.5 - (self.pcy / self.nrows)
         new_pc[..., 2] = self.pcz / (self.ncols * self.px_size)
-        return new_pc
-
-    def _tsl2emsoft(self) -> np.ndarray:
-        """Convert PC from EDAX TSL to EMsoft convention."""
-        new_pc = np.zeros_like(self.pc)
-        new_pc[..., 0] = -self.ncols * (self.pcx - 0.5)
-        new_pc[..., 1] = self.nrows * (0.5 - self.pcy)
-        new_pc[..., 2] = self.ncols * self.px_size * self.pcz
         return new_pc
 
     def _emsoft2tsl(self) -> np.ndarray:
@@ -308,14 +317,6 @@ class EBSDDetector:
         new_pc[..., 1] = 1 - new_pc[..., 1]
         return new_pc
 
-    def _oxford2emsoft(self) -> np.ndarray:
-        """Convert PC from Oxford to EMsoft convention."""
-        new_pc = np.zeros_like(self.pc)
-        new_pc[..., 0] = -self.ncols * (self.pcx - 0.5)
-        new_pc[..., 1] = self.nrows * (self.pcy - 0.5)
-        new_pc[..., 2] = self.ncols * self.px_size * self.pcz
-        return new_pc
-
     def to_emsoft(self) -> np.ndarray:
         """Return PC in the EMsoft convention."""
         return self._bruker2emsoft()
@@ -330,7 +331,7 @@ class EBSDDetector:
 
     def to_oxford(self) -> np.ndarray:
         """Return PC in the Oxford convention."""
-        raise NotImplementedError
+        raise self._bruker2tsl()
 
     def deepcopy(self):
         """Return a deep copy using :func:`copy.deepcopy`."""
