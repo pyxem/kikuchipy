@@ -124,6 +124,19 @@ util
 
 ....
 
+detectors
+=========
+
+.. automodule:: kikuchipy.detectors
+
+.. autoclass:: kikuchipy.detectors.EBSDDetector
+    :members:
+    :undoc-members:
+
+    .. automethod:: __init__
+
+....
+
 generators
 ==========
 

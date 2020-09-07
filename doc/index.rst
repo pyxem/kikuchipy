@@ -20,6 +20,7 @@ kikuchipy
     feature_maps.rst
     virtual_backscatter_electron_imaging.rst
     visualizing_patterns.rst
+    reference_frames.rst
     multivariate_analysis.rst
     metadata.rst
     reference.rst
