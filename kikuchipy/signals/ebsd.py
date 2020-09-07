@@ -63,6 +63,7 @@ from kikuchipy.signals.util._dask import (
 )
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 from kikuchipy.signals._common_image import CommonImage
+from kikuchipy.detectors import EBSDDetector
 
 
 class EBSD(CommonImage, Signal2D):
@@ -87,6 +88,14 @@ class EBSD(CommonImage, Signal2D):
         :class:`hyperspy.signals.Signal2D` or a :class:`numpy.ndarray`.
         """
         Signal2D.__init__(self, *args, **kwargs)
+
+        if "detector_dict" in kwargs:
+            self.detector = EBSDDetector(kwargs.pop("detector_dict"))
+        else:
+            self.detector = EBSDDetector(
+                shape=self.axes_manager.signal_shape,
+                px_size=self.axes_manager.signal_axes[0].scale,
+            )
 
         # Update metadata if object is initialised from numpy array
         if not self.metadata.has_item(metadata_nodes("ebsd")):
