@@ -15,4 +15,3 @@ about: Create a report to help us improve
 ```
 
 #### Expected behaviour
-<!-- A clear and concise description of what you expected to happen. -->
