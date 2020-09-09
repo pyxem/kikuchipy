@@ -38,8 +38,10 @@ class LambertProjection(SphericalProjection):
     """Lambert Projection of a vector (as implemented in MTEX?)"""
 
     def project(self, v: Union[Vector3d, np.ndarray]) -> Vector3d:
+        # TODO: Implement equation 10a and 10b from Patrick G. Callahan and Marc De Graef
         pass
 
     @staticmethod
     def iproject(x: np.ndarray, y: np.ndarray) -> Vector3d:
+        # TODO: Implement equation 8a and 8b from Patrick G. Callahan and Marc De Graef
         pass
