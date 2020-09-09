@@ -16,3 +16,30 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+
+# Bunge Euler triplets
+# phi1, Phi, phi2
+
+# Pattern center
+# 2D coordinates = xpc, ypc
+
+# All coordinates in units of micrometers
+
+from typing import Union
+import numpy as np
+from orix.vector import Vector3d
+
+# These may not be needed?
+# from kikuchipy.projections.gnomonic_projection import GnomonicProjection
+from kikuchipy.projections.spherical_projection import SphericalProjection
+
+
+class LambertProjection(SphericalProjection):
+    """Lambert Projection of a vector (as implemented in MTEX?)"""
+
+    def project(self, v: Union[Vector3d, np.ndarray]) -> Vector3d:
+        pass
+
+    @staticmethod
+    def iproject(x: np.ndarray, y: np.ndarray) -> Vector3d:
+        pass
