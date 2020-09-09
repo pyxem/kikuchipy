@@ -16,7 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Union
+import numpy as np
+from orix.vector import Vector3d
+# These may not be needed?
+# from kikuchipy.projections.gnomonic_projection import GnomonicProjection
+from kikuchipy.projections.spherical_projection import SphericalProjection
 
+# Temporary notes for myself :)
 # Bunge Euler triplets
 # phi1, Phi, phi2
 
@@ -24,14 +31,6 @@
 # 2D coordinates = xpc, ypc
 
 # All coordinates in units of micrometers
-
-from typing import Union
-import numpy as np
-from orix.vector import Vector3d
-
-# These may not be needed?
-# from kikuchipy.projections.gnomonic_projection import GnomonicProjection
-from kikuchipy.projections.spherical_projection import SphericalProjection
 
 
 class LambertProjection(SphericalProjection):
@@ -49,7 +48,7 @@ class LambertProjection(SphericalProjection):
             z = v[..., 2]
 
         # TODO: Implement requirement checker for which equation to use
-        something_important = True
+        something_important = True # Very temporary :)
         if something_important:
             # Equation 10a - Requirement: |y| <= |x|
             X = np.sign(x)*np.sqrt(2*(1-z))*((np.sqrt(np.pi))/2)
@@ -63,6 +62,26 @@ class LambertProjection(SphericalProjection):
 
     @staticmethod
     def iproject(x: np.ndarray, y: np.ndarray) -> Vector3d:
-        # TODO: Implement equation 8a from Patrick G. Callahan and Marc De Graef
-        # TODO: Implement equation 8b from Patrick G. Callahan and Marc De Graef
-        pass
+        X = x # v[..., 0] The user needs to input this array?
+        Y = y # v[..., 1] The user needs to input this array?
+        # A perhaps easier solution would be to take in **ONE** np.ndarray v and set X = v[..., 0], Y = v[..., 1]?
+        # TODO: Implement requirement checker for which equation to use
+        something_important_again = True # Very temporary :)
+        if something_important_again:
+            # 0 < |Y| <= |X| <= L
+            x = eq_c(X)*np.cos((Y*np.pi)/(4*X))
+            y = eq_c(X)*np.sin((Y*np.pi)/(4*X))
+            z = 1 - (2*(X**2))/np.pi
+        else:
+            # 0 < |X| <= |X| <= L
+            x = eq_c(Y)*np.sin((X*np.pi)/(4*Y))
+            y = eq_c(Y)*np.cos((X*np.pi)/(4*Y))
+            z = 1 - (2*(Y**2))/np.pi
+
+        v = np.column_stack((x, y, z))
+
+        return Vector3d(v)
+
+
+def eq_c(p: np.darray) -> np.ndarray:
+    return 2/(np.pi) * np.sqrt(np.pi - p**2)
