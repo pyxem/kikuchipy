@@ -37,6 +37,9 @@ class LambertProjection:
             y = v[..., 1]
             z = v[..., 2]
 
+        # TODO: The equations assume x^2 + y^2 + z^2 = 1, so we need to normalize the input
+        # TODO: Should check if Northern or Southern hemisph and act accordingly
+
         # TODO: This should be converted into numpy arrays from the get-go using np.where() - But I am still looking for
         #  a way to make that work
 
