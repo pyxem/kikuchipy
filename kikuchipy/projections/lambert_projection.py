@@ -36,6 +36,7 @@ from kikuchipy.projections.spherical_projection import SphericalProjection
 class LambertProjection(SphericalProjection):
     """Lambert Projection of a vector (as implemented in MTEX?)"""
 
+    @classmethod
     def project(self, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
 
         if isinstance(v, Vector3d):
@@ -87,15 +88,17 @@ def eq_c(p: np.darray) -> np.ndarray:
     return 2/(np.pi) * np.sqrt(np.pi - p**2)
 
 
-# TODO: Create Lambert to Gnomonic method
+
 def lambert_to_gnomonic(v: np.ndarray) -> np.ndarray:
     # Take vector from Lambert and convert it into a Orix Vector3d object
-    vec = LambertProjection.iproject(v[..., 0],v[..., 1])
-    # This requires GnomonicProjection to be a class method, was prev. instance method - is that ok?
+    vec = LambertProjection.iproject(v[..., 0], v[..., 1])
+    # This requires GnomonicProjection.project to be a class method, was prev. instance method - is that ok?
     vec = GnomonicProjection.project(vec)
     return vec
 
-# TODO: Create Gnomonic to Lambert method
 def gnomonic_to_lambert(v: np.ndarray) -> np.ndarray:
-    pass
+    vec = GnomonicProjection.iproject(v[..., 0], v[..., 1])
+    # This requires LambertProjection.project to be a class method, was prev. instance methd - is that ok?
+    vec = LambertProjection.project(vec)
+    return vec
 
