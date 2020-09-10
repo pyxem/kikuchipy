@@ -29,6 +29,7 @@ class GnomonicProjection(SphericalProjection):
 
     @classmethod
     def project(self, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
+        """Convert from Cartesian to the Gnomic projection"""
         polar = super().project(v)
         theta, phi = polar[..., 0], polar[..., 1]
 
@@ -54,6 +55,7 @@ class GnomonicProjection(SphericalProjection):
 
     @staticmethod
     def iproject(x: np.ndarray, y: np.ndarray) -> Vector3d:
+        """Convert from the Gnomonic projection to Cartesian coordinates."""
         theta = np.arctan(np.sqrt(x ** 2 + y ** 2))
         phi = np.atan2(y, x)
         return Vector3d.from_polar(theta=theta, phi=phi)
