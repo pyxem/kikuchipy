@@ -198,6 +198,7 @@ class EBSDDetector:
     @property
     def x_range(self) -> np.ndarray:
         """X detector limits in gnomonic projection."""
+        # TODO: Decide whether we need dstack?
         return np.dstack((self.x_min, self.x_max))
 
     @property
@@ -331,7 +332,7 @@ class EBSDDetector:
 
     def to_oxford(self) -> np.ndarray:
         """Return PC in the Oxford convention."""
-        raise self._bruker2tsl()
+        return self._bruker2tsl()
 
     def deepcopy(self):
         """Return a deep copy using :func:`copy.deepcopy`."""

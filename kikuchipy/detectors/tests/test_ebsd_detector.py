@@ -134,10 +134,123 @@ class TestEBSDDetector:
         assert np.allclose(detector.to_emsoft(), emsoft, atol=1e-4)
         assert np.allclose(detector.to_tsl(), tsl, atol=1e-4)
 
-    def test_repr(self):
+    def test_repr(self, pc1):
         """Expected string representation."""
-        pass
+        assert repr(
+            EBSDDetector(shape=(1, 2), px_size=3, binning=4, tilt=5, pc=pc1)
+        ) == (
+            "EBSDDetector (1, 2), px_size 3 um, binning 4, tilt 5, pc "
+            "(0.421, 0.779, 0.505)"
+        )
 
-    def test_deepcopy(self):
+    def test_deepcopy(self, pc1):
         """Yields the expected parameters and an actual deep copy."""
-        pass
+        detector1 = EBSDDetector(pc=pc1)
+        detector2 = detector1.deepcopy()
+        detector1.pcx += 0.1
+        assert np.allclose(detector1.pcx, 0.521)
+        assert np.allclose(detector2.pcx, 0.421)
+
+    def test_set_pc_coordinates(self, pc1):
+        """Returns desired arrays with desired shapes."""
+        ny, nx = (2, 3)
+        nav_shape = (ny, nx)
+        n = ny * nx
+        detector = EBSDDetector(pc=np.tile(pc1, nav_shape + (1,)))
+        assert detector.navigation_shape == nav_shape
+
+        new_pc = np.zeros(nav_shape + (3,))
+        new_pc[..., 0] = pc1[0] * 0.01 * np.arange(n).reshape(nav_shape)
+        new_pc[..., 1] = pc1[1] * 0.01 * np.arange(n).reshape(nav_shape)
+        new_pc[..., 2] = pc1[2] * 0.01 * np.arange(n).reshape(nav_shape)
+        detector.pcx = new_pc[..., 0]
+        detector.pcy = new_pc[..., 1]
+        detector.pcz = new_pc[..., 2]
+        assert np.allclose(detector.pc, new_pc)
+
+    @pytest.mark.parametrize(
+        "pc, desired_pc_average",
+        [
+            ([0.1234, 0.1235, 0.1234], [0.1230, 0.1240, 0.1230]),
+            (np.arange(30).reshape((2, 5, 3)), [13.5, 14.5, 15.5]),
+            (np.arange(30).reshape((10, 3)), [13.5, 14.5, 15.5]),
+        ],
+    )
+    def test_pc_average(self, pc, desired_pc_average):
+        """Calculation of PC average."""
+        assert np.allclose(EBSDDetector(pc=pc).pc_average, desired_pc_average)
+
+    @pytest.mark.parametrize(
+        "pc, desired_nav_shape, desired_nav_ndim",
+        [
+            (np.arange(30).reshape((2, 5, 3)), (5, 2), 2),
+            (np.arange(30).reshape((5, 2, 3)), (10, 1), 2),
+            (np.arange(30).reshape((2, 5, 3)), (10,), 1),
+        ],
+    )
+    def test_set_navigation_shape(
+        self, pc, desired_nav_shape, desired_nav_ndim
+    ):
+        """Change shape of PC array."""
+        detector = EBSDDetector(pc=pc)
+        detector.navigation_shape = desired_nav_shape
+        assert detector.navigation_shape == desired_nav_shape
+        assert detector.navigation_dimension == desired_nav_ndim
+        assert detector.pc.shape == desired_nav_shape + (3,)
+
+    def test_set_navigation_shape_raises(self, pc1):
+        """Desired error message."""
+        detector = EBSDDetector(pc=pc1)
+        with pytest.raises(ValueError, match="A maximum dimension of 2"):
+            detector.navigation_shape = (1, 2, 3)
+
+    @pytest.mark.parametrize(
+        "shape, desired_x_range, desired_y_range",
+        [
+            ((60, 60), [-0.833828, 1.1467617], [-0.4369182, 1.54367201]),
+            ((510, 510), [-0.833828, 1.1467617], [-0.4369182, 1.54367201]),
+            ((1, 1), [-0.833828, 1.1467617], [-0.4369182, 1.54367201]),
+            ((480, 640), [-0.6253713, 0.860071], [-0.4369182, 1.54367201]),
+        ],
+    )
+    def test_gnomonic_range(self, pc1, shape, desired_x_range, desired_y_range):
+        """Gnomonic x/y range, x depends on aspect ratio."""
+        detector = EBSDDetector(shape=shape, pc=pc1)
+        assert np.allclose(detector.x_range, desired_x_range)
+        assert np.allclose(detector.y_range, desired_y_range)
+
+    @pytest.mark.parametrize(
+        "shape, desired_x_scale, desired_y_scale",
+        [
+            ((60, 60), 0.033569, 0.033569),
+            ((510, 510), 0.003891, 0.003891),
+            ((1, 1), 1.980590, 1.980590),
+            ((480, 640), 0.002324, 0.004134),
+        ],
+    )
+    def test_gnomonic_scale(self, pc1, shape, desired_x_scale, desired_y_scale):
+        """Gnomonic x/y scale."""
+        detector = EBSDDetector(shape=shape, pc=pc1)
+        assert np.allclose(detector.x_scale, desired_x_scale, atol=1e-6)
+        assert np.allclose(detector.y_scale, desired_y_scale, atol=1e-6)
+
+    @pytest.mark.parametrize(
+        "pc, convention, desired_pc",
+        [
+            ([0.421, 0.2206, 0.5049], "tsl", [0.421, 0.7794, 0.5049]),
+            ([0.421, 0.2206, 0.5049], "oxford", [0.421, 0.7794, 0.5049]),
+            ([0.421, 0.7794, 0.5049], "bruker", [0.421, 0.7794, 0.5049]),
+            ([0.421, 0.7794, 0.5049], None, [0.421, 0.7794, 0.5049]),
+            ([-37.92, -134.112, 16964.64], "emsoft", [0.421, 0.7794, 0.5049]),
+        ],
+    )
+    def test_set_pc_convention(self, pc, convention, desired_pc):
+        """PC is converted to Bruker's format via correct conversion."""
+        detector = EBSDDetector(
+            shape=(480, 480), px_size=70, pc=pc, convention=convention
+        )
+        assert np.allclose(detector.pc, desired_pc)
+        assert np.allclose(detector.to_tsl(), [0.421, 0.2206, 0.5049])
+
+
+#        assert np.allclose(detector.to_emsoft(), [-37.92, -134.112, 16964.64])
