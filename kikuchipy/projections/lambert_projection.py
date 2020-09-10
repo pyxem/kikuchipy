@@ -19,8 +19,8 @@
 from typing import Union
 import numpy as np
 from orix.vector import Vector3d
-# These may not be needed?
-# from kikuchipy.projections.gnomonic_projection import GnomonicProjection
+from kikuchipy.projections.gnomonic_projection import GnomonicProjection
+# These may not be needed? Dont think the inherit is needed
 from kikuchipy.projections.spherical_projection import SphericalProjection
 
 # Temporary notes for myself :)
@@ -89,7 +89,11 @@ def eq_c(p: np.darray) -> np.ndarray:
 
 # TODO: Create Lambert to Gnomonic method
 def lambert_to_gnomonic(v: np.ndarray) -> np.ndarray:
-    pass
+    # Take vector from Lambert and convert it into a Orix Vector3d object
+    vec = LambertProjection.iproject(v[..., 0],v[..., 1])
+    # This requires GnomonicProjection to be a class method, was prev. instance method - is that ok?
+    vec = GnomonicProjection.project(vec)
+    return vec
 
 # TODO: Create Gnomonic to Lambert method
 def gnomonic_to_lambert(v: np.ndarray) -> np.ndarray:

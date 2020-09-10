@@ -27,6 +27,7 @@ from kikuchipy.projections.spherical_projection import SphericalProjection
 class GnomonicProjection(SphericalProjection):
     """Gnomonic projection of a vector as implemented in MTEX."""
 
+    @classmethod
     def project(self, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
         polar = super().project(v)
         theta, phi = polar[..., 0], polar[..., 1]
