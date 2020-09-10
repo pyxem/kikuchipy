@@ -47,6 +47,11 @@ class LambertProjection:
         li_X = [0]
         li_Y = [0]
         for x_val, y_val, z_val in zip(x, y, z):
+            # x^2 + y^2 + z^2 should equal 1 (Needs to lie on the unit sphere)
+            if x_val ** 2 + y_val ** 2 + z_val ** 2 != 1:
+                raise ValueError(
+                    "Vector is not on the unit sphere! Make sure x^2 + y^2 + z^2 = 1"
+                )
             if abs(y_val) <= abs(
                 x_val
             ):  # Equation 10a - Requirement: |y| <= |x|
