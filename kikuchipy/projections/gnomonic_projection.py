@@ -33,6 +33,8 @@ class GnomonicProjection(SphericalProjection):
         polar = super().project(v)
         theta, phi = polar[..., 0], polar[..., 1]
 
+        # TODO: Make sure the input vector is on the unit sphere in order to keep all the projections in sync!
+
         # Map to upper hemisphere
         if isinstance(v, Vector3d):
             is_upper = v.z > 0
