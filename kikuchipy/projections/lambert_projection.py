@@ -20,7 +20,9 @@ from typing import Union
 import numpy as np
 from orix.vector import Vector3d
 from kikuchipy.projections.gnomonic_projection import GnomonicProjection
-# These may not be needed? Dont think the inherit is needed
+
+
+# This may not be needed? Dont think the inherit is needed
 from kikuchipy.projections.spherical_projection import SphericalProjection
 
 # Temporary notes for myself :)
@@ -51,7 +53,7 @@ class LambertProjection(SphericalProjection):
         #  Use temporary lists for speed / memory
         li_X = [0]
         li_Y = [0]
-        for x_val, y_val, z_val in zip(x,y,z):
+        for x_val, y_val, z_val in zip(x, y, z):
             if abs(y_val) <= abs(x_val): # Equation 10a - Requirement: |y| <= |x|
                 li_X.append(np.sign(x_val)*np.sqrt(2*(1-z_val))*((np.sqrt(np.pi))/2))
                 li_Y.append(np.sign(x_val)*np.sqrt(2*(1-z_val))*((2/(np.sqrt(np.pi))) * np.arctan(y_val/x_val)))
@@ -99,7 +101,7 @@ class LambertProjection(SphericalProjection):
         return Vector3d(v)
 
 
-def eq_c(p: np.darray) -> np.ndarray:
+def eq_c(p: np.ndarray) -> np.ndarray:
     return 2/(np.pi) * np.sqrt(np.pi - p**2)
 
 
