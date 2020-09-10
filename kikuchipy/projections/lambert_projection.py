@@ -39,13 +39,6 @@ class LambertProjection:
 
         # TODO: Should check if Northern or Southern hemisph and act accordingly
 
-        # TODO: This should be converted into numpy arrays from the get-go using np.where() - But I am still looking for
-        #  a way to make that work
-
-        #  Use temporary lists for speed / memory
-        li_X = [0]
-        li_Y = [0]
-
         # Lets try to use numpy arrays instead of lists!
         size = len(x)
         X = np.zeros(size)
@@ -92,54 +85,26 @@ class LambertProjection:
         X = x
         Y = y
 
-        # TODO: This should be converted into numpy arrays from the get-go using np.where() - But I am still looking for
-        #  a way to make that work
-
-        #  Use temporary lists, ideally would be numpy arrays from the start. Still finding implementation
-        li_x = [0]
-        li_y = [0]
-        li_z = [0]
+        size = len(X)
+        x = np.zeros(size)
+        y = np.zeros(size)
+        z = np.zeros(size)
 
         for x_val, y_val in zip(X, Y):
-            # Edge cases - !! UNVERIFIED EQUATIONS !!
-            if x_val == 0 and y_val == 0:
-                li_x.append(0)
-                li_y.append(0)
-                li_z.append(1)
-            elif x_val == 0 and y_val != 0:
-                li_x.append(0)
-                li_y.append(_eq_c(y_val))
-                li_z.append(1 - (2 * (y_val ** 2)) / np.pi)
-            elif y_val == 0 and x_val != 0:
-                li_x.append(_eq_c(x_val))
-                li_y.append(0)
-                li_z.append(li_z.append(1 - (2 * (x_val ** 2)) / np.pi))
-            elif abs(y_val) <= abs(x_val):
+            index = 0
+            if abs(y_val) <= abs(x_val):
                 # 0 < |Y| <= |X| <= L - Equation 8a
-                li_x.append(
-                    _eq_c(x_val) * np.cos((y_val * np.pi) / (4 * x_val))
-                )
-                li_y.append(
-                    _eq_c(x_val) * np.sin((y_val * np.pi) / (4 * x_val))
-                )
-                li_z.append(1 - (2 * (x_val ** 2)) / np.pi)
+                x[index] = _eq_c(x_val) * np.cos((y_val * np.pi) / (4 * x_val))
+                y[index] = _eq_c(x_val) * np.sin((y_val * np.pi) / (4 * x_val))
+                z[index] = 1 - (2 * (x_val ** 2)) / np.pi
             else:
                 # 0 < |X| <= |Y| <= L - Equation 8b
-                li_x.append(
-                    _eq_c(y_val) * np.sin((x_val * np.pi) / (4 * y_val))
-                )
-                li_y.append(
-                    _eq_c(y_val) * np.cos((x_val * np.pi) / (4 * y_val))
-                )
-                li_z.append(1 - (2 * (y_val ** 2)) / np.pi)
+                x[index] = _eq_c(y_val) * np.sin((x_val * np.pi) / (4 * y_val))
+                y[index] = _eq_c(y_val) * np.cos((x_val * np.pi) / (4 * y_val))
+                z[index] = 1 - (2 * (y_val ** 2)) / np.pi
+            index += 1
 
-        # Done appending, convert to numpy array. Naive solution, probably a faster one out there
-        x = np.array(li_x[1::])
-        y = np.array(li_y[1::])
-        z = np.array(li_z[1::])
-        v = np.column_stack((x, y, z))
-
-        return Vector3d(v)
+        return Vector3d(np.column_stack((x, y, z)))
 
 
 def _eq_c(p: np.ndarray) -> np.ndarray:
