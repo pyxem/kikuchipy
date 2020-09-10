@@ -27,7 +27,7 @@ class LambertProjection:
 
     @classmethod
     def project(self, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
-
+        """Convert from Cartesian to the Lambert projection"""
         if isinstance(v, Vector3d):
             x = v.x
             y = v.y
@@ -77,6 +77,7 @@ class LambertProjection:
 
     @staticmethod
     def iproject(x: np.ndarray, y: np.ndarray) -> Vector3d:
+        """Convert from Lambert to Cartesian coordinates."""
         X = x
         Y = y
 
@@ -130,18 +131,22 @@ class LambertProjection:
         return Vector3d(v)
 
 
-# This function is used inside of LambertProjection.iproject method to make code more readable
 def _eq_c(p: np.ndarray) -> np.ndarray:
+    """Private function used inside LambertProjection.iproject to increase readability."""
     return 2 / np.pi * np.sqrt(np.pi - p ** 2)
 
 
 def lambert_to_gnomonic(v: np.ndarray) -> np.ndarray:
+    """Convert from Lambert via Cartesian coordinates to Gnomonic."""
+    # These two functions could probably be combined into 1 to decrease runtime
     vec = LambertProjection.iproject(v[..., 0], v[..., 1])
     vec = GnomonicProjection.project(vec)
     return vec
 
 
 def gnomonic_to_lambert(v: np.ndarray) -> np.ndarray:
+    """Convert from Gnomonic via Cartesian coordinates to Lambert."""
+    # These two functions could probably be combined into 1 to decrease runtime
     vec = GnomonicProjection.iproject(v[..., 0], v[..., 1])
     vec = LambertProjection.project(vec)
     return vec
