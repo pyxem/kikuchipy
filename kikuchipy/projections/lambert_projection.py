@@ -102,7 +102,7 @@ class LambertProjection(SphericalProjection):
 
 
 # This function is used inside of LambertProjection.iproject method to make code more readable
-def eq_c(p: np.ndarray) -> np.ndarray:
+def _eq_c(p: np.ndarray) -> np.ndarray:
     return 2/(np.pi) * np.sqrt(np.pi - p**2)
 
 
