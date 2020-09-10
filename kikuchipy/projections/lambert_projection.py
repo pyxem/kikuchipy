@@ -37,7 +37,6 @@ class LambertProjection:
             y = v[..., 1]
             z = v[..., 2]
 
-        # TODO: The equations assume x^2 + y^2 + z^2 = 1, so we need to normalize the input
         # TODO: Should check if Northern or Southern hemisph and act accordingly
 
         # TODO: This should be converted into numpy arrays from the get-go using np.where() - But I am still looking for
@@ -46,7 +45,14 @@ class LambertProjection:
         #  Use temporary lists for speed / memory
         li_X = [0]
         li_Y = [0]
+
+        # Lets try to use numpy arrays instead of lists!
+        size = len(x)
+        X = np.zeros(size)
+        Y = np.zeros(size)
+
         for x_val, y_val, z_val in zip(x, y, z):
+            index = 0
             # x^2 + y^2 + z^2 should equal 1 (Needs to lie on the unit sphere)
             if x_val ** 2 + y_val ** 2 + z_val ** 2 != 1:
                 raise ValueError(
@@ -55,31 +61,28 @@ class LambertProjection:
             if abs(y_val) <= abs(
                 x_val
             ):  # Equation 10a - Requirement: |y| <= |x|
-                li_X.append(
+                X[index] = (
                     np.sign(x_val)
                     * np.sqrt(2 * (1 - z_val))
                     * ((np.sqrt(np.pi)) / 2)
                 )
-                li_Y.append(
+                Y[index] = (
                     np.sign(x_val)
                     * np.sqrt(2 * (1 - z_val))
                     * ((2 / (np.sqrt(np.pi))) * np.arctan(y_val / x_val))
                 )
             else:  # Equation 10b - Requirement: |x| <= |y|
-                li_X.append(
+                X[index] = (
                     np.sign(y_val)
                     * np.sqrt(2 * (1 - z_val))
                     * ((2 / (np.sqrt(np.pi))) * np.arctan(x_val / y_val))
                 )
-                li_Y.append(
+                Y[index] = (
                     np.sign(y_val)
                     * np.sqrt(2 * (1 - z_val))
                     * ((np.sqrt(np.pi)) / 2)
                 )
-
-        # Convert to numpy arrays when done appending and we remove initial element
-        X = np.array(li_X[1::])
-        Y = np.array(li_Y[1::])
+            index += 1
 
         return np.column_stack((X, Y))
 
