@@ -92,7 +92,19 @@ class LambertProjection:
 
         for x_val, y_val in zip(X, Y):
             index = 0
-            if abs(y_val) <= abs(x_val):
+            if abs(x_val) > np.sqrt((np.pi) / 2) or abs(y_val) > np.sqrt(
+                (np.pi) / 2
+            ):
+                raise ValueError(
+                    "The X and Y values MUST NOT be greater than L = sqrt(pi/2)"
+                )
+            if (
+                x_val == 0 and y_val == 0
+            ):  # This is probably covered in the equations below but it is here now :)
+                x[index] = 0
+                y[index] = 0
+                z[index] = 1
+            elif abs(y_val) <= abs(x_val):
                 # 0 < |Y| <= |X| <= L - Equation 8a
                 x[index] = _eq_c(x_val) * np.cos((y_val * np.pi) / (4 * x_val))
                 y[index] = _eq_c(x_val) * np.sin((y_val * np.pi) / (4 * x_val))
