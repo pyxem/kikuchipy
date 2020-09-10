@@ -29,9 +29,9 @@ class LambertProjection:
     def project(self, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
         """Convert from Cartesian to the Lambert projection"""
         if isinstance(v, Vector3d):
-            x = v.x
-            y = v.y
-            z = v.z
+            x = v.x.data
+            y = v.y.data
+            z = v.z.data
         else:
             x = v[..., 0]
             y = v[..., 1]
