@@ -48,16 +48,20 @@ class LambertProjection(SphericalProjection):
             y = v[..., 1]
             z = v[..., 2]
 
-        # TODO: Implement requirement checker for which equation to use
-        something_important = True # Very temporary :)
-        if something_important:
-            # Equation 10a - Requirement: |y| <= |x|
-            X = np.sign(x)*np.sqrt(2*(1-z))*((np.sqrt(np.pi))/2)
-            Y = np.sign(x)*np.sqrt(2*(1-z))*((2/(np.sqrt(np.pi))) * np.arctan(y/x))
-        else:
-            # Equation 10b - Requirement: |x| <= |y|
-            X = np.sign(y)*np.sqrt(2*(1-z))*((2/(np.sqrt(np.pi))) * np.arctan(x/y))
-            Y = np.sign(y)*np.sqrt(2*(1-z))*((np.sqrt(np.pi))/2)
+        #  Use temporary lists for speed / memory
+        li_X = [0]
+        li_Y = [0]
+        for x_val, y_val, z_val in zip(x,y,z):
+            if abs(y_val) <= abs(x_val): # Equation 10a - Requirement: |y| <= |x|
+                li_X.append(np.sign(x_val)*np.sqrt(2*(1-z_val))*((np.sqrt(np.pi))/2))
+                li_Y.append(np.sign(x_val)*np.sqrt(2*(1-z_val))*((2/(np.sqrt(np.pi))) * np.arctan(y_val/x_val)))
+            else: # Equation 10b - Requirement: |x| <= |y|
+                li_X.append(np.sign(y_val) * np.sqrt(2 * (1 - z_val)) * ((2 / (np.sqrt(np.pi))) * np.arctan(x_val / y_val)))
+                li_Y.append(np.sign(y_val) * np.sqrt(2 * (1 - z_val)) * ((np.sqrt(np.pi)) / 2))
+
+        # Convert to numpy arrays when done appending and we remove initial element
+        X = np.array(li_X[1::])
+        Y = np.array(li_Y[1::])
 
         return np.column_stack((X, Y))
 
@@ -90,15 +94,18 @@ def eq_c(p: np.darray) -> np.ndarray:
 
 
 def lambert_to_gnomonic(v: np.ndarray) -> np.ndarray:
-    # Take vector from Lambert and convert it into a Orix Vector3d object
+    # Take vector from Lambert and convert it into an Orix Vector3d object
     vec = LambertProjection.iproject(v[..., 0], v[..., 1])
     # This requires GnomonicProjection.project to be a class method, was prev. instance method - is that ok?
+    # Take Orix Vector 3d object and convert it to Gnomonic projection
     vec = GnomonicProjection.project(vec)
     return vec
 
 def gnomonic_to_lambert(v: np.ndarray) -> np.ndarray:
+    # Take vector from Gnomonic and convert it into an Orix Vector3d object
     vec = GnomonicProjection.iproject(v[..., 0], v[..., 1])
     # This requires LambertProjection.project to be a class method, was prev. instance methd - is that ok?
+    # Take Orix Vector 3d object and convert it to Lambert projection
     vec = LambertProjection.project(vec)
     return vec
 
