@@ -54,12 +54,30 @@ class LambertProjection(SphericalProjection):
         li_X = [0]
         li_Y = [0]
         for x_val, y_val, z_val in zip(x, y, z):
-            if abs(y_val) <= abs(x_val): # Equation 10a - Requirement: |y| <= |x|
-                li_X.append(np.sign(x_val)*np.sqrt(2*(1-z_val))*((np.sqrt(np.pi))/2))
-                li_Y.append(np.sign(x_val)*np.sqrt(2*(1-z_val))*((2/(np.sqrt(np.pi))) * np.arctan(y_val/x_val)))
-            else: # Equation 10b - Requirement: |x| <= |y|
-                li_X.append(np.sign(y_val) * np.sqrt(2 * (1 - z_val)) * ((2 / (np.sqrt(np.pi))) * np.arctan(x_val / y_val)))
-                li_Y.append(np.sign(y_val) * np.sqrt(2 * (1 - z_val)) * ((np.sqrt(np.pi)) / 2))
+            if abs(y_val) <= abs(
+                x_val
+            ):  # Equation 10a - Requirement: |y| <= |x|
+                li_X.append(
+                    np.sign(x_val)
+                    * np.sqrt(2 * (1 - z_val))
+                    * ((np.sqrt(np.pi)) / 2)
+                )
+                li_Y.append(
+                    np.sign(x_val)
+                    * np.sqrt(2 * (1 - z_val))
+                    * ((2 / (np.sqrt(np.pi))) * np.arctan(y_val / x_val))
+                )
+            else:  # Equation 10b - Requirement: |x| <= |y|
+                li_X.append(
+                    np.sign(y_val)
+                    * np.sqrt(2 * (1 - z_val))
+                    * ((2 / (np.sqrt(np.pi))) * np.arctan(x_val / y_val))
+                )
+                li_Y.append(
+                    np.sign(y_val)
+                    * np.sqrt(2 * (1 - z_val))
+                    * ((np.sqrt(np.pi)) / 2)
+                )
 
         # Convert to numpy arrays when done appending and we remove initial element
         X = np.array(li_X[1::])
@@ -78,24 +96,47 @@ class LambertProjection(SphericalProjection):
         li_y = [0]
         li_z = [0]
 
-        for x_val, y_val in zip(X,Y):
-            if abs(y_val) <= abs(x_val): # Equation requires values > 0, this is not accounted for and may lead to
-                # errors in the code
+        # TODO: This should be converted into numpy arrays from the get-go using np.where() - But I am still looking for
+        #  a way to make that work
+
+        for x_val, y_val in zip(X, Y):
+            # Edge cases - !! UNVERIFIED EQUATIONS !!
+            if x_val == 0 and y_val == 0:
+                li_x.append(0)
+                li_y.append(0)
+                li_z.append(1)
+            elif x_val == 0 and y_val != 0:
+                li_x.append(0)
+                li_y.append(_eq_c(y_val))
+                li_z.append(1 - (2 * (y_val ** 2)) / np.pi)
+            elif y_val == 0 and x_val != 0:
+                li_x.append(_eq_c(x_val))
+                li_y.append(0)
+                li_z.append(li_z.append(1 - (2 * (x_val ** 2)) / np.pi))
+
+            elif abs(y_val) <= abs(x_val):
                 # 0 < |Y| <= |X| <= L - Equation 8a
-                li_x.append(eq_c(x_val)*np.cos((y_val*np.pi)/(4*x_val)))
-                li_y.append(eq_c(x_val) * np.sin((y_val * np.pi) / (4 * x_val)))
+                li_x.append(
+                    _eq_c(x_val) * np.cos((y_val * np.pi) / (4 * x_val))
+                )
+                li_y.append(
+                    _eq_c(x_val) * np.sin((y_val * np.pi) / (4 * x_val))
+                )
                 li_z.append(1 - (2 * (x_val ** 2)) / np.pi)
             else:
-                # 0 < |X| <= |X| <= L - Equation 8b
-                li_x.append(eq_c(y_val)*np.sin((x_val*np.pi)/(4*y_val)))
-                li_y.append(eq_c(y_val)*np.cos((x_val*np.pi)/(4*y_val)))
-                li_z.append(1 - (2*(y_val**2))/np.pi)
+                # 0 < |X| <= |Y| <= L - Equation 8b
+                li_x.append(
+                    _eq_c(y_val) * np.sin((x_val * np.pi) / (4 * y_val))
+                )
+                li_y.append(
+                    _eq_c(y_val) * np.cos((x_val * np.pi) / (4 * y_val))
+                )
+                li_z.append(1 - (2 * (y_val ** 2)) / np.pi)
 
         # Done appending, now we can use numpy arrays
         x = np.array(li_x[1::])
         y = np.array(li_y[1::])
         z = np.array(li_z[1::])
-
         v = np.column_stack((x, y, z))
 
         return Vector3d(v)
@@ -103,8 +144,7 @@ class LambertProjection(SphericalProjection):
 
 # This function is used inside of LambertProjection.iproject method to make code more readable
 def _eq_c(p: np.ndarray) -> np.ndarray:
-    return 2/(np.pi) * np.sqrt(np.pi - p**2)
-
+    return 2 / np.pi * np.sqrt(np.pi - p ** 2)
 
 
 def lambert_to_gnomonic(v: np.ndarray) -> np.ndarray:
@@ -115,6 +155,7 @@ def lambert_to_gnomonic(v: np.ndarray) -> np.ndarray:
     vec = GnomonicProjection.project(vec)
     return vec
 
+
 def gnomonic_to_lambert(v: np.ndarray) -> np.ndarray:
     # Take vector from Gnomonic and convert it into an Orix Vector3d object
     vec = GnomonicProjection.iproject(v[..., 0], v[..., 1])
@@ -122,4 +163,3 @@ def gnomonic_to_lambert(v: np.ndarray) -> np.ndarray:
     # Take Orix Vector 3d object and convert it to Lambert projection
     vec = LambertProjection.project(vec)
     return vec
-
