@@ -62,8 +62,8 @@ class LambertProjection(SphericalProjection):
 
     @staticmethod
     def iproject(x: np.ndarray, y: np.ndarray) -> Vector3d:
-        X = x # v[..., 0] The user needs to input this array?
-        Y = y # v[..., 1] The user needs to input this array?
+        X = x  # v[..., 0] The user needs to input this array?
+        Y = y  # v[..., 1] The user needs to input this array?
         # A perhaps easier solution would be to take in **ONE** np.ndarray v and set X = v[..., 0], Y = v[..., 1]?
         # TODO: Implement requirement checker for which equation to use
         something_important_again = True # Very temporary :)
@@ -85,3 +85,13 @@ class LambertProjection(SphericalProjection):
 
 def eq_c(p: np.darray) -> np.ndarray:
     return 2/(np.pi) * np.sqrt(np.pi - p**2)
+
+
+# TODO: Create Lambert to Gnomonic method
+def lambert_to_gnomonic(v: np.ndarray) -> np.ndarray:
+    pass
+
+# TODO: Create Gnomonic to Lambert method
+def gnomonic_to_lambert(v: np.ndarray) -> np.ndarray:
+    pass
+
