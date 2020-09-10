@@ -70,18 +70,29 @@ class LambertProjection(SphericalProjection):
         X = x  # v[..., 0] The user needs to input this array?
         Y = y  # v[..., 1] The user needs to input this array?
         # A perhaps easier solution would be to take in **ONE** np.ndarray v and set X = v[..., 0], Y = v[..., 1]?
-        # TODO: Implement requirement checker for which equation to use
-        something_important_again = True # Very temporary :)
-        if something_important_again:
-            # 0 < |Y| <= |X| <= L
-            x = eq_c(X)*np.cos((Y*np.pi)/(4*X))
-            y = eq_c(X)*np.sin((Y*np.pi)/(4*X))
-            z = 1 - (2*(X**2))/np.pi
-        else:
-            # 0 < |X| <= |X| <= L
-            x = eq_c(Y)*np.sin((X*np.pi)/(4*Y))
-            y = eq_c(Y)*np.cos((X*np.pi)/(4*Y))
-            z = 1 - (2*(Y**2))/np.pi
+
+        #  Use temporary lists for speed / memory
+        li_x = [0]
+        li_y = [0]
+        li_z = [0]
+
+        for x_val, y_val in zip(X,Y):
+            if abs(y_val) <= abs(x_val): # Equation requires values > 0, this is not accounted for and may lead to
+                # errors in the code
+                # 0 < |Y| <= |X| <= L - Equation 8a
+                li_x.append(eq_c(x_val)*np.cos((y_val*np.pi)/(4*x_val)))
+                li_y.append(eq_c(x_val) * np.sin((y_val * np.pi) / (4 * x_val)))
+                li_z.append(1 - (2 * (x_val ** 2)) / np.pi)
+            else:
+                # 0 < |X| <= |X| <= L - Equation 8b
+                li_x.append(eq_c(y_val)*np.sin((x_val*np.pi)/(4*y_val)))
+                li_y.append(eq_c(y_val)*np.cos((x_val*np.pi)/(4*y_val)))
+                li_z.append(1 - (2*(y_val**2))/np.pi)
+
+        # Done appending, now we can use numpy arrays
+        x = np.array(li_x[1::])
+        y = np.array(li_y[1::])
+        z = np.array(li_z[1::])
 
         v = np.column_stack((x, y, z))
 
