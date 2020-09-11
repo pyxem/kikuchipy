@@ -19,6 +19,7 @@
 from copy import deepcopy
 from typing import List, Optional, Tuple, Union
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -60,7 +61,9 @@ class EBSDDetector:
             divided by the detector height. Default is (0.5, 0.5, 0.5).
         convention
             PC convention. If None (default), Bruker's convention is
-            assumed.
+            assumed. Options are "tsl", "oxford", "bruker", "emsoft",
+            "emsoft4", and "emsoft5". "emsoft" and "emsoft5" is the same
+            convention.
         """
         self.shape = shape
         self.px_size = px_size
@@ -186,6 +189,16 @@ class EBSDDetector:
         return len(self.navigation_shape)
 
     @property
+    def extent(self) -> np.ndarray:
+        """Detector extent [x0, x1, y0, y1] in pixel coordinates."""
+        return np.array([0, self.ncols, 0, self.nrows])
+
+    @property
+    def extent_gnomonic(self) -> np.ndarray:
+        """Detector extent [x0, x1, y0, y1] in gnomonic coordinates."""
+        return np.concatenate([self.x_range, self.y_range]).reshape(-1)
+
+    @property
     def x_min(self) -> Union[np.ndarray, float]:
         """Left bound of detector in gnomonic projection."""
         return -self.aspect_ratio * (self.pcx / self.pcz)
@@ -259,68 +272,79 @@ class EBSDDetector:
         elif convention.lower() == "tsl":
             self.pc = self._tsl2bruker()
         elif convention.lower() == "oxford":
-            self.pc = self._oxford2emsoft()
+            self.pc = self._tsl2bruker()
             self.pc = self._emsoft2bruker()
-        elif convention.lower() == "emsoft":
+        elif convention.lower() in ["emsoft", "emsoft5"]:
             self.pc = self._emsoft2bruker()
         else:
-            conventions = ["bruker", "emsoft", "oxford", "tsl"]
+            conventions = [
+                "bruker",
+                "emsoft",
+                "emsoft4",
+                "emsoft5",
+                "oxford",
+                "tsl",
+            ]
             raise ValueError(
                 f"Projection center convention '{convention}' not among the "
                 f"recognised conventions {conventions}."
             )
 
-    def _bruker2emsoft(self) -> np.ndarray:
-        """Convert PC from Bruker to EMsoft convention."""
+    def _emsoft2bruker(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc)
-        new_pc[..., 0] = self.ncols * (self.pcx - 0.5)
-        new_pc[..., 1] = self.nrows * (0.5 - self.pcy)
-        new_pc[..., 2] = self.nrows * self.px_size * self.pcz
-        return new_pc
-
-    def _tsl2emsoft(self) -> np.ndarray:
-        """Convert PC from EDAX TSL to EMsoft convention."""
-        new_pc = np.zeros_like(self.pc)
-        new_pc[..., 0] = self.ncols * (self.pcx - 0.5)
-        new_pc[..., 1] = self.nrows * (self.pcy - 0.5)
-        new_pc[..., 2] = self.ncols * self.px_size * self.pcz
-        return new_pc
-
-    def _oxford2emsoft(self) -> np.ndarray:
-        """Convert PC from Oxford to EMsoft convention."""
-        return self._tsl2emsoft()
-
-    def _emsoft2bruker(self) -> np.ndarray:
-        """Convert PC from EMsoft to Bruker convention."""
-        new_pc = np.zeros_like(self.pc)
-        new_pc[..., 0] = (self.pcx / self.ncols) + 0.5
+        if version != 5:
+            new_pc[..., 0] = 0.5 + (-self.pcx / self.ncols)
+        else:
+            new_pc[..., 0] = 0.5 + (self.pcx / self.ncols)
         new_pc[..., 1] = 0.5 - (self.pcy / self.nrows)
-        new_pc[..., 2] = self.pcz / (self.ncols * self.px_size)
-        return new_pc
-
-    def _emsoft2tsl(self) -> np.ndarray:
-        """Convert PC from EMsoft to EDAX TSL convention."""
-        new_pc = np.zeros_like(self.pc)
-        new_pc[..., 0] = (self.pcx / self.ncols) + 0.5
-        new_pc[..., 1] = 0.5 - (self.pcy / self.nrows)
-        new_pc[..., 2] = self.pcz / (self.ncols * self.px_size)
+        new_pc[..., 2] = self.pcz / (self.nrows * self.px_size)
         return new_pc
 
     def _tsl2bruker(self) -> np.ndarray:
-        """Convert PC from EDAX TSL to Bruker convention."""
-        new_pc = self.pc[:]
+        new_pc = self.pc[:]  # Deepcopy
         new_pc[..., 1] = 1 - new_pc[..., 1]
+        return new_pc
+
+    def _bruker2emsoft(self, version: int = 5) -> np.ndarray:
+        new_pc = np.zeros_like(self.pc)
+        new_pc[..., 0] = self.ncols * (self.pcx - 0.5)
+        if version != 5:
+            new_pc[..., 0] = -new_pc[..., 0]
+        new_pc[..., 1] = self.nrows * (0.5 - self.pcy)
+        new_pc[..., 2] = self.nrows * self.px_size * self.pcz
+        return new_pc * self.binning
+
+    def _emsoft2tsl(self, version: int = 5) -> np.ndarray:
+        new_pc = np.zeros_like(self.pc)
+        if version == 5:
+            new_pc[..., 0] = 0.5 - (-self.pcx / self.ncols)
+        else:
+            new_pc[..., 0] = 0.5 - (self.pcx / self.ncols)
+        new_pc[..., 1] = 0.5 - (self.pcy / self.nrows)
+        new_pc[..., 2] = self.pcz / (self.ncols * self.px_size)
         return new_pc
 
     def _bruker2tsl(self) -> np.ndarray:
-        """Convert PC from Bruker to EDAX TSL convention."""
-        new_pc = self.pc[:]
+        new_pc = self.pc[:]  # Deepcopy
         new_pc[..., 1] = 1 - new_pc[..., 1]
         return new_pc
 
-    def to_emsoft(self) -> np.ndarray:
-        """Return PC in the EMsoft convention."""
-        return self._bruker2emsoft()
+    def to_emsoft(self, version: int = 5) -> np.ndarray:
+        """Return PC in the EMsoft convention.
+
+        Parameters
+        ----------
+        version
+            Which EMsoft PC convention to use. The direction of the x PC
+            coordinate, xpc, flipped in version 5, because from then on
+            the sample was viewed from the detector, not the other way
+            around.
+
+        Returns
+        -------
+        np.ndarray
+        """
+        return self._bruker2emsoft(version=version)
 
     def to_bruker(self) -> np.ndarray:
         """Return PC in the Bruker convention."""
@@ -337,3 +361,88 @@ class EBSDDetector:
     def deepcopy(self):
         """Return a deep copy using :func:`copy.deepcopy`."""
         return deepcopy(self)
+
+    def plot(
+        self,
+        coordinates: Optional[str] = None,
+        show_pc: bool = True,
+        pattern: Optional[np.ndarray] = None,
+        draw_gnomonic_circles: bool = False,
+        zoom: float = 1,
+        return_fig_ax: bool = False,
+    ) -> Union[None, Tuple[plt.figure, plt.axis]]:
+        """Plot the detector screen.
+
+        Parameters
+        ----------
+        coordinates
+            Which coordinates to use, "detector" or "gnomonic". If None
+            (default), "detector" is used.
+        show_pc
+            Show the average projection center. Default is True.
+        pattern
+            A pattern to put on the detector. If None (default), no
+            pattern is displayed. The pattern array must have the
+            same shape as the detector.
+        draw_gnomonic_circles
+            Draw circles for angular distances from pattern. Default is
+            False. Circle positions are only correct when
+            `coordinates="gnomonic"`.
+        zoom
+            Whether to zoom in/out from the detector, e.g. to show the
+            extent of the gnomonic projection circles. A zoom > 1 zooms
+            out. Default is 1, i.e. no zoom.
+        return_fig_ax
+            Whether to return the figure and axis object created.
+            Default is False.
+        """
+        sy, sx = self.shape
+        pcx, pcy = self.pc_average[:2]
+
+        if coordinates in [None, "detector"]:
+            pcy *= sy
+            pcx *= sx
+            extent = self.extent
+            extent[2:] = extent[2:][::-1]
+            x_label = r"$x_d$"
+            y_label = r"$y_d$"
+        else:
+            pcy, pcx = (0, 0)
+            extent = self.extent_gnomonic
+            x_label = r"$x_g$"
+            y_label = r"$y_g$"
+
+        fig, ax = plt.subplots()
+        ax.axis(zoom * extent)
+        ax.set_aspect(self.aspect_ratio)
+        ax.set_xlabel(x_label, fontsize=18)
+        ax.set_ylabel(y_label, fontsize=18)
+
+        if isinstance(pattern, np.ndarray):
+            if pattern.shape != (sy, sx):
+                raise ValueError(
+                    f"Pattern shape {pattern.shape} must equal the detector "
+                    f"shape {(sy, sx)}"
+                )
+            ax.imshow(pattern, extent=extent, cmap="gray")
+
+        if show_pc:
+            ax.scatter(
+                x=pcx, y=pcy, s=300, facecolor="gold", edgecolor="k", marker="*"
+            )
+
+        if draw_gnomonic_circles:
+            for angle in range(0, 81, 10):
+                ax.add_artist(
+                    plt.Circle(
+                        (pcx, pcy),
+                        np.tan(np.deg2rad(angle)),
+                        alpha=0.25,
+                        edgecolor="k",
+                        facecolor="None",
+                        linewidth=3,
+                    )
+                )
+
+        if return_fig_ax:
+            return fig, ax
