@@ -39,46 +39,68 @@ class LambertProjection:
 
         # TODO: Should check if Northern or Southern hemisph and act accordingly
 
-        # Lets try to use numpy arrays instead of lists!
-        size = len(x)
+        # Checks if multiple arrays/vectors or a single vector/array
+        multi = False
+        try:
+            size = len(x)
+            multi = True
+        except TypeError:
+            size = 1
         X = np.zeros(size)
         Y = np.zeros(size)
 
-        index = 0
-        for x_val, y_val, z_val in zip(x, y, z):
+        if multi:
+            index = 0
+            for x_val, y_val, z_val in zip(x, y, z):
 
-            # x^2 + y^2 + z^2 should equal 1 (Needs to lie on the unit sphere)
-            # This checker might be too strict. maybe can format the LHS of the equation to 2 decimals or something
+                # x^2 + y^2 + z^2 should equal 1 (Needs to lie on the unit sphere)
+                # This checker might be too strict. maybe can format the LHS of the equation to 2 decimals or something
 
-            if round(x_val ** 2 + y_val ** 2 + z_val ** 2, 1) != 1:
-                raise ValueError(
-                    "Vector is not on the unit sphere! Make sure x^2 + y^2 + z^2 = 1"
-                )
-            if abs(y_val) <= abs(
-                x_val
-            ):  # Equation 10a - Requirement: |y| <= |x|
-                X[index] = (
-                    np.sign(x_val)
-                    * np.sqrt(2 * (1 - z_val))
-                    * ((np.sqrt(np.pi)) / 2)
-                )
-                Y[index] = (
-                    np.sign(x_val)
-                    * np.sqrt(2 * (1 - z_val))
-                    * ((2 / (np.sqrt(np.pi))) * np.arctan(y_val / x_val))
+                if round(x_val ** 2 + y_val ** 2 + z_val ** 2, 1) != 1:
+                    raise ValueError(
+                        "Vector is not on the unit sphere! Make sure x^2 + y^2 + z^2 = 1"
+                    )
+                if abs(y_val) <= abs(
+                    x_val
+                ):  # Equation 10a - Requirement: |y| <= |x|
+                    X[index] = (
+                        np.sign(x_val)
+                        * np.sqrt(2 * (1 - z_val))
+                        * ((np.sqrt(np.pi)) / 2)
+                    )
+                    Y[index] = (
+                        np.sign(x_val)
+                        * np.sqrt(2 * (1 - z_val))
+                        * ((2 / (np.sqrt(np.pi))) * np.arctan(y_val / x_val))
+                    )
+                else:  # Equation 10b - Requirement: |x| <= |y|
+                    X[index] = (
+                        np.sign(y_val)
+                        * np.sqrt(2 * (1 - z_val))
+                        * ((2 / (np.sqrt(np.pi))) * np.arctan(x_val / y_val))
+                    )
+                    Y[index] = (
+                        np.sign(y_val)
+                        * np.sqrt(2 * (1 - z_val))
+                        * ((np.sqrt(np.pi)) / 2)
+                    )
+                index += 1
+        else:
+            if abs(y) <= abs(x):
+                # Equation 10a - Requirement: |y| <= |x|
+                X = np.sign(x) * np.sqrt(2 * (1 - z)) * ((np.sqrt(np.pi)) / 2)
+                Y = (
+                    np.sign(x)
+                    * np.sqrt(2 * (1 - z))
+                    * ((2 / (np.sqrt(np.pi))) * np.arctan(y / x))
                 )
             else:  # Equation 10b - Requirement: |x| <= |y|
-                X[index] = (
-                    np.sign(y_val)
-                    * np.sqrt(2 * (1 - z_val))
-                    * ((2 / (np.sqrt(np.pi))) * np.arctan(x_val / y_val))
+                X = (
+                    np.sign(y)
+                    * np.sqrt(2 * (1 - z))
+                    * ((2 / (np.sqrt(np.pi))) * np.arctan(x / y))
                 )
-                Y[index] = (
-                    np.sign(y_val)
-                    * np.sqrt(2 * (1 - z_val))
-                    * ((np.sqrt(np.pi)) / 2)
-                )
-            index += 1
+                Y = np.sign(y) * np.sqrt(2 * (1 - z)) * ((np.sqrt(np.pi)) / 2)
 
         return np.column_stack((X, Y))
 
@@ -88,36 +110,72 @@ class LambertProjection:
         X = x
         Y = y
 
-        size = len(X)
+        # Checks if multiple arrays/vectors or a single vector/array
+        multi = False
+        try:
+            size = len(x)
+            multi = True
+        except TypeError:
+            size = 1
         x = np.zeros(size)
         y = np.zeros(size)
         z = np.zeros(size)
 
-        index = 0
-        for x_val, y_val in zip(X, Y):
-            if abs(x_val) > np.sqrt(np.pi / 2) or abs(y_val) > np.sqrt(
-                np.pi / 2
-            ):
+        if multi:
+            index = 0
+            for x_val, y_val in zip(X, Y):
+                if abs(x_val) > np.sqrt(np.pi / 2) or abs(y_val) > np.sqrt(
+                    np.pi / 2
+                ):
+                    raise ValueError(
+                        "The X and Y values MUST NOT be greater than L = sqrt(pi/2)"
+                    )
+                if (
+                    x_val == 0 and y_val == 0
+                ):  # This is probably covered in the equations below but it is here now :)
+                    x[index] = 0
+                    y[index] = 0
+                    z[index] = 1
+                elif abs(y_val) <= abs(x_val):
+                    # 0 < |Y| <= |X| <= L - Equation 8a
+                    x[index] = _eq_c(x_val) * np.cos(
+                        (y_val * np.pi) / (4 * x_val)
+                    )
+                    y[index] = _eq_c(x_val) * np.sin(
+                        (y_val * np.pi) / (4 * x_val)
+                    )
+                    z[index] = 1 - (2 * (x_val ** 2)) / np.pi
+                else:
+                    # 0 < |X| <= |Y| <= L - Equation 8b
+                    x[index] = _eq_c(y_val) * np.sin(
+                        (x_val * np.pi) / (4 * y_val)
+                    )
+                    y[index] = _eq_c(y_val) * np.cos(
+                        (x_val * np.pi) / (4 * y_val)
+                    )
+                    z[index] = 1 - (2 * (y_val ** 2)) / np.pi
+                index += 1
+        else:
+            if abs(x) > np.sqrt(np.pi / 2) or abs(y) > np.sqrt(np.pi / 2):
                 raise ValueError(
                     "The X and Y values MUST NOT be greater than L = sqrt(pi/2)"
                 )
             if (
-                x_val == 0 and y_val == 0
+                X == 0 and Y == 0
             ):  # This is probably covered in the equations below but it is here now :)
-                x[index] = 0
-                y[index] = 0
-                z[index] = 1
-            elif abs(y_val) <= abs(x_val):
+                x = 0
+                y = 0
+                z = 1
+            elif abs(Y) <= abs(X):
                 # 0 < |Y| <= |X| <= L - Equation 8a
-                x[index] = _eq_c(x_val) * np.cos((y_val * np.pi) / (4 * x_val))
-                y[index] = _eq_c(x_val) * np.sin((y_val * np.pi) / (4 * x_val))
-                z[index] = 1 - (2 * (x_val ** 2)) / np.pi
+                x = _eq_c(X) * np.cos((Y * np.pi) / (4 * X))
+                y = _eq_c(X) * np.sin((Y * np.pi) / (4 * X))
+                z = 1 - (2 * (X ** 2)) / np.pi
             else:
                 # 0 < |X| <= |Y| <= L - Equation 8b
-                x[index] = _eq_c(y_val) * np.sin((x_val * np.pi) / (4 * y_val))
-                y[index] = _eq_c(y_val) * np.cos((x_val * np.pi) / (4 * y_val))
-                z[index] = 1 - (2 * (y_val ** 2)) / np.pi
-            index += 1
+                x = _eq_c(Y) * np.sin((X * np.pi) / (4 * Y))
+                y = _eq_c(Y) * np.cos((X * np.pi) / (4 * Y))
+                z = 1 - (2 * (Y ** 2)) / np.pi
 
         return Vector3d(np.column_stack((x, y, z)))
 
@@ -140,4 +198,4 @@ class LambertProjection:
 
 def _eq_c(p: np.ndarray) -> np.ndarray:
     """Private function used inside LambertProjection.iproject to increase readability."""
-    return 2 / np.pi * np.sqrt(np.pi - p ** 2)
+    return (2 * p / np.pi) * np.sqrt(np.pi - p ** 2)
