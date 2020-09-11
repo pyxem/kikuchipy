@@ -44,8 +44,9 @@ class LambertProjection:
         X = np.zeros(size)
         Y = np.zeros(size)
 
+        index = 0
         for x_val, y_val, z_val in zip(x, y, z):
-            index = 0
+
             # x^2 + y^2 + z^2 should equal 1 (Needs to lie on the unit sphere)
             # This checker might be too strict. maybe can format the LHS of the equation to 2 decimals or something
 
@@ -92,8 +93,8 @@ class LambertProjection:
         y = np.zeros(size)
         z = np.zeros(size)
 
+        index = 0
         for x_val, y_val in zip(X, Y):
-            index = 0
             if abs(x_val) > np.sqrt(np.pi / 2) or abs(y_val) > np.sqrt(
                 np.pi / 2
             ):
