@@ -121,24 +121,23 @@ class LambertProjection:
 
         return Vector3d(np.column_stack((x, y, z)))
 
+    @staticmethod
+    def lambert_to_gnomonic(v: np.ndarray) -> np.ndarray:
+        """Convert from Lambert via Cartesian coordinates to Gnomonic."""
+        # These two functions could probably be combined into 1 to decrease runtime
+        vec = LambertProjection.iproject(v[..., 0], v[..., 1])
+        vec = GnomonicProjection.project(vec)
+        return vec
 
-# I believe this method is implemented wrong. Why is it taking and returning np.ndarray?
+    @staticmethod
+    def gnomonic_to_lambert(v: np.ndarray) -> np.ndarray:
+        """Convert from Gnomonic via Cartesian coordinates to Lambert."""
+        # These two functions could probably be combined into 1 to decrease runtime
+        vec = GnomonicProjection.iproject(v[..., 0], v[..., 1])
+        vec = LambertProjection.project(vec)
+        return vec
+
+
 def _eq_c(p: np.ndarray) -> np.ndarray:
     """Private function used inside LambertProjection.iproject to increase readability."""
     return 2 / np.pi * np.sqrt(np.pi - p ** 2)
-
-
-def lambert_to_gnomonic(v: np.ndarray) -> np.ndarray:
-    """Convert from Lambert via Cartesian coordinates to Gnomonic."""
-    # These two functions could probably be combined into 1 to decrease runtime
-    vec = LambertProjection.iproject(v[..., 0], v[..., 1])
-    vec = GnomonicProjection.project(vec)
-    return vec
-
-
-def gnomonic_to_lambert(v: np.ndarray) -> np.ndarray:
-    """Convert from Gnomonic via Cartesian coordinates to Lambert."""
-    # These two functions could probably be combined into 1 to decrease runtime
-    vec = GnomonicProjection.iproject(v[..., 0], v[..., 1])
-    vec = LambertProjection.project(vec)
-    return vec
