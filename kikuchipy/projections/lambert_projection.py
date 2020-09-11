@@ -47,7 +47,9 @@ class LambertProjection:
         for x_val, y_val, z_val in zip(x, y, z):
             index = 0
             # x^2 + y^2 + z^2 should equal 1 (Needs to lie on the unit sphere)
-            if x_val ** 2 + y_val ** 2 + z_val ** 2 != 1:
+            # This checker might be too strict. maybe can format the LHS of the equation to 2 decimals or something
+
+            if round(x_val ** 2 + y_val ** 2 + z_val ** 2, 1) != 1:
                 raise ValueError(
                     "Vector is not on the unit sphere! Make sure x^2 + y^2 + z^2 = 1"
                 )
@@ -92,8 +94,8 @@ class LambertProjection:
 
         for x_val, y_val in zip(X, Y):
             index = 0
-            if abs(x_val) > np.sqrt((np.pi) / 2) or abs(y_val) > np.sqrt(
-                (np.pi) / 2
+            if abs(x_val) > np.sqrt(np.pi / 2) or abs(y_val) > np.sqrt(
+                np.pi / 2
             ):
                 raise ValueError(
                     "The X and Y values MUST NOT be greater than L = sqrt(pi/2)"
@@ -119,6 +121,7 @@ class LambertProjection:
         return Vector3d(np.column_stack((x, y, z)))
 
 
+# I believe this method is implemented wrong. Why is it taking and returning np.ndarray?
 def _eq_c(p: np.ndarray) -> np.ndarray:
     """Private function used inside LambertProjection.iproject to increase readability."""
     return 2 / np.pi * np.sqrt(np.pi - p ** 2)
