@@ -69,7 +69,7 @@ class TestLambertProjection:
         """Conversion from Lambert to Cartesian coordinates works"""
         vec = np.array((0.81417, 0.81417))
         expected = Vector3d((0.57702409, 0.577, 0.578))
-        output = LambertProjection.iproject(vec[..., 0], vec[..., 1])
+        output = LambertProjection.iproject(vec)
         print(type(output.x.data))
         print(type(expected.x.data))
         assert output.x.data[0] == pytest.approx(expected.x.data[0])

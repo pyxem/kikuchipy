@@ -105,15 +105,15 @@ class LambertProjection:
         return np.column_stack((X, Y))
 
     @staticmethod
-    def iproject(x: np.ndarray, y: np.ndarray) -> Vector3d:
+    def iproject(vec: np.ndarray) -> Vector3d:
         """Convert from Lambert to Cartesian coordinates."""
-        X = x
-        Y = y
+        X = vec[..., 0]
+        Y = vec[..., 1]
 
         # Checks if multiple arrays/vectors or a single vector/array
         multi = False
         try:
-            size = len(x)
+            size = len(X)
             multi = True
         except TypeError:
             size = 1
@@ -183,7 +183,7 @@ class LambertProjection:
     def lambert_to_gnomonic(v: np.ndarray) -> np.ndarray:
         """Convert from Lambert via Cartesian coordinates to Gnomonic."""
         # These two functions could probably be combined into 1 to decrease runtime
-        vec = LambertProjection.iproject(v[..., 0], v[..., 1])
+        vec = LambertProjection.iproject(v)
         vec = GnomonicProjection.project(vec)
         return vec
 
