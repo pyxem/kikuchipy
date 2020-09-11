@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from copy import deepcopy
+
 import numpy as np
 import pytest
 
@@ -107,32 +109,6 @@ class TestEBSDDetector:
         assert detector.size == size
         assert detector.shape_unbinned == shape_unbinned
         assert detector.px_size_binned == px_size_binned
-
-    @pytest.mark.parametrize(
-        "pc, convention, bruker, tsl, oxford, emsoft",
-        # fmt: off
-        [
-            (
-                [3.4848, 114.2016, 15767.7], "emsoft",
-                [0.50726, 0.26208, 0.55489], [0.50726, 0.73792, 0.55489],
-                [0.50726, 0.73792, 0.55489], [3.4848, 114.2016, 15767.7],
-            )
-        ],
-        # fmt: on
-    )
-    def test_pc_conversions(self, pc, convention, bruker, tsl, oxford, emsoft):
-        """Conversions between PC conventions."""
-        detector = EBSDDetector(
-            shape=(480, 480),
-            binning=1,
-            px_size=59.2,
-            pc=pc,
-            convention=convention,
-        )
-        assert np.allclose(detector.pc, bruker, atol=1e-4)
-        assert np.allclose(detector.to_bruker(), bruker, atol=1e-4)
-        assert np.allclose(detector.to_emsoft(), emsoft, atol=1e-4)
-        assert np.allclose(detector.to_tsl(), tsl, atol=1e-4)
 
     def test_repr(self, pc1):
         """Expected string representation."""
@@ -235,22 +211,95 @@ class TestEBSDDetector:
         assert np.allclose(detector.y_scale, desired_y_scale, atol=1e-6)
 
     @pytest.mark.parametrize(
-        "pc, convention, desired_pc",
+        "shape, pc, px_size, binning, version, desired_pc",
         [
-            ([0.421, 0.2206, 0.5049], "tsl", [0.421, 0.7794, 0.5049]),
-            ([0.421, 0.2206, 0.5049], "oxford", [0.421, 0.7794, 0.5049]),
-            ([0.421, 0.7794, 0.5049], "bruker", [0.421, 0.7794, 0.5049]),
-            ([0.421, 0.7794, 0.5049], None, [0.421, 0.7794, 0.5049]),
-            ([-37.92, -134.112, 16964.64], "emsoft", [0.421, 0.7794, 0.5049]),
+            (
+                (60, 60),
+                [3.4848, 114.2016, 15767.7],
+                59.2,
+                8,
+                4,
+                [0.50726, 0.26208, 0.55849],
+            ),
+            (
+                (60, 60),
+                [-3.4848, 114.2016, 15767.7],
+                59.2,
+                8,
+                5,
+                [0.50726, 0.26208, 0.55849],
+            ),
+            (
+                (61, 61),
+                [-10.632, 145.5187, 19918.9],
+                59.2,
+                8,
+                4,
+                [0.47821, 0.20181, 0.68948],
+            ),
+            (
+                (61, 61),
+                [10.632, 145.5187, 19918.9],
+                59.2,
+                8,
+                5,
+                [0.47821, 0.20181, 0.68948],
+            ),
+            (
+                (80, 60),
+                [-0.55, -13.00, 16075.2],
+                50,
+                6,
+                4,
+                [0.4991, 0.5271, 0.6698],
+            ),
+            (
+                (80, 60),
+                [0.55, -13.00, 16075.2],
+                50,
+                6,
+                5,
+                [0.4991, 0.5271, 0.6698],
+            ),
         ],
     )
-    def test_set_pc_convention(self, pc, convention, desired_pc):
-        """PC is converted to Bruker's format via correct conversion."""
-        detector = EBSDDetector(
-            shape=(480, 480), px_size=70, pc=pc, convention=convention
+    def test_set_pc_from_emsoft(
+        self, shape, pc, px_size, binning, version, desired_pc
+    ):
+        """PC EMsoft -> Bruker -> EMsoft, also checking to_tsl() and
+        to_bruker().
+        """
+        det = EBSDDetector(
+            shape=shape,
+            pc=pc,
+            px_size=px_size,
+            binning=binning,
+            convention=f"emsoft{version}",
         )
-        assert np.allclose(detector.pc, desired_pc)
-        assert np.allclose(detector.to_tsl(), [0.421, 0.2206, 0.5049])
 
+        assert np.allclose(det.pc, desired_pc, atol=1e-2)
+        assert np.allclose(det.to_emsoft(version=version), pc, atol=1e-2)
+        assert np.allclose(det.to_bruker(), desired_pc, atol=1e-2)
 
-#        assert np.allclose(detector.to_emsoft(), [-37.92, -134.112, 16964.64])
+        pc_tsl = deepcopy(det.pc)
+        pc_tsl[..., 1] = 1 - pc_tsl[..., 1]
+        assert np.allclose(det.to_tsl(), pc_tsl, atol=1e-2)
+        assert np.allclose(det.to_oxford(), pc_tsl, atol=1e-2)
+
+    @pytest.mark.parametrize(
+        "pc, desired_pc",
+        [
+            ([0.35, 1, 0.65], [0.35, 0, 0.65]),
+            ([0.25, 0, 0.75], [0.25, 1, 0.75]),
+            ([0.1, 0.2, 0.3], [0.1, 0.8, 0.3]),
+            ([0.6, 0.6, 0.6], [0.6, 0.4, 0.6]),
+        ],
+    )
+    def test_set_pc_from_tsl(self, pc, desired_pc):
+        """PC TSL -> Bruker -> TSL."""
+        det = EBSDDetector(pc=pc, convention="tsl")
+        assert np.allclose(det.pc, desired_pc)
+        assert np.allclose(det.to_tsl(), pc)
+        assert np.allclose(
+            EBSDDetector(pc=det.to_tsl(), convention="tsl").to_tsl(), pc
+        )

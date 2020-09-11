@@ -273,9 +273,12 @@ class EBSDDetector:
             self.pc = self._tsl2bruker()
         elif convention.lower() == "oxford":
             self.pc = self._tsl2bruker()
-            self.pc = self._emsoft2bruker()
-        elif convention.lower() in ["emsoft", "emsoft5"]:
-            self.pc = self._emsoft2bruker()
+        elif convention.lower() in ["emsoft", "emsoft4", "emsoft5"]:
+            try:
+                version = int(convention[-1])
+            except ValueError:
+                version = 5
+            self.pc = self._emsoft2bruker(version=version)
         else:
             conventions = [
                 "bruker",
@@ -292,41 +295,31 @@ class EBSDDetector:
 
     def _emsoft2bruker(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc)
-        if version != 5:
-            new_pc[..., 0] = 0.5 + (-self.pcx / self.ncols)
+        if version == 5:
+            new_pc[..., 0] = 0.5 + (-self.pcx / (self.ncols * self.binning))
         else:
-            new_pc[..., 0] = 0.5 + (self.pcx / self.ncols)
-        new_pc[..., 1] = 0.5 - (self.pcy / self.nrows)
-        new_pc[..., 2] = self.pcz / (self.nrows * self.px_size)
+            new_pc[..., 0] = 0.5 + (self.pcx / (self.ncols * self.binning))
+        new_pc[..., 1] = 0.5 - (self.pcy / (self.nrows * self.binning))
+        new_pc[..., 2] = self.pcz / (self.nrows * self.px_size * self.binning)
         return new_pc
 
     def _tsl2bruker(self) -> np.ndarray:
-        new_pc = self.pc[:]  # Deepcopy
-        new_pc[..., 1] = 1 - new_pc[..., 1]
+        new_pc = deepcopy(self.pc)
+        new_pc[..., 1] = 1 - self.pcy
         return new_pc
 
     def _bruker2emsoft(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc)
         new_pc[..., 0] = self.ncols * (self.pcx - 0.5)
-        if version != 5:
+        if version == 5:
             new_pc[..., 0] = -new_pc[..., 0]
         new_pc[..., 1] = self.nrows * (0.5 - self.pcy)
         new_pc[..., 2] = self.nrows * self.px_size * self.pcz
         return new_pc * self.binning
 
-    def _emsoft2tsl(self, version: int = 5) -> np.ndarray:
-        new_pc = np.zeros_like(self.pc)
-        if version == 5:
-            new_pc[..., 0] = 0.5 - (-self.pcx / self.ncols)
-        else:
-            new_pc[..., 0] = 0.5 - (self.pcx / self.ncols)
-        new_pc[..., 1] = 0.5 - (self.pcy / self.nrows)
-        new_pc[..., 2] = self.pcz / (self.ncols * self.px_size)
-        return new_pc
-
     def _bruker2tsl(self) -> np.ndarray:
-        new_pc = self.pc[:]  # Deepcopy
-        new_pc[..., 1] = 1 - new_pc[..., 1]
+        new_pc = deepcopy(self.pc)
+        new_pc[..., 1] = 1 - self.pcy
         return new_pc
 
     def to_emsoft(self, version: int = 5) -> np.ndarray:
