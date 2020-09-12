@@ -102,14 +102,16 @@ class LambertProjection:
         return vec
 
 
-def _eq_c(p: np.ndarray) -> np.ndarray:
+def _eq_c(p: Union[np.ndarray, float, int]) -> Union[np.ndarray, float, int]:
     """Private function used inside LambertProjection.iproject to increase readability."""
     return (2 * p / np.pi) * np.sqrt(np.pi - p ** 2)
 
 
 def _setLambert(
-    x: np.ndarray, y: np.ndarray, z: np.ndarray
-) -> (np.ndarray, np.ndarray):
+    x: Union[np.ndarray, float, int],
+    y: Union[np.ndarray, float, int],
+    z: Union[np.ndarray, float, int],
+) -> (Union[np.ndarray, float, int], Union[np.ndarray, float, int]):
     """Takes the Cartesian coordinate x, y, z 1D arrays and returns the Lambert equivalent X and Y"""
     if abs(y) <= abs(x):  # Equation 10a - Requirement: |y| <= |x|
         X = np.sign(x) * np.sqrt(2 * (1 - z)) * ((np.sqrt(np.pi)) / 2)
@@ -129,8 +131,12 @@ def _setLambert(
 
 
 def _setCartesian(
-    X: np.ndarray, Y: np.ndarray
-) -> (np.ndarray, np.ndarray, np.ndarray):
+    X: Union[np.ndarray, float, int], Y: Union[np.ndarray, float, int]
+) -> (
+    Union[np.ndarray, float, int],
+    Union[np.ndarray, float, int],
+    Union[np.ndarray, float, int],
+):
     """Takes Lambert X and Y coordinate arrays and returns the Cartesian equivalent x, y, z 1D arrays"""
     if abs(Y) <= abs(X):
         # 0 < |Y| <= |X| <= L - Equation 8a
