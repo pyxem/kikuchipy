@@ -29,13 +29,14 @@ class LambertProjection:
     def project(self, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
         """Convert from Cartesian to the Lambert projection"""
         if isinstance(v, Vector3d):
-            x = v.x.data
-            y = v.y.data
-            z = v.z.data
+            x = v.x.data / v.norm.data
+            y = v.y.data / v.norm.data
+            z = v.z.data / v.norm.data
         else:
-            x = v[..., 0]
-            y = v[..., 1]
-            z = v[..., 2]
+            norm = np.sqrt(np.sum(np.square([v[..., 0], v[..., 1], v[..., 2]])))
+            x = v[..., 0] / norm
+            y = v[..., 1] / norm
+            z = v[..., 2] / norm
 
         # TODO: Should check if Northern or Southern hemisph and act accordingly
 
@@ -52,14 +53,6 @@ class LambertProjection:
         if multi:
             index = 0
             for x_val, y_val, z_val in zip(x, y, z):
-
-                # x^2 + y^2 + z^2 should equal 1 (Needs to lie on the unit sphere)
-                # This checker might be too strict. maybe can format the LHS of the equation to 2 decimals or something
-
-                if round(x_val ** 2 + y_val ** 2 + z_val ** 2, 1) != 1:
-                    raise ValueError(
-                        "Vector is not on the unit sphere! Make sure x^2 + y^2 + z^2 = 1"
-                    )
                 if abs(y_val) <= abs(
                     x_val
                 ):  # Equation 10a - Requirement: |y| <= |x|
@@ -124,12 +117,6 @@ class LambertProjection:
         if multi:
             index = 0
             for x_val, y_val in zip(X, Y):
-                if abs(x_val) > np.sqrt(np.pi / 2) or abs(y_val) > np.sqrt(
-                    np.pi / 2
-                ):
-                    raise ValueError(
-                        "The X and Y values MUST NOT be greater than L = sqrt(pi/2)"
-                    )
                 if (
                     x_val == 0 and y_val == 0
                 ):  # This is probably covered in the equations below but it is here now :)
@@ -156,10 +143,6 @@ class LambertProjection:
                     z[index] = 1 - (2 * (y_val ** 2)) / np.pi
                 index += 1
         else:
-            if abs(x) > np.sqrt(np.pi / 2) or abs(y) > np.sqrt(np.pi / 2):
-                raise ValueError(
-                    "The X and Y values MUST NOT be greater than L = sqrt(pi/2)"
-                )
             if (
                 X == 0 and Y == 0
             ):  # This is probably covered in the equations below but it is here now :)
@@ -199,3 +182,13 @@ class LambertProjection:
 def _eq_c(p: np.ndarray) -> np.ndarray:
     """Private function used inside LambertProjection.iproject to increase readability."""
     return (2 * p / np.pi) * np.sqrt(np.pi - p ** 2)
+
+
+def _setLambert(x, y, z):
+    # TODO: Create this method
+    pass
+
+
+def _setCartesian(x, y):
+    # TODO: Create this method
+    pass
