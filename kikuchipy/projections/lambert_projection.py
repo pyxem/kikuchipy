@@ -53,47 +53,10 @@ class LambertProjection:
         if multi:
             index = 0
             for x_val, y_val, z_val in zip(x, y, z):
-                if abs(y_val) <= abs(
-                    x_val
-                ):  # Equation 10a - Requirement: |y| <= |x|
-                    X[index] = (
-                        np.sign(x_val)
-                        * np.sqrt(2 * (1 - z_val))
-                        * ((np.sqrt(np.pi)) / 2)
-                    )
-                    Y[index] = (
-                        np.sign(x_val)
-                        * np.sqrt(2 * (1 - z_val))
-                        * ((2 / (np.sqrt(np.pi))) * np.arctan(y_val / x_val))
-                    )
-                else:  # Equation 10b - Requirement: |x| <= |y|
-                    X[index] = (
-                        np.sign(y_val)
-                        * np.sqrt(2 * (1 - z_val))
-                        * ((2 / (np.sqrt(np.pi))) * np.arctan(x_val / y_val))
-                    )
-                    Y[index] = (
-                        np.sign(y_val)
-                        * np.sqrt(2 * (1 - z_val))
-                        * ((np.sqrt(np.pi)) / 2)
-                    )
+                X[index], Y[index] = _setLambert(x_val, y_val, z_val)
                 index += 1
         else:
-            if abs(y) <= abs(x):
-                # Equation 10a - Requirement: |y| <= |x|
-                X = np.sign(x) * np.sqrt(2 * (1 - z)) * ((np.sqrt(np.pi)) / 2)
-                Y = (
-                    np.sign(x)
-                    * np.sqrt(2 * (1 - z))
-                    * ((2 / (np.sqrt(np.pi))) * np.arctan(y / x))
-                )
-            else:  # Equation 10b - Requirement: |x| <= |y|
-                X = (
-                    np.sign(y)
-                    * np.sqrt(2 * (1 - z))
-                    * ((2 / (np.sqrt(np.pi))) * np.arctan(x / y))
-                )
-                Y = np.sign(y) * np.sqrt(2 * (1 - z)) * ((np.sqrt(np.pi)) / 2)
+            X, Y = _setLambert(x, y, z)
 
         return np.column_stack((X, Y))
 
@@ -113,53 +76,13 @@ class LambertProjection:
         x = np.zeros(size)
         y = np.zeros(size)
         z = np.zeros(size)
-
         if multi:
             index = 0
             for x_val, y_val in zip(X, Y):
-                if (
-                    x_val == 0 and y_val == 0
-                ):  # This is probably covered in the equations below but it is here now :)
-                    x[index] = 0
-                    y[index] = 0
-                    z[index] = 1
-                elif abs(y_val) <= abs(x_val):
-                    # 0 < |Y| <= |X| <= L - Equation 8a
-                    x[index] = _eq_c(x_val) * np.cos(
-                        (y_val * np.pi) / (4 * x_val)
-                    )
-                    y[index] = _eq_c(x_val) * np.sin(
-                        (y_val * np.pi) / (4 * x_val)
-                    )
-                    z[index] = 1 - (2 * (x_val ** 2)) / np.pi
-                else:
-                    # 0 < |X| <= |Y| <= L - Equation 8b
-                    x[index] = _eq_c(y_val) * np.sin(
-                        (x_val * np.pi) / (4 * y_val)
-                    )
-                    y[index] = _eq_c(y_val) * np.cos(
-                        (x_val * np.pi) / (4 * y_val)
-                    )
-                    z[index] = 1 - (2 * (y_val ** 2)) / np.pi
+                x[index], y[index], z[index] = _setCartesian(x_val, y_val)
                 index += 1
         else:
-            if (
-                X == 0 and Y == 0
-            ):  # This is probably covered in the equations below but it is here now :)
-                x = 0
-                y = 0
-                z = 1
-            elif abs(Y) <= abs(X):
-                # 0 < |Y| <= |X| <= L - Equation 8a
-                x = _eq_c(X) * np.cos((Y * np.pi) / (4 * X))
-                y = _eq_c(X) * np.sin((Y * np.pi) / (4 * X))
-                z = 1 - (2 * (X ** 2)) / np.pi
-            else:
-                # 0 < |X| <= |Y| <= L - Equation 8b
-                x = _eq_c(Y) * np.sin((X * np.pi) / (4 * Y))
-                y = _eq_c(Y) * np.cos((X * np.pi) / (4 * Y))
-                z = 1 - (2 * (Y ** 2)) / np.pi
-
+            x, y, z = _setCartesian(X, Y)
         return Vector3d(np.column_stack((x, y, z)))
 
     @staticmethod
@@ -184,11 +107,39 @@ def _eq_c(p: np.ndarray) -> np.ndarray:
     return (2 * p / np.pi) * np.sqrt(np.pi - p ** 2)
 
 
-def _setLambert(x, y, z):
-    # TODO: Create this method
-    pass
+def _setLambert(
+    x: np.ndarray, y: np.ndarray, z: np.ndarray
+) -> (np.ndarray, np.ndarray):
+    """Takes the Cartesian coordinate x, y, z 1D arrays and returns the Lambert equivalent X and Y"""
+    if abs(y) <= abs(x):  # Equation 10a - Requirement: |y| <= |x|
+        X = np.sign(x) * np.sqrt(2 * (1 - z)) * ((np.sqrt(np.pi)) / 2)
+        Y = (
+            np.sign(x)
+            * np.sqrt(2 * (1 - z))
+            * ((2 / (np.sqrt(np.pi))) * np.arctan(y / x))
+        )
+    else:  # Equation 10b - Requirement: |x| <= |y|
+        X = (
+            np.sign(y)
+            * np.sqrt(2 * (1 - z))
+            * ((2 / (np.sqrt(np.pi))) * np.arctan(x / y))
+        )
+        Y = np.sign(y) * np.sqrt(2 * (1 - z)) * ((np.sqrt(np.pi)) / 2)
+    return X, Y
 
 
-def _setCartesian(x, y):
-    # TODO: Create this method
-    pass
+def _setCartesian(
+    X: np.ndarray, Y: np.ndarray
+) -> (np.ndarray, np.ndarray, np.ndarray):
+    """Takes Lambert X and Y coordinate arrays and returns the Cartesian equivalent x, y, z 1D arrays"""
+    if abs(Y) <= abs(X):
+        # 0 < |Y| <= |X| <= L - Equation 8a
+        x = _eq_c(X) * np.cos((Y * np.pi) / (4 * X))
+        y = _eq_c(X) * np.sin((Y * np.pi) / (4 * X))
+        z = 1 - (2 * (X ** 2)) / np.pi
+    else:
+        # 0 < |X| <= |Y| <= L - Equation 8b
+        x = _eq_c(Y) * np.sin((X * np.pi) / (4 * Y))
+        y = _eq_c(Y) * np.cos((X * np.pi) / (4 * Y))
+        z = 1 - (2 * (Y ** 2)) / np.pi
+    return x, y, z
