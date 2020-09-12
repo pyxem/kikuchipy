@@ -21,7 +21,11 @@ import pytest
 
 
 from kikuchipy.projections.lambert_projection import LambertProjection
-from kikuchipy.projections.lambert_projection import _eq_c
+from kikuchipy.projections.lambert_projection import (
+    _eq_c,
+    _setCartesian,
+    _setLambert,
+)
 from orix.vector import Vector3d
 
 # !! WORK IN PROGRESS !!
@@ -33,10 +37,10 @@ class TestLambertProjection:
 
         vector_one = Vector3d((0.578, 0.578, 0.578))
         output_a = LambertProjection.project(vector_one)
-        expected_a = np.array((0.814172, 0.814172))
+        expected_a = np.array((0.81417, 0.81417))
 
-        assert output_a[..., 0][0] == pytest.approx(expected_a[..., 0])
-        assert output_a[..., 1][0] == pytest.approx(expected_a[..., 1])
+        assert output_a[..., 0][0] == pytest.approx(expected_a[..., 0], rel=1e4)
+        assert output_a[..., 1][0] == pytest.approx(expected_a[..., 1], rel=1e4)
 
         vector_two = Vector3d(
             np.array(
@@ -53,17 +57,25 @@ class TestLambertProjection:
             )
         )
 
-        assert output_b[..., 0][0] == pytest.approx(expected_b[..., 0][0])
-        assert output_b[..., 1][0] == pytest.approx(expected_b[..., 1][0])
-        assert output_b[..., 1][2] == pytest.approx(expected_b[..., 1][2])
-        assert output_b[..., 0][2] == pytest.approx(expected_b[..., 0][2])
+        assert output_b[..., 0][0] == pytest.approx(
+            expected_b[..., 0][0], rel=1e4
+        )
+        assert output_b[..., 1][0] == pytest.approx(
+            expected_b[..., 1][0], rel=1e4
+        )
+        assert output_b[..., 1][2] == pytest.approx(
+            expected_b[..., 1][2], rel=1e4
+        )
+        assert output_b[..., 0][2] == pytest.approx(
+            expected_b[..., 0][2], rel=1e4
+        )
 
     def test_project_ndarray(self):
         "Works for numpy ndarrays"
         ipt = np.array((0.578, 0.578, 0.578))
         output = LambertProjection.project(ipt)
-        expected = np.array((0.814172, 0.814172))
-        assert output[..., 0][0] == pytest.approx(expected[..., 0])
+        expected = np.array((0.81417, 0.81417))
+        assert output[..., 0][0] == pytest.approx(expected[..., 0], rel=1e4)
 
     def test_iproject(self):
         """Conversion from Lambert to Cartesian coordinates works"""
@@ -98,3 +110,22 @@ class TestLambertProjection:
         output = LambertProjection.gnomonic_to_lambert(vec)
         expected = np.array((0.81417, 0.81417))
         assert output[..., 0][0] == pytest.approx(expected[..., 0], rel=1e-3)
+
+    def test_setLambert(self):
+        x = 1 / np.sqrt(3)
+        y = 1 / np.sqrt(3)
+        z = 1 / np.sqrt(3)
+        X, Y = _setLambert(x, y, z)
+        expX = 0.8147985301
+        expY = 0.8147985301
+        assert X == pytest.approx(expX, rel=1e-5)
+        assert Y == pytest.approx(expY, rel=1e-5)
+
+    def test_setCartesian(self):
+        X = 0.8147985301
+        Y = 0.8147985301
+
+        x, y, z = _setCartesian(X, Y)
+        assert x == pytest.approx(1 / np.sqrt(3), rel=1e-5)
+        assert y == pytest.approx(1 / np.sqrt(3), rel=1e-5)
+        assert z == pytest.approx(1 / np.sqrt(3), rel=1e-5)
