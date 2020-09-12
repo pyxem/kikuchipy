@@ -330,8 +330,8 @@ class EBSDDetector:
         version
             Which EMsoft PC convention to use. The direction of the x PC
             coordinate, xpc, flipped in version 5, because from then on
-            the sample was viewed from the detector, not the other way
-            around.
+            the EBSD patterns were viewed looking from detector to
+            sample, not the other way around.
 
         Returns
         -------
