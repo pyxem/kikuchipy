@@ -18,6 +18,8 @@
 
 from copy import deepcopy
 
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
@@ -278,28 +280,179 @@ class TestEBSDDetector:
         )
 
         assert np.allclose(det.pc, desired_pc, atol=1e-2)
-        assert np.allclose(det.to_emsoft(version=version), pc, atol=1e-2)
-        assert np.allclose(det.to_bruker(), desired_pc, atol=1e-2)
+        assert np.allclose(det.pc_emsoft(version=version), pc, atol=1e-2)
+        assert np.allclose(det.pc_bruker(), desired_pc, atol=1e-2)
 
         pc_tsl = deepcopy(det.pc)
         pc_tsl[..., 1] = 1 - pc_tsl[..., 1]
-        assert np.allclose(det.to_tsl(), pc_tsl, atol=1e-2)
-        assert np.allclose(det.to_oxford(), pc_tsl, atol=1e-2)
+        assert np.allclose(det.pc_tsl(), pc_tsl, atol=1e-2)
+        assert np.allclose(det.pc_oxford(), pc_tsl, atol=1e-2)
+
+    def test_set_pc_from_emsoft_no_version(self):
+        """PC EMsoft -> Bruker, no EMsoft version specified gives v5."""
+        assert np.allclose(
+            EBSDDetector(
+                shape=(60, 60),
+                pc=[-3.4848, 114.2016, 15767.7],
+                px_size=59.2,
+                binning=8,
+                convention="emsoft",
+            ).pc,
+            [0.50726, 0.26208, 0.55849],
+            atol=1e-2,
+        )
 
     @pytest.mark.parametrize(
-        "pc, desired_pc",
+        "pc, convention, desired_pc",
         [
-            ([0.35, 1, 0.65], [0.35, 0, 0.65]),
-            ([0.25, 0, 0.75], [0.25, 1, 0.75]),
-            ([0.1, 0.2, 0.3], [0.1, 0.8, 0.3]),
-            ([0.6, 0.6, 0.6], [0.6, 0.4, 0.6]),
+            ([0.35, 1, 0.65], "tsl", [0.35, 0, 0.65]),
+            ([0.25, 0, 0.75], "oxford", [0.25, 1, 0.75]),
+            ([0.1, 0.2, 0.3], "amatek", [0.1, 0.8, 0.3]),
+            ([0.6, 0.6, 0.6], "edax", [0.6, 0.4, 0.6]),
         ],
     )
-    def test_set_pc_from_tsl(self, pc, desired_pc):
+    def test_set_pc_from_tsl_oxford(self, pc, convention, desired_pc):
         """PC TSL -> Bruker -> TSL."""
-        det = EBSDDetector(pc=pc, convention="tsl")
+        det = EBSDDetector(pc=pc, convention=convention)
         assert np.allclose(det.pc, desired_pc)
-        assert np.allclose(det.to_tsl(), pc)
+        assert np.allclose(det.pc_tsl(), pc)
         assert np.allclose(
-            EBSDDetector(pc=det.to_tsl(), convention="tsl").to_tsl(), pc
+            EBSDDetector(pc=det.pc_tsl(), convention="tsl").pc_tsl(), pc
         )
+
+    @pytest.mark.parametrize(
+        "pc, convention",
+        [
+            ([0.35, 1, 0.65], None),
+            ([0.25, 0, 0.75], None),
+            ([0.1, 0.2, 0.3], "Bruker"),
+            ([0.6, 0.6, 0.6], "bruker"),
+        ],
+    )
+    def test_set_pc_from_bruker(self, pc, convention):
+        """PC Bruker returns Bruker PC, which is the default."""
+        det = EBSDDetector(pc=pc, convention=convention)
+        assert np.allclose(det.pc, pc)
+
+    def test_set_pc_convention_raises(self, pc1):
+        """Wrong convention raises."""
+        with pytest.raises(ValueError, match="Projection center convention "):
+            _ = EBSDDetector(pc=pc1, convention="nordif")
+
+    @pytest.mark.parametrize(
+        "coordinates, show_pc, pattern, zoom, desired_labels",
+        [
+            (None, False, None, 1, ["$x_d$", "$y_d$"]),
+            ("pixel", True, np.ones((60, 60)), 1, ["$x_d$", "$y_d$"]),
+            ("gnomonic", True, np.ones((60, 60)), 2, ["$x_g$", "$y_g$"]),
+        ],
+    )
+    def test_plot_detector(
+        self, detector, coordinates, show_pc, pattern, zoom, desired_labels
+    ):
+        """Plotting detector works, *not* checking whether Matplotlib
+        displays the pattern correctly.
+        """
+        _, ax = detector.plot(
+            coordinates=coordinates,
+            show_pc=show_pc,
+            pattern=pattern,
+            zoom=zoom,
+            return_fig_ax=True,
+        )
+        assert ax.get_xlabel() == desired_labels[0]
+        assert ax.get_ylabel() == desired_labels[1]
+        if isinstance(pattern, np.ndarray):
+            assert np.allclose(ax.get_images()[0].get_array(), pattern)
+        plt.close("all")
+
+    @pytest.mark.parametrize(
+        "gnomonic_angles, gnomonic_circles_kwargs",
+        [
+            ([10, 20], {"edgecolor": "b"}),
+            (np.arange(1, 3) * 10, {"edgecolor": "r"}),
+            (None, None),
+        ],
+    )
+    def test_plot_detector_gnomonic_circles(
+        self, detector, gnomonic_angles, gnomonic_circles_kwargs
+    ):
+        """Draw gnomonic circles."""
+        _, ax = detector.plot(
+            coordinates="gnomonic",
+            draw_gnomonic_circles=True,
+            gnomonic_angles=gnomonic_angles,
+            gnomonic_circles_kwargs=gnomonic_circles_kwargs,
+            return_fig_ax=True,
+        )
+        if gnomonic_angles is None:
+            n_angles = 8
+        else:
+            n_angles = len(gnomonic_angles)
+        assert len(ax.artists) == n_angles
+        if gnomonic_circles_kwargs is None:
+            edgecolor = "k"
+        else:
+            edgecolor = gnomonic_circles_kwargs["edgecolor"]
+        assert np.allclose(
+            ax.artists[0]._edgecolor[:3], mcolors.to_rgb(edgecolor)
+        )
+        plt.close("all")
+
+    @pytest.mark.parametrize("pattern", [np.ones((61, 61)), np.ones((59, 60))])
+    def test_plot_detector_pattern_raises(self, detector, pattern):
+        """Pattern shape unequal to detector shape raises ValueError."""
+        with pytest.raises(ValueError, match=f"Pattern shape {pattern.shape}*"):
+            detector.plot(pattern=pattern)
+        plt.close("all")
+
+    @pytest.mark.parametrize(
+        "pattern_kwargs", [None, {"cmap": "inferno"}, {"cmap": "plasma"}]
+    )
+    def test_plot_pattern_kwargs(self, detector, pattern_kwargs):
+        """Pass pattern kwargs to imshow()."""
+        _, ax = detector.plot(
+            pattern=np.ones((60, 60)),
+            pattern_kwargs=pattern_kwargs,
+            return_fig_ax=True,
+        )
+        if pattern_kwargs is None:
+            pattern_kwargs = {"cmap": "gray"}
+        assert ax.images[0].cmap.name == pattern_kwargs["cmap"]
+        plt.close("all")
+
+    @pytest.mark.parametrize(
+        "pc_kwargs", [None, {"facecolor": "r"}, {"facecolor": "b"}]
+    )
+    def test_plot_pc_kwargs(self, detector, pc_kwargs):
+        """Pass PC kwargs to scatter()."""
+        _, ax = detector.plot(
+            show_pc=True, pc_kwargs=pc_kwargs, return_fig_ax=True
+        )
+        if pc_kwargs is None:
+            pc_kwargs = {"facecolor": "gold"}
+        assert np.allclose(
+            ax.collections[0].get_facecolor().squeeze()[:3],
+            mcolors.to_rgb(pc_kwargs["facecolor"]),
+        )
+        plt.close("all")
+
+    @pytest.mark.parametrize("coordinates", ["pixel", "gnomonic"])
+    def test_plot_extent(self, detector, coordinates):
+        """Correct detector extent."""
+        _, ax = detector.plot(
+            coordinates=coordinates,
+            pattern=np.ones(detector.shape),
+            return_fig_ax=True,
+        )
+        if coordinates == "gnomonic":
+            desired_data_lim = np.concatenate(
+                [
+                    detector.extent_gnomonic[::2],
+                    np.diff(detector.extent_gnomonic)[::2],
+                ]
+            )
+        else:
+            desired_data_lim = np.sort(detector.extent)
+        assert np.allclose(ax.dataLim.bounds, desired_data_lim)
+        plt.close("all")

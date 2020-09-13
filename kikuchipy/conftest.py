@@ -109,7 +109,7 @@ def pc1():
 
 
 @pytest.fixture(params=[(1,)])
-def nordif_detector(request, pc1):
+def detector(request, pc1):
     """A NORDIF UF1100 EBSD detector with a TSL PC."""
     return EBSDDetector(
         shape=(60, 60),
@@ -174,13 +174,13 @@ def r_tsl2bruker():
 
 @pytest.fixture
 def nickel_ebsd_simulation_generator(
-    nickel_phase, nordif_detector, nickel_rotations, r_tsl2bruker,
+    nickel_phase, detector, nickel_rotations, r_tsl2bruker,
 ):
     """Generator for EBSD simulations of Kikuchi bands for the Nickel
     data set referenced above.
     """
     return EBSDSimulationGenerator(
         phase=nickel_phase,
-        detector=nordif_detector,
+        detector=detector,
         rotations=r_tsl2bruker * nickel_rotations,
     )

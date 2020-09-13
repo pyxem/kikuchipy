@@ -267,18 +267,18 @@ class EBSDDetector:
 
     def _set_pc_convention(self, convention: str):
         """Set appropriate PC based on vendor convention."""
-        if convention is None or convention == "bruker":
+        if convention is None or convention.lower() == "bruker":
             pass
-        elif convention.lower() == "tsl":
-            self.pc = self._tsl2bruker()
+        elif convention.lower() in ["tsl", "edax", "amatek"]:
+            self.pc = self._pc_tsl2bruker()
         elif convention.lower() == "oxford":
-            self.pc = self._tsl2bruker()
+            self.pc = self._pc_tsl2bruker()
         elif convention.lower() in ["emsoft", "emsoft4", "emsoft5"]:
             try:
                 version = int(convention[-1])
             except ValueError:
                 version = 5
-            self.pc = self._emsoft2bruker(version=version)
+            self.pc = self._pc_emsoft2bruker(version=version)
         else:
             conventions = [
                 "bruker",
@@ -293,7 +293,7 @@ class EBSDDetector:
                 f"recognised conventions {conventions}."
             )
 
-    def _emsoft2bruker(self, version: int = 5) -> np.ndarray:
+    def _pc_emsoft2bruker(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc)
         if version == 5:
             new_pc[..., 0] = 0.5 + (-self.pcx / (self.ncols * self.binning))
@@ -303,12 +303,12 @@ class EBSDDetector:
         new_pc[..., 2] = self.pcz / (self.nrows * self.px_size * self.binning)
         return new_pc
 
-    def _tsl2bruker(self) -> np.ndarray:
+    def _pc_tsl2bruker(self) -> np.ndarray:
         new_pc = deepcopy(self.pc)
         new_pc[..., 1] = 1 - self.pcy
         return new_pc
 
-    def _bruker2emsoft(self, version: int = 5) -> np.ndarray:
+    def _pc_bruker2emsoft(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc)
         new_pc[..., 0] = self.ncols * (self.pcx - 0.5)
         if version == 5:
@@ -317,12 +317,12 @@ class EBSDDetector:
         new_pc[..., 2] = self.nrows * self.px_size * self.pcz
         return new_pc * self.binning
 
-    def _bruker2tsl(self) -> np.ndarray:
+    def _pc_bruker2tsl(self) -> np.ndarray:
         new_pc = deepcopy(self.pc)
         new_pc[..., 1] = 1 - self.pcy
         return new_pc
 
-    def to_emsoft(self, version: int = 5) -> np.ndarray:
+    def pc_emsoft(self, version: int = 5) -> np.ndarray:
         """Return PC in the EMsoft convention.
 
         Parameters
@@ -337,19 +337,19 @@ class EBSDDetector:
         -------
         np.ndarray
         """
-        return self._bruker2emsoft(version=version)
+        return self._pc_bruker2emsoft(version=version)
 
-    def to_bruker(self) -> np.ndarray:
+    def pc_bruker(self) -> np.ndarray:
         """Return PC in the Bruker convention."""
         return self.pc
 
-    def to_tsl(self) -> np.ndarray:
+    def pc_tsl(self) -> np.ndarray:
         """Return PC in the EDAX TSL convention."""
-        return self._bruker2tsl()
+        return self._pc_bruker2tsl()
 
-    def to_oxford(self) -> np.ndarray:
+    def pc_oxford(self) -> np.ndarray:
         """Return PC in the Oxford convention."""
-        return self._bruker2tsl()
+        return self._pc_bruker2tsl()
 
     def deepcopy(self):
         """Return a deep copy using :func:`copy.deepcopy`."""
@@ -359,8 +359,12 @@ class EBSDDetector:
         self,
         coordinates: Optional[str] = None,
         show_pc: bool = True,
+        pc_kwargs: Optional[dict] = None,
         pattern: Optional[np.ndarray] = None,
+        pattern_kwargs: Optional[dict] = None,
         draw_gnomonic_circles: bool = False,
+        gnomonic_angles: Union[None, list, np.ndarray] = None,
+        gnomonic_circles_kwargs: Optional[dict] = None,
         zoom: float = 1,
         return_fig_ax: bool = False,
     ) -> Union[None, Tuple[plt.figure, plt.axis]]:
@@ -369,18 +373,30 @@ class EBSDDetector:
         Parameters
         ----------
         coordinates
-            Which coordinates to use, "detector" or "gnomonic". If None
-            (default), "detector" is used.
+            Which coordinates to use, "pixel" or "gnomonic". If None
+            (default), "pixel" is used.
         show_pc
             Show the average projection center. Default is True.
+        pc_kwargs
+            A dictionary of keyword arguments passed to
+            :meth:`matplotlib.axes.Axes.scatter`.
         pattern
             A pattern to put on the detector. If None (default), no
             pattern is displayed. The pattern array must have the
             same shape as the detector.
+        pattern_kwargs
+            A dictionary of keyword arguments passed to
+            :meth:`matplotlib.axes.Axes.imshow`.
         draw_gnomonic_circles
             Draw circles for angular distances from pattern. Default is
             False. Circle positions are only correct when
             `coordinates="gnomonic"`.
+        gnomonic_angles
+            Which angular distances to plot if `draw_gnomonic_circles`
+            is True. Default is from 10 to 80 in steps of 10.
+        gnomonic_circles_kwargs
+            A dictionary of keyword arguments passed to
+            :meth:`matplotlib.patches.Circle`.
         zoom
             Whether to zoom in/out from the detector, e.g. to show the
             extent of the gnomonic projection circles. A zoom > 1 zooms
@@ -392,7 +408,7 @@ class EBSDDetector:
         sy, sx = self.shape
         pcx, pcy = self.pc_average[:2]
 
-        if coordinates in [None, "detector"]:
+        if coordinates in [None, "pixel"]:
             pcy *= sy
             pcx *= sx
             extent = self.extent
@@ -411,29 +427,53 @@ class EBSDDetector:
         ax.set_xlabel(x_label, fontsize=18)
         ax.set_ylabel(y_label, fontsize=18)
 
+        # Plot a pattern on the detector
         if isinstance(pattern, np.ndarray):
             if pattern.shape != (sy, sx):
                 raise ValueError(
                     f"Pattern shape {pattern.shape} must equal the detector "
                     f"shape {(sy, sx)}"
                 )
-            ax.imshow(pattern, extent=extent, cmap="gray")
+            if pattern_kwargs is None:
+                pattern_kwargs = {}
+            pattern_kwargs.setdefault("cmap", "gray")
+            ax.imshow(pattern, extent=extent, **pattern_kwargs)
 
+        # Show the projection center
         if show_pc:
-            ax.scatter(
-                x=pcx, y=pcy, s=300, facecolor="gold", edgecolor="k", marker="*"
-            )
+            if pc_kwargs is None:
+                pc_kwargs = {}
+            default_params_pc = {
+                "s": 300,
+                "facecolor": "gold",
+                "edgecolor": "k",
+                "marker": "*",
+            }
+            [pc_kwargs.setdefault(k, v) for k, v in default_params_pc.items()]
+            ax.scatter(x=pcx, y=pcy, **pc_kwargs)
 
+        # Draw gnomonic circles centered on the projection center
         if draw_gnomonic_circles:
-            for angle in range(0, 81, 10):
+            if gnomonic_circles_kwargs is None:
+                gnomonic_circles_kwargs = {}
+            default_params_gnomonic = {
+                "alpha": 0.25,
+                "edgecolor": "k",
+                "facecolor": "None",
+                "linewidth": 3,
+            }
+            [
+                gnomonic_circles_kwargs.setdefault(k, v)
+                for k, v in default_params_gnomonic.items()
+            ]
+            if gnomonic_angles is None:
+                gnomonic_angles = np.arange(1, 9) * 10
+            for angle in gnomonic_angles:
                 ax.add_artist(
                     plt.Circle(
                         (pcx, pcy),
                         np.tan(np.deg2rad(angle)),
-                        alpha=0.25,
-                        edgecolor="k",
-                        facecolor="None",
-                        linewidth=3,
+                        **gnomonic_circles_kwargs,
                     )
                 )
 
