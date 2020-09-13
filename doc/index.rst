@@ -15,12 +15,12 @@ kikuchipy
     :caption: User guide
 
     load_save_data.rst
+    reference_frames.rst
     change_scan_pattern_size.rst
     pattern_processing.rst
     feature_maps.rst
     virtual_backscatter_electron_imaging.rst
     visualizing_patterns.rst
-    reference_frames.rst
     multivariate_analysis.rst
     metadata.rst
     reference.rst

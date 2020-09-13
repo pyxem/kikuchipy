@@ -24,6 +24,26 @@ import numpy as np
 
 
 class EBSDDetector:
+    """An EBSD detector class storing its shape, pixel size, binning
+    factor, detector tilt, sample tilt and projection center (PC) per
+    pattern. Given one or multiple PCs, the detector's gnomonic
+    coordinates are calculated. Uses of these include projecting Kikuchi
+    bands, given a unit cell, unit cell orientation and family of
+    planes, onto the detector.
+
+    Calculation of gnomonic coordinates is based on the work by Aimo
+    Winkelmann in the supplementary material to [Britton2016]_.
+
+    References
+    ----------
+    .. [Britton2016]
+        T. B. Britton, J. Jiang, Y. Guo, A. Vilalta-Clemente, D. Wallis,
+        L. N. Hansen, A. Winkelmann, A. J. Wilkinson, "Tutorial: Crystal
+        orientations and EBSD - Or which way is up?," *Materials
+        Characterization* **117** (2016), doi:
+        https://doi.org/10.1016/j.matchar.2016.04.008.
+    """
+
     def __init__(
         self,
         shape: Tuple[int, int] = (1, 1),
@@ -36,6 +56,8 @@ class EBSDDetector:
     ):
         """Create an EBSD detector with a shape, pixel size, binning,
         and projection/pattern center(s) (PC(s)).
+
+        PC conversions are calculated as presented in [Jackson2019]_.
 
         Parameters
         ----------
@@ -58,12 +80,39 @@ class EBSDDetector:
             measured relative to the detection screen. X and Y are
             measured from the detector left and top, respectively, while
             Z is the distance from the sample to the detection screen
-            divided by the detector height. Default is (0.5, 0.5, 0.5).
+            divided by the detector height. If multiple PCs are passed,
+            they are assumed to be on the form [[x0, y0, z0],
+            [x1, y1, z1], ...]. Default is [[0.5, 0.5, 0.5]].
         convention
             PC convention. If None (default), Bruker's convention is
             assumed. Options are "tsl", "oxford", "bruker", "emsoft",
             "emsoft4", and "emsoft5". "emsoft" and "emsoft5" is the same
             convention.
+
+        Examples
+        --------
+        >>> from kikuchipy.detectors import EBSDDetector
+        >>> det = EBSDDetector(
+        ...     shape=(60, 60),
+        ...     pc=np.ones((149, 200)) * [0.421, 0.779, 0.505],
+        ...     convention="tsl",
+        ...     pixel_size=70,
+        ...     binning=8,
+        ...     tilt=5,
+        ...     sample_tilt=70,
+        ... )
+        >>> det
+        EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 0, pc
+         (0.421, 0.221, 0.505)
+        >>> det.navigation_shape  # (nrows, ncols)
+        (149, 200)
+        >>> det.extent
+        array([ 0, 60,  0, 60])
+        >>> det.extent_gnomonic
+        array([-0.83366337,  1.14653465, -1.54257426,  0.43762376])
+        >>> fig, ax = det.plot(
+        ...     coordinates="gnomonic", return_fig_ax=True
+        ... )
         """
         self.shape = shape
         self.px_size = px_size
@@ -75,22 +124,24 @@ class EBSDDetector:
 
     @property
     def specimen_scintillator_distance(self) -> float:
-        """Specimen to scintillator distance (SSD), also known as L."""
+        """Specimen to scintillator distance (SSD), known in EMsoft as
+        `L`.
+        """
         return self.pcz * self.height
 
     @property
     def nrows(self) -> int:
-        """Number of rows in pixels."""
+        """Number of detector pixel rows."""
         return self.shape[0]
 
     @property
     def ncols(self) -> int:
-        """Number of columns in pixels."""
+        """Number of detector pixel columns."""
         return self.shape[1]
 
     @property
     def size(self) -> int:
-        """Number of pixels."""
+        """Number of detector pixels."""
         return self.nrows * self.ncols
 
     @property
@@ -125,7 +176,15 @@ class EBSDDetector:
 
     @pc.setter
     def pc(self, value: Union[np.ndarray, List, Tuple]):
-        """Set all projection center coordinates."""
+        """Set all projection center coordinates.
+
+        Parameters
+        ----------
+        value
+            Projection center coordinates. If multiple PCs are passed,
+            they are assumed to be on the form [[x0, y0, z0],
+            [x1, y1, z1], ...]. Default is [[0.5, 0.5, 0.5]].
+        """
         self._pc = np.atleast_2d(value)
 
     @property
@@ -135,7 +194,14 @@ class EBSDDetector:
 
     @pcx.setter
     def pcx(self, value: Union[np.ndarray, list, tuple, float]):
-        """Set the x projection center coordinates."""
+        """Set the x projection center coordinates.
+
+        Parameters
+        ----------
+        value
+            Projection center x coordinates. If multiple x coordinates
+            are passed, they are assumed to be on the form [x0, x1,...].
+        """
         self._pc[..., 0] = np.atleast_2d(value)
 
     @property
@@ -145,7 +211,15 @@ class EBSDDetector:
 
     @pcy.setter
     def pcy(self, value: Union[np.ndarray, list, tuple, float]):
-        """Set y projection center coordinates."""
+        """Set y projection center coordinates.
+
+
+        Parameters
+        ----------
+        value
+            Projection center y coordinates. If multiple y coordinates
+            are passed, they are assumed to be on the form [y0, y1,...].
+        """
         self._pc[..., 1] = np.atleast_2d(value)
 
     @property
@@ -155,7 +229,15 @@ class EBSDDetector:
 
     @pcz.setter
     def pcz(self, value: Union[np.ndarray, list, tuple, float]):
-        """Set z projection center coordinates."""
+        """Set z projection center coordinates.
+
+
+        Parameters
+        ----------
+        value
+            Projection center z coordinates. If multiple z coordinates
+            are passed, they are assumed to be on the form [z0, z1,...].
+        """
         self._pc[..., 2] = np.atleast_2d(value)
 
     @property
@@ -176,7 +258,13 @@ class EBSDDetector:
 
     @navigation_shape.setter
     def navigation_shape(self, value: tuple):
-        """Set navigation shape of the projection center array."""
+        """Set navigation shape of the projection center array.
+
+        Parameters
+        ----------
+        value
+            Navigation shape, with a maximum dimension of 2.
+        """
         ndim = len(value)
         if ndim > 2:
             raise ValueError(f"A maximum dimension of 2 is allowed, 2 < {ndim}")
@@ -248,25 +336,23 @@ class EBSDDetector:
     @property
     def r_max(self):
         """Maximum distance from PC to detector edge in gnomonic
-        projection.
+        coordinates.
         """
         corners = np.zeros(self.navigation_shape + (4,))
-        corners[..., 0] = self.x_min ** 2 + self.y_min ** 2  # Upper left
-        corners[..., 1] = self.x_max ** 2 + self.y_min ** 2  # Upper right
-        corners[..., 2] = self.x_max ** 2 + self.y_max ** 2  # Lower right
-        corners[..., 3] = self.x_min ** 2 + self.y_min ** 2  # Lower left
+        corners[..., 0] = self.x_min ** 2 + self.y_min ** 2  # Up. left
+        corners[..., 1] = self.x_max ** 2 + self.y_min ** 2  # Up. right
+        corners[..., 2] = self.x_max ** 2 + self.y_max ** 2  # Lo. right
+        corners[..., 3] = self.x_min ** 2 + self.y_min ** 2  # Lo. left
         return np.sqrt(np.max(corners, axis=-1))
 
     def __repr__(self) -> str:
-        """Nice string representation."""
         return (
             f"{self.__class__.__name__} {self.shape}, "
             f"px_size {self.px_size} um, binning {self.binning}, "
             f"tilt {self.tilt}, pc {tuple(self.pc_average)}"
         )
 
-    def _set_pc_convention(self, convention: str):
-        """Set appropriate PC based on vendor convention."""
+    def _set_pc_convention(self, convention: Optional[str] = None):
         if convention is None or convention.lower() == "bruker":
             pass
         elif convention.lower() in ["tsl", "edax", "amatek"]:
@@ -325,30 +411,37 @@ class EBSDDetector:
     def pc_emsoft(self, version: int = 5) -> np.ndarray:
         """Return PC in the EMsoft convention.
 
+        PC conversions are calculated as presented in [Jackson2019]_.
+
         Parameters
         ----------
         version
             Which EMsoft PC convention to use. The direction of the x PC
-            coordinate, xpc, flipped in version 5, because from then on
-            the EBSD patterns were viewed looking from detector to
+            coordinate, `xpc`, flipped in version 5, because from then
+            on the EBSD patterns were viewed looking from detector to
             sample, not the other way around.
-
-        Returns
-        -------
-        np.ndarray
         """
         return self._pc_bruker2emsoft(version=version)
 
     def pc_bruker(self) -> np.ndarray:
-        """Return PC in the Bruker convention."""
+        """Return PC in the Bruker convention.
+
+        PC conversions are calculated as presented in [Jackson2019]_.
+        """
         return self.pc
 
     def pc_tsl(self) -> np.ndarray:
-        """Return PC in the EDAX TSL convention."""
+        """Return PC in the EDAX TSL convention.
+
+        PC conversions are calculated as presented in [Jackson2019]_.
+        """
         return self._pc_bruker2tsl()
 
     def pc_oxford(self) -> np.ndarray:
-        """Return PC in the Oxford convention."""
+        """Return PC in the Oxford convention.
+
+        PC conversions are calculated as presented in [Jackson2019]_.
+        """
         return self._pc_bruker2tsl()
 
     def deepcopy(self):
@@ -369,6 +462,10 @@ class EBSDDetector:
         return_fig_ax: bool = False,
     ) -> Union[None, Tuple[plt.figure, plt.axis]]:
         """Plot the detector screen.
+
+        The plotting of gnomonic circles and general style is adapted
+        from the supplementary material to [Britton2016]_ by Aimo
+        Winkelmann.
 
         Parameters
         ----------
