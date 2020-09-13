@@ -60,3 +60,10 @@ rm ${VIS}/vbse_navigator.png
 rm ${VIS}/vbse_navigator_rescaled.jpg
 rm ${VIS}/vbse_signal.jpg
 rm ${VIS}/vbse_signal.png
+
+# reference frames
+REF_FRAMES=reference_frames
+rm ${REF_FRAMES}/gnomonic_coordinates.jpg
+rm ${REF_FRAMES}/gnomonic_coordinates.png
+rm ${REF_FRAMES}/pixel_coordinates.jpg
+rm ${REF_FRAMES}/pixel_coordinates.png

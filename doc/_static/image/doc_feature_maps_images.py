@@ -62,8 +62,8 @@ plt.savefig(
     pad_inches=0,
 )
 # Pattern FFT
-p_fft = kp.util.pattern.fft(p, shift=True)
-p_spec = kp.util.pattern.fft_spectrum(p_fft)
+p_fft = kp.pattern.fft(p, shift=True)
+p_spec = kp.pattern.fft_spectrum(p_fft)
 plt.figure()
 plt.imshow(np.log(p_spec))
 plt.colorbar()
@@ -73,7 +73,7 @@ plt.savefig(
     pad_inches=0,
 )
 # Frequency vectors
-q = kp.util.pattern.fft_frequency_vectors(shape=p.shape)
+q = kp.pattern.fft_frequency_vectors(shape=p.shape)
 plt.figure()
 plt.imshow(fftshift(q))
 plt.colorbar()

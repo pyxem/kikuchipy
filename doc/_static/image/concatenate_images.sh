@@ -8,6 +8,7 @@ CHANGES=change_scan_pattern_size
 VIS=visualizing_patterns
 FEATMAP=feature_maps
 VIRTUAL=virtual_backscatter_electron_imaging
+REF_FRAMES=reference_frames
 
 # Pattern processing
 convert ${PATPROC}/pattern_raw.png ${PATPROC}/pattern_static.png +append ${PATPROC}/static_correction.jpg
@@ -41,3 +42,8 @@ convert ${FEATMAP}/image_quality_pattern.png ${FEATMAP}/fft_spectrum.png ${FEATM
 # Virtual imaging
 convert ${VIRTUAL}/images_nav.jpg -resize 477x433 ${VIRTUAL}/images_nav_rescaled.jpg
 convert ${VIRTUAL}/images_nav_rescaled.jpg ${VIRTUAL}/images_sig.jpg -gravity center +append ${VIRTUAL}/images.jpg
+
+# Reference frames
+convert ${REF_FRAMES}/pixel_coordinates.png ${REF_FRAMES}/pixel_coordinates.jpg
+convert ${REF_FRAMES}/gnomonic_coordinates.png ${REF_FRAMES}/gnomonic_coordinates.jpg
+convert ${REF_FRAMES}/pixel_coordinates.jpg ${REF_FRAMES}/gnomonic_coordinates.jpg +append ${REF_FRAMES}/detector_coordinates.jpg
