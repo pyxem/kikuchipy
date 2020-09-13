@@ -19,6 +19,8 @@
 from copy import deepcopy
 from typing import List, Optional, Tuple, Union
 
+from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -110,9 +112,7 @@ class EBSDDetector:
         array([ 0, 60,  0, 60])
         >>> det.extent_gnomonic
         array([-0.83366337,  1.14653465, -1.54257426,  0.43762376])
-        >>> fig, ax = det.plot(
-        ...     coordinates="gnomonic", return_fig_ax=True
-        ... )
+        >>> det.plot()
         """
         self.shape = shape
         self.px_size = px_size
@@ -258,7 +258,7 @@ class EBSDDetector:
 
     @navigation_shape.setter
     def navigation_shape(self, value: tuple):
-        """Set navigation shape of the projection center array.
+        """Set the navigation shape of the projection center array.
 
         Parameters
         ----------
@@ -273,7 +273,9 @@ class EBSDDetector:
 
     @property
     def navigation_dimension(self) -> int:
-        """Number of navigation dimensions (a maximum of 2)."""
+        """Number of navigation dimensions of the projection center
+        array (a maximum of 2).
+        """
         return len(self.navigation_shape)
 
     @property
@@ -288,38 +290,37 @@ class EBSDDetector:
 
     @property
     def x_min(self) -> Union[np.ndarray, float]:
-        """Left bound of detector in gnomonic projection."""
+        """Left bound of detector in gnomonic coordinates."""
         return -self.aspect_ratio * (self.pcx / self.pcz)
 
     @property
     def x_max(self) -> Union[np.ndarray, float]:
-        """Right bound of detector in gnomonic projection."""
+        """Right bound of detector in gnomonic coordinates."""
         return self.aspect_ratio * (1 - self.pcx) / self.pcz
 
     @property
     def x_range(self) -> np.ndarray:
-        """X detector limits in gnomonic projection."""
-        # TODO: Decide whether we need dstack?
-        return np.dstack((self.x_min, self.x_max))
+        """X detector limits in gnomonic coordinates."""
+        return np.column_stack((self.x_min, self.x_max))
 
     @property
     def y_min(self) -> Union[np.ndarray, float]:
-        """Top bound of detector in gnomonic projection."""
+        """Top bound of detector in gnomonic coordinates."""
         return -(1 - self.pcy) / self.pcz
 
     @property
     def y_max(self) -> Union[np.ndarray, float]:
-        """Bottom bound of detector in gnomonic projection."""
+        """Bottom bound of detector in gnomonic coordinates."""
         return self.pcy / self.pcz
 
     @property
     def y_range(self) -> np.ndarray:
-        """Y detector limits in gnomonic projection."""
-        return np.dstack((self.y_min, self.y_max))
+        """The y detector limits in gnomonic coordinates."""
+        return np.column_stack((self.y_min, self.y_max))
 
     @property
     def x_scale(self) -> np.ndarray:
-        """Width of a pixel in gnomonic projection."""
+        """Width of a pixel in gnomonic coordinates."""
         if self.ncols == 1:
             return np.diff(self.x_range)
         else:
@@ -327,7 +328,7 @@ class EBSDDetector:
 
     @property
     def y_scale(self) -> np.ndarray:
-        """Height of a pixel in gnomonic projection."""
+        """Height of a pixel in gnomonic coordinates."""
         if self.nrows == 1:
             return np.diff(self.y_range)
         else:
@@ -460,7 +461,7 @@ class EBSDDetector:
         gnomonic_circles_kwargs: Optional[dict] = None,
         zoom: float = 1,
         return_fig_ax: bool = False,
-    ) -> Union[None, Tuple[plt.figure, plt.axis]]:
+    ) -> Union[None, Tuple[Figure, Axes]]:
         """Plot the detector screen.
 
         The plotting of gnomonic circles and general style is adapted
@@ -499,8 +500,41 @@ class EBSDDetector:
             extent of the gnomonic projection circles. A zoom > 1 zooms
             out. Default is 1, i.e. no zoom.
         return_fig_ax
-            Whether to return the figure and axis object created.
+            Whether to return the figure and axes object created.
             Default is False.
+
+        Returns
+        -------
+        fig
+            Matplotlib figure object, if `return_fig_ax` is True.
+        ax
+            Matplotlib axes object, if `return_fig_ax` is True.
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from kikuchipy.detectors import EBSDDetector
+        >>> det = EBSDDetector(
+        ...     shape=(60, 60),
+        ...     pc=np.ones((149, 200)) * [0.421, 0.779, 0.505],
+        ...     convention="tsl",
+        ...     pixel_size=70,
+        ...     binning=8,
+        ...     tilt=5,
+        ...     sample_tilt=70,
+        ... )
+        >>> det.plot()
+        >>> det.plot(
+        ...     coordinates="gnomonic",
+        ...     draw_gnomonic_circles=True,
+        ...     gnomonic_circles_kwargs={"edgecolor": "b", "alpha": 0.3}
+        ... )
+        >>> fig, ax = det.plot(
+        ...     pattern=np.ones(det.shape),
+        ...     show_pc=True,
+        ...     return_fig_ax=True,
+        ... )
+        >>> fig.savefig("detector.png")
         """
         sy, sx = self.shape
         pcx, pcy = self.pc_average[:2]
