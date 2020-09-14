@@ -22,6 +22,10 @@ Added
 -----
 - Reader for EMsoft's simulated EBSD patterns returned by their ``EMEBSD.f90``
   program. (`#202 <https://github.com/pyxem/kikuchipy/pull/202>`_)
+- EBSD detector class to handle detector parameters, including detector pixels'
+  gnomonic coordinates. EBSD reference frame documentation.
+  (`#204 <https://github.com/pyxem/kikuchipy/pull/204>`_,
+  `#215 <https://github.com/pyxem/kikuchipy/pull/215>`_)
 
 Changed
 -------
