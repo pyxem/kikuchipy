@@ -86,23 +86,28 @@ class LambertProjection:
 
     @staticmethod
     def lambert_to_gnomonic(v: np.ndarray) -> np.ndarray:
-        """Convert a (n,2) array from Lambert via Cartesian coordinates to Gnomonic."""
-        # These two functions could probably be combined into 1 to decrease runtime
+        """Convert a (n,2) array from Lambert via Cartesian coordinates to
+        Gnomonic."""
+        # These two functions could probably be combined into 1 to decrease
+        # runtime
         vec = LambertProjection.iproject(v)
         vec = GnomonicProjection.project(vec)
         return vec
 
     @staticmethod
     def gnomonic_to_lambert(v: np.ndarray) -> np.ndarray:
-        """Convert a (n,2) array from Gnomonic via Cartesian coordinates to Lambert."""
-        # These two functions could probably be combined into 1 to decrease runtime
+        """Convert a (n,2) array from Gnomonic via Cartesian coordinates to
+        Lambert."""
+        # These two functions could probably be combined into 1 to decrease
+        # runtime
         vec = GnomonicProjection.iproject(v[..., 0], v[..., 1])
         vec = LambertProjection.project(vec)
         return vec
 
 
 def _eq_c(p: Union[np.ndarray, float, int]) -> Union[np.ndarray, float, int]:
-    """Private function used inside LambertProjection.iproject to increase readability."""
+    """Private function used inside LambertProjection.iproject to increase
+    readability."""
     return (2 * p / np.pi) * np.sqrt(np.pi - p ** 2)
 
 
