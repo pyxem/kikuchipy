@@ -38,7 +38,7 @@ s.rescale_intensity(percentiles=(0.5, 99.5))
 
 det = EBSDDetector(shape=(60, 60), pc=[0.4210, 0.2206, 0.5049],)
 fig, ax = det.plot(
-    coordinates="pixel",
+    coordinates="detector",
     pattern=s.inav[0, 0].data,
     show_pc=True,
     return_fig_ax=True,
@@ -54,7 +54,7 @@ arrow_dict1 = {
 }
 arrow_length = det.ncols * 0.2
 x_color = "r"
-y_color = "lime"
+y_color = "b"  # green (0, 0.78, 0)
 ax.set_xlabel(ax.get_xlabel(), color=x_color)
 ax.set_ylabel(ax.get_ylabel(), color=y_color)
 ax.arrow(
@@ -64,11 +64,11 @@ ax.arrow(
     dx=0, dy=arrow_length, fc=y_color, ec=y_color, **arrow_dict1,
 )
 fig.savefig(
-    os.path.join(refframe_dir, "pixel_coordinates.png"),
+    os.path.join(refframe_dir, "detector_coordinates.png"),
     bbox_inches="tight",
     pad_inches=0,
     transparent=True,
-    dpi=300,
+    dpi=150,
 )
 
 fig2, ax2 = det.plot(
@@ -77,7 +77,7 @@ fig2, ax2 = det.plot(
     show_pc=True,
     pc_kwargs={"zorder": 500},
     draw_gnomonic_circles=True,
-    gnomonic_circles_kwargs={"alpha": 0.3},
+    gnomonic_circles_kwargs={"alpha": 0.4},
     return_fig_ax=True,
 )
 gn_scale = det.x_scale.squeeze()
@@ -89,8 +89,6 @@ arrow_dict = {
     "zorder": 10,
 }
 arrow_length = det.ncols * 0.2 * gn_scale
-x_color = "r"
-y_color = "lime"
 ax2.set_xlabel(ax2.get_xlabel(), color=x_color)
 ax2.set_ylabel(ax2.get_ylabel(), color=y_color)
 ax2.arrow(x=0, y=0, dx=arrow_length, dy=0, fc=x_color, ec=x_color, **arrow_dict)
@@ -100,7 +98,7 @@ fig2.savefig(
     bbox_inches="tight",
     pad_inches=0,
     transparent=True,
-    dpi=300,
+    dpi=150,
 )
 
 plt.close("all")

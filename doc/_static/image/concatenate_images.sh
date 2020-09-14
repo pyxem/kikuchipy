@@ -24,11 +24,11 @@ convert ${PATPROC}/fft_filter_highlowpass2d.png ${PATPROC}/fft_filter_highlowpas
 convert ${PATPROC}/fft_filter_laplacian_correlate.png ${PATPROC}/fft_filter_laplacian_spatial.png -gravity center +append ${PATPROC}/fft_filter_laplacian.jpg
 
 # Change image size
-convert ${PATPROC}/pattern_dynamic.jpg ${CHANGES}/pattern_cropped.jpg +append ${CHANGES}/change_pattern_size.jpg
+convert ${PATPROC}/pattern_dynamic.jpg ${CHANGES}/pattern_cropped.png +append ${CHANGES}/change_pattern_size.jpg
 
 # Visualizing patterns
 # Rescale navigators
-convert ${VIS}/vbse_navigator.jpg -resize 860x581 ${VIS}/vbse_navigator_rescaled.jpg
+convert ${VIS}/vbse_navigator.png -resize 860x581 ${VIS}/vbse_navigator_rescaled.jpg
 convert ${VIS}/orientation_similarity_map_navigator.jpg -resize 860x581 ${VIS}/osm_navigator_rescaled.jpg
 convert ${VIS}/orientation_map_navigator.jpg -resize 860x581 ${VIS}/om_navigator_rescaled.jpg
 # Concatenate images
@@ -44,6 +44,6 @@ convert ${VIRTUAL}/images_nav.jpg -resize 477x433 ${VIRTUAL}/images_nav_rescaled
 convert ${VIRTUAL}/images_nav_rescaled.jpg ${VIRTUAL}/images_sig.jpg -gravity center +append ${VIRTUAL}/images.jpg
 
 # Reference frames
-convert ${REF_FRAMES}/pixel_coordinates.png ${REF_FRAMES}/pixel_coordinates.jpg
+convert ${REF_FRAMES}/detector_coordinates.png ${REF_FRAMES}/detector_coordinates.jpg
 convert ${REF_FRAMES}/gnomonic_coordinates.png ${REF_FRAMES}/gnomonic_coordinates.jpg
-convert ${REF_FRAMES}/pixel_coordinates.jpg ${REF_FRAMES}/gnomonic_coordinates.jpg +append ${REF_FRAMES}/detector_coordinates.jpg
+convert ${REF_FRAMES}/detector_coordinates.jpg ${REF_FRAMES}/gnomonic_coordinates.jpg +append ${REF_FRAMES}/detector_gnomonic_coordinates.jpg

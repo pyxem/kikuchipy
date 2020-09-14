@@ -36,6 +36,8 @@ datadir, fname = os.path.split(data)
 fname, ext = os.path.splitext(fname)
 s = kp.load(data, lazy=False)
 
+s.metadata.General.title = "patterns"
+
 # Get dynamic background
 bg = s.get_dynamic_background()
 bg.plot()
@@ -152,7 +154,7 @@ w_high = kp.filters.Window(
 )
 w = w_low * w_high
 plt.figure()
-plt.imshow(w)
+plt.imshow(w, cmap="gray")
 plt.colorbar()
 plt.savefig(
     os.path.join(procdir, "fft_filter_highlowpass2d.png"),
@@ -180,7 +182,7 @@ p = s10.inav[0, 0].deepcopy().data.astype(np.float32)
 p2 = correlate(p, w_laplacian)
 p2 = kp.pattern.rescale_intensity(p2, dtype_out=np.uint8)
 plt.figure()
-plt.imshow(p2)
+plt.imshow(p2, cmap="gray")
 plt.colorbar()
 plt.savefig(
     os.path.join(procdir, "fft_filter_laplacian_correlate.png"),

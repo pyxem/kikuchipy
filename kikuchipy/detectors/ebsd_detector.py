@@ -471,8 +471,8 @@ class EBSDDetector:
         Parameters
         ----------
         coordinates
-            Which coordinates to use, "pixel" or "gnomonic". If None
-            (default), "pixel" is used.
+            Which coordinates to use, "detector" or "gnomonic". If None
+            (default), "detector" is used.
         show_pc
             Show the average projection center. Default is True.
         pc_kwargs
@@ -539,18 +539,18 @@ class EBSDDetector:
         sy, sx = self.shape
         pcx, pcy = self.pc_average[:2]
 
-        if coordinates in [None, "pixel"]:
+        if coordinates in [None, "detector"]:
             pcy *= sy
             pcx *= sx
             extent = self.extent
             extent[2:] = extent[2:][::-1]
-            x_label = r"$x_d$"
-            y_label = r"$y_d$"
+            x_label = r"$x_{\mathrm{detector}}$"
+            y_label = r"$y_{\mathrm{detector}}$"
         else:
             pcy, pcx = (0, 0)
             extent = self.extent_gnomonic
-            x_label = r"$x_g$"
-            y_label = r"$y_g$"
+            x_label = r"$x_{\mathrm{gnomonic}}$"
+            y_label = r"$y_{\mathrm{gnomonic}}$"
 
         fig, ax = plt.subplots()
         ax.axis(zoom * extent)
@@ -588,7 +588,7 @@ class EBSDDetector:
             if gnomonic_circles_kwargs is None:
                 gnomonic_circles_kwargs = {}
             default_params_gnomonic = {
-                "alpha": 0.25,
+                "alpha": 0.4,
                 "edgecolor": "k",
                 "facecolor": "None",
                 "linewidth": 3,

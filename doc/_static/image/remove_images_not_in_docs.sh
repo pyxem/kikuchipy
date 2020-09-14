@@ -7,7 +7,6 @@
 
 # change_scan_pattern_size
 CHANGES=change_scan_pattern_size
-rm ${CHANGES}/pattern_cropped.jpg
 rm ${CHANGES}/pattern_cropped.png
 
 # pattern_processing
@@ -45,25 +44,20 @@ rm ${VIRTUAL}/images_sig.jpg
 # visualizing_patterns
 VIS=visualizing_patterns
 rm ${VIS}/om_navigator_rescaled.jpg
-rm ${VIS}/orientation_map.jpg
 rm ${VIS}/orientation_map_navigator.jpg
-rm ${VIS}/orientation_similarity_map.png
 rm ${VIS}/orientation_similarity_map_navigator.jpg
 rm ${VIS}/osm_navigator_rescaled.jpg
 rm ${VIS}/pattern.jpg
 rm ${VIS}/pattern_roi.jpg
-rm ${VIS}/roi_vbse_navigator.jpg
 rm ${VIS}/simulated_pattern.jpg
 rm ${VIS}/standard_navigator.jpg
-rm ${VIS}/vbse_navigator.jpg
 rm ${VIS}/vbse_navigator.png
 rm ${VIS}/vbse_navigator_rescaled.jpg
-rm ${VIS}/vbse_signal.jpg
 rm ${VIS}/vbse_signal.png
 
 # reference frames
 REF_FRAMES=reference_frames
 rm ${REF_FRAMES}/gnomonic_coordinates.jpg
 rm ${REF_FRAMES}/gnomonic_coordinates.png
-rm ${REF_FRAMES}/pixel_coordinates.jpg
-rm ${REF_FRAMES}/pixel_coordinates.png
+rm ${REF_FRAMES}/detector_coordinates.jpg
+rm ${REF_FRAMES}/detector_coordinates.png
