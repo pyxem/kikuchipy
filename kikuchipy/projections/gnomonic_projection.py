@@ -29,7 +29,7 @@ class GnomonicProjection(SphericalProjection):
 
     @classmethod
     def project(self, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
-        """Convert from Cartesian to the Gnomic projection"""
+        """Convert from Cartesian to the Gnomic projection."""
         polar = super().project(v)
         theta, phi = polar[..., 0], polar[..., 1]
 
