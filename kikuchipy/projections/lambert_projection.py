@@ -78,17 +78,19 @@ class LambertProjection:
         true_term = Y * np.pi / (4 * X)
         false_term = X * np.pi / (4 * Y)
         abs_yx = abs(Y) <= abs(X)
+        c_x = _eq_c(X)
+        c_y = _eq_c(Y)
 
         # Equations 8a and 8b from Callahan and De Graef (2013)
         x = np.where(
             abs_yx,
-            _eq_c(X) * np.cos(true_term),
-            _eq_c(Y) * np.sin(false_term),
+            c_x * np.cos(true_term),
+            c_y * np.sin(false_term),
         )
         y = np.where(
             abs_yx,
-            _eq_c(X) * np.sin(true_term),
-            _eq_c(Y) * np.cos(false_term),
+            c_x * np.sin(true_term),
+            c_y * np.cos(false_term),
         )
         z = np.where(
             abs_yx,
