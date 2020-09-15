@@ -20,10 +20,7 @@ import numpy as np
 from orix.vector import Vector3d
 import pytest
 
-from kikuchipy.projections.lambert_projection import LambertProjection
-from kikuchipy.projections.lambert_projection import (
-    _eq_c,
-)
+from kikuchipy.projections.lambert_projection import LambertProjection, _eq_c
 
 
 class TestLambertProjection:
