@@ -25,11 +25,11 @@ from kikuchipy.projections.gnomonic_projection import GnomonicProjection
 
 
 class LambertProjection:
-    """Lambert Projection of a vector"""
+    """Lambert projection of a vector [Callahan2013]_."""
 
     @classmethod
     def project(cls, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
-        """Convert (n, 3) vector from Cartesian to the Lambert projection"""
+        """Convert (n, 3) vector from Cartesian to the Lambert projection."""
         if isinstance(v, Vector3d):
             w = v.unit.data
             x = w[..., 0]
@@ -43,19 +43,24 @@ class LambertProjection:
             y = v[..., 1] / norm
             z = v[..., 2] / norm
 
+        # Arrays used in both setting X and Y
+        sqrt_z = np.sqrt(2 * (1 - z))
+        sign_x = np.sign(x)
+        sign_y = np.sign(y)
+        # Reusable constants
+        sqrt_pi = np.sqrt(np.pi)
+        sqrt_pi_half = sqrt_pi / 2
+        two_over_sqrt_pi = 2 / sqrt_pi
+
         X = np.where(
             abs(y) <= abs(x),
-            np.sign(x) * np.sqrt(2 * (1 - z)) * (sqrt_pi / 2),
-            np.sign(y)
-            * np.sqrt(2 * (1 - z))
-            * ((2 / sqrt_pi) * np.arctan2(x, y)),
+            sign_x * sqrt_z * sqrt_pi_half,
+            sign_y * sqrt_z * (two_over_sqrt_pi * np.arctan2(x, y)),
         )
         Y = np.where(
             abs(y) <= abs(x),
-            np.sign(x)
-            * np.sqrt(2 * (1 - z))
-            * ((2 / sqrt_pi) * np.arctan2(y, x)),
-            np.sign(y) * np.sqrt(2 * (1 - z)) * (sqrt_pi / 2),
+            sign_x * sqrt_z * (two_over_sqrt_pi * np.arctan2(y, x)),
+            sign_y * sqrt_z * sqrt_pi_half,
         )
 
         return np.column_stack((X, Y))
@@ -109,7 +114,3 @@ def _eq_c(p: Union[np.ndarray, float, int]) -> Union[np.ndarray, float, int]:
     """Private function used inside LambertProjection.iproject to increase
     readability."""
     return (2 * p / np.pi) * np.sqrt(np.pi - p ** 2)
-
-
-# Constant
-sqrt_pi = np.sqrt(np.pi)
