@@ -108,9 +108,9 @@ class EBSDDetector:
          (0.421, 0.221, 0.505)
         >>> det.navigation_shape  # (nrows, ncols)
         (149, 200)
-        >>> det.extent
+        >>> det.bounds
         array([ 0, 60,  0, 60])
-        >>> det.extent_gnomonic
+        >>> det.gnomonic_bounds
         array([-0.83366337,  1.14653465, -1.54257426,  0.43762376])
         >>> det.plot()
         """
@@ -160,7 +160,7 @@ class EBSDDetector:
         return self.nrows / self.ncols
 
     @property
-    def shape_unbinned(self) -> Tuple[int, int]:
+    def unbinned_shape(self) -> Tuple[int, int]:
         """Unbinned detector shape in pixels."""
         return tuple(np.array(self.shape) * self.binning)
 
@@ -231,7 +231,6 @@ class EBSDDetector:
     def pcz(self, value: Union[np.ndarray, list, tuple, float]):
         """Set z projection center coordinates.
 
-
         Parameters
         ----------
         value
@@ -279,14 +278,9 @@ class EBSDDetector:
         return len(self.navigation_shape)
 
     @property
-    def extent(self) -> np.ndarray:
-        """Detector extent [x0, x1, y0, y1] in pixel coordinates."""
-        return np.array([0, self.ncols, 0, self.nrows])
-
-    @property
-    def extent_gnomonic(self) -> np.ndarray:
-        """Detector extent [x0, x1, y0, y1] in gnomonic coordinates."""
-        return np.concatenate([self.x_range, self.y_range]).reshape(-1)
+    def bounds(self) -> np.ndarray:
+        """Detector bounds [x0, x1, y0, y1] in pixel coordinates."""
+        return np.array([0, self.ncols - 1, 0, self.nrows - 1])
 
     @property
     def x_min(self) -> Union[np.ndarray, float]:
@@ -301,7 +295,9 @@ class EBSDDetector:
     @property
     def x_range(self) -> np.ndarray:
         """X detector limits in gnomonic coordinates."""
-        return np.column_stack((self.x_min, self.x_max))
+        return np.dstack((self.x_min, self.x_max)).reshape(
+            self.navigation_shape + (2,)
+        )
 
     @property
     def y_min(self) -> Union[np.ndarray, float]:
@@ -316,23 +312,40 @@ class EBSDDetector:
     @property
     def y_range(self) -> np.ndarray:
         """The y detector limits in gnomonic coordinates."""
-        return np.column_stack((self.y_min, self.y_max))
+        return np.dstack((self.y_min, self.y_max)).reshape(
+            self.navigation_shape + (2,)
+        )
+
+    @property
+    def gnomonic_bounds(self) -> np.ndarray:
+        """Detector bounds [x0, x1, y0, y1] in gnomonic coordinates."""
+        return np.concatenate((self.x_range, self.y_range)).reshape(
+            self.navigation_shape + (4,)
+        )
+
+    @property
+    def _average_gnomonic_bounds(self) -> np.ndarray:
+        return np.mean(
+            self.gnomonic_bounds, axis=(0, 1, 2)[: self.navigation_dimension]
+        )
 
     @property
     def x_scale(self) -> np.ndarray:
         """Width of a pixel in gnomonic coordinates."""
         if self.ncols == 1:
-            return np.diff(self.x_range)
+            x_scale = np.diff(self.x_range)
         else:
-            return np.diff(self.x_range) / (self.ncols - 1)
+            x_scale = np.diff(self.x_range) / (self.ncols - 1)
+        return x_scale.reshape(self.navigation_shape)
 
     @property
     def y_scale(self) -> np.ndarray:
         """Height of a pixel in gnomonic coordinates."""
         if self.nrows == 1:
-            return np.diff(self.y_range)
+            y_scale = np.diff(self.y_range)
         else:
-            return np.diff(self.y_range) / (self.nrows - 1)
+            y_scale = np.diff(self.y_range) / (self.nrows - 1)
+        return y_scale.reshape(self.navigation_shape)
 
     @property
     def r_max(self):
@@ -344,7 +357,7 @@ class EBSDDetector:
         corners[..., 1] = self.x_max ** 2 + self.y_min ** 2  # Up. right
         corners[..., 2] = self.x_max ** 2 + self.y_max ** 2  # Lo. right
         corners[..., 3] = self.x_min ** 2 + self.y_min ** 2  # Lo. left
-        return np.sqrt(np.max(corners, axis=-1))
+        return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
 
     def __repr__(self) -> str:
         return (
@@ -542,18 +555,18 @@ class EBSDDetector:
         if coordinates in [None, "detector"]:
             pcy *= sy
             pcx *= sx
-            extent = self.extent
-            extent[2:] = extent[2:][::-1]
+            bounds = self.bounds
+            bounds[2:] = bounds[2:][::-1]
             x_label = r"$x_{\mathrm{detector}}$"
             y_label = r"$y_{\mathrm{detector}}$"
         else:
             pcy, pcx = (0, 0)
-            extent = self.extent_gnomonic
+            bounds = self._average_gnomonic_bounds
             x_label = r"$x_{\mathrm{gnomonic}}$"
             y_label = r"$y_{\mathrm{gnomonic}}$"
 
         fig, ax = plt.subplots()
-        ax.axis(zoom * extent)
+        ax.axis(zoom * bounds)
         ax.set_aspect(self.aspect_ratio)
         ax.set_xlabel(x_label, fontsize=18)
         ax.set_ylabel(y_label, fontsize=18)
@@ -568,7 +581,7 @@ class EBSDDetector:
             if pattern_kwargs is None:
                 pattern_kwargs = {}
             pattern_kwargs.setdefault("cmap", "gray")
-            ax.imshow(pattern, extent=extent, **pattern_kwargs)
+            ax.imshow(pattern, extent=bounds, **pattern_kwargs)
 
         # Show the projection center
         if show_pc:

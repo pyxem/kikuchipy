@@ -109,7 +109,7 @@ class TestEBSDDetector:
         assert detector.width == width
         assert detector.height == height
         assert detector.size == size
-        assert detector.shape_unbinned == shape_unbinned
+        assert detector.unbinned_shape == shape_unbinned
         assert detector.px_size_binned == px_size_binned
 
     def test_repr(self, pc1):
@@ -466,11 +466,84 @@ class TestEBSDDetector:
         if coordinates == "gnomonic":
             desired_data_lim = np.concatenate(
                 [
-                    detector.extent_gnomonic[::2],
-                    np.diff(detector.extent_gnomonic)[::2],
+                    detector._average_gnomonic_bounds[::2],
+                    np.diff(detector._average_gnomonic_bounds)[::2],
                 ]
             )
         else:
-            desired_data_lim = np.sort(detector.extent)
+            desired_data_lim = np.sort(detector.bounds)
         assert np.allclose(ax.dataLim.bounds, desired_data_lim)
         plt.close("all")
+
+    @pytest.mark.parametrize(
+        "shape, desired_shapes",
+        [
+            (
+                (1,),  # PC
+                [
+                    (4,),  # extent
+                    (1,),  # x_min
+                    (1,),  # y_min
+                    (1, 2),  # x_range
+                    (1, 2),  # y_range
+                    (1,),  # x_scale
+                    (1,),  # y_scale
+                    (1, 4),  # extent_gnomonic
+                ],
+            ),
+            (
+                (10,),
+                [(4,), (10,), (10,), (10, 2), (10, 2), (10,), (10,), (10, 4),],
+            ),
+            (
+                (10, 10),
+                [
+                    (4,),
+                    (10, 10),
+                    (10, 10),
+                    (10, 10, 2),
+                    (10, 10, 2),
+                    (10, 10),
+                    (10, 10),
+                    (10, 10, 4),
+                ],
+            ),
+            (
+                (1, 10),
+                [
+                    (4,),
+                    (1, 10),
+                    (1, 10),
+                    (1, 10, 2),
+                    (1, 10, 2),
+                    (1, 10),
+                    (1, 10),
+                    (1, 10, 4),
+                ],
+            ),
+            (
+                (10, 1),
+                [
+                    (4,),
+                    (10, 1),
+                    (10, 1),
+                    (10, 1, 2),
+                    (10, 1, 2),
+                    (10, 1),
+                    (10, 1),
+                    (10, 1, 4),
+                ],
+            ),
+        ],
+    )
+    def test_property_shapes(self, shape, desired_shapes):
+        """Expected property shapes when varying navigation shape."""
+        det = EBSDDetector(pc=np.ones(shape + (3,)))
+        assert det.bounds.shape == desired_shapes[0]
+        assert det.x_min.shape == desired_shapes[1]
+        assert det.y_min.shape == desired_shapes[2]
+        assert det.x_range.shape == desired_shapes[3]
+        assert det.y_range.shape == desired_shapes[4]
+        assert det.x_scale.shape == desired_shapes[5]
+        assert det.y_scale.shape == desired_shapes[6]
+        assert det.gnomonic_bounds.shape == desired_shapes[7]
