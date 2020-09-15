@@ -119,7 +119,7 @@ setup(
         "matplotlib >= 3.2",
         "numpy >= 1.18",
         "numba >= 0.48",
-        "orix <= 0.4",
+        "orix >= 0.5",
         "scikit-image >= 0.16",
         "scikit-learn",
         "scipy",
