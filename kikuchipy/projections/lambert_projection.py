@@ -97,7 +97,7 @@ class LambertProjection:
 
     @staticmethod
     def lambert_to_gnomonic(xy: np.ndarray) -> np.ndarray:
-        """Convert a (n,2) array from Lambert via Cartesian coordinates to
+        """Convert (n,2) array from Lambert via Cartesian coordinates to
         Gnomonic."""
         # These two functions could probably be combined into 1 to decrease
         # runtime
@@ -107,7 +107,7 @@ class LambertProjection:
 
     @staticmethod
     def gnomonic_to_lambert(xy: np.ndarray) -> np.ndarray:
-        """Convert a (n,2) array from Gnomonic via Cartesian coordinates to
+        """Convert (n,2) array from Gnomonic via Cartesian coordinates to
         Lambert."""
         # These two functions could probably be combined into 1 to decrease
         # runtime
