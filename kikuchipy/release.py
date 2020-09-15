@@ -18,7 +18,11 @@
 
 author = "kikuchipy developers"
 copyright = "Copyright 2019-2020, kikuchipy"
-credits = ["Håkon Wiik Ånes", "Tina Bergh"]
+credits = [
+    "Håkon Wiik Ånes",
+    "Tina Bergh",
+    "Lars Andreas Hastad Lervik",
+]
 license = "GPLv3+"
 maintainer = "Håkon Wiik Ånes"
 maintainer_email = "hakon.w.anes@ntnu.no"
