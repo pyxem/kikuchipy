@@ -75,20 +75,20 @@ class LambertProjection:
         Y = xy[..., 1]
 
         # Arrays used in setting x and y
-        y_pi = Y * np.pi
-        x_pi = X * np.pi
+        true_term = Y * np.pi / (4 * X)
+        false_term = X * np.pi / (4 * Y)
         abs_yx = abs(Y) <= abs(X)
 
         # Equations 8a and 8b from Callahan and De Graef (2013)
         x = np.where(
             abs_yx,
-            _eq_c(X) * np.cos(y_pi / (4 * X)),
-            _eq_c(Y) * np.sin(x_pi / (4 * Y)),
+            _eq_c(X) * np.cos(true_term),
+            _eq_c(Y) * np.sin(false_term),
         )
         y = np.where(
             abs_yx,
-            _eq_c(X) * np.sin(y_pi / (4 * X)),
-            _eq_c(Y) * np.cos(x_pi / (4 * Y)),
+            _eq_c(X) * np.sin(true_term),
+            _eq_c(Y) * np.cos(false_term),
         )
         z = np.where(
             abs_yx,
