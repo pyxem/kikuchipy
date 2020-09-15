@@ -26,6 +26,10 @@ Added
 - Modified Lambert mapping, and its inverse, from points on the unit sphere to a
   2D square grid, as implemented in Callahan and De Graef (2013).
   (`#214 <https://github.com/pyxem/kikuchipy/pull/214>`_)
+- EBSD detector class to handle detector parameters, including detector pixels'
+  gnomonic coordinates. EBSD reference frame documentation.
+  (`#204 <https://github.com/pyxem/kikuchipy/pull/204>`_,
+  `#215 <https://github.com/pyxem/kikuchipy/pull/215>`_)
 
 Changed
 -------

@@ -22,7 +22,6 @@ import matplotlib
 
 matplotlib.rcParams["backend"] = "qt5agg"
 import matplotlib.pyplot as plt
-import numpy as np
 
 import kikuchipy as kp
 
@@ -67,6 +66,22 @@ vbse_imgs._plot.navigator_plot.figure.savefig(
 )
 vbse_imgs._plot.signal_plot.figure.savefig(
     os.path.join(vbsedir, "images_sig.jpg"),
+)
+
+# Get an RGB image with alpha channel
+s2 = s.deepcopy()
+s2.remove_static_background()
+s2.remove_dynamic_background()
+s2.average_neighbour_patterns()
+iq = s2.get_image_quality()
+vbse_gen.grid_shape = (10, 10)
+vbse_rgba = vbse_gen.get_rgb_image(r=red, g=green, b=blue, alpha=iq)
+vbse_rgba.plot()
+vbse_rgba._plot.signal_plot.figure.savefig(
+    os.path.join(vbsedir, "rgba_image.jpg"),
+    bbox_inches="tight",
+    pad_inches=0,
+    dpi=300,
 )
 
 plt.close("all")

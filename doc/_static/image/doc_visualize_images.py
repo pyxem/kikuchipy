@@ -18,14 +18,18 @@
 
 import os
 import logging
-import hyperspy.api as hs
+
+import matplotlib as mpl
+
+mpl.rcParams["backend"] = "qt5agg"
 import matplotlib.pyplot as plt
+import hyperspy.api as hs
 import numpy as np
 import skimage.exposure as ske
+import skimage.color as skc
+import skimage.transform as skt
 
 import kikuchipy as kp
-
-logging.getLogger("kikuchipy").setLevel(logging.DEBUG)
 
 data = "/home/hakon/phd/data/ni/190506_ebsd/1/nordif/Pattern.dat"
 data_mp = "/home/hakon/kode/emsoft/emdata/crystal_data/ni/ni_mc_mp_20kv.h5"
@@ -61,8 +65,8 @@ s._plot.signal_plot.figure.savefig(os.path.join(visdir, "vbse_signal.png"),)
 
 # Quality metric map
 osm = plt.imread(os.path.join(visdir, "orientation_similarity_map.png"))
+osm = skc.rgb2gray(skc.rgba2rgb(osm))
 s_osm = hs.signals.Signal2D(osm)
-s_osm = s_osm.rebin(s.axes_manager.navigation_shape)
 s.axes_manager.navigation_axes[0].index = 155
 s.axes_manager.navigation_axes[1].index = 77
 s.plot(navigator=s_osm)
@@ -72,7 +76,10 @@ s._plot.navigator_plot.figure.savefig(
 
 # Orientation map
 om = plt.imread(os.path.join(visdir, "orientation_map.jpg"))
-om_scaled = ske.rescale_intensity(om, out_range=np.uint8)
+om_rescaled = skt.resize(
+    om, s.axes_manager.navigation_shape[::-1], anti_aliasing=False
+)
+om_scaled = ske.rescale_intensity(om_rescaled, out_range=np.uint8)
 s_om = hs.signals.Signal2D(om_scaled)
 s_om = s_om.transpose(signal_axes=1)
 s_om.change_dtype("rgb8")

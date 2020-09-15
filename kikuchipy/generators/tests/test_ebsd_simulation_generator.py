@@ -24,28 +24,23 @@ from kikuchipy.generators import EBSDSimulationGenerator
 class TestEBSDSimulationGenerator:
     @pytest.mark.parametrize("nav_shape", [(5, 5), (25,), (1, 25)])
     def test_align_navigation_shape(
-        self,
-        nickel_phase,
-        nordif_detector,
-        nickel_rotations,
-        r_tsl2bruker,
-        nav_shape,
+        self, nickel_phase, detector, nickel_rotations, r_tsl2bruker, nav_shape,
     ):
         """Initialization of a detector with orientations of a certain
         shape also reshapes the varying PCs, i.e. the detector
         navigation shape, if the detector has more than one PC.
         """
-        assert nordif_detector.navigation_shape == (1,)
+        assert detector.navigation_shape == (1,)
         o_nickel = r_tsl2bruker * nickel_rotations.reshape(*nav_shape)
         assert o_nickel.shape == nav_shape
         sim_gen = EBSDSimulationGenerator(
-            phase=nickel_phase, detector=nordif_detector, rotations=o_nickel,
+            phase=nickel_phase, detector=detector, rotations=o_nickel,
         )
         assert sim_gen.detector.navigation_shape == sim_gen.rotations.shape
 
     @pytest.mark.parametrize("nav_shape", [(5, 5), (25,), (1, 25), (25, 1)])
     def test_ebsd_simulation_generator_navigation_shape(
-        self, nickel_ebsd_simulation_generator, nickel_rlp, nav_shape,
+        self, nickel_ebsd_simulation_generator, nav_shape,
     ):
         """Setting the navigation shape changes all derived navigation
         shapes.
