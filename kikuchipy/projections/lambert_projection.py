@@ -47,6 +47,8 @@ class LambertProjection:
         sqrt_z = np.sqrt(2 * (1 - z))
         sign_x = np.sign(x)
         sign_y = np.sign(y)
+        abs_yx = abs(y) <= abs(x)
+
         # Reusable constants
         sqrt_pi = np.sqrt(np.pi)
         sqrt_pi_half = sqrt_pi / 2
@@ -54,12 +56,12 @@ class LambertProjection:
 
         # Equations 10a and 10b from Callahan and De Graef (2013)
         X = np.where(
-            abs(y) <= abs(x),
+            abs_yx,
             sign_x * sqrt_z * sqrt_pi_half,
             sign_y * sqrt_z * (two_over_sqrt_pi * np.arctan2(x, y)),
         )
         Y = np.where(
-            abs(y) <= abs(x),
+            abs_yx,
             sign_x * sqrt_z * (two_over_sqrt_pi * np.arctan2(y, x)),
             sign_y * sqrt_z * sqrt_pi_half,
         )
@@ -75,20 +77,21 @@ class LambertProjection:
         # Arrays used in setting x and y
         y_pi = Y * np.pi
         x_pi = X * np.pi
+        abs_yx = abs(Y) <= abs(X)
 
         # Equations 8a and 8b from Callahan and De Graef (2013)
         x = np.where(
-            abs(Y) <= abs(X),
+            abs_yx,
             _eq_c(X) * np.cos(y_pi / (4 * X)),
             _eq_c(Y) * np.sin(x_pi / (4 * Y)),
         )
         y = np.where(
-            abs(Y) <= abs(X),
+            abs_yx,
             _eq_c(X) * np.sin(y_pi / (4 * X)),
             _eq_c(Y) * np.cos(x_pi / (4 * Y)),
         )
         z = np.where(
-            abs(Y) <= abs(X),
+            abs_yx,
             1 - (2 * (X ** 2)) / np.pi,
             1 - (2 * (Y ** 2)) / np.pi,
         )
