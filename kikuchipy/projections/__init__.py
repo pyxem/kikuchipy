@@ -20,12 +20,14 @@ from kikuchipy.projections import (
     ebsd_projections,
     gnomonic_projection,
     hesse_normal_form,
+    lambert_projection,
     spherical_projection,
 )
 
 __all__ = [
     "ebsd_projections",
-    "gnomonic_projection.py",
+    "gnomonic_projection",
     "hesse_normal_form",
-    "spherical_projection.py",
+    "lambert_projection",
+    "spherical_projection",
 ]

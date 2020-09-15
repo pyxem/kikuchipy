@@ -15,18 +15,3 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
-
-author = "kikuchipy developers"
-copyright = "Copyright 2019-2020, kikuchipy"
-credits = [
-    "Håkon Wiik Ånes",
-    "Tina Bergh",
-    "Lars Andreas Hastad Lervik",
-]
-license = "GPLv3+"
-maintainer = "Håkon Wiik Ånes"
-maintainer_email = "hakon.w.anes@ntnu.no"
-name = "kikuchipy"
-platforms = ["Linux", "MacOS X", "Windows"]
-status = "Development"
-version = "0.3.dev0"
