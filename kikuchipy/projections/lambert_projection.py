@@ -52,6 +52,7 @@ class LambertProjection:
         sqrt_pi_half = sqrt_pi / 2
         two_over_sqrt_pi = 2 / sqrt_pi
 
+        # Equations 10a and 10b from Callahan and De Graef (2013)
         X = np.where(
             abs(y) <= abs(x),
             sign_x * sqrt_z * sqrt_pi_half,
@@ -75,6 +76,7 @@ class LambertProjection:
         y_pi = Y * np.pi
         x_pi = X * np.pi
 
+        # Equations 8a and 8b from Callahan and De Graef (2013)
         x = np.where(
             abs(Y) <= abs(X),
             _eq_c(X) * np.cos(y_pi / (4 * X)),
