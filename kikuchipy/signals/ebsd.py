@@ -1531,4 +1531,3 @@ class LazyEBSD(EBSD, LazySignal2D):
         # Delete temporary files
         os.remove(file_learn)
         gc.collect()  # Don't sink
-

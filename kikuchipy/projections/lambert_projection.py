@@ -82,20 +82,10 @@ class LambertProjection:
         c_y = _eq_c(Y)
 
         # Equations 8a and 8b from Callahan and De Graef (2013)
-        x = np.where(
-            abs_yx,
-            c_x * np.cos(true_term),
-            c_y * np.sin(false_term),
-        )
-        y = np.where(
-            abs_yx,
-            c_x * np.sin(true_term),
-            c_y * np.cos(false_term),
-        )
+        x = np.where(abs_yx, c_x * np.cos(true_term), c_y * np.sin(false_term))
+        y = np.where(abs_yx, c_x * np.sin(true_term), c_y * np.cos(false_term))
         z = np.where(
-            abs_yx,
-            1 - (2 * (X ** 2)) / np.pi,
-            1 - (2 * (Y ** 2)) / np.pi,
+            abs_yx, 1 - (2 * (X ** 2)) / np.pi, 1 - (2 * (Y ** 2)) / np.pi,
         )
 
         return Vector3d(np.column_stack((x, y, z)))
