@@ -66,20 +66,24 @@ class LambertProjection:
         return np.column_stack((X, Y))
 
     @staticmethod
-    def iproject(vec: np.ndarray) -> Vector3d:
+    def iproject(xy: np.ndarray) -> Vector3d:
         """Convert (n, 2) array from Lambert to Cartesian coordinates."""
-        X = vec[..., 0]
-        Y = vec[..., 1]
+        X = xy[..., 0]
+        Y = xy[..., 1]
+
+        # Arrays used in setting x and y
+        y_pi = Y * np.pi
+        x_pi = X * np.pi
 
         x = np.where(
             abs(Y) <= abs(X),
-            _eq_c(X) * np.cos((Y * np.pi) / (4 * X)),
-            _eq_c(Y) * np.sin((X * np.pi) / (4 * Y)),
+            _eq_c(X) * np.cos(y_pi / (4 * X)),
+            _eq_c(Y) * np.sin(x_pi / (4 * Y)),
         )
         y = np.where(
             abs(Y) <= abs(X),
-            _eq_c(X) * np.sin((Y * np.pi) / (4 * X)),
-            _eq_c(Y) * np.cos((X * np.pi) / (4 * Y)),
+            _eq_c(X) * np.sin(y_pi / (4 * X)),
+            _eq_c(Y) * np.cos(x_pi / (4 * Y)),
         )
         z = np.where(
             abs(Y) <= abs(X),
@@ -90,24 +94,24 @@ class LambertProjection:
         return Vector3d(np.column_stack((x, y, z)))
 
     @staticmethod
-    def lambert_to_gnomonic(v: np.ndarray) -> np.ndarray:
+    def lambert_to_gnomonic(xy: np.ndarray) -> np.ndarray:
         """Convert a (n,2) array from Lambert via Cartesian coordinates to
         Gnomonic."""
         # These two functions could probably be combined into 1 to decrease
         # runtime
-        vec = LambertProjection.iproject(v)
-        vec = GnomonicProjection.project(vec)
-        return vec
+        vec = LambertProjection.iproject(xy)
+        xy = GnomonicProjection.project(vec)
+        return xy
 
     @staticmethod
-    def gnomonic_to_lambert(v: np.ndarray) -> np.ndarray:
+    def gnomonic_to_lambert(xy: np.ndarray) -> np.ndarray:
         """Convert a (n,2) array from Gnomonic via Cartesian coordinates to
         Lambert."""
         # These two functions could probably be combined into 1 to decrease
         # runtime
-        vec = GnomonicProjection.iproject(v[..., 0], v[..., 1])
-        vec = LambertProjection.project(vec)
-        return vec
+        vec = GnomonicProjection.iproject(xy[..., 0], xy[..., 1])
+        xy = LambertProjection.project(vec)
+        return xy
 
 
 def _eq_c(p: Union[np.ndarray, float, int]) -> Union[np.ndarray, float, int]:
