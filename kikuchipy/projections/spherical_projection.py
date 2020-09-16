@@ -24,23 +24,51 @@ from orix.vector.spherical_region import SphericalRegion
 
 
 class SphericalProjection:
-    """Spherical projection of a vector as implemented in MTEX."""
+    """Spherical projection of a cartesian vector according to the ISO
+    31-11 standard [SphericalWolfram]_.
+
+    References
+    ----------
+    .. [SphericalWolfram] Weisstein, Eric W. "Spherical Coordinates,"
+        *From MathWorld--A Wolfram Web Resource*,
+        url: https://mathworld.wolfram.com/SphericalCoordinates.html
+    """
 
     spherical_region = SphericalRegion([0, 0, 1])
 
-    def project(self, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
-        """Convert from cartesian to spherical coordinates."""
-        polar = get_polar(v)
+    @classmethod
+    def project(cls, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
+        """Convert from cartesian to spherical coordinates according to
+        the ISO 31-11 standard [SphericalWolfram]_.
 
-        # Restrict to plotable domain
-        is_antipodal = v < self.spherical_region
-        polar[is_antipodal, 1] += np.pi
+        Parameters
+        ----------
+        v
+            3D vector(s) on the form [[x0, y0, z0], [x1, y1, z1], ...].
 
-        return polar
+        Returns
+        -------
+        spherical_coordinates
+            Spherical coordinates theta, phi and r on the form
+            [[theta1, phi1, r1], [theta2, phi2, r2], ...].
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> from kikuchipy.projections.spherical_projection import (
+        ...     SphericalProjection
+        ... )
+        >>> v = np.random.random_sample(30).reshape((10, 3))
+        >>> theta, phi, r = SphericalProjection.project(v)
+        >>> np.allclose(np.arccos(v[: 2] / r), theta)
+        True
+        >>> np.allclose(np.arctan2(v[:, 1], v[:, 2]), phi)
+        True
+        """
+        return _get_polar(v)
 
 
-def get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
-    """Convert from cartesian to spherical coordinates."""
+def _get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     if isinstance(v, Vector3d):
         x, y, z = v.xyz
     else:
@@ -53,7 +81,19 @@ def get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
 
 
 def get_theta(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
-    """Get spherical coordinate theta from cartesian."""
+    """Get spherical coordinate theta from cartesian according to the
+    ISO 31-11 standard [SphericalWolfram]_.
+
+    Parameters
+    ----------
+    v
+        3D vector(s) on the form [[x0, y0, z0], [x1, y1, z1], ...].
+
+    Returns
+    -------
+    theta
+        Spherical coordinate theta.
+    """
     if isinstance(v, Vector3d):
         x, y, z = v.xyz
     else:
@@ -63,7 +103,19 @@ def get_theta(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
 
 
 def get_phi(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
-    """Get spherical coordinate phi from cartesian."""
+    """Get spherical coordinate phi from cartesian according to the ISO
+    31-11 standard [SphericalWolfram]_.
+
+    Parameters
+    ----------
+    v
+        3D vector(s) on the form [[x0, y0, z0], [x1, y1, z1], ...].
+
+    Returns
+    -------
+    phi
+        Spherical coordinate phi.
+    """
     if isinstance(v, Vector3d):
         x, y, _ = v.xyz
     else:
@@ -74,7 +126,18 @@ def get_phi(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
 
 
 def get_r(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
-    """Get spherical coordinate radius from cartesian."""
+    """Get radial spherical coordinate from cartesian coordinates.
+
+    Parameters
+    ----------
+    v
+        3D vector(s) on the form [[x0, y0, z0], [x1, y1, z1], ...].
+
+    Returns
+    -------
+    phi
+        Spherical coordinate phi.
+    """
     if isinstance(v, Vector3d):
         x, y, z = v.xyz
     else:

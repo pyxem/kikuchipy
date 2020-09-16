@@ -40,14 +40,8 @@ class TestLambertProjection:
             )
         )
         output_b = LambertProjection.project(vector_two)
-
-        expected_b = np.array(
-            (
-                (0.814172, 0.814172, 0.814172),
-                (0, 0, 0),
-                (0.6784123, 0, 0.6784123),
-            )
-        )
+        expected_b = np.array([[0.8147, 0.8147], [0, 0.6782], [0.6782, 0]])
+        assert np.allclose(output_b, expected_b, atol=1e-4)
 
         assert output_a[..., 0][0] == pytest.approx(expected_a[..., 0], rel=1e4)
         assert output_a[..., 1][0] == pytest.approx(expected_a[..., 1], rel=1e4)

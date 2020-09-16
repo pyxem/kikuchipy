@@ -95,11 +95,7 @@ class KikuchiBand(ReciprocalLatticePoint):
     @property
     def navigation_shape(self) -> tuple:
         """Navigation shape."""
-        coordinate_shape = self.hkl_detector.shape
-        if len(coordinate_shape) == 2:
-            return (1,)
-        else:
-            return coordinate_shape[:-1]
+        return self.hkl_detector.shape[:-1]
 
     @property
     def navigation_dimension(self) -> int:
