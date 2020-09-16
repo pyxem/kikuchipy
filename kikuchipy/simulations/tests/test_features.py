@@ -25,4 +25,9 @@ from kikuchipy.generators import EBSDSimulationGenerator
 
 
 class TestKikuchiBand:
-    pass
+    @pytest.mark.parametrize(
+        "shape, desired_shapes", [],
+    )
+    def test_property_shapes(self, shape, desired_shapes):
+        """Expected property shapes when varying navigation shape."""
+        pass

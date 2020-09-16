@@ -28,7 +28,7 @@ class GnomonicProjection(SphericalProjection):
     """Gnomonic projection of a vector as implemented in MTEX."""
 
     @classmethod
-    def project(self, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
+    def project(cls, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
         """Convert from Cartesian to the Gnomonic projection."""
         polar = super().project(v)
         theta, phi = polar[..., 0], polar[..., 1]
@@ -41,7 +41,7 @@ class GnomonicProjection(SphericalProjection):
         theta[is_upper] -= np.pi
 
         # Turn around antipodal vectors
-        is_antipodal = v < self.spherical_region
+        is_antipodal = v < cls.spherical_region
         phi[is_antipodal] += np.pi
 
         # Formula for gnomonic projection
