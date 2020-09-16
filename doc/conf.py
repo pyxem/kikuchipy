@@ -95,6 +95,9 @@ html_theme_options = {
     "prev_next_buttons_location": "bottom",
 }
 
+# Figure references
+numfig = True
+
 
 def linkcode_resolve(domain, info):
     """Determine the URL corresponding to Python object.

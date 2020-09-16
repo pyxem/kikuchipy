@@ -36,6 +36,8 @@ datadir, fname = os.path.split(data)
 fname, ext = os.path.splitext(fname)
 s = kp.load(data, lazy=False)
 
+s.metadata.General.title = "patterns"
+
 # Get dynamic background
 bg = s.get_dynamic_background()
 bg.plot()
@@ -67,7 +69,7 @@ s3 = kp.load(data2, lazy=True)
 s4 = s3.inav[150:160, 75:85]
 s4.remove_static_background()
 s5 = s4.deepcopy()
-k = kp.util.Window(window="gaussian", shape=(3, 3), std=1)
+k = kp.filters.Window(window="gaussian", shape=(3, 3), std=1)
 fig, _, _ = k.plot(cmap="inferno")
 fig.savefig(
     os.path.join(procdir, "window_gaussian_std1.png"),
@@ -91,7 +93,7 @@ s5._plot.signal_plot.figure.savefig(
 )
 
 # Circular (5,4) kernel
-k = kp.util.Window("circular", (5, 4))
+k = kp.filters.Window("circular", (5, 4))
 fig, _, _ = k.plot()
 fig.savefig(
     os.path.join(procdir, "window_circular_54.png"),
@@ -144,15 +146,15 @@ plt.savefig(os.path.join(procdir, "normalize_intensity_after.png"))
 s9 = s.deepcopy()
 pattern_shape = s9.axes_manager.signal_shape[::-1]
 # Gaussian high/lowpass
-w_low = kp.util.Window(
+w_low = kp.filters.Window(
     "lowpass", shape=pattern_shape, cutoff=22, cutoff_width=10,
 )
-w_high = kp.util.Window(
+w_high = kp.filters.Window(
     "highpass", shape=pattern_shape, cutoff=3, cutoff_width=2,
 )
 w = w_low * w_high
 plt.figure()
-plt.imshow(w)
+plt.imshow(w, cmap="gray")
 plt.colorbar()
 plt.savefig(
     os.path.join(procdir, "fft_filter_highlowpass2d.png"),
@@ -178,9 +180,9 @@ w_laplacian = np.array([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]])
 
 p = s10.inav[0, 0].deepcopy().data.astype(np.float32)
 p2 = correlate(p, w_laplacian)
-p2 = kp.util.pattern.rescale_intensity(p2, dtype_out=np.uint8)
+p2 = kp.pattern.rescale_intensity(p2, dtype_out=np.uint8)
 plt.figure()
-plt.imshow(p2)
+plt.imshow(p2, cmap="gray")
 plt.colorbar()
 plt.savefig(
     os.path.join(procdir, "fft_filter_laplacian_correlate.png"),
