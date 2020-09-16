@@ -94,10 +94,10 @@ class GeometricalEBSDSimulation:
         # X and Y coordinates are now in place (0, 2) and (1, 3) respectively
         band_coords_detector[..., ::2] = (
             band_coords_gnomonic[..., :2] + (pcx / pcz)
-        ) / self.detector.x_scale[..., np.newaxis]
+        ) / self.detector.x_scale[..., np.newaxis, np.newaxis]
         band_coords_detector[..., 1::2] = (
             -band_coords_gnomonic[..., 2:] + (pcy / pcz)
-        ) / self.detector.y_scale[..., np.newaxis]
+        ) / self.detector.y_scale[..., np.newaxis, np.newaxis]
 
         return band_coords_detector
 

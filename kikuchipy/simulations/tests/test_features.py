@@ -16,13 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import numpy as np
-from orix.quaternion.orientation import Orientation
-import pytest
-
-from kikuchipy.detectors import EBSDDetector
-from kikuchipy.generators import EBSDSimulationGenerator
-
 
 class TestKikuchiBand:
     pass
