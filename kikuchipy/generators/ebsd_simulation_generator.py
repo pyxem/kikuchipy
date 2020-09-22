@@ -19,11 +19,11 @@
 from copy import deepcopy
 from typing import Optional
 
-from kikuchipy.crystallography import ReciprocalLatticePoint
 import numpy as np
 from orix.crystal_map import Phase
 from orix.quaternion.rotation import Rotation
 
+from kikuchipy.crystallography import ReciprocalLatticePoint
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.projections.ebsd_projections import (
     detector2reciprocal_lattice,
@@ -174,7 +174,7 @@ class EBSDSimulationGenerator:
         bands = KikuchiBand(
             phase=phase,
             hkl=hkl,
-            coordinates=band_coordinates,
+            hkl_detector=band_coordinates,
             in_pattern=hkl_in_pattern,
             gnomonic_radius=self.detector.r_max,
         )
