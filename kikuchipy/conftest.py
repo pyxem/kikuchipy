@@ -92,14 +92,12 @@ def nickel_phase(nickel_structure):
     return Phase(name="ni", structure=nickel_structure, space_group=225)
 
 
-@pytest.fixture(params=[1.3])
+@pytest.fixture(params=[[[1, 1, 1], [2, 0, 0], [2, 2, 0]]])
 def nickel_rlp(request, nickel_phase):
     """A set of reciprocal lattice points for a Nickel crystal
     structure with a minimum interplanar spacing.
     """
-    return ReciprocalLatticePoint.from_min_dspacing(
-        phase=nickel_phase, min_dspacing=request.param,
-    )
+    return ReciprocalLatticePoint(phase=nickel_phase, hkl=request.param)
 
 
 @pytest.fixture
@@ -124,14 +122,14 @@ def detector(request, pc1):
 
 @pytest.fixture
 def nickel_rotations():
-    """A set of 25 rotations in a TSL sample reference frame (RD-TD-ND).
+    """A set of 25 rotations in a TSL crystal reference frame (RD-TD-ND).
 
     The rotations are from an EMsoft indexing of patterns in the region
     of interest (row0:row1, col0:col1) = (79:84, 134:139) of the first
     Nickel data set in this set of scans:
     https://zenodo.org/record/3265037.
     """
-    return Rotation.from_euler(
+    return Rotation(
         np.array(
             [
                 [0.8662, 0.2033, -0.3483, -0.2951],
@@ -166,7 +164,7 @@ def nickel_rotations():
 
 @pytest.fixture
 def r_tsl2bruker():
-    """A rotation from the TSL to bruker sample reference frame."""
+    """A rotation from the TSL to Bruker crystal reference frame."""
     return Rotation.from_neo_euler(
         neo_euler.AxAngle.from_axes_angles(Vector3d.zvector(), np.pi / 2)
     )
@@ -182,5 +180,5 @@ def nickel_ebsd_simulation_generator(
     return EBSDSimulationGenerator(
         detector=detector,
         phase=nickel_phase,
-        rotations=r_tsl2bruker * nickel_rotations,
+        rotations=nickel_rotations * r_tsl2bruker,
     )

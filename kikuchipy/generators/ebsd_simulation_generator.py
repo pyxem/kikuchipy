@@ -98,6 +98,14 @@ class EBSDSimulationGenerator:
             f"{rotation_repr}\n"
         )
 
+    def __getitem__(self, key):
+        new_detector = self.detector.deepcopy()
+        new_detector.pc = new_detector.pc[key]
+        new_rotations = self.rotations[key]
+        return self.__class__(
+            detector=new_detector, phase=self.phase, rotations=new_rotations
+        )
+
     def geometrical_simulation(
         self, reciprocal_lattice_point: Optional[ReciprocalLatticePoint] = None,
     ) -> GeometricalEBSDSimulation:
@@ -132,7 +140,6 @@ class EBSDSimulationGenerator:
         # Unit cell parameters (called more than once)
         phase = rlp.phase
         hkl = rlp._hkldata
-        hkl_transposed = hkl.T
 
         # Get Kikuchi band coordinates for all bands in all patterns
         # U_Kstar, transformation from detector frame D to reciprocal crystal
@@ -147,7 +154,7 @@ class EBSDSimulationGenerator:
             rotation=self.rotations,
         )
         # Output shape is (nhkl, n, 3) or (nhkl, ny, nx, 3)
-        band_coordinates = det2recip.T.dot(hkl_transposed).T
+        band_coordinates = np.tensordot(hkl, det2recip, axes=(1, 0))
 
         # Determine whether a band is visible in a pattern
         upper_hemisphere = band_coordinates[..., 2] > 0
@@ -189,7 +196,6 @@ class EBSDSimulationGenerator:
 
         return GeometricalEBSDSimulation(
             detector=self.detector,
-            reciprocal_lattice_point=rlp,
             rotations=self.rotations,
             bands=bands,
             #            zone_axes=zone_axes,
@@ -197,8 +203,11 @@ class EBSDSimulationGenerator:
 
     def _rlp_phase_is_compatible(self, rlp: ReciprocalLatticePoint):
         if (
-            rlp.phase.structure.lattice.abcABG()
-            != self.phase.structure.lattice.abcABG()
+            not np.allclose(
+                rlp.phase.structure.lattice.abcABG(),
+                self.phase.structure.lattice.abcABG(),
+                atol=1e-4,
+            )
             or rlp.phase.point_group.name != self.phase.point_group.name
         ):
             raise ValueError(
