@@ -16,11 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Module for generating signals from signals.
-
-This generator workflow is adopted from
-`pyxem <http://github.com/pyxem/pyxem>`_.
-"""
+"""Module for the set up and generation of signals and simulations."""
 
 from kikuchipy.generators.virtual_bse_generator import VirtualBSEGenerator
 from kikuchipy.generators import util

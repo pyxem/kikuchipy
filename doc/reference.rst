@@ -129,6 +129,11 @@ detectors
 
 .. automodule:: kikuchipy.detectors
 
+.. currentmodule:: kikuchipy.detectors.EBSDDetector
+
+.. autosummary::
+    plot
+
 .. autoclass:: kikuchipy.detectors.EBSDDetector
     :members:
     :undoc-members:
@@ -141,6 +146,20 @@ generators
 ==========
 
 .. automodule:: kikuchipy.generators
+
+EBSDSimulationGenerator
+-----------------------
+
+.. currentmodule:: kikuchipy.generators.EBSDSimulationGenerator
+
+.. autosummary::
+    geometrical_simulation
+
+.. autoclass:: kikuchipy.generators.EBSDSimulationGenerator
+    :members:
+    :undoc-members:
+
+    .. automethod:: __init__
 
 VirtualBSEGenerator
 -------------------
@@ -156,6 +175,8 @@ VirtualBSEGenerator
 .. autoclass:: kikuchipy.generators.VirtualBSEGenerator
     :members:
     :undoc-members:
+
+    .. automethod:: __init__
 
 util
 ----
