@@ -33,10 +33,10 @@ class TestEBSDSimulationGenerator:
         assert detector.navigation_shape == (1,)
         o_nickel = r_tsl2bruker * nickel_rotations.reshape(*nav_shape)
         assert o_nickel.shape == nav_shape
-        sim_gen = EBSDSimulationGenerator(
-            phase=nickel_phase, detector=detector, rotations=o_nickel,
+        simgen = EBSDSimulationGenerator(
+            detector=detector, phase=nickel_phase, rotations=o_nickel,
         )
-        assert sim_gen.detector.navigation_shape == sim_gen.rotations.shape
+        assert simgen.detector.navigation_shape == simgen.rotations.shape
 
     @pytest.mark.parametrize("nav_shape", [(5, 5), (25,), (1, 25), (25, 1)])
     def test_ebsd_simulation_generator_navigation_shape(
@@ -45,11 +45,59 @@ class TestEBSDSimulationGenerator:
         """Setting the navigation shape changes all derived navigation
         shapes.
         """
-        sim_gen = nickel_ebsd_simulation_generator
-        assert sim_gen.navigation_shape == (25,)
-        assert sim_gen.navigation_dimension == 1
+        simgen = nickel_ebsd_simulation_generator
+        assert simgen.navigation_shape == (25,)
+        assert simgen.navigation_dimension == 1
 
-        sim_gen.navigation_shape = nav_shape
+        simgen.navigation_shape = nav_shape
         # sim_gen.navigation_shape is derived from sim.orientations.shape
-        assert sim_gen.navigation_shape == nav_shape
-        assert sim_gen.detector.navigation_shape == nav_shape
+        assert simgen.navigation_shape == nav_shape
+        assert simgen.detector.navigation_shape == nav_shape
+
+    @pytest.mark.parametrize(
+        "shape_in, shape_change, ndim_in, ndim_change",
+        [
+            ((5, 5), (25,), 2, 1),
+            ((25, 1), (1, 25), 2, 2),
+            ((25,), (5, 5), 1, 2),
+        ],
+    )
+    def test_set_rotations(
+        self,
+        nickel_phase,
+        detector,
+        nickel_rotations,
+        shape_in,
+        shape_change,
+        ndim_in,
+        ndim_change,
+    ):
+        """Setting rotations updates detector PC navigation shape."""
+        r_nickel = nickel_rotations.reshape(*shape_in)
+        simgen = EBSDSimulationGenerator(
+            detector=detector, phase=nickel_phase, rotations=r_nickel
+        )
+        assert simgen.navigation_shape == shape_in
+        assert simgen.detector.navigation_shape == shape_in
+        assert simgen.navigation_dimension == ndim_in
+
+        simgen.navigation_shape = shape_change
+        assert simgen.navigation_shape == shape_change
+        assert simgen.detector.navigation_shape == shape_change
+        assert simgen.navigation_dimension == ndim_change
+
+    def test_repr(self, nickel_ebsd_simulation_generator):
+        """Desired string representation."""
+        desired_repr = (
+            "EBSDSimulationGenerator (25,)\n"
+            "EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 0, "
+            "pc (0.421, 0.221, 0.505)\n"
+            "<name: ni. space group: Fm-3m. point group: m-3m. "
+            "proper point group: 432. color: tab:blue>\n"
+            "Rotation (25,)\n"
+        )
+        assert repr(nickel_ebsd_simulation_generator) == desired_repr
+
+    def test_geometrical_simulation(self, nickel_ebsd_simulation_generator):
+        """Desired output EBSDGeometricalSimulation object."""
+        pass

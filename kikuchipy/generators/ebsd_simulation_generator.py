@@ -35,10 +35,7 @@ from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 class EBSDSimulationGenerator:
     def __init__(
-        self,
-        detector: Optional[EBSDDetector] = None,
-        phase: Optional[Phase] = None,
-        rotations: Optional[Rotation] = None,
+        self, detector: EBSDDetector, phase: Phase, rotations: Rotation,
     ):
         """A generator storing necessary parameters to simulate
         geometrical EBSD patterns.
@@ -46,8 +43,7 @@ class EBSDSimulationGenerator:
         Parameters
         ----------
         detector
-            Detector describing the detector-sample geometry. If None
-            (default), a default detector is used.
+            Detector describing the detector-sample geometry.
         phase
             A phase container with a crystal structure and a space and
             point group describing the allowed symmetry operations.
@@ -56,39 +52,37 @@ class EBSDSimulationGenerator:
             navigation shape of the resulting simulation is determined
             from the rotations' shape, with a maximum dimension of 2.
         """
-        if detector is None:
-            detector = EBSDDetector()
-        if phase is None:
-            phase = Phase()
         self.detector = detector.deepcopy()
         self.phase = phase.deepcopy()
         self.rotations = deepcopy(rotations)
-        self._align_navigation_shape()
 
     @property
     def rotations(self) -> Rotation:
+        """Unit cell rotations to simulate patterns for."""
         return self._rotations
 
     @rotations.setter
     def rotations(self, value: Rotation):
+        """Set unit cell rotations, also reshaping detector PC array."""
         ndim = len(value.shape)
         if ndim > 2:
-            raise ValueError(f"A maximum dimension of 2 is allowed, 2 < {ndim}")
+            raise ValueError(f"A maximum dimension of 2 is allowed, {ndim} > 2")
         else:
             self._rotations = value
+            self._align_pc_with_rotations_shape()
 
     @property
     def navigation_shape(self) -> tuple:
-        return self.rotations.shape
+        return self._rotations.shape
 
     @navigation_shape.setter
     def navigation_shape(self, value: tuple):
         ndim = len(value)
         if ndim > 2:
-            raise ValueError(f"A maximum dimension of 2 is allowed, 2 < {ndim}")
+            raise ValueError(f"A maximum dimension of 2 is allowed, {ndim} > 2")
         else:
-            self.rotations = self.rotations.reshape(*value)
             self.detector.navigation_shape = value
+            self.rotations = self.rotations.reshape(*value)
 
     @property
     def navigation_dimension(self) -> int:
@@ -96,11 +90,12 @@ class EBSDSimulationGenerator:
         return len(self.navigation_shape)
 
     def __repr__(self):
+        rotation_repr = repr(self.rotations).split("\n")[0]
         return (
-            f"{self.__class__.__name__}\n"
+            f"{self.__class__.__name__} {self.navigation_shape}\n"
             f"{self.detector}\n"
             f"{self.phase}\n"
-            f"{self.rotations}\n"
+            f"{rotation_repr}\n"
         )
 
     def geometrical_simulation(
@@ -114,14 +109,13 @@ class EBSDSimulationGenerator:
         reciprocal_lattice_point :
             Crystal planes to project onto the detector. If None, and
             the generator has a phase with a unit cell with a point
-            group, a set of planes with minimum distance of 1 Å is used.
+            group, a set of planes with minimum distance of 1 Å and
+            their symmetrically equivalent planes are used.
 
         Returns
         -------
         GeometricalEBSDSimulation
         """
-        if self.rotations is None:
-            raise ValueError("Unit cell rotations must be set")
         rlp = reciprocal_lattice_point
         if rlp is None and (
             hasattr(self.phase.point_group, "name")
@@ -130,7 +124,6 @@ class EBSDSimulationGenerator:
             rlp = ReciprocalLatticePoint.from_min_dspacing(
                 self.phase, min_dspacing=1
             )
-            rlp.calculate_structure_factor(voltage=15e3)
             rlp = rlp[rlp.allowed].symmetrise()
         elif rlp is None:
             raise ValueError("A ReciprocalLatticePoint object must be passed")
@@ -213,11 +206,11 @@ class EBSDSimulationGenerator:
                 f"is not the same as {self.phase}"
             )
 
-    def _align_navigation_shape(self):
+    def _align_pc_with_rotations_shape(self):
         """Ensure that the PC and rotation arrays have matching
         navigation shapes, e.g. (2, 5, 3) and (2, 5, 4), respectively.
         """
-        nav_shape = self.navigation_shape
+        nav_shape = self.navigation_shape  # From rotations
         detector_nav_shape = self.detector.navigation_shape
         if detector_nav_shape == (1,):
             self.detector.pc = np.ones(nav_shape + (3,)) * self.detector.pc[0]

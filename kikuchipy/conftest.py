@@ -180,7 +180,7 @@ def nickel_ebsd_simulation_generator(
     data set referenced above.
     """
     return EBSDSimulationGenerator(
-        phase=nickel_phase,
         detector=detector,
+        phase=nickel_phase,
         rotations=r_tsl2bruker * nickel_rotations,
     )
