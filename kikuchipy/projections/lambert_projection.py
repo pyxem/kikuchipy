@@ -66,7 +66,7 @@ class LambertProjection:
             sign_y * sqrt_z * sqrt_pi_half,
         )
 
-        return np.column_stack((X, Y))
+        return np.dstack((X, Y))
 
     @staticmethod
     def iproject(xy: np.ndarray) -> Vector3d:
@@ -85,7 +85,9 @@ class LambertProjection:
         x = np.where(abs_yx, c_x * np.cos(true_term), c_y * np.sin(false_term))
         y = np.where(abs_yx, c_x * np.sin(true_term), c_y * np.cos(false_term))
         z = np.where(
-            abs_yx, 1 - (2 * (X ** 2)) / np.pi, 1 - (2 * (Y ** 2)) / np.pi,
+            abs_yx,
+            1 - (2 * (X ** 2)) / np.pi,
+            1 - (2 * (Y ** 2)) / np.pi,
         )
 
         return Vector3d(np.column_stack((x, y, z)))

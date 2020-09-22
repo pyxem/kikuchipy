@@ -31,8 +31,12 @@ class TestLambertProjection:
         output_a = LambertProjection.project(vector_one)
         expected_a = np.array((0.81417, 0.81417))
 
-        assert output_a[..., 0][0] == pytest.approx(expected_a[..., 0], rel=1e4)
-        assert output_a[..., 1][0] == pytest.approx(expected_a[..., 1], rel=1e4)
+        assert (output_a[..., 0][0])[0] == pytest.approx(
+            expected_a[..., 0], rel=1e4
+        )
+        assert (output_a[..., 1][0])[0] == pytest.approx(
+            expected_a[..., 1], rel=1e4
+        )
 
         vector_two = Vector3d(
             np.array(
@@ -41,23 +45,22 @@ class TestLambertProjection:
         )
         output_b = LambertProjection.project(vector_two)
 
-        expected_b = np.array(
-            (
-                (0.814172, 0.814172, 0.814172),
-                (0, 0, 0),
-                (0.6784123, 0, 0.6784123),
-            )
-        )
+        expected_x = np.array((0.81417, 0, 0.678))
+        expected_y = np.array((0.81417, 0.678, 0))
 
-        assert output_a[..., 0][0] == pytest.approx(expected_a[..., 0], rel=1e4)
-        assert output_a[..., 1][0] == pytest.approx(expected_a[..., 1], rel=1e4)
+        assert output_b[..., 0, 0] == pytest.approx(expected_x[0], rel=1e4)
+        assert output_b[..., 0, 1] == pytest.approx(expected_y[0], rel=1e4)
+        assert output_b[..., 1, 0] == pytest.approx(expected_x[1], rel=1e4)
+        assert output_b[..., 1, 1] == pytest.approx(expected_y[1], rel=1e4)
+        assert output_b[..., 2, 0] == pytest.approx(expected_x[2], rel=1e4)
+        assert output_b[..., 2, 1] == pytest.approx(expected_y[2], rel=1e4)
 
     def test_project_ndarray(self):
         "Works for numpy ndarrays"
         ipt = np.array((0.578, 0.578, 0.578))
         output = LambertProjection.project(ipt)
         expected = np.array((0.81417, 0.81417))
-        assert output[..., 0][0] == pytest.approx(expected[..., 0], rel=1e4)
+        assert output[..., 0, 0] == pytest.approx(expected[0], rel=1e4)
 
     def test_iproject(self):
         """Conversion from Lambert to Cartesian coordinates works"""
@@ -82,11 +85,21 @@ class TestLambertProjection:
         )  # Should give x,y,z = 1/sqrt(3) (1, 1, 1)
         output = LambertProjection.lambert_to_gnomonic(vec)
         expected = np.array((1, 1))
-        assert output[..., 0][0] == pytest.approx(expected[..., 0], abs=1e-2)
+        assert output[..., 0, 0] == pytest.approx(expected[0], abs=1e-2)
 
     def test_gnomonic_to_lambert(self):
         """Conversion from Gnomonic to Lambert works"""
         vec = np.array((1, 1))  # Similar to the case above
         output = LambertProjection.gnomonic_to_lambert(vec)
         expected = np.array((0.81417, 0.81417))
-        assert output[..., 0][0] == pytest.approx(expected[..., 0], rel=1e-3)
+        assert output[..., 0, 0] == pytest.approx(expected[0], rel=1e-3)
+
+    def test_shape_respect(self):
+        """Check that LambertProjection.project() respects navigation axes"""
+        sx = 60
+        a = np.arange(sx ** 2).reshape((sx, sx))
+        v = Vector3d(np.dstack([a, a, a]))
+        assert v.shape == (sx, sx)
+        assert v.data.shape == (sx, sx, 3)
+        xy_lambert = LambertProjection.project(v)
+        assert xy_lambert.shape == (sx, sx, 2)
