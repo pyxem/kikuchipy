@@ -35,6 +35,7 @@ class SphericalProjection:
 
         # Restrict to plotable domain
         is_antipodal = v < self.spherical_region
+        print(is_antipodal)
         polar[is_antipodal, 1] += np.pi
 
         return polar
@@ -50,7 +51,7 @@ def get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     phi += (phi < 0) * 2 * np.pi
     r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
     theta = np.arccos(z / r)
-    return np.column_stack((theta, phi, r))
+    return np.dstack((theta, phi, r))
 
 
 def get_theta(v: Union[Vector3d, np.ndarray]) -> np.ndarray:

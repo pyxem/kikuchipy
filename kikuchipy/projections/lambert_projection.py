@@ -90,7 +90,7 @@ class LambertProjection:
             1 - (2 * (Y ** 2)) / np.pi,
         )
 
-        return Vector3d(np.column_stack((x, y, z)))
+        return Vector3d(np.dstack((x, y, z)))
 
     @staticmethod
     def lambert_to_gnomonic(xy: np.ndarray) -> np.ndarray:
@@ -98,6 +98,7 @@ class LambertProjection:
         Gnomonic."""
         # These two functions could probably be combined into 1 to decrease
         # runtime
+
         vec = LambertProjection.iproject(xy)
         xy = GnomonicProjection.project(vec)
         return xy

@@ -97,9 +97,14 @@ class TestLambertProjection:
     def test_shape_respect(self):
         """Check that LambertProjection.project() respects navigation axes"""
         sx = 60
-        a = np.arange(sx ** 2).reshape((sx, sx))
+        a = np.arange(1, sx ** 2 + 1).reshape((sx, sx))
         v = Vector3d(np.dstack([a, a, a]))
         assert v.shape == (sx, sx)
         assert v.data.shape == (sx, sx, 3)
+        # Forward
         xy_lambert = LambertProjection.project(v)
         assert xy_lambert.shape == (sx, sx, 2)
+        # and back
+        xyz_frm_lambert = LambertProjection.iproject(xy_lambert)
+        assert xyz_frm_lambert.shape == v.shape
+        assert xyz_frm_lambert.data.shape == v.data.shape
