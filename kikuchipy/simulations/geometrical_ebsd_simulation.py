@@ -61,7 +61,6 @@ class GeometricalEBSDSimulation:
         """
         self.detector = detector
         self.rotations = rotations
-        #        self.reciprocal_lattice_point = reciprocal_lattice_point
         self.bands = bands
         self.zone_axes = zone_axes
 
