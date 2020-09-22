@@ -35,7 +35,6 @@ class SphericalProjection:
 
         # Restrict to plotable domain
         is_antipodal = v < self.spherical_region
-        print(is_antipodal)
         polar[is_antipodal, 1] += np.pi
 
         return polar
