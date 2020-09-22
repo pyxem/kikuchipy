@@ -51,6 +51,30 @@ class EBSDSimulationGenerator:
             Unit cell rotations to simulate patterns for. The
             navigation shape of the resulting simulation is determined
             from the rotations' shape, with a maximum dimension of 2.
+
+        Examples
+        --------
+        >>> from orix.crystal_map import Phase
+        >>> from orix.quaternion import Rotation
+        >>> from kikuchipy.detectors import EBSDDetector
+        >>> from kikuchipy.generators import EBSDSimulationGenerator
+        >>> det = EBSDDetector(
+        ...     shape=(60, 60), sample_tilt=70, pc=[0.5,] * 3
+        ... )
+        >>> p = Phase(name="ni", space_group=225)
+        >>> p.structure.lattice.setLatPar(3.52, 3.52, 3.52, 90, 90, 90)
+        >>> simgen = EBSDSimulationGenerator(
+        ...     detector=det,
+        ...     phase=p,
+        ...     rotations=Rotation.from_euler([90, 45, 90])
+        ... )
+        >>> simgen
+        EBSDSimulationGenerator (1,)
+        EBSDDetector (60, 60), px_size 1 um, binning 1, tilt 0, pc
+        (0.5, 0.5, 0.5)
+        <name: . space group: None. point group: None. proper point
+        group: None. color: tab:blue>
+        Rotation (1,)
         """
         self.detector = detector.deepcopy()
         self.phase = phase.deepcopy()
@@ -73,10 +97,16 @@ class EBSDSimulationGenerator:
 
     @property
     def navigation_shape(self) -> tuple:
+        """Navigation shape of the rotations and detector projection
+        center array (maximum of 2).
+        """
         return self._rotations.shape
 
     @navigation_shape.setter
     def navigation_shape(self, value: tuple):
+        """Set the navigation shape of the rotations and detector
+        projection center array (maximum of 2).
+        """
         ndim = len(value)
         if ndim > 2:
             raise ValueError(f"A maximum dimension of 2 is allowed, {ndim} > 2")
@@ -123,6 +153,26 @@ class EBSDSimulationGenerator:
         Returns
         -------
         GeometricalEBSDSimulation
+
+        Examples
+        --------
+        >>> from diffsims.crystallography import ReciprocalLatticePoint
+        >>> simgen
+        EBSDSimulationGenerator (1,)
+        EBSDDetector (60, 60), px_size 1 um, binning 1, tilt 0, pc
+        (0.5, 0.5, 0.5)
+        <name: . space group: None. point group: None. proper point
+        group: None. color: tab:blue>
+        Rotation (1,)
+        >>> sim1 = simgen.geometrical_simulation()
+        >>> sim1.bands.size
+        94
+        >>> rlp = ReciprocalLatticePoint(
+        ...     phase=simgen.phase, hkl=[[1, 1, 1], [2, 0, 0]]
+        ... )
+        >>> sim2 = simgen.geometrical_simulation()
+        >>> sim2.bands.size
+        13
         """
         rlp = reciprocal_lattice_point
         if rlp is None and (
@@ -211,8 +261,8 @@ class EBSDSimulationGenerator:
             or rlp.phase.point_group.name != self.phase.point_group.name
         ):
             raise ValueError(
-                f"The unit cell with the reciprocal lattice points {rlp.phase} "
-                f"is not the same as {self.phase}"
+                f"The lattice parameters and/or point group of {rlp.phase} "
+                f"are not the same as for {self.phase}"
             )
 
     def _align_pc_with_rotations_shape(self):

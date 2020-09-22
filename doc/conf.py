@@ -47,7 +47,7 @@ intersphinx_mapping = {
     "hyperspy": ("http://hyperspy.org/hyperspy-doc/current", None),
     "matplotlib": ("https://matplotlib.org", None),
     "numpy": ("https://docs.scipy.org/doc/numpy", None),
-    "orix": ("https://orix.readthedocs.io/en/stable/reference.html", None),
+    "orix": ("https://orix.readthedocs.io/en/stable", None),
     "python": ("https://docs.python.org/3", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
     "skimage": ("https://scikit-image.org/docs/stable", None),

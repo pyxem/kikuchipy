@@ -220,7 +220,7 @@ class TestEBSDSimulationGenerator:
         if compatible:
             assert simgen._rlp_phase_is_compatible(nickel_rlp) is None
         else:
-            with pytest.raises(ValueError, match="The unit cell with the"):
+            with pytest.raises(ValueError, match="The lattice parameters and/"):
                 simgen._rlp_phase_is_compatible(nickel_rlp)
 
     def test_band_coordinates(
