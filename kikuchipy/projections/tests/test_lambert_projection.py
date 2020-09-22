@@ -65,9 +65,13 @@ class TestLambertProjection:
     def test_iproject(self):
         """Conversion from Lambert to Cartesian coordinates works"""
         vec = np.array((0.81417, 0.81417))
-        expected = Vector3d((0.57702409, 0.577, 0.578))
-        output = LambertProjection.iproject(vec)
-        assert np.allclose(output.x.data[0], expected.x.data[0], rtol=1e-05)
+        expected = Vector3d(
+            (0.5770240896680434, 0.5770240896680434, 0.5780020760218183)
+        )  # Vector3d(1,)
+        output = LambertProjection.iproject(vec)  # Vector3d(1,1)
+        assert output[0].x.data[0] == expected.x.data[0]
+        assert output[0].y.data[0] == expected.y.data[0]
+        assert output[0].z.data[0] == expected.z.data[0]
 
     def test_eq_c(self):
         """Helper function works"""
