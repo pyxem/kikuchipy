@@ -21,12 +21,7 @@
 from diffpy.structure import Lattice
 import numpy as np
 
-from kikuchipy.crystallography.reciprocal_lattice_point import (
-    ReciprocalLatticePoint,
-)
-
 __all__ = [
-    "ReciprocalLatticePoint",
     "get_direct_structure_matrix",
     "get_reciprocal_structure_matrix",
     "get_reciprocal_metric_tensor",
