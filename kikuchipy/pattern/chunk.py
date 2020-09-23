@@ -16,6 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Functions for operating on :class:`numpy.ndarray` or
+:class:`dask.array.Array` chunks of EBSD patterns.
+"""
+
 from typing import Union, Optional, Tuple, List
 
 import dask.array as da

@@ -16,15 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Generator utilities, for transferring of axes to new signals."""
-
-from kikuchipy.generators.util.virtual_bse import get_rgb_image, normalize_image
-
-__all__ = [
-    "get_rgb_image",
-    "normalize_image",
-]
-
 
 def _transfer_navigation_axes_to_signal_axes(new_axes, old_axes):
     """Transfer navigation axis calibrations from an old signal to the
@@ -47,7 +38,7 @@ def _transfer_navigation_axes_to_signal_axes(new_axes, old_axes):
         The new signal with calibrated signal axes.
     """
     for i in range(
-        min(new_axes.signal_dimension, old_axes.navigation_dimension,)
+        min(new_axes.signal_dimension, old_axes.navigation_dimension)
     ):
         ax_new = new_axes.signal_axes[i]
         ax_old = old_axes.navigation_axes[i]

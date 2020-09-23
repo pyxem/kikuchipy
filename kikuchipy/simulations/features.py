@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Kikuchi bands and zone axes used in geometrical EBSD simulations."""
+
 from typing import Union
 
 from diffsims.crystallography import ReciprocalLatticePoint
@@ -25,6 +27,8 @@ from orix.vector import Vector3d
 
 
 class KikuchiBand(ReciprocalLatticePoint):
+    """Kikuchi bands used in geometrical EBSD simulations."""
+
     def __init__(
         self,
         phase: Phase,
@@ -187,6 +191,8 @@ class KikuchiBand(ReciprocalLatticePoint):
 
 
 class ZoneAxis(ReciprocalLatticePoint):
+    """Zone axes used in geometrical EBSD simulations."""
+
     def __init__(
         self,
         phase: Phase,

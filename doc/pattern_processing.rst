@@ -278,7 +278,7 @@ shape :math:`m \times n`, this becomes [Gonzalez2017]_
     {\sum_{s=-a}^a\sum_{t=-b}^b{w(s, t)}},
 
 where :math:`a = (m - 1)/2` and :math:`b = (n - 1)/2`. The window :math:`w`, a
-:class:`~kikuchipy.filters.Window` object, can be plotted:
+:class:`~kikuchipy.filters.window.Window` object, can be plotted:
 
 .. code-block::
 
@@ -297,14 +297,14 @@ where :math:`a = (m - 1)/2` and :math:`b = (n - 1)/2`. The window :math:`w`, a
 Any 1D or 2D window with desired coefficients can be used. This custom window
 can be passed to the ``window`` parameter in
 :meth:`~kikuchipy.signals.EBSD.average_neighbour_patterns` or
-:class:`~kikuchipy.filters.Window` as a :class:`numpy.ndarray` or
+:class:`~kikuchipy.filters.window.Window` as a :class:`numpy.ndarray` or
 :class:`dask.array.Array`. Additionally, any window in
 :func:`scipy.signal.windows.get_window` passed as a string via ``window`` with
 the necessary parameters as keyword arguments (like ``std=1`` for
 ``window="gaussian"``) can be used. To demonstrate the creation and use of an
 asymmetrical circular window (and the use of
-:meth:`~kikuchipy.filters.Window.make_circular`, although we could create a
-circular window directly by calling ``window="circular"`` upon window
+:meth:`~kikuchipy.filters.window.Window.make_circular`, although we could create
+a circular window directly by calling ``window="circular"`` upon window
 initialization):
 
 .. code-block::
@@ -400,17 +400,17 @@ Filtering of patterns in the frequency domain can be done with
 :meth:`~kikuchipy.signals.EBSD.fft_filter`. This method takes a spatial
 kernel defined in the spatial domain, or a transfer function defined in the
 frequency domain, in the ``transfer_function`` argument as a
-:class:`numpy.ndarray` or a :class:`~kikuchipy.filters.Window`. Which domain
-the transfer function is defined in must be passed to the ``function_domain``
-argument. Whether to shift zero-frequency components to the centre of the FFT
-can also be controlled via ``shift``, but note that this is only used when
-``function_domain="frequency"``.
+:class:`numpy.ndarray` or a :class:`~kikuchipy.filters.window.Window`. Which
+domain the transfer function is defined in must be passed to the
+``function_domain`` argument. Whether to shift zero-frequency components to the
+centre of the FFT can also be controlled via ``shift``, but note that this is
+only used when ``function_domain="frequency"``.
 
 Popular uses of filtering of EBSD patterns in the frequency domain include
 removing large scale variations across the detector with a Gaussian high pass
 filter, or removing high frequency noise with a Gaussian low pass filter. These
 particular functions are readily available via
-:class:`~kikuchipy.filters.Window`:
+:class:`~kikuchipy.filters.window.Window`:
 
 .. code-block::
 

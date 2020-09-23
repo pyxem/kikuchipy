@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Single and chunk pattern processing used by signals."""
+
 from kikuchipy.pattern._pattern import (
     fft,
     fft_filter,

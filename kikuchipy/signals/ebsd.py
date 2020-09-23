@@ -917,7 +917,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        kikuchipy.filters.Window
+        :class:`~kikuchipy.filters.window.Window`
         """
         dtype_out = self.data.dtype
 
@@ -1006,7 +1006,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        kikuchipy.filters.Window,
+        :class:`~kikuchipy.filters.window.Window`,
         :func:`scipy.signal.windows.get_window`,
         :func:`scipy.ndimage.correlate`
 

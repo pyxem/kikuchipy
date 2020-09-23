@@ -16,6 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Simulations returned by a generator, and handling of Kikuchi bands
+and zone axes.
+"""
+
 from kikuchipy.simulations.geometrical_ebsd_simulation import (
     GeometricalEBSDSimulation,
 )

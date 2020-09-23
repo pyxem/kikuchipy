@@ -32,6 +32,9 @@ from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 
 class GeometricalEBSDSimulation:
+    """Geometrical EBSD simulation with Kikuchi bands and zone axes.
+    """
+
     def __init__(
         self,
         detector: EBSDDetector,
@@ -51,9 +54,9 @@ class GeometricalEBSDSimulation:
         rotations
             Orientations of the unit cell.
         bands
-            Kikuchi band(s) projected onto the detector.
+            Kikuchi bands projected onto the detector. Default is None.
         zone_axes
-            Zone axis/axes projected onto the detector. Default is None.
+            Zone axes projected onto the detector. Default is None.
 
         Returns
         -------
