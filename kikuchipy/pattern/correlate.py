@@ -16,10 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""
-Utilities for computing similarities between EBSD patterns.
-"""
-
 from typing import Union
 
 from dask.array import Array

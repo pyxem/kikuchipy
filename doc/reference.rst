@@ -2,7 +2,7 @@
 API reference
 =============
 
-This reference manual details the public classes, modules and functions in
+This reference manual details the public modules, classes, and functions in
 kikuchipy, as generated from their docstrings. Many of the docstrings contain
 examples, however, see the user guide for how to use kikuchipy.
 
@@ -11,8 +11,302 @@ examples, however, see the user guide for how to use kikuchipy.
     kikuchipy is in an alpha stage, and there will be breaking changes with each
     release.
 
+....
+
+crystallography
+===============
+
+Crystallographic computations not in diffpy.structure.
+
+.. currentmodule:: kikuchipy.crystallography
+
+.. autosummary::
+    get_direct_structure_matrix
+    get_reciprocal_metric_tensor
+    get_reciprocal_structure_matrix
+
+.. autofunction:: get_direct_structure_matrix
+.. autofunction:: get_reciprocal_metric_tensor
+.. autofunction:: get_reciprocal_structure_matrix
+
+....
+
+detectors
+=========
+
+An EBSD detector and related quantities.
+
+.. currentmodule:: kikuchipy.detectors.ebsd_detector
+
+.. autosummary::
+    EBSDDetector
+
+EBSDDetector
+------------
+
+.. currentmodule:: kikuchipy.detectors.ebsd_detector.EBSDDetector
+
+.. autosummary::
+    plot
+
+.. autoclass:: kikuchipy.detectors.ebsd_detector.EBSDDetector
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+    .. automethod:: __init__
+
+....
+
+draw
+====
+
+Create HyperSpy markers to add to signals.
+
+.. currentmodule:: kikuchipy.draw
+
+markers
+-------
+
+.. currentmodule:: kikuchipy.draw.markers
+
+.. autosummary::
+    get_line_segment_list
+    get_point_list
+    get_text_list
+    permanent_on_signal
+
+.. autofunction:: get_line_segment_list
+.. autofunction:: get_point_list
+.. autofunction:: get_text_list
+.. autofunction:: permanent_on_signal
+
+....
+
+filters
+=======
+
+Pattern filters used on signals.
+
+.. currentmodule:: kikuchipy.filters.window
+
+.. autosummary::
+    distance_to_origin
+    highpass_fft_filter
+    lowpass_fft_filter
+    modified_hann
+    Window
+
+.. autofunction:: distance_to_origin
+.. autofunction:: highpass_fft_filter
+.. autofunction:: lowpass_fft_filter
+.. autofunction:: modified_hann
+
+Window
+------
+
+.. currentmodule:: kikuchipy.filters.window.Window
+
+.. autosummary::
+    is_valid
+    make_circular
+    plot
+    shape_compatible
+
+.. autoclass:: kikuchipy.filters.window.Window
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+    .. automethod:: __init__
+
+....
+
+generators
+==========
+
+Generate signals and simulations, sometimes *from* other signals.
+
+.. currentmodule:: kikuchipy.generators
+
+.. autosummary::
+    EBSDSimulationGenerator
+    VirtualBSEGenerator
+    util
+
+.. automodule:: kikuchipy.generators
+
+EBSDSimulationGenerator
+-----------------------
+
+.. currentmodule:: kikuchipy.generators.EBSDSimulationGenerator
+
+.. autosummary::
+    geometrical_simulation
+
+.. autoclass:: kikuchipy.generators.EBSDSimulationGenerator
+    :members:
+    :undoc-members:
+
+    .. automethod:: __init__
+
+VirtualBSEGenerator
+-------------------
+
+.. currentmodule:: kikuchipy.generators.VirtualBSEGenerator
+
+.. autosummary::
+    get_images_from_grid
+    get_rgb_image
+    plot_grid
+    roi_from_grid
+
+.. autoclass:: kikuchipy.generators.VirtualBSEGenerator
+    :members:
+    :undoc-members:
+
+    .. automethod:: __init__
+
+util
+----
+
+.. currentmodule:: kikuchipy.generators.util
+
+.. automodule:: kikuchipy.generators.util
+    :members:
+    :undoc-members:
+
+....
+
+io
+==
+
+.. currentmodule:: kikuchipy.io
+
+Input/output plugins and tools used to read and write signals to file.
+
+.. automodule:: kikuchipy.io
+
+.. automodule:: kikuchipy.io._io
+    :members:
+    :undoc-members:
+
+These plugin functions import patterns and parameters from file formats into
+:class:`~kikuchipy.signals.EBSD` or
+:class:`~kikuchipy.signals.EBSDMasterPattern` (or
+:class:`~kikuchipy.signals.LazyEBSD` or
+:class:`~kikuchipy.signals.LazyEBSDMasterPattern` if loading lazily) objects.
+
+....
+
+h5ebsd
+------
+
+.. automodule:: kikuchipy.io.plugins.h5ebsd
+    :members:
+    :undoc-members:
+
+....
+
+nordif
+------
+
+.. automodule:: kikuchipy.io.plugins.nordif
+    :members:
+    :undoc-members:
+
+....
+
+emsoft_ebsd
+-----------
+
+.. automodule:: kikuchipy.io.plugins.emsoft_ebsd
+    :members:
+    :undoc-members:
+
+....
+
+emsoft_ebsd_master_pattern
+--------------------------
+
+.. automodule:: kikuchipy.io.plugins.emsoft_ebsd_master_pattern
+    :members:
+    :undoc-members:
+
+....
+
+pattern
+=======
+
+Module for single and chunk pattern processing, used by signals.
+
+Functions operating on single EBSD patterns as :class:`numpy.ndarray`.
+
+.. currentmodule:: kikuchipy.pattern
+
+.. autosummary::
+    fft
+    fft_filter
+    fft_frequency_vectors
+    fft_spectrum
+    get_dynamic_background
+    get_image_quality
+    ifft
+    normalize_intensity
+    remove_dynamic_background
+    rescale_intensity
+
+.. automodule:: kikuchipy.pattern
+    :members:
+    :undoc-members:
+
+....
+
+chunk
+-----
+
+Functions for operating on :class:`numpy.ndarray` or :class:`dask.array.Array`
+chunks of EBSD patterns.
+
+.. currentmodule:: kikuchipy.pattern.chunk
+
+.. autosummary::
+    adaptive_histogram_equalization
+    average_neighbour_patterns
+    fft_filter
+    get_dynamic_background
+    get_image_quality
+    normalize_intensity
+    remove_dynamic_background
+    remove_static_background
+    rescale_intensity
+
+.. automodule:: kikuchipy.pattern.chunk
+    :members:
+    :undoc-members:
+
+....
+
+correlate
+---------
+
+.. currentmodule:: kikuchipy.pattern.correlate
+
+Utilities for computing similarities between EBSD patterns.
+
+.. automodule:: kikuchipy.pattern.correlate
+    :members:
+    :undoc-members:
+
+....
+
 signals
 =======
+
+.. currentmodule:: kikuchipy.signals
+
+Experimental and simulated diffraction patterns and virtual backscatter
+electron images.
 
 .. automodule:: kikuchipy.signals
 
@@ -124,192 +418,7 @@ util
 
 ....
 
-detectors
-=========
+simulations
+===========
 
-.. automodule:: kikuchipy.detectors
-
-.. currentmodule:: kikuchipy.detectors.EBSDDetector
-
-.. autosummary::
-    plot
-
-.. autoclass:: kikuchipy.detectors.EBSDDetector
-    :members:
-    :undoc-members:
-
-    .. automethod:: __init__
-
-....
-
-generators
-==========
-
-.. automodule:: kikuchipy.generators
-
-EBSDSimulationGenerator
------------------------
-
-.. currentmodule:: kikuchipy.generators.EBSDSimulationGenerator
-
-.. autosummary::
-    geometrical_simulation
-
-.. autoclass:: kikuchipy.generators.EBSDSimulationGenerator
-    :members:
-    :undoc-members:
-
-    .. automethod:: __init__
-
-VirtualBSEGenerator
--------------------
-
-.. currentmodule:: kikuchipy.generators.VirtualBSEGenerator
-
-.. autosummary::
-    get_images_from_grid
-    get_rgb_image
-    plot_grid
-    roi_from_grid
-
-.. autoclass:: kikuchipy.generators.VirtualBSEGenerator
-    :members:
-    :undoc-members:
-
-    .. automethod:: __init__
-
-util
-----
-
-.. currentmodule:: kikuchipy.generators.util
-
-.. automodule:: kikuchipy.generators.util
-    :members:
-    :undoc-members:
-
-....
-
-pattern
-=======
-
-Module for single and chunk pattern processing, used by signals.
-
-Functions operating on single EBSD patterns as :class:`numpy.ndarray`.
-
-.. currentmodule:: kikuchipy.pattern
-
-.. autosummary::
-    fft
-    fft_filter
-    fft_frequency_vectors
-    fft_spectrum
-    get_dynamic_background
-    get_image_quality
-    ifft
-    normalize_intensity
-    remove_dynamic_background
-    rescale_intensity
-
-.. automodule:: kikuchipy.pattern
-    :members:
-    :undoc-members:
-
-....
-
-chunk
------
-
-Functions for operating on :class:`numpy.ndarray` or :class:`dask.array.Array`
-chunks of EBSD patterns.
-
-.. currentmodule:: kikuchipy.pattern.chunk
-
-.. autosummary::
-    adaptive_histogram_equalization
-    average_neighbour_patterns
-    fft_filter
-    get_dynamic_background
-    get_image_quality
-    normalize_intensity
-    remove_dynamic_background
-    remove_static_background
-    rescale_intensity
-
-.. automodule:: kikuchipy.pattern.chunk
-    :members:
-    :undoc-members:
-
-....
-
-correlate
----------
-
-.. currentmodule:: kikuchipy.pattern.correlate
-
-.. automodule:: kikuchipy.pattern.correlate
-    :members:
-    :undoc-members:
-
-....
-
-filters
-=======
-
-.. currentmodule:: kikuchipy.filters
-
-.. automodule:: kikuchipy.filters
-    :members:
-    :undoc-members:
-
-....
-
-io
-==
-
-.. automodule:: kikuchipy.io
-
-.. automodule:: kikuchipy.io._io
-    :members:
-    :undoc-members:
-
-These plugin functions import patterns and parameters from file formats into
-:class:`~kikuchipy.signals.EBSD` or
-:class:`~kikuchipy.signals.EBSDMasterPattern` (or
-:class:`~kikuchipy.signals.LazyEBSD` or
-:class:`~kikuchipy.signals.LazyEBSDMasterPattern` if loading lazily) objects.
-
-....
-
-h5ebsd
-------
-
-.. automodule:: kikuchipy.io.plugins.h5ebsd
-    :members:
-    :undoc-members:
-
-....
-
-nordif
-------
-
-.. automodule:: kikuchipy.io.plugins.nordif
-    :members:
-    :undoc-members:
-
-....
-
-emsoft_ebsd
------------
-
-.. automodule:: kikuchipy.io.plugins.emsoft_ebsd
-    :members:
-    :undoc-members:
-
-....
-
-emsoft_ebsd_master_pattern
---------------------------
-
-.. automodule:: kikuchipy.io.plugins.emsoft_ebsd_master_pattern
-    :members:
-    :undoc-members:
+.. currentmodule:: kikuchipy.simulations

@@ -34,6 +34,10 @@ from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 
 class EBSDSimulationGenerator:
+    """A generator storing necessary parameters to simulate geometrical
+    EBSD patterns.
+    """
+
     def __init__(
         self, detector: EBSDDetector, phase: Phase, rotations: Rotation,
     ):

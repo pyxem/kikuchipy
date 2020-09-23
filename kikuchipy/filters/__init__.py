@@ -16,8 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Module for pattern filtering, used by signals."""
-
 from kikuchipy.filters.window import (
     distance_to_origin,
     modified_hann,
