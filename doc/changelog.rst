@@ -47,6 +47,11 @@ Changed
 - Remove language_version in pre-commit config file.
   (`#195 <https://github.com/pyxem/kikuchipy/pull/195>`_)
 
+Fixed
+-----
+- NumPy array creation when calculating window pixel's distance to the origin is
+  not ragged anymore. (`#221 <https://github.com/pyxem/kikuchipy/pull/221>`_)
+
 0.2.2 (2020-05-24)
 ==================
 
