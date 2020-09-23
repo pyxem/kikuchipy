@@ -34,6 +34,9 @@ Added
   detector, which can be added to an EBSD signal as markers.
   (`#204 <https://github.com/pyxem/kikuchipy/pull/204>`_,
   `#219 <https://github.com/pyxem/kikuchipy/pull/219>`_)
+- Dependency on the diffsims package (https://github.com/pyxem/diffsims/) for
+  handling of electron scattering and diffraction.
+  (`#220 <https://github.com/pyxem/kikuchipy/pull/220>`_)
 
 Changed
 -------

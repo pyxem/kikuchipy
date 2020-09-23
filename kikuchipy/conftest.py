@@ -21,13 +21,13 @@ import os
 import tempfile
 
 from diffpy.structure import Atom, Lattice, Structure
+from diffsims.crystallography import ReciprocalLatticePoint
 import numpy as np
 from orix.crystal_map import Phase
 from orix.quaternion.rotation import Rotation
 from orix.vector import Vector3d, neo_euler
 import pytest
 
-from kikuchipy.crystallography import ReciprocalLatticePoint
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.generators import EBSDSimulationGenerator
 from kikuchipy.signals import EBSD

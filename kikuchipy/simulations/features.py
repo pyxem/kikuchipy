@@ -18,11 +18,10 @@
 
 from typing import Union
 
+from diffsims.crystallography import ReciprocalLatticePoint
 import numpy as np
 from orix.crystal_map import Phase
 from orix.vector import Vector3d
-
-from kikuchipy.crystallography import ReciprocalLatticePoint
 
 
 class KikuchiBand(ReciprocalLatticePoint):

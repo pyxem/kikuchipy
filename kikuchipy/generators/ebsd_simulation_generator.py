@@ -19,11 +19,11 @@
 from copy import deepcopy
 from typing import Optional
 
+from diffsims.crystallography import ReciprocalLatticePoint
 import numpy as np
 from orix.crystal_map import Phase
 from orix.quaternion.rotation import Rotation
 
-from kikuchipy.crystallography import ReciprocalLatticePoint
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.projections.ebsd_projections import (
     detector2reciprocal_lattice,
