@@ -851,7 +851,7 @@ class TestDecomposition:
 
         # Decomposition
         dummy_signal.change_dtype(np.float32)
-        dummy_signal.decomposition(algorithm="svd")
+        dummy_signal.decomposition(algorithm="SVD")
 
         # Get decomposition model
         model_signal = dummy_signal.get_decomposition_model(
