@@ -40,6 +40,11 @@ class KikuchiBand(ReciprocalLatticePoint):
         """Center positions of Kikuchi bands on the detector for n
         simulated patterns.
 
+        This class extends the
+        :class:`~diffsims.crystallography.ReciprocalLatticePoint` class
+        with EBSD detector pixel and gnomonic coordinates for each band
+        (or point).
+
         Parameters
         ----------
         phase
@@ -57,21 +62,38 @@ class KikuchiBand(ReciprocalLatticePoint):
             Only plane trace coordinates of bands with Hesse normal
             form distances below this radius is returned when called
             for.
+
+        Examples
+        --------
+        This class is ment to be part of a GeometricalEBSDSimulation
+        generated from an EBSDSimulationGenerator object. However, a
+        KikuchiBand object with no navigation shape and two bands can be
+        created in the following way:
+
+        >>> import numpy as np
+        >>> from orix.crystal_map import Phase
+        >>> from kikuchipy.simulations.features import KikuchiBand
+        >>> p = Phase(name="ni", space_group=225)
+        >>> p.structure.lattice.setLatPar(3.52, 3.52, 3.52, 90, 90, 90)
+        >>> bands = KikuchiBand(
+        ...     phase=p,
+        ...     hkl=np.array([[-1, 1, 1], [-2, 0, 0]]),
+        ...     hkl_detector=np.array(
+        ...         [[0.26, 0.32, 0.26], [-0.21, 0.45, 0.27]]
+        ...     ),
+        ...     in_pattern=np.ones(2, dtype=bool),
+        ...     gnomonic_radius=10,
+        ... )
+        >>> bands
+        KikuchiBand (|2)
+        Phase: ni (m-3m)
+        [[-1  1  1]
+         [ 0 -2  0]]
         """
         super().__init__(phase=phase, hkl=hkl)
         self._hkl_detector = Vector3d(hkl_detector)
-        self._in_pattern = np.atleast_2d(in_pattern)
+        self._in_pattern = in_pattern
         self.gnomonic_radius = gnomonic_radius
-
-    def __getitem__(self, key):
-        # TODO: Index by patterns or bands, not only patterns!
-        return KikuchiBand(
-            phase=self.phase,
-            hkl=self.hkl,
-            hkl_detector=self.hkl_detector[key],
-            in_pattern=self.in_pattern[key],
-            gnomonic_radius=self.gnomonic_radius,
-        )
 
     @property
     def hkl_detector(self) -> Vector3d:
@@ -81,19 +103,21 @@ class KikuchiBand(ReciprocalLatticePoint):
     @property
     def gnomonic_radius(self) -> np.ndarray:
         """Only plane trace coordinates of bands with Hesse normal form
-        distances below this radius are returned when called for.
+        distances below this radius are returned when called for. Per
+        navigation point.
         """
         return self._gnomonic_radius
 
     @gnomonic_radius.setter
     def gnomonic_radius(self, value: Union[np.ndarray, list, float]):
         """Only plane trace coordinates of bands with Hesse normal form
-        distances below this radius are returned when called for.
+        distances below this radius are returned when called for. Per
+        navigation point.
         """
-        r = np.asarray(value)
+        r = np.atleast_1d(value)
         if r.size == 1:
-            self._gnomonic_radius = r * np.ones(self.navigation_shape)
-        self._gnomonic_radius = r.reshape(self.navigation_shape)
+            r = r * np.ones(self.navigation_shape)
+        self._gnomonic_radius = np.atleast_1d(r.reshape(self.navigation_shape))
 
     @property
     def navigation_shape(self) -> tuple:
@@ -104,6 +128,11 @@ class KikuchiBand(ReciprocalLatticePoint):
     def navigation_dimension(self) -> int:
         """Number of navigation dimensions (a maximum of 2)."""
         return len(self.navigation_shape)
+
+    @property
+    def _data_shape(self) -> tuple:
+        """Navigation shape + number of bands."""
+        return self.navigation_shape + (self.size,)
 
     @property
     def in_pattern(self) -> np.ndarray:
@@ -132,8 +161,8 @@ class KikuchiBand(ReciprocalLatticePoint):
 
     @property
     def hesse_distance(self) -> np.ndarray:
-        """Distance from the PC (origin), i.e. the right-angle component
-        of the distance to the pole.
+        """Distance from the PC (origin) per band, i.e. the right-angle
+        component of the distance to the pole.
         """
         return np.tan(0.5 * np.pi - self.hkl_detector.theta.data)
 
@@ -145,7 +174,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         is_full_upper = self.z_detector > -1e-5
         gnomonic_radius = self.gnomonic_radius[..., np.newaxis]
         in_circle = np.abs(self.hesse_distance) < gnomonic_radius
-        return np.logical_and(in_circle, is_full_upper)
+        return np.logical_and(in_circle, is_full_upper).squeeze()
 
     @property
     def hesse_alpha(self) -> np.ndarray:
@@ -154,17 +183,20 @@ class KikuchiBand(ReciprocalLatticePoint):
         """
         hesse_distance = self.hesse_distance
         hesse_distance[~self.within_gnomonic_radius] = np.nan
-        return np.arccos(hesse_distance / self.gnomonic_radius[..., np.newaxis])
+        gnomonic_radius = self.gnomonic_radius.reshape(
+            self.gnomonic_radius.shape + (1,) * (self.navigation_dimension - 1)
+        )
+        return np.arccos(hesse_distance / gnomonic_radius)
 
     @property
     def plane_trace_coordinates(self) -> np.ndarray:
-        """Plane trace coordinates P1, P2 in the plane of the detector
-        in gnomonic coordinates.
+        """Plane trace coordinates P1, P2 on the form [y0, x0, y1, x1]
+        per band in the plane of the detector in gnomonic coordinates.
 
-        Only coordinates for the planes within the `gnomonic_radius` are
-        returned.
+        Coordinates for the planes outside the `gnomonic_radius` are set
+        to NaN.
         """
-        # Get alpha1 and alpha2 angles
+        # Get alpha1 and alpha2 angles (NaN for bands outside gnomonic radius)
         phi = self.hkl_detector.phi.data
         hesse_alpha = self.hesse_alpha
         plane_trace = np.zeros(self.navigation_shape + (self.size, 4))
@@ -178,7 +210,9 @@ class KikuchiBand(ReciprocalLatticePoint):
         plane_trace[..., 3] = np.sin(alpha2)
 
         # And remember to multiply by the gnomonic radius
-        gnomonic_radius = self.gnomonic_radius[..., np.newaxis, np.newaxis]
+        gnomonic_radius = self.gnomonic_radius.reshape(
+            self.gnomonic_radius.shape + (1,) * self.navigation_dimension
+        )
         return gnomonic_radius * plane_trace
 
     @property
@@ -188,6 +222,30 @@ class KikuchiBand(ReciprocalLatticePoint):
     @property
     def hesse_line_y(self) -> np.ndarray:
         return -self.hesse_distance * np.sin(self.hkl_detector.phi.data)
+
+    def __getitem__(self, key):
+        # TODO: More cases!
+        if isinstance(key, int):
+            if self.navigation_dimension == 0:  # Slicing bands
+                hkl = self.hkl[key]
+            else:  # Slicing navigation space
+                hkl = self.hkl
+        else:
+            hkl = self.hkl
+        return KikuchiBand(
+            phase=self.phase,
+            hkl=hkl,
+            hkl_detector=self.hkl_detector[key],
+            in_pattern=self.in_pattern[key],
+            gnomonic_radius=self.gnomonic_radius[key],
+        )
+
+    def __repr__(self):
+        shape_str = _get_dimension_str(
+            nav_shape=self.navigation_shape, sig_shape=(self.size,)
+        )
+        first_line = f"{self.__class__.__name__} {shape_str}"
+        return "\n".join([first_line] + super().__repr__().split("\n")[1:])
 
 
 class ZoneAxis(ReciprocalLatticePoint):
@@ -303,3 +361,19 @@ class ZoneAxis(ReciprocalLatticePoint):
     @property
     def within_gnomonic_radius(self) -> np.ndarray:
         return self.r_gnomonic < self.gnomonic_radius
+
+
+def _get_dimension_str(nav_shape: tuple, sig_shape: tuple):
+    """Adapted from HyperSpy's AxesManager._get_dimension_str."""
+    dim_str = "("
+    if len(nav_shape) > 0:
+        for axis in nav_shape:
+            dim_str += f"{axis}, "
+    dim_str = dim_str.rstrip(", ")
+    dim_str += "|"
+    if len(sig_shape) > 0:
+        for axis in sig_shape:
+            dim_str += f"{axis}, "
+    dim_str = dim_str.rstrip(", ")
+    dim_str += ")"
+    return dim_str
