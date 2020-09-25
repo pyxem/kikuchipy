@@ -94,7 +94,12 @@ class LambertProjection:
             1 - (2 * (Y ** 2)) / np.pi,
         )
 
-        return Vector3d(np.dstack((x, y, z)))
+        cart = np.zeros(x.shape + (3,), dtype=x.dtype)
+        cart[..., 0] = x
+        cart[..., 1] = y
+        cart[..., 2] = z
+
+        return Vector3d(cart)
 
     @staticmethod
     def lambert_to_gnomonic(xy: np.ndarray) -> np.ndarray:
