@@ -224,21 +224,45 @@ class KikuchiBand(ReciprocalLatticePoint):
         return -self.hesse_distance * np.sin(self.hkl_detector.phi.data)
 
     def __getitem__(self, key):
-        # TODO: More cases!
-        if isinstance(key, int):
-            if self.navigation_dimension == 0:  # Slicing bands
+        # TODO: Handle transfer of structure factor and theta in
+        #  diffsims, perhaps allow these in __init__() as kwargs?
+        # TODO: More cases
+        sliced = False
+        if isinstance(key, int) or isinstance(key, slice):  # Single key
+            if self.navigation_dimension == 0:  # Slice bands
+                print(1)
                 hkl = self.hkl[key]
-            else:  # Slicing navigation space
-                hkl = self.hkl
-        else:
+                gnomonic_radius = self.gnomonic_radius
+                structure_factor = self.structure_factor[key]
+                theta = self.theta[key]
+                sliced = True
+        elif isinstance(key, tuple) and (
+            isinstance(key[0], int) or isinstance(key[0], slice)
+        ):
+            if self.navigation_dimension == 1 and len(key) == 2:  # Slice both
+                nav_slice, band_slice = key
+                print(2)
+                hkl = self.hkl[band_slice]
+                structure_factor = self.structure_factor[band_slice]
+                theta = self.theta[band_slice]
+                gnomonic_radius = self.gnomonic_radius[nav_slice]
+                sliced = True
+        if not sliced:
+            print(3)
             hkl = self.hkl
-        return KikuchiBand(
+            structure_factor = self.structure_factor
+            theta = self.theta
+            gnomonic_radius = self.gnomonic_radius[key]
+        new_bands = KikuchiBand(
             phase=self.phase,
             hkl=hkl,
             hkl_detector=self.hkl_detector[key],
             in_pattern=self.in_pattern[key],
-            gnomonic_radius=self.gnomonic_radius[key],
+            gnomonic_radius=gnomonic_radius,
         )
+        new_bands._structure_factor = structure_factor
+        new_bands._theta = theta
+        return new_bands
 
     def __repr__(self):
         shape_str = _get_dimension_str(
@@ -246,6 +270,24 @@ class KikuchiBand(ReciprocalLatticePoint):
         )
         first_line = f"{self.__class__.__name__} {shape_str}"
         return "\n".join([first_line] + super().__repr__().split("\n")[1:])
+
+    def unique(self, **kwargs):
+        # TODO: Fix transfer of properties in this class and other inheriting
+        #  classes in diffsims when creating a new class object
+        raise NotImplemented
+
+    def symmetrise(self, **kwargs):
+        # TODO: Fix transfer of properties in this class and other inheriting
+        #  classes in diffsims when creating a new class object
+        raise NotImplemented
+
+    @classmethod
+    def from_min_dspacing(cls, **kwargs):
+        raise NotImplemented
+
+    @classmethod
+    def from_highest_hkl(cls, **kwargs):
+        raise NotImplemented
 
 
 class ZoneAxis(ReciprocalLatticePoint):
