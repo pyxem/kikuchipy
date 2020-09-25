@@ -65,9 +65,15 @@ class TestLambertProjection:
             (0.5770240896680434, 0.5770240896680434, 0.5780020760218183)
         )  # Vector3d(1,)
         output = LambertProjection.iproject(vec)  # Vector3d(1,1)
-        assert output[0].x.data[0] == expected.x.data[0]
-        assert output[0].y.data[0] == expected.y.data[0]
-        assert output[0].z.data[0] == expected.z.data[0]
+        assert output[0].x.data[0] == pytest.approx(
+            expected.x.data[0], rel=1e-3
+        )
+        assert output[0].y.data[0] == pytest.approx(
+            expected.y.data[0], rel=1e-3
+        )
+        assert output[0].z.data[0] == pytest.approx(
+            expected.z.data[0], rel=1e-3
+        )
 
     def test_eq_c(self):
         """Helper function works"""
