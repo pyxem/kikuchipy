@@ -108,7 +108,7 @@ class LambertProjection:
         Lambert."""
         # These two functions could probably be combined into 1 to decrease
         # runtime
-        vec = GnomonicProjection.iproject(xy[..., 0], xy[..., 1])
+        vec = GnomonicProjection.iproject(xy)
         xy = LambertProjection.project(vec)
         return xy
 

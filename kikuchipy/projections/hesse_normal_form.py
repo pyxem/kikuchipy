@@ -30,13 +30,13 @@ class HesseNormalForm:
     def project_polar(
         polar: np.ndarray, radius: Optional[float] = 10
     ) -> np.ndarray:
-        """Return the Hesse normal form of plane(s) given by polar
+        """Return the Hesse normal form of plane(s) given by spherical
         coordinates.
 
         Parameters
         ----------
         polar
-            Polar coordinates theta, phi, r.
+            Spherical coordinates theta, phi, r.
         radius
             Hesse radius. Default is 10.
 

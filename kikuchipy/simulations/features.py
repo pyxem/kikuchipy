@@ -18,20 +18,19 @@
 
 from typing import Union
 
-from kikuchipy.crystallography import ReciprocalLatticePoint
 import numpy as np
 from orix.crystal_map import Phase
 from orix.vector import Vector3d
 
-from kikuchipy.projections.spherical_projection import get_phi, get_theta, get_r
+from kikuchipy.crystallography import ReciprocalLatticePoint
 
 
 class KikuchiBand(ReciprocalLatticePoint):
     def __init__(
         self,
         phase: Phase,
-        hkl: Union[Vector3d, np.ndarray, list, tuple],
-        coordinates: np.ndarray,
+        hkl: Union[Vector3d, np.ndarray],
+        hkl_detector: Union[Vector3d, np.ndarray],
         in_pattern: np.ndarray,
         gnomonic_radius: Union[float, np.ndarray] = 10,
     ):
@@ -45,22 +44,19 @@ class KikuchiBand(ReciprocalLatticePoint):
             point group describing the allowed symmetry operations.
         hkl
             All Miller indices present in any of the n patterns.
-        coordinates
-            Detector coordinates per pattern for each hkl, in the shape
-            (n, n_hkl, 3).
+        hkl_detector
+            Detector coordinates for all Miller indices per pattern, in
+            the shape navigation_shape + (n_hkl, 3).
         in_pattern
-            Boolean array of shape (n, n_hkl) indicating whether an hkl
-            is visible in a pattern.
+            Boolean array of shape navigation_shape + (n_hkl,)
+            indicating whether an hkl is visible in a pattern.
         gnomonic_radius
             Only plane trace coordinates of bands with Hesse normal
             form distances below this radius is returned when called
             for.
         """
         super().__init__(phase=phase, hkl=hkl)
-        if coordinates.ndim == 2:
-            self._coordinates = coordinates[np.newaxis, ...]
-        else:  # ndim == 3
-            self._coordinates = coordinates
+        self._hkl_detector = Vector3d(hkl_detector)
         self._in_pattern = np.atleast_2d(in_pattern)
         self.gnomonic_radius = gnomonic_radius
 
@@ -69,14 +65,15 @@ class KikuchiBand(ReciprocalLatticePoint):
         return KikuchiBand(
             phase=self.phase,
             hkl=self.hkl,
-            coordinates=self.coordinates[key],
+            hkl_detector=self.hkl_detector[key],
             in_pattern=self.in_pattern[key],
             gnomonic_radius=self.gnomonic_radius,
         )
 
     @property
-    def coordinates(self) -> np.ndarray:
-        return self._coordinates
+    def hkl_detector(self) -> Vector3d:
+        """Detector coordinates for all Miller indices per pattern."""
+        return self._hkl_detector
 
     @property
     def gnomonic_radius(self) -> np.ndarray:
@@ -93,17 +90,12 @@ class KikuchiBand(ReciprocalLatticePoint):
         r = np.asarray(value)
         if r.size == 1:
             self._gnomonic_radius = r * np.ones(self.navigation_shape)
-        else:
-            self._gnomonic_radius = r.reshape(self.navigation_shape)
+        self._gnomonic_radius = r.reshape(self.navigation_shape)
 
     @property
     def navigation_shape(self) -> tuple:
         """Navigation shape."""
-        coordinate_shape = self.coordinates.shape
-        if len(coordinate_shape) == 2:
-            return (1,)
-        else:
-            return coordinate_shape[:-2]
+        return self.hkl_detector.shape[:-1]
 
     @property
     def navigation_dimension(self) -> int:
@@ -117,15 +109,15 @@ class KikuchiBand(ReciprocalLatticePoint):
 
     @property
     def x_detector(self) -> np.ndarray:
-        return self.coordinates[..., 0]
+        return self.hkl_detector.data[..., 0]
 
     @property
     def y_detector(self) -> np.ndarray:
-        return self.coordinates[..., 1]
+        return self.hkl_detector.data[..., 1]
 
     @property
     def z_detector(self) -> np.ndarray:
-        return self.coordinates[..., 2]
+        return self.hkl_detector.data[..., 2]
 
     @property
     def x_gnomonic(self) -> np.ndarray:
@@ -136,19 +128,11 @@ class KikuchiBand(ReciprocalLatticePoint):
         return self.y_detector / self.z_detector
 
     @property
-    def phi_polar(self) -> np.ndarray:
-        return get_phi(self.coordinates)
-
-    @property
-    def theta_polar(self) -> np.ndarray:
-        return get_theta(self.coordinates)
-
-    @property
     def hesse_distance(self) -> np.ndarray:
         """Distance from the PC (origin), i.e. the right-angle component
-        of the distance to pole.
+        of the distance to the pole.
         """
-        return np.tan(0.5 * np.pi - self.theta_polar)
+        return np.tan(0.5 * np.pi - self.hkl_detector.theta.data)
 
     @property
     def within_gnomonic_radius(self) -> np.ndarray:
@@ -178,7 +162,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         returned.
         """
         # Get alpha1 and alpha2 angles
-        phi = self.phi_polar
+        phi = self.hkl_detector.phi.data
         hesse_alpha = self.hesse_alpha
         plane_trace = np.zeros(self.navigation_shape + (self.size, 4))
         alpha1 = phi - np.pi + hesse_alpha
@@ -196,11 +180,11 @@ class KikuchiBand(ReciprocalLatticePoint):
 
     @property
     def hesse_line_x(self) -> np.ndarray:
-        return -self.hesse_distance * np.cos(self.phi_polar)
+        return -self.hesse_distance * np.cos(self.hkl_detector.phi.data)
 
     @property
     def hesse_line_y(self) -> np.ndarray:
-        return -self.hesse_distance * np.sin(self.phi_polar)
+        return -self.hesse_distance * np.sin(self.hkl_detector.phi.data)
 
 
 class ZoneAxis(ReciprocalLatticePoint):
