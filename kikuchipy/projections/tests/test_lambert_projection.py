@@ -31,8 +31,8 @@ class TestLambertProjection:
         output_a = LambertProjection.project(vector_one)
         expected_a = np.array((0.81417, 0.81417))
 
-        assert (output_a[..., 0, 0]) == pytest.approx(expected_a[0], rel=1e4)
-        assert output_a[..., 0, 1] == pytest.approx(expected_a[1], rel=1e4)
+        assert (output_a[..., 0, 0]) == pytest.approx(expected_a[0], abs=1e-3)
+        assert output_a[..., 0, 1] == pytest.approx(expected_a[1], abs=1e-3)
 
         vector_two = Vector3d(
             np.array(
@@ -44,19 +44,19 @@ class TestLambertProjection:
         expected_x = np.array((0.81417, 0, 0.678))
         expected_y = np.array((0.81417, 0.678, 0))
 
-        assert output_b[..., 0, 0] == pytest.approx(expected_x[0], rel=1e4)
-        assert output_b[..., 0, 1] == pytest.approx(expected_y[0], rel=1e4)
-        assert output_b[..., 1, 0] == pytest.approx(expected_x[1], rel=1e4)
-        assert output_b[..., 1, 1] == pytest.approx(expected_y[1], rel=1e4)
-        assert output_b[..., 2, 0] == pytest.approx(expected_x[2], rel=1e4)
-        assert output_b[..., 2, 1] == pytest.approx(expected_y[2], rel=1e4)
+        assert output_b[..., 0, 0] == pytest.approx(expected_x[0], abs=1e-3)
+        assert output_b[..., 0, 1] == pytest.approx(expected_y[0], abs=1e-3)
+        assert output_b[..., 1, 0] == pytest.approx(expected_x[1], abs=1e-3)
+        assert output_b[..., 1, 1] == pytest.approx(expected_y[1], abs=1e-3)
+        assert output_b[..., 2, 0] == pytest.approx(expected_x[2], abs=1e-3)
+        assert output_b[..., 2, 1] == pytest.approx(expected_y[2], abs=1e-3)
 
     def test_project_ndarray(self):
         "Works for numpy ndarrays"
         ipt = np.array((0.578, 0.578, 0.578))
         output = LambertProjection.project(ipt)
         expected = np.array((0.81417, 0.81417))
-        assert output[..., 0] == pytest.approx(expected[0], rel=1e4)
+        assert output[..., 0] == pytest.approx(expected[0], rel=1e-3)
 
     def test_iproject(self):
         """Conversion from Lambert to Cartesian coordinates works"""
