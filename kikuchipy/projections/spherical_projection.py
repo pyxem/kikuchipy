@@ -81,6 +81,7 @@ def _get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     polar[..., 0] = theta
     polar[..., 1] = phi
     polar[..., 2] = r
+
     return polar
 
 
