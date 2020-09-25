@@ -68,7 +68,11 @@ class GnomonicProjection(SphericalProjection):
         x = np.cos(phi) * r
         y = np.sin(phi) * r
 
-        return np.dstack((x, y))
+        gnomonic = np.zeros(x.shape + (2,), dtype=x.dtype)
+        gnomonic[..., 0] = x
+        gnomonic[..., 1] = y
+
+        return gnomonic
 
     @staticmethod
     def iproject(xy: np.ndarray) -> Vector3d:
