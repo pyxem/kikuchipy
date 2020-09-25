@@ -66,7 +66,11 @@ class LambertProjection:
             sign_y * sqrt_z * sqrt_pi_half,
         )
 
-        return np.dstack((X, Y))
+        lambert = np.zeros(X.shape + (2,), dtype=X.dtype)
+        lambert[..., 0] = X
+        lambert[..., 1] = Y
+
+        return lambert
 
     @staticmethod
     def iproject(xy: np.ndarray) -> Vector3d:

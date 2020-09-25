@@ -56,7 +56,8 @@ class TestLambertProjection:
         ipt = np.array((0.578, 0.578, 0.578))
         output = LambertProjection.project(ipt)
         expected = np.array((0.81417, 0.81417))
-        assert output[..., 0, 0] == pytest.approx(expected[0], rel=1e4)
+        print(output)
+        assert output[..., 0] == pytest.approx(expected[0], rel=1e4)
 
     def test_iproject(self):
         """Conversion from Lambert to Cartesian coordinates works"""
