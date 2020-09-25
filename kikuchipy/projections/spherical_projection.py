@@ -77,7 +77,11 @@ def _get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     phi += (phi < 0) * 2 * np.pi
     r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
     theta = np.arccos(z / r)
-    return np.dstack((theta, phi, r))
+    polar = np.zeros(x.shape + (3,), dtype=x.dtype)
+    polar[..., 0] = theta
+    polar[..., 1] = phi
+    polar[..., 2] = r
+    return polar
 
 
 def get_theta(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
