@@ -65,10 +65,11 @@ class GnomonicProjection(SphericalProjection):
         r = np.tan(theta)
 
         # Compute coordinates
-        x = np.cos(phi) * r
-        y = np.sin(phi) * r
+        gnomonic = np.zeros(r.shape + (2,), dtype=r.dtype)
+        gnomonic[..., 0] = np.cos(phi) * r
+        gnomonic[..., 1] = np.sin(phi) * r
 
-        return np.column_stack((x, y))
+        return gnomonic
 
     @staticmethod
     def iproject(xy: np.ndarray) -> Vector3d:
