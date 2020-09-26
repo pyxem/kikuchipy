@@ -19,7 +19,6 @@
 from re import sub
 from typing import Optional
 
-from kikuchipy.crystallography import ReciprocalLatticePoint
 import numpy as np
 from orix.quaternion.rotation import Rotation
 
@@ -36,7 +35,6 @@ class GeometricalEBSDSimulation:
     def __init__(
         self,
         detector: EBSDDetector,
-        reciprocal_lattice_point: ReciprocalLatticePoint,
         rotations: Rotation,
         bands: Optional[KikuchiBand] = None,
         zone_axes: Optional[ZoneAxis] = None,
@@ -50,8 +48,6 @@ class GeometricalEBSDSimulation:
         detector
             An EBSD detector with a shape, pixel size, binning, and
             projection center(s) (PC(s)).
-        reciprocal_lattice_point
-            Crystal planes projected onto the detector.
         rotations
             Orientations of the unit cell.
         bands
@@ -65,7 +61,6 @@ class GeometricalEBSDSimulation:
         """
         self.detector = detector
         self.rotations = rotations
-        self.reciprocal_lattice_point = reciprocal_lattice_point
         self.bands = bands
         self.zone_axes = zone_axes
 
@@ -233,12 +228,12 @@ class GeometricalEBSDSimulation:
         -------
         list
         """
-        pcxy = self.detector.pc[:2]
+        pcxy = self.detector.pc[..., :2]
         nrows, ncols = self.detector.shape
         x_scale = ncols - 1 if ncols > 1 else 1
         y_scale = nrows - 1 if nrows > 1 else 1
-        pcxy[0, ...] *= x_scale
-        pcxy[1, ...] *= y_scale
+        pcxy[..., 0] *= x_scale
+        pcxy[..., 1] *= y_scale
         return get_point_list(
             points=pcxy,
             size=kwargs.pop("size", 150),
@@ -311,3 +306,14 @@ class GeometricalEBSDSimulation:
                 pc_kwargs = {}
             markers += self.pc_as_markers(**pc_kwargs)
         return markers
+
+    def __repr__(self):
+        rotation_repr = repr(self.rotations).split("\n")[0]
+        band_repr = repr(self.bands).split("\n")[0]
+        return (
+            f"{self.__class__.__name__} {self.bands.navigation_shape}\n"
+            f"{self.detector}\n"
+            f"{self.bands.phase}\n"
+            f"{band_repr}\n"
+            f"{rotation_repr}\n"
+        )

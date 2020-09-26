@@ -30,6 +30,13 @@ Added
   gnomonic coordinates. EBSD reference frame documentation.
   (`#204 <https://github.com/pyxem/kikuchipy/pull/204>`_,
   `#215 <https://github.com/pyxem/kikuchipy/pull/215>`_)
+- Geometrical EBSD simulations, projecting a set of Kikuchi bands onto a
+  detector, which can be added to an EBSD signal as markers.
+  (`#204 <https://github.com/pyxem/kikuchipy/pull/204>`_,
+  `#219 <https://github.com/pyxem/kikuchipy/pull/219>`_)
+- Dependency on the diffsims package (https://github.com/pyxem/diffsims/) for
+  handling of electron scattering and diffraction.
+  (`#220 <https://github.com/pyxem/kikuchipy/pull/220>`_)
 
 Changed
 -------
@@ -39,6 +46,11 @@ Changed
   (`#196 <https://github.com/pyxem/kikuchipy/pull/196>`_)
 - Remove language_version in pre-commit config file.
   (`#195 <https://github.com/pyxem/kikuchipy/pull/195>`_)
+
+Fixed
+-----
+- NumPy array creation when calculating window pixel's distance to the origin is
+  not ragged anymore. (`#221 <https://github.com/pyxem/kikuchipy/pull/221>`_)
 
 0.2.2 (2020-05-24)
 ==================

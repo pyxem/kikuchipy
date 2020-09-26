@@ -395,7 +395,7 @@ def distance_to_origin(
     coordinates = np.ogrid[tuple(slice(None, i) for i in shape)]
     if len(origin) == 2:
         squared = [(i - o) ** 2 for i, o in zip(coordinates, origin)]
-        return np.sqrt(np.sum(squared))
+        return np.sqrt(np.add.outer(*squared).squeeze())
     else:
         return abs(coordinates[0] - origin[0])
 
