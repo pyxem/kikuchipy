@@ -73,14 +73,12 @@ def _get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
         x, y, z = v.xyz
     else:
         x, y, z = v[..., 0], v[..., 1], v[..., 2]
-    phi = np.arctan2(y, x)
-    phi += (phi < 0) * 2 * np.pi
-    r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
-    theta = np.arccos(z / r)
     polar = np.zeros(x.shape + (3,), dtype=x.dtype)
-    polar[..., 0] = theta
-    polar[..., 1] = phi
-    polar[..., 2] = r
+    polar[..., 1] = np.where(
+        np.arctan2(y, x) < 0, np.arctan2(y, x) + 2 * np.pi, np.arctan2(y, x)
+    )  # Phi
+    polar[..., 2] = np.sqrt(x ** 2 + y ** 2 + z ** 2)  # r
+    polar[..., 0] = np.arccos(z / polar[..., 2])  # Theta
 
     return polar
 
