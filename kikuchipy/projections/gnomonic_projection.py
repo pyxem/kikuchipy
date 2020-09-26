@@ -65,12 +65,9 @@ class GnomonicProjection(SphericalProjection):
         r = np.tan(theta)
 
         # Compute coordinates
-        x = np.cos(phi) * r
-        y = np.sin(phi) * r
-
-        gnomonic = np.zeros(x.shape + (2,), dtype=x.dtype)
-        gnomonic[..., 0] = x
-        gnomonic[..., 1] = y
+        gnomonic = np.zeros(r.shape + (2,), dtype=r.dtype)
+        gnomonic[..., 0] = np.cos(phi) * r
+        gnomonic[..., 1] = np.sin(phi) * r
 
         return gnomonic
 
