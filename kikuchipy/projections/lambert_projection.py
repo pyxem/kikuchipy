@@ -54,21 +54,19 @@ class LambertProjection:
         sqrt_pi_half = sqrt_pi / 2
         two_over_sqrt_pi = 2 / sqrt_pi
 
+        lambert = np.zeros(x.shape + (2,), dtype=x.dtype)
+
         # Equations 10a and 10b from Callahan and De Graef (2013)
-        X = np.where(
+        lambert[..., 0] = np.where(
             abs_yx,
             sign_x * sqrt_z * sqrt_pi_half,
             sign_y * sqrt_z * (two_over_sqrt_pi * np.arctan2(x, y)),
         )
-        Y = np.where(
+        lambert[..., 1] = np.where(
             abs_yx,
             sign_x * sqrt_z * (two_over_sqrt_pi * np.arctan2(y, x)),
             sign_y * sqrt_z * sqrt_pi_half,
         )
-
-        lambert = np.zeros(X.shape + (2,), dtype=X.dtype)
-        lambert[..., 0] = X
-        lambert[..., 1] = Y
 
         return lambert
 
@@ -85,19 +83,20 @@ class LambertProjection:
         c_x = _eq_c(X)
         c_y = _eq_c(Y)
 
+        cart = np.zeros(X.shape + (3,), dtype=X.dtype)
+
         # Equations 8a and 8b from Callahan and De Graef (2013)
-        x = np.where(abs_yx, c_x * np.cos(true_term), c_y * np.sin(false_term))
-        y = np.where(abs_yx, c_x * np.sin(true_term), c_y * np.cos(false_term))
-        z = np.where(
+        cart[..., 0] = np.where(
+            abs_yx, c_x * np.cos(true_term), c_y * np.sin(false_term)
+        )
+        cart[..., 1] = np.where(
+            abs_yx, c_x * np.sin(true_term), c_y * np.cos(false_term)
+        )
+        cart[..., 2] = np.where(
             abs_yx,
             1 - (2 * (X ** 2)) / np.pi,
             1 - (2 * (Y ** 2)) / np.pi,
         )
-
-        cart = np.zeros(x.shape + (3,), dtype=x.dtype)
-        cart[..., 0] = x
-        cart[..., 1] = y
-        cart[..., 2] = z
 
         return Vector3d(cart)
 
