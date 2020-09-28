@@ -97,7 +97,7 @@ class KikuchiBand(ReciprocalLatticePoint):
 
     @property
     def hkl_detector(self) -> Vector3d:
-        """Detector coordinates for all Miller indices per pattern."""
+        """Detector coordinates for all bands per pattern."""
         return self._hkl_detector
 
     @property
@@ -141,22 +141,31 @@ class KikuchiBand(ReciprocalLatticePoint):
 
     @property
     def x_detector(self) -> np.ndarray:
+        """X detector coordinate for all bands per pattern."""
         return self.hkl_detector.data[..., 0]
 
     @property
     def y_detector(self) -> np.ndarray:
+        """Y detector coordinate for all bands per pattern."""
         return self.hkl_detector.data[..., 1]
 
     @property
     def z_detector(self) -> np.ndarray:
+        """Z detector coordinate for all bands per pattern."""
         return self.hkl_detector.data[..., 2]
 
     @property
     def x_gnomonic(self) -> np.ndarray:
+        """X coordinate in the gnomonic projection plane on the detector
+        for all bands per pattern.
+        """
         return self.x_detector / self.z_detector
 
     @property
     def y_gnomonic(self) -> np.ndarray:
+        """Y coordinate in the gnomonic projection plane on the detector
+        for all bands per pattern.
+        """
         return self.y_detector / self.z_detector
 
     @property

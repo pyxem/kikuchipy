@@ -323,6 +323,54 @@ correlate
 
 ....
 
+projections
+===========
+
+.. automodule:: kikuchipy.projections
+
+.. currentmodule:: kikuchipy.projections
+
+.. autosummary::
+    ebsd_projections
+    hesse_normal_form.HesseNormalForm
+    spherical_projection.SphericalProjection
+
+ebsd_projections
+----------------
+
+.. currentmodule:: kikuchipy.projections.ebsd_projections
+
+.. autosummary::
+    detector2direct_lattice
+    detector2reciprocal_lattice
+    detector2sample
+
+.. automodule:: kikuchipy.projections.ebsd_projections
+    :members:
+    :undoc-members:
+
+HesseNormalForm
+-----------------
+
+.. automodule:: kikuchipy.projections.hesse_normal_form
+
+.. autoclass:: kikuchipy.projections.hesse_normal_form.HesseNormalForm
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+SphericalProjection
+--------------------
+
+.. automodule:: kikuchipy.projections.spherical_projection
+
+.. autoclass:: kikuchipy.projections.spherical_projection.SphericalProjection
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+....
+
 signals
 =======
 
@@ -478,7 +526,6 @@ features
 
 .. autosummary::
     KikuchiBand
-    ZoneAxis
 
 KikuchiBand
 ~~~~~~~~~~~
@@ -487,15 +534,7 @@ KikuchiBand
     :members:
     :undoc-members:
     :show-inheritance:
+    :exclude-members: from_highest_hkl, from_min_dspacing, symmetrise, unique
 
     .. automethod:: __init__
-
-ZoneAxis
-~~~~~~~~
-
-.. autoclass:: kikuchipy.simulations.features.ZoneAxis
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-    .. automethod:: __init__
+    .. automethod:: __getitem__

@@ -257,8 +257,7 @@ class GeometricalEBSDSimulation:
         zone_axes_labels_kwargs: Optional[dict] = None,
         pc_kwargs: Optional[dict] = None,
     ) -> list:
-        """Return a list of all or some of the available simulation
-        markers.
+        """Return a list of all or some of the simulation markers.
 
         Parameters
         ----------
