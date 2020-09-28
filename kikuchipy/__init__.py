@@ -16,17 +16,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""
-Processing and analysis of electron backscatter diffraction (EBSD)
-patterns in Python.
-
-The ``kikuchipy`` library builds on the tools for multi-dimensional data
-analysis provided by the HyperSpy library. This means that the EBSD and
-EBSDMasterPattern classes, which have several common methods for
-processing of EBSD patterns, also inherits all relevant methods from
-HyperSpy's Signal2D and Signal classes.
-"""
-
 # Import order must not be changed
 from kikuchipy import crystallography
 from kikuchipy import detectors

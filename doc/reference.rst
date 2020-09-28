@@ -2,125 +2,48 @@
 API reference
 =============
 
-This reference manual details the public classes, modules and functions in
+This reference manual details the public modules, classes, and functions in
 kikuchipy, as generated from their docstrings. Many of the docstrings contain
 examples, however, see the user guide for how to use kikuchipy.
 
 .. caution::
 
-    kikuchipy is in an alpha stage, and there will be breaking changes with each
+    kikuchipy is in an alpha stage, so there will be breaking changes with each
     release.
 
-signals
-=======
+.. module:: kikuchipy
 
-.. automodule:: kikuchipy.signals
-
-EBSD
-----
-
-All methods listed here are also available to
-:class:`~kikuchipy.signals.LazyEBSD` objects.
-
-.. currentmodule:: kikuchipy.signals.EBSD
+The list of top modules (and the load function):
 
 .. autosummary::
-    adaptive_histogram_equalization
-    average_neighbour_patterns
-    fft_filter
-    get_decomposition_model
-    get_dynamic_background
-    get_image_quality
-    get_virtual_bse_intensity
-    normalize_intensity
-    plot_virtual_bse_intensity
-    rebin
-    remove_dynamic_background
-    remove_static_background
-    rescale_intensity
-    save
-    set_detector_calibration
-    set_experimental_parameters
-    set_phase_parameters
-    set_scan_calibration
-
-.. autoclass:: kikuchipy.signals.EBSD
-    :members:
-    :undoc-members:
-    :inherited-members: Signal2D
-    :show-inheritance:
+    crystallography
+    detectors
+    draw
+    filters
+    generators
+    io
+    load
+    pattern
+    signals
+    simulations
 
 ....
 
-These methods are exclusive to LazyEBSD objects.
+crystallography
+===============
 
-.. currentmodule:: kikuchipy.signals.LazyEBSD
+.. automodule:: kikuchipy.crystallography
+
+.. currentmodule:: kikuchipy.crystallography
 
 .. autosummary::
-    get_decomposition_model_write
+    get_direct_structure_matrix
+    get_reciprocal_metric_tensor
+    get_reciprocal_structure_matrix
 
-.. autoclass:: kikuchipy.signals.LazyEBSD
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-....
-
-EBSDMasterPattern
------------------
-
-All methods listed here are also available to
-:class:`~kikuchipy.signals.LazyEBSDMasterPattern` objects.
-
-.. currentmodule:: kikuchipy.signals.EBSDMasterPattern
-
-.. autosummary::
-    normalize_intensity
-    rescale_intensity
-    set_simulation_parameters
-    set_phase_parameters
-
-.. autoclass:: kikuchipy.signals.EBSDMasterPattern
-    :members:
-    :undoc-members:
-    :inherited-members: Signal2D
-    :show-inheritance:
-
-....
-
-There are no methods exclusive to LazyEBSDMasterPattern objects.
-
-.. autoclass:: kikuchipy.signals.LazyEBSDMasterPattern
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-....
-
-VirtualBSEImage
----------------
-
-.. currentmodule:: kikuchipy.signals.VirtualBSEImage
-
-.. autosummary::
-    normalize_intensity
-    rescale_intensity
-
-.. autoclass:: kikuchipy.signals.VirtualBSEImage
-    :members:
-    :undoc-members:
-    :inherited-members: Signal2D
-
-....
-
-util
-----
-
-.. currentmodule:: kikuchipy.signals.util
-
-.. automodule:: kikuchipy.signals.util
-    :members:
-    :undoc-members:
+.. autofunction:: get_direct_structure_matrix
+.. autofunction:: get_reciprocal_metric_tensor
+.. autofunction:: get_reciprocal_structure_matrix
 
 ....
 
@@ -129,14 +52,87 @@ detectors
 
 .. automodule:: kikuchipy.detectors
 
-.. currentmodule:: kikuchipy.detectors.EBSDDetector
+.. currentmodule:: kikuchipy.detectors.ebsd_detector
+
+.. autosummary::
+    EBSDDetector
+
+EBSDDetector
+------------
+
+.. currentmodule:: kikuchipy.detectors.ebsd_detector.EBSDDetector
 
 .. autosummary::
     plot
 
-.. autoclass:: kikuchipy.detectors.EBSDDetector
+.. autoclass:: kikuchipy.detectors.ebsd_detector.EBSDDetector
     :members:
     :undoc-members:
+    :show-inheritance:
+
+    .. automethod:: __init__
+
+....
+
+draw
+====
+
+.. automodule:: kikuchipy.draw
+
+.. currentmodule:: kikuchipy.draw
+
+markers
+-------
+
+.. currentmodule:: kikuchipy.draw.markers
+
+.. autosummary::
+    get_line_segment_list
+    get_point_list
+    get_text_list
+    permanent_on_signal
+
+.. autofunction:: get_line_segment_list
+.. autofunction:: get_point_list
+.. autofunction:: get_text_list
+.. autofunction:: permanent_on_signal
+
+....
+
+filters
+=======
+
+.. automodule:: kikuchipy.filters
+
+.. currentmodule:: kikuchipy.filters.window
+
+.. autosummary::
+    distance_to_origin
+    highpass_fft_filter
+    lowpass_fft_filter
+    modified_hann
+    Window
+
+.. autofunction:: distance_to_origin
+.. autofunction:: highpass_fft_filter
+.. autofunction:: lowpass_fft_filter
+.. autofunction:: modified_hann
+
+Window
+------
+
+.. currentmodule:: kikuchipy.filters.window.Window
+
+.. autosummary::
+    is_valid
+    make_circular
+    plot
+    shape_compatible
+
+.. autoclass:: kikuchipy.filters.window.Window
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
     .. automethod:: __init__
 
@@ -146,6 +142,14 @@ generators
 ==========
 
 .. automodule:: kikuchipy.generators
+
+.. currentmodule:: kikuchipy.generators
+
+.. autosummary::
+    EBSDSimulationGenerator
+    VirtualBSEGenerator
+    virtual_bse_generator.get_rgb_image
+    virtual_bse_generator.normalize_image
 
 EBSDSimulationGenerator
 -----------------------
@@ -158,6 +162,7 @@ EBSDSimulationGenerator
 .. autoclass:: kikuchipy.generators.EBSDSimulationGenerator
     :members:
     :undoc-members:
+    :show-inheritance:
 
     .. automethod:: __init__
 
@@ -175,30 +180,96 @@ VirtualBSEGenerator
 .. autoclass:: kikuchipy.generators.VirtualBSEGenerator
     :members:
     :undoc-members:
+    :show-inheritance:
 
     .. automethod:: __init__
 
-util
-----
+Other functions
+---------------
 
-.. currentmodule:: kikuchipy.generators.util
+.. currentmodule:: kikuchipy.generators.virtual_bse_generator
 
-.. automodule:: kikuchipy.generators.util
+.. autofunction:: get_rgb_image
+.. autofunction:: normalize_image
+
+....
+
+io
+==
+
+.. automodule:: kikuchipy.io
+
+.. currentmodule:: kikuchipy.io
+
+.. autosummary::
+    _io.load
+    plugins
+
+.. autofunction:: kikuchipy.io._io.load
+
+plugins
+-------
+
+.. automodule:: kikuchipy.io.plugins
+
+.. currentmodule:: kikuchipy.io.plugins
+
+.. autosummary::
+    h5ebsd
+    nordif
+    emsoft_ebsd
+    emsoft_ebsd_master_pattern
+
+The plugins import patterns and parameters from file formats into
+:class:`~kikuchipy.signals.EBSD` or
+:class:`~kikuchipy.signals.EBSDMasterPattern` (or
+:class:`~kikuchipy.signals.LazyEBSD` or
+:class:`~kikuchipy.signals.LazyEBSDMasterPattern` if loading lazily) objects.
+
+h5ebsd
+~~~~~~
+
+.. automodule:: kikuchipy.io.plugins.h5ebsd
     :members:
     :undoc-members:
+    :show-inheritance:
+
+nordif
+~~~~~~
+
+.. automodule:: kikuchipy.io.plugins.nordif
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+emsoft_ebsd
+~~~~~~~~~~~
+
+.. automodule:: kikuchipy.io.plugins.emsoft_ebsd
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+emsoft_ebsd_master_pattern
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: kikuchipy.io.plugins.emsoft_ebsd_master_pattern
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 ....
 
 pattern
 =======
 
-Module for single and chunk pattern processing, used by signals.
-
-Functions operating on single EBSD patterns as :class:`numpy.ndarray`.
+Single and chunk pattern processing used by signals.
 
 .. currentmodule:: kikuchipy.pattern
 
 .. autosummary::
+    chunk
+    correlate
     fft
     fft_filter
     fft_frequency_vectors
@@ -210,11 +281,11 @@ Functions operating on single EBSD patterns as :class:`numpy.ndarray`.
     remove_dynamic_background
     rescale_intensity
 
+Functions operating on single EBSD patterns as :class:`numpy.ndarray`.
+
 .. automodule:: kikuchipy.pattern
     :members:
     :undoc-members:
-
-....
 
 chunk
 -----
@@ -252,64 +323,218 @@ correlate
 
 ....
 
-filters
+projections
+===========
+
+.. automodule:: kikuchipy.projections
+
+.. currentmodule:: kikuchipy.projections
+
+.. autosummary::
+    ebsd_projections
+    hesse_normal_form.HesseNormalForm
+    spherical_projection.SphericalProjection
+
+ebsd_projections
+----------------
+
+.. currentmodule:: kikuchipy.projections.ebsd_projections
+
+.. autosummary::
+    detector2direct_lattice
+    detector2reciprocal_lattice
+    detector2sample
+
+.. automodule:: kikuchipy.projections.ebsd_projections
+    :members:
+    :undoc-members:
+
+HesseNormalForm
+-----------------
+
+.. automodule:: kikuchipy.projections.hesse_normal_form
+
+.. autoclass:: kikuchipy.projections.hesse_normal_form.HesseNormalForm
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+SphericalProjection
+--------------------
+
+.. automodule:: kikuchipy.projections.spherical_projection
+
+.. autoclass:: kikuchipy.projections.spherical_projection.SphericalProjection
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+....
+
+signals
 =======
 
-.. currentmodule:: kikuchipy.filters
+.. automodule:: kikuchipy.signals
 
-.. automodule:: kikuchipy.filters
+.. currentmodule:: kikuchipy.signals
+
+.. autosummary::
+    EBSD
+    EBSDMasterPattern
+    VirtualBSEImage
+    util
+
+EBSD
+----
+
+All methods listed here are also available to
+:class:`~kikuchipy.signals.LazyEBSD` objects.
+
+.. currentmodule:: kikuchipy.signals.EBSD
+
+.. autosummary::
+    adaptive_histogram_equalization
+    average_neighbour_patterns
+    fft_filter
+    get_decomposition_model
+    get_dynamic_background
+    get_image_quality
+    get_virtual_bse_intensity
+    normalize_intensity
+    plot_virtual_bse_intensity
+    rebin
+    remove_dynamic_background
+    remove_static_background
+    rescale_intensity
+    save
+    set_detector_calibration
+    set_experimental_parameters
+    set_phase_parameters
+    set_scan_calibration
+
+.. autoclass:: kikuchipy.signals.EBSD
+    :members:
+    :undoc-members:
+    :inherited-members: Signal2D
+    :show-inheritance:
+
+These methods are exclusive to LazyEBSD objects.
+
+.. currentmodule:: kikuchipy.signals.LazyEBSD
+
+.. autosummary::
+    get_decomposition_model_write
+
+.. autoclass:: kikuchipy.signals.LazyEBSD
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+EBSDMasterPattern
+-----------------
+
+All methods listed here are also available to
+:class:`~kikuchipy.signals.LazyEBSDMasterPattern` objects.
+
+.. currentmodule:: kikuchipy.signals.EBSDMasterPattern
+
+.. autosummary::
+    normalize_intensity
+    rescale_intensity
+    set_simulation_parameters
+    set_phase_parameters
+
+.. autoclass:: kikuchipy.signals.EBSDMasterPattern
+    :members:
+    :undoc-members:
+    :inherited-members: Signal2D
+    :show-inheritance:
+
+There are no methods exclusive to LazyEBSDMasterPattern objects.
+
+.. autoclass:: kikuchipy.signals.LazyEBSDMasterPattern
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+VirtualBSEImage
+---------------
+
+.. currentmodule:: kikuchipy.signals.VirtualBSEImage
+
+.. autosummary::
+    normalize_intensity
+    rescale_intensity
+
+.. autoclass:: kikuchipy.signals.VirtualBSEImage
+    :members:
+    :undoc-members:
+    :inherited-members: Signal2D
+
+util
+----
+
+.. currentmodule:: kikuchipy.signals.util
+
+.. autosummary::
+    ebsd_master_pattern_metadata
+    ebsd_metadata
+    metadata_nodes
+
+.. automodule:: kikuchipy.signals.util
     :members:
     :undoc-members:
 
 ....
 
-io
-==
+simulations
+===========
 
-.. automodule:: kikuchipy.io
+.. automodule:: kikuchipy.simulations
 
-.. automodule:: kikuchipy.io._io
+.. currentmodule:: kikuchipy.simulations
+
+.. autosummary::
+    GeometricalEBSDSimulation
+    features
+
+GeometricalEBSDSimulation
+-------------------------
+
+.. currentmodule:: kikuchipy.simulations.GeometricalEBSDSimulation
+
+.. autosummary::
+    as_markers
+    bands_as_markers
+    pc_as_markers
+    zone_axes_as_markers
+    zone_axes_labels_as_markers
+
+.. autoclass:: kikuchipy.simulations.GeometricalEBSDSimulation
     :members:
     :undoc-members:
+    :show-inheritance:
 
-These plugin functions import patterns and parameters from file formats into
-:class:`~kikuchipy.signals.EBSD` or
-:class:`~kikuchipy.signals.EBSDMasterPattern` (or
-:class:`~kikuchipy.signals.LazyEBSD` or
-:class:`~kikuchipy.signals.LazyEBSDMasterPattern` if loading lazily) objects.
+    .. automethod:: __init__
 
-....
+features
+--------
 
-h5ebsd
-------
+.. automodule:: kikuchipy.simulations.features
 
-.. automodule:: kikuchipy.io.plugins.h5ebsd
+.. currentmodule:: kikuchipy.simulations.features
+
+.. autosummary::
+    KikuchiBand
+
+KikuchiBand
+~~~~~~~~~~~
+
+.. autoclass:: kikuchipy.simulations.features.KikuchiBand
     :members:
     :undoc-members:
+    :show-inheritance:
+    :exclude-members: from_highest_hkl, from_min_dspacing, symmetrise, unique
 
-....
-
-nordif
-------
-
-.. automodule:: kikuchipy.io.plugins.nordif
-    :members:
-    :undoc-members:
-
-....
-
-emsoft_ebsd
------------
-
-.. automodule:: kikuchipy.io.plugins.emsoft_ebsd
-    :members:
-    :undoc-members:
-
-....
-
-emsoft_ebsd_master_pattern
---------------------------
-
-.. automodule:: kikuchipy.io.plugins.emsoft_ebsd_master_pattern
-    :members:
-    :undoc-members:
+    .. automethod:: __init__
+    .. automethod:: __getitem__

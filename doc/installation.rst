@@ -11,7 +11,7 @@ We recommend you install it in a `conda environment
 <https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`_
 with the `Miniconda distribution`_::
 
-   $ conda create --name kikuchipy python=3.7
+   $ conda create --name kikuchipy python=3.8
    $ conda activate kikuchipy
 
 If you prefer a graphical interface to manage packages and environments, install

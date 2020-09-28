@@ -44,6 +44,8 @@ extensions = [
 # Create links to references within kikuchipy's documentation to these packages.
 intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/latest", None),
+    "diffpy.structure": ("https://www.diffpy.org/diffpy.structure", None),
+    "diffsims": ("https://diffsims.readthedocs.io/en/stable", None),
     "hyperspy": ("http://hyperspy.org/hyperspy-doc/current", None),
     "matplotlib": ("https://matplotlib.org", None),
     "numpy": ("https://docs.scipy.org/doc/numpy", None),

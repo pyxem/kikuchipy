@@ -77,10 +77,10 @@ used as a navigator for a scan ``s``:
 Any image
 ---------
 
-Images loaded into a :class:`~hyperspy.signals.Signal2D` object can be used as
-navigators. E.g. a quality metric map, like the orientation similarity obtained
-from dictionary indexing with `EMsoft <https://github.com/EMsoft-org/EMsoft>`_
-(see e.g. [Marquardt2017]_):
+Images loaded into a :class:`~hyperspy._signals.signal2d.Signal2D` object can be
+used as navigators. E.g. a quality metric map, like the orientation similarity
+obtained from dictionary indexing with
+`EMsoft <https://github.com/EMsoft-org/EMsoft>`_ (see e.g. [Marquardt2017]_):
 
 .. code-block::
 

@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Module for defining an EBSD detector and related quantities."""
+"""An EBSD detector and related quantities."""
 
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 

@@ -86,7 +86,6 @@ class CommonImage(Signal2D):
 
         See Also
         --------
-        kikuchipy.signals.CommonImage.normalize_intensity,
         kikuchipy.pattern.rescale_intensity,
         :func:`skimage.exposure.rescale_intensity`
 

@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Crystallography tools not found elsewhere."""
+"""Crystallographic computations not in diffpy.structure."""
 
 from diffpy.structure import Lattice
 import numpy as np

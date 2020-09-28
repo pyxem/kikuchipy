@@ -16,6 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Spherical projection of a cartesian vector according to the ISO
+31-11 standard [SphericalWolfram]_.
+"""
+
 from typing import Union
 
 import numpy as np
