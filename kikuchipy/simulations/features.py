@@ -224,44 +224,48 @@ class KikuchiBand(ReciprocalLatticePoint):
         return -self.hesse_distance * np.sin(self.hkl_detector.phi.data)
 
     def __getitem__(self, key):
-        # TODO: Handle transfer of structure factor and theta in
-        #  diffsims, perhaps allow these in __init__() as kwargs?
-        # TODO: More cases
-        sliced = False
-        if isinstance(key, int) or isinstance(key, slice):  # Single key
-            if self.navigation_dimension == 0:  # Slice bands
-                print(1)
-                hkl = self.hkl[key]
-                gnomonic_radius = self.gnomonic_radius
-                structure_factor = self.structure_factor[key]
-                theta = self.theta[key]
-                sliced = True
-        elif isinstance(key, tuple) and (
-            isinstance(key[0], int) or isinstance(key[0], slice)
-        ):
-            if self.navigation_dimension == 1 and len(key) == 2:  # Slice both
-                nav_slice, band_slice = key
-                print(2)
-                hkl = self.hkl[band_slice]
-                structure_factor = self.structure_factor[band_slice]
-                theta = self.theta[band_slice]
-                gnomonic_radius = self.gnomonic_radius[nav_slice]
-                sliced = True
-        if not sliced:
-            print(3)
-            hkl = self.hkl
-            structure_factor = self.structure_factor
-            theta = self.theta
-            gnomonic_radius = self.gnomonic_radius[key]
+        """Get a deepcopy subset of the KikuchiBand object.
+
+        Properties have different shapes, so care must be taken when
+        slicing. As an example, consider a 2 x 3 map with 4 bands. Three
+        data shapes are considered:
+        * navigation shape (2, 3) (gnomonic_radius)
+        * band shape (4,) (hkl, structure_factor, theta)
+        * full shape (2, 3, 4) (hkl_detector, in_pattern)
+        """
+        # These are overwritten as the input key length is investigated
+        nav_slice, band_slice = key, key  # full_slice = key
+        nav_ndim = self.navigation_dimension
+        n_keys = len(key) if hasattr(key, "__iter__") else 1
+        if n_keys == 0:  # The case with key = ()/slice(None). Return everything
+            band_slice = slice(None)
+        elif n_keys == 1:
+            if nav_ndim != 0:
+                band_slice = slice(None)
+        elif n_keys == 2:
+            if nav_ndim == 0:
+                raise IndexError("Not enough axes to slice")
+            elif nav_ndim == 1:
+                nav_slice = key[0]
+                band_slice = key[1]
+            else:  # nav_slice = key
+                band_slice = slice(None)
+        elif n_keys == 3:  # Maximum number of slices
+            if nav_ndim < 2:
+                raise IndexError("Not enough axes to slice")
+            else:
+                nav_slice = key[:2]
+                band_slice = key[2]
+        print(f"key: {key}, nav_slice: {nav_slice}, band_slice: {band_slice}\n")
         new_bands = KikuchiBand(
             phase=self.phase,
-            hkl=hkl,
+            hkl=self.hkl[band_slice],
             hkl_detector=self.hkl_detector[key],
             in_pattern=self.in_pattern[key],
-            gnomonic_radius=gnomonic_radius,
+            gnomonic_radius=self.gnomonic_radius[nav_slice],
         )
-        new_bands._structure_factor = structure_factor
-        new_bands._theta = theta
+        new_bands._structure_factor = self.structure_factor[band_slice]
+        new_bands._theta = self.theta[band_slice]
         return new_bands
 
     def __repr__(self):

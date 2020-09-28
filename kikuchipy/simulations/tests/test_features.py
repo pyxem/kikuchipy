@@ -211,8 +211,12 @@ class TestKikuchiBand:
         "nav_shape, n_bands, get_key, desired_data_shape_before, "
         "desired_data_shape_after",
         [
+            ((2, 3), 9, (), (2, 3, 9), (2, 3, 9)),
+            ((2, 3), 18, slice(None), (2, 3, 18), (2, 3, 18)),
             ((2, 3), 9, 0, (2, 3, 9), (3, 9)),
-            # TODO: More cases!
+            ((2, 3), 9, (slice(0, 2), 0), (2, 3, 9), (2, 9)),
+            ((2, 3), 9, (1, slice(None)), (2, 3, 9), (3, 9)),
+            ((2, 3), 5, (slice(None), 2, slice(0, 5)), (2, 3, 5), (2, 5)),
         ],
     )
     def test_getitem(
@@ -234,7 +238,7 @@ class TestKikuchiBand:
             phase=nickel_phase,
             hkl=hkl,
             hkl_detector=hkl_detector,
-            in_pattern=np.ones(nav_shape, dtype=bool),
+            in_pattern=np.ones(nav_shape + (n_bands,), dtype=bool),
         )
 
         assert bands._data_shape == desired_data_shape_before
@@ -242,6 +246,35 @@ class TestKikuchiBand:
         new_bands = bands[get_key]
         assert new_bands._data_shape == desired_data_shape_after
 
-    def test_hesse_lines(self):
+    def test_hesse_lines(self, nickel_phase):
         """Desired Hesse lines."""
-        pass
+        full_shape = (2, 2, 2)
+        bands = KikuchiBand(
+            phase=nickel_phase,
+            hkl=np.array([[-1, 1, 1], [0, -2, 0]]),
+            hkl_detector=np.tile(
+                np.array([[0.26, 0.32, 0.26], [-0.21, 0.45, -0.27]]),
+                full_shape + (1, 1),
+            ),
+            in_pattern=np.ones(full_shape, dtype=bool),
+        )
+
+        assert np.allclose(
+            bands.hesse_line_x,
+            np.array(
+                [
+                    [[-0.39764706, -0.22992701], [-0.39764706, -0.22992701]],
+                    [[-0.39764706, -0.22992701], [-0.39764706, -0.22992701]],
+                ]
+            ),
+        )
+
+        assert np.allclose(
+            bands.hesse_line_y,
+            np.array(
+                [
+                    [[-0.48941176, 0.49270073], [-0.48941176, 0.49270073]],
+                    [[-0.48941176, 0.49270073], [-0.48941176, 0.49270073]],
+                ]
+            ),
+        )
