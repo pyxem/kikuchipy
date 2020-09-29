@@ -320,7 +320,3 @@ class TestKikuchiBand:
                 ]
             ),
         )
-
-    def test_hesse_alpha(self):
-        """Expected behaviour with varying shapes."""
-        pass
