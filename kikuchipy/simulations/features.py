@@ -181,9 +181,11 @@ class KikuchiBand(ReciprocalLatticePoint):
         as a boolean array.
         """
         is_full_upper = self.z_detector > -1e-5
-        gnomonic_radius = self.gnomonic_radius[..., np.newaxis]
+        gnomonic_radius = self._get_reshaped_gnomonic_radius(
+            self.hesse_distance.ndim
+        )
         in_circle = np.abs(self.hesse_distance) < gnomonic_radius
-        return np.logical_and(in_circle, is_full_upper).squeeze()
+        return np.logical_and(in_circle, is_full_upper)
 
     @property
     def hesse_alpha(self) -> np.ndarray:
@@ -192,8 +194,8 @@ class KikuchiBand(ReciprocalLatticePoint):
         """
         hesse_distance = self.hesse_distance
         hesse_distance[~self.within_gnomonic_radius] = np.nan
-        gnomonic_radius = self.gnomonic_radius.reshape(
-            self.gnomonic_radius.shape + (1,) * (self.navigation_dimension - 1)
+        gnomonic_radius = self._get_reshaped_gnomonic_radius(
+            hesse_distance.ndim
         )
         return np.arccos(hesse_distance / gnomonic_radius)
 
@@ -219,9 +221,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         plane_trace[..., 3] = np.sin(alpha2)
 
         # And remember to multiply by the gnomonic radius
-        gnomonic_radius = self.gnomonic_radius.reshape(
-            self.gnomonic_radius.shape + (1,) * self.navigation_dimension
-        )
+        gnomonic_radius = self._get_reshaped_gnomonic_radius(plane_trace.ndim)
         return gnomonic_radius * plane_trace
 
     @property
@@ -265,7 +265,6 @@ class KikuchiBand(ReciprocalLatticePoint):
             else:
                 nav_slice = key[:2]
                 band_slice = key[2]
-        print(f"key: {key}, nav_slice: {nav_slice}, band_slice: {band_slice}\n")
         new_bands = KikuchiBand(
             phase=self.phase,
             hkl=self.hkl[band_slice],
@@ -283,6 +282,12 @@ class KikuchiBand(ReciprocalLatticePoint):
         )
         first_line = f"{self.__class__.__name__} {shape_str}"
         return "\n".join([first_line] + super().__repr__().split("\n")[1:])
+
+    def _get_reshaped_gnomonic_radius(self, ndim: int) -> np.ndarray:
+        add_ndim = ndim - self.gnomonic_radius.ndim
+        return self.gnomonic_radius.reshape(
+            self.gnomonic_radius.shape + (1,) * add_ndim
+        )
 
     def unique(self, **kwargs):
         # TODO: Fix transfer of properties in this class and other inheriting
