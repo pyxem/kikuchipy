@@ -86,6 +86,22 @@ centre coordinate and static background pattern (stored as a
     >>> s.set_experimental_parameters(
     ...     beam_energy=15, xpc=0.5073, static_bg=static_bg)
 
+In addition to the HyperSpy provided ``metadata``, ``original_metadata`` and
+``axes_manager`` properties, kikuchipy tries to read a
+:class:`~orix.crystal_map.crystal_map.CrystalMap` object indexing results into a
+``xmap`` property and a :class:`~kikuchipy.detectors.ebsd_detector.EBSDDetector`
+object into a ``detector`` property:
+
+.. code-block::
+
+    >>> s.xmap
+    Phase  Orientations  Name  Space group  Point group  Proper point group     Color
+        0  200 (100.0%)    ni        Fm-3m         m-3m                 432  tab:blue
+    Properties:
+    Scan unit: um
+    >>> s.detector
+    EBSDDetector (60, 60), px_size 70.0 um, binning 8, tilt 0, pc (0.5, 0.5, 0.5)
+
 .. _from-numpy-array:
 
 From a NumPy array
