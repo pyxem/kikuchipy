@@ -35,6 +35,7 @@ from hyperspy.roi import BaseInteractiveROI
 from hyperspy.api import interactive
 from h5py import File
 import numpy as np
+from orix.crystal_map import CrystalMap
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
@@ -97,6 +98,11 @@ class EBSD(CommonImage, Signal2D):
                 px_size=self.axes_manager.signal_axes[0].scale,
             )
 
+        if "xmap" in kwargs:
+            self._xmap = kwargs.pop("xmap")
+        else:
+            self._xmap = None
+
         # Update metadata if object is initialised from numpy array
         if not self.metadata.has_item(metadata_nodes("ebsd")):
             md = self.metadata.as_dictionary()
@@ -104,6 +110,14 @@ class EBSD(CommonImage, Signal2D):
             self.metadata = DictionaryTreeBrowser(md)
         if not self.metadata.has_item("Sample.Phases"):
             self.set_phase_parameters()
+
+    @property
+    def xmap(self) -> CrystalMap:
+        """A :class:`~orix.crystal_map.CrystalMap` containing the
+        phases, unit cell rotations and auxiliary properties of the EBSD
+        data set.
+        """
+        return self._xmap
 
     def set_experimental_parameters(
         self,

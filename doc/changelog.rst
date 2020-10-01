@@ -37,6 +37,9 @@ Added
 - Dependency on the diffsims package (https://github.com/pyxem/diffsims/) for
   handling of electron scattering and diffraction.
   (`#220 <https://github.com/pyxem/kikuchipy/pull/220>`_)
+- EBSD.xmap property storing an orix CrystalMap object. So far only read from
+  a EMsoft simulated EBSD pattern file. Relevant documentation updated.
+  (`#226 <https://github.com/pyxem/kikuchipy/pull/226>`_)
 
 Changed
 -------
