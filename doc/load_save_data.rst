@@ -88,9 +88,10 @@ centre coordinate and static background pattern (stored as a
 
 In addition to the HyperSpy provided ``metadata``, ``original_metadata`` and
 ``axes_manager`` properties, kikuchipy tries to read a
-:class:`~orix.crystal_map.crystal_map.CrystalMap` object indexing results into a
-``xmap`` property and a :class:`~kikuchipy.detectors.ebsd_detector.EBSDDetector`
-object into a ``detector`` property:
+:class:`~orix.crystal_map.crystal_map.CrystalMap` object with indexing results
+into a ``xmap`` property and an
+:class:`~kikuchipy.detectors.ebsd_detector.EBSDDetector` object into a
+``detector`` property:
 
 .. code-block::
 
@@ -303,6 +304,11 @@ the kikuchipy format, e.g. one containing only ``Scan 1``, by passing:
     >>> s.save('patterns.h5', add_scan=True, scan_number=2)
 
 Here, the h5ebsd :func:`~kikuchipy.io.plugins.h5ebsd.file_writer` is called.
+
+.. note::
+
+    The ``xmap`` and ``detector`` EBSD class properties are so far not written
+    to this file format.
 
 .. _nordif-format:
 
