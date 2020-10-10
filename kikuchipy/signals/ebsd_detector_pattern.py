@@ -197,10 +197,11 @@ def _get_lambert_interpolation_parameters(
     niyp = np.where(niyp < npy - 1, niyp, niy)
     nix = np.where(nix < 0, nixp, nix)
     niy = np.where(niy < 0, niyp, niy)
-    dx = x - nix
-    dy = y - niy
+    dx = x - nix + scale
+    dy = y - niy + scale
     dxm = 1.0 - dx
     dym = 1.0 - dy
+
     return (
         nix.astype(int),
         niy.astype(int),
@@ -213,9 +214,9 @@ def _get_lambert_interpolation_parameters(
     )
 
 
-a = EBSDDetectorPattern.get_pattern_eu(
-    master_pattern, detector, 0, 0, 0, _get_direction_cosines(detector)
-)
-
-plt.imshow(a, cmap="gray")
-plt.show()
+# a = EBSDDetectorPattern.get_pattern_eu(
+#     master_pattern, detector, 0, 0, 0, _get_direction_cosines(detector)
+# )
+#
+# plt.imshow(a, cmap="gray", interpolation='none')
+# plt.show()
