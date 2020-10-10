@@ -86,8 +86,9 @@ class EBSDDetectorPattern:
             indexing="ij",
         )
 
-        # Current direction cosines output (row, column, xyz)
-        rotated_dc = rotation * direction_cosines[ii, jj]
+        # Current direction cosines output (row, column, xyz) -- changed
+        # Current direction cosines output (column, row, xyz)
+        rotated_dc = rotation * direction_cosines[jj, ii]
 
         (
             nix,
@@ -102,28 +103,25 @@ class EBSDDetectorPattern:
             rotated_dc, scale_factor, npx, npy
         )
         # it should look at all the energy thingies probably
-        print(nix[0, 0])
-        print(niy[0, 0])
-        print(ii)
         ebsd_detector_pattern[ii, jj] = np.where(
             rotated_dc.z >= 0,
             (
-                +master_north.data[
+                +master_north[
                     15,
-                    nix[ii.astype(int), jj.astype(int)],
-                    niy[ii.astype(int), jj.astype(int)],
+                    nix[ii, jj],
+                    niy[ii, jj],
                 ]
                 * dxm
                 * dym
-                + master_north.data[15, nixp, niy] * dx * dym
-                + master_north.data[15, nix, niyp] * dxm * dy
-                + master_north.data[15, nixp, niyp] * dx * dy
+                + master_north[15, nixp, niy] * dx * dym
+                + master_north[15, nix, niyp] * dxm * dy
+                + master_north[15, nixp, niyp] * dx * dy
             ),
             (
-                +master_south.data[15, nix, niy] * dxm * dym
-                + master_south.data[15, nixp, niy] * dx * dym
-                + master_south.data[15, nix, niyp] * dxm * dy
-                + master_south.data[15, nixp, niyp] * dx * dy
+                +master_south[15, nix, niy] * dxm * dym
+                + master_south[15, nixp, niy] * dx * dym
+                + master_south[15, nix, niyp] * dxm * dy
+                + master_south[15, nixp, niyp] * dx * dy
             ),
         )
         return ebsd_detector_pattern
@@ -157,7 +155,7 @@ def _get_direction_cosines(detector: EBSDDetector):
     cw = np.cos(omega)
     sw = np.sin(omega)
 
-    r_g_array = np.zeros((detector.nrows, detector.ncols, 3))
+    r_g_array = np.zeros((detector.ncols, detector.nrows, 3))
 
     ii, jj = np.meshgrid(
         np.arange(0, detector.nrows),
@@ -170,9 +168,9 @@ def _get_direction_cosines(detector: EBSDDetector):
 
     # NOTE EMSOFT HAS CHANGED THE INDICES THIS IS NOT DONE HERE YET
     # SEE WHAT YOU NEED TO DO OR IF YOU NEED TO DO SOMETHING AT ALL :)
-    r_g_array[ii, jj, 0] = scin_y[ii] * ca + sa * Ls[jj]
-    r_g_array[ii, jj, 1] = Lc[jj]
-    r_g_array[ii, jj, 2] = -sa * scin_y[ii] + ca * Ls[jj]
+    r_g_array[jj, ii, 0] = scin_y[ii] * ca + sa * Ls[jj]
+    r_g_array[jj, ii, 1] = Lc[jj]
+    r_g_array[jj, ii, 2] = -sa * scin_y[ii] + ca * Ls[jj]
 
     r_g = Vector3d(r_g_array)
     # Current output shape (row, column, xyz) vs EMsoft (column, row, xyz) I think
@@ -219,5 +217,5 @@ a = EBSDDetectorPattern.get_pattern_eu(
     master_pattern, detector, 0, 0, 0, _get_direction_cosines(detector)
 )
 
-plt.imshow(a)
+plt.imshow(a, cmap="gray")
 plt.show()
