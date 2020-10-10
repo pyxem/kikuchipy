@@ -221,7 +221,7 @@ def _get_direction_cosines(detector: EBSDDetector):
     r_g_array[jj, ii, 2] = -sa * scin_y[ii] + ca * Ls[jj]
 
     r_g = Vector3d(r_g_array)
-    # Current output shape (row, column, xyz) vs EMsoft (column, row, xyz) I think
+
     return r_g.unit
 
 
