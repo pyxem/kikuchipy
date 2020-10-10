@@ -262,6 +262,7 @@ def _get_lambert_interpolation_parameters(
     )
 
 
+# TODO: I believe the patterns need to be rotated 180 degrees and then inverted
 a = EBSDDetectorPattern.get_pattern(
     master_pattern, detector, _get_direction_cosines(detector), 120, 45, 60
 )
