@@ -56,7 +56,6 @@ detector = EBSDDetector(
 class EBSDDetectorPattern:
     @classmethod
     def get_patterns(cls, master_pattern, anglefile, detector: EBSDDetector):
-        direction_cosines = _get_direction_cosines(detector)
 
         # I am not sure this is the fastest way to do things, limited experience with io
         with open(anglefile, "r") as f:
@@ -81,8 +80,11 @@ class EBSDDetectorPattern:
         )
 
         num_rotations = np.arange(0, number_of_rotations)
+        direction_cosines = _get_direction_cosines(
+            detector, number_of_rotations
+        )
 
-        # THis part can be optimized, but let it as is for now to get a MVP
+        #       THis part can be optimized, but let it as is for now to get a MVP
         for i in range(number_of_rotations):
             pattern_catalogue[..., i] = EBSDDetectorPattern.get_pattern(
                 master_pattern,
@@ -93,8 +95,9 @@ class EBSDDetectorPattern:
                 angle_array[i, 0],
             )
 
-        # I think this is the best way to do it but this leads to IndexError: index 2 is out of bounds for axis 1 with size 2 in from_euler
         # pattern_catalogue[..., num_rotations] = EBSDDetectorPattern.get_pattern(master_pattern, detector, direction_cosines, angle_array[num_rotations, 0], angle_array[num_rotations, 1], angle_array[num_rotations, 2])
+        # Rotate 180 degrees for now and flip
+        # pattern_catalogue = np.rot90(pattern_catalogue, 2)
 
         return pattern_catalogue
 
@@ -104,7 +107,10 @@ class EBSDDetectorPattern:
     ):
         # This can be determined from anglefile, but not sure if it is faster?
         if len(args) == 3:
-            rotation = rot.Rotation.from_euler(np.radians(args))
+            euler = np.column_stack(
+                np.radians(args)
+            )  # Not needed in current implementation but should be down the road
+            rotation = rot.Rotation.from_euler(euler)
         elif len(args) == 4:
             rotation = rot.Rotation(args)
         else:  # This can probably be removed if get_pattern becomes a private method
@@ -116,6 +122,7 @@ class EBSDDetectorPattern:
         master_north = master_pattern.data[0]
         master_south = master_pattern.data[1]
 
+        # NYI
         energy_bins = int(
             master_pattern.axes_manager["energy"].axis[-1]
             - master_pattern.axes_manager["energy"].axis[0]
@@ -135,7 +142,7 @@ class EBSDDetectorPattern:
             indexing="ij",
         )
 
-        # Current direction cosines output (column, row, xyz)
+        # Current direction cosines output (column, row, rotation, xyz)
         rotated_dc = rotation * direction_cosines[jj, ii]
 
         (
@@ -179,7 +186,7 @@ class EBSDDetectorPattern:
 
 # This should probably be its own method in the detector module
 # detector.direction_cosines or something
-def _get_direction_cosines(detector: EBSDDetector):
+def _get_direction_cosines(detector: EBSDDetector, num_rot):
     xpc = detector.pc[..., 0]
     ypc = detector.pc[..., 1]
     L = detector.pc[..., 2]  # This will be wrong in the future
@@ -220,8 +227,10 @@ def _get_direction_cosines(detector: EBSDDetector):
     r_g_array[jj, ii, 1] = Lc[jj]
     r_g_array[jj, ii, 2] = -sa * scin_y[ii] + ca * Ls[jj]
 
+    # r_g_array = np.repeat(r_g_array[:, :,np.newaxis, :], num_rot, axis=2)
+
     r_g = Vector3d(r_g_array)
-    # Current output shape (row, column, xyz) vs EMsoft (column, row, xyz) I think
+
     return r_g.unit
 
 
@@ -263,20 +272,24 @@ def _get_lambert_interpolation_parameters(
 
 
 # TODO: I believe the patterns need to be rotated 180 degrees and then inverted
-a = EBSDDetectorPattern.get_pattern(
-    master_pattern, detector, _get_direction_cosines(detector), 120, 45, 60
+# a = EBSDDetectorPattern.get_pattern(
+#      master_pattern, detector, _get_direction_cosines(detector, 1), 120, 45, 60)
+patterns = EBSDDetectorPattern.get_patterns(
+    master_pattern, euler_angles, detector
 )
-# patterns = EBSDDetectorPattern.get_patterns(master_pattern, euler_angles, detector)
 #
-# # These are currently upside down compared to EMsoft!
+# # These are currently upside down compared (and inverted?) to EMsoft!
 # # first rotation
-# #plt.imshow(patterns[..., 0], cmap="gray")
+plt.imshow(patterns[..., 1], cmap="gray")
+plt.axis("off")
 # # 2nd rotation
 # plt.imshow(patterns[..., 1], cmap="gray") # Looks a bit more rotated than the key
 # #...
 # # nth rotation
 # #plt.imshow(patterns[..., n-1], cmap="gray")
+#
 
-plt.imshow(a, cmap="gray")
+
+# plt.imshow(a, cmap="gray")
 
 plt.show()
