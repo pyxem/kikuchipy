@@ -320,3 +320,8 @@ class TestKikuchiBand:
                 ]
             ),
         )
+
+
+class TestZoneAxis:
+    def test_init(self):
+        pass

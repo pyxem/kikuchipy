@@ -27,14 +27,14 @@ def get_line_segment_list(lines: Union[list, np.ndarray], **kwargs) -> list:
 
     Parameters
     ----------
-    lines :
+    lines
         On the form [[x00, y00, x01, y01], [x10, y10, x11, y11], ...].
-    kwargs :
+    kwargs
         Keyword arguments allowed by :class:`matplotlib.pyplot.axvline`.
 
     Returns
     -------
-    marker_list :
+    marker_list
         List of :class:`hyperspy.utils.markers.line_segment`.
     """
     lines = np.asarray(lines)
@@ -43,13 +43,14 @@ def get_line_segment_list(lines: Union[list, np.ndarray], **kwargs) -> list:
 
     marker_list = []
     for i in range(lines.shape[-2]):  # Iterate over bands
-        # TODO: Exclude np.nan bands (not visible in that pattern)
-        x1 = lines[..., i, 0]
-        y1 = lines[..., i, 1]
-        x2 = lines[..., i, 2]
-        y2 = lines[..., i, 3]
-        marker_list.append(line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kwargs))
-
+        if not np.allclose(lines[..., i, :], np.nan, equal_nan=True):
+            x1 = lines[..., i, 0]
+            y1 = lines[..., i, 1]
+            x2 = lines[..., i, 2]
+            y2 = lines[..., i, 3]
+            marker_list.append(
+                line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kwargs)
+            )
     return marker_list
 
 
@@ -58,56 +59,71 @@ def get_point_list(points: Union[list, np.ndarray], **kwargs) -> list:
 
     Parameters
     ----------
-    points :
+    points
         On the form [[x0, y0], [x1, y1], ...].
-    kwargs :
+    kwargs
         Keyword arguments allowed by :class:`matplotlib.pyplot.axvline`.
 
     Returns
     -------
-    marker_list :
+    marker_list
         List of :class:`hyperspy.utils.markers.point`.
     """
-    points = np.atleast_2d(points)
-    return [point(x=x, y=y, **kwargs) for x, y in points]
+    points = np.asarray(points)
+    if points.ndim == 1:
+        points = points[np.newaxis, ...]
+
+    marker_list = []
+    for i in range(points.shape[-2]):  # Iterate over zone axes
+        if not np.allclose(points[..., i, :], np.nan, equal_nan=True):
+            marker_list.append(
+                point(x=points[..., i, 0], y=points[..., i, 1], **kwargs)
+            )
+    return marker_list
 
 
-def get_text_list(texts: list, coordinates: np.ndarray, **kwargs) -> list:
+def get_text_list(
+    texts: Union[list, np.ndarray], coordinates: np.ndarray, **kwargs,
+) -> list:
     """Return a list of text markers.
 
     Parameters
     ----------
-    texts :
+    texts
         A list of texts.
-    coordinates :
+    coordinates
         On the form [[x0, y0], [x1, y1], ...].
-    kwargs :
+    kwargs
         Keyword arguments allowed by :class:`matplotlib.pyplot.axvline.`
 
     Returns
     -------
-    marker_list :
+    marker_list
         List of :class:`hyperspy.utils.markers.text`.
     """
-    coordinates = np.atleast_2d(coordinates)
-    return [
-        text(x=x, y=y, text=t, **kwargs)
-        for t, (x, y) in zip(texts, coordinates)
-    ]
+    coordinates = np.asarray(coordinates)
+    if coordinates.ndim == 1:
+        coordinates = coordinates[np.newaxis, ...]
 
-
-def permanent_on_signal(signal, marker_list: list):
-    """Add a list of markers to a signal.
-
-    Parameters
-    ----------
-    signal : EBSD or EBSDMasterPattern
-        Signal to add markers to.
-    marker_list :
-        List of HyperSpy markers.
-    """
-    if not hasattr(signal.metadata, "Markers"):
-        signal.metadata.add_node("Markers")
-    n_extra = len(signal.metadata.Markers)
-    for i, marker in enumerate(marker_list):
-        signal.metadata.Markers[f"marker{i + n_extra}"] = marker
+    marker_list = []
+    is_finite = np.isfinite(coordinates)[..., 0]
+    coordinates[~is_finite] = -1
+    for i in range(coordinates.shape[-2]):  # Iterate over zone axes
+        x = coordinates[..., i, 0]
+        y = coordinates[..., i, 1]
+        x[~is_finite[..., i]] = np.nan
+        y[~is_finite[..., i]] = np.nan
+        text_marker = text(x=x, y=y, text=texts[i], **kwargs,)
+        # TODO: Pass "visible" parameter to text() when HyperSpy allows
+        #  it (merges this PR
+        #  https://github.com/hyperspy/hyperspy/pull/2558 and publishes
+        #  a minor release with that update)
+        # text_marker = text(
+        #     x=coordinates[..., i, 0],
+        #     y=coordinates[..., i, 1],
+        #     text=texts[i],
+        #     visible=is_finite[..., i],
+        #     **kwargs
+        # )
+        marker_list.append(text_marker)
+    return marker_list

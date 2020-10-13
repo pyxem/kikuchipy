@@ -320,7 +320,7 @@ class EBSD(CommonImage, Signal2D):
         """
         # Ensure atom coordinates are numpy arrays
         if atom_coordinates is not None:
-            for phase, val in atom_coordinates.items():
+            for phase, _ in atom_coordinates.items():
                 atom_coordinates[phase]["coordinates"] = np.array(
                     atom_coordinates[phase]["coordinates"]
                 )
@@ -1345,7 +1345,7 @@ class EBSD(CommonImage, Signal2D):
             else:
                 raise ValueError("Filename not defined.")
         if extension is not None:
-            basename, ext = os.path.splitext(filename)
+            basename, _ = os.path.splitext(filename)
             filename = basename + "." + extension
         _save(filename, self, overwrite=overwrite, **kwargs)
 

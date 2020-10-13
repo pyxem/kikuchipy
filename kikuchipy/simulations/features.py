@@ -292,20 +292,20 @@ class KikuchiBand(ReciprocalLatticePoint):
     def unique(self, **kwargs):
         # TODO: Fix transfer of properties in this class and other inheriting
         #  classes in diffsims when creating a new class object
-        raise NotImplemented
+        raise NotImplementedError
 
     def symmetrise(self, **kwargs):
         # TODO: Fix transfer of properties in this class and other inheriting
         #  classes in diffsims when creating a new class object
-        raise NotImplemented
+        raise NotImplementedError
 
     @classmethod
     def from_min_dspacing(cls, **kwargs):
-        raise NotImplemented
+        raise NotImplementedError
 
     @classmethod
     def from_highest_hkl(cls, **kwargs):
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class ZoneAxis(ReciprocalLatticePoint):
@@ -314,8 +314,8 @@ class ZoneAxis(ReciprocalLatticePoint):
     def __init__(
         self,
         phase: Phase,
-        hkl: Union[Vector3d, np.ndarray, list, tuple],
-        coordinates: np.ndarray,
+        uvw: Union[Vector3d, np.ndarray, list, tuple],
+        uvw_detector: np.ndarray,
         in_pattern: np.ndarray,
         gnomonic_radius: Union[float, np.ndarray] = 10,
     ):
@@ -326,9 +326,9 @@ class ZoneAxis(ReciprocalLatticePoint):
         phase
             A phase container with a crystal structure and a space and
             point group describing the allowed symmetry operations.
-        hkl
+        uvw
             Miller indices.
-        coordinates
+        uvw_detector
             Zone axes coordinates on the detector.
         in_pattern
             Boolean array of shape (n, n_hkl) indicating whether an hkl
@@ -338,89 +338,140 @@ class ZoneAxis(ReciprocalLatticePoint):
             form distances below this radius is returned when called
             for.
         """
-        super().__init__(phase=phase, hkl=hkl)
-        if coordinates.ndim == 2:
-            self._coordinates = coordinates[np.newaxis, ...]
-        else:  # ndim == 3
-            self._coordinates = coordinates
-        self._in_pattern = np.atleast_2d(in_pattern)
+        super().__init__(phase=phase, hkl=uvw)
+        self._uvw_detector = Vector3d(uvw_detector)
+        self._in_pattern = in_pattern
         self.gnomonic_radius = gnomonic_radius
 
     @property
+    def uvw_detector(self) -> Vector3d:
+        """Detector coordinates for all zone axes per pattern."""
+        return self._uvw_detector
+
+    @property
     def gnomonic_radius(self) -> np.ndarray:
-        """Only plane trace coordinates of bands with Hesse normal form
-        distances below this radius is returned when called for.
+        """Only zone axes within this distance from the PC are returned
+        when called for. Per navigation point.
         """
         return self._gnomonic_radius
 
     @gnomonic_radius.setter
-    def gnomonic_radius(self, value: Union[float, np.ndarray]):
+    def gnomonic_radius(self, value: Union[np.ndarray, list, float]):
         """Only plane trace coordinates of bands with Hesse normal form
-        distances below this radius is returned when called for.
+        distances below this radius are returned when called for. Per
+        navigation point.
         """
-        r = np.asarray(value)
-        if r.ndim == 1:
-            self._gnomonic_radius = r[:, np.newaxis]
-        else:
-            self._gnomonic_radius = r
+        r = np.atleast_1d(value)
+        if r.size == 1:
+            r = r * np.ones(self.navigation_shape)
+        self._gnomonic_radius = np.atleast_1d(r.reshape(self.navigation_shape))
+
+    @property
+    def navigation_shape(self) -> tuple:
+        """Navigation shape."""
+        return self.uvw_detector.shape[:-1]
+
+    @property
+    def navigation_dimension(self) -> int:
+        """Number of navigation dimensions (a maximum of 2)."""
+        return len(self.navigation_shape)
+
+    @property
+    def _data_shape(self) -> tuple:
+        """Navigation shape + number of bands."""
+        return self.navigation_shape + (self.size,)
 
     @property
     def in_pattern(self) -> np.ndarray:
         """Which bands are visible in which patterns."""
         return self._in_pattern
 
-    def __getitem__(self, key, **kwargs):
-        return ZoneAxis(
-            phase=self.phase,
-            hkl=self.hkl,
-            coordinates=self.coordinates[key],
-            in_pattern=self.in_pattern[key],
-            gnomonic_radius=self.gnomonic_radius,
-        )
-
-    @property
-    def coordinates(self) -> np.ndarray:
-        return self._coordinates
-
     @property
     def x_detector(self) -> np.ndarray:
-        return self.coordinates[..., 0]
+        """X detector coordinate for all zone axes per pattern."""
+        return self.uvw_detector.data[..., 0]
 
     @property
     def y_detector(self) -> np.ndarray:
-        return self.coordinates[..., 1]
+        """Y detector coordinate for all zone axes per pattern."""
+        return self.uvw_detector.data[..., 1]
 
     @property
     def z_detector(self) -> np.ndarray:
-        return self.coordinates[..., 2]
+        """Z detector coordinate for all zone axes per pattern."""
+        return self.uvw_detector.data[..., 2]
 
     @property
     def x_gnomonic(self) -> np.ndarray:
-        """Only coordinates for the axes within the Gnomonic radius are
-        returned.
+        """X coordinate in the gnomonic projection plane on the detector
+        for all zone axes per pattern.
         """
-        within = self.within_gnomonic_radius
-        return self.x_detector[within] / self.z_detector[within]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            return self.x_detector / self.z_detector
 
     @property
     def y_gnomonic(self) -> np.ndarray:
-        """Only coordinates for the axes within the Gnomonic radius are
-        returned.
+        """X coordinate in the gnomonic projection plane on the detector
+        for all zone axes per pattern.
         """
-        within = self.within_gnomonic_radius
-        return self.y_detector[within] / self.z_detector[within]
+        with np.errstate(divide="ignore", invalid="ignore"):
+            return self.y_detector / self.z_detector
 
     @property
     def r_gnomonic(self) -> np.ndarray:
-        return get_r(self.coordinates) / self.z_detector
-
-    @property
-    def theta_polar(self) -> np.ndarray:
-        return get_theta(self.coordinates)
+        """Gnomonic radius for all zone axes per pattern."""
+        return np.sqrt(self.x_gnomonic ** 2 + self.y_gnomonic ** 2)
 
     @property
     def within_gnomonic_radius(self) -> np.ndarray:
-        return self.r_gnomonic < self.gnomonic_radius
+        """Return whether a zone axis is within the `gnomonic_radius`
+        as a boolean array.
+        """
+        is_full_upper = self.z_detector > -1e-5
+        gnomonic_radius = self._get_reshaped_gnomonic_radius(
+            self.navigation_dimension + 1
+        )
+        in_circle = self.r_gnomonic < gnomonic_radius
+        return np.logical_and(in_circle, is_full_upper)
+
+    @property
+    def _xy_within_gnomonic_radius(self) -> np.ndarray:
+        xy = np.ones(self._data_shape + (2,)) * np.nan
+        within = self.within_gnomonic_radius
+        xy[within, 0] = self.x_gnomonic[within]
+        xy[within, 1] = self.y_gnomonic[within]
+        return xy
+
+    def __repr__(self):
+        shape_str = _get_dimension_str(
+            nav_shape=self.navigation_shape, sig_shape=(self.size,)
+        )
+        first_line = f"{self.__class__.__name__} {shape_str}"
+        return "\n".join([first_line] + super().__repr__().split("\n")[1:])
+
+    def _get_reshaped_gnomonic_radius(self, ndim: int) -> np.ndarray:
+        add_ndim = ndim - self.gnomonic_radius.ndim
+        return self.gnomonic_radius.reshape(
+            self.gnomonic_radius.shape + (1,) * add_ndim
+        )
+
+    def unique(self, **kwargs):
+        # TODO: Fix transfer of properties in this class and other inheriting
+        #  classes in diffsims when creating a new class object
+        raise NotImplementedError
+
+    def symmetrise(self, **kwargs):
+        # TODO: Fix transfer of properties in this class and other inheriting
+        #  classes in diffsims when creating a new class object
+        raise NotImplementedError
+
+    @classmethod
+    def from_min_dspacing(cls, **kwargs):
+        raise NotImplementedError
+
+    @classmethod
+    def from_highest_hkl(cls, **kwargs):
+        raise NotImplementedError
 
 
 def _get_dimension_str(nav_shape: tuple, sig_shape: tuple):

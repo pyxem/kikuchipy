@@ -100,3 +100,6 @@ ENV/
 #auto changing files
 build/
 src/
+
+# Visual Studo Code
+*.code-workspace

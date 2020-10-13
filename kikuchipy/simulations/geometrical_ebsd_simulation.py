@@ -16,9 +16,12 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from collections import defaultdict
 from re import sub
-from typing import Optional
+from typing import List, Optional, Tuple
+import warnings
 
+import matplotlib
 import numpy as np
 from orix.quaternion.rotation import Rotation
 
@@ -28,6 +31,7 @@ from kikuchipy.draw.markers import (
     get_point_list,
     get_text_list,
 )
+from kikuchipy.draw.colors import KIKUCHI_BAND_COLORS_TSL
 from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 
@@ -106,21 +110,28 @@ class GeometricalEBSDSimulation:
 
         Returns
         -------
-        zone_axes_coords
+        za_coords
             Column sorted, on the form [[x0, y0], [x1, y1], ...].
         """
-        x_gnomonic = self.zone_axes.x_gnomonic
-        y_gnomonic = self.zone_axes.y_gnomonic
-        size = x_gnomonic.size
-        zone_axes_coords = np.zeros((size, 2), dtype=np.float32)
-        pcx, pcy, pcz = self.detector.pc
-        zone_axes_coords[:, 0] = (
-            x_gnomonic + (pcx / pcz)
-        ) / self.detector.x_scale
-        zone_axes_coords[:, 1] = (
-            -y_gnomonic + (pcy / pcz)
-        ) / self.detector.y_scale
-        return zone_axes_coords
+        xyg = self.zone_axes._xy_within_gnomonic_radius
+        xg = xyg[..., 0]
+        yg = xyg[..., 1]
+        za_coords = np.zeros_like(xyg)
+
+        # Get projection center coordinates, and add two axis to get the shape
+        # (navigation shape, 1, 1)
+        pcx = self.detector.pcx[..., np.newaxis]
+        pcy = self.detector.pcy[..., np.newaxis]
+        pcz = self.detector.pcz[..., np.newaxis]
+
+        za_coords[..., 0] = (xg + (pcx / pcz)) / self.detector.x_scale[
+            ..., np.newaxis
+        ]
+        za_coords[..., 1] = (-yg + (pcy / pcz)) / self.detector.y_scale[
+            ..., np.newaxis
+        ]
+
+        return za_coords
 
     @property
     def zone_axes_label_detector_coordinates(self) -> np.ndarray:
@@ -132,15 +143,22 @@ class GeometricalEBSDSimulation:
         np.ndarray
             Column sorted, on the form [[x0, y0], [x1, y1], ...].
         """
-        zone_axes_coords = self.zone_axes_detector_coordinates
-        zone_axes_coords[:, 1] -= 0.02 * self.detector.nrows
-        return zone_axes_coords
+        za_coords = self.zone_axes_detector_coordinates
+        za_coords[..., 1] -= 0.02 * self.detector.nrows
+        return za_coords
 
-    def bands_as_markers(self, **kwargs) -> list:
+    def bands_as_markers(
+        self, family_colors: Optional[List[str]] = None, **kwargs
+    ) -> list:
         """Return a list of Kikuchi band line segment markers.
 
         Parameters
         ----------
+        family_colors
+            A list of colors, either as RGB iterables or colors
+            recognizable by Matplotlib, used to color each unique family
+            of bands. If None (default), this is determined from a list
+            similar to the one used in EDAX TSL's software.
         kwargs
             Keyword arguments passed to
             :func:`~kikuchipy.draw.markers.get_line_segment_list`.
@@ -153,14 +171,36 @@ class GeometricalEBSDSimulation:
             lines = np.squeeze(self.bands_detector_coordinates)
         else:
             lines = self.bands_detector_coordinates
-        return get_line_segment_list(
-            lines=lines,
-            linewidth=kwargs.pop("linewidth", 2),
-            color=kwargs.pop("color", "lime"),
-            alpha=kwargs.pop("alpha", 0.7),
-            zorder=kwargs.pop("zorder", 1),
-            **kwargs,
-        )
+
+        # Get dictionaries of families and in which a band belongs
+        families, families_idx = _get_hkl_family(self.bands.hkl.data)
+
+        # Get family colors
+        # TODO: Perhaps move this outside this function (might be useful
+        #  elsewhere)
+        if family_colors is None:
+            family_colors = []
+            colors = KIKUCHI_BAND_COLORS_TSL["m-3m"]
+            for hkl in families.keys():
+                for table_hkl, color in colors:
+                    if _is_equivalent(hkl, table_hkl):
+                        family_colors.append(color)
+                        break
+                else:  # Hopefully we never arrive here
+                    family_colors.append([1, 0, 0])
+
+        # Append list of markers per family
+        marker_list = []
+        for i, idx in enumerate(families_idx.values()):
+            marker_list += get_line_segment_list(
+                lines=lines[..., idx, :],
+                linewidth=kwargs.pop("linewidth", 1),
+                color=family_colors[i],
+                alpha=kwargs.pop("alpha", 1),
+                zorder=kwargs.pop("zorder", 1),
+                **kwargs,
+            )
+        return marker_list
 
     def zone_axes_as_markers(self, **kwargs) -> list:
         """Return a list of zone axes point markers.
@@ -199,9 +239,23 @@ class GeometricalEBSDSimulation:
         -------
         list
         """
-        zone_axes = self.zone_axes[self.zone_axes.within_gnomonic_radius]
+        # TODO: Remove warning after HyperSpy merges this PR
+        #  https://github.com/hyperspy/hyperspy/pull/2558 and publishes
+        #  a minor release with that update
+        if matplotlib._log.level < 40:
+            warnings.warn(
+                message=(
+                    "Matplotlib will print log warnings when EBSD.plot() is "
+                    "called due to zone axes NaN values, unless it's log level "
+                    "is set to 'error' via `matplotlib.set_loglevel('error')`. "
+                    "This will (hopefully) be fixed when HyperSpy releases a "
+                    "minor version with this update "
+                    "https://github.com/hyperspy/hyperspy/pull/2558"
+                ),
+                category=UserWarning,
+            )
         return get_text_list(
-            texts=sub("[][ ]", "", str(zone_axes._hkldata)).split("\n"),
+            texts=sub("[][ ]", "", str(self.zone_axes._hkldata)).split("\n"),
             coordinates=self.zone_axes_label_detector_coordinates,
             color=kwargs.pop("color", "k"),
             zorder=kwargs.pop("zorder", 5),
@@ -319,3 +373,35 @@ class GeometricalEBSDSimulation:
             f"{band_repr}\n"
             f"{rotation_repr}\n"
         )
+
+
+def _get_hkl_family(hkl: np.ndarray) -> Tuple[dict, dict]:
+    # TODO: Almost identical to
+    #  diffsims.crystallography.ReciprocalLatticePoint.unique, improve
+    #  this instead!
+    # Remove [0, 0, 0] points
+    hkl = hkl[~np.all(np.isclose(hkl, 0), axis=1)]
+    families = defaultdict(list)
+    families_idx = defaultdict(list)
+    for i, this_hkl in enumerate(hkl.tolist()):
+        for that_hkl in families.keys():
+            if _is_equivalent(this_hkl, that_hkl):
+                families[tuple(that_hkl)].append(this_hkl)
+                families_idx[tuple(that_hkl)].append(i)
+                break
+        else:
+            families[tuple(this_hkl)].append(this_hkl)
+            families_idx[tuple(this_hkl)].append(i)
+    n_families = len(families)
+    unique_hkl = np.zeros((n_families, 3), dtype=int)
+    for i, all_hkl_in_family in enumerate(families.values()):
+        unique_hkl[i] = sorted(all_hkl_in_family)[-1]
+    return families, families_idx
+
+
+def _is_equivalent(this_hkl: list, that_hkl: list) -> bool:
+    # TODO: Also include equivalence of HKL reduced by common divisor?
+    return np.allclose(
+        sorted(np.abs(this_hkl).astype(int)),
+        sorted(np.abs(that_hkl).astype(int)),
+    )
