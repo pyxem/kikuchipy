@@ -125,7 +125,6 @@ class TestSimilarityMetrics:
             scope=MetricScope.MANY_TO_MANY,
             make_compatible_to_lower_scopes=True,
         )
-        print(euclidean_metric._is_compatible(p, t))
         assert (
             euclidean_metric._is_compatible(p, t) == True
             and pytest.approx(euclidean_metric(p, t)[2, 1]) == 0
