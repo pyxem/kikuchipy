@@ -15,9 +15,3 @@ def _get_number_of_templates(t):
         return t.shape[0]
     else:
         return 1
-
-
-def _create_dummy_data(nav_shape, sig_shape, num_templates):
-    p = da.from_array(np.ones(nav_shape + sig_shape), np.int8)
-    t = da.from_array(np.ones((num_templates,) + sig_shape, np.int8))
-    return p, t
