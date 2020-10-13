@@ -201,7 +201,9 @@ class SimilarityMetric:
         return self._metric_func(patterns, templates)
 
     def _expand_dims_to_match_scope(
-        self, p: Union[np.ndarray, da.Array], t: Union[np.ndarray, da.Array],
+        self,
+        p: Union[np.ndarray, da.Array],
+        t: Union[np.ndarray, da.Array],
     ) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
         p_scope_ndim, t_scope_ndim = self._SCOPE_TO_P_T_NDIM[self.scope]
         p = p[(np.newaxis,) * (p_scope_ndim - p.ndim)]
@@ -267,8 +269,10 @@ class FlatSimilarityMetric(SimilarityMetric):
         return self._metric_func(patterns, templates)
 
 
-def expand_dims_to_many_to_many(
-    p: Union[np.ndarray, da.Array], t: Union[np.ndarray, da.Array], flat: bool,
+def _expand_dims_to_many_to_many(
+    p: Union[np.ndarray, da.Array],
+    t: Union[np.ndarray, da.Array],
+    flat: bool,
 ) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
     """Expand the dims of patterns and templates to match
     `MetricScope.MANY_TO_MANY`.
@@ -300,7 +304,7 @@ def expand_dims_to_many_to_many(
     return p, t
 
 
-def zero_mean(
+def _zero_mean(
     p: Union[np.ndarray, da.Array],
     t: Union[np.ndarray, da.Array],
     flat: bool = False,
@@ -322,7 +326,7 @@ def zero_mean(
         Tuple of `p` and `t` with their mean subtracted.
     """
     squeeze = 1 not in p.shape + t.shape
-    p, t = expand_dims_to_many_to_many(p, t, flat)
+    p, t = _expand_dims_to_many_to_many(p, t, flat)
     p_mean_axis = 1 if flat else (2, 3)
     t_mean_axis = 1 if flat else (1, 2)
     p -= p.mean(axis=p_mean_axis, keepdims=True)
@@ -334,7 +338,7 @@ def zero_mean(
         return p, t
 
 
-def normalize(
+def _normalize(
     p: Union[np.ndarray, da.Array],
     t: Union[np.ndarray, da.Array],
     flat: bool = False,
@@ -356,7 +360,7 @@ def normalize(
         Tuple of `p` and `t` divided respectively by their L2-norms.
     """
     squeeze = 1 not in p.shape + t.shape
-    p, t = expand_dims_to_many_to_many(p, t, flat)
+    p, t = _expand_dims_to_many_to_many(p, t, flat)
     p_sum_axis = 1 if flat else (2, 3)
     t_sum_axis = 1 if flat else (1, 2)
     p /= (p ** 2).sum(axis=p_sum_axis, keepdims=True) ** 0.5
@@ -389,12 +393,10 @@ def _zncc_einsum(
     Union[da.Array, np.ndarray]
         [description]
     """
-    patterns, templates = zero_mean(patterns, templates)
-    patterns, templates = normalize(patterns, templates)
+    patterns, templates = _zero_mean(patterns, templates)
+    patterns, templates = _normalize(patterns, templates)
 
-    zncc = da.einsum(
-        "ijk,lmjk->ilm", templates, patterns, optimize=True
-    )  # TODO: Will fail if np.ndarray!!!
+    zncc = da.einsum("ijk,lmjk->ilm", templates, patterns, optimize=True)
 
     # Alternative with equivalent results:
     #   zncc = da.tensordot(templates, patterns, axes=([1, 2], [2, 3]))
