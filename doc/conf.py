@@ -45,7 +45,7 @@ extensions = [
 intersphinx_mapping = {
     "dask": ("https://docs.dask.org/en/latest", None),
     "diffpy.structure": ("https://www.diffpy.org/diffpy.structure", None),
-    "diffsims": ("https://diffsims.readthedocs.io/en/stable", None),
+    "diffsims": ("https://diffsims.readthedocs.io/en/latest", None),
     "hyperspy": ("http://hyperspy.org/hyperspy-doc/current", None),
     "matplotlib": ("https://matplotlib.org", None),
     "numpy": ("https://docs.scipy.org/doc/numpy", None),

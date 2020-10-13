@@ -42,10 +42,7 @@ from scipy.spatial.distance import cdist
 class TestSimilarityMetrics:
     @pytest.mark.parametrize(
         "flat,returned_class",
-        [
-            (False, SimilarityMetric),
-            (True, FlatSimilarityMetric),
-        ],
+        [(False, SimilarityMetric), (True, FlatSimilarityMetric),],
     )
     def test_make_similarity_metric(self, flat, returned_class):
         assert (
@@ -73,10 +70,7 @@ class TestSimilarityMetrics:
         p_da = da.from_array(p)
 
         # One perfect match and one close match
-        t = np.array(
-            [[[5, 3], [2, 7]], [[9, 8], [1, 7]]],
-            np.int8,
-        )
+        t = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8,)
         t_da = da.from_array(t)
 
         # many to many
@@ -97,10 +91,7 @@ class TestSimilarityMetrics:
         p_da = da.from_array(p)
 
         # One perfect match and one close match
-        t = np.array(
-            [[[5, 3], [2, 7]], [[9, 8], [1, 7]]],
-            np.int8,
-        )
+        t = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8,)
         t_da = da.from_array(t)
 
         # many to many
@@ -114,10 +105,7 @@ class TestSimilarityMetrics:
             ],
             np.int8,
         )
-        t = np.array(
-            [[[5, 3], [2, 7]], [[9, 8], [1, 7]]],
-            np.int8,
-        )
+        t = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8,)
         euclidean_metric = make_similarity_metric(
             lambda p, t: cdist(p, t, metric="euclidean"),
             greater_is_better=False,
@@ -152,10 +140,7 @@ class TestSimilarityMetrics:
         )
 
     def test_get_number_of_templates(self):
-        t = np.array(
-            [[[5, 3], [2, 7]], [[9, 8], [1, 7]]],
-            np.int8,
-        )
+        t = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8,)
         assert (
             _get_number_of_templates(t) == 2
             and _get_number_of_templates(t[0]) == 1
