@@ -20,18 +20,16 @@ import pytest
 import numpy as np
 import dask.array as da
 
-from kikuchipy.indexation.similarity_metrics import (
+from kikuchipy.indexing.similarity_metrics import (
     make_similarity_metric,
     SimilarityMetric,
     MetricScope,
     FlatSimilarityMetric,
     SIMILARITY_METRICS,
-    normalize,
-    zero_mean,
     _zncc_einsum,
     _ndp_einsum,
 )
-from kikuchipy.indexation._util import (
+from kikuchipy.indexing._util import (
     _get_nav_shape,
     _get_sig_shape,
     _get_number_of_templates,

@@ -16,16 +16,20 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Union, Dict, Callable
+"""Similarity metrics for comparing gray-tone images."""
+
+from enum import Enum
+from typing import Callable, Dict, Tuple, Union
+
 import dask.array as da
 import numpy as np
 
-from enum import Enum
-from kikuchipy.indexation._util import _get_nav_shape, _get_sig_shape
+from kikuchipy.indexing._util import _get_nav_shape, _get_sig_shape
 
 
 class MetricScope(Enum):
-    """Describes the input parameters for a similarity metric. See `make_similarity_metric`"""
+    """Describes the input parameters for a similarity metric. See
+    :func:`make_similarity_metric`."""
 
     MANY_TO_MANY = "many_to_many"
     ONE_TO_MANY = "one_to_many"
@@ -35,19 +39,59 @@ class MetricScope(Enum):
 
 def make_similarity_metric(
     metric_func: Callable,
-    greater_is_better=True,
-    scope=MetricScope.MANY_TO_MANY,
-    flat=False,
-    make_compatible_to_lower_scopes=False,
-    dtype_out=np.float32,
+    greater_is_better: bool = True,
+    scope: Enum = MetricScope.MANY_TO_MANY,
+    flat: bool = False,
+    make_compatible_to_lower_scopes: bool = False,
+    dtype_out: np.dtype = np.float32,
 ):
-    """Make a similarity metric for comparing gray-tone images of equal size.
+    """Make a similarity metric for comparing gray-tone images of equal
+    size.
 
-    This factory function wraps metric functions for use in `template_match`,
-    which again is used by :class:`~kikuchipy.indexation.StaticDictionary` and :class:`~kikuchipy.indexation.DynamicDictionary`.
+    This factory function wraps metric functions for use in
+    `template_match`, which again is used by
+    :class:`~kikuchipy.indexing.StaticDictionary` and
+    :class:`~kikuchipy.indexing.DynamicDictionary`.
 
-    The metric function must take the arrays; patterns and templates as arguments.
-    The scope and wheter the metric is flat defines the intended data shapes:
+    Parameters
+    ----------
+    metric_func : Callable
+        Metric function with signature
+        `metric_func(patterns, templates)`, which computes the
+        similarity or a distance matrix between (experimental)
+        pattern(s) and (simulated) template(s).
+    greater_is_better : bool, optional
+        Whether greater values correspond to more similar images, by
+        default True. Used for choosing `n_largest` metric results in
+        `template_match`.
+    scope : MetricScope, optional
+        Describes how `metric_func`'s input parameters are structured,
+        by default `MetricScope.MANY_TO_MANY`.
+    flat : bool, optional
+        Whether patterns and templates are to be flattened before sent
+        to `metric_func` when the similarity metric is called, by
+        default False.
+    make_compatible_to_lower_scopes : bool, optional
+        Whether to reshape patterns and templates by adding single
+        dimensions to match the given scope, by default False.
+    dtype_out : np.dtype, optional
+        The data type used and returned by the metric, by default
+        :class:`np.float32`.
+
+    Returns
+    -------
+    Union[SimilarityMetric, FlatSimilarityMetric]
+        A callable class instance computing a similarity matrix with
+        signature `metric(patterns, templates)`.
+
+    Notes
+    -----
+    The metric function must take the arrays `patterns` and `templates`
+    as arguments, in that order. The scope and whether the metric is
+    flat defines the intended data shapes. In the following table,
+    (m,n) and (x,y) correspond to navigation and signal shape,
+    respectively.
+
     +--------------+-----------------------+----------------------+
     | MetricScope  | flat = False          | flat = True          |
     +==============+===========+===========+==========+===========+
@@ -66,37 +110,6 @@ def make_similarity_metric(
     | ONE_TO_ONE   |   (y,x)       (y,x)   |   (yx,)      (yx,)   |
     |              |         scalar        |        scalar        |
     +--------------+-----------+-----------+----------+-----------+
-    where (m,n) and (x,y) correspond to navigation and signal shape in HyperSpy, respectively.
-
-    Parameters
-    ----------
-    metric_func : Callable
-        Metric function with signature
-        `metric_func(patterns,templates)`
-
-        Computes similarity or distance matrix
-        between (experimental) pattern(s) and (simulated) template(s).
-
-    greater_is_better : bool, optional
-        Whether greater values correspond to more similar images, by default True.
-        Used for choosing `n_largest` metric results in `template_match`.
-    scope : MetricScope, optional
-        Describes how `metric_func`'s input parameters is structured,
-        by default MetricScope.MANY_TO_MANY.
-    flat : bool, optional
-        Whether patterns and templates are flattened before sent to `metric_func`
-        when the similarity metric is called, by default False.
-    make_compatible_to_lower_scopes : bool, optional
-        Whether to pad patterns and templates with single dimensions
-        to match given scope, by default False.
-    dtype_out : data-type, optional
-        The data type used and returned by the metric, by default np.float32
-
-    Returns
-    -------
-    Union[SimilarityMetric, FlatSimilarityMetric]
-        A callable class instance computing a similarity matrix with signature
-        `metric(patterns,templates)`.
     """
     sign = 1 if greater_is_better else -1
     if flat:
@@ -122,6 +135,7 @@ def make_similarity_metric(
 class SimilarityMetric:
     """Similarity metric between 2D gray-tone images."""
 
+    # See table in docstring of `make_similarity_metric`
     _P_T_NDIM_TO_SCOPE = {
         (4, 3): MetricScope.MANY_TO_MANY,
         (2, 3): MetricScope.ONE_TO_MANY,
@@ -129,7 +143,7 @@ class SimilarityMetric:
         (2, 2): MetricScope.ONE_TO_ONE,
     }
 
-    _SCOPE_TO_P_T_NDMI = {
+    _SCOPE_TO_P_T_NDIM = {
         MetricScope.MANY_TO_MANY: (4, 3),
         MetricScope.ONE_TO_MANY: (2, 3),
         MetricScope.MANY_TO_ONE: (4, 2),
@@ -155,12 +169,12 @@ class SimilarityMetric:
 
     def __init__(
         self,
-        metric_func,
-        sign,
-        scope,
-        flat,
-        make_compatible_to_lower_scopes,
-        dtype_out=np.float32,
+        metric_func: Callable,
+        sign: int,
+        scope: Enum,
+        flat: bool,
+        make_compatible_to_lower_scopes: bool,
+        dtype_out: np.dtype = np.float32,
     ):
         self._metric_func = metric_func
         self._make_compatible_to_lower_scopes = make_compatible_to_lower_scopes
@@ -169,7 +183,11 @@ class SimilarityMetric:
         self.flat = flat
         self.scope = scope
 
-    def __call__(self, patterns, templates):
+    def __call__(
+        self,
+        patterns: Union[np.ndarray, da.Array],
+        templates: Union[np.ndarray, da.Array],
+    ):
         dtype = self._dtype_out
         patterns = patterns.astype(dtype)
         templates = templates.astype(dtype)
@@ -183,16 +201,26 @@ class SimilarityMetric:
             )
         return self._measure(patterns, templates).squeeze()
 
-    def _measure(self, patterns, templates):
+    def _measure(
+        self,
+        patterns: Union[np.ndarray, da.Array],
+        templates: Union[np.ndarray, da.Array],
+    ) -> Union[np.ndarray, da.Array]:
         return self._metric_func(patterns, templates)
 
-    def _expand_dims_to_match_scope(self, p, t):
-        p_scope_ndim, t_scope_ndim = self._SCOPE_TO_P_T_NDMI[self.scope]
+    def _expand_dims_to_match_scope(
+        self,
+        p: Union[np.ndarray, da.Array],
+        t: Union[np.ndarray, da.Array],
+    ) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
+        p_scope_ndim, t_scope_ndim = self._SCOPE_TO_P_T_NDIM[self.scope]
         p = p[(np.newaxis,) * (p_scope_ndim - p.ndim)]
         t = t[(np.newaxis,) * (t_scope_ndim - t.ndim)]
         return p, t
 
-    def _is_compatible(self, p, t):
+    def _is_compatible(
+        self, p: Union[np.ndarray, da.Array], t: Union[np.ndarray, da.Array]
+    ) -> bool:
         p_ndim, t_ndim = p.ndim, t.ndim
         if self.flat:
             p_ndim -= 2
@@ -210,8 +238,11 @@ class SimilarityMetric:
 
 
 class FlatSimilarityMetric(SimilarityMetric):
-    """Similarity metric between 2D gray-tone images where the images are flattened before sent to `metric_func`"""
+    """Similarity metric between 2D gray-tone images where the images
+    are flattened before sent to `metric_func`.
+    """
 
+    # See table in docstring of `make_similarity_metric`
     _P_T_NDIM_TO_SCOPE = {
         (2, 2): MetricScope.MANY_TO_MANY,
         (1, 2): MetricScope.ONE_TO_MANY,
@@ -219,7 +250,7 @@ class FlatSimilarityMetric(SimilarityMetric):
         (1, 1): MetricScope.ONE_TO_ONE,
     }
 
-    _SCOPE_TO_P_T_NDMI = {
+    _SCOPE_TO_P_T_NDIM = {
         MetricScope.MANY_TO_MANY: (2, 2),
         MetricScope.ONE_TO_MANY: (1, 2),
         MetricScope.MANY_TO_ONE: (3, 1),
@@ -227,7 +258,7 @@ class FlatSimilarityMetric(SimilarityMetric):
     }
 
     _PARTIAL_SCOPE_TO_NDIM = {
-        "MANY_": 2,  #  Many patterns
+        "MANY_": 2,  # Many patterns
         "_MANY": 2,  # Many templates
         "ONE_": 1,  # One pattern
         "_ONE": 1,  # One template
@@ -237,7 +268,7 @@ class FlatSimilarityMetric(SimilarityMetric):
         self,
         patterns: Union[np.ndarray, da.Array],
         templates: Union[np.ndarray, da.Array],
-    ):
+    ) -> Union[np.ndarray, da.Array]:
         nav_shape = _get_nav_shape(patterns)
         sig_shape = _get_sig_shape(patterns)
         nav_flat_size, sig_flat_size = np.prod(nav_shape), np.prod(sig_shape)
@@ -246,25 +277,34 @@ class FlatSimilarityMetric(SimilarityMetric):
         return self._metric_func(patterns, templates)
 
 
-def expand_dims_to_many_to_many(p, t, flat):
-    """Expand the dims of patterns and templates to match MetricScope.MANY_TO_MANY.
+def expand_dims_to_many_to_many(
+    p: Union[np.ndarray, da.Array],
+    t: Union[np.ndarray, da.Array],
+    flat: bool,
+) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
+    """Expand the dims of patterns and templates to match
+    `MetricScope.MANY_TO_MANY`.
 
     Parameters
     ----------
-    p : Union[np.ndarray, da.Array]
-        Patterns
-    t : Union[np.ndarray, da.Array]
-        Templates
-    flat : bool, optional
-        Wheter `p` and `t` are flattened
+    p
+        Patterns.
+    t
+        Templates.
+    flat
+        Whether `p` and `t` are flattened.
+
     Returns
     -------
-    (p,t)
-        Tuple of p and t
-        with their dimensions expanded to match MetricScope.MANY_TO_MANY.
+    p
+        Patterns with their dimension expanded to match
+        `MetricScope.MANY_TO_MANY`.
+    t
+        Templates with their dimension expanded to match
+        `MetricScope.MANY_TO_MANY`.
     """
     metric_cls = FlatSimilarityMetric if flat else SimilarityMetric
-    p_scope_ndim, t_scope_ndim = metric_cls._SCOPE_TO_P_T_NDMI[
+    p_scope_ndim, t_scope_ndim = metric_cls._SCOPE_TO_P_T_NDIM[
         MetricScope.MANY_TO_MANY
     ]
     p = p[(np.newaxis,) * (p_scope_ndim - p.ndim)]
@@ -272,70 +312,72 @@ def expand_dims_to_many_to_many(p, t, flat):
     return p, t
 
 
-def zero_mean(p, t, flat=False):
+def _zero_mean(
+    p: Union[np.ndarray, da.Array],
+    t: Union[np.ndarray, da.Array],
+    flat: bool = False,
+) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
     """Subtract the mean from patterns and templates of any scope.
 
     Parameters
     ----------
     p : Union[np.ndarray, da.Array]
-        Patterns
+        Patterns.
     t : Union[np.ndarray, da.Array]
-        Templates
+        Templates.
     flat : bool, optional
-        Wheter `p` and `t` are flattened, by default False
+        Whether `p` and `t` are flattened, by default False.
 
     Returns
     -------
-    (p,t)
-        Tuple of p and t with their mean subtracted.
+    p, t
+        Tuple of `p` and `t` with their mean subtracted.
     """
     squeeze = 1 not in p.shape + t.shape
-    p, t = expand_dims_to_many_to_many(p, t, flat)
+    p, t = _expand_dims_to_many_to_many(p, t, flat)
     p_mean_axis = 1 if flat else (2, 3)
     t_mean_axis = 1 if flat else (1, 2)
     p -= p.mean(axis=p_mean_axis, keepdims=True)
     t -= t.mean(axis=t_mean_axis, keepdims=True)
 
     if squeeze:
-        return (
-            p.squeeze(),
-            t.squeeze(),
-        )
+        return p.squeeze(), t.squeeze()
     else:
         return p, t
 
 
-def normalize(p, t, flat=False):
+def _normalize(
+    p: Union[np.ndarray, da.Array],
+    t: Union[np.ndarray, da.Array],
+    flat: bool = False,
+) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
     """Normalize patterns and templates of any scope.
 
     Parameters
     ----------
     p : Union[np.ndarray, da.Array]
-        Patterns
+        Patterns.
     t : Union[np.ndarray, da.Array]
-        Templates
+        Templates.
     flat : bool, optional
-        Wheter `p` and `t` are flattened, by default False
+        Whether `p` and `t` are flattened, by default False.
 
     Returns
     -------
-    (p,t)
-        Tuple of p and t divided respectively by their L2-norms.
+    p, t
+        Tuple of `p` and `t` divided respectively by their L2-norms.
     """
     squeeze = 1 not in p.shape + t.shape
-    p, t = expand_dims_to_many_to_many(p, t, flat)
+    p, t = _expand_dims_to_many_to_many(p, t, flat)
     p_sum_axis = 1 if flat else (2, 3)
     t_sum_axis = 1 if flat else (1, 2)
     p /= (p ** 2).sum(axis=p_sum_axis, keepdims=True) ** 0.5
     t /= (t ** 2).sum(axis=t_sum_axis, keepdims=True) ** 0.5
 
     if squeeze:
-        return (
-            p.squeeze(),
-            t.squeeze(),
-        )
+        return p.squeeze(), t.squeeze()
     else:
-        return (p, t)
+        return p, t
 
 
 SIMILARITY_METRICS: Dict[str, Callable] = {}
@@ -344,7 +386,7 @@ SIMILARITY_METRICS: Dict[str, Callable] = {}
 def _zncc_einsum(
     patterns: Union[da.Array, np.ndarray],
     templates: Union[da.Array, np.ndarray],
-):
+) -> Union[np.ndarray, da.Array]:
     """Compute (lazily) ZNCC between patterns and templates.
 
     Parameters
@@ -359,12 +401,10 @@ def _zncc_einsum(
     Union[da.Array, np.ndarray]
         [description]
     """
-    patterns, templates = zero_mean(patterns, templates)
-    patterns, templates = normalize(patterns, templates)
+    patterns, templates = _zero_mean(patterns, templates)
+    patterns, templates = _normalize(patterns, templates)
 
-    zncc = da.einsum(
-        "ijk,lmjk->ilm", templates, patterns, optimize=True
-    )  # TODO: Will fail if np.ndarray!!!
+    zncc = da.einsum("ijk,lmjk->ilm", templates, patterns, optimize=True)
 
     # Alternative with equivalent results:
     #   zncc = da.tensordot(templates, patterns, axes=([1, 2], [2, 3]))
@@ -381,7 +421,7 @@ SIMILARITY_METRICS["zncc"] = make_similarity_metric(
 def _ndp_einsum(
     patterns: Union[da.Array, np.ndarray],
     templates: Union[da.Array, np.ndarray],
-):
+) -> Union[np.ndarray, da.Array]:
     patterns, templates = normalize(patterns, templates)
     ndp = da.einsum("ijk,lmjk->ilm", templates, patterns, optimize=True)
     return ndp
