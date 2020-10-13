@@ -237,7 +237,7 @@ class FlatSimilarityMetric(SimilarityMetric):
         nav_flat_size, sig_flat_size = np.prod(nav_shape), np.prod(sig_shape)
         patterns = patterns.reshape((nav_flat_size, sig_flat_size))
         templates = templates.reshape((-1, sig_flat_size))
-        return self._metric_func(patterns, templates).squeeze()
+        return self._metric_func(patterns, templates)
 
 
 def expand_dims_to_many_to_many(p, t, flat):
