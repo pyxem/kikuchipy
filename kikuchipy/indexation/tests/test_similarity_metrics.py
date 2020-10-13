@@ -18,6 +18,7 @@
 
 import pytest
 import numpy as np
+import dask.array as da
 
 from kikuchipy.indexation.similarity_metrics import (
     make_similarity_metric,
@@ -48,11 +49,37 @@ class TestSimilarityMetrics:
         ],
     )
     def test_make_similarity_metric(self, flat, returned_class):
-        assert isinstance(
-            make_similarity_metric(
-                lambda p, t: sum_absolute_difference(p, t, flat),
-                flat=flat,
-                scope=MetricScope.MANY_TO_ONE,
-            ),
-            returned_class,
+        assert (
+            type(
+                make_similarity_metric(
+                    lambda p, t: sum_absolute_difference(p, t, flat),
+                    flat=flat,
+                    scope=MetricScope.MANY_TO_ONE,
+                )
+            )
+            is returned_class
         )
+
+    def test_zncc(self):
+        zncc_metric = SIMILARITY_METRICS["zncc"]
+        p = np.array(
+            [
+                [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
+                [[[9, 8], [1, 7]], [[5, 2], [2, 7]]],
+            ],
+            np.int8,
+        )
+        p_da = da.from_array(p)
+
+        # One perfect match and one close match
+        t = np.array(
+            [[[5, 3], [2, 7]], [[9, 8], [1, 7]]],
+            np.int8,
+        )
+        t_da = da.from_array(t)
+
+        # many to many
+        assert 1 == pytest.approx(zncc_metric(p_da, t_da).compute()[1, 1, 0])
+
+        # Working with lower scopes, here one to many:
+        assert 1 == pytest.approx(zncc_metric(p_da[1, 0], t_da).compute()[1])
