@@ -18,6 +18,7 @@
 
 import pytest
 import numpy as np
+import dask.array as da
 
 from kikuchipy.indexation.similarity_metrics import (
     make_similarity_metric,
@@ -27,16 +28,15 @@ from kikuchipy.indexation.similarity_metrics import (
     SIMILARITY_METRICS,
     normalize,
     zero_mean,
-    expand_dims_to_many_to_many,
     _zncc_einsum,
     _ndp_einsum,
 )
-
-
-# working for many_to_one and lower
-def sum_absolute_difference(p, t, flat):
-    axis = 1 if flat else (2, 3)
-    return np.sum(np.abs(p - t), axis=axis).squeeze()
+from kikuchipy.indexation._util import (
+    _get_nav_shape,
+    _get_sig_shape,
+    _get_number_of_templates,
+)
+from scipy.spatial.distance import cdist
 
 
 class TestSimilarityMetrics:
@@ -48,11 +48,115 @@ class TestSimilarityMetrics:
         ],
     )
     def test_make_similarity_metric(self, flat, returned_class):
-        assert isinstance(
-            make_similarity_metric(
-                lambda p, t: sum_absolute_difference(p, t, flat),
-                flat=flat,
-                scope=MetricScope.MANY_TO_ONE,
-            ),
-            returned_class,
+        assert (
+            type(
+                make_similarity_metric(
+                    lambda p, t: np.zeros((2, 4))
+                    if flat
+                    else np.zeros((2, 2, 2)),
+                    flat=flat,
+                    scope=MetricScope.MANY_TO_MANY,
+                )
+            )
+            is returned_class
+        )
+
+    def test_zncc(self):
+        zncc_metric = SIMILARITY_METRICS["zncc"]
+        p = np.array(
+            [
+                [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
+                [[[9, 8], [1, 7]], [[5, 2], [2, 7]]],
+            ],
+            np.int8,
+        )
+        p_da = da.from_array(p)
+
+        # One perfect match and one close match
+        t = np.array(
+            [[[5, 3], [2, 7]], [[9, 8], [1, 7]]],
+            np.int8,
+        )
+        t_da = da.from_array(t)
+
+        # many to many
+        assert pytest.approx(zncc_metric(p_da, t_da).compute()[1, 1, 0]) == 1
+
+        # Working with lower scopes, here one to many:
+        assert pytest.approx(zncc_metric(p_da[1, 0], t_da).compute()[1]) == 1
+
+    def test_ndp(self):
+        ndp_metric = SIMILARITY_METRICS["ndp"]
+        p = np.array(
+            [
+                [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
+                [[[9, 8], [1, 7]], [[5, 2], [2, 7]]],
+            ],
+            np.int8,
+        )
+        p_da = da.from_array(p)
+
+        # One perfect match and one close match
+        t = np.array(
+            [[[5, 3], [2, 7]], [[9, 8], [1, 7]]],
+            np.int8,
+        )
+        t_da = da.from_array(t)
+
+        # many to many
+        assert pytest.approx(ndp_metric(p_da, t_da).compute()[1, 1, 0]) == 1
+
+    def test_flat_metric(self):
+        p = np.array(
+            [
+                [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
+                [[[9, 8], [1, 7]], [[5, 2], [2, 7]]],
+            ],
+            np.int8,
+        )
+        t = np.array(
+            [[[5, 3], [2, 7]], [[9, 8], [1, 7]]],
+            np.int8,
+        )
+        euclidean_metric = make_similarity_metric(
+            lambda p, t: cdist(p, t, metric="euclidean"),
+            greater_is_better=False,
+            flat=True,
+            scope=MetricScope.MANY_TO_MANY,
+            make_compatible_to_lower_scopes=True,
+        )
+        assert (
+            euclidean_metric._is_compatible(p, t) == True
+            and pytest.approx(euclidean_metric(p, t)[2, 1]) == 0
+        )
+
+    def test_make_compatible_to_lower_scopes(self):
+        zncc_metric = SIMILARITY_METRICS["zncc"]
+        assert zncc_metric._is_compatible(np.zeros((2, 2)), np.zeros((2, 2)))
+
+    def test_too_large_scoped_inputs(self):
+        metric = make_similarity_metric(
+            lambda p, t: 1.0, scope=MetricScope.ONE_TO_ONE
+        )
+        assert (
+            metric._is_compatible(np.zeros((2, 2, 2, 2)), np.zeros((4, 2, 2)))
+            == False
+        )
+
+    def test_too_small_scoped_inputs(self):
+        metric = make_similarity_metric(
+            lambda p, t: np.zeros((2, 2, 2)), scope=MetricScope.MANY_TO_MANY
+        )
+        assert (
+            metric._is_compatible(np.zeros((2, 2)), np.zeros((2, 2))) == False
+        )
+
+    def test_get_number_of_templates(self):
+        t = np.array(
+            [[[5, 3], [2, 7]], [[9, 8], [1, 7]]],
+            np.int8,
+        )
+        assert (
+            _get_number_of_templates(t) == 2
+            and _get_number_of_templates(t[0]) == 1
         )

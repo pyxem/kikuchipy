@@ -31,11 +31,6 @@ class MetricScope(Enum):
     ONE_TO_MANY = "one_to_many"
     ONE_TO_ONE = "one_to_one"
     MANY_TO_ONE = "many_to_one"
-    ANY_TO_ANY = "*_to_*"
-    ANY_TO_MANY = "*_to_many"
-    MANY_TO_ANY = "many_to_*"
-    ONE_TO_ANY = "one_to_*"
-    ANY_TO_ONE = "*_to_one"
 
 
 def make_similarity_metric(
@@ -134,18 +129,28 @@ class SimilarityMetric:
         (2, 2): MetricScope.ONE_TO_ONE,
     }
 
-    _PARTIAL_SCOPE_TO_NDIM = {
-        "MANY_": 4,  #  Many patterns
-        "_MANY": 3,  # Many templates
-        "ONE_": 2,  # One pattern
-        "_ONE": 2,  # One template￼
+    _SCOPE_TO_P_T_NDMI = {
+        MetricScope.MANY_TO_MANY: (4, 3),
+        MetricScope.ONE_TO_MANY: (2, 3),
+        MetricScope.MANY_TO_ONE: (4, 2),
+        MetricScope.ONE_TO_ONE: (2, 2),
     }
 
-    _SCOPE_INCLUDING_LOWER_SCOPES = {
-        MetricScope.MANY_TO_MANY: MetricScope.ANY_TO_ANY,
-        MetricScope.ONE_TO_MANY: MetricScope.ONE_TO_ANY,
-        MetricScope.ONE_TO_ONE: MetricScope.ONE_TO_ONE,
-        MetricScope.MANY_TO_ONE: MetricScope.ANY_TO_ONE,
+    _SCOPE_TO_LOWER_SCOPES = {
+        MetricScope.MANY_TO_MANY: (
+            MetricScope.MANY_TO_ONE,
+            MetricScope.ONE_TO_MANY,
+            MetricScope.ONE_TO_ONE,
+        ),
+        MetricScope.ONE_TO_MANY: (
+            MetricScope.ONE_TO_MANY,
+            MetricScope.ONE_TO_ONE,
+        ),
+        MetricScope.ONE_TO_ONE: (),
+        MetricScope.MANY_TO_ONE: (
+            MetricScope.MANY_TO_ONE,
+            MetricScope.ONE_TO_ONE,
+        ),
     }
 
     def __init__(
@@ -182,12 +187,9 @@ class SimilarityMetric:
         return self._metric_func(patterns, templates)
 
     def _expand_dims_to_match_scope(self, p, t):
-        p_sl, t_sl = len(p.shape), len(t.shape)
-        p_scope, t_scope = self.scope.name.split("TO")
-        p_ssl = self._PARTIAL_SCOPE_TO_NDIM.get(p_scope, p_sl)
-        t_ssl = self._PARTIAL_SCOPE_TO_NDIM.get(t_scope, t_sl)
-        p = p[(np.newaxis,) * (p_ssl - p_sl)]
-        t = t[(np.newaxis,) * (t_ssl - t_sl)]
+        p_scope_ndim, t_scope_ndim = self._SCOPE_TO_P_T_NDMI[self.scope]
+        p = p[(np.newaxis,) * (p_scope_ndim - p.ndim)]
+        t = t[(np.newaxis,) * (t_scope_ndim - t.ndim)]
         return p, t
 
     def _is_compatible(self, p, t):
@@ -195,29 +197,33 @@ class SimilarityMetric:
         if self.flat:
             p_ndim -= 2
             t_ndim -= 1
-        scope = self._P_T_NDIM_TO_SCOPE.get((p_ndim, t_ndim), False)
-        if not scope:
+        inferred_scope = self._P_T_NDIM_TO_SCOPE.get((p_ndim, t_ndim), False)
+        if not inferred_scope:
             return False
-        if scope == self.scope:
+        if inferred_scope == self.scope:
             return True
         else:
             if self._make_compatible_to_lower_scopes:
-                scope = self._SCOPE_INCLUDING_LOWER_SCOPES[scope]
-            p_scope, t_scope = scope.name.split("TO")
-            return (
-                self._PARTIAL_SCOPE_TO_NDIM.get(p_scope, p_ndim) == p_ndim
-                and self._PARTIAL_SCOPE_TO_NDIM.get(t_scope, t_ndim) == t_ndim
-            )
+                return inferred_scope in self._SCOPE_TO_LOWER_SCOPES[self.scope]
+            else:
+                return False
 
 
 class FlatSimilarityMetric(SimilarityMetric):
     """Similarity metric between 2D gray-tone images where the images are flattened before sent to `metric_func`"""
 
     _P_T_NDIM_TO_SCOPE = {
-        (3, 2): MetricScope.MANY_TO_MANY,
+        (2, 2): MetricScope.MANY_TO_MANY,
         (1, 2): MetricScope.ONE_TO_MANY,
         (3, 1): MetricScope.MANY_TO_ONE,
         (1, 1): MetricScope.ONE_TO_ONE,
+    }
+
+    _SCOPE_TO_P_T_NDMI = {
+        MetricScope.MANY_TO_MANY: (2, 2),
+        MetricScope.ONE_TO_MANY: (1, 2),
+        MetricScope.MANY_TO_ONE: (3, 1),
+        MetricScope.ONE_TO_ONE: (1, 1),
     }
 
     _PARTIAL_SCOPE_TO_NDIM = {
@@ -237,7 +243,7 @@ class FlatSimilarityMetric(SimilarityMetric):
         nav_flat_size, sig_flat_size = np.prod(nav_shape), np.prod(sig_shape)
         patterns = patterns.reshape((nav_flat_size, sig_flat_size))
         templates = templates.reshape((-1, sig_flat_size))
-        return self._metric_func(patterns, templates).squeeze()
+        return self._metric_func(patterns, templates)
 
 
 def expand_dims_to_many_to_many(p, t, flat):
@@ -257,12 +263,12 @@ def expand_dims_to_many_to_many(p, t, flat):
         Tuple of p and t
         with their dimensions expanded to match MetricScope.MANY_TO_MANY.
     """
-    p_sl, t_sl = len(p.shape), len(t.shape)
-    metric_class = FlatSimilarityMetric if flat else SimilarityMetric
-    p_ssl = metric_class._PARTIAL_SCOPE_TO_NDIM["MANY_"]
-    t_ssl = metric_class._PARTIAL_SCOPE_TO_NDIM["_MANY"]
-    p = p[(np.newaxis,) * (p_ssl - p_sl)]
-    t = t[(np.newaxis,) * (t_ssl - t_sl)]
+    metric_cls = FlatSimilarityMetric if flat else SimilarityMetric
+    p_scope_ndim, t_scope_ndim = metric_cls._SCOPE_TO_P_T_NDMI[
+        MetricScope.MANY_TO_MANY
+    ]
+    p = p[(np.newaxis,) * (p_scope_ndim - p.ndim)]
+    t = t[(np.newaxis,) * (t_scope_ndim - t.ndim)]
     return p, t
 
 
@@ -382,7 +388,7 @@ def _ndp_einsum(
 
 
 SIMILARITY_METRICS["ndp"] = make_similarity_metric(
-    _zncc_einsum,
+    _ndp_einsum,
     scope=MetricScope.MANY_TO_MANY,
     make_compatible_to_lower_scopes=True,
 )
