@@ -26,8 +26,6 @@ from kikuchipy.indexing.similarity_metrics import (
     MetricScope,
     FlatSimilarityMetric,
     SIMILARITY_METRICS,
-    normalize,
-    zero_mean,
     _zncc_einsum,
     _ndp_einsum,
 )
