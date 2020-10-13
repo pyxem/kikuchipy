@@ -15,9 +15,9 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
-"""Module for indexation of diffraction patterns"""
+"""Module for indexing of diffraction patterns"""
 
-from kikuchipy.indexation.similarity_metrics import make_similarity_metric
+from kikuchipy.indexing.similarity_metrics import make_similarity_metric
 
 __all__ = [
     "make_similarity_metric",

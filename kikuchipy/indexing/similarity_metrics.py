@@ -21,7 +21,7 @@ import dask.array as da
 import numpy as np
 
 from enum import Enum
-from kikuchipy.indexation._util import _get_nav_shape, _get_sig_shape
+from kikuchipy.indexing._util import _get_nav_shape, _get_sig_shape
 
 
 class MetricScope(Enum):
