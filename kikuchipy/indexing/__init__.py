@@ -15,7 +15,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
-"""Module for indexing of diffraction patterns"""
+
+"""Indexing of EBSD patterns."""
 
 from kikuchipy.indexing.similarity_metrics import make_similarity_metric
 

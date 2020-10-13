@@ -21,6 +21,7 @@ The list of top modules (and the load function):
     draw
     filters
     generators
+    indexing
     io
     load
     pattern
@@ -191,6 +192,31 @@ Other functions
 
 .. autofunction:: get_rgb_image
 .. autofunction:: normalize_image
+
+....
+
+indexing
+========
+
+.. automodule:: kikuchipy.indexing
+
+.. currentmodule:: kikuchipy.indexing
+
+.. autosummary::
+    similarity_metrics
+
+similarity_metrics
+------------------
+
+.. currentmodule:: kikuchipy.indexing.similarity_metrics
+
+.. autosummary::
+    make_similarity_metric
+
+.. automodule:: kikuchipy.indexing.similarity_metrics
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 ....
 
