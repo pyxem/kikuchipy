@@ -422,7 +422,7 @@ def _ndp_einsum(
     patterns: Union[da.Array, np.ndarray],
     templates: Union[da.Array, np.ndarray],
 ) -> Union[np.ndarray, da.Array]:
-    patterns, templates = normalize(patterns, templates)
+    patterns, templates = _normalize(patterns, templates)
     ndp = da.einsum("ijk,lmjk->ilm", templates, patterns, optimize=True)
     return ndp
 
