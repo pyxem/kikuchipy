@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file. The format
 is based on `Keep a Changelog <https://keepachangelog.com/en/1.1.0>`_, and this
 project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
-Contributors to each release are listed in alphabetical order.
+Contributors to each release are listed in alphabetical order by first name.
 
 Unreleased
 ==========
@@ -18,9 +18,13 @@ Contributors
 ------------
 - Håkon Wiik Ånes
 - Lars Andreas Hastad Lervik
+- Ole Natlandsmyr
 
 Added
 -----
+- Indexing of EBSD patterns through template matching of the patterns with a
+  static dictionary of simulated patterns with known orientations.
+  (`#231 <https://github.com/pyxem/kikuchipy/pull/231>`_)
 - Reader for EMsoft's simulated EBSD patterns returned by their ``EMEBSD.f90``
   program. (`#202 <https://github.com/pyxem/kikuchipy/pull/202>`_)
 - Modified Lambert mapping, and its inverse, from points on the unit sphere to a
