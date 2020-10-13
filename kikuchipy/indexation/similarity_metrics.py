@@ -168,6 +168,10 @@ class SimilarityMetric:
         dtype = self._dtype_out
         patterns = patterns.astype(dtype)
         templates = templates.astype(dtype)
+        if isinstance(patterns, da.Array):
+            patterns = patterns.rechunk()
+        if isinstance(templates, da.Array):
+            templates = templates.rechunk()
         if self._make_compatible_to_lower_scopes:
             patterns, templates = self._expand_dims_to_match_scope(
                 patterns, templates
