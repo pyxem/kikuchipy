@@ -55,32 +55,32 @@ def make_similarity_metric(
 
     Parameters
     ----------
-    metric_func : Callable
+    metric_func
         Metric function with signature
         `metric_func(patterns, templates)`, which computes the
         similarity or a distance matrix between (experimental)
         pattern(s) and (simulated) template(s).
-    greater_is_better : bool, optional
+    greater_is_better
         Whether greater values correspond to more similar images, by
         default True. Used for choosing `n_largest` metric results in
         `template_match`.
-    scope : MetricScope, optional
+    scope
         Describes how `metric_func`'s input parameters are structured,
         by default `MetricScope.MANY_TO_MANY`.
-    flat : bool, optional
+    flat
         Whether patterns and templates are to be flattened before sent
         to `metric_func` when the similarity metric is called, by
         default False.
-    make_compatible_to_lower_scopes : bool, optional
+    make_compatible_to_lower_scopes
         Whether to reshape patterns and templates by adding single
         dimensions to match the given scope, by default False.
-    dtype_out : np.dtype, optional
+    dtype_out
         The data type used and returned by the metric, by default
         :class:`np.float32`.
 
     Returns
     -------
-    Union[SimilarityMetric, FlatSimilarityMetric]
+    metric_class : Union[SimilarityMetric, FlatSimilarityMetric]
         A callable class instance computing a similarity matrix with
         signature `metric(patterns, templates)`.
 
@@ -90,26 +90,18 @@ def make_similarity_metric(
     as arguments, in that order. The scope and whether the metric is
     flat defines the intended data shapes. In the following table,
     (m,n) and (x,y) correspond to navigation and signal shape,
-    respectively.
+    respectively:
 
-    +--------------+-----------------------+----------------------+
-    | MetricScope  | flat = False          | flat = True          |
-    +==============+===========+===========+==========+===========+
-    |              | patterns    templates | patterns   templates |
-    |              |        returns        |       returns        |
-    +--------------+-----------+-----------+----------+-----------+
-    | MANY_TO_MANY | (n,m,y,x)    (N,y,x)  | (nm,yx)      (N,yx)  |
-    |              |        (N,n,m)        |        (N,nm)        |
-    +--------------+-----------+-----------+----------+-----------+
-    | ONE_TO_MANY  |   (y,x)      (N,y,x)  |   (yx,)      (N,yx)  |
-    |              |         (N,)          |        (N,)          |
-    +--------------+-----------+-----------+----------+-----------+
-    | MANY_TO_ONE  | (n,m,y,x)     (y,x)   | (nm,yx)      (yx,)   |
-    |              |         (n,m)         |        (nm,)         |
-    +--------------+-----------+-----------+----------+-----------+
-    | ONE_TO_ONE   |   (y,x)       (y,x)   |   (yx,)      (yx,)   |
-    |              |         scalar        |        scalar        |
-    +--------------+-----------+-----------+----------+-----------+
+    ============ ========= ========= ======== ======== ========= =======
+    MetricScope  flat = False                 flat = True
+    ------------ ---------------------------- --------------------------
+    \-           patterns  templates returns  patterns templates returns
+    ============ ========= ========= ======== ======== ========= =======
+    MANY_TO_MANY (n,m,y,x) (N,y,x)   (N,n,m)  (nm,yx)  (N,yx)    (N,nm)
+    ONE_TO_MANY  (y,x)     (N,y,x)   (N,)     (yx,)    (N,yx)    (N,)
+    MANY_TO_ONE  (n,m,y,x) (y,x)     (n,m)    (nm,yx)  (yx,)     (nm,)
+    ONE_TO_ONE   (y,x)     (y,x)     (1,)     (yx,)    (yx,)     (1,)
+    ============ ========= ========= ======== ======== ========= =======
     """
     sign = 1 if greater_is_better else -1
     if flat:
