@@ -277,7 +277,7 @@ class FlatSimilarityMetric(SimilarityMetric):
         return self._metric_func(patterns, templates)
 
 
-def expand_dims_to_many_to_many(
+def _expand_dims_to_many_to_many(
     p: Union[np.ndarray, da.Array],
     t: Union[np.ndarray, da.Array],
     flat: bool,
