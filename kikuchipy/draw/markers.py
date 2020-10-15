@@ -62,7 +62,7 @@ def get_point_list(points: Union[list, np.ndarray], **kwargs) -> list:
     points
         On the form [[x0, y0], [x1, y1], ...].
     kwargs
-        Keyword arguments allowed by :class:`matplotlib.pyplot.axvline`.
+        Keyword arguments allowed by :class:`matplotlib.pyplot.scatter`.
 
     Returns
     -------

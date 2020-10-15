@@ -143,8 +143,10 @@ class EBSDSimulationGenerator:
     def geometrical_simulation(
         self, reciprocal_lattice_point: Optional[ReciprocalLatticePoint] = None
     ) -> GeometricalEBSDSimulation:
-        """Project a set of center positions of Kikuchi bands on the
+        """Project a set of Kikuchi bands and zone axes onto the
         detector, one set for each rotation of the unit cell.
+
+        The zone axes are calculated from the Kikuchi bands.
 
         Parameters
         ----------

@@ -180,6 +180,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         """Return whether a plane trace is within the `gnomonic_radius`
         as a boolean array.
         """
+        # TODO: Should be part of GeometricalEBSDSimulation, not here
         is_full_upper = self.z_detector > -1e-5
         gnomonic_radius = self._get_reshaped_gnomonic_radius(
             self.hesse_distance.ndim
@@ -427,6 +428,7 @@ class ZoneAxis(ReciprocalLatticePoint):
         """Return whether a zone axis is within the `gnomonic_radius`
         as a boolean array.
         """
+        # TODO: Should be part of GeometricalEBSDSimulation, not here
         is_full_upper = self.z_detector > -1e-5
         gnomonic_radius = self._get_reshaped_gnomonic_radius(
             self.navigation_dimension + 1
@@ -454,6 +456,50 @@ class ZoneAxis(ReciprocalLatticePoint):
         return self.gnomonic_radius.reshape(
             self.gnomonic_radius.shape + (1,) * add_ndim
         )
+
+    def __getitem__(self, key):
+        """Get a deepcopy subset of the ZoneAxis object.
+
+        Properties have different shapes, so care must be taken when
+        slicing. As an example, consider a 2 x 3 map with 4 zone axes.
+        Three data shapes are considered:
+        * navigation shape (2, 3) (gnomonic_radius)
+        * zone axes shape (4,) (hkl, structure_factor, theta)
+        * full shape (2, 3, 4) (uvw_detector, in_pattern)
+        """
+        # These are overwritten as the input key length is investigated
+        nav_slice, za_slice = key, key  # full_slice = key
+        nav_ndim = self.navigation_dimension
+        n_keys = len(key) if hasattr(key, "__iter__") else 1
+        if n_keys == 0:  # The case with key = ()/slice(None). Return everything
+            za_slice = slice(None)
+        elif n_keys == 1:
+            if nav_ndim != 0:
+                za_slice = slice(None)
+        elif n_keys == 2:
+            if nav_ndim == 0:
+                raise IndexError("Not enough axes to slice")
+            elif nav_ndim == 1:
+                nav_slice = key[0]
+                za_slice = key[1]
+            else:  # nav_slice = key
+                za_slice = slice(None)
+        elif n_keys == 3:  # Maximum number of slices
+            if nav_ndim < 2:
+                raise IndexError("Not enough axes to slice")
+            else:
+                nav_slice = key[:2]
+                za_slice = key[2]
+        new_za = ZoneAxis(
+            phase=self.phase,
+            uvw=self.hkl[za_slice],
+            uvw_detector=self.uvw_detector[key],
+            in_pattern=self.in_pattern[key],
+            gnomonic_radius=self.gnomonic_radius[nav_slice],
+        )
+        new_za._structure_factor = self.structure_factor[za_slice]
+        new_za._theta = self.theta[za_slice]
+        return new_za
 
     def unique(self, **kwargs):
         # TODO: Fix transfer of properties in this class and other inheriting

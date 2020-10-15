@@ -18,14 +18,14 @@
 
 """Color palettes for Kikuchi bands."""
 
+import matplotlib.colors as mcolors
 import numpy as np
 
 
-# TSL Kikuchi band colors (custom names)
 RED = (1, 0, 0)
 GREEN = (0, 1, 0)
 BLUE = (0, 0, 1)
-YELLOW = (1.0, 1, 0)
+YELLOW = (1, 1, 0)
 CYAN = (0, 1, 1)
 PINK = (1, 0, 1)
 BROWN = (0.5, 0, 0)
@@ -34,8 +34,28 @@ PURPLE = (0.5, 0, 0.5)
 DARK_GREEN = (0, 0.5, 0)
 DARKER_GREEN = (0, 0.5, 0.5)
 DARK_BLUE = (0, 0, 0.5)
-# TODO: More colors!
-KIKUCHI_BAND_COLORS_TSL = {
+TSL_COLORS = [
+    RED,
+    YELLOW,
+    GREEN,
+    BLUE,
+    PINK,
+    CYAN,
+    BROWN,
+    DARK_GREEN,
+    PURPLE,
+    DARK_BLUE,
+    EARTH,
+    DARKER_GREEN,
+]
+
+TABLEAU_COLORS = [mcolors.to_rgb(f"C{i}") for i in range(10)]
+
+# TSL Kikuchi band colors (custom names)
+# Don't know how to replicate this automatically, and it is too cumbersome (and
+# inelegant) to write down this list for all point groups. Will therefore leave
+# this list, with just the m-3m point group, as a reference, unused.
+_KIKUCHI_BAND_COLORS_TSL = {
     "m-3m": np.array(
         [
             ([1, -1, -1], RED),
@@ -51,8 +71,9 @@ KIKUCHI_BAND_COLORS_TSL = {
             ([3, -3, -3], RED),
             ([0, -4, 4], GREEN),
             ([1, -5, -3], PURPLE),
-            ([2, -4, -4], DARK_BLUE),
             ([0, -6, 0], YELLOW),
+            ([2, -4, -4], DARK_BLUE),
+            #            ([6, 2, 0], ?),  # Jumped over this in the list??
             ([3, -5, -3], GREEN),
             ([2, -6, -2], BLUE),
             ([4, -4, -4], RED),

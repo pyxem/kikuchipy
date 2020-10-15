@@ -18,11 +18,13 @@
 
 from collections import defaultdict
 from re import sub
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 import warnings
 
+from diffsims.crystallography import ReciprocalLatticePoint
 import matplotlib
 import numpy as np
+from orix.crystal_map import Phase
 from orix.quaternion.rotation import Rotation
 
 from kikuchipy.detectors import EBSDDetector
@@ -31,13 +33,14 @@ from kikuchipy.draw.markers import (
     get_point_list,
     get_text_list,
 )
-from kikuchipy.draw.colors import KIKUCHI_BAND_COLORS_TSL
+from kikuchipy.draw.colors import TABLEAU_COLORS, TSL_COLORS
 from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 
 class GeometricalEBSDSimulation:
-    """Geometrical EBSD simulation with Kikuchi bands and zone axes.
-    """
+    """Geometrical EBSD simulation with Kikuchi bands and zone axes."""
+
+    exclude_outside_detector = True
 
     def __init__(
         self,
@@ -118,8 +121,8 @@ class GeometricalEBSDSimulation:
         yg = xyg[..., 1]
         za_coords = np.zeros_like(xyg)
 
-        # Get projection center coordinates, and add two axis to get the shape
-        # (navigation shape, 1, 1)
+        # Get projection center coordinates, and add one axis to get the
+        # shape (navigation shape, 1)
         pcx = self.detector.pcx[..., np.newaxis]
         pcy = self.detector.pcy[..., np.newaxis]
         pcz = self.detector.pcz[..., np.newaxis]
@@ -130,6 +133,10 @@ class GeometricalEBSDSimulation:
         za_coords[..., 1] = (-yg + (pcy / pcz)) / self.detector.y_scale[
             ..., np.newaxis
         ]
+
+        if self.exclude_outside_detector:
+            on_detector = self.zone_axes_within_gnomonic_bounds
+            za_coords[~on_detector] = np.nan
 
         return za_coords
 
@@ -180,7 +187,11 @@ class GeometricalEBSDSimulation:
         #  elsewhere)
         if family_colors is None:
             family_colors = []
-            colors = KIKUCHI_BAND_COLORS_TSL["m-3m"]
+            colors = _get_colors_for_allowed_bands(
+                phase=self.bands.phase,
+                highest_hkl=np.max(np.abs(self.bands._hkldata), axis=0),
+                color_cycle=TSL_COLORS,
+            )
             for hkl in families.keys():
                 for table_hkl, color in colors:
                     if _is_equivalent(hkl, table_hkl):
@@ -189,7 +200,8 @@ class GeometricalEBSDSimulation:
                 else:  # Hopefully we never arrive here
                     family_colors.append([1, 0, 0])
 
-        # Append list of markers per family
+        # Append list of markers per family (colors changing with
+        # family)
         marker_list = []
         for i, idx in enumerate(families_idx.values()):
             marker_list += get_line_segment_list(
@@ -215,6 +227,9 @@ class GeometricalEBSDSimulation:
         -------
         list
         """
+        # TODO: Give them some descriptive colors (facecolor)!
+        # TODO: Marker style based on symmetry (2, 3, 4 and 6-fold):
+        #  https://matplotlib.org/3.3.2/api/markers_api.html#module-matplotlib.markers
         return get_point_list(
             points=self.zone_axes_detector_coordinates,
             size=kwargs.pop("size", 40),
@@ -222,7 +237,7 @@ class GeometricalEBSDSimulation:
             facecolor=kwargs.pop("facecolor", "w"),
             edgecolor=kwargs.pop("edgecolor", "k"),
             zorder=kwargs.pop("zorder", 5),
-            alpha=kwargs.pop("alpha", 0.7),
+            alpha=kwargs.pop("alpha", 1),
             **kwargs,
         )
 
@@ -249,7 +264,7 @@ class GeometricalEBSDSimulation:
                     "called due to zone axes NaN values, unless it's log level "
                     "is set to 'error' via `matplotlib.set_loglevel('error')`. "
                     "This will (hopefully) be fixed when HyperSpy releases a "
-                    "minor version with this update "
+                    "minor version with this update: "
                     "https://github.com/hyperspy/hyperspy/pull/2558"
                 ),
                 category=UserWarning,
@@ -267,7 +282,7 @@ class GeometricalEBSDSimulation:
                     edgecolor="k",
                     boxstyle="round, rounding_size=0.2",
                     pad=0.1,
-                    alpha=0.7,
+                    alpha=1,
                 ),
             ),
         )
@@ -285,7 +300,15 @@ class GeometricalEBSDSimulation:
         -------
         list
         """
-        pcxy = self.detector.pc[..., :2]
+        # Set up (x, y) detector coordinate array of final shape
+        # nav_shape + (n_patterns, 2)
+        nav_shape = self.bands.navigation_shape
+        n = int(np.prod(nav_shape))  # Number of patterns
+        pcxy = np.ones((n, n, 2)) * np.nan
+        i = np.arange(n)
+        pcxy[i, i, :2] = self.detector.pc[..., :2].reshape((n, 2))
+        pcxy = pcxy.reshape(nav_shape + (n, 2))
+
         nrows, ncols = self.detector.shape
         x_scale = ncols - 1 if ncols > 1 else 1
         y_scale = nrows - 1 if nrows > 1 else 1
@@ -295,7 +318,7 @@ class GeometricalEBSDSimulation:
             points=pcxy,
             size=kwargs.pop("size", 150),
             marker=kwargs.pop("marker", "*"),
-            facecolor=kwargs.pop("facolor", "C1"),
+            facecolor=kwargs.pop("facecolor", "C1"),
             edgecolor=kwargs.pop("edgecolor", "k"),
             zorder=kwargs.pop("zorder", 6),
         )
@@ -363,6 +386,46 @@ class GeometricalEBSDSimulation:
             markers += self.pc_as_markers(**pc_kwargs)
         return markers
 
+    @property
+    def zone_axes_within_gnomonic_bounds(self) -> np.ndarray:
+        """Return a boolean array with True for the zone axes within
+        the detector's gnomonic bounds.
+
+        Returns
+        -------
+        within_gnomonic_bounds
+            Boolean array with True for zone axes within the detector's
+            gnomonic bounds.
+        """
+        # Get gnomonic bounds
+        x_range = self.detector.x_range
+        y_range = self.detector.y_range
+
+        # Extend gnomonic bounds by one detector pixel to include zone
+        # axes on the detector border
+        x_scale = self.detector.x_scale
+        y_scale = self.detector.y_scale
+        x_range[..., 0] -= x_scale
+        x_range[..., 1] += x_scale
+        y_range[..., 0] -= y_scale
+        y_range[..., 1] += y_scale
+
+        # Get gnomonic coordinates
+        xg = self.zone_axes.x_gnomonic
+        yg = self.zone_axes.y_gnomonic
+
+        # Add an extra dimension to account for n number of zone axes in
+        # the last dimension for the gnomonic coordinate arrays
+        x_range = np.expand_dims(x_range, axis=-2)
+        y_range = np.expand_dims(y_range, axis=-2)
+
+        # Get boolean array
+        within_x = np.logical_and(xg >= x_range[..., 0], xg <= x_range[..., 1])
+        within_y = np.logical_and(yg >= y_range[..., 0], yg <= y_range[..., 1])
+        within_gnomonic_bounds = within_x * within_y
+
+        return within_gnomonic_bounds
+
     def __repr__(self):
         rotation_repr = repr(self.rotations).split("\n")[0]
         band_repr = repr(self.bands).split("\n")[0]
@@ -375,7 +438,7 @@ class GeometricalEBSDSimulation:
         )
 
 
-def _get_hkl_family(hkl: np.ndarray) -> Tuple[dict, dict]:
+def _get_hkl_family(hkl: np.ndarray, reduce: bool = False) -> Tuple[dict, dict]:
     # TODO: Almost identical to
     #  diffsims.crystallography.ReciprocalLatticePoint.unique, improve
     #  this instead!
@@ -385,7 +448,7 @@ def _get_hkl_family(hkl: np.ndarray) -> Tuple[dict, dict]:
     families_idx = defaultdict(list)
     for i, this_hkl in enumerate(hkl.tolist()):
         for that_hkl in families.keys():
-            if _is_equivalent(this_hkl, that_hkl):
+            if _is_equivalent(this_hkl, that_hkl, reduce=reduce):
                 families[tuple(that_hkl)].append(this_hkl)
                 families_idx[tuple(that_hkl)].append(i)
                 break
@@ -399,9 +462,85 @@ def _get_hkl_family(hkl: np.ndarray) -> Tuple[dict, dict]:
     return families, families_idx
 
 
-def _is_equivalent(this_hkl: list, that_hkl: list) -> bool:
-    # TODO: Also include equivalence of HKL reduced by common divisor?
+def _is_equivalent(
+    this_hkl: list, that_hkl: list, reduce: bool = False
+) -> bool:
+    """Determine whether two Miller index 3-tuples are equivalent.
+    Symmetry is not considered.
+    """
+    if reduce:
+        this_hkl, _ = _reduce_hkl(this_hkl)
+        that_hkl, _ = _reduce_hkl(that_hkl)
     return np.allclose(
         sorted(np.abs(this_hkl).astype(int)),
         sorted(np.abs(that_hkl).astype(int)),
     )
+
+
+def _reduce_hkl(hkl: Union[list, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
+    """Reduce Miller indices 3-tuples by a greatest common divisor."""
+    hkl = np.atleast_2d(hkl)
+    divisor = np.gcd.reduce(hkl, axis=1)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        hkl = hkl / divisor[:, np.newaxis]
+    return hkl.astype(int), divisor
+
+
+def _get_colors_for_allowed_bands(
+    phase: Phase,
+    highest_hkl: Union[List[int], np.ndarray, None] = None,
+    color_cycle: Optional[List[str]] = None,
+):
+    """Return an array of Miller indices of allowed Kikuchi bands for a
+    point group and a corresponding color.
+
+    The idea with this function is to always get the same color for the
+    same band in the same point group.
+
+    Parameters
+    ----------
+    phase
+        A phase container with a crystal structure and a space and point
+        group describing the allowed symmetry operations.
+    highest_hkl
+        Highest Miller indices to consider. If None (default),
+        [9, 9, 9] is used.
+    color_cycle
+        A list of color names recognized by Matplotlib. If None
+        (default), the Matplotlib Tableau colors are cycled through.
+
+    Returns
+    -------
+    hkl_color
+        Array with Miller indices and corresponding color.
+    """
+    if highest_hkl is None:
+        highest_hkl = [9, 9, 9]
+    rlp = ReciprocalLatticePoint.from_highest_hkl(
+        phase=phase, highest_hkl=highest_hkl,
+    )
+
+    rlp2 = rlp[rlp.allowed]
+    # TODO: Replace this ordering with future ordering method in
+    #  diffsims
+    g_order = np.argsort(rlp2.gspacing)
+    new_hkl = np.atleast_2d(rlp2._hkldata)[g_order]
+    rlp3 = ReciprocalLatticePoint(phase=rlp.phase, hkl=new_hkl)
+    hkl = np.atleast_2d(rlp3._hkldata)
+    families, families_idx = _get_hkl_family(hkl=hkl, reduce=True)
+
+    if color_cycle is None:
+        color_cycle = TABLEAU_COLORS
+    n_color_cycle = len(color_cycle)
+    n_families = len(families)
+    colors = np.tile(
+        color_cycle, (int(np.ceil(n_families / n_color_cycle)), 1)
+    )[:n_families]
+    colors = [matplotlib.colors.to_rgb(i) for i in colors]
+
+    hkl_colors = np.zeros(shape=(rlp3.size, 2, 3))
+    for hkl_idx, color in zip(families_idx.values(), colors):
+        hkl_colors[hkl_idx, 0] = hkl[hkl_idx]
+        hkl_colors[hkl_idx, 1] = color
+
+    return hkl_colors
