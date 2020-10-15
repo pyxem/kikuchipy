@@ -33,7 +33,7 @@ from kikuchipy.draw.markers import (
     get_point_list,
     get_text_list,
 )
-from kikuchipy.draw.colors import TABLEAU_COLORS, TSL_COLORS
+from kikuchipy.draw.colors import TSL_COLORS
 from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 
@@ -190,7 +190,6 @@ class GeometricalEBSDSimulation:
             colors = _get_colors_for_allowed_bands(
                 phase=self.bands.phase,
                 highest_hkl=np.max(np.abs(self.bands._hkldata), axis=0),
-                color_cycle=TSL_COLORS,
             )
             for hkl in families.keys():
                 for table_hkl, color in colors:
@@ -530,7 +529,7 @@ def _get_colors_for_allowed_bands(
     families, families_idx = _get_hkl_family(hkl=hkl, reduce=True)
 
     if color_cycle is None:
-        color_cycle = TABLEAU_COLORS
+        color_cycle = TSL_COLORS
     n_color_cycle = len(color_cycle)
     n_families = len(families)
     colors = np.tile(
