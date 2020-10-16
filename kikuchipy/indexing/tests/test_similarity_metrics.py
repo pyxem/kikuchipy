@@ -91,6 +91,23 @@ class TestSimilarityMetrics:
         # many to many
         assert pytest.approx(ndp_metric(p_da, t_da).compute()[1, 0, 1]) == 1
 
+    @pytest.mark.parametrize("metric", ["zncc", "ndp"])
+    def test_zncc_ndp_returns_desired_array_type(self, metric):
+        metric = SIMILARITY_METRICS[metric]
+        p = np.array(
+            [
+                [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
+                [[[9, 8], [1, 7]], [[5, 2], [2, 7]]],
+            ],
+            np.int8,
+        )
+        t = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8)
+
+        assert isinstance(metric(p, t), np.ndarray)
+        assert isinstance(metric(da.from_array(p), da.from_array(t)), da.Array)
+        assert isinstance(metric(p, da.from_array(t)), da.Array)
+        assert isinstance(metric(da.from_array(p), t), da.Array)
+
     def test_flat_metric(self):
         p = np.array(
             [
@@ -152,3 +169,27 @@ class TestSimilarityMetrics:
             _get_number_of_templates(t) == 2
             and _get_number_of_templates(t[0]) == 1
         )
+
+    def test_similarity_metric_representation(self):
+        metrics = [
+            make_similarity_metric(
+                metric_func=lambda p, t: np.zeros((2, 2, 2)),
+                scope=MetricScope.MANY_TO_MANY,
+            ),
+            make_similarity_metric(
+                metric_func=lambda p, t: np.zeros((2, 2, 2)),
+                scope=MetricScope.ONE_TO_MANY,
+                flat=True,
+            ),
+            SIMILARITY_METRICS["zncc"],
+            SIMILARITY_METRICS["ndp"],
+        ]
+        desired_repr = [
+            f"SimilarityMetric <lambda>, scope: many_to_many",
+            f"FlatSimilarityMetric <lambda>, scope: one_to_many",
+            f"SimilarityMetric _zncc_einsum, scope: many_to_many",
+            f"SimilarityMetric _ndp_einsum, scope: many_to_many",
+        ]
+
+        for i in range(len(desired_repr)):
+            assert repr(metrics[i]) == desired_repr[i]
