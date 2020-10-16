@@ -99,7 +99,7 @@ def make_similarity_metric(
     |              |        returns        |       returns        |
     +--------------+-----------+-----------+----------+-----------+
     | MANY_TO_MANY | (n,m,y,x)    (N,y,x)  | (nm,yx)      (N,yx)  |
-    |              |        (N,n,m)        |        (N,nm)        |
+    |              |        (n,m,N)        |        (nm,N)        |
     +--------------+-----------+-----------+----------+-----------+
     | ONE_TO_MANY  |   (y,x)      (N,y,x)  |   (yx,)      (N,yx)  |
     |              |         (N,)          |        (N,)          |
@@ -404,10 +404,10 @@ def _zncc_einsum(
     patterns, templates = _zero_mean(patterns, templates)
     patterns, templates = _normalize(patterns, templates)
 
-    zncc = da.einsum("ijk,lmjk->ilm", templates, patterns, optimize=True)
+    zncc = da.einsum("ijkl,mkl->ijm", patterns, templates, optimize=True)
 
     # Alternative with equivalent results:
-    #   zncc = da.tensordot(templates, patterns, axes=([1, 2], [2, 3]))
+    # zncc = da.tensordot(p_da, t_da, axes=([2,3], [1, 2]))
     return zncc
 
 
@@ -423,7 +423,7 @@ def _ndp_einsum(
     templates: Union[da.Array, np.ndarray],
 ) -> Union[np.ndarray, da.Array]:
     patterns, templates = _normalize(patterns, templates)
-    ndp = da.einsum("ijk,lmjk->ilm", templates, patterns, optimize=True)
+    ndp = da.einsum("ijkl,mkl->ijm", patterns, templates, optimize=True)
     return ndp
 
 
