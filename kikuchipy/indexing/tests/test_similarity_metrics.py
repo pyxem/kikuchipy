@@ -105,6 +105,8 @@ class TestSimilarityMetrics:
 
         assert isinstance(metric(p, t), np.ndarray)
         assert isinstance(metric(da.from_array(p), da.from_array(t)), da.Array)
+        assert isinstance(metric(p, da.from_array(t)), da.Array)
+        assert isinstance(metric(da.from_array(p), t), da.Array)
 
     def test_flat_metric(self):
         p = np.array(
