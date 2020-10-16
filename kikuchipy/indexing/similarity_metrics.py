@@ -273,8 +273,8 @@ class FlatSimilarityMetric(SimilarityMetric):
         patterns: Union[np.ndarray, da.Array],
         templates: Union[np.ndarray, da.Array],
     ) -> Union[np.ndarray, da.Array]:
-        """Strip images to 1D vectors, measure the similarities and
-        return the results.
+        """Flatten images, measure the similarities and return the
+        results.
         """
         nav_shape = _get_nav_shape(patterns)
         sig_shape = _get_sig_shape(patterns)
@@ -293,10 +293,7 @@ def _get_sig_shape(p):
 
 
 def _get_number_of_templates(t):
-    if t.ndim == 3:
-        return t.shape[0]
-    else:
-        return 1
+    return t.shape[0] if t.ndim == 3 else 1
 
 
 def _expand_dims_to_many_to_many(
@@ -421,7 +418,9 @@ def _zncc_einsum(
     Returns
     -------
     zncc
-        Correlation coefficients in range [0, 1] for all comparisons.
+        Correlation coefficients in range [-1, 1] for all comparisons,
+        as :class:`np.ndarray` if both `patterns` and `templates` are
+        :class:`np.ndarray`, else :class:`da.Array`.
 
     Notes
     -----
@@ -431,7 +430,10 @@ def _zncc_einsum(
     patterns, templates = _zero_mean(patterns, templates)
     patterns, templates = _normalize(patterns, templates)
     zncc = da.einsum("ijkl,mkl->ijm", patterns, templates, optimize=True)
-    return zncc
+    if isinstance(patterns, np.ndarray) and isinstance(templates, np.ndarray):
+        return zncc.compute()
+    else:
+        return zncc
 
 
 def _ndp_einsum(
@@ -451,11 +453,16 @@ def _ndp_einsum(
     Returns
     -------
     ndp
-        Normalized dot products in range [0, 1] for all comparisons.
+        Normalized dot products in range [0, 1] for all comparisons,
+        as :class:`np.ndarray` if both `patterns` and `templates` are
+        :class:`np.ndarray`, else :class:`da.Array`.
     """
     patterns, templates = _normalize(patterns, templates)
     ndp = da.einsum("ijkl,mkl->ijm", patterns, templates, optimize=True)
-    return ndp
+    if isinstance(patterns, np.ndarray) and isinstance(templates, np.ndarray):
+        return ndp.compute()
+    else:
+        return ndp
 
 
 SIMILARITY_METRICS = {
