@@ -47,7 +47,7 @@ def template_match(
     compute: bool = True,
     n_slices: int = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """[summary. Haakon read returns to understand]
+    """[summary. Haakon read Returns to understand]
 
     Parameters
     ----------
@@ -94,6 +94,20 @@ def template_match(
             f"{metric.scope} must be either of {accepeted_scopes}."
         )
 
+    # check if data is too low scoped
+    # could be a function in similarity_metrics for making it cleaner here
+    # this check makes _is_compatible uneccesarry
+    if (
+        not metric._P_T_NDIM_TO_SCOPE.get(
+            (patterns.ndim, templates.ndim), False
+        )
+        in accepeted_scopes
+    ):
+        raise OSError(
+            f"The shape of patterns and templates must correspond with either of {accepeted_scopes}\n"
+            f"The shapes; {patterns.shape}, {templates.shape} was given."
+        )
+
     # Expects signal data to be located on the two last axis for all scopes
     sig_data_shape = patterns.shape[-2:]
     t_sig_shape = templates.shape[-2:]
@@ -101,12 +115,6 @@ def template_match(
         raise OSError(
             f"The pattern {sig_data_shape} and template {t_sig_shape} "
             "signal shapes are not identical."
-        )
-
-    if not metric._is_compatible(patterns, templates):
-        raise OSError(
-            f"The shape of patterns {patterns.shape} and templates {templates.shape} "
-            f"are not compatible with the scope {metric.scope} of {type(metric).__name__}"
         )
 
     similarities = metric(patterns, templates)
@@ -122,6 +130,7 @@ def template_match(
             match_result = da.compute(*match_result)
 
     # Flattens the signal axis if not already flat
+    # This is foremost a design choice for returning standard outputs
     if not metric.flat:
         # If N is < keep_n => keep_n = N
         keep_n = match_result[0].shape[-1]
