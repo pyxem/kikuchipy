@@ -209,7 +209,9 @@ class SimilarityMetric:
         return self._metric_func(patterns, templates)
 
     def _expand_dims_to_match_scope(
-        self, p: Union[np.ndarray, da.Array], t: Union[np.ndarray, da.Array],
+        self,
+        p: Union[np.ndarray, da.Array],
+        t: Union[np.ndarray, da.Array],
     ) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
         """Return patterns and templates with added axes corresponding
         to the scope of the metric.
@@ -219,13 +221,10 @@ class SimilarityMetric:
         t = t[(np.newaxis,) * (t_scope_ndim - t.ndim)]
         return p, t
 
-    def _is_compatible(
-        self, p: Union[np.ndarray, da.Array], t: Union[np.ndarray, da.Array]
-    ) -> bool:
+    def _is_compatible(self, p_ndim: int, t_ndim: int) -> bool:
         """Return whether shapes of patterns and templates are
         compatible with the metric's scope.
         """
-        p_ndim, t_ndim = p.ndim, t.ndim
         if self.flat:
             p_ndim = p_ndim // 2  # 4 -> 2 or 2 -> 1
             t_ndim -= 1
@@ -297,7 +296,9 @@ def _get_number_of_templates(t):
 
 
 def _expand_dims_to_many_to_many(
-    p: Union[np.ndarray, da.Array], t: Union[np.ndarray, da.Array], flat: bool,
+    p: Union[np.ndarray, da.Array],
+    t: Union[np.ndarray, da.Array],
+    flat: bool,
 ) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
     """Expand the dims of patterns and templates to match
     `MetricScope.MANY_TO_MANY`.
