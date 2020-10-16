@@ -27,8 +27,8 @@ from kikuchipy.indexing.similarity_metrics import (
     MetricScope,
     FlatSimilarityMetric,
     SIMILARITY_METRICS,
+    _get_number_of_templates,
 )
-from kikuchipy.indexing._util import _get_number_of_templates
 
 
 class TestSimilarityMetrics:

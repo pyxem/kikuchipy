@@ -24,8 +24,6 @@ from typing import Callable, Tuple, Union
 import dask.array as da
 import numpy as np
 
-from kikuchipy.indexing._util import _get_nav_shape, _get_sig_shape
-
 
 class MetricScope(Enum):
     """Describes the input parameters for a similarity metric. See
@@ -224,7 +222,9 @@ class SimilarityMetric:
     def _is_compatible(
         self, p: Union[np.ndarray, da.Array], t: Union[np.ndarray, da.Array]
     ) -> bool:
-        """Return whether"""
+        """Return whether shapes of patterns and templates are
+        compatible with the metric's scope.
+        """
         p_ndim, t_ndim = p.ndim, t.ndim
         if self.flat:
             p_ndim = p_ndim // 2  # 4 -> 2 or 2 -> 1
@@ -282,6 +282,21 @@ class FlatSimilarityMetric(SimilarityMetric):
         patterns = patterns.reshape((nav_flat_size, sig_flat_size))
         templates = templates.reshape((-1, sig_flat_size))
         return self._metric_func(patterns, templates)
+
+
+def _get_nav_shape(p):
+    return {2: (), 3: (p.shape[0],), 4: (p.shape[:2])}[p.ndim]
+
+
+def _get_sig_shape(p):
+    return p.shape[-2:]
+
+
+def _get_number_of_templates(t):
+    if t.ndim == 3:
+        return t.shape[0]
+    else:
+        return 1
 
 
 def _expand_dims_to_many_to_many(
