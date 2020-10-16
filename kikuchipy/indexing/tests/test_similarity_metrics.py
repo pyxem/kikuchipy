@@ -16,9 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import pytest
-import numpy as np
 import dask.array as da
+import numpy as np
+import pytest
+from scipy.spatial.distance import cdist
 
 from kikuchipy.indexing.similarity_metrics import (
     make_similarity_metric,
@@ -26,24 +27,14 @@ from kikuchipy.indexing.similarity_metrics import (
     MetricScope,
     FlatSimilarityMetric,
     SIMILARITY_METRICS,
-    _zncc_einsum,
-    _ndp_einsum,
 )
-from kikuchipy.indexing._util import (
-    _get_nav_shape,
-    _get_sig_shape,
-    _get_number_of_templates,
-)
-from scipy.spatial.distance import cdist
+from kikuchipy.indexing._util import _get_number_of_templates
 
 
 class TestSimilarityMetrics:
     @pytest.mark.parametrize(
         "flat,returned_class",
-        [
-            (False, SimilarityMetric),
-            (True, FlatSimilarityMetric),
-        ],
+        [(False, SimilarityMetric), (True, FlatSimilarityMetric),],
     )
     def test_make_similarity_metric(self, flat, returned_class):
         assert (
@@ -73,10 +64,7 @@ class TestSimilarityMetrics:
 
         # One perfect match, at [1,0,1] in results, and one close match
         # Two templates
-        t = np.array(
-            [[[5, 3], [2, 7]], [[9, 8], [1, 7]]],
-            np.int8,
-        )
+        t = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8)
         t_da = da.from_array(t)
 
         # many to many
@@ -97,10 +85,7 @@ class TestSimilarityMetrics:
         p_da = da.from_array(p)
 
         # One perfect match and one close match
-        t = np.array(
-            [[[5, 3], [2, 7]], [[9, 8], [1, 7]]],
-            np.int8,
-        )
+        t = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8)
         t_da = da.from_array(t)
 
         # many to many
@@ -114,10 +99,7 @@ class TestSimilarityMetrics:
             ],
             np.int8,
         )
-        t = np.array(
-            [[[5, 3], [2, 7]], [[9, 8], [1, 7]]],
-            np.int8,
-        )
+        t = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8)
         euclidean_metric = make_similarity_metric(
             lambda p, t: cdist(p, t, metric="euclidean"),
             greater_is_better=False,
@@ -126,7 +108,7 @@ class TestSimilarityMetrics:
             make_compatible_to_lower_scopes=True,
         )
         assert (
-            euclidean_metric._is_compatible(p, t) == True
+            euclidean_metric._is_compatible(p, t) is True
             and pytest.approx(euclidean_metric(p, t)[2, 1]) == 0
         )
 
@@ -140,7 +122,7 @@ class TestSimilarityMetrics:
         )
         assert (
             metric._is_compatible(np.zeros((2, 2, 2, 2)), np.zeros((4, 2, 2)))
-            == False
+            is False
         )
 
     def test_not_supported_inputs(self):
@@ -153,7 +135,7 @@ class TestSimilarityMetrics:
             metric._is_compatible(
                 np.zeros((2, 2, 2, 2, 2)), np.zeros((4, 2, 2))
             )
-            == False
+            is False
         )
 
     def test_too_small_scoped_inputs(self):
@@ -161,14 +143,11 @@ class TestSimilarityMetrics:
             lambda p, t: np.zeros((2, 2, 2)), scope=MetricScope.MANY_TO_MANY
         )
         assert (
-            metric._is_compatible(np.zeros((2, 2)), np.zeros((2, 2))) == False
+            metric._is_compatible(np.zeros((2, 2)), np.zeros((2, 2))) is False
         )
 
     def test_get_number_of_templates(self):
-        t = np.array(
-            [[[5, 3], [2, 7]], [[9, 8], [1, 7]]],
-            np.int8,
-        )
+        t = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8)
         assert (
             _get_number_of_templates(t) == 2
             and _get_number_of_templates(t[0]) == 1
