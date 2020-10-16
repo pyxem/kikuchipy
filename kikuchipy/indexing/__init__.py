@@ -16,33 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-# Import order must not be changed
-from kikuchipy import crystallography
-from kikuchipy import detectors
-from kikuchipy import draw
-from kikuchipy import filters
-from kikuchipy import indexing
-from kikuchipy import pattern
-from kikuchipy import projections
-from kikuchipy import signals
-from kikuchipy import generators
-from kikuchipy import simulations
-from kikuchipy.io._io import load
+"""Indexing of EBSD patterns."""
 
-from kikuchipy import release
-
-__version__ = release.version
+from kikuchipy.indexing.similarity_metrics import make_similarity_metric
 
 __all__ = [
-    "crystallography",
-    "detectors",
-    "draw",
-    "filters",
-    "generators",
-    "indexing",
-    "load",
-    "pattern",
-    "projections",
-    "signals",
-    "simulations",
+    "make_similarity_metric",
 ]
