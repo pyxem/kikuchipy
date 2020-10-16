@@ -94,6 +94,15 @@ def template_match(
             f"{metric.scope} must be either of {accepeted_scopes}."
         )
 
+    # Expects signal data to be located on the two last axis for all scopes
+    sig_data_shape = patterns.shape[-2:]
+    t_sig_shape = templates.shape[-2:]
+    if sig_data_shape != t_sig_shape:
+        raise OSError(
+            f"The pattern {sig_data_shape} and template {t_sig_shape} "
+            "signal shapes are not identical."
+        )
+
     # check if data is too low scoped
     # could be a function in similarity_metrics for making it cleaner here
     # this check makes _is_compatible uneccesarry
@@ -106,15 +115,6 @@ def template_match(
         raise OSError(
             f"The shape of patterns and templates must correspond with either of {accepeted_scopes}\n"
             f"The shapes; {patterns.shape}, {templates.shape} was given."
-        )
-
-    # Expects signal data to be located on the two last axis for all scopes
-    sig_data_shape = patterns.shape[-2:]
-    t_sig_shape = templates.shape[-2:]
-    if sig_data_shape != t_sig_shape:
-        raise OSError(
-            f"The pattern {sig_data_shape} and template {t_sig_shape} "
-            "signal shapes are not identical."
         )
 
     similarities = metric(patterns, templates)
