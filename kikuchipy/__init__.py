@@ -21,6 +21,7 @@ from kikuchipy import crystallography
 from kikuchipy import detectors
 from kikuchipy import draw
 from kikuchipy import filters
+from kikuchipy import indexing
 from kikuchipy import pattern
 from kikuchipy import projections
 from kikuchipy import signals
@@ -38,6 +39,7 @@ __all__ = [
     "draw",
     "filters",
     "generators",
+    "indexing",
     "load",
     "pattern",
     "projections",

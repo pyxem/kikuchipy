@@ -61,6 +61,7 @@ class TestSimilarityMetrics:
 
     def test_zncc(self):
         zncc_metric = SIMILARITY_METRICS["zncc"]
+        # Four patterns
         p = np.array(
             [
                 [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
@@ -70,7 +71,8 @@ class TestSimilarityMetrics:
         )
         p_da = da.from_array(p)
 
-        # One perfect match and one close match
+        # One perfect match, at [1,0,1] in results, and one close match
+        # Two templates
         t = np.array(
             [[[5, 3], [2, 7]], [[9, 8], [1, 7]]],
             np.int8,
@@ -78,7 +80,7 @@ class TestSimilarityMetrics:
         t_da = da.from_array(t)
 
         # many to many
-        assert pytest.approx(zncc_metric(p_da, t_da).compute()[1, 1, 0]) == 1
+        assert pytest.approx(zncc_metric(p_da, t_da).compute()[1, 0, 1]) == 1
 
         # Working with lower scopes, here one to many:
         assert pytest.approx(zncc_metric(p_da[1, 0], t_da).compute()[1]) == 1
@@ -102,7 +104,7 @@ class TestSimilarityMetrics:
         t_da = da.from_array(t)
 
         # many to many
-        assert pytest.approx(ndp_metric(p_da, t_da).compute()[1, 1, 0]) == 1
+        assert pytest.approx(ndp_metric(p_da, t_da).compute()[1, 0, 1]) == 1
 
     def test_flat_metric(self):
         p = np.array(
@@ -138,6 +140,19 @@ class TestSimilarityMetrics:
         )
         assert (
             metric._is_compatible(np.zeros((2, 2, 2, 2)), np.zeros((4, 2, 2)))
+            == False
+        )
+
+    def test_not_supported_inputs(self):
+        metric = make_similarity_metric(
+            lambda p, t: 1.0,
+            scope=MetricScope.MANY_TO_MANY,
+            make_compatible_to_lower_scopes=True,
+        )
+        assert (
+            metric._is_compatible(
+                np.zeros((2, 2, 2, 2, 2)), np.zeros((4, 2, 2))
+            )
             == False
         )
 
