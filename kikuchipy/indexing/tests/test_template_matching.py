@@ -81,7 +81,6 @@ class TestTemplateMatching:
             ],
             np.int8,
         )
-        # One perfect match, at [1,0,1] in results, and one close match
         # Five templates
         t = np.array(
             [
