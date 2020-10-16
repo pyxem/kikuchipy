@@ -219,13 +219,10 @@ class SimilarityMetric:
         t = t[(np.newaxis,) * (t_scope_ndim - t.ndim)]
         return p, t
 
-    def _is_compatible(
-        self, p: Union[np.ndarray, da.Array], t: Union[np.ndarray, da.Array]
-    ) -> bool:
+    def _is_compatible(self, p_ndim: int, t_ndim: int) -> bool:
         """Return whether shapes of patterns and templates are
         compatible with the metric's scope.
         """
-        p_ndim, t_ndim = p.ndim, t.ndim
         if self.flat:
             p_ndim = p_ndim // 2  # 4 -> 2 or 2 -> 1
             t_ndim -= 1

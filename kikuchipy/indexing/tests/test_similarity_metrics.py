@@ -125,20 +125,24 @@ class TestSimilarityMetrics:
             make_compatible_to_lower_scopes=True,
         )
         assert (
-            euclidean_metric._is_compatible(p, t) is True
+            euclidean_metric._is_compatible(p.ndim, t.ndim) is True
             and pytest.approx(euclidean_metric(p, t)[2, 1]) == 0
         )
 
     def test_make_compatible_to_lower_scopes(self):
         zncc_metric = SIMILARITY_METRICS["zncc"]
-        assert zncc_metric._is_compatible(np.zeros((2, 2)), np.zeros((2, 2)))
+        assert zncc_metric._is_compatible(
+            np.zeros((2, 2)).ndim, np.zeros((2, 2)).ndim
+        )
 
     def test_too_large_scoped_inputs(self):
         metric = make_similarity_metric(
             lambda p, t: 1.0, scope=MetricScope.ONE_TO_ONE
         )
         assert (
-            metric._is_compatible(np.zeros((2, 2, 2, 2)), np.zeros((4, 2, 2)))
+            metric._is_compatible(
+                np.zeros((2, 2, 2, 2)).ndim, np.zeros((4, 2, 2)).ndim
+            )
             is False
         )
 
@@ -150,7 +154,7 @@ class TestSimilarityMetrics:
         )
         assert (
             metric._is_compatible(
-                np.zeros((2, 2, 2, 2, 2)), np.zeros((4, 2, 2))
+                np.zeros((2, 2, 2, 2, 2)).ndim, np.zeros((4, 2, 2)).ndim
             )
             is False
         )
@@ -160,7 +164,8 @@ class TestSimilarityMetrics:
             lambda p, t: np.zeros((2, 2, 2)), scope=MetricScope.MANY_TO_MANY
         )
         assert (
-            metric._is_compatible(np.zeros((2, 2)), np.zeros((2, 2))) is False
+            metric._is_compatible(np.zeros((2, 2)).ndim, np.zeros((2, 2)).ndim)
+            is False
         )
 
     def test_get_number_of_templates(self):
