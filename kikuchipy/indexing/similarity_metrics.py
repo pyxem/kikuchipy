@@ -215,7 +215,7 @@ class SimilarityMetric:
     ) -> bool:
         p_ndim, t_ndim = p.ndim, t.ndim
         if self.flat:
-            p_ndim -= 2
+            p_ndim = p_ndim // 2  # 4 -> 2 or 2 -> 1
             t_ndim -= 1
         inferred_scope = self._P_T_NDIM_TO_SCOPE.get((p_ndim, t_ndim), False)
         if not inferred_scope:
