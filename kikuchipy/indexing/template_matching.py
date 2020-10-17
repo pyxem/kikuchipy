@@ -108,13 +108,14 @@ def template_match(
         )
 
     similarities = metric(patterns, templates)
-    if not isinstance(similarities, da.Array):
-        similarities = da.from_array(similarities)
+    similarities = da.asarray(similarities)
 
     # ONE_TO_ONE
     if similarities.shape == ():
-        s = np.array([similarities.compute()]) if compute else similarities
-        return np.array([0]), s
+        similarity = (
+            np.array([similarities.compute()]) if compute else similarities
+        )
+        return np.array([0]), similarity
 
     # If N is < keep_n => keep_n = N
     keep_n = min(keep_n, len(templates))
@@ -170,8 +171,6 @@ def _template_match_slice_templates(
     # without thinking about aligining with dask chunks or rechunking
     # dask seem to handle the sequential slicing decently
 
-    metric = SIMILARITY_METRICS.get(metric, metric)
-
     nav_shape = _get_nav_shape(patterns)
     nav_size = np.prod(nav_shape)
     num_templates = _get_number_of_templates(templates)
@@ -180,7 +179,7 @@ def _template_match_slice_templates(
     n = min(keep_n, slice_size)
     match_result_aggregate = (
         np.zeros((nav_size, n_slices * n), np.int32),
-        np.zeros((nav_size, n_slices * n), np.float32),
+        np.zeros((nav_size, n_slices * n), metric._dtype_out),
     )
 
     start = 0
