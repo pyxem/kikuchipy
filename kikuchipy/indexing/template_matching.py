@@ -47,30 +47,33 @@ def template_match(
     compute: bool = True,
     n_slices: int = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """[summary. Haakon read Returns to understand]
+    """Find the best matching templates to patterns based on given metric.
+
+    Function is primarily for use in
+    :class:`~kikuchipy.indexing.StaticDictionaryIndexing` and
+    :class:`~kikuchipy.indexing.DynamicDictionaryIndexing`.
 
     Parameters
     ----------
     patterns : Union[da.Array, np.ndarray]
-        [description]
+        Patterns
     templates : Union[da.Array, np.ndarray]
-        [description]
+        Templates
     keep_n : int, optional
-        [description], by default 1
+        Number of match results to keep for each pattern, by default 1
     metric : Union[str, SimilarityMetric], optional
-        [description], by default "zncc"
+        Similarity metric, by default "zncc"
     compute : bool, optional
-        [description, dask compute, computes anyway (for now) if n_slices is given], by default True,
+        Whether to compute dask arrays before returning, by default True.
+        Is True if `n_slices` is given.
     n_slices : int, optional
-        [description], by default None
+        Number of templates slices to process sequentially, by default None
 
     Returns
     -------
-    match_result : Tuple[np.ndarray, np.ndarray]
-        [both arrays have shape (ny*nx,keep_n)
-        first array is template indicies and
-        second array is metric results
-        both are sorted along keep_n axis according to metric used]
+    template_indices, metric_result : Tuple[np.ndarray, np.ndarray]
+        Template indices and corresponding metric results with data shapes (ny*nx,keep_n).
+        Both arrays are sorted along keep_n axis according to metric used.
     """
     if n_slices is not None:
         # Will (for now) dask compute regardless of compute param
@@ -103,7 +106,7 @@ def template_match(
             "signal shapes are not identical."
         )
 
-    # check if data is too low scoped
+    # Check if data is too low scoped
     # could be a function in similarity_metrics for making it cleaner here
     # this check makes _is_compatible uneccesarry
     if (
@@ -138,7 +141,8 @@ def template_match(
             match_result[0].reshape(-1, keep_n),
             match_result[1].reshape(-1, keep_n),
         )
-    return match_result
+    template_indices, metric_results = match_result
+    return template_indices, metric_results
 
 
 def _template_match_slice_templates(
@@ -148,6 +152,26 @@ def _template_match_slice_templates(
     metric: Union[str, SimilarityMetric] = "zncc",
     n_slices: int = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
+    """See `template_match`.
+
+    Parameters
+    ----------
+    patterns : Union[da.Array, np.ndarray]
+        Patterns
+    templates : Union[da.Array, np.ndarray]
+        Templates
+    keep_n : int, optional
+        Number of results to keep, by default 1
+    metric : Union[str, SimilarityMetric], optional
+        Similarity metric, by default "zncc"
+    n_slices : int, optional
+        Number of templates slices to process sequentially, by default None
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        [description]
+    """
 
     # This is a naive implementation, hopefully not stupid, of slicing the templates in batches
     # without thinking about aligining with dask chunks or rechunking
