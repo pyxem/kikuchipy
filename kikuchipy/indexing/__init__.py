@@ -20,5 +20,14 @@
 
 from kikuchipy.indexing.similarity_metrics import make_similarity_metric
 from kikuchipy.indexing.template_matching import template_match
+from kikuchipy.indexing.static_dictionary_indexing import (
+    StaticDictionaryIndexing,
+)
+from kikuchipy.indexing.osm import orientation_similarity_map
 
-__all__ = ["make_similarity_metric", "template_match"]
+__all__ = [
+    "StaticDictionaryIndexing",
+    "template_match",
+    "make_similarity_metric",
+    "orientation_similarity_map",
+]
