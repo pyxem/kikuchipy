@@ -43,15 +43,6 @@ class TestTemplateMatching:
                 np.zeros((2, 2)), np.zeros((2, 2)), metric="not_recognized"
             )
 
-    def test_not_accepted_metric(self):
-        dummy_metric = make_similarity_metric(
-            lambda p, t: 1.0, scope=MetricScope.ONE_TO_ONE
-        )
-        with pytest.raises(ValueError):
-            template_match(
-                np.zeros((2, 2)), np.zeros((2, 2)), metric=dummy_metric
-            )
-
     def test_mismatching_signal_shapes(self):
         self.dummy_metric.scope = MetricScope.MANY_TO_MANY
         with pytest.raises(OSError):
@@ -59,14 +50,14 @@ class TestTemplateMatching:
                 np.zeros((2, 2)), np.zeros((3, 3)), metric=self.dummy_metric
             )
 
-    def test_not_accepted_data(self):
-        with pytest.raises(OSError):
-            template_match(np.zeros((2, 2)), np.zeros((2, 2)))
-
     def test_metric_not_compatible_with_data(self):
         self.dummy_metric.scope = MetricScope.ONE_TO_MANY
         with pytest.raises(OSError):
-            template_match(np.zeros((2, 2)), np.zeros((2, 2)))
+            template_match(
+                np.zeros((2, 2, 2, 2)),
+                np.zeros((2, 2)),
+                metric=self.dummy_metric,
+            )
 
     @pytest.mark.parametrize(
         "n_slices",
@@ -103,3 +94,7 @@ class TestTemplateMatching:
         mr = template_match(p, t, compute=False)
         assert len(mr) == 2
         assert isinstance(mr[0], da.Array) and isinstance(mr[1], da.Array)
+
+    def test_template_match_one_to_one(self):
+        mr = template_match(np.zeros((2, 2)), np.zeros((2, 2)))
+        assert mr[0][0] == 0

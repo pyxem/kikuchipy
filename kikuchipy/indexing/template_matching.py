@@ -91,11 +91,6 @@ def template_match(
             f"{metric} must be either of {list(SIMILARITY_METRICS.keys())} "
             "or an instance of SimilarityMetric. See make_similarity_metric."
         )
-    accepeted_scopes = (MetricScope.MANY_TO_MANY, MetricScope.ONE_TO_MANY)
-    if not metric.scope in accepeted_scopes:
-        raise ValueError(
-            f"{metric.scope} must be either of {accepeted_scopes}."
-        )
 
     # Expects signal data to be located on the two last axis for all scopes
     sig_data_shape = patterns.shape[-2:]
@@ -106,23 +101,23 @@ def template_match(
             "signal shapes are not identical."
         )
 
-    # Check if data is too low scoped
-    # could be a function in similarity_metrics for making it cleaner here
-    # this check makes _is_compatible uneccesarry
-    if (
-        not metric._P_T_NDIM_TO_SCOPE.get(
-            (patterns.ndim, templates.ndim), False
-        )
-        in accepeted_scopes
-    ):
+    if not metric._is_compatible(patterns.ndim, templates.ndim):
         raise OSError(
-            f"The shape of patterns and templates must correspond with either of {accepeted_scopes}\n"
-            f"The shapes; {patterns.shape}, {templates.shape} was given."
+            f"The shape of patterns {patterns.shape} and templates {templates.shape} "
+            f"are not compatible with the scope {metric.scope} of {type(metric).__name__}"
         )
 
     similarities = metric(patterns, templates)
     if not isinstance(similarities, da.Array):
         similarities = da.from_array(similarities)
+
+    # ONE_TO_ONE
+    if similarities.shape == ():
+        s = np.array([similarities.compute()]) if compute else similarities
+        return np.array([0]), s
+
+    # If N is < keep_n => keep_n = N
+    keep_n = min(keep_n, len(templates))
 
     match_result = (
         similarities.argtopk(metric.sign * keep_n, axis=-1),
@@ -135,8 +130,6 @@ def template_match(
     # Flattens the signal axis if not already flat
     # This is foremost a design choice for returning standard outputs
     if not metric.flat:
-        # If N is < keep_n => keep_n = N
-        keep_n = match_result[0].shape[-1]
         match_result = (
             match_result[0].reshape(-1, keep_n),
             match_result[1].reshape(-1, keep_n),
