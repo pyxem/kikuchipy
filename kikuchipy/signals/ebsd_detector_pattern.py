@@ -73,8 +73,6 @@ class EBSDDetectorPattern:
             detector, number_of_rotations
         )
 
-        ebsd_detector_pattern = np.zeros((detector.nrows, detector.ncols))
-
         master_north = master_pattern.data[0]
         master_south = master_pattern.data[1]
 
