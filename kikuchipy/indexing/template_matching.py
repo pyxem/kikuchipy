@@ -65,7 +65,6 @@ def template_match(
         Similarity metric, by default "zncc".
     compute : bool, optional
         Whether to compute dask arrays before returning, by default True.
-        Is True if `n_slices` is given.
     n_slices : int, optional
         Number of template slices to process sequentially, by default None.
 
@@ -77,7 +76,11 @@ def template_match(
     """
     metric = SIMILARITY_METRICS.get(metric, metric)
     if n_slices is not None:
-        # Will (for now) dask compute regardless of compute param
+        if not compute:
+            raise NotImplementedError(
+                "Slicing templates and returning dask arrays is not implemented."
+            )
+
         return _template_match_slice_templates(
             patterns,
             templates,
