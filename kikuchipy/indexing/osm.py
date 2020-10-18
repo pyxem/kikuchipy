@@ -112,11 +112,13 @@ def orientation_similarity_map(
         # v is indices picked out with footprint from flat_index_map
         v = v.astype(np.int)
 
+        center_value = v[center_index]
+
         # Filter only true neighbours, -1 out of image and not include itself
-        neighbours = v[np.where((v != -1) & (v != center_index))]
+        neighbours = v[np.where((v != -1) & (v != center_value))]
 
         number_of_equal_matches_to_its_neighbours = [
-            f(match_indicies[center_index], mi)
+            f(match_indicies[center_value], mi)
             for mi in match_indicies[neighbours]
         ]
         os = np.mean(number_of_equal_matches_to_its_neighbours)
