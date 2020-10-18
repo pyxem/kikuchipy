@@ -75,6 +75,7 @@ def template_match(
         Template indices and corresponding metric results with data shapes (ny*nx,keep_n).
         Both arrays are sorted along keep_n axis according to metric used.
     """
+    metric = SIMILARITY_METRICS.get(metric, metric)
     if n_slices is not None:
         # Will (for now) dask compute regardless of compute param
         return _template_match_slice_templates(
@@ -84,8 +85,6 @@ def template_match(
             metric=metric,
             n_slices=n_slices,
         )
-
-    metric = SIMILARITY_METRICS.get(metric, metric)
     if not isinstance(metric, SimilarityMetric):
         raise ValueError(
             f"{metric} must be either of {list(SIMILARITY_METRICS.keys())} "
