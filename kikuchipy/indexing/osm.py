@@ -36,6 +36,7 @@ def orientation_similarity_map(
     normalize_by_n: bool = True,
     from_n_largest: int = None,
     footprint: np.ndarray = None,
+    center_index: int = 2,
 ) -> np.ndarray:
     """Create Orientation Similarity Map(OSM), following [Marquardt2017]_.
 
@@ -47,13 +48,16 @@ def orientation_similarity_map(
     xmap : CrystalMap
         CrystalMap with "template_indices" in prop
     n_largest : int, optional
-        Number of sorted results to be used, by default use all
+        Number of sorted results to be used, by default use all.
     normalize_by_n : bool, optional
         Whether to return Orientation Similarity in range [0, 1], by default True
     from_n_largest : int, optional
-        Create OSM for each n in range [`from_n_largest`, `n_largest`], by default None
+        Create OSM for each n in range [`from_n_largest`, `n_largest`], by default None.
     footprint : [np.ndarray], optional
-        Not implemented, by default nearest neighbours.
+        Boolean 2D array specifying which neighbours to be used in computation of OS
+        in each navigation point, by default nearest neighbours.
+    center_index : int, optional
+        Flat index of central navigation point in the truthy values of footprint, by default 2.
 
     Returns
     -------
@@ -81,9 +85,6 @@ def orientation_similarity_map(
 
     if footprint is None:
         footprint = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
-    else:
-        # See line 130, px = v[2]
-        raise NotImplementedError("Feel free to contribute!")
 
     template_indices = xmap.prop["template_indices"]
 
@@ -91,9 +92,9 @@ def orientation_similarity_map(
 
     if n_largest is None:
         n_largest = keep_n
-    elif abs(n_largest) > keep_n:
+    elif n_largest > keep_n:
         raise ValueError(
-            f"Value of n_largest {n_largest} can not be larger than keep_n {keep_n}"  # keep_n * len(dictionaries) for merged maps
+            f"n_largest {n_largest} can not be larger than keep_n {keep_n}"  # keep_n * len(dictionaries) for merged maps
         )
 
     data_shape = xmap.shape
@@ -104,21 +105,19 @@ def orientation_similarity_map(
 
     osm = np.zeros(data_shape + (n_largest - from_n_largest + 1,))
 
-    # cardinality of the intersection between a and b
+    # Cardinality of the intersection between a and b
     f = lambda a, b: len(np.intersect1d(a, b))
 
     def os_per_pixel(v, match_indicies, n):
         # v is indices picked out with footprint from flat_index_map
         v = v.astype(np.int)
 
-        # Flat index of center pixel, OBS! ONLY FOR footprint is it v[2]
-        px = v[2]
-
         # Filter only true neighbours, -1 out of image and not include itself
-        neighbours = v[np.where((v != -1) & (v != px))]
+        neighbours = v[np.where((v != -1) & (v != center_index))]
 
         number_of_equal_matches_to_its_neighbours = [
-            f(match_indicies[px], mi) for mi in match_indicies[neighbours]
+            f(match_indicies[center_index], mi)
+            for mi in match_indicies[neighbours]
         ]
         os = np.mean(number_of_equal_matches_to_its_neighbours)
         if normalize_by_n:
