@@ -30,7 +30,7 @@ from kikuchipy.indexing.similarity_metrics import (
 )
 
 
-def _merge(
+def merge_crystalmaps(
     xmaps: List[CrystalMap],
     mean_n_largest: int = 1,
     metric: Union[str, SimilarityMetric] = None,

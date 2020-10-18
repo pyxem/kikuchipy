@@ -16,20 +16,33 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Indexing of EBSD patterns."""
+import pytest
+import numpy as np
 
-from kikuchipy.indexing.similarity_metrics import make_similarity_metric
-from kikuchipy.indexing.template_matching import template_match
-from kikuchipy.indexing.static_dictionary_indexing import (
-    StaticDictionaryIndexing,
-)
-from kikuchipy.indexing.osm import orientation_similarity_map
+from orix.crystal_map import CrystalMap
+from orix.quaternion import Rotation
+
 from kikuchipy.indexing.merge_crystalmaps import merge_crystalmaps
 
-__all__ = [
-    "StaticDictionaryIndexing",
-    "template_match",
-    "make_similarity_metric",
-    "orientation_similarity_map",
-    "merge_crystalmaps",
-]
+
+def test_merge_crystalmaps():
+    xmap1 = CrystalMap(
+        Rotation(np.zeros((9, 4))),
+        x=np.arange(9),
+        prop={
+            "metric_results": np.ones((9, 1)),
+            "template_indices": np.arange(9).reshape((9, 1)),
+        },
+    )
+    xmap2 = CrystalMap(
+        Rotation(np.zeros((9, 4))),
+        x=np.arange(9),
+        prop={
+            "metric_results": np.zeros((9, 1)),
+            "template_indices": np.arange(9, 18).reshape((9, 1)),
+        },
+    )
+    xmap1.phases._dict[0].name = "1"
+    xmap2.phases._dict[0].name = "2"
+    xmap_merged = merge_crystalmaps([xmap2, xmap1])
+    assert np.allclose(xmap_merged.template_indices[:, 0], np.arange(9))

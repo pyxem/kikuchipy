@@ -34,21 +34,23 @@ from kikuchipy.indexing.similarity_metrics import (
     SIMILARITY_METRICS,
 )
 
-from kikuchipy.indexing.merge_crystalmaps import _merge
+from kikuchipy.indexing.merge_crystalmaps import merge_crystalmaps
 
 
 class StaticDictionaryIndexing:
     """Indexing against pre-computed dictionaries from EMsoft's EMEBSD.f90 program"""
 
     def __init__(
-        self, dictionaries: Union[EBSD, LazyEBSD, List[Union[EBSD, LazyEBSD]]]
+        self,
+        dictionaries: Union[EBSD, LazyEBSD, List[Union[EBSD, LazyEBSD]]],
     ):
         """Initialize with one or more dictionaries before indexing patterns.
 
         Parameters
         ----------
         dictionaries : Union[EBSD, LazyEBSD, List[Union[EBSD, LazyEBSD]]]
-            Dictionaries as EBSD Signals with one-dimensional navigation axis.
+            Dictionaries as EBSD Signals with one-dimensional navigation axis
+            and with the `xmap` property set.
         """
         self.dictionaries = (
             dictionaries if isinstance(dictionaries, list) else [dictionaries]
@@ -94,7 +96,7 @@ class StaticDictionaryIndexing:
             answer = input(
                 f"You should probably increase n_slices depending on your available memory, try above {num_templates // 13500}. Do you want to proceed? [y/n]"
             )
-            if answer is not "y":
+            if answer != "y":
                 return
 
         n_slices = None if n_slices == 1 else n_slices
@@ -128,15 +130,14 @@ class StaticDictionaryIndexing:
         def match_result_2_xmap(i, mr):
             t_indices, coeffs = mr
             xmap = self.dictionaries[i].xmap
+            phase_list = xmap.phases_in_data
+            rotations = xmap.rotations[t_indices]
             return CrystalMap(
-                xmap.rotations[t_indices],
+                rotations,
                 x=x,
                 y=y,
-                phase_list=xmap.phases_in_data,
-                prop={
-                    "metric_results": coeffs,
-                    "template_indices": t_indices,
-                },
+                phase_list=phase_list,
+                prop={"metric_results": coeffs, "template_indices": t_indices},
                 scan_unit=scan_unit,
             )
 
@@ -147,7 +148,7 @@ class StaticDictionaryIndexing:
         #
         # Creating one CrystalMap using best metric result accross all dictionaries
         #
-        if merge_xmaps:
+        if merge_xmaps and len(self.dictionaries) > 1:
             # Cummulative summation of the dictionary lengths to create unique template ids across dictionaries
             cum_sum_dict_lengths = np.cumsum(
                 [d.data.shape[0] for d in self.dictionaries]
@@ -162,7 +163,7 @@ class StaticDictionaryIndexing:
             xmaps_unique_t_ids = [
                 adjust_t_ids(i, xmap) for i, xmap in enumerate(xmaps)
             ]
-            xmap_merged = _merge(xmaps_unique_t_ids, metric=metric)
+            xmap_merged = merge_crystalmaps(xmaps_unique_t_ids, metric=metric)
             xmaps.append(xmap_merged)
 
         # Orientation Similarity Maps
@@ -170,7 +171,7 @@ class StaticDictionaryIndexing:
             print("Computing Orientation Similarity Maps.")
             for xmap in xmaps:
                 xmap.prop["osm"] = orientation_similarity_map(
-                    xmap, n_largest=keep_n, metric=metric
+                    xmap, n_largest=keep_n
                 ).flatten()
 
         return xmaps
