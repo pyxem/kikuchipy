@@ -67,22 +67,23 @@ class StaticDictionaryIndexing:
     ) -> List[CrystalMap]:
         """Perform Dictionary Indexing on patterns against preloaded dictionaries.[ref here or elsewhere?]
 
-        Produces one `CrystalMap` for each dictionary with `"metric_results"` and `"template_indices"` set in `prop`.
+        Produce a `CrystalMap` for each dictionary with `metric_results` and `template_indices` as properties.
 
         Parameters
         ----------
         patterns : Union[EBSD, LazyEBSD]
             Patterns
         metric : Union[str, SimilarityMetric], optional
-            Similarity metric, by default "zncc"
+            Similarity metric, by default "zncc".
         keep_n : int, optional
-            Number of sorted results to keep, by default 1
+            Number of sorted results to keep, by default 1.
         n_slices : int, optional
-            [description], by default 1
+            Number of template slices to process sequentially, by default 1.
         merge_xmaps : bool, optional
-            Produce one merged crystal map from best results, by default True
+            Produce a merged crystal map from best results, by default True.
+            See also `merge_crystalmaps`.
         osm : bool, optional
-            Orientation Similarity maps in each `prop["osm"]`, by default True
+            Orientation Similarity Maps as property `osm`, by default True.
 
         Returns
         -------

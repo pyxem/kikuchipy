@@ -49,8 +49,8 @@ def make_similarity_metric(
 
     This factory function wraps metric functions for use in
     `template_match`, which again is used by
-    :class:`~kikuchipy.indexing.StaticDictionary` and
-    :class:`~kikuchipy.indexing.DynamicDictionary`.
+    :class:`~kikuchipy.indexing.StaticDictionaryIndexing` and
+    :class:`~kikuchipy.indexing.DynamicDictionaryIndexing`.
 
     Parameters
     ----------
@@ -61,7 +61,7 @@ def make_similarity_metric(
         pattern(s) and (simulated) template(s).
     greater_is_better
         Whether greater values correspond to more similar images, by
-        default True. Used for choosing `n_largest` metric results in
+        default True. Used for choosing `keep_n` metric results in
         `template_match`.
     scope
         Describes the shapes of the `metric_func`'s input parameters
@@ -334,6 +334,7 @@ def _zero_mean(
     p: Union[np.ndarray, da.Array],
     t: Union[np.ndarray, da.Array],
     flat: bool = False,
+    dtype=np.float32,
 ) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
     """Subtract the mean from patterns and templates of any scope.
 
@@ -357,8 +358,8 @@ def _zero_mean(
     p, t = _expand_dims_to_many_to_many(p, t, flat)
     p_mean_axis = 1 if flat else (2, 3)
     t_mean_axis = 1 if flat else (1, 2)
-    p -= p.mean(axis=p_mean_axis, keepdims=True)
-    t -= t.mean(axis=t_mean_axis, keepdims=True)
+    p -= p.mean(axis=p_mean_axis, keepdims=True, dtype=dtype)
+    t -= t.mean(axis=t_mean_axis, keepdims=True, dtype=dtype)
 
     if squeeze:
         return p.squeeze(), t.squeeze()
@@ -370,6 +371,7 @@ def _normalize(
     p: Union[np.ndarray, da.Array],
     t: Union[np.ndarray, da.Array],
     flat: bool = False,
+    dtype=np.float32,
 ) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
     """Normalize patterns and templates of any scope.
 
@@ -393,8 +395,8 @@ def _normalize(
     p, t = _expand_dims_to_many_to_many(p, t, flat)
     p_sum_axis = 1 if flat else (2, 3)
     t_sum_axis = 1 if flat else (1, 2)
-    p /= (p ** 2).sum(axis=p_sum_axis, keepdims=True) ** 0.5
-    t /= (t ** 2).sum(axis=t_sum_axis, keepdims=True) ** 0.5
+    p /= (p ** 2).sum(axis=p_sum_axis, keepdims=True, dtype=dtype) ** 0.5
+    t /= (t ** 2).sum(axis=t_sum_axis, keepdims=True, dtype=dtype) ** 0.5
 
     if squeeze:
         return p.squeeze(), t.squeeze()
