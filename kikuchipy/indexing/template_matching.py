@@ -62,12 +62,12 @@ def template_match(
     keep_n : int, optional
         Number of match results to keep for each pattern, by default 1
     metric : Union[str, SimilarityMetric], optional
-        Similarity metric, by default "zncc"
+        Similarity metric, by default "zncc".
     compute : bool, optional
         Whether to compute dask arrays before returning, by default True.
         Is True if `n_slices` is given.
     n_slices : int, optional
-        Number of templates slices to process sequentially, by default None
+        Number of template slices to process sequentially, by default None.
 
     Returns
     -------
@@ -156,9 +156,9 @@ def _template_match_slice_templates(
     keep_n : int, optional
         Number of results to keep, by default 1
     metric : Union[str, SimilarityMetric], optional
-        Similarity metric, by default "zncc"
+        Similarity metric, by default "zncc".
     n_slices : int, optional
-        Number of templates slices to process sequentially, by default None
+        Number of template slices to process sequentially, by default None.
 
     Returns
     -------
