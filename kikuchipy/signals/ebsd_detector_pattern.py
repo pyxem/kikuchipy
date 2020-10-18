@@ -21,6 +21,7 @@ from typing import Union
 import numpy as np
 from orix.quaternion import rotation as rot
 from orix.vector import Vector3d
+from orix import sampling, quaternion
 import matplotlib.pyplot as plt
 
 
@@ -36,8 +37,8 @@ master_pattern = load(
 
 euler_angles = r"C:\Users\laler\EMsoftData\testfile.txt"
 
-xpc = 0.00001
-ypc = 0.00001
+xpc = 0
+ypc = 0
 L = 15000
 theta_c = 10
 sigma = 70
@@ -52,28 +53,16 @@ detector = EBSDDetector(
     sample_tilt=sigma,
 )
 
+r = sampling.sample_generators.get_sample_fundamental(
+    resolution=59, space_group=225
+)
+
 
 class EBSDDetectorPattern:
     @classmethod
-    def get_patterns(cls, master_pattern, anglefile, detector: EBSDDetector):
+    def get_patterns(cls, master_pattern, rotations, detector: EBSDDetector):
 
-        # I am not sure this is the fastest way to do things, limited experience with io
-        with open(anglefile, "r") as f:
-            angle_type = f.readline()
-            number_of_rotations = int(f.readline())
-
-            if angle_type.strip() == "eu":
-                angle_array = np.zeros((number_of_rotations, 3))
-                i = -1
-                for line in f:
-                    i += 1
-                    li = line.split()
-                    angle_array[i, 0] = float(li[0])
-                    angle_array[i, 1] = float(li[1])
-                    angle_array[i, 2] = float(li[2])
-            # TODO: Implement quaternion
-            else:
-                raise ValueError
+        number_of_rotations = rotations.shape[0]
 
         pattern_catalogue = np.zeros(
             (detector.nrows, detector.ncols, number_of_rotations)
@@ -84,56 +73,20 @@ class EBSDDetectorPattern:
             detector, number_of_rotations
         )
 
-        #       THis part can be optimized, but let it as is for now to get a MVP
-        for i in range(number_of_rotations):
-            pattern_catalogue[..., i] = EBSDDetectorPattern.get_pattern(
-                master_pattern,
-                detector,
-                direction_cosines,
-                angle_array[i, 0],
-                angle_array[i, 0],
-                angle_array[i, 0],
-            )
-
-        # pattern_catalogue[..., num_rotations] = EBSDDetectorPattern.get_pattern(master_pattern, detector, direction_cosines, angle_array[num_rotations, 0], angle_array[num_rotations, 1], angle_array[num_rotations, 2])
-        # Rotate 180 degrees for now and flip
-        # pattern_catalogue = np.rot90(pattern_catalogue, 2)
-
-        return pattern_catalogue
-
-    @classmethod
-    def get_pattern(
-        cls, master_pattern, detector: EBSDDetector, direction_cosines, *args
-    ):
-        # This can be determined from anglefile, but not sure if it is faster?
-        if len(args) == 3:
-            euler = np.column_stack(
-                np.radians(args)
-            )  # Not needed in current implementation but should be down the road
-            rotation = rot.Rotation.from_euler(euler)
-        elif len(args) == 4:
-            rotation = rot.Rotation(args)
-        else:  # This can probably be removed if get_pattern becomes a private method
-            raise ValueError(
-                "Rotation angles need to be in Bunge-Euler or Quaternion!"
-            )
         ebsd_detector_pattern = np.zeros((detector.nrows, detector.ncols))
 
         master_north = master_pattern.data[0]
         master_south = master_pattern.data[1]
-
-        # NYI
-        energy_bins = int(
-            master_pattern.axes_manager["energy"].axis[-1]
-            - master_pattern.axes_manager["energy"].axis[0]
-        )
 
         # npx assuming (row, col) these should be equal
         npx = master_pattern.data.shape[3]
         # npy
         npy = master_pattern.data.shape[2]
 
-        # 500
+        # Sum the energy axis
+        master_north = np.sum(master_north, 0)
+        master_south = np.sum(master_south, 0)
+
         scale_factor = (npx - 1) / 2
 
         ii, jj = np.meshgrid(
@@ -143,7 +96,7 @@ class EBSDDetectorPattern:
         )
 
         # Current direction cosines output (column, row, rotation, xyz)
-        rotated_dc = rotation * direction_cosines[jj, ii]
+        rotated_dc = rotations * direction_cosines[jj, ii]
 
         (
             nix,
@@ -157,47 +110,37 @@ class EBSDDetectorPattern:
         ) = _get_lambert_interpolation_parameters(
             rotated_dc, scale_factor, npx, npy
         )
-        # it should look at all the energy thingies probably
-        # This could probably be a sum of MPNH between emin emax
-        # and MPSH between emin emax
-        ebsd_detector_pattern[ii, jj] = np.where(
+
+        pattern_catalogue[..., num_rotations] = np.where(
             rotated_dc.z >= 0,
             (
-                +master_north[
-                    15,
-                    nix[ii, jj],
-                    niy[ii, jj],
-                ]
-                * dxm
-                * dym
-                + master_north[15, nixp, niy] * dx * dym
-                + master_north[15, nix, niyp] * dxm * dy
-                + master_north[15, nixp, niyp] * dx * dy
+                +master_north[niy, nix] * dxm * dym
+                + master_north[niyp, nix] * dx * dym
+                + master_north[niy, nixp] * dxm * dy
+                + master_north[niyp, nixp] * dx * dy
             ),
             (
-                +master_south[15, nix, niy] * dxm * dym
-                + master_south[15, nixp, niy] * dx * dym
-                + master_south[15, nix, niyp] * dxm * dy
-                + master_south[15, nixp, niyp] * dx * dy
+                +master_south[niy, nix] * dxm * dym
+                + master_south[niyp, nix] * dx * dym
+                + master_south[niy, nixp] * dxm * dy
+                + master_south[niyp, nixp] * dx * dy
             ),
         )
-        return ebsd_detector_pattern
+        pattern_catalogue = np.rot90(pattern_catalogue, 2)
+        return pattern_catalogue
 
 
-# This should probably be its own method in the detector module
-# detector.direction_cosines or something
 def _get_direction_cosines(detector: EBSDDetector, num_rot):
     xpc = detector.pc[..., 0]
     ypc = detector.pc[..., 1]
     L = detector.pc[..., 2]  # This will be wrong in the future
-
     # Scintillator coordinates in microns
     scin_x = (
-        -(-xpc - (1.0 - detector.ncols) * 0.5 - np.arange(0, detector.ncols))
+        -((-xpc - (1.0 - detector.ncols) * 0.5) - np.arange(0, detector.ncols))
         * detector.px_size
     )
     scin_y = (
-        ypc - (1.0 - detector.nrows) * 0.5 - np.arange(0, detector.nrows)
+        (ypc - (1.0 - detector.nrows) * 0.5) - np.arange(0, detector.nrows)
     ) * detector.px_size
 
     # Auxilliary angle to rotate between reference frames
@@ -227,8 +170,8 @@ def _get_direction_cosines(detector: EBSDDetector, num_rot):
     r_g_array[jj, ii, 1] = Lc[jj]
     r_g_array[jj, ii, 2] = -sa * scin_y[ii] + ca * Ls[jj]
 
-    # r_g_array = np.repeat(r_g_array[:, :,np.newaxis, :], num_rot, axis=2)
-
+    r_g_array = np.repeat(r_g_array[:, :, np.newaxis, :], num_rot, axis=2)
+    r_g_array = np.flipud(r_g_array)
     r_g = Vector3d(r_g_array)
 
     return r_g.unit
@@ -271,25 +214,7 @@ def _get_lambert_interpolation_parameters(
     )
 
 
-# TODO: I believe the patterns need to be rotated 180 degrees and then inverted
-# a = EBSDDetectorPattern.get_pattern(
-#      master_pattern, detector, _get_direction_cosines(detector, 1), 120, 45, 60)
-patterns = EBSDDetectorPattern.get_patterns(
-    master_pattern, euler_angles, detector
-)
-#
-# # These are currently upside down compared (and inverted?) to EMsoft!
-# # first rotation
-plt.imshow(patterns[..., 1], cmap="gray")
-plt.axis("off")
-# # 2nd rotation
-# plt.imshow(patterns[..., 1], cmap="gray") # Looks a bit more rotated than the key
-# #...
-# # nth rotation
-# #plt.imshow(patterns[..., n-1], cmap="gray")
-#
+patterns = EBSDDetectorPattern.get_patterns(master_pattern, r, detector)
 
-
-# plt.imshow(a, cmap="gray")
-
+plt.imshow(patterns[..., 0], cmap="gray")
 plt.show()
