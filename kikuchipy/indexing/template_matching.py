@@ -47,33 +47,40 @@ def template_match(
     compute: bool = True,
     n_slices: int = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """[summary. Haakon read Returns to understand]
+    """Find the best matching templates to patterns based on given metric.
+
+    Function is primarily for use in
+    :class:`~kikuchipy.indexing.StaticDictionaryIndexing` and
+    :class:`~kikuchipy.indexing.DynamicDictionaryIndexing`.
 
     Parameters
     ----------
     patterns : Union[da.Array, np.ndarray]
-        [description]
+        Patterns
     templates : Union[da.Array, np.ndarray]
-        [description]
+        Templates
     keep_n : int, optional
-        [description], by default 1
+        Number of match results to keep for each pattern, by default 1
     metric : Union[str, SimilarityMetric], optional
-        [description], by default "zncc"
+        Similarity metric, by default "zncc".
     compute : bool, optional
-        [description, dask compute, computes anyway (for now) if n_slices is given], by default True,
+        Whether to compute dask arrays before returning, by default True.
     n_slices : int, optional
-        [description], by default None
+        Number of template slices to process sequentially, by default None.
 
     Returns
     -------
-    match_result : Tuple[np.ndarray, np.ndarray]
-        [both arrays have shape (ny*nx,keep_n)
-        first array is template indicies and
-        second array is metric results
-        both are sorted along keep_n axis according to metric used]
+    template_indices, metric_result : Tuple[np.ndarray, np.ndarray]
+        Template indices and corresponding metric results with data shapes (ny*nx,keep_n).
+        Both arrays are sorted along keep_n axis according to metric used.
     """
+    metric = SIMILARITY_METRICS.get(metric, metric)
     if n_slices is not None:
-        # Will (for now) dask compute regardless of compute param
+        if not compute:
+            raise NotImplementedError(
+                "Slicing templates and returning dask arrays is not implemented."
+            )
+
         return _template_match_slice_templates(
             patterns,
             templates,
@@ -81,17 +88,10 @@ def template_match(
             metric=metric,
             n_slices=n_slices,
         )
-
-    metric = SIMILARITY_METRICS.get(metric, metric)
     if not isinstance(metric, SimilarityMetric):
         raise ValueError(
             f"{metric} must be either of {list(SIMILARITY_METRICS.keys())} "
             "or an instance of SimilarityMetric. See make_similarity_metric."
-        )
-    accepeted_scopes = (MetricScope.MANY_TO_MANY, MetricScope.ONE_TO_MANY)
-    if not metric.scope in accepeted_scopes:
-        raise ValueError(
-            f"{metric.scope} must be either of {accepeted_scopes}."
         )
 
     # Expects signal data to be located on the two last axis for all scopes
@@ -103,23 +103,24 @@ def template_match(
             "signal shapes are not identical."
         )
 
-    # check if data is too low scoped
-    # could be a function in similarity_metrics for making it cleaner here
-    # this check makes _is_compatible uneccesarry
-    if (
-        not metric._P_T_NDIM_TO_SCOPE.get(
-            (patterns.ndim, templates.ndim), False
-        )
-        in accepeted_scopes
-    ):
+    if not metric._is_compatible(patterns.ndim, templates.ndim):
         raise OSError(
-            f"The shape of patterns and templates must correspond with either of {accepeted_scopes}\n"
-            f"The shapes; {patterns.shape}, {templates.shape} was given."
+            f"The shape of patterns {patterns.shape} and templates {templates.shape} "
+            f"are not compatible with the scope {metric.scope} of {type(metric).__name__}"
         )
 
     similarities = metric(patterns, templates)
-    if not isinstance(similarities, da.Array):
-        similarities = da.from_array(similarities)
+    similarities = da.asarray(similarities)
+
+    # ONE_TO_ONE
+    if similarities.shape == ():
+        similarity = (
+            np.array([similarities.compute()]) if compute else similarities
+        )
+        return np.array([0]), similarity
+
+    # If N is < keep_n => keep_n = N
+    keep_n = min(keep_n, len(templates))
 
     match_result = (
         similarities.argtopk(metric.sign * keep_n, axis=-1),
@@ -132,13 +133,12 @@ def template_match(
     # Flattens the signal axis if not already flat
     # This is foremost a design choice for returning standard outputs
     if not metric.flat:
-        # If N is < keep_n => keep_n = N
-        keep_n = match_result[0].shape[-1]
         match_result = (
             match_result[0].reshape(-1, keep_n),
             match_result[1].reshape(-1, keep_n),
         )
-    return match_result
+    template_indices, metric_results = match_result
+    return template_indices, metric_results
 
 
 def _template_match_slice_templates(
@@ -148,12 +148,30 @@ def _template_match_slice_templates(
     metric: Union[str, SimilarityMetric] = "zncc",
     n_slices: int = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
+    """See `template_match`.
+
+    Parameters
+    ----------
+    patterns : Union[da.Array, np.ndarray]
+        Patterns
+    templates : Union[da.Array, np.ndarray]
+        Templates
+    keep_n : int, optional
+        Number of results to keep, by default 1
+    metric : Union[str, SimilarityMetric], optional
+        Similarity metric, by default "zncc".
+    n_slices : int, optional
+        Number of template slices to process sequentially, by default None.
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        [description]
+    """
 
     # This is a naive implementation, hopefully not stupid, of slicing the templates in batches
     # without thinking about aligining with dask chunks or rechunking
     # dask seem to handle the sequential slicing decently
-
-    metric = SIMILARITY_METRICS.get(metric, metric)
 
     nav_shape = _get_nav_shape(patterns)
     nav_size = np.prod(nav_shape)
@@ -163,7 +181,7 @@ def _template_match_slice_templates(
     n = min(keep_n, slice_size)
     match_result_aggregate = (
         np.zeros((nav_size, n_slices * n), np.int32),
-        np.zeros((nav_size, n_slices * n), np.float32),
+        np.zeros((nav_size, n_slices * n), metric._dtype_out),
     )
 
     start = 0
