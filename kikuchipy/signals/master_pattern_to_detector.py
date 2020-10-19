@@ -21,144 +21,182 @@ from typing import Union
 import numpy as np
 from orix.quaternion import rotation as rot
 from orix.vector import Vector3d
-from scipy import interpolate
+import matplotlib.pyplot as plt
 
 
 from kikuchipy.detectors import ebsd_detector
 from kikuchipy.projections import lambert_projection
+from kikuchipy import load
 
 
 class SimulateEBSDPattern:
     @classmethod
-    # def my_awesome_method(cls,xpc, ypc, L, phi1, Phi, phi2):
-    # def my_awesome_method(cls, xpc, ypx, L, a, b, c, d):
+    # def get_pattern(cls,xpc, ypc, L, phi1, Phi, phi2):
+    # def get_pattern(cls, xpc, ypx, L, a, b, c, d):
     def get_pattern(cls, xpc, ypc, L, *args):
-        # Create Orix Rotation object with input values either:
-        # A) Bunge-Euler triplets, or
-        # B) Quaternions
+        print(len(args))
         if len(args) == 3:
-            rotation = rot.Rotation.from_euler(args)
+            rotation = rot.Rotation.from_euler(np.radians(args))
         elif len(args) == 4:
             rotation = rot.Rotation(args)
         else:
             raise ValueError("Rotation need to be Bunge-Euler or Quaternion!")
 
         # Detector model
-        detector = ebsd_detector.EBSDDetector()
+        detector = ebsd_detector.EBSDDetector(
+            shape=(480, 640),  # row, columns - y, x
+            px_size=50.0,
+            pc=(xpc, ypc, L),
+            # convention="emsoft",
+            tilt=10,
+            sample_tilt=70,
+        )
 
         """
         This stuff is from the Callahan paper
         
         """
 
-        # Detector tilt
-        theta_c = detector.tilt
-        # Sample tilt
-        sigma = detector.sample_tilt
+        # detnumsx = detector.ncols
+        # detnumsy = detector.nrows
+        detnumsx = detector.ncols  # 640
+        detnumsy = detector.nrows  # 480
 
-        alpha = np.pi / 2 - sigma + theta_c
+        npx = 1001
+        npy = 1001
 
-        # NYI
-        ys = 0
-        xs = 0
+        master_pattern = load(
+            r"C:\Users\laler\Desktop\Project - Kikuchipy\Ni-MP.h5",
+            projection="lambert",
+            hemisphere="both",
+        )
 
-        # Screen coordinates in sample reference frame
-        ypc_ys = ypc - ys
-        xpc_xs = xpc - xs
-        r_g_x = ypc_ys * np.cos(alpha) + L * np.sin(alpha)
-        r_g_y = xpc_xs
-        r_g_z = -ypc_ys * np.sin(alpha) + L * np.cos(alpha)
+        MPNH = master_pattern.data[0]
+        MPSH = master_pattern.data[1]
 
-        r_g = Vector3d(np.column_stack((r_g_x, r_g_y, r_g_z)))
+        ebsd_pattern = np.zeros((detnumsx, detnumsy))
+        energy_bins = int(
+            master_pattern.axes_manager["energy"].axis[-1]
+            - master_pattern.axes_manager["energy"].axis[0]
+        )
 
-        # r_g = np.column_stack(r_g_x, r_g_y, r_g_z)
-        # Length of above
-        # rho_s = np.sqrt(L**2 + ypc_ys**2 + xpc_xs**2)
-        # Direction cosines of a screen pixel in the (RD, TD, ND) reference frame
-        # r_g_hat = r_g / rho_s
-        r_g_hat = r_g.unit
+        # For-loop nightmare will be changed obviously :))
+        scale_factor = 500
+        direction_cos = _get_direction_cosines(detector)
+        for i in range(0, detector.ncols):
+            for j in range(0, detector.nrows):
+                rotated_dc = rotation * direction_cos[i, j]
+                (
+                    nix,
+                    niy,
+                    nixp,
+                    niyp,
+                    dx,
+                    dy,
+                    dxm,
+                    dym,
+                ) = _get_lambert_interpolation_parameters(
+                    rotated_dc, scale_factor, npx, npy
+                )
+                for k in range(
+                    energy_bins, energy_bins + 1
+                ):  # No background intensity
+                    if rotated_dc.z >= 0:  # Northern
+                        ebsd_pattern[i, j] += (
+                            +MPNH.data[k, nix, niy] * dxm * dym
+                            + MPNH.data[k, nixp, niy] * dx * dym
+                            + MPNH.data[k, nix, niyp] * dxm * dy
+                            + MPNH.data[k, nixp, niyp] * dx * dy
+                        )
+                    else:  # Southern
+                        ebsd_pattern[i, j] += (
+                            +MPSH.data[k, nix, niy] * dxm * dym
+                            + MPSH.data[k, nixp, niy] * dx * dym
+                            + MPSH.data[k, nix, niyp] * dxm * dy
+                            + MPSH.data[k, nixp, niyp] * dx * dy
+                        )
+        return ebsd_pattern
 
-        northern = True
-        # The following is VERY WIP Lines 77 - 81
-        if r_g_hat.x.data < 0:  # If True we are in southern hemisphere
-            northern = False
-            r_g_hat = -r_g_hat
 
-        # Rotate our vector according to our Rotation object
-        rotated_vector = rotation * r_g_hat
+def _get_direction_cosines(detector: ebsd_detector.EBSDDetector):
+    xpc = detector.pc[..., 0]
+    ypc = detector.pc[..., 1]
+    L = detector.pc[..., 2]  # This will be wrong in the future
+    # For some reason we are also dealing with L in microns??
+    # These are in microns for some reason
+    scin_x = (
+        -(-xpc - (1 - detector.ncols) * 0.5 - np.arange(0, detector.ncols))
+        * detector.px_size
+    )
+    scin_y = (
+        ypc - (1 - detector.nrows) * 0.5 - np.arange(0, detector.nrows)
+    ) * detector.px_size
 
-        # Line 400 in EMdymod.f90 very relevant
+    sigma = np.radians(detector.sample_tilt)
+    theta_c = np.radians(detector.tilt)
 
-        detnumsx = detector.nrows
-        detnumsy = detector.ncols
-        numquats = 1
+    alpha = (np.pi / 2) - sigma + theta_c
 
-        # npx: Number of pixels along square semi-edge
-        # npy: Should be same as npx
-        # nix: Coordinates of point
-        # niy:
-        # nixp: and neighboring point
-        # niyp:
-        # dx interpolation weight factors
-        # dy
-        # dxm
-        # dym
+    ca = np.cos(alpha)
+    sa = np.cos(alpha)
 
-        npx = detnumsx
-        npy = detnumsy
+    omega = 0  # angle between normal of sample and detector
 
-        # Sum of the Northern Hemisphere Master Pattern (along a dimension?)
-        mLPNHsum = np.array((1, 1, 1))
+    cw = np.cos(np.radians(omega))
+    sw = np.sin(np.radians(omega))
 
-        (
-            nix,
-            niy,
-            nixp,
-            niyp,
-            dx,
-            dy,
-            dxm,
-            dym,
-        ) = _get_lambert_interpolation_parameters(rotated_vector, 1, npx, npy)
+    epl = 479
 
-        accum_e_detector = 1  # Should be an array with interpolated intensities
-        ebsd_pattern = np.zeros((detnumsx, detnumsy, numquats))
+    r_g_arr = np.zeros((640, 480, 3))
+    for j in range(0, 640):
+        Ls = -sw * scin_x[j] + L * cw
+        Lc = cw * scin_x[j] + L * sw
+        for i in range(0, 480):
+            r_g_arr[j, epl - i, 0] = scin_y[i] * ca + sa * Ls
+            r_g_arr[j, epl - i, 1] = Lc
+            r_g_arr[j, epl - i, 2] = -sa * scin_y[i] + ca * Ls
 
-        for k in range(numquats):
-            for i in range(detnumsx):
-                for j in range(detnumsy):
-                    ebsd_pattern[i, j, k] = (
-                        accum_e_detector * mLPNHsum[nix, niy, k] * dxm * dym
-                        + mLPNHsum[nixp, niy, k] * dx * dym
-                        + mLPNHsum[nix, niyp, k] * dxm * dy
-                        + mLPNHsum[nixp, niyp, k] * dx * dy
-                    )
+    r_g = Vector3d(r_g_arr)
+    r_g_hat = r_g.unit
+    return r_g_hat
 
 
 def _get_lambert_interpolation_parameters(
     rotated_direction_cosines, scale, npx, npy
 ):
-    # Direction cosines to Rosca-Lambert projection
-    xy = scale * lambert_projection.LambertProjection.project(
-        rotated_direction_cosines
+    # Normalized direction cosines to Rosca-Lambert projection
+    xy = (
+        scale
+        * lambert_projection.LambertProjection.project(
+            rotated_direction_cosines
+        )
+        / (np.sqrt(np.pi / 2))
     )
+
     x = xy[..., 0]
     y = xy[..., 1]
-    nix = int(npx + x) - npx
-    niy = int(npy + y) - npy
+    nix = int(npx + x) - npx + scale
+    niy = int(npy + y) - npy + scale
     nixp = nix + 1
     niyp = niy + 1
-    if nixp > npx:
+    if nixp > 1000:
         nixp = nix
-    if niyp > npy:
+    if niyp > 1000:
         niyp = niy
-    if nix < -npx:
+    if nix < 0:
         nix = nixp
-    if niy < -npy:
+    if niy < 0:
         niy = niyp
     dx = x - nix
     dy = y - niy
     dxm = 1.0 - dx
     dym = 1.0 - dy
-
     return nix, niy, nixp, niyp, dx, dy, dxm, dym
+
+
+a = SimulateEBSDPattern.get_pattern(0.00001, 0.00001, 15000, 0, 0, 0)
+from matplotlib.colors import NoNorm
+
+norm = plt.Normalize(a.min(), a.max())
+plt.imshow(a, norm=norm, cmap="gray", interpolation="none", filternorm=False)
+plt.show()

@@ -31,6 +31,11 @@ from kikuchipy.signals.util._metadata import (
 )
 from kikuchipy.signals._common_image import CommonImage
 
+from orix.vector import Vector3d
+
+from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.projections.lambert_projection import LambertProjection
+
 
 class EBSDMasterPattern(CommonImage, Signal2D):
     """Simulated Electron Backscatter Diffraction (EBSD) master pattern.
@@ -270,6 +275,72 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         phase = {k: v for k, v in inputs.items() if v is not None}
         _update_phase_info(self.metadata, phase, number)
 
+    def get_patterns(self, rotations, detector: EBSDDetector):
+
+        number_of_rotations = rotations.shape[0]
+
+        pattern_catalogue = np.zeros(
+            (detector.nrows, detector.ncols, number_of_rotations)
+        )
+
+        num_rotations = np.arange(0, number_of_rotations)
+        direction_cosines = _get_direction_cosines(
+            detector, number_of_rotations
+        )
+
+        master_north = self.data[0]
+        master_south = self.data[1]
+
+        # npx assuming (row, col) these should be equal
+        npx = self.data.shape[3]
+        # npy
+        npy = self.data.shape[2]
+
+        # Sum the energy axis
+        master_north = np.sum(master_north, 0)
+        master_south = np.sum(master_south, 0)
+
+        scale_factor = (npx - 1) / 2
+
+        ii, jj = np.meshgrid(
+            np.arange(0, detector.nrows),
+            np.arange(0, detector.ncols),
+            indexing="ij",
+        )
+
+        # Current direction cosines output (column, row, rotation, xyz)
+        rotated_dc = rotations * direction_cosines[jj, ii]
+
+        (
+            nix,
+            niy,
+            nixp,
+            niyp,
+            dx,
+            dy,
+            dxm,
+            dym,
+        ) = _get_lambert_interpolation_parameters(
+            rotated_dc, scale_factor, npx, npy
+        )
+        pattern_catalogue[..., num_rotations] = np.where(
+            rotated_dc.z >= 0,
+            (
+                master_north[niy, nix] * dxm * dym
+                + master_north[niyp, nix] * dx * dym
+                + master_north[niy, nixp] * dxm * dy
+                + master_north[niyp, nixp] * dx * dy
+            ),
+            (
+                master_south[niy, nix] * dxm * dym
+                + master_south[niyp, nix] * dx * dym
+                + master_south[niy, nixp] * dxm * dy
+                + master_south[niyp, nixp] * dx * dy
+            ),
+        )
+        pattern_catalogue = np.rot90(pattern_catalogue, 2)
+        return pattern_catalogue
+
 
 class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
     """Lazy implementation of the :class:`EBSDMasterPattern` class.
@@ -289,3 +360,90 @@ class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+
+# Private methods used in the EBSD pattern sampling routine
+
+
+def _get_direction_cosines(detector: EBSDDetector, num_rot):
+    xpc = detector.pc[..., 0]
+    ypc = detector.pc[..., 1]
+    L = detector.pc[..., 2]  # This will be wrong in the future
+    # Scintillator coordinates in microns
+    scin_x = (
+        -((-xpc - (1.0 - detector.ncols) * 0.5) - np.arange(0, detector.ncols))
+        * detector.px_size
+    )
+    scin_y = (
+        (ypc - (1.0 - detector.nrows) * 0.5) - np.arange(0, detector.nrows)
+    ) * detector.px_size
+
+    # Auxilliary angle to rotate between reference frames
+    theta_c = np.radians(detector.tilt)
+    sigma = np.radians(detector.sample_tilt)
+
+    alpha = (np.pi / 2) - sigma + theta_c
+    ca = np.cos(alpha)
+    sa = np.sin(alpha)
+
+    omega = np.radians(0)  # angle between normal of sample and detector
+    cw = np.cos(omega)
+    sw = np.sin(omega)
+
+    r_g_array = np.zeros((detector.ncols, detector.nrows, 3))
+
+    ii, jj = np.meshgrid(
+        np.arange(0, detector.nrows),
+        np.arange(0, detector.ncols),
+        indexing="ij",
+    )
+
+    Ls = -sw * scin_x + L * cw
+    Lc = cw * scin_x + L * sw
+
+    r_g_array[jj, ii, 0] = scin_y[ii] * ca + sa * Ls[jj]
+    r_g_array[jj, ii, 1] = Lc[jj]
+    r_g_array[jj, ii, 2] = -sa * scin_y[ii] + ca * Ls[jj]
+
+    r_g_array = np.repeat(r_g_array[:, :, np.newaxis, :], num_rot, axis=2)
+    r_g_array = np.flipud(r_g_array)
+    r_g = Vector3d(r_g_array)
+
+    return r_g.unit
+
+
+def _get_lambert_interpolation_parameters(
+    rotated_direction_cosines, scale, npx, npy
+):
+    # Normalized direction cosines to Rosca-Lambert projection
+    xy = (
+        scale
+        * LambertProjection.project(rotated_direction_cosines)
+        / (np.sqrt(np.pi / 2))
+    )
+
+    x = xy[..., 0]
+    y = xy[..., 1]
+    nix = x.astype(int) + scale
+    niy = y.astype(int) + scale
+    nixp = nix + 1
+    niyp = niy + 1
+    nixp = np.where(nixp < npx - 1, nixp, nix)
+    niyp = np.where(niyp < npy - 1, niyp, niy)
+    nix = np.where(nix < 0, nixp, nix)
+    niy = np.where(niy < 0, niyp, niy)
+    dx = x - nix + scale
+    dy = y - niy + scale
+    dxm = 1.0 - dx
+    dym = 1.0 - dy
+
+    return (
+        nix.astype(int),
+        niy.astype(int),
+        nixp.astype(int),
+        niyp.astype(int),
+        dx,
+        dy,
+        dxm,
+        dym,
+    )

@@ -21,7 +21,7 @@ from typing import Union
 import numpy as np
 from orix.quaternion import rotation as rot
 from orix.vector import Vector3d
-from orix import sampling, quaternion
+from orix import sampling
 import matplotlib.pyplot as plt
 
 
@@ -54,7 +54,7 @@ detector = EBSDDetector(
 )
 
 r = sampling.sample_generators.get_sample_fundamental(
-    resolution=59, space_group=225
+    resolution=58, space_group=225
 )
 
 
