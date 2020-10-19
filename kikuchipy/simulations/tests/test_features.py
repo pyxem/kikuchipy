@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from copy import deepcopy
 import numpy as np
 import pytest
 
@@ -320,6 +321,64 @@ class TestKikuchiBand:
                 ]
             ),
         )
+
+    def test_get_item(self, nickel_kikuchi_band):
+        """KikuchiBand.__getitem__() works as desired."""
+        bands = nickel_kikuchi_band
+        nav_shape = bands.navigation_shape
+
+        # Zero getitem keys
+        assert np.allclose(bands[:].hkl_detector.data, bands.hkl_detector.data)
+        assert bands[:].navigation_shape == nav_shape
+        assert np.allclose(bands[()].hkl_detector.data, bands.hkl_detector.data)
+        assert bands[()].navigation_shape == nav_shape
+        assert np.allclose(
+            bands[slice(None)].hkl_detector.data, bands.hkl_detector.data
+        )
+        assert bands[slice(None)].navigation_shape == nav_shape
+
+        # One getitem key
+        # All bands visible in first pattern
+        assert np.allclose(
+            bands[0].hkl_detector.data, bands.hkl_detector.data[0]
+        )
+        assert bands[0].navigation_shape == (5,)
+
+        # Two getitem keys
+        with pytest.raises(IndexError, match="Not enough axes to slice"):
+            # Slicing shape () with two keys
+            _ = bands[0, 0][0, 0]
+        # Slicing ndim == 1 with two keys
+        assert np.allclose(bands[0][0, :2]._hkldata, bands._hkldata[:2])
+        assert bands[0][0, :2].navigation_shape == ()
+
+        # Three getitem keys
+        with pytest.raises(IndexError, match="Not enough axes to slice"):
+            # Slicing ndim == 1 with three keys
+            _ = bands[0][0, :2, :3]
+        this_slice = (0, slice(0, 2), slice(0, 3))
+        bands2 = bands[this_slice]
+        assert np.allclose(
+            bands2.hkl_detector.data, bands.hkl_detector.data[this_slice]
+        )
+        assert bands2.size == 3
+        assert bands[this_slice].navigation_shape == (2,)
+
+    def test_unique(self, nickel_kikuchi_band):
+        with pytest.raises(NotImplementedError):
+            _ = nickel_kikuchi_band.unique()
+
+    def test_symmetrise(self, nickel_kikuchi_band):
+        with pytest.raises(NotImplementedError):
+            _ = nickel_kikuchi_band.symmetrise()
+
+    def test_from_min_dspacing(self, nickel_kikuchi_band):
+        with pytest.raises(NotImplementedError):
+            _ = nickel_kikuchi_band.from_min_dspacing()
+
+    def test_from_highest_hkl(self, nickel_kikuchi_band):
+        with pytest.raises(NotImplementedError):
+            _ = nickel_kikuchi_band.from_highest_hkl()
 
 
 class TestZoneAxis:

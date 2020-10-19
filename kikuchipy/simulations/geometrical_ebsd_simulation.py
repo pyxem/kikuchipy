@@ -46,12 +46,12 @@ class GeometricalEBSDSimulation:
         self,
         detector: EBSDDetector,
         rotations: Rotation,
-        bands: Optional[KikuchiBand] = None,
-        zone_axes: Optional[ZoneAxis] = None,
+        bands: KikuchiBand,
+        zone_axes: ZoneAxis,
     ):
         """Create a geometrical EBSD simulation storing a set of center
-        positions of Kikuchi bands on the detector, one set for each
-        orientation of the unit cell.
+        positions of Kikuchi bands and zone axes on the detector, one
+        set for each orientation of the unit cell.
 
         Parameters
         ----------
@@ -82,8 +82,7 @@ class GeometricalEBSDSimulation:
         Returns
         -------
         band_coords
-            On the form [[x00, y00, x01, y01], [x10, y10, x11, y11],
-            ...].
+            Band coordinates on the detector.
         """
         # Get start and end points for the plane traces in gnomonic coordinates
         # and set up output array in uncalibrated detector coordinates
@@ -111,10 +110,14 @@ class GeometricalEBSDSimulation:
         """Coordinates of zone axes in uncalibrated detector
         coordinates.
 
+        If `GeometricalEBSDSimulation.exclude_outside_detector` is True,
+        the coordinates of the zone axes outside the detector are set to
+        `np.nan`.
+
         Returns
         -------
         za_coords
-            Column sorted, on the form [[x0, y0], [x1, y1], ...].
+            Zone axis coordinates on the detector.
         """
         xyg = self.zone_axes._xy_within_gnomonic_radius
         xg = xyg[..., 0]
@@ -148,7 +151,7 @@ class GeometricalEBSDSimulation:
         Returns
         -------
         np.ndarray
-            Column sorted, on the form [[x0, y0], [x1, y1], ...].
+            Zone axes labels placed just above the zone axes.
         """
         za_coords = self.zone_axes_detector_coordinates
         za_coords[..., 1] -= 0.02 * self.detector.nrows
