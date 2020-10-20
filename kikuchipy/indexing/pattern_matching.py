@@ -33,7 +33,7 @@ from kikuchipy.indexing.similarity_metrics import (
 
 from kikuchipy.indexing.similarity_metrics import (
     _get_nav_shape,
-    _get_number_of_templates,
+    _get_number_of_simulated,
 )
 
 # Future Work: mask -> maskedarrays
@@ -175,7 +175,7 @@ def _pattern_match_slice_simulated(
 
     nav_shape = _get_nav_shape(experimental)
     nav_size = np.prod(nav_shape)
-    num_simulated = _get_number_of_templates(simulated)
+    num_simulated = _get_number_of_simulated(simulated)
     slice_size = num_simulated // n_slices
 
     n = min(keep_n, slice_size)
