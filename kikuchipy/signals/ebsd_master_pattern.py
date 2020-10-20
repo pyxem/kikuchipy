@@ -302,9 +302,16 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         scale_factor = (npx - 1) / 2
 
+        # Requires rotation
+        # ii, jj = np.meshgrid(
+        #     np.arange(0, detector.nrows),
+        #     np.arange(0, detector.ncols),
+        #     indexing="ij",
+        # )
+
         ii, jj = np.meshgrid(
-            np.arange(0, detector.nrows),
-            np.arange(0, detector.ncols),
+            np.arange(detector.nrows - 1, -1, -1),
+            np.arange(detector.ncols - 1, -1, -1),
             indexing="ij",
         )
 
@@ -338,7 +345,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
                 + master_south[niyp, nixp] * dx * dy
             ),
         )
-        pattern_catalogue = np.rot90(pattern_catalogue, 2)
+        # pattern_catalogue = np.rot90(pattern_catalogue, 2)
         return pattern_catalogue
 
 
@@ -394,7 +401,7 @@ def _get_direction_cosines(detector: EBSDDetector, num_rot):
 
     ii, jj = np.meshgrid(
         np.arange(0, detector.nrows),
-        np.arange(0, detector.ncols),
+        np.arange(detector.ncols - 1, -1, -1),
         indexing="ij",
     )
 
@@ -406,7 +413,6 @@ def _get_direction_cosines(detector: EBSDDetector, num_rot):
     r_g_array[jj, ii, 2] = -sa * scin_y[ii] + ca * Ls[jj]
 
     r_g_array = np.repeat(r_g_array[:, :, np.newaxis, :], num_rot, axis=2)
-    r_g_array = np.flipud(r_g_array)
     r_g = Vector3d(r_g_array)
 
     return r_g.unit
