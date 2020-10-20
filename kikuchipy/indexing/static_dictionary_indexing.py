@@ -25,8 +25,7 @@ from h5py import File
 from orix.quaternion.rotation import Rotation
 from orix.crystal_map.crystal_map import CrystalMap, PhaseList, Phase
 
-from kikuchipy.signals import EBSD, LazyEBSD
-from kikuchipy.indexing.template_matching import template_match
+from kikuchipy.indexing import pattern_match
 
 from kikuchipy.indexing.osm import orientation_similarity_map
 from kikuchipy.indexing.similarity_metrics import (
@@ -42,7 +41,9 @@ class StaticDictionaryIndexing:
 
     def __init__(
         self,
-        dictionaries: Union[EBSD, LazyEBSD, List[Union[EBSD, LazyEBSD]]],
+        dictionaries: Union[
+            "EBSD", "LazyEBSD", List[Union["EBSD", "LazyEBSD"]]
+        ],
     ):
         """Initialize with one or more dictionaries before indexing patterns.
 
@@ -58,7 +59,7 @@ class StaticDictionaryIndexing:
 
     def index(
         self,
-        patterns: Union[EBSD, LazyEBSD],
+        patterns: Union["EBSD", "LazyEBSD"],
         metric: Union[str, SimilarityMetric] = "zncc",
         keep_n: int = 1,
         n_slices: int = 1,
@@ -106,7 +107,7 @@ class StaticDictionaryIndexing:
 
         # Naively let dask compute them seperately, should try in the future combined compute for better performance
         match_results = [
-            template_match(
+            pattern_match(
                 patterns.data,
                 dictionary.data,
                 metric=metric,

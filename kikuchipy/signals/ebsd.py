@@ -885,7 +885,7 @@ class EBSD(CommonImage, Signal2D):
 
     def index(
         self,
-        simulations: Union[EBSD, LazyEBSD, List[Union[EBSD, LazyEBSD]]],
+        simulations: Union["EBSD", "LazyEBSD", List[Union["EBSD", "LazyEBSD"]]],
         metric: Union[str, SimilarityMetric] = "zncc",
         keep_n: int = 1,
         n_slices: int = 1,
@@ -899,7 +899,9 @@ class EBSD(CommonImage, Signal2D):
         Parameters
         ----------
         simulations : Union[EBSD, LazyEBSD, List[Union[EBSD, LazyEBSD]]]
-            Simulated patterns, possibly a list of candidate phases
+            Simulated patterns as EBSD Signals, possibly a list of candidate phases.
+            Signals must have one-dimensional navigation axis
+            and the `xmap` property set.
         metric : Union[str, SimilarityMetric], optional
             Similarity metric, by default "zncc".
         keep_n : int, optional

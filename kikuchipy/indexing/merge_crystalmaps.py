@@ -46,7 +46,8 @@ def merge_crystalmaps(
     xmaps : List[CrystalMap]
         List of `CrystalMap`s with "template_indices" and "metric_results" in prop
     mean_n_largest : int, optional
-        Compute the "merged_top_metric_result" prop from the mean of n_largest, by default 1
+        Number of top metric results to take the mean of,
+        before comparing and put in the property `merged_top_metric_result`, by default 1
     metric : Union[str, SimilarityMetric], optional
         Similarity metric, by default None
 
@@ -73,7 +74,7 @@ def merge_crystalmaps(
 
     top_results_across_xmaps = np.array(
         [
-            np.mean(xmap.prop["metric_results"][:, 0:mean_n_largest], axis=1)
+            np.mean(xmap.metric_results[:, :mean_n_largest], axis=1)
             for xmap in xmaps
         ]
     )
@@ -82,7 +83,7 @@ def merge_crystalmaps(
     merged_top_metric_result = np.choose(phase_id, top_results_across_xmaps)
 
     metric_results = np.concatenate(
-        [xmap.prop["metric_results"] for xmap in xmaps], axis=1
+        [xmap.metric_results for xmap in xmaps], axis=1
     )
 
     metric_result_sorted_indicies = np.argsort(
@@ -90,7 +91,7 @@ def merge_crystalmaps(
     )
 
     template_indices = np.concatenate(
-        [xmap.prop["template_indices"] for xmap in xmaps],
+        [xmap.template_indices for xmap in xmaps],
         axis=1,
     )
     template_indices = np.take_along_axis(
@@ -107,7 +108,7 @@ def merge_crystalmaps(
     }
 
     # The rotations can be examined more carefully, takes now all keep_n only for the top 1 phase
-    # Not ideal
+    # Maybe not ideal
     rotations_across_xmaps = np.array([xmap.rotations.data for xmap in xmaps])
     rotations = np.array(
         [rotations_across_xmaps[id][i] for i, id in enumerate(phase_id)]
