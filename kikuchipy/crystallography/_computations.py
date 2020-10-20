@@ -18,14 +18,20 @@
 
 """Crystallographic computations."""
 
-from kikuchipy.crystallography.matrices import (
-    get_direct_structure_matrix,
-    get_reciprocal_structure_matrix,
-    get_reciprocal_metric_tensor,
-)
+from typing import Union
 
-__all__ = [
-    "get_direct_structure_matrix",
-    "get_reciprocal_structure_matrix",
-    "get_reciprocal_metric_tensor",
-]
+import numpy as np
+
+
+def _get_uvw_from_hkl(hkl: Union[np.ndarray, list, tuple]) -> np.ndarray:
+    """Return a unique set of zone axes from the cross product of Miller
+    indices, without 000.
+    """
+    hkl = np.atleast_2d(hkl)
+    uvw = np.cross(hkl[:, np.newaxis, :], hkl).reshape((len(hkl) ** 2, 3))
+    not000 = np.count_nonzero(uvw, axis=1) != 0
+    uvw = uvw[not000]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        uvw = uvw / np.gcd.reduce(uvw, axis=1)[:, np.newaxis]
+    uvw = np.unique(uvw, axis=0).astype(int)
+    return uvw

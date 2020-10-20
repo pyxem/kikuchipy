@@ -16,17 +16,21 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from copy import deepcopy
 import numpy as np
 import pytest
 
-from kikuchipy.simulations.features import KikuchiBand
+from kikuchipy.crystallography._computations import _get_uvw_from_hkl
+from kikuchipy.generators.ebsd_simulation_generator import (
+    _get_coordinates_in_upper_hemisphere,
+)
+from kikuchipy.projections.ebsd_projections import detector2direct_lattice
+from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 
 class TestKikuchiBand:
     @pytest.mark.parametrize(
         "hkl, hkl_detector, within_gnomonic_radius, hesse_distance, "
-        "hesse_alpha,nav_shape, nav_dim, size",
+        "hesse_alpha, nav_shape, nav_dim, size",
         [
             (
                 np.array([[-1, 1, 1], [2, 0, 0]]),
@@ -364,6 +368,24 @@ class TestKikuchiBand:
         assert bands2.size == 3
         assert bands[this_slice].navigation_shape == (2,)
 
+    def test_get_item_structure_factor_theta(self, nickel_kikuchi_band):
+        """Calculated structure factors and theta angles carry over."""
+        bands = nickel_kikuchi_band
+        v = 20e3
+        bands.calculate_structure_factor(voltage=v)
+        bands.calculate_theta(voltage=v)
+
+        # All bands
+        assert np.allclose(
+            bands[2, 2:4].structure_factor, bands.structure_factor
+        )
+        # Some bands
+        new_bands = bands[2, 2:4, 3:15]
+        assert np.allclose(
+            new_bands.structure_factor, bands.structure_factor[3:15]
+        )
+        assert np.allclose(new_bands.theta, bands.theta[3:15])
+
     def test_unique(self, nickel_kikuchi_band):
         with pytest.raises(NotImplementedError):
             _ = nickel_kikuchi_band.unique()
@@ -382,5 +404,131 @@ class TestKikuchiBand:
 
 
 class TestZoneAxis:
-    def test_init(self):
+    @pytest.mark.parametrize(
+        "hkl_slices, desired_nav_shape",
+        [
+            ((slice(0, 2), slice(0, 2), slice(None)), (2, 2)),
+            ((slice(None), slice(None), slice(None)), (5, 5)),
+            ((0, slice(0, 2), slice(None)), (2,)),
+            #            ((0, 0, slice(None)), ()),
+        ],
+    )
+    def test_init(
+        self,
+        nickel_kikuchi_band,
+        detector,
+        nickel_rotations,
+        hkl_slices,
+        desired_nav_shape,
+    ):
+        bands = nickel_kikuchi_band[hkl_slices]
+        phase = bands.phase
+
+        n_nav_dims = bands.navigation_dimension
+        navigation_axes = (1, 2)[:n_nav_dims]
+
+        rotations = nickel_rotations.reshape(5, 5)[hkl_slices[:2]]
+
+        uvw = _get_uvw_from_hkl(bands.hkl.data)
+        det2direct = detector2direct_lattice(
+            sample_tilt=detector.sample_tilt,
+            detector_tilt=detector.tilt,
+            lattice=phase.structure.lattice,
+            rotation=rotations,
+        )
+        uvw_detector = np.tensordot(uvw, det2direct, axes=(1, 0))
+        uvw_is_upper, uvw_in_a_pattern = _get_coordinates_in_upper_hemisphere(
+            z_coordinates=uvw_detector[..., 2], navigation_axes=navigation_axes
+        )
+        uvw = uvw[uvw_in_a_pattern, ...]
+        uvw_in_pattern = uvw_is_upper[uvw_in_a_pattern, ...].T
+        uvw_detector = np.moveaxis(
+            uvw_detector[uvw_in_a_pattern], source=0, destination=n_nav_dims
+        )
+        za = ZoneAxis(
+            phase=phase,
+            uvw=uvw,
+            uvw_detector=uvw_detector,
+            in_pattern=uvw_in_pattern,
+            gnomonic_radius=detector.r_max,
+        )
+
+        assert za.navigation_shape == desired_nav_shape
+
+    def test_gnomonic_radius(self):
         pass
+
+    def test_within_gnomonic_radius(self):
+        pass
+
+    def test_get_item(self, nickel_zone_axes):
+        """ZoneAxis.__getitem__() works as desired."""
+        za = nickel_zone_axes
+        nav_shape = za.navigation_shape
+
+        # Zero getitem keys
+        assert np.allclose(za[:].uvw_detector.data, za.uvw_detector.data)
+        assert za[:].navigation_shape == nav_shape
+        assert np.allclose(za[()].uvw_detector.data, za.uvw_detector.data)
+        assert za[()].navigation_shape == nav_shape
+        assert np.allclose(
+            za[slice(None)].uvw_detector.data, za.uvw_detector.data
+        )
+        assert za[slice(None)].navigation_shape == nav_shape
+
+        # One getitem key
+        # All bands visible in first pattern
+        assert np.allclose(za[0].uvw_detector.data, za.uvw_detector.data[0])
+        assert za[0].navigation_shape == (5,)
+
+        # Two getitem keys
+        with pytest.raises(IndexError, match="Not enough axes to slice"):
+            # Slicing shape () with two keys
+            _ = za[0, 0][0, 0]
+        # Slicing ndim == 1 with two keys
+        assert np.allclose(za[0][0, :2]._hkldata, za._hkldata[:2])
+        assert za[0][0, :2].navigation_shape == ()
+
+        # Three getitem keys
+        with pytest.raises(IndexError, match="Not enough axes to slice"):
+            # Slicing ndim == 1 with three keys
+            _ = za[0][0, :2, :3]
+        this_slice = (0, slice(0, 2), slice(0, 3))
+        bands2 = za[this_slice]
+        assert np.allclose(
+            bands2.uvw_detector.data, za.uvw_detector.data[this_slice]
+        )
+        assert bands2.size == 3
+        assert za[this_slice].navigation_shape == (2,)
+
+    def test_get_item_structure_factor_theta(self, nickel_zone_axes):
+        """Calculated structure factors and theta angles carry over."""
+        za = nickel_zone_axes
+        v = 20e3
+        za.calculate_structure_factor(voltage=v)
+        za.calculate_theta(voltage=v)
+
+        # All bands
+        assert np.allclose(za[2, 2:4].structure_factor, za.structure_factor)
+        # Some bands
+        new_bands = za[2, 2:4, 3:15]
+        assert np.allclose(
+            new_bands.structure_factor, za.structure_factor[3:15]
+        )
+        assert np.allclose(new_bands.theta, za.theta[3:15])
+
+    def test_unique(self, nickel_zone_axes):
+        with pytest.raises(NotImplementedError):
+            _ = nickel_zone_axes.unique()
+
+    def test_symmetrise(self, nickel_zone_axes):
+        with pytest.raises(NotImplementedError):
+            _ = nickel_zone_axes.symmetrise()
+
+    def test_from_min_dspacing(self, nickel_zone_axes):
+        with pytest.raises(NotImplementedError):
+            _ = nickel_zone_axes.from_min_dspacing()
+
+    def test_from_highest_hkl(self, nickel_zone_axes):
+        with pytest.raises(NotImplementedError):
+            _ = nickel_zone_axes.from_highest_hkl()

@@ -16,16 +16,21 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Crystallographic computations."""
+import numpy as np
+import pytest
 
-from kikuchipy.crystallography.matrices import (
-    get_direct_structure_matrix,
-    get_reciprocal_structure_matrix,
-    get_reciprocal_metric_tensor,
-)
+from kikuchipy.crystallography._computations import _get_uvw_from_hkl
 
-__all__ = [
-    "get_direct_structure_matrix",
-    "get_reciprocal_structure_matrix",
-    "get_reciprocal_metric_tensor",
-]
+
+class TestCrystallographicComputations:
+    @pytest.mark.parametrize(
+        "hkl, desired_uvw",
+        [
+            ([1, 1, 1], np.array([]).reshape((0, 3))),
+            ([[1, 1, 1], [2, 2, 2]], np.array([]).reshape((0, 3))),
+            ([[1, 1, 1], [1, 1, -1]], [[-1, 1, 0], [1, -1, 0]]),
+        ],
+    )
+    def test_get_uvw_from_hkl(self, hkl, desired_uvw):
+        """Desired uvw from the cross product of hkl."""
+        assert np.allclose(_get_uvw_from_hkl(hkl), desired_uvw)

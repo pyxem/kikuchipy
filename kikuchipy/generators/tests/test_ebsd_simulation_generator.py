@@ -22,6 +22,9 @@ from orix.quaternion import Rotation
 import pytest
 
 from kikuchipy.generators import EBSDSimulationGenerator
+from kikuchipy.generators.ebsd_simulation_generator import (
+    _get_coordinates_in_upper_hemisphere,
+)
 
 
 class TestEBSDSimulationGenerator:
@@ -136,7 +139,7 @@ class TestEBSDSimulationGenerator:
             ((slice(0, 2), slice(2, 4)), (2, 2), [0.1, 0.7, 0.3], [1, 2, 3]),
         ],
     )
-    def test_getitem(
+    def test_get_item(
         self,
         nickel_ebsd_simulation_generator,
         nav_idx,
@@ -252,3 +255,36 @@ class TestEBSDSimulationGenerator:
             ),
         )
         assert np.allclose(bands.gnomonic_radius, simgen[:2].detector.r_max)
+
+    def test_get_coordinates_in_upper_hemisphere_1d(self):
+        """Coordinates are considered correctly whether to be in the
+        upper hemisphere and visible in a point (pattern).
+        """
+        # Shape (2, 2, 2, 3): (n bands/zone axes, i, j, xyz)
+        coords = np.array(
+            [
+                [[[1, 2, -1], [1, 2, -2]], [[1, 2, -3], [1, 2, 0]]],
+                [[[1, 2, -3], [1, 2, 3]], [[1, 2, 1e-3], [1, 2, -3]]],
+            ]
+        )
+        is_upper, in_a_point = _get_coordinates_in_upper_hemisphere(
+            z_coordinates=coords[..., 2], navigation_axes=(1, 2)
+        )
+        assert np.allclose(
+            is_upper,
+            [[[False, False], [False, False]], [[False, True], [True, False]]],
+        )
+        assert np.allclose(in_a_point, [False, True])
+
+    def test_get_coordinates_in_upper_hemisphere_2d(self):
+        """Coordinates are considered correctly whether to be in the
+        upper hemisphere and visible in a point (pattern).
+        """
+        # Shape (2, 2, 3): (n bands/zone axes, i, xyz)
+        coords = np.array([[[1, 2, -1], [1, 2, -2]], [[1, 2, -3], [1, 2, 3]]])
+        is_upper, in_a_point = _get_coordinates_in_upper_hemisphere(
+            z_coordinates=coords[..., 2], navigation_axes=(1,)
+        )
+
+        assert np.allclose(is_upper, [[False, False], [False, True]])
+        assert np.allclose(in_a_point, [False, True])

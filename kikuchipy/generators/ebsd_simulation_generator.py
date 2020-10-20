@@ -17,13 +17,14 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from copy import deepcopy
-from typing import Optional
+from typing import Optional, Tuple
 
 from diffsims.crystallography import ReciprocalLatticePoint
 import numpy as np
 from orix.crystal_map import Phase
 from orix.quaternion.rotation import Rotation
 
+from kikuchipy.crystallography._computations import _get_uvw_from_hkl
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.projections.ebsd_projections import (
     detector2reciprocal_lattice,
@@ -180,8 +181,6 @@ class EBSDSimulationGenerator:
         >>> sim2.bands.size
         13
         """
-        # TODO: Consider chopping all these computations into smaller
-        #  bits so that they can be used by other methods
         rlp = reciprocal_lattice_point
         if rlp is None and (
             hasattr(self.phase.point_group, "name")
@@ -199,15 +198,13 @@ class EBSDSimulationGenerator:
         phase = rlp.phase
         hkl = rlp._hkldata
 
-        # Get number of navigation dimensions and axes
-        nav_dim = self.navigation_dimension
-        navigation_axes = (1, 2)[:nav_dim]
+        # Get navigation axes
+        n_nav_dims = self.navigation_dimension
+        navigation_axes = (1, 2)[:n_nav_dims]
 
         # Get Kikuchi band coordinates for all bands in all patterns
-        # U_Kstar, transformation from detector frame D to reciprocal crystal
-        # lattice frame Kstar
-        # TODO: Possible bottleneck due to large dot products! Room for
-        #  lots of improvements with dask.
+        # U_Kstar, transformation from detector frame D to reciprocal
+        # crystal lattice frame Kstar.
         # Output shape is (3, n, 3) or (3, ny, nx, 3)
         det2recip = detector2reciprocal_lattice(
             sample_tilt=self.detector.sample_tilt,
@@ -217,15 +214,15 @@ class EBSDSimulationGenerator:
         )
         # Output shape is (nhkl, n, 3) or (nhkl, ny, nx, 3)
         hkl_detector = np.tensordot(hkl, det2recip, axes=(1, 0))
-        # Determine whether a band is visible in a pattern
-        upper_hemisphere = hkl_detector[..., 2] > 0
-        is_in_some_pattern = np.sum(upper_hemisphere, axis=navigation_axes) != 0
-        # Get bands that are in some pattern and their coordinates in the
-        # proper shape
-        hkl = hkl[is_in_some_pattern, ...]
-        hkl_in_pattern = upper_hemisphere[is_in_some_pattern, ...].T
+        # Get bands that are in some pattern
+        hkl_is_upper, hkl_in_a_pattern = _get_coordinates_in_upper_hemisphere(
+            z_coordinates=hkl_detector[..., 2], navigation_axes=navigation_axes
+        )
+        hkl = hkl[hkl_in_a_pattern, ...]
+        hkl_in_pattern = hkl_is_upper[hkl_in_a_pattern, ...].T
+        # Get coordinates in the proper shape
         hkl_detector = np.moveaxis(
-            hkl_detector[is_in_some_pattern], source=0, destination=nav_dim
+            hkl_detector[hkl_in_a_pattern], source=0, destination=n_nav_dims
         )
         # And store it all
         bands = KikuchiBand(
@@ -237,14 +234,7 @@ class EBSDSimulationGenerator:
         )
 
         # Get zone axes coordinates from Kikuchi bands
-        n_hkl = bands.size
-        n_hkl2 = n_hkl ** 2
-        uvw = np.cross(hkl[:, np.newaxis, :], hkl).reshape((n_hkl2, 3))
-        not000 = np.count_nonzero(uvw, axis=1) != 0
-        uvw = uvw[not000]
-        with np.errstate(divide="ignore", invalid="ignore"):
-            uvw = uvw / np.gcd.reduce(uvw, axis=1)[:, np.newaxis]
-        uvw = np.unique(uvw, axis=0).astype(int)
+        uvw = _get_uvw_from_hkl(hkl=hkl)
         det2direct = detector2direct_lattice(
             sample_tilt=self.detector.sample_tilt,
             detector_tilt=self.detector.tilt,
@@ -252,12 +242,13 @@ class EBSDSimulationGenerator:
             rotation=self.rotations,
         )
         uvw_detector = np.tensordot(uvw, det2direct, axes=(1, 0))
-        upper_hemisphere = uvw_detector[..., 2] > 0
-        is_in_some_pattern = np.sum(upper_hemisphere, axis=navigation_axes) != 0
-        uvw = uvw[is_in_some_pattern, ...]
-        uvw_in_pattern = upper_hemisphere[is_in_some_pattern, ...].T
+        uvw_is_upper, uvw_in_a_pattern = _get_coordinates_in_upper_hemisphere(
+            z_coordinates=uvw_detector[..., 2], navigation_axes=navigation_axes
+        )
+        uvw = uvw[uvw_in_a_pattern, ...]
+        uvw_in_pattern = uvw_is_upper[uvw_in_a_pattern, ...].T
         uvw_detector = np.moveaxis(
-            uvw_detector[is_in_some_pattern], source=0, destination=nav_dim
+            uvw_detector[uvw_in_a_pattern], source=0, destination=n_nav_dims
         )
         zone_axes = ZoneAxis(
             phase=phase,
@@ -302,3 +293,15 @@ class EBSDSimulationGenerator:
                 f"(1,) or equal to the rotations's shape {self.rotations.shape}"
             )
         self.detector.navigation_shape = self.navigation_shape
+
+
+def _get_coordinates_in_upper_hemisphere(
+    z_coordinates: np.ndarray, navigation_axes: Tuple[int, ...]
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Return two boolean arrays with True if a coordinate is in the
+    upper hemisphere and if it is in the upper hemisphere in some
+    pattern, respectively.
+    """
+    upper_hemisphere = z_coordinates > 0
+    in_a_pattern = np.sum(upper_hemisphere, axis=navigation_axes) != 0
+    return upper_hemisphere, in_a_pattern.squeeze()
