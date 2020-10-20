@@ -163,7 +163,7 @@ class TestEBSDSimulationGenerator:
         simgen2.detector.pc[0] = new_pc
         assert not np.allclose(simgen[nav_idx].detector.pc, simgen2.detector.pc)
 
-    def test_geometrical_simulation(
+    def test_geometrical_simulation2d(
         self, nickel_ebsd_simulation_generator, nickel_rlp,
     ):
         """Desired output EBSDGeometricalSimulation object."""
@@ -183,6 +183,43 @@ class TestEBSDSimulationGenerator:
 
         sim2 = simgen.geometrical_simulation()
         assert sim2.bands.size == 132
+
+    def test_geometrical_simulation1d(
+        self, nickel_ebsd_simulation_generator, nickel_rlp,
+    ):
+        """Geometrical EBSD simulations handle 1d."""
+        simgen = nickel_ebsd_simulation_generator[:5]
+
+        rlp = nickel_rlp[nickel_rlp.allowed].symmetrise()
+        assert rlp.size == 26
+
+        sim1 = simgen.geometrical_simulation(rlp)
+        assert np.allclose(sim1.detector.pc, simgen.detector.pc)
+        assert np.allclose(
+            sim1.bands.phase.point_group.data, simgen.phase.point_group.data
+        )
+        assert np.allclose(sim1.rotations.data, simgen.rotations.data)
+        assert sim1.bands.navigation_shape == (5,)
+        assert sim1.bands.size == 15
+
+    def test_geometrical_simulation0d(
+        self, nickel_ebsd_simulation_generator, nickel_rlp,
+    ):
+        """Geometrical EBSD simulations handle 0d."""
+        simgen = nickel_ebsd_simulation_generator[0]
+        simgen.navigation_shape = ()
+
+        rlp = nickel_rlp[nickel_rlp.allowed].symmetrise()
+        assert rlp.size == 26
+
+        sim1 = simgen.geometrical_simulation(rlp)
+        assert np.allclose(sim1.detector.pc, simgen.detector.pc)
+        assert np.allclose(
+            sim1.bands.phase.point_group.data, simgen.phase.point_group.data
+        )
+        assert np.allclose(sim1.rotations.data, simgen.rotations.data)
+        assert sim1.bands.navigation_shape == ()
+        assert sim1.bands.size == 13
 
     def test_geometrical_simulation_raises(
         self, nickel_ebsd_simulation_generator,
