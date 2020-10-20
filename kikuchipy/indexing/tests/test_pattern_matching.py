@@ -22,13 +22,13 @@ import pytest
 from scipy.spatial.distance import cdist
 
 
-from kikuchipy.indexing import make_similarity_metric, template_match
+from kikuchipy.indexing import make_similarity_metric, pattern_match
 
-from kikuchipy.indexing.template_matching import _template_match_slice_templates
+from kikuchipy.indexing.pattern_matching import _pattern_match_slice_simulated
 from kikuchipy.indexing.similarity_metrics import MetricScope
 
 
-class TestTemplateMatching:
+class TestPatternMatching:
     zncc_flat_metric = make_similarity_metric(
         lambda p, t: cdist(p, t, metric="correlation"),
         greater_is_better=False,
@@ -39,21 +39,21 @@ class TestTemplateMatching:
 
     def test_not_recognized_metric(self):
         with pytest.raises(ValueError):
-            template_match(
+            pattern_match(
                 np.zeros((2, 2)), np.zeros((2, 2)), metric="not_recognized"
             )
 
     def test_mismatching_signal_shapes(self):
         self.dummy_metric.scope = MetricScope.MANY_TO_MANY
         with pytest.raises(OSError):
-            template_match(
+            pattern_match(
                 np.zeros((2, 2)), np.zeros((3, 3)), metric=self.dummy_metric
             )
 
     def test_metric_not_compatible_with_data(self):
         self.dummy_metric.scope = MetricScope.ONE_TO_MANY
         with pytest.raises(OSError):
-            template_match(
+            pattern_match(
                 np.zeros((2, 2, 2, 2)),
                 np.zeros((2, 2)),
                 metric=self.dummy_metric,
@@ -63,7 +63,7 @@ class TestTemplateMatching:
         "n_slices",
         [None, 2],
     )
-    def test_template_match_compute_true(self, n_slices):
+    def test_pattern_match_compute_true(self, n_slices):
         # Four patterns
         p = np.array(
             [
@@ -84,17 +84,17 @@ class TestTemplateMatching:
             np.int8,
         )
         t_da = da.from_array(t)
-        mr = template_match(p, t_da, n_slices=n_slices)
+        mr = pattern_match(p, t_da, n_slices=n_slices)
         assert mr[0][2] == 1  # Template index in t of perfect match
         assert pytest.approx(mr[1][2]) == 1.0  # ZNCC of perfect match
 
-    def test_template_match_compute_false(self):
+    def test_pattern_match_compute_false(self):
         p = np.arange(16).reshape((2, 2, 2, 2))
         t = np.arange(8).reshape((2, 2, 2))
-        mr = template_match(p, t, compute=False)
+        mr = pattern_match(p, t, compute=False)
         assert len(mr) == 2
         assert isinstance(mr[0], da.Array) and isinstance(mr[1], da.Array)
 
-    def test_template_match_one_to_one(self):
-        mr = template_match(np.zeros((2, 2)), np.zeros((2, 2)))
+    def test_pattern_match_one_to_one(self):
+        mr = pattern_match(np.zeros((2, 2)), np.zeros((2, 2)))
         assert mr[0][0] == 0

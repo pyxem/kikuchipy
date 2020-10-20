@@ -19,7 +19,7 @@
 """Indexing of EBSD patterns."""
 
 from kikuchipy.indexing.similarity_metrics import make_similarity_metric
-from kikuchipy.indexing.template_matching import template_match
+from kikuchipy.indexing.pattern_matching import pattern_match
 from kikuchipy.indexing.static_dictionary_indexing import (
     StaticDictionaryIndexing,
 )
@@ -28,7 +28,7 @@ from kikuchipy.indexing.merge_crystalmaps import merge_crystalmaps
 
 __all__ = [
     "StaticDictionaryIndexing",
-    "template_match",
+    "pattern_match",
     "make_similarity_metric",
     "orientation_similarity_map",
     "merge_crystalmaps",
