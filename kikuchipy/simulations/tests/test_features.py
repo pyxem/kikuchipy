@@ -405,12 +405,13 @@ class TestKikuchiBand:
 
 class TestZoneAxis:
     @pytest.mark.parametrize(
-        "hkl_slices, desired_nav_shape",
+        "hkl_slices, desired_nav_shape, desired_nav_dims, desired_data_shape",
         [
-            ((slice(0, 2), slice(0, 2), slice(None)), (2, 2)),
-            ((slice(None), slice(None), slice(None)), (5, 5)),
-            ((0, slice(0, 2), slice(None)), (2,)),
-            #            ((0, 0, slice(None)), ()),
+            ((slice(0, 2), slice(0, 2), slice(None)), (2, 2), 2, (2, 2, 28)),
+            ((slice(None), slice(None), slice(None)), (5, 5), 2, (5, 5, 37)),
+            ((0, slice(0, 1), slice(None)), (1,), 1, (1, 25)),
+            ((slice(0, 1), slice(1, 2), slice(None)), (1, 1), 2, (1, 1, 25)),
+            ((0, 0, slice(None)), (), 0, (25,)),
         ],
     )
     def test_init(
@@ -420,6 +421,8 @@ class TestZoneAxis:
         nickel_rotations,
         hkl_slices,
         desired_nav_shape,
+        desired_nav_dims,
+        desired_data_shape,
     ):
         bands = nickel_kikuchi_band[hkl_slices]
         phase = bands.phase
@@ -437,6 +440,8 @@ class TestZoneAxis:
             rotation=rotations,
         )
         uvw_detector = np.tensordot(uvw, det2direct, axes=(1, 0))
+        if n_nav_dims == 0:
+            uvw_detector = uvw_detector.squeeze()
         uvw_is_upper, uvw_in_a_pattern = _get_coordinates_in_upper_hemisphere(
             z_coordinates=uvw_detector[..., 2], navigation_axes=navigation_axes
         )
@@ -454,12 +459,130 @@ class TestZoneAxis:
         )
 
         assert za.navigation_shape == desired_nav_shape
+        assert za.navigation_dimension == desired_nav_dims
+        assert za._data_shape == desired_data_shape
 
-    def test_gnomonic_radius(self):
-        pass
+        x_detector = uvw_detector[..., 0]
+        y_detector = uvw_detector[..., 1]
+        z_detector = uvw_detector[..., 2]
+        assert np.allclose(za.x_detector, x_detector)
+        assert np.allclose(za.y_detector, y_detector)
+        assert np.allclose(za.z_detector, z_detector)
 
-    def test_within_gnomonic_radius(self):
-        pass
+        with np.errstate(divide="ignore"):
+            desired_x_gnomonic = x_detector / z_detector
+            desired_y_gnomonic = y_detector / z_detector
+        assert np.allclose(za.x_gnomonic, desired_x_gnomonic)
+        assert np.allclose(za.y_gnomonic, desired_y_gnomonic)
+        assert np.allclose(
+            za.r_gnomonic,
+            np.sqrt(desired_x_gnomonic ** 2 + desired_y_gnomonic ** 2),
+        )
+
+    @pytest.mark.parametrize(
+        "uvw, uvw_detector, dim_str, za_str",
+        [
+            (
+                np.array([-1, 1, 1]),
+                np.array([0.26, 0.32, 0.26]),
+                "(|1)",
+                "[[-1  1  1]]",
+            ),
+            (
+                np.array([[-1, 1, 1], [2, 0, 0]]),
+                np.tile(
+                    np.array([[0.26, 0.32, 0.26], [-0.21, 0.45, -0.27]]),
+                    (2, 2, 1, 1),  # shape (2, 2, 2, 3)
+                ),
+                "(2, 2|2)",
+                "[[-1  1  1]\n [ 2  0  0]]",
+            ),
+        ],
+    )
+    def test_repr(self, nickel_phase, uvw, uvw_detector, dim_str, za_str):
+        """Desired representation."""
+        za = ZoneAxis(
+            phase=nickel_phase,
+            uvw=uvw,
+            uvw_detector=uvw_detector,
+            in_pattern=np.ones(uvw_detector.shape[:-1], dtype=bool),
+        )
+        assert repr(za) == (
+            f"ZoneAxis {dim_str}\n"
+            f"Phase: {nickel_phase.name} ({nickel_phase.point_group.name})\n"
+            f"{za_str}"
+        )
+
+    @pytest.mark.parametrize(
+        (
+            "uvw_detector, uvw_in_pattern, gr, desired_data_shape, "
+            "desired_within_gr"
+        ),
+        [
+            # 2D, (ny, nx, n, xyz): (2, 2, 2, 3)
+            (
+                [
+                    [[[1, 5, 1], [-1, -3, 4]], [[2, 4, -1], [0, -3, 4]]],
+                    [[[1, 5, 1], [0, -3, 4]], [[1, 5, 1], [-1, -3, 4]]],
+                ],
+                [[[True, True], [True, True]], [[False, True], [True, True]]],
+                1.92,
+                (2, 2, 2),
+                [
+                    [[False, True], [False, True]],
+                    [[False, True], [False, True]],
+                ],
+            ),
+            # 1D, (nx, n, xyz): (1, 2, 3)
+            (
+                [[[-14, 11, 8], [-10, 9, 14]]],
+                [[True, True]],
+                1.92,
+                (1, 2),
+                [[False, True]],
+            ),
+            # 0D, (n, xyz): (2, 3)
+            (
+                [[-14, 11, 8], [-10, 9, 14]],
+                [True, True],
+                1.92,
+                (2,),
+                [False, True],
+            ),
+        ],
+    )
+    def test_within_gnomonic_radius(
+        self,
+        nickel_phase,
+        uvw_detector,
+        uvw_in_pattern,
+        gr,
+        desired_data_shape,
+        desired_within_gr,
+    ):
+        """Gnomonic radius behaves for 2D, 1D and 0D data sets."""
+        za = ZoneAxis(
+            phase=nickel_phase,
+            uvw=[[-1, 1, 0], [0, -1, 1]],
+            uvw_detector=uvw_detector,
+            in_pattern=uvw_in_pattern,
+            gnomonic_radius=gr,
+        )
+
+        assert za._data_shape == desired_data_shape
+
+        uvw_detector = np.asarray(uvw_detector, dtype=np.float32)
+        desired_within_gr = np.asarray(desired_within_gr)
+
+        assert np.allclose(za.within_gnomonic_radius, desired_within_gr)
+
+        desired_xy = np.ones((za._data_shape + (2,))) * np.nan
+        desired_xy[..., 0] = uvw_detector[..., 0] / uvw_detector[..., 2]
+        desired_xy[..., 1] = uvw_detector[..., 1] / uvw_detector[..., 2]
+        desired_xy[~desired_within_gr] = np.nan
+        assert np.allclose(
+            za._xy_within_gnomonic_radius, desired_xy, equal_nan=True
+        )
 
     def test_get_item(self, nickel_zone_axes):
         """ZoneAxis.__getitem__() works as desired."""

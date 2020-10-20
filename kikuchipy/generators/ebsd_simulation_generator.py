@@ -198,7 +198,8 @@ class EBSDSimulationGenerator:
         phase = rlp.phase
         hkl = rlp._hkldata
 
-        # Get navigation axes
+        # Get number of navigation dimensions and navigation axes
+        # indices
         n_nav_dims = self.navigation_dimension
         navigation_axes = (1, 2)[:n_nav_dims]
 
@@ -214,6 +215,8 @@ class EBSDSimulationGenerator:
         )
         # Output shape is (nhkl, n, 3) or (nhkl, ny, nx, 3)
         hkl_detector = np.tensordot(hkl, det2recip, axes=(1, 0))
+        if n_nav_dims == 0:
+            hkl_detector = hkl_detector.squeeze()
         # Get bands that are in some pattern
         hkl_is_upper, hkl_in_a_pattern = _get_coordinates_in_upper_hemisphere(
             z_coordinates=hkl_detector[..., 2], navigation_axes=navigation_axes
@@ -242,6 +245,8 @@ class EBSDSimulationGenerator:
             rotation=self.rotations,
         )
         uvw_detector = np.tensordot(uvw, det2direct, axes=(1, 0))
+        if n_nav_dims == 0:
+            uvw_detector = uvw_detector.squeeze()
         uvw_is_upper, uvw_in_a_pattern = _get_coordinates_in_upper_hemisphere(
             z_coordinates=uvw_detector[..., 2], navigation_axes=navigation_axes
         )
@@ -296,12 +301,14 @@ class EBSDSimulationGenerator:
 
 
 def _get_coordinates_in_upper_hemisphere(
-    z_coordinates: np.ndarray, navigation_axes: Tuple[int, ...]
+    z_coordinates: np.ndarray, navigation_axes: tuple
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Return two boolean arrays with True if a coordinate is in the
     upper hemisphere and if it is in the upper hemisphere in some
     pattern, respectively.
     """
     upper_hemisphere = z_coordinates > 0
+    if len(navigation_axes) == 0:
+        upper_hemisphere = upper_hemisphere.squeeze()
     in_a_pattern = np.sum(upper_hemisphere, axis=navigation_axes) != 0
-    return upper_hemisphere, in_a_pattern.squeeze()
+    return upper_hemisphere, in_a_pattern

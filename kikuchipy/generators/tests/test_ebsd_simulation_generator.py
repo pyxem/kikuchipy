@@ -256,7 +256,7 @@ class TestEBSDSimulationGenerator:
         )
         assert np.allclose(bands.gnomonic_radius, simgen[:2].detector.r_max)
 
-    def test_get_coordinates_in_upper_hemisphere_1d(self):
+    def test_get_coordinates_in_upper_hemisphere_2d(self):
         """Coordinates are considered correctly whether to be in the
         upper hemisphere and visible in a point (pattern).
         """
@@ -267,8 +267,10 @@ class TestEBSDSimulationGenerator:
                 [[[1, 2, -3], [1, 2, 3]], [[1, 2, 1e-3], [1, 2, -3]]],
             ]
         )
+        n_nav_dims = 2
+        navigation_axes = (1, 2)[:n_nav_dims]
         is_upper, in_a_point = _get_coordinates_in_upper_hemisphere(
-            z_coordinates=coords[..., 2], navigation_axes=(1, 2)
+            z_coordinates=coords[..., 2], navigation_axes=navigation_axes
         )
         assert np.allclose(
             is_upper,
@@ -276,15 +278,32 @@ class TestEBSDSimulationGenerator:
         )
         assert np.allclose(in_a_point, [False, True])
 
-    def test_get_coordinates_in_upper_hemisphere_2d(self):
+    def test_get_coordinates_in_upper_hemisphere_1d(self):
         """Coordinates are considered correctly whether to be in the
         upper hemisphere and visible in a point (pattern).
         """
         # Shape (2, 2, 3): (n bands/zone axes, i, xyz)
         coords = np.array([[[1, 2, -1], [1, 2, -2]], [[1, 2, -3], [1, 2, 3]]])
+        n_nav_dims = 1
+        navigation_axes = (1, 2)[:n_nav_dims]
         is_upper, in_a_point = _get_coordinates_in_upper_hemisphere(
-            z_coordinates=coords[..., 2], navigation_axes=(1,)
+            z_coordinates=coords[..., 2], navigation_axes=navigation_axes
         )
 
         assert np.allclose(is_upper, [[False, False], [False, True]])
+        assert np.allclose(in_a_point, [False, True])
+
+    def test_get_coordinates_in_upper_hemisphere_0d(self):
+        """Coordinates are considered correctly whether to be in the
+        upper hemisphere and visible in a point (pattern).
+        """
+        # Shape (2, 3): (n bands/zone axes, xyz)
+        coords = np.array([[1, 2, -1], [1, 2, 2]])
+        n_nav_dims = 0
+        navigation_axes = (1, 2)[:n_nav_dims]
+        is_upper, in_a_point = _get_coordinates_in_upper_hemisphere(
+            z_coordinates=coords[..., 2], navigation_axes=navigation_axes
+        )
+
+        assert np.allclose(is_upper, [False, True])
         assert np.allclose(in_a_point, [False, True])

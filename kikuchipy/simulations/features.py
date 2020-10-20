@@ -32,9 +32,9 @@ class KikuchiBand(ReciprocalLatticePoint):
     def __init__(
         self,
         phase: Phase,
-        hkl: Union[Vector3d, np.ndarray],
-        hkl_detector: Union[Vector3d, np.ndarray],
-        in_pattern: np.ndarray,
+        hkl: Union[Vector3d, np.ndarray, tuple],
+        hkl_detector: Union[Vector3d, np.ndarray, list, tuple],
+        in_pattern: Union[np.ndarray, list, tuple],
         gnomonic_radius: Union[float, np.ndarray] = 10,
     ):
         """Center positions of Kikuchi bands on the detector for n
@@ -92,7 +92,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         """
         super().__init__(phase=phase, hkl=hkl)
         self._hkl_detector = Vector3d(hkl_detector)
-        self._in_pattern = in_pattern
+        self._in_pattern = np.asarray(in_pattern)
         self.gnomonic_radius = gnomonic_radius
 
     @property
@@ -316,8 +316,8 @@ class ZoneAxis(ReciprocalLatticePoint):
         self,
         phase: Phase,
         uvw: Union[Vector3d, np.ndarray, list, tuple],
-        uvw_detector: np.ndarray,
-        in_pattern: np.ndarray,
+        uvw_detector: Union[Vector3d, np.ndarray, list, tuple],
+        in_pattern: Union[np.ndarray, list, tuple],
         gnomonic_radius: Union[float, np.ndarray] = 10,
     ):
         """Positions of zone axes on the detector.
@@ -341,7 +341,7 @@ class ZoneAxis(ReciprocalLatticePoint):
         """
         super().__init__(phase=phase, hkl=uvw)
         self._uvw_detector = Vector3d(uvw_detector)
-        self._in_pattern = in_pattern
+        self._in_pattern = np.asarray(in_pattern)
         self.gnomonic_radius = gnomonic_radius
 
     @property
