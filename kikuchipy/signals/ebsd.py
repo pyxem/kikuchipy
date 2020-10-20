@@ -51,6 +51,8 @@ from kikuchipy.pattern._pattern import (
     fft_filter,
     _dynamic_background_frequency_space_setup,
 )
+from kikuchipy.indexing import StaticDictionaryIndexing
+from kikuchipy.indexing.similarity_metrics import SimilarityMetric
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
     metadata_nodes,
@@ -881,6 +883,52 @@ class EBSD(CommonImage, Signal2D):
 
         return image_quality_map
 
+    def index(
+        self,
+        simulations: Union[EBSD, LazyEBSD, List[Union[EBSD, LazyEBSD]]],
+        metric: Union[str, SimilarityMetric] = "zncc",
+        keep_n: int = 1,
+        n_slices: int = 1,
+        merge_xmaps: bool = False,
+        osm: bool = False,
+    ) -> List[CrystalMap]:
+        """Perform Dictionary Indexing on patterns against pre-computed simulations.[ref here or elsewhere?]
+
+        Produce a `CrystalMap` for each dictionary with `metric_results` and `template_indices` as properties.
+
+        Parameters
+        ----------
+        simulations : Union[EBSD, LazyEBSD, List[Union[EBSD, LazyEBSD]]]
+            Simulated patterns, possibly a list of candidate phases
+        metric : Union[str, SimilarityMetric], optional
+            Similarity metric, by default "zncc".
+        keep_n : int, optional
+            Number of sorted results to keep, by default 1.
+        n_slices : int, optional
+            Number of simulation slices to process sequentially, by default 1.
+        merge_xmaps : bool, optional
+            Produce a merged crystal map from best results
+            if multiple candidate phases, by default False.
+            See also `merge_crystalmaps`.
+        osm : bool, optional
+            Orientation Similarity Maps as property `OSM`, by default False.
+
+
+        Returns
+        -------
+        List[CrystalMap]
+            A crystal map for each dictionary loaded and one merged map if `merge_xmaps = True`.
+        """
+        sdi = StaticDictionaryIndexing(simulations)
+        return sdi.index(
+            self,
+            metric=metric,
+            keep_n=keep_n,
+            n_slices=n_slices,
+            merge_xmaps=merge_xmaps,
+            osm=osm,
+        )
+
     def fft_filter(
         self,
         transfer_function: Union[np.ndarray, Window],
@@ -1072,7 +1120,9 @@ class EBSD(CommonImage, Signal2D):
             averaging_window = copy.copy(window)
         else:
             averaging_window = Window(
-                window=window, shape=window_shape, **kwargs,
+                window=window,
+                shape=window_shape,
+                **kwargs,
             )
         averaging_window.shape_compatible(self.axes_manager.signal_shape)
 
@@ -1126,7 +1176,9 @@ class EBSD(CommonImage, Signal2D):
                 overlap_depth[i] = 0
         overlap_boundary = {i: "none" for i in range(data_dim)}
         overlapped_dask_array = da.overlap.overlap(
-            dask_array, depth=overlap_depth, boundary=overlap_boundary,
+            dask_array,
+            depth=overlap_depth,
+            boundary=overlap_boundary,
         )
 
         # Must also be overlapped, since the patterns are overlapped
