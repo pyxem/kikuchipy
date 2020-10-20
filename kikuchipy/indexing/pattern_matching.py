@@ -153,9 +153,9 @@ def _pattern_match_slice_simulated(
     Parameters
     ----------
     experimental : da.Array or np.ndarray
-        Experimental data
+        Experimental patterns
     simulated : da.Array or np.ndarray
-        Simulated data
+        Simulated patterns
     keep_n : int, optional
         Number of results to keep, by default 1
     metric : str or SimilarityMetric, optional
@@ -202,7 +202,9 @@ def _pattern_match_slice_simulated(
 
         result_slice = np.s_[:, i * n : (i + 1) * n]
         with ProgressBar():
-            print(f"simulation matching {i+1}/{n_slices}:", file=sys.stdout)
+            print(
+                f"Matching patterns, batch {i+1}/{n_slices}:", file=sys.stdout
+            )
             da.store(
                 match_result,
                 [
