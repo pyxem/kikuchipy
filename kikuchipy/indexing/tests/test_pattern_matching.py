@@ -95,6 +95,12 @@ class TestPatternMatching:
         assert len(mr) == 2
         assert isinstance(mr[0], da.Array) and isinstance(mr[1], da.Array)
 
+    def test_pattern_match_slices_compute_false(self):
+        p = np.arange(16).reshape((2, 2, 2, 2))
+        t = np.arange(8).reshape((2, 2, 2))
+        with pytest.raises(NotImplementedError):
+            pattern_match(p, t, n_slices=2, compute=False)
+
     def test_pattern_match_one_to_one(self):
         mr = pattern_match(np.zeros((2, 2)), np.zeros((2, 2)))
         assert mr[0][0] == 0
