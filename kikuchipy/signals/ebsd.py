@@ -90,13 +90,13 @@ class EBSD(CommonImage, Signal2D):
         """
         Signal2D.__init__(self, *args, **kwargs)
 
-        if "detector_dict" in kwargs:
-            self.detector = EBSDDetector(kwargs.pop("detector_dict"))
-        else:
-            self.detector = EBSDDetector(
-                shape=self.axes_manager.signal_shape,
-                px_size=self.axes_manager.signal_axes[0].scale,
-            )
+        #        if "detector_dict" in kwargs:
+        #            self.detector = EBSDDetector(kwargs.pop("detector_dict"))
+        #        else:
+        self.detector = EBSDDetector(
+            shape=self.axes_manager.signal_shape,
+            px_size=self.axes_manager.signal_axes[0].scale,
+        )
 
         if "xmap" in kwargs:
             self._xmap = kwargs.pop("xmap")
