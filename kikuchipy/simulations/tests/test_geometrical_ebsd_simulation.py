@@ -16,11 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from hyperspy.utils.markers import line_segment, point, text
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from kikuchipy.detectors import EBSDDetector
-from kikuchipy.generators import EBSDSimulationGenerator
+from kikuchipy.signals import EBSD
+
+
+matplotlib.use("Agg")  # For plotting
 
 
 class TestGeometricalEBSDSimulation:
@@ -47,105 +52,257 @@ class TestGeometricalEBSDSimulation:
         assert sim.zone_axes_label_detector_coordinates.shape == za_shape
         assert sim.zone_axes_within_gnomonic_bounds.shape == nav_shape + (n_za,)
 
-    def test_bands_detector_coordinates(
-        self, nickel_ebsd_simulation_generator, nickel_rlp
+    @pytest.mark.parametrize(
+        "nav_slice, nav_shape, n_bands, n_za",
+        [
+            ((0, 0), (), 4, 6),  # 0d
+            ((0, slice(0, 3)), (3,), 4, 7),  # 1d
+            ((slice(0, 4), slice(0, 2)), (4, 2), 4, 7),  # 2d
+        ],
+    )
+    def test_detector_coordinates_shapes(
+        self,
+        nickel_ebsd_simulation_generator,
+        nickel_rlp,
+        nav_slice,
+        nav_shape,
+        n_bands,
+        n_za,
     ):
-        """Desired band detector coordinates."""
+        """Desired detector coordinates without a navigation space."""
         simgen = nickel_ebsd_simulation_generator
         simgen.navigation_shape = (5, 5)
         rlp = nickel_rlp.symmetrise()
 
-        # 0d
-        nav_shape = ()
-        simgen1 = simgen[0, 0]
-        simgen1.navigation_shape = nav_shape
-        sim1 = simgen1.geometrical_simulation(rlp[:2])
-        assert sim1.bands.navigation_shape == nav_shape
-        assert sim1.bands._data_shape == (1,)
-        assert sim1.bands_detector_coordinates.shape == (1, 4)
+        simgen = simgen[nav_slice]
+        if nav_shape == ():  # Have to reshape data, otherwise equals (1,)
+            simgen.navigation_shape = nav_shape
+        sim = simgen.geometrical_simulation(rlp[:10])
+        assert sim.bands.navigation_shape == nav_shape
+        assert sim.zone_axes.navigation_shape == nav_shape
+        assert sim.bands._data_shape == nav_shape + (n_bands,)
+        assert sim.zone_axes._data_shape == nav_shape + (n_za,)
+        assert sim.bands_detector_coordinates.shape == (
+            nav_shape + (n_bands, 4)
+        )
+        assert sim.zone_axes_detector_coordinates.shape == (
+            nav_shape + (n_za, 2)
+        )
+        assert sim.zone_axes_label_detector_coordinates.shape == (
+            nav_shape + (n_za, 2)
+        )
 
-        # 1d
-        nav_shape = (3,)
-        simgen2 = simgen[0, :3]
-        assert simgen2.navigation_shape == nav_shape
-        sim2 = simgen2.geometrical_simulation(rlp[:3])
-        assert sim2.bands.navigation_shape == nav_shape
-        assert sim2.bands._data_shape == (3, 2)
-        assert sim2.bands_detector_coordinates.shape == (3, 2, 4)
-
-        # 2d
-        nav_shape = (4, 2)
-        simgen3 = simgen[:4, :2]
-        assert simgen3.navigation_shape == nav_shape
-        sim3 = simgen3.geometrical_simulation(rlp[:4])
-        assert sim3.bands.navigation_shape == nav_shape
-        assert sim3.bands._data_shape == (4, 2, 3)
-        assert sim3.bands_detector_coordinates.shape == (4, 2, 3, 4)
-
-    def test_zone_axes_coordinates(
-        self, nickel_ebsd_simulation_generator, nickel_rlp
+    @pytest.mark.parametrize("exclude, not_nan", [(True, 376), (False, 678)])
+    def test_zone_axes_detector_coordinates_exclude(
+        self, nickel_ebsd_simulation_generator, nickel_rlp, exclude, not_nan
     ):
-        """Desired zone axes coordinates."""
-        pass
+        """Desired number of zone axes if excluding outside detector."""
+        simgen = nickel_ebsd_simulation_generator
+        sim = simgen.geometrical_simulation(nickel_rlp.symmetrise())
 
-    def test_zone_axes_label_detector_coordinates(
-        self, nickel_ebsd_simulation_generator, nickel_rlp
-    ):
-        """Desired zone axes label coordinates."""
-        pass
+        sim.exclude_outside_detector = exclude
+        assert sim.zone_axes_detector_coordinates.shape == (
+            simgen.navigation_shape + (35, 2)
+        )
+        assert (
+            np.sum(np.isfinite(sim.zone_axes_detector_coordinates)) == not_nan
+        )
+        assert sim.exclude_outside_detector == exclude
 
+    @pytest.mark.parametrize("nav_shape", [(5, 5), (1, 25), (25, 1), (25,)])
     def test_bands_as_markers(
+        self, nickel_ebsd_simulation_generator, nickel_rlp, nav_shape
+    ):
+        """Line markers work."""
+        simgen = nickel_ebsd_simulation_generator
+        simgen.navigation_shape = nav_shape
+        sim = simgen.geometrical_simulation(nickel_rlp.symmetrise())
+
+        se = EBSD(np.ones(nav_shape + (60, 60), dtype=np.uint8))
+
+        se.add_marker(
+            marker=sim.bands_as_markers(), permanent=True, plot_marker=False
+        )
+        assert isinstance(se.metadata.Markers.line_segment, line_segment)
+        se.plot()
+        plt.close("all")
+
+    def test_bands_as_markers_family_colors(
         self, nickel_ebsd_simulation_generator, nickel_rlp
     ):
-        """Desired line markers."""
-        pass
+        """Line markers work when specifying colors."""
+        simgen = nickel_ebsd_simulation_generator
+        sim = simgen.geometrical_simulation(nickel_rlp[:2])
 
+        se = EBSD(np.ones(simgen.navigation_shape + (60, 60), dtype=np.uint8))
+
+        colors = ["lime", "tab:blue"]
+        se.add_marker(
+            marker=sim.bands_as_markers(family_colors=colors),
+            permanent=True,
+            plot_marker=False,
+        )
+        assert (
+            se.metadata.Markers.line_segment.marker_properties["color"]
+            == colors[0]
+        )
+        assert (
+            se.metadata.Markers.line_segment1.marker_properties["color"]
+            == colors[1]
+        )
+        se.plot()
+        plt.close("all")
+
+    def test_bands_as_markers_1d_nav(
+        self, nickel_ebsd_simulation_generator, nickel_rlp
+    ):
+        """1D nav shape band markers work."""
+        simgen = nickel_ebsd_simulation_generator[0]
+        assert simgen.navigation_shape == (1,)
+        sim = simgen.geometrical_simulation(nickel_rlp.symmetrise())
+        assert sim.bands.navigation_shape == (1,)
+
+        se = EBSD(np.ones((60, 60), dtype=np.uint8))
+
+        se.add_marker(
+            marker=sim.bands_as_markers(), permanent=False, plot_marker=True,
+        )
+        plt.close("all")
+
+    @pytest.mark.parametrize("nav_shape", [(5, 5), (1, 25), (25, 1), (25,)])
     def test_zone_axes_as_markers(
-        self, nickel_ebsd_simulation_generator, nickel_rlp
+        self, nickel_ebsd_simulation_generator, nickel_rlp, nav_shape
     ):
-        """Desired point markers."""
-        pass
+        """Point markers work."""
+        simgen = nickel_ebsd_simulation_generator
+        simgen.navigation_shape = nav_shape
+        sim = simgen.geometrical_simulation(nickel_rlp.symmetrise())
 
+        se = EBSD(np.ones(nav_shape + (60, 60), dtype=np.uint8))
+
+        se.add_marker(
+            marker=sim.zone_axes_as_markers(), permanent=True, plot_marker=False
+        )
+        assert isinstance(se.metadata.Markers.point, point)
+        se.plot()
+        plt.close("all")
+
+    @pytest.mark.parametrize("nav_shape", [(5, 5), (1, 25), (25, 1), (25,)])
     def test_zone_axes_labels_as_markers(
-        self, nickel_ebsd_simulation_generator, nickel_rlp
+        self, nickel_ebsd_simulation_generator, nickel_rlp, nav_shape
     ):
-        """Desired text markers."""
-        pass
+        """Text markers work."""
+        simgen = nickel_ebsd_simulation_generator
+        simgen.navigation_shape = nav_shape
+        sim = simgen.geometrical_simulation(nickel_rlp.symmetrise())
+
+        se = EBSD(np.ones(nav_shape + (60, 60), dtype=np.uint8))
+
+        matplotlib.set_loglevel("error")
+        se.add_marker(
+            marker=sim.zone_axes_labels_as_markers(),
+            permanent=True,
+            plot_marker=False,
+        )
+        assert isinstance(se.metadata.Markers.text, text)
+        se.plot()
+        plt.close("all")
+        matplotlib.set_loglevel("warning")
 
     def test_plot_zone_axes_labels_warns(
         self, nickel_ebsd_simulation_generator, nickel_rlp
     ):
         """Matplotlib warns when plotting text with NaN coordinates."""
-        pass
+        simgen = nickel_ebsd_simulation_generator
+        sim = simgen.geometrical_simulation(nickel_rlp.symmetrise())
 
-    def test_pc_as_markers(self, nickel_ebsd_simulation_generator, nickel_rlp):
-        """Desired point markers."""
-        pass
+        se = EBSD(np.ones(simgen.navigation_shape + (60, 60), dtype=np.uint8))
+
+        with pytest.warns(UserWarning, match="Matplotlib will print"):
+            se.add_marker(
+                marker=sim.zone_axes_labels_as_markers(),
+                permanent=False,
+                plot_marker=True,
+            )
+            se.plot()
+            se.axes_manager[0].index = 1
+        plt.close("all")
+
+    @pytest.mark.parametrize("nav_shape", [(5, 5), (1, 25), (25, 1), (25,)])
+    def test_pc_as_markers(
+        self, nickel_ebsd_simulation_generator, nickel_rlp, nav_shape
+    ):
+        """Projection center markers work."""
+        simgen = nickel_ebsd_simulation_generator
+        simgen.navigation_shape = nav_shape
+        sim = simgen.geometrical_simulation(nickel_rlp.symmetrise())
+
+        se = EBSD(np.ones(nav_shape + (60, 60), dtype=np.uint8))
+
+        se.add_marker(
+            marker=sim.pc_as_markers(), permanent=True, plot_marker=False
+        )
+        assert isinstance(se.metadata.Markers.point, point)
+        assert se.metadata.Markers.point.marker_properties["marker"] == "*"
+        se.plot()
+        plt.close("all")
 
     def test_as_markers(self, nickel_ebsd_simulation_generator, nickel_rlp):
-        """Desired set of markers."""
-        pass
+        """All markers work."""
+        simgen = nickel_ebsd_simulation_generator
+        sim = simgen.geometrical_simulation(nickel_rlp.symmetrise())
+
+        se = EBSD(np.ones(simgen.navigation_shape + (60, 60), dtype=np.uint8))
+
+        matplotlib.set_loglevel("error")
+        se.add_marker(
+            marker=sim.as_markers(
+                bands=True, zone_axes=True, zone_axes_labels=True, pc=True,
+            ),
+            permanent=True,
+            plot_marker=False,
+        )
+        se.plot()
+        plt.close("all")
+        matplotlib.set_loglevel("warning")
 
     def test_zone_axes_within_gnomonic_bounds(
         self, nickel_ebsd_simulation_generator, nickel_rlp
     ):
         """Desired boolean array."""
-        pass
+        simgen = nickel_ebsd_simulation_generator
+        simgen.navigation_shape = (5, 5)
+        rlp = nickel_rlp.symmetrise()
 
-    def test_repr(self, nickel_ebsd_simulation_generator, nickel_rlp):
-        """Desired string representation."""
-        pass
+        # 0d: 6 bands
+        simgen0d = simgen[0, 0]
+        simgen0d.navigation_shape = ()
+        sim0d = simgen0d.geometrical_simulation(rlp[:10])
+        assert sim0d.zone_axes_within_gnomonic_bounds.shape == (6,)
 
-    def test_get_hkl_family(self, nickel_ebsd_simulation_generator, nickel_rlp):
-        """Desired sets of families and indices."""
-        pass
+        # 1d: 3 points, 7 bands
+        sim1d = simgen[0, :3].geometrical_simulation(rlp[:10])
+        assert sim1d.zone_axes_within_gnomonic_bounds.shape == (3, 7)
 
-    def test_is_equivalent(self, nickel_ebsd_simulation_generator, nickel_rlp):
-        """Desired equivalency, with reducing HKL."""
-        pass
+        # 2d, 4 by 2 points, 7 bands
+        sim2d = simgen[:4, :2].geometrical_simulation(rlp[:10])
+        assert sim2d.zone_axes_within_gnomonic_bounds.shape == (4, 2, 7)
 
-    def test_get_colors_for_allowed_bands(
-        self, nickel_ebsd_simulation_generator, nickel_rlp
+    @pytest.mark.parametrize("nav_shape", [(5, 5), (25, 1), (1, 25)])
+    def test_repr(
+        self, nickel_ebsd_simulation_generator, nickel_rlp, nav_shape
     ):
-        """Desired colors for bands."""
-        pass
+        """Desired string representation."""
+        simgen = nickel_ebsd_simulation_generator
+        simgen.navigation_shape = nav_shape
+        sim = simgen.geometrical_simulation(nickel_rlp)
+
+        assert repr(sim) == (
+            f"GeometricalEBSDSimulation {nav_shape}\n"
+            "EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 0, pc "
+            "(0.421, 0.221, 0.505)\n"
+            "<name: ni. space group: Fm-3m. point group: m-3m. proper point "
+            "group: 432. color: tab:blue>\n"
+            f"KikuchiBand {str(nav_shape)[:-1]}|3)\n"
+            f"Rotation {nav_shape}"
+        )

@@ -16,24 +16,25 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from collections import defaultdict
 from re import sub
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional
 import warnings
 
-from diffsims.crystallography import ReciprocalLatticePoint
 import matplotlib
 import numpy as np
-from orix.crystal_map import Phase
 from orix.quaternion.rotation import Rotation
 
+from kikuchipy.crystallography._computations import (
+    _get_hkl_family,
+    _get_colors_for_allowed_bands,
+    _is_equivalent,
+)
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.draw.markers import (
     get_line_segment_list,
     get_point_list,
     get_text_list,
 )
-from kikuchipy.draw.colors import TSL_COLORS
 from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 
@@ -165,10 +166,11 @@ class GeometricalEBSDSimulation:
         Parameters
         ----------
         family_colors
-            A list of colors, either as RGB iterables or colors
-            recognizable by Matplotlib, used to color each unique family
-            of bands. If None (default), this is determined from a list
-            similar to the one used in EDAX TSL's software.
+            A list of at least as many colors as unique HKL families,
+            either as RGB iterables or colors recognizable by
+            Matplotlib, used to color each unique family of bands. If
+            None (default), this is determined from a list similar to
+            the one used in EDAX TSL's software.
         kwargs
             Keyword arguments passed to
             :func:`~kikuchipy.draw.markers.get_line_segment_list`.
@@ -199,8 +201,8 @@ class GeometricalEBSDSimulation:
                     if _is_equivalent(hkl, table_hkl):
                         family_colors.append(color)
                         break
-                else:  # Hopefully we never arrive here
-                    family_colors.append([1, 0, 0])
+        #                else:  # Hopefully we never arrive here
+        #                    family_colors.append([1, 0, 0])
 
         # Append list of markers per family (colors changing with
         # family)
@@ -265,9 +267,7 @@ class GeometricalEBSDSimulation:
                     "Matplotlib will print log warnings when EBSD.plot() is "
                     "called due to zone axes NaN values, unless it's log level "
                     "is set to 'error' via `matplotlib.set_loglevel('error')`. "
-                    "This will (hopefully) be fixed when HyperSpy releases a "
-                    "minor version with this update: "
-                    "https://github.com/hyperspy/hyperspy/pull/2558"
+                    "This will hopefully be unnecessary in the future."
                 ),
                 category=UserWarning,
             )
@@ -426,7 +426,7 @@ class GeometricalEBSDSimulation:
         within_y = np.logical_and(yg >= y_range[..., 0], yg <= y_range[..., 1])
         within_gnomonic_bounds = within_x * within_y
 
-        return within_gnomonic_bounds
+        return within_gnomonic_bounds.reshape(self.zone_axes._data_shape)
 
     def __repr__(self):
         rotation_repr = repr(self.rotations).split("\n")[0]
@@ -436,114 +436,5 @@ class GeometricalEBSDSimulation:
             f"{self.detector}\n"
             f"{self.bands.phase}\n"
             f"{band_repr}\n"
-            f"{rotation_repr}\n"
+            f"{rotation_repr}"
         )
-
-
-def _get_hkl_family(hkl: np.ndarray, reduce: bool = False) -> Tuple[dict, dict]:
-    # TODO: Almost identical to
-    #  diffsims.crystallography.ReciprocalLatticePoint.unique, improve
-    #  this instead!
-    # Remove [0, 0, 0] points
-    hkl = hkl[~np.all(np.isclose(hkl, 0), axis=1)]
-    families = defaultdict(list)
-    families_idx = defaultdict(list)
-    for i, this_hkl in enumerate(hkl.tolist()):
-        for that_hkl in families.keys():
-            if _is_equivalent(this_hkl, that_hkl, reduce=reduce):
-                families[tuple(that_hkl)].append(this_hkl)
-                families_idx[tuple(that_hkl)].append(i)
-                break
-        else:
-            families[tuple(this_hkl)].append(this_hkl)
-            families_idx[tuple(this_hkl)].append(i)
-    n_families = len(families)
-    unique_hkl = np.zeros((n_families, 3), dtype=int)
-    for i, all_hkl_in_family in enumerate(families.values()):
-        unique_hkl[i] = sorted(all_hkl_in_family)[-1]
-    return families, families_idx
-
-
-def _is_equivalent(
-    this_hkl: list, that_hkl: list, reduce: bool = False
-) -> bool:
-    """Determine whether two Miller index 3-tuples are equivalent.
-    Symmetry is not considered.
-    """
-    if reduce:
-        this_hkl, _ = _reduce_hkl(this_hkl)
-        that_hkl, _ = _reduce_hkl(that_hkl)
-    return np.allclose(
-        sorted(np.abs(this_hkl).astype(int)),
-        sorted(np.abs(that_hkl).astype(int)),
-    )
-
-
-def _reduce_hkl(hkl: Union[list, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
-    """Reduce Miller indices 3-tuples by a greatest common divisor."""
-    hkl = np.atleast_2d(hkl)
-    divisor = np.gcd.reduce(hkl, axis=1)
-    with np.errstate(divide="ignore", invalid="ignore"):
-        hkl = hkl / divisor[:, np.newaxis]
-    return hkl.astype(int), divisor
-
-
-def _get_colors_for_allowed_bands(
-    phase: Phase,
-    highest_hkl: Union[List[int], np.ndarray, None] = None,
-    color_cycle: Optional[List[str]] = None,
-):
-    """Return an array of Miller indices of allowed Kikuchi bands for a
-    point group and a corresponding color.
-
-    The idea with this function is to always get the same color for the
-    same band in the same point group.
-
-    Parameters
-    ----------
-    phase
-        A phase container with a crystal structure and a space and point
-        group describing the allowed symmetry operations.
-    highest_hkl
-        Highest Miller indices to consider. If None (default),
-        [9, 9, 9] is used.
-    color_cycle
-        A list of color names recognized by Matplotlib. If None
-        (default), a color palette based on EDAX TSL's coloring of bands
-        is cycled through.
-
-    Returns
-    -------
-    hkl_color
-        Array with Miller indices and corresponding color.
-    """
-    if highest_hkl is None:
-        highest_hkl = [9, 9, 9]
-    rlp = ReciprocalLatticePoint.from_highest_hkl(
-        phase=phase, highest_hkl=highest_hkl,
-    )
-
-    rlp2 = rlp[rlp.allowed]
-    # TODO: Replace this ordering with future ordering method in
-    #  diffsims
-    g_order = np.argsort(rlp2.gspacing)
-    new_hkl = np.atleast_2d(rlp2._hkldata)[g_order]
-    rlp3 = ReciprocalLatticePoint(phase=rlp.phase, hkl=new_hkl)
-    hkl = np.atleast_2d(rlp3._hkldata)
-    families, families_idx = _get_hkl_family(hkl=hkl, reduce=True)
-
-    if color_cycle is None:
-        color_cycle = TSL_COLORS
-    n_color_cycle = len(color_cycle)
-    n_families = len(families)
-    colors = np.tile(
-        color_cycle, (int(np.ceil(n_families / n_color_cycle)), 1)
-    )[:n_families]
-    colors = [matplotlib.colors.to_rgb(i) for i in colors]
-
-    hkl_colors = np.zeros(shape=(rlp3.size, 2, 3))
-    for hkl_idx, color in zip(families_idx.values(), colors):
-        hkl_colors[hkl_idx, 0] = hkl[hkl_idx]
-        hkl_colors[hkl_idx, 1] = color
-
-    return hkl_colors
