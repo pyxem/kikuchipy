@@ -51,7 +51,36 @@ class TestGeometricalEBSDSimulation:
         self, nickel_ebsd_simulation_generator, nickel_rlp
     ):
         """Desired band detector coordinates."""
-        pass
+        simgen = nickel_ebsd_simulation_generator
+        simgen.navigation_shape = (5, 5)
+        rlp = nickel_rlp.symmetrise()
+
+        # 0d
+        nav_shape = ()
+        simgen1 = simgen[0, 0]
+        simgen1.navigation_shape = nav_shape
+        sim1 = simgen1.geometrical_simulation(rlp[:2])
+        assert sim1.bands.navigation_shape == nav_shape
+        assert sim1.bands._data_shape == (1,)
+        assert sim1.bands_detector_coordinates.shape == (1, 4)
+
+        # 1d
+        nav_shape = (3,)
+        simgen2 = simgen[0, :3]
+        assert simgen2.navigation_shape == nav_shape
+        sim2 = simgen2.geometrical_simulation(rlp[:3])
+        assert sim2.bands.navigation_shape == nav_shape
+        assert sim2.bands._data_shape == (3, 2)
+        assert sim2.bands_detector_coordinates.shape == (3, 2, 4)
+
+        # 2d
+        nav_shape = (4, 2)
+        simgen3 = simgen[:4, :2]
+        assert simgen3.navigation_shape == nav_shape
+        sim3 = simgen3.geometrical_simulation(rlp[:4])
+        assert sim3.bands.navigation_shape == nav_shape
+        assert sim3.bands._data_shape == (4, 2, 3)
+        assert sim3.bands_detector_coordinates.shape == (4, 2, 3, 4)
 
     def test_zone_axes_coordinates(
         self, nickel_ebsd_simulation_generator, nickel_rlp
