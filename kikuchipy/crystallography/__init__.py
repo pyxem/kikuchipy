@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Crystallographic computations."""
+"""Crystallographic computations not found (easily) elsewhere."""
 
 from kikuchipy.crystallography.matrices import (
     get_direct_structure_matrix,

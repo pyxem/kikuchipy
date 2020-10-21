@@ -82,7 +82,7 @@ class GeometricalEBSDSimulation:
 
         Returns
         -------
-        band_coords
+        band_coords_detector : numpy.ndarray
             Band coordinates on the detector.
         """
         # Get start and end points for the plane traces in gnomonic coordinates
@@ -117,7 +117,7 @@ class GeometricalEBSDSimulation:
 
         Returns
         -------
-        za_coords
+        za_coords : numpy.ndarray
             Zone axis coordinates on the detector.
         """
         xyg = self.zone_axes._xy_within_gnomonic_radius
@@ -151,7 +151,7 @@ class GeometricalEBSDSimulation:
 
         Returns
         -------
-        np.ndarray
+        za_coords : numpy.ndarray
             Zone axes labels placed just above the zone axes.
         """
         za_coords = self.zone_axes_detector_coordinates
@@ -178,6 +178,7 @@ class GeometricalEBSDSimulation:
         Returns
         -------
         list
+            List with line segment markers.
         """
         if self.bands.navigation_shape == (1,):
             lines = np.squeeze(self.bands_detector_coordinates)
@@ -230,6 +231,7 @@ class GeometricalEBSDSimulation:
         Returns
         -------
         list
+            List with point markers.
         """
         # TODO: Give them some descriptive colors (facecolor)!
         # TODO: Marker style based on symmetry (2, 3, 4 and 6-fold):
@@ -257,6 +259,7 @@ class GeometricalEBSDSimulation:
         Returns
         -------
         list
+            List of text markers.
         """
         # TODO: Remove warning after HyperSpy merges this PR
         #  https://github.com/hyperspy/hyperspy/pull/2558 and publishes
@@ -301,6 +304,7 @@ class GeometricalEBSDSimulation:
         Returns
         -------
         list
+            List of point markers.
         """
         # Set up (x, y) detector coordinate array of final shape
         # nav_shape + (n_patterns, 2)
@@ -364,8 +368,8 @@ class GeometricalEBSDSimulation:
 
         Returns
         -------
-        markers
-            A list with all markers.
+        markers : hyperspy.drawing.marker.MarkerBase
+            List with all markers.
         """
         markers = []
         if bands:
@@ -395,7 +399,7 @@ class GeometricalEBSDSimulation:
 
         Returns
         -------
-        within_gnomonic_bounds
+        within_gnomonic_bounds : numpy.ndarray
             Boolean array with True for zone axes within the detector's
             gnomonic bounds.
         """

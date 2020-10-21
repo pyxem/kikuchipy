@@ -35,7 +35,6 @@ def get_direct_structure_matrix(lattice: Lattice) -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
     """
     a, b, c = lattice.abcABG()[:3]
     ca, cb, cg = lattice.ca, lattice.cb, lattice.cg
@@ -59,7 +58,6 @@ def get_reciprocal_structure_matrix(lattice: Lattice) -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
     """
     return np.linalg.inv(get_direct_structure_matrix(lattice)).T
 
@@ -74,7 +72,6 @@ def get_reciprocal_metric_tensor(lattice: Lattice) -> np.ndarray:
 
     Returns
     -------
-    np.ndarray
     """
     a, b, c = lattice.abcABG()[:3]
     ca, cb, cg = lattice.ca, lattice.cb, lattice.cg

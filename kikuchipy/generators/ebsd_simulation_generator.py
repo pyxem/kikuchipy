@@ -151,7 +151,7 @@ class EBSDSimulationGenerator:
 
         Parameters
         ----------
-        reciprocal_lattice_point :
+        reciprocal_lattice_point
             Crystal planes to project onto the detector. If None, and
             the generator has a phase with a unit cell with a point
             group, a set of planes with minimum distance of 1 Å and

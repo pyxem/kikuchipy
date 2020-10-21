@@ -30,12 +30,13 @@ def get_line_segment_list(lines: Union[list, np.ndarray], **kwargs) -> list:
     lines
         On the form [[x00, y00, x01, y01], [x10, y10, x11, y11], ...].
     kwargs
-        Keyword arguments allowed by :class:`matplotlib.pyplot.axvline`.
+        Keyword arguments allowed by :func:`matplotlib.pyplot.axvline`.
 
     Returns
     -------
-    marker_list
-        List of :class:`hyperspy.utils.markers.line_segment`.
+    marker_list : list
+        List of
+        :class:`hyperspy.drawing._markers.line_segment.LineSegment`.
     """
     lines = np.asarray(lines)
     if lines.ndim == 1:  # No navigation shape, one line
@@ -62,12 +63,12 @@ def get_point_list(points: Union[list, np.ndarray], **kwargs) -> list:
     points
         On the form [[x0, y0], [x1, y1], ...].
     kwargs
-        Keyword arguments allowed by :class:`matplotlib.pyplot.scatter`.
+        Keyword arguments allowed by :func:`matplotlib.pyplot.scatter`.
 
     Returns
     -------
-    marker_list
-        List of :class:`hyperspy.utils.markers.point`.
+    marker_list : list
+        List of :class:`hyperspy.drawing._markers.point.Point`.
     """
     points = np.asarray(points)
     if points.ndim == 1:
@@ -96,12 +97,12 @@ def get_text_list(
     coordinates
         On the form [[x0, y0], [x1, y1], ...].
     kwargs
-        Keyword arguments allowed by :class:`matplotlib.pyplot.axvline.`
+        Keyword arguments allowed by :func:`matplotlib.pyplot.axvline.`
 
     Returns
     -------
-    marker_list
-        List of :class:`hyperspy.utils.markers.text`.
+    marker_list : list
+        List of :class:`hyperspy.drawing._markers.text.Text`.
     """
     coordinates = np.asarray(coordinates)
     if coordinates.ndim == 1:

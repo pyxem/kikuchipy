@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Color palettes for Kikuchi bands."""
+"""Color palettes for plotting Kikuchi bands."""
 
 # Kikuchi band color palette from EDAX TSL Data Collection version 7
 RED = (1, 0, 0)
