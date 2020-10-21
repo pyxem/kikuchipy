@@ -16,32 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Color palettes for Kikuchi bands."""
+import matplotlib.colors as mcolors
 
-# Kikuchi band color palette from EDAX TSL Data Collection version 7
-RED = (1, 0, 0)
-GREEN = (0, 1, 0)
-BLUE = (0, 0, 1)
-YELLOW = (1, 1, 0)
-CYAN = (0, 1, 1)
-PINK = (1, 0, 1)
-BROWN = (0.5, 0, 0)
-EARTH = (0.5, 0.5, 0)
-PURPLE = (0.5, 0, 0.5)
-DARK_GREEN = (0, 0.5, 0)
-DARKER_GREEN = (0, 0.5, 0.5)
-DARK_BLUE = (0, 0, 0.5)
-TSL_COLORS = [
-    RED,
-    YELLOW,
-    GREEN,
-    BLUE,
-    PINK,
-    CYAN,
-    BROWN,
-    DARK_GREEN,
-    PURPLE,
-    DARK_BLUE,
-    EARTH,
-    DARKER_GREEN,
-]
+from kikuchipy.draw.colors import TSL_COLORS
+
+
+class TestColors:
+    def test_tsl_colors(self):
+        assert isinstance(TSL_COLORS, list)
+        assert len(TSL_COLORS) == 12
+        for c in TSL_COLORS:
+            assert len(c) == 3
+            assert isinstance(c, tuple)
+            assert mcolors.is_color_like(c)

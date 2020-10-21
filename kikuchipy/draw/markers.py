@@ -38,7 +38,7 @@ def get_line_segment_list(lines: Union[list, np.ndarray], **kwargs) -> list:
         List of :class:`hyperspy.utils.markers.line_segment`.
     """
     lines = np.asarray(lines)
-    if lines.ndim == 1:
+    if lines.ndim == 1:  # No navigation shape, one line
         lines = lines[np.newaxis, ...]
 
     marker_list = []
@@ -83,7 +83,9 @@ def get_point_list(points: Union[list, np.ndarray], **kwargs) -> list:
 
 
 def get_text_list(
-    texts: Union[list, np.ndarray], coordinates: np.ndarray, **kwargs,
+    texts: Union[list, np.ndarray],
+    coordinates: Union[np.ndarray, list],
+    **kwargs,
 ) -> list:
     """Return a list of text markers.
 
@@ -109,21 +111,22 @@ def get_text_list(
     is_finite = np.isfinite(coordinates)[..., 0]
     coordinates[~is_finite] = -1
     for i in range(coordinates.shape[-2]):  # Iterate over zone axes
-        x = coordinates[..., i, 0]
-        y = coordinates[..., i, 1]
-        x[~is_finite[..., i]] = np.nan
-        y[~is_finite[..., i]] = np.nan
-        text_marker = text(x=x, y=y, text=texts[i], **kwargs,)
-        # TODO: Pass "visible" parameter to text() when HyperSpy allows
-        #  it (merges this PR
-        #  https://github.com/hyperspy/hyperspy/pull/2558 and publishes
-        #  a minor release with that update)
-        # text_marker = text(
-        #     x=coordinates[..., i, 0],
-        #     y=coordinates[..., i, 1],
-        #     text=texts[i],
-        #     visible=is_finite[..., i],
-        #     **kwargs
-        # )
-        marker_list.append(text_marker)
+        if not np.allclose(coordinates[..., i, :], -1):  # All NaNs
+            x = coordinates[..., i, 0]
+            y = coordinates[..., i, 1]
+            x[~is_finite[..., i]] = np.nan
+            y[~is_finite[..., i]] = np.nan
+            text_marker = text(x=x, y=y, text=texts[i], **kwargs,)
+            # TODO: Pass "visible" parameter to text() when HyperSpy allows
+            #  it (merges this PR
+            #  https://github.com/hyperspy/hyperspy/pull/2558 and publishes
+            #  a minor release with that update)
+            # text_marker = text(
+            #     x=coordinates[..., i, 0],
+            #     y=coordinates[..., i, 1],
+            #     text=texts[i],
+            #     visible=is_finite[..., i],
+            #     **kwargs
+            # )
+            marker_list.append(text_marker)
     return marker_list

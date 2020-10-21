@@ -509,7 +509,8 @@ def _get_colors_for_allowed_bands(
         [9, 9, 9] is used.
     color_cycle
         A list of color names recognized by Matplotlib. If None
-        (default), the Matplotlib Tableau colors are cycled through.
+        (default), a color palette based on EDAX TSL's coloring of bands
+        is cycled through.
 
     Returns
     -------
