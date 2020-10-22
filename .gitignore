@@ -71,7 +71,7 @@ target/
 # IPython Notebook
 .ipynb_checkpoints
 *-test.ipynb
-*.ipynb
+doc/_static/*/*/*.ipynb
 
 # pyenv
 .python-version
@@ -97,12 +97,10 @@ ENV/
 # PyCharm project settings
 .idea/
 
-# VS Code project setting
+# Visual Studo Code
 .vscode/
+*.code-workspace
 
 #auto changing files
 build/
 src/
-
-# Visual Studo Code
-*.code-workspace
