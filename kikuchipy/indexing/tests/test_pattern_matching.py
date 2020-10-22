@@ -61,7 +61,7 @@ class TestPatternMatching:
 
     @pytest.mark.parametrize(
         "n_slices",
-        [None, 2],
+        [1, 2],
     )
     def test_pattern_match_compute_true(self, n_slices):
         # Four patterns
