@@ -15,10 +15,17 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
-"""Module for indexation of diffraction patterns"""
 
-from kikuchipy.indexation.similarity_metrics import make_similarity_metric
+import matplotlib.colors as mcolors
 
-__all__ = [
-    "make_similarity_metric",
-]
+from kikuchipy.draw.colors import TSL_COLORS
+
+
+class TestColors:
+    def test_tsl_colors(self):
+        assert isinstance(TSL_COLORS, list)
+        assert len(TSL_COLORS) == 12
+        for c in TSL_COLORS:
+            assert len(c) == 3
+            assert isinstance(c, tuple)
+            assert mcolors.is_color_like(c)

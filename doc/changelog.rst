@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file. The format
 is based on `Keep a Changelog <https://keepachangelog.com/en/1.1.0>`_, and this
 project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
-Contributors to each release are listed in alphabetical order.
+Contributors to each release are listed in alphabetical order by first name.
 
 Unreleased
 ==========
@@ -18,9 +18,14 @@ Contributors
 ------------
 - Håkon Wiik Ånes
 - Lars Andreas Hastad Lervik
+- Ole Natlandsmyr
 
 Added
 -----
+- Indexing of EBSD patterns through matching of patterns with a static
+  dictionary of simulated patterns with known orientations.
+  (`#231 <https://github.com/pyxem/kikuchipy/pull/231>`_,
+  `#233 <https://github.com/pyxem/kikuchipy/pull/233>`_)
 - Reader for EMsoft's simulated EBSD patterns returned by their ``EMEBSD.f90``
   program. (`#202 <https://github.com/pyxem/kikuchipy/pull/202>`_)
 - Modified Lambert mapping, and its inverse, from points on the unit sphere to a
@@ -30,10 +35,11 @@ Added
   gnomonic coordinates. EBSD reference frame documentation.
   (`#204 <https://github.com/pyxem/kikuchipy/pull/204>`_,
   `#215 <https://github.com/pyxem/kikuchipy/pull/215>`_)
-- Geometrical EBSD simulations, projecting a set of Kikuchi bands onto a
-  detector, which can be added to an EBSD signal as markers.
+- Geometrical EBSD simulations, projecting a set of Kikuchi bands and zone axes
+  onto a detector, which can be added to an EBSD signal as markers.
   (`#204 <https://github.com/pyxem/kikuchipy/pull/204>`_,
-  `#219 <https://github.com/pyxem/kikuchipy/pull/219>`_)
+  `#219 <https://github.com/pyxem/kikuchipy/pull/219>`_,
+  `#232 <https://github.com/pyxem/kikuchipy/pull/232>`_)
 - Dependency on the diffsims package (https://github.com/pyxem/diffsims/) for
   handling of electron scattering and diffraction.
   (`#220 <https://github.com/pyxem/kikuchipy/pull/220>`_)

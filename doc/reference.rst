@@ -21,9 +21,11 @@ The list of top modules (and the load function):
     draw
     filters
     generators
+    indexing
     io
     load
     pattern
+    projections
     signals
     simulations
 
@@ -90,12 +92,15 @@ markers
     get_line_segment_list
     get_point_list
     get_text_list
-    permanent_on_signal
 
 .. autofunction:: get_line_segment_list
 .. autofunction:: get_point_list
 .. autofunction:: get_text_list
-.. autofunction:: permanent_on_signal
+
+colors
+------
+
+.. automodule:: kikuchipy.draw.colors
 
 ....
 
@@ -191,6 +196,46 @@ Other functions
 
 .. autofunction:: get_rgb_image
 .. autofunction:: normalize_image
+
+....
+
+indexing
+========
+
+.. automodule:: kikuchipy.indexing
+
+.. currentmodule:: kikuchipy.indexing
+
+.. autosummary::
+    pattern_matching
+    similarity_metrics
+
+pattern_matching
+----------------
+
+.. currentmodule:: kikuchipy.indexing.pattern_matching
+
+.. autosummary::
+    pattern_match
+
+.. automodule:: kikuchipy.indexing.pattern_matching
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+similarity_metrics
+------------------
+
+.. currentmodule:: kikuchipy.indexing.similarity_metrics
+
+.. autosummary::
+    make_similarity_metric
+    MetricScope
+
+.. automodule:: kikuchipy.indexing.similarity_metrics
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 ....
 
@@ -526,11 +571,24 @@ features
 
 .. autosummary::
     KikuchiBand
+    ZoneAxis
 
 KikuchiBand
 ~~~~~~~~~~~
 
 .. autoclass:: kikuchipy.simulations.features.KikuchiBand
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :exclude-members: from_highest_hkl, from_min_dspacing, symmetrise, unique
+
+    .. automethod:: __init__
+    .. automethod:: __getitem__
+
+ZoneAxis
+~~~~~~~~
+
+.. autoclass:: kikuchipy.simulations.features.ZoneAxis
     :members:
     :undoc-members:
     :show-inheritance:
