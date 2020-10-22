@@ -102,5 +102,6 @@ class TestPatternMatching:
             pattern_match(p, t, n_slices=2, compute=False)
 
     def test_pattern_match_one_to_one(self):
-        mr = pattern_match(np.zeros((2, 2)), np.zeros((2, 2)))
+        p = np.random.random(3 * 3).reshape((3, 3))
+        mr = pattern_match(p, p)
         assert mr[0][0] == 0
