@@ -207,7 +207,21 @@ indexing
 .. currentmodule:: kikuchipy.indexing
 
 .. autosummary::
+    pattern_matching
     similarity_metrics
+
+pattern_matching
+----------------
+
+.. currentmodule:: kikuchipy.indexing.pattern_matching
+
+.. autosummary::
+    pattern_match
+
+.. automodule:: kikuchipy.indexing.pattern_matching
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 similarity_metrics
 ------------------
@@ -216,6 +230,7 @@ similarity_metrics
 
 .. autosummary::
     make_similarity_metric
+    MetricScope
 
 .. automodule:: kikuchipy.indexing.similarity_metrics
     :members:

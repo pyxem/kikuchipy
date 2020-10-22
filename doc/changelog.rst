@@ -22,9 +22,10 @@ Contributors
 
 Added
 -----
-- Indexing of EBSD patterns through template matching of the patterns with a
-  static dictionary of simulated patterns with known orientations.
-  (`#231 <https://github.com/pyxem/kikuchipy/pull/231>`_)
+- Indexing of EBSD patterns through matching of patterns with a static
+  dictionary of simulated patterns with known orientations.
+  (`#231 <https://github.com/pyxem/kikuchipy/pull/231>`_,
+  `#233 <https://github.com/pyxem/kikuchipy/pull/233>`_)
 - Reader for EMsoft's simulated EBSD patterns returned by their ``EMEBSD.f90``
   program. (`#202 <https://github.com/pyxem/kikuchipy/pull/202>`_)
 - Modified Lambert mapping, and its inverse, from points on the unit sphere to a

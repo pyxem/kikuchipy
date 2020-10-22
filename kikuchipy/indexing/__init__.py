@@ -18,8 +18,14 @@
 
 """Indexing of EBSD patterns."""
 
-from kikuchipy.indexing.similarity_metrics import make_similarity_metric
+from kikuchipy.indexing.similarity_metrics import (
+    make_similarity_metric,
+    MetricScope,
+)
+from kikuchipy.indexing.pattern_matching import pattern_match
 
 __all__ = [
     "make_similarity_metric",
+    "MetricScope",
+    "pattern_match",
 ]
