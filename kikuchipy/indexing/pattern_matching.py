@@ -72,7 +72,7 @@ def pattern_match(
     -------
     simulation_indices : np.ndarray or da.Array
         Simulation indices corresponding with metric results
-    metric_result : np.ndarray or da.Array
+    scores : np.ndarray or da.Array
         Metric results with data shapes (ny*nx,keep_n).
         Sorted along keep_n axis according to the metric used.
     """
@@ -146,7 +146,7 @@ def _pattern_match_single_slice(
     -------
     simulation_indices : np.ndarray or da.Array
         Simulation indices corresponding with metric results
-    metric_result : np.ndarray or da.Array
+    scores : np.ndarray or da.Array
         Metric results with data shapes (ny*nx,keep_n).
         Sorted along keep_n axis according to the metric used.
     """
@@ -163,22 +163,20 @@ def _pattern_match_single_slice(
     # If N is < keep_n => keep_n = N
     keep_n = min(keep_n, len(simulated))
 
-    match_result = (
-        similarities.argtopk(metric.sign * keep_n, axis=-1),
-        similarities.topk(metric.sign * keep_n, axis=-1),
-    )
+    simulated_indices = similarities.argtopk(metric.sign * keep_n, axis=-1)
+    scores = similarities.topk(metric.sign * keep_n, axis=-1)
+
     if compute:
         with ProgressBar():
-            match_result = da.compute(*match_result)
+            simulated_indices, scores = da.compute(simulated_indices, scores)
 
     # Flattens the signal axis if not already flat
     # This is foremost a design choice for returning standard outputs
     if not metric.flat:
-        match_result = (
-            match_result[0].reshape(-1, keep_n),
-            match_result[1].reshape(-1, keep_n),
-        )
-    return match_result
+        simulated_indices = simulated_indices.reshape(-1, keep_n)
+        scores = scores.reshape(-1, keep_n)
+
+    return simulated_indices, scores
 
 
 def _pattern_match_slice_simulated(
@@ -207,7 +205,7 @@ def _pattern_match_slice_simulated(
     -------
     simulation_indices : np.ndarray
         Simulation indices corresponding with metric results
-    metric_result : np.ndarray or da.Array
+    scores : np.ndarray or da.Array
         Sorted metric results.
     """
 
@@ -221,16 +219,14 @@ def _pattern_match_slice_simulated(
     slice_size = num_simulated // n_slices
 
     n = min(keep_n, slice_size)
-    match_result_aggregate = (
-        np.zeros((nav_size, n_slices * n), np.int32),
-        np.zeros((nav_size, n_slices * n), metric._dtype_out),
-    )
+    simulated_indices_aggregate = np.zeros((nav_size, n_slices * n), np.int)
+    scores_aggregate = np.zeros((nav_size, n_slices * n), metric._dtype_out)
 
     start = 0
     for i in range(n_slices):
         end = start + slice_size if i != n_slices - 1 else num_simulated
 
-        simulated_indices, metric_results = _pattern_match_single_slice(
+        simulated_indices, scores = _pattern_match_single_slice(
             experimental,
             simulated[start:end],
             keep_n=keep_n,
@@ -247,25 +243,23 @@ def _pattern_match_slice_simulated(
                 f"Matching patterns, batch {i+1}/{n_slices}:", file=sys.stdout
             )
             da.store(
-                [simulated_indices, metric_results],
+                [simulated_indices, scores],
                 [
-                    match_result_aggregate[0][result_slice],
-                    match_result_aggregate[1][result_slice],
+                    simulated_indices_aggregate[result_slice],
+                    scores_aggregate[result_slice],
                 ],
                 # regions=(slice(......)) # should be possible, but do we gain anything?
             )
 
         start += slice_size
 
-    match_result = (
-        np.zeros((nav_size, n), np.int32),
-        np.zeros((nav_size, n), np.float32),
-    )
+    simulated_indices = np.zeros((nav_size, n), np.int32)
+    scores = np.zeros((nav_size, n), np.float32)
     for i in range(nav_size):
-        indices = (metric.sign * -match_result_aggregate[1][i]).argsort(
+        indices = (metric.sign * -scores_aggregate[i]).argsort(
             kind="mergesort"
         )[:keep_n]
-        match_result[0][i] = match_result_aggregate[0][i][indices]
-        match_result[1][i] = match_result_aggregate[1][i][indices]
+        simulated_indices[i] = simulated_indices_aggregate[i][indices]
+        scores[i] = scores_aggregate[i][indices]
 
-    return match_result
+    return simulated_indices, scores
