@@ -34,10 +34,7 @@ from kikuchipy.indexing.similarity_metrics import (
 class TestSimilarityMetrics:
     @pytest.mark.parametrize(
         "flat,returned_class",
-        [
-            (False, SimilarityMetric),
-            (True, FlatSimilarityMetric),
-        ],
+        [(False, SimilarityMetric), (True, FlatSimilarityMetric),],
     )
     def test_make_similarity_metric(self, flat, returned_class):
         assert (

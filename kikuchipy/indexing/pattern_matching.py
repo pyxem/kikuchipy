@@ -16,8 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Union, Tuple
+"""Matching of experimental to simulated gray-tone patterns."""
+
 import sys
+from typing import Union, Tuple
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
@@ -26,17 +28,12 @@ import numpy as np
 from kikuchipy.indexing.similarity_metrics import (
     SIMILARITY_METRICS,
     SimilarityMetric,
-    FlatSimilarityMetric,
-    MetricScope,
-    make_similarity_metric,
-)
-
-from kikuchipy.indexing.similarity_metrics import (
     _get_nav_shape,
     _get_number_of_simulated,
 )
 
-# Future Work: mask -> maskedarrays
+# TODO: Support masking signal space
+# TODO: Support masking navigation space
 
 
 def pattern_match(
@@ -46,8 +43,9 @@ def pattern_match(
     metric: Union[str, SimilarityMetric] = "zncc",
     compute: bool = True,
     n_slices: int = 1,
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Find the best matching simulations to experimental data based on given metric.
+) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[da.Array, da.Array]]:
+    """Find the best matching simulations to experimental data based on
+    given `metric`.
 
     Function is primarily for use in
     :class:`~kikuchipy.indexing.StaticDictionaryIndexing` and
@@ -55,32 +53,34 @@ def pattern_match(
 
     Parameters
     ----------
-    experimental : da.Array or np.ndarray
-        Experimental patterns
-    simulated : da.Array or np.ndarray
-        Simulated patterns
+    experimental : numpy.ndarray or dask.array.Array
+        Experimental patterns.
+    simulated : numpy.ndarray or dask.array.Array
+        Simulated patterns.
     keep_n : int, optional
-        Number of match results to keep for each pattern, by default 1
-    metric : str or SimilarityMetric, optional
+        Number of match results to keep for each pattern, by default 1.
+    metric : str or SimilarityMetric
         Similarity metric, by default "zncc".
     compute : bool, optional
-        Whether to compute dask arrays before returning, by default True.
+        Whether to compute dask arrays before returning, by default
+        True.
     n_slices : int, optional
-        Number of simulated slices to process sequentially, by default 1.
+        Number of simulated slices to process sequentially, by default
+        1.
 
     Returns
     -------
-    simulation_indices : np.ndarray or da.Array
-        Simulation indices corresponding with metric results
-    scores : np.ndarray or da.Array
-        Metric results with data shapes (ny*nx,keep_n).
-        Sorted along keep_n axis according to the metric used.
+    simulation_indices : numpy.ndarray or dask.array.Array
+        Simulation indices corresponding with metric results.
+    scores : numpy.ndarray or dask.array.Array
+        Metric results with data shapes (ny*nx, keep_n). Sorted along
+        `keep_n` axis according to the metric used.
     """
     metric = SIMILARITY_METRICS.get(metric, metric)
     if not isinstance(metric, SimilarityMetric):
         raise ValueError(
             f"{metric} must be either of {list(SIMILARITY_METRICS.keys())} "
-            "or an instance of SimilarityMetric. See make_similarity_metric."
+            "or an instance of SimilarityMetric. See make_similarity_metric"
         )
 
     # Expects signal data to be located on the two last axis for all scopes
@@ -89,13 +89,14 @@ def pattern_match(
     if sig_data_shape != t_sig_shape:
         raise OSError(
             f"The experimental {sig_data_shape} and simulated {t_sig_shape} "
-            "signal shapes are not identical."
+            "signal shapes are not identical"
         )
 
     if not metric._is_compatible(experimental.ndim, simulated.ndim):
         raise OSError(
-            f"The shape of experimental {experimental.shape} and simulated {simulated.shape} "
-            f"are not compatible with the scope {metric.scope} of {type(metric).__name__}"
+            f"The shape of experimental {experimental.shape} and simulated "
+            f"{simulated.shape} are not compatible with the scope "
+            f"{metric.scope} of {type(metric).__name__}"
         )
 
     if n_slices == 1:
@@ -109,7 +110,8 @@ def pattern_match(
     else:
         if not compute:
             raise NotImplementedError(
-                "Slicing simulations and returning dask arrays is not implemented."
+                "Slicing simulations and returning dask arrays is not "
+                "implemented"
             )
         return _pattern_match_slice_simulated(
             experimental,
@@ -121,34 +123,35 @@ def pattern_match(
 
 
 def _pattern_match_single_slice(
-    experimental: Union[da.Array, np.ndarray],
-    simulated: Union[da.Array, np.ndarray],
+    experimental: Union[np.ndarray, da.Array],
+    simulated: Union[np.ndarray, da.Array],
     keep_n: int,
     metric: SimilarityMetric,
     compute: bool,
 ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[da.Array, da.Array]]:
-    """See `pattern_match`.
+    """See :func:`pattern_match`.
 
     Parameters
     ----------
-    experimental : da.Array or np.ndarray
-        Experimental patterns
-    simulated : da.Array or np.ndarray
-        Simulated patterns
+    experimental : numpy.ndarray or dask.array.Array
+        Experimental patterns.
+    simulated : numpy.ndarray or dask.array.Array
+        Simulated patterns.
     keep_n : int
         Number of results to keep.
     metric : SimilarityMetric
         Similarity metric.
     compute : bool
-        [description]
+        Whether to compute dask arrays before returning, by default
+        True.
 
     Returns
     -------
-    simulation_indices : np.ndarray or da.Array
-        Simulation indices corresponding with metric results
-    scores : np.ndarray or da.Array
-        Metric results with data shapes (ny*nx,keep_n).
-        Sorted along keep_n axis according to the metric used.
+    simulation_indices : numpy.ndarray or dask.array.Array
+        Simulation indices corresponding with metric results.
+    scores : numpy.ndarray or dask.array.Array
+        Metric results with data shapes (ny*nx, keep_n). Sorted along
+        `keep_n` axis according to the metric used.
     """
     similarities = metric(experimental, simulated)
     similarities = da.asarray(similarities)
@@ -170,7 +173,7 @@ def _pattern_match_single_slice(
         with ProgressBar():
             simulated_indices, scores = da.compute(simulated_indices, scores)
 
-    # Flattens the signal axis if not already flat
+    # Flattens the signal axis if not already flat.
     # This is foremost a design choice for returning standard outputs
     if not metric.flat:
         simulated_indices = simulated_indices.reshape(-1, keep_n)
@@ -180,41 +183,41 @@ def _pattern_match_single_slice(
 
 
 def _pattern_match_slice_simulated(
-    experimental: Union[da.Array, np.ndarray],
-    simulated: Union[da.Array, np.ndarray],
+    experimental: Union[np.ndarray, da.Array],
+    simulated: Union[np.ndarray, da.Array],
     keep_n: int,
     metric: SimilarityMetric,
     n_slices: int,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """See `pattern_match`.
+    """See :func:`pattern_match`.
 
     Parameters
     ----------
-    experimental : da.Array or np.ndarray
-        Experimental patterns
-    simulated : da.Array or np.ndarray
-        Simulated patterns
+    experimental : numpy.ndarray or dask.array.Array
+        Experimental patterns.
+    simulated : numpy.ndarray or dask.array.Array
+        Simulated patterns.
     keep_n : int
         Number of results to keep.
     metric : SimilarityMetric
-        Similarity metric
+        Similarity metric.
     n_slices : int
         Number of simulation slices to process sequentially.
 
     Returns
     -------
-    simulation_indices : np.ndarray
-        Simulation indices corresponding with metric results
-    scores : np.ndarray or da.Array
+    simulation_indices : numpy.ndarray
+        Simulation indices corresponding with metric results.
+    scores : numpy.ndarray
         Sorted metric results.
     """
-
-    # This is a naive implementation, hopefully not stupid, of slicing the simulated in batches
-    # without thinking about aligining with dask chunks or rechunking
-    # dask seem to handle the sequential slicing decently
+    # This is a naive implementation, hopefully not stupid, of slicing
+    # the simulated in batches without thinking about aligning with
+    # dask chunks or rechunking dask seem to handle the sequential
+    # slicing decently
 
     nav_shape = _get_nav_shape(experimental)
-    nav_size = np.prod(nav_shape)
+    nav_size = int(np.prod(nav_shape))
     num_simulated = _get_number_of_simulated(simulated)
     slice_size = num_simulated // n_slices
 
@@ -234,13 +237,14 @@ def _pattern_match_slice_simulated(
             compute=False,
         )
 
-        # adjust simulation indicies matches to correspond with original simulated
+        # Adjust simulation indicies matches to correspond with
+        # original simulated
         simulated_indices += start
 
         result_slice = np.s_[:, i * n : (i + 1) * n]
         with ProgressBar():
             print(
-                f"Matching patterns, batch {i+1}/{n_slices}:", file=sys.stdout
+                f"Matching patterns, batch {i + 1}/{n_slices}:", file=sys.stdout
             )
             da.store(
                 [simulated_indices, scores],
@@ -248,7 +252,8 @@ def _pattern_match_slice_simulated(
                     simulated_indices_aggregate[result_slice],
                     scores_aggregate[result_slice],
                 ],
-                # regions=(slice(......)) # should be possible, but do we gain anything?
+                # This should be possible, but do we gain anything?
+                # regions=(slice(......))
             )
 
         start += slice_size

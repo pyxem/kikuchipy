@@ -22,10 +22,11 @@ import pytest
 from scipy.spatial.distance import cdist
 
 
-from kikuchipy.indexing import make_similarity_metric, pattern_match
-
-from kikuchipy.indexing.pattern_matching import _pattern_match_slice_simulated
-from kikuchipy.indexing.similarity_metrics import MetricScope
+from kikuchipy.indexing import (
+    make_similarity_metric,
+    MetricScope,
+    pattern_match,
+)
 
 
 class TestPatternMatching:
@@ -60,8 +61,7 @@ class TestPatternMatching:
             )
 
     @pytest.mark.parametrize(
-        "n_slices",
-        [1, 2],
+        "n_slices", [1, 2],
     )
     def test_pattern_match_compute_true(self, n_slices):
         # Four patterns
