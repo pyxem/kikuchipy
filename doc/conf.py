@@ -39,6 +39,7 @@ extensions = [
     "sphinx.ext.linkcode",
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
+    "nbsphinx",
 ]
 
 # Create links to references within kikuchipy's documentation to these packages.
@@ -66,7 +67,8 @@ templates_path = [
 # directories to ignore when looking for source files. This image also affects
 # html_static_path and html_extra_path.
 exclude_patterns = [
-    "_build",
+    "build",
+    "_static/v0.2.0/*.ipynb",
 ]
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for a

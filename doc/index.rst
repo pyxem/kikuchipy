@@ -18,6 +18,7 @@ kikuchipy
     reference_frames.rst
     change_scan_pattern_size.rst
     pattern_processing.rst
+    pattern_processing2.ipynb
     feature_maps.rst
     virtual_backscatter_electron_imaging.rst
     visualizing_patterns.rst
