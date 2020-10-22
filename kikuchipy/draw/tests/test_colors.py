@@ -16,16 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Crystallographic computations not found (easily) elsewhere."""
+import matplotlib.colors as mcolors
 
-from kikuchipy.crystallography.matrices import (
-    get_direct_structure_matrix,
-    get_reciprocal_structure_matrix,
-    get_reciprocal_metric_tensor,
-)
+from kikuchipy.draw.colors import TSL_COLORS
 
-__all__ = [
-    "get_direct_structure_matrix",
-    "get_reciprocal_structure_matrix",
-    "get_reciprocal_metric_tensor",
-]
+
+class TestColors:
+    def test_tsl_colors(self):
+        assert isinstance(TSL_COLORS, list)
+        assert len(TSL_COLORS) == 12
+        for c in TSL_COLORS:
+            assert len(c) == 3
+            assert isinstance(c, tuple)
+            assert mcolors.is_color_like(c)
