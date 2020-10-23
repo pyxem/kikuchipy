@@ -316,8 +316,6 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             dtype=dtype_out,
         )
 
-        # Don't completely understand the following atm
-
         names = ["x", "dy", "dx"]
         scales = np.ones(3)
 
@@ -420,8 +418,10 @@ def _get_lambert_interpolation_parameters(
     niy = y.astype(int) + scale
     nixp = nix + 1
     niyp = niy + 1
-    nixp = np.where(nixp < npx - 1, nixp, nix)
-    niyp = np.where(niyp < npy - 1, niyp, niy)
+    nixp = np.where(nixp <= npx - 1, nixp, nix)
+    niyp = np.where(niyp <= npy - 1, niyp, niy)
+    # nixp = np.where(nixp < npx - 1, nixp, nix)
+    # niyp = np.where(niyp < npy - 1, niyp, niy)
     nix = np.where(nix < 0, nixp, nix)
     niy = np.where(niy < 0, niyp, niy)
     dx = x - nix + scale
@@ -440,6 +440,8 @@ def _get_lambert_interpolation_parameters(
         dym,
     )
 
+
+from scipy.interpolate import interp2d
 
 # Map Blocks stuff from here
 def _get_patterns_chunk(
@@ -477,16 +479,16 @@ def _get_patterns_chunk(
         simulated[i] = np.where(
             rot_dc.z >= 0,
             (
-                master_north[niy, nix] * dxm * dym
-                + master_north[niyp, nix] * dx * dym
-                + master_north[niy, nixp] * dxm * dy
-                + master_north[niyp, nixp] * dx * dy
+                master_north[nix, niy] * dxm * dym
+                + master_north[nixp, niy] * dx * dym
+                + master_north[nix, niyp] * dxm * dy
+                + master_north[nixp, niyp] * dx * dy
             ),
             (
-                master_south[niy, nix] * dxm * dym
-                + master_south[niyp, nix] * dx * dym
-                + master_south[niy, nixp] * dxm * dy
-                + master_south[niyp, nixp] * dx * dy
+                master_south[nix, niy] * dxm * dym
+                + master_south[nixp, niy] * dx * dym
+                + master_south[nix, niyp] * dxm * dy
+                + master_south[nixp, niyp] * dx * dy
             ),
         )
 
