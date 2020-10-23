@@ -47,6 +47,7 @@ extra_feature_requirements = {
         "sphinx-copybutton >= 0.2.5",
         "sphinx-autodoc-typehints >= 1.10.3",
         "nbsphinx >= 0.7",
+        "sphinxcontrib-bibtex >= 1.0",
     ],
     # Update in .travis.yml if this list is updated!
     "tests": ["pytest >= 5.4", "pytest-cov >= 2.8.1", "coverage >= 5.0",],

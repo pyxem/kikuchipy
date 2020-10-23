@@ -117,10 +117,10 @@ You can then make a `pull request
 <https://guides.github.com/activities/forking/#making-a-pull-request>`_ to
 kikuchipy's ``master`` branch. Good job!
 
-.. _building-the-documentation:
+.. _building-and-writing-documentation:
 
-Building the documentation
-==========================
+Building and writing documentation
+==================================
 
 We use `Sphinx <https://www.sphinx-doc.org/en/master/>`_ for documenting
 functionality. Install necessary dependencies to build the documentation::
@@ -133,11 +133,27 @@ Then, build the documentation from the ``doc`` directory::
    $ make html
 
 The documentation's ``html`` pages are built in the ``doc/build/html`` directory
-from files in the `reStructuredText
+from files in the `reStructuredText (reST)
 <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`_
 plaintext markup language. They should be accessible in the browser by typing
 ``file:///your-absolute/path/to/kikuchipy/doc/build/html/index.html`` in the
 address bar.
+
+Tips for writing Jupyter Notebooks that are meant to be converted to `reST` text
+files by `nbsphinx <https://nbsphinx.readthedocs.io/en/latest/>`_:
+
+- Use ``_ = ax[0].imshow(...)`` to disable Matplotlib output if a Matplotlib
+  command is the last line in a cell (as per
+  `this Stack Overflow question <https://stackoverflow.com/questions/12056115/disable-the-output-of-matplotlib-pyplot>`_).
+- Cite some work? Add a bibtex entry in the ``bibliography.bib`` file and cite
+  it with this HTML in a Markdown cell
+  ``<cite data-cite="bibtex-id">Flintstone et al. (10 000 BC.)</cite>``.
+- Refer to the API reference with this Markdown
+  ``[fft_filter()](reference.rst#kikuchipy.signals.EBSD.fft_filter)``. Remember
+  to add the function/method parantheses ``()``.
+- Reference external APIs (because ``intersphinx`` isn't supported) via standard
+  Markdown
+  ``[Signal2D](http://hyperspy.org/hyperspy-doc/current/api/hyperspy._signals.signal2d.html)``.
 
 .. _running-and-writing-tests:
 

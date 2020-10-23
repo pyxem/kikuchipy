@@ -17,6 +17,7 @@ The list of top modules (and the load function):
 
 .. autosummary::
     crystallography
+    data
     detectors
     draw
     filters
@@ -46,6 +47,20 @@ crystallography
 .. autofunction:: get_direct_structure_matrix
 .. autofunction:: get_reciprocal_metric_tensor
 .. autofunction:: get_reciprocal_structure_matrix
+
+....
+
+data
+====
+
+.. currentmodule:: kikuchipy.data
+
+.. autosummary::
+    nickel_small
+
+.. automodule:: kikuchipy.data
+    :members:
+    :undoc-members:
 
 ....
 
