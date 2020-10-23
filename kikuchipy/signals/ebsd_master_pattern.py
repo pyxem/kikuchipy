@@ -280,7 +280,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         phase = {k: v for k, v in inputs.items() if v is not None}
         _update_phase_info(self.metadata, phase, number)
 
-    def get_patterns2(
+    def get_patterns(
         self,
         rotations,
         detector: EBSDDetector,
@@ -298,7 +298,6 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         chunks = (min(chunk_size, n), det_y, det_x)
 
         dtype_out = dtype_out
-        # dtype_out = np.float32
 
         r_da = da.from_array(rotations.data, chunks=(chunks[0], -1))
 
@@ -336,76 +335,6 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         ]
 
         return LazyEBSD(simulated, axes=axes)
-
-    def get_patterns(self, rotations, detector: EBSDDetector):
-
-        number_of_rotations = rotations.shape[0]
-
-        # For float16 - (480, 640, 10 000) 6.15 GB
-        pattern_catalogue = np.zeros(
-            (detector.nrows, detector.ncols, number_of_rotations),
-            dtype="float16",
-        )
-
-        num_rotations = np.arange(0, number_of_rotations)
-        direction_cosines = _get_direction_cosines(
-            detector, number_of_rotations
-        )
-
-        master_north = self.data[0]
-        master_south = self.data[1]
-
-        # npx assuming (row, col) these should be equal
-        npx = self.data.shape[3]
-        # npy
-        npy = self.data.shape[2]
-
-        # Sum the energy axis
-        master_north = np.sum(master_north, 0)
-        master_south = np.sum(master_south, 0)
-
-        scale_factor = (npx - 1) / 2
-
-        ii, jj = np.meshgrid(
-            np.arange(detector.nrows - 1, -1, -1),
-            np.arange(detector.ncols - 1, -1, -1),
-            indexing="ij",
-        )
-
-        # Current direction cosines output (column, row, rotation, xyz)
-        # rotations = rotations.reshape(-1, 1)
-        rotated_dc = rotations * direction_cosines[jj, ii]
-        # print(direction_cosines.shape)
-        # (640, 480, 7)
-
-        (
-            nix,
-            niy,
-            nixp,
-            niyp,
-            dx,
-            dy,
-            dxm,
-            dym,
-        ) = _get_lambert_interpolation_parameters(
-            rotated_dc, scale_factor, npx, npy
-        )
-        pattern_catalogue[..., num_rotations] = np.where(
-            rotated_dc.z >= 0,
-            (
-                master_north[niy, nix] * dxm * dym
-                + master_north[niyp, nix] * dx * dym
-                + master_north[niy, nixp] * dxm * dy
-                + master_north[niyp, nixp] * dx * dy
-            ),
-            (
-                master_south[niy, nix] * dxm * dym
-                + master_south[niyp, nix] * dx * dym
-                + master_south[niy, nixp] * dxm * dy
-                + master_south[niyp, nixp] * dx * dy
-            ),
-        )
-        return pattern_catalogue
 
 
 class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
@@ -456,27 +385,20 @@ def _get_direction_cosines(detector: EBSDDetector):
     cw = np.cos(omega)
     sw = np.sin(omega)
 
-    # r_g_array = np.zeros((detector.ncols, detector.nrows, 3))
     r_g_array = np.zeros((detector.nrows, detector.ncols, 3))
 
-    # ii, jj = np.meshgrid(
-    #     np.arange(0, detector.nrows),
-    #     np.arange(detector.ncols - 1, -1, -1),
-    #     indexing="ij",
-    # )
+    Ls = -sw * scin_x + L * cw
+    Lc = cw * scin_x + L * sw
 
-    ii, jj = np.meshgrid(
+    i, j = np.meshgrid(  # Is almost correct
         np.arange(detector.nrows - 1, -1, -1),
         np.arange(detector.ncols),
         indexing="ij",
     )
 
-    Ls = -sw * scin_x + L * cw
-    Lc = cw * scin_x + L * sw
-
-    r_g_array[ii, jj, 0] = scin_y[ii] * ca + sa * Ls[jj]
-    r_g_array[ii, jj, 1] = Lc[jj]
-    r_g_array[ii, jj, 2] = -sa * scin_y[ii] + ca * Ls[jj]
+    r_g_array[..., 0] = scin_y[i] * ca + sa * Ls[j]
+    r_g_array[..., 1] = Lc[j]
+    r_g_array[..., 2] = -sa * scin_y[i] + ca * Ls[j]
     r_g = Vector3d(r_g_array)
 
     return r_g.unit
