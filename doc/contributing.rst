@@ -46,6 +46,9 @@ available globally (in the ``conda`` environment)::
 This installs all necessary development dependencies, including those for
 running tests and building documentation.
 
+Code style
+==========
+
 The code making up kikuchipy is formatted closely following the `Style Guide for
 Python Code <https://www.python.org/dev/peps/pep-0008/>`_ with `The Black Code
 style <https://black.readthedocs.io/en/stable/the_black_code_style.html>`_. We
@@ -63,7 +66,11 @@ Note that ``black`` won't format `docstrings
 <https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard>`_
 standard.
 
-.. _making-changes:
+Comment lines should preferably be limited to 72 characters.
+
+Package imports should be structured into three blocks with blank lines between
+them (descending order): standard library (like ``os`` and ``typing``), third
+party packages (like ``numpy`` and ``hyperspy``) and finally kikuchipy imports.
 
 Making changes
 ==============
@@ -86,8 +93,6 @@ email <https://github.com/settings/emails>`_ as the author. You can set this up
 following `this GitHub guide
 <https://help.github.com/en/github/setting-up-and-managing-your-github-user-account/setting-your-commit-email-address>`_.
 
-.. _keeping-your-branch-up-to-date:
-
 Keeping your branch up-to-date
 ==============================
 
@@ -104,8 +109,6 @@ Update your feature branch::
    $ git checkout your-awesome-feature-name
    $ git merge master
 
-.. _sharing-your-changes:
-
 Sharing your changes
 ====================
 
@@ -116,8 +119,6 @@ Update your remote branch::
 You can then make a `pull request
 <https://guides.github.com/activities/forking/#making-a-pull-request>`_ to
 kikuchipy's ``master`` branch. Good job!
-
-.. _building-and-writing-documentation:
 
 Building and writing documentation
 ==================================
@@ -132,30 +133,28 @@ Then, build the documentation from the ``doc`` directory::
    $ cd doc
    $ make html
 
-The documentation's ``html`` pages are built in the ``doc/build/html`` directory
+The documentation's HTML pages are built in the ``doc/build/html`` directory
 from files in the `reStructuredText (reST)
 <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`_
 plaintext markup language. They should be accessible in the browser by typing
 ``file:///your-absolute/path/to/kikuchipy/doc/build/html/index.html`` in the
 address bar.
 
-Tips for writing Jupyter Notebooks that are meant to be converted to `reST` text
+Tips for writing Jupyter Notebooks that are meant to be converted to reST text
 files by `nbsphinx <https://nbsphinx.readthedocs.io/en/latest/>`_:
 
+- All notebooks should have a Markdown (MD) cell with this message at the top,
+  "This notebook is part of the `kikuchipy` documentation https://kikuchipy.org.
+  Links to the documentation won't work from the notebook.", and have
+  ``"nbsphinx": "hidden"`` in the cell metadata so that the message is not
+  visible when displayed in the documentation.
 - Use ``_ = ax[0].imshow(...)`` to disable Matplotlib output if a Matplotlib
-  command is the last line in a cell (as per
-  `this Stack Overflow question <https://stackoverflow.com/questions/12056115/disable-the-output-of-matplotlib-pyplot>`_).
-- Cite some work? Add a bibtex entry in the ``bibliography.bib`` file and cite
-  it with this HTML in a Markdown cell
-  ``<cite data-cite="bibtex-id">Flintstone et al. (10 000 BC.)</cite>``.
-- Refer to the API reference with this Markdown
+  command is the last line in a cell.
+- Refer to our API reference with this general MD
   ``[fft_filter()](reference.rst#kikuchipy.signals.EBSD.fft_filter)``. Remember
-  to add the function/method parantheses ``()``.
-- Reference external APIs (because ``intersphinx`` isn't supported) via standard
-  Markdown
+  to add the parentheses ``()``.
+- Reference external APIs via standard MD like
   ``[Signal2D](http://hyperspy.org/hyperspy-doc/current/api/hyperspy._signals.signal2d.html)``.
-
-.. _running-and-writing-tests:
 
 Running and writing tests
 =========================
@@ -185,15 +184,11 @@ terminal. For an even nicer presentation, you can use ``coverage.py`` directly::
 Then, you can open the created ``htmlcov/index.html`` in the browser and inspect
 the coverage in more detail.
 
-.. _code-of-conduct:
-
 Code of Conduct
 ===============
 
 kikuchipy has a :doc:`Code of Conduct <code_of_conduct>` that should be honoured
 by everyone who participates in the kikuchipy community.
-
-.. _questions-comments-and-feedback:
 
 Questions, comments, and feedback
 =================================
@@ -201,8 +196,6 @@ Questions, comments, and feedback
 Have any questions, comments, suggestions for improvements, or any other
 inquiries regarding the project? Feel free to open an issue in our `GitHub Issue
 Tracker <https://github.com/pyxem/kikuchipy/issues>`_.
-
-.. _continuous-integration:
 
 Continuous integration (CI)
 ===========================

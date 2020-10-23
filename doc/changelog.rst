@@ -302,8 +302,7 @@ Features
 - Since the ``EBSD`` class is based upon HyperSpy's ``Signal2D`` class, which
   itself is based upon their ``BaseSignal`` class, all functionality available
   to ``Signal2D`` is also available to the ``EBSD`` class. See HyperSpy's user
-  guide (http://hyperspy.org/hyperspy-doc/current/user_guide/tools.html) for
-  details.
+  guide (http://hyperspy.org/hyperspy-doc/current/user_guide) for details.
 
 Contributors
 ------------
