@@ -418,8 +418,8 @@ def _get_lambert_interpolation_parameters(
     nij = j.astype(int) + scale
     niip = nii + 1
     nijp = nij + 1
-    niip = np.where(niip <= npx - 1, niip, nii)
-    nijp = np.where(nijp <= npy - 1, nijp, nij)
+    niip = np.where(niip < npx, niip, nii)
+    nijp = np.where(nijp < npy, nijp, nij)
     nii = np.where(nii < 0, niip, nii)
     nij = np.where(nij < 0, nijp, nij)
     di = i - nii + scale
