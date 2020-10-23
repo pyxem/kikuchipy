@@ -412,32 +412,30 @@ def _get_lambert_interpolation_parameters(
         / (np.sqrt(np.pi / 2))
     )
 
-    x = xy[..., 0]
-    y = xy[..., 1]
-    nix = x.astype(int) + scale
-    niy = y.astype(int) + scale
-    nixp = nix + 1
-    niyp = niy + 1
-    nixp = np.where(nixp <= npx - 1, nixp, nix)
-    niyp = np.where(niyp <= npy - 1, niyp, niy)
-    # nixp = np.where(nixp < npx - 1, nixp, nix)
-    # niyp = np.where(niyp < npy - 1, niyp, niy)
-    nix = np.where(nix < 0, nixp, nix)
-    niy = np.where(niy < 0, niyp, niy)
-    dx = x - nix + scale
-    dy = y - niy + scale
-    dxm = 1.0 - dx
-    dym = 1.0 - dy
+    i = xy[..., 0]
+    j = xy[..., 1]
+    nii = i.astype(int) + scale
+    nij = j.astype(int) + scale
+    niip = nii + 1
+    nijp = nij + 1
+    niip = np.where(niip <= npx - 1, niip, nii)
+    nijp = np.where(nijp <= npy - 1, nijp, nij)
+    nii = np.where(nii < 0, niip, nii)
+    nij = np.where(nij < 0, nijp, nij)
+    di = i - nii + scale
+    dj = j - nij + scale
+    dim = 1.0 - di
+    djm = 1.0 - dj
 
     return (
-        nix.astype(int),
-        niy.astype(int),
-        nixp.astype(int),
-        niyp.astype(int),
-        dx,
-        dy,
-        dxm,
-        dym,
+        nii.astype(int),
+        nij.astype(int),
+        niip.astype(int),
+        nijp.astype(int),
+        di,
+        dj,
+        dim,
+        djm,
     )
 
 
@@ -452,23 +450,17 @@ def _get_patterns_chunk(
     npy, npx = master_north.shape
     scale_factor = (npx - 1) / 2
 
-    ii, jj = np.meshgrid(
-        np.arange(480 - 1, -1, -1),
-        np.arange(640 - 1, -1, -1),
-        indexing="ij",
-    )
-
     for i in range(m):
         rot_dc = Rotation(r[i]) * dc
         (
-            nix,
-            niy,
-            nixp,
-            niyp,
-            dx,
-            dy,
-            dxm,
-            dym,
+            nii,
+            nij,
+            niip,
+            nijp,
+            di,
+            dj,
+            dim,
+            djm,
         ) = _get_lambert_interpolation_parameters(
             rotated_direction_cosines=rot_dc,
             scale=scale_factor,
@@ -479,16 +471,16 @@ def _get_patterns_chunk(
         simulated[i] = np.where(
             rot_dc.z >= 0,
             (
-                master_north[nix, niy] * dxm * dym
-                + master_north[nixp, niy] * dx * dym
-                + master_north[nix, niyp] * dxm * dy
-                + master_north[nixp, niyp] * dx * dy
+                master_north[nii, nij] * dim * djm
+                + master_north[niip, nij] * di * djm
+                + master_north[nii, nijp] * dim * dj
+                + master_north[niip, nijp] * di * dj
             ),
             (
-                master_south[nix, niy] * dxm * dym
-                + master_south[nixp, niy] * dx * dym
-                + master_south[nix, niyp] * dxm * dy
-                + master_south[nixp, niyp] * dx * dy
+                master_south[nii, nij] * dim * djm
+                + master_south[niip, nij] * di * djm
+                + master_south[nii, nijp] * dim * dj
+                + master_south[niip, nijp] * di * dj
             ),
         )
 
