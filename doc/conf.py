@@ -111,6 +111,8 @@ nbsphinx_prolog = r"""
 
 .. raw:: html
 
+    <style>a:hover { text-decoration: underline; }</style>
+
     <div class="admonition note">
       This page was generated from
       <a class="reference external" href="https://github.com/pyxem/kikuchipy/blob/{{ env.config.release|e }}/{{ docname|e }}">{{ docname|e }}</a>.
