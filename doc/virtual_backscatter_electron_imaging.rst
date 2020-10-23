@@ -34,7 +34,7 @@ adopted from pyxem_, by integrating the intensities within a part, e.g. a (10 x
 
 Note that the position of the ROI on the detector is updated during the
 interactive plotting. See `HyperSpy's ROI user guide
-<http://hyperspy.org/hyperspy-doc/current/user_guide/tools.html#region-of-interest-roi>`_
+<http://hyperspy.org/hyperspy-doc/current/user_guide/interactive_operations_ROIs.html#region-of-interest-roi>`_
 for more detailed use of these.
 
 The virtual image, created from integrating the intensities within the ROI, can

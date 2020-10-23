@@ -16,35 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-# Import order must not be changed
-from kikuchipy import crystallography
-from kikuchipy import detectors
-from kikuchipy import draw
-from kikuchipy import filters
-from kikuchipy import indexing
-from kikuchipy import pattern
-from kikuchipy import projections
-from kikuchipy import signals
-from kikuchipy import generators
-from kikuchipy import simulations
-from kikuchipy.io._io import load
-from kikuchipy import data  # Must be below io.load
+from kikuchipy import data
+from kikuchipy.signals import EBSD, LazyEBSD
 
-from kikuchipy import release
 
-__version__ = release.version
+class TestData:
+    def test_load_nickel_small(self):
+        s = data.nickel_small()
 
-__all__ = [
-    "crystallography",
-    "data",
-    "detectors",
-    "draw",
-    "filters",
-    "generators",
-    "indexing",
-    "load",
-    "pattern",
-    "projections",
-    "signals",
-    "simulations",
-]
+        assert isinstance(s, EBSD)
+        assert s.data.shape == (3, 3, 60, 60)
+
+        s2 = data.nickel_small(lazy=True)
+
+        assert isinstance(s2, LazyEBSD)

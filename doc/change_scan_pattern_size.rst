@@ -5,10 +5,10 @@ Change scan and pattern size
 Patterns in an :class:`~kikuchipy.signals.EBSD` or
 :class:`~kikuchipy.signals.EBSDMasterPattern` signal ``s`` are stored in the
 ``s.data`` attribute as either :class:`numpy.ndarray` or
-:class:`dask.array.Array`. `HyperSpy's user guide <http://hyperspy.org/
-hyperspy-doc/current/user_guide/tools.html#indexing>`_ explains how to access,
-i.e. index, the data. This section details example uses of scan and pattern
-indexing specific to EBSD and EBSDMasterPattern objects.
+:class:`dask.array.Array`. `HyperSpy's user guide
+<http://hyperspy.org/hyperspy-doc/current/user_guide/signal.html#indexing>`_
+explains how to access, i.e. index, the data. This section details example uses
+of scan and pattern indexing specific to EBSD and EBSDMasterPattern objects.
 
 .. _crop-scan-pattern:
 
@@ -68,8 +68,8 @@ Binning
 A new EBSD scan with patterns binned e.g. by 2 can be obtained using the
 :meth:`~kikuchipy.signals.EBSD.rebin` method provided by HyperSpy, explained
 further in `their user guide
-<http://hyperspy.org/hyperspy-doc/current/user_guide/tools.html#rebinning>`_, by
-passing in either the ``scale`` or ``new_shape`` parameter:
+<http://hyperspy.org/hyperspy-doc/current/user_guide/signal.html#rebinning>`_,
+by passing in either the ``scale`` or ``new_shape`` parameter:
 
 .. code-block::
 
@@ -82,7 +82,8 @@ passing in either the ``scale`` or ``new_shape`` parameter:
 Note that :meth:`~kikuchipy.signals.EBSD.rebin` casts the data to ``uint64``.
 This means that in this example, each pixel in the binned scan ``s3`` takes up
 eight times the memory size of pixels in the original scan ``s``. If you want,
-you can :ref:`rescale the intensities <rescale-intensity>` to e.g. the ``uint8``
-data type range.
+you can rescale-intensity_ to e.g. the ``uint8`` data type range.
+
+.. _rescale-intensity: pattern_processing.ipynb#rescale-intensity
 
 This also works for :class:`~kikuchipy.signals.EBSDMasterPattern` signals.
