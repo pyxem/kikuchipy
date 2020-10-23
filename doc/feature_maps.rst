@@ -5,7 +5,7 @@ Feature maps
 This section details methods for extracting information from pattern
 intensities, called feature maps (for lack of a better description).
 
-.. _image-quality:
+.. _feature-maps-image-quality:
 
 Image quality
 =============
