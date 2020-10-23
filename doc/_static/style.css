@@ -65,6 +65,10 @@ p {
     color: #0366d6;
     text-decoration: underline;
 }
+.rst-content .note a:hover {
+    color: #0366d6;
+    text-decoration: underline;
+}
 .wy-breadcrumbs li a:hover {
     color: #0366d6;
     text-decoration: underline;

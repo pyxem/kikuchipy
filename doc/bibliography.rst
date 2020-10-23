@@ -3,4 +3,5 @@ Bibliography
 ============
 
 .. bibliography:: bibliography.bib
-   :cited:
+   :all:
+   :style: alpha
