@@ -17,16 +17,31 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from kikuchipy import data
-from kikuchipy.signals import EBSD, LazyEBSD
+from kikuchipy.signals import (
+    EBSD,
+    LazyEBSD,
+    EBSDMasterPattern,
+    LazyEBSDMasterPattern,
+)
 
 
 class TestData:
-    def test_load_nickel_small(self):
-        s = data.nickel_small()
+    def test_load_nickel_ebsd(self):
+        s = data.nickel_ebsd()
 
         assert isinstance(s, EBSD)
         assert s.data.shape == (3, 3, 60, 60)
 
-        s2 = data.nickel_small(lazy=True)
+        s2 = data.nickel_ebsd(lazy=True)
 
         assert isinstance(s2, LazyEBSD)
+
+    def test_load_nickel_master_pattern(self):
+        smp = data.nickel_master_pattern()
+
+        assert isinstance(smp, EBSDMasterPattern)
+        assert smp.data.shape == (701, 701)
+
+        smp2 = data.nickel_master_pattern(lazy=True)
+
+        assert isinstance(smp2, LazyEBSDMasterPattern)
