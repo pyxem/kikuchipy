@@ -14,7 +14,7 @@ kikuchipy
     :hidden:
     :caption: User guide
 
-    load_save_data.rst
+    load_save_data.ipynb
     reference_frames.rst
     change_scan_pattern_size.rst
     pattern_processing.ipynb
