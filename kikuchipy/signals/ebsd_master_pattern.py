@@ -299,6 +299,10 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         dtype_out = dtype_out
 
+        rescale = False
+        if dtype_out != np.float32:
+            rescale = True
+
         r_da = da.from_array(rotations.data, chunks=(chunks[0], -1))
 
         mpn = self.data[0, energy_index]
@@ -309,7 +313,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             dc=dc,
             master_north=mpn,
             master_south=mps,
-            rescale=False,
+            rescale=rescale,
             dtype_out=dtype_out,
             drop_axis=1,
             new_axis=(1, 2),
@@ -450,7 +454,10 @@ def _get_patterns_chunk(
     dtype_out=np.float32,
 ):
     m = r.shape[0]
-    simulated = np.empty(shape=(m,) + dc.shape, dtype=dtype_out)
+    if rescale:
+        simulated = np.empty(shape=(m,) + dc.shape, dtype=dtype_out)
+    temp_simulated = np.empty(shape=(m,) + dc.shape, dtype=np.float32)
+
     npy, npx = master_north.shape
     scale_factor = (npx - 1) / 2
 
@@ -472,7 +479,7 @@ def _get_patterns_chunk(
             npy=npy,
         )
 
-        simulated[i] = np.where(
+        temp_simulated[i] = np.where(
             rot_dc.z >= 0,
             (
                 master_north[nii, nij] * dim * djm
@@ -487,5 +494,11 @@ def _get_patterns_chunk(
                 + master_south[niip, nijp] * di * dj
             ),
         )
-
-    return simulated
+        if rescale:
+            simulated[i] = rescale_intensity(
+                temp_simulated[i], dtype_out=dtype_out
+            )
+    if rescale:
+        return simulated
+    else:
+        return temp_simulated
