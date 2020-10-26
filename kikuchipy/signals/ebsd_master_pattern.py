@@ -367,6 +367,8 @@ def _get_direction_cosines(detector: EBSDDetector):
     xpc = detector.pc[..., 0]
     ypc = detector.pc[..., 1]
     L = detector.pc[..., 2]  # This will be wrong in the future
+    # xpc, ypc, L = detector.pc_emsoft() It should probably be something like this
+
     # Scintillator coordinates in microns
     scin_x = (
         -((-xpc - (1.0 - detector.ncols) * 0.5) - np.arange(0, detector.ncols))
@@ -384,6 +386,7 @@ def _get_direction_cosines(detector: EBSDDetector):
     ca = np.cos(alpha)
     sa = np.sin(alpha)
 
+    # Omega NYI
     omega = np.radians(0)  # angle between normal of sample and detector
     cw = np.cos(omega)
     sw = np.sin(omega)
@@ -454,9 +457,7 @@ def _get_patterns_chunk(
     dtype_out=np.float32,
 ):
     m = r.shape[0]
-    if rescale:
-        simulated = np.empty(shape=(m,) + dc.shape, dtype=dtype_out)
-    temp_simulated = np.empty(shape=(m,) + dc.shape, dtype=np.float32)
+    simulated = np.empty(shape=(m,) + dc.shape, dtype=dtype_out)
 
     npy, npx = master_north.shape
     scale_factor = (npx - 1) / 2
@@ -479,7 +480,7 @@ def _get_patterns_chunk(
             npy=npy,
         )
 
-        temp_simulated[i] = np.where(
+        pattern = np.where(
             rot_dc.z >= 0,
             (
                 master_north[nii, nij] * dim * djm
@@ -495,10 +496,7 @@ def _get_patterns_chunk(
             ),
         )
         if rescale:
-            simulated[i] = rescale_intensity(
-                temp_simulated[i], dtype_out=dtype_out
-            )
-    if rescale:
-        return simulated
-    else:
-        return temp_simulated
+            pattern = rescale_intensity(pattern, dtype_out=dtype_out)
+        simulated[i] = pattern
+
+    return simulated
