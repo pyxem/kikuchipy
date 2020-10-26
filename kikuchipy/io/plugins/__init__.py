@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Input/output plugins."""
+
 from kikuchipy.io.plugins import (
     emsoft_ebsd,
     emsoft_ebsd_master_pattern,

@@ -16,16 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Simulations returned by a generator and handling of Kikuchi bands and
-zone axes.
-"""
+import matplotlib.colors as mcolors
 
-from kikuchipy.simulations.geometrical_ebsd_simulation import (
-    GeometricalEBSDSimulation,
-)
-from kikuchipy.simulations import features
+from kikuchipy.draw.colors import TSL_COLORS
 
-__all__ = [
-    "GeometricalEBSDSimulation",
-    "features",
-]
+
+class TestColors:
+    def test_tsl_colors(self):
+        assert isinstance(TSL_COLORS, list)
+        assert len(TSL_COLORS) == 12
+        for c in TSL_COLORS:
+            assert len(c) == 3
+            assert isinstance(c, tuple)
+            assert mcolors.is_color_like(c)

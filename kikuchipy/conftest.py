@@ -30,7 +30,12 @@ import pytest
 
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.generators import EBSDSimulationGenerator
+from kikuchipy.projections.ebsd_projections import (
+    detector2reciprocal_lattice,
+    detector2direct_lattice,
+)
 from kikuchipy.signals import EBSD
+from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 
 @pytest.fixture
@@ -181,4 +186,109 @@ def nickel_ebsd_simulation_generator(
         detector=detector,
         phase=nickel_phase,
         rotations=nickel_rotations * r_tsl2bruker,
+    )
+
+
+@pytest.fixture
+def nickel_kikuchi_band(nickel_rlp, nickel_rotations, pc1):
+    rlp = nickel_rlp.symmetrise()
+
+    phase = rlp.phase
+    hkl = rlp._hkldata
+
+    nav_shape = (5, 5)
+
+    detector = EBSDDetector(
+        shape=(60, 60),
+        binning=8,
+        px_size=70,
+        pc=np.ones(nav_shape + (3,)) * pc1,
+        sample_tilt=70,
+        tilt=0,
+        convention="tsl",
+    )
+
+    nav_dim = detector.navigation_dimension
+    navigation_axes = (1, 2)[:nav_dim]
+
+    # Output shape is (3, n, 3) or (3, ny, nx, 3)
+    det2recip = detector2reciprocal_lattice(
+        sample_tilt=detector.sample_tilt,
+        detector_tilt=detector.tilt,
+        lattice=phase.structure.lattice,
+        rotation=nickel_rotations.reshape(*nav_shape),
+    )
+
+    # Output shape is (nhkl, n, 3) or (nhkl, ny, nx, 3)
+    hkl_detector = np.tensordot(hkl, det2recip, axes=(1, 0))
+    # Determine whether a band is visible in a pattern
+    upper_hemisphere = hkl_detector[..., 2] > 0
+    is_in_some_pattern = np.sum(upper_hemisphere, axis=navigation_axes) != 0
+    # Get bands that are in some pattern and their coordinates in the
+    # proper shape
+    hkl = hkl[is_in_some_pattern, ...]
+    hkl_in_pattern = upper_hemisphere[is_in_some_pattern, ...].T
+    hkl_detector = np.moveaxis(
+        hkl_detector[is_in_some_pattern], source=0, destination=nav_dim
+    )
+
+    return KikuchiBand(
+        phase=phase,
+        hkl=hkl,
+        hkl_detector=hkl_detector,
+        in_pattern=hkl_in_pattern,
+        gnomonic_radius=detector.r_max,
+    )
+
+
+@pytest.fixture
+def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
+    bands = nickel_kikuchi_band
+    hkl = bands._hkldata
+    phase = bands.phase
+
+    nav_shape = (5, 5)
+
+    detector = EBSDDetector(
+        shape=(60, 60),
+        binning=8,
+        px_size=70,
+        pc=np.ones(nav_shape + (3,)) * pc1,
+        sample_tilt=70,
+        tilt=0,
+        convention="tsl",
+    )
+
+    nav_dim = detector.navigation_dimension
+    navigation_axes = (1, 2)[:nav_dim]
+
+    n_hkl = bands.size
+    n_hkl2 = n_hkl ** 2
+    uvw = np.cross(hkl[:, np.newaxis, :], hkl).reshape((n_hkl2, 3))
+    not000 = np.count_nonzero(uvw, axis=1) != 0
+    uvw = uvw[not000]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        uvw = uvw / np.gcd.reduce(uvw, axis=1)[:, np.newaxis]
+    uvw = np.unique(uvw, axis=0).astype(int)
+    det2direct = detector2direct_lattice(
+        sample_tilt=detector.sample_tilt,
+        detector_tilt=detector.tilt,
+        lattice=phase.structure.lattice,
+        rotation=nickel_rotations.reshape(*nav_shape),
+    )
+    uvw_detector = np.tensordot(uvw, det2direct, axes=(1, 0))
+    upper_hemisphere = uvw_detector[..., 2] > 0
+    is_in_some_pattern = np.sum(upper_hemisphere, axis=navigation_axes) != 0
+    uvw = uvw[is_in_some_pattern, ...]
+    uvw_in_pattern = upper_hemisphere[is_in_some_pattern, ...].T
+    uvw_detector = np.moveaxis(
+        uvw_detector[is_in_some_pattern], source=0, destination=nav_dim
+    )
+
+    return ZoneAxis(
+        phase=phase,
+        uvw=uvw,
+        uvw_detector=uvw_detector,
+        in_pattern=uvw_in_pattern,
+        gnomonic_radius=detector.r_max,
     )

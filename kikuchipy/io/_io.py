@@ -54,7 +54,7 @@ for plugin in plugins:
 def load(filename: str, lazy: bool = False, **kwargs):
     """Load an :class:`~kikuchipy.signals.EBSD` or
     :class:`~kikuchipy.signals.EBSDMasterPattern` object from a
-    supported file.
+    supported file format.
 
     This function is a modified version of :func:`hyperspy.io.load`.
 
@@ -69,6 +69,13 @@ def load(filename: str, lazy: bool = False, **kwargs):
     kwargs :
         Keyword arguments passed to the corresponding kikuchipy reader.
         See their individual documentation for available options.
+
+    Examples
+    --------
+    >>> import kikuchipy as kp
+    >>> s = kp.load("patterns.h5")
+    >>> s
+    <EBSD, title: , dimensions: (10, 20|60, 60)>
     """
     if not os.path.isfile(filename):
         raise IOError(f"No filename matches '{filename}'.")

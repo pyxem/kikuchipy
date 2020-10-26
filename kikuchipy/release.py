@@ -18,9 +18,11 @@
 
 author = "kikuchipy developers"
 copyright = "Copyright 2019-2020, kikuchipy"
+# Initial commiter first, then sorted by line contributions
 credits = [
     "Håkon Wiik Ånes",
     "Tina Bergh",
+    "Ole Natlandsmyr",
     "Lars Andreas Hastad Lervik",
 ]
 license = "GPLv3+"

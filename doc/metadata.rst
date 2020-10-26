@@ -92,7 +92,7 @@ convenience.
 
     If you regularly use information relevant to EBSD data not included in the
     metadata structure, you can request this in our `issue tracker
-    <https://github.com/kikuchipy/kikuchipy/issues>`_.
+    <https://github.com/pyxem/kikuchipy/issues>`_.
 
 EBSD
 ====

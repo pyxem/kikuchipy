@@ -5,7 +5,7 @@ Feature maps
 This section details methods for extracting information from pattern
 intensities, called feature maps (for lack of a better description).
 
-.. _image-quality:
+.. _feature-maps-image-quality:
 
 Image quality
 =============
@@ -14,7 +14,7 @@ The image quality metric :math:`Q` presented by Krieger Lassen [Lassen1994]_
 can be calculated for an :class:`~kikuchipy.signals.EBSD` object with
 :meth:`~kikuchipy.signals.EBSD.get_image_quality`, or, for a single pattern
 (:class:`numpy.ndarray`), with :func:`~kikuchipy.pattern.get_image_quality`.
-Following the notation in [Marquardt2017]_, it is given by
+Following the notation in :cite:`marquardt2017quantitative`, it is given by
 
 .. math::
 
@@ -68,9 +68,9 @@ centre, and plot them:
     frequency vectors :math:`\mathbf{q}` (right).
 
 If we *don't* want the EBSD patterns to be
-:ref:`zero-mean normalized <normalize-intensity>` before computing :math:`Q`,
-we must pass ``normalized=False``. Let's compute the image quality :math:`Q` and
-plot it for a Nickel data set from [Anes2019]_:
+`zero-mean normalized <pattern_processing.ipynb#normalize-intensity>`_ before
+computing :math:`Q`, we must pass ``normalized=False``. Let's compute the image
+quality :math:`Q` and plot it for a Nickel data set from [Anes2019]_:
 
 .. code-block::
 

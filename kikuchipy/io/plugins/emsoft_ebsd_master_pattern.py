@@ -16,6 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Read support for simulated EBSD master patterns in EMsoft's HDF5
+format.
+"""
+
 from typing import List, Optional, Tuple
 
 import dask.array as da

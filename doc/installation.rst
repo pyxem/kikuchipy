@@ -11,8 +11,8 @@ We recommend you install it in a `conda environment
 <https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`_
 with the `Miniconda distribution`_::
 
-   $ conda create --name kikuchipy python=3.7
-   $ conda activate kikuchipy
+   $conda create --name kikuchipy python=3.8
+   $conda activate kikuchipy
 
 If you prefer a graphical interface to manage packages and environments, install
 the `Anaconda distribution`_ instead.
@@ -28,11 +28,11 @@ Anaconda
 Anaconda provides the easiest installation. In the Anaconda Prompt, terminal or
 Command Prompt, install with::
 
-    $ conda install kikuchipy --channel conda-forge
+    $conda install kikuchipy --channel conda-forge
 
 If you at a later time need to update the package::
 
-    $ conda update kikuchipy
+    $conda update kikuchipy
 
 .. _install-with-pip:
 
@@ -42,11 +42,11 @@ Pip
 To install with ``pip``, run the following in the Anaconda Prompt, terminal or
 Command Prompt::
 
-    $ pip install kikuchipy
+    $pip install kikuchipy
 
 If you at a later time need to update the package::
 
-    $ pip install --upgrade kikuchipy
+    $pip install --upgrade kikuchipy
 
 .. note::
 
@@ -60,11 +60,11 @@ Install from source
 -------------------
 
 To install kikuchipy from source, clone the repository from `GitHub
-<https://github.com/kikuchipy/kikuchipy>`_::
+<https://github.com/pyxem/kikuchipy>`_::
 
-    $ git clone https://github.com/kikuchipy/kikuchipy.git
-    $ cd kikuchipy
-    $ pip install --editable .
+    $git clone https://github.com/pyxem/kikuchipy.git
+    $cd kikuchipy
+    $pip install --editable .
 
 See the :ref:`contributing guidelines <setting-up-a-development-installation>`
 for how to set up a development installation.

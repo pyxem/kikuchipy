@@ -35,6 +35,7 @@ from hyperspy.roi import BaseInteractiveROI
 from hyperspy.api import interactive
 from h5py import File
 import numpy as np
+from orix.crystal_map import CrystalMap
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
@@ -89,13 +90,18 @@ class EBSD(CommonImage, Signal2D):
         """
         Signal2D.__init__(self, *args, **kwargs)
 
-        if "detector_dict" in kwargs:
-            self.detector = EBSDDetector(kwargs.pop("detector_dict"))
+        #        if "detector_dict" in kwargs:
+        #            self.detector = EBSDDetector(kwargs.pop("detector_dict"))
+        #        else:
+        self.detector = EBSDDetector(
+            shape=self.axes_manager.signal_shape,
+            px_size=self.axes_manager.signal_axes[0].scale,
+        )
+
+        if "xmap" in kwargs:
+            self._xmap = kwargs.pop("xmap")
         else:
-            self.detector = EBSDDetector(
-                shape=self.axes_manager.signal_shape,
-                px_size=self.axes_manager.signal_axes[0].scale,
-            )
+            self._xmap = None
 
         # Update metadata if object is initialised from numpy array
         if not self.metadata.has_item(metadata_nodes("ebsd")):
@@ -104,6 +110,14 @@ class EBSD(CommonImage, Signal2D):
             self.metadata = DictionaryTreeBrowser(md)
         if not self.metadata.has_item("Sample.Phases"):
             self.set_phase_parameters()
+
+    @property
+    def xmap(self) -> CrystalMap:
+        """A :class:`~orix.crystal_map.CrystalMap` containing the
+        phases, unit cell rotations and auxiliary properties of the EBSD
+        data set.
+        """
+        return self._xmap
 
     def set_experimental_parameters(
         self,
@@ -306,7 +320,7 @@ class EBSD(CommonImage, Signal2D):
         """
         # Ensure atom coordinates are numpy arrays
         if atom_coordinates is not None:
-            for phase, val in atom_coordinates.items():
+            for phase, _ in atom_coordinates.items():
                 atom_coordinates[phase]["coordinates"] = np.array(
                     atom_coordinates[phase]["coordinates"]
                 )
@@ -917,7 +931,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        kikuchipy.filters.Window
+        :class:`~kikuchipy.filters.window.Window`
         """
         dtype_out = self.data.dtype
 
@@ -1006,7 +1020,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        kikuchipy.filters.Window,
+        :class:`~kikuchipy.filters.window.Window`,
         :func:`scipy.signal.windows.get_window`,
         :func:`scipy.ndimage.correlate`
 
@@ -1335,7 +1349,7 @@ class EBSD(CommonImage, Signal2D):
             else:
                 raise ValueError("Filename not defined.")
         if extension is not None:
-            basename, ext = os.path.splitext(filename)
+            basename, _ = os.path.splitext(filename)
             filename = basename + "." + extension
         _save(filename, self, overwrite=overwrite, **kwargs)
 

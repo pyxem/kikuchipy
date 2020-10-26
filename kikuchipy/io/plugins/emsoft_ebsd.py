@@ -16,11 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Read support for simulated EBSD patterns in EMsoft's HDF5 format."""
+
+import os
 from typing import List, Tuple, Union
 
 import dask.array as da
+from diffpy.structure import Atom, Lattice, Structure
 from h5py import File
 import numpy as np
+from orix.crystal_map import CrystalMap, Phase, PhaseList
+from orix.quaternion import Rotation
 
 from kikuchipy.io.plugins.h5ebsd import hdf5group2dict
 from kikuchipy.io.plugins.emsoft_ebsd_master_pattern import (
@@ -151,6 +157,15 @@ def file_reader(
         for i in range(patterns.ndim)
     ]
 
+    # Get crystal map
+    phase = _crystaldata2phase(hdf5group2dict(f["CrystalData"]))
+    xtal_fname = f["EMData/EBSD/xtalname"][()][0].decode().split("/")[-1]
+    phase.name, _ = os.path.splitext(xtal_fname)
+    scan["xmap"] = CrystalMap(
+        rotations=Rotation.from_euler(f["EMData/EBSD/EulerAngles"][()]),
+        phase_list=PhaseList(phase),
+    )
+
     if not lazy:
         f.close()
 
@@ -215,3 +230,44 @@ def _get_metadata(omd: dict) -> dict:
     }
     _set_metadata_from_mapping(omd, md, mapping)
     return md.as_dictionary()
+
+
+def _crystaldata2phase(dictionary: dict) -> Phase:
+    """Return a :class:`~orix.crystal_map.Phase` object from a
+    dictionary with EMsoft CrystalData group content.
+
+    Parameters
+    ----------
+    dictionary
+        Dictionary with phase information.
+
+    Returns
+    -------
+    Phase
+    """
+    # TODO: Move this to orix.io.plugins.emsoft_h5ebsd as part of v0.6
+    # Get list of atoms
+    n_atoms = dictionary["Natomtypes"]
+    atom_data = dictionary["AtomData"]
+    atom_types = dictionary["Atomtypes"]
+    if n_atoms == 1:
+        atom_types = (atom_types,)  # Make iterable
+    atoms = []
+    for i in range(n_atoms):
+        # TODO: Convert atom type integer to element name, like Ni for 26
+        atoms.append(
+            Atom(
+                atype=atom_types[i],
+                xyz=atom_data[:3, i],
+                occupancy=atom_data[3, i],
+                Uisoequiv=atom_data[4, i] / (8 * np.pi ** 2) * 1e2,  # Å^-2
+            )
+        )
+
+    # TODO: Use space group setting
+    return Phase(
+        space_group=int(dictionary["SpaceGroupNumber"]),
+        structure=Structure(
+            lattice=Lattice(*dictionary["LatticeParameters"].T), atoms=atoms
+        ),
+    )
