@@ -16,35 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-# Import order must not be changed
-from kikuchipy import crystallography
-from kikuchipy import detectors
-from kikuchipy import draw
-from kikuchipy import filters
-from kikuchipy import indexing
-from kikuchipy import pattern
-from kikuchipy import projections
-from kikuchipy import signals
-from kikuchipy import generators
-from kikuchipy import simulations
-from kikuchipy.io._io import load
-from kikuchipy import data  # Must be below io.load
+import matplotlib.colors as mcolors
 
-from kikuchipy import release
+from kikuchipy.draw.colors import TSL_COLORS
 
-__version__ = release.version
 
-__all__ = [
-    "crystallography",
-    "data",
-    "detectors",
-    "draw",
-    "filters",
-    "generators",
-    "indexing",
-    "load",
-    "pattern",
-    "projections",
-    "signals",
-    "simulations",
-]
+class TestColors:
+    def test_tsl_colors(self):
+        assert isinstance(TSL_COLORS, list)
+        assert len(TSL_COLORS) == 12
+        for c in TSL_COLORS:
+            assert len(c) == 3
+            assert isinstance(c, tuple)
+            assert mcolors.is_color_like(c)

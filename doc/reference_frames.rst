@@ -79,10 +79,10 @@ Above, the PC was passed in the EDAX TSL convention. Passing the PC in the
 Bruker, Oxford, or EMsoft v4 or v5 convention is also supported. Likewise, the
 PC can be returned in all conventions via
 :meth:`~kikuchipy.detectors.ebsd_detector.EBSDDetector.pc_emsoft` and similar.
-Conversions between conventions are implemented as described in [Jackson2019]_.
-The unbinned pixel size :math:`\delta`, binning factor :math:`b` and number of
-pixel rows :math:`s_y` and columns :math:`s_x` are needed to convert a PC
-between the EMsoft and Bruker conventions:
+Conversions between conventions are implemented as described in
+:cite:`jackson2019dictionary`. The unbinned pixel size :math:`\delta`, binning
+factor :math:`b` and number of pixel rows :math:`s_y` and columns :math:`s_x`
+are needed to convert a PC between the EMsoft and Bruker conventions:
 
 - EDAX TSL or Oxford to Bruker
 

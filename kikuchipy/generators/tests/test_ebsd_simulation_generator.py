@@ -22,6 +22,9 @@ from orix.quaternion import Rotation
 import pytest
 
 from kikuchipy.generators import EBSDSimulationGenerator
+from kikuchipy.generators.ebsd_simulation_generator import (
+    _get_coordinates_in_upper_hemisphere,
+)
 
 
 class TestEBSDSimulationGenerator:
@@ -136,7 +139,7 @@ class TestEBSDSimulationGenerator:
             ((slice(0, 2), slice(2, 4)), (2, 2), [0.1, 0.7, 0.3], [1, 2, 3]),
         ],
     )
-    def test_getitem(
+    def test_get_item(
         self,
         nickel_ebsd_simulation_generator,
         nav_idx,
@@ -160,7 +163,7 @@ class TestEBSDSimulationGenerator:
         simgen2.detector.pc[0] = new_pc
         assert not np.allclose(simgen[nav_idx].detector.pc, simgen2.detector.pc)
 
-    def test_geometrical_simulation(
+    def test_geometrical_simulation2d(
         self, nickel_ebsd_simulation_generator, nickel_rlp,
     ):
         """Desired output EBSDGeometricalSimulation object."""
@@ -180,6 +183,43 @@ class TestEBSDSimulationGenerator:
 
         sim2 = simgen.geometrical_simulation()
         assert sim2.bands.size == 132
+
+    def test_geometrical_simulation1d(
+        self, nickel_ebsd_simulation_generator, nickel_rlp,
+    ):
+        """Geometrical EBSD simulations handle 1d."""
+        simgen = nickel_ebsd_simulation_generator[:5]
+
+        rlp = nickel_rlp[nickel_rlp.allowed].symmetrise()
+        assert rlp.size == 26
+
+        sim1 = simgen.geometrical_simulation(rlp)
+        assert np.allclose(sim1.detector.pc, simgen.detector.pc)
+        assert np.allclose(
+            sim1.bands.phase.point_group.data, simgen.phase.point_group.data
+        )
+        assert np.allclose(sim1.rotations.data, simgen.rotations.data)
+        assert sim1.bands.navigation_shape == (5,)
+        assert sim1.bands.size == 15
+
+    def test_geometrical_simulation0d(
+        self, nickel_ebsd_simulation_generator, nickel_rlp,
+    ):
+        """Geometrical EBSD simulations handle 0d."""
+        simgen = nickel_ebsd_simulation_generator[0]
+        simgen.navigation_shape = ()
+
+        rlp = nickel_rlp[nickel_rlp.allowed].symmetrise()
+        assert rlp.size == 26
+
+        sim1 = simgen.geometrical_simulation(rlp)
+        assert np.allclose(sim1.detector.pc, simgen.detector.pc)
+        assert np.allclose(
+            sim1.bands.phase.point_group.data, simgen.phase.point_group.data
+        )
+        assert np.allclose(sim1.rotations.data, simgen.rotations.data)
+        assert sim1.bands.navigation_shape == ()
+        assert sim1.bands.size == 13
 
     def test_geometrical_simulation_raises(
         self, nickel_ebsd_simulation_generator,
@@ -252,3 +292,55 @@ class TestEBSDSimulationGenerator:
             ),
         )
         assert np.allclose(bands.gnomonic_radius, simgen[:2].detector.r_max)
+
+    def test_get_coordinates_in_upper_hemisphere_2d(self):
+        """Coordinates are considered correctly whether to be in the
+        upper hemisphere and visible in a point (pattern).
+        """
+        # Shape (2, 2, 2, 3): (n bands/zone axes, i, j, xyz)
+        coords = np.array(
+            [
+                [[[1, 2, -1], [1, 2, -2]], [[1, 2, -3], [1, 2, 0]]],
+                [[[1, 2, -3], [1, 2, 3]], [[1, 2, 1e-3], [1, 2, -3]]],
+            ]
+        )
+        n_nav_dims = 2
+        navigation_axes = (1, 2)[:n_nav_dims]
+        is_upper, in_a_point = _get_coordinates_in_upper_hemisphere(
+            z_coordinates=coords[..., 2], navigation_axes=navigation_axes
+        )
+        assert np.allclose(
+            is_upper,
+            [[[False, False], [False, False]], [[False, True], [True, False]]],
+        )
+        assert np.allclose(in_a_point, [False, True])
+
+    def test_get_coordinates_in_upper_hemisphere_1d(self):
+        """Coordinates are considered correctly whether to be in the
+        upper hemisphere and visible in a point (pattern).
+        """
+        # Shape (2, 2, 3): (n bands/zone axes, i, xyz)
+        coords = np.array([[[1, 2, -1], [1, 2, -2]], [[1, 2, -3], [1, 2, 3]]])
+        n_nav_dims = 1
+        navigation_axes = (1, 2)[:n_nav_dims]
+        is_upper, in_a_point = _get_coordinates_in_upper_hemisphere(
+            z_coordinates=coords[..., 2], navigation_axes=navigation_axes
+        )
+
+        assert np.allclose(is_upper, [[False, False], [False, True]])
+        assert np.allclose(in_a_point, [False, True])
+
+    def test_get_coordinates_in_upper_hemisphere_0d(self):
+        """Coordinates are considered correctly whether to be in the
+        upper hemisphere and visible in a point (pattern).
+        """
+        # Shape (2, 3): (n bands/zone axes, xyz)
+        coords = np.array([[1, 2, -1], [1, 2, 2]])
+        n_nav_dims = 0
+        navigation_axes = (1, 2)[:n_nav_dims]
+        is_upper, in_a_point = _get_coordinates_in_upper_hemisphere(
+            z_coordinates=coords[..., 2], navigation_axes=navigation_axes
+        )
+
+        assert np.allclose(is_upper, [False, True])
+        assert np.allclose(in_a_point, [False, True])

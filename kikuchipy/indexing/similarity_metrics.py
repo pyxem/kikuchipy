@@ -44,39 +44,40 @@ def make_similarity_metric(
     make_compatible_to_lower_scopes: bool = False,
     dtype_out: np.dtype = np.float32,
 ):
-    """Make a similarity metric for comparing gray-tone patterns of equal
-    size.
+    """Make a similarity metric for comparing gray-tone patterns of
+    equal size.
 
     This factory function wraps metric functions for use in
-    `pattern_match`, which again is used by
+    :func:`~kikuchipy.indexing.pattern_matching.pattern_match`, which
+    again is used by
     :class:`~kikuchipy.indexing.StaticDictionaryIndexing` and
     :class:`~kikuchipy.indexing.DynamicDictionaryIndexing`.
 
     Parameters
     ----------
-    metric_func
+    metric_func : Callable
         Metric function with signature
         `metric_func(experimental, simulated)`, which computes the
         similarity or a distance matrix between experimental
         and simulated pattern(s)).
-    greater_is_better
+    greater_is_better : bool, optional
         Whether greater values correspond to more similar patterns, by
         default True. Used for choosing `keep_n` metric results in
         `pattern_match`.
-    scope
+    scope : MetricScope, optional
         Describes the shapes of the `metric_func`'s input parameters
         `experimental` and `simulated`, by default
         `MetricScope.MANY_TO_MANY`.
-    flat
-        Whether experimental and simulated patterns are to be flattened before sent
-        to `metric_func` when the similarity metric is called, by
-        default False.
-    make_compatible_to_lower_scopes
-        Whether to reshape experimental and simulated data by adding single
-        dimensions to match the given scope, by default False.
-    dtype_out
+    flat : bool, optional
+        Whether experimental and simulated patterns are to be flattened
+        before sent to `metric_func` when the similarity metric is
+        called, by default False.
+    make_compatible_to_lower_scopes : bool, optional
+        Whether to reshape experimental and simulated data by adding
+        single dimensions to match the given scope, by default False.
+    dtype_out : numpy.dtype, optional
         The data type used and returned by the metric, by default
-        :class:`np.float32`.
+        :class:`numpy.float32`.
 
     Returns
     -------
@@ -86,10 +87,10 @@ def make_similarity_metric(
 
     Notes
     -----
-    The metric function must take the arrays `experimental` and `simulated`
-    as arguments, in that order. The scope and whether the metric is
-    flat defines the intended data shapes. In the following table,
-    (ny, nx) and (sy, sx) correspond to the navigation and signal
+    The metric function must take the arrays `experimental` and
+    `simulated` as arguments, in that order. The scope and whether the
+    metric is flat defines the intended data shapes. In the following
+    table, (ny, nx) and (sy, sx) correspond to the navigation and signal
     shapes (row, column), respectively, with N number of simulations:
 
     ============ ============= ========= ========= ============= ========= =========
@@ -213,8 +214,8 @@ class SimilarityMetric:
         expt: Union[np.ndarray, da.Array],
         sim: Union[np.ndarray, da.Array],
     ) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
-        """Return experimental and simulated data with added axes corresponding
-        to the scope of the metric.
+        """Return experimental and simulated data with added axes
+        corresponding to the scope of the metric.
         """
         expt_scope_ndim, sim_scope_ndim = self._SCOPE_TO_EXPT_SIM_NDIM[
             self.scope
@@ -338,16 +339,16 @@ def _zero_mean(
     expt: Union[np.ndarray, da.Array],
     sim: Union[np.ndarray, da.Array],
     flat: bool = False,
-    dtype=np.float32,
 ) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
-    """Subtract the mean from experimental and simulated data of any scope.
+    """Subtract the mean from experimental and simulated data of any
+    scope.
 
     Parameters
     ----------
     expt : np.ndarray or da.Array
-        experimental.
+        Experimental.
     sim : np.ndarray or da.Array
-        simulated.
+        Simulated.
     flat : bool, optional
         Whether `p` and `t` are flattened, by default False.
 
@@ -375,7 +376,6 @@ def _normalize(
     expt: Union[np.ndarray, da.Array],
     sim: Union[np.ndarray, da.Array],
     flat: bool = False,
-    dtype=np.float32,
 ) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
     """Normalize experimental and simulated patterns of any scope.
 
@@ -426,8 +426,8 @@ def _zncc_einsum(
     -------
     zncc
         Correlation coefficients in range [-1, 1] for all comparisons,
-        as :class:`np.ndarray` if both `experimental` and `simulated` are
-        :class:`np.ndarray`, else :class:`da.Array`.
+        as :class:`np.ndarray` if both `experimental` and `simulated`
+        are :class:`np.ndarray`, else :class:`da.Array`.
 
     Notes
     -----
@@ -461,10 +461,10 @@ def _ndp_einsum(
 
     Returns
     -------
-    ndexpt
+    ndp
         Normalized dot products in range [0, 1] for all comparisons,
-        as :class:`np.ndarray` if both `experimental` and `simulated` are
-        :class:`np.ndarray`, else :class:`da.Array`.
+        as :class:`np.ndarray` if both `experimental` and `simulated`
+        are :class:`np.ndarray`, else :class:`da.Array`.
     """
     experimental, simulated = _normalize(experimental, simulated)
     ndp = da.einsum("ijkl,mkl->ijm", experimental, simulated, optimize=True)

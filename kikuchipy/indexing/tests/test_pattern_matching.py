@@ -21,11 +21,11 @@ import numpy as np
 import pytest
 from scipy.spatial.distance import cdist
 
-
-from kikuchipy.indexing import make_similarity_metric, pattern_match
-
-from kikuchipy.indexing.pattern_matching import _pattern_match_slice_simulated
-from kikuchipy.indexing.similarity_metrics import MetricScope
+from kikuchipy.indexing import (
+    make_similarity_metric,
+    MetricScope,
+    pattern_match,
+)
 
 
 class TestPatternMatching:
@@ -59,10 +59,7 @@ class TestPatternMatching:
                 metric=self.dummy_metric,
             )
 
-    @pytest.mark.parametrize(
-        "n_slices",
-        [None, 2],
-    )
+    @pytest.mark.parametrize("n_slices", [1, 2])
     def test_pattern_match_compute_true(self, n_slices):
         # Four patterns
         p = np.array(
@@ -95,6 +92,13 @@ class TestPatternMatching:
         assert len(mr) == 2
         assert isinstance(mr[0], da.Array) and isinstance(mr[1], da.Array)
 
+    def test_pattern_match_slices_compute_false(self):
+        p = np.arange(16).reshape((2, 2, 2, 2))
+        t = np.arange(8).reshape((2, 2, 2))
+        with pytest.raises(NotImplementedError):
+            pattern_match(p, t, n_slices=2, compute=False)
+
     def test_pattern_match_one_to_one(self):
-        mr = pattern_match(np.zeros((2, 2)), np.zeros((2, 2)))
+        p = np.random.random(3 * 3).reshape((3, 3))
+        mr = pattern_match(p, p)
         assert mr[0][0] == 0

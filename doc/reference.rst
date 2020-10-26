@@ -17,6 +17,7 @@ The list of top modules (and the load function):
 
 .. autosummary::
     crystallography
+    data
     detectors
     draw
     filters
@@ -25,6 +26,7 @@ The list of top modules (and the load function):
     io
     load
     pattern
+    projections
     signals
     simulations
 
@@ -45,6 +47,20 @@ crystallography
 .. autofunction:: get_direct_structure_matrix
 .. autofunction:: get_reciprocal_metric_tensor
 .. autofunction:: get_reciprocal_structure_matrix
+
+....
+
+data
+====
+
+.. currentmodule:: kikuchipy.data
+
+.. autosummary::
+    nickel_small
+
+.. automodule:: kikuchipy.data
+    :members:
+    :undoc-members:
 
 ....
 
@@ -91,12 +107,15 @@ markers
     get_line_segment_list
     get_point_list
     get_text_list
-    permanent_on_signal
 
 .. autofunction:: get_line_segment_list
 .. autofunction:: get_point_list
 .. autofunction:: get_text_list
-.. autofunction:: permanent_on_signal
+
+colors
+------
+
+.. automodule:: kikuchipy.draw.colors
 
 ....
 
@@ -203,7 +222,21 @@ indexing
 .. currentmodule:: kikuchipy.indexing
 
 .. autosummary::
+    pattern_matching
     similarity_metrics
+
+pattern_matching
+----------------
+
+.. currentmodule:: kikuchipy.indexing.pattern_matching
+
+.. autosummary::
+    pattern_match
+
+.. automodule:: kikuchipy.indexing.pattern_matching
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 similarity_metrics
 ------------------
@@ -212,6 +245,7 @@ similarity_metrics
 
 .. autosummary::
     make_similarity_metric
+    MetricScope
 
 .. automodule:: kikuchipy.indexing.similarity_metrics
     :members:
@@ -552,11 +586,24 @@ features
 
 .. autosummary::
     KikuchiBand
+    ZoneAxis
 
 KikuchiBand
 ~~~~~~~~~~~
 
 .. autoclass:: kikuchipy.simulations.features.KikuchiBand
+    :members:
+    :undoc-members:
+    :show-inheritance:
+    :exclude-members: from_highest_hkl, from_min_dspacing, symmetrise, unique
+
+    .. automethod:: __init__
+    .. automethod:: __getitem__
+
+ZoneAxis
+~~~~~~~~
+
+.. autoclass:: kikuchipy.simulations.features.ZoneAxis
     :members:
     :undoc-members:
     :show-inheritance:

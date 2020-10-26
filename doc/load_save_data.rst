@@ -262,7 +262,7 @@ Currently, kikuchipy has readers and writers for the following file formats:
     If you want to process your patterns with kikuchipy, but use an unsupported
     EBSD vendor software, or if you want to write your processed patterns to a
     vendor format that does not support writing, please request this feature
-    in our `issue tracker <https://github.com/kikuchipy/kikuchipy/issues>`_.
+    in our `issue tracker <https://github.com/pyxem/kikuchipy/issues>`_.
 
 .. _h5ebsd-format:
 
@@ -414,8 +414,9 @@ respectively. Master patterns for all beam energies are read by default. Passing
 Master patterns can be written to HDF5 files using HyperSpy's HDF5 specification
 :ref:`as explained above <save-patterns>`.
 
-See [Jackson2019]_ for a hands-on tutorial explaining how to simulate these
-patterns with EMsoft, and [Callahan2013]_ for details of the underlying theory.
+See :cite:`jackson2019dictionary` for a hands-on tutorial explaining how to
+simulate these patterns with EMsoft, and [Callahan2013]_ for details of the
+underlying theory.
 
 .. _from-kikuchipy-into-other-software:
 

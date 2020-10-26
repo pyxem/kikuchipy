@@ -92,13 +92,13 @@ class EBSD(CommonImage, Signal2D):
         """
         Signal2D.__init__(self, *args, **kwargs)
 
-        if "detector_dict" in kwargs:
-            self.detector = EBSDDetector(kwargs.pop("detector_dict"))
-        else:
-            self.detector = EBSDDetector(
-                shape=self.axes_manager.signal_shape,
-                px_size=self.axes_manager.signal_axes[0].scale,
-            )
+        #        if "detector_dict" in kwargs:
+        #            self.detector = EBSDDetector(kwargs.pop("detector_dict"))
+        #        else:
+        self.detector = EBSDDetector(
+            shape=self.axes_manager.signal_shape,
+            px_size=self.axes_manager.signal_axes[0].scale,
+        )
 
         if "xmap" in kwargs:
             self._xmap = kwargs.pop("xmap")
@@ -322,7 +322,7 @@ class EBSD(CommonImage, Signal2D):
         """
         # Ensure atom coordinates are numpy arrays
         if atom_coordinates is not None:
-            for phase, val in atom_coordinates.items():
+            for phase, _ in atom_coordinates.items():
                 atom_coordinates[phase]["coordinates"] = np.array(
                     atom_coordinates[phase]["coordinates"]
                 )
@@ -1122,9 +1122,7 @@ class EBSD(CommonImage, Signal2D):
             averaging_window = copy.copy(window)
         else:
             averaging_window = Window(
-                window=window,
-                shape=window_shape,
-                **kwargs,
+                window=window, shape=window_shape, **kwargs,
             )
         averaging_window.shape_compatible(self.axes_manager.signal_shape)
 
@@ -1178,9 +1176,7 @@ class EBSD(CommonImage, Signal2D):
                 overlap_depth[i] = 0
         overlap_boundary = {i: "none" for i in range(data_dim)}
         overlapped_dask_array = da.overlap.overlap(
-            dask_array,
-            depth=overlap_depth,
-            boundary=overlap_boundary,
+            dask_array, depth=overlap_depth, boundary=overlap_boundary,
         )
 
         # Must also be overlapped, since the patterns are overlapped
@@ -1399,7 +1395,7 @@ class EBSD(CommonImage, Signal2D):
             else:
                 raise ValueError("Filename not defined.")
         if extension is not None:
-            basename, ext = os.path.splitext(filename)
+            basename, _ = os.path.splitext(filename)
             filename = basename + "." + extension
         _save(filename, self, overwrite=overwrite, **kwargs)
 

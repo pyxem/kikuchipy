@@ -22,9 +22,13 @@ Contributors
 
 Added
 -----
-- Indexing of EBSD patterns through template matching of the patterns with a
-  static dictionary of simulated patterns with known orientations.
-  (`#231 <https://github.com/pyxem/kikuchipy/pull/231>`_)
+- A kikuchipy.data module, starting with a small Nickel data set with 9
+  patterns, meant to be used for testing and in the user guide.
+  (`#236 <https://github.com/pyxem/kikuchipy/pull/236>`_)
+- Indexing of EBSD patterns through matching of patterns with a static
+  dictionary of simulated patterns with known orientations.
+  (`#231 <https://github.com/pyxem/kikuchipy/pull/231>`_,
+  `#233 <https://github.com/pyxem/kikuchipy/pull/233>`_)
 - Reader for EMsoft's simulated EBSD patterns returned by their ``EMEBSD.f90``
   program. (`#202 <https://github.com/pyxem/kikuchipy/pull/202>`_)
 - Modified Lambert mapping, and its inverse, from points on the unit sphere to a
@@ -34,10 +38,11 @@ Added
   gnomonic coordinates. EBSD reference frame documentation.
   (`#204 <https://github.com/pyxem/kikuchipy/pull/204>`_,
   `#215 <https://github.com/pyxem/kikuchipy/pull/215>`_)
-- Geometrical EBSD simulations, projecting a set of Kikuchi bands onto a
-  detector, which can be added to an EBSD signal as markers.
+- Geometrical EBSD simulations, projecting a set of Kikuchi bands and zone axes
+  onto a detector, which can be added to an EBSD signal as markers.
   (`#204 <https://github.com/pyxem/kikuchipy/pull/204>`_,
-  `#219 <https://github.com/pyxem/kikuchipy/pull/219>`_)
+  `#219 <https://github.com/pyxem/kikuchipy/pull/219>`_,
+  `#232 <https://github.com/pyxem/kikuchipy/pull/232>`_)
 - Dependency on the diffsims package (https://github.com/pyxem/diffsims/) for
   handling of electron scattering and diffraction.
   (`#220 <https://github.com/pyxem/kikuchipy/pull/220>`_)
@@ -47,6 +52,9 @@ Added
 
 Changed
 -------
+- Migrating the user guide from `reStructuredText` files to Jupyter Notebooks
+  built to HTML via the `nbsphinx` package.
+  (`#236 <https://github.com/pyxem/kikuchipy/pull/236>`_)
 - Move GitHub repository to the pyxem organization. Update relevant URLs.
   (`#198 <https://github.com/pyxem/kikuchipy/pull/198>`_)
 - Allow scikit-image >= 0.16.
@@ -294,8 +302,7 @@ Features
 - Since the ``EBSD`` class is based upon HyperSpy's ``Signal2D`` class, which
   itself is based upon their ``BaseSignal`` class, all functionality available
   to ``Signal2D`` is also available to the ``EBSD`` class. See HyperSpy's user
-  guide (http://hyperspy.org/hyperspy-doc/current/user_guide/tools.html) for
-  details.
+  guide (http://hyperspy.org/hyperspy-doc/current/user_guide) for details.
 
 Contributors
 ------------

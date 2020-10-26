@@ -16,35 +16,32 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-# Import order must not be changed
-from kikuchipy import crystallography
-from kikuchipy import detectors
-from kikuchipy import draw
-from kikuchipy import filters
-from kikuchipy import indexing
-from kikuchipy import pattern
-from kikuchipy import projections
-from kikuchipy import signals
-from kikuchipy import generators
-from kikuchipy import simulations
-from kikuchipy.io._io import load
-from kikuchipy import data  # Must be below io.load
+"""Color palettes for plotting Kikuchi bands."""
 
-from kikuchipy import release
-
-__version__ = release.version
-
-__all__ = [
-    "crystallography",
-    "data",
-    "detectors",
-    "draw",
-    "filters",
-    "generators",
-    "indexing",
-    "load",
-    "pattern",
-    "projections",
-    "signals",
-    "simulations",
+# Kikuchi band color palette from EDAX TSL Data Collection version 7
+RED = (1, 0, 0)
+GREEN = (0, 1, 0)
+BLUE = (0, 0, 1)
+YELLOW = (1, 1, 0)
+CYAN = (0, 1, 1)
+PINK = (1, 0, 1)
+BROWN = (0.5, 0, 0)
+EARTH = (0.5, 0.5, 0)
+PURPLE = (0.5, 0, 0.5)
+DARK_GREEN = (0, 0.5, 0)
+DARKER_GREEN = (0, 0.5, 0.5)
+DARK_BLUE = (0, 0, 0.5)
+TSL_COLORS = [
+    RED,
+    YELLOW,
+    GREEN,
+    BLUE,
+    PINK,
+    CYAN,
+    BROWN,
+    DARK_GREEN,
+    PURPLE,
+    DARK_BLUE,
+    EARTH,
+    DARKER_GREEN,
 ]
