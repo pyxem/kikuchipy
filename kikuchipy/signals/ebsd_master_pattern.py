@@ -309,6 +309,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             dc=dc,
             master_north=mpn,
             master_south=mps,
+            rescale=False,
             dtype_out=dtype_out,
             drop_axis=1,
             new_axis=(1, 2),
@@ -439,11 +440,14 @@ def _get_lambert_interpolation_parameters(
     )
 
 
-from scipy.interpolate import interp2d
-
 # Map Blocks stuff from here
 def _get_patterns_chunk(
-    r, dc, master_north, master_south, dtype_out=np.float32
+    r,
+    dc,
+    master_north,
+    master_south,
+    rescale,
+    dtype_out=np.float32,
 ):
     m = r.shape[0]
     simulated = np.empty(shape=(m,) + dc.shape, dtype=dtype_out)
