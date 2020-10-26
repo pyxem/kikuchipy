@@ -396,7 +396,7 @@ def _get_direction_cosines(detector: EBSDDetector):
     Ls = -sw * scin_x + L * cw
     Lc = cw * scin_x + L * sw
 
-    i, j = np.meshgrid(  # Is almost correct
+    i, j = np.meshgrid(
         np.arange(detector.nrows - 1, -1, -1),
         np.arange(detector.ncols),
         indexing="ij",
