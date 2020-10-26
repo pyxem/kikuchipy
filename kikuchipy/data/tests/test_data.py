@@ -16,16 +16,17 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Simulations returned by a generator and handling of Kikuchi bands and
-zone axes.
-"""
+from kikuchipy import data
+from kikuchipy.signals import EBSD, LazyEBSD
 
-from kikuchipy.simulations.geometrical_ebsd_simulation import (
-    GeometricalEBSDSimulation,
-)
-from kikuchipy.simulations import features
 
-__all__ = [
-    "GeometricalEBSDSimulation",
-    "features",
-]
+class TestData:
+    def test_load_nickel_small(self):
+        s = data.nickel_small()
+
+        assert isinstance(s, EBSD)
+        assert s.data.shape == (3, 3, 60, 60)
+
+        s2 = data.nickel_small(lazy=True)
+
+        assert isinstance(s2, LazyEBSD)

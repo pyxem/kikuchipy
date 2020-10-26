@@ -16,16 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Module for the set up and generation of signals and simulations."""
+"""Generate signals and simulations, sometimes *from* other signals."""
 
-from kikuchipy.generators.virtual_bse_generator import VirtualBSEGenerator
-from kikuchipy.generators import util
 from kikuchipy.generators.ebsd_simulation_generator import (
     EBSDSimulationGenerator,
 )
+from kikuchipy.generators.virtual_bse_generator import VirtualBSEGenerator
 
 __all__ = [
     "EBSDSimulationGenerator",
-    "util",
     "VirtualBSEGenerator",
 ]

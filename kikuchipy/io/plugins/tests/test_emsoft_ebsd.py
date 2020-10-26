@@ -21,10 +21,15 @@ import os
 import dask.array as da
 from h5py import File
 import numpy as np
+from orix.crystal_map import CrystalMap
 import pytest
 
 from kikuchipy.io._io import load
-from kikuchipy.io.plugins.emsoft_ebsd import _check_file_format
+from kikuchipy.io.plugins.emsoft_ebsd import (
+    _check_file_format,
+    _crystaldata2phase,
+)
+from kikuchipy.io.plugins.h5ebsd import hdf5group2dict
 from kikuchipy.signals.util._metadata import metadata_nodes
 
 DIR_PATH = os.path.dirname(__file__)
@@ -37,6 +42,8 @@ class TestEMsoftEBSDReader:
     def test_file_reader(self):
         """Test correct data shape, axes properties and metadata."""
         s = load(EMSOFT_FILE)
+
+        assert isinstance(s.xmap, CrystalMap)
 
         assert s.data.shape == (10, 10, 10)
 
@@ -85,3 +92,43 @@ class TestEMsoftEBSDReader:
             )
             with pytest.raises(IOError, match=".* is not in EMsoft's format "):
                 _ = _check_file_format(f)
+
+    def test_crystaldata2phase(self):
+        """A Phase object is correctly returned."""
+        with File(EMSOFT_FILE, mode="r") as f:
+            xtal_dict = hdf5group2dict(f["CrystalData"])
+        phase = _crystaldata2phase(xtal_dict)
+
+        assert phase.name == ""
+        assert phase.space_group.number == 140
+        assert phase.color == "tab:blue"
+
+        structure = phase.structure
+        assert np.allclose(
+            structure.lattice.abcABG(), [0.5949, 0.5949, 0.5821, 90, 90, 90]
+        )
+        assert np.allclose(
+            structure.xyz, [[0.1587, 0.6587, 0], [0, 0, 0.25]], atol=1e-4
+        )
+        assert np.allclose(structure.occupancy, [1, 1])
+        assert np.allclose(structure.Bisoequiv, [0.5] * 2)
+        assert np.compare_chararrays(
+            structure.element,
+            np.array(["13", "29"], dtype="|S2"),
+            "==",
+            rstrip=False,
+        ).all()
+
+    def test_crystaldata2phase_single_atom(self):
+        """A Phase object is correctly returned when there is only one
+        atom present.
+        """
+        with File(EMSOFT_FILE, mode="r") as f:
+            xtal_dict = hdf5group2dict(f["CrystalData"])
+        xtal_dict["Natomtypes"] = 1
+        xtal_dict["AtomData"] = xtal_dict["AtomData"][:, 0][..., np.newaxis]
+        xtal_dict["Atomtypes"] = xtal_dict["Atomtypes"][0]
+
+        phase = _crystaldata2phase(xtal_dict)
+
+        assert len(phase.structure) == 1

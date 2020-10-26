@@ -16,6 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Hessian normal form of a plane given by polar coordinates. (Not
+currently used anywhere.)
+"""
+
 from typing import Optional
 
 import numpy as np

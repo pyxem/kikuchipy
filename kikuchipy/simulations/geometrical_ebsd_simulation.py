@@ -17,11 +17,18 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from re import sub
-from typing import Optional
+from typing import List, Optional
+import warnings
 
+import matplotlib
 import numpy as np
 from orix.quaternion.rotation import Rotation
 
+from kikuchipy.crystallography._computations import (
+    _get_hkl_family,
+    _get_colors_for_allowed_bands,
+    _is_equivalent,
+)
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.draw.markers import (
     get_line_segment_list,
@@ -32,16 +39,20 @@ from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 
 class GeometricalEBSDSimulation:
+    """Geometrical EBSD simulation with Kikuchi bands and zone axes."""
+
+    exclude_outside_detector = True
+
     def __init__(
         self,
         detector: EBSDDetector,
         rotations: Rotation,
-        bands: Optional[KikuchiBand] = None,
-        zone_axes: Optional[ZoneAxis] = None,
+        bands: KikuchiBand,
+        zone_axes: ZoneAxis,
     ):
         """Create a geometrical EBSD simulation storing a set of center
-        positions of Kikuchi bands on the detector, one set for each
-        orientation of the unit cell.
+        positions of Kikuchi bands and zone axes on the detector, one
+        set for each orientation of the unit cell.
 
         Parameters
         ----------
@@ -51,9 +62,9 @@ class GeometricalEBSDSimulation:
         rotations
             Orientations of the unit cell.
         bands
-            Kikuchi band(s) projected onto the detector.
+            Kikuchi bands projected onto the detector. Default is None.
         zone_axes
-            Zone axis/axes projected onto the detector. Default is None.
+            Zone axes projected onto the detector. Default is None.
 
         Returns
         -------
@@ -71,9 +82,8 @@ class GeometricalEBSDSimulation:
 
         Returns
         -------
-        band_coords
-            On the form [[x00, y00, x01, y01], [x10, y10, x11, y11],
-            ...].
+        band_coords_detector : numpy.ndarray
+            Band coordinates on the detector.
         """
         # Get start and end points for the plane traces in gnomonic coordinates
         # and set up output array in uncalibrated detector coordinates
@@ -101,23 +111,38 @@ class GeometricalEBSDSimulation:
         """Coordinates of zone axes in uncalibrated detector
         coordinates.
 
+        If `GeometricalEBSDSimulation.exclude_outside_detector` is True,
+        the coordinates of the zone axes outside the detector are set to
+        `np.nan`.
+
         Returns
         -------
-        zone_axes_coords
-            Column sorted, on the form [[x0, y0], [x1, y1], ...].
+        za_coords : numpy.ndarray
+            Zone axis coordinates on the detector.
         """
-        x_gnomonic = self.zone_axes.x_gnomonic
-        y_gnomonic = self.zone_axes.y_gnomonic
-        size = x_gnomonic.size
-        zone_axes_coords = np.zeros((size, 2), dtype=np.float32)
-        pcx, pcy, pcz = self.detector.pc
-        zone_axes_coords[:, 0] = (
-            x_gnomonic + (pcx / pcz)
-        ) / self.detector.x_scale
-        zone_axes_coords[:, 1] = (
-            -y_gnomonic + (pcy / pcz)
-        ) / self.detector.y_scale
-        return zone_axes_coords
+        xyg = self.zone_axes._xy_within_gnomonic_radius
+        xg = xyg[..., 0]
+        yg = xyg[..., 1]
+        za_coords = np.zeros_like(xyg)
+
+        # Get projection center coordinates, and add one axis to get the
+        # shape (navigation shape, 1)
+        pcx = self.detector.pcx[..., np.newaxis]
+        pcy = self.detector.pcy[..., np.newaxis]
+        pcz = self.detector.pcz[..., np.newaxis]
+
+        za_coords[..., 0] = (xg + (pcx / pcz)) / self.detector.x_scale[
+            ..., np.newaxis
+        ]
+        za_coords[..., 1] = (-yg + (pcy / pcz)) / self.detector.y_scale[
+            ..., np.newaxis
+        ]
+
+        if self.exclude_outside_detector:
+            on_detector = self.zone_axes_within_gnomonic_bounds
+            za_coords[~on_detector] = np.nan
+
+        return za_coords
 
     @property
     def zone_axes_label_detector_coordinates(self) -> np.ndarray:
@@ -126,18 +151,26 @@ class GeometricalEBSDSimulation:
 
         Returns
         -------
-        np.ndarray
-            Column sorted, on the form [[x0, y0], [x1, y1], ...].
+        za_coords : numpy.ndarray
+            Zone axes labels placed just above the zone axes.
         """
-        zone_axes_coords = self.zone_axes_detector_coordinates
-        zone_axes_coords[:, 1] -= 0.02 * self.detector.nrows
-        return zone_axes_coords
+        za_coords = self.zone_axes_detector_coordinates
+        za_coords[..., 1] -= 0.02 * self.detector.nrows
+        return za_coords
 
-    def bands_as_markers(self, **kwargs) -> list:
+    def bands_as_markers(
+        self, family_colors: Optional[List[str]] = None, **kwargs
+    ) -> list:
         """Return a list of Kikuchi band line segment markers.
 
         Parameters
         ----------
+        family_colors
+            A list of at least as many colors as unique HKL families,
+            either as RGB iterables or colors recognizable by
+            Matplotlib, used to color each unique family of bands. If
+            None (default), this is determined from a list similar to
+            the one used in EDAX TSL's software.
         kwargs
             Keyword arguments passed to
             :func:`~kikuchipy.draw.markers.get_line_segment_list`.
@@ -145,19 +178,46 @@ class GeometricalEBSDSimulation:
         Returns
         -------
         list
+            List with line segment markers.
         """
         if self.bands.navigation_shape == (1,):
             lines = np.squeeze(self.bands_detector_coordinates)
         else:
             lines = self.bands_detector_coordinates
-        return get_line_segment_list(
-            lines=lines,
-            linewidth=kwargs.pop("linewidth", 2),
-            color=kwargs.pop("color", "lime"),
-            alpha=kwargs.pop("alpha", 0.7),
-            zorder=kwargs.pop("zorder", 1),
-            **kwargs,
-        )
+
+        # Get dictionaries of families and in which a band belongs
+        families, families_idx = _get_hkl_family(self.bands.hkl.data)
+
+        # Get family colors
+        # TODO: Perhaps move this outside this function (might be useful
+        #  elsewhere)
+        if family_colors is None:
+            family_colors = []
+            colors = _get_colors_for_allowed_bands(
+                phase=self.bands.phase,
+                highest_hkl=np.max(np.abs(self.bands._hkldata), axis=0),
+            )
+            for hkl in families.keys():
+                for table_hkl, color in colors:
+                    if _is_equivalent(hkl, table_hkl):
+                        family_colors.append(color)
+                        break
+        #                else:  # Hopefully we never arrive here
+        #                    family_colors.append([1, 0, 0])
+
+        # Append list of markers per family (colors changing with
+        # family)
+        marker_list = []
+        for i, idx in enumerate(families_idx.values()):
+            marker_list += get_line_segment_list(
+                lines=lines[..., idx, :],
+                linewidth=kwargs.pop("linewidth", 1),
+                color=family_colors[i],
+                alpha=kwargs.pop("alpha", 1),
+                zorder=kwargs.pop("zorder", 1),
+                **kwargs,
+            )
+        return marker_list
 
     def zone_axes_as_markers(self, **kwargs) -> list:
         """Return a list of zone axes point markers.
@@ -171,7 +231,11 @@ class GeometricalEBSDSimulation:
         Returns
         -------
         list
+            List with point markers.
         """
+        # TODO: Give them some descriptive colors (facecolor)!
+        # TODO: Marker style based on symmetry (2, 3, 4 and 6-fold):
+        #  https://matplotlib.org/3.3.2/api/markers_api.html#module-matplotlib.markers
         return get_point_list(
             points=self.zone_axes_detector_coordinates,
             size=kwargs.pop("size", 40),
@@ -179,7 +243,7 @@ class GeometricalEBSDSimulation:
             facecolor=kwargs.pop("facecolor", "w"),
             edgecolor=kwargs.pop("edgecolor", "k"),
             zorder=kwargs.pop("zorder", 5),
-            alpha=kwargs.pop("alpha", 0.7),
+            alpha=kwargs.pop("alpha", 1),
             **kwargs,
         )
 
@@ -195,10 +259,23 @@ class GeometricalEBSDSimulation:
         Returns
         -------
         list
+            List of text markers.
         """
-        zone_axes = self.zone_axes[self.zone_axes.within_gnomonic_radius]
+        # TODO: Remove warning after HyperSpy merges this PR
+        #  https://github.com/hyperspy/hyperspy/pull/2558 and publishes
+        #  a minor release with that update
+        if matplotlib._log.level < 40:
+            warnings.warn(
+                message=(
+                    "Matplotlib will print log warnings when EBSD.plot() is "
+                    "called due to zone axes NaN values, unless it's log level "
+                    "is set to 'error' via `matplotlib.set_loglevel('error')`. "
+                    "This will hopefully be unnecessary in the future."
+                ),
+                category=UserWarning,
+            )
         return get_text_list(
-            texts=sub("[][ ]", "", str(zone_axes._hkldata)).split("\n"),
+            texts=sub("[][ ]", "", str(self.zone_axes._hkldata)).split("\n"),
             coordinates=self.zone_axes_label_detector_coordinates,
             color=kwargs.pop("color", "k"),
             zorder=kwargs.pop("zorder", 5),
@@ -210,7 +287,7 @@ class GeometricalEBSDSimulation:
                     edgecolor="k",
                     boxstyle="round, rounding_size=0.2",
                     pad=0.1,
-                    alpha=0.7,
+                    alpha=1,
                 ),
             ),
         )
@@ -227,8 +304,17 @@ class GeometricalEBSDSimulation:
         Returns
         -------
         list
+            List of point markers.
         """
-        pcxy = self.detector.pc[..., :2]
+        # Set up (x, y) detector coordinate array of final shape
+        # nav_shape + (n_patterns, 2)
+        nav_shape = self.bands.navigation_shape
+        n = int(np.prod(nav_shape))  # Number of patterns
+        pcxy = np.ones((n, n, 2)) * np.nan
+        i = np.arange(n)
+        pcxy[i, i, :2] = self.detector.pc[..., :2].reshape((n, 2))
+        pcxy = pcxy.reshape(nav_shape + (n, 2))
+
         nrows, ncols = self.detector.shape
         x_scale = ncols - 1 if ncols > 1 else 1
         y_scale = nrows - 1 if nrows > 1 else 1
@@ -238,7 +324,7 @@ class GeometricalEBSDSimulation:
             points=pcxy,
             size=kwargs.pop("size", 150),
             marker=kwargs.pop("marker", "*"),
-            facecolor=kwargs.pop("facolor", "C1"),
+            facecolor=kwargs.pop("facecolor", "C1"),
             edgecolor=kwargs.pop("edgecolor", "k"),
             zorder=kwargs.pop("zorder", 6),
         )
@@ -254,8 +340,7 @@ class GeometricalEBSDSimulation:
         zone_axes_labels_kwargs: Optional[dict] = None,
         pc_kwargs: Optional[dict] = None,
     ) -> list:
-        """Return a list of all or some of the available simulation
-        markers.
+        """Return a list of all or some of the simulation markers.
 
         Parameters
         ----------
@@ -283,8 +368,8 @@ class GeometricalEBSDSimulation:
 
         Returns
         -------
-        markers
-            A list with all markers.
+        markers : hyperspy.drawing.marker.MarkerBase
+            List with all markers.
         """
         markers = []
         if bands:
@@ -307,6 +392,46 @@ class GeometricalEBSDSimulation:
             markers += self.pc_as_markers(**pc_kwargs)
         return markers
 
+    @property
+    def zone_axes_within_gnomonic_bounds(self) -> np.ndarray:
+        """Return a boolean array with True for the zone axes within
+        the detector's gnomonic bounds.
+
+        Returns
+        -------
+        within_gnomonic_bounds : numpy.ndarray
+            Boolean array with True for zone axes within the detector's
+            gnomonic bounds.
+        """
+        # Get gnomonic bounds
+        x_range = self.detector.x_range
+        y_range = self.detector.y_range
+
+        # Extend gnomonic bounds by one detector pixel to include zone
+        # axes on the detector border
+        x_scale = self.detector.x_scale
+        y_scale = self.detector.y_scale
+        x_range[..., 0] -= x_scale
+        x_range[..., 1] += x_scale
+        y_range[..., 0] -= y_scale
+        y_range[..., 1] += y_scale
+
+        # Get gnomonic coordinates
+        xg = self.zone_axes.x_gnomonic
+        yg = self.zone_axes.y_gnomonic
+
+        # Add an extra dimension to account for n number of zone axes in
+        # the last dimension for the gnomonic coordinate arrays
+        x_range = np.expand_dims(x_range, axis=-2)
+        y_range = np.expand_dims(y_range, axis=-2)
+
+        # Get boolean array
+        within_x = np.logical_and(xg >= x_range[..., 0], xg <= x_range[..., 1])
+        within_y = np.logical_and(yg >= y_range[..., 0], yg <= y_range[..., 1])
+        within_gnomonic_bounds = within_x * within_y
+
+        return within_gnomonic_bounds.reshape(self.zone_axes._data_shape)
+
     def __repr__(self):
         rotation_repr = repr(self.rotations).split("\n")[0]
         band_repr = repr(self.bands).split("\n")[0]
@@ -315,5 +440,5 @@ class GeometricalEBSDSimulation:
             f"{self.detector}\n"
             f"{self.bands.phase}\n"
             f"{band_repr}\n"
-            f"{rotation_repr}\n"
+            f"{rotation_repr}"
         )

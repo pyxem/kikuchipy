@@ -16,16 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Simulations returned by a generator and handling of Kikuchi bands and
-zone axes.
-"""
+"""Indexing of EBSD patterns."""
 
-from kikuchipy.simulations.geometrical_ebsd_simulation import (
-    GeometricalEBSDSimulation,
+from kikuchipy.indexing.similarity_metrics import (
+    make_similarity_metric,
+    MetricScope,
 )
-from kikuchipy.simulations import features
+from kikuchipy.indexing.pattern_matching import pattern_match
 
 __all__ = [
-    "GeometricalEBSDSimulation",
-    "features",
+    "make_similarity_metric",
+    "MetricScope",
+    "pattern_match",
 ]

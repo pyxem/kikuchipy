@@ -111,10 +111,7 @@ class Window(np.ndarray):
 
     See Also
     --------
-    :func:`scipy.signal.windows.get_window`,
-    kikuchipy.filters.modified_hann,
-    kikuchipy.filters.highpass_fft_filter,
-    kikuchipy.filters.lowpass_fft_filter
+    :func:`scipy.signal.windows.get_window`
     """
 
     name: str = None
@@ -269,9 +266,7 @@ class Window(np.ndarray):
         ----------
         shape
             Shape of data to apply window to.
-
         """
-
         # Number of window dimensions cannot be greater than data
         # dimensions, and a window axis cannot be greater than the
         # corresponding data axis

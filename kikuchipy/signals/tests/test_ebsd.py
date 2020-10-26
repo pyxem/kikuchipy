@@ -25,6 +25,7 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 import matplotlib
 from matplotlib.pyplot import close
 import numpy as np
+from orix.crystal_map import CrystalMap
 import pytest
 from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
@@ -39,6 +40,7 @@ matplotlib.use("Agg")  # For plotting
 
 DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy/patterns.h5")
+EMSOFT_FILE = os.path.join(DIR_PATH, "../../data/emsoft_ebsd/simulated_ebsd.h5")
 
 
 def assert_dictionary(input_dict, output_dict):
@@ -1193,3 +1195,20 @@ class TestNormalizeIntensityEBSD:
 
         assert isinstance(lazy_signal, LazyEBSD)
         assert np.allclose(np.mean(lazy_signal.data.compute()), 0, atol=1e-6)
+
+
+class TestEBSDxmapProperty:
+    def test_init_xmap(self, dummy_signal):
+        """The attribute is set correctly."""
+        assert dummy_signal.xmap is None
+
+        ssim = load(EMSOFT_FILE)
+        xmap = ssim.xmap
+        assert isinstance(xmap, CrystalMap)
+        assert xmap.phases[0].name == "ni"
+
+
+class TestEBSDdetectorProperty:
+    def test_init_detector(self):
+        """The attribute is set correctly."""
+        pass

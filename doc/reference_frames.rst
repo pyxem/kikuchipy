@@ -45,7 +45,7 @@ The EBSD detector
 -----------------
 
 All relevant parameters for the sample-detector geometry are stored in an
-:class:`~kikuchipy.detectors.EBSDDetector` object:
+:class:`~kikuchipy.detectors.ebsd_detector.EBSDDetector` object:
 
 .. code::
 
@@ -78,11 +78,11 @@ convention:
 Above, the PC was passed in the EDAX TSL convention. Passing the PC in the
 Bruker, Oxford, or EMsoft v4 or v5 convention is also supported. Likewise, the
 PC can be returned in all conventions via
-:meth:`~kikuchipy.detectors.EBSDDetector.pc_emsoft` and similar. Conversions
-between conventions are implemented as described in [Jackson2019]_. The unbinned
-pixel size :math:`\delta`, binning factor :math:`b` and number of pixel rows
-:math:`s_y` and columns :math:`s_x` are needed to convert a PC between the
-EMsoft and Bruker conventions:
+:meth:`~kikuchipy.detectors.ebsd_detector.EBSDDetector.pc_emsoft` and similar.
+Conversions between conventions are implemented as described in
+:cite:`jackson2019dictionary`. The unbinned pixel size :math:`\delta`, binning
+factor :math:`b` and number of pixel rows :math:`s_y` and columns :math:`s_x`
+are needed to convert a PC between the EMsoft and Bruker conventions:
 
 - EDAX TSL or Oxford to Bruker
 
@@ -101,8 +101,8 @@ EMsoft and Bruker conventions:
     \right].
 
 The detector can be plotted to show whether the average PC is placed as
-expected using :meth:`~kikuchipy.detectors.EBSDDetector.plot` (see its docstring
-for a complete explanation of its parameters):
+expected using :meth:`~kikuchipy.detectors.ebsd_detector.EBSDDetector.plot` (see
+its docstring for a complete explanation of its parameters):
 
 .. code::
 
@@ -137,10 +137,11 @@ dimension (maximum of two):
     PC was the main motivation behind the ``EBSDDetector`` class.
 
 The right panel in :numref:`fig-detector-coordinates` shows the detector plotted
-in the gnomonic projection using :meth:`~kikuchipy.detectors.EBSDDetector.plot`.
-We assign 2D gnomonic coordinates (:math:`x_g`, :math:`y_g`) in a gnomonic
-projection plane parallel to the detector screen to a 3D point (:math:`x_d`,
-:math:`y_d`, :math:`z_d`) in the detector frame as
+in the gnomonic projection using
+:meth:`~kikuchipy.detectors.ebsd_detector.EBSDDetector.plot`. We assign 2D
+gnomonic coordinates (:math:`x_g`, :math:`y_g`) in a gnomonic projection plane
+parallel to the detector screen to a 3D point (:math:`x_d`, :math:`y_d`,
+:math:`z_d`) in the detector frame as
 
 .. math::
 
