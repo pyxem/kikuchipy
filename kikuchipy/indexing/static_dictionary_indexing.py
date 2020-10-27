@@ -101,7 +101,7 @@ class StaticDictionaryIndexing:
             if answer != "y":
                 return
 
-        n_slices = None if n_slices == 1 else n_slices
+        #        n_slices = None if n_slices == 1 else n_slices
 
         metric = SIMILARITY_METRICS.get(metric, metric)
 

@@ -68,8 +68,8 @@ def pattern_match(
         Whether to compute dask arrays before returning, by default
         True.
     n_slices : int, optional
-        Number of simulated slices to process sequentially, by default
-        1.
+        Number of simulated slices to process sequentially. Default is
+        1, i.e. the simulated pattern array is not sliced.
 
     Returns
     -------
@@ -190,7 +190,7 @@ def _pattern_match_slice_simulated(
     simulated: Union[np.ndarray, da.Array],
     keep_n: int,
     metric: SimilarityMetric,
-    n_slices: int,
+    n_slices: int = 1,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """See :func:`pattern_match`.
 
@@ -204,8 +204,9 @@ def _pattern_match_slice_simulated(
         Number of results to keep.
     metric : SimilarityMetric
         Similarity metric.
-    n_slices : int
-        Number of simulation slices to process sequentially.
+    n_slices : int, optional
+        Number of simulation slices to process sequentially. Default is
+        1, i.e. the simulated pattern array is not sliced.
 
     Returns
     -------
