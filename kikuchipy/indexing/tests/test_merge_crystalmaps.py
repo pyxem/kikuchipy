@@ -17,6 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import pytest
+import warnings
 import numpy as np
 
 from orix.crystal_map import CrystalMap
@@ -46,3 +47,24 @@ def test_merge_crystalmaps():
     xmap2.phases._dict[0].name = "2"
     xmap_merged = merge_crystalmaps([xmap2, xmap1])
     assert np.allclose(xmap_merged.template_indices[:, 0], np.arange(9))
+
+
+def test_warning_merge_maps_with_same_phase():
+    xmap1 = CrystalMap(
+        Rotation(np.zeros((9, 4))),
+        x=np.arange(9),
+        prop={
+            "metric_results": np.ones((9, 1)),
+            "template_indices": np.arange(9).reshape((9, 1)),
+        },
+    )
+    xmap2 = CrystalMap(
+        Rotation(np.zeros((9, 4))),
+        x=np.arange(9),
+        prop={
+            "metric_results": np.zeros((9, 1)),
+            "template_indices": np.arange(9, 18).reshape((9, 1)),
+        },
+    )
+    with pytest.warns(UserWarning):
+        merge_crystalmaps([xmap2, xmap1])
