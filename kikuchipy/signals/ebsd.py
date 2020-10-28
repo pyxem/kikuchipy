@@ -62,6 +62,10 @@ from kikuchipy.signals.util._dask import (
     _rechunk_learning_results,
     _update_learning_results,
 )
+from kikuchipy.signals.util._map_helper import (
+    _get_neighbour_dot_product_matrices,
+    _get_average_dot_product_map,
+)
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 from kikuchipy.signals._common_image import CommonImage
 from kikuchipy.detectors import EBSDDetector
@@ -979,6 +983,96 @@ class EBSD(CommonImage, Signal2D):
         else:
             self.data = filtered_patterns
 
+    def get_neighbour_dot_product_matrices(
+        self, window: Window = None, standardize=True, dtype=np.float32
+    ):
+        # Create dask array of signal patterns and do processing on this
+        dask_array = _get_dask_array(signal=self)
+
+        if window is None:
+            window = Window(window="circular", shape=(3, 3))
+        window_extent = np.subtract(window.shape, window.origin) - 1
+
+        overlap_depth = {
+            i: e
+            for i, (e, c) in enumerate(
+                zip(window_extent, dask_array.chunks[:-2])
+            )
+            if c[0] != dask_array.shape[i]
+        }
+        overlap_boundary = "none"  # {0: "none", 1: "none"}
+        overlapped_dask_array = da.overlap.overlap(
+            dask_array, depth=overlap_depth, boundary=overlap_boundary
+        )
+        dp_matrices = overlapped_dask_array.map_blocks(
+            _get_neighbour_dot_product_matrices,
+            dtype=dtype,
+            standardize=standardize,
+            window=window,
+        )
+        dp_matrices = da.overlap.trim_internal(
+            dp_matrices, overlap_depth, overlap_boundary
+        )
+        if not self._lazy:
+            with ProgressBar():
+                print(
+                    "Calculating neighbour dot product matrices:",
+                    file=sys.stdout,
+                )
+                dp_matrices = dp_matrices.compute()
+        return dp_matrices
+
+    def get_average_dot_product(
+        self,
+        dp_matrices: np.ndarray = None,
+        window: Window = None,
+        standardize: bool = False,
+        dtype=np.float32,
+    ):
+        # Create dask array of signal patterns and do processing on this
+        if dp_matrices is not None:
+            # Check of dp_matrices.ndim == 4 can go here
+            origin = (
+                window.origin
+                if window is not None
+                else tuple(i // 2 for i in dp_matrices.shape[-2:])
+            )
+            dp_matrices = dp_matrices.copy()
+            dp_matrices[:, :, origin[0], origin[1]] = np.nan
+            return np.nanmean(dp_matrices, axis=(2, 3))
+
+        dask_array = _get_dask_array(signal=self)
+        if window is None:
+            window = Window(window="circular", shape=(3, 3))
+        window_extent = np.subtract(window.shape, window.origin) - 1
+
+        overlap_depth = {
+            i: e
+            for i, (e, c) in enumerate(
+                zip(window_extent, dask_array.chunks[:-2])
+            )
+            if c[0] != dask_array.shape[i]
+        }
+        overlap_boundary = "none"
+        overlapped_dask_array = da.overlap.overlap(
+            dask_array, depth=overlap_depth, boundary=overlap_boundary
+        )
+        adp = overlapped_dask_array.map_blocks(
+            _get_average_dot_product_map,
+            dtype=dtype,
+            standardize=standardize,
+            window=window,
+        )
+        adp = da.overlap.trim_internal(adp, overlap_depth, overlap_boundary)
+        if not self._lazy:
+            with ProgressBar():
+                print(
+                    "Calculating average dot product map:",
+                    file=sys.stdout,
+                )
+                adp = adp.compute()
+        return adp
+
     def average_neighbour_patterns(
         self,
         window: Union[str, np.ndarray, da.Array, Window] = "circular",
@@ -1072,7 +1166,9 @@ class EBSD(CommonImage, Signal2D):
             averaging_window = copy.copy(window)
         else:
             averaging_window = Window(
-                window=window, shape=window_shape, **kwargs,
+                window=window,
+                shape=window_shape,
+                **kwargs,
             )
         averaging_window.shape_compatible(self.axes_manager.signal_shape)
 
@@ -1126,7 +1222,9 @@ class EBSD(CommonImage, Signal2D):
                 overlap_depth[i] = 0
         overlap_boundary = {i: "none" for i in range(data_dim)}
         overlapped_dask_array = da.overlap.overlap(
-            dask_array, depth=overlap_depth, boundary=overlap_boundary,
+            dask_array,
+            depth=overlap_depth,
+            boundary=overlap_boundary,
         )
 
         # Must also be overlapped, since the patterns are overlapped
