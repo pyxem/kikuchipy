@@ -54,12 +54,12 @@ class TestStaticDictionaryIndexing:
         sd = StaticDictionaryIndexing([s_dict1, s_dict2])
         res = sd.index(s)
         cm1, _, _ = res
-        assert np.allclose(cm1.metric_results, 1)
-        # np.isin(["metric_results","template_indices","osm"],list(cm.prop.keys()))
+        assert np.allclose(cm1.scores, 1)
+        # np.isin(["scores","simulated_indices","osm"],list(cm.prop.keys()))
         assert np.all(
             [
-                "metric_results" in cm.prop
-                and "template_indices" in cm.prop
+                "scores" in cm.prop
+                and "simulated_indices" in cm.prop
                 and "osm" in cm.prop
                 for cm in res
             ]

@@ -29,7 +29,7 @@ class TestOrientationSimilarityMap:
     def test_orientation_similarity_map(self):
         xmap = CrystalMap(
             rotations=Rotation(np.zeros((100, 4))),
-            prop={"template_indices": np.tile(np.arange(5), (100, 1))},
+            prop={"simulated_indices": np.tile(np.arange(5), (100, 1))},
             x=np.tile(np.arange(10), 10),
             y=np.tile(np.arange(10), 10),
         )
@@ -38,7 +38,7 @@ class TestOrientationSimilarityMap:
     def test_n_largest_too_great(self):
         xmap = CrystalMap(
             rotations=Rotation(np.zeros((100, 4))),
-            prop={"template_indices": np.ones((100, 5))},
+            prop={"simulated_indices": np.ones((100, 5))},
             x=np.tile(np.arange(10), 10),
             y=np.tile(np.arange(10), 10),
         )
@@ -48,7 +48,7 @@ class TestOrientationSimilarityMap:
     def test_from_n_largest(self):
         xmap = CrystalMap(
             rotations=Rotation(np.zeros((100, 4))),
-            prop={"template_indices": np.ones((100, 5))},
+            prop={"simulated_indices": np.ones((100, 5))},
             x=np.tile(np.arange(10), 10),
             y=np.tile(np.arange(10), 10),
         )

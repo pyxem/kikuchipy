@@ -68,7 +68,7 @@ class StaticDictionaryIndexing:
     ) -> List[CrystalMap]:
         """Perform Dictionary Indexing on patterns against preloaded dictionaries.[ref here or elsewhere?]
 
-        Produce a `CrystalMap` for each dictionary with `metric_results` and `template_indices` as properties.
+        Produce a `CrystalMap` for each dictionary with `scores` and `simulated_indices` as properties.
 
         Parameters
         ----------
@@ -79,9 +79,9 @@ class StaticDictionaryIndexing:
         keep_n : int, optional
             Number of sorted results to keep, by default 1.
         n_slices : int, optional
-            Number of template slices to process sequentially, by default 1.
+            Number of slices of simulations to process sequentially, by default 1.
         merge_xmaps : bool, optional
-            Produce a merged crystal map from best results, by default True.
+            Produce a merged crystal map from best scores, by default True.
             See also `merge_crystalmaps`.
         osm : bool, optional
             Orientation Similarity Maps as property `osm`, by default True.
@@ -93,10 +93,10 @@ class StaticDictionaryIndexing:
         """
 
         # This needs a rework before sent to cluster and possibly more automatic slicing with dask
-        num_templates = self.dictionaries[0].data.shape[0]
-        if num_templates // n_slices > 13500:
+        num_simulations = self.dictionaries[0].data.shape[0]
+        if num_simulations // n_slices > 13500:
             answer = input(
-                f"You should probably increase n_slices depending on your available memory, try above {num_templates // 13500}. Do you want to proceed? [y/n]"
+                f"You should probably increase n_slices depending on your available memory, try above {num_simulations // 13500}. Do you want to proceed? [y/n]"
             )
             if answer != "y":
                 return
@@ -130,16 +130,16 @@ class StaticDictionaryIndexing:
         #
 
         def match_result_2_xmap(i, mr):
-            t_indices, coeffs = mr
+            simulated_indices, scores = mr
             xmap = self.dictionaries[i].xmap
             phase_list = xmap.phases_in_data
-            rotations = xmap.rotations[t_indices]
+            rotations = xmap.rotations[simulated_indices]
             return CrystalMap(
                 rotations,
                 x=x,
                 y=y,
                 phase_list=phase_list,
-                prop={"metric_results": coeffs, "template_indices": t_indices},
+                prop={"scores": scores, "simulated_indices": simulated_indices},
                 scan_unit=scan_unit,
             )
 
@@ -151,21 +151,21 @@ class StaticDictionaryIndexing:
         # Creating one CrystalMap using best metric result accross all dictionaries
         #
         if merge_xmaps and len(self.dictionaries) > 1:
-            # Cummulative summation of the dictionary lengths to create unique template ids across dictionaries
+            # Cummulative summation of the dictionary lengths to create unique simulation ids across dictionaries
             cum_sum_dict_lengths = np.cumsum(
                 [d.data.shape[0] for d in self.dictionaries]
             )
 
-            def adjust_t_ids(i, xmap):
+            def adjust_sim_ids(i, xmap):
                 if i == 0:
                     return xmap
-                xmap.prop["template_indices"] += cum_sum_dict_lengths[i - 1]
+                xmap.simulated_indices += cum_sum_dict_lengths[i - 1]
                 return xmap
 
-            xmaps_unique_t_ids = [
-                adjust_t_ids(i, xmap) for i, xmap in enumerate(xmaps)
+            xmaps_unique_sim_ids = [
+                adjust_sim_ids(i, xmap) for i, xmap in enumerate(xmaps)
             ]
-            xmap_merged = merge_crystalmaps(xmaps_unique_t_ids, metric=metric)
+            xmap_merged = merge_crystalmaps(xmaps_unique_sim_ids, metric=metric)
             xmaps.append(xmap_merged)
 
         # Orientation Similarity Maps

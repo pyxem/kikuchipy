@@ -40,13 +40,13 @@ def orientation_similarity_map(
 ) -> np.ndarray:
     """Create Orientation Similarity Map(OSM), following [Marquardt2017]_.
 
-    The given CrystalMap `xmap` must contain `"template_indices"` in `xmap.prop`
+    The given CrystalMap `xmap` must have `simulated_indices` as property
     as produced by :class:`~kikuchipy.indexing.StaticDictionaryIndexing`.
 
     Parameters
     ----------
     xmap : CrystalMap
-        CrystalMap with "template_indices" in prop
+        CrystalMap with `simulated_indices` in prop
     n_largest : int, optional
         Number of sorted results to be used, by default use all.
     normalize_by_n : bool, optional
@@ -86,9 +86,9 @@ def orientation_similarity_map(
     if footprint is None:
         footprint = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
 
-    template_indices = xmap.prop["template_indices"]
+    simulated_indices = xmap.simulated_indices
 
-    nav_size, keep_n = template_indices.shape
+    nav_size, keep_n = simulated_indices.shape
 
     if n_largest is None:
         n_largest = keep_n
@@ -127,7 +127,7 @@ def orientation_similarity_map(
         return os
 
     for i, n in enumerate(range(n_largest, from_n_largest - 1, -1)):
-        match_indicies = template_indices[:, :n]
+        match_indicies = simulated_indices[:, :n]
         osm[:, :, i] = generic_filter(
             flat_index_map,
             lambda v: os_per_pixel(v, match_indicies, n),

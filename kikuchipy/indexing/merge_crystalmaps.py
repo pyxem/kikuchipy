@@ -36,36 +36,32 @@ def merge_crystalmaps(
     mean_n_largest: int = 1,
     metric: Union[str, SimilarityMetric] = None,
 ):
-    """Merge a list of `CrystalMap`s into a single map. Used on results from DictionaryIndexing.
+    """Merge a list of single-phase `CrystalMap`s into one multi-phase map. Used on results from DictionaryIndexing.
 
-    The given `CrystalMap`s must have "template_indices" and "metric_results" in prop
+    The given `CrystalMap`s must have "simulated_indices" and "scores" in prop
     as produced by :class:`~kikuchipy.indexing.StaticDictionaryIndexing`.
     Both props are merge sorted into the returned map.
 
     Parameters
     ----------
     xmaps : List[CrystalMap]
-        List of `CrystalMap`s with "template_indices" and "metric_results" in prop
+        List of `CrystalMap`s with "simulated_indices" and "scores" in prop
     mean_n_largest : int, optional
         Number of top metric results to take the mean of,
-        before comparing and put in the property `merged_top_metric_result`, by default 1
+        before comparing and put in the property `merged_top_scores`, by default 1
     metric : Union[str, SimilarityMetric], optional
         Similarity metric, by default None
 
     Returns
     -------
     merged_xmap : CrystalMap
-        A CrystalMap with added prop "merged_top_metric_result"
+        A CrystalMap with added prop `merged_top_scores`
 
     Notes
     -----
     `mean_n_largest` can be given with a negative sign if metric is not given
     in order to choose the lowest valued metric results.
 
-    Raises
-    ------
-    ValueError
-        If `xmaps` contains CrystalMaps with equal phases.
     """
     if metric is None:
         sign = copysign(1, mean_n_largest)
@@ -73,39 +69,30 @@ def merge_crystalmaps(
     else:
         sign = SIMILARITY_METRICS.get(metric, metric).sign
 
-    top_results_across_xmaps = np.array(
-        [
-            np.mean(xmap.metric_results[:, :mean_n_largest], axis=1)
-            for xmap in xmaps
-        ]
+    top_scores_across_xmaps = np.array(
+        [np.mean(xmap.scores[:, :mean_n_largest], axis=1) for xmap in xmaps]
     )
 
-    phase_id = np.argmax(sign * top_results_across_xmaps, axis=0)
-    merged_top_metric_result = np.choose(phase_id, top_results_across_xmaps)
+    phase_id = np.argmax(sign * top_scores_across_xmaps, axis=0)
+    merged_top_scores = np.choose(phase_id, top_scores_across_xmaps)
 
-    metric_results = np.concatenate(
-        [xmap.metric_results for xmap in xmaps], axis=1
-    )
+    scores = np.concatenate([xmap.scores for xmap in xmaps], axis=1)
 
-    metric_result_sorted_indicies = np.argsort(
-        sign * -metric_results, kind="mergesort", axis=1
-    )
+    score_sorted_indicies = np.argsort(sign * -scores, kind="mergesort", axis=1)
 
-    template_indices = np.concatenate(
-        [xmap.template_indices for xmap in xmaps],
+    simulated_indices = np.concatenate(
+        [xmap.simulated_indices for xmap in xmaps],
         axis=1,
     )
-    template_indices = np.take_along_axis(
-        template_indices, metric_result_sorted_indicies, axis=1
+    simulated_indices = np.take_along_axis(
+        simulated_indices, score_sorted_indicies, axis=1
     )
-    metric_results = np.take_along_axis(
-        metric_results, metric_result_sorted_indicies, axis=1
-    )
+    scores = np.take_along_axis(scores, score_sorted_indicies, axis=1)
 
     prop = {
-        "merged_top_metric_result": merged_top_metric_result,
-        "template_indices": template_indices,
-        "metric_results": metric_results,
+        "merged_top_scores": merged_top_scores,
+        "simulated_indices": simulated_indices,
+        "scores": scores,
     }
 
     # The rotations can be examined more carefully, takes now all keep_n only for the top 1 phase
@@ -116,7 +103,7 @@ def merge_crystalmaps(
     )
     rotations = Rotation(rotations)
 
-    # OBS! Can raise ValueError if phase already in phase_lists
+    # Warn if phase already in phase_lists
     phase_list = PhaseList()
     for xmap in xmaps:
         try:

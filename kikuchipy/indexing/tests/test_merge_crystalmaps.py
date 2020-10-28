@@ -31,22 +31,22 @@ def test_merge_crystalmaps():
         Rotation(np.zeros((9, 4))),
         x=np.arange(9),
         prop={
-            "metric_results": np.ones((9, 1)),
-            "template_indices": np.arange(9).reshape((9, 1)),
+            "scores": np.ones((9, 1)),
+            "simulated_indices": np.arange(9).reshape((9, 1)),
         },
     )
     xmap2 = CrystalMap(
         Rotation(np.zeros((9, 4))),
         x=np.arange(9),
         prop={
-            "metric_results": np.zeros((9, 1)),
-            "template_indices": np.arange(9, 18).reshape((9, 1)),
+            "scores": np.zeros((9, 1)),
+            "simulated_indices": np.arange(9, 18).reshape((9, 1)),
         },
     )
     xmap1.phases._dict[0].name = "1"
     xmap2.phases._dict[0].name = "2"
     xmap_merged = merge_crystalmaps([xmap2, xmap1])
-    assert np.allclose(xmap_merged.template_indices[:, 0], np.arange(9))
+    assert np.allclose(xmap_merged.simulated_indices[:, 0], np.arange(9))
 
 
 def test_warning_merge_maps_with_same_phase():
@@ -54,16 +54,16 @@ def test_warning_merge_maps_with_same_phase():
         Rotation(np.zeros((9, 4))),
         x=np.arange(9),
         prop={
-            "metric_results": np.ones((9, 1)),
-            "template_indices": np.arange(9).reshape((9, 1)),
+            "scores": np.ones((9, 1)),
+            "simulated_indices": np.arange(9).reshape((9, 1)),
         },
     )
     xmap2 = CrystalMap(
         Rotation(np.zeros((9, 4))),
         x=np.arange(9),
         prop={
-            "metric_results": np.zeros((9, 1)),
-            "template_indices": np.arange(9, 18).reshape((9, 1)),
+            "scores": np.zeros((9, 1)),
+            "simulated_indices": np.arange(9, 18).reshape((9, 1)),
         },
     )
     with pytest.warns(UserWarning):
