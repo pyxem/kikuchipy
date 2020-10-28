@@ -18,6 +18,7 @@
 
 from typing import Union, List
 from math import copysign
+import warnings
 
 import numpy as np
 
@@ -118,7 +119,14 @@ def merge_crystalmaps(
     # OBS! Can raise ValueError if phase already in phase_lists
     phase_list = PhaseList()
     for xmap in xmaps:
-        phase_list.add(xmap.phases_in_data)
+        try:
+            phase_list.add(xmap.phases_in_data)
+        except ValueError:
+            warnings.warn(
+                f"One or more of the phases in {xmap.phases_in_data} are already"
+                "in the PhaseList.",
+                UserWarning,
+            )
 
     merged_xmap = CrystalMap(
         rotations,
