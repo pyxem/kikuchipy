@@ -1252,5 +1252,5 @@ class TestDictionaryIndexing:
         all patterns from dummy_signal"""
         s_dict = EBSD(dummy_signal.data.reshape(-1, 3, 3))
         s_dict._xmap = CrystalMap(Rotation(np.zeros((9, 4))), x=np.arange(9))
-        cm = dummy_signal.dictionary_indexing(s_dict)
+        (cm,) = dummy_signal.dictionary_indexing(s_dict)
         assert np.allclose(cm.scores, 1)
