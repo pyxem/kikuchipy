@@ -376,11 +376,11 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
     r_g.unit : Vector3d
         Object containing the direction cosines for each detector pixel.
     """
-    xpc = detector.pc[..., 0]
-    ypc = detector.pc[..., 1]
-    L = detector.pc[..., 2]  # This will be wrong in the future
-    # xpc, ypc, L = detector.pc_emsoft() It should probably be something like this
 
+    pc = detector.pc_emsoft()
+    xpc = pc[..., 0]
+    ypc = pc[..., 1]
+    L = pc[..., 2]
     # Scintillator coordinates in microns
     scin_x = (
         -((-xpc - (1.0 - detector.ncols) * 0.5) - np.arange(0, detector.ncols))
