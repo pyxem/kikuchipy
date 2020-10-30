@@ -1,0 +1,77 @@
+ &MCCLdata
+! only bse1, full or Ivol simulation
+ mode = 'full' ! 'bse1' (=ECP) or 'full' (=EBSD), 'Ivol' for interaction volume output
+! name of the crystal structure file
+ xtalname = 'ni/ni.xtal',
+! for EBSD and ECP: number of pixels along x-direction of square projection [odd number!]
+ numsx = 201,
+!
+!================ EBSD parameters ==================
+!
+! for full EBSD mode: sample tilt angle from horizontal [degrees]
+ sig = 70.0,
+! sample tilt angle around RD axis [degrees]
+ omega = 0.0,
+!
+!================ ECP (BSE1) parameters ============
+!
+! start angle
+ sigstart = 0.0,
+! end angle
+ sigend = 30.0,
+! sig step size
+ sigstep = 2.0,
+!
+!======== Interaction Volume parameters ============
+! beam enters volume at [(ivolx-1)/2, (ivoly-1)/2, 0]
+!
+! x, y, z number of voxels [odd numbers!]
+ ivolx = 1001,
+ ivoly = 1001,
+ ivolz = 101,
+! x, y, z voxel step sizes [nm]
+ ivolstepx = 1.0,
+ ivolstepy = 1.0,
+ ivolstepz = 1.0,
+!
+!================ GPU parameters ===================
+!
+! number of incident electrons per thread
+ num_el = 10,
+! GPU platform ID selector
+ platid = 1,
+! GPU device ID selector
+ devid = 1,
+! number of work items (depends on GPU card; leave unchanged)
+ globalworkgrpsz = 150,
+!
+!================ # electrons ======================
+!
+! total number of incident electrons and multiplier (to get more than 2^(31)-1 electrons)
+ totnum_el = 2000000000,
+ multiplier = 1,
+!
+!================ energy parameters ================
+!
+! incident beam energy [keV]
+ EkeV = 20.1D0,
+! minimum energy to consider [keV]
+ Ehistmin = 20.D0,
+! energy binsize [keV]
+ Ebinsize = 1.0D0,
+!
+!========= EBSD/ECP depth parameters ===============
+! (these parameters are not used for Ivol mode)
+!
+! maximum depth to consider for exit depth statistics [nm]
+ depthmax = 100.D0,
+! depth step size [nm]
+ depthstep = 1.0D0,
+!
+!========= output file =============================
+!
+! output data file name; pathname is relative to the EMdatapathname path !!!
+ dataname = 'crystal_data/ni/ni_mc_mp_20kv2.h5',
+! should the user be notified by email or Slack that the program has completed its run?
+ Notify = 'Off',
+ /

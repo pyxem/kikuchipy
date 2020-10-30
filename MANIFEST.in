@@ -8,6 +8,6 @@ include setup.py
 include kikuchipy/hyperspy_extension.yaml
 
 recursive-include doc Makefile make.bat
-recursive-include doc *.rst *.py
+recursive-include doc *.rst *.py *.ipynb
 recursive-include doc/_static *.png *.jpg *.svg *.gif *.sh
 recursive-include kikuchipy/data *
