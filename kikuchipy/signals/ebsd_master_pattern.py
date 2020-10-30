@@ -409,9 +409,40 @@ def _get_direction_cosines(detector: EBSDDetector):
 
 
 def _get_lambert_interpolation_parameters(
-    rotated_direction_cosines, scale, npx, npy
-):
-    """Get Lambert interpolation parameters as described in EMsoft"""
+    rotated_direction_cosines: Vector3d, scale: int, npx: int, npy: int
+) -> tuple:
+    """Get Lambert interpolation parameters as described in EMsoft.
+
+    Parameters
+    ----------
+    rotated_direction_cosines: Vector3d
+        Rotated direction cosines vector.
+    scale: int
+        Factor to scale up from Rosca-Lambert projection to the master pattern.
+    npx: int
+        Number of pixels on the master pattern in the x direction.
+    npy: int
+        Number of pixels on the master pattern in the y direction.
+
+    Returns
+    ----------
+    nii: numpy.ndarray
+        Row coordinate of a point.
+    nij: numpy.ndarray
+        Column coordinate of a point.
+    niip: numpy.ndarray
+        Row coordinate of neighboring point.
+    nijp: numpy.ndarray
+        Column coordinate of a neighboring point.
+    di: numpy.ndarray
+        Interpolation weight factor.
+    dj: numpy.ndarray
+        Interpolation weight factor.
+    dim: numpy.ndarray
+        Interpolation weight factor.
+    djm: numpy.ndarray
+        Interpolation weight factor.
+    """
     # Normalized direction cosines to Rosca-Lambert projection
     xy = (
         scale
@@ -446,7 +477,6 @@ def _get_lambert_interpolation_parameters(
     )
 
 
-# Map Blocks stuff from here
 def _get_patterns_chunk(
     r: Rotation,
     dc: Vector3d,
