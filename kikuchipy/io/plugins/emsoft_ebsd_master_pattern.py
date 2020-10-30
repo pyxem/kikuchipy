@@ -49,7 +49,7 @@ footprint = ["emdata/ebsdmaster"]
 
 def file_reader(
     filename: str,
-    energy_range: Optional[range] = None,
+    energy: Optional[range] = None,
     projection: str = "spherical",
     hemisphere: str = "north",
     lazy: bool = False,
@@ -62,8 +62,8 @@ def file_reader(
     ----------
     filename
         Full file path of the HDF file.
-    energy_range
-        Range of beam energies for patterns to read. If None is passed
+    energy
+        Desired beam energy or energy range. If None is passed
         (default), all available energies are read.
     projection
         Projection(s) to read. Options are "spherical" (default) or
@@ -120,18 +120,18 @@ def file_reader(
     data_group = f["EMData/EBSDmaster"]
     energies = data_group["EkeVs"][()]
     data_shape, data_slices = _get_data_shape_slices(
-        npx=f["NMLparameters/EBSDMasterNameList/npx"][()],
+        npx=f["NMLparameters/EBSDMasterNameList/npx"][()][0],
         energies=energies,
-        energy_range=energy_range,
+        energy=energy,
     )
     i_min = data_slices[0].start
     i_min = 0 if i_min is None else i_min
     min_energy = energies[i_min]
 
-    # Account for the Lambert projections being stored as having a 1-dimension
-    # before the energy dimension
-    # TODO: Figure out why EMsoft v4.3 have two Lambert projections in both
-    #  northern and southern hemisphere.
+    # Account for the Lambert projections being stored as having a
+    # 1-dimension before the energy dimension
+    # TODO: Figure out why EMsoft v4.3 have two Lambert projections in
+    #  both northern and southern hemisphere.
     if projection.lower() == "lambert":
         data_slices = (slice(0, 1),) + data_slices
 
@@ -166,7 +166,7 @@ def file_reader(
     data = data.squeeze()
 
     # Axes scales
-    energy_scale = energies[1] - energies[0]
+    energy_scale = f["NMLparameters/MCCLNameList/Ebinsize"][:][0]
     scales = np.array([1, energy_scale, 1, 1])
 
     ny, nx, sy, sx = data_shape
@@ -231,40 +231,41 @@ def _check_file_format(file: File):
 
 
 def _get_data_shape_slices(
-    npx: int, energies: np.ndarray, energy_range: Optional[tuple] = None,
+    npx: int, energies: np.ndarray, energy: Optional[tuple] = None,
 ) -> Tuple[Tuple, Tuple[slice, ...]]:
-    """Determine data shape from number of pixels in a master pattern
-    quadrant and an energy array.
+    """Determine the data shape from half the master pattern side length
+    and an energy or energy range.
 
     Parameters
     ----------
     npx
-        Number of pixels along x-direction of the square master pattern.
+        Half the number of pixels along x-direction of the square master
+        pattern. Half is used because that is what EMsoft uses.
     energies
         Beam energies.
-    energy_range
-        Range of sought energies.
+    energy
+        Desired beam energy or energy range.
 
     Returns
     -------
     data_shape
         Shape of data.
     data_slices
-        Data to get, determined from `energy_range`.
-
+        Data to get, determined from `energy`.
     """
-
     data_shape = (npx * 2 + 1,) * 2
     data_slices = (slice(None, None),) * 2
-    if energy_range is None:
+    if energy is None:
         data_slices = (slice(None, None),) + data_slices
         data_shape = (len(energies),) + data_shape
-    else:
-        i_min = np.argwhere(energies >= energy_range[0])[0][0]
-        i_max = np.argwhere(energies <= energy_range[1])[-1][0] + 1
+    elif hasattr(energy, "__iter__"):
+        i_min = np.argwhere(energies >= energy[0])[0][0]
+        i_max = np.argwhere(energies <= energy[1])[-1][0] + 1
         data_slices = (slice(i_min, i_max),) + data_slices
         data_shape = (i_max - i_min,) + data_shape
-
+    else:  # Assume integer
+        data_slices = (slice(0, 1),) + data_slices
+        data_shape = (1,) + data_shape
     return data_shape, data_slices
 
 
