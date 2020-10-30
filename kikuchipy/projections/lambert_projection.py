@@ -57,8 +57,7 @@ class LambertProjection:
         two_over_sqrt_pi = 2 / sqrt_pi
 
         lambert = np.zeros(x.shape + (2,), dtype=x.dtype)
-        # print(sign_y, sqrt_z, two_over_sqrt_pi, np.arctan2(x,y), x, y)
-        # print(sign_y * sqrt_z * (two_over_sqrt_pi * np.arctan(x/y)))
+
         # Equations 10a and 10b from Callahan and De Graef (2013)
         lambert[..., 0] = np.where(
             abs_yx,
@@ -96,7 +95,9 @@ class LambertProjection:
             abs_yx, c_x * np.sin(true_term), c_y * np.cos(false_term)
         )
         cart[..., 2] = np.where(
-            abs_yx, 1 - (2 * (X ** 2)) / np.pi, 1 - (2 * (Y ** 2)) / np.pi,
+            abs_yx,
+            1 - (2 * (X ** 2)) / np.pi,
+            1 - (2 * (Y ** 2)) / np.pi,
         )
 
         return Vector3d(cart)

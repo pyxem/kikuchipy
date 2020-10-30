@@ -18,14 +18,18 @@
 
 from typing import Optional, Union, List
 
+import dask.array as da
 from hyperspy._signals.signal2d import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.misc.utils import DictionaryTreeBrowser
 import numpy as np
-import dask.array as da
+from orix.vector import Vector3d
 from orix.quaternion import Rotation  # For type hints
-from kikuchipy.signals import LazyEBSD
 
+
+from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.projections.lambert_projection import LambertProjection
+from kikuchipy.signals import LazyEBSD
 from kikuchipy.signals.util._metadata import (
     ebsd_master_pattern_metadata,
     metadata_nodes,
@@ -33,12 +37,6 @@ from kikuchipy.signals.util._metadata import (
     _write_parameters_to_dictionary,
 )
 from kikuchipy.signals._common_image import CommonImage
-
-from orix.vector import Vector3d
-
-from kikuchipy.detectors.ebsd_detector import EBSDDetector
-from kikuchipy.projections.lambert_projection import LambertProjection
-
 from kikuchipy.pattern import rescale_intensity
 
 
@@ -413,6 +411,7 @@ def _get_direction_cosines(detector: EBSDDetector):
 def _get_lambert_interpolation_parameters(
     rotated_direction_cosines, scale, npx, npy
 ):
+    """Get Lambert interpolation parameters as described in EMsoft"""
     # Normalized direction cosines to Rosca-Lambert projection
     xy = (
         scale
