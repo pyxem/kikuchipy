@@ -74,9 +74,9 @@ def nickel_ebsd(**kwargs) -> EBSD:
 
 
 def nickel_master_pattern(**kwargs) -> EBSDMasterPattern:
-    """(701, 701) `uint8` square Lambert projection of the northern
-    hemisphere of a Nickel master pattern at 20 keV accelerating
-    voltage.
+    """(401, 401) `uint8` square Lambert or spherical projection of the
+    northern and southern hemisphere of a Nickel master pattern at 20
+    keV accelerating voltage.
 
     Parameters
     ----------
@@ -90,17 +90,19 @@ def nickel_master_pattern(**kwargs) -> EBSDMasterPattern:
 
     Notes
     -----
-    Initially generated using the EMsoft program EMEBSDMaster.f90 to a
-    resolution of (1001, 1001) and data type `float32`, and subsequently
-    binned using :meth:`~hyperspy.signals._signal2d.rebin` to (701, 701)
-    and rescaled using
-    :meth:`~kikuchipy.signals.EBSDMasterPattern.rescale_intensity` to
-    `uint8`.
+    Initially generated using the EMsoft EMMCOpenCL and EMEBSDMaster
+    programs. The included file was rewritten to disk with :mod:`h5py`,
+    where the master patterns' data type is converted from `float32` to
+    `uint8` with
+    :meth:`~kikuchipy.signals.EBSDMasterPattern.rescale_intensity`, all
+    datasets were written with
+    :meth:`~kikuchipy.io.plugins.h5ebsd.dict2h5ebsdgroup` with
+    keyword arguments `compression="gzip"` and `compression_opts=9`. All
+    other HDF5 groups and datasets are the same as in the original file.
     """
     return _load(
         filename=os.path.join(
-            "emsoft_ebsd_master_pattern",
-            "nickel_master_pattern_uint8_701x701.hspy",
+            "emsoft_ebsd_master_pattern", "ni_mc_mp_20kv_uint8_gzip_opts9.h5",
         ),
         **kwargs,
     )
