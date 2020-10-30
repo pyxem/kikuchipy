@@ -16,17 +16,72 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from dask.array import Array
+import numpy as np
+import pytest
+
 from kikuchipy import data
-from kikuchipy.signals import EBSD, LazyEBSD
+from kikuchipy.signals import (
+    EBSD,
+    LazyEBSD,
+    EBSDMasterPattern,
+    LazyEBSDMasterPattern,
+)
 
 
 class TestData:
-    def test_load_nickel_small(self):
-        s = data.nickel_small()
+    def test_load_nickel_ebsd(self):
+        s = data.nickel_ebsd()
 
         assert isinstance(s, EBSD)
         assert s.data.shape == (3, 3, 60, 60)
 
-        s2 = data.nickel_small(lazy=True)
+        s_lazy = data.nickel_ebsd(lazy=True)
 
-        assert isinstance(s2, LazyEBSD)
+        assert isinstance(s_lazy, LazyEBSD)
+        assert isinstance(s_lazy.data, Array)
+
+    def test_load_nickel_master_pattern(self):
+        """Can be read."""
+        mp = data.nickel_master_pattern()
+        assert mp.data.shape == (401, 401)
+
+    @pytest.mark.parametrize(
+        "projection, hemisphere, desired_shape",
+        [
+            ("lambert", "north", (401, 401)),
+            ("lambert", "both", (2, 401, 401)),
+            ("spherical", "south", (401, 401)),
+            ("spherical", "both", (2, 401, 401)),
+        ],
+    )
+    def test_load_nickel_master_pattern_kwargs(
+        self, projection, hemisphere, desired_shape
+    ):
+        """Master patterns in both spherical and Lambert projections
+        can be loaded as expected.
+        """
+        mp = data.nickel_master_pattern(
+            projection=projection, hemisphere=hemisphere,
+        )
+
+        assert isinstance(mp, EBSDMasterPattern)
+        assert mp.data.shape == desired_shape
+        assert np.issubdtype(mp.data.dtype, np.uint8)
+        assert (
+            mp.metadata.get_item(
+                "Simulation.EBSD_master_pattern.Master_pattern.projection"
+            )
+            == projection
+        )
+        assert (
+            mp.metadata.get_item(
+                "Simulation.EBSD_master_pattern.Master_pattern.hemisphere"
+            )
+            == hemisphere
+        )
+
+        mp_lazy = data.nickel_master_pattern(lazy=True)
+
+        assert isinstance(mp_lazy, LazyEBSDMasterPattern)
+        assert isinstance(mp_lazy.data, Array)
