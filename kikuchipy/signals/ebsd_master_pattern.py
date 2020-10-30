@@ -448,13 +448,41 @@ def _get_lambert_interpolation_parameters(
 
 # Map Blocks stuff from here
 def _get_patterns_chunk(
-    r,
-    dc,
-    master_north,
-    master_south,
-    rescale,
+    r: Rotation,
+    dc: Vector3d,
+    master_north: np.ndarray,
+    master_south: np.ndarray,
+    rescale: bool,
     dtype_out=np.float32,
-):
+) -> np.ndarray:
+    """
+    Get the EBSD patterns on the detector for each rotation in the chunk.
+
+    Each pattern is found by a bi-quadratic interpolation of the master pattern
+    as described in EMsoft.
+
+    Parameters
+    ----------
+    r : Rotation
+        Rotation object with all the rotations for a given chunk.
+    dc : Vector3d
+        Direction cosines unit vector between detector and sample.
+    master_north : numpy.ndarray
+        Northern hemisphere of the master pattern.
+    master_south : numpy.ndarray
+        Southern hemisphere of the pater pattern.
+    rescale : bool
+        Whether to call rescale_intensities() or not.
+    dtype_out : numpy.dtype
+        Data type of the returned patterns.
+
+    Returns
+    ----------
+    simulated : numpy.ndarray
+        Ndarray with shape (n, y, x) containing all the patterns.
+
+
+    """
     m = r.shape[0]
     simulated = np.empty(shape=(m,) + dc.shape, dtype=dtype_out)
 
@@ -497,5 +525,4 @@ def _get_patterns_chunk(
         if rescale:
             pattern = rescale_intensity(pattern, dtype_out=dtype_out)
         simulated[i] = pattern
-
     return simulated
