@@ -1,0 +1,80 @@
+
+
+ Copyright (C) 2001-2019 Marc De Graef Research Group/CMU
+ EMsoft comes with ABSOLUTELY NO WARRANTY.
+ This is free software, and you are welcome to redistribute it
+ under certain conditions; see License.txt file for details.
+
+
+ Program name         : EMEBSDmaster.f90
+ Purpose              : EBSD Energy-dependent Master Pattern Simulation
+ Platform             : Linux
+ Source code version  : 5_0_20201029_
+ Source code Revision : 
+ Build Date/Time      : 2020-10-29 13:10:02Z
+
+ See https://github.com/EMsoft-org/EMsoft/wiki for selected help pages.
+
+ Oct 30 2020   1:28:56.880 AM
+
+
+Number of command line arguments detected:           1
+ --> total number of BSE electrons in MC data set  2000000000
+
+
+-->Crystal Structure Information<--
+  a [nm]             :  0.35236
+  b [nm]             :  0.35236
+  c [nm]             :  0.35236
+  alpha [deg]        : 90.00000
+  beta  [deg]        : 90.00000
+  gamma [deg]        : 90.00000
+  Volume [nm^3]      :  0.04374816
+  Space group #      : 225
+  Space group symbol : F m 3 m
+  Generator String   :16aODDaDODbOOOcOOOdOOOeOOO0
+   Structure is centrosymmetric
+  # generators       :   8
+  # symmetry matrices: 192
+  # point sym. matr. :  48
+
+
+  Number of asymmetric atom positions           1
+  General position / atomic number / multiplicity :   1/28/  4 (Ni)
+   Equivalent positions  (x y z  occ  DWF)
+         >    0.00000,  0.00000,  0.00000,  1.00000,  0.00350
+         >    0.00000,  0.50000,  0.50000,  1.00000,  0.00350
+         >    0.50000,  0.00000,  0.50000,  1.00000,  0.00350
+         >    0.50000,  0.50000,  0.00000,  1.00000,  0.00350
+
+
+ Mean inner potential [V] 0.2962E+02
+ Wavelength corrected for refraction
+ Relativistic correction factor [gamma] 0.1039E+01
+ Relativistic Accelerating Potential [V] 0.2052E+05
+ Electron Wavelength [nm] 0.8561E-02
+ Interaction constant [V nm]^(-1) 0.1858E-01
+ Range of reflections along a*, b* and c* =           8           8           8
+ Normal absorption length [nm] =   59.5765381    
+
+ Generating Fourier coefficient lookup table ...Done
+
+ Range of reflections along a*, b* and c* =           8           8           8
+
+Generating Sgh coefficient lookup table ...Done
+
+
+ Starting computation for energy bin (in reverse order)   1 of    1; energy [keV] = 20.00
+
+# independent beam directions to be considered =   20302
+ Attempting to set number of threads to  24
+  completed beam direction    5000 of    20302
+  completed beam direction   10000 of    20302
+  completed beam direction   15000 of    20302
+  completed beam direction   20000 of    20302
+ -> Average number of strong reflections =   18
+ -> Average number of weak reflections   =    9
+Execution time [s]:           3
+Final data stored in file crystal_data/ni/ni_mc_mp_20kv2.h5
+
+Total execution time [s]           3

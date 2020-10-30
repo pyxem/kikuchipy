@@ -13,8 +13,8 @@ they each include a node ``Acquisition_instrument.Sample.Phases`` to store
 phase information, and ``Acquisition_instrument.SEM.Detector.EBSD`` or
 ``Simulation.EBSD_master_pattern``, respectively. The information in these nodes
 are written, along with the patterns, to file when saving an EBSD object in the
-:ref:`kikuchipy h5ebsd format <h5ebsd-format>` or an EBSDMasterPattern object in
-`the HyperSpy HDF5 format
+`kikuchipy h5ebsd format <load_save_data.ipynb#h5ebsd>`_ 
+or an EBSDMasterPattern object in `the HyperSpy HDF5 format
 <http://hyperspy.org/hyperspy-doc/current/user_guide/io.html#hspy-hyperspy-s-hdf5-specification>`_.
 
 ::
