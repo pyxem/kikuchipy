@@ -395,7 +395,7 @@ class EBSDDetector:
             )
 
     def _pc_emsoft2bruker(self, version: int = 5) -> np.ndarray:
-        new_pc = np.zeros_like(self.pc)
+        new_pc = np.zeros_like(self.pc, dtype=np.float32)
         if version == 5:
             new_pc[..., 0] = 0.5 + (-self.pcx / (self.ncols * self.binning))
         else:
@@ -410,7 +410,7 @@ class EBSDDetector:
         return new_pc
 
     def _pc_bruker2emsoft(self, version: int = 5) -> np.ndarray:
-        new_pc = np.zeros_like(self.pc)
+        new_pc = np.zeros_like(self.pc, dtype=np.float32)
         new_pc[..., 0] = self.ncols * (self.pcx - 0.5)
         if version == 5:
             new_pc[..., 0] = -new_pc[..., 0]
