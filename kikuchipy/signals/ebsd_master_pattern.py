@@ -24,10 +24,10 @@ from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.misc.utils import DictionaryTreeBrowser
 import numpy as np
 from orix.vector import Vector3d
-from orix.quaternion import Rotation  # For type hints
-
+from orix.quaternion import Rotation
 
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.pattern import rescale_intensity
 from kikuchipy.projections.lambert_projection import LambertProjection
 from kikuchipy.signals import LazyEBSD
 from kikuchipy.signals.util._metadata import (
@@ -37,7 +37,6 @@ from kikuchipy.signals.util._metadata import (
     _write_parameters_to_dictionary,
 )
 from kikuchipy.signals._common_image import CommonImage
-from kikuchipy.pattern import rescale_intensity
 
 
 class EBSDMasterPattern(CommonImage, Signal2D):
@@ -280,12 +279,34 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
     def get_patterns(
         self,
-        rotations,
+        rotations: Rotation,
         detector: EBSDDetector,
-        energy_index,
-        chunk_size,
+        energy_index: int,
+        chunk_size: int,
         dtype_out=np.float32,
-    ):
+    ) -> LazyEBSD:
+        """
+        Creates a catalogue of EBSD patterns given a set of rotations and
+        a detector model.
+
+        Parameters
+        ----------
+        rotations: Rotation
+            Set of rotations to get patterns from.
+        detector: EBSDDetector
+            EBSD Detector model.
+        energy_index: int
+            Index of the wanted energy in the master pattern.
+            WIP THIS WILL BE CHANGED TO ENERGY ASAP.
+        chunk_size: int
+            The amount of rotations the dask arrays should work on per chunk.
+        dtype_out: numpy.dtype
+            Data type of the returned patterns.
+
+        Returns
+        ----------
+        LazyEBSD object containing the simulated EBSD patterns.
+        """
 
         dc = _get_direction_cosines(detector)
 
@@ -356,9 +377,6 @@ class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-
-# Private methods used in the EBSD pattern sampling routine
 
 
 def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
