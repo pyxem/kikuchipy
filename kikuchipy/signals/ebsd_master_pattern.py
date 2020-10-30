@@ -361,7 +361,21 @@ class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
 # Private methods used in the EBSD pattern sampling routine
 
 
-def _get_direction_cosines(detector: EBSDDetector):
+def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
+    """
+    Get the direction cosines between the detector and sample as done in EMsoft
+    and [Callahan2013]_.
+
+    Parameters
+    ----------
+    detector: EBSDDetector
+        EBSDDetector object with a certain detector geometry.
+
+    Returns
+    ----------
+    r_g.unit : Vector3d
+        Object containing the direction cosines for each detector pixel.
+    """
     xpc = detector.pc[..., 0]
     ypc = detector.pc[..., 1]
     L = detector.pc[..., 2]  # This will be wrong in the future
@@ -384,7 +398,7 @@ def _get_direction_cosines(detector: EBSDDetector):
     ca = np.cos(alpha)
     sa = np.sin(alpha)
 
-    # Omega NYI
+    # NYI
     omega = np.radians(0)  # angle between normal of sample and detector
     cw = np.cos(omega)
     sw = np.sin(omega)
