@@ -91,9 +91,9 @@ def nickel_master_pattern(**kwargs) -> EBSDMasterPattern:
     Notes
     -----
     Initially generated using the EMsoft EMMCOpenCL and EMEBSDMaster
-    programs. The included file was rewritten to disk with :mod:`h5py`,
-    where the master patterns' data type is converted from `float32` to
-    `uint8` with
+    programs. The included file was rewritten to disk with
+    :mod:`h5py`, where the master patterns' data type is converted from
+    `float32` to `uint8` with
     :meth:`~kikuchipy.signals.EBSDMasterPattern.rescale_intensity`, all
     datasets were written with
     :meth:`~kikuchipy.io.plugins.h5ebsd.dict2h5ebsdgroup` with
