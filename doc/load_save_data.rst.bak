@@ -392,13 +392,13 @@ can be read into an :class:`~kikuchipy.signals.EBSDMasterPattern` object:
 Here, the EMsoft EBSD master pattern
 :func:`~kikuchipy.io.plugins.emsoft_ebsd_master_pattern.file_reader` is called,
 which takes the optional arguments ``projection``, ``hemisphere`` and
-``energy_range``. The spherical projection is read by default. Passing
+``energy``. The spherical projection is read by default. Passing
 ``projection="lambert"`` will read the square Lambert projection instead. The
 northern hemisphere is read by default. Passing ``hemisphere="south"`` or
 ``hemisphere="both"`` will read the southern hemisphere projection or both,
 respectively. Master patterns for all beam energies are read by default. Passing
-``energy_range=(10, 20)`` will read the master patterns with beam energies from
-10 to 20 keV.
+``energy=(10, 20)`` or ``energy=15`` will read the master pattern(s) with beam
+energies from 10 to 20 keV, or just 15 keV, respectively:
 
 .. code-block::
 
@@ -406,7 +406,7 @@ respectively. Master patterns for all beam energies are read by default. Passing
     ...     "master_patterns.h5",
     ...     projection="lambert",
     ...     hemisphere="both",
-    ...     energy_range=(10, 20)
+    ...     energy=(10, 20)
     ... )
     >>> s
     <EBSDMasterPattern, title: , dimensions: (2, 11|1001, 1001)>

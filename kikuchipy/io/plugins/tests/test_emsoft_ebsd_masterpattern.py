@@ -175,11 +175,11 @@ class TestEMsoftEBSDMasterPatternReader:
                 data=np.array([b"EMEBSDmasterr.f90"], dtype="S17"),
             )
             with pytest.raises(IOError, match=".* is not in EMsoft's master "):
-                _ = _check_file_format(f)
+                _check_file_format(f)
 
     @pytest.mark.parametrize(
         (
-            "npx, energies, energy_range, expected_shape, expected_slices, "
+            "npx, energies, energy, expected_shape, expected_slices, "
             "expected_min_max_energy"
         ),
         [
@@ -199,19 +199,27 @@ class TestEMsoftEBSDMasterPatternReader:
                 (slice(2, 7), slice(None, None), slice(None, None)),
                 (18, 24),
             ),
+            (
+                64,
+                np.linspace(10, 20, 11) * 1.5,
+                15,
+                (1, 129, 129),
+                (slice(0, 1), slice(None, None), slice(None, None)),
+                (15, 15),
+            ),
         ],
     )
     def test_get_data_shape_slices(
         self,
         npx,
         energies,
-        energy_range,
+        energy,
         expected_shape,
         expected_slices,
         expected_min_max_energy,
     ):
         data_shape, data_slices = _get_data_shape_slices(
-            npx=npx, energies=energies, energy_range=energy_range
+            npx=npx, energies=energies, energy=energy
         )
 
         assert data_shape == expected_shape
@@ -226,9 +234,7 @@ class TestEMsoftEBSDMasterPatternReader:
     def test_load_lazy(self, projection):
         """The Lambert projection's southern hemisphere is stored
         chunked.
-
         """
-
         s = load(
             EMSOFT_FILE, projection=projection, hemisphere="south", lazy=True
         )
@@ -324,3 +330,12 @@ class TestEMsoftEBSDMasterPatternReader:
         }
 
         assert_dictionary(actual_d, desired_d)
+
+    @pytest.mark.parametrize(
+        "energy, desired_shape", [(20, (2, 13, 13)), ((15, 20), (2, 6, 13, 13))]
+    )
+    def test_load_energy(self, energy, desired_shape):
+        """Ensure desired energy parameters can be passed."""
+        s = load(EMSOFT_FILE, energy=energy, hemisphere="both")
+
+        assert s.data.shape == desired_shape
