@@ -23,9 +23,10 @@ Contributors
 
 Added
 -----
-- A kikuchipy.data module, starting with a small Nickel data set with 9
-  patterns, meant to be used for testing and in the user guide.
-  (`#236 <https://github.com/pyxem/kikuchipy/pull/236>`_)
+- A kikuchipy.data module with a small Nickel EBSD data set and master
+  pattern.
+  (`#236 <https://github.com/pyxem/kikuchipy/pull/236>`_,
+  `#237 <https://github.com/pyxem/kikuchipy/pull/237>`_)
 - Indexing of EBSD patterns through matching of patterns with a static
   dictionary of simulated patterns with known orientations.
   (`#231 <https://github.com/pyxem/kikuchipy/pull/231>`_,
@@ -58,7 +59,8 @@ Changed
   (`240 <https://github.com/pyxem/kikuchipy/pull/240>`_)
 - Migrating the user guide from `reStructuredText` files to Jupyter Notebooks
   built to HTML via the `nbsphinx` package.
-  (`#236 <https://github.com/pyxem/kikuchipy/pull/236>`_)
+  (`#236 <https://github.com/pyxem/kikuchipy/pull/236>`_,
+  `#237 <https://github.com/pyxem/kikuchipy/pull/237>`_)
 - Move GitHub repository to the pyxem organization. Update relevant URLs.
   (`#198 <https://github.com/pyxem/kikuchipy/pull/198>`_)
 - Allow scikit-image >= 0.16.
