@@ -589,3 +589,6 @@ def _get_patterns_chunk(
             pattern = rescale_intensity(pattern, dtype_out=dtype_out)
         simulated[i] = pattern
     return simulated
+
+
+# :)
