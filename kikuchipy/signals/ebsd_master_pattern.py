@@ -400,12 +400,12 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
     xpc = pc[..., 0]
     ypc = pc[..., 1]
     L = pc[..., 2]
-    # Scintillator coordinates in microns
-    scin_x = (
+    # Detector coordinates in microns
+    det_x = (
         -((-xpc - (1.0 - detector.ncols) * 0.5) - np.arange(0, detector.ncols))
         * detector.px_size
     )
-    scin_y = (
+    det_y = (
         (ypc - (1.0 - detector.nrows) * 0.5) - np.arange(0, detector.nrows)
     ) * detector.px_size
 
@@ -424,8 +424,8 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
 
     r_g_array = np.zeros((detector.nrows, detector.ncols, 3))
 
-    Ls = -sw * scin_x + L * cw
-    Lc = cw * scin_x + L * sw
+    Ls = -sw * det_x + L * cw
+    Lc = cw * det_x + L * sw
 
     i, j = np.meshgrid(
         np.arange(detector.nrows - 1, -1, -1),
@@ -433,9 +433,9 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
         indexing="ij",
     )
 
-    r_g_array[..., 0] = scin_y[i] * ca + sa * Ls[j]
+    r_g_array[..., 0] = det_y[i] * ca + sa * Ls[j]
     r_g_array[..., 1] = Lc[j]
-    r_g_array[..., 2] = -sa * scin_y[i] + ca * Ls[j]
+    r_g_array[..., 2] = -sa * det_y[i] + ca * Ls[j]
     r_g = Vector3d(r_g_array)
 
     return r_g.unit
