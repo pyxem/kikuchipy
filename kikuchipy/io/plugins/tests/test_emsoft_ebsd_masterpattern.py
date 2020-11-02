@@ -158,6 +158,11 @@ class TestEMsoftEBSDMasterPatternReader:
         assert s.axes_manager.as_dictionary() == axes_manager
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
+        signal_indx = s.axes_manager.signal_indices_in_array
+        assert np.allclose(
+            s.max(axis=signal_indx).data, s.axes_manager["energy"].axis
+        )
+
     def test_projection_lambert(self):
         s = load(EMSOFT_FILE, projection="lambert", hemisphere="both",)
 
@@ -206,6 +211,14 @@ class TestEMsoftEBSDMasterPatternReader:
                 (1, 129, 129),
                 (slice(0, 1), slice(None, None), slice(None, None)),
                 (15, 15),
+            ),
+            (
+                64,
+                np.linspace(10, 20, 11) * 1.5,
+                23,
+                (1, 129, 129),
+                (slice(5, 6), slice(None, None), slice(None, None)),
+                (22.5, 22.5),
             ),
         ],
     )
@@ -332,10 +345,27 @@ class TestEMsoftEBSDMasterPatternReader:
         assert_dictionary(actual_d, desired_d)
 
     @pytest.mark.parametrize(
-        "energy, desired_shape", [(20, (2, 13, 13)), ((15, 20), (2, 6, 13, 13))]
+        "energy, energy_slice, desired_shape, desired_mean_energies",
+        [
+            (20, slice(10, None), (2, 13, 13), [20,]),
+            (15, slice(5, 6), (2, 13, 13), [15,]),
+            ((15, 20), slice(5, None), (2, 6, 13, 13), np.linspace(15, 20, 6)),
+            ((19, 20), slice(9, None), (2, 2, 13, 13), np.linspace(19, 20, 2)),
+        ],
     )
-    def test_load_energy(self, energy, desired_shape):
+    def test_load_energy(
+        self, energy, energy_slice, desired_shape, desired_mean_energies
+    ):
         """Ensure desired energy parameters can be passed."""
         s = load(EMSOFT_FILE, energy=energy, hemisphere="both")
-
         assert s.data.shape == desired_shape
+
+        s2 = load(
+            EMSOFT_FILE, projection="lambert", energy=energy, hemisphere="north"
+        )
+        sig_indx = s2.axes_manager.signal_indices_in_array
+        assert np.allclose(s2.mean(axis=sig_indx).data, desired_mean_energies)
+
+        with File(EMSOFT_FILE, mode="r") as f:
+            mp_lambert_north = f["EMData/EBSDmaster/mLPNH"][:][0][energy_slice]
+            assert np.allclose(s2.data, mp_lambert_north)
