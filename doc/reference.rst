@@ -56,8 +56,9 @@ data
 .. currentmodule:: kikuchipy.data
 
 .. autosummary::
-    nickel_ebsd
-    nickel_master_pattern
+    nickel_ebsd_small
+    nickel_ebsd_large
+    nickel_ebsd_master_pattern_uint8
 
 .. automodule:: kikuchipy.data
     :members:

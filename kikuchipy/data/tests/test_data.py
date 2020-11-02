@@ -91,7 +91,7 @@ class TestData:
     def test_load_nickel_ebsd_large_raises(self):
         """Raises desired error message."""
         file = data.cache_data_path.joinpath("nickel_ebsd_large/patterns.h5")
-        if file.exists():
+        if file.exists():  # pragma: no cover
             os.remove(file)
             os.rmdir(file.parent)
         with pytest.raises(ValueError, match="The dataset must be"):

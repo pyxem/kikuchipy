@@ -18,7 +18,8 @@
 
 """Test data.
 
-For more test data sets, see :doc:`open datasets <open_datasets>`.
+Some datasets must be downloaded from the web. For more test datasets,
+see :doc:`open datasets <open_datasets>`.
 """
 
 from pathlib import Path
