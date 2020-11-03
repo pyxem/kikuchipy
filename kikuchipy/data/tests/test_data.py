@@ -43,9 +43,9 @@ class TestData:
         assert isinstance(s_lazy, LazyEBSD)
         assert isinstance(s_lazy.data, Array)
 
-    def test_load_nickel_ebsd_master_pattern_uint8(self):
+    def test_load_nickel_ebsd_master_pattern_small(self):
         """Can be read."""
-        mp = data.nickel_ebsd_master_pattern_uint8()
+        mp = data.nickel_ebsd_master_pattern_small()
         assert mp.data.shape == (401, 401)
 
     @pytest.mark.parametrize(
@@ -57,13 +57,13 @@ class TestData:
             ("spherical", "both", (2, 401, 401)),
         ],
     )
-    def test_load_nickel_ebsd_master_pattern_uint8_kwargs(
+    def test_load_nickel_ebsd_master_pattern_small_kwargs(
         self, projection, hemisphere, desired_shape
     ):
         """Master patterns in both spherical and Lambert projections
         can be loaded as expected.
         """
-        mp = data.nickel_ebsd_master_pattern_uint8(
+        mp = data.nickel_ebsd_master_pattern_small(
             projection=projection, hemisphere=hemisphere,
         )
 
@@ -83,7 +83,7 @@ class TestData:
             == hemisphere
         )
 
-        mp_lazy = data.nickel_ebsd_master_pattern_uint8(lazy=True)
+        mp_lazy = data.nickel_ebsd_master_pattern_small(lazy=True)
 
         assert isinstance(mp_lazy, LazyEBSDMasterPattern)
         assert isinstance(mp_lazy.data, Array)
@@ -97,10 +97,10 @@ class TestData:
         with pytest.raises(ValueError, match="The dataset must be"):
             _ = data.nickel_ebsd_large(allow_download=False)
 
-    def test_load_nickel_ebsd_large_allow(self):
+    def test_load_nickel_ebsd_large_allow_download(self):
         """Download from external."""
-        s = data.nickel_ebsd_large(allow_download=True)
+        s = data.nickel_ebsd_large(lazy=True, allow_download=True)
 
-        assert isinstance(s, EBSD)
+        assert isinstance(s, LazyEBSD)
         assert s.data.shape == (55, 75, 60, 60)
         assert np.issubdtype(s.data.dtype, np.uint8)

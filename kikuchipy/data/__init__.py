@@ -36,8 +36,8 @@ from kikuchipy.data._registry import registry, registry_urls
 
 __all__ = [
     "nickel_ebsd_small",
-    "nickel_ebsd_master_pattern_uint8",
     "nickel_ebsd_large",
+    "nickel_ebsd_master_pattern_small",
 ]
 
 
@@ -110,7 +110,7 @@ def nickel_ebsd_small(**kwargs) -> EBSD:
     return _load(filename="data/kikuchipy/patterns.h5", **kwargs)
 
 
-def nickel_ebsd_master_pattern_uint8(**kwargs) -> EBSDMasterPattern:
+def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
     """(401, 401) `uint8` square Lambert or spherical projection of the
     northern and southern hemisphere of a Nickel master pattern at 20
     keV accelerating voltage.
@@ -149,8 +149,8 @@ def nickel_ebsd_large(allow_download: bool = False, **kwargs) -> EBSD:
     ----------
     allow_download : bool
         Whether to allow downloading the dataset from the kikuchipy-data
-        GitHub repository to the local cache with the pooch Python
-        package. Default is False.
+        GitHub repository (https://github.com/pyxem/kikuchipy-data) to
+        the local cache with the pooch Python package. Default is False.
     kwargs
         Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
 

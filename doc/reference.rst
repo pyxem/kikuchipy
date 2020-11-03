@@ -58,7 +58,7 @@ data
 .. autosummary::
     nickel_ebsd_small
     nickel_ebsd_large
-    nickel_ebsd_master_pattern_uint8
+    nickel_ebsd_master_pattern_small
 
 .. automodule:: kikuchipy.data
     :members:
