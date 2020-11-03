@@ -184,6 +184,13 @@ terminal. For an even nicer presentation, you can use ``coverage.py`` directly::
 Then, you can open the created ``htmlcov/index.html`` in the browser and inspect
 the coverage in more detail.
 
+.. note::
+
+   Some :mod:`kikuchipy.data` module tests check that data not part of the
+   package distribution can be downloaded from the `kikuchipy-data GitHub
+   repository <https://github.com/pyxem/kikuchipy-data>`_, thus downloading some
+   datasets of ~15 MB to your local cache.
+
 Code of Conduct
 ===============
 

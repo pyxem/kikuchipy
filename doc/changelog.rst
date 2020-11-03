@@ -23,10 +23,11 @@ Contributors
 
 Added
 -----
-- A kikuchipy.data module with a small Nickel EBSD data set and master
-  pattern.
+- A data module with a small Nickel EBSD data set and master pattern, and a
+  larger EBSD data set downloadable via the module.
   (`#236 <https://github.com/pyxem/kikuchipy/pull/236>`_,
-  `#237 <https://github.com/pyxem/kikuchipy/pull/237>`_)
+  `#237 <https://github.com/pyxem/kikuchipy/pull/237>`_,
+  `#243 <https://github.com/pyxem/kikuchipy/pull/243>`_)
 - Indexing of EBSD patterns through matching of patterns with a static
   dictionary of simulated patterns with known orientations.
   (`#231 <https://github.com/pyxem/kikuchipy/pull/231>`_,
