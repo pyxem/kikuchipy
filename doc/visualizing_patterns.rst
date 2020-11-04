@@ -105,7 +105,7 @@ obtained from dictionary indexing with
     Navigating EBSD patterns (left) in a quality metric map ``s_osm``, in this
     case an orientation similarity map from dictionary indexing with EMsoft.
 
-Or, an :ref:`image quality map <feature-maps-image-quality>` calculated using
+Or, an `image quality map <feature_maps.ipynb#Image-quality>`_ calculated using
 :meth:`~kikuchipy.signals.EBSD.get_image_quality`:
 
 .. code-block::
