@@ -18,7 +18,7 @@
 
 """Indexing of EBSD patterns and useful related tools."""
 
-from kikuchipy.indexing.merge_crystal_maps import merge_crystal_maps
+from kikuchipy.indexing._merge_crystal_maps import merge_crystal_maps
 from kikuchipy.indexing.orientation_similarity_map import (
     orientation_similarity_map,
 )

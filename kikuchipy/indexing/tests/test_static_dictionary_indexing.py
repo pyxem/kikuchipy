@@ -16,35 +16,26 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 import numpy as np
 from orix.crystal_map import CrystalMap
 from orix.quaternion import Rotation
+import pytest
 
-from kikuchipy import load
-from kikuchipy.signals import EBSD
-
-from kikuchipy.indexing.static_dictionary_indexing import (
+from kikuchipy.data import nickel_ebsd_small
+from kikuchipy.indexing._static_dictionary_indexing import (
     StaticDictionaryIndexing,
+    _get_spatial_arrays,
 )
-
-DIR_PATH = os.path.dirname(__file__)
-KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy/patterns.h5")
+from kikuchipy.signals import EBSD
 
 
 class TestStaticDictionaryIndexing:
-    def test_init(self):
-        s = load(KIKUCHIPY_FILE)
+    def test_init_static_dictionary_indexing(self):
+        s = nickel_ebsd_small()
+        _ = StaticDictionaryIndexing(s)
 
-        self.sd = StaticDictionaryIndexing(s)
-        pass
-
-    def test_init_index(self):
-        pass
-
-    def test_index(self):
-        s = load(KIKUCHIPY_FILE)
+    def test_static_dictionary_indexing(self):
+        s = nickel_ebsd_small()
         s_dict1 = EBSD(s.data.reshape(-1, 60, 60))
         s_dict2 = EBSD(s.data.reshape(-1, 60, 60))
         s_dict1._xmap = CrystalMap(Rotation(np.zeros((9, 4))), x=np.arange(9))
@@ -52,8 +43,9 @@ class TestStaticDictionaryIndexing:
         s_dict1.xmap.phases._dict[0].name = "1"
         s_dict2.xmap.phases._dict[0].name = "2"
         sd = StaticDictionaryIndexing([s_dict1, s_dict2])
-        res = sd.index(s)
+        res = sd(s)
         cm1, _, _ = res
+
         assert np.allclose(cm1.scores, 1)
         # np.isin(["scores","simulated_indices","osm"],list(cm.prop.keys()))
         assert np.all(
@@ -64,3 +56,36 @@ class TestStaticDictionaryIndexing:
                 for cm in res
             ]
         )
+
+    @pytest.mark.parametrize(
+        "nav_slice, desired_arrays",
+        [
+            # 0d
+            ((0, 0), ()),
+            ((slice(0, 0), slice(0, 0)), (np.array([]),) * 2),
+            # 1d
+            ((0, slice(None)), np.tile(np.arange(0, 4.5, 1.5), 3)),
+            # 2d
+            (
+                (slice(None), slice(0, 2)),
+                (
+                    np.tile(np.arange(0, 4.5, 1.5), 3),
+                    np.tile(np.arange(0, 3, 1.5), 2),
+                ),
+            ),
+        ],
+    )
+    def test_get_spatial_arrays(self, nav_slice, desired_arrays):
+        """Ensure spatial arrays for 0d, 1d and 2d EBSD signals are
+        returned correctly.
+        """
+        s = nickel_ebsd_small()
+        spatial_arrays = _get_spatial_arrays(s.inav[nav_slice].axes_manager)
+
+        if len(spatial_arrays) == 0:
+            assert spatial_arrays == desired_arrays
+        else:
+            assert [
+                np.allclose(spatial_arrays[i], desired_arrays[i])
+                for i in range(len(spatial_arrays))
+            ]

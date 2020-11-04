@@ -16,13 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import pytest
 import numpy as np
-
 from orix.crystal_map import CrystalMap
 from orix.quaternion import Rotation
+import pytest
 
-from kikuchipy.indexing.osm import orientation_similarity_map
+from kikuchipy.indexing.orientation_similarity_map import (
+    orientation_similarity_map,
+)
 
 
 class TestOrientationSimilarityMap:

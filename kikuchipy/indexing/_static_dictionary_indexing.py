@@ -21,10 +21,11 @@ from typing import Union, List
 import numpy as np
 from orix.crystal_map import CrystalMap
 
-from kikuchipy.indexing._pattern_matching import _pattern_match
+from kikuchipy.indexing._merge_crystal_maps import merge_crystal_maps
 from kikuchipy.indexing.orientation_similarity_map import (
     orientation_similarity_map,
 )
+from kikuchipy.indexing._pattern_matching import _pattern_match
 from kikuchipy.indexing.similarity_metrics import (
     SimilarityMetric,
     SIMILARITY_METRICS,
@@ -43,21 +44,21 @@ class StaticDictionaryIndexing:
         Parameters
         ----------
         dictionaries : EBSD or list of EBSD
-            Dictionaries as EBSD Signals with one-dimensional navigation
+            Dictionaries as EBSD signals with one-dimensional navigation
             axis and with the `xmap` property set.
         """
         if not isinstance(dictionaries, list):
             dictionaries = list(dictionaries)
         self.dictionaries = dictionaries
 
-    def dictionary_indexing(
+    def __call__(
         self,
-        patterns,
+        signal,
         metric: Union[str, SimilarityMetric] = "zncc",
         keep_n: int = 1,
         n_slices: int = 1,
-        merge_crystal_maps: bool = True,
-        osm: bool = True,
+        return_merged_crystal_map: bool = True,
+        get_orientation_similarity_map: bool = True,
     ) -> List[CrystalMap]:
         """Perform dictionary indexing on patterns against preloaded
         dictionaries, returning a :class:`~orix.crystal_map.CrystalMap`
@@ -66,7 +67,7 @@ class StaticDictionaryIndexing:
 
         Parameters
         ----------
-        patterns : EBSD
+        signal : EBSD
             EBSD signal with experimental patterns.
         metric : str or SimilarityMetric, optional
             Similarity metric, by default "zncc".
@@ -75,12 +76,12 @@ class StaticDictionaryIndexing:
         n_slices : int, optional
             Number of slices of simulations to process sequentially, by
             default 1.
-        merge_crystal_maps : bool, optional
+        return_merged_crystal_map : bool, optional
             Return a merged crystal map, the best matches determined
             from the similarity scores, in addition to the single phase
             maps. By default True. See also
             :func:`~kikuchipy.indexing.merge_crystal_maps`.
-        osm : bool, optional
+        get_orientation_similarity_map : bool, optional
             Add orientation similarity maps to the returned crystal maps
             as an `osm` property, by default True.
 
@@ -88,99 +89,105 @@ class StaticDictionaryIndexing:
         -------
         xmaps : list of CrystalMap
             A crystal map for each dictionary loaded and one merged map
-            if `merge_crystal_maps = True`.
+            if `return_merged_crystal_map = True`.
         """
         # This needs a rework before sent to cluster and possibly more
         # automatic slicing with dask
         num_simulations = self.dictionaries[0].data.shape[0]
-        if num_simulations // n_slices > 13500:
+        good_number = 13500
+        if (num_simulations // n_slices) > good_number:
             answer = input(
                 "You should probably increase n_slices depending on your "
-                f"available memory, try above {num_simulations // 13500}. Do "
-                "you want to proceed? [y/n]"
+                f"available memory, try above {num_simulations // good_number}."
+                " Do you want to proceed? [y/n]"
             )
             if answer != "y":
                 return
 
         metric = SIMILARITY_METRICS.get(metric, metric)
 
+        axes_manager = signal.axes_manager
+        spatial_arrays = _get_spatial_arrays(
+            shape=axes_manager.navigation_shape,
+            extent=axes_manager.navigation_extent,
+            step_sizes=[i.scale for i in axes_manager.navigation_axes],
+        )
+        n_nav_dims = axes_manager.navigation_dimension
+        if n_nav_dims == 0:
+            xmap_kwargs = dict()
+        elif n_nav_dims == 1:
+            scan_unit = axes_manager.navigation_axes[0].units
+            xmap_kwargs = dict(x=spatial_arrays, scan_unit=scan_unit)
+        else:  # 2d
+            scan_unit = axes_manager.navigation_axes[0].units
+            xmap_kwargs = dict(
+                x=spatial_arrays[0], y=spatial_arrays[1], scan_unit=scan_unit,
+            )
+
         # Naively let dask compute them seperately, should try in the
         # future combined compute for better performance
-        match_results = [
-            _pattern_match(
-                patterns.data,
+        xmaps = []
+        patterns = signal.data
+        for dictionary in self.dictionaries:
+            simulated_indices, scores = _pattern_match(
+                patterns,
                 dictionary.data,
                 metric=metric,
                 keep_n=keep_n,
                 n_slices=n_slices,
             )
-            for dictionary in self.dictionaries
-        ]
-
-        # Create spatial arrays
-        nav_axes = patterns.axes_manager
-        step_size = nav_axes[0].units
-
-        #        axm = patterns.axes_manager
-        #        scan_unit = axm.navigation_axes[0].units
-        #        col1, col2, row1, row2 = axm.navigation_extent
-        #        scale_x, scale_y = (axm.navigation_axes[i].scale for i in range(2))
-        #        nav_shape = axm.navigation_shape
-        #        x = np.tile(np.arange(col1, col2 + scale_x, scale_x), nav_shape[1])
-        #        y = np.tile(np.arange(row1, row2 + scale_y, scale_y), nav_shape[0])
-
-        #
-        # Create crystal map for each match_result, i.e. each phase
-        #
-
-        def match_result_2_xmap(i, mr):
-            simulated_indices, scores = mr
-            xmap = self.dictionaries[i].xmap
-            phase_list = xmap.phases_in_data
-            rotations = xmap.rotations[simulated_indices]
-            return CrystalMap(
-                rotations,
-                x=x,
-                y=y,
-                phase_list=phase_list,
+            new_xmap = CrystalMap(
+                rotations=dictionary.xmap.rotations[simulated_indices],
+                phase_list=dictionary.xmap.phases_in_data,
                 prop={"scores": scores, "simulated_indices": simulated_indices},
-                scan_unit=scan_unit,
+                **xmap_kwargs,
             )
+            xmaps.append(new_xmap)
 
-        xmaps = [
-            match_result_2_xmap(i, mr) for i, mr in enumerate(match_results)
-        ]
-
-        #
-        # Creating one CrystalMap using best metric result accross all dictionaries
-        #
-        if merge_crystal_maps and len(self.dictionaries) > 1:
-            # Cummulative summation of the dictionary lengths to create unique simulation ids across dictionaries
-            cum_sum_dict_lengths = np.cumsum(
+        # Create a merged CrystalMap using best metric result across all
+        # dictionaries
+        if return_merged_crystal_map and len(self.dictionaries) > 1:
+            # Cummulative summation of the dictionary lengths to create
+            # unique simulation IDs across dictionaries
+            cumsum_dict_lengths = np.cumsum(
                 [d.data.shape[0] for d in self.dictionaries]
             )
 
             def adjust_sim_ids(i, xmap):
                 if i == 0:
                     return xmap
-                xmap.simulated_indices += cum_sum_dict_lengths[i - 1]
+                xmap.simulated_indices += cumsum_dict_lengths[i - 1]
                 return xmap
 
-            xmaps_unique_sim_ids = [
-                adjust_sim_ids(i, xmap) for i, xmap in enumerate(xmaps)
-            ]
-            xmap_merged = merge_crystalmaps(xmaps_unique_sim_ids, metric=metric)
+            xmaps_unique_sim_ids = []
+            for i, xmap in enumerate(xmaps):
+                xmaps_unique_sim_ids.append(adjust_sim_ids(i, xmap))
+
+            xmap_merged = merge_crystal_maps(
+                xmaps_unique_sim_ids, metric=metric
+            )
             xmaps.append(xmap_merged)
 
-        # Orientation Similarity Maps
-        if osm:
-            print("Computing Orientation Similarity Maps.")
+        # Compute orientation similarity map
+        if get_orientation_similarity_map:
             for xmap in xmaps:
-                xmap.prop["osm"] = orientation_similarity_map(
-                    xmap, n_largest=keep_n
-                ).flatten()
+                osm = orientation_similarity_map(xmap, n_largest=keep_n)
+                xmap.prop["osm"] = osm.flatten()
 
         return xmaps
 
 
-# def _get_spatial_arrays()
+def _get_spatial_arrays(shape, extent, step_sizes):
+    n_nav_dims = len(shape)
+    if n_nav_dims == 0:
+        return ()
+    if n_nav_dims == 1:
+        x0, x1 = extent
+        dx = step_sizes[0]
+        return np.tile(np.arange(x0, x1 + dx, dx), shape[0])
+    else:
+        x0, x1, y0, y1 = extent
+        dx, dy = step_sizes
+        y = np.tile(np.arange(y0, y1 + dy, dy), shape[1])
+        x = np.tile(np.arange(x0, x1 + dx, dx), shape[0])
+        return x, y

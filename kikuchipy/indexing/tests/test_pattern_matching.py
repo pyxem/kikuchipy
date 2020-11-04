@@ -21,10 +21,10 @@ import numpy as np
 import pytest
 from scipy.spatial.distance import cdist
 
-from kikuchipy.indexing import (
+from kikuchipy.indexing._pattern_matching import _pattern_match
+from kikuchipy.indexing.similarity_metrics import (
     make_similarity_metric,
     MetricScope,
-    _pattern_match,
 )
 
 
@@ -34,7 +34,6 @@ class TestPatternMatching:
         greater_is_better=False,
         flat=True,
     )
-
     dummy_metric = make_similarity_metric(lambda p, t: 1.0)
 
     def test_not_recognized_metric(self):
