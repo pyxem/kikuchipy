@@ -24,7 +24,7 @@ from scipy.spatial.distance import cdist
 from kikuchipy.indexing import (
     make_similarity_metric,
     MetricScope,
-    pattern_match,
+    _pattern_match,
 )
 
 
@@ -39,21 +39,21 @@ class TestPatternMatching:
 
     def test_not_recognized_metric(self):
         with pytest.raises(ValueError):
-            pattern_match(
+            _pattern_match(
                 np.zeros((2, 2)), np.zeros((2, 2)), metric="not_recognized"
             )
 
     def test_mismatching_signal_shapes(self):
         self.dummy_metric.scope = MetricScope.MANY_TO_MANY
         with pytest.raises(OSError):
-            pattern_match(
+            _pattern_match(
                 np.zeros((2, 2)), np.zeros((3, 3)), metric=self.dummy_metric
             )
 
     def test_metric_not_compatible_with_data(self):
         self.dummy_metric.scope = MetricScope.ONE_TO_MANY
         with pytest.raises(OSError):
-            pattern_match(
+            _pattern_match(
                 np.zeros((2, 2, 2, 2)),
                 np.zeros((2, 2)),
                 metric=self.dummy_metric,
@@ -81,14 +81,14 @@ class TestPatternMatching:
             np.int8,
         )
         t_da = da.from_array(t)
-        mr = pattern_match(p, t_da, n_slices=n_slices)
+        mr = _pattern_match(p, t_da, n_slices=n_slices)
         assert mr[0][2] == 1  # Template index in t of perfect match
         assert pytest.approx(mr[1][2]) == 1.0  # ZNCC of perfect match
 
     def test_pattern_match_compute_false(self):
         p = np.arange(16).reshape((2, 2, 2, 2))
         t = np.arange(8).reshape((2, 2, 2))
-        mr = pattern_match(p, t, compute=False)
+        mr = _pattern_match(p, t, compute=False)
         assert len(mr) == 2
         assert isinstance(mr[0], da.Array) and isinstance(mr[1], da.Array)
 
@@ -96,9 +96,9 @@ class TestPatternMatching:
         p = np.arange(16).reshape((2, 2, 2, 2))
         t = np.arange(8).reshape((2, 2, 2))
         with pytest.raises(NotImplementedError):
-            pattern_match(p, t, n_slices=2, compute=False)
+            _pattern_match(p, t, n_slices=2, compute=False)
 
     def test_pattern_match_one_to_one(self):
         p = np.random.random(3 * 3).reshape((3, 3))
-        mr = pattern_match(p, p)
+        mr = _pattern_match(p, p)
         assert mr[0][0] == 0

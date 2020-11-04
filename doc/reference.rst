@@ -223,18 +223,14 @@ indexing
 .. currentmodule:: kikuchipy.indexing
 
 .. autosummary::
-    pattern_matching
+    merge_crystal_maps
+    orientation_similarity_map
+    StaticDictionaryIndexing
     similarity_metrics
 
-pattern_matching
-----------------
-
-.. currentmodule:: kikuchipy.indexing.pattern_matching
-
-.. autosummary::
-    pattern_match
-
-.. automodule:: kikuchipy.indexing.pattern_matching
+.. autofunction:: merge_crystal_maps
+.. autofunction:: orientation_similarity_map
+.. autoclass:: StaticDictionaryIndexing
     :members:
     :undoc-members:
     :show-inheritance:
@@ -256,7 +252,7 @@ similarity_metrics
 ....
 
 io
-==
+===
 
 .. automodule:: kikuchipy.io
 

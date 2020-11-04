@@ -17,97 +17,97 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from typing import Union, List
-import dask.array as da
-from dask.diagnostics import ProgressBar
+
 import numpy as np
-from h5py import File
+from orix.crystal_map import CrystalMap
 
-from orix.quaternion.rotation import Rotation
-from orix.crystal_map.crystal_map import CrystalMap, PhaseList, Phase
-
-from kikuchipy.indexing import pattern_match
-
-from kikuchipy.indexing.osm import orientation_similarity_map
+from kikuchipy.indexing._pattern_matching import _pattern_match
+from kikuchipy.indexing.orientation_similarity_map import (
+    orientation_similarity_map,
+)
 from kikuchipy.indexing.similarity_metrics import (
     SimilarityMetric,
     SIMILARITY_METRICS,
 )
 
-from kikuchipy.indexing.merge_crystalmaps import merge_crystalmaps
-
 
 class StaticDictionaryIndexing:
-    """Indexing against pre-computed dictionaries from EMsoft's EMEBSD.f90 program"""
+    """Indexing against pre-computed dictionaries of simulated EBSD
+    patterns.
+    """
 
-    def __init__(
-        self,
-        dictionaries: Union[
-            "EBSD", "LazyEBSD", List[Union["EBSD", "LazyEBSD"]]
-        ],
-    ):
-        """Initialize with one or more dictionaries before indexing patterns.
+    def __init__(self, dictionaries):
+        """Initialize with one or more dictionaries before indexing
+        patterns.
 
         Parameters
         ----------
-        dictionaries : Union[EBSD, LazyEBSD, List[Union[EBSD, LazyEBSD]]]
-            Dictionaries as EBSD Signals with one-dimensional navigation axis
-            and with the `xmap` property set.
+        dictionaries : EBSD or list of EBSD
+            Dictionaries as EBSD Signals with one-dimensional navigation
+            axis and with the `xmap` property set.
         """
-        self.dictionaries = (
-            dictionaries if isinstance(dictionaries, list) else [dictionaries]
-        )
+        if not isinstance(dictionaries, list):
+            dictionaries = list(dictionaries)
+        self.dictionaries = dictionaries
 
-    def index(
+    def dictionary_indexing(
         self,
-        patterns: Union["EBSD", "LazyEBSD"],
+        patterns,
         metric: Union[str, SimilarityMetric] = "zncc",
         keep_n: int = 1,
         n_slices: int = 1,
-        merge_xmaps: bool = True,
+        merge_crystal_maps: bool = True,
         osm: bool = True,
     ) -> List[CrystalMap]:
-        """Perform Dictionary Indexing on patterns against preloaded dictionaries.[ref here or elsewhere?]
-
-        Produce a `CrystalMap` for each dictionary with `scores` and `simulated_indices` as properties.
+        """Perform dictionary indexing on patterns against preloaded
+        dictionaries, returning a :class:`~orix.crystal_map.CrystalMap`
+        for each dictionary with `scores` and `simulated_indices` as
+        properties.
 
         Parameters
         ----------
-        patterns : Union[EBSD, LazyEBSD]
-            Patterns
-        metric : Union[str, SimilarityMetric], optional
+        patterns : EBSD
+            EBSD signal with experimental patterns.
+        metric : str or SimilarityMetric, optional
             Similarity metric, by default "zncc".
         keep_n : int, optional
             Number of sorted results to keep, by default 1.
         n_slices : int, optional
-            Number of slices of simulations to process sequentially, by default 1.
-        merge_xmaps : bool, optional
-            Produce a merged crystal map from best scores, by default True.
-            See also `merge_crystalmaps`.
+            Number of slices of simulations to process sequentially, by
+            default 1.
+        merge_crystal_maps : bool, optional
+            Return a merged crystal map, the best matches determined
+            from the similarity scores, in addition to the single phase
+            maps. By default True. See also
+            :func:`~kikuchipy.indexing.merge_crystal_maps`.
         osm : bool, optional
-            Orientation Similarity Maps as property `osm`, by default True.
+            Add orientation similarity maps to the returned crystal maps
+            as an `osm` property, by default True.
 
         Returns
         -------
-        xmaps : List[CrystalMap]
-            A crystal map for each dictionary loaded and one merged map if `merge_xmaps = True`.
+        xmaps : list of CrystalMap
+            A crystal map for each dictionary loaded and one merged map
+            if `merge_crystal_maps = True`.
         """
-
-        # This needs a rework before sent to cluster and possibly more automatic slicing with dask
+        # This needs a rework before sent to cluster and possibly more
+        # automatic slicing with dask
         num_simulations = self.dictionaries[0].data.shape[0]
         if num_simulations // n_slices > 13500:
             answer = input(
-                f"You should probably increase n_slices depending on your available memory, try above {num_simulations // 13500}. Do you want to proceed? [y/n]"
+                "You should probably increase n_slices depending on your "
+                f"available memory, try above {num_simulations // 13500}. Do "
+                "you want to proceed? [y/n]"
             )
             if answer != "y":
                 return
 
-        #        n_slices = None if n_slices == 1 else n_slices
-
         metric = SIMILARITY_METRICS.get(metric, metric)
 
-        # Naively let dask compute them seperately, should try in the future combined compute for better performance
+        # Naively let dask compute them seperately, should try in the
+        # future combined compute for better performance
         match_results = [
-            pattern_match(
+            _pattern_match(
                 patterns.data,
                 dictionary.data,
                 metric=metric,
@@ -117,13 +117,17 @@ class StaticDictionaryIndexing:
             for dictionary in self.dictionaries
         ]
 
-        axm = patterns.axes_manager
-        scan_unit = axm.navigation_axes[0].units
-        x1, x2, y1, y2 = axm.navigation_extent
-        scale_x, scale_y = (axm.navigation_axes[i].scale for i in range(2))
-        nav_shape = axm.navigation_shape
-        x = np.tile(np.arange(x1, x2 + scale_x, scale_x), nav_shape[1])
-        y = np.tile(np.arange(y1, y2 + scale_y, scale_y), nav_shape[0])
+        # Create spatial arrays
+        nav_axes = patterns.axes_manager
+        step_size = nav_axes[0].units
+
+        #        axm = patterns.axes_manager
+        #        scan_unit = axm.navigation_axes[0].units
+        #        col1, col2, row1, row2 = axm.navigation_extent
+        #        scale_x, scale_y = (axm.navigation_axes[i].scale for i in range(2))
+        #        nav_shape = axm.navigation_shape
+        #        x = np.tile(np.arange(col1, col2 + scale_x, scale_x), nav_shape[1])
+        #        y = np.tile(np.arange(row1, row2 + scale_y, scale_y), nav_shape[0])
 
         #
         # Create crystal map for each match_result, i.e. each phase
@@ -150,7 +154,7 @@ class StaticDictionaryIndexing:
         #
         # Creating one CrystalMap using best metric result accross all dictionaries
         #
-        if merge_xmaps and len(self.dictionaries) > 1:
+        if merge_crystal_maps and len(self.dictionaries) > 1:
             # Cummulative summation of the dictionary lengths to create unique simulation ids across dictionaries
             cum_sum_dict_lengths = np.cumsum(
                 [d.data.shape[0] for d in self.dictionaries]
@@ -177,3 +181,6 @@ class StaticDictionaryIndexing:
                 ).flatten()
 
         return xmaps
+
+
+# def _get_spatial_arrays()

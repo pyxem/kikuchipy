@@ -28,18 +28,16 @@ import numpy as np
 from kikuchipy.indexing.similarity_metrics import (
     SIMILARITY_METRICS,
     SimilarityMetric,
-)
-
-from kikuchipy.indexing.similarity_metrics import (
     _get_nav_shape,
     _get_number_of_simulated,
 )
+
 
 # TODO: Support masking signal space
 # TODO: Support masking navigation space
 
 
-def pattern_match(
+def _pattern_match(
     experimental: Union[da.Array, np.ndarray],
     simulated: Union[da.Array, np.ndarray],
     keep_n: int = 1,

@@ -31,7 +31,7 @@ from kikuchipy.indexing.similarity_metrics import (
 )
 
 
-def merge_crystalmaps(
+def merge_crystal_maps(
     xmaps: List[CrystalMap],
     mean_n_largest: int = 1,
     metric: Union[str, SimilarityMetric] = None,
@@ -81,8 +81,7 @@ def merge_crystalmaps(
     score_sorted_indicies = np.argsort(sign * -scores, kind="mergesort", axis=1)
 
     simulated_indices = np.concatenate(
-        [xmap.simulated_indices for xmap in xmaps],
-        axis=1,
+        [xmap.simulated_indices for xmap in xmaps], axis=1,
     )
     simulated_indices = np.take_along_axis(
         simulated_indices, score_sorted_indicies, axis=1
