@@ -32,30 +32,30 @@ from kikuchipy.signals import EBSD
 class TestStaticDictionaryIndexing:
     def test_init_static_dictionary_indexing(self):
         s = nickel_ebsd_small()
-        _ = StaticDictionaryIndexing(s)
+        sdi = StaticDictionaryIndexing(s)
 
-    def test_static_dictionary_indexing(self):
+        assert isinstance(sdi.dictionaries, list)
+        assert sdi.dictionaries[0] == s
+        assert isinstance(sdi.dictionaries[0], EBSD)
+        assert np.may_share_memory(sdi.dictionaries[0].data, s.data)
+
+    def test_static_dictionary_indexing_osm(self):
         s = nickel_ebsd_small()
+
         s_dict1 = EBSD(s.data.reshape(-1, 60, 60))
         s_dict2 = EBSD(s.data.reshape(-1, 60, 60))
-        s_dict1._xmap = CrystalMap(Rotation(np.zeros((9, 4))), x=np.arange(9))
-        s_dict2._xmap = CrystalMap(Rotation(np.zeros((9, 4))), x=np.arange(9))
-        s_dict1.xmap.phases._dict[0].name = "1"
-        s_dict2.xmap.phases._dict[0].name = "2"
-        sd = StaticDictionaryIndexing([s_dict1, s_dict2])
-        res = sd(s)
-        cm1, _, _ = res
+        s_dict1._xmap = CrystalMap(Rotation(np.zeros((9, 4))))
+        s_dict2._xmap = CrystalMap(Rotation(np.zeros((9, 4))))
+        s_dict1.xmap.phases[0].name = "a"
+        s_dict2.xmap.phases[0].name = "b"
 
-        assert np.allclose(cm1.scores, 1)
+        sd = StaticDictionaryIndexing([s_dict1, s_dict2])
+        res = sd(s, return_merged_crystal_map=False)
+        xmap1, _ = res
+
+        assert np.allclose(xmap1.scores, 1)
         # np.isin(["scores","simulated_indices","osm"],list(cm.prop.keys()))
-        assert np.all(
-            [
-                "scores" in cm.prop
-                and "simulated_indices" in cm.prop
-                and "osm" in cm.prop
-                for cm in res
-            ]
-        )
+        assert np.all(["osm" in xmap.prop for xmap in res])
 
     @pytest.mark.parametrize(
         "nav_slice, desired_arrays",
@@ -80,7 +80,12 @@ class TestStaticDictionaryIndexing:
         returned correctly.
         """
         s = nickel_ebsd_small()
-        spatial_arrays = _get_spatial_arrays(s.inav[nav_slice].axes_manager)
+        axes_manager = s.inav[nav_slice].axes_manager
+        spatial_arrays = _get_spatial_arrays(
+            shape=axes_manager.navigation_shape,
+            extent=axes_manager.navigation_extent,
+            step_sizes=[i.scale for i in axes_manager.navigation_axes],
+        )
 
         if len(spatial_arrays) == 0:
             assert spatial_arrays == desired_arrays

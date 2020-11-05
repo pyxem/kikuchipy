@@ -31,7 +31,7 @@ from kikuchipy.indexing.similarity_metrics import (
 
 
 def merge_crystal_maps(
-    xmaps: List[CrystalMap],
+    crystal_maps: List[CrystalMap],
     mean_n_best: int = 1,
     metric: Union[str, SimilarityMetric] = None,
     simulation_indices_prop: str = "simulation_indices",
@@ -43,7 +43,7 @@ def merge_crystal_maps(
 
     Parameters
     ----------
-    xmaps : list of CrystalMap
+    crystal_maps : list of CrystalMap
         A list of crystal maps with simulated indices and scores among
         their properties.
     mean_n_best : int, optional
@@ -72,7 +72,7 @@ def merge_crystal_maps(
     `mean_n_best` can be given with a negative sign if `metric` is not
     given, in order to choose the lowest valued metric results.
     """
-    if len(xmaps) == 1:
+    if len(crystal_maps) == 1:
         raise ValueError("More than one map must be passed")
 
     if metric is None:
@@ -91,11 +91,13 @@ def merge_crystal_maps(
     # number of scores per point. Shape: (M, N, K) or (M, K) if only one
     # score is available (e.g. refined dot products from EMsoft)
     (comb_shape, n_scores_per_point) = _get_combined_scores_shape(
-        xmaps=xmaps, score_prop=score_prop
+        crystal_maps=crystal_maps, score_prop=score_prop
     )
 
     # Combined (unsorted) scores array of shape (M, N, K) or (M, K)
-    combined_scores = np.dstack([xmap.prop[score_prop] for xmap in xmaps])
+    combined_scores = np.dstack(
+        [xmap.prop[score_prop] for xmap in crystal_maps]
+    )
     combined_scores = combined_scores.reshape(comb_shape)
 
     # Best score in each map point
@@ -109,21 +111,28 @@ def merge_crystal_maps(
 
     # Get the new CrystalMap's rotations, scores and indices, restricted
     # to one phase per point (uncombined)
-    new_rotations = Rotation(np.zeros_like(xmaps[0].rotations.data))
-    new_scores = np.zeros_like(xmaps[0].prop[score_prop])
-    new_indices = np.zeros_like(xmaps[0].prop[simulation_indices_prop])
+    new_rotations = Rotation(np.zeros_like(crystal_maps[0].rotations.data))
+    new_scores = np.zeros_like(crystal_maps[0].prop[score_prop])
+    new_indices = np.zeros_like(crystal_maps[0].prop[simulation_indices_prop])
     phase_list = PhaseList()
-    for i, xmap in enumerate(xmaps):
+    for i, xmap in enumerate(crystal_maps):
         mask = phase_id == i
         new_rotations[mask] = xmap.rotations[mask]
         new_scores[mask] = xmap.prop[score_prop][mask]
         new_indices[mask] = xmap.prop[simulation_indices_prop][mask]
         if np.sum(mask) != 0:
             try:
-                phase = xmap.phases_in_data[0]
+                phase = xmap.phases_in_data[0].deepcopy()
                 phase_list.add(phase)
             except ValueError:
-                warnings.warn(f"There are duplicates of phase {phase}")
+                name = phase.name
+                warnings.warn(
+                    f"There are duplicates of phase {name}, will therefore "
+                    f"rename this phase's name to {name + str(i)} in the merged"
+                    " PhaseList",
+                )
+                phase.name = name + str(i)
+                phase_list.add(phase)
 
     # To get the combined, best, sorted scores and simulation indices
     # from all maps (phases), we collapse the second and (potentially)
@@ -145,8 +154,8 @@ def merge_crystal_maps(
     # EMsoft)
     comb_sim_idx = np.dstack(
         [
-            xmap.prop[simulation_indices_prop][:, :n_scores_per_point]
-            for xmap in xmaps
+            xmap.prop[simulation_indices_prop]  # [:, :n_scores_per_point]
+            for xmap in crystal_maps
         ]
     )
 
@@ -170,23 +179,23 @@ def merge_crystal_maps(
         rotations=new_rotations,
         phase_id=phase_id,
         phase_list=phase_list,
-        x=xmaps[0].x,
-        y=xmaps[0].y,
-        z=xmaps[0].z,
+        x=crystal_maps[0].x,
+        y=crystal_maps[0].y,
+        z=crystal_maps[0].z,
         prop={
             score_prop: new_scores,
             simulation_indices_prop: new_indices,
             "merged_scores": merged_best_scores,
             "merged_simulated_indices": merged_simulated_indices,
         },
-        scan_unit=xmaps[0].scan_unit,
+        scan_unit=crystal_maps[0].scan_unit,
     )
 
 
 def _get_combined_scores_shape(
-    xmaps: List[CrystalMap], score_prop: str = "scores"
+    crystal_maps: List[CrystalMap], score_prop: str = "scores"
 ) -> Tuple[tuple, int]:
-    xmap = xmaps[0]
+    xmap = crystal_maps[0]
     all_scores_shape = (xmap.size,)
     single_scores_shape = xmap.prop[score_prop].shape
     if len(single_scores_shape) == 1:
@@ -194,7 +203,7 @@ def _get_combined_scores_shape(
     else:
         n_scores_per_point = single_scores_shape[1]
         all_scores_shape += (single_scores_shape[-1],)
-    n_xmaps = len(xmaps)
+    n_xmaps = len(crystal_maps)
     if n_xmaps > 1:
         all_scores_shape += (n_xmaps,)
     return all_scores_shape, n_scores_per_point

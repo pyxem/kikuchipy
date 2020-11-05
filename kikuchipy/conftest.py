@@ -40,8 +40,8 @@ from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 @pytest.fixture
 def dummy_signal():
-    """Dummy signal of shape <3, 3|3, 3>. If this is changed, all tests
-    using this signal will fail since they compare the output from
+    """Dummy signal of shape <(3, 3)|(3, 3)>. If this is changed, all
+    tests using this signal will fail since they compare the output from
     methods using this signal (as input) to hard-coded outputs.
     """
     # fmt: off
@@ -292,3 +292,45 @@ def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
         in_pattern=uvw_in_pattern,
         gnomonic_radius=detector.r_max,
     )
+
+
+@pytest.fixture
+def rotations():
+    return Rotation([(2, 4, 6, 8), (-1, -3, -5, -7)])
+
+
+@pytest.fixture(
+    params=[
+        (
+            # Tuple with default values for parameters: map_shape, step_sizes,
+            # and n_rotations_per_point
+            (4, 3),  # map_shape
+            (1.5, 1.5),  # step_sizes
+            1,  # rotations_per_point
+            [0],  # unique phase IDs
+        )
+    ],
+)
+def crystal_map_input(request, rotations):
+    """Taken from orix."""
+    # Unpack parameters
+    (ny, nx), (dy, dx), rotations_per_point, unique_phase_ids = request.param
+    map_size = ny * nx
+
+    d = {"x": None, "y": None, "z": None, "rotations": None}
+    if nx > 1:
+        d["x"] = np.tile(np.arange(nx) * dx, ny)
+    if ny > 1:
+        d["y"] = np.sort(np.tile(np.arange(ny) * dy, nx))
+
+    rot_idx = np.random.choice(
+        np.arange(rotations.size), map_size * rotations_per_point
+    )
+    data_shape = (map_size,)
+    if rotations_per_point > 1:
+        data_shape += (rotations_per_point,)
+    d["rotations"] = rotations[rot_idx].reshape(*data_shape)
+
+    d["phase_id"] = np.random.choice(unique_phase_ids, map_size)
+
+    return d

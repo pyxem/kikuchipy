@@ -48,7 +48,7 @@ class StaticDictionaryIndexing:
             axis and with the `xmap` property set.
         """
         if not isinstance(dictionaries, list):
-            dictionaries = list(dictionaries)
+            dictionaries = [dictionaries]
         self.dictionaries = dictionaries
 
     def __call__(
@@ -174,10 +174,15 @@ class StaticDictionaryIndexing:
                 osm = orientation_similarity_map(xmap, n_largest=keep_n)
                 xmap.prop["osm"] = osm.flatten()
 
+        if len(xmaps) == 1:
+            xmaps = xmaps[0]
+
         return xmaps
 
 
-def _get_spatial_arrays(shape, extent, step_sizes):
+def _get_spatial_arrays(
+    shape: tuple, extent: tuple, step_sizes: tuple
+) -> Union[tuple, np.ndarray]:
     n_nav_dims = len(shape)
     if n_nav_dims == 0:
         return ()

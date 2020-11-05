@@ -922,13 +922,13 @@ class EBSD(CommonImage, Signal2D):
             A crystal map for each dictionary loaded and one merged map if `merge_xmaps = True`.
         """
         sdi = StaticDictionaryIndexing(simulations)
-        return sdi.index(
-            self,
+        return sdi(
+            signal=self,
             metric=metric,
             keep_n=keep_n,
             n_slices=n_slices,
-            merge_xmaps=merge_xmaps,
-            osm=osm,
+            return_merged_crystal_map=merge_xmaps,
+            get_orientation_similarity_map=osm,
         )
 
     def fft_filter(
