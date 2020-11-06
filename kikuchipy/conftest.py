@@ -303,7 +303,11 @@ def rotations():
 @pytest.fixture
 def get_single_phase_xmap(rotations):
     def _get_single_phase_xmap(
-        nav_shape, rotations_per_point, prop_names, name, phase_id
+        nav_shape,
+        rotations_per_point=5,
+        prop_names=["scores", "simulation_indices"],
+        name="a",
+        phase_id=0,
     ):
         d, map_size = _get_spatial_array_dicts(nav_shape)
         rot_idx = np.random.choice(
@@ -315,8 +319,9 @@ def get_single_phase_xmap(rotations):
         d["rotations"] = rotations[rot_idx].reshape(*data_shape)
         d["phase_id"] = np.ones(map_size) * phase_id
         d["phase_list"] = PhaseList(Phase(name=name))
+        # Scores and simulation indices
         d["prop"] = {
-            prop_names[0]: np.ones(data_shape),
+            prop_names[0]: np.ones(data_shape, dtype=np.float32),
             prop_names[1]: np.arange(np.prod(data_shape)).reshape(data_shape),
         }
         return CrystalMap(**d)

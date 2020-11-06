@@ -41,7 +41,7 @@ def merge_crystal_maps(
     :class:`~orix.crystal_mapCrystalMap`s with a 1D or 2D navigation
     shape into one multi phase map.
 
-    Typically used to create a multi phase map from single phase results
+    Typically used to create a multiphase map from single phase results
     from :class:`~kikuchipy.indexing.DictionaryIndexing`.
 
     Parameters
@@ -67,14 +67,30 @@ def merge_crystal_maps(
         A crystal map where the rotation of the phase with the best
         matching score(s) is assigned to each point. The best matching
         simulation indices and scores, merge sorted, are added to its
-        properties with names `merged_scores` and
-        `merged_simulation_indices`, respectively.
+        properties with names equal to whatever passed to `scores_prop`
+        and `simulation_indices_prop` with `merged_` as a suffix,
+        respectively.
 
     Notes
     -----
     `mean_n_best` can be given with a negative sign if `metric` is not
     given, in order to choose the lowest valued metric results.
+
+    It is assumed that there are at least as many simulation indices as
+    scores per point, and that all maps have the same number of
+    rotations, scores and simulation indices per point.
     """
+    map_shapes = [xmap.shape for xmap in crystal_maps]
+    if not np.sum(abs(np.diff(map_shapes, axis=0))) == 0:
+        raise ValueError("All crystal maps must have the same navigation shape")
+
+    rot_per_point_per_map = [xmap.rotations_per_point for xmap in crystal_maps]
+    if not all(np.diff(rot_per_point_per_map) == 0):
+        raise ValueError(
+            "All crystal maps must have the same number of rotations, scores "
+            "and simulation indices per point."
+        )
+
     if metric is None:
         sign = copysign(1, mean_n_best)
         mean_n_best = abs(mean_n_best)
@@ -154,18 +170,17 @@ def merge_crystal_maps(
     # indices per point than scores (e.g. refined dot products from
     # EMsoft)
     comb_sim_idx = np.dstack(
-        [
-            xmap.prop[simulation_indices_prop]  # [:, :n_scores_per_point]
-            for xmap in crystal_maps
-        ]
+        [xmap.prop[simulation_indices_prop] for xmap in crystal_maps]
     )
 
     # To enable calculation of an orientation similarity map from the
     # combined, sorted simulation indices array, we must make the
     # indices unique across all maps
-    max_indices = np.max(comb_sim_idx, axis=(0, 1))
-    increment_indices = np.cumsum(max_indices) - max_indices[0]
-    comb_sim_idx += increment_indices
+    for i in range(1, comb_sim_idx.shape[-1]):
+        increment = (
+            abs(comb_sim_idx[..., i - 1].max() - comb_sim_idx[..., i].min()) + 1
+        )
+        comb_sim_idx[..., i] += increment
 
     # Collapse axes as for the combined scores array above
     comb_sim_idx = comb_sim_idx.reshape(mergesort_shape)
@@ -186,8 +201,8 @@ def merge_crystal_maps(
         prop={
             scores_prop: new_scores,
             simulation_indices_prop: new_indices,
-            "merged_scores": merged_best_scores,
-            "merged_simulated_indices": merged_simulated_indices,
+            f"merged_{scores_prop}": merged_best_scores,
+            f"merged_{simulation_indices_prop}": merged_simulated_indices,
         },
         scan_unit=crystal_maps[0].scan_unit,
     )
@@ -204,9 +219,7 @@ def _get_combined_scores_shape(
     else:
         n_scores_per_point = single_scores_shape[1]
         all_scores_shape += (single_scores_shape[-1],)
-    n_xmaps = len(crystal_maps)
-    if n_xmaps > 1:
-        all_scores_shape += (n_xmaps,)
+    all_scores_shape += (len(crystal_maps),)
     return all_scores_shape, n_scores_per_point
 
 
