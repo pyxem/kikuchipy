@@ -199,10 +199,10 @@ class TestSimilarityMetrics:
             SIMILARITY_METRICS["ndp"],
         ]
         desired_repr = [
-            f"SimilarityMetric <lambda>, scope: many_to_many",
-            f"FlatSimilarityMetric <lambda>, scope: one_to_many",
-            f"SimilarityMetric _zncc_einsum, scope: many_to_many",
-            f"SimilarityMetric _ndp_einsum, scope: many_to_many",
+            "SimilarityMetric <lambda>, scope: many_to_many",
+            "FlatSimilarityMetric <lambda>, scope: one_to_many",
+            "SimilarityMetric _zncc_einsum, scope: many_to_many",
+            "SimilarityMetric _ndp_einsum, scope: many_to_many",
         ]
 
         for i in range(len(desired_repr)):

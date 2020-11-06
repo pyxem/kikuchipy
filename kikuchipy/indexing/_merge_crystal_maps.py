@@ -35,11 +35,14 @@ def merge_crystal_maps(
     mean_n_best: int = 1,
     metric: Union[str, SimilarityMetric] = None,
     simulation_indices_prop: str = "simulation_indices",
-    score_prop: str = "scores",
+    scores_prop: str = "scores",
 ):
-    """Merge a list of single phase
-    :class:`~orix.crystal_mapCrystalMap`s into one multi phase map. Used
-    on results from :class:`~kikuchipy.indexing.DictionaryIndexing`.
+    """Merge a list of at least two single phase
+    :class:`~orix.crystal_mapCrystalMap`s with a 1D or 2D navigation
+    shape into one multi phase map.
+
+    Typically used to create a multi phase map from single phase results
+    from :class:`~kikuchipy.indexing.DictionaryIndexing`.
 
     Parameters
     ----------
@@ -54,7 +57,7 @@ def merge_crystal_maps(
     simulation_indices_prop : str, optional
         Name of simulated indices array in the crystal map's properties.
         Default is "simulation_indices".
-    score_prop : str, optional
+    scores_prop : str, optional
         Name of scores array in the crystal map's properties. Default
         is "scores".
 
@@ -72,9 +75,6 @@ def merge_crystal_maps(
     `mean_n_best` can be given with a negative sign if `metric` is not
     given, in order to choose the lowest valued metric results.
     """
-    if len(crystal_maps) == 1:
-        raise ValueError("More than one map must be passed")
-
     if metric is None:
         sign = copysign(1, mean_n_best)
         mean_n_best = abs(mean_n_best)
@@ -91,12 +91,12 @@ def merge_crystal_maps(
     # number of scores per point. Shape: (M, N, K) or (M, K) if only one
     # score is available (e.g. refined dot products from EMsoft)
     (comb_shape, n_scores_per_point) = _get_combined_scores_shape(
-        crystal_maps=crystal_maps, score_prop=score_prop
+        crystal_maps=crystal_maps, scores_prop=scores_prop
     )
 
     # Combined (unsorted) scores array of shape (M, N, K) or (M, K)
     combined_scores = np.dstack(
-        [xmap.prop[score_prop] for xmap in crystal_maps]
+        [xmap.prop[scores_prop] for xmap in crystal_maps]
     )
     combined_scores = combined_scores.reshape(comb_shape)
 
@@ -112,17 +112,18 @@ def merge_crystal_maps(
     # Get the new CrystalMap's rotations, scores and indices, restricted
     # to one phase per point (uncombined)
     new_rotations = Rotation(np.zeros_like(crystal_maps[0].rotations.data))
-    new_scores = np.zeros_like(crystal_maps[0].prop[score_prop])
+    new_scores = np.zeros_like(crystal_maps[0].prop[scores_prop])
     new_indices = np.zeros_like(crystal_maps[0].prop[simulation_indices_prop])
     phase_list = PhaseList()
     for i, xmap in enumerate(crystal_maps):
         mask = phase_id == i
         new_rotations[mask] = xmap.rotations[mask]
-        new_scores[mask] = xmap.prop[score_prop][mask]
+        new_scores[mask] = xmap.prop[scores_prop][mask]
         new_indices[mask] = xmap.prop[simulation_indices_prop][mask]
         if np.sum(mask) != 0:
+            current_id = xmap.phases_in_data.ids[0]
+            phase = xmap.phases_in_data[current_id].deepcopy()
             try:
-                phase = xmap.phases_in_data[0].deepcopy()
                 phase_list.add(phase)
             except ValueError:
                 name = phase.name
@@ -183,7 +184,7 @@ def merge_crystal_maps(
         y=crystal_maps[0].y,
         z=crystal_maps[0].z,
         prop={
-            score_prop: new_scores,
+            scores_prop: new_scores,
             simulation_indices_prop: new_indices,
             "merged_scores": merged_best_scores,
             "merged_simulated_indices": merged_simulated_indices,
@@ -193,11 +194,11 @@ def merge_crystal_maps(
 
 
 def _get_combined_scores_shape(
-    crystal_maps: List[CrystalMap], score_prop: str = "scores"
+    crystal_maps: List[CrystalMap], scores_prop: str = "scores"
 ) -> Tuple[tuple, int]:
     xmap = crystal_maps[0]
     all_scores_shape = (xmap.size,)
-    single_scores_shape = xmap.prop[score_prop].shape
+    single_scores_shape = xmap.prop[scores_prop].shape
     if len(single_scores_shape) == 1:
         n_scores_per_point = 1
     else:
