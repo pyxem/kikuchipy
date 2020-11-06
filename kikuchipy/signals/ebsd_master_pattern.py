@@ -313,6 +313,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         n = rotations.size
         det_y, det_x = detector.shape
 
+        # index = self.axes_manager.na
+
         out_shape = (n, det_y, det_x)
         chunks = (min(chunk_size, n), det_y, det_x)
 
@@ -400,6 +402,7 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
     xpc = pc[..., 0]
     ypc = pc[..., 1]
     L = pc[..., 2]
+
     # Detector coordinates in microns
     det_x = (
         -((-xpc - (1.0 - detector.ncols) * 0.5) - np.arange(0, detector.ncols))
@@ -592,3 +595,6 @@ def _get_patterns_chunk(
 
 
 # :)
+
+
+# emsoft ebsd master pattern github GET ENERGY INDEX

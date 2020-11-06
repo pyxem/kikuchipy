@@ -25,6 +25,7 @@ import numpy as np
 import pytest
 
 from kikuchipy import load
+from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins.tests.test_emsoft_ebsd_masterpattern import (
     METADATA,
     setup_axes_manager,
@@ -33,6 +34,9 @@ from kikuchipy.signals.tests.test_ebsd import assert_dictionary
 from kikuchipy.signals.ebsd_master_pattern import (
     EBSDMasterPattern,
     LazyEBSDMasterPattern,
+    _get_direction_cosines,
+    _get_lambert_interpolation_parameters,
+    _get_patterns_chunk,
 )
 from kikuchipy.signals.util._metadata import metadata_nodes
 
@@ -166,3 +170,34 @@ class TestMetadata:
         md_dict = s.metadata.get_item("Sample.Phases.1").as_dictionary()
         p.pop("number")
         assert_dictionary(p, md_dict)
+
+
+class TestEBSDCatalogue:
+
+    # Create  detector model
+    detector = EBSDDetector(
+        shape=(480, 640),
+        px_size=50,
+        pc=(20, 20, 15000),
+        convention="emsoft4",
+        tilt=10,
+        sample_tilt=70,
+    )
+
+    def test_get_direction_cosines(self):
+        out = _get_direction_cosines(self.detector)
+        pass
+
+    def test_get_lambert_interpolation_parameters(self):
+        dc = 1
+        scl = 1
+        npx = 1
+        npy = 1
+        out = _get_lambert_interpolation_parameters(dc, scl, npx, npy)
+        pass
+
+    def test_get_patterns(self):
+        pass
+
+    def test_get_patterns_chunk(self):
+        pass
