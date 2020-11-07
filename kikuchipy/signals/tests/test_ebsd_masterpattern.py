@@ -51,6 +51,11 @@ EMSOFT_FILE = os.path.join(
     DIR_PATH, "../../data/emsoft_ebsd_master_pattern/master_patterns.h5"
 )
 
+EMSOFT_MASTER = os.path.join(
+    DIR_PATH,
+    "../../data/emsoft_ebsd_master_pattern/ni_mc_mp_20kv_uint8_gzip_opts9.h5",
+)
+
 
 class TestEBSDMasterPatternInit:
     def test_init_no_metadata(self):
@@ -224,13 +229,7 @@ class TestEBSDCatalogue:
 
     def test_get_patterns(self):
 
-        # Cubic Test
-        mp = kp.load(
-            r"C:\Users\laler\Desktop\Project - Kikuchipy\Patterns\Ni\MCoutputNTNU.h5",
-            projection="lambert",
-            hemisphere="both",
-        )
-
+        # Ni Test
         EMSOFT_EBSD_FILE = os.path.join(
             DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5"
         )
@@ -241,25 +240,34 @@ class TestEBSDCatalogue:
 
         angles = np.array((120, 45, 60))
         r = Rotation.from_euler(np.radians(angles))
-        pattern = mp.get_patterns(r, self.detector, 20, 100, dtype_out=np.uint8)
 
-        pat = pattern.data[0].compute()
+        kp_mp = kp.load(EMSOFT_MASTER, projection="lambert", hemisphere="both")
+
+        kp_pattern = kp_mp.get_patterns(
+            r, self.detector, 20, 100, dtype_out=np.uint8
+        )
+        kp_pat = kp_pattern.data[0].compute()
 
         zncc_metric = SIMILARITY_METRICS["zncc"]
         ndp_metric = SIMILARITY_METRICS["ndp"]
 
-        zncc = zncc_metric(pat, emsoft_key)
-        ndp = ndp_metric(pat, emsoft_key)
+        zncc1 = zncc_metric(kp_pat, emsoft_key)
+        ndp1 = ndp_metric(kp_pat, emsoft_key)
 
-        assert zncc >= 0.985
-        assert ndp >= 0.985
-        # This passes locally
-
-        kikuchipy_master = kp.load(EMSOFT_FILE)
+        assert zncc1 >= 0.935  # Best I can do with current pattern in data
+        # with (1001, 1001) it will go above 0.985
+        assert ndp1 >= 0.935
 
         # TODO: Create tests for other structures
 
     def test_get_patterns_chunk(self):
-        r = Rotation.from_euler((0, 0, 0))
+        r = Rotation.from_euler(((0, 0, 0), (1, 1, 1), (2, 2, 2)))
         dc = _get_direction_cosines(self.detector)
-        pass
+
+        mpn = np.empty((1001, 1001))
+        mps = mpn
+        npx = 1001
+        npy = npx
+        out = _get_patterns_chunk(r, dc, mpn, mps, npx, npy, rescale=False)
+
+        assert out.shape == r.shape + dc.shape

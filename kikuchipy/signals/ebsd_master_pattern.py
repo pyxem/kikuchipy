@@ -473,7 +473,10 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
 
 
 def _get_lambert_interpolation_parameters(
-    rotated_direction_cosines: Vector3d, scale: int, npx: int, npy: int
+    rotated_direction_cosines: Vector3d,
+    scale: Union[int, float],
+    npx: int,
+    npy: int,
 ) -> tuple:
     """Get Lambert interpolation parameters as described in EMsoft.
 
