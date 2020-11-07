@@ -281,7 +281,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         self,
         rotations: Rotation,
         detector: EBSDDetector,
-        energy_index: int,
+        energy: int,
         chunk_size: int,
         dtype_out=np.float32,
     ) -> LazyEBSD:
@@ -295,9 +295,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             Set of rotations to get patterns from.
         detector : EBSDDetector
             EBSDDetector object describing the detector geometry.
-        energy_index : int
-            Index of the wanted energy in the master pattern.
-            WIP THIS WILL BE CHANGED TO ENERGY ASAP.
+        energy : int
+            The wanted energy in the master pattern.
         chunk_size : int
             The amount of rotations the dask arrays should work on per chunk.
         dtype_out : numpy.dtype
@@ -308,12 +307,18 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         LazyEBSD object containing the simulated EBSD patterns.
         """
 
+        if (
+            self.metadata.Simulation.EBSD_master_pattern.Master_pattern.projection
+            != "lambert"
+        ):
+            raise NotImplementedError(
+                "Method only supports master patterns in lambert projection!"
+            )
+
         dc = _get_direction_cosines(detector)
 
         n = rotations.size
         det_y, det_x = detector.shape
-
-        # index = self.axes_manager.na
 
         out_shape = (n, det_y, det_x)
         chunks = (min(chunk_size, n), det_y, det_x)
@@ -326,14 +331,37 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         r_da = da.from_array(rotations.data, chunks=(chunks[0], -1))
 
-        mpn = self.data[0, energy_index]
-        mps = self.data[1, energy_index]
+        # 4 cases
+        # Has energies, has hemis - Case 1
+        if len(self.axes_manager.shape) == 4:
+            energies = self.axes_manager["energy"].axis
+            energy_index = (np.abs(energies - energy)).argmin()
+            mpn = self.data[0, energy_index]
+            mps = self.data[1, energy_index]
+
+        # no energies, no hemis - Case 2
+        elif len(self.axes_manager.shape) == 2:
+            mpn = self.data
+            mps = mpn
+        else:
+            try:  # has energies, no hemi - Case 3
+                energies = self.axes_manager["energy"].axis
+                energy_index = (np.abs(energies - energy)).argmin()
+                mpn = self.data[energy_index]
+                mps = mpn
+            except ValueError:  # no energies, yes hemi - Case 4
+                mpn = self.data[0]
+                mps = self.data[1]
+
+        npx, npy = self.axes_manager.signal_shape
 
         simulated = r_da.map_blocks(
             _get_patterns_chunk,
             dc=dc,
             master_north=mpn,
             master_south=mps,
+            npx=npx,
+            npy=npy,
             rescale=rescale,
             dtype_out=dtype_out,
             drop_axis=1,
@@ -518,6 +546,8 @@ def _get_patterns_chunk(
     dc: Vector3d,
     master_north: np.ndarray,
     master_south: np.ndarray,
+    npx: int,
+    npy: int,
     rescale: bool,
     dtype_out=np.float32,
 ) -> np.ndarray:
@@ -536,7 +566,11 @@ def _get_patterns_chunk(
     master_north : numpy.ndarray
         Northern hemisphere of the master pattern.
     master_south : numpy.ndarray
-        Southern hemisphere of the pater pattern.
+        Southern hemisphere of the master pattern.
+    npx : int
+        Number of pixels in the x-direction on the master pattern.
+    npy: int
+        Number of pixels in the y-direction on the master pattern.
     rescale : bool
         Whether to call rescale_intensities() or not.
     dtype_out : numpy.dtype
@@ -552,7 +586,6 @@ def _get_patterns_chunk(
     m = r.shape[0]
     simulated = np.empty(shape=(m,) + dc.shape, dtype=dtype_out)
 
-    npy, npx = master_north.shape
     scale_factor = (npx - 1) / 2
 
     for i in range(m):
@@ -592,9 +625,3 @@ def _get_patterns_chunk(
             pattern = rescale_intensity(pattern, dtype_out=dtype_out)
         simulated[i] = pattern
     return simulated
-
-
-# :)
-
-
-# emsoft ebsd master pattern github GET ENERGY INDEX

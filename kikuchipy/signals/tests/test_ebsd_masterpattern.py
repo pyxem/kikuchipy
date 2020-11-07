@@ -22,8 +22,11 @@ import dask.array as da
 from hyperspy.api import load as hs_load
 from hyperspy._signals.signal2d import Signal2D
 import numpy as np
+from orix.vector import Vector3d
+from orix.quaternion import Rotation
 import pytest
 
+import kikuchipy as kp
 from kikuchipy import load
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins.tests.test_emsoft_ebsd_masterpattern import (
@@ -39,6 +42,8 @@ from kikuchipy.signals.ebsd_master_pattern import (
     _get_patterns_chunk,
 )
 from kikuchipy.signals.util._metadata import metadata_nodes
+from kikuchipy.indexing.similarity_metrics import SIMILARITY_METRICS
+from kikuchipy.indexing.pattern_matching import pattern_match
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -186,18 +191,75 @@ class TestEBSDCatalogue:
 
     def test_get_direction_cosines(self):
         out = _get_direction_cosines(self.detector)
-        pass
+        assert isinstance(out, Vector3d)
 
     def test_get_lambert_interpolation_parameters(self):
-        dc = 1
-        scl = 1
-        npx = 1
-        npy = 1
-        out = _get_lambert_interpolation_parameters(dc, scl, npx, npy)
-        pass
+        dc = _get_direction_cosines(self.detector)
+        scl = 500
+        npx = 1001
+        npy = 1001
+        (
+            nii,
+            nij,
+            niip,
+            nijp,
+            di,
+            dj,
+            dim,
+            djm,
+        ) = _get_lambert_interpolation_parameters(dc, scl, npx, npy)
+
+        assert (nii <= niip).all()
+        assert (nij <= nijp).all()
+
+        assert (nii < npx).all()
+        assert (nij < npy).all()
+        assert (niip < npx).all()
+        assert (nijp < npx).all()
+
+        assert (nii >= 0).all()
+        assert (nij >= 0).all()
+        assert (niip >= 0).all()
+        assert (nijp >= 0).all()
 
     def test_get_patterns(self):
-        pass
+
+        # Cubic Test
+        mp = kp.load(
+            r"C:\Users\laler\Desktop\Project - Kikuchipy\Patterns\Ni\MCoutputNTNU.h5",
+            projection="lambert",
+            hemisphere="both",
+        )
+
+        EMSOFT_EBSD_FILE = os.path.join(
+            DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5"
+        )
+
+        emsoft_key = kp.load(EMSOFT_EBSD_FILE)
+
+        emsoft_key = emsoft_key.data[0]
+
+        angles = np.array((120, 45, 60))
+        r = Rotation.from_euler(np.radians(angles))
+        pattern = mp.get_patterns(r, self.detector, 20, 100, dtype_out=np.uint8)
+
+        pat = pattern.data[0].compute()
+
+        zncc_metric = SIMILARITY_METRICS["zncc"]
+        ndp_metric = SIMILARITY_METRICS["ndp"]
+
+        zncc = zncc_metric(pat, emsoft_key)
+        ndp = ndp_metric(pat, emsoft_key)
+
+        assert zncc >= 0.985
+        assert ndp >= 0.985
+        # This passes locally
+
+        kikuchipy_master = kp.load(EMSOFT_FILE)
+
+        # TODO: Create tests for other structures
 
     def test_get_patterns_chunk(self):
+        r = Rotation.from_euler((0, 0, 0))
+        dc = _get_direction_cosines(self.detector)
         pass
