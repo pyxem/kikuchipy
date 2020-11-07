@@ -271,6 +271,3 @@ class TestEBSDCatalogue:
         out = _get_patterns_chunk(r, dc, mpn, mps, npx, npy, rescale=False)
 
         assert out.shape == r.shape + dc.shape
-
-
-# run travis
