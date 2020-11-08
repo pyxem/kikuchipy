@@ -23,10 +23,12 @@ Contributors
 
 Added
 -----
-- A kikuchipy.data module with a small Nickel EBSD data set and master
-  pattern.
+- A data module with a small Nickel EBSD data set and master pattern, and a
+  larger EBSD data set downloadable via the module. Two dependencies, pooch and
+  tqdm, are added along with this module.
   (`#236 <https://github.com/pyxem/kikuchipy/pull/236>`_,
-  `#237 <https://github.com/pyxem/kikuchipy/pull/237>`_)
+  `#237 <https://github.com/pyxem/kikuchipy/pull/237>`_,
+  `#243 <https://github.com/pyxem/kikuchipy/pull/243>`_)
 - Indexing of EBSD patterns through matching of patterns with a static
   dictionary of simulated patterns with known orientations.
   (`#231 <https://github.com/pyxem/kikuchipy/pull/231>`_,
@@ -34,9 +36,8 @@ Added
 - EBSD.xmap property storing an orix CrystalMap object. So far only read from
   a EMsoft simulated EBSD pattern file. Relevant documentation updated.
   (`#226 <https://github.com/pyxem/kikuchipy/pull/226>`_)
-- Dependency on the diffsims package (https://github.com/pyxem/diffsims/) for
-  handling of electron scattering and diffraction.
-  (`#220 <https://github.com/pyxem/kikuchipy/pull/220>`_)
+- Dependency on the diffsims package for handling of electron scattering and
+  diffraction. (`#220 <https://github.com/pyxem/kikuchipy/pull/220>`_)
 - Modified Lambert mapping, and its inverse, from points on the unit sphere to a
   2D square grid, as implemented in Callahan and De Graef (2013).
   (`#214 <https://github.com/pyxem/kikuchipy/pull/214>`_)
@@ -49,7 +50,7 @@ Added
   gnomonic coordinates. EBSD reference frame documentation.
   (`#204 <https://github.com/pyxem/kikuchipy/pull/204>`_,
   `#215 <https://github.com/pyxem/kikuchipy/pull/215>`_)
-- Reader for EMsoft's simulated EBSD patterns returned by their ``EMEBSD.f90``
+- Reader for EMsoft's simulated EBSD patterns returned by their EMEBSD.f90
   program. (`#202 <https://github.com/pyxem/kikuchipy/pull/202>`_)
 
 Changed
@@ -57,10 +58,11 @@ Changed
 - EMsoft EBSD master pattern plugin can read a single energy pattern. Parameter
   `energy_range`  changed to `energy`.
   (`240 <https://github.com/pyxem/kikuchipy/pull/240>`_)
-- Migrating the user guide from `reStructuredText` files to Jupyter Notebooks
-  built to HTML via the `nbsphinx` package.
+- Migrate user guide from reST files to Jupyter Notebooks converted to HTML with
+  the `nbsphinx` package.
   (`#236 <https://github.com/pyxem/kikuchipy/pull/236>`_,
-  `#237 <https://github.com/pyxem/kikuchipy/pull/237>`_)
+  `#237 <https://github.com/pyxem/kikuchipy/pull/237>`_,
+  `#244 <https://github.com/pyxem/kikuchipy/pull/244>`_)
 - Move GitHub repository to the pyxem organization. Update relevant URLs.
   (`#198 <https://github.com/pyxem/kikuchipy/pull/198>`_)
 - Allow scikit-image >= 0.16.
