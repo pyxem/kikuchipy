@@ -285,8 +285,7 @@ class TestEBSDCatalogue:
             detector_shape[0],
         )
 
-        mp_c = EBSDMasterPattern(np.zeros((2, 11, 11)))
-        mp_c.axes_manager[0].name = "y"
+        mp_c = EBSDMasterPattern(np.zeros((11, 11)))
         mp_c.set_simulation_parameters(projection="lambert")
         out_c = mp_c.get_patterns(r2, self.detector, 5, 1)
 
@@ -296,6 +295,10 @@ class TestEBSDCatalogue:
             detector_shape[1],
             detector_shape[0],
         )
+
+        mp_d = EBSDMasterPattern(np.zeros((2, 11, 11)))
+        with pytest.raises(NotImplementedError):
+            mp_d.get_patterns(r2, self.detector, 5, 1)
 
         # TODO: Create tests for other structures
 
