@@ -26,7 +26,7 @@ from orix.vector import Vector3d
 from orix.quaternion import Rotation
 import pytest
 
-import kikuchipy as kp
+
 from kikuchipy import load
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins.tests.test_emsoft_ebsd_masterpattern import (
@@ -43,7 +43,6 @@ from kikuchipy.signals.ebsd_master_pattern import (
 )
 from kikuchipy.signals.util._metadata import metadata_nodes
 from kikuchipy.indexing.similarity_metrics import SIMILARITY_METRICS
-from kikuchipy.indexing.pattern_matching import pattern_match
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -234,14 +233,14 @@ class TestEBSDCatalogue:
             DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5"
         )
 
-        emsoft_key = kp.load(EMSOFT_EBSD_FILE)
+        emsoft_key = load(EMSOFT_EBSD_FILE)
 
         emsoft_key = emsoft_key.data[0]
 
         angles = np.array((120, 45, 60))
         r = Rotation.from_euler(np.radians(angles))
 
-        kp_mp = kp.load(EMSOFT_MASTER, projection="lambert", hemisphere="both")
+        kp_mp = load(EMSOFT_MASTER, projection="lambert", hemisphere="both")
 
         kp_pattern = kp_mp.get_patterns(
             r, self.detector, 20, 100, dtype_out=np.uint8
