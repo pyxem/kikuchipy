@@ -264,7 +264,9 @@ def _get_data_shape_slices(
         data_slices = (slice(i_min, i_max),) + data_slices
         data_shape = (i_max - i_min,) + data_shape
     else:  # Assume integer
-        data_slices = (slice(0, 1),) + data_slices
+        # Always returns one integer
+        index = np.abs(energies - energy).argmin()
+        data_slices = (slice(index, index + 1),) + data_slices
         data_shape = (1,) + data_shape
     return data_shape, data_slices
 
