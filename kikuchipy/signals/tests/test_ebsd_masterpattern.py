@@ -41,6 +41,7 @@ from kikuchipy.signals.ebsd_master_pattern import (
     _get_lambert_interpolation_parameters,
     _get_patterns_chunk,
 )
+from kikuchipy.signals.ebsd import LazyEBSD
 from kikuchipy.signals.util._metadata import metadata_nodes
 from kikuchipy.indexing.similarity_metrics import SIMILARITY_METRICS
 
@@ -256,6 +257,45 @@ class TestEBSDCatalogue:
         assert zncc1 >= 0.935  # Best I can do with current pattern in data
         # with (1001, 1001) it will go above 0.985
         assert ndp1 >= 0.935
+
+        detector_shape = self.detector.shape
+        r2 = Rotation.from_euler(((0, 0, 0), (1, 1, 1), (2, 2, 2)))
+        mp_a = EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
+        mp_a.axes_manager[0].name = "energy"
+        mp_a.axes_manager[1].name = "y"
+        mp_a.set_simulation_parameters(projection="lambert")
+        out_a = mp_a.get_patterns(r2, self.detector, 5, 1)
+
+        assert isinstance(out_a, LazyEBSD)
+        assert out_a.axes_manager.shape == (
+            3,
+            detector_shape[1],
+            detector_shape[0],
+        )
+
+        mp_b = EBSDMasterPattern(np.zeros((10, 11, 11)))
+        mp_b.axes_manager[0].name = "energy"
+        mp_b.set_simulation_parameters(projection="lambert")
+        out_b = mp_b.get_patterns(r2, self.detector, 5, 1)
+
+        assert isinstance(out_b, LazyEBSD)
+        assert out_b.axes_manager.shape == (
+            3,
+            detector_shape[1],
+            detector_shape[0],
+        )
+
+        mp_c = EBSDMasterPattern(np.zeros((2, 11, 11)))
+        mp_c.axes_manager[0].name = "y"
+        mp_c.set_simulation_parameters(projection="lambert")
+        out_c = mp_c.get_patterns(r2, self.detector, 5, 1)
+
+        assert isinstance(out_c, LazyEBSD)
+        assert out_c.axes_manager.shape == (
+            3,
+            detector_shape[1],
+            detector_shape[0],
+        )
 
         # TODO: Create tests for other structures
 
