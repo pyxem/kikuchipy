@@ -38,15 +38,20 @@ def merge_crystal_maps(
     scores_prop: str = "scores",
 ):
     """Merge a list of at least two single phase
-    :class:`~orix.crystal_mapCrystalMap`s with a 1D or 2D navigation
-    shape into one multi phase map.
+    :class:`~orix.crystal_map.crystal_map.CrystalMap` with a 1D or 2D
+    navigation shape into one multi phase map.
 
     Typically used to create a multiphase map from single phase results
-    from :class:`~kikuchipy.indexing.DictionaryIndexing`.
+    from :class:`~kikuchipy.indexing.StaticDictionaryIndexing`.
+
+    It is required that there are at least as many simulation indices as
+    scores per point, and that all maps have the same number of
+    rotations, scores and simulation indices per point.
 
     Parameters
     ----------
-    crystal_maps : list of CrystalMap
+    crystal_maps : list of\
+            :class:`~orix.crystal_map.crystal_map.CrystalMap`
         A list of crystal maps with simulated indices and scores among
         their properties.
     mean_n_best : int, optional
@@ -55,30 +60,26 @@ def merge_crystal_maps(
     metric : str or SimilarityMetric, optional
         Similarity metric, default is None.
     simulation_indices_prop : str, optional
-        Name of simulated indices array in the crystal map's properties.
+        Name of simulated indices array in the crystal maps' properties.
         Default is "simulation_indices".
     scores_prop : str, optional
-        Name of scores array in the crystal map's properties. Default
+        Name of scores array in the crystal maps' properties. Default
         is "scores".
 
     Returns
     -------
-    merged_xmap : CrystalMap
+    merged_xmap : ~orix.crystal_map.crystal_map.CrystalMap
         A crystal map where the rotation of the phase with the best
         matching score(s) is assigned to each point. The best matching
         simulation indices and scores, merge sorted, are added to its
         properties with names equal to whatever passed to `scores_prop`
-        and `simulation_indices_prop` with `merged_` as a suffix,
+        and `simulation_indices_prop` with "merged" as a suffix,
         respectively.
 
     Notes
     -----
     `mean_n_best` can be given with a negative sign if `metric` is not
     given, in order to choose the lowest valued metric results.
-
-    It is assumed that there are at least as many simulation indices as
-    scores per point, and that all maps have the same number of
-    rotations, scores and simulation indices per point.
     """
     map_shapes = [xmap.shape for xmap in crystal_maps]
     if not np.sum(abs(np.diff(map_shapes, axis=0))) == 0:
