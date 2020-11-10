@@ -885,41 +885,46 @@ class EBSD(CommonImage, Signal2D):
 
     def dictionary_indexing(
         self,
-        simulations: Union["EBSD", "LazyEBSD", List[Union["EBSD", "LazyEBSD"]]],
+        simulations,
         metric: Union[str, SimilarityMetric] = "zncc",
-        keep_n: int = 1,
+        keep_n: int = 50,
         n_slices: int = 1,
-        merge_xmaps: bool = False,
-        osm: bool = False,
+        return_merged_crystal_map: bool = False,
+        get_orientation_similarity_map: bool = False,
     ) -> List[CrystalMap]:
-        """Perform Dictionary Indexing on patterns against pre-computed simulations.[ref here or elsewhere?]
+        """Perform dictionary indexing on patterns against pre-computed
+        simulations.[ref here or elsewhere?]
 
-        Produce a `CrystalMap` for each dictionary with `scores` and `simulated_indices` as properties.
+        Produce a `CrystalMap` for each dictionary with "scores" and
+        "simulation_indices" as properties.
 
         Parameters
         ----------
-        simulations : Union[EBSD, LazyEBSD, List[Union[EBSD, LazyEBSD]]]
-            Simulated patterns as EBSD Signals, in most cases a list of candidate phases.
-            Signals must have one-dimensional navigation axis
-            and the `xmap` property set.
-        metric : Union[str, SimilarityMetric], optional
+        simulations : EBSD or LazyEBSD or list of EBSD or LazyEBSD
+            A dictionary or a list of dictionaries of simulated
+            patterns as EBSD signals. The signals must have a 1D
+            navigation axis and the `xmap` property set.
+        metric : str or SimilarityMetric, optional
             Similarity metric, by default "zncc".
         keep_n : int, optional
-            Number of sorted results to keep, by default 1.
+            Number of sorted results to keep, by default 50.
         n_slices : int, optional
-            Number of simulation slices to process sequentially, by default 1.
-        merge_xmaps : bool, optional
-            Produce a merged crystal map from best results
-            if multiple candidate phases, by default False.
-            See also `merge_crystalmaps`.
-        osm : bool, optional
-            Orientation Similarity Maps as property `osm`, by default False.
-
+            Number of simulation slices to process sequentially, by
+            default 1 (i.e. no slicing).
+        return_merged_crystal_map : bool, optional
+            Return a merged crystal map, the best matches determined
+            from the similarity scores, in addition to the single phase
+            maps. By default True. See also
+            :func:`~kikuchipy.indexing.merge_crystal_maps`.
+        get_orientation_similarity_map : bool, optional
+            Add orientation similarity maps to the returned crystal maps
+            as an `osm` property, by default True.
 
         Returns
         -------
-        List[CrystalMap]
-            A crystal map for each dictionary loaded and one merged map if `merge_xmaps = True`.
+        list of :class:`~orix.crystal_map.crystal_map.CrystalMap
+            A crystal map for each dictionary and one merged map if
+            `return_merged_crystal_map` was set to True.
         """
         sdi = StaticDictionaryIndexing(simulations)
         return sdi(
@@ -927,8 +932,8 @@ class EBSD(CommonImage, Signal2D):
             metric=metric,
             keep_n=keep_n,
             n_slices=n_slices,
-            return_merged_crystal_map=merge_xmaps,
-            get_orientation_similarity_map=osm,
+            return_merged_crystal_map=return_merged_crystal_map,
+            get_orientation_similarity_map=get_orientation_similarity_map,
         )
 
     def fft_filter(

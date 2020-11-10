@@ -347,8 +347,8 @@ class TestEMsoftEBSDMasterPatternReader:
     @pytest.mark.parametrize(
         "energy, energy_slice, desired_shape, desired_mean_energies",
         [
-            (20, slice(10, None), (2, 13, 13), [20,]),
-            (15, slice(5, 6), (2, 13, 13), [15,]),
+            (20, slice(10, None), (2, 13, 13), [20,],),
+            (15, slice(5, 6), (2, 13, 13), [15,],),
             ((15, 20), slice(5, None), (2, 6, 13, 13), np.linspace(15, 20, 6)),
             ((19, 20), slice(9, None), (2, 2, 13, 13), np.linspace(19, 20, 2)),
         ],

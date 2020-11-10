@@ -16,94 +16,76 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Tuple, List
-from math import copysign
+"""Compute an orientation similarity map, where the ranked list of the
+array indices of the best matching simulated patterns in one map point
+is compared to the corresponding lists in the nearest neighbour points.
+"""
 
 import numpy as np
-from scipy.ndimage import generic_filter
-
 from orix.crystal_map import CrystalMap
-
-from kikuchipy.indexing.similarity_metrics import (
-    SimilarityMetric,
-    SIMILARITY_METRICS,
-)
+from scipy.ndimage import generic_filter
 
 
 def orientation_similarity_map(
     xmap: CrystalMap,
-    n_largest: int = None,
-    normalize_by_n: bool = True,
-    from_n_largest: int = None,
+    n_best: int = None,
+    simulation_indices_prop: str = "simulation_indices",
+    normalize: bool = True,
+    from_n_best: int = None,
     footprint: np.ndarray = None,
     center_index: int = 2,
 ) -> np.ndarray:
-    """Create Orientation Similarity Map(OSM), following [Marquardt2017]_.
-
-    The given CrystalMap `xmap` must have `simulated_indices` as property
-    as produced by :class:`~kikuchipy.indexing.StaticDictionaryIndexing`.
+    """Compute an orientation similarity map (OSM) following
+    [Marquardt2017]_, where the ranked list of the array indices of the
+    best matching simulated patterns in one map point is compared to the
+    corresponding lists in the nearest neighbour points.
 
     Parameters
     ----------
-    xmap : CrystalMap
-        CrystalMap with `simulated_indices` in prop
-    n_largest : int, optional
-        Number of sorted results to be used, by default use all.
-    normalize_by_n : bool, optional
-        Whether to return Orientation Similarity in range [0, 1], by default True
-    from_n_largest : int, optional
-        Create OSM for each n in range [`from_n_largest`, `n_largest`], by default None.
-    footprint : [np.ndarray], optional
-        Boolean 2D array specifying which neighbours to be used in computation of OS
-        in each navigation point, by default nearest neighbours.
+    xmap : ~orix.crystal_map.crystal_map.CrystalMap
+        A crystal map with a ranked list of the array indices of the
+        best matching simulated patterns among its properties.
+    n_best : int, optional
+        Number of ranked indices to compare. If None (default), all
+        indices are compared.
+    normalize : bool, optional
+        Whether to normalize the number of equal indices to the range
+        [0, 1], by default True.
+    from_n_best : int, optional
+        Return an OSM for each n in the range [`from_n_best`, `n_best`].
+        If None (default), only the OSM for `n_best` indices is
+        returned.
+    footprint : numpy.ndarray, optional
+        Boolean 2D array specifying which neighbouring points to compare
+        lists with, by default the four nearest neighbours.
     center_index : int, optional
-        Flat index of central navigation point in the truthy values of footprint, by default 2.
+        Flat index of central navigation point in the truthy values of
+        footprint, by default 2.
 
     Returns
     -------
-    osm : np.ndarray
-        Orientation Similarity Map(s)
-
-    Notes
-    -----
-    If a range of OSM are to be created n_largest is at osm[:,:,0]
-    and from_n_largest at osm[:,:,-1].
-
-    Raises
-    ------
-    NotImplementedError
-        [might be interesting to try different footprints]
-
-    References
-    ----------
-    .. [Marquardt2017] K. Marquardt, M. De Graef,\
-        S. Singh, H. Marquardt, A. Rosenthal, S. Koizuimi\
-        "Quantitative electron backscatter diffraction (EBSD) data analyses \
-        using the dictionary indexing (DI) approach"\
-        , American Mineralogist: Journal of Earth and Planetary Materials 102(9), 2017.
+    osm : numpy.ndarray
+        Orientation similarity map(s). If `from_n_best` is not None,
+        the returned array has three dimensions, where `n_best` is at
+        array[:, :, 0] and `from_n_best` at array[:, :, -1].
     """
+    simulation_indices = xmap.prop[simulation_indices_prop]
+    nav_size, keep_n = simulation_indices.shape
 
-    if footprint is None:
-        footprint = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
-
-    simulated_indices = xmap.simulated_indices
-
-    nav_size, keep_n = simulated_indices.shape
-
-    if n_largest is None:
-        n_largest = keep_n
-    elif n_largest > keep_n:
+    if n_best is None:
+        n_best = keep_n
+    elif n_best > keep_n:
         raise ValueError(
-            f"n_largest {n_largest} can not be larger than keep_n {keep_n}"  # keep_n * len(dictionaries) for merged maps
+            f"n_best {n_best} cannot be larger than keep_n {keep_n}"
         )
 
     data_shape = xmap.shape
     flat_index_map = np.arange(nav_size).reshape(data_shape)
 
-    if from_n_largest is None:
-        from_n_largest = n_largest
+    if from_n_best is None:
+        from_n_best = n_best
 
-    osm = np.zeros(data_shape + (n_largest - from_n_largest + 1,))
+    osm = np.zeros(data_shape + (n_best - from_n_best + 1,))
 
     # Cardinality of the intersection between a and b
     f = lambda a, b: len(np.intersect1d(a, b))
@@ -122,12 +104,15 @@ def orientation_similarity_map(
             for mi in match_indicies[neighbours]
         ]
         os = np.mean(number_of_equal_matches_to_its_neighbours)
-        if normalize_by_n:
+        if normalize:
             os /= n
         return os
 
-    for i, n in enumerate(range(n_largest, from_n_largest - 1, -1)):
-        match_indicies = simulated_indices[:, :n]
+    if footprint is None:
+        footprint = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
+
+    for i, n in enumerate(range(n_best, from_n_best - 1, -1)):
+        match_indicies = simulation_indices[:, :n]
         osm[:, :, i] = generic_filter(
             flat_index_map,
             lambda v: os_per_pixel(v, match_indicies, n),

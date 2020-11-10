@@ -18,12 +18,13 @@
 
 """Matching of experimental to simulated gray-tone patterns."""
 
-import sys
 from typing import Union, Tuple
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
 import numpy as np
+import psutil
+from tqdm import tqdm
 
 from kikuchipy.indexing.similarity_metrics import (
     SIMILARITY_METRICS,
@@ -40,7 +41,7 @@ from kikuchipy.indexing.similarity_metrics import (
 def _pattern_match(
     experimental: Union[da.Array, np.ndarray],
     simulated: Union[da.Array, np.ndarray],
-    keep_n: int = 1,
+    keep_n: int = 50,
     metric: Union[str, SimilarityMetric] = "zncc",
     compute: bool = True,
     n_slices: int = 1,
@@ -59,7 +60,7 @@ def _pattern_match(
     simulated : numpy.ndarray or dask.array.Array
         Simulated patterns.
     keep_n : int, optional
-        Number of match results to keep for each pattern, by default 1.
+        Number of match results to keep for each pattern, by default 50.
     metric : str or SimilarityMetric
         Similarity metric, by default "zncc".
     compute : bool, optional
@@ -128,9 +129,9 @@ def _pattern_match_single_slice(
     simulated: Union[np.ndarray, da.Array],
     keep_n: int,
     metric: SimilarityMetric,
-    compute: bool,
+    compute: bool = True,
 ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[da.Array, da.Array]]:
-    """See :func:`pattern_match`.
+    """See :func:`_pattern_match`.
 
     Parameters
     ----------
@@ -142,7 +143,7 @@ def _pattern_match_single_slice(
         Number of results to keep.
     metric : SimilarityMetric
         Similarity metric.
-    compute : bool
+    compute : bool, optional
         Whether to compute dask arrays before returning, by default
         True.
 
@@ -228,26 +229,31 @@ def _pattern_match_slice_simulated(
     scores_aggregate = np.zeros((nav_size, n_slices * n), metric._dtype_out)
 
     start = 0
-    for i in range(n_slices):
-        end = start + slice_size if i != n_slices - 1 else num_simulated
+    with tqdm(
+        iterable=range(n_slices),
+        desc="Matching patterns",
+        unit="slice",
+        total=n_slices,
+    ) as t:
+        for i in range(n_slices):
+            mem = psutil.virtual_memory().available / 1e9
+            t.set_postfix_str(f"Available RAM {mem:.3f} GB")
 
-        simulated_indices, scores = _pattern_match_single_slice(
-            experimental,
-            simulated[start:end],
-            keep_n=keep_n,
-            metric=metric,
-            compute=False,
-        )
+            end = start + slice_size if i != n_slices - 1 else num_simulated
 
-        # Adjust simulation indicies matches to correspond with
-        # original simulated
-        simulated_indices += start
-
-        result_slice = np.s_[:, i * n : (i + 1) * n]
-        with ProgressBar():
-            print(
-                f"Matching patterns, batch {i+1}/{n_slices}:", file=sys.stdout
+            simulated_indices, scores = _pattern_match_single_slice(
+                experimental,
+                simulated[start:end],
+                keep_n=keep_n,
+                metric=metric,
+                compute=False,
             )
+
+            # Adjust simulation indicies matches to correspond with
+            # original simulated
+            simulated_indices += start
+
+            result_slice = np.s_[:, i * n : (i + 1) * n]
             da.store(
                 [simulated_indices, scores],
                 [
@@ -258,7 +264,8 @@ def _pattern_match_slice_simulated(
                 # regions=(slice(......))
             )
 
-        start += slice_size
+            start += slice_size
+            t.update()
 
     simulated_indices = np.zeros((nav_size, n), np.int32)
     scores = np.zeros((nav_size, n), np.float32)

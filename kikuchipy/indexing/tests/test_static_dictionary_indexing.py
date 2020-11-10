@@ -58,28 +58,39 @@ class TestStaticDictionaryIndexing:
         assert np.all(["osm" in xmap.prop for xmap in res])
 
     @pytest.mark.parametrize(
-        "nav_slice, desired_arrays",
+        "nav_slice, step_sizes, desired_arrays",
         [
             # 0d
-            ((0, 0), ()),
-            ((slice(0, 0), slice(0, 0)), (np.array([]),) * 2),
+            ((0, 0), (1, 1), ()),
+            ((slice(0, 0), slice(0, 0)), (1, 1), (np.array([]),) * 2),
             # 1d
-            ((0, slice(None)), np.tile(np.arange(0, 4.5, 1.5), 3)),
+            ((0, slice(None)), (1, 1.5), np.tile(np.arange(0, 4.5, 1.5), 3)),
             # 2d
             (
                 (slice(None), slice(0, 2)),
+                (2, 1.5),
                 (
-                    np.tile(np.arange(0, 4.5, 1.5), 3),
-                    np.tile(np.arange(0, 3, 1.5), 2),
+                    np.tile(np.arange(0, 6, 2), 2),
+                    np.tile(np.arange(0, 3, 1.5), 3),
+                ),
+            ),
+            (
+                (slice(None), slice(0, 2)),
+                (0.5, 1),
+                (
+                    np.tile(np.arange(0, 1.5, 0.5), 2),
+                    np.tile(np.arange(0, 2, 1), 3),
                 ),
             ),
         ],
     )
-    def test_get_spatial_arrays(self, nav_slice, desired_arrays):
+    def test_get_spatial_arrays(self, nav_slice, step_sizes, desired_arrays):
         """Ensure spatial arrays for 0d, 1d and 2d EBSD signals are
         returned correctly.
         """
         s = nickel_ebsd_small()
+        s.axes_manager["x"].scale = step_sizes[0]
+        s.axes_manager["y"].scale = step_sizes[1]
         axes_manager = s.inav[nav_slice].axes_manager
         spatial_arrays = _get_spatial_arrays(
             shape=axes_manager.navigation_shape,

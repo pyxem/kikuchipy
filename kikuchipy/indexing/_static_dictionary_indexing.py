@@ -55,7 +55,7 @@ class StaticDictionaryIndexing:
         self,
         signal,
         metric: Union[str, SimilarityMetric] = "zncc",
-        keep_n: int = 1,
+        keep_n: int = 50,
         n_slices: int = 1,
         return_merged_crystal_map: bool = True,
         get_orientation_similarity_map: bool = True,
@@ -75,7 +75,7 @@ class StaticDictionaryIndexing:
             Number of sorted results to keep, by default 1.
         n_slices : int, optional
             Number of slices of simulations to process sequentially, by
-            default 1.
+            default 50.
         return_merged_crystal_map : bool, optional
             Return a merged crystal map, the best matches determined
             from the similarity scores, in addition to the single phase
@@ -129,7 +129,7 @@ class StaticDictionaryIndexing:
         xmaps = []
         patterns = signal.data
         for dictionary in self.dictionaries:
-            simulated_indices, scores = _pattern_match(
+            simulation_indices, scores = _pattern_match(
                 patterns,
                 dictionary.data,
                 metric=metric,
@@ -137,9 +137,12 @@ class StaticDictionaryIndexing:
                 n_slices=n_slices,
             )
             new_xmap = CrystalMap(
-                rotations=dictionary.xmap.rotations[simulated_indices],
+                rotations=dictionary.xmap.rotations[simulation_indices],
                 phase_list=dictionary.xmap.phases_in_data,
-                prop={"scores": scores, "simulated_indices": simulated_indices},
+                prop={
+                    "scores": scores,
+                    "simulation_indices": simulation_indices,
+                },
                 **xmap_kwargs,
             )
             xmaps.append(new_xmap)
@@ -147,31 +150,13 @@ class StaticDictionaryIndexing:
         # Create a merged CrystalMap using best metric result across all
         # dictionaries
         if return_merged_crystal_map and len(self.dictionaries) > 1:
-            # Cummulative summation of the dictionary lengths to create
-            # unique simulation IDs across dictionaries
-            cumsum_dict_lengths = np.cumsum(
-                [d.data.shape[0] for d in self.dictionaries]
-            )
-
-            def adjust_sim_ids(i, xmap):
-                if i == 0:
-                    return xmap
-                xmap.simulated_indices += cumsum_dict_lengths[i - 1]
-                return xmap
-
-            xmaps_unique_sim_ids = []
-            for i, xmap in enumerate(xmaps):
-                xmaps_unique_sim_ids.append(adjust_sim_ids(i, xmap))
-
-            xmap_merged = merge_crystal_maps(
-                xmaps_unique_sim_ids, metric=metric
-            )
+            xmap_merged = merge_crystal_maps(xmaps, metric=metric)
             xmaps.append(xmap_merged)
 
         # Compute orientation similarity map
         if get_orientation_similarity_map:
             for xmap in xmaps:
-                osm = orientation_similarity_map(xmap, n_largest=keep_n)
+                osm = orientation_similarity_map(xmap, n_best=keep_n)
                 xmap.prop["osm"] = osm.flatten()
 
         if len(xmaps) == 1:
@@ -193,6 +178,6 @@ def _get_spatial_arrays(
     else:
         x0, x1, y0, y1 = extent
         dx, dy = step_sizes
-        y = np.tile(np.arange(y0, y1 + dy, dy), shape[1])
-        x = np.tile(np.arange(x0, x1 + dx, dx), shape[0])
+        x = np.tile(np.arange(x0, x1 + dx, dx), shape[1])
+        y = np.tile(np.arange(y0, y1 + dy, dy), shape[0])
         return x, y
