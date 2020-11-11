@@ -36,7 +36,7 @@ def orientation_similarity_map(
     footprint: np.ndarray = None,
     center_index: int = 2,
 ) -> np.ndarray:
-    """Compute an orientation similarity map following
+    r"""Compute an orientation similarity map following
     :cite:`marquardt2017quantitative`, where the ranked list of the
     array indices of the best matching simulated patterns in one point
     is compared to the corresponding lists in the nearest neighbour
@@ -70,6 +70,23 @@ def orientation_similarity_map(
         Orientation similarity map(s). If `from_n_best` is not None,
         the returned array has three dimensions, where `n_best` is at
         array[:, :, 0] and `from_n_best` at array[:, :, -1].
+
+    Notes
+    -----
+    If the set :math:`S_{r,c}` is the ranked list of best matching
+    indices for a given point :math:`(r,c)`, then the orientation
+    similarity index :math:`\eta_{r,c}` is the average value of the
+    cardinalities (\#) of the intersections with the neighbouring sets
+
+    .. math::
+
+        \eta_{r,c} = \frac{1}{4}
+            \left(
+                \#(S_{r,c} \cap S_{r-1,c}) +
+                \#(S_{r,c} \cap S_{r+1,c}) +
+                \#(S_{r,c} \cap S_{r,c-1}) +
+                \#(S_{r,c} \cap S_{r,c+1})
+            \right).
     """
     simulation_indices = xmap.prop[simulation_indices_prop]
     nav_size, keep_n = simulation_indices.shape
