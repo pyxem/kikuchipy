@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Indexing of EBSD patterns and useful related tools."""
+"""Indexing of EBSD patterns by comparison to simulated patterns, and
+useful related tools.
+"""
 
 from kikuchipy.indexing._merge_crystal_maps import merge_crystal_maps
 from kikuchipy.indexing.orientation_similarity_map import (

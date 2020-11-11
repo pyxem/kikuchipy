@@ -31,9 +31,11 @@ class MetricScope(Enum):
     """
 
     MANY_TO_MANY = "many_to_many"
+    SOME_TO_MANY = "some_to_many"
     ONE_TO_MANY = "one_to_many"
     ONE_TO_ONE = "one_to_one"
     MANY_TO_ONE = "many_to_one"
+    SOME_TO_ONE = "some_to_one"
 
 
 def make_similarity_metric(
@@ -99,13 +101,20 @@ def make_similarity_metric(
     \-           experimental  simulated returns   experimental  simulated returns
     ============ ============= ========= ========= ============= ========= =========
     MANY_TO_MANY (ny,nx,sy,sx) (N,sy,sx) (ny,nx,N) (ny*nx,sy*sx) (N,sy*sx) (ny*nx,N)
+    SOME_TO_MANY (nx,sy,sx)    (N,sy,sx) (nx,N)    -             -         -
     ONE_TO_MANY  (sy,sx)       (N,sy,sx) (N,)      (sy*sx,)      (N,sy*sx) (N,)
     MANY_TO_ONE  (ny,nx,sy,sx) (sy,sx)   (ny,nx)   (ny*nx,sy*sx) (sy*sx,)  (ny*nx)
+    SOME_TO_ONE  (nx,sy,sx)    (sy,sx)   (nx,)     -             -         -
     ONE_TO_ONE   (sy,sx)       (sy,sx)   (1,)      (sy*sx,)      (sy*sx,)  (1,)
     ============ ============= ========= ========= ============= ========= =========
     """
     sign = 1 if greater_is_better else -1
     if flat:
+        if "some" in scope.value:
+            if "many" in scope.value:
+                scope = MetricScope.MANY_TO_MANY
+            else:  # "one" in scope.value
+                scope = MetricScope.MANY_TO_ONE
         return FlatSimilarityMetric(
             metric_func,
             sign,
@@ -129,36 +138,43 @@ class SimilarityMetric:
     """Similarity metric between 2D gray-tone patterns."""
 
     # See table in docstring of `make_similarity_metric`
-    # TODO: Support for 1D navigation shape
     _EXPT_SIM_NDIM_TO_SCOPE = {
         (4, 3): MetricScope.MANY_TO_MANY,
+        (3, 3): MetricScope.SOME_TO_MANY,
         (2, 3): MetricScope.ONE_TO_MANY,
         (4, 2): MetricScope.MANY_TO_ONE,
+        (3, 2): MetricScope.SOME_TO_ONE,
         (2, 2): MetricScope.ONE_TO_ONE,
     }
 
     _SCOPE_TO_EXPT_SIM_NDIM = {
         MetricScope.MANY_TO_MANY: (4, 3),
+        MetricScope.SOME_TO_MANY: (3, 3),
         MetricScope.ONE_TO_MANY: (2, 3),
         MetricScope.MANY_TO_ONE: (4, 2),
+        MetricScope.SOME_TO_ONE: (3, 2),
         MetricScope.ONE_TO_ONE: (2, 2),
     }
 
     _SCOPE_TO_LOWER_SCOPES = {
         MetricScope.MANY_TO_MANY: (
-            MetricScope.MANY_TO_ONE,
+            MetricScope.SOME_TO_MANY,
             MetricScope.ONE_TO_MANY,
+            MetricScope.MANY_TO_ONE,
+            MetricScope.SOME_TO_ONE,
             MetricScope.ONE_TO_ONE,
         ),
-        MetricScope.ONE_TO_MANY: (
+        MetricScope.SOME_TO_MANY: (
             MetricScope.ONE_TO_MANY,
+            MetricScope.SOME_TO_ONE,
+            MetricScope.ONE_TO_ONE,
+        ),
+        MetricScope.ONE_TO_MANY: (MetricScope.ONE_TO_ONE,),
+        MetricScope.MANY_TO_ONE: (
+            MetricScope.SOME_TO_ONE,
             MetricScope.ONE_TO_ONE,
         ),
         MetricScope.ONE_TO_ONE: (),
-        MetricScope.MANY_TO_ONE: (
-            MetricScope.MANY_TO_ONE,
-            MetricScope.ONE_TO_ONE,
-        ),
     }
 
     def __init__(
@@ -246,8 +262,9 @@ class SimilarityMetric:
 
 
 class FlatSimilarityMetric(SimilarityMetric):
-    """Similarity metric between 2D gray-tone images where the images
-    are flattened before sent to `metric_func`.
+    """Similarity metric between 2D gray-tone images where the
+    navigation and signal axes are flattened before sent to
+    `metric_func`.
     """
 
     # See table in docstring of `make_similarity_metric`
@@ -361,8 +378,9 @@ def _zero_mean(
     """
     squeeze = 1 not in expt.shape + sim.shape
     expt, sim = _expand_dims_to_many_to_many(expt, sim, flat)
-    expt_mean_axis = 1 if flat else (2, 3)
-    sim_mean_axis = 1 if flat else (1, 2)
+    # Always take the mean along the last two axes (signal axes)
+    expt_mean_axis = 1 if flat else (-2, -1)
+    sim_mean_axis = 1 if flat else (-2, -1)
     expt -= expt.mean(axis=expt_mean_axis, keepdims=True)
     sim -= sim.mean(axis=sim_mean_axis, keepdims=True)
 
@@ -397,8 +415,9 @@ def _normalize(
     """
     squeeze = 1 not in expt.shape + sim.shape
     expt, sim = _expand_dims_to_many_to_many(expt, sim, flat)
-    expt_sum_axis = 1 if flat else (2, 3)
-    sim_sum_axis = 1 if flat else (1, 2)
+    # Always take the sum along the last two axes (signal axes)
+    expt_sum_axis = 1 if flat else (-2, -1)
+    sim_sum_axis = 1 if flat else (-2, -1)
     expt /= (expt ** 2).sum(axis=expt_sum_axis, keepdims=True) ** 0.5
     sim /= (sim ** 2).sum(axis=sim_sum_axis, keepdims=True) ** 0.5
 

@@ -28,13 +28,14 @@ from kikuchipy.indexing.similarity_metrics import (
     FlatSimilarityMetric,
     SIMILARITY_METRICS,
     _get_number_of_simulated,
+    _zncc_einsum,
 )
 
 
-class TestSimilarityMetrics:
+class TestSimilarityMetric:
     @pytest.mark.parametrize(
-        "flat,returned_class",
-        [(False, SimilarityMetric), (True, FlatSimilarityMetric),],
+        "flat, returned_class",
+        [(False, SimilarityMetric), (True, FlatSimilarityMetric)],
     )
     def test_make_similarity_metric(self, flat, returned_class):
         assert (
@@ -48,53 +49,6 @@ class TestSimilarityMetrics:
                 )
             )
             is returned_class
-        )
-
-    def test_zncc(self):
-        zncc_metric = SIMILARITY_METRICS["zncc"]
-        # Four experimental data
-        expt = np.array(
-            [
-                [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
-                [[[9, 8], [1, 7]], [[5, 2], [2, 7]]],
-            ],
-            np.int8,
-        )
-        expt_da = da.from_array(expt)
-
-        # One perfect match, at [1,0,1] in results, and one close match
-        # Two simulated
-        sim = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8)
-        sim_da = da.from_array(sim)
-
-        # many to many
-        assert (
-            pytest.approx(zncc_metric(expt_da, sim_da).compute()[1, 0, 1]) == 1
-        )
-
-        # Working with lower scopes, here one to many:
-        assert (
-            pytest.approx(zncc_metric(expt_da[1, 0], sim_da).compute()[1]) == 1
-        )
-
-    def test_ndp(self):
-        ndp_metric = SIMILARITY_METRICS["ndp"]
-        expt = np.array(
-            [
-                [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
-                [[[9, 8], [1, 7]], [[5, 2], [2, 7]]],
-            ],
-            np.int8,
-        )
-        expt_da = da.from_array(expt)
-
-        # One perfect match and one close match
-        sim = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8)
-        sim_da = da.from_array(sim)
-
-        # many to many
-        assert (
-            pytest.approx(ndp_metric(expt_da, sim_da).compute()[1, 0, 1]) == 1
         )
 
     @pytest.mark.parametrize("metric", ["zncc", "ndp"])
@@ -207,3 +161,134 @@ class TestSimilarityMetrics:
 
         for i in range(len(desired_repr)):
             assert repr(metrics[i]) == desired_repr[i]
+
+    def test_some_to_many(self, dummy_signal):
+        scope = MetricScope.SOME_TO_MANY
+        assert scope.name == "SOME_TO_MANY"
+        assert scope.value == "some_to_many"
+
+        sig_shape = dummy_signal.axes_manager.signal_shape
+        expt = dummy_signal.data.reshape((-1,) + sig_shape)
+        sim = expt[:3]
+        dims = (expt.ndim, sim.ndim)
+        assert dims == (3, 3)
+
+        # Expansion of dimensions works
+        ncc_metric = SIMILARITY_METRICS["zncc"]
+        ncc = ncc_metric(expt, sim)
+        assert ncc.shape == (9, 3)
+        assert np.allclose(np.diagonal(ncc), 1)
+
+        def dot_product(a, b):
+            norm_a = np.linalg.norm(a, axis=(1, 2))[:, np.newaxis, np.newaxis]
+            norm_b = np.linalg.norm(b, axis=(1, 2))[:, np.newaxis, np.newaxis]
+            return np.tensordot(a / norm_a, b / norm_b, axes=([1, 2], [2, 1]))
+
+        metric = make_similarity_metric(metric_func=dot_product, scope=scope)
+        assert metric._EXPT_SIM_NDIM_TO_SCOPE[dims] == scope
+        assert metric._SCOPE_TO_EXPT_SIM_NDIM[scope] == dims
+
+        ndp = metric(expt, sim)
+        assert ndp.shape == (9, 3)
+        assert np.allclose(np.sum(ndp), 19.92476)
+
+    def test_some_to_many_flat(self, dummy_signal):
+        scope_in = MetricScope.SOME_TO_MANY
+        metric = make_similarity_metric(
+            metric_func=_zncc_einsum, scope=scope_in, flat=True
+        )
+        scope_out = metric.scope
+
+        assert metric.flat
+        assert scope_out.name == "MANY_TO_MANY"
+
+    def test_some_to_one(self, dummy_signal):
+        scope = MetricScope.SOME_TO_ONE
+        assert scope.name == "SOME_TO_ONE"
+        assert scope.value == "some_to_one"
+
+        sig_shape = dummy_signal.axes_manager.signal_shape
+        expt = dummy_signal.data.reshape((-1,) + sig_shape)
+        sim = expt[0]
+        dims = (expt.ndim, sim.ndim)
+        assert dims == (3, 2)
+
+        # Expansion of dimensions works
+        ndp_metric = SIMILARITY_METRICS["ndp"]
+        ndp = ndp_metric(expt, sim)
+        assert ndp.shape == (9,)
+        assert np.allclose(ndp[0], 1)
+
+        def dot_product(a, b):
+            norm_a = np.linalg.norm(a, axis=(1, 2))[:, np.newaxis, np.newaxis]
+            norm_b = np.linalg.norm(b)
+            return np.tensordot(a / norm_a, b / norm_b, axes=([1, 2], [1, 0]))
+
+        metric = make_similarity_metric(metric_func=dot_product, scope=scope)
+        assert metric._EXPT_SIM_NDIM_TO_SCOPE[dims] == scope
+        assert metric._SCOPE_TO_EXPT_SIM_NDIM[scope] == dims
+
+        ndp = metric(expt, sim)
+        assert ndp.shape == (9,)
+        assert np.allclose(np.sum(ndp), 6.9578266)
+
+    def test_some_to_one_flat(self, dummy_signal):
+        scope_in = MetricScope.SOME_TO_ONE
+        metric = make_similarity_metric(
+            metric_func=_zncc_einsum, scope=scope_in, flat=True
+        )
+        scope_out = metric.scope
+
+        assert metric.flat
+        assert scope_out.name == "MANY_TO_ONE"
+
+
+class TestNCC:
+    def test_zncc(self):
+        zncc_metric = SIMILARITY_METRICS["zncc"]
+        # Four experimental data
+        expt = np.array(
+            [
+                [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
+                [[[9, 8], [1, 7]], [[5, 2], [2, 7]]],
+            ],
+            np.int8,
+        )
+        expt_da = da.from_array(expt)
+
+        # One perfect match, at [1,0,1] in results, and one close match
+        # Two simulated
+        sim = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8)
+        sim_da = da.from_array(sim)
+
+        # many to many
+        assert (
+            pytest.approx(zncc_metric(expt_da, sim_da).compute()[1, 0, 1]) == 1
+        )
+
+        # Working with lower scopes, here one to many:
+        assert (
+            pytest.approx(zncc_metric(expt_da[1, 0], sim_da).compute()[1]) == 1
+        )
+
+
+class TestNDP:
+    def test_ndp(self):
+        ndp_metric = SIMILARITY_METRICS["ndp"]
+        expt = np.array(
+            [
+                [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
+                [[[9, 8], [1, 7]], [[5, 2], [2, 7]]],
+            ],
+            np.int8,
+        )
+        expt_da = da.from_array(expt)
+
+        # One perfect match and one close match
+        sim = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8)
+        sim_da = da.from_array(sim)
+
+        # many to many
+        assert (
+            pytest.approx(ndp_metric(expt_da, sim_da).compute()[1, 0, 1]) == 1
+        )

@@ -80,9 +80,9 @@ class TestPatternMatching:
             np.int8,
         )
         t_da = da.from_array(t)
-        mr = _pattern_match(p, t_da, n_slices=n_slices)
+        mr = _pattern_match(p, t_da, n_slices=n_slices, keep_n=1)
         assert mr[0][2] == 1  # Template index in t of perfect match
-        assert pytest.approx(mr[1][2]) == 1.0  # ZNCC of perfect match
+        assert np.allclose(mr[1][2], 1.0)  # ZNCC of perfect match
 
     def test_pattern_match_compute_false(self):
         p = np.arange(16).reshape((2, 2, 2, 2))

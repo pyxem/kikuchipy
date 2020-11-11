@@ -30,31 +30,31 @@ class TestOrientationSimilarityMap:
     def test_orientation_similarity_map(self):
         xmap = CrystalMap(
             rotations=Rotation(np.zeros((100, 4))),
-            prop={"simulated_indices": np.tile(np.arange(5), (100, 1))},
+            prop={"simulation_indices": np.tile(np.arange(5), (100, 1))},
             x=np.tile(np.arange(10), 10),
             y=np.tile(np.arange(10), 10),
         )
         assert np.allclose(orientation_similarity_map(xmap), np.ones((10, 10)))
 
-    def test_n_largest_too_great(self):
+    def test_n_best_too_great(self):
         xmap = CrystalMap(
             rotations=Rotation(np.zeros((100, 4))),
-            prop={"simulated_indices": np.ones((100, 5))},
+            prop={"simulation_indices": np.ones((100, 5))},
             x=np.tile(np.arange(10), 10),
             y=np.tile(np.arange(10), 10),
         )
-        with pytest.raises(ValueError):
-            orientation_similarity_map(xmap, n_largest=6)
+        with pytest.raises(ValueError, match="n_best 6 cannot be greater than"):
+            orientation_similarity_map(xmap, n_best=6)
 
-    def test_from_n_largest(self):
+    def test_from_n_best(self):
+        sim_idx_prop = "simulated_indices"
         xmap = CrystalMap(
             rotations=Rotation(np.zeros((100, 4))),
-            prop={"simulated_indices": np.ones((100, 5))},
+            prop={sim_idx_prop: np.ones((100, 5))},
             x=np.tile(np.arange(10), 10),
             y=np.tile(np.arange(10), 10),
         )
-        assert orientation_similarity_map(xmap, from_n_largest=2).shape == (
-            10,
-            10,
-            4,
+        osm = orientation_similarity_map(
+            xmap, simulation_indices_prop=sim_idx_prop, from_n_best=2
         )
+        assert osm.shape == (10, 10, 4)

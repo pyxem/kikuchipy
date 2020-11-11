@@ -57,9 +57,9 @@ class StaticDictionaryIndexing:
         metric: Union[str, SimilarityMetric] = "zncc",
         keep_n: int = 50,
         n_slices: int = 1,
-        return_merged_crystal_map: bool = True,
-        get_orientation_similarity_map: bool = True,
-    ) -> List[CrystalMap]:
+        return_merged_crystal_map: bool = False,
+        get_orientation_similarity_map: bool = False,
+    ) -> Union[CrystalMap, List[CrystalMap]]:
         """Perform dictionary indexing on patterns against preloaded
         dictionaries, returning a :class:`~orix.crystal_map.CrystalMap`
         for each dictionary with `scores` and `simulated_indices` as
@@ -72,38 +72,45 @@ class StaticDictionaryIndexing:
         metric : str or SimilarityMetric, optional
             Similarity metric, by default "zncc".
         keep_n : int, optional
-            Number of sorted results to keep, by default 1.
+            Number of sorted results to keep, by default 50 or as many
+            as there are simulated patterns if fewer than 50 are
+            available.
         n_slices : int, optional
             Number of slices of simulations to process sequentially, by
-            default 50.
+            default 1.
         return_merged_crystal_map : bool, optional
             Return a merged crystal map, the best matches determined
             from the similarity scores, in addition to the single phase
-            maps. By default True. See also
+            maps. By default False. See also
             :func:`~kikuchipy.indexing.merge_crystal_maps`.
         get_orientation_similarity_map : bool, optional
             Add orientation similarity maps to the returned crystal maps
-            as an `osm` property, by default True.
+            as an `osm` property, by default False.
 
         Returns
         -------
-        xmaps : list of CrystalMap
+        xmaps : ~orix.crystal_map.crystal_map.CrystalMap or list of \
+                ~orix.crystal_map.crystal_map.CrystalMap
             A crystal map for each dictionary loaded and one merged map
             if `return_merged_crystal_map = True`.
         """
         # This needs a rework before sent to cluster and possibly more
         # automatic slicing with dask
-        num_simulations = self.dictionaries[0].data.shape[0]
+        n_simulations = max(
+            [d.axes_manager.navigation_size for d in self.dictionaries]
+        )
         good_number = 13500
-        if (num_simulations // n_slices) > good_number:
+        if (n_simulations // n_slices) > good_number:
             answer = input(
                 "You should probably increase n_slices depending on your "
-                f"available memory, try above {num_simulations // good_number}."
+                f"available memory, try above {n_simulations // good_number}."
                 " Do you want to proceed? [y/n]"
             )
             if answer != "y":
                 return
 
+        # Get metric from optimized metrics if it is available, or
+        # return the metric if it is not
         metric = SIMILARITY_METRICS.get(metric, metric)
 
         axes_manager = signal.axes_manager
@@ -123,6 +130,8 @@ class StaticDictionaryIndexing:
             xmap_kwargs = dict(
                 x=spatial_arrays[0], y=spatial_arrays[1], scan_unit=scan_unit,
             )
+
+        keep_n = min([keep_n] + [d.xmap.size for d in self.dictionaries])
 
         # Naively let dask compute them seperately, should try in the
         # future combined compute for better performance
@@ -174,7 +183,7 @@ def _get_spatial_arrays(
     if n_nav_dims == 1:
         x0, x1 = extent
         dx = step_sizes[0]
-        return np.tile(np.arange(x0, x1 + dx, dx), shape[0])
+        return np.arange(x0, x1 + dx, dx)
     else:
         x0, x1, y0, y1 = extent
         dx, dy = step_sizes

@@ -22,12 +22,11 @@ is compared to the corresponding lists in the nearest neighbour points.
 """
 
 import numpy as np
-from orix.crystal_map import CrystalMap
 from scipy.ndimage import generic_filter
 
 
 def orientation_similarity_map(
-    xmap: CrystalMap,
+    xmap,
     n_best: int = None,
     simulation_indices_prop: str = "simulation_indices",
     normalize: bool = True,
@@ -76,7 +75,7 @@ def orientation_similarity_map(
         n_best = keep_n
     elif n_best > keep_n:
         raise ValueError(
-            f"n_best {n_best} cannot be larger than keep_n {keep_n}"
+            f"n_best {n_best} cannot be greater than keep_n {keep_n}"
         )
 
     data_shape = xmap.shape
@@ -85,28 +84,7 @@ def orientation_similarity_map(
     if from_n_best is None:
         from_n_best = n_best
 
-    osm = np.zeros(data_shape + (n_best - from_n_best + 1,))
-
-    # Cardinality of the intersection between a and b
-    f = lambda a, b: len(np.intersect1d(a, b))
-
-    def os_per_pixel(v, match_indicies, n):
-        # v is indices picked out with footprint from flat_index_map
-        v = v.astype(np.int)
-
-        center_value = v[center_index]
-
-        # Filter only true neighbours, -1 out of image and not include itself
-        neighbours = v[np.where((v != -1) & (v != center_value))]
-
-        number_of_equal_matches_to_its_neighbours = [
-            f(match_indicies[center_value], mi)
-            for mi in match_indicies[neighbours]
-        ]
-        os = np.mean(number_of_equal_matches_to_its_neighbours)
-        if normalize:
-            os /= n
-        return os
+    osm = np.zeros(data_shape + (n_best - from_n_best + 1,), dtype=np.float32)
 
     if footprint is None:
         footprint = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
@@ -115,7 +93,9 @@ def orientation_similarity_map(
         match_indicies = simulation_indices[:, :n]
         osm[:, :, i] = generic_filter(
             flat_index_map,
-            lambda v: os_per_pixel(v, match_indicies, n),
+            lambda v: _orientation_similarity_per_pixel(
+                v, center_index, match_indicies, n, normalize,
+            ),
             footprint=footprint,
             mode="constant",
             cval=-1,
@@ -123,3 +103,30 @@ def orientation_similarity_map(
         )
 
     return osm.squeeze()
+
+
+def _orientation_similarity_per_pixel(
+    v: np.ndarray,
+    center_index: int,
+    match_indices: np.ndarray,
+    n: int,
+    normalize: bool,
+) -> np.ndarray:
+    # v are indices picked out with the footprint from flat_index_map
+    v = v.astype(np.int)
+    center_value = v[center_index]
+    # Filter only true neighbours, -1 out of image and not include itself
+    neighbours = v[np.where((v != -1) & (v != center_value))]
+
+    # Cardinality of the intersection between a and b
+    number_of_equal_matches_to_its_neighbours = [
+        len(np.intersect1d(match_indices[center_value], mi))
+        for mi in match_indices[neighbours]
+    ]
+
+    os = np.mean(number_of_equal_matches_to_its_neighbours)
+
+    if normalize:
+        os /= n
+
+    return os

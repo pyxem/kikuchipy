@@ -900,7 +900,7 @@ class EBSD(CommonImage, Signal2D):
 
         Parameters
         ----------
-        simulations : EBSD or LazyEBSD or list of EBSD or LazyEBSD
+        simulations : EBSD or list of EBSD
             A dictionary or a list of dictionaries of simulated
             patterns as EBSD signals. The signals must have a 1D
             navigation axis and the `xmap` property set.
@@ -914,17 +914,24 @@ class EBSD(CommonImage, Signal2D):
         return_merged_crystal_map : bool, optional
             Return a merged crystal map, the best matches determined
             from the similarity scores, in addition to the single phase
-            maps. By default True. See also
-            :func:`~kikuchipy.indexing.merge_crystal_maps`.
+            maps. By default False.
         get_orientation_similarity_map : bool, optional
-            Add orientation similarity maps to the returned crystal maps
-            as an `osm` property, by default True.
+            Add orientation similarity maps to the returned crystal
+            maps' properties named "osm", by default False.
 
         Returns
         -------
         list of :class:`~orix.crystal_map.crystal_map.CrystalMap
             A crystal map for each dictionary and one merged map if
             `return_merged_crystal_map` was set to True.
+
+        Notes
+        -----
+        Merging of crystal maps and calculations of orientation
+        similarity maps can be done afterwards directly with
+        :func:`~kikuchipy.indexing.merge_crystal_maps` and
+        :func:`~kikuchipy.indexing.orientation_similarity_maps`,
+        respectively.
         """
         sdi = StaticDictionaryIndexing(simulations)
         return sdi(
