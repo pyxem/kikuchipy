@@ -26,7 +26,7 @@ from kikuchipy.indexing.similarity_metrics import (
     SimilarityMetric,
     MetricScope,
     FlatSimilarityMetric,
-    SIMILARITY_METRICS,
+    _SIMILARITY_METRICS,
     _get_number_of_simulated,
     _zncc_einsum,
 )
@@ -51,9 +51,9 @@ class TestSimilarityMetric:
             is returned_class
         )
 
-    @pytest.mark.parametrize("metric", ["zncc", "ndp"])
-    def test_zncc_ndp_returns_desired_array_type(self, metric):
-        metric = SIMILARITY_METRICS[metric]
+    @pytest.mark.parametrize("metric", ["ncc", "ndp"])
+    def test_ncc_ndp_returns_desired_array_type(self, metric):
+        metric = _SIMILARITY_METRICS[metric]
         expt = np.array(
             [
                 [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],
@@ -86,14 +86,13 @@ class TestSimilarityMetric:
             scope=MetricScope.MANY_TO_MANY,
             make_compatible_to_lower_scopes=True,
         )
-        assert (
-            euclidean_metric._is_compatible(expt.ndim, sim.ndim) is True
-            and pytest.approx(euclidean_metric(expt, sim)[2, 1]) == 0
-        )
+        assert euclidean_metric._is_compatible(
+            expt.ndim, sim.ndim
+        ) is True and np.allclose(euclidean_metric(expt, sim)[2, 1], 0)
 
     def test_make_compatible_to_lower_scopes(self):
-        zncc_metric = SIMILARITY_METRICS["zncc"]
-        assert zncc_metric._is_compatible(
+        ncc_metric = _SIMILARITY_METRICS["ncc"]
+        assert ncc_metric._is_compatible(
             np.zeros((2, 2)).ndim, np.zeros((2, 2)).ndim
         )
 
@@ -149,8 +148,8 @@ class TestSimilarityMetric:
                 scope=MetricScope.ONE_TO_MANY,
                 flat=True,
             ),
-            SIMILARITY_METRICS["zncc"],
-            SIMILARITY_METRICS["ndp"],
+            _SIMILARITY_METRICS["ncc"],
+            _SIMILARITY_METRICS["ndp"],
         ]
         desired_repr = [
             "SimilarityMetric <lambda>, scope: many_to_many",
@@ -174,7 +173,7 @@ class TestSimilarityMetric:
         assert dims == (3, 3)
 
         # Expansion of dimensions works
-        ncc_metric = SIMILARITY_METRICS["zncc"]
+        ncc_metric = _SIMILARITY_METRICS["ncc"]
         ncc = ncc_metric(expt, sim)
         assert ncc.shape == (9, 3)
         assert np.allclose(np.diagonal(ncc), 1)
@@ -214,7 +213,7 @@ class TestSimilarityMetric:
         assert dims == (3, 2)
 
         # Expansion of dimensions works
-        ndp_metric = SIMILARITY_METRICS["ndp"]
+        ndp_metric = _SIMILARITY_METRICS["ndp"]
         ndp = ndp_metric(expt, sim)
         assert ndp.shape == (9,)
         assert np.allclose(ndp[0], 1)
@@ -245,7 +244,7 @@ class TestSimilarityMetric:
 
 class TestNCC:
     def test_zncc(self):
-        zncc_metric = SIMILARITY_METRICS["zncc"]
+        ncc_metric = _SIMILARITY_METRICS["ncc"]
         # Four experimental data
         expt = np.array(
             [
@@ -262,19 +261,15 @@ class TestNCC:
         sim_da = da.from_array(sim)
 
         # many to many
-        assert (
-            pytest.approx(zncc_metric(expt_da, sim_da).compute()[1, 0, 1]) == 1
-        )
+        assert np.allclose(ncc_metric(expt_da, sim_da).compute()[1, 0, 1], 1)
 
         # Working with lower scopes, here one to many:
-        assert (
-            pytest.approx(zncc_metric(expt_da[1, 0], sim_da).compute()[1]) == 1
-        )
+        assert np.allclose(ncc_metric(expt_da[1, 0], sim_da).compute()[1], 1)
 
 
 class TestNDP:
     def test_ndp(self):
-        ndp_metric = SIMILARITY_METRICS["ndp"]
+        ndp_metric = _SIMILARITY_METRICS["ndp"]
         expt = np.array(
             [
                 [[[1, 2], [3, 4]], [[5, 6], [7, 8]]],

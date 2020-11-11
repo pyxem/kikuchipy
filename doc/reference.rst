@@ -224,17 +224,21 @@ indexing
 .. currentmodule:: kikuchipy.indexing
 
 .. autosummary::
-    merge_crystal_maps
-    orientation_similarity_map
     StaticDictionaryIndexing
+    orientation_similarity_map
+    merge_crystal_maps
     similarity_metrics
 
-.. autofunction:: merge_crystal_maps
-.. autofunction:: orientation_similarity_map
 .. autoclass:: StaticDictionaryIndexing
     :members:
     :undoc-members:
     :show-inheritance:
+
+    .. automethod:: __init__
+    .. automethod:: __call__
+
+.. autofunction:: orientation_similarity_map
+.. autofunction:: merge_crystal_maps
 
 similarity_metrics
 ------------------
@@ -244,11 +248,16 @@ similarity_metrics
 .. autosummary::
     make_similarity_metric
     MetricScope
+    ncc
+    ndp
 
 .. automodule:: kikuchipy.indexing.similarity_metrics
     :members:
     :undoc-members:
     :show-inheritance:
+
+.. autofunction:: ncc
+.. autofunction:: ndp
 
 ....
 
@@ -453,6 +462,7 @@ All methods listed here are also available to
 .. autosummary::
     adaptive_histogram_equalization
     average_neighbour_patterns
+    dictionary_indexing
     fft_filter
     get_decomposition_model
     get_dynamic_background

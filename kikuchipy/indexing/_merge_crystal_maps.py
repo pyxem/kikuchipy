@@ -26,7 +26,7 @@ from orix.quaternion.rotation import Rotation
 
 from kikuchipy.indexing.similarity_metrics import (
     SimilarityMetric,
-    SIMILARITY_METRICS,
+    _SIMILARITY_METRICS,
 )
 
 
@@ -40,9 +40,6 @@ def merge_crystal_maps(
     """Merge a list of at least two single phase
     :class:`~orix.crystal_map.crystal_map.CrystalMap` with a 1D or 2D
     navigation shape into one multi phase map.
-
-    Typically used to create a multiphase map from single phase results
-    from :class:`~kikuchipy.indexing.StaticDictionaryIndexing`.
 
     It is required that there are at least as many simulation indices as
     scores per point, and that all maps have the same number of
@@ -96,7 +93,7 @@ def merge_crystal_maps(
         sign = copysign(1, mean_n_best)
         mean_n_best = abs(mean_n_best)
     else:
-        sign = SIMILARITY_METRICS.get(metric, metric).sign
+        sign = _SIMILARITY_METRICS.get(metric, metric).sign
 
     # Notation used in the comments below:
     # - M: number of map points

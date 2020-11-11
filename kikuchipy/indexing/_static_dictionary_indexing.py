@@ -28,24 +28,25 @@ from kikuchipy.indexing.orientation_similarity_map import (
 from kikuchipy.indexing._pattern_matching import _pattern_match
 from kikuchipy.indexing.similarity_metrics import (
     SimilarityMetric,
-    SIMILARITY_METRICS,
+    _SIMILARITY_METRICS,
 )
 
 
 class StaticDictionaryIndexing:
-    """Indexing against pre-computed dictionaries of simulated EBSD
-    patterns.
+    """Dictionary indexing :cite:`chen2015dictionary` by comparing
+    experimental EBSD patterns against dictionaries of pre-computed
+    simulated patterns.
     """
 
     def __init__(self, dictionaries):
-        """Initialize with one or more dictionaries before indexing
-        patterns.
+        """Set up dictionary indexing with one or more dictionaries of
+        pre-computed simulated patterns.
 
         Parameters
         ----------
         dictionaries : EBSD or list of EBSD
-            Dictionaries as EBSD signals with one-dimensional navigation
-            axis and with the `xmap` property set.
+            Dictionaries as EBSD signals with a 1D navigation axis and
+            the `xmap` property with crystal orientations set.
         """
         if not isinstance(dictionaries, list):
             dictionaries = [dictionaries]
@@ -54,45 +55,57 @@ class StaticDictionaryIndexing:
     def __call__(
         self,
         signal,
-        metric: Union[str, SimilarityMetric] = "zncc",
+        metric: Union[str, SimilarityMetric] = "ncc",
         keep_n: int = 50,
         n_slices: int = 1,
         return_merged_crystal_map: bool = False,
         get_orientation_similarity_map: bool = False,
     ) -> Union[CrystalMap, List[CrystalMap]]:
-        """Perform dictionary indexing on patterns against preloaded
-        dictionaries, returning a :class:`~orix.crystal_map.CrystalMap`
-        for each dictionary with `scores` and `simulated_indices` as
-        properties.
+        """Perform dictionary indexing :cite:`chen2015dictionary` by
+        comparing experimental patterns against pre-computed simulations
+        with normalized cross-correlation or a user-defined similarity
+        metric.
+
+        :class:`~orix.crystal_map.crystal_map.CrystalMap`'s for each
+        dictionary with "scores" and "simulation_indices" as properties
+        are returned.
 
         Parameters
         ----------
         signal : EBSD
             EBSD signal with experimental patterns.
         metric : str or SimilarityMetric, optional
-            Similarity metric, by default "zncc".
+            Similarity metric, by default "ncc" (normalized
+            cross-correlation).
         keep_n : int, optional
-            Number of sorted results to keep, by default 50 or as many
-            as there are simulated patterns if fewer than 50 are
-            available.
+            Number of best matches to keep, by default 50 or the number
+            of simulated patterns if fewer than 50 are available.
         n_slices : int, optional
-            Number of slices of simulations to process sequentially, by
-            default 1.
+            Number of simulation slices to process sequentially, by
+            default 1 (no slicing).
         return_merged_crystal_map : bool, optional
-            Return a merged crystal map, the best matches determined
-            from the similarity scores, in addition to the single phase
-            maps. By default False. See also
-            :func:`~kikuchipy.indexing.merge_crystal_maps`.
+            Whether to return a merged crystal map, the best matches
+            determined from the similarity scores, in addition to the
+            single phase maps. By default False.
         get_orientation_similarity_map : bool, optional
-            Add orientation similarity maps to the returned crystal maps
-            as an `osm` property, by default False.
+            Add orientation similarity maps to the returned crystal
+            maps' properties named "osm". By default False.
 
         Returns
         -------
-        xmaps : ~orix.crystal_map.crystal_map.CrystalMap or list of \
-                ~orix.crystal_map.crystal_map.CrystalMap
+        xmaps : :class:`~orix.crystal_map.crystal_map.CrystalMap` or \
+                list of \
+                :class:`~orix.crystal_map.crystal_map.CrystalMap`
             A crystal map for each dictionary loaded and one merged map
             if `return_merged_crystal_map = True`.
+
+        Notes
+        -----
+        Merging of crystal maps and calculations of orientation
+        similarity maps can be done afterwards with
+        :func:`~kikuchipy.indexing.merge_crystal_maps` and
+        :func:`~kikuchipy.indexing.orientation_similarity_map`,
+        respectively.
         """
         # This needs a rework before sent to cluster and possibly more
         # automatic slicing with dask
@@ -111,7 +124,7 @@ class StaticDictionaryIndexing:
 
         # Get metric from optimized metrics if it is available, or
         # return the metric if it is not
-        metric = SIMILARITY_METRICS.get(metric, metric)
+        metric = _SIMILARITY_METRICS.get(metric, metric)
 
         axes_manager = signal.axes_manager
         spatial_arrays = _get_spatial_arrays(

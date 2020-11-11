@@ -21,6 +21,8 @@ array indices of the best matching simulated patterns in one map point
 is compared to the corresponding lists in the nearest neighbour points.
 """
 
+# TODO: Consider moving to orix.
+
 import numpy as np
 from scipy.ndimage import generic_filter
 
@@ -34,10 +36,11 @@ def orientation_similarity_map(
     footprint: np.ndarray = None,
     center_index: int = 2,
 ) -> np.ndarray:
-    """Compute an orientation similarity map (OSM) following
-    [Marquardt2017]_, where the ranked list of the array indices of the
-    best matching simulated patterns in one map point is compared to the
-    corresponding lists in the nearest neighbour points.
+    """Compute an orientation similarity map following
+    :cite:`marquardt2017quantitative`, where the ranked list of the
+    array indices of the best matching simulated patterns in one point
+    is compared to the corresponding lists in the nearest neighbour
+    points.
 
     Parameters
     ----------
