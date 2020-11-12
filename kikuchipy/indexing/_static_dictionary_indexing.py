@@ -157,6 +157,7 @@ class StaticDictionaryIndexing:
                 metric=metric,
                 keep_n=keep_n,
                 n_slices=n_slices,
+                phase_name=dictionary.xmap.phases_in_data.names[0],
             )
             new_xmap = CrystalMap(
                 rotations=dictionary.xmap.rotations[simulation_indices],

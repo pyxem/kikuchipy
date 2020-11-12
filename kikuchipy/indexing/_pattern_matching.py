@@ -18,7 +18,7 @@
 
 """Matching of experimental to simulated gray-tone patterns."""
 
-from typing import Union, Tuple
+from typing import Optional, Tuple, Union
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
@@ -45,6 +45,7 @@ def _pattern_match(
     metric: Union[str, SimilarityMetric] = "ncc",
     compute: bool = True,
     n_slices: int = 1,
+    phase_name: Optional[str] = None,
 ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[da.Array, da.Array]]:
     """Find the best matching simulations to experimental data based on
     given `metric`.
@@ -69,6 +70,9 @@ def _pattern_match(
     n_slices : int, optional
         Number of simulated slices to process sequentially. Default is
         1, i.e. the simulated pattern array is not sliced.
+    phase_name : str, optional
+        Simulated patterns phase name, shown in the progressbar if
+        `n_slices` > 1.
 
     Returns
     -------
@@ -102,6 +106,8 @@ def _pattern_match(
             f"{metric.scope} of {type(metric).__name__}"
         )
 
+    keep_n = min(keep_n, _get_number_of_simulated(simulated))
+
     if n_slices == 1:
         return _pattern_match_single_slice(
             experimental,
@@ -122,6 +128,7 @@ def _pattern_match(
             keep_n=keep_n,
             metric=metric,
             n_slices=n_slices,
+            phase_name=phase_name,
         )
 
 
@@ -131,6 +138,7 @@ def _pattern_match_slice_simulated(
     keep_n: int,
     metric: SimilarityMetric,
     n_slices: int = 1,
+    phase_name: Optional[str] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """See :func:`_pattern_match`.
 
@@ -146,7 +154,9 @@ def _pattern_match_slice_simulated(
         Similarity metric.
     n_slices : int, optional
         Number of simulation slices to process sequentially. Default is
-        1, i.e. the simulated pattern array is not sliced.
+        1 (no slicing).
+    phase_name : str, optional
+        Simulated patterns phase name, shown in the progressbar.
 
     Returns
     -------
@@ -155,33 +165,35 @@ def _pattern_match_slice_simulated(
     scores : numpy.ndarray or dask.array.Array
         Ranked metric results with data shapes (ny*nx, keep_n).
     """
-    # This is a naive implementation, hopefully not stupid, of slicing
-    # the simulated in batches without thinking about aligning with
-    # dask chunks or rechunking dask seem to handle the sequential
-    # slicing decently
+    # TODO: Try to respect/utilize chunks when slicing
 
     nav_shape = _get_nav_shape(experimental)
     nav_size = int(np.prod(nav_shape))
     num_simulated = _get_number_of_simulated(simulated)
     slice_size = num_simulated // n_slices
 
-    n = min(keep_n, slice_size)
-    simulated_indices_aggregate = np.zeros((nav_size, n_slices * n), np.int)
-    scores_aggregate = np.zeros((nav_size, n_slices * n), metric._dtype_out)
+    n = min(keep_n, num_simulated)
+    aggregate_shape = (nav_size, n_slices * n)
+    result_shape = (nav_size, n)
+    simulated_indices_aggregate = np.zeros(aggregate_shape, np.int32)
+    scores_aggregate = np.zeros(aggregate_shape, metric._dtype_out)
 
-    start = 0
+    if phase_name is None or phase_name == "":
+        desc = "Matching patterns"
+    else:
+        desc = f"Matching {phase_name[:10]} patterns"
+
     with tqdm(
-        iterable=range(n_slices),
-        desc="Matching patterns",
-        unit="slice",
-        total=n_slices,
+        iterable=range(n_slices), desc=desc, unit="slice", total=n_slices
     ) as t:
+        start = 0
         for i in range(n_slices):
-            mem = psutil.virtual_memory().available / 1e9
-            t.set_postfix_str(f"Available RAM {mem:.3f} GB")
+            t.set_postfix_str(f"mem={psutil.virtual_memory().percent}%")
 
-            # TODO: Try to respect/utilize chunks when slicing
-            end = start + slice_size if i != n_slices - 1 else num_simulated
+            if i != n_slices - 1:
+                end = start + slice_size
+            else:  # Last iteration
+                end = num_simulated
 
             simulated_indices, scores = _pattern_match_single_slice(
                 experimental,
@@ -191,26 +203,27 @@ def _pattern_match_slice_simulated(
                 compute=False,
             )
 
-            # Adjust simulation indicies matches to correspond with
+            # Adjust simulation indices matches to correspond with
             # original simulated
             simulated_indices += start
 
-            result_slice = np.s_[:, i * n : (i + 1) * n]
             da.store(
-                [simulated_indices, scores],
-                [
-                    simulated_indices_aggregate[result_slice],
-                    scores_aggregate[result_slice],
-                ],
-                # This should be possible, but do we gain anything?
-                # regions=(slice(......))
+                sources=[simulated_indices, scores],
+                targets=[simulated_indices_aggregate, scores_aggregate],
+                regions=[np.s_[:, i * n : (i + 1) * n]] * 2,
             )
 
             start += slice_size
+
+            # Update progressbar
             t.update()
 
-    simulated_indices = np.zeros((nav_size, n), np.int32)
-    scores = np.zeros((nav_size, n), np.float32)
+            # TODO: Perform a test to see if memory use in this loop
+            #  would benefit from garbage collection
+            # gc.collect()
+
+    simulated_indices = np.zeros(result_shape, np.int32)
+    scores = np.zeros(result_shape, metric._dtype_out)
     for i in range(nav_size):
         indices = (metric.sign * -scores_aggregate[i]).argsort(
             kind="mergesort"

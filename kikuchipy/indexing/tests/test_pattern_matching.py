@@ -21,6 +21,7 @@ import numpy as np
 import pytest
 from scipy.spatial.distance import cdist
 
+from kikuchipy.data import nickel_ebsd_small
 from kikuchipy.indexing._pattern_matching import _pattern_match
 from kikuchipy.indexing.similarity_metrics import (
     make_similarity_metric,
@@ -101,3 +102,16 @@ class TestPatternMatching:
         p = np.random.random(3 * 3).reshape((3, 3))
         mr = _pattern_match(p, p)
         assert mr[0][0] == 0
+
+    def test_pattern_match_phase_name(self):
+        """Ensure that the `phase_name` accepts different types."""
+        exp = nickel_ebsd_small().data
+        sim = exp.reshape((-1,) + exp.shape[-2:])
+
+        sim_idx1, scores1 = _pattern_match(exp, sim, n_slices=2)
+        sim_idx2, scores2 = _pattern_match(exp, sim, phase_name="a", n_slices=2)
+        sim_idx3, scores3 = _pattern_match(exp, sim, phase_name="", n_slices=2)
+
+        assert np.allclose(sim_idx1[0], [0, 3, 6, 4, 7, 1, 8, 5, 2])
+        assert np.allclose(sim_idx2[0], [0, 3, 6, 4, 7, 1, 8, 5, 2])
+        assert np.allclose(sim_idx3[0], [0, 3, 6, 4, 7, 1, 8, 5, 2])
