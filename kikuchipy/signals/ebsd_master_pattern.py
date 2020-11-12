@@ -339,7 +339,6 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             energy_index = (np.abs(energies - energy)).argmin()
             mpn = self.data[0, energy_index]
             mps = self.data[1, energy_index]
-
         # no energies, no hemis - Case 2
         elif len(self.axes_manager.shape) == 2:
             mpn = self.data
