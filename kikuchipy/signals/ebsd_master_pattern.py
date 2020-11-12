@@ -29,7 +29,7 @@ from orix.quaternion import Rotation
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.pattern import rescale_intensity
 from kikuchipy.projections.lambert_projection import LambertProjection
-from kikuchipy.signals import LazyEBSD
+from kikuchipy.signals import LazyEBSD, EBSD
 from kikuchipy.signals.util._metadata import (
     ebsd_master_pattern_metadata,
     metadata_nodes,
@@ -282,9 +282,10 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         rotations: Rotation,
         detector: EBSDDetector,
         energy: int,
-        n_chunk=-1,
-        dtype_out=np.float32,
-    ) -> LazyEBSD:
+        n_chunk: Optional[int] = -1,
+        dtype_out: Optional[np.dtype] = np.float32,
+        compute: Optional[bool] = False,
+    ) -> Union[LazyEBSD, EBSD]:
         """
         Creates a dictionary of EBSD patterns for a sample in the
         (RD, TD, ND) reference frame, given a set of local crystal lattice
@@ -305,12 +306,17 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             this is set so each chunk is around 100 MB.
         dtype_out : numpy.dtype, optional
             Data type of the returned patterns, by default np.float32.
+        compute : bool, optional
+            Wheter or not the dask.compute() function should be called, by
+            default false.
+            For more information visit the dask documentation at:
+            https://docs.dask.org/en/latest/api.html#dask.compute
 
         Returns
         ----------
-        LazyEBSD object containing the simulated EBSD patterns with the shape
-        (number of rotations, detector pixels in x direction, detector pixels
-        in y direction).
+        LazyEBSD, or if compute == True an EBSD, object containing the
+        simulated EBSD patterns with the shape (number of rotations,
+        detector pixels in x direction, detector pixels in y direction).
 
         Notes
         ----------
@@ -318,7 +324,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         the northern and southern hemispheres must be provided to yield the
         correct result.
         For more details regarding the reference frame visit the reference frame
-        user guide at kikuchipy.org/en/latest/reference_frames.html.
+        user guide at: https://kikuchipy.org/en/latest/reference_frames.html.
         """
 
         if (
@@ -405,7 +411,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             }
             for i in range(simulated.ndim)
         ]
-
+        if compute:
+            return EBSD(simulated.compute(), axes=axes)
         return LazyEBSD(simulated, axes=axes)
 
 

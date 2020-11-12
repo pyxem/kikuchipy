@@ -42,7 +42,7 @@ from kikuchipy.signals.ebsd_master_pattern import (
     _get_patterns_chunk,
     _min_number_of_chunks,
 )
-from kikuchipy.signals.ebsd import LazyEBSD
+from kikuchipy.signals.ebsd import LazyEBSD, EBSD
 from kikuchipy.signals.util._metadata import metadata_nodes
 from kikuchipy.indexing.similarity_metrics import SIMILARITY_METRICS
 
@@ -289,8 +289,10 @@ class TestEBSDCatalogue:
         mp_c = EBSDMasterPattern(np.zeros((11, 11)))
         mp_c.set_simulation_parameters(projection="lambert")
         out_c = mp_c.get_patterns(r2, self.detector, 5, 1)
+        out_c_2 = mp_c.get_patterns(r2, self.detector, 5, 1, compute=True)
 
         assert isinstance(out_c, LazyEBSD)
+        assert isinstance(out_c_2, EBSD)
         assert out_c.axes_manager.shape == (
             3,
             detector_shape[1],
