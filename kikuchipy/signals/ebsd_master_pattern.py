@@ -332,24 +332,6 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         if len(pc) > 1:
             raise ValueError("Method only supports a single projection center!")
 
-        dc = _get_direction_cosines(detector)
-
-        n = rotations.size
-        det_y, det_x = detector.shape
-        dtype_out = dtype_out
-
-        if n_chunk == -1:
-            n_chunk = _min_number_of_chunks(detector, rotations, dtype_out)
-
-        out_shape = (n, det_y, det_x)
-        chunks = (int(np.ceil(n / n_chunk)), det_y, det_x)
-
-        rescale = False
-        if dtype_out != np.float32:
-            rescale = True
-
-        r_da = da.from_array(rotations.data, chunks=(chunks[0], -1))
-
         # 4 cases
         # Has energies, has hemis - Case 1
         if len(self.axes_manager.shape) == 4:
@@ -374,6 +356,24 @@ class EBSDMasterPattern(CommonImage, Signal2D):
                 mps = self.data[1]
 
         npx, npy = self.axes_manager.signal_shape
+
+        dc = _get_direction_cosines(detector)
+
+        n = rotations.size
+        det_y, det_x = detector.shape
+        dtype_out = dtype_out
+
+        if n_chunk == -1:
+            n_chunk = _min_number_of_chunks(detector, rotations, dtype_out)
+
+        out_shape = (n, det_y, det_x)
+        chunks = (int(np.ceil(n / n_chunk)), det_y, det_x)
+
+        rescale = False
+        if dtype_out != np.float32:
+            rescale = True
+
+        r_da = da.from_array(rotations.data, chunks=(chunks[0], -1))
 
         simulated = r_da.map_blocks(
             _get_patterns_chunk,
