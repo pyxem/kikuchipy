@@ -302,8 +302,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             The wanted energy in the master pattern.
         chunk_size : int
             The amount of rotations the dask arrays should work on per chunk.
-        dtype_out : numpy.dtype
-            Data type of the returned patterns.
+        dtype_out : numpy.dtype, optional
+            Data type of the returned patterns, by default np.float32.
 
         Returns
         ----------
