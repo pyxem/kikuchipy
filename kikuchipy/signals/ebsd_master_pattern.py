@@ -285,9 +285,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         n_chunk: Optional[int] = -1,
         dtype_out: Optional[np.dtype] = np.float32,
         compute: Optional[bool] = False,
-    ) -> Union[LazyEBSD, EBSD]:
-        """
-        Creates a dictionary of EBSD patterns for a sample in the
+    ) -> Union[EBSD, LazyEBSD]:
+        """Creates a dictionary of EBSD patterns for a sample in the
         (RD, TD, ND) reference frame, given a set of local crystal lattice
         rotations and a detector model from a master pattern in the Lambert
         projection.
@@ -314,9 +313,10 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         Returns
         ----------
-        LazyEBSD, or if compute == True an EBSD, object containing the
-        simulated EBSD patterns with the shape (number of rotations,
-        detector pixels in x direction, detector pixels in y direction).
+        this : EBSD or LazyEBSD
+            Object containing the simulated EBSD patterns with the shape
+            (number of rotations, detector pixels in x direction,
+            detector pixels in y direction).
 
         Notes
         ----------
@@ -437,8 +437,7 @@ class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
 
 
 def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
-    """
-    Get the direction cosines between the detector and sample as done in EMsoft
+    """Get the direction cosines between the detector and sample as done in EMsoft
     and [Callahan2013]_.
 
     Parameters
@@ -448,7 +447,7 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
 
     Returns
     ----------
-    r_g.unit : Vector3d
+    Vector3d
         Vector3d object containing the direction cosines for each detector
         pixel.
     """
@@ -529,13 +528,13 @@ def _get_lambert_interpolation_parameters(
     nijp : numpy.ndarray
         Column coordinate of a neighboring point.
     di : numpy.ndarray
-        Interpolation weight factor.
+        Row interpolation weight factor.
     dj : numpy.ndarray
-        Interpolation weight factor.
+        Column interpolation weight factor.
     dim : numpy.ndarray
-        Interpolation weight factor.
+        Row interpolation weight factor.
     djm : numpy.ndarray
-        Interpolation weight factor.
+        Column interpolation weight factor.
     """
     # Normalized direction cosines to Rosca-Lambert projection
     xy = (
@@ -579,10 +578,9 @@ def _get_patterns_chunk(
     npx: int,
     npy: int,
     rescale: bool,
-    dtype_out=np.float32,
+    dtype_out: Optional[np.dtype] = np.float32,
 ) -> np.ndarray:
-    """
-    Get the EBSD patterns on the detector for each rotation in the chunk.
+    """Get the EBSD patterns on the detector for each rotation in the chunk.
 
     Each pattern is found by a bi-quadratic interpolation of the master pattern
     as described in EMsoft.
@@ -608,8 +606,8 @@ def _get_patterns_chunk(
 
     Returns
     ----------
-    simulated : numpy.ndarray
-        Ndarray with shape (n, y, x) containing all the patterns.
+    numpy.ndarray
+        Ndarray with shape (n, y, x) containing all the simulated patterns.
 
 
     """
