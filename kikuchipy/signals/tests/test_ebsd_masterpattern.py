@@ -90,6 +90,12 @@ class TestIO:
         assert s3.axes_manager.as_dictionary() == axes_manager
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
+    def test_property_handling_load_save_cycle(self):
+        """A set property is nicely saved to and subsequently loaded from a
+        HDF5 file in the HyperSpy format (HSPY).
+        """
+        pass
+
 
 class TestMetadata:
     def test_set_simulation_parameters(self):
@@ -166,3 +172,13 @@ class TestMetadata:
         md_dict = s.metadata.get_item("Sample.Phases.1").as_dictionary()
         p.pop("number")
         assert_dictionary(p, md_dict)
+
+    # @pytest.mark.parametrize("parameter, value")
+    def test_setting_property_updates_metadata(self):
+        """Setting a property updates the corresponding metadata parameter."""
+        pass
+
+    # @pytest.mark.parametrize("parameter, value")
+    def test_setting_metadata_updates_property(self):
+        """Setting a metadata parameter updates the corresponding property."""
+        pass

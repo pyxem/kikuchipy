@@ -55,6 +55,9 @@ Added
 
 Changed
 -------
+- EBSDMasterPattern class exposes metadata as properties (some are settable),
+  replacing the set_simulation_parameters() and set_phase_parameters() methods.
+  (`#246 <https://github.com/pyxem/kikuchipy/pull/246>`_)
 - EMsoft EBSD master pattern plugin can read a single energy pattern. Parameter
   `energy_range`  changed to `energy`.
   (`240 <https://github.com/pyxem/kikuchipy/pull/240>`_)
