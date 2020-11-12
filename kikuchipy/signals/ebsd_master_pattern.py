@@ -558,16 +558,7 @@ def _get_lambert_interpolation_parameters(
     dim = 1.0 - di
     djm = 1.0 - dj
 
-    return (
-        nii,
-        nij,
-        niip,
-        nijp,
-        di,
-        dj,
-        dim,
-        djm,
-    )
+    return nii, nij, niip, nijp, di, dj, dim, djm
 
 
 def _get_patterns_chunk(
