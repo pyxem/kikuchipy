@@ -36,9 +36,6 @@ class LambertProjection:
             y = w[..., 1]
             z = w[..., 2]
         else:
-            # norm = np.sqrt(
-            #     np.sum(np.square([v[..., 0], v[..., 1], v[..., 2]]), axis=0)
-            # )
             norm = np.linalg.norm(v)
             v = v / norm
             x = v[..., 0]
