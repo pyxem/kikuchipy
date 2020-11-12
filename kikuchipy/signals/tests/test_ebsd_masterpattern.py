@@ -28,6 +28,7 @@ import pytest
 
 
 from kikuchipy import load
+from kikuchipy.data import nickel_ebsd_master_pattern_small as nimp
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins.tests.test_emsoft_ebsd_masterpattern import (
     METADATA,
@@ -50,11 +51,6 @@ from kikuchipy.indexing.similarity_metrics import SIMILARITY_METRICS
 DIR_PATH = os.path.dirname(__file__)
 EMSOFT_FILE = os.path.join(
     DIR_PATH, "../../data/emsoft_ebsd_master_pattern/master_patterns.h5"
-)
-
-EMSOFT_MASTER = os.path.join(
-    DIR_PATH,
-    "../../data/emsoft_ebsd_master_pattern/ni_mc_mp_20kv_uint8_gzip_opts9.h5",
 )
 
 
@@ -234,16 +230,12 @@ class TestEBSDCatalogue:
         EMSOFT_EBSD_FILE = os.path.join(
             DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5"
         )
-
         emsoft_key = load(EMSOFT_EBSD_FILE)
-
         emsoft_key = emsoft_key.data[0]
 
         angles = np.array((120, 45, 60))
         r = Rotation.from_euler(np.radians(angles))
-
-        kp_mp = load(EMSOFT_MASTER, projection="lambert", hemisphere="both")
-
+        kp_mp = nimp(projection="lambert", hemisphere="both")
         kp_pattern = kp_mp.get_patterns(
             r, self.detector, 20, 100, dtype_out=np.uint8
         )
