@@ -649,7 +649,7 @@ def _min_number_of_chunks(
     """Returns the minimum number of chunks required for our detector model and
      set of unit cell rotations so that each chunk is around 100 MB.
 
-     Parameteres
+     Parameters
      -----------
      d : EBSDDetector
         EBSDDetector object with the detector geometry.
