@@ -327,6 +327,9 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             raise NotImplementedError(
                 "Method only supports master patterns in lambert projection!"
             )
+        pc = detector.pc_emsoft()
+        if len(pc) > 1:
+            raise ValueError("Method only supports a single projection center!")
 
         dc = _get_direction_cosines(detector)
 
@@ -441,8 +444,6 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
     """
 
     pc = detector.pc_emsoft()
-    if len(pc) > 1:
-        raise ValueError("Method only supports a single projection center!")
     xpc = pc[..., 0]
     ypc = pc[..., 1]
     L = pc[..., 2]
