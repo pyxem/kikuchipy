@@ -441,7 +441,8 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
     Parameters
     ----------
     detector : EBSDDetector
-        EBSDDetector object with a certain detector geometry.
+        EBSDDetector object with a certain detector geometry and one
+        projection center.
 
     Returns
     ----------
