@@ -536,7 +536,7 @@ def _get_lambert_interpolation_parameters(
     djm : numpy.ndarray
         Column interpolation weight factor.
     """
-    # Normalized direction cosines to Rosca-Lambert projection
+    # Direction cosines to Rosca-Lambert projection
     xy = (
         scale
         * LambertProjection.project(rotated_direction_cosines)
@@ -549,20 +549,20 @@ def _get_lambert_interpolation_parameters(
     nij = (j + scale).astype(int)
     niip = nii + 1
     nijp = nij + 1
-    niip = np.where(niip < npx, niip, nii)
-    nijp = np.where(nijp < npy, nijp, nij)
-    nii = np.where(nii < 0, niip, nii)
-    nij = np.where(nij < 0, nijp, nij)
+    niip = np.where(niip < npx, niip, nii).astype(int)
+    nijp = np.where(nijp < npy, nijp, nij).astype(int)
+    nii = np.where(nii < 0, niip, nii).astype(int)
+    nij = np.where(nij < 0, nijp, nij).astype(int)
     di = i - nii + scale
     dj = j - nij + scale
     dim = 1.0 - di
     djm = 1.0 - dj
 
     return (
-        nii.astype(int),
-        nij.astype(int),
-        niip.astype(int),
-        nijp.astype(int),
+        nii,
+        nij,
+        niip,
+        nijp,
         di,
         dj,
         dim,
