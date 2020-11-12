@@ -604,9 +604,7 @@ def _get_patterns_chunk(
     """
     m = r.shape[0]
     simulated = np.empty(shape=(m,) + dc.shape, dtype=dtype_out)
-
     scale_factor = (npx - 1) / 2
-
     for i in range(m):
         rot_dc = Rotation(r[i]) * dc
         (
