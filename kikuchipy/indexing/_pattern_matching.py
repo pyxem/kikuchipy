@@ -273,7 +273,7 @@ def _pattern_match_single_slice(
         )
         return np.array([0]), similarity
 
-    # If N is < keep_n => keep_n = N
+    # keep_n_aggregate: If N is < keep_n => keep_n = N
     keep_n = min(keep_n, len(simulated))
 
     simulated_indices = similarities.argtopk(metric.sign * keep_n, axis=-1)
