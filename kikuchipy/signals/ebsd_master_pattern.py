@@ -345,6 +345,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             mps = mpn
         else:
             try:  # has energies, no hemi - Case 3
+                # TODO: Raise warning if not centro and no hemi
                 energies = self.axes_manager["energy"].axis
                 energy_index = (np.abs(energies - energy)).argmin()
                 mpn = self.data[energy_index]
@@ -519,8 +520,8 @@ def _get_lambert_interpolation_parameters(
 
     i = xy[..., 0]
     j = xy[..., 1]
-    nii = i.astype(int) + scale
-    nij = j.astype(int) + scale
+    nii = (i + scale).astype(int)
+    nij = (j + scale).astype(int)
     niip = nii + 1
     nijp = nij + 1
     niip = np.where(niip < npx, niip, nii)
