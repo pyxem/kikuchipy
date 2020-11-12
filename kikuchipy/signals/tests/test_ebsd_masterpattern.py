@@ -300,6 +300,19 @@ class TestEBSDCatalogue:
         with pytest.raises(NotImplementedError):
             mp_d.get_patterns(r2, self.detector, 5, 1)
 
+        # More than one Projection center is currently not supported so it
+        # should fail.
+        d2 = EBSDDetector(
+            shape=(10, 10),
+            px_size=50,
+            pc=((0, 0, 15000), (0, 0, 15000)),
+            convention="emsoft4",
+            tilt=0,
+            sample_tilt=70,
+        )
+        with pytest.raises(ValueError):
+            mp_c.get_patterns(r2, d2, 5, 1)
+
         # TODO: Create tests for other structures
 
     def test_get_patterns_chunk(self):

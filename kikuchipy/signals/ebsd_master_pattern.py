@@ -296,7 +296,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         rotations : Rotation
             Set of unit cell rotations to get patterns from.
         detector : EBSDDetector
-            EBSDDetector object describing the detector geometry.
+            EBSDDetector object describing the detector geometry with one
+            projection center.
         energy : int
             The wanted energy in the master pattern.
         chunk_size : int
@@ -440,6 +441,8 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
     """
 
     pc = detector.pc_emsoft()
+    if len(pc) > 1:
+        raise ValueError("Method only supports a single projection center!")
     xpc = pc[..., 0]
     ypc = pc[..., 1]
     L = pc[..., 2]
