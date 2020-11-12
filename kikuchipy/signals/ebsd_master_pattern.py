@@ -341,6 +341,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             mps = self.data[1, energy_index]
         # no energies, no hemis - Case 2
         elif len(self.axes_manager.shape) == 2:
+            # TODO: Raise warning if not centro and no hemi
             mpn = self.data
             mps = mpn
         else:
