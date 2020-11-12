@@ -286,13 +286,15 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         dtype_out=np.float32,
     ) -> LazyEBSD:
         """
-        Creates a catalogue of EBSD patterns given a set of rotations and
-        a detector model from the master pattern.
+        Creates a dictionary of EBSD patterns for a sample in the
+        (RD, TD, ND) reference frame, given a set of local crystal lattice
+        rotations and a detector model from a master pattern in the Lambert
+        projection.
 
         Parameters
         ----------
         rotations : Rotation
-            Set of rotations to get patterns from.
+            Set of unit cell rotations to get patterns from.
         detector : EBSDDetector
             EBSDDetector object describing the detector geometry.
         energy : int
@@ -304,7 +306,17 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         Returns
         ----------
-        LazyEBSD object containing the simulated EBSD patterns.
+        LazyEBSD object containing the simulated EBSD patterns with the shape
+        (number of rotations, detector pixels in x direction, detector pixels
+        in y direction).
+
+        Notes
+        ----------
+        If the master pattern phase has a non-centrosymmetric point group, both
+        the northern and southern hemispheres must be provided to yield the
+        correct result.
+        For more details regarding the reference frame visit the reference frame
+        user guide at kikuchipy.org/en/latest/reference_frames.html.
         """
 
         if (
