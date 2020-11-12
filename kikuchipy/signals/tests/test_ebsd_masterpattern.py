@@ -40,6 +40,7 @@ from kikuchipy.signals.ebsd_master_pattern import (
     _get_direction_cosines,
     _get_lambert_interpolation_parameters,
     _get_patterns_chunk,
+    _min_number_of_chunks,
 )
 from kikuchipy.signals.ebsd import LazyEBSD
 from kikuchipy.signals.util._metadata import metadata_nodes
@@ -326,3 +327,10 @@ class TestEBSDCatalogue:
         out = _get_patterns_chunk(r, dc, mpn, mps, npx, npy, rescale=False)
 
         assert out.shape == r.shape + dc.shape
+
+    def test_min_number_of_chunks(self):
+        d = self.detector
+        arr = ((0, 0, 0),) * 117000
+        r = Rotation.from_euler(arr)
+        n_chunks = _min_number_of_chunks(d, r, dtype_out=np.uint8)
+        assert n_chunks == 360

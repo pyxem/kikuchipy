@@ -282,7 +282,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         rotations: Rotation,
         detector: EBSDDetector,
         energy: int,
-        chunk_size: int,
+        n_chunk=-1,
         dtype_out=np.float32,
     ) -> LazyEBSD:
         """
@@ -300,8 +300,9 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             projection center.
         energy : int
             The wanted energy in the master pattern.
-        chunk_size : int
-            The amount of rotations the dask arrays should work on per chunk.
+        n_chunk : int, optional
+            The number of chunks the data should be split up into. By default,
+            this is set so each chunk is around 100 MB.
         dtype_out : numpy.dtype, optional
             Data type of the returned patterns, by default np.float32.
 
@@ -335,11 +336,13 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         n = rotations.size
         det_y, det_x = detector.shape
+        dtype_out = dtype_out
+
+        if n_chunk == -1:
+            n_chunk = _min_number_of_chunks(detector, rotations, dtype_out)
 
         out_shape = (n, det_y, det_x)
-        chunks = (min(chunk_size, n), det_y, det_x)
-
-        dtype_out = dtype_out
+        chunks = (int(np.ceil(n / n_chunk)), det_y, det_x)
 
         rescale = False
         if dtype_out != np.float32:
@@ -593,8 +596,8 @@ def _get_patterns_chunk(
         Number of pixels in the y-direction on the master pattern.
     rescale : bool
         Whether to call rescale_intensities() or not.
-    dtype_out : numpy.dtype
-        Data type of the returned patterns.
+    dtype_out : numpy.dtype, optional
+        Data type of the returned patterns, by default np.float32.
 
     Returns
     ----------
@@ -645,3 +648,30 @@ def _get_patterns_chunk(
             pattern = rescale_intensity(pattern, dtype_out=dtype_out)
         simulated[i] = pattern
     return simulated
+
+
+def _min_number_of_chunks(
+    d: EBSDDetector, r: Rotation, dtype_out=np.dtype
+) -> int:
+    """Returns the minimum number of chunks required for our detector model and
+     set of unit cell rotations so that each chunk is around 100 MB.
+
+     Parameteres
+     -----------
+     d : EBSDDetector
+        EBSDDetector object with the detector geometry.
+    r : Rotation
+        Rotation object containing all the unit cell rotations.
+    dtype_out : np.dtype
+        The output data type.
+     Returns
+     ----------
+     int
+        The minimum number of chunks required so each chunk is around 100 MB.
+    """
+    dy, dx = d.shape
+    n = r.size
+    nbytes = dy * dx * n.astype("int64") * np.dtype(dtype_out).itemsize
+    nbytes_goal = 100e6  # 100 MB
+    n_chunks = int(np.ceil(nbytes / nbytes_goal))
+    return n_chunks
