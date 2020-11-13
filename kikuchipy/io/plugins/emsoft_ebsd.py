@@ -29,9 +29,6 @@ from orix.crystal_map import CrystalMap, Phase, PhaseList
 from orix.quaternion import Rotation
 
 from kikuchipy.io.plugins.h5ebsd import hdf5group2dict
-from kikuchipy.io.plugins.emsoft_ebsd_master_pattern import (
-    _crystal_data_2_metadata,
-)
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
     metadata_nodes,
@@ -103,13 +100,6 @@ def file_reader(
             "General": {
                 "title": f.filename.split("/")[-1].split(".")[0],
                 "original_filename": f.filename.split("/")[-1],
-            },
-            "Sample": {
-                "Phases": {
-                    "1": _crystal_data_2_metadata(
-                        hdf5group2dict(f["CrystalData"])
-                    )
-                }
             },
         }
     )

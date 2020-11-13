@@ -100,10 +100,7 @@ class EBSD(CommonImage, Signal2D):
             px_size=self.axes_manager.signal_axes[0].scale,
         )
 
-        if "xmap" in kwargs:
-            self._xmap = kwargs.pop("xmap")
-        else:
-            self._xmap = None
+        self._xmap = kwargs.pop("xmap", None)
 
         # Update metadata if object is initialised from numpy array
         if not self.metadata.has_item(metadata_nodes("ebsd")):

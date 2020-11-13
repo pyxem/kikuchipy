@@ -22,11 +22,9 @@ from h5py import File
 import numpy as np
 import pytest
 
-from kikuchipy.io._io import load
+from kikuchipy import load
 from kikuchipy.io.plugins.emsoft_ebsd_master_pattern import (
     _check_file_format,
-    _crystal_data_2_metadata,
-    _dict2dict_via_mapping,
     _get_data_shape_slices,
     _get_datasets,
 )
@@ -42,64 +40,12 @@ EMSOFT_FILE = os.path.join(
     DIR_PATH, "../../../data/emsoft_ebsd_master_pattern/master_patterns.h5"
 )
 
-# Settings content
 METADATA = {
     "General": {
         "original_filename": "master_patterns.h5",
         "title": "master_patterns",
     },
-    "Sample": {
-        "Phases": {
-            "1": {
-                "atom_coordinates": {
-                    "1": {
-                        "atom": 13,
-                        "coordinates": np.array([0.1587, 0.6587, 0]),
-                        "site_occupation": 1.0,
-                        "debye_waller_factor": 0.005,
-                    },
-                    "2": {
-                        "atom": 29,
-                        "coordinates": np.array([0, 0, 0.25]),
-                        "site_occupation": 1.0,
-                        "debye_waller_factor": 0.005,
-                    },
-                },
-                "lattice_constants": np.array(
-                    [0.5949, 0.5949, 0.5821, 90, 90, 90]
-                ),
-                "setting": 1,
-                "source": "Su Y.C., Yan J., Lu P.T., Su J.T.: Thermodynamic...",
-                "space_group": 140,
-            }
-        }
-    },
     "Signal": {"binned": False, "signal_type": "EBSDMasterPattern"},
-    "Simulation": {
-        "EBSD_master_pattern": {
-            "BSE_simulation": {
-                "depth_step": 1.0,
-                "energy_step": 1.0,
-                "incident_beam_energy": 20.0,
-                "max_depth": 100.0,
-                "min_beam_energy": 10.0,
-                "mode": "CSDA",
-                "number_of_electrons": 2000000000,
-                "pixels_along_x": 6,
-                "sample_tilt": 70,
-            },
-            "Master_pattern": {
-                "Bethe_parameters": {
-                    "complete_cutoff": 50.0,
-                    "strong_beam_cutoff": 4.0,
-                    "weak_beam_cutoff": 8.0,
-                },
-                "hemisphere": "north",
-                "projection": "spherical",
-                "smallest_interplanar_spacing": 0.05,
-            },
-        }
-    },
 }
 
 
@@ -292,63 +238,11 @@ class TestEMsoftEBSDMasterPatternReader:
                     hemisphere=hemisphere,
                 )
 
-    def test_dict2dict_via_mapping(self):
-        with File(EMSOFT_FILE, mode="r") as f:
-            mc_mapping = [
-                ("MCmode", "mode"),
-                ("sig", "sample_tilt"),
-                ("numsx", "pixels_along_x"),
-                ("totnum_el", "number_of_electrons"),
-                ("EkeV", "incident_beam_energy"),
-                ("Ehistmin", "min_beam_energy"),
-                ("Ebinsize", "energy_step"),
-                ("depthmax", "max_depth"),
-                ("depthstep", "depth_step"),
-            ]
-            d = _dict2dict_via_mapping(
-                dict_in=f["NMLparameters/MCCLNameList"], mapping=mc_mapping,
-            )
-
-        actual_keys = list(d.keys())
-        actual_keys.sort()
-        expected_keys = [j for _, j in mc_mapping]
-        expected_keys.sort()
-        assert actual_keys == expected_keys
-
-    def test_crystal_data_2_metadata(self):
-        group_dict = {
-            "Natomtypes": 1,
-            "Atomtypes": 13,
-            "AtomData": np.array([[0.1587], [0.6587], [0], [1], [0.005]]),
-            "CrystalSystem": 2,
-            "LatticeParameters": np.array([0.5949, 0.5949, 0.5821, 90, 90, 90]),
-            "SpaceGroupNumber": 140,
-            "SpaceGroupSetting": 1,
-            "Source": "A paper.",
-        }
-        actual_d = _crystal_data_2_metadata(group_dict)
-        desired_d = {
-            "atom_coordinates": {
-                "1": {
-                    "atom": group_dict["Atomtypes"],
-                    "coordinates": group_dict["AtomData"][:3, 0],
-                    "site_occupation": group_dict["AtomData"][3, 0],
-                    "debye_waller_factor": group_dict["AtomData"][4, 0],
-                }
-            },
-            "lattice_constants": group_dict["LatticeParameters"],
-            "setting": group_dict["SpaceGroupSetting"],
-            "space_group": group_dict["SpaceGroupNumber"],
-            "source": group_dict["Source"],
-        }
-
-        assert_dictionary(actual_d, desired_d)
-
     @pytest.mark.parametrize(
         "energy, energy_slice, desired_shape, desired_mean_energies",
         [
-            (20, slice(10, None), (2, 13, 13), [20,],),
-            (15, slice(5, 6), (2, 13, 13), [15,],),
+            (20, slice(10, None), (2, 13, 13), [20]),
+            (15, slice(5, 6), (2, 13, 13), [15]),
             ((15, 20), slice(5, None), (2, 6, 13, 13), np.linspace(15, 20, 6)),
             ((19, 20), slice(9, None), (2, 2, 13, 13), np.linspace(19, 20, 2)),
         ],
