@@ -466,6 +466,3 @@ class HemisphereError(Exception):
     one hemisphere."""
 
     pass
-
-
-# dummy
