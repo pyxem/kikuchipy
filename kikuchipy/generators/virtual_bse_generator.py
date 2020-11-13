@@ -129,8 +129,8 @@ class VirtualBSEGenerator:
 
         See Also
         --------
-        kikuchipy.signals.EBSD.plot_virtual_bse_intensity,
-        kikuchipy.signals.EBSD.get_virtual_bse_intensity,
+        ~kikuchipy.signals.EBSD.plot_virtual_bse_intensity
+        ~kikuchipy.signals.EBSD.get_virtual_bse_intensity
 
         Notes
         -----
