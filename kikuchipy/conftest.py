@@ -19,11 +19,12 @@
 import gc
 import os
 import tempfile
+from typing import Tuple
 
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticePoint
 import numpy as np
-from orix.crystal_map import Phase
+from orix.crystal_map import CrystalMap, Phase, PhaseList
 from orix.quaternion.rotation import Rotation
 from orix.vector import Vector3d, neo_euler
 import pytest
@@ -40,8 +41,8 @@ from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 @pytest.fixture
 def dummy_signal():
-    """Dummy signal of shape <3, 3|3, 3>. If this is changed, all tests
-    using this signal will fail since they compare the output from
+    """Dummy signal of shape <(3, 3)|(3, 3)>. If this is changed, all
+    tests using this signal will fail since they compare the output from
     methods using this signal (as input) to hard-coded outputs.
     """
     # fmt: off
@@ -292,3 +293,59 @@ def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
         in_pattern=uvw_in_pattern,
         gnomonic_radius=detector.r_max,
     )
+
+
+@pytest.fixture
+def rotations():
+    return Rotation([(2, 4, 6, 8), (-1, -3, -5, -7)])
+
+
+@pytest.fixture
+def get_single_phase_xmap(rotations):
+    def _get_single_phase_xmap(
+        nav_shape,
+        rotations_per_point=5,
+        prop_names=["scores", "simulation_indices"],
+        name="a",
+        phase_id=0,
+    ):
+        d, map_size = _get_spatial_array_dicts(nav_shape)
+        rot_idx = np.random.choice(
+            np.arange(rotations.size), map_size * rotations_per_point
+        )
+        data_shape = (map_size,)
+        if rotations_per_point > 1:
+            data_shape += (rotations_per_point,)
+        d["rotations"] = rotations[rot_idx].reshape(*data_shape)
+        d["phase_id"] = np.ones(map_size) * phase_id
+        d["phase_list"] = PhaseList(Phase(name=name))
+        # Scores and simulation indices
+        d["prop"] = {
+            prop_names[0]: np.ones(data_shape, dtype=np.float32),
+            prop_names[1]: np.arange(np.prod(data_shape)).reshape(data_shape),
+        }
+        return CrystalMap(**d)
+
+    return _get_single_phase_xmap
+
+
+def _get_spatial_array_dicts(
+    nav_shape: Tuple[int, int], step_sizes: Tuple[int, int] = (1.5, 1)
+) -> Tuple[dict, int]:
+    ny, nx = nav_shape
+    dy, dx = step_sizes
+    d = {"x": None, "y": None, "z": None}
+    map_size = 1
+    if nx > 1:
+        if ny > 1:
+            d["x"] = np.tile(np.arange(nx) * dx, ny)
+        else:
+            d["x"] = np.arange(nx) * dx
+        map_size *= nx
+    if ny > 1:
+        if nx > 1:
+            d["y"] = np.sort(np.tile(np.arange(ny) * dy, nx))
+        else:
+            d["y"] = np.arange(ny) * dy
+        map_size *= ny
+    return d, map_size

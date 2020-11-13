@@ -19,6 +19,7 @@
 from itertools import chain
 from setuptools import setup, find_packages
 
+
 # Get release information without importing anything from the project
 with open("kikuchipy/release.py") as fid:
     for line in fid:
@@ -124,6 +125,7 @@ setup(
         "numba >= 0.48",
         "orix >= 0.5",
         "pooch",
+        "psutil",
         "tqdm >= 0.5.2",
         "scikit-image >= 0.16",
         "scikit-learn",

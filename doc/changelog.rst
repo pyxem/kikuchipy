@@ -29,10 +29,14 @@ Added
   (`#236 <https://github.com/pyxem/kikuchipy/pull/236>`_,
   `#237 <https://github.com/pyxem/kikuchipy/pull/237>`_,
   `#243 <https://github.com/pyxem/kikuchipy/pull/243>`_)
-- Indexing of EBSD patterns through matching of patterns with a static
-  dictionary of simulated patterns with known orientations.
+- Pattern matching of EBSD patterns with a dictionary of pre-computed simulated
+  patterns with known crystal orientations, and related useful tools
   (`#231 <https://github.com/pyxem/kikuchipy/pull/231>`_,
-  `#233 <https://github.com/pyxem/kikuchipy/pull/233>`_)
+  `#233 <https://github.com/pyxem/kikuchipy/pull/233>`_,
+  `#234 <https://github.com/pyxem/kikuchipy/pull/234>`_): (1) A framework for
+  creation of similarity metrics used in pattern matching, (2) computation of an
+  orientation similarity map from indexing results, and (3) creation of a multi
+  phase crystal map from single phase maps from pattern matching.
 - EBSD.xmap property storing an orix CrystalMap object. So far only read from
   a EMsoft simulated EBSD pattern file. Relevant documentation updated.
   (`#226 <https://github.com/pyxem/kikuchipy/pull/226>`_)
@@ -55,8 +59,8 @@ Added
 
 Changed
 -------
-- The EBSDMasterPattern gets unsettable phase, hemisphere and projection
-  properties. (`#246 <https://github.com/pyxem/kikuchipy/pull/246>`_)
+- The EBSDMasterPattern gets phase, hemisphere and projection properties.
+  (`#246 <https://github.com/pyxem/kikuchipy/pull/246>`_)
 - EMsoft EBSD master pattern plugin can read a single energy pattern. Parameter
   `energy_range`  changed to `energy`.
   (`240 <https://github.com/pyxem/kikuchipy/pull/240>`_)
