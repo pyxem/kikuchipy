@@ -117,8 +117,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         Notes
         ----------
         If the master pattern phase has a non-centrosymmetric point group, both
-        the northern and southern hemispheres must be provided to yield the
-        correct result.
+        the northern and southern hemispheres must be provided.
         For more details regarding the reference frame visit the reference frame
         user guide at: https://kikuchipy.org/en/latest/reference_frames.html.
         """
