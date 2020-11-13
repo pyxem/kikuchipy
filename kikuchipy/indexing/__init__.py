@@ -16,16 +16,23 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Indexing of EBSD patterns."""
+"""Tools for indexing of EBSD patterns by comparison to simulated
+patterns.
 
-from kikuchipy.indexing.similarity_metrics import (
-    make_similarity_metric,
-    MetricScope,
+The EBSD method :meth:`~kikuchipy.signals.EBSD.match_patterns` uses
+these tools for pattern matching.
+"""
+
+from kikuchipy.indexing._merge_crystal_maps import merge_crystal_maps
+from kikuchipy.indexing.orientation_similarity_map import (
+    orientation_similarity_map,
 )
-from kikuchipy.indexing.pattern_matching import pattern_match
+from kikuchipy.indexing import similarity_metrics
+from kikuchipy.indexing._static_pattern_matching import StaticPatternMatching
 
 __all__ = [
-    "make_similarity_metric",
-    "MetricScope",
-    "pattern_match",
+    "merge_crystal_maps",
+    "orientation_similarity_map",
+    "similarity_metrics",
+    "StaticPatternMatching",
 ]

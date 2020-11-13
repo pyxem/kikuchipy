@@ -26,6 +26,7 @@ import matplotlib
 from matplotlib.pyplot import close
 import numpy as np
 from orix.crystal_map import CrystalMap
+from orix.quaternion import Rotation
 import pytest
 from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
@@ -1212,3 +1213,15 @@ class TestEBSDdetectorProperty:
     def test_init_detector(self):
         """The attribute is set correctly."""
         pass
+
+
+class TestPatternMatching:
+    def test_match_patterns(self, dummy_signal):
+        """Scores are all 1.0 for a dictionary containing all patterns
+        from dummy_signal().
+        """
+        s_dict = EBSD(dummy_signal.data.reshape(-1, 3, 3))
+        s_dict._xmap = CrystalMap(Rotation(np.zeros((9, 4))))
+        xmap = dummy_signal.match_patterns(s_dict)
+
+        assert np.allclose(xmap.scores[:, 0], 1)
