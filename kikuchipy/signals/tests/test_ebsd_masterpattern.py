@@ -22,17 +22,18 @@ import dask.array as da
 from hyperspy.api import load as hs_load
 from hyperspy._signals.signal2d import Signal2D
 import numpy as np
+from orix.crystal_map import Phase
 from orix.vector import Vector3d
 from orix.quaternion import Rotation
 import pytest
 
 
 from kikuchipy import load
-from kikuchipy.data import nickel_ebsd_master_pattern_small as nimp
+from kikuchipy.data import nickel_ebsd_master_pattern_small
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins.tests.test_emsoft_ebsd_masterpattern import (
-    METADATA,
     setup_axes_manager,
+    METADATA,
 )
 from kikuchipy.signals.tests.test_ebsd import assert_dictionary
 from kikuchipy.signals.ebsd_master_pattern import (
@@ -56,10 +57,17 @@ EMSOFT_FILE = os.path.join(
 
 class TestEBSDMasterPatternInit:
     def test_init_no_metadata(self):
-        s = EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
+        s = EBSDMasterPattern(
+            np.zeros((2, 10, 11, 11)),
+            projection="lambert",
+            hemisphere="both",
+            phase=Phase("a"),
+        )
 
-        assert s.metadata.has_item("Simulation.EBSD_master_pattern")
-        assert s.metadata.has_item("Sample.Phases")
+        assert isinstance(s.phase, Phase)
+        assert s.phase.name == "a"
+        assert s.projection == "lambert"
+        assert s.hemisphere == "both"
 
     def test_ebsd_masterpattern_lazy_data_init(self):
         s = EBSDMasterPattern(da.zeros((2, 10, 11, 11)))
@@ -100,6 +108,32 @@ class TestIO:
         assert isinstance(s3, EBSDMasterPattern)
         assert s3.axes_manager.as_dictionary() == axes_manager
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
+
+    @pytest.mark.parametrize(
+        "save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"]
+    )
+    def test_original_metadata_save_load_cycle(self, save_path_hdf5):
+        s = nickel_ebsd_master_pattern_small()
+
+        omd_dict_keys = s.original_metadata.as_dictionary().keys()
+        desired_keys = [
+            "BetheList",
+            "EBSDMasterNameList",
+            "MCCLNameList",
+            "AtomData",
+            "Atomtypes",
+            "CrystalSystem",
+            "LatticeParameters",
+            "Natomtypes",
+        ]
+        assert [k in omd_dict_keys for k in desired_keys]
+
+        s.save(save_path_hdf5)
+        s2 = hs_load(save_path_hdf5, signal_type="EBSDMasterPattern")
+        assert isinstance(s2, EBSDMasterPattern)
+
+        omd_dict_keys2 = s2.original_metadata.as_dictionary().keys()
+        assert [k in omd_dict_keys2 for k in desired_keys]
 
 
 class TestMetadata:
@@ -150,33 +184,19 @@ class TestMetadata:
         md_dict = s.metadata.get_item(ebsd_mp_node).as_dictionary()
         assert_dictionary(p_desired, md_dict)
 
-    def test_set_phase_parameters(self):
-        s = EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
-        p = {
-            "number": 1,
-            "atom_coordinates": {
-                "1": {
-                    "atom": "Ni",
-                    "coordinates": [0, 0, 0],
-                    "site_occupation": 1,
-                    "debye_waller_factor": 0.0035,
-                }
-            },
-            "formula": "Ni",
-            "info": "Some sample info",
-            "lattice_constants": [0.35236, 0.35236, 0.35236, 90, 90, 90],
-            "laue_group": "m3m",
-            "material_name": "Ni",
-            "point_group": "432",
-            "space_group": 225,
-            "setting": 1,
-            "source": "Peng",
-            "symmetry": 43,
-        }
-        s.set_phase_parameters(**p)
-        md_dict = s.metadata.get_item("Sample.Phases.1").as_dictionary()
-        p.pop("number")
-        assert_dictionary(p, md_dict)
+
+class TestProperties:
+    @pytest.mark.parametrize(
+        "projection, hemisphere",
+        [("lambert", "north"), ("spherical", "south"), ("lambert", "both")],
+    )
+    def test_properties(self, projection, hemisphere):
+        mp = nickel_ebsd_master_pattern_small(
+            projection=projection, hemisphere=hemisphere
+        )
+
+        assert mp.projection == projection
+        assert mp.hemisphere == hemisphere
 
 
 class TestEBSDCatalogue:
@@ -235,7 +255,9 @@ class TestEBSDCatalogue:
 
         angles = np.array((120, 45, 60))
         r = Rotation.from_euler(np.radians(angles))
-        kp_mp = nimp(projection="lambert", hemisphere="both")
+        kp_mp = nickel_ebsd_master_pattern_small(
+            projection="lambert", hemisphere="both"
+        )
         kp_pattern = kp_mp.get_patterns(
             r, self.detector, 20, 100, dtype_out=np.uint8
         )
@@ -256,7 +278,7 @@ class TestEBSDCatalogue:
         mp_a = EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
         mp_a.axes_manager[0].name = "energy"
         mp_a.axes_manager[1].name = "y"
-        mp_a.set_simulation_parameters(projection="lambert")
+        mp_a.projection = "lambert"
         out_a = mp_a.get_patterns(r2, self.detector, 5, 1)
 
         assert isinstance(out_a, LazyEBSD)
@@ -268,7 +290,7 @@ class TestEBSDCatalogue:
 
         mp_b = EBSDMasterPattern(np.zeros((10, 11, 11)))
         mp_b.axes_manager[0].name = "energy"
-        mp_b.set_simulation_parameters(projection="lambert")
+        mp_b.projection = "lambert"
         out_b = mp_b.get_patterns(r2, self.detector, 5, 1)
 
         assert isinstance(out_b, LazyEBSD)
@@ -279,7 +301,7 @@ class TestEBSDCatalogue:
         )
 
         mp_c = EBSDMasterPattern(np.zeros((11, 11)))
-        mp_c.set_simulation_parameters(projection="lambert")
+        mp_c.projection = "lambert"
         out_c = mp_c.get_patterns(r2, self.detector, 5, 1)
         out_c_2 = mp_c.get_patterns(r2, self.detector, 5, 1, compute=True)
 

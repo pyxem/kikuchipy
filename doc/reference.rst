@@ -503,12 +503,9 @@ All methods listed here are also available to
 .. autosummary::
     normalize_intensity
     rescale_intensity
-    set_simulation_parameters
-    set_phase_parameters
 
 .. autoclass:: kikuchipy.signals.EBSDMasterPattern
     :members:
-    :undoc-members:
     :inherited-members: Signal2D
     :show-inheritance:
 
@@ -539,7 +536,6 @@ util
 .. currentmodule:: kikuchipy.signals.util
 
 .. autosummary::
-    ebsd_master_pattern_metadata
     ebsd_metadata
     metadata_nodes
 
