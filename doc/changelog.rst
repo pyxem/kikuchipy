@@ -55,6 +55,8 @@ Added
 
 Changed
 -------
+- The EBSDMasterPattern gets unsettable phase, hemisphere and projection
+  properties. (`#246 <https://github.com/pyxem/kikuchipy/pull/246>`_)
 - EMsoft EBSD master pattern plugin can read a single energy pattern. Parameter
   `energy_range`  changed to `energy`.
   (`240 <https://github.com/pyxem/kikuchipy/pull/240>`_)
@@ -69,6 +71,13 @@ Changed
   (`#196 <https://github.com/pyxem/kikuchipy/pull/196>`_)
 - Remove language_version in pre-commit config file.
   (`#195 <https://github.com/pyxem/kikuchipy/pull/195>`_)
+
+Removed
+-------
+- The EBSDMasterPattern and EBSD metadata node Sample.Phases, to be replaced
+  by class attributes. The set_phase_parameters() method is removed from both
+  classes, and the set_simulation_parameters() is removed from the former class.
+  (`#246 <https://github.com/pyxem/kikuchipy/pull/246>`_)
 
 Fixed
 -----

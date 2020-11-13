@@ -70,18 +70,8 @@ class TestData:
         assert isinstance(mp, EBSDMasterPattern)
         assert mp.data.shape == desired_shape
         assert np.issubdtype(mp.data.dtype, np.uint8)
-        assert (
-            mp.metadata.get_item(
-                "Simulation.EBSD_master_pattern.Master_pattern.projection"
-            )
-            == projection
-        )
-        assert (
-            mp.metadata.get_item(
-                "Simulation.EBSD_master_pattern.Master_pattern.hemisphere"
-            )
-            == hemisphere
-        )
+        assert mp.projection == projection
+        assert mp.hemisphere == hemisphere
 
         mp_lazy = data.nickel_ebsd_master_pattern_small(lazy=True)
 
