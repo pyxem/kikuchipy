@@ -17,12 +17,9 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 
-from typing import Optional, Union, List
+from typing import Optional, Union
 
 import dask.array as da
-from hyperspy._signals.signal2d import Signal2D
-from hyperspy._lazy_signals import LazySignal2D
-from hyperspy.misc.utils import DictionaryTreeBrowser
 import numpy as np
 from orix.vector import Vector3d
 from orix.quaternion import Rotation
@@ -31,17 +28,10 @@ from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.pattern import rescale_intensity
 from kikuchipy.projections.lambert_projection import LambertProjection
 from kikuchipy.signals import LazyEBSD, EBSD
-from kikuchipy.signals.util._metadata import (
-    ebsd_master_pattern_metadata,
-    metadata_nodes,
-    _update_phase_info,
-    _write_parameters_to_dictionary,
-)
 
 from hyperspy._signals.signal2d import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from orix.crystal_map import Phase
-
 
 from kikuchipy.signals._common_image import CommonImage
 
@@ -121,9 +111,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         Returns
         ----------
         this : EBSD or LazyEBSD
-            Object containing the simulated EBSD patterns with the shape
-            (number of rotations, detector pixels in x direction,
-            detector pixels in y direction).
+            All the simulated EBSD patterns with the shape (number of rotations,
+            detector pixels in x direction, detector pixels in y direction).
 
         Notes
         ----------
@@ -134,10 +123,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         user guide at: https://kikuchipy.org/en/latest/reference_frames.html.
         """
 
-        if (
-            self.metadata.Simulation.EBSD_master_pattern.Master_pattern.projection
-            != "lambert"
-        ):
+        if self.projection != "lambert":
             raise NotImplementedError(
                 "Method only supports master patterns in lambert projection!"
             )
@@ -154,12 +140,20 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             mps = self.data[1, energy_index]
         # no energies, no hemis - Case 2
         elif len(self.axes_manager.shape) == 2:
-            # TODO: Raise warning if not centro and no hemi
+            if not self.phase.point_group.contains_inversion:
+                raise HemisphereError(
+                    "For phases without inversion symmetry, "
+                    "both hemispheres must be in master pattern!"
+                )
             mpn = self.data
             mps = mpn
         else:
             try:  # has energies, no hemi - Case 3
-                # TODO: Raise warning if not centro and no hemi
+                if not self.phase.point_group.contains_inversion:
+                    raise HemisphereError(
+                        "For phases without inversion symmetry, both"
+                        "hemispheres must be in master pattern!"
+                    )
                 energies = self.axes_manager["energy"].axis
                 energy_index = (np.abs(energies - energy)).argmin()
                 mpn = self.data[energy_index]
@@ -174,7 +168,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         det_y, det_x = detector.shape
         dtype_out = dtype_out
 
-        if n_chunk == -1:
+        if n_chunk <= 0:
             n_chunk = _min_number_of_chunks(detector, rotations, dtype_out)
 
         out_shape = (n, det_y, det_x)
@@ -249,8 +243,7 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
     Returns
     ----------
     Vector3d
-        Vector3d object containing the direction cosines for each detector
-        pixel.
+        Direction cosines for each detector pixel.
     """
 
     pc = detector.pc_emsoft()
@@ -275,7 +268,7 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
     ca = np.cos(alpha)
     sa = np.sin(alpha)
 
-    # NYI
+    # TODO: Enable detector azimuthal angle
     omega = np.radians(0)  # angle between normal of sample and detector
     cw = np.cos(omega)
     sw = np.sin(omega)
@@ -373,7 +366,6 @@ def _get_patterns_chunk(
     dtype_out: Optional[np.dtype] = np.float32,
 ) -> np.ndarray:
     """Get the EBSD patterns on the detector for each rotation in the chunk.
-
     Each pattern is found by a bi-quadratic interpolation of the master pattern
     as described in EMsoft.
 
@@ -399,9 +391,7 @@ def _get_patterns_chunk(
     Returns
     ----------
     numpy.ndarray
-        Ndarray with shape (n, y, x) containing all the simulated patterns.
-
-
+        (n, y, x) array containing all the simulated patterns.
     """
     m = r.shape[0]
     simulated = np.empty(shape=(m,) + dc.shape, dtype=dtype_out)
@@ -423,7 +413,6 @@ def _get_patterns_chunk(
             npx=npx,
             npy=npy,
         )
-
         pattern = np.where(
             rot_dc.z >= 0,
             (
@@ -446,7 +435,7 @@ def _get_patterns_chunk(
 
 
 def _min_number_of_chunks(
-    d: EBSDDetector, r: Rotation, dtype_out=np.dtype
+    d: EBSDDetector, r: Rotation, dtype_out: np.dtype
 ) -> int:
     """Returns the minimum number of chunks required for our detector model and
      set of unit cell rotations so that each chunk is around 100 MB.
@@ -470,3 +459,10 @@ def _min_number_of_chunks(
     nbytes_goal = 100e6  # 100 MB
     n_chunks = int(np.ceil(nbytes / nbytes_goal))
     return n_chunks
+
+
+class HemisphereError(Exception):
+    """Raised when a master pattern without inversion symmetry only has
+    one hemisphere."""
+
+    pass

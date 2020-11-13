@@ -43,10 +43,10 @@ from kikuchipy.signals.ebsd_master_pattern import (
     _get_lambert_interpolation_parameters,
     _get_patterns_chunk,
     _min_number_of_chunks,
+    HemisphereError,
 )
 from kikuchipy.signals.ebsd import LazyEBSD, EBSD
-from kikuchipy.signals.util._metadata import metadata_nodes
-from kikuchipy.indexing.similarity_metrics import SIMILARITY_METRICS
+from kikuchipy.indexing.similarity_metrics import _SIMILARITY_METRICS
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -136,55 +136,6 @@ class TestIO:
         assert [k in omd_dict_keys2 for k in desired_keys]
 
 
-class TestMetadata:
-    def test_set_simulation_parameters(self):
-        s = EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
-        p_desired = {
-            "BSE_simulation": {
-                "depth_step": 1.0,
-                "energy_step": 1.0,
-                "incident_beam_energy": 20.0,
-                "max_depth": 100.0,
-                "min_beam_energy": 10.0,
-                "mode": "CSDA",
-                "number_of_electrons": 2000000000,
-                "pixels_along_x": 5,
-                "sample_tilt": 70,
-            },
-            "Master_pattern": {
-                "Bethe_parameters": {
-                    "complete_cutoff": 50.0,
-                    "strong_beam_cutoff": 4.0,
-                    "weak_beam_cutoff": 8.0,
-                },
-                "hemisphere": "north",
-                "projection": "spherical",
-                "smallest_interplanar_spacing": 0.05,
-            },
-        }
-        p_in = {
-            "complete_cutoff": 50.0,
-            "depth_step": 1.0,
-            "energy_step": 1.0,
-            "hemisphere": "north",
-            "incident_beam_energy": 20.0,
-            "max_depth": 100.0,
-            "min_beam_energy": 10.0,
-            "mode": "CSDA",
-            "number_of_electrons": 2000000000,
-            "pixels_along_x": 5,
-            "projection": "spherical",
-            "sample_tilt": 70,
-            "smallest_interplanar_spacing": 0.05,
-            "strong_beam_cutoff": 4.0,
-            "weak_beam_cutoff": 8.0,
-        }
-        s.set_simulation_parameters(**p_in)
-        ebsd_mp_node = metadata_nodes("ebsd_master_pattern")
-        md_dict = s.metadata.get_item(ebsd_mp_node).as_dictionary()
-        assert_dictionary(p_desired, md_dict)
-
-
 class TestProperties:
     @pytest.mark.parametrize(
         "projection, hemisphere",
@@ -200,7 +151,6 @@ class TestProperties:
 
 
 class TestEBSDCatalogue:
-
     # Create  detector model
     detector = EBSDDetector(
         shape=(480, 640),
@@ -263,13 +213,13 @@ class TestEBSDCatalogue:
         )
         kp_pat = kp_pattern.data[0].compute()
 
-        zncc_metric = SIMILARITY_METRICS["zncc"]
-        ndp_metric = SIMILARITY_METRICS["ndp"]
+        ncc_metric = _SIMILARITY_METRICS["ncc"]
+        ndp_metric = _SIMILARITY_METRICS["ndp"]
 
-        zncc1 = zncc_metric(kp_pat, emsoft_key)
+        ncc1 = ncc_metric(kp_pat, emsoft_key)
         ndp1 = ndp_metric(kp_pat, emsoft_key)
 
-        assert zncc1 >= 0.935  # Best I can do with current pattern in data
+        assert ncc1 >= 0.935  # Best I can do with current pattern in data
         # with (1001, 1001) it will go above 0.985
         assert ndp1 >= 0.935
 
@@ -279,6 +229,7 @@ class TestEBSDCatalogue:
         mp_a.axes_manager[0].name = "energy"
         mp_a.axes_manager[1].name = "y"
         mp_a.projection = "lambert"
+        mp_a.phase = Phase("Ni", 225)
         out_a = mp_a.get_patterns(r2, self.detector, 5, 1)
 
         assert isinstance(out_a, LazyEBSD)
@@ -291,6 +242,7 @@ class TestEBSDCatalogue:
         mp_b = EBSDMasterPattern(np.zeros((10, 11, 11)))
         mp_b.axes_manager[0].name = "energy"
         mp_b.projection = "lambert"
+        mp_b.phase = Phase("Ni", 225)
         out_b = mp_b.get_patterns(r2, self.detector, 5, 1)
 
         assert isinstance(out_b, LazyEBSD)
@@ -302,6 +254,7 @@ class TestEBSDCatalogue:
 
         mp_c = EBSDMasterPattern(np.zeros((11, 11)))
         mp_c.projection = "lambert"
+        mp_c.phase = Phase("Ni", 225)
         out_c = mp_c.get_patterns(r2, self.detector, 5, 1)
         out_c_2 = mp_c.get_patterns(r2, self.detector, 5, 1, compute=True)
 
@@ -313,9 +266,22 @@ class TestEBSDCatalogue:
             detector_shape[0],
         )
 
+        mp_c2 = EBSDMasterPattern(np.zeros((11, 11)))
+        mp_c2.projection = "lambert"
+        mp_c2.phase = Phase("!Ni", 220)
+        with pytest.raises(HemisphereError):
+            mp_c2.get_patterns(r2, self.detector, 5, 1)
+
         mp_d = EBSDMasterPattern(np.zeros((2, 11, 11)))
         with pytest.raises(NotImplementedError):
             mp_d.get_patterns(r2, self.detector, 5, 1)
+
+        mp_e = EBSDMasterPattern(np.zeros((10, 11, 11)))
+        mp_e.axes_manager[0].name = "energy"
+        mp_e.projection = "lambert"
+        mp_e.phase = Phase("!Ni", 220)
+        with pytest.raises(HemisphereError):
+            mp_e.get_patterns(r2, self.detector, 5, 1)
 
         # More than one Projection center is currently not supported so it
         # should fail.
