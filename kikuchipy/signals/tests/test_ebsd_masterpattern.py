@@ -98,6 +98,9 @@ class TestIO:
         assert s3.axes_manager.as_dictionary() == axes_manager
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
+    @pytest.mark.parametrize(
+        "save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"]
+    )
     def test_original_metadata_save_load_cycle(self, save_path_hdf5):
         s = nickel_ebsd_master_pattern_small()
 
