@@ -224,12 +224,12 @@ indexing
 .. currentmodule:: kikuchipy.indexing
 
 .. autosummary::
-    StaticDictionaryIndexing
+    StaticPatternMatching
     orientation_similarity_map
     merge_crystal_maps
     similarity_metrics
 
-.. autoclass:: StaticDictionaryIndexing
+.. autoclass:: StaticPatternMatching
     :members:
     :undoc-members:
     :show-inheritance:
@@ -462,7 +462,7 @@ All methods listed here are also available to
 .. autosummary::
     adaptive_histogram_equalization
     average_neighbour_patterns
-    dictionary_indexing
+    match_patterns
     fft_filter
     get_decomposition_model
     get_dynamic_background

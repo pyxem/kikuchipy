@@ -50,6 +50,9 @@ def orientation_similarity_map(
     n_best : int, optional
         Number of ranked indices to compare. If None (default), all
         indices are compared.
+    simulation_indices_prop : str, optional
+        Name of simulated indices array in the crystal maps' properties.
+        Default is "simulation_indices".
     normalize : bool, optional
         Whether to normalize the number of equal indices to the range
         [0, 1], by default True.

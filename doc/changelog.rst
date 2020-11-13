@@ -59,8 +59,8 @@ Added
 
 Changed
 -------
-- The EBSDMasterPattern gets unsettable phase, hemisphere and projection
-  properties. (`#246 <https://github.com/pyxem/kikuchipy/pull/246>`_)
+- The EBSDMasterPattern gets phase, hemisphere and projection properties.
+  (`#246 <https://github.com/pyxem/kikuchipy/pull/246>`_)
 - EMsoft EBSD master pattern plugin can read a single energy pattern. Parameter
   `energy_range`  changed to `energy`.
   (`240 <https://github.com/pyxem/kikuchipy/pull/240>`_)

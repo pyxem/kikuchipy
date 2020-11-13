@@ -1215,13 +1215,13 @@ class TestEBSDdetectorProperty:
         pass
 
 
-class TestDictionaryIndexing:
-    def test_dictionary_indexing(self, dummy_signal):
+class TestPatternMatching:
+    def test_match_patterns(self, dummy_signal):
         """Scores are all 1.0 for a dictionary containing all patterns
         from dummy_signal().
         """
         s_dict = EBSD(dummy_signal.data.reshape(-1, 3, 3))
         s_dict._xmap = CrystalMap(Rotation(np.zeros((9, 4))))
-        xmap = dummy_signal.dictionary_indexing(s_dict)
+        xmap = dummy_signal.match_patterns(s_dict)
 
         assert np.allclose(xmap.scores[:, 0], 1)

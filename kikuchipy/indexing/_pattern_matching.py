@@ -51,8 +51,7 @@ def _pattern_match(
     given `metric`.
 
     Function is primarily for use in
-    :class:`~kikuchipy.indexing.StaticDictionaryIndexing` and
-    :class:`~kikuchipy.indexing.DynamicDictionaryIndexing`.
+    :class:`~kikuchipy.indexing.StaticPatternMatching`.
 
     Parameters
     ----------

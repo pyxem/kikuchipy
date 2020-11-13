@@ -32,21 +32,22 @@ from kikuchipy.indexing.similarity_metrics import (
 )
 
 
-class StaticDictionaryIndexing:
-    """Dictionary indexing :cite:`chen2015dictionary` by comparing
-    experimental EBSD patterns against dictionaries of pre-computed
-    simulated patterns.
+class StaticPatternMatching:
+    """Pattern matching of experimental patterns to simulated patterns,
+    of known crystal orientations in pre-computed dictionaries
+    :cite:`chen2015dictionary,jackson2019dictionary`, for phase and
+    orientation determination.
     """
 
     def __init__(self, dictionaries):
-        """Set up dictionary indexing with one or more dictionaries of
-        pre-computed simulated patterns.
+        """Set up pattern matching with one or more dictionaries of
+        pre-computed simulated patterns of known crystal orientations.
 
         Parameters
         ----------
         dictionaries : EBSD or list of EBSD
             Dictionaries as EBSD signals with a 1D navigation axis and
-            the `xmap` property with crystal orientations set.
+            the `xmap` property with known crystal orientations set.
         """
         if not isinstance(dictionaries, list):
             dictionaries = [dictionaries]
@@ -61,10 +62,15 @@ class StaticDictionaryIndexing:
         return_merged_crystal_map: bool = False,
         get_orientation_similarity_map: bool = False,
     ) -> Union[CrystalMap, List[CrystalMap]]:
-        """Perform dictionary indexing :cite:`chen2015dictionary` by
-        comparing experimental patterns against pre-computed simulations
-        with normalized cross-correlation or a user-defined similarity
-        metric.
+        """Match each experimental pattern to all simulated patterns, of
+        known crystal orientations in pre-computed dictionaries
+        :cite:`chen2015dictionary,jackson2019dictionary`, to determine
+        their phase and orientation.
+
+        A suitable similarity metric, the normalized cross-correlation
+        (:func:`~kikuchipy.indexing.similarity_metrics.ncc`), is used by
+        default, but a valid user-defined similarity metric may be used
+        instead.
 
         :class:`~orix.crystal_map.crystal_map.CrystalMap`'s for each
         dictionary with "scores" and "simulation_indices" as properties
@@ -106,6 +112,11 @@ class StaticDictionaryIndexing:
         :func:`~kikuchipy.indexing.merge_crystal_maps` and
         :func:`~kikuchipy.indexing.orientation_similarity_map`,
         respectively.
+
+        See Also
+        --------
+        ~kikuchipy.indexing.similarity_metrics.make_similarity_metric
+        ~kikuchipy.indexing.similarity_metrics.ndp
         """
         # This needs a rework before sent to cluster and possibly more
         # automatic slicing with dask

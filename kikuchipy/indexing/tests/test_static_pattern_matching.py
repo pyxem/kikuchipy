@@ -24,18 +24,18 @@ from orix.quaternion import Rotation
 import pytest
 
 from kikuchipy.data import nickel_ebsd_small
-from kikuchipy.indexing._static_dictionary_indexing import (
-    StaticDictionaryIndexing,
+from kikuchipy.indexing._static_pattern_matching import (
+    StaticPatternMatching,
     _get_spatial_arrays,
 )
 from kikuchipy.io.tests.test_util import replace_stdin
 from kikuchipy.signals import EBSD
 
 
-class TestStaticDictionaryIndexing:
-    def test_init_static_dictionary_indexing(self):
+class TestStaticPatternMatching:
+    def test_init_static_pattern_matching(self):
         s = nickel_ebsd_small()
-        sdi = StaticDictionaryIndexing(s)
+        sdi = StaticPatternMatching(s)
 
         assert isinstance(sdi.dictionaries, list)
         assert sdi.dictionaries[0] == s
@@ -53,7 +53,7 @@ class TestStaticDictionaryIndexing:
         s_dict1.xmap.phases[0].name = "a"
         s_dict2.xmap.phases[0].name = "b"
 
-        sd = StaticDictionaryIndexing([s_dict1, s_dict2])
+        sd = StaticPatternMatching([s_dict1, s_dict2])
         res = sd(s, keep_n=1, get_orientation_similarity_map=True)
         xmap1, _ = res
 
@@ -67,7 +67,7 @@ class TestStaticDictionaryIndexing:
         s = nickel_ebsd_small()
         s_dict = EBSD(np.random.random((n_rot_in, 60, 60)).astype(np.float32))
         s_dict._xmap = CrystalMap(Rotation(np.zeros((n_rot_in, 4))))
-        sd = StaticDictionaryIndexing(s_dict)
+        sd = StaticPatternMatching(s_dict)
         xmap = sd(s)
 
         assert xmap.rotations_per_point == n_rot_out
@@ -91,7 +91,7 @@ class TestStaticDictionaryIndexing:
         s_dict1.xmap.phases[0].name = "a"
         s_dict2.xmap.phases[0].name = "b"
 
-        sd = StaticDictionaryIndexing([s_dict1, s_dict2])
+        sd = StaticPatternMatching([s_dict1, s_dict2])
         res1 = sd(s, return_merged_crystal_map=return_merged_xmap)
 
         assert len(res1) == desired_n_xmaps_out
@@ -116,7 +116,7 @@ class TestStaticDictionaryIndexing:
         )
         s_dict1 = EBSD(rand_data)
         s_dict1._xmap = CrystalMap(Rotation(np.zeros((n_sim, 4))))
-        sd = StaticDictionaryIndexing(s_dict1)
+        sd = StaticPatternMatching(s_dict1)
 
         with replace_stdin(io.StringIO("y")):
             res = sd(dummy_signal, n_slices=1)
@@ -137,7 +137,7 @@ class TestStaticDictionaryIndexing:
         s_dict1 = EBSD(dummy_signal.data.reshape((-1,) + sig_shape))
         n_sim = s_dict1.axes_manager.navigation_size
         s_dict1._xmap = CrystalMap(Rotation(np.zeros((n_sim, 4))))
-        sd = StaticDictionaryIndexing(s_dict1)
+        sd = StaticPatternMatching(s_dict1)
         res = sd(s)
 
         assert res.shape == desired_xmap_shape
