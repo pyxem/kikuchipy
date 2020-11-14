@@ -121,12 +121,12 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         if self.projection != "lambert":
             raise NotImplementedError(
-                "Method only supports master patterns in lambert projection!"
+                "Method only supports master patterns in Lambert projection!"
             )
         pc = detector.pc_emsoft()
         if len(pc) > 1:
             raise ValueError(
-                "Method only supports a single " "projection/pattern center!"
+                "Method only supports a single projection/pattern center!"
             )
 
         # 4 cases
@@ -383,7 +383,7 @@ def _get_patterns_chunk(
         Number of pixels in the y-direction on the master pattern.
     rescale : bool
         Whether to call rescale_intensities() or not.
-    dtype_out : numpy.dtype, optional
+    dtype_out : type, optional
         Data type of the returned patterns, by default np.float32.
 
     Returns
