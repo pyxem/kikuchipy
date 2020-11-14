@@ -167,7 +167,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         dtype_out = dtype_out
 
         if not n_chunk:
-            n_chunk = _min_number_of_chunks((det_y, det_x, n, dtype_out))
+            n_chunk = _min_number_of_chunks(detector.shape, n, dtype_out)
 
         out_shape = (n, det_y, det_x)
         chunks = (int(abs(np.ceil(n / n_chunk))), det_y, det_x)
@@ -432,22 +432,28 @@ def _get_patterns_chunk(
     return simulated
 
 
-def _min_number_of_chunks(vals: tuple) -> int:
+def _min_number_of_chunks(
+    detector_shape: tuple, n_rotations: int, dtype_out: type
+) -> int:
     """Returns the minimum number of chunks required for our detector model and
     set of unit cell rotations so that each chunk is around 100 MB.
 
     Parameters
     ----------
-    vals : tuple
-       Tuple with detector shape, number of rotations and data type.
+    detector_shape : tuple
+        Shape of the detector.
+    n_rotations : int
+        Number of rotations.
+    dtype_out : type
+        Data type used for the simulated patterns.
 
     Returns
     -------
     int
        The minimum number of chunks required so each chunk is around 100 MB.
     """
-    dy, dx, n, dtype_out = vals
-    nbytes = dy * dx * n * np.dtype(dtype_out).itemsize
+    dy, dx = detector_shape
+    nbytes = dy * dx * n_rotations * np.dtype(dtype_out).itemsize
     nbytes_goal = 100e6  # 100 MB
     n_chunks = int(np.ceil(nbytes / nbytes_goal))
     return n_chunks
