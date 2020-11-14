@@ -441,7 +441,7 @@ def _min_number_of_chunks(
     Parameters
     ----------
     detector_shape : tuple
-        Shape of the detector.
+        Shape of the detector in pixels.
     n_rotations : int
         Number of rotations.
     dtype_out : type
