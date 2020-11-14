@@ -43,10 +43,9 @@ from kikuchipy.signals.ebsd_master_pattern import (
     _get_lambert_interpolation_parameters,
     _get_patterns_chunk,
     _min_number_of_chunks,
-    HemisphereError,
 )
 from kikuchipy.signals.ebsd import LazyEBSD, EBSD
-from kikuchipy.indexing.similarity_metrics import _SIMILARITY_METRICS
+from kikuchipy.indexing.similarity_metrics import ncc, ndp
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -213,14 +212,10 @@ class TestEBSDCatalogue:
         )
         kp_pat = kp_pattern.data[0].compute()
 
-        ncc_metric = _SIMILARITY_METRICS["ncc"]
-        ndp_metric = _SIMILARITY_METRICS["ndp"]
+        ncc1 = ncc(kp_pat, emsoft_key)
+        ndp1 = ndp(kp_pat, emsoft_key)
 
-        ncc1 = ncc_metric(kp_pat, emsoft_key)
-        ndp1 = ndp_metric(kp_pat, emsoft_key)
-
-        assert ncc1 >= 0.935  # Best I can do with current pattern in data
-        # with (1001, 1001) it will go above 0.985
+        assert ncc1 >= 0.935
         assert ndp1 >= 0.935
 
         detector_shape = self.detector.shape
@@ -269,7 +264,7 @@ class TestEBSDCatalogue:
         mp_c2 = EBSDMasterPattern(np.zeros((11, 11)))
         mp_c2.projection = "lambert"
         mp_c2.phase = Phase("!Ni", 220)
-        with pytest.raises(HemisphereError):
+        with pytest.raises(AttributeError):
             mp_c2.get_patterns(r2, self.detector, 5, 1)
 
         mp_d = EBSDMasterPattern(np.zeros((2, 11, 11)))
@@ -280,7 +275,7 @@ class TestEBSDCatalogue:
         mp_e.axes_manager[0].name = "energy"
         mp_e.projection = "lambert"
         mp_e.phase = Phase("!Ni", 220)
-        with pytest.raises(HemisphereError):
+        with pytest.raises(AttributeError):
             mp_e.get_patterns(r2, self.detector, 5, 1)
 
         # More than one Projection center is currently not supported so it
@@ -311,8 +306,5 @@ class TestEBSDCatalogue:
         assert out.shape == r.shape + dc.shape
 
     def test_min_number_of_chunks(self):
-        d = self.detector
-        arr = ((0, 0, 0),) * 117000
-        r = Rotation.from_euler(arr)
-        n_chunks = _min_number_of_chunks(d, r, dtype_out=np.uint8)
+        n_chunks = _min_number_of_chunks((480, 640, 117000, np.uint8))
         assert n_chunks == 360
