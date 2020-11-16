@@ -36,15 +36,14 @@ class LambertProjection:
             y = w[..., 1]
             z = w[..., 2]
         else:
-            norm = np.sqrt(
-                np.sum(np.square([v[..., 0], v[..., 1], v[..., 2]]), axis=0)
-            )
-            x = v[..., 0] / norm
-            y = v[..., 1] / norm
-            z = v[..., 2] / norm
+            norm = np.linalg.norm(v)
+            v = v / norm
+            x = v[..., 0]
+            y = v[..., 1]
+            z = v[..., 2]
 
         # Arrays used in both setting X and Y
-        sqrt_z = np.sqrt(2 * (1 - z))
+        sqrt_z = np.sqrt(2 * (1 - abs(z)))
         sign_x = np.sign(x)
         sign_y = np.sign(y)
         abs_yx = abs(y) <= abs(x)
@@ -60,11 +59,11 @@ class LambertProjection:
         lambert[..., 0] = np.where(
             abs_yx,
             sign_x * sqrt_z * sqrt_pi_half,
-            sign_y * sqrt_z * (two_over_sqrt_pi * np.arctan2(x, y)),
+            sign_y * sqrt_z * (two_over_sqrt_pi * np.arctan(x / y)),
         )
         lambert[..., 1] = np.where(
             abs_yx,
-            sign_x * sqrt_z * (two_over_sqrt_pi * np.arctan2(y, x)),
+            sign_x * sqrt_z * (two_over_sqrt_pi * np.arctan(y / x)),
             sign_y * sqrt_z * sqrt_pi_half,
         )
 
@@ -93,7 +92,9 @@ class LambertProjection:
             abs_yx, c_x * np.sin(true_term), c_y * np.cos(false_term)
         )
         cart[..., 2] = np.where(
-            abs_yx, 1 - (2 * (X ** 2)) / np.pi, 1 - (2 * (Y ** 2)) / np.pi,
+            abs_yx,
+            1 - (2 * (X ** 2)) / np.pi,
+            1 - (2 * (Y ** 2)) / np.pi,
         )
 
         return Vector3d(cart)
