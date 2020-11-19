@@ -68,8 +68,8 @@ class CommonImage(Signal2D):
             intensity.
         in_range
             Min./max. intensity of input images. If None (default),
-            stretching is performed when `in_range` is set to a narrower
             `in_range` is set to pattern min./max intensity. Contrast
+            stretching is performed when `in_range` is set to a narrower
             intensity range than the input patterns. Must be None if
             `relative` is True or `percentiles` are passed.
         out_range

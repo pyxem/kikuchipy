@@ -152,7 +152,7 @@ def remove_dynamic_background(
 
     See Also
     --------
-    kikuchipy.signals.EBSD.remove_dynamic_background,
+    kikuchipy.signals.EBSD.remove_dynamic_background
     kikuchipy.pattern.remove_dynamic_background
     """
     if std is None:

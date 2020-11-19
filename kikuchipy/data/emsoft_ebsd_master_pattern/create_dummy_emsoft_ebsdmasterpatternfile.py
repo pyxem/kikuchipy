@@ -10,8 +10,18 @@ fname = "master_patterns.h5"
 f = h5py.File(os.path.join(ddir, fname), mode="w")
 
 npx = 6
+signal_shape = (npx * 2 + 1,) * 2
 energies = np.linspace(10, 20, 11, dtype=np.float32)
-data_shape = (len(energies),) + (npx * 2 + 1,) * 2
+data_shape = (len(energies),) + signal_shape
+
+mp_lambert_north = np.ones(
+    (1,) + data_shape, dtype=np.float32
+) * energies.reshape((1, 11, 1, 1))
+mp_lambert_south = mp_lambert_north
+circle = kp.filters.Window(shape=signal_shape).astype(np.float32)
+mp_spherical_north = mp_lambert_north.squeeze() * circle
+mp_spherical_south = mp_spherical_north
+
 data = {
     "CrystalData": {
         "AtomData": np.array(
@@ -30,10 +40,9 @@ data = {
         "EBSDmaster": {
             "BetheParameters": np.array([4, 8, 50, 1], dtype=np.float32),
             "EkeVs": np.linspace(10, 20, 11, dtype=np.float32),
-            "mLPNH": np.ones((1,) + data_shape, dtype=np.float32),
-            #            "mLPSH": np.ones((1,) + data_shape, dtype=np.float32),
-            "masterSPNH": np.ones(data_shape, dtype=np.float32),
-            "masterSPSH": np.ones(data_shape, dtype=np.float32),
+            "mLPNH": mp_lambert_north,
+            "masterSPNH": mp_spherical_north,
+            "masterSPSH": mp_spherical_south,
             "numEbins": len(energies),
         }
     },
@@ -67,8 +76,9 @@ data = {
 kp.io.plugins.h5ebsd.dict2h5ebsdgroup(dictionary=data, group=f["/"])
 
 # One chunked data set
-mLPSH = np.ones((1,) + data_shape, dtype=np.float32)
-f["EMData/EBSDmaster"].create_dataset("mLPSH", data=mLPSH, chunks=True)
+f["EMData/EBSDmaster"].create_dataset(
+    "mLPSH", data=mp_lambert_south, chunks=True
+)
 
 # One byte string with latin-1 stuff
 creation_time = b"12:30:13.559 PM\xf0\x14\x1e\xc8\xbcU"

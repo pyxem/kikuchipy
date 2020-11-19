@@ -1,0 +1,32 @@
+ &EBSDmastervars
+! smallest d-spacing to take into account [nm]
+ dmin = 0.05,
+! number of pixels along x-direction of the square master pattern  (2*npx+1 = total number)
+!   in Legendre mode (see below), this number will be the maximum band width for
+!   the spherical harmonic transform
+ npx = 200,
+! number of OpenMP threads (0 to use the maximum available)
+ nthreads = 24,
+! name of the energy statistics file produced by EMMCOpenCL program; relative to EMdatapathname;
+! this file will also contain the output data of the master program
+ energyfile = 'crystal_data/ni/ni_mc_mp_20kv2.h5',
+! BetheParameters file name
+ BetheParametersFile = 'BetheParameters.nml',
+! do you wish to receive a notification (Email or Slack) when the program completes ?
+ Notify = 'Off',
+! name of EMMCOpenCL output file to be used to copy the MC data from for this master pattern run;
+! This can be used to perform multiple master pattern runs starting from the same MC data set without
+! having to rerun the MC computation.  Leave this variable set to 'undefined' if not needed.
+ copyfromenergyfile = 'undefined',
+! if copyfromenergyfile is not 'undefined', then:
+!   - for EMsoft developers who have the EMsoft_SDK installed, the following parameter will be ignored;
+!   - all other users will need to provide the full path to the h5copy program here
+ h5copypath = 'undefined',
+ ! restart computation ?
+ restart = .FALSE.,
+! create output file with uniform master patterns set to 1.0 (used to study background only)
+ uniform = .FALSE.,
+! ===============================
+! for the EMEBSDdepthmaster program only, set the following parameter
+ useEnergyWeighting = .FALSE.,
+ /

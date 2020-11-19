@@ -9,7 +9,8 @@ All notable changes to this project will be documented in this file. The format
 is based on `Keep a Changelog <https://keepachangelog.com/en/1.1.0>`_, and this
 project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
-Contributors to each release are listed in alphabetical order by first name.
+Contributors to each release are listed in alphabetical order by first name. 
+List entries are sorted in descending chronological order.
 
 Unreleased
 ==========
@@ -22,39 +23,65 @@ Contributors
 
 Added
 -----
-- Indexing of EBSD patterns through matching of patterns with a static
-  dictionary of simulated patterns with known orientations.
+- A data module with a small Nickel EBSD data set and master pattern, and a
+  larger EBSD data set downloadable via the module. Two dependencies, pooch and
+  tqdm, are added along with this module.
+  (`#236 <https://github.com/pyxem/kikuchipy/pull/236>`_,
+  `#237 <https://github.com/pyxem/kikuchipy/pull/237>`_,
+  `#243 <https://github.com/pyxem/kikuchipy/pull/243>`_)
+- Pattern matching of EBSD patterns with a dictionary of pre-computed simulated
+  patterns with known crystal orientations, and related useful tools
   (`#231 <https://github.com/pyxem/kikuchipy/pull/231>`_,
-  `#233 <https://github.com/pyxem/kikuchipy/pull/233>`_)
-- Reader for EMsoft's simulated EBSD patterns returned by their ``EMEBSD.f90``
-  program. (`#202 <https://github.com/pyxem/kikuchipy/pull/202>`_)
+  `#233 <https://github.com/pyxem/kikuchipy/pull/233>`_,
+  `#234 <https://github.com/pyxem/kikuchipy/pull/234>`_): (1) A framework for
+  creation of similarity metrics used in pattern matching, (2) computation of an
+  orientation similarity map from indexing results, and (3) creation of a multi
+  phase crystal map from single phase maps from pattern matching.
+- EBSD.xmap property storing an orix CrystalMap object. So far only read from
+  a EMsoft simulated EBSD pattern file. Relevant documentation updated.
+  (`#226 <https://github.com/pyxem/kikuchipy/pull/226>`_)
+- Dependency on the diffsims package for handling of electron scattering and
+  diffraction. (`#220 <https://github.com/pyxem/kikuchipy/pull/220>`_)
 - Modified Lambert mapping, and its inverse, from points on the unit sphere to a
   2D square grid, as implemented in Callahan and De Graef (2013).
   (`#214 <https://github.com/pyxem/kikuchipy/pull/214>`_)
-- EBSD detector class to handle detector parameters, including detector pixels'
-  gnomonic coordinates. EBSD reference frame documentation.
-  (`#204 <https://github.com/pyxem/kikuchipy/pull/204>`_,
-  `#215 <https://github.com/pyxem/kikuchipy/pull/215>`_)
 - Geometrical EBSD simulations, projecting a set of Kikuchi bands and zone axes
   onto a detector, which can be added to an EBSD signal as markers.
   (`#204 <https://github.com/pyxem/kikuchipy/pull/204>`_,
   `#219 <https://github.com/pyxem/kikuchipy/pull/219>`_,
   `#232 <https://github.com/pyxem/kikuchipy/pull/232>`_)
-- Dependency on the diffsims package (https://github.com/pyxem/diffsims/) for
-  handling of electron scattering and diffraction.
-  (`#220 <https://github.com/pyxem/kikuchipy/pull/220>`_)
-- EBSD.xmap property storing an orix CrystalMap object. So far only read from
-  a EMsoft simulated EBSD pattern file. Relevant documentation updated.
-  (`#226 <https://github.com/pyxem/kikuchipy/pull/226>`_)
+- EBSD detector class to handle detector parameters, including detector pixels'
+  gnomonic coordinates. EBSD reference frame documentation.
+  (`#204 <https://github.com/pyxem/kikuchipy/pull/204>`_,
+  `#215 <https://github.com/pyxem/kikuchipy/pull/215>`_)
+- Reader for EMsoft's simulated EBSD patterns returned by their EMEBSD.f90
+  program. (`#202 <https://github.com/pyxem/kikuchipy/pull/202>`_)
 
 Changed
 -------
+- The EBSDMasterPattern gets phase, hemisphere and projection properties.
+  (`#246 <https://github.com/pyxem/kikuchipy/pull/246>`_)
+- EMsoft EBSD master pattern plugin can read a single energy pattern. Parameter
+  `energy_range`  changed to `energy`.
+  (`240 <https://github.com/pyxem/kikuchipy/pull/240>`_)
+- Migrate user guide from reST files to Jupyter Notebooks converted to HTML with
+  the `nbsphinx` package.
+  (`#236 <https://github.com/pyxem/kikuchipy/pull/236>`_,
+  `#237 <https://github.com/pyxem/kikuchipy/pull/237>`_,
+  `#244 <https://github.com/pyxem/kikuchipy/pull/244>`_)
 - Move GitHub repository to the pyxem organization. Update relevant URLs.
   (`#198 <https://github.com/pyxem/kikuchipy/pull/198>`_)
 - Allow scikit-image >= 0.16.
   (`#196 <https://github.com/pyxem/kikuchipy/pull/196>`_)
 - Remove language_version in pre-commit config file.
   (`#195 <https://github.com/pyxem/kikuchipy/pull/195>`_)
+
+Removed
+-------
+- The EBSDMasterPattern and EBSD metadata node Sample.Phases, to be replaced
+  by class attributes. The set_phase_parameters() method is removed from both
+  classes, and the set_simulation_parameters() is removed from the former class.
+  (`#246 <https://github.com/pyxem/kikuchipy/pull/246>`_)
 
 Fixed
 -----
@@ -296,8 +323,7 @@ Features
 - Since the ``EBSD`` class is based upon HyperSpy's ``Signal2D`` class, which
   itself is based upon their ``BaseSignal`` class, all functionality available
   to ``Signal2D`` is also available to the ``EBSD`` class. See HyperSpy's user
-  guide (http://hyperspy.org/hyperspy-doc/current/user_guide/tools.html) for
-  details.
+  guide (http://hyperspy.org/hyperspy-doc/current/user_guide) for details.
 
 Contributors
 ------------

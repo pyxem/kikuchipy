@@ -20,6 +20,7 @@
 format.
 """
 
+import os
 from typing import List, Optional, Tuple
 
 import dask.array as da
@@ -27,6 +28,7 @@ from h5py import File, Group, Dataset
 import numpy as np
 
 from kikuchipy.io.plugins.h5ebsd import hdf5group2dict
+from kikuchipy.io.plugins.emsoft_ebsd import _crystaldata2phase
 
 
 # Plugin characteristics
@@ -49,21 +51,21 @@ footprint = ["emdata/ebsdmaster"]
 
 def file_reader(
     filename: str,
-    energy_range: Optional[range] = None,
+    energy: Optional[range] = None,
     projection: str = "spherical",
     hemisphere: str = "north",
     lazy: bool = False,
     **kwargs,
 ) -> List[dict]:
     """Read electron backscatter diffraction master patterns from
-    EMsoft's HDF5 file format [Callahan2013]_.
+    EMsoft's HDF5 file format :cite:`callahan2013dynamical`.
 
     Parameters
     ----------
     filename
         Full file path of the HDF file.
-    energy_range
-        Range of beam energies for patterns to read. If None is passed
+    energy
+        Desired beam energy or energy range. If None is passed
         (default), all available energies are read.
     projection
         Projection(s) to read. Options are "spherical" (default) or
@@ -83,13 +85,6 @@ def file_reader(
     -------
     signal_dict_list: list of dicts
         Data, axes, metadata and original metadata.
-
-    References
-    ----------
-    .. [Callahan2013] P. G. Callahan and M. De Graef, "Dynamical\
-        Electron Backscatter Diffraction Patterns. Part I: Pattern\
-        Simulations," *Microscopy and Microanalysis* **19** (2013), doi:
-        https://doi.org/10.1017/S1431927613001840.
     """
     mode = kwargs.pop("mode", "r")
     f = File(filename, mode=mode, **kwargs)
@@ -97,41 +92,46 @@ def file_reader(
     # Check if the file is valid
     _check_file_format(f)
 
-    # Set metadata dictionary
+    # Set metadata and original metadata dictionary
     md = {
-        "Signal": {"signal_type": "EBSDMasterPattern", "record_by": "image",},
+        "Signal": {"signal_type": "EBSDMasterPattern", "record_by": "image"},
         "General": {
             "title": f.filename.split("/")[-1].split(".")[0],
             "original_filename": f.filename.split("/")[-1],
         },
-        "Simulation": {
-            "EBSD_master_pattern": _namelist_params_2_metadata(
-                hdf5group2dict(f["NMLparameters"], recursive=True)
-            )
-        },
-        "Sample": {
-            "Phases": {
-                "1": _crystal_data_2_metadata(hdf5group2dict(f["CrystalData"]))
-            },
-        },
     }
+    nml_params = hdf5group2dict(f["NMLparameters"], recursive=True)
+
+    # Get phase information and add it to both the original metadata and
+    # a Phase object
+    crystal_data = hdf5group2dict(f["CrystalData"])
+    nml_params["CrystalData"] = crystal_data
+    phase = _crystaldata2phase(crystal_data)
+
+    # Get the phase name
+    try:
+        xtal_name = os.path.split(nml_params["MCCLNameList"]["xtalname"])[0]
+        phase_name = os.path.splitext(xtal_name)[0]
+    except KeyError:
+        phase_name = None
+    phase.name = phase_name
 
     # Get data shape and slices
     data_group = f["EMData/EBSDmaster"]
     energies = data_group["EkeVs"][()]
     data_shape, data_slices = _get_data_shape_slices(
-        npx=f["NMLparameters/EBSDMasterNameList/npx"][()],
+        npx=nml_params["EBSDMasterNameList"]["npx"],
         energies=energies,
-        energy_range=energy_range,
+        energy=energy,
     )
     i_min = data_slices[0].start
     i_min = 0 if i_min is None else i_min
     min_energy = energies[i_min]
 
-    # Account for the Lambert projections being stored as having a 1-dimension
-    # before the energy dimension
-    # TODO: Figure out why EMsoft v4.3 have two Lambert projections in both
-    #  northern and southern hemisphere.
+    # Account for the Lambert projections being stored as having a
+    # 1-dimension before the energy dimension
+    # TODO: Figure out why EMsoft v4.3 have two Lambert projections in
+    #  both northern and southern hemisphere.
     if projection.lower() == "lambert":
         data_slices = (slice(0, 1),) + data_slices
 
@@ -166,7 +166,7 @@ def file_reader(
     data = data.squeeze()
 
     # Axes scales
-    energy_scale = energies[1] - energies[0]
+    energy_scale = nml_params["MCCLNameList"]["Ebinsize"]
     scales = np.array([1, energy_scale, 1, 1])
 
     ny, nx, sy, sx = data_shape
@@ -193,23 +193,20 @@ def file_reader(
         for i, j in zip(range(data.ndim), dim_idx)
     ]
 
-    md["Simulation"]["EBSD_master_pattern"]["Master_pattern"].update(
-        {"projection": projection, "hemisphere": hemisphere}
-    )
-
     output = {
         "axes": axes,
         "data": data,
         "metadata": md,
-        "original_metadata": {},
+        "original_metadata": nml_params,
+        "phase": phase,
+        "projection": projection,
+        "hemisphere": hemisphere,
     }
 
     if not lazy:
         f.close()
 
-    return [
-        output,
-    ]
+    return [output]
 
 
 def _check_file_format(file: File):
@@ -231,40 +228,43 @@ def _check_file_format(file: File):
 
 
 def _get_data_shape_slices(
-    npx: int, energies: np.ndarray, energy_range: Optional[tuple] = None,
+    npx: int, energies: np.ndarray, energy: Optional[tuple] = None,
 ) -> Tuple[Tuple, Tuple[slice, ...]]:
-    """Determine data shape from number of pixels in a master pattern
-    quadrant and an energy array.
+    """Determine the data shape from half the master pattern side length
+    and an energy or energy range.
 
     Parameters
     ----------
     npx
-        Number of pixels along x-direction of the square master pattern.
+        Half the number of pixels along x-direction of the square master
+        pattern. Half is used because that is what EMsoft uses.
     energies
         Beam energies.
-    energy_range
-        Range of sought energies.
+    energy
+        Desired beam energy or energy range.
 
     Returns
     -------
     data_shape
         Shape of data.
     data_slices
-        Data to get, determined from `energy_range`.
-
+        Data to get, determined from `energy`.
     """
-
     data_shape = (npx * 2 + 1,) * 2
     data_slices = (slice(None, None),) * 2
-    if energy_range is None:
+    if energy is None:
         data_slices = (slice(None, None),) + data_slices
         data_shape = (len(energies),) + data_shape
-    else:
-        i_min = np.argwhere(energies >= energy_range[0])[0][0]
-        i_max = np.argwhere(energies <= energy_range[1])[-1][0] + 1
+    elif hasattr(energy, "__iter__"):
+        i_min = np.argwhere(energies >= energy[0])[0][0]
+        i_max = np.argwhere(energies <= energy[1])[-1][0] + 1
         data_slices = (slice(i_min, i_max),) + data_slices
         data_shape = (i_max - i_min,) + data_shape
-
+    else:  # Assume integer
+        # Always returns one integer
+        index = np.abs(energies - energy).argmin()
+        data_slices = (slice(index, index + 1),) + data_slices
+        data_shape = (1,) + data_shape
     return data_shape, data_slices
 
 
@@ -314,77 +314,3 @@ def _get_datasets(
         )
 
     return datasets
-
-
-def _dict2dict_via_mapping(dict_in: dict, mapping: List[Tuple]) -> dict:
-    dict_out = {}
-    for name_file, name_md in mapping:
-        for d_key, d_val in dict_in.items():
-            if d_key == name_file:
-                dict_out[name_md] = d_val
-    return dict_out
-
-
-def _namelist_params_2_metadata(group_dict: dict) -> dict:
-    md = {
-        "BSE_simulation": _dict2dict_via_mapping(
-            dict_in=group_dict["MCCLNameList"],
-            mapping=[
-                ("MCmode", "mode"),
-                ("sig", "sample_tilt"),
-                ("numsx", "pixels_along_x"),
-                ("totnum_el", "number_of_electrons"),
-                ("EkeV", "incident_beam_energy"),
-                ("Ehistmin", "min_beam_energy"),
-                ("Ebinsize", "energy_step"),
-                ("depthmax", "max_depth"),
-                ("depthstep", "depth_step"),
-            ],
-        ),
-        "Master_pattern": {
-            "Bethe_parameters": _dict2dict_via_mapping(
-                dict_in=group_dict["BetheList"],
-                mapping=[
-                    ("c1", "strong_beam_cutoff"),
-                    ("c2", "weak_beam_cutoff"),
-                    ("c3", "complete_cutoff"),
-                ],
-            ),
-            "smallest_interplanar_spacing": group_dict["EBSDMasterNameList"][
-                "dmin"
-            ],
-        },
-    }
-    return md
-
-
-def _crystal_data_2_metadata(group_dict: dict) -> dict:
-    md = {"atom_coordinates": {}}
-
-    # Get atoms
-    n_atoms = group_dict["Natomtypes"]
-    atom_data = group_dict["AtomData"]
-
-    atom_types = group_dict["Atomtypes"]
-    if n_atoms == 1:
-        atom_types = (atom_types,)
-
-    for i in range(n_atoms):
-        i_atom = str(i + 1)
-        md["atom_coordinates"][i_atom] = {}
-        key = md["atom_coordinates"][i_atom]
-        key["atom"] = atom_types[i]
-
-        key["coordinates"] = atom_data[:3, i]
-        site_occupation = atom_data[3, i]
-        debye_waller_factor = atom_data[4, i]
-
-        key["site_occupation"] = site_occupation
-        key["debye_waller_factor"] = debye_waller_factor
-
-    md["lattice_constants"] = group_dict["LatticeParameters"].T
-    md["setting"] = group_dict["SpaceGroupSetting"]
-    md["space_group"] = group_dict["SpaceGroupNumber"]
-    md["source"] = group_dict["Source"]
-
-    return md

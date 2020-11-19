@@ -19,7 +19,8 @@
 from itertools import chain
 from setuptools import setup, find_packages
 
-# Get release information without importing anything from the projections
+
+# Get release information without importing anything from the project
 with open("kikuchipy/release.py") as fid:
     for line in fid:
         if line.startswith("author"):
@@ -42,16 +43,18 @@ with open("kikuchipy/release.py") as fid:
 # https://setuptools.readthedocs.io/en/latest/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
 extra_feature_requirements = {
     "doc": [
+        "nbsphinx >= 0.7",
         "sphinx >= 3.0.2",
         "sphinx-rtd-theme >= 0.4.3",
         "sphinx-copybutton >= 0.2.5",
         "sphinx-autodoc-typehints >= 1.10.3",
+        "sphinxcontrib-bibtex >= 1.0",
     ],
     # Update in .travis.yml if this list is updated!
-    "tests": ["pytest >= 5.4", "pytest-cov >= 2.8.1", "coverage >= 5.0",],
+    "tests": ["coverage >= 5.0", "pytest >= 5.4", "pytest-cov >= 2.8.1"],
 }
 
-# Create a development projections, including both the doc and tests projects
+# Create a development project, including both the doc and tests projects
 extra_feature_requirements["dev"] = [
     "black >= 19.3b0",
     "pre-commit >= 1.16",
@@ -121,6 +124,9 @@ setup(
         "numpy >= 1.18",
         "numba >= 0.48",
         "orix >= 0.5",
+        "pooch",
+        "psutil",
+        "tqdm >= 0.5.2",
         "scikit-image >= 0.16",
         "scikit-learn",
         "scipy",
