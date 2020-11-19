@@ -28,6 +28,7 @@ from kikuchipy import signals
 from kikuchipy import generators
 from kikuchipy import simulations
 from kikuchipy.io._io import load
+from kikuchipy import data  # Must be below io.load
 
 from kikuchipy import release
 
@@ -35,6 +36,7 @@ __version__ = release.version
 
 __all__ = [
     "crystallography",
+    "data",
     "detectors",
     "draw",
     "filters",

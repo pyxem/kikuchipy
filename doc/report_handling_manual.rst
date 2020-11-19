@@ -80,8 +80,6 @@ Committee suggests mediation, it should:
   satisfactory resolution was achieved or not) and decide on any additional
   action deemed necessary.
 
-.. _how-the-committee-will-respond-to-reports:
-
 How the committee will respond to reports
 =========================================
 
@@ -89,8 +87,6 @@ When the committee (or a committee member) receives a report, they will first
 determine whether the report is about a clear and severe breach (as defined
 below). If so, immediate action needs to be taken in addition to the regular
 report handling process.
-
-.. _clear-and-severe-breach-actions:
 
 Clear and severe breach actions
 -------------------------------
@@ -119,8 +115,6 @@ severe breach, they will do the following:
 * The Code of Conduct Committee will formally review and sign off on all cases
   where this mechanism has been applied to make sure it is not being used to
   control ordinary heated disagreement.
-
-.. _report-handling:
 
 Report handling
 ---------------
@@ -224,15 +218,11 @@ event of an ongoing resolution, such as a ban.
 The committee will never publicly discuss the issue; all public statements will
 be made by the chair of the kikuchipy Code of Conduct Committee.
 
-.. _conflict-of-interest:
-
 Conflict of interest
 ====================
 
 In the event of any conflict of interest, a committee member must immediately
 notify the other members, and recuse themselves if necessary.
-
-.. _report-handling-manual-endnotes:
 
 Endnotes
 ========
@@ -240,5 +230,5 @@ Endnotes
 We are thankful to the groups behind the following documents, from which we drew
 content and inspiration:
 
-* `napari Code of Conduct - How to follow up on a report <https://github.com/napari/napari/blob/master/docs/REPORT_HANDLING_MANUAL.md>`_
-* `NumPy Code of Conduct - How to follow up on a report <https://numpy.org/devdocs/dev/conduct/report_handling_manual.html#coc-reporting-manual>`_
+* `napari Code of Conduct - How to follow up on a report <https://github.com/napari/napari/blob/master/docs/source/developers/CODE_OF_CONDUCT_REPORTING.md>`_
+* `NumPy Code of Conduct - How to follow up on a report <https://numpy.org/report-handling-manual>`_

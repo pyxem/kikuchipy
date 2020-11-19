@@ -17,6 +17,7 @@ The list of top modules (and the load function):
 
 .. autosummary::
     crystallography
+    data
     detectors
     draw
     filters
@@ -46,6 +47,22 @@ crystallography
 .. autofunction:: get_direct_structure_matrix
 .. autofunction:: get_reciprocal_metric_tensor
 .. autofunction:: get_reciprocal_structure_matrix
+
+....
+
+data
+====
+
+.. currentmodule:: kikuchipy.data
+
+.. autosummary::
+    nickel_ebsd_small
+    nickel_ebsd_large
+    nickel_ebsd_master_pattern_small
+
+.. automodule:: kikuchipy.data
+    :members:
+    :undoc-members:
 
 ....
 
@@ -207,21 +224,21 @@ indexing
 .. currentmodule:: kikuchipy.indexing
 
 .. autosummary::
-    pattern_matching
+    StaticPatternMatching
+    orientation_similarity_map
+    merge_crystal_maps
     similarity_metrics
 
-pattern_matching
-----------------
-
-.. currentmodule:: kikuchipy.indexing.pattern_matching
-
-.. autosummary::
-    pattern_match
-
-.. automodule:: kikuchipy.indexing.pattern_matching
+.. autoclass:: StaticPatternMatching
     :members:
     :undoc-members:
     :show-inheritance:
+
+    .. automethod:: __init__
+    .. automethod:: __call__
+
+.. autofunction:: orientation_similarity_map
+.. autofunction:: merge_crystal_maps
 
 similarity_metrics
 ------------------
@@ -231,16 +248,21 @@ similarity_metrics
 .. autosummary::
     make_similarity_metric
     MetricScope
+    ncc
+    ndp
 
 .. automodule:: kikuchipy.indexing.similarity_metrics
     :members:
     :undoc-members:
     :show-inheritance:
 
+.. autofunction:: ncc
+.. autofunction:: ndp
+
 ....
 
 io
-==
+===
 
 .. automodule:: kikuchipy.io
 
@@ -440,6 +462,7 @@ All methods listed here are also available to
 .. autosummary::
     adaptive_histogram_equalization
     average_neighbour_patterns
+    match_patterns
     fft_filter
     get_decomposition_model
     get_dynamic_background
@@ -486,12 +509,9 @@ All methods listed here are also available to
 .. autosummary::
     normalize_intensity
     rescale_intensity
-    set_simulation_parameters
-    set_phase_parameters
 
 .. autoclass:: kikuchipy.signals.EBSDMasterPattern
     :members:
-    :undoc-members:
     :inherited-members: Signal2D
     :show-inheritance:
 
@@ -522,7 +542,6 @@ util
 .. currentmodule:: kikuchipy.signals.util
 
 .. autosummary::
-    ebsd_master_pattern_metadata
     ebsd_metadata
     metadata_nodes
 

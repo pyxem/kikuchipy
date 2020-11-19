@@ -21,11 +21,11 @@ import numpy as np
 import pytest
 from scipy.spatial.distance import cdist
 
-
-from kikuchipy.indexing import (
+from kikuchipy.data import nickel_ebsd_small
+from kikuchipy.indexing._pattern_matching import _pattern_match
+from kikuchipy.indexing.similarity_metrics import (
     make_similarity_metric,
     MetricScope,
-    pattern_match,
 )
 
 
@@ -35,34 +35,31 @@ class TestPatternMatching:
         greater_is_better=False,
         flat=True,
     )
-
     dummy_metric = make_similarity_metric(lambda p, t: 1.0)
 
     def test_not_recognized_metric(self):
         with pytest.raises(ValueError):
-            pattern_match(
+            _pattern_match(
                 np.zeros((2, 2)), np.zeros((2, 2)), metric="not_recognized"
             )
 
     def test_mismatching_signal_shapes(self):
         self.dummy_metric.scope = MetricScope.MANY_TO_MANY
         with pytest.raises(OSError):
-            pattern_match(
+            _pattern_match(
                 np.zeros((2, 2)), np.zeros((3, 3)), metric=self.dummy_metric
             )
 
     def test_metric_not_compatible_with_data(self):
         self.dummy_metric.scope = MetricScope.ONE_TO_MANY
         with pytest.raises(OSError):
-            pattern_match(
+            _pattern_match(
                 np.zeros((2, 2, 2, 2)),
                 np.zeros((2, 2)),
                 metric=self.dummy_metric,
             )
 
-    @pytest.mark.parametrize(
-        "n_slices", [1, 2],
-    )
+    @pytest.mark.parametrize("n_slices", [1, 2])
     def test_pattern_match_compute_true(self, n_slices):
         # Four patterns
         p = np.array(
@@ -84,14 +81,14 @@ class TestPatternMatching:
             np.int8,
         )
         t_da = da.from_array(t)
-        mr = pattern_match(p, t_da, n_slices=n_slices)
+        mr = _pattern_match(p, t_da, n_slices=n_slices, keep_n=1)
         assert mr[0][2] == 1  # Template index in t of perfect match
-        assert pytest.approx(mr[1][2]) == 1.0  # ZNCC of perfect match
+        assert np.allclose(mr[1][2], 1.0)  # ZNCC of perfect match
 
     def test_pattern_match_compute_false(self):
         p = np.arange(16).reshape((2, 2, 2, 2))
         t = np.arange(8).reshape((2, 2, 2))
-        mr = pattern_match(p, t, compute=False)
+        mr = _pattern_match(p, t, compute=False)
         assert len(mr) == 2
         assert isinstance(mr[0], da.Array) and isinstance(mr[1], da.Array)
 
@@ -99,9 +96,22 @@ class TestPatternMatching:
         p = np.arange(16).reshape((2, 2, 2, 2))
         t = np.arange(8).reshape((2, 2, 2))
         with pytest.raises(NotImplementedError):
-            pattern_match(p, t, n_slices=2, compute=False)
+            _pattern_match(p, t, n_slices=2, compute=False)
 
     def test_pattern_match_one_to_one(self):
         p = np.random.random(3 * 3).reshape((3, 3))
-        mr = pattern_match(p, p)
+        mr = _pattern_match(p, p)
         assert mr[0][0] == 0
+
+    def test_pattern_match_phase_name(self):
+        """Ensure that the `phase_name` accepts different types."""
+        exp = nickel_ebsd_small().data
+        sim = exp.reshape((-1,) + exp.shape[-2:])
+
+        sim_idx1, scores1 = _pattern_match(exp, sim, n_slices=2)
+        sim_idx2, scores2 = _pattern_match(exp, sim, phase_name="a", n_slices=2)
+        sim_idx3, scores3 = _pattern_match(exp, sim, phase_name="", n_slices=2)
+
+        assert np.allclose(sim_idx1[0], [0, 3, 6, 4, 7, 1, 8, 5, 2])
+        assert np.allclose(sim_idx2[0], [0, 3, 6, 4, 7, 1, 8, 5, 2])
+        assert np.allclose(sim_idx3[0], [0, 3, 6, 4, 7, 1, 8, 5, 2])

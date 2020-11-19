@@ -67,55 +67,10 @@ def ebsd_metadata() -> DictionaryTreeBrowser:
     return md
 
 
-def ebsd_master_pattern_metadata() -> DictionaryTreeBrowser:
-    """Return a dictionary in HyperSpy's DictionaryTreeBrowser format
-    with the default kikuchipy EBSD master pattern metadata.
-
-    The parameters are chosen based on the contents in EMsoft's EBSD
-    master pattern HDF5 file.
-
-    See
-    :meth:`~kikuchipy.signals.EBSDMasterPattern.set_simulation_parameters`
-    for an explanation of the parameters.
-
-    Returns
-    -------
-    md : hyperspy.misc.utils.DictionaryTreeBrowser
-    """
-    ebsd_master_pattern = {
-        "BSE_simulation": {
-            "depth_step": -1.0,
-            "energy_step": -1.0,
-            "incident_beam_energy": -1.0,
-            "max_depth": -1.0,
-            "min_beam_energy": -1.0,
-            "mode": "",
-            "number_of_electrons": -1,
-            "pixels_along_x": -1,
-            "sample_tilt": -1.0,
-        },
-        "Master_pattern": {
-            "Bethe_parameters": {
-                "complete_cutoff": -1.0,
-                "strong_beam_cutoff": -1.0,
-                "weak_beam_cutoff": -1.0,
-            },
-            "smallest_interplanar_spacing": -1.0,
-            "projection": "",
-            "hemisphere": "",
-        },
-    }
-
-    md = DictionaryTreeBrowser()
-    md.set_item(metadata_nodes("ebsd_master_pattern"), ebsd_master_pattern)
-
-    return md
-
-
 def metadata_nodes(
     nodes: Union[None, str, List[str]] = None
 ) -> Union[List[str], str, List]:
-    """Return SEM, EBSD and/or EBSD master pattern metadata nodes.
+    """Return SEM and/or EBSD metadata nodes.
 
     This is a convenience function so that we only have to define these
     node strings here.
@@ -123,9 +78,8 @@ def metadata_nodes(
     Parameters
     ----------
     nodes
-        Metadata nodes to return. Options are "sem", "ebsd",
-        "ebsd_master_pattern" or None. If None (default) is passed, all
-        nodes are returned.
+        Metadata nodes to return. Options are "sem", "ebsd", or None.
+        If None (default) is passed, all nodes are returned.
 
     Returns
     -------
@@ -134,7 +88,6 @@ def metadata_nodes(
     available_nodes = {
         "sem": "Acquisition_instrument.SEM",
         "ebsd": "Acquisition_instrument.SEM.Detector.EBSD",
-        "ebsd_master_pattern": "Simulation.EBSD_master_pattern",
     }
 
     if nodes is None:
