@@ -1,0 +1,17 @@
+ &Bethelist
+! Do not change the line above !
+!
+! Details about the particular implementation of the Bethe potentials can be
+! found in the recent paper: A. Wang & M. De Graef, "Modeling dynamical electron
+! scattering with Bethe potentials and the scattering matrix" Ultramicroscopy,
+! vol 160, pp. 35-43 (2016)
+!
+! strong beam cutoff
+ c1 = 4.0,
+! weak beam cutoff
+ c2 = 8.0,
+! complete cutoff
+ c3 = 50.0,
+! double diffraction reflections: maximum excitation error to include [nm^{-1}]
+ sgdbdiff = 1.00
+ /

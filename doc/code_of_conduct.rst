@@ -2,8 +2,6 @@
 kikuchipy Code of Conduct
 =========================
 
-.. _code-of-conduct-introduction:
-
 Introduction
 ============
 
@@ -22,8 +20,6 @@ This code is not exhaustive or complete. It serves to distill our common
 understanding of a collaborative, shared environment and goals. Please try to
 follow this code in spirit as much as in letter, to create a friendly and
 productive environment that enriches the surrounding community.
-
-.. _specific-guidelines:
 
 Specific guidelines
 ===================
@@ -76,8 +72,6 @@ We strive to:
      then stop.
    - Advocating for, or encouraging, any of the above behaviour.
 
-.. _diversity-statement:
-
 Diversity statement
 ===================
 
@@ -100,8 +94,6 @@ Standards for behaviour in the kikuchipy community are detailed in the Code of
 Conduct above. Participants in our community should uphold these standards in
 all their interactions and help others to do so as well (see next section).
 
-.. _reporting-guidelines:
-
 Reporting guidelines
 ====================
 
@@ -123,8 +115,6 @@ kikuchipy-conduct@googlegroups.com. Currently, the committee consists of:
 
 * `Håkon Wiik Ånes <https://github.com/hakonanes>`_ (chair)
 * `Tina Bergh <https://github.com/tinabe>`_
-
-.. _incident-reporting-resolution-code-of-conduct-enforcement:
 
 Incident reporting resolution & Code of Conduct enforcement
 ===========================================================
@@ -157,13 +147,11 @@ will be:
 The committee will respond to any report as soon as possible, and at most within
 72 hours.
 
-.. _code-of-conduct-endnotes:
-
 Endnotes
 ========
 
 We are thankful to the groups behind the following documents, from which we drew
 content and inspiration:
 
-* `napari Code of Conduct <https://github.com/napari/napari/blob/master/docs/CODE_OF_CONDUCT.md>`_
-* `NumPy Code of Conduct <https://numpy.org/devdocs/dev/conduct/code_of_conduct.html>`_
+* `napari Code of Conduct <https://github.com/napari/napari/blob/master/docs/source/developers/CODE_OF_CONDUCT.md>`_
+* `NumPy Code of Conduct <https://numpy.org/code-of-conduct>`_

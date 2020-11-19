@@ -31,9 +31,11 @@ class MetricScope(Enum):
     """
 
     MANY_TO_MANY = "many_to_many"
+    SOME_TO_MANY = "some_to_many"
     ONE_TO_MANY = "one_to_many"
     ONE_TO_ONE = "one_to_one"
     MANY_TO_ONE = "many_to_one"
+    SOME_TO_ONE = "some_to_one"
 
 
 def make_similarity_metric(
@@ -48,10 +50,8 @@ def make_similarity_metric(
     equal size.
 
     This factory function wraps metric functions for use in
-    :func:`~kikuchipy.indexing.pattern_matching.pattern_match`, which
-    again is used by
-    :class:`~kikuchipy.indexing.StaticDictionaryIndexing` and
-    :class:`~kikuchipy.indexing.DynamicDictionaryIndexing`.
+    :meth:`~kikuchipy.signals.EBSD.match_patterns` (which uses
+    :class:`~kikuchipy.indexing.StaticPatternMatching`).
 
     Parameters
     ----------
@@ -96,16 +96,27 @@ def make_similarity_metric(
     ============ ============= ========= ========= ============= ========= =========
     MetricScope  flat = False                      flat = True
     ------------ --------------------------------- ---------------------------------
-    \-           experimental  simulated returns   experimental  simulated returns
+    -            experimental  simulated returns   experimental  simulated returns
     ============ ============= ========= ========= ============= ========= =========
     MANY_TO_MANY (ny,nx,sy,sx) (N,sy,sx) (ny,nx,N) (ny*nx,sy*sx) (N,sy*sx) (ny*nx,N)
+    SOME_TO_MANY (nx,sy,sx)    (N,sy,sx) (nx,N)    -             -         -
     ONE_TO_MANY  (sy,sx)       (N,sy,sx) (N,)      (sy*sx,)      (N,sy*sx) (N,)
     MANY_TO_ONE  (ny,nx,sy,sx) (sy,sx)   (ny,nx)   (ny*nx,sy*sx) (sy*sx,)  (ny*nx)
+    SOME_TO_ONE  (nx,sy,sx)    (sy,sx)   (nx,)     -             -         -
     ONE_TO_ONE   (sy,sx)       (sy,sx)   (1,)      (sy*sx,)      (sy*sx,)  (1,)
     ============ ============= ========= ========= ============= ========= =========
+
+    If a scope of `SOME_TO_MANY` or `SOME_TO_ONE` and `flat=True` is
+    desired, the returned similarity metric has the scope `MANY_TO_MANY`
+    or `MANY_TO_ONE`, respectively.
     """
     sign = 1 if greater_is_better else -1
     if flat:
+        if "some" in scope.value:
+            if "many" in scope.value:
+                scope = MetricScope.MANY_TO_MANY
+            else:  # "one" in scope.value
+                scope = MetricScope.MANY_TO_ONE
         return FlatSimilarityMetric(
             metric_func,
             sign,
@@ -129,36 +140,43 @@ class SimilarityMetric:
     """Similarity metric between 2D gray-tone patterns."""
 
     # See table in docstring of `make_similarity_metric`
-    # TODO: Support for 1D navigation shape
     _EXPT_SIM_NDIM_TO_SCOPE = {
         (4, 3): MetricScope.MANY_TO_MANY,
+        (3, 3): MetricScope.SOME_TO_MANY,
         (2, 3): MetricScope.ONE_TO_MANY,
         (4, 2): MetricScope.MANY_TO_ONE,
+        (3, 2): MetricScope.SOME_TO_ONE,
         (2, 2): MetricScope.ONE_TO_ONE,
     }
 
     _SCOPE_TO_EXPT_SIM_NDIM = {
         MetricScope.MANY_TO_MANY: (4, 3),
+        MetricScope.SOME_TO_MANY: (3, 3),
         MetricScope.ONE_TO_MANY: (2, 3),
         MetricScope.MANY_TO_ONE: (4, 2),
+        MetricScope.SOME_TO_ONE: (3, 2),
         MetricScope.ONE_TO_ONE: (2, 2),
     }
 
     _SCOPE_TO_LOWER_SCOPES = {
         MetricScope.MANY_TO_MANY: (
-            MetricScope.MANY_TO_ONE,
+            MetricScope.SOME_TO_MANY,
             MetricScope.ONE_TO_MANY,
+            MetricScope.MANY_TO_ONE,
+            MetricScope.SOME_TO_ONE,
             MetricScope.ONE_TO_ONE,
         ),
-        MetricScope.ONE_TO_MANY: (
+        MetricScope.SOME_TO_MANY: (
             MetricScope.ONE_TO_MANY,
+            MetricScope.SOME_TO_ONE,
+            MetricScope.ONE_TO_ONE,
+        ),
+        MetricScope.ONE_TO_MANY: (MetricScope.ONE_TO_ONE,),
+        MetricScope.MANY_TO_ONE: (
+            MetricScope.SOME_TO_ONE,
             MetricScope.ONE_TO_ONE,
         ),
         MetricScope.ONE_TO_ONE: (),
-        MetricScope.MANY_TO_ONE: (
-            MetricScope.MANY_TO_ONE,
-            MetricScope.ONE_TO_ONE,
-        ),
     }
 
     def __init__(
@@ -246,8 +264,9 @@ class SimilarityMetric:
 
 
 class FlatSimilarityMetric(SimilarityMetric):
-    """Similarity metric between 2D gray-tone images where the images
-    are flattened before sent to `metric_func`.
+    """Similarity metric between 2D gray-tone images where the
+    navigation and signal axes are flattened before sent to
+    `metric_func`.
     """
 
     # See table in docstring of `make_similarity_metric`
@@ -361,8 +380,9 @@ def _zero_mean(
     """
     squeeze = 1 not in expt.shape + sim.shape
     expt, sim = _expand_dims_to_many_to_many(expt, sim, flat)
-    expt_mean_axis = 1 if flat else (2, 3)
-    sim_mean_axis = 1 if flat else (1, 2)
+    # Always take the mean along the last two axes (signal axes)
+    expt_mean_axis = 1 if flat else (-2, -1)
+    sim_mean_axis = 1 if flat else (-2, -1)
     expt -= expt.mean(axis=expt_mean_axis, keepdims=True)
     sim -= sim.mean(axis=sim_mean_axis, keepdims=True)
 
@@ -381,24 +401,25 @@ def _normalize(
 
     Parameters
     ----------
-    expt : np.ndarray or da.Array
+    expt : numpy.ndarray or dask.array.Array
         Experimental patterns.
-    sim : np.ndarray or da.Array
+    sim : numpy.ndarray or dask.array.Array
         Simulated patterns.
     flat : bool, optional
         Whether `expt` and `sim` are flattened, by default False.
 
     Returns
     -------
-    expt
+    expt : numpy.ndarray or dask.array.Array
         Experimental patterns divided by their L2 norms.
-    sim
+    sim : numpy.ndarray or dask.array.Array
         Simulated patterns divided by their L2 norms.
     """
     squeeze = 1 not in expt.shape + sim.shape
     expt, sim = _expand_dims_to_many_to_many(expt, sim, flat)
-    expt_sum_axis = 1 if flat else (2, 3)
-    sim_sum_axis = 1 if flat else (1, 2)
+    # Always take the sum along the last two axes (signal axes)
+    expt_sum_axis = 1 if flat else (-2, -1)
+    sim_sum_axis = 1 if flat else (-2, -1)
     expt /= (expt ** 2).sum(axis=expt_sum_axis, keepdims=True) ** 0.5
     sim /= (sim ** 2).sum(axis=sim_sum_axis, keepdims=True) ** 0.5
 
@@ -412,79 +433,121 @@ def _zncc_einsum(
     experimental: Union[da.Array, np.ndarray],
     simulated: Union[da.Array, np.ndarray],
 ) -> Union[np.ndarray, da.Array]:
-    """Compute (lazily) the zero-mean normalized cross-correlation
-    coefficient between experimental and simulated patterns.
-
-    Parameters
-    ----------
-    experimental
-        Experimental patterns.
-    simulated
-        Simulated patterns.
-
-    Returns
-    -------
-    zncc
-        Correlation coefficients in range [-1, 1] for all comparisons,
-        as :class:`np.ndarray` if both `experimental` and `simulated`
-        are :class:`np.ndarray`, else :class:`da.Array`.
-
-    Notes
-    -----
-    Equivalent results are obtained with :func:`dask.Array.tensordot`
-    with the `axes` argument `axes=([2, 3], [1, 2]))`.
-    """
     experimental, simulated = _zero_mean(experimental, simulated)
     experimental, simulated = _normalize(experimental, simulated)
-    zncc = da.einsum("ijkl,mkl->ijm", experimental, simulated, optimize=True)
+    r = da.einsum("ijkl,mkl->ijm", experimental, simulated, optimize=True)
     if isinstance(experimental, np.ndarray) and isinstance(
         simulated, np.ndarray
     ):
-        return zncc.compute()
+        return r.compute()
     else:
-        return zncc
+        return r
 
 
 def _ndp_einsum(
     experimental: Union[da.Array, np.ndarray],
     simulated: Union[da.Array, np.ndarray],
 ) -> Union[np.ndarray, da.Array]:
-    """Compute the normalized dot product between experimental and
-    simulated patterns.
+    experimental, simulated = _normalize(experimental, simulated)
+    rho = da.einsum("ijkl,mkl->ijm", experimental, simulated, optimize=True)
+    if isinstance(experimental, np.ndarray) and isinstance(
+        simulated, np.ndarray
+    ):
+        return rho.compute()
+    else:
+        return rho
+
+
+ncc = make_similarity_metric(
+    metric_func=_zncc_einsum,
+    scope=MetricScope.MANY_TO_MANY,
+    make_compatible_to_lower_scopes=True,
+)
+ncc.__doc__ = r"""
+    A similarity metric for calculation of the normalized
+    cross-correlation coefficient (NCC) `r` :cite:`goshtasby2012image`
+    between experimental and simulated patterns.
 
     Parameters
     ----------
-    experimental
+    experimental : numpy.ndarray or dask.array.Array
         Experimental patterns.
-    simulated
+    simulated : numpy.ndarray or dask.array.Array
         Simulated patterns.
 
     Returns
     -------
-    ndp
+    r : numpy.ndarray or dask.array.Array
+        Correlation coefficients in range [-1, 1] for all comparisons,
+        as :class:`numpy.ndarray` if both `experimental` and `simulated`
+        are :class:`numpy.ndarray`, else :class:`dask.array.Array`.
+
+    Notes
+    -----
+    The NCC, or Pearson Correlation Coefficient, is defined as
+
+    .. math::
+
+        r = \frac
+            {\sum^n_{i=1}(x_i - \bar{x})(y_i - \bar{y})}
+            {
+                \sqrt{\sum ^n _{i=1}(x_i - \bar{x})^2}
+                \sqrt{\sum ^n _{i=1}(y_i - \bar{y})^2}
+            },
+
+    where experimental patterns :math:`x` and simulated patterns
+    :math:`y` are centered by subtracting out the mean of each pattern,
+    and the sum of cross-products of the centered patterns is
+    accumulated. The denominator adjusts the scales of the patterns to
+    have equal units.
+
+    Equivalent results are obtained with :func:`dask.array.tensordot`
+    with ``axes=([2, 3], [1, 2]))`` for 4D and 3D experimental and
+    simulated data sets, respectively.
+"""
+
+
+ndp = make_similarity_metric(
+    metric_func=_ndp_einsum,
+    scope=MetricScope.MANY_TO_MANY,
+    make_compatible_to_lower_scopes=True,
+)
+ndp.__doc__ = r"""
+    A similarity metric for calculation of the normalized dot product
+    (NDP) :math:`\rho` :cite:`chen2015dictionary` between experimental
+    and simulated patterns.
+
+    Parameters
+    ----------
+    experimental : numpy.ndarray or dask.array.Array
+        Experimental patterns.
+    simulated : numpy.ndarray or dask.array.Array
+        Simulated patterns.
+
+    Returns
+    -------
+    rho : numpy.ndarray or dask.array.Array
         Normalized dot products in range [0, 1] for all comparisons,
-        as :class:`np.ndarray` if both `experimental` and `simulated`
-        are :class:`np.ndarray`, else :class:`da.Array`.
-    """
-    experimental, simulated = _normalize(experimental, simulated)
-    ndp = da.einsum("ijkl,mkl->ijm", experimental, simulated, optimize=True)
-    if isinstance(experimental, np.ndarray) and isinstance(
-        simulated, np.ndarray
-    ):
-        return ndp.compute()
-    else:
-        return ndp
+        as :class:`numpy.ndarray` if both `experimental` and `simulated`
+        are :class:`numpy.ndarray`, else :class:`dask.array.Array`.
+
+    Notes
+    -----
+    The NDP is defined as
+
+    .. math::
+
+        \rho = \frac
+        {\langle \mathbf{X}, \mathbf{Y} \rangle}
+        {||\mathbf{X}|| \cdot ||\mathbf{Y}||},
+
+    where :math:`{\langle \mathbf{X}, \mathbf{Y} \rangle}` is the dot
+    (inner) product of the pattern vectors :math:`\mathbf{X}` and
+    :math:`\mathbf{Y}`.
+"""
 
 
-SIMILARITY_METRICS = {
-    "zncc": make_similarity_metric(
-        metric_func=_zncc_einsum,
-        scope=MetricScope.MANY_TO_MANY,
-        make_compatible_to_lower_scopes=True,
-    ),
-    "ndp": make_similarity_metric(
-        metric_func=_ndp_einsum,
-        scope=MetricScope.MANY_TO_MANY,
-        make_compatible_to_lower_scopes=True,
-    ),
+_SIMILARITY_METRICS = {
+    "ncc": ncc,
+    "ndp": ndp,
 }

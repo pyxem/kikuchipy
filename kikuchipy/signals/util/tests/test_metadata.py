@@ -20,7 +20,6 @@ import pytest
 
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
-    ebsd_master_pattern_metadata,
     metadata_nodes,
     _set_metadata_from_mapping,
 )
@@ -36,36 +35,11 @@ class TestMetadata:
     def test_metadata_nodes(self):
         sem_node = "Acquisition_instrument.SEM"
         ebsd_node = sem_node + ".Detector.EBSD"
-        simulation_node = "Simulation"
-        ebsd_master_pattern_node = simulation_node + ".EBSD_master_pattern"
 
         assert metadata_nodes("sem") == sem_node
         assert metadata_nodes("ebsd") == ebsd_node
-        assert metadata_nodes() == [
-            sem_node,
-            ebsd_node,
-            ebsd_master_pattern_node,
-        ]
-        assert metadata_nodes(["ebsd", "sem"]) == [
-            ebsd_node,
-            sem_node,
-        ]
-        assert metadata_nodes(["sem", "ebsd_master_pattern"]) == [
-            sem_node,
-            ebsd_master_pattern_node,
-        ]
-
-    def test_ebsd_masterpattern_metadata(self):
-        ebsd_mp_node = metadata_nodes("ebsd_master_pattern")
-        md = ebsd_master_pattern_metadata()
-
-        assert md.get_item(ebsd_mp_node + ".BSE_simulation.mode") == ""
-        assert (
-            md.get_item(
-                ebsd_mp_node + ".Master_pattern.smallest_interplanar_spacing"
-            )
-            == -1.0
-        )
+        assert metadata_nodes() == [sem_node, ebsd_node]
+        assert metadata_nodes(["ebsd", "sem"]) == [ebsd_node, sem_node]
 
     def test_set_metadata_from_mapping(self):
         """Updating DictionaryTreeBrowser with values from a dictionary

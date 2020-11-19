@@ -80,7 +80,8 @@ Any image
 Images loaded into a :class:`~hyperspy._signals.signal2d.Signal2D` object can be
 used as navigators. E.g. a quality metric map, like the orientation similarity
 obtained from dictionary indexing with
-`EMsoft <https://github.com/EMsoft-org/EMsoft>`_ (see e.g. [Marquardt2017]_):
+`EMsoft <https://github.com/EMsoft-org/EMsoft>`_ (see e.g.
+:cite:`marquardt2017quantitative`.):
 
 .. code-block::
 
@@ -104,7 +105,7 @@ obtained from dictionary indexing with
     Navigating EBSD patterns (left) in a quality metric map ``s_osm``, in this
     case an orientation similarity map from dictionary indexing with EMsoft.
 
-Or, an :ref:`image quality map <image-quality>` calculated using
+Or, an `image quality map <feature_maps.ipynb#Image-quality>`_ calculated using
 :meth:`~kikuchipy.signals.EBSD.get_image_quality`:
 
 .. code-block::
