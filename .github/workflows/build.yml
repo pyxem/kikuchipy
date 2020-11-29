@@ -1,10 +1,10 @@
-name: Tests
+name: Builds
 
 on: [push, pull_request]
 
 jobs:
-  run-tests-with-pip:
-    name: ${{ matrix.os }}/py${{ matrix.PYTHON_VERSION }}/pip
+  build-with-pip:
+    name: ${{ matrix.os }}/py${{ matrix.python-version }}/pip
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     env:
@@ -13,23 +13,28 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        PYTHON_VERSION: [3.8]
+        python-version: [3.8]
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        name: Install Python
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.PYTHON_VERSION }}
+          python-version: ${{ matrix.python-version }}
       - name: Display versions
-        run: python -V; pip -V
-      - name: Install package
-        shell: bash
-        run: pip install -U -e .'[doc, tests]'
+        run: |
+          python --version
+          pip --version
+      - name: Install depedencies and package
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade --editable .
       - name: Run tests
-        run: pytest --cov=kikuchipy --pyargs kikuchipy
+        run: |
+          pytest --cov=kikuchipy --pyargs kikuchipy
       - name: Generate line coverage
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: coverage report --show-missing
+        run: |
+          coverage report --show-missing
       - name: Upload coverage to Coveralls
         if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: AndreMiras/coveralls-python-action@develop
