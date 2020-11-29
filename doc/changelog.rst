@@ -60,7 +60,7 @@ Added
 Changed
 -------
 - Replace Travis CI with GitHub Actions.
-  (`#247 <https://github.com/pyxem/kikuchipy/pull/247>`_)
+  (`#250 <https://github.com/pyxem/kikuchipy/pull/250>`_)
 - The EBSDMasterPattern gets phase, hemisphere and projection properties.
   (`#246 <https://github.com/pyxem/kikuchipy/pull/246>`_)
 - EMsoft EBSD master pattern plugin can read a single energy pattern. Parameter

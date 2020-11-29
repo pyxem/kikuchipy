@@ -903,7 +903,6 @@ class TestDecomposition:
         model_mean = model_signal.data.mean().compute()
         assert np.allclose(model_mean, mean_intensity, atol=0.1)
 
-    @pytest.mark.xfail
     @pytest.mark.parametrize(
         "components, mean_intensity", [(None, 132.1), (3, 122.9)]
     )

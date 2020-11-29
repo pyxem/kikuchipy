@@ -320,7 +320,6 @@ class TestNORDIF:
                 )
             assert s.data.shape == nav_shape[::-1] + sig_shape
 
-    @pytest.mark.xfail
     def test_load_save_cycle(self, save_path_nordif):
         s = load(PATTERN_FILE)
 
@@ -358,7 +357,6 @@ class TestNORDIF:
         # Delete reference to close np.memmap file
         del s_reload
 
-    @pytest.mark.xfail
     def test_load_save_lazy(self, save_path_nordif):
         s = load(PATTERN_FILE, lazy=True)
         assert isinstance(s.data, da.Array)
@@ -397,7 +395,6 @@ class TestNORDIF:
             s = load(PATTERN_FILE, lazy=lazy, mmap_mode="r+")
             assert s.axes_manager.as_dictionary() == AXES_MANAGER
 
-    @pytest.mark.xfail
     def test_save_fresh(self, save_path_nordif):
         scan_size = (10, 3)
         pattern_size = (5, 5)
@@ -412,7 +409,6 @@ class TestNORDIF:
             )
         assert np.allclose(s.data, s_reload.data)
 
-    @pytest.mark.xfail
     def test_write_data_line(self, save_path_nordif):
         scan_size = 3
         pattern_size = (5, 5)
@@ -427,7 +423,6 @@ class TestNORDIF:
             )
         assert np.allclose(s.data, s_reload.data)
 
-    @pytest.mark.xfail
     def test_write_data_single(self, save_path_nordif):
         pattern_size = (5, 5)
         s = EBSD((255 * np.random.rand(*pattern_size)).astype(np.uint8))
@@ -438,7 +433,6 @@ class TestNORDIF:
             )
         assert np.allclose(s.data, s_reload.data)
 
-    @pytest.mark.xfail
     def test_read_cutoff(self, save_path_nordif):
         scan_size = (10, 3)
         scan_size_reloaded = (10, 20)

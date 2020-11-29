@@ -17,6 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from functools import reduce
+import os
 from typing import Union, Any, List, Optional
 import warnings
 
@@ -134,3 +135,10 @@ def _get_nested_dictionary(
         keys,
         dictionary,
     )
+
+
+def _ensure_directory(filename: str):
+    """Check if the filename path exists, create it if not."""
+    directory = os.path.split(filename)[0]
+    if directory and not os.path.exists(directory):
+        os.makedirs(directory)
