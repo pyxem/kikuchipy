@@ -27,7 +27,7 @@ jobs:
       - name: Install depedencies and package
         run: |
           python -m pip install --upgrade pip
-          pip install --upgrade --editable .
+          pip install --upgrade --editable .'[doc, tests]'
       - name: Run tests
         run: |
           pytest --cov=kikuchipy --pyargs kikuchipy
