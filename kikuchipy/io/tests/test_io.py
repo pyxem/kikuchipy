@@ -33,6 +33,7 @@ KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy/patterns.h5")
 
 
 class TestIO:
+    @pytest.mark.xfail
     @pytest.mark.parametrize("filename", ("im_not_here.h5", "unsupported.h4"))
     def test_load(self, filename):
         if filename == "im_not_here.h5":
@@ -104,6 +105,7 @@ class TestIO:
             else:
                 assert signal == LazyEBSD
 
+    @pytest.mark.xfail
     @pytest.mark.parametrize("extension", ("", ".h4"))
     def test_save_extensions(self, extension):
         s = load(KIKUCHIPY_FILE)
@@ -123,6 +125,7 @@ class TestIO:
         with pytest.raises(ValueError, match="This file format cannot write"):
             s.save()
 
+    @pytest.mark.xfail
     def test_save_to_existing_file(self, save_path_hdf5):
         s = load(KIKUCHIPY_FILE)
         s.save(save_path_hdf5)
