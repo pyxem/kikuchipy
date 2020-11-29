@@ -120,12 +120,13 @@ class Testh5ebsd:
         assert s.data.shape == (3, 3, 60, 60)
         assert s.axes_manager.as_dictionary() == AXES_MANAGER
 
-    def test_load_manufacturer(self, save_path_hdf5):
+    def test_load_manufacturer(self, tmp_path):
+        file = tmp_path / "patterns_temp.h5"
         s = EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
-        s.save(save_path_hdf5)
+        s.save(file)
 
         # Change manufacturer
-        with File(save_path_hdf5, mode="r+") as f:
+        with File(file, mode="r+") as f:
             manufacturer = f["manufacturer"]
             manufacturer[()] = "Nope".encode()
 
@@ -133,7 +134,7 @@ class Testh5ebsd:
             OSError,
             match="Manufacturer Nope not among recognised manufacturers",
         ):
-            _ = load(save_path_hdf5)
+            _ = load(file)
 
     @pytest.mark.parametrize(
         "delete, error",

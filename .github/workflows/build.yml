@@ -9,15 +9,11 @@ jobs:
     timeout-minutes: 15
     env:
       MPLBACKEND: agg
-      PIP_ARGS: -U --use-feature=2020-resolver -e
-      PYTEST_ARGS: --pyargs kikuchipy
-      PYTEST_ARGS_COVERAGE: --cov=.
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        PYTHON_VERSION: [3.7, 3.8]
-        PIP_SELECTOR: ['[doc, tests]']
+        os: [ubuntu-latest]
+        PYTHON_VERSION: [3.8]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -25,16 +21,12 @@ jobs:
         with:
           python-version: ${{ matrix.PYTHON_VERSION }}
       - name: Display versions
-        run: |
-          python --version
-          pip --version
+        run: python -V; pip -V
       - name: Install package
         shell: bash
-        run: |
-          pip install ${{ env.PIP_ARGS }} .'${{ matrix.PIP_SELECTOR }}'
+        run: pip install -U -e .'[doc, tests]'
       - name: Run tests
-        run: |
-          pytest ${{ env.PYTEST_ARGS_COVERAGE }} ${{ env.PYTEST_ARGS }}
+        run: pytest --cov=kikuchipy --pyargs kikuchipy
       - name: Generate line coverage
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: coverage report --show-missing
