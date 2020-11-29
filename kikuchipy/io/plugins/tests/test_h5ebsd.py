@@ -124,8 +124,7 @@ class Testh5ebsd:
     def test_load_manufacturer(self, tmp_path):
         file = tmp_path / "patterns_temp.h5"
         s = EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
-        #        s.save(file)
-        s.save(file, overwrite=True)
+        s.save(file)
 
         # Change manufacturer
         with File(file, mode="r+") as f:

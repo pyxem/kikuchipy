@@ -28,7 +28,7 @@ jobs:
         shell: bash
         run: pip install -U -e .'[doc, tests]'
       - name: Run tests
-        run: pytest -rxX --reruns 3 --cov=kikuchipy --pyargs kikuchipy
+        run: pytest -rxX --cov=kikuchipy --pyargs kikuchipy
       - name: Generate line coverage
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: coverage report --show-missing

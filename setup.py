@@ -50,13 +50,7 @@ extra_feature_requirements = {
         "sphinx-autodoc-typehints >= 1.10.3",
         "sphinxcontrib-bibtex >= 1.0",
     ],
-    # Update in .travis.yml if this list is updated!
-    "tests": [
-        "coverage >= 5.0",
-        "pytest >= 5.4",
-        "pytest-cov >= 2.8.1",
-        "pytest-rerunfailures",
-    ],
+    "tests": ["coverage >= 5.0", "pytest >= 5.4", "pytest-cov >= 2.8.1"],
 }
 
 # Create a development project, including both the doc and tests projects
@@ -118,7 +112,6 @@ setup(
         "Source Code": "https://github.com/pyxem/kikuchipy",
     },
     # Dependencies
-    # Update in .travis.yml if this list is updated!
     extras_require=extra_feature_requirements,
     install_requires=[
         "dask[array] >= 2.14",
