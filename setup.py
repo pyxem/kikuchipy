@@ -51,7 +51,12 @@ extra_feature_requirements = {
         "sphinxcontrib-bibtex >= 1.0",
     ],
     # Update in .travis.yml if this list is updated!
-    "tests": ["coverage >= 5.0", "pytest >= 5.4", "pytest-cov >= 2.8.1"],
+    "tests": [
+        "coverage >= 5.0",
+        "pytest >= 5.4",
+        "pytest-cov >= 2.8.1",
+        "pytest-rerunfailures",
+    ],
 }
 
 # Create a development project, including both the doc and tests projects
@@ -119,7 +124,7 @@ setup(
         "dask[array] >= 2.14",
         "diffsims >= 0.3",
         "hyperspy >= 1.5.2",
-        "h5py <= 2.10",
+        "h5py >= 2.10",
         "matplotlib >= 3.2",
         "numpy >= 1.18",
         "numba >= 0.48",
