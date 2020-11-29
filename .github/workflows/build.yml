@@ -12,12 +12,12 @@ jobs:
       PIP_ARGS: -U --use-feature=2020-resolver -e
       PYTEST_ARGS: --pyargs kikuchipy
       PYTEST_ARGS_COVERAGE: --cov=.
-      PIP_SELECTOR: ['[doc, tests]']
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
         PYTHON_VERSION: [3.7, 3.8]
+        PIP_SELECTOR: ['[doc, tests]']
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -31,7 +31,7 @@ jobs:
       - name: Install package
         shell: bash
         run: |
-          pip install ${{ env.PIP_ARGS }} .'${{ env.PIP_SELECTOR }}'
+          pip install ${{ env.PIP_ARGS }} .'${{ matrix.PIP_SELECTOR }}'
       - name: Run tests
         run: |
           pytest ${{ env.PYTEST_ARGS_COVERAGE }} ${{ env.PYTEST_ARGS }}
