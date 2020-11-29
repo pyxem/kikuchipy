@@ -1,0 +1,38 @@
+
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  run-tests:
+    name: ${{ matrix.os }}-py${{ matrix.PYTHON_VERSION }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    env:
+      MPLBACKEND: agg
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        PYTHON_VERSION: [3.7, 3.8]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        name: Install Python
+        with:
+          python-version: ${{ matrix.PYTHON_VERSION }}
+      - name: Display version
+        run: |
+          python --version
+          pip --version
+      - name: Install kikuchipy
+        shell: bash
+        run: pip install --upgrade --editable .'[doc, tests]'
+      - name: Run tests
+        run: python -m pytest --cov=kikuchipy --pyargs kikuchipy
+      - name: Generate line coverage
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: coverage report --show-missing
+      - name: Upload coverage to Coveralls
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: AndreMiras/coveralls-python-action@develop
