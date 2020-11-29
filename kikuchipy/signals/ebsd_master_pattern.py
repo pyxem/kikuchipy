@@ -81,44 +81,45 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         dtype_out: type = np.float32,
         compute: bool = False,
     ) -> Union[EBSD, LazyEBSD]:
-        """Creates a dictionary of EBSD patterns for a sample in the EDAX TSL
-        (RD, TD, ND) reference frame, given a set of local crystal lattice
-        rotations and a detector model from a master pattern in the Lambert
-        projection.
+        """Creates a dictionary of EBSD patterns for a sample in the
+        EDAX TSL (RD, TD, ND) reference frame, given a set of local
+        crystal lattice rotations and a detector model from a master
+        pattern in the Lambert projection.
 
         Parameters
         ----------
         rotations : Rotation
             Set of unit cell rotations to get patterns from.
         detector : EBSDDetector
-            EBSDDetector object describing the detector geometry with a single,
-            fixed projection/pattern center.
+            EBSDDetector object describing the detector geometry with a
+            single, fixed projection/pattern center.
         energy : int
             The wanted energy in the master pattern.
         n_chunk : int, optional
-            The number of chunks the data should be split up into. By default,
-            this is set so each chunk is around 100 MB.
+            The number of chunks the data should be split up into. By
+            default, this is set so each chunk is around 100 MB.
         dtype_out : type, optional
             Data type of the returned patterns, by default np.float32.
         compute : bool, optional
-            Whether or not the dask.compute() function should be called and
-            read the patterns into memory, by default false.
+            Whether or not the dask.compute() function should be called
+            and read the patterns into memory, by default false.
             For more information see: :func:`dask.array.Array.compute`.
 
         Returns
         -------
         EBSD or LazyEBSD
-            All the simulated EBSD patterns with the shape (number of rotations,
-            detector pixels in x direction, detector pixels in y direction).
+            All the simulated EBSD patterns with the shape (number of
+            rotations, detector pixels in x direction, detector pixels
+            in y direction).
 
         Notes
         -----
-        If the master pattern phase has a non-centrosymmetric point group, both
-        the northern and southern hemispheres must be provided.
-        For more details regarding the reference frame visit the reference frame
-        user guide at: https://kikuchipy.org/en/latest/reference_frames.html.
+        If the master pattern phase has a non-centrosymmetric point
+        group, both the northern and southern hemispheres must be
+        provided. For more details regarding the reference frame visit
+        the reference frame user guide at:
+        https://kikuchipy.org/en/latest/reference_frames.html.
         """
-
         if self.projection != "lambert":
             raise NotImplementedError(
                 "Method only supports master patterns in Lambert projection!"
@@ -229,8 +230,8 @@ class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
 
 
 def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
-    """Get the direction cosines between the detector and sample as done in
-    EMsoft and [Callahan2013]_.
+    """Get the direction cosines between the detector and sample as done
+    in EMsoft and [Callahan2013]_.
 
     Parameters
     ----------
@@ -303,7 +304,8 @@ def _get_lambert_interpolation_parameters(
     rotated_direction_cosines : Vector3d
         Rotated direction cosines vector.
     scale : int
-        Factor to scale up from Rosca-Lambert projection to the master pattern.
+        Factor to scale up from Rosca-Lambert projection to the master
+        pattern.
     npx : int
         Number of pixels on the master pattern in the x direction.
     npy : int
@@ -363,9 +365,9 @@ def _get_patterns_chunk(
     rescale: bool,
     dtype_out: Optional[type] = np.float32,
 ) -> np.ndarray:
-    """Get the EBSD patterns on the detector for each rotation in the chunk.
-    Each pattern is found by a bi-quadratic interpolation of the master pattern
-    as described in EMsoft.
+    """Get the EBSD patterns on the detector for each rotation in the
+    chunk. Each pattern is found by a bi-quadratic interpolation of the
+    master pattern as described in EMsoft.
 
     Parameters
     ----------
@@ -435,8 +437,9 @@ def _get_patterns_chunk(
 def _min_number_of_chunks(
     detector_shape: tuple, n_rotations: int, dtype_out: type
 ) -> int:
-    """Returns the minimum number of chunks required for our detector model and
-    set of unit cell rotations so that each chunk is around 100 MB.
+    """Returns the minimum number of chunks required for our detector
+    model and set of unit cell rotations so that each chunk is around
+    100 MB.
 
     Parameters
     ----------
@@ -450,7 +453,8 @@ def _min_number_of_chunks(
     Returns
     -------
     int
-       The minimum number of chunks required so each chunk is around 100 MB.
+       The minimum number of chunks required so each chunk is around
+       100 MB.
     """
     dy, dx = detector_shape
     nbytes = dy * dx * n_rotations * np.dtype(dtype_out).itemsize

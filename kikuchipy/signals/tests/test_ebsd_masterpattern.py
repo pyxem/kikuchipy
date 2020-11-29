@@ -293,6 +293,18 @@ class TestEBSDCatalogue:
 
         # TODO: Create tests for other structures
 
+    def test_get_patterns_no_chunk(self, detector):
+        mp = nickel_ebsd_master_pattern_small(projection="lambert")
+        sim = mp.get_patterns(
+            rotations=Rotation([1, 0, 0, 0]),
+            detector=detector,
+            energy=20,
+            n_chunk=None,
+        )
+
+        assert isinstance(sim, EBSD)
+        assert isinstance(sim.data, da.Array)
+
     def test_get_patterns_chunk(self):
         r = Rotation.from_euler(((0, 0, 0), (1, 1, 1), (2, 2, 2)))
         dc = _get_direction_cosines(self.detector)
