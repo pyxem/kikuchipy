@@ -26,7 +26,7 @@ jobs:
           pip --version
       - name: Install depedencies and package
         shell: bash
-        run: pip install -U --use-feature=2020-resolver -e .'[doc, tests]'
+        run: pip install -U -e .'[doc, tests]'
       - name: Run tests
         run: pytest -rxX --reruns 3 --cov=kikuchipy --pyargs kikuchipy
       - name: Generate line coverage
