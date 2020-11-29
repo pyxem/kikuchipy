@@ -1,15 +1,18 @@
-
 name: Tests
 
 on: [push, pull_request]
 
 jobs:
-  run-tests:
-    name: ${{ matrix.os }}-py${{ matrix.PYTHON_VERSION }}
+  run-tests-with-pip:
+    name: ${{ matrix.os }}/py${{ matrix.PYTHON_VERSION }}/pip
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 15
     env:
       MPLBACKEND: agg
+      PIP_ARGS: -U --use-feature=2020-resolver -e
+      PYTEST_ARGS: --pyargs kikuchipy
+      PYTEST_ARGS_COVERAGE: --cov=.
+      PIP_SELECTOR: ['[doc, tests]']
     strategy:
       fail-fast: false
       matrix:
@@ -21,15 +24,17 @@ jobs:
         name: Install Python
         with:
           python-version: ${{ matrix.PYTHON_VERSION }}
-      - name: Display version
+      - name: Display versions
         run: |
           python --version
           pip --version
-      - name: Install kikuchipy
+      - name: Install package
         shell: bash
-        run: pip install --upgrade --editable .'[doc, tests]'
+        run: |
+          pip install ${{ env.PIP_ARGS }} .'${{ env.PIP_SELECTOR }}'
       - name: Run tests
-        run: python -m pytest --cov=kikuchipy --pyargs kikuchipy
+        run: |
+          pytest ${{ env.PYTEST_ARGS_COVERAGE }} ${{ env.PYTEST_ARGS }}
       - name: Generate line coverage
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: coverage report --show-missing
