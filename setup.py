@@ -119,7 +119,7 @@ setup(
         "dask[array] >= 2.14",
         "diffsims >= 0.3",
         "hyperspy >= 1.5.2",
-        "h5py >= 2.10",
+        "h5py < 3",
         "matplotlib >= 3.2",
         "numpy >= 1.18",
         "numba >= 0.48",
