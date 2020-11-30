@@ -23,6 +23,8 @@ Contributors
 
 Added
 -----
+- Link to Binder in README and in the notebooks for running them in the browser.
+  (`#257 <https://github.com/pyxem/kikuchipy/pull/257>`_)
 - A data module with a small Nickel EBSD data set and master pattern, and a
   larger EBSD data set downloadable via the module. Two dependencies, pooch and
   tqdm, are added along with this module.
