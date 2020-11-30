@@ -135,14 +135,7 @@ setup(
     package_dir={"kikuchipy": "kikuchipy"},
     include_package_data=True,
     package_data={
-        "": [
-            "LICENSE",
-            "README.rst",
-            "pyproject.toml",
-            "pytest.ini",
-            "readthedocs.yml",
-            "setup.py",
-        ],
+        "": ["LICENSE", "README.rst"],
         "kikuchipy": ["*.py", "hyperspy_extension.yaml", "data/*"],
     },
 )
