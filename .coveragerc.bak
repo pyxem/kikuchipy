@@ -3,3 +3,4 @@ source = kikuchipy
 omit =
     setup.py
     kikuchipy/release.py
+relative_files = True
