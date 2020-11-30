@@ -44,6 +44,7 @@ data = {
             "masterSPNH": mp_spherical_north,
             "masterSPSH": mp_spherical_south,
             "numEbins": len(energies),
+            "numset": 1,
         }
     },
     "NMLparameters": {
