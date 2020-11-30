@@ -207,8 +207,8 @@ Tracker <https://github.com/pyxem/kikuchipy/issues>`_.
 Continuous integration (CI)
 ===========================
 
-We use `Travis CI <https://travis-ci.com/pyxem/kikuchipy>`_ to ensure that
-kikuchipy can be installed on Windows, macOS and Linux (Ubuntu). After a
+We use `GitHub Actions <https://github.com/pyxem/kikuchipy/actions>`_ to ensure
+that kikuchipy can be installed on Windows, macOS and Linux (Ubuntu). After a
 successful installation, the CI server runs the tests. After the tests return no
 errors, code coverage is reported to `Coveralls
 <https://coveralls.io/github/pyxem/kikuchipy?branch=master>`_.

@@ -1,6 +1,6 @@
-.. Travis CI
-.. image:: https://travis-ci.com/pyxem/kikuchipy.svg?branch=master
-    :target: https://travis-ci.com/pyxem/kikuchipy
+.. GitHub Actions
+.. image:: https://github.com/pyxem/kikuchipy/workflows/build/badge.svg
+    :target: https://github.com/pyxem/kikuchipy/actions
     :alt: Build status
 
 .. Coveralls
@@ -18,19 +18,15 @@
     :target: https://pypi.python.org/pypi/kikuchipy
     :alt: PyPI version
 
-.. conda-forge version
-.. image:: https://img.shields.io/conda/vn/conda-forge/kikuchipy
-    :target: https://anaconda.org/conda-forge/kikuchipy
-    :alt: conda-forge version
+.. Total downloads
+.. image:: https://pepy.tech/badge/kikuchipy
+    :target: https://github.com/pyxem/kikuchipy
+    :alt: Total downloads
 
 .. Zenodo DOI
 .. image:: https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg
     :target: https://doi.org/10.5281/zenodo.3597646
     :alt: DOI
-
-.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
-    :target: https://black.readthedocs.io/en/stable/
-    :alt: Black formatting
 
 kikuchipy is an open-source Python library for processing and analysis of
 electron backscatter diffraction (EBSD) patterns.
