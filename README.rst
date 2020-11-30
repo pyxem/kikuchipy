@@ -45,7 +45,8 @@ with each release...
 
 kikuchipy is released under the GPLv3+ license.
 
-- User guide: https://kikuchipy.org, or launch Binder and visit ``doc/``
+- User guide: https://kikuchipy.org, or launch Binder, visit ``doc/`` and run
+  the Jupyter Notebooks
 - Contributing: https://kikuchipy.org/en/latest/contributing.html
 - Code of Conduct: https://kikuchipy.org/en/latest/code_of_conduct.html
 - Cite: If you find this project useful, please cite the DOI above.
