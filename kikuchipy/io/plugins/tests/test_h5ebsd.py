@@ -217,12 +217,13 @@ class Testh5ebsd:
 
         # Write both patterns and learning results to the HSpy file
         # format
+        #        file = tmp_path / "patterns.hspy"
         os.chdir(tmp_path)
-        fname = "patterns.hspy"
-        s.save(fname)
+        file = "patterns.hspy"
+        s.save(file)
 
         # Reload data and use HyperSpy's set_signal_type function
-        s_reload = hs_load(fname)
+        s_reload = hs_load(file)
         s_reload.set_signal_type("EBSD")
 
         # Check signal type, patterns and learning results
