@@ -87,6 +87,9 @@ Removed
 
 Fixed
 -----
+- Reading of Lambert projections from EMsoft's master pattern file now sums
+  contributions from asymmetric positions correctly.
+  (`#255 <https://github.com/pyxem/kikuchipy/pull/255>`_)
 - NumPy array creation when calculating window pixel's distance to the origin is
   not ragged anymore. (`#221 <https://github.com/pyxem/kikuchipy/pull/221>`_)
 
