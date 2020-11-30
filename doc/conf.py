@@ -136,6 +136,8 @@ nbsphinx_prolog = r"""
     \textcolor{gray}{The following section was generated from
     \sphinxcode{\sphinxupquote{\strut {{ docname | escape_latex }}}} \dotfill}}
 """
+# https://nbsphinx.readthedocs.io/en/0.8.0/never-execute.html
+nbsphinx_execute = "always"  # auto, always, never
 
 
 def linkcode_resolve(domain, info):
