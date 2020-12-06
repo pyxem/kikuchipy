@@ -23,10 +23,10 @@
     :target: https://pypi.python.org/pypi/kikuchipy
     :alt: PyPI version
 
-.. Total downloads
-.. image:: https://static.pepy.tech/personalized-badge/kikuchipy?&left_color=grey&right_color=yellow&left_text=downloads
-    :target: https://github.com/pyxem/kikuchipy
-    :alt: Total downloads
+.. Downloads per month
+.. image:: https://static.pepy.tech/personalized-badge/kikuchipy?period=month&left_color=grey&right_color=yellow&left_text=downloads/month
+    :target: https://pepy.tech/project/kikuchipy
+    :alt: Downloads per month
 
 .. Zenodo DOI
 .. image:: https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg
