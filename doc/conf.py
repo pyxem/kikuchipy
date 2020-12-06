@@ -104,9 +104,17 @@ html_theme_options = {
 numfig = True
 
 # nbsphinx configuration
-# Taken from nbsphinx' own nbsphinx configuration file.
+# Taken from nbsphinx' own nbsphinx configuration file, with slight
+# modification to point nbviewer and Binder to the GitHub master links
+# when the documentation is launched from a kikuchipy version with
+# "dev" in the version.
+if "dev" in version:
+    release_version = "master"
+else:
+    release_verision = version
 # This is processed by Jinja2 and inserted before each notebook
-nbsphinx_prolog = r"""
+nbsphinx_prolog = (
+    r"""
 {% set docname = 'doc/' + env.doc2path(env.docname, base=None) %}
 
 .. raw:: html
@@ -115,9 +123,13 @@ nbsphinx_prolog = r"""
 
     <div class="admonition note">
       This page was generated from
-      <a class="reference external" href="https://github.com/pyxem/kikuchipy/blob/{{ env.config.release|e }}/{{ docname|e }}">{{ docname|e }}</a>.
+      <a class="reference external" href="https://github.com/pyxem/kikuchipy/blob/"""
+    + f"{release_version}"
+    + r"""/{{ docname|e }}">{{ docname|e }}</a>.
       Interactive online version:
-      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/pyxem/kikuchipy/{{ env.config.release|e }}?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
+      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/pyxem/kikuchipy/"""
+    + f"{release_version}"
+    + r"""?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
       <script>
         if (document.location.host) {
           $(document.currentScript).replaceWith(
@@ -138,8 +150,9 @@ nbsphinx_prolog = r"""
     \textcolor{gray}{The following section was generated from
     \sphinxcode{\sphinxupquote{\strut {{ docname | escape_latex }}}} \dotfill}}
 """
+)
 # https://nbsphinx.readthedocs.io/en/0.8.0/never-execute.html
-nbsphinx_execute = "always"  # auto, always, never
+nbsphinx_execute = "auto"  # auto, always, never
 
 
 def linkcode_resolve(domain, info):
