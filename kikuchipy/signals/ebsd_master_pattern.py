@@ -163,7 +163,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         npx, npy = self.axes_manager.signal_shape
         dc = _get_direction_cosines(detector)
-        n = rotations.size
+        n = int(rotations.size)
         det_y, det_x = detector.shape
         dtype_out = dtype_out
 
