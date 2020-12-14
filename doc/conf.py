@@ -154,6 +154,9 @@ nbsphinx_prolog = (
 # https://nbsphinx.readthedocs.io/en/0.8.0/never-execute.html
 nbsphinx_execute = "always"  # auto, always, never
 
+# sphinxcontrib-bibtex configuration
+bibtex_bibfiles = ["bibliography.bib"]
+
 
 def linkcode_resolve(domain, info):
     """Determine the URL corresponding to Python object.
