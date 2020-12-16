@@ -22,6 +22,7 @@ kikuchipy
     virtual_backscatter_electron_imaging.rst
     visualizing_patterns.rst
     multivariate_analysis.rst
+    pattern_matching.rst
     metadata.rst
     reference.rst
     bibliography.rst
