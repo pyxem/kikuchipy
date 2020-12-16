@@ -320,21 +320,21 @@ class TestSimulatedPatternDictionary:
         n_chunks = _min_number_of_chunks(self.detector.shape, 117000, np.uint8)
         assert n_chunks == 360
 
-    def test_simulated_patterns_xmap(self):
+    def test_simulated_patterns_xmap_detector(self):
         mp = nickel_ebsd_master_pattern_small(projection="lambert")
         r = Rotation.from_euler([[0, 0, 0], [0, np.pi / 2, 0]])
-
-        s = mp.get_patterns(
-            rotations=r,
-            detector=EBSDDetector(
-                shape=(60, 60),
-                pc=[0.5, 0.5, 0.5],
-                sample_tilt=70,
-                convention="tsl",
-            ),
-            energy=20,
+        detector = EBSDDetector(
+            shape=(60, 60),
+            pc=[0.5, 0.5, 0.5],
+            sample_tilt=70,
+            convention="tsl",
         )
+        s = mp.get_patterns(rotations=r, detector=detector, energy=20)
 
         assert np.allclose(s.xmap.rotations.to_euler(), r.to_euler())
         assert s.xmap.phases.names == [mp.phase.name]
         assert s.xmap.phases[0].point_group.name == mp.phase.point_group.name
+
+        assert s.detector.shape == detector.shape
+        assert np.allclose(s.detector.pc, detector.pc)
+        assert s.detector.sample_tilt == detector.sample_tilt

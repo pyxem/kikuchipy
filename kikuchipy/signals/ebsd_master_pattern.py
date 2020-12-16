@@ -198,11 +198,13 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         names = ["x", "dy", "dx"]
         scales = np.ones(3)
 
-        # Create crystal map
-        xmap = CrystalMap(
-            phase_list=PhaseList(self.phase), rotations=rotations,
+        # Add crystal map and detector to keyword arguments
+        kwargs = dict(
+            xmap=CrystalMap(
+                phase_list=PhaseList(self.phase), rotations=rotations,
+            ),
+            detector=detector,
         )
-        kwargs = dict(xmap=xmap)
 
         # Create axis objects for each axis
         axes = [

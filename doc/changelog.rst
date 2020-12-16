@@ -23,6 +23,8 @@ Contributors
 
 Added
 -----
+- EBSD.detector property storing an EBSDDetector.
+  (`#262 <https://github.com/pyxem/kikuchipy/pull/262>`_)
 - Link to Binder in README and in the notebooks for running them in the browser.
   (`#257 <https://github.com/pyxem/kikuchipy/pull/257>`_)
 - A data module with a small Nickel EBSD data set and master pattern, and a
@@ -65,7 +67,7 @@ Changed
 - The EBSDMasterPattern gets phase, hemisphere and projection properties.
   (`#246 <https://github.com/pyxem/kikuchipy/pull/246>`_)
 - EMsoft EBSD master pattern plugin can read a single energy pattern. Parameter
-  `energy_range`  changed to `energy`.
+  `energy_range` changed to `energy`.
   (`240 <https://github.com/pyxem/kikuchipy/pull/240>`_)
 - Migrate user guide from reST files to Jupyter Notebooks converted to HTML with
   the `nbsphinx` package.
