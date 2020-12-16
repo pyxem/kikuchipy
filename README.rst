@@ -24,8 +24,8 @@
     :alt: PyPI version
 
 .. Downloads per month
-.. image:: https://static.pepy.tech/personalized-badge/kikuchipy?period=month&left_color=grey&right_color=yellow&left_text=downloads/month
-    :target: https://pepy.tech/project/kikuchipy
+.. image:: https://img.shields.io/pypi/dm/kikuchipy.svg
+    :target: https://pypistats.org/packages/kikuchipy
     :alt: Downloads per month
 
 .. Zenodo DOI

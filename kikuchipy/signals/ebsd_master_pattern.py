@@ -23,7 +23,7 @@ import dask.array as da
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy._signals.signal2d import Signal2D
 import numpy as np
-from orix.crystal_map import Phase
+from orix.crystal_map import CrystalMap, Phase, PhaseList
 from orix.vector import Vector3d
 from orix.quaternion import Rotation
 
@@ -81,36 +81,37 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         dtype_out: type = np.float32,
         compute: bool = False,
     ) -> Union[EBSD, LazyEBSD]:
-        """Creates a dictionary of EBSD patterns for a sample in the
-        EDAX TSL (RD, TD, ND) reference frame, given a set of local
-        crystal lattice rotations and a detector model from a master
-        pattern in the Lambert projection.
+        """Return a dictionary of EBSD patterns projected onto a
+        detector from a master pattern in the Lambert projection, for a
+        set of crystal rotations relative to the EDAX TSL sample
+        reference frame (RD, TD, ND) and a fixed detector-sample
+        geometry.
 
         Parameters
         ----------
         rotations : Rotation
-            Set of unit cell rotations to get patterns from.
+            Set of crystal rotations to get patterns from.
         detector : EBSDDetector
-            EBSDDetector object describing the detector geometry with a
-            single, fixed projection/pattern center.
+            EBSD detector describing the detector dimensions and the
+            detector-sample geometry with a single, fixed
+            projection/pattern center.
         energy : int
-            The wanted energy in the master pattern.
+            Master pattern energy, in kV.
         n_chunk : int, optional
-            The number of chunks the data should be split up into. By
-            default, this is set so each chunk is around 100 MB.
+            Number of dask chunks the pattern projection computation
+            should be split into. By default, this is set so each chunk
+            is around a maximum of 100 MB.
         dtype_out : type, optional
             Data type of the returned patterns, by default np.float32.
         compute : bool, optional
-            Whether or not the dask.compute() function should be called
-            and read the patterns into memory, by default false.
-            For more information see: :func:`dask.array.Array.compute`.
+            Whether to return a lazy result, by default False. For more
+            information see :func:`~dask.array.Array.compute`.
 
         Returns
         -------
         EBSD or LazyEBSD
-            All the simulated EBSD patterns with the shape (number of
-            rotations, detector pixels in x direction, detector pixels
-            in y direction).
+            EBSD patterns with the shape
+            `(rotations.size,) + detector.shape`.
 
         Notes
         -----
@@ -122,12 +123,12 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         """
         if self.projection != "lambert":
             raise NotImplementedError(
-                "Method only supports master patterns in Lambert projection!"
+                "Method only supports master patterns in Lambert projection"
             )
         pc = detector.pc_emsoft()
         if len(pc) > 1:
-            raise ValueError(
-                "Method only supports a single projection/pattern center!"
+            raise NotImplementedError(
+                "Method only supports a single projection/pattern center"
             )
 
         # 4 cases
@@ -141,8 +142,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         elif len(self.axes_manager.shape) == 2:
             if not self.phase.point_group.contains_inversion:
                 raise AttributeError(
-                    "For phases without inversion symmetry, "
-                    "both hemispheres must be in master pattern!"
+                    "For phases without inversion symmetry, both hemispheres "
+                    "must be in the master pattern"
                 )
             mpn = self.data
             mps = mpn
@@ -151,8 +152,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
                 energies = self.axes_manager["energy"].axis
                 if not self.phase.point_group.contains_inversion:
                     raise AttributeError(
-                        "For phases without inversion symmetry, both"
-                        "hemispheres must be in master pattern!"
+                        "For phases without inversion symmetry, both "
+                        "hemispheres must be in the master pattern"
                     )
                 energy_index = (np.abs(energies - energy)).argmin()
                 mpn = self.data[energy_index]
@@ -197,6 +198,14 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         names = ["x", "dy", "dx"]
         scales = np.ones(3)
 
+        # Add crystal map and detector to keyword arguments
+        kwargs = dict(
+            xmap=CrystalMap(
+                phase_list=PhaseList(self.phase), rotations=rotations,
+            ),
+            detector=detector,
+        )
+
         # Create axis objects for each axis
         axes = [
             {
@@ -210,8 +219,9 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             for i in range(simulated.ndim)
         ]
         if compute:
-            return EBSD(simulated.compute(), axes=axes)
-        return LazyEBSD(simulated, axes=axes)
+            return EBSD(simulated.compute(), axes=axes, **kwargs)
+        else:
+            return LazyEBSD(simulated, axes=axes, **kwargs)
 
 
 class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
@@ -244,7 +254,6 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
     Vector3d
         Direction cosines for each detector pixel.
     """
-
     pc = detector.pc_emsoft()
     xpc = pc[..., 0]
     ypc = pc[..., 1]
@@ -372,7 +381,7 @@ def _get_patterns_chunk(
     Parameters
     ----------
     r : Rotation
-        Rotation object with all the rotations for a given chunk.
+        Rotations for a given chunk.
     dc : Vector3d
         Direction cosines unit vector between detector and sample.
     master_north : numpy.ndarray
@@ -453,8 +462,7 @@ def _min_number_of_chunks(
     Returns
     -------
     int
-       The minimum number of chunks required so each chunk is around
-       100 MB.
+       Minimum number of chunks required so each chunk is around 100 MB.
     """
     dy, dx = detector_shape
     nbytes = dy * dx * n_rotations * np.dtype(dtype_out).itemsize
