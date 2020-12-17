@@ -23,6 +23,8 @@ Contributors
 
 Added
 -----
+- User guide notebook showing basic pattern matching.
+  (`#263 <https://github.com/pyxem/kikuchipy/pull/263>`_)
 - EBSD.detector property storing an EBSDDetector.
   (`#262 <https://github.com/pyxem/kikuchipy/pull/262>`_)
 - Link to Binder in README and in the notebooks for running them in the browser.
