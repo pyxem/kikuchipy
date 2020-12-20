@@ -140,8 +140,6 @@ above), e.g. an orientation ``om`` or phase map, is a bit more involved:
 
     Navigating EBSD patterns (left) in an orientation map ``s_om`` (right).
 
-.. _plot-multiple-scans:
-
 Plot multiple scans
 ===================
 

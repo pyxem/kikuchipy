@@ -18,10 +18,12 @@
 
 import dask.array as da
 import numpy as np
+from orix.quaternion import Rotation
 import pytest
 from scipy.spatial.distance import cdist
 
-from kikuchipy.data import nickel_ebsd_small
+from kikuchipy.detectors import EBSDDetector
+from kikuchipy.data import nickel_ebsd_small, nickel_ebsd_master_pattern_small
 from kikuchipy.indexing._pattern_matching import _pattern_match
 from kikuchipy.indexing.similarity_metrics import (
     make_similarity_metric,
@@ -115,3 +117,36 @@ class TestPatternMatching:
         assert np.allclose(sim_idx1[0], [0, 3, 6, 4, 7, 1, 8, 5, 2])
         assert np.allclose(sim_idx2[0], [0, 3, 6, 4, 7, 1, 8, 5, 2])
         assert np.allclose(sim_idx3[0], [0, 3, 6, 4, 7, 1, 8, 5, 2])
+
+    def test_passing_results_from_get_patterns(self):
+        s = nickel_ebsd_small()
+        print(s)
+        s.remove_static_background()
+        s.remove_dynamic_background()
+
+        mp = nickel_ebsd_master_pattern_small(projection="lambert")
+        r = Rotation(
+            [
+                [0.9522, -0.0151, -0.2883, 0.1001],  # Left grain
+                [0.9534, 0.0465, -0.2187, -0.2026],  # Right grain
+                [0.8876, -0.2312, 0.3364, -0.2131],  # 50th best match
+            ]
+        )
+        detector = EBSDDetector(
+            shape=s.axes_manager.signal_shape[::-1],
+            pc=[0.421, 0.7794, 0.5049],
+            convention="tsl",
+            sample_tilt=70,
+        )
+        sim = mp.get_patterns(rotations=r, detector=detector, energy=20)
+
+        xmap = s.match_patterns(sim, keep_n=1)
+        scores = xmap.scores.reshape(xmap.size,)
+        sim_idx = xmap.simulation_indices.reshape(xmap.size,)
+
+        assert np.allclose(
+            scores,
+            [0.197, 0.188, 0.207, 0.198, 0.186, 0.225, 0.191, 0.191, 0.206],
+            atol=1e-3,
+        )
+        assert np.allclose(sim_idx, [0, 1, 1, 0, 1, 1, 0, 1, 1])

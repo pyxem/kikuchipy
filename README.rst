@@ -1,3 +1,13 @@
+.. Launch binder
+.. image:: https://mybinder.org/badge_logo.svg
+    :target: https://mybinder.org/v2/gh/pyxem/kikuchipy/HEAD
+    :alt: Launch binder
+
+.. Read the Docs
+.. image:: https://readthedocs.org/projects/kikuchipy/badge/?version=latest
+    :target: https://kikuchipy.org/en/latest/
+    :alt: Documentation status
+
 .. GitHub Actions
 .. image:: https://github.com/pyxem/kikuchipy/workflows/build/badge.svg
     :target: https://github.com/pyxem/kikuchipy/actions
@@ -8,20 +18,15 @@
     :target: https://coveralls.io/github/pyxem/kikuchipy?branch=master
     :alt: Coveralls status
 
-.. Read the Docs
-.. image:: https://readthedocs.org/projects/kikuchipy/badge/?version=latest
-    :target: https://kikuchipy.org/en/latest/
-    :alt: Documentation status
-
 .. PyPI version
 .. image:: https://img.shields.io/pypi/v/kikuchipy.svg
     :target: https://pypi.python.org/pypi/kikuchipy
     :alt: PyPI version
 
-.. Total downloads
-.. image:: https://pepy.tech/badge/kikuchipy
-    :target: https://github.com/pyxem/kikuchipy
-    :alt: Total downloads
+.. Downloads per month
+.. image:: https://img.shields.io/pypi/dm/kikuchipy.svg
+    :target: https://pypistats.org/packages/kikuchipy
+    :alt: Downloads per month
 
 .. Zenodo DOI
 .. image:: https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg
@@ -35,34 +40,13 @@ The library builds on the tools for multi-dimensional data analysis provided
 by the HyperSpy library. An effort is made to keep memory usage in check and
 enable scalability by using the Dask library for pattern processing.
 
-The project is in an alpha stage, and there will likely be breaking changes with
-each release.
+The project is in an **alpha** stage, so there will likely be breaking changes
+with each release...
 
 kikuchipy is released under the GPLv3+ license.
 
-User guide
-----------
-Installation instructions, a user guide and the full API reference are available
-from `our webpage <https://kikuchipy.org>`_.
-
-Tutorials and example workflows
--------------------------------
-Jupyter Notebooks that you can work through and modify to perform processing and
-analyses of EBSD patterns are available `here
-<https://github.com/pyxem/kikuchipy-demos>`_. For learning purposes, we
-recommend to use them alongside our user guide.
-
-Contributing
-------------
-Everyone is welcome to contribute. Please read our `contributor guide
-<https://kikuchipy.org/en/latest/contributing.html>`_ to get started!
-
-Code of Conduct
----------------
-kikuchipy has a `Code of Conduct
-<https://kikuchipy.org/en/latest/code_of_conduct.html>`_ that should be honoured
-by everyone who participates in the kikuchipy community.
-
-Cite
-----
-If you find this project useful, please cite the DOI above.
+- User guide: https://kikuchipy.org, or launch Binder, visit ``doc/`` and run
+  the Jupyter Notebooks
+- Contributing: https://kikuchipy.org/en/latest/contributing.html
+- Code of Conduct: https://kikuchipy.org/en/latest/code_of_conduct.html
+- Cite: If you find this project useful, please cite the DOI above.
