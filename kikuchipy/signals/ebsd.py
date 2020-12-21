@@ -79,7 +79,7 @@ class EBSD(CommonImage, Signal2D):
     guide.
 
     See the docstring of :class:`hyperspy.signal.BaseSignal` for a list
-    of attributes.
+    of attributes in addition to the ones listed below.
     """
 
     _signal_type = "EBSD"
@@ -92,14 +92,13 @@ class EBSD(CommonImage, Signal2D):
         """
         Signal2D.__init__(self, *args, **kwargs)
 
-        #        if "detector_dict" in kwargs:
-        #            self.detector = EBSDDetector(kwargs.pop("detector_dict"))
-        #        else:
-        self.detector = EBSDDetector(
-            shape=self.axes_manager.signal_shape,
-            px_size=self.axes_manager.signal_axes[0].scale,
+        self._detector = kwargs.pop(
+            "detector",
+            EBSDDetector(
+                shape=self.axes_manager.signal_shape,
+                px_size=self.axes_manager.signal_axes[0].scale,
+            ),
         )
-
         self._xmap = kwargs.pop("xmap", None)
 
         # Update metadata if object is initialised from numpy array
@@ -109,6 +108,14 @@ class EBSD(CommonImage, Signal2D):
             self.metadata = DictionaryTreeBrowser(md)
         if not self.metadata.has_item("Sample.Phases"):
             self.set_phase_parameters()
+
+    @property
+    def detector(self) -> EBSDDetector:
+        """An :class:`~kikuchipy.detectors.ebsd_detector.EBSDDetector`
+        describing the EBSD detector dimensions, the projection/pattern
+        centre, and the detector-sample geometry.
+        """
+        return self._detector
 
     @property
     def xmap(self) -> CrystalMap:
@@ -1149,9 +1156,7 @@ class EBSD(CommonImage, Signal2D):
             averaging_window = copy.copy(window)
         else:
             averaging_window = Window(
-                window=window,
-                shape=window_shape,
-                **kwargs,
+                window=window, shape=window_shape, **kwargs,
             )
         averaging_window.shape_compatible(self.axes_manager.signal_shape)
 
@@ -1205,9 +1210,7 @@ class EBSD(CommonImage, Signal2D):
                 overlap_depth[i] = 0
         overlap_boundary = {i: "none" for i in range(data_dim)}
         overlapped_dask_array = da.overlap.overlap(
-            dask_array,
-            depth=overlap_depth,
-            boundary=overlap_boundary,
+            dask_array, depth=overlap_depth, boundary=overlap_boundary,
         )
 
         # Must also be overlapped, since the patterns are overlapped
