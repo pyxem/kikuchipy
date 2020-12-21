@@ -20,9 +20,9 @@ kikuchipy
     pattern_processing.ipynb
     feature_maps.ipynb
     virtual_backscatter_electron_imaging.rst
-    visualizing_patterns.rst
-    multivariate_analysis.rst
+    visualizing_patterns.ipynb
     pattern_matching.ipynb
+    multivariate_analysis.rst
     metadata.rst
     reference.rst
     bibliography.rst
