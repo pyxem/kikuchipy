@@ -122,7 +122,7 @@ setup(
         "numpy >= 1.18",
         "numba >= 0.48",
         "orix >= 0.5",
-        "pooch",
+        "pooch >= 0.13",
         "psutil",
         "tqdm >= 0.5.2",
         "scikit-image >= 0.16",
@@ -135,14 +135,7 @@ setup(
     package_dir={"kikuchipy": "kikuchipy"},
     include_package_data=True,
     package_data={
-        "": [
-            "LICENSE",
-            "README.rst",
-            "pyproject.toml",
-            "pytest.ini",
-            "readthedocs.yml",
-            "setup.py",
-        ],
+        "": ["LICENSE", "README.rst"],
         "kikuchipy": ["*.py", "hyperspy_extension.yaml", "data/*"],
     },
 )
