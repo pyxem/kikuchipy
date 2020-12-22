@@ -128,23 +128,25 @@ def file_reader(
     i_min = 0 if i_min is None else i_min
     min_energy = energies[i_min]
 
-    # Account for the Lambert projections being stored as having a
-    # 1-dimension before the energy dimension
-    # TODO: Figure out why EMsoft v4.3 have two Lambert projections in
-    #  both northern and southern hemisphere.
-    if projection.lower() == "lambert":
-        data_slices = (slice(0, 1),) + data_slices
-
     # Get HDF5 data sets
     datasets = _get_datasets(
         data_group=data_group, projection=projection, hemisphere=hemisphere,
     )
+
+    # TODO: Data shape and slices are easier to handle if the reader
+    #  was a class (in addition to file_reader()) instead of a series of
+    #  function
+    dataset_shape = data_shape
+    if projection.lower() == "lambert":
+        data_slices = (slice(None, None),) + data_slices
+        data_shape = (data_group["numset"][:][0],) + data_shape
+
     data_shape = (len(datasets),) + data_shape
 
     # Set up data reading
     data_kwargs = {}
     if lazy:
-        if datasets[0].chunks is None or datasets[0].shape != data_shape:
+        if datasets[0].chunks is None or datasets[0].shape != dataset_shape:
             data_kwargs["chunks"] = "auto"
         else:
             data_kwargs["chunks"] = datasets[0].chunks
@@ -161,6 +163,15 @@ def file_reader(
             [data, data_read_func(datasets[1][data_slices], **data_kwargs)],
             axis=0,
         )
+
+    if projection.lower() == "lambert":
+        if hemisphere.lower() == "both":
+            sum_axis = 1
+            data_shape = (data_shape[0],) + data_shape[2:]
+        else:
+            sum_axis = 0
+            data_shape = data_shape[1:]
+        data = data.sum(axis=sum_axis).astype(data.dtype)
 
     # Remove 1-dimensions
     data = data.squeeze()
@@ -230,8 +241,9 @@ def _check_file_format(file: File):
 def _get_data_shape_slices(
     npx: int, energies: np.ndarray, energy: Optional[tuple] = None,
 ) -> Tuple[Tuple, Tuple[slice, ...]]:
-    """Determine the data shape from half the master pattern side length
-    and an energy or energy range.
+    """Determine the data shape from half the master pattern side
+    length, number of asymmetric positions if the Lambert projection is
+    to be read, and an energy or energy range.
 
     Parameters
     ----------
