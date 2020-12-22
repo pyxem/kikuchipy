@@ -20,7 +20,6 @@ import os
 from typing import Optional
 
 from hyperspy.io_plugins import hspy
-from hyperspy.misc.io.tools import ensure_directory
 from hyperspy.misc.io.tools import overwrite as overwrite_method
 from hyperspy.misc.utils import strlist2enumeration, find_subclasses
 from hyperspy.signal import BaseSignal
@@ -34,7 +33,7 @@ from kikuchipy.io.plugins import (
     h5ebsd,
     nordif,
 )
-from kikuchipy.io._util import _get_input_bool
+from kikuchipy.io._util import _get_input_bool, _ensure_directory
 
 
 plugins = [
@@ -356,7 +355,7 @@ def _save(
                 f"formats can: {strlist2enumeration(writing_plugins)}"
             )
 
-        ensure_directory(filename)
+        _ensure_directory(filename)
         is_file = os.path.isfile(filename)
 
         # Check if we are to add signal to an already existing h5ebsd file

@@ -83,9 +83,14 @@ ADAPT_EQ_UINT8_SKIMAGE16 = np.array(
 ADAPT_EQ_UINT8_SKIMAGE17 = np.array(
     [[92, 215, 92], [255, 215, 92], [215, 26, 0]], dtype=np.uint8
 )
+ADAPT_EQ_UINT8_SKIMAGE18 = np.array(
+    [[92, 215, 92], [255, 215, 92], [215, 26, 0]], dtype=np.uint8
+)
 ADAPT_EQ_UINT8 = ADAPT_EQ_UINT8_SKIMAGE16
-if skimage_version[2:4] == str(17):
+if skimage_version[2:4] == str(17):  # pragma: no cover
     ADAPT_EQ_UINT8 = ADAPT_EQ_UINT8_SKIMAGE17
+elif skimage_version[2:4] == str(18):  # pragma: no cover
+    ADAPT_EQ_UINT8 = ADAPT_EQ_UINT8_SKIMAGE18
 
 
 class TestRescaleIntensityChunk:
