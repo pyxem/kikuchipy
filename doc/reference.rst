@@ -468,6 +468,7 @@ All methods listed here are also available to
     get_dynamic_background
     get_image_quality
     get_virtual_bse_intensity
+    match_patterns
     normalize_intensity
     plot_virtual_bse_intensity
     rebin
@@ -507,6 +508,7 @@ All methods listed here are also available to
 .. currentmodule:: kikuchipy.signals.EBSDMasterPattern
 
 .. autosummary::
+    get_patterns
     normalize_intensity
     rescale_intensity
 

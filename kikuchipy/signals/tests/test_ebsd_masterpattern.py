@@ -27,7 +27,6 @@ from orix.vector import Vector3d
 from orix.quaternion import Rotation
 import pytest
 
-
 from kikuchipy import load
 from kikuchipy.data import nickel_ebsd_master_pattern_small
 from kikuchipy.detectors import EBSDDetector
@@ -149,8 +148,8 @@ class TestProperties:
         assert mp.hemisphere == hemisphere
 
 
-class TestEBSDCatalogue:
-    # Create  detector model
+class TestSimulatedPatternDictionary:
+    # Create detector model
     detector = EBSDDetector(
         shape=(480, 640),
         px_size=50,
@@ -288,10 +287,22 @@ class TestEBSDCatalogue:
             tilt=0,
             sample_tilt=70,
         )
-        with pytest.raises(ValueError):
+        with pytest.raises(NotImplementedError):
             mp_c.get_patterns(r2, d2, 5, 1)
 
         # TODO: Create tests for other structures
+
+    def test_get_patterns_no_chunk(self, detector):
+        mp = nickel_ebsd_master_pattern_small(projection="lambert")
+        sim = mp.get_patterns(
+            rotations=Rotation([1, 0, 0, 0]),
+            detector=detector,
+            energy=20,
+            n_chunk=None,
+        )
+
+        assert isinstance(sim, EBSD)
+        assert isinstance(sim.data, da.Array)
 
     def test_get_patterns_chunk(self):
         r = Rotation.from_euler(((0, 0, 0), (1, 1, 1), (2, 2, 2)))
@@ -308,3 +319,22 @@ class TestEBSDCatalogue:
     def test_min_number_of_chunks(self):
         n_chunks = _min_number_of_chunks(self.detector.shape, 117000, np.uint8)
         assert n_chunks == 360
+
+    def test_simulated_patterns_xmap_detector(self):
+        mp = nickel_ebsd_master_pattern_small(projection="lambert")
+        r = Rotation.from_euler([[0, 0, 0], [0, np.pi / 2, 0]])
+        detector = EBSDDetector(
+            shape=(60, 60),
+            pc=[0.5, 0.5, 0.5],
+            sample_tilt=70,
+            convention="tsl",
+        )
+        s = mp.get_patterns(rotations=r, detector=detector, energy=20)
+
+        assert np.allclose(s.xmap.rotations.to_euler(), r.to_euler())
+        assert s.xmap.phases.names == [mp.phase.name]
+        assert s.xmap.phases[0].point_group.name == mp.phase.point_group.name
+
+        assert s.detector.shape == detector.shape
+        assert np.allclose(s.detector.pc, detector.pc)
+        assert s.detector.sample_tilt == detector.sample_tilt

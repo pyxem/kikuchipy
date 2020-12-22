@@ -35,11 +35,10 @@ class TestLambertProjection:
         assert output_a[..., 0, 1] == pytest.approx(expected_a[1], abs=1e-3)
 
         vector_two = Vector3d(
-            np.array(
-                [[0.578, 0.578, 0.578], [0, 0.707, 0.707], [0.707, 0, 0.707]]
-            )
+            [[0.578, 0.578, 0.578], [0, 0.707, 0.707], [0.707, 0, 0.707]]
         )
-        output_b = LambertProjection.project(vector_two)
+        with np.errstate(divide="ignore"):
+            output_b = LambertProjection.project(vector_two)
 
         expected_x = np.array((0.81417, 0, 0.678))
         expected_y = np.array((0.81417, 0.678, 0))
