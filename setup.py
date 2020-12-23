@@ -50,7 +50,6 @@ extra_feature_requirements = {
         "sphinx-autodoc-typehints >= 1.10.3",
         "sphinxcontrib-bibtex >= 1.0",
     ],
-    # Update in .travis.yml if this list is updated!
     "tests": ["coverage >= 5.0", "pytest >= 5.4", "pytest-cov >= 2.8.1"],
 }
 
@@ -113,7 +112,6 @@ setup(
         "Source Code": "https://github.com/pyxem/kikuchipy",
     },
     # Dependencies
-    # Update in .travis.yml if this list is updated!
     extras_require=extra_feature_requirements,
     install_requires=[
         "dask[array] >= 2.14",
@@ -124,7 +122,7 @@ setup(
         "numpy >= 1.18",
         "numba >= 0.48",
         "orix >= 0.5",
-        "pooch",
+        "pooch >= 0.13",
         "psutil",
         "tqdm >= 0.5.2",
         "scikit-image >= 0.16",
@@ -137,14 +135,7 @@ setup(
     package_dir={"kikuchipy": "kikuchipy"},
     include_package_data=True,
     package_data={
-        "": [
-            "LICENSE",
-            "README.rst",
-            "pyproject.toml",
-            "pytest.ini",
-            "readthedocs.yml",
-            "setup.py",
-        ],
+        "": ["LICENSE", "README.rst"],
         "kikuchipy": ["*.py", "hyperspy_extension.yaml", "data/*"],
     },
 )
