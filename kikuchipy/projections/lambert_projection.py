@@ -59,11 +59,15 @@ class LambertProjection:
         lambert[..., 0] = np.where(
             abs_yx,
             sign_x * sqrt_z * sqrt_pi_half,
-            sign_y * sqrt_z * (two_over_sqrt_pi * np.arctan(x / y)),
+            sign_y
+            * sqrt_z
+            * (two_over_sqrt_pi * np.arctan(np.divide(x, y, where=y != 0))),
         )
         lambert[..., 1] = np.where(
             abs_yx,
-            sign_x * sqrt_z * (two_over_sqrt_pi * np.arctan(y / x)),
+            sign_x
+            * sqrt_z
+            * (two_over_sqrt_pi * np.arctan(np.divide(y, x, where=x != 0))),
             sign_y * sqrt_z * sqrt_pi_half,
         )
 
