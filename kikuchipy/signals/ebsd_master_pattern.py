@@ -201,7 +201,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         # Add crystal map and detector to keyword arguments
         kwargs = dict(
             xmap=CrystalMap(
-                phase_list=PhaseList(self.phase), rotations=rotations,
+                phase_list=PhaseList(self.phase),
+                rotations=rotations,
             ),
             detector=detector,
         )
@@ -346,8 +347,8 @@ def _get_lambert_interpolation_parameters(
         / (np.sqrt(np.pi / 2))
     )
 
-    i = xy[..., 0]
-    j = xy[..., 1]
+    i = xy[..., 1]
+    j = xy[..., 0]
     nii = (i + scale).astype(int)
     nij = (j + scale).astype(int)
     niip = nii + 1
