@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -112,8 +112,7 @@ class TestEBSDSimulationGenerator:
     def test_align_pc_with_rotations_shape_raises(
         self, nickel_ebsd_simulation_generator,
     ):
-        """Detector and rotations navigation shapes must be compatible.
-        """
+        """Detector and rotations navigation shapes must be compatible."""
         simgen = nickel_ebsd_simulation_generator
         simgen.detector.pc = simgen.detector.pc[:2]
         with pytest.raises(ValueError, match="The detector navigation shape"):
