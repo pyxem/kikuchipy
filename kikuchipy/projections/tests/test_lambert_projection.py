@@ -57,6 +57,26 @@ class TestLambertProjection:
         expected = np.array((0.81417, 0.81417))
         assert output[..., 0] == pytest.approx(expected[0], rel=1e-3)
 
+        xyz = np.array(([0, 0, 1], [0, 1, 0], [2, 0, 0], [0, 0, -3]))
+        xyz2 = np.array(([0, 0, -1], [0, -1, 0], [-2, 0, 0], [0, 0, 3]))
+
+        xy = LambertProjection.project(xyz)
+        xy2 = LambertProjection.project(xyz2)
+
+        assert np.allclose(
+            xy,
+            ([0, 0], [0, np.sqrt(np.pi / 2)], [np.sqrt(np.pi / 2), 0], [0, 0]),
+        )
+        assert np.allclose(
+            xy2,
+            (
+                [0, 0],
+                [0, -np.sqrt(np.pi / 2)],
+                [-np.sqrt(np.pi / 2), 0],
+                [0, 0],
+            ),
+        )
+
     def test_iproject(self):
         """Conversion from Lambert to Cartesian coordinates works"""
         vec = np.array((0.81417, 0.81417))

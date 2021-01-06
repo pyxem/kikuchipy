@@ -93,6 +93,8 @@ Removed
 
 Fixed
 -----
+- Lambert projection handles edge case vectors better
+  (`#272 <https://github.com/pyxem/kikuchipy/pull/272>`_)
 - Reading of Lambert projections from EMsoft's master pattern file now sums
   contributions from asymmetric positions correctly.
   (`#255 <https://github.com/pyxem/kikuchipy/pull/255>`_)
