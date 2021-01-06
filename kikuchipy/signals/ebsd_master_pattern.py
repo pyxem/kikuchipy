@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -201,8 +201,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         # Add crystal map and detector to keyword arguments
         kwargs = dict(
             xmap=CrystalMap(
-                phase_list=PhaseList(self.phase),
-                rotations=rotations,
+                phase_list=PhaseList(self.phase), rotations=rotations,
             ),
             detector=detector,
         )
