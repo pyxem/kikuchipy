@@ -137,7 +137,7 @@ class TestIO:
 class TestProperties:
     @pytest.mark.parametrize(
         "projection, hemisphere",
-        [("lambert", "north"), ("spherical", "south"), ("lambert", "both")],
+        [("lambert", "north"), ("stereographic", "south"), ("lambert", "both")],
     )
     def test_properties(self, projection, hemisphere):
         mp = nickel_ebsd_master_pattern_small(
