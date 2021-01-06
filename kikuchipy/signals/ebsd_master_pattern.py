@@ -17,9 +17,11 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 
+import sys
 from typing import Optional, Union
 
 import dask.array as da
+from dask.diagnostics import ProgressBar
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy._signals.signal2d import Signal2D
 import numpy as np
@@ -220,9 +222,16 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             for i in range(simulated.ndim)
         ]
         if compute:
-            return EBSD(simulated.compute(), axes=axes, **kwargs)
+            with ProgressBar():
+                print(
+                    "Creating a dictionary of simulated patterns:",
+                    file=sys.stdout,
+                )
+                patterns = simulated.compute()
+            out = EBSD(patterns, axes=axes, **kwargs)
         else:
-            return LazyEBSD(simulated, axes=axes, **kwargs)
+            out = LazyEBSD(simulated, axes=axes, **kwargs)
+        return out
 
 
 class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
