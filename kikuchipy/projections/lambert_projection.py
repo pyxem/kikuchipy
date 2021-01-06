@@ -36,11 +36,12 @@ class LambertProjection:
             y = w[..., 1]
             z = w[..., 2]
         else:
-            norm = np.linalg.norm(v)
-            v = v / norm
-            x = v[..., 0]
-            y = v[..., 1]
-            z = v[..., 2]
+            w = np.atleast_2d(v)
+            norm = np.linalg.norm(w, axis=-1)[..., np.newaxis]
+            w = w / norm
+            x = w[..., 0]
+            y = w[..., 1]
+            z = w[..., 2]
 
         # Arrays used in both setting X and Y
         sqrt_z = np.sqrt(2 * (1 - abs(z)))
@@ -53,19 +54,22 @@ class LambertProjection:
         sqrt_pi_half = sqrt_pi / 2
         two_over_sqrt_pi = 2 / sqrt_pi
 
+        # Ensure (0, 0) is returned where |z| = 1
         lambert = np.zeros(x.shape + (2,), dtype=x.dtype)
+        z_not_one = abs(z) != 1
 
-        # Equations 10a and 10b from Callahan and De Graef (2013)
-        lambert[..., 0] = np.where(
-            abs_yx,
-            sign_x * sqrt_z * sqrt_pi_half,
-            sign_y * sqrt_z * (two_over_sqrt_pi * np.arctan(x / y)),
-        )
-        lambert[..., 1] = np.where(
-            abs_yx,
-            sign_x * sqrt_z * (two_over_sqrt_pi * np.arctan(y / x)),
-            sign_y * sqrt_z * sqrt_pi_half,
-        )
+        # Equations (10a) and (10b) from Callahan and De Graef (2013)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            lambert[z_not_one, 0] = np.where(
+                abs_yx,
+                sign_x * sqrt_z * sqrt_pi_half,
+                sign_y * sqrt_z * (two_over_sqrt_pi * np.arctan(x / y)),
+            )[z_not_one]
+            lambert[z_not_one, 1] = np.where(
+                abs_yx,
+                sign_x * sqrt_z * (two_over_sqrt_pi * np.arctan(y / x)),
+                sign_y * sqrt_z * sqrt_pi_half,
+            )[z_not_one]
 
         return lambert
 
