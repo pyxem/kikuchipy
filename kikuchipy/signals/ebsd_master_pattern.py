@@ -46,7 +46,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
     Attributes
     ----------
     projection : str
-        Which projection the pattern is in: "spherical" or "lambert".
+        Which projection the pattern is in, "stereographic" or
+        "lambert".
     hemisphere : str
         Which hemisphere the data contains: "north", "south" or "both".
     phase : orix.crystal_map.phase_list.Phase
@@ -201,8 +202,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         # Add crystal map and detector to keyword arguments
         kwargs = dict(
             xmap=CrystalMap(
-                phase_list=PhaseList(self.phase),
-                rotations=rotations,
+                phase_list=PhaseList(self.phase), rotations=rotations,
             ),
             detector=detector,
         )

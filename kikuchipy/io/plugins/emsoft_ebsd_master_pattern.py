@@ -52,7 +52,7 @@ footprint = ["emdata/ebsdmaster"]
 def file_reader(
     filename: str,
     energy: Optional[range] = None,
-    projection: str = "spherical",
+    projection: str = "stereographic",
     hemisphere: str = "north",
     lazy: bool = False,
     **kwargs,
@@ -68,7 +68,7 @@ def file_reader(
         Desired beam energy or energy range. If None is passed
         (default), all available energies are read.
     projection
-        Projection(s) to read. Options are "spherical" (default) or
+        Projection(s) to read. Options are "stereographic" (default) or
         "lambert".
     hemisphere
         Projection hemisphere(s) to read. Options are "north" (default),
@@ -290,7 +290,7 @@ def _get_datasets(
     data_group
         HDF5 data group with data sets.
     projection
-        "spherical" or "lambert" projection.
+        "stereographic" or "lambert" projection.
     hemisphere
         "north" hemisphere, "south" hemisphere, or "both".
 
@@ -302,7 +302,7 @@ def _get_datasets(
     hemisphere = hemisphere.lower()
     projection = projection.lower()
 
-    projections = {"spherical": "masterSP", "lambert": "mLP"}
+    projections = {"stereographic": "masterSP", "lambert": "mLP"}
     hemispheres = {"north": "NH", "south": "SH"}
 
     if projection not in projections.keys():

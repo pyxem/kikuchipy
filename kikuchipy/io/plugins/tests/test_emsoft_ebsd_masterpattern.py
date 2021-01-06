@@ -189,7 +189,7 @@ class TestEMsoftEBSDMasterPatternReader:
             (keep_energies.min(), keep_energies.max()), expected_min_max_energy
         )
 
-    @pytest.mark.parametrize("projection", ["spherical", "lambert"])
+    @pytest.mark.parametrize("projection", ["stereographic", "lambert"])
     def test_load_lazy(self, projection):
         """The Lambert projection's southern hemisphere is stored
         chunked.
@@ -207,8 +207,8 @@ class TestEMsoftEBSDMasterPatternReader:
     @pytest.mark.parametrize(
         "projection, hemisphere, dataset_names",
         [
-            ("spherical", "North", ["masterSPNH"]),
-            ("Spherical", "both", ["masterSPNH", "masterSPSH"]),
+            ("stereographic", "North", ["masterSPNH"]),
+            ("stereographic", "both", ["masterSPNH", "masterSPSH"]),
             ("lambert", "south", ["mLPSH"]),
             ("Lambert", "BOTH", ["mLPNH", "mLPSH"]),
         ],
@@ -225,7 +225,7 @@ class TestEMsoftEBSDMasterPatternReader:
     @pytest.mark.parametrize(
         "projection, hemisphere, error_msg",
         [
-            ("sphericall", "north", "'projection' value sphericall "),
+            ("stereographicl", "north", "'projection' value stereographicl "),
             ("lambert", "east", "'hemisphere' value east "),
         ],
     )
