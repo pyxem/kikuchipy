@@ -317,7 +317,7 @@ class TestSimulatedPatternDictionary:
         assert out.shape == r.shape + dc.shape
 
     def test_min_number_of_chunks(self):
-        n_chunks = _min_number_of_chunks(self.detector.shape, 117000, np.uint8)
+        n_chunks = _min_number_of_chunks(self.detector.size, 117000, np.uint8)
         assert n_chunks == 360
 
     def test_simulated_patterns_xmap_detector(self):

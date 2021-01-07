@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Optional, Union
+
 import dask.array as da
 import numpy as np
 
@@ -65,7 +67,82 @@ def _get_chunks(data_shape, dtype, mbytes_chunk=100):
     return chunks
 
 
-def _get_dask_array(signal, dtype=None):
+def _get_chunking(
+    signal=None,
+    shape: Optional[tuple] = None,
+    nav_dim: Optional[int] = None,
+    sig_dim: Optional[int] = None,
+    chunk_size: Optional[int] = None,
+    chunk_bytes: Union[int, float, str, None] = 30e6,
+    dtype: Optional[np.dtype] = None,
+) -> tuple:
+    """Get a chunk tuple based on the shape of the signal data.
+
+    The signal dimensions will not be chunked, and the navigation
+    dimensions will be chunked based on either `chunk_size`, or be
+    optimized based on the `chunk_bytes`.
+
+    This function is taken from pyxem's dask tools.
+
+    Parameters
+    ----------
+    signal : kikuchipy.signals.EBSD, kikuchipy.signals.LazyEBSD or None
+        If None (default), the following must be passed: data shape to
+        be chunked `shape`, the number of navigation dimensions
+        `nav_dim`, the number of signal dimensions `sig_dim` and the
+        data array data type `dtype`.
+    shape
+        Data shape, must be passed if `signal` is None.
+    nav_dim
+        Number of navigation dimensions, must be passed if `signal` is
+        None.
+    chunk_size
+        Size of the navigation chunk. If None (default), this size is
+        set automatically based on on `chunk_bytes`. This is a square if
+        `signal` has two navigation dimensions.
+    chunk_bytes
+        Number of bytes in each chunk. Default is 30e6, i.e. 30 MB.
+        Only used if freedom is given to choose, i.e. if `chunk_size` is
+        None. Various parameter types are allowed, e.g. 30000000,
+        "30 MB", "30MiB", or the default 30e6, all resulting in
+        approximately 30 MB chunks.
+    dtype
+        Data type of the array to chunk. Will take precedent over the
+        signal data type if `signal` is passed. Must be passed if
+        `signal` is None.
+
+    Returns
+    -------
+    chunks
+    """
+    if signal is not None:
+        nav_dim = signal.axes_manager.navigation_dimension
+        sig_dim = signal.axes_manager.signal_dimension
+        shape = signal.data.shape
+    if dtype is None:
+        dtype = signal.data.dtype
+
+    chunks_dict = {}
+    # Set the desired navigation chunk shape
+    for i in range(nav_dim):
+        if chunk_size is None:
+            chunks_dict[i] = "auto"
+        else:
+            chunks_dict[i] = chunk_size
+    # Don't chunk the signal shape
+    for i in range(nav_dim, nav_dim + sig_dim):
+        chunks_dict[i] = -1
+
+    chunks = da.core.normalize_chunks(
+        chunks=chunks_dict, shape=shape, limit=chunk_bytes, dtype=dtype,
+    )
+
+    return chunks
+
+
+def _get_dask_array(
+    signal, dtype=None, chunk_size=None, chunk_bytes=None,
+) -> da.Array:
     """Return dask array of patterns with appropriate chunking.
 
     Parameters
@@ -75,6 +152,14 @@ def _get_dask_array(signal, dtype=None):
         Signal with data to return dask array from.
     dtype : :class:`numpy.dtype`, optional
         Data type of returned dask array.
+    chunk_size : int, optional
+        Size of the navigation chunk. If None (default), this size is
+        set automatically based on on `chunk_bytes`. This is a square if
+        `signal` has two navigation dimensions.
+    chunk_bytes : float, optional
+        Number of bytes in each chunk. If None (default) this is 30e6,
+        i.e. 30 MB. Only used if freedom is given to choose, i.e. if
+        `chunk_size` is None.
 
     Returns
     -------
@@ -87,9 +172,12 @@ def _get_dask_array(signal, dtype=None):
     if signal._lazy or isinstance(signal.data, da.Array):
         dask_array = signal.data
     else:
-        sig_chunks = list(signal.axes_manager.signal_shape)[::-1]
-        chunks = [8] * len(signal.axes_manager.navigation_shape)
-        chunks.extend(sig_chunks)
+        chunks = _get_chunking(
+            signal=signal,
+            chunk_size=chunk_size,
+            chunk_bytes=chunk_bytes,
+            dtype=dtype,
+        )
         dask_array = da.from_array(signal.data, chunks=chunks)
 
     return dask_array.astype(dtype)
