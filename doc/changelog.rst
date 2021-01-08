@@ -24,7 +24,7 @@ Contributors
 Added
 -----
 - Support for writing/reading an EBSD signal with 1 or 0 navigation axes to/from
-  an h5ebsd file in the kikuchipy format.
+  a kikuchipy h5ebsd file.
   (`#276 <https://github.com/pyxem/kikuchipy/pull/276>`_)
 - User guide notebook showing basic pattern matching.
   (`#263 <https://github.com/pyxem/kikuchipy/pull/263>`_)
