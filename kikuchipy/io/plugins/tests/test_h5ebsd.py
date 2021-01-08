@@ -362,10 +362,12 @@ class Testh5ebsd:
             _ = hdf5group2dict(group=f["/"], lazy=True)
 
     def test_save_load_1d_nav(self, save_path_hdf5):
+        """Save-load cycle of signals with one navigation dimension."""
         desired_shape = (3, 60, 60)
         desired_nav_extent = (0, 3)
-
         s = nickel_ebsd_small()
+
+        # One column of patterns
         s_y_only = s.inav[0]
         s_y_only.save(save_path_hdf5)
         s_y_only2 = load(save_path_hdf5)
@@ -373,6 +375,7 @@ class Testh5ebsd:
         assert s_y_only2.axes_manager.navigation_axes[0].name == "y"
         assert s_y_only2.axes_manager.navigation_extent == desired_nav_extent
 
+        # One row of patterns
         s_x_only = s.inav[:, 0]
         s_x_only.save(save_path_hdf5, overwrite=True)
         s_x_only2 = load(save_path_hdf5)
@@ -380,6 +383,7 @@ class Testh5ebsd:
         assert s_x_only2.axes_manager.navigation_axes[0].name == "x"
         assert s_x_only2.axes_manager.navigation_extent == desired_nav_extent
 
+        # Maintain axis name
         s_y_only2.axes_manager["y"].name = "x"
         s_y_only2.save(save_path_hdf5, overwrite=True)
         s_x_only3 = load(save_path_hdf5)
@@ -388,6 +392,7 @@ class Testh5ebsd:
         assert s_x_only3.axes_manager.navigation_extent == desired_nav_extent
 
     def test_save_load_0d_nav(self, save_path_hdf5):
+        """Save-load cycle of a signal with no navigation dimension."""
         s = nickel_ebsd_small()
         s0 = s.inav[0, 0]
         s0.save(save_path_hdf5)
