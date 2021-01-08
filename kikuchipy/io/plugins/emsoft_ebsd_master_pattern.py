@@ -181,8 +181,8 @@ def file_reader(
     scales = np.array([1, energy_scale, 1, 1])
 
     ny, nx, sy, sx = data_shape
-    names = ["y", "energy", "height", "width"]
-    units = ["hemisphere", "keV", "px", "px"]
+    names = ["hemisphere", "energy", "height", "width"]
+    units = ["", "keV", "px", "px"]
     offsets = [0, min_energy, -sy // 2, -sx // 2]
     dim_idx = []
     if ny != 1:

@@ -50,12 +50,12 @@ METADATA = {
 
 
 AXES_MANAGER = {
-    "y": {
-        "name": "y",
+    "hemisphere": {
+        "name": "hemisphere",
         "scale": 1,
         "offset": 0,
         "size": 2,
-        "units": "hemisphere",
+        "units": "",
         "navigate": True,
     },
     "energy": {
@@ -87,7 +87,7 @@ AXES_MANAGER = {
 
 def setup_axes_manager(axes=None):
     if axes is None:
-        axes = ["y", "energy", "height", "width"]
+        axes = ["hemisphere", "energy", "height", "width"]
     d = {}
     for i, a in enumerate(axes):
         d["axis-" + str(i)] = AXES_MANAGER[a]
@@ -110,7 +110,7 @@ class TestEMsoftEBSDMasterPatternReader:
         )
 
     def test_projection_lambert(self):
-        s = load(EMSOFT_FILE, projection="lambert", hemisphere="both",)
+        s = load(EMSOFT_FILE, projection="lambert", hemisphere="both")
 
         axes_manager = setup_axes_manager()
 

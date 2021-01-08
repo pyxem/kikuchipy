@@ -41,7 +41,6 @@ from kikuchipy.signals.ebsd_master_pattern import (
     _get_direction_cosines,
     _get_lambert_interpolation_parameters,
     _get_patterns_chunk,
-    _min_number_of_chunks,
 )
 from kikuchipy.signals.ebsd import LazyEBSD, EBSD
 from kikuchipy.indexing.similarity_metrics import ncc, ndp
@@ -165,9 +164,9 @@ class TestSimulatedPatternDictionary:
 
     def test_get_lambert_interpolation_parameters(self):
         dc = _get_direction_cosines(self.detector)
-        scl = 500
         npx = 1001
         npy = 1001
+        scale = 500
         (
             nii,
             nij,
@@ -177,7 +176,9 @@ class TestSimulatedPatternDictionary:
             dj,
             dim,
             djm,
-        ) = _get_lambert_interpolation_parameters(dc, scl, npx, npy)
+        ) = _get_lambert_interpolation_parameters(
+            rotated_direction_cosines=dc, npx=npx, npy=npy, scale=scale,
+        )
 
         assert (nii <= niip).all()
         assert (nij <= nijp).all()
@@ -193,7 +194,6 @@ class TestSimulatedPatternDictionary:
         assert (nijp >= 0).all()
 
     def test_get_patterns(self):
-
         # Ni Test
         EMSOFT_EBSD_FILE = os.path.join(
             DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5"
@@ -207,7 +207,7 @@ class TestSimulatedPatternDictionary:
             projection="lambert", hemisphere="both"
         )
         kp_pattern = kp_mp.get_patterns(
-            r, self.detector, 20, 100, dtype_out=np.uint8
+            rotations=r, detector=self.detector, energy=20, dtype_out=np.uint8
         )
         kp_pat = kp_pattern.data[0].compute()
 
@@ -220,65 +220,55 @@ class TestSimulatedPatternDictionary:
         detector_shape = self.detector.shape
         r2 = Rotation.from_euler(((0, 0, 0), (1, 1, 1), (2, 2, 2)))
         mp_a = EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
-        mp_a.axes_manager[0].name = "energy"
-        mp_a.axes_manager[1].name = "y"
+        print(mp_a.axes_manager)
+        mp_a.axes_manager[0].name = "hemisphere"
+        mp_a.axes_manager[1].name = "energy"
         mp_a.projection = "lambert"
         mp_a.phase = Phase("Ni", 225)
-        out_a = mp_a.get_patterns(r2, self.detector, 5, 1)
+        out_a = mp_a.get_patterns(r2, self.detector, 5)
 
         assert isinstance(out_a, LazyEBSD)
-        assert out_a.axes_manager.shape == (
-            3,
-            detector_shape[1],
-            detector_shape[0],
-        )
+        desired_data_shape = (3,) + detector_shape[::-1]
+        assert out_a.axes_manager.shape == desired_data_shape
 
         mp_b = EBSDMasterPattern(np.zeros((10, 11, 11)))
         mp_b.axes_manager[0].name = "energy"
         mp_b.projection = "lambert"
         mp_b.phase = Phase("Ni", 225)
-        out_b = mp_b.get_patterns(r2, self.detector, 5, 1)
+        out_b = mp_b.get_patterns(r2, self.detector, 5)
 
         assert isinstance(out_b, LazyEBSD)
-        assert out_b.axes_manager.shape == (
-            3,
-            detector_shape[1],
-            detector_shape[0],
-        )
+        assert out_b.axes_manager.shape == desired_data_shape
 
         mp_c = EBSDMasterPattern(np.zeros((11, 11)))
         mp_c.projection = "lambert"
         mp_c.phase = Phase("Ni", 225)
-        out_c = mp_c.get_patterns(r2, self.detector, 5, 1)
-        out_c_2 = mp_c.get_patterns(r2, self.detector, 5, 1, compute=True)
+        out_c = mp_c.get_patterns(r2, self.detector, 5)
+        out_c_2 = mp_c.get_patterns(r2, self.detector, 5, compute=True)
 
         assert isinstance(out_c, LazyEBSD)
         assert isinstance(out_c_2, EBSD)
-        assert out_c.axes_manager.shape == (
-            3,
-            detector_shape[1],
-            detector_shape[0],
-        )
+        assert out_c.axes_manager.shape == desired_data_shape
 
         mp_c2 = EBSDMasterPattern(np.zeros((11, 11)))
         mp_c2.projection = "lambert"
         mp_c2.phase = Phase("!Ni", 220)
         with pytest.raises(AttributeError):
-            mp_c2.get_patterns(r2, self.detector, 5, 1)
+            mp_c2.get_patterns(r2, self.detector, 5)
 
         mp_d = EBSDMasterPattern(np.zeros((2, 11, 11)))
         with pytest.raises(NotImplementedError):
-            mp_d.get_patterns(r2, self.detector, 5, 1)
+            mp_d.get_patterns(r2, self.detector, 5)
 
         mp_e = EBSDMasterPattern(np.zeros((10, 11, 11)))
         mp_e.axes_manager[0].name = "energy"
         mp_e.projection = "lambert"
         mp_e.phase = Phase("!Ni", 220)
         with pytest.raises(AttributeError):
-            mp_e.get_patterns(r2, self.detector, 5, 1)
+            mp_e.get_patterns(r2, self.detector, 5)
 
-        # More than one Projection center is currently not supported so it
-        # should fail.
+        # More than one Projection center is currently not supported so
+        # it should fail
         d2 = EBSDDetector(
             shape=(10, 10),
             px_size=50,
@@ -288,21 +278,9 @@ class TestSimulatedPatternDictionary:
             sample_tilt=70,
         )
         with pytest.raises(NotImplementedError):
-            mp_c.get_patterns(r2, d2, 5, 1)
+            mp_c.get_patterns(r2, d2, 5)
 
         # TODO: Create tests for other structures
-
-    def test_get_patterns_no_chunk(self, detector):
-        mp = nickel_ebsd_master_pattern_small(projection="lambert")
-        sim = mp.get_patterns(
-            rotations=Rotation([1, 0, 0, 0]),
-            detector=detector,
-            energy=20,
-            n_chunk=None,
-        )
-
-        assert isinstance(sim, EBSD)
-        assert isinstance(sim.data, da.Array)
 
     def test_get_patterns_chunk(self):
         r = Rotation.from_euler(((0, 0, 0), (1, 1, 1), (2, 2, 2)))
@@ -312,13 +290,18 @@ class TestSimulatedPatternDictionary:
         mps = mpn
         npx = 1001
         npy = npx
-        out = _get_patterns_chunk(r, dc, mpn, mps, npx, npy, rescale=False)
+        out = _get_patterns_chunk(
+            rotations_array=r.data,
+            dc=dc,
+            master_north=mpn,
+            master_south=mps,
+            npx=npx,
+            npy=npy,
+            scale=(npx - 1) / 2,
+            rescale=False,
+        )
 
         assert out.shape == r.shape + dc.shape
-
-    def test_min_number_of_chunks(self):
-        n_chunks = _min_number_of_chunks(self.detector.size, 117000, np.uint8)
-        assert n_chunks == 360
 
     def test_simulated_patterns_xmap_detector(self):
         mp = nickel_ebsd_master_pattern_small(projection="lambert")
@@ -338,3 +321,18 @@ class TestSimulatedPatternDictionary:
         assert s.detector.shape == detector.shape
         assert np.allclose(s.detector.pc, detector.pc)
         assert s.detector.sample_tilt == detector.sample_tilt
+
+    @pytest.mark.parametrize("nav_shape", [(10, 20), (3, 5), (2, 6)])
+    def test_get_patterns_navigation_shape(self, nav_shape):
+        mp = nickel_ebsd_master_pattern_small(projection="lambert")
+        r = Rotation(np.random.uniform(low=0, high=1, size=nav_shape + (4,)))
+        detector = EBSDDetector(shape=(60, 60))
+        sim = mp.get_patterns(rotations=r, detector=detector, energy=20)
+        assert sim.axes_manager.navigation_shape[::-1] == nav_shape
+
+    def test_get_patterns_navigation_shape_raises(self):
+        mp = nickel_ebsd_master_pattern_small(projection="lambert")
+        r = Rotation(np.random.uniform(low=0, high=1, size=(1, 2, 3, 4)))
+        detector = EBSDDetector(shape=(60, 60))
+        with pytest.raises(ValueError, match="The rotations object can only"):
+            _ = mp.get_patterns(rotations=r, detector=detector, energy=20)
