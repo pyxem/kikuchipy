@@ -26,6 +26,7 @@ from h5py import File, Dataset
 import numpy as np
 import pytest
 
+from kikuchipy.data import nickel_ebsd_small
 from kikuchipy.io._io import load
 from kikuchipy.io.plugins.h5ebsd import (
     check_h5ebsd,
@@ -359,3 +360,37 @@ class Testh5ebsd:
         f = File(KIKUCHIPY_FILE, mode="r")
         with pytest.warns(VisibleDeprecationWarning, match="The 'lazy' "):
             _ = hdf5group2dict(group=f["/"], lazy=True)
+
+    def test_save_load_1d_nav(self, save_path_hdf5):
+        desired_shape = (3, 60, 60)
+        desired_nav_extent = (0, 3)
+
+        s = nickel_ebsd_small()
+        s_y_only = s.inav[0]
+        s_y_only.save(save_path_hdf5)
+        s_y_only2 = load(save_path_hdf5)
+        assert s_y_only2.data.shape == desired_shape
+        assert s_y_only2.axes_manager.navigation_axes[0].name == "y"
+        assert s_y_only2.axes_manager.navigation_extent == desired_nav_extent
+
+        s_x_only = s.inav[:, 0]
+        s_x_only.save(save_path_hdf5, overwrite=True)
+        s_x_only2 = load(save_path_hdf5)
+        assert s_x_only2.data.shape == desired_shape
+        assert s_x_only2.axes_manager.navigation_axes[0].name == "x"
+        assert s_x_only2.axes_manager.navigation_extent == desired_nav_extent
+
+        s_y_only2.axes_manager["y"].name = "x"
+        s_y_only2.save(save_path_hdf5, overwrite=True)
+        s_x_only3 = load(save_path_hdf5)
+        assert s_x_only3.data.shape == desired_shape
+        assert s_x_only3.axes_manager.navigation_axes[0].name == "x"
+        assert s_x_only3.axes_manager.navigation_extent == desired_nav_extent
+
+    def test_save_load_0d_nav(self, save_path_hdf5):
+        s = nickel_ebsd_small()
+        s0 = s.inav[0, 0]
+        s0.save(save_path_hdf5)
+        s1 = load(save_path_hdf5)
+        assert s1.data.shape == (60, 60)
+        assert s1.axes_manager.navigation_axes == ()
