@@ -71,7 +71,6 @@ Changed
 -------
 - Name of hemisphere axis in EBSDMasterPattern from "y" to "hemisphere".
   (`#275 <https://github.com/pyxem/kikuchipy/pull/275>`_)
-
 - Replace Travis CI with GitHub Actions.
   (`#250 <https://github.com/pyxem/kikuchipy/pull/250>`_)
 - The EBSDMasterPattern gets phase, hemisphere and projection properties.
