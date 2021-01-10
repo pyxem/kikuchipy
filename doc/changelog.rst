@@ -23,6 +23,9 @@ Contributors
 
 Added
 -----
+- Support for writing/reading an EBSD signal with 1 or 0 navigation axes to/from
+  a kikuchipy h5ebsd file.
+  (`#276 <https://github.com/pyxem/kikuchipy/pull/276>`_)
 - Better control over dask array chunking when processing patterns.
   (`#275 <https://github.com/pyxem/kikuchipy/pull/275>`_)
 - User guide notebook showing basic pattern matching.
@@ -32,7 +35,7 @@ Added
 - Link to Binder in README and in the notebooks for running them in the browser.
   (`#257 <https://github.com/pyxem/kikuchipy/pull/257>`_)
 - Creation of dictionary of dynamically simulated EBSD patterns from a master
-  pattern in the modified Lambert projection.
+  pattern in the square Lambert projection.
   (`#239 <https://github.com/pyxem/kikuchipy/pull/239>`_)
 - A data module with a small Nickel EBSD data set and master pattern, and a
   larger EBSD data set downloadable via the module. Two dependencies, pooch and
@@ -52,7 +55,7 @@ Added
   (`#226 <https://github.com/pyxem/kikuchipy/pull/226>`_)
 - Dependency on the diffsims package for handling of electron scattering and
   diffraction. (`#220 <https://github.com/pyxem/kikuchipy/pull/220>`_)
-- Modified Lambert mapping, and its inverse, from points on the unit sphere to a
+- Square Lambert mapping, and its inverse, from points on the unit sphere to a
   2D square grid, as implemented in Callahan and De Graef (2013).
   (`#214 <https://github.com/pyxem/kikuchipy/pull/214>`_)
 - Geometrical EBSD simulations, projecting a set of Kikuchi bands and zone axes
@@ -100,10 +103,10 @@ Removed
 
 Fixed
 -----
-- Lambert projection handles edge case vectors better
+- Square Lambert projection handles edge case vectors better
   (`#272 <https://github.com/pyxem/kikuchipy/pull/272>`_)
-- Reading of Lambert projections from EMsoft's master pattern file now sums
-  contributions from asymmetric positions correctly.
+- Reading of square Lambert projections from EMsoft's master pattern file now
+  sums contributions from asymmetric positions correctly.
   (`#255 <https://github.com/pyxem/kikuchipy/pull/255>`_)
 - NumPy array creation when calculating window pixel's distance to the origin is
   not ragged anymore. (`#221 <https://github.com/pyxem/kikuchipy/pull/221>`_)

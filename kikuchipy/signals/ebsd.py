@@ -89,6 +89,8 @@ class EBSD(CommonImage, Signal2D):
     def __init__(self, *args, **kwargs):
         """Create an :class:`~kikuchipy.signals.EBSD` object from a
         :class:`hyperspy.signals.Signal2D` or a :class:`numpy.ndarray`.
+        See the docstring of :class:`hyperspy.signal.BaseSignal` for
+        optional input parameters.
         """
         Signal2D.__init__(self, *args, **kwargs)
 

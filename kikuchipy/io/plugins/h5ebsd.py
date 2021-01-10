@@ -57,8 +57,8 @@ full_support = False
 # Recognised file extension
 file_extensions = ["h5", "hdf5", "h5ebsd"]
 default_extension = 1
-# Writing capabilities
-writes = [(2, 2), (2, 1), (1, 2)]
+# Writing capabilities (signal dimensions, navigation dimensions)
+writes = [(2, 2), (2, 1), (2, 0)]
 
 # Unique HDF5 footprint
 footprint = ["manufacturer", "version"]
@@ -415,16 +415,24 @@ def h5ebsd2signaldict(
     scan["data"] = data
 
     units = ["um"] * 4
-    names = ["y", "x", "dy", "dx"]
     scales = np.ones(4)
-
     # Calibrate scan dimension and detector dimension
-    step_x, step_y = scan_size.step_x, scan_size.step_y
-    scales[0] = scales[0] * step_x
-    scales[1] = scales[1] * step_y
-    detector_pixel_size = scan_size.delta
-    scales[2] = scales[2] * detector_pixel_size
-    scales[3] = scales[3] * detector_pixel_size
+    scales[0] *= scan_size.step_y
+    scales[1] *= scan_size.step_x
+    scales[2] *= scan_size.delta
+    scales[3] *= scan_size.delta
+    # Set axes names
+    names = ["y", "x", "dy", "dx"]
+    if data.ndim == 3:
+        if ny > nx:
+            names.remove("x")
+            scales = np.delete(scales, 1)
+        else:
+            names.remove("y")
+            scales = np.delete(scales, 0)
+    elif data.ndim == 2:
+        names = names[2:]
+        scales = scales[2:]
 
     # Create axis objects for each axis
     axes = [
@@ -804,26 +812,39 @@ def file_writer(
 
     # Create scan dictionary with EBSD and SEM metadata
     # Add scan size, image size and detector pixel size to dictionary to write
-    sx, sy = signal.axes_manager.signal_shape
-    nx, ny = signal.axes_manager.navigation_shape
-    nav_indices = signal.axes_manager.navigation_indices_in_array
-    sig_indices = signal.axes_manager.signal_indices_in_array
+    data_shape = [1] * 4  # (ny, nx, sy, sx)
+    data_scales = [1] * 4  # (y, x, dy, dx)
+    nav_extent = [0, 1, 0, 1]  # (x0, x1, y0, y1)
+    am = signal.axes_manager
+    nav_axes = am.navigation_axes
+    nav_dim = am.navigation_dimension
+    if nav_dim == 1:
+        nav_axis = nav_axes[0]
+        if nav_axis.name == "y":
+            data_shape[0] = nav_axis.size
+            data_scales[0] = nav_axis.scale
+            nav_extent[2:] = am.navigation_extent
+        else:  # nav_axis.name == "x" or something else
+            data_shape[1] = nav_axis.size
+            data_scales[1] = nav_axis.scale
+            nav_extent[:2] = am.navigation_extent
+    elif nav_dim == 2:
+        data_shape[:2] = [i.size for i in nav_axes][::-1]
+        data_scales[:2] = [i.scale for i in nav_axes][::-1]
+        nav_extent = am.navigation_extent
+    data_shape[2:] = am.signal_shape
+    data_scales[2:] = [i.scale for i in am.signal_axes]
+    ny, nx, sy, sx = data_shape
+    scale_ny, scale_nx, scale_sy, _ = data_scales
     md = signal.metadata.deepcopy()
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     md.set_item(ebsd_node + ".pattern_width", sx)
     md.set_item(ebsd_node + ".pattern_height", sy)
     md.set_item(ebsd_node + ".n_columns", nx)
     md.set_item(ebsd_node + ".n_rows", ny)
-    md.set_item(
-        ebsd_node + ".step_x", signal.axes_manager[nav_indices[0]].scale
-    )
-    md.set_item(
-        ebsd_node + ".step_y", signal.axes_manager[nav_indices[1]].scale
-    )
-    md.set_item(
-        ebsd_node + ".detector_pixel_size",
-        signal.axes_manager[sig_indices[1]].scale,
-    )
+    md.set_item(ebsd_node + ".step_x", scale_nx)
+    md.set_item(ebsd_node + ".step_y", scale_ny)
+    md.set_item(ebsd_node + ".detector_pixel_size", scale_sy)
     # Separate EBSD and SEM metadata
     det_str, ebsd_str = ebsd_node.split(".")[-2:]  # Detector and EBSD nodes
     md_sem = md.get_item(sem_node).copy().as_dictionary()  # SEM node as dict
@@ -854,15 +875,10 @@ def file_writer(
         signal_axes=(2, 1),
         **kwargs,
     )
-    (
-        nx_start,
-        nx_stop,
-        ny_start,
-        ny_stop,
-    ) = signal.axes_manager.navigation_extent
+    nx_start, nx_stop, ny_start, ny_stop = nav_extent
     sample_pos = {
-        "x_sample": np.tile(np.linspace(nx_start, nx_stop, nx), ny),
         "y_sample": np.tile(np.linspace(ny_start, ny_stop, ny), nx),
+        "x_sample": np.tile(np.linspace(nx_start, nx_stop, nx), ny),
     }
     dict2h5ebsdgroup(sample_pos, scan_group["EBSD/Data"])
 

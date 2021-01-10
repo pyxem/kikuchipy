@@ -86,10 +86,10 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         **kwargs,
     ) -> Union[EBSD, LazyEBSD]:
         """Return a dictionary of EBSD patterns projected onto a
-        detector from a master pattern in the Lambert projection, for a
-        set of crystal rotations relative to the EDAX TSL sample
-        reference frame (RD, TD, ND) and a fixed detector-sample
-        geometry.
+        detector from a master pattern in the square Lambert
+        projection :cite:`callahan2013dynamical`, for a set of crystal
+        rotations relative to the EDAX TSL sample reference frame (RD,
+        TD, ND) and a fixed detector-sample geometry.
 
         Parameters
         ----------
@@ -132,7 +132,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         """
         if self.projection != "lambert":
             raise NotImplementedError(
-                "Master pattern must be in the (modified) Lambert projection"
+                "Master pattern must be in the square Lambert projection"
             )
         if len(detector.pc) > 1:
             raise NotImplementedError(
@@ -276,7 +276,7 @@ class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
 
 def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
     """Get the direction cosines between the detector and sample as done
-    in EMsoft and [Callahan2013]_.
+    in EMsoft and :cite:`callahan2013dynamical`.
 
     Parameters
     ----------
@@ -341,7 +341,8 @@ def _get_lambert_interpolation_parameters(
     npy: int,
     scale: Union[int, float],
 ) -> tuple:
-    """Get Lambert interpolation parameters as described in EMsoft.
+    """Get interpolation parameters in the square Lambert projection, as
+    implemented in EMsoft.
 
     Parameters
     ----------
@@ -352,8 +353,8 @@ def _get_lambert_interpolation_parameters(
     npy
         Number of pixels on the master pattern in the y direction.
     scale
-        Factor to scale up from Rosca-Lambert projection to the master
-        pattern.
+        Factor to scale up from the square Lambert projection to the
+        master pattern.
 
     Returns
     -------
@@ -374,7 +375,7 @@ def _get_lambert_interpolation_parameters(
     djm : numpy.ndarray
         Column interpolation weight factor.
     """
-    # Direction cosines to Rosca-Lambert projection
+    # Direction cosines to the square Lambert projection
     xy = (
         scale
         * LambertProjection.project(rotated_direction_cosines)
@@ -430,7 +431,7 @@ def _get_patterns_chunk(
     npy
         Number of pixels in the y-direction on the master pattern.
     scale
-        Factor to scale up from Rosca-Lambert projection to the master
+        Factor to scale up from square Lambert projection to the master
         pattern.
     rescale
         Whether to call rescale_intensities() or not.

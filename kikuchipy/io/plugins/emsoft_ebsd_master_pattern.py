@@ -242,8 +242,8 @@ def _get_data_shape_slices(
     npx: int, energies: np.ndarray, energy: Optional[tuple] = None,
 ) -> Tuple[Tuple, Tuple[slice, ...]]:
     """Determine the data shape from half the master pattern side
-    length, number of asymmetric positions if the Lambert projection is
-    to be read, and an energy or energy range.
+    length, number of asymmetric positions if the square Lambert
+    projection is to be read, and an energy or energy range.
 
     Parameters
     ----------
