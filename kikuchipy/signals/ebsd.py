@@ -60,7 +60,7 @@ from kikuchipy.signals.util._metadata import (
     _write_parameters_to_dictionary,
 )
 from kikuchipy.signals.util._dask import (
-    _get_dask_array,
+    get_dask_array,
     _rechunk_learning_results,
     _update_learning_results,
 )
@@ -518,7 +518,7 @@ class EBSD(CommonImage, Signal2D):
             in_range = None
 
         # Create a dask array of signal patterns and do the processing on this
-        dask_array = _get_dask_array(signal=self, dtype=dtype)
+        dask_array = get_dask_array(signal=self, dtype=dtype)
 
         # Remove the static background and rescale intensities chunk by chunk
         corrected_patterns = dask_array.map_blocks(
@@ -597,7 +597,7 @@ class EBSD(CommonImage, Signal2D):
         """
         # Create a dask array of signal patterns and do the processing on this
         dtype = np.float32
-        dask_array = _get_dask_array(signal=self, dtype=dtype)
+        dask_array = get_dask_array(signal=self, dtype=dtype)
 
         if std is None:
             std = self.axes_manager.signal_shape[0] / 8
@@ -717,7 +717,7 @@ class EBSD(CommonImage, Signal2D):
 
         if dtype_out is None:
             dtype_out = self.data.dtype.type
-        dask_array = _get_dask_array(self, dtype=dtype_out)
+        dask_array = get_dask_array(self, dtype=dtype_out)
 
         background_patterns = dask_array.map_blocks(
             func=chunk.get_dynamic_background,
@@ -811,7 +811,7 @@ class EBSD(CommonImage, Signal2D):
         kernel_size = [int(k) for k in kernel_size]
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = _get_dask_array(signal=self)
+        dask_array = get_dask_array(signal=self)
 
         # Local contrast enhancement
         equalized_patterns = dask_array.map_blocks(
@@ -865,7 +865,7 @@ class EBSD(CommonImage, Signal2D):
         """
         # Data set to operate on
         dtype_out = np.float32
-        dask_array = _get_dask_array(self, dtype=dtype_out)
+        dask_array = get_dask_array(self, dtype=dtype_out)
 
         # Calculate frequency vectors
         sx, sy = self.axes_manager.signal_shape
@@ -1022,7 +1022,7 @@ class EBSD(CommonImage, Signal2D):
         dtype_out = self.data.dtype
 
         dtype = np.float32
-        dask_array = _get_dask_array(signal=self, dtype=dtype)
+        dask_array = get_dask_array(signal=self, dtype=dtype)
 
         kwargs = {}
         if function_domain == "frequency":
@@ -1191,7 +1191,7 @@ class EBSD(CommonImage, Signal2D):
         #        averaging_window._add_axes(self.axes_manager.signal_dimension)
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = _get_dask_array(signal=self)
+        dask_array = get_dask_array(signal=self)
 
         # Add signal dimensions to array be able to use with Dask's map_blocks()
         nav_dim = self.axes_manager.navigation_dimension

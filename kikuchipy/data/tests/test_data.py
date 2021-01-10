@@ -53,14 +53,14 @@ class TestData:
         [
             ("lambert", "north", (401, 401)),
             ("lambert", "both", (2, 401, 401)),
-            ("spherical", "south", (401, 401)),
-            ("spherical", "both", (2, 401, 401)),
+            ("stereographic", "south", (401, 401)),
+            ("stereographic", "both", (2, 401, 401)),
         ],
     )
     def test_load_nickel_ebsd_master_pattern_small_kwargs(
         self, projection, hemisphere, desired_shape
     ):
-        """Master patterns in both spherical and Lambert projections
+        """Master patterns in both stereographic and Lambert projections
         can be loaded as expected.
         """
         mp = data.nickel_ebsd_master_pattern_small(

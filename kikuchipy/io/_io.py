@@ -17,7 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from typing import Optional
+from typing import Optional, Union
 
 from hyperspy.io_plugins import hspy
 from hyperspy.misc.io.tools import overwrite as overwrite_method
@@ -65,9 +65,15 @@ def load(filename: str, lazy: bool = False, **kwargs):
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
         is False.
-    kwargs :
+    kwargs
         Keyword arguments passed to the corresponding kikuchipy reader.
         See their individual documentation for available options.
+
+    Returns
+    -------
+    kikuchipy.signals.EBSD, kikuchipy.signals.EBSDMasterPattern, \
+        list of kikuchipy.signals.EBSD or \
+        list of kikuchipy.signals.EBSDMasterPattern
 
     Examples
     --------
