@@ -1525,7 +1525,7 @@ class EBSD(CommonImage, Signal2D):
             return s_out
 
 
-class LazyEBSD(EBSD, LazySignal2D):
+class LazyEBSD(LazySignal2D, EBSD):
     """Lazy implementation of the :class:`EBSD` class.
 
     This class extends HyperSpy's LazySignal2D class for EBSD patterns.
@@ -1536,10 +1536,13 @@ class LazyEBSD(EBSD, LazySignal2D):
     See docstring of :class:`EBSD` for attributes and methods.
     """
 
-    _lazy = True
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
+    def compute(self, *args, **kwargs):
+        xmap = self.xmap
+        super().compute(*args, **kwargs)
+        self._xmap = xmap
 
     def get_decomposition_model_write(
         self,
