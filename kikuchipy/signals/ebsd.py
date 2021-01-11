@@ -1166,6 +1166,7 @@ class EBSD(CommonImage, Signal2D):
                     file=sys.stdout,
                 )
                 adp = adp.compute()
+                adp = adp.squeeze()
         return adp
 
     def average_neighbour_patterns(
