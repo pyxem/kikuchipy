@@ -49,14 +49,14 @@ def _map_helper(
             patterns, indices, nav_shape, window, dtype, **kwargs
         )
 
-    output = np.bool_ if ignore_map else dtype
+    dtype_out = np.bool_ if ignore_map else dtype
     return generic_filter(
         flat_index_map,
         wrapped_map_function,
         footprint=window,
         mode="constant",
         cval=-1,
-        output=output,
+        output=dtype_out,
     )
 
 
@@ -74,6 +74,7 @@ def _neighbour_dot_products(
     center_index: int,
     flat_window_truthy_indices: np.ndarray,
     standardize: bool,
+    return_average: bool,
 ):
     # Flat navigation index corresponding with origin of window
     px = indices[center_index]
@@ -99,13 +100,22 @@ def _neighbour_dot_products(
     )
 
     if standardize:
-        # TODO: create function for this in this file instead
+        # TODO: create function for _standardize in this file instead
         pattern, neighbour_patterns = _zero_mean(
             pattern, neighbour_patterns, flat=True
         )
         pattern, neighbour_patterns = _normalize(
             pattern, neighbour_patterns, flat=True
         )
+
+    dot_products = (neighbour_patterns @ pattern.T).squeeze()  # np.einsum
+
+    # Returns average with neighbours used by _get_average_dot_product_map
+    if return_average:
+        return np.mean(dot_products)
+
+    # output variable is modified in place
+    if standardize:
         # Set center of similarity matrix 1.0
         output[px][flat_window_truthy_indices[center_index]] = output[px][
             flat_window_truthy_indices[center_index]
@@ -117,11 +127,13 @@ def _neighbour_dot_products(
             pattern ** 2
         ).sum()
 
-    dot_products = (neighbour_patterns @ pattern.T).squeeze()  # np.einsum
     output[px][
         flat_window_truthy_indices[where_neighbours_in_indices]
     ] = dot_products
-    return np.mean(dot_products)
+
+    # output variable is modified in place
+    # but need to return a value
+    return 0
 
 
 def _get_neighbour_dot_product_matrices(
@@ -151,56 +163,38 @@ def _get_neighbour_dot_product_matrices(
         center_index=center_index,
         flat_window_truthy_indices=flat_window_truthy_indices,
         standardize=standardize,
+        return_average=False,
     )
     output = output.reshape(*nav_shape, *window.shape)
     return output
 
 
-def _adp(
-    patterns: np.ndarray,
-    indices: np.ndarray,
-    nav_shape: Tuple,
-    window: Window,
-    dtype: np.dtype,
-    center_index: int,
-    standardize: bool,
-):
-    px = indices[center_index]
-    neighbours = indices[np.where((indices != -1) & (indices != px))]
-    sig_size = np.prod(patterns.shape[-2:])
-    neighbours = np.unravel_index(neighbours, nav_shape)
-    n_data = patterns[neighbours].reshape((-1, sig_size)).astype(dtype)
-    p = (
-        patterns[np.unravel_index(px, nav_shape)]
-        .squeeze()
-        .flatten()
-        .astype(dtype)
-    )
-    if standardize:
-        p, n_data = _zero_mean(p, n_data, flat=True)
-        p, n_data = _normalize(p, n_data, flat=True)
-    return np.mean(n_data @ p.T)
-
-
 def _get_average_dot_product_map(
     patterns: np.ndarray,
-    window: np.ndarray = None,
-    dtype=np.float32,
-    standardize: bool = False,
+    window: np.ndarray,
+    dtype,
+    standardize: bool,
 ):
-    nav_shape = patterns.shape[:-2]
+    _assert_window_is_binary(window)
     flat_window_origin = np.ravel_multi_index(window.origin, window.shape)
     boolean_window = window.copy().astype(bool)
     flat_window = boolean_window.flatten()
+    flat_window_truthy_indices = np.nonzero(flat_window)[0]
     zeros_before_origin = np.count_nonzero(~flat_window[:flat_window_origin])
     center_index = flat_window_origin - zeros_before_origin
-    return _map_helper(
+    nav_shape = patterns.shape[:-2]
+
+    adp = _map_helper(
         patterns,
-        _adp,
+        _neighbour_dot_products,
         window=boolean_window,
         nav_shape=nav_shape,
         dtype=dtype,
         ignore_map=False,
+        output=None,
         center_index=center_index,
+        flat_window_truthy_indices=flat_window_truthy_indices,
         standardize=standardize,
-    )[:, :, None, None]
+        return_average=True,
+    )
+    return adp[:, :, None, None]
