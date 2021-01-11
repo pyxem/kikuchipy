@@ -204,9 +204,9 @@ class SimilarityMetric:
         experimental = experimental.astype(dtype)
         simulated = simulated.astype(dtype)
         if isinstance(experimental, da.Array):
-            experimental = experimental.rechunk()
+            experimental = _rechunk(experimental)
         if isinstance(simulated, da.Array):
-            simulated = simulated.rechunk()
+            simulated = _rechunk(simulated)
         if self._make_compatible_to_lower_scopes:
             experimental, simulated = self._expand_dims_to_match_scope(
                 experimental, simulated
@@ -305,6 +305,15 @@ class FlatSimilarityMetric(SimilarityMetric):
         experimental = experimental.reshape((nav_flat_size, sig_flat_size))
         simulated = simulated.reshape((-1, sig_flat_size))
         return self._metric_func(experimental, simulated)
+
+
+def _rechunk(dask_array: da.Array):
+    ndim_to_chunks = {
+        2: {0: -1, 1: -1},
+        3: {0: "auto", 1: -1, 2: -1},
+        4: {0: "auto", 1: "auto", 2: -1, 3: -1},
+    }
+    return dask_array.rechunk(ndim_to_chunks[dask_array.ndim])
 
 
 def _get_nav_shape(expt):
