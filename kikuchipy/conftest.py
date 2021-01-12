@@ -195,7 +195,7 @@ def nickel_kikuchi_band(nickel_rlp, nickel_rotations, pc1):
     rlp = nickel_rlp.symmetrise()
 
     phase = rlp.phase
-    hkl = rlp._hkldata
+    hkl = rlp.hkl.data
 
     nav_shape = (5, 5)
 
@@ -245,7 +245,7 @@ def nickel_kikuchi_band(nickel_rlp, nickel_rotations, pc1):
 @pytest.fixture
 def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
     bands = nickel_kikuchi_band
-    hkl = bands._hkldata
+    hkl = bands.hkl.data
     phase = bands.phase
 
     nav_shape = (5, 5)

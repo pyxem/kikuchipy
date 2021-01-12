@@ -274,7 +274,7 @@ class TestEBSDSimulationGenerator:
 
         bands = sim.bands
         assert bands.size == 14
-        assert np.allclose(bands._hkldata[5:7], [[0, -2, 0], [0, 0, 2]])
+        assert np.allclose(bands.hkl.data[5:7], [[0, -2, 0], [0, 0, 2]])
         assert np.allclose(
             bands.hkl_detector[:, 5:7].data,
             np.array(

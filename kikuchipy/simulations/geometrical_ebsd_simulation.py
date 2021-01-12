@@ -195,7 +195,7 @@ class GeometricalEBSDSimulation:
             family_colors = []
             colors = _get_colors_for_allowed_bands(
                 phase=self.bands.phase,
-                highest_hkl=np.max(np.abs(self.bands._hkldata), axis=0),
+                highest_hkl=np.max(np.abs(self.bands.hkl.data), axis=0),
             )
             for hkl in families.keys():
                 for table_hkl, color in colors:
@@ -275,7 +275,7 @@ class GeometricalEBSDSimulation:
                 category=UserWarning,
             )
         return get_text_list(
-            texts=sub("[][ ]", "", str(self.zone_axes._hkldata)).split("\n"),
+            texts=sub("[][ ]", "", str(self.zone_axes.hkl.data)).split("\n"),
             coordinates=self.zone_axes_label_detector_coordinates,
             color=kwargs.pop("color", "k"),
             zorder=kwargs.pop("zorder", 5),

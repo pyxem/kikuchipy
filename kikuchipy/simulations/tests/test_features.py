@@ -353,7 +353,7 @@ class TestKikuchiBand:
             # Slicing shape () with two keys
             _ = bands[0, 0][0, 0]
         # Slicing ndim == 1 with two keys
-        assert np.allclose(bands[0][0, :2]._hkldata, bands._hkldata[:2])
+        assert np.allclose(bands[0][0, :2].hkl.data, bands.hkl.data[:2])
         assert bands[0][0, :2].navigation_shape == ()
 
         # Three getitem keys
@@ -609,7 +609,7 @@ class TestZoneAxis:
             # Slicing shape () with two keys
             _ = za[0, 0][0, 0]
         # Slicing ndim == 1 with two keys
-        assert np.allclose(za[0][0, :2]._hkldata, za._hkldata[:2])
+        assert np.allclose(za[0][0, :2].hkl.data, za.hkl.data[:2])
         assert za[0][0, :2].navigation_shape == ()
 
         # Three getitem keys
