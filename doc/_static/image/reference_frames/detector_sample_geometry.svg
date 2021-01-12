@@ -14,7 +14,7 @@
    viewBox="0 0 177.16296 84.625331"
    version="1.1"
    id="svg8"
-   inkscape:version="1.0.1 (3bc2e813f5, 2020-09-07)"
+   inkscape:version="1.0.1 (0767f8302a, 2020-10-17)"
    sodipodi:docname="detector_sample_geometry.svg"
    inkscape:export-filename="/home/hakon/kode/kikuchipy/doc/_static/image/reference_frames/detector_sample_geometry.png"
    inkscape:export-xdpi="300"
@@ -72,7 +72,7 @@
       <path
          transform="matrix(-1.1,0,0,-1.1,-1.1,0)"
          d="M 8.7185878,4.0337352 -2.2072895,0.01601326 8.7185884,-4.0017078 c -1.7454984,2.3720609 -1.7354408,5.6174519 -6e-7,8.035443 z"
-         style="fill:#0000ff;fill-opacity:1;fill-rule:evenodd;stroke:#0000ff;stroke-width:0.625;stroke-linejoin:round;stroke-opacity:1"
+         style="fill:#ff0000;fill-opacity:1;fill-rule:evenodd;stroke:#ff0000;stroke-width:0.625;stroke-linejoin:round;stroke-opacity:1"
          id="path2384" />
     </marker>
     <marker
@@ -605,7 +605,7 @@
        xlink:href="#linearGradient971"
        id="linearGradient3497"
        gradientUnits="userSpaceOnUse"
-       gradientTransform="matrix(0.60597372,0,0,1.0021317,-23.541753,-0.32225286)"
+       gradientTransform="matrix(0.60597372,0,0,1.0021317,-33.59592,-0.32225286)"
        x1="-59.820938"
        y1="151.16499"
        x2="-0.61348981"
@@ -638,16 +638,45 @@
        y1="151.16499"
        x2="-23.884237"
        y2="151.16499"
-       gradientUnits="userSpaceOnUse" />
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(-10.054167)" />
+    <style
+       type="text/css"
+       id="style2466">*{stroke-linecap:butt;stroke-linejoin:round;}</style>
+    <style
+       type="text/css"
+       id="style2557">*{stroke-linecap:butt;stroke-linejoin:round;}</style>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath2588">
+      <ellipse
+         style="fill:none;stroke:#000000;stroke-width:0.339614;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="ellipse2590"
+         cx="67.74437"
+         cy="110.50975"
+         rx="5.8848825"
+         ry="17.478561" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath2608">
+      <ellipse
+         style="fill:none;stroke:#000000;stroke-width:0.339614;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="ellipse2610"
+         cx="77.188698"
+         cy="129.19781"
+         rx="5.8848825"
+         ry="17.478561" />
+    </clipPath>
   </defs>
   <sodipodi:namedview
      id="base"
      pagecolor="#ffffff"
      bordercolor="#666666"
      borderopacity="1.0"
-     inkscape:pageopacity="0.0"
+     inkscape:pageopacity="1"
      inkscape:pageshadow="2"
-     inkscape:zoom="2.8733901"
+     inkscape:zoom="2.8046916"
      inkscape:cx="334.79617"
      inkscape:cy="159.9219"
      inkscape:document-units="mm"
@@ -655,9 +684,9 @@
      inkscape:document-rotation="0"
      showgrid="false"
      inkscape:window-width="2560"
-     inkscape:window-height="1376"
+     inkscape:window-height="1403"
      inkscape:window-x="0"
-     inkscape:window-y="27"
+     inkscape:window-y="0"
      inkscape:window-maximized="1"
      inkscape:snap-bbox="true"
      fit-margin-top="0"
@@ -752,168 +781,339 @@
        style="fill:none;stroke:#ffa761;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:0.8, 0.8;stroke-dashoffset:0;stroke-opacity:1"
        d="m 107.98187,112.0388 v 43.1511"
        id="path1104" />
-    <g
-       id="g7528"
-       transform="translate(10.054167)">
-      <rect
-         style="fill:url(#linearGradient6951);fill-opacity:1;stroke:url(#linearGradient3497);stroke-width:0.263233;stroke-linecap:butt;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-         id="rect905"
-         width="35.673466"
-         height="35.050003"
-         x="-59.68932"
-         y="133.64"
-         transform="scale(-1,1)" />
-      <image
-         sodipodi:absref="/home/hakon/kode/kikuchipy/doc/_static/image/pattern_processing/contrast_stretching.jpg"
-         xlink:href="../pattern_processing/contrast_stretching.jpg"
-         transform="matrix(-0.09853059,0,0,0.29264357,72.704286,128.40655)"
-         clip-path="url(#clipPath857)"
-         y="3.4059801"
-         x="-104.31608"
-         id="image845"
-         preserveAspectRatio="none"
-         height="148.91423"
-         width="328.07263" />
-      <ellipse
-         style="fill:none;stroke:#000000;stroke-width:0.339614;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-         id="ellipse885"
-         cx="59.989849"
-         cy="151.15575"
-         rx="5.8848825"
-         ry="17.478561" />
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.29167px;line-height:4.63022px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
-         x="42.472324"
+    <rect
+       style="fill:url(#linearGradient6951);fill-opacity:1;stroke:url(#linearGradient3497);stroke-width:0.263233;stroke-linecap:butt;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect905"
+       width="35.673466"
+       height="35.050003"
+       x="-69.743484"
+       y="133.64"
+       transform="scale(-1,1)" />
+    <image
+       width="12.613132"
+       height="34.957001"
+       preserveAspectRatio="none"
+       style="image-rendering:optimizeSpeed"
+       xlink:href="data:image/png;base64,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
+"
+       id="image2602"
+       x="70.882133"
+       y="111.71932"
+       clip-path="url(#clipPath2608)"
+       transform="matrix(-1,0,0,1,147.23271,21.957924)" />
+    <ellipse
+       style="fill:none;stroke:#000000;stroke-width:0.339614;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="ellipse885"
+       cx="70.044014"
+       cy="151.15575"
+       rx="5.8848825"
+       ry="17.478561" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.29167px;line-height:4.63022px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="52.526493"
+       y="150.41533"
+       id="text977"><tspan
+         sodipodi:role="line"
+         id="tspan975"
+         x="52.526493"
          y="150.41533"
-         id="text977"><tspan
-           sodipodi:role="line"
-           id="tspan975"
-           x="42.472324"
-           y="150.41533"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.29167px;font-family:Inconsolata;-inkscape-font-specification:Inconsolata;text-align:center;text-anchor:middle;stroke-width:0.264583">EBSD</tspan><tspan
-           sodipodi:role="line"
-           x="42.472324"
-           y="155.14543"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.29167px;font-family:Inconsolata;-inkscape-font-specification:Inconsolata;text-align:center;text-anchor:middle;stroke-width:0.264583"
-           id="tspan979">detector</tspan></text>
-      <path
-         sodipodi:type="star"
-         style="opacity:1;fill:#ffc900;fill-opacity:1;stroke:#000000;stroke-width:0.3;stroke-linecap:butt;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
-         id="path7428"
-         sodipodi:sides="5"
-         sodipodi:cx="60.425896"
-         sodipodi:cy="143.53273"
-         sodipodi:r1="1.4951121"
-         sodipodi:r2="0.74755603"
-         sodipodi:arg1="-2.0943951"
-         sodipodi:arg2="-1.4660766"
-         inkscape:flatsided="false"
-         inkscape:rounded="0"
-         inkscape:randomized="0"
-         d="m 59.67834,142.23793 0.825697,0.55134 0.922284,-0.36762 -0.269205,0.95565 0.634633,0.76355 -0.992075,0.0393 -0.53006,0.83952 -0.343931,-0.93138 -0.962228,-0.24469 0.779514,-0.61491 z"
-         inkscape:transform-center-x="0.048294175"
-         inkscape:transform-center-y="0.096057607" />
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.29167px;font-family:Inconsolata;-inkscape-font-specification:Inconsolata;text-align:center;text-anchor:middle;stroke-width:0.264583">EBSD</tspan><tspan
+         sodipodi:role="line"
+         x="52.526493"
+         y="155.14543"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.29167px;font-family:Inconsolata;-inkscape-font-specification:Inconsolata;text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan979">detector</tspan></text>
+    <path
+       sodipodi:type="star"
+       style="fill:#ffc900;fill-opacity:1;stroke:#000000;stroke-width:0.3;stroke-linecap:butt;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="path7428"
+       sodipodi:sides="5"
+       sodipodi:cx="70.480063"
+       sodipodi:cy="143.53273"
+       sodipodi:r1="1.4951121"
+       sodipodi:r2="0.74755603"
+       sodipodi:arg1="-2.0943951"
+       sodipodi:arg2="-1.4660766"
+       inkscape:flatsided="false"
+       inkscape:rounded="0"
+       inkscape:randomized="0"
+       inkscape:transform-center-x="0.048294175"
+       inkscape:transform-center-y="0.096057607"
+       d="m 69.732508,142.23793 0.825697,0.55134 0.922285,-0.36762 -0.269205,0.95565 0.634632,0.76355 -0.992075,0.0393 -0.530059,0.83952 -0.343931,-0.93138 -0.962228,-0.24469 0.779514,-0.61491 z" />
+    <g
+       id="g1845"
+       transform="translate(22.754168,0.61452826)">
       <g
-         id="g1845"
-         transform="translate(12.700001,0.61452826)">
-        <g
-           id="g7631"
-           transform="matrix(0.68617075,0,0,1.004538,5.3971114,-0.68319728)">
-          <path
-             style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-             d="m 17.193729,148.13757 -9.0050895,2.4129"
-             id="path7436"
-             sodipodi:nodetypes="cc" />
-          <path
-             style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-             d="m 17.193729,152.96337 -9.0050895,-2.4129"
-             id="path7438"
-             sodipodi:nodetypes="cc" />
-        </g>
+         id="g7631"
+         transform="matrix(0.68617075,0,0,1.004538,5.3971114,-0.68319728)">
         <path
            style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-           d="m 15.754237,148.50909 c 2.04296,2.07687 -0.01707,4.04441 -0.01707,4.04441"
-           id="path7448" />
-        <circle
-           style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.426373;stroke-linecap:butt;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
-           id="path7456"
-           cx="15.852457"
-           cy="150.55048"
-           r="0.28681353" />
+           d="m 17.193729,148.13757 -9.0050895,2.4129"
+           id="path7436"
+           sodipodi:nodetypes="cc" />
+        <path
+           style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+           d="m 17.193729,152.96337 -9.0050895,-2.4129"
+           id="path7438"
+           sodipodi:nodetypes="cc" />
       </g>
+      <path
+         style="fill:none;fill-opacity:1;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 15.754237,148.50909 c 2.04296,2.07687 -0.01707,4.04441 -0.01707,4.04441"
+         id="path7448" />
+      <circle
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.426373;stroke-linecap:butt;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         id="path7456"
+         cx="15.852457"
+         cy="150.55048"
+         r="0.28681353" />
     </g>
     <path
        style="fill:none;stroke:#ffa761;stroke-width:0.4;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:0.8, 0.8;stroke-dashoffset:0;stroke-opacity:1"
        d="m 70.483284,133.61532 37.602606,21.58133 -37.602606,13.51801"
        id="path1108" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;line-height:3.00833px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1"
-       x="107.0425"
-       y="162.873"
-       id="text1727"><tspan
-         sodipodi:role="line"
-         id="tspan1725"
+    <g
+       id="g1895"
+       style="opacity:0.3"
+       transform="translate(-8.1074879,18.009023)">
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;line-height:3.00833px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1"
          x="107.0425"
          y="162.873"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1"><tspan
-           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic'"
-           id="tspan8198">x</tspan><tspan
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.58611px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';baseline-shift:sub;fill:#ff0000;fill-opacity:1;stroke:none;stroke-opacity:1"
-           id="tspan1741">euler</tspan></tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;line-height:3.00833px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#0000ff;fill-opacity:1;stroke:none;stroke-width:0.264583"
-       x="110.85132"
-       y="154.76508"
-       id="text1737"><tspan
-         sodipodi:role="line"
-         id="tspan1735"
+         id="text1727"><tspan
+           sodipodi:role="line"
+           id="tspan1725"
+           x="107.0425"
+           y="162.873"
+           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1"><tspan
+             style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic'"
+             id="tspan8198">x</tspan><tspan
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.58611px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';baseline-shift:sub;fill:#ff0000;fill-opacity:1;stroke:none;stroke-opacity:1"
+             id="tspan1741">euler</tspan></tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;line-height:3.00833px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#0000ff;fill-opacity:1;stroke:none;stroke-width:0.264583"
          x="110.85132"
          y="154.76508"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#0000ff;fill-opacity:1;stroke-width:0.264583"><tspan
-           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic'"
-           id="tspan8196">y</tspan><tspan
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.58611px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';baseline-shift:sub;fill:#0000ff;fill-opacity:1"
-           id="tspan1743">euler</tspan></tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;line-height:3.00833px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#00c800;fill-opacity:1;stroke:none;stroke-width:0.264583"
-       x="90.423271"
-       y="151.00127"
-       id="text1749"><tspan
-         sodipodi:role="line"
-         id="tspan1747"
+         id="text1737"><tspan
+           sodipodi:role="line"
+           id="tspan1735"
+           x="110.85132"
+           y="154.76508"
+           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#0000ff;fill-opacity:1;stroke-width:0.264583"><tspan
+             style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic'"
+             id="tspan8196">y</tspan><tspan
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.58611px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';baseline-shift:sub;fill:#0000ff;fill-opacity:1"
+             id="tspan1743">euler</tspan></tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;line-height:3.00833px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#00c800;fill-opacity:1;stroke:none;stroke-width:0.264583"
          x="90.423271"
          y="151.00127"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#00c800;fill-opacity:1;stroke-width:0.264583"><tspan
-           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#00c800;fill-opacity:1"
-           id="tspan8200">z</tspan><tspan
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.58611px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';baseline-shift:sub;fill:#00c800;fill-opacity:1"
-           id="tspan1751">euler</tspan></tspan></text>
-    <path
-       style="fill:#ff0000;fill-opacity:1;stroke:#ff0000;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker3818)"
-       d="m 107.96205,155.19069 6.44349,6.24184"
-       id="path3650"
-       inkscape:transform-center-x="-3.2249021"
-       inkscape:transform-center-y="3.0951636" />
-    <path
-       style="fill:#0000ff;fill-opacity:1;stroke:#0000ff;stroke-width:0.300332;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker3828)"
-       d="m 107.98187,155.1899 3.73963,-7.7129"
-       id="path3652"
-       inkscape:transform-center-x="-1.9086334"
-       inkscape:transform-center-y="-3.8346067" />
-    <path
-       style="fill:#00c800;fill-opacity:1;stroke:#00c800;stroke-width:0.300332;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker3838)"
-       d="m 107.98837,155.18093 -8.489665,-1.18287"
-       id="path3654"
-       inkscape:transform-center-x="4.3159896"
-       inkscape:transform-center-y="-0.66084923" />
+         id="text1749"><tspan
+           sodipodi:role="line"
+           id="tspan1747"
+           x="90.423271"
+           y="151.00127"
+           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#00c800;fill-opacity:1;stroke-width:0.264583"><tspan
+             style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#00c800;fill-opacity:1"
+             id="tspan8200">z</tspan><tspan
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.58611px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';baseline-shift:sub;fill:#00c800;fill-opacity:1"
+             id="tspan1751">euler</tspan></tspan></text>
+      <path
+         style="fill:#ff0000;fill-opacity:1;stroke:#ff0000;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker3818)"
+         d="m 107.96205,155.19069 6.44349,6.24184"
+         id="path3650"
+         inkscape:transform-center-x="-3.2249021"
+         inkscape:transform-center-y="3.0951636" />
+      <path
+         style="fill:#0000ff;fill-opacity:1;stroke:#0000ff;stroke-width:0.300332;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker3828)"
+         d="m 107.98187,155.1899 3.73963,-7.7129"
+         id="path3652"
+         inkscape:transform-center-x="-1.9086334"
+         inkscape:transform-center-y="-3.8346067" />
+      <path
+         style="fill:#00c800;fill-opacity:1;stroke:#00c800;stroke-width:0.300332;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker3838)"
+         d="m 107.98837,155.18093 -8.489665,-1.18287"
+         id="path3654"
+         inkscape:transform-center-x="4.3159896"
+         inkscape:transform-center-y="-0.66084923" />
+    </g>
     <g
        id="g2081"
-       transform="translate(-5.7700875,-1.5091076)"
-       style="opacity:0.4">
+       transform="translate(3.83211,-16.71832)"
+       style="opacity:1">
       <path
          style="fill:#00c800;fill-opacity:1;stroke:#00c800;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker4143)"
          d="m 104.25378,171.91497 -8.846008,-1.49238"
@@ -1218,36 +1418,26 @@
        cy="83.591164"
        r="0.57008368"
        transform="rotate(20)" />
-    <g
-       id="g2382"
-       transform="translate(40.079886,-4.5323514)">
-      <g
-         id="g3608"
-         inkscape:transform-center-x="2.6807695"
-         inkscape:transform-center-y="-3.9737928"
-         transform="rotate(30,152.40344,173.69095)">
-        <path
-           style="fill:#0000ff;fill-opacity:1;stroke:#0000ff;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker2386)"
-           d="m 152.401,173.71225 -1.54371,-8.83719"
-           id="path2376"
-           inkscape:transform-center-x="-0.0023071417"
-           inkscape:transform-center-y="-4.4982029" />
-        <path
-           style="fill:#00c800;fill-opacity:1;stroke:#00c800;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker2396)"
-           d="m 152.40157,173.71206 -8.84056,1.5243"
-           id="path2378"
-           inkscape:transform-center-x="4.494802"
-           inkscape:transform-center-y="-0.064899391" />
-        <ellipse
-           style="fill:#ff0000;fill-opacity:1;stroke:#ff0000;stroke-width:0.3;stroke-linecap:butt;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
-           id="ellipse2380"
-           cx="197.53098"
-           cy="-119.93832"
-           rx="0.44369501"
-           ry="0.43807998"
-           transform="rotate(80)" />
-      </g>
-    </g>
+    <path
+       style="fill:#ff0000;fill-opacity:1;stroke:#ff0000;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker2386)"
+       d="m 192.47115,169.17595 -3.08171,8.42508"
+       id="path2376"
+       inkscape:transform-center-x="0.0023128854"
+       inkscape:transform-center-y="4.4982061" />
+    <path
+       style="fill:#00c800;fill-opacity:1;stroke:#00c800;stroke-width:0.265;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker2396)"
+       d="m 192.47115,169.17594 -8.4183,-3.10019"
+       id="path2378"
+       inkscape:transform-center-x="4.494802"
+       inkscape:transform-center-y="-0.064899391" />
+    <ellipse
+       style="fill:#0000ff;fill-opacity:1;stroke:#0000ff;stroke-width:0.3;stroke-linecap:butt;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="ellipse2380"
+       cx="93.138115"
+       cy="-238.74216"
+       rx="0.44369501"
+       ry="0.43807998"
+       transform="rotate(110)" />
     <circle
        style="fill:#c8c8c8;fill-opacity:1;stroke:none;stroke-width:0.256572;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
        id="circle3806"
@@ -1257,47 +1447,37 @@
        transform="rotate(20)" />
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;line-height:3.00833px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1"
-       x="180.75232"
-       y="158.21883"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;line-height:2.40666px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1"
+       x="194.08325"
+       y="175.32269"
        id="text4801"><tspan
          sodipodi:role="line"
          id="tspan4799"
-         x="180.75232"
-         y="158.21883"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#0000ff;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1"><tspan
-           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic'"
-           id="tspan4795">y</tspan><tspan
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.58611px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';baseline-shift:sub"
-           id="tspan4797">euler</tspan></tspan></text>
+         x="194.08325"
+         y="175.32269"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#0000ff;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1">TD</tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;line-height:3.00833px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#00c800;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1"
-       x="176.49086"
-       y="163.01428"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;line-height:2.40666px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#00c800;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1"
+       x="181.63792"
+       y="165.26147"
        id="text4809"><tspan
          sodipodi:role="line"
          id="tspan4807"
-         x="176.49086"
-         y="163.01428"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81944px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#00c800;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1"><tspan
-           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#00c800;fill-opacity:1"
-           id="tspan4803">z</tspan><tspan
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.58611px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';baseline-shift:sub;fill:#00c800;fill-opacity:1"
-           id="tspan4805">euler</tspan></tspan></text>
+         x="181.63792"
+         y="165.26147"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#00c800;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1">ND</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;line-height:2.40666px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1"
-       x="192.35812"
-       y="173.61562"
+       x="180.8866"
+       y="177.97083"
        id="text4815"><tspan
          sodipodi:role="line"
          id="tspan4813"
-         x="192.35812"
-         y="173.61562"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1">x<tspan
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:65%;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';baseline-shift:sub"
-   id="tspan4811">euler</tspan></tspan></text>
+         x="180.8866"
+         y="177.97083"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1">RD</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.29167px;line-height:1.805px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
@@ -2193,72 +2373,76 @@
        cx="194.90816"
        cy="139.00539"
        r="0.88876349" />
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0555px;line-height:2.40664px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264581;stroke-opacity:1"
-       x="174.80498"
-       y="106.34088"
-       id="text2814"><tspan
-         sodipodi:role="line"
-         id="tspan2812"
+    <g
+       id="g1662"
+       style="opacity:0.3">
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0555px;line-height:2.40664px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264581;stroke-opacity:1"
          x="174.80498"
          y="106.34088"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0555px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264581;stroke-opacity:1">x<tspan
+         id="text2814"><tspan
+           sodipodi:role="line"
+           id="tspan2812"
+           x="174.80498"
+           y="106.34088"
+           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0555px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264581;stroke-opacity:1">x<tspan
    style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.58607px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';baseline-shift:sub;stroke-width:0.264581"
    id="tspan8429">euler</tspan></tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81936px;line-height:3.0083px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264581;stroke-opacity:1"
-       x="196.10925"
-       y="119.66734"
-       id="text2820"><tspan
-         sodipodi:role="line"
-         id="tspan2818"
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81936px;line-height:3.0083px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264581;stroke-opacity:1"
          x="196.10925"
          y="119.66734"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81936px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#0000ff;fill-opacity:1;stroke:none;stroke-width:0.264581;stroke-opacity:1"><tspan
-           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0555px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';stroke-width:0.264581"
-           id="tspan8433">y</tspan><tspan
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.58607px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';baseline-shift:sub;stroke-width:0.264581"
-           id="tspan3116">euler</tspan></tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81936px;line-height:3.0083px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#00c800;fill-opacity:1;stroke:none;stroke-width:0.264581;stroke-opacity:1"
-       x="192.14633"
-       y="107.39922"
-       id="text2826"><tspan
-         sodipodi:role="line"
-         id="tspan2824"
+         id="text2820"><tspan
+           sodipodi:role="line"
+           id="tspan2818"
+           x="196.10925"
+           y="119.66734"
+           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81936px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#0000ff;fill-opacity:1;stroke:none;stroke-width:0.264581;stroke-opacity:1"><tspan
+             style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0555px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';stroke-width:0.264581"
+             id="tspan8433">y</tspan><tspan
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.58607px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';baseline-shift:sub;stroke-width:0.264581"
+             id="tspan3116">euler</tspan></tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81936px;line-height:3.0083px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#00c800;fill-opacity:1;stroke:none;stroke-width:0.264581;stroke-opacity:1"
          x="192.14633"
          y="107.39922"
-         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81936px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#00c800;fill-opacity:1;stroke:none;stroke-width:0.264581;stroke-opacity:1"><tspan
-           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0555px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#00c800;fill-opacity:1;stroke-width:0.264581"
-           id="tspan8431">z</tspan><tspan
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.58607px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';baseline-shift:sub;fill:#00c800;fill-opacity:1;stroke-width:0.264581"
-           id="tspan3114">euler</tspan></tspan></text>
-    <path
-       style="fill:#ff0000;fill-opacity:1;stroke:#ff0000;stroke-width:0.264998;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker5012)"
-       d="m 194.86571,109.43517 -8.97092,-0.0143"
-       id="path5002"
-       inkscape:transform-center-x="-0.0023071417"
-       inkscape:transform-center-y="-4.4982029" />
-    <path
-       style="fill:#0000ff;fill-opacity:1;stroke:#0000ff;stroke-width:0.264998;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker5022)"
-       d="m 194.86562,109.43458 -0.034,8.97086"
-       id="path5004"
-       inkscape:transform-center-x="4.494802"
-       inkscape:transform-center-y="-0.064899391" />
-    <ellipse
-       style="fill:#00c800;fill-opacity:1;stroke:#00c800;stroke-width:0.299997;stroke-linecap:butt;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
-       id="ellipse5006"
-       cx="194.85936"
-       cy="109.41771"
-       rx="0.44369116"
-       ry="0.4380762" />
+         id="text2826"><tspan
+           sodipodi:role="line"
+           id="tspan2824"
+           x="192.14633"
+           y="107.39922"
+           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:8.81936px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#00c800;fill-opacity:1;stroke:none;stroke-width:0.264581;stroke-opacity:1"><tspan
+             style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.0555px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';fill:#00c800;fill-opacity:1;stroke-width:0.264581"
+             id="tspan8431">z</tspan><tspan
+             style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.58607px;font-family:Inconsolata;-inkscape-font-specification:'Inconsolata Italic';baseline-shift:sub;fill:#00c800;fill-opacity:1;stroke-width:0.264581"
+             id="tspan3114">euler</tspan></tspan></text>
+      <path
+         style="fill:#ff0000;fill-opacity:1;stroke:#ff0000;stroke-width:0.264998;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker5012)"
+         d="m 194.86571,109.43517 -8.97092,-0.0143"
+         id="path5002"
+         inkscape:transform-center-x="-0.0023071417"
+         inkscape:transform-center-y="-4.4982029" />
+      <path
+         style="fill:#0000ff;fill-opacity:1;stroke:#0000ff;stroke-width:0.264998;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker5022)"
+         d="m 194.86562,109.43458 -0.034,8.97086"
+         id="path5004"
+         inkscape:transform-center-x="4.494802"
+         inkscape:transform-center-y="-0.064899391" />
+      <ellipse
+         style="fill:#00c800;fill-opacity:1;stroke:#00c800;stroke-width:0.299997;stroke-linecap:butt;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+         id="ellipse5006"
+         cx="194.85936"
+         cy="109.41771"
+         rx="0.44369116"
+         ry="0.4380762" />
+    </g>
     <g
        id="g3537"
        transform="matrix(0.99999134,0,0,0.99999134,-4.837496,6.3200743)"
-       style="opacity:0.4">
+       style="opacity:1">
       <text
          xml:space="preserve"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.29167px;line-height:1.805px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:none;stroke-width:0.264583;stroke-opacity:1"
