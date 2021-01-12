@@ -72,6 +72,8 @@ Added
 
 Changed
 -------
+- Dependency requirement of diffsims from >= 0.3 to >= 0.4
+  (`#282 <https://github.com/pyxem/kikuchipy/pull/282>`_)
 - Name of hemisphere axis in EBSDMasterPattern from "y" to "hemisphere".
   (`#275 <https://github.com/pyxem/kikuchipy/pull/275>`_)
 - Replace Travis CI with GitHub Actions.
@@ -88,8 +90,9 @@ Changed
   `#244 <https://github.com/pyxem/kikuchipy/pull/244>`_,
   `#245 <https://github.com/pyxem/kikuchipy/pull/245>`_,
   `#279 <https://github.com/pyxem/kikuchipy/pull/279>`_,
+  `#245 <https://github.com/pyxem/kikuchipy/pull/245>`_,
+  `#279 <https://github.com/pyxem/kikuchipy/pull/279>`_,
   `#281 <https://github.com/pyxem/kikuchipy/pull/281>`_)
-
 - Move GitHub repository to the pyxem organization. Update relevant URLs.
   (`#198 <https://github.com/pyxem/kikuchipy/pull/198>`_)
 - Allow scikit-image >= 0.16.
