@@ -17,9 +17,10 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 """Rotations to align the EBSD detector with the tilted sample. Notation
-from [Britton2016]_.
+from :cite:`britton2016tutorial`.
 """
 
+from typing import Optional
 from diffpy.structure import Lattice
 import numpy as np
 from orix.quaternion.rotation import Rotation
@@ -28,7 +29,9 @@ from orix.vector import neo_euler, Vector3d
 from kikuchipy.crystallography import get_direct_structure_matrix
 
 
-def detector2sample(sample_tilt: float, detector_tilt: float) -> Rotation:
+def detector2sample(
+    sample_tilt: float, detector_tilt: float, convention: Optional[str] = None,
+) -> Rotation:
     """Rotation U_S to align detector frame D with sample frame S.
 
     Parameters
@@ -37,15 +40,28 @@ def detector2sample(sample_tilt: float, detector_tilt: float) -> Rotation:
         Sample tilt in degrees.
     detector_tilt
         Detector tilt in degrees.
+    convention
+        Which sample reference frame to use, either the one used by EDAX
+        TSL (default), "tsl", or the one used by Bruker, "bruker".
 
     Returns
     -------
     Rotation
     """
-    x_axis = Vector3d.xvector()
+    # Rotation about sample (microscope) X axis
     tilt = -np.deg2rad((sample_tilt - 90) - detector_tilt)
-    ax_angle = neo_euler.AxAngle.from_axes_angles(x_axis, tilt)
-    return Rotation.from_neo_euler(ax_angle).to_matrix()[0]
+    ax_angle = neo_euler.AxAngle.from_axes_angles(Vector3d.xvector(), tilt)
+    r = Rotation.from_neo_euler(ax_angle)
+
+    if convention != "bruker":
+        # Followed by a 90 degree rotation about the sample Z axis,
+        # if the TSL sample reference frame is used
+        ax_angle_bruker2tsl = neo_euler.AxAngle.from_axes_angles(
+            Vector3d.zvector(), np.pi / 2
+        )
+        r = Rotation.from_neo_euler(ax_angle_bruker2tsl) * r
+
+    return r.to_matrix()[0]
 
 
 def detector2direct_lattice(

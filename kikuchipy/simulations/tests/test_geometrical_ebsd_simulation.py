@@ -198,7 +198,6 @@ class TestGeometricalEBSDSimulation:
 
         se = EBSD(np.ones(nav_shape + (60, 60), dtype=np.uint8))
 
-        matplotlib.set_loglevel("error")
         se.add_marker(
             marker=sim.zone_axes_labels_as_markers(),
             permanent=True,
@@ -206,26 +205,6 @@ class TestGeometricalEBSDSimulation:
         )
         assert isinstance(se.metadata.Markers.text, text)
         se.plot()
-        plt.close("all")
-        matplotlib.set_loglevel("warning")
-
-    def test_plot_zone_axes_labels_warns(
-        self, nickel_ebsd_simulation_generator, nickel_rlp
-    ):
-        """Matplotlib warns when plotting text with NaN coordinates."""
-        simgen = nickel_ebsd_simulation_generator
-        sim = simgen.geometrical_simulation(nickel_rlp.symmetrise())
-
-        se = EBSD(np.ones(simgen.navigation_shape + (60, 60), dtype=np.uint8))
-
-        with pytest.warns(UserWarning, match="Matplotlib will print"):
-            se.add_marker(
-                marker=sim.zone_axes_labels_as_markers(),
-                permanent=False,
-                plot_marker=True,
-            )
-            se.plot()
-            se.axes_manager[0].index = 1
         plt.close("all")
 
     @pytest.mark.parametrize("nav_shape", [(5, 5), (1, 25), (25, 1), (25,)])
@@ -254,7 +233,6 @@ class TestGeometricalEBSDSimulation:
 
         se = EBSD(np.ones(simgen.navigation_shape + (60, 60), dtype=np.uint8))
 
-        matplotlib.set_loglevel("error")
         se.add_marker(
             marker=sim.as_markers(
                 bands=True, zone_axes=True, zone_axes_labels=True, pc=True,
@@ -264,7 +242,6 @@ class TestGeometricalEBSDSimulation:
         )
         se.plot()
         plt.close("all")
-        matplotlib.set_loglevel("warning")
 
     def test_zone_axes_within_gnomonic_bounds(
         self, nickel_ebsd_simulation_generator, nickel_rlp

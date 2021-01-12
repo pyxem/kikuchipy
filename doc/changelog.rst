@@ -88,8 +88,11 @@ Changed
   (`#236 <https://github.com/pyxem/kikuchipy/pull/236>`_,
   `#237 <https://github.com/pyxem/kikuchipy/pull/237>`_,
   `#244 <https://github.com/pyxem/kikuchipy/pull/244>`_,
-  `#245 <https://github.com/pyxem/kikuchipy/pull/245>`_
-  `#279 <https://github.com/pyxem/kikuchipy/pull/279>`_)
+  `#245 <https://github.com/pyxem/kikuchipy/pull/245>`_,
+  `#279 <https://github.com/pyxem/kikuchipy/pull/279>`_,
+  `#245 <https://github.com/pyxem/kikuchipy/pull/245>`_,
+  `#279 <https://github.com/pyxem/kikuchipy/pull/279>`_,
+  `#281 <https://github.com/pyxem/kikuchipy/pull/281>`_)
 - Move GitHub repository to the pyxem organization. Update relevant URLs.
   (`#198 <https://github.com/pyxem/kikuchipy/pull/198>`_)
 - Allow scikit-image >= 0.16.

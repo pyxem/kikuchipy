@@ -407,8 +407,8 @@ class TestZoneAxis:
     @pytest.mark.parametrize(
         "hkl_slices, desired_nav_shape, desired_nav_dims, desired_data_shape",
         [
-            ((slice(0, 2), slice(0, 2), slice(None)), (2, 2), 2, (2, 2, 28)),
-            ((slice(None), slice(None), slice(None)), (5, 5), 2, (5, 5, 37)),
+            ((slice(0, 2), slice(0, 2), slice(None)), (2, 2), 2, (2, 2, 27)),
+            ((slice(None), slice(None), slice(None)), (5, 5), 2, (5, 5, 35)),
             ((0, slice(0, 1), slice(None)), (1,), 1, (1, 25)),
             ((slice(0, 1), slice(1, 2), slice(None)), (1, 1), 2, (1, 1, 25)),
             ((0, 0, slice(None)), (), 0, (25,)),
