@@ -7,8 +7,8 @@ Sample-detector geometry
 
 :numref:`fig-detector-sample-geometry` and :numref:`fig-detector-coordinates`
 show EBSD reference frames used in kikuchipy, all of which are right handed.
-They are based on definitions presented in [Britton2016]_ and the accompanying
-supplementary material.
+They are based on definitions presented in :cite:`britton2016tutorial` and the
+accompanying supplementary material.
 
 .. _fig-detector-sample-geometry:
 .. figure:: _static/image/reference_frames/detector_sample_geometry.png

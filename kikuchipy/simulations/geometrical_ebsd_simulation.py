@@ -16,11 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 from re import sub
 from typing import List, Optional
-import warnings
 
-import matplotlib
 import numpy as np
 from orix.quaternion.rotation import Rotation
 
@@ -36,6 +35,15 @@ from kikuchipy.draw.markers import (
     get_text_list,
 )
 from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
+
+
+class DisableMatplotlibWarningFilter(logging.Filter):
+    def filter(self):
+        message_to_disable = "posx and posy should be finite values"
+        return not self.msg == message_to_disable
+
+
+logging.getLogger("matplotlib.text").addFilter(DisableMatplotlibWarningFilter)
 
 
 class GeometricalEBSDSimulation:
@@ -83,7 +91,7 @@ class GeometricalEBSDSimulation:
         Returns
         -------
         band_coords_detector : numpy.ndarray
-            Band coordinates on the detector.
+            Band coordinates (y0, x0, y1, x1) on the detector.
         """
         # Get start and end points for the plane traces in gnomonic coordinates
         # and set up output array in uncalibrated detector coordinates
@@ -109,7 +117,7 @@ class GeometricalEBSDSimulation:
     @property
     def zone_axes_detector_coordinates(self) -> np.ndarray:
         """Coordinates of zone axes in uncalibrated detector
-        coordinates.
+        coordinates (a scale of 1 and offset of 0).
 
         If `GeometricalEBSDSimulation.exclude_outside_detector` is True,
         the coordinates of the zone axes outside the detector are set to
@@ -118,7 +126,7 @@ class GeometricalEBSDSimulation:
         Returns
         -------
         za_coords : numpy.ndarray
-            Zone axis coordinates on the detector.
+            Zone axis coordinates (x, y) on the detector.
         """
         xyg = self.zone_axes._xy_within_gnomonic_radius
         xg = xyg[..., 0]
@@ -147,12 +155,13 @@ class GeometricalEBSDSimulation:
     @property
     def zone_axes_label_detector_coordinates(self) -> np.ndarray:
         """Coordinates of zone axes labels in uncalibrated detector
-        coordinates.
+        coordinates (a scale of 1 and offset of 0).
 
         Returns
         -------
         za_coords : numpy.ndarray
-            Zone axes labels placed just above the zone axes.
+            Zone axes labels (x, y) placed just above the zone axes on
+            the detector.
         """
         za_coords = self.zone_axes_detector_coordinates
         za_coords[..., 1] -= 0.02 * self.detector.nrows
@@ -261,19 +270,6 @@ class GeometricalEBSDSimulation:
         list
             List of text markers.
         """
-        # TODO: Remove warning after HyperSpy merges this PR
-        #  https://github.com/hyperspy/hyperspy/pull/2558 and publishes
-        #  a minor release with that update
-        if matplotlib._log.level < 40:
-            warnings.warn(
-                message=(
-                    "Matplotlib will print log warnings when EBSD.plot() is "
-                    "called due to zone axes NaN values, unless it's log level "
-                    "is set to 'error' via `matplotlib.set_loglevel('error')`. "
-                    "This will hopefully be unnecessary in the future."
-                ),
-                category=UserWarning,
-            )
         return get_text_list(
             texts=sub("[][ ]", "", str(self.zone_axes._hkldata)).split("\n"),
             coordinates=self.zone_axes_label_detector_coordinates,

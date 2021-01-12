@@ -22,6 +22,7 @@ kikuchipy
     virtual_backscatter_electron_imaging.rst
     visualizing_patterns.ipynb
     pattern_matching.ipynb
+    geometrical_ebsd_simulations.ipynb
     multivariate_analysis.rst
     metadata.rst
     reference.rst

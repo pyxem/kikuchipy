@@ -34,16 +34,8 @@ class EBSDDetector:
     planes, onto the detector.
 
     Calculation of gnomonic coordinates is based on the work by Aimo
-    Winkelmann in the supplementary material to [Britton2016]_.
-
-    References
-    ----------
-    .. [Britton2016]
-        T. B. Britton, J. Jiang, Y. Guo, A. Vilalta-Clemente, D. Wallis,
-        L. N. Hansen, A. Winkelmann, A. J. Wilkinson, "Tutorial: Crystal
-        orientations and EBSD - Or which way is up?," *Materials
-        Characterization* **117** (2016), doi:
-        https://doi.org/10.1016/j.matchar.2016.04.008.
+    Winkelmann in the supplementary material to
+    :cite:`britton2016tutorial`.
     """
 
     def __init__(
@@ -483,8 +475,8 @@ class EBSDDetector:
         """Plot the detector screen.
 
         The plotting of gnomonic circles and general style is adapted
-        from the supplementary material to [Britton2016]_ by Aimo
-        Winkelmann.
+        from the supplementary material to :cite:`britton2016tutorial`
+        by Aimo Winkelmann.
 
         Parameters
         ----------

@@ -17,7 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 """Rotations to align the EBSD detector with the tilted sample. Notation
-from [Britton2016]_.
+from :cite:`britton2016tutorial`.
 """
 
 from diffpy.structure import Lattice
