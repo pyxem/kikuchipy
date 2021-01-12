@@ -17,6 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
+from orix.quaternion import Rotation
 import pytest
 
 from kikuchipy.projections.ebsd_projections import detector2sample
@@ -36,3 +37,14 @@ class TestEBSDProjections:
             sample_tilt=70, detector_tilt=10, convention=convention
         )
         assert np.allclose(r_matrix, desired_rotation, atol=0.1)
+
+    def test_rotate_tsl2bruker(self, r_tsl2bruker):
+        s_tilt = 70
+        d_tilt = 10
+        r_tsl_matrix = detector2sample(sample_tilt=s_tilt, detector_tilt=d_tilt)
+        r_tsl = Rotation.from_matrix(r_tsl_matrix)
+        r_bruker_matrix = detector2sample(
+            sample_tilt=s_tilt, detector_tilt=d_tilt, convention="bruker"
+        )
+        r_bruker = Rotation.from_matrix(r_bruker_matrix)
+        assert np.allclose((~r_tsl2bruker * r_tsl).data, r_bruker.data)

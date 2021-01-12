@@ -30,14 +30,14 @@ from kikuchipy.generators.ebsd_simulation_generator import (
 class TestEBSDSimulationGenerator:
     @pytest.mark.parametrize("nav_shape", [(5, 5), (25,), (1, 25)])
     def test_align_navigation_shape(
-        self, nickel_phase, detector, nickel_rotations, r_tsl2bruker, nav_shape,
+        self, nickel_phase, detector, nickel_rotations, nav_shape,
     ):
         """Initialization of a detector with orientations of a certain
         shape also reshapes the varying PCs, i.e. the detector
         navigation shape, if the detector has more than one PC.
         """
         assert detector.navigation_shape == (1,)
-        o_nickel = r_tsl2bruker * nickel_rotations.reshape(*nav_shape)
+        o_nickel = nickel_rotations.reshape(*nav_shape)
         assert o_nickel.shape == nav_shape
         simgen = EBSDSimulationGenerator(
             detector=detector, phase=nickel_phase, rotations=o_nickel,
