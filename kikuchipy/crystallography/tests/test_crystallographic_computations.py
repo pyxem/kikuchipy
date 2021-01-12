@@ -62,7 +62,7 @@ class TestCrystallographicComputations:
                     phase=Phase(space_group=225), hkl=[1, 1, 1]
                 )
                 .symmetrise()
-                ._hkldata,
+                .hkl.data,
                 [1, 1, 1],
                 [
                     [
@@ -84,7 +84,7 @@ class TestCrystallographicComputations:
                     phase=Phase(space_group=225), hkl=[[1, 1, 1], [2, 0, 0]]
                 )
                 .symmetrise()
-                ._hkldata,
+                .hkl.data,
                 [[1, 1, 1], [2, 0, 0]],
                 [
                     [
@@ -114,7 +114,7 @@ class TestCrystallographicComputations:
                     phase=Phase(space_group=225), hkl=[[1, 1, 1], [2, 2, 2]]
                 )
                 .symmetrise()
-                ._hkldata,
+                .hkl.data,
                 [1, 1, 1],
                 [
                     [

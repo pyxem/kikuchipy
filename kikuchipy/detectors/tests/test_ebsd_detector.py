@@ -341,33 +341,15 @@ class TestEBSDDetector:
             _ = EBSDDetector(pc=pc1, convention="nordif")
 
     @pytest.mark.parametrize(
-        "coordinates, show_pc, pattern, zoom, desired_labels",
+        "coordinates, show_pc, pattern, zoom, desired_label",
         [
-            (
-                None,
-                False,
-                None,
-                1,
-                ["$x_{\mathrm{detector}}$", "$y_{\mathrm{detector}}$"],
-            ),
-            (
-                "detector",
-                True,
-                np.ones((60, 60)),
-                1,
-                ["$x_{\mathrm{detector}}$", "$y_{\mathrm{detector}}$"],
-            ),
-            (
-                "gnomonic",
-                True,
-                np.ones((60, 60)),
-                2,
-                ["$x_{\mathrm{gnomonic}}$", "$y_{\mathrm{gnomonic}}$"],
-            ),
+            (None, False, None, 1, "detector"),
+            ("detector", True, np.ones((60, 60)), 1, "detector"),
+            ("gnomonic", True, np.ones((60, 60)), 2, "gnomonic"),
         ],
     )
     def test_plot_detector(
-        self, detector, coordinates, show_pc, pattern, zoom, desired_labels
+        self, detector, coordinates, show_pc, pattern, zoom, desired_label
     ):
         """Plotting detector works, *not* checking whether Matplotlib
         displays the pattern correctly.
@@ -379,8 +361,8 @@ class TestEBSDDetector:
             zoom=zoom,
             return_fig_ax=True,
         )
-        assert ax.get_xlabel() == desired_labels[0]
-        assert ax.get_ylabel() == desired_labels[1]
+        assert ax.get_xlabel() == f"x {desired_label}"
+        assert ax.get_ylabel() == f"y {desired_label}"
         if isinstance(pattern, np.ndarray):
             assert np.allclose(ax.get_images()[0].get_array(), pattern)
         plt.close("all")

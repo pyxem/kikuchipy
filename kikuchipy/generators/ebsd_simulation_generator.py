@@ -196,7 +196,7 @@ class EBSDSimulationGenerator:
 
         # Unit cell parameters (called more than once)
         phase = rlp.phase
-        hkl = rlp._hkldata
+        hkl = rlp.hkl.data
 
         # Get number of navigation dimensions and navigation axes
         # indices

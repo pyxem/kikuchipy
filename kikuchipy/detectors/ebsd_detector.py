@@ -349,7 +349,7 @@ class EBSDDetector:
         return y_scale.reshape(self.navigation_shape)
 
     @property
-    def r_max(self):
+    def r_max(self) -> np.ndarray:
         """Maximum distance from PC to detector edge in gnomonic
         coordinates.
         """
@@ -562,19 +562,19 @@ class EBSDDetector:
             pcx *= sx
             bounds = self.bounds
             bounds[2:] = bounds[2:][::-1]
-            x_label = r"$x_{\mathrm{detector}}$"
-            y_label = r"$y_{\mathrm{detector}}$"
+            x_label = "x detector"
+            y_label = "y detector"
         else:
             pcy, pcx = (0, 0)
             bounds = self._average_gnomonic_bounds
-            x_label = r"$x_{\mathrm{gnomonic}}$"
-            y_label = r"$y_{\mathrm{gnomonic}}$"
+            x_label = "x gnomonic"
+            y_label = "y gnomonic"
 
         fig, ax = plt.subplots()
         ax.axis(zoom * bounds)
         ax.set_aspect(self.aspect_ratio)
-        ax.set_xlabel(x_label, fontsize=18)
-        ax.set_ylabel(y_label, fontsize=18)
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
 
         # Plot a pattern on the detector
         if isinstance(pattern, np.ndarray):
