@@ -23,6 +23,8 @@ Contributors
 
 Added
 -----
+- A nice gallery to the README with links to each user guide page.
+  (`#282 <https://github.com/pyxem/kikuchipy/pull/282>`_)
 - Support for writing/reading an EBSD signal with 1 or 0 navigation axes to/from
   a kikuchipy h5ebsd file.
   (`#276 <https://github.com/pyxem/kikuchipy/pull/276>`_)

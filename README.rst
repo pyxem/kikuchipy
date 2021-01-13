@@ -36,17 +36,36 @@
 kikuchipy is an open-source Python library for processing and analysis of
 electron backscatter diffraction (EBSD) patterns.
 
-The library builds on the tools for multi-dimensional data analysis provided
-by the HyperSpy library. An effort is made to keep memory usage in check and
-enable scalability by using the Dask library for pattern processing.
+The library builds on the tools for multi-dimensional data analysis provided by
+the HyperSpy library. It is in an alpha stage, so there will be breaking changes
+with each release.
 
-The project is in an **alpha** stage, so there will likely be breaking changes
-with each release...
+kikuchipy is released under the GPLv3+ license. If you find this project useful,
+pleace cite the DOI above.
 
-kikuchipy is released under the GPLv3+ license.
+Do you have a question or want to **contribute**? Great! Our
+`contributing guide <https://kikuchipy.org/en/latest/contributing.html>`_
+explains how to best do that.
 
-- User guide: https://kikuchipy.org, or launch Binder, visit ``doc/`` and run
-  the Jupyter Notebooks
-- Contributing: https://kikuchipy.org/en/latest/contributing.html
-- Code of Conduct: https://kikuchipy.org/en/latest/code_of_conduct.html
-- Cite: If you find this project useful, please cite the DOI above.
+.. nbgallery::
+    :caption: User guide
+
+    load_save_data.ipynb
+    reference_frames.ipynb
+    change_navigation_signal_shapes.ipynb
+    pattern_processing.ipynb
+    visualizing_patterns.ipynb
+    feature_maps.ipynb
+    virtual_backscatter_electron_imaging.ipynb
+    pattern_matching.ipynb
+    geometrical_ebsd_simulations.ipynb
+    multivariate_analysis.ipynb
+    metadata_structure.ipynb
+
+This user guide covers the processing and analysis of EBSD patterns available in
+kikuchipy. The guide consists of Jupyter Notebooks with many links to detailed
+explanations of the input parameters and output of functions and class methods
+(the API reference). The notebooks can be inspected statically on
+https://kikuchipy.org or via `nbviewer`, downloaded and run locally, or run
+interactively in the browser after clicking the Binder link above and navigating
+to the ``doc/`` directory. We hope you find them useful!
