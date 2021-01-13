@@ -10,28 +10,27 @@ kikuchipy
 
     installation.rst
 
-.. toctree::
-    :hidden:
+.. nbgallery::
     :caption: User guide
 
     load_save_data.ipynb
-    reference_frames.rst
-    change_scan_pattern_size.rst
+    reference_frames.ipynb
+    change_navigation_signal_shapes.ipynb
     pattern_processing.ipynb
+    visualizing_patterns.ipynb
     feature_maps.ipynb
     virtual_backscatter_electron_imaging.ipynb
-    visualizing_patterns.ipynb
     pattern_matching.ipynb
     geometrical_ebsd_simulations.ipynb
-    multivariate_analysis.rst
-    metadata.rst
-    reference.rst
-    bibliography.rst
+    multivariate_analysis.ipynb
+    metadata_structure.ipynb
 
 .. toctree::
     :hidden:
     :caption: Help & reference
 
+    reference.rst
+    bibliography.rst
     contributing.rst
     open_datasets.rst
     changelog.rst

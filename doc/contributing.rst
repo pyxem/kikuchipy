@@ -9,10 +9,21 @@ and more. These guidelines provide resources on how best to contribute.
 For new users, checking out the `GitHub guides <https://guides.github.com>`_ are
 recommended.
 
-.. Many of these steps follow napari's contributor guide:
-   https://github.com/napari/napari/blob/master/docs/CONTRIBUTING.md
+Questions, comments, and feedback
+=================================
 
-.. _setting-up-a-development-installation:
+Have any questions, comments, suggestions for improvements, or any other
+inquiries regarding the project? Feel free to
+`ask a question <https://github.com/pyxem/kikuchipy/discussions>`_,
+`open an issue <https://github.com/pyxem/kikuchipy/issues>`_ or
+`make a pull request <https://github.com/pyxem/kikuchipy/pulls>`_ in our GitHub
+repository.
+
+Code of Conduct
+===============
+
+kikuchipy has a :doc:`Code of Conduct <code_of_conduct>` that should be honoured
+by everyone who participates in the kikuchipy community.
 
 Setting up a development installation
 =====================================
@@ -155,6 +166,10 @@ files by `nbsphinx <https://nbsphinx.readthedocs.io/en/latest/>`_:
   to add the parentheses ``()``.
 - Reference external APIs via standard MD like
   ``[Signal2D](http://hyperspy.org/hyperspy-doc/current/api/hyperspy._signals.signal2d.html)``.
+- The Sphinx gallery thumbnail used for a notebook is set by adding the
+  ``nbsphinx-thumbnail`` tag to a code cell with an image output. The notebook
+  must be added to the gallery in the README.rst to be included in the
+  documentation pages.
 
 Running and writing tests
 =========================
@@ -190,19 +205,6 @@ the coverage in more detail.
    package distribution can be downloaded from the `kikuchipy-data GitHub
    repository <https://github.com/pyxem/kikuchipy-data>`_, thus downloading some
    datasets of ~15 MB to your local cache.
-
-Code of Conduct
-===============
-
-kikuchipy has a :doc:`Code of Conduct <code_of_conduct>` that should be honoured
-by everyone who participates in the kikuchipy community.
-
-Questions, comments, and feedback
-=================================
-
-Have any questions, comments, suggestions for improvements, or any other
-inquiries regarding the project? Feel free to open an issue in our `GitHub Issue
-Tracker <https://github.com/pyxem/kikuchipy/issues>`_.
 
 Continuous integration (CI)
 ===========================
