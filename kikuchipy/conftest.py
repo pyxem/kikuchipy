@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -178,15 +178,13 @@ def r_tsl2bruker():
 
 @pytest.fixture
 def nickel_ebsd_simulation_generator(
-    nickel_phase, detector, nickel_rotations, r_tsl2bruker,
+    nickel_phase, detector, nickel_rotations,
 ):
     """Generator for EBSD simulations of Kikuchi bands for the Nickel
     data set referenced above.
     """
     return EBSDSimulationGenerator(
-        detector=detector,
-        phase=nickel_phase,
-        rotations=nickel_rotations * r_tsl2bruker,
+        detector=detector, phase=nickel_phase, rotations=nickel_rotations,
     )
 
 
@@ -195,7 +193,7 @@ def nickel_kikuchi_band(nickel_rlp, nickel_rotations, pc1):
     rlp = nickel_rlp.symmetrise()
 
     phase = rlp.phase
-    hkl = rlp._hkldata
+    hkl = rlp.hkl.data
 
     nav_shape = (5, 5)
 
@@ -245,7 +243,7 @@ def nickel_kikuchi_band(nickel_rlp, nickel_rotations, pc1):
 @pytest.fixture
 def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
     bands = nickel_kikuchi_band
-    hkl = bands._hkldata
+    hkl = bands.hkl.data
     phase = bands.phase
 
     nav_shape = (5, 5)

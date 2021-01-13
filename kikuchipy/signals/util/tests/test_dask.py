@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -21,40 +21,80 @@ import numpy as np
 import pytest
 
 from kikuchipy.signals.util._dask import (
-    _get_chunks,
-    _get_dask_array,
+    get_dask_array,
+    get_chunking,
     _rechunk_learning_results,
 )
 from kikuchipy.signals.ebsd import EBSD, LazyEBSD
 
 
 class TestDask:
-    @pytest.mark.parametrize("mbytes_chunk", (0.5, 50, 100))
-    def test_get_chunks(self, mbytes_chunk):
-        data_shape = (200, 298, 60, 60)
-        data_type = np.dtype("uint8")
-        chunks = _get_chunks(
-            data_shape=data_shape, dtype=data_type, mbytes_chunk=mbytes_chunk
-        )
+    def test_get_chunking_no_parameters(self):
+        s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint16))
+        chunks = get_chunking(s)
+        assert len(chunks) == 4
 
-        # Determine chunking of longest axis
-        if mbytes_chunk == 0.5:
-            nx, ny = (12, 12)
-        elif mbytes_chunk == 50:
-            nx, ny = (66, 200)
-        else:  # mbytes_chunk == 100
-            nx, ny = (136, 200)
-        assert chunks == [ny, nx, 60, 60]
+    def test_chunk_shape(self):
+        s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint16))
+        chunks = get_chunking(s, chunk_shape=16)
+        assert chunks == ((16, 16), (16, 16), (256,), (256,))
+
+    def test_chunk_bytes(self):
+        s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint16))
+        chunks = get_chunking(s, chunk_bytes=15e6)
+        assert chunks == ((8, 8, 8, 8), (8, 8, 8, 8), (256,), (256,))
+
+    def test_get_chunking_dtype(self):
+        s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint8))
+        chunks0 = get_chunking(s, dtype=np.float32)
+        chunks1 = get_chunking(s)
+        assert chunks0 == ((8, 8, 8, 8), (8, 8, 8, 8), (256,), (256,))
+        assert chunks1 == ((16, 16), (16, 16), (256,), (256,))
+
+    @pytest.mark.parametrize(
+        "shape, nav_dim, sig_dim, dtype, desired_chunks",
+        [
+            (
+                (32, 32, 256, 256),
+                2,
+                2,
+                np.uint16,
+                ((8, 8, 8, 8), (8, 8, 8, 8), (256,), (256,)),
+            ),
+            (
+                (32, 32, 256, 256),
+                2,
+                2,
+                np.uint8,
+                ((16, 16), (16, 16), (256,), (256,)),
+            ),
+        ],
+    )
+    def test_get_chunking_no_signal(
+        self, shape, nav_dim, sig_dim, dtype, desired_chunks
+    ):
+        chunks = get_chunking(
+            data_shape=shape, nav_dim=nav_dim, sig_dim=sig_dim, dtype=dtype,
+        )
+        assert chunks == desired_chunks
 
     def test_get_dask_array(self):
         s = EBSD((255 * np.random.rand(10, 10, 120, 120)).astype(np.uint8))
-        dask_array = _get_dask_array(s)
+        dask_array = get_dask_array(s, chunk_shape=8)
         assert dask_array.chunksize == (8, 8, 120, 120)
 
         # Make data lazy
         s.data = dask_array.rechunk((5, 5, 120, 120))
-        dask_array = _get_dask_array(s)
+        dask_array = get_dask_array(s)
         assert dask_array.chunksize == (5, 5, 120, 120)
+
+    def test_chunk_bytes_indirectly(self):
+        s = EBSD(np.zeros((10, 10, 8, 8)))
+        array_out0 = get_dask_array(s)
+        array_out1 = get_dask_array(s, chunk_bytes="25KiB")
+        array_out2 = get_dask_array(s, chunk_bytes=25e3)
+        assert array_out0.chunksize != array_out1.chunksize
+        assert array_out1.chunksize == array_out2.chunksize
 
     def test_rechunk_learning_results(self):
         data = da.from_array(np.random.rand(10, 100, 100, 5).astype(np.float32))

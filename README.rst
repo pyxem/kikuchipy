@@ -24,8 +24,8 @@
     :alt: PyPI version
 
 .. Downloads per month
-.. image:: https://img.shields.io/pypi/dm/kikuchipy.svg
-    :target: https://pypistats.org/packages/kikuchipy
+.. image:: https://pepy.tech/badge/kikuchipy/month
+    :target: https://pepy.tech/project/kikuchipy
     :alt: Downloads per month
 
 .. Zenodo DOI

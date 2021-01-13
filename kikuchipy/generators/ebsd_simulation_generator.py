@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -196,7 +196,7 @@ class EBSDSimulationGenerator:
 
         # Unit cell parameters (called more than once)
         phase = rlp.phase
-        hkl = rlp._hkldata
+        hkl = rlp.hkl.data
 
         # Get number of navigation dimensions and navigation axes
         # indices

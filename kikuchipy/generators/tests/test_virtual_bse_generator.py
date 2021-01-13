@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -201,7 +201,8 @@ class TestGetRGBImage:
         assert np.allclose(vbse_rgb_img.data.mean(), desired_mean_intensity)
 
     @pytest.mark.parametrize(
-        "alpha_add, desired_mean_intensity", [(0, 88.481481), (10, 107.851851),]
+        "alpha_add, desired_mean_intensity",
+        [(0, 88.481481), (10, 107.851851),],
     )
     def test_get_rgb_alpha(self, alpha_add, desired_mean_intensity):
         s = load(KIKUCHIPY_FILE)

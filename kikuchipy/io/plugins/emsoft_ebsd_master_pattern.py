@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -52,7 +52,7 @@ footprint = ["emdata/ebsdmaster"]
 def file_reader(
     filename: str,
     energy: Optional[range] = None,
-    projection: str = "spherical",
+    projection: str = "stereographic",
     hemisphere: str = "north",
     lazy: bool = False,
     **kwargs,
@@ -68,7 +68,7 @@ def file_reader(
         Desired beam energy or energy range. If None is passed
         (default), all available energies are read.
     projection
-        Projection(s) to read. Options are "spherical" (default) or
+        Projection(s) to read. Options are "stereographic" (default) or
         "lambert".
     hemisphere
         Projection hemisphere(s) to read. Options are "north" (default),
@@ -181,8 +181,8 @@ def file_reader(
     scales = np.array([1, energy_scale, 1, 1])
 
     ny, nx, sy, sx = data_shape
-    names = ["y", "energy", "height", "width"]
-    units = ["hemisphere", "keV", "px", "px"]
+    names = ["hemisphere", "energy", "height", "width"]
+    units = ["", "keV", "px", "px"]
     offsets = [0, min_energy, -sy // 2, -sx // 2]
     dim_idx = []
     if ny != 1:
@@ -242,8 +242,8 @@ def _get_data_shape_slices(
     npx: int, energies: np.ndarray, energy: Optional[tuple] = None,
 ) -> Tuple[Tuple, Tuple[slice, ...]]:
     """Determine the data shape from half the master pattern side
-    length, number of asymmetric positions if the Lambert projection is
-    to be read, and an energy or energy range.
+    length, number of asymmetric positions if the square Lambert
+    projection is to be read, and an energy or energy range.
 
     Parameters
     ----------
@@ -290,7 +290,7 @@ def _get_datasets(
     data_group
         HDF5 data group with data sets.
     projection
-        "spherical" or "lambert" projection.
+        "stereographic" or "lambert" projection.
     hemisphere
         "north" hemisphere, "south" hemisphere, or "both".
 
@@ -302,7 +302,7 @@ def _get_datasets(
     hemisphere = hemisphere.lower()
     projection = projection.lower()
 
-    projections = {"spherical": "masterSP", "lambert": "mLP"}
+    projections = {"stereographic": "masterSP", "lambert": "mLP"}
     hemispheres = {"north": "NH", "south": "SH"}
 
     if projection not in projections.keys():

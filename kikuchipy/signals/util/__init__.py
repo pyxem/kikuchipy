@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -16,11 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Signal utilities, mostly for handling signal metadata and attributes."""
+"""Signal utilities for handling signal metadata and attributes and
+for controlling chunking of :class:`dask.array.Array`.
+"""
 
+from kikuchipy.signals.util._dask import get_chunking, get_dask_array
 from kikuchipy.signals.util._metadata import ebsd_metadata, metadata_nodes
 
 __all__ = [
     "ebsd_metadata",
+    "get_chunking",
+    "get_dask_array",
     "metadata_nodes",
 ]

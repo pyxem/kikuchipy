@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -50,12 +50,12 @@ METADATA = {
 
 
 AXES_MANAGER = {
-    "y": {
-        "name": "y",
+    "hemisphere": {
+        "name": "hemisphere",
         "scale": 1,
         "offset": 0,
         "size": 2,
-        "units": "hemisphere",
+        "units": "",
         "navigate": True,
     },
     "energy": {
@@ -87,7 +87,7 @@ AXES_MANAGER = {
 
 def setup_axes_manager(axes=None):
     if axes is None:
-        axes = ["y", "energy", "height", "width"]
+        axes = ["hemisphere", "energy", "height", "width"]
     d = {}
     for i, a in enumerate(axes):
         d["axis-" + str(i)] = AXES_MANAGER[a]
@@ -110,7 +110,7 @@ class TestEMsoftEBSDMasterPatternReader:
         )
 
     def test_projection_lambert(self):
-        s = load(EMSOFT_FILE, projection="lambert", hemisphere="both",)
+        s = load(EMSOFT_FILE, projection="lambert", hemisphere="both")
 
         axes_manager = setup_axes_manager()
 
@@ -189,7 +189,7 @@ class TestEMsoftEBSDMasterPatternReader:
             (keep_energies.min(), keep_energies.max()), expected_min_max_energy
         )
 
-    @pytest.mark.parametrize("projection", ["spherical", "lambert"])
+    @pytest.mark.parametrize("projection", ["stereographic", "lambert"])
     def test_load_lazy(self, projection):
         """The Lambert projection's southern hemisphere is stored
         chunked.
@@ -207,8 +207,8 @@ class TestEMsoftEBSDMasterPatternReader:
     @pytest.mark.parametrize(
         "projection, hemisphere, dataset_names",
         [
-            ("spherical", "North", ["masterSPNH"]),
-            ("Spherical", "both", ["masterSPNH", "masterSPSH"]),
+            ("stereographic", "North", ["masterSPNH"]),
+            ("stereographic", "both", ["masterSPNH", "masterSPSH"]),
             ("lambert", "south", ["mLPSH"]),
             ("Lambert", "BOTH", ["mLPNH", "mLPSH"]),
         ],
@@ -225,7 +225,7 @@ class TestEMsoftEBSDMasterPatternReader:
     @pytest.mark.parametrize(
         "projection, hemisphere, error_msg",
         [
-            ("sphericall", "north", "'projection' value sphericall "),
+            ("stereographicl", "north", "'projection' value stereographicl "),
             ("lambert", "east", "'hemisphere' value east "),
         ],
     )

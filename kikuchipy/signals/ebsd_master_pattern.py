@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -17,9 +17,11 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 
+import sys
 from typing import Optional, Union
 
 import dask.array as da
+from dask.diagnostics import ProgressBar
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy._signals.signal2d import Signal2D
 import numpy as np
@@ -32,6 +34,7 @@ from kikuchipy.pattern import rescale_intensity
 from kikuchipy.projections.lambert_projection import LambertProjection
 from kikuchipy.signals import LazyEBSD, EBSD
 from kikuchipy.signals._common_image import CommonImage
+from kikuchipy.signals.util._dask import get_chunking
 
 
 class EBSDMasterPattern(CommonImage, Signal2D):
@@ -46,7 +49,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
     Attributes
     ----------
     projection : str
-        Which projection the pattern is in: "spherical" or "lambert".
+        Which projection the pattern is in, "stereographic" or
+        "lambert".
     hemisphere : str
         Which hemisphere the data contains: "north", "south" or "both".
     phase : orix.crystal_map.phase_list.Phase
@@ -76,42 +80,47 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         self,
         rotations: Rotation,
         detector: EBSDDetector,
-        energy: int,
-        n_chunk: Optional[int] = None,
+        energy: Union[int, float],
         dtype_out: type = np.float32,
         compute: bool = False,
+        **kwargs,
     ) -> Union[EBSD, LazyEBSD]:
         """Return a dictionary of EBSD patterns projected onto a
-        detector from a master pattern in the Lambert projection, for a
-        set of crystal rotations relative to the EDAX TSL sample
-        reference frame (RD, TD, ND) and a fixed detector-sample
-        geometry.
+        detector from a master pattern in the square Lambert
+        projection :cite:`callahan2013dynamical`, for a set of crystal
+        rotations relative to the EDAX TSL sample reference frame (RD,
+        TD, ND) and a fixed detector-sample geometry.
 
         Parameters
         ----------
-        rotations : Rotation
-            Set of crystal rotations to get patterns from.
-        detector : EBSDDetector
+        rotations
+            Set of crystal rotations to get patterns from. The shape of
+            this object, a maximum of two dimensions, determines the
+            navigation shape of the output signal.
+        detector
             EBSD detector describing the detector dimensions and the
             detector-sample geometry with a single, fixed
             projection/pattern center.
-        energy : int
-            Master pattern energy, in kV.
-        n_chunk : int, optional
-            Number of dask chunks the pattern projection computation
-            should be split into. By default, this is set so each chunk
-            is around a maximum of 100 MB.
-        dtype_out : type, optional
+        energy
+            Acceleration voltage, in kV, used to simulate the desired
+            master pattern to create a dictionary from.
+        dtype_out
             Data type of the returned patterns, by default np.float32.
-        compute : bool, optional
+        compute
             Whether to return a lazy result, by default False. For more
             information see :func:`~dask.array.Array.compute`.
+        kwargs
+            Keyword arguments passed to
+            :func:`~kikuchipy.signals.util.get_chunking` to control the
+            number of chunks the dictionary creation and the output data
+            array is split into. Only `chunk_shape`, `chunk_bytes` and
+            `dtype_out` (to `dtype`) are passed on.
 
         Returns
         -------
         EBSD or LazyEBSD
-            EBSD patterns with the shape
-            `(rotations.size,) + detector.shape`.
+            Signal with navigation and signal shape equal to the
+            rotation object's and detector shape, respectively.
 
         Notes
         -----
@@ -123,80 +132,91 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         """
         if self.projection != "lambert":
             raise NotImplementedError(
-                "Method only supports master patterns in Lambert projection"
+                "Master pattern must be in the square Lambert projection"
             )
-        pc = detector.pc_emsoft()
-        if len(pc) > 1:
+        if len(detector.pc) > 1:
             raise NotImplementedError(
-                "Method only supports a single projection/pattern center"
+                "Detector must have exactly one projection center"
             )
 
-        # 4 cases
-        # Has energies, has hemis - Case 1
-        if len(self.axes_manager.shape) == 4:
+        # Get suitable chunks when iterating over the rotations. The
+        # signal axes are not chunked.
+        nav_shape = rotations.shape
+        nav_dim = len(nav_shape)
+        if nav_dim > 2:
+            raise ValueError(
+                "The rotations object can only have one or two dimensions, but "
+                f"an object with {nav_dim} was passed"
+            )
+        data_shape = nav_shape + detector.shape
+        chunks = get_chunking(
+            data_shape=data_shape,
+            nav_dim=nav_dim,
+            sig_dim=len(detector.shape),
+            chunk_shape=kwargs.pop("chunk_shape", None),
+            chunk_bytes=kwargs.pop("chunk_bytes", None),
+            dtype=dtype_out,
+        )
+
+        # Get the master pattern arrays created by a desired energy
+        north_slice = ()
+        if "energy" in [i.name for i in self.axes_manager.navigation_axes]:
             energies = self.axes_manager["energy"].axis
-            energy_index = (np.abs(energies - energy)).argmin()
-            mpn = self.data[0, energy_index]
-            mps = self.data[1, energy_index]
-        # no energies, no hemis - Case 2
-        elif len(self.axes_manager.shape) == 2:
-            if not self.phase.point_group.contains_inversion:
-                raise AttributeError(
-                    "For phases without inversion symmetry, both hemispheres "
-                    "must be in the master pattern"
-                )
-            mpn = self.data
-            mps = mpn
-        else:
-            try:  # has energies, no hemi - Case 3
-                energies = self.axes_manager["energy"].axis
-                if not self.phase.point_group.contains_inversion:
-                    raise AttributeError(
-                        "For phases without inversion symmetry, both "
-                        "hemispheres must be in the master pattern"
-                    )
-                energy_index = (np.abs(energies - energy)).argmin()
-                mpn = self.data[energy_index]
-                mps = mpn
-            except ValueError:  # no energies, yes hemi - Case 4
-                mpn = self.data[0]
-                mps = self.data[1]
+            north_slice += ((np.abs(energies - energy)).argmin(),)
+        south_slice = north_slice
+        if self.hemisphere == "both":
+            north_slice = (0,) + north_slice
+            south_slice = (1,) + south_slice
+        elif not self.phase.point_group.contains_inversion:
+            raise AttributeError(
+                "For crystals of point groups without inversion symmetry, like "
+                f"the current {self.phase.point_group.name}, both hemispheres "
+                "must be present in the master pattern signal"
+            )
+        master_north = self.data[north_slice]
+        master_south = self.data[south_slice]
 
-        npx, npy = self.axes_manager.signal_shape
-        dc = _get_direction_cosines(detector)
-        n = int(rotations.size)
-        det_y, det_x = detector.shape
-        dtype_out = dtype_out
-
-        if not n_chunk:
-            n_chunk = _min_number_of_chunks(detector.shape, n, dtype_out)
-
-        out_shape = (n, det_y, det_x)
-        chunks = (int(abs(np.ceil(n / n_chunk))), det_y, det_x)
-
+        # Whether to rescale pattern intensities after projection
         rescale = False
         if dtype_out != np.float32:
             rescale = True
 
-        r_da = da.from_array(rotations.data, chunks=(chunks[0], -1))
+        # Get direction cosines for each detector pixel relative to the
+        # source point
+        dc = _get_direction_cosines(detector)
 
+        # Get dask array from rotations
+        r_da = da.from_array(rotations.data, chunks=chunks[:nav_dim] + (-1,))
+
+        # Which axes to drop and add when iterating over the rotations
+        # dask array to produce the EBSD signal array, i.e. drop the
+        # (4,)-shape quaternion axis and add detector shape axes, e.g.
+        # (60, 60)
+        if nav_dim == 1:
+            drop_axis = 1
+            new_axis = (1, 2)
+        else:  # nav_dim == 2
+            drop_axis = 2
+            new_axis = (2, 3)
+
+        # Project simulated patterns onto detector
+        npx, npy = self.axes_manager.signal_shape
+        scale = (npx - 1) / 2
         simulated = r_da.map_blocks(
             _get_patterns_chunk,
             dc=dc,
-            master_north=mpn,
-            master_south=mps,
+            master_north=master_north,
+            master_south=master_south,
             npx=npx,
             npy=npy,
+            scale=scale,
             rescale=rescale,
             dtype_out=dtype_out,
-            drop_axis=1,
-            new_axis=(1, 2),
+            drop_axis=drop_axis,
+            new_axis=new_axis,
             chunks=chunks,
             dtype=dtype_out,
         )
-
-        names = ["x", "dy", "dx"]
-        scales = np.ones(3)
 
         # Add crystal map and detector to keyword arguments
         kwargs = dict(
@@ -206,22 +226,37 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             detector=detector,
         )
 
-        # Create axis objects for each axis
+        # Specify navigation and signal axes for signal initialization
+        names = ["y", "x", "dy", "dx"]
+        scales = np.ones(4)
+        ndim = simulated.ndim
+        if ndim == 3:
+            names = names[1:]
+            scales = scales[1:]
         axes = [
-            {
-                "size": out_shape[i],
-                "index_in_array": i,
-                "name": names[i],
-                "scale": scales[i],
-                "offset": 0.0,
-                "units": "px",
-            }
-            for i in range(simulated.ndim)
+            dict(
+                size=data_shape[i],
+                index_in_array=i,
+                name=names[i],
+                scale=scales[i],
+                offset=0.0,
+                units="px",
+            )
+            for i in range(ndim)
         ]
+
         if compute:
-            return EBSD(simulated.compute(), axes=axes, **kwargs)
+            with ProgressBar():
+                print(
+                    f"Creating a dictionary of {nav_shape} simulated patterns:",
+                    file=sys.stdout,
+                )
+                patterns = simulated.compute()
+            out = EBSD(patterns, axes=axes, **kwargs)
         else:
-            return LazyEBSD(simulated, axes=axes, **kwargs)
+            out = LazyEBSD(simulated, axes=axes, **kwargs)
+
+        return out
 
 
 class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
@@ -241,7 +276,7 @@ class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
 
 def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
     """Get the direction cosines between the detector and sample as done
-    in EMsoft and [Callahan2013]_.
+    in EMsoft and :cite:`callahan2013dynamical`.
 
     Parameters
     ----------
@@ -302,23 +337,24 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
 
 def _get_lambert_interpolation_parameters(
     rotated_direction_cosines: Vector3d,
-    scale: Union[int, float],
     npx: int,
     npy: int,
+    scale: Union[int, float],
 ) -> tuple:
-    """Get Lambert interpolation parameters as described in EMsoft.
+    """Get interpolation parameters in the square Lambert projection, as
+    implemented in EMsoft.
 
     Parameters
     ----------
-    rotated_direction_cosines : Vector3d
+    rotated_direction_cosines
         Rotated direction cosines vector.
-    scale : int
-        Factor to scale up from Rosca-Lambert projection to the master
-        pattern.
-    npx : int
+    npx
         Number of pixels on the master pattern in the x direction.
-    npy : int
+    npy
         Number of pixels on the master pattern in the y direction.
+    scale
+        Factor to scale up from the square Lambert projection to the
+        master pattern.
 
     Returns
     -------
@@ -339,15 +375,15 @@ def _get_lambert_interpolation_parameters(
     djm : numpy.ndarray
         Column interpolation weight factor.
     """
-    # Direction cosines to Rosca-Lambert projection
+    # Direction cosines to the square Lambert projection
     xy = (
         scale
         * LambertProjection.project(rotated_direction_cosines)
         / (np.sqrt(np.pi / 2))
     )
 
-    i = xy[..., 0]
-    j = xy[..., 1]
+    i = xy[..., 1]
+    j = xy[..., 0]
     nii = (i + scale).astype(int)
     nij = (j + scale).astype(int)
     niip = nii + 1
@@ -365,12 +401,13 @@ def _get_lambert_interpolation_parameters(
 
 
 def _get_patterns_chunk(
-    r: Rotation,
+    rotations_array: np.ndarray,
     dc: Vector3d,
     master_north: np.ndarray,
     master_south: np.ndarray,
     npx: int,
     npy: int,
+    scale: Union[int, float],
     rescale: bool,
     dtype_out: Optional[type] = np.float32,
 ) -> np.ndarray:
@@ -380,33 +417,37 @@ def _get_patterns_chunk(
 
     Parameters
     ----------
-    r : Rotation
-        Rotations for a given chunk.
-    dc : Vector3d
+    rotations_array
+        Array of rotations of shape (..., 4) for a given chunk in
+        quaternions.
+    dc
         Direction cosines unit vector between detector and sample.
-    master_north : numpy.ndarray
+    master_north
         Northern hemisphere of the master pattern.
-    master_south : numpy.ndarray
+    master_south
         Southern hemisphere of the master pattern.
-    npx : int
+    npx
         Number of pixels in the x-direction on the master pattern.
-    npy: int
+    npy
         Number of pixels in the y-direction on the master pattern.
-    rescale : bool
+    scale
+        Factor to scale up from square Lambert projection to the master
+        pattern.
+    rescale
         Whether to call rescale_intensities() or not.
-    dtype_out : type, optional
+    dtype_out
         Data type of the returned patterns, by default np.float32.
 
     Returns
     -------
     numpy.ndarray
-        (n, y, x) array containing all the simulated patterns.
+        3D or 4D array with simulated patterns.
     """
-    m = r.shape[0]
-    simulated = np.empty(shape=(m,) + dc.shape, dtype=dtype_out)
-    scale_factor = (npx - 1) / 2
-    for i in range(m):
-        rot_dc = Rotation(r[i]) * dc
+    rotations = Rotation(rotations_array)
+    rotations_shape = rotations_array.shape[:-1]
+    simulated = np.empty(shape=rotations_shape + dc.shape, dtype=dtype_out)
+    for i in np.ndindex(rotations_shape):
+        rotated_dc = rotations[i] * dc
         (
             nii,
             nij,
@@ -417,13 +458,10 @@ def _get_patterns_chunk(
             dim,
             djm,
         ) = _get_lambert_interpolation_parameters(
-            rotated_direction_cosines=rot_dc,
-            scale=scale_factor,
-            npx=npx,
-            npy=npy,
+            rotated_direction_cosines=rotated_dc, npx=npx, npy=npy, scale=scale,
         )
         pattern = np.where(
-            rot_dc.z >= 0,
+            rotated_dc.z >= 0,
             (
                 master_north[nii, nij] * dim * djm
                 + master_north[niip, nij] * di * djm
@@ -441,31 +479,3 @@ def _get_patterns_chunk(
             pattern = rescale_intensity(pattern, dtype_out=dtype_out)
         simulated[i] = pattern
     return simulated
-
-
-def _min_number_of_chunks(
-    detector_shape: tuple, n_rotations: int, dtype_out: type
-) -> int:
-    """Returns the minimum number of chunks required for our detector
-    model and set of unit cell rotations so that each chunk is around
-    100 MB.
-
-    Parameters
-    ----------
-    detector_shape : tuple
-        Shape of the detector in pixels.
-    n_rotations : int
-        Number of rotations.
-    dtype_out : type
-        Data type used for the simulated patterns.
-
-    Returns
-    -------
-    int
-       Minimum number of chunks required so each chunk is around 100 MB.
-    """
-    dy, dx = detector_shape
-    nbytes = dy * dx * n_rotations * np.dtype(dtype_out).itemsize
-    nbytes_goal = 100e6  # 100 MB
-    n_chunks = int(np.ceil(nbytes / nbytes_goal))
-    return n_chunks

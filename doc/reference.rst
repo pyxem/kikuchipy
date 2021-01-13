@@ -545,6 +545,8 @@ util
 
 .. autosummary::
     ebsd_metadata
+    get_chunking
+    get_dask_array
     metadata_nodes
 
 .. automodule:: kikuchipy.signals.util

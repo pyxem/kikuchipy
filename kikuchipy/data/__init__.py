@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -112,7 +112,7 @@ def nickel_ebsd_small(**kwargs) -> EBSD:
 
 
 def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
-    """(401, 401) `uint8` square Lambert or spherical projection of the
+    """(401, 401) `uint8` square Lambert or stereographic projection of the
     northern and southern hemisphere of a Nickel master pattern at 20
     keV accelerating voltage.
 

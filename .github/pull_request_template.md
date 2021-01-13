@@ -4,7 +4,7 @@
 
 - [ ] [Docstrings for all functions](https://github.com/numpy/numpy/blob/master/doc/example.py)
 - [ ] Unit tests with pytest for all lines
-- [ ] Clean style in [as per black](https://black.readthedocs.io/en/stable/the_black_code_style.html)
+- [ ] Clean code style by [running black via pre-commit](https://kikuchipy.org/en/latest/contributing.html#code-style)
 
 #### Minimal example of the bug fix or new feature
 

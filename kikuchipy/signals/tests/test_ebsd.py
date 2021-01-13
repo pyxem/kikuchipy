@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -1208,11 +1208,17 @@ class TestEBSDxmapProperty:
         assert isinstance(xmap, CrystalMap)
         assert xmap.phases[0].name == "ni"
 
+    def test_attribute_carry_over_from_lazy(self, dummy_signal):
+        ssim = load(EMSOFT_FILE, lazy=True)
+        xmap_lazy = ssim.xmap.deepcopy()
+        assert isinstance(xmap_lazy, CrystalMap)
+        assert xmap_lazy.phases[0].name == "ni"
 
-class TestEBSDdetectorProperty:
-    def test_init_detector(self):
-        """The attribute is set correctly."""
-        pass
+        ssim.compute()
+        xmap = ssim.xmap
+        assert isinstance(xmap, CrystalMap)
+        assert xmap.phases[0].name == "ni"
+        assert np.allclose(xmap.rotations.data, xmap_lazy.rotations.data)
 
 
 class TestPatternMatching:

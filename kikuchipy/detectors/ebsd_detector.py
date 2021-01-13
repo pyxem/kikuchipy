@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -34,16 +34,8 @@ class EBSDDetector:
     planes, onto the detector.
 
     Calculation of gnomonic coordinates is based on the work by Aimo
-    Winkelmann in the supplementary material to [Britton2016]_.
-
-    References
-    ----------
-    .. [Britton2016]
-        T. B. Britton, J. Jiang, Y. Guo, A. Vilalta-Clemente, D. Wallis,
-        L. N. Hansen, A. Winkelmann, A. J. Wilkinson, "Tutorial: Crystal
-        orientations and EBSD - Or which way is up?," *Materials
-        Characterization* **117** (2016), doi:
-        https://doi.org/10.1016/j.matchar.2016.04.008.
+    Winkelmann in the supplementary material to
+    :cite:`britton2016tutorial`.
     """
 
     def __init__(
@@ -349,7 +341,7 @@ class EBSDDetector:
         return y_scale.reshape(self.navigation_shape)
 
     @property
-    def r_max(self):
+    def r_max(self) -> np.ndarray:
         """Maximum distance from PC to detector edge in gnomonic
         coordinates.
         """
@@ -483,8 +475,8 @@ class EBSDDetector:
         """Plot the detector screen.
 
         The plotting of gnomonic circles and general style is adapted
-        from the supplementary material to [Britton2016]_ by Aimo
-        Winkelmann.
+        from the supplementary material to :cite:`britton2016tutorial`
+        by Aimo Winkelmann.
 
         Parameters
         ----------
@@ -562,19 +554,19 @@ class EBSDDetector:
             pcx *= sx
             bounds = self.bounds
             bounds[2:] = bounds[2:][::-1]
-            x_label = r"$x_{\mathrm{detector}}$"
-            y_label = r"$y_{\mathrm{detector}}$"
+            x_label = "x detector"
+            y_label = "y detector"
         else:
             pcy, pcx = (0, 0)
             bounds = self._average_gnomonic_bounds
-            x_label = r"$x_{\mathrm{gnomonic}}$"
-            y_label = r"$y_{\mathrm{gnomonic}}$"
+            x_label = "x gnomonic"
+            y_label = "y gnomonic"
 
         fig, ax = plt.subplots()
         ax.axis(zoom * bounds)
         ax.set_aspect(self.aspect_ratio)
-        ax.set_xlabel(x_label, fontsize=18)
-        ax.set_ylabel(y_label, fontsize=18)
+        ax.set_xlabel(x_label)
+        ax.set_ylabel(y_label)
 
         # Plot a pattern on the detector
         if isinstance(pattern, np.ndarray):
