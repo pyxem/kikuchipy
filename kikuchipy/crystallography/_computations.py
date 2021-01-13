@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -135,9 +135,9 @@ def _get_colors_for_allowed_bands(
     # TODO: Replace this ordering with future ordering method in
     #  diffsims
     g_order = np.argsort(rlp2.gspacing)
-    new_hkl = np.atleast_2d(rlp2._hkldata)[g_order]
+    new_hkl = np.atleast_2d(rlp2.hkl.data)[g_order]
     rlp3 = ReciprocalLatticePoint(phase=rlp.phase, hkl=new_hkl)
-    hkl = np.atleast_2d(rlp3._hkldata)
+    hkl = np.atleast_2d(rlp3.hkl.data)
     families, families_idx = _get_hkl_family(hkl=hkl, reduce=True)
 
     if color_cycle is None:

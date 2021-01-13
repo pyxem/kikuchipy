@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -25,7 +25,7 @@ from hyperspy.misc.rgb_tools import rgb_dtypes
 import numpy as np
 from skimage.util.dtype import dtype_range
 
-from kikuchipy.signals.util._dask import _get_dask_array
+from kikuchipy.signals.util._dask import get_dask_array
 from kikuchipy.pattern import chunk
 
 
@@ -147,7 +147,7 @@ class CommonImage(Signal2D):
             out_range = dtype_range[dtype_out_pass]
 
         # Create dask array of signal images and do processing on this
-        dask_array = _get_dask_array(signal=self)
+        dask_array = get_dask_array(signal=self)
 
         # Rescale images
         rescaled_images = dask_array.map_blocks(
@@ -219,7 +219,7 @@ class CommonImage(Signal2D):
         if dtype_out is None:
             dtype_out = self.data.dtype
 
-        dask_array = _get_dask_array(self, dtype=np.float32)
+        dask_array = get_dask_array(self, dtype=np.float32)
 
         normalized_images = dask_array.map_blocks(
             func=chunk.normalize_intensity,

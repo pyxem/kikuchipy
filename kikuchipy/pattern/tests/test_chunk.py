@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -31,7 +31,7 @@ from kikuchipy.pattern._pattern import (
     fft_spectrum,
 )
 from kikuchipy.pattern import chunk
-from kikuchipy.signals.util._dask import _get_dask_array
+from kikuchipy.signals.util._dask import get_dask_array
 
 
 # Expected output intensities from various image processing methods
@@ -115,7 +115,7 @@ class TestRescaleIntensityChunk:
         ],
     )
     def test_rescale_intensity(self, dummy_signal, dtype_out, answer):
-        dask_array = _get_dask_array(dummy_signal, dtype=np.float32)
+        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
 
         rescaled_patterns = dask_array.map_blocks(
             func=chunk.rescale_intensity, dtype_out=dtype_out, dtype=dtype_out,
@@ -176,7 +176,7 @@ class TestRescaleIntensityChunk:
     )
     def test_rescale_intensity_in_range(self, dummy_signal, in_range, answer):
         dtype_out = dummy_signal.data.dtype
-        dask_array = _get_dask_array(dummy_signal, dtype=np.float32)
+        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
 
         rescaled_patterns = dask_array.map_blocks(
             func=chunk.rescale_intensity,
@@ -206,7 +206,7 @@ class TestRescaleIntensityChunk:
         self, dummy_signal, percentiles, answer
     ):
         dtype_out = dummy_signal.data.dtype
-        dask_array = _get_dask_array(dummy_signal, dtype=np.float32)
+        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
 
         rescaled_patterns = dask_array.map_blocks(
             func=chunk.rescale_intensity,
@@ -235,7 +235,7 @@ class TestRemoveStaticBackgroundChunk:
         dtype_out = dummy_signal.data.dtype.type
         dtype_proc = np.float32
 
-        dask_array = _get_dask_array(dummy_signal, dtype=dtype_proc)
+        dask_array = get_dask_array(dummy_signal, dtype=dtype_proc)
         corrected_patterns = dask_array.map_blocks(
             func=chunk.remove_static_background,
             static_bg=dummy_background.astype(dtype_proc),
@@ -257,7 +257,7 @@ class TestRemoveStaticBackgroundChunk:
 
         out_range = (0, dtype_range[dtype_out][-1])
 
-        dask_array = _get_dask_array(dummy_signal, dtype=dtype_proc)
+        dask_array = get_dask_array(dummy_signal, dtype=dtype_proc)
 
         corrected_patterns = dask_array.map_blocks(
             func=chunk.remove_static_background,
@@ -277,7 +277,7 @@ class TestRemoveStaticBackgroundChunk:
         dtype_out = dummy_signal.data.dtype.type
         dtype_proc = np.float32
 
-        dask_array = _get_dask_array(dummy_signal, dtype=dtype_proc)
+        dask_array = get_dask_array(dummy_signal, dtype=dtype_proc)
 
         corrected_patterns = dask_array.map_blocks(
             func=chunk.remove_static_background,
@@ -327,7 +327,7 @@ class TestRemoveDynamicBackgroundChunk:
     def test_remove_dynamic_background_spatial(self, dummy_signal, std, answer):
         dtype_out = dummy_signal.data.dtype.type
 
-        dask_array = _get_dask_array(dummy_signal, dtype=np.float32)
+        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
 
         kwargs = {"sigma": std}
 
@@ -347,7 +347,7 @@ class TestRemoveDynamicBackgroundChunk:
     def test_remove_dynamic_background_spatial_uint16(self, dummy_signal):
         dtype_out = np.uint16
 
-        dask_array = _get_dask_array(dummy_signal, dtype=np.float32)
+        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
 
         corrected_patterns = dask_array.map_blocks(
             func=chunk.remove_dynamic_background,
@@ -376,7 +376,7 @@ class TestRemoveDynamicBackgroundChunk:
     ):
         dtype_out = dummy_signal.data.dtype.type
 
-        dask_array = _get_dask_array(dummy_signal, dtype=np.float32)
+        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
 
         kwargs = {}
         (
@@ -418,7 +418,7 @@ class TestRemoveDynamicBackgroundChunk:
 
         out_range = (0, omax)
 
-        dask_array = _get_dask_array(dummy_signal, dtype=np.float32)
+        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
 
         corrected_patterns = dask_array.map_blocks(
             func=chunk.remove_dynamic_background,
@@ -478,7 +478,7 @@ class TestGetDynamicBackgroundChunk:
         kwargs = {"sigma": std}
 
         dtype_out = np.uint8
-        dask_array = _get_dask_array(dummy_signal, dtype=np.float32)
+        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
 
         background = dask_array.map_blocks(
             func=chunk.get_dynamic_background,
@@ -512,7 +512,7 @@ class TestGetDynamicBackgroundChunk:
 
         dtype_out = answer.dtype
 
-        dask_array = _get_dask_array(dummy_signal, dtype=np.float32)
+        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
 
         kwargs = {}
         (
@@ -581,7 +581,7 @@ class TestGetDynamicBackgroundChunk:
 
 class TestAdaptiveHistogramEqualizationChunk:
     def test_adaptive_histogram_equalization_chunk(self, dummy_signal):
-        dask_array = _get_dask_array(dummy_signal)
+        dask_array = get_dask_array(dummy_signal)
         dtype_out = dask_array.dtype
         kernel_size = (10, 10)
         nbins = 128
@@ -602,7 +602,7 @@ class TestAverageNeighbourPatternsChunk:
         w = Window()
 
         # Get array to operate on
-        dask_array = _get_dask_array(dummy_signal)
+        dask_array = get_dask_array(dummy_signal)
         dtype_out = dask_array.dtype
 
         # Get sum of window data for each image

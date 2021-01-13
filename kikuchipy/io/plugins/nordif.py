@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -44,7 +44,7 @@ full_support = False
 # Recognised file extension
 file_extensions = ["dat"]
 default_extension = 0
-# Writing capabilities
+# Writing capabilities (signal dimensions, navigation dimensions)
 writes = [(2, 2), (2, 1), (2, 0)]
 
 

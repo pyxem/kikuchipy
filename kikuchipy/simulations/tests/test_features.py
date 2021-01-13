@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -353,7 +353,7 @@ class TestKikuchiBand:
             # Slicing shape () with two keys
             _ = bands[0, 0][0, 0]
         # Slicing ndim == 1 with two keys
-        assert np.allclose(bands[0][0, :2]._hkldata, bands._hkldata[:2])
+        assert np.allclose(bands[0][0, :2].hkl.data, bands.hkl.data[:2])
         assert bands[0][0, :2].navigation_shape == ()
 
         # Three getitem keys
@@ -407,8 +407,8 @@ class TestZoneAxis:
     @pytest.mark.parametrize(
         "hkl_slices, desired_nav_shape, desired_nav_dims, desired_data_shape",
         [
-            ((slice(0, 2), slice(0, 2), slice(None)), (2, 2), 2, (2, 2, 28)),
-            ((slice(None), slice(None), slice(None)), (5, 5), 2, (5, 5, 37)),
+            ((slice(0, 2), slice(0, 2), slice(None)), (2, 2), 2, (2, 2, 27)),
+            ((slice(None), slice(None), slice(None)), (5, 5), 2, (5, 5, 35)),
             ((0, slice(0, 1), slice(None)), (1,), 1, (1, 25)),
             ((slice(0, 1), slice(1, 2), slice(None)), (1, 1), 2, (1, 1, 25)),
             ((0, 0, slice(None)), (), 0, (25,)),
@@ -609,7 +609,7 @@ class TestZoneAxis:
             # Slicing shape () with two keys
             _ = za[0, 0][0, 0]
         # Slicing ndim == 1 with two keys
-        assert np.allclose(za[0][0, :2]._hkldata, za._hkldata[:2])
+        assert np.allclose(za[0][0, :2].hkl.data, za.hkl.data[:2])
         assert za[0][0, :2].navigation_shape == ()
 
         # Three getitem keys

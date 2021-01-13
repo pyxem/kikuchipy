@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2020 The kikuchipy developers
+# Copyright 2019-2021 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -30,14 +30,14 @@ from kikuchipy.generators.ebsd_simulation_generator import (
 class TestEBSDSimulationGenerator:
     @pytest.mark.parametrize("nav_shape", [(5, 5), (25,), (1, 25)])
     def test_align_navigation_shape(
-        self, nickel_phase, detector, nickel_rotations, r_tsl2bruker, nav_shape,
+        self, nickel_phase, detector, nickel_rotations, nav_shape,
     ):
         """Initialization of a detector with orientations of a certain
         shape also reshapes the varying PCs, i.e. the detector
         navigation shape, if the detector has more than one PC.
         """
         assert detector.navigation_shape == (1,)
-        o_nickel = r_tsl2bruker * nickel_rotations.reshape(*nav_shape)
+        o_nickel = nickel_rotations.reshape(*nav_shape)
         assert o_nickel.shape == nav_shape
         simgen = EBSDSimulationGenerator(
             detector=detector, phase=nickel_phase, rotations=o_nickel,
@@ -112,8 +112,7 @@ class TestEBSDSimulationGenerator:
     def test_align_pc_with_rotations_shape_raises(
         self, nickel_ebsd_simulation_generator,
     ):
-        """Detector and rotations navigation shapes must be compatible.
-        """
+        """Detector and rotations navigation shapes must be compatible."""
         simgen = nickel_ebsd_simulation_generator
         simgen.detector.pc = simgen.detector.pc[:2]
         with pytest.raises(ValueError, match="The detector navigation shape"):
@@ -275,7 +274,7 @@ class TestEBSDSimulationGenerator:
 
         bands = sim.bands
         assert bands.size == 14
-        assert np.allclose(bands._hkldata[5:7], [[0, -2, 0], [0, 0, 2]])
+        assert np.allclose(bands.hkl.data[5:7], [[0, -2, 0], [0, 0, 2]])
         assert np.allclose(
             bands.hkl_detector[:, 5:7].data,
             np.array(

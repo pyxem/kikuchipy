@@ -19,9 +19,10 @@ kikuchipy
     change_scan_pattern_size.rst
     pattern_processing.ipynb
     feature_maps.ipynb
-    virtual_backscatter_electron_imaging.rst
+    virtual_backscatter_electron_imaging.ipynb
     visualizing_patterns.ipynb
     pattern_matching.ipynb
+    geometrical_ebsd_simulations.ipynb
     multivariate_analysis.rst
     metadata.rst
     reference.rst
