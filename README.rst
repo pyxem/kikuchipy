@@ -47,25 +47,10 @@ Do you have a question or want to **contribute**? Great! Our
 `contributing guide <https://kikuchipy.org/en/latest/contributing.html>`_
 explains how to best do that.
 
-.. nbgallery::
-    :caption: User guide
-
-    load_save_data.ipynb
-    reference_frames.ipynb
-    change_navigation_signal_shapes.ipynb
-    pattern_processing.ipynb
-    visualizing_patterns.ipynb
-    feature_maps.ipynb
-    virtual_backscatter_electron_imaging.ipynb
-    pattern_matching.ipynb
-    geometrical_ebsd_simulations.ipynb
-    multivariate_analysis.ipynb
-    metadata_structure.ipynb
-
-This user guide covers the processing and analysis of EBSD patterns available in
-kikuchipy. The guide consists of Jupyter Notebooks with many links to detailed
-explanations of the input parameters and output of functions and class methods
-(the API reference). The notebooks can be inspected statically on
-https://kikuchipy.org or via `nbviewer`, downloaded and run locally, or run
-interactively in the browser after clicking the Binder link above and navigating
-to the ``doc/`` directory. We hope you find them useful!
+A **user guide** covering the available processing and analysis of EBSD patterns in
+kikuchipy is available at https://kikuchipy.org. The guide consists of Jupyter
+Notebooks with many links to detailed explanations of the input parameters and
+output of functions and class methods (the API reference). The notebooks can be
+inspected statically on the web page or via `nbviewer`, downloaded and run
+locally, or run interactively in the browser after clicking the Binder link
+above and navigating to the ``doc/`` directory. We hope you find them useful!
