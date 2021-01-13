@@ -34,23 +34,21 @@
     :alt: DOI
 
 kikuchipy is an open-source Python library for processing and analysis of
-electron backscatter diffraction (EBSD) patterns.
+electron backscatter diffraction (EBSD) patterns. The library builds on the
+tools for multi-dimensional data analysis provided by the HyperSpy library.
 
-The library builds on the tools for multi-dimensional data analysis provided by
-the HyperSpy library. It is in an alpha stage, so there will be breaking changes
-with each release.
+- **User guide and documentation**: https://kikuchipy.org. The guide consists of
+  Jupyter Notebooks with many links to detailed explanations of the input
+  parameters and output of functions and class methods (the API reference).
+  The notebooks can be inspected statically on the web page or via `nbviewer`,
+  downloaded and run locally, or run interactively in the browser after
+  clicking the Binder link above and navigating to the ``doc/`` directory. We
+  hope you find them useful!
+- **License**: kikuchipy is released under the GPLv3+ license.
+- **Cite**: If you find this project useful, pleace cite the DOI above.
+- **Contribute**: Do you have a question or want to contribute? Great! Our
+  `contributing guide <https://kikuchipy.org/en/latest/contributing.html>`_
+  explains how to best do that.
 
-kikuchipy is released under the GPLv3+ **license**. If you find this project useful,
-pleace **cite** the DOI above.
-
-Do you have a question or want to **contribute**? Great! Our
-`contributing guide <https://kikuchipy.org/en/latest/contributing.html>`_
-explains how to best do that.
-
-A **user guide** covering the available processing and analysis of EBSD patterns in
-kikuchipy is available at https://kikuchipy.org. The guide consists of Jupyter
-Notebooks with many links to detailed explanations of the input parameters and
-output of functions and class methods (the **API reference**). The notebooks
-can be inspected statically on the web page or via `nbviewer`, downloaded and
-run locally, or **run interactively** in the browser after clicking the Binder link
-above and navigating to the ``doc/`` directory. We hope you find them useful!
+The library is in an alpha stage, so there will be breaking changes with each
+release.
