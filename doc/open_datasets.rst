@@ -17,4 +17,4 @@ with `record-number` named `data.zip`, can be downloaded:
     ...     filename='./downloaded_data.zip'
     ... )
 
-- :cite:`anes2019electron`
+- :cite:`aanes2019electron`
