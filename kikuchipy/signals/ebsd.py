@@ -1164,8 +1164,7 @@ class EBSD(CommonImage, Signal2D):
         if not self._lazy:
             with ProgressBar():
                 print(
-                    "Calculating average dot product map:",
-                    file=sys.stdout,
+                    "Calculating average dot product map:", file=sys.stdout,
                 )
                 adp = adp.compute()
                 adp = adp.squeeze()
@@ -1264,9 +1263,7 @@ class EBSD(CommonImage, Signal2D):
             averaging_window = copy.copy(window)
         else:
             averaging_window = Window(
-                window=window,
-                shape=window_shape,
-                **kwargs,
+                window=window, shape=window_shape, **kwargs,
             )
         averaging_window.shape_compatible(self.axes_manager.signal_shape)
 
@@ -1284,12 +1281,11 @@ class EBSD(CommonImage, Signal2D):
         # Get sum of window data for each pattern, to normalize with
         # after correlation
         window_sums = correlate(
-            input=np.ones(self.axes_manager.navigation_shape[::-1], np.int),
+            input=np.ones(self.axes_manager.navigation_shape[::-1], dtype=int),
             weights=averaging_window,
             mode="constant",
             cval=0,
         )
-        # window_sums = np.ones(window_sums.shape)
 
         # Add signal dimensions to window array to enable its use with Dask's
         # map_blocks()
@@ -1297,22 +1293,17 @@ class EBSD(CommonImage, Signal2D):
         averaging_window = averaging_window.reshape(
             averaging_window.shape + (1,) * sig_dim
         )
-        #        averaging_window._add_axes(self.axes_manager.signal_dimension)
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = get_dask_array(signal=self)
-
-        # print(dask_array.chunksize)
-        # dask_array = dask_array.rechunk({0: "auto", 1: "auto", 2: -1, 3: -1})
+        dask_array = get_dask_array(signal=self, rechunk=True)
 
         # Add signal dimensions to array be able to use with Dask's map_blocks()
         nav_dim = self.axes_manager.navigation_dimension
         for i in range(sig_dim):
             window_sums = np.expand_dims(window_sums, axis=window_sums.ndim)
         window_sums = da.from_array(
-            window_sums, chunks=dask_array.chunksize[:nav_dim] + (1,) * sig_dim
+            window_sums, chunks=dask_array.chunks[:nav_dim] + (1,) * sig_dim
         )
-        # print(window_sums.chunks)
 
         # Create overlap between chunks to enable correlation with the window
         # using Dask's map_blocks()
@@ -1328,20 +1319,13 @@ class EBSD(CommonImage, Signal2D):
                 overlap_depth[i] = 0
         overlap_boundary = "none"  # {i: "none" for i in range(data_dim)}
         overlapped_dask_array = da.overlap.overlap(
-            dask_array,
-            depth=overlap_depth,
-            boundary=overlap_boundary,
+            dask_array, depth=overlap_depth, boundary=overlap_boundary,
         )
 
         # Must also be overlapped, since the patterns are overlapped
         overlapped_window_sums = da.overlap.overlap(
             window_sums, depth=overlap_depth, boundary=overlap_boundary
         )
-        # print(overlap_depth)
-        # print(overlap_boundary)
-        # print(dask_array.chunks)
-        # print(overlapped_window_sums.chunks)
-        # print(overlapped_dask_array.chunks)
 
         # Finally, average patterns by correlation with the window and
         # subsequent division by the number of neighbours correlated with
@@ -1358,7 +1342,7 @@ class EBSD(CommonImage, Signal2D):
         # Trim overlapping patterns
         averaged_patterns = da.overlap.trim_overlap(
             overlapped_averaged_patterns,
-            overlap_depth,
+            depth=overlap_depth,
             boundary=overlap_boundary,
         )
 
@@ -1366,9 +1350,7 @@ class EBSD(CommonImage, Signal2D):
         if not self._lazy:
             with ProgressBar():
                 print("Averaging with the neighbour patterns:", file=sys.stdout)
-                self.data = averaged_patterns.compute()
-                # OBS! compute vs store: stackoverflow.com/questions/64770364, + related github issue
-                # averaged_patterns.store(self.data, compute=True)
+                averaged_patterns.store(self.data, compute=True)
         else:
             self.data = averaged_patterns
 
@@ -1667,6 +1649,7 @@ class LazyEBSD(LazySignal2D, EBSD):
     def compute(self, *args, **kwargs):
         xmap = self.xmap
         super().compute(*args, **kwargs)
+        gc.collect()  # Don't sink
         self._xmap = xmap
 
     def get_decomposition_model_write(
