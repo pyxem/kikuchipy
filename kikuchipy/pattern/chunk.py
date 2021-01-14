@@ -285,9 +285,7 @@ def remove_dynamic_background(
 
         # Rescale intensities
         corrected_patterns[nav_idx] = pattern_processing.rescale_intensity(
-            pattern=corrected_pattern,
-            out_range=out_range,
-            dtype_out=dtype_out,
+            pattern=corrected_pattern, out_range=out_range, dtype_out=dtype_out,
         )
 
     return corrected_patterns
@@ -537,18 +535,14 @@ def average_neighbour_patterns(
 
     # Correlate patterns with window
     correlated_patterns = correlate(
-        patterns.astype(np.float64),
-        weights=window,
-        mode="constant",
-        cval=0.0,
+        patterns.astype(np.float32), weights=window, mode="constant", cval=0,
     )
-    # Divide convolved patterns by number of neighbours averaged with
-    # correlated_patterns /= window_sums
 
+    # Divide convolved patterns by number of neighbours averaged with
     averaged_patterns = np.empty_like(correlated_patterns, dtype=dtype_out)
     for nav_idx in np.ndindex(patterns.shape[:-2]):
-        averaged_patterns[nav_idx] = pattern_processing.rescale_intensity(
-            correlated_patterns[nav_idx] / window_sums[nav_idx][0, 0],
-            dtype_out=dtype_out,
+        averaged_patterns[nav_idx] = (
+            correlated_patterns[nav_idx] / window_sums[nav_idx]
         )
+
     return averaged_patterns
