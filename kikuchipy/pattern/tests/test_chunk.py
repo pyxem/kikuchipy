@@ -35,20 +35,6 @@ from kikuchipy.signals.util._dask import get_dask_array
 
 
 # Expected output intensities from various image processing methods
-RESCALED_UINT8 = np.array(
-    [[182, 218, 182], [255, 218, 182], [218, 36, 0]], dtype=np.uint8
-)
-RESCALED_FLOAT32 = np.array(
-    [
-        [0.714286, 0.857143, 0.714286],
-        [1.0, 0.857143, 0.714286],
-        [0.857143, 0.142857, 0.0],
-    ],
-    dtype=np.float32,
-)
-RESCALED_UINT8_0100 = np.array(
-    [[71, 85, 71], [100, 85, 71], [85, 14, 0]], dtype=np.uint8
-)
 STATIC_SUB_UINT8 = np.array(
     [[127, 212, 127], [255, 255, 170], [212, 0, 0]], dtype=np.uint8
 )
@@ -633,9 +619,9 @@ class TestAverageNeighbourPatternsChunk:
             dtype=dtype_out,
         )
 
-        answer = np.array([7, 4, 6, 6, 3, 7, 7, 3, 2], dtype=np.uint8).reshape(
-            (3, 3)
-        )
+        answer = np.array(
+            [255, 109, 218, 218, 36, 236, 255, 36, 0], dtype=np.uint8
+        ).reshape((3, 3))
 
         # Check for correct data type and gives expected output intensities
         assert averaged_patterns.dtype == dtype_out

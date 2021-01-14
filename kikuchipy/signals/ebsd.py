@@ -556,7 +556,7 @@ class EBSD(CommonImage, Signal2D):
         The removal is performed by subtracting or dividing by a
         Gaussian blurred version of each pattern. Resulting pattern
         intensities are rescaled to fill the input patterns' data type
-        range.
+        range individually.
 
         Parameters
         ----------
@@ -801,7 +801,7 @@ class EBSD(CommonImage, Signal2D):
           only *after* static and dynamic background corrections,
           otherwise some unwanted darkening towards the edges might
           occur.
-        * The default window size might not fit all image sizes, so it
+        * The default window size might not fit all pattern sizes, so it
           may be necessary to search for the optimal window size.
         """
         # Determine window size (shape of contextual region)
@@ -1073,7 +1073,7 @@ class EBSD(CommonImage, Signal2D):
         self, window: Window = None, standardize=True, dtype=np.float32
     ):
         # Create dask array of signal patterns and do processing on this
-        dask_array = _get_dask_array(signal=self)
+        dask_array = get_dask_array(signal=self)
 
         if window is None:
             # Default nearest neighbours
@@ -1132,10 +1132,10 @@ class EBSD(CommonImage, Signal2D):
             dp_matrices[:, :, origin[0], origin[1]] = np.nan
             return np.nanmean(dp_matrices, axis=(2, 3))
 
-        # Create dask array of signal patterns and do processing on this
-        dask_array = _get_dask_array(signal=self)
+        # Create dask array of signal data and do processing on this
+        dask_array = get_dask_array(signal=self)
 
-        # default nearest neighbours
+        # Default to the five nearest neighbours
         if window is None:
             window = Window(window="circular", shape=(3, 3))
 
@@ -1181,7 +1181,8 @@ class EBSD(CommonImage, Signal2D):
 
         The amount of averaging is specified by the window coefficients.
         All patterns are averaged with the same window. Map borders are
-        extended with zeros.
+        extended with zeros. Resulting pattern intensities are rescaled
+        to fill the input patterns' data type range individually.
 
         Averaging is accomplished by correlating the window with the
         extended array of patterns using
@@ -1214,50 +1215,6 @@ class EBSD(CommonImage, Signal2D):
         ~kikuchipy.filters.window.Window
         :func:`scipy.signal.windows.get_window`
         :func:`scipy.ndimage.correlate`
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> import kikuchipy as kp
-        >>> s = kp.signals.EBSD(np.ones((4, 4, 1, 1)))
-        >>> k = 1
-        >>> for i in range(4):
-        ...     for j in range(4):
-        ...         s.inav[j, i].data *= k
-        ...         k += 1
-        >>> s.data[:, :, 0, 0]
-        array([[ 1.,  2.,  3.,  4.],
-               [ 5.,  6.,  7.,  8.],
-               [ 9., 10., 11., 12.],
-               [13., 14., 15., 16.]])
-        >>> s2 = s.deepcopy()  # For use below
-        >>> s.average_neighbour_patterns(
-        ...     window="circular", shape=(3, 3))
-        >>> s.data[:, :, 0, 0]
-        array([[ 2.66666667,  3.        ,  4.        ,  5.        ],
-               [ 5.25      ,  6.        ,  7.        ,  7.75      ],
-               [ 9.25      , 10.        , 11.        , 11.75      ],
-               [12.        , 13.        , 14.        , 14.33333333]])
-
-        A window object can also be passed
-
-        >>> w = kp.filters.Window(window="gaussian", std=2)
-        >>> w
-        Window (3, 3) gaussian
-        [[0.7788 0.8825 0.7788]
-         [0.8825 1.     0.8825]
-         [0.7788 0.8825 0.7788]]
-        >>> s2.average_neighbour_patterns(w)
-        >>> s2.data[:, :, 0, 0]
-        array([[ 3.34395304,  3.87516243,  4.87516264,  5.40637176],
-               [ 5.46879047,  5.99999985,  6.99999991,  7.53120901],
-               [ 9.46879095,  9.99999959, 11.00000015, 11.53120913],
-               [11.59362845, 12.12483732, 13.1248368 , 13.65604717]])
-
-        This window can subsequently be plotted and saved
-
-        >>> figure, image, colorbar = w.plot()
-        >>> figure.savefig('averaging_window.png')
         """
         if isinstance(window, Window) and window.is_valid():
             averaging_window = copy.copy(window)
