@@ -48,6 +48,7 @@ extra_feature_requirements = {
         "sphinx-rtd-theme >= 0.4.3",
         "sphinx-copybutton >= 0.2.5",
         "sphinx-autodoc-typehints >= 1.10.3",
+        "sphinx-gallery >= 0.6",
         "sphinxcontrib-bibtex >= 1.0",
     ],
     "tests": ["coverage >= 5.0", "pytest >= 5.4", "pytest-cov >= 2.8.1"],

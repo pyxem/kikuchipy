@@ -96,7 +96,7 @@ def _load(filename: str, **kwargs) -> Union[EBSD, EBSDMasterPattern]:
 def nickel_ebsd_small(**kwargs) -> EBSD:
     """9 EBSD patterns in a (3, 3) navigation shape of (60, 60) detector
     pixels from Nickel, acquired on a NORDIF UF-1100 detector
-    :cite:`anes2019electron`.
+    :cite:`aanes2019electron`.
 
     Parameters
     ----------
@@ -145,7 +145,7 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
 def nickel_ebsd_large(allow_download: bool = False, **kwargs) -> EBSD:
     """4125 EBSD patterns in a (55, 75) navigation shape of (60, 60)
     detector pixels from Nickel, acquired on a NORDIF UF-1100 detector
-    :cite:`anes2019electron`.
+    :cite:`aanes2019electron`.
 
     Parameters
     ----------

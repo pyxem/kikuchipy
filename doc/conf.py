@@ -4,15 +4,16 @@
 # list see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
+from datetime import datetime
 import inspect
 import os
 from os.path import relpath, dirname
 import re
 import sys
-from datetime import datetime
 
 from kikuchipy import release as kp_release
 import kikuchipy
+
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -21,7 +22,7 @@ sys.path.append("../")
 
 # Project information
 project = "kikuchipy"
-copyright = "2019-" + str(datetime.now().year) + ", " + kp_release.author + "."
+copyright = f"2019-{datetime.now().year}, {kp_release.author}"
 author = kp_release.author
 version = kp_release.version
 release = kp_release.version
@@ -40,6 +41,7 @@ extensions = [
     "sphinx.ext.linkcode",
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
+    "sphinx_gallery.load_style",
     "nbsphinx",
 ]
 
