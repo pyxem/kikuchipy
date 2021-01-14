@@ -1295,7 +1295,7 @@ class EBSD(CommonImage, Signal2D):
         )
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = get_dask_array(signal=self, rechunk=True)
+        dask_array = get_dask_array(signal=self)
 
         # Add signal dimensions to array be able to use with Dask's map_blocks()
         nav_dim = self.axes_manager.navigation_dimension
@@ -1317,7 +1317,7 @@ class EBSD(CommonImage, Signal2D):
                 overlap_depth[i] = window_shape[i] // 2
             else:
                 overlap_depth[i] = 0
-        overlap_boundary = "none"  # {i: "none" for i in range(data_dim)}
+        overlap_boundary = "none"
         overlapped_dask_array = da.overlap.overlap(
             dask_array, depth=overlap_depth, boundary=overlap_boundary,
         )
