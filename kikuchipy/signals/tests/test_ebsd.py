@@ -761,6 +761,18 @@ class TestAverageNeighbourPatternsEBSD:
         assert np.allclose(dummy_signal.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
 
+    def test_average_neighbour_patterns_lazy(self):
+        """Fixes https://github.com/pyxem/kikuchipy/issues/230."""
+        chunks = (
+            (3, 3, 4, 3, 4, 3, 4, 3, 3, 4, 3, 4, 3, 4, 3, 4),
+            (75,),
+            (6,),
+            (6,),
+        )
+        s = LazyEBSD(da.zeros((55, 75, 6, 6), chunks=chunks, dtype=np.uint8))
+        s.average_neighbour_patterns()
+        s.compute()
+
 
 class TestRebin:
     def test_rebin(self, dummy_signal):

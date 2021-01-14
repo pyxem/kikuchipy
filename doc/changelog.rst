@@ -109,6 +109,8 @@ Removed
 
 Fixed
 -----
+- IndexError in neighbour pattern averaging
+  (`#280 <https://github.com/pyxem/kikuchipy/pull/280>`_)
 - Square Lambert projection handles edge case vectors better
   (`#272 <https://github.com/pyxem/kikuchipy/pull/272>`_)
 - Reading of square Lambert projections from EMsoft's master pattern file now

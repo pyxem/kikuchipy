@@ -97,7 +97,9 @@ def get_chunking(
     return chunks
 
 
-def get_dask_array(signal, dtype=None, **kwargs) -> da.Array:
+def get_dask_array(
+    signal, dtype: Optional[type] = None, **kwargs: dict
+) -> da.Array:
     """Return dask array of patterns with appropriate chunking.
 
     Parameters
@@ -135,7 +137,9 @@ def get_dask_array(signal, dtype=None, **kwargs) -> da.Array:
     return dask_array.astype(dtype)
 
 
-def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
+def _rechunk_learning_results(
+    factors, loadings, mbytes_chunk: int = 100
+) -> list:
     """Return suggested data chunks for learning results.
 
     It is assumed that the loadings are not transposed. The last axes of
@@ -194,7 +198,7 @@ def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
     return chunks
 
 
-def _update_learning_results(learning_results, components, dtype_out):
+def _update_learning_results(learning_results, components, dtype_out: type):
     """Update learning results before calling
     :meth:`hyperspy.learn.mva.MVA.get_decomposition_model` by
     changing data type, keeping only desired components and rechunking
