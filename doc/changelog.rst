@@ -74,6 +74,9 @@ Added
 
 Changed
 -------
+- Averaging EBSD patterns with nearest neighbours now rescales to input data
+  type range, thus loosing relative intensities, to avoid clipping intensities.
+  (`#280 <https://github.com/pyxem/kikuchipy/pull/280>`_)
 - Dependency requirement of diffsims from >= 0.3 to >= 0.4
   (`#282 <https://github.com/pyxem/kikuchipy/pull/282>`_)
 - Name of hemisphere axis in EBSDMasterPattern from "y" to "hemisphere".
