@@ -1116,11 +1116,45 @@ class EBSD(CommonImage, Signal2D):
 
     def get_average_dot_product(
         self,
-        dp_matrices: np.ndarray = None,
         window: Window = None,
-        standardize: bool = True,
-        dtype=np.float32,
-    ):
+        zero_mean: bool = True,
+        normalize: bool = True,
+        dtype_out: type = np.float32,
+        dp_matrices: np.ndarray = None,
+    ) -> np.ndarray:
+        """Get a map of the average dot product between a pattern and
+        its neighbours within a window.
+
+        Parameters
+        ----------
+        window
+            Window defining the neighbours to calculate the average
+            with. If None (default), the four nearest neighbours are
+            used. Only integer window coefficients are allowed.
+        zero_mean
+            Whether to subtract the mean of each pattern individually to
+            center the intensities about zero before calculating the
+            dot products. Default is True.
+        normalize
+            Whether to normalize the pattern intensities to a standard
+            deviation of 1 before calculating the dot products. This
+            operation is performed after centering the intensities if
+            `zero_mean` is True. Default is True.
+        dtype_out
+            Data type of the output map. Default is
+            :class:`numpy.float32`.
+
+        Returns
+        -------
+        adp
+            Map of the average dot product between each pattern and its
+            neighbours.
+        """
+        if self.axes_manager.navigation_dimension == 0:
+            raise ValueError(
+                "Signal must have at least one navigation dimension"
+            )
+
         if dp_matrices is not None:
             # Check if dp_matrices.ndim == 4 can go here
             origin = (
@@ -1132,20 +1166,21 @@ class EBSD(CommonImage, Signal2D):
             dp_matrices[:, :, origin[0], origin[1]] = np.nan
             return np.nanmean(dp_matrices, axis=(2, 3))
 
-        # Create dask array of signal patterns and do processing on this
+        # Create dask array of signal data and do processing on this
         dask_array = get_dask_array(signal=self)
 
-        # default nearest neighbours
+        # Default to the nearest neighbours
         if window is None:
-            window = Window(window="circular", shape=(3, 3))
+            nav_dim = self.axes_manager.navigation_dimension
+            window = Window(window="circular", shape=(3, 3)[:nav_dim])
 
-        window_extent = np.subtract(window.shape, window.origin) - 1
+        # Set overlap depth between navigation chunks equal to the max.
+        # number of nearest neighbours in each navigation axis
+        sig_dim = self.axes_manager.signal_dimension
+        nav_shape = self.axes_manager.navigation_shape[::-1]
+        is_chunked = ~np.equal(dask_array.chunksize[:-sig_dim], nav_shape)
         overlap_depth = {
-            i: e
-            for i, (e, c) in enumerate(
-                zip(window_extent, dask_array.chunks[:-2])
-            )
-            if c[0] != dask_array.shape[i]
+            i: n for i, n in enumerate(window.n_neighbours) if is_chunked[i]
         }
 
         overlap_boundary = "none"
@@ -1155,11 +1190,14 @@ class EBSD(CommonImage, Signal2D):
 
         adp = overlapped_dask_array.map_blocks(
             _get_average_dot_product_map,
-            window,
-            dtype,
-            standardize=standardize,
-            dtype=dtype,
+            window=window,
+            sig_dim=sig_dim,
+            sig_size=self.axes_manager.signal_size,
+            zero_mean=zero_mean,
+            normalize=normalize,
+            dtype_out=dtype_out,
             drop_axis=self.axes_manager.signal_indices_in_array,
+            dtype=dtype_out,
         )
 
         adp = da.overlap.trim_internal(
@@ -1169,50 +1207,11 @@ class EBSD(CommonImage, Signal2D):
         if not self._lazy:
             with ProgressBar():
                 print(
-                    "Calculating average dot product map:", file=sys.stdout,
+                    "Calculating the average dot product map:", file=sys.stdout,
                 )
                 adp = adp.compute()
-        return adp
 
-    #        # Create dask array of signal data and do processing on this
-    #        dask_array = get_dask_array(signal=self)
-    #
-    #        # Default to the nearest neighbours
-    #        if window is None:
-    #            nav_dim = self.axes_manager.navigation_dimension
-    #            window = Window(window="circular", shape=(3, 3)[:nav_dim])
-    #
-    #        # Set overlap depth between navigation chunks equal to the max.
-    #        # number of nearest neighbours in each navigation axis
-    #        overlap_depth = {i: n for i, n in enumerate(window.n_neighbours)}
-    #
-    #        overlap_boundary = "none"
-    #        overlapped_dask_array = da.overlap.overlap(
-    #            dask_array, depth=overlap_depth, boundary=overlap_boundary
-    #        )
-    #
-    #        adp = overlapped_dask_array.map_blocks(
-    #            _get_average_dot_product_map,
-    #            window,
-    #            dtype_out,
-    #            standardize=standardize,
-    #            nav_shape=self.axes_manager.navigation_shape[::-1],
-    #            sig_size=self.axes_manager.signal_size,
-    #            drop_axis=self.axes_manager.signal_indices_in_array,
-    #            dtype=dtype_out,
-    #        )
-    #        adp = da.overlap.trim_internal(
-    #            adp, axes=overlap_depth, boundary=overlap_boundary
-    #        )
-    #
-    #        if not self._lazy:
-    #            with ProgressBar():
-    #                print(
-    #                    "Calculating average dot product map:", file=sys.stdout,
-    #                )
-    #                adp = adp.compute()
-    #
-    #        return adp
+        return adp
 
     def average_neighbour_patterns(
         self,

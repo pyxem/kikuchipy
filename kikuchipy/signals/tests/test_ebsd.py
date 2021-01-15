@@ -32,6 +32,7 @@ from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
 
 from kikuchipy import load
+from kikuchipy import data
 from kikuchipy.filters.window import Window
 from kikuchipy.pattern._pattern import fft_spectrum
 from kikuchipy.signals.ebsd import EBSD, LazyEBSD
@@ -1256,7 +1257,27 @@ class TestPatternMatching:
 
 class TestAverageDotProductMapEBSD:
     def test_adp_0d(self):
-        pass
+        s = data.nickel_ebsd_small()
+        with pytest.raises(ValueError, match="Signal must have at least one"):
+            _ = s.inav[0, 0].get_average_dot_product()
 
     def test_adp_1d(self):
-        pass
+        s = data.nickel_ebsd_small()
+        adp = s.inav[0].get_average_dot_product()
+        assert np.allclose(adp, [0.99747044, 0.99745756, 0.9974445], atol=1e-5)
+
+    def test_adp_2d(self):
+        s = data.nickel_ebsd_small()
+        adp = s.get_average_dot_product()
+        assert np.allclose(
+            adp,
+            np.array(
+                [
+                    [0.9956795, 0.99611735, 0.9972207],
+                    [0.99636394, 0.99656117, 0.9972527],
+                    [0.99573123, 0.9961346, 0.9970487],
+                ]
+            ),
+            atol=1e-5,
+        )
+        assert adp.dtype == np.float32
