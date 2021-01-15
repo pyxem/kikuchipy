@@ -16,15 +16,14 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Tuple, List, Callable, Union
+from typing import Callable, Union
 
 import numpy as np
 from scipy.ndimage import generic_filter
-import dask.array as da
 
 from kikuchipy.indexing.similarity_metrics import (
-    _zero_mean,
-    _normalize,
+    _normalize_expt_sim,
+    _zero_mean_expt_sim,
 )
 from kikuchipy.filters import Window
 
@@ -33,26 +32,33 @@ def _map_helper(
     patterns: np.ndarray,
     map_function: Callable,
     window: Window,
-    nav_shape,
-    dtype: np.dtype = np.float32,
+    nav_shape: tuple,
+    dtype_out: type = np.float32,
     ignore_map: bool = False,
     **kwargs,
-):
-    # Check if Window is binary, raise error or binarize+warn if not
-
+) -> np.ndarray:
+    # Array in the original navigation shape of indices into the
+    # flattened navigation axis
     flat_index_map = np.arange(np.prod(nav_shape)).reshape(nav_shape)
 
     def wrapped_map_function(indices):
-        # indices picked out with window from flat_index_map
-        indices = indices.astype(np.int)
+        # Indices to be picked out with window from flat_index_map
+        indices = indices.astype(int)
         return map_function(
-            patterns, indices, nav_shape, window, dtype, **kwargs
+            patterns=patterns,
+            indices=indices,
+            nav_shape=nav_shape,
+            window=window,
+            dtype_out=dtype_out,
+            **kwargs,
         )
 
-    dtype_out = np.bool_ if ignore_map else dtype
+    #    dtype_out = np.bool_ if ignore_map else dtype_out
+    dtype_out = bool if ignore_map else dtype_out
+
     return generic_filter(
-        flat_index_map,
-        wrapped_map_function,
+        input=flat_index_map,
+        function=wrapped_map_function,
         footprint=window,
         mode="constant",
         cval=-1,
@@ -60,51 +66,44 @@ def _map_helper(
     )
 
 
-def _assert_window_is_binary(window: Window):
-    return None
-
-
 def _neighbour_dot_products(
     patterns: np.ndarray,
     indices: np.ndarray,
-    nav_shape: Tuple,
+    nav_shape: tuple,
+    sig_size: tuple,
     window: Window,
-    dtype: np.dtype,
+    dtype_out: type,
     output: np.ndarray,
     center_index: int,
     flat_window_truthy_indices: np.ndarray,
     standardize: bool,
     return_average: bool,
-):
-    # Flat navigation index corresponding with origin of window
-    px = indices[center_index]
+) -> Union[np.ndarray, int]:
+    # Flat navigation index corresponding to the origin of the window,
+    # i.e. into `patterns`, i.e. the current navigation point to average
+    current_nav_idx = indices[center_index]
 
-    # Neighbours navigation index
-    where_neighbours_in_indices = np.where((indices != -1) & (indices != px))
-    neighbours = indices[where_neighbours_in_indices]
+    # Indices into `indices` of neighbours to compute dot product with,
+    # excluding neighbours outside the map and itself
+    neighbour_idx = np.where((indices != current_nav_idx) & (indices != -1))[0]
+    neighbours = indices[neighbour_idx]
     neighbours = np.unravel_index(neighbours, nav_shape)
 
-    sig_size = np.prod(patterns.shape[-2:])
-
-    # Neighbouring flat patterns
+    # Flat array of neighbour patterns
     neighbour_patterns = (
-        patterns[neighbours].reshape((-1, sig_size)).astype(dtype)
+        patterns[neighbours].reshape((-1, sig_size)).astype(dtype_out)
     )
 
-    # Flat pattern corresponding with origin
-    pattern = (
-        patterns[np.unravel_index(px, nav_shape)]
-        .squeeze()
-        .flatten()
-        .astype(dtype)
-    )
+    # Flat pattern corresponding to the window origin, i.e. the current
+    # navigation point to average
+    pattern = patterns[np.unravel_index(current_nav_idx, nav_shape)]
+    pattern = pattern.squeeze().flatten().astype(dtype_out)
 
     if standardize:
-        # TODO: create function for _standardize in this file instead
-        pattern, neighbour_patterns = _zero_mean(
+        pattern, neighbour_patterns = _zero_mean_expt_sim(
             pattern, neighbour_patterns, flat=True
         )
-        pattern, neighbour_patterns = _normalize(
+        pattern, neighbour_patterns = _normalize_expt_sim(
             pattern, neighbour_patterns, flat=True
         )
 
@@ -117,17 +116,19 @@ def _neighbour_dot_products(
     # output variable is modified in place
     if standardize:
         # Set center of similarity matrix 1.0
-        output[px][flat_window_truthy_indices[center_index]] = output[px][
+        output[current_nav_idx][
+            flat_window_truthy_indices[center_index]
+        ] = output[current_nav_idx][
             flat_window_truthy_indices[center_index]
         ] = 1.0
     else:
         # Compute dot product with itself
         # Should be the maximum value in the matrix
-        output[px][flat_window_truthy_indices[center_index]] = (
+        output[current_nav_idx][flat_window_truthy_indices[center_index]] = (
             pattern ** 2
         ).sum()
 
-    output[px][
+    output[current_nav_idx][
         flat_window_truthy_indices[where_neighbours_in_indices]
     ] = dot_products
 
@@ -140,9 +141,8 @@ def _get_neighbour_dot_product_matrices(
     patterns: np.ndarray,
     window: Window,
     standardize: bool = False,
-    dtype: np.dtype = np.float32,
+    dtype_out: type = np.float32,
 ) -> np.ndarray:
-    _assert_window_is_binary(window)
     flat_window_origin = np.ravel_multi_index(window.origin, window.shape)
     boolean_window = window.copy().astype(bool)
     flat_window = boolean_window.flatten()
@@ -150,14 +150,14 @@ def _get_neighbour_dot_product_matrices(
     zeros_before_origin = np.count_nonzero(~flat_window[:flat_window_origin])
     center_index = flat_window_origin - zeros_before_origin
     nav_shape = patterns.shape[:-2]
-    output = np.empty((np.prod(nav_shape), window.size), dtype)
+    output = np.empty((np.prod(nav_shape), window.size), dtype_out)
     output[:] = np.nan
     _map_helper(
         patterns,
         _neighbour_dot_products,
         window=boolean_window,
         nav_shape=nav_shape,
-        dtype=dtype,
+        dtype_out=dtype_out,
         ignore_map=True,
         output=output,
         center_index=center_index,
@@ -171,25 +171,55 @@ def _get_neighbour_dot_product_matrices(
 
 def _get_average_dot_product_map(
     patterns: np.ndarray,
-    window: np.ndarray,
-    dtype,
+    window: Window,
+    dtype_out: type,
     standardize: bool,
-):
-    _assert_window_is_binary(window)
+    nav_shape: tuple,
+    sig_size: tuple,
+) -> np.ndarray:
+    """Get the average dot product map for a chunk of patterns.
+    
+    Parameters
+    ----------
+    patterns
+        Pattern chunk.
+    window
+        Window defining the neighbours to calculate the average with.
+    dtype_out
+        Data type of output map.
+    standardize
+        Whether to standardize pattern intensities before computing the
+        average dot product.
+    nav_shape
+        Navigation/map shape.
+    sig_size
+        Number of pattern pixels.
+    
+    Returns
+    -------
+    adp
+        Average dot product map for the chunk of patterns.
+    """
+    # Index of window origin in flattened window
     flat_window_origin = np.ravel_multi_index(window.origin, window.shape)
+
+    # Make window flat with boolean values
     boolean_window = window.copy().astype(bool)
     flat_window = boolean_window.flatten()
+
+    # Index of window origin in boolean array with only True values
     flat_window_truthy_indices = np.nonzero(flat_window)[0]
-    zeros_before_origin = np.count_nonzero(~flat_window[:flat_window_origin])
-    center_index = flat_window_origin - zeros_before_origin
-    nav_shape = patterns.shape[:-2]
+    center_index = np.where(flat_window_truthy_indices == flat_window_origin)[
+        0
+    ][0]
 
     adp = _map_helper(
-        patterns,
-        _neighbour_dot_products,
+        patterns=patterns,
+        map_function=_neighbour_dot_products,
         window=boolean_window,
         nav_shape=nav_shape,
-        dtype=dtype,
+        sig_size=sig_size,
+        dtype_out=dtype_out,
         ignore_map=False,
         output=None,
         center_index=center_index,
@@ -197,4 +227,5 @@ def _get_average_dot_product_map(
         standardize=standardize,
         return_average=True,
     )
-    return adp[:, :, None, None]
+
+    return adp

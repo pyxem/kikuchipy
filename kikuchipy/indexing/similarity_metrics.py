@@ -363,7 +363,7 @@ def _expand_dims_to_many_to_many(
     return expt, sim
 
 
-def _zero_mean(
+def _zero_mean_expt_sim(
     expt: Union[np.ndarray, da.Array],
     sim: Union[np.ndarray, da.Array],
     flat: bool = False,
@@ -389,19 +389,35 @@ def _zero_mean(
     """
     squeeze = 1 not in expt.shape + sim.shape
     expt, sim = _expand_dims_to_many_to_many(expt, sim, flat)
+    return (
+        _zero_mean(patterns=expt, flat=flat, squeeze=squeeze),
+        _zero_mean(patterns=sim, flat=flat, squeeze=squeeze),
+    )
     # Always take the mean along the last two axes (signal axes)
-    expt_mean_axis = 1 if flat else (-2, -1)
-    sim_mean_axis = 1 if flat else (-2, -1)
-    expt -= expt.mean(axis=expt_mean_axis, keepdims=True)
-    sim -= sim.mean(axis=sim_mean_axis, keepdims=True)
 
+
+#    expt_mean_axis = 1 if flat else (-2, -1)
+#    sim_mean_axis = 1 if flat else (-2, -1)
+#    expt -= expt.mean(axis=expt_mean_axis, keepdims=True)
+#    sim -= sim.mean(axis=sim_mean_axis, keepdims=True)
+
+#    if squeeze:
+#        return expt.squeeze(), sim.squeeze()
+#    else:
+#        return expt, sim
+
+
+def _zero_mean(
+    patterns: np.ndarray, flat: bool = False, squeeze: bool = False,
+) -> np.ndarray:
+    mean_axis = 1 if flat else (-2, -1)
+    patterns -= patterns.mean(axis=mean_axis, keepdims=True)
     if squeeze:
-        return expt.squeeze(), sim.squeeze()
-    else:
-        return expt, sim
+        patterns = patterns.squeeze()
+    return patterns
 
 
-def _normalize(
+def _normalize_expt_sim(
     expt: Union[np.ndarray, da.Array],
     sim: Union[np.ndarray, da.Array],
     flat: bool = False,
@@ -442,8 +458,8 @@ def _zncc_einsum(
     experimental: Union[da.Array, np.ndarray],
     simulated: Union[da.Array, np.ndarray],
 ) -> Union[np.ndarray, da.Array]:
-    experimental, simulated = _zero_mean(experimental, simulated)
-    experimental, simulated = _normalize(experimental, simulated)
+    experimental, simulated = _zero_mean_expt_sim(experimental, simulated)
+    experimental, simulated = _normalize_expt_sim(experimental, simulated)
     r = da.einsum("ijkl,mkl->ijm", experimental, simulated, optimize=True)
     if isinstance(experimental, np.ndarray) and isinstance(
         simulated, np.ndarray
@@ -457,7 +473,7 @@ def _ndp_einsum(
     experimental: Union[da.Array, np.ndarray],
     simulated: Union[da.Array, np.ndarray],
 ) -> Union[np.ndarray, da.Array]:
-    experimental, simulated = _normalize(experimental, simulated)
+    experimental, simulated = _normalize_expt_sim(experimental, simulated)
     rho = da.einsum("ijkl,mkl->ijm", experimental, simulated, optimize=True)
     if isinstance(experimental, np.ndarray) and isinstance(
         simulated, np.ndarray

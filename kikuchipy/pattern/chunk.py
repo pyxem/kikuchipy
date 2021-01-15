@@ -538,7 +538,7 @@ def average_neighbour_patterns(
 
     # Correlate patterns with window
     correlated_patterns = correlate(
-        patterns.astype(np.float64), weights=window, mode="constant", cval=0,
+        patterns.astype(np.float32), weights=window, mode="constant", cval=0,
     )
 
     # Divide convolved patterns by number of neighbours averaged with
