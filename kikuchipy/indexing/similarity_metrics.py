@@ -22,6 +22,7 @@ from enum import Enum
 from typing import Callable, Tuple, Union
 
 import dask.array as da
+from numba import jit, njit
 import numpy as np
 
 
@@ -387,34 +388,26 @@ def _zero_mean_expt_sim(
     sim
         Simulated data with mean subtracted.
     """
-    squeeze = 1 not in expt.shape + sim.shape
-    expt, sim = _expand_dims_to_many_to_many(expt, sim, flat)
-    return (
-        _zero_mean(patterns=expt, flat=flat, squeeze=squeeze),
-        _zero_mean(patterns=sim, flat=flat, squeeze=squeeze),
-    )
-    # Always take the mean along the last two axes (signal axes)
-
-
-#    expt_mean_axis = 1 if flat else (-2, -1)
-#    sim_mean_axis = 1 if flat else (-2, -1)
-#    expt -= expt.mean(axis=expt_mean_axis, keepdims=True)
-#    sim -= sim.mean(axis=sim_mean_axis, keepdims=True)
-
-#    if squeeze:
-#        return expt.squeeze(), sim.squeeze()
-#    else:
-#        return expt, sim
-
-
-def _zero_mean(
-    patterns: np.ndarray, flat: bool = False, squeeze: bool = False,
-) -> np.ndarray:
+    expt_expanded, sim_expanded = _expand_dims_to_many_to_many(expt, sim, flat)
     mean_axis = 1 if flat else (-2, -1)
-    patterns -= patterns.mean(axis=mean_axis, keepdims=True)
-    if squeeze:
-        patterns = patterns.squeeze()
-    return patterns
+    expt_mean_sub = _zero_mean(patterns=expt_expanded, mean_axis=mean_axis)
+    sim_mean_sub = _zero_mean(patterns=sim_expanded, mean_axis=mean_axis)
+    if 1 not in expt.shape + sim.shape:
+        expt_mean_sub = expt_mean_sub.squeeze()
+        sim_mean_sub = sim_mean_sub.squeeze()
+    return expt_mean_sub, sim_mean_sub
+
+
+@jit
+def _zero_mean(
+    patterns: np.ndarray, mean_axis: Tuple[int, tuple],
+) -> np.ndarray:
+    patterns_mean = patterns.mean(axis=mean_axis, keepdims=True)
+    patterns_mean_sub = patterns - patterns_mean
+    return patterns_mean_sub
+
+
+#    return patterns - patterns.mean(axis=mean_axis, keepdims=True)
 
 
 def _normalize_expt_sim(
@@ -440,18 +433,20 @@ def _normalize_expt_sim(
     sim : numpy.ndarray or dask.array.Array
         Simulated patterns divided by their L2 norms.
     """
-    squeeze = 1 not in expt.shape + sim.shape
-    expt, sim = _expand_dims_to_many_to_many(expt, sim, flat)
-    # Always take the sum along the last two axes (signal axes)
-    expt_sum_axis = 1 if flat else (-2, -1)
-    sim_sum_axis = 1 if flat else (-2, -1)
-    expt /= (expt ** 2).sum(axis=expt_sum_axis, keepdims=True) ** 0.5
-    sim /= (sim ** 2).sum(axis=sim_sum_axis, keepdims=True) ** 0.5
+    expt_expanded, sim_expanded = _expand_dims_to_many_to_many(expt, sim, flat)
+    mean_axis = 1 if flat else (-2, -1)
+    expt_normalized = _normalize(patterns=expt_expanded, mean_axis=mean_axis)
+    sim_normalized = _normalize(patterns=sim_expanded, mean_axis=mean_axis)
+    if 1 not in expt.shape + sim.shape:
+        expt_normalized = expt_normalized.squeeze()
+        sim_normalized = sim_normalized.squeeze()
+    return expt_normalized, sim_normalized
 
-    if squeeze:
-        return expt.squeeze(), sim.squeeze()
-    else:
-        return expt, sim
+
+def _normalize(
+    patterns: np.ndarray, mean_axis: Tuple[int, tuple],
+) -> np.ndarray:
+    return patterns / (patterns ** 2).sum(axis=mean_axis, keepdims=True) ** 0.5
 
 
 def _zncc_einsum(
