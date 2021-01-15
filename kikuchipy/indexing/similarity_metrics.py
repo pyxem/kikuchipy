@@ -22,8 +22,9 @@ from enum import Enum
 from typing import Callable, Tuple, Union
 
 import dask.array as da
-from numba import jit, njit
 import numpy as np
+
+from kikuchipy.pattern._pattern import _normalize, _zero_mean
 
 
 class MetricScope(Enum):
@@ -379,7 +380,7 @@ def _zero_mean_expt_sim(
     sim : np.ndarray or da.Array
         Simulated.
     flat : bool, optional
-        Whether `p` and `t` are flattened, by default False.
+        Whether `expt` and `sim` are flattened, by default False.
 
     Returns
     -------
@@ -390,24 +391,12 @@ def _zero_mean_expt_sim(
     """
     expt_expanded, sim_expanded = _expand_dims_to_many_to_many(expt, sim, flat)
     mean_axis = 1 if flat else (-2, -1)
-    expt_mean_sub = _zero_mean(patterns=expt_expanded, mean_axis=mean_axis)
-    sim_mean_sub = _zero_mean(patterns=sim_expanded, mean_axis=mean_axis)
+    expt_mean_sub = _zero_mean(patterns=expt_expanded, axis=mean_axis)
+    sim_mean_sub = _zero_mean(patterns=sim_expanded, axis=mean_axis)
     if 1 not in expt.shape + sim.shape:
         expt_mean_sub = expt_mean_sub.squeeze()
         sim_mean_sub = sim_mean_sub.squeeze()
     return expt_mean_sub, sim_mean_sub
-
-
-@jit
-def _zero_mean(
-    patterns: np.ndarray, mean_axis: Tuple[int, tuple],
-) -> np.ndarray:
-    patterns_mean = patterns.mean(axis=mean_axis, keepdims=True)
-    patterns_mean_sub = patterns - patterns_mean
-    return patterns_mean_sub
-
-
-#    return patterns - patterns.mean(axis=mean_axis, keepdims=True)
 
 
 def _normalize_expt_sim(
@@ -434,19 +423,13 @@ def _normalize_expt_sim(
         Simulated patterns divided by their L2 norms.
     """
     expt_expanded, sim_expanded = _expand_dims_to_many_to_many(expt, sim, flat)
-    mean_axis = 1 if flat else (-2, -1)
-    expt_normalized = _normalize(patterns=expt_expanded, mean_axis=mean_axis)
-    sim_normalized = _normalize(patterns=sim_expanded, mean_axis=mean_axis)
+    sum_axis = 1 if flat else (-2, -1)
+    expt_normalized = _normalize(patterns=expt_expanded, axis=sum_axis)
+    sim_normalized = _normalize(patterns=sim_expanded, axis=sum_axis)
     if 1 not in expt.shape + sim.shape:
         expt_normalized = expt_normalized.squeeze()
         sim_normalized = sim_normalized.squeeze()
     return expt_normalized, sim_normalized
-
-
-def _normalize(
-    patterns: np.ndarray, mean_axis: Tuple[int, tuple],
-) -> np.ndarray:
-    return patterns / (patterns ** 2).sum(axis=mean_axis, keepdims=True) ** 0.5
 
 
 def _zncc_einsum(
