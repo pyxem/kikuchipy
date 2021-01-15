@@ -1119,7 +1119,7 @@ class EBSD(CommonImage, Signal2D):
         dp_matrices: np.ndarray = None,
         window: Window = None,
         standardize: bool = True,
-        dtype_out=np.float32,
+        dtype=np.float32,
     ):
         if dp_matrices is not None:
             # Check if dp_matrices.ndim == 4 can go here
@@ -1132,17 +1132,21 @@ class EBSD(CommonImage, Signal2D):
             dp_matrices[:, :, origin[0], origin[1]] = np.nan
             return np.nanmean(dp_matrices, axis=(2, 3))
 
-        # Create dask array of signal data and do processing on this
+        # Create dask array of signal patterns and do processing on this
         dask_array = get_dask_array(signal=self)
 
-        # Default to the nearest neighbours
+        # default nearest neighbours
         if window is None:
-            nav_dim = self.axes_manager.navigation_dimension
-            window = Window(window="circular", shape=(3, 3)[:nav_dim])
+            window = Window(window="circular", shape=(3, 3))
 
-        # Set overlap depth between navigation chunks equal to the max.
-        # number of nearest neighbours in each navigation axis
-        overlap_depth = {i: n for i, n in enumerate(window.n_neighbours)}
+        window_extent = np.subtract(window.shape, window.origin) - 1
+        overlap_depth = {
+            i: e
+            for i, (e, c) in enumerate(
+                zip(window_extent, dask_array.chunks[:-2])
+            )
+            if c[0] != dask_array.shape[i]
+        }
 
         overlap_boundary = "none"
         overlapped_dask_array = da.overlap.overlap(
@@ -1152,13 +1156,12 @@ class EBSD(CommonImage, Signal2D):
         adp = overlapped_dask_array.map_blocks(
             _get_average_dot_product_map,
             window,
-            dtype_out,
+            dtype,
             standardize=standardize,
-            nav_shape=self.axes_manager.navigation_shape[::-1],
-            sig_size=self.axes_manager.signal_size,
+            dtype=dtype,
             drop_axis=self.axes_manager.signal_indices_in_array,
-            dtype=dtype_out,
         )
+
         adp = da.overlap.trim_internal(
             adp, axes=overlap_depth, boundary=overlap_boundary
         )
@@ -1169,8 +1172,47 @@ class EBSD(CommonImage, Signal2D):
                     "Calculating average dot product map:", file=sys.stdout,
                 )
                 adp = adp.compute()
-
         return adp
+
+    #        # Create dask array of signal data and do processing on this
+    #        dask_array = get_dask_array(signal=self)
+    #
+    #        # Default to the nearest neighbours
+    #        if window is None:
+    #            nav_dim = self.axes_manager.navigation_dimension
+    #            window = Window(window="circular", shape=(3, 3)[:nav_dim])
+    #
+    #        # Set overlap depth between navigation chunks equal to the max.
+    #        # number of nearest neighbours in each navigation axis
+    #        overlap_depth = {i: n for i, n in enumerate(window.n_neighbours)}
+    #
+    #        overlap_boundary = "none"
+    #        overlapped_dask_array = da.overlap.overlap(
+    #            dask_array, depth=overlap_depth, boundary=overlap_boundary
+    #        )
+    #
+    #        adp = overlapped_dask_array.map_blocks(
+    #            _get_average_dot_product_map,
+    #            window,
+    #            dtype_out,
+    #            standardize=standardize,
+    #            nav_shape=self.axes_manager.navigation_shape[::-1],
+    #            sig_size=self.axes_manager.signal_size,
+    #            drop_axis=self.axes_manager.signal_indices_in_array,
+    #            dtype=dtype_out,
+    #        )
+    #        adp = da.overlap.trim_internal(
+    #            adp, axes=overlap_depth, boundary=overlap_boundary
+    #        )
+    #
+    #        if not self._lazy:
+    #            with ProgressBar():
+    #                print(
+    #                    "Calculating average dot product map:", file=sys.stdout,
+    #                )
+    #                adp = adp.compute()
+    #
+    #        return adp
 
     def average_neighbour_patterns(
         self,
