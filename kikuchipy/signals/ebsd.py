@@ -1119,7 +1119,7 @@ class EBSD(CommonImage, Signal2D):
         dp_matrices: np.ndarray = None,
         window: Window = None,
         standardize: bool = True,
-        dtype=np.float32,
+        dtype_out=np.float32,
     ):
         if dp_matrices is not None:
             # Check if dp_matrices.ndim == 4 can go here
@@ -1135,31 +1135,33 @@ class EBSD(CommonImage, Signal2D):
         # Create dask array of signal data and do processing on this
         dask_array = get_dask_array(signal=self)
 
-        # Default to the five nearest neighbours
+        # Default to the nearest neighbours
         if window is None:
-            window = Window(window="circular", shape=(3, 3))
+            nav_dim = self.axes_manager.navigation_dimension
+            window = Window(window="circular", shape=(3, 3)[:nav_dim])
 
-        window_extent = np.subtract(window.shape, window.origin) - 1
-        overlap_depth = {
-            i: e
-            for i, (e, c) in enumerate(
-                zip(window_extent, dask_array.chunks[:-2])
-            )
-            if c[0] != dask_array.shape[i]
-        }
+        # Set overlap depth between navigation chunks equal to the max.
+        # number of nearest neighbours in each navigation axis
+        overlap_depth = {i: n for i, n in enumerate(window.n_neighbours)}
 
+        overlap_boundary = "none"
         overlapped_dask_array = da.overlap.overlap(
-            dask_array, depth=overlap_depth, boundary="none"
+            dask_array, depth=overlap_depth, boundary=overlap_boundary
         )
 
         adp = overlapped_dask_array.map_blocks(
             _get_average_dot_product_map,
             window,
-            dtype,
+            dtype_out,
             standardize=standardize,
+            nav_shape=self.axes_manager.navigation_shape[::-1],
+            sig_size=self.axes_manager.signal_size,
+            drop_axis=self.axes_manager.signal_indices_in_array,
+            dtype=dtype_out,
         )
-
-        adp = da.overlap.trim_internal(adp, axes=overlap_depth, boundary="none")
+        adp = da.overlap.trim_internal(
+            adp, axes=overlap_depth, boundary=overlap_boundary
+        )
 
         if not self._lazy:
             with ProgressBar():
@@ -1167,7 +1169,7 @@ class EBSD(CommonImage, Signal2D):
                     "Calculating average dot product map:", file=sys.stdout,
                 )
                 adp = adp.compute()
-                adp = adp.squeeze()
+
         return adp
 
     def average_neighbour_patterns(

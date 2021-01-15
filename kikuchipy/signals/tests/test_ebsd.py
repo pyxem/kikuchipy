@@ -1252,3 +1252,11 @@ class TestPatternMatching:
         xmap = dummy_signal.match_patterns(s_dict)
 
         assert np.allclose(xmap.scores[:, 0], 1)
+
+
+class TestAverageDotProductMapEBSD:
+    def test_adp_0d(self):
+        pass
+
+    def test_adp_1d(self):
+        pass
