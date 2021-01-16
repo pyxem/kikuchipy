@@ -16,7 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Callable, Tuple
+"""Private functions for calculating dot products between EBSD patterns
+and their neighbours in a map.
+"""
+
+from typing import Callable, Optional
 
 import numpy as np
 from scipy.ndimage import generic_filter
@@ -30,7 +34,7 @@ def _map_helper(
     map_function: Callable,
     window: Window,
     nav_shape: tuple,
-    dtype_out: type = np.float32,
+    dtype_out: np.dtype = np.float32,
     ignore_map: bool = False,
     **kwargs,
 ) -> np.ndarray:
@@ -49,6 +53,8 @@ def _map_helper(
             **kwargs,
         )
 
+    #    if "output" in kwargs:
+    #        dtype_out = np.bool_
     dtype_out = np.bool_ if ignore_map else dtype_out
 
     return generic_filter(
@@ -64,33 +70,31 @@ def _map_helper(
 def _neighbour_dot_products(
     patterns: np.ndarray,
     indices: np.ndarray,
-    nav_shape: Tuple,
+    nav_shape: tuple,
     sig_size: int,
-    dtype_out: type,
-    output: np.ndarray,
+    dtype_out: np.dtype,
     center_index: int,
     flat_window_truthy_indices: np.ndarray,
     zero_mean: bool,
     normalize: bool,
-    return_average: bool,
-):
+    output: Optional[np.ndarray] = None,
+) -> np.ndarray:
     # Flat navigation index corresponding to the origin of the window,
     # i.e. into `patterns`, i.e. the current navigation point to average
-    current_nav_idx = indices[center_index]
+    pat_idx = indices[center_index]
 
     # Indices into `indices` of neighbours to compute dot product with,
     # excluding neighbours outside the map and itself
-    neighbour_idx = np.where((indices != current_nav_idx) & (indices != -1))[0]
+    neighbour_idx = np.where((indices != pat_idx) & (indices != -1))[0]
     neighbours = indices[neighbour_idx]
     neighbours = np.unravel_index(neighbours, nav_shape)
-
     # Flat array of neighbour patterns
     neighbour_patterns = patterns[neighbours].astype(dtype_out)
     neighbour_patterns = neighbour_patterns.reshape((-1, sig_size))
 
     # Flat pattern corresponding to the window origin, i.e. the current
     # navigation point to average
-    pattern = patterns[np.unravel_index(current_nav_idx, nav_shape)]
+    pattern = patterns[np.unravel_index(pat_idx, nav_shape)]
     pattern = pattern.squeeze().flatten().astype(dtype_out)
 
     if zero_mean:
@@ -100,63 +104,72 @@ def _neighbour_dot_products(
         pattern = _normalize(pattern, axis=0)
         neighbour_patterns = _normalize(neighbour_patterns, axis=1)
 
+    # Calculate dot products
     dot_products = neighbour_patterns @ pattern
 
     # Returns average with neighbours used by _get_average_dot_product_map
-    if return_average:
+    if output is None:
         return np.mean(dot_products)
 
-    # output variable is modified in place
-    #    if standardize:
-    #        # Set center of similarity matrix 1.0
-    #        output[current_nav_idx][flat_window_truthy_indices[center_index]] = output[current_nav_idx][
+    # The `output` variable is modified in place
+    if zero_mean:
+        center_value = 1
+        # Set center of similarity matrix 1
+    #        output[pat_idx][flat_window_truthy_indices[center_index]] = 1
+    #        output[pat_idx][flat_window_truthy_indices[center_index]] = output[pat_idx][
     #            flat_window_truthy_indices[center_index]
-    #        ] = 1.0
-    #    else:
-    #        # Compute dot product with itself
-    #        # Should be the maximum value in the matrix
-    #        output[current_nav_idx][flat_window_truthy_indices[center_index]] = (
-    #            pattern ** 2
-    #        ).sum()
-    #
-    #    output[current_nav_idx][
-    #        flat_window_truthy_indices[neighbour_idx]
-    #    ] = dot_products
-    #
-    #    # output variable is modified in place
-    #    # but need to return a value
-    return
+    #        ] = 1
+    else:
+        # Compute dot product with itself. Should be the maximum value
+        # in the matrix
+        center_value = (pattern ** 2).sum()
+    output[pat_idx][flat_window_truthy_indices[center_index]] = center_value
+    output[pat_idx][flat_window_truthy_indices[neighbour_idx]] = dot_products
+
+    return 0
 
 
 def _get_neighbour_dot_product_matrices(
     patterns: np.ndarray,
     window: Window,
-    standardize: bool = False,
-    dtype_out: type = np.float32,
+    sig_dim: int,
+    sig_size: int,
+    zero_mean: bool,
+    normalize: bool,
+    dtype_out: np.dtype,
 ) -> np.ndarray:
+    # Index of window origin in flattened window
     flat_window_origin = np.ravel_multi_index(window.origin, window.shape)
+
+    # Make window flat with boolean values
     boolean_window = window.copy().astype(bool)
     flat_window = boolean_window.flatten()
+
+    # Index of window origin in boolean array with only True values
     flat_window_truthy_indices = np.nonzero(flat_window)[0]
-    zeros_before_origin = np.count_nonzero(~flat_window[:flat_window_origin])
-    center_index = flat_window_origin - zeros_before_origin
-    nav_shape = patterns.shape[:-2]
-    output = np.empty((np.prod(nav_shape), window.size), dtype_out)
+    center_index = np.where(flat_window_truthy_indices == flat_window_origin)
+    center_index = center_index[0][0]
+
+    nav_shape = patterns.shape[:-sig_dim]
+    output = np.empty((np.prod(nav_shape), window.size), dtype=dtype_out)
     output[:] = np.nan
+
     _map_helper(
         patterns,
         _neighbour_dot_products,
         window=boolean_window,
         nav_shape=nav_shape,
-        dtype_out=dtype_out,
+        sig_size=sig_size,
         ignore_map=True,
-        output=output,
         center_index=center_index,
         flat_window_truthy_indices=flat_window_truthy_indices,
-        standardize=standardize,
-        return_average=False,
+        zero_mean=zero_mean,
+        normalize=normalize,
+        output=output,
     )
+
     output = output.reshape(*nav_shape, *window.shape)
+
     return output
 
 
@@ -167,7 +180,7 @@ def _get_average_dot_product_map(
     sig_size: int,
     zero_mean: bool,
     normalize: bool,
-    dtype_out: type,
+    dtype_out: np.dtype,
 ) -> np.ndarray:
     """Get the average dot product map for a chunk of patterns.
 
@@ -218,12 +231,10 @@ def _get_average_dot_product_map(
         sig_size=sig_size,
         dtype_out=dtype_out,
         ignore_map=False,
-        output=None,
         center_index=center_index,
         flat_window_truthy_indices=flat_window_truthy_indices,
         zero_mean=zero_mean,
         normalize=normalize,
-        return_average=True,
     )
 
     return adp
