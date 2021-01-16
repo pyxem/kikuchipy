@@ -32,7 +32,7 @@ from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
 
 from kikuchipy import load
-from kikuchipy import data
+from kikuchipy.data import nickel_ebsd_small
 from kikuchipy.filters.window import Window
 from kikuchipy.pattern._pattern import fft_spectrum
 from kikuchipy.signals.ebsd import EBSD, LazyEBSD
@@ -1255,29 +1255,117 @@ class TestPatternMatching:
         assert np.allclose(xmap.scores[:, 0], 1)
 
 
-class TestAverageDotProductMapEBSD:
+class TestAverageNeighbourDotProductMap:
     def test_adp_0d(self):
-        s = data.nickel_ebsd_small()
+        s = nickel_ebsd_small()
         with pytest.raises(ValueError, match="Signal must have at least one"):
-            _ = s.inav[0, 0].get_average_dot_product()
+            _ = s.inav[0, 0].get_average_neighbour_dot_product_map()
 
     def test_adp_1d(self):
-        s = data.nickel_ebsd_small()
-        adp = s.inav[0].get_average_dot_product()
-        assert np.allclose(adp, [0.99747044, 0.99745756, 0.9974445], atol=1e-5)
+        s = nickel_ebsd_small()
+        adp = s.inav[0].get_average_neighbour_dot_product_map()
+        assert np.allclose(adp, [0.997470, 0.997457, 0.99744], atol=1e-5)
 
     def test_adp_2d(self):
-        s = data.nickel_ebsd_small()
-        adp = s.get_average_dot_product()
+        s = nickel_ebsd_small()
+        adp = s.get_average_neighbour_dot_product_map()
         assert np.allclose(
             adp,
-            np.array(
-                [
-                    [0.9956795, 0.99611735, 0.9972207],
-                    [0.99636394, 0.99656117, 0.9972527],
-                    [0.99573123, 0.9961346, 0.9970487],
-                ]
-            ),
+            [
+                [0.995679, 0.996117, 0.997220],
+                [0.996363, 0.996561, 0.997252],
+                [0.995731, 0.996134, 0.997048],
+            ],
             atol=1e-5,
         )
         assert adp.dtype == np.float32
+
+    @pytest.mark.parametrize(
+        "window, desired_adp_map",
+        [
+            (
+                "rectangular",
+                [
+                    [0.995135, 0.995891, 0.997144],
+                    [0.995425, 0.996032, 0.997245],
+                    [0.995160, 0.995959, 0.997019],
+                ],
+            ),
+            (
+                "circular",
+                [
+                    [0.995679, 0.996117, 0.997220],
+                    [0.996363, 0.996561, 0.997252],
+                    [0.995731, 0.996134, 0.997048],
+                ],
+            ),
+        ],
+    )
+    def test_window(self, window, desired_adp_map):
+        s = nickel_ebsd_small()
+        w = Window(window=window)
+        adp = s.get_average_neighbour_dot_product_map(window=w)
+        assert np.allclose(adp, desired_adp_map, atol=1e-5)
+
+    @pytest.mark.parametrize(
+        "zero_mean, desired_adp_map",
+        [
+            (
+                True,
+                [
+                    [0.995679, 0.996117, 0.997220],
+                    [0.996363, 0.996561, 0.997252],
+                    [0.995731, 0.996134, 0.997048],
+                ],
+            ),
+            (
+                False,
+                [
+                    [0.999663, 0.999699, 0.999785],
+                    [0.999717, 0.999733, 0.999786],
+                    [0.999666, 0.999698, 0.999769],
+                ],
+            ),
+        ],
+    )
+    def test_zero_mean(self, zero_mean, desired_adp_map):
+        s = nickel_ebsd_small()
+        adp = s.get_average_neighbour_dot_product_map(zero_mean=zero_mean)
+        assert np.allclose(adp, desired_adp_map, atol=1e-5)
+
+    @pytest.mark.parametrize(
+        "normalize, desired_adp_map",
+        [
+            (
+                True,
+                [
+                    [0.995679, 0.996117, 0.997220],
+                    [0.996363, 0.996561, 0.997252],
+                    [0.995731, 0.996134, 0.997048],
+                ],
+            ),
+            (
+                False,
+                [
+                    [6402544, 6398041.5, 6434939.5],
+                    [6411949.5, 6409170, 6464348],
+                    [6451061, 6456555.5, 6489456],
+                ],
+            ),
+        ],
+    )
+    def test_normalize(self, normalize, desired_adp_map):
+        s = nickel_ebsd_small()
+        adp = s.get_average_neighbour_dot_product_map(normalize=normalize)
+        assert np.allclose(adp, desired_adp_map, atol=1e-5)
+
+    def test_dtype_out(self):
+        s = nickel_ebsd_small()
+        dtype1 = np.float32
+        adp1 = s.get_average_neighbour_dot_product_map(normalize=False)
+        assert adp1.dtype == dtype1
+        dtype2 = np.int32
+        adp2 = s.get_average_neighbour_dot_product_map(
+            normalize=True, dtype_out=dtype2
+        )
+        assert adp2.dtype == dtype2

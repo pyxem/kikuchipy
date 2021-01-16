@@ -168,7 +168,7 @@ def _get_average_dot_product_map(
     zero_mean: bool,
     normalize: bool,
     dtype_out: type,
-):
+) -> np.ndarray:
     """Get the average dot product map for a chunk of patterns.
 
     Parameters

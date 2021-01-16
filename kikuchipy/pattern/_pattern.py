@@ -18,7 +18,7 @@
 
 from typing import Union, Tuple, Optional, List
 
-from numba import njit, jit
+from numba import njit
 import numpy as np
 from numpy.fft import (
     fft2,
