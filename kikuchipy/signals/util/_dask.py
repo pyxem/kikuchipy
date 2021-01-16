@@ -137,6 +137,31 @@ def get_dask_array(
     return dask_array.astype(dtype)
 
 
+def _get_overlap_depth_from_window(
+    window, axes_manager, chunksize: tuple
+) -> dict:
+    """Return overlap depth between navigation chunks equal to the max.
+    number of nearest neighbours in each navigation axis.
+
+    Parameters
+    ----------
+    window : kikuchipy.filters.window.Window
+    axes_manager : hyperspy.axes.AxesManager
+    chunksize : tuple
+
+    Returns
+    -------
+    overlap_depth : dict
+    """
+    sig_dim = axes_manager.signal_dimension
+    nav_shape = axes_manager.navigation_shape[::-1]
+    is_chunked = ~np.equal(chunksize[:-sig_dim], nav_shape)
+    overlap_depth = {
+        i: n for i, n in enumerate(window.n_neighbours) if is_chunked[i]
+    }
+    return overlap_depth
+
+
 def _rechunk_learning_results(
     factors, loadings, mbytes_chunk: int = 100
 ) -> list:
