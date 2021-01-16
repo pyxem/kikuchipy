@@ -1199,7 +1199,7 @@ class EBSD(CommonImage, Signal2D):
         adp = overlapped_dask_array.map_blocks(
             _get_average_dot_product_map,
             window=window,
-            sig_dim=sig_dim,
+            sig_dim=self.axes_manager.signal_dimension,
             sig_size=self.axes_manager.signal_size,
             zero_mean=zero_mean,
             normalize=normalize,
