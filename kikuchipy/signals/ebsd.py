@@ -51,6 +51,8 @@ from kikuchipy.pattern._pattern import (
     fft_filter,
     _dynamic_background_frequency_space_setup,
 )
+from kikuchipy.indexing import StaticPatternMatching
+from kikuchipy.indexing.similarity_metrics import SimilarityMetric
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
     metadata_nodes,
@@ -98,10 +100,7 @@ class EBSD(CommonImage, Signal2D):
             px_size=self.axes_manager.signal_axes[0].scale,
         )
 
-        if "xmap" in kwargs:
-            self._xmap = kwargs.pop("xmap")
-        else:
-            self._xmap = None
+        self._xmap = kwargs.pop("xmap", None)
 
         # Update metadata if object is initialised from numpy array
         if not self.metadata.has_item(metadata_nodes("ebsd")):
@@ -196,7 +195,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        kikuchipy.signals.EBSD.set_phase_parameters
+        ~kikuchipy.signals.EBSD.set_phase_parameters
 
         Examples
         --------
@@ -298,7 +297,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        kikuchipy.signals.EBSD.set_experimental_parameters
+        ~kikuchipy.signals.EBSD.set_experimental_parameters
 
         Examples
         --------
@@ -357,7 +356,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        kikuchipy.signals.EBSD.set_detector_calibration
+        ~kikuchipy.signals.EBSD.set_detector_calibration
 
         Examples
         --------
@@ -383,7 +382,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        kikuchipy.signals.EBSD.set_scan_calibration
+        ~kikuchipy.signals.EBSD.set_scan_calibration
 
         Examples
         --------
@@ -431,7 +430,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        kikuchipy.signals.EBSD.remove_dynamic_background,
+        ~kikuchipy.signals.EBSD.remove_dynamic_background
 
         Examples
         --------
@@ -567,9 +566,9 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        kikuchipy.signals.EBSD.remove_static_background,
-        kikuchipy.signals.EBSD.get_dynamic_background,
-        kikuchipy.pattern.remove_dynamic_background,
+        kikuchipy.signals.EBSD.remove_static_background
+        kikuchipy.signals.EBSD.get_dynamic_background
+        kikuchipy.pattern.remove_dynamic_background
         kikuchipy.pattern.get_dynamic_background
 
         Examples
@@ -758,8 +757,8 @@ class EBSD(CommonImage, Signal2D):
 
         See also
         --------
-        kikuchipy.signals.EBSD.rescale_intensity,
-        kikuchipy.signals.EBSD.normalize_intensity
+        ~kikuchipy.signals.EBSD.rescale_intensity
+        ~kikuchipy.signals.EBSD.normalize_intensity
 
         Examples
         --------
@@ -881,6 +880,84 @@ class EBSD(CommonImage, Signal2D):
 
         return image_quality_map
 
+    def match_patterns(
+        self,
+        simulations,
+        metric: Union[str, SimilarityMetric] = "ncc",
+        keep_n: int = 50,
+        n_slices: int = 1,
+        return_merged_crystal_map: bool = False,
+        get_orientation_similarity_map: bool = False,
+    ) -> Union[CrystalMap, List[CrystalMap]]:
+        """Match each experimental pattern to all simulated patterns, of
+        known crystal orientations in pre-computed dictionaries
+        :cite:`chen2015dictionary,jackson2019dictionary`, to determine
+        their phase and orientation.
+
+        A suitable similarity metric, the normalized cross-correlation
+        (:func:`~kikuchipy.indexing.similarity_metrics.ncc`), is used by
+        default, but a valid user-defined similarity metric may be used
+        instead (see
+        :func:`~kikuchipy.indexing.similarity_metrics.make_similarity_metric`).
+
+        :class:`~orix.crystal_map.crystal_map.CrystalMap`'s for each
+        dictionary with "scores" and "simulation_indices" as properties
+        are returned.
+
+        Parameters
+        ----------
+        simulations : EBSD or list of EBSD
+            An EBSD signal or a list of EBSD signals with simulated
+            patterns (dictionaries). The signals must have a 1D
+            navigation axis and the `xmap` property with crystal
+            orientations set.
+        metric : str or SimilarityMetric, optional
+            Similarity metric, by default "ncc" (normalized
+            cross-correlation).
+        keep_n : int, optional
+            Number of best matches to keep, by default 50 or the number
+            of simulated patterns if fewer than 50 are available.
+        n_slices : int, optional
+            Number of simulation slices to process sequentially, by
+            default 1 (no slicing).
+        return_merged_crystal_map : bool, optional
+            Whether to return a merged crystal map, the best matches
+            determined from the similarity scores, in addition to the
+            single phase maps. By default False.
+        get_orientation_similarity_map : bool, optional
+            Add orientation similarity maps to the returned crystal
+            maps' properties named "osm". By default False.
+
+        Returns
+        -------
+        xmaps : ~orix.crystal_map.crystal_map.CrystalMap or list of \
+                ~orix.crystal_map.crystal_map.CrystalMap
+            A crystal map for each dictionary loaded and one merged map
+            if `return_merged_crystal_map = True`.
+
+        Notes
+        -----
+        Merging of crystal maps and calculations of orientation
+        similarity maps can be done afterwards with
+        :func:`~kikuchipy.indexing.merge_crystal_maps` and
+        :func:`~kikuchipy.indexing.orientation_similarity_map`,
+        respectively.
+
+        See Also
+        --------
+        ~kikuchipy.indexing.similarity_metrics.make_similarity_metric
+        ~kikuchipy.indexing.similarity_metrics.ndp
+        """
+        sdi = StaticPatternMatching(simulations)
+        return sdi(
+            signal=self,
+            metric=metric,
+            keep_n=keep_n,
+            n_slices=n_slices,
+            return_merged_crystal_map=return_merged_crystal_map,
+            get_orientation_similarity_map=get_orientation_similarity_map,
+        )
+
     def fft_filter(
         self,
         transfer_function: Union[np.ndarray, Window],
@@ -931,7 +1008,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        :class:`~kikuchipy.filters.window.Window`
+        ~kikuchipy.filters.window.Window
         """
         dtype_out = self.data.dtype
 
@@ -1020,8 +1097,8 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        :class:`~kikuchipy.filters.window.Window`,
-        :func:`scipy.signal.windows.get_window`,
+        ~kikuchipy.filters.window.Window
+        :func:`scipy.signal.windows.get_window`
         :func:`scipy.ndimage.correlate`
 
         Examples
@@ -1072,7 +1149,9 @@ class EBSD(CommonImage, Signal2D):
             averaging_window = copy.copy(window)
         else:
             averaging_window = Window(
-                window=window, shape=window_shape, **kwargs,
+                window=window,
+                shape=window_shape,
+                **kwargs,
             )
         averaging_window.shape_compatible(self.axes_manager.signal_shape)
 
@@ -1126,7 +1205,9 @@ class EBSD(CommonImage, Signal2D):
                 overlap_depth[i] = 0
         overlap_boundary = {i: "none" for i in range(data_dim)}
         overlapped_dask_array = da.overlap.overlap(
-            dask_array, depth=overlap_depth, boundary=overlap_boundary,
+            dask_array,
+            depth=overlap_depth,
+            boundary=overlap_boundary,
         )
 
         # Must also be overlapped, since the patterns are overlapped
@@ -1195,7 +1276,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        kikuchipy.signals.EBSD.get_virtual_bse_intensity
+        ~kikuchipy.signals.EBSD.get_virtual_bse_intensity
         """
         # Plot signal if necessary
         if self._plot is None or not self._plot.is_active:
@@ -1273,7 +1354,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        kikuchipy.signals.EBSD.plot_virtual_bse_intensity
+        ~kikuchipy.signals.EBSD.plot_virtual_bse_intensity
         """
         vbse = roi(self, axes=self.axes_manager.signal_axes)
         vbse_sum = self._get_sum_signal(vbse, out_signal_axes)
@@ -1325,7 +1406,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        kikuchipy.io.plugins.h5ebsd.file_writer,\
+        kikuchipy.io.plugins.h5ebsd.file_writer
         kikuchipy.io.plugins.nordif.file_writer
         """
         if filename is None:

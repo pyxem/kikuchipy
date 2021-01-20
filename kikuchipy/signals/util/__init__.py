@@ -18,14 +18,9 @@
 
 """Signal utilities, mostly for handling signal metadata and attributes."""
 
-from kikuchipy.signals.util._metadata import (
-    ebsd_master_pattern_metadata,
-    ebsd_metadata,
-    metadata_nodes,
-)
+from kikuchipy.signals.util._metadata import ebsd_metadata, metadata_nodes
 
 __all__ = [
-    "ebsd_master_pattern_metadata",
     "ebsd_metadata",
     "metadata_nodes",
 ]

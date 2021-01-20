@@ -14,16 +14,17 @@ kikuchipy
     :hidden:
     :caption: User guide
 
-    load_save_data.rst
+    load_save_data.ipynb
     reference_frames.rst
     change_scan_pattern_size.rst
-    pattern_processing.rst
-    feature_maps.rst
+    pattern_processing.ipynb
+    feature_maps.ipynb
     virtual_backscatter_electron_imaging.rst
     visualizing_patterns.rst
     multivariate_analysis.rst
     metadata.rst
     reference.rst
+    bibliography.rst
 
 .. toctree::
     :hidden:

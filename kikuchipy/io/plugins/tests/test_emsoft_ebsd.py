@@ -30,7 +30,6 @@ from kikuchipy.io.plugins.emsoft_ebsd import (
     _crystaldata2phase,
 )
 from kikuchipy.io.plugins.h5ebsd import hdf5group2dict
-from kikuchipy.signals.util._metadata import metadata_nodes
 
 DIR_PATH = os.path.dirname(__file__)
 EMSOFT_FILE = os.path.join(
@@ -44,24 +43,10 @@ class TestEMsoftEBSDReader:
         s = load(EMSOFT_FILE)
 
         assert isinstance(s.xmap, CrystalMap)
-
         assert s.data.shape == (10, 10, 10)
-
         assert s.axes_manager["dx"].scale == 70
         assert s.axes_manager["dx"].units == "um"
         assert s.axes_manager["x"].units == "px"
-
-        sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
-        phase_node = "Sample.Phases.1"
-        desired_dict = {
-            f"{sem_node}.beam_energy": 20,
-            f"{ebsd_node}.manufacturer": "EMsoft",
-            f"{ebsd_node}.xpc": 4.86,
-            f"{phase_node}.space_group": 140,
-            f"{phase_node}.atom_coordinates.1.atom": 13,
-        }
-        for key, value in desired_dict.items():
-            assert s.metadata.get_item(key) == value
 
     @pytest.mark.parametrize("scan_size", [10, (1, 10), (5, 2)])
     def test_scan_size(self, scan_size):

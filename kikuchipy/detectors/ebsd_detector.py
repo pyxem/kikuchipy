@@ -59,7 +59,8 @@ class EBSDDetector:
         """Create an EBSD detector with a shape, pixel size, binning,
         and projection/pattern center(s) (PC(s)).
 
-        PC conversions are calculated as presented in [Jackson2019]_.
+        PC conversions are calculated as presented in
+        :cite:`jackson2019dictionary`.
 
         Parameters
         ----------
@@ -98,7 +99,7 @@ class EBSDDetector:
         ...     shape=(60, 60),
         ...     pc=np.ones((149, 200)) * [0.421, 0.779, 0.505],
         ...     convention="tsl",
-        ...     pixel_size=70,
+        ...     px_size=70,
         ...     binning=8,
         ...     tilt=5,
         ...     sample_tilt=70,
@@ -394,7 +395,7 @@ class EBSDDetector:
             )
 
     def _pc_emsoft2bruker(self, version: int = 5) -> np.ndarray:
-        new_pc = np.zeros_like(self.pc)
+        new_pc = np.zeros_like(self.pc, dtype=np.float32)
         if version == 5:
             new_pc[..., 0] = 0.5 + (-self.pcx / (self.ncols * self.binning))
         else:
@@ -409,7 +410,7 @@ class EBSDDetector:
         return new_pc
 
     def _pc_bruker2emsoft(self, version: int = 5) -> np.ndarray:
-        new_pc = np.zeros_like(self.pc)
+        new_pc = np.zeros_like(self.pc, dtype=np.float32)
         new_pc[..., 0] = self.ncols * (self.pcx - 0.5)
         if version == 5:
             new_pc[..., 0] = -new_pc[..., 0]
@@ -425,7 +426,8 @@ class EBSDDetector:
     def pc_emsoft(self, version: int = 5) -> np.ndarray:
         """Return PC in the EMsoft convention.
 
-        PC conversions are calculated as presented in [Jackson2019]_.
+        PC conversions are calculated as presented in
+        :cite:`jackson2019dictionary`.
 
         Parameters
         ----------
@@ -440,21 +442,24 @@ class EBSDDetector:
     def pc_bruker(self) -> np.ndarray:
         """Return PC in the Bruker convention.
 
-        PC conversions are calculated as presented in [Jackson2019]_.
+        PC conversions are calculated as presented in
+        :cite:`jackson2019dictionary`..
         """
         return self.pc
 
     def pc_tsl(self) -> np.ndarray:
         """Return PC in the EDAX TSL convention.
 
-        PC conversions are calculated as presented in [Jackson2019]_.
+        PC conversions are calculated as presented in
+        :cite:`jackson2019dictionary`..
         """
         return self._pc_bruker2tsl()
 
     def pc_oxford(self) -> np.ndarray:
         """Return PC in the Oxford convention.
 
-        PC conversions are calculated as presented in [Jackson2019]_.
+        PC conversions are calculated as presented in
+        :cite:`jackson2019dictionary`.
         """
         return self._pc_bruker2tsl()
 
