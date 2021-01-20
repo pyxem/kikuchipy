@@ -1073,12 +1073,12 @@ class EBSD(CommonImage, Signal2D):
 
     def get_neighbour_dot_product_matrices(
         self,
-        window: Window = None,
+        window: Optional[Window] = None,
         zero_mean: bool = True,
         normalize: bool = True,
         dtype_out: np.dtype = np.float32,
     ) -> Union[np.ndarray, da.Array]:
-        """Return an array with dot products of a pattern and its
+        """Get an array with dot products of a pattern and its
         neighbours within a window.
 
         Parameters
@@ -1103,9 +1103,6 @@ class EBSD(CommonImage, Signal2D):
 
         Returns
         -------
-        dp_matrices
-            Dot products of each pattern and its neighbours within a
-            window.
         """
         if self.axes_manager.navigation_dimension == 0:
             raise ValueError(
@@ -1164,14 +1161,14 @@ class EBSD(CommonImage, Signal2D):
 
     def get_average_neighbour_dot_product_map(
         self,
-        window: Window = None,
+        window: Optional[Window] = None,
         zero_mean: bool = True,
         normalize: bool = True,
         dtype_out: np.dtype = np.float32,
-        dp_matrices: np.ndarray = None,
+        dp_matrices: Optional[np.ndarray] = None,
     ) -> Union[np.ndarray, da.Array]:
-        """Return a map of the average dot product between a pattern and
-        its neighbours within a window.
+        """Get a map of the average dot product between patterns and
+        their neighbours within an averaging window.
 
         Parameters
         ----------
@@ -1202,9 +1199,6 @@ class EBSD(CommonImage, Signal2D):
 
         Returns
         -------
-        adp
-            Map of the average dot product between each pattern and its
-            neighbours.
         """
         if self.axes_manager.navigation_dimension == 0:
             raise ValueError(
