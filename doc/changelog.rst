@@ -23,6 +23,8 @@ Contributors
 
 Added
 -----
+- Calculation of an average dot product map, or just the dot product matrices.
+  (`#280 <https://github.com/pyxem/kikuchipy/pull/280>`_)
 - A nice gallery to the documentation with links to each user guide page.
   (`#285 <https://github.com/pyxem/kikuchipy/pull/285>`_)
 - Support for writing/reading an EBSD signal with 1 or 0 navigation axes to/from
@@ -74,6 +76,12 @@ Added
 
 Changed
 -------
+- The feature maps notebook to include how to obtain an average dot product map
+  and dot product matrices for an EBSD signal.
+  (`#280 <https://github.com/pyxem/kikuchipy/pull/280>`_)
+- Averaging EBSD patterns with nearest neighbours now rescales to input data
+  type range, thus loosing relative intensities, to avoid clipping intensities.
+  (`#280 <https://github.com/pyxem/kikuchipy/pull/280>`_)
 - Dependency requirement of diffsims from >= 0.3 to >= 0.4
   (`#282 <https://github.com/pyxem/kikuchipy/pull/282>`_)
 - Name of hemisphere axis in EBSDMasterPattern from "y" to "hemisphere".
@@ -111,6 +119,8 @@ Removed
 
 Fixed
 -----
+- IndexError in neighbour pattern averaging
+  (`#280 <https://github.com/pyxem/kikuchipy/pull/280>`_)
 - Square Lambert projection handles edge case vectors better
   (`#272 <https://github.com/pyxem/kikuchipy/pull/272>`_)
 - Reading of square Lambert projections from EMsoft's master pattern file now

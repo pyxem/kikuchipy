@@ -580,3 +580,15 @@ def fft_frequency_vectors(shape: Tuple[int, int]) -> np.ndarray:
         frequency_vectors[i] = liney[i] ** 2 + linex ** 2 - 1
 
     return frequency_vectors
+
+
+def _zero_mean(patterns: np.ndarray, axis: Tuple[int, tuple]) -> np.ndarray:
+    patterns_mean = patterns.mean(axis=axis, keepdims=True)
+    return patterns - patterns_mean
+
+
+def _normalize(patterns: np.ndarray, axis: Tuple[int, tuple]) -> np.ndarray:
+    patterns_squared = patterns ** 2
+    patterns_norm = patterns_squared.sum(axis=axis, keepdims=True)
+    patterns_norm_squared = patterns_norm ** 0.5
+    return patterns / patterns_norm_squared
