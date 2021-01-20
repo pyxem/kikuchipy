@@ -35,20 +35,6 @@ from kikuchipy.signals.util._dask import get_dask_array
 
 
 # Expected output intensities from various image processing methods
-RESCALED_UINT8 = np.array(
-    [[182, 218, 182], [255, 218, 182], [218, 36, 0]], dtype=np.uint8
-)
-RESCALED_FLOAT32 = np.array(
-    [
-        [0.714286, 0.857143, 0.714286],
-        [1.0, 0.857143, 0.714286],
-        [0.857143, 0.142857, 0.0],
-    ],
-    dtype=np.float32,
-)
-RESCALED_UINT8_0100 = np.array(
-    [[71, 85, 71], [100, 85, 71], [85, 14, 0]], dtype=np.uint8
-)
 STATIC_SUB_UINT8 = np.array(
     [[127, 212, 127], [255, 255, 170], [212, 0, 0]], dtype=np.uint8
 )
@@ -608,20 +594,21 @@ class TestAverageNeighbourPatternsChunk:
         # Get sum of window data for each image
         nav_shape = dummy_signal.axes_manager.navigation_shape
         w_sums = convolve(
-            input=np.ones(nav_shape[::-1]),
+            input=np.ones(nav_shape[::-1], dtype=int),
             weights=w.data,
             mode="constant",
             cval=0,
         )
 
-        for i in range(dummy_signal.axes_manager.signal_dimension):
+        # Add signal dimensions to arrays to enable their use with
+        # Dask's map_blocks()
+        sig_dim = dummy_signal.axes_manager.signal_dimension
+        nav_dim = dummy_signal.axes_manager.navigation_dimension
+        for _ in range(sig_dim):
             w_sums = np.expand_dims(w_sums, axis=w_sums.ndim)
-        w_sums = da.from_array(w_sums, chunks=dask_array.chunksize)
-
-        # Add signal dimensions to window array to enable its use with Dask's
-        # map_blocks()
-        w = w.reshape(
-            w.shape + (1,) * dummy_signal.axes_manager.signal_dimension
+            w = np.expand_dims(w, axis=w.ndim)
+        w_sums = da.from_array(
+            w_sums, chunks=dask_array.chunks[:nav_dim] + (1,) * sig_dim
         )
 
         averaged_patterns = dask_array.map_blocks(
@@ -632,9 +619,9 @@ class TestAverageNeighbourPatternsChunk:
             dtype=dtype_out,
         )
 
-        answer = np.array([7, 4, 6, 6, 3, 7, 7, 3, 2], dtype=np.uint8).reshape(
-            (3, 3)
-        )
+        answer = np.array(
+            [255, 109, 218, 218, 36, 236, 255, 36, 0], dtype=np.uint8
+        ).reshape((3, 3))
 
         # Check for correct data type and gives expected output intensities
         assert averaged_patterns.dtype == dtype_out

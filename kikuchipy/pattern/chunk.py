@@ -507,11 +507,14 @@ def average_neighbour_patterns(
     patterns: np.ndarray,
     window_sums: np.ndarray,
     window: Union[np.ndarray, Window],
-    dtype_out: Union[
-        None, np.dtype, Tuple[int, int], Tuple[float, float]
-    ] = None,
+    dtype_out: Optional[np.dtype] = None,
 ) -> np.ndarray:
     """Average a chunk of patterns with its neighbours within a window.
+
+    The amount of averaging is specified by the window coefficients.
+    All patterns are averaged with the same window. Map borders are
+    extended with zeros. Resulting pattern intensities are rescaled
+    to fill the input patterns' data type range individually.
 
     Parameters
     ----------
@@ -541,8 +544,9 @@ def average_neighbour_patterns(
     # Divide convolved patterns by number of neighbours averaged with
     averaged_patterns = np.empty_like(correlated_patterns, dtype=dtype_out)
     for nav_idx in np.ndindex(patterns.shape[:-2]):
-        averaged_patterns[nav_idx] = (
-            correlated_patterns[nav_idx] / window_sums[nav_idx]
+        averaged_patterns[nav_idx] = pattern_processing.rescale_intensity(
+            pattern=correlated_patterns[nav_idx] / window_sums[nav_idx],
+            dtype_out=dtype_out,
         )
 
     return averaged_patterns

@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Optional, Union
+from typing import List, Optional, Tuple, Union
 
 import dask.array as da
 import numpy as np
@@ -29,7 +29,7 @@ def get_chunking(
     sig_dim: Optional[int] = None,
     chunk_shape: Optional[int] = None,
     chunk_bytes: Union[int, float, str, None] = 30e6,
-    dtype: Optional[type] = None,
+    dtype: Optional[np.dtype] = None,
 ) -> tuple:
     """Get a chunk tuple based on the shape of the signal data.
 
@@ -97,7 +97,9 @@ def get_chunking(
     return chunks
 
 
-def get_dask_array(signal, dtype=None, **kwargs) -> da.Array:
+def get_dask_array(
+    signal, dtype: Optional[np.dtype] = None, **kwargs
+) -> da.Array:
     """Return dask array of patterns with appropriate chunking.
 
     Parameters
@@ -105,7 +107,7 @@ def get_dask_array(signal, dtype=None, **kwargs) -> da.Array:
     signal : :class:`~kikuchipy.signals.ebsd.EBSD` or\
             :class:`~kikuchipy.signals.ebsd.LazyEBSD`
         Signal with data to return dask array from.
-    dtype : :class:`numpy.dtype`, optional
+    dtype
         Data type of returned dask array. This is also passed on to
         :func:`~kikuchipy.signals.util.get_chunking`.
     kwargs
@@ -116,7 +118,7 @@ def get_dask_array(signal, dtype=None, **kwargs) -> da.Array:
 
     Returns
     -------
-    dask_array : :class:`dask.array.Array`
+    dask_array
         Dask array with signal data with appropriate chunking and data
         type.
     """
@@ -135,7 +137,32 @@ def get_dask_array(signal, dtype=None, **kwargs) -> da.Array:
     return dask_array.astype(dtype)
 
 
-def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
+def _get_chunk_overlap_depth(window, axes_manager, chunksize: tuple) -> dict:
+    """Return overlap depth between navigation chunks equal to the max.
+    number of nearest neighbours in each navigation axis.
+
+    Parameters
+    ----------
+    window : kikuchipy.filters.window.Window
+    axes_manager : hyperspy.axes.AxesManager
+    chunksize
+
+    Returns
+    -------
+    overlap_depth
+    """
+    sig_dim = axes_manager.signal_dimension
+    nav_shape = axes_manager.navigation_shape[::-1]
+    is_chunked = ~np.equal(chunksize[:-sig_dim], nav_shape)
+    overlap_depth = {
+        i: n for i, n in enumerate(window.n_neighbours) if is_chunked[i]
+    }
+    return overlap_depth
+
+
+def _rechunk_learning_results(
+    factors: np.ndarray, loadings: np.ndarray, mbytes_chunk: int = 100
+) -> list:
     """Return suggested data chunks for learning results.
 
     It is assumed that the loadings are not transposed. The last axes of
@@ -145,11 +172,15 @@ def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
 
     Parameters
     ----------
-    factors : :attr:`hyperspy.learn.mva.LearningResults.factors`
-        Component patterns in learning results.
-    loadings : :attr:`hyperspy.learn.mva.LearningResults.loadings`
-        Component loadings in learning results.
-    mbytes_chunk : int, optional
+    factors
+        Component patterns
+        :attr:`hyperspy.learn.mva.LearningResults.factors` in learning
+        results.
+    loadings
+        Component loadings
+        :attr:`hyperspy.learn.mva.LearningResults.loadings` in learning
+        results.
+    mbytes_chunk
         Size of chunks in MB, default is 100 MB as suggested in the Dask
         documentation.
 
@@ -157,13 +188,12 @@ def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
     -------
     List of two tuples :
         The first/second tuple are suggested chunks to pass to
-        :func:`dask.array.rechunk` for factors/loadings,
-        respectively.
+        :func:`dask.array.rechunk` for factors/loadings, respectively.
     """
     # Make sure the last factors/loading axes have the same shapes
     if factors.shape[-1] != loadings.shape[-1]:
         raise ValueError(
-            "The last dimensions in factors and loadings are not the same."
+            "The last dimensions in factors and loadings are not the same"
         )
 
     # Get shape of learning results
@@ -194,7 +224,11 @@ def _rechunk_learning_results(factors, loadings, mbytes_chunk=100):
     return chunks
 
 
-def _update_learning_results(learning_results, components, dtype_out):
+def _update_learning_results(
+    learning_results,
+    components: Union[None, int, List[int]],
+    dtype_out: np.dtype,
+) -> Tuple[np.ndarray, np.ndarray]:
     """Update learning results before calling
     :meth:`hyperspy.learn.mva.MVA.get_decomposition_model` by
     changing data type, keeping only desired components and rechunking
@@ -204,19 +238,19 @@ def _update_learning_results(learning_results, components, dtype_out):
     ----------
     learning_results : hyperspy.learn.mva.LearningResults
         Learning results with component patterns and loadings.
-    components : None, int or list of ints
-        If ``None``, rebuilds the signal from all ``components``. If
-        ``int``, rebuilds signal from ``components`` in range 0-given
-        ``int``. If list of ``int``, rebuilds signal from only
-        ``components`` in given list.
-    dtype_out : numpy.float16, numpy.float32 or numpy.float64
-        Data type to cast learning results to.
+    components
+        If None, rebuilds the signal from all `components`. If `int`,
+        rebuilds signal from `components` in range 0-given `int`. If
+        list of `int`, rebuilds signal from only `components` in given
+        list.
+    dtype_out
+        Floating data type to cast learning results to.
 
     Returns
     -------
-    factors : :attr:`hyperspy.learn.mva.LearningResults.factors`
+    factors
         Updated component patterns in learning results.
-    loadings : :attr:`hyperspy.learn.mva.LearningResults.loadings`
+    loadings
         Updated component loadings in learning results.
     """
     # Change data type

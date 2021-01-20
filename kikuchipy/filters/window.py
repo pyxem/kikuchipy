@@ -227,6 +227,13 @@ class Window(np.ndarray):
         """Radial distance to the window origin."""
         return distance_to_origin(self.shape, self.origin)
 
+    @property
+    def n_neighbours(self) -> tuple:
+        """Maximum number of nearest neighbours in each navigation axis
+        to the origin.
+        """
+        return tuple(np.subtract(self.shape, self.origin) - 1)
+
     def make_circular(self):
         """Make window circular.
 

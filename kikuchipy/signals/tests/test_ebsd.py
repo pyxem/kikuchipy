@@ -32,6 +32,7 @@ from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
 
 from kikuchipy import load
+from kikuchipy.data import nickel_ebsd_small
 from kikuchipy.filters.window import Window
 from kikuchipy.pattern._pattern import fft_spectrum
 from kikuchipy.signals.ebsd import EBSD, LazyEBSD
@@ -639,12 +640,13 @@ class TestAverageNeighbourPatternsEBSD:
                 # fmt: off
                 np.array(
                     [
-                        7, 4, 6, 6, 3, 7, 7, 3, 2, 4, 4, 6, 4, 2, 5, 4, 3, 5, 5,
-                        5, 3, 5, 3, 8, 6, 5, 5, 5, 2, 6, 4, 3, 3, 4, 1, 1, 6, 4,
-                        6, 4, 3, 4, 5, 5, 3, 5, 3, 3, 3, 3, 5, 3, 4, 5, 5, 3, 7,
-                        4, 4, 2, 3, 4, 1, 5, 3, 6, 3, 4, 1, 1, 4, 4, 7, 6, 3, 4,
-                        6, 4, 3, 6, 3,
-                    ],
+                        255, 109, 218, 218, 36, 236, 255, 36, 0, 143, 111, 255,
+                        159, 0, 207, 159, 63, 175, 136, 118, 33, 118, 0, 255,
+                        153, 118, 102, 182, 24, 255, 121, 109, 85, 133, 0, 12,
+                        255, 107, 228, 80, 40, 107, 161, 147, 0, 204, 0, 51, 51,
+                        51, 229, 25, 76, 255, 195, 104, 255, 135, 150, 59, 104,
+                        120, 0, 204, 102, 255, 89, 127, 0, 12, 140, 127, 255,
+                        185, 0, 69, 162, 46, 0, 208, 0                    ],
                 ),
                 # fmt: on
                 None,
@@ -656,11 +658,13 @@ class TestAverageNeighbourPatternsEBSD:
                 # fmt: off
                 np.array(
                     [
-                        7, 6, 6, 7, 3, 6, 7, 4, 3, 4, 5, 5, 6, 2, 7, 5, 3, 5, 4,
-                        5, 5, 6, 1, 8, 5, 5, 7, 6, 3, 7, 5, 2, 5, 6, 3, 3, 5, 3,
-                        5, 4, 3, 6, 5, 3, 3, 5, 4, 5, 4, 2, 6, 5, 4, 5, 5, 2, 7,
-                        3, 3, 2, 3, 3, 2, 6, 3, 5, 3, 4, 3, 3, 4, 3, 6, 4, 5, 3,
-                        4, 3, 3, 5, 4,
+                        255, 223, 223, 255, 0, 223, 255, 63, 0, 109, 145, 145,
+                        200, 0, 255, 163, 54, 127, 119, 136, 153, 170, 0, 255,
+                        153, 136, 221, 212, 42, 255, 127, 0, 141, 184, 14, 28,
+                        210, 44, 179, 134, 0, 255, 210, 14, 29, 200, 109, 182,
+                        109, 0, 255, 182, 145, 182, 150, 34, 255, 57, 81, 0, 57,
+                        69, 11, 255, 38, 191, 63, 114, 38, 50, 89, 0, 255, 117,
+                        137, 19, 117, 0, 0, 176, 58
                     ],
                 ),
                 # fmt: on
@@ -673,11 +677,13 @@ class TestAverageNeighbourPatternsEBSD:
                 # fmt: off
                 np.array(
                     [
-                        6, 3, 7, 5, 2, 5, 6, 2, 3, 5, 3, 5, 4, 3, 6, 5, 3, 3, 5,
-                        4, 4, 4, 2, 6, 5, 4, 5, 5, 3, 7, 4, 3, 3, 4, 3, 2, 5, 4,
-                        5, 4, 3, 4, 4, 4, 3, 5, 4, 4, 4, 3, 5, 4, 5, 5, 5, 2, 7,
-                        3, 3, 1, 3, 3, 2, 6, 3, 5, 3, 4, 3, 3, 4, 3, 6, 4, 4, 3,
-                        4, 3, 3, 5, 4,
+                        218, 46, 255, 139, 0, 150, 194, 3, 11, 211, 63, 196,
+                        145, 0, 255, 211, 33, 55, 175, 105, 155, 110, 0, 255,
+                        169, 135, 177, 184, 72, 255, 112, 59, 62, 115, 55, 0,
+                        255, 51, 225, 107, 21, 122, 85, 47, 0, 255, 129, 152,
+                        77, 0, 169, 48, 187, 170, 153, 36, 255, 63, 86, 0, 57,
+                        69, 4, 255, 45, 206, 58, 115, 16, 33, 98, 0, 255, 121,
+                        117, 32, 121, 14, 0, 174, 66
                     ],
                 ),
                 # fmt: on
@@ -719,8 +725,8 @@ class TestAverageNeighbourPatternsEBSD:
         # fmt: off
         answer = np.array(
             [
-                7, 6, 6, 7, 3, 6, 7, 4, 3, 4, 5, 5, 6, 2, 7, 5, 3, 5, 4, 5, 5,
-                6, 1, 8, 5, 5, 7,
+                255, 223, 223, 255, 0, 223, 255, 63, 0, 109, 145, 145, 200, 0,
+                255, 163, 54, 127, 119, 136, 153, 170, 0, 255, 153, 136, 221
             ],
             dtype=np.uint8
         ).reshape(dummy_signal_1d.axes_manager.shape)
@@ -733,10 +739,12 @@ class TestAverageNeighbourPatternsEBSD:
         # fmt: off
         answer = np.array(
             [
-                6, 3, 6, 6, 5, 6, 7, 1, 1, 6, 3, 8, 3, 0, 4, 5, 4, 5, 4, 4, 1,
-                4, 4, 8, 5, 4, 4, 5, 2, 6, 5, 4, 4, 5, 1, 0, 6, 5, 8, 3, 2, 2,
-                4, 6, 4, 5, 4, 2, 5, 4, 7, 4, 4, 6, 6, 1, 6, 4, 4, 4, 4, 1, 1,
-                4, 4, 8, 2, 3, 0, 2, 5, 3, 8, 5, 1, 5, 6, 6, 4, 5, 4,
+                233, 106, 212, 233, 170, 233, 255, 21, 0, 191, 95, 255, 95, 0,
+                111, 143, 127, 159, 98, 117, 0, 117, 117, 255, 137, 117, 117,
+                239, 95, 255, 223, 191, 175, 207, 31, 0, 155, 127, 255, 56, 0,
+                14, 70, 155, 84, 175, 111, 0, 143, 127, 255, 95, 127, 191, 231,
+                0, 255, 162, 139, 139, 162, 23, 0, 135, 135, 255, 60, 105, 0,
+                60, 165, 105, 255, 127, 0, 127, 163, 182, 109, 145, 109
             ],
             dtype=np.uint8
         ).reshape(dummy_signal.axes_manager.shape)
@@ -750,16 +758,30 @@ class TestAverageNeighbourPatternsEBSD:
         # fmt: off
         answer = np.array(
             [
-                7, 4, 6, 6, 3, 7, 7, 3, 2, 4, 4, 6, 4, 2, 5, 4, 3, 5, 5, 5, 3,
-                5, 3, 8, 6, 5, 5, 5, 2, 6, 4, 3, 3, 4, 1, 1, 6, 4, 6, 4, 3, 4,
-                5, 5, 3, 5, 3, 3, 3, 3, 5, 3, 4, 5, 5, 3, 7, 4, 4, 2, 3, 4, 1,
-                5, 3, 6, 3, 4, 1, 1, 4, 4, 7, 6, 3, 4, 6, 4, 3, 6, 3,
+                255, 109, 218, 218, 36, 236, 255, 36, 0, 143, 111, 255, 159, 0,
+                207, 159, 63, 175, 136, 118, 33, 118, 0, 255, 153, 118, 102,
+                182, 24, 255, 121, 109, 85, 133, 0, 12, 255, 107, 228, 80, 40,
+                107, 161, 147, 0, 204, 0, 51, 51, 51, 229, 25, 76, 255, 195,
+                104, 255, 135, 150, 59, 104, 120, 0, 204, 102, 255, 89, 127, 0,
+                12, 140, 127, 255, 185, 0, 69, 162, 46, 0, 208, 0
             ],
             dtype=np.uint8
         ).reshape(dummy_signal.axes_manager.shape)
         # fmt: on
         assert np.allclose(dummy_signal.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
+
+    def test_average_neighbour_patterns_lazy(self):
+        """Fixes https://github.com/pyxem/kikuchipy/issues/230."""
+        chunks = (
+            (3, 3, 4, 3, 4, 3, 4, 3, 3, 4, 3, 4, 3, 4, 3, 4),
+            (75,),
+            (6,),
+            (6,),
+        )
+        s = LazyEBSD(da.zeros((55, 75, 6, 6), chunks=chunks, dtype=np.uint8))
+        s.average_neighbour_patterns()
+        s.compute()
 
 
 class TestRebin:
@@ -1231,3 +1253,315 @@ class TestPatternMatching:
         xmap = dummy_signal.match_patterns(s_dict)
 
         assert np.allclose(xmap.scores[:, 0], 1)
+
+
+class TestAverageNeighbourDotProductMap:
+    def test_adp_0d(self):
+        s = nickel_ebsd_small().inav[0, 0]
+        with pytest.raises(ValueError, match="Signal must have at least one"):
+            _ = s.get_average_neighbour_dot_product_map()
+
+    def test_adp_1d(self):
+        s = nickel_ebsd_small().inav[0]
+        adp = s.get_average_neighbour_dot_product_map()
+        assert np.allclose(adp, [0.997470, 0.997457, 0.99744], atol=1e-5)
+
+    def test_adp_2d(self):
+        s = nickel_ebsd_small()
+        adp = s.get_average_neighbour_dot_product_map()
+        assert np.allclose(
+            adp,
+            [
+                [0.995679, 0.996117, 0.997220],
+                [0.996363, 0.996561, 0.997252],
+                [0.995731, 0.996134, 0.997048],
+            ],
+            atol=1e-5,
+        )
+        assert adp.dtype == np.float32
+
+    @pytest.mark.parametrize(
+        "window, desired_adp_map",
+        [
+            (
+                "rectangular",
+                [
+                    [0.995135, 0.995891, 0.997144],
+                    [0.995425, 0.996032, 0.997245],
+                    [0.995160, 0.995959, 0.997019],
+                ],
+            ),
+            (
+                "circular",
+                [
+                    [0.995679, 0.996117, 0.997220],
+                    [0.996363, 0.996561, 0.997252],
+                    [0.995731, 0.996134, 0.997048],
+                ],
+            ),
+        ],
+    )
+    def test_adp_window(self, window, desired_adp_map):
+        s = nickel_ebsd_small()
+        w = Window(window=window)
+        adp = s.get_average_neighbour_dot_product_map(window=w)
+        assert np.allclose(adp, desired_adp_map, atol=1e-5)
+
+    @pytest.mark.parametrize(
+        "zero_mean, desired_adp_map",
+        [
+            (
+                True,
+                [
+                    [0.995679, 0.996117, 0.997220],
+                    [0.996363, 0.996561, 0.997252],
+                    [0.995731, 0.996134, 0.997048],
+                ],
+            ),
+            (
+                False,
+                [
+                    [0.999663, 0.999699, 0.999785],
+                    [0.999717, 0.999733, 0.999786],
+                    [0.999666, 0.999698, 0.999769],
+                ],
+            ),
+        ],
+    )
+    def test_adp_zero_mean(self, zero_mean, desired_adp_map):
+        s = nickel_ebsd_small()
+        adp = s.get_average_neighbour_dot_product_map(zero_mean=zero_mean)
+        assert np.allclose(adp, desired_adp_map, atol=1e-5)
+
+    @pytest.mark.parametrize(
+        "normalize, desired_adp_map",
+        [
+            (
+                True,
+                [
+                    [0.995679, 0.996117, 0.997220],
+                    [0.996363, 0.996561, 0.997252],
+                    [0.995731, 0.996134, 0.997048],
+                ],
+            ),
+            (
+                False,
+                [
+                    [6402544, 6398041.5, 6434939.5],
+                    [6411949.5, 6409170, 6464348],
+                    [6451061, 6456555.5, 6489456],
+                ],
+            ),
+        ],
+    )
+    def test_adp_normalize(self, normalize, desired_adp_map):
+        s = nickel_ebsd_small()
+        adp = s.get_average_neighbour_dot_product_map(normalize=normalize)
+        assert np.allclose(adp, desired_adp_map, atol=1e-5)
+
+    def test_adp_dtype_out(self):
+        s = nickel_ebsd_small()
+        dtype1 = np.float32
+        adp1 = s.get_average_neighbour_dot_product_map(normalize=False)
+        assert adp1.dtype == dtype1
+        dtype2 = np.int32
+        adp2 = s.get_average_neighbour_dot_product_map(
+            normalize=True, dtype_out=dtype2
+        )
+        assert adp2.dtype == dtype2
+
+    def test_adp_lazy(self):
+        s = nickel_ebsd_small(lazy=True)
+        adp = s.get_average_neighbour_dot_product_map()
+
+        assert np.allclose(
+            adp.compute(),
+            [
+                [0.995679, 0.996117, 0.997220],
+                [0.996363, 0.996561, 0.997252],
+                [0.995731, 0.996134, 0.997048],
+            ],
+            atol=1e-5,
+        )
+        assert adp.dtype == np.float32
+
+    @pytest.mark.parametrize(
+        "window",
+        [
+            Window(window="circular", shape=(3, 3)),
+            Window(window="rectangular", shape=(3, 2)),
+            Window(window="rectangular", shape=(2, 3)),
+        ],
+    )
+    def test_adp_dp_matrices(self, window):
+        s = nickel_ebsd_small()
+        dp_matrices = s.get_neighbour_dot_product_matrices(window=window)
+        adp1 = s.get_average_neighbour_dot_product_map(window=window)
+        adp2 = s.get_average_neighbour_dot_product_map(dp_matrices=dp_matrices)
+
+        assert np.allclose(adp1, adp2)
+
+    @pytest.mark.parametrize("slices", [(0,), (slice(0, 1), slice(None))])
+    def test_adp_dp_matrices_shapes(self, slices):
+        s = nickel_ebsd_small().inav[slices]
+        dp_matrices = s.get_neighbour_dot_product_matrices()
+        adp1 = s.get_average_neighbour_dot_product_map()
+        adp2 = s.get_average_neighbour_dot_product_map(dp_matrices=dp_matrices)
+
+        assert np.allclose(adp1, adp2)
+
+
+class TestNeighbourDotProductMatrices:
+    def test_dp_matrices_0d(self):
+        s = nickel_ebsd_small().inav[0, 0]
+        with pytest.raises(ValueError, match="Signal must have at least one"):
+            _ = s.get_neighbour_dot_product_matrices()
+
+    def test_dp_matrices_1d(self):
+        s = nickel_ebsd_small().inav[0]
+        dp_matrices = s.get_neighbour_dot_product_matrices()
+
+        assert dp_matrices.shape == s.axes_manager.navigation_shape + (3,)
+        assert dp_matrices.dtype == np.float32
+        assert np.allclose(
+            dp_matrices,
+            [
+                [np.nan, 1, 0.997470],
+                [0.997470, 1, 0.997444],
+                [0.997444, 1, np.nan],
+            ],
+            atol=1e-5,
+            equal_nan=True,
+        )
+
+    def test_dp_matrices_2d(self):
+        s = nickel_ebsd_small()
+        dp_matrices = s.get_neighbour_dot_product_matrices()
+
+        assert dp_matrices.shape == s.axes_manager.navigation_shape + (3, 3)
+        assert dp_matrices.dtype == np.float32
+        assert np.allclose(
+            dp_matrices[1, 1],
+            [
+                [np.nan, 0.997347, np.nan],
+                [0.994177, 1, 0.997358],
+                [np.nan, 0.997360, np.nan],
+            ],
+            atol=1e-5,
+            equal_nan=True,
+        )
+
+    def test_dp_matrices_lazy(self):
+        s = nickel_ebsd_small()
+        s_lazy = s.as_lazy()
+        dp_matrices = s.get_neighbour_dot_product_matrices()
+        dp_matrices_lazy = s_lazy.get_neighbour_dot_product_matrices()
+
+        assert dp_matrices.shape == dp_matrices_lazy.shape
+        assert dp_matrices.dtype == dp_matrices_lazy.dtype
+        assert np.allclose(dp_matrices, dp_matrices_lazy, equal_nan=True)
+
+    @pytest.mark.parametrize(
+        "window, desired_dp_matrices_11",
+        [
+            (
+                Window(window="circular", shape=(3, 3)),
+                [
+                    [np.nan, 0.997347, np.nan],
+                    [0.994177, 1, 0.997358],
+                    [np.nan, 0.997360, np.nan],
+                ],
+            ),
+            (
+                Window(window="rectangular", shape=(3, 3)),
+                [
+                    [0.994048, 0.997347, 0.996990],
+                    [0.994177, 1, 0.997358],
+                    [0.994017, 0.997360, 0.996960],
+                ],
+            ),
+            (
+                Window(window="rectangular", shape=(3, 2)),
+                [[0.994048, 0.997347], [0.994177, 1], [0.994017, 0.997360]],
+            ),
+            (
+                Window(window="rectangular", shape=(2, 3)),
+                [[0.994048, 0.997347, 0.996990], [0.994177, 1, 0.997358]],
+            ),
+        ],
+    )
+    def test_dp_matrices_window(self, window, desired_dp_matrices_11):
+        s = nickel_ebsd_small()
+        dp_matrices = s.get_neighbour_dot_product_matrices(window=window)
+
+        assert np.allclose(
+            dp_matrices[1, 1],
+            desired_dp_matrices_11,
+            atol=1e-5,
+            equal_nan=True,
+        )
+
+    @pytest.mark.parametrize("dtype_out", [np.float16, np.float32, np.float64])
+    def test_dp_matrices_dtype_out(self, dtype_out):
+        s = nickel_ebsd_small()
+        dp_matrices = s.get_neighbour_dot_product_matrices(dtype_out=dtype_out)
+
+        assert dp_matrices.dtype == dtype_out
+
+    @pytest.mark.parametrize(
+        "zero_mean, desired_dp_matrices11",
+        [
+            (
+                True,
+                [
+                    [np.nan, 0.997347, np.nan],
+                    [0.994177, 1, 0.997358],
+                    [np.nan, 0.997360, np.nan],
+                ],
+            ),
+            (
+                False,
+                [
+                    [np.nan, 0.999796, np.nan],
+                    [0.999547, 1, 0.999794],
+                    [np.nan, 0.999796, np.nan],
+                ],
+            ),
+        ],
+    )
+    def test_dp_matrices_zero_mean(self, zero_mean, desired_dp_matrices11):
+        s = nickel_ebsd_small()
+        dp_matrices = s.get_neighbour_dot_product_matrices(zero_mean=zero_mean)
+
+        assert np.allclose(
+            dp_matrices[1, 1], desired_dp_matrices11, atol=1e-5, equal_nan=True,
+        )
+
+    @pytest.mark.parametrize(
+        "normalize, desired_dp_matrices11",
+        [
+            (
+                True,
+                [
+                    [np.nan, 0.997347, np.nan],
+                    [0.994177, 1, 0.997358],
+                    [np.nan, 0.997360, np.nan],
+                ],
+            ),
+            (
+                False,
+                [
+                    [np.nan, 6393165.5, np.nan],
+                    [6375199, 6403340, 6439387],
+                    [np.nan, 6428928, np.nan],
+                ],
+            ),
+        ],
+    )
+    def test_dp_matrices_normalize(self, normalize, desired_dp_matrices11):
+        s = nickel_ebsd_small()
+        dp_matrices = s.get_neighbour_dot_product_matrices(normalize=normalize)
+
+        assert np.allclose(
+            dp_matrices[1, 1], desired_dp_matrices11, atol=1e-5, equal_nan=True,
+        )
