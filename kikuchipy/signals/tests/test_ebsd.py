@@ -1257,13 +1257,13 @@ class TestPatternMatching:
 
 class TestAverageNeighbourDotProductMap:
     def test_adp_0d(self):
-        s = nickel_ebsd_small()
+        s = nickel_ebsd_small().inav[0, 0]
         with pytest.raises(ValueError, match="Signal must have at least one"):
-            _ = s.inav[0, 0].get_average_neighbour_dot_product_map()
+            _ = s.get_average_neighbour_dot_product_map()
 
     def test_adp_1d(self):
-        s = nickel_ebsd_small()
-        adp = s.inav[0].get_average_neighbour_dot_product_map()
+        s = nickel_ebsd_small().inav[0]
+        adp = s.get_average_neighbour_dot_product_map()
         assert np.allclose(adp, [0.997470, 0.997457, 0.99744], atol=1e-5)
 
     def test_adp_2d(self):
@@ -1301,7 +1301,7 @@ class TestAverageNeighbourDotProductMap:
             ),
         ],
     )
-    def test_window(self, window, desired_adp_map):
+    def test_adp_window(self, window, desired_adp_map):
         s = nickel_ebsd_small()
         w = Window(window=window)
         adp = s.get_average_neighbour_dot_product_map(window=w)
@@ -1328,7 +1328,7 @@ class TestAverageNeighbourDotProductMap:
             ),
         ],
     )
-    def test_zero_mean(self, zero_mean, desired_adp_map):
+    def test_adp_zero_mean(self, zero_mean, desired_adp_map):
         s = nickel_ebsd_small()
         adp = s.get_average_neighbour_dot_product_map(zero_mean=zero_mean)
         assert np.allclose(adp, desired_adp_map, atol=1e-5)
@@ -1354,12 +1354,12 @@ class TestAverageNeighbourDotProductMap:
             ),
         ],
     )
-    def test_normalize(self, normalize, desired_adp_map):
+    def test_adp_normalize(self, normalize, desired_adp_map):
         s = nickel_ebsd_small()
         adp = s.get_average_neighbour_dot_product_map(normalize=normalize)
         assert np.allclose(adp, desired_adp_map, atol=1e-5)
 
-    def test_dtype_out(self):
+    def test_adp_dtype_out(self):
         s = nickel_ebsd_small()
         dtype1 = np.float32
         adp1 = s.get_average_neighbour_dot_product_map(normalize=False)
@@ -1369,3 +1369,199 @@ class TestAverageNeighbourDotProductMap:
             normalize=True, dtype_out=dtype2
         )
         assert adp2.dtype == dtype2
+
+    def test_adp_lazy(self):
+        s = nickel_ebsd_small(lazy=True)
+        adp = s.get_average_neighbour_dot_product_map()
+
+        assert np.allclose(
+            adp.compute(),
+            [
+                [0.995679, 0.996117, 0.997220],
+                [0.996363, 0.996561, 0.997252],
+                [0.995731, 0.996134, 0.997048],
+            ],
+            atol=1e-5,
+        )
+        assert adp.dtype == np.float32
+
+    @pytest.mark.parametrize(
+        "window",
+        [
+            Window(window="circular", shape=(3, 3)),
+            Window(window="rectangular", shape=(3, 2)),
+            Window(window="rectangular", shape=(2, 3)),
+        ],
+    )
+    def test_adp_dp_matrices(self, window):
+        s = nickel_ebsd_small()
+        dp_matrices = s.get_neighbour_dot_product_matrices(window=window)
+        adp1 = s.get_average_neighbour_dot_product_map(window=window)
+        adp2 = s.get_average_neighbour_dot_product_map(dp_matrices=dp_matrices)
+
+        assert np.allclose(adp1, adp2)
+
+    @pytest.mark.parametrize("slices", [(0,), (slice(0, 1), slice(None))])
+    def test_adp_dp_matrices_shapes(self, slices):
+        s = nickel_ebsd_small().inav[slices]
+        dp_matrices = s.get_neighbour_dot_product_matrices()
+        adp1 = s.get_average_neighbour_dot_product_map()
+        adp2 = s.get_average_neighbour_dot_product_map(dp_matrices=dp_matrices)
+
+        assert np.allclose(adp1, adp2)
+
+
+class TestNeighbourDotProductMatrices:
+    def test_dp_matrices_0d(self):
+        s = nickel_ebsd_small().inav[0, 0]
+        with pytest.raises(ValueError, match="Signal must have at least one"):
+            _ = s.get_neighbour_dot_product_matrices()
+
+    def test_dp_matrices_1d(self):
+        s = nickel_ebsd_small().inav[0]
+        dp_matrices = s.get_neighbour_dot_product_matrices()
+
+        assert dp_matrices.shape == s.axes_manager.navigation_shape + (3,)
+        assert dp_matrices.dtype == np.float32
+        assert np.allclose(
+            dp_matrices,
+            [
+                [np.nan, 1, 0.997470],
+                [0.997470, 1, 0.997444],
+                [0.997444, 1, np.nan],
+            ],
+            atol=1e-5,
+            equal_nan=True,
+        )
+
+    def test_dp_matrices_2d(self):
+        s = nickel_ebsd_small()
+        dp_matrices = s.get_neighbour_dot_product_matrices()
+
+        assert dp_matrices.shape == s.axes_manager.navigation_shape + (3, 3)
+        assert dp_matrices.dtype == np.float32
+        assert np.allclose(
+            dp_matrices[1, 1],
+            [
+                [np.nan, 0.997347, np.nan],
+                [0.994177, 1, 0.997358],
+                [np.nan, 0.997360, np.nan],
+            ],
+            atol=1e-5,
+            equal_nan=True,
+        )
+
+    def test_dp_matrices_lazy(self):
+        s = nickel_ebsd_small()
+        s_lazy = s.as_lazy()
+        dp_matrices = s.get_neighbour_dot_product_matrices()
+        dp_matrices_lazy = s_lazy.get_neighbour_dot_product_matrices()
+
+        assert dp_matrices.shape == dp_matrices_lazy.shape
+        assert dp_matrices.dtype == dp_matrices_lazy.dtype
+        assert np.allclose(dp_matrices, dp_matrices_lazy, equal_nan=True)
+
+    @pytest.mark.parametrize(
+        "window, desired_dp_matrices_11",
+        [
+            (
+                Window(window="circular", shape=(3, 3)),
+                [
+                    [np.nan, 0.997347, np.nan],
+                    [0.994177, 1, 0.997358],
+                    [np.nan, 0.997360, np.nan],
+                ],
+            ),
+            (
+                Window(window="rectangular", shape=(3, 3)),
+                [
+                    [0.994048, 0.997347, 0.996990],
+                    [0.994177, 1, 0.997358],
+                    [0.994017, 0.997360, 0.996960],
+                ],
+            ),
+            (
+                Window(window="rectangular", shape=(3, 2)),
+                [[0.994048, 0.997347], [0.994177, 1], [0.994017, 0.997360]],
+            ),
+            (
+                Window(window="rectangular", shape=(2, 3)),
+                [[0.994048, 0.997347, 0.996990], [0.994177, 1, 0.997358]],
+            ),
+        ],
+    )
+    def test_dp_matrices_window(self, window, desired_dp_matrices_11):
+        s = nickel_ebsd_small()
+        dp_matrices = s.get_neighbour_dot_product_matrices(window=window)
+
+        assert np.allclose(
+            dp_matrices[1, 1],
+            desired_dp_matrices_11,
+            atol=1e-5,
+            equal_nan=True,
+        )
+
+    @pytest.mark.parametrize("dtype_out", [np.float16, np.float32, np.float64])
+    def test_dp_matrices_dtype_out(self, dtype_out):
+        s = nickel_ebsd_small()
+        dp_matrices = s.get_neighbour_dot_product_matrices(dtype_out=dtype_out)
+
+        assert dp_matrices.dtype == dtype_out
+
+    @pytest.mark.parametrize(
+        "zero_mean, desired_dp_matrices11",
+        [
+            (
+                True,
+                [
+                    [np.nan, 0.997347, np.nan],
+                    [0.994177, 1, 0.997358],
+                    [np.nan, 0.997360, np.nan],
+                ],
+            ),
+            (
+                False,
+                [
+                    [np.nan, 0.999796, np.nan],
+                    [0.999547, 1, 0.999794],
+                    [np.nan, 0.999796, np.nan],
+                ],
+            ),
+        ],
+    )
+    def test_dp_matrices_zero_mean(self, zero_mean, desired_dp_matrices11):
+        s = nickel_ebsd_small()
+        dp_matrices = s.get_neighbour_dot_product_matrices(zero_mean=zero_mean)
+
+        assert np.allclose(
+            dp_matrices[1, 1], desired_dp_matrices11, atol=1e-5, equal_nan=True,
+        )
+
+    @pytest.mark.parametrize(
+        "normalize, desired_dp_matrices11",
+        [
+            (
+                True,
+                [
+                    [np.nan, 0.997347, np.nan],
+                    [0.994177, 1, 0.997358],
+                    [np.nan, 0.997360, np.nan],
+                ],
+            ),
+            (
+                False,
+                [
+                    [np.nan, 6393165.5, np.nan],
+                    [6375199, 6403340, 6439387],
+                    [np.nan, 6428928, np.nan],
+                ],
+            ),
+        ],
+    )
+    def test_dp_matrices_normalize(self, normalize, desired_dp_matrices11):
+        s = nickel_ebsd_small()
+        dp_matrices = s.get_neighbour_dot_product_matrices(normalize=normalize)
+
+        assert np.allclose(
+            dp_matrices[1, 1], desired_dp_matrices11, atol=1e-5, equal_nan=True,
+        )
