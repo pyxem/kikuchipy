@@ -61,14 +61,8 @@ from kikuchipy.signals.util._metadata import (
 )
 from kikuchipy.signals.util._dask import (
     get_dask_array,
-    get_chunking,
-    _get_chunk_overlap_depth,
     _rechunk_learning_results,
     _update_learning_results,
-)
-from kikuchipy.signals.util._map_helper import (
-    _get_neighbour_dot_product_matrices,
-    _get_average_dot_product_map,
 )
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 from kikuchipy.signals._common_image import CommonImage
@@ -558,7 +552,7 @@ class EBSD(CommonImage, Signal2D):
         The removal is performed by subtracting or dividing by a
         Gaussian blurred version of each pattern. Resulting pattern
         intensities are rescaled to fill the input patterns' data type
-        range individually.
+        range.
 
         Parameters
         ----------
@@ -803,7 +797,7 @@ class EBSD(CommonImage, Signal2D):
           only *after* static and dynamic background corrections,
           otherwise some unwanted darkening towards the edges might
           occur.
-        * The default window size might not fit all pattern sizes, so it
+        * The default window size might not fit all image sizes, so it
           may be necessary to search for the optimal window size.
         """
         # Determine window size (shape of contextual region)
@@ -1071,198 +1065,6 @@ class EBSD(CommonImage, Signal2D):
         else:
             self.data = filtered_patterns
 
-    def get_neighbour_dot_product_matrices(
-        self,
-        window: Optional[Window] = None,
-        zero_mean: bool = True,
-        normalize: bool = True,
-        dtype_out: np.dtype = np.float32,
-    ) -> Union[np.ndarray, da.Array]:
-        """Get an array with dot products of a pattern and its
-        neighbours within a window.
-
-        Parameters
-        ----------
-        window
-            Window with integer coefficients defining the neighbours to
-            calculate the dot products with. If None (default), the four
-            nearest neighbours are used. Must have the same number of
-            dimensions as signal navigation dimensions.
-        zero_mean
-            Whether to subtract the mean of each pattern individually to
-            center the intensities about zero before calculating the
-            dot products. Default is True.
-        normalize
-            Whether to normalize the pattern intensities to a standard
-            deviation of 1 before calculating the dot products. This
-            operation is performed after centering the intensities if
-            `zero_mean` is True. Default is True.
-        dtype_out
-            Data type of the output map. Default is
-            :class:`numpy.float32`.
-
-        Returns
-        -------
-        """
-        if self.axes_manager.navigation_dimension == 0:
-            raise ValueError(
-                "Signal must have at least one navigation dimension"
-            )
-
-        # Create dask array of signal patterns and do processing on this
-        dask_array = get_dask_array(signal=self)
-
-        # Default to the nearest neighbours
-        nav_dim = self.axes_manager.navigation_dimension
-        if window is None:
-            window = Window(window="circular", shape=(3, 3)[:nav_dim])
-
-        # Set overlap depth between navigation chunks equal to the max.
-        # number of nearest neighbours in each navigation axis
-        overlap_depth = _get_chunk_overlap_depth(
-            window=window,
-            axes_manager=self.axes_manager,
-            chunksize=dask_array.chunksize,
-        )
-
-        window_shape = window.shape
-        window_dim = window.ndim
-        chunks = get_chunking(
-            data_shape=self.axes_manager.navigation_shape[::-1] + window_shape,
-            nav_dim=nav_dim,
-            sig_dim=window_dim,
-            dtype=dtype_out,
-        )
-        dp_matrices = dask_array.map_overlap(
-            _get_neighbour_dot_product_matrices,
-            window=window,
-            sig_dim=self.axes_manager.signal_dimension,
-            sig_size=self.axes_manager.signal_size,
-            zero_mean=zero_mean,
-            normalize=normalize,
-            dtype_out=dtype_out,
-            drop_axis=self.axes_manager.signal_indices_in_array,
-            new_axis=tuple(np.arange(window_dim) + nav_dim)[::-1],
-            dtype=dtype_out,
-            depth=overlap_depth,
-            boundary="none",
-            chunks=chunks,
-        )
-
-        if not self._lazy:
-            with ProgressBar():
-                print(
-                    "Calculating neighbour dot product matrices:",
-                    file=sys.stdout,
-                )
-                dp_matrices = dp_matrices.compute()
-
-        return dp_matrices
-
-    def get_average_neighbour_dot_product_map(
-        self,
-        window: Optional[Window] = None,
-        zero_mean: bool = True,
-        normalize: bool = True,
-        dtype_out: np.dtype = np.float32,
-        dp_matrices: Optional[np.ndarray] = None,
-    ) -> Union[np.ndarray, da.Array]:
-        """Get a map of the average dot product between patterns and
-        their neighbours within an averaging window.
-
-        Parameters
-        ----------
-        window
-            Window with integer coefficients defining the neighbours to
-            calculate the average with. If None (default), the four
-            nearest neighbours are used. Must have the same number of
-            dimensions as signal navigation dimensions.
-        zero_mean
-            Whether to subtract the mean of each pattern individually to
-            center the intensities about zero before calculating the
-            dot products. Default is True.
-        normalize
-            Whether to normalize the pattern intensities to a standard
-            deviation of 1 before calculating the dot products. This
-            operation is performed after centering the intensities if
-            `zero_mean` is True. Default is True.
-        dtype_out
-            Data type of the output map. Default is
-            :class:`numpy.float32`.
-        dp_matrices
-            Optional pre-calculated dot product matrices, by default
-            None. If an array is passed, the average dot product map
-            is calculated from this array. The `dp_matrices` array can
-            be obtained from :meth:`get_neighbour_dot_product_matrices`.
-            It's shape must correspond to the signal's navigation shape
-            and the window's shape.
-
-        Returns
-        -------
-        """
-        if self.axes_manager.navigation_dimension == 0:
-            raise ValueError(
-                "Signal must have at least one navigation dimension"
-            )
-
-        # Default to the nearest neighbours
-        nav_dim = self.axes_manager.navigation_dimension
-        if window is None:
-            window = Window(window="circular", shape=(3, 3)[:nav_dim])
-
-        if dp_matrices is not None:
-            nan_slices = [slice(None) for _ in range(nav_dim)]
-            nan_slices += [slice(i, i + 1) for i in window.origin]
-            dp_matrices2 = dp_matrices.copy()
-            dp_matrices2[tuple(nan_slices)] = np.nan
-            if nav_dim == 1:
-                mean_axis = 1
-            else:  # == 2
-                mean_axis = (2, 3)
-            return np.nanmean(dp_matrices2, axis=mean_axis)
-
-        # Create dask array of signal data and do processing on this
-        dask_array = get_dask_array(signal=self)
-
-        # Set overlap depth between navigation chunks equal to the max.
-        # number of nearest neighbours in each navigation axis
-        overlap_depth = _get_chunk_overlap_depth(
-            window=window,
-            axes_manager=self.axes_manager,
-            chunksize=dask_array.chunksize,
-        )
-
-        chunks = get_chunking(
-            data_shape=self.axes_manager.navigation_shape[::-1],
-            nav_dim=nav_dim,
-            sig_dim=0,
-            dtype=dtype_out,
-        )
-        adp = dask_array.map_overlap(
-            _get_average_dot_product_map,
-            window=window,
-            sig_dim=self.axes_manager.signal_dimension,
-            sig_size=self.axes_manager.signal_size,
-            zero_mean=zero_mean,
-            normalize=normalize,
-            dtype_out=dtype_out,
-            drop_axis=self.axes_manager.signal_indices_in_array,
-            dtype=dtype_out,
-            depth=overlap_depth,
-            boundary="none",
-            chunks=chunks,
-        )
-
-        if not self._lazy:
-            with ProgressBar():
-                print(
-                    "Calculating average neighbour dot product map:",
-                    file=sys.stdout,
-                )
-                adp = adp.compute()
-
-        return adp
-
     def average_neighbour_patterns(
         self,
         window: Union[str, np.ndarray, da.Array, Window] = "circular",
@@ -1274,8 +1076,7 @@ class EBSD(CommonImage, Signal2D):
 
         The amount of averaging is specified by the window coefficients.
         All patterns are averaged with the same window. Map borders are
-        extended with zeros. Resulting pattern intensities are rescaled
-        to fill the input patterns' data type range individually.
+        extended with zeros.
 
         Averaging is accomplished by correlating the window with the
         extended array of patterns using
@@ -1308,6 +1109,50 @@ class EBSD(CommonImage, Signal2D):
         ~kikuchipy.filters.window.Window
         :func:`scipy.signal.windows.get_window`
         :func:`scipy.ndimage.correlate`
+
+        Examples
+        --------
+        >>> import numpy as np
+        >>> import kikuchipy as kp
+        >>> s = kp.signals.EBSD(np.ones((4, 4, 1, 1)))
+        >>> k = 1
+        >>> for i in range(4):
+        ...     for j in range(4):
+        ...         s.inav[j, i].data *= k
+        ...         k += 1
+        >>> s.data[:, :, 0, 0]
+        array([[ 1.,  2.,  3.,  4.],
+               [ 5.,  6.,  7.,  8.],
+               [ 9., 10., 11., 12.],
+               [13., 14., 15., 16.]])
+        >>> s2 = s.deepcopy()  # For use below
+        >>> s.average_neighbour_patterns(
+        ...     window="circular", shape=(3, 3))
+        >>> s.data[:, :, 0, 0]
+        array([[ 2.66666667,  3.        ,  4.        ,  5.        ],
+               [ 5.25      ,  6.        ,  7.        ,  7.75      ],
+               [ 9.25      , 10.        , 11.        , 11.75      ],
+               [12.        , 13.        , 14.        , 14.33333333]])
+
+        A window object can also be passed
+
+        >>> w = kp.filters.Window(window="gaussian", std=2)
+        >>> w
+        Window (3, 3) gaussian
+        [[0.7788 0.8825 0.7788]
+         [0.8825 1.     0.8825]
+         [0.7788 0.8825 0.7788]]
+        >>> s2.average_neighbour_patterns(w)
+        >>> s2.data[:, :, 0, 0]
+        array([[ 3.34395304,  3.87516243,  4.87516264,  5.40637176],
+               [ 5.46879047,  5.99999985,  6.99999991,  7.53120901],
+               [ 9.46879095,  9.99999959, 11.00000015, 11.53120913],
+               [11.59362845, 12.12483732, 13.1248368 , 13.65604717]])
+
+        This window can subsequently be plotted and saved
+
+        >>> figure, image, colorbar = w.plot()
+        >>> figure.savefig('averaging_window.png')
         """
         if isinstance(window, Window) and window.is_valid():
             averaging_window = copy.copy(window)
@@ -1331,7 +1176,7 @@ class EBSD(CommonImage, Signal2D):
         # Get sum of window data for each pattern, to normalize with
         # after correlation
         window_sums = correlate(
-            input=np.ones(self.axes_manager.navigation_shape[::-1], dtype=int),
+            input=np.ones(self.axes_manager.navigation_shape[::-1]),
             weights=averaging_window,
             mode="constant",
             cval=0,
@@ -1343,6 +1188,7 @@ class EBSD(CommonImage, Signal2D):
         averaging_window = averaging_window.reshape(
             averaging_window.shape + (1,) * sig_dim
         )
+        #        averaging_window._add_axes(self.axes_manager.signal_dimension)
 
         # Create dask array of signal patterns and do processing on this
         dask_array = get_dask_array(signal=self)
@@ -1352,7 +1198,7 @@ class EBSD(CommonImage, Signal2D):
         for i in range(sig_dim):
             window_sums = np.expand_dims(window_sums, axis=window_sums.ndim)
         window_sums = da.from_array(
-            window_sums, chunks=dask_array.chunks[:nav_dim] + (1,) * sig_dim
+            window_sums, chunks=dask_array.chunksize[:nav_dim] + (1,) * sig_dim
         )
 
         # Create overlap between chunks to enable correlation with the window
@@ -1360,14 +1206,11 @@ class EBSD(CommonImage, Signal2D):
         data_dim = len(self.axes_manager.shape)
         overlap_depth = {}
         for i in range(data_dim):
-            if (
-                i < len(window_shape)
-                and dask_array.chunks[i][0] < dask_array.shape[i]
-            ):
+            if i < len(window_shape):
                 overlap_depth[i] = window_shape[i] // 2
             else:
                 overlap_depth[i] = 0
-        overlap_boundary = "none"
+        overlap_boundary = {i: "none" for i in range(data_dim)}
         overlapped_dask_array = da.overlap.overlap(
             dask_array, depth=overlap_depth, boundary=overlap_boundary,
         )
@@ -1699,7 +1542,6 @@ class LazyEBSD(LazySignal2D, EBSD):
     def compute(self, *args, **kwargs):
         xmap = self.xmap
         super().compute(*args, **kwargs)
-        gc.collect()  # Don't sink
         self._xmap = xmap
 
     def get_decomposition_model_write(

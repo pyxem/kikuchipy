@@ -464,11 +464,9 @@ All methods listed here are also available to
     average_neighbour_patterns
     match_patterns
     fft_filter
-    get_average_neighbour_dot_product_map
     get_decomposition_model
     get_dynamic_background
     get_image_quality
-    get_neighbour_dot_product_matrices
     get_virtual_bse_intensity
     match_patterns
     normalize_intensity

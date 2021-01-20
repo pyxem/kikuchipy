@@ -468,16 +468,3 @@ class TestWindow:
         w = w / np.sum(w)
 
         assert np.allclose(w, answer)
-
-    @pytest.mark.parametrize(
-        "shape, desired_n_neighbours",
-        [
-            ((3, 3), (1, 1)),
-            ((3,), (1,)),
-            ((7, 5), (3, 2),),
-            ((6, 5), (2, 2)),
-            ((5, 7), (2, 3)),
-        ],
-    )
-    def test_n_neighbours(self, shape, desired_n_neighbours):
-        assert Window(shape=shape).n_neighbours == desired_n_neighbours

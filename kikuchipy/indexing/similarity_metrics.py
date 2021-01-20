@@ -24,8 +24,6 @@ from typing import Callable, Tuple, Union
 import dask.array as da
 import numpy as np
 
-from kikuchipy.pattern._pattern import _normalize, _zero_mean
-
 
 class MetricScope(Enum):
     """Describes the input parameters for a similarity metric. See
@@ -206,9 +204,9 @@ class SimilarityMetric:
         experimental = experimental.astype(dtype)
         simulated = simulated.astype(dtype)
         if isinstance(experimental, da.Array):
-            experimental = _rechunk(experimental)
+            experimental = experimental.rechunk()
         if isinstance(simulated, da.Array):
-            simulated = _rechunk(simulated)
+            simulated = simulated.rechunk()
         if self._make_compatible_to_lower_scopes:
             experimental, simulated = self._expand_dims_to_match_scope(
                 experimental, simulated
@@ -309,15 +307,6 @@ class FlatSimilarityMetric(SimilarityMetric):
         return self._metric_func(experimental, simulated)
 
 
-def _rechunk(dask_array: da.Array):
-    ndim_to_chunks = {
-        2: {0: -1, 1: -1},
-        3: {0: "auto", 1: -1, 2: -1},
-        4: {0: "auto", 1: "auto", 2: -1, 3: -1},
-    }
-    return dask_array.rechunk(ndim_to_chunks[dask_array.ndim])
-
-
 def _get_nav_shape(expt):
     return {2: (), 3: (expt.shape[0],), 4: (expt.shape[:2])}[expt.ndim]
 
@@ -365,7 +354,7 @@ def _expand_dims_to_many_to_many(
     return expt, sim
 
 
-def _zero_mean_expt_sim(
+def _zero_mean(
     expt: Union[np.ndarray, da.Array],
     sim: Union[np.ndarray, da.Array],
     flat: bool = False,
@@ -380,7 +369,7 @@ def _zero_mean_expt_sim(
     sim : np.ndarray or da.Array
         Simulated.
     flat : bool, optional
-        Whether `expt` and `sim` are flattened, by default False.
+        Whether `p` and `t` are flattened, by default False.
 
     Returns
     -------
@@ -389,17 +378,21 @@ def _zero_mean_expt_sim(
     sim
         Simulated data with mean subtracted.
     """
-    expt_expanded, sim_expanded = _expand_dims_to_many_to_many(expt, sim, flat)
-    mean_axis = 1 if flat else (-2, -1)
-    expt_mean_sub = _zero_mean(patterns=expt_expanded, axis=mean_axis)
-    sim_mean_sub = _zero_mean(patterns=sim_expanded, axis=mean_axis)
-    if 1 not in expt.shape + sim.shape:
-        expt_mean_sub = expt_mean_sub.squeeze()
-        sim_mean_sub = sim_mean_sub.squeeze()
-    return expt_mean_sub, sim_mean_sub
+    squeeze = 1 not in expt.shape + sim.shape
+    expt, sim = _expand_dims_to_many_to_many(expt, sim, flat)
+    # Always take the mean along the last two axes (signal axes)
+    expt_mean_axis = 1 if flat else (-2, -1)
+    sim_mean_axis = 1 if flat else (-2, -1)
+    expt -= expt.mean(axis=expt_mean_axis, keepdims=True)
+    sim -= sim.mean(axis=sim_mean_axis, keepdims=True)
+
+    if squeeze:
+        return expt.squeeze(), sim.squeeze()
+    else:
+        return expt, sim
 
 
-def _normalize_expt_sim(
+def _normalize(
     expt: Union[np.ndarray, da.Array],
     sim: Union[np.ndarray, da.Array],
     flat: bool = False,
@@ -422,22 +415,26 @@ def _normalize_expt_sim(
     sim : numpy.ndarray or dask.array.Array
         Simulated patterns divided by their L2 norms.
     """
-    expt_expanded, sim_expanded = _expand_dims_to_many_to_many(expt, sim, flat)
-    sum_axis = 1 if flat else (-2, -1)
-    expt_normalized = _normalize(patterns=expt_expanded, axis=sum_axis)
-    sim_normalized = _normalize(patterns=sim_expanded, axis=sum_axis)
-    if 1 not in expt.shape + sim.shape:
-        expt_normalized = expt_normalized.squeeze()
-        sim_normalized = sim_normalized.squeeze()
-    return expt_normalized, sim_normalized
+    squeeze = 1 not in expt.shape + sim.shape
+    expt, sim = _expand_dims_to_many_to_many(expt, sim, flat)
+    # Always take the sum along the last two axes (signal axes)
+    expt_sum_axis = 1 if flat else (-2, -1)
+    sim_sum_axis = 1 if flat else (-2, -1)
+    expt /= (expt ** 2).sum(axis=expt_sum_axis, keepdims=True) ** 0.5
+    sim /= (sim ** 2).sum(axis=sim_sum_axis, keepdims=True) ** 0.5
+
+    if squeeze:
+        return expt.squeeze(), sim.squeeze()
+    else:
+        return expt, sim
 
 
 def _zncc_einsum(
     experimental: Union[da.Array, np.ndarray],
     simulated: Union[da.Array, np.ndarray],
 ) -> Union[np.ndarray, da.Array]:
-    experimental, simulated = _zero_mean_expt_sim(experimental, simulated)
-    experimental, simulated = _normalize_expt_sim(experimental, simulated)
+    experimental, simulated = _zero_mean(experimental, simulated)
+    experimental, simulated = _normalize(experimental, simulated)
     r = da.einsum("ijkl,mkl->ijm", experimental, simulated, optimize=True)
     if isinstance(experimental, np.ndarray) and isinstance(
         simulated, np.ndarray
@@ -451,7 +448,7 @@ def _ndp_einsum(
     experimental: Union[da.Array, np.ndarray],
     simulated: Union[da.Array, np.ndarray],
 ) -> Union[np.ndarray, da.Array]:
-    experimental, simulated = _normalize_expt_sim(experimental, simulated)
+    experimental, simulated = _normalize(experimental, simulated)
     rho = da.einsum("ijkl,mkl->ijm", experimental, simulated, optimize=True)
     if isinstance(experimental, np.ndarray) and isinstance(
         simulated, np.ndarray
