@@ -1306,11 +1306,10 @@ class EBSD(CommonImage, Signal2D):
             averaging_window = Window(
                 window=window, shape=window_shape, **kwargs,
             )
-        averaging_window.shape_compatible(self.axes_manager.signal_shape)
 
         # Do nothing if a window of shape (1, ) or (1, 1) is passed
+        nav_shape = self.axes_manager.navigation_shape[::-1]
         window_shape = averaging_window.shape
-        nav_shape = self.axes_manager.navigation_shape
         if window_shape in [(1,), (1, 1)]:
             return warnings.warn(
                 f"A window of shape {window_shape} was passed, no averaging is "
@@ -1322,7 +1321,7 @@ class EBSD(CommonImage, Signal2D):
         # Get sum of window data for each pattern, to normalize with
         # after correlation
         window_sums = correlate(
-            input=np.ones(self.axes_manager.navigation_shape[::-1], dtype=int),
+            input=np.ones(nav_shape, dtype=int),
             weights=averaging_window,
             mode="constant",
             cval=0,
@@ -1348,43 +1347,27 @@ class EBSD(CommonImage, Signal2D):
 
         # Create overlap between chunks to enable correlation with the window
         # using Dask's map_blocks()
-        data_dim = len(self.axes_manager.shape)
+        window_dim = averaging_window.ndim
         overlap_depth = {}
-        for i in range(data_dim):
-            if (
-                i < len(window_shape)
-                and dask_array.chunks[i][0] < dask_array.shape[i]
-            ):
-                overlap_depth[i] = window_shape[i] // 2
+        for i in range(nav_dim):
+            if i < window_dim and dask_array.chunks[i][0] < dask_array.shape[i]:
+                overlap_depth[i] = (window_shape[i] // 2) + 1
             else:
-                overlap_depth[i] = 0
-        overlap_boundary = "none"
-        overlapped_dask_array = da.overlap.overlap(
-            dask_array, depth=overlap_depth, boundary=overlap_boundary,
+                overlap_depth[i] = 1
+        overlap_depth.update(
+            {i: 0 for i in self.axes_manager.signal_indices_in_array[::-1]}
         )
 
-        # Must also be overlapped, since the patterns are overlapped
-        overlapped_window_sums = da.overlap.overlap(
-            window_sums, depth=overlap_depth, boundary=overlap_boundary
-        )
-
-        # Finally, average patterns by correlation with the window and
-        # subsequent division by the number of neighbours correlated with
         dtype_out = self.data.dtype
-        overlapped_averaged_patterns = da.map_blocks(
+        averaged_patterns = da.overlap.map_overlap(
             chunk.average_neighbour_patterns,
-            overlapped_dask_array,
-            overlapped_window_sums,
+            dask_array,
+            window_sums,
             window=averaging_window,
             dtype_out=dtype_out,
             dtype=dtype_out,
-        )
-
-        # Trim overlapping patterns
-        averaged_patterns = da.overlap.trim_overlap(
-            overlapped_averaged_patterns,
             depth=overlap_depth,
-            boundary=overlap_boundary,
+            boundary=np.nan,
         )
 
         # Overwrite signal patterns
