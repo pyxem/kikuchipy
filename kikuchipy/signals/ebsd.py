@@ -1125,14 +1125,6 @@ class EBSD(CommonImage, Signal2D):
             chunksize=dask_array.chunksize,
         )
 
-        window_shape = window.shape
-        window_dim = window.ndim
-        chunks = get_chunking(
-            data_shape=self.axes_manager.navigation_shape[::-1] + window_shape,
-            nav_dim=nav_dim,
-            sig_dim=window_dim,
-            dtype=dtype_out,
-        )
         dp_matrices = dask_array.map_overlap(
             _get_neighbour_dot_product_matrices,
             window=window,
@@ -1141,12 +1133,11 @@ class EBSD(CommonImage, Signal2D):
             zero_mean=zero_mean,
             normalize=normalize,
             dtype_out=dtype_out,
-            drop_axis=self.axes_manager.signal_indices_in_array,
-            new_axis=tuple(np.arange(window_dim) + nav_dim)[::-1],
+            drop_axis=self.axes_manager.signal_indices_in_array[::-1],
+            new_axis=tuple(np.arange(window.ndim) + nav_dim),
             dtype=dtype_out,
             depth=overlap_depth,
             boundary="none",
-            chunks=chunks,
         )
 
         if not self._lazy:
@@ -1232,12 +1223,6 @@ class EBSD(CommonImage, Signal2D):
             chunksize=dask_array.chunksize,
         )
 
-        chunks = get_chunking(
-            data_shape=self.axes_manager.navigation_shape[::-1],
-            nav_dim=nav_dim,
-            sig_dim=0,
-            dtype=dtype_out,
-        )
         adp = dask_array.map_overlap(
             _get_average_dot_product_map,
             window=window,
@@ -1250,8 +1235,14 @@ class EBSD(CommonImage, Signal2D):
             dtype=dtype_out,
             depth=overlap_depth,
             boundary="none",
-            chunks=chunks,
         )
+        chunks = get_chunking(
+            data_shape=self.axes_manager.navigation_shape[::-1],
+            nav_dim=nav_dim,
+            sig_dim=0,
+            dtype=dtype_out,
+        )
+        adp = adp.rechunk(chunks=chunks)
 
         if not self._lazy:
             with ProgressBar():

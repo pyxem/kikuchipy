@@ -32,7 +32,7 @@ from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
 
 from kikuchipy import load
-from kikuchipy.data import nickel_ebsd_small
+from kikuchipy.data import nickel_ebsd_small, nickel_ebsd_large
 from kikuchipy.filters.window import Window
 from kikuchipy.pattern._pattern import fft_spectrum
 from kikuchipy.signals.ebsd import EBSD, LazyEBSD
@@ -1385,6 +1385,16 @@ class TestAverageNeighbourDotProductMap:
         )
         assert adp.dtype == np.float32
 
+    def test_adp_lazy2(self):
+        s = nickel_ebsd_large()
+        s_lazy = s.as_lazy()
+        adp = s.get_average_neighbour_dot_product_map()
+        adp_lazy = s_lazy.get_average_neighbour_dot_product_map()
+
+        assert adp.shape == adp_lazy.shape
+        assert adp.dtype == adp_lazy.dtype
+        assert np.allclose(adp, adp_lazy, equal_nan=True)
+
     @pytest.mark.parametrize(
         "window",
         [
@@ -1394,7 +1404,7 @@ class TestAverageNeighbourDotProductMap:
         ],
     )
     def test_adp_dp_matrices(self, window):
-        s = nickel_ebsd_small()
+        s = nickel_ebsd_large()
         dp_matrices = s.get_neighbour_dot_product_matrices(window=window)
         adp1 = s.get_average_neighbour_dot_product_map(window=window)
         adp2 = s.get_average_neighbour_dot_product_map(dp_matrices=dp_matrices)
@@ -1452,12 +1462,12 @@ class TestNeighbourDotProductMatrices:
         )
 
     def test_dp_matrices_lazy(self):
-        s = nickel_ebsd_small()
+        s = nickel_ebsd_large()
         s_lazy = s.as_lazy()
         dp_matrices = s.get_neighbour_dot_product_matrices()
         dp_matrices_lazy = s_lazy.get_neighbour_dot_product_matrices()
 
-        assert dp_matrices.shape == dp_matrices_lazy.shape
+        assert dp_matrices.shape == dp_matrices_lazy.shape[:2] + (3, 3)
         assert dp_matrices.dtype == dp_matrices_lazy.dtype
         assert np.allclose(dp_matrices, dp_matrices_lazy, equal_nan=True)
 
@@ -1565,3 +1575,9 @@ class TestNeighbourDotProductMatrices:
         assert np.allclose(
             dp_matrices[1, 1], desired_dp_matrices11, atol=1e-5, equal_nan=True,
         )
+
+    def test_dp_matrices_large(self):
+        nav_shape = (250, 137)
+        s = LazyEBSD(da.ones(nav_shape + (96, 96), dtype=np.uint8))
+        dp_matrices = s.get_neighbour_dot_product_matrices()
+        assert dp_matrices.shape == nav_shape + (1, 1)
