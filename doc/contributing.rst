@@ -25,6 +25,8 @@ Code of Conduct
 kikuchipy has a :doc:`Code of Conduct <code_of_conduct>` that should be honoured
 by everyone who participates in the kikuchipy community.
 
+.. _setting-up-a-development-installation:
+
 Setting up a development installation
 =====================================
 
