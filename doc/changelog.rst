@@ -12,8 +12,12 @@ project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 Contributors to each release are listed in alphabetical order by first name. 
 List entries are sorted in descending chronological order.
 
-Unreleased
-==========
+0.3.0 (2021-01-22)
+==================
+
+Details of all development associated with this release is listed below and in
+`this GitHub milestone
+<https://github.com/pyxem/kikuchipy/milestone/3?closed=1>`_.
 
 Contributors
 ------------
@@ -121,8 +125,6 @@ Fixed
 -----
 - IndexError in neighbour pattern averaging
   (`#280 <https://github.com/pyxem/kikuchipy/pull/280>`_)
-- Square Lambert projection handles edge case vectors better
-  (`#272 <https://github.com/pyxem/kikuchipy/pull/272>`_)
 - Reading of square Lambert projections from EMsoft's master pattern file now
   sums contributions from asymmetric positions correctly.
   (`#255 <https://github.com/pyxem/kikuchipy/pull/255>`_)
