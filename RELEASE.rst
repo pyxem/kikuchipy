@@ -22,8 +22,14 @@ This guide should be updated after every new release!
   release branch: https://readthedocs.org/projects/kikuchipy/.
 
 - On the master branch, increment the version number in `release.py` to the next
-  ``.dev0``.
-
+  `.dev0`.
+- If a release candidate (RC) is to be made, make a PR to the release branch
+  with `-rc.1` added to the version name, like v0.42.0-rc.1, merge the PR after
+  all checks pass, and publish an RC release off of the release branch. See that
+  it is made available via PyPI, download it with the `dev` dependencies, and
+  run the tests to make sure everything is as it should be. Also check that
+  Binder can build the repository successfully by going to the Read the Docs PR
+  check in the RC PR above after the RC release.
 - Create a release draft (tag) via the GitHub repo from the release branch with
   the correct tag version name, e.g. v0.42.x and release title (see previous
   releases). Add the new release notes from the changelog. Publish the release.

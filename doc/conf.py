@@ -113,7 +113,7 @@ numfig = True
 if "dev" in version:
     release_version = "master"
 else:
-    release_version = version
+    release_version = "v" + version
 # This is processed by Jinja2 and inserted before each notebook
 nbsphinx_prolog = (
     r"""
