@@ -12,6 +12,18 @@ project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 Contributors to each release are listed in alphabetical order by first name. 
 List entries are sorted in descending chronological order.
 
+Unreleased
+==========
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Fixed
+-----
+- Version link Binder uses to make the Jupyter Notebooks run in the browser.
+  (`#301 <https://github.com/pyxem/kikuchipy/pull/300>`_)
+
 0.3.0 (2021-01-22)
 ==================
 
