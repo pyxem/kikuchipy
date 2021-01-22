@@ -22,7 +22,7 @@ Contributors
 Fixed
 -----
 - Version link Binder uses to make the Jupyter Notebooks run in the browser.
-  (`#301 <https://github.com/pyxem/kikuchipy/pull/300>`_)
+  (`#301 <https://github.com/pyxem/kikuchipy/pull/301>`_)
 
 0.3.0 (2021-01-22)
 ==================
