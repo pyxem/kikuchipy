@@ -141,7 +141,6 @@ class StaticPatternMatching:
         spatial_arrays = _get_spatial_arrays(
             shape=axes_manager.navigation_shape,
             extent=axes_manager.navigation_extent,
-            step_sizes=[i.scale for i in axes_manager.navigation_axes],
         )
         n_nav_dims = axes_manager.navigation_dimension
         if n_nav_dims == 0:
@@ -200,18 +199,16 @@ class StaticPatternMatching:
 
 
 def _get_spatial_arrays(
-    shape: tuple, extent: tuple, step_sizes: tuple
+    shape: tuple, extent: tuple
 ) -> Union[tuple, np.ndarray]:
     n_nav_dims = len(shape)
     if n_nav_dims == 0:
         return ()
     if n_nav_dims == 1:
         x0, x1 = extent
-        dx = step_sizes[0]
-        return np.arange(x0, x1 + dx, dx)
+        return np.linspace(x0, x1, shape[0])
     else:
         x0, x1, y0, y1 = extent
-        dx, dy = step_sizes
-        x = np.tile(np.arange(x0, x1 + dx, dx), shape[1])
-        y = np.tile(np.arange(y0, y1 + dy, dy), shape[0])
+        x = np.tile(np.linspace(x0, x1, shape[0]), shape[1])
+        y = np.tile(np.linspace(y0, y1, shape[1]), shape[0])
         return x, y
