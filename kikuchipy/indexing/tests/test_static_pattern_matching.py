@@ -143,45 +143,45 @@ class TestStaticPatternMatching:
         assert res.shape == desired_xmap_shape
 
     @pytest.mark.parametrize(
-        "nav_slice, step_sizes, desired_arrays",
+        "shape, extent, desired_arrays",
         [
             # 0d
-            ((0, 0), (1, 1), ()),
-            ((slice(0, 0), slice(0, 0)), (1, 1), (np.array([]),) * 2),
+            ((), (), ()),
+            ((0, 0), (0.0, 2.0, 0.0, 2.0), (np.array([]),) * 2),
             # 1d
-            ((0, slice(None)), (1, 1.5), np.tile(np.arange(0, 4.5, 1.5), 3)),
+            ((3,), (0.0, 3.0), np.tile(np.linspace(0, 4.5, 3), 3)),
             # 2d
             (
-                (slice(None), slice(0, 2)),
-                (2, 1.5),
+                (3, 2),
+                (0.0, 4.0, 0.0, 1.5),
                 (
-                    np.tile(np.arange(0, 6, 2), 2),
-                    np.tile(np.arange(0, 3, 1.5), 3),
+                    np.tile(np.linspace(0, 4, 3), 2),
+                    np.tile(np.linspace(0, 1.5, 2), 3),
                 ),
             ),
             (
-                (slice(None), slice(0, 2)),
-                (0.5, 1),
+                (3, 2),
+                (0.0, 1.0, 0.0, 1.0),
                 (
-                    np.tile(np.arange(0, 1.5, 0.5), 2),
-                    np.tile(np.arange(0, 2, 1), 3),
+                    np.tile(np.linspace(0, 1, 3), 2),
+                    np.tile(np.linspace(0, 1, 2), 3),
+                ),
+            ),
+            (
+                (136, 249),
+                (79.5, 99.75, 30.0, 67.2),
+                (
+                    np.tile(np.linspace(79.5, 99.75, 136), 249),
+                    np.tile(np.linspace(30.0, 67.2, 249), 136),
                 ),
             ),
         ],
     )
-    def test_get_spatial_arrays(self, nav_slice, step_sizes, desired_arrays):
+    def test_get_spatial_arrays(self, shape, extent, desired_arrays):
         """Ensure spatial arrays for 0d, 1d and 2d EBSD signals are
         returned correctly.
         """
-        s = nickel_ebsd_small()
-        s.axes_manager["x"].scale = step_sizes[0]
-        s.axes_manager["y"].scale = step_sizes[1]
-        axes_manager = s.inav[nav_slice].axes_manager
-        spatial_arrays = _get_spatial_arrays(
-            shape=axes_manager.navigation_shape,
-            extent=axes_manager.navigation_extent,
-            step_sizes=[i.scale for i in axes_manager.navigation_axes],
-        )
+        spatial_arrays = _get_spatial_arrays(shape, extent)
 
         if len(spatial_arrays) == 0:
             assert spatial_arrays == desired_arrays
