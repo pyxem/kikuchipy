@@ -23,7 +23,7 @@ Fixed
 -----
 - Pattern matching sometimes failing to generate a crystal map due to incorrect
   creation of spatial arrays
-  (`#306 <https://github.com/pyxem/kikuchipy/pull/306>`_)
+  (`#307 <https://github.com/pyxem/kikuchipy/pull/307>`_)
 
 0.3.1 (2021-01-22)
 ==================
