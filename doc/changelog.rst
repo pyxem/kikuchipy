@@ -12,8 +12,8 @@ project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 Contributors to each release are listed in alphabetical order by first name. 
 List entries are sorted in descending chronological order.
 
-Unreleased
-==========
+0.3.2 (2021-02-01)
+==================
 
 Contributors
 ------------
