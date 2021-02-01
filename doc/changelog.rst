@@ -21,6 +21,8 @@ Contributors
 
 Fixed
 -----
+- Deletion of temporary files saved to temporary directories in user guide
+  (`#312 <https://github.com/pyxem/kikuchipy/pull/312>`_)
 - Pattern matching sometimes failing to generate a crystal map due to incorrect
   creation of spatial arrays
   (`#307 <https://github.com/pyxem/kikuchipy/pull/307>`_)
