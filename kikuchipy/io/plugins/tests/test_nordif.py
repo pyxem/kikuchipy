@@ -191,13 +191,13 @@ ORIGINAL_METADATA = {
         "[Calibration patterns]\t\t",
         "Calibration (425,447)\t425,447\tpx",
         "Calibration (294,532)\t294,532\tpx",
-        "Calibration (573,543)\t573,543\tpx",
-        "Calibration (596,378)\t596,378\tpx",
-        "Calibration (308,369)\t308,369\tpx",
-        "Calibration (171,632)\t171,632\tpx",
-        "Calibration (704,668)\t704,668\tpx",
-        "Calibration (696,269)\t696,269\tpx",
-        "Calibration (152,247)\t152,247\tpx",
+        #        "Calibration (573,543)\t573,543\tpx",
+        #        "Calibration (596,378)\t596,378\tpx",
+        #        "Calibration (308,369)\t308,369\tpx",
+        #        "Calibration (171,632)\t171,632\tpx",
+        #        "Calibration (704,668)\t704,668\tpx",
+        #        "Calibration (696,269)\t696,269\tpx",
+        #        "Calibration (152,247)\t152,247\tpx",
     ]
 }
 SCAN_SIZE_FILE = {

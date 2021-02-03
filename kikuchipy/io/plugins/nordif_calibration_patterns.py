@@ -51,9 +51,7 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
     filename
         File path to the NORDIF settings text file.
     lazy
-        Open the data lazily without actually reading the data from disk
-        until required. Allows opening arbitrary sized datasets. Default
-        is False. 
+        This parameter is not used in this reader.
    
     Returns
     -------
@@ -61,7 +59,7 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
         Data, axes, metadata and original metadata.
     """
     # Get metadata from setting file
-    sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
+    ebsd_node = metadata_nodes("ebsd")
     md, omd, _ = get_settings_from_file(filename)
     dirname = os.path.dirname(filename)
 
@@ -87,7 +85,7 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
 
     coordinates = _get_coordinates(filename)
 
-    data = _read_patterns(dirname=dirname, coordinates=coordinates)
+    data = _get_patterns(dirname=dirname, coordinates=coordinates)
     scan["data"] = data
 
     units = ["um"] * 3
@@ -121,20 +119,24 @@ def _get_coordinates(filename: str) -> List[Tuple[int, int]]:
     xy = []
     for line in content[l_start + 1 :]:
         match = re.search("Calibration \((.*)\)", line)
-        match = match.group(1)
-        match = match.split(",")
-        xy.append(tuple(int(i) for i in match))
+        try:
+            match = match.group(1)
+            match = match.split(",")
+            xy.append(tuple(int(i) for i in match))
+        except AttributeError:
+            pass
     if len(xy) == 0:
         raise ValueError(err)
     return xy
 
 
-def _read_patterns(
+def _get_patterns(
     dirname: str, coordinates: List[Tuple[int, int]]
 ) -> np.ndarray:
     patterns = []
     for x, y in coordinates:
         fname_pattern = f"Calibration ({x},{y}).bmp"
         file_pattern = os.path.join(dirname, fname_pattern)
-        patterns.append(imread(file_pattern))
+        pattern = imread(file_pattern)
+        patterns.append(pattern)
     return np.asarray(patterns)
