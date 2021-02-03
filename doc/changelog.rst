@@ -15,6 +15,15 @@ List entries are sorted in descending chronological order.
 Unreleased
 ==========
 
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Added
+-----
+- Reading of NORDIF calibration patterns specified in a setting file into an
+  EBSD signal. (`#317 <https://github.com/pyxem/kikuchipy/pull/317>`_)
+
 0.3.2 (2021-02-01)
 ==================
 
@@ -24,10 +33,10 @@ Contributors
 
 Fixed
 -----
-- Deletion of temporary files saved to temporary directories in user guide
+- Deletion of temporary files saved to temporary directories in user guide.
   (`#312 <https://github.com/pyxem/kikuchipy/pull/312>`_)
 - Pattern matching sometimes failing to generate a crystal map due to incorrect
-  creation of spatial arrays
+  creation of spatial arrays.
   (`#307 <https://github.com/pyxem/kikuchipy/pull/307>`_)
 
 0.3.1 (2021-01-22)

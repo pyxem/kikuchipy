@@ -284,6 +284,7 @@ plugins
 .. autosummary::
     h5ebsd
     nordif
+    nordif_calibration_patterns
     emsoft_ebsd
     emsoft_ebsd_master_pattern
 
@@ -305,6 +306,14 @@ nordif
 ~~~~~~
 
 .. automodule:: kikuchipy.io.plugins.nordif
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+nordif_calibration_patterns
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: kikuchipy.io.plugins.nordif_calibration_patterns
     :members:
     :undoc-members:
     :show-inheritance:
