@@ -148,9 +148,9 @@ class MovingScreenCalibration:
     @property
     def line_lengths(self) -> np.ndarray:
         """Length of lines within the patterns in pixels."""
-        length_points_in = _line_lengths(self.points[0])
-        length_points_out = _line_lengths(self.points[1])
-        return np.stack([length_points_in, length_points_out])
+        length_in = _line_lengths(self.lines_start[0], self.lines_end[0])
+        length_out = _line_lengths(self.lines_start[1], self.lines_end[1])
+        return np.stack([length_in, length_out])
 
     @property
     def point_correspondence(self) -> np.ndarray:
@@ -190,13 +190,10 @@ class MovingScreenCalibration:
 
     @property
     def _pxy_all(self) -> np.array:
+        l_iter = combinations(range(self.n_points), 2)
+        l = self.lines_in_out
         return np.array(
-            [
-                _get_intersection_from_lines(
-                    self.lines_in_out[i], self.lines_in_out[j]
-                )
-                for i, j in combinations(range(self.n_points), 2)
-            ]
+            [_get_intersection_from_lines(l[i], l[j]) for i, j in l_iter]
         )
 
     @property
@@ -208,8 +205,8 @@ class MovingScreenCalibration:
         px_all = self._pxy_all[:, 0]
         py_all = self._pxy_all[:, 1]
         return np.logical_and(
-            np.logical_and(px_all > 0, px_all < self.ncols),  # x inside
-            np.logical_and(py_all > 0, py_all < self.nrows),  # y inside
+            np.logical_and(px_all > 0, px_all < self.ncols),
+            np.logical_and(py_all > 0, py_all < self.nrows),
         )
 
     @property
@@ -294,7 +291,9 @@ class MovingScreenCalibration:
         pattern_kwargs: dict = dict(cmap="gray"),
         line_kwargs: dict = dict(linewidth=2, zorder=1),
         scatter_kwargs: dict = dict(zorder=2),
-        pc_kwargs: dict = dict(marker="*", s=30, color="w"),
+        pc_kwargs: dict = dict(
+            marker="*", s=150, facecolor="C1", edgecolor="k"
+        ),
         return_fig_ax: bool = False,
     ) -> Union[None, tuple]:
         """A convenience method of three images, the first two with the
@@ -317,6 +316,13 @@ class MovingScreenCalibration:
             :meth:`matplotlib.Axes.axes.scatter` when plotting the PCs.
         return_fig_ax
             Whether to return the figure and axes, default is False.
+
+        Returns
+        -------
+        fig
+            Figure, returned if `return_fig_ax` is True.
+        ax
+            Axes, returned if `return_fig_ax` is True.
         """
         pat1, pat2 = self.patterns
         points1, points2 = self.points
@@ -351,7 +357,7 @@ class MovingScreenCalibration:
                 start, end, linestyle="--", color=f"C{i}", **line_kwargs
             )
 
-        ax[2].set_title("Projection centers")
+        ax[2].set_title("Projection center")
         ax[2].imshow(np.ones(self.shape), cmap="gray", vmin=0, vmax=2)
         ax[2].scatter(points1[:, 0], points1[:, 1], **scatter_kwargs)
         ax[2].scatter(points2[:, 0], points2[:, 1], **scatter_kwargs)
@@ -406,10 +412,8 @@ def _get_intersection_from_lines(
     return px, py
 
 
-def _line_lengths(points):
-    lines = _construct_lines_between_points(points)
-    delta = lines[:, :2] - lines[:, 2:]  # start points - end points
-    return np.sqrt(np.sum(np.square(delta), axis=1))
+def _line_lengths(lines_start, lines_end):
+    return np.sqrt(np.sum(np.square(lines_start - lines_end), axis=1))
 
 
 def _construct_lines_between_points(points):
