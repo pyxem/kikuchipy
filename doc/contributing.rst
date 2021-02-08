@@ -188,6 +188,13 @@ Some useful `fixtures <https://docs.pytest.org/en/latest/fixture.html>`_, like a
 dummy scan and corresponding background pattern, are available in the
 ``conftest.py`` file.
 
+.. note::
+
+   Some :mod:`kikuchipy.data` module tests check that data not part of the
+   package distribution can be downloaded from the `kikuchipy-data GitHub
+   repository <https://github.com/pyxem/kikuchipy-data>`_, thus downloading some
+   datasets of ~15 MB to your local cache.
+
 To run the tests::
 
    $ pytest --cov --pyargs kikuchipy
@@ -201,12 +208,31 @@ terminal. For an even nicer presentation, you can use ``coverage.py`` directly::
 Then, you can open the created ``htmlcov/index.html`` in the browser and inspect
 the coverage in more detail.
 
-.. note::
+Adding test data to the data module
+===================================
 
-   Some :mod:`kikuchipy.data` module tests check that data not part of the
-   package distribution can be downloaded from the `kikuchipy-data GitHub
-   repository <https://github.com/pyxem/kikuchipy-data>`_, thus downloading some
-   datasets of ~15 MB to your local cache.
+Test data sets used in user guides and tests are included in the
+:mod:`kikuchipy.data` module via the
+`pooch <https://www.fatiando.org/pooch/latest/>`_ Python library. These are
+listed in `kikuchipy.data._registry.py` with their file hash (SHA256, get with
+e.g. `sha256sum <file>`) and location, the latter potentially not within the
+package but from the
+`kikuchipy-data <https://github.com/pyxem/kikuchipy-data>`_ repository, since
+some files are considered too large to include.
+
+If a dataset is asked for and it is not in the package but in the registry, it
+can be downloaded from the repository, provided that the user allows this by
+passing `allow_download=True` to e.g. :func:`~kikuchipy.data.nickel_ebsd_large`.
+The dataset is then downloaded to a local cache, e.g.
+`/home/user/.cache/kikuchipy/`. Pooch handles download, caching, version control
+etc. Every file in the registry has a SHA256 label that pooch checks against. If
+we have updated the SHA256 of a file, pooch will redownload it. When the file is
+available in the cache, the user can just load it as the other files in the data
+module.
+
+The user can specify the desired data cache directory by setting a global
+`KIKUCHIPY_DATA_DIR` variable on their system, e.g. setting
+`export KIKUCHIPY_DATA_DIR=~/kikuchipy_data` in `~/.bashrc`.
 
 Continuous integration (CI)
 ===========================
