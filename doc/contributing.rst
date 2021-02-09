@@ -208,18 +208,18 @@ terminal. For an even nicer presentation, you can use ``coverage.py`` directly::
 Then, you can open the created ``htmlcov/index.html`` in the browser and inspect
 the coverage in more detail.
 
-Adding test data to the data module
-===================================
+Adding data to the data module
+==============================
 
 Test data for user guides and tests are included in the :mod:`kikuchipy.data`
 module via the `pooch <https://www.fatiando.org/pooch/latest/>`_ Python library.
-These are listed in `kikuchipy.data._registry.py` with their file verification
-string (hash, SHA256, obtain with e.g. `sha256sum <file>`) and location, the
-latter potentially not within the package but from the
+These are listed in a file registry (`kikuchipy.data._registry.py`) with their
+file verification string (hash, SHA256, obtain with e.g. `sha256sum <file>`) and
+location, the latter potentially not within the package but from the
 `kikuchipy-data <https://github.com/pyxem/kikuchipy-data>`_ repository, since
-some files are considered too large to include.
+some files are considered too large to include in the package.
 
-If required dataset isn't in the package, but is in the registry, it can be
+If a required dataset isn't in the package, but is in the registry, it can be
 downloaded from the repository when the user passes `allow_download=True` to
 e.g. :func:`~kikuchipy.data.nickel_ebsd_large`. The dataset is then downloaded
 to a local cache, e.g. `/home/user/.cache/kikuchipy/`. Pooch handles
@@ -227,9 +227,9 @@ downloading, caching, version control, file verification (against hash) etc. If
 we have updated the file hash, pooch will redownload it. If the file is
 available in the cache, it can be loaded as the other files in the data module.
 
-The desired data cache directory by set with a global `KIKUCHIPY_DATA_DIR`
-variable locally, e.g. by setting `export KIKUCHIPY_DATA_DIR=~/kikuchipy_data`
-in `~/.bashrc`.
+The desired data cache directory used by pooch can be set with a global
+`KIKUCHIPY_DATA_DIR` variable locally, e.g. by setting
+`export KIKUCHIPY_DATA_DIR=~/kikuchipy_data` in `~/.bashrc`.
 
 Continuous integration (CI)
 ===========================
