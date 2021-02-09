@@ -177,10 +177,10 @@ def silicon_ebsd_moving_screen_in(
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
 
-    This pattern is used in combination with one of two other patterns
-    of the same region but with another specimen-screen-distance in the
-    moving-screen projection center calibration technique
-    :cite:`hjelen1991electron`.
+    This pattern and two other patterns from the same sample position
+    but with 5 mm and 10 mm greater sample-screen-distances were
+    acquired to test the moving-screen projection center estimation
+    technique :cite:`hjelen1991electron`.
 
     Parameters
     ----------
@@ -214,11 +214,12 @@ def silicon_ebsd_moving_screen_out5mm(
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
 
-    This pattern is used in combination with one of two other patterns
-    of the same region but with another specimen-screen-distance (SSD)
-    in the moving-screen projection center calibration technique
-    :cite:`hjelen1991electron`. It has a 5 mm greater SSD compared to
-    :func:`silicon_ebsd_moving_screen_in`.
+    This pattern and two other patterns from the same sample position
+    but with sample-screen-distances 5 mm shorter
+    (:func:`silicon_ebsd_moving_screen_in`) and 5 mm greater
+    (:func:`silicon_ebsd_moving_screen_out10mm`) were acquired to test
+    the moving-screen projection center estimation technique
+    :cite:`hjelen1991electron`.
 
     Parameters
     ----------
@@ -252,11 +253,12 @@ def silicon_ebsd_moving_screen_out10mm(
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
 
-    This pattern is used in combination with one of two other patterns
-    of the same region but with another specimen-screen-distance (SSD)
-    in the moving-screen projection center calibration technique
-    :cite:`hjelen1991electron`. It has a 10 mm greater SSD compared to
-    :func:`silicon_ebsd_moving_screen_in`.
+    This pattern and two other patterns from the same sample position
+    but with sample-screen-distances 10 mm shorter
+    (:func:`silicon_ebsd_moving_screen_in`) and 5 mm shorter
+    (:func:`silicon_ebsd_moving_screen_out5mm`) were acquired to test
+    the moving-screen projection center estimation technique
+    :cite:`hjelen1991electron`.
 
     Parameters
     ----------

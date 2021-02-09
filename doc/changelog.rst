@@ -21,9 +21,9 @@ Contributors
 
 Added
 -----
-- Add three EBSD patterns from the same position of a single crystal Si sample
-  with varying sample-screen distances to the data module via external repo.
-  (`#318 <https://github.com/pyxem/kikuchipy/pull/318>`_)
+- Three single crystal Si EBSD patterns, from the same sample position but with
+  varying sample-screen distances, to the data module (via external repo).
+  (`#320 <https://github.com/pyxem/kikuchipy/pull/320>`_)
 - Reading of NORDIF calibration patterns specified in a setting file into an
   EBSD signal. (`#317 <https://github.com/pyxem/kikuchipy/pull/317>`_)
 
