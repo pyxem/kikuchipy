@@ -26,7 +26,7 @@ import numpy as np
 from scipy.spatial.distance import cdist
 
 
-class MovingScreenCalibration:
+class PCCalibrationMovingScreen:
     """A class to perform and inspect the calibration of the EBSD
     projection center (PC) using the "moving screen" technique from
     :cite:`hjelen1991electron`.
@@ -136,13 +136,15 @@ class MovingScreenCalibration:
     @property
     def lines_start(self) -> np.ndarray:
         """Starting points of lines within the patterns, of shape
-        ???.
+        (2, n_lines, 2).
         """
         return np.stack([self.lines[0, :, :2], self.lines[1, :, :2]])
 
     @property
     def lines_end(self) -> np.ndarray:
-        """End points of lines within both patterns, of shape ???."""
+        """End points of lines within both patterns, of shape
+        (2, n_lines, 2).
+        """
         return np.stack([self.lines[0, :, 2:], self.lines[1, :, 2:]])
 
     @property
@@ -161,18 +163,11 @@ class MovingScreenCalibration:
         return self._point_correspondence
 
     @property
-    def points_in_out(self) -> np.ndarray:
-        """Start and end points of the lines between corresponding
-        points in the "in" and "out" patterns, of shape ???.
-        """
-        return self._points_in_out
-
-    @property
     def lines_in_out(self) -> np.ndarray:
-        """Start and end points of the lines between corresponding
-        points in the patterns, of shape (n_points, 4).
+        """Start (out) and end (in) points of the lines between
+        corresponding points in the patterns, of shape (n_points, 4).
         """
-        return self.points_in_out.reshape((self.n_points, 4))
+        return self._lines_in_out
 
     @property
     def lines_in_out_start(self) -> np.ndarray:
@@ -279,12 +274,12 @@ class MovingScreenCalibration:
         Is first run upon initialization.
         """
         self.find_point_correspondence()
-        self._points_in_out = np.stack(
+        self._lines_in_out = np.stack(
             [
-                [self.points[0, i], self.points[1, j]]
+                [self.points[1, j], self.points[0, i]]
                 for i, j in enumerate(self.point_correspondence)
             ]
-        )
+        ).reshape((self.n_points, 4))
 
     def plot(
         self,
