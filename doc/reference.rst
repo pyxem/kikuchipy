@@ -59,6 +59,9 @@ data
     nickel_ebsd_small
     nickel_ebsd_large
     nickel_ebsd_master_pattern_small
+    silicon_ebsd_moving_screen_in
+    silicon_ebsd_moving_screen_out5mm
+    silicon_ebsd_moving_screen_out10mm
 
 .. automodule:: kikuchipy.data
     :members:
