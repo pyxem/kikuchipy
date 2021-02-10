@@ -29,19 +29,19 @@ POINTS_OUT = [(77, 146), (424, 156), (246, 269), (104, 265), (392, 276)]
 PX_SIZE = 46 / 508  # mm / px
 
 
-@pytest.fixture(params=[[0, 1, 2, 3, 4]])
+@pytest.fixture
 def moving_screen_cal_instance(request):
     return PCCalibrationMovingScreen(
         pattern_in=data.silicon_ebsd_moving_screen_in(allow_download=True),
         pattern_out=data.silicon_ebsd_moving_screen_out5mm(allow_download=True),
         points_in=POINTS_IN,
-        points_out=np.array(POINTS_OUT)[request.param],
+        points_out=POINTS_OUT,
         delta_z=5,  # mm
         px_size=PX_SIZE,
     )
 
 
-class TestMovingScreenPCCalibration:
+class TestPCCalibrationMovingScreen:
     def test_points_lines(self, moving_screen_cal_instance):
         cal = moving_screen_cal_instance
         nrows, ncols = (480, 480)
@@ -54,37 +54,19 @@ class TestMovingScreenPCCalibration:
 
         assert cal.n_points == n_points
         assert cal.points.shape == (2, n_points, 2)
-        assert np.allclose(cal.point_correspondence, np.arange(n_points))
         assert np.allclose(cal.points[0], POINTS_IN)
         assert np.allclose(cal.points[1], POINTS_OUT)
 
         assert cal.n_lines == n_lines
         assert cal.lines.shape == (2, n_lines, 4)
-        assert cal.lines_in_out.shape == (n_points, 4)
+        assert cal.lines_out_in.shape == (n_points, 4)
         assert cal.lines_start.shape == (2, n_lines, 2)
         assert cal.lines_end.shape == (2, n_lines, 2)
-        assert cal.lines_in_out.shape == (n_points, 4)
-        assert np.allclose(cal.lines_in_out_start, POINTS_OUT)
-        assert cal.lines_in_out_start.shape == (n_points, 2)
-        assert np.allclose(cal.lines_in_out_end, POINTS_IN)
-        assert cal.lines_in_out_end.shape == (n_points, 2)
-
-    @pytest.mark.parametrize(
-        "moving_screen_cal_instance, desired_correspondence",
-        [
-            ([0, 2, 1, 3, 4], [0, 2, 1, 3, 4]),
-            ([4, 3, 2, 1, 0], [4, 3, 2, 1, 0]),
-            ([2, 4, 0, 1, 3], [2, 4, 0, 1, 3]),
-        ],
-        indirect=["moving_screen_cal_instance"],
-    )
-    def test_point_correspondence(
-        self, moving_screen_cal_instance, desired_correspondence
-    ):
-        assert np.allclose(
-            moving_screen_cal_instance.point_correspondence,
-            desired_correspondence,
-        )
+        assert cal.lines_out_in.shape == (n_points, 4)
+        assert np.allclose(cal.lines_out_in_start, POINTS_OUT)
+        assert cal.lines_out_in_start.shape == (n_points, 2)
+        assert np.allclose(cal.lines_out_in_end, POINTS_IN)
+        assert cal.lines_out_in_end.shape == (n_points, 2)
 
     @pytest.mark.parametrize(
         "n_points, desired_pc",
@@ -96,11 +78,9 @@ class TestMovingScreenPCCalibration:
     )
     def test_pc(self, moving_screen_cal_instance, n_points, desired_pc):
         cal = moving_screen_cal_instance
-        cal.points = cal.points[:, :n_points]
 
+        cal.points = cal.points[:, :n_points]
         cal.make_lines()
-        cal.find_point_correspondence()
-        cal.make_lines_in_out()
 
         assert cal.n_points == n_points
         assert np.allclose(cal.pc, desired_pc, atol=1e-4)

@@ -19,35 +19,34 @@
 """Calibration of the EBSD projection/pattern center."""
 
 from itertools import combinations
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.spatial.distance import cdist
 
 
 class PCCalibrationMovingScreen:
     """A class to perform and inspect the calibration of the EBSD
     projection center (PC) using the "moving screen" technique from
     :cite:`hjelen1991electron`.
-    
+
     The technique requires two patterns acquired with a stationary beam
-    but with different specimen-screen-distances where the difference is
+    but with different detector distances (DDs) where the difference is
     known. First, the goal is to find the pattern region which does not
     shift between the two camera positions, (PCx, PCy). This point can
     be estimated by selecting the same pattern features in both
-    patterns. Second, the specimen to screen distance, PCy, can be
-    estimated in the same unit as the known camera distance differences.
-    If also the detector pixel size is known, PCz can be given in the
-    fraction of the detector screen height.
+    patterns. Second, the DD (PCz) can be estimated in the same unit as
+    the known camera distance difference. If also the detector pixel
+    size is known, PCz can be given in the fraction of the detector
+    screen height.
     """
 
     def __init__(
         self,
         pattern_in: np.ndarray,
         pattern_out: np.ndarray,
-        points_in: Union[np.ndarray, list],
-        points_out: Union[np.ndarray, list],
+        points_in: Union[np.ndarray, List[Tuple[float]]],
+        points_out: Union[np.ndarray, List[Tuple[float]]],
         delta_z: float = 1,
         px_size: Optional[float] = None,
         binning: int = 1,
@@ -55,14 +54,14 @@ class PCCalibrationMovingScreen:
     ):
         r"""Return a class instance storing the PC estimates, the
         average PC, and other parameters relevant for the estimation.
-        
+
         Parameters
         ----------
         pattern_in
-            Pattern acquired with the shortest specimen-screen distance
-            (SSD) in the "in" position.
+            Pattern acquired with the shortest detector distance (DD) in
+            the "in" position.
         pattern_out
-            Pattern acquired with the longer SSD in the "out" position,
+            Pattern acquired with the longer DD in the "out" position,
             with the camera a known distance `delta_z` from the "in"
             position.
         points_in
@@ -71,7 +70,8 @@ class PCCalibrationMovingScreen:
         points_out
             Set of :math:`n` coordinates [(x1, y1), (x2, y2), ...] of
             pattern features, the same as in `points_in`, in
-            `pattern_out`.
+            `pattern_out`. They must be in the same order as in
+            `points_in`.
         delta_z
             Known distance between the "in" and "out" camera positions
             in which the `pattern_in` and `pattern_out` were acquired,
@@ -97,8 +97,6 @@ class PCCalibrationMovingScreen:
         self.convention = convention
 
         self.make_lines()
-        self.find_point_correspondence()
-        self.make_lines_in_out()
 
     @property
     def shape(self) -> Tuple[int, int]:
@@ -155,38 +153,30 @@ class PCCalibrationMovingScreen:
         return np.stack([length_in, length_out])
 
     @property
-    def point_correspondence(self) -> np.ndarray:
-        """1D array of indices into `self.points[1, ...]` corresponding
-        to `self.points[0]`, i.e. the pattern features in the "out"
-        pattern corresponding to the features in the "in" pattern.
-        """
-        return self._point_correspondence
-
-    @property
-    def lines_in_out(self) -> np.ndarray:
+    def lines_out_in(self) -> np.ndarray:
         """Start (out) and end (in) points of the lines between
         corresponding points in the patterns, of shape (n_points, 4).
         """
-        return self._lines_in_out
+        return np.hstack([self.points[1], self.points[0]])
 
     @property
-    def lines_in_out_start(self) -> np.ndarray:
+    def lines_out_in_start(self) -> np.ndarray:
         """Starting points of the lines between corresponding points in
         the patterns, of shape (n_points, 2).
         """
-        return self.lines_in_out[:, :2]
+        return self.lines_out_in[:, :2]
 
     @property
-    def lines_in_out_end(self) -> np.ndarray:
+    def lines_out_in_end(self) -> np.ndarray:
         """End points of the lines between corresponding points in the
         patterns, of shape (n_points, 2).
         """
-        return self.lines_in_out[:, 2:]
+        return self.lines_out_in[:, 2:]
 
     @property
     def _pxy_all(self) -> np.array:
         l_iter = combinations(range(self.n_points), 2)
-        l = self.lines_in_out
+        l = self.lines_out_in
         return np.array(
             [_get_intersection_from_lines(l[i], l[j]) for i, j in l_iter]
         )
@@ -261,56 +251,40 @@ class PCCalibrationMovingScreen:
         lines_out = _construct_lines_between_points(self.points[1])
         self._lines = np.stack([lines_in, lines_out])
 
-    def find_point_correspondence(self):
-        """Find the correspondence between points in the patterns
-        from the euclidean distance, and populate
-        `self.point_correspondence`. Is first run upon initialization.
-        """
-        distance = cdist(self.points[0], self.points[1])
-        self._point_correspondence = distance.argmin(axis=0)
-
-    def make_lines_in_out(self):
-        """Draw lines between corresponding points across the patterns.
-        Is first run upon initialization.
-        """
-        self.find_point_correspondence()
-        self._lines_in_out = np.stack(
-            [
-                [self.points[1, j], self.points[0, i]]
-                for i, j in enumerate(self.point_correspondence)
-            ]
-        ).reshape((self.n_points, 4))
-
     def plot(
         self,
         pattern_kwargs: dict = dict(cmap="gray"),
         line_kwargs: dict = dict(linewidth=2, zorder=1),
         scatter_kwargs: dict = dict(zorder=2),
         pc_kwargs: dict = dict(
-            marker="*", s=150, facecolor="C1", edgecolor="k"
+            marker="*", s=300, facecolor="gold", edgecolor="k"
         ),
         return_fig_ax: bool = False,
-    ) -> Union[None, tuple]:
+        **kwargs: dict,
+    ) -> Union[None, Tuple[plt.Figure, List[plt.Axes]]]:
         """A convenience method of three images, the first two with the
         patterns with points and lines annotated, and the third with the
         calibration results.
-        
+
         Parameters
         ----------
         pattern_kwargs
             Keyword arguments passed to
-            :meth:`matplotlib.Axes.axes.imshow`.
+            :meth:`matplotlib.axes.Axes.imshow`.
         line_kwargs
             Keyword arguments passed to
-            :meth:`matplotlib.Axes.axes.axline`.
+            :meth:`matplotlib.axes.Axes.axline`.
         scatter_kwargs
             Keyword arguments passed to
-            :meth:`matplotlib.Axes.axes.scatter`.
+            :meth:`matplotlib.axes.Axes.scatter`.
         pc_kwargs
             Keyword arguments, along with `scatter_kwargs`, passed to
-            :meth:`matplotlib.Axes.axes.scatter` when plotting the PCs.
+            :meth:`matplotlib.axes.Axes.scatter` when plotting the PCs.
         return_fig_ax
             Whether to return the figure and axes, default is False.
+        kwargs
+            Keyword arguments passed to
+            :func:`matplotlib.pyplot.subplots`.
 
         Returns
         -------
@@ -327,11 +301,15 @@ class PCCalibrationMovingScreen:
         n_lines = self.n_lines
         lines_start = self.lines_start
         lines_end = self.lines_end
-        lines_in_out_start = self.lines_in_out_start
-        lines_in_out_end = self.lines_in_out_end
+        lines_out_in_start = self.lines_out_in_start
+        lines_out_in_end = self.lines_out_in_end
 
         ncols = 3
-        fig, ax = plt.subplots(ncols=ncols, sharex=True, sharey=True)
+        for k, v in zip(
+            ["sharex", "sharey", "figsize"], [True, True, (20, 10)]
+        ):
+            kwargs.setdefault(k, v)
+        fig, ax = plt.subplots(ncols=ncols, **kwargs)
         ax[0].set_title("In (operating) position")
         ax[0].imshow(pat1, **pattern_kwargs)
         ax[0].scatter(points1[:, 0], points1[:, 1], **scatter_kwargs)
@@ -364,7 +342,7 @@ class PCCalibrationMovingScreen:
             **scatter_kwargs,
         )
         for i in range(self.n_points):
-            start, end = lines_in_out_start[i], lines_in_out_end[i]
+            start, end = lines_out_in_start[i], lines_out_in_end[i]
             ax[2].axline(start, end, color=f"C{i}", **line_kwargs)
 
         for i in range(ncols):
@@ -384,7 +362,7 @@ class PCCalibrationMovingScreen:
 
 
 def _get_intersection_from_lines(
-    line1: Union[list, np.ndarray], line2: Union[list, np.ndarray]
+    line1: Union[List[int], np.ndarray], line2: Union[List[int], np.ndarray],
 ) -> Tuple[float, float]:
     """line: [x1, y1, x2, y2]"""
     x1, y1, x2, y2 = line1
@@ -407,11 +385,11 @@ def _get_intersection_from_lines(
     return px, py
 
 
-def _line_lengths(lines_start, lines_end):
+def _line_lengths(lines_start: np.ndarray, lines_end: np.ndarray) -> np.ndarray:
     return np.sqrt(np.sum(np.square(lines_start - lines_end), axis=1))
 
 
-def _construct_lines_between_points(points):
+def _construct_lines_between_points(points: np.ndarray) -> np.ndarray:
     combs = list(combinations(range(len(points)), 2))
     start = np.zeros((len(combs), 2))
     end = np.zeros_like(start)
