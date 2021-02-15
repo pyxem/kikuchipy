@@ -221,7 +221,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         # Add crystal map and detector to keyword arguments
         kwargs = dict(
             xmap=CrystalMap(
-                phase_list=PhaseList(self.phase), rotations=rotations,
+                phase_list=PhaseList(self.phase),
+                rotations=rotations,
             ),
             detector=detector,
         )
@@ -246,12 +247,12 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         ]
 
         if compute:
-            with ProgressBar():
-                print(
-                    f"Creating a dictionary of {nav_shape} simulated patterns:",
-                    file=sys.stdout,
-                )
-                patterns = simulated.compute()
+            # with ProgressBar():
+            #     print(
+            #         f"Creating a dictionary of {nav_shape} simulated patterns:",
+            #         file=sys.stdout,
+            #     )
+            patterns = simulated.compute()
             out = EBSD(patterns, axes=axes, **kwargs)
         else:
             out = LazyEBSD(simulated, axes=axes, **kwargs)
@@ -458,7 +459,10 @@ def _get_patterns_chunk(
             dim,
             djm,
         ) = _get_lambert_interpolation_parameters(
-            rotated_direction_cosines=rotated_dc, npx=npx, npy=npy, scale=scale,
+            rotated_direction_cosines=rotated_dc,
+            npx=npx,
+            npy=npy,
+            scale=scale,
         )
         pattern = np.where(
             rotated_dc.z >= 0,
