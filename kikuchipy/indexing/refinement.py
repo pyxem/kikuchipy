@@ -52,8 +52,9 @@ class Refinement:
                 )
                 output = refined_params.compute()
         else:
-            refined_params.visualize(filename="refinement_test.svg")
-            output = refined_params
+            output = refined_params.visualize(
+                filename="refinement_test.svg", rankdir="LR"
+            )
         return output
 
 
