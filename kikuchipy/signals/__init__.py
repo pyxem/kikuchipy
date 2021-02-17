@@ -25,6 +25,8 @@ from kikuchipy.signals.ebsd import EBSD, LazyEBSD
 from kikuchipy.signals.ebsd_master_pattern import (
     EBSDMasterPattern,
     LazyEBSDMasterPattern,
+    _get_direction_cosines,
+    _get_lambert_interpolation_parameters,
 )
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 
@@ -35,4 +37,6 @@ __all__ = [
     "LazyEBSDMasterPattern",
     "util",
     "VirtualBSEImage",
+    "_get_direction_cosines",
+    "_get_lambert_interpolation_parameters",
 ]
