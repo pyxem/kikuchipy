@@ -94,3 +94,36 @@ class TestData:
         assert isinstance(s, LazyEBSD)
         assert s.data.shape == (55, 75, 60, 60)
         assert np.issubdtype(s.data.dtype, np.uint8)
+
+    def test_load_silicon_ebsd_moving_screen_in(self):
+        """Download external Si pattern."""
+        s = data.silicon_ebsd_moving_screen_in(allow_download=True)
+
+        assert s.data.shape == (480, 480)
+        assert s.data.dtype == np.uint8
+        assert isinstance(
+            s.metadata.Acquisition_instrument.SEM.Detector.EBSD.static_background,
+            np.ndarray,
+        )
+
+    def test_load_silicon_ebsd_moving_screen_out5mm(self):
+        """Download external Si pattern."""
+        s = data.silicon_ebsd_moving_screen_out5mm(allow_download=True)
+
+        assert s.data.shape == (480, 480)
+        assert s.data.dtype == np.uint8
+        assert isinstance(
+            s.metadata.Acquisition_instrument.SEM.Detector.EBSD.static_background,
+            np.ndarray,
+        )
+
+    def test_load_silicon_ebsd_moving_screen_out10mm(self):
+        """Download external Si pattern."""
+        s = data.silicon_ebsd_moving_screen_out10mm(allow_download=True)
+
+        assert s.data.shape == (480, 480)
+        assert s.data.dtype == np.uint8
+        assert isinstance(
+            s.metadata.Acquisition_instrument.SEM.Detector.EBSD.static_background,
+            np.ndarray,
+        )
