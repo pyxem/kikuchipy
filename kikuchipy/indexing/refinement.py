@@ -1,16 +1,18 @@
 import sys
 
+import cv2
 import dask.array as da
 from dask.diagnostics import ProgressBar
 import numpy as np
 from orix.quaternion import Rotation
 import scipy.optimize
-from kikuchipy.indexing.similarity_metrics import ncc
 from kikuchipy.signals import (
-    EBSDMasterPattern,
     _get_direction_cosines,
     _get_lambert_interpolation_parameters,
 )
+from kikuchipy.indexing.similarity_metrics import ncc
+
+from kikuchipy.pattern import rescale_intensity
 
 
 class Refinement:
@@ -18,48 +20,73 @@ class Refinement:
     def refine_xmap(
         xmap, mp, exp, det, energy, xy_px=5, L_px=500, degs=0.5, compute=True
     ):
+        # Convert to radians
+        rads = degs * (np.pi / 180)
+        ny = det.ncols
+        nx = det.nrows
         pc = det.pc_emsoft()
-        xpc_guess = pc[0][0]
-        ypc_guess = pc[0][1]
-        L_guess = pc[0][2]
+        xpc = pc[0][0]
+        ypc = pc[0][1]
+        L = pc[0][2]
+
+        # Can maybe do something like this down the road?
+        # x_star_lower = max(0, det.pcx - xy_px/nx)
+        # x_star_upper = min(1, det.pcx + xy_px/nx)
+        #
+        # y_star_lower = max(0, det.pcy - xy_px/ny)
+        # y_star_upper = min(1, det.pcy - xy_px/ny)
+
+        x_star_lower = ((xpc - xy_px) / nx) + 0.5
+        x_star_upper = ((xpc + xy_px) / nx) + 0.5
+
+        y_star_lower = -((ypc + xy_px) / ny) + 0.5
+        y_star_upper = -((ypc - xy_px) / ny) + 0.5
+
+        #       nydelta = ny * 90.55 # should be px_size
+        nydelta = (
+            ny * det.px_size
+        )  # px_size is 1 since Bruker so we can remove this
+        z_star_lower = (L - L_px) / nydelta
+        z_star_upper = (L + L_px) / nydelta
+
         pc_bounds = [
-            (xpc_guess - xy_px, xpc_guess + xy_px),
-            (ypc_guess - xy_px, ypc_guess + xy_px),
-            (L_guess - L_px, L_guess + L_px),
+            (x_star_lower, x_star_upper),
+            (y_star_lower, y_star_upper),
+            (z_star_lower, z_star_upper),
         ]
+        #        print(pc_bounds)
         ncols = exp.data.shape[1]
         rdata = xmap.rotations.data
-        rdata = xmap.rotations.data[:10]  # Smaller dataset for testing
+        # rdata = xmap.rotations.data[:10]  # Smaller dataset for testing
         dtype = rdata.dtype
         # TODO: Optimize chunks, currently hardcoded for SDSS dataset
         # r_da = da.from_array(rdata, chunks=(11700, 1, 4))
-        r_da = da.from_array(rdata, chunks=(10, 1, 4))
+        # r_da = da.from_array(rdata, chunks=(10, 1, 4))
+        r_da = da.from_array(rdata, chunks=(1, 4))  # single Si mvp test
 
         (
             master_north,
             master_south,
-            dc,
             npx,
             npy,
             scale,
         ) = _get_single_pattern_params(mp, det, energy)
-
         exp_data = exp.data
+        exp_data = rescale_intensity(exp_data, dtype_out=np.float32)
         refined_params = r_da.map_blocks(
             _get_refined_params_chunk,
             master_north=master_north,
             master_south=master_south,
-            dc=dc,
             npx=npx,
             npy=npy,
             scale=scale,
             exp=exp_data,
             det=det,
             pc_bounds=pc_bounds,
-            degs=degs,
+            rads=rads,
             ncols=ncols,
-            dtype_out=dtype,
-            dtype=dtype,
+            dtype_out=np.float32,
+            dtype=np.float32,
         )
         if compute:
             with ProgressBar():
@@ -76,31 +103,40 @@ class Refinement:
 
 
 def _shgo_objective_function(x, *args):
-    xpc = x[0]
-    ypc = x[1]
-    L = x[2]
+    x_star = x[0]
+    y_star = x[1]
+    z_star = x[2]
+
+    # Passed in radians
     phi1 = x[3]
     Phi = x[4]
     phi2 = x[5]
+
     experimental = args[0]
     master_north = args[1]
     master_south = args[2]
-    dc = args[3]
-    npx = args[4]
-    npy = args[5]
-    scale = args[6]
-    detector = args[7]
-    # We could probably speed this up quite a bit by using Bruker PC all the way
-    # TODO: Use Bruker PC instead of EMsoft PC
-    detector.pcx = 0.5 + (
-        -xpc / (detector.ncols * detector.binning)
-    )  # Assumes EMsoft v5 PC
-    detector.pcy = 0.5 - (ypc / (detector.nrows * detector.binning))
-    detector.pcz = L / (detector.nrows * detector.px_size * detector.binning)
-    r = Rotation.from_euler(np.radians(np.array((phi1, Phi, phi2))))
+    npx = args[3]
+    npy = args[4]
+    scale = args[5]
+    detector = args[6]
+    detector.pcx = x_star
+    detector.pcy = y_star
+    detector.pcz = z_star
+    dc = _get_direction_cosines(detector)
+
+    r = Rotation.from_euler((phi1, Phi, phi2))
     sim_pattern = _simulate_single_pattern(
-        r, dc, master_north, master_south, npx, npy, scale
+        r,
+        dc,
+        master_north,
+        master_south,
+        npx,
+        npy,
+        scale,
     )
+    result = cv2.matchTemplate(experimental, sim_pattern, cv2.TM_CCOEFF_NORMED)
+    # print(result)
+    return -result[0][0]
     return -ncc(experimental, sim_pattern)
 
 
@@ -108,14 +144,13 @@ def _get_refined_params_chunk(
     r,
     master_north,
     master_south,
-    dc,
     npx,
     npy,
     scale,
     exp,
     det,
     pc_bounds,
-    degs,
+    rads,
     ncols,
     dtype_out=np.float32,
 ):
@@ -126,33 +161,43 @@ def _get_refined_params_chunk(
     )
     for i in np.ndindex(rotations_shape[0]):
         index = i[0]
-        row = index // ncols
-        col = index % ncols
-        exp_data = exp[row, col]
+        # TODO: Fix this mess
+        if len(exp.data.shape) == 2:
+            exp_data = exp
+        else:
+            row = index // ncols
+            col = index % ncols
+            exp_data = exp[row, col]
         rotation = rotations[index]
         best = rotation[0]
         r_euler = best.to_euler()
-        phi1_guess = np.rad2deg(r_euler[..., 0])
-        Phi_guess = np.rad2deg(r_euler[..., 1])
-        phi2_guess = np.rad2deg(r_euler[..., 2])
+        phi1_guess = r_euler[..., 0]
+        Phi_guess = r_euler[..., 1]
+        phi2_guess = r_euler[..., 2]
         rotation_bounds = [
-            (phi1_guess[0] - degs, phi1_guess[0] + degs),
-            (Phi_guess[0] - degs, Phi_guess[0] + degs),
-            (phi2_guess[0] - degs, phi2_guess[0] + degs),
+            (phi1_guess[0] - rads, phi1_guess[0] + rads),
+            (Phi_guess[0] - rads, Phi_guess[0] + rads),
+            (phi2_guess[0] - rads, phi2_guess[0] + rads),
         ]
         # Could probably speed up here as well
         bounds = pc_bounds + rotation_bounds
-        args = (exp_data, master_north, master_south, dc, npx, npy, scale, det)
+        #       print(bounds)
+        args = (exp_data, master_north, master_south, npx, npy, scale, det)
         optimized = scipy.optimize.shgo(
             _shgo_objective_function, bounds, args=args
         )
-        xpc = optimized.x[0]
-        ypc = optimized.x[1]
-        zpc = optimized.x[2]
+        print(optimized)
+        x_star = optimized.x[0]
+        y_star = optimized.x[1]
+        z_star = optimized.x[2]
+
+        # In radians
         phi1 = optimized.x[3]
         Phi = optimized.x[4]
         phi2 = optimized.x[5]
-        refined_params[index] = np.array((xpc, ypc, zpc, phi1, Phi, phi2))
+        refined_params[index] = np.array(
+            (x_star, y_star, z_star, phi1, Phi, phi2)
+        )
     return refined_params
 
 
@@ -185,11 +230,10 @@ def _get_single_pattern_params(mp, detector, energy):
         )
     master_north = mp.data[north_slice]
     master_south = mp.data[south_slice]
-    dc = _get_direction_cosines(detector)
     npx, npy = mp.axes_manager.signal_shape
     scale = (npx - 1) / 2
 
-    return master_north, master_south, dc, npx, npy, scale
+    return master_north, master_south, npx, npy, scale
 
 
 def _simulate_single_pattern(
@@ -232,4 +276,6 @@ def _simulate_single_pattern(
             + master_south[niip, nijp] * di * dj
         ),
     )
-    return pattern
+    # out = rescale_intensity(pattern, dtype_out=np.uint8)
+    # return out
+    return pattern.astype(np.float32)
