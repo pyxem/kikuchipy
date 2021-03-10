@@ -32,7 +32,7 @@ class Refinement:
         energy,
         bounds=1,
         methodname="Nelder-Mead",
-        tol=0.001,
+        tol=0.01,
         compute=True,
     ):
         bounds = bounds * (np.pi / 180)
@@ -43,8 +43,8 @@ class Refinement:
         dtype = rdata.dtype
         # TODO: Optimize chunks, currently hardcoded for SDSS dataset
         # r_da = da.from_array(rdata, chunks=(11700, 1, 4))
-        # r_da = da.from_array(rdata, chunks=(10, 1, 4))
-        r_da = da.from_array(rdata, chunks=(1, 4))  # single Si mvp test
+        r_da = da.from_array(rdata, chunks=(10, 1, 4))
+        # r_da = da.from_array(rdata, chunks=(1, 4))  # single Si mvp test
 
         (
             master_north,
@@ -55,6 +55,7 @@ class Refinement:
         ) = _get_single_pattern_params(mp, det, energy)
 
         dc = _get_direction_cosines_lean(det)
+        # dc = _get_direction_cosines(det)
 
         exp_data = exp.data
         exp_data = rescale_intensity(exp_data, dtype_out=np.float32)
@@ -185,7 +186,7 @@ def _refine_orientations_chunk(
     rotations = Rotation(r)
     rotations_shape = r.shape
     refined_params = np.empty(
-        shape=(rotations_shape[0],) + (3,), dtype=dtype_out
+        shape=(rotations_shape[0],) + (4,), dtype=dtype_out
     )
 
     # If xmap were to store unique PCs the following line should be placed inside the for-loop
@@ -196,17 +197,23 @@ def _refine_orientations_chunk(
         if len(exp.data.shape) == 2:
             exp_data = exp
         else:
-            row = index // ncols
-            col = index % ncols
-            exp_data = exp[row, col]
+            # print(exp.shape)
+            # row = index // ncols
+            # col = index % ncols
+            # exp_data = exp[row, col]
+            exp_data = exp[index]
+            # print(exp_data.shape)
 
         rotation = rotations[index]
         best_rotation = rotation[0]
         r_euler = best_rotation.to_euler()
-        phi1 = r_euler[..., 0]
-        Phi = r_euler[..., 1]
-        phi2 = r_euler[..., 2]
+        phi1 = r_euler[..., 0][0]
+        Phi = r_euler[..., 1][0]
+        phi2 = r_euler[..., 2][0]
         x0 = np.array((phi1, Phi, phi2))
+        # x0 = [phi1, Phi, phi2]
+        # print("\n", rotation, "\n", best_rotation, "\n", r_euler, "\n", phi1, Phi, phi2,"\n", x0.shape)
+        # print("\n", best_rotation, "\n")
 
         args = (exp_data, master_north, master_south, npx, npy, scale, dc)
 
@@ -227,14 +234,16 @@ def _refine_orientations_chunk(
             bounds=bounds,
             args=args,
             method=methodname,
+            options={"adaptive": True},
         )
+        score = -optimized.fun
         phi1 = optimized.x[0]
         Phi = optimized.x[1]
         phi2 = optimized.x[2]
 
-        refined_params[index] = np.array((phi1, Phi, phi2))
+        refined_params[index] = np.array((score, phi1, Phi, phi2))
         # Just for testing
-        return optimized
+        # return optimized
     return refined_params
 
 
@@ -327,7 +336,7 @@ def _orientation_objective_function(x, *args):
     dc = args[6]
 
     rotation = Rotation.from_euler((phi1, Phi, phi2))
-
+    # print("\n", rotation,"\n", )
     sim_pattern = _simulate_single_pattern(
         rotation,
         dc,
@@ -337,8 +346,10 @@ def _orientation_objective_function(x, *args):
         npy,
         scale,
     )
-
+    # print(sim_pattern.shape)
+    # return -ncc(experimental, sim_pattern)
     result = cv2.matchTemplate(experimental, sim_pattern, cv2.TM_CCOEFF_NORMED)
+    # print("\n", -result, "\n")
     return -result[0][0]
 
 
@@ -382,7 +393,6 @@ def _projection_center_objective_function(x, *args):
         npy,
         scale,
     )
-
     result = cv2.matchTemplate(experimental, sim_pattern, cv2.TM_CCOEFF_NORMED)
     return -result[0][0]
 
@@ -427,6 +437,7 @@ def _simulate_single_pattern(
             + master_south[niip, nijp] * di * dj
         ),
     )
+    # return pattern
     return pattern.astype(np.float32)
 
 

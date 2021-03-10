@@ -247,11 +247,11 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         ]
 
         if compute:
-            # with ProgressBar():
-            #     print(
-            #         f"Creating a dictionary of {nav_shape} simulated patterns:",
-            #         file=sys.stdout,
-            #     )
+            with ProgressBar():
+                print(
+                    f"Creating a dictionary of {nav_shape} simulated patterns:",
+                    file=sys.stdout,
+                )
             patterns = simulated.compute()
             out = EBSD(patterns, axes=axes, **kwargs)
         else:
