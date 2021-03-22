@@ -45,8 +45,9 @@ class Refinement:
         dtype = rdata.dtype
         # TODO: Optimize chunks, currently hardcoded for SDSS dataset
         # r_da = da.from_array(rdata, chunks=(11700, 1, 4))
-        r_da = da.from_array(rdata, chunks=(1000, 10, 4))
+        # r_da = da.from_array(rdata, chunks=(1000, 10, 4))
         # r_da = da.from_array(rdata, chunks=(1, 4))  # single Si mvp test
+        r_da = da.from_array(rdata, chunks=(12, 4))
 
         (
             master_north,
@@ -204,113 +205,123 @@ def _refine_orientations_chunk(
             # col = index % ncols
             # exp_data = exp[row, col]
             exp_data = exp[index]
-            # print(exp_data.shape)
 
         rotation = rotations[index]
-        best_rotation = rotation[0]
-        # rodrigues = Rodrigues.from_rotation(best_rotation)
-        # r1 = rodrigues.data[..., 0][0]
-        # r2 = rodrigues.data[..., 1][0]
-        # r3 = rodrigues.data[..., 2][0]
+        params = []
+        for r in rotation:
+            # best_rotation = rotation[0]
+            best_rotation = r
+            # rodrigues = Rodrigues.from_rotation(best_rotation)
+            # r1 = rodrigues.data[..., 0][0]
+            # r2 = rodrigues.data[..., 1][0]
+            # r3 = rodrigues.data[..., 2][0]
 
-        # x0 = rodrigues.data[0]
+            # x0 = rodrigues.data[0]
 
-        q1 = best_rotation.data[..., 0][0]
-        q2 = best_rotation.data[..., 1][0]
-        q3 = best_rotation.data[..., 2][0]
-        q4 = best_rotation.data[..., 3][0]
+            q1 = best_rotation.data[..., 0][0]
+            q2 = best_rotation.data[..., 1][0]
+            q3 = best_rotation.data[..., 2][0]
+            q4 = best_rotation.data[..., 3][0]
 
-        x0 = best_rotation.data[0]
+            x0 = best_rotation.data[0]
 
-        args = (exp_data, master_north, master_south, npx, npy, scale, dc)
+            args = (exp_data, master_north, master_south, npx, npy, scale, dc)
 
-        # if methodname == "Nelder-Mead":
-        #     bounds = None
-        #     options = {"adaptive": False}
-        # else:
-        #     bounds = None
-        #     options = None
-        #
-        # optimized = scipy.optimize.minimize(
-        #     _orientation_objective_function,
-        #     tol=tol,
-        #     x0=x0,
-        #     bounds=bounds,
-        #     args=args,
-        #     method=methodname,
-        #     options=options,
-        # )
-        # score = -optimized.fun
-        # #r1 = optimized.x[0]
-        # #r2 = optimized.x[1]
-        # #r3 = optimized.x[2]
-        # q1 = optimized.x[0]
-        # q2 = optimized.x[1]
-        # q3 = optimized.x[2]
-        # q4 = optimized.x[3]
-        # refined_params[index] = np.array((score, q1, q2, q3, q4))
+            # if methodname == "Nelder-Mead":
+            #     bounds = None
+            #     options = {"adaptive": False}
+            # else:
+            #     bounds = None
+            #     options = None
+            #
+            # optimized = scipy.optimize.minimize(
+            #     _orientation_objective_function,
+            #     tol=tol,
+            #     x0=x0,
+            #     bounds=bounds,
+            #     args=args,
+            #     method=methodname,
+            #     options=options,
+            # )
+            # score = -optimized.fun
+            # #r1 = optimized.x[0]
+            # #r2 = optimized.x[1]
+            # #r3 = optimized.x[2]
+            # q1 = optimized.x[0]
+            # q2 = optimized.x[1]
+            # q3 = optimized.x[2]
+            # q4 = optimized.x[3]
+            # refined_params[index] = np.array((score, q1, q2, q3, q4))
 
-        # Py-BOBYQA Test
+            # Py-BOBYQA Test
 
-        # Euler angles
-        r_euler = best_rotation.to_euler()
-        phi1 = r_euler[..., 0][0]
-        Phi = r_euler[..., 1][0]
-        phi2 = r_euler[..., 2][0]
-        x0 = np.array((phi1, Phi, phi2))
+            # Euler angles
+            r_euler = best_rotation.to_euler()
+            phi1 = r_euler[..., 0][0]
+            Phi = r_euler[..., 1][0]
+            phi2 = r_euler[..., 2][0]
+            x0 = np.array((phi1, Phi, phi2))
 
-        # Rodrigues vector changing axis and angle
-        r_rod = Rodrigues.from_rotation(best_rotation)
-        rx = r_rod.data[..., 0][0]
-        ry = r_rod.data[..., 1][0]
-        rz = r_rod.data[..., 2][0]
-        x0 = np.array((rx, ry, rz))
-        # ==> Perfect:  0.988  Good:  0.0  OK:  0.0  Poor:  0.012
+            # Rodrigues vector changing axis and angle
+            r_rod = Rodrigues.from_rotation(best_rotation)
+            rx = r_rod.data[..., 0][0]
+            ry = r_rod.data[..., 1][0]
+            rz = r_rod.data[..., 2][0]
+            x0 = np.array((rx, ry, rz))
+            # ==> Perfect:  0.988  Good:  0.0  OK:  0.0  Poor:  0.012
 
-        # Rodrigues Vector changing only axis
-        alpha = r_rod.angle.data[0]
-        tan_alpha = np.tan(alpha / 2)
+            # Rodrigues Vector changing only axis
+            alpha = r_rod.angle.data[0]
+            tan_alpha = np.tan(alpha / 2)
 
-        rxa = r_rod.axis.data[..., 0][0]
-        ryb = r_rod.axis.data[..., 1][0]
-        rzc = r_rod.axis.data[..., 2][0]
-        x0 = np.array((rxa, ryb, rzc))
-        # ==> Perfect:  0.988  Good:  0.0  OK:  0.0  Poor:  0.012
+            rxa = r_rod.axis.data[..., 0][0]
+            ryb = r_rod.axis.data[..., 1][0]
+            rzc = r_rod.axis.data[..., 2][0]
+            x0 = np.array((rxa, ryb, rzc))
+            # ==> Perfect:  0.988  Good:  0.0  OK:  0.0  Poor:  0.012
 
-        args = (
-            exp_data,
-            master_north,
-            master_south,
-            npx,
-            npy,
-            scale,
-            dc,
-            tan_alpha,
-        )
+            args = (
+                exp_data,
+                master_north,
+                master_south,
+                npx,
+                npy,
+                scale,
+                dc,
+                tan_alpha,
+            )
 
-        # print(x0)
+            # print(x0)
 
-        lower = np.array([-1.1, -1.1, -1.1])
-        upper = np.array([1.1, 1.1, 1.1])
-        soln = pybobyqa.solve(
-            _orientation_objective_function,
-            x0,
-            args=args,
-            bounds=(lower, upper),
-            do_logging=False,
-            # scaling_within_bounds=True,
-            rhobeg=1,
-            rhoend=0.000000001,
-            seek_global_minimum=True,
-            user_params={"model.abs_tol": -0.98},
-        )
-        # print(soln)
-        score = -soln.f
-        q1 = soln.x[0]
-        q2 = soln.x[1]
-        q3 = soln.x[2]
+            # lower = np.array([-1.1, -1.1, -1.1])
+            # upper = np.array([1.1, 1.1, 1.1])
+            soln = pybobyqa.solve(
+                _orientation_objective_function,
+                x0,
+                args=args,
+                # bounds=(lower, upper),
+                do_logging=False,
+                # scaling_within_bounds=True,
+                # rhobeg=1.1,
+                # rhoend=0.000000001,
+                # seek_global_minimum=True,
+                user_params={"model.abs_tol": -0.98},
+            )
+            # print(soln)
+            score = -soln.f
+            q1 = soln.x[0]
+            q2 = soln.x[1]
+            q3 = soln.x[2]
+
+            params.append((score, q1, q2, q3))
+            if score >= 0.98:
+                break
+        sorted_params = sorted(params, key=lambda x: x[0])
+        (score, r1, r2, r3) = sorted_params[-1]
+        refined_params[index] = np.array((score, r1, r2, r3))
+
         #   q4 = soln.x[0]
-        refined_params[index] = np.array((score, q1, q2, q3))
+        #    refined_params[index] = np.array((score, q1, q2, q3))
 
         # params = []
         # for r in rotation:
@@ -458,6 +469,7 @@ def _orientation_objective_function(x, *args):
     rz = x[2]
 
     rod = Rodrigues((tan_alpha * rx, tan_alpha * ry, tan_alpha * rz))
+    # rod = Rodrigues((rx, ry, rz))
     rotation = Rotation.from_neo_euler(rod)
 
     # print("\n", rotation,"\n", )
@@ -471,6 +483,7 @@ def _orientation_objective_function(x, *args):
         scale,
     )
     # print(sim_pattern.shape)
+    return ndp(experimental, sim_pattern)
     # return -ncc(experimental, sim_pattern)
     result = cv2.matchTemplate(experimental, sim_pattern, cv2.TM_CCOEFF_NORMED)
     # print("\n", -result, "\n")
@@ -590,7 +603,8 @@ def _get_direction_cosines_lean(detector: EBSDDetector) -> Vector3d:
 
     # Detector coordinates in microns
     det_x = (
-        -((-xpc - (1.0 - detector.ncols) * 0.5) - np.arange(0, detector.ncols))
+        -1
+        * ((-xpc - (1.0 - detector.ncols) * 0.5) - np.arange(0, detector.ncols))
         * detector.px_size
     )
     det_y = (
