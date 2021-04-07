@@ -1,33 +1,21 @@
 import sys
+from typing import Optional, Union
 
 import cv2
 import dask.array as da
 from dask.diagnostics import ProgressBar
+import numba
 import numpy as np
-
 from orix.crystal_map import CrystalMap
 from orix.vector import Vector3d, Rodrigues
 from orix.quaternion import Rotation
 import scipy.optimize
+
 from kikuchipy.detectors import EBSDDetector
-from kikuchipy.signals import (
-    _get_direction_cosines,
-    _get_lambert_interpolation_parameters,
-)
-from kikuchipy.indexing.similarity_metrics import ncc, ndp
-
-import gradient_free_optimizers
-
-import pybobyqa
-
 from kikuchipy.pattern import rescale_intensity
 
 
 class Refinement:
-    @staticmethod
-    def refine_orientations_projection_center_3_step():
-        pass
-
     @staticmethod
     def refine_orientations(
         xmap,
@@ -35,17 +23,25 @@ class Refinement:
         exp,
         det,
         energy,
-        method="BOBYQA",
+        method="minimize",
+        method_kwargs=None,
         compute=True,
     ):
+
+        if method == "minimize" and not method_kwargs:
+            method_kwargs = {"method": "Nelder-Mead"}
+        elif not method_kwargs:
+            method_kwargs = {}
+        method = getattr(scipy.optimize, method)
+
         ncols = exp.data.shape[1]
 
         # Convert from Quaternions to Rodrigues vector
         rodrigues = Rodrigues.from_rotation(xmap.rotations)
         rdata = rodrigues.data
-        # dtype = rdata.dtype
+        chunk_size = ("auto",) + (-1,) * (len(rdata.shape) - 1)
 
-        r_da = da.from_array(rdata, chunks=("auto", -1, -1))
+        r_da = da.from_array(rdata, chunks=chunk_size)
 
         (
             master_north,
@@ -55,14 +51,17 @@ class Refinement:
             scale,
         ) = _get_single_pattern_params(mp, det, energy)
 
+        # TODO: Replace this method with njit rework, needed for pc and 6D
         dc = _get_direction_cosines_lean(det)
+        dc = dc.data
         # dc = _get_direction_cosines(det)
 
         exp_data = exp.data
         exp_data = rescale_intensity(exp_data, dtype_out=np.float32)
         refined_params = r_da.map_blocks(
             _refine_orientations_chunk,
-            meth=method,
+            method=method,
+            method_kwargs=method_kwargs,
             master_north=master_north,
             master_south=master_south,
             npx=npx,
@@ -90,440 +89,30 @@ class Refinement:
                 )
                 rod = Rodrigues(rodrigues_params)
                 output_rotation = Rotation.from_neo_euler(rod)
+                xmap_dict = xmap.__dict__
                 output_scores = output_params[..., 0]
                 # TODO: Needs vast improvements!
                 output = CrystalMap(
                     rotations=output_rotation,
+                    phase_id=xmap_dict["_phase_id"],
+                    x=xmap_dict["_x"],
+                    y=xmap_dict["_y"],
+                    phase_list=xmap_dict["phases"],
                     prop={
+                        "simulation_indices": xmap_dict["_prop"][
+                            "simulation_indices"
+                        ][..., 0],
                         "scores": output_scores,
                     },
+                    is_in_data=xmap_dict["is_in_data"],
+                    scan_unit=xmap_dict["scan_unit"],
                 )
         else:
-            # output = refined_params.visualize(
-            #     filename="refinement_test.svg", rankdir="LR"
-            # )
-            output = refined_params
-        return output
-
-    @staticmethod
-    def refine_orientations2(
-        xmap,
-        mp,
-        exp,
-        det,
-        energy,
-        compute=True,
-    ):
-        ncols = exp.data.shape[1]
-
-        # Convert from Quaternions to Rodrigues vector
-        test_data = xmap.rotations.data[0:10]
-        test_rotation = Rotation(test_data)
-        rodrigues = Rodrigues.from_rotation(test_rotation)
-        # rodrigues = Rodrigues.from_rotation(xmap.rotations)
-        rdata = rodrigues.data
-        # dtype = rdata.dtype
-
-        r_da = da.from_array(rdata, chunks=("auto", -1, -1))
-
-        (
-            master_north,
-            master_south,
-            npx,
-            npy,
-            scale,
-        ) = _get_single_pattern_params(mp, det, energy)
-
-        dc = _get_direction_cosines_lean(det)
-        # dc = _get_direction_cosines(det)
-
-        exp_data = exp.data
-        exp_data = rescale_intensity(exp_data, dtype_out=np.float32)
-        # TODO: When Chunks is optimzied I think we need to add drop axis etc.
-        refined_params = r_da.map_blocks(
-            _refine_orientations_chunk2,
-            master_north=master_north,
-            master_south=master_south,
-            npx=npx,
-            npy=npy,
-            scale=scale,
-            exp=exp_data,
-            dc=dc,
-            ncols=ncols,
-            dtype_out=np.float32,
-            dtype=np.float32,
-        )
-        if compute:
-            with ProgressBar():
-                print(
-                    f"Refining {xmap.rotations.shape[0]} orientations:",
-                    file=sys.stdout,
-                )
-                output = refined_params.compute()
-        else:
-            # output = refined_params.visualize(
-            #     filename="refinement_test.svg", rankdir="LR"
-            # )
-            output = refined_params
-        return output
-
-    @staticmethod
-    def refine_projection_center(
-        xmap,
-        mp,
-        exp,
-        det,
-        energy,
-        bounds=None,
-        methodname="Nelder-Mead",
-        tol=0.001,
-        compute=True,
-    ):
-
-        ncols = exp.data.shape[1]
-
-        rdata = xmap.rotations.data
-        # rdata = xmap.rotations.data[:10]  # Smaller dataset for testing
-        dtype = rdata.dtype
-        # TODO: Optimize chunks, currently hardcoded for SDSS dataset
-        # r_da = da.from_array(rdata, chunks=(11700, 1, 4))
-        # r_da = da.from_array(rdata, chunks=(10, 1, 4))
-        r_da = da.from_array(rdata, chunks=(1, 4))  # single Si mvp test
-
-        (
-            master_north,
-            master_south,
-            npx,
-            npy,
-            scale,
-        ) = _get_single_pattern_params(mp, det, energy)
-
-        pc = det.pc
-        xpc = det.pcx[0]
-        ypc = det.pcy[0]
-        zpc = det.pcz[0]
-
-        if bounds is None and methodname != "Nelder-Mead":
-            bounds = [
-                (max(0, xpc - 0.1), min(xpc + 0.1, 1)),
-                (max(0, ypc - 0.1), min(ypc + 0.1, 1)),
-                (max(0, zpc - 0.1), zpc + 0.1),
-            ]
-        else:
-            bounds = None
-
-        exp_data = exp.data
-        exp_data = rescale_intensity(exp_data, dtype_out=np.float32)
-        refined_params = r_da.map_blocks(
-            _refine_projection_center_chunk,
-            master_north=master_north,
-            master_south=master_south,
-            npx=npx,
-            npy=npy,
-            scale=scale,
-            exp=exp_data,
-            det=det,
-            pc=pc,
-            ncols=ncols,
-            methodname=methodname,
-            tol=tol,
-            bounds=bounds,
-            dtype_out=np.float32,
-            dtype=np.float32,
-        )
-        if compute:
-            with ProgressBar():
-                print(
-                    f"Refining {xmap.rotations.shape[0]} PCs:",
-                    file=sys.stdout,
-                )
-                output = refined_params.compute()
-        else:
-            # output = refined_params.visualize(
-            #     filename="refinement_test.svg", rankdir="LR"
-            # )
             output = refined_params
         return output
 
 
-def _refine_orientations_chunk(
-    r,
-    meth,
-    master_north,
-    master_south,
-    npx,
-    npy,
-    scale,
-    exp,
-    dc,
-    ncols,
-    dtype_out=np.float32,
-):
-    # rotations = Rotation(r)
-    rotations_shape = r.shape
-    refined_params = np.empty(
-        shape=(rotations_shape[0],) + (4,), dtype=dtype_out
-    )
-    # If xmap were to store unique PCs the following line should be placed inside the for-loop
-
-    for i in np.ndindex(rotations_shape[0]):
-        index = i[0]
-        # TODO: Fix this mess, used here for single pattern refinement
-        if len(exp.shape) == 2:  # Single Experimental pattern
-            exp_data = exp
-        elif len(exp.shape) == 3:  # Experimental Pattern 1D nav shape
-            exp_data = exp[index]
-        else:  # Experimental Patterns 2D nav shape
-            row = index // ncols
-            col = index % ncols
-            exp_data = exp[row, col]
-
-        rotation = r[index]
-        best_rotation = rotation[0]
-
-        # Initial Rodrigues vector params
-        rx = best_rotation[..., 0]
-        ry = best_rotation[..., 1]
-        rz = best_rotation[..., 2]
-        rod_x0 = np.array((rx, ry, rz))
-
-        args = (
-            exp_data,
-            master_north,
-            master_south,
-            npx,
-            npy,
-            scale,
-            dc,
-        )
-        if meth == "BOBYQA":
-            soln = pybobyqa.solve(
-                _orientation_objective_function,
-                x0=rod_x0,
-                args=args,
-                # bounds=(lower, upper),
-                do_logging=False,
-                user_params={"model.abs_tol": 0.01},
-            )
-            # ==> R-DI Avg score:  0.9686444236040115  Perfect:  0.973  Good:  0.0  OK:  0.0  Poor:  0.027
-            # print(soln)
-            score = 1 - soln.f
-            r1 = soln.x[0]
-            r2 = soln.x[1]
-            r3 = soln.x[2]
-        elif meth == "Nelder-Mead":
-            soln = scipy.optimize.minimize(
-                _orientation_objective_function,
-                x0=rod_x0,
-                args=args,
-                method="Nelder-Mead",
-            )
-            score = 1 - soln.fun
-            r1 = soln.x[0]
-            r2 = soln.x[1]
-            r3 = soln.x[2]
-        else:
-            raise NotImplementedError(
-                "Invalid Solver! Only BOBYQA and Nelder-Mead currently supported."
-            )
-
-        refined_params[index] = np.array((score, r1, r2, r3))
-    return refined_params
-
-
-def _refine_projection_center_chunk(
-    r,
-    master_north,
-    master_south,
-    npx,
-    npy,
-    scale,
-    exp,
-    det,
-    pc,
-    ncols,
-    methodname,
-    tol,
-    bounds,
-    dtype_out=np.float32,
-):
-    rotations = Rotation(r)
-    rotations_shape = r.shape
-    refined_params = np.empty(
-        shape=(rotations_shape[0],) + (3,), dtype=dtype_out
-    )
-
-    # If xmap were to store unique PCs the following line should be placed inside the for-loop
-    x0 = pc
-
-    for i in np.ndindex(rotations_shape[0]):
-        index = i[0]
-        # TODO: Fix this mess
-        if len(exp.data.shape) == 2:
-            exp_data = exp
-        else:
-            row = index // ncols
-            col = index % ncols
-            exp_data = exp[row, col]
-
-        rotation = rotations[index]
-        best_rotation = rotation[0]
-
-        detector_data = [
-            det.ncols,
-            det.nrows,
-            det.px_size,
-            det.tilt,
-            det.sample_tilt,
-        ]
-        args = (
-            exp_data,
-            master_north,
-            master_south,
-            npx,
-            npy,
-            scale,
-            detector_data,
-            best_rotation,
-        )
-
-        optimized = scipy.optimize.minimize(
-            _projection_center_objective_function,
-            tol=tol,
-            x0=x0,
-            bounds=bounds,
-            args=args,
-            method=methodname,
-            options={"adaptive": False},
-        )
-        x_star = optimized.x[0]
-        y_star = optimized.x[1]
-        z_star = optimized.x[2]
-
-        refined_params[index] = np.array((x_star, y_star, z_star))
-        # Just for testing
-        return optimized
-    return refined_params
-
-
-def _orientation_objective_function(x, *args):
-    experimental = args[0]
-    master_north = args[1]
-    master_south = args[2]
-    npx = args[3]
-    npy = args[4]
-    scale = args[5]
-    dc = args[6]
-
-    rx = x[0]
-    ry = x[1]
-    rz = x[2]
-
-    rod = Rodrigues((rx, ry, rz))
-    rotation = Rotation.from_neo_euler(rod)
-
-    sim_pattern = _simulate_single_pattern(
-        rotation,
-        dc,
-        master_north,
-        master_south,
-        npx,
-        npy,
-        scale,
-    )
-
-    result = cv2.matchTemplate(experimental, sim_pattern, cv2.TM_CCOEFF_NORMED)
-    return 1 - result[0][0]
-
-
-def _projection_center_objective_function(x, *args):
-    x_star = x[0]
-    y_star = x[1]
-    z_star = x[2]
-
-    experimental = args[0]
-    master_north = args[1]
-    master_south = args[2]
-    npx = args[3]
-    npy = args[4]
-    scale = args[5]
-    detector_data = args[6]
-    rotation = args[7]
-
-    detector_ncols = detector_data[0]
-    detector_nrows = detector_data[1]
-    detector_px_size = detector_data[2]
-    detector_tilt = detector_data[3]
-    sample_tilt = detector_data[4]
-
-    detector = EBSDDetector(
-        shape=(detector_nrows, detector_ncols),
-        pc=(x_star, y_star, z_star),
-        tilt=detector_tilt,
-        sample_tilt=sample_tilt,
-        px_size=detector_px_size,
-        convention="bruker",
-    )
-
-    dc = _get_direction_cosines_lean(detector)
-
-    sim_pattern = _simulate_single_pattern(
-        rotation,
-        dc,
-        master_north,
-        master_south,
-        npx,
-        npy,
-        scale,
-    )
-    result = cv2.matchTemplate(experimental, sim_pattern, cv2.TM_CCOEFF_NORMED)
-    return -result[0][0]
-
-
-def _simulate_single_pattern(
-    rotation,
-    dc,
-    master_north,
-    master_south,
-    npx,
-    npy,
-    scale,
-):
-    rotated_dc = rotation * dc
-    (
-        nii,
-        nij,
-        niip,
-        nijp,
-        di,
-        dj,
-        dim,
-        djm,
-    ) = _get_lambert_interpolation_parameters(
-        rotated_direction_cosines=rotated_dc,
-        npx=npx,
-        npy=npy,
-        scale=scale,
-    )
-    pattern = np.where(
-        rotated_dc.z >= 0,
-        (
-            master_north[nii, nij] * dim * djm
-            + master_north[niip, nij] * di * djm
-            + master_north[nii, nijp] * dim * dj
-            + master_north[niip, nijp] * di * dj
-        ),
-        (
-            master_south[nii, nij] * dim * djm
-            + master_south[niip, nij] * di * djm
-            + master_south[nii, nijp] * dim * dj
-            + master_south[niip, nijp] * di * dj
-        ),
-    )
-    # return pattern
-    return pattern.astype(np.float32)
-
-
+# TODO: Make a function that just returns the data
 def _get_direction_cosines_lean(detector: EBSDDetector) -> Vector3d:
     """Get the direction cosines between the detector and sample as done
     in EMsoft and :cite:`callahan2013dynamical`.
@@ -616,109 +205,168 @@ def _get_single_pattern_params(mp, detector, energy):
     return master_north, master_south, npx, npy, scale
 
 
-def _extra_orientation_refinement_chunk(
+### NUMBA FUNCTIONS ###
+@numba.njit()
+def _fast_simulate_single_pattern(
     r,
+    dc,
     master_north,
     master_south,
     npx,
     npy,
     scale,
-    exp,
-    dc,
-    ncols,
-    dtype_out=np.float32,
 ):
-    rotations_shape = r.shape
-    refined_params = np.empty(
-        shape=(rotations_shape[0],) + (4,), dtype=dtype_out
+
+    # From orix.quaternion.Quaternion.__mul__
+
+    a = r[0]
+    b = r[1]
+    c = r[2]
+    d = r[3]
+
+    x = dc[..., 0]
+    y = dc[..., 1]
+    z = dc[..., 2]
+
+    x_new = (a ** 2 + b ** 2 - c ** 2 - d ** 2) * x + 2 * (
+        (a * c + b * d) * z + (b * c - a * d) * y
     )
-    sufficient_score = np.mean(r[..., 0]) - 2 * np.std(r[..., 0])
-    for i in np.ndindex(rotations_shape[0]):
-        index = i[0]
-        if len(exp.shape) == 2:  # Single Experimental pattern
-            exp_data = exp
-        elif len(exp.shape) == 3:  # Experimental Pattern 1D nav shape
-            exp_data = exp[index]
-        else:  # Experimental Patterns 2D nav shape
-            row = index // ncols
-            col = index % ncols
-            exp_data = exp[row, col]
+    y_new = (a ** 2 - b ** 2 + c ** 2 - d ** 2) * y + 2 * (
+        (a * d + b * c) * x + (c * d - a * b) * z
+    )
+    z_new = (a ** 2 - b ** 2 - c ** 2 + d ** 2) * z + 2 * (
+        (a * b + c * d) * y + (b * d - a * c) * x
+    )
+    rotated_dc = np.stack((x_new, y_new, z_new), axis=-1)
 
-        rotation = r[index]
-
-        rx = rotation[1]
-        ry = rotation[2]
-        rz = rotation[3]
-        rod = Rodrigues((rx, ry, rz))
-        rot = Rotation.from_neo_euler(rod)
-        rot_data = np.rad2deg((rot.to_euler()[0]))
-        phi1 = rot_data[0]
-        Phi = rot_data[1]
-        phi2 = rot_data[2]
-
-        if rotation[0] >= sufficient_score:
-            refined_params[index] = np.array((rotation[0], phi1, Phi, phi2))
-        else:
-
-            x0 = np.rad2deg((phi1, Phi, phi2))
-
-            args = (
-                exp_data,
-                master_north,
-                master_south,
-                npx,
-                npy,
-                scale,
-                dc,
-            )
-
-            soln = scipy.optimize.dual_annealing(
-                _orientation_objective_function_euler,
-                bounds=[(0, 360), (0, 360), (0, 360)],
-                args=args,
-                local_search_options={"method": "Nelder-Mead"},
-            )
-            # print(soln)
-            score = 1 - soln.fun
-            r1 = soln.x[0]
-            r2 = soln.x[1]
-            r3 = soln.x[2]
-
-            refined_params[index] = np.array((score, r1, r2, r3))
-    return refined_params
+    (
+        nii,
+        nij,
+        niip,
+        nijp,
+        di,
+        dj,
+        dim,
+        djm,
+    ) = _fast_get_lambert_interpolation_parameters(
+        rotated_direction_cosines=rotated_dc,
+        npx=npx,
+        npy=npy,
+        scale=scale,
+    )
+    pattern = np.zeros(shape=rotated_dc.shape[0:-1], dtype=np.float32)
+    for i in range(rotated_dc.shape[0]):
+        for j in range(rotated_dc.shape[1]):
+            _nii = nii[i][j]
+            _nij = nij[i][j]
+            _niip = niip[i][j]
+            _nijp = nijp[i][j]
+            _di = di[i][j]
+            _dj = dj[i][j]
+            _dim = dim[i][j]
+            _djm = djm[i][j]
+            if rotated_dc[..., 2][i][j] >= 0:
+                pattern[i][j] = (
+                    master_north[_nii, _nij] * _dim * _djm
+                    + master_north[_niip, _nij] * _di * _djm
+                    + master_north[_nii, _nijp] * _dim * _dj
+                    + master_north[_niip, _nijp] * _di * _dj
+                )
+            else:
+                pattern[i][j] = (
+                    master_south[_nii, _nij] * _dim * _djm
+                    + master_south[_niip, _nij] * _di * _djm
+                    + master_south[_nii, _nijp] * _dim * _dj
+                    + master_south[_niip, _nijp] * _di * _dj
+                )
+    return pattern
 
 
-def _orientation_objective_function_euler(x, *args):
-    experimental = args[0]
-    master_north = args[1]
-    master_south = args[2]
-    npx = args[3]
-    npy = args[4]
-    scale = args[5]
-    dc = args[6]
+@numba.njit()
+def _fast_lambert_projection(v):
+    w = np.atleast_2d(v)
+    norm = np.sqrt(np.sum(np.square(w), axis=-1))
+    norm = np.expand_dims(norm, axis=-1)
+    w = w / norm
 
-    phi1 = x[0]
-    Phi = x[1]
-    phi2 = x[2]
+    x = w[..., 0]
+    y = w[..., 1]
+    z = w[..., 2]
 
-    rotation = Rotation.from_euler(np.deg2rad((phi1, Phi, phi2)))
+    # Arrays used in both setting X and Y
+    sqrt_z = np.sqrt(2 * (1 - np.abs(z)))
+    sign_x = np.sign(x)
+    sign_y = np.sign(y)
+    abs_yx = np.abs(y) <= np.abs(x)
 
-    sim_pattern = _simulate_single_pattern(
-        rotation,
-        dc,
-        master_north,
-        master_south,
-        npx,
-        npy,
-        scale,
+    # Reusable constants
+    sqrt_pi = np.sqrt(np.pi)
+    sqrt_pi_half = sqrt_pi / 2
+    two_over_sqrt_pi = 2 / sqrt_pi
+
+    # Ensure (0, 0) is returned where |z| = 1
+    lambert = np.zeros(x.shape + (2,), dtype=np.float32)
+    # z_not_one = np.abs(z) != 1
+
+    # I believe it currently returns invalid results for the vector [0, 0, 1]
+    # as discussed in https://github.com/pyxem/kikuchipy/issues/272
+
+    # Numba does not support the fix implemented in the main code
+    # one workaround could be to implement a standard loop setting the values
+
+    # Equations (10a) and (10b) from Callahan and De Graef (2013)
+    lambert[..., 0] = np.where(
+        abs_yx,
+        sign_x * sqrt_z * sqrt_pi_half,
+        sign_y * sqrt_z * (two_over_sqrt_pi * np.arctan(x / y)),
+    )
+    lambert[..., 1] = np.where(
+        abs_yx,
+        sign_x * sqrt_z * (two_over_sqrt_pi * np.arctan(y / x)),
+        sign_y * sqrt_z * sqrt_pi_half,
+    )
+    return lambert
+
+
+@numba.njit()
+def _fast_get_lambert_interpolation_parameters(
+    rotated_direction_cosines: np.ndarray,
+    npx: int,
+    npy: int,
+    scale: Union[int, float],
+) -> tuple:
+
+    xy = (
+        scale
+        * _fast_lambert_projection(rotated_direction_cosines)
+        / (np.sqrt(np.pi / 2))
     )
 
-    result = cv2.matchTemplate(experimental, sim_pattern, cv2.TM_CCOEFF_NORMED)
-    return 1 - result[0][0]
+    i = xy[..., 1]
+    j = xy[..., 0]
+    nii = (i + scale).astype(np.int32)
+    nij = (j + scale).astype(np.int32)
+    niip = nii + 1
+    nijp = nij + 1
+    niip = np.where(niip < npx, niip, nii).astype(np.int32)
+    nijp = np.where(nijp < npy, nijp, nij).astype(np.int32)
+    nii = np.where(nii < 0, niip, nii).astype(np.int32)
+    nij = np.where(nij < 0, nijp, nij).astype(np.int32)
+    di = i - nii + scale
+    dj = j - nij + scale
+    dim = 1.0 - di
+    djm = 1.0 - dj
+
+    return nii, nij, niip, nijp, di, dj, dim, djm
 
 
-def _refine_orientations_chunk2(
+### CHUNK FUNCTIONS ###
+
+
+def _refine_orientations_chunk(
     r,
+    method,
+    method_kwargs,
     master_north,
     master_south,
     npx,
@@ -734,6 +382,7 @@ def _refine_orientations_chunk2(
     refined_params = np.empty(
         shape=(rotations_shape[0],) + (4,), dtype=dtype_out
     )
+    # If xmap were to store unique PCs the following line should be placed inside the for-loop
 
     for i in np.ndindex(rotations_shape[0]):
         index = i[0]
@@ -748,19 +397,16 @@ def _refine_orientations_chunk2(
             exp_data = exp[row, col]
 
         rotation = r[index]
-        best_rotation = rotation[0]
+        if len(rotation.shape) > 1:
+            best_rotation = rotation[0]
+        else:
+            best_rotation = rotation
+
         # Initial Rodrigues vector params
         rx = best_rotation[..., 0]
         ry = best_rotation[..., 1]
         rz = best_rotation[..., 2]
-
-        rod = Rodrigues((rx, ry, rz))
-        rot = Rotation.from_neo_euler(rod)
-
-        euler = np.rad2deg((rot.to_euler()[0]))
-        phi1 = euler[..., 0]
-        Phi = euler[..., 1]
-        phi2 = euler[..., 2]
+        rod_x0 = np.array((rx, ry, rz))
 
         args = (
             exp_data,
@@ -771,50 +417,65 @@ def _refine_orientations_chunk2(
             scale,
             dc,
         )
-
-        def _objective_function_2(x):
-            _phi1 = x["x1"]
-            _Phi = x["x2"]
-            _phi2 = x["x3"]
-
-            _rotation = Rotation.from_euler(np.deg2rad((_phi1, _Phi, _phi2)))
-
-            _sim_pattern = _simulate_single_pattern(
-                _rotation,
-                dc,
-                master_north,
-                master_south,
-                npx,
-                npy,
-                scale,
-            )
-
-            _result = cv2.matchTemplate(
-                exp_data, _sim_pattern, cv2.TM_CCOEFF_NORMED
-            )
-            return _result[0][0]
-
-        p1l = phi1 - 1
-        p1u = phi1 + 1
-
-        search_space = {
-            "x1": np.arange(phi1 - 1, phi1 + 1, 0.1),
-            "x2": np.arange(Phi - 1, Phi + 1, 0.1),
-            "x3": np.arange(phi2 - 1, phi2 - 1, 0.1),
-        }
-        print(search_space["x3"])
-        # print("hello")
-        opt = gradient_free_optimizers.RepulsingHillClimbingOptimizer(
-            search_space
+        soln = method(
+            _orientation_objective_function,
+            x0=rod_x0,
+            args=args,
+            **method_kwargs,
         )
-        opt.search(
-            _objective_function_2, max_score=0.98, n_iter=100, verbosity=False
-        )
-        score = opt.best_score
-        print("\n", score, "\n")
-        r1 = opt.best_para["x1"]
-        r2 = opt.best_para["x2"]
-        r3 = opt.best_para["x3"]
+        score = 1 - soln.fun
+        rx = soln.x[0]
+        ry = soln.x[1]
+        rz = soln.x[2]
 
-        # refined_params[index] = np.array((score, r1, r2, r3))
+        refined_params[index] = np.array((score, rx, ry, rz))
+
     return refined_params
+
+
+### OBJECTIVE FUNCTIONS ###
+
+# @numba.njit
+def _orientation_objective_function(x, *args):
+    experimental = args[0]
+    master_north = args[1]
+    master_south = args[2]
+    npx = args[3]
+    npy = args[4]
+    scale = args[5]
+    dc = args[6]
+
+    # rx = x[0]
+    # ry = x[1]
+    # rz = x[2]
+    #
+    # v = np.array((rx, ry, rz))
+    v = np.array((x[0], x[1], x[2]), dtype=np.float32)
+    norm = np.sqrt(np.sum(np.square(v), axis=-1))
+    v = v / norm
+    x = v[0]
+    y = v[1]
+    z = v[2]
+    # angle = np.arctan(norm) * 2
+    # half_angle = angle / 2  # Here we are multiplying by 2 just to divide by 2 :)
+    half_angle = np.arctan(norm)
+    # Adapted from Orix.quaternion.rotation.Rotation.from_neo_euler
+    s = np.sin(half_angle)
+    a = np.cos(half_angle)
+    b = s * x
+    c = s * y
+    d = s * z
+    r = np.array((a, b, c, d))
+
+    sim_pattern = _fast_simulate_single_pattern(
+        r,
+        dc,
+        master_north,
+        master_south,
+        npx,
+        npy,
+        scale,
+    )
+
+    result = cv2.matchTemplate(experimental, sim_pattern, cv2.TM_CCOEFF_NORMED)
+    return 1 - result[0][0]
