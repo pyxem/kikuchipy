@@ -23,6 +23,7 @@ import numpy as np
 import pytest
 
 from kikuchipy import load
+from kikuchipy.conftest import assert_dictionary
 from kikuchipy.io.plugins.emsoft_ebsd_master_pattern import (
     _check_file_format,
     _get_data_shape_slices,
@@ -32,7 +33,6 @@ from kikuchipy.signals.ebsd_master_pattern import (
     EBSDMasterPattern,
     LazyEBSDMasterPattern,
 )
-from kikuchipy.signals.tests.test_ebsd import assert_dictionary
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -101,7 +101,7 @@ class TestEMsoftEBSDMasterPatternReader:
         axes_manager = setup_axes_manager(["energy", "height", "width"])
 
         assert s.data.shape == (11, 13, 13)
-        assert s.axes_manager.as_dictionary() == axes_manager
+        assert_dictionary(s.axes_manager.as_dictionary(), axes_manager)
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
         signal_indx = s.axes_manager.signal_indices_in_array
@@ -112,10 +112,8 @@ class TestEMsoftEBSDMasterPatternReader:
     def test_projection_lambert(self):
         s = load(EMSOFT_FILE, projection="lambert", hemisphere="both")
 
-        axes_manager = setup_axes_manager()
-
         assert s.data.shape == (2, 11, 13, 13)
-        assert s.axes_manager.as_dictionary() == axes_manager
+        assert_dictionary(s.axes_manager.as_dictionary(), setup_axes_manager())
 
     def test_check_file_format(self, save_path_hdf5):
         with File(save_path_hdf5, mode="w") as f:
