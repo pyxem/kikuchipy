@@ -9,8 +9,21 @@ All notable changes to this project will be documented in this file. The format
 is based on `Keep a Changelog <https://keepachangelog.com/en/1.1.0>`_, and this
 project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
-Contributors to each release are listed in alphabetical order by first name. 
+Contributors to each release are listed in alphabetical order by first name.
 List entries are sorted in descending chronological order.
+
+0.3.3 (2021-04-18)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Fixed
+-----
+- Passing a static background pattern to EBSD.remove_static_background() for a
+  non-square detector dataset works.
+  (`#331 <https://github.com/pyxem/kikuchipy/pull/331>`_)
 
 0.3.2 (2021-02-01)
 ==================
