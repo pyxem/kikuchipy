@@ -28,6 +28,7 @@ from orix.quaternion import Rotation
 import pytest
 
 from kikuchipy import load
+from kikuchipy.conftest import assert_dictionary
 from kikuchipy.data import nickel_ebsd_master_pattern_small
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins.tests.test_emsoft_ebsd_masterpattern import (
@@ -89,21 +90,21 @@ class TestIO:
         axes_manager = setup_axes_manager(["energy", "height", "width"])
 
         assert isinstance(s, EBSDMasterPattern)
-        assert s.axes_manager.as_dictionary() == axes_manager
+        assert_dictionary(s.axes_manager.as_dictionary(), axes_manager)
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
         s.save(save_path_hdf5)
 
         s2 = hs_load(save_path_hdf5, signal_type="EBSDMasterPattern")
         assert isinstance(s2, EBSDMasterPattern)
-        assert s2.axes_manager.as_dictionary() == axes_manager
+        assert_dictionary(s2.axes_manager.as_dictionary(), axes_manager)
         assert_dictionary(s2.metadata.as_dictionary(), METADATA)
 
         s3 = hs_load(save_path_hdf5)
         assert isinstance(s3, Signal2D)
         s3.set_signal_type("EBSDMasterPattern")
         assert isinstance(s3, EBSDMasterPattern)
-        assert s3.axes_manager.as_dictionary() == axes_manager
+        assert_dictionary(s3.axes_manager.as_dictionary(), axes_manager)
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
     @pytest.mark.parametrize(

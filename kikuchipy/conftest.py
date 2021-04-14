@@ -17,12 +17,16 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import gc
+from numbers import Number
 import os
+from packaging import version
 import tempfile
 from typing import Tuple
 
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticePoint
+from hyperspy import __version__ as hs_version
+from hyperspy.misc.utils import DictionaryTreeBrowser
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList
 from orix.quaternion.rotation import Rotation
@@ -37,6 +41,33 @@ from kikuchipy.projections.ebsd_projections import (
 )
 from kikuchipy.signals import EBSD
 from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
+
+
+def assert_dictionary(dict1, dict2):
+    """Assert that two dictionaries are (almost) equal.
+
+    Used to compare signal's axes managers or metadata in tests.
+    """
+    if isinstance(dict1, DictionaryTreeBrowser):
+        dict1 = dict1.as_dictionary()
+        dict2 = dict2.as_dictionary()
+    for key in dict2.keys():
+        if key in ["is_binned", "binned"] and version.parse(
+            hs_version
+        ) > version.parse(
+            "1.6.2"
+        ):  # pragma: no cover
+            continue
+        if isinstance(dict2[key], dict):
+            assert_dictionary(dict1[key], dict2[key])
+        else:
+            if isinstance(dict2[key], list) or isinstance(dict1[key], list):
+                dict2[key] = np.array(dict2[key])
+                dict1[key] = np.array(dict1[key])
+            if isinstance(dict2[key], (np.ndarray, Number)):
+                assert np.allclose(dict1[key], dict2[key])
+            else:
+                assert dict1[key] == dict2[key]
 
 
 @pytest.fixture
