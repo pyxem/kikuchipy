@@ -136,7 +136,7 @@ def _orientation_similarity_per_pixel(
     normalize: bool,
 ) -> np.ndarray:
     # v are indices picked out with the footprint from flat_index_map
-    v = v.astype(np.int)
+    v = v.astype(int)
     center_value = v[center_index]
     # Filter only true neighbours, -1 out of image and not include itself
     neighbours = v[np.where((v != -1) & (v != center_value))]
