@@ -495,7 +495,7 @@ class EBSD(CommonImage, Signal2D):
                 f"The static background dtype_out {static_bg.dtype} is not the "
                 f"same as pattern dtype_out {dtype_out}."
             )
-        pat_shape = self.axes_manager.signal_shape
+        pat_shape = self.axes_manager.signal_shape[::-1]
         bg_shape = static_bg.shape
         if bg_shape != pat_shape:
             raise OSError(
