@@ -34,7 +34,7 @@ Fixed
 -----
 - Passing a static background pattern to EBSD.remove_static_background() for a
   non-square detector dataset works.
-  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+  (`#331 <https://github.com/pyxem/kikuchipy/pull/331>`_)
 
 0.3.2 (2021-02-01)
 ==================

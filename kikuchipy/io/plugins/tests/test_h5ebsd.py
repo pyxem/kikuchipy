@@ -27,6 +27,7 @@ import numpy as np
 import pytest
 
 from kikuchipy.data import nickel_ebsd_small
+from kikuchipy.conftest import assert_dictionary
 from kikuchipy.io._io import load
 from kikuchipy.io.plugins.h5ebsd import (
     check_h5ebsd,
@@ -91,7 +92,7 @@ class Testh5ebsd:
         s = load(KIKUCHIPY_FILE)
 
         assert s.data.shape == (3, 3, 60, 60)
-        assert s.axes_manager.as_dictionary() == AXES_MANAGER
+        assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
 
     def test_load_edax(self):
         with File(EDAX_FILE, mode="r+") as f:
@@ -105,7 +106,7 @@ class Testh5ebsd:
 
         s = load(EDAX_FILE)
         assert s.data.shape == (3, 3, 60, 60)
-        assert s.axes_manager.as_dictionary() == AXES_MANAGER
+        assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
 
     def test_load_bruker(self):
         with File(BRUKER_FILE, mode="r+") as f:
@@ -119,7 +120,7 @@ class Testh5ebsd:
 
         s = load(BRUKER_FILE)
         assert s.data.shape == (3, 3, 60, 60)
-        assert s.axes_manager.as_dictionary() == AXES_MANAGER
+        assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
 
     def test_load_manufacturer(self, save_path_hdf5):
         s = EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
@@ -177,7 +178,7 @@ class Testh5ebsd:
         with pytest.warns(UserWarning, match="Will attempt to load by zero"):
             s_reload = load(save_path_hdf5, lazy=lazy)
         AXES_MANAGER["axis-1"]["size"] = new_n_columns
-        assert s_reload.axes_manager.as_dictionary() == AXES_MANAGER
+        assert_dictionary(s_reload.axes_manager.as_dictionary(), AXES_MANAGER)
 
     @pytest.mark.parametrize("remove_phases", (True, False))
     def test_load_save_cycle(self, save_path_hdf5, remove_phases):
