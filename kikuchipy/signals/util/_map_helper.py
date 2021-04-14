@@ -45,10 +45,10 @@ def _map_helper(
     """Return output of :func:`scipy.ndimage.generic_filter` after
     wrapping the `map_function` to apply at each element of
     `flat_index_map`.
-    
+
     The generic filter function will be applied at each navigation
     point.
-    
+
     Parameters
     ----------
     patterns
@@ -79,7 +79,7 @@ def _map_helper(
         # from `flat_index_map`
         return map_function(
             patterns=patterns,
-            indices=indices.astype(np.int),
+            indices=indices.astype(int),
             nav_shape=nav_shape,
             dtype_out=dtype_out,
             **kwargs,
@@ -109,7 +109,7 @@ def _neighbour_dot_products(
 ) -> Union[float, int]:
     """Return either an average of a dot product matrix between a
     pattern and it's neighbours, or the matrix.
-    
+
     Parameters
     ----------
     patterns
@@ -127,7 +127,7 @@ def _neighbour_dot_products(
         Index into `patterns` for the current pattern to calculate the
         dot products for.
     zero_mean
-        Whether to center the pattern intensities by subtracting the 
+        Whether to center the pattern intensities by subtracting the
         mean intensity to get an average intensity of zero,
         individually.
     normalize

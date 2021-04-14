@@ -135,7 +135,7 @@ class Window(np.ndarray):
             try:
                 if any(np.array(shape) < 1):
                     raise ValueError(f"All window axes {shape} must be > 0.")
-                if any(isinstance(i, np.float) for i in np.array(shape)):
+                if any(isinstance(i, float) for i in np.array(shape)):
                     raise TypeError
             except TypeError:
                 raise TypeError(
