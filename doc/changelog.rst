@@ -30,6 +30,12 @@ Added
 - Reading of NORDIF calibration patterns specified in a setting file into an
   EBSD signal. (`#317 <https://github.com/pyxem/kikuchipy/pull/317>`_)
 
+Fixed
+-----
+- Passing a static background pattern to EBSD.remove_static_background() for a
+  non-square detector dataset works.
+  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+
 0.3.2 (2021-02-01)
 ==================
 

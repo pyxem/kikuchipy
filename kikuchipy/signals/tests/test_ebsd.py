@@ -330,6 +330,13 @@ class TestRemoveStaticBackgroundEBSD:
                 relative=True, scale_bg=True, static_bg=dummy_background,
             )
 
+    def test_non_square_patterns(self):
+        s = nickel_ebsd_small()
+        s = s.isig[:, :-5]  # Remove bottom five rows
+        static_bg = s.mean(axis=(0, 1))
+        static_bg.change_dtype(np.uint8)
+        s.remove_static_background(static_bg=static_bg.data)
+
 
 class TestRemoveDynamicBackgroundEBSD:
     @pytest.mark.parametrize(
