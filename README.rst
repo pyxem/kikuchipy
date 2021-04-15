@@ -3,6 +3,10 @@
     :target: https://mybinder.org/v2/gh/pyxem/kikuchipy/HEAD
     :alt: Launch binder
 
+.. Gitter chat
+.. image:: https://badges.gitter.im/Join%20Chat.svg
+    :target: https://gitter.im/pyxem/kikuchipy
+
 .. Read the Docs
 .. image:: https://readthedocs.org/projects/kikuchipy/badge/?version=latest
     :target: https://kikuchipy.org/en/latest/
