@@ -296,7 +296,6 @@ class TestMarkers:
             assert text_markers[i].data["text"] == texts[i]
 
     def test_get_text_list_nans(self):
-        """Returns"""
         text_coords = np.ones((2, 3, 2)) * np.nan
         assert (
             len(

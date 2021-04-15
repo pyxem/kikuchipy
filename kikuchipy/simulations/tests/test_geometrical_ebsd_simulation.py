@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from diffsims.crystallography import ReciprocalLatticePoint
 from hyperspy.utils.markers import line_segment, point, text
 import matplotlib
 import matplotlib.pyplot as plt
@@ -215,6 +216,18 @@ class TestGeometricalEBSDSimulation:
         assert isinstance(se.metadata.Markers.text, text)
         se.plot()
         plt.close("all")
+
+    def test_many_zone_axes_labels_as_markers(
+        self, nickel_ebsd_simulation_generator, nickel_phase
+    ):
+        simgen = nickel_ebsd_simulation_generator
+        rlp = ReciprocalLatticePoint(
+            phase=nickel_phase,
+            hkl=[[1, 1, 1], [2, 0, 0], [2, 2, 0], [3, 1, 1], [1, 2, 3]],
+        )
+        rlp2 = rlp.symmetrise()
+        sim = simgen.geometrical_simulation(rlp2)
+        _ = sim.zone_axes_labels_as_markers()
 
     @pytest.mark.parametrize("nav_shape", [(5, 5), (1, 25), (25, 1), (25,)])
     def test_pc_as_markers(
