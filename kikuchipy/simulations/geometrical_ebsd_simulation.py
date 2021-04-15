@@ -270,8 +270,10 @@ class GeometricalEBSDSimulation:
         list
             List of text markers.
         """
+        za = self.zone_axes.hkl.data
+        array_str = np.array2string(za, threshold=za.size)
         return get_text_list(
-            texts=sub("[][ ]", "", str(self.zone_axes.hkl.data)).split("\n"),
+            texts=sub("[][ ]", "", array_str).split("\n"),
             coordinates=self.zone_axes_label_detector_coordinates,
             color=kwargs.pop("color", "k"),
             zorder=kwargs.pop("zorder", 5),
