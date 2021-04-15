@@ -17,6 +17,8 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
+from orix.crystal_map import CrystalMap, Phase, PhaseList
+from orix.quaternion import Rotation
 import pytest
 
 from kikuchipy.indexing._merge_crystal_maps import merge_crystal_maps
@@ -415,3 +417,51 @@ class TestMergeCrystalMaps:
         crystal_maps = [xmap1, xmap2]
         with pytest.raises(ValueError, match="All crystal maps must have the"):
             _ = merge_crystal_maps(crystal_maps)
+
+    def test_merging_refined_maps(self):
+        ny, nx = (3, 3)
+        nav_size = ny * nx
+        r = Rotation.from_euler(np.ones((nav_size, 3)))
+        x = np.tile(np.arange(ny), nx)
+        y = np.repeat(np.arange(nx), ny)
+
+        # Simulation indices
+        n_sim_indices = 10
+        sim_indices1 = np.random.randint(
+            low=0, high=1000, size=n_sim_indices * nav_size
+        ).reshape((nav_size, n_sim_indices))
+        sim_indices2 = np.random.randint(
+            low=0, high=1000, size=n_sim_indices * nav_size
+        ).reshape((nav_size, n_sim_indices))
+
+        # Scores
+        scores1 = np.ones(nav_size)
+        scores1[0] = 3
+        scores2 = 2 * np.ones(nav_size)
+
+        xmap1 = CrystalMap(
+            rotations=r,
+            phase_id=np.ones(nav_size) * 0,
+            phase_list=PhaseList(Phase(name="a")),
+            x=x,
+            y=y,
+            prop={"simulation_indices": sim_indices1, "scores": scores1},
+        )
+        xmap2 = CrystalMap(
+            rotations=r,
+            phase_id=np.ones(nav_size),
+            phase_list=PhaseList(Phase(name="b")),
+            x=x,
+            y=y,
+            prop={"simulation_indices": sim_indices2, "scores": scores2},
+        )
+        xmap_merged = merge_crystal_maps(crystal_maps=[xmap1, xmap2])
+
+        assert "simulation_indices" not in xmap_merged.prop.keys()
+        assert "merged_simulation_indices" not in xmap_merged.prop.keys()
+
+        with pytest.raises(ValueError, match="Cannot merge maps with more"):
+            _ = merge_crystal_maps(
+                crystal_maps=[xmap1, xmap2],
+                simulation_indices_prop="simulation_indices",
+            )

@@ -22,6 +22,9 @@ Contributors
 
 Fixed
 -----
+- Merging of (typically refined) crystal maps, where either a simulation indices
+  is not present, or it contains more indices per point than scores.
+  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
 - Bugs in getting plot markers from geometrical EBSD simulation.
   (`#334 <https://github.com/pyxem/kikuchipy/pull/334>`_)
 - Passing a static background pattern to EBSD.remove_static_background() for a
