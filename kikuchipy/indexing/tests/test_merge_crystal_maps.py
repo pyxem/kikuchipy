@@ -255,7 +255,9 @@ class TestMergeCrystalMaps:
         desired_phase_id[3] = 1
 
         merged_xmap = merge_crystal_maps(
-            crystal_maps=[xmap1, xmap2], metric=metric,
+            crystal_maps=[xmap1, xmap2],
+            metric=metric,
+            simulation_indices_prop=sim_idx_prop,
         )
 
         assert np.allclose(merged_xmap.phase_id, desired_phase_id)
@@ -358,10 +360,13 @@ class TestMergeCrystalMaps:
         """Ensure that the mergesorted scores and simulation index
         properties in the merged map has the correct values and shape.
         """
+        prop_names = ["scores", "simulation_indices"]
         n_phases = np.shape(desired_merged_scores)[-1] // rot_per_point
         xmaps = []
         for i in range(n_phases):
-            xmap = get_single_phase_xmap(nav_shape, rot_per_point, name=str(i))
+            xmap = get_single_phase_xmap(
+                nav_shape, rot_per_point, name=str(i), prop_names=prop_names
+            )
             xmap[i].scores += i
             xmaps.append(xmap)
 
@@ -370,7 +375,9 @@ class TestMergeCrystalMaps:
         assert np.sum(np.diff(all_sim_idx)) == 0
 
         merged_xmap = merge_crystal_maps(
-            crystal_maps=xmaps, mean_n_best=mean_n_best,
+            crystal_maps=xmaps,
+            mean_n_best=mean_n_best,
+            simulation_indices_prop=prop_names[1],
         )
 
         assert merged_xmap.phases.size == n_phases
