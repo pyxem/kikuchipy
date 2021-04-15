@@ -41,9 +41,8 @@ def merge_crystal_maps(
     :class:`~orix.crystal_map.crystal_map.CrystalMap` with a 1D or 2D
     navigation shape into one multi phase map.
 
-    It is required that there are at least as many simulation indices as
-    scores per point, and that all maps have the same number of
-    rotations, scores and simulation indices per point.
+    It is required that all maps have the same number of rotations and
+    scores (and simulation indices if applicable) per point.
 
     Parameters
     ----------
