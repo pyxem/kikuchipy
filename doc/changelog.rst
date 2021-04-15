@@ -18,6 +18,7 @@ List entries are sorted in descending chronological order.
 Contributors
 ------------
 - Håkon Wiik Ånes
+- Ole Natlandsmyr
 
 Fixed
 -----
