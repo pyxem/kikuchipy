@@ -211,8 +211,8 @@ class GeometricalEBSDSimulation:
                     if _is_equivalent(hkl, table_hkl):
                         family_colors.append(color)
                         break
-        #                else:  # Hopefully we never arrive here
-        #                    family_colors.append([1, 0, 0])
+                else:  # A non-allowed band is passed
+                    family_colors.append([1, 1, 1])
 
         # Append list of markers per family (colors changing with
         # family)
