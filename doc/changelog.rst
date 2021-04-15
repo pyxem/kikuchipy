@@ -21,6 +21,8 @@ Contributors
 
 Fixed
 -----
+- Bugs in getting plot markers from geometrical EBSD simulation.
+  (`#334 <https://github.com/pyxem/kikuchipy/pull/334>`_)
 - Passing a static background pattern to EBSD.remove_static_background() for a
   non-square detector dataset works.
   (`#331 <https://github.com/pyxem/kikuchipy/pull/331>`_)
