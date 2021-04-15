@@ -109,7 +109,16 @@ class TestGeometricalEBSDSimulation:
         )
         assert sim.exclude_outside_detector == exclude
 
-    @pytest.mark.parametrize("nav_shape", [(5, 5), (1, 25), (25, 1), (25,)])
+    @pytest.mark.parametrize(
+        "nav_shape, nickel_rlp",
+        [
+            ((5, 5), [[1, 1, 1], [2, 0, 0], [2, 2, 0], [3, 1, 1], [1, 2, 3]]),
+            ((1, 25), [[1, 1, 1], [2, 0, 0], [2, 2, 0], [3, 1, 1], [1, 2, 3]]),
+            ((25, 1), [[1, 1, 1], [2, 0, 0], [2, 2, 0], [3, 1, 1], [1, 2, 3]]),
+            ((25,), [[1, 1, 1], [2, 0, 0], [2, 2, 0], [3, 1, 1], [1, 2, 3]]),
+        ],
+        indirect=["nickel_rlp"],
+    )
     def test_bands_as_markers(
         self, nickel_ebsd_simulation_generator, nickel_rlp, nav_shape
     ):
