@@ -398,6 +398,9 @@ def h5ebsd2signaldict(
     sx, sy = scan_size.sx, scan_size.sy
     nx, ny = scan_size.nx, scan_size.ny
     try:
+        if "indices" in scan_size.keys():
+            # Because of Bruker region of interest
+            data = data[scan_size.indices]
         data = data.reshape((ny, nx, sy, sx)).squeeze()
     except ValueError:
         warnings.warn(
@@ -701,14 +704,26 @@ def brukerheader2dicts(
             f"Only square grids are supported, however a {grid_type} grid was "
             "passed."
         )
-    md.set_item(ebsd_node + ".sample_tilt", hd["SampleTilt"])
-    md.set_item(ebsd_node + ".xpc", np.mean(dd["PCX"]))
-    md.set_item(ebsd_node + ".ypc", np.mean(dd["PCY"]))
-    md.set_item(ebsd_node + ".zpc", np.mean(dd["DD"]))
-    md.set_item(ebsd_node + ".static_background", hd["StaticBackground"])
-    md.set_item(sem_node + ".working_distance", hd["WD"])
-    md.set_item(sem_node + ".beam_energy", hd["KV"])
-    md.set_item(sem_node + ".magnification", hd["Magnification"])
+    # Values: data set name, data group, function to apply, node
+    dset_mapping = {
+        "sample_tilt": ["SampleTilt", hd, None, ebsd_node],
+        "xpz": ["PCX", dd, np.mean, ebsd_node],
+        "ypc": ["PCY", dd, np.mean, ebsd_node],
+        "zpc": ["DD", dd, np.mean, ebsd_node],
+        "static_background": ["StaticBackground", hd, None, ebsd_node],
+        "working_distance": ["WD", hd, None, sem_node],
+        "beam_energy": ["KV", hd, None, sem_node],
+        "magnification": ["Magnification", hd, None, sem_node],
+    }
+    for k, v in dset_mapping.items():
+        dset_name, dset_group, func, node = v
+        try:
+            dset = dset_group[dset_name]
+            if func:
+                dset = func(dset)
+        except KeyError:
+            dset = None
+        md.set_item(node + f".{k}", dset)
     # Loop over phases
     for phase_no, phase in hd["Phases"].items():
         phase["material_name"] = phase["Name"]
@@ -728,12 +743,37 @@ def brukerheader2dicts(
     # Populate original metadata dictionary
     omd = DictionaryTreeBrowser({"bruker_header": hd})
 
-    # Populate scan size dictionary
+    # Initialize scan size dictionary
     scan_size = DictionaryTreeBrowser()
+
+    # Get region of interest (ROI, only rectangular shape supported)
+    try:
+        sd = hdf5group2dict(group=scan_group["EBSD/SEM"])
+        iy = sd["IY"][()]
+        ix = sd["IX"][()]
+        roi = True
+    except KeyError:
+        roi = False
+        ny = hd["NROWS"]
+        nx = hd["NCOLS"]
+    if roi:
+        ny_roi, nx_roi, is_rectangular = _bruker_roi_is_rectangular(iy, ix)
+        if is_rectangular:
+            ny = ny_roi
+            nx = nx_roi
+            # Get indices of patterns in the 2D map
+            idx = np.array([iy - np.min(iy), ix - np.min(ix)])
+            scan_size["indices"] = np.ravel_multi_index(idx, (ny, nx)).argsort()
+        else:
+            raise ValueError(
+                "Only a rectangular region of interest is supported"
+            )
+
+    # Populate scan size dictionary
     scan_size.set_item("sx", hd["PatternWidth"])
     scan_size.set_item("sy", hd["PatternHeight"])
-    scan_size.set_item("nx", hd["NCOLS"])
-    scan_size.set_item("ny", hd["NROWS"])
+    scan_size.set_item("nx", nx)
+    scan_size.set_item("ny", ny)
     scan_size.set_item("step_x", hd["XSTEP"])
     scan_size.set_item("step_y", hd["YSTEP"])
     scan_size.set_item(
@@ -741,6 +781,20 @@ def brukerheader2dicts(
     )
 
     return md, omd, scan_size
+
+
+def _bruker_roi_is_rectangular(iy, ix):
+    iy_unique, iy_unique_counts = np.unique(iy, return_counts=True)
+    ix_unique, ix_unique_counts = np.unique(ix, return_counts=True)
+    is_rectangular = (
+        np.all(np.diff(np.sort(iy_unique)) == 1)
+        and np.all(np.diff(np.sort(ix_unique)) == 1)
+        and np.unique(iy_unique_counts).size == 1
+        and np.unique(ix_unique_counts).size == 1
+    )
+    iy2 = np.max(iy) - np.min(iy) + 1
+    ix2 = np.max(ix) - np.min(ix) + 1
+    return iy2, ix2, is_rectangular
 
 
 def file_writer(

@@ -50,6 +50,10 @@ KIKUCHIPY_FILE_GROUP_NAMES = [
 ]
 EDAX_FILE = os.path.join(DATA_PATH, "edax/patterns.h5")
 BRUKER_FILE = os.path.join(DATA_PATH, "bruker/patterns.h5")
+BRUKER_FILE_ROI = os.path.join(DATA_PATH, "bruker/patterns_roi.h5")
+BRUKER_FILE_ROI_NONRECTANGULAR = os.path.join(
+    DATA_PATH, "bruker/patterns_roi_nonrectangular.h5"
+)
 BG_FILE = os.path.join(DATA_PATH, "nordif/Background acquisition image.bmp")
 AXES_MANAGER = {
     "axis-0": {
@@ -121,6 +125,13 @@ class Testh5ebsd:
         s = load(BRUKER_FILE)
         assert s.data.shape == (3, 3, 60, 60)
         assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
+
+    def test_load_bruker_roi(self):
+        s = load(BRUKER_FILE_ROI)
+        assert s.data.shape == (3, 2, 60, 60)
+
+        with pytest.raises(ValueError, match="Only a rectangular region of"):
+            _ = load(BRUKER_FILE_ROI_NONRECTANGULAR)
 
     def test_load_manufacturer(self, save_path_hdf5):
         s = EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))

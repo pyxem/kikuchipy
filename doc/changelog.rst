@@ -32,6 +32,8 @@ Added
 
 Fixed
 -----
+- Reading of EBSD patterns from Bruker h5ebsd with a region of interest
+  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
 - Merging of (typically refined) crystal maps, where either a simulation indices
   array is not present or the array contains more indices per point than scores.
   (`#335 <https://github.com/pyxem/kikuchipy/pull/335>`_)
