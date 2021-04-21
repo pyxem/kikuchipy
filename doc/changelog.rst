@@ -9,8 +9,29 @@ All notable changes to this project will be documented in this file. The format
 is based on `Keep a Changelog <https://keepachangelog.com/en/1.1.0>`_, and this
 project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
-Contributors to each release are listed in alphabetical order by first name. 
+Contributors to each release are listed in alphabetical order by first name.
 List entries are sorted in descending chronological order.
+
+0.3.3 (2021-04-18)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+- Ole Natlandsmyr
+
+Fixed
+-----
+- Reading of EBSD patterns from Bruker h5ebsd with a region of interest
+  (`#339 <https://github.com/pyxem/kikuchipy/pull/339>`_)
+- Merging of (typically refined) crystal maps, where either a simulation indices
+  array is not present or the array contains more indices per point than scores.
+  (`#335 <https://github.com/pyxem/kikuchipy/pull/335>`_)
+- Bugs in getting plot markers from geometrical EBSD simulation.
+  (`#334 <https://github.com/pyxem/kikuchipy/pull/334>`_)
+- Passing a static background pattern to EBSD.remove_static_background() for a
+  non-square detector dataset works.
+  (`#331 <https://github.com/pyxem/kikuchipy/pull/331>`_)
 
 0.3.2 (2021-02-01)
 ==================

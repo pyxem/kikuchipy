@@ -17,11 +17,9 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from numbers import Number
 
 import dask.array as da
 from hyperspy.utils.roi import RectangularROI
-from hyperspy.misc.utils import DictionaryTreeBrowser
 import matplotlib
 from matplotlib.pyplot import close
 import numpy as np
@@ -33,6 +31,7 @@ from skimage.exposure import rescale_intensity
 
 from kikuchipy import load
 from kikuchipy.data import nickel_ebsd_small, nickel_ebsd_large
+from kikuchipy.conftest import assert_dictionary
 from kikuchipy.filters.window import Window
 from kikuchipy.pattern._pattern import fft_spectrum
 from kikuchipy.signals.ebsd import EBSD, LazyEBSD
@@ -43,25 +42,6 @@ matplotlib.use("Agg")  # For plotting
 DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy/patterns.h5")
 EMSOFT_FILE = os.path.join(DIR_PATH, "../../data/emsoft_ebsd/simulated_ebsd.h5")
-
-
-def assert_dictionary(input_dict, output_dict):
-    if isinstance(input_dict, DictionaryTreeBrowser):
-        input_dict = input_dict.as_dictionary()
-        output_dict = output_dict.as_dictionary()
-    for key in output_dict.keys():
-        if isinstance(output_dict[key], dict):
-            assert_dictionary(input_dict[key], output_dict[key])
-        else:
-            if isinstance(output_dict[key], list) or isinstance(
-                input_dict[key], list
-            ):
-                output_dict[key] = np.array(output_dict[key])
-                input_dict[key] = np.array(input_dict[key])
-            if isinstance(output_dict[key], (np.ndarray, Number)):
-                assert np.allclose(input_dict[key], output_dict[key])
-            else:
-                assert input_dict[key] == output_dict[key]
 
 
 class TestEBSD:
@@ -329,6 +309,13 @@ class TestRemoveStaticBackgroundEBSD:
             dummy_signal.remove_static_background(
                 relative=True, scale_bg=True, static_bg=dummy_background,
             )
+
+    def test_non_square_patterns(self):
+        s = nickel_ebsd_small()
+        s = s.isig[:, :-5]  # Remove bottom five rows
+        static_bg = s.mean(axis=(0, 1))
+        static_bg.change_dtype(np.uint8)
+        s.remove_static_background(static_bg=static_bg.data)
 
 
 class TestRemoveDynamicBackgroundEBSD:

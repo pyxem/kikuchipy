@@ -83,7 +83,7 @@ class TestRescaleIntensityPattern:
             (np.uint8, None, RESCALED_UINT8),
             (np.float32, None, RESCALED_FLOAT32),
             (None, None, RESCALED_UINT8),
-            (np.complex, None, RESCALED_UINT8),
+            (complex, None, RESCALED_UINT8),
             (np.uint8, (0, 100), RESCALED_UINT8_0100),
         ],
     )
@@ -93,7 +93,7 @@ class TestRescaleIntensityPattern:
         pattern = dummy_signal.inav[0, 0].data
 
         # Check for accepted data types
-        if dtype_out == np.complex:
+        if dtype_out == complex:
             with pytest.raises(KeyError, match="Could not set output"):
                 _ = rescale_intensity(
                     pattern=pattern,
