@@ -57,7 +57,7 @@ class Window(np.ndarray):
         Shape of the window. Not used if a custom window is passed to
         `window`. This can be either 1D or 2D, and can be asymmetrical.
         Default is (3, 3).
-    **kwargs
+    **kwargs :
         Keyword arguments passed to the window type. If none are
         passed, the default values of that particular window are used.
 

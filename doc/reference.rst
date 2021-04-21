@@ -36,6 +36,7 @@ crystallography
 ===============
 
 .. automodule:: kikuchipy.crystallography
+
 .. currentmodule:: kikuchipy.crystallography
 
 .. autosummary::
@@ -58,9 +59,6 @@ data
     nickel_ebsd_small
     nickel_ebsd_large
     nickel_ebsd_master_pattern_small
-    silicon_ebsd_moving_screen_in
-    silicon_ebsd_moving_screen_out5mm
-    silicon_ebsd_moving_screen_out10mm
 
 .. automodule:: kikuchipy.data
     :members:
@@ -72,37 +70,21 @@ detectors
 =========
 
 .. automodule:: kikuchipy.detectors
-.. currentmodule:: kikuchipy.detectors
+
+.. currentmodule:: kikuchipy.detectors.ebsd_detector
 
 .. autosummary::
     EBSDDetector
-    PCCalibrationMovingScreen
 
 EBSDDetector
 ------------
 
-.. currentmodule:: kikuchipy.detectors.EBSDDetector
+.. currentmodule:: kikuchipy.detectors.ebsd_detector.EBSDDetector
 
 .. autosummary::
     plot
 
-.. autoclass:: kikuchipy.detectors.EBSDDetector
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-    .. automethod:: __init__
-
-PCCalibrationMovingScreen
--------------------------
-
-.. currentmodule:: kikuchipy.detectors.PCCalibrationMovingScreen
-
-.. autosummary::
-    make_lines
-    plot
-
-.. autoclass:: kikuchipy.detectors.PCCalibrationMovingScreen
+.. autoclass:: kikuchipy.detectors.ebsd_detector.EBSDDetector
     :members:
     :undoc-members:
     :show-inheritance:
@@ -115,6 +97,7 @@ draw
 ====
 
 .. automodule:: kikuchipy.draw
+
 .. currentmodule:: kikuchipy.draw
 
 markers
@@ -142,7 +125,8 @@ filters
 =======
 
 .. automodule:: kikuchipy.filters
-.. currentmodule:: kikuchipy.filters
+
+.. currentmodule:: kikuchipy.filters.window
 
 .. autosummary::
     distance_to_origin
@@ -159,7 +143,7 @@ filters
 Window
 ------
 
-.. currentmodule:: kikuchipy.filters.Window
+.. currentmodule:: kikuchipy.filters.window.Window
 
 .. autosummary::
     is_valid
@@ -167,7 +151,7 @@ Window
     plot
     shape_compatible
 
-.. autoclass:: kikuchipy.filters.Window
+.. autoclass:: kikuchipy.filters.window.Window
     :members:
     :undoc-members:
     :show-inheritance:
@@ -300,7 +284,6 @@ plugins
 .. autosummary::
     h5ebsd
     nordif
-    nordif_calibration_patterns
     emsoft_ebsd
     emsoft_ebsd_master_pattern
 
@@ -322,14 +305,6 @@ nordif
 ~~~~~~
 
 .. automodule:: kikuchipy.io.plugins.nordif
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-nordif_calibration_patterns
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: kikuchipy.io.plugins.nordif_calibration_patterns
     :members:
     :undoc-members:
     :show-inheritance:

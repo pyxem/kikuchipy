@@ -320,9 +320,9 @@ class GeometricalEBSDSimulation:
         pcxy[..., 1] *= y_scale
         return get_point_list(
             points=pcxy,
-            size=kwargs.pop("size", 300),
+            size=kwargs.pop("size", 150),
             marker=kwargs.pop("marker", "*"),
-            facecolor=kwargs.pop("facecolor", "gold"),
+            facecolor=kwargs.pop("facecolor", "C1"),
             edgecolor=kwargs.pop("edgecolor", "k"),
             zorder=kwargs.pop("zorder", 6),
         )

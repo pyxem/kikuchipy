@@ -18,10 +18,6 @@
 
 """An EBSD detector and related quantities."""
 
-from kikuchipy.detectors.calibration import PCCalibrationMovingScreen
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 
-__all__ = [
-    "PCCalibrationMovingScreen",
-    "EBSDDetector",
-]
+__all__ = ["EBSDDetector"]
