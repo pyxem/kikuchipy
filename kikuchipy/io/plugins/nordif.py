@@ -22,7 +22,7 @@ import datetime
 import os
 import re
 import time
-from typing import Union, List, Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 import warnings
 
 from hyperspy.misc.utils import DictionaryTreeBrowser
@@ -96,8 +96,8 @@ def file_reader(
         f = open(filename, mode="rb")
 
     # Get metadata from setting file
-    sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
-    folder, fname = os.path.split(filename)
+    ebsd_node = metadata_nodes("ebsd")
+    folder, _ = os.path.split(filename)
     if setting_file is None:
         setting_file = os.path.join(folder, "Setting.txt")
     setting_file_exists = os.path.isfile(setting_file)

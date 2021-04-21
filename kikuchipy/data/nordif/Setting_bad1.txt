@@ -87,6 +87,3 @@ Acquisition (507,500)	507,500	px
 Acquisition (393,501)	393,501	px
 Acquisition (440,448)	440,448	px
 		
-[Calibration patterns]		
-Calibration (425,447)	425,447	px
-Calibration (294,532)	294,532	px

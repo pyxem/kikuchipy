@@ -38,6 +38,9 @@ __all__ = [
     "nickel_ebsd_small",
     "nickel_ebsd_large",
     "nickel_ebsd_master_pattern_small",
+    "silicon_ebsd_moving_screen_in",
+    "silicon_ebsd_moving_screen_out5mm",
+    "silicon_ebsd_moving_screen_out10mm",
 ]
 
 
@@ -163,6 +166,121 @@ def nickel_ebsd_large(allow_download: bool = False, **kwargs) -> EBSD:
     """
     return _load(
         filename="data/nickel_ebsd_large/patterns.h5",
+        allow_download=allow_download,
+        **kwargs,
+    )
+
+
+def silicon_ebsd_moving_screen_in(
+    allow_download: bool = False, **kwargs
+) -> EBSD:
+    """One EBSD pattern of (480, 480) detector pixels from a single
+    crystal Silicon sample, acquired on a NORDIF UF-420 detector.
+
+    This pattern and two other patterns from the same sample position
+    but with 5 mm and 10 mm greater sample-screen-distances were
+    acquired to test the moving-screen projection center estimation
+    technique :cite:`hjelen1991electron`.
+
+    Parameters
+    ----------
+    allow_download : bool
+        Whether to allow downloading the dataset from the kikuchipy-data
+        GitHub repository (https://github.com/pyxem/kikuchipy-data) to
+        the local cache with the pooch Python package. Default is False.
+    kwargs
+        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
+
+    Returns
+    -------
+    signal : EBSD
+        EBSD signal.
+    
+    See Also
+    --------
+    silicon_ebsd_moving_screen_out5mm
+    silicon_ebsd_moving_screen_out10mm
+    """
+    return _load(
+        filename="data/silicon_ebsd_moving_screen/si_in.h5",
+        allow_download=allow_download,
+        **kwargs,
+    )
+
+
+def silicon_ebsd_moving_screen_out5mm(
+    allow_download: bool = False, **kwargs
+) -> EBSD:
+    """One EBSD pattern of (480, 480) detector pixels from a single
+    crystal Silicon sample, acquired on a NORDIF UF-420 detector.
+
+    This pattern and two other patterns from the same sample position
+    but with sample-screen-distances 5 mm shorter
+    (:func:`silicon_ebsd_moving_screen_in`) and 5 mm greater
+    (:func:`silicon_ebsd_moving_screen_out10mm`) were acquired to test
+    the moving-screen projection center estimation technique
+    :cite:`hjelen1991electron`.
+
+    Parameters
+    ----------
+    allow_download : bool
+        Whether to allow downloading the dataset from the kikuchipy-data
+        GitHub repository (https://github.com/pyxem/kikuchipy-data) to
+        the local cache with the pooch Python package. Default is False.
+    kwargs
+        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
+
+    Returns
+    -------
+    signal : EBSD
+        EBSD signal.
+    
+    See Also
+    --------
+    silicon_ebsd_moving_screen_in
+    silicon_ebsd_moving_screen_out10mm
+    """
+    return _load(
+        filename="data/silicon_ebsd_moving_screen/si_out5mm.h5",
+        allow_download=allow_download,
+        **kwargs,
+    )
+
+
+def silicon_ebsd_moving_screen_out10mm(
+    allow_download: bool = False, **kwargs
+) -> EBSD:
+    """One EBSD pattern of (480, 480) detector pixels from a single
+    crystal Silicon sample, acquired on a NORDIF UF-420 detector.
+
+    This pattern and two other patterns from the same sample position
+    but with sample-screen-distances 10 mm shorter
+    (:func:`silicon_ebsd_moving_screen_in`) and 5 mm shorter
+    (:func:`silicon_ebsd_moving_screen_out5mm`) were acquired to test
+    the moving-screen projection center estimation technique
+    :cite:`hjelen1991electron`.
+
+    Parameters
+    ----------
+    allow_download : bool
+        Whether to allow downloading the dataset from the kikuchipy-data
+        GitHub repository (https://github.com/pyxem/kikuchipy-data) to
+        the local cache with the pooch Python package. Default is False.
+    kwargs
+        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
+
+    Returns
+    -------
+    signal : EBSD
+        EBSD signal.
+    
+    See Also
+    --------
+    silicon_ebsd_moving_screen_in
+    silicon_ebsd_moving_screen_out5mm
+    """
+    return _load(
+        filename="data/silicon_ebsd_moving_screen/si_out10mm.h5",
         allow_download=allow_download,
         **kwargs,
     )

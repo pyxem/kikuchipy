@@ -32,6 +32,7 @@ from kikuchipy.io.plugins import (
     emsoft_ebsd_master_pattern,
     h5ebsd,
     nordif,
+    nordif_calibration_patterns,
 )
 from kikuchipy.io._util import _get_input_bool, _ensure_directory
 
@@ -42,6 +43,7 @@ plugins = [
     hspy,
     h5ebsd,
     nordif,
+    nordif_calibration_patterns,
 ]
 
 default_write_ext = set()

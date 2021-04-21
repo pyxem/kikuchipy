@@ -12,6 +12,24 @@ project adheres to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 Contributors to each release are listed in alphabetical order by first name.
 List entries are sorted in descending chronological order.
 
+Unreleased
+==========
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Added
+-----
+- Projection/pattern center calibration via the moving screen technique in a
+  kikuchipy.detectors.calibration module.
+  (`#322 <https://github.com/pyxem/kikuchipy/pull/322>`_)
+- Three single crystal Si EBSD patterns, from the same sample position but with
+  varying detector distances, to the data module (via external repo).
+  (`#320 <https://github.com/pyxem/kikuchipy/pull/320>`_)
+- Reading of NORDIF calibration patterns specified in a setting file into an
+  EBSD signal. (`#317 <https://github.com/pyxem/kikuchipy/pull/317>`_)
+
 0.3.3 (2021-04-18)
 ==================
 
@@ -42,10 +60,10 @@ Contributors
 
 Fixed
 -----
-- Deletion of temporary files saved to temporary directories in user guide
+- Deletion of temporary files saved to temporary directories in user guide.
   (`#312 <https://github.com/pyxem/kikuchipy/pull/312>`_)
 - Pattern matching sometimes failing to generate a crystal map due to incorrect
-  creation of spatial arrays
+  creation of spatial arrays.
   (`#307 <https://github.com/pyxem/kikuchipy/pull/307>`_)
 
 0.3.1 (2021-01-22)
