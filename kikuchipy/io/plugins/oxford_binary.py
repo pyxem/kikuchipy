@@ -16,20 +16,24 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Input/output plugins."""
+"""Read support for EBSD patterns in Oxford Instrument's binary .ebsp
+format.
+"""
 
-from kikuchipy.io.plugins import (
-    emsoft_ebsd,
-    emsoft_ebsd_master_pattern,
-    h5ebsd,
-    nordif,
-    oxford_binary,
-)
+from typing import Dict, List
 
-__all__ = [
-    "emsoft_ebsd",
-    "emsoft_ebsd_master_pattern",
-    "h5ebsd",
-    "nordif",
-    "oxford_binary",
-]
+
+# Plugin characteristics
+# ----------------------
+format_name = "Oxford"
+description = "Read support for Oxford Instrument's .ebsp file."
+full_support = False
+# Recognised file extension
+file_extensions = ["ebsp"]
+default_extension = 0
+# Writing capabilities (signal dimensions, navigation dimensions)
+writes = False
+
+
+def file_reader(filename: str) -> List[Dict]:
+    return
