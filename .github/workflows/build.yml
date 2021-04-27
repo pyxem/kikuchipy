@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   build-with-pip:
-    name: ${{ matrix.os }}/py${{ matrix.PYTHON_VERSION }}/pip
+    name: ${{ matrix.os }}/py${{ matrix.python-version }}/pip
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     env:
@@ -13,19 +13,19 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        PYTHON_VERSION: [3.8, 3.9]
+        python-version: [3.8, 3.9]
         include:
           # Oldest supported version of main dependencies on Python 3.7
           - os: ubuntu
-            PYTHON_VERSION: 3.7
+            python-version: 3.7
             OLDEST_SUPPORTED_VERSION: true
             DEPENDENCIES: dask==2.14 diffsims==0.4 hyperspy==1.5.2 matplotlib==3.2 numpy==1.18 orix==0.5
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.PYTHON_VERSION }}
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
-          PYTHON_VERSION: ${{ matrix.PYTHON_VERSION }}
+          python-version: ${{ matrix.python-version }}
       - name: Display versions
         run: python -V; pip -V
       - name: Install depedencies and package
