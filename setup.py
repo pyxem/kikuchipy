@@ -116,14 +116,14 @@ setup(
     # Dependencies
     extras_require=extra_feature_requirements,
     install_requires=[
-        "dask[array] >= 2.14",
+        "dask[array] >= 2.18",
         "diffsims >= 0.4",
         "hyperspy >= 1.5.2",
         "h5py >= 2.10",
-        "matplotlib >= 3.2",
-        "numpy >= 1.18",
+        "matplotlib >= 3.3",
+        "numpy >= 1.19",
         "numba >= 0.48",
-        "orix >= 0.5",
+        "orix >= 0.5.1",
         "pooch >= 0.13",
         "psutil",
         "tqdm >= 0.5.2",
