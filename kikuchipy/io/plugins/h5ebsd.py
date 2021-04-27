@@ -776,9 +776,10 @@ def brukerheader2dicts(
     scan_size.set_item("ny", ny)
     scan_size.set_item("step_x", hd["XSTEP"])
     scan_size.set_item("step_y", hd["YSTEP"])
-    scan_size.set_item(
-        "delta", hd["DetectorFullHeightMicrons"] / hd["UnClippedPatternHeight"]
-    )
+    #    scan_size.set_item(
+    #        "delta", hd["DetectorFullHeightMicrons"] / hd["UnClippedPatternHeight"]
+    #    )
+    scan_size.set_item("delta", 1)
 
     return md, omd, scan_size
 
