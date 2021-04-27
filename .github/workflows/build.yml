@@ -16,7 +16,7 @@ jobs:
         python-version: [3.8, 3.9]
         include:
           # Oldest supported version of main dependencies on Python 3.7
-          - os: ubuntu
+          - os: ubuntu-latest
             python-version: 3.7
             OLDEST_SUPPORTED_VERSION: true
             DEPENDENCIES: dask==2.14 diffsims==0.4 hyperspy==1.5.2 matplotlib==3.2 numpy==1.18 orix==0.5
