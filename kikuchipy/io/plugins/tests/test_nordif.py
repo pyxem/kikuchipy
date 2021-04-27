@@ -378,8 +378,6 @@ class TestNORDIF:
         mm = s.data.dask[k]
         assert isinstance(mm, np.memmap)
         assert not mm.flags["WRITEABLE"]
-        with pytest.raises(NotImplementedError):
-            s.data[:] = 23
 
     @pytest.mark.parametrize("lazy", [True, False])
     def test_load_inplace(self, lazy):

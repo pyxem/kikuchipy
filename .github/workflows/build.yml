@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 jobs:
   build-with-pip:
-    name: ${{ matrix.os }}/py${{ matrix.python-version }}/pip
+    name: ${{ matrix.os }}/py${{ matrix.PYTHON_VERSION }}/pip
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     env:
@@ -13,18 +13,27 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.7, 3.8]
+        PYTHON_VERSION: [3.8, 3.9]
+        include:
+          # Oldest supported version of main dependencies on Python 3.7
+          - os: ubuntu
+            PYTHON_VERSION: 3.7
+            OLDEST_SUPPORTED_VERSION: true
+            DEPENDENCIES: dask==2.14 diffsims==0.4 hyperspy==1.5.2 matplotlib==3.2 numpy==1.18 orix==0.5
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.PYTHON_VERSION }}
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          PYTHON_VERSION: ${{ matrix.PYTHON_VERSION }}
       - name: Display versions
         run: python -V; pip -V
       - name: Install depedencies and package
         shell: bash
         run: pip install -U -e .'[doc, tests]'
+      - name: Install oldest supported version
+        if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
+        run: pip install ${{ matrix.DEPENDENCIES }}
       - name: Run tests
         run: pytest --cov=kikuchipy --pyargs kikuchipy
       - name: Generate line coverage

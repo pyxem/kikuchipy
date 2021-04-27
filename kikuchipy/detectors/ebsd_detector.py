@@ -21,6 +21,7 @@ from typing import List, Optional, Tuple, Union
 
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from matplotlib.markers import MarkerStyle
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -584,12 +585,12 @@ class EBSDDetector:
         if show_pc:
             if pc_kwargs is None:
                 pc_kwargs = {}
-            default_params_pc = {
-                "s": 300,
-                "facecolor": "gold",
-                "edgecolor": "k",
-                "marker": "*",
-            }
+            default_params_pc = dict(
+                s=300,
+                facecolor="gold",
+                edgecolor="k",
+                marker=MarkerStyle(marker="*", fillstyle="full"),
+            )
             [pc_kwargs.setdefault(k, v) for k, v in default_params_pc.items()]
             ax.scatter(x=pcx, y=pcy, **pc_kwargs)
 
