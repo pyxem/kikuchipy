@@ -193,8 +193,12 @@ ebsd_data.create_dataset("phi2", dtype=np.float32, data=ones9)
 # Header
 ebsd_header = ebsd.create_group("Header")
 ebsd_header.create_dataset("CameraTilt", dtype=float, data=0)
-ebsd_header.create_dataset("DetectorFullHeightMicrons", dtype=np.int32, data=sy)
-ebsd_header.create_dataset("DetectorFullWidthMicrons", dtype=np.int32, data=sx)
+ebsd_header.create_dataset(
+    "DetectorFullHeightMicrons", dtype=np.int32, data=23700
+)
+ebsd_header.create_dataset(
+    "DetectorFullWidthMicrons", dtype=np.int32, data=31600
+)
 grid_type = ebsd_header.create_dataset("Grid Type", shape=(1,), dtype="|S9")
 grid_type[()] = b"isometric"
 ebsd_header.create_dataset("KV", dtype=float, data=20)
