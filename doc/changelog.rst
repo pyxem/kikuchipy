@@ -34,7 +34,7 @@ Fixed
 -----
 - Scaling of region of interest coordinates used in virtual backscatter electron
   imaging to physical coordinates
-  ()
+  (`#349 <https://github.com/pyxem/kikuchipy/pull/349>`_)
 
 0.3.3 (2021-04-18)
 ==================
