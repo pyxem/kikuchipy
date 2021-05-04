@@ -25,7 +25,6 @@ from typing import Tuple
 
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticePoint
-import hyperspy.api as hs
 from hyperspy import __version__ as hs_version
 from hyperspy.misc.utils import DictionaryTreeBrowser
 import matplotlib.pyplot as plt
@@ -35,14 +34,11 @@ from orix.quaternion.rotation import Rotation
 from orix.vector import Vector3d, neo_euler
 import pytest
 
-from kikuchipy.detectors import EBSDDetector
-from kikuchipy.generators import EBSDSimulationGenerator
+import kikuchipy as kp
 from kikuchipy.projections.ebsd_projections import (
     detector2reciprocal_lattice,
     detector2direct_lattice,
 )
-from kikuchipy.signals import EBSD
-from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 
 # ------------------------- Helper functions ------------------------- #
@@ -97,6 +93,13 @@ def _get_spatial_array_dicts(
     return d, map_size
 
 
+# ------------------------------ Setup ------------------------------ #
+
+
+def pytest_sessionstart(session):  # pragma: no cover
+    _ = kp.data.nickel_ebsd_large(allow_download=True)
+
+
 # ----------------------------- Fixtures ----------------------------- #
 
 
@@ -117,7 +120,7 @@ def dummy_signal():
         dtype=np.uint8
     ).reshape((3, 3, 3, 3))
     # fmt: on
-    return EBSD(dummy_array)
+    return kp.signals.EBSD(dummy_array)
 
 
 @pytest.fixture
@@ -176,7 +179,7 @@ def pc1():
 @pytest.fixture(params=[(1,)])
 def detector(request, pc1):
     """A NORDIF UF1100 EBSD detector with a TSL PC."""
-    return EBSDDetector(
+    return kp.detectors.EBSDDetector(
         shape=(60, 60),
         binning=8,
         px_size=70,
@@ -244,7 +247,7 @@ def nickel_ebsd_simulation_generator(
     """Generator for EBSD simulations of Kikuchi bands for the Nickel
     data set referenced above.
     """
-    return EBSDSimulationGenerator(
+    return kp.generators.EBSDSimulationGenerator(
         detector=detector, phase=nickel_phase, rotations=nickel_rotations,
     )
 
@@ -258,7 +261,7 @@ def nickel_kikuchi_band(nickel_rlp, nickel_rotations, pc1):
 
     nav_shape = (5, 5)
 
-    detector = EBSDDetector(
+    detector = kp.detectors.EBSDDetector(
         shape=(60, 60),
         binning=8,
         px_size=70,
@@ -292,7 +295,7 @@ def nickel_kikuchi_band(nickel_rlp, nickel_rotations, pc1):
         hkl_detector[is_in_some_pattern], source=0, destination=nav_dim
     )
 
-    return KikuchiBand(
+    return kp.simulations.features.KikuchiBand(
         phase=phase,
         hkl=hkl,
         hkl_detector=hkl_detector,
@@ -309,7 +312,7 @@ def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
 
     nav_shape = (5, 5)
 
-    detector = EBSDDetector(
+    detector = kp.detectors.EBSDDetector(
         shape=(60, 60),
         binning=8,
         px_size=70,
@@ -345,7 +348,7 @@ def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
         uvw_detector[is_in_some_pattern], source=0, destination=nav_dim
     )
 
-    return ZoneAxis(
+    return kp.simulations.features.ZoneAxis(
         phase=phase,
         uvw=uvw,
         uvw_detector=uvw_detector,
