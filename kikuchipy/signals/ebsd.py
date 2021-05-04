@@ -215,9 +215,10 @@ class EBSD(CommonImage, Signal2D):
         Examples
         --------
         >>> import kikuchipy as kp
-        >>> ebsd_node = metadata_nodes("ebsd")
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> ebsd_node = kp.signals.util.metadata_nodes("ebsd")
         >>> s.metadata.get_item(ebsd_node + '.xpc')
-        1.0
+        -5.64
         >>> s.set_experimental_parameters(xpc=0.50726)
         >>> s.metadata.get_item(ebsd_node + '.xpc')
         0.50726
@@ -316,20 +317,26 @@ class EBSD(CommonImage, Signal2D):
 
         Examples
         --------
-        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
-        ├── atom =
-        ├── coordinates = array([0., 0., 0.])
-        ├── debye_waller_factor = 0.0
-        └── site_occupation = 0.0
-        >>> s.set_phase_parameters(
-        ...     number=1, atom_coordinates={
-        ...         '1': {'atom': 'Ni', 'coordinates': [0, 0, 0],
-        ...         'site_occupation': 1,
-        ...         'debye_waller_factor': 0.0035}})
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
         >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
         ├── atom = Ni
-        ├── coordinates = array([0., 0., 0.])
+        ├── coordinates = array([0, 0, 0])
         ├── debye_waller_factor = 0.0035
+        └── site_occupation = 1
+        >>> s.set_phase_parameters(
+        ...     number=1,
+        ...     atom_coordinates={'1': {
+        ...         'atom': 'Fe',
+        ...         'coordinates': [0, 0, 0],
+        ...         'site_occupation': 1,
+        ...         'debye_waller_factor': 0.005
+        ...     }}
+        ... )
+        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
+        ├── atom = Fe
+        ├── coordinates = array([0, 0, 0])
+        ├── debye_waller_factor = 0.005
         └── site_occupation = 1
         """
         # Ensure atom coordinates are numpy arrays
@@ -375,11 +382,13 @@ class EBSD(CommonImage, Signal2D):
 
         Examples
         --------
-        >>> s.axes_manager.['x'].scale  # Default value
-        1.0
-        >>> s.set_scan_calibration(step_x=1.5)  # Microns
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
         >>> s.axes_manager['x'].scale
         1.5
+        >>> s.set_scan_calibration(step_x=2)  # Microns
+        >>> s.axes_manager['x'].scale
+        2.0
         """
         x, y = self.axes_manager.navigation_axes
         x.name, y.name = ("x", "y")
@@ -401,6 +410,8 @@ class EBSD(CommonImage, Signal2D):
 
         Examples
         --------
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
         >>> s.axes_manager['dx'].scale  # Default value
         1.0
         >>> s.set_detector_calibration(delta=70.)
@@ -455,21 +466,23 @@ class EBSD(CommonImage, Signal2D):
 
         >>> import kikuchipy as kp
         >>> ebsd_node = kp.signals.util.metadata_nodes("ebsd")
+        >>> s = kp.data.nickel_ebsd_small()
         >>> s.metadata.get_item(ebsd_node + '.static_background')
-        [[84 87 90 ... 27 29 30]
-        [87 90 93 ... 27 28 30]
-        [92 94 97 ... 39 28 29]
-        ...
-        [80 82 84 ... 36 30 26]
-        [79 80 82 ... 28 26 26]
-        [76 78 80 ... 26 26 25]]
+        array([[84, 87, 90, ..., 27, 29, 30],
+               [87, 90, 93, ..., 27, 28, 30],
+               [92, 94, 97, ..., 39, 28, 29],
+               ...,
+               [80, 82, 84, ..., 36, 30, 26],
+               [79, 80, 82, ..., 28, 26, 26],
+               [76, 78, 80, ..., 26, 26, 25]], dtype=uint8)
 
         The static background can be removed by subtracting or dividing
         this background from each pattern while keeping relative
         intensities between patterns (or not):
 
         >>> s.remove_static_background(
-        ...     operation='subtract', relative=True)
+        ...     operation='subtract', relative=True
+        ... )  # doctest: +SKIP
 
         If the metadata has no background pattern, this must be passed
         in the `static_bg` parameter as a numpy or dask array.
@@ -593,13 +606,15 @@ class EBSD(CommonImage, Signal2D):
         dynamic corrections (whether `relative` is set to True or
         False in :meth:`~remove_static_background`):
 
-        >>> s.remove_static_background(operation="subtract")
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> s.remove_static_background(operation="subtract")  # doctest: +SKIP
         >>> s.remove_dynamic_background(
         ...     operation="subtract",  # Default
         ...     filter_domain="frequency",  # Default
         ...     truncate=4.0,  # Default
         ...     std=5,
-        ... )
+        ... )  # doctest: +SKIP
         """
         # Create a dask array of signal patterns and do the processing on this
         dtype = np.float32
@@ -783,19 +798,19 @@ class EBSD(CommonImage, Signal2D):
 
         >>> import numpy as np
         >>> import matplotlib.pyplot as plt
-        >>> s2 = s.inav[0, 0]
-        >>> s2.adaptive_histogram_equalization()
-        >>> imin = np.iinfo(s.data.dtype_out).min
-        >>> imax = np.iinfo(s.data.dtype_out).max + 1
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> s2 = s.inav[0, 0].deepcopy()
+        >>> s2.adaptive_histogram_equalization()  # doctest: +SKIP
         >>> hist, _ = np.histogram(
-        ...     s.inav[0, 0].data, bins=imax, range=(imin, imax))
-        >>> hist2, _ = np.histogram(
-        ...     s2.inav[0, 0].data, bins=imax, range=(imin, imax))
+        ...     s.inav[0, 0].data, bins=255, range=(0, 255)
+        ... )
+        >>> hist2, _ = np.histogram(s2.data, bins=255, range=(0, 255))
         >>> fig, ax = plt.subplots(nrows=2, ncols=2)
-        >>> ax[0, 0].imshow(s.inav[0, 0].data)
-        >>> ax[1, 0].plot(hist)
-        >>> ax[0, 1].imshow(s2.inav[0, 0].data)
-        >>> ax[1, 1].plot(hist2)
+        >>> _ = ax[0, 0].imshow(s.inav[0, 0].data)
+        >>> _ = ax[1, 0].plot(hist)
+        >>> _ = ax[0, 1].imshow(s2.data)
+        >>> _ = ax[1, 1].plot(hist2)
 
         Notes
         -----
@@ -862,8 +877,11 @@ class EBSD(CommonImage, Signal2D):
 
         Examples
         --------
-        >>> iq = s.get_image_quality(normalize=True)  # Default
-        >>> plt.imshow(iq)
+        >>> import matplotlib.pyplot as plt
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> iq = s.get_image_quality(normalize=True)  # doctest: +SKIP
+        >>> plt.imshow(iq)  # doctest: +SKIP
 
         See Also
         --------
@@ -1012,14 +1030,17 @@ class EBSD(CommonImage, Signal2D):
         Applying a Gaussian low pass filter with a cutoff frequency of
         20 to an EBSD object ``s``:
 
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
         >>> pattern_shape = s.axes_manager.signal_shape[::-1]
         >>> w = kp.filters.Window(
-        ...     "lowpass", cutoff=20, shape=pattern_shape)
+        ...     "lowpass", cutoff=20, shape=pattern_shape
+        ... )
         >>> s.fft_filter(
         ...     transfer_function=w,
         ...     function_domain="frequency",
         ...     shift=True,
-        ... )
+        ... )  # doctest: +SKIP
 
         See Also
         --------
@@ -1406,6 +1427,8 @@ class EBSD(CommonImage, Signal2D):
         Examples
         --------
         >>> import hyperspy.api as hs
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
         >>> roi = hs.roi.RectangularROI(
         ...     left=0, right=5, top=0, bottom=5)
         >>> s.plot_virtual_bse_intensity(roi)
@@ -1484,8 +1507,11 @@ class EBSD(CommonImage, Signal2D):
         Examples
         --------
         >>> import hyperspy.api as hs
+        >>> import kikuchipy as kp
         >>> roi = hs.roi.RectangularROI(
-        ...     left=0, right=5, top=0, bottom=5)
+        ...     left=0, right=5, top=0, bottom=5
+        ... )
+        >>> s = kp.data.nickel_ebsd_small()
         >>> vbse_image = s.get_virtual_bse_intensity(roi)
 
         See Also
