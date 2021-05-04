@@ -329,7 +329,8 @@ class Window(np.ndarray):
         >>> import kikuchipy as kp
         >>> w = kp.filters.Window()
         >>> figure, image, colorbar = w.plot(
-        ...     cmap="inferno", grid=True, show_values=True)
+        ...     cmap="inferno", grid=True, show_values=True
+        ... )
         >>> figure.savefig('my_kernel.png')
         """
         if not self.is_valid():
@@ -439,6 +440,7 @@ def modified_hann(Nx: int) -> np.ndarray:
 
     Examples
     --------
+    >>> import numpy as np
     >>> import kikuchipy as kp
     >>> w1 = kp.filters.modified_hann(Nx=30)
     >>> w2 = kp.filters.Window("modified_hann", shape=(30,))
@@ -559,11 +561,14 @@ def highpass_fft_filter(
 
     Examples
     --------
+    >>> import numpy as np
     >>> import kikuchipy as kp
     >>> w1 = kp.filters.Window(
-    ...     "highpass", cutoff=1, cutoff_width=0.5, shape=(96, 96))
+    ...     "highpass", cutoff=1, cutoff_width=0.5, shape=(96, 96)
+    ... )
     >>> w2 = kp.filters.highpass_fft_filter(
-    ...     shape=(96, 96), cutoff=1, cutoff_width=0.5)
+    ...     shape=(96, 96), cutoff=1, cutoff_width=0.5
+    ... )
     >>> np.allclose(w1, w2)
     True
     """
