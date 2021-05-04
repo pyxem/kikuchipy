@@ -25,8 +25,10 @@ from typing import Tuple
 
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticePoint
+import hyperspy.api as hs
 from hyperspy import __version__ as hs_version
 from hyperspy.misc.utils import DictionaryTreeBrowser
+import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList
 from orix.quaternion.rotation import Rotation
@@ -41,6 +43,9 @@ from kikuchipy.projections.ebsd_projections import (
 )
 from kikuchipy.signals import EBSD
 from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
+
+
+# ------------------------- Helper functions ------------------------- #
 
 
 def assert_dictionary(dict1, dict2):
@@ -68,6 +73,31 @@ def assert_dictionary(dict1, dict2):
                 assert np.allclose(dict1[key], dict2[key])
             else:
                 assert dict1[key] == dict2[key]
+
+
+def _get_spatial_array_dicts(
+    nav_shape: Tuple[int, int], step_sizes: Tuple[int, int] = (1.5, 1)
+) -> Tuple[dict, int]:
+    ny, nx = nav_shape
+    dy, dx = step_sizes
+    d = {"x": None, "y": None, "z": None}
+    map_size = 1
+    if nx > 1:
+        if ny > 1:
+            d["x"] = np.tile(np.arange(nx) * dx, ny)
+        else:
+            d["x"] = np.arange(nx) * dx
+        map_size *= nx
+    if ny > 1:
+        if nx > 1:
+            d["y"] = np.sort(np.tile(np.arange(ny) * dy, nx))
+        else:
+            d["y"] = np.arange(ny) * dy
+        map_size *= ny
+    return d, map_size
+
+
+# ----------------------------- Fixtures ----------------------------- #
 
 
 @pytest.fixture
@@ -358,23 +388,25 @@ def get_single_phase_xmap(rotations):
     return _get_single_phase_xmap
 
 
-def _get_spatial_array_dicts(
-    nav_shape: Tuple[int, int], step_sizes: Tuple[int, int] = (1.5, 1)
-) -> Tuple[dict, int]:
-    ny, nx = nav_shape
-    dy, dx = step_sizes
-    d = {"x": None, "y": None, "z": None}
-    map_size = 1
-    if nx > 1:
-        if ny > 1:
-            d["x"] = np.tile(np.arange(nx) * dx, ny)
-        else:
-            d["x"] = np.arange(nx) * dx
-        map_size *= nx
-    if ny > 1:
-        if nx > 1:
-            d["y"] = np.sort(np.tile(np.arange(ny) * dy, nx))
-        else:
-            d["y"] = np.arange(ny) * dy
-        map_size *= ny
-    return d, map_size
+# ---------------------- pytest doctest-modules ---------------------- #
+
+
+@pytest.fixture(autouse=True)
+def doctest_setup_teardown(request):
+    # Setup
+    plt.ioff()  # Interactive plotting off
+    temporary_directory = tempfile.TemporaryDirectory()
+    original_directory = os.getcwd()
+    os.chdir(temporary_directory.name)
+    yield
+
+    # Teardown
+    os.chdir(original_directory)
+    temporary_directory.cleanup()
+    plt.close("all")
+
+
+@pytest.fixture(autouse=True)
+def import_to_namespace(doctest_namespace):
+    DIR_PATH = os.path.dirname(__file__)
+    doctest_namespace["DATA_DIR"] = os.path.join(DIR_PATH, "data/kikuchipy")

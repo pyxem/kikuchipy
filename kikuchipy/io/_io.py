@@ -17,7 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from typing import Optional, Union
+from typing import Optional
 
 from hyperspy.io_plugins import hspy
 from hyperspy.misc.io.tools import overwrite as overwrite_method
@@ -79,10 +79,12 @@ def load(filename: str, lazy: bool = False, **kwargs):
 
     Examples
     --------
+    Import nine patterns from an HDF5 file in a directory `DATA_DIR`
+
     >>> import kikuchipy as kp
-    >>> s = kp.load("patterns.h5")
+    >>> s = kp.load(DATA_DIR + "/patterns.h5")
     >>> s
-    <EBSD, title: , dimensions: (10, 20|60, 60)>
+    <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
     """
     if not os.path.isfile(filename):
         raise IOError(f"No filename matches '{filename}'.")

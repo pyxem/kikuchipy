@@ -63,10 +63,10 @@ class SphericalProjection:
         ...     SphericalProjection
         ... )
         >>> v = np.random.random_sample(30).reshape((10, 3))
-        >>> theta, phi, r = SphericalProjection.project(v)
-        >>> np.allclose(np.arccos(v[: 2] / r), theta)
+        >>> theta, phi, r = SphericalProjection.project(v).T
+        >>> np.allclose(np.arccos(v[:, 2] / r), theta)
         True
-        >>> np.allclose(np.arctan2(v[:, 1], v[:, 2]), phi)
+        >>> np.allclose(np.arctan2(v[:, 1], v[:, 0]), phi)
         True
         """
         return _get_polar(v)

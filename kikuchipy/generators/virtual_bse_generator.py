@@ -201,13 +201,15 @@ class VirtualBSEGenerator:
 
         Examples
         --------
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_large()
         >>> s
-        <EBSD, title: Pattern, dimensions: (200, 149|60, 60)>
-        >>> vbse_gen = VirtualBSEGenerator(s)
+        <EBSD, title: patterns Scan 1, dimensions: (75, 55|60, 60)>
+        >>> vbse_gen = kp.generators.VirtualBSEGenerator(s)
         >>> vbse_gen.grid_shape = (5, 5)
         >>> vbse = vbse_gen.get_images_from_grid()
         >>> vbse
-        <VirtualBSEImage, title: , dimensions: (5, 5|200, 149)>
+        <VirtualBSEImage, title: , dimensions: (5, 5|75, 55)>
         """
         grid_shape = self.grid_shape
         new_shape = grid_shape + self.signal.axes_manager.navigation_shape[::-1]

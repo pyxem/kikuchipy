@@ -208,6 +208,11 @@ terminal. For an even nicer presentation, you can use ``coverage.py`` directly::
 Then, you can open the created ``htmlcov/index.html`` in the browser and inspect
 the coverage in more detail.
 
+Docstring examples are tested
+`with pytest <https://docs.pytest.org/en/stable/doctest.html>`_ as well::
+
+   $ pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
+
 Adding data to the data module
 ==============================
 

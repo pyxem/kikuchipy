@@ -30,10 +30,12 @@ jobs:
         run: python -V; pip -V
       - name: Install depedencies and package
         shell: bash
-        run: pip install -U -e .'[doc, tests]'
+        run: pip install -U -e .'[tests]'
       - name: Install oldest supported version
         if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
         run: pip install ${{ matrix.DEPENDENCIES }}
+      - name: Run docstring tests
+        run: pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
       - name: Run tests
         run: pytest --cov=kikuchipy --pyargs kikuchipy
       - name: Generate line coverage
