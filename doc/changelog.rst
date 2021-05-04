@@ -22,7 +22,7 @@ Contributors
 Added
 -----
 - Unit testing of docstring examples.
-  (`#? <https://github.com/pyxem/kikuchipy/pull/>`_)
+  (`#350 <https://github.com/pyxem/kikuchipy/pull/350>`_)
 - Support for Python 3.9.
   (`#348 <https://github.com/pyxem/kikuchipy/pull/348>`_)
 - Projection/pattern center calibration via the moving screen technique in a
