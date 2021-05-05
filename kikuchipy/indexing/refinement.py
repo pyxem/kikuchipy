@@ -2,6 +2,7 @@ import sys
 from typing import Optional, Union
 
 import cv2
+import dask
 import dask.array as da
 from dask.diagnostics import ProgressBar
 import numba
@@ -13,9 +14,403 @@ import scipy.optimize
 
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.pattern import rescale_intensity
+from kikuchipy.signals import EBSD, LazyEBSD
+from kikuchipy.indexing.similarity_metrics import ncc
 
 
 class Refinement:
+    @staticmethod
+    def refine_xmap3(
+        xmap,
+        mp,
+        exp,
+        det,
+        mask,
+        energy,
+        method="minimize",
+        method_kwargs=None,
+        compute=True,
+    ):
+        if method == "minimize" and not method_kwargs:
+            method_kwargs = {"method": "Nelder-Mead"}
+        elif not method_kwargs:
+            method_kwargs = {}
+        method = getattr(scipy.optimize, method)
+
+        # Convert from Quaternions to Euler angles
+        with np.errstate(divide="ignore", invalid="ignore"):
+            euler = Rotation.to_euler(xmap.rotations)
+
+        # Extract best rotation from xmap if given more than 1
+        if len(euler.shape) > 2:
+            euler = euler[:, 0, :]
+
+        exp_data = exp.data
+        exp_data = rescale_intensity(exp_data, dtype_out=np.float32)
+        # exp_data = exp_data * mask # The mask should already have been
+        # applied during DI
+        exp_shape = exp_data.shape
+
+        pc = det.pc
+
+        # Set the PC equal across the scan if not given
+        if len(pc) == 1:
+            pc_val = pc[0]
+            pc = np.full((exp_shape[0] * exp_shape[1], 3), pc_val)
+        # Should raise error here if len pc not equal to scan size
+
+        # 2D nav-dim
+        if len(exp_shape) == 4:
+            exp_data = exp_data.reshape(
+                (exp_shape[0] * exp_shape[1], exp_shape[2], exp_shape[3])
+            )
+        elif len(exp_shape) == 2:  # 0D nav-dim
+            exp_data = np.expand_dims(exp_data, axis=0)
+
+        (
+            master_north,
+            master_south,
+            npx,
+            npy,
+            scale,
+        ) = _get_single_pattern_params(mp, det, energy)
+
+        theta_c = np.deg2rad(det.tilt)
+        sigma = np.deg2rad(det.sample_tilt)
+        alpha = (np.pi / 2) - sigma + theta_c
+
+        detector_data = [det.ncols, det.nrows, det.px_size, alpha]
+
+        pre_args = (
+            master_north,
+            master_south,
+            npx,
+            npy,
+            scale,
+            detector_data,
+            mask,
+        )
+
+        pre_args = dask.delayed(pre_args)
+        exp_data = dask.delayed(exp_data)
+        refined_params = [
+            dask.delayed(_refine_xmap_solver)(
+                euler[i], pc[i], exp_data[i], pre_args, method, method_kwargs
+            )
+            for i in range(euler.shape[0])
+        ]
+        if compute:
+            with ProgressBar():
+                print(
+                    f"Refining {xmap.rotations.shape[0]} orientations and "
+                    f"projection centers:",
+                    file=sys.stdout,
+                )
+                results = dask.compute(*refined_params, scheduler="threads")
+                refined_euler = np.empty((euler.shape[0], 3), dtype=np.float32)
+                refined_pc = np.empty((euler.shape[0], 3), dtype=np.float32)
+                refined_scores = np.empty((euler.shape[0]), dtype=np.float32)
+                for i in range(euler.shape[0]):
+                    refined_scores[i] = results[i][0]
+
+                    refined_euler[i][0] = results[i][1]
+                    refined_euler[i][1] = results[i][2]
+                    refined_euler[i][2] = results[i][3]
+
+                    refined_pc[i][0] = results[i][4]
+                    refined_pc[i][1] = results[i][5]
+                    refined_pc[i][2] = results[i][6]
+
+                new_det = det.deepcopy()
+                new_det.pc = refined_pc
+                refined_rotations = Rotation.from_euler(refined_euler)
+                xmap_dict = xmap.__dict__
+
+                output = CrystalMap(
+                    rotations=refined_rotations,
+                    phase_id=xmap_dict["_phase_id"],
+                    x=xmap_dict["_x"],
+                    y=xmap_dict["_y"],
+                    phase_list=xmap_dict["phases"],
+                    prop={
+                        "simulation_indices": xmap_dict["_prop"][
+                            "simulation_indices"
+                        ][..., 0],
+                        "scores": refined_scores,
+                    },
+                    is_in_data=xmap_dict["is_in_data"],
+                    scan_unit=xmap_dict["scan_unit"],
+                )
+        else:
+            output = dask.delayed(refined_params)
+            new_det = -1
+        return output, new_det
+
+    @staticmethod
+    def refine_xmap2(
+        xmap,
+        mp,
+        exp,
+        det,
+        energy,
+        mode="both",
+        method="minimize",
+        method_kwargs=None,
+        compute=True,
+    ):
+        if method not in ["minimize", "dual_annealing"]:
+            raise NotImplementedError
+        if method == "minimize" and not method_kwargs:
+            method_kwargs = {"method": "Nelder-Mead"}
+        elif not method_kwargs:
+            method_kwargs = {}
+        method = getattr(scipy.optimize, method)
+
+        ncols = exp.data.shape[1]
+
+        # Convert from Quaternions to Euler angles
+        with np.errstate(divide="ignore", invalid="ignore"):
+            euler = Rotation.to_euler(xmap.rotations)
+
+        # Extract best rotation from xmap if given more than 1
+        if len(euler.shape) > 2:
+            euler = euler[:, 0, :]
+
+        exp_data = exp.data
+        exp_shape = exp_data.shape
+
+        pc = det.pc
+
+        # Set the PC equal across the scan if not given
+        if len(pc) == 1:
+            pc_val = pc[0]
+            pc = np.full((exp_shape[0] * exp_shape[1], 3), pc_val)
+        # Should raise error here if len pc not equal to scan size
+
+        # 2D nav-dim
+        if len(exp_shape) == 4:
+            exp_data = exp_data.reshape(
+                exp_shape[0] * exp_shape[1], exp_shape[2], exp_shape[3]
+            )
+            chunk_shape = ("auto", -1, -1)
+        elif len(exp_shape) == 3:  # 1D nav-dim
+            chunk_shape = ("auto", -1, -1)
+        else:  # 0D nav-dim
+            # Will this work if it is a Dask Array ??
+            exp_data = np.expand_dims(exp_data, axis=0)
+            chunk_shape = (-1, -1, -1)
+
+        exp_da = da.from_array(exp_data, chunks=chunk_shape)
+        (
+            master_north,
+            master_south,
+            npx,
+            npy,
+            scale,
+        ) = _get_single_pattern_params(mp, det, energy)
+
+        theta_c = np.deg2rad(det.tilt)
+        sigma = np.deg2rad(det.sample_tilt)
+        alpha = (np.pi / 2) - sigma + theta_c
+
+        detector_data = [det.ncols, det.nrows, det.px_size, alpha]
+        refined_params = exp_da.map_blocks(
+            _refine_xmap_chunk2,
+            r=euler,
+            pc=pc,
+            method=method,
+            method_kwargs=method_kwargs,
+            master_north=master_north,
+            master_south=master_south,
+            npx=npx,
+            npy=npy,
+            scale=scale,
+            detector_data=detector_data,
+            drop_axis=(1, 2),
+            new_axis=1,
+            dtype=np.float32,
+        )
+        new_det = -1
+        if compute:
+            with ProgressBar():
+                print(
+                    f"Refining {xmap.rotations.shape[0]} orientations and "
+                    f"projcetion centers:",
+                    file=sys.stdout,
+                )
+                print("9")
+                output_params = refined_params.compute()
+                euler_params = np.column_stack(
+                    (
+                        output_params[..., 1],
+                        output_params[..., 2],
+                        output_params[..., 3],
+                    )
+                )
+                pcs = np.column_stack(
+                    (
+                        output_params[..., 4],
+                        output_params[..., 5],
+                        output_params[..., 6],
+                    )
+                )
+                new_det = det.deepcopy()
+                new_det.pc = pcs
+                rot = Rotation.from_euler(euler_params)
+                output_rotation = rot
+                xmap_dict = xmap.__dict__
+                output_scores = output_params[..., 0]
+                # TODO: Needs vast improvements!
+                output = CrystalMap(
+                    rotations=output_rotation,
+                    phase_id=xmap_dict["_phase_id"],
+                    x=xmap_dict["_x"],
+                    y=xmap_dict["_y"],
+                    phase_list=xmap_dict["phases"],
+                    prop={
+                        "simulation_indices": xmap_dict["_prop"][
+                            "simulation_indices"
+                        ][..., 0],
+                        "scores": output_scores,
+                    },
+                    is_in_data=xmap_dict["is_in_data"],
+                    scan_unit=xmap_dict["scan_unit"],
+                )
+        else:
+            output = refined_params
+        return output, new_det
+
+    @staticmethod
+    def refine_orientations2(
+        xmap,
+        mp,
+        exp,
+        det,
+        energy,
+        mask=1,
+        method="minimize",
+        method_kwargs=None,
+        compute=True,
+    ):
+
+        if method not in ["minimize", "dual_annealing"]:
+            raise NotImplementedError
+        if method == "minimize" and not method_kwargs:
+            method_kwargs = {"method": "Nelder-Mead"}
+        elif not method_kwargs:
+            method_kwargs = {}
+        method = getattr(scipy.optimize, method)
+
+        # Convert from Quaternions to Euler angles
+        with np.errstate(divide="ignore", invalid="ignore"):
+            euler = Rotation.to_euler(xmap.rotations)
+
+        # Extract best rotation from xmap if given more than 1
+        if len(euler.shape) > 2:
+            euler = euler[:, 0, :]
+
+        exp_data = exp.data
+        exp_data = rescale_intensity(exp_data, dtype_out=np.float32)
+        exp_shape = exp_data.shape
+
+        if len(exp_shape) == 4:
+            exp_data = exp_data.reshape(
+                (exp_shape[0] * exp_shape[1], exp_shape[2], exp_shape[3])
+            )
+        elif len(exp_shape) == 2:  # 0D nav-dim
+            exp_data = np.expand_dims(exp_data, axis=0)
+
+        scan_points = exp_data.shape[0]
+
+        theta_c = np.deg2rad(det.tilt)
+        sigma = np.deg2rad(det.sample_tilt)
+        alpha = (np.pi / 2) - sigma + theta_c
+
+        dncols = det.ncols
+        dnrows = det.nrows
+        px_size = det.px_size
+
+        # TODO: Make this work with
+        pc_emsoft = det.pc_emsoft()
+        if len(pc_emsoft) == 1:
+            xpc = np.full(scan_points, pc_emsoft[..., 0])
+            ypc = np.full(scan_points, pc_emsoft[..., 1])
+            L = np.full(scan_points, pc_emsoft[..., 2])
+        else:  # Should raise error here if shape mismatch with exp!!
+            xpc = pc_emsoft[..., 0]
+            ypc = pc_emsoft[..., 1]
+            L = pc_emsoft[..., 2]
+
+        dc = _fast_get_dc_multiple_pc(
+            xpc, ypc, L, scan_points, dncols, dnrows, px_size, alpha
+        )
+
+        (
+            master_north,
+            master_south,
+            npx,
+            npy,
+            scale,
+        ) = _get_single_pattern_params(mp, det, energy)
+
+        pre_args = (
+            master_north,
+            master_south,
+            npx,
+            npy,
+            scale,
+            mask,
+        )
+
+        pre_args = dask.delayed(pre_args)
+        exp_data = dask.delayed(exp_data)
+        refined_params = [
+            dask.delayed(_refine_orientations_solver)(
+                exp_data[i], euler[i], dc[i], method, method_kwargs, pre_args
+            )
+            for i in range(euler.shape[0])
+        ]
+
+        if compute:
+            with ProgressBar():
+                print(
+                    f"Refining {xmap.rotations.shape[0]} orientations:",
+                    file=sys.stdout,
+                )
+                results = dask.compute(*refined_params)
+                refined_euler = np.empty(
+                    (xmap.rotations.shape[0], 3), dtype=np.float32
+                )
+                refined_scores = np.empty(
+                    (xmap.rotations.shape[0]), dtype=np.float32
+                )
+                for i in range(xmap.rotations.shape[0]):
+                    refined_scores[i] = results[i][0]
+
+                    refined_euler[i][0] = results[i][1]
+                    refined_euler[i][1] = results[i][2]
+                    refined_euler[i][2] = results[i][3]
+
+                refined_rotations = Rotation.from_euler(refined_euler)
+
+                xmap_dict = xmap.__dict__
+
+                output = CrystalMap(
+                    rotations=refined_rotations,
+                    phase_id=xmap_dict["_phase_id"],
+                    x=xmap_dict["_x"],
+                    y=xmap_dict["_y"],
+                    phase_list=xmap_dict["phases"],
+                    prop={
+                        "scores": refined_scores,
+                    },
+                    is_in_data=xmap_dict["is_in_data"],
+                    scan_unit=xmap_dict["scan_unit"],
+                )
+        else:
+            output = dask.delayed(refined_params)
+        return output
+
     @staticmethod
     def refine_orientations(
         xmap,
@@ -122,6 +517,112 @@ class Refinement:
         return output
 
     @staticmethod
+    def refine_projection_center2(
+        xmap,
+        mp,
+        exp,
+        det,
+        energy,
+        mask=1,
+        method="minimize",
+        method_kwargs=None,
+        compute=True,
+    ):
+        if method == "minimize" and not method_kwargs:
+            method_kwargs = {"method": "Nelder-Mead"}
+        elif not method_kwargs:
+            method_kwargs = {}
+        method = getattr(scipy.optimize, method)
+
+        # Extract best rotation from xmap if given more than 1
+        if len(xmap.rotations.shape) > 1:
+            r = xmap.rotations[:, 0].data
+        else:
+            r = xmap.rotations.data
+
+        exp_data = exp.data
+        exp_data = rescale_intensity(exp_data, dtype_out=np.float32)
+        exp_shape = exp_data.shape
+
+        pc = det.pc
+
+        # Set the PC equal across the scan if not given
+        if len(pc) == 1:
+            pc_val = pc[0]
+            pc = np.full((exp_shape[0] * exp_shape[1], 3), pc_val)
+        # Should raise error here if len pc not equal to scan size
+
+        # 2D nav-dim
+        if len(exp_shape) == 4:
+            exp_data = exp_data.reshape(
+                (exp_shape[0] * exp_shape[1], exp_shape[2], exp_shape[3])
+            )
+        elif len(exp_shape) == 2:  # 0D nav-dim
+            exp_data = np.expand_dims(exp_data, axis=0)
+
+        (
+            master_north,
+            master_south,
+            npx,
+            npy,
+            scale,
+        ) = _get_single_pattern_params(mp, det, energy)
+
+        theta_c = np.deg2rad(det.tilt)
+        sigma = np.deg2rad(det.sample_tilt)
+        alpha = (np.pi / 2) - sigma + theta_c
+
+        detector_data = [det.ncols, det.nrows, det.px_size, alpha]
+
+        pre_args = (
+            master_north,
+            master_south,
+            npx,
+            npy,
+            scale,
+            detector_data,
+            mask,
+        )
+
+        pre_args = dask.delayed(pre_args)
+        exp_data = dask.delayed(exp_data)
+        refined_params = [
+            dask.delayed(_refine_pc_solver)(
+                exp_data[i], r[i], pc[i], method, method_kwargs, pre_args
+            )
+            for i in range(xmap.rotations.shape[0])
+        ]
+
+        output = refined_params
+        if compute:
+            with ProgressBar():
+                print(
+                    f"Refining {xmap.rotations.shape[0]} projection centers:",
+                    file=sys.stdout,
+                )
+                results = dask.compute(*refined_params)
+
+                refined_pc = np.empty(
+                    (xmap.rotations.shape[0], 3), dtype=np.float32
+                )
+                refined_scores = np.empty(
+                    (xmap.rotations.shape[0]), dtype=np.float32
+                )
+                for i in range(xmap.rotations.shape[0]):
+                    refined_scores[i] = results[i][0]
+
+                    refined_pc[i][0] = results[i][1]
+                    refined_pc[i][1] = results[i][2]
+                    refined_pc[i][2] = results[i][3]
+
+                new_det = det.deepcopy()
+                new_det.pc = refined_pc
+
+                output = (refined_scores, new_det)
+
+        return output
+
+    @staticmethod
     def refine_projection_center(
         xmap,
         mp,
@@ -139,7 +640,7 @@ class Refinement:
             method_kwargs = {}
         method = getattr(scipy.optimize, method)
 
-        #        ncols = exp.data.shape[1]
+        ncols = exp.data.shape[1]
 
         rdata = xmap.rotations.data
         chunk_size = ("auto",) + (-1,) * (len(rdata.shape) - 1)
@@ -175,6 +676,7 @@ class Refinement:
             npy=npy,
             scale=scale,
             exp=exp_data,
+            ncols=ncols,
             detector_data=detector_data,
             dtype_out=np.float32,
             dtype=np.float32,
@@ -209,12 +711,14 @@ class Refinement:
         elif not method_kwargs:
             method_kwargs = {}
         method = getattr(scipy.optimize, method)
+        print("UPDATED1!")
 
         # Convert from Quaternions to Rodrigues vector
         euler = Rotation.to_euler(xmap.rotations)
         rdata = euler.data
         chunk_size = ("auto",) + (-1,) * (len(rdata.shape) - 1)
         pc = det.pc
+        ncols = exp.data.shape[1]
 
         r_da = da.from_array(rdata, chunks=chunk_size)
 
@@ -254,6 +758,7 @@ class Refinement:
             scale=scale,
             exp=exp_data,
             pc=pc,
+            ncols=ncols,
             detector_data=detector_data,
             dtype_out=np.float32,
             dtype=np.float32,
@@ -371,10 +876,10 @@ def _get_single_pattern_params(mp, detector, energy):
         raise NotImplementedError(
             "Master pattern must be in the square Lambert projection"
         )
-    if len(detector.pc) > 1:
-        raise NotImplementedError(
-            "Detector must have exactly one projection center"
-        )
+    # if len(detector.pc) > 1:
+    #     raise NotImplementedError(
+    #         "Detector must have exactly one projection center"
+    #     )
 
     # Get the master pattern arrays created by a desired energy
     north_slice = ()
@@ -400,12 +905,48 @@ def _get_single_pattern_params(mp, detector, energy):
 
 
 ### NUMBA FUNCTIONS ###
+@numba.njit(nogil=True)
+def _fast_get_dc_multiple_pc(
+    xpc, ypc, L, scan_points, ncols, nrows, px_size, alpha
+):
+    nrows = int(nrows)
+    ncols = int(ncols)
+
+    ca = np.cos(alpha)
+    sa = np.sin(alpha)
+
+    # 1 DC per scan point
+    r_g_array = np.zeros((scan_points, nrows, ncols, 3), dtype=np.float32)
+    for k in range(scan_points):
+        det_x = (
+            -1
+            * ((-xpc[k] - (1.0 - ncols) * 0.5) - np.arange(0, ncols))
+            * px_size
+        )
+        det_y = ((ypc[k] - (1.0 - nrows) * 0.5) - np.arange(0, nrows)) * px_size
+        L2 = L[k]
+        for i in range(nrows):
+            for j in range(ncols):
+                x = det_y[nrows - i - 1] * ca + sa * L2
+                y = det_x[j]
+                z = -sa * det_y[nrows - i - 1] + ca * L2
+                r_g_array[k][i][j][0] = x
+                r_g_array[k][i][j][1] = y
+                r_g_array[k][i][j][2] = z
+
+    norm = np.sqrt(np.sum(np.square(r_g_array), axis=-1))
+    norm = np.expand_dims(norm, axis=-1)
+    r_g_array = r_g_array / norm
+
+    return r_g_array
 
 
-@numba.njit()
+@numba.njit(nogil=True)
 def _fast_get_dc(xpc, ypc, L, ncols, nrows, px_size, alpha):
     # alpha: alpha = (np.pi / 2) - sigma + theta_c
     # Detector coordinates in microns
+    nrows = int(nrows)
+    ncols = int(ncols)
     det_x = -1 * ((-xpc - (1.0 - ncols) * 0.5) - np.arange(0, ncols)) * px_size
     det_y = ((ypc - (1.0 - nrows) * 0.5) - np.arange(0, nrows)) * px_size
 
@@ -432,7 +973,16 @@ def _fast_get_dc(xpc, ypc, L, ncols, nrows, px_size, alpha):
     return r_g_array
 
 
-@numba.njit()
+@numba.njit(nogil=True)
+def _fast_norm_dc(r_g_array):
+    norm = np.sqrt(np.sum(np.square(r_g_array), axis=-1))
+    norm = np.expand_dims(norm, axis=-1)
+    r_g_array = r_g_array / norm
+
+    return r_g_array
+
+
+@numba.njit(nogil=True)
 def _fast_simulate_single_pattern(
     r,
     dc,
@@ -508,7 +1058,7 @@ def _fast_simulate_single_pattern(
     return pattern
 
 
-@numba.njit()
+@numba.njit(nogil=True)
 def _fast_lambert_projection(v):
     w = np.atleast_2d(v)
     norm = np.sqrt(np.sum(np.square(w), axis=-1))
@@ -554,7 +1104,7 @@ def _fast_lambert_projection(v):
     return lambert
 
 
-@numba.njit()
+@numba.njit(nogil=True)
 def _fast_get_lambert_interpolation_parameters(
     rotated_direction_cosines: np.ndarray,
     npx: int,
@@ -690,13 +1240,14 @@ def _refine_pc_chunk(
     scale,
     exp,
     detector_data,
+    ncols,
     dtype_out=np.float32,
 ):
     rotations_shape = r.shape
     refined_params = np.empty(
         shape=(rotations_shape[0],) + (4,), dtype=dtype_out
     )
-    ncols = detector_data[0]
+
     for i in np.ndindex(rotations_shape[0]):
         index = i[0]
         if len(exp.shape) == 2:  # Single Experimental pattern
@@ -759,13 +1310,13 @@ def _refine_xmap_chunk(
     exp,
     pc,
     detector_data,
+    ncols,
     dtype_out=np.float32,
 ):
     rotations_shape = r.shape
     refined_params = np.empty(
         shape=(rotations_shape[0],) + (7,), dtype=dtype_out
     )
-    ncols = detector_data[0]
     for i in np.ndindex(rotations_shape[0]):
         index = i[0]
         if len(exp.shape) == 2:  # Single Experimental pattern
@@ -861,6 +1412,61 @@ def _refine_xmap_chunk(
     return refined_params
 
 
+def _refine_xmap_chunk2(
+    exp,
+    r,
+    method,
+    method_kwargs,
+    master_north,
+    master_south,
+    npx,
+    npy,
+    scale,
+    pc,
+    detector_data,
+):
+    rotations_shape = r.shape
+    refined_params = np.empty(
+        shape=(rotations_shape[0],) + (7,), dtype=np.float32
+    )
+
+    for i in np.arange(rotations_shape[0]):
+        exp_data = exp[i]
+        pc_x0 = pc[i]
+        best_rotation = r[i]
+
+        phi1_0 = best_rotation[..., 0]
+        Phi_0 = best_rotation[..., 1]
+        phi2_0 = best_rotation[..., 2]
+        eu_x0 = np.array((phi1_0, Phi_0, phi2_0))
+
+        args = (
+            exp_data,
+            master_north,
+            master_south,
+            npx,
+            npy,
+            scale,
+            detector_data,
+        )
+        soln = method(
+            _full_objective_function_euler,
+            x0=np.concatenate((eu_x0, pc_x0), axis=None),
+            args=args,
+            **method_kwargs,
+        )
+        score = 1 - soln.fun
+        phi1 = soln.x[0]
+        Phi = soln.x[1]
+        phi2 = soln.x[2]
+        pcx = soln.x[3]
+        pxy = soln.x[4]
+        pxz = soln.x[5]
+
+        refined_params[i] = np.array((score, phi1, Phi, phi2, pcx, pxy, pxz))
+    return refined_params
+
+
 ### OBJECTIVE FUNCTIONS ###
 
 
@@ -871,7 +1477,8 @@ def _orientation_objective_function_euler(x, *args):
     npx = args[3]
     npy = args[4]
     scale = args[5]
-    dc = args[6]
+    mask = args[6]
+    dc = args[7]
 
     # From Orix.rotation.from_euler()
     alpha = x[0]  # psi1
@@ -905,8 +1512,10 @@ def _orientation_objective_function_euler(x, *args):
         scale,
     )
 
-    result = cv2.matchTemplate(experimental, sim_pattern, cv2.TM_CCOEFF_NORMED)
-    return 1 - result[0][0]
+    sim_pattern = sim_pattern * mask
+
+    result = py_ncc(experimental, sim_pattern)
+    return 1 - result
 
 
 def _orientation_objective_function(x, *args):
@@ -916,7 +1525,8 @@ def _orientation_objective_function(x, *args):
     npx = args[3]
     npy = args[4]
     scale = args[5]
-    dc = args[6]
+    mask = args[6]
+    dc = args[7]
 
     # rx = x[0]
     # ry = x[1]
@@ -951,8 +1561,8 @@ def _orientation_objective_function(x, *args):
         scale,
     )
 
-    result = cv2.matchTemplate(experimental, sim_pattern, cv2.TM_CCOEFF_NORMED)
-    return 1 - result[0][0]
+    result = py_ncc(experimental, sim_pattern)
+    return 1 - result
 
 
 def _projection_center_objective_function(x, *args):
@@ -967,7 +1577,8 @@ def _projection_center_objective_function(x, *args):
     npy = args[4]
     scale = args[5]
     detector_data = args[6]
-    rotation = args[7]
+    mask = args[7]
+    rotation = args[8]
 
     detector_ncols = detector_data[0]
     detector_nrows = detector_data[1]
@@ -993,8 +1604,10 @@ def _projection_center_objective_function(x, *args):
         scale,
     )
 
-    result = cv2.matchTemplate(experimental, sim_pattern, cv2.TM_CCOEFF_NORMED)
-    return 1 - result[0][0]
+    sim_pattern = sim_pattern * mask
+
+    result = py_ncc(experimental, sim_pattern)
+    return 1 - result
 
 
 def _full_objective_function(x, *args):
@@ -1002,6 +1615,75 @@ def _full_objective_function(x, *args):
 
 
 def _full_objective_function_euler(x, *args):
+    experimental = args[0]
+    master_north = args[1]
+    master_south = args[2]
+    npx = args[3]
+    npy = args[4]
+    scale = args[5]
+    detector_data = args[6]
+    mask = args[7]
+
+    detector_ncols = detector_data[0]
+    detector_nrows = detector_data[1]
+    detector_px_size = detector_data[2]
+
+    # From Orix.rotation.from_euler()
+    phi1 = x[0]
+    Phi = x[1]
+    phi2 = x[2]
+
+    alpha = phi1
+    beta = Phi
+    gamma = phi2
+
+    sigma = 0.5 * np.add(alpha, gamma)
+    delta = 0.5 * np.subtract(alpha, gamma)
+    c = np.cos(beta / 2)
+    s = np.sin(beta / 2)
+
+    # Using P = 1 from A.6
+    q = np.zeros((4,))
+    q[..., 0] = c * np.cos(sigma)
+    q[..., 1] = -s * np.cos(delta)
+    q[..., 2] = -s * np.sin(delta)
+    q[..., 3] = -c * np.sin(sigma)
+
+    for i in [1, 2, 3, 0]:  # flip the zero element last
+        q[..., i] = np.where(q[..., 0] < 0, -q[..., i], q[..., i])
+
+    rotation = q
+
+    x_star = x[3]
+    y_star = x[4]
+    z_star = x[5]
+
+    xpc = detector_ncols * (x_star - 0.5)  # Might be sign issue here?
+    xpc = -xpc
+    ypc = detector_nrows * (0.5 - y_star)
+    L = detector_nrows * detector_px_size * z_star
+
+    alpha2 = detector_data[3]  # Different alpha
+    dc = _fast_get_dc(
+        xpc, ypc, L, detector_ncols, detector_nrows, detector_px_size, alpha2
+    )
+
+    sim_pattern = _fast_simulate_single_pattern(
+        rotation,
+        dc,
+        master_north,
+        master_south,
+        npx,
+        npy,
+        scale,
+    )
+    sim_pattern = sim_pattern * mask
+
+    result = py_ncc(experimental, sim_pattern)
+    return 1 - result
+
+
+def _full_objective_function_euler2(x, *args):
     experimental = args[0]
     master_north = args[1]
     master_south = args[2]
@@ -1064,8 +1746,8 @@ def _full_objective_function_euler(x, *args):
         scale,
     )
 
-    result = cv2.matchTemplate(experimental, sim_pattern, cv2.TM_CCOEFF_NORMED)
-    return 1 - result[0][0]
+    result = ncc(sim_pattern, experimental)
+    return 1 - result
 
 
 ### Callback ###
@@ -1081,3 +1763,257 @@ class MinimizeStopper(object):
             return True
         else:
             return False
+
+
+### KAM ###
+
+from orix.quaternion import Misorientation
+
+
+def KAM(xmap, y_shape, x_shape, order, threshold, symmetry_list):
+    threshold = np.deg2rad(threshold)
+
+    # Get the cutoff value from the order
+    # , probably a formula for this somewhere... :)
+    # 0th order ==> 0
+    # 1st order ==> 1
+    # 2nd order ==> 4
+    # 3rd order ==> 5
+    # 4th ordr ==> 8
+
+    if order < 0:
+        raise ValueError("Order must be a positive integer!")
+    if order > 4:
+        raise NotImplementedError("Order must be between 0 and 4.")
+
+    order_list = [0, 1, 4, 5, 8]
+    max_distance = order_list[int(order)]
+
+    # Reshape the 1D rotation array to 2D grid with same shape as scan
+    r = Rotation(xmap.rotations.data.reshape(y_shape, x_shape, 4))
+    # Convert to Misorientations with given symmetries
+    m = Misorientation(r).set_symmetry(*symmetry_list)
+
+    kam_map = np.zeros((y_shape, x_shape), dtype=np.float32)
+
+    for i in range(y_shape):
+        for j in range(x_shape):
+            N = 0
+            total_misorientation = 0
+            for k in range(i - 2, i + 3):
+                for l in range(j - 2, j + 3):
+                    # Do we consider ourself?
+                    # if i == k and j == l:
+                    # 	continue
+                    if k ** 2 + l ** 2 >= max_distance:
+                        continue
+                    else:  # Can we index misorientation object?
+                        m_kl = m[i, j].angle_with(m[k, l])
+                        if m_kl <= threshold:
+                            N += 1
+                            total_misorientation += m_kl
+            kam_value = total_misorientation / N
+            kam_map[i, j] = kam_value
+    return kam_map
+
+
+# Assumes entire exp data fits into memory
+def _refine_xmap_fast(xmap, mp, exp, det, energy, method, method_kwargs):
+    if method == "minimize" and not method_kwargs:
+        method_kwargs = {"method": "Nelder-Mead"}
+    elif not method_kwargs:
+        method_kwargs = {}
+    method = getattr(scipy.optimize, method)
+
+    euler = Rotation.to_euler(xmap.rotations)
+    if len(euler.shape) > 2:
+        euler = euler[:, 0, :]  # Extract best rotation
+    pc = det.pc
+    # ncols = exp.data.shape[1]
+
+    (
+        master_north,
+        master_south,
+        npx,
+        npy,
+        scale,
+    ) = _get_single_pattern_params(mp, det, energy)
+
+    theta_c = np.deg2rad(det.tilt)
+    sigma = np.deg2rad(det.sample_tilt)
+    alpha = (np.pi / 2) - sigma + theta_c
+
+    detector_data = np.array(
+        (det.ncols, det.nrows, det.px_size, alpha), dtype=np.float32
+    )
+
+    exp_data = exp.data
+    exp_data = rescale_intensity(exp_data, dtype_out=np.float32)
+
+    # Make exp_data 1D
+    if len(exp_data.shape) > 3:
+        exp_data = exp_data.reshape(
+            (
+                exp_data.shape[0] * exp_data.shape[1],
+                exp_data.shape[2],
+                exp_data.shape[3],
+            )
+        )
+
+    n_rotations = euler.shape[0]
+    refined_params = np.zeros(shape=(n_rotations, 7), dtype=np.float32)
+    i = np.arange(n_rotations)
+
+    if len(pc) > 1:
+        refined_params[i] = 0
+    else:
+        pc_x0 = pc[0]
+        refined_params[i] = _compute_params_xmap(
+            euler[i],
+            pc_x0,
+            exp_data[i],
+            master_north,
+            master_south,
+            npx,
+            npy,
+            scale,
+            detector_data,
+            method_kwargs,
+        )
+    return refined_params
+
+
+def _compute_params_xmap(
+    rotation,
+    pc,
+    exp,
+    master_north,
+    master_south,
+    npx,
+    npy,
+    scale,
+    detector_data,
+    method_kwargs,
+):
+    args = (
+        exp,
+        master_north,
+        master_south,
+        npx,
+        npy,
+        scale,
+        detector_data,
+    )
+    phi1_0 = rotation[..., 0]
+    Phi_0 = rotation[..., 1]
+    phi2_0 = rotation[..., 2]
+
+    eu_x0 = np.array((phi1_0, Phi_0, phi2_0))
+    print(eu_x0.shape)
+
+    # TODO: Implement the other methods if needed
+    soln = scipy.optimize.minimize(
+        _full_objective_function_euler,
+        x0=np.concatenate((eu_x0, pc), axis=None),
+        args=args,
+        **method_kwargs,
+    )
+    score = 1 - soln.fun
+    phi1 = soln.x[0]
+    Phi = soln.x[1]
+    phi2 = soln.x[2]
+    pcx = soln.x[3]
+    pcy = soln.x[4]
+    pcz = soln.x[5]
+    return np.array((score, phi1, Phi, phi2, pcx, pcy, pcz))
+
+
+def _refine_xmap_solver(r, pc, exp, pre_args, method, method_kwargs):
+    phi1_0 = r[..., 0]
+    Phi_0 = r[..., 1]
+    phi2_0 = r[..., 2]
+    eu_x0 = np.array((phi1_0, Phi_0, phi2_0))
+
+    args = (exp,) + pre_args
+
+    soln = method(
+        _full_objective_function_euler,
+        x0=np.concatenate((eu_x0, pc), axis=None),
+        args=args,
+        **method_kwargs,
+    )
+    score = 1 - soln.fun
+    phi1 = soln.x[0]
+    Phi = soln.x[1]
+    phi2 = soln.x[2]
+    pcx = soln.x[3]
+    pxy = soln.x[4]
+    pxz = soln.x[5]
+
+    return (score, phi1, Phi, phi2, pcx, pxy, pxz)
+
+
+def _refine_pc_solver(exp, r, pc, method, method_kwargs, pre_args):
+    args = (exp,) + pre_args + (r,)
+    pc_x0 = pc
+    soln = method(
+        _projection_center_objective_function,
+        x0=pc_x0,
+        args=args,
+        **method_kwargs,
+    )
+
+    score = 1 - soln.fun
+    pcx = soln.x[0]
+    pcy = soln.x[1]
+    pcz = soln.x[2]
+    return (score, pcx, pcy, pcz)
+
+
+def _refine_orientations_solver(exp, r, dc, method, method_kwargs, pre_args):
+
+    phi1 = r[..., 0]
+    Phi = r[..., 1]
+    phi2 = r[..., 2]
+
+    args = (exp,) + pre_args + (dc,)
+
+    r_x0 = np.array((phi1, Phi, phi2), dtype=np.float32)
+
+    soln = method(
+        _orientation_objective_function_euler,
+        x0=r_x0,
+        args=args,
+        **method_kwargs,
+    )
+    score = 1 - soln.fun
+    refined_phi1 = soln.x[0]
+    refined_Phi = soln.x[1]
+    refined_phi2 = soln.x[2]
+
+    return (score, refined_phi1, refined_Phi, refined_phi2)
+
+
+#### Custom Similarity Metrics ####
+
+
+@numba.njit(fastmath=True)
+def py_ncc(a, b):
+    # Input should already be np.float32
+    # a = a.astype(np.float32)
+    # b = b.astype(np.float32)
+    abar = np.mean(a)
+    bbar = np.mean(b)
+    astar = a - abar
+    bstar = b - bbar
+    return np.sum(astar * bstar) / np.sqrt(
+        np.sum(np.square(astar)) * np.sum(np.square(bstar))
+    )
+
+
+@numba.njit(fastmath=True)
+def py_ndp(a, b):
+    # Input should already be np.float32
+    # a = a.astype(np.float32)
+    # b = b.astype(np.float32)
+    return np.sum(a * b) / np.sqrt(np.sum(np.square(a)) * np.sum(np.square(b)))
