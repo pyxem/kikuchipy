@@ -88,7 +88,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         KikuchiBand (|2)
         Phase: ni (m-3m)
         [[-1  1  1]
-         [ 0 -2  0]]
+         [-2  0  0]]
         """
         super().__init__(phase=phase, hkl=hkl)
         self._hkl_detector = Vector3d(hkl_detector)

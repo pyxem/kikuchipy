@@ -63,8 +63,8 @@ class Window(np.ndarray):
 
     Examples
     --------
-    >>> import kikuchipy as kp
     >>> import numpy as np
+    >>> import kikuchipy as kp
 
     The following passed parameters are the default
 
@@ -95,9 +95,9 @@ class Window(np.ndarray):
     >>> w = kp.filters.Window(np.arange(6).reshape(3, 2))
     >>> w
     Window (3, 2) custom
-    [[0, 1]
-     [2, 3]
-     [4, 5]]
+    [[0 1]
+     [2 3]
+     [4 5]]
 
     To create a Gaussian window with a standard deviation of 2, obtained
     from :func:`scipy.signal.windows.gaussian`
@@ -105,9 +105,9 @@ class Window(np.ndarray):
     >>> w = kp.filters.Window(window="gaussian", std=2)
     >>> w
     Window (3, 3) gaussian
-    [[0.77880078, 0.8824969 , 0.77880078]
-     [0.8824969 , 1.        , 0.8824969 ]
-     [0.77880078, 0.8824969 , 0.77880078]]
+    [[0.7788 0.8825 0.7788]
+     [0.8825 1.     0.8825]
+     [0.7788 0.8825 0.7788]]
 
     See Also
     --------
@@ -135,7 +135,7 @@ class Window(np.ndarray):
             try:
                 if any(np.array(shape) < 1):
                     raise ValueError(f"All window axes {shape} must be > 0.")
-                if any(isinstance(i, np.float) for i in np.array(shape)):
+                if any(isinstance(i, float) for i in np.array(shape)):
                     raise TypeError
             except TypeError:
                 raise TypeError(
@@ -326,8 +326,11 @@ class Window(np.ndarray):
         showing element values and x/y ticks, can be produced and
         written to file
 
+        >>> import kikuchipy as kp
+        >>> w = kp.filters.Window()
         >>> figure, image, colorbar = w.plot(
-        ...     cmap="inferno", grid=True, show_values=True)
+        ...     cmap="inferno", grid=True, show_values=True
+        ... )
         >>> figure.savefig('my_kernel.png')
         """
         if not self.is_valid():
@@ -437,6 +440,7 @@ def modified_hann(Nx: int) -> np.ndarray:
 
     Examples
     --------
+    >>> import numpy as np
     >>> import kikuchipy as kp
     >>> w1 = kp.filters.modified_hann(Nx=30)
     >>> w2 = kp.filters.Window("modified_hann", shape=(30,))
@@ -490,11 +494,14 @@ def lowpass_fft_filter(
 
     Examples
     --------
+    >>> import numpy as np
     >>> import kikuchipy as kp
     >>> w1 = kp.filters.Window(
-    ...     "lowpass", cutoff=30, cutoff_width=15, shape=(96, 96))
+    ...     "lowpass", cutoff=30, cutoff_width=15, shape=(96, 96)
+    ... )
     >>> w2 = kp.filters.lowpass_fft_filter(
-            shape=(96, 96), cutoff=30, cutoff_width=15)
+    ...     shape=(96, 96), cutoff=30, cutoff_width=15
+    ... )
     >>> np.allclose(w1, w2)
     True
     """
@@ -554,11 +561,14 @@ def highpass_fft_filter(
 
     Examples
     --------
+    >>> import numpy as np
     >>> import kikuchipy as kp
     >>> w1 = kp.filters.Window(
-    ...     "highpass", cutoff=1, cutoff_width=0.5, shape=(96, 96))
+    ...     "highpass", cutoff=1, cutoff_width=0.5, shape=(96, 96)
+    ... )
     >>> w2 = kp.filters.highpass_fft_filter(
-    ...     shape=(96, 96), cutoff=1, cutoff_width=0.5)
+    ...     shape=(96, 96), cutoff=1, cutoff_width=0.5
+    ... )
     >>> np.allclose(w1, w2)
     True
     """

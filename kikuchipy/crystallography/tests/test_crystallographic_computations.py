@@ -17,7 +17,6 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from diffsims.crystallography import ReciprocalLatticePoint
-import matplotlib.colors as mcolors
 import numpy as np
 import pytest
 from orix.crystal_map import Phase

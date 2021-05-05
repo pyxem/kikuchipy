@@ -21,6 +21,10 @@ Contributors
 
 Added
 -----
+- Unit testing of docstring examples.
+  (`#350 <https://github.com/pyxem/kikuchipy/pull/350>`_)
+- Support for Python 3.9.
+  (`#348 <https://github.com/pyxem/kikuchipy/pull/348>`_)
 - Projection/pattern center calibration via the moving screen technique in a
   kikuchipy.detectors.calibration module.
   (`#322 <https://github.com/pyxem/kikuchipy/pull/322>`_)
@@ -29,6 +33,33 @@ Added
   (`#320 <https://github.com/pyxem/kikuchipy/pull/320>`_)
 - Reading of NORDIF calibration patterns specified in a setting file into an
   EBSD signal. (`#317 <https://github.com/pyxem/kikuchipy/pull/317>`_)
+
+Fixed
+-----
+- Scaling of region of interest coordinates used in virtual backscatter electron
+  imaging to physical coordinates
+  (`#349 <https://github.com/pyxem/kikuchipy/pull/349>`_)
+
+0.3.3 (2021-04-18)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+- Ole Natlandsmyr
+
+Fixed
+-----
+- Reading of EBSD patterns from Bruker h5ebsd with a region of interest
+  (`#339 <https://github.com/pyxem/kikuchipy/pull/339>`_)
+- Merging of (typically refined) crystal maps, where either a simulation indices
+  array is not present or the array contains more indices per point than scores.
+  (`#335 <https://github.com/pyxem/kikuchipy/pull/335>`_)
+- Bugs in getting plot markers from geometrical EBSD simulation.
+  (`#334 <https://github.com/pyxem/kikuchipy/pull/334>`_)
+- Passing a static background pattern to EBSD.remove_static_background() for a
+  non-square detector dataset works.
+  (`#331 <https://github.com/pyxem/kikuchipy/pull/331>`_)
 
 0.3.2 (2021-02-01)
 ==================

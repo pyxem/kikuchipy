@@ -27,6 +27,7 @@ import numpy as np
 import pytest
 
 from kikuchipy.data import nickel_ebsd_small
+from kikuchipy.conftest import assert_dictionary
 from kikuchipy.io._io import load
 from kikuchipy.io.plugins.h5ebsd import (
     check_h5ebsd,
@@ -49,6 +50,10 @@ KIKUCHIPY_FILE_GROUP_NAMES = [
 ]
 EDAX_FILE = os.path.join(DATA_PATH, "edax/patterns.h5")
 BRUKER_FILE = os.path.join(DATA_PATH, "bruker/patterns.h5")
+BRUKER_FILE_ROI = os.path.join(DATA_PATH, "bruker/patterns_roi.h5")
+BRUKER_FILE_ROI_NONRECTANGULAR = os.path.join(
+    DATA_PATH, "bruker/patterns_roi_nonrectangular.h5"
+)
 BG_FILE = os.path.join(DATA_PATH, "nordif/Background acquisition image.bmp")
 AXES_MANAGER = {
     "axis-0": {
@@ -91,7 +96,7 @@ class Testh5ebsd:
         s = load(KIKUCHIPY_FILE)
 
         assert s.data.shape == (3, 3, 60, 60)
-        assert s.axes_manager.as_dictionary() == AXES_MANAGER
+        assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
 
     def test_load_edax(self):
         with File(EDAX_FILE, mode="r+") as f:
@@ -105,7 +110,7 @@ class Testh5ebsd:
 
         s = load(EDAX_FILE)
         assert s.data.shape == (3, 3, 60, 60)
-        assert s.axes_manager.as_dictionary() == AXES_MANAGER
+        assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
 
     def test_load_bruker(self):
         with File(BRUKER_FILE, mode="r+") as f:
@@ -119,7 +124,14 @@ class Testh5ebsd:
 
         s = load(BRUKER_FILE)
         assert s.data.shape == (3, 3, 60, 60)
-        assert s.axes_manager.as_dictionary() == AXES_MANAGER
+        assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
+
+    def test_load_bruker_roi(self):
+        s = load(BRUKER_FILE_ROI)
+        assert s.data.shape == (3, 2, 60, 60)
+
+        with pytest.raises(ValueError, match="Only a rectangular region of"):
+            _ = load(BRUKER_FILE_ROI_NONRECTANGULAR)
 
     def test_load_manufacturer(self, save_path_hdf5):
         s = EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
@@ -177,7 +189,7 @@ class Testh5ebsd:
         with pytest.warns(UserWarning, match="Will attempt to load by zero"):
             s_reload = load(save_path_hdf5, lazy=lazy)
         AXES_MANAGER["axis-1"]["size"] = new_n_columns
-        assert s_reload.axes_manager.as_dictionary() == AXES_MANAGER
+        assert_dictionary(s_reload.axes_manager.as_dictionary(), AXES_MANAGER)
 
     @pytest.mark.parametrize("remove_phases", (True, False))
     def test_load_save_cycle(self, save_path_hdf5, remove_phases):
@@ -293,8 +305,6 @@ class Testh5ebsd:
         )
         mm = s.data.dask[k]
         assert isinstance(mm, Dataset)
-        with pytest.raises(NotImplementedError):
-            s.data[:] = 23
 
     def test_save_fresh(self, save_path_hdf5, tmp_path):
         scan_size = (10, 3)

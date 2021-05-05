@@ -21,6 +21,7 @@ from typing import List, Optional, Tuple, Union
 
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from matplotlib.markers import MarkerStyle
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -86,10 +87,11 @@ class EBSDDetector:
 
         Examples
         --------
+        >>> import numpy as np
         >>> from kikuchipy.detectors import EBSDDetector
         >>> det = EBSDDetector(
         ...     shape=(60, 60),
-        ...     pc=np.ones((149, 200)) * [0.421, 0.779, 0.505],
+        ...     pc=np.ones((149, 200, 3)) * (0.421, 0.779, 0.505),
         ...     convention="tsl",
         ...     px_size=70,
         ...     binning=8,
@@ -97,14 +99,13 @@ class EBSDDetector:
         ...     sample_tilt=70,
         ... )
         >>> det
-        EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 0, pc
-         (0.421, 0.221, 0.505)
+        EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 5, pc (0.421, 0.221, 0.505)
         >>> det.navigation_shape  # (nrows, ncols)
         (149, 200)
         >>> det.bounds
-        array([ 0, 60,  0, 60])
-        >>> det.gnomonic_bounds
-        array([-0.83366337,  1.14653465, -1.54257426,  0.43762376])
+        array([ 0, 59,  0, 59])
+        >>> det.gnomonic_bounds[0, 0]
+        array([-0.83366337,  1.14653465, -0.83366337,  1.14653465])
         >>> det.plot()
         """
         self.shape = shape
@@ -526,11 +527,8 @@ class EBSDDetector:
         >>> from kikuchipy.detectors import EBSDDetector
         >>> det = EBSDDetector(
         ...     shape=(60, 60),
-        ...     pc=np.ones((149, 200)) * [0.421, 0.779, 0.505],
+        ...     pc=np.ones((149, 200, 3)) * (0.421, 0.779, 0.505),
         ...     convention="tsl",
-        ...     pixel_size=70,
-        ...     binning=8,
-        ...     tilt=5,
         ...     sample_tilt=70,
         ... )
         >>> det.plot()
@@ -584,12 +582,12 @@ class EBSDDetector:
         if show_pc:
             if pc_kwargs is None:
                 pc_kwargs = {}
-            default_params_pc = {
-                "s": 300,
-                "facecolor": "gold",
-                "edgecolor": "k",
-                "marker": "*",
-            }
+            default_params_pc = dict(
+                s=300,
+                facecolor="gold",
+                edgecolor="k",
+                marker=MarkerStyle(marker="*", fillstyle="full"),
+            )
             [pc_kwargs.setdefault(k, v) for k, v in default_params_pc.items()]
             ax.scatter(x=pcx, y=pcy, **pc_kwargs)
 

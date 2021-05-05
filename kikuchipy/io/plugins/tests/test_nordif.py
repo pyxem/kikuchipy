@@ -31,6 +31,7 @@ from matplotlib.pyplot import imread
 import numpy as np
 import pytest
 
+from kikuchipy.conftest import assert_dictionary
 from kikuchipy.io._io import load
 from kikuchipy.io.plugins.nordif import get_settings_from_file, get_string
 from kikuchipy.signals.ebsd import EBSD
@@ -235,6 +236,7 @@ AXES_MANAGER = {
         "navigate": False,
     },
 }
+# AXES_MANAGER = make_dicts_compatible_with_hyperspy_v1_7(AXES_MANAGER)
 
 
 @pytest.fixture()
@@ -276,7 +278,7 @@ class TestNORDIF:
         s = load(PATTERN_FILE, setting_file=SETTING_FILE)
 
         assert s.data.shape == (3, 3, 60, 60)
-        assert s.axes_manager.as_dictionary() == AXES_MANAGER
+        assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
 
         static_bg = imread(BG_FILE)
         assert np.allclose(
@@ -376,8 +378,6 @@ class TestNORDIF:
         mm = s.data.dask[k]
         assert isinstance(mm, np.memmap)
         assert not mm.flags["WRITEABLE"]
-        with pytest.raises(NotImplementedError):
-            s.data[:] = 23
 
     @pytest.mark.parametrize("lazy", [True, False])
     def test_load_inplace(self, lazy):
@@ -386,7 +386,7 @@ class TestNORDIF:
                 _ = load(PATTERN_FILE, lazy=lazy, mmap_mode="r+")
         else:
             s = load(PATTERN_FILE, lazy=lazy, mmap_mode="r+")
-            assert s.axes_manager.as_dictionary() == AXES_MANAGER
+            assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
 
     def test_save_fresh(self, save_path_nordif):
         scan_size = (10, 3)

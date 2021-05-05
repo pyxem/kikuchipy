@@ -13,7 +13,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.7, 3.8]
+        python-version: [3.8, 3.9]
+        include:
+          # Oldest supported version of main dependencies on Python 3.7
+          - os: ubuntu-latest
+            python-version: 3.7
+            OLDEST_SUPPORTED_VERSION: true
+            DEPENDENCIES: dask==2.18 diffsims==0.4 hyperspy==1.5.2 matplotlib==3.3 numpy==1.19 orix==0.5.1 scikit-image==0.16.2
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -24,7 +30,13 @@ jobs:
         run: python -V; pip -V
       - name: Install depedencies and package
         shell: bash
-        run: pip install -U -e .'[doc, tests]'
+        run: pip install -U -e .'[tests]'
+      - name: Install oldest supported version
+        if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
+        run: pip install ${{ matrix.DEPENDENCIES }}
+      - name: Run docstring tests
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
       - name: Run tests
         run: pytest --cov=kikuchipy --pyargs kikuchipy
       - name: Generate line coverage

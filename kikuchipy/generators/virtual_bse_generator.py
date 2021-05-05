@@ -201,13 +201,15 @@ class VirtualBSEGenerator:
 
         Examples
         --------
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
         >>> s
-        <EBSD, title: Pattern, dimensions: (200, 149|60, 60)>
-        >>> vbse_gen = VirtualBSEGenerator(s)
+        <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
+        >>> vbse_gen = kp.generators.VirtualBSEGenerator(s)
         >>> vbse_gen.grid_shape = (5, 5)
         >>> vbse = vbse_gen.get_images_from_grid()
         >>> vbse
-        <VirtualBSEImage, title: , dimensions: (5, 5|200, 149)>
+        <VirtualBSEImage, title: , dimensions: (5, 5|3, 3)>
         """
         grid_shape = self.grid_shape
         new_shape = grid_shape + self.signal.axes_manager.navigation_shape[::-1]
@@ -217,8 +219,8 @@ class VirtualBSEGenerator:
             images[row, col] = self.signal.get_virtual_bse_intensity(roi).data
 
         vbse_images = VirtualBSEImage(images)
-        # TODO: Transfer signal's detector axes to new navigation axes with
-        #  proper binning
+        # TODO: Transfer signal's detector axes to new navigation axes
+        #  with proper binning
         vbse_images.axes_manager = _transfer_navigation_axes_to_signal_axes(
             new_axes=vbse_images.axes_manager, old_axes=self.signal.axes_manager
         )
@@ -243,15 +245,16 @@ class VirtualBSEGenerator:
         """
         rows = self.grid_rows
         cols = self.grid_cols
+        dc, dr = [i.scale for i in self.signal.axes_manager.signal_axes]
 
         if isinstance(index, tuple):
             index = (index,)
         index = np.array(index)
 
-        min_col = cols[min(index[:, 1])]
-        max_col = cols[max(index[:, 1])] + cols[1]
-        min_row = rows[min(index[:, 0])]
-        max_row = rows[max(index[:, 0])] + rows[1]
+        min_col = cols[min(index[:, 1])] * dc
+        max_col = (cols[max(index[:, 1])] + cols[1]) * dc
+        min_row = rows[min(index[:, 0])] * dr
+        max_row = (rows[max(index[:, 0])] + rows[1]) * dr
 
         return RectangularROI(
             left=min_col, top=min_row, right=max_col, bottom=max_row,
@@ -289,9 +292,9 @@ class VirtualBSEGenerator:
         pattern : kikuchipy.signals.EBSD
             A single pattern with the markers added.
         """
-        # Get detector scales
+        # Get detector scales (column, row)
         axes_manager = self.signal.axes_manager
-        dx, dy = [i.scale for i in axes_manager.signal_axes]
+        dc, dr = [i.scale for i in axes_manager.signal_axes]
 
         rows = self.grid_rows
         cols = self.grid_cols
@@ -303,8 +306,8 @@ class VirtualBSEGenerator:
             for row, col in np.ndindex(self.grid_shape):
                 markers.append(
                     Text(
-                        x=cols[col],
-                        y=rows[row] + (0.1 * rows[1]),
+                        x=cols[col] * dc,
+                        y=(rows[row] + (0.1 * rows[1])) * dr,
                         text=f"{row,col}",
                         color=color,
                     )
@@ -312,8 +315,8 @@ class VirtualBSEGenerator:
 
         # Set lines
         kwargs.setdefault("color", "w")
-        markers += [HorizontalLine((i - 0.5) * dy, **kwargs) for i in rows]
-        markers += [VerticalLine((j - 0.5) * dx, **kwargs) for j in cols]
+        markers += [HorizontalLine((i - 0.5) * dr, **kwargs) for i in rows]
+        markers += [VerticalLine((j - 0.5) * dc, **kwargs) for j in cols]
 
         # Color RGB tiles
         if rgb_channels is not None:
@@ -325,10 +328,10 @@ class VirtualBSEGenerator:
                     roi = self.roi_from_grid((row, col))
                     markers += [
                         Rectangle(
-                            x1=(roi.left - 0.5) * dx,
-                            y1=(roi.top - 0.5) * dx,
-                            x2=(roi.right - 0.5) * dy,
-                            y2=(roi.bottom - 0.5) * dy,
+                            x1=(roi.left - 0.5) * dc,
+                            y1=(roi.top - 0.5) * dc,
+                            x2=(roi.right - 0.5) * dr,
+                            y2=(roi.bottom - 0.5) * dr,
                             **kwargs,
                         )
                     ]

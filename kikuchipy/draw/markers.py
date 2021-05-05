@@ -118,16 +118,5 @@ def get_text_list(
             x[~is_finite[..., i]] = np.nan
             y[~is_finite[..., i]] = np.nan
             text_marker = text(x=x, y=y, text=texts[i], **kwargs,)
-            # TODO: Pass "visible" parameter to text() when HyperSpy allows
-            #  it (merges this PR
-            #  https://github.com/hyperspy/hyperspy/pull/2558 and publishes
-            #  a minor release with that update)
-            # text_marker = text(
-            #     x=coordinates[..., i, 0],
-            #     y=coordinates[..., i, 1],
-            #     text=texts[i],
-            #     visible=is_finite[..., i],
-            #     **kwargs
-            # )
             marker_list.append(text_marker)
     return marker_list
