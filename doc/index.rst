@@ -31,6 +31,7 @@ kikuchipy
 
     reference.rst
     bibliography.rst
+    kikuchipy_h5ebsd_specification.rst
     contributing.rst
     open_datasets.rst
     changelog.rst

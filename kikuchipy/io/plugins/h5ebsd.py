@@ -28,6 +28,8 @@ from hyperspy.exceptions import VisibleDeprecationWarning
 from hyperspy.io_plugins.hspy import overwrite_dataset
 import h5py
 import numpy as np
+from orix import __version__ as orix_ver
+from orix.io.plugins.orix_hdf5 import crystalmap2dict, dict2hdf5group
 
 from kikuchipy.io._util import (
     _get_input_variable,
@@ -806,7 +808,7 @@ BRUKER_DETECTOR_MODEL_RESOLUTION = dict(
 )
 
 
-def file_writer(
+def file_writer2(
     filename: str,
     signal,
     add_scan: Optional[bool] = None,
@@ -814,8 +816,8 @@ def file_writer(
     **kwargs,
 ):
     """Write an :class:`~kikuchipy.signals.EBSD` or
-    :class:`~kikuchipy.signals.LazyEBSD` signal to an existing,
-    but not open, or new h5ebsd file.
+    :class:`~kikuchipy.signals.LazyEBSD` signal to an existing, but not
+    open, or new h5ebsd file.
 
     Only writing to kikuchipy's h5ebsd format is supported.
 
@@ -945,6 +947,14 @@ def file_writer(
     }
     dict2h5ebsdgroup(sample_pos, scan_group["EBSD/Data"])
 
+    # Write crystal map to file
+    xmap = signal.xmap
+    if xmap is not None:
+        scan_group.create_group("EBSD/CrystalMap")
+        file_dict = dict(manufacturer="orix", version=orix_ver)
+        dict2hdf5group(file_dict, scan_group["EBSD/CrystalMap"])
+        dict2hdf5group(crystalmap2dict(xmap), scan_group["EBSD/CrystalMap"])
+
     f.close()
 
 
@@ -982,8 +992,221 @@ def dict2h5ebsdgroup(dictionary: dict, group: h5py.Group, **kwargs):
             except TypeError:
                 warnings.warn(
                     "The hdf5 writer could not write the following information "
-                    "to the file '{} : {}'.".format(key, val)
+                    f"to the file '{key} : {val}'."
                 )
                 break  # or continue?
         group.create_dataset(key, shape=dshape, dtype=ddtype, **kwargs)
         group[key][()] = val
+
+
+class H5ebsdFile:
+    from kikuchipy.release import version as ver_signal
+
+    manufacturer = "kikuchipy"
+    version = ver_signal
+
+    def __init__(self, filename: str, signal):
+        self.filename = filename
+        self.signal = signal
+        self.old_file = os.path.isfile(filename)
+
+    @property
+    def all_scan_groups(self) -> list:
+        f = self.file
+        scan_group_list = []
+        for k in f["/"].keys():
+            if "Scan" in k:
+                scan_group_list.append(f[k])
+        return scan_group_list
+
+    @property
+    def data_shape_out(self):
+        data_shape = [1] * 4  # (ny, nx, sy, sx)
+        am = self.signal.axes_manager
+        nav_axes = am.navigation_axes
+        nav_dim = am.navigation_dimension
+        if nav_dim == 1:
+            nav_axis = nav_axes[0]
+            if nav_axis.name == "y":
+                data_shape[0] = nav_axis.size
+            else:  # nav_axis.name == "x", or something else
+                data_shape[1] = nav_axis.size
+        elif nav_dim == 2:
+            data_shape[:2] = [a.size for a in nav_axes][::-1]
+        data_shape[2:] = am.signal_shape[::-1]
+        return data_shape
+
+    @property
+    def ebsd_metadata(self) -> dict:
+        md = self.signal_metadata
+        return md["Acquisition_instrument"]["SEM"]["Detector"]["EBSD"]
+
+    @property
+    def scan_number(self) -> list:
+        scan_number_list = []
+        for gr in self.all_scan_groups:
+            gr_name = int(gr.name.split()[-1])
+            scan_number_list.append(gr_name)
+        return scan_number_list
+
+    @property
+    def sem_metadata(self) -> dict:
+        md = self.signal_metadata
+        return md["Acquisition_instrument"]["SEM"]
+
+    @property
+    def signal_metadata(self) -> dict:
+        return self.signal.metadata.as_dictionary()
+
+    def check_file(self):
+        f = self.file
+        top_groups = list(f["/"].keys())
+        scan_groups = get_scan_groups(f)
+        n_groups = len(top_groups)
+        if len(scan_groups) != n_groups - 2:
+            raise IOError(
+                f"'{f.filename}' is not an h5ebsd file, as manufacturer and/or"
+                " version could not be read from its top group"
+            )
+        if not any(
+            "EBSD/Data" in group and "EBSD/Header" in group
+            for group in scan_groups
+        ):
+            raise IOError(
+                f"'{f.filename}' is not an h5ebsd file, as no top groups with "
+                "subgroup name 'EBSD' with subgroups 'Data' and 'Header' was "
+                "detected"
+            )
+
+    def get_ebsd_header_dict(self):
+        md = self.ebsd_metadata
+        det = self.signal.detector
+        return dict(
+            scan_time=md["scan_time"],
+            static_background=md["static_background"],
+            Detector=dict(
+                azimuth_angle=0,
+                binning=det.binning,
+                exposure_time=md["exposure_time"],
+                frame_number=md["frame_number"],
+                frame_rate=md["frame_rate"],
+                gain=md["gain"],
+                name=md["detector"],
+                pc=det.pc,
+                px_size=det.px_size,
+                sample_tilt=det.sample_tilt,
+                tilt=det.tilt,
+            ),
+        )
+
+    def get_sem_header_dict(self):
+        md = self.sem_metadata
+        return dict(
+            beam_energy=md["beam_energy"],
+            magnification=md["magnification"],
+            microscope=md["microscope"],
+            working_distance=md["working_distance"],
+        )
+
+    def open_file(self, add_scan: bool):
+        if self.old_file and add_scan:
+            mode = "r+"
+        else:
+            mode = "w"
+        try:
+            self.file = h5py.File(self.filename, mode=mode)
+        except OSError:
+            raise OSError("Cannot write to an already open file")
+
+    def set_manufacturer(self):
+        for k, v in hdf5group2dict(group=self.file["/"]).items():
+            if k.lower() == "manufacturer":
+                self.manufacturer = v
+                break
+        else:
+            self.manufacturer = None
+
+    def set_version(self):
+        for k, v in hdf5group2dict(group=self.file["/"]).items():
+            if k.lower() == "version":
+                self.version = v
+                break
+        else:
+            self.version = None
+
+    def write(
+        self, add_scan: Optional[bool] = None, scan_number: int = 1, **kwargs
+    ):
+        self.open_file(add_scan=add_scan)
+        if self.old_file and add_scan:
+            # File exists, try to add to it
+            self.check_file()
+            self.set_manufacturer()
+            self.set_version()
+            file_manufacturer = self.manufacturer
+            if file_manufacturer.lower() != "kikuchipy":
+                self.file.close()
+                raise IOError(
+                    "Only writing to kikuchipy's (and not "
+                    f"{file_manufacturer}'s) h5ebsd format is supported"
+                )
+            for i in self.scan_number:
+                if i == scan_number:
+                    q = f"Scan {i} already in file, enter another scan number:\n"
+                    scan_number = _get_input_variable(q, int)
+                    if scan_number is None:
+                        raise IOError("Invalid scan number.")
+        else:
+            # File did not exist
+            dict2h5ebsdgroup(
+                dict(manufacturer=self.manufacturer, version=self.version),
+                self.file["/"],
+                **kwargs,
+            )
+
+        # Create scan group
+        scan_group = self.file.create_group(f"Scan {scan_number}")
+
+        # Write metadata to scan group
+        dict2h5ebsdgroup(
+            dict(
+                EBSD=dict(Header=self.get_ebsd_header_dict()),
+                SEM=dict(Header=self.get_sem_header_dict()),
+            ),
+            scan_group,
+        )
+
+        # Write signal to file
+        man_pats = manufacturer_pattern_names()
+        dset_pattern_name = man_pats["kikuchipy"]
+        ny, nx, sy, sx = self.data_shape_out
+        overwrite_dataset(
+            scan_group.create_group("EBSD/Data"),
+            self.signal.data.reshape(nx * ny, sy, sx),
+            dset_pattern_name,
+            signal_axes=(2, 1),
+            **kwargs,
+        )
+
+        # Write crystallographic data to scan group
+        xmap = self.signal.xmap
+        if xmap is not None:
+            from orix import __version__ as ver_orix
+
+            dict2hdf5group(
+                dict(manufacturer="orix", version=ver_orix, crystal_map=xmap),
+                scan_group.create_group("EBSD/CrystalMap"),
+            )
+
+        self.file.close()
+
+
+def file_writer(
+    filename: str,
+    signal,
+    add_scan: Optional[bool] = None,
+    scan_number: int = 1,
+    **kwargs,
+):
+    f = H5ebsdFile(filename=filename, signal=signal)
+    f.write(add_scan=add_scan, scan_number=scan_number, **kwargs)

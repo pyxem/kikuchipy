@@ -24,8 +24,10 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 from hyperspy.exceptions import VisibleDeprecationWarning
 from h5py import File, Dataset
 import numpy as np
+from orix import quaternion
 import pytest
 
+import kikuchipy as kp
 from kikuchipy.data import nickel_ebsd_small
 from kikuchipy.conftest import assert_dictionary
 from kikuchipy.io._io import load
@@ -97,6 +99,28 @@ class Testh5ebsd:
 
         assert s.data.shape == (3, 3, 60, 60)
         assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
+
+    def test_save_load_kikuchipy_xmap(self, detector, save_path_hdf5):
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
+        r = quaternion.Rotation.from_euler(np.deg2rad([[0, 0, 0], [45, 0, 0]]))
+        sim1 = mp.get_patterns(
+            rotations=r,
+            detector=detector,
+            energy=20,
+            dtype_out=np.uint8,
+            compute=True,
+        )
+        xmap1 = sim1.xmap.deepcopy()
+        assert xmap1.size == 2
+        assert np.allclose(xmap1.rotations.data, r.data)
+        pg = xmap1.phases[0].point_group.name
+        assert pg == mp.phase.point_group.name
+        sim1.save(save_path_hdf5)
+
+        sim2 = kp.load(save_path_hdf5)
+        xmap2 = sim2.xmap.deepcopy()
+        assert xmap2.size == xmap1.size
+        assert xmap2.phases[0].point_group.name == pg
 
     def test_load_edax(self):
         with File(EDAX_FILE, mode="r+") as f:
@@ -230,7 +254,6 @@ class Testh5ebsd:
 
         # Write both patterns and learning results to the HSpy file
         # format
-        #        file = tmp_path / "patterns.hspy"
         os.chdir(tmp_path)
         file = "patterns.hspy"
         s.save(file)

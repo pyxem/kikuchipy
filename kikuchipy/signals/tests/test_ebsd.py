@@ -1218,7 +1218,7 @@ class TestEBSDxmapProperty:
         assert isinstance(xmap, CrystalMap)
         assert xmap.phases[0].name == "ni"
 
-    def test_attribute_carry_over_from_lazy(self, dummy_signal):
+    def test_attribute_carry_over_from_lazy(self):
         ssim = load(EMSOFT_FILE, lazy=True)
         xmap_lazy = ssim.xmap.deepcopy()
         assert isinstance(xmap_lazy, CrystalMap)
