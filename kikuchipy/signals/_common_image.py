@@ -91,27 +91,37 @@ class CommonImage(Signal2D):
 
         Examples
         --------
+        >>> import numpy as np
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
+
         Image intensities are stretched to fill the available grey
         levels in the input images' data type range or any
         :class:`numpy.dtype` range passed to `dtype_out`, either
         keeping relative intensities between images or not:
 
-        >>> print(s.data.dtype_out, s.data.min(), s.data.max(),
-        ...       s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
-        uint8 20 254 24 233
+        >>> print(
+        ...     s.data.dtype, s.data.min(), s.data.max(),
+        ...     s.inav[0, 0].data.min(), s.inav[0, 0].data.max()
+        ... )
+        uint8 23 246 26 245
         >>> s2 = s.deepcopy()
-        >>> s.rescale_intensity(dtype_out=np.uint16)
-        >>> print(s.data.dtype_out, s.data.min(), s.data.max(),
-        ...       s.inav[0, 0].data.min(), s.inav[0, 0].data.max())
+        >>> s.rescale_intensity(dtype_out=np.uint16)  # doctest: +SKIP
+        >>> print(
+        ...     s.data.dtype, s.data.min(), s.data.max(),
+        ...     s.inav[0, 0].data.min(), s.inav[0, 0].data.max()
+        ... )  # doctest: +SKIP
         uint16 0 65535 0 65535
-        >>> s2.rescale_intensity(relative=True)
-        >>> print(s2.data.dtype_out, s2.data.min(), s2.data.max(),
-        ...       s2.inav[0, 0].data.min(), s2.inav[0, 0].data.max())
-        uint8 0 255 4 232
+        >>> s2.rescale_intensity(relative=True)  # doctest: +SKIP
+        >>> print(
+        ...     s2.data.dtype, s2.data.min(), s2.data.max(),
+        ...     s2.inav[0, 0].data.min(), s2.inav[0, 0].data.max()
+        ... )  # doctest: +SKIP
+        uint8 0 255 3 253
 
         Contrast stretching can be performed by passing percentiles:
 
-        >>> s.rescale_intensity(percentiles=(1, 99))
+        >>> s.rescale_intensity(percentiles=(1, 99))  # doctest: +SKIP
 
         Here, the darkest and brightest pixels within the 1% percentile
         are set to the ends of the data type range, e.g. 0 and 255
@@ -199,11 +209,13 @@ class CommonImage(Signal2D):
 
         Examples
         --------
+        >>> import numpy as np
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
         >>> np.mean(s.data)
         146.0670987654321
-        >>> s.change_dtype(np.float32)  # Or passing dtype_out=np.float32
-        >>> s.normalize_intensity()
-        >>> np.mean(s.data)
+        >>> s.normalize_intensity(dtype_out=np.float32)  # doctest: +SKIP
+        >>> np.mean(s.data)  # doctest: +SKIP
         2.6373216e-08
 
         Notes

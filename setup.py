@@ -100,6 +100,7 @@ setup(
         "SEM",
         "scanning electron microscopy",
         "kikuchi pattern",
+        "dictionary indexing",
     ],
     zip_safe=True,
     # Contact
