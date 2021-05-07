@@ -370,8 +370,9 @@ def get_single_phase_xmap(rotations):
         prop_names=["scores", "simulation_indices"],
         name="a",
         phase_id=0,
+        step_sizes=(1.5, 1),
     ):
-        d, map_size = _get_spatial_array_dicts(nav_shape)
+        d, map_size = _get_spatial_array_dicts(nav_shape, step_sizes)
         rot_idx = np.random.choice(
             np.arange(rotations.size), map_size * rotations_per_point
         )

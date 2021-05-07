@@ -84,6 +84,11 @@ EBSDDetector
 .. currentmodule:: kikuchipy.detectors.EBSDDetector
 
 .. autosummary::
+    deepcopy
+    pc_bruker
+    pc_emsoft
+    pc_oxford
+    pc_tsl
     plot
 
 .. autoclass:: kikuchipy.detectors.EBSDDetector
@@ -482,6 +487,9 @@ EBSD
 All methods listed here are also available to
 :class:`~kikuchipy.signals.LazyEBSD` objects.
 
+See :class:`hyperspy._signals.signal2d.Signal2D` for methods inherited
+from HyperSpy.
+
 .. currentmodule:: kikuchipy.signals.EBSD
 
 .. autosummary::
@@ -532,6 +540,9 @@ EBSDMasterPattern
 All methods listed here are also available to
 :class:`~kikuchipy.signals.LazyEBSDMasterPattern` objects.
 
+See :class:`hyperspy._signals.signal2d.Signal2D` for methods inherited
+from HyperSpy.
+
 .. currentmodule:: kikuchipy.signals.EBSDMasterPattern
 
 .. autosummary::
@@ -553,6 +564,9 @@ There are no methods exclusive to LazyEBSDMasterPattern objects.
 
 VirtualBSEImage
 ---------------
+
+See :class:`hyperspy._signals.signal2d.Signal2D` for methods inherited
+from HyperSpy.
 
 .. currentmodule:: kikuchipy.signals.VirtualBSEImage
 
