@@ -29,13 +29,8 @@ import pytest
 from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
 
-from kikuchipy import load
-from kikuchipy.data import nickel_ebsd_small, nickel_ebsd_large
+import kikuchipy as kp
 from kikuchipy.conftest import assert_dictionary
-from kikuchipy.filters.window import Window
-from kikuchipy.pattern._pattern import fft_spectrum
-from kikuchipy.signals.ebsd import EBSD, LazyEBSD
-from kikuchipy.signals.util._metadata import ebsd_metadata, metadata_nodes
 
 matplotlib.use("Agg")  # For plotting
 
@@ -49,21 +44,21 @@ class TestEBSD:
 
         # Signal shape
         array0 = np.zeros(shape=(10, 10, 10, 10))
-        s0 = EBSD(array0)
+        s0 = kp.signals.EBSD(array0)
         assert array0.shape == s0.axes_manager.shape
 
         # Cannot initialise signal with one signal dimension
         with pytest.raises(ValueError):
-            _ = EBSD(np.zeros(10))
+            _ = kp.signals.EBSD(np.zeros(10))
 
         # Shape of one-image signal
         array1 = np.zeros(shape=(10, 10))
-        s1 = EBSD(array1)
+        s1 = kp.signals.EBSD(array1)
         assert array1.shape == s1.axes_manager.shape
 
         # SEM metadata
-        kp_md = ebsd_metadata()
-        sem_node = metadata_nodes("sem")
+        kp_md = kp.signals.util.ebsd_metadata()
+        sem_node = kp.signals.util.metadata_nodes("sem")
         assert_dictionary(
             kp_md.get_item(sem_node), s1.metadata.get_item(sem_node)
         )
@@ -77,7 +72,7 @@ class TestEBSD:
         # Assert that lazy attribute and class changed, while metadata was not
         # changed
         assert lazy_signal._lazy is True
-        assert lazy_signal.__class__ == LazyEBSD
+        assert lazy_signal.__class__ == kp.signals.LazyEBSD
         assert_dictionary(
             dummy_signal.metadata.as_dictionary(),
             lazy_signal.metadata.as_dictionary(),
@@ -108,7 +103,7 @@ class TestEBSD:
             "magnification": 500,
         }
         dummy_signal.set_experimental_parameters(**p)
-        ebsd_node = metadata_nodes("ebsd")
+        ebsd_node = kp.signals.util.metadata_nodes("ebsd")
         md_dict = dummy_signal.metadata.get_item(ebsd_node).as_dictionary()
         assert_dictionary(p, md_dict)
 
@@ -267,7 +262,7 @@ class TestRemoveStaticBackgroundEBSD:
         static background pattern to `remove_static_background().`
         """
 
-        ebsd_node = metadata_nodes("ebsd")
+        ebsd_node = kp.signals.util.metadata_nodes("ebsd")
         dummy_signal.metadata.set_item(
             ebsd_node + ".static_background", static_bg
         )
@@ -311,7 +306,7 @@ class TestRemoveStaticBackgroundEBSD:
             )
 
     def test_non_square_patterns(self):
-        s = nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
         s = s.isig[:, :-5]  # Remove bottom five rows
         static_bg = s.mean(axis=(0, 1))
         static_bg.change_dtype(np.uint8)
@@ -597,7 +592,7 @@ class TestAdaptiveHistogramEqualizationEBSD:
         actual equalization are found elsewhere.
         """
 
-        s = load(KIKUCHIPY_FILE)
+        s = kp.load(KIKUCHIPY_FILE)
 
         # These window sizes should work without issue
         for kernel_size in [None, 10]:
@@ -610,7 +605,7 @@ class TestAdaptiveHistogramEqualizationEBSD:
             s.adaptive_histogram_equalization(kernel_size=(10, 10, 10))
 
     def test_lazy_adaptive_histogram_equalization(self):
-        s = load(KIKUCHIPY_FILE, lazy=True)
+        s = kp.load(KIKUCHIPY_FILE, lazy=True)
         s.adaptive_histogram_equalization()
         assert isinstance(s.data, da.Array)
 
@@ -741,7 +736,7 @@ class TestAverageNeighbourPatternsEBSD:
         assert dummy_signal.data.dtype == answer.dtype
 
     def test_average_neighbour_patterns_pass_window(self, dummy_signal):
-        w = Window()
+        w = kp.filters.Window()
         dummy_signal.average_neighbour_patterns(w)
         # fmt: off
         answer = np.array(
@@ -767,14 +762,16 @@ class TestAverageNeighbourPatternsEBSD:
             (6,),
             (6,),
         )
-        s = LazyEBSD(da.zeros((55, 75, 6, 6), chunks=chunks, dtype=np.uint8))
+        s = kp.signals.LazyEBSD(
+            da.zeros((55, 75, 6, 6), chunks=chunks, dtype=np.uint8)
+        )
         s.average_neighbour_patterns()
         s.compute()
 
 
 class TestRebin:
     def test_rebin(self, dummy_signal):
-        ebsd_node = metadata_nodes("ebsd")
+        ebsd_node = kp.signals.util.metadata_nodes("ebsd")
 
         # Passing new_shape, only scaling in signal space
         new_shape = (3, 3, 2, 1)
@@ -800,7 +797,7 @@ class TestRebin:
         ]
         s2 = dummy_signal.copy().as_lazy()
         s3 = dummy_signal.rebin(scale=scale, out=s2)
-        assert isinstance(s2, LazyEBSD)
+        assert isinstance(s2, kp.signals.LazyEBSD)
         assert s2.axes_manager.shape == tuple(expected_new_shape)
         assert s2.metadata.get_item(ebsd_node + ".binning") == float(scale[3])
         assert s3 is None
@@ -841,13 +838,13 @@ class TestDecomposition:
     def test_decomposition(self, dummy_signal):
         dummy_signal.change_dtype(np.float32)
         dummy_signal.decomposition()
-        assert isinstance(dummy_signal, EBSD)
+        assert isinstance(dummy_signal, kp.signals.EBSD)
 
     def test_lazy_decomposition(self, dummy_signal):
         lazy_signal = dummy_signal.as_lazy()
         lazy_signal.change_dtype(np.float32)
         lazy_signal.decomposition()
-        assert isinstance(lazy_signal, LazyEBSD)
+        assert isinstance(lazy_signal, kp.signals.LazyEBSD)
 
     @pytest.mark.parametrize(
         "components, dtype_out, mean_intensity",
@@ -874,7 +871,7 @@ class TestDecomposition:
         # Check data shape, signal class and image intensities in model
         # signal
         assert model_signal.data.shape == dummy_signal.data.shape
-        assert isinstance(model_signal, EBSD)
+        assert isinstance(model_signal, kp.signals.EBSD)
         assert np.allclose(model_signal.data.mean(), mean_intensity, atol=1e-3)
 
     @pytest.mark.parametrize(
@@ -890,7 +887,7 @@ class TestDecomposition:
         lazy_signal.decomposition(algorithm="PCA", output_dimension=9)
 
         # Signal type
-        assert isinstance(lazy_signal, LazyEBSD)
+        assert isinstance(lazy_signal, kp.signals.LazyEBSD)
 
         # Turn factors and loadings into dask arrays
         lazy_signal.learning_results.factors = da.from_array(
@@ -908,7 +905,7 @@ class TestDecomposition:
         # Check data shape, signal class and image intensities in model
         # signal after rescaling to 8 bit unsigned integer
         assert model_signal.data.shape == lazy_signal.data.shape
-        assert isinstance(model_signal, LazyEBSD)
+        assert isinstance(model_signal, kp.signals.LazyEBSD)
         model_signal.rescale_intensity(relative=True, dtype_out=np.uint8)
         model_mean = model_signal.data.mean().compute()
         assert np.allclose(model_mean, mean_intensity, atol=0.1)
@@ -938,7 +935,7 @@ class TestDecomposition:
         lazy_signal.get_decomposition_model_write(
             components=components, dir_out=tmp_path, fname_out=fname_out
         )
-        s_reload = load(os.path.join(tmp_path, fname_out))
+        s_reload = kp.load(os.path.join(tmp_path, fname_out))
 
         # ... data type, data shape and mean intensity
         assert s_reload.data.dtype == lazy_signal.data.dtype
@@ -951,15 +948,15 @@ class TestLazy:
         lazy_signal = dummy_signal.as_lazy()
 
         lazy_signal.compute()
-        assert isinstance(lazy_signal, EBSD)
+        assert isinstance(lazy_signal, kp.signals.EBSD)
         assert lazy_signal._lazy is False
 
     def test_change_dtype(self, dummy_signal):
         lazy_signal = dummy_signal.as_lazy()
 
-        assert isinstance(lazy_signal, LazyEBSD)
+        assert isinstance(lazy_signal, kp.signals.LazyEBSD)
         lazy_signal.change_dtype("uint16")
-        assert isinstance(lazy_signal, LazyEBSD)
+        assert isinstance(lazy_signal, kp.signals.LazyEBSD)
 
 
 class TestGetDynamicBackgroundEBSD:
@@ -970,7 +967,7 @@ class TestGetDynamicBackgroundEBSD:
         )
 
         assert bg.data.dtype == dtype_out
-        assert isinstance(bg, EBSD)
+        assert isinstance(bg, kp.signals.EBSD)
 
     def test_get_dynamic_background_frequency(self, dummy_signal):
         dtype_out = np.float32
@@ -979,7 +976,7 @@ class TestGetDynamicBackgroundEBSD:
         )
 
         assert bg.data.dtype == dtype_out
-        assert isinstance(bg, EBSD)
+        assert isinstance(bg, kp.signals.EBSD)
 
     def test_get_dynamic_background_raises(self, dummy_signal):
         filter_domain = "Vasselheim"
@@ -991,11 +988,11 @@ class TestGetDynamicBackgroundEBSD:
 
         bg = lazy_signal.get_dynamic_background()
 
-        assert isinstance(bg, LazyEBSD)
+        assert isinstance(bg, kp.signals.LazyEBSD)
 
         bg.compute()
 
-        assert isinstance(bg, EBSD)
+        assert isinstance(bg, kp.signals.EBSD)
 
 
 class TestGetImageQualityEBSD:
@@ -1076,16 +1073,16 @@ class TestFFTFilterEBSD:
         dummy_signal.data = dummy_signal.data.astype(dtype_out)
 
         shape = dummy_signal.axes_manager.signal_shape
-        w = Window(transfer_function, shape=shape, **kwargs)
+        w = kp.filters.Window(transfer_function, shape=shape, **kwargs)
 
         dummy_signal.fft_filter(
             transfer_function=w, function_domain="frequency", shift=shift,
         )
 
-        assert isinstance(dummy_signal, EBSD)
+        assert isinstance(dummy_signal, kp.signals.EBSD)
         assert dummy_signal.data.dtype == dtype_out
         assert np.allclose(
-            np.sum(fft_spectrum(dummy_signal.inav[0, 0].data)),
+            np.sum(kp.pattern.fft_spectrum(dummy_signal.inav[0, 0].data)),
             expected_spectrum_sum,
             atol=1e-4,
         )
@@ -1129,7 +1126,7 @@ class TestFFTFilterEBSD:
             transfer_function=w, function_domain="frequency", shift=False
         )
 
-        assert isinstance(lazy_signal, LazyEBSD)
+        assert isinstance(lazy_signal, kp.signals.LazyEBSD)
         assert lazy_signal.data.dtype == dummy_signal.data.dtype
 
 
@@ -1194,7 +1191,7 @@ class TestNormalizeIntensityEBSD:
         else:
             assert np.allclose(np.mean(dummy_signal.data), 0, atol=1e-6)
 
-        assert isinstance(dummy_signal, EBSD)
+        assert isinstance(dummy_signal, kp.signals.EBSD)
         assert dummy_signal.data.dtype == dtype_out
         assert np.allclose(dummy_signal.inav[0, 0].data, answer, atol=1e-4)
 
@@ -1204,22 +1201,22 @@ class TestNormalizeIntensityEBSD:
 
         lazy_signal.normalize_intensity()
 
-        assert isinstance(lazy_signal, LazyEBSD)
+        assert isinstance(lazy_signal, kp.signals.LazyEBSD)
         assert np.allclose(np.mean(lazy_signal.data.compute()), 0, atol=1e-6)
 
 
-class TestEBSDxmapProperty:
+class TestEBSDXmapProperty:
     def test_init_xmap(self, dummy_signal):
         """The attribute is set correctly."""
         assert dummy_signal.xmap is None
 
-        ssim = load(EMSOFT_FILE)
+        ssim = kp.load(EMSOFT_FILE)
         xmap = ssim.xmap
         assert isinstance(xmap, CrystalMap)
         assert xmap.phases[0].name == "ni"
 
-    def test_attribute_carry_over_from_lazy(self, dummy_signal):
-        ssim = load(EMSOFT_FILE, lazy=True)
+    def test_attribute_carry_over_from_lazy(self):
+        ssim = kp.load(EMSOFT_FILE, lazy=True)
         xmap_lazy = ssim.xmap.deepcopy()
         assert isinstance(xmap_lazy, CrystalMap)
         assert xmap_lazy.phases[0].name == "ni"
@@ -1230,13 +1227,63 @@ class TestEBSDxmapProperty:
         assert xmap.phases[0].name == "ni"
         assert np.allclose(xmap.rotations.data, xmap_lazy.rotations.data)
 
+    def test_set_xmap(self, get_single_phase_xmap):
+        s = kp.data.nickel_ebsd_large(lazy=True)
+        nav_shape = s.axes_manager.navigation_shape[::-1]
+        step_sizes = (1.5, 1.5)
+
+        # Should succeed
+        xmap_good = get_single_phase_xmap(
+            nav_shape=nav_shape, step_sizes=step_sizes
+        )
+        s.xmap = xmap_good
+
+        # Should fail
+        xmap_bad = get_single_phase_xmap(
+            nav_shape=nav_shape[::-1], step_sizes=step_sizes,
+        )
+        with pytest.raises(AttributeError, match="The crystal map shape"):
+            s.xmap = xmap_bad
+        with pytest.raises(AttributeError, match="The crystal map shape"):
+            s.axes_manager["x"].scale = 2
+            s.xmap = xmap_good
+        with pytest.raises(AttributeError, match="The crystal map shape"):
+            s.axes_manager["x"].scale = 1
+            s.axes_manager["x"].name = "x2"
+            with pytest.warns(UserWarning, match="The signal navigation axes"):
+                s.xmap = xmap_good
+
+    def test_attribute_carry_over_from_deepcopy(self, get_single_phase_xmap):
+        s = kp.data.nickel_ebsd_small(lazy=True)
+        nav_axes = s.axes_manager.navigation_axes[::-1]
+        nav_shape = (a.size for a in nav_axes)
+        nav_scales = (a.scale for a in nav_axes)
+
+        xmap = get_single_phase_xmap(nav_shape=nav_shape, step_sizes=nav_scales)
+        s.xmap = xmap
+
+        s2 = s.deepcopy()
+        assert isinstance(s2.xmap, CrystalMap)
+        r1 = s.xmap.rotations.data
+        r2 = s2.xmap.rotations.data
+        assert not np.may_share_memory(r1, r2)
+        assert np.allclose(r1, r2)
+        assert not np.may_share_memory(s.detector.pc, s2.detector.pc)
+
+
+class TestEBSDDetectorProperty:
+    def test_attribute_carry_over_from_deepcopy(self):
+        s = kp.data.nickel_ebsd_small(lazy=True)
+        s._detector = None
+        s2 = s.deepcopy()
+
 
 class TestPatternMatching:
     def test_match_patterns(self, dummy_signal):
         """Scores are all 1.0 for a dictionary containing all patterns
         from dummy_signal().
         """
-        s_dict = EBSD(dummy_signal.data.reshape(-1, 3, 3))
+        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
         s_dict._xmap = CrystalMap(Rotation(np.zeros((9, 4))))
         xmap = dummy_signal.match_patterns(s_dict)
 
@@ -1245,17 +1292,17 @@ class TestPatternMatching:
 
 class TestAverageNeighbourDotProductMap:
     def test_adp_0d(self):
-        s = nickel_ebsd_small().inav[0, 0]
+        s = kp.data.nickel_ebsd_small().inav[0, 0]
         with pytest.raises(ValueError, match="Signal must have at least one"):
             _ = s.get_average_neighbour_dot_product_map()
 
     def test_adp_1d(self):
-        s = nickel_ebsd_small().inav[0]
+        s = kp.data.nickel_ebsd_small().inav[0]
         adp = s.get_average_neighbour_dot_product_map()
         assert np.allclose(adp, [0.997470, 0.997457, 0.99744], atol=1e-5)
 
     def test_adp_2d(self):
-        s = nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
         adp = s.get_average_neighbour_dot_product_map()
         assert np.allclose(
             adp,
@@ -1290,8 +1337,8 @@ class TestAverageNeighbourDotProductMap:
         ],
     )
     def test_adp_window(self, window, desired_adp_map):
-        s = nickel_ebsd_small()
-        w = Window(window=window)
+        s = kp.data.nickel_ebsd_small()
+        w = kp.filters.Window(window=window)
         adp = s.get_average_neighbour_dot_product_map(window=w)
         assert np.allclose(adp, desired_adp_map, atol=1e-5)
 
@@ -1317,7 +1364,7 @@ class TestAverageNeighbourDotProductMap:
         ],
     )
     def test_adp_zero_mean(self, zero_mean, desired_adp_map):
-        s = nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
         adp = s.get_average_neighbour_dot_product_map(zero_mean=zero_mean)
         assert np.allclose(adp, desired_adp_map, atol=1e-5)
 
@@ -1343,12 +1390,12 @@ class TestAverageNeighbourDotProductMap:
         ],
     )
     def test_adp_normalize(self, normalize, desired_adp_map):
-        s = nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
         adp = s.get_average_neighbour_dot_product_map(normalize=normalize)
         assert np.allclose(adp, desired_adp_map, atol=1e-5)
 
     def test_adp_dtype_out(self):
-        s = nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
         dtype1 = np.float32
         adp1 = s.get_average_neighbour_dot_product_map(normalize=False)
         assert adp1.dtype == dtype1
@@ -1359,7 +1406,7 @@ class TestAverageNeighbourDotProductMap:
         assert adp2.dtype == dtype2
 
     def test_adp_lazy(self):
-        s = nickel_ebsd_small(lazy=True)
+        s = kp.data.nickel_ebsd_small(lazy=True)
         adp = s.get_average_neighbour_dot_product_map()
 
         assert np.allclose(
@@ -1374,7 +1421,7 @@ class TestAverageNeighbourDotProductMap:
         assert adp.dtype == np.float32
 
     def test_adp_lazy2(self):
-        s = nickel_ebsd_large()
+        s = kp.data.nickel_ebsd_large()
         s_lazy = s.as_lazy()
         adp = s.get_average_neighbour_dot_product_map()
         adp_lazy = s_lazy.get_average_neighbour_dot_product_map()
@@ -1386,13 +1433,13 @@ class TestAverageNeighbourDotProductMap:
     @pytest.mark.parametrize(
         "window",
         [
-            Window(window="circular", shape=(3, 3)),
-            Window(window="rectangular", shape=(3, 2)),
-            Window(window="rectangular", shape=(2, 3)),
+            kp.filters.Window(window="circular", shape=(3, 3)),
+            kp.filters.Window(window="rectangular", shape=(3, 2)),
+            kp.filters.Window(window="rectangular", shape=(2, 3)),
         ],
     )
     def test_adp_dp_matrices(self, window):
-        s = nickel_ebsd_large()
+        s = kp.data.nickel_ebsd_large()
         dp_matrices = s.get_neighbour_dot_product_matrices(window=window)
         adp1 = s.get_average_neighbour_dot_product_map(window=window)
         adp2 = s.get_average_neighbour_dot_product_map(dp_matrices=dp_matrices)
@@ -1401,7 +1448,7 @@ class TestAverageNeighbourDotProductMap:
 
     @pytest.mark.parametrize("slices", [(0,), (slice(0, 1), slice(None))])
     def test_adp_dp_matrices_shapes(self, slices):
-        s = nickel_ebsd_small().inav[slices]
+        s = kp.data.nickel_ebsd_small().inav[slices]
         dp_matrices = s.get_neighbour_dot_product_matrices()
         adp1 = s.get_average_neighbour_dot_product_map()
         adp2 = s.get_average_neighbour_dot_product_map(dp_matrices=dp_matrices)
@@ -1411,12 +1458,12 @@ class TestAverageNeighbourDotProductMap:
 
 class TestNeighbourDotProductMatrices:
     def test_dp_matrices_0d(self):
-        s = nickel_ebsd_small().inav[0, 0]
+        s = kp.data.nickel_ebsd_small().inav[0, 0]
         with pytest.raises(ValueError, match="Signal must have at least one"):
             _ = s.get_neighbour_dot_product_matrices()
 
     def test_dp_matrices_1d(self):
-        s = nickel_ebsd_small().inav[0]
+        s = kp.data.nickel_ebsd_small().inav[0]
         dp_matrices = s.get_neighbour_dot_product_matrices()
 
         assert dp_matrices.shape == s.axes_manager.navigation_shape + (3,)
@@ -1433,7 +1480,7 @@ class TestNeighbourDotProductMatrices:
         )
 
     def test_dp_matrices_2d(self):
-        s = nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
         dp_matrices = s.get_neighbour_dot_product_matrices()
 
         assert dp_matrices.shape == s.axes_manager.navigation_shape + (3, 3)
@@ -1450,7 +1497,7 @@ class TestNeighbourDotProductMatrices:
         )
 
     def test_dp_matrices_lazy(self):
-        s = nickel_ebsd_large()
+        s = kp.data.nickel_ebsd_large()
         s_lazy = s.as_lazy()
         dp_matrices = s.get_neighbour_dot_product_matrices()
         dp_matrices_lazy = s_lazy.get_neighbour_dot_product_matrices()
@@ -1463,7 +1510,7 @@ class TestNeighbourDotProductMatrices:
         "window, desired_dp_matrices_11",
         [
             (
-                Window(window="circular", shape=(3, 3)),
+                kp.filters.Window(window="circular", shape=(3, 3)),
                 [
                     [np.nan, 0.997347, np.nan],
                     [0.994177, 1, 0.997358],
@@ -1471,7 +1518,7 @@ class TestNeighbourDotProductMatrices:
                 ],
             ),
             (
-                Window(window="rectangular", shape=(3, 3)),
+                kp.filters.Window(window="rectangular", shape=(3, 3)),
                 [
                     [0.994048, 0.997347, 0.996990],
                     [0.994177, 1, 0.997358],
@@ -1479,17 +1526,17 @@ class TestNeighbourDotProductMatrices:
                 ],
             ),
             (
-                Window(window="rectangular", shape=(3, 2)),
+                kp.filters.Window(window="rectangular", shape=(3, 2)),
                 [[0.994048, 0.997347], [0.994177, 1], [0.994017, 0.997360]],
             ),
             (
-                Window(window="rectangular", shape=(2, 3)),
+                kp.filters.Window(window="rectangular", shape=(2, 3)),
                 [[0.994048, 0.997347, 0.996990], [0.994177, 1, 0.997358]],
             ),
         ],
     )
     def test_dp_matrices_window(self, window, desired_dp_matrices_11):
-        s = nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
         dp_matrices = s.get_neighbour_dot_product_matrices(window=window)
 
         assert np.allclose(
@@ -1501,7 +1548,7 @@ class TestNeighbourDotProductMatrices:
 
     @pytest.mark.parametrize("dtype_out", [np.float16, np.float32, np.float64])
     def test_dp_matrices_dtype_out(self, dtype_out):
-        s = nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
         dp_matrices = s.get_neighbour_dot_product_matrices(dtype_out=dtype_out)
 
         assert dp_matrices.dtype == dtype_out
@@ -1528,7 +1575,7 @@ class TestNeighbourDotProductMatrices:
         ],
     )
     def test_dp_matrices_zero_mean(self, zero_mean, desired_dp_matrices11):
-        s = nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
         dp_matrices = s.get_neighbour_dot_product_matrices(zero_mean=zero_mean)
 
         assert np.allclose(
@@ -1557,7 +1604,7 @@ class TestNeighbourDotProductMatrices:
         ],
     )
     def test_dp_matrices_normalize(self, normalize, desired_dp_matrices11):
-        s = nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
         dp_matrices = s.get_neighbour_dot_product_matrices(normalize=normalize)
 
         assert np.allclose(
@@ -1566,6 +1613,6 @@ class TestNeighbourDotProductMatrices:
 
     def test_dp_matrices_large(self):
         nav_shape = (250, 137)
-        s = LazyEBSD(da.ones(nav_shape + (96, 96), dtype=np.uint8))
+        s = kp.signals.LazyEBSD(da.ones(nav_shape + (96, 96), dtype=np.uint8))
         dp_matrices = s.get_neighbour_dot_product_matrices()
         assert dp_matrices.shape == nav_shape + (1, 1)

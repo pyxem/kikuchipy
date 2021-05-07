@@ -66,6 +66,9 @@ from kikuchipy.signals.util._dask import (
     _rechunk_learning_results,
     _update_learning_results,
 )
+from kikuchipy.signals.util._crystal_map import (
+    crystal_map_is_compatible_with_signal,
+)
 from kikuchipy.signals.util._map_helper import (
     _get_neighbour_dot_product_matrices,
     _get_average_dot_product_map,
@@ -117,6 +120,8 @@ class EBSD(CommonImage, Signal2D):
         if not self.metadata.has_item("Sample.Phases"):
             self.set_phase_parameters()
 
+    # ---------------------- Custom properties ----------------------- #
+
     @property
     def detector(self) -> EBSDDetector:
         """An :class:`~kikuchipy.detectors.ebsd_detector.EBSDDetector`
@@ -132,6 +137,15 @@ class EBSD(CommonImage, Signal2D):
         data set.
         """
         return self._xmap
+
+    @xmap.setter
+    def xmap(self, value: CrystalMap):
+        if crystal_map_is_compatible_with_signal(
+            value, self.axes_manager, raise_if_false=True,
+        ):
+            self._xmap = value
+
+    # ------------------------ Custom methods ------------------------ #
 
     def set_experimental_parameters(
         self,
@@ -1524,6 +1538,20 @@ class EBSD(CommonImage, Signal2D):
         vbse_sum.set_signal_type("VirtualBSEImage")
         return vbse_sum
 
+    # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
+
+    def deepcopy(self):
+        new = super().deepcopy()
+        if self.xmap is not None:
+            new._xmap = self.xmap.deepcopy()
+        else:
+            new._xmap = copy.deepcopy(self.xmap)
+        if self.detector is not None:
+            new._detector = self.detector.deepcopy()
+        else:
+            new._detector = copy.deepcopy(self.detector)
+        return new
+
     def save(
         self,
         filename: Optional[str] = None,
@@ -1572,17 +1600,12 @@ class EBSD(CommonImage, Signal2D):
         kikuchipy.io.plugins.nordif.file_writer
         """
         if filename is None:
-            if self.tmp_parameters.has_item(
-                "filename"
-            ) and self.tmp_parameters.has_item("folder"):
-                filename = os.path.join(
-                    self.tmp_parameters.folder, self.tmp_parameters.filename
-                )
-                extension = (
-                    self.tmp_parameters.extension
-                    if not extension
-                    else extension
-                )
+            tmp_params = self.tmp_parameters
+            if tmp_params.has_item("filename") and tmp_params.has_item(
+                "folder"
+            ):
+                filename = os.path.join(tmp_params.folder, tmp_params.filename)
+                extension = tmp_params.extension if not extension else extension
             elif self.metadata.has_item("General.original_filename"):
                 filename = self.metadata.General.original_filename
             else:
