@@ -38,7 +38,7 @@ Fixed
 -----
 - Deep copying EBSD and EBSDMasterPattern signals carry over, respectively,
   `xmap` and `detector`, and `phase`, `hemisphere` and `projection` properties
-  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_).
+  (`#356 <https://github.com/pyxem/kikuchipy/pull/356>`_).
 - Scaling of region of interest coordinates used in virtual backscatter electron
   imaging to physical coordinates.
   (`#349 <https://github.com/pyxem/kikuchipy/pull/349>`_)
