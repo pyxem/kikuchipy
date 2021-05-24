@@ -36,8 +36,11 @@ Added
 
 Fixed
 -----
+- Deep copying EBSD and EBSDMasterPattern signals carry over, respectively,
+  `xmap` and `detector`, and `phase`, `hemisphere` and `projection` properties
+  (`#356 <https://github.com/pyxem/kikuchipy/pull/356>`_).
 - Scaling of region of interest coordinates used in virtual backscatter electron
-  imaging to physical coordinates
+  imaging to physical coordinates.
   (`#349 <https://github.com/pyxem/kikuchipy/pull/349>`_)
 
 0.3.3 (2021-04-18)
@@ -50,7 +53,7 @@ Contributors
 
 Fixed
 -----
-- Reading of EBSD patterns from Bruker h5ebsd with a region of interest
+- Reading of EBSD patterns from Bruker h5ebsd with a region of interest.
   (`#339 <https://github.com/pyxem/kikuchipy/pull/339>`_)
 - Merging of (typically refined) crystal maps, where either a simulation indices
   array is not present or the array contains more indices per point than scores.

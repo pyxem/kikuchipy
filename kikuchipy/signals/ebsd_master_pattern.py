@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-
+import copy
 import sys
 from typing import Optional, Union
 
@@ -61,6 +61,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
     _signal_type = "EBSDMasterPattern"
     _alias_signal_types = ["ebsd_master_pattern", "master_pattern"]
     _lazy = False
+
+    # ---------------------- Custom properties ----------------------- #
 
     phase = Phase()
     projection = None
@@ -258,6 +260,14 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             out = LazyEBSD(simulated, axes=axes, **kwargs)
 
         return out
+
+    # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
+    def deepcopy(self):
+        new = super().deepcopy()
+        new.phase = self.phase.deepcopy()
+        new.projection = copy.deepcopy(self.projection)
+        new.hemisphere = copy.deepcopy(self.hemisphere)
+        return new
 
 
 class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
