@@ -173,7 +173,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         """Distance from the PC (origin) per band, i.e. the right-angle
         component of the distance to the pole.
         """
-        return np.tan(0.5 * np.pi - self.hkl_detector.theta.data)
+        return np.tan(0.5 * np.pi - self.hkl_detector.polar.data)
 
     @property
     def within_gnomonic_radius(self) -> np.ndarray:
@@ -209,11 +209,11 @@ class KikuchiBand(ReciprocalLatticePoint):
         to NaN.
         """
         # Get alpha1 and alpha2 angles (NaN for bands outside gnomonic radius)
-        phi = self.hkl_detector.phi.data
+        azimuth = self.hkl_detector.azimuth.data
         hesse_alpha = self.hesse_alpha
         plane_trace = np.zeros(self.navigation_shape + (self.size, 4))
-        alpha1 = phi - np.pi + hesse_alpha
-        alpha2 = phi - np.pi - hesse_alpha
+        alpha1 = azimuth - np.pi + hesse_alpha
+        alpha2 = azimuth - np.pi - hesse_alpha
 
         # Calculate start and end points for the plane traces
         plane_trace[..., 0] = np.cos(alpha1)
@@ -227,11 +227,11 @@ class KikuchiBand(ReciprocalLatticePoint):
 
     @property
     def hesse_line_x(self) -> np.ndarray:
-        return -self.hesse_distance * np.cos(self.hkl_detector.phi.data)
+        return -self.hesse_distance * np.cos(self.hkl_detector.azimuth.data)
 
     @property
     def hesse_line_y(self) -> np.ndarray:
-        return -self.hesse_distance * np.sin(self.hkl_detector.phi.data)
+        return -self.hesse_distance * np.sin(self.hkl_detector.azimuth.data)
 
     def __getitem__(self, key):
         """Get a deepcopy subset of the KikuchiBand object.
@@ -240,7 +240,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         slicing. As an example, consider a 2 x 3 map with 4 bands. Three
         data shapes are considered:
         * navigation shape (2, 3) (gnomonic_radius)
-        * band shape (4,) (hkl, structure_factor, theta)
+        * band shape (4,) (hkl, structure_factor, polar)
         * full shape (2, 3, 4) (hkl_detector, in_pattern)
         """
         # These are overwritten as the input key length is investigated
@@ -464,7 +464,7 @@ class ZoneAxis(ReciprocalLatticePoint):
         slicing. As an example, consider a 2 x 3 map with 4 zone axes.
         Three data shapes are considered:
         * navigation shape (2, 3) (gnomonic_radius)
-        * zone axes shape (4,) (hkl, structure_factor, theta)
+        * zone axes shape (4,) (hkl, structure_factor, polar)
         * full shape (2, 3, 4) (uvw_detector, in_pattern)
         """
         # These are overwritten as the input key length is investigated
