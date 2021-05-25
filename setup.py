@@ -115,7 +115,9 @@ setup(
     # Dependencies
     extras_require=extra_feature_requirements,
     install_requires=[
-        "dask[array] >= 2.14",
+        # Restrict newest dask version until
+        # https://github.com/dask/dask/issues/7583 is resolved
+        "dask[array] >= 2.18, <= 2021.03.1",
         "diffsims >= 0.4",
         "hyperspy >= 1.5.2",
         "h5py >= 2.10",
