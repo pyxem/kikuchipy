@@ -51,23 +51,23 @@ class GnomonicProjection(SphericalProjection):
         >>> v = np.random.random_sample(30).reshape((10, 3))
         >>> xy = GnomonicProjection.project(v)
         """
-        polar = super().project(v)
-        theta, phi = polar[..., 0], polar[..., 1]
+        polar_coordinates = super().project(v)
+        polar, azimuth = polar_coordinates[..., 0], polar_coordinates[..., 1]
 
         # Map to upper hemisphere
         if isinstance(v, Vector3d):
             is_upper = v.z > 0
         else:
             is_upper = v[..., 2] > 0
-        theta[is_upper] -= np.pi
+        polar[is_upper] -= np.pi
 
         # Formula for gnomonic projection
-        r = np.tan(theta)
+        r = np.tan(polar)
 
         # Compute coordinates
         gnomonic = np.zeros(r.shape + (2,), dtype=r.dtype)
-        gnomonic[..., 0] = np.cos(phi) * r
-        gnomonic[..., 1] = np.sin(phi) * r
+        gnomonic[..., 0] = np.cos(azimuth) * r
+        gnomonic[..., 1] = np.sin(azimuth) * r
 
         return gnomonic
 
@@ -98,6 +98,6 @@ class GnomonicProjection(SphericalProjection):
         >>> xyz = GnomonicProjection.iproject(xy_g)
         """
         x, y = xy[..., 0], xy[..., 1]
-        theta = np.arctan(np.sqrt(x ** 2 + y ** 2))
-        phi = np.arctan2(y, x)
-        return Vector3d.from_polar(theta=theta, phi=phi)
+        polar = np.arctan(np.sqrt(x ** 2 + y ** 2))
+        azimuth = np.arctan2(y, x)
+        return Vector3d.from_polar(polar=polar, azimuth=azimuth)
