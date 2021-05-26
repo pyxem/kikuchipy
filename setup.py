@@ -115,14 +115,16 @@ setup(
     # Dependencies
     extras_require=extra_feature_requirements,
     install_requires=[
-        "dask[array] >= 2.14",
+        # Restrict newest dask version until
+        # https://github.com/dask/dask/issues/7583 is resolved
+        "dask[array] >= 2.18, <= 2021.03.1",
         "diffsims >= 0.4",
         "hyperspy >= 1.5.2",
         "h5py >= 2.10",
         "matplotlib >= 3.2",
         "numpy >= 1.18",
         "numba >= 0.48",
-        "orix >= 0.5",
+        "orix >= 0.6.0",
         "pooch >= 0.13",
         "psutil",
         "tqdm >= 0.5.2",
