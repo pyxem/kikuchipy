@@ -240,7 +240,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         slicing. As an example, consider a 2 x 3 map with 4 bands. Three
         data shapes are considered:
         * navigation shape (2, 3) (gnomonic_radius)
-        * band shape (4,) (hkl, structure_factor, polar)
+        * band shape (4,) (hkl, structure_factor, theta)
         * full shape (2, 3, 4) (hkl_detector, in_pattern)
         """
         # These are overwritten as the input key length is investigated
@@ -464,7 +464,7 @@ class ZoneAxis(ReciprocalLatticePoint):
         slicing. As an example, consider a 2 x 3 map with 4 zone axes.
         Three data shapes are considered:
         * navigation shape (2, 3) (gnomonic_radius)
-        * zone axes shape (4,) (hkl, structure_factor, polar)
+        * zone axes shape (4,) (hkl, structure_factor, theta)
         * full shape (2, 3, 4) (uvw_detector, in_pattern)
         """
         # These are overwritten as the input key length is investigated
