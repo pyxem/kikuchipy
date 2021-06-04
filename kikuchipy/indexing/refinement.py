@@ -27,6 +27,7 @@ class Refinement:
         mask=1,
         method="minimize",
         method_kwargs=None,
+        trust_region=None,
         compute=True,
     ):
         if method == "minimize" and not method_kwargs:
@@ -42,6 +43,20 @@ class Refinement:
         # Extract best rotation from xmap if given more than 1
         if len(euler.shape) > 2:
             euler = euler[:, 0, :]
+
+        if not trust_region:
+            trust_region = [
+                0.0174532925,
+                0.0174532925,
+                0.0174532925,
+                0.05,
+                0.05,
+                0.05,
+            ]
+        else:
+            trust_region = (
+                np.deg2rad(trust_region[:3]).tolist() + trust_region[3:]
+            )
 
         exp.rescale_intensity(dtype_out=np.float32)
         exp_data = exp.data
@@ -89,9 +104,16 @@ class Refinement:
 
         pre_args = dask.delayed(pre_args)
         exp_data = dask.delayed(exp_data)
+        trust_region = dask.delayed(trust_region)
         refined_params = [
             dask.delayed(_refine_xmap_solver)(
-                euler[i], pc[i], exp_data[i], pre_args, method, method_kwargs
+                euler[i],
+                pc[i],
+                exp_data[i],
+                pre_args,
+                method,
+                method_kwargs,
+                trust_region,
             )
             for i in range(euler.shape[0])
         ]
@@ -149,6 +171,7 @@ class Refinement:
         mask=1,
         method="minimize",
         method_kwargs=None,
+        trust_region=None,
         compute=True,
     ):
         print("FOO2!")
@@ -176,6 +199,11 @@ class Refinement:
             )
         elif len(exp_shape) == 2:  # 0D nav-dim
             exp_data = exp_data.reshape(((1,) + exp_data.shape))
+
+        if not trust_region:
+            trust_region = [0.0174532925, 0.0174532925, 0.0174532925]  # 1 deg
+        else:
+            trust_region = np.deg2rad(trust_region)
 
         scan_points = exp_data.shape[0]
 
@@ -221,9 +249,16 @@ class Refinement:
 
         pre_args = dask.delayed(pre_args)
         exp_data = dask.delayed(exp_data)
+        trust_region = dask.delayed(trust_region)
         refined_params = [
             dask.delayed(_refine_orientations_solver)(
-                exp_data[i], euler[i], dc[i], method, method_kwargs, pre_args
+                exp_data[i],
+                euler[i],
+                dc[i],
+                method,
+                method_kwargs,
+                pre_args,
+                trust_region,
             )
             for i in range(euler.shape[0])
         ]
@@ -278,6 +313,7 @@ class Refinement:
         mask=1,
         method="minimize",
         method_kwargs=None,
+        trust_region=None,
         compute=True,
     ):
         if method == "minimize" and not method_kwargs:
@@ -312,6 +348,9 @@ class Refinement:
         elif len(exp_shape) == 2:  # 0D nav-dim
             exp_data = np.expand_dims(exp_data, axis=0)
 
+        if not trust_region:
+            trust_region = [0.05, 0.05, 0.05]
+
         (
             master_north,
             master_south,
@@ -338,9 +377,16 @@ class Refinement:
 
         pre_args = dask.delayed(pre_args)
         exp_data = dask.delayed(exp_data)
+        trust_region = dask.delayed(trust_region)
         refined_params = [
             dask.delayed(_refine_pc_solver)(
-                exp_data[i], r[i], pc[i], method, method_kwargs, pre_args
+                exp_data[i],
+                r[i],
+                pc[i],
+                method,
+                method_kwargs,
+                pre_args,
+                trust_region,
             )
             for i in range(xmap.rotations.shape[0])
         ]
@@ -822,7 +868,9 @@ class MinimizeStopper(object):
             return False
 
 
-def _refine_xmap_solver(r, pc, exp, pre_args, method, method_kwargs):
+def _refine_xmap_solver(
+    r, pc, exp, pre_args, method, method_kwargs, trust_region
+):
     phi1_0 = r[..., 0]
     Phi_0 = r[..., 1]
     phi2_0 = r[..., 2]
@@ -843,12 +891,12 @@ def _refine_xmap_solver(r, pc, exp, pre_args, method, method_kwargs):
         soln = method(
             _full_objective_function_euler,
             bounds=[
-                (full_x0[0] - 0.0174532925, full_x0[0] + 0.0174532925),
-                (full_x0[1] - 0.0174532925, full_x0[1] + 0.0174532925),
-                (full_x0[2] - 0.0174532925, full_x0[2] + 0.0174532925),
-                (full_x0[3] - 0.05, full_x0[3] + 0.05),
-                (full_x0[4] - 0.05, full_x0[4] + 0.05),
-                (full_x0[5] - 0.05, full_x0[5] + 0.05),
+                (full_x0[0] - trust_region[0], full_x0[0] + trust_region[0]),
+                (full_x0[1] - trust_region[1], full_x0[1] + trust_region[1]),
+                (full_x0[2] - trust_region[2], full_x0[2] + trust_region[2]),
+                (full_x0[3] - trust_region[3], full_x0[3] + trust_region[3]),
+                (full_x0[4] - trust_region[4], full_x0[4] + trust_region[4]),
+                (full_x0[5] - trust_region[5], full_x0[5] + trust_region[5]),
             ],
             args=args,
             **method_kwargs,
@@ -857,12 +905,12 @@ def _refine_xmap_solver(r, pc, exp, pre_args, method, method_kwargs):
         soln = method(
             _full_objective_function_euler,
             bounds=[
-                (full_x0[0] - 0.0174532925, full_x0[0] + 0.0174532925),
-                (full_x0[1] - 0.0174532925, full_x0[1] + 0.0174532925),
-                (full_x0[2] - 0.0174532925, full_x0[2] + 0.0174532925),
-                (full_x0[3] - 0.05, full_x0[3] + 0.05),
-                (full_x0[4] - 0.05, full_x0[4] + 0.05),
-                (full_x0[5] - 0.05, full_x0[5] + 0.05),
+                (full_x0[0] - trust_region[0], full_x0[0] + trust_region[0]),
+                (full_x0[1] - trust_region[1], full_x0[1] + trust_region[1]),
+                (full_x0[2] - trust_region[2], full_x0[2] + trust_region[2]),
+                (full_x0[3] - trust_region[3], full_x0[3] + trust_region[3]),
+                (full_x0[4] - trust_region[4], full_x0[4] + trust_region[4]),
+                (full_x0[5] - trust_region[5], full_x0[5] + trust_region[5]),
             ],
             args=args,
             **method_kwargs,
@@ -886,7 +934,9 @@ def _refine_xmap_solver(r, pc, exp, pre_args, method, method_kwargs):
     return (score, phi1, Phi, phi2, pcx, pxy, pxz)
 
 
-def _refine_pc_solver(exp, r, pc, method, method_kwargs, pre_args):
+def _refine_pc_solver(
+    exp, r, pc, method, method_kwargs, pre_args, trust_region
+):
     args = (exp,) + pre_args + (r,)
     pc_x0 = pc
 
@@ -901,9 +951,9 @@ def _refine_pc_solver(exp, r, pc, method, method_kwargs, pre_args):
         soln = method(
             _projection_center_objective_function,
             bounds=[
-                (pc_x0[0] - 0.05, pc_x0[0] + 0.05),
-                (pc_x0[1] - 0.05, pc_x0[1] + 0.05),
-                (pc_x0[2] - 0.05, pc_x0[2] + 0.05),
+                (pc_x0[0] - trust_region[0], pc_x0[0] + trust_region[0]),
+                (pc_x0[1] - trust_region[1], pc_x0[1] + trust_region[1]),
+                (pc_x0[2] - trust_region[2], pc_x0[2] + trust_region[2]),
             ],
             args=args,
             **method_kwargs,
@@ -912,9 +962,9 @@ def _refine_pc_solver(exp, r, pc, method, method_kwargs, pre_args):
         soln = method(
             _projection_center_objective_function,
             bounds=[
-                (pc_x0[0] - 0.05, pc_x0[0] + 0.05),
-                (pc_x0[1] - 0.05, pc_x0[1] + 0.05),
-                (pc_x0[2] - 0.05, pc_x0[2] + 0.05),
+                (pc_x0[0] - trust_region[0], pc_x0[0] + trust_region[0]),
+                (pc_x0[1] - trust_region[1], pc_x0[1] + trust_region[1]),
+                (pc_x0[2] - trust_region[2], pc_x0[2] + trust_region[2]),
             ],
             args=args,
             **method_kwargs,
@@ -934,7 +984,9 @@ def _refine_pc_solver(exp, r, pc, method, method_kwargs, pre_args):
     return (score, pcx, pcy, pcz)
 
 
-def _refine_orientations_solver(exp, r, dc, method, method_kwargs, pre_args):
+def _refine_orientations_solver(
+    exp, r, dc, method, method_kwargs, pre_args, trust_region
+):
 
     phi1 = r[..., 0]
     Phi = r[..., 1]
@@ -955,9 +1007,9 @@ def _refine_orientations_solver(exp, r, dc, method, method_kwargs, pre_args):
         soln = method(
             _orientation_objective_function_euler,
             bounds=[
-                (r_x0[0] - 0.0174532925, r_x0[0] + 0.0174532925),
-                (r_x0[1] - 0.0174532925, r_x0[1] + 0.0174532925),
-                (r_x0[2] - 0.0174532925, r_x0[2] + 0.0174532925),
+                (r_x0[0] - trust_region[0], r_x0[0] + trust_region[0]),
+                (r_x0[1] - trust_region[1], r_x0[1] + trust_region[1]),
+                (r_x0[2] - trust_region[2], r_x0[2] + trust_region[2]),
             ],
             args=args,
             **method_kwargs,
@@ -966,9 +1018,9 @@ def _refine_orientations_solver(exp, r, dc, method, method_kwargs, pre_args):
         soln = method(
             _orientation_objective_function_euler,
             bounds=[
-                (r_x0[0] - 0.0174532925, r_x0[0] + 0.0174532925),
-                (r_x0[1] - 0.0174532925, r_x0[1] + 0.0174532925),
-                (r_x0[2] - 0.0174532925, r_x0[2] + 0.0174532925),
+                (r_x0[0] - trust_region[0], r_x0[0] + trust_region[0]),
+                (r_x0[1] - trust_region[1], r_x0[1] + trust_region[1]),
+                (r_x0[2] - trust_region[2], r_x0[2] + trust_region[2]),
             ],
             args=args,
             **method_kwargs,
