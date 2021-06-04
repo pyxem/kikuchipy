@@ -1,14 +1,12 @@
 import sys
 from typing import Optional, Union
 
-import cv2
+
 import dask
-import dask.array as da
 from dask.diagnostics import ProgressBar
 import numba
 import numpy as np
 from orix.crystal_map import CrystalMap
-from orix.vector import Vector3d, Rodrigues
 from orix.quaternion import Rotation
 import scipy.optimize
 
@@ -25,8 +23,8 @@ class Refinement:
         mp,
         exp,
         det,
-        mask,
         energy,
+        mask=1,
         method="minimize",
         method_kwargs=None,
         compute=True,
@@ -45,10 +43,8 @@ class Refinement:
         if len(euler.shape) > 2:
             euler = euler[:, 0, :]
 
+        exp.rescale_intensity(dtype_out=np.float32)
         exp_data = exp.data
-        exp_data = rescale_intensity(exp_data, dtype_out=np.float32)
-        # exp_data = exp_data * mask # The mask should already have been
-        # applied during DI
         exp_shape = exp_data.shape
 
         pc = det.pc
@@ -155,9 +151,7 @@ class Refinement:
         method_kwargs=None,
         compute=True,
     ):
-
-        if method not in ["minimize", "dual_annealing"]:
-            raise NotImplementedError
+        print("FOO2!")
         if method == "minimize" and not method_kwargs:
             method_kwargs = {"method": "Nelder-Mead"}
         elif not method_kwargs:
@@ -172,8 +166,8 @@ class Refinement:
         if len(euler.shape) > 2:
             euler = euler[:, 0, :]
 
+        exp.rescale_intensity(dtype_out=np.float32)
         exp_data = exp.data
-        exp_data = rescale_intensity(exp_data, dtype_out=np.float32)
         exp_shape = exp_data.shape
 
         if len(exp_shape) == 4:
@@ -181,7 +175,7 @@ class Refinement:
                 (exp_shape[0] * exp_shape[1], exp_shape[2], exp_shape[3])
             )
         elif len(exp_shape) == 2:  # 0D nav-dim
-            exp_data = np.expand_dims(exp_data, axis=0)
+            exp_data = exp_data.reshape(((1,) + exp_data.shape))
 
         scan_points = exp_data.shape[0]
 
@@ -226,7 +220,14 @@ class Refinement:
         )
 
         pre_args = dask.delayed(pre_args)
-        exp_data = dask.delayed(exp_data)
+        # exp_data = dask.delayed(exp_data) # Remove this because if exp_data
+        # is a dask array (that is larger than memory) it will crash the program
+
+        # From: https://docs.dask.org/en/latest/delayed-best-practices.html
+        # Every time you pass a concrete result (anything that isn’t delayed)
+        # Dask will hash it by default to give it a name.
+        # This is fairly fast (around 500 MB/s) but can be slow if you do it
+        # over and over again. Instead, it is better to delay your data as well.
         refined_params = [
             dask.delayed(_refine_orientations_solver)(
                 exp_data[i], euler[i], dc[i], method, method_kwargs, pre_args
@@ -298,8 +299,8 @@ class Refinement:
         else:
             r = xmap.rotations.data
 
+        exp.rescale_intensity(dtype_out=np.float32)
         exp_data = exp.data
-        exp_data = rescale_intensity(exp_data, dtype_out=np.float32)
         exp_shape = exp_data.shape
 
         pc = det.pc
@@ -379,63 +380,6 @@ class Refinement:
                 output = (refined_scores, new_det)
 
         return output
-
-
-def _get_direction_cosines_lean(detector: EBSDDetector) -> Vector3d:
-    """Get the direction cosines between the detector and sample as done
-    in EMsoft and :cite:`callahan2013dynamical`.
-
-    Parameters
-    ----------
-    detector : EBSDDetector
-        EBSDDetector object with a certain detector geometry and one
-        projection center.
-
-    Returns
-    -------
-    Vector3d
-        Direction cosines for each detector pixel.
-    """
-
-    # TODO: Make even leaner
-
-    pc = detector.pc_emsoft()
-    xpc = pc[..., 0]
-    ypc = pc[..., 1]
-    L = pc[..., 2]
-
-    # Detector coordinates in microns
-    det_x = (
-        -1
-        * ((-xpc - (1.0 - detector.ncols) * 0.5) - np.arange(0, detector.ncols))
-        * detector.px_size
-    )
-    det_y = (
-        (ypc - (1.0 - detector.nrows) * 0.5) - np.arange(0, detector.nrows)
-    ) * detector.px_size
-
-    # Auxilliary angle to rotate between reference frames
-    theta_c = np.radians(detector.tilt)
-    sigma = np.radians(detector.sample_tilt)
-
-    alpha = (np.pi / 2) - sigma + theta_c
-    ca = np.cos(alpha)
-    sa = np.sin(alpha)
-
-    r_g_array = np.zeros((detector.nrows, detector.ncols, 3))
-
-    i, j = np.meshgrid(
-        np.arange(detector.nrows - 1, -1, -1),
-        np.arange(detector.ncols),
-        indexing="ij",
-    )
-
-    r_g_array[..., 0] = det_y[i] * ca + sa * L
-    r_g_array[..., 1] = det_x[j]
-    r_g_array[..., 2] = -sa * det_y[i] + ca * L
-    r_g = Vector3d(r_g_array)
-
-    return r_g.unit
 
 
 def _get_single_pattern_params(mp, detector, energy):
@@ -893,12 +837,51 @@ def _refine_xmap_solver(r, pc, exp, pre_args, method, method_kwargs):
 
     args = (exp,) + pre_args
 
-    soln = method(
-        _full_objective_function_euler,
-        x0=np.concatenate((eu_x0, pc), axis=None),
-        args=args,
-        **method_kwargs,
-    )
+    full_x0 = np.concatenate((eu_x0, pc), axis=None)
+
+    if method.__name__ == "minimize":
+        soln = method(
+            _full_objective_function_euler,
+            x0=full_x0,
+            args=args,
+            **method_kwargs,
+        )
+    elif method.__name__ == "differential_evolution":
+        soln = method(
+            _full_objective_function_euler,
+            bounds=[
+                (full_x0[0] - 0.0174532925, full_x0[0] + 0.0174532925),
+                (full_x0[1] - 0.0174532925, full_x0[1] + 0.0174532925),
+                (full_x0[2] - 0.0174532925, full_x0[2] + 0.0174532925),
+                (full_x0[3] - 0.05, full_x0[3] + 0.05),
+                (full_x0[4] - 0.05, full_x0[4] + 0.05),
+                (full_x0[5] - 0.05, full_x0[5] + 0.05),
+            ],
+            args=args,
+            **method_kwargs,
+        )
+    elif method.__name__ == "dual_annealing":
+        soln = method(
+            _full_objective_function_euler,
+            bounds=[
+                (full_x0[0] - 0.0174532925, full_x0[0] + 0.0174532925),
+                (full_x0[1] - 0.0174532925, full_x0[1] + 0.0174532925),
+                (full_x0[2] - 0.0174532925, full_x0[2] + 0.0174532925),
+                (full_x0[3] - 0.05, full_x0[3] + 0.05),
+                (full_x0[4] - 0.05, full_x0[4] + 0.05),
+                (full_x0[5] - 0.05, full_x0[5] + 0.05),
+            ],
+            args=args,
+            **method_kwargs,
+        )
+    elif method.__name__ == "basinhopping":
+        method_kwargs["minimizer_kwargs"]["args"] = args
+        soln = method(
+            _full_objective_function_euler,
+            x0=full_x0,
+            **method_kwargs,
+        )
+
     score = 1 - soln.fun
     phi1 = soln.x[0]
     Phi = soln.x[1]
@@ -913,12 +896,43 @@ def _refine_xmap_solver(r, pc, exp, pre_args, method, method_kwargs):
 def _refine_pc_solver(exp, r, pc, method, method_kwargs, pre_args):
     args = (exp,) + pre_args + (r,)
     pc_x0 = pc
-    soln = method(
-        _projection_center_objective_function,
-        x0=pc_x0,
-        args=args,
-        **method_kwargs,
-    )
+
+    if method.__name__ == "minimize":
+        soln = method(
+            _projection_center_objective_function,
+            x0=pc_x0,
+            args=args,
+            **method_kwargs,
+        )
+    elif method.__name__ == "differential_evolution":
+        soln = method(
+            _projection_center_objective_function,
+            bounds=[
+                (pc_x0[0] - 0.05, pc_x0[0] + 0.05),
+                (pc_x0[1] - 0.05, pc_x0[1] + 0.05),
+                (pc_x0[2] - 0.05, pc_x0[2] + 0.05),
+            ],
+            args=args,
+            **method_kwargs,
+        )
+    elif method.__name__ == "dual_annealing":
+        soln = method(
+            _projection_center_objective_function,
+            bounds=[
+                (pc_x0[0] - 0.05, pc_x0[0] + 0.05),
+                (pc_x0[1] - 0.05, pc_x0[1] + 0.05),
+                (pc_x0[2] - 0.05, pc_x0[2] + 0.05),
+            ],
+            args=args,
+            **method_kwargs,
+        )
+    elif method.__name__ == "basinhopping":
+        method_kwargs["minimizer_kwargs"]["args"] = args
+        soln = method(
+            _projection_center_objective_function,
+            x0=pc_x0,
+            **method_kwargs,
+        )
 
     score = 1 - soln.fun
     pcx = soln.x[0]
@@ -937,12 +951,43 @@ def _refine_orientations_solver(exp, r, dc, method, method_kwargs, pre_args):
 
     r_x0 = np.array((phi1, Phi, phi2), dtype=np.float32)
 
-    soln = method(
-        _orientation_objective_function_euler,
-        x0=r_x0,
-        args=args,
-        **method_kwargs,
-    )
+    if method.__name__ == "minimize":
+        soln = method(
+            _orientation_objective_function_euler,
+            x0=r_x0,
+            args=args,
+            **method_kwargs,
+        )
+    elif method.__name__ == "differential_evolution":
+        soln = method(
+            _orientation_objective_function_euler,
+            bounds=[
+                (r_x0[0] - 0.0174532925, r_x0[0] + 0.0174532925),
+                (r_x0[1] - 0.0174532925, r_x0[1] + 0.0174532925),
+                (r_x0[2] - 0.0174532925, r_x0[2] + 0.0174532925),
+            ],
+            args=args,
+            **method_kwargs,
+        )
+    elif method.__name__ == "dual_annealing":
+        soln = method(
+            _orientation_objective_function_euler,
+            bounds=[
+                (r_x0[0] - 0.0174532925, r_x0[0] + 0.0174532925),
+                (r_x0[1] - 0.0174532925, r_x0[1] + 0.0174532925),
+                (r_x0[2] - 0.0174532925, r_x0[2] + 0.0174532925),
+            ],
+            args=args,
+            **method_kwargs,
+        )
+    elif method.__name__ == "basinhopping":
+        method_kwargs["minimizer_kwargs"]["args"] = args
+        soln = method(
+            _orientation_objective_function_euler,
+            x0=r_x0,
+            **method_kwargs,
+        )
+
     score = 1 - soln.fun
     refined_phi1 = soln.x[0]
     refined_Phi = soln.x[1]
