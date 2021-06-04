@@ -220,14 +220,7 @@ class Refinement:
         )
 
         pre_args = dask.delayed(pre_args)
-        # exp_data = dask.delayed(exp_data) # Remove this because if exp_data
-        # is a dask array (that is larger than memory) it will crash the program
-
-        # From: https://docs.dask.org/en/latest/delayed-best-practices.html
-        # Every time you pass a concrete result (anything that isn’t delayed)
-        # Dask will hash it by default to give it a name.
-        # This is fairly fast (around 500 MB/s) but can be slow if you do it
-        # over and over again. Instead, it is better to delay your data as well.
+        exp_data = dask.delayed(exp_data)
         refined_params = [
             dask.delayed(_refine_orientations_solver)(
                 exp_data[i], euler[i], dc[i], method, method_kwargs, pre_args
