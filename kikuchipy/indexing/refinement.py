@@ -76,7 +76,7 @@ class Refinement:
                 (exp_shape[0] * exp_shape[1], exp_shape[2], exp_shape[3])
             )
         elif len(exp_shape) == 2:  # 0D nav-dim
-            exp_data = np.expand_dims(exp_data, axis=0)
+            exp_data = exp_data.reshape(((1,) + exp_data.shape))
 
         (
             master_north,
@@ -103,20 +103,44 @@ class Refinement:
         )
 
         pre_args = dask.delayed(pre_args)
-        exp_data = dask.delayed(exp_data)
         trust_region = dask.delayed(trust_region)
-        refined_params = [
-            dask.delayed(_refine_xmap_solver)(
-                euler[i],
-                pc[i],
-                exp_data[i],
-                pre_args,
-                method,
-                method_kwargs,
-                trust_region,
-            )
-            for i in range(euler.shape[0])
-        ]
+
+        if isinstance(exp_data, dask.array.core.Array):
+            patterns_in_chunk = exp_data.chunks[0]
+            partitons = exp_data.to_delayed()  # List of delayed objects
+            # equal to the number of chunks
+            inner_index = 0
+            refined_params = []
+            for k, part in enumerate(partitons):
+                data = part[0, 0]
+                num_patterns = patterns_in_chunk[k]
+                for i in range(num_patterns):
+                    res = dask.delayed(_refine_xmap_solver)(
+                        euler[i + inner_index],
+                        pc[i + inner_index],
+                        data[i],
+                        pre_args,
+                        method,
+                        method_kwargs,
+                        trust_region,
+                    )
+                    refined_params.append(res)
+
+                inner_index += num_patterns  # Increase the index for
+                # the next chunk
+        else:  # NumPy array
+            refined_params = [
+                dask.delayed(_refine_xmap_solver)(
+                    euler[i],
+                    pc[i],
+                    exp_data[i],
+                    pre_args,
+                    method,
+                    method_kwargs,
+                    trust_region,
+                )
+                for i in range(euler.shape[0])
+            ]
         if compute:
             with ProgressBar():
                 print(
@@ -174,7 +198,6 @@ class Refinement:
         trust_region=None,
         compute=True,
     ):
-        print("FOO2!")
         if method == "minimize" and not method_kwargs:
             method_kwargs = {"method": "Nelder-Mead"}
         elif not method_kwargs:
@@ -189,7 +212,8 @@ class Refinement:
         if len(euler.shape) > 2:
             euler = euler[:, 0, :]
 
-        exp.rescale_intensity(dtype_out=np.float32)
+        exp.rescale_intensity(dtype_out=np.float32)  # Here we are rescaling
+        # the input, we should probably not do this! :)
         exp_data = exp.data
         exp_shape = exp_data.shape
 
@@ -248,20 +272,45 @@ class Refinement:
         )
 
         pre_args = dask.delayed(pre_args)
-        exp_data = dask.delayed(exp_data)
         trust_region = dask.delayed(trust_region)
-        refined_params = [
-            dask.delayed(_refine_orientations_solver)(
-                exp_data[i],
-                euler[i],
-                dc[i],
-                method,
-                method_kwargs,
-                pre_args,
-                trust_region,
-            )
-            for i in range(euler.shape[0])
-        ]
+
+        if isinstance(exp_data, dask.array.core.Array):
+            patterns_in_chunk = exp_data.chunks[0]
+            partitons = exp_data.to_delayed()  # List of delayed objects
+            # equal to the number of chunks
+            inner_index = 0
+            refined_params = []
+            for k, part in enumerate(partitons):
+                data = part[0, 0]
+                num_patterns = patterns_in_chunk[k]
+                for i in range(num_patterns):
+                    res = dask.delayed(_refine_orientations_solver)(
+                        data[i],
+                        euler[inner_index + i],
+                        dc[inner_index + i],
+                        method,
+                        method_kwargs,
+                        pre_args,
+                        trust_region,
+                    )
+                    refined_params.append(res)
+
+                inner_index += num_patterns  # Increase the index for
+                # the next chunk
+
+        else:  # numpy array
+            refined_params = [
+                dask.delayed(_refine_orientations_solver)(
+                    exp_data[i],
+                    euler[i],
+                    dc[i],
+                    method,
+                    method_kwargs,
+                    pre_args,
+                    trust_region,
+                )
+                for i in range(euler.shape[0])
+            ]
 
         if compute:
             with ProgressBar():
@@ -346,7 +395,7 @@ class Refinement:
                 (exp_shape[0] * exp_shape[1], exp_shape[2], exp_shape[3])
             )
         elif len(exp_shape) == 2:  # 0D nav-dim
-            exp_data = np.expand_dims(exp_data, axis=0)
+            exp_data = exp_data.reshape(((1,) + exp_data.shape))
 
         if not trust_region:
             trust_region = [0.05, 0.05, 0.05]
@@ -376,20 +425,44 @@ class Refinement:
         )
 
         pre_args = dask.delayed(pre_args)
-        exp_data = dask.delayed(exp_data)
         trust_region = dask.delayed(trust_region)
-        refined_params = [
-            dask.delayed(_refine_pc_solver)(
-                exp_data[i],
-                r[i],
-                pc[i],
-                method,
-                method_kwargs,
-                pre_args,
-                trust_region,
-            )
-            for i in range(xmap.rotations.shape[0])
-        ]
+
+        if isinstance(exp_data, dask.array.core.Array):
+            patterns_in_chunk = exp_data.chunks[0]
+            partitons = exp_data.to_delayed()  # List of delayed objects
+            # equal to the number of chunks
+            inner_index = 0
+            refined_params = []
+            for k, part in enumerate(partitons):
+                data = part[0, 0]
+                num_patterns = patterns_in_chunk[k]
+                for i in range(num_patterns):
+                    res = dask.delayed(_refine_pc_solver)(
+                        data[i],
+                        r[i + inner_index],
+                        pc[i + inner_index],
+                        method,
+                        method_kwargs,
+                        pre_args,
+                        trust_region,
+                    )
+                    refined_params.append(res)
+
+                inner_index += num_patterns  # Increase the index for
+                # the next chunk
+        else:  # NumPy array
+            refined_params = [
+                dask.delayed(_refine_pc_solver)(
+                    exp_data[i],
+                    r[i],
+                    pc[i],
+                    method,
+                    method_kwargs,
+                    pre_args,
+                    trust_region,
+                )
+                for i in range(xmap.rotations.shape[0])
+            ]
 
         output = refined_params
         if compute:
