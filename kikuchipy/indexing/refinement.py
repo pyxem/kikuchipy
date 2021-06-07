@@ -250,10 +250,6 @@ class Refinement:
             ypc = pc_emsoft[..., 1]
             L = pc_emsoft[..., 2]
 
-        dc = _fast_get_dc_multiple_pc(
-            xpc, ypc, L, scan_points, dncols, dnrows, px_size, alpha
-        )
-
         (
             master_north,
             master_south,
@@ -274,6 +270,7 @@ class Refinement:
         pre_args = dask.delayed(pre_args)
         trust_region = dask.delayed(trust_region)
 
+        print("foo1234")
         if isinstance(exp_data, dask.array.core.Array):
             patterns_in_chunk = exp_data.chunks[0]
             partitons = exp_data.to_delayed()  # List of delayed objects
@@ -283,11 +280,23 @@ class Refinement:
             for k, part in enumerate(partitons):
                 data = part[0, 0]
                 num_patterns = patterns_in_chunk[k]
+
+                dc = dask.delayed(_fast_get_dc_multiple_pc)(
+                    xpc[inner_index : num_patterns + inner_index],
+                    ypc[inner_index : num_patterns + inner_index],
+                    L[inner_index : num_patterns + inner_index],
+                    num_patterns,
+                    dncols,
+                    dnrows,
+                    px_size,
+                    alpha,
+                )
+
                 for i in range(num_patterns):
                     res = dask.delayed(_refine_orientations_solver)(
                         data[i],
                         euler[inner_index + i],
-                        dc[inner_index + i],
+                        dc[i],
                         method,
                         method_kwargs,
                         pre_args,
@@ -299,6 +308,10 @@ class Refinement:
                 # the next chunk
 
         else:  # numpy array
+            dc = _fast_get_dc_multiple_pc(
+                xpc, ypc, L, scan_points, dncols, dnrows, px_size, alpha
+            )
+
             refined_params = [
                 dask.delayed(_refine_orientations_solver)(
                     exp_data[i],
