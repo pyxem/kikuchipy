@@ -270,7 +270,6 @@ class Refinement:
         pre_args = dask.delayed(pre_args)
         trust_region = dask.delayed(trust_region)
 
-        print("foo1234")
         if isinstance(exp_data, dask.array.core.Array):
             patterns_in_chunk = exp_data.chunks[0]
             partitons = exp_data.to_delayed()  # List of delayed objects
