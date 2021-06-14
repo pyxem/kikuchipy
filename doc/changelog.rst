@@ -21,6 +21,10 @@ Contributors
 
 Added
 -----
+- Unit testing of docstring examples.
+  (`#350 <https://github.com/pyxem/kikuchipy/pull/350>`_)
+- Support for Python 3.9.
+  (`#348 <https://github.com/pyxem/kikuchipy/pull/348>`_)
 - Projection/pattern center calibration via the moving screen technique in a
   kikuchipy.detectors.calibration module.
   (`#322 <https://github.com/pyxem/kikuchipy/pull/322>`_)
@@ -32,7 +36,36 @@ Added
 
 Fixed
 -----
-- Reading of EBSD patterns from Bruker h5ebsd with a region of interest
+- Deep copying EBSD and EBSDMasterPattern signals carry over, respectively,
+  `xmap` and `detector`, and `phase`, `hemisphere` and `projection` properties
+  (`#356 <https://github.com/pyxem/kikuchipy/pull/356>`_).
+- Scaling of region of interest coordinates used in virtual backscatter electron
+  imaging to physical coordinates.
+  (`#349 <https://github.com/pyxem/kikuchipy/pull/349>`_)
+
+0.3.4 (2021-05-26)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Added
+-----
+- Restricted newest version of dask<=2021.03.1 and pinned orix==0.6.0.
+  (`#360 <https://github.com/pyxem/kikuchipy/pull/360>`_)
+
+0.3.3 (2021-04-18)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+- Ole Natlandsmyr
+
+Fixed
+-----
+- Reading of EBSD patterns from Bruker h5ebsd with a region of interest.
   (`#339 <https://github.com/pyxem/kikuchipy/pull/339>`_)
 - Merging of (typically refined) crystal maps, where either a simulation indices
   array is not present or the array contains more indices per point than scores.

@@ -126,7 +126,7 @@ class TestEBSDSimulationGenerator:
             "pc (0.421, 0.221, 0.505)\n"
             "<name: ni. space group: Fm-3m. point group: m-3m. "
             "proper point group: 432. color: tab:blue>\n"
-            "Rotation (25,)\n"
+            "Rotation (25,)"
         )
         assert repr(nickel_ebsd_simulation_generator) == desired_repr
 

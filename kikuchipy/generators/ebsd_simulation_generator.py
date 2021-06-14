@@ -59,26 +59,22 @@ class EBSDSimulationGenerator:
 
         Examples
         --------
-        >>> from orix.crystal_map import Phase
-        >>> from orix.quaternion import Rotation
-        >>> from kikuchipy.detectors import EBSDDetector
-        >>> from kikuchipy.generators import EBSDSimulationGenerator
-        >>> det = EBSDDetector(
+        >>> from orix import crystal_map, quaternion
+        >>> import kikuchipy as kp
+        >>> det = kp.detectors.EBSDDetector(
         ...     shape=(60, 60), sample_tilt=70, pc=[0.5,] * 3
         ... )
-        >>> p = Phase(name="ni", space_group=225)
+        >>> p = crystal_map.Phase(name="ni", space_group=225)
         >>> p.structure.lattice.setLatPar(3.52, 3.52, 3.52, 90, 90, 90)
-        >>> simgen = EBSDSimulationGenerator(
+        >>> simgen = kp.generators.EBSDSimulationGenerator(
         ...     detector=det,
         ...     phase=p,
         ...     rotations=Rotation.from_euler([90, 45, 90])
         ... )
         >>> simgen
         EBSDSimulationGenerator (1,)
-        EBSDDetector (60, 60), px_size 1 um, binning 1, tilt 0, pc
-        (0.5, 0.5, 0.5)
-        <name: . space group: None. point group: None. proper point
-        group: None. color: tab:blue>
+        EBSDDetector (60, 60), px_size 1 um, binning 1, tilt 0, pc (0.5, 0.5, 0.5)
+        <name: ni. space group: Fm-3m. point group: m-3m. proper point group: 432. color: tab:blue>
         Rotation (1,)
         """
         self.detector = detector.deepcopy()
@@ -130,7 +126,7 @@ class EBSDSimulationGenerator:
             f"{self.__class__.__name__} {self.navigation_shape}\n"
             f"{self.detector}\n"
             f"{self.phase}\n"
-            f"{rotation_repr}\n"
+            f"{rotation_repr}"
         )
 
     def __getitem__(self, key):
@@ -164,22 +160,27 @@ class EBSDSimulationGenerator:
         Examples
         --------
         >>> from diffsims.crystallography import ReciprocalLatticePoint
-        >>> simgen
-        EBSDSimulationGenerator (1,)
-        EBSDDetector (60, 60), px_size 1 um, binning 1, tilt 0, pc
-        (0.5, 0.5, 0.5)
-        <name: . space group: None. point group: None. proper point
-        group: None. color: tab:blue>
-        Rotation (1,)
+        >>> from orix import crystal_map, quaternion
+        >>> import kikuchipy as kp
+        >>> det = kp.detectors.EBSDDetector(
+        ...     shape=(60, 60), sample_tilt=70, pc=[0.5,] * 3
+        ... )
+        >>> p = crystal_map.Phase(name="ni", space_group=225)
+        >>> p.structure.lattice.setLatPar(3.52, 3.52, 3.52, 90, 90, 90)
+        >>> simgen = kp.generators.EBSDSimulationGenerator(
+        ...     detector=det,
+        ...     phase=p,
+        ...     rotations=quaternion.Rotation.from_euler([0, 0, 0])
+        ... )
         >>> sim1 = simgen.geometrical_simulation()
         >>> sim1.bands.size
         94
         >>> rlp = ReciprocalLatticePoint(
-        ...     phase=simgen.phase, hkl=[[1, 1, 1], [2, 0, 0]]
-        ... )
-        >>> sim2 = simgen.geometrical_simulation()
+        ...     phase=p, hkl=[[1, 1, 1], [2, 0, 0]]
+        ... ).symmetrise()
+        >>> sim2 = simgen.geometrical_simulation(rlp)
         >>> sim2.bands.size
-        13
+        7
         """
         rlp = reciprocal_lattice_point
         if rlp is None and (

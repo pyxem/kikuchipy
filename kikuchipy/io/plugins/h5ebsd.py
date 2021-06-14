@@ -749,21 +749,21 @@ def brukerheader2dicts(
     # Get region of interest (ROI, only rectangular shape supported)
     try:
         sd = hdf5group2dict(group=scan_group["EBSD/SEM"])
-        iy = sd["IY"][()]
-        ix = sd["IX"][()]
+        ir = sd["IY"][()]
+        ic = sd["IX"][()]
         roi = True
     except KeyError:
         roi = False
-        ny = hd["NROWS"]
-        nx = hd["NCOLS"]
+        nr = hd["NROWS"]
+        nc = hd["NCOLS"]
     if roi:
-        ny_roi, nx_roi, is_rectangular = _bruker_roi_is_rectangular(iy, ix)
+        nr_roi, nc_roi, is_rectangular = _bruker_roi_is_rectangular(ir, ic)
         if is_rectangular:
-            ny = ny_roi
-            nx = nx_roi
+            nr = nr_roi
+            nc = nc_roi
             # Get indices of patterns in the 2D map
-            idx = np.array([iy - np.min(iy), ix - np.min(ix)])
-            scan_size["indices"] = np.ravel_multi_index(idx, (ny, nx)).argsort()
+            idx = np.array([ir - np.min(ir), ic - np.min(ic)])
+            scan_size["indices"] = np.ravel_multi_index(idx, (nr, nc)).argsort()
         else:
             raise ValueError(
                 "Only a rectangular region of interest is supported"
@@ -772,8 +772,8 @@ def brukerheader2dicts(
     # Populate scan size dictionary
     scan_size.set_item("sx", hd["PatternWidth"])
     scan_size.set_item("sy", hd["PatternHeight"])
-    scan_size.set_item("nx", nx)
-    scan_size.set_item("ny", ny)
+    scan_size.set_item("nx", nc)
+    scan_size.set_item("ny", nr)
     scan_size.set_item("step_x", hd["XSTEP"])
     scan_size.set_item("step_y", hd["YSTEP"])
     scan_size.set_item(
@@ -783,18 +783,27 @@ def brukerheader2dicts(
     return md, omd, scan_size
 
 
-def _bruker_roi_is_rectangular(iy, ix):
-    iy_unique, iy_unique_counts = np.unique(iy, return_counts=True)
-    ix_unique, ix_unique_counts = np.unique(ix, return_counts=True)
+def _bruker_roi_is_rectangular(ir, ic):
+    ir_unique, ir_unique_counts = np.unique(ir, return_counts=True)
+    ic_unique, ic_unique_counts = np.unique(ic, return_counts=True)
     is_rectangular = (
-        np.all(np.diff(np.sort(iy_unique)) == 1)
-        and np.all(np.diff(np.sort(ix_unique)) == 1)
-        and np.unique(iy_unique_counts).size == 1
-        and np.unique(ix_unique_counts).size == 1
+        np.all(np.diff(np.sort(ir_unique)) == 1)
+        and np.all(np.diff(np.sort(ic_unique)) == 1)
+        and np.unique(ir_unique_counts).size == 1
+        and np.unique(ic_unique_counts).size == 1
     )
-    iy2 = np.max(iy) - np.min(iy) + 1
-    ix2 = np.max(ix) - np.min(ix) + 1
-    return iy2, ix2, is_rectangular
+    ir2 = np.max(ir) - np.min(ir) + 1
+    ic2 = np.max(ic) - np.min(ic) + 1
+    return ir2, ic2, is_rectangular
+
+
+# (n rows, n columns). Source: internet
+BRUKER_DETECTOR_MODEL_RESOLUTION = dict(
+    eflash_fs=(480, 640),
+    eflash_hd=(1200, 1600),
+    eflash_hr=(1200, 1600),
+    eflash_xs=(540, 720),
+)
 
 
 def file_writer(

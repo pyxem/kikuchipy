@@ -305,8 +305,6 @@ class Testh5ebsd:
         )
         mm = s.data.dask[k]
         assert isinstance(mm, Dataset)
-        with pytest.raises(NotImplementedError):
-            s.data[:] = 23
 
     def test_save_fresh(self, save_path_hdf5, tmp_path):
         scan_size = (10, 3)

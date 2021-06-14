@@ -63,16 +63,16 @@ class SphericalProjection:
         ...     SphericalProjection
         ... )
         >>> v = np.random.random_sample(30).reshape((10, 3))
-        >>> theta, phi, r = SphericalProjection.project(v)
-        >>> np.allclose(np.arccos(v[: 2] / r), theta)
+        >>> theta, phi, r = SphericalProjection.project(v).T
+        >>> np.allclose(np.arccos(v[:, 2] / r), theta)
         True
-        >>> np.allclose(np.arctan2(v[:, 1], v[:, 2]), phi)
+        >>> np.allclose(np.arctan2(v[:, 1], v[:, 0]), phi)
         True
         """
-        return _get_polar(v)
+        return _get_polar_coordinates(v)
 
 
-def _get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
+def _get_polar_coordinates(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     if isinstance(v, Vector3d):
         x, y, z = v.xyz
     else:
@@ -80,16 +80,16 @@ def _get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     polar = np.zeros(x.shape + (3,), dtype=x.dtype)
     polar[..., 1] = np.where(
         np.arctan2(y, x) < 0, np.arctan2(y, x) + 2 * np.pi, np.arctan2(y, x)
-    )  # Phi
+    )  # Azimuth
     polar[..., 2] = np.sqrt(x ** 2 + y ** 2 + z ** 2)  # r
-    polar[..., 0] = np.arccos(z / polar[..., 2])  # Theta
+    polar[..., 0] = np.arccos(z / polar[..., 2])  # Polar
 
     return polar
 
 
-def get_theta(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
-    """Get spherical coordinate theta from cartesian according to the
-    ISO 31-11 standard [SphericalWolfram]_.
+def get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
+    """Get the polar spherical coordinate from cartesian according to
+    the ISO 31-11 standard [SphericalWolfram]_.
 
     Parameters
     ----------
@@ -98,8 +98,8 @@ def get_theta(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
 
     Returns
     -------
-    theta
-        Spherical coordinate theta.
+    polar
+        Polar spherical coordinate.
     """
     if isinstance(v, Vector3d):
         x, y, z = v.xyz
@@ -109,9 +109,9 @@ def get_theta(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     return np.arccos(z / r)
 
 
-def get_phi(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
-    """Get spherical coordinate phi from cartesian according to the ISO
-    31-11 standard [SphericalWolfram]_.
+def get_azimuth(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
+    """Get the azimuthal spherical coordinate from cartesian according
+    to the ISO 31-11 standard [SphericalWolfram]_.
 
     Parameters
     ----------
@@ -120,20 +120,20 @@ def get_phi(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
 
     Returns
     -------
-    phi
-        Spherical coordinate phi.
+    azimuth
+        Azimuthal spherical coordinate.
     """
     if isinstance(v, Vector3d):
         x, y, _ = v.xyz
     else:
         x, y = v[..., 0], v[..., 1]
-    phi = np.arctan2(y, x)
-    phi += (phi < 0) * 2 * np.pi
-    return phi
+    azimuth = np.arctan2(y, x)
+    azimuth += (azimuth < 0) * 2 * np.pi
+    return azimuth
 
 
-def get_r(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
-    """Get radial spherical coordinate from cartesian coordinates.
+def get_radial(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
+    """Get the radial spherical coordinate from cartesian coordinates.
 
     Parameters
     ----------
@@ -142,8 +142,8 @@ def get_r(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
 
     Returns
     -------
-    phi
-        Spherical coordinate phi.
+    radial
+        Radial spherical coordinate.
     """
     if isinstance(v, Vector3d):
         x, y, z = v.xyz
