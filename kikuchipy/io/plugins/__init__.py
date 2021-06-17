@@ -23,6 +23,7 @@ from kikuchipy.io.plugins import (
     emsoft_ebsd_master_pattern,
     h5ebsd,
     nordif,
+    oxford_binary,
 )
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     "emsoft_ebsd_master_pattern",
     "h5ebsd",
     "nordif",
+    "oxford_binary",
 ]
