@@ -241,18 +241,12 @@ def r_tsl2bruker():
 
 
 @pytest.fixture
-def nickel_ebsd_simulation_generator(
-    nickel_phase,
-    detector,
-    nickel_rotations,
-):
+def nickel_ebsd_simulation_generator(nickel_phase, detector, nickel_rotations):
     """Generator for EBSD simulations of Kikuchi bands for the Nickel
     data set referenced above.
     """
     return kp.generators.EBSDSimulationGenerator(
-        detector=detector,
-        phase=nickel_phase,
-        rotations=nickel_rotations,
+        detector=detector, phase=nickel_phase, rotations=nickel_rotations
     )
 
 

@@ -52,11 +52,15 @@ pattern_footer = np.zeros(9, dtype=np.uint16)
 pattern_positions = np.arange(n_patterns, dtype=int)
 pattern_positions *= pattern_header_size + n_pixels + pattern_footer_size
 pattern_positions += file_header.nbytes + n_patterns * 8
+# Shift positions one step to the right
+new_order = np.roll(np.arange(n_patterns), 1)
+pattern_positions = pattern_positions[new_order]
 pattern_positions.tofile(file)
 
 # Write patterns with header and footer
 pattern_data = s.data
-for i, (r, c) in enumerate(np.ndindex((nr, nc))):
+for i in new_order:
+    r, c = np.unravel_index(i, (nr, nc))
     pattern_header.tofile(file)
     pattern_data[r, c].tofile(file)
     pattern_footer.tofile(file)

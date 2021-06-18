@@ -93,7 +93,7 @@ class OxfordBinaryFile:
         return sr, sc
 
     def guess_number_of_patterns(
-        self, assumed_n_pixels: int = 3600
+        self, assumed_n_pixels: int = 40 ** 2
     ) -> Tuple[int, np.ndarray]:
         """Guess the number of patterns in the file based upon an
         assumed lower bound for the number of pattern pixels and the
@@ -107,9 +107,7 @@ class OxfordBinaryFile:
         Returns
         -------
         n_patterns
-            Number of EBSD patterns in the file.
-        pattern_starts
-            Byte positions of the pattern starts in the file.
+            Guess of the number of EBSD patterns in the file.
         """
         file = self.file
         file.seek(0)
@@ -122,17 +120,21 @@ class OxfordBinaryFile:
         assumed_pattern_starts = np.fromfile(
             file, dtype=int, count=max_assumed_n_patterns, offset=8
         )
-
         diff_pattern_starts_bytes = np.diff(assumed_pattern_starts)
-        n_pixels = diff_pattern_starts_bytes[0] - header_size
-        is_actual_pattern_starts = diff_pattern_starts_bytes == (
-            n_pixels + header_size
-        )
-        n_patterns = np.sum(is_actual_pattern_starts) + 1
 
-        pattern_starts = assumed_pattern_starts[:n_patterns]
+        # Determine outliers by a distance to the mean greater than a
+        # number of standard deviations
+        mean = np.mean(diff_pattern_starts_bytes)
+        std = np.std(diff_pattern_starts_bytes)
+        distance = abs(diff_pattern_starts_bytes - mean)
+        max_std = 2
+        not_outlier = distance < max_std * std
+        outliers_start_idx = np.argmax(not_outlier < 1) - 1
+        not_outlier = np.ones(max_assumed_n_patterns, dtype=bool)
+        not_outlier[outliers_start_idx:] = False
+        n_patterns = np.sum(not_outlier)
 
-        return n_patterns, pattern_starts
+        return n_patterns
 
     def read(
         self, navigation_shape: Tuple[int, int] = None, lazy: bool = False
@@ -142,15 +144,17 @@ class OxfordBinaryFile:
 
         pattern_starts = None
         if navigation_shape is None:
-            n, pattern_starts = self.guess_number_of_patterns()
-            data_shape = (n,)
+            n_patterns = self.guess_number_of_patterns()
+            data_shape = (n_patterns,)
         else:
-            n = np.prod(navigation_shape)
+            n_patterns = np.prod(navigation_shape)
             data_shape = navigation_shape
 
-            # Get byte positions for the start of each pattern
-            file.seek(0)
-            pattern_starts = np.fromfile(file, dtype=int, count=n, offset=8)
+        # Get byte positions for the start of each pattern
+        file.seek(0)
+        pattern_starts = np.fromfile(
+            file, dtype=int, count=n_patterns, offset=8
+        )
 
         pattern_positions = np.argsort(pattern_starts)
         first_pattern_position = pattern_starts[0]
@@ -163,8 +167,8 @@ class OxfordBinaryFile:
         header_size = 34  # header AND footer
 
         # Create a memory map from data on disk
-        data_size = n * sr * sc + (n - 1) * header_size
-        offset2 = bits * (n + 1) + (2 * bits) * 1
+        data_size = n_patterns * sr * sc + (n_patterns - 1) * header_size
+        offset2 = bits * (n_patterns + 1) + (2 * bits) * 1
         file.seek(0)
         # Could use numpy.fromfile() when lazy=False directly here, but
         # this reading route has a memory peak greater than the data
@@ -176,10 +180,10 @@ class OxfordBinaryFile:
         # Reshape data for easy removal of header info from the pattern
         # intensities
         data0 = da.pad(data0, pad_width=(0, header_size))
-        data0 = data0.reshape((n, sr * sc + header_size))
+        data0 = data0.reshape((n_patterns, sr * sc + header_size))
 
         # Sort if necessary
-        if not np.allclose(np.diff(pattern_positions), 1):
+        if not np.allclose(np.diff(pattern_starts), 1):
             data0 = data0[pattern_positions]
 
         data0 = data0[..., :-header_size]
