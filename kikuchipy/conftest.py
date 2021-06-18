@@ -242,13 +242,17 @@ def r_tsl2bruker():
 
 @pytest.fixture
 def nickel_ebsd_simulation_generator(
-    nickel_phase, detector, nickel_rotations,
+    nickel_phase,
+    detector,
+    nickel_rotations,
 ):
     """Generator for EBSD simulations of Kikuchi bands for the Nickel
     data set referenced above.
     """
     return kp.generators.EBSDSimulationGenerator(
-        detector=detector, phase=nickel_phase, rotations=nickel_rotations,
+        detector=detector,
+        phase=nickel_phase,
+        rotations=nickel_rotations,
     )
 
 
@@ -413,4 +417,6 @@ def doctest_setup_teardown(request):
 @pytest.fixture(autouse=True)
 def import_to_namespace(doctest_namespace):
     DIR_PATH = os.path.dirname(__file__)
-    doctest_namespace["DATA_DIR"] = os.path.join(DIR_PATH, "data/kikuchipy")
+    doctest_namespace["DATA_DIR"] = os.path.join(
+        DIR_PATH, "data/kikuchipy_h5ebsd"
+    )
