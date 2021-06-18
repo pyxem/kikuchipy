@@ -18,6 +18,9 @@
 
 """Read support for EBSD patterns in Oxford Instrument's binary .ebsp
 format.
+
+The reader assumes that the file is uncompressed and that patterns are
+stored as 8-bit unsigned integers.
 """
 
 import os
@@ -30,7 +33,7 @@ import numpy as np
 # Plugin characteristics
 # ----------------------
 format_name = "Oxford"
-description = "Read support for Oxford Instrument's .ebsp file."
+description = "Read support for Oxford Instrument's binary .ebsp file."
 full_support = False
 # Recognised file extension
 file_extensions = ["ebsp"]
@@ -41,7 +44,7 @@ writes = False
 
 def file_reader(
     filename: str,
-    navigation_shape: Tuple[int, int],
+    navigation_shape: Tuple[int, int] = None,
     lazy: bool = False,
 ) -> List[Dict]:
     file = OxfordBinaryFile(filename)
@@ -49,11 +52,13 @@ def file_reader(
     return [scan]
 
 
-def file_writer(filename: str):
-    file = OxfordBinaryFile(filename)
-
-
 class OxfordBinaryFile:
+    """Binary file with EBSD patterns stored in the Oxford .ebsp format.
+
+    It is assumed that the file is uncompressed and that patterns are
+    stored as 8-bit unsigned integers.
+    """
+
     def __init__(self, filename: str):
         """Set up an Oxford binary .ebsp file for reading or writing.
 
@@ -87,27 +92,78 @@ class OxfordBinaryFile:
         sr, sc = sig_shape[[2, 4]].astype(int)
         return sr, sc
 
-    def read(self, navigation_shape: Tuple[int, int], lazy: bool = False):
-        nr, nc = navigation_shape
-        n = nr * nc
+    def guess_number_of_patterns(
+        self, assumed_n_pixels: int = 3600
+    ) -> Tuple[int, np.ndarray]:
+        """Guess the number of patterns in the file based upon an
+        assumed lower bound for the number of pattern pixels and the
+        file size.
 
+        Parameters
+        ----------
+        assumed_n_pixels : int
+            Assumed lower bound for the number of pattern pixels.
+
+        Returns
+        -------
+        n_patterns
+            Number of EBSD patterns in the file.
+        pattern_starts
+            Byte positions of the pattern starts in the file.
+        """
+        file = self.file
+        file.seek(0)
+        file_byte_size = os.path.getsize(file.name)
+        header_size = 34
+
+        max_assumed_n_patterns = file_byte_size // (
+            assumed_n_pixels + header_size
+        )
+        assumed_pattern_starts = np.fromfile(
+            file, dtype=int, count=max_assumed_n_patterns, offset=8
+        )
+
+        diff_pattern_starts_bytes = np.diff(assumed_pattern_starts)
+        n_pixels = diff_pattern_starts_bytes[0] - header_size
+        is_actual_pattern_starts = diff_pattern_starts_bytes == (
+            n_pixels + header_size
+        )
+        n_patterns = np.sum(is_actual_pattern_starts) + 1
+
+        pattern_starts = assumed_pattern_starts[:n_patterns]
+
+        return n_patterns, pattern_starts
+
+    def read(
+        self, navigation_shape: Tuple[int, int] = None, lazy: bool = False
+    ):
         self.open()
         file = self.file
 
-        # Get byte positions for the start of each pattern
-        file.seek(0)
-        pattern_starts = np.fromfile(file, dtype=int, count=n, offset=8)
+        pattern_starts = None
+        if navigation_shape is None:
+            n, pattern_starts = self.guess_number_of_patterns()
+            data_shape = (n,)
+        else:
+            n = np.prod(navigation_shape)
+            data_shape = navigation_shape
+
+            # Get byte positions for the start of each pattern
+            file.seek(0)
+            pattern_starts = np.fromfile(file, dtype=int, count=n, offset=8)
+
         pattern_positions = np.argsort(pattern_starts)
         first_pattern_position = pattern_starts[0]
 
         sr, sc = self.get_signal_shape(offset=first_pattern_position)
+        data_shape += (sr, sc)
 
         dtype = np.uint8
         bits = np.iinfo(dtype).bits
-        n_bytes_header = 34
+        header_size = 34  # header AND footer
 
         # Create a memory map from data on disk
-        data_size = n * sr * sc + (n - 1) * n_bytes_header
+        data_size = n * sr * sc + (n - 1) * header_size
         offset2 = bits * (n + 1) + (2 * bits) * 1
         file.seek(0)
         # Could use numpy.fromfile() when lazy=False directly here, but
@@ -119,15 +175,14 @@ class OxfordBinaryFile:
 
         # Reshape data for easy removal of header info from the pattern
         # intensities
-        data0 = da.pad(data0, pad_width=(0, n_bytes_header))
-        data0 = data0.reshape((n, sr * sc + n_bytes_header))
+        data0 = da.pad(data0, pad_width=(0, header_size))
+        data0 = data0.reshape((n, sr * sc + header_size))
 
         # Sort if necessary
         if not np.allclose(np.diff(pattern_positions), 1):
             data0 = data0[pattern_positions]
 
-        data0 = data0[..., :-n_bytes_header]
-        data_shape = (nr, nc, sr, sc)
+        data0 = data0[..., :-header_size]
         data0 = data0.reshape(data_shape)
 
         if lazy:
@@ -170,50 +225,3 @@ class OxfordBinaryFile:
         self.close()
 
         return scan
-
-    def write(self):
-        return
-
-
-def _guess_number_of_patterns(
-    file, offset: int, assumed_n_pixels: int = 3600
-) -> Tuple[int, np.ndarray]:
-    """Guess the number of patterns in the file based upon an assumed
-    lower bound for the number of pattern pixels and the file size.
-
-    Parameters
-    ----------
-    file : io.FileIO
-        Oxford Instrument's binary file (.ebsp) with EBSD patterns.
-    offset : int
-        File byte offset for the pattern starts, either 0 or 8 depending
-        on the .ebsp file format version.
-    assumed_n_pixels : int
-        Assumed lower bound for the number of pattern pixels.
-
-    Returns
-    -------
-    n_patterns
-        Number of EBSD patterns in the file.
-    pattern_starts
-        Byte positions of the pattern starts in the file.
-    """
-    file.seek(0)
-    file_byte_size = os.path.getsize(file.name)
-    header_size = 34
-
-    max_assumed_n_patterns = file_byte_size // (assumed_n_pixels + header_size)
-    assumed_pattern_starts = np.fromfile(
-        file, dtype="q", count=max_assumed_n_patterns, offset=offset
-    )
-
-    diff_pattern_starts_bytes = np.diff(assumed_pattern_starts)
-    n_pixels = diff_pattern_starts_bytes[0] - header_size
-    is_actual_pattern_starts = diff_pattern_starts_bytes == (
-        n_pixels + header_size
-    )
-    n_patterns = np.sum(is_actual_pattern_starts) + 1
-
-    pattern_starts = assumed_pattern_starts[:n_patterns]
-
-    return n_patterns, pattern_starts

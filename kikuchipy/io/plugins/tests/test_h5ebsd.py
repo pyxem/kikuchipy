@@ -40,19 +40,19 @@ from kikuchipy.signals.util._metadata import metadata_nodes
 
 DIR_PATH = os.path.dirname(__file__)
 DATA_PATH = os.path.join(DIR_PATH, "../../../data")
-KIKUCHIPY_FILE = os.path.join(DATA_PATH, "kikuchipy/patterns.h5")
+KIKUCHIPY_FILE = os.path.join(DATA_PATH, "kikuchipy_h5ebsd/patterns.h5")
 KIKUCHIPY_FILE_NO_CHUNKS = os.path.join(
-    DATA_PATH, "kikuchipy/patterns_nochunks.h5"
+    DATA_PATH, "kikuchipy_h5ebsd/patterns_nochunks.h5"
 )
 KIKUCHIPY_FILE_GROUP_NAMES = [
     "My awes0m4 Xcan #! with a long title",
     "Scan 2",
 ]
-EDAX_FILE = os.path.join(DATA_PATH, "edax/patterns.h5")
-BRUKER_FILE = os.path.join(DATA_PATH, "bruker/patterns.h5")
-BRUKER_FILE_ROI = os.path.join(DATA_PATH, "bruker/patterns_roi.h5")
+EDAX_FILE = os.path.join(DATA_PATH, "edax_h5ebsd/patterns.h5")
+BRUKER_FILE = os.path.join(DATA_PATH, "bruker_h5ebsd/patterns.h5")
+BRUKER_FILE_ROI = os.path.join(DATA_PATH, "bruker_h5ebsd/patterns_roi.h5")
 BRUKER_FILE_ROI_NONRECTANGULAR = os.path.join(
-    DATA_PATH, "bruker/patterns_roi_nonrectangular.h5"
+    DATA_PATH, "bruker_h5ebsd/patterns_roi_nonrectangular.h5"
 )
 BG_FILE = os.path.join(DATA_PATH, "nordif/Background acquisition image.bmp")
 AXES_MANAGER = {

@@ -35,7 +35,9 @@ from kikuchipy.conftest import assert_dictionary
 matplotlib.use("Agg")  # For plotting
 
 DIR_PATH = os.path.dirname(__file__)
-KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy/patterns.h5")
+KIKUCHIPY_FILE = os.path.join(
+    DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5"
+)
 EMSOFT_FILE = os.path.join(DIR_PATH, "../../data/emsoft_ebsd/simulated_ebsd.h5")
 
 
@@ -282,11 +284,15 @@ class TestRemoveStaticBackgroundEBSD:
         dummy_signal2 = dummy_signal.deepcopy()
 
         dummy_signal.remove_static_background(
-            scale_bg=True, relative=False, static_bg=dummy_background,
+            scale_bg=True,
+            relative=False,
+            static_bg=dummy_background,
         )
 
         dummy_signal2.remove_static_background(
-            scale_bg=False, relative=False, static_bg=dummy_background,
+            scale_bg=False,
+            relative=False,
+            static_bg=dummy_background,
         )
 
         p1 = dummy_signal.inav[0, 0].data
@@ -302,7 +308,9 @@ class TestRemoveStaticBackgroundEBSD:
     ):
         with pytest.raises(ValueError, match="'scale_bg' must be False"):
             dummy_signal.remove_static_background(
-                relative=True, scale_bg=True, static_bg=dummy_background,
+                relative=True,
+                scale_bg=True,
+                static_bg=dummy_background,
             )
 
     def test_non_square_patterns(self):
@@ -397,7 +405,9 @@ class TestRemoveDynamicBackgroundEBSD:
         """
 
         dummy_signal.remove_dynamic_background(
-            operation=operation, std=std, filter_domain="spatial",
+            operation=operation,
+            std=std,
+            filter_domain="spatial",
         )
         answer = answer.reshape((3,) * 4).astype(np.uint8)
         assert np.allclose(dummy_signal.data, answer)
@@ -465,7 +475,9 @@ class TestRemoveDynamicBackgroundEBSD:
 
         filter_domain = "frequency"
         dummy_signal.remove_dynamic_background(
-            operation=operation, std=std, filter_domain=filter_domain,
+            operation=operation,
+            std=std,
+            filter_domain=filter_domain,
         )
 
         assert dummy_signal.data.dtype == dtype_out
@@ -576,13 +588,15 @@ class TestRescaleIntensityEBSD:
     def test_rescale_intensity_raises_in_range_percentiles(self, dummy_signal):
         with pytest.raises(ValueError, match="'percentiles' must be None"):
             dummy_signal.rescale_intensity(
-                in_range=(1, 254), percentiles=(1, 99),
+                in_range=(1, 254),
+                percentiles=(1, 99),
             )
 
     def test_rescale_intensity_raises_in_range_relative(self, dummy_signal):
         with pytest.raises(ValueError, match="'in_range' must be None if "):
             dummy_signal.rescale_intensity(
-                in_range=(1, 254), relative=True,
+                in_range=(1, 254),
+                relative=True,
             )
 
 
@@ -675,18 +689,27 @@ class TestAverageNeighbourPatternsEBSD:
         ],
     )
     def test_average_neighbour_patterns(
-        self, dummy_signal, window, window_shape, lazy, answer, kwargs,
+        self,
+        dummy_signal,
+        window,
+        window_shape,
+        lazy,
+        answer,
+        kwargs,
     ):
         if lazy:
             dummy_signal = dummy_signal.as_lazy()
 
         if kwargs is None:
             dummy_signal.average_neighbour_patterns(
-                window=window, window_shape=window_shape,
+                window=window,
+                window_shape=window_shape,
             )
         else:
             dummy_signal.average_neighbour_patterns(
-                window=window, window_shape=window_shape, **kwargs,
+                window=window,
+                window_shape=window_shape,
+                **kwargs,
             )
 
         answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
@@ -697,7 +720,8 @@ class TestAverageNeighbourPatternsEBSD:
         answer = dummy_signal.data.copy()
         with pytest.warns(UserWarning, match="A window of shape .* was "):
             dummy_signal.average_neighbour_patterns(
-                window="rectangular", window_shape=(1, 1),
+                window="rectangular",
+                window_shape=(1, 1),
             )
         assert np.allclose(dummy_signal.data, answer)
         assert dummy_signal.data.dtype == answer.dtype
@@ -963,7 +987,9 @@ class TestGetDynamicBackgroundEBSD:
     def test_get_dynamic_background_spatial(self, dummy_signal):
         dtype_out = dummy_signal.data.dtype
         bg = dummy_signal.get_dynamic_background(
-            filter_domain="spatial", std=2, truncate=3,
+            filter_domain="spatial",
+            std=2,
+            truncate=3,
         )
 
         assert bg.data.dtype == dtype_out
@@ -972,7 +998,10 @@ class TestGetDynamicBackgroundEBSD:
     def test_get_dynamic_background_frequency(self, dummy_signal):
         dtype_out = np.float32
         bg = dummy_signal.get_dynamic_background(
-            filter_domain="frequency", std=2, truncate=3, dtype_out=dtype_out,
+            filter_domain="frequency",
+            std=2,
+            truncate=3,
+            dtype_out=dtype_out,
         )
 
         assert bg.data.dtype == dtype_out
@@ -1076,7 +1105,9 @@ class TestFFTFilterEBSD:
         w = kp.filters.Window(transfer_function, shape=shape, **kwargs)
 
         dummy_signal.fft_filter(
-            transfer_function=w, function_domain="frequency", shift=shift,
+            transfer_function=w,
+            function_domain="frequency",
+            shift=shift,
         )
 
         assert isinstance(dummy_signal, kp.signals.EBSD)
@@ -1095,7 +1126,9 @@ class TestFFTFilterEBSD:
         w = np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]])
 
         dummy_signal.fft_filter(
-            transfer_function=w, function_domain="spatial", shift=False,
+            transfer_function=w,
+            function_domain="spatial",
+            shift=False,
         )
         p2 = dummy_signal.inav[0, 0].data
         assert not np.allclose(p, p2, atol=1e-1)
@@ -1240,7 +1273,8 @@ class TestEBSDXmapProperty:
 
         # Should fail
         xmap_bad = get_single_phase_xmap(
-            nav_shape=nav_shape[::-1], step_sizes=step_sizes,
+            nav_shape=nav_shape[::-1],
+            step_sizes=step_sizes,
         )
         with pytest.raises(AttributeError, match="The crystal map shape"):
             s.xmap = xmap_bad
@@ -1579,7 +1613,10 @@ class TestNeighbourDotProductMatrices:
         dp_matrices = s.get_neighbour_dot_product_matrices(zero_mean=zero_mean)
 
         assert np.allclose(
-            dp_matrices[1, 1], desired_dp_matrices11, atol=1e-5, equal_nan=True,
+            dp_matrices[1, 1],
+            desired_dp_matrices11,
+            atol=1e-5,
+            equal_nan=True,
         )
 
     @pytest.mark.parametrize(
@@ -1608,7 +1645,10 @@ class TestNeighbourDotProductMatrices:
         dp_matrices = s.get_neighbour_dot_product_matrices(normalize=normalize)
 
         assert np.allclose(
-            dp_matrices[1, 1], desired_dp_matrices11, atol=1e-5, equal_nan=True,
+            dp_matrices[1, 1],
+            desired_dp_matrices11,
+            atol=1e-5,
+            equal_nan=True,
         )
 
     def test_dp_matrices_large(self):

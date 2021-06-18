@@ -48,6 +48,9 @@ DIR_PATH = os.path.dirname(__file__)
 EMSOFT_FILE = os.path.join(
     DIR_PATH, "../../data/emsoft_ebsd_master_pattern/master_patterns.h5"
 )
+EMSOFT_EBSD_FILE = os.path.join(
+    DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5"
+)
 
 
 class TestEBSDMasterPatternInit:
@@ -180,7 +183,10 @@ class TestSimulatedPatternDictionary:
         npy = 1001
         scale = 500
         nii, nij, niip, nijp = _get_lambert_interpolation_parameters(
-            rotated_direction_cosines=dc, npx=npx, npy=npy, scale=scale,
+            rotated_direction_cosines=dc,
+            npx=npx,
+            npy=npy,
+            scale=scale,
         )[:4]
 
         assert (nii <= niip).all()
@@ -198,9 +204,6 @@ class TestSimulatedPatternDictionary:
 
     def test_get_patterns(self):
         # Ni Test
-        EMSOFT_EBSD_FILE = os.path.join(
-            DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5"
-        )
         emsoft_key = load(EMSOFT_EBSD_FILE)
         emsoft_key = emsoft_key.data[0]
 

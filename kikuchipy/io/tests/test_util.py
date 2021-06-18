@@ -16,9 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from contextlib import contextmanager
 import io
 import sys
-from contextlib import contextmanager
 
 import pytest
 

@@ -29,7 +29,9 @@ from kikuchipy.io._io import _assign_signal_subclass, _dict2signal
 from kikuchipy.signals.ebsd import EBSD, LazyEBSD
 
 DIR_PATH = os.path.dirname(__file__)
-KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy/patterns.h5")
+KIKUCHIPY_FILE = os.path.join(
+    DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5"
+)
 
 
 class TestIO:
