@@ -183,10 +183,7 @@ class TestSimulatedPatternDictionary:
         npy = 1001
         scale = 500
         nii, nij, niip, nijp = _get_lambert_interpolation_parameters(
-            rotated_direction_cosines=dc,
-            npx=npx,
-            npy=npy,
-            scale=scale,
+            rotated_direction_cosines=dc, npx=npx, npy=npy, scale=scale
         )[:4]
 
         assert (nii <= niip).all()

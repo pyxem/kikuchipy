@@ -52,16 +52,8 @@ class TestVirtualBSEGenerator:
     @pytest.mark.parametrize(
         "grid_shape, desired_rows, desired_cols",
         [
-            (
-                (10, 10),
-                np.linspace(0, 60, 10 + 1),
-                np.linspace(0, 60, 10 + 1),
-            ),
-            (
-                (13, 7),
-                np.linspace(0, 60, 13 + 1),
-                np.linspace(0, 60, 7 + 1),
-            ),
+            ((10, 10), np.linspace(0, 60, 10 + 1), np.linspace(0, 60, 10 + 1)),
+            ((13, 7), np.linspace(0, 60, 13 + 1), np.linspace(0, 60, 7 + 1)),
         ],
     )
     def test_set_grid_shape(self, grid_shape, desired_rows, desired_cols):
@@ -82,11 +74,7 @@ class TestVirtualBSEGenerator:
 
     @pytest.mark.parametrize(
         "grid_shape, desired_n_markers",
-        [
-            ((3, 3), 9 + 3 + 8),
-            ((1, 1), 1 + 3 + 4),
-            ((2, 3), 6 + 3 + 7),
-        ],
+        [((3, 3), 9 + 3 + 8), ((1, 1), 1 + 3 + 4), ((2, 3), 6 + 3 + 7)],
     )
     def test_plot_grid(self, grid_shape, desired_n_markers):
         s = load(KIKUCHIPY_FILE)
@@ -95,8 +83,7 @@ class TestVirtualBSEGenerator:
         rgb_channels = [(0, 0), (0, 1), (1, 0)]
         pattern_idx = (2, 2)
         p = vbse_gen.plot_grid(
-            pattern_idx=pattern_idx,
-            rgb_channels=rgb_channels,
+            pattern_idx=pattern_idx, rgb_channels=rgb_channels
         )
         p2 = vbse_gen.plot_grid()
 
@@ -192,10 +179,7 @@ class TestGetRGBImage:
         s = load(KIKUCHIPY_FILE)
         vbse_gen = VirtualBSEGenerator(s)
         vbse_rgb_img = vbse_gen.get_rgb_image(
-            r=(0, 0),
-            g=(0, 1),
-            b=(0, 2),
-            dtype_out=np.uint16,
+            r=(0, 0), g=(0, 1), b=(0, 2), dtype_out=np.uint16
         )
 
         assert vbse_rgb_img.data.dtype == np.dtype(
@@ -204,10 +188,7 @@ class TestGetRGBImage:
 
     @pytest.mark.parametrize(
         "percentile, desired_mean_intensity",
-        [
-            (None, 136.481481),
-            ((1, 99), 134.740740),
-        ],
+        [(None, 136.481481), ((1, 99), 134.740740)],
     )
     def test_get_rgb_image_contrast_stretching(
         self, percentile, desired_mean_intensity
@@ -215,10 +196,7 @@ class TestGetRGBImage:
         s = load(KIKUCHIPY_FILE)
         vbse_gen = VirtualBSEGenerator(s)
         vbse_rgb_img = vbse_gen.get_rgb_image(
-            r=(0, 0),
-            g=(0, 1),
-            b=(0, 2),
-            percentiles=percentile,
+            r=(0, 0), g=(0, 1), b=(0, 2), percentiles=percentile
         )
         vbse_rgb_img.change_dtype(np.uint8)
 
@@ -226,10 +204,7 @@ class TestGetRGBImage:
 
     @pytest.mark.parametrize(
         "alpha_add, desired_mean_intensity",
-        [
-            (0, 88.481481),
-            (10, 107.851851),
-        ],
+        [(0, 88.481481), (10, 107.851851)],
     )
     def test_get_rgb_alpha(self, alpha_add, desired_mean_intensity):
         s = load(KIKUCHIPY_FILE)
@@ -255,10 +230,7 @@ class TestGetRGBImage:
             r=(0, 1), g=(0, 2), b=(0, 3), alpha=vbse_img
         )
         vbse_rgb_img2 = vbse_gen.get_rgb_image(
-            r=(0, 1),
-            g=(0, 2),
-            b=(0, 3),
-            alpha=vbse_img.data,
+            r=(0, 1), g=(0, 2), b=(0, 3), alpha=vbse_img.data
         )
         vbse_rgb_img1.change_dtype(np.uint8)
         vbse_rgb_img2.change_dtype(np.uint8)
