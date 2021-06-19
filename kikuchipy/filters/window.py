@@ -420,7 +420,7 @@ def modified_hann(Nx: int) -> np.ndarray:
     r"""Return a 1D modified Hann window with the maximum value
     normalized to 1.
 
-    Used in [Wilkinson2006]_.
+    Used in :cite:`wilkinson2006high`.
 
     Parameters
     ----------
@@ -439,14 +439,6 @@ def modified_hann(Nx: int) -> np.ndarray:
     .. math:: w(x) = \cos\left(\frac{\pi x}{N_x}\right),
 
     with :math:`x` relative to the window centre.
-
-    References
-    ----------
-    .. [Wilkinson2006] A. J. Wilkinson, G. Meaden, D. J. Dingley, \
-        "High resolution mapping of strains and rotations using \
-        electron backscatter diffraction," Materials Science and \
-        Technology 22(11), (2006), doi:
-        https://doi.org/10.1179/174328406X130966.
 
     Examples
     --------
@@ -468,7 +460,7 @@ def lowpass_fft_filter(
     r"""Return a frequency domain low-pass filter transfer function in
     2D.
 
-    Used in [Wilkinson2006]_.
+    Used in :cite:`wilkinson2006high`.
 
     Parameters
     ----------
@@ -535,7 +527,7 @@ def highpass_fft_filter(
     r"""Return a frequency domain high-pass filter transfer function in
     2D.
 
-    Used in [Wilkinson2006]_.
+    Used in :cite:`wilkinson2006high`.
 
     Parameters
     ----------
