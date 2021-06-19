@@ -116,24 +116,26 @@ setup(
     },
     # Dependencies
     extras_require=extra_feature_requirements,
+    # fmt: off
     install_requires=[
         # Restrict newest dask version until
         # https://github.com/dask/dask/issues/7583 is resolved
-        "dask[array] >= 2.18, <= 2021.03.1",
-        "diffsims >= 0.4",
-        "hyperspy >= 1.5.2",
-        "h5py >= 2.10",
-        "matplotlib >= 3.3",
-        "numpy >= 1.19",
-        "numba >= 0.48",
-        "orix >= 0.6.0",
-        "pooch >= 0.13",
+        "dask[array]    >= 2.18, <= 2021.03.1",
+        "diffsims       >= 0.4",
+        "hyperspy       >= 1.5.2",
+        "h5py           >= 2.10",
+        "matplotlib     >= 3.3",
+        "numpy          >= 1.19",
+        "numba          >= 0.48",
+        "orix           >= 0.6.0",
+        "pooch          >= 0.13",
         "psutil",
-        "tqdm >= 0.5.2",
-        "scikit-image >= 0.16.2",
+        "tqdm           >= 0.5.2",
+        "scikit-image   >= 0.16.2",
         "scikit-learn",
         "scipy",
     ],
+    # fmt: on
     entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},
     # Files to include when distributing package
     packages=find_packages(),
