@@ -43,9 +43,9 @@ with open("kikuchipy/release.py") as fid:
 # https://setuptools.readthedocs.io/en/latest/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
 extra_feature_requirements = {
     "doc": [
+        "furo",
         "nbsphinx >= 0.7",
         "sphinx >= 3.0.2",
-        "sphinx-rtd-theme >= 0.4.3",
         "sphinx-copybutton >= 0.2.5",
         "sphinx-autodoc-typehints >= 1.10.3",
         "sphinx-gallery >= 0.6",
