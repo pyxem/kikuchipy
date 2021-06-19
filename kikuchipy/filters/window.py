@@ -288,10 +288,12 @@ class Window(np.ndarray):
         self,
         grid: bool = True,
         show_values: bool = True,
-        cmap: str = "viridis",
         textcolors: Optional[List[str]] = None,
+        cmap: str = "viridis",
         cmap_label: str = "Value",
-    ) -> Tuple[Figure, AxesImage, Colorbar]:
+        colorbar: bool = True,
+        return_figure: bool = False,
+    ) -> Figure:
         """Plot window values with indices relative to the origin.
 
         Parameters
@@ -302,22 +304,24 @@ class Window(np.ndarray):
         show_values
             Whether to show values as text in centre of element. Default
             is True.
-        cmap
-            A color map to color data with, available in
-            :class:`matplotlib.colors.ListedColormap`. Default is
-            "viridis".
         textcolors
             A list of two color specifications. The first is used for
             values below a threshold, the second for those above. If
             None (default), this is set to ["white", "black"].
+        cmap
+            A color map to color data with, available in
+            :class:`matplotlib.colors.ListedColormap`. Default is
+            "viridis".
         cmap_label
             Color map label. Default is "Value".
+        colorbar
+            Whether to show the colorbar. Default is True.
+        return_figure
+            Whether to return the figure or not. Default is False.
 
         Returns
         -------
         fig
-        image
-        colorbar
 
         Examples
         --------
@@ -327,10 +331,15 @@ class Window(np.ndarray):
 
         >>> import kikuchipy as kp
         >>> w = kp.filters.Window()
-        >>> figure, image, colorbar = w.plot(
-        ...     cmap="inferno", grid=True, show_values=True
-        ... )
-        >>> figure.savefig('my_kernel.png')
+        >>> fig = w.plot(return_figure=True)
+        >>> fig.savefig('my_kernel.png')
+
+        If getting the figure axes, image array or colorbar is necessary
+
+        >>> ax = fig.axes[0]
+        >>> im = ax.get_images()[0]
+        >>> arr = im.get_array()
+        >>> cbar = im.colorbar
         """
         if not self.is_valid():
             raise ValueError("Window is invalid.")
@@ -345,8 +354,9 @@ class Window(np.ndarray):
         fig, ax = subplots()
         image = ax.imshow(w, cmap=cmap, interpolation=None)
 
-        colorbar = ax.figure.colorbar(image, ax=ax)
-        colorbar.ax.set_ylabel(cmap_label, rotation=-90, va="bottom")
+        if colorbar:
+            cbar = ax.figure.colorbar(image, ax=ax)
+            cbar.ax.set_ylabel(cmap_label, rotation=-90, va="bottom")
 
         # Set plot ticks
         ky, kx = w.shape
@@ -359,7 +369,7 @@ class Window(np.ndarray):
         ax.set_yticks(np.arange(ky + 1) - 0.5, minor=True)
 
         if grid:  # Create grid
-            for edge, spine in ax.spines.items():
+            for spine in ax.spines.values():
                 spine.set_visible(False)
             ax.grid(which="minor", color="w", linestyle="-", linewidth=3)
             ax.tick_params(which="minor", bottom=False, left=False)
@@ -376,7 +386,8 @@ class Window(np.ndarray):
                 coeff_str = str(round(val, 4) if val % 1 else int(val))
                 image.axes.text(idx[1], idx[0], coeff_str, **kw)
 
-        return fig, image, colorbar
+        if return_figure:
+            return fig
 
 
 def distance_to_origin(
@@ -409,7 +420,7 @@ def modified_hann(Nx: int) -> np.ndarray:
     r"""Return a 1D modified Hann window with the maximum value
     normalized to 1.
 
-    Used in [Wilkinson2006]_.
+    Used in :cite:`wilkinson2006high`.
 
     Parameters
     ----------
@@ -418,7 +429,7 @@ def modified_hann(Nx: int) -> np.ndarray:
 
     Returns
     -------
-    w : numpy.ndarray
+    w
         1D Hann window.
 
     Notes
@@ -428,14 +439,6 @@ def modified_hann(Nx: int) -> np.ndarray:
     .. math:: w(x) = \cos\left(\frac{\pi x}{N_x}\right),
 
     with :math:`x` relative to the window centre.
-
-    References
-    ----------
-    .. [Wilkinson2006] A. J. Wilkinson, G. Meaden, D. J. Dingley, \
-        "High resolution mapping of strains and rotations using \
-        electron backscatter diffraction," Materials Science and \
-        Technology 22(11), (2006), doi:
-        https://doi.org/10.1179/174328406X130966.
 
     Examples
     --------
@@ -457,7 +460,7 @@ def lowpass_fft_filter(
     r"""Return a frequency domain low-pass filter transfer function in
     2D.
 
-    Used in [Wilkinson2006]_.
+    Used in :cite:`wilkinson2006high`.
 
     Parameters
     ----------
@@ -471,7 +474,7 @@ def lowpass_fft_filter(
 
     Returns
     -------
-    w : numpy.ndarray
+    w
         2D transfer function.
 
     Notes
@@ -524,7 +527,7 @@ def highpass_fft_filter(
     r"""Return a frequency domain high-pass filter transfer function in
     2D.
 
-    Used in [Wilkinson2006]_.
+    Used in :cite:`wilkinson2006high`.
 
     Parameters
     ----------
