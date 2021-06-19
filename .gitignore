@@ -71,7 +71,7 @@ target/
 # IPython Notebook
 .ipynb_checkpoints
 *-test.ipynb
-doc/_static/*/*/*.ipynb
+doc/_static/*/*.ipynb
 
 # pyenv
 .python-version
