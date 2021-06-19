@@ -34,6 +34,12 @@ Added
 - Reading of NORDIF calibration patterns specified in a setting file into an
   EBSD signal. (`#317 <https://github.com/pyxem/kikuchipy/pull/317>`_)
 
+Changed
+-------
+- Only return figure from kikuchipy.filters.Window.plot() if desired, also add a
+  colorbar only if desired.
+  (`#375 <https://github.com/pyxem/kikuchipy/pull/375>`_)
+
 Fixed
 -----
 - Deep copying EBSD and EBSDMasterPattern signals carry over, respectively,
