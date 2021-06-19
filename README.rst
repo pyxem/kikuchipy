@@ -18,7 +18,7 @@
     :alt: Build status
 
 .. Coveralls
-.. image:: https://img.shields.io/coveralls/github/pyxem/kikuchipy.svg
+.. image:: https://coveralls.io/repos/github/pyxem/kikuchipy/badge.svg?branch=master
     :target: https://coveralls.io/github/pyxem/kikuchipy?branch=master
     :alt: Coveralls status
 
