@@ -495,7 +495,7 @@ from HyperSpy.
 .. autosummary::
     adaptive_histogram_equalization
     average_neighbour_patterns
-    match_patterns
+    dictionary_indexing
     fft_filter
     get_average_neighbour_dot_product_map
     get_decomposition_model

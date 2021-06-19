@@ -76,6 +76,7 @@ from kikuchipy.signals.util._map_helper import (
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 from kikuchipy.signals._common_image import CommonImage
 from kikuchipy.detectors import EBSDDetector
+from kikuchipy._util import deprecated
 
 
 class EBSD(CommonImage, Signal2D):
@@ -141,7 +142,9 @@ class EBSD(CommonImage, Signal2D):
     @xmap.setter
     def xmap(self, value: CrystalMap):
         if crystal_map_is_compatible_with_signal(
-            value, self.axes_manager, raise_if_false=True,
+            value,
+            self.axes_manager,
+            raise_if_false=True,
         ):
             self._xmap = value
 
@@ -927,7 +930,17 @@ class EBSD(CommonImage, Signal2D):
 
         return image_quality_map
 
+    @deprecated(
+        since="0.4",
+        alternative="kikuchipy.signals.EBSD.dictionary_indexing",
+        removal="0.5",
+    )
     def match_patterns(
+        self, *args, **kwargs
+    ) -> Union[CrystalMap, List[CrystalMap]]:
+        return self.dictionary_indexing(*args, **kwargs)
+
+    def dictionary_indexing(
         self,
         simulations,
         metric: Union[str, SimilarityMetric] = "ncc",
@@ -1339,7 +1352,9 @@ class EBSD(CommonImage, Signal2D):
             averaging_window = copy.copy(window)
         else:
             averaging_window = Window(
-                window=window, shape=window_shape, **kwargs,
+                window=window,
+                shape=window_shape,
+                **kwargs,
             )
 
         # Do nothing if a window of shape (1, ) or (1, 1) is passed

@@ -19,7 +19,7 @@
 """Tools for indexing of EBSD patterns by comparison to simulated
 patterns.
 
-The EBSD method :meth:`~kikuchipy.signals.EBSD.match_patterns` uses
+The EBSD method :meth:`~kikuchipy.signals.EBSD.dictionary_indexing` uses
 these tools for pattern matching.
 """
 

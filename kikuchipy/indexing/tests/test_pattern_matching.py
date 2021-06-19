@@ -110,9 +110,9 @@ class TestPatternMatching:
         exp = nickel_ebsd_small().data
         sim = exp.reshape((-1,) + exp.shape[-2:])
 
-        sim_idx1, scores1 = _pattern_match(exp, sim, n_slices=2)
-        sim_idx2, scores2 = _pattern_match(exp, sim, phase_name="a", n_slices=2)
-        sim_idx3, scores3 = _pattern_match(exp, sim, phase_name="", n_slices=2)
+        sim_idx1, _ = _pattern_match(exp, sim, n_slices=2)
+        sim_idx2, _ = _pattern_match(exp, sim, phase_name="a", n_slices=2)
+        sim_idx3, _ = _pattern_match(exp, sim, phase_name="", n_slices=2)
 
         assert np.allclose(sim_idx1[0], [0, 3, 6, 4, 7, 1, 8, 5, 2])
         assert np.allclose(sim_idx2[0], [0, 3, 6, 4, 7, 1, 8, 5, 2])
@@ -140,9 +140,9 @@ class TestPatternMatching:
         )
         sim = mp.get_patterns(rotations=r, detector=detector, energy=20)
 
-        xmap = s.match_patterns(sim, keep_n=1)
-        scores = xmap.scores.reshape(xmap.size,)
-        sim_idx = xmap.simulation_indices.reshape(xmap.size,)
+        xmap = s.dictionary_indexing(sim, keep_n=1)
+        scores = xmap.scores.reshape(xmap.size)
+        sim_idx = xmap.simulation_indices.reshape(xmap.size)
 
         assert np.allclose(
             scores,
