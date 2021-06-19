@@ -38,8 +38,7 @@ from kikuchipy.filters.window import (
 CIRCULAR33 = np.array([0, 1, 0, 1, 1, 1, 0, 1, 0]).reshape(3, 3)
 # fmt: off
 CIRCULAR54 = np.array(
-    [0., 0., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 0., 1., 1., 1., 0., 0.,
-     1., 0.]
+    [0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0]
 ).reshape(5, 4)
 # fmt: on
 RECTANGULAR33 = np.ones(9).reshape(3, 3)
@@ -47,7 +46,7 @@ RECTANGULAR3 = np.ones(3)
 GAUSS33_STD1 = np.outer(gaussian(3, 1), gaussian(3, 1))
 GAUSS55_STD2 = np.outer(gaussian(5, 2), gaussian(5, 2))
 GAUSS33_CIRCULAR = np.array(
-    [0.0, 0.60653066, 0.0, 0.60653066, 1.0, 0.60653066, 0.0, 0.60653066, 0.0]
+    [0, 0.60653066, 0, 0.60653066, 1, 0.60653066, 0, 0.60653066, 0]
 ).reshape(3, 3)
 GAUSS5_STD2 = gaussian(5, 2)
 GENERAL_GAUSS55_PWR05_STD2 = np.outer(
@@ -225,9 +224,12 @@ class TestWindow:
 
     def test_plot_default_values(self):
         w = Window()
-        fig, im, cbar = w.plot()
+        fig = w.plot(return_figure=True, colorbar=True)
+        ax = fig.axes[0]
+        im = ax.get_images()[0]
+        cbar = im.colorbar
 
-        np.testing.assert_array_almost_equal(w, im.get_array().data)
+        np.testing.assert_array_almost_equal(w, im.get_array())
         assert im.cmap.name == "viridis"
         assert isinstance(fig, Figure)
         assert isinstance(im, AxesImage)
@@ -252,12 +254,18 @@ class TestWindow:
     ):
         w = Window(window=window)
 
-        fig, im, cbar = w.plot(
-            cmap=cmap, textcolors=textcolors, cmap_label=cmap_label
+        fig = w.plot(
+            cmap=cmap,
+            textcolors=textcolors,
+            cmap_label=cmap_label,
+            return_figure=True,
         )
+        ax = fig.axes[0]
+        im = ax.get_images()[0]
+        cbar = im.colorbar
 
         np.testing.assert_array_almost_equal(w, answer_coeff)
-        np.testing.assert_array_almost_equal(im.get_array().data, answer_coeff)
+        np.testing.assert_array_almost_equal(im.get_array(), answer_coeff)
         assert isinstance(fig, Figure)
         assert isinstance(im, AxesImage)
         assert isinstance(cbar, Colorbar)
@@ -270,13 +278,13 @@ class TestWindow:
 
     def test_plot_one_axis(self):
         w = Window(window="gaussian", shape=(5,), std=2)
-        fig, im, cbar = w.plot()
+        fig = w.plot(return_figure=True)
+        ax = fig.axes[0]
+        im = ax.get_images()[0]
 
         # Compare to global window GAUSS5_STD2
         np.testing.assert_array_almost_equal(w, GAUSS5_STD2)
-        np.testing.assert_array_almost_equal(
-            im.get_array().data[:, 0], GAUSS5_STD2
-        )
+        np.testing.assert_array_almost_equal(im.get_array()[:, 0], GAUSS5_STD2)
 
     @pytest.mark.parametrize(
         "shape, c, w_c, answer",
