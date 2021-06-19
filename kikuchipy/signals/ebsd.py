@@ -142,9 +142,7 @@ class EBSD(CommonImage, Signal2D):
     @xmap.setter
     def xmap(self, value: CrystalMap):
         if crystal_map_is_compatible_with_signal(
-            value,
-            self.axes_manager,
-            raise_if_false=True,
+            value, self.axes_manager, raise_if_false=True
         ):
             self._xmap = value
 
@@ -1352,9 +1350,7 @@ class EBSD(CommonImage, Signal2D):
             averaging_window = copy.copy(window)
         else:
             averaging_window = Window(
-                window=window,
-                shape=window_shape,
-                **kwargs,
+                window=window, shape=window_shape, **kwargs
             )
 
         # Do nothing if a window of shape (1, ) or (1, 1) is passed

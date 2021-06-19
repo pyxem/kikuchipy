@@ -24,7 +24,6 @@ import matplotlib
 from matplotlib.pyplot import close
 import numpy as np
 from orix.crystal_map import CrystalMap
-from orix.quaternion import Rotation
 import pytest
 from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
@@ -1274,7 +1273,8 @@ class TestDictionaryIndexing:
         from dummy_signal().
         """
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
-        s_dict._xmap = CrystalMap(Rotation(np.zeros((9, 4))))
+        s_dict.axes_manager[0].name = "x"
+        s_dict.xmap = CrystalMap.empty((9,))
         xmap = dummy_signal.dictionary_indexing(s_dict)
 
         assert np.allclose(xmap.scores[:, 0], 1)
@@ -1282,7 +1282,8 @@ class TestDictionaryIndexing:
     def test_match_patterns_warns(self, dummy_signal):
         # TODO: Remove test after v0.4 is released
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
-        s_dict._xmap = CrystalMap(Rotation(np.zeros((9, 4))))
+        s_dict.axes_manager[0].name = "x"
+        s_dict.xmap = CrystalMap.empty((9,), step_sizes=(1,))
         with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
             _ = dummy_signal.match_patterns(s_dict)
 
