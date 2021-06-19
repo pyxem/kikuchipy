@@ -17,15 +17,15 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from copy import copy
-from typing import List, Tuple, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 from dask.array import Array
-from numba import njit
-import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
 from matplotlib.colorbar import Colorbar
 from matplotlib.pyplot import subplots
+from numba import njit
+import numpy as np
 from scipy.signal.windows import get_window
 
 
@@ -58,8 +58,7 @@ class Window(np.ndarray):
         `window`. This can be either 1D or 2D, and can be asymmetrical.
         Default is (3, 3).
     **kwargs
-        Keyword arguments passed to the window type. If none are
-        passed, the default values of that particular window are used.
+        Required keyword arguments passed to the window type.
 
     Examples
     --------
