@@ -98,7 +98,7 @@ class TestWindow:
                 ValueError,
                 "Window <class 'list'> must be of type numpy.ndarray,",
             ),
-            ("boxcar", (5, -5), ValueError, "All window axes .* must be > 0",),
+            ("boxcar", (5, -5), ValueError, "All window axes .* must be > 0"),
             (
                 "boxcar",
                 (5, 5.1),
@@ -142,7 +142,7 @@ class TestWindow:
     def test_init_general_gaussian(self):
         window = "general_gaussian"
         shape = (5, 5)
-        w = Window(window=window, shape=shape, p=0.5, std=2,)
+        w = Window(window=window, shape=shape, p=0.5, std=2)
         assert w.is_valid()
         np.testing.assert_array_almost_equal(w.data, GENERAL_GAUSS55_PWR05_STD2)
         assert w.name == window
@@ -196,7 +196,10 @@ class TestWindow:
     def test_make_circular(
         self, window, shape, answer_coeff, answer_circular, answer_type
     ):
-        k = Window(window=window, shape=shape)
+        kwargs = dict()
+        if window == "gaussian":
+            kwargs["std"] = 1
+        k = Window(window=window, shape=shape, **kwargs)
         k.make_circular()
 
         np.testing.assert_array_almost_equal(k, answer_coeff)
@@ -240,8 +243,8 @@ class TestWindow:
     @pytest.mark.parametrize(
         "window, answer_coeff, cmap, textcolors, cmap_label",
         [
-            ("circular", CIRCULAR33, "viridis", ["k", "w"], "Coefficient",),
-            ("rectangular", RECTANGULAR33, "inferno", ["b", "r"], "Coeff.",),
+            ("circular", CIRCULAR33, "viridis", ["k", "w"], "Coefficient"),
+            ("rectangular", RECTANGULAR33, "inferno", ["b", "r"], "Coeff."),
         ],
     )
     def test_plot(
@@ -392,9 +395,7 @@ class TestWindow:
 
         assert np.allclose(w, answer, atol=1e-4)
 
-    @pytest.mark.parametrize(
-        "Nx, answer", [(96, 61.1182), (801, 509.9328)],
-    )
+    @pytest.mark.parametrize("Nx, answer", [(96, 61.1182), (801, 509.9328)])
     def test_modified_hann_direct_sum(self, Nx, answer):
         # py_func ensures coverage for a Numba decorated function
         w = modified_hann.py_func(Nx)
@@ -423,7 +424,7 @@ class TestWindow:
                     ]
                 ),
             ),
-            ((5,), (2,), np.array([2, 1, 0, 1, 2]),),
+            ((5,), (2,), np.array([2, 1, 0, 1, 2])),
             (
                 (4, 4),
                 (2, 3),
@@ -474,7 +475,7 @@ class TestWindow:
         [
             ((3, 3), (1, 1)),
             ((3,), (1,)),
-            ((7, 5), (3, 2),),
+            ((7, 5), (3, 2)),
             ((6, 5), (2, 2)),
             ((5, 7), (2, 3)),
         ],
