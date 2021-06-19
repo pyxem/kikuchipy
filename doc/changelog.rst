@@ -44,7 +44,7 @@ Deprecated
 ----------
 - The EBSD.match_patterns() method changes name to EBSD.dictionary_indexing(),
   and will be removed in v0.5.
-  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+  (`#376 <https://github.com/pyxem/kikuchipy/pull/376>`_)
 
 Fixed
 -----
