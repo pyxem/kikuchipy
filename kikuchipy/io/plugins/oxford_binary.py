@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read support for EBSD patterns in Oxford Instrument's binary .ebsp
+"""Read support for EBSD patterns in Oxford Instruments' binary .ebsp
 format.
 
 The reader assumes that the file is uncompressed and that patterns are
@@ -32,8 +32,8 @@ import numpy as np
 
 # Plugin characteristics
 # ----------------------
-format_name = "Oxford"
-description = "Read support for Oxford Instrument's binary .ebsp file."
+format_name = "Oxford binary"
+description = "Read support for Oxford Instruments' binary .ebsp file."
 full_support = False
 # Recognised file extension
 file_extensions = ["ebsp"]
@@ -47,13 +47,35 @@ def file_reader(
     navigation_shape: Tuple[int, int] = None,
     lazy: bool = False,
 ) -> List[Dict]:
+    """Return a list with one dictionary containing the EBSD
+    patterns from the file in a 'data' key along with an
+    'axes' key and 'metadata' and 'original_metadata' keys.
+
+    Parameters
+    ----------
+    navigation_shape
+        Number of map rows and columns, in that order. If not given,
+        the number of patterns in the file is guessed from the file
+        header, and the navigation shape of the returned pattern
+        array will be one-dimensional.
+    lazy
+        Whether to load the patterns lazily. Default is False.
+
+    Returns
+    -------
+    list of dict
+        Data, axes, metadata, and original metadata in a dictionary
+        within a list. Data is returned as :class:`numpy.ndarray` if
+        `lazy` is False, otherwise as :class:`dask.array.Array`.
+    """
     file = OxfordBinaryFile(filename)
     scan = file.read(navigation_shape=navigation_shape, lazy=lazy)
     return [scan]
 
 
 class OxfordBinaryFile:
-    """Binary file with EBSD patterns stored in the Oxford .ebsp format.
+    """Binary file with EBSD patterns stored in Oxford Instruments'
+    .ebsp format.
 
     It is assumed that the file is uncompressed and that patterns are
     stored as 8-bit unsigned integers.
@@ -71,7 +93,7 @@ class OxfordBinaryFile:
         self.file = None
 
     def open(self):
-        """Open the file in readable mode."""
+        """Open file in readable mode."""
         self.file = open(self.filename, mode="rb")
 
     def close(self):
@@ -79,7 +101,8 @@ class OxfordBinaryFile:
         self.file.close()
 
     def get_signal_shape(self, offset: int) -> Tuple[int, int]:
-        """Return signal shape (n rows, n columns).
+        """Return signal shape as (number of map rows, number of map
+        columns).
 
         Parameters
         ----------
@@ -92,17 +115,16 @@ class OxfordBinaryFile:
         sr, sc = sig_shape[[2, 4]].astype(int)
         return sr, sc
 
-    def guess_number_of_patterns(
-        self, assumed_n_pixels: int = 40 ** 2
-    ) -> Tuple[int, np.ndarray]:
+    def guess_number_of_patterns(self, assumed_n_pixels: int = 1600) -> int:
         """Guess the number of patterns in the file based upon an
         assumed lower bound for the number of pattern pixels and the
         file size.
 
         Parameters
         ----------
-        assumed_n_pixels : int
+        assumed_n_pixels
             Assumed lower bound for the number of pattern pixels.
+            Default is 1600 pixels.
 
         Returns
         -------
@@ -112,10 +134,10 @@ class OxfordBinaryFile:
         file = self.file
         file.seek(0)
         file_byte_size = os.path.getsize(file.name)
-        header_size = 34
+        metadata_size = 34
 
         max_assumed_n_patterns = file_byte_size // (
-            assumed_n_pixels + header_size
+            assumed_n_pixels + metadata_size
         )
         assumed_pattern_starts = np.fromfile(
             file, dtype=int, count=max_assumed_n_patterns, offset=8
@@ -138,7 +160,28 @@ class OxfordBinaryFile:
 
     def read(
         self, navigation_shape: Tuple[int, int] = None, lazy: bool = False
-    ):
+    ) -> Dict:
+        """Return a dictionary containing the EBSD patterns from the
+        file in a 'data' key along with an 'axes' key and 'metadata'
+        and 'original_metadata' keys.
+
+        Parameters
+        ----------
+        navigation_shape
+            Number of map rows and columns, in that order. If not given,
+            the number of patterns in the file is guessed from the file
+            header, and the navigation shape of the returned pattern
+            array will be one-dimensional.
+        lazy
+            Whether to load the patterns lazily. Default is False.
+
+        Returns
+        -------
+        scan
+            Data, axes, metadata, and original metadata. Data is
+            returned as :class:`numpy.ndarray` if `lazy` is False,
+            otherwise as :class:`dask.array.Array`.
+        """
         self.open()
         file = self.file
 
@@ -157,36 +200,56 @@ class OxfordBinaryFile:
         )
 
         pattern_positions = np.argsort(pattern_starts)
-        first_pattern_position = pattern_starts[0]
+        first_pattern_position = pattern_starts[pattern_positions[0]]
+
+        # Raise explanatory error if byte position of first pattern
+        # seems obviously wrong
+        file_size = os.path.getsize(file.name)
+        if first_pattern_position < 0 or first_pattern_position > file_size:
+            raise ValueError(
+                f"An assumed number of patterns of {n_patterns} seems too large"
+                f" for a file size of {file_size} bytes"
+            )
 
         sr, sc = self.get_signal_shape(offset=first_pattern_position)
         data_shape += (sr, sc)
 
-        dtype = np.uint8
-        bits = np.iinfo(dtype).bits
-        header_size = 34  # header AND footer
+        # Raise explanatory error if any of the signal dimensions are 0
+        if sr == 0 or sc == 0:
+            raise ValueError(
+                f"The assumed number of patterns {n_patterns} leads to an "
+                f"assumed signal shape of ({sr}, {sc}), which seems wrong"
+            )
 
         # Create a memory map from data on disk
-        data_size = n_patterns * sr * sc + (n_patterns - 1) * header_size
-        offset2 = bits * (n_patterns + 1) + (2 * bits) * 1
-        file.seek(0)
+        dtype = np.uint8
+        header_size = 16
+        footer_size = 18
+        metadata_size = header_size + footer_size
+        data_size = n_patterns * (sr * sc + metadata_size)
+
         # Could use numpy.fromfile() when lazy=False directly here, but
         # this reading route has a memory peak greater than the data
         # in memory. Use dask instead.
+        file.seek(0)
         data0 = np.memmap(
-            file, shape=(data_size,), dtype=dtype, mode="r", offset=offset2
+            file,
+            shape=(data_size,),
+            dtype=dtype,
+            mode="r",
+            offset=first_pattern_position,
         )
+        data0 = da.from_array(data0)
 
-        # Reshape data for easy removal of header info from the pattern
-        # intensities
-        data0 = da.pad(data0, pad_width=(0, header_size))
-        data0 = data0.reshape((n_patterns, sr * sc + header_size))
+        # Reshape data for easy removal of header and footer info from
+        # the pattern intensities
+        data0 = data0.reshape((n_patterns, -1))
 
         # Sort if necessary
         if not np.allclose(np.diff(pattern_starts), 1):
             data0 = data0[pattern_positions]
 
-        data0 = data0[..., :-header_size]
+        data0 = data0[:, header_size : header_size + sr * sc]
         data0 = data0.reshape(data_shape)
 
         if lazy:

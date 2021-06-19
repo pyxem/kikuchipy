@@ -308,6 +308,7 @@ plugins
     nordif_calibration_patterns
     emsoft_ebsd
     emsoft_ebsd_master_pattern
+    oxford_binary
 
 The plugins import patterns and parameters from file formats into
 :class:`~kikuchipy.signals.EBSD` or
@@ -351,6 +352,14 @@ emsoft_ebsd_master_pattern
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: kikuchipy.io.plugins.emsoft_ebsd_master_pattern
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+oxford_binary
+~~~~~~~~~~~~~
+
+.. automodule:: kikuchipy.io.plugins.oxford_binary
     :members:
     :undoc-members:
     :show-inheritance:

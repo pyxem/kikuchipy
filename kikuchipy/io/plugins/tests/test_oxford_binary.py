@@ -19,6 +19,7 @@
 import os
 
 import numpy as np
+import pytest
 
 import kikuchipy as kp
 
@@ -50,3 +51,10 @@ class TestOxfordBinary:
 
         sig_shape = s2.axes_manager.signal_shape[::-1]
         assert np.allclose(s.data, s2.data.reshape((9,) + sig_shape))
+
+    def test_raises(self):
+        with pytest.raises(ValueError, match="An assumed number of patterns"):
+            _ = kp.load(OXFORD_FILE, navigation_shape=(40, 30))
+
+        with pytest.raises(ValueError, match="The assumed number of patterns"):
+            _ = kp.load(OXFORD_FILE, navigation_shape=(3, 4))

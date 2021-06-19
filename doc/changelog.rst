@@ -21,6 +21,9 @@ Contributors
 
 Added
 -----
+- Reader for EBSD patterns stored in Oxford Instrument's binary .ebsp file
+  format, uncompressed and with intensities as 8-bit unsigned integers.
+  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
 - Unit testing of docstring examples.
   (`#350 <https://github.com/pyxem/kikuchipy/pull/350>`_)
 - Support for Python 3.9.

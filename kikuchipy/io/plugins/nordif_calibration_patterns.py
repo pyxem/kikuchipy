@@ -45,14 +45,14 @@ writes = False
 def file_reader(filename: str, lazy: bool = False) -> List[dict]:
     """Reader electron backscatter patterns from .bmp files stored in a
     NORDIF project directory, their filenames listed in a text file.
-    
+
     Parameters
     ----------
     filename
         File path to the NORDIF settings text file.
     lazy
         This parameter is not used in this reader.
-   
+
     Returns
     -------
     scan : list of dicts
@@ -118,7 +118,7 @@ def _get_coordinates(filename: str) -> List[Tuple[int, int]]:
         raise ValueError(err)
     xy = []
     for line in content[l_start + 1 :]:
-        match = re.search("Calibration \((.*)\)", line)
+        match = re.search(r"Calibration \((.*)\)", line)
         try:
             match = match.group(1)
             match = match.split(",")
