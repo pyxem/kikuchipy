@@ -42,6 +42,9 @@ Changed
 
 Deprecated
 ----------
+- The kikuchipy.pattern.correlate module will be removed in v0.5. Use
+  kikuchipy.indexing.similarity_metrics instead.
+  (`#377 <https://github.com/pyxem/kikuchipy/pull/377>`_)
 - Rename the EBSD.match_patterns() method to EBSD.dictionary_indexing().
   match_patterns() will be removed in v0.5.
   (`#376 <https://github.com/pyxem/kikuchipy/pull/376>`_)
