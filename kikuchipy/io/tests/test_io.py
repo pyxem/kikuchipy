@@ -65,9 +65,7 @@ class TestIO:
             (np.dtype("uint8"), False, 2, ""),
         ],
     )
-    def test_assign_signal_subclass(
-        self, dtype, lazy, signal_dimension, signal_type
-    ):
+    def test_assign_signal_subclass(self, dtype, lazy, signal_dimension, signal_type):
         if "complex" in dtype.name:
             with pytest.raises(ValueError, match="Data type"):
                 _ = _assign_signal_subclass(
@@ -129,12 +127,7 @@ class TestIO:
         with pytest.warns(UserWarning, match="Your terminal does not"):
             s.save(save_path_hdf5, scan_number=2)
         with pytest.raises(ValueError, match="overwrite parameter can"):
-            s.save(
-                save_path_hdf5,
-                scan_number=2,
-                overwrite="False",
-                add_scan=False,
-            )
+            s.save(save_path_hdf5, scan_number=2, overwrite="False", add_scan=False)
         s.save(save_path_hdf5, scan_number=2, overwrite=False, add_scan=False)
         with pytest.raises(OSError, match="Scan 'Scan 2' is not among the"):
             _ = load(save_path_hdf5, scan_group_names="Scan 2")

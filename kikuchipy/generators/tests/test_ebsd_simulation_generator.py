@@ -30,7 +30,7 @@ from kikuchipy.generators.ebsd_simulation_generator import (
 class TestEBSDSimulationGenerator:
     @pytest.mark.parametrize("nav_shape", [(5, 5), (25,), (1, 25)])
     def test_align_navigation_shape(
-        self, nickel_phase, detector, nickel_rotations, nav_shape,
+        self, nickel_phase, detector, nickel_rotations, nav_shape
     ):
         """Initialization of a detector with orientations of a certain
         shape also reshapes the varying PCs, i.e. the detector
@@ -40,14 +40,12 @@ class TestEBSDSimulationGenerator:
         o_nickel = nickel_rotations.reshape(*nav_shape)
         assert o_nickel.shape == nav_shape
         simgen = EBSDSimulationGenerator(
-            detector=detector, phase=nickel_phase, rotations=o_nickel,
+            detector=detector, phase=nickel_phase, rotations=o_nickel
         )
         assert simgen.detector.navigation_shape == simgen.rotations.shape
 
     @pytest.mark.parametrize("nav_shape", [(5, 5), (25,), (1, 25), (25, 1)])
-    def test_set_navigation_shape(
-        self, nickel_ebsd_simulation_generator, nav_shape,
-    ):
+    def test_set_navigation_shape(self, nickel_ebsd_simulation_generator, nav_shape):
         """Setting the navigation shape changes all derived navigation
         shapes.
         """
@@ -70,11 +68,7 @@ class TestEBSDSimulationGenerator:
 
     @pytest.mark.parametrize(
         "shape_in, shape_change, ndim_in, ndim_change",
-        [
-            ((5, 5), (25,), 2, 1),
-            ((25, 1), (1, 25), 2, 2),
-            ((25,), (5, 5), 1, 2),
-        ],
+        [((5, 5), (25,), 2, 1), ((25, 1), (1, 25), 2, 2), ((25,), (5, 5), 1, 2)],
     )
     def test_set_rotations(
         self,
@@ -101,16 +95,14 @@ class TestEBSDSimulationGenerator:
         assert simgen.navigation_dimension == ndim_change
 
     @pytest.mark.parametrize("nav_shape", [(5, 5, 1), (1, 5, 5, 1)])
-    def test_set_rotations_raises(
-        self, nickel_ebsd_simulation_generator, nav_shape,
-    ):
+    def test_set_rotations_raises(self, nickel_ebsd_simulation_generator, nav_shape):
         """Cannot have a navigation dimension greater than 2."""
         r = nickel_ebsd_simulation_generator.rotations.reshape(*nav_shape)
         with pytest.raises(ValueError, match="A maximum dimension of 2 is"):
             nickel_ebsd_simulation_generator.rotations = r
 
     def test_align_pc_with_rotations_shape_raises(
-        self, nickel_ebsd_simulation_generator,
+        self, nickel_ebsd_simulation_generator
     ):
         """Detector and rotations navigation shapes must be compatible."""
         simgen = nickel_ebsd_simulation_generator
@@ -158,12 +150,12 @@ class TestEBSDSimulationGenerator:
         assert np.allclose(simgen2.detector.pc, desired_pc)
         assert np.allclose(simgen2.rotations.data, r.data)
 
-        new_pc = [0.5,] * 3
+        new_pc = [0.5] * 3
         simgen2.detector.pc[0] = new_pc
         assert not np.allclose(simgen[nav_idx].detector.pc, simgen2.detector.pc)
 
     def test_geometrical_simulation2d(
-        self, nickel_ebsd_simulation_generator, nickel_rlp,
+        self, nickel_ebsd_simulation_generator, nickel_rlp
     ):
         """Desired output EBSDGeometricalSimulation object."""
         simgen = nickel_ebsd_simulation_generator
@@ -184,7 +176,7 @@ class TestEBSDSimulationGenerator:
         assert sim2.bands.size == 132
 
     def test_geometrical_simulation1d(
-        self, nickel_ebsd_simulation_generator, nickel_rlp,
+        self, nickel_ebsd_simulation_generator, nickel_rlp
     ):
         """Geometrical EBSD simulations handle 1d."""
         simgen = nickel_ebsd_simulation_generator[:5]
@@ -202,7 +194,7 @@ class TestEBSDSimulationGenerator:
         assert sim1.bands.size == 15
 
     def test_geometrical_simulation0d(
-        self, nickel_ebsd_simulation_generator, nickel_rlp,
+        self, nickel_ebsd_simulation_generator, nickel_rlp
     ):
         """Geometrical EBSD simulations handle 0d."""
         simgen = nickel_ebsd_simulation_generator[0]
@@ -220,9 +212,7 @@ class TestEBSDSimulationGenerator:
         assert sim1.bands.navigation_shape == ()
         assert sim1.bands.size == 13
 
-    def test_geometrical_simulation_raises(
-        self, nickel_ebsd_simulation_generator,
-    ):
+    def test_geometrical_simulation_raises(self, nickel_ebsd_simulation_generator):
         """Generator must have a Phase object with point group
         symmetries and a crystal structure if no ReciprocalLatticePoint
         object is passed when simulating geometrical EBSD patterns.
@@ -262,9 +252,7 @@ class TestEBSDSimulationGenerator:
             with pytest.raises(ValueError, match="The lattice parameters and/"):
                 simgen._rlp_phase_is_compatible(nickel_rlp)
 
-    def test_band_coordinates(
-        self, nickel_ebsd_simulation_generator, nickel_rlp
-    ):
+    def test_band_coordinates(self, nickel_ebsd_simulation_generator, nickel_rlp):
         """Desired band values like detector coordinates."""
         simgen = nickel_ebsd_simulation_generator
         assert simgen.navigation_shape == (25,)

@@ -29,11 +29,7 @@ from kikuchipy.crystallography._computations import (
     _is_equivalent,
 )
 from kikuchipy.detectors import EBSDDetector
-from kikuchipy.draw.markers import (
-    get_line_segment_list,
-    get_point_list,
-    get_text_list,
-)
+from kikuchipy.draw.markers import get_line_segment_list, get_point_list, get_text_list
 from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 
@@ -139,12 +135,8 @@ class GeometricalEBSDSimulation:
         pcy = self.detector.pcy[..., np.newaxis]
         pcz = self.detector.pcz[..., np.newaxis]
 
-        za_coords[..., 0] = (xg + (pcx / pcz)) / self.detector.x_scale[
-            ..., np.newaxis
-        ]
-        za_coords[..., 1] = (-yg + (pcy / pcz)) / self.detector.y_scale[
-            ..., np.newaxis
-        ]
+        za_coords[..., 0] = (xg + (pcx / pcz)) / self.detector.x_scale[..., np.newaxis]
+        za_coords[..., 1] = (-yg + (pcy / pcz)) / self.detector.y_scale[..., np.newaxis]
 
         if self.exclude_outside_detector:
             on_detector = self.zone_axes_within_gnomonic_bounds
@@ -381,9 +373,7 @@ class GeometricalEBSDSimulation:
         if zone_axes_labels:
             if zone_axes_labels_kwargs is None:
                 zone_axes_labels_kwargs = {}
-            markers += self.zone_axes_labels_as_markers(
-                **zone_axes_labels_kwargs
-            )
+            markers += self.zone_axes_labels_as_markers(**zone_axes_labels_kwargs)
         if pc:
             if pc_kwargs is None:
                 pc_kwargs = {}

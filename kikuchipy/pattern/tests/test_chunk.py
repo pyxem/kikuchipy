@@ -61,7 +61,8 @@ DYN_CORR_UINT16_SPATIAL_STD2 = np.array(
     dtype=np.uint16,
 )
 DYN_CORR_UINT8_SPATIAL_STD2_OMAX250 = np.array(
-    [[167, 210, 177], [250, 217, 184], [217, 31, 0]], dtype=np.uint8,
+    [[167, 210, 177], [250, 217, 184], [217, 31, 0]],
+    dtype=np.uint8,
 )
 ADAPT_EQ_UINT8_SKIMAGE16 = np.array(
     [[127, 223, 127], [255, 223, 31], [223, 31, 0]], dtype=np.uint8
@@ -104,7 +105,7 @@ class TestRescaleIntensityChunk:
         dask_array = get_dask_array(dummy_signal, dtype=np.float32)
 
         rescaled_patterns = dask_array.map_blocks(
-            func=chunk.rescale_intensity, dtype_out=dtype_out, dtype=dtype_out,
+            func=chunk.rescale_intensity, dtype_out=dtype_out, dtype=dtype_out
         )
 
         assert isinstance(rescaled_patterns, da.Array)
@@ -144,9 +145,7 @@ class TestRescaleIntensityChunk:
         dummy_signal.data = dummy_signal.data.astype(np.float32)
 
         rescaled_patterns = chunk.rescale_intensity(
-            patterns=dummy_signal.data,
-            out_range=out_range,
-            dtype_out=dtype_out,
+            patterns=dummy_signal.data, out_range=out_range, dtype_out=dtype_out
         )
 
         assert isinstance(rescaled_patterns, np.ndarray)
@@ -178,19 +177,11 @@ class TestRescaleIntensityChunk:
     @pytest.mark.parametrize(
         "percentiles, answer",
         [
-            (
-                (10, 90),
-                np.array([[198, 245, 198], [254, 245, 198], [245, 9, 0]]),
-            ),
-            (
-                (1, 99),
-                np.array([[183, 220, 183], [255, 220, 183], [220, 34, 0]]),
-            ),
+            ((10, 90), np.array([[198, 245, 198], [254, 245, 198], [245, 9, 0]])),
+            ((1, 99), np.array([[183, 220, 183], [255, 220, 183], [220, 34, 0]])),
         ],
     )
-    def test_rescale_intensity_percentiles(
-        self, dummy_signal, percentiles, answer
-    ):
+    def test_rescale_intensity_percentiles(self, dummy_signal, percentiles, answer):
         dtype_out = dummy_signal.data.dtype
         dask_array = get_dask_array(dummy_signal, dtype=np.float32)
 
@@ -213,7 +204,10 @@ class TestRescaleIntensityChunk:
 class TestRemoveStaticBackgroundChunk:
     @pytest.mark.parametrize(
         "operation_func, answer",
-        [(np.subtract, STATIC_SUB_UINT8), (np.divide, STATIC_DIV_UINT8),],
+        [
+            (np.subtract, STATIC_SUB_UINT8),
+            (np.divide, STATIC_DIV_UINT8),
+        ],
     )
     def test_remove_static_background_chunk(
         self, dummy_signal, dummy_background, operation_func, answer
@@ -275,17 +269,12 @@ class TestRemoveStaticBackgroundChunk:
         )
 
         assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(
-            corrected_patterns[0, 0].compute(), STATIC_SUB_SCALEBG_UINT8
-        )
+        assert np.allclose(corrected_patterns[0, 0].compute(), STATIC_SUB_SCALEBG_UINT8)
 
     @pytest.mark.parametrize(
         "dtype_out, answer",
         [
-            (
-                np.float32,
-                np.array([[0, 0.6666, 0], [1, 1, 0.3333], [0.6666, -1, -1]]),
-            ),
+            (np.float32, np.array([[0, 0.6666, 0], [1, 1, 0.3333], [0.6666, -1, -1]])),
             (np.uint16, np.array([[0, 2, 0], [3, 3, 1], [2, 65535, 65535]])),
         ],
     )
@@ -397,9 +386,7 @@ class TestRemoveDynamicBackgroundChunk:
             (250, DYN_CORR_UINT8_SPATIAL_STD2_OMAX250),
         ],
     )
-    def test_remove_dynamic_background_out_range(
-        self, dummy_signal, omax, answer
-    ):
+    def test_remove_dynamic_background_out_range(self, dummy_signal, omax, answer):
         dtype_out = dummy_signal.data.dtype.type
 
         out_range = (0, omax)
@@ -432,7 +419,8 @@ class TestRemoveDynamicBackgroundChunk:
                 dtype=np.float32,
             ),
             np.array(
-                [[0, 1, 1], [2, 1, 0], [1, 65535, 65533]], dtype=np.uint16,
+                [[0, 1, 1], [2, 1, 0], [1, 65535, 65533]],
+                dtype=np.uint16,
             ),
         ],
     )
@@ -557,7 +545,7 @@ class TestGetDynamicBackgroundChunk:
         )
 
         background = chunk.get_dynamic_background(
-            patterns=dummy_signal.data, filter_func=_fft_filter, **kwargs,
+            patterns=dummy_signal.data, filter_func=_fft_filter, **kwargs
         )
 
         assert isinstance(background, np.ndarray)
@@ -657,9 +645,7 @@ class TestGetImageQualityChunk:
         ],
     )
     def test_get_image_quality_chunk(self, dummy_signal, normalize, answer):
-        iq = chunk.get_image_quality(
-            patterns=dummy_signal.data, normalize=normalize,
-        )
+        iq = chunk.get_image_quality(patterns=dummy_signal.data, normalize=normalize)
 
         assert np.allclose(iq, answer, atol=1e-4)
 
@@ -725,9 +711,7 @@ class TestFFTFilterChunk:
 
         assert this_fft.dtype == dtype_out
         assert np.allclose(
-            np.sum(fft_spectrum.py_func(this_fft)),
-            expected_spectrum_sum,
-            atol=1e-4,
+            np.sum(fft_spectrum.py_func(this_fft)), expected_spectrum_sum, atol=1e-4
         )
 
 

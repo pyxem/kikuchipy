@@ -78,9 +78,7 @@ class TestEBSDMasterPatternInit:
 
 
 class TestIO:
-    @pytest.mark.parametrize(
-        "save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"]
-    )
+    @pytest.mark.parametrize("save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"])
     def test_save_load_hspy(self, save_path_hdf5):
         s = load(EMSOFT_FILE)
 
@@ -104,9 +102,7 @@ class TestIO:
         assert_dictionary(s3.axes_manager.as_dictionary(), axes_manager)
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
-    @pytest.mark.parametrize(
-        "save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"]
-    )
+    @pytest.mark.parametrize("save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"])
     def test_original_metadata_save_load_cycle(self, save_path_hdf5):
         s = nickel_ebsd_master_pattern_small()
 
@@ -180,7 +176,7 @@ class TestSimulatedPatternDictionary:
         npy = 1001
         scale = 500
         nii, nij, niip, nijp = _get_lambert_interpolation_parameters(
-            rotated_direction_cosines=dc, npx=npx, npy=npy, scale=scale,
+            rotated_direction_cosines=dc, npx=npx, npy=npy, scale=scale
         )[:4]
 
         assert (nii <= niip).all()

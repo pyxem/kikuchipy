@@ -42,7 +42,7 @@ mp_lp = kp.load(
 mp_sp = kp.load(
     filename=os.path.join(datadir, phase, fname),
     hemisphere=hemisphere,
-    projection="spherical",
+    projection="stereographic",
 )
 
 # Rescale to uint8
@@ -56,24 +56,14 @@ orig_data = kp.io.plugins.h5ebsd.hdf5group2dict(group=f["/"], recursive=True)
 
 # Overwrite master patterns in original data
 lp_shape = (1, 1) + mp_lp.axes_manager.signal_shape[::-1]
-orig_data["EMData"]["EBSDmaster"]["mLPNH"] = mp_lp.inav[0].data.reshape(
-    lp_shape
-)
-orig_data["EMData"]["EBSDmaster"]["mLPSH"] = mp_lp.inav[1].data.reshape(
-    lp_shape
-)
+orig_data["EMData"]["EBSDmaster"]["mLPNH"] = mp_lp.inav[0].data.reshape(lp_shape)
+orig_data["EMData"]["EBSDmaster"]["mLPSH"] = mp_lp.inav[1].data.reshape(lp_shape)
 sp_shape = (1,) + mp_sp.axes_manager.signal_shape[::-1]
-orig_data["EMData"]["EBSDmaster"]["masterSPNH"] = mp_sp.inav[0].data.reshape(
-    sp_shape
-)
-orig_data["EMData"]["EBSDmaster"]["masterSPSH"] = mp_sp.inav[1].data.reshape(
-    sp_shape
-)
+orig_data["EMData"]["EBSDmaster"]["masterSPNH"] = mp_sp.inav[0].data.reshape(sp_shape)
+orig_data["EMData"]["EBSDmaster"]["masterSPSH"] = mp_sp.inav[1].data.reshape(sp_shape)
 
 # Create new HDF5 file (included in the kikuchipy.data module)
-f2 = File(
-    os.path.join(datadir, phase, "ni_mc_mp_20kv_uint8_gzip_opts9.h5"), mode="w"
-)
+f2 = File(os.path.join(datadir, phase, "ni_mc_mp_20kv_uint8_gzip_opts9.h5"), mode="w")
 kp.io.plugins.h5ebsd.dict2h5ebsdgroup(
     dictionary=orig_data, group=f2, compression="gzip", compression_opts=9
 )

@@ -56,7 +56,7 @@ extra_feature_requirements = {
 
 # Create a development project, including both the doc and tests projects
 extra_feature_requirements["dev"] = [
-    "black >= 19.3b0",
+    "black",
     "pre-commit >= 1.16",
 ] + list(chain(*list(extra_feature_requirements.values())))
 
@@ -127,7 +127,7 @@ setup(
         "matplotlib     >= 3.3",
         "numpy          >= 1.19",
         "numba          >= 0.48",
-        "orix           >= 0.6.0",
+        "orix           >= 0.6",
         "pooch          >= 0.13",
         "psutil",
         "tqdm           >= 0.5.2",

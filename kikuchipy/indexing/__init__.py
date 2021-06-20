@@ -24,9 +24,7 @@ these tools for pattern matching.
 """
 
 from kikuchipy.indexing._merge_crystal_maps import merge_crystal_maps
-from kikuchipy.indexing.orientation_similarity_map import (
-    orientation_similarity_map,
-)
+from kikuchipy.indexing.orientation_similarity_map import orientation_similarity_map
 from kikuchipy.indexing import similarity_metrics
 from kikuchipy.indexing._static_pattern_matching import StaticPatternMatching
 

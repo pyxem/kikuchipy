@@ -41,13 +41,8 @@ from kikuchipy.signals.util._metadata import metadata_nodes
 DIR_PATH = os.path.dirname(__file__)
 DATA_PATH = os.path.join(DIR_PATH, "../../../data")
 KIKUCHIPY_FILE = os.path.join(DATA_PATH, "kikuchipy/patterns.h5")
-KIKUCHIPY_FILE_NO_CHUNKS = os.path.join(
-    DATA_PATH, "kikuchipy/patterns_nochunks.h5"
-)
-KIKUCHIPY_FILE_GROUP_NAMES = [
-    "My awes0m4 Xcan #! with a long title",
-    "Scan 2",
-]
+KIKUCHIPY_FILE_NO_CHUNKS = os.path.join(DATA_PATH, "kikuchipy/patterns_nochunks.h5")
+KIKUCHIPY_FILE_GROUP_NAMES = ["My awes0m4 Xcan #! with a long title", "Scan 2"]
 EDAX_FILE = os.path.join(DATA_PATH, "edax/patterns.h5")
 BRUKER_FILE = os.path.join(DATA_PATH, "bruker/patterns.h5")
 BRUKER_FILE_ROI = os.path.join(DATA_PATH, "bruker/patterns_roi.h5")
@@ -143,8 +138,7 @@ class Testh5ebsd:
             manufacturer[()] = "Nope".encode()
 
         with pytest.raises(
-            OSError,
-            match="Manufacturer Nope not among recognised manufacturers",
+            OSError, match="Manufacturer Nope not among recognised manufacturers"
         ):
             _ = load(save_path_hdf5)
 
@@ -213,9 +207,7 @@ class Testh5ebsd:
             ebsd_node + ".version", s.metadata.get_item(ebsd_node + ".version")
         )
         if remove_phases:
-            s.metadata.Sample.set_item(
-                "Phases", s_reload.metadata.Sample.Phases
-            )
+            s.metadata.Sample.set_item("Phases", s_reload.metadata.Sample.Phases)
         np.testing.assert_equal(
             s_reload.metadata.as_dictionary(), s.metadata.as_dictionary()
         )
@@ -264,9 +256,7 @@ class Testh5ebsd:
                 _ = load(KIKUCHIPY_FILE, scan_group_names=scan_group_names)
             return 0
         elif scan_group_names == KIKUCHIPY_FILE_GROUP_NAMES:
-            s1, s2 = load(
-                KIKUCHIPY_FILE, scan_group_names=KIKUCHIPY_FILE_GROUP_NAMES
-            )
+            s1, s2 = load(KIKUCHIPY_FILE, scan_group_names=KIKUCHIPY_FILE_GROUP_NAMES)
         else:  # scan_group_names == "Scan 2"
             s2 = load(KIKUCHIPY_FILE, scan_group_names=scan_group_names)
             assert s2.metadata.General.title == "patterns Scan 2"
@@ -326,9 +316,7 @@ class Testh5ebsd:
 
     @pytest.mark.parametrize("scan_number", (1, 2))
     def test_save_multiple(self, save_path_hdf5, scan_number):
-        s1, s2 = load(
-            KIKUCHIPY_FILE, scan_group_names=KIKUCHIPY_FILE_GROUP_NAMES
-        )
+        s1, s2 = load(KIKUCHIPY_FILE, scan_group_names=KIKUCHIPY_FILE_GROUP_NAMES)
         s1.save(save_path_hdf5)
         error = "Invalid scan number"
         with pytest.raises(OSError, match=error), pytest.warns(UserWarning):
@@ -345,11 +333,7 @@ class Testh5ebsd:
             s.save(EDAX_FILE, add_scan=True)
 
     def test_dict2h5ebsdgroup(self, save_path_hdf5):
-        dictionary = {
-            "a": [np.array(24.5)],
-            "b": DictionaryTreeBrowser(),
-            "c": set(),
-        }
+        dictionary = {"a": [np.array(24.5)], "b": DictionaryTreeBrowser(), "c": set()}
         with File(save_path_hdf5, mode="w") as f:
             group = f.create_group(name="a_group")
             with pytest.warns(UserWarning, match="The hdf5 writer could not"):

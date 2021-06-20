@@ -41,9 +41,7 @@ class TestSimilarityMetric:
         assert (
             type(
                 make_similarity_metric(
-                    lambda expt, sim: np.zeros((2, 4))
-                    if flat
-                    else np.zeros((2, 2, 2)),
+                    lambda expt, sim: np.zeros((2, 4)) if flat else np.zeros((2, 2, 2)),
                     flat=flat,
                     scope=MetricScope.MANY_TO_MANY,
                 )
@@ -64,9 +62,7 @@ class TestSimilarityMetric:
         sim = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8)
 
         assert isinstance(metric(expt, sim), np.ndarray)
-        assert isinstance(
-            metric(da.from_array(expt), da.from_array(sim)), da.Array
-        )
+        assert isinstance(metric(da.from_array(expt), da.from_array(sim)), da.Array)
         assert isinstance(metric(expt, da.from_array(sim)), da.Array)
         assert isinstance(metric(da.from_array(expt), sim), da.Array)
 
@@ -92,18 +88,14 @@ class TestSimilarityMetric:
 
     def test_make_compatible_to_lower_scopes(self):
         ncc_metric = _SIMILARITY_METRICS["ncc"]
-        assert ncc_metric._is_compatible(
-            np.zeros((2, 2)).ndim, np.zeros((2, 2)).ndim
-        )
+        assert ncc_metric._is_compatible(np.zeros((2, 2)).ndim, np.zeros((2, 2)).ndim)
 
     def test_too_large_scoped_inputs(self):
         metric = make_similarity_metric(
             lambda expt, sim: 1.0, scope=MetricScope.ONE_TO_ONE
         )
         assert (
-            metric._is_compatible(
-                np.zeros((2, 2, 2, 2)).ndim, np.zeros((4, 2, 2)).ndim
-            )
+            metric._is_compatible(np.zeros((2, 2, 2, 2)).ndim, np.zeros((4, 2, 2)).ndim)
             is False
         )
 
@@ -122,19 +114,16 @@ class TestSimilarityMetric:
 
     def test_too_small_scoped_inputs(self):
         metric = make_similarity_metric(
-            lambda expt, sim: np.zeros((2, 2, 2)),
-            scope=MetricScope.MANY_TO_MANY,
+            lambda expt, sim: np.zeros((2, 2, 2)), scope=MetricScope.MANY_TO_MANY
         )
         assert (
-            metric._is_compatible(np.zeros((2, 2)).ndim, np.zeros((2, 2)).ndim)
-            is False
+            metric._is_compatible(np.zeros((2, 2)).ndim, np.zeros((2, 2)).ndim) is False
         )
 
     def test_get_number_of_simulated(self):
         sim = np.array([[[5, 3], [2, 7]], [[9, 8], [1, 7]]], np.int8)
         assert (
-            _get_number_of_simulated(sim) == 2
-            and _get_number_of_simulated(sim[0]) == 1
+            _get_number_of_simulated(sim) == 2 and _get_number_of_simulated(sim[0]) == 1
         )
 
     def test_similarity_metric_representation(self):
@@ -191,7 +180,7 @@ class TestSimilarityMetric:
         assert ndp.shape == (9, 3)
         assert np.allclose(np.sum(ndp), 19.92476)
 
-    def test_some_to_many_flat(self, dummy_signal):
+    def test_some_to_many_flat(self):
         scope_in = MetricScope.SOME_TO_MANY
         metric = make_similarity_metric(
             metric_func=_zncc_einsum, scope=scope_in, flat=True
@@ -231,7 +220,7 @@ class TestSimilarityMetric:
         assert ndp.shape == (9,)
         assert np.allclose(np.sum(ndp), 6.9578266)
 
-    def test_some_to_one_flat(self, dummy_signal):
+    def test_some_to_one_flat(self):
         scope_in = MetricScope.SOME_TO_ONE
         metric = make_similarity_metric(
             metric_func=_zncc_einsum, scope=scope_in, flat=True
@@ -284,6 +273,4 @@ class TestNDP:
         sim_da = da.from_array(sim)
 
         # many to many
-        assert (
-            pytest.approx(ndp_metric(expt_da, sim_da).compute()[1, 0, 1]) == 1
-        )
+        assert pytest.approx(ndp_metric(expt_da, sim_da).compute()[1, 0, 1]) == 1

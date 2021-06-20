@@ -64,17 +64,10 @@ class TestLambertProjection:
         xy2 = LambertProjection.project(xyz2)
 
         assert np.allclose(
-            xy,
-            ([0, 0], [0, np.sqrt(np.pi / 2)], [np.sqrt(np.pi / 2), 0], [0, 0]),
+            xy, ([0, 0], [0, np.sqrt(np.pi / 2)], [np.sqrt(np.pi / 2), 0], [0, 0])
         )
         assert np.allclose(
-            xy2,
-            (
-                [0, 0],
-                [0, -np.sqrt(np.pi / 2)],
-                [-np.sqrt(np.pi / 2), 0],
-                [0, 0],
-            ),
+            xy2, ([0, 0], [0, -np.sqrt(np.pi / 2)], [-np.sqrt(np.pi / 2), 0], [0, 0])
         )
 
     def test_iproject(self):
@@ -83,16 +76,10 @@ class TestLambertProjection:
         expected = Vector3d(
             (0.5770240896680434, 0.5770240896680434, 0.5780020760218183)
         )  # Vector3d(1,)
-        output = LambertProjection.iproject(vec)  # Vector3d(1,1)
-        assert output[0].x.data[0] == pytest.approx(
-            expected.x.data[0], rel=1e-3
-        )
-        assert output[0].y.data[0] == pytest.approx(
-            expected.y.data[0], rel=1e-3
-        )
-        assert output[0].z.data[0] == pytest.approx(
-            expected.z.data[0], rel=1e-3
-        )
+        output = LambertProjection.iproject(vec)  # Vector3d(1, 1)
+        assert output[0].x.data[0] == pytest.approx(expected.x.data[0], rel=1e-3)
+        assert output[0].y.data[0] == pytest.approx(expected.y.data[0], rel=1e-3)
+        assert output[0].z.data[0] == pytest.approx(expected.z.data[0], rel=1e-3)
 
     def test_eq_c(self):
         """Helper function works"""
@@ -105,9 +92,7 @@ class TestLambertProjection:
 
     def test_lambert_to_gnomonic(self):
         """Conversion from Lambert to Gnomonic works"""
-        vec = np.array(
-            (0.81417, 0.81417)
-        )  # Should give x,y,z = 1/sqrt(3) (1, 1, 1)
+        vec = np.array((0.81417, 0.81417))  # Should give x,y,z = 1/sqrt(3) (1, 1, 1)
         output = LambertProjection.lambert_to_gnomonic(vec)
         expected = np.array((1, 1))
         assert output[..., 0, 0] == pytest.approx(expected[0], abs=1e-2)

@@ -53,9 +53,7 @@ def assert_dictionary(dict1, dict2):
         dict1 = dict1.as_dictionary()
         dict2 = dict2.as_dictionary()
     for key in dict2.keys():
-        if key in ["is_binned", "binned"] and version.parse(
-            hs_version
-        ) > version.parse(
+        if key in ["is_binned", "binned"] and version.parse(hs_version) > version.parse(
             "1.6.2"
         ):  # pragma: no cover
             continue
@@ -241,14 +239,12 @@ def r_tsl2bruker():
 
 
 @pytest.fixture
-def nickel_ebsd_simulation_generator(
-    nickel_phase, detector, nickel_rotations,
-):
+def nickel_ebsd_simulation_generator(nickel_phase, detector, nickel_rotations):
     """Generator for EBSD simulations of Kikuchi bands for the Nickel
     data set referenced above.
     """
     return kp.generators.EBSDSimulationGenerator(
-        detector=detector, phase=nickel_phase, rotations=nickel_rotations,
+        detector=detector, phase=nickel_phase, rotations=nickel_rotations
     )
 
 

@@ -35,9 +35,7 @@ data = {
     },
     "NMLparameters": {
         "EBSDNameList": {
-            "Ftensor": np.array(
-                [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]
-            ),
+            "Ftensor": np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]]),
             "L": 2123.3,
             "alphaBD": 0.0,
             "anglefile": "pattern/ni/2020/1/ni1_sda_eulers.txt",

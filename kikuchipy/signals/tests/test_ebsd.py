@@ -57,9 +57,7 @@ class TestEBSD:
         # SEM metadata
         kp_md = kp.signals.util.ebsd_metadata()
         sem_node = kp.signals.util.metadata_nodes("sem")
-        assert_dictionary(
-            kp_md.get_item(sem_node), s1.metadata.get_item(sem_node)
-        )
+        assert_dictionary(kp_md.get_item(sem_node), s1.metadata.get_item(sem_node))
 
         # Phases metadata
         assert s1.metadata.has_item("Sample.Phases")
@@ -72,8 +70,7 @@ class TestEBSD:
         assert lazy_signal._lazy is True
         assert lazy_signal.__class__ == kp.signals.LazyEBSD
         assert_dictionary(
-            dummy_signal.metadata.as_dictionary(),
-            lazy_signal.metadata.as_dictionary(),
+            dummy_signal.metadata.as_dictionary(), lazy_signal.metadata.as_dictionary()
         )
 
     def test_set_experimental_parameters(self, dummy_signal):
@@ -128,9 +125,7 @@ class TestEBSD:
             "symmetry": 43,
         }
         dummy_signal.set_phase_parameters(**p)
-        md_dict = dummy_signal.metadata.get_item(
-            "Sample.Phases.1"
-        ).as_dictionary()
+        md_dict = dummy_signal.metadata.get_item("Sample.Phases.1").as_dictionary()
         p.pop("number")
         assert_dictionary(p, md_dict)
 
@@ -260,22 +255,16 @@ class TestRemoveStaticBackgroundEBSD:
         static background pattern to `remove_static_background().`
         """
         ebsd_node = kp.signals.util.metadata_nodes("ebsd")
-        dummy_signal.metadata.set_item(
-            ebsd_node + ".static_background", static_bg
-        )
+        dummy_signal.metadata.set_item(ebsd_node + ".static_background", static_bg)
         with pytest.raises(error, match=match):
             dummy_signal.remove_static_background()
 
-    def test_lazy_remove_static_background(
-        self, dummy_signal, dummy_background
-    ):
+    def test_lazy_remove_static_background(self, dummy_signal, dummy_background):
         dummy_signal = dummy_signal.as_lazy()
         dummy_signal.remove_static_background(static_bg=dummy_background)
         assert isinstance(dummy_signal.data, da.Array)
 
-    def test_remove_static_background_scalebg(
-        self, dummy_signal, dummy_background
-    ):
+    def test_remove_static_background_scalebg(self, dummy_signal, dummy_background):
         dummy_signal2 = dummy_signal.deepcopy()
 
         dummy_signal.remove_static_background(
@@ -290,9 +279,7 @@ class TestRemoveStaticBackgroundEBSD:
         p2 = dummy_signal2.inav[0, 0].data
 
         assert not np.allclose(p1, p2, atol=0.1)
-        assert np.allclose(
-            p1, np.array([[15, 150, 15], [180, 255, 120], [150, 0, 75]])
-        )
+        assert np.allclose(p1, np.array([[15, 150, 15], [180, 255, 120], [150, 0, 75]]))
 
     def test_remove_static_background_relative_and_scalebg_raises(
         self, dummy_signal, dummy_background
@@ -548,14 +535,10 @@ class TestRescaleIntensityEBSD:
             ),
         ],
     )
-    def test_rescale_intensity_percentiles(
-        self, dummy_signal, percentiles, answer
-    ):
+    def test_rescale_intensity_percentiles(self, dummy_signal, percentiles, answer):
         dummy_signal.data = dummy_signal.data.astype(np.float32)
         dtype_out = np.uint8
-        dummy_signal.rescale_intensity(
-            percentiles=percentiles, dtype_out=dtype_out
-        )
+        dummy_signal.rescale_intensity(percentiles=percentiles, dtype_out=dtype_out)
 
         assert dummy_signal.data.dtype == dtype_out
         assert np.allclose(dummy_signal.inav[0, 0].data, answer)
@@ -570,9 +553,7 @@ class TestRescaleIntensityEBSD:
 
     def test_rescale_intensity_raises_in_range_percentiles(self, dummy_signal):
         with pytest.raises(ValueError, match="'percentiles' must be None"):
-            dummy_signal.rescale_intensity(
-                in_range=(1, 254), percentiles=(1, 99)
-            )
+            dummy_signal.rescale_intensity(in_range=(1, 254), percentiles=(1, 99))
 
     def test_rescale_intensity_raises_in_range_relative(self, dummy_signal):
         with pytest.raises(ValueError, match="'in_range' must be None if "):
@@ -748,15 +729,8 @@ class TestAverageNeighbourPatternsEBSD:
 
     def test_average_neighbour_patterns_lazy(self):
         """Fixes https://github.com/pyxem/kikuchipy/issues/230."""
-        chunks = (
-            (3, 3, 4, 3, 4, 3, 4, 3, 3, 4, 3, 4, 3, 4, 3, 4),
-            (75,),
-            (6,),
-            (6,),
-        )
-        s = kp.signals.LazyEBSD(
-            da.zeros((55, 75, 6, 6), chunks=chunks, dtype=np.uint8)
-        )
+        chunks = ((3, 3, 4, 3, 4, 3, 4, 3, 3, 4, 3, 4, 3, 4, 3, 4), (75,), (6,), (6,))
+        s = kp.signals.LazyEBSD(da.zeros((55, 75, 6, 6), chunks=chunks, dtype=np.uint8))
         s.average_neighbour_patterns()
         s.compute()
 
@@ -797,16 +771,12 @@ class TestRebin:
 
 class TestVirtualBackscatterElectronImaging:
     @pytest.mark.parametrize("out_signal_axes", [None, (0, 1), ("x", "y")])
-    def test_virtual_backscatter_electron_imaging(
-        self, dummy_signal, out_signal_axes
-    ):
+    def test_virtual_backscatter_electron_imaging(self, dummy_signal, out_signal_axes):
         dummy_signal.axes_manager.navigation_axes[0].name = "x"
         dummy_signal.axes_manager.navigation_axes[1].name = "y"
 
         roi = RectangularROI(left=0, top=0, right=1, bottom=1)
-        dummy_signal.plot_virtual_bse_intensity(
-            roi, out_signal_axes=out_signal_axes
-        )
+        dummy_signal.plot_virtual_bse_intensity(roi, out_signal_axes=out_signal_axes)
 
         close("all")
 
@@ -821,9 +791,7 @@ class TestVirtualBackscatterElectronImaging:
     def test_virtual_backscatter_electron_imaging_raises(self, dummy_signal):
         roi = RectangularROI(0, 0, 1, 1)
         with pytest.raises(ValueError):
-            _ = dummy_signal.get_virtual_bse_intensity(
-                roi, out_signal_axes=(0, 1, 2)
-            )
+            _ = dummy_signal.get_virtual_bse_intensity(roi, out_signal_axes=(0, 1, 2))
 
 
 class TestDecomposition:
@@ -902,9 +870,7 @@ class TestDecomposition:
         model_mean = model_signal.data.mean().compute()
         assert np.allclose(model_mean, mean_intensity, atol=0.1)
 
-    @pytest.mark.parametrize(
-        "components, mean_intensity", [(None, 132.1), (3, 122.9)]
-    )
+    @pytest.mark.parametrize("components, mean_intensity", [(None, 132.1), (3, 122.9)])
     def test_get_decomposition_model_write(
         self, dummy_signal, components, mean_intensity, tmp_path
     ):
@@ -1222,9 +1188,7 @@ class TestEBSDXmapProperty:
         step_sizes = (1.5, 1.5)
 
         # Should succeed
-        xmap_good = get_single_phase_xmap(
-            nav_shape=nav_shape, step_sizes=step_sizes
-        )
+        xmap_good = get_single_phase_xmap(nav_shape=nav_shape, step_sizes=step_sizes)
         s.xmap = xmap_good
 
         # Should fail
@@ -1398,9 +1362,7 @@ class TestAverageNeighbourDotProductMap:
         adp1 = s.get_average_neighbour_dot_product_map(normalize=False)
         assert adp1.dtype == dtype1
         dtype2 = np.int32
-        adp2 = s.get_average_neighbour_dot_product_map(
-            normalize=True, dtype_out=dtype2
-        )
+        adp2 = s.get_average_neighbour_dot_product_map(normalize=True, dtype_out=dtype2)
         assert adp2.dtype == dtype2
 
     def test_adp_lazy(self):

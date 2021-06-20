@@ -42,10 +42,7 @@ class TestCrystallographicComputations:
         assert np.allclose(_get_uvw_from_hkl(hkl), desired_uvw)
 
     @pytest.mark.parametrize(
-        (
-            "hkl, desired_family_keys, desired_family_values, desired_indices, "
-            "reduce"
-        ),
+        ("hkl, desired_family_keys, desired_family_values, desired_indices, " "reduce"),
         [
             ([1, 1, 1], [[1, 1, 1]], [1, 1, 1], [0], False),
             ([1, 1, 1], [[1, 1, 1]], [1, 1, 1], [0], True),
@@ -57,9 +54,7 @@ class TestCrystallographicComputations:
                 False,
             ),
             (
-                ReciprocalLatticePoint(
-                    phase=Phase(space_group=225), hkl=[1, 1, 1]
-                )
+                ReciprocalLatticePoint(phase=Phase(space_group=225), hkl=[1, 1, 1])
                 .symmetrise()
                 .hkl.data,
                 [1, 1, 1],
@@ -141,12 +136,7 @@ class TestCrystallographicComputations:
         ],
     )
     def test_get_hkl_family(
-        self,
-        hkl,
-        desired_family_keys,
-        desired_family_values,
-        desired_indices,
-        reduce,
+        self, hkl, desired_family_keys, desired_family_values, desired_indices, reduce
     ):
         """Desired sets of families and indices."""
         families, families_idx = _get_hkl_family(hkl, reduce=reduce)

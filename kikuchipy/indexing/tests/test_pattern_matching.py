@@ -25,10 +25,7 @@ from scipy.spatial.distance import cdist
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.data import nickel_ebsd_small, nickel_ebsd_master_pattern_small
 from kikuchipy.indexing._pattern_matching import _pattern_match
-from kikuchipy.indexing.similarity_metrics import (
-    make_similarity_metric,
-    MetricScope,
-)
+from kikuchipy.indexing.similarity_metrics import make_similarity_metric, MetricScope
 
 
 class TestPatternMatching:
@@ -41,24 +38,18 @@ class TestPatternMatching:
 
     def test_not_recognized_metric(self):
         with pytest.raises(ValueError):
-            _pattern_match(
-                np.zeros((2, 2)), np.zeros((2, 2)), metric="not_recognized"
-            )
+            _pattern_match(np.zeros((2, 2)), np.zeros((2, 2)), metric="not_recognized")
 
     def test_mismatching_signal_shapes(self):
         self.dummy_metric.scope = MetricScope.MANY_TO_MANY
         with pytest.raises(OSError):
-            _pattern_match(
-                np.zeros((2, 2)), np.zeros((3, 3)), metric=self.dummy_metric
-            )
+            _pattern_match(np.zeros((2, 2)), np.zeros((3, 3)), metric=self.dummy_metric)
 
     def test_metric_not_compatible_with_data(self):
         self.dummy_metric.scope = MetricScope.ONE_TO_MANY
         with pytest.raises(OSError):
             _pattern_match(
-                np.zeros((2, 2, 2, 2)),
-                np.zeros((2, 2)),
-                metric=self.dummy_metric,
+                np.zeros((2, 2, 2, 2)), np.zeros((2, 2)), metric=self.dummy_metric
             )
 
     @pytest.mark.parametrize("n_slices", [1, 2])
