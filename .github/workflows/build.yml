@@ -3,6 +3,15 @@ name: build
 on: [push, pull_request]
 
 jobs:
+  code:
+    name: Code
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - uses: psf/black@stable
+
   build-with-pip:
     name: ${{ matrix.os }}/py${{ matrix.python-version }}/pip
     runs-on: ${{ matrix.os }}
