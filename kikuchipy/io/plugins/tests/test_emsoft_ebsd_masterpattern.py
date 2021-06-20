@@ -246,7 +246,7 @@ class TestEMsoftEBSDMasterPatternReader:
 
         s2 = load(EMSOFT_FILE, projection="lambert", energy=energy, hemisphere="north")
         sig_indx = s2.axes_manager.signal_indices_in_array
-        assert np.allclose(s2.mean(axis=sig_indx).data, desired_mean_energies)
+        assert np.allclose(s2.nanmean(axis=sig_indx).data, desired_mean_energies)
 
         with File(EMSOFT_FILE, mode="r") as f:
             mp_lambert_north = f["EMData/EBSDmaster/mLPNH"][:][0][energy_slice]

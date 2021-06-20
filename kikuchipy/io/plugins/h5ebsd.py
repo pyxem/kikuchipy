@@ -694,9 +694,9 @@ def brukerheader2dicts(
     # Values: data set name, data group, function to apply, node
     dset_mapping = {
         "sample_tilt": ["SampleTilt", hd, None, ebsd_node],
-        "xpz": ["PCX", dd, np.mean, ebsd_node],
-        "ypc": ["PCY", dd, np.mean, ebsd_node],
-        "zpc": ["DD", dd, np.mean, ebsd_node],
+        "xpz": ["PCX", dd, np.nanmean, ebsd_node],
+        "ypc": ["PCY", dd, np.nanmean, ebsd_node],
+        "zpc": ["DD", dd, np.nanmean, ebsd_node],
         "static_background": ["StaticBackground", hd, None, ebsd_node],
         "working_distance": ["WD", hd, None, sem_node],
         "beam_energy": ["KV", hd, None, sem_node],

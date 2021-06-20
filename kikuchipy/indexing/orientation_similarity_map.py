@@ -141,7 +141,7 @@ def _orientation_similarity_per_pixel(
         for mi in match_indices[neighbours]
     ]
 
-    os = np.mean(number_of_equal_matches_to_its_neighbours)
+    os = np.nanmean(number_of_equal_matches_to_its_neighbours)
 
     if normalize:
         os /= n

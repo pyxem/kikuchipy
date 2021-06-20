@@ -175,7 +175,7 @@ def _neighbour_dot_products(
     dot_products = neighbour_patterns @ pattern
 
     if output is None:
-        return np.mean(dot_products)
+        return np.nanmean(dot_products)
     else:
         center_value = (pattern ** 2).sum()
         output[pat_idx][flat_window_truthy_indices[center_index]] = center_value
