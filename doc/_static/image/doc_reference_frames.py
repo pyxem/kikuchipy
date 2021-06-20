@@ -36,7 +36,10 @@ s.remove_static_background()
 s.remove_dynamic_background()
 s.rescale_intensity(percentiles=(0.5, 99.5))
 
-det = EBSDDetector(shape=(60, 60), pc=[0.4210, 0.2206, 0.5049],)
+det = EBSDDetector(
+    shape=(60, 60),
+    pc=[0.4210, 0.2206, 0.5049],
+)
 fig, ax = det.plot(
     coordinates="detector",
     pattern=s.inav[0, 0].data,
@@ -58,10 +61,18 @@ y_color = "b"  # green (0, 0.78, 0)
 ax.set_xlabel(ax.get_xlabel(), color=x_color)
 ax.set_ylabel(ax.get_ylabel(), color=y_color)
 ax.arrow(
-    dx=arrow_length, dy=0, fc=x_color, ec=x_color, **arrow_dict1,
+    dx=arrow_length,
+    dy=0,
+    fc=x_color,
+    ec=x_color,
+    **arrow_dict1,
 )
 ax.arrow(
-    dx=0, dy=arrow_length, fc=y_color, ec=y_color, **arrow_dict1,
+    dx=0,
+    dy=arrow_length,
+    fc=y_color,
+    ec=y_color,
+    **arrow_dict1,
 )
 fig.savefig(
     os.path.join(refframe_dir, "detector_coordinates.png"),

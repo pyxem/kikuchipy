@@ -18,9 +18,7 @@
 
 """Generate signals and simulations, sometimes *from* other signals."""
 
-from kikuchipy.generators.ebsd_simulation_generator import (
-    EBSDSimulationGenerator,
-)
+from kikuchipy.generators.ebsd_simulation_generator import EBSDSimulationGenerator
 from kikuchipy.generators.virtual_bse_generator import VirtualBSEGenerator
 
 __all__ = [

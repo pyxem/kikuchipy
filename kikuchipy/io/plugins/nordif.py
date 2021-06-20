@@ -86,9 +86,7 @@ def file_reader(
     scan = {}
 
     # Make sure we open in correct mode
-    if "+" in mmap_mode or (
-        "write" in mmap_mode and "copyonwrite" != mmap_mode
-    ):
+    if "+" in mmap_mode or ("write" in mmap_mode and "copyonwrite" != mmap_mode):
         if lazy:
             raise ValueError("Lazy loading does not support in-place writing")
         f = open(filename, mode="r+b")
@@ -110,9 +108,8 @@ def file_reader(
     else:
         if scan_size is None and pattern_size is None:
             raise ValueError(
-                "No setting file found and no scan_size or pattern_size "
-                "detected in input arguments. These must be set if no setting "
-                "file is provided."
+                "No setting file found and no scan_size or pattern_size detected in "
+                "input arguments. These must be set if no setting file is provided"
             )
         md = ebsd_metadata()
         omd = DictionaryTreeBrowser()
@@ -123,15 +120,13 @@ def file_reader(
         md.set_item(ebsd_node + ".static_background", imread(static_bg_file))
     except FileNotFoundError:
         warnings.warn(
-            f"Could not read static background pattern '{static_bg_file}', "
-            "however it can be added using set_experimental_parameters()."
+            f"Could not read static background pattern '{static_bg_file}', however it "
+            "can be added using set_experimental_parameters()"
         )
 
     # Set required and other parameters in metadata
     md.set_item("General.original_filename", filename)
-    md.set_item(
-        "General.title", os.path.splitext(os.path.split(filename)[1])[0]
-    )
+    md.set_item("General.title", os.path.splitext(os.path.split(filename)[1])[0])
     md.set_item("Signal.signal_type", "EBSD")
     md.set_item("Signal.record_by", "image")
     scan["metadata"] = md.as_dictionary()
@@ -195,9 +190,7 @@ def file_reader(
 
     f.close()
 
-    return [
-        scan,
-    ]
+    return [scan]
 
 
 def get_settings_from_file(
@@ -253,9 +246,7 @@ def get_settings_from_file(
     # Get metadata values from settings file using regular expressions
     azimuth_angle = get_string(content, "Azimuthal\t(.*)\t", l_ang + 4, f)
     md.set_item(ebsd_node + ".azimuth_angle", float(azimuth_angle))
-    beam_energy = get_string(
-        content, "Accelerating voltage\t(.*)\tkV", l_mic + 5, f
-    )
+    beam_energy = get_string(content, "Accelerating voltage\t(.*)\tkV", l_mic + 5, f)
     md.set_item(sem_node + ".beam_energy", float(beam_energy))
     detector = get_string(content, "Model\t(.*)\t", l_det + 1, f)
     detector = re.sub("[^a-zA-Z0-9]", repl="", string=detector)
@@ -278,16 +269,12 @@ def get_settings_from_file(
     scan_time = get_string(content, "Scan time\t(.*)\t", l_area + 7, f)
     scan_time = time.strptime(scan_time, "%H:%M:%S")
     scan_time = datetime.timedelta(
-        hours=scan_time.tm_hour,
-        minutes=scan_time.tm_min,
-        seconds=scan_time.tm_sec,
+        hours=scan_time.tm_hour, minutes=scan_time.tm_min, seconds=scan_time.tm_sec
     ).total_seconds()
     md.set_item(ebsd_node + ".scan_time", int(scan_time))
     version = get_string(content, "Software version\t(.*)\t", l_nordif + 1, f)
     md.set_item(ebsd_node + ".version", version)
-    working_distance = get_string(
-        content, "Working distance\t(.*)\tmm", l_mic + 6, f
-    )
+    working_distance = get_string(content, "Working distance\t(.*)\tmm", l_mic + 6, f)
     md.set_item(sem_node + ".working_distance", float(working_distance))
     md.set_item(ebsd_node + ".grid_type", "square")
     md.set_item(ebsd_node + ".manufacturer", "NORDIF")
@@ -335,8 +322,8 @@ def get_string(content: list, expression: str, line_no: int, file) -> str:
     match = re.search(expression, content[line_no])
     if match is None:
         warnings.warn(
-            f"Failed to read line {line_no - 1} in settings file '{file.name}' "
-            f"using regular expression '{expression}'."
+            f"Failed to read line {line_no - 1} in settings file '{file.name}' using "
+            f"regular expression '{expression}'"
         )
         return 0
     else:

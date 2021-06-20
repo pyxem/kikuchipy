@@ -60,9 +60,7 @@ class TestStaticPatternMatching:
         assert np.allclose(xmap1.scores, 1)
         assert np.all(["osm" in xmap.prop for xmap in res])
 
-    @pytest.mark.parametrize(
-        "n_rot_in, n_rot_out, keep_n", [(60, 50, 10), (40, 40, 5)]
-    )
+    @pytest.mark.parametrize("n_rot_in, n_rot_out, keep_n", [(60, 50, 10), (40, 40, 5)])
     def test_keep_n(self, n_rot_in, n_rot_out, keep_n):
         s = nickel_ebsd_small()
         s_dict = EBSD(np.random.random((n_rot_in, 60, 60)).astype(np.float32))
@@ -79,9 +77,7 @@ class TestStaticPatternMatching:
     @pytest.mark.parametrize(
         "return_merged_xmap, desired_n_xmaps_out", [(True, 3), (False, 2)]
     )
-    def test_return_merged_crystal_map(
-        self, return_merged_xmap, desired_n_xmaps_out
-    ):
+    def test_return_merged_crystal_map(self, return_merged_xmap, desired_n_xmaps_out):
         s = nickel_ebsd_small()
         s_dict1 = EBSD(s.data.reshape(-1, 60, 60))
         s_dict2 = s_dict1.deepcopy()
@@ -127,11 +123,10 @@ class TestStaticPatternMatching:
             assert res is None
 
     @pytest.mark.parametrize(
-        "slices, desired_xmap_shape", [((0, 0), ()), ((0, slice(0, 2)), (2,))],
+        "slices, desired_xmap_shape",
+        [((0, 0), ()), ((0, slice(0, 2)), (2,))],
     )
-    def test_signal_varying_dimensions(
-        self, dummy_signal, slices, desired_xmap_shape
-    ):
+    def test_signal_varying_dimensions(self, dummy_signal, slices, desired_xmap_shape):
         s = dummy_signal.inav[slices]
         sig_shape = dummy_signal.axes_manager.signal_shape
         s_dict1 = EBSD(dummy_signal.data.reshape((-1,) + sig_shape))

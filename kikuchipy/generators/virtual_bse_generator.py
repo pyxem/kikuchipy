@@ -29,9 +29,7 @@ import numpy as np
 
 from kikuchipy.signals import EBSD, LazyEBSD
 from kikuchipy.signals import VirtualBSEImage
-from kikuchipy.generators._transfer_axes import (
-    _transfer_navigation_axes_to_signal_axes,
-)
+from kikuchipy.generators._transfer_axes import _transfer_navigation_axes_to_signal_axes
 from kikuchipy.pattern import rescale_intensity
 
 
@@ -69,15 +67,9 @@ class VirtualBSEGenerator:
 
     def get_rgb_image(
         self,
-        r: Union[
-            BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple],
-        ],
-        g: Union[
-            BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple],
-        ],
-        b: Union[
-            BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple],
-        ],
+        r: Union[BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple]],
+        g: Union[BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple]],
+        b: Union[BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple]],
         percentiles: Optional[Tuple] = None,
         normalize: bool = True,
         alpha: Union[None, np.ndarray, VirtualBSEImage] = None,
@@ -143,8 +135,7 @@ class VirtualBSEGenerator:
                 rois = (rois,)
 
             image = np.zeros(
-                self.signal.axes_manager.navigation_shape[::-1],
-                dtype=np.float64,
+                self.signal.axes_manager.navigation_shape[::-1], dtype=np.float64
             )
             for roi in rois:
                 if isinstance(roi, tuple):
@@ -175,15 +166,12 @@ class VirtualBSEGenerator:
         vbse_rgb_image.change_dtype(dtype_rgb)
 
         vbse_rgb_image.axes_manager = _transfer_navigation_axes_to_signal_axes(
-            new_axes=vbse_rgb_image.axes_manager,
-            old_axes=self.signal.axes_manager,
+            new_axes=vbse_rgb_image.axes_manager, old_axes=self.signal.axes_manager
         )
 
         return vbse_rgb_image
 
-    def get_images_from_grid(
-        self, dtype_out: np.dtype = np.float32,
-    ) -> VirtualBSEImage:
+    def get_images_from_grid(self, dtype_out: np.dtype = np.float32) -> VirtualBSEImage:
         """Return an in-memory signal with a stack of virtual
         backscatter electron (BSE) images by integrating the intensities
         within regions of interest (ROI) defined by the detector
@@ -256,9 +244,7 @@ class VirtualBSEGenerator:
         min_row = rows[min(index[:, 0])] * dr
         max_row = (rows[max(index[:, 0])] + rows[1]) * dr
 
-        return RectangularROI(
-            left=min_col, top=min_row, right=max_col, bottom=max_row,
-        )
+        return RectangularROI(left=min_col, top=min_row, right=max_col, bottom=max_row)
 
     def plot_grid(
         self,
@@ -444,8 +430,6 @@ def get_rgb_image(
         in_range = tuple(np.percentile(rgb_image, q=percentiles))
     else:
         in_range = None
-    rgb_image = rescale_intensity(
-        rgb_image, in_range=in_range, dtype_out=dtype_out
-    )
+    rgb_image = rescale_intensity(rgb_image, in_range=in_range, dtype_out=dtype_out)
 
     return rgb_image.astype(dtype_out)

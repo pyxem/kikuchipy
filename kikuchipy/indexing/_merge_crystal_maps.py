@@ -24,10 +24,7 @@ import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList
 from orix.quaternion.rotation import Rotation
 
-from kikuchipy.indexing.similarity_metrics import (
-    SimilarityMetric,
-    _SIMILARITY_METRICS,
-)
+from kikuchipy.indexing.similarity_metrics import SimilarityMetric, _SIMILARITY_METRICS
 
 
 def merge_crystal_maps(
@@ -112,9 +109,7 @@ def merge_crystal_maps(
     )
 
     # Combined (unsorted) scores array of shape (M, N, K) or (M, K)
-    combined_scores = np.dstack(
-        [xmap.prop[scores_prop] for xmap in crystal_maps]
-    )
+    combined_scores = np.dstack([xmap.prop[scores_prop] for xmap in crystal_maps])
     combined_scores = combined_scores.reshape(comb_shape)
 
     # Best score in each map point
@@ -131,9 +126,7 @@ def merge_crystal_maps(
     new_rotations = Rotation(np.zeros_like(crystal_maps[0].rotations.data))
     new_scores = np.zeros_like(crystal_maps[0].prop[scores_prop])
     if simulation_indices_prop is not None:
-        new_indices = np.zeros_like(
-            crystal_maps[0].prop[simulation_indices_prop]
-        )
+        new_indices = np.zeros_like(crystal_maps[0].prop[simulation_indices_prop])
     phase_list = PhaseList()
     for i, xmap in enumerate(crystal_maps):
         mask = phase_id == i
@@ -161,9 +154,7 @@ def merge_crystal_maps(
     # third axis to get (M, N * K) or (M, K)
     mergesort_shape = (comb_shape[0], np.prod(comb_shape[1:]))
     comb_scores_reshaped = combined_scores.reshape(mergesort_shape)
-    best_sorted_idx = np.argsort(
-        sign * -comb_scores_reshaped, kind="mergesort", axis=1
-    )
+    best_sorted_idx = np.argsort(sign * -comb_scores_reshaped, kind="mergesort", axis=1)
 
     # Best, sorted scores in all maps (for all phases) per point
     merged_best_scores = np.take_along_axis(
@@ -171,10 +162,7 @@ def merge_crystal_maps(
     )
 
     # Set up merged map's properties
-    props = {
-        scores_prop: new_scores,
-        f"merged_{scores_prop}": merged_best_scores,
-    }
+    props = {scores_prop: new_scores, f"merged_{scores_prop}": merged_best_scores}
 
     if simulation_indices_prop is not None:
         # Combined (unsorted) simulation indices array of shape
@@ -187,8 +175,7 @@ def merge_crystal_maps(
 
         if comb_sim_idx.size != np.prod(mergesort_shape):
             raise ValueError(
-                "Cannot merge maps with more simulation indices than scores per"
-                " point."
+                "Cannot merge maps with more simulation indices than scores per point"
             )
 
         # To enable calculation of an orientation similarity map from
@@ -196,8 +183,7 @@ def merge_crystal_maps(
         # the indices unique across all maps
         for i in range(1, comb_sim_idx.shape[-1]):
             increment = (
-                abs(comb_sim_idx[..., i - 1].max() - comb_sim_idx[..., i].min())
-                + 1
+                abs(comb_sim_idx[..., i - 1].max() - comb_sim_idx[..., i].min()) + 1
             )
             comb_sim_idx[..., i] += increment
 

@@ -37,9 +37,7 @@ def rescale_intensity(
     patterns: Union[np.ndarray, da.Array],
     in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
     out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-    dtype_out: Union[
-        None, np.dtype, Tuple[int, int], Tuple[float, float]
-    ] = None,
+    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
     percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
 ) -> Union[np.ndarray, da.Array]:
     """Rescale pattern intensities in a chunk of EBSD patterns.
@@ -98,9 +96,7 @@ def remove_static_background(
     scale_bg: bool = False,
     in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
     out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-    dtype_out: Union[
-        None, np.dtype, Tuple[int, int], Tuple[float, float]
-    ] = None,
+    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
 ) -> np.ndarray:
     """Remove the static background in a chunk of EBSD patterns.
 
@@ -176,9 +172,7 @@ def remove_static_background(
 def get_dynamic_background(
     patterns: Union[np.ndarray, da.Array],
     filter_func: Union[gaussian_filter, barnes.fft_filter],
-    dtype_out: Union[
-        None, np.dtype, Tuple[int, int], Tuple[float, float]
-    ] = None,
+    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
     **kwargs,
 ) -> np.ndarray:
     """Obtain the dynamic background in a chunk of EBSD patterns.
@@ -220,9 +214,7 @@ def remove_dynamic_background(
     filter_func: Union[gaussian_filter, barnes.fft_filter],
     operation_func: Union[np.subtract, np.divide],
     out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-    dtype_out: Union[
-        None, np.dtype, Tuple[int, int], Tuple[float, float]
-    ] = None,
+    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
     **kwargs,
 ) -> np.ndarray:
     """Correct the dynamic background in a chunk of EBSD patterns.
@@ -285,7 +277,9 @@ def remove_dynamic_background(
 
         # Rescale intensities
         corrected_patterns[nav_idx] = pattern_processing.rescale_intensity(
-            pattern=corrected_pattern, out_range=out_range, dtype_out=dtype_out,
+            pattern=corrected_pattern,
+            out_range=out_range,
+            dtype_out=dtype_out,
         )
 
     return corrected_patterns
@@ -381,9 +375,7 @@ def get_image_quality(
     for nav_idx in np.ndindex(patterns.shape[:-2]):
         # Get (normalized) pattern
         if normalize:
-            pattern = pattern_processing.normalize_intensity(
-                pattern=patterns[nav_idx]
-            )
+            pattern = pattern_processing.normalize_intensity(pattern=patterns[nav_idx])
         else:
             pattern = patterns[nav_idx]
 
@@ -402,9 +394,7 @@ def fft_filter(
     patterns: np.ndarray,
     filter_func: Union[pattern_processing.fft_filter, barnes._fft_filter],
     transfer_function: Union[np.ndarray, Window],
-    dtype_out: Union[
-        None, np.dtype, Tuple[int, int], Tuple[float, float]
-    ] = None,
+    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
     **kwargs,
 ) -> np.ndarray:
     """Filter a chunk of EBSD patterns in the frequency domain.
@@ -538,7 +528,7 @@ def average_neighbour_patterns(
 
     # Correlate patterns with window
     correlated_patterns = correlate(
-        patterns.astype(np.float32), weights=window, mode="constant", cval=0,
+        patterns.astype(np.float32), weights=window, mode="constant", cval=0
     )
 
     # Divide convolved patterns by number of neighbours averaged with

@@ -84,8 +84,8 @@ def _pattern_match(
     metric = _SIMILARITY_METRICS.get(metric, metric)
     if not isinstance(metric, SimilarityMetric):
         raise ValueError(
-            f"{metric} must be either of {list(_SIMILARITY_METRICS.keys())} "
-            "or an instance of SimilarityMetric. See "
+            f"{metric} must be either of {list(_SIMILARITY_METRICS.keys())} or an "
+            "instance of SimilarityMetric. See "
             "kikuchipy.indexing.similarity_metrics.make_similarity_metric()"
         )
 
@@ -94,32 +94,27 @@ def _pattern_match(
     t_sig_shape = simulated.shape[-2:]
     if sig_data_shape != t_sig_shape:
         raise OSError(
-            f"The experimental {sig_data_shape} and simulated {t_sig_shape} "
-            "signal shapes are not identical"
+            f"The experimental {sig_data_shape} and simulated {t_sig_shape} signal "
+            "shapes are not identical"
         )
 
     if not metric._is_compatible(experimental.ndim, simulated.ndim):
         raise OSError(
             f"The shape of experimental {experimental.shape} and simulated "
-            f"{simulated.shape} are not compatible with the scope "
-            f"{metric.scope} of {type(metric).__name__}"
+            f"{simulated.shape} are not compatible with the scope {metric.scope} of "
+            f"{type(metric).__name__}"
         )
 
     keep_n = min(keep_n, _get_number_of_simulated(simulated))
 
     if n_slices == 1:
         return _pattern_match_single_slice(
-            experimental,
-            simulated,
-            keep_n=keep_n,
-            metric=metric,
-            compute=compute,
+            experimental, simulated, keep_n=keep_n, metric=metric, compute=compute
         )
     else:
         if not compute:
             raise NotImplementedError(
-                "Slicing simulations and returning dask arrays is not "
-                "implemented"
+                "Slicing simulations and returning dask arrays is not " "implemented"
             )
         return _pattern_match_slice_simulated(
             experimental,
@@ -182,9 +177,7 @@ def _pattern_match_slice_simulated(
     else:
         desc = f"Matching {phase_name[:10]} patterns"
 
-    with tqdm(
-        iterable=range(n_slices), desc=desc, unit="slice", total=n_slices
-    ) as t:
+    with tqdm(iterable=range(n_slices), desc=desc, unit="slice", total=n_slices) as t:
         start = 0
         for i in range(n_slices):
             t.set_postfix_str(f"mem={psutil.virtual_memory().percent}%")
@@ -224,9 +217,9 @@ def _pattern_match_slice_simulated(
     simulated_indices = np.zeros(result_shape, np.int32)
     scores = np.zeros(result_shape, metric._dtype_out)
     for i in range(nav_size):
-        indices = (metric.sign * -scores_aggregate[i]).argsort(
-            kind="mergesort"
-        )[:keep_n]
+        indices = (metric.sign * -scores_aggregate[i]).argsort(kind="mergesort")[
+            :keep_n
+        ]
         simulated_indices[i] = simulated_indices_aggregate[i][indices]
         scores[i] = scores_aggregate[i][indices]
 
@@ -267,9 +260,7 @@ def _pattern_match_single_slice(
 
     # If MetricScope.ONE_TO_ONE
     if similarities.shape == ():
-        similarity = (
-            np.array([similarities.compute()]) if compute else similarities
-        )
+        similarity = np.array([similarities.compute()]) if compute else similarities
         return np.array([0]), similarity
 
     # keep_n_aggregate: If N is < keep_n => keep_n = N

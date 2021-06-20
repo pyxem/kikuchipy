@@ -202,9 +202,7 @@ def _write_parameters_to_dictionary(
             dictionary.set_item(node + "." + key, val)
 
 
-def _set_metadata_from_mapping(
-    omd: dict, md: DictionaryTreeBrowser, mapping: dict,
-):
+def _set_metadata_from_mapping(omd: dict, md: DictionaryTreeBrowser, mapping: dict):
     """Update metadata dictionary inplace from original metadata
     dictionary via a mapping.
 

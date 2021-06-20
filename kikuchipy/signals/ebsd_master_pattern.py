@@ -147,8 +147,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         nav_dim = len(nav_shape)
         if nav_dim > 2:
             raise ValueError(
-                "The rotations object can only have one or two dimensions, but "
-                f"an object with {nav_dim} was passed"
+                "The rotations object can only have one or two dimensions, but an "
+                f"object with {nav_dim} was passed"
             )
         data_shape = nav_shape + detector.shape
         chunks = get_chunking(
@@ -171,9 +171,9 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             south_slice = (1,) + south_slice
         elif not self.phase.point_group.contains_inversion:
             raise AttributeError(
-                "For crystals of point groups without inversion symmetry, like "
-                f"the current {self.phase.point_group.name}, both hemispheres "
-                "must be present in the master pattern signal"
+                "For crystals of point groups without inversion symmetry, like the "
+                "current {self.phase.point_group.name}, both hemispheres must be "
+                "present in the master pattern signal"
             )
         master_north = self.data[north_slice]
         master_south = self.data[south_slice]
@@ -222,9 +222,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         # Add crystal map and detector to keyword arguments
         kwargs = dict(
-            xmap=CrystalMap(
-                phase_list=PhaseList(self.phase), rotations=rotations,
-            ),
+            xmap=CrystalMap(phase_list=PhaseList(self.phase), rotations=rotations),
             detector=detector,
         )
 
@@ -332,9 +330,7 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
     Lc = cw * det_x + L * sw
 
     i, j = np.meshgrid(
-        np.arange(detector.nrows - 1, -1, -1),
-        np.arange(detector.ncols),
-        indexing="ij",
+        np.arange(detector.nrows - 1, -1, -1), np.arange(detector.ncols), indexing="ij"
     )
 
     r_g_array[..., 0] = det_y[i] * ca + sa * Ls[j]
@@ -346,10 +342,7 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
 
 
 def _get_lambert_interpolation_parameters(
-    rotated_direction_cosines: Vector3d,
-    npx: int,
-    npy: int,
-    scale: Union[int, float],
+    rotated_direction_cosines: Vector3d, npx: int, npy: int, scale: Union[int, float]
 ) -> tuple:
     """Get interpolation parameters in the square Lambert projection, as
     implemented in EMsoft.
@@ -468,7 +461,7 @@ def _get_patterns_chunk(
             dim,
             djm,
         ) = _get_lambert_interpolation_parameters(
-            rotated_direction_cosines=rotated_dc, npx=npx, npy=npy, scale=scale,
+            rotated_direction_cosines=rotated_dc, npx=npx, npy=npy, scale=scale
         )
         pattern = np.where(
             rotated_dc.z >= 0,

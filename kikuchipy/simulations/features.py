@@ -182,9 +182,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         """
         # TODO: Should be part of GeometricalEBSDSimulation, not here
         is_full_upper = self.z_detector > -1e-5
-        gnomonic_radius = self._get_reshaped_gnomonic_radius(
-            self.hesse_distance.ndim
-        )
+        gnomonic_radius = self._get_reshaped_gnomonic_radius(self.hesse_distance.ndim)
         in_circle = np.abs(self.hesse_distance) < gnomonic_radius
         return np.logical_and(in_circle, is_full_upper)
 
@@ -195,9 +193,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         """
         hesse_distance = self.hesse_distance
         hesse_distance[~self.within_gnomonic_radius] = np.nan
-        gnomonic_radius = self._get_reshaped_gnomonic_radius(
-            hesse_distance.ndim
-        )
+        gnomonic_radius = self._get_reshaped_gnomonic_radius(hesse_distance.ndim)
         return np.arccos(hesse_distance / gnomonic_radius)
 
     @property

@@ -31,9 +31,7 @@ class HesseNormalForm:
     """Hessian normal form of a plane given by polar coordinates."""
 
     @staticmethod
-    def project_polar(
-        polar: np.ndarray, radius: Optional[float] = 10
-    ) -> np.ndarray:
+    def project_polar(polar: np.ndarray, radius: Optional[float] = 10) -> np.ndarray:
         """Return the Hesse normal form of plane(s) given by spherical
         coordinates.
 

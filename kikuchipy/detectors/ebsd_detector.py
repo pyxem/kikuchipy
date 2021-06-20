@@ -289,9 +289,7 @@ class EBSDDetector:
     @property
     def x_range(self) -> np.ndarray:
         """X detector limits in gnomonic coordinates."""
-        return np.dstack((self.x_min, self.x_max)).reshape(
-            self.navigation_shape + (2,)
-        )
+        return np.dstack((self.x_min, self.x_max)).reshape(self.navigation_shape + (2,))
 
     @property
     def y_min(self) -> Union[np.ndarray, float]:
@@ -306,9 +304,7 @@ class EBSDDetector:
     @property
     def y_range(self) -> np.ndarray:
         """The y detector limits in gnomonic coordinates."""
-        return np.dstack((self.y_min, self.y_max)).reshape(
-            self.navigation_shape + (2,)
-        )
+        return np.dstack((self.y_min, self.y_max)).reshape(self.navigation_shape + (2,))
 
     @property
     def gnomonic_bounds(self) -> np.ndarray:
@@ -610,9 +606,7 @@ class EBSDDetector:
             for angle in gnomonic_angles:
                 ax.add_artist(
                     plt.Circle(
-                        (pcx, pcy),
-                        np.tan(np.deg2rad(angle)),
-                        **gnomonic_circles_kwargs,
+                        (pcx, pcy), np.tan(np.deg2rad(angle)), **gnomonic_circles_kwargs
                     )
                 )
 

@@ -21,9 +21,7 @@ from orix.crystal_map import CrystalMap
 from orix.quaternion import Rotation
 import pytest
 
-from kikuchipy.indexing.orientation_similarity_map import (
-    orientation_similarity_map,
-)
+from kikuchipy.indexing.orientation_similarity_map import orientation_similarity_map
 
 
 class TestOrientationSimilarityMap:

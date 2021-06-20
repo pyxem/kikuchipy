@@ -23,12 +23,7 @@ import numpy as np
 import pytest
 
 from kikuchipy import data
-from kikuchipy.signals import (
-    EBSD,
-    LazyEBSD,
-    EBSDMasterPattern,
-    LazyEBSDMasterPattern,
-)
+from kikuchipy.signals import EBSD, LazyEBSD, EBSDMasterPattern, LazyEBSDMasterPattern
 
 
 class TestData:
@@ -64,7 +59,7 @@ class TestData:
         can be loaded as expected.
         """
         mp = data.nickel_ebsd_master_pattern_small(
-            projection=projection, hemisphere=hemisphere,
+            projection=projection, hemisphere=hemisphere
         )
 
         assert isinstance(mp, EBSDMasterPattern)

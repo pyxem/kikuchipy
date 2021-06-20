@@ -37,8 +37,8 @@ class TestDeprecationWarning:
         with pytest.warns(np.VisibleDeprecationWarning) as record:
             assert foo(4) == 5
         desired_msg = (
-            "Function `foo()` is deprecated and will be removed in version 0.8. "
-            "Use `bar()` instead."
+            "Function `foo()` is deprecated and will be removed in version 0.8. Use "
+            "`bar()` instead."
         )
         assert str(record[0].message) == desired_msg
         assert foo.__doc__ == (

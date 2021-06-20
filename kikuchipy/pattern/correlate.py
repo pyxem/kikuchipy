@@ -29,9 +29,7 @@ from kikuchipy._util import deprecated
 
 
 @deprecated(
-    since="0.4",
-    alternative="kikuchipy.indexing.similarity_metrics.ncc",
-    removal="0.5",
+    since="0.4", alternative="kikuchipy.indexing.similarity_metrics.ncc", removal="0.5"
 )
 def normalized_correlation_coefficient(
     pattern: Union[np.ndarray, Array],

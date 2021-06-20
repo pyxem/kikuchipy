@@ -58,9 +58,7 @@ class TestBarnesFFTFilter:
         p = np.ones(image_shape, dtype=np.uint8)
         w = Window("gaussian", shape=(21, 23), std=5)
 
-        fft_shape, _, off1, _ = barnes._fft_filter_setup(
-            image_shape=p.shape, window=w
-        )
+        fft_shape, _, off1, _ = barnes._fft_filter_setup(image_shape=p.shape, window=w)
         p_padded = barnes._pad_image(
             image=p,
             fft_shape=fft_shape,
@@ -130,11 +128,7 @@ class TestBarnesFFTFilter:
     @pytest.mark.parametrize(
         "image, w, answer",
         [
-            (
-                np.array([[1, 2], [3, 4]]),
-                np.array([[1]]),
-                np.array([[1, 2], [3, 4]]),
-            ),
+            (np.array([[1, 2], [3, 4]]), np.array([[1]]), np.array([[1, 2], [3, 4]])),
             (
                 np.array([[1, 2], [3, 4]]),
                 np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]]),

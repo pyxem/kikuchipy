@@ -151,15 +151,14 @@ class TestWindow:
         w = Window()
         object_type = str(type(w)).strip(">'").split(".")[-1]
         assert w.__repr__() == (
-            f"{object_type} {w.shape} {w.name}\n"
-            "[[0. 1. 0.]\n [1. 1. 1.]\n [0. 1. 0.]]"
+            f"{object_type} {w.shape} {w.name}\n[[0. 1. 0.]\n [1. 1. 1.]\n [0. 1. 0.]]"
         )
 
     def test_is_valid(self):
         change_attribute = np.array([0, 0, 0, 1])
 
         # Change one attribute at a time and check whether the window is valid
-        for i in range(len(change_attribute)):
+        for _ in range(len(change_attribute)):
             w = Window()
 
             valid_window = True
@@ -218,8 +217,7 @@ class TestWindow:
     def test_shape_compatible(self, dummy_signal, shape, compatible):
         w = Window(shape=shape)
         assert (
-            w.shape_compatible(dummy_signal.axes_manager.navigation_shape)
-            == compatible
+            w.shape_compatible(dummy_signal.axes_manager.navigation_shape) == compatible
         )
 
     def test_plot_default_values(self):
@@ -249,16 +247,11 @@ class TestWindow:
             ("rectangular", RECTANGULAR33, "inferno", ["b", "r"], "Coeff."),
         ],
     )
-    def test_plot(
-        self, window, answer_coeff, cmap, textcolors, cmap_label, tmp_path
-    ):
+    def test_plot(self, window, answer_coeff, cmap, textcolors, cmap_label, tmp_path):
         w = Window(window=window)
 
         fig = w.plot(
-            cmap=cmap,
-            textcolors=textcolors,
-            cmap_label=cmap_label,
-            return_figure=True,
+            cmap=cmap, textcolors=textcolors, cmap_label=cmap_label, return_figure=True
         )
         ax = fig.axes[0]
         im = ax.get_images()[0]

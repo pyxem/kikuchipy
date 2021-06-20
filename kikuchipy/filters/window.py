@@ -137,9 +137,7 @@ class Window(np.ndarray):
                 if any(isinstance(i, float) for i in np.array(shape)):
                     raise TypeError
             except TypeError:
-                raise TypeError(
-                    f"Window shape {shape} must be a sequence of ints."
-                )
+                raise TypeError(f"Window shape {shape} must be a sequence of ints.")
 
         exclude_window_corners = False
         if isinstance(window, np.ndarray) or isinstance(window, Array):

@@ -20,9 +20,7 @@
 zone axes.
 """
 
-from kikuchipy.simulations.geometrical_ebsd_simulation import (
-    GeometricalEBSDSimulation,
-)
+from kikuchipy.simulations.geometrical_ebsd_simulation import GeometricalEBSDSimulation
 from kikuchipy.simulations import features
 
 __all__ = [
