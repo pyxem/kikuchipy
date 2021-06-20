@@ -114,7 +114,7 @@ def merge_crystal_maps(
 
     # Best score in each map point
     if n_scores_per_point > 1:  # (M, N, K)
-        best_scores = np.mean(combined_scores[:, :mean_n_best], axis=1)
+        best_scores = np.nanmean(combined_scores[:, :mean_n_best], axis=1)
     else:  # (M, K)
         best_scores = combined_scores
 

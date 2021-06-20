@@ -205,7 +205,7 @@ class PCCalibrationMovingScreen:
         """Average of intersections of the lines between corresponding
         points in the patterns.
         """
-        return np.mean(self.pxy_all, axis=0)
+        return np.nanmean(self.pxy_all, axis=0)
 
     @property
     def pcx_all(self) -> np.ndarray:
@@ -239,7 +239,7 @@ class PCCalibrationMovingScreen:
     @property
     def pc(self) -> np.ndarray:
         """The average PC calculated from all estimates."""
-        return np.mean(self.pc_all, axis=0)
+        return np.nanmean(self.pc_all, axis=0)
 
     def make_lines(self):
         """Draw lines between all points within a pattern and populate
