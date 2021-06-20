@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+# TODO: Remove file after v0.4 is released
+
 """Compute similarities between EBSD patterns."""
 
 from typing import Union
@@ -23,7 +25,14 @@ from typing import Union
 from dask.array import Array
 import numpy as np
 
+# from kikuchipy._util import deprecated
 
+
+# @deprecated(
+#    since="0.4",
+#    alternative="kikuchipy.indexing.similarity_metrics.ncc",
+#    removal="0.5",
+# )
 def normalized_correlation_coefficient(
     pattern: Union[np.ndarray, Array],
     template: Union[np.ndarray, Array],
