@@ -10,11 +10,6 @@ from orix.crystal_map import CrystalMap
 from orix.quaternion import Rotation
 import scipy.optimize
 
-from kikuchipy.detectors import EBSDDetector
-from kikuchipy.pattern import rescale_intensity
-from kikuchipy.signals import EBSD, LazyEBSD
-from kikuchipy.indexing.similarity_metrics import ncc
-
 
 class Refinement:
     @staticmethod
@@ -239,7 +234,6 @@ class Refinement:
         dnrows = det.nrows
         px_size = det.px_size
 
-        # TODO: Make this work with
         pc_emsoft = det.pc_emsoft()
         if len(pc_emsoft) == 1:
             xpc = np.full(scan_points, pc_emsoft[..., 0])
@@ -938,21 +932,6 @@ def _full_objective_function_euler(x, *args):
     return 1 - result
 
 
-### Callback ###
-
-
-class MinimizeStopper(object):
-    def __init__(self, max_score):
-        self.max_score = max_score
-
-    def __call__(self, x, f, context):
-        score = 1 - f
-        if score > self.max_score:
-            return True
-        else:
-            return False
-
-
 def _refine_xmap_solver(
     r, pc, exp, pre_args, method, method_kwargs, trust_region
 ):
@@ -1132,8 +1111,6 @@ def _refine_orientations_solver(
 @numba.njit(fastmath=True)
 def py_ncc(a, b):
     # Input should already be np.float32
-    # a = a.astype(np.float32)
-    # b = b.astype(np.float32)
     abar = np.mean(a)
     bbar = np.mean(b)
     astar = a - abar
@@ -1146,6 +1123,4 @@ def py_ncc(a, b):
 @numba.njit(fastmath=True)
 def py_ndp(a, b):
     # Input should already be np.float32
-    # a = a.astype(np.float32)
-    # b = b.astype(np.float32)
     return np.sum(a * b) / np.sqrt(np.sum(np.square(a)) * np.sum(np.square(b)))
