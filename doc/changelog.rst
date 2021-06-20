@@ -40,6 +40,12 @@ Changed
   colorbar only if desired.
   (`#375 <https://github.com/pyxem/kikuchipy/pull/375>`_)
 
+Deprecated
+----------
+- Rename the EBSD.match_patterns() method to EBSD.dictionary_indexing().
+  match_patterns() will be removed in v0.5.
+  (`#376 <https://github.com/pyxem/kikuchipy/pull/376>`_)
+
 Fixed
 -----
 - Deep copying EBSD and EBSDMasterPattern signals carry over, respectively,

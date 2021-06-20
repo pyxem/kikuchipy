@@ -52,7 +52,7 @@ def make_similarity_metric(
     equal size.
 
     This factory function wraps metric functions for use in
-    :meth:`~kikuchipy.signals.EBSD.match_patterns` (which uses
+    :meth:`~kikuchipy.signals.EBSD.dictionary_indexing` (which uses
     :class:`~kikuchipy.indexing.StaticPatternMatching`).
 
     Parameters
