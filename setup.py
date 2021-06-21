@@ -57,6 +57,7 @@ extra_feature_requirements = {
 # Create a development project, including both the doc and tests projects
 extra_feature_requirements["dev"] = [
     "black",
+    "manifix",
     "pre-commit >= 1.16",
 ] + list(chain(*list(extra_feature_requirements.values())))
 
