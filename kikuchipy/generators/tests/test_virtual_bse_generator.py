@@ -29,7 +29,7 @@ from kikuchipy.generators import VirtualBSEGenerator
 from kikuchipy.signals import EBSD, LazyEBSD, VirtualBSEImage
 
 DIR_PATH = os.path.dirname(__file__)
-KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy/patterns.h5")
+KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5")
 
 matplotlib.use("Agg")  # For plotting
 
