@@ -33,9 +33,7 @@ class TestNORDIFCalibrationPatterns:
         s = load(os.path.join(NORDIF_DIR, "Setting.txt"))
         assert s.data.shape == (2, 60, 60)
 
-    @pytest.mark.parametrize(
-        "setting_file", ["Setting_bad1.txt", "Setting_bad2.txt"]
-    )
+    @pytest.mark.parametrize("setting_file", ["Setting_bad1.txt", "Setting_bad2.txt"])
     def test_get_coordinates_raises(self, setting_file):
         with pytest.raises(ValueError, match="No calibration patterns found"):
             _ = _get_coordinates(os.path.join(NORDIF_DIR, setting_file))

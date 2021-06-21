@@ -175,13 +175,11 @@ def _neighbour_dot_products(
     dot_products = neighbour_patterns @ pattern
 
     if output is None:
-        return np.mean(dot_products)
+        return np.nanmean(dot_products)
     else:
         center_value = (pattern ** 2).sum()
         output[pat_idx][flat_window_truthy_indices[center_index]] = center_value
-        output[pat_idx][
-            flat_window_truthy_indices[neighbour_idx]
-        ] = dot_products
+        output[pat_idx][flat_window_truthy_indices[neighbour_idx]] = dot_products
         # Output variable is modified in place, but `_map_helper()`
         # expects a (in this case discarded) returned value
         return 1
@@ -230,11 +228,9 @@ def _get_neighbour_dot_product_matrices(
     """
     # Get a flat boolean window, a boolean array with True for True
     # window coefficients, and the index of this window's origin
-    (
-        boolean_window,
-        flat_window_truthy_indices,
-        center_index,
-    ) = _setup_window_indices(window=window)
+    (boolean_window, flat_window_truthy_indices, center_index) = _setup_window_indices(
+        window=window
+    )
 
     nav_shape = patterns.shape[:-sig_dim]
     output = np.empty((np.prod(nav_shape), window.size), dtype=dtype_out)

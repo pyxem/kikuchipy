@@ -52,7 +52,7 @@ def make_similarity_metric(
     equal size.
 
     This factory function wraps metric functions for use in
-    :meth:`~kikuchipy.signals.EBSD.match_patterns` (which uses
+    :meth:`~kikuchipy.signals.EBSD.dictionary_indexing` (which uses
     :class:`~kikuchipy.indexing.StaticPatternMatching`).
 
     Parameters
@@ -120,21 +120,11 @@ def make_similarity_metric(
             else:  # "one" in scope.value
                 scope = MetricScope.MANY_TO_ONE
         return FlatSimilarityMetric(
-            metric_func,
-            sign,
-            scope,
-            flat,
-            make_compatible_to_lower_scopes,
-            dtype_out,
+            metric_func, sign, scope, flat, make_compatible_to_lower_scopes, dtype_out
         )
     else:
         return SimilarityMetric(
-            metric_func,
-            sign,
-            scope,
-            flat,
-            make_compatible_to_lower_scopes,
-            dtype_out,
+            metric_func, sign, scope, flat, make_compatible_to_lower_scopes, dtype_out
         )
 
 
@@ -230,16 +220,12 @@ class SimilarityMetric:
         return self._metric_func(experimental, simulated)
 
     def _expand_dims_to_match_scope(
-        self,
-        expt: Union[np.ndarray, da.Array],
-        sim: Union[np.ndarray, da.Array],
+        self, expt: Union[np.ndarray, da.Array], sim: Union[np.ndarray, da.Array]
     ) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
         """Return experimental and simulated data with added axes
         corresponding to the scope of the metric.
         """
-        expt_scope_ndim, sim_scope_ndim = self._SCOPE_TO_EXPT_SIM_NDIM[
-            self.scope
-        ]
+        expt_scope_ndim, sim_scope_ndim = self._SCOPE_TO_EXPT_SIM_NDIM[self.scope]
         expt = expt[(np.newaxis,) * (expt_scope_ndim - expt.ndim)]
         sim = sim[(np.newaxis,) * (sim_scope_ndim - sim.ndim)]
         return expt, sim
@@ -251,9 +237,7 @@ class SimilarityMetric:
         if self.flat:
             expt_ndim = expt_ndim // 2  # 4 -> 2 or 2 -> 1
             sim_ndim -= 1
-        inferred_scope = self._EXPT_SIM_NDIM_TO_SCOPE.get(
-            (expt_ndim, sim_ndim), False
-        )
+        inferred_scope = self._EXPT_SIM_NDIM_TO_SCOPE.get((expt_ndim, sim_ndim), False)
         if not inferred_scope:
             return False
         if inferred_scope == self.scope:
@@ -331,9 +315,7 @@ def _get_number_of_simulated(sim):
 
 
 def _expand_dims_to_many_to_many(
-    expt: Union[np.ndarray, da.Array],
-    sim: Union[np.ndarray, da.Array],
-    flat: bool,
+    expt: Union[np.ndarray, da.Array], sim: Union[np.ndarray, da.Array], flat: bool
 ) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
     """Expand the dims of experimental and simulated to match
     `MetricScope.MANY_TO_MANY`.
@@ -433,29 +415,23 @@ def _normalize_expt_sim(
 
 
 def _zncc_einsum(
-    experimental: Union[da.Array, np.ndarray],
-    simulated: Union[da.Array, np.ndarray],
+    experimental: Union[da.Array, np.ndarray], simulated: Union[da.Array, np.ndarray]
 ) -> Union[np.ndarray, da.Array]:
     experimental, simulated = _zero_mean_expt_sim(experimental, simulated)
     experimental, simulated = _normalize_expt_sim(experimental, simulated)
     r = da.einsum("ijkl,mkl->ijm", experimental, simulated, optimize=True)
-    if isinstance(experimental, np.ndarray) and isinstance(
-        simulated, np.ndarray
-    ):
+    if isinstance(experimental, np.ndarray) and isinstance(simulated, np.ndarray):
         return r.compute()
     else:
         return r
 
 
 def _ndp_einsum(
-    experimental: Union[da.Array, np.ndarray],
-    simulated: Union[da.Array, np.ndarray],
+    experimental: Union[da.Array, np.ndarray], simulated: Union[da.Array, np.ndarray]
 ) -> Union[np.ndarray, da.Array]:
     experimental, simulated = _normalize_expt_sim(experimental, simulated)
     rho = da.einsum("ijkl,mkl->ijm", experimental, simulated, optimize=True)
-    if isinstance(experimental, np.ndarray) and isinstance(
-        simulated, np.ndarray
-    ):
+    if isinstance(experimental, np.ndarray) and isinstance(simulated, np.ndarray):
         return rho.compute()
     else:
         return rho
@@ -550,7 +526,4 @@ ndp.__doc__ = r"""
 """
 
 
-_SIMILARITY_METRICS = {
-    "ncc": ncc,
-    "ndp": ndp,
-}
+_SIMILARITY_METRICS = {"ncc": ncc, "ndp": ndp}

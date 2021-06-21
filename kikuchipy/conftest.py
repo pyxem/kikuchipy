@@ -53,9 +53,7 @@ def assert_dictionary(dict1, dict2):
         dict1 = dict1.as_dictionary()
         dict2 = dict2.as_dictionary()
     for key in dict2.keys():
-        if key in ["is_binned", "binned"] and version.parse(
-            hs_version
-        ) > version.parse(
+        if key in ["is_binned", "binned"] and version.parse(hs_version) > version.parse(
             "1.6.2"
         ):  # pragma: no cover
             continue
@@ -411,6 +409,4 @@ def doctest_setup_teardown(request):
 @pytest.fixture(autouse=True)
 def import_to_namespace(doctest_namespace):
     DIR_PATH = os.path.dirname(__file__)
-    doctest_namespace["DATA_DIR"] = os.path.join(
-        DIR_PATH, "data/kikuchipy_h5ebsd"
-    )
+    doctest_namespace["DATA_DIR"] = os.path.join(DIR_PATH, "data/kikuchipy_h5ebsd")

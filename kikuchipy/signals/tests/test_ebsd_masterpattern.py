@@ -48,9 +48,7 @@ DIR_PATH = os.path.dirname(__file__)
 EMSOFT_FILE = os.path.join(
     DIR_PATH, "../../data/emsoft_ebsd_master_pattern/master_patterns.h5"
 )
-EMSOFT_EBSD_FILE = os.path.join(
-    DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5"
-)
+EMSOFT_EBSD_FILE = os.path.join(DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5")
 
 
 class TestEBSDMasterPatternInit:
@@ -81,9 +79,7 @@ class TestEBSDMasterPatternInit:
 
 
 class TestIO:
-    @pytest.mark.parametrize(
-        "save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"]
-    )
+    @pytest.mark.parametrize("save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"])
     def test_save_load_hspy(self, save_path_hdf5):
         s = load(EMSOFT_FILE)
 
@@ -107,9 +103,7 @@ class TestIO:
         assert_dictionary(s3.axes_manager.as_dictionary(), axes_manager)
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
-    @pytest.mark.parametrize(
-        "save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"]
-    )
+    @pytest.mark.parametrize("save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"])
     def test_original_metadata_save_load_cycle(self, save_path_hdf5):
         s = nickel_ebsd_master_pattern_small()
 

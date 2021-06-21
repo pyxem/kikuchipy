@@ -69,8 +69,8 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
         md.set_item(ebsd_node + ".static_background", imread(static_bg_file))
     except FileNotFoundError:
         warnings.warn(
-            f"Could not read static background pattern '{static_bg_file}', "
-            "however it can be added using set_experimental_parameters()."
+            f"Could not read static background pattern '{static_bg_file}', however it "
+            "can be added using set_experimental_parameters()."
         )
 
     # Set required and other parameters in metadata
@@ -130,9 +130,7 @@ def _get_coordinates(filename: str) -> List[Tuple[int, int]]:
     return xy
 
 
-def _get_patterns(
-    dirname: str, coordinates: List[Tuple[int, int]]
-) -> np.ndarray:
+def _get_patterns(dirname: str, coordinates: List[Tuple[int, int]]) -> np.ndarray:
     patterns = []
     for x, y in coordinates:
         fname_pattern = f"Calibration ({x},{y}).bmp"

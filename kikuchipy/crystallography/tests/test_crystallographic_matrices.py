@@ -64,15 +64,11 @@ class TestCrystallographicMatrices:
             (Lattice(3.52, 3.52, 3.52, 90, 90, 90), np.eye(3) * 0.080),
             (
                 Lattice(3.52, 3.52, 10.5, 90, 90, 120),
-                np.array(
-                    [[0.107, 0.053, -0], [0.053, 0.107, -0], [-0, -0, 0.009]]
-                ),
+                np.array([[0.107, 0.053, -0], [0.053, 0.107, -0], [-0, -0, 0.009]]),
             ),
         ],
     )
     def test_reciprocal_metric_tensor(self, lattice, desired_matrix):
         recip_metrics = get_reciprocal_metric_tensor(lattice)
-        assert np.allclose(
-            recip_metrics, lattice.reciprocal().metrics, atol=1e-3
-        )
+        assert np.allclose(recip_metrics, lattice.reciprocal().metrics, atol=1e-3)
         assert np.allclose(recip_metrics, desired_matrix, atol=1e-3)

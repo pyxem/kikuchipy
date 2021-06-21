@@ -16,8 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""
-This module contains tools to use the 2D image filter of numpy arrays
+"""This module contains tools to use the 2D image filter of numpy arrays
 via FFT written by Connelly Barnes (public domain, 2007).
 """
 
@@ -33,19 +32,16 @@ from kikuchipy.filters.window import Window
 
 
 def _fft_filter_setup(
-    image_shape: Tuple[int, int], window: Union[np.ndarray, Window],
+    image_shape: Tuple[int, int],
+    window: Union[np.ndarray, Window],
 ) -> Tuple[Tuple[int, int], np.ndarray, Tuple[int, int], Tuple[int, int]]:
     window_shape = window.shape
 
     # Optimal FFT shape
     #    real_fft_only = True
     fft_shape = (
-        next_fast_len(
-            image_shape[0] + window_shape[0] - 1
-        ),  # , real_fft_only),
-        next_fast_len(
-            image_shape[1] + window_shape[1] - 1
-        ),  # , real_fft_only),
+        next_fast_len(image_shape[0] + window_shape[0] - 1),  # , real_fft_only),
+        next_fast_len(image_shape[1] + window_shape[1] - 1),  # , real_fft_only),
     )
 
     # Pad window to optimal FFT size
@@ -62,7 +58,8 @@ def _fft_filter_setup(
 
 
 def fft_filter(
-    image: np.ndarray, window: Union[np.ndarray, Window],
+    image: np.ndarray,
+    window: Union[np.ndarray, Window],
 ) -> np.ndarray:
     """Filter a 2D image in the frequency domain with a window defined
     in the spatial domain.
@@ -151,9 +148,7 @@ def _pad_image(
     # Extend bottom row below
     image_pad[iy : iy + (wy - 1) // 2, :ix] = image[-1, :]
     # Extend right most column to the right
-    image_pad[:iy, ix : ix + (wx - 1) // 2] = np.expand_dims(
-        image[:, -1], axis=1
-    )
+    image_pad[:iy, ix : ix + (wx - 1) // 2] = np.expand_dims(image[:, -1], axis=1)
     # Pad top row below
     image_pad[fy - oy :, :ix] = image[0, :]
     # Pad left most column to the right

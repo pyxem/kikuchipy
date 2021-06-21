@@ -171,9 +171,7 @@ def nickel_ebsd_large(allow_download: bool = False, **kwargs) -> EBSD:
     )
 
 
-def silicon_ebsd_moving_screen_in(
-    allow_download: bool = False, **kwargs
-) -> EBSD:
+def silicon_ebsd_moving_screen_in(allow_download: bool = False, **kwargs) -> EBSD:
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
 
@@ -208,9 +206,7 @@ def silicon_ebsd_moving_screen_in(
     )
 
 
-def silicon_ebsd_moving_screen_out5mm(
-    allow_download: bool = False, **kwargs
-) -> EBSD:
+def silicon_ebsd_moving_screen_out5mm(allow_download: bool = False, **kwargs) -> EBSD:
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
 
@@ -247,9 +243,7 @@ def silicon_ebsd_moving_screen_out5mm(
     )
 
 
-def silicon_ebsd_moving_screen_out10mm(
-    allow_download: bool = False, **kwargs
-) -> EBSD:
+def silicon_ebsd_moving_screen_out10mm(allow_download: bool = False, **kwargs) -> EBSD:
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
 

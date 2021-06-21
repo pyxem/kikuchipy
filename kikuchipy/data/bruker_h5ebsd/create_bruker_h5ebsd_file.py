@@ -84,14 +84,12 @@ ebsd_header.create_dataset("MinIndexedBands", dtype=np.int32, data=5)
 ebsd_header.create_dataset("NCOLS", dtype=np.int32, data=nx)
 ebsd_header.create_dataset("NROWS", dtype=np.int32, data=ny)
 ebsd_header.create_dataset("NPoints", dtype=np.int32, data=n)
-original_file = ebsd_header.create_dataset(
-    "OriginalFile", shape=(1,), dtype="|S50"
-)
+original_file = ebsd_header.create_dataset("OriginalFile", shape=(1,), dtype="|S50")
 original_file[()] = b"/a/home/for/your/data.h5"
 ebsd_header.create_dataset("PatternHeight", dtype=np.int32, data=sy)
 ebsd_header.create_dataset("PatternWidth", dtype=np.int32, data=sx)
 ebsd_header.create_dataset("PixelByteCount", dtype=np.int32, data=1)
-s_mean = s.mean((2, 3)).data.astype(np.uint8)
+s_mean = s.nanmean((2, 3)).data.astype(np.uint8)
 ebsd_header.create_dataset("SEM Image", data=skc.gray2rgb(s_mean))
 ebsd_header.create_dataset("SEPixelSizeX", dtype=float, data=1)
 ebsd_header.create_dataset("SEPixelSizeY", dtype=float, data=1)
@@ -110,9 +108,7 @@ formula = phase.create_dataset("Formula", shape=(1,), dtype="|S2")
 formula[()] = b"Ni"
 phase.create_dataset("IT", dtype=np.int32, data=225)
 phase.create_dataset(
-    "LatticeConstants",
-    dtype=np.float32,
-    data=np.array([3.56, 3.56, 3.56, 90, 90, 90]),
+    "LatticeConstants", dtype=np.float32, data=np.array([3.56, 3.56, 3.56, 90, 90, 90])
 )
 name = phase.create_dataset("Name", shape=(1,), dtype="|S6")
 name[()] = b"Nickel"
@@ -193,12 +189,8 @@ ebsd_data.create_dataset("phi2", dtype=np.float32, data=ones9)
 # Header
 ebsd_header = ebsd.create_group("Header")
 ebsd_header.create_dataset("CameraTilt", dtype=float, data=0)
-ebsd_header.create_dataset(
-    "DetectorFullHeightMicrons", dtype=np.int32, data=23700
-)
-ebsd_header.create_dataset(
-    "DetectorFullWidthMicrons", dtype=np.int32, data=31600
-)
+ebsd_header.create_dataset("DetectorFullHeightMicrons", dtype=np.int32, data=23700)
+ebsd_header.create_dataset("DetectorFullWidthMicrons", dtype=np.int32, data=31600)
 grid_type = ebsd_header.create_dataset("Grid Type", shape=(1,), dtype="|S9")
 grid_type[()] = b"isometric"
 ebsd_header.create_dataset("KV", dtype=float, data=20)
@@ -210,14 +202,12 @@ ebsd_header.create_dataset("MinIndexedBands", dtype=np.int32, data=5)
 ebsd_header.create_dataset("NCOLS", dtype=np.int32, data=nx)
 ebsd_header.create_dataset("NROWS", dtype=np.int32, data=ny)
 ebsd_header.create_dataset("NPoints", dtype=np.int32, data=n)
-original_file = ebsd_header.create_dataset(
-    "OriginalFile", shape=(1,), dtype="|S50"
-)
+original_file = ebsd_header.create_dataset("OriginalFile", shape=(1,), dtype="|S50")
 original_file[()] = b"/a/home/for/your/data.h5"
 ebsd_header.create_dataset("PatternHeight", dtype=np.int32, data=sy)
 ebsd_header.create_dataset("PatternWidth", dtype=np.int32, data=sx)
 ebsd_header.create_dataset("PixelByteCount", dtype=np.int32, data=1)
-s_mean = s.mean((2, 3)).data.astype(np.uint8)
+s_mean = s.nanmean((2, 3)).data.astype(np.uint8)
 ebsd_header.create_dataset("SEM Image", data=skc.gray2rgb(s_mean))
 ebsd_header.create_dataset("SEPixelSizeX", dtype=float, data=1)
 ebsd_header.create_dataset("SEPixelSizeY", dtype=float, data=1)
@@ -324,14 +314,12 @@ ebsd_header.create_dataset("MinIndexedBands", dtype=np.int32, data=5)
 ebsd_header.create_dataset("NCOLS", dtype=np.int32, data=nx)
 ebsd_header.create_dataset("NROWS", dtype=np.int32, data=ny)
 ebsd_header.create_dataset("NPoints", dtype=np.int32, data=n)
-original_file = ebsd_header.create_dataset(
-    "OriginalFile", shape=(1,), dtype="|S50"
-)
+original_file = ebsd_header.create_dataset("OriginalFile", shape=(1,), dtype="|S50")
 original_file[()] = b"/a/home/for/your/data.h5"
 ebsd_header.create_dataset("PatternHeight", dtype=np.int32, data=sy)
 ebsd_header.create_dataset("PatternWidth", dtype=np.int32, data=sx)
 ebsd_header.create_dataset("PixelByteCount", dtype=np.int32, data=1)
-s_mean = s.mean((2, 3)).data.astype(np.uint8)
+s_mean = s.nanmean((2, 3)).data.astype(np.uint8)
 ebsd_header.create_dataset("SEM Image", data=skc.gray2rgb(s_mean))
 ebsd_header.create_dataset("SEPixelSizeX", dtype=float, data=1)
 ebsd_header.create_dataset("SEPixelSizeY", dtype=float, data=1)
@@ -350,9 +338,7 @@ formula = phase.create_dataset("Formula", shape=(1,), dtype="|S2")
 formula[()] = b"Ni"
 phase.create_dataset("IT", dtype=np.int32, data=225)
 phase.create_dataset(
-    "LatticeConstants",
-    dtype=np.float32,
-    data=np.array([3.56, 3.56, 3.56, 90, 90, 90]),
+    "LatticeConstants", dtype=np.float32, data=np.array([3.56, 3.56, 3.56, 90, 90, 90])
 )
 name = phase.create_dataset("Name", shape=(1,), dtype="|S6")
 name[()] = b"Nickel"

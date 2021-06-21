@@ -40,10 +40,7 @@ from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
 from kikuchipy.io._io import _save
-from kikuchipy.filters.fft_barnes import (
-    _fft_filter,
-    _fft_filter_setup,
-)
+from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
 from kikuchipy.pattern import chunk
 from kikuchipy.pattern._pattern import (
@@ -66,9 +63,7 @@ from kikuchipy.signals.util._dask import (
     _rechunk_learning_results,
     _update_learning_results,
 )
-from kikuchipy.signals.util._crystal_map import (
-    crystal_map_is_compatible_with_signal,
-)
+from kikuchipy.signals.util._crystal_map import crystal_map_is_compatible_with_signal
 from kikuchipy.signals.util._map_helper import (
     _get_neighbour_dot_product_matrices,
     _get_average_dot_product_map,
@@ -76,6 +71,7 @@ from kikuchipy.signals.util._map_helper import (
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 from kikuchipy.signals._common_image import CommonImage
 from kikuchipy.detectors import EBSDDetector
+from kikuchipy._util import deprecated
 
 
 class EBSD(CommonImage, Signal2D):
@@ -141,7 +137,7 @@ class EBSD(CommonImage, Signal2D):
     @xmap.setter
     def xmap(self, value: CrystalMap):
         if crystal_map_is_compatible_with_signal(
-            value, self.axes_manager, raise_if_false=True,
+            value, self.axes_manager, raise_if_false=True
         ):
             self._xmap = value
 
@@ -509,25 +505,24 @@ class EBSD(CommonImage, Signal2D):
                 md = self.metadata
                 ebsd_node = metadata_nodes("ebsd")
                 static_bg = da.from_array(
-                    md.get_item(ebsd_node + ".static_background"),
-                    chunks="auto",
+                    md.get_item(ebsd_node + ".static_background"), chunks="auto"
                 )
             except AttributeError:
                 raise OSError(
-                    "The static background is not a numpy or dask array or "
-                    "could not be read from signal metadata."
+                    "The static background is not a numpy or dask array or could not be"
+                    " read from signal metadata."
                 )
         if dtype_out != static_bg.dtype:
             raise ValueError(
-                f"The static background dtype_out {static_bg.dtype} is not the "
-                f"same as pattern dtype_out {dtype_out}."
+                f"The static background dtype_out {static_bg.dtype} is not the same as "
+                f"pattern dtype_out {dtype_out}."
             )
         pat_shape = self.axes_manager.signal_shape[::-1]
         bg_shape = static_bg.shape
         if bg_shape != pat_shape:
             raise OSError(
-                f"The pattern {pat_shape} and static background {bg_shape} "
-                "shapes are not identical."
+                f"The pattern {pat_shape} and static background {bg_shape} shapes are "
+                "not identical."
             )
         dtype = np.float32
         static_bg = static_bg.astype(dtype)
@@ -658,9 +653,7 @@ class EBSD(CommonImage, Signal2D):
             kwargs["truncate"] = truncate
         else:
             filter_domains = ["frequency", "spatial"]
-            raise ValueError(
-                f"{filter_domain} must be either of {filter_domains}."
-            )
+            raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
 
         if operation == "subtract":
             operation_func = np.subtract
@@ -746,9 +739,7 @@ class EBSD(CommonImage, Signal2D):
             kwargs["truncate"] = truncate
         else:
             filter_domains = ["frequency", "spatial"]
-            raise ValueError(
-                f"{filter_domain} must be either of {filter_domains}."
-            )
+            raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
 
         if dtype_out is None:
             dtype_out = self.data.dtype.type
@@ -927,7 +918,15 @@ class EBSD(CommonImage, Signal2D):
 
         return image_quality_map
 
-    def match_patterns(
+    @deprecated(
+        since="0.4",
+        alternative="kikuchipy.signals.EBSD.dictionary_indexing",
+        removal="0.5",
+    )
+    def match_patterns(self, *args, **kwargs) -> Union[CrystalMap, List[CrystalMap]]:
+        return self.dictionary_indexing(*args, **kwargs)
+
+    def dictionary_indexing(
         self,
         simulations,
         metric: Union[str, SimilarityMetric] = "ncc",
@@ -1085,9 +1084,7 @@ class EBSD(CommonImage, Signal2D):
             )
         else:
             function_domains = ["frequency", "spatial"]
-            raise ValueError(
-                f"{function_domain} must be either of {function_domains}."
-            )
+            raise ValueError(f"{function_domain} must be either of {function_domains}.")
 
         filtered_patterns = dask_array.map_blocks(
             func=chunk.fft_filter,
@@ -1140,9 +1137,7 @@ class EBSD(CommonImage, Signal2D):
         -------
         """
         if self.axes_manager.navigation_dimension == 0:
-            raise ValueError(
-                "Signal must have at least one navigation dimension"
-            )
+            raise ValueError("Signal must have at least one navigation dimension")
 
         # Create dask array of signal patterns and do processing on this
         dask_array = get_dask_array(signal=self)
@@ -1177,10 +1172,7 @@ class EBSD(CommonImage, Signal2D):
 
         if not self._lazy:
             with ProgressBar():
-                print(
-                    "Calculating neighbour dot product matrices:",
-                    file=sys.stdout,
-                )
+                print("Calculating neighbour dot product matrices:", file=sys.stdout)
                 dp_matrices = dp_matrices.compute()
 
         return dp_matrices
@@ -1227,9 +1219,7 @@ class EBSD(CommonImage, Signal2D):
         -------
         """
         if self.axes_manager.navigation_dimension == 0:
-            raise ValueError(
-                "Signal must have at least one navigation dimension"
-            )
+            raise ValueError("Signal must have at least one navigation dimension")
 
         # Default to the nearest neighbours
         nav_dim = self.axes_manager.navigation_dimension
@@ -1281,10 +1271,7 @@ class EBSD(CommonImage, Signal2D):
 
         if not self._lazy:
             with ProgressBar():
-                print(
-                    "Calculating average neighbour dot product map:",
-                    file=sys.stdout,
-                )
+                print("Calculating average neighbour dot product map:", file=sys.stdout)
                 adp = adp.compute()
 
         return adp
@@ -1338,9 +1325,7 @@ class EBSD(CommonImage, Signal2D):
         if isinstance(window, Window) and window.is_valid():
             averaging_window = copy.copy(window)
         else:
-            averaging_window = Window(
-                window=window, shape=window_shape, **kwargs,
-            )
+            averaging_window = Window(window=window, shape=window_shape, **kwargs)
 
         # Do nothing if a window of shape (1, ) or (1, 1) is passed
         nav_shape = self.axes_manager.navigation_shape[::-1]
@@ -1456,9 +1441,7 @@ class EBSD(CommonImage, Signal2D):
             self.plot()
 
         # Get the sliced signal from the ROI
-        sliced_signal = roi.interactive(
-            self, axes=self.axes_manager.signal_axes
-        )
+        sliced_signal = roi.interactive(self, axes=self.axes_manager.signal_axes)
 
         # Create an output signal for the virtual backscatter electron
         # calculation
@@ -1486,8 +1469,8 @@ class EBSD(CommonImage, Signal2D):
             )
         if len(out_signal_axes) > signal.axes_manager.navigation_dimension:
             raise ValueError(
-                "The length of 'out_signal_axes' cannot be longer than the "
-                "navigation dimension of the signal."
+                "The length of 'out_signal_axes' cannot be longer than the navigation "
+                "dimension of the signal."
             )
         out.set_signal_type("")
         return out.transpose(out_signal_axes)
@@ -1601,9 +1584,7 @@ class EBSD(CommonImage, Signal2D):
         """
         if filename is None:
             tmp_params = self.tmp_parameters
-            if tmp_params.has_item("filename") and tmp_params.has_item(
-                "folder"
-            ):
+            if tmp_params.has_item("filename") and tmp_params.has_item("folder"):
                 filename = os.path.join(tmp_params.folder, tmp_params.filename)
                 extension = tmp_params.extension if not extension else extension
             elif self.metadata.has_item("General.original_filename"):
@@ -1673,26 +1654,21 @@ class EBSD(CommonImage, Signal2D):
         return s_model
 
     def rebin(self, new_shape=None, scale=None, crop=True, out=None):
-        s_out = super().rebin(
-            new_shape=new_shape, scale=scale, crop=crop, out=out
-        )
+        s_out = super().rebin(new_shape=new_shape, scale=scale, crop=crop, out=out)
 
         return_signal = True
         if s_out is None:
             s_out = out
             return_signal = False
 
-        # Update binning in metadata to signal dimension with largest or lowest
-        # binning if downscaling or upscaling, respectively
+        # Update binning in metadata to signal dimension with largest or
+        # lowest binning if downscaling or upscaling, respectively
         md = s_out.metadata
         ebsd_node = metadata_nodes("ebsd")
         if scale is None:
             sx, sy = self.axes_manager.signal_shape
             signal_idx = self.axes_manager.signal_indices_in_array
-            scale = (
-                sx / new_shape[signal_idx[0]],
-                sy / new_shape[signal_idx[1]],
-            )
+            scale = (sx / new_shape[signal_idx[0]], sy / new_shape[signal_idx[1]])
         upscaled_dimensions = np.where(np.array(scale) < 1)[0]
         if len(upscaled_dimensions):
             new_binning = np.min(scale)

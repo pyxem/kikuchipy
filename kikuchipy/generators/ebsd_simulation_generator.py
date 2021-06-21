@@ -39,9 +39,7 @@ class EBSDSimulationGenerator:
     EBSD patterns.
     """
 
-    def __init__(
-        self, detector: EBSDDetector, phase: Phase, rotations: Rotation,
-    ):
+    def __init__(self, detector: EBSDDetector, phase: Phase, rotations: Rotation):
         """A generator storing necessary parameters to simulate
         geometrical EBSD patterns.
 
@@ -187,9 +185,7 @@ class EBSDSimulationGenerator:
             hasattr(self.phase.point_group, "name")
             and hasattr(self.phase.structure.lattice, "abcABG")
         ):
-            rlp = ReciprocalLatticePoint.from_min_dspacing(
-                self.phase, min_dspacing=1
-            )
+            rlp = ReciprocalLatticePoint.from_min_dspacing(self.phase, min_dspacing=1)
             rlp = rlp[rlp.allowed].symmetrise()
         elif rlp is None:
             raise ValueError("A ReciprocalLatticePoint object must be passed")
@@ -281,8 +277,8 @@ class EBSDSimulationGenerator:
             or rlp.phase.point_group.name != self.phase.point_group.name
         ):
             raise ValueError(
-                f"The lattice parameters and/or point group of {rlp.phase} "
-                f"are not the same as for {self.phase}"
+                f"The lattice parameters and/or point group of {rlp.phase} are not the "
+                f"same as for {self.phase}"
             )
 
     def _align_pc_with_rotations_shape(self):
@@ -295,8 +291,8 @@ class EBSDSimulationGenerator:
             self.detector.pc = np.ones(nav_shape + (3,)) * self.detector.pc[0]
         elif detector_nav_shape != nav_shape:
             raise ValueError(
-                f"The detector navigation shape {detector_nav_shape} must be "
-                f"(1,) or equal to the rotations's shape {self.rotations.shape}"
+                f"The detector navigation shape {detector_nav_shape} must be (1,) or "
+                f"equal to the rotations's shape {self.rotations.shape}"
             )
         self.detector.navigation_shape = self.navigation_shape
 

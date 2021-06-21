@@ -32,7 +32,7 @@ matplotlib.use("Agg")  # For plotting
 class TestGeometricalEBSDSimulation:
     @pytest.mark.parametrize("nav_shape", [(5, 5), (25,), (1, 25), (25, 1)])
     def test_ebsd_simulation_navigation_shape(
-        self, nickel_ebsd_simulation_generator, nickel_rlp, nav_shape,
+        self, nickel_ebsd_simulation_generator, nickel_rlp, nav_shape
     ):
         """Setting the navigation shape changes all derived navigation
         shapes.
@@ -44,9 +44,7 @@ class TestGeometricalEBSDSimulation:
         assert sim.detector.navigation_shape == nav_shape
         assert sim.rotations.shape == nav_shape
         assert sim.bands.navigation_shape == nav_shape
-        assert sim.bands_detector_coordinates.shape == (
-            nav_shape + (sim.bands.size, 4)
-        )
+        assert sim.bands_detector_coordinates.shape == (nav_shape + (sim.bands.size, 4))
         n_za = sim.zone_axes.size
         za_shape = nav_shape + (n_za, 2)
         assert sim.zone_axes_detector_coordinates.shape == za_shape
@@ -83,15 +81,9 @@ class TestGeometricalEBSDSimulation:
         assert sim.zone_axes.navigation_shape == nav_shape
         assert sim.bands._data_shape == nav_shape + (n_bands,)
         assert sim.zone_axes._data_shape == nav_shape + (n_za,)
-        assert sim.bands_detector_coordinates.shape == (
-            nav_shape + (n_bands, 4)
-        )
-        assert sim.zone_axes_detector_coordinates.shape == (
-            nav_shape + (n_za, 2)
-        )
-        assert sim.zone_axes_label_detector_coordinates.shape == (
-            nav_shape + (n_za, 2)
-        )
+        assert sim.bands_detector_coordinates.shape == (nav_shape + (n_bands, 4))
+        assert sim.zone_axes_detector_coordinates.shape == (nav_shape + (n_za, 2))
+        assert sim.zone_axes_label_detector_coordinates.shape == (nav_shape + (n_za, 2))
 
     @pytest.mark.parametrize("exclude, not_nan", [(True, 376), (False, 678)])
     def test_zone_axes_detector_coordinates_exclude(
@@ -105,9 +97,7 @@ class TestGeometricalEBSDSimulation:
         assert sim.zone_axes_detector_coordinates.shape == (
             simgen.navigation_shape + (35, 2)
         )
-        assert (
-            np.sum(np.isfinite(sim.zone_axes_detector_coordinates)) == not_nan
-        )
+        assert np.sum(np.isfinite(sim.zone_axes_detector_coordinates)) == not_nan
         assert sim.exclude_outside_detector == exclude
 
     @pytest.mark.parametrize(
@@ -130,9 +120,7 @@ class TestGeometricalEBSDSimulation:
 
         se = EBSD(np.ones(nav_shape + (60, 60), dtype=np.uint8))
 
-        se.add_marker(
-            marker=sim.bands_as_markers(), permanent=True, plot_marker=False
-        )
+        se.add_marker(marker=sim.bands_as_markers(), permanent=True, plot_marker=False)
         assert isinstance(se.metadata.Markers.line_segment, line_segment)
         se.plot()
         plt.close("all")
@@ -152,14 +140,8 @@ class TestGeometricalEBSDSimulation:
             permanent=True,
             plot_marker=False,
         )
-        assert (
-            se.metadata.Markers.line_segment.marker_properties["color"]
-            == colors[0]
-        )
-        assert (
-            se.metadata.Markers.line_segment1.marker_properties["color"]
-            == colors[1]
-        )
+        assert se.metadata.Markers.line_segment.marker_properties["color"] == colors[0]
+        assert se.metadata.Markers.line_segment1.marker_properties["color"] == colors[1]
         se.plot()
         plt.close("all")
 
@@ -174,9 +156,7 @@ class TestGeometricalEBSDSimulation:
 
         se = EBSD(np.ones((60, 60), dtype=np.uint8))
 
-        se.add_marker(
-            marker=sim.bands_as_markers(), permanent=False, plot_marker=True,
-        )
+        se.add_marker(marker=sim.bands_as_markers(), permanent=False, plot_marker=True)
         plt.close("all")
 
     @pytest.mark.parametrize("nav_shape", [(5, 5), (1, 25), (25, 1), (25,)])
@@ -209,9 +189,7 @@ class TestGeometricalEBSDSimulation:
         se = EBSD(np.ones(nav_shape + (60, 60), dtype=np.uint8))
 
         se.add_marker(
-            marker=sim.zone_axes_labels_as_markers(),
-            permanent=True,
-            plot_marker=False,
+            marker=sim.zone_axes_labels_as_markers(), permanent=True, plot_marker=False
         )
         assert isinstance(se.metadata.Markers.text, text)
         se.plot()
@@ -240,9 +218,7 @@ class TestGeometricalEBSDSimulation:
 
         se = EBSD(np.ones(nav_shape + (60, 60), dtype=np.uint8))
 
-        se.add_marker(
-            marker=sim.pc_as_markers(), permanent=True, plot_marker=False
-        )
+        se.add_marker(marker=sim.pc_as_markers(), permanent=True, plot_marker=False)
         assert isinstance(se.metadata.Markers.point, point)
         assert se.metadata.Markers.point.marker_properties["marker"] == "*"
         se.plot()
@@ -257,7 +233,7 @@ class TestGeometricalEBSDSimulation:
 
         se.add_marker(
             marker=sim.as_markers(
-                bands=True, zone_axes=True, zone_axes_labels=True, pc=True,
+                bands=True, zone_axes=True, zone_axes_labels=True, pc=True
             ),
             permanent=True,
             plot_marker=False,
@@ -288,9 +264,7 @@ class TestGeometricalEBSDSimulation:
         assert sim2d.zone_axes_within_gnomonic_bounds.shape == (4, 2, 7)
 
     @pytest.mark.parametrize("nav_shape", [(5, 5), (25, 1), (1, 25)])
-    def test_repr(
-        self, nickel_ebsd_simulation_generator, nickel_rlp, nav_shape
-    ):
+    def test_repr(self, nickel_ebsd_simulation_generator, nickel_rlp, nav_shape):
         """Desired string representation."""
         simgen = nickel_ebsd_simulation_generator
         simgen.navigation_shape = nav_shape

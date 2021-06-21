@@ -41,10 +41,7 @@ EMSOFT_FILE = os.path.join(
 )
 
 METADATA = {
-    "General": {
-        "original_filename": "master_patterns.h5",
-        "title": "master_patterns",
-    },
+    "General": {"original_filename": "master_patterns.h5", "title": "master_patterns"},
     "Signal": {"binned": False, "signal_type": "EBSDMasterPattern"},
 }
 
@@ -105,9 +102,7 @@ class TestEMsoftEBSDMasterPatternReader:
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
         signal_indx = s.axes_manager.signal_indices_in_array
-        assert np.allclose(
-            s.max(axis=signal_indx).data, s.axes_manager["energy"].axis
-        )
+        assert np.allclose(s.max(axis=signal_indx).data, s.axes_manager["energy"].axis)
 
     def test_projection_lambert(self):
         s = load(EMSOFT_FILE, projection="lambert", hemisphere="both")
@@ -120,8 +115,7 @@ class TestEMsoftEBSDMasterPatternReader:
             g1 = f.create_group("EMheader")
             g2 = g1.create_group("EBSDmaster")
             g2.create_dataset(
-                "ProgramName",
-                data=np.array([b"EMEBSDmasterr.f90"], dtype="S17"),
+                "ProgramName", data=np.array([b"EMEBSDmasterr.f90"], dtype="S17")
             )
             with pytest.raises(IOError, match=".* is not in EMsoft's master "):
                 _check_file_format(f)
@@ -192,9 +186,7 @@ class TestEMsoftEBSDMasterPatternReader:
         """The Lambert projection's southern hemisphere is stored
         chunked.
         """
-        s = load(
-            EMSOFT_FILE, projection=projection, hemisphere="south", lazy=True
-        )
+        s = load(EMSOFT_FILE, projection=projection, hemisphere="south", lazy=True)
 
         assert isinstance(s, LazyEBSDMasterPattern)
 
@@ -252,11 +244,9 @@ class TestEMsoftEBSDMasterPatternReader:
         s = load(EMSOFT_FILE, energy=energy, hemisphere="both")
         assert s.data.shape == desired_shape
 
-        s2 = load(
-            EMSOFT_FILE, projection="lambert", energy=energy, hemisphere="north"
-        )
+        s2 = load(EMSOFT_FILE, projection="lambert", energy=energy, hemisphere="north")
         sig_indx = s2.axes_manager.signal_indices_in_array
-        assert np.allclose(s2.mean(axis=sig_indx).data, desired_mean_energies)
+        assert np.allclose(s2.nanmean(axis=sig_indx).data, desired_mean_energies)
 
         with File(EMSOFT_FILE, mode="r") as f:
             mp_lambert_north = f["EMData/EBSDmaster/mLPNH"][:][0][energy_slice]

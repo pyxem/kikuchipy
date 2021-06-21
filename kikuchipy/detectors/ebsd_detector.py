@@ -242,7 +242,7 @@ class EBSDDetector:
             axis += (0,)
         elif ndim == 3:
             axis += (0, 1)
-        return np.mean(self.pc, axis=axis).round(3)
+        return np.nanmean(self.pc, axis=axis).round(3)
 
     @property
     def navigation_shape(self) -> tuple:
@@ -289,9 +289,7 @@ class EBSDDetector:
     @property
     def x_range(self) -> np.ndarray:
         """X detector limits in gnomonic coordinates."""
-        return np.dstack((self.x_min, self.x_max)).reshape(
-            self.navigation_shape + (2,)
-        )
+        return np.dstack((self.x_min, self.x_max)).reshape(self.navigation_shape + (2,))
 
     @property
     def y_min(self) -> Union[np.ndarray, float]:
@@ -306,9 +304,7 @@ class EBSDDetector:
     @property
     def y_range(self) -> np.ndarray:
         """The y detector limits in gnomonic coordinates."""
-        return np.dstack((self.y_min, self.y_max)).reshape(
-            self.navigation_shape + (2,)
-        )
+        return np.dstack((self.y_min, self.y_max)).reshape(self.navigation_shape + (2,))
 
     @property
     def gnomonic_bounds(self) -> np.ndarray:
@@ -319,7 +315,7 @@ class EBSDDetector:
 
     @property
     def _average_gnomonic_bounds(self) -> np.ndarray:
-        return np.mean(
+        return np.nanmean(
             self.gnomonic_bounds, axis=(0, 1, 2)[: self.navigation_dimension]
         )
 
@@ -610,9 +606,7 @@ class EBSDDetector:
             for angle in gnomonic_angles:
                 ax.add_artist(
                     plt.Circle(
-                        (pcx, pcy),
-                        np.tan(np.deg2rad(angle)),
-                        **gnomonic_circles_kwargs,
+                        (pcx, pcy), np.tan(np.deg2rad(angle)), **gnomonic_circles_kwargs
                     )
                 )
 

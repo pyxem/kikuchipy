@@ -91,15 +91,16 @@ def get_chunking(
         chunks_dict[i] = -1
 
     chunks = da.core.normalize_chunks(
-        chunks=chunks_dict, shape=data_shape, limit=chunk_bytes, dtype=dtype,
+        chunks=chunks_dict,
+        shape=data_shape,
+        limit=chunk_bytes,
+        dtype=dtype,
     )
 
     return chunks
 
 
-def get_dask_array(
-    signal, dtype: Optional[np.dtype] = None, **kwargs
-) -> da.Array:
+def get_dask_array(signal, dtype: Optional[np.dtype] = None, **kwargs) -> da.Array:
     """Return dask array of patterns with appropriate chunking.
 
     Parameters
@@ -154,9 +155,7 @@ def _get_chunk_overlap_depth(window, axes_manager, chunksize: tuple) -> dict:
     sig_dim = axes_manager.signal_dimension
     nav_shape = axes_manager.navigation_shape[::-1]
     is_chunked = ~np.equal(chunksize[:-sig_dim], nav_shape)
-    overlap_depth = {
-        i: n for i, n in enumerate(window.n_neighbours) if is_chunked[i]
-    }
+    overlap_depth = {i: n for i, n in enumerate(window.n_neighbours) if is_chunked[i]}
     return overlap_depth
 
 
@@ -192,9 +191,7 @@ def _rechunk_learning_results(
     """
     # Make sure the last factors/loading axes have the same shapes
     if factors.shape[-1] != loadings.shape[-1]:
-        raise ValueError(
-            "The last dimensions in factors and loadings are not the same"
-        )
+        raise ValueError("The last dimensions in factors and loadings are not the same")
 
     # Get shape of learning results
     learning_results_shape = factors.shape + loadings.shape

@@ -177,9 +177,7 @@ class PCCalibrationMovingScreen:
     def _pxy_all(self) -> np.array:
         l_iter = combinations(range(self.n_points), 2)
         l = self.lines_out_in
-        return np.array(
-            [_get_intersection_from_lines(l[i], l[j]) for i, j in l_iter]
-        )
+        return np.array([_get_intersection_from_lines(l[i], l[j]) for i, j in l_iter])
 
     @property
     def pxy_within_detector(self) -> np.ndarray:
@@ -207,7 +205,7 @@ class PCCalibrationMovingScreen:
         """Average of intersections of the lines between corresponding
         points in the patterns.
         """
-        return np.mean(self.pxy_all, axis=0)
+        return np.nanmean(self.pxy_all, axis=0)
 
     @property
     def pcx_all(self) -> np.ndarray:
@@ -241,7 +239,7 @@ class PCCalibrationMovingScreen:
     @property
     def pc(self) -> np.ndarray:
         """The average PC calculated from all estimates."""
-        return np.mean(self.pc_all, axis=0)
+        return np.nanmean(self.pc_all, axis=0)
 
     def make_lines(self):
         """Draw lines between all points within a pattern and populate
@@ -256,9 +254,7 @@ class PCCalibrationMovingScreen:
         pattern_kwargs: dict = dict(cmap="gray"),
         line_kwargs: dict = dict(linewidth=2, zorder=1),
         scatter_kwargs: dict = dict(zorder=2),
-        pc_kwargs: dict = dict(
-            marker="*", s=300, facecolor="gold", edgecolor="k"
-        ),
+        pc_kwargs: dict = dict(marker="*", s=300, facecolor="gold", edgecolor="k"),
         return_fig_ax: bool = False,
         **kwargs: dict,
     ) -> Union[None, Tuple[plt.Figure, List[plt.Axes]]]:
@@ -305,9 +301,7 @@ class PCCalibrationMovingScreen:
         lines_out_in_end = self.lines_out_in_end
 
         ncols = 3
-        for k, v in zip(
-            ["sharex", "sharey", "figsize"], [True, True, (20, 10)]
-        ):
+        for k, v in zip(["sharex", "sharey", "figsize"], [True, True, (20, 10)]):
             kwargs.setdefault(k, v)
         fig, ax = plt.subplots(ncols=ncols, **kwargs)
         ax[0].set_title("In (operating) position")
@@ -315,31 +309,21 @@ class PCCalibrationMovingScreen:
         ax[0].scatter(points1[:, 0], points1[:, 1], **scatter_kwargs)
         for i in range(n_lines):
             start, end = lines_start[0, i], lines_end[0, i]
-            ax[0].axline(
-                start, end, linestyle="-", color=f"C{i}", **line_kwargs
-            )
+            ax[0].axline(start, end, linestyle="-", color=f"C{i}", **line_kwargs)
 
         ax[1].set_title("Out position")
         ax[1].imshow(pat2, **pattern_kwargs)
-        ax[1].scatter(
-            points2[:, 0], points2[:, 1], color="C1", **scatter_kwargs
-        )
+        ax[1].scatter(points2[:, 0], points2[:, 1], color="C1", **scatter_kwargs)
         for i in range(n_lines):
             start, end = lines_start[1, i], lines_end[1, i]
-            ax[1].axline(
-                start, end, linestyle="--", color=f"C{i}", **line_kwargs
-            )
+            ax[1].axline(start, end, linestyle="--", color=f"C{i}", **line_kwargs)
 
         ax[2].set_title("Projection center")
         ax[2].imshow(np.ones(self.shape), cmap="gray", vmin=0, vmax=2)
         ax[2].scatter(points1[:, 0], points1[:, 1], **scatter_kwargs)
         ax[2].scatter(points2[:, 0], points2[:, 1], **scatter_kwargs)
         ax[2].scatter(
-            pxy_all[:, 0],
-            pxy_all[:, 1],
-            color="k",
-            marker="*",
-            **scatter_kwargs,
+            pxy_all[:, 0], pxy_all[:, 1], color="k", marker="*", **scatter_kwargs
         )
         for i in range(self.n_points):
             start, end = lines_out_in_start[i], lines_out_in_end[i]
@@ -362,7 +346,8 @@ class PCCalibrationMovingScreen:
 
 
 def _get_intersection_from_lines(
-    line1: Union[List[int], np.ndarray], line2: Union[List[int], np.ndarray],
+    line1: Union[List[int], np.ndarray],
+    line2: Union[List[int], np.ndarray],
 ) -> Tuple[float, float]:
     """line: [x1, y1, x2, y2]"""
     x1, y1, x2, y2 = line1

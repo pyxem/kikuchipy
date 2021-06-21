@@ -16,12 +16,18 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Generate signals and simulations, sometimes *from* other signals."""
+"""Helper functions and classes for managing kikuchipy.
 
-from kikuchipy.generators.ebsd_simulation_generator import EBSDSimulationGenerator
-from kikuchipy.generators.virtual_bse_generator import VirtualBSEGenerator
+This module and documentation is only relevant for kikuchioy developers,
+not for users.
 
-__all__ = [
-    "EBSDSimulationGenerator",
-    "VirtualBSEGenerator",
-]
+.. warning:
+    This module and its submodules are for internal use only.  Do not
+    use them in your own code. We may change the API at any time with no
+    warning.
+"""
+
+from kikuchipy._util._util import deprecated
+
+
+__all__ = ["deprecated"]

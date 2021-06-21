@@ -45,9 +45,7 @@ class CommonImage(Signal2D):
         relative: bool = False,
         in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
         out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-        dtype_out: Union[
-            None, np.dtype, Tuple[int, int], Tuple[float, float]
-        ] = None,
+        dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
         percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
     ):
         """Rescale image intensities inplace.
@@ -139,9 +137,7 @@ class CommonImage(Signal2D):
 
         # Determine min./max. intensity of input image to rescale to
         if in_range is not None and percentiles is not None:
-            raise ValueError(
-                "'percentiles' must be None if 'in_range' is not None."
-            )
+            raise ValueError("'percentiles' must be None if 'in_range' is not None.")
         elif relative is True and in_range is not None:
             raise ValueError("'in_range' must be None if 'relative' is True.")
         elif relative:  # Scale relative to min./max. intensity in images

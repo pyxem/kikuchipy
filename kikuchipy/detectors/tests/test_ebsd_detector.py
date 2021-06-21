@@ -34,7 +34,7 @@ class TestEBSDDetector:
         binning = 4
         tilt = 5
         det = EBSDDetector(
-            shape=shape, px_size=px_size, binning=binning, tilt=tilt, pc=pc1,
+            shape=shape, px_size=px_size, binning=binning, tilt=tilt, pc=pc1
         )
         assert det.shape == shape
         assert det.aspect_ratio == 0.5
@@ -48,9 +48,7 @@ class TestEBSDDetector:
             ((10, 10, 1), (10, 10), 2),
         ],
     )
-    def test_nav_shape_dim(
-        self, pc1, nav_shape, desired_nav_shape, desired_nav_dim
-    ):
+    def test_nav_shape_dim(self, pc1, nav_shape, desired_nav_shape, desired_nav_dim):
         """Navigation shape and dimension is derived correctly from PC shape."""
         det = EBSDDetector(pc=np.tile(pc1, nav_shape))
         assert det.navigation_shape == desired_nav_shape
@@ -69,14 +67,8 @@ class TestEBSDDetector:
         ),
         [
             # fmt: off
-            (
-                (60, 60), 70, 8, [1, 1, 0.5], 16800, 33600, 33600, 3600,
-                (480, 480), 560,
-            ),
-            (
-                (60, 60), 70, 8, [1, 1, 0.7], 23520, 33600, 33600, 3600,
-                (480, 480), 560,
-            ),
+            ((60, 60), 70, 8, [1, 1, 0.5], 16800, 33600, 33600, 3600, (480, 480), 560),
+            ((60, 60), 70, 8, [1, 1, 0.7], 23520, 33600, 33600, 3600, (480, 480), 560),
             (
                 (480, 460), 70, 0.5, [1, 1, 0.7], 11760, 16100, 16800, 220800,
                 (240, 230), 35,
@@ -102,9 +94,7 @@ class TestEBSDDetector:
         px_size_binned,
     ):
         """Initialization yields expected derived values."""
-        detector = EBSDDetector(
-            shape=shape, px_size=px_size, binning=binning, pc=pc
-        )
+        detector = EBSDDetector(shape=shape, px_size=px_size, binning=binning, pc=pc)
         assert detector.specimen_scintillator_distance == ssd
         assert detector.width == width
         assert detector.height == height
@@ -166,9 +156,7 @@ class TestEBSDDetector:
             (np.arange(30).reshape((2, 5, 3)), (10,), 1),
         ],
     )
-    def test_set_navigation_shape(
-        self, pc, desired_nav_shape, desired_nav_ndim
-    ):
+    def test_set_navigation_shape(self, pc, desired_nav_shape, desired_nav_ndim):
         """Change shape of PC array."""
         detector = EBSDDetector(pc=pc)
         detector.navigation_shape = desired_nav_shape
@@ -266,9 +254,7 @@ class TestEBSDDetector:
             ((480, 640), [0, 0, 15000], 50, 1, 5, [0.5, 0.5, 0.625]),
         ],
     )
-    def test_set_pc_from_emsoft(
-        self, shape, pc, px_size, binning, version, desired_pc
-    ):
+    def test_set_pc_from_emsoft(self, shape, pc, px_size, binning, version, desired_pc):
         """PC EMsoft -> Bruker -> EMsoft, also checking to_tsl() and
         to_bruker().
         """
@@ -317,9 +303,7 @@ class TestEBSDDetector:
         det = EBSDDetector(pc=pc, convention=convention)
         assert np.allclose(det.pc, desired_pc)
         assert np.allclose(det.pc_tsl(), pc)
-        assert np.allclose(
-            EBSDDetector(pc=det.pc_tsl(), convention="tsl").pc_tsl(), pc
-        )
+        assert np.allclose(EBSDDetector(pc=det.pc_tsl(), convention="tsl").pc_tsl(), pc)
 
     @pytest.mark.parametrize(
         "pc, convention",
@@ -395,9 +379,7 @@ class TestEBSDDetector:
             edgecolor = "k"
         else:
             edgecolor = gnomonic_circles_kwargs["edgecolor"]
-        assert np.allclose(
-            ax.artists[0]._edgecolor[:3], mcolors.to_rgb(edgecolor)
-        )
+        assert np.allclose(ax.artists[0]._edgecolor[:3], mcolors.to_rgb(edgecolor))
         plt.close("all")
 
     @pytest.mark.parametrize("pattern", [np.ones((61, 61)), np.ones((59, 60))])
@@ -427,9 +409,7 @@ class TestEBSDDetector:
     )
     def test_plot_pc_kwargs(self, detector, pc_kwargs):
         """Pass PC kwargs to scatter()."""
-        _, ax = detector.plot(
-            show_pc=True, pc_kwargs=pc_kwargs, return_fig_ax=True
-        )
+        _, ax = detector.plot(show_pc=True, pc_kwargs=pc_kwargs, return_fig_ax=True)
         if pc_kwargs is None:
             pc_kwargs = {"facecolor": "gold"}
         assert np.allclose(
@@ -476,7 +456,16 @@ class TestEBSDDetector:
             ),
             (
                 (10,),
-                [(4,), (10,), (10,), (10, 2), (10, 2), (10,), (10,), (10, 4),],
+                [
+                    (4,),
+                    (10,),
+                    (10,),
+                    (10, 2),
+                    (10, 2),
+                    (10,),
+                    (10,),
+                    (10, 4),
+                ],
             ),
             (
                 (10, 10),

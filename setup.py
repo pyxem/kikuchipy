@@ -43,9 +43,9 @@ with open("kikuchipy/release.py") as fid:
 # https://setuptools.readthedocs.io/en/latest/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
 extra_feature_requirements = {
     "doc": [
+        "furo",
         "nbsphinx >= 0.7",
         "sphinx >= 3.0.2",
-        "sphinx-rtd-theme >= 0.4.3",
         "sphinx-copybutton >= 0.2.5",
         "sphinx-autodoc-typehints >= 1.10.3",
         "sphinx-gallery >= 0.6",
@@ -56,7 +56,7 @@ extra_feature_requirements = {
 
 # Create a development project, including both the doc and tests projects
 extra_feature_requirements["dev"] = [
-    "black >= 19.3b0",
+    "black",
     "pre-commit >= 1.16",
 ] + list(chain(*list(extra_feature_requirements.values())))
 
@@ -116,24 +116,26 @@ setup(
     },
     # Dependencies
     extras_require=extra_feature_requirements,
+    # fmt: off
     install_requires=[
         # Restrict newest dask version until
         # https://github.com/dask/dask/issues/7583 is resolved
-        "dask[array] >= 2.18, <= 2021.03.1",
-        "diffsims >= 0.4",
-        "hyperspy >= 1.5.2",
-        "h5py >= 2.10",
-        "matplotlib >= 3.3",
-        "numpy >= 1.19",
-        "numba >= 0.48",
-        "orix >= 0.6.0",
-        "pooch >= 0.13",
+        "dask[array]    >= 2.18, <= 2021.03.1",
+        "diffsims       >= 0.4",
+        "hyperspy       >= 1.5.2",
+        "h5py           >= 2.10",
+        "matplotlib     >= 3.3",
+        "numpy          >= 1.19",
+        "numba          >= 0.48",
+        "orix           >= 0.6",
+        "pooch          >= 0.13",
         "psutil",
-        "tqdm >= 0.5.2",
-        "scikit-image >= 0.16.2",
+        "tqdm           >= 0.5.2",
+        "scikit-image   >= 0.16.2",
         "scikit-learn",
         "scipy",
     ],
+    # fmt: on
     entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},
     # Files to include when distributing package
     packages=find_packages(),
