@@ -140,7 +140,7 @@ class OxfordBinaryFile:
             assumed_n_pixels + metadata_size
         )
         assumed_pattern_starts = np.fromfile(
-            file, dtype=int, count=max_assumed_n_patterns, offset=8
+            file, dtype=np.int64, count=max_assumed_n_patterns, offset=8
         )
         diff_pattern_starts_bytes = np.diff(assumed_pattern_starts)
 
@@ -196,7 +196,7 @@ class OxfordBinaryFile:
         # Get byte positions for the start of each pattern
         file.seek(0)
         pattern_starts = np.fromfile(
-            file, dtype=int, count=n_patterns, offset=8
+            file, dtype=np.int64, count=n_patterns, offset=8
         )
 
         pattern_positions = np.argsort(pattern_starts)
