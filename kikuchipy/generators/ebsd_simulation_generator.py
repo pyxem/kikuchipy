@@ -67,11 +67,11 @@ class EBSDSimulationGenerator:
         >>> simgen = kp.generators.EBSDSimulationGenerator(
         ...     detector=det,
         ...     phase=p,
-        ...     rotations=Rotation.from_euler([90, 45, 90])
+        ...     rotations=Rotation.from_euler([1.57, 0, 1.57])
         ... )
         >>> simgen
         EBSDSimulationGenerator (1,)
-        EBSDDetector (60, 60), px_size 1 um, binning 1, tilt 0, pc (0.5, 0.5, 0.5)
+        EBSDDetector (60, 60), px_size 1 um, binning 1, tilt 0, azimuthal 0, pc (0.5, 0.5, 0.5)
         <name: ni. space group: Fm-3m. point group: m-3m. proper point group: 432. color: tab:blue>
         Rotation (1,)
         """
