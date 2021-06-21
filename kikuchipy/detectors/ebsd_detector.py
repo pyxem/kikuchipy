@@ -63,12 +63,10 @@ class EBSDDetector:
             (1, 1).
         px_size
             Size of unbinned detector pixel in um, assuming a square
-            pixel shape. Default is 1 um. Only used when converting to
-            and from EMsoft's PC convention.
+            pixel shape. Default is 1 um.
         binning
             Detector binning, i.e. how many pixels are binned into one.
-            Default is 1, i.e. no binning. Only used when converting to
-            and from EMsoft's PC convention.
+            Default is 1, i.e. no binning.
         tilt
             Detector tilt from horizontal in degrees. Default is 0.
         azimuthal
