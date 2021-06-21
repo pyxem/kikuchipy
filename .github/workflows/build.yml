@@ -12,6 +12,18 @@ jobs:
       - uses: actions/checkout@v2
       - uses: psf/black@stable
 
+  # Make sure all necessary files are included in a release
+  manifest:
+    name: check manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - name: Install dependencies
+        run: pip install manifix
+      - name: Check MANIFEST.in file
+        run: python setup.py manifix
+
   build-with-pip:
     name: ${{ matrix.os }}/py${{ matrix.python-version }}/pip
     runs-on: ${{ matrix.os }}
