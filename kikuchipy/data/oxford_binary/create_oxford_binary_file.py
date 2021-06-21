@@ -35,7 +35,7 @@ fname = os.path.join(dir_data, "patterns.ebsp")
 file = open(fname, mode="w")
 
 # Write file header: 8 bytes with ?
-file_header = np.ones(1, dtype=int)
+file_header = np.ones(1, dtype=np.int64)
 file_header.tofile(file)
 
 # Pattern header: 16 bytes with pattern height, pattern width and ?
@@ -49,7 +49,7 @@ pattern_footer_size = 18
 pattern_footer = np.zeros(9, dtype=np.uint16)
 
 # Write pattern positions: 8 bytes per position
-pattern_positions = np.arange(n_patterns, dtype=int)
+pattern_positions = np.arange(n_patterns, dtype=np.int64)
 pattern_positions *= pattern_header_size + n_pixels + pattern_footer_size
 pattern_positions += file_header.nbytes + n_patterns * 8
 # Shift positions one step to the right
