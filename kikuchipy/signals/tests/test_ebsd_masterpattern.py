@@ -156,7 +156,6 @@ class TestProperties:
 
 
 class TestSimulatedPatternDictionary:
-    # Create detector model
     detector = kp.detectors.EBSDDetector(
         shape=(480, 640),
         px_size=50,
@@ -335,3 +334,31 @@ class TestSimulatedPatternDictionary:
         detector = kp.detectors.EBSDDetector(shape=(60, 60))
         with pytest.raises(ValueError, match="The rotations object can only"):
             _ = mp.get_patterns(rotations=r, detector=detector, energy=20)
+
+    def test_detector_azimuthal(self):
+        """Test that setting an azimuthal angle of a detector results in
+        different patterns.
+        """
+        det1 = self.detector
+
+        # Looking from the detector toward the sample, the left part of
+        # the detector is closer to the sample than the right part
+        det2 = det1.deepcopy()
+        det2.azimuthal = 10
+
+        # Looking from the detector toward the sample, the right part of
+        # the detector is closer to the sample than the left part
+        det3 = det1.deepcopy()
+        det3.azimuthal = -10
+
+        mp = nickel_ebsd_master_pattern_small(projection="lambert")
+        r = Rotation.identity()
+
+        kwargs = dict(rotations=r, energy=20, compute=True)
+        sim1 = mp.get_patterns(detector=det1, **kwargs)
+        sim2 = mp.get_patterns(detector=det2, **kwargs)
+        sim3 = mp.get_patterns(detector=det3, **kwargs)
+
+        assert not np.allclose(sim1.data, sim2.data)
+        assert np.allclose(sim2.data.mean(), 44.06, atol=1e-2)
+        assert np.allclose(sim3.data.mean(), 43.88, atol=1e-2)

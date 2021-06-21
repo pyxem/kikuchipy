@@ -45,6 +45,7 @@ class EBSDDetector:
         px_size: float = 1,
         binning: int = 1,
         tilt: float = 0,
+        azimuthal: float = 0,
         sample_tilt: float = 70,
         pc: Union[np.ndarray, list, tuple] = (0.5, 0.5, 0.5),
         convention: Optional[str] = None,
@@ -62,12 +63,18 @@ class EBSDDetector:
             (1, 1).
         px_size
             Size of unbinned detector pixel in um, assuming a square
-            pixel shape. Default is 1 um.
+            pixel shape. Default is 1 um. Only used when converting to
+            and from EMsoft's PC convention.
         binning
             Detector binning, i.e. how many pixels are binned into one.
-            Default is 1, i.e. no binning.
+            Default is 1, i.e. no binning. Only used when converting to
+            and from EMsoft's PC convention.
         tilt
             Detector tilt from horizontal in degrees. Default is 0.
+        azimuthal
+            Sample tilt about the sample RD (downwards) axis. A positive
+            angle means the sample normal moves towards the right
+            looking from the sample to the detector. Default is 0.
         sample_tilt
             Sample tilt from horizontal in degrees. Default is 70.
         pc
@@ -99,7 +106,7 @@ class EBSDDetector:
         ...     sample_tilt=70,
         ... )
         >>> det
-        EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 5, pc (0.421, 0.221, 0.505)
+        EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 5, azimuthal 0, pc (0.421, 0.221, 0.505)
         >>> det.navigation_shape  # (nrows, ncols)
         (149, 200)
         >>> det.bounds
@@ -112,6 +119,7 @@ class EBSDDetector:
         self.px_size = px_size
         self.binning = binning
         self.tilt = tilt
+        self.azimuthal = azimuthal
         self.sample_tilt = sample_tilt
         self.pc = pc
         self._set_pc_convention(convention)
@@ -353,7 +361,7 @@ class EBSDDetector:
         return (
             f"{self.__class__.__name__} {self.shape}, "
             f"px_size {self.px_size} um, binning {self.binning}, "
-            f"tilt {self.tilt}, pc {tuple(self.pc_average)}"
+            f"tilt {self.tilt}, azimuthal {self.azimuthal}, pc {tuple(self.pc_average)}"
         )
 
     def _set_pc_convention(self, convention: Optional[str] = None):

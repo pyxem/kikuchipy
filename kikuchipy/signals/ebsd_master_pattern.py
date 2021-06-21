@@ -297,19 +297,19 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
     Vector3d
         Direction cosines for each detector pixel.
     """
-    pc = detector.pc_emsoft()
-    xpc = pc[..., 0]
-    ypc = pc[..., 1]
-    L = pc[..., 2]
+    nrows, ncols = detector.shape
+
+    pcx, pcy, pcz = detector.pc[0]
+    xpc = ncols * (0.5 - pcx)
+    ypc = nrows * (0.5 - pcy)
+    L = nrows * pcz
+
+    ncols_array = np.arange(ncols)
+    nrows_array = np.arange(nrows)
 
     # Detector coordinates in microns
-    det_x = (
-        -((-xpc - (1.0 - detector.ncols) * 0.5) - np.arange(0, detector.ncols))
-        * detector.px_size
-    )
-    det_y = (
-        (ypc - (1.0 - detector.nrows) * 0.5) - np.arange(0, detector.nrows)
-    ) * detector.px_size
+    det_x = -((-xpc - (1.0 - ncols) * 0.5) - ncols_array)
+    det_y = (ypc - (1.0 - nrows) * 0.5) - nrows_array
 
     # Auxilliary angle to rotate between reference frames
     theta_c = np.radians(detector.tilt)
@@ -319,19 +319,19 @@ def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
     ca = np.cos(alpha)
     sa = np.sin(alpha)
 
-    # TODO: Enable detector azimuthal angle
-    omega = np.radians(0)  # angle between normal of sample and detector
+    # Angle between normal of sample and detector. A positive angle
+    # means the detector normal moves towards the right looking from the
+    # detector to the sample
+    omega = np.radians(detector.azimuthal)
     cw = np.cos(omega)
     sw = np.sin(omega)
 
-    r_g_array = np.zeros((detector.nrows, detector.ncols, 3))
+    r_g_array = np.zeros((nrows, ncols, 3))
 
     Ls = -sw * det_x + L * cw
     Lc = cw * det_x + L * sw
 
-    i, j = np.meshgrid(
-        np.arange(detector.nrows - 1, -1, -1), np.arange(detector.ncols), indexing="ij"
-    )
+    i, j = np.meshgrid(nrows_array[::-1], ncols_array, indexing="ij")
 
     r_g_array[..., 0] = det_y[i] * ca + sa * Ls[j]
     r_g_array[..., 1] = Lc[j]

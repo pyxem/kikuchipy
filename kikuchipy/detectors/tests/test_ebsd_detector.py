@@ -104,10 +104,11 @@ class TestEBSDDetector:
 
     def test_repr(self, pc1):
         """Expected string representation."""
-        assert repr(
-            EBSDDetector(shape=(1, 2), px_size=3, binning=4, tilt=5, pc=pc1)
-        ) == (
-            "EBSDDetector (1, 2), px_size 3 um, binning 4, tilt 5, pc "
+        det = EBSDDetector(
+            shape=(1, 2), px_size=3, binning=4, tilt=5, azimuthal=2, pc=pc1
+        )
+        assert repr(det) == (
+            "EBSDDetector (1, 2), px_size 3 um, binning 4, tilt 5, azimuthal 2, pc "
             "(0.421, 0.779, 0.505)"
         )
 
