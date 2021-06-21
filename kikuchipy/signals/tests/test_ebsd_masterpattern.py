@@ -48,6 +48,7 @@ DIR_PATH = os.path.dirname(__file__)
 EMSOFT_FILE = os.path.join(
     DIR_PATH, "../../data/emsoft_ebsd_master_pattern/master_patterns.h5"
 )
+EMSOFT_EBSD_FILE = os.path.join(DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5")
 
 
 class TestEBSDMasterPatternInit:
@@ -193,9 +194,6 @@ class TestSimulatedPatternDictionary:
 
     def test_get_patterns(self):
         # Ni Test
-        EMSOFT_EBSD_FILE = os.path.join(
-            DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5"
-        )
         emsoft_key = load(EMSOFT_EBSD_FILE)
         emsoft_key = emsoft_key.data[0]
 

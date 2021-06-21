@@ -23,7 +23,10 @@ Added
 -----
 - Sample tilt about RD can be passed as part of an EBSDDetector. This can be used when
   projecting parts of master patterns onto a detector.
-  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+  (`#381 <https://github.com/pyxem/kikuchipy/pull/381>`_)
+- Reader for EBSD patterns stored in Oxford Instrument's binary .ebsp file
+  format, uncompressed and with intensities as 8-bit unsigned integers.
+  (`#371 <https://github.com/pyxem/kikuchipy/pull/371>`_)
 - Unit testing of docstring examples.
   (`#350 <https://github.com/pyxem/kikuchipy/pull/350>`_)
 - Support for Python 3.9.

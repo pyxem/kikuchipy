@@ -409,4 +409,4 @@ def doctest_setup_teardown(request):
 @pytest.fixture(autouse=True)
 def import_to_namespace(doctest_namespace):
     DIR_PATH = os.path.dirname(__file__)
-    doctest_namespace["DATA_DIR"] = os.path.join(DIR_PATH, "data/kikuchipy")
+    doctest_namespace["DATA_DIR"] = os.path.join(DIR_PATH, "data/kikuchipy_h5ebsd")

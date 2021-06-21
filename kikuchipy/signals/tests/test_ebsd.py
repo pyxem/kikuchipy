@@ -34,7 +34,7 @@ from kikuchipy.conftest import assert_dictionary
 matplotlib.use("Agg")  # For plotting
 
 DIR_PATH = os.path.dirname(__file__)
-KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy/patterns.h5")
+KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5")
 EMSOFT_FILE = os.path.join(DIR_PATH, "../../data/emsoft_ebsd/simulated_ebsd.h5")
 
 

@@ -33,6 +33,7 @@ from kikuchipy.io.plugins import (
     h5ebsd,
     nordif,
     nordif_calibration_patterns,
+    oxford_binary,
 )
 from kikuchipy.io._util import _get_input_bool, _ensure_directory
 
@@ -44,6 +45,7 @@ plugins = [
     h5ebsd,
     nordif,
     nordif_calibration_patterns,
+    oxford_binary,
 ]
 
 default_write_ext = set()
