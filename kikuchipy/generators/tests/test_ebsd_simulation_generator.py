@@ -114,7 +114,7 @@ class TestEBSDSimulationGenerator:
         """Desired string representation."""
         desired_repr = (
             "EBSDSimulationGenerator (25,)\n"
-            "EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 0, "
+            "EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 0, azimuthal 0, "
             "pc (0.421, 0.221, 0.505)\n"
             "<name: ni. space group: Fm-3m. point group: m-3m. "
             "proper point group: 432. color: tab:blue>\n"

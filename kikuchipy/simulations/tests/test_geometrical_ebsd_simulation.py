@@ -272,10 +272,10 @@ class TestGeometricalEBSDSimulation:
 
         assert repr(sim) == (
             f"GeometricalEBSDSimulation {nav_shape}\n"
-            "EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 0, pc "
+            "EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 0, azimuthal 0, pc "
             "(0.421, 0.221, 0.505)\n"
-            "<name: ni. space group: Fm-3m. point group: m-3m. proper point "
-            "group: 432. color: tab:blue>\n"
+            "<name: ni. space group: Fm-3m. point group: m-3m. proper point group: 432."
+            " color: tab:blue>\n"
             f"KikuchiBand {str(nav_shape)[:-1]}|3)\n"
             f"Rotation {nav_shape}"
         )
