@@ -61,20 +61,14 @@ class TestDask:
                 np.uint16,
                 ((8, 8, 8, 8), (8, 8, 8, 8), (256,), (256,)),
             ),
-            (
-                (32, 32, 256, 256),
-                2,
-                2,
-                np.uint8,
-                ((16, 16), (16, 16), (256,), (256,)),
-            ),
+            ((32, 32, 256, 256), 2, 2, np.uint8, ((16, 16), (16, 16), (256,), (256,))),
         ],
     )
     def test_get_chunking_no_signal(
         self, shape, nav_dim, sig_dim, dtype, desired_chunks
     ):
         chunks = get_chunking(
-            data_shape=shape, nav_dim=nav_dim, sig_dim=sig_dim, dtype=dtype,
+            data_shape=shape, nav_dim=nav_dim, sig_dim=sig_dim, dtype=dtype
         )
         assert chunks == desired_chunks
 

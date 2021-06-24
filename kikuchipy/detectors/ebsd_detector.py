@@ -21,6 +21,7 @@ from typing import List, Optional, Tuple, Union
 
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
+from matplotlib.markers import MarkerStyle
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -44,6 +45,7 @@ class EBSDDetector:
         px_size: float = 1,
         binning: int = 1,
         tilt: float = 0,
+        azimuthal: float = 0,
         sample_tilt: float = 70,
         pc: Union[np.ndarray, list, tuple] = (0.5, 0.5, 0.5),
         convention: Optional[str] = None,
@@ -67,6 +69,10 @@ class EBSDDetector:
             Default is 1, i.e. no binning.
         tilt
             Detector tilt from horizontal in degrees. Default is 0.
+        azimuthal
+            Sample tilt about the sample RD (downwards) axis. A positive
+            angle means the sample normal moves towards the right
+            looking from the sample to the detector. Default is 0.
         sample_tilt
             Sample tilt from horizontal in degrees. Default is 70.
         pc
@@ -86,10 +92,11 @@ class EBSDDetector:
 
         Examples
         --------
+        >>> import numpy as np
         >>> from kikuchipy.detectors import EBSDDetector
         >>> det = EBSDDetector(
         ...     shape=(60, 60),
-        ...     pc=np.ones((149, 200)) * [0.421, 0.779, 0.505],
+        ...     pc=np.ones((149, 200, 3)) * (0.421, 0.779, 0.505),
         ...     convention="tsl",
         ...     px_size=70,
         ...     binning=8,
@@ -97,20 +104,20 @@ class EBSDDetector:
         ...     sample_tilt=70,
         ... )
         >>> det
-        EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 0, pc
-         (0.421, 0.221, 0.505)
+        EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 5, azimuthal 0, pc (0.421, 0.221, 0.505)
         >>> det.navigation_shape  # (nrows, ncols)
         (149, 200)
         >>> det.bounds
-        array([ 0, 60,  0, 60])
-        >>> det.gnomonic_bounds
-        array([-0.83366337,  1.14653465, -1.54257426,  0.43762376])
+        array([ 0, 59,  0, 59])
+        >>> det.gnomonic_bounds[0, 0]
+        array([-0.83366337,  1.14653465, -0.83366337,  1.14653465])
         >>> det.plot()
         """
         self.shape = shape
         self.px_size = px_size
         self.binning = binning
         self.tilt = tilt
+        self.azimuthal = azimuthal
         self.sample_tilt = sample_tilt
         self.pc = pc
         self._set_pc_convention(convention)
@@ -241,7 +248,7 @@ class EBSDDetector:
             axis += (0,)
         elif ndim == 3:
             axis += (0, 1)
-        return np.mean(self.pc, axis=axis).round(3)
+        return np.nanmean(self.pc, axis=axis).round(3)
 
     @property
     def navigation_shape(self) -> tuple:
@@ -288,9 +295,7 @@ class EBSDDetector:
     @property
     def x_range(self) -> np.ndarray:
         """X detector limits in gnomonic coordinates."""
-        return np.dstack((self.x_min, self.x_max)).reshape(
-            self.navigation_shape + (2,)
-        )
+        return np.dstack((self.x_min, self.x_max)).reshape(self.navigation_shape + (2,))
 
     @property
     def y_min(self) -> Union[np.ndarray, float]:
@@ -305,9 +310,7 @@ class EBSDDetector:
     @property
     def y_range(self) -> np.ndarray:
         """The y detector limits in gnomonic coordinates."""
-        return np.dstack((self.y_min, self.y_max)).reshape(
-            self.navigation_shape + (2,)
-        )
+        return np.dstack((self.y_min, self.y_max)).reshape(self.navigation_shape + (2,))
 
     @property
     def gnomonic_bounds(self) -> np.ndarray:
@@ -318,7 +321,7 @@ class EBSDDetector:
 
     @property
     def _average_gnomonic_bounds(self) -> np.ndarray:
-        return np.mean(
+        return np.nanmean(
             self.gnomonic_bounds, axis=(0, 1, 2)[: self.navigation_dimension]
         )
 
@@ -356,7 +359,7 @@ class EBSDDetector:
         return (
             f"{self.__class__.__name__} {self.shape}, "
             f"px_size {self.px_size} um, binning {self.binning}, "
-            f"tilt {self.tilt}, pc {tuple(self.pc_average)}"
+            f"tilt {self.tilt}, azimuthal {self.azimuthal}, pc {tuple(self.pc_average)}"
         )
 
     def _set_pc_convention(self, convention: Optional[str] = None):
@@ -526,11 +529,8 @@ class EBSDDetector:
         >>> from kikuchipy.detectors import EBSDDetector
         >>> det = EBSDDetector(
         ...     shape=(60, 60),
-        ...     pc=np.ones((149, 200)) * [0.421, 0.779, 0.505],
+        ...     pc=np.ones((149, 200, 3)) * (0.421, 0.779, 0.505),
         ...     convention="tsl",
-        ...     pixel_size=70,
-        ...     binning=8,
-        ...     tilt=5,
         ...     sample_tilt=70,
         ... )
         >>> det.plot()
@@ -584,12 +584,12 @@ class EBSDDetector:
         if show_pc:
             if pc_kwargs is None:
                 pc_kwargs = {}
-            default_params_pc = {
-                "s": 300,
-                "facecolor": "gold",
-                "edgecolor": "k",
-                "marker": "*",
-            }
+            default_params_pc = dict(
+                s=300,
+                facecolor="gold",
+                edgecolor="k",
+                marker=MarkerStyle(marker="*", fillstyle="full"),
+            )
             [pc_kwargs.setdefault(k, v) for k, v in default_params_pc.items()]
             ax.scatter(x=pcx, y=pcy, **pc_kwargs)
 
@@ -612,9 +612,7 @@ class EBSDDetector:
             for angle in gnomonic_angles:
                 ax.add_artist(
                     plt.Circle(
-                        (pcx, pcy),
-                        np.tan(np.deg2rad(angle)),
-                        **gnomonic_circles_kwargs,
+                        (pcx, pcy), np.tan(np.deg2rad(angle)), **gnomonic_circles_kwargs
                     )
                 )
 

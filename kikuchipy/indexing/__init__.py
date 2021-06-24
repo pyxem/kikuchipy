@@ -19,14 +19,12 @@
 """Tools for indexing of EBSD patterns by comparison to simulated
 patterns.
 
-The EBSD method :meth:`~kikuchipy.signals.EBSD.match_patterns` uses
+The EBSD method :meth:`~kikuchipy.signals.EBSD.dictionary_indexing` uses
 these tools for pattern matching.
 """
 
 from kikuchipy.indexing._merge_crystal_maps import merge_crystal_maps
-from kikuchipy.indexing.orientation_similarity_map import (
-    orientation_similarity_map,
-)
+from kikuchipy.indexing.orientation_similarity_map import orientation_similarity_map
 from kikuchipy.indexing import similarity_metrics
 from kikuchipy.indexing._static_pattern_matching import StaticPatternMatching
 

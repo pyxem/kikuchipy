@@ -97,9 +97,7 @@ def orientation_similarity_map(
     if n_best is None:
         n_best = keep_n
     elif n_best > keep_n:
-        raise ValueError(
-            f"n_best {n_best} cannot be greater than keep_n {keep_n}"
-        )
+        raise ValueError(f"n_best {n_best} cannot be greater than keep_n {keep_n}")
 
     data_shape = xmap.shape
     flat_index_map = np.arange(nav_size).reshape(data_shape)
@@ -117,7 +115,7 @@ def orientation_similarity_map(
         osm[:, :, i] = generic_filter(
             flat_index_map,
             lambda v: _orientation_similarity_per_pixel(
-                v, center_index, match_indicies, n, normalize,
+                v, center_index, match_indicies, n, normalize
             ),
             footprint=footprint,
             mode="constant",
@@ -129,14 +127,10 @@ def orientation_similarity_map(
 
 
 def _orientation_similarity_per_pixel(
-    v: np.ndarray,
-    center_index: int,
-    match_indices: np.ndarray,
-    n: int,
-    normalize: bool,
+    v: np.ndarray, center_index: int, match_indices: np.ndarray, n: int, normalize: bool
 ) -> np.ndarray:
     # v are indices picked out with the footprint from flat_index_map
-    v = v.astype(np.int)
+    v = v.astype(int)
     center_value = v[center_index]
     # Filter only true neighbours, -1 out of image and not include itself
     neighbours = v[np.where((v != -1) & (v != center_value))]
@@ -147,7 +141,7 @@ def _orientation_similarity_per_pixel(
         for mi in match_indices[neighbours]
     ]
 
-    os = np.mean(number_of_equal_matches_to_its_neighbours)
+    os = np.nanmean(number_of_equal_matches_to_its_neighbours)
 
     if normalize:
         os /= n

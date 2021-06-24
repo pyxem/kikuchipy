@@ -29,11 +29,7 @@ from kikuchipy.crystallography._computations import (
     _is_equivalent,
 )
 from kikuchipy.detectors import EBSDDetector
-from kikuchipy.draw.markers import (
-    get_line_segment_list,
-    get_point_list,
-    get_text_list,
-)
+from kikuchipy.draw.markers import get_line_segment_list, get_point_list, get_text_list
 from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 
@@ -139,12 +135,8 @@ class GeometricalEBSDSimulation:
         pcy = self.detector.pcy[..., np.newaxis]
         pcz = self.detector.pcz[..., np.newaxis]
 
-        za_coords[..., 0] = (xg + (pcx / pcz)) / self.detector.x_scale[
-            ..., np.newaxis
-        ]
-        za_coords[..., 1] = (-yg + (pcy / pcz)) / self.detector.y_scale[
-            ..., np.newaxis
-        ]
+        za_coords[..., 0] = (xg + (pcx / pcz)) / self.detector.x_scale[..., np.newaxis]
+        za_coords[..., 1] = (-yg + (pcy / pcz)) / self.detector.y_scale[..., np.newaxis]
 
         if self.exclude_outside_detector:
             on_detector = self.zone_axes_within_gnomonic_bounds
@@ -211,8 +203,8 @@ class GeometricalEBSDSimulation:
                     if _is_equivalent(hkl, table_hkl):
                         family_colors.append(color)
                         break
-        #                else:  # Hopefully we never arrive here
-        #                    family_colors.append([1, 0, 0])
+                else:  # A non-allowed band is passed
+                    family_colors.append([1, 1, 1])
 
         # Append list of markers per family (colors changing with
         # family)
@@ -270,8 +262,10 @@ class GeometricalEBSDSimulation:
         list
             List of text markers.
         """
+        za = self.zone_axes.hkl.data
+        array_str = np.array2string(za, threshold=za.size)
         return get_text_list(
-            texts=sub("[][ ]", "", str(self.zone_axes.hkl.data)).split("\n"),
+            texts=sub("[][ ]", "", array_str).split("\n"),
             coordinates=self.zone_axes_label_detector_coordinates,
             color=kwargs.pop("color", "k"),
             zorder=kwargs.pop("zorder", 5),
@@ -379,9 +373,7 @@ class GeometricalEBSDSimulation:
         if zone_axes_labels:
             if zone_axes_labels_kwargs is None:
                 zone_axes_labels_kwargs = {}
-            markers += self.zone_axes_labels_as_markers(
-                **zone_axes_labels_kwargs
-            )
+            markers += self.zone_axes_labels_as_markers(**zone_axes_labels_kwargs)
         if pc:
             if pc_kwargs is None:
                 pc_kwargs = {}

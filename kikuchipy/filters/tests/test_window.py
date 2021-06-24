@@ -38,8 +38,7 @@ from kikuchipy.filters.window import (
 CIRCULAR33 = np.array([0, 1, 0, 1, 1, 1, 0, 1, 0]).reshape(3, 3)
 # fmt: off
 CIRCULAR54 = np.array(
-    [0., 0., 1., 0., 0., 1., 1., 1., 1., 1., 1., 1., 0., 1., 1., 1., 0., 0.,
-     1., 0.]
+    [0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0]
 ).reshape(5, 4)
 # fmt: on
 RECTANGULAR33 = np.ones(9).reshape(3, 3)
@@ -47,7 +46,7 @@ RECTANGULAR3 = np.ones(3)
 GAUSS33_STD1 = np.outer(gaussian(3, 1), gaussian(3, 1))
 GAUSS55_STD2 = np.outer(gaussian(5, 2), gaussian(5, 2))
 GAUSS33_CIRCULAR = np.array(
-    [0.0, 0.60653066, 0.0, 0.60653066, 1.0, 0.60653066, 0.0, 0.60653066, 0.0]
+    [0, 0.60653066, 0, 0.60653066, 1, 0.60653066, 0, 0.60653066, 0]
 ).reshape(3, 3)
 GAUSS5_STD2 = gaussian(5, 2)
 GENERAL_GAUSS55_PWR05_STD2 = np.outer(
@@ -98,7 +97,7 @@ class TestWindow:
                 ValueError,
                 "Window <class 'list'> must be of type numpy.ndarray,",
             ),
-            ("boxcar", (5, -5), ValueError, "All window axes .* must be > 0",),
+            ("boxcar", (5, -5), ValueError, "All window axes .* must be > 0"),
             (
                 "boxcar",
                 (5, 5.1),
@@ -142,7 +141,7 @@ class TestWindow:
     def test_init_general_gaussian(self):
         window = "general_gaussian"
         shape = (5, 5)
-        w = Window(window=window, shape=shape, p=0.5, std=2,)
+        w = Window(window=window, shape=shape, p=0.5, std=2)
         assert w.is_valid()
         np.testing.assert_array_almost_equal(w.data, GENERAL_GAUSS55_PWR05_STD2)
         assert w.name == window
@@ -152,15 +151,14 @@ class TestWindow:
         w = Window()
         object_type = str(type(w)).strip(">'").split(".")[-1]
         assert w.__repr__() == (
-            f"{object_type} {w.shape} {w.name}\n"
-            "[[0. 1. 0.]\n [1. 1. 1.]\n [0. 1. 0.]]"
+            f"{object_type} {w.shape} {w.name}\n[[0. 1. 0.]\n [1. 1. 1.]\n [0. 1. 0.]]"
         )
 
     def test_is_valid(self):
         change_attribute = np.array([0, 0, 0, 1])
 
         # Change one attribute at a time and check whether the window is valid
-        for i in range(len(change_attribute)):
+        for _ in range(len(change_attribute)):
             w = Window()
 
             valid_window = True
@@ -196,7 +194,10 @@ class TestWindow:
     def test_make_circular(
         self, window, shape, answer_coeff, answer_circular, answer_type
     ):
-        k = Window(window=window, shape=shape)
+        kwargs = dict()
+        if window == "gaussian":
+            kwargs["std"] = 1
+        k = Window(window=window, shape=shape, **kwargs)
         k.make_circular()
 
         np.testing.assert_array_almost_equal(k, answer_coeff)
@@ -216,15 +217,17 @@ class TestWindow:
     def test_shape_compatible(self, dummy_signal, shape, compatible):
         w = Window(shape=shape)
         assert (
-            w.shape_compatible(dummy_signal.axes_manager.navigation_shape)
-            == compatible
+            w.shape_compatible(dummy_signal.axes_manager.navigation_shape) == compatible
         )
 
     def test_plot_default_values(self):
         w = Window()
-        fig, im, cbar = w.plot()
+        fig = w.plot(return_figure=True, colorbar=True)
+        ax = fig.axes[0]
+        im = ax.get_images()[0]
+        cbar = im.colorbar
 
-        np.testing.assert_array_almost_equal(w, im.get_array().data)
+        np.testing.assert_array_almost_equal(w, im.get_array())
         assert im.cmap.name == "viridis"
         assert isinstance(fig, Figure)
         assert isinstance(im, AxesImage)
@@ -240,21 +243,22 @@ class TestWindow:
     @pytest.mark.parametrize(
         "window, answer_coeff, cmap, textcolors, cmap_label",
         [
-            ("circular", CIRCULAR33, "viridis", ["k", "w"], "Coefficient",),
-            ("rectangular", RECTANGULAR33, "inferno", ["b", "r"], "Coeff.",),
+            ("circular", CIRCULAR33, "viridis", ["k", "w"], "Coefficient"),
+            ("rectangular", RECTANGULAR33, "inferno", ["b", "r"], "Coeff."),
         ],
     )
-    def test_plot(
-        self, window, answer_coeff, cmap, textcolors, cmap_label, tmp_path
-    ):
+    def test_plot(self, window, answer_coeff, cmap, textcolors, cmap_label, tmp_path):
         w = Window(window=window)
 
-        fig, im, cbar = w.plot(
-            cmap=cmap, textcolors=textcolors, cmap_label=cmap_label
+        fig = w.plot(
+            cmap=cmap, textcolors=textcolors, cmap_label=cmap_label, return_figure=True
         )
+        ax = fig.axes[0]
+        im = ax.get_images()[0]
+        cbar = im.colorbar
 
         np.testing.assert_array_almost_equal(w, answer_coeff)
-        np.testing.assert_array_almost_equal(im.get_array().data, answer_coeff)
+        np.testing.assert_array_almost_equal(im.get_array(), answer_coeff)
         assert isinstance(fig, Figure)
         assert isinstance(im, AxesImage)
         assert isinstance(cbar, Colorbar)
@@ -267,13 +271,13 @@ class TestWindow:
 
     def test_plot_one_axis(self):
         w = Window(window="gaussian", shape=(5,), std=2)
-        fig, im, cbar = w.plot()
+        fig = w.plot(return_figure=True)
+        ax = fig.axes[0]
+        im = ax.get_images()[0]
 
         # Compare to global window GAUSS5_STD2
         np.testing.assert_array_almost_equal(w, GAUSS5_STD2)
-        np.testing.assert_array_almost_equal(
-            im.get_array().data[:, 0], GAUSS5_STD2
-        )
+        np.testing.assert_array_almost_equal(im.get_array()[:, 0], GAUSS5_STD2)
 
     @pytest.mark.parametrize(
         "shape, c, w_c, answer",
@@ -392,9 +396,7 @@ class TestWindow:
 
         assert np.allclose(w, answer, atol=1e-4)
 
-    @pytest.mark.parametrize(
-        "Nx, answer", [(96, 61.1182), (801, 509.9328)],
-    )
+    @pytest.mark.parametrize("Nx, answer", [(96, 61.1182), (801, 509.9328)])
     def test_modified_hann_direct_sum(self, Nx, answer):
         # py_func ensures coverage for a Numba decorated function
         w = modified_hann.py_func(Nx)
@@ -423,7 +425,7 @@ class TestWindow:
                     ]
                 ),
             ),
-            ((5,), (2,), np.array([2, 1, 0, 1, 2]),),
+            ((5,), (2,), np.array([2, 1, 0, 1, 2])),
             (
                 (4, 4),
                 (2, 3),
@@ -474,7 +476,7 @@ class TestWindow:
         [
             ((3, 3), (1, 1)),
             ((3,), (1,)),
-            ((7, 5), (3, 2),),
+            ((7, 5), (3, 2)),
             ((6, 5), (2, 2)),
             ((5, 7), (2, 3)),
         ],

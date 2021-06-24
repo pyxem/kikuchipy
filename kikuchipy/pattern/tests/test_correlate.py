@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+# TODO: Remove file after v0.4 is released
+
 import numpy as np
 import pytest
 
@@ -30,9 +32,10 @@ class TestNormalizedCrossCorrelation:
     def test_normalised_correlation_coefficient(
         self, dummy_signal, pattern_idx, template_idx, answer
     ):
-        coefficient = normalized_correlation_coefficient(
-            pattern=dummy_signal.inav[pattern_idx].data,
-            template=dummy_signal.inav[template_idx].data,
-            zero_normalised=True,
-        )
-        assert np.allclose(coefficient, answer, atol=1e-7)
+        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
+            coefficient = normalized_correlation_coefficient(
+                pattern=dummy_signal.inav[pattern_idx].data,
+                template=dummy_signal.inav[template_idx].data,
+                zero_normalised=True,
+            )
+            assert np.allclose(coefficient, answer, atol=1e-7)

@@ -40,9 +40,9 @@ from kikuchipy.signals.util._metadata import (
 # ----------------------
 format_name = "emsoft_ebsd"
 description = (
-    "Read support for dynamically simulated electron backscatter diffraction "
-    "patterns stored in EMsoft's HDF5 file format produced by their EMEBSD.f90 "
-    "program."
+    "Read support for dynamically simulated electron backscatter "
+    "diffraction patterns stored in EMsoft's HDF5 file format produced "
+    "by their EMEBSD.f90 program."
 )
 full_support = False
 # Recognised file extension
@@ -88,9 +88,7 @@ def file_reader(
     _check_file_format(f)
 
     # Read original metadata
-    omd = hdf5group2dict(
-        f["/"], data_dset_names=["EBSDPatterns"], recursive=True
-    )
+    omd = hdf5group2dict(f["/"], data_dset_names=["EBSDPatterns"], recursive=True)
 
     # Set metadata and original metadata dictionaries
     md = _get_metadata(omd)
@@ -175,8 +173,8 @@ def _check_file_format(file: File):
             raise KeyError
     except KeyError:
         raise IOError(
-            f"'{file.filename}' is not in EMsoft's format returned by their "
-            "EMEBSD.f90 program."
+            f"'{file.filename}' is not in EMsoft's format returned by their EMEBSD.f90 "
+            "program."
         )
 
 
@@ -199,24 +197,12 @@ def _get_metadata(omd: dict) -> dict:
     mapping = {
         f"{ebsd_node}.version": ["EMheader", "EBSD", "Version"],
         f"{ebsd_node}.binning": ["NMLparameters", "EBSDNameList", "binning"],
-        f"{ebsd_node}.elevation_angle": [
-            "NMLparameters",
-            "EBSDNameList",
-            "thetac",
-        ],
-        f"{ebsd_node}.exposure_time": [
-            "NMLparameters",
-            "EBSDNameList",
-            "dwelltime",
-        ],
+        f"{ebsd_node}.elevation_angle": ["NMLparameters", "EBSDNameList", "thetac"],
+        f"{ebsd_node}.exposure_time": ["NMLparameters", "EBSDNameList", "dwelltime"],
         f"{ebsd_node}.xpc": ["NMLparameters", "EBSDNameList", "xpc"],
         f"{ebsd_node}.ypc": ["NMLparameters", "EBSDNameList", "ypc"],
         f"{ebsd_node}.zpc": ["NMLparameters", "EBSDNameList", "L"],
-        f"{sem_node}.beam_energy": [
-            "NMLparameters",
-            "EBSDNameList",
-            "energymax",
-        ],
+        f"{sem_node}.beam_energy": ["NMLparameters", "EBSDNameList", "energymax"],
     }
     _set_metadata_from_mapping(omd, md, mapping)
     return md.as_dictionary()

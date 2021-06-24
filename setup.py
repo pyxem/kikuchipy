@@ -43,9 +43,9 @@ with open("kikuchipy/release.py") as fid:
 # https://setuptools.readthedocs.io/en/latest/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
 extra_feature_requirements = {
     "doc": [
+        "furo",
         "nbsphinx >= 0.7",
         "sphinx >= 3.0.2",
-        "sphinx-rtd-theme >= 0.4.3",
         "sphinx-copybutton >= 0.2.5",
         "sphinx-autodoc-typehints >= 1.10.3",
         "sphinx-gallery >= 0.6",
@@ -56,7 +56,8 @@ extra_feature_requirements = {
 
 # Create a development project, including both the doc and tests projects
 extra_feature_requirements["dev"] = [
-    "black >= 19.3b0",
+    "black",
+    "manifix",
     "pre-commit >= 1.16",
 ] + list(chain(*list(extra_feature_requirements.values())))
 
@@ -77,6 +78,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         (
@@ -99,6 +101,7 @@ setup(
         "SEM",
         "scanning electron microscopy",
         "kikuchi pattern",
+        "dictionary indexing",
     ],
     zip_safe=True,
     # Contact
@@ -114,22 +117,26 @@ setup(
     },
     # Dependencies
     extras_require=extra_feature_requirements,
+    # fmt: off
     install_requires=[
-        "dask[array] >= 2.14",
-        "diffsims >= 0.4",
-        "hyperspy >= 1.5.2",
-        "h5py >= 2.10",
-        "matplotlib >= 3.2",
-        "numpy >= 1.18",
-        "numba >= 0.48",
-        "orix >= 0.5",
-        "pooch >= 0.13",
+        # Restrict newest dask version until
+        # https://github.com/dask/dask/issues/7583 is resolved
+        "dask[array]    >= 2.18, <= 2021.03.1",
+        "diffsims       >= 0.4",
+        "hyperspy       >= 1.5.2",
+        "h5py           >= 2.10",
+        "matplotlib     >= 3.3",
+        "numpy          >= 1.19",
+        "numba          >= 0.48",
+        "orix           >= 0.6",
+        "pooch          >= 0.13",
         "psutil",
-        "tqdm >= 0.5.2",
-        "scikit-image >= 0.16",
+        "tqdm           >= 0.5.2",
+        "scikit-image   >= 0.16.2",
         "scikit-learn",
         "scipy",
     ],
+    # fmt: on
     entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},
     # Files to include when distributing package
     packages=find_packages(),

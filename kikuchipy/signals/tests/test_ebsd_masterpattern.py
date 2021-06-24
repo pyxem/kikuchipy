@@ -27,22 +27,20 @@ from orix.vector import Vector3d
 from orix.quaternion import Rotation
 import pytest
 
+import kikuchipy as kp
 from kikuchipy import load
+from kikuchipy.conftest import assert_dictionary
 from kikuchipy.data import nickel_ebsd_master_pattern_small
-from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins.tests.test_emsoft_ebsd_masterpattern import (
     setup_axes_manager,
     METADATA,
 )
 from kikuchipy.signals.tests.test_ebsd import assert_dictionary
 from kikuchipy.signals.ebsd_master_pattern import (
-    EBSDMasterPattern,
-    LazyEBSDMasterPattern,
     _get_direction_cosines,
     _get_lambert_interpolation_parameters,
     _get_patterns_chunk,
 )
-from kikuchipy.signals.ebsd import LazyEBSD, EBSD
 from kikuchipy.indexing.similarity_metrics import ncc, ndp
 
 
@@ -50,11 +48,12 @@ DIR_PATH = os.path.dirname(__file__)
 EMSOFT_FILE = os.path.join(
     DIR_PATH, "../../data/emsoft_ebsd_master_pattern/master_patterns.h5"
 )
+EMSOFT_EBSD_FILE = os.path.join(DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5")
 
 
 class TestEBSDMasterPatternInit:
     def test_init_no_metadata(self):
-        s = EBSDMasterPattern(
+        s = kp.signals.EBSDMasterPattern(
             np.zeros((2, 10, 11, 11)),
             projection="lambert",
             hemisphere="both",
@@ -67,48 +66,44 @@ class TestEBSDMasterPatternInit:
         assert s.hemisphere == "both"
 
     def test_ebsd_masterpattern_lazy_data_init(self):
-        s = EBSDMasterPattern(da.zeros((2, 10, 11, 11)))
+        s = kp.signals.EBSDMasterPattern(da.zeros((2, 10, 11, 11)))
 
-        assert isinstance(s, EBSDMasterPattern)
+        assert isinstance(s, kp.signals.EBSDMasterPattern)
         assert isinstance(s.data, da.Array)
 
     def test_ebsd_masterpattern_lazy_init(self):
-        s = LazyEBSDMasterPattern(da.zeros((2, 10, 11, 11)))
+        s = kp.signals.LazyEBSDMasterPattern(da.zeros((2, 10, 11, 11)))
 
-        assert isinstance(s, LazyEBSDMasterPattern)
+        assert isinstance(s, kp.signals.LazyEBSDMasterPattern)
         assert isinstance(s.data, da.Array)
 
 
 class TestIO:
-    @pytest.mark.parametrize(
-        "save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"]
-    )
+    @pytest.mark.parametrize("save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"])
     def test_save_load_hspy(self, save_path_hdf5):
         s = load(EMSOFT_FILE)
 
         axes_manager = setup_axes_manager(["energy", "height", "width"])
 
-        assert isinstance(s, EBSDMasterPattern)
-        assert s.axes_manager.as_dictionary() == axes_manager
+        assert isinstance(s, kp.signals.EBSDMasterPattern)
+        assert_dictionary(s.axes_manager.as_dictionary(), axes_manager)
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
         s.save(save_path_hdf5)
 
         s2 = hs_load(save_path_hdf5, signal_type="EBSDMasterPattern")
-        assert isinstance(s2, EBSDMasterPattern)
-        assert s2.axes_manager.as_dictionary() == axes_manager
+        assert isinstance(s2, kp.signals.EBSDMasterPattern)
+        assert_dictionary(s2.axes_manager.as_dictionary(), axes_manager)
         assert_dictionary(s2.metadata.as_dictionary(), METADATA)
 
         s3 = hs_load(save_path_hdf5)
         assert isinstance(s3, Signal2D)
         s3.set_signal_type("EBSDMasterPattern")
-        assert isinstance(s3, EBSDMasterPattern)
-        assert s3.axes_manager.as_dictionary() == axes_manager
+        assert isinstance(s3, kp.signals.EBSDMasterPattern)
+        assert_dictionary(s3.axes_manager.as_dictionary(), axes_manager)
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
-    @pytest.mark.parametrize(
-        "save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"]
-    )
+    @pytest.mark.parametrize("save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"])
     def test_original_metadata_save_load_cycle(self, save_path_hdf5):
         s = nickel_ebsd_master_pattern_small()
 
@@ -127,7 +122,7 @@ class TestIO:
 
         s.save(save_path_hdf5)
         s2 = hs_load(save_path_hdf5, signal_type="EBSDMasterPattern")
-        assert isinstance(s2, EBSDMasterPattern)
+        assert isinstance(s2, kp.signals.EBSDMasterPattern)
 
         omd_dict_keys2 = s2.original_metadata.as_dictionary().keys()
         assert [k in omd_dict_keys2 for k in desired_keys]
@@ -140,16 +135,29 @@ class TestProperties:
     )
     def test_properties(self, projection, hemisphere):
         mp = nickel_ebsd_master_pattern_small(
-            projection=projection, hemisphere=hemisphere
+            projection=projection, hemisphere=hemisphere, lazy=True
         )
-
         assert mp.projection == projection
         assert mp.hemisphere == hemisphere
 
+        # Deepcopy
+        mp2 = mp.deepcopy()
+
+        assert mp2.projection == projection
+        mp2.projection = "gnomonic"
+        assert mp2.projection != projection
+
+        assert mp2.hemisphere == hemisphere
+        mp2.hemisphere = "west"
+        assert mp2.hemisphere != hemisphere
+
+        assert mp2.phase.point_group.name == mp.phase.point_group.name
+        mp2.phase.space_group = 220
+        assert mp2.phase.point_group.name != mp.phase.point_group.name
+
 
 class TestSimulatedPatternDictionary:
-    # Create detector model
-    detector = EBSDDetector(
+    detector = kp.detectors.EBSDDetector(
         shape=(480, 640),
         px_size=50,
         pc=(20, 20, 15000),
@@ -167,18 +175,9 @@ class TestSimulatedPatternDictionary:
         npx = 1001
         npy = 1001
         scale = 500
-        (
-            nii,
-            nij,
-            niip,
-            nijp,
-            di,
-            dj,
-            dim,
-            djm,
-        ) = _get_lambert_interpolation_parameters(
-            rotated_direction_cosines=dc, npx=npx, npy=npy, scale=scale,
-        )
+        nii, nij, niip, nijp = _get_lambert_interpolation_parameters(
+            rotated_direction_cosines=dc, npx=npx, npy=npy, scale=scale
+        )[:4]
 
         assert (nii <= niip).all()
         assert (nij <= nijp).all()
@@ -195,9 +194,6 @@ class TestSimulatedPatternDictionary:
 
     def test_get_patterns(self):
         # Ni Test
-        EMSOFT_EBSD_FILE = os.path.join(
-            DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5"
-        )
         emsoft_key = load(EMSOFT_EBSD_FILE)
         emsoft_key = emsoft_key.data[0]
 
@@ -219,7 +215,7 @@ class TestSimulatedPatternDictionary:
 
         detector_shape = self.detector.shape
         r2 = Rotation.from_euler(((0, 0, 0), (1, 1, 1), (2, 2, 2)))
-        mp_a = EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
+        mp_a = kp.signals.EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
         print(mp_a.axes_manager)
         mp_a.axes_manager[0].name = "hemisphere"
         mp_a.axes_manager[1].name = "energy"
@@ -227,40 +223,40 @@ class TestSimulatedPatternDictionary:
         mp_a.phase = Phase("Ni", 225)
         out_a = mp_a.get_patterns(r2, self.detector, 5)
 
-        assert isinstance(out_a, LazyEBSD)
+        assert isinstance(out_a, kp.signals.LazyEBSD)
         desired_data_shape = (3,) + detector_shape[::-1]
         assert out_a.axes_manager.shape == desired_data_shape
 
-        mp_b = EBSDMasterPattern(np.zeros((10, 11, 11)))
+        mp_b = kp.signals.EBSDMasterPattern(np.zeros((10, 11, 11)))
         mp_b.axes_manager[0].name = "energy"
         mp_b.projection = "lambert"
         mp_b.phase = Phase("Ni", 225)
         out_b = mp_b.get_patterns(r2, self.detector, 5)
 
-        assert isinstance(out_b, LazyEBSD)
+        assert isinstance(out_b, kp.signals.LazyEBSD)
         assert out_b.axes_manager.shape == desired_data_shape
 
-        mp_c = EBSDMasterPattern(np.zeros((11, 11)))
+        mp_c = kp.signals.EBSDMasterPattern(np.zeros((11, 11)))
         mp_c.projection = "lambert"
         mp_c.phase = Phase("Ni", 225)
         out_c = mp_c.get_patterns(r2, self.detector, 5)
         out_c_2 = mp_c.get_patterns(r2, self.detector, 5, compute=True)
 
-        assert isinstance(out_c, LazyEBSD)
-        assert isinstance(out_c_2, EBSD)
+        assert isinstance(out_c, kp.signals.LazyEBSD)
+        assert isinstance(out_c_2, kp.signals.EBSD)
         assert out_c.axes_manager.shape == desired_data_shape
 
-        mp_c2 = EBSDMasterPattern(np.zeros((11, 11)))
+        mp_c2 = kp.signals.EBSDMasterPattern(np.zeros((11, 11)))
         mp_c2.projection = "lambert"
         mp_c2.phase = Phase("!Ni", 220)
         with pytest.raises(AttributeError):
             mp_c2.get_patterns(r2, self.detector, 5)
 
-        mp_d = EBSDMasterPattern(np.zeros((2, 11, 11)))
+        mp_d = kp.signals.EBSDMasterPattern(np.zeros((2, 11, 11)))
         with pytest.raises(NotImplementedError):
             mp_d.get_patterns(r2, self.detector, 5)
 
-        mp_e = EBSDMasterPattern(np.zeros((10, 11, 11)))
+        mp_e = kp.signals.EBSDMasterPattern(np.zeros((10, 11, 11)))
         mp_e.axes_manager[0].name = "energy"
         mp_e.projection = "lambert"
         mp_e.phase = Phase("!Ni", 220)
@@ -269,7 +265,7 @@ class TestSimulatedPatternDictionary:
 
         # More than one Projection center is currently not supported so
         # it should fail
-        d2 = EBSDDetector(
+        d2 = kp.detectors.EBSDDetector(
             shape=(10, 10),
             px_size=50,
             pc=((0, 0, 15000), (0, 0, 15000)),
@@ -306,7 +302,7 @@ class TestSimulatedPatternDictionary:
     def test_simulated_patterns_xmap_detector(self):
         mp = nickel_ebsd_master_pattern_small(projection="lambert")
         r = Rotation.from_euler([[0, 0, 0], [0, np.pi / 2, 0]])
-        detector = EBSDDetector(
+        detector = kp.detectors.EBSDDetector(
             shape=(60, 60),
             pc=[0.5, 0.5, 0.5],
             sample_tilt=70,
@@ -326,13 +322,41 @@ class TestSimulatedPatternDictionary:
     def test_get_patterns_navigation_shape(self, nav_shape):
         mp = nickel_ebsd_master_pattern_small(projection="lambert")
         r = Rotation(np.random.uniform(low=0, high=1, size=nav_shape + (4,)))
-        detector = EBSDDetector(shape=(60, 60))
+        detector = kp.detectors.EBSDDetector(shape=(60, 60))
         sim = mp.get_patterns(rotations=r, detector=detector, energy=20)
         assert sim.axes_manager.navigation_shape[::-1] == nav_shape
 
     def test_get_patterns_navigation_shape_raises(self):
         mp = nickel_ebsd_master_pattern_small(projection="lambert")
         r = Rotation(np.random.uniform(low=0, high=1, size=(1, 2, 3, 4)))
-        detector = EBSDDetector(shape=(60, 60))
+        detector = kp.detectors.EBSDDetector(shape=(60, 60))
         with pytest.raises(ValueError, match="The rotations object can only"):
             _ = mp.get_patterns(rotations=r, detector=detector, energy=20)
+
+    def test_detector_azimuthal(self):
+        """Test that setting an azimuthal angle of a detector results in
+        different patterns.
+        """
+        det1 = self.detector
+
+        # Looking from the detector toward the sample, the left part of
+        # the detector is closer to the sample than the right part
+        det2 = det1.deepcopy()
+        det2.azimuthal = 10
+
+        # Looking from the detector toward the sample, the right part of
+        # the detector is closer to the sample than the left part
+        det3 = det1.deepcopy()
+        det3.azimuthal = -10
+
+        mp = nickel_ebsd_master_pattern_small(projection="lambert")
+        r = Rotation.identity()
+
+        kwargs = dict(rotations=r, energy=20, compute=True)
+        sim1 = mp.get_patterns(detector=det1, **kwargs)
+        sim2 = mp.get_patterns(detector=det2, **kwargs)
+        sim3 = mp.get_patterns(detector=det3, **kwargs)
+
+        assert not np.allclose(sim1.data, sim2.data)
+        assert np.allclose(sim2.data.mean(), 44.06, atol=1e-2)
+        assert np.allclose(sim3.data.mean(), 43.88, atol=1e-2)

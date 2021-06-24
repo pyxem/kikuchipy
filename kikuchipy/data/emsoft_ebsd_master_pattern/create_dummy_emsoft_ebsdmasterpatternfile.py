@@ -14,9 +14,9 @@ signal_shape = (npx * 2 + 1,) * 2
 energies = np.linspace(10, 20, 11, dtype=np.float32)
 data_shape = (len(energies),) + signal_shape
 
-mp_lambert_north = np.ones(
-    (1,) + data_shape, dtype=np.float32
-) * energies.reshape((1, 11, 1, 1))
+mp_lambert_north = np.ones((1,) + data_shape, dtype=np.float32) * energies.reshape(
+    (1, 11, 1, 1)
+)
 mp_lambert_south = mp_lambert_north
 circle = kp.filters.Window(shape=signal_shape).astype(np.float32)
 mp_spherical_north = mp_lambert_north.squeeze() * circle
@@ -68,18 +68,14 @@ data = {
         "BetheList": {"c1": 4.0, "c2": 8.0, "c3": 50.0, "sgdbdiff": 1.0},
     },
     "EMheader": {
-        "EBSDmaster": {
-            "ProgramName": np.array([b"EMEBSDmaster.f90"], dtype="S16")
-        },
+        "EBSDmaster": {"ProgramName": np.array([b"EMEBSDmaster.f90"], dtype="S16")},
     },
 }
 
 kp.io.plugins.h5ebsd.dict2h5ebsdgroup(dictionary=data, group=f["/"])
 
 # One chunked data set
-f["EMData/EBSDmaster"].create_dataset(
-    "mLPSH", data=mp_lambert_south, chunks=True
-)
+f["EMData/EBSDmaster"].create_dataset("mLPSH", data=mp_lambert_south, chunks=True)
 
 # One byte string with latin-1 stuff
 creation_time = b"12:30:13.559 PM\xf0\x14\x1e\xc8\xbcU"

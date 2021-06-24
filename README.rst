@@ -3,6 +3,10 @@
     :target: https://mybinder.org/v2/gh/pyxem/kikuchipy/HEAD
     :alt: Launch binder
 
+.. Gitter chat
+.. image:: https://badges.gitter.im/Join%20Chat.svg
+    :target: https://gitter.im/pyxem/kikuchipy
+
 .. Read the Docs
 .. image:: https://readthedocs.org/projects/kikuchipy/badge/?version=latest
     :target: https://kikuchipy.org/en/latest/
@@ -14,7 +18,7 @@
     :alt: Build status
 
 .. Coveralls
-.. image:: https://img.shields.io/coveralls/github/pyxem/kikuchipy.svg
+.. image:: https://coveralls.io/repos/github/pyxem/kikuchipy/badge.svg?branch=master
     :target: https://coveralls.io/github/pyxem/kikuchipy?branch=master
     :alt: Coveralls status
 

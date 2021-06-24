@@ -25,10 +25,7 @@ from scipy.spatial.distance import cdist
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.data import nickel_ebsd_small, nickel_ebsd_master_pattern_small
 from kikuchipy.indexing._pattern_matching import _pattern_match
-from kikuchipy.indexing.similarity_metrics import (
-    make_similarity_metric,
-    MetricScope,
-)
+from kikuchipy.indexing.similarity_metrics import make_similarity_metric, MetricScope
 
 
 class TestPatternMatching:
@@ -41,24 +38,18 @@ class TestPatternMatching:
 
     def test_not_recognized_metric(self):
         with pytest.raises(ValueError):
-            _pattern_match(
-                np.zeros((2, 2)), np.zeros((2, 2)), metric="not_recognized"
-            )
+            _pattern_match(np.zeros((2, 2)), np.zeros((2, 2)), metric="not_recognized")
 
     def test_mismatching_signal_shapes(self):
         self.dummy_metric.scope = MetricScope.MANY_TO_MANY
         with pytest.raises(OSError):
-            _pattern_match(
-                np.zeros((2, 2)), np.zeros((3, 3)), metric=self.dummy_metric
-            )
+            _pattern_match(np.zeros((2, 2)), np.zeros((3, 3)), metric=self.dummy_metric)
 
     def test_metric_not_compatible_with_data(self):
         self.dummy_metric.scope = MetricScope.ONE_TO_MANY
         with pytest.raises(OSError):
             _pattern_match(
-                np.zeros((2, 2, 2, 2)),
-                np.zeros((2, 2)),
-                metric=self.dummy_metric,
+                np.zeros((2, 2, 2, 2)), np.zeros((2, 2)), metric=self.dummy_metric
             )
 
     @pytest.mark.parametrize("n_slices", [1, 2])
@@ -110,9 +101,9 @@ class TestPatternMatching:
         exp = nickel_ebsd_small().data
         sim = exp.reshape((-1,) + exp.shape[-2:])
 
-        sim_idx1, scores1 = _pattern_match(exp, sim, n_slices=2)
-        sim_idx2, scores2 = _pattern_match(exp, sim, phase_name="a", n_slices=2)
-        sim_idx3, scores3 = _pattern_match(exp, sim, phase_name="", n_slices=2)
+        sim_idx1, _ = _pattern_match(exp, sim, n_slices=2)
+        sim_idx2, _ = _pattern_match(exp, sim, phase_name="a", n_slices=2)
+        sim_idx3, _ = _pattern_match(exp, sim, phase_name="", n_slices=2)
 
         assert np.allclose(sim_idx1[0], [0, 3, 6, 4, 7, 1, 8, 5, 2])
         assert np.allclose(sim_idx2[0], [0, 3, 6, 4, 7, 1, 8, 5, 2])
@@ -140,9 +131,9 @@ class TestPatternMatching:
         )
         sim = mp.get_patterns(rotations=r, detector=detector, energy=20)
 
-        xmap = s.match_patterns(sim, keep_n=1)
-        scores = xmap.scores.reshape(xmap.size,)
-        sim_idx = xmap.simulation_indices.reshape(xmap.size,)
+        xmap = s.dictionary_indexing(sim, keep_n=1)
+        scores = xmap.scores.reshape(xmap.size)
+        sim_idx = xmap.simulation_indices.reshape(xmap.size)
 
         assert np.allclose(
             scores,

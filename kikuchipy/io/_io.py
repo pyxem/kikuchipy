@@ -17,7 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from typing import Optional, Union
+from typing import Optional
 
 from hyperspy.io_plugins import hspy
 from hyperspy.misc.io.tools import overwrite as overwrite_method
@@ -33,6 +33,7 @@ from kikuchipy.io.plugins import (
     h5ebsd,
     nordif,
     nordif_calibration_patterns,
+    oxford_binary,
 )
 from kikuchipy.io._util import _get_input_bool, _ensure_directory
 
@@ -44,6 +45,7 @@ plugins = [
     h5ebsd,
     nordif,
     nordif_calibration_patterns,
+    oxford_binary,
 ]
 
 default_write_ext = set()
@@ -79,10 +81,12 @@ def load(filename: str, lazy: bool = False, **kwargs):
 
     Examples
     --------
+    Import nine patterns from an HDF5 file in a directory `DATA_DIR`
+
     >>> import kikuchipy as kp
-    >>> s = kp.load("patterns.h5")
+    >>> s = kp.load(DATA_DIR + "/patterns.h5")
     >>> s
-    <EBSD, title: , dimensions: (10, 20|60, 60)>
+    <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
     """
     if not os.path.isfile(filename):
         raise IOError(f"No filename matches '{filename}'.")
@@ -95,8 +99,8 @@ def load(filename: str, lazy: bool = False, **kwargs):
             readers.append(plugin)
     if len(readers) == 0:
         raise IOError(
-            f"Could not read '{filename}'. If the file format is supported, "
-            "please report this error."
+            f"Could not read '{filename}'. If the file format is supported, please "
+            "report this error"
         )
     elif len(readers) > 1 and is_hdf5(filename):
         reader = _plugin_from_footprints(filename, plugins=readers)
@@ -149,8 +153,7 @@ def _dict2signal(signal_dict: dict, lazy: bool = False):
             record_by = md["Signal"]["record_by"]
             if record_by != "image":
                 raise ValueError(
-                    "kikuchipy only supports `record_by = image`, not "
-                    f"{record_by}."
+                    "kikuchipy only supports `record_by = image`, not " f"{record_by}."
                 )
             del md["Signal"]["record_by"]
         if "Signal" in md and "signal_type" in md["Signal"]:
@@ -267,11 +270,10 @@ def _assign_signal_subclass(
     ):
         dtype = "real"
     else:
-        raise ValueError(f"Data type '{dtype.name}' not understood.")
+        raise ValueError(f"Data type '{dtype.name}' not understood")
     if not isinstance(signal_dimension, int) or signal_dimension < 0:
         raise ValueError(
-            "Signal dimension must be a positive integer and not "
-            f"'{signal_dimension}'."
+            f"Signal dimension must be a positive integer and not '{signal_dimension}'"
         )
 
     # Get possible signal classes
@@ -342,8 +344,8 @@ def _save(
 
     if writer is None:
         raise ValueError(
-            f"'{ext}' does not correspond to any supported format. Supported "
-            f"file extensions are: '{strlist2enumeration(default_write_ext)}'"
+            f"'{ext}' does not correspond to any supported format. Supported file "
+            f"extensions are: '{strlist2enumeration(default_write_ext)}'"
         )
     else:
         sd = signal.axes_manager.signal_dimension
@@ -359,8 +361,8 @@ def _save(
                 ):
                     writing_plugins.append(plugin)
             raise ValueError(
-                "This file format cannot write this data. The following "
-                f"formats can: {strlist2enumeration(writing_plugins)}"
+                "This file format cannot write this data. The following formats can: "
+                f"{strlist2enumeration(writing_plugins)}"
             )
 
         _ensure_directory(filename)
@@ -384,8 +386,8 @@ def _save(
             write = False  # Don't write the file
         else:
             raise ValueError(
-                "overwrite parameter can only be None, True or False, and "
-                f"not {overwrite}"
+                "overwrite parameter can only be None, True or False, and not "
+                f"{overwrite}"
             )
 
         # Finally, write file
@@ -393,7 +395,5 @@ def _save(
             writer.file_writer(filename, signal, **kwargs)
             directory, filename = os.path.split(os.path.abspath(filename))
             signal.tmp_parameters.set_item("folder", directory)
-            signal.tmp_parameters.set_item(
-                "filename", os.path.splitext(filename)[0]
-            )
+            signal.tmp_parameters.set_item("filename", os.path.splitext(filename)[0])
             signal.tmp_parameters.set_item("extension", ext)

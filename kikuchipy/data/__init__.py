@@ -22,8 +22,8 @@ Some datasets must be downloaded from the web. For more test datasets,
 see :doc:`open datasets <open_datasets>`.
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
 from typing import Union
 
 import pooch as ppooch
@@ -111,7 +111,7 @@ def nickel_ebsd_small(**kwargs) -> EBSD:
     signal : EBSD
         EBSD signal.
     """
-    return _load(filename="data/kikuchipy/patterns.h5", **kwargs)
+    return _load(filename="data/kikuchipy_h5ebsd/patterns.h5", **kwargs)
 
 
 def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
@@ -171,9 +171,7 @@ def nickel_ebsd_large(allow_download: bool = False, **kwargs) -> EBSD:
     )
 
 
-def silicon_ebsd_moving_screen_in(
-    allow_download: bool = False, **kwargs
-) -> EBSD:
+def silicon_ebsd_moving_screen_in(allow_download: bool = False, **kwargs) -> EBSD:
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
 
@@ -195,7 +193,7 @@ def silicon_ebsd_moving_screen_in(
     -------
     signal : EBSD
         EBSD signal.
-    
+
     See Also
     --------
     silicon_ebsd_moving_screen_out5mm
@@ -208,9 +206,7 @@ def silicon_ebsd_moving_screen_in(
     )
 
 
-def silicon_ebsd_moving_screen_out5mm(
-    allow_download: bool = False, **kwargs
-) -> EBSD:
+def silicon_ebsd_moving_screen_out5mm(allow_download: bool = False, **kwargs) -> EBSD:
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
 
@@ -234,7 +230,7 @@ def silicon_ebsd_moving_screen_out5mm(
     -------
     signal : EBSD
         EBSD signal.
-    
+
     See Also
     --------
     silicon_ebsd_moving_screen_in
@@ -247,9 +243,7 @@ def silicon_ebsd_moving_screen_out5mm(
     )
 
 
-def silicon_ebsd_moving_screen_out10mm(
-    allow_download: bool = False, **kwargs
-) -> EBSD:
+def silicon_ebsd_moving_screen_out10mm(allow_download: bool = False, **kwargs) -> EBSD:
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
 
@@ -273,7 +267,7 @@ def silicon_ebsd_moving_screen_out10mm(
     -------
     signal : EBSD
         EBSD signal.
-    
+
     See Also
     --------
     silicon_ebsd_moving_screen_in

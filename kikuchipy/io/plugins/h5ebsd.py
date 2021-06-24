@@ -119,9 +119,7 @@ def file_reader(
         )
 
     # Get scans to return
-    scans_return = get_desired_scan_groups(
-        file=f, scan_group_names=scan_group_names
-    )
+    scans_return = get_desired_scan_groups(file=f, scan_group_names=scan_group_names)
 
     # Parse file
     scan_dict_list = []
@@ -149,17 +147,16 @@ def check_h5ebsd(file: h5py.File):
     n_groups = len(top_groups)
     if len(scan_groups) != n_groups - 2:
         raise IOError(
-            f"'{file.filename}' is not an h5ebsd file, as manufacturer and/or"
-            " version could not be read from its top group."
+            f"'{file.filename}' is not an h5ebsd file, as manufacturer and/or version "
+            "could not be read from its top group."
         )
 
     if not any(
         "EBSD/Data" in group and "EBSD/Header" in group for group in scan_groups
     ):
         raise IOError(
-            f"'{file.filename}' is not an h5ebsd file, as no top groups with "
-            "subgroup name 'EBSD' with subgroups 'Data' and 'Header' was "
-            "detected."
+            f"'{file.filename}' is not an h5ebsd file, as no top groups with subgroup "
+            "name 'EBSD' with subgroups 'Data' and 'Header' was detected"
         )
 
 
@@ -216,15 +213,11 @@ def manufacturer_pattern_names() -> Dict[str, str]:
     -------
     dict
     """
-    return {
-        "kikuchipy": "patterns",
-        "edax": "Pattern",
-        "bruker nano": "RawPatterns",
-    }
+    return {"kikuchipy": "patterns", "edax": "Pattern", "bruker nano": "RawPatterns"}
 
 
 def get_desired_scan_groups(
-    file: h5py.File, scan_group_names: Union[None, str, List[str]] = None,
+    file: h5py.File, scan_group_names: Union[None, str, List[str]] = None
 ) -> List[h5py.Group]:
     """Get the desired HDF5 groups with scans within them.
 
@@ -300,8 +293,8 @@ def hdf5group2dict(
     """
     if "lazy" in kwargs.keys():
         warnings.warn(
-            "The 'lazy' parameter is not used in this method. Passing it will "
-            "raise an error from v0.3.",
+            "The 'lazy' parameter is not used in this method. Passing it will raise an "
+            "error from v0.3.",
             VisibleDeprecationWarning,
         )
 
@@ -336,7 +329,7 @@ def hdf5group2dict(
 
 
 def h5ebsd2signaldict(
-    scan_group: h5py.Group, manufacturer: str, version: str, lazy: bool = False,
+    scan_group: h5py.Group, manufacturer: str, version: str, lazy: bool = False
 ) -> dict:
     """Return a dictionary with ``signal``, ``metadata`` and
     ``original_metadata`` from an h5ebsd scan.
@@ -359,9 +352,7 @@ def h5ebsd2signaldict(
         Dictionary with patterns, ``metadata`` and
         ``original_metadata``.
     """
-    md, omd, scan_size = h5ebsdheader2dicts(
-        scan_group, manufacturer, version, lazy
-    )
+    md, omd, scan_size = h5ebsdheader2dicts(scan_group, manufacturer, version, lazy)
     md.set_item("Signal.signal_type", "EBSD")
     md.set_item("Signal.record_by", "image")
 
@@ -398,12 +389,14 @@ def h5ebsd2signaldict(
     sx, sy = scan_size.sx, scan_size.sy
     nx, ny = scan_size.nx, scan_size.ny
     try:
+        if "indices" in scan_size.keys():
+            # Because of Bruker region of interest
+            data = data[scan_size.indices]
         data = data.reshape((ny, nx, sy, sx)).squeeze()
     except ValueError:
         warnings.warn(
-            f"Pattern size ({sx} x {sy}) and scan size ({nx} x {ny}) larger "
-            "than file size. Will attempt to load by zero padding incomplete "
-            "frames."
+            f"Pattern size ({sx} x {sy}) and scan size ({nx} x {ny}) larger than file "
+            "size. Will attempt to load by zero padding incomplete frames"
         )
         # Data is stored image by image
         pw = [(0, ny * nx * sy * sx - data.size)]
@@ -536,7 +529,7 @@ def kikuchipyheader2dicts(
     md.set_item(
         ebsd_node,
         hdf5group2dict(
-            group=scan_group["EBSD/Header"], data_dset_names=pattern_dset_names,
+            group=scan_group["EBSD/Header"], data_dset_names=pattern_dset_names
         ),
     )
     md = _delete_from_nested_dictionary(md, "Phases")
@@ -544,7 +537,7 @@ def kikuchipyheader2dicts(
     md.set_item(
         sem_node,
         hdf5group2dict(
-            group=scan_group["SEM/Header"], data_dset_names=pattern_dset_names,
+            group=scan_group["SEM/Header"], data_dset_names=pattern_dset_names
         ),
     )
     md.set_item(
@@ -613,8 +606,7 @@ def edaxheader2dicts(
         md.set_item(ebsd_node + ".grid_type", "square")
     else:
         raise IOError(
-            f"Only square grids are supported, however a {grid_type} grid was "
-            "passed."
+            f"Only square grids are supported, however a {grid_type} grid was passed"
         )
     md.set_item(ebsd_node + ".sample_tilt", hd["Sample Tilt"])
     md.set_item("General.authors", hd["Operator"])
@@ -625,8 +617,7 @@ def edaxheader2dicts(
     md.set_item(sem_node + ".working_distance", hd["Working Distance"])
     if "SEM-PRIAS Images" in scan_group.keys():
         md.set_item(
-            sem_node + ".magnification",
-            scan_group["SEM-PRIAS Images/Header/Mag"][0],
+            sem_node + ".magnification", scan_group["SEM-PRIAS Images/Header/Mag"][0]
         )
     # Loop over phases in group and add to metadata
     for phase_no, phase in hd["Phase"].items():
@@ -687,7 +678,7 @@ def brukerheader2dicts(
         recursive=True,
     )
     dd = hdf5group2dict(
-        group=scan_group["EBSD/Data"], data_dset_names=pattern_dset_names,
+        group=scan_group["EBSD/Data"], data_dset_names=pattern_dset_names
     )
 
     # Populate metadata dictionary
@@ -698,17 +689,28 @@ def brukerheader2dicts(
         md.set_item(ebsd_node + ".grid_type", "square")
     else:
         raise IOError(
-            f"Only square grids are supported, however a {grid_type} grid was "
-            "passed."
+            f"Only square grids are supported, however a {grid_type} grid was passed"
         )
-    md.set_item(ebsd_node + ".sample_tilt", hd["SampleTilt"])
-    md.set_item(ebsd_node + ".xpc", np.mean(dd["PCX"]))
-    md.set_item(ebsd_node + ".ypc", np.mean(dd["PCY"]))
-    md.set_item(ebsd_node + ".zpc", np.mean(dd["DD"]))
-    md.set_item(ebsd_node + ".static_background", hd["StaticBackground"])
-    md.set_item(sem_node + ".working_distance", hd["WD"])
-    md.set_item(sem_node + ".beam_energy", hd["KV"])
-    md.set_item(sem_node + ".magnification", hd["Magnification"])
+    # Values: data set name, data group, function to apply, node
+    dset_mapping = {
+        "sample_tilt": ["SampleTilt", hd, None, ebsd_node],
+        "xpz": ["PCX", dd, np.nanmean, ebsd_node],
+        "ypc": ["PCY", dd, np.nanmean, ebsd_node],
+        "zpc": ["DD", dd, np.nanmean, ebsd_node],
+        "static_background": ["StaticBackground", hd, None, ebsd_node],
+        "working_distance": ["WD", hd, None, sem_node],
+        "beam_energy": ["KV", hd, None, sem_node],
+        "magnification": ["Magnification", hd, None, sem_node],
+    }
+    for k, v in dset_mapping.items():
+        dset_name, dset_group, func, node = v
+        try:
+            dset = dset_group[dset_name]
+            if func:
+                dset = func(dset)
+        except KeyError:
+            dset = None
+        md.set_item(node + f".{k}", dset)
     # Loop over phases
     for phase_no, phase in hd["Phases"].items():
         phase["material_name"] = phase["Name"]
@@ -728,12 +730,35 @@ def brukerheader2dicts(
     # Populate original metadata dictionary
     omd = DictionaryTreeBrowser({"bruker_header": hd})
 
-    # Populate scan size dictionary
+    # Initialize scan size dictionary
     scan_size = DictionaryTreeBrowser()
+
+    # Get region of interest (ROI, only rectangular shape supported)
+    try:
+        sd = hdf5group2dict(group=scan_group["EBSD/SEM"])
+        ir = sd["IY"][()]
+        ic = sd["IX"][()]
+        roi = True
+    except KeyError:
+        roi = False
+        nr = hd["NROWS"]
+        nc = hd["NCOLS"]
+    if roi:
+        nr_roi, nc_roi, is_rectangular = _bruker_roi_is_rectangular(ir, ic)
+        if is_rectangular:
+            nr = nr_roi
+            nc = nc_roi
+            # Get indices of patterns in the 2D map
+            idx = np.array([ir - np.min(ir), ic - np.min(ic)])
+            scan_size["indices"] = np.ravel_multi_index(idx, (nr, nc)).argsort()
+        else:
+            raise ValueError("Only a rectangular region of interest is supported")
+
+    # Populate scan size dictionary
     scan_size.set_item("sx", hd["PatternWidth"])
     scan_size.set_item("sy", hd["PatternHeight"])
-    scan_size.set_item("nx", hd["NCOLS"])
-    scan_size.set_item("ny", hd["NROWS"])
+    scan_size.set_item("nx", nc)
+    scan_size.set_item("ny", nr)
     scan_size.set_item("step_x", hd["XSTEP"])
     scan_size.set_item("step_y", hd["YSTEP"])
     scan_size.set_item(
@@ -741,6 +766,29 @@ def brukerheader2dicts(
     )
 
     return md, omd, scan_size
+
+
+def _bruker_roi_is_rectangular(ir, ic):
+    ir_unique, ir_unique_counts = np.unique(ir, return_counts=True)
+    ic_unique, ic_unique_counts = np.unique(ic, return_counts=True)
+    is_rectangular = (
+        np.all(np.diff(np.sort(ir_unique)) == 1)
+        and np.all(np.diff(np.sort(ic_unique)) == 1)
+        and np.unique(ir_unique_counts).size == 1
+        and np.unique(ic_unique_counts).size == 1
+    )
+    ir2 = np.max(ir) - np.min(ir) + 1
+    ic2 = np.max(ic) - np.min(ic) + 1
+    return ir2, ic2, is_rectangular
+
+
+# (n rows, n columns). Source: internet
+BRUKER_DETECTOR_MODEL_RESOLUTION = dict(
+    eflash_fs=(480, 640),
+    eflash_hd=(1200, 1600),
+    eflash_hr=(1200, 1600),
+    eflash_xs=(540, 720),
+)
 
 
 def file_writer(
@@ -791,8 +839,8 @@ def file_writer(
         if man_ver_dict["manufacturer"].lower() != man_file.lower():
             f.close()
             raise IOError(
-                f"Only writing to kikuchipy's (and not {man_file}'s) h5ebsd "
-                "format is supported."
+                f"Only writing to kikuchipy's (and not {man_file}'s) h5ebsd format is "
+                "supported."
             )
         man_ver_dict["version"] = ver_file
 
@@ -918,8 +966,8 @@ def dict2h5ebsdgroup(dictionary: dict, group: h5py.Group, **kwargs):
                 dshape = np.shape(val)
             except TypeError:
                 warnings.warn(
-                    "The hdf5 writer could not write the following information "
-                    "to the file '{} : {}'.".format(key, val)
+                    "The hdf5 writer could not write the following information to the "
+                    f"file '{key} : {val}'"
                 )
                 break  # or continue?
         group.create_dataset(key, shape=dshape, dtype=ddtype, **kwargs)

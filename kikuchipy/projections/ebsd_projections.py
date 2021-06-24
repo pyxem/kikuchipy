@@ -30,7 +30,9 @@ from kikuchipy.crystallography import get_direct_structure_matrix
 
 
 def detector2sample(
-    sample_tilt: float, detector_tilt: float, convention: Optional[str] = None,
+    sample_tilt: float,
+    detector_tilt: float,
+    convention: Optional[str] = None,
 ) -> Rotation:
     """Rotation U_S to align detector frame D with sample frame S.
 

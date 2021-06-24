@@ -28,14 +28,14 @@ We strive to:
 
 1. Be open. We invite anyone to participate in our community. We prefer to use
    public methods of communication for project-related messages, unless
-   discussing something sensitive. This applies to messages for help or 
+   discussing something sensitive. This applies to messages for help or
    project-related support, too; not only is a public-support request much more
    likely to result in an answer to a question, it also ensures that any
    inadvertent mistakes in answering are more easily detected and corrected.
 
 2. Be empathetic, welcoming, friendly, and patient. We work together to resolve
    conflict, and assume good intentions. We may all experience some frustration
-   from time to time, but we do not allow frustration to turn into a personal 
+   from time to time, but we do not allow frustration to turn into a personal
    attack. A community where people feel uncomfortable or threatened is not a
    productive one.
 
@@ -51,7 +51,7 @@ We strive to:
    appropriate forum. We will try hard to be responsive and helpful.
 
 5. Be careful in the words that we choose. We are careful and respectful in our
-   communication and we take responsibility for our own speech. Be kind 
+   communication and we take responsibility for our own speech. Be kind
    others. Do not insult or put down other participants. We will not accept
    harassment or other exclusionary behaviour, such as:
 
@@ -153,5 +153,5 @@ Endnotes
 We are thankful to the groups behind the following documents, from which we drew
 content and inspiration:
 
-* `napari Code of Conduct <https://github.com/napari/napari/blob/master/docs/source/developers/CODE_OF_CONDUCT.md>`_
+* `napari Code of Conduct <https://napari.org/community/code_of_conduct.html>`_
 * `NumPy Code of Conduct <https://numpy.org/code-of-conduct>`_

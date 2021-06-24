@@ -49,9 +49,7 @@ def get_line_segment_list(lines: Union[list, np.ndarray], **kwargs) -> list:
             y1 = lines[..., i, 1]
             x2 = lines[..., i, 2]
             y2 = lines[..., i, 3]
-            marker_list.append(
-                line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kwargs)
-            )
+            marker_list.append(line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kwargs))
     return marker_list
 
 
@@ -84,9 +82,7 @@ def get_point_list(points: Union[list, np.ndarray], **kwargs) -> list:
 
 
 def get_text_list(
-    texts: Union[list, np.ndarray],
-    coordinates: Union[np.ndarray, list],
-    **kwargs,
+    texts: Union[list, np.ndarray], coordinates: Union[np.ndarray, list], **kwargs
 ) -> list:
     """Return a list of text markers.
 
@@ -117,17 +113,6 @@ def get_text_list(
             y = coordinates[..., i, 1]
             x[~is_finite[..., i]] = np.nan
             y[~is_finite[..., i]] = np.nan
-            text_marker = text(x=x, y=y, text=texts[i], **kwargs,)
-            # TODO: Pass "visible" parameter to text() when HyperSpy allows
-            #  it (merges this PR
-            #  https://github.com/hyperspy/hyperspy/pull/2558 and publishes
-            #  a minor release with that update)
-            # text_marker = text(
-            #     x=coordinates[..., i, 0],
-            #     y=coordinates[..., i, 1],
-            #     text=texts[i],
-            #     visible=is_finite[..., i],
-            #     **kwargs
-            # )
+            text_marker = text(x=x, y=y, text=texts[i], **kwargs)
             marker_list.append(text_marker)
     return marker_list

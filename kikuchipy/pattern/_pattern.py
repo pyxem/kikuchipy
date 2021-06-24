@@ -20,14 +20,7 @@ from typing import Union, Tuple, Optional, List
 
 from numba import njit
 import numpy as np
-from numpy.fft import (
-    fft2,
-    rfft2,
-    ifft2,
-    irfft2,
-    fftshift,
-    ifftshift,
-)
+from numpy.fft import fft2, rfft2, ifft2, irfft2, fftshift, ifftshift
 from scipy.ndimage import gaussian_filter
 from skimage.util.dtype import dtype_range
 
@@ -111,9 +104,7 @@ def remove_dynamic_background(
     filter_domain: str = "frequency",
     std: Union[None, int, float] = None,
     truncate: Union[int, float] = 4.0,
-    dtype_out: Union[
-        None, np.dtype, Tuple[int, int], Tuple[float, float]
-    ] = None,
+    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
 ) -> np.ndarray:
     """Remove the dynamic background in an EBSD pattern.
 
@@ -169,7 +160,7 @@ def remove_dynamic_background(
             offset_before_fft,
             offset_after_ifft,
         ) = _dynamic_background_frequency_space_setup(
-            pattern_shape=pattern.shape, std=std, truncate=truncate,
+            pattern_shape=pattern.shape, std=std, truncate=truncate
         )
         dynamic_bg = _fft_filter(
             image=pattern,
@@ -180,9 +171,7 @@ def remove_dynamic_background(
             offset_after_ifft=offset_after_ifft,
         )
     elif filter_domain == "spatial":
-        dynamic_bg = gaussian_filter(
-            input=pattern, sigma=std, truncate=truncate,
-        )
+        dynamic_bg = gaussian_filter(input=pattern, sigma=std, truncate=truncate)
     else:
         filter_domains = ["frequency", "spatial"]
         raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
@@ -194,9 +183,7 @@ def remove_dynamic_background(
         corrected_pattern = pattern / dynamic_bg
 
     # Rescale intensity
-    corrected_pattern = rescale_intensity(
-        corrected_pattern, dtype_out=dtype_out
-    )
+    corrected_pattern = rescale_intensity(corrected_pattern, dtype_out=dtype_out)
 
     return corrected_pattern
 
@@ -206,11 +193,7 @@ def _dynamic_background_frequency_space_setup(
     std: Union[int, float],
     truncate: Union[int, float],
 ) -> Tuple[
-    Tuple[int, int],
-    Tuple[int, int],
-    np.ndarray,
-    Tuple[int, int],
-    Tuple[int, int],
+    Tuple[int, int], Tuple[int, int], np.ndarray, Tuple[int, int], Tuple[int, int]
 ]:
     # Get Gaussian filtering window
     shape = (int(truncate * std),) * 2
@@ -280,7 +263,7 @@ def get_dynamic_background(
             offset_before_fft,
             offset_after_ifft,
         ) = _dynamic_background_frequency_space_setup(
-            pattern_shape=pattern.shape, std=std, truncate=truncate,
+            pattern_shape=pattern.shape, std=std, truncate=truncate
         )
         dynamic_bg = _fft_filter(
             image=pattern,
@@ -291,9 +274,7 @@ def get_dynamic_background(
             offset_after_ifft=offset_after_ifft,
         )
     elif filter_domain == "spatial":
-        dynamic_bg = gaussian_filter(
-            input=pattern, sigma=std, truncate=truncate,
-        )
+        dynamic_bg = gaussian_filter(input=pattern, sigma=std, truncate=truncate)
     else:
         filter_domains = ["frequency", "spatial"]
         raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
@@ -485,9 +466,7 @@ def fft_filter(
         Filtered EBSD pattern.
     """
     # Get the FFT
-    pattern_fft = fft(
-        pattern, shift=shift, apodization_window=apodization_window
-    )
+    pattern_fft = fft(pattern, shift=shift, apodization_window=apodization_window)
 
     # Apply the transfer function to the FFT
     filtered_fft = pattern_fft * transfer_function
@@ -583,12 +562,12 @@ def fft_frequency_vectors(shape: Tuple[int, int]) -> np.ndarray:
 
 
 def _zero_mean(patterns: np.ndarray, axis: Tuple[int, tuple]) -> np.ndarray:
-    patterns_mean = patterns.mean(axis=axis, keepdims=True)
+    patterns_mean = np.nanmean(patterns, axis=axis, keepdims=True)
     return patterns - patterns_mean
 
 
 def _normalize(patterns: np.ndarray, axis: Tuple[int, tuple]) -> np.ndarray:
     patterns_squared = patterns ** 2
-    patterns_norm = patterns_squared.sum(axis=axis, keepdims=True)
+    patterns_norm = np.nansum(patterns_squared, axis=axis, keepdims=True)
     patterns_norm_squared = patterns_norm ** 0.5
     return patterns / patterns_norm_squared

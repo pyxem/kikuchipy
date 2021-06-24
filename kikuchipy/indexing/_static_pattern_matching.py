@@ -21,15 +21,9 @@ from typing import Union, List
 import numpy as np
 from orix.crystal_map import CrystalMap
 
-from kikuchipy.indexing._merge_crystal_maps import merge_crystal_maps
-from kikuchipy.indexing.orientation_similarity_map import (
-    orientation_similarity_map,
-)
+from kikuchipy.indexing import merge_crystal_maps, orientation_similarity_map
 from kikuchipy.indexing._pattern_matching import _pattern_match
-from kikuchipy.indexing.similarity_metrics import (
-    SimilarityMetric,
-    _SIMILARITY_METRICS,
-)
+from kikuchipy.indexing.similarity_metrics import SimilarityMetric, _SIMILARITY_METRICS
 
 
 class StaticPatternMatching:
@@ -120,15 +114,13 @@ class StaticPatternMatching:
         """
         # This needs a rework before sent to cluster and possibly more
         # automatic slicing with dask
-        n_simulations = max(
-            [d.axes_manager.navigation_size for d in self.dictionaries]
-        )
+        n_simulations = max([d.axes_manager.navigation_size for d in self.dictionaries])
         good_number = 13500
         if (n_simulations // n_slices) > good_number:
             answer = input(
-                "You should probably increase n_slices depending on your "
-                f"available memory, try above {n_simulations // good_number}."
-                " Do you want to proceed? [y/n]"
+                "You should probably increase n_slices depending on your available "
+                f"memory, try above {n_simulations // good_number}. Do you want to "
+                "proceed? [y/n]"
             )
             if answer != "y":
                 return
@@ -139,8 +131,7 @@ class StaticPatternMatching:
 
         axes_manager = signal.axes_manager
         spatial_arrays = _get_spatial_arrays(
-            shape=axes_manager.navigation_shape,
-            extent=axes_manager.navigation_extent,
+            shape=axes_manager.navigation_shape, extent=axes_manager.navigation_extent
         )
         n_nav_dims = axes_manager.navigation_dimension
         if n_nav_dims == 0:
@@ -151,7 +142,7 @@ class StaticPatternMatching:
         else:  # 2d
             scan_unit = axes_manager.navigation_axes[0].units
             xmap_kwargs = dict(
-                x=spatial_arrays[0], y=spatial_arrays[1], scan_unit=scan_unit,
+                x=spatial_arrays[0], y=spatial_arrays[1], scan_unit=scan_unit
             )
 
         keep_n = min([keep_n] + [d.xmap.size for d in self.dictionaries])
@@ -172,10 +163,7 @@ class StaticPatternMatching:
             new_xmap = CrystalMap(
                 rotations=dictionary.xmap.rotations[simulation_indices],
                 phase_list=dictionary.xmap.phases_in_data,
-                prop={
-                    "scores": scores,
-                    "simulation_indices": simulation_indices,
-                },
+                prop={"scores": scores, "simulation_indices": simulation_indices},
                 **xmap_kwargs,
             )
             xmaps.append(new_xmap)
@@ -198,9 +186,7 @@ class StaticPatternMatching:
         return xmaps
 
 
-def _get_spatial_arrays(
-    shape: tuple, extent: tuple
-) -> Union[tuple, np.ndarray]:
+def _get_spatial_arrays(shape: tuple, extent: tuple) -> Union[tuple, np.ndarray]:
     n_nav_dims = len(shape)
     if n_nav_dims == 0:
         return ()

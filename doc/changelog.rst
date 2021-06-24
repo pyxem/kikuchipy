@@ -21,6 +21,16 @@ Contributors
 
 Added
 -----
+- Sample tilt about RD can be passed as part of an EBSDDetector. This can be used when
+  projecting parts of master patterns onto a detector.
+  (`#381 <https://github.com/pyxem/kikuchipy/pull/381>`_)
+- Reader for EBSD patterns stored in Oxford Instrument's binary .ebsp file
+  format, uncompressed and with intensities as 8-bit unsigned integers.
+  (`#371 <https://github.com/pyxem/kikuchipy/pull/371>`_)
+- Unit testing of docstring examples.
+  (`#350 <https://github.com/pyxem/kikuchipy/pull/350>`_)
+- Support for Python 3.9.
+  (`#348 <https://github.com/pyxem/kikuchipy/pull/348>`_)
 - Projection/pattern center calibration via the moving screen technique in a
   kikuchipy.detectors.calibration module.
   (`#322 <https://github.com/pyxem/kikuchipy/pull/322>`_)
@@ -29,6 +39,63 @@ Added
   (`#320 <https://github.com/pyxem/kikuchipy/pull/320>`_)
 - Reading of NORDIF calibration patterns specified in a setting file into an
   EBSD signal. (`#317 <https://github.com/pyxem/kikuchipy/pull/317>`_)
+
+Changed
+-------
+- Only return figure from kikuchipy.filters.Window.plot() if desired, also add a
+  colorbar only if desired.
+  (`#375 <https://github.com/pyxem/kikuchipy/pull/375>`_)
+
+Deprecated
+----------
+- The kikuchipy.pattern.correlate module will be removed in v0.5. Use
+  kikuchipy.indexing.similarity_metrics instead.
+  (`#377 <https://github.com/pyxem/kikuchipy/pull/377>`_)
+- Rename the EBSD.match_patterns() method to EBSD.dictionary_indexing().
+  match_patterns() will be removed in v0.5.
+  (`#376 <https://github.com/pyxem/kikuchipy/pull/376>`_)
+
+Fixed
+-----
+- Deep copying EBSD and EBSDMasterPattern signals carry over, respectively,
+  `xmap` and `detector`, and `phase`, `hemisphere` and `projection` properties
+  (`#356 <https://github.com/pyxem/kikuchipy/pull/356>`_).
+- Scaling of region of interest coordinates used in virtual backscatter electron
+  imaging to physical coordinates.
+  (`#349 <https://github.com/pyxem/kikuchipy/pull/349>`_)
+
+0.3.4 (2021-05-26)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Added
+-----
+- Restricted newest version of dask<=2021.03.1 and pinned orix==0.6.0.
+  (`#360 <https://github.com/pyxem/kikuchipy/pull/360>`_)
+
+0.3.3 (2021-04-18)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+- Ole Natlandsmyr
+
+Fixed
+-----
+- Reading of EBSD patterns from Bruker h5ebsd with a region of interest.
+  (`#339 <https://github.com/pyxem/kikuchipy/pull/339>`_)
+- Merging of (typically refined) crystal maps, where either a simulation indices
+  array is not present or the array contains more indices per point than scores.
+  (`#335 <https://github.com/pyxem/kikuchipy/pull/335>`_)
+- Bugs in getting plot markers from geometrical EBSD simulation.
+  (`#334 <https://github.com/pyxem/kikuchipy/pull/334>`_)
+- Passing a static background pattern to EBSD.remove_static_background() for a
+  non-square detector dataset works.
+  (`#331 <https://github.com/pyxem/kikuchipy/pull/331>`_)
 
 0.3.2 (2021-02-01)
 ==================

@@ -17,15 +17,15 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from copy import copy
-from typing import List, Tuple, Optional, Sequence, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 from dask.array import Array
-from numba import njit
-import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
 from matplotlib.colorbar import Colorbar
 from matplotlib.pyplot import subplots
+from numba import njit
+import numpy as np
 from scipy.signal.windows import get_window
 
 
@@ -58,13 +58,12 @@ class Window(np.ndarray):
         `window`. This can be either 1D or 2D, and can be asymmetrical.
         Default is (3, 3).
     **kwargs
-        Keyword arguments passed to the window type. If none are
-        passed, the default values of that particular window are used.
+        Required keyword arguments passed to the window type.
 
     Examples
     --------
-    >>> import kikuchipy as kp
     >>> import numpy as np
+    >>> import kikuchipy as kp
 
     The following passed parameters are the default
 
@@ -95,9 +94,9 @@ class Window(np.ndarray):
     >>> w = kp.filters.Window(np.arange(6).reshape(3, 2))
     >>> w
     Window (3, 2) custom
-    [[0, 1]
-     [2, 3]
-     [4, 5]]
+    [[0 1]
+     [2 3]
+     [4 5]]
 
     To create a Gaussian window with a standard deviation of 2, obtained
     from :func:`scipy.signal.windows.gaussian`
@@ -105,9 +104,9 @@ class Window(np.ndarray):
     >>> w = kp.filters.Window(window="gaussian", std=2)
     >>> w
     Window (3, 3) gaussian
-    [[0.77880078, 0.8824969 , 0.77880078]
-     [0.8824969 , 1.        , 0.8824969 ]
-     [0.77880078, 0.8824969 , 0.77880078]]
+    [[0.7788 0.8825 0.7788]
+     [0.8825 1.     0.8825]
+     [0.7788 0.8825 0.7788]]
 
     See Also
     --------
@@ -135,12 +134,10 @@ class Window(np.ndarray):
             try:
                 if any(np.array(shape) < 1):
                     raise ValueError(f"All window axes {shape} must be > 0.")
-                if any(isinstance(i, np.float) for i in np.array(shape)):
+                if any(isinstance(i, float) for i in np.array(shape)):
                     raise TypeError
             except TypeError:
-                raise TypeError(
-                    f"Window shape {shape} must be a sequence of ints."
-                )
+                raise TypeError(f"Window shape {shape} must be a sequence of ints.")
 
         exclude_window_corners = False
         if isinstance(window, np.ndarray) or isinstance(window, Array):
@@ -289,10 +286,12 @@ class Window(np.ndarray):
         self,
         grid: bool = True,
         show_values: bool = True,
-        cmap: str = "viridis",
         textcolors: Optional[List[str]] = None,
+        cmap: str = "viridis",
         cmap_label: str = "Value",
-    ) -> Tuple[Figure, AxesImage, Colorbar]:
+        colorbar: bool = True,
+        return_figure: bool = False,
+    ) -> Figure:
         """Plot window values with indices relative to the origin.
 
         Parameters
@@ -303,22 +302,24 @@ class Window(np.ndarray):
         show_values
             Whether to show values as text in centre of element. Default
             is True.
-        cmap
-            A color map to color data with, available in
-            :class:`matplotlib.colors.ListedColormap`. Default is
-            "viridis".
         textcolors
             A list of two color specifications. The first is used for
             values below a threshold, the second for those above. If
             None (default), this is set to ["white", "black"].
+        cmap
+            A color map to color data with, available in
+            :class:`matplotlib.colors.ListedColormap`. Default is
+            "viridis".
         cmap_label
             Color map label. Default is "Value".
+        colorbar
+            Whether to show the colorbar. Default is True.
+        return_figure
+            Whether to return the figure or not. Default is False.
 
         Returns
         -------
         fig
-        image
-        colorbar
 
         Examples
         --------
@@ -326,9 +327,17 @@ class Window(np.ndarray):
         showing element values and x/y ticks, can be produced and
         written to file
 
-        >>> figure, image, colorbar = w.plot(
-        ...     cmap="inferno", grid=True, show_values=True)
-        >>> figure.savefig('my_kernel.png')
+        >>> import kikuchipy as kp
+        >>> w = kp.filters.Window()
+        >>> fig = w.plot(return_figure=True)
+        >>> fig.savefig('my_kernel.png')
+
+        If getting the figure axes, image array or colorbar is necessary
+
+        >>> ax = fig.axes[0]
+        >>> im = ax.get_images()[0]
+        >>> arr = im.get_array()
+        >>> cbar = im.colorbar
         """
         if not self.is_valid():
             raise ValueError("Window is invalid.")
@@ -343,8 +352,9 @@ class Window(np.ndarray):
         fig, ax = subplots()
         image = ax.imshow(w, cmap=cmap, interpolation=None)
 
-        colorbar = ax.figure.colorbar(image, ax=ax)
-        colorbar.ax.set_ylabel(cmap_label, rotation=-90, va="bottom")
+        if colorbar:
+            cbar = ax.figure.colorbar(image, ax=ax)
+            cbar.ax.set_ylabel(cmap_label, rotation=-90, va="bottom")
 
         # Set plot ticks
         ky, kx = w.shape
@@ -357,7 +367,7 @@ class Window(np.ndarray):
         ax.set_yticks(np.arange(ky + 1) - 0.5, minor=True)
 
         if grid:  # Create grid
-            for edge, spine in ax.spines.items():
+            for spine in ax.spines.values():
                 spine.set_visible(False)
             ax.grid(which="minor", color="w", linestyle="-", linewidth=3)
             ax.tick_params(which="minor", bottom=False, left=False)
@@ -374,7 +384,8 @@ class Window(np.ndarray):
                 coeff_str = str(round(val, 4) if val % 1 else int(val))
                 image.axes.text(idx[1], idx[0], coeff_str, **kw)
 
-        return fig, image, colorbar
+        if return_figure:
+            return fig
 
 
 def distance_to_origin(
@@ -407,7 +418,7 @@ def modified_hann(Nx: int) -> np.ndarray:
     r"""Return a 1D modified Hann window with the maximum value
     normalized to 1.
 
-    Used in [Wilkinson2006]_.
+    Used in :cite:`wilkinson2006high`.
 
     Parameters
     ----------
@@ -416,7 +427,7 @@ def modified_hann(Nx: int) -> np.ndarray:
 
     Returns
     -------
-    w : numpy.ndarray
+    w
         1D Hann window.
 
     Notes
@@ -427,16 +438,9 @@ def modified_hann(Nx: int) -> np.ndarray:
 
     with :math:`x` relative to the window centre.
 
-    References
-    ----------
-    .. [Wilkinson2006] A. J. Wilkinson, G. Meaden, D. J. Dingley, \
-        "High resolution mapping of strains and rotations using \
-        electron backscatter diffraction," Materials Science and \
-        Technology 22(11), (2006), doi:
-        https://doi.org/10.1179/174328406X130966.
-
     Examples
     --------
+    >>> import numpy as np
     >>> import kikuchipy as kp
     >>> w1 = kp.filters.modified_hann(Nx=30)
     >>> w2 = kp.filters.Window("modified_hann", shape=(30,))
@@ -454,7 +458,7 @@ def lowpass_fft_filter(
     r"""Return a frequency domain low-pass filter transfer function in
     2D.
 
-    Used in [Wilkinson2006]_.
+    Used in :cite:`wilkinson2006high`.
 
     Parameters
     ----------
@@ -468,7 +472,7 @@ def lowpass_fft_filter(
 
     Returns
     -------
-    w : numpy.ndarray
+    w
         2D transfer function.
 
     Notes
@@ -490,11 +494,14 @@ def lowpass_fft_filter(
 
     Examples
     --------
+    >>> import numpy as np
     >>> import kikuchipy as kp
     >>> w1 = kp.filters.Window(
-    ...     "lowpass", cutoff=30, cutoff_width=15, shape=(96, 96))
+    ...     "lowpass", cutoff=30, cutoff_width=15, shape=(96, 96)
+    ... )
     >>> w2 = kp.filters.lowpass_fft_filter(
-            shape=(96, 96), cutoff=30, cutoff_width=15)
+    ...     shape=(96, 96), cutoff=30, cutoff_width=15
+    ... )
     >>> np.allclose(w1, w2)
     True
     """
@@ -518,7 +525,7 @@ def highpass_fft_filter(
     r"""Return a frequency domain high-pass filter transfer function in
     2D.
 
-    Used in [Wilkinson2006]_.
+    Used in :cite:`wilkinson2006high`.
 
     Parameters
     ----------
@@ -554,11 +561,14 @@ def highpass_fft_filter(
 
     Examples
     --------
+    >>> import numpy as np
     >>> import kikuchipy as kp
     >>> w1 = kp.filters.Window(
-    ...     "highpass", cutoff=1, cutoff_width=0.5, shape=(96, 96))
+    ...     "highpass", cutoff=1, cutoff_width=0.5, shape=(96, 96)
+    ... )
     >>> w2 = kp.filters.highpass_fft_filter(
-    ...     shape=(96, 96), cutoff=1, cutoff_width=0.5)
+    ...     shape=(96, 96), cutoff=1, cutoff_width=0.5
+    ... )
     >>> np.allclose(w1, w2)
     True
     """

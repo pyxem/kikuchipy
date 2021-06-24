@@ -24,23 +24,21 @@ from typing import Optional
 
 import numpy as np
 
-from kikuchipy.projections.spherical_projection import get_theta
+from kikuchipy.projections.spherical_projection import get_polar
 
 
 class HesseNormalForm:
     """Hessian normal form of a plane given by polar coordinates."""
 
     @staticmethod
-    def project_polar(
-        polar: np.ndarray, radius: Optional[float] = 10
-    ) -> np.ndarray:
+    def project_polar(polar: np.ndarray, radius: Optional[float] = 10) -> np.ndarray:
         """Return the Hesse normal form of plane(s) given by spherical
         coordinates.
 
         Parameters
         ----------
         polar
-            Spherical coordinates theta, phi, r.
+            The polar, azimuthal and radial spherical coordinates.
         radius
             Hesse radius. Default is 10.
 
@@ -74,9 +72,9 @@ class HesseNormalForm:
         hesse
             Hesse normal form coordinates distance and angle.
         """
-        theta = get_theta(cartesian)
-        hesse = np.zeros((theta.size, 2))
-        hesse_distance = np.tan(0.5 * np.pi - theta)
+        polar = get_polar(cartesian)
+        hesse = np.zeros((polar.size, 2))
+        hesse_distance = np.tan(0.5 * np.pi - polar)
         hesse[..., 0] = hesse_distance
         hesse[..., 1] = np.arccos(hesse_distance / radius)
         return hesse

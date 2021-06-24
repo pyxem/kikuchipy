@@ -44,8 +44,8 @@ def _get_input_bool(question: str) -> bool:
             return False
     except OSError:
         warnings.warn(
-            "Your terminal does not support raw input. Not adding scan. To add "
-            "the scan use `add_scan=True`"
+            "Your terminal does not support raw input. Not adding scan. To add the scan"
+            " use `add_scan=True`"
         )
         return False
 
@@ -71,14 +71,14 @@ def _get_input_variable(question: str, var_type: Any) -> Union[None, Any]:
         return answer
     except OSError:
         warnings.warn(
-            "Your terminal does not support raw input. Not adding scan. To add "
-            "the scan use `add_scan=True`"
+            "Your terminal does not support raw input. Not adding scan. To add the scan"
+            " use `add_scan=True`"
         )
         return None
 
 
 def _delete_from_nested_dictionary(
-    dictionary: Union[dict, DictionaryTreeBrowser], keys: List[str],
+    dictionary: Union[dict, DictionaryTreeBrowser], keys: List[str]
 ) -> Union[dict, DictionaryTreeBrowser]:
     """Delete key(s) from a nested dictionary.
 

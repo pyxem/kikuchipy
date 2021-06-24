@@ -120,9 +120,7 @@ def file_reader(
     data_group = f["EMData/EBSDmaster"]
     energies = data_group["EkeVs"][()]
     data_shape, data_slices = _get_data_shape_slices(
-        npx=nml_params["EBSDMasterNameList"]["npx"],
-        energies=energies,
-        energy=energy,
+        npx=nml_params["EBSDMasterNameList"]["npx"], energies=energies, energy=energy
     )
     i_min = data_slices[0].start
     i_min = 0 if i_min is None else i_min
@@ -130,7 +128,7 @@ def file_reader(
 
     # Get HDF5 data sets
     datasets = _get_datasets(
-        data_group=data_group, projection=projection, hemisphere=hemisphere,
+        data_group=data_group, projection=projection, hemisphere=hemisphere
     )
 
     # TODO: Data shape and slices are easier to handle if the reader
@@ -160,8 +158,7 @@ def file_reader(
     data = data_read_func(datasets[0][data_slices], **data_kwargs)
     if data_shape[0] == 2:
         data = data_stack_func(
-            [data, data_read_func(datasets[1][data_slices], **data_kwargs)],
-            axis=0,
+            [data, data_read_func(datasets[1][data_slices], **data_kwargs)], axis=0
         )
 
     if projection.lower() == "lambert":
@@ -233,13 +230,13 @@ def _check_file_format(file: File):
         if program_name != "EMEBSDmaster.f90":
             raise KeyError
     except KeyError:
-        raise IOError(
-            f"'{file.filename}' is not in EMsoft's master pattern format."
-        )
+        raise IOError(f"'{file.filename}' is not in EMsoft's master pattern format.")
 
 
 def _get_data_shape_slices(
-    npx: int, energies: np.ndarray, energy: Optional[tuple] = None,
+    npx: int,
+    energies: np.ndarray,
+    energy: Optional[tuple] = None,
 ) -> Tuple[Tuple, Tuple[slice, ...]]:
     """Determine the data shape from half the master pattern side
     length, number of asymmetric positions if the square Lambert
@@ -280,9 +277,7 @@ def _get_data_shape_slices(
     return data_shape, data_slices
 
 
-def _get_datasets(
-    data_group: Group, projection: str, hemisphere: str,
-) -> List[Dataset]:
+def _get_datasets(data_group: Group, projection: str, hemisphere: str) -> List[Dataset]:
     """Get datasets from projection and hemisphere.
 
     Parameters
@@ -307,8 +302,7 @@ def _get_datasets(
 
     if projection not in projections.keys():
         raise ValueError(
-            f"'projection' value {projection} must be one of "
-            f"{projections.keys()}"
+            f"'projection' value {projection} must be one of " f"{projections.keys()}"
         )
 
     if hemisphere == "both":
@@ -321,8 +315,7 @@ def _get_datasets(
         datasets = [data_group[dset_name]]
     else:
         raise ValueError(
-            f"'hemisphere' value {hemisphere} must be one of "
-            f"{hemispheres.keys()}."
+            f"'hemisphere' value {hemisphere} must be one of " f"{hemispheres.keys()}."
         )
 
     return datasets

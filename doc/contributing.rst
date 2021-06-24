@@ -165,13 +165,19 @@ files by `nbsphinx <https://nbsphinx.readthedocs.io/en/latest/>`_:
   command is the last line in a cell.
 - Refer to our API reference with this general MD
   ``[fft_filter()](reference.rst#kikuchipy.signals.EBSD.fft_filter)``. Remember
-  to add the parentheses ``()``.
+  to add the parentheses ``()`` for functions and methods.
 - Reference external APIs via standard MD like
   ``[Signal2D](http://hyperspy.org/hyperspy-doc/current/api/hyperspy._signals.signal2d.html)``.
 - The Sphinx gallery thumbnail used for a notebook is set by adding the
   ``nbsphinx-thumbnail`` tag to a code cell with an image output. The notebook
   must be added to the gallery in the README.rst to be included in the
   documentation pages.
+- The Furo Sphinx theme displays the documentation in a light or dark theme,
+  depending on the browser/OS setting. It is important to make sure the
+  documentation is readable with both themes. This means explicitly printing
+  the signal axes manager, like ``print(s.axes_manager)``, and displaying all
+  figures with a white background for axes labels and ticks and figure titles
+  etc. to be readable.
 
 Running and writing tests
 =========================
@@ -207,6 +213,11 @@ terminal. For an even nicer presentation, you can use ``coverage.py`` directly::
 
 Then, you can open the created ``htmlcov/index.html`` in the browser and inspect
 the coverage in more detail.
+
+Docstring examples are tested
+`with pytest <https://docs.pytest.org/en/stable/doctest.html>`_ as well::
+
+   $ pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
 
 Adding data to the data module
 ==============================

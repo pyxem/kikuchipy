@@ -29,9 +29,7 @@ import numpy as np
 
 from kikuchipy.signals import EBSD, LazyEBSD
 from kikuchipy.signals import VirtualBSEImage
-from kikuchipy.generators._transfer_axes import (
-    _transfer_navigation_axes_to_signal_axes,
-)
+from kikuchipy.generators._transfer_axes import _transfer_navigation_axes_to_signal_axes
 from kikuchipy.pattern import rescale_intensity
 
 
@@ -69,15 +67,9 @@ class VirtualBSEGenerator:
 
     def get_rgb_image(
         self,
-        r: Union[
-            BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple],
-        ],
-        g: Union[
-            BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple],
-        ],
-        b: Union[
-            BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple],
-        ],
+        r: Union[BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple]],
+        g: Union[BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple]],
+        b: Union[BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple]],
         percentiles: Optional[Tuple] = None,
         normalize: bool = True,
         alpha: Union[None, np.ndarray, VirtualBSEImage] = None,
@@ -143,8 +135,7 @@ class VirtualBSEGenerator:
                 rois = (rois,)
 
             image = np.zeros(
-                self.signal.axes_manager.navigation_shape[::-1],
-                dtype=np.float64,
+                self.signal.axes_manager.navigation_shape[::-1], dtype=np.float64
             )
             for roi in rois:
                 if isinstance(roi, tuple):
@@ -175,15 +166,12 @@ class VirtualBSEGenerator:
         vbse_rgb_image.change_dtype(dtype_rgb)
 
         vbse_rgb_image.axes_manager = _transfer_navigation_axes_to_signal_axes(
-            new_axes=vbse_rgb_image.axes_manager,
-            old_axes=self.signal.axes_manager,
+            new_axes=vbse_rgb_image.axes_manager, old_axes=self.signal.axes_manager
         )
 
         return vbse_rgb_image
 
-    def get_images_from_grid(
-        self, dtype_out: np.dtype = np.float32,
-    ) -> VirtualBSEImage:
+    def get_images_from_grid(self, dtype_out: np.dtype = np.float32) -> VirtualBSEImage:
         """Return an in-memory signal with a stack of virtual
         backscatter electron (BSE) images by integrating the intensities
         within regions of interest (ROI) defined by the detector
@@ -201,13 +189,15 @@ class VirtualBSEGenerator:
 
         Examples
         --------
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
         >>> s
-        <EBSD, title: Pattern, dimensions: (200, 149|60, 60)>
-        >>> vbse_gen = VirtualBSEGenerator(s)
+        <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
+        >>> vbse_gen = kp.generators.VirtualBSEGenerator(s)
         >>> vbse_gen.grid_shape = (5, 5)
         >>> vbse = vbse_gen.get_images_from_grid()
         >>> vbse
-        <VirtualBSEImage, title: , dimensions: (5, 5|200, 149)>
+        <VirtualBSEImage, title: , dimensions: (5, 5|3, 3)>
         """
         grid_shape = self.grid_shape
         new_shape = grid_shape + self.signal.axes_manager.navigation_shape[::-1]
@@ -217,8 +207,8 @@ class VirtualBSEGenerator:
             images[row, col] = self.signal.get_virtual_bse_intensity(roi).data
 
         vbse_images = VirtualBSEImage(images)
-        # TODO: Transfer signal's detector axes to new navigation axes with
-        #  proper binning
+        # TODO: Transfer signal's detector axes to new navigation axes
+        #  with proper binning
         vbse_images.axes_manager = _transfer_navigation_axes_to_signal_axes(
             new_axes=vbse_images.axes_manager, old_axes=self.signal.axes_manager
         )
@@ -243,19 +233,18 @@ class VirtualBSEGenerator:
         """
         rows = self.grid_rows
         cols = self.grid_cols
+        dc, dr = [i.scale for i in self.signal.axes_manager.signal_axes]
 
         if isinstance(index, tuple):
             index = (index,)
         index = np.array(index)
 
-        min_col = cols[min(index[:, 1])]
-        max_col = cols[max(index[:, 1])] + cols[1]
-        min_row = rows[min(index[:, 0])]
-        max_row = rows[max(index[:, 0])] + rows[1]
+        min_col = cols[min(index[:, 1])] * dc
+        max_col = (cols[max(index[:, 1])] + cols[1]) * dc
+        min_row = rows[min(index[:, 0])] * dr
+        max_row = (rows[max(index[:, 0])] + rows[1]) * dr
 
-        return RectangularROI(
-            left=min_col, top=min_row, right=max_col, bottom=max_row,
-        )
+        return RectangularROI(left=min_col, top=min_row, right=max_col, bottom=max_row)
 
     def plot_grid(
         self,
@@ -289,9 +278,9 @@ class VirtualBSEGenerator:
         pattern : kikuchipy.signals.EBSD
             A single pattern with the markers added.
         """
-        # Get detector scales
+        # Get detector scales (column, row)
         axes_manager = self.signal.axes_manager
-        dx, dy = [i.scale for i in axes_manager.signal_axes]
+        dc, dr = [i.scale for i in axes_manager.signal_axes]
 
         rows = self.grid_rows
         cols = self.grid_cols
@@ -303,8 +292,8 @@ class VirtualBSEGenerator:
             for row, col in np.ndindex(self.grid_shape):
                 markers.append(
                     Text(
-                        x=cols[col],
-                        y=rows[row] + (0.1 * rows[1]),
+                        x=cols[col] * dc,
+                        y=(rows[row] + (0.1 * rows[1])) * dr,
                         text=f"{row,col}",
                         color=color,
                     )
@@ -312,8 +301,8 @@ class VirtualBSEGenerator:
 
         # Set lines
         kwargs.setdefault("color", "w")
-        markers += [HorizontalLine((i - 0.5) * dy, **kwargs) for i in rows]
-        markers += [VerticalLine((j - 0.5) * dx, **kwargs) for j in cols]
+        markers += [HorizontalLine((i - 0.5) * dr, **kwargs) for i in rows]
+        markers += [VerticalLine((j - 0.5) * dc, **kwargs) for j in cols]
 
         # Color RGB tiles
         if rgb_channels is not None:
@@ -325,10 +314,10 @@ class VirtualBSEGenerator:
                     roi = self.roi_from_grid((row, col))
                     markers += [
                         Rectangle(
-                            x1=(roi.left - 0.5) * dx,
-                            y1=(roi.top - 0.5) * dx,
-                            x2=(roi.right - 0.5) * dy,
-                            y2=(roi.bottom - 0.5) * dy,
+                            x1=(roi.left - 0.5) * dc,
+                            y1=(roi.top - 0.5) * dc,
+                            x2=(roi.right - 0.5) * dr,
+                            y2=(roi.bottom - 0.5) * dr,
                             **kwargs,
                         )
                     ]
@@ -441,8 +430,6 @@ def get_rgb_image(
         in_range = tuple(np.percentile(rgb_image, q=percentiles))
     else:
         in_range = None
-    rgb_image = rescale_intensity(
-        rgb_image, in_range=in_range, dtype_out=dtype_out
-    )
+    rgb_image = rescale_intensity(rgb_image, in_range=in_range, dtype_out=dtype_out)
 
     return rgb_image.astype(dtype_out)

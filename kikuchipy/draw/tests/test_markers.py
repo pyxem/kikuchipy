@@ -20,11 +20,7 @@ from hyperspy.utils.markers import line_segment, point, text
 import numpy as np
 import pytest
 
-from kikuchipy.draw.markers import (
-    get_line_segment_list,
-    get_point_list,
-    get_text_list,
-)
+from kikuchipy.draw.markers import get_line_segment_list, get_point_list, get_text_list
 
 
 class TestMarkers:
@@ -87,7 +83,8 @@ class TestMarkers:
         for i in range(n_lines):
             assert line_markers[i]._get_data_shape() == nav_shape  # 1d
             assert np.allclose(
-                np.dstack(line_markers[i].data.tolist()[:4]), lines[:, i],
+                np.dstack(line_markers[i].data.tolist()[:4]),
+                lines[:, i],
             )
 
     def test_get_line_segment_list2d(self):
@@ -104,7 +101,7 @@ class TestMarkers:
         for i in range(n_lines):
             assert line_markers[i]._get_data_shape() == nav_shape
             assert np.allclose(
-                np.dstack(line_markers[i].data.tolist()[:4]), lines[:, :, i],
+                np.dstack(line_markers[i].data.tolist()[:4]), lines[:, :, i]
             )
 
     def test_get_line_segment_list_nans(self):
@@ -117,9 +114,7 @@ class TestMarkers:
         nav_shape = ()
         size = int(np.prod(nav_shape) * n_points * 2)
         points = np.random.random(size=size).reshape(nav_shape + (n_points, 2))
-        kwargs = dict(
-            s=40, marker="o", facecolor="w", edgecolor="k", zorder=5, alpha=1
-        )
+        kwargs = dict(s=40, marker="o", facecolor="w", edgecolor="k", zorder=5, alpha=1)
         point_markers = get_point_list(list(points), **kwargs)
 
         # Number of markers
@@ -168,7 +163,7 @@ class TestMarkers:
         for i in range(n_points):
             assert point_markers[i]._get_data_shape() == nav_shape  # 1d
             assert np.allclose(
-                np.dstack(point_markers[i].data.tolist()[:2]), points[:, i],
+                np.dstack(point_markers[i].data.tolist()[:2]), points[:, i]
             )
 
     def test_get_point_list2d(self):
@@ -185,7 +180,7 @@ class TestMarkers:
         for i in range(n_points):
             assert point_markers[i]._get_data_shape() == nav_shape
             assert np.allclose(
-                np.dstack(point_markers[i].data.tolist()[:2]), points[:, :, i],
+                np.dstack(point_markers[i].data.tolist()[:2]), points[:, :, i]
             )
 
     def test_get_point_list_nans(self):
@@ -198,9 +193,7 @@ class TestMarkers:
         nav_shape = ()
         size = int(np.prod(nav_shape) * n_labels * 2)
         texts = ["111", "220", "-220"][:n_labels]
-        text_coords = np.random.random(size=size).reshape(
-            nav_shape + (n_labels, 2)
-        )
+        text_coords = np.random.random(size=size).reshape(nav_shape + (n_labels, 2))
         kwargs = dict(
             color="k",
             zorder=5,
@@ -225,11 +218,7 @@ class TestMarkers:
         # Coordinates, data shape and marker properties
         for i, (t, marker) in enumerate(zip(text_coords, text_markers)):
             assert np.allclose(
-                [
-                    marker.get_data_position("x1"),
-                    marker.get_data_position("y1"),
-                ],
-                t,
+                [marker.get_data_position("x1"), marker.get_data_position("y1")], t
             )
             assert marker.get_data_position("text") == texts[i]
             assert marker._get_data_shape() == nav_shape
@@ -258,9 +247,7 @@ class TestMarkers:
         n_labels = 2
         size = int(np.prod(nav_shape) * n_labels * 2)
         texts = ["111", "-220"]
-        text_coords = np.random.random(size=size).reshape(
-            nav_shape + (n_labels, 2)
-        )
+        text_coords = np.random.random(size=size).reshape(nav_shape + (n_labels, 2))
         text_markers = get_text_list(texts=texts, coordinates=text_coords)
 
         assert len(text_markers) == n_labels
@@ -269,7 +256,7 @@ class TestMarkers:
         for i in range(n_labels):
             assert text_markers[i]._get_data_shape() == nav_shape
             assert np.allclose(
-                np.dstack(text_markers[i].data.tolist()[:2]), text_coords[:, i],
+                np.dstack(text_markers[i].data.tolist()[:2]), text_coords[:, i]
             )
             assert text_markers[i].data["text"] == texts[i]
 
@@ -279,9 +266,7 @@ class TestMarkers:
         n_labels = 3
         size = int(np.prod(nav_shape) * n_labels * 2)
         texts = ["111", "-2-20", "311"]
-        text_coords = np.random.random(size=size).reshape(
-            nav_shape + (n_labels, 2)
-        )
+        text_coords = np.random.random(size=size).reshape(nav_shape + (n_labels, 2))
         text_markers = get_text_list(texts=texts, coordinates=text_coords)
 
         assert len(text_markers) == n_labels
@@ -290,19 +275,13 @@ class TestMarkers:
         for i in range(n_labels):
             assert text_markers[i]._get_data_shape() == nav_shape
             assert np.allclose(
-                np.dstack(text_markers[i].data.tolist()[:2]),
-                text_coords[:, :, i],
+                np.dstack(text_markers[i].data.tolist()[:2]), text_coords[:, :, i]
             )
             assert text_markers[i].data["text"] == texts[i]
 
     def test_get_text_list_nans(self):
-        """Returns"""
         text_coords = np.ones((2, 3, 2)) * np.nan
         assert (
-            len(
-                get_text_list(
-                    texts=["111", "200", "220"], coordinates=text_coords
-                )
-            )
+            len(get_text_list(texts=["111", "200", "220"], coordinates=text_coords))
             == 0
         )

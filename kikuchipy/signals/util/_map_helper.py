@@ -45,10 +45,10 @@ def _map_helper(
     """Return output of :func:`scipy.ndimage.generic_filter` after
     wrapping the `map_function` to apply at each element of
     `flat_index_map`.
-    
+
     The generic filter function will be applied at each navigation
     point.
-    
+
     Parameters
     ----------
     patterns
@@ -79,7 +79,7 @@ def _map_helper(
         # from `flat_index_map`
         return map_function(
             patterns=patterns,
-            indices=indices.astype(np.int),
+            indices=indices.astype(int),
             nav_shape=nav_shape,
             dtype_out=dtype_out,
             **kwargs,
@@ -109,7 +109,7 @@ def _neighbour_dot_products(
 ) -> Union[float, int]:
     """Return either an average of a dot product matrix between a
     pattern and it's neighbours, or the matrix.
-    
+
     Parameters
     ----------
     patterns
@@ -127,7 +127,7 @@ def _neighbour_dot_products(
         Index into `patterns` for the current pattern to calculate the
         dot products for.
     zero_mean
-        Whether to center the pattern intensities by subtracting the 
+        Whether to center the pattern intensities by subtracting the
         mean intensity to get an average intensity of zero,
         individually.
     normalize
@@ -175,13 +175,11 @@ def _neighbour_dot_products(
     dot_products = neighbour_patterns @ pattern
 
     if output is None:
-        return np.mean(dot_products)
+        return np.nanmean(dot_products)
     else:
         center_value = (pattern ** 2).sum()
         output[pat_idx][flat_window_truthy_indices[center_index]] = center_value
-        output[pat_idx][
-            flat_window_truthy_indices[neighbour_idx]
-        ] = dot_products
+        output[pat_idx][flat_window_truthy_indices[neighbour_idx]] = dot_products
         # Output variable is modified in place, but `_map_helper()`
         # expects a (in this case discarded) returned value
         return 1
@@ -230,11 +228,9 @@ def _get_neighbour_dot_product_matrices(
     """
     # Get a flat boolean window, a boolean array with True for True
     # window coefficients, and the index of this window's origin
-    (
-        boolean_window,
-        flat_window_truthy_indices,
-        center_index,
-    ) = _setup_window_indices(window=window)
+    (boolean_window, flat_window_truthy_indices, center_index) = _setup_window_indices(
+        window=window
+    )
 
     nav_shape = patterns.shape[:-sig_dim]
     output = np.empty((np.prod(nav_shape), window.size), dtype=dtype_out)

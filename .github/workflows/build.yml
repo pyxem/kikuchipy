@@ -3,6 +3,27 @@ name: build
 on: [push, pull_request]
 
 jobs:
+  code:
+    name: code style
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - uses: psf/black@stable
+
+  # Make sure all necessary files are included in a release
+  manifest:
+    name: check manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - name: Install dependencies
+        run: pip install manifix
+      - name: Check MANIFEST.in file
+        run: python setup.py manifix
+
   build-with-pip:
     name: ${{ matrix.os }}/py${{ matrix.python-version }}/pip
     runs-on: ${{ matrix.os }}
@@ -13,7 +34,13 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.7, 3.8]
+        python-version: [3.8, 3.9]
+        include:
+          # Oldest supported version of main dependencies on Python 3.7
+          - os: ubuntu-latest
+            python-version: 3.7
+            OLDEST_SUPPORTED_VERSION: true
+            DEPENDENCIES: dask==2.18 diffsims==0.4.0 hyperspy==1.5.2 matplotlib==3.3 numpy==1.19 orix==0.6.0 scikit-image==0.16.2
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -24,7 +51,13 @@ jobs:
         run: python -V; pip -V
       - name: Install depedencies and package
         shell: bash
-        run: pip install -U -e .'[doc, tests]'
+        run: pip install -U -e .'[tests]'
+      - name: Install oldest supported version
+        if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
+        run: pip install ${{ matrix.DEPENDENCIES }}
+      - name: Run docstring tests
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
       - name: Run tests
         run: pytest --cov=kikuchipy --pyargs kikuchipy
       - name: Generate line coverage

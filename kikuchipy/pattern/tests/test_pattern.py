@@ -45,9 +45,7 @@ RESCALED_FLOAT32 = np.array(
 RESCALED_UINT8_0100 = np.array(
     [[71, 85, 71], [100, 85, 71], [85, 14, 0]], dtype=np.uint8
 )
-STATIC_CORR_UINT8 = np.array(
-    [[0, 2, 0], [3, 3, 1], [2, 255, 255]], dtype=np.uint8
-)
+STATIC_CORR_UINT8 = np.array([[0, 2, 0], [3, 3, 1], [2, 255, 255]], dtype=np.uint8)
 DYN_CORR_UINT8_SPATIAL_STD2 = np.array(
     [[170, 215, 181], [255, 221, 188], [221, 32, 0]], dtype=np.uint8
 )
@@ -69,7 +67,8 @@ DYN_CORR_UINT16_SPATIAL_STD2 = np.array(
     dtype=np.uint16,
 )
 DYN_CORR_UINT8_SPATIAL_STD2_OMAX250 = np.array(
-    [[167, 210, 177], [250, 217, 184], [217, 31, 0]], dtype=np.uint8,
+    [[167, 210, 177], [250, 217, 184], [217, 31, 0]],
+    dtype=np.uint8,
 )
 ADAPT_EQ_UINT8 = np.array(
     [[127, 223, 127], [255, 223, 31], [223, 31, 0]], dtype=np.uint8
@@ -83,17 +82,15 @@ class TestRescaleIntensityPattern:
             (np.uint8, None, RESCALED_UINT8),
             (np.float32, None, RESCALED_FLOAT32),
             (None, None, RESCALED_UINT8),
-            (np.complex, None, RESCALED_UINT8),
+            (complex, None, RESCALED_UINT8),
             (np.uint8, (0, 100), RESCALED_UINT8_0100),
         ],
     )
-    def test_rescale_intensity(
-        self, dummy_signal, dtype_out, out_range, answer
-    ):
+    def test_rescale_intensity(self, dummy_signal, dtype_out, out_range, answer):
         pattern = dummy_signal.inav[0, 0].data
 
         # Check for accepted data types
-        if dtype_out == np.complex:
+        if dtype_out == complex:
             with pytest.raises(KeyError, match="Could not set output"):
                 _ = rescale_intensity(
                     pattern=pattern,
@@ -120,9 +117,7 @@ class TestRescaleIntensityPattern:
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
         imin, imax = np.min(p), np.max(p)
         omin, omax = -3, 300.15
-        p2 = _rescale.py_func(
-            pattern=p, imin=imin, imax=imax, omin=omin, omax=omax,
-        )
+        p2 = _rescale.py_func(pattern=p, imin=imin, imax=imax, omin=omin, omax=omax)
 
         assert np.allclose(np.min(p2), omin)
         assert np.allclose(np.max(p2), omax)
@@ -179,13 +174,9 @@ class TestRemoveDynamicBackgroundPattern:
         p = dummy_signal.inav[0, 0].data
         filter_domain = "Taldorei"
         with pytest.raises(ValueError, match=f"{filter_domain} must be "):
-            _ = remove_dynamic_background(
-                pattern=p, filter_domain=filter_domain,
-            )
+            _ = remove_dynamic_background(pattern=p, filter_domain=filter_domain)
 
-    def test_remove_dynamic_background_pattern_frequency_setup(
-        self, dummy_signal
-    ):
+    def test_remove_dynamic_background_pattern_frequency_setup(self, dummy_signal):
         std = 2
         truncate = 3.0
 
@@ -226,7 +217,7 @@ class TestGetDynamicBackgroundPattern:
     ):
         p = dummy_signal.inav[0, 0].data
         bg = get_dynamic_background(
-            pattern=p, filter_domain="spatial", std=std, truncate=truncate,
+            pattern=p, filter_domain="spatial", std=std, truncate=truncate
         )
 
         assert np.allclose(bg, answer)
@@ -255,9 +246,7 @@ class TestGetDynamicBackgroundPattern:
 
         p = dummy_signal.inav[0, 0].data.astype(answer.dtype)
 
-        bg = get_dynamic_background(
-            pattern=p, filter_domain="frequency", std=std,
-        )
+        bg = get_dynamic_background(pattern=p, filter_domain="frequency", std=std)
 
         assert np.allclose(bg, answer, atol=1e-4)
 
@@ -278,13 +267,7 @@ class TestGetImageQuality:
         ],
     )
     def test_get_image_quality_pattern(
-        self,
-        dummy_signal,
-        idx,
-        normalize,
-        frequency_vectors,
-        inertia_max,
-        answer,
+        self, dummy_signal, idx, normalize, frequency_vectors, inertia_max, answer
     ):
         p = dummy_signal.inav[idx].data.astype(np.float32)
         iq = get_image_quality(
@@ -351,7 +334,10 @@ class TestFFTPattern:
         kwargs = {}
 
         p_fft = fft(
-            pattern=p, shift=shift, real_fft_only=real_fft_only, **kwargs,
+            pattern=p,
+            shift=shift,
+            real_fft_only=real_fft_only,
+            **kwargs,
         )
 
         assert np.allclose(
@@ -361,12 +347,13 @@ class TestFFTPattern:
         )
 
     @pytest.mark.parametrize(
-        "window", ["modified_hann", "tukey", "hamming"],
+        "window",
+        ["modified_hann", "tukey", "hamming"],
     )
     def test_fft_pattern_apodization_window(self, dummy_signal, window):
         p = dummy_signal.inav[0, 0].data
         w = Window(window, shape=p.shape)
-        p2 = fft(pattern=p, apodization_window=w, shift=True,)
+        p2 = fft(pattern=p, apodization_window=w, shift=True)
         p3 = fft(pattern=p * w, shift=True)
         p4 = fft(pattern=p, shift=True)
 
@@ -443,9 +430,7 @@ class TestNormalizeIntensityPattern:
     ):
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
         p2 = normalize_intensity.py_func(
-            pattern=p,
-            num_std=num_std,
-            divide_by_square_root=divide_by_square_root,
+            pattern=p, num_std=num_std, divide_by_square_root=divide_by_square_root
         )
 
         assert np.allclose(np.mean(p2), 0, atol=1e-6)

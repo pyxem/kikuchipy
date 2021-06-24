@@ -88,7 +88,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         KikuchiBand (|2)
         Phase: ni (m-3m)
         [[-1  1  1]
-         [ 0 -2  0]]
+         [-2  0  0]]
         """
         super().__init__(phase=phase, hkl=hkl)
         self._hkl_detector = Vector3d(hkl_detector)
@@ -173,7 +173,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         """Distance from the PC (origin) per band, i.e. the right-angle
         component of the distance to the pole.
         """
-        return np.tan(0.5 * np.pi - self.hkl_detector.theta.data)
+        return np.tan(0.5 * np.pi - self.hkl_detector.polar.data)
 
     @property
     def within_gnomonic_radius(self) -> np.ndarray:
@@ -182,9 +182,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         """
         # TODO: Should be part of GeometricalEBSDSimulation, not here
         is_full_upper = self.z_detector > -1e-5
-        gnomonic_radius = self._get_reshaped_gnomonic_radius(
-            self.hesse_distance.ndim
-        )
+        gnomonic_radius = self._get_reshaped_gnomonic_radius(self.hesse_distance.ndim)
         in_circle = np.abs(self.hesse_distance) < gnomonic_radius
         return np.logical_and(in_circle, is_full_upper)
 
@@ -195,9 +193,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         """
         hesse_distance = self.hesse_distance
         hesse_distance[~self.within_gnomonic_radius] = np.nan
-        gnomonic_radius = self._get_reshaped_gnomonic_radius(
-            hesse_distance.ndim
-        )
+        gnomonic_radius = self._get_reshaped_gnomonic_radius(hesse_distance.ndim)
         return np.arccos(hesse_distance / gnomonic_radius)
 
     @property
@@ -209,11 +205,11 @@ class KikuchiBand(ReciprocalLatticePoint):
         to NaN.
         """
         # Get alpha1 and alpha2 angles (NaN for bands outside gnomonic radius)
-        phi = self.hkl_detector.phi.data
+        azimuth = self.hkl_detector.azimuth.data
         hesse_alpha = self.hesse_alpha
         plane_trace = np.zeros(self.navigation_shape + (self.size, 4))
-        alpha1 = phi - np.pi + hesse_alpha
-        alpha2 = phi - np.pi - hesse_alpha
+        alpha1 = azimuth - np.pi + hesse_alpha
+        alpha2 = azimuth - np.pi - hesse_alpha
 
         # Calculate start and end points for the plane traces
         plane_trace[..., 0] = np.cos(alpha1)
@@ -227,11 +223,11 @@ class KikuchiBand(ReciprocalLatticePoint):
 
     @property
     def hesse_line_x(self) -> np.ndarray:
-        return -self.hesse_distance * np.cos(self.hkl_detector.phi.data)
+        return -self.hesse_distance * np.cos(self.hkl_detector.azimuth.data)
 
     @property
     def hesse_line_y(self) -> np.ndarray:
-        return -self.hesse_distance * np.sin(self.hkl_detector.phi.data)
+        return -self.hesse_distance * np.sin(self.hkl_detector.azimuth.data)
 
     def __getitem__(self, key):
         """Get a deepcopy subset of the KikuchiBand object.

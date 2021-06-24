@@ -23,6 +23,7 @@ import numpy as np
 import pytest
 
 from kikuchipy import load
+from kikuchipy.conftest import assert_dictionary
 from kikuchipy.io.plugins.emsoft_ebsd_master_pattern import (
     _check_file_format,
     _get_data_shape_slices,
@@ -32,7 +33,6 @@ from kikuchipy.signals.ebsd_master_pattern import (
     EBSDMasterPattern,
     LazyEBSDMasterPattern,
 )
-from kikuchipy.signals.tests.test_ebsd import assert_dictionary
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -41,10 +41,7 @@ EMSOFT_FILE = os.path.join(
 )
 
 METADATA = {
-    "General": {
-        "original_filename": "master_patterns.h5",
-        "title": "master_patterns",
-    },
+    "General": {"original_filename": "master_patterns.h5", "title": "master_patterns"},
     "Signal": {"binned": False, "signal_type": "EBSDMasterPattern"},
 }
 
@@ -101,29 +98,24 @@ class TestEMsoftEBSDMasterPatternReader:
         axes_manager = setup_axes_manager(["energy", "height", "width"])
 
         assert s.data.shape == (11, 13, 13)
-        assert s.axes_manager.as_dictionary() == axes_manager
+        assert_dictionary(s.axes_manager.as_dictionary(), axes_manager)
         assert_dictionary(s.metadata.as_dictionary(), METADATA)
 
         signal_indx = s.axes_manager.signal_indices_in_array
-        assert np.allclose(
-            s.max(axis=signal_indx).data, s.axes_manager["energy"].axis
-        )
+        assert np.allclose(s.max(axis=signal_indx).data, s.axes_manager["energy"].axis)
 
     def test_projection_lambert(self):
         s = load(EMSOFT_FILE, projection="lambert", hemisphere="both")
 
-        axes_manager = setup_axes_manager()
-
         assert s.data.shape == (2, 11, 13, 13)
-        assert s.axes_manager.as_dictionary() == axes_manager
+        assert_dictionary(s.axes_manager.as_dictionary(), setup_axes_manager())
 
     def test_check_file_format(self, save_path_hdf5):
         with File(save_path_hdf5, mode="w") as f:
             g1 = f.create_group("EMheader")
             g2 = g1.create_group("EBSDmaster")
             g2.create_dataset(
-                "ProgramName",
-                data=np.array([b"EMEBSDmasterr.f90"], dtype="S17"),
+                "ProgramName", data=np.array([b"EMEBSDmasterr.f90"], dtype="S17")
             )
             with pytest.raises(IOError, match=".* is not in EMsoft's master "):
                 _check_file_format(f)
@@ -194,9 +186,7 @@ class TestEMsoftEBSDMasterPatternReader:
         """The Lambert projection's southern hemisphere is stored
         chunked.
         """
-        s = load(
-            EMSOFT_FILE, projection=projection, hemisphere="south", lazy=True
-        )
+        s = load(EMSOFT_FILE, projection=projection, hemisphere="south", lazy=True)
 
         assert isinstance(s, LazyEBSDMasterPattern)
 
@@ -254,11 +244,9 @@ class TestEMsoftEBSDMasterPatternReader:
         s = load(EMSOFT_FILE, energy=energy, hemisphere="both")
         assert s.data.shape == desired_shape
 
-        s2 = load(
-            EMSOFT_FILE, projection="lambert", energy=energy, hemisphere="north"
-        )
+        s2 = load(EMSOFT_FILE, projection="lambert", energy=energy, hemisphere="north")
         sig_indx = s2.axes_manager.signal_indices_in_array
-        assert np.allclose(s2.mean(axis=sig_indx).data, desired_mean_energies)
+        assert np.allclose(s2.nanmean(axis=sig_indx).data, desired_mean_energies)
 
         with File(EMSOFT_FILE, mode="r") as f:
             mp_lambert_north = f["EMData/EBSDmaster/mLPNH"][:][0][energy_slice]
