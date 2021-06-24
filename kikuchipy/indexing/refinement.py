@@ -49,9 +49,7 @@ class Refinement:
                 0.05,
             ]
         else:
-            trust_region = (
-                np.deg2rad(trust_region[:3]).tolist() + trust_region[3:]
-            )
+            trust_region = np.deg2rad(trust_region[:3]).tolist() + trust_region[3:]
 
         exp.rescale_intensity(dtype_out=np.float32)
         exp_data = exp.data
@@ -325,12 +323,8 @@ class Refinement:
                     file=sys.stdout,
                 )
                 results = dask.compute(*refined_params)
-                refined_euler = np.empty(
-                    (xmap.rotations.shape[0], 3), dtype=np.float32
-                )
-                refined_scores = np.empty(
-                    (xmap.rotations.shape[0]), dtype=np.float32
-                )
+                refined_euler = np.empty((xmap.rotations.shape[0], 3), dtype=np.float32)
+                refined_scores = np.empty((xmap.rotations.shape[0]), dtype=np.float32)
                 for i in range(xmap.rotations.shape[0]):
                     refined_scores[i] = results[i][0]
 
@@ -479,12 +473,8 @@ class Refinement:
                 )
                 results = dask.compute(*refined_params)
 
-                refined_pc = np.empty(
-                    (xmap.rotations.shape[0], 3), dtype=np.float32
-                )
-                refined_scores = np.empty(
-                    (xmap.rotations.shape[0]), dtype=np.float32
-                )
+                refined_pc = np.empty((xmap.rotations.shape[0], 3), dtype=np.float32)
+                refined_scores = np.empty((xmap.rotations.shape[0]), dtype=np.float32)
                 for i in range(xmap.rotations.shape[0]):
                     refined_scores[i] = results[i][0]
 
@@ -537,9 +527,7 @@ def _get_single_pattern_params(mp, detector, energy):
 
 ### NUMBA FUNCTIONS ###
 @numba.njit(nogil=True)
-def _fast_get_dc_multiple_pc(
-    xpc, ypc, L, scan_points, ncols, nrows, px_size, alpha
-):
+def _fast_get_dc_multiple_pc(xpc, ypc, L, scan_points, ncols, nrows, px_size, alpha):
     nrows = int(nrows)
     ncols = int(ncols)
 
@@ -549,11 +537,7 @@ def _fast_get_dc_multiple_pc(
     # 1 DC per scan point
     r_g_array = np.zeros((scan_points, nrows, ncols, 3), dtype=np.float32)
     for k in range(scan_points):
-        det_x = (
-            -1
-            * ((-xpc[k] - (1.0 - ncols) * 0.5) - np.arange(0, ncols))
-            * px_size
-        )
+        det_x = -1 * ((-xpc[k] - (1.0 - ncols) * 0.5) - np.arange(0, ncols)) * px_size
         det_y = ((ypc[k] - (1.0 - nrows) * 0.5) - np.arange(0, nrows)) * px_size
         L2 = L[k]
         for i in range(nrows):
@@ -932,9 +916,7 @@ def _full_objective_function_euler(x, *args):
     return 1 - result
 
 
-def _refine_xmap_solver(
-    r, pc, exp, pre_args, method, method_kwargs, trust_region
-):
+def _refine_xmap_solver(r, pc, exp, pre_args, method, method_kwargs, trust_region):
     phi1_0 = r[..., 0]
     Phi_0 = r[..., 1]
     phi2_0 = r[..., 2]
@@ -998,9 +980,7 @@ def _refine_xmap_solver(
     return (score, phi1, Phi, phi2, pcx, pxy, pxz)
 
 
-def _refine_pc_solver(
-    exp, r, pc, method, method_kwargs, pre_args, trust_region
-):
+def _refine_pc_solver(exp, r, pc, method, method_kwargs, pre_args, trust_region):
     args = (exp,) + pre_args + (r,)
     pc_x0 = pc
 
@@ -1124,3 +1104,6 @@ def py_ncc(a, b):
 def py_ndp(a, b):
     # Input should already be np.float32
     return np.sum(a * b) / np.sqrt(np.sum(np.square(a)) * np.sum(np.square(b)))
+
+
+# 123
