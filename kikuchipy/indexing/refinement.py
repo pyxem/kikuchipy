@@ -1104,6 +1104,3 @@ def py_ncc(a, b):
 def py_ndp(a, b):
     # Input should already be np.float32
     return np.sum(a * b) / np.sqrt(np.sum(np.square(a)) * np.sum(np.square(b)))
-
-
-# 123
