@@ -10,21 +10,24 @@ from orix.crystal_map import CrystalMap
 from orix.quaternion import Rotation
 import scipy.optimize
 
+from kikuchipy.signals import EBSD, EBSDMasterPattern, LazyEBSD
+from kikuchipy.detectors import EBSDDetector
+
 
 class Refinement:
     @staticmethod
     def refine_xmap(
-        xmap,
-        mp,
-        exp,
-        det,
-        energy,
-        mask=1,
-        method="minimize",
-        method_kwargs=None,
-        trust_region=None,
-        compute=True,
-    ):
+        xmap: CrystalMap,
+        mp: EBSDMasterPattern,
+        exp: Union[EBSD, LazyEBSD],
+        det: EBSDDetector,
+        energy: Union[int, float],
+        mask: Union[np.ndarray, int] = 1,
+        method: str = "minimize",
+        method_kwargs: Optional[dict] = None,
+        trust_region: Optional[list] = None,
+        compute: bool = True,
+    ) -> tuple:
         if method == "minimize" and not method_kwargs:
             method_kwargs = {"method": "Nelder-Mead"}
         elif not method_kwargs:
@@ -180,17 +183,17 @@ class Refinement:
 
     @staticmethod
     def refine_orientations(
-        xmap,
-        mp,
-        exp,
-        det,
-        energy,
-        mask=1,
-        method="minimize",
-        method_kwargs=None,
-        trust_region=None,
-        compute=True,
-    ):
+        xmap: CrystalMap,
+        mp: EBSDMasterPattern,
+        exp: Union[EBSD, LazyEBSD],
+        det: EBSDDetector,
+        energy: Union[int, float],
+        mask: Union[np.ndarray, int] = 1,
+        method: str = "minimize",
+        method_kwargs: Optional[dict] = None,
+        trust_region: Optional[list] = None,
+        compute: bool = True,
+    ) -> CrystalMap:
         if method == "minimize" and not method_kwargs:
             method_kwargs = {"method": "Nelder-Mead"}
         elif not method_kwargs:
@@ -354,17 +357,17 @@ class Refinement:
 
     @staticmethod
     def refine_projection_center(
-        xmap,
-        mp,
-        exp,
-        det,
-        energy,
-        mask=1,
-        method="minimize",
-        method_kwargs=None,
-        trust_region=None,
-        compute=True,
-    ):
+        xmap: CrystalMap,
+        mp: EBSDMasterPattern,
+        exp: Union[EBSD, LazyEBSD],
+        det: EBSDDetector,
+        energy: Union[int, float],
+        mask: Union[np.array, int] = 1,
+        method: str = "minimize",
+        method_kwargs: Optional[dict] = None,
+        trust_region: Optional[list] = None,
+        compute: bool = True,
+    ) -> tuple:
         if method == "minimize" and not method_kwargs:
             method_kwargs = {"method": "Nelder-Mead"}
         elif not method_kwargs:
@@ -527,7 +530,38 @@ def _get_single_pattern_params(mp, detector, energy):
 
 ### NUMBA FUNCTIONS ###
 @numba.njit(nogil=True)
-def _fast_get_dc_multiple_pc(xpc, ypc, L, scan_points, ncols, nrows, px_size, alpha):
+def _fast_get_dc_multiple_pc(
+    xpc: np.ndarray,
+    ypc: np.ndarray,
+    L: np.ndarray,
+    scan_points: int,
+    ncols: int,
+    nrows: int,
+    px_size: Union[int, float],
+    alpha: float,
+) -> np.ndarray:
+    """Get the direction cosines between the detector and sample, with
+     varying projection center.
+     Based on :func:`~kikuchipy.indexing.refinement._fast_get_dc`.
+    Parameters
+    ----------
+    xpc, ypc, L
+        Projection center coordinates in the EMsoft convention for
+        each scan point.
+    scan_points
+        Number of patterns in the scan.
+    ncols, nrows
+        Number of pixels in the x- and y-direction on the detector.
+    px_size
+        Pixel size in um.
+    alpha
+        Defined as (np.pi / 2) - sigma + theta_c, where sigma is the
+        sample tilt and theta_c is the detector tilt.
+
+    Returns
+    -------
+        Direction cosines unit vectors for each detector pixel.
+    """
     nrows = int(nrows)
     ncols = int(ncols)
 
@@ -557,7 +591,34 @@ def _fast_get_dc_multiple_pc(xpc, ypc, L, scan_points, ncols, nrows, px_size, al
 
 
 @numba.njit(nogil=True)
-def _fast_get_dc(xpc, ypc, L, ncols, nrows, px_size, alpha):
+def _fast_get_dc(
+    xpc: Union[int, float],
+    ypc: Union[int, float],
+    L: Union[int, float],
+    ncols: int,
+    nrows: int,
+    px_size: Union[int, float],
+    alpha: float,
+) -> np.ndarray:
+    """Get the direction cosines between the detector and sample, with
+     a single, fixed projction center, as done in EMsoft
+     and :cite:`callahan2013dynamical`.
+    Parameters
+    ----------
+    xpc, ypc, L
+        Projection center coordinates in the EMsoft convention.
+    ncols, nrows
+        Number of pixels in the x- and y-direction on the detector.
+    px_size
+        Pixel size in um.
+    alpha
+        Defined as (np.pi / 2) - sigma + theta_c, where sigma is the
+        sample tilt and theta_c is the detector tilt.
+
+    Returns
+    -------
+        Direction cosines unit vectors for each detector pixel.
+    """
     # alpha: alpha = (np.pi / 2) - sigma + theta_c
     # Detector coordinates in microns
     nrows = int(nrows)
@@ -589,24 +650,38 @@ def _fast_get_dc(xpc, ypc, L, ncols, nrows, px_size, alpha):
 
 
 @numba.njit(nogil=True)
-def _fast_norm_dc(r_g_array):
-    norm = np.sqrt(np.sum(np.square(r_g_array), axis=-1))
-    norm = np.expand_dims(norm, axis=-1)
-    r_g_array = r_g_array / norm
-
-    return r_g_array
-
-
-@numba.njit(nogil=True)
 def _fast_simulate_single_pattern(
-    r,
-    dc,
-    master_north,
-    master_south,
-    npx,
-    npy,
-    scale,
-):
+    r: np.ndarray,
+    dc: np.ndarray,
+    master_north: np.ndarray,
+    master_south: np.ndarray,
+    npx: int,
+    npy: int,
+    scale: Union[int, float],
+) -> np.ndarray:
+    """Simulates a single EBSD pattern for a given rotation. The pattern
+    is found by bi-quadratic interpolation of the master pattern as
+    described in EMsoft.
+
+    Parameters
+    ----------
+    r
+        Rotation represented by a unit quaternion.
+    dc
+        Direction cosines unit vector between detector and sample.
+    master_north, master_south
+        Northern and southern hemisphere of the master pattern in
+        the square Lambert projection.
+    npx, npy
+        Number of pixels on the master pattern in the x and y direction.
+    scale
+        Factor to scale up from the square Lambert projection to the
+        master pattern.
+    Returns
+    -------
+    pattern
+        Simulated EBSD pattern.
+    """
 
     # From orix.quaternion.Quaternion.__mul__
 
@@ -674,7 +749,21 @@ def _fast_simulate_single_pattern(
 
 
 @numba.njit(nogil=True)
-def _fast_lambert_projection(v):
+def _fast_lambert_projection(
+    v: np.ndarray,
+) -> np.ndarray:
+    """Lambert projection of a vector as described in[Callahan2013]_.
+
+    Parameters
+    ----------
+    v
+        Rotated direction cosines with Cartesian coordinates.
+
+    Returns
+    -------
+    lambert
+        Rotated direction cosines in the square Lambert projection.
+    """
     w = np.atleast_2d(v)
     norm = np.sqrt(np.sum(np.square(w), axis=-1))
     norm = np.expand_dims(norm, axis=-1)
@@ -699,11 +788,13 @@ def _fast_lambert_projection(v):
     lambert = np.zeros(x.shape + (2,), dtype=np.float32)
     # z_not_one = np.abs(z) != 1
 
-    # I believe it currently returns invalid results for the vector [0, 0, 1]
-    # as discussed in https://github.com/pyxem/kikuchipy/issues/272
+    # I believe it currently returns invalid results for the
+    # vector [0, 0, 1] as discussed in
+    # https://github.com/pyxem/kikuchipy/issues/272
 
-    # Numba does not support the fix implemented in the main code
-    # one workaround could be to implement a standard loop setting the values
+    # Numba does not support the fix implemented in the main code,
+    # one workaround could be to implement a standard loop setting
+    # the values
 
     # Equations (10a) and (10b) from Callahan and De Graef (2013)
     lambert[..., 0] = np.where(
@@ -726,6 +817,28 @@ def _fast_get_lambert_interpolation_parameters(
     npy: int,
     scale: Union[int, float],
 ) -> tuple:
+    """Get interpolation parameters in the square Lambert projection, as
+    implemented in EMsoft.
+
+    Parameters
+    ----------
+    rotated_direction_cosines
+        Rotated direction cosines vector.
+    npx, npy
+        Number of pixels on the master pattern in the x and y direction.
+    scale
+        Factor to scale up from the square Lambert projection to the
+        master pattern.
+
+    Returns
+    -------
+    nii, nij
+        Row and column coordinate of a point.
+    niip, nijp
+        Row and column coordinate of neighboring point.
+    di, dim, dj, djm
+        Row and column interpolation weight factors.
+    """
 
     xy = (
         scale
@@ -751,10 +864,27 @@ def _fast_get_lambert_interpolation_parameters(
     return nii, nij, niip, nijp, di, dj, dim, djm
 
 
-### OBJECTIVE FUNCTIONS ###
+# OBJECTIVE FUNCTIONS
+def _orientation_objective_function_euler(
+    x: np.ndarray,
+    *args: tuple,
+) -> float:
+    """Objective function to be minimized when optimizing euler angles
+    (phi1, Phi, phi2).
 
+    Parameters
+    ----------
+    x
+        1-D array containing the current (phi1, Phi, phi2)
+        in radians.
+    args
+        Tuple of fixed parameters needed completely specify
+        the function.
 
-def _orientation_objective_function_euler(x, *args):
+    Returns
+    -------
+        Objective function value.
+    """
     experimental = args[0]
     master_north = args[1]
     master_south = args[2]
@@ -798,11 +928,30 @@ def _orientation_objective_function_euler(x, *args):
 
     sim_pattern = sim_pattern * mask
 
-    result = py_ncc(experimental, sim_pattern)
+    result = _py_ncc(experimental, sim_pattern)
     return 1 - result
 
 
-def _projection_center_objective_function(x, *args):
+def _projection_center_objective_function(
+    x: np.ndarray,
+    *args: tuple,
+) -> float:
+    """Objective function to be minimized when optimizing the projection
+    center coordinates (PCx, PCy, PCz).
+
+    Parameters
+    ----------
+    x
+        1-D array containing the current (PCx, PCy, PCz) in the
+        Bruker convention.
+    args
+        Tuple of fixed parameters needed completely specify
+        the function.
+
+    Returns
+    -------
+        Objective function value.
+    """
     x_star = x[0]
     y_star = x[1]
     z_star = x[2]
@@ -843,11 +992,27 @@ def _projection_center_objective_function(x, *args):
 
     sim_pattern = sim_pattern * mask
 
-    result = py_ncc(experimental, sim_pattern)
+    result = _py_ncc(experimental, sim_pattern)
     return 1 - result
 
 
-def _full_objective_function_euler(x, *args):
+def _full_objective_function_euler(x: np.ndarray, *args: tuple) -> float:
+    """Objective function to be minimized when optimizing euler angles
+    (phi1, Phi, phi2) and projection center coordinates (PCx, PCy, PCz).
+
+    Parameters
+    ----------
+    x
+        1-D array containing the current (phi1, Phi, phi2) in radians
+        and (PCx, PCy, PCz) in Bruker convention.
+    args
+        Tuple of fixed parameters needed completely specify
+        the function.
+
+    Returns
+    -------
+        Objective function value.
+    """
     experimental = args[0]
     master_north = args[1]
     master_south = args[2]
@@ -912,11 +1077,56 @@ def _full_objective_function_euler(x, *args):
     )
     sim_pattern = sim_pattern * mask
 
-    result = py_ncc(experimental, sim_pattern)
+    result = _py_ncc(experimental, sim_pattern)
     return 1 - result
 
 
-def _refine_xmap_solver(r, pc, exp, pre_args, method, method_kwargs, trust_region):
+# SOLVERS
+def _refine_xmap_solver(
+    r: np.ndarray,
+    pc: np.ndarray,
+    exp: np.ndarray,
+    pre_args: tuple,
+    method: type(lambda x: None),
+    method_kwargs: dict,
+    trust_region: list,
+) -> tuple:
+    """Maximizes the similarity between an experimental pattern and
+    a simulated pattern by optimizing the euler angles (phi1, Phi, phi2)
+    and the projection center coordinates (PCx, PCy, PCz).
+
+    Parameters
+    ----------
+    r
+        Euler angles (phi1, Phi, phi2) in radians.
+    pc
+        Projection center coordinates in Bruker convention.
+    exp
+        One experimental pattern with shape (n x m) and data type
+        float 32.
+    pre_args
+        Tuple of fixed parameters used for single pattern
+        simulations.
+    method
+        scipy.optimize function.
+    method_kwargs
+        Keyword arguments for the specific scipy.optimize function.
+        For the list of possible keyword arguments, see
+        the scipy documentation.
+    trust_region
+        List of how wide the bounds, centered on r and pc,
+        should be for (phi1, Phi, phi2, PCx, PCy, PCz).
+        Only used for methods that support bounds (excluding Powell).
+    Returns
+    -------
+        score
+            Highest NCC value.
+        phi1, Phi , phi2
+            The euler angles which gave the highest score, in radians.
+        pcx, pxy, pxz
+            The projection center coordinates which gave the highest
+            score, in the Bruker convention.
+    """
     phi1_0 = r[..., 0]
     Phi_0 = r[..., 1]
     phi2_0 = r[..., 2]
@@ -980,7 +1190,49 @@ def _refine_xmap_solver(r, pc, exp, pre_args, method, method_kwargs, trust_regio
     return (score, phi1, Phi, phi2, pcx, pxy, pxz)
 
 
-def _refine_pc_solver(exp, r, pc, method, method_kwargs, pre_args, trust_region):
+def _refine_pc_solver(
+    exp: np.ndarray,
+    r: np.ndarray,
+    pc: np.ndarray,
+    method: type(lambda x: None),
+    method_kwargs: dict,
+    pre_args: tuple,
+    trust_region: list,
+) -> tuple:
+    """Maximizes the similarity between an experimental pattern and a
+        simulated pattern by optimizing the projection center
+        coordinates (PCx, PCy, PCz) used in the simulation.
+
+    Parameters
+    ----------
+    exp
+        One experimental pattern with shape (n x m) and data type
+        float 32.
+    r
+        Euler angles (phi1, Phi, phi2) in radians.
+    pc
+        Projection center coordinates in Bruker convention.
+    method
+        scipy.optimize function.
+    method_kwargs
+        Keyword arguments for the specific scipy.optimize function.
+        For the list of possible keyword arguments, see
+        the scipy documentation.
+    pre_args
+        Tuple of fixed parameters used for single pattern
+        simulations.
+    trust_region
+        List of how wide the bounds, centered pc, should be for
+        (PCx, PCy, PCz). Only used for methods that support bounds
+        (excluding Powell).
+    Returns
+    -------
+        score
+            Highest NCC value.
+        pcx, pxy, pxz
+            The projection center coordinates which gave the highest
+            score, in the Bruker convention.
+    """
     args = (exp,) + pre_args + (r,)
     pc_x0 = pc
 
@@ -1029,8 +1281,48 @@ def _refine_pc_solver(exp, r, pc, method, method_kwargs, pre_args, trust_region)
 
 
 def _refine_orientations_solver(
-    exp, r, dc, method, method_kwargs, pre_args, trust_region
-):
+    exp: np.ndarray,
+    r: np.ndarray,
+    dc: np.ndarray,
+    method: type(lambda x: None),
+    method_kwargs: dict,
+    pre_args: tuple,
+    trust_region: list,
+) -> tuple:
+    """Maximizes the similarity between an experimental pattern and a
+    simulated pattern by optimizing the euler angles (phi1, Phi, phi2)
+    used in the simulation.
+
+    Parameters
+    ----------
+    exp
+        One experimental pattern with shape (n x m) and data type
+        float 32.
+    r
+        Euler angles (phi1, Phi, phi2) in radians.
+    dc
+        Direction cosines with shape (n x m) and data type float 32.
+    method
+        scipy.optimize function.
+    method_kwargs
+        Keyword arguments for the specific scipy.optimize function.
+        For the list of possible keyword arguments,
+        see the scipy documentation.
+    pre_args
+        Tuple of fixed parameters used for single pattern
+        simulations.
+    trust_region
+        List of how wide the bounds, centered on r, should be for
+        (phi1, Phi, phi2). Only used for methods that
+        support bounds (excluding Powell).
+
+    Returns
+    -------
+        score
+            Highest NCC value.
+        phi1, Phi , phi2
+            The euler angles which gave the highest score, in radians.
+    """
 
     phi1 = r[..., 0]
     Phi = r[..., 1]
@@ -1085,12 +1377,21 @@ def _refine_orientations_solver(
     return (score, refined_phi1, refined_Phi, refined_phi2)
 
 
-#### Custom Similarity Metrics ####
-
-
+# SIMILARITY METRICS
 @numba.njit(fastmath=True)
-def py_ncc(a, b):
-    # Input should already be np.float32
+def _py_ncc(a: np.ndarray, b: np.ndarray) -> float:
+    """Calculates the normalized cross-correlation coefficient (NCC)
+    between two patterns of the same size and with data type float32.
+
+    Parameters
+    ----------
+    a, b
+        np.ndarray with shape (n x m) and with data type np.float32.
+
+    Returns
+    -------
+        float representing the NCC between a and b.
+    """
     abar = np.mean(a)
     bbar = np.mean(b)
     astar = a - abar
@@ -1098,9 +1399,3 @@ def py_ncc(a, b):
     return np.sum(astar * bstar) / np.sqrt(
         np.sum(np.square(astar)) * np.sum(np.square(bstar))
     )
-
-
-@numba.njit(fastmath=True)
-def py_ndp(a, b):
-    # Input should already be np.float32
-    return np.sum(a * b) / np.sqrt(np.sum(np.square(a)) * np.sum(np.square(b)))
