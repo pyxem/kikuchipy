@@ -29,9 +29,9 @@ from orix.crystal_map import CrystalMap
 from orix.quaternion import Rotation
 import scipy.optimize
 
-if TYPE_CHECKING:
-    from kikuchipy.signals import EBSD, EBSDMasterPattern, LazyEBSD
-    from kikuchipy.detectors import EBSDDetector
+# from kikuchipy.signals import EBSD, EBSDMasterPattern, LazyEBSD
+# from kikuchipy.detectors import EBSDDetector
+from kikuchipy import signals
 
 
 class EBSDRefinement:
@@ -44,9 +44,9 @@ class EBSDRefinement:
     @staticmethod
     def refine_xmap(
         xmap: CrystalMap,
-        mp: EBSDMasterPattern,
-        exp: Union[EBSD, LazyEBSD],
-        det: EBSDDetector,
+        mp: signals.EBSDMasterPattern,
+        exp: Union[signals.EBSD, signals.LazyEBSD],
+        det,
         energy: Union[int, float],
         mask: Optional[np.ndarray] = None,
         method: str = "minimize",
