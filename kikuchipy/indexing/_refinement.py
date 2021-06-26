@@ -18,7 +18,7 @@
 
 
 import sys
-from typing import Optional, Union
+from typing import Optional, Union, TYPE_CHECKING
 
 
 import dask
@@ -29,8 +29,9 @@ from orix.crystal_map import CrystalMap
 from orix.quaternion import Rotation
 import scipy.optimize
 
-from kikuchipy.signals import EBSD, EBSDMasterPattern, LazyEBSD
-from kikuchipy.detectors import EBSDDetector
+if TYPE_CHECKING:
+    from kikuchipy.signals import EBSD, EBSDMasterPattern, LazyEBSD
+    from kikuchipy.detectors import EBSDDetector
 
 
 class EBSDRefinement:

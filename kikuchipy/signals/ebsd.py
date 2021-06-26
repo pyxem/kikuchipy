@@ -1007,15 +1007,48 @@ class EBSD(CommonImage, Signal2D):
 
     def orientation_refinement(self):
         # TODO: Implement this method
-        pass
+        return EBSDRefinement.refine_orientations(
+            xmap=None,
+            mp=None,
+            exp=self,
+            det=None,
+            energy=None,
+            mask=None,
+            method=None,
+            method_kwargs=None,
+            trust_region=None,
+            compute=None,
+        )
 
     def pc_refinement(self):
         # TODO: Implement this method
-        pass
+        return EBSDRefinement.refine_projection_center(
+            xmap=None,
+            mp=None,
+            exp=self,
+            det=None,
+            energy=None,
+            mask=None,
+            method=None,
+            method_kwargs=None,
+            trust_region=None,
+            compute=None,
+        )
 
     def full_refinement(self):
         # TODO: Implement this method
-        pass
+        return EBSDRefinement.refine_xmap(
+            xmap=None,
+            mp=None,
+            exp=self,
+            det=None,
+            energy=None,
+            mask=None,
+            method=None,
+            method_kwargs=None,
+            trust_region=None,
+            compute=None,
+        )
 
     def fft_filter(
         self,
