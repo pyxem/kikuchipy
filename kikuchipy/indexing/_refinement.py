@@ -1,3 +1,22 @@
+# -*- coding: utf-8 -*-
+# Copyright 2019-2021 The kikuchipy developers
+#
+# This file is part of kikuchipy.
+#
+# kikuchipy is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# kikuchipy is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+
+
 import sys
 from typing import Optional, Union
 
@@ -13,8 +32,14 @@ import scipy.optimize
 from kikuchipy.signals import EBSD, EBSDMasterPattern, LazyEBSD
 from kikuchipy.detectors import EBSDDetector
 
+"""Tools to refine the indexing results of dictionary indexing. The
+methods attempts to avoid pure Python whenever possible, and are 
+based heavily on the pattern simulations in 
+:meth:`~kikuchipy.signals.EBSDMasterPattern.get_patterns`
+"""
 
-class Refinement:
+
+class EBSDRefinement:
     @staticmethod
     def refine_xmap(
         xmap: CrystalMap,
@@ -22,7 +47,7 @@ class Refinement:
         exp: Union[EBSD, LazyEBSD],
         det: EBSDDetector,
         energy: Union[int, float],
-        mask: Union[np.ndarray, int] = 1,
+        mask: Optional[np.ndarray] = None,
         method: str = "minimize",
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
@@ -87,6 +112,9 @@ class Refinement:
         alpha = (np.pi / 2) - sigma + theta_c
 
         detector_data = [det.ncols, det.nrows, det.px_size, alpha]
+
+        if mask is None:
+            mask = 1
 
         pre_args = (
             master_north,
@@ -188,7 +216,7 @@ class Refinement:
         exp: Union[EBSD, LazyEBSD],
         det: EBSDDetector,
         energy: Union[int, float],
-        mask: Union[np.ndarray, int] = 1,
+        mask: Optional[np.ndarray] = None,
         method: str = "minimize",
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
@@ -252,6 +280,9 @@ class Refinement:
             npy,
             scale,
         ) = _get_single_pattern_params(mp, det, energy)
+
+        if mask is None:
+            mask = 1
 
         pre_args = (
             master_north,
@@ -362,7 +393,7 @@ class Refinement:
         exp: Union[EBSD, LazyEBSD],
         det: EBSDDetector,
         energy: Union[int, float],
-        mask: Union[np.array, int] = 1,
+        mask: Optional[np.array] = None,
         method: str = "minimize",
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
@@ -416,6 +447,9 @@ class Refinement:
         alpha = (np.pi / 2) - sigma + theta_c
 
         detector_data = [det.ncols, det.nrows, det.px_size, alpha]
+
+        if mask is None:
+            mask = 1
 
         pre_args = (
             master_north,
@@ -752,7 +786,8 @@ def _fast_simulate_single_pattern(
 def _fast_lambert_projection(
     v: np.ndarray,
 ) -> np.ndarray:
-    """Lambert projection of a vector as described in[Callahan2013]_.
+    """Lambert projection of a vector as described in
+    :cite:`callahan2013dynamical`.
 
     Parameters
     ----------
