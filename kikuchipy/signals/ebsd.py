@@ -49,6 +49,7 @@ from kikuchipy.pattern._pattern import (
     _dynamic_background_frequency_space_setup,
 )
 from kikuchipy.indexing import StaticPatternMatching
+from kikuchipy.indexing._refinement import EBSDRefinement
 from kikuchipy.indexing.similarity_metrics import SimilarityMetric
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
@@ -1003,6 +1004,18 @@ class EBSD(CommonImage, Signal2D):
             return_merged_crystal_map=return_merged_crystal_map,
             get_orientation_similarity_map=get_orientation_similarity_map,
         )
+
+    def orientation_refinement(self):
+        # TODO: Implement this method
+        pass
+
+    def pc_refinement(self):
+        # TODO: Implement this method
+        pass
+
+    def full_refinement(self):
+        # TODO: Implement this method
+        pass
 
     def fft_filter(
         self,

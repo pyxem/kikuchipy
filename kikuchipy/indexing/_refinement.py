@@ -32,14 +32,14 @@ import scipy.optimize
 from kikuchipy.signals import EBSD, EBSDMasterPattern, LazyEBSD
 from kikuchipy.detectors import EBSDDetector
 
-"""Tools to refine the indexing results of dictionary indexing. The
-methods attempts to avoid pure Python whenever possible, and are 
-based heavily on the pattern simulations in 
-:meth:`~kikuchipy.signals.EBSDMasterPattern.get_patterns`
-"""
-
 
 class EBSDRefinement:
+    """Tools to refine the indexing results of dictionary indexing. The
+    methods attempts to avoid pure Python whenever possible, and are
+    based heavily on the pattern simulations in
+    :meth:`~kikuchipy.signals.EBSDMasterPattern.get_patterns`
+    """
+
     @staticmethod
     def refine_xmap(
         xmap: CrystalMap,
