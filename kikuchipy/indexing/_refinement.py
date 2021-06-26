@@ -18,7 +18,7 @@
 
 
 import sys
-from typing import Optional, Union, TYPE_CHECKING
+from typing import Optional, Union
 
 
 import dask
@@ -28,10 +28,6 @@ import numpy as np
 from orix.crystal_map import CrystalMap
 from orix.quaternion import Rotation
 import scipy.optimize
-
-# from kikuchipy.signals import EBSD, EBSDMasterPattern, LazyEBSD
-# from kikuchipy.detectors import EBSDDetector
-from kikuchipy import signals
 
 
 class EBSDRefinement:
@@ -44,8 +40,8 @@ class EBSDRefinement:
     @staticmethod
     def refine_xmap(
         xmap: CrystalMap,
-        mp: signals.EBSDMasterPattern,
-        exp: Union[signals.EBSD, signals.LazyEBSD],
+        mp,
+        exp,
         det,
         energy: Union[int, float],
         mask: Optional[np.ndarray] = None,
@@ -213,9 +209,9 @@ class EBSDRefinement:
     @staticmethod
     def refine_orientations(
         xmap: CrystalMap,
-        mp: EBSDMasterPattern,
-        exp: Union[EBSD, LazyEBSD],
-        det: EBSDDetector,
+        mp,
+        exp,
+        det,
         energy: Union[int, float],
         mask: Optional[np.ndarray] = None,
         method: str = "minimize",
@@ -390,9 +386,9 @@ class EBSDRefinement:
     @staticmethod
     def refine_projection_center(
         xmap: CrystalMap,
-        mp: EBSDMasterPattern,
-        exp: Union[EBSD, LazyEBSD],
-        det: EBSDDetector,
+        mp,
+        exp,
+        det,
         energy: Union[int, float],
         mask: Optional[np.array] = None,
         method: str = "minimize",
