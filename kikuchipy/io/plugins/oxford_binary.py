@@ -112,7 +112,7 @@ class OxfordBinaryFile:
         file = self.file
         file.seek(0)
         sig_shape = np.fromfile(file, dtype=np.uint16, count=5, offset=offset)
-        sr, sc = sig_shape[[2, 4]].astype(int)
+        sr, sc = sig_shape[[2, 4]].astype(np.int64)
         return sr, sc
 
     def guess_number_of_patterns(self, assumed_n_pixels: int = 1600) -> int:
@@ -206,6 +206,15 @@ class OxfordBinaryFile:
         metadata_size = header_size + footer_size
         data_size = n_patterns * (sr * sc + metadata_size)
 
+        # Raise explanatory error if byte position of first pattern
+        # seems obviously wrong
+        file_size = os.path.getsize(file.name)
+        if data_size > file_size:
+            raise ValueError(
+                f"Assumed number of {n_patterns} patterns with {sr * sc} pixels leads "
+                f"to a data size {data_size} greater than the file size {file_size}"
+            )
+
         # Could use numpy.fromfile() when lazy=False directly here, but
         # this reading route has a memory peak greater than the data
         # in memory. Use dask instead.
@@ -227,7 +236,7 @@ class OxfordBinaryFile:
         if not np.allclose(np.diff(pattern_starts), 1):
             pattern_positions = (
                 (pattern_starts - first_pattern_position) / (data_size / n_patterns)
-            ).astype(int)
+            ).astype(np.int64)
             data0 = data0[pattern_positions]
 
         data0 = data0[:, header_size : header_size + sr * sc]
