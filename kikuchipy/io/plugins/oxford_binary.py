@@ -194,28 +194,10 @@ class OxfordBinaryFile:
         # Get byte positions for the start of each pattern
         file.seek(0)
         pattern_starts = np.fromfile(file, dtype=np.int64, count=n_patterns, offset=8)
-
-        pattern_positions = np.argsort(pattern_starts)
-        first_pattern_position = pattern_starts[pattern_positions[0]]
-
-        # Raise explanatory error if byte position of first pattern
-        # seems obviously wrong
-        file_size = os.path.getsize(file.name)
-        if first_pattern_position < 0 or first_pattern_position > file_size:
-            raise ValueError(
-                f"An assumed number of patterns of {n_patterns} seems too large"
-                f" for a file size of {file_size} bytes"
-            )
+        first_pattern_position = 8 + n_patterns * 8
 
         sr, sc = self.get_signal_shape(offset=first_pattern_position)
         data_shape += (sr, sc)
-
-        # Raise explanatory error if any of the signal dimensions are 0
-        if sr == 0 or sc == 0:
-            raise ValueError(
-                f"The assumed number of patterns {n_patterns} leads to an "
-                f"assumed signal shape of ({sr}, {sc}), which seems wrong"
-            )
 
         # Create a memory map from data on disk
         dtype = np.uint8
@@ -243,6 +225,9 @@ class OxfordBinaryFile:
 
         # Sort if necessary
         if not np.allclose(np.diff(pattern_starts), 1):
+            pattern_positions = (
+                (pattern_starts - first_pattern_position) / (data_size / n_patterns)
+            ).astype(int)
             data0 = data0[pattern_positions]
 
         data0 = data0[:, header_size : header_size + sr * sc]

@@ -53,8 +53,5 @@ class TestOxfordBinary:
         assert np.allclose(s.data, s2.data.reshape((9,) + sig_shape))
 
     def test_raises(self):
-        with pytest.raises(ValueError, match="An assumed number of patterns"):
+        with pytest.raises(ValueError, match="mmap length is greater than file size"):
             _ = kp.load(OXFORD_FILE, navigation_shape=(40, 30))
-
-        with pytest.raises(ValueError, match="The assumed number of patterns"):
-            _ = kp.load(OXFORD_FILE, navigation_shape=(3, 4))
