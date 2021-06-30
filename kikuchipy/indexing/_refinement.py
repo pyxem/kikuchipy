@@ -33,7 +33,7 @@ import scipy.optimize
 class EBSDRefinement:
     """Tools to refine the indexing results of dictionary indexing. The
     methods attempts to avoid pure Python whenever possible, and are
-    based heavily on the pattern simulations in
+    based on the pattern simulations in
     :meth:`~kikuchipy.signals.EBSDMasterPattern.get_patterns`
     """
 
@@ -77,6 +77,8 @@ class EBSDRefinement:
             trust_region = np.deg2rad(trust_region[:3]).tolist() + trust_region[3:]
 
         exp.rescale_intensity(dtype_out=np.float32)
+        # Here we are rescaling
+        # the input, we should probably not do this! :)
         exp_data = exp.data
         exp_shape = exp_data.shape
 
@@ -233,7 +235,8 @@ class EBSDRefinement:
         if len(euler.shape) > 2:
             euler = euler[:, 0, :]
 
-        exp.rescale_intensity(dtype_out=np.float32)  # Here we are rescaling
+        exp.rescale_intensity(dtype_out=np.float32)
+        # Here we are rescaling
         # the input, we should probably not do this! :)
         exp_data = exp.data
         exp_shape = exp_data.shape
@@ -409,6 +412,8 @@ class EBSDRefinement:
             r = xmap.rotations.data
 
         exp.rescale_intensity(dtype_out=np.float32)
+        # Here we are rescaling
+        # the input, we should probably not do this! :)
         exp_data = exp.data
         exp_shape = exp_data.shape
 
@@ -634,6 +639,7 @@ def _fast_get_dc(
     """Get the direction cosines between the detector and sample, with
      a single, fixed projction center, as done in EMsoft
      and :cite:`callahan2013dynamical`.
+
     Parameters
     ----------
     xpc, ypc, L
@@ -708,6 +714,7 @@ def _fast_simulate_single_pattern(
     scale
         Factor to scale up from the square Lambert projection to the
         master pattern.
+
     Returns
     -------
     pattern
@@ -1149,6 +1156,7 @@ def _refine_xmap_solver(
         List of how wide the bounds, centered on r and pc,
         should be for (phi1, Phi, phi2, PCx, PCy, PCz).
         Only used for methods that support bounds (excluding Powell).
+
     Returns
     -------
         score
@@ -1431,3 +1439,39 @@ def _py_ncc(a: np.ndarray, b: np.ndarray) -> float:
     return np.sum(astar * bstar) / np.sqrt(
         np.sum(np.square(astar)) * np.sum(np.square(bstar))
     )
+
+
+def _refinement_parameter_check(exp, xmap, detector, method):
+    # Signal and Detector must have same shape
+    if exp.axes_manager.signal_shape != detector.shape:
+        raise ValueError("Detector must have same shape as the signal shape")
+
+    # Minimization strategy must be supported
+    # Invalid local minimizers will be caught by the scipy functions
+    if method is not None:
+        supported_methods = [
+            "minimize",
+            "differential_evolution",
+            "dual_annealing",
+            "basinhopping",
+        ]
+        if method not in supported_methods:
+            raise ValueError("Method not supported")
+
+    scan_points = 1
+    for x in exp.axes_manager.navigation_shape:
+        scan_points *= x
+
+    # Must have 1 PC or n x m PCs
+    if len(detector.pc) != 1 and len(detector.pc) != scan_points:
+        raise ValueError(
+            "Detector must have exactly one projection center, or one projection center per scan point"
+        )
+
+    # xmap must be single phase
+    if len(xmap.phases.ids) != 1:
+        raise ValueError("Crystal map must have exactly one phase")
+    if len(xmap.rotations.data) != scan_points:
+        raise ValueError(
+            "Number of rotations in crystal map must be equal to the number of experimental patterns"
+        )
