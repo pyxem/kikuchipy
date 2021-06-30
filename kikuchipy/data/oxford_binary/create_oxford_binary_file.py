@@ -25,9 +25,9 @@ import kikuchipy as kp
 
 s = kp.data.nickel_ebsd_small()
 
-sr, sc = s.axes_manager.signal_shape[::-1]
+sc, sr = s.axes_manager.signal_shape
 n_pixels = sr * sc
-nr, nc = s.axes_manager.navigation_shape[::-1]
+nc, nr = s.axes_manager.navigation_shape
 n_patterns = nr * nc
 
 dir_data = os.path.abspath(os.path.dirname(__file__))
@@ -53,9 +53,10 @@ pattern_positions = np.arange(n_patterns, dtype=np.int64)
 pattern_positions *= pattern_header_size + n_pixels + pattern_footer_size
 pattern_positions += file_header.nbytes + n_patterns * 8
 # Shift positions one step to the right
-new_order = np.roll(np.arange(n_patterns), 1)
-pattern_positions = pattern_positions[new_order]
+pattern_positions = np.roll(pattern_positions, shift=1)
 pattern_positions.tofile(file)
+# And thus the patterns must be shifted one step to the left
+new_order = np.roll(np.arange(n_patterns), shift=-1)
 
 # Write patterns with header and footer
 pattern_data = s.data
