@@ -1442,6 +1442,25 @@ def _py_ncc(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def _refinement_parameter_check(exp, xmap, detector, method):
+    """Helper function to determine if the input to the different EBSD
+    refinement methods are valid.
+
+    Parameters
+    ----------
+    exp
+        Experimental data
+    xmap
+        CrystalMap containing the indexing result.
+    detector
+        EBSDDetector describing the experimental geometry.
+    method
+        Name of the scipy optimization method.
+
+    Raises
+    ------
+    ValueError
+        If one of the parameters are invalid.
+    """
     # Signal and Detector must have same shape
     if exp.axes_manager.signal_shape != detector.shape:
         raise ValueError("Detector must have same shape as the signal shape")
