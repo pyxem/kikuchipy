@@ -17,10 +17,14 @@ Unreleased
 
 Contributors
 ------------
-- Håkon Wiik Ånes
+- Håkon Wiik
+- Lars Andreas Hastad Lervik
 
 Added
 -----
+- Refinement module for EBSD refinement. Allows for the refinement of
+  orientations and/or projection center estimates.
+  (`#387 <https://github.com/pyxem/kikuchipy/pull/387>`_)
 - Sample tilt about RD can be passed as part of an EBSDDetector. This can be used when
   projecting parts of master patterns onto a detector.
   (`#381 <https://github.com/pyxem/kikuchipy/pull/381>`_)

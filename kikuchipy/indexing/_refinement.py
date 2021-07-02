@@ -529,17 +529,34 @@ class EBSDRefinement:
         return output
 
 
-def _get_single_pattern_params(mp, detector, energy):
-    # This method is already a part of the EBSDMasterPattern.get_patterns so
-    # it could probably replace it?
+def _get_single_pattern_params(mp, energy):
+    """Helper function that checks if the master pattern is in the
+    square Lambert projection.
+
+    Parameters
+    ----------
+    mp
+      Master pattern in the square Lambert projection.
+    energy
+        Acceleration voltage, in kV, used to simulate the desired
+        master pattern.
+
+    Returns
+    -------
+    master_north, master_south
+        Northern and southern hemisphere of the master pattern in
+        the square Lambert projection.
+    npx, npy
+        Number of pixels on the master pattern in the x and y direction.
+    scale
+        Factor to scale up from the square Lambert projection to the
+        master pattern.
+    """
+
     if mp.projection != "lambert":
         raise NotImplementedError(
             "Master pattern must be in the square Lambert projection"
         )
-    # if len(detector.pc) > 1:
-    #     raise NotImplementedError(
-    #         "Detector must have exactly one projection center"
-    #     )
 
     # Get the master pattern arrays created by a desired energy
     north_slice = ()
