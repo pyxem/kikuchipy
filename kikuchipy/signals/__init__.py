@@ -37,6 +37,4 @@ __all__ = [
     "LazyEBSDMasterPattern",
     "util",
     "VirtualBSEImage",
-    "_get_direction_cosines",
-    "_get_lambert_interpolation_parameters",
 ]
