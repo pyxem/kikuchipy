@@ -17,7 +17,7 @@ Unreleased
 
 Contributors
 ------------
-- Håkon Wiik
+- Håkon Wiik Ånes
 - Lars Andreas Hastad Lervik
 
 Added
