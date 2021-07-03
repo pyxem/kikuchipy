@@ -45,16 +45,61 @@ class EBSDRefinement:
         det,
         energy: Union[int, float],
         mask: Optional[np.ndarray] = None,
-        method: str = "minimize",
+        method: Optional[str] = None,
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
         compute: bool = True,
     ) -> tuple:
-        if method == "minimize" and not method_kwargs:
-            method_kwargs = {"method": "Nelder-Mead"}
-        elif not method_kwargs:
-            method_kwargs = {}
-        method = getattr(scipy.optimize, method)
+        """Performs an orientation and projection center refinement
+        using the initial indexing results stored in a single phase
+        :class:`~orix.crystal_map.CrystalMap` and the projection center
+        estimates stored in an
+        :class:`~kikuchipy.detectors.ebsd_detector.EBSDDetector`.
+
+        Parameters
+        ----------
+        xmap : CrystalMap
+            A crystal map storing the results of the initial EBSD
+            indexing.
+        mp : EBSDMasterPattern
+            EBSDMasterPattern in the square Lambert projection.
+        exp : EBSD
+            Experimental EBSD data.
+        det : EBSDDetecor
+            EBSD detector describing the detector dimensions and the
+            detector-sample geometry with either a single, fixed
+            projection/pattern center or a projection center for each
+            scan point.
+        energy : int
+            Acceleration voltage, in kV, used to simulate the desired
+            master pattern.
+        mask : np.ndarray, optional
+            Boolean mask to be applied to the simulated patterns.
+        method : str, optional
+            Name of the scipy.optimize function to be used. Must be one
+            of "minimize", "differential_evolution", "dual_annealing",
+            or "basinhopping". If not specified, "minimize" is used.
+        method_kwargs : dict, optional
+            Keyword arguments passed to the scipy.optimize function
+            specified above.
+        trust_region : list, optional
+            List of how wide the bounds, centered on the initial
+            orientation indexing result and projection center,
+            should be for (phi1, Phi, phi2) in degrees and
+            (PCx, PCy, PCz) in the Bruker convention.
+            Only used for methods that support bounds
+            (excluding Powell). Defaults to [1, 1, 1, 0.05, 0.05, 0.05]
+        compute : bool, optional
+            Whether to return a computed result, by default True.
+            For more information see :func:`~dask.array.Array.compute`.
+
+        Returns
+        -------
+        CrystalMap, EBSDDetector
+            A crystal map with the refined orientations and a new
+            EBSD detector with refined projection centers.
+        """
+        method, method_kwargs = _get_method(method, method_kwargs)
 
         # Convert from Quaternions to Euler angles
         with np.errstate(divide="ignore", invalid="ignore"):
@@ -216,16 +261,57 @@ class EBSDRefinement:
         det,
         energy: Union[int, float],
         mask: Optional[np.ndarray] = None,
-        method: str = "minimize",
+        method: Optional[str] = None,
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
         compute: bool = True,
     ) -> CrystalMap:
-        if method == "minimize" and not method_kwargs:
-            method_kwargs = {"method": "Nelder-Mead"}
-        elif not method_kwargs:
-            method_kwargs = {}
-        method = getattr(scipy.optimize, method)
+        """Performs an orientation refinement using the initial indexing
+                results stored in a single phase
+                :class:`~orix.crystal_map.CrystalMap` and the fixed
+                detector-sample geometry.
+
+        Parameters
+        ----------
+        xmap : CrystalMap
+            A crystal map storing the results of the initial EBSD
+        mp : EBSDMasterPattern
+            EBSDMasterPattern in the square Lambert projection.
+        exp : EBSD
+            Experimental EBSD data.
+        det : EBSDDetector
+            EBSD detector describing the detector dimensions and the
+            detector-sample geometry with either a single, fixed
+            projection/pattern center or a projection center for each
+            scan point.
+        energy : int
+           Acceleration voltage, in kV, used to simulate the desired
+            master pattern.
+        mask : np.ndarray
+            Boolean mask to be applied to the simulated patterns.
+        method : str, optional
+            Name of the scipy.optimize function to be used. Must be one
+            of "minimize", "differential_evolution", "dual_annealing",
+            or "basinhopping". If not specified, "minimize" is used.
+        method_kwargs : dict, optional
+            Keyword arguments passed to the scipy.optimize function
+            specified above.
+        trust_region : list, optional
+            List of how wide the bounds, centered on the initial
+            orientation indexing result, should be for
+            (phi1, Phi, phi2) in degrees. Only used for methods that
+            support bounds (excluding Powell). Defaults to [1, 1, 1].
+        compute : bool
+            Whether to return a computed result, by default True.
+            For more information see :func:`~dask.array.Array.compute`
+
+        Returns
+        -------
+        CrystalMap
+            A new crystal map where the orientations have been
+            refined.
+        """
+        method, method_kwargs = _get_method(method, method_kwargs)
 
         # Convert from Quaternions to Euler angles
         with np.errstate(divide="ignore", invalid="ignore"):
@@ -394,16 +480,58 @@ class EBSDRefinement:
         det,
         energy: Union[int, float],
         mask: Optional[np.array] = None,
-        method: str = "minimize",
+        method: Optional[str] = None,
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
         compute: bool = True,
     ) -> tuple:
-        if method == "minimize" and not method_kwargs:
-            method_kwargs = {"method": "Nelder-Mead"}
-        elif not method_kwargs:
-            method_kwargs = {}
-        method = getattr(scipy.optimize, method)
+        """Performs a projection center refinement using the
+        fixed indexing results stored in a single phase
+        :class:`~orix.crystal_map.CrystalMap` and the projection center
+        estimates stored in an
+        :class:`~kikuchipy.detectors.ebsd_detector.EBSDDetector`.
+
+        Parameters
+        ----------
+        xmap : CrystalMap
+            A crystal map storing the results of the initial EBSD
+            indexing.
+        mp : EBSDMasterPattern
+            EBSDMasterPattern in the square Lambert projection.
+        exp : EBSD
+            Experimental EBSD data.
+        det : EBSDDetector
+            EBSD detector describing the detector dimensions and the
+            detector-sample geometry with either a single, fixed
+            projection/pattern center or a projection center for each
+            scan point.
+        energy : int
+            Acceleration voltage, in kV, used to simulate the desired
+            master pattern.
+        mask : np.ndarray, optional
+            Boolean mask to be applied to the simulated patterns.
+        method : str, optional
+            Name of the scipy.optimize function to be used. Must be one
+            of "minimize", "differential_evolution", "dual_annealing",
+            or "basinhopping". If not specified, "minimize" is used.
+        method_kwargs : dict, optional
+            Keyword arguments passed to the scipy.optimize function
+            specified above.
+        trust_region : list, optional
+            List of how wide the bounds, centered on the projection
+            center, should be for (PCx, PCy, PCz) in Bruker convention.
+            Only used for methods that support bounds
+            (excluding Powell). Defaults to [0.05, 0.05, 0.05].
+        compute : bool
+            Whether to return a computed result, by default True.
+            For more information see :func:`~dask.array.Array.compute`.
+        Returns
+        -------
+        np.ndarray, EBSDDetector
+            An array containing the similarity metric after refinement,
+            and a new EBSD detector with refined projection centers.
+        """
+        method, method_kwargs = _get_method(method, method_kwargs)
 
         # Extract best rotation from xmap if given more than 1
         if len(xmap.rotations.shape) > 1:
@@ -1458,7 +1586,7 @@ def _py_ncc(a: np.ndarray, b: np.ndarray) -> float:
     )
 
 
-def _refinement_parameter_check(exp, xmap, detector, method):
+def _refinement_parameter_check(exp, xmap, detector, method, mask):
     """Helper function to determine if the input to the different EBSD
     refinement methods are valid.
 
@@ -1472,6 +1600,8 @@ def _refinement_parameter_check(exp, xmap, detector, method):
         EBSDDetector describing the experimental geometry.
     method
         Name of the scipy optimization method.
+    mask
+        Mask applied to the patterns.
 
     Raises
     ------
@@ -1511,3 +1641,34 @@ def _refinement_parameter_check(exp, xmap, detector, method):
         raise ValueError(
             "Number of rotations in crystal map must be equal to the number of experimental patterns"
         )
+    if mask is not None:
+        if exp.axes_manager.signal_shape != mask.shape:
+            raise ValueError("Mask and signal must have the same shape")
+
+
+def _get_method(method, method_kwargs):
+    """Helper function that gets the correct optimization function,
+    and sets reasonable keyword arguments if not specified.
+
+    Parameters
+    ----------
+    method : str, optional
+        Name of the scipy optimization method
+    method_kwargs : dict, optional
+        Keyword arguments for function
+    Returns
+    -------
+    method : function
+        Scipy optimization function.
+    method_kwargs : dict
+        Keyword arguments for function.
+    """
+    if not method:
+        method = "minimize"
+    if method == "minimize" and not method_kwargs:
+        method_kwargs = {"method": "Nelder-Mead"}
+    elif not method_kwargs:
+        method_kwargs = {}
+    method = getattr(scipy.optimize, method)
+
+    return method, method_kwargs

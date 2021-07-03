@@ -1027,34 +1027,34 @@ class EBSD(CommonImage, Signal2D):
 
         Parameters
         ----------
-        xmap
+        xmap : CrystalMap
             A crystal map storing the results of the initial EBSD
             indexing.
-        master_pattern
+        master_pattern : EBSDMasterPattern
             EBSDMasterPattern in the square Lambert projection.
-        detector
+        detector : EBSDDetector
             EBSD detector describing the detector dimensions and the
             detector-sample geometry with either a single, fixed
             projection/pattern center or a projection center for each
             scan point.
-        energy
+        energy : int
             Acceleration voltage, in kV, used to simulate the desired
             master pattern.
-        mask
+        mask : np.ndarrayr
             Boolean mask to be applied to the simulated patterns.
-        method
+        method : str, optional
             Name of the scipy.optimize function to be used. Must be one
             of "minimize", "differential_evolution", "dual_annealing",
-            or "basinhopping".
-        method_kwargs
+            or "basinhopping". If not specified, "minimize" is used.
+        method_kwargs : dict, optional
             Keyword arguments passed to the scipy.optimize function
             specified above.
-        trust_region
+        trust_region : list, optional
             List of how wide the bounds, centered on the initial
             orientation indexing result, should be for
             (phi1, Phi, phi2) in degrees. Only used for methods that
-            support bounds (excluding Powell).
-        compute
+            support bounds (excluding Powell). Defaults to [1, 1, 1].
+        compute : bool
             Whether to return a computed result, by default True.
             For more information see :func:`~dask.array.Array.compute`.
 
@@ -1075,7 +1075,7 @@ class EBSD(CommonImage, Signal2D):
         See ~kikuchipy.signals.EBSD.rescale_intensity
         """
         _refinement_parameter_check(
-            exp=self, xmap=xmap, detector=detector, method=method
+            exp=self, xmap=xmap, detector=detector, method=method, mask=mask
         )
         return EBSDRefinement.refine_orientations(
             xmap=xmap,
@@ -1114,34 +1114,34 @@ class EBSD(CommonImage, Signal2D):
 
         Parameters
         ----------
-        xmap
+        xmap : CrystalMap
             A crystal map storing the results of the initial EBSD
             indexing.
-        master_pattern
+        master_pattern : EBSDMasterPattern
             EBSDMasterPattern in the square Lambert projection.
-        detector
+        detector : EBSDDetector
             EBSD detector describing the detector dimensions and the
             detector-sample geometry with either a single, fixed
             projection/pattern center or a projection center for each
             scan point.
-        energy
+        energy : int
             Acceleration voltage, in kV, used to simulate the desired
             master pattern.
-        mask
+        mask : np.ndarray, optional
             Boolean mask to be applied to the simulated patterns.
-        method
+        method : str, optional
             Name of the scipy.optimize function to be used. Must be one
             of "minimize", "differential_evolution", "dual_annealing",
-            or "basinhopping".
-        method_kwargs
+            or "basinhopping". If not specified, "minimize" is used.
+        method_kwargs : dict, optional
             Keyword arguments passed to the scipy.optimize function
             specified above.
-        trust_region
+        trust_region : list, optional
             List of how wide the bounds, centered on the projection
             center, should be for (PCx, PCy, PCz) in Bruker convention.
             Only used for methods that support bounds
-            (excluding Powell).
-        compute
+            (excluding Powell). Defaults to [0.05, 0.05, 0.05].
+        compute : bool
             Whether to return a computed result, by default True.
             For more information see :func:`~dask.array.Array.compute`.
         Returns
@@ -1162,7 +1162,7 @@ class EBSD(CommonImage, Signal2D):
 
         """
         _refinement_parameter_check(
-            exp=self, xmap=xmap, detector=detector, method=method
+            exp=self, xmap=xmap, detector=detector, method=method, mask=mask
         )
         return EBSDRefinement.refine_projection_center(
             xmap=xmap,
@@ -1201,36 +1201,36 @@ class EBSD(CommonImage, Signal2D):
 
         Parameters
         ----------
-        xmap
+        xmap : CrystalMap
             A crystal map storing the results of the initial EBSD
             indexing.
-        master_pattern
+        master_pattern : EBSDMasterPattern
             EBSDMasterPattern in the square Lambert projection.
-        detector
+        detector : EBSDDetector
             EBSD detector describing the detector dimensions and the
             detector-sample geometry with either a single, fixed
             projection/pattern center or a projection center for each
             scan point.
-        energy
+        energy : int
             Acceleration voltage, in kV, used to simulate the desired
             master pattern.
-        mask
+        mask : np.ndarray, optional
             Boolean mask to be applied to the simulated patterns.
-        method
+        method : str, optional
             Name of the scipy.optimize function to be used. Must be one
             of "minimize", "differential_evolution", "dual_annealing",
-            or "basinhopping".
-        method_kwargs
+            or "basinhopping". If not specified, "minimize" is used.
+        method_kwargs : dict, optional
             Keyword arguments passed to the scipy.optimize function
             specified above.
-        trust_region
+        trust_region : list, optional
             List of how wide the bounds, centered on the initial
             orientation indexing result and projection center,
             should be for (phi1, Phi, phi2) in degrees and
             (PCx, PCy, PCz) in the Bruker convention.
             Only used for methods that support bounds
-            (excluding Powell).
-        compute
+            (excluding Powell). Defaults to [1, 1, 1, 0.05, 0.05, 0.05]
+        compute : bool
             Whether to return a computed result, by default True.
             For more information see :func:`~dask.array.Array.compute`.
 
@@ -1259,7 +1259,7 @@ class EBSD(CommonImage, Signal2D):
         See ~kikuchipy.signals.EBSD.rescale_intensity
         """
         _refinement_parameter_check(
-            exp=self, xmap=xmap, detector=detector, method=method
+            exp=self, xmap=xmap, detector=detector, method=method, mask=mask
         )
         return EBSDRefinement.refine_xmap(
             xmap=xmap,
