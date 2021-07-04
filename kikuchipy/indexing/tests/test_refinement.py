@@ -30,9 +30,11 @@ from kikuchipy.indexing._refinement import (
 
 
 class TestEBSDRefinementMethods:
+
+    # Added .py_func to the JIT functions
     def test_ncc(self):
         a = np.random.rand(100, 100)
-        assert _py_ncc(a, a) == pytest.approx(1.0)
+        assert _py_ncc.py_func(a, a) == pytest.approx(1.0)
 
     def test_get_dc_multiple_pc(self):
         xpc = np.array((0.5, 0.4))
@@ -44,7 +46,7 @@ class TestEBSDRefinementMethods:
         px_size = 1
         alpha = 0.34
 
-        out = _fast_get_dc_multiple_pc(
+        out = _fast_get_dc_multiple_pc.py_func(
             xpc, ypc, L, scan_points, ncols, nrows, px_size, alpha
         )
 
@@ -59,7 +61,7 @@ class TestEBSDRefinementMethods:
         px_size = 1
         alpha = 0.34
 
-        out = _fast_get_dc(xpc, ypc, L, ncols, nrows, px_size, alpha)
+        out = _fast_get_dc.py_func(xpc, ypc, L, ncols, nrows, px_size, alpha)
 
         assert out.shape == (nrows, ncols, 3)
 
@@ -72,7 +74,7 @@ class TestEBSDRefinementMethods:
         npy = 401
         scale = 1
 
-        out = _fast_simulate_single_pattern(
+        out = _fast_simulate_single_pattern.py_func(
             r, dc, master_north, master_south, npx, npy, scale
         )
 
@@ -83,7 +85,7 @@ class TestEBSDRefinementMethods:
         npx = 401
         npy = 401
         scale = 1
-        a, b, c, d, e, f, g, h = _fast_get_lambert_interpolation_parameters(
+        a, b, c, d, e, f, g, h = _fast_get_lambert_interpolation_parameters.py_func(
             rdc, npx, npy, scale
         )
 
@@ -99,5 +101,5 @@ class TestEBSDRefinementMethods:
 
     def test_lambert_projection(self):
         v = np.random.rand(60, 60, 3)
-        w = _fast_lambert_projection(v)
+        w = _fast_lambert_projection.py_func(v)
         assert w.shape == (60, 60, 2)
