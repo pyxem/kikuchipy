@@ -74,11 +74,17 @@ class TestEBSDRefinementMethods:
         npy = 401
         scale = 1
 
-        out = _fast_simulate_single_pattern.py_func(
+        out1 = _fast_simulate_single_pattern.py_func(
             r, dc, master_north, master_south, npx, npy, scale
         )
 
-        assert out.shape == (60, 60)
+        assert out1.shape == (60, 60)
+
+        out2 = _fast_simulate_single_pattern.py_func(
+            r, -dc, master_north, master_south, npx, npy, scale
+        )
+
+        assert out2.shape == (60, 60)
 
     def test_lambert_params(self):
         rdc = np.random.rand(60, 60)
