@@ -1636,10 +1636,14 @@ def _refinement_parameter_check(exp, xmap, detector, method, mask):
     # xmap must be single phase
     if len(xmap.phases.ids) != 1:
         raise ValueError("Crystal map must have exactly one phase")
+
+    # Same number of rotations in xmap as scan points
     if len(xmap.rotations.data) != scan_points:
         raise ValueError(
             "Number of rotations in crystal map must be equal to the number of experimental patterns"
         )
+
+    # mask must fit pattern
     if mask is not None:
         if exp.axes_manager.signal_shape != mask.shape:
             raise ValueError("Mask and signal must have the same shape")

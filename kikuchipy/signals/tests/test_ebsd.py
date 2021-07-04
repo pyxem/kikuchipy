@@ -23,7 +23,8 @@ from hyperspy.utils.roi import RectangularROI
 import matplotlib
 from matplotlib.pyplot import close
 import numpy as np
-from orix.crystal_map import CrystalMap
+from orix.crystal_map import CrystalMap, PhaseList
+from orix.quaternion import Rotation
 import pytest
 from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
@@ -1271,6 +1272,73 @@ class TestEBSDRefinement:
 
         assert isinstance(refined_xmap, CrystalMap)
         assert len(refined_xmap.rotations.data) == 100
+
+        xmap2 = CrystalMap.empty((99,))
+
+        pl = PhaseList(names=["a", "b"], space_groups=[10, 20])
+        indx = np.zeros((100,))
+        indx[50:] = 1
+        xmap3 = CrystalMap(
+            rotations=Rotation.random(100),
+            phase_id=indx,
+            phase_list=pl,
+        )
+
+        detector2 = kp.detectors.EBSDDetector(
+            shape=(6, 60),
+            pc=[0.5, 0.5, 0.5],
+            sample_tilt=70,
+            convention="tsl",
+        )
+
+        detector3 = kp.detectors.EBSDDetector(
+            shape=(60, 60),
+            pc=[[0.5, 0.5, 0.5], [0.45, 0.45, 0.45]],
+            sample_tilt=70,
+            convention="tsl",
+        )
+
+        mask = np.ones((6, 60))
+
+        # Signal and detector must have same shape
+        with pytest.raises(ValueError):
+            _ = s0.orientation_refinement(
+                xmap=xmap, master_pattern=mp, detector=detector2, energy=20
+            )
+
+        # Method must be supported
+        with pytest.raises(ValueError):
+            _ = s0.orientation_refinement(
+                xmap=xmap,
+                master_pattern=mp,
+                detector=detector,
+                energy=20,
+                method="shgo",
+            )
+
+        # Must have 1 or n x m PCs
+        with pytest.raises(ValueError):
+            _ = s0.orientation_refinement(
+                xmap=xmap, master_pattern=mp, detector=detector3, energy=20
+            )
+
+        # xmap must be single phase
+        with pytest.raises(ValueError):
+            _ = s0.orientation_refinement(
+                xmap=xmap3, master_pattern=mp, detector=detector, energy=20
+            )
+
+        # xmap must have 1 rotation for every pattern
+        with pytest.raises(ValueError):
+            _ = s0.orientation_refinement(
+                xmap=xmap2, master_pattern=mp, detector=detector, energy=20
+            )
+
+        # mask must fit pattern
+        with pytest.raises(ValueError):
+            _ = s0.orientation_refinement(
+                xmap=xmap, master_pattern=mp, detector=detector, energy=20, mask=mask
+            )
 
     def test_pc_refinement(self):
         array0 = np.random.rand(10, 10, 60, 60)
