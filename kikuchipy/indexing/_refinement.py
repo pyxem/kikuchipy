@@ -28,6 +28,8 @@ from orix.crystal_map import CrystalMap
 from orix.quaternion import Rotation
 import scipy.optimize
 
+from kikuchipy.pattern import rescale_intensity
+
 
 class EBSDRefinement:
     """Tools to refine the indexing results of dictionary indexing. The
@@ -704,6 +706,10 @@ def _get_single_pattern_params(mp, energy):
     master_south = mp.data[south_slice]
     npx, npy = mp.axes_manager.signal_shape
     scale = (npx - 1) / 2
+
+    if master_north.dtype != np.float32:
+        master_north = rescale_intensity(master_north, dtype_out=np.float32)
+        master_south = rescale_intensity(master_south, dtype_out=np.float32)
 
     return master_north, master_south, npx, npy, scale
 
