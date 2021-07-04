@@ -20,7 +20,6 @@
 import sys
 from typing import Optional, Union
 
-
 import dask
 from dask.diagnostics import ProgressBar
 import numba
@@ -149,7 +148,7 @@ class EBSDRefinement:
             npx,
             npy,
             scale,
-        ) = _get_single_pattern_params(mp, det, energy)
+        ) = _get_single_pattern_params(mp, energy)
 
         theta_c = np.deg2rad(det.tilt)
         sigma = np.deg2rad(det.sample_tilt)
@@ -267,9 +266,9 @@ class EBSDRefinement:
         compute: bool = True,
     ) -> CrystalMap:
         """Performs an orientation refinement using the initial indexing
-                results stored in a single phase
-                :class:`~orix.crystal_map.CrystalMap` and the fixed
-                detector-sample geometry.
+        results stored in a single phase
+        :class:`~orix.crystal_map.CrystalMap` and the fixed
+        detector-sample geometry.
 
         Parameters
         ----------
@@ -365,7 +364,7 @@ class EBSDRefinement:
             npx,
             npy,
             scale,
-        ) = _get_single_pattern_params(mp, det, energy)
+        ) = _get_single_pattern_params(mp, energy)
 
         if mask is None:
             mask = 1
@@ -570,7 +569,7 @@ class EBSDRefinement:
             npx,
             npy,
             scale,
-        ) = _get_single_pattern_params(mp, det, energy)
+        ) = _get_single_pattern_params(mp, energy)
 
         theta_c = np.deg2rad(det.tilt)
         sigma = np.deg2rad(det.sample_tilt)
@@ -1656,6 +1655,7 @@ def _get_method(method, method_kwargs):
         Name of the scipy optimization method
     method_kwargs : dict, optional
         Keyword arguments for function
+
     Returns
     -------
     method : function

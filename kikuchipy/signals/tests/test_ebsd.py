@@ -1252,6 +1252,66 @@ class TestDictionaryIndexing:
             _ = dummy_signal.match_patterns(s_dict)
 
 
+class TestEBSDRefinement:
+    def test_orientation_refinement(self):
+        array0 = np.random.rand(10, 10, 60, 60)
+        s0 = kp.signals.EBSD(array0)
+        xmap = CrystalMap.empty((100,))
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
+        detector = kp.detectors.EBSDDetector(
+            shape=(60, 60),
+            pc=[0.5, 0.5, 0.5],
+            sample_tilt=70,
+            convention="tsl",
+        )
+
+        refined_xmap = s0.orientation_refinement(
+            xmap=xmap, master_pattern=mp, detector=detector, energy=20
+        )
+
+        assert isinstance(refined_xmap, CrystalMap)
+        assert len(refined_xmap.rotations.data) == 100
+
+    def test_pc_refinement(self):
+        array0 = np.random.rand(10, 10, 60, 60)
+        s0 = kp.signals.EBSD(array0)
+        xmap = CrystalMap.empty((100,))
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
+        detector = kp.detectors.EBSDDetector(
+            shape=(60, 60),
+            pc=[0.5, 0.5, 0.5],
+            sample_tilt=70,
+            convention="tsl",
+        )
+
+        (scores, new_det) = s0.pc_refinement(
+            xmap=xmap, master_pattern=mp, detector=detector, energy=20
+        )
+
+        assert isinstance(new_det, type(detector))
+        assert len(scores) == 100
+
+    def test_full_refinement(self):
+        array0 = np.random.rand(10, 10, 60, 60)
+        s0 = kp.signals.EBSD(array0)
+        xmap = CrystalMap.empty((100,))
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
+        detector = kp.detectors.EBSDDetector(
+            shape=(60, 60),
+            pc=[0.5, 0.5, 0.5],
+            sample_tilt=70,
+            convention="tsl",
+        )
+
+        (refined_xmap, new_det) = s0.full_refinement(
+            xmap=xmap, master_pattern=mp, detector=detector, energy=20
+        )
+
+        assert isinstance(refined_xmap, CrystalMap)
+        assert isinstance(new_det, type(detector))
+        assert len(refined_xmap.rotations.data) == 100
+
+
 class TestAverageNeighbourDotProductMap:
     def test_adp_0d(self):
         s = kp.data.nickel_ebsd_small().inav[0, 0]
