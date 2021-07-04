@@ -134,7 +134,6 @@ class EBSDRefinement:
         if len(pc) == 1:
             pc_val = pc[0]
             pc = np.full((exp_shape[0] * exp_shape[1], 3), pc_val)
-        # Should raise error here if len pc not equal to scan size
 
         # 2D nav-dim
         if len(exp_shape) == 4:
@@ -526,6 +525,7 @@ class EBSDRefinement:
         compute : bool
             Whether to return a computed result, by default True.
             For more information see :func:`~dask.array.Array.compute`.
+
         Returns
         -------
         np.ndarray, EBSDDetector
@@ -729,6 +729,7 @@ def _fast_get_dc_multiple_pc(
     """Get the direction cosines between the detector and sample, with
      varying projection center.
      Based on :func:`~kikuchipy.indexing.refinement._fast_get_dc`.
+
     Parameters
     ----------
     xpc, ypc, L
@@ -1415,6 +1416,7 @@ def _refine_pc_solver(
         List of how wide the bounds, centered pc, should be for
         (PCx, PCy, PCz). Only used for methods that support bounds
         (excluding Powell).
+
     Returns
     -------
         score
