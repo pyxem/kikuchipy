@@ -1040,7 +1040,7 @@ class EBSD(CommonImage, Signal2D):
         energy : int
             Acceleration voltage, in kV, used to simulate the desired
             master pattern.
-        mask : np.ndarrayr
+        mask : np.ndarray
             Boolean mask to be applied to the simulated patterns.
         method : str, optional
             Name of the scipy.optimize function to be used. Must be one

@@ -1302,6 +1302,10 @@ class TestEBSDRefinement:
     s2 = kp.signals.LazyEBSD(array2)
     xmap4 = CrystalMap.empty((2,))
 
+    array3 = da.random.random((60, 60))
+    single = kp.signals.LazyEBSD(array3)
+    xmap_single = CrystalMap.empty((1,))
+
     def test_orientation_refinement(self):
 
         # From test_ebsd_masterpattern.py
@@ -1437,6 +1441,24 @@ class TestEBSDRefinement:
         assert isinstance(refined_xmap1, CrystalMap)
         assert len(refined_xmap1.rotations.data) == 100
 
+        refined_xmap_single = self.single.orientation_refinement(
+            xmap=self.xmap_single,
+            master_pattern=self.mp,
+            detector=self.detector,
+            energy=20,
+        )
+        assert isinstance(refined_xmap_single, CrystalMap)
+        assert len(refined_xmap_single.rotations.data) == 1
+
+        refined_xmap_single = self.single.orientation_refinement(
+            xmap=CrystalMap(Rotation.random((1, 2))),
+            master_pattern=self.mp,
+            detector=self.detector,
+            energy=20,
+        )
+        assert isinstance(refined_xmap_single, CrystalMap)
+        assert len(refined_xmap_single.rotations.data) == 1
+
         refined_xmap2 = self.s2.orientation_refinement(
             xmap=self.xmap4,
             master_pattern=self.mp,
@@ -1514,6 +1536,26 @@ class TestEBSDRefinement:
         assert isinstance(new_det1, type(self.detector))
         assert len(scores1) == 100
 
+        (scores1, new_det1) = self.single.pc_refinement(
+            xmap=self.xmap_single,
+            master_pattern=self.mp,
+            detector=self.detector,
+            energy=20,
+        )
+
+        assert isinstance(new_det1, type(self.detector))
+        assert len(scores1) == 1
+
+        (scores1, new_det1) = self.single.pc_refinement(
+            xmap=CrystalMap(Rotation.random((1, 2))),
+            master_pattern=self.mp,
+            detector=self.detector,
+            energy=20,
+        )
+
+        assert isinstance(new_det1, type(self.detector))
+        assert len(scores1) == 1
+
         (scores2, new_det2) = self.s2.pc_refinement(
             xmap=self.xmap4,
             master_pattern=self.mp,
@@ -1572,6 +1614,28 @@ class TestEBSDRefinement:
         assert isinstance(refined_xmap, CrystalMap)
         assert isinstance(new_det, type(self.detector))
         assert len(refined_xmap.rotations.data) == 100
+
+        (refined_xmap, new_det) = self.single.full_refinement(
+            xmap=self.xmap_single,
+            master_pattern=self.mp,
+            detector=self.detector,
+            energy=20,
+        )
+
+        assert isinstance(refined_xmap, CrystalMap)
+        assert isinstance(new_det, type(self.detector))
+        assert len(refined_xmap.rotations.data) == 1
+
+        (refined_xmap, new_det) = self.single.full_refinement(
+            xmap=CrystalMap(Rotation.random((1, 2))),
+            master_pattern=self.mp,
+            detector=self.detector,
+            energy=20,
+        )
+
+        assert isinstance(refined_xmap, CrystalMap)
+        assert isinstance(new_det, type(self.detector))
+        assert len(refined_xmap.rotations.data) == 1
 
         out = self.s0.full_refinement(
             xmap=self.xmap,
