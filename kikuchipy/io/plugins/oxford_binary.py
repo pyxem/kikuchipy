@@ -16,15 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read support for EBSD patterns in Oxford Instruments' binary .ebsp
-format.
-
-The reader assumes that the file is uncompressed and that patterns are
-stored as 8-bit unsigned integers.
+"""Read support for uncompressed EBSD patterns in Oxford Instruments'
+binary .ebsp format.
 """
 
 import os
-from typing import Dict, List, Tuple
+import struct
+from typing import Dict, List, Optional, Tuple
 
 import dask.array as da
 import numpy as np
@@ -42,212 +40,170 @@ default_extension = 0
 writes = False
 
 
-def file_reader(
-    filename: str,
-    navigation_shape: Tuple[int, int] = None,
-    lazy: bool = False,
-) -> List[Dict]:
-    """Return a list with one dictionary containing the EBSD
-    patterns from the file in a 'data' key along with an
-    'axes' key and 'metadata' and 'original_metadata' keys.
-
-    Parameters
-    ----------
-    navigation_shape
-        Number of map rows and columns, in that order. If not given,
-        the number of patterns in the file is guessed from the file
-        header, and the navigation shape of the returned pattern
-        array will be one-dimensional.
-    lazy
-        Whether to load the patterns lazily. Default is False.
-
-    Returns
-    -------
-    list of dict
-        Data, axes, metadata, and original metadata in a dictionary
-        within a list. Data is returned as :class:`numpy.ndarray` if
-        `lazy` is False, otherwise as :class:`dask.array.Array`.
-    """
-    file = OxfordBinaryFile(filename)
-    scan = file.read(navigation_shape=navigation_shape, lazy=lazy)
-    return [scan]
+def file_reader(filename, navigation_shape=None, lazy=False):
+    pass
 
 
 class OxfordBinaryFile:
-    """Binary file with EBSD patterns stored in Oxford Instruments'
-    .ebsp format.
+    pattern_header_size = 16
+    pattern_footer_size = 18
+    # fmt: off
+    pattern_header_dtype = [
+        ("is_compressed",   np.int32, (1,)),
+        ("nrows",           np.int32, (1,)),
+        ("ncols",           np.int32, (1,)),
+        ("n_bytes",         np.int32, (1,)),
+    ]
+    # fmt: on
 
-    It is assumed that the file is uncompressed and that patterns are
-    stored as 8-bit unsigned integers.
-    """
+    def __init__(self, filename: str, navigation_shape: Optional[Tuple[int]] = None):
+        self.file = open(filename, mode="rb")
 
-    def __init__(self, filename: str):
-        """Set up an Oxford binary .ebsp file for reading or writing.
+        self.version = self.get_version()
 
-        Parameters
-        ----------
-        filename
-            Full path to file on disk.
-        """
-        self.filename = filename
-        self.file = None
-
-    def open(self):
-        """Open file in readable mode."""
-        self.file = open(self.filename, mode="rb")
-
-    def close(self):
-        """Close file."""
-        self.file.close()
-
-    def get_signal_shape(self, offset: int) -> Tuple[int, int]:
-        """Return signal shape as (number of map rows, number of map
-        columns).
-
-        Parameters
-        ----------
-        offset
-            Byte offset to the file position with the information.
-        """
-        file = self.file
-        file.seek(0)
-        sig_shape = np.fromfile(file, dtype=np.uint16, count=5, offset=offset)
-        sr, sc = sig_shape[[2, 4]].astype(np.int64)
-        return sr, sc
-
-    def guess_number_of_patterns(self, assumed_n_pixels: int = 1600) -> int:
-        """Guess the number of patterns in the file based upon an
-        assumed lower bound for the number of pattern pixels and the
-        file size.
-
-        Parameters
-        ----------
-        assumed_n_pixels
-            Assumed lower bound for the number of pattern pixels.
-            Default is 1600 pixels.
-
-        Returns
-        -------
-        n_patterns
-            Guess of the number of EBSD patterns in the file.
-        """
-        file = self.file
-        file.seek(0)
-        file_byte_size = os.path.getsize(file.name)
-        metadata_size = 34
-
-        max_assumed_n_patterns = file_byte_size // (assumed_n_pixels + metadata_size)
-        assumed_pattern_starts = np.fromfile(
-            file, dtype=np.int64, count=max_assumed_n_patterns, offset=8
-        )
-        diff_pattern_starts_bytes = np.diff(assumed_pattern_starts)
-
-        # Determine outliers by a distance to the mean greater than a
-        # number of standard deviations
-        mean = np.mean(diff_pattern_starts_bytes)
-        std = np.std(diff_pattern_starts_bytes)
-        distance = abs(diff_pattern_starts_bytes - mean)
-        max_std = 2
-        not_outlier = distance < max_std * std
-        outliers_start_idx = np.argmax(not_outlier < 1) - 1
-        not_outlier = np.ones(max_assumed_n_patterns, dtype=bool)
-        not_outlier[outliers_start_idx:] = False
-        n_patterns = np.sum(not_outlier)
-
-        return n_patterns
-
-    def read(
-        self, navigation_shape: Tuple[int, int] = None, lazy: bool = False
-    ) -> Dict:
-        """Return a dictionary containing the EBSD patterns from the
-        file in a 'data' key along with an 'axes' key and 'metadata'
-        and 'original_metadata' keys.
-
-        Parameters
-        ----------
-        navigation_shape
-            Number of map rows and columns, in that order. If not given,
-            the number of patterns in the file is guessed from the file
-            header, and the navigation shape of the returned pattern
-            array will be one-dimensional.
-        lazy
-            Whether to load the patterns lazily. Default is False.
-
-        Returns
-        -------
-        scan
-            Data, axes, metadata, and original metadata. Data is
-            returned as :class:`numpy.ndarray` if `lazy` is False,
-            otherwise as :class:`dask.array.Array`.
-        """
-        self.open()
-        file = self.file
-
-        pattern_starts = None
         if navigation_shape is None:
-            n_patterns = self.guess_number_of_patterns()
-            data_shape = (n_patterns,)
+            self.n_patterns = self.guess_number_of_patterns()
         else:
-            n_patterns = np.prod(navigation_shape)
-            data_shape = navigation_shape
+            self.n_patterns = np.prod(navigation_shape)
+        self.pattern_starts = self.get_pattern_starts()
 
-        # Get byte positions for the start of each pattern
-        file.seek(0)
-        pattern_starts = np.fromfile(file, dtype=np.int64, count=n_patterns, offset=8)
-        first_pattern_position = 8 + n_patterns * 8
+        first_pattern_position = self.first_pattern_position
 
-        sr, sc = self.get_signal_shape(offset=first_pattern_position)
-        data_shape += (sr, sc)
+        is_compressed, nrows, ncols, n_bytes = self.get_single_pattern_header(
+            first_pattern_position
+        )
+        self.is_compressed = is_compressed
+        self.signal_shape = (nrows, ncols)
+        self.n_bytes = n_bytes
+        if n_bytes == self.n_pixels:
+            self.dtype = np.uint8
+        else:
+            self.dtype = np.uint16
 
-        # Create a memory map from data on disk
-        dtype = np.uint8
-        header_size = 16
-        footer_size = 18
-        metadata_size = header_size + footer_size
-        data_size = n_patterns * (sr * sc + metadata_size)
+        self.pattern_footer_dtype = self.get_pattern_footer_dtype(
+            first_pattern_position
+        )
 
-        # Raise explanatory error if byte position of first pattern
-        # seems obviously wrong
-        file_size = os.path.getsize(file.name)
-        if data_size > file_size:
+        self.mmap = self.get_memmap()
+
+    @property
+    def all_indexed(self) -> np.ndarray:
+        return self.is_indexed.all()
+
+    @property
+    def pattern_dtype(self) -> np.dtype:
+        if self.n_bytes == self.n_pixels:
+            return np.uint8
+        else:
+            return np.uint16
+
+    @property
+    def first_pattern_position(self) -> int:
+        return self.pattern_order_byte_position + self.n_patterns * 8
+
+    @property
+    def is_indexed(self):
+        return self.pattern_starts != 0
+
+    @property
+    def metadata_size(self):
+        return self.pattern_header_size + self.pattern_footer_size
+
+    @property
+    def n_pixels(self):
+        return np.prod(self.signal_shape)
+
+    @property
+    def pattern_order(self) -> np.ndarray:
+        bytes_per_pattern = self.n_bytes + self.metadata_size
+        pp = (self.pattern_starts - self.first_pattern_position) / bytes_per_pattern
+        return pp.astype(int)
+
+    @property
+    def pattern_order_byte_position(self) -> int:
+        if self.version != 0:
+            return 8
+        else:
+            return 0
+
+    def get_memmap(self):
+        file_dtype = self.pattern_header_dtype
+        file_dtype += [("pattern", self.pattern_dtype, self.signal_shape)]
+        footer_dtype = self.pattern_footer_dtype
+        if len(footer_dtype) != 0:
+            file_dtype += footer_dtype
+
+        return np.memmap(
+            self.file,
+            dtype=file_dtype,
+            shape=self.n_patterns,
+            mode="r",
+            offset=self.first_pattern_position,
+        )
+
+    def get_pattern_starts(self) -> np.ndarray:
+        self.file.seek(self.pattern_order_byte_position)
+        return np.fromfile(self.file, dtype=np.int64, count=self.n_patterns)
+
+    def get_single_pattern_header(self, offset: int) -> Tuple[bool, int, int, int]:
+        self.file.seek(offset)
+        header = np.fromfile(self.file, dtype=self.pattern_header_dtype, count=1)
+        return (
+            bool(header["is_compressed"][0]),
+            int(header["nrows"]),
+            int(header["ncols"]),
+            int(header["n_bytes"]),
+        )
+
+    def get_pattern_footer_dtype(self, offset: int) -> List[tuple]:
+        self.file.seek(offset + self.pattern_header_size + self.n_bytes)
+        footer_dtype = ()
+        map_col_dtype = ("map_col", np.float64, (1,))
+        map_row_dtype = ("map_row", np.float64, (1,))
+        if self.version == 1:
+            footer_dtype += (map_col_dtype, map_row_dtype)
+            self.pattern_footer_size = 16
+        elif self.version > 1:
+            pattern_footer_size = 2
+            if struct.unpack("?", self.file.read(1))[0]:  # bool
+                footer_dtype += (("has_map_col", bool, (1,)), map_col_dtype)
+                pattern_footer_size += 8
+            if struct.unpack("?", self.file.read(1))[0]:  # bool
+                footer_dtype += (("has_map_row", bool, (1,)), map_row_dtype)
+                pattern_footer_size += 8
+            self.pattern_footer_size = pattern_footer_size
+        return list(footer_dtype)
+
+    def get_version(self) -> int:
+        self.file.seek(0)
+        version = struct.unpack("q", self.file.read(8))[0]  # int64
+        if version < 0:
+            return -version
+        else:
+            return 0
+
+    def get_scan(
+        self, navigation_shape: Optional[Tuple[int]] = None, lazy: bool = False
+    ) -> list:
+
+        is_non_indexed = self.pattern_starts == 0
+        n_non_indexed = np.sum(is_non_indexed)
+        # TODO: Fix this
+        if n_non_indexed > 0:
             raise ValueError(
-                f"Assumed number of {n_patterns} patterns with {sr * sc} pixels leads "
-                f"to a data size {data_size} greater than the file size {file_size}"
+                "Cannot read EBSD patterns from a file with only non-indexed patterns"
             )
 
-        # Could use numpy.fromfile() when lazy=False directly here, but
-        # this reading route has a memory peak greater than the data
-        # in memory. Use dask instead.
-        file.seek(0)
-        data0 = np.memmap(
-            file,
-            shape=(data_size,),
-            dtype=dtype,
-            mode="r",
-            offset=first_pattern_position,
-        )
-        data0 = da.from_array(data0)
+        header = self.get_single_pattern_header(offset=self.first_pattern_position)
+        self.signal_shape = (header["sr"], header["sc"])
+        self.dtype = header["dtype"]
+        # TODO: Fix this
+        if header["is_compressed"]:
+            raise ValueError("Cannot read EBSD patterns from a compressed file")
 
-        # Reshape data for easy removal of header and footer info from
-        # the pattern intensities
-        data0 = data0.reshape((n_patterns, -1))
+        data = self.get_patterns(lazy=lazy)
 
-        # Sort if necessary
-        if not np.allclose(np.diff(pattern_starts), 1):
-            pattern_positions = (
-                (pattern_starts - first_pattern_position) / (data_size / n_patterns)
-            ).astype(np.int64)
-            data0 = data0[pattern_positions]
-
-        data0 = data0[:, header_size : header_size + sr * sc]
-        data0 = data0.reshape(data_shape)
-
-        if lazy:
-            data = data0
-        else:
-            # Create array in memory and overwrite inplace
-            data = np.zeros(data_shape, dtype=dtype)
-            da.store(sources=data0, targets=data, compute=True)
+        self.file.close()
 
         units = ["um"] * 4
         names = ["y", "x", "dy", "dx"]
@@ -279,6 +235,79 @@ class OxfordBinaryFile:
             original_metadata=dict(),
         )
 
-        self.close()
-
         return scan
+
+    def get_patterns(self, lazy: bool) -> np.ndarray:
+        first_pattern_position = self.first_pattern_position
+        self.file.seek(first_pattern_position)
+
+        bytes_per_pattern = self.n_pixels * self.n_bytes + self.metadata_size
+        data_shape = self.navigation_shape + (bytes_per_pattern,)
+        patterns = da.from_array(
+            np.memmap(self.file, shape=data_shape, dtype=self.dtype, mode="r")
+        )
+
+        # Sort if necessary
+        pattern_starts = self.pattern_starts
+        if not np.allclose(np.diff(pattern_starts), 1):
+            pattern_order = (
+                (pattern_starts - first_pattern_position) / bytes_per_pattern
+            ).astype(np.int64)
+            patterns = patterns[pattern_order]
+
+        # Remove header and footer
+        pattern_header_size = self.pattern_header_size
+        patterns = patterns[..., pattern_header_size : pattern_header_size + n_pixels]
+
+        if lazy:
+            data = patterns
+        else:
+            # Create array in memory and overwrite inplace
+            data = np.zeros(data_shape, dtype=self.dtype)
+            da.store(sources=patterns, targets=data, compute=True)
+
+        return data
+
+    def guess_number_of_patterns(self, min_assumed_n_pixels: int = 1600) -> int:
+        """Guess the number of patterns in the file based upon an
+        assumed lower bound for the number of pattern pixels and the
+        file size.
+
+        Parameters
+        ----------
+        min_assumed_n_pixels
+            Assumed lower bound for the number of pattern pixels.
+            Default is 1600 pixels.
+
+        Returns
+        -------
+        n_patterns
+            Guess of the number of EBSD patterns in the file.
+        """
+        self.file.seek(self.pattern_order_byte_position)
+        file_byte_size = os.path.getsize(self.file.name)
+
+        # Maximum bytes to read based on minimum assumed pixel size
+        max_assumed_n_patterns = file_byte_size // (
+            min_assumed_n_pixels + self.pattern_header_size
+        )
+
+        # Read assumed pattern starts
+        assumed_pattern_starts = np.fromfile(
+            self.file, dtype=np.int64, count=max_assumed_n_patterns
+        )
+
+        # It is assumed that a jump in bytes from one pattern position
+        # to the next does not exceed a number of maximum bytes one
+        # pattern can take up in the file. The array index where
+        # this happens (plus 2) is assumed to be the number of patterns
+        # in the file.
+        diff_pattern_starts = np.diff(assumed_pattern_starts)
+        max_assumed_n_pixels = 1024 * 1244
+        # n pixels x 2 (can be uint16)
+        max_assumed_pattern_size = max_assumed_n_pixels * 2 + self.pattern_header_size
+        # 20x is chosen as a sufficiently high jump in bytes
+        pattern_start = abs(diff_pattern_starts) > 20 * max_assumed_pattern_size
+        n_patterns = np.nonzero(pattern_start)[0][0] + 1
+
+        return n_patterns
