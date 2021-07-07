@@ -70,6 +70,17 @@ class TestStaticPatternMatching:
 
         assert xmap2.rotations_per_point == keep_n
 
+    def test_coordinate_arrays(self):
+        s = nickel_ebsd_small().inav[:, :2]
+        s_dict = EBSD(s.data.reshape(-1, 60, 60))
+        s_dict._xmap = CrystalMap.empty((s.axes_manager.navigation_size,))
+        sd = StaticPatternMatching(s_dict)
+        xmap = sd(s)
+
+        assert s.axes_manager.navigation_shape[::-1] == (2, 3)
+        assert np.allclose(xmap.x, [0, 1.5, 3, 0, 1.5, 3])
+        assert np.allclose(xmap.y, [0, 0, 0, 1.5, 1.5, 1.5])
+
     @pytest.mark.parametrize(
         "return_merged_xmap, desired_n_xmaps_out", [(True, 3), (False, 2)]
     )

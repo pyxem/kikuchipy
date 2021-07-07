@@ -130,7 +130,7 @@ class StaticPatternMatching:
 
         step_sizes = tuple([i.scale for i in am.navigation_axes])
         coordinate_arrays, _ = create_coordinate_arrays(
-            shape=am.navigation_shape, step_sizes=step_sizes
+            shape=am.navigation_shape[::-1], step_sizes=step_sizes
         )
 
         n_nav_dims = am.navigation_dimension
