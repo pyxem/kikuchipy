@@ -44,3 +44,61 @@ class TestOxfordBinary:
         assert isinstance(s, kp.signals.LazyEBSD)
         s.compute()
         assert np.allclose(s.data, s2.data)
+
+    @pytest.mark.parametrize(
+        "oxford_binary_file",
+        [((2, 3), (60, 60), np.uint8, 2, True, True)],
+        indirect=["oxford_binary_file"],
+    )
+    def test_compressed_patterns_raises(self, oxford_binary_file):
+        with pytest.raises(NotImplementedError, match="Cannot read compressed"):
+            _ = kp.load(oxford_binary_file.name)
+
+    @pytest.mark.parametrize(
+        "oxford_binary_file, dtype",
+        [
+            (((2, 3), (60, 60), np.uint8, 2, False, True), np.uint8),
+            (((2, 3), (60, 60), np.uint16, 2, False, True), np.uint16),
+        ],
+        indirect=["oxford_binary_file"],
+    )
+    def test_dtype(self, oxford_binary_file, dtype):
+        s = kp.load(oxford_binary_file.name)
+        assert np.issubdtype(s.data.dtype, dtype)
+
+    @pytest.mark.parametrize(
+        "oxford_binary_file",
+        [((2, 3), (60, 60), np.uint8, 2, False, False)],
+        indirect=["oxford_binary_file"],
+    )
+    def test_not_all_patterns_present(self, oxford_binary_file):
+        s = kp.load(oxford_binary_file.name)
+        assert s.axes_manager.navigation_shape == (5,)
+
+    @pytest.mark.parametrize(
+        "oxford_binary_file, ver",
+        [
+            (((2, 3), (60, 60), np.uint8, 2, False, True), 2),
+            (((2, 3), (60, 60), np.uint16, 1, False, True), 1),
+            (((2, 3), (60, 60), np.uint8, 0, False, True), 0),
+        ],
+        indirect=["oxford_binary_file"],
+    )
+    def test_versions(self, oxford_binary_file, ver):
+        s = kp.load(oxford_binary_file.name)
+        if ver > 0:
+            assert s.original_metadata.has_item("beam_x")
+            assert s.original_metadata.has_item("beam_y")
+
+    @pytest.mark.parametrize(
+        "oxford_binary_file, n_patterns",
+        [
+            (((2, 3), (60, 60), np.uint8, 2, False, True), 6),
+            (((3, 4), (62, 73), np.uint8, 2, False, True), 12),
+        ],
+        indirect=["oxford_binary_file"],
+    )
+    def test_guess_number_of_patterns(self, oxford_binary_file, n_patterns):
+        with open(oxford_binary_file.name, mode="rb") as f:
+            fox = kp.io.plugins.oxford_binary.OxfordBinaryFileReader(f)
+            assert fox.n_patterns == n_patterns

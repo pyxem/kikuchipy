@@ -132,7 +132,7 @@ class OxfordBinaryFileReader:
 
         # Allow for reading of files where only non-indexed patterns are
         # stored in the file
-        if not self.all_patterns_present:
+        if not self.all_patterns_present or len(self.pattern_footer_dtype) == 0:
             self.navigation_shape = (self.n_indexed_patterns,)
             self.step_sizes = [1]
             self.axes_names = ["x", "dy", "dx"]
@@ -472,11 +472,13 @@ class OxfordBinaryFileReader:
 
         order = self.pattern_order[self.pattern_is_present]
         om = dict(
-            y_beam=self.memmap["beam_y"][..., 0][order],
-            x_beam=self.memmap["beam_x"][..., 0][order],
             map1d_id=np.arange(self.n_patterns)[self.pattern_is_present],
             file_order=order,
         )
+        if "beam_y" in self.memmap.dtype.names:
+            om["beam_y"] = beam_y = self.memmap["beam_y"][..., 0][order]
+        if "beam_x" in self.memmap.dtype.names:
+            om["beam_x"] = beam_x = self.memmap["beam_x"][..., 0][order]
 
         scan = dict(
             axes=axes,
