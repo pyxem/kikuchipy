@@ -133,7 +133,7 @@ class OxfordBinaryFileReader:
         # Allow for reading of files where only non-indexed patterns are
         # stored in the file
         if not self.all_patterns_present or len(self.pattern_footer_dtype) == 0:
-            self.navigation_shape = (self.n_indexed_patterns,)
+            self.navigation_shape = (self.n_patterns_present,)
             self.step_sizes = [1]
             self.axes_names = ["x", "dy", "dx"]
             self.scan_unit = "px"
@@ -172,7 +172,7 @@ class OxfordBinaryFileReader:
         return self.pattern_starts != 0
 
     @property
-    def n_indexed_patterns(self) -> int:
+    def n_patterns_present(self) -> int:
         """Number of patterns actually stored in the file."""
         return np.sum(self.pattern_is_present)
 
@@ -235,7 +235,7 @@ class OxfordBinaryFileReader:
         return np.memmap(
             self.file,
             dtype=file_dtype,
-            shape=self.n_indexed_patterns,
+            shape=self.n_patterns_present,
             mode="r",
             offset=self.first_pattern_position,
         )
@@ -273,12 +273,12 @@ class OxfordBinaryFileReader:
 
         step_size = second_x - first_x  # um
 
-        min_row_i = int(abs(np.around(first_y / step_size)))
-        max_row_i = int(abs(np.around(last_y / step_size)) + 1)
-        nrows = max_row_i + min_row_i
-        min_col_i = int(abs(np.around(first_x / step_size)))
-        max_col_i = int(abs(np.around(last_x / step_size) + 1))
-        ncols = max_col_i + min_col_i
+        first_yi = np.around(first_y / step_size)
+        last_yi = np.around(last_y / step_size)
+        nrows = int(abs(last_yi - first_yi)) + 1
+        first_xi = np.around(first_x / step_size)
+        last_xi = np.around(last_x / step_size)
+        ncols = int(abs(last_xi - first_xi)) + 1
 
         return nrows, ncols, step_size
 
