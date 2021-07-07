@@ -31,27 +31,16 @@ OXFORD_FILE = os.path.join(OXFORD_PATH, "patterns.ebsp")
 
 class TestOxfordBinary:
     def test_load(self):
-        s = kp.load(OXFORD_FILE, navigation_shape=(3, 3))
+        s = kp.load(OXFORD_FILE)
         s2 = kp.data.nickel_ebsd_small()
 
         assert isinstance(s, kp.signals.EBSD)
         assert np.allclose(s.data, s2.data)
 
     def test_load_lazy(self):
-        s = kp.load(OXFORD_FILE, navigation_shape=(3, 3), lazy=True)
+        s = kp.load(OXFORD_FILE, lazy=True)
         s2 = kp.data.nickel_ebsd_small()
 
         assert isinstance(s, kp.signals.LazyEBSD)
         s.compute()
         assert np.allclose(s.data, s2.data)
-
-    def test_load_no_navigation_shape(self):
-        s = kp.load(OXFORD_FILE)
-        s2 = kp.load(OXFORD_FILE, navigation_shape=(3, 3))
-
-        sig_shape = s2.axes_manager.signal_shape[::-1]
-        assert np.allclose(s.data, s2.data.reshape((9,) + sig_shape))
-
-    def test_raises(self):
-        with pytest.raises(ValueError, match="Assumed number of 1200 patterns with "):
-            _ = kp.load(OXFORD_FILE, navigation_shape=(40, 30))
