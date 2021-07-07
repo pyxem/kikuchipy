@@ -57,6 +57,8 @@ Deprecated
 
 Fixed
 -----
+- Row (y) coordinate array returned with the crystal map from dictionary indexing is
+  correctly sorted. (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
 - Deep copying EBSD and EBSDMasterPattern signals carry over, respectively, `xmap` and
   `detector`, and `phase`, `hemisphere` and `projection` properties
   (`#356 <https://github.com/pyxem/kikuchipy/pull/356>`_).
