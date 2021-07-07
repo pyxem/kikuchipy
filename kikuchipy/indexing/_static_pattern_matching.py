@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Union, List
+from typing import List, Union
 
 from orix.crystal_map import CrystalMap, create_coordinate_arrays
 
