@@ -20,14 +20,10 @@ import io
 
 import numpy as np
 from orix.crystal_map import CrystalMap
-from orix.quaternion import Rotation
 import pytest
 
 from kikuchipy.data import nickel_ebsd_small
-from kikuchipy.indexing._static_pattern_matching import (
-    StaticPatternMatching,
-    _get_spatial_arrays,
-)
+from kikuchipy.indexing._static_pattern_matching import StaticPatternMatching
 from kikuchipy.io.tests.test_util import replace_stdin
 from kikuchipy.signals import EBSD
 
@@ -48,8 +44,8 @@ class TestStaticPatternMatching:
         s_dict1 = EBSD(s.data.reshape(-1, 60, 60))
         s_dict2 = EBSD(s.data.reshape(-1, 60, 60))
         n_patterns = s_dict1.axes_manager.navigation_size
-        s_dict1._xmap = CrystalMap(Rotation(np.zeros((n_patterns, 4))))
-        s_dict2._xmap = CrystalMap(Rotation(np.zeros((n_patterns, 4))))
+        s_dict1._xmap = CrystalMap.empty((n_patterns,))
+        s_dict2._xmap = CrystalMap.empty((n_patterns,))
         s_dict1.xmap.phases[0].name = "a"
         s_dict2.xmap.phases[0].name = "b"
 
@@ -64,7 +60,7 @@ class TestStaticPatternMatching:
     def test_keep_n(self, n_rot_in, n_rot_out, keep_n):
         s = nickel_ebsd_small()
         s_dict = EBSD(np.random.random((n_rot_in, 60, 60)).astype(np.float32))
-        s_dict._xmap = CrystalMap(Rotation(np.zeros((n_rot_in, 4))))
+        s_dict._xmap = CrystalMap.empty((n_rot_in,))
         sd = StaticPatternMatching(s_dict)
         xmap = sd(s)
 
@@ -74,6 +70,17 @@ class TestStaticPatternMatching:
 
         assert xmap2.rotations_per_point == keep_n
 
+    def test_coordinate_arrays(self):
+        s = nickel_ebsd_small().inav[:, :2]
+        s_dict = EBSD(s.data.reshape(-1, 60, 60))
+        s_dict._xmap = CrystalMap.empty((s.axes_manager.navigation_size,))
+        sd = StaticPatternMatching(s_dict)
+        xmap = sd(s)
+
+        assert s.axes_manager.navigation_shape[::-1] == (2, 3)
+        assert np.allclose(xmap.x, [0, 1.5, 3, 0, 1.5, 3])
+        assert np.allclose(xmap.y, [0, 0, 0, 1.5, 1.5, 1.5])
+
     @pytest.mark.parametrize(
         "return_merged_xmap, desired_n_xmaps_out", [(True, 3), (False, 2)]
     )
@@ -82,7 +89,7 @@ class TestStaticPatternMatching:
         s_dict1 = EBSD(s.data.reshape(-1, 60, 60))
         s_dict2 = s_dict1.deepcopy()
         n_patterns = s_dict1.axes_manager.navigation_size
-        s_dict1._xmap = CrystalMap(Rotation(np.zeros((n_patterns, 4))))
+        s_dict1._xmap = CrystalMap.empty((n_patterns,))
         s_dict2._xmap = s_dict1.xmap.deepcopy()
         s_dict1.xmap.phases[0].name = "a"
         s_dict2.xmap.phases[0].name = "b"
@@ -111,7 +118,7 @@ class TestStaticPatternMatching:
             .astype(np.uint8)
         )
         s_dict1 = EBSD(rand_data)
-        s_dict1._xmap = CrystalMap(Rotation(np.zeros((n_sim, 4))))
+        s_dict1._xmap = CrystalMap.empty((n_sim,))
         sd = StaticPatternMatching(s_dict1)
 
         with replace_stdin(io.StringIO("y")):
@@ -131,57 +138,8 @@ class TestStaticPatternMatching:
         sig_shape = dummy_signal.axes_manager.signal_shape
         s_dict1 = EBSD(dummy_signal.data.reshape((-1,) + sig_shape))
         n_sim = s_dict1.axes_manager.navigation_size
-        s_dict1._xmap = CrystalMap(Rotation(np.zeros((n_sim, 4))))
+        s_dict1._xmap = CrystalMap.empty((n_sim,))
         sd = StaticPatternMatching(s_dict1)
         res = sd(s)
 
         assert res.shape == desired_xmap_shape
-
-    @pytest.mark.parametrize(
-        "shape, extent, desired_arrays",
-        [
-            # 0d
-            ((), (), ()),
-            ((0, 0), (0.0, 2.0, 0.0, 2.0), (np.array([]),) * 2),
-            # 1d
-            ((3,), (0.0, 3.0), np.tile(np.linspace(0, 4.5, 3), 3)),
-            # 2d
-            (
-                (3, 2),
-                (0.0, 4.0, 0.0, 1.5),
-                (
-                    np.tile(np.linspace(0, 4, 3), 2),
-                    np.tile(np.linspace(0, 1.5, 2), 3),
-                ),
-            ),
-            (
-                (3, 2),
-                (0.0, 1.0, 0.0, 1.0),
-                (
-                    np.tile(np.linspace(0, 1, 3), 2),
-                    np.tile(np.linspace(0, 1, 2), 3),
-                ),
-            ),
-            (
-                (136, 249),
-                (79.5, 99.75, 30.0, 67.2),
-                (
-                    np.tile(np.linspace(79.5, 99.75, 136), 249),
-                    np.tile(np.linspace(30.0, 67.2, 249), 136),
-                ),
-            ),
-        ],
-    )
-    def test_get_spatial_arrays(self, shape, extent, desired_arrays):
-        """Ensure spatial arrays for 0d, 1d and 2d EBSD signals are
-        returned correctly.
-        """
-        spatial_arrays = _get_spatial_arrays(shape, extent)
-
-        if len(spatial_arrays) == 0:
-            assert spatial_arrays == desired_arrays
-        else:
-            assert [
-                np.allclose(spatial_arrays[i], desired_arrays[i])
-                for i in range(len(spatial_arrays))
-            ]
