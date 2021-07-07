@@ -388,6 +388,83 @@ def get_single_phase_xmap(rotations):
     return _get_single_phase_xmap
 
 
+@pytest.fixture(params=[((2, 3), (60, 60), np.uint8, 2, False, True)])
+def oxford_binary_file(tmpdir, request):
+    """Create a dummy Oxford Instruments' binary .ebsp file.
+
+    The creation of a dummy .ebsp file is explained in more detail in
+    kikuchipy/data/oxford_binary/create_dummy_oxford_binary_file.py.
+
+    Parameters expected in `request`
+    -------------------------------
+    navigation_shape : tuple of ints
+    signal_shape : tuple of ints
+    dtype : numpy.dtype
+    version : int
+    compressed : bool
+    all_present : bool
+    """
+    # Unpack parameters
+    (nr, nc), (sr, sc), dtype, ver, compressed, all_present = request.param
+
+    fname = tmpdir.join("dummy_oxford_file.ebsp")
+    f = open(fname, mode="w")
+
+    if ver != 0:
+        np.array(-ver, dtype=np.int64).tofile(f)
+
+    pattern_header_size = 16
+    if ver == 0:
+        pattern_footer_size = 0
+    elif ver == 1:
+        pattern_footer_size = 16
+    else:
+        pattern_footer_size = 18
+
+    n_patterns = nr * nc
+    n_pixels = sr * sc
+
+    if np.issubdtype(dtype, np.uint8):
+        n_bytes = n_pixels
+    else:
+        n_bytes = 2 * n_pixels
+
+    pattern_starts = np.arange(n_patterns, dtype=np.int64)
+    pattern_starts *= pattern_header_size + n_bytes + pattern_footer_size
+    pattern_starts += n_patterns * 8
+    if ver != 0:
+        pattern_starts += 8
+
+    pattern_starts = np.roll(pattern_starts, shift=1)
+    if not all_present:
+        pattern_starts[0] = 0
+    pattern_starts.tofile(f)
+    new_order = np.roll(np.arange(n_patterns), shift=-1)
+
+    pattern_header = np.array([compressed, sr, sc, n_bytes], dtype=np.int32)
+    data = np.arange(n_patterns * n_pixels, dtype=dtype).reshape((nr, nc, sr, sc))
+
+    if not all_present:
+        new_order = new_order[1:]
+
+    for i in new_order:
+        r, c = np.unravel_index(i, (nr, nc))
+        pattern_header.tofile(f)
+        data[r, c].tofile(f)
+        if ver > 1:
+            np.array(1, dtype=bool).tofile(f)  # has_beam_x
+        if ver > 0:
+            np.array(c, dtype=np.float64).tofile(f)  # beam_x
+        if ver > 1:
+            np.array(1, dtype=bool).tofile(f)  # has_beam_y
+        if ver > 0:
+            np.array(r, dtype=np.float64).tofile(f)  # beam_y
+
+    f.close()
+
+    return f
+
+
 # ---------------------- pytest doctest-modules ---------------------- #
 
 
@@ -408,5 +485,5 @@ def doctest_setup_teardown(request):
 
 @pytest.fixture(autouse=True)
 def import_to_namespace(doctest_namespace):
-    DIR_PATH = os.path.dirname(__file__)
-    doctest_namespace["DATA_DIR"] = os.path.join(DIR_PATH, "data/kikuchipy_h5ebsd")
+    dir_path = os.path.dirname(__file__)
+    doctest_namespace["DATA_DIR"] = os.path.join(dir_path, "data/kikuchipy_h5ebsd")

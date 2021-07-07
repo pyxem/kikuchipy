@@ -303,11 +303,11 @@ plugins
 .. currentmodule:: kikuchipy.io.plugins
 
 .. autosummary::
+    emsoft_ebsd
+    emsoft_ebsd_master_pattern
     h5ebsd
     nordif
     nordif_calibration_patterns
-    emsoft_ebsd
-    emsoft_ebsd_master_pattern
     oxford_binary
 
 The plugins import patterns and parameters from file formats into
@@ -315,6 +315,22 @@ The plugins import patterns and parameters from file formats into
 :class:`~kikuchipy.signals.EBSDMasterPattern` (or
 :class:`~kikuchipy.signals.LazyEBSD` or
 :class:`~kikuchipy.signals.LazyEBSDMasterPattern` if loading lazily) objects.
+
+emsoft_ebsd
+~~~~~~~~~~~
+
+.. automodule:: kikuchipy.io.plugins.emsoft_ebsd
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+emsoft_ebsd_master_pattern
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: kikuchipy.io.plugins.emsoft_ebsd_master_pattern
+    :members:
+    :undoc-members:
+    :show-inheritance:
 
 h5ebsd
 ~~~~~~
@@ -340,21 +356,6 @@ nordif_calibration_patterns
     :undoc-members:
     :show-inheritance:
 
-emsoft_ebsd
-~~~~~~~~~~~
-
-.. automodule:: kikuchipy.io.plugins.emsoft_ebsd
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-emsoft_ebsd_master_pattern
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. automodule:: kikuchipy.io.plugins.emsoft_ebsd_master_pattern
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 oxford_binary
 ~~~~~~~~~~~~~

@@ -16,6 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Script to create a dummy Oxford Instruments' binary .ebsp file
+for testing and use in the user guide.
+"""
+
 import os
 
 import numpy as np
@@ -29,34 +33,31 @@ sc, sr = s.axes_manager.signal_shape
 n_pixels = sr * sc
 nc, nr = s.axes_manager.navigation_shape
 n_patterns = nr * nc
+step_size = s.axes_manager["x"].scale
 
 dir_data = os.path.abspath(os.path.dirname(__file__))
 fname = os.path.join(dir_data, "patterns.ebsp")
 file = open(fname, mode="w")
 
-# Write file header: 8 bytes with ?
-file_header = np.ones(1, dtype=np.int64)
-file_header.tofile(file)
-
-# Pattern header: 16 bytes with pattern height, pattern width and ?
 pattern_header_size = 16
-pattern_header = np.zeros(8, dtype=np.uint16)
-pattern_header[2] = sr
-pattern_header[4] = sc
-
-# Pattern footer: 18 bytes with ?
 pattern_footer_size = 18
-pattern_footer = np.zeros(9, dtype=np.uint16)
 
-# Write pattern positions: 8 bytes per position
-pattern_positions = np.arange(n_patterns, dtype=np.int64)
-pattern_positions *= pattern_header_size + n_pixels + pattern_footer_size
-pattern_positions += file_header.nbytes + n_patterns * 8
+# Write file header: 8 bytes with the file version
+version = np.array(-2, dtype=np.int64)
+version.tofile(file)
+# Write pattern starts: 8 bytes per position
+pattern_starts = np.arange(n_patterns, dtype=np.int64)
+pattern_starts *= pattern_header_size + n_pixels + pattern_footer_size
+pattern_starts += version.nbytes + n_patterns * 8
 # Shift positions one step to the right
-pattern_positions = np.roll(pattern_positions, shift=1)
-pattern_positions.tofile(file)
+pattern_starts = np.roll(pattern_starts, shift=1)
+pattern_starts.tofile(file)
 # And thus the patterns must be shifted one step to the left
 new_order = np.roll(np.arange(n_patterns), shift=-1)
+
+# Pattern header: 16 bytes with whether the pattern is compressed,
+# pattern height, pattern width and the number of pattern bytes
+pattern_header = np.array([0, sr, sc, sr * sc], dtype=np.int32)
 
 # Write patterns with header and footer
 pattern_data = s.data
@@ -64,6 +65,11 @@ for i in new_order:
     r, c = np.unravel_index(i, (nr, nc))
     pattern_header.tofile(file)
     pattern_data[r, c].tofile(file)
-    pattern_footer.tofile(file)
+
+    # Pattern footer
+    np.array(1, dtype=bool).tofile(file)  # has_beam_x
+    np.array(c * step_size, dtype=np.float64).tofile(file)  # beam_x
+    np.array(1, dtype=bool).tofile(file)  # has_beam_y
+    np.array(r * step_size, dtype=np.float64).tofile(file)  # beam_y
 
 file.close()
