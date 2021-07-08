@@ -12,8 +12,8 @@ to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 Contributors to each release are listed in alphabetical order by first name. List
 entries are sorted in descending chronological order.
 
-Unreleased
-==========
+0.4.0 (2021-07-08)
+==================
 
 Contributors
 ------------
@@ -57,6 +57,8 @@ Deprecated
 
 Fixed
 -----
+- Set minimal requirement of importlib_metadata to v3.6 so Binder can run user guide
+  notebooks with HyperSpy 1.6.3. (`#395 <https://github.com/pyxem/kikuchipy/pull/395>`_)
 - Row (y) coordinate array returned with the crystal map from dictionary indexing is
   correctly sorted. (`#392 <https://github.com/pyxem/kikuchipy/pull/392>`_)
 - Deep copying EBSD and EBSDMasterPattern signals carry over, respectively, `xmap` and

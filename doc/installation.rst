@@ -10,16 +10,6 @@ kikuchipy can be installed from `Anaconda
 and supports Python >= 3.7. All alternatives are available on Windows, macOS,
 and Linux.
 
-.. _install-with-hyperspy-bundle:
-
-With the HyperSpy Bundle
-========================
-
-The easiest way to install kikuchipy is via the HyperSpy Bundle. See
-`HyperSpy's documentation
-<http://hyperspy.org/hyperspy-doc/current/user_guide/install.html#hyperspy-bundle>`_
-for instructions.
-
 .. _install-with-anaconda:
 
 With Anaconda
@@ -77,6 +67,23 @@ To install a specific version of kikuchipy (say version 0.3.4)::
     $ pip install kikuchipy==0.3.4
 
 .. _install-from-source:
+
+.. _install-with-hyperspy-bundle:
+
+With the HyperSpy Bundle
+========================
+
+The easiest way to install kikuchipy is via the HyperSpy Bundle. See
+`HyperSpy's documentation
+<http://hyperspy.org/hyperspy-doc/current/user_guide/install.html#hyperspy-bundle>`_
+for instructions.
+
+.. warning::
+
+    kikuchipy is updated more frequently than the HyperSpy Bundle, thus the installed
+    version of kikuchipy will most likely not be the latest version available. See the
+    `HyperSpy Bundle repository <https://github.com/hyperspy/hyperspy-bundle>`_ for how
+    to update packages in the bundle.
 
 From source
 ===========
