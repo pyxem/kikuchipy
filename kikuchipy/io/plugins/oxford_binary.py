@@ -17,8 +17,9 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 """Read support for uncompressed EBSD patterns in Oxford Instruments'
-binary .ebsp file format. Information about the file format was provided
-by Oxford Instruments.
+binary .ebsp file format.
+
+Information about the file format was provided by Oxford Instruments.
 """
 
 import os
