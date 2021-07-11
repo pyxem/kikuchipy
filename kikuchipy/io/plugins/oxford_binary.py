@@ -17,7 +17,8 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 """Read support for uncompressed EBSD patterns in Oxford Instruments'
-binary .ebsp format.
+binary .ebsp file format. Information about the file format was provided
+by Oxford Instruments.
 """
 
 import os
@@ -59,6 +60,11 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
     -------
     scan
         Data, axes, metadata and original metadata.
+
+    Notes
+    -----
+    Information about the .ebsp file format was provided by Oxford
+    Instruments.
     """
     with open(filename, mode="rb") as f:
         obf = OxfordBinaryFileReader(f)
