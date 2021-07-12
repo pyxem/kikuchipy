@@ -455,7 +455,7 @@ def refine_orientations(
             )
             for i in range(euler.shape[0])
         ]
-    print("FOO")
+
     if compute:
         with ProgressBar():
             print(
