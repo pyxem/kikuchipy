@@ -220,7 +220,7 @@ def full_refinement(
         with ProgressBar():
             print(
                 "\n".join([str(pr) for pr in to_print]),
-                f"Refining {xmap.size} orientations and " f"projection centers:",
+                f"\nRefining {xmap.size} orientations and " f"projection " f"centers:",
                 file=sys.stdout,
             )
             results = dask.compute(*refined_params, scheduler="threads")
@@ -1622,6 +1622,8 @@ def _refinement_parameter_check(exp, xmap, detector, method, mask):
             raise ValueError("Method not supported")
 
     scan_points = exp.axes_manager.navigation_size
+    if scan_points == 0:
+        scan_points = 1
 
     # Must have 1 PC or n x m PCs
     if len(detector.pc) != 1 and len(detector.pc) != scan_points:
