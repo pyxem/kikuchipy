@@ -100,7 +100,7 @@ def full_refinement(
     euler = Rotation.to_euler(xmap.rotations)
 
     # Extract best rotation from xmap if given more than 1
-    if xmap.rotations_per_point > 2:
+    if xmap.rotations_per_point > 1:
         euler = euler[:, 0, :]
 
     if not trust_region:
@@ -325,7 +325,7 @@ def refine_orientations(
     euler = Rotation.to_euler(xmap.rotations)
 
     # Extract best rotation from xmap if given more than 1
-    if xmap.rotations_per_point > 2:
+    if xmap.rotations_per_point > 1:
         euler = euler[:, 0, :]
 
     if signal.data.dtype != np.float32:
