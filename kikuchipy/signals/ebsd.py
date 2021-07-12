@@ -49,7 +49,12 @@ from kikuchipy.pattern._pattern import (
     _dynamic_background_frequency_space_setup,
 )
 from kikuchipy.indexing import StaticPatternMatching
-from kikuchipy.indexing._refinement import EBSDRefinement, _refinement_parameter_check
+from kikuchipy.indexing._refinement import (
+    full_refinement,
+    refine_orientations,
+    refine_projection_center,
+    _refinement_parameter_check,
+)
 from kikuchipy.indexing.similarity_metrics import SimilarityMetric
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
@@ -1018,12 +1023,14 @@ class EBSD(CommonImage, Signal2D):
         compute: bool = True,
     ) -> CrystalMap:
         """Performs an orientation refinement using the initial indexing
-        results stored in a single phase
+        results, in the EDAX TSL sample reference frame (RD,
+        TD, ND), stored in a single phase
         :class:`~orix.crystal_map.CrystalMap` and the fixed
         detector-sample geometry. The refinement uses a subset of the
         optimization routines implemented in scipy and attempts to
         maximize the similarity between experimental and simulated
-        patterns as calculated by the NCC.
+        patterns, as calculated by the NCC, using the best orientation as a
+        starting point.
 
         Parameters
         ----------
@@ -1041,7 +1048,8 @@ class EBSD(CommonImage, Signal2D):
             Acceleration voltage, in kV, used to simulate the desired
             master pattern.
         mask : np.ndarray
-            Boolean mask to be applied to the simulated patterns.
+            Boolean mask to be applied to the simulated patterns. True values
+            are masked away.
         method : str, optional
             Name of the scipy.optimize function to be used. Must be one
             of "minimize", "differential_evolution", "dual_annealing",
@@ -1055,33 +1063,39 @@ class EBSD(CommonImage, Signal2D):
             (phi1, Phi, phi2) in degrees. Only used for methods that
             support bounds (excluding Powell). Defaults to [1, 1, 1].
         compute : bool
-            Whether to return a computed result, by default True.
+            Whether to return a computed result, by default True. If compute is
+            set to False, a Delayed list object is returned where the Euler
+            angles (phi1, Phi, phi2) in radians for index i is given by
+            List[i][0], List[i][1], List[i][2].
             For more information see :func:`~dask.array.Array.compute`.
 
         Returns
         -------
-         CrystalMap
+        CrystalMap
             A new crystal map where the orientations have been
             refined.
 
         Notes
         -----
-        The method rescales the experimental signal to float32,
-        if your patterns are stored in uint8, this might lead to
-        memory issues. To ensure that the method runs smoothly,
-        it is recommended that you rescale the signal prior to
-        refinement.
+        The method creates a deepcopy of the signal and rescales it to float32
+        if the initial signal has a different data type, such as uint8. This
+        might lead to memory issues if your experimental data set is large. To
+        ensure that the method runs smoothly, it is recommended that you
+        rescale the signal prior to refinement, and if the data set becomes
+        larger than memory use a LazyEBSD object instead for your experimental
+        data.
+
 
         See ~kikuchipy.signals.EBSD.rescale_intensity
         """
         _refinement_parameter_check(
             exp=self, xmap=xmap, detector=detector, method=method, mask=mask
         )
-        return EBSDRefinement.refine_orientations(
+        return refine_orientations(
             xmap=xmap,
-            mp=master_pattern,
-            exp=self,
-            det=detector,
+            master_pattern=master_pattern,
+            signal=self,
+            detector=detector,
             energy=energy,
             mask=mask,
             method=method,
@@ -1103,7 +1117,8 @@ class EBSD(CommonImage, Signal2D):
         compute: bool = True,
     ) -> Tuple[np.ndarray, EBSDDetector]:
         """Performs a projection center refinement using the
-        fixed indexing results stored in a single phase
+        best orientation, for each point, from the initial indexing stored in a
+        single phase
         :class:`~orix.crystal_map.CrystalMap` and the projection center
         estimates stored in an
         :class:`~kikuchipy.detectors.ebsd_detector.EBSDDetector`.
@@ -1128,7 +1143,8 @@ class EBSD(CommonImage, Signal2D):
             Acceleration voltage, in kV, used to simulate the desired
             master pattern.
         mask : np.ndarray, optional
-            Boolean mask to be applied to the simulated patterns.
+            Boolean mask to be applied to the simulated patterns. True values
+            are masked away.
         method : str, optional
             Name of the scipy.optimize function to be used. Must be one
             of "minimize", "differential_evolution", "dual_annealing",
@@ -1142,7 +1158,11 @@ class EBSD(CommonImage, Signal2D):
             Only used for methods that support bounds
             (excluding Powell). Defaults to [0.05, 0.05, 0.05].
         compute : bool
-            Whether to return a computed result, by default True.
+            Whether to return a computed result, by default True.  If compute is
+            set to False, a Delayed list object is returned where the
+            similarity metric score for index i is given by List[i][0], and the
+            projection center in the Bruker convention (PCx, PCy, PCz) for index
+            i is given by List[i][1], List[i][2], List[i][3].
             For more information see :func:`~dask.array.Array.compute`.
         Returns
         -------
@@ -1152,11 +1172,13 @@ class EBSD(CommonImage, Signal2D):
 
         Notes
         -----
-        The method rescales the experimental signal to float32,
-        if your patterns are stored in uint8, this might lead to
-        memory issues. To ensure that the method runs smoothly,
-        it is recommended that you rescale the signal prior to
-        refinement.
+        The method creates a deepcopy of the signal and rescales it to float32
+        if the initial signal has a different data type, such as uint8. This
+        might lead to memory issues if your experimental data set is large. To
+        ensure that the method runs smoothly, it is recommended that you
+        rescale the signal prior to refinement, and if the data set becomes
+        larger than memory use a LazyEBSD object instead for your experimental
+        data.
 
         See ~kikuchipy.signals.EBSD.rescale_intensity
 
@@ -1164,11 +1186,11 @@ class EBSD(CommonImage, Signal2D):
         _refinement_parameter_check(
             exp=self, xmap=xmap, detector=detector, method=method, mask=mask
         )
-        return EBSDRefinement.refine_projection_center(
+        return refine_projection_center(
             xmap=xmap,
-            mp=master_pattern,
-            exp=self,
-            det=detector,
+            master_pattern=master_pattern,
+            signal=self,
+            detector=detector,
             energy=energy,
             mask=mask,
             method=method,
@@ -1190,14 +1212,15 @@ class EBSD(CommonImage, Signal2D):
         compute: bool = True,
     ) -> Tuple[CrystalMap, EBSDDetector]:
         """Performs an orientation and projection center refinement
-        using the initial indexing results stored in a single phase
+        using the initial indexing results, in the EDAX TSL sample reference
+        frame (RD, TD, ND), stored in a single phase
         :class:`~orix.crystal_map.CrystalMap` and the projection center
         estimates stored in an
         :class:`~kikuchipy.detectors.ebsd_detector.EBSDDetector`.
         The refinement uses a subset of the optimization routines
         implemented in scipy and attempts to  maximize the similarity
-        between experimental and simulated patterns as calculated by
-        the NCC.
+        between experimental and simulated patterns, as calculated by the NCC,
+        using the best orientation as a starting point.
 
         Parameters
         ----------
@@ -1215,7 +1238,8 @@ class EBSD(CommonImage, Signal2D):
             Acceleration voltage, in kV, used to simulate the desired
             master pattern.
         mask : np.ndarray, optional
-            Boolean mask to be applied to the simulated patterns.
+            Boolean mask to be applied to the simulated patterns. True values
+            are masked away.
         method : str, optional
             Name of the scipy.optimize function to be used. Must be one
             of "minimize", "differential_evolution", "dual_annealing",
@@ -1231,7 +1255,12 @@ class EBSD(CommonImage, Signal2D):
             Only used for methods that support bounds
             (excluding Powell). Defaults to [1, 1, 1, 0.05, 0.05, 0.05]
         compute : bool
-            Whether to return a computed result, by default True.
+            Whether to return a computed result, by default True. If compute is
+            set to False, a Delayed list object is returned where the Euler
+            angles (phi1, Phi, phi2) in radians for index i is given by
+            List[i][0], List[i][1], List[i][2], and the projection center
+            (PCx, PCy, PCz) in the Bruker convention is given by
+            List[i][3], List[i][4], List[i][5].
             For more information see :func:`~dask.array.Array.compute`.
 
         Returns
@@ -1250,22 +1279,25 @@ class EBSD(CommonImage, Signal2D):
         similarity is incorrect. It is left to the user to ensure that
         the output is reasonable.
 
-        The method rescales the experimental signal to float32,
-        if your patterns are stored in uint8, this might lead to
-        memory issues. To ensure that the method runs smoothly,
-        it is recommended that you rescale the signal prior to
-        refinement.
+        The method creates a deepcopy of the signal and rescales it to float32
+        if the initial signal has a different data type, such as uint8. This
+        might lead to memory issues if your experimental data set is large. To
+        ensure that the method runs smoothly, it is recommended that you
+        rescale the signal prior to refinement, and if the data set becomes
+        larger than memory use a LazyEBSD object instead for your experimental
+        data.
+
 
         See ~kikuchipy.signals.EBSD.rescale_intensity
         """
         _refinement_parameter_check(
             exp=self, xmap=xmap, detector=detector, method=method, mask=mask
         )
-        return EBSDRefinement.refine_xmap(
+        return full_refinement(
             xmap=xmap,
-            mp=master_pattern,
-            exp=self,
-            det=detector,
+            master_pattern=master_pattern,
+            signal=self,
+            detector=detector,
             energy=energy,
             mask=mask,
             method=method,

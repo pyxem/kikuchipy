@@ -26,6 +26,7 @@ from kikuchipy.indexing._refinement import (
     _fast_simulate_single_pattern,
     _fast_get_dc,
     _fast_get_dc_multiple_pc,
+    _rotation_from_euler,
 )
 
 
@@ -109,3 +110,29 @@ class TestEBSDRefinementMethods:
         v = np.random.rand(60, 60, 3)
         w = _fast_lambert_projection.py_func(v)
         assert w.shape == (60, 60, 2)
+
+    def test_euler_to_rotation(self):
+        phi1 = 0.0
+        Phi = 0.0
+        phi2 = 0.0
+
+        q = _rotation_from_euler.py_func(phi1, Phi, phi2)
+
+        assert (q == np.array((1, 0, 0, 0))).all()
+
+        phi1 = 1.0
+        Phi = 2.0
+        phi2 = 3.0
+        key = np.array((0.2248, 0.4546, -0.7081, 0.4913))
+
+        q2 = _rotation_from_euler.py_func(phi1, Phi, phi2)
+
+        assert np.allclose(key, q2, atol=1e-04)
+
+        phi1 = 0.3
+        Phi = 0.47
+        phi2 = 0.58
+        key = np.array((0.8799, -0.2306, 0.0325, -0.4142))
+
+        q3 = _rotation_from_euler.py_func(phi1, Phi, phi2)
+        assert np.allclose(key, q3, atol=1e-04)
