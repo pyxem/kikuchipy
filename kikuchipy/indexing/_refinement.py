@@ -1381,8 +1381,8 @@ def _refine_pc_solver(
     trust_region: list,
 ) -> tuple:
     """Maximizes the similarity between an experimental pattern and a
-        simulated pattern by optimizing the projection center
-        coordinates (PCx, PCy, PCz) used in the simulation.
+    simulated pattern by optimizing the projection center
+    coordinates (PCx, PCy, PCz) used in the simulation.
 
     Parameters
     ----------
