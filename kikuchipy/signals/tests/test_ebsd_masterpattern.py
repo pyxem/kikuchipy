@@ -216,7 +216,6 @@ class TestSimulatedPatternDictionary:
         detector_shape = self.detector.shape
         r2 = Rotation.from_euler(((0, 0, 0), (1, 1, 1), (2, 2, 2)))
         mp_a = kp.signals.EBSDMasterPattern(np.zeros((2, 10, 11, 11)))
-        print(mp_a.axes_manager)
         mp_a.axes_manager[0].name = "hemisphere"
         mp_a.axes_manager[1].name = "energy"
         mp_a.projection = "lambert"
