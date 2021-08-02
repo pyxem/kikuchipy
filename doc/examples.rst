@@ -16,4 +16,4 @@ Visualization
 
 .. nbgallery::
 
-    examples/save_nice_master_pattern_image_to_file.ipynb
+    examples/save_nice_master_pattern_image.ipynb
