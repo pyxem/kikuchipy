@@ -15,9 +15,6 @@ entries are sorted in descending chronological order.
 Unreleased
 ==========
 
-0.4.0 (2021-07-08)
-==================
-
 Contributors
 ------------
 - Håkon Wiik Ånes
@@ -25,9 +22,31 @@ Contributors
 
 Added
 -----
+- Notebooks to the documentation as shorter or longer "Examples" that don't fit in the
+  user guide. (`#403 <https://github.com/pyxem/kikuchipy/pull/403>`_)
 - Refinement module for EBSD refinement. Allows for the refinement of
   orientations and/or projection center estimates.
   (`#387 <https://github.com/pyxem/kikuchipy/pull/387>`_)
+
+Changed
+-------
+- URLs of user guide topics have an extra "/user_guide/<topic>" added to them.
+  (`#403 <https://github.com/pyxem/kikuchipy/pull/403>`_)
+
+Fixed
+-----
+- Set newest supported version of Sphinx to 4.0.2 so that nbsphinx works.
+  (`#403 <https://github.com/pyxem/kikuchipy/pull/403>`_)
+
+0.4.0 (2021-07-08)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Added
+-----
 - Sample tilt about RD can be passed as part of an EBSDDetector. This can be used when
   projecting parts of master patterns onto a detector.
   (`#381 <https://github.com/pyxem/kikuchipy/pull/381>`_)
@@ -50,8 +69,7 @@ Added
 Changed
 -------
 - Only return figure from kikuchipy.filters.Window.plot() if desired, also add a
-  colorbar only if desired.
-  (`#375 <https://github.com/pyxem/kikuchipy/pull/375>`_)
+  colorbar only if desired. (`#375 <https://github.com/pyxem/kikuchipy/pull/375>`_)
 
 Deprecated
 ----------

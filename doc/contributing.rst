@@ -48,8 +48,8 @@ We recommend installing in a `conda environment
 with the `Miniconda distribution
 <https://docs.conda.io/en/latest/miniconda.html>`_::
 
-   $ conda create --name kikuchipy
-   $ conda activate kikuchipy
+   $ conda create --name kp-dev
+   $ conda activate kp-dev
 
 Then, install the required dependencies while making the development version
 available globally (in the ``conda`` environment)::
@@ -164,7 +164,7 @@ files by `nbsphinx <https://nbsphinx.readthedocs.io/en/latest/>`_:
 - Use ``_ = ax[0].imshow(...)`` to disable Matplotlib output if a Matplotlib
   command is the last line in a cell.
 - Refer to our API reference with this general MD
-  ``[fft_filter()](reference.rst#kikuchipy.signals.EBSD.fft_filter)``. Remember
+  ``[fft_filter()](../reference.rst#kikuchipy.signals.EBSD.fft_filter)``. Remember
   to add the parentheses ``()`` for functions and methods.
 - Reference external APIs via standard MD like
   ``[Signal2D](http://hyperspy.org/hyperspy-doc/current/api/hyperspy._signals.signal2d.html)``.
