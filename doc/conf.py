@@ -50,18 +50,18 @@ extensions = [
 # Create links to references within kikuchipy's documentation to these
 # packages
 intersphinx_mapping = {
-    "dask": ("https://docs.dask.org/en/latest", None),
+    "dask": ("https://docs.dask.org/en/stable", None),
     "diffpy.structure": ("https://www.diffpy.org/diffpy.structure", None),
     "diffsims": ("https://diffsims.readthedocs.io/en/latest", None),
-    "hyperspy": ("http://hyperspy.org/hyperspy-doc/current", None),
+    "hyperspy": ("https://hyperspy.org/hyperspy-doc/current", None),
     "matplotlib": ("https://matplotlib.org", None),
-    "numpy": ("https://docs.scipy.org/doc/numpy", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
     "orix": ("https://orix.readthedocs.io/en/stable", None),
     "python": ("https://docs.python.org/3", None),
     "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
     "skimage": ("https://scikit-image.org/docs/stable", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
-    "h5py": ("http://docs.h5py.org/en/stable/", None),
+    "h5py": ("https://docs.h5py.org/en/stable", None),
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -138,7 +138,7 @@ nbsphinx_prolog = (
 """
 )
 # https://nbsphinx.readthedocs.io/en/0.8.0/never-execute.html
-nbsphinx_execute = "always"  # auto, always, never
+nbsphinx_execute = "auto"  # always, auto, never
 nbsphinx_execute_arguments = [
     "--InlineBackend.rc=figure.facecolor='w'",
     "--InlineBackend.rc=font.size=15",
