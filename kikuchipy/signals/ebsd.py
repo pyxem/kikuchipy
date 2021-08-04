@@ -1779,21 +1779,6 @@ class EBSD(CommonImage, Signal2D):
         # Plot the result
         out.plot(**kwargs)
 
-    @staticmethod
-    def _get_sum_signal(signal, out_signal_axes: Optional[List] = None):
-        out = signal.nansum(signal.axes_manager.signal_axes)
-        if out_signal_axes is None:
-            out_signal_axes = list(
-                np.arange(min(signal.axes_manager.navigation_dimension, 2))
-            )
-        if len(out_signal_axes) > signal.axes_manager.navigation_dimension:
-            raise ValueError(
-                "The length of 'out_signal_axes' cannot be longer than the navigation "
-                "dimension of the signal."
-            )
-        out.set_signal_type("")
-        return out.transpose(out_signal_axes)
-
     def get_virtual_bse_intensity(
         self,
         roi: BaseInteractiveROI,
@@ -2034,6 +2019,21 @@ class EBSD(CommonImage, Signal2D):
             raise ValueError("Crystal map must have exactly one phase")
         if mask is not None and sig_shape != mask.shape:
             raise ValueError("Mask and signal must have the same shape")
+
+    @staticmethod
+    def _get_sum_signal(signal, out_signal_axes: Optional[List] = None):
+        out = signal.nansum(signal.axes_manager.signal_axes)
+        if out_signal_axes is None:
+            out_signal_axes = list(
+                np.arange(min(signal.axes_manager.navigation_dimension, 2))
+            )
+        if len(out_signal_axes) > signal.axes_manager.navigation_dimension:
+            raise ValueError(
+                "The length of 'out_signal_axes' cannot be longer than the navigation "
+                "dimension of the signal."
+            )
+        out.set_signal_type("")
+        return out.transpose(out_signal_axes)
 
 
 class LazyEBSD(LazySignal2D, EBSD):

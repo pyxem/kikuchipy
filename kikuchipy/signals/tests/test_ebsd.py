@@ -1208,8 +1208,8 @@ class TestEBSDXmapProperty:
     def test_attribute_carry_over_from_deepcopy(self, get_single_phase_xmap):
         s = kp.data.nickel_ebsd_small(lazy=True)
         nav_axes = s.axes_manager.navigation_axes[::-1]
-        nav_shape = (a.size for a in nav_axes)
-        nav_scales = (a.scale for a in nav_axes)
+        nav_shape = tuple(a.size for a in nav_axes)
+        nav_scales = tuple(a.scale for a in nav_axes)
 
         xmap = get_single_phase_xmap(nav_shape=nav_shape, step_sizes=nav_scales)
         s.xmap = xmap
@@ -1257,16 +1257,18 @@ class TestEBSDDetectorProperty:
     @pytest.mark.parametrize(
         "detector, signal_nav_shape, compatible, error_msg_start",
         [
-            ((2, 3), (2, 3), True, None),
-            ((3, 2), (2, 3), False, "Detector must have exactly"),
-            ((2, 3), (), False, "Detector must have exactly"),
+            (((1,), (5, 5)), (2, 3), True, None),
+            (((2, 3), (5, 5)), (2, 3), True, None),
+            (((1,), (5, 4)), (2, 3), False, "Detector and signal must have the same"),
+            (((3, 2), (5, 5)), (2, 3), False, "Detector must have exactly"),
+            (((2, 3), (5, 5)), (), False, "Detector must have exactly"),
         ],
         indirect=["detector"],
     )
     def test_compatible_with_signal(
         self, detector, signal_nav_shape, compatible, error_msg_start
     ):
-        s = kp.signals.EBSD(np.ones(signal_nav_shape + (60, 60), dtype=int))
+        s = kp.signals.EBSD(np.ones(signal_nav_shape + (5, 5), dtype=int))
         func_kwargs = dict(
             detector=detector,
             navigation_shape=s.axes_manager.navigation_shape[::-1],
@@ -1305,36 +1307,54 @@ class TestDictionaryIndexing:
 
 
 class TestEBSDRefinement:
-    nav_shape = (10, 10)
-    sig_shape = (60, 60)
-    step_sizes = (1, 1)
-
-    nav_size = int(np.prod(nav_shape))
-    data_shape = nav_shape + sig_shape
+    """Note that it is the calls to the :mod:`scipy.optimize` methods
+    that take up test time. The setup here in kikuchipy and the array
+    sizes doesn't matter that much.
+    """
 
     axes = [
-        dict(name="x", size=nav_shape[1], scale=step_sizes[0]),
-        dict(name="y", size=nav_shape[0], scale=step_sizes[1]),
-        dict(size=sig_shape[1]),
-        dict(size=sig_shape[0]),
+        dict(name="hemisphere", size=2, scale=1),
+        dict(name="energy", size=5, offset=15, scale=1),
+        dict(name="dy", size=5, scale=1),
+        dict(name="dx", size=5, scale=1),
     ]
+    mp_data = np.random.rand(2, 5, 5, 5).astype(np.float32)
+    mp0 = kp.signals.EBSDMasterPattern(
+        mp_data,
+        axes=axes,
+        projection="lambert",
+        hemisphere="both",
+        phase=Phase("ni", 225),
+    )
 
-    s0 = kp.signals.EBSD(np.random.rand(*data_shape), axes=axes)
-    xmap = CrystalMap.empty(shape=nav_shape, step_sizes=step_sizes)
+    nav_shape0 = (10, 10)
+    sig_shape0 = (60, 60)
+    step_sizes0 = (1, 1)
+
+    nav_size = int(np.prod(nav_shape0))
+    data_shape = nav_shape0 + sig_shape0
+    axes0 = [
+        dict(name="x", size=nav_shape0[1], scale=step_sizes0[0]),
+        dict(name="y", size=nav_shape0[0], scale=step_sizes0[1]),
+        dict(size=sig_shape0[1]),
+        dict(size=sig_shape0[0]),
+    ]
+    s0 = kp.signals.EBSD(np.ones(data_shape, dtype=np.uint8), axes=axes0)
+    xmap = CrystalMap.empty(shape=nav_shape0, step_sizes=step_sizes0)
     mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
     detector = kp.detectors.EBSDDetector(
-        shape=sig_shape,
+        shape=sig_shape0,
         pc=(0.5, 0.5, 0.5),
         sample_tilt=70,
         convention="tsl",
     )
 
-    xmap2 = CrystalMap.empty((nav_size - 1,), step_sizes=(step_sizes[0],))
+    xmap2 = CrystalMap.empty((nav_size - 1,), step_sizes=(step_sizes0[0],))
 
     phase_ids = np.zeros((nav_size,))
     phase_ids[-1] = 1
     xmap3 = CrystalMap(
-        rotations=Rotation.random(nav_size).reshape(*nav_shape),
+        rotations=Rotation.random(nav_size).reshape(*nav_shape0),
         phase_id=phase_ids,
         phase_list=PhaseList(names=["a", "b"], space_groups=[10, 20]),
     )
@@ -1346,29 +1366,129 @@ class TestEBSDRefinement:
         convention="tsl",
     )
 
+    mask = np.ones((6, 60), dtype=bool)
+    mask2 = np.zeros((60, 60), dtype=bool)
+
+    mp2 = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
+
+    array1 = da.ones((10, 10, 60, 60), dtype=np.uint8)
+    s1 = kp.signals.LazyEBSD(array1)
+
+    nav_shape2 = (2,)
+    sig_shape2 = (4, 5)
+    array2 = da.random.random(nav_shape2 + sig_shape2).astype(np.float32)
+    axes2 = [
+        dict(name="x", size=nav_shape2[0]),
+        dict(size=sig_shape2[0]),
+        dict(size=sig_shape2[1]),
+    ]
+    s2 = kp.signals.LazyEBSD(array2, axes=axes2)
+    xmap4 = CrystalMap.empty(shape=nav_shape2, step_sizes=(1,))
     detector3 = kp.detectors.EBSDDetector(
-        shape=(60, 60),
+        shape=sig_shape2,
         pc=[[0.5, 0.5, 0.5], [0.45, 0.45, 0.45]],
         sample_tilt=70,
         convention="tsl",
     )
 
-    mask = np.ones((6, 60))
-
-    mask2 = np.zeros((60, 60), dtype=np.uint8)
-
-    mp2 = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
-
-    array1 = da.random.random((10, 10, 60, 60))
-    s1 = kp.signals.LazyEBSD(array1)
-
-    array2 = da.random.random((2, 60, 60))
-    s2 = kp.signals.LazyEBSD(array2)
-    xmap4 = CrystalMap.empty((2,))
-
-    array3 = da.random.random((60, 60)).astype(np.float32)
+    array3 = da.ones((60, 60), dtype=np.float32)
     single = kp.signals.LazyEBSD(array3)
     xmap_single = CrystalMap.empty((1,))
+
+    @pytest.mark.parametrize(
+        "ebsd_with_axes_and_random_data, detector, error_msg",
+        [
+            (((2,), (3, 2), True, np.float32), ((2,), (2, 3)), "Detector and signal m"),
+            (((3,), (2, 3), True, np.float32), ((2,), (2, 3)), "Detector must have ex"),
+        ],
+        indirect=["ebsd_with_axes_and_random_data", "detector"],
+    )
+    def test_refinement_check_raises(
+        self,
+        ebsd_with_axes_and_random_data,
+        detector,
+        error_msg,
+        get_single_phase_xmap,
+    ):
+        s = ebsd_with_axes_and_random_data
+        xmap = get_single_phase_xmap(
+            nav_shape=s.axes_manager.navigation_shape[::-1],
+            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
+        )
+        xmap.phases[0].name = self.mp0.phase.name
+
+        with pytest.raises(ValueError, match=error_msg):
+            _ = s.refine_orientation(
+                xmap=xmap, master_pattern=self.mp0, detector=detector, energy=20
+            )
+
+    @pytest.mark.parametrize(
+        "ebsd_with_axes_and_random_data, detector",
+        [
+            (((2,), (2, 3), True, np.float32), ((2,), (2, 3))),
+            (((3, 2), (2, 3), False, np.float32), ((1,), (2, 3))),
+        ],
+        indirect=["ebsd_with_axes_and_random_data", "detector"],
+    )
+    def test_refine_orientation_default(
+        self,
+        ebsd_with_axes_and_random_data,
+        detector,
+        get_single_phase_xmap,
+    ):
+        s = ebsd_with_axes_and_random_data
+        xmap = get_single_phase_xmap(
+            nav_shape=s.axes_manager.navigation_shape[::-1],
+            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
+        )
+        xmap.phases[0].name = self.mp0.phase.name
+
+        xmap_refined = s.refine_orientation(
+            xmap=xmap,
+            master_pattern=self.mp0,
+            energy=20,
+            detector=detector,
+        )
+
+        assert xmap_refined.shape == xmap.shape
+
+    def test_refine_orientation_mask(self):
+        pass
+
+    def test_refine_orientation_basinhopping(self):
+        refined_xmap2 = self.s2.refine_orientation(
+            xmap=self.xmap4,
+            master_pattern=self.mp,
+            method="basinhopping",
+            method_kwargs={"minimizer_kwargs": {"method": "Nelder-Mead"}},
+            detector=self.detector3,
+            trust_region=[0.5, 0.5, 0.5],
+            energy=20,
+        )
+        assert len(refined_xmap2.rotations.data) == 2
+
+    def test_refine_orientation_differential_evolution(self):
+        refined_xmap2 = self.s2.refine_orientation(
+            xmap=self.xmap4,
+            master_pattern=self.mp,
+            method="differential_evolution",
+            detector=self.detector3,
+            trust_region=[0.5, 0.5, 0.5],
+            energy=20,
+        )
+
+        assert len(refined_xmap2.rotations.data) == 2
+
+    def test_refine_orientation_dual_annealing(self):
+        refined_xmap2 = self.s2.refine_orientation(
+            xmap=self.xmap4,
+            master_pattern=self.mp,
+            method="dual_annealing",
+            detector=self.detector3,
+            trust_region=[0.5, 0.5, 0.5],
+            energy=20,
+        )
+        assert refined_xmap2.rotations.shape == (2,)
 
     def test_refine_orientation(self):
         mp_a = kp.signals.EBSDMasterPattern(
@@ -1437,15 +1557,6 @@ class TestEBSDRefinement:
                 energy=20,
             )
 
-        # Signal and detector must have same shape
-        with pytest.raises(ValueError):
-            _ = self.s0.refine_orientation(
-                xmap=self.xmap,
-                master_pattern=self.mp,
-                detector=self.detector2,
-                energy=20,
-            )
-
         # Method must be supported
         with pytest.raises(ValueError):
             _ = self.s0.refine_orientation(
@@ -1454,15 +1565,6 @@ class TestEBSDRefinement:
                 detector=self.detector,
                 energy=20,
                 method="shgo",
-            )
-
-        # Must have 1 or n x m PCs
-        with pytest.raises(ValueError):
-            _ = self.s0.refine_orientation(
-                xmap=self.xmap,
-                master_pattern=self.mp,
-                detector=self.detector3,
-                energy=20,
             )
 
         # xmap must be single phase
@@ -1524,54 +1626,49 @@ class TestEBSDRefinement:
         )
         assert len(refined_xmap_single.rotations.data) == 1
 
-        refined_xmap2 = self.s2.refine_orientation(
+    def test_refine_projection_center_default(self):
+        pass
+
+    def test_refine_projection_center_basinhopping(self):
+        scores, new_det = self.s2.refine_projection_center(
             xmap=self.xmap4,
             master_pattern=self.mp,
             detector=self.detector3,
-            trust_region=[0.5, 0.5, 0.5],
+            trust_region=[0.01, 0.01, 0.01],
             energy=20,
-        )
-
-        assert len(refined_xmap2.rotations.data) == 2
-
-        # BH
-        refined_xmap2 = self.s2.refine_orientation(
-            xmap=self.xmap4,
-            master_pattern=self.mp,
             method="basinhopping",
             method_kwargs={"minimizer_kwargs": {"method": "Nelder-Mead"}},
-            detector=self.detector3,
-            trust_region=[0.5, 0.5, 0.5],
-            energy=20,
         )
 
-        assert len(refined_xmap2.rotations.data) == 2
+        assert isinstance(new_det, type(self.detector))
+        assert len(scores) == 2
 
-        # DA
-        refined_xmap2 = self.s2.refine_orientation(
+    def test_refine_projection_center_differential_evolution(self):
+        scores, new_det = self.s2.refine_projection_center(
             xmap=self.xmap4,
             master_pattern=self.mp,
-            method="dual_annealing",
             detector=self.detector3,
-            trust_region=[0.5, 0.5, 0.5],
+            trust_region=[0.01, 0.01, 0.01],
             energy=20,
-        )
-
-        assert len(refined_xmap2.rotations.data) == 2
-
-        # DE
-        refined_xmap2 = self.s2.refine_orientation(
-            xmap=self.xmap4,
-            master_pattern=self.mp,
             method="differential_evolution",
+        )
+        assert isinstance(new_det, type(self.detector))
+        assert len(scores) == 2
+
+    def test_refine_projection_center_dual_annealing(self):
+        scores, new_det = self.s2.refine_projection_center(
+            xmap=self.xmap4,
+            master_pattern=self.mp,
             detector=self.detector3,
-            trust_region=[0.5, 0.5, 0.5],
+            trust_region=[0.01, 0.01, 0.01],
             energy=20,
+            method="dual_annealing",
         )
 
-        assert len(refined_xmap2.rotations.data) == 2
+        assert isinstance(new_det, type(self.detector))
+        assert len(scores) == 2
 
-    def test_pc_refinement(self):
+    def test_refine_projection_center(self):
 
         (scores, new_det) = self.s0.refine_projection_center(
             xmap=self.xmap, master_pattern=self.mp, detector=self.detector, energy=20
@@ -1639,45 +1736,49 @@ class TestEBSDRefinement:
         assert isinstance(new_det2, type(self.detector))
         assert len(scores2) == 2
 
-        # BH
-        (scores2, new_det2) = self.s2.refine_projection_center(
+    def test_refine_all_default(self):
+        pass
+
+    def test_refine_all_basinhopping(self):
+        refined_xmap, new_det = self.s2.refine_all(
             xmap=self.xmap4,
             master_pattern=self.mp,
             detector=self.detector3,
-            trust_region=[0.01, 0.01, 0.01],
             energy=20,
             method="basinhopping",
             method_kwargs={"minimizer_kwargs": {"method": "Nelder-Mead"}},
+            trust_region=[0.1, 0.1, 0.1, 0.01, 0.01, 0.01],
         )
+        assert isinstance(new_det, type(self.detector))
+        assert len(refined_xmap.rotations.data) == 2
 
-        assert isinstance(new_det2, type(self.detector))
-        assert len(scores2) == 2
-        # DA
-        (scores2, new_det2) = self.s2.refine_projection_center(
+    def test_refine_all_differential_evolution(self):
+        refined_xmap, new_det = self.s2.refine_all(
             xmap=self.xmap4,
             master_pattern=self.mp,
             detector=self.detector3,
-            trust_region=[0.01, 0.01, 0.01],
-            energy=20,
-            method="dual_annealing",
-        )
-
-        assert isinstance(new_det2, type(self.detector))
-        assert len(scores2) == 2
-        # DE
-        (scores2, new_det2) = self.s2.refine_projection_center(
-            xmap=self.xmap4,
-            master_pattern=self.mp,
-            detector=self.detector3,
-            trust_region=[0.01, 0.01, 0.01],
             energy=20,
             method="differential_evolution",
+            trust_region=[0.1, 0.1, 0.1, 0.01, 0.01, 0.01],
         )
 
-        assert isinstance(new_det2, type(self.detector))
-        assert len(scores2) == 2
+        assert isinstance(new_det, type(self.detector))
+        assert len(refined_xmap.rotations.data) == 2
 
-    def test_full_refinement(self):
+    def test_refine_all_dual_annealing(self):
+        refined_xmap, new_det = self.s2.refine_all(
+            xmap=self.xmap4,
+            master_pattern=self.mp,
+            detector=self.detector3,
+            energy=20,
+            method="dual_annealing",
+            trust_region=[0.1, 0.1, 0.1, 0.01, 0.01, 0.01],
+        )
+
+        assert isinstance(new_det, type(self.detector))
+        assert len(refined_xmap.rotations.data) == 2
+
+    def test_refine_all(self):
 
         (refined_xmap, new_det) = self.s0.refine_all(
             xmap=self.xmap, master_pattern=self.mp, detector=self.detector, energy=20
@@ -1739,45 +1840,6 @@ class TestEBSDRefinement:
             master_pattern=self.mp,
             detector=self.detector3,
             energy=20,
-            trust_region=[0.1, 0.1, 0.1, 0.01, 0.01, 0.01],
-        )
-
-        assert isinstance(new_det2, type(self.detector))
-        assert len(refined_xmap2.rotations.data) == 2
-
-        # BH
-        (refined_xmap2, new_det2) = self.s2.refine_all(
-            xmap=self.xmap4,
-            master_pattern=self.mp,
-            detector=self.detector3,
-            energy=20,
-            method="basinhopping",
-            method_kwargs={"minimizer_kwargs": {"method": "Nelder-Mead"}},
-            trust_region=[0.1, 0.1, 0.1, 0.01, 0.01, 0.01],
-        )
-
-        assert isinstance(new_det2, type(self.detector))
-        assert len(refined_xmap2.rotations.data) == 2
-        # DA
-        (refined_xmap2, new_det2) = self.s2.refine_all(
-            xmap=self.xmap4,
-            master_pattern=self.mp,
-            detector=self.detector3,
-            energy=20,
-            method="dual_annealing",
-            trust_region=[0.1, 0.1, 0.1, 0.01, 0.01, 0.01],
-        )
-
-        assert isinstance(new_det2, type(self.detector))
-        assert len(refined_xmap2.rotations.data) == 2
-
-        # DE
-        (refined_xmap2, new_det2) = self.s2.refine_all(
-            xmap=self.xmap4,
-            master_pattern=self.mp,
-            detector=self.detector3,
-            energy=20,
-            method="differential_evolution",
             trust_region=[0.1, 0.1, 0.1, 0.01, 0.01, 0.01],
         )
 

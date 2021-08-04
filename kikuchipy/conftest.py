@@ -21,8 +21,8 @@ from numbers import Number
 import os
 from packaging import version
 import tempfile
-from typing import Tuple
 
+import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticePoint
 from hyperspy import __version__ as hs_version
@@ -69,28 +69,6 @@ def assert_dictionary(dict1, dict2):
                 assert dict1[key] == dict2[key]
 
 
-def _get_spatial_array_dicts(
-    nav_shape: Tuple[int, int], step_sizes: Tuple[int, int] = (1.5, 1)
-) -> Tuple[dict, int]:
-    ny, nx = nav_shape
-    dy, dx = step_sizes
-    d = {"x": None, "y": None, "z": None}
-    map_size = 1
-    if nx > 1:
-        if ny > 1:
-            d["x"] = np.tile(np.arange(nx) * dx, ny)
-        else:
-            d["x"] = np.arange(nx) * dx
-        map_size *= nx
-    if ny > 1:
-        if nx > 1:
-            d["y"] = np.sort(np.tile(np.arange(ny) * dy, nx))
-        else:
-            d["y"] = np.arange(ny) * dy
-        map_size *= ny
-    return d, map_size
-
-
 # ------------------------------ Setup ------------------------------ #
 
 
@@ -131,14 +109,47 @@ def dummy_background():
     return np.array([5, 4, 5, 4, 3, 4, 4, 4, 3], dtype=np.uint8).reshape((3, 3))
 
 
+@pytest.fixture(params=[(3, 3), (3, 3), False, np.uint8])
+def ebsd_with_axes_and_random_data(request):
+    """EBSD signal with minimally defined axes and random data.
+
+    Parameters
+    ----------
+    navigation_shape : tuple
+    signal_shape : tuple
+    lazy : bool
+    dtype : numpy.dtype
+    """
+    nav_shape, sig_shape, lazy, dtype = request.param
+    nav_ndim = len(nav_shape)
+    sig_ndim = len(sig_shape)
+    data_shape = nav_shape + sig_shape
+    axes = []
+    if nav_ndim == 1:
+        axes.append(dict(name="x", size=nav_shape[0], scale=1))
+    if nav_ndim == 2:
+        axes.append(dict(name="y", size=nav_shape[0], scale=1))
+        axes.append(dict(name="x", size=nav_shape[1], scale=1))
+    if sig_ndim == 1:
+        axes.append(dict(name="dx", size=sig_shape[0], scale=1))
+    if sig_ndim == 2:
+        axes.append(dict(name="dy", size=sig_shape[0], scale=1))
+        axes.append(dict(name="dx", size=sig_shape[1], scale=1))
+    if lazy:
+        data = da.random.random(data_shape).astype(dtype)
+        return kp.signals.LazyEBSD(data, axes=axes)
+    else:
+        data = np.random.random(data_shape).astype(dtype)
+        return kp.signals.EBSD(data, axes=axes)
+
+
 @pytest.fixture(params=["h5"])
 def save_path_hdf5(request):
     """Temporary file in a temporary directory for use when tests need
     to write, and sometimes read again, a signal to, and from, a file.
     """
-    ext = request.param
     with tempfile.TemporaryDirectory() as tmp:
-        file_path = os.path.join(tmp, "patterns_temp." + ext)
+        file_path = os.path.join(tmp, "patterns_temp." + request.param)
         yield file_path
         gc.collect()
 
@@ -174,14 +185,15 @@ def pc1():
     return [0.4210, 0.7794, 0.5049]
 
 
-@pytest.fixture(params=[(1,)])
+@pytest.fixture(params=[[(1,), (60, 60)]])
 def detector(request, pc1):
     """A NORDIF UF1100 EBSD detector with a TSL PC."""
+    nav_shape, sig_shape = request.param
     return kp.detectors.EBSDDetector(
-        shape=(60, 60),
+        shape=sig_shape,
         binning=8,
         px_size=70,
-        pc=np.ones(request.param + (3,)) * pc1,
+        pc=np.ones(nav_shape + (3,)) * pc1,
         sample_tilt=70,
         tilt=0,
         convention="tsl",
@@ -368,22 +380,23 @@ def get_single_phase_xmap(rotations):
         phase_id=0,
         step_sizes=(1.5, 1),
     ):
-        d, map_size = _get_spatial_array_dicts(nav_shape, step_sizes)
+        xmap = CrystalMap.empty(shape=nav_shape, step_sizes=step_sizes)
+        map_size = xmap.size
         rot_idx = np.random.choice(
             np.arange(rotations.size), map_size * rotations_per_point
         )
         data_shape = (map_size,)
         if rotations_per_point > 1:
             data_shape += (rotations_per_point,)
-        d["rotations"] = rotations[rot_idx].reshape(*data_shape)
-        d["phase_id"] = np.ones(map_size) * phase_id
-        d["phase_list"] = PhaseList(Phase(name=name))
+        xmap._rotations = rotations[rot_idx].reshape(*data_shape)
+        xmap._phase_id = np.ones(map_size) * phase_id
+        xmap._phase_list = PhaseList(Phase(name=name))
         # Scores and simulation indices
-        d["prop"] = {
+        xmap._prop = {
             prop_names[0]: np.ones(data_shape, dtype=np.float32),
             prop_names[1]: np.arange(np.prod(data_shape)).reshape(data_shape),
         }
-        return CrystalMap(**d)
+        return xmap
 
     return _get_single_phase_xmap
 
