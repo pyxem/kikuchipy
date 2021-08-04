@@ -50,10 +50,9 @@ from kikuchipy.pattern._pattern import (
 )
 from kikuchipy.indexing import StaticPatternMatching
 from kikuchipy.indexing._refinement import (
-    full_refinement,
-    refine_orientations,
-    refine_projection_center,
-    _refinement_parameter_check,
+    _refine_all,
+    _refine_orientation,
+    _refine_projection_center,
 )
 from kikuchipy.indexing.similarity_metrics import SimilarityMetric
 from kikuchipy.signals.util._metadata import (
@@ -69,7 +68,8 @@ from kikuchipy.signals.util._dask import (
     _rechunk_learning_results,
     _update_learning_results,
 )
-from kikuchipy.signals.util._crystal_map import crystal_map_is_compatible_with_signal
+from kikuchipy.signals.util._detector import _detector_is_compatible_with_signal
+from kikuchipy.signals.util._crystal_map import _crystal_map_is_compatible_with_signal
 from kikuchipy.signals.util._map_helper import (
     _get_neighbour_dot_product_matrices,
     _get_average_dot_product_map,
@@ -132,6 +132,16 @@ class EBSD(CommonImage, Signal2D):
         """
         return self._detector
 
+    @detector.setter
+    def detector(self, value: EBSDDetector):
+        if _detector_is_compatible_with_signal(
+            detector=value,
+            navigation_shape=self.axes_manager.navigation_shape[::-1],
+            signal_shape=self.axes_manager.signal_shape[::-1],
+            raise_if_not=True,
+        ):
+            self._detector = value
+
     @property
     def xmap(self) -> CrystalMap:
         """A :class:`~orix.crystal_map.CrystalMap` containing the
@@ -142,8 +152,8 @@ class EBSD(CommonImage, Signal2D):
 
     @xmap.setter
     def xmap(self, value: CrystalMap):
-        if crystal_map_is_compatible_with_signal(
-            value, self.axes_manager, raise_if_false=True
+        if _crystal_map_is_compatible_with_signal(
+            value, self.axes_manager.navigation_axes[::-1], raise_if_not=True
         ):
             self._xmap = value
 
@@ -1010,88 +1020,90 @@ class EBSD(CommonImage, Signal2D):
             get_orientation_similarity_map=get_orientation_similarity_map,
         )
 
-    def orientation_refinement(
+    def refine_orientation(
         self,
         xmap: CrystalMap,
-        master_pattern,
         detector: EBSDDetector,
+        master_pattern,
         energy: Union[int, float],
         mask: Optional[np.ndarray] = None,
-        method: Optional[str] = None,
+        method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
         compute: bool = True,
-    ) -> CrystalMap:
-        """Performs an orientation refinement using the initial indexing
-        results, in the EDAX TSL sample reference frame (RD,
-        TD, ND), stored in a single phase
-        :class:`~orix.crystal_map.CrystalMap` and the fixed
-        detector-sample geometry. The refinement uses a subset of the
-        optimization routines implemented in scipy and attempts to
-        maximize the similarity between experimental and simulated
-        patterns, as calculated by the NCC, using the best orientation as a
-        starting point.
+    ):
+        r"""Refine orientations by searching orientation space around
+        the best indexed solution using fixed projection centers.
+
+        Refinement attempts to optimize (maximize) the similarity
+        between patterns in this signal and simulated patterns
+        re-projected from a master pattern. The only supported
+        similarity metric is the normalized cross-correlation (NCC).
+        The orientation, represented by three Euler angles
+        (:math:`\phi_1`, :math:`\Phi`, :math:`\phi_2`), is changed
+        during re-projection, while the sample-detector geometry,
+        represented by the three projection center (PC) parameters
+        (PCx, PCy, PCz), are fixed.
+
+        A subset of the optimization methods in SciPy are available.
 
         Parameters
         ----------
-        xmap : CrystalMap
-            A crystal map storing the results of the initial EBSD
-            indexing.
+        xmap
+            Single phase crystal map with at least one orientation per
+            point. The orientations are assumed to be relative to the
+            EDAX TSL sample reference frame RD-TD-ND.
+        detector
+            Detector describing the detector-sample geometry with either
+            one PC to be used for all map points or one for each point.
         master_pattern : EBSDMasterPattern
-            EBSDMasterPattern in the square Lambert projection.
-        detector : EBSDDetector
-            EBSD detector describing the detector dimensions and the
-            detector-sample geometry with either a single, fixed
-            projection/pattern center or a projection center for each
-            scan point.
-        energy : int
-            Acceleration voltage, in kV, used to simulate the desired
-            master pattern.
-        mask : np.ndarray
-            Boolean mask to be applied to the simulated patterns. True values
-            are masked away.
+            Master pattern in the square Lambert projection of the same
+            phase as the one in the crystal map.
+        energy
+            Accelerating voltage of the electron beam in kV
+            specifying which master pattern energy to use during
+            re-projection of simulated patterns.
+        mask
+            Boolean mask of signal shape to be applied to both the
+            experimental and simulated patterns before comparison.
+            Pixels set to `True` are masked away. If not given, all
+            pixels are compared.
         method : str, optional
-            Name of the scipy.optimize function to be used. Must be one
-            of "minimize", "differential_evolution", "dual_annealing",
-            or "basinhopping". If not specified, "minimize" is used.
-        method_kwargs : dict, optional
-            Keyword arguments passed to the scipy.optimize function
-            specified above.
-        trust_region : list, optional
-            List of how wide the bounds, centered on the initial
-            orientation indexing result, should be for
-            (phi1, Phi, phi2) in degrees. Only used for methods that
-            support bounds (excluding Powell). Defaults to [1, 1, 1].
-        compute : bool
-            Whether to return a computed result, by default True. If compute is
-            set to False, a Delayed list object is returned where the Euler
-            angles (phi1, Phi, phi2) in radians for index i is given by
-            List[i][0], List[i][1], List[i][2].
-            For more information see :func:`~dask.array.Array.compute`.
+            Name of the :mod:`scipy.optimize` optimization method, among
+            "minimize", "differential_evolution", "dual_annealing",
+            and "basinhopping". Default is "minimize".
+        method_kwargs
+            Keyword arguments passed to the :mod:`scipy.optimize`
+            `method`.
+        trust_region
+            List of angular deviation in degrees from the initial
+            orientation for the three Euler angles. Only used for
+            optimization methods that support bounds (excluding
+            "Powell"). Default is [1, 1, 1].
+        compute
+            Whether to refine now (True) or later (False). Default is
+            True. See :meth:`~dask.array.Array.compute` for more
+            details.
 
         Returns
         -------
-        CrystalMap
-            A new crystal map where the orientations have been
-            refined.
+        ~orix.crystal_map.CrystalMap or ~dask.delayed.Delayed
+            New crystal map with refined orientations and similarity
+            metrics in a "scores" property if `compute` is True. If
+            `compute` is False, a :class:`~dask.delayed.Delayed` list
+            instance `euler` is returned where the Euler angles in
+            radians for the flattened map index `i` is accessed as
+            `euler[i][0]`, `euler[i][1]`, `euler[i][2]`.
 
-        Notes
-        -----
-        The method creates a deepcopy of the signal and rescales it to float32
-        if the initial signal has a different data type, such as uint8. This
-        might lead to memory issues if your experimental data set is large. To
-        ensure that the method runs smoothly, it is recommended that you
-        rescale the signal prior to refinement, and if the data set becomes
-        larger than memory use a LazyEBSD object instead for your experimental
-        data.
-
-
-        See ~kikuchipy.signals.EBSD.rescale_intensity
+        See Also
+        --------
+        refine_projection_center
+        refine_all
         """
-        _refinement_parameter_check(
-            exp=self, xmap=xmap, detector=detector, method=method, mask=mask
+        self._check_refinement_parameters(
+            xmap=xmap, detector=detector, method=method, mask=mask
         )
-        return refine_orientations(
+        return _refine_orientation(
             xmap=xmap,
             master_pattern=master_pattern,
             signal=self,
@@ -1104,89 +1116,90 @@ class EBSD(CommonImage, Signal2D):
             compute=compute,
         )
 
-    def pc_refinement(
+    def refine_projection_center(
         self,
         xmap: CrystalMap,
-        master_pattern,
         detector: EBSDDetector,
+        master_pattern,
         energy: Union[int, float],
         mask: Optional[np.ndarray] = None,
-        method: Optional[str] = None,
+        method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
         compute: bool = True,
-    ) -> Tuple[np.ndarray, EBSDDetector]:
-        """Performs a projection center refinement using the
-        best orientation, for each point, from the initial indexing stored in a
-        single phase
-        :class:`~orix.crystal_map.CrystalMap` and the projection center
-        estimates stored in an
-        :class:`~kikuchipy.detectors.ebsd_detector.EBSDDetector`.
-        The refinement uses a subset of the optimization routines
-        implemented in scipy and attempts to  maximize the similarity
-        between experimental and simulated patterns as calculated by
-        the NCC.
+    ):
+        """Refine projection centers by searching the parameter space
+        using fixed orientations.
+
+        Refinement attempts to optimize (maximize) the similarity
+        between patterns in this signal and simulated patterns
+        re-projected from a master pattern. The only supported
+        similarity metric is the normalized cross-correlation (NCC).
+        The sample-detector geometry, represented by the three
+        projection center (PC) parameters (PCx, PCy, PCz), is changed
+        during re-projection, while the orientations are fixed.
+
+        A subset of the optimization methods in SciPy are available.
 
         Parameters
         ----------
-        xmap : CrystalMap
-            A crystal map storing the results of the initial EBSD
-            indexing.
+        xmap
+            Single phase crystal map with at least one orientation per
+            point. The orientations are assumed to be relative to the
+            EDAX TSL sample reference frame RD-TD-ND.
+        detector
+            Detector describing the detector-sample geometry with either
+            one PC to be used for all map points or one for each point.
         master_pattern : EBSDMasterPattern
-            EBSDMasterPattern in the square Lambert projection.
-        detector : EBSDDetector
-            EBSD detector describing the detector dimensions and the
-            detector-sample geometry with either a single, fixed
-            projection/pattern center or a projection center for each
-            scan point.
-        energy : int
-            Acceleration voltage, in kV, used to simulate the desired
-            master pattern.
-        mask : np.ndarray, optional
-            Boolean mask to be applied to the simulated patterns. True values
-            are masked away.
+            Master pattern in the square Lambert projection of the same
+            phase as the one in the crystal map.
+        energy
+            Accelerating voltage of the electron beam in kV
+            specifying which master pattern energy to use during
+            re-projection of simulated patterns.
+        mask
+            Boolean mask of signal shape to be applied to both the
+            experimental and simulated patterns before comparison.
+            Pixels set to `True` are masked away. If not given, all
+            pixels are compared.
         method : str, optional
-            Name of the scipy.optimize function to be used. Must be one
-            of "minimize", "differential_evolution", "dual_annealing",
-            or "basinhopping". If not specified, "minimize" is used.
-        method_kwargs : dict, optional
-            Keyword arguments passed to the scipy.optimize function
-            specified above.
-        trust_region : list, optional
-            List of how wide the bounds, centered on the projection
-            center, should be for (PCx, PCy, PCz) in Bruker convention.
-            Only used for methods that support bounds
-            (excluding Powell). Defaults to [0.05, 0.05, 0.05].
-        compute : bool
-            Whether to return a computed result, by default True.  If compute is
-            set to False, a Delayed list object is returned where the
-            similarity metric score for index i is given by List[i][0], and the
-            projection center in the Bruker convention (PCx, PCy, PCz) for index
-            i is given by List[i][1], List[i][2], List[i][3].
-            For more information see :func:`~dask.array.Array.compute`.
+            Name of the :mod:`scipy.optimize` optimization method, among
+            "minimize", "differential_evolution", "dual_annealing",
+            and "basinhopping". Default is "minimize".
+        method_kwargs
+            Keyword arguments passed to the :mod:`scipy.optimize`
+            `method`.
+        trust_region
+            List of percentage deviations from the initial PC
+            parameters in the Bruker convention. The parameter range is
+            [0, 1]. Only used for optimization methods that support
+            bounds (excluding "Powell"). Default is [0.05, 0.05, 0.05].
+        compute
+            Whether to refine now (True) or later (False). Default is
+            True. See :meth:`~dask.array.Array.compute` for more
+            details.
+
         Returns
         -------
-         np.ndarray, EBSDDetector
-            An array containing the similarity metric after refinement,
-            and a new EBSD detector with refined projection centers.
+        ~orix.crystal_map.CrystalMap or ~dask.delayed.Delayed
+            New crystal map with new similarity metrics stored in the
+            "scores" property and a new EBSD detector instance with the
+            refined PCs if `compute` is True. If `compute` is False, a
+            :class:`~dask.delayed.Delayed` list instance `results` is
+            returned where the optimized similarity metric and PC
+            parameters (PCx, PCy, PCz) for the flattened map index `i`
+            are accessed as `results[i][0]`, `results[i][1]`,
+            `results[i][2]`, and `results[i][3]`, respectively.
 
-        Notes
-        -----
-        The method creates a deepcopy of the signal and rescales it to float32
-        if the initial signal has a different data type, such as uint8. This
-        might lead to memory issues if your experimental data set is large. To
-        ensure that the method runs smoothly, it is recommended that you
-        rescale the signal prior to refinement, and if the data set becomes
-        larger than memory use a LazyEBSD object instead for your experimental
-        data.
-
-        See ~kikuchipy.signals.EBSD.rescale_intensity
-
+        See Also
+        --------
+        refine_orientation
+        refine_all
         """
-        _refinement_parameter_check(
-            exp=self, xmap=xmap, detector=detector, method=method, mask=mask
+        self._check_refinement_parameters(
+            xmap=xmap, detector=detector, method=method, mask=mask
         )
-        return refine_projection_center(
+        return _refine_projection_center(
             xmap=xmap,
             master_pattern=master_pattern,
             signal=self,
@@ -1199,101 +1212,105 @@ class EBSD(CommonImage, Signal2D):
             compute=compute,
         )
 
-    def full_refinement(
+    def refine_all(
         self,
         xmap: CrystalMap,
-        master_pattern,
         detector: EBSDDetector,
+        master_pattern,
         energy: Union[int, float],
         mask: Optional[np.ndarray] = None,
-        method: Optional[str] = None,
+        method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
         compute: bool = True,
-    ) -> Tuple[CrystalMap, EBSDDetector]:
-        """Performs an orientation and projection center refinement
-        using the initial indexing results, in the EDAX TSL sample reference
-        frame (RD, TD, ND), stored in a single phase
-        :class:`~orix.crystal_map.CrystalMap` and the projection center
-        estimates stored in an
-        :class:`~kikuchipy.detectors.ebsd_detector.EBSDDetector`.
-        The refinement uses a subset of the optimization routines
-        implemented in scipy and attempts to  maximize the similarity
-        between experimental and simulated patterns, as calculated by the NCC,
-        using the best orientation as a starting point.
+    ):
+        r"""Refine orientations and projection centers simultaneously by
+        searching the orientation and PC parameter space.
+
+        Refinement attempts to optimize (maximize) the similarity
+        between patterns in this signal and simulated patterns
+        re-projected from a master pattern. The only supported
+        similarity metric is the normalized cross-correlation (NCC).
+        The orientation, represented by three Euler angles
+        (:math:`\phi_1`, :math:`\Phi`, :math:`\phi_2`), and the
+        sample-detector geometry, represented by the three projection
+        center (PC) parameters (PCx, PCy, PCz), are changed during
+        re-projection.
+
+        A subset of the optimization methods in SciPy are available.
 
         Parameters
         ----------
-        xmap : CrystalMap
-            A crystal map storing the results of the initial EBSD
-            indexing.
+        xmap
+            Single phase crystal map with at least one orientation per
+            point. The orientations are assumed to be relative to the
+            EDAX TSL sample reference frame RD-TD-ND.
+        detector
+            Detector describing the detector-sample geometry with either
+            one PC to be used for all map points or one for each point.
         master_pattern : EBSDMasterPattern
-            EBSDMasterPattern in the square Lambert projection.
-        detector : EBSDDetector
-            EBSD detector describing the detector dimensions and the
-            detector-sample geometry with either a single, fixed
-            projection/pattern center or a projection center for each
-            scan point.
-        energy : int
-            Acceleration voltage, in kV, used to simulate the desired
-            master pattern.
-        mask : np.ndarray, optional
-            Boolean mask to be applied to the simulated patterns. True values
-            are masked away.
+            Master pattern in the square Lambert projection of the same
+            phase as the one in the crystal map.
+        energy
+            Accelerating voltage of the electron beam in kV
+            specifying which master pattern energy to use during
+            re-projection of simulated patterns.
+        mask
+            Boolean mask of signal shape to be applied to both the
+            experimental and simulated patterns before comparison.
+            Pixels set to `True` are masked away. If not given, all
+            pixels are compared.
         method : str, optional
-            Name of the scipy.optimize function to be used. Must be one
-            of "minimize", "differential_evolution", "dual_annealing",
-            or "basinhopping". If not specified, "minimize" is used.
-        method_kwargs : dict, optional
-            Keyword arguments passed to the scipy.optimize function
-            specified above.
-        trust_region : list, optional
-            List of how wide the bounds, centered on the initial
-            orientation indexing result and projection center,
-            should be for (phi1, Phi, phi2) in degrees and
-            (PCx, PCy, PCz) in the Bruker convention.
-            Only used for methods that support bounds
-            (excluding Powell). Defaults to [1, 1, 1, 0.05, 0.05, 0.05]
-        compute : bool
-            Whether to return a computed result, by default True. If compute is
-            set to False, a Delayed list object is returned where the Euler
-            angles (phi1, Phi, phi2) in radians for index i is given by
-            List[i][0], List[i][1], List[i][2], and the projection center
-            (PCx, PCy, PCz) in the Bruker convention is given by
-            List[i][3], List[i][4], List[i][5].
-            For more information see :func:`~dask.array.Array.compute`.
+            Name of the :mod:`scipy.optimize` optimization method, among
+            "minimize", "differential_evolution", "dual_annealing",
+            and "basinhopping". Default is "minimize".
+        method_kwargs
+            Keyword arguments passed to the :mod:`scipy.optimize`
+            `method`.
+        trust_region
+            List of three angular deviations in degrees from the initial
+            orientation for the three Euler angles and three percentage
+            deviations from the initial PC parameters in the Bruker
+            convention. Only used for optimization methods that support
+            bounds (excluding "Powell"). Default is [1, 1, 1, 0.05,
+            0.05, 0.05].
+        compute
+            Whether to refine now (True) or later (False). Default is
+            True. See :meth:`~dask.array.Array.compute` for more
+            details.
 
         Returns
         -------
-        CrystalMap, EBSDDetector
-            A crystal map with the refined orientations and a new
-            EBSD detector with refined projection centers.
+        CrystalMap and EBSDDetector, or ~dask.delayed.Delayed
+            New crystal map with refined orientations and similarity
+            metrics as a "scores" property and a new EBSD detector with
+            refined projection centers, if `compute` is True. If
+            `compute` is False, a :class:`~dask.delayed.Delayed` list
+            instance `results` is returned where the Euler angles in
+            radians and the PC parameters in the Bruker convention for
+            the flattened map index `i` are accessed as `results[i][0]`,
+            `results[i][1]`, `results[i][2]`, `results[i][3]`,
+            `results[i][4]`, and `results[i][5]`, respectively.
+
+        See Also
+        --------
+        refine_orientation
+        refine_projection_center
 
         Notes
         -----
         The method attempts to refine the orientations and projection
-        center at the same time for each scan point. The optimization
+        center at the same time for each map point. The optimization
         landscape is sloppy :cite:`pang2020optimization`, where the
-        different parameters can make up for each other. Thus, it is
+        orientation and PC can make up for each other. Thus, it is
         possible that the set of parameters that yield the highest
         similarity is incorrect. It is left to the user to ensure that
         the output is reasonable.
-
-        The method creates a deepcopy of the signal and rescales it to float32
-        if the initial signal has a different data type, such as uint8. This
-        might lead to memory issues if your experimental data set is large. To
-        ensure that the method runs smoothly, it is recommended that you
-        rescale the signal prior to refinement, and if the data set becomes
-        larger than memory use a LazyEBSD object instead for your experimental
-        data.
-
-
-        See ~kikuchipy.signals.EBSD.rescale_intensity
         """
-        _refinement_parameter_check(
-            exp=self, xmap=xmap, detector=detector, method=method, mask=mask
+        self._check_refinement_parameters(
+            xmap=xmap, detector=detector, method=method, mask=mask
         )
-        return full_refinement(
+        return _refine_all(
             xmap=xmap,
             master_pattern=master_pattern,
             signal=self,
@@ -1981,6 +1998,42 @@ class EBSD(CommonImage, Signal2D):
 
         if return_signal:
             return s_out
+
+    # ------------------------ Private methods ----------------------- #
+    def _check_refinement_parameters(
+        self,
+        xmap: CrystalMap,
+        detector: EBSDDetector,
+        method: Union[str, None],
+        mask: Union[np.ndarray, None],
+    ):
+        """Raise ValueError if EBSD refinement input is invalid."""
+        _crystal_map_is_compatible_with_signal(
+            xmap=xmap,
+            navigation_axes=self.axes_manager.navigation_axes[::-1],
+            raise_if_not=True,
+        )
+
+        sig_shape = self.axes_manager.signal_shape[::-1]
+        _detector_is_compatible_with_signal(
+            detector=detector,
+            navigation_shape=self.axes_manager.navigation_shape[::-1],
+            signal_shape=sig_shape,
+            raise_if_not=True,
+        )
+
+        # Invalid local minimizer names are caught by the SciPy functions
+        if method is not None and method not in [
+            "minimize",
+            "differential_evolution",
+            "dual_annealing",
+            "basinhopping",
+        ]:
+            raise ValueError(f"Method {method} not supported")
+        if len(xmap.phases.ids) != 1:
+            raise ValueError("Crystal map must have exactly one phase")
+        if mask is not None and sig_shape != mask.shape:
+            raise ValueError("Mask and signal must have the same shape")
 
 
 class LazyEBSD(LazySignal2D, EBSD):

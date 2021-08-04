@@ -31,7 +31,7 @@ import scipy.optimize
 from kikuchipy.pattern import rescale_intensity
 
 
-def full_refinement(
+def _refine_all(
     xmap: CrystalMap,
     master_pattern,
     signal,
@@ -261,7 +261,7 @@ def full_refinement(
     return output, new_det
 
 
-def refine_orientations(
+def _refine_orientation(
     xmap: CrystalMap,
     master_pattern,
     signal,
@@ -494,7 +494,7 @@ def refine_orientations(
     return output
 
 
-def refine_projection_center(
+def _refine_projection_center(
     xmap: CrystalMap,
     master_pattern,
     signal,
@@ -1581,70 +1581,6 @@ def _py_ncc(a: np.ndarray, b: np.ndarray) -> float:
     return np.sum(astar * bstar) / np.sqrt(
         np.sum(np.square(astar)) * np.sum(np.square(bstar))
     )
-
-
-def _refinement_parameter_check(exp, xmap, detector, method, mask):
-    """Helper function to determine if the input to the different EBSD
-    refinement methods are valid.
-
-    Parameters
-    ----------
-    exp
-        Experimental data
-    xmap
-        CrystalMap containing the indexing result.
-    detector
-        EBSDDetector describing the experimental geometry.
-    method
-        Name of the scipy optimization method.
-    mask
-        Mask applied to the patterns.
-
-    Raises
-    ------
-    ValueError
-        If one of the parameters are invalid.
-    """
-    # Signal and Detector must have same shape
-    if exp.axes_manager.signal_shape[::-1] != detector.shape:
-        raise ValueError("Detector must have same shape as the signal shape")
-
-    # Minimization strategy must be supported
-    # Invalid local minimizers will be caught by the scipy functions
-    if method is not None:
-        supported_methods = [
-            "minimize",
-            "differential_evolution",
-            "dual_annealing",
-            "basinhopping",
-        ]
-        if method not in supported_methods:
-            raise ValueError("Method not supported")
-
-    scan_points = exp.axes_manager.navigation_size
-    if scan_points == 0:
-        scan_points = 1
-
-    # Must have 1 PC or n x m PCs
-    if len(detector.pc) != 1 and len(detector.pc) != scan_points:
-        raise ValueError(
-            "Detector must have exactly one projection center, or one projection center per scan point"
-        )
-
-    # xmap must be single phase
-    if len(xmap.phases.ids) != 1:
-        raise ValueError("Crystal map must have exactly one phase")
-
-    # Same number of rotations in xmap as scan points
-    if xmap.size != scan_points:
-        raise ValueError(
-            "Number of rotations in crystal map must be equal to the number of experimental patterns"
-        )
-
-    # mask must fit pattern
-    if mask is not None:
-        if exp.axes_manager.signal_shape != mask.shape:
-            raise ValueError("Mask and signal must have the same shape")
 
 
 def _get_method(method, method_kwargs):

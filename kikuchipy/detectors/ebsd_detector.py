@@ -122,6 +122,13 @@ class EBSDDetector:
         self.pc = pc
         self._set_pc_convention(convention)
 
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__} {self.shape}, "
+            f"px_size {self.px_size} um, binning {self.binning}, "
+            f"tilt {self.tilt}, azimuthal {self.azimuthal}, pc {tuple(self.pc_average)}"
+        )
+
     @property
     def specimen_scintillator_distance(self) -> float:
         """Specimen to scintillator distance (SSD), known in EMsoft as
@@ -355,69 +362,6 @@ class EBSDDetector:
         corners[..., 3] = self.x_min ** 2 + self.y_min ** 2  # Lo. left
         return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
 
-    def __repr__(self) -> str:
-        return (
-            f"{self.__class__.__name__} {self.shape}, "
-            f"px_size {self.px_size} um, binning {self.binning}, "
-            f"tilt {self.tilt}, azimuthal {self.azimuthal}, pc {tuple(self.pc_average)}"
-        )
-
-    def _set_pc_convention(self, convention: Optional[str] = None):
-        if convention is None or convention.lower() == "bruker":
-            pass
-        elif convention.lower() in ["tsl", "edax", "amatek"]:
-            self.pc = self._pc_tsl2bruker()
-        elif convention.lower() == "oxford":
-            self.pc = self._pc_tsl2bruker()
-        elif convention.lower() in ["emsoft", "emsoft4", "emsoft5"]:
-            try:
-                version = int(convention[-1])
-            except ValueError:
-                version = 5
-            self.pc = self._pc_emsoft2bruker(version=version)
-        else:
-            conventions = [
-                "bruker",
-                "emsoft",
-                "emsoft4",
-                "emsoft5",
-                "oxford",
-                "tsl",
-            ]
-            raise ValueError(
-                f"Projection center convention '{convention}' not among the "
-                f"recognised conventions {conventions}."
-            )
-
-    def _pc_emsoft2bruker(self, version: int = 5) -> np.ndarray:
-        new_pc = np.zeros_like(self.pc, dtype=np.float32)
-        if version == 5:
-            new_pc[..., 0] = 0.5 + (-self.pcx / (self.ncols * self.binning))
-        else:
-            new_pc[..., 0] = 0.5 + (self.pcx / (self.ncols * self.binning))
-        new_pc[..., 1] = 0.5 - (self.pcy / (self.nrows * self.binning))
-        new_pc[..., 2] = self.pcz / (self.nrows * self.px_size * self.binning)
-        return new_pc
-
-    def _pc_tsl2bruker(self) -> np.ndarray:
-        new_pc = deepcopy(self.pc)
-        new_pc[..., 1] = 1 - self.pcy
-        return new_pc
-
-    def _pc_bruker2emsoft(self, version: int = 5) -> np.ndarray:
-        new_pc = np.zeros_like(self.pc, dtype=np.float32)
-        new_pc[..., 0] = self.ncols * (self.pcx - 0.5)
-        if version == 5:
-            new_pc[..., 0] = -new_pc[..., 0]
-        new_pc[..., 1] = self.nrows * (0.5 - self.pcy)
-        new_pc[..., 2] = self.nrows * self.px_size * self.pcz
-        return new_pc * self.binning
-
-    def _pc_bruker2tsl(self) -> np.ndarray:
-        new_pc = deepcopy(self.pc)
-        new_pc[..., 1] = 1 - self.pcy
-        return new_pc
-
     def pc_emsoft(self, version: int = 5) -> np.ndarray:
         """Return PC in the EMsoft convention.
 
@@ -618,3 +562,59 @@ class EBSDDetector:
 
         if return_fig_ax:
             return fig, ax
+
+    def _set_pc_convention(self, convention: Optional[str] = None):
+        if convention is None or convention.lower() == "bruker":
+            pass
+        elif convention.lower() in ["tsl", "edax", "amatek"]:
+            self.pc = self._pc_tsl2bruker()
+        elif convention.lower() == "oxford":
+            self.pc = self._pc_tsl2bruker()
+        elif convention.lower() in ["emsoft", "emsoft4", "emsoft5"]:
+            try:
+                version = int(convention[-1])
+            except ValueError:
+                version = 5
+            self.pc = self._pc_emsoft2bruker(version=version)
+        else:
+            conventions = [
+                "bruker",
+                "emsoft",
+                "emsoft4",
+                "emsoft5",
+                "oxford",
+                "tsl",
+            ]
+            raise ValueError(
+                f"Projection center convention '{convention}' not among the "
+                f"recognised conventions {conventions}."
+            )
+
+    def _pc_emsoft2bruker(self, version: int = 5) -> np.ndarray:
+        new_pc = np.zeros_like(self.pc, dtype=np.float32)
+        if version == 5:
+            new_pc[..., 0] = 0.5 + (-self.pcx / (self.ncols * self.binning))
+        else:
+            new_pc[..., 0] = 0.5 + (self.pcx / (self.ncols * self.binning))
+        new_pc[..., 1] = 0.5 - (self.pcy / (self.nrows * self.binning))
+        new_pc[..., 2] = self.pcz / (self.nrows * self.px_size * self.binning)
+        return new_pc
+
+    def _pc_tsl2bruker(self) -> np.ndarray:
+        new_pc = deepcopy(self.pc)
+        new_pc[..., 1] = 1 - self.pcy
+        return new_pc
+
+    def _pc_bruker2emsoft(self, version: int = 5) -> np.ndarray:
+        new_pc = np.zeros_like(self.pc, dtype=np.float32)
+        new_pc[..., 0] = self.ncols * (self.pcx - 0.5)
+        if version == 5:
+            new_pc[..., 0] = -new_pc[..., 0]
+        new_pc[..., 1] = self.nrows * (0.5 - self.pcy)
+        new_pc[..., 2] = self.nrows * self.px_size * self.pcz
+        return new_pc * self.binning
+
+    def _pc_bruker2tsl(self) -> np.ndarray:
+        new_pc = deepcopy(self.pc)
+        new_pc[..., 1] = 1 - self.pcy
+        return new_pc

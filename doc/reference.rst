@@ -517,6 +517,9 @@ from HyperSpy.
     normalize_intensity
     plot_virtual_bse_intensity
     rebin
+    refine_all
+    refine_orientation
+    refine_projection_center
     remove_dynamic_background
     remove_static_background
     rescale_intensity

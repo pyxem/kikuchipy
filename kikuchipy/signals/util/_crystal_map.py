@@ -16,37 +16,38 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Utilities for combining a crystallographic map,
-:class:`orix.crystal_map.CrystalMap` with an EBSD signal,
+"""Utilities for attaching a crystallographic map,
+:class:`orix.crystal_map.CrystalMap` to an EBSD signal,
 :class:`kikuchipy.signals.EBSD`.
 """
 
 import warnings
 
-from hyperspy.axes import AxesManager
 from orix.crystal_map import CrystalMap
 
 
-def crystal_map_is_compatible_with_signal(
-    xmap: CrystalMap, axes_manager: AxesManager, raise_if_false: bool = False
+def _crystal_map_is_compatible_with_signal(
+    xmap: CrystalMap, navigation_axes: tuple, raise_if_not: bool = False
 ) -> bool:
-    nav_axes = axes_manager.navigation_axes[::-1]
-    nav_shape = tuple([a.size for a in nav_axes])
-    nav_scale = tuple([a.scale for a in nav_axes])
-    compatible = None
+    """Check whether a signal's navigation axes are compatible with a
+    crystal map.
+    """
+    nav_shape = tuple([a.size for a in navigation_axes])
+    nav_scale = tuple([a.scale for a in navigation_axes])
+
     try:
-        xmap_scale = tuple([xmap._step_sizes[a.name] for a in nav_axes])
+        xmap_scale = tuple([xmap._step_sizes[a.name] for a in navigation_axes])
     except KeyError:
         warnings.warn(
             "The signal navigation axes must be named 'x' and/or 'y' in order to "
             "compare the signal navigation scale to the CrystalMap step sizes 'dx' and "
             "'dy' (see `EBSD.axes_manager`)"
         )
-        xmap_scale = (None,) * len(nav_axes)
-        compatible = False
+        xmap_scale = (None,) * len(navigation_axes)
+
     compatible = xmap.shape == nav_shape and xmap_scale == nav_scale
-    if not compatible and raise_if_false:
-        raise AttributeError(
+    if not compatible and raise_if_not:
+        raise ValueError(
             f"The crystal map shape {xmap.shape} and step sizes {xmap_scale} aren't "
             f"compatible with the signal navigation shape {nav_shape} and step sizes "
             f"{nav_scale} (see `EBSD.axes_manager`)"
