@@ -21,12 +21,12 @@ from datetime import datetime
 
 author = "kikuchipy developers"
 copyright = f"Copyright 2019-{datetime.now().year}, kikuchipy"
-# Initial commiter first, then sorted by line contributions
+# Initial committer first, then sorted by line contributions
 credits = [
     "Håkon Wiik Ånes",
+    "Lars Andreas Hastad Lervik",
     "Ole Natlandsmyr",
     "Tina Bergh",
-    "Lars Andreas Hastad Lervik",
 ]
 license = "GPLv3+"
 maintainer = "Håkon Wiik Ånes"
