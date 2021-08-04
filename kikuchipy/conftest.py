@@ -187,7 +187,9 @@ def pc1():
 
 @pytest.fixture(params=[[(1,), (60, 60)]])
 def detector(request, pc1):
-    """A NORDIF UF1100 EBSD detector with a TSL PC."""
+    """An EBSD detector of a given shape with a number of PCs given by
+    a navigation shape.
+    """
     nav_shape, sig_shape = request.param
     return kp.detectors.EBSDDetector(
         shape=sig_shape,
