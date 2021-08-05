@@ -29,14 +29,14 @@ class TestMergeCrystalMaps:
     @pytest.mark.parametrize(
         "map_shape, rot_per_point, phase_names",
         [
-            ((0, 3), 10, ["a", "b"]),
-            ((0, 4), 1, ["a", "b", "c"]),
-            ((3, 0), 5, ["austenite", "ferrite"]),
-            ((4, 0), 1, ["al", "cu", "si"]),
+            ((3,), 10, ["a", "b"]),
+            ((4,), 1, ["a", "b", "c"]),
+            ((3,), 5, ["austenite", "ferrite"]),
+            ((4,), 1, ["al", "cu", "si"]),
         ],
     )
     def test_merge_crystal_maps_1d(
-        self, get_single_phase_xmap, map_shape, rot_per_point, phase_names
+        self, map_shape, rot_per_point, phase_names, get_single_phase_xmap
     ):
         """Crystal maps with a 1D navigation shape can be merged
         successfully and yields an expected output.
@@ -54,10 +54,17 @@ class TestMergeCrystalMaps:
         desired_idx = np.arange(np.prod(data_shape)).reshape(data_shape)
 
         xmaps = []
-        xmap_args = (map_shape, rot_per_point, [scores_prop, sim_idx_prop])
+        xmap_kwargs = dict(
+            nav_shape=map_shape,
+            rotations_per_point=rot_per_point,
+            prop_names=[scores_prop, sim_idx_prop],
+            step_sizes=(1,),
+        )
         phase_ids = np.arange(n_phases)
         for i in range(n_phases):
-            xmap = get_single_phase_xmap(*xmap_args, phase_names[i], phase_ids[i])
+            xmap = get_single_phase_xmap(
+                name=phase_names[i], phase_id=phase_ids[i], **xmap_kwargs
+            )
             # All maps have at least one point with the best score
             xmap[i].prop[scores_prop] += i + 1
             xmaps.append(xmap)
@@ -280,7 +287,7 @@ class TestMergeCrystalMaps:
             "desired_merged_sim_idx"
         ),
         [
-            ((2, 0), 1, 1, [[1, 1], [2, 1]], [[0, 2], [3, 1]]),
+            ((2,), 1, 1, [[1, 1], [2, 1]], [[0, 2], [3, 1]]),
             ((1, 2), 1, 1, [[1, 1], [2, 1]], [[0, 2], [3, 1]]),
             (
                 (1, 3),
@@ -328,7 +335,7 @@ class TestMergeCrystalMaps:
         desired_merged_scores,
         desired_merged_sim_idx,
     ):
-        """Ensure that the mergesorted scores and simulation index
+        """Ensure that the merge sorted scores and simulation index
         properties in the merged map has the correct values and shape.
         """
         prop_names = ["scores", "simulation_indices"]

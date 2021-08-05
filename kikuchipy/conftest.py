@@ -29,7 +29,7 @@ from hyperspy import __version__ as hs_version
 from hyperspy.misc.utils import DictionaryTreeBrowser
 import matplotlib.pyplot as plt
 import numpy as np
-from orix.crystal_map import CrystalMap, Phase, PhaseList
+from orix.crystal_map import CrystalMap, create_coordinate_arrays, Phase, PhaseList
 from orix.quaternion.rotation import Rotation
 from orix.vector import Vector3d, neo_euler
 import pytest
@@ -130,8 +130,8 @@ def ebsd_with_axes_and_random_data(request):
     if nav_ndim == 2:
         axes.append(dict(name="y", size=nav_shape[0], scale=1))
         axes.append(dict(name="x", size=nav_shape[1], scale=1))
-    if sig_ndim == 1:
-        axes.append(dict(name="dx", size=sig_shape[0], scale=1))
+    #    if sig_ndim == 1:
+    #        axes.append(dict(name="dx", size=sig_shape[0], scale=1))
     if sig_ndim == 2:
         axes.append(dict(name="dy", size=sig_shape[0], scale=1))
         axes.append(dict(name="dx", size=sig_shape[1], scale=1))
@@ -369,7 +369,7 @@ def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
 
 @pytest.fixture
 def rotations():
-    yield Rotation([(2, 4, 6, 8), (-1, -3, -5, -7)])
+    return Rotation([(2, 4, 6, 8), (-1, -3, -5, -7)])
 
 
 @pytest.fixture
@@ -380,25 +380,24 @@ def get_single_phase_xmap(rotations):
         prop_names=["scores", "simulation_indices"],
         name="a",
         phase_id=0,
-        step_sizes=(1.5, 1),
+        step_sizes=None,
     ):
-        xmap = CrystalMap.empty(shape=nav_shape, step_sizes=step_sizes)
-        map_size = xmap.size
+        d, map_size = create_coordinate_arrays(shape=nav_shape, step_sizes=step_sizes)
         rot_idx = np.random.choice(
             np.arange(rotations.size), map_size * rotations_per_point
         )
         data_shape = (map_size,)
         if rotations_per_point > 1:
             data_shape += (rotations_per_point,)
-        xmap._rotations = rotations[rot_idx].reshape(*data_shape)
-        xmap._phase_id = np.ones(map_size) * phase_id
-        xmap._phase_list = PhaseList(Phase(name=name))
+        d["rotations"] = rotations[rot_idx].reshape(*data_shape)
+        d["phase_id"] = np.ones(map_size) * phase_id
+        d["phase_list"] = PhaseList(Phase(name=name))
         # Scores and simulation indices
-        xmap._prop = {
+        d["prop"] = {
             prop_names[0]: np.ones(data_shape, dtype=np.float32),
             prop_names[1]: np.arange(np.prod(data_shape)).reshape(data_shape),
         }
-        return xmap
+        return CrystalMap(**d)
 
     return _get_single_phase_xmap
 
