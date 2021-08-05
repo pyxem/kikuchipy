@@ -214,6 +214,14 @@ terminal. For an even nicer presentation, you can use ``coverage.py`` directly::
 Then, you can open the created ``htmlcov/index.html`` in the browser and inspect
 the coverage in more detail.
 
+To run only a specific test function or class, .e.g the ``TestEBSD`` class::
+
+    $ pytest -k TestEBSD
+
+This is useful when you only want to run a specific test and not the full test suite,
+e.g. when you're creating or updating a test. But remember to run the full test suite
+before pushing!
+
 Docstring examples are tested
 `with pytest <https://docs.pytest.org/en/stable/doctest.html>`_ as well::
 
