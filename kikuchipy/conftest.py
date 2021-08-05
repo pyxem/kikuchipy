@@ -96,7 +96,7 @@ def dummy_signal():
         dtype=np.uint8
     ).reshape((3, 3, 3, 3))
     # fmt: on
-    return kp.signals.EBSD(dummy_array)
+    yield kp.signals.EBSD(dummy_array)
 
 
 @pytest.fixture
@@ -106,10 +106,10 @@ def dummy_background():
     compare the output from methods using this background (as input) to
     hard-coded outputs.
     """
-    return np.array([5, 4, 5, 4, 3, 4, 4, 4, 3], dtype=np.uint8).reshape((3, 3))
+    yield np.array([5, 4, 5, 4, 3, 4, 4, 4, 3], dtype=np.uint8).reshape((3, 3))
 
 
-@pytest.fixture(params=[(3, 3), (3, 3), False, np.uint8])
+@pytest.fixture(params=[[(3, 3), (3, 3), False, np.float32]])
 def ebsd_with_axes_and_random_data(request):
     """EBSD signal with minimally defined axes and random data.
 
@@ -137,10 +137,10 @@ def ebsd_with_axes_and_random_data(request):
         axes.append(dict(name="dx", size=sig_shape[1], scale=1))
     if lazy:
         data = da.random.random(data_shape).astype(dtype)
-        return kp.signals.LazyEBSD(data, axes=axes)
+        yield kp.signals.LazyEBSD(data, axes=axes)
     else:
         data = np.random.random(data_shape).astype(dtype)
-        return kp.signals.EBSD(data, axes=axes)
+        yield kp.signals.EBSD(data, axes=axes)
 
 
 @pytest.fixture(params=["h5"])
@@ -157,7 +157,7 @@ def save_path_hdf5(request):
 @pytest.fixture
 def nickel_structure():
     """A diffpy.structure with a Nickel crystal structure."""
-    return Structure(
+    yield Structure(
         atoms=[Atom("Ni", [0, 0, 0])],
         lattice=Lattice(3.5236, 3.5236, 3.5236, 90, 90, 90),
     )
@@ -168,7 +168,7 @@ def nickel_phase(nickel_structure):
     """A orix.crystal_map.Phase with a Nickel crystal structure and
     symmetry operations.
     """
-    return Phase(name="ni", structure=nickel_structure, space_group=225)
+    yield Phase(name="ni", structure=nickel_structure, space_group=225)
 
 
 @pytest.fixture(params=[[[1, 1, 1], [2, 0, 0], [2, 2, 0]]])
@@ -176,13 +176,13 @@ def nickel_rlp(request, nickel_phase):
     """A set of reciprocal lattice points for a Nickel crystal
     structure with a minimum interplanar spacing.
     """
-    return ReciprocalLatticePoint(phase=nickel_phase, hkl=request.param)
+    yield ReciprocalLatticePoint(phase=nickel_phase, hkl=request.param)
 
 
 @pytest.fixture
 def pc1():
     """One projection center (PC) in TSL convention."""
-    return [0.4210, 0.7794, 0.5049]
+    yield [0.4210, 0.7794, 0.5049]
 
 
 @pytest.fixture(params=[[(1,), (60, 60)]])
@@ -191,7 +191,7 @@ def detector(request, pc1):
     a navigation shape.
     """
     nav_shape, sig_shape = request.param
-    return kp.detectors.EBSDDetector(
+    yield kp.detectors.EBSDDetector(
         shape=sig_shape,
         binning=8,
         px_size=70,
@@ -211,7 +211,7 @@ def nickel_rotations():
     Nickel data set in this set of scans:
     https://zenodo.org/record/3265037.
     """
-    return Rotation(
+    yield Rotation(
         np.array(
             [
                 [0.8662, 0.2033, -0.3483, -0.2951],
@@ -247,7 +247,7 @@ def nickel_rotations():
 @pytest.fixture
 def r_tsl2bruker():
     """A rotation from the TSL to Bruker crystal reference frame."""
-    return Rotation.from_neo_euler(
+    yield Rotation.from_neo_euler(
         neo_euler.AxAngle.from_axes_angles(Vector3d.zvector(), np.pi / 2)
     )
 
@@ -257,7 +257,7 @@ def nickel_ebsd_simulation_generator(nickel_phase, detector, nickel_rotations):
     """Generator for EBSD simulations of Kikuchi bands for the Nickel
     data set referenced above.
     """
-    return kp.generators.EBSDSimulationGenerator(
+    yield kp.generators.EBSDSimulationGenerator(
         detector=detector, phase=nickel_phase, rotations=nickel_rotations
     )
 
@@ -305,7 +305,7 @@ def nickel_kikuchi_band(nickel_rlp, nickel_rotations, pc1):
         hkl_detector[is_in_some_pattern], source=0, destination=nav_dim
     )
 
-    return kp.simulations.features.KikuchiBand(
+    yield kp.simulations.features.KikuchiBand(
         phase=phase,
         hkl=hkl,
         hkl_detector=hkl_detector,
@@ -358,7 +358,7 @@ def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
         uvw_detector[is_in_some_pattern], source=0, destination=nav_dim
     )
 
-    return kp.simulations.features.ZoneAxis(
+    yield kp.simulations.features.ZoneAxis(
         phase=phase,
         uvw=uvw,
         uvw_detector=uvw_detector,
@@ -369,7 +369,7 @@ def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
 
 @pytest.fixture
 def rotations():
-    return Rotation([(2, 4, 6, 8), (-1, -3, -5, -7)])
+    yield Rotation([(2, 4, 6, 8), (-1, -3, -5, -7)])
 
 
 @pytest.fixture
@@ -477,7 +477,7 @@ def oxford_binary_file(tmpdir, request):
 
     f.close()
 
-    return f
+    yield f
 
 
 # ---------------------- pytest doctest-modules ---------------------- #
