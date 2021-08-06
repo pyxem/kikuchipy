@@ -18,63 +18,49 @@
 
 from typing import Union
 
+from numba import njit, prange
 import numpy as np
 from orix.vector import Vector3d
 
 from kikuchipy.projections.gnomonic_projection import GnomonicProjection
 
 
+# Reusable constants
+SQRT_PI = np.sqrt(np.pi)
+SQRT_PI_HALF = SQRT_PI / 2
+TWO_OVER_SQRT_PI = 2 / SQRT_PI
+
+
 class LambertProjection:
-    """Lambert projection of a vector [Callahan2013]_."""
+    """Lambert projection of a vector :cite:`callahan2013dynamical`."""
 
     @classmethod
-    def project(cls, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
-        """Convert (n, 3) vector from Cartesian to the Lambert projection."""
+    def vector2xy(cls, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
+        """Convert vector(s) from Cartesian to the Lambert projection.
+
+        Parameters
+        ----------
+        v
+            Vectors of any shape as long as the last dimension is (3,).
+
+        Returns
+        -------
+        xy
+            Vectors in the square Lambert projection, of the same shape
+            as the input vectors, with the last dimension as (2,).
+        """
         if isinstance(v, Vector3d):
-            w = v.unit.data
-            x = w[..., 0]
-            y = w[..., 1]
-            z = w[..., 2]
+            w = v.data
         else:
-            w = np.atleast_2d(v)
-            norm = np.linalg.norm(w, axis=-1)[..., np.newaxis]
-            w = w / norm
-            x = w[..., 0]
-            y = w[..., 1]
-            z = w[..., 2]
-
-        # Arrays used in both setting X and Y
-        sqrt_z = np.sqrt(2 * (1 - abs(z)))
-        sign_x = np.sign(x)
-        sign_y = np.sign(y)
-        abs_yx = abs(y) <= abs(x)
-
-        # Reusable constants
-        sqrt_pi = np.sqrt(np.pi)
-        sqrt_pi_half = sqrt_pi / 2
-        two_over_sqrt_pi = 2 / sqrt_pi
-
-        # Ensure (0, 0) is returned where |z| = 1
-        lambert = np.zeros(x.shape + (2,), dtype=x.dtype)
-        z_not_one = abs(z) != 1
-
-        # Equations (10a) and (10b) from Callahan and De Graef (2013)
-        with np.errstate(divide="ignore", invalid="ignore"):
-            lambert[z_not_one, 0] = np.where(
-                abs_yx,
-                sign_x * sqrt_z * sqrt_pi_half,
-                sign_y * sqrt_z * (two_over_sqrt_pi * np.arctan(x / y)),
-            )[z_not_one]
-            lambert[z_not_one, 1] = np.where(
-                abs_yx,
-                sign_x * sqrt_z * (two_over_sqrt_pi * np.arctan(y / x)),
-                sign_y * sqrt_z * sqrt_pi_half,
-            )[z_not_one]
-
-        return lambert
+            w = v
+        original_shape = w.shape[:-1]
+        w = w.reshape((-1, 3))
+        xy = _vector2xy(w)
+        xy = xy.reshape(original_shape + (2,))
+        return xy
 
     @staticmethod
-    def iproject(xy: np.ndarray) -> Vector3d:
+    def xy2vector(xy: np.ndarray) -> Vector3d:
         """Convert (n, 2) array from Lambert to Cartesian coordinates."""
         X = xy[..., 0]
         Y = xy[..., 1]
@@ -107,9 +93,8 @@ class LambertProjection:
         Gnomonic."""
         # These two functions could probably be combined into 1 to decrease
         # runtime
-        vec = LambertProjection.iproject(xy)
-        xy = GnomonicProjection.project(vec)
-        return xy
+        v = LambertProjection.xy2vector(xy)
+        return GnomonicProjection.project(v)
 
     @staticmethod
     def gnomonic_to_lambert(xy: np.ndarray) -> np.ndarray:
@@ -117,12 +102,53 @@ class LambertProjection:
         Lambert."""
         # These two functions could probably be combined into 1 to decrease
         # runtime
-        vec = GnomonicProjection.iproject(xy)
-        xy = LambertProjection.project(vec)
-        return xy
+        v = GnomonicProjection.iproject(xy)
+        return LambertProjection.vector2xy(v)
 
 
+@njit(nogil=True)
 def _eq_c(p: Union[np.ndarray, float, int]) -> Union[np.ndarray, float, int]:
-    """Private function used inside LambertProjection.iproject to increase
-    readability."""
+    """Private function used inside LambertProjection.xy2vector to
+    increase readability.
+    """
     return (2 * p / np.pi) * np.sqrt(np.pi - p ** 2)
+
+
+@njit(nogil=True, cache=True)
+def _vector2xy(v: np.ndarray) -> np.ndarray:
+    """Lambert projection of vector(s) :cite:`callahan2013dynamical`.
+
+    Parameters
+    ----------
+    v
+        Array of shape (n, 3), typically rotated direction cosines, in
+        Cartesian coordinates.
+
+    Returns
+    -------
+    lambert
+        Square Lambert coordinates (X, Y) in array of shape (n, 2).
+    """
+    # Normalize vectors (vectorized operation is faster than per vector)
+    norm = np.sqrt(np.sum(np.square(v), axis=1))
+    norm = np.expand_dims(norm, axis=1)
+    w = v / norm
+
+    n_vectors = v.shape[0]
+    lambert_xy = np.zeros((n_vectors, 2))
+    for i in prange(n_vectors):
+        x, y, z = w[i]
+        abs_z = np.abs(z)
+        sqrt_z = np.sqrt(2 * (1 - abs_z))
+        if abs_z == 1:  # (X, Y) = (0, 0)
+            continue
+        elif np.abs(y) <= np.abs(x):
+            sign_x = np.sign(x)
+            lambert_xy[i, 0] = sign_x * sqrt_z * SQRT_PI_HALF
+            lambert_xy[i, 1] = sign_x * sqrt_z * TWO_OVER_SQRT_PI * np.arctan(y / x)
+        else:
+            sign_y = np.sign(y)
+            lambert_xy[i, 0] = sign_y * sqrt_z * TWO_OVER_SQRT_PI * np.arctan(x / y)
+            lambert_xy[i, 1] = sign_y * sqrt_z * SQRT_PI_HALF
+
+    return lambert_xy

@@ -29,7 +29,7 @@ def get_chunking(
     sig_dim: Optional[int] = None,
     chunk_shape: Optional[int] = None,
     chunk_bytes: Union[int, float, str, None] = 30e6,
-    dtype: Optional[np.dtype] = None,
+    dtype: Optional[type] = None,
 ) -> tuple:
     """Get a chunk tuple based on the shape of the signal data.
 
@@ -100,7 +100,7 @@ def get_chunking(
     return chunks
 
 
-def get_dask_array(signal, dtype: Optional[np.dtype] = None, **kwargs) -> da.Array:
+def get_dask_array(signal, dtype: Optional[type] = None, **kwargs) -> da.Array:
     """Return dask array of patterns with appropriate chunking.
 
     Parameters
@@ -224,7 +224,7 @@ def _rechunk_learning_results(
 def _update_learning_results(
     learning_results,
     components: Union[None, int, List[int]],
-    dtype_out: np.dtype,
+    dtype_out: type,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Update learning results before calling
     :meth:`hyperspy.learn.mva.MVA.get_decomposition_model` by

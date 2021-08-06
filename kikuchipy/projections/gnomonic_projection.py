@@ -95,7 +95,7 @@ class GnomonicProjection(SphericalProjection):
         ...     GnomonicProjection
         ... )
         >>> xy_g = np.random.random_sample(20).reshape((10, 2))
-        >>> xyz = GnomonicProjection.iproject(xy_g)
+        >>> xyz = GnomonicProjection.xy2vector(xy_g)
         """
         x, y = xy[..., 0], xy[..., 1]
         polar = np.arctan(np.sqrt(x ** 2 + y ** 2))

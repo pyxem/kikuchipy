@@ -17,8 +17,9 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import copy
+import gc
 import sys
-from typing import Optional, Union
+from typing import Union
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
@@ -26,15 +27,17 @@ from hyperspy._lazy_signals import LazySignal2D
 from hyperspy._signals.signal2d import Signal2D
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList
-from orix.vector import Vector3d
 from orix.quaternion import Rotation
+from orix.vector import Vector3d
 
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
-from kikuchipy.pattern import rescale_intensity
-from kikuchipy.projections.lambert_projection import LambertProjection
 from kikuchipy.signals import LazyEBSD, EBSD
 from kikuchipy.signals._common_image import CommonImage
 from kikuchipy.signals.util._dask import get_chunking
+from kikuchipy.signals.util._master_pattern import (
+    _get_direction_cosines_from_detector,
+    _get_patterns_chunk,
+)
 
 
 class EBSDMasterPattern(CommonImage, Signal2D):
@@ -129,8 +132,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         If the master pattern phase has a non-centrosymmetric point
         group, both the northern and southern hemispheres must be
         provided. For more details regarding the reference frame visit
-        the reference frame user guide at:
-        https://kikuchipy.org/en/latest/reference_frames.html.
+        the reference frame user guide.
         """
         if self.projection != "lambert":
             raise NotImplementedError(
@@ -185,7 +187,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         # Get direction cosines for each detector pixel relative to the
         # source point
-        dc = _get_direction_cosines(detector)
+        dc = _get_direction_cosines_from_detector(detector)
+        dc_v = Vector3d(dc)
 
         # Get dask array from rotations
         r_da = da.from_array(rotations.data, chunks=chunks[:nav_dim] + (-1,))
@@ -206,7 +209,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         scale = (npx - 1) / 2
         simulated = r_da.map_blocks(
             _get_patterns_chunk,
-            dc=dc,
+            dc=dc_v,
             master_north=master_north,
             master_south=master_south,
             npx=npx,
@@ -255,6 +258,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             out = EBSD(patterns, axes=axes, **kwargs)
         else:
             out = LazyEBSD(simulated, axes=axes, **kwargs)
+        gc.collect()
 
         return out
 
@@ -280,205 +284,3 @@ class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-
-def _get_direction_cosines(detector: EBSDDetector) -> Vector3d:
-    """Get the direction cosines between the detector and sample as done
-    in EMsoft and :cite:`callahan2013dynamical`.
-
-    Parameters
-    ----------
-    detector : EBSDDetector
-        EBSDDetector object with a certain detector geometry and one
-        projection center.
-
-    Returns
-    -------
-    Vector3d
-        Direction cosines for each detector pixel.
-    """
-    nrows, ncols = detector.shape
-
-    pcx, pcy, pcz = detector.pc[0]
-    xpc = ncols * (0.5 - pcx)
-    ypc = nrows * (0.5 - pcy)
-    L = nrows * pcz
-
-    ncols_array = np.arange(ncols)
-    nrows_array = np.arange(nrows)
-
-    # Detector coordinates in microns
-    det_x = -((-xpc - (1.0 - ncols) * 0.5) - ncols_array)
-    det_y = (ypc - (1.0 - nrows) * 0.5) - nrows_array
-
-    # Auxilliary angle to rotate between reference frames
-    theta_c = np.radians(detector.tilt)
-    sigma = np.radians(detector.sample_tilt)
-
-    alpha = (np.pi / 2) - sigma + theta_c
-    ca = np.cos(alpha)
-    sa = np.sin(alpha)
-
-    # Angle between normal of sample and detector. A positive angle
-    # means the detector normal moves towards the right looking from the
-    # detector to the sample
-    omega = np.radians(detector.azimuthal)
-    cw = np.cos(omega)
-    sw = np.sin(omega)
-
-    r_g_array = np.zeros((nrows, ncols, 3))
-
-    Ls = -sw * det_x + L * cw
-    Lc = cw * det_x + L * sw
-
-    i, j = np.meshgrid(nrows_array[::-1], ncols_array, indexing="ij")
-
-    r_g_array[..., 0] = det_y[i] * ca + sa * Ls[j]
-    r_g_array[..., 1] = Lc[j]
-    r_g_array[..., 2] = -sa * det_y[i] + ca * Ls[j]
-    r_g = Vector3d(r_g_array)
-
-    return r_g.unit
-
-
-def _get_lambert_interpolation_parameters(
-    rotated_direction_cosines: Vector3d, npx: int, npy: int, scale: Union[int, float]
-) -> tuple:
-    """Get interpolation parameters in the square Lambert projection, as
-    implemented in EMsoft.
-
-    Parameters
-    ----------
-    rotated_direction_cosines
-        Rotated direction cosines vector.
-    npx
-        Number of pixels on the master pattern in the x direction.
-    npy
-        Number of pixels on the master pattern in the y direction.
-    scale
-        Factor to scale up from the square Lambert projection to the
-        master pattern.
-
-    Returns
-    -------
-    nii : numpy.ndarray
-        Row coordinate of a point.
-    nij : numpy.ndarray
-        Column coordinate of a point.
-    niip : numpy.ndarray
-        Row coordinate of neighboring point.
-    nijp : numpy.ndarray
-        Column coordinate of a neighboring point.
-    di : numpy.ndarray
-        Row interpolation weight factor.
-    dj : numpy.ndarray
-        Column interpolation weight factor.
-    dim : numpy.ndarray
-        Row interpolation weight factor.
-    djm : numpy.ndarray
-        Column interpolation weight factor.
-    """
-    # Direction cosines to the square Lambert projection
-    xy = (
-        scale
-        * LambertProjection.project(rotated_direction_cosines)
-        / (np.sqrt(np.pi / 2))
-    )
-
-    i = xy[..., 1]
-    j = xy[..., 0]
-    nii = (i + scale).astype(int)
-    nij = (j + scale).astype(int)
-    niip = nii + 1
-    nijp = nij + 1
-    niip = np.where(niip < npx, niip, nii).astype(int)
-    nijp = np.where(nijp < npy, nijp, nij).astype(int)
-    nii = np.where(nii < 0, niip, nii).astype(int)
-    nij = np.where(nij < 0, nijp, nij).astype(int)
-    di = i - nii + scale
-    dj = j - nij + scale
-    dim = 1.0 - di
-    djm = 1.0 - dj
-
-    return nii, nij, niip, nijp, di, dj, dim, djm
-
-
-def _get_patterns_chunk(
-    rotations_array: np.ndarray,
-    dc: Vector3d,
-    master_north: np.ndarray,
-    master_south: np.ndarray,
-    npx: int,
-    npy: int,
-    scale: Union[int, float],
-    rescale: bool,
-    dtype_out: Optional[type] = np.float32,
-) -> np.ndarray:
-    """Get the EBSD patterns on the detector for each rotation in the
-    chunk. Each pattern is found by a bi-quadratic interpolation of the
-    master pattern as described in EMsoft.
-
-    Parameters
-    ----------
-    rotations_array
-        Array of rotations of shape (..., 4) for a given chunk in
-        quaternions.
-    dc
-        Direction cosines unit vector between detector and sample.
-    master_north
-        Northern hemisphere of the master pattern.
-    master_south
-        Southern hemisphere of the master pattern.
-    npx
-        Number of pixels in the x-direction on the master pattern.
-    npy
-        Number of pixels in the y-direction on the master pattern.
-    scale
-        Factor to scale up from square Lambert projection to the master
-        pattern.
-    rescale
-        Whether to call rescale_intensities() or not.
-    dtype_out
-        Data type of the returned patterns, by default np.float32.
-
-    Returns
-    -------
-    numpy.ndarray
-        3D or 4D array with simulated patterns.
-    """
-    rotations = Rotation(rotations_array)
-    rotations_shape = rotations_array.shape[:-1]
-    simulated = np.empty(shape=rotations_shape + dc.shape, dtype=dtype_out)
-    for i in np.ndindex(rotations_shape):
-        rotated_dc = rotations[i] * dc
-        (
-            nii,
-            nij,
-            niip,
-            nijp,
-            di,
-            dj,
-            dim,
-            djm,
-        ) = _get_lambert_interpolation_parameters(
-            rotated_direction_cosines=rotated_dc, npx=npx, npy=npy, scale=scale
-        )
-        pattern = np.where(
-            rotated_dc.z >= 0,
-            (
-                master_north[nii, nij] * dim * djm
-                + master_north[niip, nij] * di * djm
-                + master_north[nii, nijp] * dim * dj
-                + master_north[niip, nijp] * di * dj
-            ),
-            (
-                master_south[nii, nij] * dim * djm
-                + master_south[niip, nij] * di * djm
-                + master_south[nii, nijp] * dim * dj
-                + master_south[niip, nijp] * di * dj
-            ),
-        )
-        if rescale:
-            pattern = rescale_intensity(pattern, dtype_out=dtype_out)
-        simulated[i] = pattern
-    return simulated

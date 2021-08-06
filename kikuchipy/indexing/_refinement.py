@@ -16,6 +16,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Tools for the refinement of crystal orientations and projection
+centers by optimizing the similarity between experimental and simulated
+patterns using SciPy.
+"""
 
 import sys
 from typing import Optional, Union
@@ -29,236 +33,6 @@ from orix.quaternion import Rotation
 import scipy.optimize
 
 from kikuchipy.pattern import rescale_intensity
-
-
-def _refine_all(
-    xmap: CrystalMap,
-    master_pattern,
-    signal,
-    detector,
-    energy: Union[int, float],
-    mask: Optional[np.ndarray] = None,
-    method: Optional[str] = None,
-    method_kwargs: Optional[dict] = None,
-    trust_region: Optional[list] = None,
-    compute: bool = True,
-) -> tuple:
-    """Performs an orientation and projection center refinement
-    using the best orientation, for each point, from the initial indexing
-    results stored in a single phase
-    :class:`~orix.crystal_map.CrystalMap` and the projection center
-    estimates stored in an
-    :class:`~kikuchipy.detectors.EBSDDetector`.
-
-    Parameters
-    ----------
-    xmap : CrystalMap
-        A crystal map storing the results of the initial EBSD
-        indexing.
-    master_pattern : EBSDMasterPattern
-        EBSDMasterPattern in the square Lambert projection.
-    signal : EBSD
-        Experimental EBSD data.
-    detector : EBSDDetecor
-        EBSD detector describing the detector dimensions and the
-        detector-sample geometry with either a single, fixed
-        projection/pattern center or a projection center for each
-        scan point.
-    energy : int
-        Acceleration voltage, in kV, used to simulate the desired
-        master pattern.
-    mask : np.ndarray, optional
-        Boolean mask to be applied to the simulated patterns. True values are
-        masked away.
-    method : str, optional
-        Name of the scipy.optimize function to be used. Must be one
-        of "minimize", "differential_evolution", "dual_annealing",
-        or "basinhopping". If not specified, "minimize" is used.
-    method_kwargs : dict, optional
-        Keyword arguments passed to the scipy.optimize function
-        specified above.
-    trust_region : list, optional
-        List of how wide the bounds, centered on the initial
-        orientation indexing result and projection center,
-        should be for (phi1, Phi, phi2) in degrees and
-        (PCx, PCy, PCz) in the Bruker convention.
-        Only used for methods that support bounds
-        (excluding Powell). Defaults to [1, 1, 1, 0.05, 0.05, 0.05]
-    compute : bool, optional
-        Whether to return a computed result, by default True.
-        For more information see :func:`~dask.array.Array.compute`.
-
-    Returns
-    -------
-    CrystalMap, EBSDDetector
-        A crystal map with the refined orientations and a new
-        EBSD detector with refined projection centers.
-    """
-    method, method_kwargs = _get_method(method, method_kwargs)
-
-    # Convert from Quaternions to Euler angles
-    euler = Rotation.to_euler(xmap.rotations)
-
-    # Extract best rotation from xmap if given more than 1
-    if xmap.rotations_per_point > 1:
-        euler = euler[:, 0, :]
-
-    if not trust_region:
-        trust_region = [
-            0.0174532925,
-            0.0174532925,
-            0.0174532925,
-            0.05,
-            0.05,
-            0.05,
-        ]
-    else:
-        trust_region = np.deg2rad(trust_region[:3]).tolist() + trust_region[3:]
-
-    if signal.data.dtype != np.float32:
-        exp = signal.deepcopy()
-        exp.rescale_intensity(dtype_out=np.float32)
-    else:
-        exp = signal
-
-    exp_data = exp.data
-    exp_shape = exp_data.shape
-
-    pc = detector.pc
-
-    # Set the PC equal across the scan if not given
-    if len(pc) == 1:
-        pc_val = pc[0]
-        pc = np.full((exp_shape[0] * exp_shape[1], 3), pc_val)
-
-    # 2D nav-dim
-    if len(exp_shape) == 4:
-        exp_data = exp_data.reshape(
-            (exp_shape[0] * exp_shape[1], exp_shape[2], exp_shape[3])
-        )
-    elif len(exp_shape) == 2:  # 0D nav-dim
-        exp_data = exp_data.reshape(((1,) + exp_data.shape))
-
-    (
-        master_north,
-        master_south,
-        npx,
-        npy,
-        scale,
-    ) = _get_single_pattern_params(master_pattern, energy)
-
-    theta_c = np.deg2rad(detector.tilt)
-    sigma = np.deg2rad(detector.sample_tilt)
-    alpha = (np.pi / 2) - sigma + theta_c
-
-    detector_data = [detector.ncols, detector.nrows, detector.px_size, alpha]
-
-    if mask is None:
-        mask = 1
-    else:
-        mask = ~mask
-
-    pre_args = (
-        master_north,
-        master_south,
-        npx,
-        npy,
-        scale,
-        detector_data,
-        mask,
-    )
-
-    to_print = [
-        "Refinement info:",
-        f"method={method.__name__}",
-        f"method kwargs={method_kwargs}",
-    ]
-
-    if method.__name__ not in ["minimize", "basinhopping"]:
-        to_print.append(f"trust region={trust_region}")
-
-    pre_args = dask.delayed(pre_args)
-    trust_region = dask.delayed(trust_region)
-
-    if isinstance(exp_data, dask.array.core.Array):
-        patterns_in_chunk = exp_data.chunks[0]
-        partitons = exp_data.to_delayed()  # List of delayed objects
-        # equal to the number of chunks
-        inner_index = 0
-        refined_params = []
-        for k, part in enumerate(partitons):
-            data = part[0, 0]
-            num_patterns = patterns_in_chunk[k]
-            for i in range(num_patterns):
-                res = dask.delayed(_full_refinement_solver)(
-                    euler[i + inner_index],
-                    pc[i + inner_index],
-                    data[i],
-                    pre_args,
-                    method,
-                    method_kwargs,
-                    trust_region,
-                )
-                refined_params.append(res)
-
-            inner_index += num_patterns  # Increase the index for
-            # the next chunk
-    else:  # NumPy array
-        refined_params = [
-            dask.delayed(_full_refinement_solver)(
-                euler[i],
-                pc[i],
-                exp_data[i],
-                pre_args,
-                method,
-                method_kwargs,
-                trust_region,
-            )
-            for i in range(euler.shape[0])
-        ]
-    if compute:
-        with ProgressBar():
-            print(
-                "\n".join([str(pr) for pr in to_print]),
-                f"\nRefining {xmap.size} orientations and " f"projection " f"centers:",
-                file=sys.stdout,
-            )
-            results = dask.compute(*refined_params, scheduler="threads")
-            refined_euler = np.empty((euler.shape[0], 3), dtype=np.float32)
-            refined_pc = np.empty((euler.shape[0], 3), dtype=np.float32)
-            refined_scores = np.empty((euler.shape[0]), dtype=np.float32)
-            for i in range(euler.shape[0]):
-                refined_scores[i] = results[i][0]
-
-                refined_euler[i][0] = results[i][1]
-                refined_euler[i][1] = results[i][2]
-                refined_euler[i][2] = results[i][3]
-
-                refined_pc[i][0] = results[i][4]
-                refined_pc[i][1] = results[i][5]
-                refined_pc[i][2] = results[i][6]
-
-            new_det = detector.deepcopy()
-            new_det.pc = refined_pc
-            refined_rotations = Rotation.from_euler(refined_euler)
-            xmap_dict = xmap.__dict__
-
-            output = CrystalMap(
-                rotations=refined_rotations,
-                phase_id=xmap_dict["_phase_id"],
-                x=xmap_dict["_x"],
-                y=xmap_dict["_y"],
-                phase_list=xmap_dict["phases"],
-                prop={
-                    "scores": refined_scores,
-                },
-                is_in_data=xmap_dict["is_in_data"],
-                scan_unit=xmap_dict["scan_unit"],
-            )
-    else:
-        output = dask.delayed(refined_params)
-        new_det = -1
-    return output, new_det
 
 
 def _refine_orientation(
@@ -690,6 +464,236 @@ def _refine_projection_center(
             output = (refined_scores, new_det)
 
     return output
+
+
+def _refine_all(
+    xmap: CrystalMap,
+    master_pattern,
+    signal,
+    detector,
+    energy: Union[int, float],
+    mask: Optional[np.ndarray] = None,
+    method: Optional[str] = None,
+    method_kwargs: Optional[dict] = None,
+    trust_region: Optional[list] = None,
+    compute: bool = True,
+) -> tuple:
+    """Performs an orientation and projection center refinement
+    using the best orientation, for each point, from the initial indexing
+    results stored in a single phase
+    :class:`~orix.crystal_map.CrystalMap` and the projection center
+    estimates stored in an
+    :class:`~kikuchipy.detectors.EBSDDetector`.
+
+    Parameters
+    ----------
+    xmap : CrystalMap
+        A crystal map storing the results of the initial EBSD
+        indexing.
+    master_pattern : EBSDMasterPattern
+        EBSDMasterPattern in the square Lambert projection.
+    signal : EBSD
+        Experimental EBSD data.
+    detector : EBSDDetecor
+        EBSD detector describing the detector dimensions and the
+        detector-sample geometry with either a single, fixed
+        projection/pattern center or a projection center for each
+        scan point.
+    energy : int
+        Acceleration voltage, in kV, used to simulate the desired
+        master pattern.
+    mask : np.ndarray, optional
+        Boolean mask to be applied to the simulated patterns. True values are
+        masked away.
+    method : str, optional
+        Name of the scipy.optimize function to be used. Must be one
+        of "minimize", "differential_evolution", "dual_annealing",
+        or "basinhopping". If not specified, "minimize" is used.
+    method_kwargs : dict, optional
+        Keyword arguments passed to the scipy.optimize function
+        specified above.
+    trust_region : list, optional
+        List of how wide the bounds, centered on the initial
+        orientation indexing result and projection center,
+        should be for (phi1, Phi, phi2) in degrees and
+        (PCx, PCy, PCz) in the Bruker convention.
+        Only used for methods that support bounds
+        (excluding Powell). Defaults to [1, 1, 1, 0.05, 0.05, 0.05]
+    compute : bool, optional
+        Whether to return a computed result, by default True.
+        For more information see :func:`~dask.array.Array.compute`.
+
+    Returns
+    -------
+    CrystalMap, EBSDDetector
+        A crystal map with the refined orientations and a new
+        EBSD detector with refined projection centers.
+    """
+    method, method_kwargs = _get_method(method, method_kwargs)
+
+    # Convert from Quaternions to Euler angles
+    euler = Rotation.to_euler(xmap.rotations)
+
+    # Extract best rotation from xmap if given more than 1
+    if xmap.rotations_per_point > 1:
+        euler = euler[:, 0, :]
+
+    if not trust_region:
+        trust_region = [
+            0.0174532925,
+            0.0174532925,
+            0.0174532925,
+            0.05,
+            0.05,
+            0.05,
+        ]
+    else:
+        trust_region = np.deg2rad(trust_region[:3]).tolist() + trust_region[3:]
+
+    if signal.data.dtype != np.float32:
+        exp = signal.deepcopy()
+        exp.rescale_intensity(dtype_out=np.float32)
+    else:
+        exp = signal
+
+    exp_data = exp.data
+    exp_shape = exp_data.shape
+
+    pc = detector.pc
+
+    # Set the PC equal across the scan if not given
+    if len(pc) == 1:
+        pc_val = pc[0]
+        pc = np.full((exp_shape[0] * exp_shape[1], 3), pc_val)
+
+    # 2D nav-dim
+    if len(exp_shape) == 4:
+        exp_data = exp_data.reshape(
+            (exp_shape[0] * exp_shape[1], exp_shape[2], exp_shape[3])
+        )
+    elif len(exp_shape) == 2:  # 0D nav-dim
+        exp_data = exp_data.reshape(((1,) + exp_data.shape))
+
+    (
+        master_north,
+        master_south,
+        npx,
+        npy,
+        scale,
+    ) = _get_single_pattern_params(master_pattern, energy)
+
+    theta_c = np.deg2rad(detector.tilt)
+    sigma = np.deg2rad(detector.sample_tilt)
+    alpha = (np.pi / 2) - sigma + theta_c
+
+    detector_data = [detector.ncols, detector.nrows, detector.px_size, alpha]
+
+    if mask is None:
+        mask = 1
+    else:
+        mask = ~mask
+
+    pre_args = (
+        master_north,
+        master_south,
+        npx,
+        npy,
+        scale,
+        detector_data,
+        mask,
+    )
+
+    to_print = [
+        "Refinement info:",
+        f"method={method.__name__}",
+        f"method kwargs={method_kwargs}",
+    ]
+
+    if method.__name__ not in ["minimize", "basinhopping"]:
+        to_print.append(f"trust region={trust_region}")
+
+    pre_args = dask.delayed(pre_args)
+    trust_region = dask.delayed(trust_region)
+
+    if isinstance(exp_data, dask.array.core.Array):
+        patterns_in_chunk = exp_data.chunks[0]
+        partitons = exp_data.to_delayed()  # List of delayed objects
+        # equal to the number of chunks
+        inner_index = 0
+        refined_params = []
+        for k, part in enumerate(partitons):
+            data = part[0, 0]
+            num_patterns = patterns_in_chunk[k]
+            for i in range(num_patterns):
+                res = dask.delayed(_full_refinement_solver)(
+                    euler[i + inner_index],
+                    pc[i + inner_index],
+                    data[i],
+                    pre_args,
+                    method,
+                    method_kwargs,
+                    trust_region,
+                )
+                refined_params.append(res)
+
+            inner_index += num_patterns  # Increase the index for
+            # the next chunk
+    else:  # NumPy array
+        refined_params = [
+            dask.delayed(_full_refinement_solver)(
+                euler[i],
+                pc[i],
+                exp_data[i],
+                pre_args,
+                method,
+                method_kwargs,
+                trust_region,
+            )
+            for i in range(euler.shape[0])
+        ]
+    if compute:
+        with ProgressBar():
+            print(
+                "\n".join([str(pr) for pr in to_print]),
+                f"\nRefining {xmap.size} orientations and " f"projection " f"centers:",
+                file=sys.stdout,
+            )
+            results = dask.compute(*refined_params, scheduler="threads")
+            refined_euler = np.empty((euler.shape[0], 3), dtype=np.float32)
+            refined_pc = np.empty((euler.shape[0], 3), dtype=np.float32)
+            refined_scores = np.empty((euler.shape[0]), dtype=np.float32)
+            for i in range(euler.shape[0]):
+                refined_scores[i] = results[i][0]
+
+                refined_euler[i][0] = results[i][1]
+                refined_euler[i][1] = results[i][2]
+                refined_euler[i][2] = results[i][3]
+
+                refined_pc[i][0] = results[i][4]
+                refined_pc[i][1] = results[i][5]
+                refined_pc[i][2] = results[i][6]
+
+            new_det = detector.deepcopy()
+            new_det.pc = refined_pc
+            refined_rotations = Rotation.from_euler(refined_euler)
+            xmap_dict = xmap.__dict__
+
+            output = CrystalMap(
+                rotations=refined_rotations,
+                phase_id=xmap_dict["_phase_id"],
+                x=xmap_dict["_x"],
+                y=xmap_dict["_y"],
+                phase_list=xmap_dict["phases"],
+                prop={
+                    "scores": refined_scores,
+                },
+                is_in_data=xmap_dict["is_in_data"],
+                scan_unit=xmap_dict["scan_unit"],
+            )
+    else:
+        output = dask.delayed(refined_params)
+        new_det = -1
+    return output, new_det
 
 
 def _get_single_pattern_params(mp, energy):

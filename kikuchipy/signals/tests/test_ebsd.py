@@ -1561,7 +1561,7 @@ class TestEBSDRefinement:
 #
 #    def test_orientation_refinement(self):
 #
-#        # From test_ebsd_masterpattern.py
+#        # From test_ebsd_master_pattern.py
 #        mp_a = kp.signals.EBSDMasterPattern(
 #            np.random.rand(2, 10, 1001, 1001), dtype=np.float32
 #        )
