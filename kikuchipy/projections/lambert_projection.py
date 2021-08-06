@@ -94,7 +94,7 @@ class LambertProjection:
         # These two functions could probably be combined into 1 to decrease
         # runtime
         v = LambertProjection.xy2vector(xy)
-        return GnomonicProjection.project(v)
+        return GnomonicProjection.vector2xy(v)
 
     @staticmethod
     def gnomonic_to_lambert(xy: np.ndarray) -> np.ndarray:
@@ -102,7 +102,7 @@ class LambertProjection:
         Lambert."""
         # These two functions could probably be combined into 1 to decrease
         # runtime
-        v = GnomonicProjection.iproject(xy)
+        v = GnomonicProjection.xy2vector(xy)
         return LambertProjection.vector2xy(v)
 
 
