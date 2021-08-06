@@ -28,7 +28,7 @@ from hyperspy._signals.signal2d import Signal2D
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList
 from orix.quaternion import Rotation
-from orix.vector import Vector3d
+from skimage.util.dtype import dtype_range
 
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.signals import LazyEBSD, EBSD
@@ -36,7 +36,7 @@ from kikuchipy.signals._common_image import CommonImage
 from kikuchipy.signals.util._dask import get_chunking
 from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_from_detector,
-    _get_patterns_chunk,
+    _project_patterns_from_master_pattern,
 )
 
 
@@ -181,17 +181,21 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         master_south = self.data[south_slice]
 
         # Whether to rescale pattern intensities after projection
-        rescale = False
-        if dtype_out != np.float32:
+        if dtype_out != self.data.dtype:
             rescale = True
+            out_min, out_max = dtype_range[dtype_out]
+        else:
+            rescale = False
+            # Cannot be None due to Numba, so they are set to something
+            # here. Values aren't used unless `rescale` is True.
+            out_min, out_max = 1, 2
 
         # Get direction cosines for each detector pixel relative to the
         # source point
-        dc = _get_direction_cosines_from_detector(detector)
-        dc_v = Vector3d(dc)
+        direction_cosines = _get_direction_cosines_from_detector(detector)
 
         # Get dask array from rotations
-        r_da = da.from_array(rotations.data, chunks=chunks[:nav_dim] + (-1,))
+        rot_da = da.from_array(rotations.data, chunks=chunks[:nav_dim] + (-1,))
 
         # Which axes to drop and add when iterating over the rotations
         # dask array to produce the EBSD signal array, i.e. drop the
@@ -207,16 +211,18 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         # Project simulated patterns onto detector
         npx, npy = self.axes_manager.signal_shape
         scale = (npx - 1) / 2
-        simulated = r_da.map_blocks(
-            _get_patterns_chunk,
-            dc=dc_v,
+        simulated = rot_da.map_blocks(
+            _project_patterns_from_master_pattern,
+            direction_cosines=direction_cosines,
             master_north=master_north,
             master_south=master_south,
-            npx=npx,
-            npy=npy,
-            scale=scale,
-            rescale=rescale,
+            npx=int(npx),
+            npy=int(npy),
+            scale=float(scale),
             dtype_out=dtype_out,
+            rescale=rescale,
+            out_min=out_min,
+            out_max=out_max,
             drop_axis=drop_axis,
             new_axis=new_axis,
             chunks=chunks,
@@ -249,12 +255,13 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         ]
 
         if compute:
+            patterns = np.zeros(shape=simulated.shape, dtype=simulated.dtype)
             with ProgressBar():
                 print(
                     f"Creating a dictionary of {nav_shape} simulated patterns:",
                     file=sys.stdout,
                 )
-                patterns = simulated.compute()
+                simulated.store(patterns, compute=True)
             out = EBSD(patterns, axes=axes, **kwargs)
         else:
             out = LazyEBSD(simulated, axes=axes, **kwargs)

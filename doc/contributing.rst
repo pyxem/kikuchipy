@@ -250,6 +250,14 @@ The desired data cache directory used by pooch can be set with a global
 `KIKUCHIPY_DATA_DIR` variable locally, e.g. by setting
 `export KIKUCHIPY_DATA_DIR=~/kikuchipy_data` in `~/.bashrc`.
 
+Improving performance
+=====================
+When we write code, it's important that we (1) get the correct result, (2) don't fill up
+memory, and (3) that the computation doesn't take too long. To keep memory in check, we
+use `Dask <https://docs.dask.org/en/latest/>`_ wherever possible. To speed up
+computations, we use `Numba <https://numba.pydata.org/numba-doc/dev/>`_ wherever
+possible.
+
 Continuous integration (CI)
 ===========================
 

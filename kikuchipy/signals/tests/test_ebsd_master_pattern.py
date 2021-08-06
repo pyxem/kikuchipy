@@ -24,7 +24,6 @@ from hyperspy._signals.signal2d import Signal2D
 import numpy as np
 from orix.crystal_map import Phase
 from orix.quaternion import Rotation
-from orix.vector import Vector3d
 import pytest
 
 import kikuchipy as kp
@@ -36,9 +35,13 @@ from kikuchipy.io.plugins.tests.test_emsoft_ebsd_masterpattern import (
 )
 from kikuchipy.signals.tests.test_ebsd import assert_dictionary
 from kikuchipy.signals.util._master_pattern import (
+    _get_direction_cosines,
     _get_direction_cosines_from_detector,
     _get_lambert_interpolation_parameters,
-    _get_patterns_chunk,
+    _get_pixel_from_master_pattern,
+    _project_patterns_from_master_pattern,
+    _project_single_pattern_from_master_pattern,
+    _rotate_vector,
 )
 from kikuchipy.indexing.similarity_metrics import ncc, ndp
 
@@ -171,24 +174,17 @@ class TestSimulatedPatternDictionary:
         assert dc.shape == detector.shape + (3,)
         assert np.max(dc) <= 1
 
-    def test_get_lambert_interpolation_parameters(self):
-        dc = _get_direction_cosines_from_detector(self.detector)
-        npx = npy = 101
-        scale = (npx - 1) // 2
-        nii, nij, niip, nijp = _get_lambert_interpolation_parameters(
-            v=dc.reshape((-1, 3)), npx=npx, npy=npy, scale=scale
-        )[:4]
-
-        assert np.all(nii <= niip)
-        assert np.all(nij <= nijp)
-        assert np.all(nii < npx)
-        assert np.all(nij < npy)
-        assert np.all(niip < npx)
-        assert np.all(nijp < npx)
-        assert np.all(nii >= 0)
-        assert np.all(nij >= 0)
-        assert np.all(niip >= 0)
-        assert np.all(nijp >= 0)
+        dc2 = _get_direction_cosines.py_func(
+            pcx=detector.pcx,
+            pcy=detector.pcy,
+            pcz=detector.pcz,
+            nrows=detector.nrows,
+            ncols=detector.ncols,
+            tilt=detector.tilt,
+            azimuthal=detector.azimuthal,
+            sample_tilt=detector.sample_tilt,
+        )
+        assert np.allclose(dc, dc2)
 
     def test_get_patterns(self):
         emsoft_key = load(EMSOFT_EBSD_FILE)
@@ -266,28 +262,6 @@ class TestSimulatedPatternDictionary:
 
         # TODO: Create tests for other structures
 
-    def test_get_patterns_chunk(self):
-        r = Rotation.from_euler(((0, 0, 0), (1, 1, 1), (2, 2, 2)))
-        dc = _get_direction_cosines_from_detector(self.detector)
-        dc = Vector3d(dc)
-
-        mpn = np.empty((1001, 1001))
-        mps = mpn
-        npx = 101
-        npy = npx
-        out = _get_patterns_chunk(
-            rotations_array=r.data,
-            dc=dc,
-            master_north=mpn,
-            master_south=mps,
-            npx=npx,
-            npy=npy,
-            scale=(npx - 1) / 2,
-            rescale=False,
-        )
-
-        assert out.shape == r.shape + dc.shape
-
     def test_simulated_patterns_xmap_detector(self):
         mp = nickel_ebsd_master_pattern_small(projection="lambert")
         r = Rotation.from_euler([[0, 0, 0], [0, np.pi / 2, 0]])
@@ -341,11 +315,117 @@ class TestSimulatedPatternDictionary:
         mp = nickel_ebsd_master_pattern_small(projection="lambert")
         r = Rotation.identity()
 
-        kwargs = dict(rotations=r, energy=20, compute=True)
+        kwargs = dict(rotations=r, energy=20, compute=True, dtype_out=np.uint8)
         sim1 = mp.get_patterns(detector=det1, **kwargs)
         sim2 = mp.get_patterns(detector=det2, **kwargs)
         sim3 = mp.get_patterns(detector=det3, **kwargs)
 
         assert not np.allclose(sim1.data, sim2.data)
-        assert np.allclose(sim2.data.mean(), 44.06, atol=1e-2)
-        assert np.allclose(sim3.data.mean(), 43.88, atol=1e-2)
+        assert np.allclose(sim2.data.mean(), 43.56, atol=1e-2)
+        assert np.allclose(sim3.data.mean(), 43.39, atol=1e-2)
+
+    def test_project_patterns_from_master_pattern(self):
+        """Make sure the Numba function is covered."""
+        r = Rotation.from_euler(((0, 0, 0), (1, 1, 1), (2, 2, 2)))
+        dc = _get_direction_cosines_from_detector(self.detector)
+
+        npx = npy = 101
+        mpn = mps = np.zeros((npy, npx))
+        patterns = _project_patterns_from_master_pattern.py_func(
+            rotations=r.data,
+            direction_cosines=dc,
+            master_north=mpn,
+            master_south=mps,
+            npx=npx,
+            npy=npy,
+            scale=float((npx - 1) / 2),
+            dtype_out=mpn.dtype,
+            rescale=False,
+            # Aren't used
+            out_min=1,
+            out_max=2,
+        )
+
+        assert patterns.shape == r.shape + dc.shape[:-1]
+
+    @pytest.mark.parametrize(
+        "dtype_out, intensity_range", [(np.float32, (0, 1)), (np.uint8, (0, 255))]
+    )
+    def test_project_single_pattern_from_master_pattern(
+        self, dtype_out, intensity_range
+    ):
+        """Make sure the Numba function is covered."""
+        dc = _get_direction_cosines_from_detector(self.detector)
+        npx = npy = 101
+        mpn = mps = np.random.random(npy * npx).reshape((npy, npx))
+
+        pattern = _project_single_pattern_from_master_pattern.py_func(
+            rotation=np.array([1, 1, 0, 0], dtype=float),
+            direction_cosines=dc.reshape((-1, 3)),
+            master_north=mpn,
+            master_south=mps,
+            npx=npx,
+            npy=npy,
+            scale=1,
+            n_pixels=self.detector.size,
+            rescale=True,
+            out_min=intensity_range[0],
+            out_max=intensity_range[1],
+            dtype_out=dtype_out,
+        )
+        assert pattern.shape == (self.detector.size,)
+        assert pattern.dtype == dtype_out
+        assert np.min(pattern) == intensity_range[0]
+        assert np.max(pattern) == intensity_range[1]
+
+    def test_get_lambert_interpolation_parameters(self):
+        """Make sure the Numba function is covered."""
+        dc = _get_direction_cosines_from_detector(self.detector)
+        npx = npy = 101
+        scale = (npx - 1) // 2
+        nii, nij, niip, nijp = _get_lambert_interpolation_parameters.py_func(
+            v=dc.reshape((-1, 3)), npx=npx, npy=npy, scale=scale
+        )[:4]
+
+        assert np.all(nii <= niip)
+        assert np.all(nij <= nijp)
+        assert np.all(nii < npx)
+        assert np.all(nij < npy)
+        assert np.all(niip < npx)
+        assert np.all(nijp < npx)
+        assert np.all(nii >= 0)
+        assert np.all(nij >= 0)
+        assert np.all(niip >= 0)
+        assert np.all(nijp >= 0)
+
+    def test_rotate_vector(self):
+        """Make sure the Numba function is covered."""
+        dc = _get_direction_cosines_from_detector(self.detector)
+        dc = dc.reshape((-1, 3))
+        rotated_dc = _rotate_vector.py_func(np.array([1, 1, 0, 0], dtype=float), dc)
+
+        assert not np.allclose(rotated_dc, dc)
+        assert rotated_dc.shape == dc.shape
+
+    def test_get_pixel_from_master_pattern(self):
+        """Make sure the Numba function is covered."""
+        dc = _get_direction_cosines_from_detector(self.detector)
+        npx = npy = 101
+        scale = (npx - 1) // 2
+        (
+            nii,
+            nij,
+            niip,
+            nijp,
+            di,
+            dj,
+            dim,
+            djm,
+        ) = _get_lambert_interpolation_parameters(
+            v=dc.reshape((-1, 3)), npx=npx, npy=npy, scale=scale
+        )
+        mp = np.ones((npy, npx), dtype=float)
+        value = _get_pixel_from_master_pattern.py_func(
+            mp, nii[0], nij[0], niip[0], nijp[0], di[0], dj[0], dim[0], djm[0]
+        )
+        assert value == 1.0

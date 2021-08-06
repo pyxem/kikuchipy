@@ -16,18 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Tools for projecting parts of dynamically simulated master patterns
-into a detector.
+"""Private tools for projecting parts of dynamically simulated master
+patterns into a detector.
 """
 
 from typing import Optional, Union
 
 import numba as nb
 import numpy as np
-from orix.quaternion import Rotation
-from orix.vector import Vector3d
 
-from kikuchipy.pattern import rescale_intensity
+from kikuchipy.pattern._pattern import _rescale
 from kikuchipy.projections.lambert_projection import _vector2xy
 
 
@@ -48,7 +46,7 @@ def _get_direction_cosines_from_detector(detector) -> np.ndarray:
     )
 
 
-@nb.njit(nogil=True)
+@nb.jit(nogil=True, nopython=True)
 def _get_direction_cosines(
     pcx: np.ndarray,
     pcy: np.ndarray,
@@ -117,9 +115,9 @@ def _get_direction_cosines(
     for i in nb.prange(nrows):
         ii = nrows - i - 1
         for j in nb.prange(ncols):
-            r_g_array[i][j][0] = det_y[ii] * ca + sa * Ls[j]
-            r_g_array[i][j][1] = Lc[j]
-            r_g_array[i][j][2] = -sa * det_y[ii] + ca * Ls[j]
+            r_g_array[i, j, 0] = det_y[ii] * ca + sa * Ls[j]
+            r_g_array[i, j, 1] = Lc[j]
+            r_g_array[i, j, 2] = -sa * det_y[ii] + ca * Ls[j]
 
     # Normalize
     norm = np.sqrt(np.sum(np.square(r_g_array), axis=-1))
@@ -127,6 +125,210 @@ def _get_direction_cosines(
     r_g_array = np.divide(r_g_array, norm)
 
     return r_g_array
+
+
+@nb.jit(cache=True, nogil=True, nopython=True)
+def _project_patterns_from_master_pattern(
+    rotations: np.ndarray,
+    direction_cosines: np.ndarray,
+    master_north: np.ndarray,
+    master_south: np.ndarray,
+    npx: int,
+    npy: int,
+    scale: float,
+    rescale: bool,
+    out_min: Union[int, float],
+    out_max: Union[int, float],
+    dtype_out: Optional[type] = np.float32,
+) -> np.ndarray:
+    """Project one simulated EBSD pattern onto a detector per rotation,
+    given one direction cosine per detector pixel, describing the
+    detector's view of the sample.
+
+    Parameters
+    ----------
+    rotations
+        Array of rotations of shape (..., 4) for a given chunk as
+        quaternions.
+    direction_cosines
+        Direction cosines (unit vectors) between detector and sample of
+        shape (nrows, ncols, 3).
+    master_north
+        Northern hemisphere of the master pattern.
+    master_south
+        Southern hemisphere of the master pattern.
+    npx
+        Number of pixels in the x-direction on the master pattern.
+    npy
+        Number of pixels in the y-direction on the master pattern.
+    scale
+        Factor to scale up from square Lambert projection to the master
+        pattern.
+    rescale
+        Whether to rescale pattern intensities.
+    dtype_out
+        NumPy data type of the returned patterns, by default 32-bit
+        float.
+
+    Returns
+    -------
+    numpy.ndarray
+        3D or 4D array with simulated patterns.
+
+    Notes
+    -----
+    This function is optimized with Numba, so care must be taken with
+    array shapes and data types.
+    """
+    nav_shape = rotations.shape[:-1]
+    sig_shape = direction_cosines.shape[:-1]
+    n_pixels = sig_shape[0] * sig_shape[1]
+    simulated = np.zeros(nav_shape + (n_pixels,), dtype=dtype_out)
+
+    direction_cosines_flat = direction_cosines.reshape((-1, 3))
+
+    for i in np.ndindex(nav_shape):
+        simulated[i] = _project_single_pattern_from_master_pattern(
+            rotation=rotations[i],
+            direction_cosines=direction_cosines_flat,
+            master_north=master_north,
+            master_south=master_south,
+            npx=npx,
+            npy=npy,
+            scale=scale,
+            n_pixels=n_pixels,
+            rescale=rescale,
+            out_min=out_min,
+            out_max=out_max,
+            dtype_out=dtype_out,
+        )
+
+    return simulated.reshape(nav_shape + sig_shape)
+
+
+@nb.jit(cache=True, nogil=True, nopython=True)
+def _project_single_pattern_from_master_pattern(
+    rotation: np.ndarray,
+    direction_cosines: np.ndarray,
+    master_north: np.ndarray,
+    master_south: np.ndarray,
+    npx: int,
+    npy: int,
+    scale: float,
+    n_pixels: int,
+    rescale: bool,
+    out_min: Union[int, float],
+    out_max: Union[int, float],
+    dtype_out: type,
+) -> np.ndarray:
+    """Project a single EBSD pattern onto a detector given one rotation
+    and one direction cosine per detector pixel, describing the
+    detector's view of the sample.
+
+    Parameters
+    ----------
+    rotation
+        Array of one rotation of shape (4,).
+    direction_cosines
+        Direction cosines (unit vectors) between detector and sample of
+        shape (n_pixels, 3).
+    master_north
+        Northern hemisphere of the master pattern.
+    master_south
+        Southern hemisphere of the master pattern.
+    npx
+        Number of pixels in the x-direction on the master pattern.
+    npy
+        Number of pixels in the y-direction on the master pattern.
+    scale
+        Factor to scale up from square Lambert projection to the master
+        pattern.
+    n_pixels
+        Number of detector pixels.
+    rescale
+        Whether to rescale pattern intensities.
+    dtype_out
+        NumPy data type of the returned patterns.
+
+    Returns
+    -------
+    numpy.ndarray
+        Simulated EBSD pattern.
+
+    Notes
+    -----
+    This function is optimized with Numba, so care must be taken with
+    array shapes and data types.
+    """
+    # Rotate the detector's view of the crystal
+    rotated_direction_cosines = _rotate_vector(rotation, direction_cosines)
+
+    (nii, nij, niip, nijp, di, dj, dim, djm,) = _get_lambert_interpolation_parameters(
+        v=rotated_direction_cosines, npx=npx, npy=npy, scale=scale
+    )
+
+    # Loop over the detector pixels and fill in intensities one by one
+    # from the correct hemisphere of the master pattern
+    pattern = np.zeros((n_pixels,))
+    for i in nb.prange(n_pixels):
+        if rotated_direction_cosines[i, 2] >= 0:
+            mp = master_north
+        else:
+            mp = master_south
+        pattern[i] = _get_pixel_from_master_pattern(
+            mp, nii[i], nij[i], niip[i], nijp[i], di[i], dj[i], dim[i], djm[i]
+        )
+
+    # Potentially rescale pattern intensities to desired data type
+    if rescale:
+        pattern = _rescale(pattern, np.min(pattern), np.max(pattern), out_min, out_max)
+
+    return pattern.astype(dtype_out)
+
+
+@nb.jit(
+    "float64[:, :](float64[:], float64[:, :])", nogil=True, cache=True, nopython=True
+)
+def _rotate_vector(rotation: np.ndarray, vector: np.ndarray) -> np.ndarray:
+    """Rotation of vector(s) by a quaternion.
+
+    Parameters
+    ----------
+    rotation
+        Rotation as an array of shape (4,) and data type 64-bit floats.
+    vector
+        Vector(s) as an array of shape (n, 3) and data type 64-bit
+        floats.
+
+    Returns
+    -------
+    rotated_vectors
+
+    Notes
+    -----
+    This function is optimized with Numba, so care must be taken with
+    array shapes and data types.
+    """
+    # TODO: Implement this and similar functions in orix
+    a, b, c, d = rotation
+    x = vector[:, 0]
+    y = vector[:, 1]
+    z = vector[:, 2]
+    rotated_vector = np.zeros(vector.shape)
+    aa = a ** 2
+    bb = b ** 2
+    cc = c ** 2
+    dd = d ** 2
+    ac = a * c
+    ab = a * b
+    ad = a * d
+    bc = b * c
+    bd = b * d
+    cd = c * d
+    rotated_vector[:, 0] = (aa + bb - cc - dd) * x + 2 * ((ac + bd) * z + (bc - ad) * y)
+    rotated_vector[:, 1] = (aa - bb + cc - dd) * y + 2 * ((ad + bc) * x + (cd - ab) * z)
+    rotated_vector[:, 2] = (aa - bb - cc + dd) * z + 2 * ((ab + cd) * y + (bd - ac) * x)
+    return rotated_vector
 
 
 @nb.jit(
@@ -208,13 +410,13 @@ def _get_lambert_interpolation_parameters(
         niip_i = nii_i + 1
         nijp_i = nij_i + 1
         if niip_i > npx:
-            niip_i = nii_i
+            niip_i = nii_i  # pragma: no cover
         if nijp_i > npy:
-            nijp_i = nij_i
+            nijp_i = nij_i  # pragma: no cover
         if nii_i < 0:
-            nii_i = niip_i
+            nii_i = niip_i  # pragma: no cover
         if nij_i < 0:
-            nij_i = nijp_i
+            nij_i = nijp_i  # pragma: no cover
 
         nii[ii] = nii_i
         nij[ii] = nij_i
@@ -228,89 +430,19 @@ def _get_lambert_interpolation_parameters(
     return nii, nij, niip, nijp, di, dj, dim, djm
 
 
-def _get_patterns_chunk(
-    rotations_array: np.ndarray,
-    dc: Vector3d,
-    master_north: np.ndarray,
-    master_south: np.ndarray,
-    npx: int,
-    npy: int,
-    scale: Union[int, float],
-    rescale: bool,
-    dtype_out: Optional[type] = np.float32,
-) -> np.ndarray:
-    """Get the EBSD patterns on the detector for each rotation in the
-    chunk. Each pattern is found by a bi-quadratic interpolation of the
-    master pattern as described in EMsoft.
+@nb.jit(cache=True, nogil=True, nopython=True)
+def _get_pixel_from_master_pattern(mp, nii, nij, niip, nijp, di, dj, dim, djm):
+    """Return an intensity from a master pattern in the square Lambert
+    projection using bi-linear interpolation.
 
-    Parameters
-    ----------
-    rotations_array
-        Array of rotations of shape (..., 4) for a given chunk in
-        quaternions.
-    dc
-        Direction cosines unit vector between detector and sample.
-    master_north
-        Northern hemisphere of the master pattern.
-    master_south
-        Southern hemisphere of the master pattern.
-    npx
-        Number of pixels in the x-direction on the master pattern.
-    npy
-        Number of pixels in the y-direction on the master pattern.
-    scale
-        Factor to scale up from square Lambert projection to the master
-        pattern.
-    rescale
-        Whether to rescale pattern intensities.
-    dtype_out
-        NumPy data type of the returned patterns, by default 32-bit
-        float.
-
-    Returns
-    -------
-    numpy.ndarray
-        3D or 4D array with simulated patterns.
+    Notes
+    -----
+    This function is optimized with Numba, so care must be taken with
+    array shapes and data types.
     """
-    rot = Rotation(rotations_array)
-    sig_shape = dc.shape
-    dc_flat = dc.reshape(dc.size)
-    nav_shape = rot.shape
-    #    simulated = np.empty(shape=nav_shape + sig_shape, dtype=dtype_out)
-    n_pixels = dc_flat.shape
-    simulated = np.zeros(shape=nav_shape + n_pixels, dtype=dtype_out)
-
-    interpolation_kwargs = dict(npx=int(npx), npy=int(npy), scale=float(scale))
-    for i in np.ndindex(nav_shape):
-        dc_rot = rot[i] * dc_flat
-        (
-            nii,
-            nij,
-            niip,
-            nijp,
-            di,
-            dj,
-            dim,
-            djm,
-        ) = _get_lambert_interpolation_parameters(v=dc_rot.data, **interpolation_kwargs)
-        pattern = np.where(
-            dc_rot.z >= 0,
-            (
-                master_north[nii, nij] * dim * djm
-                + master_north[niip, nij] * di * djm
-                + master_north[nii, nijp] * dim * dj
-                + master_north[niip, nijp] * di * dj
-            ),
-            (
-                master_south[nii, nij] * dim * djm
-                + master_south[niip, nij] * di * djm
-                + master_south[nii, nijp] * dim * dj
-                + master_south[niip, nijp] * di * dj
-            ),
-        )
-        if rescale:
-            pattern = rescale_intensity(pattern, dtype_out=dtype_out)
-        #        simulated[i] = pattern.reshape(sig_shape)
-        simulated[i] = pattern
-
-    return simulated.reshape(nav_shape + sig_shape)
+    return (
+        mp[nii, nij] * dim * djm
+        + mp[niip, nij] * di * djm
+        + mp[nii, nijp] * dim * dj
+        + mp[niip, nijp] * di * dj
+    )

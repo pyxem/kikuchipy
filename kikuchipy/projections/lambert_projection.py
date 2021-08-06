@@ -18,7 +18,7 @@
 
 from typing import Union
 
-from numba import njit, prange
+import numba as nb
 import numpy as np
 from orix.vector import Vector3d
 
@@ -54,7 +54,7 @@ class LambertProjection:
         else:
             w = v
         original_shape = w.shape[:-1]
-        w = w.reshape((-1, 3))
+        w = w.reshape((-1, 3)).astype(float)
         xy = _vector2xy(w)
         xy = xy.reshape(original_shape + (2,))
         return xy
@@ -106,7 +106,7 @@ class LambertProjection:
         return LambertProjection.vector2xy(v)
 
 
-@njit(nogil=True)
+@nb.jit(nogil=True, nopython=True)
 def _eq_c(p: Union[np.ndarray, float, int]) -> Union[np.ndarray, float, int]:
     """Private function used inside LambertProjection.xy2vector to
     increase readability.
@@ -114,20 +114,21 @@ def _eq_c(p: Union[np.ndarray, float, int]) -> Union[np.ndarray, float, int]:
     return (2 * p / np.pi) * np.sqrt(np.pi - p ** 2)
 
 
-@njit(nogil=True, cache=True)
+@nb.jit("float64[:, :](float64[:, :])", nogil=True, cache=True, nopython=True)
 def _vector2xy(v: np.ndarray) -> np.ndarray:
     """Lambert projection of vector(s) :cite:`callahan2013dynamical`.
 
     Parameters
     ----------
     v
-        Array of shape (n, 3), typically rotated direction cosines, in
-        Cartesian coordinates.
+        Vector(s) in an array of shape (n, 3) and 64-bit float data
+        type in Cartesian coordinates.
 
     Returns
     -------
     lambert
-        Square Lambert coordinates (X, Y) in array of shape (n, 2).
+        Square Lambert coordinates (X, Y) in array of shape (n, 2) and
+        data type 64-bit float.
     """
     # Normalize vectors (vectorized operation is faster than per vector)
     norm = np.sqrt(np.sum(np.square(v), axis=1))
@@ -136,7 +137,7 @@ def _vector2xy(v: np.ndarray) -> np.ndarray:
 
     n_vectors = v.shape[0]
     lambert_xy = np.zeros((n_vectors, 2))
-    for i in prange(n_vectors):
+    for i in nb.prange(n_vectors):
         x, y, z = w[i]
         abs_z = np.abs(z)
         sqrt_z = np.sqrt(2 * (1 - abs_z))

@@ -20,7 +20,11 @@ import numpy as np
 from orix.vector import Vector3d
 import pytest
 
-from kikuchipy.projections.lambert_projection import LambertProjection, _eq_c
+from kikuchipy.projections.lambert_projection import (
+    LambertProjection,
+    _eq_c,
+    _vector2xy,
+)
 
 
 class TestLambertProjection:
@@ -77,6 +81,7 @@ class TestLambertProjection:
             [0, 0],
         ]
         assert np.allclose(LambertProjection.vector2xy(xyz), lambert_xy)
+        assert np.allclose(_vector2xy.py_func(xyz), lambert_xy)
 
     def test_xy2vector(self):
         """Conversion from Lambert to Cartesian coordinates works"""
@@ -90,7 +95,7 @@ class TestLambertProjection:
         value = arr_1[..., 0]
         output_arr = np.array((0.61655, 0.61655, 0.61655))
         expected = output_arr[..., 0]
-        output = _eq_c(value)
+        output = _eq_c.py_func(value)
         assert output == pytest.approx(expected, rel=1e-5)
 
     def test_lambert_to_gnomonic(self):
