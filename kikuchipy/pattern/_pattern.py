@@ -32,7 +32,7 @@ def rescale_intensity(
     pattern: np.ndarray,
     in_range: Optional[Tuple[Union[int, float], ...]] = None,
     out_range: Optional[Tuple[Union[int, float], ...]] = None,
-    dtype_out: Optional[np.dtype] = None,
+    dtype_out: Union[None, np.dtype, type] = None,
 ) -> np.ndarray:
     """Rescale intensities in an EBSD pattern.
 

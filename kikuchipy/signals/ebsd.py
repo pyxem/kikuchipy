@@ -50,7 +50,7 @@ from kikuchipy.pattern._pattern import (
 )
 from kikuchipy.indexing import StaticPatternMatching
 from kikuchipy.indexing._refinement import (
-    _refine_all,
+    _refine_orientation_projection_center,
     _refine_orientation,
     _refine_projection_center,
 )
@@ -98,7 +98,7 @@ class EBSD(CommonImage, Signal2D):
     _lazy = False
 
     def __init__(self, *args, **kwargs):
-        """Create an :class:`~kikuchipy.signals.EBSD` object from a
+        """Create an :class:`~kikuchipy.signals.EBSD` instance from a
         :class:`hyperspy.signals.Signal2D` or a :class:`numpy.ndarray`.
         See the docstring of :class:`hyperspy.signal.BaseSignal` for
         optional input parameters.
@@ -1037,11 +1037,11 @@ class EBSD(CommonImage, Signal2D):
 
         Refinement attempts to optimize (maximize) the similarity
         between patterns in this signal and simulated patterns
-        re-projected from a master pattern. The only supported
-        similarity metric is the normalized cross-correlation (NCC).
-        The orientation, represented by three Euler angles
+        projected from a master pattern. The only supported similarity
+        metric is the normalized cross-correlation (NCC). The
+        orientation, represented by three Euler angles
         (:math:`\phi_1`, :math:`\Phi`, :math:`\phi_2`), is changed
-        during re-projection, while the sample-detector geometry,
+        during projection, while the sample-detector geometry,
         represented by the three projection center (PC) parameters
         (PCx, PCy, PCz), are fixed.
 
@@ -1060,9 +1060,9 @@ class EBSD(CommonImage, Signal2D):
             Master pattern in the square Lambert projection of the same
             phase as the one in the crystal map.
         energy
-            Accelerating voltage of the electron beam in kV
-            specifying which master pattern energy to use during
-            re-projection of simulated patterns.
+            Accelerating voltage of the electron beam in kV specifying
+            which master pattern energy to use during projection of
+            simulated patterns.
         mask
             Boolean mask of signal shape to be applied to both the
             experimental and simulated patterns before comparison.
@@ -1098,17 +1098,17 @@ class EBSD(CommonImage, Signal2D):
         See Also
         --------
         refine_projection_center
-        refine_all
+        refine_orientation_projection_center
         """
         self._check_refinement_parameters(
             xmap=xmap, detector=detector, method=method, mask=mask
         )
         return _refine_orientation(
             xmap=xmap,
-            master_pattern=master_pattern,
-            signal=self,
             detector=detector,
+            master_pattern=master_pattern,
             energy=energy,
+            patterns=self.data,
             mask=mask,
             method=method,
             method_kwargs=method_kwargs,
@@ -1132,12 +1132,12 @@ class EBSD(CommonImage, Signal2D):
         using fixed orientations.
 
         Refinement attempts to optimize (maximize) the similarity
-        between patterns in this signal and simulated patterns
-        re-projected from a master pattern. The only supported
-        similarity metric is the normalized cross-correlation (NCC).
-        The sample-detector geometry, represented by the three
-        projection center (PC) parameters (PCx, PCy, PCz), is changed
-        during re-projection, while the orientations are fixed.
+        between patterns in this signal and simulated patterns projected
+        from a master pattern. The only supported similarity metric is
+        the normalized cross-correlation (NCC). The sample-detector
+        geometry, represented by the three projection center (PC)
+        parameters (PCx, PCy, PCz), is changed during projection, while
+        the orientations are fixed.
 
         A subset of the optimization methods in SciPy are available.
 
@@ -1154,9 +1154,9 @@ class EBSD(CommonImage, Signal2D):
             Master pattern in the square Lambert projection of the same
             phase as the one in the crystal map.
         energy
-            Accelerating voltage of the electron beam in kV
-            specifying which master pattern energy to use during
-            re-projection of simulated patterns.
+            Accelerating voltage of the electron beam in kV specifying
+            which master pattern energy to use during projection of
+            simulated patterns.
         mask
             Boolean mask of signal shape to be applied to both the
             experimental and simulated patterns before comparison.
@@ -1194,7 +1194,7 @@ class EBSD(CommonImage, Signal2D):
         See Also
         --------
         refine_orientation
-        refine_all
+        refine_orientation_projection_center
         """
         self._check_refinement_parameters(
             xmap=xmap, detector=detector, method=method, mask=mask
@@ -1212,7 +1212,7 @@ class EBSD(CommonImage, Signal2D):
             compute=compute,
         )
 
-    def refine_all(
+    def refine_orientation_projection_center(
         self,
         xmap: CrystalMap,
         detector: EBSDDetector,
@@ -1229,13 +1229,13 @@ class EBSD(CommonImage, Signal2D):
 
         Refinement attempts to optimize (maximize) the similarity
         between patterns in this signal and simulated patterns
-        re-projected from a master pattern. The only supported
+        projected from a master pattern. The only supported
         similarity metric is the normalized cross-correlation (NCC).
         The orientation, represented by three Euler angles
         (:math:`\phi_1`, :math:`\Phi`, :math:`\phi_2`), and the
         sample-detector geometry, represented by the three projection
         center (PC) parameters (PCx, PCy, PCz), are changed during
-        re-projection.
+        projection.
 
         A subset of the optimization methods in SciPy are available.
 
@@ -1252,9 +1252,9 @@ class EBSD(CommonImage, Signal2D):
             Master pattern in the square Lambert projection of the same
             phase as the one in the crystal map.
         energy
-            Accelerating voltage of the electron beam in kV
-            specifying which master pattern energy to use during
-            re-projection of simulated patterns.
+            Accelerating voltage of the electron beam in kV specifying
+            which master pattern energy to use during projection of
+            simulated patterns.
         mask
             Boolean mask of signal shape to be applied to both the
             experimental and simulated patterns before comparison.
@@ -1310,7 +1310,7 @@ class EBSD(CommonImage, Signal2D):
         self._check_refinement_parameters(
             xmap=xmap, detector=detector, method=method, mask=mask
         )
-        return _refine_all(
+        return _refine_orientation_projection_center(
             xmap=xmap,
             master_pattern=master_pattern,
             signal=self,
@@ -1985,6 +1985,7 @@ class EBSD(CommonImage, Signal2D):
             return s_out
 
     # ------------------------ Private methods ----------------------- #
+
     def _check_refinement_parameters(
         self,
         xmap: CrystalMap,

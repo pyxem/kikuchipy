@@ -1491,7 +1491,7 @@ class TestEBSDRefinement:
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
         xmap.phases[0].name = self.mp.phase.name
-        xmap_refined, new_detector = s.refine_all(
+        xmap_refined, new_detector = s.refine_orientation_projection_center(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,

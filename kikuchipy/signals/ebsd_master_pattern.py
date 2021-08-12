@@ -19,7 +19,7 @@
 import copy
 import gc
 import sys
-from typing import Union
+from typing import Tuple, Union
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
@@ -35,7 +35,7 @@ from kikuchipy.signals import LazyEBSD, EBSD
 from kikuchipy.signals._common_image import CommonImage
 from kikuchipy.signals.util._dask import get_chunking
 from kikuchipy.signals.util._master_pattern import (
-    _get_direction_cosines_from_detector,
+    _get_direction_cosines_for_single_pc_from_detector,
     _project_patterns_from_master_pattern,
 )
 
@@ -73,8 +73,10 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
     def __init__(self, *args, **kwargs):
         """Create an :class:`~kikuchipy.signals.EBSDMasterPattern`
-        object from a :class:`hyperspy.signals.Signal2D` or a
-        :class:`numpy.ndarray`.
+        instance from a :class:`hyperspy.signals.Signal2D` or a
+        :class:`numpy.ndarray`. See the docstring of
+        :class:`hyperspy.signal.BaseSignal` for optional input
+        parameters.
         """
         Signal2D.__init__(self, *args, **kwargs)
         self.phase = kwargs.pop("phase", Phase())
@@ -86,7 +88,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         rotations: Rotation,
         detector: EBSDDetector,
         energy: Union[int, float],
-        dtype_out: type = np.float32,
+        dtype_out: Union[type, np.dtype] = np.float32,
         compute: bool = False,
         **kwargs,
     ) -> Union[EBSD, LazyEBSD]:
@@ -99,8 +101,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         Parameters
         ----------
         rotations
-            Set of crystal rotations to get patterns from. The shape of
-            this object, a maximum of two dimensions, determines the
+            Crystal rotations to get patterns from. The shape of this
+            instance, a maximum of two dimensions, determines the
             navigation shape of the output signal.
         detector
             EBSD detector describing the detector dimensions and the
@@ -108,7 +110,9 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             projection/pattern center.
         energy
             Acceleration voltage, in kV, used to simulate the desired
-            master pattern to create a dictionary from.
+            master pattern to create a dictionary from. If only a single
+            energy is present in the signal, this will be returned no
+            matter its energy.
         dtype_out
             Data type of the returned patterns, by default np.float32.
         compute
@@ -125,7 +129,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         -------
         EBSD or LazyEBSD
             Signal with navigation and signal shape equal to the
-            rotation object's and detector shape, respectively.
+            rotation instance and detector shape, respectively.
 
         Notes
         -----
@@ -134,23 +138,21 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         provided. For more details regarding the reference frame visit
         the reference frame user guide.
         """
-        if self.projection != "lambert":
-            raise NotImplementedError(
-                "Master pattern must be in the square Lambert projection"
-            )
+        self._is_suitable_for_projection(raise_if_not=True)
+
         if len(detector.pc) > 1:
             raise NotImplementedError(
                 "Detector must have exactly one projection center"
             )
 
-        # Get suitable chunks when iterating over the rotations. The
-        # signal axes are not chunked.
+        # Get suitable chunks when iterating over the rotations. Signal
+        # axes are not chunked.
         nav_shape = rotations.shape
         nav_dim = len(nav_shape)
         if nav_dim > 2:
             raise ValueError(
-                "The rotations object can only have one or two dimensions, but an "
-                f"object with {nav_dim} was passed"
+                "`rotations` can only have one or two dimensions, but an instance with "
+                f"{nav_dim} dimensions was passed"
             )
         data_shape = nav_shape + detector.shape
         chunks = get_chunking(
@@ -162,27 +164,11 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             dtype=dtype_out,
         )
 
-        # Get the master pattern arrays created by a desired energy
-        north_slice = ()
-        if "energy" in [i.name for i in self.axes_manager.navigation_axes]:
-            energies = self.axes_manager["energy"].axis
-            north_slice += ((np.abs(energies - energy)).argmin(),)
-        south_slice = north_slice
-        if self.hemisphere == "both":
-            north_slice = (0,) + north_slice
-            south_slice = (1,) + south_slice
-        elif not self.phase.point_group.contains_inversion:
-            raise AttributeError(
-                "For crystals of point groups without inversion symmetry, like the "
-                "current {self.phase.point_group.name}, both hemispheres must be "
-                "present in the master pattern signal"
-            )
-        master_north = self.data[north_slice]
-        master_south = self.data[south_slice]
-
         # Whether to rescale pattern intensities after projection
         if dtype_out != self.data.dtype:
             rescale = True
+            if isinstance(dtype_out, np.dtype):
+                dtype_out = dtype_out.type
             out_min, out_max = dtype_range[dtype_out]
         else:
             rescale = False
@@ -192,7 +178,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         # Get direction cosines for each detector pixel relative to the
         # source point
-        direction_cosines = _get_direction_cosines_from_detector(detector)
+        direction_cosines = _get_direction_cosines_for_single_pc_from_detector(detector)
 
         # Get dask array from rotations
         rot_da = da.from_array(rotations.data, chunks=chunks[:nav_dim] + (-1,))
@@ -207,6 +193,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         else:  # nav_dim == 2
             drop_axis = 2
             new_axis = (2, 3)
+
+        master_north, master_south = self._get_master_pattern_arrays_from_energy(energy)
 
         # Project simulated patterns onto detector
         npx, npy = self.axes_manager.signal_shape
@@ -270,12 +258,67 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         return out
 
     # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
+
     def deepcopy(self):
         new = super().deepcopy()
         new.phase = self.phase.deepcopy()
         new.projection = copy.deepcopy(self.projection)
         new.hemisphere = copy.deepcopy(self.hemisphere)
         return new
+
+    # ------------------------ Private methods ----------------------- #
+
+    def _get_master_pattern_arrays_from_energy(
+        self, energy: Union[int, float]
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Return northern and southern master patterns created with a
+        single, given energy.
+
+        Parameters
+        ----------
+        energy
+            Acceleration voltage in kV. If only a single energy is
+            present in the signal, this will be returned no matter its
+            energy.
+
+        Returns
+        -------
+        master_north, master_south
+            Northern and southern hemispheres of master pattern.
+        """
+        if "energy" in [i.name for i in self.axes_manager.navigation_axes]:
+            master_patterns = self.inav[float(energy)].data
+        else:  # Assume a single energy
+            master_patterns = self.data
+        if self.hemisphere == "both":
+            master_north, master_south = master_patterns
+        else:
+            master_north = master_south = master_patterns
+        return master_north, master_south
+
+    def _is_suitable_for_projection(self, raise_if_not: bool = False):
+        """Check whether the master pattern is suitable for projection
+        onto an EBSD detector and return a bool or raise an error
+        message if desired.
+        """
+        suitable = True
+        error = None
+        if self.projection != "lambert":
+            error = NotImplementedError(
+                "Master pattern must be in the square Lambert projection"
+            )
+            suitable = False
+        if self.hemisphere != "both" and not self.phase.point_group.contains_inversion:
+            error = AttributeError(
+                "For crystals of point groups without inversion symmetry, like the "
+                f"current {self.phase.point_group.name}, both hemispheres must be "
+                "present in the master pattern signal"
+            )
+            suitable = False
+        if not suitable and raise_if_not:
+            raise error
+        else:
+            return suitable
 
 
 class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):

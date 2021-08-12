@@ -563,6 +563,8 @@ class EBSDDetector:
         if return_fig_ax:
             return fig, ax
 
+    # ------------------------ Private methods ----------------------- #
+
     def _set_pc_convention(self, convention: Optional[str] = None):
         if convention is None or convention.lower() == "bruker":
             pass

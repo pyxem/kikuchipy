@@ -35,8 +35,8 @@ from kikuchipy.io.plugins.tests.test_emsoft_ebsd_masterpattern import (
 )
 from kikuchipy.signals.tests.test_ebsd import assert_dictionary
 from kikuchipy.signals.util._master_pattern import (
-    _get_direction_cosines,
-    _get_direction_cosines_from_detector,
+    _get_direction_cosines_for_single_pc,
+    _get_direction_cosines_for_single_pc_from_detector,
     _get_lambert_interpolation_parameters,
     _get_pixel_from_master_pattern,
     _project_patterns_from_master_pattern,
@@ -170,11 +170,11 @@ class TestSimulatedPatternDictionary:
 
     def test_get_direction_cosines(self):
         detector = self.detector
-        dc = _get_direction_cosines_from_detector(detector)
+        dc = _get_direction_cosines_for_single_pc_from_detector(detector)
         assert dc.shape == detector.shape + (3,)
         assert np.max(dc) <= 1
 
-        dc2 = _get_direction_cosines.py_func(
+        dc2 = _get_direction_cosines_for_single_pc.py_func(
             pcx=detector.pcx,
             pcy=detector.pcy,
             pcz=detector.pcz,
@@ -327,7 +327,7 @@ class TestSimulatedPatternDictionary:
     def test_project_patterns_from_master_pattern(self):
         """Make sure the Numba function is covered."""
         r = Rotation.from_euler(((0, 0, 0), (1, 1, 1), (2, 2, 2)))
-        dc = _get_direction_cosines_from_detector(self.detector)
+        dc = _get_direction_cosines_for_single_pc_from_detector(self.detector)
 
         npx = npy = 101
         mpn = mps = np.zeros((npy, npx))
@@ -355,7 +355,7 @@ class TestSimulatedPatternDictionary:
         self, dtype_out, intensity_range
     ):
         """Make sure the Numba function is covered."""
-        dc = _get_direction_cosines_from_detector(self.detector)
+        dc = _get_direction_cosines_for_single_pc_from_detector(self.detector)
         npx = npy = 101
         mpn = mps = np.random.random(npy * npx).reshape((npy, npx))
 
@@ -380,7 +380,7 @@ class TestSimulatedPatternDictionary:
 
     def test_get_lambert_interpolation_parameters(self):
         """Make sure the Numba function is covered."""
-        dc = _get_direction_cosines_from_detector(self.detector)
+        dc = _get_direction_cosines_for_single_pc_from_detector(self.detector)
         npx = npy = 101
         scale = (npx - 1) // 2
         nii, nij, niip, nijp = _get_lambert_interpolation_parameters.py_func(
@@ -400,7 +400,7 @@ class TestSimulatedPatternDictionary:
 
     def test_rotate_vector(self):
         """Make sure the Numba function is covered."""
-        dc = _get_direction_cosines_from_detector(self.detector)
+        dc = _get_direction_cosines_for_single_pc_from_detector(self.detector)
         dc = dc.reshape((-1, 3))
         rotated_dc = _rotate_vector.py_func(np.array([1, 1, 0, 0], dtype=float), dc)
 
@@ -409,7 +409,7 @@ class TestSimulatedPatternDictionary:
 
     def test_get_pixel_from_master_pattern(self):
         """Make sure the Numba function is covered."""
-        dc = _get_direction_cosines_from_detector(self.detector)
+        dc = _get_direction_cosines_for_single_pc_from_detector(self.detector)
         npx = npy = 101
         scale = (npx - 1) // 2
         (
