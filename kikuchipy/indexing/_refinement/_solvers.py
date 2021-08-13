@@ -114,23 +114,22 @@ def _refine_orientation_solver(
     """
     if rescale:
         pattern = pattern.astype(np.float32)
-        pattern = _rescale(
-            pattern, imin=np.min(pattern), imax=np.max(pattern), omin=-1, omax=1
-        )
+        imin = np.min(pattern)
+        imax = np.max(pattern)
+        pattern = _rescale(pattern, imin=imin, imax=imax, omin=-1, omax=1)
 
     if direction_cosines is None:
-        direction_cosines = (
-            _get_direction_cosines_for_single_pc(
-                pcx=pcx,
-                pcy=pcy,
-                pcz=pcz,
-                nrows=nrows,
-                ncols=ncols,
-                tilt=tilt,
-                azimuthal=azimuthal,
-                sample_tilt=sample_tilt,
-            ).reshape((nrows * ncols, 3)),
+        direction_cosines = _get_direction_cosines_for_single_pc(
+            pcx=pcx,
+            pcy=pcy,
+            pcz=pcz,
+            nrows=nrows,
+            ncols=ncols,
+            tilt=tilt,
+            azimuthal=azimuthal,
+            sample_tilt=sample_tilt,
         )
+        direction_cosines = direction_cosines.reshape((nrows * ncols, 3))
 
     params = (pattern,) + (direction_cosines,) + fixed_parameters
     method_name = method.__name__
@@ -142,16 +141,34 @@ def _refine_orientation_solver(
             args=params,
             **method_kwargs,
         )
-    elif method_name == "differential_evolution":
-        solution = None
-    elif method_name == "dual_annealing":
-        solution = None
-    elif method_name == "basinhopping":
-        solution = None
+    elif method_name in ["differential_evolution", "dual_annealing"]:
+        alpha_deviation, beta_deviation, gamma_deviation = trust_region
+        alpha, beta, gamma = rotation
+        solution = method(
+            func=_refine_orientation_objective_function,
+            bounds=[
+                [alpha - alpha_deviation, alpha + alpha_deviation],
+                [beta - beta_deviation, beta + beta_deviation],
+                [gamma - gamma_deviation, gamma + gamma_deviation],
+            ],
+            args=params,
+            **method_kwargs,
+        )
+    else:  # Is always "basinhopping", due to prior check of method name
+        key_name = "minimizer_kwargs"
+        if key_name not in method_kwargs:
+            method_kwargs[key_name] = dict(args=params)
+        else:
+            method_kwargs[key_name].update(args=params)
+        solution = method(
+            func=_refine_orientation_objective_function,
+            x0=rotation,
+            **method_kwargs,
+        )
 
     score = 1 - solution.fun
-    phi1 = solution.x[0]
-    Phi = solution.x[1]
-    phi2 = solution.x[2]
+    alpha = solution.x[0]
+    beta = solution.x[1]
+    gamma = solution.x[2]
 
-    return score, phi1, Phi, phi2
+    return score, alpha, beta, gamma

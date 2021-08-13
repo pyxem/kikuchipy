@@ -35,13 +35,14 @@ from kikuchipy.io.plugins.tests.test_emsoft_ebsd_masterpattern import (
 )
 from kikuchipy.signals.tests.test_ebsd import assert_dictionary
 from kikuchipy.signals.util._master_pattern import (
+    _get_cosine_sine_of_alpha_and_azimuthal,
+    _get_direction_cosines_for_multiple_pcs,
     _get_direction_cosines_for_single_pc,
     _get_direction_cosines_for_single_pc_from_detector,
     _get_lambert_interpolation_parameters,
     _get_pixel_from_master_pattern,
     _project_patterns_from_master_pattern,
     _project_single_pattern_from_master_pattern,
-    _rotate_vector,
 )
 from kikuchipy.indexing.similarity_metrics import ncc, ndp
 
@@ -158,7 +159,7 @@ class TestProperties:
         assert mp2.phase.point_group.name != mp.phase.point_group.name
 
 
-class TestSimulatedPatternDictionary:
+class TestProjectingPatternsFromLambert:
     detector = kp.detectors.EBSDDetector(
         shape=(480, 640),
         px_size=50,
@@ -190,13 +191,13 @@ class TestSimulatedPatternDictionary:
         emsoft_key = load(EMSOFT_EBSD_FILE)
         emsoft_key = emsoft_key.data[0]
 
-        angles = np.array((120, 45, 60))
-        r = Rotation.from_euler(np.radians(angles))
+        r = Rotation.from_euler(np.radians([120, 45, 60]))
         mp1 = nickel_ebsd_master_pattern_small(projection="lambert", hemisphere="both")
         kp_pattern = mp1.get_patterns(
-            rotations=r, detector=self.detector, energy=20, dtype_out=np.uint8
+            rotations=r, detector=self.detector, energy=20, dtype_out=emsoft_key.dtype
         )
         kp_pat = kp_pattern.data[0].compute()
+        assert kp_pat.dtype == emsoft_key.dtype
         ncc1 = ncc(kp_pat, emsoft_key)
         ndp1 = ndp(kp_pat, emsoft_key)
         assert ncc1 >= 0.935
@@ -239,14 +240,14 @@ class TestSimulatedPatternDictionary:
             _ = mp5.get_patterns(r2, self.detector, 5)
 
         mp6 = kp.signals.EBSDMasterPattern(np.zeros((2, 11, 11)))
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(AttributeError, match="Master pattern `phase` attribute"):
             _ = mp6.get_patterns(r2, self.detector, 5)
 
         mp7 = kp.signals.EBSDMasterPattern(np.zeros((10, 11, 11)))
         mp7.axes_manager[0].name = "energy"
         mp7.projection = "lambert"
         mp7.phase = Phase("!Ni", 220)
-        with pytest.raises(AttributeError):
+        with pytest.raises(AttributeError, match="For point groups without inversion"):
             _ = mp7.get_patterns(r2, self.detector, 5)
 
         # More than one PC is currently not supported so should fail
@@ -261,6 +262,15 @@ class TestSimulatedPatternDictionary:
             _ = mp4.get_patterns(r2, d2, 5)
 
         # TODO: Create tests for other structures
+
+    def test_get_patterns_dtype(self):
+        r = Rotation.identity()
+        mp = nickel_ebsd_master_pattern_small(projection="lambert")
+        dtype_out = np.dtype("float64")
+        pattern = mp.get_patterns(
+            rotations=r, detector=self.detector, energy=20, dtype_out=dtype_out
+        )
+        assert pattern.data.dtype == dtype_out
 
     def test_simulated_patterns_xmap_detector(self):
         mp = nickel_ebsd_master_pattern_small(projection="lambert")
@@ -293,7 +303,7 @@ class TestSimulatedPatternDictionary:
         mp = nickel_ebsd_master_pattern_small(projection="lambert")
         r = Rotation(np.random.uniform(low=0, high=1, size=(1, 2, 3, 4)))
         detector = kp.detectors.EBSDDetector(shape=(60, 60))
-        with pytest.raises(ValueError, match="The rotations object can only"):
+        with pytest.raises(ValueError, match="`rotations` can only have one or two "):
             _ = mp.get_patterns(rotations=r, detector=detector, energy=20)
 
     def test_detector_azimuthal(self):
@@ -398,15 +408,6 @@ class TestSimulatedPatternDictionary:
         assert np.all(niip >= 0)
         assert np.all(nijp >= 0)
 
-    def test_rotate_vector(self):
-        """Make sure the Numba function is covered."""
-        dc = _get_direction_cosines_for_single_pc_from_detector(self.detector)
-        dc = dc.reshape((-1, 3))
-        rotated_dc = _rotate_vector.py_func(np.array([1, 1, 0, 0], dtype=float), dc)
-
-        assert not np.allclose(rotated_dc, dc)
-        assert rotated_dc.shape == dc.shape
-
     def test_get_pixel_from_master_pattern(self):
         """Make sure the Numba function is covered."""
         dc = _get_direction_cosines_for_single_pc_from_detector(self.detector)
@@ -429,3 +430,31 @@ class TestSimulatedPatternDictionary:
             mp, nii[0], nij[0], niip[0], nijp[0], di[0], dj[0], dim[0], djm[0]
         )
         assert value == 1.0
+
+    def test_get_cosine_sine_of_alpha_and_azimuthal(self):
+        """Make sure the Numba function is covered."""
+        values = _get_cosine_sine_of_alpha_and_azimuthal.py_func(
+            sample_tilt=70, tilt=10, azimuthal=5
+        )
+        assert np.allclose(values, [0.866, 0.5, 0.996, 0.087], atol=1e-3)
+
+    def test_get_direction_cosines_for_multiple_pcs(self):
+        """Make sure the Numba function is covered."""
+        detector = self.detector
+        dc0 = _get_direction_cosines_for_single_pc_from_detector(detector)
+        nav_shape = (2, 3)
+        detector.pc = np.full(nav_shape + (3,), detector.pc)
+        nrows, ncols = detector.shape
+        dc = _get_direction_cosines_for_multiple_pcs.py_func(
+            pcx=detector.pcx.ravel(),
+            pcy=detector.pcy.ravel(),
+            pcz=detector.pcz.ravel(),
+            nrows=nrows,
+            ncols=ncols,
+            tilt=detector.tilt,
+            azimuthal=detector.azimuthal,
+            sample_tilt=detector.sample_tilt,
+        )
+
+        assert np.allclose(dc0, dc[0])
+        assert dc.shape == (np.prod(nav_shape), nrows, ncols, 3)

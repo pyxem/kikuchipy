@@ -199,6 +199,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         # Project simulated patterns onto detector
         npx, npy = self.axes_manager.signal_shape
         scale = (npx - 1) / 2
+        # TODO: Use dask.delayed instead?
         simulated = rot_da.map_blocks(
             _project_patterns_from_master_pattern,
             direction_cosines=direction_cosines,
@@ -308,11 +309,17 @@ class EBSDMasterPattern(CommonImage, Signal2D):
                 "Master pattern must be in the square Lambert projection"
             )
             suitable = False
-        if self.hemisphere != "both" and not self.phase.point_group.contains_inversion:
+        pg = self.phase.point_group
+        if pg is None:
             error = AttributeError(
-                "For crystals of point groups without inversion symmetry, like the "
-                f"current {self.phase.point_group.name}, both hemispheres must be "
-                "present in the master pattern signal"
+                "Master pattern `phase` attribute must have a valid point group"
+            )
+            suitable = False
+        elif self.hemisphere != "both" and not pg.contains_inversion:
+            error = AttributeError(
+                "For point groups without inversion symmetry, like the current "
+                f"{pg.name}, both hemispheres must be present in the master pattern "
+                "signal"
             )
             suitable = False
         if not suitable and raise_if_not:

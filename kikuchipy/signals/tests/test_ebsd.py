@@ -19,13 +19,11 @@
 import os
 
 import dask.array as da
-from dask.delayed import Delayed
 from hyperspy.utils.roi import RectangularROI
 import matplotlib
 from matplotlib.pyplot import close
 import numpy as np
-from orix.crystal_map import CrystalMap, Phase, PhaseList
-from orix.quaternion import Rotation
+from orix.crystal_map import CrystalMap, Phase
 import pytest
 from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
@@ -1309,12 +1307,12 @@ class TestDictionaryIndexing:
 class TestEBSDRefinement:
     """Note that it is the calls to the :mod:`scipy.optimize` methods
     that take up test time. The setup here in kikuchipy and the array
-    sizes doesn't matter that much.
+    sizes don't matter that much.
     """
 
     axes = [
         dict(name="hemisphere", size=2, scale=1),
-        dict(name="energy", size=5, offset=15, scale=1),
+        dict(name="energy", size=5, offset=16, scale=1),
         dict(name="dy", size=5, scale=1),
         dict(name="dx", size=5, scale=1),
     ]
@@ -1378,8 +1376,10 @@ class TestEBSDRefinement:
             master_pattern=self.mp,
             energy=20,
             detector=detector,
+            method_kwargs=dict(options=dict(maxiter=1)),
         )
         assert xmap_refined.shape == xmap.shape
+        assert not np.allclose(xmap_refined.rotations.data, xmap.rotations[:, 0].data)
 
     @pytest.mark.parametrize(
         "method, method_kwargs",
@@ -1415,7 +1415,6 @@ class TestEBSDRefinement:
             method_kwargs=method_kwargs,
             trust_region=(0.5, 0.5, 0.5),
         )
-
         assert xmap_refined.shape == xmap.shape
         assert not np.allclose(xmap_refined.rotations.data, xmap.rotations[:, 0].data)
 
@@ -1425,84 +1424,83 @@ class TestEBSDRefinement:
     def test_refine_projection_center_local(self):
         pass
 
-    @pytest.mark.parametrize(
-        "method, method_kwargs",
-        [
-            (
-                "basinhopping",
-                dict(minimizer_kwargs=dict(method="Nelder-Mead"), niter=1),
-            ),
-            ("differential_evolution", dict(maxiter=1)),
-            ("dual_annealing", dict(maxiter=1)),
-        ],
-    )
-    def test_refine_projection_center_global(
-        self,
-        method,
-        method_kwargs,
-        ebsd_with_axes_and_random_data,
-        get_single_phase_xmap,
-    ):
-        s = ebsd_with_axes_and_random_data
-        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
-        xmap = get_single_phase_xmap(
-            nav_shape=s.axes_manager.navigation_shape[::-1],
-            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
-        )
-        xmap.phases[0].name = self.mp.phase.name
-        scores, new_detector = s.refine_projection_center(
-            xmap=xmap,
-            master_pattern=self.mp,
-            energy=20,
-            detector=detector,
-            method=method,
-            method_kwargs=method_kwargs,
-            trust_region=(0.5, 0.5, 0.5),
-        )
-
-        assert new_detector.shape == detector.shape
-        assert scores.size == xmap.size
+    #    @pytest.mark.parametrize(
+    #        "method, method_kwargs",
+    #        [
+    #            (
+    #                "basinhopping",
+    #                dict(minimizer_kwargs=dict(method="Nelder-Mead"), niter=1),
+    #            ),
+    #            ("differential_evolution", dict(maxiter=1)),
+    #            ("dual_annealing", dict(maxiter=1)),
+    #        ],
+    #    )
+    #    def test_refine_projection_center_global(
+    #        self,
+    #        method,
+    #        method_kwargs,
+    #        ebsd_with_axes_and_random_data,
+    #        get_single_phase_xmap,
+    #    ):
+    #        s = ebsd_with_axes_and_random_data
+    #        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+    #        xmap = get_single_phase_xmap(
+    #            nav_shape=s.axes_manager.navigation_shape[::-1],
+    #            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
+    #        )
+    #        xmap.phases[0].name = self.mp.phase.name
+    #        scores, new_detector = s.refine_projection_center(
+    #            xmap=xmap,
+    #            master_pattern=self.mp,
+    #            energy=20,
+    #            detector=detector,
+    #            method=method,
+    #            method_kwargs=method_kwargs,
+    #            trust_region=(0.5, 0.5, 0.5),
+    #        )
+    #        assert new_detector.shape == detector.shape
+    #        assert scores.size == xmap.size
 
     def test_refine_all_local(self):
         pass
 
-    @pytest.mark.parametrize(
-        "method, method_kwargs",
-        [
-            (
-                "basinhopping",
-                dict(minimizer_kwargs=dict(method="Nelder-Mead"), niter=1),
-            ),
-            ("differential_evolution", dict(maxiter=1)),
-            ("dual_annealing", dict(maxiter=1)),
-        ],
-    )
-    def test_refine_all_global(
-        self,
-        method,
-        method_kwargs,
-        ebsd_with_axes_and_random_data,
-        get_single_phase_xmap,
-    ):
-        s = ebsd_with_axes_and_random_data
-        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
-        xmap = get_single_phase_xmap(
-            nav_shape=s.axes_manager.navigation_shape[::-1],
-            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
-        )
-        xmap.phases[0].name = self.mp.phase.name
-        xmap_refined, new_detector = s.refine_orientation_projection_center(
-            xmap=xmap,
-            master_pattern=self.mp,
-            energy=20,
-            detector=detector,
-            method=method,
-            method_kwargs=method_kwargs,
-            trust_region=[0.1, 0.1, 0.1, 0.01, 0.01, 0.01],
-        )
 
-        assert new_detector.shape == detector.shape
-        assert not np.allclose(xmap_refined.rotations.data, xmap.rotations[:, 0].data)
+#    @pytest.mark.parametrize(
+#        "method, method_kwargs",
+#        [
+#            (
+#                "basinhopping",
+#                dict(minimizer_kwargs=dict(method="Nelder-Mead"), niter=1),
+#            ),
+#            ("differential_evolution", dict(maxiter=1)),
+#            ("dual_annealing", dict(maxiter=1)),
+#        ],
+#    )
+#    def test_refine_all_global(
+#        self,
+#        method,
+#        method_kwargs,
+#        ebsd_with_axes_and_random_data,
+#        get_single_phase_xmap,
+#    ):
+#        s = ebsd_with_axes_and_random_data
+#        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+#        xmap = get_single_phase_xmap(
+#            nav_shape=s.axes_manager.navigation_shape[::-1],
+#            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
+#        )
+#        xmap.phases[0].name = self.mp.phase.name
+#        xmap_refined, new_detector = s.refine_orientation_projection_center(
+#            xmap=xmap,
+#            master_pattern=self.mp,
+#            energy=20,
+#            detector=detector,
+#            method=method,
+#            method_kwargs=method_kwargs,
+#            trust_region=[0.1, 0.1, 0.1, 0.01, 0.01, 0.01],
+#        )
+#        assert new_detector.shape == detector.shape
+#        assert not np.allclose(xmap_refined.rotations.data, xmap.rotations[:, 0].data)
 
 
 # class TestEBSDRefinement:

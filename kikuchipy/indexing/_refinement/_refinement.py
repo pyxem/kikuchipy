@@ -21,6 +21,7 @@ centers by optimizing the similarity between experimental and simulated
 patterns.
 """
 
+import gc
 import sys
 from typing import Callable, Optional, Tuple, Union
 
@@ -56,33 +57,36 @@ def _refine_orientation(
     """
     method, method_kwargs = _get_optimization_method_with_kwargs(method, method_kwargs)
 
-    # Get rotations
+    # Get navigation shape and signal shape
+    nav_shape = xmap.shape
+    n_patterns = xmap.size
+    sig_shape = detector.shape
+    nrows, ncols = sig_shape
+    n_pixels = detector.size
+
+    # Get rotations in the correct shape
     if xmap.rotations_per_point > 1:
         rot = xmap.rotations[:, 0]
     else:
         rot = xmap.rotations
     euler = rot.to_euler()
+    euler = euler.reshape(nav_shape + (3,))
 
-    # Set the number of patterns and pattern rows, columns and pixels
-    n_patterns = xmap.size
-    n_pixels = detector.size
-    nrows, ncols = detector.shape
-
-    # Do we have to flatten pattern array?
-    patterns = patterns.reshape((-1, nrows, ncols))
-    #    patterns = patterns.reshape((-1, n_pixels))
+    # Build up dictionary of keyword arguments to pass to the refinement
+    # solver
+    solver_kwargs = dict(method=method, method_kwargs=method_kwargs)
 
     # Determine whether pattern intensities must be rescaled
     dtype_in = patterns.dtype
     dtype_desired = np.float32
     if dtype_in != dtype_desired:
-        rescale = True
+        solver_kwargs["rescale"] = True
     else:
-        rescale = False
+        solver_kwargs["rescale"] = False
 
     if trust_region is None:
         trust_region = np.ones(3)
-    trust_region = dask.delayed(np.deg2rad(trust_region))
+    solver_kwargs["trust_region"] = dask.delayed(np.deg2rad(trust_region))
 
     # Signal mask
     if mask is None:
@@ -95,67 +99,54 @@ def _refine_orientation(
     fixed_parameters = _check_master_pattern_and_return_data(master_pattern, energy)
     fixed_parameters += (mask,)
     fixed_parameters += (n_pixels,)
-    fixed_parameters = dask.delayed(fixed_parameters)
-
-    # Set keyword arguments passed to the refinement solver which are
-    # independent of the PC
-    solver_kwargs = dict(
-        rescale=rescale,
-        method=method,
-        method_kwargs=method_kwargs,
-        fixed_parameters=fixed_parameters,
-        trust_region=trust_region,
-    )
+    solver_kwargs["fixed_parameters"] = dask.delayed(fixed_parameters)
 
     # Determine whether a new PC must be re-computed for every pattern
     new_pc = np.prod(detector.navigation_shape) != 1 and n_patterns > 1
 
-    if isinstance(patterns, da.Array):
-        refined_parameters = None
-    else:  # NumPy array
-        if new_pc:
-            # Patterns have been indexed with varying PCs, so we
-            # re-compute the PC for every pattern during refinement
-            pcx = detector.pcx.astype(float)
-            pcy = detector.pcy.astype(float)
-            pcz = detector.pcz.astype(float)
-            refined_parameters = [
-                dask.delayed(_refine_orientation_solver)(
-                    pattern=patterns[i],
-                    rotation=euler[i],
-                    pcx=pcx[i],
-                    pcy=pcy[i],
-                    pcz=pcz[i],
-                    nrows=nrows,
-                    ncols=ncols,
-                    tilt=detector.tilt,
-                    azimuthal=detector.azimuthal,
-                    sample_tilt=detector.sample_tilt,
-                    **solver_kwargs,
-                )
-                for i in range(n_patterns)
-            ]
-        else:
-            # All patterns have been indexed with the same PC, so we use
-            # this during refinement of all patterns
-            dc = _get_direction_cosines_for_single_pc_from_detector(detector).reshape(
-                (n_pixels, 3)
+    if new_pc:
+        # Patterns have been indexed with varying PCs, so we
+        # re-compute the PC for every pattern during refinement
+        pcx = detector.pcx.astype(float).reshape(nav_shape)
+        pcy = detector.pcy.astype(float).reshape(nav_shape)
+        pcz = detector.pcz.astype(float).reshape(nav_shape)
+        refined_parameters = [
+            dask.delayed(_refine_orientation_solver)(
+                pattern=patterns[idx],
+                rotation=euler[idx],
+                pcx=pcx[idx],
+                pcy=pcy[idx],
+                pcz=pcz[idx],
+                nrows=nrows,
+                ncols=ncols,
+                tilt=detector.tilt,
+                azimuthal=detector.azimuthal,
+                sample_tilt=detector.sample_tilt,
+                **solver_kwargs,
             )
-            refined_parameters = [
-                dask.delayed(_refine_orientation_solver)(
-                    pattern=patterns[i],
-                    rotation=euler[i],
-                    direction_cosines=dc,
-                    **solver_kwargs,
-                )
-                for i in range(n_patterns)
-            ]
+            for idx in np.ndindex(nav_shape)
+        ]
+    else:
+        # All patterns have been indexed with the same PC, so we use
+        # this during refinement of all patterns
+        dc = _get_direction_cosines_for_single_pc_from_detector(detector).reshape(
+            (n_pixels, 3)
+        )
+        refined_parameters = [
+            dask.delayed(_refine_orientation_solver)(
+                pattern=patterns[idx],
+                rotation=euler[idx],
+                direction_cosines=dc,
+                **solver_kwargs,
+            )
+            for idx in np.ndindex(nav_shape)
+        ]
 
     if compute:
         with ProgressBar():
             print(f"Refining {n_patterns} orientations:", file=sys.stdout)
             results = dask.compute(*refined_parameters)
-            results = np.array(results)
+            results = np.array(results)  # (n, score, phi1, Phi, phi2)
             output = CrystalMap(
                 rotations=Rotation.from_euler(results[:, 1:]),
                 phase_id=np.zeros(n_patterns),
@@ -167,6 +158,7 @@ def _refine_orientation(
             )
     else:
         output = refined_parameters
+    gc.collect()
 
     return output
 
@@ -218,6 +210,7 @@ def _get_optimization_method_with_kwargs(
     method
         Name of a supported SciPy optimization method. See `method`
         parameter in :meth:`kikuchipy.signals.EBSD.refine_orientation`.
+        Default is "minimize".
     method_kwargs : dict, optional
         Keyword arguments to pass to function.
 
@@ -228,8 +221,6 @@ def _get_optimization_method_with_kwargs(
     method_kwargs
         Keyword arguments to pass to function.
     """
-    if method is None:
-        method = "minimize"
     if method == "minimize" and method_kwargs is None:
         method_kwargs = {"method": "Nelder-Mead"}
     elif method_kwargs is None:

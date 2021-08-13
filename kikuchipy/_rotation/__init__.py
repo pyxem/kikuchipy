@@ -37,16 +37,16 @@ import numpy as np
 
 
 @nb.jit("float64[:](float64, float64, float64)", nogil=True, nopython=True)
-def _rotation_from_euler(phi1: float, Phi: float, phi2: float) -> np.ndarray:
-    """Convert three Euler angles (phi1, Phi, phi2) to a unit
+def _rotation_from_euler(alpha: float, beta: float, gamma: float) -> np.ndarray:
+    """Convert three Euler angles (alpha, beta, gamma) to a unit
     quaternion.
 
     Taken from :meth:`orix.quaternion.Rotation.from_euler`.
 
     Parameters
     ----------
-    phi1, Phi, phi2
-        Euler angles in radians.
+    alpha, beta, gamma
+        Euler angles in the Bunge convention in radians.
 
     Returns
     -------
@@ -58,10 +58,10 @@ def _rotation_from_euler(phi1: float, Phi: float, phi2: float) -> np.ndarray:
     This function is optimized with Numba, so care must be taken with
     array shapes and data types.
     """
-    sigma = 0.5 * np.add(phi1, phi2)
-    delta = 0.5 * np.subtract(phi1, phi2)
-    c = np.cos(Phi / 2)
-    s = np.sin(Phi / 2)
+    sigma = 0.5 * np.add(alpha, gamma)
+    delta = 0.5 * np.subtract(alpha, gamma)
+    c = np.cos(beta / 2)
+    s = np.sin(beta / 2)
 
     rotation = np.zeros(4)
     rotation[0] = c * np.cos(sigma)
