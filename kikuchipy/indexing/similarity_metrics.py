@@ -533,7 +533,7 @@ _SIMILARITY_METRICS = {"ncc": ncc, "ndp": ndp}
 @nb.jit("float64(float32[:, :], float32[:, :])", cache=True, nogil=True, nopython=True)
 def _ncc_single_patterns_2d_float32(exp: np.ndarray, sim: np.ndarray) -> float:
     """Return the normalized cross-correlation (NCC) coefficient
-    between two patterns.
+    between two 2D patterns.
 
     Parameters
     ----------
@@ -557,7 +557,7 @@ def _ncc_single_patterns_2d_float32(exp: np.ndarray, sim: np.ndarray) -> float:
 @nb.jit("float64(float32[:], float32[:])", cache=True, nogil=True, nopython=True)
 def _ncc_single_patterns_1d_float32(exp: np.ndarray, sim: np.ndarray) -> float:
     """Return the normalized cross-correlation (NCC) coefficient
-    between two patterns.
+    between two 1D patterns.
 
     Parameters
     ----------

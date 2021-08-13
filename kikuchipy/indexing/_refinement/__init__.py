@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Helper functions and classes for managing kikuchipy.
+"""Private tools for refinement of crystal orientations and projection
+centers by optimizing the similarity between experimental and simulated
+patterns.
 
 This module and documentation is only relevant for kikuchipy developers,
 not for users.
@@ -27,4 +29,8 @@ not for users.
     warning.
 """
 
-from kikuchipy._util._util import deprecated
+from kikuchipy.indexing._refinement._refinement import (
+    _refine_orientation,
+    _refine_projection_center,
+    _refine_orientation_projection_center,
+)

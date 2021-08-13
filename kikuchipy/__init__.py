@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+# List of public modules
 # Import order must not be changed
 from kikuchipy import crystallography
 from kikuchipy import detectors

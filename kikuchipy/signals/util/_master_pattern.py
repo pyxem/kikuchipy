@@ -27,6 +27,7 @@ import numpy as np
 
 from kikuchipy.pattern._pattern import _rescale
 from kikuchipy.projections.lambert_projection import _vector2xy
+from kikuchipy._rotation import _rotate_vector
 
 
 # Reusable constants
@@ -124,8 +125,8 @@ def _get_direction_cosines_for_single_pc(
     ypc = nrows * (0.5 - pcy)
     zpc = nrows * pcz
 
-    det_x = -((-xpc - (1 - ncols) * 0.5) - ncols_array)
-    det_y = (ypc - (1 - nrows) * 0.5) - nrows_array
+    det_x = xpc + (1 - ncols) * 0.5 + ncols_array
+    det_y = ypc - (1 - nrows) * 0.5 - nrows_array
 
     ca, sa, cw, sw = _get_cosine_sine_of_alpha_and_azimuthal(
         sample_tilt=sample_tilt,
@@ -230,7 +231,6 @@ def _get_direction_cosines_for_multiple_pcs(
         ypc = nrows * (0.5 - pcy[i])
         zpc = nrows * pcz[i]
 
-        #        det_x = -((-xpc - det_x_factor) - ncols_array)
         det_x = xpc + det_x_factor + ncols_array
         det_y = ypc - det_y_factor - nrows_array
 
@@ -409,52 +409,6 @@ def _project_single_pattern_from_master_pattern(
         pattern = _rescale(pattern, np.min(pattern), np.max(pattern), out_min, out_max)
 
     return pattern.astype(dtype_out)
-
-
-@nb.jit("float64[:, :](float64[:], float64[:, :])", nogil=True, nopython=True)
-def _rotate_vector(rotation: np.ndarray, vector: np.ndarray) -> np.ndarray:
-    """Rotation of vector(s) by a quaternion.
-
-    Taken from :meth:`orix.quaternion.Quaternion.__mul__`.
-
-    Parameters
-    ----------
-    rotation
-        Quaternion rotation as an array of shape (4,) and data type
-        64-bit floats.
-    vector
-        Vector(s) as an array of shape (n, 3) and data type 64-bit
-        floats.
-
-    Returns
-    -------
-    rotated_vectors
-
-    Notes
-    -----
-    This function is optimized with Numba, so care must be taken with
-    array shapes and data types.
-    """
-    # TODO: Implement this and similar functions in orix
-    a, b, c, d = rotation
-    x = vector[:, 0]
-    y = vector[:, 1]
-    z = vector[:, 2]
-    rotated_vector = np.zeros(vector.shape)
-    aa = a ** 2
-    bb = b ** 2
-    cc = c ** 2
-    dd = d ** 2
-    ac = a * c
-    ab = a * b
-    ad = a * d
-    bc = b * c
-    bd = b * d
-    cd = c * d
-    rotated_vector[:, 0] = (aa + bb - cc - dd) * x + 2 * ((ac + bd) * z + (bc - ad) * y)
-    rotated_vector[:, 1] = (aa - bb + cc - dd) * y + 2 * ((ad + bc) * x + (cd - ab) * z)
-    rotated_vector[:, 2] = (aa - bb - cc + dd) * z + 2 * ((ab + cd) * y + (bd - ac) * x)
-    return rotated_vector
 
 
 @nb.jit(
