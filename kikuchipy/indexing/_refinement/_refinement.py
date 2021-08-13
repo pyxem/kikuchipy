@@ -35,7 +35,7 @@ import scipy.optimize
 from kikuchipy.indexing._refinement._solvers import _refine_orientation_solver
 from kikuchipy.pattern import rescale_intensity
 from kikuchipy.signals.util._master_pattern import (
-    _get_direction_cosines_for_multiple_pcs,
+    _get_direction_cosines_for_single_pc_from_detector,
 )
 
 
@@ -63,20 +63,13 @@ def _refine_orientation(
         rot = xmap.rotations
     euler = rot.to_euler()
 
-    # Detector parameters and other shapes
+    # Set the number of patterns and pattern rows, columns and pixels
     n_patterns = xmap.size
     n_pixels = detector.size
-    sig_shape = detector.shape
-    pcx = detector.pcx
-    pcy = detector.pcy
-    pcz = detector.pcz
-    if pcx.size == 1 and n_patterns > 1:
-        pcx = np.full(n_patterns, pcx)
-        pcy = np.full(n_patterns, pcy)
-        pcz = np.full(n_patterns, pcz)
+    nrows, ncols = detector.shape
 
     # Do we have to flatten pattern array?
-    patterns = patterns.reshape((-1,) + sig_shape)
+    patterns = patterns.reshape((-1, nrows, ncols))
     #    patterns = patterns.reshape((-1, n_pixels))
 
     # Determine whether pattern intensities must be rescaled
@@ -97,40 +90,66 @@ def _refine_orientation(
     else:
         mask = ~mask
 
-    # Prepare parameters which are constant during optimization
+    # Prepare parameters for the objective function which are constant
+    # during optimization
     fixed_parameters = _check_master_pattern_and_return_data(master_pattern, energy)
     fixed_parameters += (mask,)
     fixed_parameters += (n_pixels,)
     fixed_parameters = dask.delayed(fixed_parameters)
 
+    # Set keyword arguments passed to the refinement solver which are
+    # independent of the PC
+    solver_kwargs = dict(
+        rescale=rescale,
+        method=method,
+        method_kwargs=method_kwargs,
+        fixed_parameters=fixed_parameters,
+        trust_region=trust_region,
+    )
+
+    # Determine whether a new PC must be re-computed for every pattern
+    new_pc = np.prod(detector.navigation_shape) != 1 and n_patterns > 1
+
     if isinstance(patterns, da.Array):
         refined_parameters = None
     else:  # NumPy array
-        # TODO: Get direction cosines per pattern, not for all
-        #  beforehand
-        direction_cosines = _get_direction_cosines_for_multiple_pcs(
-            pcx=pcx,
-            pcy=pcy,
-            pcz=pcz,
-            nrows=sig_shape[0],
-            ncols=sig_shape[1],
-            tilt=detector.tilt,
-            azimuthal=detector.azimuthal,
-            sample_tilt=detector.sample_tilt,
-        )
-        refined_parameters = [
-            dask.delayed(_refine_orientation_solver)(
-                pattern=patterns[i],
-                rescale=rescale,
-                rotation=euler[i],
-                direction_cosines=direction_cosines[i],
-                method=method,
-                method_kwargs=method_kwargs,
-                fixed_parameters=fixed_parameters,
-                trust_region=trust_region,
+        if new_pc:
+            # Patterns have been indexed with varying PCs, so we
+            # re-compute the PC for every pattern during refinement
+            pcx = detector.pcx.astype(float)
+            pcy = detector.pcy.astype(float)
+            pcz = detector.pcz.astype(float)
+            refined_parameters = [
+                dask.delayed(_refine_orientation_solver)(
+                    pattern=patterns[i],
+                    rotation=euler[i],
+                    pcx=pcx[i],
+                    pcy=pcy[i],
+                    pcz=pcz[i],
+                    nrows=nrows,
+                    ncols=ncols,
+                    tilt=detector.tilt,
+                    azimuthal=detector.azimuthal,
+                    sample_tilt=detector.sample_tilt,
+                    **solver_kwargs,
+                )
+                for i in range(n_patterns)
+            ]
+        else:
+            # All patterns have been indexed with the same PC, so we use
+            # this during refinement of all patterns
+            dc = _get_direction_cosines_for_single_pc_from_detector(detector).reshape(
+                (n_pixels, 3)
             )
-            for i in range(n_patterns)
-        ]
+            refined_parameters = [
+                dask.delayed(_refine_orientation_solver)(
+                    pattern=patterns[i],
+                    rotation=euler[i],
+                    direction_cosines=dc,
+                    **solver_kwargs,
+                )
+                for i in range(n_patterns)
+            ]
 
     if compute:
         with ProgressBar():

@@ -92,7 +92,7 @@ def _rotate_vector(rotation: np.ndarray, vector: np.ndarray) -> np.ndarray:
 
     Returns
     -------
-    rotated_vectors
+    rotated_vector
 
     Notes
     -----

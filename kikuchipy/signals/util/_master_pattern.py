@@ -96,11 +96,11 @@ def _get_direction_cosines_for_single_pc(
     ncols
         Number of detector columns.
     tilt
-        Detector tilt from horizontal in radians.
+        Detector tilt from horizontal in degrees.
     azimuthal
-        Sample tilt about the sample RD axis in radians.
+        Sample tilt about the sample RD axis in degrees.
     sample_tilt
-        Sample tilt from horizontal in radians.
+        Sample tilt from horizontal in degrees.
 
     Returns
     -------
@@ -139,12 +139,12 @@ def _get_direction_cosines_for_single_pc(
 
     r_g_array = np.zeros((nrows, ncols, 3))
 
-    for i in nb.prange(nrows):
-        ii = nrows - i - 1
-        for j in nb.prange(ncols):
-            r_g_array[i, j, 0] = det_y[ii] * ca + sa * Ls[j]
-            r_g_array[i, j, 1] = Lc[j]
-            r_g_array[i, j, 2] = -sa * det_y[ii] + ca * Ls[j]
+    for row in nb.prange(nrows):
+        rr = nrows - row - 1
+        for col in nb.prange(ncols):
+            r_g_array[row, col, 0] = det_y[rr] * ca + sa * Ls[col]
+            r_g_array[row, col, 1] = Lc[col]
+            r_g_array[row, col, 2] = -sa * det_y[rr] + ca * Ls[col]
 
     # Normalize
     norm = np.sqrt(np.sum(np.square(r_g_array), axis=-1))
@@ -189,11 +189,11 @@ def _get_direction_cosines_for_multiple_pcs(
     ncols
         Number of detector columns.
     tilt
-        Detector tilt from horizontal in radians.
+        Detector tilt from horizontal in degrees.
     azimuthal
-        Sample tilt about the sample RD axis in radians.
+        Sample tilt about the sample RD axis in degrees.
     sample_tilt
-        Sample tilt from horizontal in radians.
+        Sample tilt from horizontal in degrees.
 
     Returns
     -------
@@ -225,11 +225,11 @@ def _get_direction_cosines_for_multiple_pcs(
     n_pcs = pcx.size
     r_g_array = np.zeros((n_pcs, nrows, ncols, 3))
 
-    for i in nb.prange(n_pcs):
+    for pci in nb.prange(n_pcs):
         # Bruker to EMsoft's v5 PC convention
-        xpc = ncols * (0.5 - pcx[i])
-        ypc = nrows * (0.5 - pcy[i])
-        zpc = nrows * pcz[i]
+        xpc = ncols * (0.5 - pcx[pci])
+        ypc = nrows * (0.5 - pcy[pci])
+        zpc = nrows * pcz[pci]
 
         det_x = xpc + det_x_factor + ncols_array
         det_y = ypc - det_y_factor - nrows_array
@@ -237,12 +237,12 @@ def _get_direction_cosines_for_multiple_pcs(
         Ls = -sw * det_x + zpc * cw
         Lc = cw * det_x + zpc * sw
 
-        for j in nb.prange(nrows):
-            jj = nrows - j - 1
-            for k in nb.prange(ncols):
-                r_g_array[i, j, k, 0] = det_y[jj] * ca + sa * Ls[k]
-                r_g_array[i, j, k, 1] = Lc[k]
-                r_g_array[i, j, k, 2] = -sa * det_y[jj] + ca * Ls[k]
+        for row in nb.prange(nrows):
+            rr = nrows - row - 1
+            for col in nb.prange(ncols):
+                r_g_array[pci, row, col, 0] = det_y[rr] * ca + sa * Ls[col]
+                r_g_array[pci, row, col, 1] = Lc[col]
+                r_g_array[pci, row, col, 2] = -sa * det_y[rr] + ca * Ls[col]
 
     # Normalize
     norm = np.sqrt(np.sum(np.square(r_g_array), axis=-1))
@@ -481,6 +481,7 @@ def _get_lambert_interpolation_parameters(
     dj = np.zeros(n)
     dim = np.zeros(n)
     djm = np.zeros(n)
+    # Use loop to avoid numpy.where() for the conditionals
     for ii in nb.prange(n):
         i_this = i[ii]
         j_this = j[ii]

@@ -56,7 +56,6 @@ def _refine_orientation_objective_function(x: np.ndarray, *args: tuple) -> float
     -------
         Objective function value (normalized cross-correlation score).
     """
-    experimental = args[0]
     simulated_pattern = _project_single_pattern_from_master_pattern(
         rotation=_rotation_from_euler(phi1=x[0], Phi=x[1], phi2=x[2]),
         direction_cosines=args[1],
@@ -72,8 +71,8 @@ def _refine_orientation_objective_function(x: np.ndarray, *args: tuple) -> float
         dtype_out=np.float32,
     )
     simulated_pattern = simulated_pattern * args[7]  # Multiply by mask
+    experimental = args[0]
     #    score = _ncc_single_patterns_1d_float32(exp=args[0], sim=simulated_pattern)
-
     simulated_pattern = simulated_pattern.reshape(experimental.shape)
     score = _ncc_single_patterns_2d_float32(exp=experimental, sim=simulated_pattern)
     return 1 - score

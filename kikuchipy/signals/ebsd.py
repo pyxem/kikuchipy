@@ -1064,10 +1064,9 @@ class EBSD(CommonImage, Signal2D):
             which master pattern energy to use during projection of
             simulated patterns.
         mask
-            Boolean mask of signal shape to be applied to both the
-            experimental and simulated patterns before comparison.
-            Pixels set to `True` are masked away. If not given, all
-            pixels are compared.
+            Boolean mask of signal shape to be applied to the simulated
+            pattern before comparison. Pixels set to `True` are masked
+            away. If not given, all pixels are compared.
         method : str, optional
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
@@ -1158,10 +1157,9 @@ class EBSD(CommonImage, Signal2D):
             which master pattern energy to use during projection of
             simulated patterns.
         mask
-            Boolean mask of signal shape to be applied to both the
-            experimental and simulated patterns before comparison.
-            Pixels set to `True` are masked away. If not given, all
-            pixels are compared.
+            Boolean mask of signal shape to be applied to the simulated
+            pattern before comparison. Pixels set to `True` are masked
+            away. If not given, all pixels are compared.
         method : str, optional
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
@@ -1256,10 +1254,9 @@ class EBSD(CommonImage, Signal2D):
             which master pattern energy to use during projection of
             simulated patterns.
         mask
-            Boolean mask of signal shape to be applied to both the
-            experimental and simulated patterns before comparison.
-            Pixels set to `True` are masked away. If not given, all
-            pixels are compared.
+            Boolean mask of signal shape to be applied to the simulated
+            pattern before comparison. Pixels set to `True` are masked
+            away. If not given, all pixels are compared.
         method : str, optional
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",

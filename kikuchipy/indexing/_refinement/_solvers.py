@@ -21,7 +21,7 @@ centers by optimizing the similarity between experimental and simulated
 patterns.
 """
 
-from typing import Callable, Tuple
+from typing import Callable, Optional, Tuple
 
 import numpy as np
 
@@ -29,17 +29,26 @@ from kikuchipy.indexing._refinement._objective_functions import (
     _refine_orientation_objective_function,
 )
 from kikuchipy.pattern._pattern import _rescale
+from kikuchipy.signals.util._master_pattern import _get_direction_cosines_for_single_pc
 
 
 def _refine_orientation_solver(
     pattern: np.ndarray,
     rescale: bool,
     rotation: np.ndarray,
-    direction_cosines: np.ndarray,
     method: Callable,
     method_kwargs: dict,
     fixed_parameters: tuple,
     trust_region: list,
+    direction_cosines: Optional[np.ndarray] = None,
+    pcx: Optional[float] = None,
+    pcy: Optional[float] = None,
+    pcz: Optional[float] = None,
+    nrows: Optional[int] = None,
+    ncols: Optional[int] = None,
+    tilt: Optional[float] = None,
+    azimuthal: Optional[float] = None,
+    sample_tilt: Optional[float] = None,
 ) -> Tuple[float, float, float, float]:
     """Maximize the similarity between an experimental pattern and a
     re-projected simulated pattern by optimizing the orientation (Euler
@@ -54,9 +63,6 @@ def _refine_orientation_solver(
         type 32-bit floats.
     rotation
         Euler angles (phi1, Phi, phi2) in radians.
-    direction_cosines
-        Vector array of shape (nrows, ncols, 3) and data type 32-bit
-        floats.
     method
         A supported :mod:`scipy.optimize` function. See `method`
         parameter in :meth:`kikuchipy.signals.EBSD.refine_orientation`.
@@ -70,6 +76,34 @@ def _refine_orientation_solver(
         orientation for the three Euler angles. Only used for
         optimization methods that support bounds (excluding
         "Powell").
+    direction_cosines
+        Vector array of shape (n pixels, 3) and data type 32-bit floats.
+        If not given, `pcx`, `pcy`, `pcz`, `nrows`, `ncols`, `tilt`,
+        `azimuthal`, and `sample_tilt` must be passed.
+    pcx
+        Projection center (PC) x coordinate. Must be passed if
+        `direction_cosines` is not given.
+    pcy
+        PC y coordinate. Must be passed if `direction_cosines` is not
+        given.
+    pcz
+        PC z coordinate. Must be passed if `direction_cosines` is not
+        given.
+    nrows
+        Number of detector rows. Must be passed if `direction_cosines`
+        is not given.
+    ncols
+        Number of detector columns. Must be passed if
+        `direction_cosines` is not given.
+    tilt
+        Detector tilt from horizontal in degrees. Must be passed if
+        `direction_cosines` is not given.
+    azimuthal
+        Sample tilt about the sample RD axis in degrees. Must be passed
+        if `direction_cosines` is not given.
+    sample_tilt
+        Sample tilt from horizontal in degrees. Must be passed if
+        `direction_cosines` is not given.
 
     Returns
     -------
@@ -84,7 +118,19 @@ def _refine_orientation_solver(
             pattern, imin=np.min(pattern), imax=np.max(pattern), omin=-1, omax=1
         )
 
-    direction_cosines = direction_cosines.reshape((-1, 3))
+    if direction_cosines is None:
+        direction_cosines = (
+            _get_direction_cosines_for_single_pc(
+                pcx=pcx,
+                pcy=pcy,
+                pcz=pcz,
+                nrows=nrows,
+                ncols=ncols,
+                tilt=tilt,
+                azimuthal=azimuthal,
+                sample_tilt=sample_tilt,
+            ).reshape((nrows * ncols, 3)),
+        )
 
     params = (pattern,) + (direction_cosines,) + fixed_parameters
     method_name = method.__name__
