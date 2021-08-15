@@ -96,7 +96,10 @@ def dummy_signal():
         dtype=np.uint8
     ).reshape((3, 3, 3, 3))
     # fmt: on
-    yield kp.signals.EBSD(dummy_array)
+    s = kp.signals.EBSD(dummy_array)
+    s.axes_manager.navigation_axes[1].name = "x"
+    s.axes_manager.navigation_axes[0].name = "y"
+    yield s
 
 
 @pytest.fixture

@@ -88,16 +88,10 @@ def _refine_orientation(
         trust_region = np.ones(3)
     solver_kwargs["trust_region"] = dask.delayed(np.deg2rad(trust_region))
 
-    # Signal mask
-    if mask is None:
-        mask = 1
-    else:
-        mask = ~mask
-
     # Prepare parameters for the objective function which are constant
     # during optimization
-    fixed_parameters = _check_master_pattern_and_return_data(master_pattern, energy)
-    fixed_parameters += (mask,)
+    fixed_parameters = _check_master_pattern_and_get_data(master_pattern, energy)
+    fixed_parameters += (_prepare_mask(mask),)
     fixed_parameters += (n_pixels,)
     solver_kwargs["fixed_parameters"] = dask.delayed(fixed_parameters)
 
@@ -229,7 +223,7 @@ def _get_optimization_method_with_kwargs(
     return method, method_kwargs
 
 
-def _check_master_pattern_and_return_data(
+def _check_master_pattern_and_get_data(
     master_pattern, energy: Union[int, float]
 ) -> Tuple[np.ndarray, np.ndarray, int, int, float]:
     """Check whether the master pattern is suitable for projection, and
@@ -237,7 +231,7 @@ def _check_master_pattern_and_return_data(
 
     Parameters
     ----------
-    master_pattern
+    master_pattern : kikuchipy.signals.EBSDMasterPattern
       Master pattern in the square Lambert projection.
     energy
         Accelerating voltage of the electron beam in kV specifying which
@@ -266,3 +260,11 @@ def _check_master_pattern_and_return_data(
         master_north = rescale_intensity(master_north, dtype_out=dtype_desired)
         master_south = rescale_intensity(master_south, dtype_out=dtype_desired)
     return master_north, master_south, npx, npy, scale
+
+
+def _prepare_mask(mask: np.ndarray) -> np.ndarray:
+    if mask is None:
+        mask = 1
+    else:
+        mask = ~mask.ravel()
+    return mask

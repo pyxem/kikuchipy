@@ -26,8 +26,9 @@ from kikuchipy.indexing.similarity_metrics import (
     SimilarityMetric,
     MetricScope,
     FlatSimilarityMetric,
-    _SIMILARITY_METRICS,
     _get_number_of_simulated,
+    _ncc_single_patterns_2d_float32,
+    _SIMILARITY_METRICS,
     _zncc_einsum,
 )
 
@@ -274,3 +275,12 @@ class TestNDP:
 
         # many to many
         assert pytest.approx(ndp_metric(expt_da, sim_da).compute()[1, 0, 1]) == 1
+
+
+class TestNumbaAcceleratedMetrics:
+    def test_ncc_single_patterns_2d_float32(self):
+        r = _ncc_single_patterns_2d_float32.py_func(
+            exp=np.linspace(0, 0.5, 100, dtype=np.float32).reshape((10, 10)),
+            sim=np.linspace(0.5, 1, 100, dtype=np.float32).reshape((10, 10)),
+        )
+        assert r == 1

@@ -1830,10 +1830,7 @@ class EBSD(CommonImage, Signal2D):
             new._xmap = self.xmap.deepcopy()
         else:
             new._xmap = copy.deepcopy(self.xmap)
-        if self.detector is not None:
-            new._detector = self.detector.deepcopy()
-        else:
-            new._detector = copy.deepcopy(self.detector)
+        new._detector = self.detector.deepcopy()
         return new
 
     def save(

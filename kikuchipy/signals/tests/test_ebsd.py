@@ -18,6 +18,7 @@
 
 import os
 
+import dask
 import dask.array as da
 from hyperspy.utils.roi import RectangularROI
 import matplotlib
@@ -1355,7 +1356,7 @@ class TestEBSDRefinement:
         "ebsd_with_axes_and_random_data, detector",
         [
             (((2,), (2, 3), True, np.float32), ((2,), (2, 3))),
-            (((3, 2), (2, 3), False, np.float32), ((1,), (2, 3))),
+            (((3, 2), (2, 3), False, np.uint8), ((1,), (2, 3))),
         ],
         indirect=["ebsd_with_axes_and_random_data", "detector"],
     )
@@ -1368,6 +1369,7 @@ class TestEBSDRefinement:
         s = ebsd_with_axes_and_random_data
         xmap = get_single_phase_xmap(
             nav_shape=s.axes_manager.navigation_shape[::-1],
+            rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
         xmap.phases[0].name = self.mp.phase.name
@@ -1376,10 +1378,34 @@ class TestEBSDRefinement:
             master_pattern=self.mp,
             energy=20,
             detector=detector,
-            method_kwargs=dict(options=dict(maxiter=1)),
+            method_kwargs=dict(options=dict(maxiter=10)),
         )
         assert xmap_refined.shape == xmap.shape
-        assert not np.allclose(xmap_refined.rotations.data, xmap.rotations[:, 0].data)
+        assert not np.allclose(xmap_refined.rotations.data, xmap.rotations.data)
+
+    def test_refine_orientation_not_compute(
+        self,
+        dummy_signal,
+        get_single_phase_xmap,
+    ):
+        s = dummy_signal
+        xmap = get_single_phase_xmap(
+            nav_shape=s.axes_manager.navigation_shape[::-1],
+            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
+        )
+        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        xmap.phases[0].name = self.mp.phase.name
+        xmap_refined = s.refine_orientation(
+            xmap=xmap,
+            master_pattern=self.mp,
+            energy=20,
+            detector=detector,
+            method_kwargs=dict(options=dict(maxiter=10)),
+            compute=False,
+        )
+        assert isinstance(xmap_refined, list)
+        assert dask.is_dask_collection(xmap_refined[0])
+        assert len(xmap_refined) == 9
 
     @pytest.mark.parametrize(
         "method, method_kwargs",
@@ -1387,6 +1413,10 @@ class TestEBSDRefinement:
             (
                 "basinhopping",
                 dict(minimizer_kwargs=dict(method="Nelder-Mead"), niter=1),
+            ),
+            (
+                "basinhopping",
+                None,
             ),
             ("differential_evolution", dict(maxiter=1)),
             ("dual_annealing", dict(maxiter=1)),
@@ -1418,8 +1448,53 @@ class TestEBSDRefinement:
         assert xmap_refined.shape == xmap.shape
         assert not np.allclose(xmap_refined.rotations.data, xmap.rotations[:, 0].data)
 
-    def test_refine_orientation_mask(self):
-        pass
+    def test_refine_raises(self, dummy_signal, get_single_phase_xmap):
+        s = dummy_signal
+        xmap = get_single_phase_xmap(
+            nav_shape=s.axes_manager.navigation_shape[::-1],
+            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
+        )
+        xmap.phases[0].name = self.mp.phase.name
+        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        refine_kwargs = dict(master_pattern=self.mp, energy=20, detector=detector)
+
+        with pytest.raises(ValueError, match="Method a not supported"):
+            _ = s.refine_orientation(xmap=xmap, method="a", **refine_kwargs)
+
+        with pytest.raises(ValueError, match="Mask and signal must have the same "):
+            _ = s.refine_orientation(
+                xmap=xmap, mask=np.zeros((10, 20)), **refine_kwargs
+            )
+
+        xmap.phases.add(Phase(name="b", point_group="m-3m"))
+        xmap._phase_id[0] = 1
+        with pytest.raises(ValueError, match="Crystal map must have exactly one phase"):
+            _ = s.refine_orientation(xmap=xmap, **refine_kwargs)
+
+    def test_refine_mask(self, dummy_signal, get_single_phase_xmap):
+        s = dummy_signal
+        xmap = get_single_phase_xmap(
+            nav_shape=s.axes_manager.navigation_shape[::-1],
+            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
+        )
+        xmap.phases[0].name = self.mp.phase.name
+        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        refine_kwargs = dict(
+            xmap=xmap,
+            master_pattern=self.mp,
+            energy=20,
+            detector=detector,
+            method="minimize",
+            method_kwargs=dict(method="Nelder-Mead", options=dict(maxiter=10)),
+        )
+        xmap_refined_no_mask = s.refine_orientation(**refine_kwargs)
+        mask = np.zeros(s.axes_manager.signal_shape[::-1], dtype=bool)
+        mask[0, 0] = 1  # Mask away upper left pixel
+        xmap_refined_mask = s.refine_orientation(mask=mask, **refine_kwargs)
+
+        assert not np.allclose(
+            xmap_refined_no_mask.rotations.data, xmap_refined_mask.rotations.data
+        )
 
     def test_refine_projection_center_local(self):
         pass
