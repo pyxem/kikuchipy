@@ -1070,15 +1070,19 @@ class EBSD(CommonImage, Signal2D):
         method : str, optional
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
-            and "basinhopping". Default is "minimize".
+            "basinhopping", and "shgo". Default is "minimize", which
+            performs local optimization with the Nelder-Mead method.
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
-            `method`.
+            `method`. For example, to perform refinement with the
+            modified Powell algorithm, pass `method="minimize"` and
+            `method_kwargs=dict(method="Powell")`.
         trust_region
-            List of angular deviation in degrees from the initial
-            orientation for the three Euler angles. Only used for
-            optimization methods that support bounds (excluding
-            "Powell"). Default is [1, 1, 1].
+            List of +/- angular deviation in degrees as bound
+            constraints on the three Euler angles. If not given and
+            `method` requires bounds, they are set to [1, 1, 1]. If
+            given, `method` is assumed to support bounds and they are
+            passed to `method`.
         compute
             Whether to refine now (True) or later (False). Default is
             True. See :meth:`~dask.array.Array.compute` for more
@@ -1092,7 +1096,7 @@ class EBSD(CommonImage, Signal2D):
             `compute` is False, a list of :class:`~dask.delayed.Delayed`
             instances, one per experimental pattern, is returned, to be
             computed later. See
-            :func:`~kikuchipy.signals.util.compute_refine_orientation_results`.
+            :func:`~kikuchipy.indexing.compute_refine_orientation_results`.
             One delayed instance has the optimized score and the three
             Euler angles in radians in element 0, 1, 2, and 3,
             respectively.
@@ -1103,9 +1107,7 @@ class EBSD(CommonImage, Signal2D):
         refine_projection_center
         refine_orientation_projection_center
         """
-        self._check_refinement_parameters(
-            xmap=xmap, detector=detector, method=method, mask=mask
-        )
+        self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
         return _refine_orientation(
             xmap=xmap,
             detector=detector,
@@ -1167,15 +1169,18 @@ class EBSD(CommonImage, Signal2D):
         method : str, optional
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
-            and "basinhopping". Default is "minimize".
+            "basinhopping", and "shgo". Default is "minimize".
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
-            `method`.
+            `method`. For example, to perform refinement with the
+            modified Powell algorithm, pass `method="minimize"` and
+            `method_kwargs=dict(method="Powell")`.
         trust_region
-            List of percentage deviations from the initial PC
-            parameters in the Bruker convention. The parameter range is
-            [0, 1]. Only used for optimization methods that support
-            bounds (excluding "Powell"). Default is [0.05, 0.05, 0.05].
+            List of +/- percentage deviations as bound constraints on
+            the PC parameters in the Bruker convention. The parameter
+            range is [0, 1]. If not given and `method` requires bounds,
+            they are set to [0.05, 0.05, 0.05]. If given, `method` is
+            assumed to support bounds and they are passed to `method`.
         compute
             Whether to refine now (True) or later (False). Default is
             True. See :meth:`~dask.array.Array.compute` for more
@@ -1183,15 +1188,15 @@ class EBSD(CommonImage, Signal2D):
 
         Returns
         -------
-        ~orix.crystal_map.CrystalMap or ~dask.delayed.Delayed
-            New crystal map with new similarity metrics stored in the
-            "scores" property and a new EBSD detector instance with the
-            refined PCs if `compute` is True. If `compute` is False, a
-            :class:`~dask.delayed.Delayed` list instance `results` is
-            returned where the optimized similarity metric and PC
-            parameters (PCx, PCy, PCz) for the flattened map index `i`
-            are accessed as `results[i][0]`, `results[i][1]`,
-            `results[i][2]`, and `results[i][3]`, respectively.
+        numpy.ndarray and ~kikuchipy.detectors.EBSDDetector or list of ~dask.delayed.Delayed
+            New similarity metrics and a new EBSD detector instance with
+            the refined PCs if `compute` is True. If `compute` is False,
+            a list of :class:`~dask.delayed.Delayed` instances, one per
+            experimental pattern, is returned, to be computed later. See
+            :func:`~kikuchipy.indexing.compute_refine_projection_center_results`.
+            One delayed instance has the optimized score and the three
+            PC parameters in the Bruker convention in element 0, 1, 2,
+            and 3, respectively.
 
         See Also
         --------
@@ -1199,15 +1204,13 @@ class EBSD(CommonImage, Signal2D):
         refine_orientation
         refine_orientation_projection_center
         """
-        self._check_refinement_parameters(
-            xmap=xmap, detector=detector, method=method, mask=mask
-        )
+        self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
         return _refine_projection_center(
             xmap=xmap,
-            master_pattern=master_pattern,
-            signal=self,
             detector=detector,
+            master_pattern=master_pattern,
             energy=energy,
+            patterns=self.data,
             mask=mask,
             method=method,
             method_kwargs=method_kwargs,
@@ -1265,17 +1268,20 @@ class EBSD(CommonImage, Signal2D):
         method : str, optional
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
-            and "basinhopping". Default is "minimize".
+            "basinhopping", and "shgo". Default is "minimize".
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
-            `method`.
+            `method`. For example, to perform refinement with the
+            modified Powell algorithm, pass `method="minimize"` and
+            `method_kwargs=dict(method="Powell")`.
         trust_region
-            List of three angular deviations in degrees from the initial
-            orientation for the three Euler angles and three percentage
-            deviations from the initial PC parameters in the Bruker
-            convention. Only used for optimization methods that support
-            bounds (excluding "Powell"). Default is [1, 1, 1, 0.05,
-            0.05, 0.05].
+            List of +/- angular deviations in degrees as bound
+            constraints on the three Euler angles and +/- percentage
+            deviations as bound constraints on the PC parameters in the
+            Bruker convention. The latter parameter range is [0, 1]. If
+            not given and `method` requires bounds, they are set to
+            [1, 1, 1, 0.05, 0.05, 0.05]. If given, `method` is assumed
+            to support bounds and they are passed to `method`.
         compute
             Whether to refine now (True) or later (False). Default is
             True. See :meth:`~dask.array.Array.compute` for more
@@ -1310,9 +1316,7 @@ class EBSD(CommonImage, Signal2D):
         similarity is incorrect. It is left to the user to ensure that
         the output is reasonable.
         """
-        self._check_refinement_parameters(
-            xmap=xmap, detector=detector, method=method, mask=mask
-        )
+        self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
         return _refine_orientation_projection_center(
             xmap=xmap,
             master_pattern=master_pattern,
@@ -1990,7 +1994,6 @@ class EBSD(CommonImage, Signal2D):
         self,
         xmap: CrystalMap,
         detector: EBSDDetector,
-        method: Union[str, None],
         mask: Union[np.ndarray, None],
     ):
         """Raise ValueError if EBSD refinement input is invalid."""
@@ -1999,7 +2002,6 @@ class EBSD(CommonImage, Signal2D):
             navigation_axes=self.axes_manager.navigation_axes[::-1],
             raise_if_not=True,
         )
-
         sig_shape = self.axes_manager.signal_shape[::-1]
         _detector_is_compatible_with_signal(
             detector=detector,
@@ -2007,15 +2009,6 @@ class EBSD(CommonImage, Signal2D):
             signal_shape=sig_shape,
             raise_if_not=True,
         )
-
-        # Invalid local minimizer names are caught by the SciPy functions
-        if method is not None and method not in [
-            "minimize",
-            "differential_evolution",
-            "dual_annealing",
-            "basinhopping",
-        ]:
-            raise ValueError(f"Method {method} not supported")
         if len(xmap.phases.ids) != 1:
             raise ValueError("Crystal map must have exactly one phase")
         if mask is not None and sig_shape != mask.shape:
