@@ -28,9 +28,3 @@ not for users.
     use them in your own code. We may change the API at any time with no
     warning.
 """
-
-from kikuchipy.indexing._refinement._refinement import (
-    _refine_orientation,
-    _refine_projection_center,
-    _refine_orientation_projection_center,
-)

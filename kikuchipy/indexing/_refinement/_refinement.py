@@ -26,8 +26,8 @@ import sys
 from typing import Callable, Optional, Tuple, Union
 
 import dask
-import dask.array as da
 from dask.diagnostics import ProgressBar
+import dask.array as da
 import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList
 from orix.quaternion import Rotation
@@ -38,6 +38,49 @@ from kikuchipy.pattern import rescale_intensity
 from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_for_single_pc_from_detector,
 )
+
+
+def compute_refine_orientation_results(
+    results: list,
+    xmap: CrystalMap,
+    master_pattern,
+) -> CrystalMap:
+    """Compute the results from
+    :meth:`~kikuchipy.signals.EBSD.refine_orientation` and return the
+    :class:`~orix.crystal_map.CrystalMap`.
+
+    Parameters
+    ----------
+    results
+        Results returned from `refine_orientation()`, which is a list of
+        :class:`~dask.delayed.Delayed`.
+    xmap
+        Crystal map passed to `refine_orientation()` to obtain
+        `results`.
+    master_pattern : ~kikuchipy.signals.EBSDMasterPattern
+        Master pattern passed to `refine_orientation()` to obtain
+        `results`.
+
+    Returns
+    -------
+    refined_xmap
+        Crystal map with refined orientations and scores.
+    """
+    n_patterns = len(results)
+    with ProgressBar():
+        print(f"Refining {n_patterns} orientations:", file=sys.stdout)
+        results = dask.compute(*results)
+        results = np.array(results)  # (n, score, phi1, Phi, phi2)
+        xmap_refined = CrystalMap(
+            rotations=Rotation.from_euler(results[:, 1:]),
+            phase_id=np.zeros(n_patterns),
+            x=xmap.x,
+            y=xmap.y,
+            phase_list=PhaseList(phases=master_pattern.phase),
+            prop=dict(scores=results[:, 0]),
+            scan_unit=xmap.scan_unit,
+        )
+    return xmap_refined
 
 
 def _refine_orientation(
@@ -98,14 +141,15 @@ def _refine_orientation(
     # Determine whether a new PC must be re-computed for every pattern
     new_pc = np.prod(detector.navigation_shape) != 1 and n_patterns > 1
 
+    refined_parameters = []
     if new_pc:
         # Patterns have been indexed with varying PCs, so we
         # re-compute the PC for every pattern during refinement
         pcx = detector.pcx.astype(float).reshape(nav_shape)
         pcy = detector.pcy.astype(float).reshape(nav_shape)
         pcz = detector.pcz.astype(float).reshape(nav_shape)
-        refined_parameters = [
-            dask.delayed(_refine_orientation_solver)(
+        for idx in np.ndindex(nav_shape):
+            delayed_solution = dask.delayed(_refine_orientation_solver)(
                 pattern=patterns[idx],
                 rotation=euler[idx],
                 pcx=pcx[idx],
@@ -118,38 +162,28 @@ def _refine_orientation(
                 sample_tilt=detector.sample_tilt,
                 **solver_kwargs,
             )
-            for idx in np.ndindex(nav_shape)
-        ]
+            refined_parameters.append(delayed_solution)
     else:
         # All patterns have been indexed with the same PC, so we use
         # this during refinement of all patterns
         dc = _get_direction_cosines_for_single_pc_from_detector(detector).reshape(
             (n_pixels, 3)
         )
-        refined_parameters = [
-            dask.delayed(_refine_orientation_solver)(
+        for idx in np.ndindex(nav_shape):
+            delayed_solution = dask.delayed(_refine_orientation_solver)(
                 pattern=patterns[idx],
                 rotation=euler[idx],
                 direction_cosines=dc,
                 **solver_kwargs,
             )
-            for idx in np.ndindex(nav_shape)
-        ]
+            refined_parameters.append(delayed_solution)
+
+    print(_refinement_info_message(method, method_kwargs))
 
     if compute:
-        with ProgressBar():
-            print(f"Refining {n_patterns} orientations:", file=sys.stdout)
-            results = dask.compute(*refined_parameters)
-            results = np.array(results)  # (n, score, phi1, Phi, phi2)
-            output = CrystalMap(
-                rotations=Rotation.from_euler(results[:, 1:]),
-                phase_id=np.zeros(n_patterns),
-                x=xmap.x,
-                y=xmap.y,
-                phase_list=PhaseList(phases=master_pattern.phase),
-                prop=dict(scores=results[:, 0]),
-                scan_unit=xmap.scan_unit,
-            )
+        output = compute_refine_orientation_results(
+            results=refined_parameters, xmap=xmap, master_pattern=master_pattern
+        )
     else:
         output = refined_parameters
     gc.collect()
@@ -250,9 +284,10 @@ def _check_master_pattern_and_get_data(
         master pattern.
     """
     master_pattern._is_suitable_for_projection(raise_if_not=True)
-    master_north, master_south = master_pattern._get_master_pattern_arrays_from_energy(
-        energy=energy
-    )
+    (
+        master_north,
+        master_south,
+    ) = master_pattern._get_master_pattern_arrays_from_energy(energy=energy)
     npx, npy = master_pattern.axes_manager.signal_shape
     scale = (npx - 1) / 2
     dtype_desired = np.float32
@@ -262,9 +297,49 @@ def _check_master_pattern_and_get_data(
     return master_north, master_south, npx, npy, scale
 
 
-def _prepare_mask(mask: np.ndarray) -> np.ndarray:
+def _prepare_mask(mask: Optional[np.ndarray] = None) -> Union[int, np.ndarray]:
+    """Ensure a valid mask or 1 is returned.
+
+    Parameters
+    ----------
+    mask
+
+    Returns
+    -------
+    mask
+        Either a 1D array or 1.
+    """
     if mask is None:
         mask = 1
     else:
         mask = ~mask.ravel()
     return mask
+
+
+def _refinement_info_message(method: Callable, method_kwargs: dict) -> str:
+    """Return a message with useful refinement information.
+
+    Parameters
+    ----------
+    method
+        SciPy optimization method.
+    method_kwargs
+        Keyword arguments to be passed to the optimization method.
+
+    Returns
+    -------
+    msg
+        Message with useful refinement information.
+    """
+    method_name = method.__name__
+    if method_name == "minimize":
+        method_type = "Local"
+    else:
+        method_type = "Global"
+    msg = (
+        "Refinement information:\n"
+        f"\tMethod: {method.__name__}\n"
+        f"\tMethod type: {method_type}\n"
+        f"\tKeyword arguments passed to method: {method_kwargs}"
+    )
+    return msg

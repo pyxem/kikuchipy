@@ -48,10 +48,10 @@ from kikuchipy.pattern._pattern import (
     fft_filter,
     _dynamic_background_frequency_space_setup,
 )
-from kikuchipy.indexing import StaticPatternMatching
-from kikuchipy.indexing._refinement import (
-    _refine_orientation_projection_center,
+from kikuchipy.indexing._static_pattern_matching import StaticPatternMatching
+from kikuchipy.indexing._refinement._refinement import (
     _refine_orientation,
+    _refine_orientation_projection_center,
     _refine_projection_center,
 )
 from kikuchipy.indexing.similarity_metrics import SimilarityMetric
@@ -1086,16 +1086,20 @@ class EBSD(CommonImage, Signal2D):
 
         Returns
         -------
-        ~orix.crystal_map.CrystalMap or ~dask.delayed.Delayed
-            New crystal map with refined orientations and similarity
-            metrics in a "scores" property if `compute` is True. If
-            `compute` is False, a :class:`~dask.delayed.Delayed` list
-            instance `euler` is returned where the Euler angles in
-            radians for the flattened map index `i` is accessed as
-            `euler[i][0]`, `euler[i][1]`, `euler[i][2]`.
+        ~orix.crystal_map.CrystalMap or list of ~dask.delayed.Delayed
+            Crystal map with refined orientations and similarity metrics
+            in a "scores" property if `compute` is True. If
+            `compute` is False, a list of :class:`~dask.delayed.Delayed`
+            instances, one per experimental pattern, is returned, to be
+            computed later. See
+            :func:`~kikuchipy.signals.util.compute_refine_orientation_results`.
+            One delayed instance has the optimized score and the three
+            Euler angles in radians in element 0, 1, 2, and 3,
+            respectively.
 
         See Also
         --------
+        scipy.optimize
         refine_projection_center
         refine_orientation_projection_center
         """
@@ -1191,6 +1195,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
+        scipy.optimize
         refine_orientation
         refine_orientation_projection_center
         """
@@ -1291,6 +1296,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
+        scipy.optimize
         refine_orientation
         refine_projection_center
 

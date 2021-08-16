@@ -16,13 +16,13 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Utilities for attaching a crystallographic map,
-:class:`orix.crystal_map.CrystalMap` to an EBSD signal,
-:class:`kikuchipy.signals.EBSD`.
+"""Utilities for working with a :class:`~orix.crystal_map.CrystalMap`
+and an :class:`~kikuchipy.signals.EBSD` signal.
 """
 
 import warnings
 
+import numpy as np
 from orix.crystal_map import CrystalMap
 
 
@@ -43,9 +43,11 @@ def _crystal_map_is_compatible_with_signal(
             "compare the signal navigation scale to the CrystalMap step sizes 'dx' and "
             "'dy' (see `EBSD.axes_manager`)"
         )
-        xmap_scale = (None,) * len(navigation_axes)
+        xmap_scale = list(xmap._step_sizes.values())[: -len(nav_shape)]
 
-    compatible = xmap.shape == nav_shape and xmap_scale == nav_scale
+    compatible = xmap.shape == nav_shape and np.allclose(
+        xmap_scale, nav_scale, atol=1e-6
+    )
     if not compatible and raise_if_not:
         raise ValueError(
             f"The crystal map shape {xmap.shape} and step sizes {xmap_scale} aren't "

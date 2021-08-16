@@ -246,6 +246,7 @@ indexing
 
 .. autosummary::
     StaticPatternMatching
+    compute_refine_orientation_results
     orientation_similarity_map
     merge_crystal_maps
     similarity_metrics
@@ -517,8 +518,8 @@ from HyperSpy.
     normalize_intensity
     plot_virtual_bse_intensity
     rebin
-    refine_all
     refine_orientation
+    refine_orientation_projection_center
     refine_projection_center
     remove_dynamic_background
     remove_static_background
