@@ -28,11 +28,15 @@ from kikuchipy.indexing.orientation_similarity_map import orientation_similarity
 from kikuchipy.indexing import similarity_metrics
 from kikuchipy.indexing._refinement._refinement import (
     compute_refine_orientation_results,
+    compute_refine_orientation_projection_center_results,
+    compute_refine_projection_center_results,
 )
 from kikuchipy.indexing._static_pattern_matching import StaticPatternMatching
 
 __all__ = [
     "compute_refine_orientation_results",
+    "compute_refine_orientation_projection_center_results",
+    "compute_refine_projection_center_results",
     "merge_crystal_maps",
     "orientation_similarity_map",
     "similarity_metrics",

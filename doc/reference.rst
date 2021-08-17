@@ -247,6 +247,8 @@ indexing
 .. autosummary::
     StaticPatternMatching
     compute_refine_orientation_results
+    compute_refine_orientation_projection_center_results
+    compute_refine_projection_center_results
     orientation_similarity_map
     merge_crystal_maps
     similarity_metrics
@@ -259,6 +261,9 @@ indexing
     .. automethod:: __init__
     .. automethod:: __call__
 
+.. autofunction:: compute_refine_orientation_results
+.. autofunction:: compute_refine_orientation_projection_center_results
+.. autofunction:: compute_refine_projection_center_results
 .. autofunction:: orientation_similarity_map
 .. autofunction:: merge_crystal_maps
 
