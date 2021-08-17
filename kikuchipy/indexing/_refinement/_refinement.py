@@ -35,6 +35,7 @@ import scipy.optimize
 
 from kikuchipy.indexing._refinement._solvers import (
     _refine_orientation_solver,
+    _refine_orientation_projection_center_solver,
     _refine_projection_center_solver,
 )
 from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
@@ -42,6 +43,10 @@ from kikuchipy.pattern import rescale_intensity
 from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_for_single_pc_from_detector,
 )
+
+
+DEFAULT_TRUST_REGION_EULER_DEG = np.ones(3)
+DEFAULT_TRUST_REGION_PC = np.full(3, 0.05)
 
 
 # Note about use of dask.delayed
@@ -157,7 +162,7 @@ def _refine_orientation(
     euler = euler.reshape(nav_shape + (3,))
 
     if trust_region is None:
-        trust_region = np.ones(3)
+        trust_region = DEFAULT_TRUST_REGION_EULER_DEG
         solver_kwargs["trust_region_passed"] = False
     else:
         solver_kwargs["trust_region_passed"] = True
@@ -201,8 +206,8 @@ def _refine_orientation(
             )
             refined_parameters.append(delayed_solution)
     else:
-        # All patterns have been indexed with the same PC, so we use
-        # the same direction cosines during refinement of all patterns
+        # Patterns have been indexed with the same PC, so we use the
+        # same direction cosines during refinement of all patterns
         dc = _get_direction_cosines_for_single_pc_from_detector(detector).reshape(
             (n_pixels, 3)
         )
@@ -277,7 +282,7 @@ def _refine_projection_center(
     rotations = rotations.reshape(nav_shape + (4,))
 
     if trust_region is None:
-        trust_region = np.full(3, 0.05)
+        trust_region = DEFAULT_TRUST_REGION_PC
         solver_kwargs["trust_region_passed"] = False
     else:
         solver_kwargs["trust_region_passed"] = True
@@ -292,37 +297,21 @@ def _refine_projection_center(
     fixed_parameters += (detector.sample_tilt,)
     solver_kwargs["fixed_parameters"] = dask.delayed(fixed_parameters)
 
-    # Determine whether a new PC is used for every pattern
-    new_pc = np.prod(detector.navigation_shape) != 1 and n_patterns > 1
-
-    if new_pc:
-        # Patterns have been indexed with varying PCs, so we use these
-        # as the starting point for every pattern
-        pcx = detector.pcx.astype(float).reshape(nav_shape)
-        pcy = detector.pcy.astype(float).reshape(nav_shape)
-        pcz = detector.pcz.astype(float).reshape(nav_shape)
-    else:
-        # All patterns have been indexed with the same PC, so we use
-        # this as the starting point for every pattern
-        pcx = np.full(nav_shape, detector.pcx, dtype=float)
-        pcy = np.full(nav_shape, detector.pcy, dtype=float)
-        pcz = np.full(nav_shape, detector.pcz, dtype=float)
+    pc = _prepare_projection_centers(
+        detector=detector, n_patterns=n_patterns, nav_shape=nav_shape
+    )
 
     # Delay data once
     patterns = dask.delayed(patterns)
     rotations = dask.delayed(rotations)
-    pcx = dask.delayed(pcx)
-    pcy = dask.delayed(pcy)
-    pcz = dask.delayed(pcz)
+    pc = dask.delayed(pc)
 
     refined_parameters = []
     for idx in np.ndindex(*nav_shape):
         delayed_solution = dask.delayed(_refine_projection_center_solver)(
             pattern=patterns[idx],
             rotation=rotations[idx],
-            pcx=pcx[idx],
-            pcy=pcy[idx],
-            pcz=pcz[idx],
+            pc=pc[idx],
             **solver_kwargs,
         )
         refined_parameters.append(delayed_solution)
@@ -350,20 +339,106 @@ def _refine_projection_center(
 
 def _refine_orientation_projection_center(
     xmap: CrystalMap,
-    master_pattern,
-    signal,
     detector,
+    master_pattern,
     energy: Union[int, float],
+    patterns: Union[np.ndarray, da.Array],
     mask: Optional[np.ndarray] = None,
     method: Optional[str] = None,
     method_kwargs: Optional[dict] = None,
-    trust_region: Optional[list] = None,
+    trust_region: Union[None, np.ndarray, list] = None,
     compute: bool = True,
 ) -> tuple:
     """See the docstring of
     :meth:`kikuchipy.signals.EBSD.refine_orientation_projection_center`.
     """
-    return
+    (
+        method,
+        method_kwargs,
+        nav_shape,
+        n_patterns,
+        sig_shape,
+        nrows,
+        ncols,
+        n_pixels,
+        rotations,
+        solver_kwargs,
+        fixed_parameters,
+    ) = _refine_setup(
+        xmap=xmap,
+        detector=detector,
+        master_pattern=master_pattern,
+        energy=energy,
+        patterns_dtype=patterns.dtype,
+        mask=mask,
+        method=method,
+        method_kwargs=method_kwargs,
+    )
+
+    # Get rotations in the correct shape
+    euler = rotations.to_euler()
+    euler = euler.reshape(nav_shape + (3,))
+
+    if trust_region is None:
+        trust_region = np.concatenate(
+            [DEFAULT_TRUST_REGION_EULER_DEG, DEFAULT_TRUST_REGION_PC]
+        )
+        solver_kwargs["trust_region_passed"] = False
+    else:
+        solver_kwargs["trust_region_passed"] = True
+    trust_region[:3] = np.deg2rad(trust_region[:3])
+    solver_kwargs["trust_region"] = dask.delayed(trust_region)
+
+    # Prepare parameters for the objective function which are constant
+    # during optimization
+    fixed_parameters += (nrows,)
+    fixed_parameters += (ncols,)
+    fixed_parameters += (detector.tilt,)
+    fixed_parameters += (detector.azimuthal,)
+    fixed_parameters += (detector.sample_tilt,)
+    solver_kwargs["fixed_parameters"] = dask.delayed(fixed_parameters)
+
+    pc = _prepare_projection_centers(
+        detector=detector, n_patterns=n_patterns, nav_shape=nav_shape
+    )
+
+    # Stack Euler angles and PC parameters into one array of shape
+    # `nav_shape` + (6,)
+    euler_pc = np.dstack([euler, pc])
+
+    # Delay data once
+    patterns = dask.delayed(patterns)
+    euler_pc = dask.delayed(euler_pc)
+
+    refined_parameters = []
+    for idx in np.ndindex(*nav_shape):
+        delayed_solution = dask.delayed(_refine_orientation_projection_center_solver)(
+            pattern=patterns[idx],
+            euler_pc=euler_pc[idx],
+            **solver_kwargs,
+        )
+        refined_parameters.append(delayed_solution)
+
+    print(
+        _refinement_info_message(
+            method=method,
+            method_kwargs=method_kwargs,
+            trust_region=list(trust_region),
+            trust_region_passed=solver_kwargs["trust_region_passed"],
+        )
+    )
+    if compute:
+        output = compute_refine_orientation_projection_center_results(
+            results=refined_parameters,
+            detector=detector,
+            xmap=xmap,
+            master_pattern=master_pattern,
+        )
+    else:
+        output = refined_parameters
+    gc.collect()
+
+    return output
 
 
 def _get_optimization_method_with_kwargs(
@@ -388,15 +463,17 @@ def _get_optimization_method_with_kwargs(
     method_kwargs
         Keyword arguments to pass to function.
     """
-    supported_methods = list(SUPPORTED_OPTIMIZATION_METHODS.keys())
+    supported_methods = list(SUPPORTED_OPTIMIZATION_METHODS)
     if method not in supported_methods:
         raise ValueError(
             f"Method {method} not in the list of supported methods {supported_methods}"
         )
     if method_kwargs is None:
         method_kwargs = {}
-    if method == "minimize":
-        method_kwargs.setdefault("method", "Nelder-Mead")
+    if method == "minimize" and "method" not in method_kwargs:
+        method_kwargs["method"] = "Nelder-Mead"
+    if method == "basinhopping" and "minimizer_kwargs" not in method_kwargs:
+        method_kwargs["minimizer_kwargs"] = {}
     method = getattr(scipy.optimize, method)
     return method, method_kwargs
 
@@ -458,6 +535,39 @@ def _prepare_mask(mask: Optional[np.ndarray] = None) -> Union[int, np.ndarray]:
     else:
         mask = ~mask.ravel()
     return mask
+
+
+def _prepare_projection_centers(
+    detector, n_patterns: int, nav_shape: tuple
+) -> np.ndarray:
+    """Return an array of projection center (PC) parameters of the
+    appropriate shape and data type.
+
+    Parameters
+    ----------
+    detector : ~kikuchipy.detectors.EBSDDetector
+        Detector with PCs.
+    n_patterns
+        Number of patterns to use in refinement.
+    nav_shape
+        Navigation shape of EBSD signal to use in refinement.
+
+    Returns
+    -------
+    pc
+        PC array of shape nav_shape + (3,) of data type 32-bit float.
+    """
+    # Determine whether a new PC is used for every pattern
+    new_pc = np.prod(detector.navigation_shape) != 1 and n_patterns > 1
+    if new_pc:
+        # Patterns have been indexed with varying PCs, so we use these
+        # as the starting point for every pattern
+        pc = detector.pc.astype(float).reshape(nav_shape + (3,))
+    else:
+        # Patterns have been indexed with the same PC, so we use this as
+        # the starting point for every pattern
+        pc = np.full(nav_shape + (3,), detector.pc[0], dtype=float)
+    return pc
 
 
 def _refinement_info_message(
@@ -530,7 +640,7 @@ def compute_refine_orientation_results(
     """
     n_patterns = len(results)
     with ProgressBar():
-        print(f"Refining {n_patterns} orientations:", file=sys.stdout)
+        print(f"Refining {n_patterns} orientation(s):", file=sys.stdout)
         computed_results = dask.compute(*results)
         # (n, score, phi1, Phi, phi2)
         computed_results = np.array(computed_results)
@@ -562,7 +672,7 @@ def compute_refine_projection_center_results(
         Detector passed to `refine_projection_center()` to obtain
         `results`.
     xmap
-        Crystal map passed to `refine_orientation()` to obtain
+        Crystal map passed to `refine_projection_center()` to obtain
         `results`.
 
     Returns
@@ -573,10 +683,66 @@ def compute_refine_projection_center_results(
     n_patterns = len(results)
     nav_shape = xmap.shape
     with ProgressBar():
-        print(f"Refining {n_patterns} projection centers:", file=sys.stdout)
+        print(f"Refining {n_patterns} projection center(s):", file=sys.stdout)
         computed_results = dask.compute(*results)
         # (n, score, PCx, PCy, PCz)
         computed_results = np.array(computed_results)
         new_detector = detector.deepcopy()
         new_detector.pc = computed_results[:, 1:].reshape(nav_shape + (3,))
     return computed_results[:, 0].reshape(nav_shape), new_detector
+
+
+def compute_refine_orientation_projection_center_results(
+    results: list,
+    detector,
+    xmap: CrystalMap,
+    master_pattern,
+) -> tuple:
+    """Compute the results from
+    :meth:`~kikuchipy.signals.EBSD.refine_orientation_projection_center`
+    and return the :class:`~orix.crystal_map.CrystalMap` and
+    :class:`~kikuchipy.detectors.EBSDDetector`.
+
+    Parameters
+    ----------
+    results
+        Results returned from `refine_orientation_projection_center()`,
+        which is a list of :class:`~dask.delayed.Delayed`.
+    detector : ~kikuchipy.detectors.EBSDDetector
+        Detector passed to `refine_orientation_projection_center()` to
+        obtain `results`.
+    xmap
+        Crystal map passed to `refine_orientation_projection_center()`
+        to obtain `results`.
+    master_pattern : ~kikuchipy.signals.EBSDMasterPattern
+        Master pattern passed to
+        `refine_orientation_projection_center()` to obtain `results`.
+
+    Returns
+    -------
+    ~orix.crystal_map.CrystalMap and ~kikuchipy.detectors.EBSDDetector
+        Crystal map with refined orientations and scores and EBSD
+        detector with refined projection center parameters.
+    """
+    n_patterns = len(results)
+    nav_shape = xmap.shape
+    with ProgressBar():
+        print(
+            f"Refining {n_patterns} orientation(s) and projection center(s):",
+            file=sys.stdout,
+        )
+        computed_results = dask.compute(*results)
+        computed_results = np.array(computed_results)
+        # (n, score, phi1, Phi, phi2, PCx, PCy, PCz)
+        xmap_refined = CrystalMap(
+            rotations=Rotation.from_euler(computed_results[:, 1:4]),
+            phase_id=np.zeros(n_patterns),
+            x=xmap.x,
+            y=xmap.y,
+            phase_list=PhaseList(phases=master_pattern.phase),
+            prop=dict(scores=computed_results[:, 0]),
+            scan_unit=xmap.scan_unit,
+        )
+        new_detector = detector.deepcopy()
+        new_detector.pc = computed_results[:, 4:].reshape(nav_shape + (3,))
+    return xmap_refined, new_detector

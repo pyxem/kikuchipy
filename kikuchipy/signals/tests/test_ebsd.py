@@ -1432,7 +1432,6 @@ class TestEBSDRefinement:
                 "basinhopping",
                 dict(minimizer_kwargs=dict(method="Nelder-Mead"), niter=1),
             ),
-            ("basinhopping", None),
             ("differential_evolution", dict(maxiter=1)),
             ("dual_annealing", dict(maxiter=1)),
             (
@@ -1651,6 +1650,118 @@ class TestEBSDRefinement:
         assert len(delayed_results) == 9
 
     # ---------- Refine orientations and projection centers ---------- #
+
+    @pytest.mark.parametrize(
+        "method_kwargs, trust_region",
+        [
+            (dict(method="Nelder-Mead"), None),
+            (dict(method="Powell"), [0.5, 0.5, 0.5, 0.01, 0.01, 0.01]),
+        ],
+    )
+    def test_refine_orientation_projection_center_local(
+        self,
+        dummy_signal,
+        method_kwargs,
+        trust_region,
+        get_single_phase_xmap,
+    ):
+        s = dummy_signal
+        nav_shape = s.axes_manager.navigation_shape[::-1]
+        xmap = get_single_phase_xmap(
+            nav_shape=nav_shape,
+            rotations_per_point=1,
+            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
+        )
+        xmap.phases[0].name = self.mp.phase.name
+        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        method_kwargs.update(dict(options=dict(maxiter=10)))
+        xmap_refined, detector_refined = s.refine_orientation_projection_center(
+            xmap=xmap,
+            master_pattern=self.mp,
+            energy=20,
+            detector=detector,
+            trust_region=trust_region,
+            method_kwargs=method_kwargs,
+        )
+        assert xmap_refined.shape == xmap.shape
+        assert not np.allclose(xmap_refined.rotations.data, xmap.rotations.data)
+        assert isinstance(detector_refined, kp.detectors.EBSDDetector)
+        assert detector_refined.pc.shape == nav_shape + (3,)
+
+    @pytest.mark.filterwarnings("ignore: The line search algorithm did not converge")
+    @pytest.mark.filterwarnings("ignore: Angles are assumed to be in radians, ")
+    @pytest.mark.parametrize(
+        "method, method_kwargs",
+        [
+            (
+                "basinhopping",
+                dict(minimizer_kwargs=dict(method="Nelder-Mead"), niter=1),
+            ),
+            ("differential_evolution", dict(maxiter=1)),
+            ("dual_annealing", dict(maxiter=1)),
+            (
+                "shgo",
+                dict(
+                    sampling_method="sobol",
+                    options=dict(f_tol=1e-3, maxiter=1),
+                    minimizer_kwargs=dict(
+                        method="Nelder-Mead", options=dict(fatol=1e-3)
+                    ),
+                ),
+            ),
+        ],
+    )
+    def test_refine_orientation_projection_center_global(
+        self,
+        method,
+        method_kwargs,
+        dummy_signal,
+        get_single_phase_xmap,
+    ):
+        s = dummy_signal
+        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        xmap = get_single_phase_xmap(
+            nav_shape=s.axes_manager.navigation_shape[::-1],
+            rotations_per_point=1,
+            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
+        )
+        xmap.phases[0].name = self.mp.phase.name
+        xmap_refined, new_detector = s.refine_orientation_projection_center(
+            xmap=xmap,
+            master_pattern=self.mp,
+            energy=20,
+            detector=detector,
+            method=method,
+            method_kwargs=method_kwargs,
+            trust_region=[0.5, 0.5, 0.5, 0.01, 0.01, 0.01],
+        )
+        assert xmap_refined.shape == xmap.shape
+        assert not np.allclose(xmap_refined.rotations.data, xmap.rotations.data)
+        assert isinstance(new_detector, kp.detectors.EBSDDetector)
+        assert not np.allclose(detector.pc, new_detector.pc[0, 0])
+
+    def test_refine_orientation_projection_center_not_compute(
+        self, dummy_signal, get_single_phase_xmap
+    ):
+        s = dummy_signal
+        xmap = get_single_phase_xmap(
+            nav_shape=s.axes_manager.navigation_shape[::-1],
+            rotations_per_point=1,
+            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
+        )
+        xmap.phases[0].name = self.mp.phase.name
+        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        delayed_results = s.refine_orientation_projection_center(
+            xmap=xmap,
+            master_pattern=self.mp,
+            energy=20,
+            detector=detector,
+            method_kwargs=dict(options=dict(maxiter=1)),
+            compute=False,
+        )
+        assert isinstance(delayed_results, list)
+        assert dask.is_dask_collection(delayed_results[0])
+        assert len(delayed_results) == 9
 
 
 class TestAverageNeighbourDotProductMap:

@@ -138,3 +138,68 @@ def _refine_projection_center_objective_function(x: np.ndarray, *args: tuple) ->
     simulated_pattern = simulated_pattern.reshape(experimental.shape)
     score = _ncc_single_patterns_2d_float32(exp=experimental, sim=simulated_pattern)
     return 1 - score
+
+
+def _refine_orientation_projection_center_objective_function(
+    x: np.ndarray, *args: tuple
+) -> float:
+    """Objective function to be minimized when optimizing orientations
+    and projection center (PC) parameters PCx, PCy, and PCz.
+
+    Parameters
+    ----------
+    x
+        1D array containing the current Euler angles (phi1, Phi, phi2)
+        and PC parameters (PCx, PCy, PCz).
+    args
+        Tuple of fixed parameters needed to completely specify the
+        function. The expected contents are:
+            0. 2D experimental pattern of 32-bit floats
+            1. 2D northern hemisphere of master pattern of 32-bit floats
+            2. 2D southern hemisphere of master pattern of 32-bit floats
+            3. Number of master pattern columns
+            4. Number of master pattern rows
+            5. Master pattern scale
+            6. 1D signal mask
+            7. Number of pattern pixels
+            8. Number of pattern rows
+            9. Number of pattern columns
+            10. Detector tilt
+            11. Detector azimuthal angle
+            12. Sample tilt
+
+    Returns
+    -------
+        Objective function value (normalized cross-correlation score).
+    """
+    rotation = _rotation_from_euler(alpha=x[0], beta=x[1], gamma=x[2])
+    n_pixels = args[7]
+    direction_cosines = _get_direction_cosines_for_single_pc(
+        pcx=x[3],
+        pcy=x[4],
+        pcz=x[5],
+        nrows=args[8],
+        ncols=args[9],
+        tilt=args[10],
+        azimuthal=args[11],
+        sample_tilt=args[12],
+    ).reshape((n_pixels, 3))
+    simulated_pattern = _project_single_pattern_from_master_pattern(
+        rotation=rotation,
+        direction_cosines=direction_cosines,
+        master_north=args[1],
+        master_south=args[2],
+        npx=args[3],
+        npy=args[4],
+        scale=args[5],
+        n_pixels=n_pixels,
+        rescale=False,
+        out_min=0,  # Required, but not used here
+        out_max=1,  # Required, but not used here
+        dtype_out=np.float32,
+    )
+    simulated_pattern = simulated_pattern * args[6]  # Multiply by mask
+    experimental = args[0]
+    simulated_pattern = simulated_pattern.reshape(experimental.shape)
+    score = _ncc_single_patterns_2d_float32(exp=experimental, sim=simulated_pattern)
+    return 1 - score

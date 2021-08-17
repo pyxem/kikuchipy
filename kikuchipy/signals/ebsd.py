@@ -1324,10 +1324,10 @@ class EBSD(CommonImage, Signal2D):
         self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
         return _refine_orientation_projection_center(
             xmap=xmap,
-            master_pattern=master_pattern,
-            signal=self,
             detector=detector,
+            master_pattern=master_pattern,
             energy=energy,
+            patterns=self.data,
             mask=mask,
             method=method,
             method_kwargs=method_kwargs,

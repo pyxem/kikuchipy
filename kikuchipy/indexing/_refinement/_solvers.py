@@ -29,6 +29,7 @@ from scipy.optimize import Bounds
 
 from kikuchipy.indexing._refinement._objective_functions import (
     _refine_orientation_objective_function,
+    _refine_orientation_projection_center_objective_function,
     _refine_projection_center_objective_function,
 )
 from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
@@ -56,8 +57,8 @@ def _refine_orientation_solver(
     sample_tilt: Optional[float] = None,
 ) -> Tuple[float, float, float, float]:
     """Maximize the similarity between an experimental pattern and a
-    re-projected simulated pattern by optimizing the orientation (Euler
-    angles) used in the re-projection.
+    projected simulated pattern by optimizing the orientation (Euler
+    angles) used in the projection.
 
     Parameters
     ----------
@@ -75,7 +76,7 @@ def _refine_orientation_solver(
         Keyword arguments passed to the `method` function. For the list
         of possible arguments, see the SciPy documentation.
     fixed_parameters
-        Fixed parameters used in the re-projection.
+        Fixed parameters used in the projection.
     trust_region
         List of +/- angular deviation in degrees as bound constraints on
         the three Euler angles.
@@ -165,23 +166,15 @@ def _refine_orientation_solver(
             **method_kwargs,
         )
     else:  # Is always "basinhopping", due to prior check of method name
-        key_name = "minimizer_kwargs"
-        if key_name not in method_kwargs:
-            method_kwargs[key_name] = dict(args=params)
-        else:
-            method_kwargs[key_name].update(args=params)
+        method_kwargs["minimizer_kwargs"].update(args=params)
         solution = method(
             func=_refine_orientation_objective_function,
             x0=rotation,
             **method_kwargs,
         )
 
-    score = 1 - solution.fun
-    alpha = solution.x[0]
-    beta = solution.x[1]
-    gamma = solution.x[2]
-
-    return score, alpha, beta, gamma
+    x = solution.x
+    return 1 - solution.fun, x[0], x[1], x[2]
 
 
 def _refine_projection_center_solver(
@@ -193,13 +186,11 @@ def _refine_projection_center_solver(
     fixed_parameters: tuple,
     trust_region: list,
     trust_region_passed: bool,
-    pcx: float,
-    pcy: float,
-    pcz: float,
+    pc: np.ndarray,
 ) -> Tuple[float, float, float, float]:
     """Maximize the similarity between an experimental pattern and a
-    re-projected simulated pattern by optimizing the projection center
-    (PC) parameters used in the re-projection.
+    projected simulated pattern by optimizing the projection center (PC)
+    parameters used in the projection.
 
     Parameters
     ----------
@@ -212,24 +203,22 @@ def _refine_projection_center_solver(
         Rotation as a quaternion array with shape (4,).
     method
         A supported :mod:`scipy.optimize` function. See `method`
-        parameter in :meth:`kikuchipy.signals.EBSD.refine_orientation`.
+        parameter in
+        :meth:`kikuchipy.signals.EBSD.refine_projection_center`.
     method_kwargs
         Keyword arguments passed to the `method` function. For the list
         of possible arguments, see the SciPy documentation.
     fixed_parameters
-        Fixed parameters used in the re-projection.
+        Fixed parameters used in the projection.
     trust_region
-        List of +/- angular deviation in degrees as bound constraints on
-        the three Euler angles.
+        List of +/- percentage deviations as bound constraints on
+        the PC parameters in the Bruker convention. The parameter
+        range is [0, 1].
     trust_region_passed
         Whether `trust_region` was passed to the public refinement
         method.
-    pcx
-        Projection center (PC) x coordinate.
-    pcy
-        PC y coordinate.
-    pcz
-        PC z coordinate.
+    pc
+        Projection center (PC) coordinates (PCx, PCy, PCz).
 
     Returns
     -------
@@ -244,10 +233,10 @@ def _refine_projection_center_solver(
     params = (pattern,) + (rotation,) + fixed_parameters
     method_name = method.__name__
 
-    pc = [pcx, pcy, pcz]
     if method_name == "minimize":
         if trust_region_passed:
             pcx_dev, pcy_dev, pcz_dev = trust_region
+            pcx, pcy, pcz = pc
             method_kwargs["bounds"] = Bounds(
                 [pcx - pcx_dev, pcy - pcy_dev, pcz - pcz_dev],
                 [pcx + pcx_dev, pcy + pcy_dev, pcz + pcz_dev],
@@ -260,6 +249,7 @@ def _refine_projection_center_solver(
         )
     elif SUPPORTED_OPTIMIZATION_METHODS[method_name]["supports_bounds"]:
         pcx_dev, pcy_dev, pcz_dev = trust_region
+        pcx, pcy, pcz = pc
         solution = method(
             func=_refine_projection_center_objective_function,
             args=params,
@@ -271,23 +261,128 @@ def _refine_projection_center_solver(
             **method_kwargs,
         )
     else:  # Is always "basinhopping", due to prior check of method name
-        key_name = "minimizer_kwargs"
-        if key_name not in method_kwargs:
-            method_kwargs[key_name] = dict(args=params)
-        else:
-            method_kwargs[key_name].update(args=params)
+        method_kwargs["minimizer_kwargs"].update(args=params)
         solution = method(
             func=_refine_projection_center_objective_function,
             x0=pc,
             **method_kwargs,
         )
 
-    score = 1 - solution.fun
-    pcx_refined = solution.x[0]
-    pcy_refined = solution.x[1]
-    pcz_refined = solution.x[2]
+    x = solution.x
+    return 1 - solution.fun, x[0], x[1], x[2]
 
-    return score, pcx_refined, pcy_refined, pcz_refined
+
+def _refine_orientation_projection_center_solver(
+    pattern: np.ndarray,
+    rescale: bool,
+    euler_pc: np.ndarray,
+    method: Callable,
+    method_kwargs: dict,
+    fixed_parameters: tuple,
+    trust_region: list,
+    trust_region_passed: bool,
+) -> Tuple[float, float, float, float, float, float, float]:
+    """Maximize the similarity between an experimental pattern and a
+    projected simulated pattern by optimizing the orientation and
+    projection center (PC) parameters used in the projection.
+
+    Parameters
+    ----------
+    pattern
+        Experimental pattern of shape (nrows, ncols).
+    rescale
+        Whether pattern intensities must be rescaled to [-1, 1] and data
+        type 32-bit floats.
+    euler_pc
+        Array with Euler angles (phi1, Phi, phi2) in radians and PC
+        parameters (PCx, PCy, PCz) in range [0, 1].
+    method
+        A supported :mod:`scipy.optimize` function. See `method`
+        parameter in
+        :meth:`kikuchipy.signals.EBSD.refine_orientation_projection_center`.
+    method_kwargs
+        Keyword arguments passed to the `method` function. For the list
+        of possible arguments, see the SciPy documentation.
+    fixed_parameters
+        Fixed parameters used in the projection.
+    trust_region
+        List of +/- angular deviations in degrees as bound
+        constraints on the three Euler angles and +/- percentage
+        deviations as bound constraints on the PC parameters in the
+        Bruker convention.
+    trust_region_passed
+        Whether `trust_region` was passed to the public refinement
+        method.
+
+    Returns
+    -------
+    score
+        Highest normalized cross-correlation score.
+    phi1, Phi, phi2
+        Optimized orientation (Euler angles) in radians.
+    pcx_refined, pcy_refined, pcz_refined
+        Optimized PC parameters in the Bruker convention.
+    """
+    if rescale:
+        pattern = _rescale_pattern(pattern.astype(np.float32))
+
+    params = (pattern,) + fixed_parameters
+    method_name = method.__name__
+
+    if method_name == "minimize":
+        if trust_region_passed:
+            alpha_dev, beta_dev, gamma_dev, pcx_dev, pcy_dev, pcz_dev = trust_region
+            alpha, beta, gamma, pcx, pcy, pcz = euler_pc
+            method_kwargs["bounds"] = Bounds(
+                [
+                    alpha - alpha_dev,
+                    beta - beta_dev,
+                    gamma - gamma_dev,
+                    pcx - pcx_dev,
+                    pcy - pcy_dev,
+                    pcz - pcz_dev,
+                ],
+                [
+                    alpha + alpha_dev,
+                    beta + beta_dev,
+                    gamma + gamma_dev,
+                    pcx + pcx_dev,
+                    pcy + pcy_dev,
+                    pcz + pcz_dev,
+                ],
+            )
+        solution = method(
+            fun=_refine_orientation_projection_center_objective_function,
+            x0=euler_pc,
+            args=params,
+            **method_kwargs,
+        )
+    elif SUPPORTED_OPTIMIZATION_METHODS[method_name]["supports_bounds"]:
+        alpha_dev, beta_dev, gamma_dev, pcx_dev, pcy_dev, pcz_dev = trust_region
+        alpha, beta, gamma, pcx, pcy, pcz = euler_pc
+        solution = method(
+            func=_refine_orientation_projection_center_objective_function,
+            args=params,
+            bounds=[
+                [alpha - alpha_dev, alpha + alpha_dev],
+                [beta - beta_dev, beta + beta_dev],
+                [gamma - gamma_dev, gamma + gamma_dev],
+                [pcx - pcx_dev, pcx + pcx_dev],
+                [pcy - pcy_dev, pcy + pcy_dev],
+                [pcz - pcz_dev, pcz + pcz_dev],
+            ],
+            **method_kwargs,
+        )
+    else:  # Is always "basinhopping", due to prior check of method name
+        method_kwargs["minimizer_kwargs"].update(args=params)
+        solution = method(
+            func=_refine_orientation_projection_center_objective_function,
+            x0=euler_pc,
+            **method_kwargs,
+        )
+
+    x = solution.x
+    return 1 - solution.fun, x[0], x[1], x[2], x[3], x[4], x[5]
 
 
 @nb.jit("float32[:, :](float32[:, :])", cache=True, nopython=True, nogil=True)
