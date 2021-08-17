@@ -38,6 +38,16 @@ class TestEBSDRefinementSetup:
         assert method_out.__name__ == method
         assert isinstance(method_kwargs_out, dict)
 
+        if method == "minimize":
+            assert method_kwargs_out["method"] == "Nelder-Mead"
+
+    def test_get_optimization_method_with_kwargs_raises(self):
+        method = "wait-and-see"
+        with pytest.raises(ValueError, match=f"Method {method} not in the list of"):
+            _ = kp.indexing._refinement._refinement._get_optimization_method_with_kwargs(
+                method
+            )
+
     def test_check_master_pattern_and_get_data(self):
         axes = [
             dict(name="hemisphere", size=2, scale=1),
@@ -74,3 +84,11 @@ class TestEBSDRefinementSetup:
         assert not np.allclose(mps, mp_data[1, -1])
         assert np.min(mpn) >= -1
         assert np.max(mpn) <= 1
+
+
+class TestRefinementSolvers:
+    def test_rescale_pattern_numba_function(self):
+        a = np.random.random(10).reshape((2, 5)).astype(np.float32)
+        b = kp.indexing._refinement._solvers._rescale_pattern.py_func(a)
+        assert not np.allclose(a, b)
+        assert b.dtype == a.dtype

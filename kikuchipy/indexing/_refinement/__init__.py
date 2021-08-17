@@ -28,3 +28,30 @@ not for users.
     use them in your own code. We may change the API at any time with no
     warning.
 """
+
+# fmt: off
+SUPPORTED_OPTIMIZATION_METHODS = {
+    # Local
+    "minimize": {
+        "type": "local",
+        "supports_bounds": True
+    },
+    # Global
+    "basinhopping": {
+        "type": "global",
+        "supports_bounds": False
+    },
+    "differential_evolution": {
+        "type": "global",
+        "supports_bounds": True
+    },
+    "dual_annealing": {
+        "type": "global",
+        "supports_bounds": True
+    },
+    "shgo": {
+        "type": "global",
+        "supports_bounds": True
+    },
+}
+# fmt: on

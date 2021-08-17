@@ -1071,7 +1071,8 @@ class EBSD(CommonImage, Signal2D):
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
             "basinhopping", and "shgo". Default is "minimize", which
-            performs local optimization with the Nelder-Mead method.
+            performs local optimization with the Nelder-Mead method
+            unless another method is passed to `method_kwargs`.
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
             `method`. For example, to perform refinement with the
@@ -1169,7 +1170,9 @@ class EBSD(CommonImage, Signal2D):
         method : str, optional
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
-            "basinhopping", and "shgo". Default is "minimize".
+            "basinhopping", and "shgo". Default is "minimize", which
+            performs local optimization with the Nelder-Mead method
+            unless another method is passed to `method_kwargs`.
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
             `method`. For example, to perform refinement with the
@@ -1268,7 +1271,9 @@ class EBSD(CommonImage, Signal2D):
         method : str, optional
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
-            "basinhopping", and "shgo". Default is "minimize".
+            "basinhopping", and "shgo". Default is "minimize", which
+            performs local optimization with the Nelder-Mead method
+            unless another method is passed to `method_kwargs`.
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
             `method`. For example, to perform refinement with the

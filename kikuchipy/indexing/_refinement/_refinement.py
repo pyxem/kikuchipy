@@ -37,10 +37,81 @@ from kikuchipy.indexing._refinement._solvers import (
     _refine_orientation_solver,
     _refine_projection_center_solver,
 )
+from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.pattern import rescale_intensity
 from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_for_single_pc_from_detector,
 )
+
+
+# Note about use of dask.delayed
+# ------------------------------
+# Private refinement functions might call dask.delayed on a Dask array,
+# specifically the experimental patterns. This is discouraged in the
+# Dask documentation:
+# https://docs.dask.org/en/latest/delayed-best-practices.html#don-t-call-dask-delayed-on-other-dask-collections
+# However, since only one pattern is passed to dask.delayed at a time,
+# this might be OK.
+
+
+def _refine_setup(
+    xmap: CrystalMap,
+    detector,
+    master_pattern,
+    energy: Union[int, float],
+    patterns_dtype: np.dtype,
+    mask: Optional[np.ndarray] = None,
+    method: Optional[str] = None,
+    method_kwargs: Optional[dict] = None,
+) -> Tuple[Callable, dict, tuple, int, tuple, int, int, int, Rotation, dict, tuple]:
+    """Set up and return everything that is common to all refinement
+    functions.
+    """
+    method, method_kwargs = _get_optimization_method_with_kwargs(method, method_kwargs)
+
+    # Get navigation shape and signal shape
+    nav_shape = xmap.shape
+    n_patterns = xmap.size
+    sig_shape = detector.shape
+    nrows, ncols = sig_shape
+    n_pixels = detector.size
+
+    # Get rotations in the correct shape
+    if xmap.rotations_per_point > 1:
+        rotations = xmap.rotations[:, 0]
+    else:
+        rotations = xmap.rotations
+
+    # Build up dictionary of keyword arguments to pass to the refinement
+    # solver
+    solver_kwargs = dict(method=method, method_kwargs=method_kwargs)
+
+    # Determine whether pattern intensities must be rescaled
+    dtype_desired = np.float32
+    if patterns_dtype != dtype_desired:
+        solver_kwargs["rescale"] = True
+    else:
+        solver_kwargs["rescale"] = False
+
+    # Prepare parameters for the objective function which are constant
+    # during optimization
+    fixed_parameters = _check_master_pattern_and_get_data(master_pattern, energy)
+    fixed_parameters += (_prepare_mask(mask),)
+    fixed_parameters += (n_pixels,)
+
+    return (
+        method,
+        method_kwargs,
+        nav_shape,
+        n_patterns,
+        sig_shape,
+        nrows,
+        ncols,
+        n_pixels,
+        rotations,
+        solver_kwargs,
+        fixed_parameters,
+    )
 
 
 def _refine_orientation(
@@ -58,34 +129,32 @@ def _refine_orientation(
     """See the docstring of
     :meth:`kikuchipy.signals.EBSD.refine_orientation`.
     """
-    method, method_kwargs = _get_optimization_method_with_kwargs(method, method_kwargs)
-
-    # Get navigation shape and signal shape
-    nav_shape = xmap.shape
-    n_patterns = xmap.size
-    sig_shape = detector.shape
-    nrows, ncols = sig_shape
-    n_pixels = detector.size
+    (
+        method,
+        method_kwargs,
+        nav_shape,
+        n_patterns,
+        sig_shape,
+        nrows,
+        ncols,
+        n_pixels,
+        rotations,
+        solver_kwargs,
+        fixed_parameters,
+    ) = _refine_setup(
+        xmap=xmap,
+        detector=detector,
+        master_pattern=master_pattern,
+        energy=energy,
+        patterns_dtype=patterns.dtype,
+        mask=mask,
+        method=method,
+        method_kwargs=method_kwargs,
+    )
 
     # Get rotations in the correct shape
-    if xmap.rotations_per_point > 1:
-        rot = xmap.rotations[:, 0]
-    else:
-        rot = xmap.rotations
-    euler = rot.to_euler()
+    euler = rotations.to_euler()
     euler = euler.reshape(nav_shape + (3,))
-
-    # Build up dictionary of keyword arguments to pass to the refinement
-    # solver
-    solver_kwargs = dict(method=method, method_kwargs=method_kwargs)
-
-    # Determine whether pattern intensities must be rescaled
-    dtype_in = patterns.dtype
-    dtype_desired = np.float32
-    if dtype_in != dtype_desired:
-        solver_kwargs["rescale"] = True
-    else:
-        solver_kwargs["rescale"] = False
 
     if trust_region is None:
         trust_region = np.ones(3)
@@ -96,13 +165,14 @@ def _refine_orientation(
 
     # Prepare parameters for the objective function which are constant
     # during optimization
-    fixed_parameters = _check_master_pattern_and_get_data(master_pattern, energy)
-    fixed_parameters += (_prepare_mask(mask),)
-    fixed_parameters += (n_pixels,)
     solver_kwargs["fixed_parameters"] = dask.delayed(fixed_parameters)
 
     # Determine whether a new PC is used for every pattern
     new_pc = np.prod(detector.navigation_shape) != 1 and n_patterns > 1
+
+    # Delay data once
+    patterns = dask.delayed(patterns)
+    euler = dask.delayed(euler)
 
     refined_parameters = []
     if new_pc:
@@ -112,7 +182,10 @@ def _refine_orientation(
         pcx = detector.pcx.astype(float).reshape(nav_shape)
         pcy = detector.pcy.astype(float).reshape(nav_shape)
         pcz = detector.pcz.astype(float).reshape(nav_shape)
-        for idx in np.ndindex(nav_shape):
+        pcx = dask.delayed(pcx)
+        pcy = dask.delayed(pcy)
+        pcz = dask.delayed(pcz)
+        for idx in np.ndindex(*nav_shape):
             delayed_solution = dask.delayed(_refine_orientation_solver)(
                 pattern=patterns[idx],
                 rotation=euler[idx],
@@ -133,7 +206,7 @@ def _refine_orientation(
         dc = _get_direction_cosines_for_single_pc_from_detector(detector).reshape(
             (n_pixels, 3)
         )
-        for idx in np.ndindex(nav_shape):
+        for idx in np.ndindex(*nav_shape):
             delayed_solution = dask.delayed(_refine_orientation_solver)(
                 pattern=patterns[idx],
                 rotation=euler[idx],
@@ -142,8 +215,14 @@ def _refine_orientation(
             )
             refined_parameters.append(delayed_solution)
 
-    print(_refinement_info_message(method, method_kwargs))
-
+    print(
+        _refinement_info_message(
+            method=method,
+            method_kwargs=method_kwargs,
+            trust_region=list(trust_region),
+            trust_region_passed=solver_kwargs["trust_region_passed"],
+        )
+    )
     if compute:
         output = compute_refine_orientation_results(
             results=refined_parameters, xmap=xmap, master_pattern=master_pattern
@@ -170,34 +249,32 @@ def _refine_projection_center(
     """See the docstring of
     :meth:`kikuchipy.signals.EBSD.refine_projection_center`.
     """
-    method, method_kwargs = _get_optimization_method_with_kwargs(method, method_kwargs)
-
-    # Get navigation shape and signal shape
-    nav_shape = xmap.shape
-    n_patterns = xmap.size
-    sig_shape = detector.shape
-    nrows, ncols = sig_shape
-    n_pixels = detector.size
+    (
+        method,
+        method_kwargs,
+        nav_shape,
+        n_patterns,
+        sig_shape,
+        nrows,
+        ncols,
+        n_pixels,
+        rotations,
+        solver_kwargs,
+        fixed_parameters,
+    ) = _refine_setup(
+        xmap=xmap,
+        detector=detector,
+        master_pattern=master_pattern,
+        energy=energy,
+        patterns_dtype=patterns.dtype,
+        mask=mask,
+        method=method,
+        method_kwargs=method_kwargs,
+    )
 
     # Get rotations in the correct shape
-    if xmap.rotations_per_point > 1:
-        rot = xmap.rotations[:, 0]
-    else:
-        rot = xmap.rotations
-    rotations = rot.data
+    rotations = rotations.data
     rotations = rotations.reshape(nav_shape + (4,))
-
-    # Build up dictionary of keyword arguments to pass to the refinement
-    # solver
-    solver_kwargs = dict(method=method, method_kwargs=method_kwargs)
-
-    # Determine whether pattern intensities must be rescaled
-    dtype_in = patterns.dtype
-    dtype_desired = np.float32
-    if dtype_in != dtype_desired:
-        solver_kwargs["rescale"] = True
-    else:
-        solver_kwargs["rescale"] = False
 
     if trust_region is None:
         trust_region = np.full(3, 0.05)
@@ -208,9 +285,6 @@ def _refine_projection_center(
 
     # Prepare parameters for the objective function which are constant
     # during optimization
-    fixed_parameters = _check_master_pattern_and_get_data(master_pattern, energy)
-    fixed_parameters += (_prepare_mask(mask),)
-    fixed_parameters += (n_pixels,)
     fixed_parameters += (nrows,)
     fixed_parameters += (ncols,)
     fixed_parameters += (detector.tilt,)
@@ -234,8 +308,15 @@ def _refine_projection_center(
         pcy = np.full(nav_shape, detector.pcy, dtype=float)
         pcz = np.full(nav_shape, detector.pcz, dtype=float)
 
+    # Delay data once
+    patterns = dask.delayed(patterns)
+    rotations = dask.delayed(rotations)
+    pcx = dask.delayed(pcx)
+    pcy = dask.delayed(pcy)
+    pcz = dask.delayed(pcz)
+
     refined_parameters = []
-    for idx in np.ndindex(nav_shape):
+    for idx in np.ndindex(*nav_shape):
         delayed_solution = dask.delayed(_refine_projection_center_solver)(
             pattern=patterns[idx],
             rotation=rotations[idx],
@@ -246,8 +327,14 @@ def _refine_projection_center(
         )
         refined_parameters.append(delayed_solution)
 
-    print(_refinement_info_message(method, method_kwargs))
-
+    print(
+        _refinement_info_message(
+            method=method,
+            method_kwargs=method_kwargs,
+            trust_region=list(trust_region),
+            trust_region_passed=solver_kwargs["trust_region_passed"],
+        )
+    )
     if compute:
         output = compute_refine_projection_center_results(
             results=refined_parameters,
@@ -301,18 +388,15 @@ def _get_optimization_method_with_kwargs(
     method_kwargs
         Keyword arguments to pass to function.
     """
-    if method not in [
-        "minimize",
-        "differential_evolution",
-        "dual_annealing",
-        "basinhopping",
-        "shgo",
-    ]:
-        raise ValueError(f"Method {method} not supported")
-    if method == "minimize" and method_kwargs is None:
-        method_kwargs = {"method": "Nelder-Mead"}
-    elif method_kwargs is None:
+    supported_methods = list(SUPPORTED_OPTIMIZATION_METHODS.keys())
+    if method not in supported_methods:
+        raise ValueError(
+            f"Method {method} not in the list of supported methods {supported_methods}"
+        )
+    if method_kwargs is None:
         method_kwargs = {}
+    if method == "minimize":
+        method_kwargs.setdefault("method", "Nelder-Mead")
     method = getattr(scipy.optimize, method)
     return method, method_kwargs
 
@@ -376,7 +460,12 @@ def _prepare_mask(mask: Optional[np.ndarray] = None) -> Union[int, np.ndarray]:
     return mask
 
 
-def _refinement_info_message(method: Callable, method_kwargs: dict) -> str:
+def _refinement_info_message(
+    method: Callable,
+    method_kwargs: dict,
+    trust_region: list,
+    trust_region_passed: bool,
+) -> str:
     """Return a message with useful refinement information.
 
     Parameters
@@ -385,6 +474,11 @@ def _refinement_info_message(method: Callable, method_kwargs: dict) -> str:
         SciPy optimization method.
     method_kwargs
         Keyword arguments to be passed to the optimization method.
+    trust_region
+        Trust region to use for bounds on parameters.
+    trust_region_passed
+        Whether a trust region was passed. Used when determining whether
+        to print the trust region.
 
     Returns
     -------
@@ -392,16 +486,19 @@ def _refinement_info_message(method: Callable, method_kwargs: dict) -> str:
         Message with useful refinement information.
     """
     method_name = method.__name__
+    method_dict = SUPPORTED_OPTIMIZATION_METHODS[method_name]
     if method_name == "minimize":
-        optimization_type = "Local"
         method_name = f"{method_kwargs['method']} (minimize)"
-    else:
-        optimization_type = "Global"
+    optimization_type = method_dict["type"]
     msg = (
         "Refinement information:\n"
-        f"\t{optimization_type} optimization method: {method_name}\n"
+        f"\t{optimization_type.capitalize()} optimization method: {method_name}\n"
         f"\tKeyword arguments passed to method: {method_kwargs}"
     )
+    if trust_region_passed or (
+        optimization_type == "global" and method_dict["supports_bounds"]
+    ):
+        msg += f"\n\tTrust region: {trust_region}"
     return msg
 
 
