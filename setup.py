@@ -73,7 +73,7 @@ setup(
         "patterns."
     ),
     long_description=open("README.md").read(),
-    long_description_content_type="text/x-rst",
+    long_description_content_type="text/markdown",
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
