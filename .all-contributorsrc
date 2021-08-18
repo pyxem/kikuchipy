@@ -4,6 +4,15 @@
   ],
   "imageSize": 100,
   "commit": false,
+  "contributorsPerLine": 7,
+  "contributorsSortAlphabetically": true,
+  "badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-<%= contributors.length %>-yellow.svg)](#contributors)",
+  "projectName": "kikuchipy",
+  "projectOwner": "pyxem",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true,
+  "commitConvention": "none",
   "contributors": [
     {
       "login": "friedkitteh",
@@ -24,22 +33,7 @@
       "name": "Håkon Wiik Ånes",
       "avatar_url": "https://avatars.githubusercontent.com/u/12139781?v=4",
       "profile": "https://www.ntnu.edu/employees/hakon.w.anes",
-      "contributions": [
-        "bug",
-        "code",
-        "data",
-        "doc",
-        "design",
-        "example",
-        "ideas",
-        "infra",
-        "maintenance",
-        "question",
-        "research",
-        "review",
-        "test",
-        "tutorial"
-      ]
+      "contributions": []
     },
     {
       "login": "onatlandsmyr",
@@ -64,13 +58,5 @@
         "review"
       ]
     }
-  ],
-  "contributorsPerLine": 7,
-  "badgeTemplate": "[![Contributors](https://img.shields.io/badge/all_contributors-1-yellow.svg)](#contributors-)",
-  "projectName": "kikuchipy",
-  "projectOwner": "pyxem",
-  "repoType": "github",
-  "repoHost": "https://github.com",
-  "skipCi": true,
-  "commitConvention": "none"
+  ]
 }
