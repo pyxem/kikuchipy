@@ -72,7 +72,7 @@ setup(
         "Processing and analysis of electron backscatter diffraction (EBSD) "
         "patterns."
     ),
-    long_description=open("README.rst").read(),
+    long_description=open("README.md").read(),
     long_description_content_type="text/x-rst",
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -146,7 +146,7 @@ setup(
     package_dir={"kikuchipy": "kikuchipy"},
     include_package_data=True,
     package_data={
-        "": ["LICENSE", "README.rst"],
+        "": ["LICENSE", "README.md"],
         "kikuchipy": ["*.py", "hyperspy_extension.yaml", "data/*"],
     },
 )
