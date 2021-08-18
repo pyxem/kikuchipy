@@ -76,7 +76,7 @@ to each local commit. Please install it in your environment::
 
 Next time you commit some code, your code will be formatted inplace according
 to our `black configuration
-<https://github.com/pyxem/kikuchipy/blob/master/pyproject.toml>`_.
+<https://github.com/pyxem/kikuchipy/blob/develop/pyproject.toml>`_.
 
 Note that ``black`` won't format `docstrings
 <https://www.python.org/dev/peps/pep-0257/>`_. We follow the `numpydoc
@@ -92,9 +92,14 @@ party packages (like ``numpy`` and ``hyperspy``) and finally kikuchipy imports.
 Making changes
 ==============
 
-Create a new feature branch::
+kikuchipy's git branch model is the Gitflow Workflow (`original blog post
+<https://nvie.com/posts/a-successful-git-branching-model/>`_). This means that if you
+are adding a new feature, branch off of ``develop``, and if you are making a patch
+(hotfix), branch off of `main` instead.
 
-    $ git checkout master -b your-awesome-feature-name
+To create a new feature branch::
+
+    $ git checkout develop -b your-awesome-feature-name
 
 When you've made some changes you can view them with::
 
@@ -113,18 +118,22 @@ following `this GitHub guide
 Keeping your branch up-to-date
 ==============================
 
-Switch to the ``master`` branch::
+If you are adding a new feature, make sure to merge ``develop`` into your feature
+branch. If you are making a patch (hotfix), merge ``main`` into your patch branch
+instead.
 
-   $ git checkout master
+Switch to the ``develop`` branch::
 
-Fetch changes and update ``master``::
+   $ git checkout develop
 
-   $ git pull upstream master --tags
+Fetch changes and update ``develop``::
+
+   $ git pull upstream develop --tags
 
 Update your feature branch::
 
    $ git checkout your-awesome-feature-name
-   $ git merge master
+   $ git merge develop
 
 Sharing your changes
 ====================
@@ -135,7 +144,8 @@ Update your remote branch::
 
 You can then make a `pull request
 <https://guides.github.com/activities/forking/#making-a-pull-request>`_ to
-kikuchipy's ``master`` branch. Good job!
+kikuchipy's ``develop`` branch for new features, and ``main`` branch for patches. Good
+job!
 
 Building and writing documentation
 ==================================
@@ -269,5 +279,5 @@ We use `GitHub Actions <https://github.com/pyxem/kikuchipy/actions>`_ to ensure
 that kikuchipy can be installed on Windows, macOS and Linux (Ubuntu). After a
 successful installation of the package, the CI server runs the tests. After the tests
 return no errors, code coverage is reported to `Coveralls
-<https://coveralls.io/github/pyxem/kikuchipy?branch=master>`_. Add "[skip ci]" or to a
+<https://coveralls.io/github/pyxem/kikuchipy?branch=develop>`_. Add "[skip ci]" or to a
 commit message to skip this workflow on any commit to a pull request, as explained

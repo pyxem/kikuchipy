@@ -91,11 +91,11 @@ html_favicon = "_static/icon/plasma_favicon.png"
 
 # nbsphinx configuration
 # Taken from nbsphinx' own nbsphinx configuration file, with slight
-# modification to point nbviewer and Binder to the GitHub master links
-# when the documentation is launched from a kikuchipy version with
+# modification to point nbviewer and Binder to the GitHub develop branch
+# links when the documentation is launched from a kikuchipy version with
 # "dev" in the version.
 if "dev" in version:
-    release_version = "master"
+    release_version = "develop"
 else:
     release_version = "v" + version
 # This is processed by Jinja2 and inserted before each notebook
@@ -152,7 +152,7 @@ def linkcode_resolve(domain, info):
     """Determine the URL corresponding to Python object.
 
     This is taken from SciPy's conf.py:
-    https://github.com/scipy/scipy/blob/master/doc/source/conf.py.
+    https://github.com/scipy/scipy/blob/develop/doc/source/conf.py.
     """
     if domain != "py":
         return None
@@ -202,7 +202,7 @@ def linkcode_resolve(domain, info):
         if m:
             return pre_link + "%s/%s%s" % (m.group(1), fn, linespec)
         elif "dev" in kikuchipy.__version__:
-            return pre_link + "master/%s%s" % (fn, linespec)
+            return pre_link + "develop/%s%s" % (fn, linespec)
         else:
             return pre_link + "v%s/%s%s" % (kikuchipy.__version__, fn, linespec)
     else:
