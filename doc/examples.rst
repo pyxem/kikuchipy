@@ -2,7 +2,7 @@
 Examples
 ========
 
-Shorter examples or longer tutorials that doesn't fit in the `User guide <index.rst>`_.
+Shorter examples or longer tutorials that don't easily fit in the `User guide <index.rst>`_.
 
 Demonstrations given at workshops
 =================================

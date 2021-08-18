@@ -41,7 +41,7 @@ class SphericalProjection:
     spherical_region = SphericalRegion([0, 0, 1])
 
     @classmethod
-    def project(cls, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
+    def vector2xy(cls, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
         """Convert from cartesian to spherical coordinates according to
         the ISO 31-11 standard [SphericalWolfram]_.
 
@@ -63,7 +63,7 @@ class SphericalProjection:
         ...     SphericalProjection
         ... )
         >>> v = np.random.random_sample(30).reshape((10, 3))
-        >>> theta, phi, r = SphericalProjection.project(v).T
+        >>> theta, phi, r = SphericalProjection.vector2xy(v).T
         >>> np.allclose(np.arccos(v[:, 2] / r), theta)
         True
         >>> np.allclose(np.arctan2(v[:, 1], v[:, 0]), phi)

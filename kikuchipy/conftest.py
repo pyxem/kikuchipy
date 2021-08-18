@@ -21,15 +21,15 @@ from numbers import Number
 import os
 from packaging import version
 import tempfile
-from typing import Tuple
 
+import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticePoint
 from hyperspy import __version__ as hs_version
 from hyperspy.misc.utils import DictionaryTreeBrowser
 import matplotlib.pyplot as plt
 import numpy as np
-from orix.crystal_map import CrystalMap, Phase, PhaseList
+from orix.crystal_map import CrystalMap, create_coordinate_arrays, Phase, PhaseList
 from orix.quaternion.rotation import Rotation
 from orix.vector import Vector3d, neo_euler
 import pytest
@@ -69,28 +69,6 @@ def assert_dictionary(dict1, dict2):
                 assert dict1[key] == dict2[key]
 
 
-def _get_spatial_array_dicts(
-    nav_shape: Tuple[int, int], step_sizes: Tuple[int, int] = (1.5, 1)
-) -> Tuple[dict, int]:
-    ny, nx = nav_shape
-    dy, dx = step_sizes
-    d = {"x": None, "y": None, "z": None}
-    map_size = 1
-    if nx > 1:
-        if ny > 1:
-            d["x"] = np.tile(np.arange(nx) * dx, ny)
-        else:
-            d["x"] = np.arange(nx) * dx
-        map_size *= nx
-    if ny > 1:
-        if nx > 1:
-            d["y"] = np.sort(np.tile(np.arange(ny) * dy, nx))
-        else:
-            d["y"] = np.arange(ny) * dy
-        map_size *= ny
-    return d, map_size
-
-
 # ------------------------------ Setup ------------------------------ #
 
 
@@ -118,7 +96,10 @@ def dummy_signal():
         dtype=np.uint8
     ).reshape((3, 3, 3, 3))
     # fmt: on
-    return kp.signals.EBSD(dummy_array)
+    s = kp.signals.EBSD(dummy_array)
+    s.axes_manager.navigation_axes[1].name = "x"
+    s.axes_manager.navigation_axes[0].name = "y"
+    yield s
 
 
 @pytest.fixture
@@ -128,7 +109,41 @@ def dummy_background():
     compare the output from methods using this background (as input) to
     hard-coded outputs.
     """
-    return np.array([5, 4, 5, 4, 3, 4, 4, 4, 3], dtype=np.uint8).reshape((3, 3))
+    yield np.array([5, 4, 5, 4, 3, 4, 4, 4, 3], dtype=np.uint8).reshape((3, 3))
+
+
+@pytest.fixture(params=[[(3, 3), (3, 3), False, np.float32]])
+def ebsd_with_axes_and_random_data(request):
+    """EBSD signal with minimally defined axes and random data.
+
+    Parameters
+    ----------
+    navigation_shape : tuple
+    signal_shape : tuple
+    lazy : bool
+    dtype : numpy.dtype
+    """
+    nav_shape, sig_shape, lazy, dtype = request.param
+    nav_ndim = len(nav_shape)
+    sig_ndim = len(sig_shape)
+    data_shape = nav_shape + sig_shape
+    axes = []
+    if nav_ndim == 1:
+        axes.append(dict(name="x", size=nav_shape[0], scale=1))
+    if nav_ndim == 2:
+        axes.append(dict(name="y", size=nav_shape[0], scale=1))
+        axes.append(dict(name="x", size=nav_shape[1], scale=1))
+    #    if sig_ndim == 1:
+    #        axes.append(dict(name="dx", size=sig_shape[0], scale=1))
+    if sig_ndim == 2:
+        axes.append(dict(name="dy", size=sig_shape[0], scale=1))
+        axes.append(dict(name="dx", size=sig_shape[1], scale=1))
+    if lazy:
+        data = da.random.random(data_shape).astype(dtype)
+        yield kp.signals.LazyEBSD(data, axes=axes)
+    else:
+        data = np.random.random(data_shape).astype(dtype)
+        yield kp.signals.EBSD(data, axes=axes)
 
 
 @pytest.fixture(params=["h5"])
@@ -136,9 +151,8 @@ def save_path_hdf5(request):
     """Temporary file in a temporary directory for use when tests need
     to write, and sometimes read again, a signal to, and from, a file.
     """
-    ext = request.param
     with tempfile.TemporaryDirectory() as tmp:
-        file_path = os.path.join(tmp, "patterns_temp." + ext)
+        file_path = os.path.join(tmp, "patterns_temp." + request.param)
         yield file_path
         gc.collect()
 
@@ -146,7 +160,7 @@ def save_path_hdf5(request):
 @pytest.fixture
 def nickel_structure():
     """A diffpy.structure with a Nickel crystal structure."""
-    return Structure(
+    yield Structure(
         atoms=[Atom("Ni", [0, 0, 0])],
         lattice=Lattice(3.5236, 3.5236, 3.5236, 90, 90, 90),
     )
@@ -157,7 +171,7 @@ def nickel_phase(nickel_structure):
     """A orix.crystal_map.Phase with a Nickel crystal structure and
     symmetry operations.
     """
-    return Phase(name="ni", structure=nickel_structure, space_group=225)
+    yield Phase(name="ni", structure=nickel_structure, space_group=225)
 
 
 @pytest.fixture(params=[[[1, 1, 1], [2, 0, 0], [2, 2, 0]]])
@@ -165,23 +179,26 @@ def nickel_rlp(request, nickel_phase):
     """A set of reciprocal lattice points for a Nickel crystal
     structure with a minimum interplanar spacing.
     """
-    return ReciprocalLatticePoint(phase=nickel_phase, hkl=request.param)
+    yield ReciprocalLatticePoint(phase=nickel_phase, hkl=request.param)
 
 
 @pytest.fixture
 def pc1():
     """One projection center (PC) in TSL convention."""
-    return [0.4210, 0.7794, 0.5049]
+    yield [0.4210, 0.7794, 0.5049]
 
 
-@pytest.fixture(params=[(1,)])
+@pytest.fixture(params=[[(1,), (60, 60)]])
 def detector(request, pc1):
-    """A NORDIF UF1100 EBSD detector with a TSL PC."""
-    return kp.detectors.EBSDDetector(
-        shape=(60, 60),
+    """An EBSD detector of a given shape with a number of PCs given by
+    a navigation shape.
+    """
+    nav_shape, sig_shape = request.param
+    yield kp.detectors.EBSDDetector(
+        shape=sig_shape,
         binning=8,
         px_size=70,
-        pc=np.ones(request.param + (3,)) * pc1,
+        pc=np.ones(nav_shape + (3,)) * pc1,
         sample_tilt=70,
         tilt=0,
         convention="tsl",
@@ -197,7 +214,7 @@ def nickel_rotations():
     Nickel data set in this set of scans:
     https://zenodo.org/record/3265037.
     """
-    return Rotation(
+    yield Rotation(
         np.array(
             [
                 [0.8662, 0.2033, -0.3483, -0.2951],
@@ -233,7 +250,7 @@ def nickel_rotations():
 @pytest.fixture
 def r_tsl2bruker():
     """A rotation from the TSL to Bruker crystal reference frame."""
-    return Rotation.from_neo_euler(
+    yield Rotation.from_neo_euler(
         neo_euler.AxAngle.from_axes_angles(Vector3d.zvector(), np.pi / 2)
     )
 
@@ -243,7 +260,7 @@ def nickel_ebsd_simulation_generator(nickel_phase, detector, nickel_rotations):
     """Generator for EBSD simulations of Kikuchi bands for the Nickel
     data set referenced above.
     """
-    return kp.generators.EBSDSimulationGenerator(
+    yield kp.generators.EBSDSimulationGenerator(
         detector=detector, phase=nickel_phase, rotations=nickel_rotations
     )
 
@@ -291,7 +308,7 @@ def nickel_kikuchi_band(nickel_rlp, nickel_rotations, pc1):
         hkl_detector[is_in_some_pattern], source=0, destination=nav_dim
     )
 
-    return kp.simulations.features.KikuchiBand(
+    yield kp.simulations.features.KikuchiBand(
         phase=phase,
         hkl=hkl,
         hkl_detector=hkl_detector,
@@ -344,7 +361,7 @@ def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
         uvw_detector[is_in_some_pattern], source=0, destination=nav_dim
     )
 
-    return kp.simulations.features.ZoneAxis(
+    yield kp.simulations.features.ZoneAxis(
         phase=phase,
         uvw=uvw,
         uvw_detector=uvw_detector,
@@ -366,9 +383,9 @@ def get_single_phase_xmap(rotations):
         prop_names=["scores", "simulation_indices"],
         name="a",
         phase_id=0,
-        step_sizes=(1.5, 1),
+        step_sizes=None,
     ):
-        d, map_size = _get_spatial_array_dicts(nav_shape, step_sizes)
+        d, map_size = create_coordinate_arrays(shape=nav_shape, step_sizes=step_sizes)
         rot_idx = np.random.choice(
             np.arange(rotations.size), map_size * rotations_per_point
         )
@@ -462,7 +479,7 @@ def oxford_binary_file(tmpdir, request):
 
     f.close()
 
-    return f
+    yield f
 
 
 # ---------------------- pytest doctest-modules ---------------------- #

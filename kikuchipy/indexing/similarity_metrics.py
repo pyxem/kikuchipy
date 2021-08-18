@@ -22,6 +22,7 @@ from enum import Enum
 from typing import Callable, Tuple, Union
 
 import dask.array as da
+import numba as nb
 import numpy as np
 
 from kikuchipy.pattern._pattern import _normalize, _zero_mean
@@ -527,3 +528,27 @@ ndp.__doc__ = r"""
 
 
 _SIMILARITY_METRICS = {"ncc": ncc, "ndp": ndp}
+
+
+@nb.jit("float64(float32[:, :], float32[:, :])", cache=True, nogil=True, nopython=True)
+def _ncc_single_patterns_2d_float32(exp: np.ndarray, sim: np.ndarray) -> float:
+    """Return the normalized cross-correlation (NCC) coefficient
+    between two 2D patterns.
+
+    Parameters
+    ----------
+    exp, sim
+        2D arrays of equal shape and of data type 32-bit floats.
+
+    Returns
+    -------
+    NCC coefficient as 64-bit float.
+    """
+    exp_mean = np.mean(exp)
+    sim_mean = np.mean(sim)
+    exp_normed = exp - exp_mean
+    sim_normed = sim - sim_mean
+    return np.divide(
+        np.sum(exp_normed * sim_normed),
+        np.sqrt(np.sum(np.square(exp_normed)) * np.sum(np.square(sim_normed))),
+    )

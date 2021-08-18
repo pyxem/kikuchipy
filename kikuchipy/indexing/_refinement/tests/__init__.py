@@ -15,23 +15,3 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
-
-from datetime import datetime
-
-
-author = "kikuchipy developers"
-copyright = f"Copyright 2019-{datetime.now().year}, kikuchipy"
-# Initial committer first, then sorted by line contributions
-credits = [
-    "Håkon Wiik Ånes",
-    "Lars Andreas Hastad Lervik",
-    "Ole Natlandsmyr",
-    "Tina Bergh",
-]
-license = "GPLv3+"
-maintainer = "Håkon Wiik Ånes"
-maintainer_email = "hakon.w.anes@ntnu.no"
-name = "kikuchipy"
-platforms = ["Linux", "MacOS X", "Windows"]
-status = "Development"
-version = "0.5.dev0"

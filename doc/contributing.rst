@@ -214,6 +214,14 @@ terminal. For an even nicer presentation, you can use ``coverage.py`` directly::
 Then, you can open the created ``htmlcov/index.html`` in the browser and inspect
 the coverage in more detail.
 
+To run only a specific test function or class, .e.g the ``TestEBSD`` class::
+
+    $ pytest -k TestEBSD
+
+This is useful when you only want to run a specific test and not the full test suite,
+e.g. when you're creating or updating a test. But remember to run the full test suite
+before pushing!
+
 Docstring examples are tested
 `with pytest <https://docs.pytest.org/en/stable/doctest.html>`_ as well::
 
@@ -242,11 +250,20 @@ The desired data cache directory used by pooch can be set with a global
 `KIKUCHIPY_DATA_DIR` variable locally, e.g. by setting
 `export KIKUCHIPY_DATA_DIR=~/kikuchipy_data` in `~/.bashrc`.
 
+Improving performance
+=====================
+When we write code, it's important that we (1) get the correct result, (2) don't fill up
+memory, and (3) that the computation doesn't take too long. To keep memory in check, we
+use `Dask <https://docs.dask.org/en/latest/>`_ wherever possible. To speed up
+computations, we use `Numba <https://numba.pydata.org/numba-doc/dev/>`_ wherever
+possible.
+
 Continuous integration (CI)
 ===========================
 
 We use `GitHub Actions <https://github.com/pyxem/kikuchipy/actions>`_ to ensure
 that kikuchipy can be installed on Windows, macOS and Linux (Ubuntu). After a
-successful installation, the CI server runs the tests. After the tests return no
-errors, code coverage is reported to `Coveralls
-<https://coveralls.io/github/pyxem/kikuchipy?branch=master>`_.
+successful installation of the package, the CI server runs the tests. After the tests
+return no errors, code coverage is reported to `Coveralls
+<https://coveralls.io/github/pyxem/kikuchipy?branch=master>`_. Add "[skip ci]" or to a
+commit message to skip this workflow on any commit to a pull request, as explained
