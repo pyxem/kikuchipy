@@ -1,3 +1,11 @@
+<img align="right" width="200px" src="https://kikuchipy.org/en/stable/_static/plasma_logo.svg">
+
+## kikuchipy
+
+kikuchipy is an open-source Python library for processing and analysis of electron
+backscatter diffraction (EBSD) patterns. The library builds on the tools for
+multi-dimensional data analysis provided by the HyperSpy library.
+
 [![Launch binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pyxem/kikuchipy/HEAD)
 [![Gitter chat](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pyxem/kikuchipy)
 [![Documentation status](https://readthedocs.org/projects/kikuchipy/badge/?version=latest)](https://kikuchipy.org/en/latest/)
@@ -7,10 +15,6 @@
 [![Downloads per month](https://pepy.tech/badge/kikuchipy/month)](https://pepy.tech/project/kikuchipy)
 [![Zenodo DOI](https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg)](https://doi.org/10.5281/zenodo.3597646)
 [![All Contributors](https://img.shields.io/badge/all_contributors-4-yellow.svg)](#contributors)
-
-kikuchipy is an open-source Python library for processing and analysis of electron
-backscatter diffraction (EBSD) patterns. The library builds on the tools for
-multi-dimensional data analysis provided by the HyperSpy library.
 
 - **User guide and API reference**: https://kikuchipy.org. The guide consists of Jupyter
   Notebooks with many links to detailed explanations of the input parameters and output
