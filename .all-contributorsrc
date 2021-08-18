@@ -1,0 +1,29 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributors": [
+    {
+      "login": "friedkitteh",
+      "name": "Lars Lervik",
+      "avatar_url": "https://avatars.githubusercontent.com/u/11888052?v=4",
+      "profile": "https://github.com/friedkitteh",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "question",
+        "review",
+        "test"
+      ]
+    }
+  ],
+  "contributorsPerLine": 7,
+  "projectName": "kikuchipy",
+  "projectOwner": "pyxem",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true
+}
