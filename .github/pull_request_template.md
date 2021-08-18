@@ -19,5 +19,6 @@
 <!-- Don't remove the checklist below. -->
 - [ ] The PR title is short, concise, and will make sense 1 year later.
 - [ ] New functions are imported in corresponding `__init__.py`.
-- [ ] New features, API changes, and deprecations are mentioned in the
-      unreleased section in `doc/changelog.rst`.
+- [ ] New features, API changes, and deprecations are mentioned in the unreleased
+      section in `doc/changelog.rst`.
+- [ ] New contributors are added to .all-contributorsrc and the table is regenerated.

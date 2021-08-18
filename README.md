@@ -1,4 +1,3 @@
-[![All Contributors](https://img.shields.io/badge/all_contributors-4-yellow.svg)](#contributors)
 [![Launch binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pyxem/kikuchipy/HEAD)
 [![Gitter chat](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pyxem/kikuchipy)
 [![Documentation status](https://readthedocs.org/projects/kikuchipy/badge/?version=latest)](https://kikuchipy.org/en/latest/)
@@ -7,6 +6,7 @@
 [![PyPI version](https://img.shields.io/pypi/v/kikuchipy.svg)](https://pypi.python.org/pypi/kikuchipy)
 [![Downloads per month](https://pepy.tech/badge/kikuchipy/month)](https://pepy.tech/project/kikuchipy)
 [![Zenodo DOI](https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg)](https://doi.org/10.5281/zenodo.3597646)
+[![All Contributors](https://img.shields.io/badge/all_contributors-4-yellow.svg)](#contributors)
 
 kikuchipy is an open-source Python library for processing and analysis of electron
 backscatter diffraction (EBSD) patterns. The library builds on the tools for
