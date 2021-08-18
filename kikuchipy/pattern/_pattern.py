@@ -18,7 +18,7 @@
 
 from typing import Union, Tuple, Optional, List
 
-from numba import njit
+import numba as nb
 import numpy as np
 from numpy.fft import fft2, rfft2, ifft2, irfft2, fftshift, ifftshift
 from scipy.ndimage import gaussian_filter
@@ -32,7 +32,7 @@ def rescale_intensity(
     pattern: np.ndarray,
     in_range: Optional[Tuple[Union[int, float], ...]] = None,
     out_range: Optional[Tuple[Union[int, float], ...]] = None,
-    dtype_out: Optional[np.dtype] = None,
+    dtype_out: Union[None, np.dtype, type] = None,
 ) -> np.ndarray:
     """Rescale intensities in an EBSD pattern.
 
@@ -86,7 +86,7 @@ def rescale_intensity(
     return _rescale(pattern, imin, imax, omin, omax).astype(dtype_out)
 
 
-@njit
+@nb.jit(nogil=True, nopython=True, cache=True)
 def _rescale(
     pattern: np.ndarray,
     imin: Union[int, float],
@@ -475,7 +475,7 @@ def fft_filter(
     return np.real(ifft(filtered_fft, shift=shift))
 
 
-@njit
+@nb.jit(nopython=True, nogil=True, cache=True)
 def fft_spectrum(fft_pattern: np.ndarray) -> np.ndarray:
     """Compute the FFT spectrum of a Fourier transformed EBSD pattern.
 
@@ -492,7 +492,7 @@ def fft_spectrum(fft_pattern: np.ndarray) -> np.ndarray:
     return np.sqrt(fft_pattern.real ** 2 + fft_pattern.imag ** 2)
 
 
-@njit
+@nb.jit(nopython=True, nogil=True, cache=True)
 def normalize_intensity(
     pattern: np.ndarray, num_std: int = 1, divide_by_square_root: bool = False
 ) -> np.ndarray:

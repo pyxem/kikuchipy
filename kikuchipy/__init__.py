@@ -16,7 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+# List of public modules
 # Import order must not be changed
+from kikuchipy import signals
 from kikuchipy import crystallography
 from kikuchipy import detectors
 from kikuchipy import draw
@@ -24,7 +26,6 @@ from kikuchipy import filters
 from kikuchipy import indexing
 from kikuchipy import pattern
 from kikuchipy import projections
-from kikuchipy import signals
 from kikuchipy import generators
 from kikuchipy import simulations
 from kikuchipy.io._io import load

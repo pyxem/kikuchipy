@@ -22,7 +22,7 @@ import warnings
 
 import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList
-from orix.quaternion.rotation import Rotation
+from orix.quaternion import Rotation
 
 from kikuchipy.indexing.similarity_metrics import SimilarityMetric, _SIMILARITY_METRICS
 

@@ -34,7 +34,7 @@ def test_spherical_projection():
     v = Vector3d(v_arr)
 
     # Vector3d
-    polar = SphericalProjection.project(v_arr)
+    polar = SphericalProjection.vector2xy(v_arr)
     assert np.allclose(polar[..., 0], v.polar.data)
     assert np.allclose(polar[..., 1], v.azimuth.data)
     assert np.allclose(polar[..., 2], v.radial.data)
@@ -43,7 +43,7 @@ def test_spherical_projection():
     assert np.allclose(get_radial(v), v.radial.data)
 
     # NumPy array
-    polar2 = SphericalProjection.project(v)
+    polar2 = SphericalProjection.vector2xy(v)
     assert np.allclose(polar2[..., 0], v.polar.data)
     assert np.allclose(polar2[..., 1], v.azimuth.data)
     assert np.allclose(polar2[..., 2], v.radial.data)

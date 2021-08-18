@@ -22,6 +22,8 @@ Contributors
 
 Added
 -----
+- How to use the new orientation and/or projection center refinements to the pattern
+  matching notebook. (`#405 <https://github.com/pyxem/kikuchipy/pull/405>`_)
 - Notebooks to the documentation as shorter or longer "Examples" that don't fit in the
   user guide. (`#403 <https://github.com/pyxem/kikuchipy/pull/403>`_)
 - Refinement module for EBSD refinement. Allows for the refinement of
@@ -30,6 +32,10 @@ Added
 
 Changed
 -------
+- Performance improvements to EBSD dictionary generation, giving a substantial speed-up.
+  (`#405 <https://github.com/pyxem/kikuchipy/pull/405>`_)
+- Rename projection methods from `project()`/`iproject()` to
+  `vector2xy()`/`xy2vector()`. (`#405 <https://github.com/pyxem/kikuchipy/pull/405>`_)
 - URLs of user guide topics have an extra "/user_guide/<topic>" added to them.
   (`#403 <https://github.com/pyxem/kikuchipy/pull/403>`_)
 

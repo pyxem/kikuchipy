@@ -28,7 +28,7 @@ class GnomonicProjection(SphericalProjection):
     """Gnomonic projection of a vector as implemented in MTEX."""
 
     @classmethod
-    def project(cls, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
+    def vector2xy(cls, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
         """Convert from 3D cartesian coordinates (x, y, z) to 2D
         Gnomonic coordinates (x_g, y_g).
 
@@ -49,9 +49,9 @@ class GnomonicProjection(SphericalProjection):
         ...     GnomonicProjection
         ... )
         >>> v = np.random.random_sample(30).reshape((10, 3))
-        >>> xy = GnomonicProjection.project(v)
+        >>> xy = GnomonicProjection.vector2xy(v)
         """
-        polar_coordinates = super().project(v)
+        polar_coordinates = super().vector2xy(v)
         polar, azimuth = polar_coordinates[..., 0], polar_coordinates[..., 1]
 
         # Map to upper hemisphere
@@ -72,7 +72,7 @@ class GnomonicProjection(SphericalProjection):
         return gnomonic
 
     @staticmethod
-    def iproject(xy: np.ndarray) -> Vector3d:
+    def xy2vector(xy: np.ndarray) -> Vector3d:
         """Convert from 2D Gnomonic coordinates (x_g, y_g) to 3D
         cartesian coordiantes (x, y, z).
 
@@ -95,7 +95,7 @@ class GnomonicProjection(SphericalProjection):
         ...     GnomonicProjection
         ... )
         >>> xy_g = np.random.random_sample(20).reshape((10, 2))
-        >>> xyz = GnomonicProjection.iproject(xy_g)
+        >>> xyz = GnomonicProjection.xy2vector(xy_g)
         """
         x, y = xy[..., 0], xy[..., 1]
         polar = np.arctan(np.sqrt(x ** 2 + y ** 2))
