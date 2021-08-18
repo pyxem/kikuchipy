@@ -10,7 +10,7 @@ multi-dimensional data analysis provided by the HyperSpy library.
 [![Gitter chat](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pyxem/kikuchipy)
 [![Documentation status](https://readthedocs.org/projects/kikuchipy/badge/?version=latest)](https://kikuchipy.org/en/latest/)
 [![Build status](https://github.com/pyxem/kikuchipy/workflows/build/badge.svg)](https://github.com/pyxem/kikuchipy/actions)
-[![Coverage status](https://coveralls.io/repos/github/pyxem/kikuchipy/badge.svg?branch=master)](https://coveralls.io/github/pyxem/kikuchipy?branch=master)
+[![Coverage status](https://coveralls.io/repos/github/pyxem/kikuchipy/badge.svg?branch=develop)](https://coveralls.io/github/pyxem/kikuchipy?branch=develop)
 [![PyPI version](https://img.shields.io/pypi/v/kikuchipy.svg)](https://pypi.python.org/pypi/kikuchipy)
 [![Downloads per month](https://pepy.tech/badge/kikuchipy/month)](https://pepy.tech/project/kikuchipy)
 [![Zenodo DOI](https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg)](https://doi.org/10.5281/zenodo.3597646)

@@ -1623,7 +1623,6 @@ class TestEBSDRefinement:
         assert new_scores.shape == xmap.shape
         assert not np.allclose(new_scores, xmap.get_map_data("scores"))
         assert isinstance(new_detector, kp.detectors.EBSDDetector)
-        assert not np.allclose(detector.pc, new_detector.pc[0, 0])
 
     def test_refine_projection_center_not_compute(
         self,
