@@ -1,4 +1,7 @@
 [![Launch binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pyxem/kikuchipy/HEAD)
+<!-- ALL-CONTRIBUTORS-BADGE:START - Do not remove or modify this section -->
+[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors-)
+<!-- ALL-CONTRIBUTORS-BADGE:END -->
 [![Gitter chat](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pyxem/kikuchipy)
 [![Documentation status](https://readthedocs.org/projects/kikuchipy/badge/?version=latest)](https://kikuchipy.org/en/latest/)
 [![Build status](https://github.com/pyxem/kikuchipy/workflows/build/badge.svg)](https://github.com/pyxem/kikuchipy/actions)
@@ -25,3 +28,23 @@ multi-dimensional data analysis provided by the HyperSpy library.
 - **Changelog**: The library is in an alpha stage, so there will be breaking changes
   with each release. Please see
   [the changelog](https://kikuchipy.org/en/latest/changelog.html) for all developments.
+
+## Contributors ✨
+
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tr>
+    <td align="center"><a href="https://github.com/friedkitteh"><img src="https://avatars.githubusercontent.com/u/11888052?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Lars Lervik</b></sub></a><br /><a href="https://github.com/pyxem/kikuchipy/issues?q=author%3Afriedkitteh" title="Bug reports">🐛</a> <a href="https://github.com/pyxem/kikuchipy/commits?author=friedkitteh" title="Code">💻</a> <a href="https://github.com/pyxem/kikuchipy/commits?author=friedkitteh" title="Documentation">📖</a> <a href="#question-friedkitteh" title="Answering Questions">💬</a> <a href="https://github.com/pyxem/kikuchipy/pulls?q=is%3Apr+reviewed-by%3Afriedkitteh" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/pyxem/kikuchipy/commits?author=friedkitteh" title="Tests">⚠️</a></td>
+  </tr>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
