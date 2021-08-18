@@ -612,11 +612,7 @@ def _refinement_info_message(
     return msg
 
 
-def compute_refine_orientation_results(
-    results: list,
-    xmap: CrystalMap,
-    master_pattern,
-) -> CrystalMap:
+def compute_refine_orientation_results(results: list, xmap: CrystalMap, master_pattern):
     """Compute the results from
     :meth:`~kikuchipy.signals.EBSD.refine_orientation` and return the
     :class:`~orix.crystal_map.CrystalMap`.
@@ -635,7 +631,7 @@ def compute_refine_orientation_results(
 
     Returns
     -------
-    refined_xmap
+    refined_xmap : :class:`~orix.crystal_map.CrystalMap`
         Crystal map with refined orientations and scores.
     """
     n_patterns = len(results)
@@ -656,9 +652,7 @@ def compute_refine_orientation_results(
     return xmap_refined
 
 
-def compute_refine_projection_center_results(
-    results: list, detector, xmap: CrystalMap
-) -> tuple:
+def compute_refine_projection_center_results(results: list, detector, xmap: CrystalMap):
     """Compute the results from
     :meth:`~kikuchipy.signals.EBSD.refine_projection_center` and return
     the score array and :class:`~kikuchipy.detectors.EBSDDetector`.
@@ -677,7 +671,9 @@ def compute_refine_projection_center_results(
 
     Returns
     -------
-    numpy.ndarray and ~kikuchipy.detectors.EBSDDetector
+    new_scores : :class:`numpy.ndarray`
+        Score array.
+    new_detector : :class:`~kikuchipy.detectors.EBSDDetector`
         EBSD detector with refined projection center parameters.
     """
     n_patterns = len(results)
@@ -697,7 +693,7 @@ def compute_refine_orientation_projection_center_results(
     detector,
     xmap: CrystalMap,
     master_pattern,
-) -> tuple:
+):
     """Compute the results from
     :meth:`~kikuchipy.signals.EBSD.refine_orientation_projection_center`
     and return the :class:`~orix.crystal_map.CrystalMap` and
@@ -720,9 +716,10 @@ def compute_refine_orientation_projection_center_results(
 
     Returns
     -------
-    ~orix.crystal_map.CrystalMap and ~kikuchipy.detectors.EBSDDetector
-        Crystal map with refined orientations and scores and EBSD
-        detector with refined projection center parameters.
+    xmap_refined : :class:`~orix.crystal_map.CrystalMap`
+        Crystal map with refined orientations and scores.
+    new_detector : :class:`~kikuchipy.detectors.EBSDDetector`
+        EBSD detector with refined projection center parameters.
     """
     n_patterns = len(results)
     nav_shape = xmap.shape

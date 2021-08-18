@@ -1045,7 +1045,15 @@ class EBSD(CommonImage, Signal2D):
         represented by the three projection center (PC) parameters
         (PCx, PCy, PCz), are fixed.
 
-        A subset of the optimization methods in SciPy are available.
+        A subset of the optimization methods in SciPy are available:
+            - Local optimization:
+                - :func:`~scipy.optimize.minimize`
+                  (includes Nelder-Mead, Powell etc.)
+            - Global optimization:
+                - :func:`~scipy.optimize.differential_evolution`
+                - :func:`~scipy.optimize.dual_annealing`
+                - :func:`~scipy.optimize.basinhopping`
+                - :func:`~scipy.optimize.shgo`
 
         Parameters
         ----------
@@ -1071,8 +1079,9 @@ class EBSD(CommonImage, Signal2D):
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
             "basinhopping", and "shgo". Default is "minimize", which
-            performs local optimization with the Nelder-Mead method
-            unless another method is passed to `method_kwargs`.
+            by default performs local optimization with the Nelder-Mead
+            method unless another "minimize" method is passed to
+            `method_kwargs`.
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
             `method`. For example, to perform refinement with the
@@ -1091,12 +1100,11 @@ class EBSD(CommonImage, Signal2D):
 
         Returns
         -------
-        ~orix.crystal_map.CrystalMap or list of ~dask.delayed.Delayed
+        :class:`~orix.crystal_map.CrystalMap` or list of :class:`~dask.delayed.Delayed`
             Crystal map with refined orientations and similarity metrics
             in a "scores" property if `compute` is True. If
-            `compute` is False, a list of :class:`~dask.delayed.Delayed`
-            instances, one per experimental pattern, is returned, to be
-            computed later. See
+            `compute` is False, a list of `Delayed` instances, one per
+            experimental pattern, is returned, to be computed later. See
             :func:`~kikuchipy.indexing.compute_refine_orientation_results`.
             One delayed instance has the optimized score and the three
             Euler angles in radians in element 0, 1, 2, and 3,
@@ -1145,7 +1153,15 @@ class EBSD(CommonImage, Signal2D):
         parameters (PCx, PCy, PCz), is changed during projection, while
         the orientations are fixed.
 
-        A subset of the optimization methods in SciPy are available.
+        A subset of the optimization methods in SciPy are available:
+            - Local optimization:
+                - :func:`~scipy.optimize.minimize`
+                  (includes Nelder-Mead, Powell etc.)
+            - Global optimization:
+                - :func:`~scipy.optimize.differential_evolution`
+                - :func:`~scipy.optimize.dual_annealing`
+                - :func:`~scipy.optimize.basinhopping`
+                - :func:`~scipy.optimize.shgo`
 
         Parameters
         ----------
@@ -1171,8 +1187,9 @@ class EBSD(CommonImage, Signal2D):
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
             "basinhopping", and "shgo". Default is "minimize", which
-            performs local optimization with the Nelder-Mead method
-            unless another method is passed to `method_kwargs`.
+            by default performs local optimization with the Nelder-Mead
+            method unless another "minimize" method is passed to
+            `method_kwargs`.
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
             `method`. For example, to perform refinement with the
@@ -1191,11 +1208,12 @@ class EBSD(CommonImage, Signal2D):
 
         Returns
         -------
-        numpy.ndarray and ~kikuchipy.detectors.EBSDDetector or list of ~dask.delayed.Delayed
+        :class:`numpy.ndarray` and :class:`~kikuchipy.detectors.EBSDDetector`,\
+        or list of :class:`~dask.delayed.Delayed`
             New similarity metrics and a new EBSD detector instance with
             the refined PCs if `compute` is True. If `compute` is False,
-            a list of :class:`~dask.delayed.Delayed` instances, one per
-            experimental pattern, is returned, to be computed later. See
+            a list of `Delayed` instances, one per experimental pattern,
+            is returned, to be computed later. See
             :func:`~kikuchipy.indexing.compute_refine_projection_center_results`.
             One delayed instance has the optimized score and the three
             PC parameters in the Bruker convention in element 0, 1, 2,
@@ -1246,7 +1264,15 @@ class EBSD(CommonImage, Signal2D):
         center (PC) parameters (PCx, PCy, PCz), are changed during
         projection.
 
-        A subset of the optimization methods in SciPy are available.
+        A subset of the optimization methods in SciPy are available:
+            - Local optimization:
+                - :func:`~scipy.optimize.minimize`
+                  (includes Nelder-Mead, Powell etc.)
+            - Global optimization:
+                - :func:`~scipy.optimize.differential_evolution`
+                - :func:`~scipy.optimize.dual_annealing`
+                - :func:`~scipy.optimize.basinhopping`
+                - :func:`~scipy.optimize.shgo`
 
         Parameters
         ----------
@@ -1272,8 +1298,9 @@ class EBSD(CommonImage, Signal2D):
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
             "basinhopping", and "shgo". Default is "minimize", which
-            performs local optimization with the Nelder-Mead method
-            unless another method is passed to `method_kwargs`.
+            by default performs local optimization with the Nelder-Mead
+            method unless another "minimize" method is passed to
+            `method_kwargs`.
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
             `method`. For example, to perform refinement with the
@@ -1294,16 +1321,17 @@ class EBSD(CommonImage, Signal2D):
 
         Returns
         -------
-        CrystalMap and EBSDDetector, or ~dask.delayed.Delayed
-            New crystal map with refined orientations and similarity
-            metrics as a "scores" property and a new EBSD detector with
-            refined projection centers, if `compute` is True. If
-            `compute` is False, a :class:`~dask.delayed.Delayed` list
-            instance `results` is returned where the Euler angles in
-            radians and the PC parameters in the Bruker convention for
-            the flattened map index `i` are accessed as `results[i][0]`,
-            `results[i][1]`, `results[i][2]`, `results[i][3]`,
-            `results[i][4]`, and `results[i][5]`, respectively.
+        :class:`~orix.crystal_map.CrystalMap` and :class:`~kikuchipy.detectors.EBSDDetector`, or list of :class:`~dask.delayed.Delayed`
+            Crystal map with refined orientations and a new EBSD
+            detector instance with the refined PCs, if `compute` is
+            True. If `compute` is False, a list of `Delayed` instances,
+            one per experimental pattern, is returned, to be computed
+            later. See
+            :func:`~kikuchipy.indexing.compute_refine_orientation_projection_center_results`.
+            One delayed instance has the optimized score, the three
+            Euler angles in radians, and the three PC parameters in the
+            Bruker convention in element 0, 1, 2, 3, 4, 5, and 6,
+            respectively.
 
         See Also
         --------
