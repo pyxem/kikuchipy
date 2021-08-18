@@ -9,6 +9,10 @@ and more. These guidelines provide resources on how best to contribute.
 For new users, checking out the `GitHub guides <https://guides.github.com>`_ are
 recommended.
 
+This project follows the
+`all-contributors <https://github.com/all-contributors/all-contributors>`_
+specification.
+
 Questions, comments, and feedback
 =================================
 

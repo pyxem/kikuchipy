@@ -18,12 +18,59 @@
         "review",
         "test"
       ]
+    },
+    {
+      "login": "hakonanes",
+      "name": "Håkon Wiik Ånes",
+      "avatar_url": "https://avatars.githubusercontent.com/u/12139781?v=4",
+      "profile": "https://www.ntnu.edu/employees/hakon.w.anes",
+      "contributions": [
+        "bug",
+        "code",
+        "data",
+        "doc",
+        "design",
+        "example",
+        "ideas",
+        "infra",
+        "maintenance",
+        "question",
+        "research",
+        "review",
+        "test",
+        "tutorial"
+      ]
+    },
+    {
+      "login": "onatlandsmyr",
+      "name": "Ole Natlandsmyr",
+      "avatar_url": "https://avatars.githubusercontent.com/u/34620114?v=4",
+      "profile": "https://github.com/onatlandsmyr",
+      "contributions": [
+        "code",
+        "doc",
+        "question",
+        "review",
+        "test"
+      ]
+    },
+    {
+      "login": "tinabe",
+      "name": "Tina Bergh",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22915119?v=4",
+      "profile": "https://github.com/tinabe",
+      "contributions": [
+        "code",
+        "review"
+      ]
     }
   ],
   "contributorsPerLine": 7,
+  "badgeTemplate": "[![Contributors](https://img.shields.io/badge/all_contributors-1-yellow.svg)](#contributors-)",
   "projectName": "kikuchipy",
   "projectOwner": "pyxem",
   "repoType": "github",
   "repoHost": "https://github.com",
-  "skipCi": true
+  "skipCi": true,
+  "commitConvention": "none"
 }
