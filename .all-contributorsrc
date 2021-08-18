@@ -6,7 +6,7 @@
   "commit": false,
   "contributorsPerLine": 7,
   "contributorsSortAlphabetically": true,
-  "badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-<%= contributors.length %>-yellow.svg)](#contributors)",
+  "badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-<%= contributors.length %>-yellow.svg)](#contributors-)",
   "projectName": "kikuchipy",
   "projectOwner": "pyxem",
   "repoType": "github",

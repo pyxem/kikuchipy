@@ -164,7 +164,7 @@ The documentation's HTML pages are built in the ``doc/build/html`` directory
 from files in the `reStructuredText (reST)
 <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`_
 plaintext markup language. They should be accessible in the browser by typing
-``file:///your-absolute/path/to/kikuchipy/doc/build/html/index.html`` in the
+``file:///your/absolute/path/to/kikuchipy/doc/build/html/index.html`` in the
 address bar.
 
 Tips for writing Jupyter Notebooks that are meant to be converted to reST text
@@ -192,6 +192,15 @@ files by `nbsphinx <https://nbsphinx.readthedocs.io/en/latest/>`_:
   the signal axes manager, like ``print(s.axes_manager)``, and displaying all
   figures with a white background for axes labels and ticks and figure titles
   etc. to be readable.
+
+In general, we run all notebooks every time the documentation is built with Sphinx, to
+ensure that all notebooks are compatible with the current API at all times. This is
+important! For computationally expensive notebooks however, we store the cell outputs so
+the documentation doesn't take too long to build, either by us locally or the Read The
+Docs GitHub action. To check that the notebooks with cell outputs stored are compatible
+with the current API as well, we run a scheduled GitHub Action every Monday which checks
+that the notebooks run OK and that they produced the same output now as when they were
+last executed. We use `nbval <https://nbval.readthedocs.io/en/latest/>`_ for this.
 
 Running and writing tests
 =========================
@@ -268,8 +277,8 @@ Improving performance
 =====================
 When we write code, it's important that we (1) get the correct result, (2) don't fill up
 memory, and (3) that the computation doesn't take too long. To keep memory in check, we
-use `Dask <https://docs.dask.org/en/latest/>`_ wherever possible. To speed up
-computations, we use `Numba <https://numba.pydata.org/numba-doc/dev/>`_ wherever
+should use `Dask <https://docs.dask.org/en/latest/>`_ wherever possible. To speed up
+computations, we should use `Numba <https://numba.pydata.org/numba-doc/dev/>`_ wherever
 possible.
 
 Continuous integration (CI)
