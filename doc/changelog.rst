@@ -41,6 +41,8 @@ Changed
 
 Fixed
 -----
+- Allow static background in EBSD metadata to be a Dask array.
+  (`#413 <https://github.com/pyxem/kikuchipy/pull/413>`_)
 - Set newest supported version of Sphinx to 4.0.2 so that nbsphinx works.
   (`#403 <https://github.com/pyxem/kikuchipy/pull/403>`_)
 
