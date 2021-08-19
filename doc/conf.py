@@ -148,6 +148,14 @@ nbsphinx_execute_arguments = [
 bibtex_bibfiles = ["bibliography.bib"]
 
 
+# Relevant for the PDF build with LaTeX
+latex_elements = {
+    # pdflatex doesn't like some Unicode characters, so a replacement
+    # for one of them is made here
+    "preamble": r"\DeclareUnicodeCharacter{2588}{-}"
+}
+
+
 def linkcode_resolve(domain, info):
     """Determine the URL corresponding to Python object.
 

@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://kikuchipy.org">
-    <img width="50%" src="doc/_static/logo/plasma_banner.svg">
+    <img width="60%" src="doc/_static/logo/plasma_banner.svg">
   </a>
 </div>
 
@@ -16,7 +16,7 @@ multi-dimensional data analysis provided by the HyperSpy library.
 [![PyPI version](https://img.shields.io/pypi/v/kikuchipy.svg)](https://pypi.python.org/pypi/kikuchipy)
 [![Downloads per month](https://pepy.tech/badge/kikuchipy/month)](https://pepy.tech/project/kikuchipy)
 [![Zenodo DOI](https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg)](https://doi.org/10.5281/zenodo.3597646)
-[![All Contributors](https://img.shields.io/badge/all_contributors-4-yellow.svg)](#contributors)
+[![All Contributors](https://img.shields.io/badge/all_contributors-4-yellow.svg)](#contributors-)
 
 - **User guide and API reference**: https://kikuchipy.org. The guide consists of Jupyter
   Notebooks with many links to detailed explanations of the input parameters and output
