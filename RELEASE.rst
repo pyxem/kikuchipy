@@ -1,7 +1,7 @@
 How to make a new release of ``kikuchipy``
 ==========================================
 
-kikuchipy's branching model is the Gitflow Workflow (`original blog post
+kikuchipy's branching model is similar to the Gitflow Workflow (`original blog post
 <https://nvie.com/posts/a-successful-git-branching-model/>`_).
 
 - If a minor release is to be made, create a release branch v<major>.<minor>.0 off of

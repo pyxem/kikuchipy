@@ -92,7 +92,7 @@ party packages (like ``numpy`` and ``hyperspy``) and finally kikuchipy imports.
 Making changes
 ==============
 
-kikuchipy's git branch model is the Gitflow Workflow (`original blog post
+kikuchipy's git branch model is similar to the Gitflow Workflow (`original blog post
 <https://nvie.com/posts/a-successful-git-branching-model/>`_). This means that if you
 are adding a new feature, branch off of ``develop``, and if you are fixing a bug, branch
 off of ``main`` instead.
