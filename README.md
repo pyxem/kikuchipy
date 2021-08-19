@@ -1,6 +1,8 @@
-<img align="right" width="200px" src="https://kikuchipy.org/en/stable/_static/plasma_logo.svg">
-
-## kikuchipy
+<div align="center">
+  <a href="https://kikuchipy.org">
+    <img width="50%" src="doc/_static/logo/plasma_banner.svg">
+  </a>
+</div>
 
 kikuchipy is an open-source Python library for processing and analysis of electron
 backscatter diffraction (EBSD) patterns. The library builds on the tools for

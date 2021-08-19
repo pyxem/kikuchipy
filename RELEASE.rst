@@ -6,12 +6,16 @@ kikuchipy's branching model is the Gitflow Workflow (`original blog post
 
 - If a minor release is to be made, create a release branch v<major>.<minor>.0 off of
   the `develop` branch locally. If a patch release is to be made, create a release
-  branch v<major>.<minor>.<patch> off of the `main` branch locally instead.
+  branch v<major>.<minor>.<patch> off of the `main` branch locally instead. Ideally, a
+  patch release should be made immediately after a bug fix has been made. Therefore, it
+  might be best to do the release updates, listed in the following steps, directly on
+  the bug fix branch, so that no separate patch release branch has to be made. The bug
+  fix branch should of course be branched off of `main`.
 - Increment the version number in `release.py`. Review and clean up `doc/changelog.rst`
   as per Keep a Changelog. Make sure all contributors and reviewers are acknowledged.
 - Make a PR of the release branch to `main`. Discuss the changelog with others, and
   make any changes *directly* to the release branch. Merge the branch into `main`. Then
-  make a PR of the release branch to `develop`, and merge this.
+  make a PR of `main` to `develop`, and merge this.
 - Create a release draft (tag) via the GitHub repo from main with the correct tag
   version name, e.g. v0.42.0, and release title "kikuchipy 0.42.0". Add the new release
   notes from the changelog, and convert any reStructuredText formatting to Markdown by

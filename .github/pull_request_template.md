@@ -1,5 +1,6 @@
 #### Description of the change
-<!-- Remember to branch off develop for new features and main for patches. -->
+<!-- Remember to branch off the develop branch for new features and the main branch for patches. -->
+
 
 #### Progress of the PR
 - [ ] [Docstrings for all functions](https://github.com/numpy/numpy/blob/master/doc/example.py)

@@ -94,12 +94,12 @@ Making changes
 
 kikuchipy's git branch model is the Gitflow Workflow (`original blog post
 <https://nvie.com/posts/a-successful-git-branching-model/>`_). This means that if you
-are adding a new feature, branch off of ``develop``, and if you are making a patch
-(hotfix), branch off of `main` instead.
+are adding a new feature, branch off of ``develop``, and if you are fixing a bug, branch
+off of ``main`` instead.
 
-To create a new feature branch::
+To create a new feature branch that tracks the upstream development branch::
 
-    $ git checkout develop -b your-awesome-feature-name
+    $ git checkout develop -b your-awesome-feature-name upstream/develop
 
 When you've made some changes you can view them with::
 
@@ -119,14 +119,13 @@ Keeping your branch up-to-date
 ==============================
 
 If you are adding a new feature, make sure to merge ``develop`` into your feature
-branch. If you are making a patch (hotfix), merge ``main`` into your patch branch
-instead.
+branch. If you are fixing a bug, merge ``main`` into your bug fix branch instead.
 
-Switch to the ``develop`` branch::
+To update a feature branch, switch to the ``develop`` branch::
 
    $ git checkout develop
 
-Fetch changes and update ``develop``::
+Fetch changes from the upstream branch and update ``develop``::
 
    $ git pull upstream develop --tags
 
@@ -144,7 +143,7 @@ Update your remote branch::
 
 You can then make a `pull request
 <https://guides.github.com/activities/forking/#making-a-pull-request>`_ to
-kikuchipy's ``develop`` branch for new features, and ``main`` branch for patches. Good
+kikuchipy's ``develop`` branch for new features and ``main`` branch for bug fixes. Good
 job!
 
 Building and writing documentation
@@ -198,9 +197,10 @@ ensure that all notebooks are compatible with the current API at all times. This
 important! For computationally expensive notebooks however, we store the cell outputs so
 the documentation doesn't take too long to build, either by us locally or the Read The
 Docs GitHub action. To check that the notebooks with cell outputs stored are compatible
-with the current API as well, we run a scheduled GitHub Action every Monday which checks
-that the notebooks run OK and that they produced the same output now as when they were
-last executed. We use `nbval <https://nbval.readthedocs.io/en/latest/>`_ for this.
+with the current API as well, we run a scheduled GitHub Action every Monday morning
+which checks that the notebooks run OK and that they produced the same output now as
+when they were last executed. We use `nbval <https://nbval.readthedocs.io/en/latest/>`_
+for this.
 
 Running and writing tests
 =========================

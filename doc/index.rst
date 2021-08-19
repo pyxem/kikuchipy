@@ -50,7 +50,7 @@ multi-dimensional data analysis provided by the HyperSpy library.
   of functions and class methods (the API reference). The notebooks can be inspected
   statically on the web page or via `nbviewer`, downloaded and run locally, or run
   interactively in the browser after clicking the Binder link above and navigating to
-  the ``doc/user_guide`` directory. We hope you find them useful!
+  the `doc/user_guide` directory. We hope you find them useful!
 - **License**: kikuchipy is released under the GPLv3+ license.
 - **Cite**: If you find this project useful, please cite the DOI above.
 - **Contribute**: Do you have a question or want to contribute? Great! Our
