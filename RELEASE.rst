@@ -11,7 +11,7 @@ kikuchipy's branching model is the Gitflow Workflow (`original blog post
   as per Keep a Changelog. Make sure all contributors and reviewers are acknowledged.
 - Make a PR of the release branch to `main`. Discuss the changelog with others, and
   make any changes *directly* to the release branch. Merge the branch into `main`. Then
-  make a PR of the release branch to `develop`, and merge this.
+  make a PR of `main` to `develop`, and merge this.
 - Create a release draft (tag) via the GitHub repo from main with the correct tag
   version name, e.g. v0.42.0, and release title "kikuchipy 0.42.0". Add the new release
   notes from the changelog, and convert any reStructuredText formatting to Markdown by
