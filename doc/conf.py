@@ -70,7 +70,7 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files. This image also
 # affects html_static_path and html_extra_path.
-exclude_patterns = ["build", "_static/icon/*.ipynb"]
+exclude_patterns = ["build", "_static/logo/*.ipynb"]
 
 # The theme to use for HTML and HTML Help pages. See the documentation
 # for a list of builtin themes.
@@ -86,8 +86,8 @@ html_static_path = ["_static"]
 pygments_style = "friendly"
 
 # Logo
-html_logo = "_static/icon/plasma_logo.svg"
-html_favicon = "_static/icon/plasma_favicon.png"
+html_logo = "_static/logo/plasma_logo.svg"
+html_favicon = "_static/logo/plasma_favicon.png"
 
 # nbsphinx configuration
 # Taken from nbsphinx' own nbsphinx configuration file, with slight
