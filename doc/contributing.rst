@@ -95,7 +95,7 @@ Making changes
 kikuchipy's git branch model is the Gitflow Workflow (`original blog post
 <https://nvie.com/posts/a-successful-git-branching-model/>`_). This means that if you
 are adding a new feature, branch off of ``develop``, and if you are fixing a bug, branch
-off of `main` instead.
+off of ``main`` instead.
 
 To create a new feature branch that tracks the upstream development branch::
 
