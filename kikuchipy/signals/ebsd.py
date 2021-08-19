@@ -516,29 +516,31 @@ class EBSD(CommonImage, Signal2D):
         dtype_out = self.data.dtype.type
 
         # Get background pattern
-        if not isinstance(static_bg, (np.ndarray, da.Array)):
+        if static_bg is None:
             try:
                 md = self.metadata
                 ebsd_node = metadata_nodes("ebsd")
-                static_bg = da.from_array(
-                    md.get_item(ebsd_node + ".static_background"), chunks="auto"
-                )
-            except AttributeError:
-                raise OSError(
-                    "The static background is not a numpy or dask array or could not be"
-                    " read from signal metadata."
+                static_bg_in_metadata = md.get_item(ebsd_node + ".static_background")
+                if isinstance(static_bg_in_metadata, (da.Array, np.ndarray)):
+                    static_bg = da.asarray(static_bg_in_metadata, chunks="auto")
+                else:
+                    raise ValueError
+            except (AttributeError, ValueError):
+                raise ValueError(
+                    "`static_bg` is not a valid NumPy or Dask array or could not be "
+                    "read from signal metadata"
                 )
         if dtype_out != static_bg.dtype:
             raise ValueError(
-                f"The static background dtype_out {static_bg.dtype} is not the same as "
-                f"pattern dtype_out {dtype_out}."
+                f"Static background dtype_out {static_bg.dtype} is not the same as "
+                f"pattern dtype_out {dtype_out}"
             )
         pat_shape = self.axes_manager.signal_shape[::-1]
         bg_shape = static_bg.shape
         if bg_shape != pat_shape:
-            raise OSError(
-                f"The pattern {pat_shape} and static background {bg_shape} shapes are "
-                "not identical."
+            raise ValueError(
+                f"Signal {pat_shape} and static background {bg_shape} shapes are not "
+                "identical"
             )
         dtype = np.float32
         static_bg = static_bg.astype(dtype)

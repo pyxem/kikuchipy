@@ -243,10 +243,10 @@ class TestRemoveStaticBackgroundEBSD:
             (
                 np.ones((3, 3), dtype=np.int8),
                 ValueError,
-                "The static background dtype_out",
+                "Static background dtype_out",
             ),
-            (None, OSError, "The static background is not a numpy or dask"),
-            (np.ones((3, 2), dtype=np.uint8), OSError, "The pattern"),
+            (None, ValueError, "`static_bg` is not a valid NumPy or Dask array"),
+            (np.ones((3, 2), dtype=np.uint8), ValueError, "Signal"),
         ],
     )
     def test_incorrect_static_background_pattern(
@@ -264,6 +264,12 @@ class TestRemoveStaticBackgroundEBSD:
         dummy_signal = dummy_signal.as_lazy()
         dummy_signal.remove_static_background(static_bg=dummy_background)
         assert isinstance(dummy_signal.data, da.Array)
+
+        ebsd_node = kp.signals.util.metadata_nodes("ebsd")
+        dummy_signal.metadata.set_item(
+            ebsd_node + ".static_background", da.from_array(dummy_background)
+        )
+        dummy_signal.remove_static_background()
 
     def test_remove_static_background_scalebg(self, dummy_signal, dummy_background):
         dummy_signal2 = dummy_signal.deepcopy()
