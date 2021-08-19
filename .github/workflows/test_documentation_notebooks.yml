@@ -2,7 +2,7 @@ name: Test documentation notebooks
 
 on:
   schedule:
-    - cron: '0 10 * * *'
+    - cron: '15 6 * * 1'
 
 jobs:
   test-documentation-notebooks:

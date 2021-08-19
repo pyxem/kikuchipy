@@ -10,7 +10,9 @@ sphinx:
   configuration: doc/conf.py
 
 # Build doc in all formats (HTML, PDF and ePub)
-formats: all
+formats:
+  - htmlzip
+  - pdf
 
 # Python environment for building the docs
 python:
