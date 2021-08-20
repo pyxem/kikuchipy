@@ -84,7 +84,7 @@ def make_similarity_metric(
 
     Returns
     -------
-    metric_class : SimilarityMetric or FlatSimilarityMetric
+    metric_class : SimilarityMetric_old or FlatSimilarityMetric
         A callable class instance computing a similarity matrix with
         signature `metric_func(experimental, simulated)`.
 
@@ -124,12 +124,12 @@ def make_similarity_metric(
             metric_func, sign, scope, flat, make_compatible_to_lower_scopes, dtype_out
         )
     else:
-        return SimilarityMetric(
+        return SimilarityMetric_old(
             metric_func, sign, scope, flat, make_compatible_to_lower_scopes, dtype_out
         )
 
 
-class SimilarityMetric:
+class SimilarityMetric_old:
     """Similarity metric between 2D gray-tone patterns."""
 
     # See table in docstring of `make_similarity_metric`
@@ -250,7 +250,7 @@ class SimilarityMetric:
                 return False
 
 
-class FlatSimilarityMetric(SimilarityMetric):
+class FlatSimilarityMetric(SimilarityMetric_old):
     """Similarity metric between 2D gray-tone images where the
     navigation and signal axes are flattened before sent to
     `metric_func`.
@@ -339,7 +339,7 @@ def _expand_dims_to_many_to_many(
         Simulated data dimension expanded to match
         `MetricScope.MANY_TO_MANY`.
     """
-    metric_cls = FlatSimilarityMetric if flat else SimilarityMetric
+    metric_cls = FlatSimilarityMetric if flat else SimilarityMetric_old
     expt_scope_ndim, sim_scope_ndim = metric_cls._SCOPE_TO_EXPT_SIM_NDIM[
         MetricScope.MANY_TO_MANY
     ]
@@ -552,3 +552,24 @@ def _ncc_single_patterns_2d_float32(exp: np.ndarray, sim: np.ndarray) -> float:
         np.sum(exp_normed * sim_normed),
         np.sqrt(np.sum(np.square(exp_normed)) * np.sum(np.square(sim_normed))),
     )
+
+
+def _ncc_patterns_4d_3d_float32(exp: np.ndarray, sim: np.ndarray) -> np.ndarray:
+    sig_axes = (-1, -2)
+
+    exp_mean = exp.mean(axis=sig_axes)
+    exp = exp - exp_mean[..., np.newaxis, np.newaxis]
+    exp_norm = np.sqrt(np.sum(np.square(exp), axis=sig_axes))
+    exp = exp / exp_norm[..., np.newaxis, np.newaxis]
+
+    sim_mean = sim.mean(axis=sig_axes)
+    sim = sim - sim_mean[..., np.newaxis, np.newaxis]
+    sim_norm = np.sqrt(np.sum(np.square(sim), axis=sig_axes))
+    sim = sim / sim_norm[..., np.newaxis, np.newaxis]
+
+    r = da.einsum("ijkl,mkl->ijm", exp, sim, optimize=True)
+
+    if isinstance(exp, np.ndarray) and isinstance(sim, np.ndarray):
+        return r.compute()
+    else:
+        return r

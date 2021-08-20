@@ -39,6 +39,6 @@ __all__ = [
     "compute_refine_projection_center_results",
     "merge_crystal_maps",
     "orientation_similarity_map",
-    "similarity_metrics",
+    "_similarity_metrics.py",
     "StaticPatternMatching",
 ]

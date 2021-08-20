@@ -21,9 +21,9 @@ import numpy as np
 import pytest
 from scipy.spatial.distance import cdist
 
-from kikuchipy.indexing.similarity_metrics import (
+from kikuchipy.indexing.similarity_metrics._similarity_metrics import (
     make_similarity_metric,
-    SimilarityMetric,
+    SimilarityMetric_old,
     MetricScope,
     FlatSimilarityMetric,
     _get_number_of_simulated,
@@ -36,7 +36,7 @@ from kikuchipy.indexing.similarity_metrics import (
 class TestSimilarityMetric:
     @pytest.mark.parametrize(
         "flat, returned_class",
-        [(False, SimilarityMetric), (True, FlatSimilarityMetric)],
+        [(False, SimilarityMetric_old), (True, FlatSimilarityMetric)],
     )
     def test_make_similarity_metric(self, flat, returned_class):
         assert (

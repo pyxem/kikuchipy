@@ -44,7 +44,7 @@ from kikuchipy.signals.util._master_pattern import (
     _project_patterns_from_master_pattern,
     _project_single_pattern_from_master_pattern,
 )
-from kikuchipy.indexing.similarity_metrics import ncc, ndp
+from kikuchipy.indexing.similarity_metrics._similarity_metrics import ncc, ndp
 
 
 DIR_PATH = os.path.dirname(__file__)

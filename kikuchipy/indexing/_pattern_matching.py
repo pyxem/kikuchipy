@@ -26,9 +26,9 @@ import numpy as np
 import psutil
 from tqdm import tqdm
 
-from kikuchipy.indexing.similarity_metrics import (
+from kikuchipy.indexing.similarity_metrics._similarity_metrics import (
     _SIMILARITY_METRICS,
-    SimilarityMetric,
+    SimilarityMetric_old,
     _get_nav_shape,
     _get_number_of_simulated,
 )
@@ -42,7 +42,7 @@ def _pattern_match(
     experimental: Union[da.Array, np.ndarray],
     simulated: Union[da.Array, np.ndarray],
     keep_n: int = 50,
-    metric: Union[str, SimilarityMetric] = "ncc",
+    metric: Union[str, SimilarityMetric_old] = "ncc",
     compute: bool = True,
     n_slices: int = 1,
     phase_name: Optional[str] = None,
@@ -61,7 +61,7 @@ def _pattern_match(
         Simulated patterns.
     keep_n : int, optional
         Number of match results to keep for each pattern, by default 50.
-    metric : str or SimilarityMetric
+    metric : str or SimilarityMetric_old
         Similarity metric, by default "ncc".
     compute : bool, optional
         Whether to compute dask arrays before returning, by default
@@ -82,7 +82,7 @@ def _pattern_match(
         `keep_n` axis according to the metric used.
     """
     metric = _SIMILARITY_METRICS.get(metric, metric)
-    if not isinstance(metric, SimilarityMetric):
+    if not isinstance(metric, SimilarityMetric_old):
         raise ValueError(
             f"{metric} must be either of {list(_SIMILARITY_METRICS.keys())} or an "
             "instance of SimilarityMetric. See "
@@ -130,7 +130,7 @@ def _pattern_match_slice_simulated(
     experimental: Union[np.ndarray, da.Array],
     simulated: Union[np.ndarray, da.Array],
     keep_n: int,
-    metric: SimilarityMetric,
+    metric: SimilarityMetric_old,
     n_slices: int = 1,
     phase_name: Optional[str] = None,
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -144,7 +144,7 @@ def _pattern_match_slice_simulated(
         Simulated patterns.
     keep_n : int
         Number of results to keep.
-    metric : SimilarityMetric
+    metric : SimilarityMetric_old
         Similarity metric.
     n_slices : int, optional
         Number of simulation slices to process sequentially. Default is
@@ -230,7 +230,7 @@ def _pattern_match_single_slice(
     experimental: Union[np.ndarray, da.Array],
     simulated: Union[np.ndarray, da.Array],
     keep_n: int,
-    metric: SimilarityMetric,
+    metric: SimilarityMetric_old,
     compute: bool,
 ) -> Union[Tuple[np.ndarray, np.ndarray], Tuple[da.Array, da.Array]]:
     """See :func:`_pattern_match`.
@@ -243,7 +243,7 @@ def _pattern_match_single_slice(
         Simulated patterns.
     keep_n : int
         Number of results to keep.
-    metric : SimilarityMetric
+    metric : SimilarityMetric_old
         Similarity metric.
     compute : bool
         Whether to compute dask arrays before returning the results.

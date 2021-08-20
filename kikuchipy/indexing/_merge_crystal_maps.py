@@ -24,13 +24,16 @@ import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList
 from orix.quaternion import Rotation
 
-from kikuchipy.indexing.similarity_metrics import SimilarityMetric, _SIMILARITY_METRICS
+from kikuchipy.indexing.similarity_metrics._similarity_metrics import (
+    SimilarityMetric_old,
+    _SIMILARITY_METRICS,
+)
 
 
 def merge_crystal_maps(
     crystal_maps: List[CrystalMap],
     mean_n_best: int = 1,
-    metric: Union[str, SimilarityMetric] = None,
+    metric: Union[str, SimilarityMetric_old] = None,
     scores_prop: str = "scores",
     simulation_indices_prop: Optional[str] = None,
 ):

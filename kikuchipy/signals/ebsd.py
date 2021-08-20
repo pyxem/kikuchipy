@@ -49,12 +49,16 @@ from kikuchipy.pattern._pattern import (
     _dynamic_background_frequency_space_setup,
 )
 from kikuchipy.indexing._static_pattern_matching import StaticPatternMatching
+from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
 from kikuchipy.indexing._refinement._refinement import (
     _refine_orientation,
     _refine_orientation_projection_center,
     _refine_projection_center,
 )
-from kikuchipy.indexing.similarity_metrics import SimilarityMetric
+from kikuchipy.indexing.similarity_metrics._similarity_metrics import (
+    SimilarityMetric_old,
+)
+from kikuchipy.indexing.similarity_metrics import SimilarityMetric, metrics
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
     metadata_nodes,
@@ -944,10 +948,52 @@ class EBSD(CommonImage, Signal2D):
     def match_patterns(self, *args, **kwargs) -> Union[CrystalMap, List[CrystalMap]]:
         return self.dictionary_indexing(*args, **kwargs)
 
+    def dictionary_indexing2(
+        self,
+        dictionary,
+        metric: Union[SimilarityMetric, str] = "ncc",
+        keep_n: int = 20,
+        n_per_iteration: Optional[int] = None,
+        signal_mask: Optional[np.ndarray] = None,
+        rechunk: bool = False,
+    ):
+        exp_am = self.axes_manager
+        dict_am = dictionary.axes_manager
+
+        if n_per_iteration is None:
+            if isinstance(dictionary.data, da.Array):
+                n_per_iteration = dictionary.data.chunksize[0]
+            else:
+                n_per_iteration = dict_am.navigation_size
+
+        # Prepare similarity metric
+        if isinstance(metric, str):
+            metric = metrics[metric]
+        metric.set_shapes_from_axes_managers(exp_am, dict_am)
+        metric.signal_dimension = 1
+        if signal_mask is None:
+            metric.signal_mask = 1
+        else:
+            metric.signal_mask = ~signal_mask
+        if metric.can_rechunk is None:
+            metric.can_rechunk = rechunk
+
+        return _dictionary_indexing(
+            experimental=self.data,
+            experimental_nav_shape=exp_am.navigation_shape[::-1],
+            dictionary=dictionary.data,
+            dictionary_size=dict_am.navigation_size,
+            step_sizes=tuple(a.scale for a in exp_am.navigation_axes[::-1]),
+            dictionary_xmap=dictionary.xmap,
+            keep_n=keep_n,
+            n_per_iteration=n_per_iteration,
+            metric=metric,
+        )
+
     def dictionary_indexing(
         self,
         simulations,
-        metric: Union[str, SimilarityMetric] = "ncc",
+        metric: Union[str, SimilarityMetric_old] = "ncc",
         keep_n: int = 50,
         n_slices: int = 1,
         return_merged_crystal_map: bool = False,
@@ -2063,6 +2109,21 @@ class EBSD(CommonImage, Signal2D):
             )
         out.set_signal_type("")
         return out.transpose(out_signal_axes)
+
+    def _prepare_metric(
+        metric: Union[SimilarityMetric, str],
+        experimental_navigation_dimension: int,
+        simulated_navigation_dimension: int,
+        signal_dimension: int,
+        signal_mask: Union[np.ndarray, float],
+    ) -> SimilarityMetric:
+        if isinstance(metric, str):
+            metric = metrics[metric]
+        metric.experimental_navigation_dimension = experimental_navigation_dimension
+        metric.simulated_navigation_dimension = simulated_navigation_dimension
+        metric.signal_dimension = signal_dimension
+        metric.signal_mask = signal_mask
+        return metric
 
 
 class LazyEBSD(LazySignal2D, EBSD):

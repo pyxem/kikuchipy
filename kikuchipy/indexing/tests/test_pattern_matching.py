@@ -25,7 +25,10 @@ from scipy.spatial.distance import cdist
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.data import nickel_ebsd_small, nickel_ebsd_master_pattern_small
 from kikuchipy.indexing._pattern_matching import _pattern_match
-from kikuchipy.indexing.similarity_metrics import make_similarity_metric, MetricScope
+from kikuchipy.indexing.similarity_metrics._similarity_metrics import (
+    make_similarity_metric,
+    MetricScope,
+)
 
 
 class TestPatternMatching:

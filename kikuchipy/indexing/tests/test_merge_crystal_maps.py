@@ -22,7 +22,9 @@ from orix.quaternion import Rotation
 import pytest
 
 from kikuchipy.indexing import merge_crystal_maps
-from kikuchipy.indexing.similarity_metrics import make_similarity_metric
+from kikuchipy.indexing.similarity_metrics._similarity_metrics import (
+    make_similarity_metric,
+)
 
 
 class TestMergeCrystalMaps:

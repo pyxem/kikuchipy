@@ -22,7 +22,10 @@ from orix.crystal_map import CrystalMap, create_coordinate_arrays
 
 from kikuchipy.indexing import merge_crystal_maps, orientation_similarity_map
 from kikuchipy.indexing._pattern_matching import _pattern_match
-from kikuchipy.indexing.similarity_metrics import SimilarityMetric, _SIMILARITY_METRICS
+from kikuchipy.indexing.similarity_metrics._similarity_metrics import (
+    SimilarityMetric_old,
+    _SIMILARITY_METRICS,
+)
 
 
 class StaticPatternMatching:
@@ -49,7 +52,7 @@ class StaticPatternMatching:
     def __call__(
         self,
         signal,
-        metric: Union[str, SimilarityMetric] = "ncc",
+        metric: Union[str, SimilarityMetric_old] = "ncc",
         keep_n: int = 50,
         n_slices: int = 1,
         return_merged_crystal_map: bool = False,
