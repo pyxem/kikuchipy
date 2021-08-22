@@ -119,15 +119,10 @@ setup(
     extras_require=extra_feature_requirements,
     # fmt: off
     install_requires=[
-        # TODO: Restrict newest dask version until
-        #   https://github.com/dask/dask/issues/7583 is resolved
-        "dask[array]        >= 2.18, <= 2021.03.1",
+        "dask[array]        >= 2021.8.1",
         "diffsims           >= 0.4",
-        "hyperspy           >= 1.5.2",
+        "hyperspy           >= 1.6.4",
         "h5py               >= 2.10",
-        # TODO: Remove after new HyperSpy release after v1.6.3.
-        #   See https://github.com/hyperspy/hyperspy/issues/2792.
-        "importlib_metadata >= 3.6",
         "matplotlib         >= 3.3",
         "numpy              >= 1.19",
         "numba              >= 0.48",
