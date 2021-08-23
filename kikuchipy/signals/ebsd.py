@@ -970,11 +970,10 @@ class EBSD(CommonImage, Signal2D):
         if isinstance(metric, str):
             metric = metrics[metric]
         metric.set_shapes_from_axes_managers(exp_am, dict_am)
-        metric.signal_dimension = 1
         if signal_mask is None:
             metric.signal_mask = 1
         else:
-            metric.signal_mask = ~signal_mask
+            metric.signal_mask = ~signal_mask.ravel()
         if metric.can_rechunk is None:
             metric.can_rechunk = rechunk
 

@@ -17,16 +17,10 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import abc
-from typing import Optional
+from typing import Optional, Union
 
 from hyperspy.axes import AxesManager
 import numpy as np
-
-NDIM_TO_CHUNKS = {
-    2: {0: -1, 1: -1},
-    3: {0: "auto", 1: -1, 2: -1},
-    4: {0: "auto", 1: "auto", 2: -1, 3: -1},
-}
 
 
 class SimilarityMetric(abc.ABC):
@@ -34,7 +28,6 @@ class SimilarityMetric(abc.ABC):
         self,
         experimental_navigation_dimension: int = 2,
         simulated_navigation_dimension: int = 1,
-        signal_dimension: int = 2,
         signal_mask: float = 1,
         greater_is_better: bool = True,
         dtype: np.dtype = np.float32,
@@ -42,7 +35,6 @@ class SimilarityMetric(abc.ABC):
     ):
         self.experimental_navigation_dimension = experimental_navigation_dimension
         self.simulated_navigation_dimension = simulated_navigation_dimension
-        self.signal_dimension = signal_dimension
         self.signal_mask = signal_mask
         self.dtype = dtype
         self.can_rechunk = can_rechunk
@@ -58,21 +50,11 @@ class SimilarityMetric(abc.ABC):
 
     @property
     def navigation_indices_in_experimental_array(self):
-        return (0, 1, 2, 3)[: self.experimental_navigation_dimension]
+        return (0, 1, 2)[: self.experimental_navigation_dimension]
 
     @property
-    def signal_indices_in_experimental_array(self):
-        exp_nav_ndim = self.experimental_navigation_dimension
-        return (0, 1, 2, 3)[exp_nav_ndim : exp_nav_ndim + self.signal_dimension]
-
-    @property
-    def navigation_indices_in_simulated_array(self):
-        return (0, 1, 2, 3)[: self.simulated_navigation_dimension]
-
-    @property
-    def signal_indices_in_simulated_array(self):
-        sim_nav_ndim = self.simulated_navigation_dimension
-        return (0, 1, 2, 3)[sim_nav_ndim : sim_nav_ndim + self.signal_dimension]
+    def signal_index(self):
+        return -1
 
     @abc.abstractmethod
     def prepare_all_experimental(self, *args, **kwargs):
@@ -86,9 +68,9 @@ class SimilarityMetric(abc.ABC):
     def compare(self, *args, **kwargs):
         return NotImplemented
 
-    def rechunk(self, patterns):
-        chunks = NDIM_TO_CHUNKS[self.experimental_navigation_dimension]
-        return patterns.rechunk(chunks)
+    @staticmethod
+    def rechunk(patterns, chunk_size: Union[int, str]):
+        return patterns.rechunk({0: chunk_size, 1: -1})
 
     def set_shapes_from_axes_managers(
         self,
@@ -99,4 +81,3 @@ class SimilarityMetric(abc.ABC):
         sim_am = simulated_axes_manager
         self.experimental_navigation_dimension = exp_am.navigation_dimension
         self.simulated_navigation_dimension = sim_am.navigation_dimension
-        self.signal_dimension = exp_am.signal_dimension
