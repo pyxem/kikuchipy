@@ -17,6 +17,7 @@ Unreleased
 
 Contributors
 ------------
+- Eric Prestat
 - Håkon Wiik Ånes
 - Lars Andreas Hastad Lervik
 
@@ -32,6 +33,9 @@ Added
 
 Changed
 -------
+- Dependency versions for dask >= 2021.8.1, fixing some memory issues encountered after
+  2021.3.1, and HyperSpy >= 1.6.4. Remove importlib_metadata from package dependencies.
+  (`#418 <https://github.com/pyxem/kikuchipy/pull/418>`_)
 - Performance improvements to EBSD dictionary generation, giving a substantial speed-up.
   (`#405 <https://github.com/pyxem/kikuchipy/pull/405>`_)
 - Rename projection methods from `project()`/`iproject()` to
