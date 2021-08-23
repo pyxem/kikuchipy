@@ -57,6 +57,16 @@
         "code",
         "review"
       ]
+    },
+    {
+      "login": "ericpre",
+      "name": "Eric Prestat",
+      "avatar_url": "https://avatars.githubusercontent.com/u/11851990?v=4",
+      "profile": "https://github.com/ericpre",
+      "contributions": [
+        "code",
+        "maintenance"
+      ]
     }
   ]
 }
