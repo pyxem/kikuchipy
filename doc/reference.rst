@@ -245,21 +245,12 @@ indexing
 .. currentmodule:: kikuchipy.indexing
 
 .. autosummary::
-    StaticPatternMatching
     compute_refine_orientation_results
     compute_refine_orientation_projection_center_results
     compute_refine_projection_center_results
     orientation_similarity_map
     merge_crystal_maps
     similarity_metrics
-
-.. autoclass:: StaticPatternMatching
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-    .. automethod:: __init__
-    .. automethod:: __call__
 
 .. autofunction:: compute_refine_orientation_results
 .. autofunction:: compute_refine_orientation_projection_center_results
@@ -273,18 +264,14 @@ similarity_metrics
 .. currentmodule:: kikuchipy.indexing.similarity_metrics
 
 .. autosummary::
-    make_similarity_metric
-    MetricScope
-    ncc
-    ndp
+    SimilarityMetric
+    NormalizedCrossCorrelationMetric
+    NormalizedDotProductMetric
 
 .. automodule:: kikuchipy.indexing.similarity_metrics
     :members:
     :undoc-members:
     :show-inheritance:
-
-.. autofunction:: ncc
-.. autofunction:: ndp
 
 ....
 

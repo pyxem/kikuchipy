@@ -15,22 +15,3 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
-
-import numpy as np
-
-from kikuchipy.indexing.similarity_metrics._similarity_metrics import (
-    _ncc_single_patterns_2d_float32,
-)
-
-
-class TestSimilarityMetric:
-    pass
-
-
-class TestNumbaAcceleratedMetrics:
-    def test_ncc_single_patterns_2d_float32(self):
-        r = _ncc_single_patterns_2d_float32.py_func(
-            exp=np.linspace(0, 0.5, 100, dtype=np.float32).reshape((10, 10)),
-            sim=np.linspace(0.5, 1, 100, dtype=np.float32).reshape((10, 10)),
-        )
-        assert r == 1

@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Similarity metrics for comparing gray-tone patterns."""
+
 from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
 from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
     NormalizedCrossCorrelationMetric,
@@ -24,17 +26,14 @@ from kikuchipy.indexing.similarity_metrics._normalized_dot_product import (
     NormalizedDotProductMetric,
 )
 
-ncc = NormalizedCrossCorrelationMetric()
-ndp = NormalizedCrossCorrelationMetric()
 metrics = dict(
-    ncc=ncc,
-    ndp=ndp,
+    ncc=NormalizedCrossCorrelationMetric,
+    ndp=NormalizedDotProductMetric,
 )
-
 
 __all__ = [
     "metrics",
-    "ncc",
-    "ndp",
+    "NormalizedCrossCorrelationMetric",
+    "NormalizedDotProductMetric",
     "SimilarityMetric",
 ]

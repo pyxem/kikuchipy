@@ -17,67 +17,119 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import abc
-from typing import Optional, Union
+from typing import Optional
 
-from hyperspy.axes import AxesManager
 import numpy as np
 
 
 class SimilarityMetric(abc.ABC):
+    """Abstract class implementing a similarity metric to match 1D or
+    2D gray-tone patterns.
+
+    When writing a custom similarity metric class, the following methods
+    must be implemented. Also listed are the attributes available within
+    the methods.
+
+    Methods
+    -------
+    prepare_experimental
+    prepare_dictionary
+    match
+
+    Attributes
+    ----------
+    allowed_dtypes : list of numpy.dtype
+        List of allowed array data types.
+    navigation_dimension : int or None
+    signal_mask : numpy.ndarray or None
+    sign : int
+        +1 if a greater match is better, -1 if a lower match is better.
+    dtype : numpy.dtype
+    rechunk : bool
+    """
+
+    allowed_dtypes = []
+
     def __init__(
         self,
-        experimental_navigation_dimension: int = 2,
-        simulated_navigation_dimension: int = 1,
-        signal_mask: float = 1,
+        navigation_dimension: Optional[int] = None,
+        signal_mask: Optional[np.ndarray] = None,
         greater_is_better: bool = True,
         dtype: np.dtype = np.float32,
-        can_rechunk: Optional[bool] = None,
+        rechunk: bool = True,
     ):
-        self.experimental_navigation_dimension = experimental_navigation_dimension
-        self.simulated_navigation_dimension = simulated_navigation_dimension
+        """Create a similarity metric matching 1D or 2D gray-tone
+        patterns.
+
+        Parameters
+        ----------
+        navigation_dimension
+            Number of experimental navigation dimensions, typically 1 or
+            2. If not given, this is set to None, so it must be set
+            later.
+        signal_mask
+            A boolean mask equal to the experimental patterns' detector
+            shape (n rows, n columns), where only pixels equal to False
+            are matched. If not given, all pixels are used.
+        greater_is_better
+            True if a higher metric means a better match.
+        dtype
+            Which data type to cast the patterns to before matching to.
+        rechunk
+            Whether to allow rechunking of arrays before matching.
+        """
+        self.navigation_dimension = navigation_dimension
         self.signal_mask = signal_mask
         self.dtype = dtype
-        self.can_rechunk = can_rechunk
+        self.rechunk = rechunk
         if greater_is_better:
             self.sign = 1
         else:
             self.sign = -1
 
-    def __call__(self, experimental, simulated):
-        experimental = self.prepare_all_experimental(experimental)
-        simulated = self.prepare_chunk_simulated(simulated)
-        return self.compare(experimental, simulated)
+    def __call__(self, experimental, dictionary):
+        experimental = self.prepare_experimental(experimental)
+        dictionary = dictionary.reshape((dictionary.shape[0], -1))
+        dictionary = self.prepare_dictionary(dictionary)
+        return self.match(experimental, dictionary)
 
-    @property
-    def navigation_indices_in_experimental_array(self):
-        return (0, 1, 2)[: self.experimental_navigation_dimension]
-
-    @property
-    def signal_index(self):
-        return -1
+    def __repr__(self):
+        string = f"{self.__class__.__name__}: {np.dtype(self.dtype).name}, "
+        if self.sign == 1:
+            string += "greater is better"
+        else:
+            string += "lower is better"
+        string += f", rechunk: {self.rechunk}, mask: {self.signal_mask is not None}"
+        return string
 
     @abc.abstractmethod
-    def prepare_all_experimental(self, *args, **kwargs):
+    def prepare_experimental(self, *args, **kwargs):
+        """Prepare experimental patterns before being sent to
+        :meth:`match`.
+        """
         return NotImplemented
 
     @abc.abstractmethod
-    def prepare_chunk_simulated(self, *args, **kwargs):
+    def prepare_dictionary(self, *args, **kwargs):
+        """Prepare dictionary patterns before being sent to
+        :meth:`match`.
+        """
         return NotImplemented
 
     @abc.abstractmethod
-    def compare(self, *args, **kwargs):
+    def match(self, *args, **kwargs):
+        """Match experimental and dictionary patterns and return their
+        similarities.
+        """
         return NotImplemented
 
-    @staticmethod
-    def rechunk(patterns, chunk_size: Union[int, str]):
-        return patterns.rechunk({0: chunk_size, 1: -1})
-
-    def set_shapes_from_axes_managers(
-        self,
-        experimental_axes_manager: AxesManager,
-        simulated_axes_manager: AxesManager,
-    ):
-        exp_am = experimental_axes_manager
-        sim_am = simulated_axes_manager
-        self.experimental_navigation_dimension = exp_am.navigation_dimension
-        self.simulated_navigation_dimension = sim_am.navigation_dimension
+    def raise_error_if_invalid(self):
+        """Raise a ValueError if `self.dtype` is not among
+        `self.allowed_dtypes` and the latter is not an empty list.
+        """
+        allowed_dtypes = self.allowed_dtypes
+        if len(allowed_dtypes) != 0 and self.dtype not in allowed_dtypes:
+            raise ValueError(
+                f"Data type {self.dtype} not among supported data types "
+                f"{allowed_dtypes}"
+            )

@@ -1292,15 +1292,67 @@ class TestEBSDDetectorProperty:
 
 class TestDictionaryIndexing:
     def test_dictionary_indexing(self, dummy_signal):
-        """Scores are all 1.0 for a dictionary containing all patterns
+        """Scores are all 1 for a dictionary containing all patterns
         from dummy_signal().
         """
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
         s_dict.axes_manager[0].name = "x"
         s_dict.xmap = CrystalMap.empty((9,))
-        xmap = dummy_signal.dictionary_indexing(s_dict)
+        dummy_signal2 = dummy_signal.deepcopy()
+        s_dict2 = s_dict.deepcopy()
+        xmap = dummy_signal2.dictionary_indexing(s_dict2)
 
+        # Data is not affected by indexing method
+        assert np.allclose(dummy_signal.data, dummy_signal2.data)
+        assert np.allclose(s_dict.data, s_dict2.data)
+
+        assert isinstance(xmap, CrystalMap)
         assert np.allclose(xmap.scores[:, 0], 1)
+
+        xmap2 = dummy_signal.dictionary_indexing(
+            s_dict,
+            dtype=np.float64,
+            n_per_iteration=2,
+            signal_mask=np.zeros(9, dtype=bool),
+        )
+        assert np.allclose(xmap2.scores[:, 0], 1)
+
+        s_dict_lazy = s_dict.as_lazy()
+        s_dict_lazy.xmap = s_dict.xmap
+        xmap3 = dummy_signal.dictionary_indexing(
+            s_dict_lazy,
+            n_per_iteration=2,
+        )
+        assert np.allclose(xmap3.scores[:, 0], 1)
+
+    def test_dictionary_indexing_invalid_metric(self, dummy_signal):
+        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
+        s_dict.axes_manager[0].name = "x"
+        s_dict.xmap = CrystalMap.empty((9,))
+        with pytest.raises(ValueError, match="1 must be either of "):
+            _ = dummy_signal.dictionary_indexing(s_dict, metric=1)
+
+    def test_dictionary_indexing_invalid_signal_shapes(self, dummy_signal):
+        s_dict_data = dummy_signal.data[:, :, :2, :2].reshape((-1, 2, 2))
+        s_dict = kp.signals.EBSD(s_dict_data)
+        s_dict.axes_manager[0].name = "x"
+        s_dict.xmap = CrystalMap.empty((9,))
+        with pytest.raises(ValueError):
+            _ = dummy_signal.dictionary_indexing(s_dict)
+
+    def test_dictionary_indexing_invalid_dictionary(self, dummy_signal):
+        s_dict = kp.signals.EBSD(dummy_signal.data)
+        s_dict.axes_manager[0].name = "x"
+        s_dict.axes_manager[1].name = "y"
+
+        # EBSD.xmap is empty
+        with pytest.raises(ValueError, match="Dictionary signal must have a non-empty"):
+            _ = dummy_signal.dictionary_indexing(s_dict)
+
+        # EBSD not 1 navigation dimension
+        s_dict.xmap = CrystalMap.empty((3, 3))
+        with pytest.raises(ValueError, match="Dictionary signal must have a non-empty"):
+            _ = dummy_signal.dictionary_indexing(s_dict)
 
     def test_dictionary_indexing_warns(self, dummy_signal):
         # TODO: Remove test after v0.4 is released

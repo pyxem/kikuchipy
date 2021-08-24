@@ -16,102 +16,90 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Union
+
+import dask
 import dask.array as da
-import numba as nb
 import numpy as np
 
 from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
 
 
 class NormalizedCrossCorrelationMetric(SimilarityMetric):
-    @property
-    def einsum_signature(self) -> str:
-        return "ik,mk->im"
+    r"""Similarity metric implementing the normalized cross-correlation,
+    or Pearson Correlation Coefficient :cite:`gonzalzez2017digital`
 
-    #        return _einsum_signature(self.experimental_navigation_dimension)
+    .. math::
 
-    @property
-    def prepare_chunk_simulated_func(self):
-        if self.dtype == np.float32:
-            return _prepare_simulated_patterns1d_float32
-        else:
-            return _prepare_simulated_patterns1d_float64
+        r = \frac
+            {\sum^n_{i=1}(x_i - \bar{x})(y_i - \bar{y})}
+            {
+                \sqrt{\sum ^n _{i=1}(x_i - \bar{x})^2}
+                \sqrt{\sum ^n _{i=1}(y_i - \bar{y})^2}
+            },
 
-    def prepare_all_experimental(
-        self, patterns: da.Array, n_per_iteration: int
+    where experimental patterns :math:`x` and simulated patterns
+    :math:`y` are centered by subtracting out the mean of each pattern,
+    and the sum of cross-products of the centered patterns is
+    accumulated. The denominator adjusts the scales of the patterns to
+    have equal units.
+
+    Equivalent results are obtained with :func:`dask.array.tensordot`
+    with ``axes=([2, 3], [1, 2]))`` for 4D and 3D experimental and
+    simulated data sets, respectively.
+    """
+    allowed_dtypes = [np.float32, np.float64]
+
+    def prepare_experimental(
+        self, patterns: Union[np.ndarray, da.Array]
+    ) -> Union[np.ndarray, da.Array]:
+        n_patterns = int(np.prod(patterns.shape[: self.navigation_dimension]))
+        patterns = patterns.reshape((n_patterns, -1))
+        print(patterns.shape)
+        return self._prepare_patterns(patterns)
+
+    def prepare_dictionary(
+        self, patterns: Union[np.ndarray, da.Array]
+    ) -> Union[np.ndarray, da.Array]:
+        # Reshaping to 2D array done in _dictionary_indexing.py
+        return self._prepare_patterns(patterns)
+
+    def match(
+        self,
+        experimental: Union[np.ndarray, da.Array],
+        dictionary: Union[np.ndarray, da.Array],
     ) -> da.Array:
-        patterns = patterns.astype(self.dtype)
-
-        n_experimental = int(
-            np.prod(patterns.shape[: self.experimental_navigation_dimension])
-        )
-        patterns = patterns.reshape((n_experimental, -1))
-
-        if not isinstance(self.signal_mask, int):
-            patterns = patterns[:, self.signal_mask]
-
-        if self.can_rechunk:
-            patterns = self.rechunk(patterns, "auto")
-
-        patterns_mean = da.mean(patterns, axis=1, keepdims=True)
-        patterns = patterns - patterns_mean
-        patterns_norm = da.sqrt(da.sum(da.square(patterns), axis=1, keepdims=True))
-        patterns = patterns / patterns_norm
-
-        return patterns
-
-    def prepare_chunk_simulated(self, patterns: np.ndarray) -> np.ndarray:
-        if not isinstance(self.signal_mask, int):
-            patterns = patterns[:, self.signal_mask]
-        return self.prepare_chunk_simulated_func(patterns)
-
-    def compare(self, experimental: da.Array, simulated: np.ndarray) -> da.Array:
         return da.einsum(
-            self.einsum_signature,
+            "ik,mk->im",
             experimental,
-            simulated,
-            optimize="greedy",
+            dictionary,
+            optimize=True,
             dtype=self.dtype,
         )
 
+    def _prepare_patterns(
+        self, patterns: Union[np.ndarray, da.Array]
+    ) -> Union[np.ndarray, da.Array]:
+        if isinstance(patterns, np.ndarray):
+            dispatcher = np
+        else:
+            dispatcher = da
+        patterns = patterns.astype(self.dtype)
 
-def _einsum_signature(experimental_navigation_dimension):
-    exp_nav_signature = "ij"[:experimental_navigation_dimension]
-    signal_signature = "k"
-    sim_nav_signature = "m"
-    exp = exp_nav_signature + signal_signature
-    sim = sim_nav_signature + signal_signature
-    out = exp_nav_signature + sim_nav_signature
-    return f"{exp},{sim}->{out}"
+        mask = self.signal_mask
+        if mask is not None:
+            with dask.config.set(**{"array.slicing.split_large_chunks": True}):
+                patterns = patterns[:, mask.ravel()]
 
+        if self.rechunk and dispatcher == da:
+            patterns = patterns.rechunk(("auto", -1))
 
-@nb.jit("float32[:](float32[:])", cache=True, nogil=True, nopython=True)
-def _zero_mean_normalize_pattern1d_float32(pattern: np.ndarray) -> np.ndarray:
-    pattern_mean = np.mean(pattern)
-    pattern = pattern - pattern_mean
-    pattern_norm = np.sqrt(np.sum(np.square(pattern)))
-    return pattern / pattern_norm
+        patterns_mean = dispatcher.mean(patterns)
+        patterns = patterns - patterns_mean
 
+        patterns_norm = dispatcher.sqrt(
+            dispatcher.sum(dispatcher.square(patterns), axis=1, keepdims=True)
+        )
+        patterns = patterns / patterns_norm
 
-@nb.jit("float64[:](float64[:])", cache=True, nogil=True, nopython=True)
-def _zero_mean_normalize_pattern1d_float64(pattern: np.ndarray) -> np.ndarray:
-    pattern_mean = np.mean(pattern)
-    pattern = pattern - pattern_mean
-    pattern_norm = np.sqrt(np.sum(np.square(pattern)))
-    return pattern / pattern_norm
-
-
-@nb.jit("float32[:, :](float32[:, :])", cache=True, nogil=True, nopython=True)
-def _prepare_simulated_patterns1d_float32(sim: np.ndarray) -> np.ndarray:
-    simulated_prepared = np.zeros_like(sim)
-    for i in nb.prange(sim.shape[0]):
-        simulated_prepared[i] = _zero_mean_normalize_pattern1d_float32(sim[i])
-    return simulated_prepared
-
-
-@nb.jit("float64[:, :](float64[:, :])", cache=True, nogil=True, nopython=True)
-def _prepare_simulated_patterns1d_float64(sim: np.ndarray) -> np.ndarray:
-    simulated_prepared = np.zeros_like(sim)
-    for i in nb.prange(sim.shape[0]):
-        simulated_prepared[i] = _zero_mean_normalize_pattern1d_float64(sim[i])
-    return simulated_prepared
+        return patterns

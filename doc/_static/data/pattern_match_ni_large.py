@@ -26,6 +26,6 @@ sim = mp.get_patterns(
     rotations=r, detector=detector, energy=20, dtype_out=np.uint8, compute=True
 )
 
-xmap = s_large.dictionary_indexing(sim, keep_n=1, n_slices=10, metric="ncc")
+xmap = s_large.dictionary_indexing_old(sim, keep_n=1, n_slices=10, metric="ncc")
 
 io.save("/home/hakon/ni_large.h5", xmap)

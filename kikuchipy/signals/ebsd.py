@@ -58,7 +58,7 @@ from kikuchipy.indexing._refinement._refinement import (
 from kikuchipy.indexing.similarity_metrics._similarity_metrics import (
     SimilarityMetric_old,
 )
-from kikuchipy.indexing.similarity_metrics import SimilarityMetric, metrics
+from kikuchipy.indexing.similarity_metrics import metrics, SimilarityMetric
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
     metadata_nodes,
@@ -946,17 +946,93 @@ class EBSD(CommonImage, Signal2D):
         removal="0.5",
     )
     def match_patterns(self, *args, **kwargs) -> Union[CrystalMap, List[CrystalMap]]:
-        return self.dictionary_indexing(*args, **kwargs)
+        return self.dictionary_indexing_old(*args, **kwargs)
 
-    def dictionary_indexing2(
+    def dictionary_indexing(
         self,
         dictionary,
-        metric: Union[SimilarityMetric, str] = "ncc",
         keep_n: int = 20,
         n_per_iteration: Optional[int] = None,
+        metric: Union[SimilarityMetric, str] = "ncc",
         signal_mask: Optional[np.ndarray] = None,
-        rechunk: bool = False,
-    ):
+        rechunk: bool = True,
+        dtype: Union[np.dtype, type, None] = None,
+    ) -> CrystalMap:
+        """Match each experimental pattern to a dictionary of simulated
+        patterns of known orientations to index the experimental
+        patterns :cite:`chen2015dictionary,jackson2019dictionary`.
+
+        A suitable similarity metric, the normalized cross-correlation
+        (:class:`~kikuchipy.indexing.similarity_metrics.NormalizedCrossCorrelationMetric`),
+        is used by default, but a valid user-defined similarity metric
+        may be used instead. The metric must be a class implementing the
+        :class:`~kikuchipy.indexing.similarity_metrics.SimilarityMetric`
+        abstract class methods.
+
+        A :class:`~orix.crystal_map.CrystalMap` with "scores" and
+        "simulation_indices" as properties is returned.
+
+        Parameters
+        ----------
+        dictionary : EBSD
+            EBSD signal with dictionary patterns. The signal must have a
+            1D navigation axis, an `xmap` property with crystal
+            orientations set, and equal detector shape.
+        keep_n
+            Number of best matches to keep, by default 20 or the number
+            of dictionary patterns if fewer than 20 are available.
+        n_per_iteration
+            Number of dictionary patterns to compare to all experimental
+            patterns in each indexing iteration. If not given, and the
+            dictionary is a LazyEBSD signal, it is equal to the chunk
+            size of the first pattern array axis, while if if is an EBSD
+            signal, it is set equal to the number of dictionary
+            patterns, yielding only one iteration. This parameter can be
+            increased to use less memory during indexing, but this will
+            increase the computation time.
+        metric
+            Similarity metric, by default "ncc" (normalized
+            cross-correlation). "ndp" (normalized dot product) is also
+            available.
+        signal_mask
+            A boolean mask equal to the experimental patterns' detector
+            shape (n rows, n columns), where only pixels equal to False
+            are matched. If not given, all pixels are used.
+        rechunk
+            Whether `metric` is allowed to rechunk experimental and
+            dictionary patterns before matching. Default is True. If a
+            custom `metric` is passed, whatever `metric.rechunk` is set
+            to will be used.
+        dtype
+            Which data type `metric` shall cast the patterns to before
+            matching. If not given, :class:`numpy.float32` will be used.
+            :class:`numpy.float32` and :class:`numpy.float64` is allowed
+            for the available `metric`s of "ncc" or "ndp".
+
+        Returns
+        -------
+        xmap
+            A crystal map with `keep_n` rotations per point with the
+            sorted best matching orientations in the dictionary. The
+            corresponding best scores and indices into the dictionary
+            are stored in the `xmap.prop` dictionary as "scores" and
+            "simulation_indices".
+
+        Notes
+        -----
+        Merging of single phase crystal maps into one multi phase map
+        and calculations of an orientation similarity map can be done
+        afterwards with
+        :func:`~kikuchipy.indexing.merge_crystal_maps` and
+        :func:`~kikuchipy.indexing.orientation_similarity_map`,
+        respectively.
+
+        See Also
+        --------
+        ~kikuchipy.indexing.similarity_metrics.SimilarityMetric
+        ~kikuchipy.indexing.similarity_metrics.NormalizedCrossCorrelationMetric
+        ~kikuchipy.indexing.similarity_metrics.NormalizedDotProductMetric
+        """
         exp_am = self.axes_manager
         dict_am = dictionary.axes_manager
 
@@ -966,22 +1042,29 @@ class EBSD(CommonImage, Signal2D):
             else:
                 n_per_iteration = dict_am.navigation_size
 
-        # Prepare similarity metric
-        if isinstance(metric, str):
-            metric = metrics[metric]
-        metric.set_shapes_from_axes_managers(exp_am, dict_am)
-        if signal_mask is None:
-            metric.signal_mask = 1
-        else:
-            metric.signal_mask = ~signal_mask.ravel()
-        if metric.can_rechunk is None:
-            metric.can_rechunk = rechunk
+        metric = self._prepare_metric(metric, signal_mask, dtype, rechunk)
+
+        exp_sig_shape = exp_am.signal_shape[::-1]
+        dict_sig_shape = dict_am.signal_shape[::-1]
+        if exp_sig_shape != dict_sig_shape:
+            raise ValueError(
+                f"Experimental {exp_sig_shape} and dictionary {dict_sig_shape} signal "
+                "shapes must be identical"
+            )
+
+        dict_xmap = dictionary.xmap
+        dict_size = dict_am.navigation_size
+        if dict_xmap is None or dict_xmap.shape != (dict_size,):
+            raise ValueError(
+                "Dictionary signal must have a non-empty `EBSD.xmap` property of equal "
+                "size as the number of dictionary patterns, and both the signal and"
+                "crystal map must have only one navigation dimension"
+            )
 
         return _dictionary_indexing(
             experimental=self.data,
             experimental_nav_shape=exp_am.navigation_shape[::-1],
             dictionary=dictionary.data,
-            dictionary_size=dict_am.navigation_size,
             step_sizes=tuple(a.scale for a in exp_am.navigation_axes[::-1]),
             dictionary_xmap=dictionary.xmap,
             keep_n=keep_n,
@@ -989,7 +1072,7 @@ class EBSD(CommonImage, Signal2D):
             metric=metric,
         )
 
-    def dictionary_indexing(
+    def dictionary_indexing_old(
         self,
         simulations,
         metric: Union[str, SimilarityMetric_old] = "ncc",
@@ -999,7 +1082,7 @@ class EBSD(CommonImage, Signal2D):
         get_orientation_similarity_map: bool = False,
     ) -> Union[CrystalMap, List[CrystalMap]]:
         """Match each experimental pattern to all simulated patterns, of
-        known crystal orientations in pre-computed dictionaries
+        metric = getattr(similarity_metrics, metric)
         :cite:`chen2015dictionary,jackson2019dictionary`, to determine
         their phase and orientation.
 
@@ -1020,14 +1103,14 @@ class EBSD(CommonImage, Signal2D):
             patterns (dictionaries). The signals must have a 1D
             navigation axis and the `xmap` property with crystal
             orientations set.
-        metric : str or SimilarityMetric, optional
+        metric : str or similarity_metrics.SimilarityMetric, optional
             Similarity metric, by default "ncc" (normalized
             cross-correlation).
         keep_n : int, optional
             Number of best matches to keep, by default 50 or the number
-            of simulated patterns if fewer than 50 are available.
+            of simulated similarity_metrics.patterns if fewer than 50 are available.
         n_slices : int, optional
-            Number of simulation slices to process sequentially, by
+        metric = getattr(similarity_metrics, metric)
             default 1 (no slicing).
         return_merged_crystal_map : bool, optional
             Whether to return a merged crystal map, the best matches
@@ -1121,7 +1204,7 @@ class EBSD(CommonImage, Signal2D):
         mask
             Boolean mask of signal shape to be applied to the simulated
             pattern before comparison. Pixels set to `True` are masked
-            away. If not given, all pixels are compared.
+            away. If not given, all pixels are matched.
         method : str, optional
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
@@ -1229,7 +1312,7 @@ class EBSD(CommonImage, Signal2D):
         mask
             Boolean mask of signal shape to be applied to the simulated
             pattern before comparison. Pixels set to `True` are masked
-            away. If not given, all pixels are compared.
+            away. If not given, all pixels are matched.
         method : str, optional
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
@@ -1340,7 +1423,7 @@ class EBSD(CommonImage, Signal2D):
         mask
             Boolean mask of signal shape to be applied to the simulated
             pattern before comparison. Pixels set to `True` are masked
-            away. If not given, all pixels are compared.
+            away. If not given, all pixels are matched.
         method : str, optional
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
@@ -2110,18 +2193,28 @@ class EBSD(CommonImage, Signal2D):
         return out.transpose(out_signal_axes)
 
     def _prepare_metric(
+        self,
         metric: Union[SimilarityMetric, str],
-        experimental_navigation_dimension: int,
-        simulated_navigation_dimension: int,
-        signal_dimension: int,
-        signal_mask: Union[np.ndarray, float],
+        signal_mask: Union[np.ndarray, None],
+        dtype: Optional[np.dtype],
+        rechunk: bool,
     ) -> SimilarityMetric:
         if isinstance(metric, str):
-            metric = metrics[metric]
-        metric.experimental_navigation_dimension = experimental_navigation_dimension
-        metric.simulated_navigation_dimension = simulated_navigation_dimension
-        metric.signal_dimension = signal_dimension
-        metric.signal_mask = signal_mask
+            metric_class = metrics[metric]
+            metric = metric_class()
+            metric.rechunk = rechunk
+        if not isinstance(metric, SimilarityMetric):
+            raise ValueError(
+                f"{metric} must be either of {metrics.keys()} or a custom metric class "
+                "inheriting from SimilarityMetric. See "
+                "kikuchipy.indexing.similarity_metrics.SimilarityMetric"
+            )
+        metric.navigation_dimension = self.axes_manager.navigation_dimension
+        if signal_mask is not None:
+            metric.signal_mask = ~signal_mask
+        if dtype is not None:
+            metric.dtype = dtype
+        metric.raise_error_if_invalid()
         return metric
 
 
