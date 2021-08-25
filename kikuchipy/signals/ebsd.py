@@ -39,26 +39,23 @@ from orix.crystal_map import CrystalMap
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
-from kikuchipy.io._io import _save
+from kikuchipy.detectors import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
-from kikuchipy.pattern import chunk
-from kikuchipy.pattern._pattern import (
-    fft_frequency_vectors,
-    fft_filter,
-    _dynamic_background_frequency_space_setup,
-)
-from kikuchipy.indexing._static_pattern_matching import StaticPatternMatching
 from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
 from kikuchipy.indexing._refinement._refinement import (
     _refine_orientation,
     _refine_orientation_projection_center,
     _refine_projection_center,
 )
-from kikuchipy.indexing.similarity_metrics._similarity_metrics import (
-    SimilarityMetric_old,
-)
 from kikuchipy.indexing.similarity_metrics import metrics, SimilarityMetric
+from kikuchipy.io._io import _save
+from kikuchipy.pattern import chunk
+from kikuchipy.pattern._pattern import (
+    fft_frequency_vectors,
+    fft_filter,
+    _dynamic_background_frequency_space_setup,
+)
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
     metadata_nodes,
@@ -78,10 +75,8 @@ from kikuchipy.signals.util._map_helper import (
     _get_neighbour_dot_product_matrices,
     _get_average_dot_product_map,
 )
-from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 from kikuchipy.signals._common_image import CommonImage
-from kikuchipy.detectors import EBSDDetector
-from kikuchipy._util import deprecated
+from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 
 
 class EBSD(CommonImage, Signal2D):
@@ -246,11 +241,11 @@ class EBSD(CommonImage, Signal2D):
         --------
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
-        >>> ebsd_node = kp.signals.util.metadata_nodes("ebsd")
-        >>> s.metadata.get_item(ebsd_node + '.xpc')
+        >>> node = kp.signals.util.metadata_nodes("ebsd")
+        >>> s.metadata.get_item(node + '.xpc')
         -5.64
         >>> s.set_experimental_parameters(xpc=0.50726)
-        >>> s.metadata.get_item(ebsd_node + '.xpc')
+        >>> s.metadata.get_item(node + '.xpc')
         0.50726
         """
         md = self.metadata
@@ -495,9 +490,9 @@ class EBSD(CommonImage, Signal2D):
         patterns is available in signal metadata:
 
         >>> import kikuchipy as kp
-        >>> ebsd_node = kp.signals.util.metadata_nodes("ebsd")
+        >>> node = kp.signals.util.metadata_nodes("ebsd")
         >>> s = kp.data.nickel_ebsd_small()
-        >>> s.metadata.get_item(ebsd_node + '.static_background')
+        >>> s.metadata.get_item(node + '.static_background')
         array([[84, 87, 90, ..., 27, 29, 30],
                [87, 90, 93, ..., 27, 28, 30],
                [92, 94, 97, ..., 39, 28, 29],
@@ -940,14 +935,6 @@ class EBSD(CommonImage, Signal2D):
 
         return image_quality_map
 
-    @deprecated(
-        since="0.4",
-        alternative="kikuchipy.signals.EBSD.dictionary_indexing",
-        removal="0.5",
-    )
-    def match_patterns(self, *args, **kwargs) -> Union[CrystalMap, List[CrystalMap]]:
-        return self.dictionary_indexing_old(*args, **kwargs)
-
     def dictionary_indexing(
         self,
         dictionary,
@@ -1070,84 +1057,6 @@ class EBSD(CommonImage, Signal2D):
             keep_n=keep_n,
             n_per_iteration=n_per_iteration,
             metric=metric,
-        )
-
-    def dictionary_indexing_old(
-        self,
-        simulations,
-        metric: Union[str, SimilarityMetric_old] = "ncc",
-        keep_n: int = 50,
-        n_slices: int = 1,
-        return_merged_crystal_map: bool = False,
-        get_orientation_similarity_map: bool = False,
-    ) -> Union[CrystalMap, List[CrystalMap]]:
-        """Match each experimental pattern to all simulated patterns, of
-        metric = getattr(similarity_metrics, metric)
-        :cite:`chen2015dictionary,jackson2019dictionary`, to determine
-        their phase and orientation.
-
-        A suitable similarity metric, the normalized cross-correlation
-        (:func:`~kikuchipy.indexing.similarity_metrics.ncc`), is used by
-        default, but a valid user-defined similarity metric may be used
-        instead (see
-        :func:`~kikuchipy.indexing.similarity_metrics.make_similarity_metric`).
-
-        :class:`~orix.crystal_map.crystal_map.CrystalMap`'s for each
-        dictionary with "scores" and "simulation_indices" as properties
-        are returned.
-
-        Parameters
-        ----------
-        simulations : EBSD or list of EBSD
-            An EBSD signal or a list of EBSD signals with simulated
-            patterns (dictionaries). The signals must have a 1D
-            navigation axis and the `xmap` property with crystal
-            orientations set.
-        metric : str or similarity_metrics.SimilarityMetric, optional
-            Similarity metric, by default "ncc" (normalized
-            cross-correlation).
-        keep_n : int, optional
-            Number of best matches to keep, by default 50 or the number
-            of simulated similarity_metrics.patterns if fewer than 50 are available.
-        n_slices : int, optional
-        metric = getattr(similarity_metrics, metric)
-            default 1 (no slicing).
-        return_merged_crystal_map : bool, optional
-            Whether to return a merged crystal map, the best matches
-            determined from the similarity scores, in addition to the
-            single phase maps. By default False.
-        get_orientation_similarity_map : bool, optional
-            Add orientation similarity maps to the returned crystal
-            maps' properties named "osm". By default False.
-
-        Returns
-        -------
-        xmaps : ~orix.crystal_map.crystal_map.CrystalMap or list of \
-                ~orix.crystal_map.crystal_map.CrystalMap
-            A crystal map for each dictionary loaded and one merged map
-            if `return_merged_crystal_map = True`.
-
-        Notes
-        -----
-        Merging of crystal maps and calculations of orientation
-        similarity maps can be done afterwards with
-        :func:`~kikuchipy.indexing.merge_crystal_maps` and
-        :func:`~kikuchipy.indexing.orientation_similarity_map`,
-        respectively.
-
-        See Also
-        --------
-        ~kikuchipy.indexing.similarity_metrics.make_similarity_metric
-        ~kikuchipy.indexing.similarity_metrics.ndp
-        """
-        sdi = StaticPatternMatching(simulations)
-        return sdi(
-            signal=self,
-            metric=metric,
-            keep_n=keep_n,
-            n_slices=n_slices,
-            return_merged_crystal_map=return_merged_crystal_map,
-            get_orientation_similarity_map=get_orientation_similarity_map,
         )
 
     def refine_orientation(
@@ -1917,9 +1826,10 @@ class EBSD(CommonImage, Signal2D):
         >>> import hyperspy.api as hs
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
-        >>> roi = hs.roi.RectangularROI(
-        ...     left=0, right=5, top=0, bottom=5)
-        >>> s.plot_virtual_bse_intensity(roi)
+        >>> rect_roi = hs.roi.RectangularROI(
+        ...     left=0, right=5, top=0, bottom=5
+        ... )
+        >>> s.plot_virtual_bse_intensity(rect_roi)
 
         See Also
         --------
@@ -1979,11 +1889,11 @@ class EBSD(CommonImage, Signal2D):
         --------
         >>> import hyperspy.api as hs
         >>> import kikuchipy as kp
-        >>> roi = hs.roi.RectangularROI(
+        >>> rect_roi = hs.roi.RectangularROI(
         ...     left=0, right=5, top=0, bottom=5
         ... )
         >>> s = kp.data.nickel_ebsd_small()
-        >>> vbse_image = s.get_virtual_bse_intensity(roi)
+        >>> vbse_image = s.get_virtual_bse_intensity(rect_roi)
 
         See Also
         --------

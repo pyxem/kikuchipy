@@ -70,8 +70,6 @@ def _dictionary_indexing(
     dictionary = dictionary.reshape((dictionary.shape[0], -1))
 
     phase_name = dictionary_xmap.phases.names[0]
-    if phase_name is None:
-        phase_name = ""
     print(
         _dictionary_indexing_info_message(
             metric=metric,

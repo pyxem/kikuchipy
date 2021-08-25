@@ -31,11 +31,9 @@ from kikuchipy.pattern._pattern import (
     rescale_intensity,
 )
 from kikuchipy.pattern import chunk
-from kikuchipy.pattern import correlate
 
 __all__ = [
     "chunk",
-    "correlate",
     "fft",
     "fft_filter",
     "fft_frequency_vectors",

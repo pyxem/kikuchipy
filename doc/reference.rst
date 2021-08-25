@@ -369,7 +369,6 @@ Single and chunk pattern processing used by signals.
 
 .. autosummary::
     chunk
-    correlate
     fft
     fft_filter
     fft_frequency_vectors
@@ -407,17 +406,6 @@ chunks of EBSD patterns.
     rescale_intensity
 
 .. automodule:: kikuchipy.pattern.chunk
-    :members:
-    :undoc-members:
-
-....
-
-correlate
----------
-
-.. currentmodule:: kikuchipy.pattern.correlate
-
-.. automodule:: kikuchipy.pattern.correlate
     :members:
     :undoc-members:
 
@@ -506,7 +494,6 @@ from HyperSpy.
     get_image_quality
     get_neighbour_dot_product_matrices
     get_virtual_bse_intensity
-    match_patterns
     normalize_intensity
     plot_virtual_bse_intensity
     rebin

@@ -29,7 +29,7 @@ def get_chunking(
     sig_dim: Optional[int] = None,
     chunk_shape: Optional[int] = None,
     chunk_bytes: Union[int, float, str, None] = 30e6,
-    dtype: Optional[type] = None,
+    dtype: Union[type, np.dtype, None] = None,
 ) -> tuple:
     """Get a chunk tuple based on the shape of the signal data.
 
@@ -160,7 +160,9 @@ def _get_chunk_overlap_depth(window, axes_manager, chunksize: tuple) -> dict:
 
 
 def _rechunk_learning_results(
-    factors: np.ndarray, loadings: np.ndarray, mbytes_chunk: int = 100
+    factors: Union[np.ndarray, da.Array],
+    loadings: Union[np.ndarray, da.Array],
+    mbytes_chunk: int = 100,
 ) -> list:
     """Return suggested data chunks for learning results.
 
@@ -224,8 +226,8 @@ def _rechunk_learning_results(
 def _update_learning_results(
     learning_results,
     components: Union[None, int, List[int]],
-    dtype_out: type,
-) -> Tuple[np.ndarray, np.ndarray]:
+    dtype_out: Union[type, np.dtype],
+) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
     """Update learning results before calling
     :meth:`hyperspy.learn.mva.MVA.get_decomposition_model` by
     changing data type, keeping only desired components and rechunking

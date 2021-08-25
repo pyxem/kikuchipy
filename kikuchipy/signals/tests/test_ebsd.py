@@ -1302,28 +1302,34 @@ class TestDictionaryIndexing:
         s_dict2 = s_dict.deepcopy()
         xmap = dummy_signal2.dictionary_indexing(s_dict2)
 
+        assert isinstance(xmap, CrystalMap)
+        assert np.allclose(xmap.scores[:, 0], 1)
+
         # Data is not affected by indexing method
         assert np.allclose(dummy_signal.data, dummy_signal2.data)
         assert np.allclose(s_dict.data, s_dict2.data)
 
-        assert isinstance(xmap, CrystalMap)
-        assert np.allclose(xmap.scores[:, 0], 1)
-
+        # So that not setting n_per_iteration if it is None is covered
+        signal_mask = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]], dtype=bool)
         xmap2 = dummy_signal.dictionary_indexing(
             s_dict,
             dtype=np.float64,
             n_per_iteration=2,
-            signal_mask=np.zeros(9, dtype=bool),
+            signal_mask=signal_mask,
         )
         assert np.allclose(xmap2.scores[:, 0], 1)
 
+        # So that setting n_per_iteration from a lazy dictionary is
+        # covered
         s_dict_lazy = s_dict.as_lazy()
         s_dict_lazy.xmap = s_dict.xmap
-        xmap3 = dummy_signal.dictionary_indexing(
-            s_dict_lazy,
-            n_per_iteration=2,
-        )
+        xmap3 = dummy_signal.dictionary_indexing(s_dict_lazy)
         assert np.allclose(xmap3.scores[:, 0], 1)
+
+        # So that computing parts of the dictionary during indexing is
+        # covered
+        xmap4 = dummy_signal.dictionary_indexing(s_dict_lazy, n_per_iteration=2)
+        assert np.allclose(xmap4.scores[:, 0], 1)
 
     def test_dictionary_indexing_invalid_metric(self, dummy_signal):
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
@@ -1353,14 +1359,6 @@ class TestDictionaryIndexing:
         s_dict.xmap = CrystalMap.empty((3, 3))
         with pytest.raises(ValueError, match="Dictionary signal must have a non-empty"):
             _ = dummy_signal.dictionary_indexing(s_dict)
-
-    def test_dictionary_indexing_warns(self, dummy_signal):
-        # TODO: Remove test after v0.4 is released
-        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
-        s_dict.axes_manager[0].name = "x"
-        s_dict.xmap = CrystalMap.empty((9,), step_sizes=(1,))
-        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
-            _ = dummy_signal.match_patterns(s_dict)
 
 
 class TestEBSDRefinement:

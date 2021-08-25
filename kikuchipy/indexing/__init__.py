@@ -25,12 +25,12 @@ these tools for pattern matching.
 
 from kikuchipy.indexing._merge_crystal_maps import merge_crystal_maps
 from kikuchipy.indexing.orientation_similarity_map import orientation_similarity_map
-from kikuchipy.indexing import similarity_metrics
 from kikuchipy.indexing._refinement._refinement import (
     compute_refine_orientation_results,
     compute_refine_orientation_projection_center_results,
     compute_refine_projection_center_results,
 )
+from kikuchipy.indexing import similarity_metrics
 
 __all__ = [
     "compute_refine_orientation_results",
@@ -38,4 +38,5 @@ __all__ = [
     "compute_refine_projection_center_results",
     "merge_crystal_maps",
     "orientation_similarity_map",
+    "similarity_metrics",
 ]
