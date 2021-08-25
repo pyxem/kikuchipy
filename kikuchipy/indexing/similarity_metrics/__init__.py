@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Similarity metrics for comparing gray-tone patterns."""
+"""Similarity metrics for comparing grayscale patterns."""
 
 from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
 from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (

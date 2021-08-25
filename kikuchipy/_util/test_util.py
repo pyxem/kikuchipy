@@ -69,3 +69,22 @@ class TestDeprecationWarning:
             ".. deprecated:: 1.9\n"
             f"   {desired_msg2}"
         )
+
+    def test_deprecation_no_old_doc(self):
+        @deprecated(since=0.7, message="Hello", alternative="bar", removal=0.8)
+        def foo(n):
+            return n + 1
+
+        with pytest.warns(np.VisibleDeprecationWarning) as record:
+            assert foo(4) == 5
+        desired_msg = (
+            "Function `foo()` is deprecated and will be removed in version 0.8. Use "
+            "`bar()` instead."
+        )
+        assert str(record[0].message) == desired_msg
+        assert foo.__doc__ == (
+            "[*Deprecated*] \n"
+            "\nNotes\n-----\n"
+            ".. deprecated:: 0.7\n"
+            f"   {desired_msg}"
+        )

@@ -17,26 +17,21 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from math import copysign
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 import warnings
 
 import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList
 from orix.quaternion import Rotation
 
-from kikuchipy.indexing.similarity_metrics._similarity_metrics import (
-    SimilarityMetric_old,
-    _SIMILARITY_METRICS,
-)
-
 
 def merge_crystal_maps(
     crystal_maps: List[CrystalMap],
     mean_n_best: int = 1,
-    metric: Union[str, SimilarityMetric_old] = None,
+    greater_is_better: Optional[int] = None,
     scores_prop: str = "scores",
     simulation_indices_prop: Optional[str] = None,
-):
+) -> CrystalMap:
     """Merge a list of at least two single phase
     :class:`~orix.crystal_map.crystal_map.CrystalMap` with a 1D or 2D
     navigation shape into one multi phase map.
@@ -46,19 +41,22 @@ def merge_crystal_maps(
 
     Parameters
     ----------
-    crystal_maps : list of\
-            :class:`~orix.crystal_map.crystal_map.CrystalMap`
+    crystal_maps
         A list of crystal maps with simulated indices and scores among
         their properties.
-    mean_n_best : int, optional
+    mean_n_best
         Number of best metric results to take the mean of before
-        comparing. Default is 1.
-    metric : str or SimilarityMetric, optional
-        Similarity metric, default is None.
-    scores_prop : str, optional
+        comparing. Default is 1. If given with a negative sign and
+        `greater_is_better` is not given, the n lowest valued metric
+        results are chosen.
+    greater_is_better
+        True if a higher score means a better match. Default is None, in
+        which case the sign of `mean_n_best` is used, with a positive
+        sign meaning True.
+    scores_prop
         Name of scores array in the crystal maps' properties. Default
         is "scores".
-    simulation_indices_prop : str, optional
+    simulation_indices_prop
         Name of simulated indices array in the crystal maps' properties.
         If None (default), the merged crystal map will not contain
         an array of merged simulation indices from the input crystal
@@ -67,7 +65,7 @@ def merge_crystal_maps(
 
     Returns
     -------
-    merged_xmap : ~orix.crystal_map.crystal_map.CrystalMap
+    merged_xmap
         A crystal map where the rotation of the phase with the best
         matching score(s) is assigned to each point. The best matching
         scores, merge sorted, are added to its properties with a name
@@ -75,11 +73,6 @@ def merge_crystal_maps(
         suffix. If `simulation_indices_prop` is passed, the best
         matching simulation indices are added in the same way as the
         scores.
-
-    Notes
-    -----
-    `mean_n_best` can be given with a negative sign if `metric` is not
-    given, in order to choose the lowest valued metric results.
     """
     map_shapes = [xmap.shape for xmap in crystal_maps]
     if not np.sum(abs(np.diff(map_shapes, axis=0))) == 0:
@@ -92,11 +85,14 @@ def merge_crystal_maps(
             " per point."
         )
 
-    if metric is None:
+    if greater_is_better is None:
         sign = copysign(1, mean_n_best)
         mean_n_best = abs(mean_n_best)
     else:
-        sign = _SIMILARITY_METRICS.get(metric, metric).sign
+        if greater_is_better:
+            sign = 1
+        else:
+            sign = -1
 
     # Notation used in the comments below:
     # - M: number of map points

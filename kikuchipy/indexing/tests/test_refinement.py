@@ -89,6 +89,6 @@ class TestEBSDRefinementSetup:
 class TestRefinementSolvers:
     def test_rescale_pattern_numba_function(self):
         a = np.random.random(10).reshape((2, 5)).astype(np.float32)
-        b = kp.indexing._refinement._solvers._rescale_pattern.py_func(a)
+        b = kp.indexing._refinement._solvers._rescale_without_min_max.py_func(a)
         assert not np.allclose(a, b)
         assert b.dtype == a.dtype

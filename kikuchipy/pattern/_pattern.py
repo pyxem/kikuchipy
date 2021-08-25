@@ -83,11 +83,11 @@ def rescale_intensity(
     else:
         omin, omax = out_range
 
-    return _rescale(pattern, imin, imax, omin, omax).astype(dtype_out)
+    return _rescale_with_min_max(pattern, imin, imax, omin, omax).astype(dtype_out)
 
 
 @nb.jit(nogil=True, nopython=True, cache=True)
-def _rescale(
+def _rescale_with_min_max(
     pattern: np.ndarray,
     imin: Union[int, float],
     imax: Union[int, float],
@@ -96,6 +96,13 @@ def _rescale(
 ) -> np.ndarray:
     rescaled_pattern = (pattern - imin) / float(imax - imin)
     return rescaled_pattern * (omax - omin) + omin
+
+
+@nb.jit("float32[:, :](float32[:, :])", cache=True, nopython=True, nogil=True)
+def _rescale_without_min_max(pattern: np.ndarray) -> np.ndarray:
+    imin = np.min(pattern)
+    imax = np.max(pattern)
+    return _rescale_with_min_max(pattern, imin=imin, imax=imax, omin=-1, omax=1)
 
 
 def remove_dynamic_background(

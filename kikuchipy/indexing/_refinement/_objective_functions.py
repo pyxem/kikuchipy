@@ -23,7 +23,7 @@ and simulated patterns.
 
 import numpy as np
 
-from kikuchipy.indexing.similarity_metrics._similarity_metrics import (
+from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
     _ncc_single_patterns_2d_float32,
 )
 from kikuchipy._rotation import _rotation_from_euler

@@ -77,6 +77,7 @@ from kikuchipy.signals.util._map_helper import (
 )
 from kikuchipy.signals._common_image import CommonImage
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
+from kikuchipy._util import deprecated
 
 
 class EBSD(CommonImage, Signal2D):
@@ -942,19 +943,21 @@ class EBSD(CommonImage, Signal2D):
         n_per_iteration: Optional[int] = None,
         metric: Union[SimilarityMetric, str] = "ncc",
         signal_mask: Optional[np.ndarray] = None,
-        rechunk: bool = True,
+        rechunk: bool = False,
         dtype: Union[np.dtype, type, None] = None,
     ) -> CrystalMap:
         """Match each experimental pattern to a dictionary of simulated
-        patterns of known orientations to index the experimental
-        patterns :cite:`chen2015dictionary,jackson2019dictionary`.
+        patterns of known orientations to index the them
+        :cite:`chen2015dictionary,jackson2019dictionary`.
 
         A suitable similarity metric, the normalized cross-correlation
         (:class:`~kikuchipy.indexing.similarity_metrics.NormalizedCrossCorrelationMetric`),
         is used by default, but a valid user-defined similarity metric
         may be used instead. The metric must be a class implementing the
         :class:`~kikuchipy.indexing.similarity_metrics.SimilarityMetric`
-        abstract class methods.
+        abstract class methods. The normalized dot product
+        (:class:`~kikuchipy.indexing.similarity_metrics.NormalizedDotProductMetric`)
+        is available as well.
 
         A :class:`~orix.crystal_map.CrystalMap` with "scores" and
         "simulation_indices" as properties is returned.
@@ -987,13 +990,14 @@ class EBSD(CommonImage, Signal2D):
             are matched. If not given, all pixels are used.
         rechunk
             Whether `metric` is allowed to rechunk experimental and
-            dictionary patterns before matching. Default is True. If a
+            dictionary patterns before matching. Default is False. If a
             custom `metric` is passed, whatever `metric.rechunk` is set
-            to will be used.
+            to will be used. Rechunking usually makes indexing faster,
+            but uses more memory.
         dtype
             Which data type `metric` shall cast the patterns to before
-            matching. If not given, :class:`numpy.float32` will be used.
-            :class:`numpy.float32` and :class:`numpy.float64` is allowed
+            matching. If not given, :~class:`numpy.float32` will be used.
+            :class:`~numpy.float32` and :~class:`numpy.float64` is allowed
             for the available `metric`s of "ncc" or "ndp".
 
         Returns
@@ -1022,14 +1026,13 @@ class EBSD(CommonImage, Signal2D):
         """
         exp_am = self.axes_manager
         dict_am = dictionary.axes_manager
+        dict_size = dict_am.navigation_size
 
         if n_per_iteration is None:
             if isinstance(dictionary.data, da.Array):
                 n_per_iteration = dictionary.data.chunksize[0]
             else:
-                n_per_iteration = dict_am.navigation_size
-
-        metric = self._prepare_metric(metric, signal_mask, dtype, rechunk)
+                n_per_iteration = dict_size
 
         exp_sig_shape = exp_am.signal_shape[::-1]
         dict_sig_shape = dict_am.signal_shape[::-1]
@@ -1040,13 +1043,14 @@ class EBSD(CommonImage, Signal2D):
             )
 
         dict_xmap = dictionary.xmap
-        dict_size = dict_am.navigation_size
         if dict_xmap is None or dict_xmap.shape != (dict_size,):
             raise ValueError(
                 "Dictionary signal must have a non-empty `EBSD.xmap` property of equal "
                 "size as the number of dictionary patterns, and both the signal and"
                 "crystal map must have only one navigation dimension"
             )
+
+        metric = self._prepare_metric(metric, signal_mask, dtype, rechunk, dict_size)
 
         return _dictionary_indexing(
             experimental=self.data,
@@ -2108,18 +2112,20 @@ class EBSD(CommonImage, Signal2D):
         signal_mask: Union[np.ndarray, None],
         dtype: Optional[np.dtype],
         rechunk: bool,
+        n_dictionary_patterns: int,
     ) -> SimilarityMetric:
-        if isinstance(metric, str):
+        if isinstance(metric, str) and metric in metrics:
             metric_class = metrics[metric]
             metric = metric_class()
             metric.rechunk = rechunk
         if not isinstance(metric, SimilarityMetric):
             raise ValueError(
-                f"{metric} must be either of {metrics.keys()} or a custom metric class "
-                "inheriting from SimilarityMetric. See "
+                f"'{metric}' must be either of {metrics.keys()} or a custom metric "
+                "class inheriting from SimilarityMetric. See "
                 "kikuchipy.indexing.similarity_metrics.SimilarityMetric"
             )
-        metric.navigation_dimension = self.axes_manager.navigation_dimension
+        metric.n_experimental_patterns = max(self.axes_manager.navigation_size, 1)
+        metric.n_dictionary_patterns = max(n_dictionary_patterns, 1)
         if signal_mask is not None:
             metric.signal_mask = ~signal_mask
         if dtype is not None:

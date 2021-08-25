@@ -23,105 +23,116 @@ import numpy as np
 
 
 class SimilarityMetric(abc.ABC):
-    """Abstract class implementing a similarity metric to match 1D or
-    2D gray-tone patterns.
+    """Abstract class implementing a similarity metric to match
+    experimental and simulated EBSD patterns in a dictionary.
 
-    When writing a custom similarity metric class, the following methods
-    must be implemented. Also listed are the attributes available within
-    the methods.
+    For use in :meth:`~kikuchipy.signals.EBSD.dictionary_indexing` or
+    directly on pattern arrays if a :meth:`__call__` method is
+    implemented. Note that `dictionary_indexing()` will always reshape
+    the dictionary pattern array to 2D (1 navigation dimension, 1 signal
+    dimension) before calling :meth:`prepare_dictionary` and
+    :meth:`match`.
 
-    Methods
-    -------
-    prepare_experimental
-    prepare_dictionary
-    match
+    Take a look at the implementation of
+    :class:`~kikuchipy.indexing.similarity_metrics.NormalizedCrossCorrelationMetric`
+    for how to write a concrete custom metric.
+
+    When writing a custom similarity metric class, the methods listed as
+    `abstract` below must be implemented. Any number of custom
+    parameters can be passed. Also listed are the attributes available
+    to the methods if set properly during initialization or after.
 
     Attributes
     ----------
     allowed_dtypes : list of numpy.dtype
-        List of allowed array data types.
-    navigation_dimension : int or None
-    signal_mask : numpy.ndarray or None
-    sign : int
-        +1 if a greater match is better, -1 if a lower match is better.
+        List of allowed array data types used during matching.
     dtype : numpy.dtype
+        Which data type to cast the patterns to before matching. Must be
+        listed in `allowed_dtypes`.
+    n_dictionary_patterns : int or None
+        Number of dictionary patterns to match. This information might
+        be necessary when reshaping the dictionary array in
+        :meth:`prepare_dictionary`.
+    n_experimental_patterns : int or None
+        Number of experimental patterns to match. This information might
+        be necessary when reshaping the dictionary array in
+        :meth:`prepare_experimental`.
+    sign : int or None
+        +1 if a greater match is better, -1 if a lower match is better.
+        This must be set in the inheriting class.
+    signal_mask : numpy.ndarray or None
+        A boolean mask equal to the experimental patterns' detector
+        shape (n rows, n columns), where only pixels equal to False
+        are matched.
     rechunk : bool
+        Whether to allow rechunking of arrays before matching.
     """
 
     allowed_dtypes = []
+    sign = None
 
     def __init__(
         self,
-        navigation_dimension: Optional[int] = None,
+        n_experimental_patterns: Optional[int] = None,
+        n_dictionary_patterns: Optional[int] = None,
         signal_mask: Optional[np.ndarray] = None,
-        greater_is_better: bool = True,
-        dtype: np.dtype = np.float32,
-        rechunk: bool = True,
+        dtype: type = np.float32,
+        rechunk: bool = False,
     ):
-        """Create a similarity metric matching 1D or 2D gray-tone
-        patterns.
+        """Create a similarity metric matching experimental and
+        simulated EBSD patterns in a dictionary.
 
         Parameters
         ----------
-        navigation_dimension
-            Number of experimental navigation dimensions, typically 1 or
-            2. If not given, this is set to None, so it must be set
-            later.
+        n_experimental_patterns
+            Number of experimental patterns. If not given, this is set
+            to None and must be set later. Must be at least 1.
+        n_dictionary_patterns
+            Number of dictionary patterns. If not given, this is set to
+            None and must be set later. Must be at least 1.
         signal_mask
             A boolean mask equal to the experimental patterns' detector
             shape (n rows, n columns), where only pixels equal to False
             are matched. If not given, all pixels are used.
-        greater_is_better
-            True if a higher metric means a better match.
         dtype
             Which data type to cast the patterns to before matching to.
         rechunk
             Whether to allow rechunking of arrays before matching.
+            Default is False.
         """
-        self.navigation_dimension = navigation_dimension
+        self.n_experimental_patterns = n_experimental_patterns
+        self.n_dictionary_patterns = n_dictionary_patterns
         self.signal_mask = signal_mask
         self.dtype = dtype
         self.rechunk = rechunk
-        if greater_is_better:
-            self.sign = 1
-        else:
-            self.sign = -1
-
-    def __call__(self, experimental, dictionary):
-        experimental = self.prepare_experimental(experimental)
-        dictionary = dictionary.reshape((dictionary.shape[0], -1))
-        dictionary = self.prepare_dictionary(dictionary)
-        return self.match(experimental, dictionary)
 
     def __repr__(self):
         string = f"{self.__class__.__name__}: {np.dtype(self.dtype).name}, "
-        if self.sign == 1:
-            string += "greater is better"
-        else:
-            string += "lower is better"
+        sign_string = {1: "greater is better", -1: "lower is better"}
+        string += sign_string[self.sign]
         string += f", rechunk: {self.rechunk}, mask: {self.signal_mask is not None}"
         return string
 
     @abc.abstractmethod
     def prepare_experimental(self, *args, **kwargs):
-        """Prepare experimental patterns before being sent to
-        :meth:`match`.
+        """Prepare experimental patterns before matching to dictionary
+        patterns in :meth:`match`.
         """
-        return NotImplemented
+        return NotImplemented  # pragma: no cover
 
     @abc.abstractmethod
     def prepare_dictionary(self, *args, **kwargs):
-        """Prepare dictionary patterns before being sent to
-        :meth:`match`.
+        """Prepare dictionary patterns before matching to experimental
+        patterns in :meth:`match`.
         """
-        return NotImplemented
+        return NotImplemented  # pragma: no cover
 
     @abc.abstractmethod
     def match(self, *args, **kwargs):
-        """Match experimental and dictionary patterns and return their
-        similarities.
+        """Match all experimental patterns to all dictionary patterns
+        and return their similarities.
         """
-        return NotImplemented
+        return NotImplemented  # pragma: no cover
 
     def raise_error_if_invalid(self):
         """Raise a ValueError if `self.dtype` is not among
@@ -130,6 +141,6 @@ class SimilarityMetric(abc.ABC):
         allowed_dtypes = self.allowed_dtypes
         if len(allowed_dtypes) != 0 and self.dtype not in allowed_dtypes:
             raise ValueError(
-                f"Data type {self.dtype} not among supported data types "
+                f"Data type {np.dtype(self.dtype).name} not among supported data types "
                 f"{allowed_dtypes}"
             )

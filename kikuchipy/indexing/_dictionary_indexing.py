@@ -61,13 +61,13 @@ def _dictionary_indexing(
     -------
     xmap
     """
-    dictionary_size = dictionary.shape[0]
+    dictionary_size = metric.n_dictionary_patterns
     n_experimental = int(np.prod(experimental_nav_shape))
     keep_n = min(keep_n, dictionary_size)
-    n_iterations = dictionary_size // n_per_iteration
+    n_iterations = int(np.ceil(dictionary_size / n_per_iteration))
 
     experimental = metric.prepare_experimental(experimental)
-    dictionary = dictionary.reshape((dictionary.shape[0], -1))
+    dictionary = dictionary.reshape((dictionary_size, -1))
 
     phase_name = dictionary_xmap.phases.names[0]
     print(
@@ -75,7 +75,6 @@ def _dictionary_indexing(
             metric=metric,
             n_experimental=n_experimental,
             dictionary_size=dictionary_size,
-            n_iterations=n_iterations,
             phase_name=phase_name,
         )
     )
@@ -91,24 +90,23 @@ def _dictionary_indexing(
             simulation_indices, scores = da.compute(simulation_indices, scores)
     else:
         simulation_indices = np.zeros((n_experimental, keep_n), dtype=np.int32)
-        scores = np.full((n_experimental, keep_n), metric.sign, dtype=metric.dtype)
-
-        lazy_dictionary = isinstance(dictionary, da.Array)
+        scores = np.full((n_experimental, keep_n), -metric.sign, dtype=metric.dtype)
 
         negative_sign = -metric.sign
+
+        lazy_dictionary = isinstance(dictionary, da.Array)
 
         chunk_starts = np.cumsum([0] + [n_per_iteration] * (n_iterations - 1))
         chunk_ends = np.cumsum([n_per_iteration] * n_iterations)
         chunk_ends[-1] = max(chunk_ends[-1], dictionary_size)
         for start, end in tqdm(zip(chunk_starts, chunk_ends), total=n_iterations):
+            dictionary_chunk = dictionary[start:end]
             if lazy_dictionary:
-                simulated = dictionary[start:end].compute()
-            else:
-                simulated = dictionary[start:end]
+                dictionary_chunk = dictionary_chunk.compute()
 
             simulation_indices_i, scores_i = _match_chunk(
                 experimental,
-                simulated,
+                dictionary_chunk,
                 keep_n=min(keep_n, end - start),
                 metric=metric,
             )
@@ -177,7 +175,6 @@ def _dictionary_indexing_info_message(
     metric: ClassVar,
     n_experimental: int,
     dictionary_size: int,
-    n_iterations: int,
     phase_name: str,
 ) -> str:
     """Return a message with useful dictionary indexing information.
@@ -187,7 +184,6 @@ def _dictionary_indexing_info_message(
     metric : SimilarityMetric
     n_experimental
     dictionary_size
-    n_iterations
     phase_name
     Returns
     -------
@@ -198,6 +194,6 @@ def _dictionary_indexing_info_message(
         "Dictionary indexing information:\n"
         f"\tPhase name: {phase_name}\n"
         f"\tMatching {n_experimental} experimental pattern(s) to {dictionary_size} "
-        f"dictionary pattern(s) in {n_iterations} iteration(s)\n"
+        f"dictionary pattern(s)\n"
         f"\t{metric}"
     )

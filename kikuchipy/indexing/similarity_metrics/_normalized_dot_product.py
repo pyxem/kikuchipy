@@ -38,21 +38,71 @@ class NormalizedDotProductMetric(SimilarityMetric):
     where :math:`{\langle \mathbf{X}, \mathbf{Y} \rangle}` is the dot
     (inner) product of the pattern vectors :math:`\mathbf{X}` and
     :math:`\mathbf{Y}`.
+
+    See :class:`~kikuchipy.indexing.similarity_metrics.SimilarityMetric`
+    for remaning attributes.
+
+    Attributes
+    ----------
+    allowed_dtypes
+        :class:`~numpy.float32` and :class:`~numpy.float64`.
+    sign
+        +1, meaning greater is better.
     """
     allowed_dtypes = [np.float32, np.float64]
+    sign = 1
+
+    def __call__(
+        self,
+        experimental: Union[da.Array, np.ndarray],
+        dictionary: Union[da.Array, np.ndarray],
+    ) -> da.Array:
+        """Compute the similarities between experimental patterns and
+        simulated dictionary patterns.
+
+        Before calling :meth:`match`, this method calls
+        :meth:`prepare_experimental`, reshapes the dictionary patterns
+        to 1 navigation dimension and 1 signal dimension, and calls
+        :meth:`prepare_dictionary`.
+
+        Parameters
+        ----------
+        experimental
+            Experimental pattern array with as many patterns as
+            :attr:`n_experimental_patterns`.
+        dictionary
+            Dictionary pattern array with as many patterns as
+            :attr:`n_dictionary_patterns`.
+
+        Returns
+        -------
+        similarities
+        """
+        experimental = self.prepare_experimental(experimental)
+        dictionary = dictionary.reshape((self.n_dictionary_patterns, -1))
+        dictionary = self.prepare_dictionary(dictionary)
+        return self.match(experimental, dictionary)
 
     def prepare_experimental(
         self, patterns: Union[np.ndarray, da.Array]
     ) -> Union[np.ndarray, da.Array]:
-        n_patterns = int(np.prod(patterns.shape[: self.navigation_dimension]))
-        patterns = patterns.reshape((n_patterns, -1))
-        return self._prepare_patterns(patterns)
+        patterns = da.asarray(patterns).astype(self.dtype)
+        patterns = patterns.reshape((self.n_experimental_patterns, -1))
+        if self.signal_mask is not None:
+            patterns = self._mask_patterns(patterns)
+        if self.rechunk:
+            patterns = patterns.rechunk(("auto", -1))
+        patterns = self._normalize_patterns(patterns)
+        return patterns
 
     def prepare_dictionary(
         self, patterns: Union[np.ndarray, da.Array]
     ) -> Union[np.ndarray, da.Array]:
-        # Reshaping to 2D array done in _dictionary_indexing.py
-        return self._prepare_patterns(patterns)
+        patterns = patterns.astype(self.dtype)
+        if self.signal_mask is not None:
+            patterns = self._mask_patterns(patterns)
+        patterns = self._normalize_patterns(patterns)
+        return patterns
 
     def match(
         self,
@@ -67,26 +117,23 @@ class NormalizedDotProductMetric(SimilarityMetric):
             dtype=self.dtype,
         )
 
-    def _prepare_patterns(
-        self, patterns: Union[np.ndarray, da.Array]
-    ) -> Union[np.ndarray, da.Array]:
-        if isinstance(patterns, np.ndarray):
-            dispatcher = np
-        else:
+    def _mask_patterns(
+        self, patterns: Union[da.Array, np.ndarray]
+    ) -> Union[da.Array, np.ndarray]:
+        with dask.config.set(**{"array.slicing.split_large_chunks": False}):
+            patterns = patterns[:, self.signal_mask.ravel()]
+        return patterns
+
+    @staticmethod
+    def _normalize_patterns(
+        patterns: Union[da.Array, np.ndarray]
+    ) -> Union[da.Array, np.ndarray]:
+        if isinstance(patterns, da.Array):
             dispatcher = da
-        patterns = patterns.astype(self.dtype)
-
-        mask = self.signal_mask
-        if mask is not None:
-            with dask.config.set(**{"array.slicing.split_large_chunks": True}):
-                patterns = patterns[:, mask.ravel()]
-
-        if self.rechunk and dispatcher == da:
-            patterns = patterns.rechunk(("auto", -1))
-
+        else:
+            dispatcher = np
         patterns_norm = dispatcher.sqrt(
             dispatcher.sum(dispatcher.square(patterns), axis=1, keepdims=True)
         )
         patterns = patterns / patterns_norm
-
         return patterns

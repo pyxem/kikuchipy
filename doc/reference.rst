@@ -2,18 +2,18 @@
 API reference
 =============
 
-This reference manual details the public modules, classes, and functions in
-kikuchipy, as generated from their docstrings. Many of the docstrings contain
-examples, however, see the user guide for how to use kikuchipy.
+This reference manual details the public modules, classes, and functions in kikuchipy,
+as generated from their docstrings. Many of the docstrings contain examples, however,
+see the user guide for how to use kikuchipy.
 
 .. caution::
 
-    kikuchipy is in an alpha stage, so there will be breaking changes with each
+    kikuchipy is in an alpha stage, so there will be some breaking changes with each
     release.
 
 .. module:: kikuchipy
 
-The list of top modules (and the load function):
+The list of top modules and the load function:
 
 .. autosummary::
     crystallography
@@ -268,10 +268,22 @@ similarity_metrics
     NormalizedCrossCorrelationMetric
     NormalizedDotProductMetric
 
-.. automodule:: kikuchipy.indexing.similarity_metrics
+.. autoclass:: kikuchipy.indexing.similarity_metrics.SimilarityMetric
     :members:
-    :undoc-members:
+
+    .. automethod:: __init__
+
+.. autoclass:: kikuchipy.indexing.similarity_metrics.NormalizedCrossCorrelationMetric
+    :members:
     :show-inheritance:
+
+    .. automethod:: __call__
+
+.. autoclass:: kikuchipy.indexing.similarity_metrics.NormalizedDotProductMetric
+    :members:
+    :show-inheritance:
+
+    .. automethod:: __call__
 
 ....
 
@@ -304,8 +316,7 @@ plugins
     oxford_binary
 
 The plugins import patterns and parameters from file formats into
-:class:`~kikuchipy.signals.EBSD` or
-:class:`~kikuchipy.signals.EBSDMasterPattern` (or
+:class:`~kikuchipy.signals.EBSD` or :class:`~kikuchipy.signals.EBSDMasterPattern` (or
 :class:`~kikuchipy.signals.LazyEBSD` or
 :class:`~kikuchipy.signals.LazyEBSDMasterPattern` if loading lazily) objects.
 
@@ -380,7 +391,7 @@ Single and chunk pattern processing used by signals.
     remove_dynamic_background
     rescale_intensity
 
-Functions operating on single EBSD patterns as :class:`numpy.ndarray`.
+Functions operating on single EBSD patterns as :class:`~numpy.ndarray`.
 
 .. automodule:: kikuchipy.pattern
     :members:
@@ -389,8 +400,8 @@ Functions operating on single EBSD patterns as :class:`numpy.ndarray`.
 chunk
 -----
 
-Functions for operating on :class:`numpy.ndarray` or :class:`dask.array.Array`
-chunks of EBSD patterns.
+Functions for operating on :class:`~numpy.ndarray` or :class:`~dask.array.Array` chunks
+of EBSD patterns.
 
 .. currentmodule:: kikuchipy.pattern.chunk
 
@@ -475,11 +486,10 @@ signals
 EBSD
 ----
 
-All methods listed here are also available to
-:class:`~kikuchipy.signals.LazyEBSD` objects.
+All methods listed here are also available to :class:`~kikuchipy.signals.LazyEBSD`
+instances.
 
-See :class:`hyperspy._signals.signal2d.Signal2D` for methods inherited
-from HyperSpy.
+See :class:`̃hyperspy._signals.signal2d.Signal2D` for methods inherited from HyperSpy.
 
 .. currentmodule:: kikuchipy.signals.EBSD
 
@@ -515,7 +525,7 @@ from HyperSpy.
     :inherited-members: Signal2D
     :show-inheritance:
 
-These methods are exclusive to LazyEBSD objects.
+These methods are exclusive to LazyEBSD instances.
 
 .. currentmodule:: kikuchipy.signals.LazyEBSD
 
@@ -531,10 +541,9 @@ EBSDMasterPattern
 -----------------
 
 All methods listed here are also available to
-:class:`~kikuchipy.signals.LazyEBSDMasterPattern` objects.
+:class:`~kikuchipy.signals.LazyEBSDMasterPattern` instances.
 
-See :class:`hyperspy._signals.signal2d.Signal2D` for methods inherited
-from HyperSpy.
+See :class:`~hyperspy._signals.signal2d.Signal2D` for methods inherited from HyperSpy.
 
 .. currentmodule:: kikuchipy.signals.EBSDMasterPattern
 
@@ -548,7 +557,7 @@ from HyperSpy.
     :inherited-members: Signal2D
     :show-inheritance:
 
-There are no methods exclusive to LazyEBSDMasterPattern objects.
+There are no methods exclusive to LazyEBSDMasterPattern instances.
 
 .. autoclass:: kikuchipy.signals.LazyEBSDMasterPattern
     :members:
@@ -558,8 +567,7 @@ There are no methods exclusive to LazyEBSDMasterPattern objects.
 VirtualBSEImage
 ---------------
 
-See :class:`hyperspy._signals.signal2d.Signal2D` for methods inherited
-from HyperSpy.
+See :class:`~hyperspy._signals.signal2d.Signal2D` for methods inherited from HyperSpy.
 
 .. currentmodule:: kikuchipy.signals.VirtualBSEImage
 

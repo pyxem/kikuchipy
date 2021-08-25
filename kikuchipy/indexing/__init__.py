@@ -16,11 +16,11 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Tools for indexing of EBSD patterns by comparison to simulated
-patterns.
+"""Tools for indexing of EBSD patterns by matching to a dictionary of
+simulated patterns.
 
 The EBSD method :meth:`~kikuchipy.signals.EBSD.dictionary_indexing` uses
-these tools for pattern matching.
+some of these tools for dictionary indexing.
 """
 
 from kikuchipy.indexing._merge_crystal_maps import merge_crystal_maps

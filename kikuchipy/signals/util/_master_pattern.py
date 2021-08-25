@@ -25,7 +25,7 @@ from typing import Optional, Tuple, Union
 import numba as nb
 import numpy as np
 
-from kikuchipy.pattern._pattern import _rescale
+from kikuchipy.pattern._pattern import _rescale_with_min_max
 from kikuchipy.projections.lambert_projection import _vector2xy
 from kikuchipy._rotation import _rotate_vector
 
@@ -406,7 +406,9 @@ def _project_single_pattern_from_master_pattern(
 
     # Potentially rescale pattern intensities to desired data type
     if rescale:
-        pattern = _rescale(pattern, np.min(pattern), np.max(pattern), out_min, out_max)
+        pattern = _rescale_with_min_max(
+            pattern, np.min(pattern), np.max(pattern), out_min, out_max
+        )
 
     return pattern.astype(dtype_out)
 
