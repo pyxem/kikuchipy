@@ -6,8 +6,8 @@ kikuchipy is an open-source Python library for processing and analysis of electr
 backscatter diffraction patterns: https://kikuchipy.org.
 
 All notable changes to this project will be documented in this file. The format is based
-on `Keep a Changelog <https://keepachangelog.com/en/1.1.0>`_, and this project adheres
-to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
+on `Keep a Changelog <https://keepachangelog.com/en/1.1.0>`_, and this project tries its
+best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 
 Contributors to each release are listed in alphabetical order by first name. List
 entries are sorted in descending chronological order.
@@ -23,6 +23,9 @@ Contributors
 
 Added
 -----
+- Possibility to specify whether to rechunk experimental and simulated data sets and
+  which data type to use for dictionary indexing.
+  (`#419 <https://github.com/pyxem/kikuchipy/pull/419>`_)
 - How to use the new orientation and/or projection center refinements to the pattern
   matching notebook. (`#405 <https://github.com/pyxem/kikuchipy/pull/405>`_)
 - Notebooks to the documentation as shorter or longer "Examples" that don't fit in the
@@ -33,6 +36,16 @@ Added
 
 Changed
 -------
+- If a custom metric is to be used for dictionary indexing, it must now be a class
+  inheriting from an abstract *SimilarityMetric* class. This replaces the previous
+  *SimilarityMetric* class and the *make_similarity_metric()* function.
+  (`#419 <https://github.com/pyxem/kikuchipy/pull/419>`_)
+- Dictionary indexing parameter *n_slices* to *n_per_iteration*.
+  (`#419 <https://github.com/pyxem/kikuchipy/pull/419>`_)
+- *merge_crystal_maps* parameter *metric* to *greater_is_better*.
+  (`#419 <https://github.com/pyxem/kikuchipy/pull/419>`_)
+- *orientation_similarity_map* parameter *normalized* is by default False.
+  (`#419 <https://github.com/pyxem/kikuchipy/pull/419>`_)
 - Dependency versions for dask >= 2021.8.1, fixing some memory issues encountered after
   2021.3.1, and HyperSpy >= 1.6.4. Remove importlib_metadata from package dependencies.
   (`#418 <https://github.com/pyxem/kikuchipy/pull/418>`_)
@@ -42,6 +55,17 @@ Changed
   `vector2xy()`/`xy2vector()`. (`#405 <https://github.com/pyxem/kikuchipy/pull/405>`_)
 - URLs of user guide topics have an extra "/user_guide/<topic>" added to them.
   (`#403 <https://github.com/pyxem/kikuchipy/pull/403>`_)
+
+Removed
+-------
+- *make_similarity_metric()* function is replaced by the need to create a class inheriting
+  from a new abstract *SimilarityMetric* class, which provides more freedom over
+  preparations of arrays before dictionary indexing.
+  (`#419 <https://github.com/pyxem/kikuchipy/pull/419>`_)
+- *EBSD.match_patterns()* is removed, use *EBSD.dictionary_indexing()* instead.
+  (`#419 <https://github.com/pyxem/kikuchipy/pull/419>`_)
+- kikuchipy.pattern.correlate module.
+  (`#419 <https://github.com/pyxem/kikuchipy/pull/419>`_)
 
 Fixed
 -----

@@ -16,32 +16,24 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Single and chunk pattern processing used by signals."""
+"""Similarity metrics for comparing grayscale patterns."""
 
-from kikuchipy.pattern._pattern import (
-    fft,
-    fft_filter,
-    fft_frequency_vectors,
-    fft_spectrum,
-    get_dynamic_background,
-    get_image_quality,
-    ifft,
-    normalize_intensity,
-    remove_dynamic_background,
-    rescale_intensity,
+from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
+from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
+    NormalizedCrossCorrelationMetric,
 )
-from kikuchipy.pattern import chunk
+from kikuchipy.indexing.similarity_metrics._normalized_dot_product import (
+    NormalizedDotProductMetric,
+)
+
+metrics = dict(
+    ncc=NormalizedCrossCorrelationMetric,
+    ndp=NormalizedDotProductMetric,
+)
 
 __all__ = [
-    "chunk",
-    "fft",
-    "fft_filter",
-    "fft_frequency_vectors",
-    "fft_spectrum",
-    "get_dynamic_background",
-    "get_image_quality",
-    "ifft",
-    "normalize_intensity",
-    "remove_dynamic_background",
-    "rescale_intensity",
+    "metrics",
+    "NormalizedCrossCorrelationMetric",
+    "NormalizedDotProductMetric",
+    "SimilarityMetric",
 ]

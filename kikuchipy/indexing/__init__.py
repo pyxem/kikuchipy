@@ -16,22 +16,21 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Tools for indexing of EBSD patterns by comparison to simulated
-patterns.
+"""Tools for indexing of EBSD patterns by matching to a dictionary of
+simulated patterns.
 
 The EBSD method :meth:`~kikuchipy.signals.EBSD.dictionary_indexing` uses
-these tools for pattern matching.
+some of these tools for dictionary indexing.
 """
 
 from kikuchipy.indexing._merge_crystal_maps import merge_crystal_maps
 from kikuchipy.indexing.orientation_similarity_map import orientation_similarity_map
-from kikuchipy.indexing import similarity_metrics
 from kikuchipy.indexing._refinement._refinement import (
     compute_refine_orientation_results,
     compute_refine_orientation_projection_center_results,
     compute_refine_projection_center_results,
 )
-from kikuchipy.indexing._static_pattern_matching import StaticPatternMatching
+from kikuchipy.indexing import similarity_metrics
 
 __all__ = [
     "compute_refine_orientation_results",
@@ -40,5 +39,4 @@ __all__ = [
     "merge_crystal_maps",
     "orientation_similarity_map",
     "similarity_metrics",
-    "StaticPatternMatching",
 ]

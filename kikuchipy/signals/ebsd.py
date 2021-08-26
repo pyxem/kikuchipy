@@ -39,22 +39,23 @@ from orix.crystal_map import CrystalMap
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
-from kikuchipy.io._io import _save
+from kikuchipy.detectors import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
+from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
+from kikuchipy.indexing._refinement._refinement import (
+    _refine_orientation,
+    _refine_orientation_projection_center,
+    _refine_projection_center,
+)
+from kikuchipy.indexing.similarity_metrics import metrics, SimilarityMetric
+from kikuchipy.io._io import _save
 from kikuchipy.pattern import chunk
 from kikuchipy.pattern._pattern import (
     fft_frequency_vectors,
     fft_filter,
     _dynamic_background_frequency_space_setup,
 )
-from kikuchipy.indexing._static_pattern_matching import StaticPatternMatching
-from kikuchipy.indexing._refinement._refinement import (
-    _refine_orientation,
-    _refine_orientation_projection_center,
-    _refine_projection_center,
-)
-from kikuchipy.indexing.similarity_metrics import SimilarityMetric
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
     metadata_nodes,
@@ -74,9 +75,8 @@ from kikuchipy.signals.util._map_helper import (
     _get_neighbour_dot_product_matrices,
     _get_average_dot_product_map,
 )
-from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 from kikuchipy.signals._common_image import CommonImage
-from kikuchipy.detectors import EBSDDetector
+from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 from kikuchipy._util import deprecated
 
 
@@ -242,11 +242,11 @@ class EBSD(CommonImage, Signal2D):
         --------
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
-        >>> ebsd_node = kp.signals.util.metadata_nodes("ebsd")
-        >>> s.metadata.get_item(ebsd_node + '.xpc')
+        >>> node = kp.signals.util.metadata_nodes("ebsd")
+        >>> s.metadata.get_item(node + '.xpc')
         -5.64
         >>> s.set_experimental_parameters(xpc=0.50726)
-        >>> s.metadata.get_item(ebsd_node + '.xpc')
+        >>> s.metadata.get_item(node + '.xpc')
         0.50726
         """
         md = self.metadata
@@ -491,9 +491,9 @@ class EBSD(CommonImage, Signal2D):
         patterns is available in signal metadata:
 
         >>> import kikuchipy as kp
-        >>> ebsd_node = kp.signals.util.metadata_nodes("ebsd")
+        >>> node = kp.signals.util.metadata_nodes("ebsd")
         >>> s = kp.data.nickel_ebsd_small()
-        >>> s.metadata.get_item(ebsd_node + '.static_background')
+        >>> s.metadata.get_item(node + '.static_background')
         array([[84, 87, 90, ..., 27, 29, 30],
                [87, 90, 93, ..., 27, 28, 30],
                [92, 94, 97, ..., 39, 28, 29],
@@ -936,90 +936,142 @@ class EBSD(CommonImage, Signal2D):
 
         return image_quality_map
 
-    @deprecated(
-        since="0.4",
-        alternative="kikuchipy.signals.EBSD.dictionary_indexing",
-        removal="0.5",
-    )
-    def match_patterns(self, *args, **kwargs) -> Union[CrystalMap, List[CrystalMap]]:
-        return self.dictionary_indexing(*args, **kwargs)
-
     def dictionary_indexing(
         self,
-        simulations,
-        metric: Union[str, SimilarityMetric] = "ncc",
-        keep_n: int = 50,
-        n_slices: int = 1,
-        return_merged_crystal_map: bool = False,
-        get_orientation_similarity_map: bool = False,
-    ) -> Union[CrystalMap, List[CrystalMap]]:
-        """Match each experimental pattern to all simulated patterns, of
-        known crystal orientations in pre-computed dictionaries
-        :cite:`chen2015dictionary,jackson2019dictionary`, to determine
-        their phase and orientation.
+        dictionary,
+        metric: Union[SimilarityMetric, str] = "ncc",
+        keep_n: int = 20,
+        n_per_iteration: Optional[int] = None,
+        signal_mask: Optional[np.ndarray] = None,
+        rechunk: bool = False,
+        dtype: Union[np.dtype, type, None] = None,
+    ) -> CrystalMap:
+        """Match each experimental pattern to a dictionary of simulated
+        patterns of known orientations to index the them
+        :cite:`chen2015dictionary,jackson2019dictionary`.
 
         A suitable similarity metric, the normalized cross-correlation
-        (:func:`~kikuchipy.indexing.similarity_metrics.ncc`), is used by
-        default, but a valid user-defined similarity metric may be used
-        instead (see
-        :func:`~kikuchipy.indexing.similarity_metrics.make_similarity_metric`).
+        (:class:`~kikuchipy.indexing.similarity_metrics.NormalizedCrossCorrelationMetric`),
+        is used by default, but a valid user-defined similarity metric
+        may be used instead. The metric must be a class implementing the
+        :class:`~kikuchipy.indexing.similarity_metrics.SimilarityMetric`
+        abstract class methods. The normalized dot product
+        (:class:`~kikuchipy.indexing.similarity_metrics.NormalizedDotProductMetric`)
+        is available as well.
 
-        :class:`~orix.crystal_map.crystal_map.CrystalMap`'s for each
-        dictionary with "scores" and "simulation_indices" as properties
-        are returned.
+        A :class:`~orix.crystal_map.CrystalMap` with "scores" and
+        "simulation_indices" as properties is returned.
 
         Parameters
         ----------
-        simulations : EBSD or list of EBSD
-            An EBSD signal or a list of EBSD signals with simulated
-            patterns (dictionaries). The signals must have a 1D
-            navigation axis and the `xmap` property with crystal
-            orientations set.
-        metric : str or SimilarityMetric, optional
+        dictionary : EBSD
+            EBSD signal with dictionary patterns. The signal must have a
+            1D navigation axis, an *xmap* property with crystal
+            orientations set, and equal detector shape.
+        metric
             Similarity metric, by default "ncc" (normalized
-            cross-correlation).
-        keep_n : int, optional
-            Number of best matches to keep, by default 50 or the number
-            of simulated patterns if fewer than 50 are available.
-        n_slices : int, optional
-            Number of simulation slices to process sequentially, by
-            default 1 (no slicing).
-        return_merged_crystal_map : bool, optional
-            Whether to return a merged crystal map, the best matches
-            determined from the similarity scores, in addition to the
-            single phase maps. By default False.
-        get_orientation_similarity_map : bool, optional
-            Add orientation similarity maps to the returned crystal
-            maps' properties named "osm". By default False.
+            cross-correlation). "ndp" (normalized dot product) is also
+            available.
+        keep_n
+            Number of best matches to keep, by default 20 or the number
+            of dictionary patterns if fewer than 20 are available.
+        n_per_iteration
+            Number of dictionary patterns to compare to all experimental
+            patterns in each indexing iteration. If not given, and the
+            dictionary is a LazyEBSD signal, it is equal to the chunk
+            size of the first pattern array axis, while if if is an EBSD
+            signal, it is set equal to the number of dictionary
+            patterns, yielding only one iteration. This parameter can be
+            increased to use less memory during indexing, but this will
+            increase the computation time.
+        signal_mask
+            A boolean mask equal to the experimental patterns' detector
+            shape (n rows, n columns), where only pixels equal to False
+            are matched. If not given, all pixels are used.
+        rechunk
+            Whether *metric* is allowed to rechunk experimental and
+            dictionary patterns before matching. Default is False. If a
+            custom *metric* is passed, whatever *metric.rechunk* is set
+            to will be used. Rechunking usually makes indexing faster,
+            but uses more memory.
+        dtype
+            Which data type *metric* shall cast the patterns to before
+            matching. If not given, :class:`~numpy.float32` will be
+            used unless a custom *metric* is passed and it has set the
+            *dtype* attribute, which will then be used instead.
+            :class:`~numpy.float32` and :class:`~numpy.float64` is
+            allowed for the available "ncc" and "ndp" metrics.
 
         Returns
         -------
-        xmaps : ~orix.crystal_map.crystal_map.CrystalMap or list of \
-                ~orix.crystal_map.crystal_map.CrystalMap
-            A crystal map for each dictionary loaded and one merged map
-            if `return_merged_crystal_map = True`.
+        xmap : ~orix.crystal_map.CrystalMap
+            A crystal map with *keep_n* rotations per point with the
+            sorted best matching orientations in the dictionary. The
+            corresponding best scores and indices into the dictionary
+            are stored in the *xmap.prop* dictionary as "scores" and
+            "simulation_indices".
 
         Notes
         -----
-        Merging of crystal maps and calculations of orientation
-        similarity maps can be done afterwards with
+        Merging of single phase crystal maps into one multi phase map
+        and calculations of an orientation similarity map can be done
+        afterwards with
         :func:`~kikuchipy.indexing.merge_crystal_maps` and
         :func:`~kikuchipy.indexing.orientation_similarity_map`,
         respectively.
 
+        .. versionchanged:: 0.5
+           Only one dictionary can be passed, the *n_per_iteration*
+           parameter replaced *n_slices*, and the
+           *return_merged_crystal_map* and
+           *get_orientation_similarity_map* parameters were removed.
+
+        .. versionadded:: 0.5
+           The *signal_mask*, *rechunk*, and *dtype* parameters.
+
         See Also
         --------
-        ~kikuchipy.indexing.similarity_metrics.make_similarity_metric
-        ~kikuchipy.indexing.similarity_metrics.ndp
+        ~kikuchipy.indexing.similarity_metrics.SimilarityMetric
+        ~kikuchipy.indexing.similarity_metrics.NormalizedCrossCorrelationMetric
+        ~kikuchipy.indexing.similarity_metrics.NormalizedDotProductMetric
         """
-        sdi = StaticPatternMatching(simulations)
-        return sdi(
-            signal=self,
-            metric=metric,
+        exp_am = self.axes_manager
+        dict_am = dictionary.axes_manager
+        dict_size = dict_am.navigation_size
+
+        if n_per_iteration is None:
+            if isinstance(dictionary.data, da.Array):
+                n_per_iteration = dictionary.data.chunksize[0]
+            else:
+                n_per_iteration = dict_size
+
+        exp_sig_shape = exp_am.signal_shape[::-1]
+        dict_sig_shape = dict_am.signal_shape[::-1]
+        if exp_sig_shape != dict_sig_shape:
+            raise ValueError(
+                f"Experimental {exp_sig_shape} and dictionary {dict_sig_shape} signal "
+                "shapes must be identical"
+            )
+
+        dict_xmap = dictionary.xmap
+        if dict_xmap is None or dict_xmap.shape != (dict_size,):
+            raise ValueError(
+                "Dictionary signal must have a non-empty `EBSD.xmap` property of equal "
+                "size as the number of dictionary patterns, and both the signal and"
+                "crystal map must have only one navigation dimension"
+            )
+
+        metric = self._prepare_metric(metric, signal_mask, dtype, rechunk, dict_size)
+
+        return _dictionary_indexing(
+            experimental=self.data,
+            experimental_nav_shape=exp_am.navigation_shape[::-1],
+            dictionary=dictionary.data,
+            step_sizes=tuple(a.scale for a in exp_am.navigation_axes[::-1]),
+            dictionary_xmap=dictionary.xmap,
             keep_n=keep_n,
-            n_slices=n_slices,
-            return_merged_crystal_map=return_merged_crystal_map,
-            get_orientation_similarity_map=get_orientation_similarity_map,
+            n_per_iteration=n_per_iteration,
+            metric=metric,
         )
 
     def refine_orientation(
@@ -1076,7 +1128,7 @@ class EBSD(CommonImage, Signal2D):
         mask
             Boolean mask of signal shape to be applied to the simulated
             pattern before comparison. Pixels set to `True` are masked
-            away. If not given, all pixels are compared.
+            away. If not given, all pixels are matched.
         method : str, optional
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
@@ -1184,7 +1236,7 @@ class EBSD(CommonImage, Signal2D):
         mask
             Boolean mask of signal shape to be applied to the simulated
             pattern before comparison. Pixels set to `True` are masked
-            away. If not given, all pixels are compared.
+            away. If not given, all pixels are matched.
         method : str, optional
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
@@ -1295,7 +1347,7 @@ class EBSD(CommonImage, Signal2D):
         mask
             Boolean mask of signal shape to be applied to the simulated
             pattern before comparison. Pixels set to `True` are masked
-            away. If not given, all pixels are compared.
+            away. If not given, all pixels are matched.
         method : str, optional
             Name of the :mod:`scipy.optimize` optimization method, among
             "minimize", "differential_evolution", "dual_annealing",
@@ -1789,9 +1841,10 @@ class EBSD(CommonImage, Signal2D):
         >>> import hyperspy.api as hs
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
-        >>> roi = hs.roi.RectangularROI(
-        ...     left=0, right=5, top=0, bottom=5)
-        >>> s.plot_virtual_bse_intensity(roi)
+        >>> rect_roi = hs.roi.RectangularROI(
+        ...     left=0, right=5, top=0, bottom=5
+        ... )
+        >>> s.plot_virtual_bse_intensity(rect_roi)
 
         See Also
         --------
@@ -1851,11 +1904,11 @@ class EBSD(CommonImage, Signal2D):
         --------
         >>> import hyperspy.api as hs
         >>> import kikuchipy as kp
-        >>> roi = hs.roi.RectangularROI(
+        >>> rect_roi = hs.roi.RectangularROI(
         ...     left=0, right=5, top=0, bottom=5
         ... )
         >>> s = kp.data.nickel_ebsd_small()
-        >>> vbse_image = s.get_virtual_bse_intensity(roi)
+        >>> vbse_image = s.get_virtual_bse_intensity(rect_roi)
 
         See Also
         --------
@@ -2063,6 +2116,33 @@ class EBSD(CommonImage, Signal2D):
             )
         out.set_signal_type("")
         return out.transpose(out_signal_axes)
+
+    def _prepare_metric(
+        self,
+        metric: Union[SimilarityMetric, str],
+        signal_mask: Union[np.ndarray, None],
+        dtype: Optional[np.dtype],
+        rechunk: bool,
+        n_dictionary_patterns: int,
+    ) -> SimilarityMetric:
+        if isinstance(metric, str) and metric in metrics:
+            metric_class = metrics[metric]
+            metric = metric_class()
+            metric.rechunk = rechunk
+        if not isinstance(metric, SimilarityMetric):
+            raise ValueError(
+                f"'{metric}' must be either of {metrics.keys()} or a custom metric "
+                "class inheriting from SimilarityMetric. See "
+                "kikuchipy.indexing.similarity_metrics.SimilarityMetric"
+            )
+        metric.n_experimental_patterns = max(self.axes_manager.navigation_size, 1)
+        metric.n_dictionary_patterns = max(n_dictionary_patterns, 1)
+        if signal_mask is not None:
+            metric.signal_mask = ~signal_mask
+        if dtype is not None:
+            metric.dtype = dtype
+        metric.raise_error_if_invalid()
+        return metric
 
 
 class LazyEBSD(LazySignal2D, EBSD):

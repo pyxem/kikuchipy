@@ -44,7 +44,10 @@ from kikuchipy.signals.util._master_pattern import (
     _project_patterns_from_master_pattern,
     _project_single_pattern_from_master_pattern,
 )
-from kikuchipy.indexing.similarity_metrics import ncc, ndp
+from kikuchipy.indexing.similarity_metrics import (
+    NormalizedCrossCorrelationMetric,
+    NormalizedDotProductMetric,
+)
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -198,9 +201,13 @@ class TestProjectingPatternsFromLambert:
         )
         kp_pat = kp_pattern.data[0].compute()
         assert kp_pat.dtype == emsoft_key.dtype
+
+        ncc = NormalizedCrossCorrelationMetric(1, 1)
         ncc1 = ncc(kp_pat, emsoft_key)
-        ndp1 = ndp(kp_pat, emsoft_key)
         assert ncc1 >= 0.935
+
+        ndp = NormalizedDotProductMetric(1, 1)
+        ndp1 = ndp(kp_pat, emsoft_key)
         assert ndp1 >= 0.935
 
         detector_shape = self.detector.shape

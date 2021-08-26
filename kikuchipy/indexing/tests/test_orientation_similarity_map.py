@@ -21,7 +21,7 @@ from orix.crystal_map import CrystalMap
 from orix.quaternion import Rotation
 import pytest
 
-from kikuchipy.indexing.orientation_similarity_map import orientation_similarity_map
+from kikuchipy.indexing import orientation_similarity_map
 
 
 class TestOrientationSimilarityMap:
@@ -32,7 +32,11 @@ class TestOrientationSimilarityMap:
             x=np.tile(np.arange(10), 10),
             y=np.tile(np.arange(10), 10),
         )
-        assert np.allclose(orientation_similarity_map(xmap), np.ones((10, 10)))
+        assert np.allclose(orientation_similarity_map(xmap), np.full((10, 10), 5))
+
+        assert np.allclose(
+            orientation_similarity_map(xmap, normalize=True), np.ones((10, 10))
+        )
 
     def test_n_best_too_great(self):
         xmap = CrystalMap(

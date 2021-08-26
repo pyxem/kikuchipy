@@ -30,7 +30,7 @@ from kikuchipy.pattern._pattern import (
     normalize_intensity,
     rescale_intensity,
     remove_dynamic_background,
-    _rescale,
+    _rescale_with_min_max,
     _dynamic_background_frequency_space_setup,
 )
 
@@ -117,7 +117,9 @@ class TestRescaleIntensityPattern:
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
         imin, imax = np.min(p), np.max(p)
         omin, omax = -3, 300.15
-        p2 = _rescale.py_func(pattern=p, imin=imin, imax=imax, omin=omin, omax=omax)
+        p2 = _rescale_with_min_max.py_func(
+            pattern=p, imin=imin, imax=imax, omin=omin, omax=omax
+        )
 
         assert np.allclose(np.min(p2), omin)
         assert np.allclose(np.max(p2), omax)

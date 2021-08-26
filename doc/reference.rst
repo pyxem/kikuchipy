@@ -2,18 +2,18 @@
 API reference
 =============
 
-This reference manual details the public modules, classes, and functions in
-kikuchipy, as generated from their docstrings. Many of the docstrings contain
-examples, however, see the user guide for how to use kikuchipy.
+This reference manual details the public modules, classes, and functions in kikuchipy,
+as generated from their docstrings. Many of the docstrings contain examples, however,
+see the user guide for how to use kikuchipy.
 
 .. caution::
 
-    kikuchipy is in an alpha stage, so there will be breaking changes with each
+    kikuchipy is in an alpha stage, so there will be some breaking changes with each
     release.
 
 .. module:: kikuchipy
 
-The list of top modules (and the load function):
+The list of top modules and the load function:
 
 .. autosummary::
     crystallography
@@ -245,21 +245,12 @@ indexing
 .. currentmodule:: kikuchipy.indexing
 
 .. autosummary::
-    StaticPatternMatching
     compute_refine_orientation_results
     compute_refine_orientation_projection_center_results
     compute_refine_projection_center_results
     orientation_similarity_map
     merge_crystal_maps
     similarity_metrics
-
-.. autoclass:: StaticPatternMatching
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-    .. automethod:: __init__
-    .. automethod:: __call__
 
 .. autofunction:: compute_refine_orientation_results
 .. autofunction:: compute_refine_orientation_projection_center_results
@@ -270,21 +261,31 @@ indexing
 similarity_metrics
 ------------------
 
+.. automodule:: kikuchipy.indexing.similarity_metrics
+
 .. currentmodule:: kikuchipy.indexing.similarity_metrics
 
 .. autosummary::
-    make_similarity_metric
-    MetricScope
-    ncc
-    ndp
+    SimilarityMetric
+    NormalizedCrossCorrelationMetric
+    NormalizedDotProductMetric
 
-.. automodule:: kikuchipy.indexing.similarity_metrics
+.. autoclass:: kikuchipy.indexing.similarity_metrics.SimilarityMetric
     :members:
-    :undoc-members:
+
+    .. automethod:: __init__
+
+.. autoclass:: kikuchipy.indexing.similarity_metrics.NormalizedCrossCorrelationMetric
+    :members:
     :show-inheritance:
 
-.. autofunction:: ncc
-.. autofunction:: ndp
+    .. automethod:: __call__
+
+.. autoclass:: kikuchipy.indexing.similarity_metrics.NormalizedDotProductMetric
+    :members:
+    :show-inheritance:
+
+    .. automethod:: __call__
 
 ....
 
@@ -317,8 +318,7 @@ plugins
     oxford_binary
 
 The plugins import patterns and parameters from file formats into
-:class:`~kikuchipy.signals.EBSD` or
-:class:`~kikuchipy.signals.EBSDMasterPattern` (or
+:class:`~kikuchipy.signals.EBSD` or :class:`~kikuchipy.signals.EBSDMasterPattern` (or
 :class:`~kikuchipy.signals.LazyEBSD` or
 :class:`~kikuchipy.signals.LazyEBSDMasterPattern` if loading lazily) objects.
 
@@ -382,7 +382,6 @@ Single and chunk pattern processing used by signals.
 
 .. autosummary::
     chunk
-    correlate
     fft
     fft_filter
     fft_frequency_vectors
@@ -394,7 +393,7 @@ Single and chunk pattern processing used by signals.
     remove_dynamic_background
     rescale_intensity
 
-Functions operating on single EBSD patterns as :class:`numpy.ndarray`.
+Functions operating on single EBSD patterns as :class:`~numpy.ndarray`.
 
 .. automodule:: kikuchipy.pattern
     :members:
@@ -403,8 +402,8 @@ Functions operating on single EBSD patterns as :class:`numpy.ndarray`.
 chunk
 -----
 
-Functions for operating on :class:`numpy.ndarray` or :class:`dask.array.Array`
-chunks of EBSD patterns.
+Functions for operating on :class:`~numpy.ndarray` or :class:`~dask.array.Array` chunks
+of EBSD patterns.
 
 .. currentmodule:: kikuchipy.pattern.chunk
 
@@ -420,17 +419,6 @@ chunks of EBSD patterns.
     rescale_intensity
 
 .. automodule:: kikuchipy.pattern.chunk
-    :members:
-    :undoc-members:
-
-....
-
-correlate
----------
-
-.. currentmodule:: kikuchipy.pattern.correlate
-
-.. automodule:: kikuchipy.pattern.correlate
     :members:
     :undoc-members:
 
@@ -500,11 +488,10 @@ signals
 EBSD
 ----
 
-All methods listed here are also available to
-:class:`~kikuchipy.signals.LazyEBSD` objects.
+All methods listed here are also available to :class:`~kikuchipy.signals.LazyEBSD`
+instances.
 
-See :class:`hyperspy._signals.signal2d.Signal2D` for methods inherited
-from HyperSpy.
+See :class:`̃hyperspy._signals.signal2d.Signal2D` for methods inherited from HyperSpy.
 
 .. currentmodule:: kikuchipy.signals.EBSD
 
@@ -519,7 +506,6 @@ from HyperSpy.
     get_image_quality
     get_neighbour_dot_product_matrices
     get_virtual_bse_intensity
-    match_patterns
     normalize_intensity
     plot_virtual_bse_intensity
     rebin
@@ -541,7 +527,7 @@ from HyperSpy.
     :inherited-members: Signal2D
     :show-inheritance:
 
-These methods are exclusive to LazyEBSD objects.
+These methods are exclusive to LazyEBSD instances.
 
 .. currentmodule:: kikuchipy.signals.LazyEBSD
 
@@ -557,10 +543,9 @@ EBSDMasterPattern
 -----------------
 
 All methods listed here are also available to
-:class:`~kikuchipy.signals.LazyEBSDMasterPattern` objects.
+:class:`~kikuchipy.signals.LazyEBSDMasterPattern` instances.
 
-See :class:`hyperspy._signals.signal2d.Signal2D` for methods inherited
-from HyperSpy.
+See :class:`~hyperspy._signals.signal2d.Signal2D` for methods inherited from HyperSpy.
 
 .. currentmodule:: kikuchipy.signals.EBSDMasterPattern
 
@@ -574,7 +559,7 @@ from HyperSpy.
     :inherited-members: Signal2D
     :show-inheritance:
 
-There are no methods exclusive to LazyEBSDMasterPattern objects.
+There are no methods exclusive to LazyEBSDMasterPattern instances.
 
 .. autoclass:: kikuchipy.signals.LazyEBSDMasterPattern
     :members:
@@ -584,8 +569,7 @@ There are no methods exclusive to LazyEBSDMasterPattern objects.
 VirtualBSEImage
 ---------------
 
-See :class:`hyperspy._signals.signal2d.Signal2D` for methods inherited
-from HyperSpy.
+See :class:`~hyperspy._signals.signal2d.Signal2D` for methods inherited from HyperSpy.
 
 .. currentmodule:: kikuchipy.signals.VirtualBSEImage
 

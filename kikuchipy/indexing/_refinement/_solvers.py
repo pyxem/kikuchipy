@@ -23,7 +23,6 @@ patterns.
 
 from typing import Callable, Optional, Tuple
 
-import numba as nb
 import numpy as np
 from scipy.optimize import Bounds
 
@@ -33,7 +32,7 @@ from kikuchipy.indexing._refinement._objective_functions import (
     _refine_projection_center_objective_function,
 )
 from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
-from kikuchipy.pattern._pattern import _rescale
+from kikuchipy.pattern._pattern import _rescale_without_min_max
 from kikuchipy.signals.util._master_pattern import _get_direction_cosines_for_single_pc
 
 
@@ -120,7 +119,7 @@ def _refine_orientation_solver(
         Optimized orientation (Euler angles) in radians.
     """
     if rescale:
-        pattern = _rescale_pattern(pattern.astype(np.float32))
+        pattern = _rescale_without_min_max(pattern.astype(np.float32))
 
     if direction_cosines is None:
         direction_cosines = _get_direction_cosines_for_single_pc(
@@ -228,7 +227,7 @@ def _refine_projection_center_solver(
         Optimized PC parameters in the Bruker convention.
     """
     if rescale:
-        pattern = _rescale_pattern(pattern.astype(np.float32))
+        pattern = _rescale_without_min_max(pattern.astype(np.float32))
 
     params = (pattern,) + (rotation,) + fixed_parameters
     method_name = method.__name__
@@ -324,7 +323,7 @@ def _refine_orientation_projection_center_solver(
         Optimized PC parameters in the Bruker convention.
     """
     if rescale:
-        pattern = _rescale_pattern(pattern.astype(np.float32))
+        pattern = _rescale_without_min_max(pattern.astype(np.float32))
 
     params = (pattern,) + fixed_parameters
     method_name = method.__name__
@@ -383,10 +382,3 @@ def _refine_orientation_projection_center_solver(
 
     x = solution.x
     return 1 - solution.fun, x[0], x[1], x[2], x[3], x[4], x[5]
-
-
-@nb.jit("float32[:, :](float32[:, :])", cache=True, nopython=True, nogil=True)
-def _rescale_pattern(pattern: np.ndarray) -> np.ndarray:
-    imin = np.min(pattern)
-    imax = np.max(pattern)
-    return _rescale(pattern, imin=imin, imax=imax, omin=-1, omax=1)

@@ -83,11 +83,11 @@ def rescale_intensity(
     else:
         omin, omax = out_range
 
-    return _rescale(pattern, imin, imax, omin, omax).astype(dtype_out)
+    return _rescale_with_min_max(pattern, imin, imax, omin, omax).astype(dtype_out)
 
 
 @nb.jit(nogil=True, nopython=True, cache=True)
-def _rescale(
+def _rescale_with_min_max(
     pattern: np.ndarray,
     imin: Union[int, float],
     imax: Union[int, float],
@@ -96,6 +96,13 @@ def _rescale(
 ) -> np.ndarray:
     rescaled_pattern = (pattern - imin) / float(imax - imin)
     return rescaled_pattern * (omax - omin) + omin
+
+
+@nb.jit("float32[:, :](float32[:, :])", cache=True, nopython=True, nogil=True)
+def _rescale_without_min_max(pattern: np.ndarray) -> np.ndarray:
+    imin = np.min(pattern)
+    imax = np.max(pattern)
+    return _rescale_with_min_max(pattern, imin=imin, imax=imax, omin=-1, omax=1)
 
 
 def remove_dynamic_background(
@@ -561,12 +568,12 @@ def fft_frequency_vectors(shape: Tuple[int, int]) -> np.ndarray:
     return frequency_vectors
 
 
-def _zero_mean(patterns: np.ndarray, axis: Tuple[int, tuple]) -> np.ndarray:
+def _zero_mean(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
     patterns_mean = np.nanmean(patterns, axis=axis, keepdims=True)
     return patterns - patterns_mean
 
 
-def _normalize(patterns: np.ndarray, axis: Tuple[int, tuple]) -> np.ndarray:
+def _normalize(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
     patterns_squared = patterns ** 2
     patterns_norm = np.nansum(patterns_squared, axis=axis, keepdims=True)
     patterns_norm_squared = patterns_norm ** 0.5
