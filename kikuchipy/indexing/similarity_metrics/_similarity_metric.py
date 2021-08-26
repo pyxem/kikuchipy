@@ -110,7 +110,8 @@ class SimilarityMetric(abc.ABC):
         string = f"{self.__class__.__name__}: {np.dtype(self.dtype).name}, "
         sign_string = {1: "greater is better", -1: "lower is better"}
         string += sign_string[self.sign]
-        string += f", rechunk: {self.rechunk}, mask: {self.signal_mask is not None}"
+        string += f", rechunk: {self.rechunk}, "
+        string += f"signal mask: {self.signal_mask is not None}"
         return string
 
     @abc.abstractmethod
