@@ -61,7 +61,7 @@ def _has_hash(path, expected_hash):
     if not os.path.exists(path):
         return False
     else:
-        return ppooch.utils.file_hash(path) == expected_hash
+        return ppooch.file_hash(path) == expected_hash
 
 
 def _cautious_downloader(url, output_file, pooch):
