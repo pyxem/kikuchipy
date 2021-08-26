@@ -128,7 +128,6 @@ setup(
         "numba              >= 0.48",
         "orix               >= 0.6",
         "pooch              >= 0.13",
-        "psutil",
         "tqdm               >= 0.5.2",
         "scikit-image       >= 0.16.2",
         "scikit-learn",
