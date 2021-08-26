@@ -40,7 +40,7 @@ class NormalizedDotProductMetric(SimilarityMetric):
     :math:`\mathbf{Y}`.
 
     See :class:`~kikuchipy.indexing.similarity_metrics.SimilarityMetric`
-    for remaning attributes.
+    for remaining attributes.
 
     Attributes
     ----------

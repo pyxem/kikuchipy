@@ -939,9 +939,9 @@ class EBSD(CommonImage, Signal2D):
     def dictionary_indexing(
         self,
         dictionary,
+        metric: Union[SimilarityMetric, str] = "ncc",
         keep_n: int = 20,
         n_per_iteration: Optional[int] = None,
-        metric: Union[SimilarityMetric, str] = "ncc",
         signal_mask: Optional[np.ndarray] = None,
         rechunk: bool = False,
         dtype: Union[np.dtype, type, None] = None,
@@ -966,8 +966,12 @@ class EBSD(CommonImage, Signal2D):
         ----------
         dictionary : EBSD
             EBSD signal with dictionary patterns. The signal must have a
-            1D navigation axis, an `xmap` property with crystal
+            1D navigation axis, an *xmap* property with crystal
             orientations set, and equal detector shape.
+        metric
+            Similarity metric, by default "ncc" (normalized
+            cross-correlation). "ndp" (normalized dot product) is also
+            available.
         keep_n
             Number of best matches to keep, by default 20 or the number
             of dictionary patterns if fewer than 20 are available.
@@ -980,33 +984,31 @@ class EBSD(CommonImage, Signal2D):
             patterns, yielding only one iteration. This parameter can be
             increased to use less memory during indexing, but this will
             increase the computation time.
-        metric
-            Similarity metric, by default "ncc" (normalized
-            cross-correlation). "ndp" (normalized dot product) is also
-            available.
         signal_mask
             A boolean mask equal to the experimental patterns' detector
             shape (n rows, n columns), where only pixels equal to False
             are matched. If not given, all pixels are used.
         rechunk
-            Whether `metric` is allowed to rechunk experimental and
+            Whether *metric* is allowed to rechunk experimental and
             dictionary patterns before matching. Default is False. If a
-            custom `metric` is passed, whatever `metric.rechunk` is set
+            custom *metric* is passed, whatever *metric.rechunk* is set
             to will be used. Rechunking usually makes indexing faster,
             but uses more memory.
         dtype
-            Which data type `metric` shall cast the patterns to before
-            matching. If not given, :~class:`numpy.float32` will be used.
-            :class:`~numpy.float32` and :~class:`numpy.float64` is allowed
-            for the available `metric`s of "ncc" or "ndp".
+            Which data type *metric* shall cast the patterns to before
+            matching. If not given, :class:`~numpy.float32` will be
+            used unless a custom *metric* is passed and it has set the
+            *dtype* attribute, which will then be used instead.
+            :class:`~numpy.float32` and :class:`~numpy.float64` is
+            allowed for the available "ncc" and "ndp" metrics.
 
         Returns
         -------
-        xmap
-            A crystal map with `keep_n` rotations per point with the
+        xmap : ~orix.crystal_map.CrystalMap
+            A crystal map with *keep_n* rotations per point with the
             sorted best matching orientations in the dictionary. The
             corresponding best scores and indices into the dictionary
-            are stored in the `xmap.prop` dictionary as "scores" and
+            are stored in the *xmap.prop* dictionary as "scores" and
             "simulation_indices".
 
         Notes
@@ -1017,6 +1019,15 @@ class EBSD(CommonImage, Signal2D):
         :func:`~kikuchipy.indexing.merge_crystal_maps` and
         :func:`~kikuchipy.indexing.orientation_similarity_map`,
         respectively.
+
+        .. versionchanged:: 0.5
+           Only one dictionary can be passed, the *n_per_iteration*
+           parameter replaced *n_slices*, and the
+           *return_merged_crystal_map* and
+           *get_orientation_similarity_map* parameters were removed.
+
+        .. versionadded:: 0.5
+           The *signal_mask*, *rechunk*, and *dtype* parameters.
 
         See Also
         --------

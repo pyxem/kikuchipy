@@ -33,8 +33,8 @@ def merge_crystal_maps(
     simulation_indices_prop: Optional[str] = None,
 ) -> CrystalMap:
     """Merge a list of at least two single phase
-    :class:`~orix.crystal_map.crystal_map.CrystalMap` with a 1D or 2D
-    navigation shape into one multi phase map.
+    :class:`~orix.crystal_map.CrystalMap` with a 1D or 2D navigation
+    shape into one multi phase map.
 
     It is required that all maps have the same number of rotations and
     scores (and simulation indices if applicable) per point.
@@ -47,11 +47,11 @@ def merge_crystal_maps(
     mean_n_best
         Number of best metric results to take the mean of before
         comparing. Default is 1. If given with a negative sign and
-        `greater_is_better` is not given, the n lowest valued metric
+        *greater_is_better* is not given, the n lowest valued metric
         results are chosen.
     greater_is_better
         True if a higher score means a better match. Default is None, in
-        which case the sign of `mean_n_best` is used, with a positive
+        which case the sign of *mean_n_best* is used, with a positive
         sign meaning True.
     scores_prop
         Name of scores array in the crystal maps' properties. Default
@@ -65,14 +65,19 @@ def merge_crystal_maps(
 
     Returns
     -------
-    merged_xmap
+    merged_xmap : ~orix.crystal_map.CrystalMap
         A crystal map where the rotation of the phase with the best
         matching score(s) is assigned to each point. The best matching
         scores, merge sorted, are added to its properties with a name
-        equal to whatever passed to `scores_prop` with "merged" as a
-        suffix. If `simulation_indices_prop` is passed, the best
+        equal to whatever passed to *scores_prop* with "merged" as a
+        suffix. If *simulation_indices_prop* is passed, the best
         matching simulation indices are added in the same way as the
         scores.
+
+    Notes
+    -----
+    .. versionchanged:: 0.5
+       The *greater_is_better* parameter replaced *metric*.
     """
     map_shapes = [xmap.shape for xmap in crystal_maps]
     if not np.sum(abs(np.diff(map_shapes, axis=0))) == 0:
@@ -81,8 +86,8 @@ def merge_crystal_maps(
     rot_per_point_per_map = [xmap.rotations_per_point for xmap in crystal_maps]
     if not all(np.diff(rot_per_point_per_map) == 0):
         raise ValueError(
-            "All crystal maps must have the same number of rotations and scores"
-            " per point."
+            "All crystal maps must have the same number of rotations and scores per "
+            "point"
         )
 
     if greater_is_better is None:
@@ -103,7 +108,7 @@ def merge_crystal_maps(
     # Shape of the combined (unsorted) scores array, and the total
     # number of scores per point. Shape: (M, N, K) or (M, K) if only one
     # score is available (e.g. refined dot products from EMsoft)
-    (comb_shape, n_scores_per_point) = _get_combined_scores_shape(
+    comb_shape, n_scores_per_point = _get_combined_scores_shape(
         crystal_maps=crystal_maps, scores_prop=scores_prop
     )
 

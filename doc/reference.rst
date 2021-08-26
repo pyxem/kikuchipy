@@ -261,6 +261,8 @@ indexing
 similarity_metrics
 ------------------
 
+.. automodule:: kikuchipy.indexing.similarity_metrics
+
 .. currentmodule:: kikuchipy.indexing.similarity_metrics
 
 .. autosummary::

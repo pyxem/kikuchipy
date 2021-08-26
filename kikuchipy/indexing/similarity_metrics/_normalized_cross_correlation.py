@@ -50,7 +50,7 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
     simulated data sets, respectively.
 
     See :class:`~kikuchipy.indexing.similarity_metrics.SimilarityMetric`
-    for remaning attributes.
+    for remaining attributes.
 
     Attributes
     ----------
@@ -143,10 +143,10 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
             dispatcher = da
         else:
             dispatcher = np
-        patterns_mean = dispatcher.mean(patterns, axis=1, keepdims=True)
+        patterns_mean = dispatcher.mean(patterns, axis=-1, keepdims=True)
         patterns = patterns - patterns_mean
         patterns_norm = dispatcher.sqrt(
-            dispatcher.sum(dispatcher.square(patterns), axis=1, keepdims=True)
+            dispatcher.sum(dispatcher.square(patterns), axis=-1, keepdims=True)
         )
         patterns = patterns / patterns_norm
         return patterns
