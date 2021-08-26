@@ -34,6 +34,10 @@ class TestOrientationSimilarityMap:
         )
         assert np.allclose(orientation_similarity_map(xmap), np.full((10, 10), 5))
 
+        assert np.allclose(
+            orientation_similarity_map(xmap, normalize=True), np.ones((10, 10))
+        )
+
     def test_n_best_too_great(self):
         xmap = CrystalMap(
             rotations=Rotation(np.zeros((100, 4))),
