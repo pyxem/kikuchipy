@@ -1368,14 +1368,36 @@ class TestDictionaryIndexing:
         s_dict.axes_manager[0].name = "x"
         s_dict.axes_manager[1].name = "y"
 
-        # EBSD.xmap is empty
+        # Dictionary xmap property is empty
         with pytest.raises(ValueError, match="Dictionary signal must have a non-empty"):
             _ = dummy_signal.dictionary_indexing(s_dict)
 
-        # EBSD not 1 navigation dimension
+        # Dictionary not 1 navigation dimension
         s_dict.xmap = CrystalMap.empty((3, 3))
         with pytest.raises(ValueError, match="Dictionary signal must have a non-empty"):
             _ = dummy_signal.dictionary_indexing(s_dict)
+
+    @pytest.mark.parametrize(
+        "nav_slice, nav_shape",
+        [
+            ((0, 0), ()),  # 0D
+            ((0, slice(0, 1)), ()),  # 0D
+            ((0, slice(0, 3)), (3,)),  # 1D
+            ((slice(0, 3), slice(0, 2)), (2, 3)),  # 2D
+        ],
+    )
+    def test_dictionary_indexing_nav_shape(self, dummy_signal, nav_slice, nav_shape):
+        """Dictionary indexing handles experimental datasets of all
+        allowed navigation shapes of 0D, 1D and 2D.
+        """
+        s = dummy_signal.inav[nav_slice]
+        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
+        s_dict.axes_manager[0].name = "x"
+        dict_size = s_dict.axes_manager.navigation_size
+        s_dict.xmap = CrystalMap.empty((dict_size,))
+        xmap = s.dictionary_indexing(s_dict)
+        assert xmap.shape == nav_shape
+        assert np.allclose(xmap.scores[:, 0], np.ones(int(np.prod(nav_shape))))
 
 
 class TestEBSDRefinement:

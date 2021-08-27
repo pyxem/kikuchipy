@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://kikuchipy.org">
-    <img width="60%" src="doc/_static/logo/plasma_banner.svg">
+    <img width="60%" src="doc/_static/logo/plasma_banner.png">
   </a>
 </div>
 
