@@ -49,7 +49,6 @@ class deprecated:
     def __init__(
         self,
         since: Union[str, int, float],
-        message: Optional[str] = None,
         alternative: Optional[str] = None,
         removal: Union[str, int, float, None] = None,
     ):
@@ -59,8 +58,6 @@ class deprecated:
         ----------
         since
             The release at which this API became deprecated.
-        message
-            The deprecation message.
         alternative
             An alternative API that the user may use in place of the
             deprecated API.
@@ -68,7 +65,6 @@ class deprecated:
             The expected removal version.
         """
         self.since = since
-        self.message = message
         self.alternative = alternative
         self.removal = removal
 
@@ -88,7 +84,7 @@ class deprecated:
         @functools.wraps(func)
         def wrapped(*args, **kwargs):
             warnings.simplefilter(
-                action="always", category=np.VisibleDeprecationWarning
+                action="always", category=np.VisibleDeprecationWarning, append=True
             )
             func_code = func.__code__
             warnings.warn_explicit(

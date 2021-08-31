@@ -77,6 +77,7 @@ from kikuchipy.signals.util._map_helper import (
 )
 from kikuchipy.signals._common_image import CommonImage
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
+from kikuchipy._util import deprecated
 
 
 class EBSD(CommonImage, Signal2D):
@@ -119,7 +120,9 @@ class EBSD(CommonImage, Signal2D):
             md.update(ebsd_metadata().as_dictionary())
             self.metadata = DictionaryTreeBrowser(md)
         if not self.metadata.has_item("Sample.Phases"):
-            self.set_phase_parameters()
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+                self.set_phase_parameters()
 
     # ---------------------- Custom properties ----------------------- #
 
@@ -158,6 +161,7 @@ class EBSD(CommonImage, Signal2D):
 
     # ------------------------ Custom methods ------------------------ #
 
+    @deprecated(since="0.5", removal="0.6")
     def set_experimental_parameters(
         self,
         detector=None,
@@ -244,7 +248,7 @@ class EBSD(CommonImage, Signal2D):
         >>> node = kp.signals.util.metadata_nodes("ebsd")
         >>> s.metadata.get_item(node + '.xpc')
         -5.64
-        >>> s.set_experimental_parameters(xpc=0.50726)
+        >>> s.set_experimental_parameters(xpc=0.50726)  # doctest: +SKIP
         >>> s.metadata.get_item(node + '.xpc')
         0.50726
         """
@@ -284,6 +288,7 @@ class EBSD(CommonImage, Signal2D):
             ebsd_node,
         )
 
+    @deprecated(since="0.5", removal="0.6")
     def set_phase_parameters(
         self,
         number=1,
@@ -357,7 +362,7 @@ class EBSD(CommonImage, Signal2D):
         ...         'site_occupation': 1,
         ...         'debye_waller_factor': 0.005
         ...     }}
-        ... )
+        ... )  # doctest: +SKIP
         >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
         ├── atom = Fe
         ├── coordinates = array([0, 0, 0])
