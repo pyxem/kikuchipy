@@ -249,7 +249,7 @@ class EBSD(CommonImage, Signal2D):
         >>> s.metadata.get_item(node + '.xpc')
         -5.64
         >>> s.set_experimental_parameters(xpc=0.50726)  # doctest: +SKIP
-        >>> s.metadata.get_item(node + '.xpc')
+        >>> s.metadata.get_item(node + '.xpc')  # doctest: +SKIP
         0.50726
         """
         md = self.metadata
@@ -363,7 +363,7 @@ class EBSD(CommonImage, Signal2D):
         ...         'debye_waller_factor': 0.005
         ...     }}
         ... )  # doctest: +SKIP
-        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
+        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1  # doctest: +SKIP
         ├── atom = Fe
         ├── coordinates = array([0, 0, 0])
         ├── debye_waller_factor = 0.005
