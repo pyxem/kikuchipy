@@ -508,7 +508,6 @@ See :class:`̃hyperspy._signals.signal2d.Signal2D` for methods inherited from Hy
     get_virtual_bse_intensity
     normalize_intensity
     plot_virtual_bse_intensity
-    rebin
     refine_orientation
     refine_orientation_projection_center
     refine_projection_center

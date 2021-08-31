@@ -742,40 +742,6 @@ class TestAverageNeighbourPatternsEBSD:
         s.compute()
 
 
-class TestRebin:
-    def test_rebin(self, dummy_signal):
-        ebsd_node = kp.signals.util.metadata_nodes("ebsd")
-
-        # Passing new_shape, only scaling in signal space
-        new_shape = (3, 3, 2, 1)
-        new_binning = dummy_signal.axes_manager.shape[3] / new_shape[3]
-        s2 = dummy_signal.rebin(new_shape=new_shape)
-        assert s2.axes_manager.shape == new_shape
-        assert s2.metadata.get_item(ebsd_node + ".binning") == new_binning
-
-        # Passing scale, also scaling in navigation space
-        scale = (3, 1, 3, 2)
-        s2 = dummy_signal.rebin(scale=scale)
-        expected_new_shape = [
-            int(i / j) for i, j in zip(dummy_signal.axes_manager.shape, scale)
-        ]
-        assert s2.axes_manager.shape == tuple(expected_new_shape)
-        assert s2.metadata.get_item(ebsd_node + ".binning") == float(scale[2])
-
-        # Passing lazy signal to out parameter, only scaling in signal space but
-        # upscaling
-        scale = (1, 1, 1, 0.5)
-        expected_new_shape = [
-            int(i / j) for i, j in zip(dummy_signal.axes_manager.shape, scale)
-        ]
-        s2 = dummy_signal.copy().as_lazy()
-        s3 = dummy_signal.rebin(scale=scale, out=s2)
-        assert isinstance(s2, kp.signals.LazyEBSD)
-        assert s2.axes_manager.shape == tuple(expected_new_shape)
-        assert s2.metadata.get_item(ebsd_node + ".binning") == float(scale[3])
-        assert s3 is None
-
-
 class TestVirtualBackscatterElectronImaging:
     @pytest.mark.parametrize("out_signal_axes", [None, (0, 1), ("x", "y")])
     def test_virtual_backscatter_electron_imaging(self, dummy_signal, out_signal_axes):
