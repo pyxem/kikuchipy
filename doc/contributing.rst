@@ -76,7 +76,7 @@ to each local commit. Please install it in your environment::
 
 Next time you commit some code, your code will be formatted inplace according
 to our `black configuration
-<https://github.com/pyxem/kikuchipy/blob/master/pyproject.toml>`_.
+<https://github.com/pyxem/kikuchipy/blob/develop/pyproject.toml>`_.
 
 Note that ``black`` won't format `docstrings
 <https://www.python.org/dev/peps/pep-0257/>`_. We follow the `numpydoc
@@ -92,9 +92,12 @@ party packages (like ``numpy`` and ``hyperspy``) and finally kikuchipy imports.
 Making changes
 ==============
 
-Create a new feature branch::
+If you want to add a new feature, branch off of the ``develop`` branch, and when you
+want to fix a bug, branch off of ``main`` instead.
 
-    $ git checkout master -b your-awesome-feature-name
+To create a new feature branch that tracks the upstream development branch::
+
+    $ git checkout develop -b your-awesome-feature-name upstream/develop
 
 When you've made some changes you can view them with::
 
@@ -113,18 +116,21 @@ following `this GitHub guide
 Keeping your branch up-to-date
 ==============================
 
-Switch to the ``master`` branch::
+If you are adding a new feature, make sure to merge ``develop`` into your feature
+branch. If you are fixing a bug, merge ``main`` into your bug fix branch instead.
 
-   $ git checkout master
+To update a feature branch, switch to the ``develop`` branch::
 
-Fetch changes and update ``master``::
+   $ git checkout develop
 
-   $ git pull upstream master --tags
+Fetch changes from the upstream branch and update ``develop``::
+
+   $ git pull upstream develop --tags
 
 Update your feature branch::
 
    $ git checkout your-awesome-feature-name
-   $ git merge master
+   $ git merge develop
 
 Sharing your changes
 ====================
@@ -135,7 +141,8 @@ Update your remote branch::
 
 You can then make a `pull request
 <https://guides.github.com/activities/forking/#making-a-pull-request>`_ to
-kikuchipy's ``master`` branch. Good job!
+kikuchipy's ``develop`` branch for new features and ``main`` branch for bug fixes. Good
+job!
 
 Building and writing documentation
 ==================================
@@ -154,7 +161,7 @@ The documentation's HTML pages are built in the ``doc/build/html`` directory
 from files in the `reStructuredText (reST)
 <https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`_
 plaintext markup language. They should be accessible in the browser by typing
-``file:///your-absolute/path/to/kikuchipy/doc/build/html/index.html`` in the
+``file:///your/absolute/path/to/kikuchipy/doc/build/html/index.html`` in the
 address bar.
 
 Tips for writing Jupyter Notebooks that are meant to be converted to reST text
@@ -182,6 +189,16 @@ files by `nbsphinx <https://nbsphinx.readthedocs.io/en/latest/>`_:
   the signal axes manager, like ``print(s.axes_manager)``, and displaying all
   figures with a white background for axes labels and ticks and figure titles
   etc. to be readable.
+
+In general, we run all notebooks every time the documentation is built with Sphinx, to
+ensure that all notebooks are compatible with the current API at all times. This is
+important! For computationally expensive notebooks however, we store the cell outputs so
+the documentation doesn't take too long to build, either by us locally or the Read The
+Docs GitHub action. To check that the notebooks with cell outputs stored are compatible
+with the current API as well, we run a scheduled GitHub Action every Monday morning
+which checks that the notebooks run OK and that they produced the same output now as
+when they were last executed. We use `nbval <https://nbval.readthedocs.io/en/latest/>`_
+for this.
 
 Running and writing tests
 =========================
@@ -258,8 +275,8 @@ Improving performance
 =====================
 When we write code, it's important that we (1) get the correct result, (2) don't fill up
 memory, and (3) that the computation doesn't take too long. To keep memory in check, we
-use `Dask <https://docs.dask.org/en/latest/>`_ wherever possible. To speed up
-computations, we use `Numba <https://numba.pydata.org/numba-doc/dev/>`_ wherever
+should use `Dask <https://docs.dask.org/en/latest/>`_ wherever possible. To speed up
+computations, we should use `Numba <https://numba.pydata.org/numba-doc/dev/>`_ wherever
 possible.
 
 Continuous integration (CI)
@@ -269,5 +286,5 @@ We use `GitHub Actions <https://github.com/pyxem/kikuchipy/actions>`_ to ensure
 that kikuchipy can be installed on Windows, macOS and Linux (Ubuntu). After a
 successful installation of the package, the CI server runs the tests. After the tests
 return no errors, code coverage is reported to `Coveralls
-<https://coveralls.io/github/pyxem/kikuchipy?branch=master>`_. Add "[skip ci]" or to a
+<https://coveralls.io/github/pyxem/kikuchipy?branch=develop>`_. Add "[skip ci]" or to a
 commit message to skip this workflow on any commit to a pull request, as explained

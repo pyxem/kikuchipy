@@ -37,7 +37,7 @@ from kikuchipy.pattern._pattern import _normalize, _zero_mean
 def _map_helper(
     patterns: np.ndarray,
     map_function: Callable,
-    window: Window,
+    window: Union[np.ndarray, Window],
     nav_shape: tuple,
     dtype_out: np.dtype = np.float32,
     **kwargs,
@@ -106,7 +106,7 @@ def _neighbour_dot_products(
     normalize: bool,
     flat_window_truthy_indices: Optional[np.ndarray] = None,
     output: Optional[np.ndarray] = None,
-) -> Union[float, int]:
+) -> Union[float, int, np.ndarray]:
     """Return either an average of a dot product matrix between a
     pattern and it's neighbours, or the matrix.
 

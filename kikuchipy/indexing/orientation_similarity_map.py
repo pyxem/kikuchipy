@@ -23,56 +23,58 @@ is compared to the corresponding lists in the nearest neighbour points.
 
 # TODO: Consider moving to orix.
 
+from typing import Optional
+
 import numpy as np
+from orix.crystal_map import CrystalMap
 from scipy.ndimage import generic_filter
 
 
 def orientation_similarity_map(
-    xmap,
-    n_best: int = None,
+    xmap: CrystalMap,
+    n_best: Optional[int] = None,
     simulation_indices_prop: str = "simulation_indices",
-    normalize: bool = True,
-    from_n_best: int = None,
-    footprint: np.ndarray = None,
+    normalize: bool = False,
+    from_n_best: Optional[int] = None,
+    footprint: Optional[np.ndarray] = None,
     center_index: int = 2,
 ) -> np.ndarray:
-    r"""Compute an orientation similarity map following
-    :cite:`marquardt2017quantitative`, where the ranked list of the
-    array indices of the best matching simulated patterns in one point
-    is compared to the corresponding lists in the nearest neighbour
-    points.
+    r"""Compute an orientation similarity map where the ranked list of
+    the dictionary indices of the best matching simulated patterns in
+    one point is compared to the corresponding lists in the nearest
+    neighbour points :cite:`marquardt2017quantitative`.
 
     Parameters
     ----------
-    xmap : ~orix.crystal_map.crystal_map.CrystalMap
+    xmap
         A crystal map with a ranked list of the array indices of the
         best matching simulated patterns among its properties.
-    n_best : int, optional
+    n_best
         Number of ranked indices to compare. If None (default), all
         indices are compared.
-    simulation_indices_prop : str, optional
+    simulation_indices_prop
         Name of simulated indices array in the crystal maps' properties.
         Default is "simulation_indices".
-    normalize : bool, optional
+    normalize
         Whether to normalize the number of equal indices to the range
-        [0, 1], by default True.
-    from_n_best : int, optional
-        Return an OSM for each n in the range [`from_n_best`, `n_best`].
-        If None (default), only the OSM for `n_best` indices is
+        [0, 1], by default False.
+    from_n_best
+        Return an OSM for each n in the range [*from_n_best*, *n_best*].
+        If None (default), only the OSM for *n_best* indices is
         returned.
-    footprint : numpy.ndarray, optional
+    footprint
         Boolean 2D array specifying which neighbouring points to compare
         lists with, by default the four nearest neighbours.
-    center_index : int, optional
+    center_index
         Flat index of central navigation point in the truthy values of
         footprint, by default 2.
 
     Returns
     -------
-    osm : numpy.ndarray
-        Orientation similarity map(s). If `from_n_best` is not None,
-        the returned array has three dimensions, where `n_best` is at
-        array[:, :, 0] and `from_n_best` at array[:, :, -1].
+    osm : ~numpy.ndarray
+        Orientation similarity map(s). If *from_n_best* is not None,
+        the returned array has three dimensions, where *n_best* is at
+        array[:, :, 0] and *from_n_best* at array[:, :, -1].
 
     Notes
     -----
@@ -90,6 +92,9 @@ def orientation_similarity_map(
                 \#(S_{r,c} \cap S_{r,c-1}) +
                 \#(S_{r,c} \cap S_{r,c+1})
             \right).
+
+    .. versionchanged:: 0.5
+       Default value of *normalize* changed to False.
     """
     simulation_indices = xmap.prop[simulation_indices_prop]
     nav_size, keep_n = simulation_indices.shape
@@ -111,11 +116,11 @@ def orientation_similarity_map(
         footprint = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])
 
     for i, n in enumerate(range(n_best, from_n_best - 1, -1)):
-        match_indicies = simulation_indices[:, :n]
+        match_indices = simulation_indices[:, :n]
         osm[:, :, i] = generic_filter(
             flat_index_map,
             lambda v: _orientation_similarity_per_pixel(
-                v, center_index, match_indicies, n, normalize
+                v, center_index, match_indices, n, normalize
             ),
             footprint=footprint,
             mode="constant",
@@ -132,7 +137,8 @@ def _orientation_similarity_per_pixel(
     # v are indices picked out with the footprint from flat_index_map
     v = v.astype(int)
     center_value = v[center_index]
-    # Filter only true neighbours, -1 out of image and not include itself
+    # Filter only true neighbours, -1 out of image and not include
+    # itself
     neighbours = v[np.where((v != -1) & (v != center_value))]
 
     # Cardinality of the intersection between a and b

@@ -29,6 +29,7 @@ not for users.
 
 import functools
 import inspect
+from typing import Callable, Optional, Union
 import warnings
 
 import numpy as np
@@ -45,27 +46,29 @@ class deprecated:
     <https://github.com/matplotlib/matplotlib/blob/master/lib/matplotlib/_api/deprecation.py#L122>`_.
     """
 
-    def __init__(self, since, message=None, alternative=None, removal=None):
+    def __init__(
+        self,
+        since: Union[str, int, float],
+        alternative: Optional[str] = None,
+        removal: Union[str, int, float, None] = None,
+    ):
         """Visible deprecation warning.
 
         Parameters
         ----------
-        since : str
+        since
             The release at which this API became deprecated.
-        message : str, optional
-            The deprecation message.
-        alternative : str, optional
+        alternative
             An alternative API that the user may use in place of the
             deprecated API.
-        removal : str, optional
+        removal
             The expected removal version.
         """
         self.since = since
-        self.message = message
         self.alternative = alternative
         self.removal = removal
 
-    def __call__(self, func):
+    def __call__(self, func: Callable):
         # Wrap function to raise warning when called, and add warning to
         # docstring
         if self.alternative is not None:
@@ -81,7 +84,7 @@ class deprecated:
         @functools.wraps(func)
         def wrapped(*args, **kwargs):
             warnings.simplefilter(
-                action="always", category=np.VisibleDeprecationWarning
+                action="always", category=np.VisibleDeprecationWarning, append=True
             )
             func_code = func.__code__
             warnings.warn_explicit(
@@ -101,8 +104,6 @@ class deprecated:
             f".. deprecated:: {self.since}\n"
             f"   {msg.strip()}"  # Matplotlib uses three spaces
         )
-        if not old_doc:
-            new_doc += r"\ "
         wrapped.__doc__ = new_doc
 
         return wrapped

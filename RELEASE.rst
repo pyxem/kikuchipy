@@ -1,34 +1,31 @@
 How to make a new release of ``kikuchipy``
 ==========================================
 
-- Create a release branch v<major>.<minor>.x. If a new minor release is to be
-  made, branch off of master via the GitHub repo, and pull this branch locally.
-  If a new patch release is to be made, pull the existing minor branch locally
-  and branch off of it.
-- Review and clean up `doc/changelog.rst` as per Keep a Changelog. Make sure all
-  contributors and reviewers are acknowledged. Increment the version number in
-  `release.py`. Make a PR to the release branch.
-- Create a PR from the release branch to master. Discuss the changelog with
-  others, and make any changes *directly* to the release branch.
-- On the master branch, increment the version number in `release.py` to the next
-  v<major>.<minor>.dev0.
-- If a release candidate (RC) is to be made, make a PR to the release branch
-  with `-rc.1` added to the version name, like v0.42.0-rc.1, merge the PR after
-  all checks pass, and publish an RC release off of the release branch. See that
-  it is made available via PyPI, download it with the `dev` dependencies, and
-  run the tests to make sure everything is as it should be. Also check that
-  Binder can build the repository successfully by going to the Read the Docs PR
-  check in the RC PR above after the RC release.
-- Create a release draft (tag) via the GitHub repo from the release branch with
-  the correct tag version name, e.g. v0.42.0, and release title
-  "kikuchipy 0.42.0". Add the new release notes from the changelog, and convert
-  any reStructuredText formatting to Markdown by hand. Publish the release.
-- Monitor the publish GitHub Action to ensure the release is successfully
-  published to PyPI.
+kikuchipy's branching model is similar to the Gitflow Workflow (`original blog post
+<https://nvie.com/posts/a-successful-git-branching-model/>`_).
+
+- If a minor release is to be made, create a release branch v<major>.<minor>.0 off of
+  the `develop` branch locally. If a patch release is to be made, create a release
+  branch v<major>.<minor>.<patch> off of the `main` branch locally instead. Ideally, a
+  patch release should be made immediately after a bug fix has been made. Therefore, it
+  might be best to do the release updates, listed in the following steps, directly on
+  the bug fix branch, so that no separate patch release branch has to be made. The bug
+  fix branch should of course be branched off of `main`.
+- Increment the version number in `release.py`. Review and clean up `doc/changelog.rst`
+  as per Keep a Changelog. Make sure all contributors and reviewers are acknowledged.
+- Make a PR of the release branch to `main`. Discuss the changelog with others, and
+  make any changes *directly* to the release branch. Merge the branch into `main`. Then
+  make a PR of `main` to `develop`, and merge this.
+- Create a release draft (tag) via the GitHub repo from main with the correct tag
+  version name, e.g. v0.42.0, and release title "kikuchipy 0.42.0". Add the new release
+  notes from the changelog, and convert any reStructuredText formatting to Markdown by
+  hand. Publish the release.
+- Monitor the publish GitHub Action to ensure the release is successfully published to
+  PyPI.
 - Download the new version from PyPI with the `dev` dependencies with
   `pip install kikuchipy[dev]==0.42.0` locally and run the tests with
   `pytest --pyargs kikuchipy` to make sure everything is as it should be.
-- Make a PR to master with any updates to this guide if necessary.
+- Make a PR to `develop` with any updates to this guide if necessary.
 
 conda-forge
 -----------

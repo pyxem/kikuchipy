@@ -6,7 +6,7 @@
   "commit": false,
   "contributorsPerLine": 7,
   "contributorsSortAlphabetically": true,
-  "badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-<%= contributors.length %>-yellow.svg)](#contributors)",
+  "badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-<%= contributors.length %>-yellow.svg)](#contributors-)",
   "projectName": "kikuchipy",
   "projectOwner": "pyxem",
   "repoType": "github",
@@ -56,6 +56,16 @@
       "contributions": [
         "code",
         "review"
+      ]
+    },
+    {
+      "login": "ericpre",
+      "name": "Eric Prestat",
+      "avatar_url": "https://avatars.githubusercontent.com/u/11851990?v=4",
+      "profile": "https://github.com/ericpre",
+      "contributions": [
+        "code",
+        "maintenance"
       ]
     }
   ]

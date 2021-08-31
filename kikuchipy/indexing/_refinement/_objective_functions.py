@@ -23,7 +23,9 @@ and simulated patterns.
 
 import numpy as np
 
-from kikuchipy.indexing.similarity_metrics import _ncc_single_patterns_2d_float32
+from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
+    _ncc_single_patterns_2d_float32,
+)
 from kikuchipy._rotation import _rotation_from_euler
 from kikuchipy.signals.util._master_pattern import (
     _project_single_pattern_from_master_pattern,

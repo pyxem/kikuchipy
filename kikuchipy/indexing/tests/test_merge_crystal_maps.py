@@ -22,7 +22,6 @@ from orix.quaternion import Rotation
 import pytest
 
 from kikuchipy.indexing import merge_crystal_maps
-from kikuchipy.indexing.similarity_metrics import make_similarity_metric
 
 
 class TestMergeCrystalMaps:
@@ -203,6 +202,7 @@ class TestMergeCrystalMaps:
         xmap2[3, 3].prop[scores_prop] = 2
         merged_xmap = merge_crystal_maps(
             crystal_maps=[xmap1, xmap2],
+            greater_is_better=True,
             scores_prop=scores_prop,
             simulation_indices_prop=sim_idx_prop,
         )
@@ -214,12 +214,7 @@ class TestMergeCrystalMaps:
         assert merged_xmap.prop[f"merged_{scores_prop}"].shape == desired_merged_shapes
         assert merged_xmap.prop[f"merged_{sim_idx_prop}"].shape == desired_merged_shapes
 
-    def test_negative_metric(self, get_single_phase_xmap):
-        def negative_sad(p, t):  # pragma: no cover
-            return -np.sum(np.abs(p - t), axis=(2, 3))
-
-        metric = make_similarity_metric(negative_sad, greater_is_better=False)
-
+    def test_lower_is_better(self, get_single_phase_xmap):
         map_shape = (5, 6)
         rot_per_point = 5
         scores_prop = "scores"
@@ -238,7 +233,7 @@ class TestMergeCrystalMaps:
 
         merged_xmap = merge_crystal_maps(
             crystal_maps=[xmap1, xmap2],
-            metric=metric,
+            greater_is_better=False,
             simulation_indices_prop=sim_idx_prop,
         )
 

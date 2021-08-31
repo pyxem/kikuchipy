@@ -1,6 +1,8 @@
-<img align="right" width="200px" src="https://kikuchipy.org/en/stable/_static/plasma_logo.svg">
-
-## kikuchipy
+<div align="center">
+  <a href="https://kikuchipy.org">
+    <img width="60%" src="doc/_static/logo/plasma_banner.png">
+  </a>
+</div>
 
 kikuchipy is an open-source Python library for processing and analysis of electron
 backscatter diffraction (EBSD) patterns. The library builds on the tools for
@@ -10,11 +12,11 @@ multi-dimensional data analysis provided by the HyperSpy library.
 [![Gitter chat](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pyxem/kikuchipy)
 [![Documentation status](https://readthedocs.org/projects/kikuchipy/badge/?version=latest)](https://kikuchipy.org/en/latest/)
 [![Build status](https://github.com/pyxem/kikuchipy/workflows/build/badge.svg)](https://github.com/pyxem/kikuchipy/actions)
-[![Coverage status](https://coveralls.io/repos/github/pyxem/kikuchipy/badge.svg?branch=master)](https://coveralls.io/github/pyxem/kikuchipy?branch=master)
+[![Coverage status](https://coveralls.io/repos/github/pyxem/kikuchipy/badge.svg?branch=develop)](https://coveralls.io/github/pyxem/kikuchipy?branch=develop)
 [![PyPI version](https://img.shields.io/pypi/v/kikuchipy.svg)](https://pypi.python.org/pypi/kikuchipy)
 [![Downloads per month](https://pepy.tech/badge/kikuchipy/month)](https://pepy.tech/project/kikuchipy)
 [![Zenodo DOI](https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg)](https://doi.org/10.5281/zenodo.3597646)
-[![All Contributors](https://img.shields.io/badge/all_contributors-4-yellow.svg)](#contributors)
+[![All Contributors](https://img.shields.io/badge/contributors-5-b1aee3.svg)](#contributors-)
 
 - **User guide and API reference**: https://kikuchipy.org. The guide consists of Jupyter
   Notebooks with many links to detailed explanations of the input parameters and output
@@ -37,6 +39,7 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <!-- markdownlint-disable -->
 <table>
   <tr>
+    <td align="center"><a href="https://github.com/ericpre"><img src="https://avatars.githubusercontent.com/u/11851990?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Eric Prestat</b></sub></a><br /><a href="https://github.com/pyxem/kikuchipy/commits?author=ericpre" title="Code">💻</a> <a href="#maintenance-ericpre" title="Maintenance">🚧</a></td>
     <td align="center"><a href="https://www.ntnu.edu/employees/hakon.w.anes"><img src="https://avatars.githubusercontent.com/u/12139781?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Håkon Wiik Ånes</b></sub></a><br /></td>
     <td align="center"><a href="https://github.com/friedkitteh"><img src="https://avatars.githubusercontent.com/u/11888052?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Lars Lervik</b></sub></a><br /><a href="https://github.com/pyxem/kikuchipy/issues?q=author%3Afriedkitteh" title="Bug reports">🐛</a> <a href="https://github.com/pyxem/kikuchipy/commits?author=friedkitteh" title="Code">💻</a> <a href="https://github.com/pyxem/kikuchipy/commits?author=friedkitteh" title="Documentation">📖</a> <a href="#question-friedkitteh" title="Answering Questions">💬</a> <a href="https://github.com/pyxem/kikuchipy/pulls?q=is%3Apr+reviewed-by%3Afriedkitteh" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/pyxem/kikuchipy/commits?author=friedkitteh" title="Tests">⚠️</a></td>
     <td align="center"><a href="https://github.com/onatlandsmyr"><img src="https://avatars.githubusercontent.com/u/34620114?v=4?s=100" width="100px;" alt=""/><br /><sub><b>Ole Natlandsmyr</b></sub></a><br /><a href="https://github.com/pyxem/kikuchipy/commits?author=onatlandsmyr" title="Code">💻</a> <a href="https://github.com/pyxem/kikuchipy/commits?author=onatlandsmyr" title="Documentation">📖</a> <a href="#question-onatlandsmyr" title="Answering Questions">💬</a> <a href="https://github.com/pyxem/kikuchipy/pulls?q=is%3Apr+reviewed-by%3Aonatlandsmyr" title="Reviewed Pull Requests">👀</a> <a href="https://github.com/pyxem/kikuchipy/commits?author=onatlandsmyr" title="Tests">⚠️</a></td>

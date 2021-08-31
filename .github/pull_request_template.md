@@ -1,4 +1,5 @@
 #### Description of the change
+<!-- Remember to branch off the develop branch for new features and the main branch for patches. -->
 
 
 #### Progress of the PR

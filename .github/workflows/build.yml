@@ -40,7 +40,7 @@ jobs:
           - os: ubuntu-latest
             python-version: 3.7
             OLDEST_SUPPORTED_VERSION: true
-            DEPENDENCIES: dask==2.18 diffsims==0.4.0 hyperspy==1.5.2 matplotlib==3.3 numpy==1.19 orix==0.6.0 scikit-image==0.16.2
+            DEPENDENCIES: dask==2021.8.1 diffsims==0.4.0 hyperspy==1.6.4 matplotlib==3.3 numba==0.48 numpy==1.19 orix==0.6.0 scikit-image==0.16.2
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -49,12 +49,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Display versions
         run: python -V; pip -V
-      - name: Install depedencies and package
-        shell: bash
-        run: pip install -U -e .'[tests]'
       - name: Install oldest supported version
         if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
         run: pip install ${{ matrix.DEPENDENCIES }}
+      - name: Install depedencies and package
+        shell: bash
+        run: pip install -U -e .'[tests]'
       - name: Run docstring tests
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: pytest --doctest-modules --ignore-glob=kikuchipy/*/tests

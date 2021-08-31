@@ -243,10 +243,10 @@ class TestRemoveStaticBackgroundEBSD:
             (
                 np.ones((3, 3), dtype=np.int8),
                 ValueError,
-                "The static background dtype_out",
+                "Static background dtype_out",
             ),
-            (None, OSError, "The static background is not a numpy or dask"),
-            (np.ones((3, 2), dtype=np.uint8), OSError, "The pattern"),
+            (None, ValueError, "`static_bg` is not a valid NumPy or Dask array"),
+            (np.ones((3, 2), dtype=np.uint8), ValueError, "Signal"),
         ],
     )
     def test_incorrect_static_background_pattern(
@@ -264,6 +264,12 @@ class TestRemoveStaticBackgroundEBSD:
         dummy_signal = dummy_signal.as_lazy()
         dummy_signal.remove_static_background(static_bg=dummy_background)
         assert isinstance(dummy_signal.data, da.Array)
+
+        ebsd_node = kp.signals.util.metadata_nodes("ebsd")
+        dummy_signal.metadata.set_item(
+            ebsd_node + ".static_background", da.from_array(dummy_background)
+        )
+        dummy_signal.remove_static_background()
 
     def test_remove_static_background_scalebg(self, dummy_signal, dummy_background):
         dummy_signal2 = dummy_signal.deepcopy()
@@ -734,40 +740,6 @@ class TestAverageNeighbourPatternsEBSD:
         s = kp.signals.LazyEBSD(da.zeros((55, 75, 6, 6), chunks=chunks, dtype=np.uint8))
         s.average_neighbour_patterns()
         s.compute()
-
-
-class TestRebin:
-    def test_rebin(self, dummy_signal):
-        ebsd_node = kp.signals.util.metadata_nodes("ebsd")
-
-        # Passing new_shape, only scaling in signal space
-        new_shape = (3, 3, 2, 1)
-        new_binning = dummy_signal.axes_manager.shape[3] / new_shape[3]
-        s2 = dummy_signal.rebin(new_shape=new_shape)
-        assert s2.axes_manager.shape == new_shape
-        assert s2.metadata.get_item(ebsd_node + ".binning") == new_binning
-
-        # Passing scale, also scaling in navigation space
-        scale = (3, 1, 3, 2)
-        s2 = dummy_signal.rebin(scale=scale)
-        expected_new_shape = [
-            int(i / j) for i, j in zip(dummy_signal.axes_manager.shape, scale)
-        ]
-        assert s2.axes_manager.shape == tuple(expected_new_shape)
-        assert s2.metadata.get_item(ebsd_node + ".binning") == float(scale[2])
-
-        # Passing lazy signal to out parameter, only scaling in signal space but
-        # upscaling
-        scale = (1, 1, 1, 0.5)
-        expected_new_shape = [
-            int(i / j) for i, j in zip(dummy_signal.axes_manager.shape, scale)
-        ]
-        s2 = dummy_signal.copy().as_lazy()
-        s3 = dummy_signal.rebin(scale=scale, out=s2)
-        assert isinstance(s2, kp.signals.LazyEBSD)
-        assert s2.axes_manager.shape == tuple(expected_new_shape)
-        assert s2.metadata.get_item(ebsd_node + ".binning") == float(scale[3])
-        assert s3 is None
 
 
 class TestVirtualBackscatterElectronImaging:
@@ -1285,24 +1257,113 @@ class TestEBSDDetectorProperty:
 
 
 class TestDictionaryIndexing:
-    def test_dictionary_indexing(self, dummy_signal):
-        """Scores are all 1.0 for a dictionary containing all patterns
+    def test_dictionary_indexing_doesnt_change_data(self, dummy_signal):
+        """Scores are all 1 for a dictionary containing all patterns
         from dummy_signal().
         """
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
         s_dict.axes_manager[0].name = "x"
         s_dict.xmap = CrystalMap.empty((9,))
-        xmap = dummy_signal.dictionary_indexing(s_dict)
+        dummy_signal2 = dummy_signal.deepcopy()
+        s_dict2 = s_dict.deepcopy()
+        xmap = dummy_signal2.dictionary_indexing(s_dict2, metric="ndp", rechunk=True)
 
+        assert isinstance(xmap, CrystalMap)
         assert np.allclose(xmap.scores[:, 0], 1)
 
-    def test_dictionary_indexing_warns(self, dummy_signal):
-        # TODO: Remove test after v0.4 is released
+        # Data is not affected by indexing method
+        assert np.allclose(dummy_signal.data, dummy_signal2.data)
+        assert np.allclose(s_dict.data, s_dict2.data)
+
+    def test_dictionary_indexing_signal_mask(self, dummy_signal):
+        """Passing a signal mask works, using 64-bit floats works,
+        rechunking of experimental patterns works.
+        """
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
         s_dict.axes_manager[0].name = "x"
-        s_dict.xmap = CrystalMap.empty((9,), step_sizes=(1,))
-        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
-            _ = dummy_signal.match_patterns(s_dict)
+        s_dict.xmap = CrystalMap.empty((9,))
+        signal_mask = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]], dtype=bool)
+        xmap = dummy_signal.dictionary_indexing(
+            s_dict,
+            dtype=np.float64,
+            n_per_iteration=2,
+            signal_mask=signal_mask,
+            rechunk=True,
+        )
+        assert np.allclose(xmap.scores[:, 0], 1)
+
+    def test_dictionary_indexing_n_per_iteration_from_lazy(self, dummy_signal):
+        """Getting number of iterations from Dask array chunk works, and
+        NDP rechunking of experimental patterns works.
+        """
+        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
+        s_dict.axes_manager[0].name = "x"
+        s_dict.xmap = CrystalMap.empty((9,))
+        s_dict_lazy = s_dict.as_lazy()
+        s_dict_lazy.xmap = s_dict.xmap
+        signal_mask = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]], dtype=bool)
+        xmap = dummy_signal.dictionary_indexing(
+            s_dict_lazy, metric="ndp", signal_mask=signal_mask
+        )
+        assert np.allclose(xmap.scores[:, 0], 1)
+
+        # So that computing parts of the dictionary during indexing is
+        # covered, and NDP rechunking
+        xmap4 = dummy_signal.dictionary_indexing(
+            s_dict_lazy, metric="ndp", n_per_iteration=2, rechunk=True
+        )
+        assert np.allclose(xmap4.scores[:, 0], 1)
+
+    def test_dictionary_indexing_invalid_metric(self, dummy_signal):
+        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
+        s_dict.axes_manager[0].name = "x"
+        s_dict.xmap = CrystalMap.empty((9,))
+        with pytest.raises(ValueError, match="'invalid' must be either of "):
+            _ = dummy_signal.dictionary_indexing(s_dict, metric="invalid")
+
+    def test_dictionary_indexing_invalid_signal_shapes(self, dummy_signal):
+        s_dict_data = dummy_signal.data[:, :, :2, :2].reshape((-1, 2, 2))
+        s_dict = kp.signals.EBSD(s_dict_data)
+        s_dict.axes_manager[0].name = "x"
+        s_dict.xmap = CrystalMap.empty((9,))
+        with pytest.raises(ValueError):
+            _ = dummy_signal.dictionary_indexing(s_dict)
+
+    def test_dictionary_indexing_invalid_dictionary(self, dummy_signal):
+        s_dict = kp.signals.EBSD(dummy_signal.data)
+        s_dict.axes_manager[0].name = "x"
+        s_dict.axes_manager[1].name = "y"
+
+        # Dictionary xmap property is empty
+        with pytest.raises(ValueError, match="Dictionary signal must have a non-empty"):
+            _ = dummy_signal.dictionary_indexing(s_dict)
+
+        # Dictionary not 1 navigation dimension
+        s_dict.xmap = CrystalMap.empty((3, 3))
+        with pytest.raises(ValueError, match="Dictionary signal must have a non-empty"):
+            _ = dummy_signal.dictionary_indexing(s_dict)
+
+    @pytest.mark.parametrize(
+        "nav_slice, nav_shape",
+        [
+            ((0, 0), ()),  # 0D
+            ((0, slice(0, 1)), ()),  # 0D
+            ((0, slice(0, 3)), (3,)),  # 1D
+            ((slice(0, 3), slice(0, 2)), (2, 3)),  # 2D
+        ],
+    )
+    def test_dictionary_indexing_nav_shape(self, dummy_signal, nav_slice, nav_shape):
+        """Dictionary indexing handles experimental datasets of all
+        allowed navigation shapes of 0D, 1D and 2D.
+        """
+        s = dummy_signal.inav[nav_slice]
+        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
+        s_dict.axes_manager[0].name = "x"
+        dict_size = s_dict.axes_manager.navigation_size
+        s_dict.xmap = CrystalMap.empty((dict_size,))
+        xmap = s.dictionary_indexing(s_dict)
+        assert xmap.shape == nav_shape
+        assert np.allclose(xmap.scores[:, 0], np.ones(int(np.prod(nav_shape))))
 
 
 class TestEBSDRefinement:
@@ -1623,7 +1684,6 @@ class TestEBSDRefinement:
         assert new_scores.shape == xmap.shape
         assert not np.allclose(new_scores, xmap.get_map_data("scores"))
         assert isinstance(new_detector, kp.detectors.EBSDDetector)
-        assert not np.allclose(detector.pc, new_detector.pc[0, 0])
 
     def test_refine_projection_center_not_compute(
         self,

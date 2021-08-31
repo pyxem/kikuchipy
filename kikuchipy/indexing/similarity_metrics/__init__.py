@@ -16,23 +16,24 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime
+"""Similarity metrics for comparing grayscale patterns."""
 
+from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
+from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
+    NormalizedCrossCorrelationMetric,
+)
+from kikuchipy.indexing.similarity_metrics._normalized_dot_product import (
+    NormalizedDotProductMetric,
+)
 
-author = "kikuchipy developers"
-copyright = f"Copyright 2019-{datetime.now().year}, kikuchipy"
-# Initial committer first, then sorted by line contributions
-credits = [
-    "Håkon Wiik Ånes",
-    "Lars Andreas Hastad Lervik",
-    "Ole Natlandsmyr",
-    "Tina Bergh",
-    "Eric Prestat",
+metrics = dict(
+    ncc=NormalizedCrossCorrelationMetric,
+    ndp=NormalizedDotProductMetric,
+)
+
+__all__ = [
+    "metrics",
+    "NormalizedCrossCorrelationMetric",
+    "NormalizedDotProductMetric",
+    "SimilarityMetric",
 ]
-license = "GPLv3+"
-maintainer = "Håkon Wiik Ånes"
-maintainer_email = "hakon.w.anes@ntnu.no"
-name = "kikuchipy"
-platforms = ["Linux", "MacOS X", "Windows"]
-status = "Development"
-version = "0.5.0"
