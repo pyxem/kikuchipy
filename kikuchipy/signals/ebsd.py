@@ -120,7 +120,9 @@ class EBSD(CommonImage, Signal2D):
             md.update(ebsd_metadata().as_dictionary())
             self.metadata = DictionaryTreeBrowser(md)
         if not self.metadata.has_item("Sample.Phases"):
-            self.set_phase_parameters()
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+                self.set_phase_parameters()
 
     # ---------------------- Custom properties ----------------------- #
 
@@ -159,6 +161,7 @@ class EBSD(CommonImage, Signal2D):
 
     # ------------------------ Custom methods ------------------------ #
 
+    @deprecated(since="0.5", removal="0.6")
     def set_experimental_parameters(
         self,
         detector=None,
@@ -245,8 +248,8 @@ class EBSD(CommonImage, Signal2D):
         >>> node = kp.signals.util.metadata_nodes("ebsd")
         >>> s.metadata.get_item(node + '.xpc')
         -5.64
-        >>> s.set_experimental_parameters(xpc=0.50726)
-        >>> s.metadata.get_item(node + '.xpc')
+        >>> s.set_experimental_parameters(xpc=0.50726)  # doctest: +SKIP
+        >>> s.metadata.get_item(node + '.xpc')  # doctest: +SKIP
         0.50726
         """
         md = self.metadata
@@ -285,6 +288,7 @@ class EBSD(CommonImage, Signal2D):
             ebsd_node,
         )
 
+    @deprecated(since="0.5", removal="0.6")
     def set_phase_parameters(
         self,
         number=1,
@@ -358,8 +362,8 @@ class EBSD(CommonImage, Signal2D):
         ...         'site_occupation': 1,
         ...         'debye_waller_factor': 0.005
         ...     }}
-        ... )
-        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
+        ... )  # doctest: +SKIP
+        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1  # doctest: +SKIP
         ├── atom = Fe
         ├── coordinates = array([0, 0, 0])
         ├── debye_waller_factor = 0.005
@@ -2048,33 +2052,6 @@ class EBSD(CommonImage, Signal2D):
         s_model.learning_results = LearningResults()
 
         return s_model
-
-    def rebin(self, new_shape=None, scale=None, crop=True, out=None):
-        s_out = super().rebin(new_shape=new_shape, scale=scale, crop=crop, out=out)
-
-        return_signal = True
-        if s_out is None:
-            s_out = out
-            return_signal = False
-
-        # Update binning in metadata to signal dimension with largest or
-        # lowest binning if downscaling or upscaling, respectively
-        md = s_out.metadata
-        ebsd_node = metadata_nodes("ebsd")
-        if scale is None:
-            sx, sy = self.axes_manager.signal_shape
-            signal_idx = self.axes_manager.signal_indices_in_array
-            scale = (sx / new_shape[signal_idx[0]], sy / new_shape[signal_idx[1]])
-        upscaled_dimensions = np.where(np.array(scale) < 1)[0]
-        if len(upscaled_dimensions):
-            new_binning = np.min(scale)
-        else:
-            new_binning = np.max(scale)
-        original_binning = abs(md.get_item(ebsd_node + ".binning"))
-        md.set_item(ebsd_node + ".binning", original_binning * new_binning)
-
-        if return_signal:
-            return s_out
 
     # ------------------------ Private methods ----------------------- #
 

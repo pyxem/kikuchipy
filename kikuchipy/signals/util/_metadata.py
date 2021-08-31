@@ -36,6 +36,10 @@ def ebsd_metadata() -> DictionaryTreeBrowser:
     Returns
     -------
     md : hyperspy.misc.utils.DictionaryTreeBrowser
+
+    Notes
+    -----
+    .. deprecated:: 0.5
     """
     md = DictionaryTreeBrowser()
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])

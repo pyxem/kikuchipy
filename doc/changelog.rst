@@ -56,6 +56,14 @@ Changed
 - URLs of user guide topics have an extra "/user_guide/<topic>" added to them.
   (`#403 <https://github.com/pyxem/kikuchipy/pull/403>`_)
 
+Deprecated
+----------
+- Custom EBSD metadata, meaning the *Acquisition_instrument.SEM.EBSD.Detector* and
+  *Sample.Phases* nodes, as well as the EBSD *set_experimental_parameters()* and
+  *set_phase_parameters()* methods. This will be removed in v0.6 The *static_background*
+  metadata array will become available as an EBSD property.
+  (`#428 <https://github.com/pyxem/kikuchipy/pull/428>`_)
+
 Removed
 -------
 - *make_similarity_metric()* function is replaced by the need to create a class inheriting

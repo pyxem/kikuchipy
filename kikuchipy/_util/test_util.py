@@ -29,7 +29,7 @@ class TestDeprecationWarning:
         gets the desired additions to their docstring.
         """
 
-        @deprecated(since=0.7, message="Hello", alternative="bar", removal=0.8)
+        @deprecated(since=0.7, alternative="bar", removal=0.8)
         def foo(n):
             """Some docstring."""
             return n + 1
@@ -71,7 +71,7 @@ class TestDeprecationWarning:
         )
 
     def test_deprecation_no_old_doc(self):
-        @deprecated(since=0.7, message="Hello", alternative="bar", removal=0.8)
+        @deprecated(since=0.7, alternative="bar", removal=0.8)
         def foo(n):
             return n + 1
 

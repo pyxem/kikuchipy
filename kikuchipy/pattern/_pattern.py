@@ -111,7 +111,7 @@ def remove_dynamic_background(
     filter_domain: str = "frequency",
     std: Union[None, int, float] = None,
     truncate: Union[int, float] = 4.0,
-    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
+    dtype_out: Union[None, np.dtype, type, Tuple[int, int], Tuple[float, float]] = None,
 ) -> np.ndarray:
     """Remove the dynamic background in an EBSD pattern.
 
