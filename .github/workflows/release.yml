@@ -24,11 +24,11 @@ jobs:
       run: |
         python check_version.py
         if [ $? == 0 ]; then
-            echo "MAKE_RELEASE='true'" >> $GITHUB_ENV
+            echo "MAKE_RELEASE=true" >> $GITHUB_ENV
         else
-            echo "MAKE_RELEASE='false'" >> $GITHUB_ENV
+            echo "MAKE_RELEASE=false" >> $GITHUB_ENV
         fi
     - name: Make tagged release
-      if: ${{ env.MAKE_RELEASE == 'true' }}
+      if: ${{ env.MAKE_RELEASE == true }}
       run: |
         echo "Make tagged release!"
