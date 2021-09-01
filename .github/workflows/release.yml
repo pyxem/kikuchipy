@@ -1,0 +1,30 @@
+name: Create tagged release
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "kikuchipy/release.py"
+
+jobs:
+  create-tagged-release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ runner.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    - name: Check branch version against PyPI version
+      run: |
+        python check_version.py
+        if [ $? == 1 ]; then
+            echo "MAKE_RELEASE='true'" >> $GITHUB_ENV
+        else
+            echo "MAKE_RELEASE='false'" >> $GITHUB_ENV
+        fi
+    - name: Install dependencies and package
+      if: ${{ env.MAKE_RELEASE == 'true' }}
+      run: |
+        echo "Make tagged release!"
