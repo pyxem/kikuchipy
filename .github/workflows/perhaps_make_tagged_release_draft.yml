@@ -33,7 +33,7 @@ jobs:
         echo "BRANCH_VERSION=${x[2]}" >> $GITHUB_ENV
     - name: Make tagged release draft body from changelog
       if: ${{ env.MAKE_RELEASE == 'true' }}
-      run: pandoc .github/workflows/release_part_in_changelog.rst -f rst -t markdown -o release_part_in_changelog.md
+      run: pandoc .github/workflows/release_part_in_changelog.rst -f rst -t markdown -o release_part_in_changelog.md --wrap=none
     - name: Make tagged release draft
       if: ${{ env.MAKE_RELEASE == 'true' }}
       uses: actions/create-release@v1
