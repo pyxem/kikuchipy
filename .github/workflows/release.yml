@@ -35,11 +35,8 @@ jobs:
         tag_name: v${{ env.BRANCH_VERSION }}
         release_name: kikuchipy ${{ env.BRANCH_VERSION }}
         body: |
-          kikuchipy ${{ env.BRANCH_VERSION }} is a release of kikuchipy, an open-source
-          Python library for processing and analysis of electron backscatter diffraction
-          (EBSD) patterns.
+          kikuchipy ${{ env.BRANCH_VERSION }} is a release of kikuchipy, an open-source Python library for processing and analysis of electron backscatter diffraction (EBSD) patterns.
 
-          See the [changelog](https://kikuchipy.org/en/latest/changelog.html) for all
-          updates from the previous release.
-        draft: true
+          See the [changelog](https://kikuchipy.org/en/latest/changelog.html) for all updates from the previous release.
+        draft: false
         prerelease: false
