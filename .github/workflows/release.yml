@@ -26,10 +26,20 @@ jobs:
         echo "MAKE_RELEASE=${x[0]}" >> $GITHUB_ENV
         echo "PYPI_VERSION=${x[1]}" >> $GITHUB_ENV
         echo "BRANCH_VERSION=${x[2]}" >> $GITHUB_ENV
-    - name: Make tagged release
-#      if: ${{ env.MAKE_RELEASE == 'true' }}
-      run: |
-        echo "${{ env.MAKE_RELEASE }}"
-        echo "${{ env.PYPI_VERSION }}"
-        echo "${{ env.BRANCH_VERSION }}"
-#        echo "Make tagged release!"
+    - name: Create tagged release
+      if: ${{ env.MAKE_RELEASE == 'true' }}
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ env.BRANCH_VERSION }}
+        release_name: kikuchipy ${{ env.BRANCH_VERSION }}
+        body: |
+          kikuchipy ${{ env.BRANCH_VERSION }} is a release of kikuchipy, an open-source
+          Python library for processing and analysis of electron backscatter diffraction
+          (EBSD) patterns.
+
+          See the [changelog](https://kikuchipy.org/en/latest/changelog.html) for all
+          updates from the previous release.
+        draft: true
+        prerelease: false
