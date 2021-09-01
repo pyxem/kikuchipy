@@ -22,7 +22,8 @@ jobs:
         pip install outdated
     - name: Check branch version against PyPI version
       run: |
-        eval x=($(python check_version.py))
+        cd .github/workflows
+        eval x=($(python make_release_or_not.py))
         echo "MAKE_RELEASE=${x[0]}" >> $GITHUB_ENV
         echo "PYPI_VERSION=${x[1]}" >> $GITHUB_ENV
         echo "BRANCH_VERSION=${x[2]}" >> $GITHUB_ENV
