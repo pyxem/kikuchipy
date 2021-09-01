@@ -16,10 +16,12 @@ kikuchipy's branching model is similar to the Gitflow Workflow (`original blog p
 - Make a PR of the release branch to `main`. Discuss the changelog with others, and
   make any changes *directly* to the release branch. Merge the branch into `main`. Then
   make a PR of `main` to `develop`, and merge this.
-- Create a release draft (tag) via the GitHub repo from main with the correct tag
-  version name, e.g. v0.42.0, and release title "kikuchipy 0.42.0". Add the new release
-  notes from the changelog, and convert any reStructuredText formatting to Markdown by
-  hand. Publish the release.
+- If the `__version__` in `release.py` on `main` has changed in a merged PR or pushed
+  commit, a tagged, annotated release *draft* is automatically created. If `__version__`
+  is now "0.42.0", the release name is "kikuchipy 0.42.0", and the tag name is
+  "v0.42.0". The tag target will be the `main` branch. The release body contains a
+  static description and a link to the changelog. This release draft can be published as
+  is, or changes to the release body can be made before publishing.
 - Monitor the publish GitHub Action to ensure the release is successfully published to
   PyPI.
 - Download the new version from PyPI with the `dev` dependencies with
