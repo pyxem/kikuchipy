@@ -22,4 +22,6 @@ print(
 )
 
 if is_outdated:
-    sys.exit(1)
+    sys.exit(10)
+else:
+    sys.exit(20)
