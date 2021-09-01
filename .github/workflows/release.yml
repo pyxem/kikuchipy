@@ -23,9 +23,9 @@ jobs:
     - name: Check branch version against PyPI version
       run: |
         eval x=($(python check_version.py))
-        echo "MAKE_RELEASE=${x[1]}" >> $GITHUB_ENV
-        echo "PYPI_VERSION=${x[2]}" >> $GITHUB_ENV
-        echo "BRANCH_VERSION=${x[3]}" >> $GITHUB_ENV
+        echo "MAKE_RELEASE=${x[0]}" >> $GITHUB_ENV
+        echo "PYPI_VERSION=${x[1]}" >> $GITHUB_ENV
+        echo "BRANCH_VERSION=${x[2]}" >> $GITHUB_ENV
     - name: Make tagged release
 #      if: ${{ env.MAKE_RELEASE == 'true' }}
       run: |
