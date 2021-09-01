@@ -29,7 +29,6 @@ jobs:
             echo "MAKE_RELEASE=false" >> $GITHUB_ENV
         fi
     - name: Make tagged release
-#      if: ${{ env.MAKE_RELEASE == 'true' }}
+      if: ${{ env.MAKE_RELEASE == 'true' }}
       run: |
-        echo "${{ env.MAKE_RELEASE }}"
         echo "Make tagged release!"
