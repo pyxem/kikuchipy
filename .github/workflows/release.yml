@@ -40,4 +40,4 @@ jobs:
           See the [changelog](https://kikuchipy.org/en/latest/changelog.html) for all updates from the previous release.
         draft: false
         prerelease: false
-        target_commitish: main
+        commitish: main
