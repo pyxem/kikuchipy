@@ -2,11 +2,11 @@ include kikuchipy/hyperspy_extension.yaml
 include LICENSE
 include MANIFEST.in
 include setup.cfg
-include README.rst
+include README.md
 include RELEASE.rst
 include readthedocs.yml
 include setup.py
 
 recursive-include doc Makefile make.bat *.rst *.py *.ipynb *.bib
-recursive-include doc/_static *.png *.jpg *.svg *.gif
+recursive-include doc/_static *.png *.jpg *.svg
 recursive-include kikuchipy/data *

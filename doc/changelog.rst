@@ -15,6 +15,18 @@ entries are sorted in descending chronological order.
 Unreleased
 ==========
 
+0.5.1 (2021-09-01)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Added
+-----
+- Automatic creation of a release using GitHub Actions, which will simplify and lead to
+  more frequent patch releases. (`#433 <https://github.com/pyxem/kikuchipy/pull/433>`_)
+
 0.5.0 (2021-08-31)
 ==================
 
