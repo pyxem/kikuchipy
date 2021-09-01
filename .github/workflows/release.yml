@@ -23,7 +23,7 @@ jobs:
     - name: Check branch version against PyPI version
       run: |
         python check_version.py
-        if [ $? == 10 ]; then
+        if [ $? == 0 ]; then
             echo "MAKE_RELEASE='true'" >> $GITHUB_ENV
         else
             echo "MAKE_RELEASE='false'" >> $GITHUB_ENV
