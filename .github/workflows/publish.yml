@@ -5,8 +5,7 @@ name: Upload package to PyPI
 
 on:
   release:
-    types:
-      - created
+    types: [published]
 
 jobs:
   publish-to-pip:
