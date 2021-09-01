@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - uses: r-lib/actions/setup-pandoc@v1
     - name: Set up Python ${{ runner.python-version }}
       uses: actions/setup-python@v2
       with:
@@ -30,6 +31,9 @@ jobs:
         echo "MAKE_RELEASE=${x[0]}" >> $GITHUB_ENV
         echo "PYPI_VERSION=${x[1]}" >> $GITHUB_ENV
         echo "BRANCH_VERSION=${x[2]}" >> $GITHUB_ENV
+    - name: Make tagged release draft body from changelog
+      if: ${{ env.MAKE_RELEASE == 'true' }}
+      run: pandoc .github/workflows/release_part_in_changelog.rst -f rst -t markdown -o release_part_in_changelog.md
     - name: Make tagged release draft
       if: ${{ env.MAKE_RELEASE == 'true' }}
       uses: actions/create-release@v1
@@ -40,8 +44,5 @@ jobs:
         tag_name: v${{ env.BRANCH_VERSION }}
         release_name: kikuchipy ${{ env.BRANCH_VERSION }}
         commitish: main
-        body: |
-          kikuchipy is an open-source Python library for processing and analysis of electron backscatter diffraction (EBSD) patterns.
-
-          See the [changelog](https://kikuchipy.org/en/latest/changelog.html) for all updates from the previous release.
+        body_path: release_part_in_changelog.md
         prerelease: false

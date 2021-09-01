@@ -36,6 +36,24 @@ except ValueError as e:
     pypi_version = re.findall(r"\s([\d.]+)", e.args[0])[1]
     make_release = True
 
+if make_release:
+    with open("../../doc/changelog.rst", mode="r") as f:
+        content = f.readlines()
+        changelog_start = 0
+        changelog_end = 0
+        for i, line in enumerate(content):
+            if line.startswith(branch_version):
+                changelog_start = i + 3
+            elif line.startswith(pypi_version):
+                changelog_end = i - 1
+    with open("release_part_in_changelog.rst", mode="w") as f:
+        f.write(
+            "kikuchipy is an open-source Python library for processing and analysis of electron backscatter diffraction (EBSD) patterns.\n\n"
+            "See the `changelog <https://kikuchipy.org/en/latest/changelog.html>`_ for all updates from the previous release.\n\n"
+        )
+        for line in content[changelog_start:changelog_end]:
+            f.write(line)
+
 # These three prints are collected by a bash script using `eval` and
 # passed to GitHub Action environment variables to be used in a workflow
 print(make_release)
