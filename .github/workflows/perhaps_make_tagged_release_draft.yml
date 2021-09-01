@@ -1,7 +1,7 @@
 name: Perhaps make a tagged release
 
-# Trigger workflow when commits to or PRs merged to the main branch contain a change in
-# the kikuchipy/release.py file. This is because this workflow should only run when a
+# Trigger workflow when commits to the main branch contain a change in the
+# kikuchipy/release.py file. This is because this workflow should only run when a
 # tagged release draft is to be made.
 on:
   push:
@@ -9,14 +9,9 @@ on:
       - main
     paths:
       - "kikuchipy/release.py"
-  pull_request:
-    branches:
-      - main
-    paths:
-      - "kikuchipy/release.py"
 
 jobs:
-  perhaps-make-tagged-release:
+  make-tagged-release:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -35,7 +30,7 @@ jobs:
         echo "MAKE_RELEASE=${x[0]}" >> $GITHUB_ENV
         echo "PYPI_VERSION=${x[1]}" >> $GITHUB_ENV
         echo "BRANCH_VERSION=${x[2]}" >> $GITHUB_ENV
-    - name: Create tagged release draft
+    - name: Make tagged release draft
       if: ${{ env.MAKE_RELEASE == 'true' }}
       uses: actions/create-release@v1
       env:
