@@ -230,5 +230,5 @@ Endnotes
 We are thankful to the groups behind the following documents, from which we drew
 content and inspiration:
 
-* `napari Code of Conduct - How to follow up on a report <https://github.com/napari/napari/blob/master/docs/source/developers/CODE_OF_CONDUCT_REPORTING.md>`_
+* `napari Code of Conduct - How to follow up on a report <https://github.com/napari/napari/blob/main/docs/community/code_of_conduct_reporting.md>`_
 * `NumPy Code of Conduct - How to follow up on a report <https://numpy.org/report-handling-manual>`_

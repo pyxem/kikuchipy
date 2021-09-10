@@ -22,7 +22,7 @@ Contributors
 Changed
 -------
 - Restricted lowest supported version of orix to >= 0.7.
-  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+  (`#444 <https://github.com/pyxem/kikuchipy/pull/444>`_)
 
 0.5.1 (2021-09-01)
 ==================
@@ -545,7 +545,7 @@ Features
 - Since the ``EBSD`` class is based upon HyperSpy's ``Signal2D`` class, which itself is
   based upon their ``BaseSignal`` class, all functionality available to ``Signal2D`` is
   also available to the ``EBSD`` class. See HyperSpy's user guide
-  (http://hyperspy.org/hyperspy-doc/current/user_guide) for details.
+  (http://hyperspy.org/hyperspy-doc/current/index.html) for details.
 
 Contributors
 ------------
