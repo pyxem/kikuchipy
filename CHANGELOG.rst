@@ -21,7 +21,9 @@ Contributors
 
 Changed
 -------
-- Restricted lowest supported version of orix to >= 0.7.
+- Add gnomonic circles as patches in axes returned from EBSDDetector.plot()
+  (`#445 <https://github.com/pyxem/kikuchipy/pull/445>`_)
+Restricted lowest supported version of orix to >= 0.7.
   (`#444 <https://github.com/pyxem/kikuchipy/pull/444>`_)
 
 0.5.1 (2021-09-01)
