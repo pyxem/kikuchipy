@@ -37,7 +37,7 @@ except ValueError as e:
     make_release = True
 
 if make_release:
-    with open("../../doc/changelog.rst", mode="r") as f:
+    with open("../../CHANGELOG.rst", mode="r") as f:
         content = f.readlines()
         changelog_start = 0
         changelog_end = 0
