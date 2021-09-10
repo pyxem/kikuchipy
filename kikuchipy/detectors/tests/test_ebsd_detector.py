@@ -381,12 +381,12 @@ class TestEBSDDetector:
             n_angles = 8
         else:
             n_angles = len(gnomonic_angles)
-        assert len(ax.artists) == n_angles
+        assert len(ax.patches) == n_angles
         if gnomonic_circles_kwargs is None:
             edgecolor = "k"
         else:
             edgecolor = gnomonic_circles_kwargs["edgecolor"]
-        assert np.allclose(ax.artists[0]._edgecolor[:3], mcolors.to_rgb(edgecolor))
+        assert np.allclose(ax.patches[0]._edgecolor[:3], mcolors.to_rgb(edgecolor))
         plt.close("all")
 
     @pytest.mark.parametrize("pattern", [np.ones((61, 61)), np.ones((59, 60))])
