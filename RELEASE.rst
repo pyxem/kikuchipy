@@ -9,9 +9,9 @@ kikuchipy's branching model is similar to the Gitflow Workflow (`original blog p
   branch v<major>.<minor>.<patch> off of the `main` branch locally instead. Ideally, a
   patch release should be made immediately after a bug fix has been made. Therefore, it
   might be best to do the release updates, listed in the following steps, directly on
-  the patch release branch, so that no separate branch has to be made. This patch
-  release branch should of course be branched off of `main`.
-- Increment the version number in `release.py`. Review and clean up `doc/changelog.rst`
+  the bug fix branch, so that no separate patch release branch has to be made. The bug
+  fix branch should of course be branched off of `main`.
+- Increment the version number in `release.py`. Review and clean up `CHANGELOG.rst`
   as per Keep a Changelog. Make sure all contributors and reviewers are acknowledged.
 - Make a PR of the release branch to `main`. Discuss the changelog with others, and
   make any changes *directly* to the release branch. Merge the branch into `main`. Then

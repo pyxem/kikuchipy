@@ -554,7 +554,7 @@ class EBSDDetector:
             if gnomonic_angles is None:
                 gnomonic_angles = np.arange(1, 9) * 10
             for angle in gnomonic_angles:
-                ax.add_artist(
+                ax.add_patch(
                     plt.Circle(
                         (pcx, pcy), np.tan(np.deg2rad(angle)), **gnomonic_circles_kwargs
                     )

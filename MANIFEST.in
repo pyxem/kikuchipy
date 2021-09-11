@@ -1,10 +1,11 @@
+include CHANGELOG.rst
 include kikuchipy/hyperspy_extension.yaml
 include LICENSE
 include MANIFEST.in
-include setup.cfg
 include README.md
-include RELEASE.rst
 include readthedocs.yml
+include RELEASE.rst
+include setup.cfg
 include setup.py
 
 recursive-include doc Makefile make.bat *.rst *.py *.ipynb *.bib
