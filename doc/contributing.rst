@@ -2,12 +2,17 @@
 Contributing
 ============
 
-kikuchipy is meant to be a community maintained project. We welcome contributions in the
-form of bug reports, documentation, code, feature requests, and more. These guidelines
-provide resources on how best to contribute.
+kikuchipy is a community maintained project. We welcome contributions in the form of bug
+reports, documentation, code, feature requests, and more. The source code is hosted on
+`GitHub <https://github.com/pyxem/kikuchipy>`_. These guidelines provide resources on
+how best to contribute.
 
-For new users, checking out the `GitHub guides <https://guides.github.com>`_ are
-recommended.
+.. tip::
+
+    This guide can look intimidating to people who want to contribute, but have limited
+    experience with tools like ``git``, ``pytest``, and ``sphinx``. The shortest route
+    to start contributing is to create a GitHub account and explain what you want to do
+    `in an issue <https://github.com/pyxem/kikuchipy/issues/new>`_.
 
 This project follows the `all-contributors
 <https://github.com/all-contributors/all-contributors>`_ specification.
@@ -15,12 +20,12 @@ This project follows the `all-contributors
 Questions, comments, and feedback
 =================================
 
-Have any questions, comments, suggestions for improvements, or any other inquiries
+Have a question, comment, suggestion for improvements, or any other inquiries
 regarding the project? Feel free to `ask a question
 <https://github.com/pyxem/kikuchipy/discussions>`_, `open an issue
 <https://github.com/pyxem/kikuchipy/issues>`_ or `make a pull request
-<https://github.com/pyxem/kikuchipy/pulls>`_ in our GitHub
-repository. We also have a `Gitter chat <https://gitter.im/pyxem/kikuchipy>`_.
+<https://github.com/pyxem/kikuchipy/pulls>`_ in our GitHub repository. We also have a
+`Gitter chat <https://gitter.im/pyxem/kikuchipy>`_.
 
 Code of Conduct
 ===============
@@ -39,24 +44,24 @@ kikuchipy.
 
 Make a local copy of your forked repository and change directories::
 
-    $ git clone https://github.com/your-username/kikuchipy.git
-    $ cd kikuchipy
+    git clone https://github.com/your-username/kikuchipy.git
+    cd kikuchipy
 
 Set the ``upstream`` remote to the main kikuchipy repository::
 
-    $ git remote add upstream https://github.com/pyxem/kikuchipy.git
+    git remote add upstream https://github.com/pyxem/kikuchipy.git
 
 We recommend installing in a `conda environment
 <https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`_
 with the `Miniconda distribution <https://docs.conda.io/en/latest/miniconda.html>`_::
 
-   $ conda create --name kp-dev
-   $ conda activate kp-dev
+    conda create --name kp-dev
+    conda activate kp-dev
 
 Then, install the required dependencies while making the development version available
 globally (in the ``conda`` environment)::
 
-   $ pip install --editable .[dev]
+    pip install --editable .[dev]
 
 This installs all necessary development dependencies, including those for running tests
 and building documentation.
@@ -70,7 +75,7 @@ Code <https://www.python.org/dev/peps/pep-0008/>`_ with `The Black Code style
 use `pre-commit <https://pre-commit.com>`_ to run ``black`` automatically prior to each
 local commit. Please install it in your environment::
 
-    $ pre-commit install
+    pre-commit install
 
 Next time you commit some code, your code will be formatted inplace according to
 ``black``.
@@ -93,16 +98,16 @@ want to fix a bug, branch off of ``main`` instead.
 
 To create a new feature branch that tracks the upstream development branch::
 
-    $ git checkout develop -b your-awesome-feature-name upstream/develop
+    git checkout develop -b your-awesome-feature-name upstream/develop
 
 When you've made some changes you can view them with::
 
-    $ git status
+    git status
 
 Add and commit your created, modified or deleted files::
 
-   $ git add my-file-or-directory
-   $ git commit -s -m "An explanatory commit message"
+    git add my-file-or-directory
+    git commit -s -m "An explanatory commit message"
 
 The ``-s`` makes sure that you sign your commit with your `GitHub-registered email
 <https://github.com/settings/emails>`_ as the author. You can set this up following
@@ -117,23 +122,23 @@ branch. If you are fixing a bug, merge ``main`` into your bug fix branch instead
 
 To update a feature branch, switch to the ``develop`` branch::
 
-   $ git checkout develop
+    git checkout develop
 
 Fetch changes from the upstream branch and update ``develop``::
 
-   $ git pull upstream develop --tags
+    git pull upstream develop --tags
 
 Update your feature branch::
 
-   $ git checkout your-awesome-feature-name
-   $ git merge develop
+    git checkout your-awesome-feature-name
+    git merge develop
 
 Sharing your changes
 ====================
 
 Update your remote branch::
 
-   $ git push -u origin your-awesome-feature-name
+    git push -u origin your-awesome-feature-name
 
 You can then make a `pull request
 <https://guides.github.com/activities/forking/#making-a-pull-request>`_ to kikuchipy's
@@ -145,12 +150,12 @@ Building and writing documentation
 We use `Sphinx <https://www.sphinx-doc.org/en/master/>`_ for documenting functionality.
 Install necessary dependencies to build the documentation::
 
-   $ pip install --editable .[doc]
+    pip install --editable .[doc]
 
 Then, build the documentation from the ``doc`` directory::
 
-   $ cd doc
-   $ make html
+    cd doc
+    make html
 
 The documentation's HTML pages are built in the ``doc/build/html`` directory from files
 in the `reStructuredText (reST)
@@ -200,7 +205,7 @@ framework. The tests reside in a ``test`` directory within each module. Tests ar
 methods that call functions in kikuchipy and compare resulting output values with known
 answers. Install necessary dependencies to run the tests::
 
-   $ pip install --editable .[tests]
+    pip install --editable .[tests]
 
 Some useful `fixtures <https://docs.pytest.org/en/latest/fixture.html>`_, like a dummy
 scan and corresponding background pattern, are available in the ``conftest.py`` file.
@@ -214,20 +219,20 @@ scan and corresponding background pattern, are available in the ``conftest.py`` 
 
 To run the tests::
 
-   $ pytest --cov --pyargs kikuchipy
+    pytest --cov --pyargs kikuchipy
 
 The ``--cov`` flag makes `coverage.py <https://coverage.readthedocs.io/en/latest/>`_
 print a nice report in the terminal. For an even nicer presentation, you can use
 ``coverage.py`` directly::
 
-   $ coverage html
+    coverage html
 
 Then, you can open the created ``htmlcov/index.html`` in the browser and inspect the
 coverage in more detail.
 
 To run only a specific test function or class, .e.g the ``TestEBSD`` class::
 
-    $ pytest -k TestEBSD
+    pytest -k TestEBSD
 
 This is useful when you only want to run a specific test and not the full test suite,
 e.g. when you're creating or updating a test. But remember to run the full test suite
@@ -236,7 +241,7 @@ before pushing!
 Docstring examples are tested `with pytest
 <https://docs.pytest.org/en/stable/doctest.html>`_ as well::
 
-   $ pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
+    pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
 
 Adding data to the data module
 ==============================
