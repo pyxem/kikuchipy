@@ -593,16 +593,14 @@ class EBSDDetector:
             )
 
     def _pc_emsoft2bruker(self, version: int = 5) -> np.ndarray:
-        ncols = self.ncols * self.binning
-        nrows = self.nrows * self.binning
         new_pc = np.zeros_like(self.pc)
         if version >= 5:
             pcx = -self.pcx
         else:
             pcx = self.pcx
-        new_pc[..., 0] = 0.5 + pcx / ncols
-        new_pc[..., 1] = 0.5 - self.pcy / nrows
-        new_pc[..., 2] = self.pcz / (nrows * self.px_size)
+        new_pc[..., 0] = 0.5 + pcx / self.ncols
+        new_pc[..., 1] = 0.5 - self.pcy / self.nrows
+        new_pc[..., 2] = self.pcz / (self.nrows * self.px_size_binned)
         return new_pc
 
     def _pc_tsl2bruker(self) -> np.ndarray:
@@ -613,13 +611,11 @@ class EBSDDetector:
 
     def _pc_bruker2emsoft(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc)
-        ncols = self.ncols / self.binning
-        nrows = self.nrows / self.binning
-        new_pc[..., 0] = ncols * (self.pcx - 0.5)
+        new_pc[..., 0] = self.ncols * (self.pcx - 0.5)
         if version >= 5:
             new_pc[..., 0] = -new_pc[..., 0]
-        new_pc[..., 1] = nrows * (0.5 - self.pcy)
-        new_pc[..., 2] = nrows * self.px_size_binned * self.pcz
+        new_pc[..., 1] = self.nrows * (0.5 - self.pcy)
+        new_pc[..., 2] = self.nrows * self.px_size_binned * self.pcz
         return new_pc
 
     def _pc_bruker2tsl(self) -> np.ndarray:
