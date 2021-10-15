@@ -167,7 +167,7 @@ class TestProjectingPatternsFromLambert:
         shape=(480, 640),
         px_size=50,
         pc=(20, 20, 15000),
-        convention="emsoft4",
+        convention="emsoft5",
         tilt=10,
         sample_tilt=70,
     )
@@ -203,11 +203,11 @@ class TestProjectingPatternsFromLambert:
         assert kp_pat.dtype == emsoft_key.dtype
 
         ncc = NormalizedCrossCorrelationMetric(1, 1)
-        ncc1 = ncc(kp_pat, emsoft_key)
+        ncc1 = ncc(kp_pat, emsoft_key).compute()[0][0]
         assert ncc1 >= 0.935
 
         ndp = NormalizedDotProductMetric(1, 1)
-        ndp1 = ndp(kp_pat, emsoft_key)
+        ndp1 = ndp(kp_pat, emsoft_key).compute()[0][0]
         assert ndp1 >= 0.935
 
         detector_shape = self.detector.shape
@@ -317,7 +317,14 @@ class TestProjectingPatternsFromLambert:
         """Test that setting an azimuthal angle of a detector results in
         different patterns.
         """
-        det1 = self.detector
+        det1 = kp.detectors.EBSDDetector(
+            shape=(480, 640),
+            px_size=50,
+            pc=(20, 20, 15000),
+            convention="emsoft5",
+            tilt=10,
+            sample_tilt=70,
+        )
 
         # Looking from the detector toward the sample, the left part of
         # the detector is closer to the sample than the right part
