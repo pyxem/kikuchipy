@@ -455,11 +455,11 @@ class EBSDDetector:
 
             x_T^* &= x_B^*,\\
             y_T^* &= 1 - \frac{N_y}{N_x} y_B^*,\\
-            z_T^* &= \frac{N_y}{N_x} z_T^*,
+            z_T^* &= \frac{N_y}{N_x} z_B^*,
 
         where $N_x$ and $N_y$ are number of detector columns and rows,
         $(x_B^*, y_B^*, z_B^*)$ are the Bruker PC coordinates, and
-        $(x_B^*, y_B^*, z_B^*)$ are the returned EDAX TSL PC
+        $(x_T^*, y_T^*, z_T^*)$ are the returned EDAX TSL PC
         coordinates.
         """
         return self._pc_bruker2tsl()
