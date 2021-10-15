@@ -317,14 +317,7 @@ class TestProjectingPatternsFromLambert:
         """Test that setting an azimuthal angle of a detector results in
         different patterns.
         """
-        det1 = kp.detectors.EBSDDetector(
-            shape=(480, 640),
-            px_size=50,
-            pc=(20, 20, 15000),
-            convention="emsoft5",
-            tilt=10,
-            sample_tilt=70,
-        )
+        det1 = self.detector
 
         # Looking from the detector toward the sample, the left part of
         # the detector is closer to the sample than the right part
