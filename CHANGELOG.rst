@@ -12,6 +12,20 @@ best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 Contributors to each release are listed in alphabetical order by first name. List
 entries are sorted in descending chronological order.
 
+0.5.3 (2021-10-17)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Fixed
+-----
+- Handling of projection centers (PCs): EMsoft's xpc is flipped between v4 and v5.
+  Correct conversion from/to EMsoft's convention requires binning factor *and* detector
+  pixel size. Conversion between TSL/Oxford and Bruker conventions correctly uses
+  detector aspect ratio. (`#455 <https://github.com/pyxem/kikuchipy/pull/455>`_)
+
 0.5.2 (2021-09-11)
 ==================
 
