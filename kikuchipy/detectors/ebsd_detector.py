@@ -125,7 +125,7 @@ class EBSDDetector:
 
         .. math::
 
-            x_B^* &= \frac{1}{2} + \frac{x_{pc}}{N_x b},\\
+            x_B^* &= \frac{1}{2} - \frac{x_{pc}}{N_x b},\\
             y_B^* &= \frac{1}{2} - \frac{y_{pc}}{N_y b},\\
             z_B^* &= \frac{L}{N_y b \delta},
 
@@ -424,7 +424,7 @@ class EBSDDetector:
 
         .. math::
 
-            x_{pc} &= N_x b (x_B^* - 1/2),\\
+            x_{pc} &= N_x b (1/2 - x_B^*),\\
             y_{pc} &= N_y b \left(\frac{1}{2} - y_B^*\right),\\
             L &= N_y b \delta z_B^*,
 
@@ -454,7 +454,7 @@ class EBSDDetector:
         .. math::
 
             x_T^* &= x_B^*,\\
-            y_T^* &= 1 - \frac{N_y}{N_x} y_B^*,\\
+            y_T^* &= frac{N_y}{N_x} ( 1 - y_B^*),\\
             z_T^* &= \frac{N_y}{N_x} z_B^*,
 
         where $N_x$ and $N_y$ are number of detector columns and rows,
