@@ -454,7 +454,7 @@ class EBSDDetector:
         .. math::
 
             x_T^* &= x_B^*,\\
-            y_T^* &= \frac{N_y}{N_x} ( 1 - y_B^*),\\
+            y_T^* &= \frac{N_y}{N_x} (1 - y_B^*),\\
             z_T^* &= \frac{N_y}{N_x} z_B^*,
 
         where $N_x$ and $N_y$ are number of detector columns and rows,
