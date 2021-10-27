@@ -21,7 +21,7 @@ Contributors
 
 Fixed
 -----
-- Handling of projection centers (PCs): EMsoft's xpc is flipped between v4 and v5.
+- Handling of projection centers (PCs): 
   Correct conversion from/to EMsoft's convention requires binning factor *and* detector
   pixel size. Conversion between TSL/Oxford and Bruker conventions correctly uses
   detector aspect ratio. (`#455 <https://github.com/pyxem/kikuchipy/pull/455>`_)
