@@ -125,7 +125,7 @@ class EBSDDetector:
 
         .. math::
 
-            x_B^* &= \frac{1}{2} + \frac{x_{pc}}{N_x b},\\
+            x_B^* &= \frac{1}{2} - \frac{x_{pc}}{N_x b},\\
             y_B^* &= \frac{1}{2} - \frac{y_{pc}}{N_y b},\\
             z_B^* &= \frac{L}{N_y b \delta},
 
@@ -424,7 +424,7 @@ class EBSDDetector:
 
         .. math::
 
-            x_{pc} &= N_x b (x_B^* - 1/2),\\
+            x_{pc} &= N_x b \left(\frac{1}{2} - x_B^*\right),\\
             y_{pc} &= N_y b \left(\frac{1}{2} - y_B^*\right),\\
             L &= N_y b \delta z_B^*,
 
@@ -454,7 +454,7 @@ class EBSDDetector:
         .. math::
 
             x_T^* &= x_B^*,\\
-            y_T^* &= 1 - \frac{N_y}{N_x} y_B^*,\\
+            y_T^* &= \frac{N_y}{N_x} (1 - y_B^*),\\
             z_T^* &= \frac{N_y}{N_x} z_B^*,
 
         where $N_x$ and $N_y$ are number of detector columns and rows,
@@ -670,7 +670,7 @@ class EBSDDetector:
         pcx = self.pcx
         if version < 5:
             pcx = -pcx
-        new_pc[..., 0] = 0.5 + (pcx / (self.ncols * self.binning))
+        new_pc[..., 0] = 0.5 - (pcx / (self.ncols * self.binning))
         new_pc[..., 1] = 0.5 - (self.pcy / (self.nrows * self.binning))
         new_pc[..., 2] = self.pcz / (self.nrows * self.binning * self.px_size)
         return new_pc
@@ -683,7 +683,7 @@ class EBSDDetector:
 
     def _pc_bruker2emsoft(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc, dtype=np.float32)
-        new_pc[..., 0] = (self.pcx - 0.5) * self.ncols * self.binning
+        new_pc[..., 0] = (0.5 - self.pcx) * self.ncols * self.binning
         if version < 5:
             new_pc[..., 0] = -new_pc[..., 0]
         new_pc[..., 1] = (0.5 - self.pcy) * self.nrows * self.binning

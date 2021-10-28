@@ -139,6 +139,7 @@ nbsphinx_prolog = (
 )
 # https://nbsphinx.readthedocs.io/en/0.8.0/never-execute.html
 nbsphinx_execute = "auto"  # always, auto, never
+nbsphinx_allow_errors = True
 nbsphinx_execute_arguments = [
     "--InlineBackend.rc=figure.facecolor='w'",
     "--InlineBackend.rc=font.size=15",
