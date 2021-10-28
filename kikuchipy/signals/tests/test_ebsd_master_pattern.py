@@ -167,7 +167,7 @@ class TestProjectingPatternsFromLambert:
         shape=(480, 640),
         px_size=50,
         pc=(20, 20, 15000),
-        convention="emsoft5",
+        convention="emsoft4",
         tilt=10,
         sample_tilt=70,
     )
