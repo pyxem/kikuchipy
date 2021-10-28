@@ -23,7 +23,7 @@ Contributors
 Added
 -----
 - Restricted newest version of h5py<=3.4 due to issue with IO function imported from
-  HyperSpy. (`#360 <https://github.com/pyxem/kikuchipy/pull/455>`_)
+  HyperSpy. (`#455 <https://github.com/pyxem/kikuchipy/pull/455>`_)
 
 Fixed
 -----
