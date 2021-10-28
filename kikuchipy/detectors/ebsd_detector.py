@@ -50,11 +50,8 @@ class EBSDDetector:
         pc: Union[np.ndarray, list, tuple] = (0.5, 0.5, 0.5),
         convention: Optional[str] = None,
     ):
-        """Create an EBSD detector with a shape, pixel size, binning,
+        r"""Create an EBSD detector with a shape, pixel size, binning,
         and projection/pattern center(s) (PC(s)).
-
-        PC conversions are calculated as presented in
-        :cite:`jackson2019dictionary`.
 
         Parameters
         ----------
@@ -78,17 +75,62 @@ class EBSDDetector:
         pc
             X, Y and Z coordinates of the projection/pattern centers
             (PCs), describing the location of the beam on the sample
-            measured relative to the detection screen. X and Y are
-            measured from the detector left and top, respectively, while
-            Z is the distance from the sample to the detection screen
-            divided by the detector height. If multiple PCs are passed,
-            they are assumed to be on the form [[x0, y0, z0],
-            [x1, y1, z1], ...]. Default is [[0.5, 0.5, 0.5]].
+            measured relative to the detection screen. See *Notes* for
+            the definition and conversions between conventions. If
+            multiple PCs are passed, they are assumed to be on the form
+            [[x0, y0, z0], [x1, y1, z1], ...]. Default is
+            [[0.5, 0.5, 0.5]].
         convention
             PC convention. If None (default), Bruker's convention is
             assumed. Options are "tsl", "oxford", "bruker", "emsoft",
             "emsoft4", and "emsoft5". "emsoft" and "emsoft5" is the same
-            convention.
+            convention. See *Notes*  for conversions between
+            conventions.
+
+        Notes
+        -----
+        The pattern on the detector is always viewed *from* the detector
+        *towards*  the sample. Pattern width and height is here given as
+        $N_x$ and $N_y$ (possibly binned).
+
+        The Bruker PC coordinates $(x_B^*, y_B^*, z_B^*)$ are defined in
+        fractions of $N_x$, $N_y$, and $N_y$, respectively, with $x_B^*$
+        and $y_B^*$ defined with respect to the upper left corner of the
+        detector. These coordinates are used internally, called
+        ($PC_x, PC_y, PC_z$) in the rest of the documentation when there
+        is no reference to Bruker specifically.
+
+        The EDAX TSL PC coordinates $(x_T^*, y_T^*, z_T^*)$ and Oxford
+        Instruments PC coordinates $(x_O^*, y_O^*, z_O^*)$ are identical
+        and defined in fractions of $N_x$ with respect to the lower left
+        corner of the detector.
+
+        The EMsoft PC coordinates $(x_{pc}, y_{pc})$ are defined as
+        number of pixels (subpixel accuracy) with resepct to the center
+        of the detector, with $x_{pc}$ towards the right and $y_{pc}$
+        upwards. The final PC coordinate $L$ is the detector distance in
+        microns. Note that before EMsoft v5.0, $x_{pc}$ was defined
+        towards the left.
+
+        Given these definitions, the following is the conversion from
+        TSL/Oxford to Bruker
+
+        .. math::
+
+            x_B^* &= x_T^*,\\
+            y_B^* &= 1 - \frac{N_x}{N_y} y_T^*,\\
+            z_B^* &= \frac{N_x}{N_y} z_T^*.
+
+        The conversion from EMsoft to Bruker is given as
+
+        .. math::
+
+            x_B^* &= \frac{1}{2} - \frac{x_{pc}}{N_x b},\\
+            y_B^* &= \frac{1}{2} - \frac{y_{pc}}{N_y b},\\
+            z_B^* &= \frac{L}{N_y b \delta},
+
+        where :math:`\delta` is the unbinned detector pixel size in
+        microns, and $b$ is the binning factor.
 
         Examples
         --------
@@ -363,42 +405,72 @@ class EBSDDetector:
         return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
 
     def pc_emsoft(self, version: int = 5) -> np.ndarray:
-        """Return PC in the EMsoft convention.
-
-        PC conversions are calculated as presented in
-        :cite:`jackson2019dictionary`.
+        r"""Return PC in the EMsoft convention.
 
         Parameters
         ----------
         version
             Which EMsoft PC convention to use. The direction of the x PC
-            coordinate, `xpc`, flipped in version 5, because from then
-            on the EBSD patterns were viewed looking from detector to
-            sample, not the other way around.
+            coordinate, $x_{pc}$, flipped in version 5, because from
+            then on the EBSD patterns were viewed looking from detector
+            to sample, not the other way around.
+
+        Notes
+        -----
+        The PC coordinate conventions of Bruker, EDAX TSL, Oxford
+        Instruments and EMsoft are explained in :meth:`__init__`.
+        The PC is stored in the Bruker convention internally, so the
+        conversion is
+
+        .. math::
+
+            x_{pc} &= N_x b \left(\frac{1}{2} - x_B^*\right),\\
+            y_{pc} &= N_y b \left(\frac{1}{2} - y_B^*\right),\\
+            L &= N_y b \delta z_B^*,
+
+        where $N_x$ and $N_y$ are number of detector columns and rows,
+        $b$ is binning, :math:`\delta` is the unbinned pixel size,
+        $(x_B^*, y_B^*, z_B^*)$ are the Bruker PC coordinates, and
+        $(x_{pc}, y_{pc}, L)$ are the returned EMsoft PC coordinates.
         """
         return self._pc_bruker2emsoft(version=version)
 
     def pc_bruker(self) -> np.ndarray:
-        """Return PC in the Bruker convention.
-
-        PC conversions are calculated as presented in
-        :cite:`jackson2019dictionary`..
+        """Return PC in the Bruker convention, defined in
+        :meth:`__init__`.
         """
         return self.pc
 
     def pc_tsl(self) -> np.ndarray:
-        """Return PC in the EDAX TSL convention.
+        r"""Return PC in the EDAX TSL convention.
 
-        PC conversions are calculated as presented in
-        :cite:`jackson2019dictionary`..
+        Notes
+        -----
+        The PC coordinate conventions of Bruker, EDAX TSL, Oxford
+        Instruments and EMsoft are explained in :meth:`__init__`.
+        The PC is stored in the Bruker convention internally, so the
+        conversion is
+
+        .. math::
+
+            x_T^* &= x_B^*,\\
+            y_T^* &= \frac{N_y}{N_x} (1 - y_B^*),\\
+            z_T^* &= \frac{N_y}{N_x} z_B^*,
+
+        where $N_x$ and $N_y$ are number of detector columns and rows,
+        $(x_B^*, y_B^*, z_B^*)$ are the Bruker PC coordinates, and
+        $(x_T^*, y_T^*, z_T^*)$ are the returned EDAX TSL PC
+        coordinates.
         """
         return self._pc_bruker2tsl()
 
     def pc_oxford(self) -> np.ndarray:
         """Return PC in the Oxford convention.
 
-        PC conversions are calculated as presented in
-        :cite:`jackson2019dictionary`.
+        Notes
+        -----
+        The Oxford PC coordinates are identical to the TSL coordinates,
+        see :meth:`pc_tsl`.
         """
         return self._pc_bruker2tsl()
 
@@ -431,7 +503,8 @@ class EBSDDetector:
             Which coordinates to use, "detector" or "gnomonic". If None
             (default), "detector" is used.
         show_pc
-            Show the average projection center. Default is True.
+            Show the average projection center in the Bruker convention.
+            Default is True.
         pc_kwargs
             A dictionary of keyword arguments passed to
             :meth:`matplotlib.axes.Axes.scatter`.
@@ -594,29 +667,31 @@ class EBSDDetector:
 
     def _pc_emsoft2bruker(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc, dtype=np.float32)
-        if version == 5:
-            new_pc[..., 0] = 0.5 + (-self.pcx / (self.ncols * self.binning))
-        else:
-            new_pc[..., 0] = 0.5 + (self.pcx / (self.ncols * self.binning))
+        pcx = self.pcx
+        if version < 5:
+            pcx = -pcx
+        new_pc[..., 0] = 0.5 - (pcx / (self.ncols * self.binning))
         new_pc[..., 1] = 0.5 - (self.pcy / (self.nrows * self.binning))
-        new_pc[..., 2] = self.pcz / (self.nrows * self.px_size * self.binning)
+        new_pc[..., 2] = self.pcz / (self.nrows * self.binning * self.px_size)
         return new_pc
 
     def _pc_tsl2bruker(self) -> np.ndarray:
         new_pc = deepcopy(self.pc)
-        new_pc[..., 1] = 1 - self.pcy
+        new_pc[..., 1] = 1 - (self.pcy / self.aspect_ratio)
+        new_pc[..., 2] = new_pc[..., 2] / self.aspect_ratio
         return new_pc
 
     def _pc_bruker2emsoft(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc, dtype=np.float32)
-        new_pc[..., 0] = self.ncols * (self.pcx - 0.5)
-        if version == 5:
+        new_pc[..., 0] = (0.5 - self.pcx) * self.ncols * self.binning
+        if version < 5:
             new_pc[..., 0] = -new_pc[..., 0]
-        new_pc[..., 1] = self.nrows * (0.5 - self.pcy)
-        new_pc[..., 2] = self.nrows * self.px_size * self.pcz
-        return new_pc * self.binning
+        new_pc[..., 1] = (0.5 - self.pcy) * self.nrows * self.binning
+        new_pc[..., 2] = self.pcz * self.nrows * self.binning * self.px_size
+        return new_pc
 
     def _pc_bruker2tsl(self) -> np.ndarray:
         new_pc = deepcopy(self.pc)
-        new_pc[..., 1] = 1 - self.pcy
+        new_pc[..., 1] = (1 - self.pcy) * self.aspect_ratio
+        new_pc[..., 2] = new_pc[..., 2] * self.aspect_ratio
         return new_pc

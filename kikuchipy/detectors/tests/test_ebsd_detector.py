@@ -214,7 +214,7 @@ class TestEBSDDetector:
                 59.2,
                 8,
                 4,
-                [0.50726, 0.26208, 0.55849],
+                [0.50726, 0.26208, 0.55488809122],
             ),
             (
                 (60, 60),
@@ -222,15 +222,15 @@ class TestEBSDDetector:
                 59.2,
                 8,
                 5,
-                [0.50726, 0.26208, 0.55849],
+                [0.50726, 0.26208, 0.55489],
             ),
             (
                 (61, 61),
-                [-10.632, 145.5187, 19918.9],
+                [-10.6320, 145.5187, 19918.9],
                 59.2,
                 8,
-                4,
-                [0.47821, 0.20181, 0.68948],
+                5,
+                [0.52178688525, 0.20180594262, 0.68948341272],
             ),
             (
                 (61, 61),
@@ -245,16 +245,16 @@ class TestEBSDDetector:
                 [-0.55, -13.00, 16075.2],
                 50,
                 6,
-                4,
-                [0.4991, 0.5271, 0.6698],
+                5,
+                [0.50153, 0.52708, 0.66980],
             ),
             (
                 (80, 60),
                 [0.55, -13.00, 16075.2],
                 50,
                 6,
-                5,
-                [0.4991, 0.5271, 0.6698],
+                4,
+                [0.50153, 0.52708, 0.66980],
             ),
             ((480, 640), [0, 0, 15000], 50, 1, 5, [0.5, 0.5, 0.625]),
         ],
@@ -271,45 +271,52 @@ class TestEBSDDetector:
             convention=f"emsoft{version}",
         )
 
-        assert np.allclose(det.pc, desired_pc, atol=1e-2)
-        assert np.allclose(det.pc_emsoft(version=version), pc, atol=1e-2)
-        assert np.allclose(det.pc_bruker(), desired_pc, atol=1e-2)
+        assert np.allclose(det.pc, desired_pc, atol=1e-5)
+        assert np.allclose(det.pc_emsoft(version=version), pc, atol=1e-5)
+        assert np.allclose(det.pc_bruker(), desired_pc, atol=1e-5)
 
         pc_tsl = deepcopy(det.pc)
         pc_tsl[..., 1] = 1 - pc_tsl[..., 1]
-        assert np.allclose(det.pc_tsl(), pc_tsl, atol=1e-2)
-        assert np.allclose(det.pc_oxford(), pc_tsl, atol=1e-2)
+        pc_tsl[..., 1:] *= det.aspect_ratio
+        assert np.allclose(det.pc_tsl(), pc_tsl, atol=1e-5)
+        assert np.allclose(det.pc_oxford(), pc_tsl, atol=1e-5)
 
     def test_set_pc_from_emsoft_no_version(self):
         """PC EMsoft -> Bruker, no EMsoft version specified gives v5."""
         assert np.allclose(
             kp.detectors.EBSDDetector(
                 shape=(60, 60),
-                pc=[-3.4848, 114.2016, 15767.7],
+                pc=[3.4848, 114.2016, 15767.7],
                 px_size=59.2,
                 binning=8,
                 convention="emsoft",
             ).pc,
-            [0.50726, 0.26208, 0.55849],
-            atol=1e-2,
+            [0.49274, 0.26208, 0.55489],
+            atol=1e-5,
         )
 
     @pytest.mark.parametrize(
-        "pc, convention, desired_pc",
+        "shape, pc, convention, desired_pc",
         [
-            ([0.35, 1, 0.65], "tsl", [0.35, 0, 0.65]),
-            ([0.25, 0, 0.75], "oxford", [0.25, 1, 0.75]),
-            ([0.1, 0.2, 0.3], "amatek", [0.1, 0.8, 0.3]),
-            ([0.6, 0.6, 0.6], "edax", [0.6, 0.4, 0.6]),
+            ((60, 60), [0.35, 1, 0.65], "tsl", [0.35, 0, 0.65]),
+            ((60, 80), [0.35, 1, 0.65], "tsl", [0.35, -0.33, 0.87]),
+            ((60, 60), [0.25, 0, 0.75], "oxford", [0.25, 1, 0.75]),
+            ((60, 80), [0.25, 0, 0.75], "oxford", [0.25, 1, 1]),
+            ((60, 60), [0.1, 0.2, 0.3], "amatek", [0.1, 0.8, 0.3]),
+            ((60, 80), [0.1, 0.2, 0.3], "amatek", [0.1, 0.73, 0.4]),
+            ((60, 60), [0.6, 0.6, 0.6], "edax", [0.6, 0.4, 0.6]),
+            ((60, 80), [0.6, 0.6, 0.6], "edax", [0.6, 0.2, 0.8]),
         ],
     )
-    def test_set_pc_from_tsl_oxford(self, pc, convention, desired_pc):
+    def test_set_pc_from_tsl_oxford(self, shape, pc, convention, desired_pc):
         """PC TSL -> Bruker -> TSL."""
-        det = kp.detectors.EBSDDetector(pc=pc, convention=convention)
-        assert np.allclose(det.pc, desired_pc)
-        assert np.allclose(det.pc_tsl(), pc)
+        det = kp.detectors.EBSDDetector(shape=shape, pc=pc, convention=convention)
+        assert np.allclose(det.pc, desired_pc, atol=1e-2)
+        assert np.allclose(det.pc_tsl(), pc, atol=1e-3)
         assert np.allclose(
-            kp.detectors.EBSDDetector(pc=det.pc_tsl(), convention="tsl").pc_tsl(), pc
+            kp.detectors.EBSDDetector(pc=det.pc_tsl(), convention="tsl").pc_tsl(),
+            pc,
+            atol=1e-2,
         )
 
     @pytest.mark.parametrize(

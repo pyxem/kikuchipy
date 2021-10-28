@@ -122,8 +122,9 @@ setup(
     install_requires=[
         "dask[array]        >= 2021.8.1",
         "diffsims           >= 0.4",
+        # TODO: Bump to 1.6.5 and unpin h5py <= 3.4 when 1.6.5 is out
         "hyperspy           >= 1.6.4",
-        "h5py               >= 2.10",
+        "h5py               >= 2.10, <= 3.4",
         "matplotlib         >= 3.3",
         "numpy              >= 1.19",
         "numba              >= 0.48",
