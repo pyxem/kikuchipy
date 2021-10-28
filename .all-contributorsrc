@@ -67,6 +67,18 @@
         "code",
         "maintenance"
       ]
+    },
+    {
+      "login": "IMBalENce",
+      "name": "Zhou Xu",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2986794?v=4",
+      "profile": "https://github.com/IMBalENce",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "test"
+      ]
     }
   ]
 }
