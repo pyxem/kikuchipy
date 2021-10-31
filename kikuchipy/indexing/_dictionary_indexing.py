@@ -20,6 +20,7 @@
 dictionary of simulated patterns with known orientations.
 """
 
+from time import time
 from typing import ClassVar, Tuple, Union
 
 import dask.array as da
@@ -79,6 +80,7 @@ def _dictionary_indexing(
         )
     )
 
+    time_start = time()
     if dictionary_size == n_per_iteration:
         simulation_indices, scores = _match_chunk(
             experimental,
@@ -89,10 +91,10 @@ def _dictionary_indexing(
         with ProgressBar():
             simulation_indices, scores = da.compute(simulation_indices, scores)
     else:
-        simulation_indices = np.zeros((n_experimental, keep_n), dtype=np.int32)
-        scores = np.full((n_experimental, keep_n), -metric.sign, dtype=metric.dtype)
-
         negative_sign = -metric.sign
+
+        simulation_indices = np.zeros((n_experimental, keep_n), dtype=np.int32)
+        scores = np.full((n_experimental, keep_n), negative_sign, dtype=metric.dtype)
 
         lazy_dictionary = isinstance(dictionary, da.Array)
 
@@ -123,6 +125,14 @@ def _dictionary_indexing(
             simulation_indices = np.take_along_axis(
                 all_simulation_indices, best_indices, axis=1
             )
+
+    total_time = time() - time_start
+    patterns_per_second = n_experimental / total_time
+    comparisons_per_second = n_experimental * dictionary_size / total_time
+    print(
+        f"\tIndexing speed: {patterns_per_second:.5f} patterns/s, "
+        f"{int(np.round(comparisons_per_second))} comparisons/s"
+    )
 
     coordinate_arrays, _ = create_coordinate_arrays(
         shape=experimental_nav_shape, step_sizes=step_sizes
