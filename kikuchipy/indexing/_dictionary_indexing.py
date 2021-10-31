@@ -127,11 +127,11 @@ def _dictionary_indexing(
             )
 
     total_time = time() - time_start
-    patterns_per_second = n_experimental / total_time
-    comparisons_per_second = n_experimental * dictionary_size / total_time
+    patterns_per_second = int(np.ceil(n_experimental / total_time))
+    comparisons_per_second = int(np.ceil(n_experimental * dictionary_size / total_time))
     print(
-        f"\tIndexing speed: {patterns_per_second:.5f} patterns/s, "
-        f"{int(np.round(comparisons_per_second))} comparisons/s"
+        f"\tIndexing speed: {patterns_per_second} patterns/s, "
+        f"{comparisons_per_second} comparisons/s"
     )
 
     coordinate_arrays, _ = create_coordinate_arrays(
