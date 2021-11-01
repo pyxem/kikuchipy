@@ -22,8 +22,10 @@ Contributors
 
 Added
 -----
-- Restricted newest version of h5py<=3.4 due to issue with IO function imported from
-  HyperSpy. (`#455 <https://github.com/pyxem/kikuchipy/pull/455>`_)
+- Printing of indexing speed of dictionary indexing.
+  (`#461 <https://github.com/pyxem/kikuchipy/pull/461>`_)
+- Restricted newest version of hyperspy<=1.6.5 due to incompatibility with h5py>=3.5.
+  (`#461 <https://github.com/pyxem/kikuchipy/pull/461>`_)
 
 Fixed
 -----
