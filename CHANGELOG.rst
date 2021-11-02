@@ -12,7 +12,7 @@ best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 Contributors to each release are listed in alphabetical order by first name. List
 entries are sorted in descending chronological order.
 
-0.5.3 (2021-11-01)
+0.5.3 (2021-11-02)
 ==================
 
 Contributors
@@ -22,8 +22,10 @@ Contributors
 
 Added
 -----
-- Restricted newest version of h5py<=3.4 due to issue with IO function imported from
-  HyperSpy. (`#455 <https://github.com/pyxem/kikuchipy/pull/455>`_)
+- Printing of speed (patterns per second) of dictionary indexing and refinement.
+  (`#461 <https://github.com/pyxem/kikuchipy/pull/461>`_)
+- Restricted newest version of hyperspy<=1.6.5 due to incompatibility with h5py>=3.5.
+  (`#461 <https://github.com/pyxem/kikuchipy/pull/461>`_)
 
 Fixed
 -----
