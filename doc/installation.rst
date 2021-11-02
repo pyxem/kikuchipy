@@ -20,23 +20,23 @@ with the `Miniconda distribution <https://docs.conda.io/en/latest/miniconda.html
 the Anaconda Prompt, terminal, or Command Prompt, create an environment and activate
 it::
 
-   $ conda create --name kp-env python=3.9
-   $ conda activate kp-env
+   conda create --name kp-env python=3.9
+   conda activate kp-env
 
 If you prefer a graphical interface to manage packages and environments, you can install
 the `Anaconda distribution <https://docs.continuum.io/anaconda>`_ instead.
 
 Installing::
 
-    $ conda install kikuchipy --channel conda-forge
+    conda install kikuchipy --channel conda-forge
 
 To update kikuchipy to the latest release::
 
-    $ conda update kikuchipy
+    conda update kikuchipy
 
 To install a specific version of kikuchipy (say version 0.3.4)::
 
-    $ conda install kikuchipy==0.3.4
+    conda install kikuchipy==0.3.4
 
 .. _install-with-pip:
 
@@ -47,7 +47,7 @@ kikuchipy is listed in the `Python Package Index <https://pypi.org/project/kikuc
 (PyPI), and can therefore be installed with `pip <https://pip.pypa.io/en/stable>`_. To
 do so, run the following in the Anaconda Prompt, terminal or Command Prompt::
 
-    $ pip install kikuchipy
+    pip install kikuchipy
 
 .. note::
 
@@ -57,11 +57,11 @@ do so, run the following in the Anaconda Prompt, terminal or Command Prompt::
 
 To update kikuchipy to the latest release::
 
-    $ pip install --upgrade kikuchipy
+    pip install --upgrade kikuchipy
 
 To install a specific version of kikuchipy (say version 0.3.4)::
 
-    $ pip install kikuchipy==0.3.4
+    pip install kikuchipy==0.3.4
 
 .. _install-from-source:
 
@@ -88,9 +88,9 @@ From source
 To install kikuchipy from source, clone the repository from `GitHub
 <https://github.com/pyxem/kikuchipy>`_, and install with ``pip``::
 
-    $ git clone https://github.com/pyxem/kikuchipy.git
-    $ cd kikuchipy
-    $ pip install --editable .
+    git clone https://github.com/pyxem/kikuchipy.git
+    cd kikuchipy
+    pip install --editable .
 
 See the :ref:`contributing guidelines <setting-up-a-development-installation>` for how
 to set up a development installation and keep it up to date.
