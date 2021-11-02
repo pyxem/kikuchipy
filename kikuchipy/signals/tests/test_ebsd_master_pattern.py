@@ -203,11 +203,11 @@ class TestProjectingPatternsFromLambert:
         assert kp_pat.dtype == emsoft_key.dtype
 
         ncc = NormalizedCrossCorrelationMetric(1, 1)
-        ncc1 = ncc(kp_pat, emsoft_key)
+        ncc1 = ncc(kp_pat, emsoft_key).compute()[0][0]
         assert ncc1 >= 0.935
 
         ndp = NormalizedDotProductMetric(1, 1)
-        ndp1 = ndp(kp_pat, emsoft_key)
+        ndp1 = ndp(kp_pat, emsoft_key).compute()[0][0]
         assert ndp1 >= 0.935
 
         detector_shape = self.detector.shape

@@ -15,6 +15,28 @@ entries are sorted in descending chronological order.
 Unreleased
 ==========
 
+0.5.3 (2021-11-02)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+- Zhou Xu
+
+Added
+-----
+- Printing of speed (patterns per second) of dictionary indexing and refinement.
+  (`#461 <https://github.com/pyxem/kikuchipy/pull/461>`_)
+- Restricted newest version of hyperspy<=1.6.5 due to incompatibility with h5py>=3.5.
+  (`#461 <https://github.com/pyxem/kikuchipy/pull/461>`_)
+
+Fixed
+-----
+- Handling of projection centers (PCs): Correct conversion from/to EMsoft's convention
+  requires binning factor *and* detector pixel size. Conversion between TSL/Oxford and
+  Bruker conventions correctly uses detector aspect ratio.
+  (`#455 <https://github.com/pyxem/kikuchipy/pull/455>`_)
+
 0.5.2 (2021-09-11)
 ==================
 

@@ -122,7 +122,7 @@ setup(
     install_requires=[
         "dask[array]        >= 2021.8.1",
         "diffsims           >= 0.4",
-        "hyperspy           >= 1.6.4",
+        "hyperspy           >= 1.6.5",
         "h5py               >= 2.10",
         "matplotlib         >= 3.3",
         "numpy              >= 1.19",
