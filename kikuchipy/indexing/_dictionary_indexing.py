@@ -20,7 +20,7 @@
 dictionary of simulated patterns with known orientations.
 """
 
-from time import time
+from time import sleep, time
 from typing import ClassVar, Tuple, Union
 
 import dask.array as da
@@ -127,8 +127,13 @@ def _dictionary_indexing(
             )
 
     total_time = time() - time_start
-    patterns_per_second = int(np.ceil(n_experimental / total_time))
-    comparisons_per_second = int(np.ceil(n_experimental * dictionary_size / total_time))
+    patterns_per_second = int(np.floor(n_experimental / total_time))
+    comparisons_per_second = int(
+        np.floor(n_experimental * dictionary_size / total_time)
+    )
+    # Without this pause, a part of the red tqdm progressbar background
+    # is displayed below this print
+    sleep(0.1)
     print(
         f"\tIndexing speed: {patterns_per_second} patterns/s, "
         f"{comparisons_per_second} comparisons/s"

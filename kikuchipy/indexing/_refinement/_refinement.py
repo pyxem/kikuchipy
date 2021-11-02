@@ -23,6 +23,7 @@ patterns.
 
 import gc
 import sys
+from time import time
 from typing import Callable, Optional, Tuple, Union
 
 import dask
@@ -637,7 +638,11 @@ def compute_refine_orientation_results(results: list, xmap: CrystalMap, master_p
     n_patterns = len(results)
     with ProgressBar():
         print(f"Refining {n_patterns} orientation(s):", file=sys.stdout)
+        time_start = time()
         computed_results = dask.compute(*results)
+        total_time = time() - time_start
+        patterns_per_second = int(np.floor(n_patterns / total_time))
+        print(f"Refinement speed: {patterns_per_second} patterns/s")
         # (n, score, phi1, Phi, phi2)
         computed_results = np.array(computed_results)
         xmap_refined = CrystalMap(
@@ -680,7 +685,11 @@ def compute_refine_projection_center_results(results: list, detector, xmap: Crys
     nav_shape = xmap.shape
     with ProgressBar():
         print(f"Refining {n_patterns} projection center(s):", file=sys.stdout)
+        time_start = time()
         computed_results = dask.compute(*results)
+        total_time = time() - time_start
+        patterns_per_second = int(np.floor(n_patterns / total_time))
+        print(f"Refinement speed: {patterns_per_second} patterns/s")
         # (n, score, PCx, PCy, PCz)
         computed_results = np.array(computed_results)
         new_detector = detector.deepcopy()
@@ -728,7 +737,11 @@ def compute_refine_orientation_projection_center_results(
             f"Refining {n_patterns} orientation(s) and projection center(s):",
             file=sys.stdout,
         )
+        time_start = time()
         computed_results = dask.compute(*results)
+        total_time = time() - time_start
+        patterns_per_second = int(np.floor(n_patterns / total_time))
+        print(f"Refinement speed: {patterns_per_second} patterns/s")
         computed_results = np.array(computed_results)
         # (n, score, phi1, Phi, phi2, PCx, PCy, PCz)
         xmap_refined = CrystalMap(

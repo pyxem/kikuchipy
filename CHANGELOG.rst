@@ -22,7 +22,7 @@ Contributors
 
 Added
 -----
-- Printing of indexing speed of dictionary indexing.
+- Printing of speed (patterns per second) of dictionary indexing and refinement.
   (`#461 <https://github.com/pyxem/kikuchipy/pull/461>`_)
 - Restricted newest version of hyperspy<=1.6.5 due to incompatibility with h5py>=3.5.
   (`#461 <https://github.com/pyxem/kikuchipy/pull/461>`_)
