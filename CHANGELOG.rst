@@ -15,6 +15,11 @@ entries are sorted in descending chronological order.
 Unreleased
 ==========
 
+Fixed
+-----
+- Hopefully prevent EBSD refinement tests using random data to fail on Azure.
+  (`#465 <https://github.com/pyxem/kikuchipy/pull/465>`_)
+
 0.5.3 (2021-11-02)
 ==================
 
