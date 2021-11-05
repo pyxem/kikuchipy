@@ -63,7 +63,6 @@ METADATA = {
                     "grid_type": "square",
                     "sample_tilt": 70.0,
                     "scan_time": 148,
-                    "static_background": -1,
                     "xpc": -1.0,
                     "ypc": -1.0,
                     "zpc": -1.0,
@@ -229,7 +228,6 @@ AXES_MANAGER = {
         "navigate": False,
     },
 }
-# AXES_MANAGER = make_dicts_compatible_with_hyperspy_v1_7(AXES_MANAGER)
 
 
 @pytest.fixture()
@@ -274,10 +272,7 @@ class TestNORDIF:
         assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
 
         static_bg = imread(BG_FILE)
-        assert np.allclose(
-            s.metadata.Acquisition_instrument.SEM.Detector.EBSD.static_background,
-            static_bg,
-        )
+        assert np.allclose(s.static_background, static_bg)
 
     @pytest.mark.parametrize(
         "nav_shape, sig_shape",
@@ -322,9 +317,7 @@ class TestNORDIF:
         assert np.allclose(s.data, s_reload.data)
 
         # Add static background and change filename to make metadata equal
-        s_reload.metadata.Acquisition_instrument.SEM.Detector.EBSD.static_background = (
-            imread(BG_FILE)
-        )
+        s_reload.static_background = imread(BG_FILE)
         s_reload.metadata.General.original_filename = (
             s.metadata.General.original_filename
         )
@@ -339,6 +332,7 @@ class TestNORDIF:
     def test_load_save_lazy(self, save_path_nordif):
         s = load(PATTERN_FILE, lazy=True)
         assert isinstance(s.data, da.Array)
+        assert isinstance(s.static_background, np.ndarray)
         s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background pattern in directory
             s_reload = load(save_path_nordif, lazy=True, setting_file=SETTING_FILE)

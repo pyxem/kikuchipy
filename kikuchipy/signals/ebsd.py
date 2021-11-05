@@ -112,6 +112,7 @@ class EBSD(CommonImage, Signal2D):
                 px_size=self.axes_manager.signal_axes[0].scale,
             ),
         )
+        self._static_background = kwargs.pop("static_background", None)
         self._xmap = kwargs.pop("xmap", None)
 
         # Update metadata if object is initialised from numpy array
@@ -158,6 +159,15 @@ class EBSD(CommonImage, Signal2D):
             value, self.axes_manager.navigation_axes[::-1], raise_if_not=True
         ):
             self._xmap = value
+
+    @property
+    def static_background(self) -> Union[np.ndarray, da.Array]:
+        """The static background pattern."""
+        return self._static_background
+
+    @static_background.setter
+    def static_background(self, value: Union[np.ndarray, da.Array]):
+        self._static_background = value
 
     # ------------------------ Custom methods ------------------------ #
 
@@ -521,18 +531,15 @@ class EBSD(CommonImage, Signal2D):
 
         # Get background pattern
         if static_bg is None:
+            static_bg = self.static_background
             try:
-                md = self.metadata
-                ebsd_node = metadata_nodes("ebsd")
-                static_bg_in_metadata = md.get_item(ebsd_node + ".static_background")
-                if isinstance(static_bg_in_metadata, (da.Array, np.ndarray)):
-                    static_bg = da.asarray(static_bg_in_metadata, chunks="auto")
+                if isinstance(static_bg, (da.Array, np.ndarray)):
+                    static_bg = da.asarray(static_bg, chunks="auto")
                 else:
                     raise ValueError
             except (AttributeError, ValueError):
                 raise ValueError(
-                    "`static_bg` is not a valid NumPy or Dask array or could not be "
-                    "read from signal metadata"
+                    "`EBSD.static_background` is not a valid NumPy or Dask array"
                 )
         if dtype_out != static_bg.dtype:
             raise ValueError(
