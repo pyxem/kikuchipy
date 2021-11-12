@@ -1175,12 +1175,13 @@ class EBSD(CommonImage, Signal2D):
         refine_orientation_projection_center
         """
         self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
+        patterns = get_dask_array(signal=self, dtype=np.float32, chunk_bytes=1e6)
         return _refine_orientation(
             xmap=xmap,
             detector=detector,
             master_pattern=master_pattern,
             energy=energy,
-            patterns=self.data,
+            patterns=patterns,
             mask=mask,
             method=method,
             method_kwargs=method_kwargs,

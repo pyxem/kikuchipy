@@ -50,16 +50,6 @@ DEFAULT_TRUST_REGION_EULER_DEG = np.ones(3)
 DEFAULT_TRUST_REGION_PC = np.full(3, 0.05)
 
 
-# Note about use of dask.delayed
-# ------------------------------
-# Private refinement functions might call dask.delayed on a Dask array,
-# specifically the experimental patterns. This is discouraged in the
-# Dask documentation:
-# https://docs.dask.org/en/latest/delayed-best-practices.html#don-t-call-dask-delayed-on-other-dask-collections
-# However, since only one pattern is passed to dask.delayed at a time,
-# this might be OK.
-
-
 def _refine_setup(
     xmap: CrystalMap,
     detector,
@@ -158,29 +148,28 @@ def _refine_orientation(
         method_kwargs=method_kwargs,
     )
 
-    # Get rotations in the correct shape
+    # Get rotations in the correct shape into a Dask array, and expand
+    # the dimensions to fit the dimensions of the pattern array
     euler = rotations.to_euler()
     euler = euler.reshape(nav_shape + (3,))
+    euler = np.expand_dims(euler, axis=-1)
+    nav_chunks = patterns.chunksize[:-2]
+    euler = da.from_array(euler, chunks=nav_chunks + (-1, -1))
 
     if trust_region is None:
         trust_region = DEFAULT_TRUST_REGION_EULER_DEG
         solver_kwargs["trust_region_passed"] = False
     else:
         solver_kwargs["trust_region_passed"] = True
-    solver_kwargs["trust_region"] = dask.delayed(np.deg2rad(trust_region))
+    solver_kwargs["trust_region"] = np.deg2rad(trust_region)
 
     # Prepare parameters for the objective function which are constant
     # during optimization
-    solver_kwargs["fixed_parameters"] = dask.delayed(fixed_parameters)
+    solver_kwargs["fixed_parameters"] = fixed_parameters
 
     # Determine whether a new PC is used for every pattern
     new_pc = np.prod(detector.navigation_shape) != 1 and n_patterns > 1
 
-    # Delay data once
-    patterns = dask.delayed(patterns)
-    euler = dask.delayed(euler)
-
-    refined_parameters = []
     if new_pc:
         # Patterns have been indexed with varying PCs, so we
         # re-compute the direction cosines for every pattern during
@@ -188,38 +177,42 @@ def _refine_orientation(
         pcx = detector.pcx.astype(float).reshape(nav_shape)
         pcy = detector.pcy.astype(float).reshape(nav_shape)
         pcz = detector.pcz.astype(float).reshape(nav_shape)
-        pcx = dask.delayed(pcx)
-        pcy = dask.delayed(pcy)
-        pcz = dask.delayed(pcz)
-        for idx in np.ndindex(*nav_shape):
-            delayed_solution = dask.delayed(_refine_orientation_solver)(
-                pattern=patterns[idx],
-                rotation=euler[idx],
-                pcx=pcx[idx],
-                pcy=pcy[idx],
-                pcz=pcz[idx],
-                nrows=nrows,
-                ncols=ncols,
-                tilt=detector.tilt,
-                azimuthal=detector.azimuthal,
-                sample_tilt=detector.sample_tilt,
-                **solver_kwargs,
-            )
-            refined_parameters.append(delayed_solution)
+        pcx = da.from_array(pcx, chunks=nav_chunks)
+        pcy = da.from_array(pcy, chunks=nav_chunks)
+        pcz = da.from_array(pcz, chunks=nav_chunks)
+        output = da.map_blocks(
+            _refine_chunk,
+            patterns,
+            euler,
+            pcx,
+            pcy,
+            pcz,
+            nrows=nrows,
+            ncols=ncols,
+            tilt=detector.tilt,
+            azimuthal=detector.azimuthal,
+            sample_tilt=detector.sample_tilt,
+            solver_kwargs=solver_kwargs,
+            drop_axis=(2, 3),
+            new_axis=(2,),
+            dtype=float,
+        )
     else:
         # Patterns have been indexed with the same PC, so we use the
         # same direction cosines during refinement of all patterns
         dc = _get_direction_cosines_for_single_pc_from_detector(detector).reshape(
             (n_pixels, 3)
         )
-        for idx in np.ndindex(*nav_shape):
-            delayed_solution = dask.delayed(_refine_orientation_solver)(
-                pattern=patterns[idx],
-                rotation=euler[idx],
-                direction_cosines=dc,
-                **solver_kwargs,
-            )
-            refined_parameters.append(delayed_solution)
+        output = da.map_blocks(
+            _refine_chunk,
+            patterns,
+            euler,
+            direction_cosines=dc,
+            solver_kwargs=solver_kwargs,
+            drop_axis=(2, 3),
+            new_axis=(2,),
+            dtype=float,
+        )
 
     print(
         _refinement_info_message(
@@ -231,13 +224,54 @@ def _refine_orientation(
     )
     if compute:
         output = compute_refine_orientation_results(
-            results=refined_parameters, xmap=xmap, master_pattern=master_pattern
+            results=output, xmap=xmap, master_pattern=master_pattern
         )
-    else:
-        output = refined_parameters
+
     gc.collect()
 
     return output
+
+
+def _refine_chunk(
+    patterns,
+    rotations,
+    pcx=None,
+    pcy=None,
+    pcz=None,
+    direction_cosines=None,
+    nrows=None,
+    ncols=None,
+    tilt=None,
+    azimuthal=None,
+    sample_tilt=None,
+    solver_kwargs=None,
+):
+    nav_shape = patterns.shape[:-2]
+    results = np.empty(nav_shape + (4,))
+    if direction_cosines is not None:
+        for idx in np.ndindex(*nav_shape):
+            results[idx] = _refine_orientation_solver(
+                pattern=patterns[idx],
+                rotation=rotations[idx],
+                direction_cosines=direction_cosines,
+                **solver_kwargs,
+            )
+    else:
+        for idx in np.ndindex(*nav_shape):
+            results[idx] = _refine_orientation_solver(
+                pattern=patterns[idx],
+                rotation=rotations[idx],
+                pcx=pcx[idx],
+                pcy=pcy[idx],
+                pcz=pcz[idx],
+                nrows=nrows,
+                ncols=ncols,
+                tilt=tilt,
+                azimuthal=azimuthal,
+                sample_tilt=sample_tilt,
+                **solver_kwargs,
+            )
+    return results
 
 
 def _refine_projection_center(
@@ -613,7 +647,9 @@ def _refinement_info_message(
     return msg
 
 
-def compute_refine_orientation_results(results: list, xmap: CrystalMap, master_pattern):
+def compute_refine_orientation_results(
+    results: da.Array, xmap: CrystalMap, master_pattern
+):
     """Compute the results from
     :meth:`~kikuchipy.signals.EBSD.refine_orientation` and return the
     :class:`~orix.crystal_map.CrystalMap`.
@@ -621,8 +657,7 @@ def compute_refine_orientation_results(results: list, xmap: CrystalMap, master_p
     Parameters
     ----------
     results
-        Results returned from `refine_orientation()`, which is a list of
-        :class:`~dask.delayed.Delayed`.
+        The dask array returned from `refine_orientation()`.
     xmap
         Crystal map passed to `refine_orientation()` to obtain
         `results`.
@@ -635,11 +670,11 @@ def compute_refine_orientation_results(results: list, xmap: CrystalMap, master_p
     refined_xmap : :class:`~orix.crystal_map.CrystalMap`
         Crystal map with refined orientations and scores.
     """
-    n_patterns = len(results)
+    n_patterns = np.prod(results.shape[:-1])
     with ProgressBar():
         print(f"Refining {n_patterns} orientation(s):", file=sys.stdout)
         time_start = time()
-        computed_results = dask.compute(*results)
+        computed_results = results.compute().reshape((-1, 4))
         total_time = time() - time_start
         patterns_per_second = int(np.floor(n_patterns / total_time))
         print(f"Refinement speed: {patterns_per_second} patterns/s")
