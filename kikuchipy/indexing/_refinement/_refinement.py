@@ -116,6 +116,7 @@ def _refine_orientation(
     master_pattern,
     energy: Union[int, float],
     patterns: Union[np.ndarray, da.Array],
+    signal_indices_in_array: tuple,
     mask: Optional[np.ndarray] = None,
     method: Optional[str] = None,
     method_kwargs: Optional[dict] = None,
@@ -148,8 +149,8 @@ def _refine_orientation(
         method_kwargs=method_kwargs,
     )
 
-    # Get rotations in the correct shape into a Dask array, and expand
-    # the dimensions to fit the dimensions of the pattern array
+    # Get rotations in the correct shape into a Dask array. Expand the
+    # dimensions to fit the dimensions of the pattern array
     euler = rotations.to_euler()
     euler = euler.reshape(nav_shape + (3,))
     euler = np.expand_dims(euler, axis=-1)
@@ -163,12 +164,16 @@ def _refine_orientation(
         solver_kwargs["trust_region_passed"] = True
     solver_kwargs["trust_region"] = np.deg2rad(trust_region)
 
-    # Prepare parameters for the objective function which are constant
-    # during optimization
+    # Parameters for the objective function which are constant during
+    # optimization
     solver_kwargs["fixed_parameters"] = fixed_parameters
 
     # Determine whether a new PC is used for every pattern
     new_pc = np.prod(detector.navigation_shape) != 1 and n_patterns > 1
+
+    map_blocks_kwargs = dict(
+        drop_axis=signal_indices_in_array, new_axis=(len(nav_shape),), dtype=np.float64
+    )
 
     if new_pc:
         # Patterns have been indexed with varying PCs, so we
@@ -177,9 +182,17 @@ def _refine_orientation(
         pcx = detector.pcx.astype(float).reshape(nav_shape)
         pcy = detector.pcy.astype(float).reshape(nav_shape)
         pcz = detector.pcz.astype(float).reshape(nav_shape)
-        pcx = da.from_array(pcx, chunks=nav_chunks)
-        pcy = da.from_array(pcy, chunks=nav_chunks)
-        pcz = da.from_array(pcz, chunks=nav_chunks)
+        # Expand dimensions to fit dimensions of patterns array
+        expand_axes = (-1, -2)
+        pcx = np.expand_dims(pcx, axis=expand_axes)
+        pcy = np.expand_dims(pcy, axis=expand_axes)
+        pcz = np.expand_dims(pcz, axis=expand_axes)
+        # Get dask array with proper chunks
+        pc_chunks = nav_chunks + (-1, -1)
+        pcx = da.from_array(pcx, chunks=pc_chunks)
+        pcy = da.from_array(pcy, chunks=pc_chunks)
+        pcz = da.from_array(pcz, chunks=pc_chunks)
+
         output = da.map_blocks(
             _refine_chunk,
             patterns,
@@ -193,25 +206,21 @@ def _refine_orientation(
             azimuthal=detector.azimuthal,
             sample_tilt=detector.sample_tilt,
             solver_kwargs=solver_kwargs,
-            drop_axis=(2, 3),
-            new_axis=(2,),
-            dtype=float,
+            **map_blocks_kwargs,
         )
     else:
         # Patterns have been indexed with the same PC, so we use the
         # same direction cosines during refinement of all patterns
-        dc = _get_direction_cosines_for_single_pc_from_detector(detector).reshape(
-            (n_pixels, 3)
-        )
+        dc = _get_direction_cosines_for_single_pc_from_detector(detector)
+        dc = dc.reshape((n_pixels, 3))
+
         output = da.map_blocks(
             _refine_chunk,
             patterns,
             euler,
             direction_cosines=dc,
             solver_kwargs=solver_kwargs,
-            drop_axis=(2, 3),
-            new_axis=(2,),
-            dtype=float,
+            **map_blocks_kwargs,
         )
 
     print(
@@ -247,7 +256,7 @@ def _refine_chunk(
     solver_kwargs=None,
 ):
     nav_shape = patterns.shape[:-2]
-    results = np.empty(nav_shape + (4,))
+    results = np.zeros(nav_shape + (4,), dtype=np.float64)
     if direction_cosines is not None:
         for idx in np.ndindex(*nav_shape):
             results[idx] = _refine_orientation_solver(
