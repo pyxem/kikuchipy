@@ -1482,7 +1482,8 @@ class TestEBSDRefinement:
         )
         assert isinstance(dask_array, da.Array)
         assert dask.is_dask_collection(dask_array)
-        assert dask_array.shape == (9, 4)
+        # Should ideally be (3, 3, 4) with better use of map_blocks()
+        assert dask_array.shape == s.axes_manager.navigation_shape[::-1] + (1,)
 
     @pytest.mark.filterwarnings("ignore: The line search algorithm did not converge")
     @pytest.mark.filterwarnings("ignore: Angles are assumed to be in radians, ")
