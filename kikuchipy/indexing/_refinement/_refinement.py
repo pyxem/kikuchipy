@@ -250,7 +250,7 @@ def _refine_orientation_chunk(
     sample_tilt=None,
     solver_kwargs=None,
 ):
-    """Refine all patterns in one dask array chunk.
+    """Refine orientations using patterns in one dask array chunk.
 
     Note that `solver_kwargs` is required. It is set to None to enable
     use of this function in :func:`~dask.array.Array.map_blocks.
@@ -397,7 +397,7 @@ def _refine_projection_center_chunk(
     pc: np.ndarray,
     solver_kwargs: dict,
 ):
-    """Refine all patterns in one dask array chunk."""
+    """Refine projection centers using patterns in one dask array chunk."""
     nav_shape = patterns.shape[:-2]
     results = np.empty(nav_shape + (4,), dtype=np.float64)
     pc = pc.reshape(nav_shape + (3,))
@@ -525,7 +525,9 @@ def _refine_orientation_projection_center_chunk(
     euler_pc: np.ndarray,
     solver_kwargs: Optional[dict] = None,
 ):
-    """Refine all patterns in one dask array chunk."""
+    """Refine orientations and projection centers using all patterns in
+    one dask array chunk.
+    """
     nav_shape = patterns.shape[:-2]
     results = np.empty(nav_shape + (7,), dtype=np.float64)
     euler_pc = euler_pc.reshape(nav_shape + (6,))
