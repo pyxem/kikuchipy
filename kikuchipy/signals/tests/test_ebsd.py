@@ -1472,7 +1472,7 @@ class TestEBSDRefinement:
         )
         detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
         xmap.phases[0].name = self.mp.phase.name
-        xmap_refined = s.refine_orientation(
+        dask_array = s.refine_orientation(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
@@ -1480,9 +1480,9 @@ class TestEBSDRefinement:
             method_kwargs=dict(options=dict(maxiter=10)),
             compute=False,
         )
-        assert isinstance(xmap_refined, list)
-        assert dask.is_dask_collection(xmap_refined[0])
-        assert len(xmap_refined) == 9
+        assert isinstance(dask_array, da.Array)
+        assert dask.is_dask_collection(dask_array)
+        assert dask_array.shape == (9, 4)
 
     @pytest.mark.filterwarnings("ignore: The line search algorithm did not converge")
     @pytest.mark.filterwarnings("ignore: Angles are assumed to be in radians, ")
