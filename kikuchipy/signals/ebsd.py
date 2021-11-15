@@ -1089,6 +1089,8 @@ class EBSD(CommonImage, Signal2D):
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
         compute: bool = True,
+        rechunk: bool = True,
+        chunk_kwargs: Optional[dict] = None,
     ):
         r"""Refine orientations by searching orientation space around
         the best indexed solution using fixed projection centers.
@@ -1175,8 +1177,18 @@ class EBSD(CommonImage, Signal2D):
         refine_orientation_projection_center
         """
         self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
-        patterns = get_dask_array(signal=self, dtype=np.float32)
-        patterns = patterns.rechunk(get_chunking(signal=self, chunk_bytes=1e6))
+
+        # Get dask array
+        dtype = np.float32
+        patterns = get_dask_array(signal=self, dtype=dtype)
+
+        # Rechunk if (1) only one chunk and (2) it's allowed
+        if (patterns.chunksize == patterns.shape) and rechunk:
+            if chunk_kwargs is None:
+                chunk_kwargs = dict(chunk_shape=16, chunk_bytes=None)
+            chunks = get_chunking(signal=self, dtype=dtype, **chunk_kwargs)
+            patterns = patterns.rechunk(chunks)
+
         return _refine_orientation(
             xmap=xmap,
             detector=detector,
@@ -1202,6 +1214,8 @@ class EBSD(CommonImage, Signal2D):
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
         compute: bool = True,
+        rechunk: bool = True,
+        chunk_kwargs: Optional[dict] = None,
     ):
         """Refine projection centers by searching the parameter space
         using fixed orientations.
@@ -1287,6 +1301,18 @@ class EBSD(CommonImage, Signal2D):
         refine_orientation_projection_center
         """
         self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
+
+        # Get dask array
+        dtype = np.float32
+        patterns = get_dask_array(signal=self, dtype=dtype)
+
+        # Rechunk if only one chunk and it's allowed
+        if (patterns.chunksize == patterns.shape) and rechunk:
+            if chunk_kwargs is None:
+                chunk_kwargs = dict(chunk_shape=16, chunk_bytes=None)
+            chunks = get_chunking(signal=self, dtype=dtype, **chunk_kwargs)
+            patterns = patterns.rechunk(chunks)
+
         return _refine_projection_center(
             xmap=xmap,
             detector=detector,

@@ -150,7 +150,8 @@ def _refine_orientation(
     )
 
     # Get rotations in the correct shape into a Dask array. Expand the
-    # dimensions to fit the dimensions of the pattern array
+    # dimensions to fit the dimensions of the pattern array, assuming
+    # a 2D detector
     euler = rotations.to_euler()
     euler = euler.reshape(nav_shape + (3,))
     euler = np.expand_dims(euler, axis=-1)
@@ -179,9 +180,9 @@ def _refine_orientation(
         # Patterns have been indexed with varying PCs, so we
         # re-compute the direction cosines for every pattern during
         # refinement
-        pcx = detector.pcx.astype(float).reshape(nav_shape)
-        pcy = detector.pcy.astype(float).reshape(nav_shape)
-        pcz = detector.pcz.astype(float).reshape(nav_shape)
+        pcx = detector.pcx.astype(np.float64).reshape(nav_shape)
+        pcy = detector.pcy.astype(np.float64).reshape(nav_shape)
+        pcz = detector.pcz.astype(np.float64).reshape(nav_shape)
         # Expand dimensions to fit dimensions of patterns array
         expand_axes = (-1, -2)
         pcx = np.expand_dims(pcx, axis=expand_axes)
@@ -194,7 +195,7 @@ def _refine_orientation(
         pcz = da.from_array(pcz, chunks=pc_chunks)
 
         output = da.map_blocks(
-            _refine_chunk,
+            _refine_orientation_chunk,
             patterns,
             euler,
             pcx,
@@ -215,7 +216,7 @@ def _refine_orientation(
         dc = dc.reshape((n_pixels, 3))
 
         output = da.map_blocks(
-            _refine_chunk,
+            _refine_orientation_chunk,
             patterns,
             euler,
             direction_cosines=dc,
@@ -241,7 +242,7 @@ def _refine_orientation(
     return output
 
 
-def _refine_chunk(
+def _refine_orientation_chunk(
     patterns,
     rotations,
     pcx=None,
@@ -256,7 +257,7 @@ def _refine_chunk(
     solver_kwargs=None,
 ):
     nav_shape = patterns.shape[:-2]
-    results = np.zeros(nav_shape + (4,), dtype=np.float64)
+    results = np.empty(nav_shape + (4,), dtype=np.float64)
     if direction_cosines is not None:
         for idx in np.ndindex(*nav_shape):
             results[idx] = _refine_orientation_solver(
@@ -266,6 +267,9 @@ def _refine_chunk(
                 **solver_kwargs,
             )
     else:
+        pcx = pcx.squeeze()
+        pcy = pcy.squeeze()
+        pcz = pcz.squeeze()
         for idx in np.ndindex(*nav_shape):
             results[idx] = _refine_orientation_solver(
                 pattern=patterns[idx],
