@@ -2137,14 +2137,13 @@ class EBSD(CommonImage, Signal2D):
         self, rechunk: bool, chunk_kwargs: Optional[dict] = None
     ) -> da.Array:
         """Possibly rechunk pattern array before refinement."""
-        dtype = np.float32
-        patterns = get_dask_array(signal=self, dtype=dtype)
+        patterns = get_dask_array(signal=self)
 
         # Rechunk if (1) only one chunk and (2) it's allowed
         if (patterns.chunksize == patterns.shape) and rechunk:
             if chunk_kwargs is None:
                 chunk_kwargs = dict(chunk_shape=16, chunk_bytes=None)
-            chunks = get_chunking(signal=self, dtype=dtype, **chunk_kwargs)
+            chunks = get_chunking(signal=self, **chunk_kwargs)
             patterns = patterns.rechunk(chunks)
 
         return patterns

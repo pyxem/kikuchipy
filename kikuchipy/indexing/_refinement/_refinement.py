@@ -257,6 +257,7 @@ def _refine_orientation_chunk(
     """
     nav_shape = patterns.shape[:-2]
     results = np.empty(nav_shape + (4,), dtype=np.float64)
+    rotations = rotations.reshape(nav_shape + (3,))
     if direction_cosines is not None:
         for idx in np.ndindex(*nav_shape):
             results[idx] = _refine_orientation_solver(
@@ -728,7 +729,7 @@ def _refinement_info_message(
 
 def compute_refine_orientation_results(
     results: da.Array, xmap: CrystalMap, master_pattern
-):
+) -> CrystalMap:
     """Compute the results from
     :meth:`~kikuchipy.signals.EBSD.refine_orientation` and return the
     :class:`~orix.crystal_map.CrystalMap`.
@@ -746,7 +747,7 @@ def compute_refine_orientation_results(
 
     Returns
     -------
-    refined_xmap : :class:`~orix.crystal_map.CrystalMap`
+    refined_xmap
         Crystal map with refined orientations and scores.
     """
     n_patterns = np.prod(results.shape[:-1])
@@ -756,7 +757,7 @@ def compute_refine_orientation_results(
         computed_results = results.compute().reshape((-1, 4))
         total_time = time() - time_start
         patterns_per_second = int(np.floor(n_patterns / total_time))
-        print(f"Refinement speed: {patterns_per_second} patterns/s")
+        print(f"Refinement speed: {patterns_per_second} patterns/s", file=sys.stdout)
         # (n, score, phi1, Phi, phi2)
         computed_results = np.array(computed_results)
         xmap_refined = CrystalMap(
@@ -781,8 +782,7 @@ def compute_refine_projection_center_results(
     Parameters
     ----------
     results
-        Results returned from `refine_projection_center()` as a dask
-        array.
+        The dask array returned from `refine_projection_center()`.
     detector : ~kikuchipy.detectors.EBSDDetector
         Detector passed to `refine_projection_center()` to obtain
         `results`.
@@ -805,7 +805,7 @@ def compute_refine_projection_center_results(
         computed_results = results.compute().reshape((-1, 4))
         total_time = time() - time_start
         patterns_per_second = int(np.floor(n_patterns / total_time))
-        print(f"Refinement speed: {patterns_per_second} patterns/s")
+        print(f"Refinement speed: {patterns_per_second} patterns/s", file=sys.stdout)
         # (n, score, PCx, PCy, PCz)
         computed_results = np.array(computed_results)
         new_detector = detector.deepcopy()
@@ -827,8 +827,8 @@ def compute_refine_orientation_projection_center_results(
     Parameters
     ----------
     results
-        Results returned from `refine_orientation_projection_center()`
-        as a dask array.
+        The dask array returned from
+        `refine_orientation_projection_center()`.
     detector : ~kikuchipy.detectors.EBSDDetector
         Detector passed to `refine_orientation_projection_center()` to
         obtain `results`.
@@ -857,7 +857,7 @@ def compute_refine_orientation_projection_center_results(
         computed_results = results.compute().reshape((-1, 7))
         total_time = time() - time_start
         patterns_per_second = int(np.floor(n_patterns / total_time))
-        print(f"Refinement speed: {patterns_per_second} patterns/s")
+        print(f"Refinement speed: {patterns_per_second} patterns/s", file=sys.stdout)
         computed_results = np.array(computed_results)
         # (n, score, phi1, Phi, phi2, PCx, PCy, PCz)
         xmap_refined = CrystalMap(

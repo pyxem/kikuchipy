@@ -1619,7 +1619,6 @@ class TestEBSDRefinement:
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        print(xmap.scores.shape)
         xmap.phases[0].name = self.mp.phase.name
         method_kwargs.update(dict(options=dict(maxiter=10)))
         new_scores, new_detector = s.refine_projection_center(
@@ -1698,7 +1697,7 @@ class TestEBSDRefinement:
         )
         detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
         xmap.phases[0].name = self.mp.phase.name
-        delayed_results = s.refine_projection_center(
+        dask_array = s.refine_projection_center(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
@@ -1706,9 +1705,10 @@ class TestEBSDRefinement:
             method_kwargs=dict(options=dict(maxiter=10)),
             compute=False,
         )
-        assert isinstance(delayed_results, list)
-        assert dask.is_dask_collection(delayed_results[0])
-        assert len(delayed_results) == 9
+        assert isinstance(dask_array, da.Array)
+        assert dask.is_dask_collection(dask_array)
+        # Should ideally be (3, 3, 4) with better use of map_blocks()
+        assert dask_array.shape == (3, 3, 1)
 
     # ---------- Refine orientations and projection centers ---------- #
 
@@ -1812,7 +1812,7 @@ class TestEBSDRefinement:
         )
         xmap.phases[0].name = self.mp.phase.name
         detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
-        delayed_results = s.refine_orientation_projection_center(
+        dask_array = s.refine_orientation_projection_center(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
@@ -1820,9 +1820,10 @@ class TestEBSDRefinement:
             method_kwargs=dict(options=dict(maxiter=1)),
             compute=False,
         )
-        assert isinstance(delayed_results, list)
-        assert dask.is_dask_collection(delayed_results[0])
-        assert len(delayed_results) == 9
+        assert isinstance(dask_array, da.Array)
+        assert dask.is_dask_collection(dask_array)
+        # Should ideally be (3, 3, 7) with better use of map_blocks()
+        assert dask_array.shape == (3, 3, 1)
 
 
 class TestAverageNeighbourDotProductMap:
