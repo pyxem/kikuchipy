@@ -1166,7 +1166,7 @@ class EBSD(CommonImage, Signal2D):
         chunk_kwargs
             Keyword arguments passed to
             :func:`~kikuchipy.signals.util.get_chunking` if `rechunk` is
-            True and the dask array with patterns used in refinrment is
+            True and the dask array with patterns used in refinement is
             returned from :func:`~kikuchipy.signals.util.get_dask_array`
             in a single chunk.
 
@@ -1292,7 +1292,7 @@ class EBSD(CommonImage, Signal2D):
         chunk_kwargs
             Keyword arguments passed to
             :func:`~kikuchipy.signals.util.get_chunking` if `rechunk` is
-            True and the dask array with patterns used in refinrment is
+            True and the dask array with patterns used in refinement is
             returned from :func:`~kikuchipy.signals.util.get_dask_array`
             in a single chunk.
 
@@ -1423,14 +1423,13 @@ class EBSD(CommonImage, Signal2D):
         chunk_kwargs
             Keyword arguments passed to
             :func:`~kikuchipy.signals.util.get_chunking` if `rechunk` is
-            True and the dask array with patterns used in refinrment is
+            True and the dask array with patterns used in refinement is
             returned from :func:`~kikuchipy.signals.util.get_dask_array`
             in a single chunk.
 
         Returns
         -------
-        :class:`~orix.crystal_map.CrystalMap` and :class:`~kikuchipy.detectors.EBSDDetector`,\
-        or :class:`~dask.array.Array`
+        :class:`~orix.crystal_map.CrystalMap` and :class:`~kikuchipy.detectors.EBSDDetector`, or :class:`~dask.array.Array`
             Crystal map with refined orientations and a new EBSD
             detector instance with the refined PCs, if `compute` is
             True. If `compute` is False, a dask array of navigation
