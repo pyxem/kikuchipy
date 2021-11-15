@@ -12,6 +12,18 @@ best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 Contributors to each release are listed in alphabetical order by first name. List
 entries are sorted in descending chronological order.
 
+0.5.4 (2021-11-17)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Fixed
+-----
+- Memory issue in EBSD refinement due to naive use of dask.delayed. Uses map_blocks()
+  instead. (`#470 <https://github.com/pyxem/kikuchipy/pull/470>`_)
+
 0.5.3 (2021-11-02)
 ==================
 
@@ -24,7 +36,7 @@ Added
 -----
 - Printing of speed (patterns per second) of dictionary indexing and refinement.
   (`#461 <https://github.com/pyxem/kikuchipy/pull/461>`_)
-- Restricted newest version of hyperspy<=1.6.5 due to incompatibility with h5py>=3.5.
+- Restricted newest version of hyperspy>=1.6.5 due to incompatibility with h5py>=3.5.
   (`#461 <https://github.com/pyxem/kikuchipy/pull/461>`_)
 
 Fixed
