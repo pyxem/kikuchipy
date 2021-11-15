@@ -19,6 +19,18 @@ Contributors
 ------------
 - Håkon Wiik Ånes
 
+Added
+-----
+- Optional parameters `rechunk` and `chunk_kwargs` to EBSD refinement methods to better
+  control possible rechunking of pattern array before refinement.
+  (`#470 <https://github.com/pyxem/kikuchipy/pull/470>`_)
+
+Changed
+-------
+- When EBSD refinement methods don't immediately compute, they return a dask array
+  instead of a list of delayed instances.
+  (`#470 <https://github.com/pyxem/kikuchipy/pull/470>`_)
+
 Fixed
 -----
 - Memory issue in EBSD refinement due to naive use of dask.delayed. Uses map_blocks()
