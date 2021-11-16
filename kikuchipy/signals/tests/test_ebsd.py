@@ -1584,6 +1584,69 @@ class TestEBSDRefinement:
             xmap_refined_no_mask.rotations.data, xmap_refined_mask.rotations.data
         )
 
+    @pytest.mark.parametrize(
+        "ebsd_with_axes_and_random_data, detector, rechunk, chunk_kwargs, chunksize",
+        [
+            (
+                ((5, 4), (10, 8), True, np.float32),
+                ((5, 4), (10, 8)),
+                False,
+                None,
+                (5, 4, 1),
+            ),
+            (
+                ((5, 4), (10, 8), True, np.float32),
+                ((5, 4), (10, 8)),
+                True,
+                dict(chunk_shape=3),
+                (3, 3, 1),
+            ),
+            (
+                ((5, 4), (10, 8), True, np.float32),
+                ((5, 4), (10, 8)),
+                False,
+                dict(chunk_shape=3),
+                (5, 4, 1),
+            ),
+        ],
+        indirect=["ebsd_with_axes_and_random_data", "detector"],
+    )
+    def test_refine_orientation_chunking(
+        self,
+        ebsd_with_axes_and_random_data,
+        detector,
+        rechunk,
+        chunk_kwargs,
+        chunksize,
+        get_single_phase_xmap,
+    ):
+        """Ensure the returned dask array when not computing has the
+        desired chunksize.
+
+        Ideally, the last dimension should have size 4 (score, phi1,
+        Phi, phi2), but this requires better handling of removed and
+        added axes and their sizes in the call to
+        :func:`dask.array.map_blocks` in :func:`_refine_orientation` and
+        the other equivalent private refinement functions.
+        """
+        s = ebsd_with_axes_and_random_data
+        xmap = get_single_phase_xmap(
+            nav_shape=s.axes_manager.navigation_shape[::-1],
+            rotations_per_point=1,
+            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
+        )
+        xmap.phases[0].name = self.mp.phase.name
+        dask_array = s.refine_orientation(
+            xmap=xmap,
+            master_pattern=self.mp,
+            energy=20,
+            detector=detector,
+            compute=False,
+            rechunk=rechunk,
+            chunk_kwargs=chunk_kwargs,
+        )
+        assert dask_array.chunksize == chunksize
+
     # ------------------- Refine projection centers ------------------ #
 
     @pytest.mark.parametrize(
