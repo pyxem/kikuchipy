@@ -26,12 +26,13 @@ kikuchipy's branching model is similar to the Gitflow Workflow (`original blog p
   PyPI.
 - Download the new version from PyPI with the ``tests`` dependencies with
   ``pip install kikuchipy[tests]==0.42.0`` locally and run the tests with
-  ``pytest --pyargs kikuchipy`` to make sure everything is as it should be.
-- Bring changes in ``main`` onto ``develop`` by branching off of ``main``, merge
-  ``develop`` into the new branch, fix conflicts, and make a PR to ``develop``.
-- Make a PR to ``develop`` with ``__version__`` updated (or reverted), e.g. from
-  "0.42.0" to "0.43.dev0".
-- Make a PR to ``develop`` with any updates to this guide if necessary.
+  ``pytest --pyargs kikuchipy`` to make sure all tests pass.
+- Monitor the documentation build at https://readthedocs.org/projects/kikuchipy/builds
+  to make sure the new stable documentation is successfully built from the release.
+- Bring changes on ``main`` onto ``develop`` by branching off of ``main``, merge
+  ``develop`` onto the new branch, fix conflicts, and make a PR to ``develop``.
+- Make a post-release PR to ``develop`` with ``__version__`` updated (or reverted), e.g.
+  from "0.42.0" to "0.43.dev0", and any updates to this guide if necessary.
 
 conda-forge
 -----------
