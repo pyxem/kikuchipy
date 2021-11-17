@@ -20,6 +20,30 @@ Fixed
 - Hopefully prevent EBSD refinement tests using random data to fail on Azure.
   (`#465 <https://github.com/pyxem/kikuchipy/pull/465>`_)
 
+0.5.4 (2021-11-17)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Added
+-----
+- Optional parameters `rechunk` and `chunk_kwargs` to EBSD refinement methods to better
+  control possible rechunking of pattern array before refinement.
+  (`#470 <https://github.com/pyxem/kikuchipy/pull/470>`_)
+
+Changed
+-------
+- When EBSD refinement methods don't immediately compute, they return a dask array
+  instead of a list of delayed instances.
+  (`#470 <https://github.com/pyxem/kikuchipy/pull/470>`_)
+
+Fixed
+-----
+- Memory issue in EBSD refinement due to naive use of dask.delayed. Uses map_blocks()
+  instead. (`#470 <https://github.com/pyxem/kikuchipy/pull/470>`_)
+
 0.5.3 (2021-11-02)
 ==================
 
@@ -32,7 +56,7 @@ Added
 -----
 - Printing of speed (patterns per second) of dictionary indexing and refinement.
   (`#461 <https://github.com/pyxem/kikuchipy/pull/461>`_)
-- Restricted newest version of hyperspy<=1.6.5 due to incompatibility with h5py>=3.5.
+- Restricted newest version of hyperspy>=1.6.5 due to incompatibility with h5py>=3.5.
   (`#461 <https://github.com/pyxem/kikuchipy/pull/461>`_)
 
 Fixed
