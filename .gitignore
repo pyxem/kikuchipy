@@ -112,3 +112,6 @@ src/
 node_modules/
 package.json
 package-lock.json
+
+# Dask
+dask-worker-space

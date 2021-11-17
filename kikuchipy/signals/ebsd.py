@@ -1089,6 +1089,8 @@ class EBSD(CommonImage, Signal2D):
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
         compute: bool = True,
+        rechunk: bool = True,
+        chunk_kwargs: Optional[dict] = None,
     ):
         r"""Refine orientations by searching orientation space around
         the best indexed solution using fixed projection centers.
@@ -1155,16 +1157,28 @@ class EBSD(CommonImage, Signal2D):
             Whether to refine now (True) or later (False). Default is
             True. See :meth:`~dask.array.Array.compute` for more
             details.
+        rechunk
+            If True (default), rechunk the dask array with patterns used
+            in refinement (not the signal data inplace) if it is
+            returned from :func:`~kikuchipy.signals.util.get_dask_array`
+            in a single chunk. This ensures small data sets are
+            rechunked so as to utilize multiple CPUs.
+        chunk_kwargs
+            Keyword arguments passed to
+            :func:`~kikuchipy.signals.util.get_chunking` if `rechunk` is
+            True and the dask array with patterns used in refinement is
+            returned from :func:`~kikuchipy.signals.util.get_dask_array`
+            in a single chunk.
 
         Returns
         -------
-        :class:`~orix.crystal_map.CrystalMap` or list of :class:`~dask.delayed.Delayed`
+        :class:`~orix.crystal_map.CrystalMap` or :class:`~dask.array.Array`
             Crystal map with refined orientations and similarity metrics
             in a "scores" property if `compute` is True. If
-            `compute` is False, a list of `Delayed` instances, one per
-            experimental pattern, is returned, to be computed later. See
+            `compute` is False, a dask array of navigation shape + (4,)
+            is returned, to be computed later. See
             :func:`~kikuchipy.indexing.compute_refine_orientation_results`.
-            One delayed instance has the optimized score and the three
+            Each navigation point has the optimized score and the three
             Euler angles in radians in element 0, 1, 2, and 3,
             respectively.
 
@@ -1175,12 +1189,16 @@ class EBSD(CommonImage, Signal2D):
         refine_orientation_projection_center
         """
         self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
+        patterns = self._get_dask_array_for_refinement(
+            rechunk=rechunk, chunk_kwargs=chunk_kwargs
+        )
         return _refine_orientation(
             xmap=xmap,
             detector=detector,
             master_pattern=master_pattern,
             energy=energy,
-            patterns=self.data,
+            patterns=patterns,
+            signal_indices_in_array=self.axes_manager.signal_indices_in_array,
             mask=mask,
             method=method,
             method_kwargs=method_kwargs,
@@ -1199,6 +1217,8 @@ class EBSD(CommonImage, Signal2D):
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
         compute: bool = True,
+        rechunk: bool = True,
+        chunk_kwargs: Optional[dict] = None,
     ):
         """Refine projection centers by searching the parameter space
         using fixed orientations.
@@ -1263,17 +1283,29 @@ class EBSD(CommonImage, Signal2D):
             Whether to refine now (True) or later (False). Default is
             True. See :meth:`~dask.array.Array.compute` for more
             details.
+        rechunk
+            If True (default), rechunk the dask array with patterns used
+            in refinement (not the signal data inplace) if it is
+            returned from :func:`~kikuchipy.signals.util.get_dask_array`
+            in a single chunk. This ensures small data sets are
+            rechunked so as to utilize multiple CPUs.
+        chunk_kwargs
+            Keyword arguments passed to
+            :func:`~kikuchipy.signals.util.get_chunking` if `rechunk` is
+            True and the dask array with patterns used in refinement is
+            returned from :func:`~kikuchipy.signals.util.get_dask_array`
+            in a single chunk.
 
         Returns
         -------
         :class:`numpy.ndarray` and :class:`~kikuchipy.detectors.EBSDDetector`,\
-        or list of :class:`~dask.delayed.Delayed`
+        or :class:`~dask.array.Array`
             New similarity metrics and a new EBSD detector instance with
             the refined PCs if `compute` is True. If `compute` is False,
-            a list of `Delayed` instances, one per experimental pattern,
-            is returned, to be computed later. See
+            a dask array of navigation shape + (4,) is returned, to be
+            computed later. See
             :func:`~kikuchipy.indexing.compute_refine_projection_center_results`.
-            One delayed instance has the optimized score and the three
+            Each navigation point has the optimized score and the three
             PC parameters in the Bruker convention in element 0, 1, 2,
             and 3, respectively.
 
@@ -1284,12 +1316,16 @@ class EBSD(CommonImage, Signal2D):
         refine_orientation_projection_center
         """
         self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
+        patterns = self._get_dask_array_for_refinement(
+            rechunk=rechunk, chunk_kwargs=chunk_kwargs
+        )
         return _refine_projection_center(
             xmap=xmap,
             detector=detector,
             master_pattern=master_pattern,
             energy=energy,
-            patterns=self.data,
+            patterns=patterns,
+            signal_indices_in_array=self.axes_manager.signal_indices_in_array,
             mask=mask,
             method=method,
             method_kwargs=method_kwargs,
@@ -1308,6 +1344,8 @@ class EBSD(CommonImage, Signal2D):
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
         compute: bool = True,
+        rechunk: bool = True,
+        chunk_kwargs: Optional[dict] = None,
     ):
         r"""Refine orientations and projection centers simultaneously by
         searching the orientation and PC parameter space.
@@ -1376,17 +1414,28 @@ class EBSD(CommonImage, Signal2D):
             Whether to refine now (True) or later (False). Default is
             True. See :meth:`~dask.array.Array.compute` for more
             details.
+        rechunk
+            If True (default), rechunk the dask array with patterns used
+            in refinement (not the signal data inplace) if it is
+            returned from :func:`~kikuchipy.signals.util.get_dask_array`
+            in a single chunk. This ensures small data sets are
+            rechunked so as to utilize multiple CPUs.
+        chunk_kwargs
+            Keyword arguments passed to
+            :func:`~kikuchipy.signals.util.get_chunking` if `rechunk` is
+            True and the dask array with patterns used in refinement is
+            returned from :func:`~kikuchipy.signals.util.get_dask_array`
+            in a single chunk.
 
         Returns
         -------
-        :class:`~orix.crystal_map.CrystalMap` and :class:`~kikuchipy.detectors.EBSDDetector`, or list of :class:`~dask.delayed.Delayed`
+        :class:`~orix.crystal_map.CrystalMap` and :class:`~kikuchipy.detectors.EBSDDetector`, or :class:`~dask.array.Array`
             Crystal map with refined orientations and a new EBSD
             detector instance with the refined PCs, if `compute` is
-            True. If `compute` is False, a list of `Delayed` instances,
-            one per experimental pattern, is returned, to be computed
-            later. See
+            True. If `compute` is False, a dask array of navigation
+            shape + (7,) is returned, to be computed later. See
             :func:`~kikuchipy.indexing.compute_refine_orientation_projection_center_results`.
-            One delayed instance has the optimized score, the three
+            Each navigation point has the optimized score, the three
             Euler angles in radians, and the three PC parameters in the
             Bruker convention in element 0, 1, 2, 3, 4, 5, and 6,
             respectively.
@@ -1408,12 +1457,16 @@ class EBSD(CommonImage, Signal2D):
         the output is reasonable.
         """
         self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
+        patterns = self._get_dask_array_for_refinement(
+            rechunk=rechunk, chunk_kwargs=chunk_kwargs
+        )
         return _refine_orientation_projection_center(
             xmap=xmap,
             detector=detector,
             master_pattern=master_pattern,
             energy=energy,
-            patterns=self.data,
+            patterns=patterns,
+            signal_indices_in_array=self.axes_manager.signal_indices_in_array,
             mask=mask,
             method=method,
             method_kwargs=method_kwargs,
@@ -2078,6 +2131,21 @@ class EBSD(CommonImage, Signal2D):
             raise ValueError("Crystal map must have exactly one phase")
         if mask is not None and sig_shape != mask.shape:
             raise ValueError("Mask and signal must have the same shape")
+
+    def _get_dask_array_for_refinement(
+        self, rechunk: bool, chunk_kwargs: Optional[dict] = None
+    ) -> da.Array:
+        """Possibly rechunk pattern array before refinement."""
+        patterns = get_dask_array(signal=self)
+
+        # Rechunk if (1) only one chunk and (2) it's allowed
+        if (patterns.chunksize == patterns.shape) and rechunk:
+            if chunk_kwargs is None:
+                chunk_kwargs = dict(chunk_shape=16, chunk_bytes=None)
+            chunks = get_chunking(signal=self, **chunk_kwargs)
+            patterns = patterns.rechunk(chunks)
+
+        return patterns
 
     @staticmethod
     def _get_sum_signal(signal, out_signal_axes: Optional[List] = None):

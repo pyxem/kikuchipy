@@ -133,8 +133,6 @@ def ebsd_with_axes_and_random_data(request):
     if nav_ndim == 2:
         axes.append(dict(name="y", size=nav_shape[0], scale=1))
         axes.append(dict(name="x", size=nav_shape[1], scale=1))
-    #    if sig_ndim == 1:
-    #        axes.append(dict(name="dx", size=sig_shape[0], scale=1))
     if sig_ndim == 2:
         axes.append(dict(name="dy", size=sig_shape[0], scale=1))
         axes.append(dict(name="dx", size=sig_shape[1], scale=1))
