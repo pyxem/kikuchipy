@@ -16,14 +16,16 @@ multi-dimensional data analysis provided by the HyperSpy library.
 [![PyPI version](https://img.shields.io/pypi/v/kikuchipy.svg)](https://pypi.python.org/pypi/kikuchipy)
 [![Downloads per month](https://pepy.tech/badge/kikuchipy/month)](https://pepy.tech/project/kikuchipy)
 [![Zenodo DOI](https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg)](https://doi.org/10.5281/zenodo.3597646)
-[![All Contributors](https://img.shields.io/badge/contributors-5-b1aee3.svg)](#contributors-)
+[![All Contributors](https://img.shields.io/github/all-contributors/pyxem/kikuchipy?color=%23A3A0CF&label=contributors)](#contributors-)
 
 - **User guide and API reference**: https://kikuchipy.org. The guide consists of Jupyter
   Notebooks with many links to detailed explanations of the input parameters and output
   of functions and class methods (the API reference). The notebooks can be inspected
-  statically on the web page or via `nbviewer`, downloaded and run locally, or run
-  interactively in the browser after clicking the Binder link above and navigating to
-  the `doc/user_guide` directory. We hope you find them useful!
+  statically on the web page or via
+  [nbviewer](https://nbviewer.jupyter.org/github/pyxem/kikuchipy/tree/develop/doc/user_guide/),
+  downloaded and run locally, or run interactively in the browser by clicking the Binder
+  link above and navigating to the `doc/user_guide` directory. We hope you find them
+  useful!
 - **License**: kikuchipy is released under the GPLv3+ license.
 - **Cite**: If you find this project useful, please cite the DOI above.
 - **Changelog**: The library is in an alpha stage, so there will be breaking changes
@@ -55,5 +57,6 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 
 This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification.
 Contributions of any kind welcome! Please see our
-[contributing guide](https://kikuchipy.org/en/latest/contributing.html) for further
-information on how best to contribute.
+[contributing guide](https://kikuchipy.org/en/latest/contributing.html) for information
+on how best to contribute (or just explain what you want to do
+[in an issue](https://github.com/pyxem/kikuchipy/issues/new)).

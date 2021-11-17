@@ -127,6 +127,7 @@ def ebsd_with_axes_and_random_data(request):
     nav_ndim = len(nav_shape)
     sig_ndim = len(sig_shape)
     data_shape = nav_shape + sig_shape
+    data_size = int(np.prod(data_shape))
     axes = []
     if nav_ndim == 1:
         axes.append(dict(name="x", size=nav_shape[0], scale=1))
@@ -136,11 +137,15 @@ def ebsd_with_axes_and_random_data(request):
     if sig_ndim == 2:
         axes.append(dict(name="dy", size=sig_shape[0], scale=1))
         axes.append(dict(name="dx", size=sig_shape[1], scale=1))
+    if np.issubdtype(dtype, np.integer):
+        data_kwds = dict(low=1, high=255, size=data_size)
+    else:
+        data_kwds = dict(low=0.1, high=1, size=data_size)
     if lazy:
-        data = da.random.random(data_shape).astype(dtype)
+        data = da.random.uniform(**data_kwds).reshape(data_shape).astype(dtype)
         yield kp.signals.LazyEBSD(data, axes=axes)
     else:
-        data = np.random.random(data_shape).astype(dtype)
+        data = np.random.uniform(**data_kwds).reshape(data_shape).astype(dtype)
         yield kp.signals.EBSD(data, axes=axes)
 
 
