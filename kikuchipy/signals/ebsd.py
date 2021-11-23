@@ -112,6 +112,7 @@ class EBSD(CommonImage, Signal2D):
                 px_size=self.axes_manager.signal_axes[0].scale,
             ),
         )
+        self._static_background = kwargs.pop("static_background", None)
         self._xmap = kwargs.pop("xmap", None)
 
         # Update metadata if object is initialised from numpy array
@@ -158,6 +159,19 @@ class EBSD(CommonImage, Signal2D):
             value, self.axes_manager.navigation_axes[::-1], raise_if_not=True
         ):
             self._xmap = value
+
+    @property
+    def static_background(self) -> Union[None, np.ndarray, da.Array]:
+        """Static background pattern."""
+        return self._static_background
+
+    @static_background.setter
+    def static_background(self, value: Union[np.ndarray, da.Array]):
+        if value.dtype != self.data.dtype:
+            warnings.warn("Background pattern has different data type from patterns")
+        if value.shape != self.axes_manager.signal_shape[::-1]:
+            warnings.warn("Background pattern has different shape from patterns")
+        self._static_background = value
 
     # ------------------------ Custom methods ------------------------ #
 
@@ -478,7 +492,7 @@ class EBSD(CommonImage, Signal2D):
             True.
         static_bg
             Static background pattern. If None is passed (default) we
-            try to read it from the signal metadata.
+            try to read it from the `EBSD.static_background` property.
         scale_bg
             Whether to scale the static background pattern to each
             individual pattern's data range before removal. Must be
@@ -495,9 +509,8 @@ class EBSD(CommonImage, Signal2D):
         patterns is available in signal metadata:
 
         >>> import kikuchipy as kp
-        >>> node = kp.signals.util.metadata_nodes("ebsd")
         >>> s = kp.data.nickel_ebsd_small()
-        >>> s.metadata.get_item(node + '.static_background')
+        >>> s.static_background
         array([[84, 87, 90, ..., 27, 29, 30],
                [87, 90, 93, ..., 27, 28, 30],
                [92, 94, 97, ..., 39, 28, 29],
@@ -514,25 +527,22 @@ class EBSD(CommonImage, Signal2D):
         ...     operation='subtract', relative=True
         ... )  # doctest: +SKIP
 
-        If the metadata has no background pattern, this must be passed
-        in the `static_bg` parameter as a numpy or dask array.
+        If the `static_background` property is None, this must be passed
+        in the `static_bg` parameter as a NumPy or Dask array.
         """
         dtype_out = self.data.dtype.type
 
         # Get background pattern
         if static_bg is None:
+            static_bg = self.static_background
             try:
-                md = self.metadata
-                ebsd_node = metadata_nodes("ebsd")
-                static_bg_in_metadata = md.get_item(ebsd_node + ".static_background")
-                if isinstance(static_bg_in_metadata, (da.Array, np.ndarray)):
-                    static_bg = da.asarray(static_bg_in_metadata, chunks="auto")
+                if isinstance(static_bg, (da.Array, np.ndarray)):
+                    static_bg = da.asarray(static_bg, chunks="auto")
                 else:
                     raise ValueError
             except (AttributeError, ValueError):
                 raise ValueError(
-                    "`static_bg` is not a valid NumPy or Dask array or could not be "
-                    "read from signal metadata"
+                    "`EBSD.static_background` is not a valid NumPy or Dask array"
                 )
         if dtype_out != static_bg.dtype:
             raise ValueError(
@@ -1979,12 +1989,22 @@ class EBSD(CommonImage, Signal2D):
 
     # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
 
+    def as_lazy(self, *args, **kwargs):
+        new = super().as_lazy(*args, **kwargs)
+        if self.static_background is not None:
+            new._static_background = da.asarray(self.static_background)
+        return new
+
     def deepcopy(self):
         new = super().deepcopy()
         if self.xmap is not None:
             new._xmap = self.xmap.deepcopy()
         else:
             new._xmap = copy.deepcopy(self.xmap)
+        if self.static_background is not None:
+            new._static_background = self.static_background.copy()
+        else:
+            new._static_background = copy.deepcopy(self.static_background)
         new._detector = self.detector.deepcopy()
         return new
 
@@ -2205,9 +2225,18 @@ class LazyEBSD(LazySignal2D, EBSD):
         super().__init__(*args, **kwargs)
 
     def compute(self, *args, **kwargs):
+        detector = self.detector
+        static_bg = self.static_background
         xmap = self.xmap
+
         super().compute(*args, **kwargs)
         gc.collect()  # Don't sink
+
+        self._detector = detector
+        if isinstance(static_bg, da.Array):
+            self._static_background = static_bg.compute()
+        else:
+            self._static_background = static_bg
         self._xmap = xmap
 
     def get_decomposition_model_write(

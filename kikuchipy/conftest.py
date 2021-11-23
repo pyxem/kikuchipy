@@ -80,7 +80,7 @@ def pytest_sessionstart(session):  # pragma: no cover
 
 
 @pytest.fixture
-def dummy_signal():
+def dummy_signal(dummy_background):
     """Dummy signal of shape <(3, 3)|(3, 3)>. If this is changed, all
     tests using this signal will fail since they compare the output from
     methods using this signal (as input) to hard-coded outputs.
@@ -96,7 +96,7 @@ def dummy_signal():
         dtype=np.uint8
     ).reshape((3, 3, 3, 3))
     # fmt: on
-    s = kp.signals.EBSD(dummy_array)
+    s = kp.signals.EBSD(dummy_array, static_background=dummy_background)
     s.axes_manager.navigation_axes[1].name = "x"
     s.axes_manager.navigation_axes[0].name = "y"
     yield s
