@@ -509,7 +509,6 @@ class EBSD(CommonImage, Signal2D):
         patterns is available in signal metadata:
 
         >>> import kikuchipy as kp
-        >>> node = kp.signals.util.metadata_nodes("ebsd")
         >>> s = kp.data.nickel_ebsd_small()
         >>> s.static_background
         array([[84, 87, 90, ..., 27, 29, 30],
