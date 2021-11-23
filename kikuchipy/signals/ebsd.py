@@ -161,8 +161,8 @@ class EBSD(CommonImage, Signal2D):
             self._xmap = value
 
     @property
-    def static_background(self) -> Union[np.ndarray, da.Array]:
-        """The static background pattern."""
+    def static_background(self) -> Union[None, np.ndarray, da.Array]:
+        """Static background pattern."""
         return self._static_background
 
     @static_background.setter

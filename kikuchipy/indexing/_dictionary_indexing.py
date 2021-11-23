@@ -133,7 +133,7 @@ def _dictionary_indexing(
     )
     # Without this pause, a part of the red tqdm progressbar background
     # is displayed below this print
-    sleep(0.1)
+    sleep(0.2)
     print(
         f"\tIndexing speed: {patterns_per_second} patterns/s, "
         f"{comparisons_per_second} comparisons/s"
