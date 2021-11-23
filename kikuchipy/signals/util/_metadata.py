@@ -55,7 +55,7 @@ def ebsd_metadata() -> DictionaryTreeBrowser:
         "grid_type": "",
         "sample_tilt": -1.0,
         "scan_time": -1.0,
-        #        "static_background": -1,
+        "static_background": -1,
         "xpc": -1.0,
         "ypc": -1.0,
         "zpc": -1.0,

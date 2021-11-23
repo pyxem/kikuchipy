@@ -63,6 +63,7 @@ METADATA = {
                     "grid_type": "square",
                     "sample_tilt": 70.0,
                     "scan_time": 148,
+                    "static_background": -1,
                     "xpc": -1.0,
                     "ypc": -1.0,
                     "zpc": -1.0,
@@ -241,7 +242,6 @@ def save_path_nordif():
 class TestNORDIF:
     def test_get_settings_from_file(self):
         settings = get_settings_from_file(SETTING_FILE)
-
         answers = [METADATA, ORIGINAL_METADATA, SCAN_SIZE_FILE]
         assert len(settings) == len(answers)
         for setting_read, answer in zip(settings, answers):
