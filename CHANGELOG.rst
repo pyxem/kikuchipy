@@ -17,6 +17,10 @@ Unreleased
 
 Added
 -----
+- Readers for ECP and TKD (transmission kikuchi diffraction) master patterns stored in
+  EMsoft's HDF5 files. (`#476 <https://github.com/pyxem/kikuchipy/pull/476>`_)
+- `ECPMasterPattern` class to store Electron Channeling Pattern (ECP) master patterns.
+  (`#476 <https://github.com/pyxem/kikuchipy/pull/476>`_)
 - `EBSD.static_background` property for easier access to the background pattern.
   (`#475 <https://github.com/pyxem/kikuchipy/pull/475>`_)
 
