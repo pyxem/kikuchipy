@@ -312,15 +312,19 @@ plugins
 .. autosummary::
     emsoft_ebsd
     emsoft_ebsd_master_pattern
+    emsoft_ecp_master_pattern
+    emsoft_tkd_master_pattern
     h5ebsd
     nordif
     nordif_calibration_patterns
     oxford_binary
 
 The plugins import patterns and parameters from file formats into
-:class:`~kikuchipy.signals.EBSD` or :class:`~kikuchipy.signals.EBSDMasterPattern` (or
-:class:`~kikuchipy.signals.LazyEBSD` or
-:class:`~kikuchipy.signals.LazyEBSDMasterPattern` if loading lazily) objects.
+:class:`~kikuchipy.signals.EBSD`, :class:`~kikuchipy.signals.EBSDMasterPattern`, or
+:class:`~kikuchipy.signals.ECPMasterPattern` (or
+:class:`~kikuchipy.signals.LazyEBSD`,
+:class:`~kikuchipy.signals.LazyEBSDMasterPattern`, or
+:class:`~kikuchipy.signals.LazyECPMasterPattern` if loading lazily) instances.
 
 emsoft_ebsd
 ~~~~~~~~~~~
@@ -334,6 +338,22 @@ emsoft_ebsd_master_pattern
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. automodule:: kikuchipy.io.plugins.emsoft_ebsd_master_pattern
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+emsoft_ecp_master_pattern
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: kikuchipy.io.plugins.emsoft_ecp_master_pattern
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+emsoft_tkd_master_pattern
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. automodule:: kikuchipy.io.plugins.emsoft_tkd_master_pattern
     :members:
     :undoc-members:
     :show-inheritance:
@@ -482,6 +502,7 @@ signals
 .. autosummary::
     EBSD
     EBSDMasterPattern
+    ECPMasterPattern
     VirtualBSEImage
     util
 
@@ -561,6 +582,32 @@ See :class:`~hyperspy._signals.signal2d.Signal2D` for methods inherited from Hyp
 There are no methods exclusive to LazyEBSDMasterPattern instances.
 
 .. autoclass:: kikuchipy.signals.LazyEBSDMasterPattern
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+ECPMasterPattern
+----------------
+
+All methods listed here are also available to
+:class:`~kikuchipy.signals.LazyECPMasterPattern` instances.
+
+See :class:`~hyperspy._signals.signal2d.Signal2D` for methods inherited from HyperSpy.
+
+.. currentmodule:: kikuchipy.signals.ECPMasterPattern
+
+.. autosummary::
+    normalize_intensity
+    rescale_intensity
+
+.. autoclass:: kikuchipy.signals.ECPMasterPattern
+    :members:
+    :inherited-members: Signal2D
+    :show-inheritance:
+
+There are no methods exclusive to LazyECPMasterPattern instances.
+
+.. autoclass:: kikuchipy.signals.LazyECPMasterPattern
     :members:
     :undoc-members:
     :show-inheritance:
