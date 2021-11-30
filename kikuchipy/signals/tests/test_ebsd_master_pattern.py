@@ -29,7 +29,7 @@ import pytest
 import kikuchipy as kp
 from kikuchipy import load
 from kikuchipy.data import nickel_ebsd_master_pattern_small
-from kikuchipy.io.plugins.tests.test_emsoft_ebsd_masterpattern import (
+from kikuchipy.io.plugins.tests.test_emsoft_ebsd_master_pattern import (
     setup_axes_manager,
     METADATA,
 )

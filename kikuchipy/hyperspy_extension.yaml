@@ -34,8 +34,8 @@ signals:
   EBSDMasterPattern:
     signal_type: EBSDMasterPattern
     signal_type_aliases:
-      - ebsd_masterpattern
-      - masterpattern
+      - ebsd_master_pattern
+      - master_pattern
     signal_dimension: 2
     dtype: real
     lazy: False
@@ -46,6 +46,20 @@ signals:
     dtype: real
     lazy: True
     module: kikuchipy.signals.ebsd_master_pattern
+  ECPMasterPattern:
+    signal_type: ECPMasterPattern
+    signal_type_aliases:
+      - ecp_master_pattern
+    signal_dimension: 2
+    dtype: real
+    lazy: False
+    module: kikuchipy.signals.ecp_master_pattern
+  LazyECPMasterPattern:
+    signal_type: ECPMasterPattern
+    signal_dimension: 2
+    dtype: real
+    lazy: True
+    module: kikuchipy.signals.ecp_master_pattern
   VirtualBSEImage:
     signal_type: VirtualBSEImage
     signal_type_aliases:

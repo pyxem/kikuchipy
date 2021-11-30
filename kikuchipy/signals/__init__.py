@@ -26,13 +26,16 @@ from kikuchipy.signals.ebsd_master_pattern import (
     EBSDMasterPattern,
     LazyEBSDMasterPattern,
 )
+from kikuchipy.signals.ecp_master_pattern import ECPMasterPattern, LazyECPMasterPattern
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 
 __all__ = [
     "EBSD",
     "EBSDMasterPattern",
+    "ECPMasterPattern",
     "LazyEBSD",
     "LazyEBSDMasterPattern",
+    "LazyECPMasterPattern",
     "util",
     "VirtualBSEImage",
 ]
