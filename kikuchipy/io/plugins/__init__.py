@@ -21,6 +21,8 @@
 from kikuchipy.io.plugins import (
     emsoft_ebsd,
     emsoft_ebsd_master_pattern,
+    emsoft_ecp_master_pattern,
+    emsoft_tkd_master_pattern,
     h5ebsd,
     nordif,
     oxford_binary,
@@ -29,6 +31,8 @@ from kikuchipy.io.plugins import (
 __all__ = [
     "emsoft_ebsd",
     "emsoft_ebsd_master_pattern",
+    "emsoft_ecp_master_pattern",
+    "emsoft_tkd_master_pattern",
     "h5ebsd",
     "nordif",
     "oxford_binary",

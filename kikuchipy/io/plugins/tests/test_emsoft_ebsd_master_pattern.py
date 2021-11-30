@@ -24,7 +24,7 @@ import pytest
 
 from kikuchipy import load
 from kikuchipy.conftest import assert_dictionary
-from kikuchipy.io.plugins.emsoft_ebsd_master_pattern import (
+from kikuchipy.io.plugins._emsoft_master_pattern import (
     _check_file_format,
     _get_data_shape_slices,
     _get_datasets,
@@ -118,7 +118,7 @@ class TestEMsoftEBSDMasterPatternReader:
                 "ProgramName", data=np.array([b"EMEBSDmasterr.f90"], dtype="S17")
             )
             with pytest.raises(IOError, match=".* is not in EMsoft's master "):
-                _check_file_format(f)
+                _check_file_format(f, "EBSD")
 
     @pytest.mark.parametrize(
         (

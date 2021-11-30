@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read support for simulated electron backscatter diffraction (EBSD)
+"""Read support for simulated transmission kikuchi diffraction (TKD)
 master patterns in EMsoft's HDF5 format.
 """
 
@@ -27,10 +27,10 @@ from kikuchipy.io.plugins._emsoft_master_pattern import EMsoftMasterPatternReade
 
 # Plugin characteristics
 # ----------------------
-format_name = "emsoft_ebsd_master_pattern"
+format_name = "emsoft_tkd_master_pattern"
 description = (
-    "Read support for electron backscatter diffraction (EBSD) master "
-    "patterns stored in EMsoft's HDF5 file format."
+    "Read support for simulated transmission kikuchi diffraction (TKD)"
+    "master patterns stored in EMsoft's HDF5 file format."
 )
 full_support = False
 # Recognised file extension
@@ -40,12 +40,12 @@ default_extension = 0
 writes = False
 
 # Unique HDF5 footprint
-footprint = ["emdata/ebsdmaster"]
+footprint = ["emdata/tkdmaster"]
 
 
-class EMsoftEBSDMasterPatternReader(EMsoftMasterPatternReader):
-    diffraction_type = "EBSD"
-    cl_parameters_group_name = "MCCL"  # Monte Carlo openCL
+class EMsoftTKDMasterPatternReader(EMsoftMasterPatternReader):
+    diffraction_type = "TKD"
+    cl_parameters_group_name = "MCCLfoil"  # Monte Carlo openCL
     energy_string = "EkeVs"
 
 
@@ -57,7 +57,7 @@ def file_reader(
     lazy: bool = False,
     **kwargs,
 ) -> List[dict]:
-    """Read simulated electron backscatter diffraction (EBSD) master
+    """Read simulated transmission kikuchi diffraction (TKD) master
     patterns from EMsoft's HDF5 file format
     :cite:`callahan2013dynamical`.
 
@@ -87,7 +87,7 @@ def file_reader(
     signal_dict_list: list of dicts
         Data, axes, metadata and original metadata.
     """
-    reader = EMsoftEBSDMasterPatternReader(
+    reader = EMsoftTKDMasterPatternReader(
         filename=filename,
         energy=energy,
         projection=projection,

@@ -16,8 +16,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read support for simulated electron backscatter diffraction (EBSD)
-master patterns in EMsoft's HDF5 format.
+"""Read support for simulated electron channeling pattern (ECP) master
+patterns in EMsoft's HDF5 format.
 """
 
 from typing import List, Optional
@@ -27,10 +27,10 @@ from kikuchipy.io.plugins._emsoft_master_pattern import EMsoftMasterPatternReade
 
 # Plugin characteristics
 # ----------------------
-format_name = "emsoft_ebsd_master_pattern"
+format_name = "emsoft_ecp_master_pattern"
 description = (
-    "Read support for electron backscatter diffraction (EBSD) master "
-    "patterns stored in EMsoft's HDF5 file format."
+    "Read support for electron channeling pattern (ECP) master patterns"
+    " stored in EMsoft's HDF5 file format."
 )
 full_support = False
 # Recognised file extension
@@ -40,13 +40,13 @@ default_extension = 0
 writes = False
 
 # Unique HDF5 footprint
-footprint = ["emdata/ebsdmaster"]
+footprint = ["emdata/ecpmaster"]
 
 
-class EMsoftEBSDMasterPatternReader(EMsoftMasterPatternReader):
-    diffraction_type = "EBSD"
+class EMsoftECPMasterPatternReader(EMsoftMasterPatternReader):
+    diffraction_type = "ECP"
     cl_parameters_group_name = "MCCL"  # Monte Carlo openCL
-    energy_string = "EkeVs"
+    energy_string = "EkeV"
 
 
 def file_reader(
@@ -57,9 +57,8 @@ def file_reader(
     lazy: bool = False,
     **kwargs,
 ) -> List[dict]:
-    """Read simulated electron backscatter diffraction (EBSD) master
-    patterns from EMsoft's HDF5 file format
-    :cite:`callahan2013dynamical`.
+    """Read simulated electron channeling pattern (ECP) master patterns
+    from EMsoft's HDF5 file format :cite:`callahan2013dynamical`.
 
     Parameters
     ----------
@@ -87,7 +86,7 @@ def file_reader(
     signal_dict_list: list of dicts
         Data, axes, metadata and original metadata.
     """
-    reader = EMsoftEBSDMasterPatternReader(
+    reader = EMsoftECPMasterPatternReader(
         filename=filename,
         energy=energy,
         projection=projection,
