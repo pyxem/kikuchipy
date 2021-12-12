@@ -12,6 +12,19 @@ best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 Contributors to each release are listed in alphabetical order by first name. List
 entries are sorted in descending chronological order.
 
+0.5.5 (2021-12-12)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+- Zhou Xu
+
+Fixed
+-----
+- Not flipping rows and columns when saving non-square patterns to kikuchipy's h5ebsd
+  format. (`#486 <https://github.com/pyxem/kikuchipy/pull/486>`_)
+
 0.5.4 (2021-11-17)
 ==================
 
