@@ -15,6 +15,10 @@ entries are sorted in descending chronological order.
 Unreleased
 ==========
 
+Contributors
+------------
+- Håkon Wiik Ånes
+
 Added
 -----
 - `EBSD.static_background` property for easier access to the background pattern.
@@ -24,6 +28,19 @@ Fixed
 -----
 - Hopefully prevent EBSD refinement tests using random data to fail on Azure.
   (`#465 <https://github.com/pyxem/kikuchipy/pull/465>`_)
+
+0.5.5 (2021-12-12)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+- Zhou Xu
+
+Fixed
+-----
+- Not flipping rows and columns when saving non-square patterns to kikuchipy's h5ebsd
+  format. (`#486 <https://github.com/pyxem/kikuchipy/pull/486>`_)
 
 0.5.4 (2021-11-17)
 ==================

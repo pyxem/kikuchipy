@@ -882,7 +882,7 @@ def file_writer(
         data_shape[:2] = [i.size for i in nav_axes][::-1]
         data_scales[:2] = [i.scale for i in nav_axes][::-1]
         nav_extent = am.navigation_extent
-    data_shape[2:] = am.signal_shape
+    data_shape[2:] = am.signal_shape[::-1]
     data_scales[2:] = [i.scale for i in am.signal_axes]
     ny, nx, sy, sx = data_shape
     scale_ny, scale_nx, scale_sy, _ = data_scales
