@@ -356,10 +356,12 @@ def h5ebsd2signaldict(
     md.set_item("Signal.signal_type", "EBSD")
     md.set_item("Signal.record_by", "image")
 
+    static_bg_node = metadata_nodes("ebsd") + ".static_background"
     scan = {
         "metadata": md.as_dictionary(),
         "original_metadata": omd.as_dictionary(),
         "attributes": {},
+        "static_background": md.get_item(static_bg_node, None),
     }
 
     # Get data dataset
