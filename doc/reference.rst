@@ -8,8 +8,8 @@ see the user guide for how to use kikuchipy.
 
 .. caution::
 
-    kikuchipy is in an alpha stage, so there will be some breaking changes with each
-    release.
+    kikuchipy is in continuous development (alpha stage), so expect
+    some breaking changes with each release.
 
 .. module:: kikuchipy
 
@@ -36,7 +36,6 @@ crystallography
 ===============
 
 .. automodule:: kikuchipy.crystallography
-.. currentmodule:: kikuchipy.crystallography
 
 .. autosummary::
     get_direct_structure_matrix
@@ -120,7 +119,7 @@ draw
 ====
 
 .. automodule:: kikuchipy.draw
-.. currentmodule:: kikuchipy.draw
+
 .. autosummary::
     colors
     get_rgb_navigator
@@ -131,7 +130,7 @@ draw
 markers
 -------
 
-.. currentmodule:: kikuchipy.draw.markers
+.. automodule:: kikuchipy.draw.markers
 
 .. autosummary::
     get_line_segment_list
@@ -146,6 +145,8 @@ colors
 ------
 
 .. automodule:: kikuchipy.draw.colors
+    :members:
+    :undoc-members:
 
 ....
 
@@ -153,7 +154,6 @@ filters
 =======
 
 .. automodule:: kikuchipy.filters
-.. currentmodule:: kikuchipy.filters
 
 .. autosummary::
     distance_to_origin

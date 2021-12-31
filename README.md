@@ -26,8 +26,8 @@ multi-dimensional data analysis provided by the HyperSpy library.
   the `doc/user_guide` directory. We hope you find them useful!
 - **License**: kikuchipy is released under the GPLv3+ license.
 - **Cite**: If you find this project useful, please cite the DOI above.
-- **Changelog**: The library is in an alpha stage, so there will be breaking changes
-  with each release. Please see
+- **Changelog**: The library is in continuous development (alpha stage), so there will
+  some be breaking changes with each release. Please see
   [the changelog](https://kikuchipy.org/en/latest/changelog.html) for all developments.
 
 ## Contributors ✨
