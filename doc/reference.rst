@@ -121,6 +121,12 @@ draw
 
 .. automodule:: kikuchipy.draw
 .. currentmodule:: kikuchipy.draw
+.. autosummary::
+    colors
+    get_rgb_navigator
+    markers
+
+.. autofunction:: get_rgb_navigator
 
 markers
 -------

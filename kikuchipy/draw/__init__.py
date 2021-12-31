@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Creation of HyperSpy markers to add to signals."""
+"""Creation of HyperSpy markers to add to signals and other tools."""
 
-from kikuchipy.draw import markers, colors
+from kikuchipy.draw import colors, markers
+from kikuchipy.draw._navigators import get_rgb_navigator
 
-__all__ = ["markers", "colors"]
+__all__ = ["colors", "get_rgb_navigator", "markers"]
