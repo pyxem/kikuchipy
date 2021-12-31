@@ -9,16 +9,20 @@ version: 2
 sphinx:
   configuration: doc/conf.py
 
+build:
+  tools:
+    python: "3.9"
+
 # Build doc in all formats (HTML, PDF and ePub)
 formats:
   - htmlzip
   - pdf
 
 # Python environment for building the docs
-python:
-  version: 3.8
-  install:
-    - method: pip
-      path: .
-      extra_requirements:
-        - doc
+#python:
+#  version: 3.8
+#  install:
+#    - method: pip
+#      path: .
+#      extra_requirements:
+#        - doc
