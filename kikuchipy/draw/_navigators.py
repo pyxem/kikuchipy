@@ -47,7 +47,7 @@ def get_rgb_navigator(image, dtype: Union[type, np.dtype] = np.uint16):
         Signal with an (n columns, n rows) signal shape and no
         navigation shape, of data type either rgb8 or rgb16.
     """
-    image_rescaled = rescale_intensity(image, out_range=dtype)
+    image_rescaled = rescale_intensity(image, out_range=dtype).astype(dtype)
     s = hs.signals.Signal2D(image_rescaled)
     s = s.transpose(signal_axes=1)
     s.change_dtype({"uint8": "rgb8", "uint16": "rgb16"}[np.dtype(dtype).name])
