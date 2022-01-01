@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
