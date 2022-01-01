@@ -41,8 +41,8 @@ kikuchipy
     :target: https://doi.org/10.5281/zenodo.3597646
     :alt: DOI
 
-kikuchipy is an open-source Python library for processing and analysis of electron
-backscatter diffraction (EBSD) patterns. The library builds on the tools for
+kikuchipy [ki-ko-chi-pai] is an open-source Python library for processing and analysis
+of electron backscatter diffraction (EBSD) patterns. The library builds on the tools for
 multi-dimensional data analysis provided by the HyperSpy library.
 
 - **User guide and API reference**: https://kikuchipy.org. The guide consists of Jupyter
