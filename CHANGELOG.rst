@@ -29,6 +29,23 @@ Fixed
 - Hopefully prevent EBSD refinement tests using random data to fail on Azure.
   (`#465 <https://github.com/pyxem/kikuchipy/pull/465>`_)
 
+0.5.6 (2022-01-02)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Added
+-----
+- Convenience function `get_rgb_navigator()` to create an RGB signal from an RGB image.
+  (`#491 <https://github.com/pyxem/kikuchipy/pull/491>`_)
+
+Changed
+-------
+- Pattern matching notebook to include orientation maps from orix.
+  (`#491 <https://github.com/pyxem/kikuchipy/pull/491>`_)
+
 0.5.5 (2021-12-12)
 ==================
 
