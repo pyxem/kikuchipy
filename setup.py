@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -120,17 +119,17 @@ setup(
     extras_require=extra_feature_requirements,
     # fmt: off
     install_requires=[
-        "dask[array]        >= 2021.8.1",
-        "diffsims           >= 0.4",
-        "hyperspy           >= 1.6.5",
-        "h5py               >= 2.10",
-        "matplotlib         >= 3.3",
-        "numpy              >= 1.19",
-        "numba              >= 0.48",
-        "orix               >= 0.7",
-        "pooch              >= 0.13",
-        "tqdm               >= 0.5.2",
-        "scikit-image       >= 0.16.2",
+        "dask[array]  >= 2021.8.1",
+        "diffsims     >= 0.4",
+        "hyperspy     >= 1.6.5",
+        "h5py         >= 2.10",
+        "matplotlib   >= 3.3",
+        "numba        >= 0.48",
+        "numpy        >= 1.19",
+        "orix         >= 0.8",
+        "pooch        >= 0.13",
+        "tqdm         >= 0.5.2",
+        "scikit-image >= 0.16.2",
         "scikit-learn",
         "scipy",
     ],

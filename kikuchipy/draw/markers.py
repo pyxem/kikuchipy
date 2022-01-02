@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -15,6 +14,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+
+"""Creation of lists of HyperSpy markers."""
 
 from typing import Union
 
