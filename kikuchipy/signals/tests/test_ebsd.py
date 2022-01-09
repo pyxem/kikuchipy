@@ -1665,7 +1665,7 @@ class TestEBSDRefinement:
             energy=energy
         )
 
-        assert xmap_ref.scores.mean() > xmap.scores.mean()
+        assert np.all(xmap_ref.scores > xmap.scores)
 
     # ------------------- Refine projection centers ------------------ #
 
