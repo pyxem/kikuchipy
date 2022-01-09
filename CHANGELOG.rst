@@ -12,6 +12,19 @@ best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 Contributors to each release are listed in alphabetical order by first name. List
 entries are sorted in descending chronological order.
 
+0.5.7 (2022-01-10)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Fixed
+-----
+- EBSD orientation refinement on Windows producing garbage results due to unpredictable
+  behaviour in Numba function which converts Euler triplet to quaternion.
+  (`#495 <https://github.com/pyxem/kikuchipy/pull/495>`_)
+
 0.5.6 (2022-01-02)
 ==================
 
