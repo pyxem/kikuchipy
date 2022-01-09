@@ -1660,9 +1660,11 @@ class TestEBSDRefinement:
             xmap=xmap,
             detector=detector,
             master_pattern=kp.data.nickel_ebsd_master_pattern_small(
-                energy=energy, projection="lambert", hemisphere="both",
+                energy=energy,
+                projection="lambert",
+                hemisphere="north",
             ),
-            energy=energy
+            energy=energy,
         )
 
         assert np.all(xmap_ref.scores > xmap.scores)
