@@ -479,6 +479,65 @@ def oxford_binary_file(tmpdir, request):
     yield f
 
 
+@pytest.fixture
+def nickel_ebsd_small_di_xmap():
+    """Yield an :class:`~orix.crystal_map.CrystalMap` from dictionary
+    indexing of the :func:`kikuchipy.data.nickel_ebsd_small` data set.
+
+    Dictionary indexing was performed with the following script:
+
+    .. code-block:: python
+
+        import kikuchipy as kp
+        from orix.sampling import get_sample_fundamental
+
+
+        s = kp.data.nickel_ebsd_small()
+        s.remove_static_background()
+        s.remove_dynamic_background()
+
+        mp = kp.data.nickel_ebsd_master_pattern_small(energy=20, projection="lambert")
+        rot = get_sample_fundamental(resolution=1.4, point_group=mp.phase.point_group)
+        sig_shape = s.axes_manager.signal_shape[::-1]
+        detector = kp.detectors.EBSDDetector(
+            shape=sig_shape,
+            sample_tilt=70,
+            pc=(0.421, 0.7794, 0.5049),
+            convention="tsl"
+        )
+        sim_dict = mp.get_patterns(rotations=rot, detector=detector, energy=20)
+        signal_mask = ~kp.filters.Window("circular", sig_shape).astype(bool)
+        xmap = s.dictionary_indexing(
+            dictionary=sim_dict, signal_mask=signal_mask, keep_n=1,
+        )
+    """
+    coords, _ = create_coordinate_arrays(shape=(3, 3), step_sizes=(1.5, 1.5))
+    # fmt: off
+    xmap = CrystalMap(
+        rotations=Rotation((
+            (0.9542, -0.0183, -0.2806,  0.1018),
+            (0.9542,  0.0608, -0.2295, -0.1818),
+            (0.9542,  0.0608, -0.2295, -0.1818),
+            (0.9542, -0.0183, -0.2806,  0.1018),
+            (0.9542,  0.0608, -0.2295, -0.1818),
+            (0.9542,  0.0608, -0.2295, -0.1818),
+            (0.9542, -0.0183, -0.2806,  0.1018),
+            (0.9542,  0.0608, -0.2295, -0.1818),
+            (0.9542,  0.0608, -0.2295, -0.1818)
+        )),
+        x=coords["x"],
+        y=coords["y"],
+        prop=dict(scores=np.array((
+            0.46917585, 0.4075796,  0.4525376,
+            0.49076438, 0.41008472, 0.46616974,
+            0.4542183,  0.41790304, 0.4655012
+        ))),
+        phase_list=PhaseList(Phase("ni", 225, "m-3m")),
+    )
+    # fmt: on
+    yield xmap
+
+
 # ---------------------- pytest doctest-modules ---------------------- #
 
 
