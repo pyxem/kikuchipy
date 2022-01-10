@@ -62,12 +62,10 @@ def _rotation_from_euler(alpha: float, beta: float, gamma: float) -> np.ndarray:
     c = np.cos(0.5 * beta)
     s = np.sin(0.5 * beta)
 
-    rotation = np.array((
-         c * np.cos(sigma),
-        -s * np.cos(delta),
-        -s * np.sin(delta),
-        -c * np.sin(sigma)
-    ), dtype=np.float64)
+    rotation = np.array(
+        (c * np.cos(sigma), -s * np.cos(delta), -s * np.sin(delta), -c * np.sin(sigma)),
+        dtype=np.float64,
+    )
 
     if rotation[0] < 0:
         rotation = -rotation
