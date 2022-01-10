@@ -57,16 +57,15 @@ def _rotation_from_euler(alpha: float, beta: float, gamma: float) -> np.ndarray:
     This function is optimized with Numba, so care must be taken with
     array shapes and data types.
     """
-    sigma = 0.5 * np.add(alpha, gamma)
-    delta = 0.5 * np.subtract(alpha, gamma)
-    c = np.cos(beta / 2)
-    s = np.sin(beta / 2)
+    sigma = 0.5 * (alpha + gamma)
+    delta = 0.5 * (alpha - gamma)
+    c = np.cos(0.5 * beta)
+    s = np.sin(0.5 * beta)
 
-    rotation = np.zeros(4)
-    rotation[0] = c * np.cos(sigma)
-    rotation[1] = -s * np.cos(delta)
-    rotation[2] = -s * np.sin(delta)
-    rotation[3] = -c * np.sin(sigma)
+    rotation = np.array(
+        (c * np.cos(sigma), -s * np.cos(delta), -s * np.sin(delta), -c * np.sin(sigma)),
+        dtype=np.float64,
+    )
 
     if rotation[0] < 0:
         rotation = -rotation
