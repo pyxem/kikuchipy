@@ -29,6 +29,19 @@ Fixed
 - Hopefully prevent EBSD refinement tests using random data to fail on Azure.
   (`#465 <https://github.com/pyxem/kikuchipy/pull/465>`_)
 
+0.5.7 (2022-01-10)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Fixed
+-----
+- EBSD orientation refinement on Windows producing garbage results due to unpredictable
+  behaviour in Numba function which converts Euler triplet to quaternion.
+  (`#495 <https://github.com/pyxem/kikuchipy/pull/495>`_)
+
 0.5.6 (2022-01-02)
 ==================
 
