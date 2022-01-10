@@ -484,6 +484,57 @@ def oxford_binary_file(tmpdir, request):
     yield f
 
 
+@pytest.fixture
+def nickel_ebsd_small_di_xmap():
+    """Yield an :class:`~orix.crystal_map.CrystalMap` from dictionary
+    indexing of the :func:`kikuchipy.data.nickel_ebsd_small` data set.
+
+    Dictionary indexing was performed with the following script:
+
+    .. code-block:: python
+
+        import kikuchipy as kp
+        from orix.sampling import get_sample_fundamental
+
+
+        s = kp.data.nickel_ebsd_small()
+        s.remove_static_background()
+        s.remove_dynamic_background()
+
+        mp = kp.data.nickel_ebsd_master_pattern_small(energy=20, projection="lambert")
+        rot = get_sample_fundamental(resolution=1.4, point_group=mp.phase.point_group)
+        detector = kp.detectors.EBSDDetector(
+            shape=s.axes_manager.signal_shape[::-1],
+            sample_tilt=70,
+            pc=(0.421, 0.7794, 0.5049),
+            convention="tsl"
+        )
+        sim_dict = mp.get_patterns(rotations=rot, detector=detector, energy=20)
+        xmap = s.dictionary_indexing(dictionary=sim_dict, keep_n=1)
+    """
+    coords, _ = create_coordinate_arrays(shape=(3, 3), step_sizes=(1.5, 1.5))
+    # fmt: off
+    grain1 = (0.9542, -0.0183, -0.2806,  0.1018)
+    grain2 = (0.9542,  0.0608, -0.2295, -0.1818)
+    xmap = CrystalMap(
+        rotations=Rotation((
+            grain1, grain2, grain2,
+            grain1, grain2, grain2,
+            grain1, grain2, grain2
+        )),
+        x=coords["x"],
+        y=coords["y"],
+        prop=dict(scores=np.array((
+            0.4364652,  0.3772456,  0.4140171,
+            0.4537009,  0.37445727, 0.43675864,
+            0.42391658, 0.38740265, 0.41931134
+        ))),
+        phase_list=PhaseList(Phase("ni", 225, "m-3m")),
+    )
+    # fmt: on
+    yield xmap
+
+
 # ---------------------- pytest doctest-modules ---------------------- #
 
 
