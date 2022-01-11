@@ -243,6 +243,15 @@ Docstring examples are tested `with pytest
 
     pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
 
+Tips for writing tests of Numba decorated functions:
+
+- A Numba decorated function `numba_func()` is only covered if it is called in the test
+  as `numba_func.py_func()`.
+- Always test a Numba decorated function calling `numba_func()` directly, in addition to
+  `numba_func.py_func()`, because the machine code function might give different results
+  on different OS with the same Python code. See `this issue for a case where this
+  happened <https://github.com/pyxem/kikuchipy/issues/496>`_.
+
 Adding data to the data module
 ==============================
 
