@@ -1,4 +1,6 @@
 include CHANGELOG.rst
+include CODE_OF_CONDUCT.rst
+include CONTRIBUTING.rst
 include kikuchipy/hyperspy_extension.yaml
 include LICENSE
 include MANIFEST.in
