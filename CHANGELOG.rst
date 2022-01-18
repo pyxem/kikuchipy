@@ -25,6 +25,11 @@ Added
 - `EBSD.static_background` property for easier access to the background pattern.
   (`#475 <https://github.com/pyxem/kikuchipy/pull/475>`_)
 
+Changed
+-------
+- Restrict minimal version of SciPy to 1.7.
+(`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
+
 Fixed
 -----
 - Hopefully prevent EBSD refinement tests using random data to fail on Azure.
