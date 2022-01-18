@@ -21,8 +21,14 @@ Contributors
 
 Added
 -----
+- Support for Python 3.10. (`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
 - `EBSD.static_background` property for easier access to the background pattern.
   (`#475 <https://github.com/pyxem/kikuchipy/pull/475>`_)
+
+Changed
+-------
+- Restrict minimal version of SciPy to 1.7.
+(`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
 
 Fixed
 -----
@@ -231,8 +237,7 @@ Added
   `#391 <https://github.com/pyxem/kikuchipy/pull/391>`_)
 - Unit testing of docstring examples.
   (`#350 <https://github.com/pyxem/kikuchipy/pull/350>`_)
-- Support for Python 3.9.
-  (`#348 <https://github.com/pyxem/kikuchipy/pull/348>`_)
+- Support for Python 3.9. (`#348 <https://github.com/pyxem/kikuchipy/pull/348>`_)
 - Projection/pattern center calibration via the moving screen technique in a
   kikuchipy.detectors.calibration module.
   (`#322 <https://github.com/pyxem/kikuchipy/pull/322>`_)
