@@ -6,8 +6,6 @@ jobs:
   code:
     name: code style
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
     steps:
       - uses: actions/checkout@v2
       - uses: psf/black@stable
@@ -25,7 +23,7 @@ jobs:
         run: python setup.py manifix
 
   build-with-pip:
-    name: ${{ matrix.os }}/py${{ matrix.python-version }}/pip
+    name: ${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.LABEL }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     env:
@@ -34,29 +32,32 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.8, 3.9]
+        python-version: [3.9, 3.10]
         include:
-          # Oldest supported version of main dependencies on Python 3.7
           - os: ubuntu-latest
             python-version: 3.7
             OLDEST_SUPPORTED_VERSION: true
-            DEPENDENCIES: dask==2021.8.1 diffsims==0.4.0 hyperspy==1.6.5 matplotlib==3.3 numba==0.48 numpy==1.19 orix==0.8.0 scikit-image==0.16.2
+            DEPENDENCIES: dask==2021.8.1 diffsims==0.4 hyperspy==1.6.5 matplotlib==3.3 numba==0.48 numpy==1.19 orix==0.8 scikit-image==0.16.2 scipy==1.7
+            LABEL: -oldest
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Display versions
+      - name: Display Python and pip versions
         run: python -V; pip -V
-      - name: Install oldest supported version
-        if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
-        run: pip install ${{ matrix.DEPENDENCIES }}
       - name: Install depedencies and package
         shell: bash
         run: pip install -U -e .'[tests]'
+      - name: Install oldest supported version
+        if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
+        run: pip install ${{ matrix.DEPENDENCIES }}
+      - name: Display package versions
+        run: pip list
       - name: Run docstring tests
         if: ${{ matrix.os == 'ubuntu-latest' }}
+        continue-on-error: true
         run: pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
       - name: Run tests
         run: pytest --cov=kikuchipy --pyargs kikuchipy
