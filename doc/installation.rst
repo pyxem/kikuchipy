@@ -20,7 +20,7 @@ with the `Miniconda distribution <https://docs.conda.io/en/latest/miniconda.html
 the Anaconda Prompt, terminal, or Command Prompt, create an environment and activate
 it::
 
-   conda create --name kp-env python=3.9
+   conda create --name kp-env python=3.10
    conda activate kp-env
 
 If you prefer a graphical interface to manage packages and environments, you can install
