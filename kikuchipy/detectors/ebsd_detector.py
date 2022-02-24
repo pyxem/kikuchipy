@@ -584,8 +584,7 @@ class EBSDDetector:
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
 
-        # Plot a pattern on the detector
-        if isinstance(pattern, np.ndarray):
+        if isinstance(pattern, np.ndarray):  # Plot a pattern
             if pattern.shape != (sy, sx):
                 raise ValueError(
                     f"Pattern shape {pattern.shape} must equal the detector "
@@ -595,6 +594,8 @@ class EBSDDetector:
                 pattern_kwargs = {}
             pattern_kwargs.setdefault("cmap", "gray")
             ax.imshow(pattern, extent=bounds, **pattern_kwargs)
+        else:  # Gray background
+            ax.imshow(np.ones(self.shape), cmap="gray", vmin=0, vmax=2, extent=bounds)
 
         # Show the projection center
         if show_pc:
@@ -605,6 +606,7 @@ class EBSDDetector:
                 facecolor="gold",
                 edgecolor="k",
                 marker=MarkerStyle(marker="*", fillstyle="full"),
+                zorder=2,
             )
             [pc_kwargs.setdefault(k, v) for k, v in default_params_pc.items()]
             ax.scatter(x=pcx, y=pcy, **pc_kwargs)
