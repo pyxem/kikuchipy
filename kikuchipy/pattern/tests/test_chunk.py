@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -15,6 +14,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+
+from packaging import version
 
 import dask.array as da
 import numpy as np
@@ -64,20 +65,11 @@ DYN_CORR_UINT8_SPATIAL_STD2_OMAX250 = np.array(
     [[167, 210, 177], [250, 217, 184], [217, 31, 0]],
     dtype=np.uint8,
 )
-ADAPT_EQ_UINT8_SKIMAGE16 = np.array(
-    [[127, 223, 127], [255, 223, 31], [223, 31, 0]], dtype=np.uint8
-)
-ADAPT_EQ_UINT8_SKIMAGE17 = np.array(
-    [[92, 215, 92], [255, 215, 92], [215, 26, 0]], dtype=np.uint8
-)
-ADAPT_EQ_UINT8_SKIMAGE18 = np.array(
-    [[92, 215, 92], [255, 215, 92], [215, 26, 0]], dtype=np.uint8
-)
-ADAPT_EQ_UINT8 = ADAPT_EQ_UINT8_SKIMAGE16
-if skimage_version[2:4] == str(17):  # pragma: no cover
-    ADAPT_EQ_UINT8 = ADAPT_EQ_UINT8_SKIMAGE17
-elif skimage_version[2:4] == str(18):  # pragma: no cover
-    ADAPT_EQ_UINT8 = ADAPT_EQ_UINT8_SKIMAGE18
+ADAPT_EQ_UINT8 = np.array([[92, 215, 92], [255, 215, 92], [215, 26, 0]], dtype=np.uint8)
+if version.parse(skimage_version) < version.parse("0.17"):  # pragma: no cover
+    ADAPT_EQ_UINT8 = np.array(
+        [[127, 223, 127], [255, 223, 31], [223, 31, 0]], dtype=np.uint8
+    )
 
 
 class TestRescaleIntensityChunk:

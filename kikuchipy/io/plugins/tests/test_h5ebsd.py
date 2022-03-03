@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -395,3 +394,15 @@ class Testh5ebsd:
         s1 = load(save_path_hdf5)
         assert s1.data.shape == (60, 60)
         assert s1.axes_manager.navigation_axes == ()
+
+    def test_save_load_non_square_patterns(self, save_path_hdf5):
+        """Ensure non-square patterns are written to file correctly."""
+        data_shape = (3, 4, 5, 6)
+        data = np.random.randint(
+            low=0, high=256, size=np.prod(data_shape), dtype=np.uint8
+        ).reshape(data_shape)
+        s = EBSD(data)
+        s.save(save_path_hdf5)
+        s2 = load(save_path_hdf5)
+        assert s.data.shape == s2.data.shape
+        assert np.allclose(s.data, s2.data)

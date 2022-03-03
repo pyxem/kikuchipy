@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -1679,6 +1678,29 @@ class TestEBSDRefinement:
             chunk_kwargs=chunk_kwargs,
         )
         assert dask_array.chunksize == chunksize
+
+    def test_refine_orientation_nickel_ebsd_small(
+        self, nickel_ebsd_small_di_xmap, detector
+    ):
+        xmap = nickel_ebsd_small_di_xmap
+
+        s = kp.data.nickel_ebsd_small()
+        s.remove_static_background()
+        s.remove_dynamic_background()
+
+        energy = 20
+        xmap_ref = s.refine_orientation(
+            xmap=xmap,
+            detector=detector,
+            master_pattern=kp.data.nickel_ebsd_master_pattern_small(
+                energy=energy,
+                projection="lambert",
+                hemisphere="north",
+            ),
+            energy=energy,
+        )
+
+        assert np.all(xmap_ref.scores > xmap.scores)
 
     # ------------------- Refine projection centers ------------------ #
 

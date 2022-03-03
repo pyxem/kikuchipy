@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -17,7 +16,8 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
-from orix import quaternion, vector
+from orix.quaternion import Rotation
+from orix.vector import Vector3d
 
 import kikuchipy as kp
 
@@ -39,15 +39,22 @@ class TestRotationVectorTools:
             sample_tilt=70,
         )
         dc = dc.reshape((-1, 3))
-        rotated_dc = kp._rotation._rotate_vector.py_func(rot, dc)
 
-        rot_orix = quaternion.Rotation(rot)
-        dc_orix = vector.Vector3d(dc)
+        rot_orix = Rotation(rot)
+        dc_orix = Vector3d(dc)
         rotated_dc_orix = rot_orix * dc_orix
 
-        assert np.allclose(rotated_dc, rotated_dc_orix.data, atol=1e-3)
+        rotated_dc = kp._rotation._rotate_vector(rot, dc)
+        rotated_dc_py = kp._rotation._rotate_vector.py_func(rot, dc)
+
+        assert np.allclose(rotated_dc, rotated_dc_py, atol=1e-3)
+        assert np.allclose(rotated_dc_py, rotated_dc_orix.data, atol=1e-3)
 
     def test_rotation_from_euler(self):
         euler = np.array([1, 2, 3])
-        rot_orix = quaternion.Rotation.from_euler(euler).data
-        assert np.allclose(rot_orix, kp._rotation._rotation_from_euler.py_func(*euler))
+        rot_orix = Rotation.from_euler(euler).data
+        rot_numba = kp._rotation._rotation_from_euler(*euler)
+        rot_numba_py = kp._rotation._rotation_from_euler.py_func(*euler)
+
+        assert np.allclose(rot_numba, rot_numba_py)
+        assert np.allclose(rot_numba_py, rot_orix)

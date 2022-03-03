@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -752,7 +751,7 @@ def compute_refine_orientation_results(
     refined_xmap
         Crystal map with refined orientations and scores.
     """
-    n_patterns = np.prod(results.shape[:-1])
+    n_patterns = int(np.prod(results.shape[:-1]))
     with ProgressBar():
         print(f"Refining {n_patterns} orientation(s):", file=sys.stdout)
         time_start = time()
@@ -799,7 +798,7 @@ def compute_refine_projection_center_results(
     new_detector : :class:`~kikuchipy.detectors.EBSDDetector`
         EBSD detector with refined projection center parameters.
     """
-    n_patterns = np.prod(results.shape[:-1])
+    n_patterns = int(np.prod(results.shape[:-1]))
     nav_shape = xmap.shape
     with ProgressBar():
         print(f"Refining {n_patterns} projection center(s):", file=sys.stdout)
@@ -848,7 +847,7 @@ def compute_refine_orientation_projection_center_results(
     new_detector : :class:`~kikuchipy.detectors.EBSDDetector`
         EBSD detector with refined projection center parameters.
     """
-    n_patterns = np.prod(results.shape[:-1])
+    n_patterns = int(np.prod(results.shape[:-1]))
     nav_shape = xmap.shape
     with ProgressBar():
         print(

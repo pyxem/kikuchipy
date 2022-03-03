@@ -15,19 +15,72 @@ entries are sorted in descending chronological order.
 Unreleased
 ==========
 
+Contributors
+------------
+- Håkon Wiik Ånes
+
 Added
 -----
 - Readers for ECP and TKD (transmission kikuchi diffraction) master patterns stored in
   EMsoft's HDF5 files. (`#476 <https://github.com/pyxem/kikuchipy/pull/476>`_)
 - `ECPMasterPattern` class to store Electron Channeling Pattern (ECP) master patterns.
   (`#476 <https://github.com/pyxem/kikuchipy/pull/476>`_)
+- Support for Python 3.10. (`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
 - `EBSD.static_background` property for easier access to the background pattern.
   (`#475 <https://github.com/pyxem/kikuchipy/pull/475>`_)
+
+Changed
+-------
+- Restrict minimal version of SciPy to 1.7.
+(`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
 
 Fixed
 -----
 - Hopefully prevent EBSD refinement tests using random data to fail on Azure.
   (`#465 <https://github.com/pyxem/kikuchipy/pull/465>`_)
+
+0.5.7 (2022-01-10)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Fixed
+-----
+- EBSD orientation refinement on Windows producing garbage results due to unpredictable
+  behaviour in Numba function which converts Euler triplet to quaternion.
+  (`#495 <https://github.com/pyxem/kikuchipy/pull/495>`_)
+
+0.5.6 (2022-01-02)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Added
+-----
+- Convenience function `get_rgb_navigator()` to create an RGB signal from an RGB image.
+  (`#491 <https://github.com/pyxem/kikuchipy/pull/491>`_)
+
+Changed
+-------
+- Pattern matching notebook to include orientation maps from orix.
+  (`#491 <https://github.com/pyxem/kikuchipy/pull/491>`_)
+
+0.5.5 (2021-12-12)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+- Zhou Xu
+
+Fixed
+-----
+- Not flipping rows and columns when saving non-square patterns to kikuchipy's h5ebsd
+  format. (`#486 <https://github.com/pyxem/kikuchipy/pull/486>`_)
 
 0.5.4 (2021-11-17)
 ==================
@@ -188,8 +241,7 @@ Added
   `#391 <https://github.com/pyxem/kikuchipy/pull/391>`_)
 - Unit testing of docstring examples.
   (`#350 <https://github.com/pyxem/kikuchipy/pull/350>`_)
-- Support for Python 3.9.
-  (`#348 <https://github.com/pyxem/kikuchipy/pull/348>`_)
+- Support for Python 3.9. (`#348 <https://github.com/pyxem/kikuchipy/pull/348>`_)
 - Projection/pattern center calibration via the moving screen technique in a
   kikuchipy.detectors.calibration module.
   (`#322 <https://github.com/pyxem/kikuchipy/pull/322>`_)
