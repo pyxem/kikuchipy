@@ -89,7 +89,7 @@ def _get_colors_for_allowed_vectors(
     # Keep only allowed vectors
     try:
         rlv2 = rlv[rlv.allowed]
-    except NotImplementedError:
+    except (NotImplementedError, ValueError):
         rlv2 = rlv
 
     # Reduce indices, e.g. [222] to [111], to assign these same color

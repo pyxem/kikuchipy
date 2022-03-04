@@ -205,7 +205,7 @@ class EBSDDetector:
     @property
     def aspect_ratio(self) -> float:
         """Number of detector rows divided by columns."""
-        return self.nrows / self.ncols
+        return self.ncols / self.nrows
 
     @property
     def unbinned_shape(self) -> Tuple[int, int]:
@@ -363,9 +363,9 @@ class EBSDDetector:
     @property
     def gnomonic_bounds(self) -> np.ndarray:
         """Detector bounds [x0, x1, y0, y1] in gnomonic coordinates."""
-        return np.concatenate((self.x_range, self.y_range)).reshape(
-            self.navigation_shape + (4,)
-        )
+        return np.stack(
+            (self.x_range, self.y_range), axis=self.navigation_dimension
+        ).reshape(self.navigation_shape + (4,))
 
     @property
     def _average_gnomonic_bounds(self) -> np.ndarray:
@@ -479,7 +479,7 @@ class EBSDDetector:
 
     def plot(
         self,
-        coordinates: Optional[str] = None,
+        coordinates: str = "detector",
         show_pc: bool = True,
         pc_kwargs: Optional[dict] = None,
         pattern: Optional[np.ndarray] = None,
@@ -499,8 +499,8 @@ class EBSDDetector:
         Parameters
         ----------
         coordinates
-            Which coordinates to use, "detector" or "gnomonic". If None
-            (default), "detector" is used.
+            Which coordinates to use, "detector" (default) or
+            "gnomonic".
         show_pc
             Show the average projection center in the Bruker convention.
             Default is True.
@@ -565,7 +565,7 @@ class EBSDDetector:
         sy, sx = self.shape
         pcx, pcy = self.pc_average[:2]
 
-        if coordinates in [None, "detector"]:
+        if coordinates == "detector":
             pcy *= sy
             pcx *= sx
             bounds = self.bounds
@@ -579,6 +579,8 @@ class EBSDDetector:
             y_label = "y gnomonic"
 
         fig, ax = plt.subplots()
+        #        print(self._average_gnomonic_bounds)
+        #        print(bounds)
         ax.axis(zoom * bounds)
         ax.set_aspect(self.aspect_ratio)
         ax.set_xlabel(x_label)

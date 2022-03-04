@@ -113,7 +113,7 @@ class GeometricalEBSDSimulation:
 
         # X and Y coordinates are now in place (0, 2) and (1, 3) respectively
         band_coords_detector[..., ::2] = (
-            band_coords_gnomonic[..., :2] + (pcx / pcz)
+            band_coords_gnomonic[..., :2] + (pcx / pcz) * self.detector.aspect_ratio
         ) / self.detector.x_scale[..., np.newaxis, np.newaxis]
         band_coords_detector[..., 1::2] = (
             -band_coords_gnomonic[..., 2:] + (pcy / pcz)
@@ -459,7 +459,7 @@ class GeometricalEBSDSimulation:
                 band_coords = self.bands.plane_trace_coordinates[index]
                 band_coords[:, [0, 1, 2, 3]] = band_coords[:, [0, 2, 1, 3]]
 
-            is_nan = np.isnan(band_coords).any(axis=1)
+            is_nan = np.isnan(band_coords).any(axis=-1)
             band_coords = band_coords[~is_nan]
             band_coords = band_coords.reshape((band_coords.shape[0], 2, 2))
 

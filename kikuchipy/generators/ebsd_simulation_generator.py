@@ -210,6 +210,7 @@ class EBSDSimulationGenerator:
             lattice=phase.structure.lattice,
             rotation=self.rotations,
         )
+        #        print(det2recip)
         # Output shape is (n hkl, n, 3) or (n hkl, ny, nx, 3)
         hkl_detector = np.tensordot(hkl, det2recip, axes=(1, 0))
         if n_nav_dims == 0:
@@ -289,11 +290,11 @@ class EBSDSimulationGenerator:
         nav_shape = self.navigation_shape  # From rotations
         detector_nav_shape = self.detector.navigation_shape
         if detector_nav_shape == (1,):
-            self.detector.pc = np.ones(nav_shape + (3,)) * self.detector.pc[0]
+            self.detector.pc = np.full(nav_shape + (3,), fill_value=self.detector.pc[0])
         elif detector_nav_shape != nav_shape:
             raise ValueError(
                 f"The detector navigation shape {detector_nav_shape} must be (1,) or "
-                f"equal to the rotations's shape {self.rotations.shape}"
+                f"equal to the rotations' shape {self.rotations.shape}"
             )
         self.detector.navigation_shape = self.navigation_shape
 
