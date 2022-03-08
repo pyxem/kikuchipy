@@ -124,7 +124,7 @@ class EBSDDetector:
 
         .. math::
 
-            x_B^* &= \frac{1}{2} - \frac{x_{pc}}{N_x b},\\
+            x_B^* &= \frac{1}{2} + \frac{x_{pc}}{N_x b},\\
             y_B^* &= \frac{1}{2} - \frac{y_{pc}}{N_y b},\\
             z_B^* &= \frac{L}{N_y b \delta},
 
@@ -205,6 +205,7 @@ class EBSDDetector:
     @property
     def aspect_ratio(self) -> float:
         """Number of detector rows divided by columns."""
+        #        return self.nrows / self.ncols
         return self.ncols / self.nrows
 
     @property
@@ -363,9 +364,9 @@ class EBSDDetector:
     @property
     def gnomonic_bounds(self) -> np.ndarray:
         """Detector bounds [x0, x1, y0, y1] in gnomonic coordinates."""
-        return np.stack(
-            (self.x_range, self.y_range), axis=self.navigation_dimension
-        ).reshape(self.navigation_shape + (4,))
+        return np.concatenate((self.x_range, self.y_range)).reshape(
+            self.navigation_shape + (4,)
+        )
 
     @property
     def _average_gnomonic_bounds(self) -> np.ndarray:
@@ -423,7 +424,7 @@ class EBSDDetector:
 
         .. math::
 
-            x_{pc} &= N_x b \left(\frac{1}{2} - x_B^*\right),\\
+            x_{pc} &= N_x b \left(x_B^* - \frac{1}{2}\right),\\
             y_{pc} &= N_y b \left(\frac{1}{2} - y_B^*\right),\\
             L &= N_y b \delta z_B^*,
 
@@ -479,7 +480,7 @@ class EBSDDetector:
 
     def plot(
         self,
-        coordinates: str = "detector",
+        coordinates: Optional[str] = None,
         show_pc: bool = True,
         pc_kwargs: Optional[dict] = None,
         pattern: Optional[np.ndarray] = None,
@@ -499,8 +500,8 @@ class EBSDDetector:
         Parameters
         ----------
         coordinates
-            Which coordinates to use, "detector" (default) or
-            "gnomonic".
+            Which coordinates to use, "detector" or "gnomonic". If None
+            (default), "detector" is used.
         show_pc
             Show the average projection center in the Bruker convention.
             Default is True.
@@ -565,7 +566,7 @@ class EBSDDetector:
         sy, sx = self.shape
         pcx, pcy = self.pc_average[:2]
 
-        if coordinates == "detector":
+        if coordinates in [None, "detector"]:
             pcy *= sy
             pcx *= sx
             bounds = self.bounds
@@ -579,14 +580,13 @@ class EBSDDetector:
             y_label = "y gnomonic"
 
         fig, ax = plt.subplots()
-        #        print(self._average_gnomonic_bounds)
-        #        print(bounds)
         ax.axis(zoom * bounds)
         ax.set_aspect(self.aspect_ratio)
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
 
-        if isinstance(pattern, np.ndarray):  # Plot a pattern
+        # Plot a pattern on the detector
+        if isinstance(pattern, np.ndarray):
             if pattern.shape != (sy, sx):
                 raise ValueError(
                     f"Pattern shape {pattern.shape} must equal the detector "
@@ -596,8 +596,6 @@ class EBSDDetector:
                 pattern_kwargs = {}
             pattern_kwargs.setdefault("cmap", "gray")
             ax.imshow(pattern, extent=bounds, **pattern_kwargs)
-        else:  # Gray background
-            ax.imshow(np.ones(self.shape), cmap="gray", vmin=0, vmax=2, extent=bounds)
 
         # Show the projection center
         if show_pc:
@@ -608,7 +606,6 @@ class EBSDDetector:
                 facecolor="gold",
                 edgecolor="k",
                 marker=MarkerStyle(marker="*", fillstyle="full"),
-                zorder=2,
             )
             [pc_kwargs.setdefault(k, v) for k, v in default_params_pc.items()]
             ax.scatter(x=pcx, y=pcy, **pc_kwargs)
@@ -673,20 +670,20 @@ class EBSDDetector:
         pcx = self.pcx
         if version < 5:
             pcx = -pcx
-        new_pc[..., 0] = 0.5 - (pcx / (self.ncols * self.binning))
+        new_pc[..., 0] = 0.5 + (pcx / (self.ncols * self.binning))
         new_pc[..., 1] = 0.5 - (self.pcy / (self.nrows * self.binning))
         new_pc[..., 2] = self.pcz / (self.nrows * self.binning * self.px_size)
         return new_pc
 
     def _pc_tsl2bruker(self) -> np.ndarray:
         new_pc = deepcopy(self.pc)
-        new_pc[..., 1] = 1 - (self.pcy / self.aspect_ratio)
-        new_pc[..., 2] = new_pc[..., 2] / self.aspect_ratio
+        new_pc[..., 1] = 1 - (self.pcy * self.aspect_ratio)
+        new_pc[..., 2] = new_pc[..., 2] * self.aspect_ratio
         return new_pc
 
     def _pc_bruker2emsoft(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc, dtype=np.float32)
-        new_pc[..., 0] = (0.5 - self.pcx) * self.ncols * self.binning
+        new_pc[..., 0] = (self.pcx - 0.5) * self.ncols * self.binning
         if version < 5:
             new_pc[..., 0] = -new_pc[..., 0]
         new_pc[..., 1] = (0.5 - self.pcy) * self.nrows * self.binning
