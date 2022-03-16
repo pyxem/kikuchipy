@@ -210,7 +210,6 @@ class EBSDSimulationGenerator:
             lattice=phase.structure.lattice,
             rotation=self.rotations,
         )
-        #        print(det2recip)
         # Output shape is (n hkl, n, 3) or (n hkl, ny, nx, 3)
         hkl_detector = np.tensordot(hkl, det2recip, axes=(1, 0))
         if n_nav_dims == 0:

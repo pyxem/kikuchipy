@@ -85,7 +85,7 @@ def detector2direct_lattice(
     structure_matrix = get_direct_structure_matrix2(lattice)
     cartesian2direct = structure_matrix
 
-    return cartesian2direct.dot(sample2cartesian) @ _detector2sample
+    return cartesian2direct.dot(sample2cartesian).dot(_detector2sample)
 
 
 def detector2reciprocal_lattice(
@@ -121,4 +121,4 @@ def detector2reciprocal_lattice(
     structure_matrix = get_direct_structure_matrix2(lattice)
     cartesian2reciprocal = np.linalg.inv(structure_matrix)
 
-    return cartesian2reciprocal.dot(sample2cartesian) @ _detector2sample
+    return cartesian2reciprocal.dot(sample2cartesian).dot(_detector2sample)
