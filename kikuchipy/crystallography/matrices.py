@@ -25,30 +25,6 @@ import numpy as np
 
 
 def get_direct_structure_matrix(lattice: Lattice) -> np.ndarray:
-    """Direct structure matrix as defined in EMsoft.
-
-    Parameters
-    ----------
-    lattice
-        Crystal structure lattice.
-
-    Returns
-    -------
-    numpy.ndarray
-    """
-    a, b, c = lattice.abcABG()[:3]
-    ca, cb, cg = lattice.ca, lattice.cb, lattice.cg
-    sa, sb, sg = lattice.sa, lattice.sb, lattice.sg
-    # fmt: off
-    return np.array([
-        [a, b * cg,  c * cb                       ],
-        [0, b * sg, -c * (cb * cg - ca) / sg      ],
-        [0, 0     ,  lattice.volume / (a * b * sg)],
-    ])
-    # fmt: on
-
-
-def get_direct_structure_matrix2(lattice: Lattice) -> np.ndarray:
     a, b, c = lattice.abcABG()[:3]
     ca, cb, cg = lattice.ca, lattice.cb, lattice.cg
     sa, sb, sg = lattice.sa, lattice.sb, lattice.sg

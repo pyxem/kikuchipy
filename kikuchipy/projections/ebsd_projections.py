@@ -23,7 +23,7 @@ from diffpy.structure import Lattice
 import numpy as np
 from orix.quaternion import Rotation
 
-from kikuchipy.crystallography.matrices import get_direct_structure_matrix2
+from kikuchipy.crystallography.matrices import get_direct_structure_matrix
 
 
 def detector2sample(sample_tilt: float, detector_tilt: float) -> np.ndarray:
@@ -82,10 +82,10 @@ def detector2direct_lattice(
     sample2cartesian = rotation.to_matrix()
 
     # Rotation U_A from C to the direct crystal lattice frame K
-    structure_matrix = get_direct_structure_matrix2(lattice)
+    structure_matrix = get_direct_structure_matrix(lattice)
     cartesian2direct = structure_matrix
 
-    return cartesian2direct.dot(sample2cartesian).dot(_detector2sample)
+    return cartesian2direct.dot(sample2cartesian) @ _detector2sample
 
 
 def detector2reciprocal_lattice(
@@ -118,7 +118,7 @@ def detector2reciprocal_lattice(
     sample2cartesian = rotation.to_matrix()
 
     # Rotation U_A from C to the reciprocal crystal lattice frame Kstar
-    structure_matrix = get_direct_structure_matrix2(lattice)
+    structure_matrix = get_direct_structure_matrix(lattice)
     cartesian2reciprocal = np.linalg.inv(structure_matrix)
 
-    return cartesian2reciprocal.dot(sample2cartesian).dot(_detector2sample)
+    return cartesian2reciprocal.dot(sample2cartesian) @ _detector2sample

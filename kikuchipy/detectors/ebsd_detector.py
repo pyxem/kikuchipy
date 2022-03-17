@@ -205,7 +205,6 @@ class EBSDDetector:
     @property
     def aspect_ratio(self) -> float:
         """Number of detector rows divided by columns."""
-        #        return self.nrows / self.ncols
         return self.ncols / self.nrows
 
     @property
@@ -361,12 +360,19 @@ class EBSDDetector:
         """The y detector limits in gnomonic coordinates."""
         return np.dstack((self.y_min, self.y_max)).reshape(self.navigation_shape + (2,))
 
+    #    @property
+    #    def gnomonic_bounds(self) -> np.ndarray:
+    #        """Detector bounds [x0, x1, y0, y1] in gnomonic coordinates."""
+    #        return np.stack(
+    #            (self.x_range, self.y_range), axis=self.navigation_dimension
+    #        ).reshape(self.navigation_shape + (4,))
+
     @property
     def gnomonic_bounds(self) -> np.ndarray:
         """Detector bounds [x0, x1, y0, y1] in gnomonic coordinates."""
-        return np.stack(
-            (self.x_range, self.y_range), axis=self.navigation_dimension
-        ).reshape(self.navigation_shape + (4,))
+        return np.concatenate((self.x_range, self.y_range)).reshape(
+            self.navigation_shape + (4,)
+        )
 
     @property
     def _average_gnomonic_bounds(self) -> np.ndarray:
@@ -580,8 +586,6 @@ class EBSDDetector:
             y_label = "y gnomonic"
 
         fig, ax = plt.subplots()
-        #        print(self._average_gnomonic_bounds)
-        #        print(bounds)
         ax.axis(zoom * bounds)
         ax.set_aspect(self.aspect_ratio)
         ax.set_xlabel(x_label)
