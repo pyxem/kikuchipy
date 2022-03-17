@@ -27,12 +27,12 @@ from orix.vector import Vector3d
 
 from kikuchipy.crystallography import get_direct_structure_matrix
 from kikuchipy.detectors import EBSDDetector
+from kikuchipy.simulations._kikuchi_pattern_simulation import (
+    GeometricalKikuchiPatternSimulation,
+)
 from kikuchipy.simulations._kikuchi_pattern_features import (
     KikuchiPatternLine,
     KikuchiPatternZoneAxis,
-)
-from kikuchipy.simulations._kikuchi_pattern_simulation import (
-    GeometricalKikuchiPatternSimulation,
 )
 
 
@@ -51,20 +51,16 @@ class KikuchiPatternSimulator:
         mode: str = "geometrical",
     ):
         # modes: geometrical, kinematical, two-beam
-        hkl = self.reflectors.hkl
         lattice = self.phase.structure.lattice
+        ref = self.reflectors
 
         # Transformation from detector reference frame CSd to sample
         # reference frame CSs
         total_tilt = np.deg2rad(detector.sample_tilt - 90 - detector.tilt)
-        u_s = (
-            (
-                Rotation.from_axes_angles((0, 0, 1), -np.pi / 2)
-                * Rotation.from_axes_angles((1, 0, 0), -total_tilt)
-            )
-            .to_matrix()
-            .squeeze()
-        )
+        u_s = Rotation.from_axes_angles(
+            (0, 0, 1), -np.pi / 2
+        ) * Rotation.from_axes_angles((1, 0, 0), -total_tilt)
+        u_s = u_s.to_matrix().squeeze()
 
         # Transformation from CSs to cartesian crystal reference frame
         # CSc
@@ -75,29 +71,69 @@ class KikuchiPatternSimulator:
         a = get_direct_structure_matrix(lattice)
         u_astar = np.linalg.inv(a)
 
+        # Transform rotations once
+        u_os = u_o.dot(u_s)
+
         # Combine transformations
-        u_kstar = u_astar.dot(u_o).dot(u_s)
+        u_kstar = u_astar.dot(u_os)
+        #        u_kstar = u_astar.dot(u_o).dot(u_s)
 
         # Transform reciprocal lattice vectors from CSk* to CSd
-        hkl_d = np.dot(u_kstar.T, hkl.T).T
+        hkl_d = np.dot(u_kstar.T, ref.hkl.T).T
 
         # Get vectors that are in some pattern
         hkl_is_upper, hkl_in_a_pattern = _get_coordinates_in_upper_hemisphere(
             z_coordinates=hkl_d[..., 2], navigation_axes=()
         )
-        hkl = hkl[hkl_in_a_pattern, ...]
         hkl_in_pattern = hkl_is_upper[hkl_in_a_pattern, ...].T
         hkl_d = hkl_d[hkl_in_a_pattern]
+
+        # Visible reflectors
+        reflectors_visible = self.reflectors[hkl_in_a_pattern]
+
+        lines = KikuchiPatternLine(
+            hkl=Vector3d(reflectors_visible.hkl),
+            hkl_detector=Vector3d(hkl_d),
+            in_pattern=hkl_in_pattern,
+            r_gnomonic=detector.r_max[0],
+        )
+
+        # Zone axes
+        hkl = reflectors_visible.reshape(reflectors_visible.size, 1)
+        uvw = hkl.cross(hkl.transpose())
+        is000 = np.isclose(uvw.data, 0).all(axis=2)
+        uvw = uvw[~is000]
+        uvw = uvw.unique()
+
+        # Transformation from CSc to direct crystal reference frame CSk
+        u_a = a.T
+
+        # Combine transformations
+        u_k = u_a.dot(u_os)
+
+        # Transform direct lattice vectors from CSk to CSd
+        uvw_d = np.dot(u_k.T, uvw.hkl.T).T
+
+        # Get vectors that are in some pattern
+        uvw_is_upper, uvw_in_a_pattern = _get_coordinates_in_upper_hemisphere(
+            z_coordinates=uvw_d[..., 2], navigation_axes=()
+        )
+        uvw_in_pattern = uvw_is_upper[uvw_in_a_pattern, ...].T
+        uvw_d = uvw_d[uvw_in_a_pattern]
+
+        zone_axes = KikuchiPatternZoneAxis(
+            uvw=Vector3d(uvw),
+            uvw_detector=Vector3d(uvw_d),
+            in_pattern=uvw_in_pattern,
+            r_gnomonic=detector.r_max[0],
+        )
 
         simulation = GeometricalKikuchiPatternSimulation(
             detector=detector,
             rotation=rotation,
-            lines=KikuchiPatternLine(
-                hkl=Vector3d(hkl),
-                hkl_detector=Vector3d(hkl_d),
-                in_pattern=hkl_in_pattern,
-                r_gnomonic=detector.r_max[0],
-            ),
+            reflectors=reflectors_visible,
+            lines=lines,
+            zone_axes=zone_axes,
         )
 
         return simulation

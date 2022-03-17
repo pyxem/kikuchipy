@@ -587,7 +587,7 @@ class EBSDDetector:
 
         fig, ax = plt.subplots()
         ax.axis(zoom * bounds)
-        ax.set_aspect(self.aspect_ratio)
+        ax.set_aspect("equal")
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
 
@@ -602,6 +602,8 @@ class EBSDDetector:
                 pattern_kwargs = {}
             pattern_kwargs.setdefault("cmap", "gray")
             ax.imshow(pattern, extent=bounds, **pattern_kwargs)
+        else:
+            ax.set_facecolor((0.5, 0.5, 0.5))
 
         # Show the projection center
         if show_pc:
@@ -613,7 +615,7 @@ class EBSDDetector:
                 edgecolor="k",
                 marker=MarkerStyle(marker="*", fillstyle="full"),
             )
-            [pc_kwargs.setdefault(k, v) for k, v in default_params_pc.items()]
+            _ = [pc_kwargs.setdefault(k, v) for k, v in default_params_pc.items()]
             ax.scatter(x=pcx, y=pcy, **pc_kwargs)
 
         # Draw gnomonic circles centered on the projection center

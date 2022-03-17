@@ -112,21 +112,18 @@ class KikuchiPatternLine(KikuchiPatternFeature):
 
     @property
     def plane_trace_coordinates(self) -> np.ndarray:
+        """x0, y0, x1, y1"""
         # Get alpha1 and alpha2 angles (NaN for bands outside gnomonic radius)
         azimuth = self.vector_detector.azimuth
         hesse_alpha = self.hesse_alpha
-        plane_trace = np.zeros((self.vector.size, 4))
-        alpha1 = azimuth - np.pi + hesse_alpha
-        alpha2 = azimuth - np.pi - hesse_alpha
+        a1 = azimuth - np.pi + hesse_alpha
+        a2 = azimuth - np.pi - hesse_alpha
 
         # Calculate start and end points for the plane traces
-        plane_trace[..., 0] = np.cos(alpha1)
-        plane_trace[..., 1] = np.cos(alpha2)
-        plane_trace[..., 2] = np.sin(alpha1)
-        plane_trace[..., 3] = np.sin(alpha2)
+        plane_trace = np.column_stack((np.cos(a1), np.sin(a1), np.cos(a2), np.sin(a2)))
+        plane_trace *= self.r_gnomonic
 
-        # And remember to multiply by the gnomonic radius
-        return self.r_gnomonic * plane_trace
+        return plane_trace
 
     @property
     def hesse_line_x(self) -> np.ndarray:
