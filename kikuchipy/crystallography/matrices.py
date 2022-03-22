@@ -24,26 +24,37 @@ import numpy as np
 #  https://github.com/diffpy/diffpy.structure/issues/46)
 
 
-def get_direct_structure_matrix(lattice: Lattice) -> np.ndarray:
+def get_direct_structure_matrix(lattice: Lattice, vendor: str = "emsoft") -> np.ndarray:
     a, b, c = lattice.abcABG()[:3]
     ca, cb, cg = lattice.ca, lattice.cb, lattice.cg
     sa, sb, sg = lattice.sa, lattice.sb, lattice.sg
-    ax = a * np.sqrt(1 + 2 * ca * cb * cg - ca ** 2 - cb ** 2 - cg ** 2) / sa
-    ay = a * (cg - ca * cb) / sa
-    az = a * cb
-    by = b * sa
-    bz = b * ca
-    cz = c
-    # fmt: off
-    return np.array([
-        [ax, 0 ,  0],
-        [ay, by,  0],
-        [az, bz, cz]
-    ])
-    # fmt: on
+    if vendor == "emsoft":
+        return np.array(
+            [
+                [a, b * cg, c * cb],
+                [0, b * sg, -c * (cb * cg - ca) / sg],
+                [0, 0, lattice.volume / (a * b * sg)],
+            ]
+        )
+    else:  # bruker
+        ax = a * np.sqrt(1 + 2 * ca * cb * cg - ca ** 2 - cb ** 2 - cg ** 2) / sa
+        ay = a * (cg - ca * cb) / sa
+        az = a * cb
+        by = b * sa
+        bz = b * ca
+        cz = c
+        # fmt: off
+        return np.array([
+            [ax, 0 ,  0],
+            [ay, by,  0],
+            [az, bz, cz]
+        ])
+        # fmt: on
 
 
-def get_reciprocal_structure_matrix(lattice: Lattice) -> np.ndarray:
+def get_reciprocal_structure_matrix(
+    lattice: Lattice, vendor: str = "emsoft"
+) -> np.ndarray:
     """Reciprocal structure matrix as defined in EMsoft.
 
     Parameters
@@ -54,7 +65,7 @@ def get_reciprocal_structure_matrix(lattice: Lattice) -> np.ndarray:
     Returns
     -------
     """
-    return np.linalg.inv(get_direct_structure_matrix(lattice)).T
+    return np.linalg.inv(get_direct_structure_matrix(lattice, vendor)).T
 
 
 def get_reciprocal_metric_tensor(lattice: Lattice) -> np.ndarray:

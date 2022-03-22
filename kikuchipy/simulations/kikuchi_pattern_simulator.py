@@ -23,9 +23,8 @@ import numpy as np
 from orix.crystal_map import Phase
 from orix.plot._util import Arrow3D
 from orix.quaternion import Rotation
-from orix.vector import Vector3d
+from orix.vector import Miller, Vector3d
 
-from kikuchipy.crystallography import get_direct_structure_matrix
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.simulations._kikuchi_pattern_simulation import (
     GeometricalKikuchiPatternSimulation,
@@ -57,29 +56,25 @@ class KikuchiPatternSimulator:
         # Transformation from detector reference frame CSd to sample
         # reference frame CSs
         total_tilt = np.deg2rad(detector.sample_tilt - 90 - detector.tilt)
-        u_s = Rotation.from_axes_angles(
-            (0, 0, 1), -np.pi / 2
-        ) * Rotation.from_axes_angles((1, 0, 0), -total_tilt)
+        u_s_bruker = Rotation.from_axes_angles((-1, 0, 0), total_tilt)
+        u_s = Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
         u_s = u_s.to_matrix().squeeze()
-
         # Transformation from CSs to cartesian crystal reference frame
         # CSc
         u_o = rotation.to_matrix().squeeze()
-
-        # Transformation from CSc to reciprocal crystal reference frame
-        # CSk*
-        a = get_direct_structure_matrix(lattice)
-        u_astar = np.linalg.inv(a)
-
         # Transform rotations once
         u_os = u_o.dot(u_s)
+        # Structure matrix
+        a = lattice.base
+        # Transformation from CSc to reciprocal crystal reference frame
+        # CSk*
+        u_astar = np.linalg.inv(a)
 
         # Combine transformations
         u_kstar = u_astar.dot(u_os)
-        #        u_kstar = u_astar.dot(u_o).dot(u_s)
 
-        # Transform reciprocal lattice vectors from CSk* to CSd
-        hkl_d = np.dot(u_kstar.T, ref.hkl.T).T
+        # Transform {hkl} from CSk* to CSd
+        hkl_d = np.matmul(ref.hkl, u_kstar)
 
         # Get vectors that are in some pattern
         hkl_is_upper, hkl_in_a_pattern = _get_coordinates_in_upper_hemisphere(
@@ -90,20 +85,22 @@ class KikuchiPatternSimulator:
 
         # Visible reflectors
         reflectors_visible = self.reflectors[hkl_in_a_pattern]
+        hkl = reflectors_visible.hkl
+
+        # Max. gnomonic radius to consider
+        max_r_gnomonic = detector.r_max[0]
 
         lines = KikuchiPatternLine(
-            hkl=Vector3d(reflectors_visible.hkl),
+            hkl=Miller(hkl=hkl, phase=self.phase),
             hkl_detector=Vector3d(hkl_d),
             in_pattern=hkl_in_pattern,
-            r_gnomonic=detector.r_max[0],
+            max_r_gnomonic=max_r_gnomonic,
         )
 
-        # Zone axes
-        hkl = reflectors_visible.reshape(reflectors_visible.size, 1)
-        uvw = hkl.cross(hkl.transpose())
-        is000 = np.isclose(uvw.data, 0).all(axis=2)
-        uvw = uvw[~is000]
-        uvw = uvw.unique()
+        # Zone axes <uvw> from {hkl}
+        uvw = np.cross(hkl[:, None, :], hkl)
+        uvw = uvw[~np.isclose(uvw, 0).all(axis=2)]
+        uvw = np.unique(uvw, axis=0)
 
         # Transformation from CSc to direct crystal reference frame CSk
         u_a = a.T
@@ -112,7 +109,7 @@ class KikuchiPatternSimulator:
         u_k = u_a.dot(u_os)
 
         # Transform direct lattice vectors from CSk to CSd
-        uvw_d = np.dot(u_k.T, uvw.hkl.T).T
+        uvw_d = np.matmul(uvw, u_k)
 
         # Get vectors that are in some pattern
         uvw_is_upper, uvw_in_a_pattern = _get_coordinates_in_upper_hemisphere(
@@ -121,11 +118,14 @@ class KikuchiPatternSimulator:
         uvw_in_pattern = uvw_is_upper[uvw_in_a_pattern, ...].T
         uvw_d = uvw_d[uvw_in_a_pattern]
 
+        # Visible zone axes
+        uvw = uvw[uvw_in_a_pattern]
+
         zone_axes = KikuchiPatternZoneAxis(
-            uvw=Vector3d(uvw),
+            uvw=Miller(uvw=uvw, phase=self.phase),
             uvw_detector=Vector3d(uvw_d),
             in_pattern=uvw_in_pattern,
-            r_gnomonic=detector.r_max[0],
+            max_r_gnomonic=max_r_gnomonic,
         )
 
         simulation = GeometricalKikuchiPatternSimulation(

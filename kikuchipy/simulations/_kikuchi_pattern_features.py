@@ -25,12 +25,12 @@ class KikuchiPatternFeature:
         vector: Vector3d,
         vector_detector: Vector3d,
         in_pattern: np.ndarray,
-        r_gnomonic: float = 10,
+        max_r_gnomonic: float = 10,
     ):
         self.vector = vector
         self.vector_detector = vector_detector
         self.in_pattern = in_pattern
-        self.r_gnomonic = r_gnomonic
+        self.max_r_gnomonic = max_r_gnomonic
 
     @property
     def x_gnomonic(self) -> np.ndarray:
@@ -39,16 +39,6 @@ class KikuchiPatternFeature:
     @property
     def y_gnomonic(self) -> np.ndarray:
         return self.vector_detector.y / self.vector_detector.z
-
-    @property
-    def hesse_distance(self) -> np.ndarray:
-        return np.tan(0.5 * np.pi - self.vector_detector.polar)
-
-    @property
-    def within_r_gnomonic(self) -> np.ndarray:
-        is_full_upper = self.vector_detector.z > -1e-5
-        in_circle = np.abs(self.hesse_distance) < self.r_gnomonic
-        return np.logical_and(in_circle, is_full_upper)
 
     def __getitem__(self, key):
         """Get a deepcopy subset of the simulation instance.
@@ -84,10 +74,10 @@ class KikuchiPatternFeature:
                 nav_slice = key[:2]
                 sim_slice = key[2]
         new_features = self.__class__(
-            vector=self.vector[sim_slice],
-            vector_detector=self.vector_detector[sim_slice],
+            self.vector[sim_slice],
+            self.vector_detector[sim_slice],
             in_pattern=self.in_pattern[key],
-            r_gnomonic=self.r_gnomonic,
+            max_r_gnomonic=self.max_r_gnomonic,
         )
         #        new_features._structure_factor = self.structure_factor[band_slice]
         #        new_features._theta = self.theta[band_slice]
@@ -100,15 +90,25 @@ class KikuchiPatternLine(KikuchiPatternFeature):
         hkl: Vector3d,
         hkl_detector: Vector3d,
         in_pattern: np.ndarray,
-        r_gnomonic: float = 10,
+        max_r_gnomonic: float = 10,
     ):
-        super().__init__(hkl, hkl_detector, in_pattern, r_gnomonic)
+        super().__init__(hkl, hkl_detector, in_pattern, max_r_gnomonic)
+
+    @property
+    def hesse_distance(self) -> np.ndarray:
+        return np.tan(0.5 * np.pi - self.vector_detector.polar)
+
+    @property
+    def within_r_gnomonic(self) -> np.ndarray:
+        is_full_upper = self.vector_detector.z > -1e-5
+        in_circle = np.abs(self.hesse_distance) < self.max_r_gnomonic
+        return np.logical_and(in_circle, is_full_upper)
 
     @property
     def hesse_alpha(self) -> np.ndarray:
         hesse_distance = self.hesse_distance
         hesse_distance[~self.within_r_gnomonic] = np.nan
-        return np.arccos(hesse_distance / self.r_gnomonic)
+        return np.arccos(hesse_distance / self.max_r_gnomonic)
 
     @property
     def plane_trace_coordinates(self) -> np.ndarray:
@@ -121,7 +121,7 @@ class KikuchiPatternLine(KikuchiPatternFeature):
 
         # Calculate start and end points for the plane traces
         plane_trace = np.column_stack((np.cos(a1), np.sin(a1), np.cos(a2), np.sin(a2)))
-        plane_trace *= self.r_gnomonic
+        plane_trace *= self.max_r_gnomonic
 
         return plane_trace
 
@@ -140,9 +140,19 @@ class KikuchiPatternZoneAxis(KikuchiPatternFeature):
         uvw: Vector3d,
         uvw_detector: Vector3d,
         in_pattern: np.ndarray,
-        r_gnomonic: float = 10,
+        max_r_gnomonic: float = 10,
     ):
-        super().__init__(uvw, uvw_detector, in_pattern, r_gnomonic)
+        super().__init__(uvw, uvw_detector, in_pattern, max_r_gnomonic)
+
+    @property
+    def r_gnomonic(self) -> np.ndarray:
+        return np.sqrt(self.x_gnomonic ** 2 + self.y_gnomonic ** 2)
+
+    @property
+    def within_r_gnomonic(self) -> np.ndarray:
+        is_full_upper = self.vector_detector.z > -1e-5
+        in_circle = self.r_gnomonic < self.max_r_gnomonic
+        return np.logical_and(in_circle, is_full_upper)
 
     @property
     def _xy_within_gnomonic_radius(self) -> np.ndarray:
