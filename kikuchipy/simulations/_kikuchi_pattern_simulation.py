@@ -23,6 +23,9 @@ import matplotlib.path as mpath
 import matplotlib.text as mtext
 import numpy as np
 
+from kikuchipy.draw.markers import get_line_segment_list
+from hyperspy.utils.markers import line_segment, point, text
+
 
 class KikuchiPatternSimulation:
     def __init__(
@@ -75,7 +78,7 @@ class GeometricalKikuchiPatternSimulation(KikuchiPatternSimulation):
         lines: bool = True,
         zone_axes: bool = True,
         zone_axes_labels: bool = True,
-        pc: bool = True,
+        show_pc: bool = True,
         pattern_kwargs: dict = None,
         lines_kwargs: dict = None,
         zone_axes_kwargs: dict = None,
@@ -86,7 +89,7 @@ class GeometricalKikuchiPatternSimulation(KikuchiPatternSimulation):
         fig, ax = self.detector.plot(
             coordinates=coordinates,
             pattern=pattern,
-            show_pc=pc,
+            show_pc=show_pc,
             pc_kwargs=pc_kwargs,
             pattern_kwargs=pattern_kwargs,
             return_fig_ax=True,
@@ -285,3 +288,22 @@ class GeometricalKikuchiPatternSimulation(KikuchiPatternSimulation):
                 text_i = mtext.Text(x, y, label, **kwargs)
                 texts.append(text_i)
         return texts
+
+    def _lines_as_markers(self, **kwargs) -> list:
+        coords = self.lines_coordinates(
+            index=(), coordinates="detector", exclude_nan=False
+        )
+        lines_list = []
+        segment_defaults = dict(linewidth=1, color="r", alpha=1, zorder=1)
+        for k, v in segment_defaults.items():
+            kwargs.setdefault(k, v)
+        for i in range(self.lines.vector.size):
+            l = coords[..., i, :]
+            if not np.all(np.isnan(l)):
+                x1 = l[..., 0]
+                y1 = l[..., 1]
+                x2 = l[..., 2]
+                y2 = l[..., 3]
+                marker = line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kwargs)
+                lines_list.append(marker)
+        return lines_list
