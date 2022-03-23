@@ -21,6 +21,7 @@ from typing import List, Optional, Tuple, Union
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.markers import MarkerStyle
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -360,13 +361,6 @@ class EBSDDetector:
         """The y detector limits in gnomonic coordinates."""
         return np.dstack((self.y_min, self.y_max)).reshape(self.navigation_shape + (2,))
 
-    #    @property
-    #    def gnomonic_bounds(self) -> np.ndarray:
-    #        """Detector bounds [x0, x1, y0, y1] in gnomonic coordinates."""
-    #        return np.stack(
-    #            (self.x_range, self.y_range), axis=self.navigation_dimension
-    #        ).reshape(self.navigation_shape + (4,))
-
     @property
     def gnomonic_bounds(self) -> np.ndarray:
         """Detector bounds [x0, x1, y0, y1] in gnomonic coordinates."""
@@ -603,7 +597,15 @@ class EBSDDetector:
             pattern_kwargs.setdefault("cmap", "gray")
             ax.imshow(pattern, extent=bounds, **pattern_kwargs)
         else:
-            ax.set_facecolor((0.5, 0.5, 0.5))
+            ax.add_artist(
+                mpatches.Rectangle(
+                    (bounds[0], bounds[2]),
+                    bounds[1],
+                    -bounds[2],
+                    fc=(0.5,) * 3,
+                    zorder=-1,
+                )
+            )
 
         # Show the projection center
         if show_pc:
@@ -614,6 +616,7 @@ class EBSDDetector:
                 facecolor="gold",
                 edgecolor="k",
                 marker=MarkerStyle(marker="*", fillstyle="full"),
+                zorder=10,
             )
             _ = [pc_kwargs.setdefault(k, v) for k, v in default_params_pc.items()]
             ax.scatter(x=pcx, y=pcy, **pc_kwargs)

@@ -15,36 +15,170 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import re
+from typing import Optional, Union
+
 import matplotlib.collections as mcollections
 import matplotlib.path as mpath
+import matplotlib.text as mtext
 import numpy as np
 
 
 class KikuchiPatternSimulation:
-
-    exclude_outside_detector = True
-
     def __init__(
         self,
         detector,
-        rotation,
+        rotations,
         reflectors,
         lines,
         zone_axes,
     ):
-        self.detector = detector
-        self.rotation = rotation
-        self.reflectors = reflectors
-        self.lines = lines
-        self.zone_axes = zone_axes
+        self._detector = detector
+        self._rotations = rotations
+        self._reflectors = reflectors
+        self._lines = lines
+        self._zone_axes = zone_axes
 
 
 class GeometricalKikuchiPatternSimulation(KikuchiPatternSimulation):
-    def __init__(self, detector, rotation, reflectors, lines, zone_axes):
-        super().__init__(detector, rotation, reflectors, lines, zone_axes)
+    def __init__(self, detector, rotations, reflectors, lines, zone_axes):
+        super().__init__(detector, rotations, reflectors, lines, zone_axes)
+        self._set_lines_detector_coordinates()
+        self._set_zone_axes_detector_coordinates()
+        self.ndim = rotations.ndim
 
     @property
-    def lines_detector_coordinates(self) -> np.ndarray:
+    def detector(self):
+        return self._detector
+
+    @property
+    def rotations(self):
+        return self._rotations
+
+    @property
+    def reflectors(self):
+        return self._reflectors
+
+    @property
+    def lines(self):
+        return self._lines
+
+    @property
+    def zone_axes(self):
+        return self._zone_axes
+
+    def plot(
+        self,
+        index: Union[int, tuple, None] = None,
+        coordinates: str = "detector",
+        pattern: Optional[np.ndarray] = None,
+        lines: bool = True,
+        zone_axes: bool = True,
+        zone_axes_labels: bool = True,
+        pc: bool = True,
+        pattern_kwargs: dict = None,
+        lines_kwargs: dict = None,
+        zone_axes_kwargs: dict = None,
+        zone_axes_labels_kwargs: dict = None,
+        pc_kwargs: dict = None,
+        return_figure: bool = False,
+    ):
+        fig, ax = self.detector.plot(
+            coordinates=coordinates,
+            pattern=pattern,
+            show_pc=pc,
+            pc_kwargs=pc_kwargs,
+            pattern_kwargs=pattern_kwargs,
+            return_fig_ax=True,
+        )
+        collections = self.as_collections(
+            index,
+            coordinates,
+            lines,
+            zone_axes,
+            zone_axes_labels,
+            lines_kwargs,
+            zone_axes_kwargs,
+            zone_axes_labels_kwargs,
+        )
+        for c in collections:
+            try:
+                ax.add_collection(c)
+            except AttributeError:
+                for text in c:
+                    ax.add_artist(text)
+        if return_figure:
+            return fig
+
+    def as_collections(
+        self,
+        index: Union[int, tuple, None] = None,
+        coordinates: str = "detector",
+        lines: bool = True,
+        zone_axes: bool = True,
+        zone_axes_labels: bool = True,
+        lines_kwargs: dict = None,
+        zone_axes_kwargs: dict = None,
+        zone_axes_labels_kwargs: dict = None,
+    ) -> list:
+        if index is None:
+            index = (0, 0)[: self.ndim]
+        collections = []
+        if lines:
+            if lines_kwargs is None:
+                lines_kwargs = {}
+            collections.append(
+                self._lines_as_collection(index, coordinates, **lines_kwargs)
+            )
+        if zone_axes:
+            if zone_axes_kwargs is None:
+                zone_axes_kwargs = {}
+            collections.append(
+                self._zone_axes_as_collection(index, coordinates, **zone_axes_kwargs)
+            )
+        if zone_axes_labels:
+            if zone_axes_labels_kwargs is None:
+                zone_axes_labels_kwargs = {}
+            collections.append(
+                self._zone_axes_labels_as_list(
+                    index, coordinates, **zone_axes_labels_kwargs
+                )
+            )
+        return collections
+
+    def lines_coordinates(
+        self,
+        index: Union[int, tuple] = None,
+        coordinates: str = "detector",
+        exclude_nan: bool = True,
+    ) -> np.ndarray:
+        if index is None:
+            index = (0, 0)[: self.ndim]
+        if coordinates == "detector":
+            coords = self._lines_detector_coordinates[index]
+        else:  # gnomonic
+            coords = self.lines.plane_trace_coordinates[index]
+        if exclude_nan:
+            coords = coords[~np.isnan(coords).any(axis=-1)]
+        return coords
+
+    def zone_axes_coordinates(
+        self,
+        index,
+        coordinates: str = "detector",
+        exclude_nan: bool = True,
+    ) -> np.ndarray:
+        if index is None:
+            index = (0, 0)[: self.ndim]
+        if coordinates == "detector":
+            coords = self._zone_axes_detector_coordinates[index]
+        else:  # gnomonic
+            coords = self.zone_axes._xy_within_r_gnomonic[index]
+        if exclude_nan:
+            coords = coords[~np.isnan(coords).any(axis=-1)]
+        return coords
+
+    def _set_lines_detector_coordinates(self) -> np.ndarray:
         """Start and end point coordinates of bands in uncalibrated
         detector coordinates (a scale of 1 and offset of 0).
 
@@ -67,52 +201,9 @@ class GeometricalKikuchiPatternSimulation(KikuchiPatternSimulation):
         coords_d[..., [1, 3]] = -coords_d[..., [1, 3]] + (pcy / pcz)
         coords_d[..., [1, 3]] = coords_d[..., [1, 3]] / det.y_scale[..., None, None]
 
-        return coords_d
+        self._lines_detector_coordinates = coords_d
 
-    @property
-    def zone_axes_within_gnomonic_bounds(self) -> np.ndarray:
-        """Return a boolean array with True for the zone axes within
-        the detector's gnomonic bounds.
-
-        Returns
-        -------
-        within_gnomonic_bounds : numpy.ndarray
-            Boolean array with True for zone axes within the detector's
-            gnomonic bounds.
-        """
-        det = self.detector
-
-        # Get gnomonic bounds
-        x_range = det.x_range
-        y_range = det.y_range
-
-        # Extend gnomonic bounds by one detector pixel to include zone
-        # axes on the detector border
-        x_scale = det.x_scale
-        y_scale = det.y_scale
-        x_range[..., 0] -= x_scale
-        x_range[..., 1] += x_scale
-        y_range[..., 0] -= y_scale
-        y_range[..., 1] += y_scale
-
-        # Get gnomonic coordinates
-        xg = self.zone_axes.x_gnomonic
-        yg = self.zone_axes.y_gnomonic
-
-        # Add an extra dimension to account for n number of zone axes in
-        # the last dimension for the gnomonic coordinate arrays
-        x_range = np.expand_dims(x_range, axis=-2)
-        y_range = np.expand_dims(y_range, axis=-2)
-
-        # Get boolean array
-        within_x = np.logical_and(xg >= x_range[..., 0], xg <= x_range[..., 1])
-        within_y = np.logical_and(yg >= y_range[..., 0], yg <= y_range[..., 1])
-        within_gnomonic_bounds = within_x * within_y
-
-        return within_gnomonic_bounds.reshape(self.zone_axes.vector.size)
-
-    @property
-    def zone_axes_detector_coordinates(self) -> np.ndarray:
+    def _set_zone_axes_detector_coordinates(self) -> np.ndarray:
         """Coordinates of zone axes in uncalibrated detector
         coordinates (a scale of 1 and offset of 0).
 
@@ -125,7 +216,7 @@ class GeometricalKikuchiPatternSimulation(KikuchiPatternSimulation):
         za_coords : numpy.ndarray
             Zone axis coordinates (x, y) on the detector.
         """
-        xyg = self.zone_axes._xy_within_gnomonic_radius
+        xyg = self.zone_axes._xy_within_r_gnomonic
         xg = xyg[..., 0]
         yg = xyg[..., 1]
         coords_d = np.empty_like(xyg)
@@ -133,49 +224,64 @@ class GeometricalKikuchiPatternSimulation(KikuchiPatternSimulation):
         # Get projection center coordinates, and add one axis to get the
         # shape (navigation shape, 1)
         det = self.detector
-        pcx = det.pcx[..., np.newaxis]
-        pcy = det.pcy[..., np.newaxis]
-        pcz = det.pcz[..., np.newaxis]
+        pcx = det.pcx[..., None]
+        pcy = det.pcy[..., None]
+        pcz = det.pcz[..., None]
 
         coords_d[..., 0] = (xg + (pcx / pcz) * det.aspect_ratio) / det.x_scale[
-            ..., np.newaxis
+            ..., None
         ]
-        coords_d[..., 1] = (-yg + (pcy / pcz)) / det.y_scale[..., np.newaxis]
+        coords_d[..., 1] = (-yg + (pcy / pcz)) / det.y_scale[..., None]
 
-        if self.exclude_outside_detector:
-            coords_d[~self.zone_axes_within_gnomonic_bounds] = np.nan
+        self._zone_axes_detector_coordinates = coords_d
 
-        return coords_d
+    def _lines_as_collection(
+        self, index: Union[int, tuple], coordinates: str, **kwargs
+    ) -> mcollections.LineCollection:
+        coords = self.lines_coordinates(index, coordinates)
+        coords = coords.reshape((coords.shape[0], 2, 2))
+        line_defaults = dict(
+            color="r", linewidth=1, alpha=1, zorder=1, label="kikuchi_lines"
+        )
+        for k, v in line_defaults.items():
+            kwargs.setdefault(k, v)
+        return mcollections.LineCollection(segments=list(coords), **kwargs)
 
-    def as_collections(self, coordinates: str = "detector") -> list:
-        # Lines
+    def _zone_axes_as_collection(
+        self, index: Union[int, tuple], coordinates: str, **kwargs
+    ) -> mcollections.PathCollection:
+        coords = self.zone_axes_coordinates(index, coordinates)
         if coordinates == "detector":
-            line_coords = self.lines_detector_coordinates
-            za_coords = self.zone_axes_detector_coordinates
-            za_scale = 2
-        else:
-            line_coords = self.lines.plane_trace_coordinates
-            za_coords = self.zone_axes._xy_within_gnomonic_radius
-            za_scale = self.detector.x_scale * 3
+            scatter_size = 0.01 * self.detector.nrows
+        else:  # gnomonic
+            scatter_size = 0.01 * np.diff(self.detector.x_range)[0]
+        circles = []
+        for x, y in coords:
+            circles.append(mpath.Path.circle((x, y), scatter_size))
+        path_defaults = dict(color="w", ec="k", zorder=1, label="zone_axes")
+        for k, v in path_defaults.items():
+            kwargs.setdefault(k, v)
+        return mcollections.PathCollection(circles, **kwargs)
 
-        line_coords = line_coords[~np.isnan(line_coords).any(axis=-1)]
-        line_coords = line_coords.reshape((line_coords.shape[0], 2, 2))
-        line_collection = mcollections.LineCollection(
-            segments=list(line_coords),
-            linewidth=1,
-            color="C0",
-            alpha=1,
-            zorder=1,
-            label="kikuchi_lines",
-        )
-
-        # Zone axes
-        za_coords = za_coords[~np.isnan(za_coords).any(axis=-1)]
-        paths = []
-        for x, y in za_coords:
-            paths.append(mpath.Path.circle((x, y), za_scale))
-        za_collection = mcollections.PathCollection(
-            paths, color="C1", zorder=1, label="zone_axes"
-        )
-
-        return [line_collection, za_collection]
+    def _zone_axes_labels_as_list(
+        self, index: Union[int, tuple], coordinates: str, **kwargs
+    ) -> list:
+        za = self.zone_axes
+        za_labels = za.vector.coordinates.round(0).astype(int)
+        za_labels = za_labels[za.within_r_gnomonic[index]]
+        za_labels_str = np.array2string(za_labels, threshold=za_labels.size)
+        za_labels_list = re.sub(" ", "", za_labels_str[1:-1]).split("\n")
+        xy = self.zone_axes_coordinates(index, coordinates)
+        if coordinates == "detector":
+            xy[..., 1] -= 0.03 * self.detector.nrows
+        else:  # gnomonic
+            xy[..., 1] += 0.03 * np.diff(self.detector.y_range)[0]
+        text_defaults = dict(ha="center", bbox=dict(boxstyle="square", fc="w", pad=0.1))
+        for k, v in text_defaults.items():
+            kwargs.setdefault(k, v)
+        texts = []
+        for (x, y), label in zip(xy, za_labels_list):
+            if np.all(~np.isnan([x, y])):
+                text_i = mtext.Text(x, y, label, **kwargs)
+                texts.append(text_i)
+        return texts

@@ -29,59 +29,63 @@ class KikuchiPatternFeature:
     ):
         self.vector = vector
         self.vector_detector = vector_detector
-        self.in_pattern = in_pattern
+        self.in_pattern = np.atleast_2d(in_pattern)
         self.max_r_gnomonic = max_r_gnomonic
+        self.ndim = vector.ndim
 
     @property
     def x_gnomonic(self) -> np.ndarray:
-        return self.vector_detector.x / self.vector_detector.z
+        return np.atleast_2d(self.vector_detector.x / self.vector_detector.z)
 
     @property
     def y_gnomonic(self) -> np.ndarray:
-        return self.vector_detector.y / self.vector_detector.z
+        return np.atleast_2d(self.vector_detector.y / self.vector_detector.z)
 
-    def __getitem__(self, key):
-        """Get a deepcopy subset of the simulation instance.
+    @property
+    def within_r_gnomonic(self) -> np.ndarray:
+        return self._within_r_gnomonic
 
-        Properties have different shapes, so care must be taken when
-        slicing. As an example, consider a 2 x 3 map with 4 lines. Three
-        data shapes are considered:
-        * navigation shape (2, 3) (gnomonic_radius)
-        * line shape (4,) (hkl, structure_factor, theta)
-        * full shape (2, 3, 4) (hkl_detector, in_pattern)
-        """
-        # These are overwritten as the input key length is investigated
-        nav_slice, sim_slice = key, key  # full_slice = key
-        nav_ndim = 1  # self.navigation_dimension
-        n_keys = len(key) if hasattr(key, "__iter__") else 1
-        if n_keys == 0:  # The case with key = ()/slice(None). Return everything
-            sim_slice = slice(None)
-        elif n_keys == 1:
-            if nav_ndim != 0:
-                sim_slice = slice(None)
-        elif n_keys == 2:
-            if nav_ndim == 0:
-                raise IndexError("Not enough axes to slice")
-            elif nav_ndim == 1:
-                nav_slice = key[0]
-                sim_slice = key[1]
-            else:  # nav_slice = key
-                sim_slice = slice(None)
-        elif n_keys == 3:  # Maximum number of slices
-            if nav_ndim < 2:
-                raise IndexError("Not enough axes to slice")
-            else:
-                nav_slice = key[:2]
-                sim_slice = key[2]
-        new_features = self.__class__(
-            self.vector[sim_slice],
-            self.vector_detector[sim_slice],
-            in_pattern=self.in_pattern[key],
-            max_r_gnomonic=self.max_r_gnomonic,
-        )
-        #        new_features._structure_factor = self.structure_factor[band_slice]
-        #        new_features._theta = self.theta[band_slice]
-        return new_features
+    #    def __getitem__(self, key):
+    #        """Get a deepcopy subset of the simulation instance.
+    #
+    #        Properties have different shapes, so care must be taken when
+    #        slicing. As an example, consider a 2 x 3 map with 4 vectors.
+    #        Three data shapes are considered:
+    #        * navigation shape (2, 3) (x_gnomonic)
+    #        * vector shape (4,) (vector)
+    #        * full shape (2, 3, 4) (vector_detector, in_pattern)
+    #        """
+    #        n_keys = len(key) if hasattr(key, "__iter__") else 1
+    #        key = np.atleast_2d(key)
+    #        # These are overwritten as the input key length is investigated
+    #        nav_slice, sim_slice = key, key  # full_slice = key
+    #        ndim = self.ndim
+    #        if n_keys == 1:
+    #            if ndim != 0:
+    #                sim_slice = slice(None)
+    #        elif n_keys == 2:
+    #            if ndim == 0:
+    #                raise IndexError("Not enough axes to slice")
+    #            elif ndim == 1:
+    #                sim_slice = key[1]
+    #            else:  # nav_slice = key
+    #                sim_slice = slice(None)
+    #        elif n_keys == 3:  # Maximum number of slices
+    #            if ndim < 2:
+    #                raise IndexError("Not enough axes to slice")
+    #            else:
+    #                sim_slice = key[2]
+    #        return self.__class__(
+    #            self.vector[sim_slice],
+    #            self.vector_detector[sim_slice],
+    #            in_pattern=self.in_pattern[key],
+    #            max_r_gnomonic=self.max_r_gnomonic,
+    #        )
+
+    def _set_within_r_gnomonic(self, coordinates):
+        is_full_upper = np.atleast_2d(self.vector_detector.z) > -1e-5
+        in_circle = coordinates < self.max_r_gnomonic
+        self._within_r_gnomonic = np.logical_and(in_circle, is_full_upper)
 
 
 class KikuchiPatternLine(KikuchiPatternFeature):
@@ -93,45 +97,46 @@ class KikuchiPatternLine(KikuchiPatternFeature):
         max_r_gnomonic: float = 10,
     ):
         super().__init__(hkl, hkl_detector, in_pattern, max_r_gnomonic)
+        self._set_hesse_distance()
+        self._set_within_r_gnomonic(np.abs(self.hesse_distance))
+        self._set_hesse_alpha()
+        self._set_plane_trace_coordinates()
 
     @property
     def hesse_distance(self) -> np.ndarray:
-        return np.tan(0.5 * np.pi - self.vector_detector.polar)
-
-    @property
-    def within_r_gnomonic(self) -> np.ndarray:
-        is_full_upper = self.vector_detector.z > -1e-5
-        in_circle = np.abs(self.hesse_distance) < self.max_r_gnomonic
-        return np.logical_and(in_circle, is_full_upper)
+        return self._hesse_distance
 
     @property
     def hesse_alpha(self) -> np.ndarray:
-        hesse_distance = self.hesse_distance
-        hesse_distance[~self.within_r_gnomonic] = np.nan
-        return np.arccos(hesse_distance / self.max_r_gnomonic)
+        return self._hesse_alpha
 
     @property
     def plane_trace_coordinates(self) -> np.ndarray:
         """x0, y0, x1, y1"""
+        return self._plane_trace_coordinates
+
+    def _set_hesse_distance(self):
+        hesse_distance = np.tan(0.5 * np.pi - self.vector_detector.polar)
+        self._hesse_distance = np.atleast_2d(hesse_distance)
+
+    def _set_hesse_alpha(self):
+        hesse_distance = self.hesse_distance
+        hesse_distance[~self.within_r_gnomonic] = np.nan
+        self._hesse_alpha = np.arccos(hesse_distance / self.max_r_gnomonic)
+
+    def _set_plane_trace_coordinates(self):
         # Get alpha1 and alpha2 angles (NaN for bands outside gnomonic radius)
-        azimuth = self.vector_detector.azimuth
+        azimuth = np.atleast_2d(self.vector_detector.azimuth)
         hesse_alpha = self.hesse_alpha
         a1 = azimuth - np.pi + hesse_alpha
         a2 = azimuth - np.pi - hesse_alpha
 
         # Calculate start and end points for the plane traces
-        plane_trace = np.column_stack((np.cos(a1), np.sin(a1), np.cos(a2), np.sin(a2)))
+        plane_trace = np.stack((np.cos(a1), np.sin(a1), np.cos(a2), np.sin(a2)))
+        plane_trace = np.moveaxis(plane_trace, 0, -1)
         plane_trace *= self.max_r_gnomonic
 
-        return plane_trace
-
-    @property
-    def hesse_line_x(self) -> np.ndarray:
-        return -self.hesse_distance * np.cos(self.vector_detector.azimuth)
-
-    @property
-    def hesse_line_y(self) -> np.ndarray:
-        return -self.hesse_distance * np.sin(self.vector_detector.azimuth)
+        self._plane_trace_coordinates = plane_trace
 
 
 class KikuchiPatternZoneAxis(KikuchiPatternFeature):
@@ -143,24 +148,22 @@ class KikuchiPatternZoneAxis(KikuchiPatternFeature):
         max_r_gnomonic: float = 10,
     ):
         super().__init__(uvw, uvw_detector, in_pattern, max_r_gnomonic)
+        self._set_r_gnomonic()
+        self._set_within_r_gnomonic(self.r_gnomonic)
+        self._set_xy_within_r_gnomonic()
 
     @property
     def r_gnomonic(self) -> np.ndarray:
-        return np.sqrt(self.x_gnomonic ** 2 + self.y_gnomonic ** 2)
+        return self._r_gnomonic
 
-    @property
-    def within_r_gnomonic(self) -> np.ndarray:
-        is_full_upper = self.vector_detector.z > -1e-5
-        in_circle = self.r_gnomonic < self.max_r_gnomonic
-        return np.logical_and(in_circle, is_full_upper)
+    def _set_r_gnomonic(self):
+        self._r_gnomonic = np.sqrt(self.x_gnomonic ** 2 + self.y_gnomonic ** 2)
 
-    @property
-    def _xy_within_gnomonic_radius(self) -> np.ndarray:
-        xy = np.ones((self.vector.size, 2)) * np.nan
-        within = self.within_r_gnomonic
-        xy[within, 0] = self.x_gnomonic[within]
-        xy[within, 1] = self.y_gnomonic[within]
-        return xy
+    def _set_xy_within_r_gnomonic(self):
+        xy = np.stack((self.x_gnomonic, self.y_gnomonic))
+        xy = np.moveaxis(xy, 0, -1)
+        xy[~self.within_r_gnomonic] = np.nan
+        self._xy_within_r_gnomonic = xy
 
 
 def _get_dimension_str(nav_shape: tuple, sig_shape: tuple):

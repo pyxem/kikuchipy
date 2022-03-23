@@ -36,22 +36,24 @@ from kikuchipy.simulations._kikuchi_pattern_features import (
 
 
 class KikuchiPatternSimulator:
-    def __init__(self, phase: Phase, reflectors: ReciprocalLatticeVector):
-        self.phase = phase
+    def __init__(self, reflectors: ReciprocalLatticeVector):
         self.reflectors = reflectors
 
-    def __repr__(self):
+    @property
+    def phase(self) -> Phase:
+        return self.reflectors.phase
+
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}"
 
     def on_detector(
         self,
         detector: EBSDDetector,
-        rotation: Rotation,
-        mode: str = "geometrical",
-    ):
-        # modes: geometrical, kinematical, two-beam
+        rotations: Rotation,
+    ) -> GeometricalKikuchiPatternSimulation:
         lattice = self.phase.structure.lattice
         ref = self.reflectors
+        hkl = ref.hkl.round(0).astype(int)
 
         # Transformation from detector reference frame CSd to sample
         # reference frame CSs
@@ -61,9 +63,9 @@ class KikuchiPatternSimulator:
         u_s = u_s.to_matrix().squeeze()
         # Transformation from CSs to cartesian crystal reference frame
         # CSc
-        u_o = rotation.to_matrix().squeeze()
+        u_o = rotations.to_matrix()
         # Transform rotations once
-        u_os = u_o.dot(u_s)
+        u_os = np.matmul(u_o, u_s)
         # Structure matrix
         a = lattice.base
         # Transformation from CSc to reciprocal crystal reference frame
@@ -71,21 +73,22 @@ class KikuchiPatternSimulator:
         u_astar = np.linalg.inv(a)
 
         # Combine transformations
-        u_kstar = u_astar.dot(u_os)
+        u_kstar = np.matmul(u_astar, u_os)
 
         # Transform {hkl} from CSk* to CSd
-        hkl_d = np.matmul(ref.hkl, u_kstar)
+        hkl_d = np.matmul(hkl, u_kstar)
 
         # Get vectors that are in some pattern
+        nav_axes = (0, 1)[: rotations.ndim]
         hkl_is_upper, hkl_in_a_pattern = _get_coordinates_in_upper_hemisphere(
-            z_coordinates=hkl_d[..., 2], navigation_axes=()
+            z_coordinates=hkl_d[..., 2], navigation_axes=nav_axes
         )
-        hkl_in_pattern = hkl_is_upper[hkl_in_a_pattern, ...].T
-        hkl_d = hkl_d[hkl_in_a_pattern]
+        hkl_in_pattern = hkl_is_upper[..., hkl_in_a_pattern]
+        hkl_d = hkl_d[..., hkl_in_a_pattern, :]
 
         # Visible reflectors
         reflectors_visible = self.reflectors[hkl_in_a_pattern]
-        hkl = reflectors_visible.hkl
+        hkl = hkl[hkl_in_a_pattern]
 
         # Max. gnomonic radius to consider
         max_r_gnomonic = detector.r_max[0]
@@ -99,24 +102,29 @@ class KikuchiPatternSimulator:
 
         # Zone axes <uvw> from {hkl}
         uvw = np.cross(hkl[:, None, :], hkl)
-        uvw = uvw[~np.isclose(uvw, 0).all(axis=2)]
+        uvw = uvw[~np.isclose(uvw, 0).all(axis=-1)]
         uvw = np.unique(uvw, axis=0)
+
+        # Reduce an index triplet to smallest integer
+        uvw = Miller(uvw=uvw, phase=self.phase)
+        uvw = uvw.round().unique(use_symmetry=False)
+        uvw = uvw.coordinates
 
         # Transformation from CSc to direct crystal reference frame CSk
         u_a = a.T
 
         # Combine transformations
-        u_k = u_a.dot(u_os)
+        u_k = np.matmul(u_a, u_os)
 
         # Transform direct lattice vectors from CSk to CSd
         uvw_d = np.matmul(uvw, u_k)
 
         # Get vectors that are in some pattern
         uvw_is_upper, uvw_in_a_pattern = _get_coordinates_in_upper_hemisphere(
-            z_coordinates=uvw_d[..., 2], navigation_axes=()
+            z_coordinates=uvw_d[..., 2], navigation_axes=nav_axes
         )
-        uvw_in_pattern = uvw_is_upper[uvw_in_a_pattern, ...].T
-        uvw_d = uvw_d[uvw_in_a_pattern]
+        uvw_in_pattern = uvw_is_upper[..., uvw_in_a_pattern]
+        uvw_d = uvw_d[..., uvw_in_a_pattern, :]
 
         # Visible zone axes
         uvw = uvw[uvw_in_a_pattern]
@@ -130,7 +138,7 @@ class KikuchiPatternSimulator:
 
         simulation = GeometricalKikuchiPatternSimulation(
             detector=detector,
-            rotation=rotation,
+            rotations=rotations,
             reflectors=reflectors_visible,
             lines=lines,
             zone_axes=zone_axes,
@@ -196,9 +204,7 @@ def _get_coordinates_in_upper_hemisphere(
     upper hemisphere and if it is in the upper hemisphere in some
     pattern, respectively.
     """
-    upper_hemisphere = z_coordinates > 0
-    if len(navigation_axes) == 0:
-        upper_hemisphere = upper_hemisphere.squeeze()
+    upper_hemisphere = np.atleast_2d(z_coordinates) > 0
     in_a_pattern = np.sum(upper_hemisphere, axis=navigation_axes) != 0
     return upper_hemisphere, in_a_pattern
 
