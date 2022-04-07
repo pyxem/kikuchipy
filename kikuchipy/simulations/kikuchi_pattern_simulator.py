@@ -66,11 +66,9 @@ class KikuchiPatternSimulator:
         u_o = rotations.to_matrix()
         # Transform rotations once
         u_os = np.matmul(u_o, u_s)
-        # Structure matrix
-        a = lattice.base
         # Transformation from CSc to reciprocal crystal reference frame
         # CSk*
-        u_astar = np.linalg.inv(a)
+        u_astar = lattice.recbase.T
 
         # Combine transformations
         u_kstar = np.matmul(u_astar, u_os)
@@ -111,7 +109,7 @@ class KikuchiPatternSimulator:
         uvw = uvw.coordinates
 
         # Transformation from CSc to direct crystal reference frame CSk
-        u_a = a.T
+        u_a = lattice.base
 
         # Combine transformations
         u_k = np.matmul(u_a, u_os)

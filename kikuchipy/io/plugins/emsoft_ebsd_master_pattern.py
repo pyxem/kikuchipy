@@ -172,6 +172,10 @@ def file_reader(
     # Remove 1-dimensions
     data = data.squeeze()
 
+    if projection.lower() == "stereographic":
+        # Mirror about horizontal (flip up-down)
+        data = data[..., ::-1, :]
+
     # Axes scales
     energy_scale = nml_params["MCCLNameList"]["Ebinsize"]
     scales = np.array([1, energy_scale, 1, 1])
