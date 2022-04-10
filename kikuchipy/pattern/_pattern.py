@@ -204,7 +204,7 @@ def _dynamic_background_frequency_space_setup(
     # Get Gaussian filtering window
     shape = (int(truncate * std),) * 2
     window = Window("gaussian", std=std, shape=shape)
-    window = window / (2 * np.pi * std ** 2)
+    window = window / (2 * np.pi * std**2)
     window = window / np.sum(window)
 
     # FFT filter setup
@@ -495,7 +495,7 @@ def fft_spectrum(fft_pattern: np.ndarray) -> np.ndarray:
     fft_spectrum : numpy.ndarray
         2D FFT spectrum of the EBSD pattern.
     """
-    return np.sqrt(fft_pattern.real ** 2 + fft_pattern.imag ** 2)
+    return np.sqrt(fft_pattern.real**2 + fft_pattern.imag**2)
 
 
 @nb.jit(nopython=True, nogil=True, cache=True)
@@ -562,7 +562,7 @@ def fft_frequency_vectors(shape: Tuple[int, int]) -> np.ndarray:
 
     frequency_vectors = np.empty(shape=(sy, sx))
     for i in range(sy):
-        frequency_vectors[i] = liney[i] ** 2 + linex ** 2 - 1
+        frequency_vectors[i] = liney[i] ** 2 + linex**2 - 1
 
     return frequency_vectors
 
@@ -573,7 +573,7 @@ def _zero_mean(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
 
 
 def _normalize(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
-    patterns_squared = patterns ** 2
+    patterns_squared = patterns**2
     patterns_norm = np.nansum(patterns_squared, axis=axis, keepdims=True)
-    patterns_norm_squared = patterns_norm ** 0.5
+    patterns_norm_squared = patterns_norm**0.5
     return patterns / patterns_norm_squared
