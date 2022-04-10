@@ -92,6 +92,8 @@ def nickel_ebsd_small(**kwargs) -> EBSD:
     pixels from Nickel, acquired on a NORDIF UF-1100 detector
     :cite:`aanes2019electron`.
 
+    Carries a CC BY 4.0 license.
+
     Parameters
     ----------
     kwargs
@@ -110,6 +112,8 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
     """(401, 401) `uint8` square Lambert or stereographic projection of the
     northern and southern hemisphere of a Nickel master pattern at 20
     keV accelerating voltage.
+
+    Carries a CC BY 4.0 license.
 
     Parameters
     ----------
@@ -144,6 +148,8 @@ def nickel_ebsd_large(
     detector pixels from Nickel, acquired on a NORDIF UF-1100 detector
     :cite:`aanes2019electron`.
 
+    Carries a CC BY 4.0 license.
+
     Parameters
     ----------
     allow_download : bool
@@ -175,6 +181,8 @@ def silicon_ebsd_moving_screen_in(
     but with 5 mm and 10 mm greater sample-screen-distances were
     acquired to test the moving-screen projection center estimation
     technique :cite:`hjelen1991electron`.
+
+    Carries a CC BY 4.0 license.
 
     Parameters
     ----------
@@ -214,6 +222,8 @@ def silicon_ebsd_moving_screen_out5mm(
     (:func:`silicon_ebsd_moving_screen_out10mm`) were acquired to test
     the moving-screen projection center estimation technique
     :cite:`hjelen1991electron`.
+
+    Carries a CC BY 4.0 license.
 
     Parameters
     ----------
@@ -255,6 +265,8 @@ def silicon_ebsd_moving_screen_out10mm(
     (:func:`silicon_ebsd_moving_screen_out5mm`) were acquired to test
     the moving-screen projection center estimation technique
     :cite:`hjelen1991electron`.
+
+    Carries a CC BY 4.0 license.
 
     Parameters
     ----------
