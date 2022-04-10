@@ -341,7 +341,7 @@ def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
     navigation_axes = (1, 2)[:nav_dim]
 
     n_hkl = bands.size
-    n_hkl2 = n_hkl ** 2
+    n_hkl2 = n_hkl**2
     uvw = np.cross(hkl[:, np.newaxis, :], hkl).reshape((n_hkl2, 3))
     not000 = np.count_nonzero(uvw, axis=1) != 0
     uvw = uvw[not000]

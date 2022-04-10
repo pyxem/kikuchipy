@@ -344,9 +344,10 @@ class TestNORDIF:
 
     def test_load_readonly(self):
         s = load(PATTERN_FILE, lazy=True)
+        keys = ["array-original", "original-array"]
         k = next(
             filter(
-                lambda x: isinstance(x, str) and x.startswith("array-original"),
+                lambda x: isinstance(x, str) and any([x.startswith(j) for j in keys]),
                 s.data.dask.keys(),
             )
         )

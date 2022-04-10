@@ -80,7 +80,7 @@ def _get_polar_coordinates(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     polar[..., 1] = np.where(
         np.arctan2(y, x) < 0, np.arctan2(y, x) + 2 * np.pi, np.arctan2(y, x)
     )  # Azimuth
-    polar[..., 2] = np.sqrt(x ** 2 + y ** 2 + z ** 2)  # r
+    polar[..., 2] = np.sqrt(x**2 + y**2 + z**2)  # r
     polar[..., 0] = np.arccos(z / polar[..., 2])  # Polar
 
     return polar
@@ -104,7 +104,7 @@ def get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
         x, y, z = v.xyz
     else:
         x, y, z = v[..., 0], v[..., 1], v[..., 2]
-    r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+    r = np.sqrt(x**2 + y**2 + z**2)
     return np.arccos(z / r)
 
 
@@ -148,4 +148,4 @@ def get_radial(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
         x, y, z = v.xyz
     else:
         x, y, z = v[..., 0], v[..., 1], v[..., 2]
-    return np.sqrt(x ** 2 + y ** 2 + z ** 2)
+    return np.sqrt(x**2 + y**2 + z**2)

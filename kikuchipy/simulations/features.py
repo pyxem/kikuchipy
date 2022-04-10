@@ -416,7 +416,7 @@ class ZoneAxis(ReciprocalLatticePoint):
     @property
     def r_gnomonic(self) -> np.ndarray:
         """Gnomonic radius for all zone axes per pattern."""
-        return np.sqrt(self.x_gnomonic ** 2 + self.y_gnomonic ** 2)
+        return np.sqrt(self.x_gnomonic**2 + self.y_gnomonic**2)
 
     @property
     def within_gnomonic_radius(self) -> np.ndarray:

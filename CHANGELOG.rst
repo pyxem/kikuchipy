@@ -21,6 +21,8 @@ Contributors
 
 Added
 -----
+- `progressbar` parameter to functions downloading external datasets in the data module.
+  (`#515 <https://github.com/pyxem/kikuchipy/pull/515>`_)
 - Support for Python 3.10. (`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
 - `EBSD.static_background` property for easier access to the background pattern.
   (`#475 <https://github.com/pyxem/kikuchipy/pull/475>`_)
