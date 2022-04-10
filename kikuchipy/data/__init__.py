@@ -103,6 +103,13 @@ def nickel_ebsd_small(**kwargs) -> EBSD:
     -------
     signal : EBSD
         EBSD signal.
+
+    Examples
+    --------
+    >>> import kikuchipy as kp
+    >>> s = kp.data.nickel_ebsd_small()
+    >>> s
+    <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
     """
     fname = _fetch("kikuchipy_h5ebsd/patterns.h5")
     return load(fname, **kwargs)
@@ -136,6 +143,21 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
     :meth:`~kikuchipy.io.plugins.h5ebsd.dict2h5ebsdgroup` with
     keyword arguments `compression="gzip"` and `compression_opts=9`. All
     other HDF5 groups and datasets are the same as in the original file.
+
+    Examples
+    --------
+    >>> import kikuchipy as kp
+    >>> s = kp.data.nickel_ebsd_master_pattern_small()
+    >>> s
+    <EBSDMasterPattern, title: ni_mc_mp_20kv_uint8_gzip_opts9, dimensions: (|401, 401)>
+    >>> s.projection
+    'stereographic'
+
+    Import master pattern in the square Lambert projection
+
+    >>> s2 = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
+    >>> s2.projection
+    'lambert'
     """
     fname = _fetch("emsoft_ebsd_master_pattern/ni_mc_mp_20kv_uint8_gzip_opts9.h5")
     return load(fname, **kwargs)
@@ -166,6 +188,13 @@ def nickel_ebsd_large(
     -------
     signal : EBSD
         EBSD signal.
+
+    Examples
+    --------
+    >>> import kikuchipy as kp
+    >>> s = kp.data.nickel_ebsd_large(allow_download=True)
+    >>> s
+    <EBSD, title: patterns Scan 1, dimensions: (75, 55|60, 60)>
     """
     fname = _fetch("nickel_ebsd_large/patterns.h5", allow_download, progressbar)
     return load(fname, **kwargs)
@@ -205,6 +234,13 @@ def silicon_ebsd_moving_screen_in(
     --------
     silicon_ebsd_moving_screen_out5mm
     silicon_ebsd_moving_screen_out10mm
+
+    Examples
+    --------
+    >>> import kikuchipy as kp
+    >>> s = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
+    >>> s
+    <EBSD, title: si_in Scan 1, dimensions: (|480, 480)>
     """
     fname = _fetch("silicon_ebsd_moving_screen/si_in.h5", allow_download, progressbar)
     return load(fname, **kwargs)
@@ -246,6 +282,13 @@ def silicon_ebsd_moving_screen_out5mm(
     --------
     silicon_ebsd_moving_screen_in
     silicon_ebsd_moving_screen_out10mm
+
+    Examples
+    --------
+    >>> import kikuchipy as kp
+    >>> s = kp.data.silicon_ebsd_moving_screen_out5mm(allow_download=True)
+    >>> s
+    <EBSD, title: si_out5mm Scan 1, dimensions: (|480, 480)>
     """
     fname = _fetch(
         "silicon_ebsd_moving_screen/si_out5mm.h5", allow_download, progressbar
@@ -289,6 +332,13 @@ def silicon_ebsd_moving_screen_out10mm(
     --------
     silicon_ebsd_moving_screen_in
     silicon_ebsd_moving_screen_out5mm
+
+    Examples
+    --------
+    >>> import kikuchipy as kp
+    >>> s = kp.data.silicon_ebsd_moving_screen_out10mm(allow_download=True)
+    >>> s
+    <EBSD, title: si_out10mm Scan 1, dimensions: (|480, 480)>
     """
     fname = _fetch(
         "silicon_ebsd_moving_screen/si_out10mm.h5", allow_download, progressbar
