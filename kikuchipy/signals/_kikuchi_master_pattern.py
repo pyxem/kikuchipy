@@ -80,6 +80,27 @@ class KikuchiMasterPattern(CommonImage, Signal2D):
         new.hemisphere = copy.deepcopy(self.hemisphere)
         return new
 
+    def set_signal_type(self, signal_type=""):
+        if signal_type in [
+            "EBSDMasterPattern",
+            "ebsd_master_pattern",
+            "master_pattern",
+            "ECPMasterPattern",
+            "ecp_master_pattern",
+        ]:
+            phase = self.phase
+            projection = self.projection
+            hemisphere = self.hemisphere
+            super().set_signal_type(signal_type)
+            self.phase = phase
+            self.projection = projection
+            self.hemisphere = hemisphere
+        else:
+            super().set_signal_type(signal_type)
+            delattr(self, "phase")
+            delattr(self, "projection")
+            delattr(self, "hemisphere")
+
     # ------------------------ Private methods ----------------------- #
 
     def _get_master_pattern_arrays_from_energy(

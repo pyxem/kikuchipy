@@ -33,8 +33,11 @@ Added
 
 Changed
 -------
+- The class properties `phase`, `projection`, and `hemisphere` carry over when calling
+  `set_signal_type()` to switch between `EBSDMasterPattern` and `ECPMasterPattern`.
+  (`#476 <https://github.com/pyxem/kikuchipy/pull/476>`_)
 - Restrict minimal version of SciPy to 1.7.
-(`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
+  (`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
 
 Fixed
 -----
