@@ -198,7 +198,7 @@ def _rechunk_learning_results(
     learning_results_shape = factors.shape + loadings.shape
 
     # Determine maximum number of (strictly necessary) chunks
-    suggested_size = mbytes_chunk * 2 ** 20
+    suggested_size = mbytes_chunk * 2**20
     factors_size = factors.nbytes
     loadings_size = loadings.nbytes
     total_size = factors_size + loadings_size

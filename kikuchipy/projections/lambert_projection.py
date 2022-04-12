@@ -81,7 +81,7 @@ class LambertProjection:
             abs_yx, c_x * np.sin(true_term), c_y * np.cos(false_term)
         )
         cart[..., 2] = np.where(
-            abs_yx, 1 - (2 * (X ** 2)) / np.pi, 1 - (2 * (Y ** 2)) / np.pi
+            abs_yx, 1 - (2 * (X**2)) / np.pi, 1 - (2 * (Y**2)) / np.pi
         )
 
         return Vector3d(cart)
@@ -110,7 +110,7 @@ def _eq_c(p: Union[np.ndarray, float, int]) -> Union[np.ndarray, float, int]:
     """Private function used inside LambertProjection.xy2vector to
     increase readability.
     """
-    return (2 * p / np.pi) * np.sqrt(np.pi - p ** 2)
+    return (2 * p / np.pi) * np.sqrt(np.pi - p**2)
 
 
 @nb.jit("float64[:, :](float64[:, :])", nogil=True, cache=True, nopython=True)

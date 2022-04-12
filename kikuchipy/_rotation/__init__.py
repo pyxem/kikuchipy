@@ -109,10 +109,10 @@ def _rotate_vector(rotation: np.ndarray, vector: np.ndarray) -> np.ndarray:
     y = vector[:, 1]
     z = vector[:, 2]
     rotated_vector = np.zeros(vector.shape)
-    aa = a ** 2
-    bb = b ** 2
-    cc = c ** 2
-    dd = d ** 2
+    aa = a**2
+    bb = b**2
+    cc = c**2
+    dd = d**2
     ac = a * c
     ab = a * b
     ad = a * d

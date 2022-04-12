@@ -452,7 +452,7 @@ class TestZoneAxis:
         assert np.allclose(za.y_gnomonic, desired_y_gnomonic)
         assert np.allclose(
             za.r_gnomonic,
-            np.sqrt(desired_x_gnomonic ** 2 + desired_y_gnomonic ** 2),
+            np.sqrt(desired_x_gnomonic**2 + desired_y_gnomonic**2),
         )
 
     @pytest.mark.parametrize(
