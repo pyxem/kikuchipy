@@ -148,7 +148,7 @@ class KikuchiPatternSimulator:
         self,
         projection: str = "stereographic",
         mode: str = "lines",
-        scale_intensity: Optional[str] = "structure_factor",
+        figure: plt.Figure = None,
         return_figure: bool = False,
         backend: str = "matplotlib",
     ):
@@ -163,36 +163,38 @@ class KikuchiPatternSimulator:
                 "with `self.reflectors.calculate_theta()`."
             )
 
-        # Scale colors by structure factor if available
-        structure_factor = ref.structure_factor
-        if structure_factor[0] is not None and scale_intensity == "structure_factor":
-            color = structure_factor / structure_factor.max()
-            color = abs(color - color.min() - color.max())
-            ref_colors = np.full((ref.size, 3), color[:, np.newaxis])
-        else:
-            ref_colors = np.zeros((ref.size, 3))
+        # Sort reflectors into groups with identical structure factors
+        f_hkl = abs(ref.structure_factor)
+        color = f_hkl / f_hkl.max()
+        color = abs(color - color.min() - color.max())
+        color = np.full((ref.size, 3), color[:, np.newaxis])
 
         if projection == "stereographic":
+            kwargs = dict(color=color, linewidth=1)
             if mode == "lines":
-                fig = ref.draw_circle(return_figure=True, color=ref_colors)
+                if figure is not None:
+                    ref.draw_circle(figure=figure, **kwargs)
+                else:
+                    figure = ref.draw_circle(return_figure=True, **kwargs)
             else:  # bands
                 v = Vector3d(ref)
                 theta = ref.theta
-                fig = v.draw_circle(
-                    opening_angle=np.pi / 2 - theta,
-                    color=ref_colors,
-                    return_figure=True,
-                )
-                v.draw_circle(
-                    opening_angle=np.pi / 2 + theta, figure=fig, color=ref_colors
-                )
+                if figure is not None:
+                    v.draw_circle(
+                        opening_angle=np.pi / 2 - theta, figure=figure, **kwargs
+                    )
+                else:
+                    figure = v.draw_circle(
+                        opening_angle=np.pi / 2 - theta, return_figure=True, **kwargs
+                    )
+                v.draw_circle(opening_angle=np.pi / 2 + theta, figure=figure, **kwargs)
         elif projection == "spherical":
-            fig = _plot_reflectors_spherical(mode, ref, ref_colors, backend)
+            figure = _plot_reflectors_spherical(mode, ref, color, backend, figure)
         else:
             raise ValueError
 
         if return_figure:
-            return fig
+            return figure
 
 
 def _get_coordinates_in_upper_hemisphere(
@@ -207,30 +209,36 @@ def _get_coordinates_in_upper_hemisphere(
     return upper_hemisphere, in_a_pattern
 
 
-def _plot_reflectors_spherical(mode, ref, ref_colors, backend):
+def _plot_reflectors_spherical(
+    mode: str, ref: ReciprocalLatticeVector, color: np.ndarray, backend: str, figure
+):
     v = Vector3d(ref).unit
 
+    steps = 101
     if mode == "lines":
-        circles = v.get_circle().data
+        circles = v.get_circle(steps=steps).data
     else:  # bands
         theta = ref.theta
         circles = (
-            v.get_circle(opening_angle=np.pi / 2 - theta).data,
-            v.get_circle(opening_angle=np.pi / 2 + theta).data,
+            v.get_circle(opening_angle=np.pi / 2 - theta, steps=steps).data,
+            v.get_circle(opening_angle=np.pi / 2 + theta, steps=steps).data,
         )
 
     colors = ["r", "g", "b"]
-    labels = ["Xc", "Yc", "Zc"]
+    labels = ["e1", "e2", "e3"]
 
     if backend == "matplotlib":
-        fig, ax = plt.subplots(subplot_kw=dict(projection="3d"))
+        if figure is not None:
+            ax = figure.axes[0]
+        else:
+            figure, ax = plt.subplots(subplot_kw=dict(projection="3d"))
         if mode == "lines":
             for i, ci in enumerate(circles):
-                ax.plot3D(*ci.T, c=ref_colors[i])
+                ax.plot3D(*ci.T, c=color[i])
         else:  # bands
             for i, (c1i, c2i) in enumerate(zip(*circles)):
-                ax.plot3D(*c1i.T, c=ref_colors[i])
-                ax.plot3D(*c2i.T, c=ref_colors[i])
+                ax.plot3D(*c1i.T, c=color[i])
+                ax.plot3D(*c2i.T, c=color[i])
         ax.axis("off")
         ax.set_xlim((-1, 1))
         ax.set_ylim((-1, 1))
@@ -258,23 +266,50 @@ def _plot_reflectors_spherical(mode, ref, ref_colors, backend):
                 va=va[i],
             )
     else:  # pyvista
-        import pyvista
+        import pyvista as pv
 
-        pl = pyvista.Plotter()
-        pl.add_axes(color="k", xlabel=labels[0], ylabel=labels[1], zlabel=labels[2])
-        sphere = pyvista.Sphere(radius=1, theta_resolution=360, phi_resolution=360)
-        pl.add_mesh(sphere, color="w", lighting=False)
+        if figure is None:
+            show = True
+            figure = pv.Plotter()
+            figure.add_axes(
+                color="k", xlabel=labels[0], ylabel=labels[1], zlabel=labels[2]
+            )
+            sphere = pv.Sphere(radius=0.99)
+            figure.add_mesh(sphere, color="w", lighting=False)
+            figure.disable_shadows()
+            figure.set_background("w")
+            figure.set_viewup((0, 1, 0))
+        else:
+            show = False
+            # Assume that the existing plot has a sphere with a radius of 1
+            v = Vector3d(circles)
+            circles = Vector3d.from_polar(v.azimuth, v.polar, radial=1.01).data
+
         if mode == "lines":
-            for i, ci in enumerate(circles):
-                pl.add_lines(lines=ci, color=tuple(ref_colors[i]), width=2)
+            circles_shape = circles.shape[:-1]
+            circles = circles.reshape((-1, 3))
+            lines = np.arange(circles.shape[0]).reshape(circles_shape)
+            color = color[:, 0]
         else:  # bands
-            for i, (c1i, c2i) in enumerate(zip(*circles)):
-                pl.add_lines(lines=c1i, color=tuple(ref_colors[i]), width=2)
-                pl.add_lines(lines=c2i, color=tuple(ref_colors[i]), width=2)
-        pl.disable_shadows()
-        pl.set_background("w")
-        pl.set_viewup((0, 1, 0))
-        pl.show()
-        fig = pl
+            circles = np.vstack(circles)
+            circles_shape = circles.shape[:-1]
+            circles = circles.reshape((-1, 3))
+            lines = np.arange(circles.shape[0]).reshape(circles_shape)
+            color = np.tile(color[:, 0], 2)
 
-    return fig
+        # Create mesh from vertices (3D coordinates) and line
+        # connectivity arrays
+        lines = np.insert(lines, 0, steps, axis=1)
+        lines = lines.ravel()
+        mesh = pv.PolyData(circles, lines=lines)
+        figure.add_mesh(
+            mesh,
+            scalars=color,
+            cmap="gray",
+            scalar_bar_args=dict(title=r"$F_{hkl}$"),
+        )
+
+        if show:
+            figure.show()
+
+    return figure
