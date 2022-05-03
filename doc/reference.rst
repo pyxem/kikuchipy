@@ -557,6 +557,7 @@ See :class:`~hyperspy._signals.signal2d.Signal2D` for methods inherited from Hyp
 .. autosummary::
     get_patterns
     normalize_intensity
+    plot_spherical
     rescale_intensity
 
 .. autoclass:: kikuchipy.signals.EBSDMasterPattern
