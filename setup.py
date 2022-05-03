@@ -44,6 +44,7 @@ extra_feature_requirements = {
     "doc": [
         "furo",
         "nbsphinx >= 0.7",
+        "panel",
         "sphinx >= 3.0.2, <= 4.0.2",
         "sphinx-copybutton >= 0.2.5",
         "sphinx-autodoc-typehints >= 1.10.3",
@@ -129,6 +130,7 @@ setup(
         "numpy          >= 1.19",
         "orix           >= 0.8",
         "pooch          >= 0.13",
+        "pyvista",
         "tqdm           >= 0.5.2",
         "scikit-image   >= 0.16.2",
         "scikit-learn",

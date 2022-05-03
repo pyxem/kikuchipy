@@ -21,6 +21,10 @@ Contributors
 
 Added
 -----
+- `EBSDMasterPattern.plot_spherical()` for plotting a master pattern in the
+  stereographic projection on the 3D sphere.
+  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+- A new dependency on `pyvista` for 3D plotting is introduced.
 - `progressbar` parameter to functions downloading external datasets in the data module.
   (`#515 <https://github.com/pyxem/kikuchipy/pull/515>`_)
 - Support for Python 3.10. (`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
@@ -30,7 +34,7 @@ Added
 Changed
 -------
 - Restrict minimal version of SciPy to 1.7.
-(`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
+  (`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
 
 Fixed
 -----

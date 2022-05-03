@@ -26,7 +26,10 @@ from hyperspy._lazy_signals import LazySignal2D
 from hyperspy._signals.signal2d import Signal2D
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList
+from orix.projections import InverseStereographicProjection
 from orix.quaternion import Rotation
+from orix.vector import Vector3d
+import pyvista as pv
 from skimage.util.dtype import dtype_range
 
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
@@ -257,6 +260,82 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         return out
 
+    def plot_spherical(
+        self,
+        energy: Union[int, float, None] = None,
+        return_figure: bool = False,
+        style: str = "surface",
+        **kwargs,
+    ) -> pv.Plotter:
+        """Plot the master pattern sphere.
+
+        This requires the master pattern to be in the stereographic
+        projection and both hemispheres to be present.
+
+        Parameters
+        ----------
+        energy
+            Acceleration voltage in kV used to simulate the master
+            pattern to plot. If not passed, the highest energy is used.
+        return_figure
+            Whether to return the :class:`pyvista.Plotter` instance for
+            further modification and then plotting. Default is `False`.
+            If `True`, the figure is not plotted.
+        style
+            Visualization style of the mesh, either "surface" (default),
+            "wireframe" or "points". In general, "surface" is
+            recommended when inspecting at a glance, while "points" is
+            recommended when zooming in. See
+            :meth:`pyvista.Plotter.add_mesh` for details.
+        kwargs
+            Keyword arguments passed to :meth:`pyvista.Plotter.show`.
+
+        Returns
+        -------
+        pl
+            Only returned if `return_figure` is `True`.
+        """
+        if self.projection != "stereographic" or (
+            self.hemisphere != "both" and not self.phase.point_group.contains_inversion
+        ):
+            raise ValueError(
+                "Master pattern must be in the stereographic projection, and have both "
+                "hemispheres present if the phase is non-centrosymmetric"
+            )
+
+        mp_north, mp_south = self._get_master_pattern_arrays_from_energy(energy)
+
+        # Remove data outside equator and combine into a 1D array
+        keep = mp_north != 0
+        data = np.ravel(np.stack((mp_north[keep], mp_south[keep])))
+
+        # Get vectors for northern and southern hemisphere into a 1D
+        # array
+        size = mp_north.shape[0]
+        x, y = np.meshgrid(np.linspace(-1, 1, size), np.linspace(-1, 1, size))
+        x = x[keep]
+        y = y[keep]
+        stereo2sphere = InverseStereographicProjection(pole=-1)
+        v1 = stereo2sphere.xy2vector(x.ravel(), y.ravel())
+        stereo2sphere.pole = 1
+        v2 = stereo2sphere.xy2vector(x.ravel(), y.ravel())
+        v3 = Vector3d.stack((v1, v2)).flatten()
+
+        grid = pv.StructuredGrid(v3.x.data, v3.y.data, v3.z.data)
+        grid.point_data["Intensity"] = data
+
+        pl = pv.Plotter()
+        pl.add_mesh(pv.Sphere(radius=0.99), color="gray", lighting=False)
+        pl.add_mesh(grid, style=style, scalar_bar_args=dict(color="k"), cmap="gray")
+        pl.add_axes(color="k", xlabel="e1", ylabel="e2", zlabel="e3")
+        pl.set_background("#fafafa")
+        pl.set_viewup((0, 1, 0))
+
+        if return_figure:
+            return pl
+        else:
+            pl.show(**kwargs)
+
     # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
 
     def deepcopy(self):
@@ -269,7 +348,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
     # ------------------------ Private methods ----------------------- #
 
     def _get_master_pattern_arrays_from_energy(
-        self, energy: Union[int, float]
+        self, energy: Union[int, float, None] = None
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Return northern and southern master patterns created with a
         single, given energy.
@@ -279,7 +358,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         energy
             Acceleration voltage in kV. If only a single energy is
             present in the signal, this will be returned no matter its
-            energy.
+            energy. If not given, the highest energy is used.
 
         Returns
         -------
@@ -287,6 +366,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             Northern and southern hemispheres of master pattern.
         """
         if "energy" in [i.name for i in self.axes_manager.navigation_axes]:
+            if energy is None:
+                energy = self.axes_manager["energy"].axis[-1]
             master_patterns = self.inav[float(energy)].data
         else:  # Assume a single energy
             master_patterns = self.data
