@@ -24,6 +24,7 @@ import numpy as np
 from orix.crystal_map import Phase
 from orix.quaternion import Rotation
 import pytest
+import pyvista as pv
 
 import kikuchipy as kp
 from kikuchipy import load
@@ -56,7 +57,7 @@ EMSOFT_FILE = os.path.join(
 EMSOFT_EBSD_FILE = os.path.join(DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5")
 
 
-class TestEBSDMasterPatternInit:
+class TestEBSDMasterPattern:
     def test_init_no_metadata(self):
         s = kp.signals.EBSDMasterPattern(
             np.zeros((2, 10, 11, 11)),
@@ -81,6 +82,24 @@ class TestEBSDMasterPatternInit:
 
         assert isinstance(s, kp.signals.LazyEBSDMasterPattern)
         assert isinstance(s.data, da.Array)
+
+    def test_get_master_pattern_arrays_from_energy(self):
+        """Get northern and southern hemisphere of master pattern of the
+        last energy axis without providing the energy parameter.
+        """
+        shape = (2, 11, 11)
+        data = np.arange(np.prod(shape)).reshape(shape)
+        mp = kp.signals.EBSDMasterPattern(
+            data,
+            axes=[
+                {"size": 2, "name": "energy"},
+                {"size": 11, "name": "x"},
+                {"size": 11, "name": "y"},
+            ],
+        )
+        mp_north, mp_south = mp._get_master_pattern_arrays_from_energy()
+        assert np.allclose(mp_north, data[1])
+        assert np.allclose(mp_south, data[1])
 
 
 class TestIO:
@@ -464,3 +483,24 @@ class TestProjectingPatternsFromLambert:
 
         assert np.allclose(dc0, dc[0])
         assert dc.shape == (np.prod(nav_shape), nrows, ncols, 3)
+
+
+class TestMasterPatternPlotting:
+    def test_plot_spherical(self):
+        """Returns expected data and raises correct error."""
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
+        pl = mp.plot_spherical(return_figure=True, style="points")
+        assert isinstance(pl, pv.Plotter)
+
+        # Number of points equal to points in the master pattern's
+        # hemispheres inside equator
+        assert pl.mesh.n_points == 251242
+
+        # Actual plot
+        mp.plot_spherical()
+
+        # Raise error since only one hemisphere is available and the
+        # phase is non-centrosymmetric
+        mp.phase.space_group = 185  # P63cm
+        with pytest.raises(ValueError):
+            mp.plot_spherical()
