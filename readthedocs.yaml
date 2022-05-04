@@ -28,6 +28,3 @@ python:
       path: .
       extra_requirements:
         - doc
-
-#conda:
-#  environment: doc/environment.yml
