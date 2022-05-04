@@ -151,8 +151,7 @@ nbsphinx_execute_arguments = [
 # -- pyvista configuration ---------------------------------------------
 pv.OFF_SCREEN = True
 pv.set_plot_theme("document")
-pv.set_jupyter_backend(None)
-pv.start_xvfb()
+pv.set_jupyter_backend("pythreejs")
 
 # sphinxcontrib-bibtex configuration
 bibtex_bibfiles = ["bibliography.bib"]
