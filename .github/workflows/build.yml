@@ -54,7 +54,7 @@ jobs:
         run: pip install -U -e .'[tests]'
 
       - name: Install '3d' extra dependencies
-        if: ${{ matrix.python-version < 3.10 }}
+        if: ${{ matrix.python-version < '3.10' }}
         shell: bash
         run: pip install .'[3d]'
 
@@ -162,7 +162,7 @@ jobs:
         run: pip install -U -e .'[tests]'
 
       - name: Install '3d' extra dependencies
-        if: ${{ matrix.python-version < 3.10 }}
+        if: ${{ matrix.python-version < '3.10' }}
         shell: bash
         run: pip install .'[3d]'
 
@@ -200,7 +200,7 @@ jobs:
         run: pip install -U -e .'[tests]'
 
       - name: Install '3d' extra dependencies
-        if: ${{ matrix.python-version < 3.10 }}
+        if: ${{ matrix.python-version < '3.10' }}
         shell: bash
         run: pip install .'[3d]'
 
