@@ -152,19 +152,7 @@ nbsphinx_execute_arguments = [
 pv.OFF_SCREEN = True
 pv.set_plot_theme("document")
 pv.set_jupyter_backend(None)
-# Error message taken directly from:
-# https://github.com/pyvista/pyvista/blob/main/pyvista/plotting/plotting.py#L115
-warnings.filterwarnings(
-    "ignore",
-    category=UserWarning,
-    message=(
-        "\n"
-        "This system does not appear to be running an xserver.\n"
-        "PyVista will likely segfault when rendering.\n\n"
-        "Try starting a virtual frame buffer with xvfb, or using\n "
-        " ``pyvista.start_xvfb()``\n"
-    ),
-)
+pv.start_xvfb()
 
 # sphinxcontrib-bibtex configuration
 bibtex_bibfiles = ["bibliography.bib"]
