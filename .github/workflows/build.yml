@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
       - uses: psf/black@stable
 
   # Make sure all necessary files are included in a release
@@ -16,9 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
       - uses: actions/setup-python@v2
       - name: Install dependencies
         run: pip install manifix
+
       - name: Check MANIFEST.in file
         run: python setup.py manifix
 
@@ -45,25 +48,44 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Display Python and pip versions
         run: python -V; pip -V
-      - name: Install depedencies and package
+
+      - name: Install dependencies and package
         shell: bash
         run: pip install -U -e .'[tests]'
+
       - name: Install oldest supported version
         if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
         run: pip install ${{ matrix.DEPENDENCIES }}
+
+      - name: Install virtual buffer package
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install xvfb
+          /sbin/ldconfig -p | grep stdc++
+
       - name: Display package versions
         run: pip list
+
+      - name: Set up headless display
+        if: ${{ matrix.os == 'windows-latest'}}
+        uses: pyvista/setup-headless-display-action@v1
+
       - name: Run docstring tests
         if: ${{ matrix.os == 'ubuntu-latest' }}
         continue-on-error: true
         run: pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
+
       - name: Run tests
         run: pytest --cov=kikuchipy --pyargs kikuchipy
+
       - name: Generate line coverage
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: coverage report --show-missing
+
       - name: Upload coverage to Coveralls
         if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: AndreMiras/coveralls-python-action@develop
