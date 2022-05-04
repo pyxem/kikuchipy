@@ -54,7 +54,7 @@ jobs:
         run: pip install -U -e .'[tests]'
 
       - name: Install '3d' extra dependencies
-        if: ${{ matrix.python-version < '3.10' }}
+        if: ${{ matrix.python-version == 3.9 }}
         shell: bash
         run: pip install .'[3d]'
 
@@ -62,7 +62,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install xvfb
-          /sbin/ldconfig -p | grep stdc++ # Temporarily check location
 
       - name: Display package versions
         run: pip list
@@ -110,14 +109,13 @@ jobs:
         shell: bash
         run: pip install .'[3d]'
 
-      - name: Install oldest supported version
+      - name: Install oldest supported versions of dependencies
         run: pip install dask==2021.8.1 diffsims==0.4 hyperspy==1.6.5 matplotlib==3.3 numba==0.48 numpy==1.19 orix==0.8 scikit-image==0.16.2 scipy==1.7
 
       - name: Install virtual buffer package
         run: |
           sudo apt-get update
           sudo apt-get install xvfb
-          /sbin/ldconfig -p | grep stdc++ # Temporarily check location
 
       - name: Display package versions
         run: pip list
@@ -162,7 +160,7 @@ jobs:
         run: pip install -U -e .'[tests]'
 
       - name: Install '3d' extra dependencies
-        if: ${{ matrix.python-version < '3.10' }}
+        if: ${{ matrix.python-version == 3.9 }}
         shell: bash
         run: pip install .'[3d]'
 
@@ -200,7 +198,7 @@ jobs:
         run: pip install -U -e .'[tests]'
 
       - name: Install '3d' extra dependencies
-        if: ${{ matrix.python-version < '3.10' }}
+        if: ${{ matrix.python-version == 3.9 }}
         shell: bash
         run: pip install .'[3d]'
 
