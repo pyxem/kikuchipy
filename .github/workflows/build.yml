@@ -187,7 +187,7 @@ jobs:
         run: pytest --cov=kikuchipy --pyargs kikuchipy
 
   coveralls-finish:
-    needs: build-with-pip
+    needs: linux
     runs-on: ubuntu-latest
     steps:
     - name: Coveralls finished
