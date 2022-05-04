@@ -12,8 +12,6 @@ import re
 import sys
 import warnings
 
-import pyvista as pv
-
 from kikuchipy import release as kp_release
 import kikuchipy
 
@@ -57,11 +55,12 @@ intersphinx_mapping = {
     "diffpy.structure": ("https://www.diffpy.org/diffpy.structure", None),
     "diffsims": ("https://diffsims.readthedocs.io/en/latest", None),
     "hyperspy": ("https://hyperspy.org/hyperspy-doc/current", None),
-    "matplotlib": ("https://matplotlib.org", None),
+    "matplotlib": ("https://matplotlib.org/stable", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "orix": ("https://orix.readthedocs.io/en/stable", None),
     "python": ("https://docs.python.org/3", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy/reference", None),
+    "pyvista": ("https://docs.pyvista.org", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "skimage": ("https://scikit-image.org/docs/stable", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
     "h5py": ("https://docs.h5py.org/en/stable", None),
@@ -147,11 +146,6 @@ nbsphinx_execute_arguments = [
     "--InlineBackend.rc=figure.facecolor='w'",
     "--InlineBackend.rc=font.size=15",
 ]
-
-# -- pyvista configuration ---------------------------------------------
-pv.OFF_SCREEN = True
-pv.set_plot_theme("document")
-pv.set_jupyter_backend("pythreejs")
 
 # sphinxcontrib-bibtex configuration
 bibtex_bibfiles = ["bibliography.bib"]
