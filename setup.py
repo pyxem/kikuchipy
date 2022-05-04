@@ -52,7 +52,6 @@ extra_feature_requirements = {
         "sphinxcontrib-bibtex >= 1.0",
     ],
     "tests": ["coverage >= 5.0", "pytest >= 5.4", "pytest-cov >= 2.8.1"],
-    "3d": ["pyvista"],
 }
 
 # Create a development project, including both the doc and tests projects
@@ -131,6 +130,7 @@ setup(
         "numpy          >= 1.19",
         "orix           >= 0.8",
         "pooch          >= 0.13",
+        "pyvista",
         "tqdm           >= 0.5.2",
         "scikit-image   >= 0.16.2",
         "scikit-learn",

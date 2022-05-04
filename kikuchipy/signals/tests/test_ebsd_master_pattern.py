@@ -24,6 +24,7 @@ import numpy as np
 from orix.crystal_map import Phase
 from orix.quaternion import Rotation
 import pytest
+import pyvista as pv
 
 import kikuchipy as kp
 from kikuchipy import load
@@ -485,11 +486,8 @@ class TestProjectingPatternsFromLambert:
 
 
 class TestMasterPatternPlotting:
-    @pytest.mark.skipif(not kp.draw._pyvista_installed, reason="pyvista not installed")
     def test_plot_spherical(self):
         """Returns expected data and raises correct error."""
-        import pyvista as pv
-
         mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
         pl = mp.plot_spherical(return_figure=True, style="points")
         assert isinstance(pl, pv.Plotter)

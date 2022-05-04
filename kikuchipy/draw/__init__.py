@@ -23,11 +23,3 @@ from kikuchipy.draw import colors, markers
 from kikuchipy.draw._navigators import get_rgb_navigator
 
 __all__ = ["colors", "get_rgb_navigator", "markers"]
-
-
-try:
-    import pyvista
-
-    _pyvista_installed = True
-except ImportError:
-    _pyvista_installed = False

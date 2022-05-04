@@ -29,6 +29,7 @@ from orix.crystal_map import CrystalMap, Phase, PhaseList
 from orix.projections import InverseStereographicProjection
 from orix.quaternion import Rotation
 from orix.vector import Vector3d
+import pyvista as pv
 from skimage.util.dtype import dtype_range
 
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
@@ -265,7 +266,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         return_figure: bool = False,
         style: str = "surface",
         **kwargs,
-    ):
+    ) -> pv.Plotter:
         """Plot the master pattern sphere.
 
         This requires the master pattern to be in the stereographic
@@ -291,18 +292,9 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         Returns
         -------
-        pl : pyvista.Plotter
+        pl
             Only returned if `return_figure` is `True`.
-
-        Notes
-        -----
-        This plot requires :mod:`pyvista` to be installed.
         """
-        try:
-            import pyvista as pv
-        except ImportError:
-            raise ValueError("This plot requires pyvista to be installed")
-
         if self.projection != "stereographic" or (
             self.hemisphere != "both" and not self.phase.point_group.contains_inversion
         ):

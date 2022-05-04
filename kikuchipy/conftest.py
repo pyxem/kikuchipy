@@ -32,6 +32,7 @@ from orix.crystal_map import CrystalMap, create_coordinate_arrays, Phase, PhaseL
 from orix.quaternion.rotation import Rotation
 from orix.vector import Vector3d, neo_euler
 import pytest
+import pyvista as pv
 
 import kikuchipy as kp
 from kikuchipy.projections.ebsd_projections import (
@@ -41,11 +42,8 @@ from kikuchipy.projections.ebsd_projections import (
 
 
 # Control PyVista behaviour
-if kp.draw._pyvista_installed:
-    import pyvista
-
-    pyvista.OFF_SCREEN = True
-    pyvista.global_theme.interactive = False
+pv.OFF_SCREEN = True
+pv.global_theme.interactive = False
 
 # ------------------------- Helper functions ------------------------- #
 
