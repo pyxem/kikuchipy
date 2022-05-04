@@ -1,0 +1,28 @@
+name: kikuchipy_docs
+channels:
+  - conda-forge
+dependencies:
+- dask>=2021.8.1
+- diffsims>=0.4
+- furo
+- hyperspy>=1.6.5
+- h5py>=2.10
+- matplotlib>=3.3
+- nbsphinx>=0.7
+- nodejs
+- numba>=0.48
+- numpy>=1.19
+- orix>=0.8
+- pooch>=0.13
+- python=3.9
+- pythreejs
+- pyvista
+- scipy>=1.7
+- scikit-image>=0.16.2
+- scikit-learn
+- sphinx>=3.0.2,<=4.0.2
+- sphinx-autodoc-typehints>=1.10.3
+- sphinx-copybutton>=0.2.5
+- sphinx-gallery>=0.6
+- sphinxcontrib-bibtex>=1.0
+- tqdm>=0.5.2

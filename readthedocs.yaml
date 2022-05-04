@@ -21,9 +21,12 @@ formats:
   - pdf
 
 # Python environment for building the docs
-python:
-  install:
-    - method: pip
-      path: .
-      extra_requirements:
-        - doc
+#python:
+#  install:
+#    - method: pip
+#      path: .
+#      extra_requirements:
+#        - doc
+
+conda:
+  environment: doc/environment.yml

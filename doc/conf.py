@@ -11,6 +11,8 @@ from os.path import relpath, dirname
 import re
 import sys
 
+import pyvista as pv
+
 from kikuchipy import release as kp_release
 import kikuchipy
 
@@ -34,6 +36,7 @@ master_doc = "index"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "nbsphinx",
     "sphinxcontrib.bibtex",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
@@ -44,7 +47,6 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
     "sphinx_gallery.load_style",
-    "nbsphinx",
 ]
 
 # Create links to references within kikuchipy's documentation to these
@@ -89,11 +91,11 @@ pygments_style = "friendly"
 html_logo = "_static/logo/plasma_logo.svg"
 html_favicon = "_static/logo/plasma_favicon.png"
 
-# nbsphinx configuration
+# -- nbsphinx configuration --------------------------------------------
 # Taken from nbsphinx' own nbsphinx configuration file, with slight
-# modification to point nbviewer and Binder to the GitHub develop branch
-# links when the documentation is launched from a kikuchipy version with
-# "dev" in the version.
+# modifications to point nbviewer and Binder to the GitHub develop
+# branch links when the documentation is launched from a kikuchipy
+# version with "dev" in the version
 if "dev" in version:
     release_version = "develop"
 else:
@@ -145,9 +147,18 @@ nbsphinx_execute_arguments = [
     "--InlineBackend.rc=font.size=15",
 ]
 
+# -- pyvista configuration ---------------------------------------------
+pv.OFF_SCREEN = True
+pv.set_plot_theme("document")
+pv.set_jupyter_backend(None)
+pv.global_theme.window_size = [768, 768]
+pv.global_theme.font.size = 22
+pv.global_theme.font.label_size = 22
+pv.global_theme.font.title_size = 22
+pv.global_theme.return_cpos = False
+
 # sphinxcontrib-bibtex configuration
 bibtex_bibfiles = ["bibliography.bib"]
-
 
 # Relevant for the PDF build with LaTeX
 latex_elements = {
