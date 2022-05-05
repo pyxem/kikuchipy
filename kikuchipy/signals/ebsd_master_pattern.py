@@ -353,6 +353,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         if return_figure:
             return pl
         else:
+            if show_kwargs is None:
+                show_kwargs = {}
             pl.show(**show_kwargs)
 
     # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
