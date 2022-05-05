@@ -497,7 +497,10 @@ class TestMasterPatternPlotting:
         assert pl.mesh.n_points == 251242
 
         # Actual plot
-        mp.plot_spherical(interactive=False)
+        mp.plot_spherical(
+            plotter_kwargs=dict(notebook=False),
+            show_kwargs=dict(interactive=False),
+        )
 
         # Raise error since only one hemisphere is available and the
         # phase is non-centrosymmetric

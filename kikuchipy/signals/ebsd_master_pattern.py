@@ -265,7 +265,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         energy: Union[int, float, None] = None,
         return_figure: bool = False,
         style: str = "surface",
-        **kwargs,
+        plotter_kwargs: Union[dict] = None,
+        show_kwargs: Union[dict] = None,
     ) -> pv.Plotter:
         """Plot the master pattern sphere.
 
@@ -277,23 +278,39 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         energy
             Acceleration voltage in kV used to simulate the master
             pattern to plot. If not passed, the highest energy is used.
+
         return_figure
             Whether to return the :class:`pyvista.Plotter` instance for
-            further modification and then plotting. Default is `False`.
-            If `True`, the figure is not plotted.
+            further modification and then plotting. Default is
+            ``False``. If ``True``, the figure is not plotted.
+
         style
-            Visualization style of the mesh, either "surface" (default),
-            "wireframe" or "points". In general, "surface" is
-            recommended when inspecting at a glance, while "points" is
-            recommended when zooming in. See
+            Visualization style of the mesh, either ``"surface"``
+            (default), ``"wireframe"`` or ``"points"``. In general,
+            ``"surface"`` is recommended when zoomed out, while
+            ``"points"`` is recommended when zoomed in. See
             :meth:`pyvista.Plotter.add_mesh` for details.
-        kwargs
-            Keyword arguments passed to :meth:`pyvista.Plotter.show`.
+
+        plotter_kwargs
+            Dictionary of keyword arguments passed to
+            :class:`pyvista.Plotter`.
+
+        show_kwargs
+            Dictionary of keyword arguments passed to
+            :meth:`pyvista.Plotter.show` if ``return_figure`` is
+            ``False``.
 
         Returns
         -------
-        pl
-            Only returned if `return_figure` is `True`.
+        pl : pyvista.Plotter
+            Only returned if ``return_figure`` is ``True``.
+
+        Examples
+        --------
+        >>> import kikuchipy as kp
+        >>> mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
+        >>> mp.plot_spherical()  # doctest: +SKIP
+
         """
         if self.projection != "stereographic" or (
             self.hemisphere != "both" and not self.phase.point_group.contains_inversion
@@ -324,7 +341,9 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         grid = pv.StructuredGrid(v3.x.data, v3.y.data, v3.z.data)
         grid.point_data["Intensity"] = data
 
-        pl = pv.Plotter()
+        if plotter_kwargs is None:
+            plotter_kwargs = {}
+        pl = pv.Plotter(**plotter_kwargs)
         pl.add_mesh(pv.Sphere(radius=0.99), color="gray", lighting=False)
         pl.add_mesh(grid, style=style, scalar_bar_args=dict(color="k"), cmap="gray")
         pl.add_axes(color="k", xlabel="e1", ylabel="e2", zlabel="e3")
@@ -334,7 +353,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         if return_figure:
             return pl
         else:
-            pl.show(**kwargs)
+            pl.show(**show_kwargs)
 
     # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
 
