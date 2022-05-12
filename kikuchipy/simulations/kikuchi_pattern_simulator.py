@@ -73,9 +73,11 @@ class KikuchiPatternSimulator:
         # Combine transformations
         u_kstar = np.matmul(u_astar, u_os)
 
+        print(1)
         # Transform {hkl} from CSk* to CSd
         hkl_d = np.matmul(hkl, u_kstar)
 
+        print(2)
         # Get vectors that are in some pattern
         nav_axes = (0, 1)[: rotations.ndim]
         hkl_is_upper, hkl_in_a_pattern = _get_coordinates_in_upper_hemisphere(
@@ -84,6 +86,7 @@ class KikuchiPatternSimulator:
         hkl_in_pattern = hkl_is_upper[..., hkl_in_a_pattern]
         hkl_d = hkl_d[..., hkl_in_a_pattern, :]
 
+        print(3)
         # Visible reflectors
         reflectors_visible = self.reflectors[hkl_in_a_pattern]
         hkl = hkl[hkl_in_a_pattern]
@@ -91,6 +94,7 @@ class KikuchiPatternSimulator:
         # Max. gnomonic radius to consider
         max_r_gnomonic = detector.r_max[0]
 
+        print(4)
         lines = KikuchiPatternLine(
             hkl=Miller(hkl=hkl, phase=self.phase),
             hkl_detector=Vector3d(hkl_d),
@@ -98,11 +102,13 @@ class KikuchiPatternSimulator:
             max_r_gnomonic=max_r_gnomonic,
         )
 
+        print(5)
         # Zone axes <uvw> from {hkl}
         uvw = np.cross(hkl[:, None, :], hkl)
         uvw = uvw[~np.isclose(uvw, 0).all(axis=-1)]
         uvw = np.unique(uvw, axis=0)
 
+        print(6)
         # Reduce an index triplet to smallest integer
         uvw = Miller(uvw=uvw, phase=self.phase)
         uvw = uvw.round().unique(use_symmetry=False)
@@ -114,9 +120,11 @@ class KikuchiPatternSimulator:
         # Combine transformations
         u_k = np.matmul(u_a, u_os)
 
+        print(7)
         # Transform direct lattice vectors from CSk to CSd
         uvw_d = np.matmul(uvw, u_k)
 
+        print(8)
         # Get vectors that are in some pattern
         uvw_is_upper, uvw_in_a_pattern = _get_coordinates_in_upper_hemisphere(
             z_coordinates=uvw_d[..., 2], navigation_axes=nav_axes
@@ -124,9 +132,11 @@ class KikuchiPatternSimulator:
         uvw_in_pattern = uvw_is_upper[..., uvw_in_a_pattern]
         uvw_d = uvw_d[..., uvw_in_a_pattern, :]
 
+        print(9)
         # Visible zone axes
         uvw = uvw[uvw_in_a_pattern]
 
+        print(10)
         zone_axes = KikuchiPatternZoneAxis(
             uvw=Miller(uvw=uvw, phase=self.phase),
             uvw_detector=Vector3d(uvw_d),
@@ -134,6 +144,7 @@ class KikuchiPatternSimulator:
             max_r_gnomonic=max_r_gnomonic,
         )
 
+        print(11)
         simulation = GeometricalKikuchiPatternSimulation(
             detector=detector,
             rotations=rotations,
