@@ -172,7 +172,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         """Distance from the PC (origin) per band, i.e. the right-angle
         component of the distance to the pole.
         """
-        return np.tan(0.5 * np.pi - self.hkl_detector.polar.data)
+        return np.tan(0.5 * np.pi - self.hkl_detector.polar)
 
     @property
     def within_gnomonic_radius(self) -> np.ndarray:
@@ -204,7 +204,7 @@ class KikuchiBand(ReciprocalLatticePoint):
         to NaN.
         """
         # Get alpha1 and alpha2 angles (NaN for bands outside gnomonic radius)
-        azimuth = self.hkl_detector.azimuth.data
+        azimuth = self.hkl_detector.azimuth
         hesse_alpha = self.hesse_alpha
         plane_trace = np.zeros(self.navigation_shape + (self.size, 4))
         alpha1 = azimuth - np.pi + hesse_alpha
@@ -222,11 +222,11 @@ class KikuchiBand(ReciprocalLatticePoint):
 
     @property
     def hesse_line_x(self) -> np.ndarray:
-        return -self.hesse_distance * np.cos(self.hkl_detector.azimuth.data)
+        return -self.hesse_distance * np.cos(self.hkl_detector.azimuth)
 
     @property
     def hesse_line_y(self) -> np.ndarray:
-        return -self.hesse_distance * np.sin(self.hkl_detector.azimuth.data)
+        return -self.hesse_distance * np.sin(self.hkl_detector.azimuth)
 
     def __getitem__(self, key):
         """Get a deepcopy subset of the KikuchiBand object.
@@ -416,7 +416,7 @@ class ZoneAxis(ReciprocalLatticePoint):
     @property
     def r_gnomonic(self) -> np.ndarray:
         """Gnomonic radius for all zone axes per pattern."""
-        return np.sqrt(self.x_gnomonic ** 2 + self.y_gnomonic ** 2)
+        return np.sqrt(self.x_gnomonic**2 + self.y_gnomonic**2)
 
     @property
     def within_gnomonic_radius(self) -> np.ndarray:
