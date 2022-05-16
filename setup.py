@@ -126,7 +126,7 @@ setup(
         "matplotlib   >= 3.3",
         "numba        >= 0.48",
         "numpy        >= 1.19",
-        "orix         >= 0.8",
+        "orix         >= 0.9",
         "pooch        >= 0.13",
         "tqdm         >= 0.5.2",
         "scikit-image >= 0.16.2",
