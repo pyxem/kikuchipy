@@ -79,6 +79,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         (
@@ -131,7 +132,7 @@ setup(
         "tqdm         >= 0.5.2",
         "scikit-image >= 0.16.2",
         "scikit-learn",
-        "scipy",
+        "scipy          >= 1.7",
     ],
     # fmt: on
     entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},

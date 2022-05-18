@@ -16,6 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+from pathlib import Path
 
 from dask.array import Array
 import numpy as np
@@ -72,14 +73,23 @@ class TestData:
         assert isinstance(mp_lazy, LazyEBSDMasterPattern)
         assert isinstance(mp_lazy.data, Array)
 
-    def test_load_nickel_ebsd_large_raises(self):
-        """Raises desired error message."""
-        file = data.cache_data_path.joinpath("nickel_ebsd_large/patterns.h5")
+    def test_not_allow_download_raises(self):
+        """Not passing `allow_download` raises expected error."""
+        file = Path(data._fetcher.path, "data/nickel_ebsd_large/patterns.h5")
+
+        # Rename file (dangerous!)
+        new_name = str(file) + ".bak"
+        rename = False
         if file.exists():  # pragma: no cover
-            os.remove(file)
-            os.rmdir(file.parent)
-        with pytest.raises(ValueError, match="The dataset must be"):
+            rename = True
+            os.rename(file, new_name)
+
+        with pytest.raises(ValueError, match="Dataset nickel_ebsd_large/patterns.h5"):
             _ = data.nickel_ebsd_large(allow_download=False)
+
+        # Revert rename
+        if rename:  # pragma: no cover
+            os.rename(new_name, file)
 
     def test_load_nickel_ebsd_large_allow_download(self):
         """Download from external."""

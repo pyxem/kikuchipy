@@ -239,12 +239,12 @@ class TestRemoveStaticBackgroundEBSD:
     @pytest.mark.parametrize(
         "static_bg, error, match",
         [
+            (np.ones((3, 3), dtype=np.int8), ValueError, "Static background dtype_out"),
             (
-                np.ones((3, 3), dtype=np.int8),
+                None,
                 ValueError,
-                "Static background dtype_out",
+                "`EBSD.static_background` is not a valid NumPy or Dask array",
             ),
-            (None, ValueError, "`static_bg` is not a valid NumPy or Dask array"),
             (np.ones((3, 2), dtype=np.uint8), ValueError, "Signal"),
         ],
     )
@@ -254,8 +254,8 @@ class TestRemoveStaticBackgroundEBSD:
         """Test for expected error messages when passing an incorrect
         static background pattern to `remove_static_background().`
         """
-        ebsd_node = kp.signals.util.metadata_nodes("ebsd")
-        dummy_signal.metadata.set_item(ebsd_node + ".static_background", static_bg)
+        # Circumvent setter of static_background
+        dummy_signal._static_background = static_bg
         with pytest.raises(error, match=match):
             dummy_signal.remove_static_background()
 
@@ -263,11 +263,7 @@ class TestRemoveStaticBackgroundEBSD:
         dummy_signal = dummy_signal.as_lazy()
         dummy_signal.remove_static_background(static_bg=dummy_background)
         assert isinstance(dummy_signal.data, da.Array)
-
-        ebsd_node = kp.signals.util.metadata_nodes("ebsd")
-        dummy_signal.metadata.set_item(
-            ebsd_node + ".static_background", da.from_array(dummy_background)
-        )
+        dummy_signal.static_background = da.from_array(dummy_background)
         dummy_signal.remove_static_background()
 
     def test_remove_static_background_scalebg(self, dummy_signal, dummy_background):
@@ -1253,6 +1249,43 @@ class TestEBSDDetectorProperty:
                 kp.signals.util._detector._detector_is_compatible_with_signal(
                     raise_if_not=True, **func_kwargs
                 )
+
+
+class TestStaticBackgroundProperty:
+    def test_background_carry_over_from_deepcopy(self, dummy_signal):
+        dummy_signal2 = dummy_signal.deepcopy()
+        bg1 = dummy_signal.static_background
+        bg2 = dummy_signal2.static_background
+        assert not np.may_share_memory(bg1, bg2)
+        assert np.allclose(bg1, bg2)
+
+    def test_background_carry_over_from_lazy(self, dummy_signal):
+        dummy_signal_lazy = dummy_signal.deepcopy().as_lazy()
+        dummy_signal_lazy.compute()
+        bg = dummy_signal.static_background
+        bg_lazy = dummy_signal_lazy.static_background
+        assert not np.may_share_memory(bg, bg_lazy)
+        assert np.allclose(bg, bg_lazy)
+
+    def test_set_background(self):
+        s = kp.data.nickel_ebsd_small(lazy=True)
+        sig_shape = s.axes_manager.signal_shape[::-1]
+        # Success
+        bg_good = np.arange(np.prod(sig_shape), dtype=s.data.dtype).reshape(sig_shape)
+        s.static_background = bg_good
+        # Warns, but allows
+        with pytest.warns(
+            UserWarning,
+            match="Background pattern has different data type from patterns",
+        ):
+            dtype = np.uint16
+            s.static_background = bg_good.astype(dtype)
+            assert s.static_background.dtype == dtype
+        with pytest.warns(
+            UserWarning, match="Background pattern has different shape from patterns"
+        ):
+            s.static_background = bg_good[:, :-2]
+            assert s.static_background.shape == (sig_shape[0], sig_shape[1] - 2)
 
 
 class TestDictionaryIndexing:

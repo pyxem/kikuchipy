@@ -12,7 +12,39 @@ best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 Contributors to each release are listed in alphabetical order by first name. List
 entries are sorted in descending chronological order.
 
+Unreleased
+==========
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Added
+-----
+- `progressbar` parameter to functions downloading external datasets in the data module.
+  (`#515 <https://github.com/pyxem/kikuchipy/pull/515>`_)
+- Support for Python 3.10. (`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
+- `EBSD.static_background` property for easier access to the background pattern.
+  (`#475 <https://github.com/pyxem/kikuchipy/pull/475>`_)
+
+Changed
+-------
+- Restrict minimal version of SciPy to 1.7.
+(`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
+
+Fixed
+-----
+- Hopefully prevent EBSD refinement tests using random data to fail on Azure.
+  (`#465 <https://github.com/pyxem/kikuchipy/pull/465>`_)
+
 0.5.8 (2022-05-16)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+0.5.7 (2022-01-10)
 ==================
 
 Contributors
@@ -28,13 +60,6 @@ Fixed
 -----
 - Internal use of ``orix.vector.Vector3d`` following ``orix``' 0.9.0 release.
   (`#520 <https://github.com/pyxem/kikuchipy/pull/520>`_)
-
-0.5.7 (2022-01-10)
-==================
-
-Contributors
-------------
-- Håkon Wiik Ånes
 
 Fixed
 -----
@@ -231,8 +256,7 @@ Added
   `#391 <https://github.com/pyxem/kikuchipy/pull/391>`_)
 - Unit testing of docstring examples.
   (`#350 <https://github.com/pyxem/kikuchipy/pull/350>`_)
-- Support for Python 3.9.
-  (`#348 <https://github.com/pyxem/kikuchipy/pull/348>`_)
+- Support for Python 3.9. (`#348 <https://github.com/pyxem/kikuchipy/pull/348>`_)
 - Projection/pattern center calibration via the moving screen technique in a
   kikuchipy.detectors.calibration module.
   (`#322 <https://github.com/pyxem/kikuchipy/pull/322>`_)

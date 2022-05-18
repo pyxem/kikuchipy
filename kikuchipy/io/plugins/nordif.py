@@ -113,14 +113,16 @@ def file_reader(
         md = ebsd_metadata()
         omd = DictionaryTreeBrowser()
 
-    # Read static background image into metadata
+    # Read static background pattern, to be passed to EBSD.__init__() to
+    # set the EBSD.static_background property
     static_bg_file = os.path.join(folder, "Background acquisition pattern.bmp")
     try:
-        md.set_item(ebsd_node + ".static_background", imread(static_bg_file))
+        scan["static_background"] = imread(static_bg_file)
     except FileNotFoundError:
+        scan["static_background"] = None
         warnings.warn(
             f"Could not read static background pattern '{static_bg_file}', however it "
-            "can be added using set_experimental_parameters()"
+            "can be set as 'EBSD.static_background'"
         )
 
     # Set required and other parameters in metadata

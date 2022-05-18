@@ -114,7 +114,7 @@ class TestLambertProjection:
     def test_shape_respect(self):
         """Check that LambertProjection.project() respects navigation axes"""
         sx = 60
-        a = np.arange(1, sx ** 2 + 1).reshape((sx, sx))
+        a = np.arange(1, sx**2 + 1).reshape((sx, sx))
         v = Vector3d(np.dstack([a, a, a]))
         assert v.shape == (sx, sx)
         assert v.data.shape == (sx, sx, 3)

@@ -26,7 +26,6 @@ from matplotlib.pyplot import imread
 import numpy as np
 
 from kikuchipy.io.plugins.nordif import get_settings_from_file
-from kikuchipy.signals.util._metadata import metadata_nodes
 
 
 # Plugin characteristics
@@ -58,18 +57,20 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
         Data, axes, metadata and original metadata.
     """
     # Get metadata from setting file
-    ebsd_node = metadata_nodes("ebsd")
     md, omd, _ = get_settings_from_file(filename)
     dirname = os.path.dirname(filename)
 
-    # Read static background image into metadata
+    scan = {}
+    # Read static background pattern, to be passed to EBSD.__init__() to
+    # set the EBSD.static_background property
     static_bg_file = os.path.join(dirname, "Background calibration pattern.bmp")
     try:
-        md.set_item(ebsd_node + ".static_background", imread(static_bg_file))
+        scan["static_background"] = imread(static_bg_file)
     except FileNotFoundError:
+        scan["static_background"] = None
         warnings.warn(
             f"Could not read static background pattern '{static_bg_file}', however it "
-            "can be added using set_experimental_parameters()."
+            "can be set as 'EBSD.static_background'"
         )
 
     # Set required and other parameters in metadata
@@ -78,7 +79,6 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
     md.set_item("Signal.signal_type", "EBSD")
     md.set_item("Signal.record_by", "image")
 
-    scan = {}
     scan["metadata"] = md.as_dictionary()
     scan["original_metadata"] = omd.as_dictionary()
 

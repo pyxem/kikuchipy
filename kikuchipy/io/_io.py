@@ -249,9 +249,9 @@ def _assign_signal_subclass(
     signal_dimension
         Number of signal dimensions.
     signal_type
-        Signal type. Options are ""/"EBSD"/"EBSDMasterPattern".
+        Signal type. Options are '', 'EBSD', 'EBSDMasterPattern'.
     lazy
-        Open the data lazily without actually reading the data from disk
+        Open the data lazily without actually reading the data from disc
         until required. Allows opening arbitrary sized datasets. Default
         is False.
 
