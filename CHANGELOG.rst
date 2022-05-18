@@ -44,13 +44,6 @@ Contributors
 ------------
 - Håkon Wiik Ånes
 
-0.5.7 (2022-01-10)
-==================
-
-Contributors
-------------
-- Håkon Wiik Ånes
-
 Changed
 -------
 - Minimal version of ``orix`` is increased to 0.9.
@@ -60,6 +53,13 @@ Fixed
 -----
 - Internal use of ``orix.vector.Vector3d`` following ``orix``' 0.9.0 release.
   (`#520 <https://github.com/pyxem/kikuchipy/pull/520>`_)
+
+0.5.7 (2022-01-10)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
 
 Fixed
 -----
