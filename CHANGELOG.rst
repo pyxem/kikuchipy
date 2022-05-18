@@ -37,6 +37,23 @@ Fixed
 - Hopefully prevent EBSD refinement tests using random data to fail on Azure.
   (`#465 <https://github.com/pyxem/kikuchipy/pull/465>`_)
 
+0.5.8 (2022-05-16)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Changed
+-------
+- Minimal version of ``orix`` is increased to 0.9.
+  (`#520 <https://github.com/pyxem/kikuchipy/pull/520>`_)
+
+Fixed
+-----
+- Internal use of ``orix.vector.Vector3d`` following ``orix``' 0.9.0 release.
+  (`#520 <https://github.com/pyxem/kikuchipy/pull/520>`_)
+
 0.5.7 (2022-01-10)
 ==================
 
