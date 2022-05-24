@@ -54,6 +54,8 @@ from kikuchipy.pattern._pattern import (
     fft_frequency_vectors,
     fft_filter,
     _dynamic_background_frequency_space_setup,
+    _remove_static_background_subtract,
+    _remove_static_background_divide,
 )
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
@@ -76,7 +78,7 @@ from kikuchipy.signals.util._map_helper import (
 )
 from kikuchipy.signals._common_image import CommonImage
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
-from kikuchipy._util import deprecated
+from kikuchipy._util import deprecated, deprecated_argument
 
 
 class EBSD(CommonImage, Signal2D):
@@ -467,14 +469,15 @@ class EBSD(CommonImage, Signal2D):
         dx.scale, dy.scale = (delta, delta)
         dx.offset, dy.offset = -centre
 
+    @deprecated_argument(name="relative", since="0.6", removal="0.7")
     def remove_static_background(
         self,
         operation: str = "subtract",
-        relative: bool = True,
+        relative: bool = False,
         static_bg: Union[None, np.ndarray, da.Array] = None,
         scale_bg: bool = False,
     ):
-        """Remove the static background in an EBSD scan inplace.
+        """Remove the static background inplace.
 
         The removal is performed by subtracting or dividing by a static
         background pattern. Resulting pattern intensities are rescaled
@@ -484,18 +487,29 @@ class EBSD(CommonImage, Signal2D):
         Parameters
         ----------
         operation
-            Whether to "subtract" (default) or "divide" by the static
-            background pattern.
+            Whether to ``"subtract"`` (default) or ``"divide"`` by the
+            static background pattern.
         relative
             Keep relative intensities between patterns. Default is
-            True.
+            ``False``.
+
+            .. deprecated:: 0.6
+
+                This parameter will be removed in version 0.7 due to the
+                implementation not working well for large datasets. It
+                was originally supported so that a virtual backscatter
+                electron (VBSE) image with meaningful contrast could be
+                navigated after static background removal. For an EBSD
+                signal ``s``, this image can be easily obtained with
+                ``s_mean = s.mean(s.axes_manager.signal_indices_in_array)``.
+
         static_bg
-            Static background pattern. If None is passed (default) we
-            try to read it from the `EBSD.static_background` property.
+            Static background pattern. If not given, the background is
+            obtained from the ``EBSD.static_background`` property.
         scale_bg
             Whether to scale the static background pattern to each
-            individual pattern's data range before removal. Must be
-            False if `relative` is True. Default is False.
+            individual pattern's data range before removal. Default is
+            ``False``.
 
         See Also
         --------
@@ -503,7 +517,7 @@ class EBSD(CommonImage, Signal2D):
 
         Examples
         --------
-        We assume that a static background pattern with the same shape
+        It is assumed that a static background pattern of the same shape
         and data type (e.g. 8-bit unsigned integer, ``uint8``) as the
         patterns is available in signal metadata:
 
@@ -519,84 +533,71 @@ class EBSD(CommonImage, Signal2D):
                [76, 78, 80, ..., 26, 26, 25]], dtype=uint8)
 
         The static background can be removed by subtracting or dividing
-        this background from each pattern while keeping relative
-        intensities between patterns (or not):
+        this background from each pattern:
 
-        >>> s.remove_static_background(
-        ...     operation='subtract', relative=True
-        ... )  # doctest: +SKIP
+        >>> s.remove_static_background(operation="divide")  # doctest: +SKIP
 
-        If the `static_background` property is None, this must be passed
-        in the `static_bg` parameter as a NumPy or Dask array.
+        If the ``static_background`` property is ``None``, this must be
+        passed in the ``static_bg`` parameter as a ``numpy`` or ``dask``
+        array.
+
         """
+        dtype = np.float32  # During processing
         dtype_out = self.data.dtype.type
+        out_range = dtype_range[dtype_out]
 
         # Get background pattern
         if static_bg is None:
             static_bg = self.static_background
             try:
-                if isinstance(static_bg, (da.Array, np.ndarray)):
-                    static_bg = da.asarray(static_bg, chunks="auto")
-                else:
+                if isinstance(static_bg, da.Array):
+                    static_bg = static_bg.compute()
+                if not isinstance(static_bg, np.ndarray):
                     raise ValueError
             except (AttributeError, ValueError):
-                raise ValueError(
-                    "`EBSD.static_background` is not a valid NumPy or Dask array"
-                )
+                raise ValueError("`EBSD.static_background` is not a valid array")
         if dtype_out != static_bg.dtype:
             raise ValueError(
                 f"Static background dtype_out {static_bg.dtype} is not the same as "
                 f"pattern dtype_out {dtype_out}"
             )
-        pat_shape = self.axes_manager.signal_shape[::-1]
+        pat_shape = self.axes_manager.signal_shape[::-1]  # xy -> ij
         bg_shape = static_bg.shape
         if bg_shape != pat_shape:
             raise ValueError(
                 f"Signal {pat_shape} and static background {bg_shape} shapes are not "
-                "identical"
+                "the same"
             )
-        dtype = np.float32
         static_bg = static_bg.astype(dtype)
 
+        # Remove background and rescale to input data type
+        omin, omax = np.float32(out_range)
+        if not self._lazy:
+            print("Removing the static background:", file=sys.stdout)
+
+            # Register a progressbar. Remove once HyperSpy v1.7.1 is
+            # released: https://github.com/hyperspy/hyperspy/issues/2946
+            pbar = ProgressBar()
+            pbar.register()
+
         if operation == "subtract":
-            operation_func = np.subtract
-        else:  # operation == "divide"
-            operation_func = np.divide
+            operation_func = _remove_static_background_subtract
+        else:
+            operation_func = _remove_static_background_divide
 
-        # Get min./max. input patterns intensity after correction
-        if relative is True and scale_bg is True:
-            raise ValueError("'scale_bg' must be False if 'relative' is True.")
-        elif relative is True:  # Scale relative to min./max. intensity in scan
-            signal_min = self.data.min(axis=(0, 1))
-            signal_max = self.data.max(axis=(0, 1))
-            in_range = (
-                operation_func(signal_min, static_bg).astype(dtype).min(),
-                operation_func(signal_max, static_bg).astype(dtype).max(),
-            )
-        else:  # Scale relative to min./max. intensity in each pattern
-            in_range = None
-
-        # Create a dask array of signal patterns and do the processing on this
-        dask_array = get_dask_array(signal=self, dtype=dtype)
-
-        # Remove the static background and rescale intensities chunk by chunk
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_static_background,
+        self.map(
+            operation_func,
+            show_progressbar=True,
+            parallel=True,
+            output_dtype=dtype_out,
             static_bg=static_bg,
-            operation_func=operation_func,
+            omin=omin,
+            omax=omax,
             scale_bg=scale_bg,
-            in_range=in_range,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
         )
 
-        # Overwrite signal patterns
         if not self._lazy:
-            with ProgressBar():
-                print("Removing the static background:", file=sys.stdout)
-                corrected_patterns.store(self.data, compute=True)
-        else:
-            self.data = corrected_patterns
+            pbar.unregister()
 
     def remove_dynamic_background(
         self,

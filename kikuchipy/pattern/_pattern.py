@@ -27,6 +27,9 @@ from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
 
 
+# --- Rescale intensities ----------------------------------------------
+
+
 def rescale_intensity(
     pattern: np.ndarray,
     in_range: Optional[Tuple[Union[int, float], ...]] = None,
@@ -85,7 +88,7 @@ def rescale_intensity(
     return _rescale_with_min_max(pattern, imin, imax, omin, omax).astype(dtype_out)
 
 
-@nb.jit(nogil=True, nopython=True, cache=True)
+@nb.njit(cache=True, fastmath=True, nogil=True)
 def _rescale_with_min_max(
     pattern: np.ndarray,
     imin: Union[int, float],
@@ -97,11 +100,288 @@ def _rescale_with_min_max(
     return rescaled_pattern * (omax - omin) + omin
 
 
-@nb.jit("float32[:, :](float32[:, :])", cache=True, nopython=True, nogil=True)
+@nb.njit("float32[:, :](float32[:, :])", cache=True, nogil=True, fastmath=True)
 def _rescale_without_min_max(pattern: np.ndarray) -> np.ndarray:
     imin = np.min(pattern)
     imax = np.max(pattern)
     return _rescale_with_min_max(pattern, imin=imin, imax=imax, omin=-1, omax=1)
+
+
+def _zero_mean(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
+    patterns_mean = np.nanmean(patterns, axis=axis, keepdims=True)
+    return patterns - patterns_mean
+
+
+def _normalize(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
+    patterns_squared = patterns**2
+    patterns_norm = np.nansum(patterns_squared, axis=axis, keepdims=True)
+    patterns_norm_squared = patterns_norm**0.5
+    return patterns / patterns_norm_squared
+
+
+@nb.njit(cache=True, fastmath=True, nogil=True)
+def normalize_intensity(
+    pattern: np.ndarray, num_std: int = 1, divide_by_square_root: bool = False
+) -> np.ndarray:
+    """Normalize image intensities to a mean of zero and a given
+    standard deviation.
+
+    Data type is preserved.
+
+    Parameters
+    ----------
+    pattern
+        EBSD pattern.
+    num_std
+        Number of standard deviations of the output intensities (default
+        is 1).
+    divide_by_square_root
+        Whether to divide output intensities by the square root of the
+        image size (default is False).
+
+    Returns
+    -------
+    normalized_pattern : numpy.ndarray
+        Normalized pattern.
+
+    Notes
+    -----
+    Data type should always be changed to floating point, e.g.
+    ``np.float32`` with :meth:`numpy.ndarray.astype`, before normalizing
+    the intensities.
+    """
+    pattern_mean = np.mean(pattern)
+    pattern_std = np.std(pattern)
+
+    if divide_by_square_root:
+        return (pattern - pattern_mean) / (
+            num_std * pattern_std * np.sqrt(pattern.size)
+        )
+    else:
+        return (pattern - pattern_mean) / (num_std * pattern_std)
+
+
+# --- FFT --------------------------------------------------------------
+
+
+def fft(
+    pattern: np.ndarray,
+    apodization_window: Union[None, np.ndarray, Window] = None,
+    shift: bool = False,
+    real_fft_only: bool = False,
+    **kwargs,
+) -> np.ndarray:
+    """Compute the discrete Fast Fourier Transform (FFT) of an EBSD
+    pattern.
+
+    Very light wrapper around routines in :mod:`scipy.fft`. The routines
+    are wrapped instead of used directly to accommodate easy setting of
+    `shift` and `real_fft_only`.
+
+    Parameters
+    ----------
+    pattern
+        EBSD pattern.
+    apodization_window
+        An apodization window to apply before the FFT in order to
+        suppress streaks.
+    shift
+        Whether to shift the zero-frequency component to the centre of
+        the spectrum (default is False).
+    real_fft_only
+        If True, the discrete FFT is computed for real input using
+        :func:`scipy.fft.rfft2`. If False (default), it is computed
+        using :func:`scipy.fft.fft2`.
+    kwargs :
+        Keyword arguments pass to :func:`scipy.fft.fft2` or
+        :func:`scipy.fft.rfft2`.
+
+    Returns
+    -------
+    out : numpy.ndarray
+        The result of the 2D FFT.
+    """
+    if apodization_window is not None:
+        pattern *= apodization_window
+
+    if real_fft_only:
+        fft_use = rfft2
+    else:
+        fft_use = fft2
+
+    if shift:
+        out = fftshift(fft_use(pattern, **kwargs))
+    else:
+        out = fft_use(pattern, **kwargs)
+
+    return out
+
+
+def ifft(
+    fft_pattern: np.ndarray,
+    shift: bool = False,
+    real_fft_only: bool = False,
+    **kwargs,
+) -> np.ndarray:
+    """Compute the inverse Fast Fourier Transform (IFFT) of an FFT of an
+    EBSD pattern.
+
+    Very light wrapper around routines in :mod:`scipy.fft`. The routines
+    are wrapped instead of used directly to accommodate easy setting of
+    `shift` and `real_fft_only`.
+
+    Parameters
+    ----------
+    fft_pattern
+        FFT of EBSD pattern.
+    shift
+        Whether to shift the zero-frequency component back to the
+        corners of the spectrum (default is False).
+    real_fft_only
+        If True, the discrete IFFT is computed for real input using
+        :func:`scipy.fft.irfft2`. If False (default), it is computed
+        using :func:`scipy.fft.ifft2`.
+    kwargs :
+        Keyword arguments pass to :func:`scipy.fft.ifft`.
+
+    Returns
+    -------
+    pattern : numpy.ndarray
+        Real part of the IFFT of the EBSD pattern.
+    """
+    if real_fft_only:
+        fft_use = irfft2
+    else:
+        fft_use = ifft2
+
+    if shift:
+        pattern = fft_use(ifftshift(fft_pattern, **kwargs))
+    else:
+        pattern = fft_use(fft_pattern, **kwargs)
+
+    return np.real(pattern)
+
+
+def fft_filter(
+    pattern: np.ndarray,
+    transfer_function: Union[np.ndarray, Window],
+    apodization_window: Union[None, np.ndarray, Window] = None,
+    shift: bool = False,
+) -> np.ndarray:
+    """Filter an EBSD patterns in the frequency domain.
+
+    Parameters
+    ----------
+    pattern
+        EBSD pattern.
+    transfer_function
+        Filter transfer function in the frequency domain.
+    apodization_window
+        An apodization window to apply before the FFT in order to
+        suppress streaks.
+    shift
+        Whether to shift the zero-frequency component to the centre of
+        the spectrum. Default is False.
+
+    Returns
+    -------
+    filtered_pattern : numpy.ndarray
+        Filtered EBSD pattern.
+    """
+    # Get the FFT
+    pattern_fft = fft(pattern, shift=shift, apodization_window=apodization_window)
+
+    # Apply the transfer function to the FFT
+    filtered_fft = pattern_fft * transfer_function
+
+    # Get real part of IFFT of the filtered FFT
+    return np.real(ifft(filtered_fft, shift=shift))
+
+
+@nb.njit(cache=True, fastmath=True, nogil=True)
+def fft_spectrum(fft_pattern: np.ndarray) -> np.ndarray:
+    """Compute the FFT spectrum of a Fourier transformed EBSD pattern.
+
+    Parameters
+    ----------
+    fft_pattern
+        Fourier transformed EBSD pattern.
+
+    Returns
+    -------
+    fft_spectrum : numpy.ndarray
+        2D FFT spectrum of the EBSD pattern.
+    """
+    return np.sqrt(fft_pattern.real**2 + fft_pattern.imag**2)
+
+
+def fft_frequency_vectors(shape: Tuple[int, int]) -> np.ndarray:
+    """Get the frequency vectors in a Fourier Transform spectrum.
+
+    Parameters
+    ----------
+    shape
+        Fourier transform shape.
+
+    Returns
+    -------
+    frequency_vectors : numpy.ndarray
+        Frequency vectors.
+    """
+    sy, sx = shape
+
+    linex = np.arange(sx) + 1
+    linex[sx // 2 :] -= sx + 1
+    liney = np.arange(sy) + 1
+    liney[sy // 2 :] -= sy + 1
+
+    frequency_vectors = np.empty(shape=(sy, sx))
+    for i in range(sy):
+        frequency_vectors[i] = liney[i] ** 2 + linex**2 - 1
+
+    return frequency_vectors
+
+
+# --- Static background removal ----------------------------------------
+
+
+@nb.njit(cache=True, fastmath=True, nogil=True)
+def _remove_static_background_subtract(pattern, static_bg, omin, omax, scale_bg):
+    pattern = pattern.astype("float32")
+    if scale_bg:
+        static_bg = _rescale_with_min_max(
+            static_bg,
+            imin=np.min(static_bg),
+            imax=np.max(static_bg),
+            omin=np.min(pattern),
+            omax=np.max(pattern),
+        )
+    pattern -= static_bg
+    imin = np.min(pattern)
+    imax = np.max(pattern)
+    rescaled = _rescale_with_min_max(pattern, imin, imax, omin, omax)
+    return rescaled
+
+
+@nb.njit(cache=True, fastmath=True, nogil=True)
+def _remove_static_background_divide(pattern, static_bg, omin, omax, scale_bg):
+    pattern = pattern.astype("float32")
+    if scale_bg:
+        static_bg = _rescale_with_min_max(
+            static_bg,
+            imin=np.min(static_bg),
+            imax=np.max(static_bg),
+            omin=np.min(pattern),
+            omax=np.max(pattern),
+        )
+    pattern /= static_bg
+    imin = np.min(pattern)
+    imax = np.max(pattern)
+    rescaled = _rescale_with_min_max(pattern, imin, imax, omin, omax)
+    return rescaled
+
+
+# --- Dynamic background removal ---------------------------------------
 
 
 def remove_dynamic_background(
@@ -205,7 +485,7 @@ def _dynamic_background_frequency_space_setup(
     shape = (int(truncate * std),) * 2
     window = Window("gaussian", std=std, shape=shape)
     window = window / (2 * np.pi * std**2)
-    window = window / np.sum(window)
+    window /= np.sum(window)
 
     # FFT filter setup
     (
@@ -222,6 +502,9 @@ def _dynamic_background_frequency_space_setup(
         offset_before_fft,
         offset_after_ifft,
     )
+
+
+# --- Other ------------------------------------------------------------
 
 
 def get_dynamic_background(
@@ -345,235 +628,3 @@ def get_image_quality(
     inertia = np.sum(spectrum * frequency_vectors) / np.sum(spectrum)
 
     return 1 - (inertia / inertia_max)
-
-
-def fft(
-    pattern: np.ndarray,
-    apodization_window: Union[None, np.ndarray, Window] = None,
-    shift: bool = False,
-    real_fft_only: bool = False,
-    **kwargs,
-) -> np.ndarray:
-    """Compute the discrete Fast Fourier Transform (FFT) of an EBSD
-    pattern.
-
-    Very light wrapper around routines in :mod:`scipy.fft`. The routines
-    are wrapped instead of used directly to accommodate easy setting of
-    `shift` and `real_fft_only`.
-
-    Parameters
-    ----------
-    pattern
-        EBSD pattern.
-    apodization_window
-        An apodization window to apply before the FFT in order to
-        suppress streaks.
-    shift
-        Whether to shift the zero-frequency component to the centre of
-        the spectrum (default is False).
-    real_fft_only
-        If True, the discrete FFT is computed for real input using
-        :func:`scipy.fft.rfft2`. If False (default), it is computed
-        using :func:`scipy.fft.fft2`.
-    kwargs :
-        Keyword arguments pass to :func:`scipy.fft.fft2` or
-        :func:`scipy.fft.rfft2`.
-
-    Returns
-    -------
-    out : numpy.ndarray
-        The result of the 2D FFT.
-    """
-    if apodization_window is not None:
-        pattern = pattern * apodization_window
-
-    if real_fft_only:
-        fft_use = rfft2
-    else:
-        fft_use = fft2
-
-    if shift:
-        out = fftshift(fft_use(pattern, **kwargs))
-    else:
-        out = fft_use(pattern, **kwargs)
-
-    return out
-
-
-def ifft(
-    fft_pattern: np.ndarray,
-    shift: bool = False,
-    real_fft_only: bool = False,
-    **kwargs,
-) -> np.ndarray:
-    """Compute the inverse Fast Fourier Transform (IFFT) of an FFT of an
-    EBSD pattern.
-
-    Very light wrapper around routines in :mod:`scipy.fft`. The routines
-    are wrapped instead of used directly to accommodate easy setting of
-    `shift` and `real_fft_only`.
-
-    Parameters
-    ----------
-    fft_pattern
-        FFT of EBSD pattern.
-    shift
-        Whether to shift the zero-frequency component back to the
-        corners of the spectrum (default is False).
-    real_fft_only
-        If True, the discrete IFFT is computed for real input using
-        :func:`scipy.fft.irfft2`. If False (default), it is computed
-        using :func:`scipy.fft.ifft2`.
-    kwargs :
-        Keyword arguments pass to :func:`scipy.fft.ifft`.
-
-    Returns
-    -------
-    pattern : numpy.ndarray
-        Real part of the IFFT of the EBSD pattern.
-    """
-    if real_fft_only:
-        fft_use = irfft2
-    else:
-        fft_use = ifft2
-
-    if shift:
-        pattern = fft_use(ifftshift(fft_pattern, **kwargs))
-    else:
-        pattern = fft_use(fft_pattern, **kwargs)
-
-    return np.real(pattern)
-
-
-def fft_filter(
-    pattern: np.ndarray,
-    transfer_function: Union[np.ndarray, Window],
-    apodization_window: Union[None, np.ndarray, Window] = None,
-    shift: bool = False,
-) -> np.ndarray:
-    """Filter an EBSD patterns in the frequency domain.
-
-    Parameters
-    ----------
-    pattern
-        EBSD pattern.
-    transfer_function
-        Filter transfer function in the frequency domain.
-    apodization_window
-        An apodization window to apply before the FFT in order to
-        suppress streaks.
-    shift
-        Whether to shift the zero-frequency component to the centre of
-        the spectrum. Default is False.
-
-    Returns
-    -------
-    filtered_pattern : numpy.ndarray
-        Filtered EBSD pattern.
-    """
-    # Get the FFT
-    pattern_fft = fft(pattern, shift=shift, apodization_window=apodization_window)
-
-    # Apply the transfer function to the FFT
-    filtered_fft = pattern_fft * transfer_function
-
-    # Get real part of IFFT of the filtered FFT
-    return np.real(ifft(filtered_fft, shift=shift))
-
-
-@nb.jit(nopython=True, nogil=True, cache=True)
-def fft_spectrum(fft_pattern: np.ndarray) -> np.ndarray:
-    """Compute the FFT spectrum of a Fourier transformed EBSD pattern.
-
-    Parameters
-    ----------
-    fft_pattern
-        Fourier transformed EBSD pattern.
-
-    Returns
-    -------
-    fft_spectrum : numpy.ndarray
-        2D FFT spectrum of the EBSD pattern.
-    """
-    return np.sqrt(fft_pattern.real**2 + fft_pattern.imag**2)
-
-
-@nb.jit(nopython=True, nogil=True, cache=True)
-def normalize_intensity(
-    pattern: np.ndarray, num_std: int = 1, divide_by_square_root: bool = False
-) -> np.ndarray:
-    """Normalize image intensities to a mean of zero and a given
-    standard deviation.
-
-    Data type is preserved.
-
-    Parameters
-    ----------
-    pattern
-        EBSD pattern.
-    num_std
-        Number of standard deviations of the output intensities (default
-        is 1).
-    divide_by_square_root
-        Whether to divide output intensities by the square root of the
-        image size (default is False).
-
-    Returns
-    -------
-    normalized_pattern : numpy.ndarray
-        Normalized pattern.
-
-    Notes
-    -----
-    Data type should always be changed to floating point, e.g.
-    ``np.float32`` with :meth:`numpy.ndarray.astype`, before normalizing
-    the intensities.
-    """
-    pattern_mean = np.mean(pattern)
-    pattern_std = np.std(pattern)
-
-    if divide_by_square_root:
-        return (pattern - pattern_mean) / (
-            num_std * pattern_std * np.sqrt(pattern.size)
-        )
-    else:
-        return (pattern - pattern_mean) / (num_std * pattern_std)
-
-
-def fft_frequency_vectors(shape: Tuple[int, int]) -> np.ndarray:
-    """Get the frequency vectors in a Fourier Transform spectrum.
-
-    Parameters
-    ----------
-    shape
-        Fourier transform shape.
-
-    Returns
-    -------
-    frequency_vectors : numpy.ndarray
-        Frequency vectors.
-    """
-    sy, sx = shape
-
-    linex = np.arange(sx) + 1
-    linex[sx // 2 :] -= sx + 1
-    liney = np.arange(sy) + 1
-    liney[sy // 2 :] -= sy + 1
-
-    frequency_vectors = np.empty(shape=(sy, sx))
-    for i in range(sy):
-        frequency_vectors[i] = liney[i] ** 2 + linex**2 - 1
-
-    return frequency_vectors
-
-
-def _zero_mean(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
-    patterns_mean = np.nanmean(patterns, axis=axis, keepdims=True)
-    return patterns - patterns_mean
-
-
-def _normalize(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
-    patterns_squared = patterns**2
-    patterns_norm = np.nansum(patterns_squared, axis=axis, keepdims=True)
-    patterns_norm_squared = patterns_norm**0.5
-    return patterns / patterns_norm_squared
