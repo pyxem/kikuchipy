@@ -22,7 +22,6 @@ import numpy as np
 import pytest
 from scipy.ndimage import convolve, gaussian_filter
 from skimage import __version__ as skimage_version
-from skimage.util.dtype import dtype_range
 
 from kikuchipy.filters.fft_barnes import _fft_filter
 from kikuchipy.filters.window import Window
@@ -36,15 +35,6 @@ from kikuchipy.signals.util._dask import get_dask_array
 
 
 # Expected output intensities from various image processing methods
-STATIC_SUB_UINT8 = np.array(
-    [[127, 212, 127], [255, 255, 170], [212, 0, 0]], dtype=np.uint8
-)
-STATIC_SUB_SCALEBG_UINT8 = np.array(
-    [[15, 150, 15], [180, 255, 120], [150, 0, 75]], dtype=np.uint8
-)
-STATIC_DIV_UINT8 = np.array(
-    [[127, 191, 127], [223, 255, 159], [191, 31, 0]], dtype=np.uint8
-)
 DYN_CORR_UINT8_SPATIAL_STD2 = np.array(
     [[170, 215, 181], [255, 221, 188], [221, 32, 0]], dtype=np.uint8
 )
@@ -191,99 +181,6 @@ class TestRescaleIntensityChunk:
         assert rescaled_patterns.dtype == dtype_out
         assert np.allclose(p1, answer)
         assert not np.allclose(p1, p2, atol=1)
-
-
-class TestRemoveStaticBackgroundChunk:
-    @pytest.mark.parametrize(
-        "operation_func, answer",
-        [
-            (np.subtract, STATIC_SUB_UINT8),
-            (np.divide, STATIC_DIV_UINT8),
-        ],
-    )
-    def test_remove_static_background_chunk(
-        self, dummy_signal, dummy_background, operation_func, answer
-    ):
-        dtype_out = dummy_signal.data.dtype.type
-        dtype_proc = np.float32
-
-        dask_array = get_dask_array(dummy_signal, dtype=dtype_proc)
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_static_background,
-            static_bg=dummy_background.astype(dtype_proc),
-            operation_func=operation_func,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-        )
-
-        # Check for correct data type and gives expected output intensities
-        assert corrected_patterns.dtype == dtype_out
-        assert isinstance(corrected_patterns, da.Array)
-        assert np.allclose(corrected_patterns[0, 0].compute(), answer)
-
-    def test_remove_static_background_chunk_out_range(
-        self, dummy_signal, dummy_background
-    ):
-        dtype_out = dummy_signal.data.dtype.type
-        dtype_proc = np.float32
-
-        out_range = (0, dtype_range[dtype_out][-1])
-
-        dask_array = get_dask_array(dummy_signal, dtype=dtype_proc)
-
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_static_background,
-            static_bg=dummy_background.astype(dtype_proc),
-            operation_func=np.subtract,
-            dtype_out=dtype_out,
-            out_range=out_range,
-            dtype=dtype_out,
-        )
-
-        assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(corrected_patterns[0, 0].compute(), STATIC_SUB_UINT8)
-
-    def test_remove_static_background_chunk_scalebg(
-        self, dummy_signal, dummy_background
-    ):
-        dtype_out = dummy_signal.data.dtype.type
-        dtype_proc = np.float32
-
-        dask_array = get_dask_array(dummy_signal, dtype=dtype_proc)
-
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_static_background,
-            static_bg=dummy_background.astype(dtype_proc),
-            operation_func=np.subtract,
-            dtype_out=dtype_out,
-            scale_bg=True,
-            dtype=dtype_out,
-        )
-
-        assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(corrected_patterns[0, 0].compute(), STATIC_SUB_SCALEBG_UINT8)
-
-    @pytest.mark.parametrize(
-        "dtype_out, answer",
-        [
-            (np.float32, np.array([[0, 0.6666, 0], [1, 1, 0.3333], [0.6666, -1, -1]])),
-            (np.uint16, np.array([[0, 2, 0], [3, 3, 1], [2, 65535, 65535]])),
-        ],
-    )
-    def test_remove_static_background_chunk_dtype_out(
-        self, dummy_signal, dummy_background, dtype_out, answer
-    ):
-        dummy_signal.data = dummy_signal.data.astype(dtype_out)
-        dummy_background = dummy_background.astype(dtype_out)
-
-        corrected_patterns = chunk.remove_static_background(
-            patterns=dummy_signal.data,
-            static_bg=dummy_background,
-            operation_func=np.subtract,
-        )
-
-        assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(corrected_patterns[0, 0], answer, atol=1e-4)
 
 
 class TestRemoveDynamicBackgroundChunk:

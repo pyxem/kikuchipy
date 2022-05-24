@@ -20,7 +20,6 @@ import os
 import dask
 import dask.array as da
 from hyperspy.utils.roi import RectangularROI
-import matplotlib
 from matplotlib.pyplot import close
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase
@@ -30,8 +29,6 @@ from skimage.exposure import rescale_intensity
 
 import kikuchipy as kp
 from kikuchipy.conftest import assert_dictionary
-
-matplotlib.use("Agg")  # For plotting
 
 DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5")
@@ -149,72 +146,34 @@ class TestEBSD:
 
 class TestRemoveStaticBackgroundEBSD:
     @pytest.mark.parametrize(
-        "operation, relative, answer",
+        "operation, answer",
         [
             (
                 "subtract",
-                True,
                 # fmt: off
                 np.array(
                     [
-                        115, 162, 115, 185, 185, 139, 162, 46, 46, 208, 185,
-                        185, 185, 46, 208, 208, 185, 185, 0, 92, 69, 139, 92,
-                        231, 92, 92, 255, 185, 46, 162, 162, 139, 208, 208, 69,
-                        92, 92, 23, 208, 23, 69, 23, 69, 69, 162, 185, 162, 0,
-                        115, 208, 185, 185, 162, 46, 92, 46, 139, 92, 139, 23,
-                        46, 46, 46, 115, 231, 185, 115, 185, 23, 69, 231, 92,
-                        208, 115, 69, 162, 162, 162, 69, 139, 255,
-                    ]
-                ),
-                # fmt: on
-            ),
-            (
-                "subtract",
-                False,
-                # fmt: off
-                np.array(
-                    [
-                        127, 212, 127, 255, 255, 170, 212, 0, 0, 255, 218, 218,
-                        218, 0, 255, 255, 218, 218, 0, 92, 69, 139, 92, 231, 92,
-                        92, 255, 218, 0, 182, 182, 145, 255, 255, 36, 72, 95, 0,
-                        255, 0, 63, 0, 63, 63, 191, 226, 198, 0, 141, 255, 226,
-                        226, 198, 56, 153, 51, 255, 153, 255, 0, 51, 51, 51,
-                        113, 255, 198, 113, 198, 0, 56, 255, 85, 191, 63, 0,
-                        127, 127, 127, 0, 95, 255,
+                        127, 212, 127, 255, 255, 170, 212, 0, 0, 255, 218, 218, 218, 0,
+                        255, 255, 218, 218, 0, 92, 69, 139, 92, 231, 92, 92, 255, 218,
+                        0, 182, 182, 145, 255, 255, 36, 72, 95, 0, 255, 0, 63, 0, 63,
+                        63, 191, 226, 198, 0, 141, 255, 226, 226, 198, 56, 153, 51, 255,
+                        153, 255, 0, 51, 51, 51, 113, 255, 198, 113, 198, 0, 56, 255,
+                        85, 191, 63, 0, 127, 127, 127, 0, 95, 255
                     ]
                 ),
                 # fmt: on
             ),
             (
                 "divide",
-                True,
                 # fmt: off
                 np.array(
                     [
-                        85, 127, 85, 148, 170, 106, 127, 21, 0, 152, 148, 136,
-                        148, 0, 170, 170, 148, 170, 0, 63, 51, 106, 56, 191, 63,
-                        63, 255, 136, 21, 119, 127, 113, 170, 170, 42, 56, 68,
-                        0, 152, 0, 28, 0, 42, 42, 141, 136, 127, 0, 85, 198,
-                        148, 148, 127, 0, 68, 21, 102, 63, 113, 0, 21, 21, 0,
-                        85, 191, 136, 85, 170, 0, 42, 191, 56, 152, 85, 51, 127,
-                        141, 127, 42, 106, 255,
-                    ]
-                )
-                # fmt: on
-            ),
-            (
-                "divide",
-                False,
-                # fmt: off
-                np.array(
-                    [
-                        127, 191, 127, 223, 255, 159, 191, 31, 0, 229, 223, 204,
-                        223, 0, 255, 255, 223, 255, 0, 63, 51, 106, 56, 191, 63,
-                        63, 255, 196, 0, 167, 182, 157, 255, 255, 36, 60, 113,
-                        0, 255, 0, 47, 0, 70, 70, 236, 174, 163, 0, 109, 255,
-                        191, 191, 163, 0, 152, 47, 229, 143, 255, 0, 47, 47, 0,
-                        113, 255, 181, 113, 226, 0, 56, 255, 75, 132, 51, 10,
-                        102, 118, 102, 0, 76, 255,
+                        127, 191, 127, 223, 255, 159, 191, 31, 0, 229, 223, 204, 223, 0,
+                        255, 255, 223, 255, 0, 63, 51, 106, 56, 191, 63, 63, 255, 196,
+                        0, 167, 182, 157, 255, 255, 36, 60, 113, 0, 255, 0, 47, 0, 70,
+                        70, 236, 174, 163, 0, 109, 255, 191, 191, 163, 0, 153, 47, 229,
+                        143, 255, 0, 47, 47, 0, 113, 255, 181, 113, 226, 0, 56, 255, 75,
+                        132, 51, 10, 102, 119, 102, 0, 76, 255
                     ]
                 )
                 # fmt: on
@@ -222,7 +181,7 @@ class TestRemoveStaticBackgroundEBSD:
         ],
     )
     def test_remove_static_background(
-        self, dummy_signal, dummy_background, operation, relative, answer
+        self, dummy_signal, dummy_background, operation, answer
     ):
         """This tests uses a hard-coded answer. If specifically
         improvements to the intensities produced by this correction is
@@ -231,7 +190,7 @@ class TestRemoveStaticBackgroundEBSD:
         """
 
         dummy_signal.remove_static_background(
-            operation=operation, relative=relative, static_bg=dummy_background
+            operation=operation, static_bg=dummy_background
         )
         answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
         assert np.allclose(dummy_signal.data, answer)
@@ -243,7 +202,7 @@ class TestRemoveStaticBackgroundEBSD:
             (
                 None,
                 ValueError,
-                "`EBSD.static_background` is not a valid NumPy or Dask array",
+                "`EBSD.static_background` is not a valid array",
             ),
             (np.ones((3, 2), dtype=np.uint8), ValueError, "Signal"),
         ],
@@ -268,13 +227,9 @@ class TestRemoveStaticBackgroundEBSD:
 
     def test_remove_static_background_scalebg(self, dummy_signal, dummy_background):
         dummy_signal2 = dummy_signal.deepcopy()
-
-        dummy_signal.remove_static_background(
-            scale_bg=True, relative=False, static_bg=dummy_background
-        )
-
+        dummy_signal.remove_static_background(scale_bg=True, static_bg=dummy_background)
         dummy_signal2.remove_static_background(
-            scale_bg=False, relative=False, static_bg=dummy_background
+            scale_bg=False, static_bg=dummy_background
         )
 
         p1 = dummy_signal.inav[0, 0].data
@@ -282,14 +237,6 @@ class TestRemoveStaticBackgroundEBSD:
 
         assert not np.allclose(p1, p2, atol=0.1)
         assert np.allclose(p1, np.array([[15, 150, 15], [180, 255, 120], [150, 0, 75]]))
-
-    def test_remove_static_background_relative_and_scalebg_raises(
-        self, dummy_signal, dummy_background
-    ):
-        with pytest.raises(ValueError, match="'scale_bg' must be False"):
-            dummy_signal.remove_static_background(
-                relative=True, scale_bg=True, static_bg=dummy_background
-            )
 
     def test_non_square_patterns(self):
         s = kp.data.nickel_ebsd_small()
