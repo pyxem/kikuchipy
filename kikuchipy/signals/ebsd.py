@@ -629,7 +629,7 @@ class EBSD(CommonImage, Signal2D):
         truncate
             Truncate the Gaussian window at this many standard
             deviations. Default is 4.0.
-        kwargs :
+        kwargs
             Keyword arguments passed to the Gaussian blurring function
             determined from `filter_domain`.
 

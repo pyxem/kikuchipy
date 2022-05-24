@@ -27,9 +27,6 @@ from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
 
 
-# --- Rescale intensities ----------------------------------------------
-
-
 def rescale_intensity(
     pattern: np.ndarray,
     in_range: Optional[Tuple[Union[int, float], ...]] = None,
@@ -161,9 +158,6 @@ def normalize_intensity(
         return (pattern - pattern_mean) / (num_std * pattern_std)
 
 
-# --- FFT --------------------------------------------------------------
-
-
 def fft(
     pattern: np.ndarray,
     apodization_window: Union[None, np.ndarray, Window] = None,
@@ -202,7 +196,7 @@ def fft(
         The result of the 2D FFT.
     """
     if apodization_window is not None:
-        pattern *= apodization_window
+        pattern = pattern * apodization_window
 
     if real_fft_only:
         fft_use = rfft2
@@ -342,9 +336,6 @@ def fft_frequency_vectors(shape: Tuple[int, int]) -> np.ndarray:
     return frequency_vectors
 
 
-# --- Static background removal ----------------------------------------
-
-
 @nb.njit(cache=True, fastmath=True, nogil=True)
 def _remove_static_background_subtract(pattern, static_bg, omin, omax, scale_bg):
     pattern = pattern.astype("float32")
@@ -379,9 +370,6 @@ def _remove_static_background_divide(pattern, static_bg, omin, omax, scale_bg):
     imax = np.max(pattern)
     rescaled = _rescale_with_min_max(pattern, imin, imax, omin, omax)
     return rescaled
-
-
-# --- Dynamic background removal ---------------------------------------
 
 
 def remove_dynamic_background(
@@ -502,9 +490,6 @@ def _dynamic_background_frequency_space_setup(
         offset_before_fft,
         offset_after_ifft,
     )
-
-
-# --- Other ------------------------------------------------------------
 
 
 def get_dynamic_background(

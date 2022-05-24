@@ -93,7 +93,6 @@ class TestRescaleIntensityPattern:
             with pytest.raises(KeyError, match="Could not set output"):
                 _ = rescale_intensity(
                     pattern=pattern,
-                    in_range=None,
                     out_range=out_range,
                     dtype_out=dtype_out,
                 )
@@ -101,7 +100,6 @@ class TestRescaleIntensityPattern:
         else:
             rescaled_pattern = rescale_intensity(
                 pattern=pattern,
-                in_range=None,
                 out_range=out_range,
                 dtype_out=dtype_out,
             )
@@ -161,12 +159,7 @@ class TestRemoveDynamicBackgroundPattern:
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
 
         p2 = remove_dynamic_background(
-            pattern=p,
-            operation="subtract",
-            filter_domain="frequency",
-            std=std,
-            truncate=truncate,
-            dtype_out=np.uint8,
+            pattern=p, std=std, truncate=truncate, dtype_out=np.uint8
         )
 
         assert np.allclose(p2, answer)
@@ -247,7 +240,7 @@ class TestGetDynamicBackgroundPattern:
 
         p = dummy_signal.inav[0, 0].data.astype(answer.dtype)
 
-        bg = get_dynamic_background(pattern=p, filter_domain="frequency", std=std)
+        bg = get_dynamic_background(pattern=p, std=std)
 
         assert np.allclose(bg, answer, atol=1e-4)
 
@@ -282,7 +275,7 @@ class TestGetImageQuality:
 
     def test_get_image_quality_white_noise(self):
         p = np.random.random((1001, 1001))
-        iq = get_image_quality(pattern=p, normalize=True)
+        iq = get_image_quality(pattern=p)
 
         assert np.allclose(iq, 0, atol=1e-2)
 
@@ -333,18 +326,10 @@ class TestFFTPattern:
         p[50, 50] = 2
 
         kwargs = {}
-
-        p_fft = fft(
-            pattern=p,
-            shift=shift,
-            real_fft_only=real_fft_only,
-            **kwargs,
-        )
+        p_fft = fft(pattern=p, shift=shift, real_fft_only=real_fft_only, **kwargs)
 
         assert np.allclose(
-            np.sum(fft_spectrum.py_func(p_fft)),
-            expected_spectrum_sum,
-            atol=1e-3,
+            np.sum(fft_spectrum.py_func(p_fft)), expected_spectrum_sum, atol=1e-3
         )
 
     @pytest.mark.parametrize(
@@ -376,8 +361,8 @@ class TestFFTPattern:
     def test_ifft_pattern_real(self, shift):
         # Odd second dimension becomes even with only real valued FFT
         p = np.random.random((101, 100))
-        p_fft = fft(p, shift=shift, real_fft_only=False)
-        p_ifft = ifft(p_fft, shift=shift, real_fft_only=False)
+        p_fft = fft(p, shift=shift)
+        p_ifft = ifft(p_fft, shift=shift)
 
         p_rfft = fft(p, shift=shift, real_fft_only=True)
         p_irfft = ifft(p_rfft, shift=shift, real_fft_only=True)
