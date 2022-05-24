@@ -421,7 +421,6 @@ of EBSD patterns.
     get_image_quality
     normalize_intensity
     remove_dynamic_background
-    remove_static_background
     rescale_intensity
 
 .. automodule:: kikuchipy.pattern.chunk
