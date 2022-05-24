@@ -347,11 +347,7 @@ def _remove_static_background_subtract(pattern, static_bg, omin, omax, scale_bg)
             omin=np.min(pattern),
             omax=np.max(pattern),
         )
-    pattern -= static_bg
-    imin = np.min(pattern)
-    imax = np.max(pattern)
-    rescaled = _rescale_with_min_max(pattern, imin, imax, omin, omax)
-    return rescaled
+    return _remove_background_subtract(pattern, static_bg, omin, omax)
 
 
 @nb.njit(cache=True, fastmath=True, nogil=True)
@@ -365,11 +361,59 @@ def _remove_static_background_divide(pattern, static_bg, omin, omax, scale_bg):
             omin=np.min(pattern),
             omax=np.max(pattern),
         )
-    pattern /= static_bg
+    return _remove_background_divide(pattern, static_bg, omin, omax)
+
+
+def _remove_dynamic_background_frequency_subtract(pattern, omin, omax, **kwargs):
+    pattern = pattern.astype("float32")
+    dynamic_bg = _fft_filter(pattern, **kwargs)
+    return _remove_background_subtract(pattern, dynamic_bg, omin, omax)
+
+
+def _remove_dynamic_background_frequency_divide(pattern, omin, omax, **kwargs):
+    pattern = pattern.astype("float32")
+    dynamic_bg = _fft_filter(pattern, **kwargs)
+    return _remove_background_divide(pattern, dynamic_bg, omin, omax)
+
+
+def _remove_dynamic_background_spatial_subtract(pattern, omin, omax, **kwargs):
+    pattern = pattern.astype("float32")
+    dynamic_bg = gaussian_filter(pattern, **kwargs)
+    return _remove_background_subtract(pattern, dynamic_bg, omin, omax)
+
+
+def _remove_dynamic_background_spatial_divide(pattern, omin, omax, **kwargs):
+    pattern = pattern.astype("float32")
+    dynamic_bg = gaussian_filter(pattern, **kwargs)
+    return _remove_background_divide(pattern, dynamic_bg, omin, omax)
+
+
+@nb.njit(cache=True, fastmath=True, nogil=True)
+def _remove_background_divide(pattern, background, omin, omax):
+    pattern /= background
     imin = np.min(pattern)
     imax = np.max(pattern)
-    rescaled = _rescale_with_min_max(pattern, imin, imax, omin, omax)
-    return rescaled
+    return _rescale_with_min_max(pattern, imin, imax, omin, omax)
+
+
+@nb.njit(cache=True, fastmath=True, nogil=True)
+def _remove_background_subtract(pattern, background, omin, omax):
+    pattern -= background
+    imin = np.min(pattern)
+    imax = np.max(pattern)
+    return _rescale_with_min_max(pattern, imin, imax, omin, omax)
+
+
+_REMOVE_DYNAMIC_BACKGROUND_FUNCS = {
+    "frequency": {
+        "subtract": _remove_dynamic_background_frequency_subtract,
+        "divide": _remove_dynamic_background_frequency_divide,
+    },
+    "spatial": {
+        "subtract": _remove_dynamic_background_spatial_subtract,
+        "divide": _remove_dynamic_background_spatial_divide,
+    },
+}
 
 
 def remove_dynamic_background(

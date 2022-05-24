@@ -21,11 +21,9 @@ via FFT written by Connelly Barnes (public domain, 2007).
 
 from typing import Union, Tuple, List
 
+import numba as nb
 import numpy as np
-from numpy.fft import rfft2, irfft2
-from scipy.fftpack import next_fast_len
-
-# from scipy.fft import next_fast_len, rfft2, irfft2
+from scipy.fft import next_fast_len, rfft2, irfft2
 
 from kikuchipy.filters.window import Window
 
@@ -129,6 +127,7 @@ def _offset_after_ifft(
     return offset
 
 
+@nb.njit(cache=True, fastmath=True, nogil=True)
 def _pad_image(
     image: np.ndarray,
     fft_shape: Tuple[int, ...],

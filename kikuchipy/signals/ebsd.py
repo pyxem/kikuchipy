@@ -56,6 +56,7 @@ from kikuchipy.pattern._pattern import (
     _dynamic_background_frequency_space_setup,
     _remove_static_background_subtract,
     _remove_static_background_divide,
+    _REMOVE_DYNAMIC_BACKGROUND_FUNCS,
 )
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
@@ -617,21 +618,21 @@ class EBSD(CommonImage, Signal2D):
         Parameters
         ----------
         operation
-            Whether to "subtract" (default) or "divide" by the dynamic
-            background pattern.
+            Whether to ``"subtract"`` (default) or ``"divide"`` by the
+            dynamic background pattern.
         filter_domain
             Whether to obtain the dynamic background by applying a
-            Gaussian convolution filter in the "frequency" (default) or
-            "spatial" domain.
+            Gaussian convolution filter in the ``"frequency"`` (default)
+            or ``"spatial"`` domain.
         std
             Standard deviation of the Gaussian window. If None
             (default), it is set to width/8.
         truncate
             Truncate the Gaussian window at this many standard
-            deviations. Default is 4.0.
+            deviations. Default is ``4.0``.
         kwargs
             Keyword arguments passed to the Gaussian blurring function
-            determined from `filter_domain`.
+            determined from ``filter_domain``.
 
         See Also
         --------
@@ -643,23 +644,16 @@ class EBSD(CommonImage, Signal2D):
         Examples
         --------
         Traditional background correction includes static and dynamic
-        corrections, loosing relative intensities between patterns after
-        dynamic corrections (whether `relative` is set to True or
-        False in :meth:`~remove_static_background`):
+        corrections:
 
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
-        >>> s.remove_static_background(operation="subtract")  # doctest: +SKIP
-        >>> s.remove_dynamic_background(
-        ...     operation="subtract",  # Default
-        ...     filter_domain="frequency",  # Default
-        ...     truncate=4.0,  # Default
-        ...     std=5,
-        ... )  # doctest: +SKIP
+        >>> s.remove_static_background()  # doctest: +SKIP
+        >>> s.remove_dynamic_background(operation="divide", std=5)  # doctest: +SKIP
+
         """
-        # Create a dask array of signal patterns and do the processing on this
-        dtype = np.float32
-        dask_array = get_dask_array(signal=self, dtype=dtype)
+        dtype_out = self.data.dtype.type
+        out_range = dtype_range[dtype_out]
 
         if std is None:
             std = self.axes_manager.signal_shape[0] / 8
@@ -667,7 +661,6 @@ class EBSD(CommonImage, Signal2D):
         # Get filter function and set up necessary keyword arguments
         if filter_domain == "frequency":
             # FFT filter setup for Connelly Barnes' algorithm
-            filter_func = _fft_filter
             (
                 kwargs["fft_shape"],
                 kwargs["window_shape"],
@@ -680,39 +673,36 @@ class EBSD(CommonImage, Signal2D):
                 truncate=truncate,
             )
         elif filter_domain == "spatial":
-            filter_func = gaussian_filter
             kwargs["sigma"] = std
             kwargs["truncate"] = truncate
         else:
             filter_domains = ["frequency", "spatial"]
             raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
 
-        if operation == "subtract":
-            operation_func = np.subtract
-        else:  # operation == "divide"
-            operation_func = np.divide
+        map_func = _REMOVE_DYNAMIC_BACKGROUND_FUNCS[filter_domain][operation]
 
-        # Get output data type and output data type intensity range
-        dtype_out = self.data.dtype.type
-        out_range = dtype_range[dtype_out]
+        # Remove background and rescale to input data type
+        omin, omax = np.float32(out_range)
+        if not self._lazy:
+            print("Removing the dynamic background:", file=sys.stdout)
 
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_dynamic_background,
-            filter_func=filter_func,
-            operation_func=operation_func,
-            dtype_out=dtype_out,
-            out_range=out_range,
-            dtype=dtype_out,
+            # Register a progressbar. Remove once HyperSpy v1.7.1 is
+            # released: https://github.com/hyperspy/hyperspy/issues/2946
+            pbar = ProgressBar()
+            pbar.register()
+
+        self.map(
+            map_func,
+            show_progressbar=True,
+            parallel=True,
+            output_dtype=dtype_out,
+            omin=omin,
+            omax=omax,
             **kwargs,
         )
 
-        # Overwrite signal patterns
         if not self._lazy:
-            with ProgressBar():
-                print("Removing the dynamic background:", file=sys.stdout)
-                corrected_patterns.store(self.data, compute=True)
-        else:
-            self.data = corrected_patterns
+            pbar.unregister()
 
     def get_dynamic_background(
         self,
