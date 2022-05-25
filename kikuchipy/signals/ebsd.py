@@ -99,6 +99,7 @@ class EBSD(CommonImage, Signal2D):
     _signal_type = "EBSD"
     _alias_signal_types = ["electron_backscatter_diffraction"]
     _lazy = False
+    _custom_properties = ["detector", "static_background", "xmap"]
 
     def __init__(self, *args, **kwargs):
         """Create an :class:`~kikuchipy.signals.EBSD` instance from a
@@ -122,7 +123,7 @@ class EBSD(CommonImage, Signal2D):
         if not self.metadata.has_item(metadata_nodes("ebsd")):
             md = self.metadata.as_dictionary()
             md.update(ebsd_metadata().as_dictionary())
-            self.metadata = DictionaryTreeBrowser(md)
+            self.metadata.add_dictionary(md)
         if not self.metadata.has_item("Sample.Phases"):
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
@@ -552,12 +553,12 @@ class EBSD(CommonImage, Signal2D):
         if static_bg is None:
             static_bg = self.static_background
             try:
-                if isinstance(static_bg, da.Array):
-                    static_bg = static_bg.compute()
-                if not isinstance(static_bg, np.ndarray):
+                if not isinstance(static_bg, (np.ndarray, da.Array)):
                     raise ValueError
             except (AttributeError, ValueError):
                 raise ValueError("`EBSD.static_background` is not a valid array")
+        if isinstance(static_bg, da.Array):
+            static_bg = static_bg.compute()
         if dtype_out != static_bg.dtype:
             raise ValueError(
                 f"Static background dtype_out {static_bg.dtype} is not the same as "
@@ -586,6 +587,7 @@ class EBSD(CommonImage, Signal2D):
         else:
             operation_func = _remove_static_background_divide
 
+        properties = self._get_custom_properties()
         self.map(
             operation_func,
             show_progressbar=True,
@@ -597,6 +599,7 @@ class EBSD(CommonImage, Signal2D):
             omax=omax,
             scale_bg=scale_bg,
         )
+        self._set_custom_properties(properties)
 
         if not self._lazy:
             pbar.unregister()
@@ -692,7 +695,7 @@ class EBSD(CommonImage, Signal2D):
             pbar = ProgressBar()
             pbar.register()
 
-        # Remove background and rescale to input data type
+        properties = self._get_custom_properties()
         self.map(
             map_func,
             show_progressbar=True,
@@ -705,6 +708,7 @@ class EBSD(CommonImage, Signal2D):
             omax=omax,
             **kwargs,
         )
+        self._set_custom_properties(properties)
 
         if not self._lazy:
             pbar.unregister()
@@ -2210,6 +2214,13 @@ class EBSD(CommonImage, Signal2D):
         metric.raise_error_if_invalid()
         return metric
 
+    def _get_custom_properties(self) -> dict:
+        return {name: self.__getattribute__(name) for name in self._custom_properties}
+
+    def _set_custom_properties(self, properties: dict):
+        for name, value in properties.items():
+            self.__setattr__("_" + name, value)
+
 
 class LazyEBSD(LazySignal2D, EBSD):
     """Lazy implementation of the :class:`EBSD` class.
@@ -2226,19 +2237,14 @@ class LazyEBSD(LazySignal2D, EBSD):
         super().__init__(*args, **kwargs)
 
     def compute(self, *args, **kwargs):
-        detector = self.detector
-        static_bg = self.static_background
-        xmap = self.xmap
+        properties = self._get_custom_properties()
 
         super().compute(*args, **kwargs)
         gc.collect()  # Don't sink
 
-        self._detector = detector
-        if isinstance(static_bg, da.Array):
-            self._static_background = static_bg.compute()
-        else:
-            self._static_background = static_bg
-        self._xmap = xmap
+        self._set_custom_properties(properties)
+        if isinstance(self.static_background, da.Array):
+            self._static_background = self._static_background.compute()
 
     def get_decomposition_model_write(
         self,
