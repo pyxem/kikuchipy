@@ -56,7 +56,7 @@ from kikuchipy.pattern._pattern import (
     _dynamic_background_frequency_space_setup,
     _remove_static_background_subtract,
     _remove_static_background_divide,
-    _REMOVE_DYNAMIC_BACKGROUND_FUNCS,
+    _remove_dynamic_background,
 )
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
@@ -545,7 +545,7 @@ class EBSD(CommonImage, Signal2D):
         """
         dtype = np.float32  # During processing
         dtype_out = self.data.dtype.type
-        out_range = dtype_range[dtype_out]
+        omin, omax = dtype_range[dtype_out]
 
         # Get background pattern
         if static_bg is None:
@@ -572,7 +572,6 @@ class EBSD(CommonImage, Signal2D):
         static_bg = static_bg.astype(dtype)
 
         # Remove background and rescale to input data type
-        omin, omax = np.float32(out_range)
         if not self._lazy:
             print("Removing the static background:", file=sys.stdout)
 
@@ -592,6 +591,7 @@ class EBSD(CommonImage, Signal2D):
             parallel=True,
             output_dtype=dtype_out,
             static_bg=static_bg,
+            dtype_out=dtype_out,
             omin=omin,
             omax=omax,
             scale_bg=scale_bg,
@@ -652,15 +652,13 @@ class EBSD(CommonImage, Signal2D):
         >>> s.remove_dynamic_background(operation="divide", std=5)  # doctest: +SKIP
 
         """
-        dtype_out = self.data.dtype.type
-        out_range = dtype_range[dtype_out]
-
         if std is None:
             std = self.axes_manager.signal_shape[0] / 8
 
         # Get filter function and set up necessary keyword arguments
         if filter_domain == "frequency":
             # FFT filter setup for Connelly Barnes' algorithm
+            filter_func = _fft_filter
             (
                 kwargs["fft_shape"],
                 kwargs["window_shape"],
@@ -673,16 +671,18 @@ class EBSD(CommonImage, Signal2D):
                 truncate=truncate,
             )
         elif filter_domain == "spatial":
+            filter_func = gaussian_filter
             kwargs["sigma"] = std
             kwargs["truncate"] = truncate
         else:
             filter_domains = ["frequency", "spatial"]
             raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
 
-        map_func = _REMOVE_DYNAMIC_BACKGROUND_FUNCS[filter_domain][operation]
+        map_func = _remove_dynamic_background
 
-        # Remove background and rescale to input data type
-        omin, omax = np.float32(out_range)
+        dtype_out = self.data.dtype.type
+        omin, omax = dtype_range[dtype_out]
+
         if not self._lazy:
             print("Removing the dynamic background:", file=sys.stdout)
 
@@ -691,11 +691,15 @@ class EBSD(CommonImage, Signal2D):
             pbar = ProgressBar()
             pbar.register()
 
+        # Remove background and rescale to input data type
         self.map(
             map_func,
             show_progressbar=True,
             parallel=True,
             output_dtype=dtype_out,
+            filter_func=filter_func,
+            operation=operation,
+            dtype_out=dtype_out,
             omin=omin,
             omax=omax,
             **kwargs,

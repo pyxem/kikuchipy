@@ -29,8 +29,12 @@ from kikuchipy.pattern._pattern import (
     normalize_intensity,
     rescale_intensity,
     remove_dynamic_background,
-    _rescale_with_min_max,
     _dynamic_background_frequency_space_setup,
+    _remove_background_subtract,
+    _remove_background_divide,
+    _remove_static_background_subtract,
+    _remove_static_background_divide,
+    _rescale_with_min_max,
 )
 
 # Expected output intensities from various image processing methods
@@ -120,6 +124,54 @@ class TestRescaleIntensityPattern:
 
         assert np.allclose(np.min(p2), omin)
         assert np.allclose(np.max(p2), omax)
+
+
+class TestRemoveStaticBackgroundPattern:
+    def test_remove_static_background_subtract(self, dummy_signal, dummy_background):
+        p = dummy_signal.inav[0, 0].data
+        dtype_out = p.dtype
+        dtype = np.float32
+        p = p.astype(dtype)
+        bg = dummy_background.astype(dtype)
+
+        p0 = p.copy()
+        p2 = _remove_static_background_subtract(p, bg, dtype_out, 0, 255, False)
+        p3 = _remove_static_background_subtract.py_func(p, bg, dtype_out, 0, 255, False)
+        p4 = _remove_static_background_subtract.py_func(p, bg, dtype_out, 0, 255, True)
+
+        assert p2.dtype == dtype_out
+        assert np.allclose(p2, p3)
+        assert not np.allclose(p2, p4)
+
+        # Cover Numba function
+        p5 = _remove_background_subtract.py_func(p.astype("float32"), bg, 0, 255)
+        assert p5.min() == 0
+        assert p5.max() == 255
+
+        assert np.allclose(p0, p)
+        assert p0.dtype == p.dtype
+
+    def test_remove_static_background_divide(self, dummy_signal, dummy_background):
+        p = dummy_signal.inav[0, 0].data
+        dtype_out = p.dtype
+        dtype = np.float32
+        bg = dummy_background.astype(dtype)
+
+        p0 = p.copy()
+        p2 = _remove_static_background_divide(p, bg, dtype_out, 0, 255, False)
+        p3 = _remove_static_background_divide.py_func(p, bg, dtype_out, 0, 255, False)
+        p4 = _remove_static_background_divide.py_func(p, bg, dtype_out, 0, 255, True)
+
+        assert np.allclose(p2, p3)
+        assert not np.allclose(p2, p4)
+
+        # Cover Numba function
+        p5 = _remove_background_divide.py_func(p.astype("float32"), bg, 0, 255)
+        assert p5.min() == 0
+        assert p5.max() == 255
+
+        assert np.allclose(p0, p)
+        assert p0.dtype == p.dtype
 
 
 class TestRemoveDynamicBackgroundPattern:
