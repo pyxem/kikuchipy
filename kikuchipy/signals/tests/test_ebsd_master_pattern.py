@@ -168,7 +168,6 @@ class TestProjectingPatternsFromLambert:
         pc=(20, 20, 15000),
         convention="emsoft4",
         tilt=10,
-        sample_tilt=70,
     )
 
     def test_get_direction_cosines(self):
@@ -262,7 +261,6 @@ class TestProjectingPatternsFromLambert:
             px_size=50,
             pc=((0, 0, 15000), (0, 0, 15000)),
             convention="emsoft4",
-            sample_tilt=70,
         )
         with pytest.raises(NotImplementedError):
             _ = mp4.get_patterns(r2, d2, 5)
@@ -284,7 +282,6 @@ class TestProjectingPatternsFromLambert:
         detector = kp.detectors.EBSDDetector(
             shape=(60, 60),
             pc=[0.5, 0.5, 0.5],
-            sample_tilt=70,
             convention="tsl",
         )
         s = mp.get_patterns(rotations=r, detector=detector, energy=20)
