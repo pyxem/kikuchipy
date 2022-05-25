@@ -17,6 +17,7 @@
 
 import numpy as np
 import pytest
+from scipy.fft import fft2
 
 from kikuchipy.filters.window import Window
 from kikuchipy.pattern._pattern import (
@@ -30,6 +31,7 @@ from kikuchipy.pattern._pattern import (
     rescale_intensity,
     remove_dynamic_background,
     _dynamic_background_frequency_space_setup,
+    _get_image_quality_numba,
     _remove_background_subtract,
     _remove_background_divide,
     _remove_static_background_subtract,
@@ -361,6 +363,18 @@ class TestGetImageQuality:
         vec = fft_frequency_vectors(shape=shape)
 
         assert np.allclose(vec, answer)
+
+    def test_get_image_quality_numba(self, dummy_signal):
+        """Cover Numba function."""
+        p = dummy_signal.inav[0, 0].data.astype(np.float32)
+        p = normalize_intensity(p)
+        fft_pattern = fft2(p)
+        frequency_vectors = fft_frequency_vectors(p.shape)
+        inertia_max = np.sum(frequency_vectors) / p.size
+        iq = _get_image_quality_numba.py_func(
+            fft_pattern, frequency_vectors, inertia_max
+        )
+        assert np.isclose(iq, -0.02, atol=1e-2)
 
 
 class TestFFTPattern:
