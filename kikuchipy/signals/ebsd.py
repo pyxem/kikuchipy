@@ -29,7 +29,6 @@ from dask.diagnostics import ProgressBar
 from hyperspy._signals.signal2d import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
-from hyperspy.misc.utils import DictionaryTreeBrowser
 from hyperspy.roi import BaseInteractiveROI
 from hyperspy.api import interactive
 from h5py import File
