@@ -44,8 +44,8 @@ Removed
   The parameter is accepted but not used. Passing it after this release will result in
   an error. (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_)
 - The following functions for processing of pattern chunks in the
-  ``kikuchipy.pattern.chunk`` module: ``get_image_quality``,
-  ``remove_dynamic_background`` and ``remove_static_background``.
+  ``kikuchipy.pattern.chunk`` module: ``get_image_quality()``,
+  ``remove_dynamic_background()`` and ``remove_static_background()``.
   (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_)
 
 Fixed
