@@ -494,7 +494,7 @@ EBSD
 All methods listed here are also available to :class:`~kikuchipy.signals.LazyEBSD`
 instances.
 
-See :class:`̃hyperspy._signals.signal2d.Signal2D` for methods inherited from HyperSpy.
+See :class:`~hyperspy._signals.signal2d.Signal2D` for methods inherited from HyperSpy.
 
 .. currentmodule:: kikuchipy.signals.EBSD
 
