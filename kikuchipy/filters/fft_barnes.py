@@ -35,10 +35,9 @@ def _fft_filter_setup(
     window_shape = window.shape
 
     # Optimal FFT shape
-    #    real_fft_only = True
     fft_shape = (
-        next_fast_len(image_shape[0] + window_shape[0] - 1),  # , real_fft_only),
-        next_fast_len(image_shape[1] + window_shape[1] - 1),  # , real_fft_only),
+        next_fast_len(image_shape[0] + window_shape[0] - 1, real=True),
+        next_fast_len(image_shape[1] + window_shape[1] - 1, real=True),
     )
 
     # Pad window to optimal FFT size
@@ -107,7 +106,6 @@ def _pad_window(
     wy, wx = window.shape
     window_pad = np.zeros(fft_shape, dtype=np.float32)
     window_pad[:wy, :wx] = np.flipud(np.fliplr(window))
-
     return window_pad
 
 
