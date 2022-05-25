@@ -224,6 +224,7 @@ class TestRemoveStaticBackgroundEBSD:
         assert isinstance(dummy_signal.data, da.Array)
         dummy_signal.static_background = da.from_array(dummy_background)
         dummy_signal.remove_static_background()
+        dummy_signal.remove_static_background(static_bg=dummy_signal.static_background)
 
     def test_remove_static_background_scalebg(self, dummy_signal, dummy_background):
         dummy_signal2 = dummy_signal.deepcopy()

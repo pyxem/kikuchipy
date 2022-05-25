@@ -114,6 +114,7 @@ class TestIO:
                     s.save(file_path)
             gc.collect()
 
+    @pytest.mark.filterwarnings("ignore:Using `set_signal_dimension`")
     def test_save_data_dimensions(self):
         s = load(KIKUCHIPY_FILE)
         s.axes_manager.set_signal_dimension(3)
