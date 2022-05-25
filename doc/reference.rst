@@ -418,10 +418,7 @@ of EBSD patterns.
     average_neighbour_patterns
     fft_filter
     get_dynamic_background
-    get_image_quality
     normalize_intensity
-    remove_dynamic_background
-    remove_static_background
     rescale_intensity
 
 .. automodule:: kikuchipy.pattern.chunk
@@ -497,7 +494,7 @@ EBSD
 All methods listed here are also available to :class:`~kikuchipy.signals.LazyEBSD`
 instances.
 
-See :class:`̃hyperspy._signals.signal2d.Signal2D` for methods inherited from HyperSpy.
+See :class:`~hyperspy._signals.signal2d.Signal2D` for methods inherited from HyperSpy.
 
 .. currentmodule:: kikuchipy.signals.EBSD
 

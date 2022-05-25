@@ -55,7 +55,7 @@ extra_feature_requirements = {
 
 # Create a development project, including both the doc and tests projects
 extra_feature_requirements["dev"] = [
-    "black",
+    "black[jupyter]",
     "manifix",
     "outdated",
     "pre-commit >= 1.16",
@@ -123,7 +123,7 @@ setup(
         "dask[array]        >= 2021.8.1",
         "diffpy.structure   >= 3",
         "diffsims           >= 0.4",
-        "hyperspy           >= 1.6.5",
+        "hyperspy           >= 1.7",
         "h5py               >= 2.10",
         "matplotlib         >= 3.3",
         "numba              >= 0.48",

@@ -38,8 +38,9 @@ everyone who participates in the kikuchipy community.
 Setting up a development installation
 =====================================
 
-You need a `fork <https://guides.github.com/activities/forking/#fork>`_ of the
-`repository <https://github.com/pyxem/kikuchipy>`_ in order to make changes to
+You need a `fork
+<https://docs.github.com/en/get-started/quickstart/contributing-to-projects#about-forking>`_
+of the `repository <https://github.com/pyxem/kikuchipy>`_ in order to make changes to
 kikuchipy.
 
 Make a local copy of your forked repository and change directories::
@@ -89,6 +90,25 @@ Comment lines should preferably be limited to 72 characters.
 Package imports should be structured into three blocks with blank lines between them
 (descending order): standard library (like ``os`` and ``typing``), third party packages
 (like ``numpy`` and ``hyperspy``) and finally kikuchipy imports.
+
+We use type hints in the function definition without type duplication in the function
+docstring, for example::
+
+    def my_function(a: int, b: Optional[bool] = None) -> Tuple[float, np.ndarray]:
+        """This is a new function.
+
+        Parameters
+        ----------
+        a
+            Explanation of ``a``.
+        b
+            Explanation of flag ``b``. Default is ``None``.
+
+        Returns
+        -------
+        values
+            Explanation of returned values.
+        """
 
 Making changes
 ==============
@@ -152,6 +172,12 @@ Install necessary dependencies to build the documentation::
 
     pip install --editable .[doc]
 
+.. note::
+
+    The user guide notebooks require some small datasets to be downloaded via the
+    :mod:`kikuchipy.data` module upon building the documentation. See the section on the
+    :ref:`data module <adding-data-to-data-module>` for more details.
+
 Then, build the documentation from the ``doc`` directory::
 
     cd doc
@@ -168,34 +194,72 @@ Tips for writing Jupyter Notebooks that are meant to be converted to reST text f
 `nbsphinx <https://nbsphinx.readthedocs.io/en/latest/>`_:
 
 - All notebooks should have a Markdown (MD) cell with this message at the top, "This
-  notebook is part of the `kikuchipy` documentation https://kikuchipy.org. Links to the
+  notebook is part of the kikuchipy documentation https://kikuchipy.org. Links to the
   documentation won't work from the notebook.", and have ``"nbsphinx": "hidden"`` in the
   cell metadata so that the message is not visible when displayed in the documentation.
-- Use ``_ = ax[0].imshow(...)`` to disable Matplotlib output if a Matplotlib command is
-  the last line in a cell.
+- Use ``_ = ax[0].imshow(...)`` to silence ``matplotlib`` output if a ``matplotlib``
+  command is the last line in a cell.
 - Refer to our API reference with this general MD
   ``[fft_filter()](../reference.rst#kikuchipy.signals.EBSD.fft_filter)``. Remember to
-  add the parentheses ``()`` for functions and methods.
+  add the parentheses ``()`` to functions and methods.
 - Reference external APIs via standard MD like
   ``[Signal2D](http://hyperspy.org/hyperspy-doc/current/api/hyperspy._signals.signal2d.html)``.
 - The Sphinx gallery thumbnail used for a notebook is set by adding the
   ``nbsphinx-thumbnail`` tag to a code cell with an image output. The notebook must be
   added to the gallery in the README.rst to be included in the documentation pages.
-- The Furo Sphinx theme displays the documentation in a light or dark theme, depending
-  on the browser/OS setting. It is important to make sure the documentation is readable
-  with both themes. This means explicitly printing the signal axes manager, like
-  ``print(s.axes_manager)``, and displaying all figures with a white background for axes
-  labels and ticks and figure titles etc. to be readable.
+- The ``furo`` Sphinx theme displays the documentation in a light or dark theme,
+  depending on the browser/OS setting. It is important to make sure the documentation is
+  readable with both themes. This means explicitly printing the signal axes manager,
+  like ``print(s.axes_manager)``, and displaying all figures with a white background for
+  axes labels and ticks and figure titles etc. to be readable.
+- Whenever the documentation is built (locally or on the Read the Docs server),
+  ``nbsphinx`` only runs the notebooks *without* any cell output stored. It is
+  recommended that notebooks are stored without cell output, so that functionality
+  within them are run and tested to ensure continued compatibility with code changes.
+  Cell output should only be stored in notebooks which are too computationally intensive
+  for the Read the Docs server to handle, which has a limit of 15 minutes and 3 GB of
+  memory per `documentation build <https://docs.readthedocs.io/en/stable/builds.html>`_.
+- We also use ``black`` to format notebooks cells. To run the ``black`` formatter on
+  your notebook(s) locally please specify the notebook(s), ie.
+  ``black my_notebook.ipynb`` or ``black *.ipynb``, as ``black .`` will not format
+  ``.ipynb`` files without explicit consent. To prevent ``black`` from automatically
+  formatting regions of your code, please wrap these code blocks with the following::
+
+      # fmt: off
+      python_code_block = not_to_be_formatted
+      # fmt: on
+
+  Please see the `black documentation <https://black.readthedocs.io/en/stable/index.html>`_
+  for more details.
 
 In general, we run all notebooks every time the documentation is built with Sphinx, to
 ensure that all notebooks are compatible with the current API at all times. This is
 important! For computationally expensive notebooks however, we store the cell outputs so
 the documentation doesn't take too long to build, either by us locally or the Read The
-Docs GitHub action. To check that the notebooks with cell outputs stored are compatible
-with the current API as well, we run a scheduled GitHub Action every Monday morning
-which checks that the notebooks run OK and that they produced the same output now as
-when they were last executed. We use `nbval <https://nbval.readthedocs.io/en/latest/>`_
-for this.
+Docs GitHub action. To check that the notebooks with stored cell outputs are compatible
+with the current API, we run a scheduled GitHub Action every Monday morning which checks
+that the notebooks run OK and that they produce the same output now as when they were
+last executed. We use `nbval <https://nbval.readthedocs.io>`_ for this.
+
+Deprecations
+============
+
+We attempt to adhere to semantic versioning as best we can. This means that as little,
+ideally no, functionality should break between minor releases. Deprecation warnings are
+raised whenever possible and feasible for functions/methods/properties/arguments, so
+that users get a heads-up one (minor) release before something is removed or changes,
+with a possible alternative to be used.
+
+The decorator should be placed right above the object signature to be deprecated::
+
+    @deprecate(since=0.8, removal=0.9, alternative="bar")
+    def foo(self, n):
+        return n + 1
+
+    @property
+    @deprecate(since=0.9, removal=0.10, alternative="another", object_type="property")
+    def this_property(self):
+        return 2
 
 Running and writing tests
 =========================
@@ -252,6 +316,8 @@ Tips for writing tests of Numba decorated functions:
   results on different OS with the same Python code. See `this issue
   <https://github.com/pyxem/kikuchipy/issues/496>`_ for a case where this happened.
 
+.. _adding-data-to-data-module:
+
 Adding data to the data module
 ==============================
 
@@ -279,6 +345,7 @@ should then be deleted manually if desired.
 
 Improving performance
 =====================
+
 When we write code, it's important that we (1) get the correct result, (2) don't fill up
 memory, and (3) that the computation doesn't take too long. To keep memory in check, we
 should use `Dask <https://docs.dask.org/en/latest/>`_ wherever possible. To speed up

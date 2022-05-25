@@ -69,6 +69,14 @@ class TestBarnesFFTFilter:
         assert p_padded.shape == expected_shape
         assert np.allclose(np.sum(p_padded[:sy, :sx]), np.sum(p))
 
+        p_padded2 = barnes._pad_image.py_func(
+            image=p,
+            fft_shape=fft_shape,
+            window_shape=w.shape,
+            offset_before_fft=off1,
+        )
+        assert np.allclose(p_padded, p_padded2)
+
     def test_pad_window(self):
         window_shape = (5, 5)
         ky, kx = window_shape
