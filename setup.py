@@ -55,7 +55,7 @@ extra_feature_requirements = {
 
 # Create a development project, including both the doc and tests projects
 extra_feature_requirements["dev"] = [
-    "black",
+    "black[jupyter]",
     "manifix",
     "outdated",
     "pre-commit >= 1.16",
