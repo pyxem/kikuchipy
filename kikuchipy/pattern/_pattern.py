@@ -160,12 +160,12 @@ def normalize_intensity(
     pattern_mean = np.mean(pattern)
     pattern_std = np.std(pattern)
 
+    pattern = pattern - pattern_mean
+
     if divide_by_square_root:
-        return (pattern - pattern_mean) / (
-            num_std * pattern_std * np.sqrt(pattern.size)
-        )
+        return pattern / (num_std * pattern_std * np.sqrt(pattern.size))
     else:
-        return (pattern - pattern_mean) / (num_std * pattern_std)
+        return pattern / (num_std * pattern_std)
 
 
 def fft(
@@ -690,13 +690,31 @@ def get_image_quality(
         sy, sx = pattern.shape
         inertia_max = np.sum(frequency_vectors) / (sy * sx)
 
-    if normalize is True:
+    return _get_image_quality(pattern, normalize, frequency_vectors, inertia_max)
+
+
+def _get_image_quality(
+    pattern: np.ndarray,
+    normalize: bool,
+    frequency_vectors: np.ndarray,
+    inertia_max: float,
+) -> float:
+    pattern = pattern.astype("float32")
+
+    if normalize:
         pattern = normalize_intensity(pattern)
 
     # Compute FFT
     # TODO: Reduce frequency vectors to real part only to enable real part FFT
     fft_pattern = fft2(pattern)
 
+    return _get_image_quality_numba(fft_pattern, frequency_vectors, inertia_max)
+
+
+@nb.njit(cache=True, fastmath=True, nogil=True)
+def _get_image_quality_numba(
+    fft_pattern: np.ndarray, frequency_vectors: np.ndarray, inertia_max: float
+) -> float:
     # Obtain (un-shifted) FFT spectrum
     spectrum = fft_spectrum(fft_pattern)
 

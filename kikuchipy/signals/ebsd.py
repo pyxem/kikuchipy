@@ -54,6 +54,7 @@ from kikuchipy.pattern._pattern import (
     fft_frequency_vectors,
     fft_filter,
     _dynamic_background_frequency_space_setup,
+    _get_image_quality,
     _remove_static_background_subtract,
     _remove_static_background_divide,
     _remove_dynamic_background,
@@ -882,7 +883,7 @@ class EBSD(CommonImage, Signal2D):
         else:
             self.data = equalized_patterns
 
-    def get_image_quality(self, normalize: bool = True) -> np.ndarray:
+    def get_image_quality(self, normalize: bool = True) -> Union[np.ndarray, da.Array]:
         """Compute the image quality map of patterns in an EBSD scan.
 
         The image quality is calculated based on the procedure defined
@@ -893,12 +894,13 @@ class EBSD(CommonImage, Signal2D):
         normalize
             Whether to normalize patterns to a mean of zero and standard
             deviation of 1 before calculating the image quality. Default
-            is True.
+            is ``True``.
 
         Returns
         -------
-        image_quality_map : numpy.ndarray
-            Image quality map of same shape as signal navigation axes.
+        image_quality_map
+            Image quality map of same shape as navigation axes. This is
+            a Dask array if the signal is lazy.
 
         References
         ----------
@@ -911,38 +913,43 @@ class EBSD(CommonImage, Signal2D):
         >>> import matplotlib.pyplot as plt
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
-        >>> iq = s.get_image_quality(normalize=True)  # doctest: +SKIP
+        >>> iq = s.get_image_quality()  # doctest: +SKIP
         >>> plt.imshow(iq)  # doctest: +SKIP
 
         See Also
         --------
         kikuchipy.pattern.get_image_quality
+
         """
-        # Data set to operate on
-        dtype_out = np.float32
-        dask_array = get_dask_array(self, dtype=dtype_out)
 
         # Calculate frequency vectors
         sx, sy = self.axes_manager.signal_shape
         frequency_vectors = fft_frequency_vectors((sy, sx))
         inertia_max = np.sum(frequency_vectors) / (sy * sx)
 
-        # Calculate image quality per chunk
-        image_quality_map = dask_array.map_blocks(
-            func=chunk.get_image_quality,
+        if not self._lazy:
+            print("Calculating the image quality:", file=sys.stdout)
+
+            # Register a progressbar. Remove once HyperSpy v1.7.1 is
+            # released: https://github.com/hyperspy/hyperspy/issues/2946
+            pbar = ProgressBar()
+            pbar.register()
+
+        image_quality_map = self.map(
+            _get_image_quality,
+            show_progressbar=True,
+            parallel=True,
+            inplace=False,
+            output_dtype=np.float32,
+            normalize=normalize,
             frequency_vectors=frequency_vectors,
             inertia_max=inertia_max,
-            normalize=normalize,
-            dtype=dtype_out,
-            drop_axis=self.axes_manager.signal_indices_in_array,
         )
 
         if not self._lazy:
-            with ProgressBar():
-                print("Calculating the image quality:", file=sys.stdout)
-                image_quality_map = image_quality_map.compute()
+            pbar.unregister()
 
-        return image_quality_map
+        return image_quality_map.data
 
     def dictionary_indexing(
         self,
