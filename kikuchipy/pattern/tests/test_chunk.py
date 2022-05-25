@@ -340,50 +340,6 @@ class TestAverageNeighbourPatternsChunk:
         assert np.allclose(averaged_patterns[0, 0].compute(), answer)
 
 
-class TestGetImageQualityChunk:
-    @pytest.mark.parametrize(
-        "normalize, answer",
-        [
-            (
-                True,
-                np.array(
-                    [
-                        [-0.0241, -0.0625, -0.0052],
-                        [-0.0317, -0.0458, -0.0956],
-                        [-0.1253, 0.0120, -0.2385],
-                    ],
-                    dtype=np.float64,
-                ),
-            ),
-            (
-                False,
-                np.array(
-                    [
-                        [0.2694, 0.2926, 0.2299],
-                        [0.2673, 0.1283, 0.2032],
-                        [0.1105, 0.2671, 0.2159],
-                    ],
-                    dtype=np.float64,
-                ),
-            ),
-        ],
-    )
-    def test_get_image_quality_chunk(self, dummy_signal, normalize, answer):
-        iq = chunk.get_image_quality(patterns=dummy_signal.data, normalize=normalize)
-
-        assert np.allclose(iq, answer, atol=1e-4)
-
-    def test_get_image_quality_chunk_white_noise(self):
-        p = np.random.random((4, 1001, 1001))
-        iq = chunk.get_image_quality(patterns=p)
-        assert np.allclose(iq, 0, atol=1e-2)
-
-    def test_get_image_quality_flat(self):
-        p = np.ones((4, 1001, 1001))
-        iq = chunk.get_image_quality(patterns=p, normalize=False)
-        assert np.allclose(iq, 1, atol=1e-2)
-
-
 class TestFFTFilterChunk:
     @pytest.mark.parametrize(
         "shift, transfer_function, kwargs, dtype_out, expected_spectrum_sum",

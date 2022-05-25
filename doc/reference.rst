@@ -418,7 +418,6 @@ of EBSD patterns.
     average_neighbour_patterns
     fft_filter
     get_dynamic_background
-    get_image_quality
     normalize_intensity
     rescale_intensity
 
