@@ -24,7 +24,7 @@ Added
 - Reduce time and memory use of the following ``kikuchipy.signals.EBSD`` methods by
   using ``hyperspy.signal.BaseSignal.map()``: ``remove_static_background()``,
   ``remove_dynamic_background()`` and ``get_image_quality()``.
-  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+  (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_)
 - ``progressbar`` parameter to functions downloading external datasets in the data
   module. (`#515 <https://github.com/pyxem/kikuchipy/pull/515>`_)
 - Support for Python 3.10. (`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
@@ -34,7 +34,7 @@ Added
 Changed
 -------
 - Restrict minimal version of HyperSpy to 1.7.
-  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+  (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_)
 - Restrict minimal version of SciPy to 1.7.
   (`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
 
@@ -42,12 +42,11 @@ Removed
 -------
 - The ``relative`` parameter in ``kikuchipy.signals.EBSD.remove_static_background()``.
   The parameter is accepted but not used. Passing it after this release will result in
-  an error.
-  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+  an error. (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_)
 - The following functions for processing of pattern chunks in the
   ``kikuchipy.pattern.chunk`` module: ``get_image_quality``,
   ``remove_dynamic_background`` and ``remove_static_background``.
-  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+  (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_)
 
 Fixed
 -----
