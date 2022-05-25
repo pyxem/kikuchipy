@@ -356,7 +356,7 @@ def _remove_static_background_subtract(
     scale_bg: bool,
 ) -> np.ndarray:
     """Remove static background from a pattern by subtraction."""
-    pattern = pattern.astype("float32")
+    pattern = pattern.astype(np.float32)
     if scale_bg:
         static_bg = _rescale_with_min_max(
             static_bg,
@@ -379,7 +379,7 @@ def _remove_static_background_divide(
     scale_bg: bool,
 ) -> np.ndarray:
     """Remove static background from a pattern by division."""
-    pattern = pattern.astype("float32")
+    pattern = pattern.astype(np.float32)
     if scale_bg:
         static_bg = _rescale_with_min_max(
             static_bg,
@@ -428,7 +428,7 @@ def _remove_dynamic_background(
     -------
     numpy.ndarray
     """
-    pattern = pattern.astype("float32")
+    pattern = pattern.astype(np.float32)
     dynamic_bg = filter_func(pattern, **kwargs)
     if operation == "subtract":
         pattern = _remove_background_subtract(pattern, dynamic_bg, omin, omax)
@@ -699,7 +699,7 @@ def _get_image_quality(
     frequency_vectors: np.ndarray,
     inertia_max: float,
 ) -> float:
-    pattern = pattern.astype("float32")
+    pattern = pattern.astype(np.float32)
 
     if normalize:
         pattern = normalize_intensity(pattern)
