@@ -18,7 +18,6 @@
 import os
 
 from hyperspy.roi import RectangularROI
-import matplotlib
 from matplotlib.pyplot import close
 import numpy as np
 import pytest
@@ -27,10 +26,9 @@ from kikuchipy import load
 from kikuchipy.generators import VirtualBSEGenerator
 from kikuchipy.signals import EBSD, LazyEBSD, VirtualBSEImage
 
+
 DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5")
-
-matplotlib.use("Agg")  # For plotting
 
 
 class TestVirtualBSEGenerator:
@@ -162,8 +160,8 @@ class TestGetRGBImage:
             [("R", "u1"), ("G", "u1"), ("B", "u1")]
         )
 
-        vbse_rgb_img1.change_dtype(np.uint8)
-        vbse_rgb_img2.change_dtype(np.uint8)
+        vbse_rgb_img1.change_dtype("uint8")
+        vbse_rgb_img2.change_dtype("uint8")
         assert np.allclose(vbse_rgb_img1.data, vbse_rgb_img2.data)
 
     def test_get_rgb_image_dtype(self):
@@ -189,12 +187,12 @@ class TestGetRGBImage:
         vbse_rgb_img = vbse_gen.get_rgb_image(
             r=(0, 0), g=(0, 1), b=(0, 2), percentiles=percentile
         )
-        vbse_rgb_img.change_dtype(np.uint8)
+        vbse_rgb_img.change_dtype("uint8")
 
         assert np.allclose(vbse_rgb_img.data.mean(), desired_mean_intensity)
 
     @pytest.mark.parametrize(
-        "alpha_add, desired_mean_intensity", [(0, 88.481481), (10, 107.851851)]
+        "alpha_add, desired_mean_intensity", [(0, 88.5), (10, 107.9)]
     )
     def test_get_rgb_alpha(self, alpha_add, desired_mean_intensity):
         s = load(KIKUCHIPY_FILE)
@@ -204,9 +202,9 @@ class TestGetRGBImage:
         alpha[0] += alpha_add
 
         vbse_rgb_img = vbse_gen.get_rgb_image(r=(0, 0), g=(0, 1), b=(0, 2), alpha=alpha)
-        vbse_rgb_img.change_dtype(np.uint8)
+        vbse_rgb_img.change_dtype("uint8")
 
-        assert np.allclose(vbse_rgb_img.data.mean(), desired_mean_intensity)
+        assert np.allclose(vbse_rgb_img.data.mean(), desired_mean_intensity, atol=0.1)
 
     def test_get_rgb_alpha_signal(self):
         s = load(KIKUCHIPY_FILE)
@@ -220,8 +218,8 @@ class TestGetRGBImage:
         vbse_rgb_img2 = vbse_gen.get_rgb_image(
             r=(0, 1), g=(0, 2), b=(0, 3), alpha=vbse_img.data
         )
-        vbse_rgb_img1.change_dtype(np.uint8)
-        vbse_rgb_img2.change_dtype(np.uint8)
+        vbse_rgb_img1.change_dtype("uint8")
+        vbse_rgb_img2.change_dtype("uint8")
 
         assert np.allclose(vbse_rgb_img1.data, vbse_rgb_img2.data)
 
@@ -245,8 +243,8 @@ class TestGetRGBImage:
     @pytest.mark.parametrize(
         "r, g, b, desired_mean_intensity",
         [
-            ([(0, 1), (0, 2)], [(1, 1), (1, 2)], [(2, 1), (2, 2)], 125.148148),
-            ([(2, 1), (2, 2)], [(3, 1), (3, 2)], [(4, 1), (4, 2)], 109.037037),
+            ([(0, 1), (0, 2)], [(1, 1), (1, 2)], [(2, 1), (2, 2)], 125.1),
+            ([(2, 1), (2, 2)], [(3, 1), (3, 2)], [(4, 1), (4, 2)], 109.0),
         ],
     )
     def test_get_rgb_multiple_rois_per_channel(self, r, g, b, desired_mean_intensity):
@@ -254,14 +252,14 @@ class TestGetRGBImage:
         vbse_gen = VirtualBSEGenerator(s)
 
         vbse_rgb_img1 = vbse_gen.get_rgb_image(r=r, g=g, b=b)
-        vbse_rgb_img1.change_dtype(np.uint8)
+        vbse_rgb_img1.change_dtype("uint8")
 
-        assert np.allclose(vbse_rgb_img1.data.mean(), desired_mean_intensity)
+        assert np.allclose(vbse_rgb_img1.data.mean(), desired_mean_intensity, atol=0.1)
 
         roi_r = vbse_gen.roi_from_grid(r)
         roi_g = vbse_gen.roi_from_grid(g)
         roi_b = vbse_gen.roi_from_grid(b)
         vbse_rgb_img2 = vbse_gen.get_rgb_image(r=roi_r, g=roi_g, b=roi_b)
-        vbse_rgb_img2.change_dtype(np.uint8)
+        vbse_rgb_img2.change_dtype("uint8")
 
         assert np.allclose(vbse_rgb_img1.data, vbse_rgb_img2.data)
