@@ -35,26 +35,6 @@ from kikuchipy.signals.util._dask import get_dask_array
 
 
 # Expected output intensities from various image processing methods
-DYN_CORR_UINT8_SPATIAL_STD2 = np.array(
-    [[170, 215, 181], [255, 221, 188], [221, 32, 0]], dtype=np.uint8
-)
-DYN_CORR_UINT8_SPATIAL_STD1 = np.array(
-    [[120, 197, 156], [255, 241, 223], [226, 0, 9]], dtype=np.uint8
-)
-DYN_CORR_UINT8_FREQUENCY_STD1_TRUNCATE3 = np.array(
-    [[111, 191, 141], [255, 253, 243], [221, 0, 38]], dtype=np.uint8
-)
-DYN_CORR_UINT8_FREQUENCY_STD2_TRUNCATE4 = np.array(
-    [[159, 214, 179], [255, 227, 201], [216, 14, 0]], dtype=np.uint8
-)
-DYN_CORR_UINT16_SPATIAL_STD2 = np.array(
-    [[43928, 55293, 46544], [65535, 56974, 48412], [56975, 8374, 0]],
-    dtype=np.uint16,
-)
-DYN_CORR_UINT8_SPATIAL_STD2_OMAX250 = np.array(
-    [[167, 210, 177], [250, 217, 184], [217, 31, 0]],
-    dtype=np.uint8,
-)
 ADAPT_EQ_UINT8 = np.array([[92, 215, 92], [255, 215, 92], [215, 26, 0]], dtype=np.uint8)
 if version.parse(skimage_version) < version.parse("0.17"):  # pragma: no cover
     ADAPT_EQ_UINT8 = np.array(
@@ -181,151 +161,6 @@ class TestRescaleIntensityChunk:
         assert rescaled_patterns.dtype == dtype_out
         assert np.allclose(p1, answer)
         assert not np.allclose(p1, p2, atol=1)
-
-
-class TestRemoveDynamicBackgroundChunk:
-    @pytest.mark.parametrize(
-        "std, answer",
-        [(1, DYN_CORR_UINT8_SPATIAL_STD1), (2, DYN_CORR_UINT8_SPATIAL_STD2)],
-    )
-    def test_remove_dynamic_background_spatial(self, dummy_signal, std, answer):
-        dtype_out = dummy_signal.data.dtype.type
-
-        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
-
-        kwargs = {"sigma": std}
-
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_dynamic_background,
-            filter_func=gaussian_filter,
-            operation_func=np.subtract,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-            **kwargs,
-        )
-
-        # Check for correct data type and gives expected output intensities
-        assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(corrected_patterns[0, 0].compute(), answer)
-
-    def test_remove_dynamic_background_spatial_uint16(self, dummy_signal):
-        dtype_out = np.uint16
-
-        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
-
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_dynamic_background,
-            filter_func=gaussian_filter,
-            operation_func=np.subtract,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-            sigma=2,
-        )
-
-        # Check for correct data type and gives expected output intensities
-        assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(
-            corrected_patterns[0, 0].compute(), DYN_CORR_UINT16_SPATIAL_STD2
-        )
-
-    @pytest.mark.parametrize(
-        "std, truncate, answer",
-        [
-            (1, 3, DYN_CORR_UINT8_FREQUENCY_STD1_TRUNCATE3),
-            (2, 4, DYN_CORR_UINT8_FREQUENCY_STD2_TRUNCATE4),
-        ],
-    )
-    def test_remove_dynamic_background_frequency(
-        self, dummy_signal, std, truncate, answer
-    ):
-        dtype_out = dummy_signal.data.dtype.type
-
-        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
-
-        kwargs = {}
-        (
-            kwargs["fft_shape"],
-            kwargs["window_shape"],
-            kwargs["transfer_function"],
-            kwargs["offset_before_fft"],
-            kwargs["offset_after_ifft"],
-        ) = _dynamic_background_frequency_space_setup(
-            pattern_shape=dummy_signal.axes_manager.signal_shape[::-1],
-            std=std,
-            truncate=truncate,
-        )
-
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_dynamic_background,
-            filter_func=_fft_filter,
-            operation_func=np.subtract,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-            **kwargs,
-        )
-
-        # Check for correct data type and gives expected output intensities
-        assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(corrected_patterns[0, 0].compute(), answer)
-
-    @pytest.mark.parametrize(
-        "omax, answer",
-        [
-            (255, DYN_CORR_UINT8_SPATIAL_STD2),
-            (250, DYN_CORR_UINT8_SPATIAL_STD2_OMAX250),
-        ],
-    )
-    def test_remove_dynamic_background_out_range(self, dummy_signal, omax, answer):
-        dtype_out = dummy_signal.data.dtype.type
-
-        out_range = (0, omax)
-
-        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
-
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_dynamic_background,
-            filter_func=gaussian_filter,
-            operation_func=np.subtract,
-            sigma=2,
-            out_range=out_range,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-        )
-
-        assert corrected_patterns.dtype == dtype_out
-        assert corrected_patterns.max().compute() == omax
-        assert np.allclose(corrected_patterns[0, 0].compute(), answer)
-
-    @pytest.mark.parametrize(
-        "answer",
-        [
-            np.array(
-                [
-                    [0.3405, 0.6874, 0.4204],
-                    [1, 0.7387, 0.4774],
-                    [0.7387, -0.7444, -1],
-                ],
-                dtype=np.float32,
-            ),
-            np.array(
-                [[0, 1, 1], [2, 1, 0], [1, 65535, 65533]],
-                dtype=np.uint16,
-            ),
-        ],
-    )
-    def test_remove_dynamic_background_dtype_out(self, dummy_signal, answer):
-        dtype_out = answer.dtype
-        dummy_signal.data = dummy_signal.data.astype(dtype_out)
-
-        corrected_patterns = chunk.remove_dynamic_background(
-            patterns=dummy_signal.data,
-            filter_func=gaussian_filter,
-            operation_func=np.subtract,
-            sigma=2,
-        )
-
-        assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(corrected_patterns[0, 0], answer, atol=1e-4)
 
 
 class TestGetDynamicBackgroundChunk:
@@ -540,7 +375,7 @@ class TestGetImageQualityChunk:
 
     def test_get_image_quality_chunk_white_noise(self):
         p = np.random.random((4, 1001, 1001))
-        iq = chunk.get_image_quality(patterns=p, normalize=True)
+        iq = chunk.get_image_quality(patterns=p)
         assert np.allclose(iq, 0, atol=1e-2)
 
     def test_get_image_quality_flat(self):

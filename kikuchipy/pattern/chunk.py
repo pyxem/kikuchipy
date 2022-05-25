@@ -31,7 +31,6 @@ import dask.array as da
 import numpy as np
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.exposure import equalize_adapthist
-from skimage.util.dtype import dtype_range
 
 import kikuchipy.pattern._pattern as pattern_processing
 import kikuchipy.filters.fft_barnes as barnes
@@ -132,82 +131,6 @@ def get_dynamic_background(
         background[nav_idx] = filter_func(patterns[nav_idx], **kwargs)
 
     return background
-
-
-def remove_dynamic_background(
-    patterns: Union[np.ndarray, da.Array],
-    filter_func: Union[gaussian_filter, barnes.fft_filter],
-    operation_func: Union[np.subtract, np.divide],
-    out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
-    **kwargs,
-) -> np.ndarray:
-    """Correct the dynamic background in a chunk of EBSD patterns.
-
-    The correction is performed by subtracting or dividing by a Gaussian
-    blurred version of each pattern. Returned pattern intensities are
-    rescaled to fill the input data type range.
-
-    Parameters
-    ----------
-    patterns
-        EBSD patterns.
-    filter_func
-        Function where a Gaussian convolution filter is applied, in the
-        frequency or spatial domain. Either
-        :func:`scipy.ndimage.gaussian_filter` or
-        :func:`kikuchipy.util.barnes_fftfilter.fft_filter`.
-    operation_func
-        Function to subtract or divide by the dynamic background
-        pattern.
-    out_range
-        Min./max. intensity values of the output patterns. If None
-        (default), `out_range` is set to `dtype_out` min./max according
-        to `skimage.util.dtype.dtype_range`.
-    dtype_out
-        Data type of corrected patterns. If None (default), it is set to
-        input patterns' data type.
-    kwargs :
-        Keyword arguments passed to the Gaussian blurring function
-        passed to `filter_func`.
-
-    Returns
-    -------
-    corrected_patterns : numpy.ndarray
-        Dynamic background corrected patterns.
-
-    See Also
-    --------
-    kikuchipy.signals.ebsd.EBSD.remove_dynamic_background
-    kikuchipy.util.pattern.remove_dynamic_background
-    """
-    if dtype_out is None:
-        dtype_out = patterns.dtype.type
-
-    if out_range is None:
-        out_range = dtype_range[dtype_out]
-
-    corrected_patterns = np.empty_like(patterns, dtype=dtype_out)
-
-    for nav_idx in np.ndindex(patterns.shape[:-2]):
-        # Get pattern
-        pattern = patterns[nav_idx]
-
-        # Get dynamic background by Gaussian filtering in frequency or
-        # spatial domain
-        dynamic_bg = filter_func(pattern, **kwargs)
-
-        # Remove dynamic background
-        corrected_pattern = operation_func(pattern, dynamic_bg)
-
-        # Rescale intensities
-        corrected_patterns[nav_idx] = pattern_processing.rescale_intensity(
-            pattern=corrected_pattern,
-            out_range=out_range,
-            dtype_out=dtype_out,
-        )
-
-    return corrected_patterns
 
 
 def adaptive_histogram_equalization(
