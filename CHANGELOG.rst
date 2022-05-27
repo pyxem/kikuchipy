@@ -35,7 +35,7 @@ Changed
 -------
 - Remove requirement that the crystal map used for EBSD refinement has identical step
   size(s) to the EBSD signal's navigation axes. This raised an error previously, but now
-  only emits a warning. (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+  only emits a warning. (`#531 <https://github.com/pyxem/kikuchipy/pull/531>`_)
 - Restrict minimal version of HyperSpy to 1.7.
   (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_)
 - Restrict minimal version of SciPy to 1.7.
