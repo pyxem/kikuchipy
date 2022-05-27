@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+import warnings
 
 import numpy as np
 import pytest
@@ -108,9 +109,9 @@ class TestDeprecateArgument:
         my_foo = Foo()
 
         # Does not warn
-        with pytest.warns(None) as record1:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
             assert my_foo.bar_arg(b=1) == {"b": 1}
-        assert len(record1) == 0
 
         # Warns
         with pytest.warns(np.VisibleDeprecationWarning) as record2:

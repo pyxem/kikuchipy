@@ -32,25 +32,28 @@ def _crystal_map_is_compatible_with_signal(
     crystal map.
     """
     nav_shape = tuple([a.size for a in navigation_axes])
-    nav_scale = tuple([a.scale for a in navigation_axes])
+    nav_scale = list([a.scale for a in navigation_axes])
 
     try:
-        xmap_scale = tuple([xmap._step_sizes[a.name] for a in navigation_axes])
+        xmap_scale = list([xmap._step_sizes[a.name] for a in navigation_axes])
     except KeyError:
         warnings.warn(
             "The signal navigation axes must be named 'x' and/or 'y' in order to "
             "compare the signal navigation scale to the CrystalMap step sizes 'dx' and "
             "'dy' (see `EBSD.axes_manager`)"
         )
-        xmap_scale = list(xmap._step_sizes.values())[: -len(nav_shape)]
+        xmap_scale = list(xmap._step_sizes.values())[-len(navigation_axes) :]
 
-    compatible = xmap.shape == nav_shape and np.allclose(
-        xmap_scale, nav_scale, atol=1e-6
-    )
+    compatible = xmap.shape == nav_shape
+    if compatible and not np.allclose(xmap_scale, nav_scale, atol=1e-6):
+        warnings.warn(
+            f"The `xmap` step size(s) {xmap_scale} are different from the signal's "
+            f"step size(s) {nav_scale} (see `EBSD.axes_manager`)"
+        )
     if not compatible and raise_if_not:
         raise ValueError(
-            f"The crystal map shape {xmap.shape} and step sizes {xmap_scale} aren't "
-            f"compatible with the signal navigation shape {nav_shape} and step sizes "
+            f"The `xmap` shape {xmap.shape} and step size(s) {xmap_scale} are not "
+            f"compatible with the signal navigation shape {nav_shape} and step size(s) "
             f"{nav_scale} (see `EBSD.axes_manager`)"
         )
     else:
