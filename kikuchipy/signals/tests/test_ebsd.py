@@ -1128,16 +1128,20 @@ class TestEBSDXmapProperty:
         xmap_bad = get_single_phase_xmap(
             nav_shape=nav_shape[::-1], step_sizes=step_sizes
         )
-        with pytest.raises(ValueError, match="The crystal map shape"):
+
+        with pytest.raises(ValueError, match="The `xmap` shape"):
             s.xmap = xmap_bad
-        with pytest.raises(ValueError, match="The crystal map shape"):
-            s.axes_manager["x"].scale = 2
+
+        s.axes_manager["x"].scale = 2
+        with pytest.warns(UserWarning, match="The `xmap` step size"):
             s.xmap = xmap_good
-        with pytest.raises(ValueError, match="The crystal map shape"):
-            s.axes_manager["x"].scale = 1
-            s.axes_manager["x"].name = "x2"
+
+        s2 = s.inav[:, :-2]
+        with pytest.raises(ValueError, match="The `xmap` shape"):
+            s2.axes_manager["x"].scale = 1
+            s2.axes_manager["x"].name = "x2"
             with pytest.warns(UserWarning, match="The signal navigation axes"):
-                s.xmap = xmap_good
+                s2.xmap = xmap_good
 
     def test_attribute_carry_over_from_deepcopy(self, get_single_phase_xmap):
         s = kp.data.nickel_ebsd_small(lazy=True)
@@ -1836,7 +1840,7 @@ class TestEBSDRefinement:
         assert detector_refined.pc.shape == nav_shape + (3,)
 
     @pytest.mark.filterwarnings("ignore: The line search algorithm did not converge")
-    @pytest.mark.filterwarnings("ignore: Angles are assumed to be in radians, ")
+    #    @pytest.mark.filterwarnings("ignore: Angles are assumed to be in radians, ")
     @pytest.mark.parametrize(
         "method, method_kwargs",
         [
