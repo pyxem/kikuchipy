@@ -49,6 +49,7 @@ from kikuchipy.indexing._refinement._refinement import (
 from kikuchipy.indexing.similarity_metrics import metrics, SimilarityMetric
 from kikuchipy.io._io import _save
 from kikuchipy.pattern import chunk
+from kikuchipy.pattern.chunk import _average_neighbour_patterns
 from kikuchipy.pattern._pattern import (
     fft_frequency_vectors,
     fft_filter,
@@ -1766,8 +1767,7 @@ class EBSD(CommonImage, Signal2D):
         window_shape: Tuple[int, ...] = (3, 3),
         **kwargs,
     ):
-        """Average patterns in an EBSD scan inplace with its neighbours
-        within a window.
+        """Average patterns inplace with its neighbours within a window.
 
         The amount of averaging is specified by the window coefficients.
         All patterns are averaged with the same window. Map borders are
@@ -1783,8 +1783,8 @@ class EBSD(CommonImage, Signal2D):
         window
             Name of averaging window or an array. Available types are
             listed in :func:`scipy.signal.windows.get_window`, in
-            addition to a "circular" window (default) filled with ones
-            in which corner coefficients are set to zero. A window
+            addition to a ``"circular"`` window (default) filled with
+            ones in which corner coefficients are set to zero. A window
             element is considered to be in a corner if its radial
             distance to the origin (window centre) is shorter or equal
             to the half width of the window's longest axis. A 1D or 2D
@@ -1793,12 +1793,12 @@ class EBSD(CommonImage, Signal2D):
         window_shape
             Shape of averaging window. Not used if a custom window or
             :class:`~kikuchipy.util.window.Window` object is passed to
-            `window`. This can be either 1D or 2D, and can be
+            ``window``. This can be either 1D or 2D, and can be
             asymmetrical. Default is (3, 3).
-        **kwargs :
+        kwargs
             Keyword arguments passed to the available window type listed
-            in :func:`scipy.signal.windows.get_window`. If none are
-            passed, the default values of that particular window are used.
+            in :func:`scipy.signal.windows.get_window`. If not given,
+            the default values of that particular window are used.
 
         See Also
         --------
@@ -1811,10 +1811,10 @@ class EBSD(CommonImage, Signal2D):
         else:
             averaging_window = Window(window=window, shape=window_shape, **kwargs)
 
-        # Do nothing if a window of shape (1, ) or (1, 1) is passed
         nav_shape = self.axes_manager.navigation_shape[::-1]
         window_shape = averaging_window.shape
         if window_shape in [(1,), (1, 1)]:
+            # Do nothing if a window of shape (1,) or (1, 1) is passed
             return warnings.warn(
                 f"A window of shape {window_shape} was passed, no averaging is "
                 "therefore performed."
@@ -1828,20 +1828,22 @@ class EBSD(CommonImage, Signal2D):
             input=np.ones(nav_shape, dtype=int),
             weights=averaging_window,
             mode="constant",
-            cval=0,
         )
 
-        # Add signal dimensions to window array to enable its use with Dask's
-        # map_blocks()
+        # Add signal dimensions to window array to enable its use with
+        # Dask's map_overlap()
         sig_dim = self.axes_manager.signal_dimension
         averaging_window = averaging_window.reshape(
             averaging_window.shape + (1,) * sig_dim
         )
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = get_dask_array(signal=self)
+        if self._lazy:
+            old_chunks = self.data.chunks
+        dask_array = get_dask_array(signal=self, chunk_bytes=8e6, rechunk=True)
 
-        # Add signal dimensions to array be able to use with Dask's map_blocks()
+        # Add signal dimensions to array be able to use with Dask's
+        # map_overlap()
         nav_dim = self.axes_manager.navigation_dimension
         for i in range(sig_dim):
             window_sums = np.expand_dims(window_sums, axis=window_sums.ndim)
@@ -1849,8 +1851,8 @@ class EBSD(CommonImage, Signal2D):
             window_sums, chunks=dask_array.chunks[:nav_dim] + (1,) * sig_dim
         )
 
-        # Create overlap between chunks to enable correlation with the window
-        # using Dask's map_blocks()
+        # Create overlap between chunks to enable correlation with the
+        # window using Dask's map_overlap()
         window_dim = averaging_window.ndim
         overlap_depth = {}
         for i in range(nav_dim):
@@ -1863,15 +1865,18 @@ class EBSD(CommonImage, Signal2D):
         )
 
         dtype_out = self.data.dtype
+        omin, omax = dtype_range[dtype_out.type]
         averaged_patterns = da.overlap.map_overlap(
-            chunk.average_neighbour_patterns,
+            _average_neighbour_patterns,
             dask_array,
             window_sums,
             window=averaging_window,
             dtype_out=dtype_out,
+            omin=omin,
+            omax=omax,
             dtype=dtype_out,
             depth=overlap_depth,
-            boundary=np.nan,
+            boundary="none",
         )
 
         # Overwrite signal patterns
@@ -1880,7 +1885,13 @@ class EBSD(CommonImage, Signal2D):
                 print("Averaging with the neighbour patterns:", file=sys.stdout)
                 averaged_patterns.store(self.data, compute=True)
         else:
+            # Revert original chunks
+            averaged_patterns = averaged_patterns.rechunk(old_chunks)
+
             self.data = averaged_patterns
+
+        # Don't sink
+        gc.collect()
 
     def plot_virtual_bse_intensity(
         self,

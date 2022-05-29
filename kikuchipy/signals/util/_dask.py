@@ -114,7 +114,7 @@ def get_dask_array(signal, dtype: Optional[type] = None, **kwargs) -> da.Array:
         Keyword arguments passed to
         :func:`~kikuchipy.signals.util.get_chunking` to control the
         number of chunks the output data array is split into. Only
-        `chunk_shape`, `chunk_bytes` and `dtype` are passed on.
+        ``chunk_shape``, ``chunk_bytes`` and ``dtype`` are passed on.
 
     Returns
     -------
@@ -126,6 +126,13 @@ def get_dask_array(signal, dtype: Optional[type] = None, **kwargs) -> da.Array:
         dtype = signal.data.dtype
     if signal._lazy or isinstance(signal.data, da.Array):
         dask_array = signal.data
+        if kwargs.pop("rechunk", False):
+            new_chunks = _reduce_chunks(
+                dask_array=dask_array,
+                chunk_bytes=kwargs.pop("chunk_bytes", 8e6),
+                dtype_out=dtype,
+            )
+            dask_array = dask_array.rechunk(new_chunks)
     else:
         chunks = get_chunking(
             signal=signal,
@@ -135,6 +142,40 @@ def get_dask_array(signal, dtype: Optional[type] = None, **kwargs) -> da.Array:
         )
         dask_array = da.from_array(signal.data, chunks=chunks)
     return dask_array.astype(dtype)
+
+
+def _reduce_chunks(
+    dask_array: da.Array,
+    chunk_bytes: Union[int, float] = 8e6,
+    dtype_out: Union[np.dtype, str] = "float32",
+) -> tuple:
+    chunksize = dask_array.chunksize
+    nav_chunksize = chunksize[:-2]
+    nav_ndim = len(nav_chunksize)
+    chunks_dict = {i: "auto" for i in range(nav_ndim)}
+    chunks_dict.update({i: -1 for i in range(nav_ndim, nav_ndim + 2)})
+
+    if nav_ndim == 2:
+        idx_min = np.argmin(nav_chunksize)
+        if nav_chunksize[idx_min] * np.prod(chunksize[-2:]) * 4 < chunk_bytes:
+            chunks_dict[idx_min] = -1
+
+    chunks = da.core.normalize_chunks(
+        chunks=chunks_dict,
+        shape=chunksize,
+        limit=chunk_bytes,
+        dtype=dtype_out,
+    )
+
+    old_chunks = dask_array.chunks
+    new_chunks = ()
+    for i in range(len(chunksize)):
+        if chunks_dict[i] == -1:
+            new_chunks += (old_chunks[i],)
+        else:
+            new_chunks += (chunks[i],)
+
+    return new_chunks
 
 
 def _get_chunk_overlap_depth(window, axes_manager, chunksize: tuple) -> dict:
