@@ -556,18 +556,18 @@ class TestAverageNeighbourPatternsEBSD:
                 (3, 3),
                 False,
                 # fmt: off
-                # Ten numbers per line
+                # One pattern per line
                 np.array(
                     [
-                        255, 109, 218, 218, 36, 236, 255, 36, 0, 143,
-                        111, 255, 159, 0, 207, 159, 63, 175, 136, 118,
-                        33, 118, 0, 255, 153, 118, 102, 182, 24, 255,
-                        121, 109, 85, 133, 0, 12, 254, 107, 228, 80,
-                        40, 107, 161, 147, 0, 204, 0, 51, 51, 51,
-                        229, 25, 76, 255, 195, 104, 255, 134, 150, 59,
-                        104, 120, 0, 204, 102, 255, 89, 127, 0, 12,
-                        140, 127, 255, 185, 0, 69, 162, 46, 0, 208,
-                        0
+                        255, 109, 218, 218, 36, 236, 255, 36, 0,
+                        143, 111, 255, 159, 0, 207, 159, 63, 175,
+                        135, 119, 34, 119, 0, 255, 153, 119, 102,
+                        182, 24, 255, 121, 109, 85, 133, 0, 12,
+                        255, 107, 228, 80, 40, 107, 161, 147, 0,
+                        204, 0, 51, 51, 51, 229, 25, 76, 255,
+                        194, 105, 255, 135, 149, 60, 105, 119, 0,
+                        204, 102, 255, 89, 127, 0, 12, 140, 127,
+                        255, 185, 0, 69, 162, 46, 0, 208, 0
                     ],
                 ),
                 # fmt: on
@@ -578,17 +578,18 @@ class TestAverageNeighbourPatternsEBSD:
                 (2, 3),
                 False,
                 # fmt: off
+                # One pattern per line
                 np.array(
                     [
-                        255, 223, 223, 255, 0, 223, 255, 63, 0, 109,
-                        145, 145, 200, 0, 255, 163, 54, 127, 119, 136,
-                        153, 170, 0, 255, 153, 136, 221, 212, 42, 255,
-                        127, 0, 141, 184, 14, 28, 210, 44, 179, 134,
-                        0, 255, 210, 14, 29, 200, 109, 182, 109, 0,
-                        255, 182, 145, 182, 150, 34, 255, 57, 81, 0,
-                        57, 69, 11, 255, 38, 191, 63, 114, 38, 50,
-                        89, 0, 255, 117, 137, 19, 117, 0, 0, 176,
-                        58
+                        255, 223, 223, 255, 0, 223, 255, 63, 0,
+                        109, 145, 145, 200, 0, 255, 163, 54, 127,
+                        119, 136, 153, 170, 0, 255, 153, 136, 221,
+                        212, 42, 255, 127, 0, 141, 184, 14, 28,
+                        210, 45, 180, 135, 0, 255, 210, 15, 30,
+                        200, 109, 182, 109, 0, 255, 182, 145, 182,
+                        150, 34, 255, 57, 81, 0, 57, 69, 11,
+                        255, 38, 191, 63, 114, 38, 51, 89, 0,
+                        255, 117, 137, 19, 117, 0, 0, 176, 58
                     ],
                 ),
                 # fmt: on
@@ -599,17 +600,18 @@ class TestAverageNeighbourPatternsEBSD:
                 (3, 3),
                 True,
                 # fmt: off
+                # one pattern per line
                 np.array(
                     [
-                        218, 46, 255, 139, 0, 150, 194, 3, 11, 211,
-                        63, 196, 145, 0, 255, 211, 33, 55, 175, 105,
-                        155, 110, 0, 255, 169, 135, 177, 184, 72, 255,
-                        112, 59, 62, 115, 55, 0, 255, 51, 225, 107,
-                        21, 122, 85, 47, 0, 254, 129, 152, 77, 0,
-                        169, 48, 187, 170, 153, 36, 255, 63, 86, 0,
-                        57, 69, 4, 255, 45, 206, 58, 115, 16, 33,
-                        98, 0, 255, 121, 117, 32, 121, 14, 0, 174,
-                        66
+                        218, 46, 255, 139, 0, 150, 194, 3, 11,
+                        211, 63, 196, 145, 0, 255, 211, 33, 55,
+                        175, 105, 155, 110, 0, 255, 169, 135, 177,
+                        184, 72, 255, 112, 59, 62, 115, 55, 0,
+                        255, 51, 225, 107, 21, 122, 85, 47, 0,
+                        255, 129, 152, 77, 0, 169, 48, 187, 170,
+                        153, 36, 255, 63, 86, 0, 57, 69, 4,
+                        254, 45, 206, 58, 115, 16, 33, 98, 0,
+                        255, 121, 117, 32, 121, 14, 0, 174, 66
                     ],
                 ),
                 # fmt: on
@@ -630,6 +632,11 @@ class TestAverageNeighbourPatternsEBSD:
             dummy_signal.average_neighbour_patterns(
                 window=window, window_shape=window_shape, **kwargs
             )
+
+        d = dummy_signal.data
+        if lazy:
+            d = d.compute()
+        print(d)
 
         answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
         assert np.allclose(dummy_signal.data, answer)
@@ -662,14 +669,18 @@ class TestAverageNeighbourPatternsEBSD:
     def test_average_neighbour_patterns_window_1d(self, dummy_signal):
         dummy_signal.average_neighbour_patterns(window_shape=(3,))
         # fmt: off
+        # One pattern per line
         answer = np.array(
             [
-                233, 106, 212, 233, 170, 233, 255, 21, 0, 191, 95, 255, 95, 0,
-                111, 143, 127, 159, 98, 117, 0, 117, 117, 255, 137, 117, 117,
-                239, 95, 255, 223, 191, 175, 207, 31, 0, 155, 127, 255, 56, 0,
-                14, 70, 155, 84, 175, 111, 0, 143, 127, 255, 95, 127, 191, 231,
-                0, 255, 162, 139, 139, 162, 23, 0, 135, 135, 255, 60, 105, 0,
-                60, 165, 105, 255, 127, 0, 127, 163, 182, 109, 145, 109
+                233, 106, 212, 233, 170, 233, 255, 21, 0,
+                191, 95, 255, 95, 0, 111, 143, 127, 159,
+                98, 117, 0, 117, 117, 255, 137, 117, 117,
+                239, 95, 255, 223, 191, 175, 207, 31, 0,
+                155, 127, 255, 56, 0, 14, 70, 155, 85,
+                175, 111, 0, 143, 127, 255, 95, 127, 191,
+                231, 0, 255, 162, 139, 139, 162, 23, 0,
+                135, 135, 255, 60, 105, 0, 60, 165, 105,
+                255, 127, 0, 127, 163, 182, 109, 145, 109
             ],
             dtype=np.uint8
         ).reshape(dummy_signal.axes_manager.shape)
@@ -681,15 +692,18 @@ class TestAverageNeighbourPatternsEBSD:
         w = kp.filters.Window()
         dummy_signal.average_neighbour_patterns(w)
         # fmt: off
-        # 15 numbers on each line
+        # One pattern per line
         answer = np.array(
             [
-                255, 109, 218, 218, 36, 236, 255, 36, 0, 143, 111, 255, 159, 0, 207,
-                159, 63, 175, 136, 118, 33, 118, 0, 255, 153, 118, 102, 182, 24, 255,
-                121, 109, 85, 133, 0, 12, 254, 107, 228, 80, 40, 107, 161, 147, 0,
-                204, 0, 51, 51, 51, 229, 25, 76, 255, 195, 104, 255, 134, 150, 59,
-                104, 120, 0, 204, 102, 255, 89, 127, 0, 12, 140, 127, 255, 185, 0,
-                69, 162, 46, 0, 208, 0
+                255, 109, 218, 218, 36, 236, 255, 36, 0,
+                143, 111, 255, 159, 0, 207, 159, 63, 175,
+                135, 119, 34, 119, 0, 255, 153, 119, 102,
+                182, 24, 255, 121, 109, 85, 133, 0, 12,
+                255, 107, 228, 80, 40, 107, 161, 147, 0,
+                204, 0, 51, 51, 51, 229, 25, 76, 255,
+                194, 105, 255, 135, 149, 60, 105, 119, 0,
+                204, 102, 255, 89, 127, 0, 12, 140, 127,
+                255, 185, 0, 69, 162, 46, 0, 208, 0
             ],
             dtype=np.uint8
         ).reshape(dummy_signal.axes_manager.shape)
@@ -703,6 +717,42 @@ class TestAverageNeighbourPatternsEBSD:
         s = kp.signals.LazyEBSD(da.zeros((55, 75, 6, 6), chunks=chunks, dtype=np.uint8))
         s.average_neighbour_patterns()
         s.compute()
+
+    def test_average_neighbour_patterns_control(self):
+        """Compare averaged array to array built up manually.
+
+        Also test Numba function directly.
+        """
+        shape = (3, 3, 3, 3)
+        data = np.arange(np.prod(shape), dtype=np.float32).reshape(shape)
+
+        # Reference
+        data_desired = np.zeros_like(data)
+        window_sums = np.array([[3, 4, 3], [4, 5, 4], [3, 4, 3]])
+        for i in range(shape[0]):
+            for j in range(shape[1]):
+                p = np.zeros(shape[2:], dtype=data.dtype)
+                for k in [(i - 1, j), (i, j), (i + 1, j), (i, j - 1), (i, j + 1)]:
+                    if -1 not in k and 3 not in k:
+                        p += data[k]
+                p /= window_sums[i, j]
+                data_desired[i, j] = kp.pattern.rescale_intensity(p)
+
+        # Averaging
+        s = kp.signals.EBSD(data)
+        s.average_neighbour_patterns()
+
+        assert np.allclose(s.data, data_desired)
+
+        # Test Numba function
+        window = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]])[:, :, None, None]
+        correlated_patterns = correlate(data, weights=window, mode="constant", cval=0)
+        rescaled_patterns = (
+            kp.pattern.chunk._rescale_neighbour_averaged_patterns.py_func(
+                correlated_patterns, window_sums, correlated_patterns.dtype, -1, 1
+            )
+        )
+        assert np.allclose(rescaled_patterns, s.data)
 
 
 class TestVirtualBackscatterElectronImaging:
