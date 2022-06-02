@@ -112,10 +112,12 @@ def remove_static_background(
     dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
 ) -> np.ndarray:
     """Remove the static background in a chunk of EBSD patterns.
+
     Removal is performed by subtracting or dividing by a static
     background pattern. Resulting pattern intensities are rescaled
     keeping relative intensities or not and stretched to fill the
     available grey levels in the patterns' data type range.
+
     Parameters
     ----------
     patterns
@@ -141,6 +143,7 @@ def remove_static_background(
     dtype_out
         Data type of corrected patterns. If None (default), it is set to
         input patterns' data type.
+
     Returns
     -------
     corrected_patterns : numpy.ndarray
@@ -233,9 +236,11 @@ def remove_dynamic_background(
     **kwargs,
 ) -> np.ndarray:
     """Correct the dynamic background in a chunk of EBSD patterns.
+
     The correction is performed by subtracting or dividing by a Gaussian
     blurred version of each pattern. Returned pattern intensities are
     rescaled to fill the input data type range.
+
     Parameters
     ----------
     patterns
@@ -258,10 +263,12 @@ def remove_dynamic_background(
     kwargs :
         Keyword arguments passed to the Gaussian blurring function
         passed to `filter_func`.
+
     Returns
     -------
     corrected_patterns : numpy.ndarray
         Dynamic background corrected patterns.
+
     See Also
     --------
     kikuchipy.signals.ebsd.EBSD.remove_dynamic_background
@@ -306,8 +313,10 @@ def get_image_quality(
     normalize: bool = True,
 ) -> np.ndarray:
     """Compute the image quality in a chunk of EBSD patterns.
+
     The image quality is calculated based on the procedure defined by
     Krieger Lassen [Lassen1994]_.
+
     Parameters
     ----------
     patterns
@@ -324,6 +333,7 @@ def get_image_quality(
         Whether to normalize patterns to a mean of zero and standard
         deviation of 1 before calculating the image quality. Default
         is True.
+
     Returns
     -------
     image_quality_chunk : numpy.ndarray
