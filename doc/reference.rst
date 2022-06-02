@@ -397,6 +397,7 @@ Single and chunk pattern processing used by signals.
     ifft
     normalize_intensity
     remove_dynamic_background
+    remove_static_background
     rescale_intensity
 
 Functions operating on single EBSD patterns as :class:`~numpy.ndarray`.
@@ -418,7 +419,10 @@ of EBSD patterns.
     average_neighbour_patterns
     fft_filter
     get_dynamic_background
+    get_image_quality
     normalize_intensity
+    remove_dynamic_background
+    remove_static_background
     rescale_intensity
 
 .. automodule:: kikuchipy.pattern.chunk
