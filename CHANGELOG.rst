@@ -33,6 +33,9 @@ Added
 
 Changed
 -------
+- Chunking of EBSD signal navigation dimensions in
+  ``EBSD.average_neighbour_patterns()`` to reduce memory use.
+  (`#532 <https://github.com/pyxem/kikuchipy/pull/532>`_)
 - Remove requirement that the crystal map used for EBSD refinement has identical step
   size(s) to the EBSD signal's navigation axes. This raised an error previously, but now
   only emits a warning. (`#531 <https://github.com/pyxem/kikuchipy/pull/531>`_)

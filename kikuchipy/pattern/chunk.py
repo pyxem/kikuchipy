@@ -28,6 +28,7 @@
 from typing import Union, Optional, Tuple, List
 
 import dask.array as da
+from numba import njit
 import numpy as np
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.exposure import equalize_adapthist
@@ -35,6 +36,7 @@ from skimage.exposure import equalize_adapthist
 import kikuchipy.pattern._pattern as pattern_processing
 import kikuchipy.filters.fft_barnes as barnes
 from kikuchipy.filters.window import Window
+from kikuchipy.pattern._pattern import _rescale_with_min_max
 
 
 def rescale_intensity(
@@ -320,9 +322,7 @@ def average_neighbour_patterns(
         dtype_out = patterns.dtype.type
 
     # Correlate patterns with window
-    correlated_patterns = correlate(
-        patterns.astype(np.float32), weights=window, mode="constant", cval=0
-    )
+    correlated_patterns = correlate(patterns, weights=window, mode="constant", cval=0)
 
     # Divide convolved patterns by number of neighbours averaged with
     averaged_patterns = np.empty_like(correlated_patterns, dtype=dtype_out)
@@ -333,3 +333,40 @@ def average_neighbour_patterns(
         )
 
     return averaged_patterns
+
+
+def _average_neighbour_patterns(
+    patterns: np.ndarray,
+    window_sums: np.ndarray,
+    window: Union[np.ndarray, Window],
+    dtype_out: np.dtype,
+    omin: float,
+    omax: float,
+) -> np.ndarray:
+    """See docstring of :func:`average_neighbour_patterns`."""
+    patterns = patterns.astype("float32")
+    correlated_patterns = correlate(patterns, weights=window, mode="constant")
+    rescaled_patterns = _rescale_neighbour_averaged_patterns(
+        correlated_patterns, window_sums, dtype_out, omin, omax
+    )
+    return rescaled_patterns
+
+
+@njit(cache=True, fastmath=True, nogil=True)
+def _rescale_neighbour_averaged_patterns(
+    patterns: np.ndarray,
+    window_sums: np.ndarray,
+    dtype_out: np.dtype,
+    omin: float,
+    omax: float,
+) -> np.ndarray:
+    """See docstring of :func:`average_neighbour_patterns`."""
+    rescaled_patterns = np.zeros(patterns.shape, dtype=dtype_out)
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        pattern_i = patterns[nav_idx] / window_sums[nav_idx]
+        imin = np.min(pattern_i)
+        imax = np.max(pattern_i)
+        rescaled_patterns[nav_idx] = _rescale_with_min_max(
+            pattern_i, imin, imax, omin, omax
+        )
+    return rescaled_patterns
