@@ -398,10 +398,10 @@ class EBSDDetector:
         coordinates.
         """
         corners = np.zeros(self.navigation_shape + (4,))
-        corners[..., 0] = self.x_min ** 2 + self.y_min ** 2  # Up. left
-        corners[..., 1] = self.x_max ** 2 + self.y_min ** 2  # Up. right
-        corners[..., 2] = self.x_max ** 2 + self.y_max ** 2  # Lo. right
-        corners[..., 3] = self.x_min ** 2 + self.y_min ** 2  # Lo. left
+        corners[..., 0] = self.x_min**2 + self.y_min**2  # Up. left
+        corners[..., 1] = self.x_max**2 + self.y_min**2  # Up. right
+        corners[..., 2] = self.x_max**2 + self.y_max**2  # Lo. right
+        corners[..., 3] = self.x_min**2 + self.y_min**2  # Lo. left
         return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
 
     def pc_emsoft(self, version: int = 5) -> np.ndarray:

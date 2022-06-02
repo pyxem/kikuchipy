@@ -106,14 +106,13 @@ def file_reader(
     crystal_data = hdf5group2dict(f["CrystalData"])
     nml_params["CrystalData"] = crystal_data
     phase = _crystaldata2phase(crystal_data)
-
-    # Get the phase name
-    try:
-        xtal_name = os.path.split(nml_params["MCCLNameList"]["xtalname"])[0]
-        phase_name = os.path.splitext(xtal_name)[0]
-    except KeyError:
-        phase_name = None
-    phase.name = phase_name
+    if phase.name == "":
+        # Get the phase name
+        try:
+            xtal_name = nml_params["MCCLNameList"]["xtalname"]
+            phase.name = os.path.splitext(xtal_name)[0]
+        except KeyError:
+            pass
 
     # Get data shape and slices
     data_group = f["EMData/EBSDmaster"]
@@ -132,7 +131,7 @@ def file_reader(
 
     # TODO: Data shape and slices are easier to handle if the reader
     #  was a class (in addition to file_reader()) instead of a series of
-    #  function
+    #  functions
     dataset_shape = data_shape
     if projection.lower() == "lambert":
         data_slices = (slice(None, None),) + data_slices

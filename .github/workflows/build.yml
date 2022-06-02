@@ -8,7 +8,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
       - uses: psf/black@stable
+
+      - name: Install Black with Jupyter extension
+        run: pip install black[jupyter]
+
+      - name: Check code style of Jupyter notebooks
+        run: black doc/*/*.ipynb
 
   # Make sure all necessary files are included in a release
   manifest:
@@ -16,9 +23,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
       - uses: actions/setup-python@v2
+
       - name: Install dependencies
         run: pip install manifix
+
       - name: Check MANIFEST.in file
         run: python setup.py manifix
 
@@ -37,33 +47,44 @@ jobs:
           - os: ubuntu-latest
             python-version: 3.7
             OLDEST_SUPPORTED_VERSION: true
-            DEPENDENCIES: dask==2021.8.1 diffsims==0.4 hyperspy==1.6.5 matplotlib==3.3 numba==0.48 numpy==1.19 orix==0.8 scikit-image==0.16.2 scipy==1.7
+            DEPENDENCIES: dask==2021.8.1 diffsims==0.4.0 hyperspy==1.7 matplotlib==3.3 numba==0.52 numpy==1.19 orix==0.9.0 scikit-image==0.16.2
             LABEL: -oldest
     steps:
       - uses: actions/checkout@v2
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Display Python and pip versions
-        run: python -V; pip -V
+        run: |
+          python -V
+          pip -V
+
       - name: Install depedencies and package
         shell: bash
         run: pip install -U -e .'[tests]'
+
       - name: Install oldest supported version
         if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
         run: pip install ${{ matrix.DEPENDENCIES }}
+
       - name: Display package versions
         run: pip list
+
       - name: Run docstring tests
         if: ${{ matrix.os == 'ubuntu-latest' }}
         continue-on-error: true
         run: pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
+
       - name: Run tests
         run: pytest --cov=kikuchipy --pyargs kikuchipy
+
       - name: Generate line coverage
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: coverage report --show-missing
+
       - name: Upload coverage to Coveralls
         if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: AndreMiras/coveralls-python-action@develop

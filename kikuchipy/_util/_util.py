@@ -106,3 +106,44 @@ class deprecated:
         wrapped.__doc__ = new_doc
 
         return wrapped
+
+
+class deprecated_argument:
+    """Decorator to remove an argument from a function or method's
+    signature.
+
+    Adapted from `scikit-image
+    <https://github.com/scikit-image/scikit-image/blob/main/skimage/_shared/utils.py#L115>`_.
+    """
+
+    def __init__(self, name, since, removal, alternative=None):
+        self.name = name
+        self.since = since
+        self.removal = removal
+        self.alternative = alternative
+
+    def __call__(self, func):
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+            if self.name in kwargs.keys():
+                msg = (
+                    f"Argument `{self.name}` is deprecated and will be removed in "
+                    f"version {self.removal}. To avoid this warning, please do not use "
+                    f"`{self.name}`. "
+                )
+                if self.alternative is not None:
+                    msg += f"Use `{self.alternative}` instead. "
+                msg += f"See the documentation of `{func.__name__}()` for more details."
+                warnings.simplefilter(
+                    action="always", category=np.VisibleDeprecationWarning
+                )
+                func_code = func.__code__
+                warnings.warn_explicit(
+                    message=msg,
+                    category=np.VisibleDeprecationWarning,
+                    filename=func_code.co_filename,
+                    lineno=func_code.co_firstlineno + 1,
+                )
+            return func(*args, **kwargs)
+
+        return wrapped

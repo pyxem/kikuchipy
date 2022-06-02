@@ -20,7 +20,6 @@ import os
 import dask
 import dask.array as da
 from hyperspy.utils.roi import RectangularROI
-import matplotlib
 from matplotlib.pyplot import close
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase
@@ -30,8 +29,6 @@ from skimage.exposure import rescale_intensity
 
 import kikuchipy as kp
 from kikuchipy.conftest import assert_dictionary
-
-matplotlib.use("Agg")  # For plotting
 
 DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5")
@@ -149,72 +146,34 @@ class TestEBSD:
 
 class TestRemoveStaticBackgroundEBSD:
     @pytest.mark.parametrize(
-        "operation, relative, answer",
+        "operation, answer",
         [
             (
                 "subtract",
-                True,
                 # fmt: off
                 np.array(
                     [
-                        115, 162, 115, 185, 185, 139, 162, 46, 46, 208, 185,
-                        185, 185, 46, 208, 208, 185, 185, 0, 92, 69, 139, 92,
-                        231, 92, 92, 255, 185, 46, 162, 162, 139, 208, 208, 69,
-                        92, 92, 23, 208, 23, 69, 23, 69, 69, 162, 185, 162, 0,
-                        115, 208, 185, 185, 162, 46, 92, 46, 139, 92, 139, 23,
-                        46, 46, 46, 115, 231, 185, 115, 185, 23, 69, 231, 92,
-                        208, 115, 69, 162, 162, 162, 69, 139, 255,
-                    ]
-                ),
-                # fmt: on
-            ),
-            (
-                "subtract",
-                False,
-                # fmt: off
-                np.array(
-                    [
-                        127, 212, 127, 255, 255, 170, 212, 0, 0, 255, 218, 218,
-                        218, 0, 255, 255, 218, 218, 0, 92, 69, 139, 92, 231, 92,
-                        92, 255, 218, 0, 182, 182, 145, 255, 255, 36, 72, 95, 0,
-                        255, 0, 63, 0, 63, 63, 191, 226, 198, 0, 141, 255, 226,
-                        226, 198, 56, 153, 51, 255, 153, 255, 0, 51, 51, 51,
-                        113, 255, 198, 113, 198, 0, 56, 255, 85, 191, 63, 0,
-                        127, 127, 127, 0, 95, 255,
+                        127, 212, 127, 255, 255, 170, 212, 0, 0, 255, 218, 218, 218, 0,
+                        255, 255, 218, 218, 0, 92, 69, 139, 92, 231, 92, 92, 255, 218,
+                        0, 182, 182, 145, 255, 255, 36, 72, 95, 0, 255, 0, 63, 0, 63,
+                        63, 191, 226, 198, 0, 141, 255, 226, 226, 198, 56, 153, 51, 255,
+                        153, 255, 0, 51, 51, 51, 113, 255, 198, 113, 198, 0, 56, 255,
+                        85, 191, 63, 0, 127, 127, 127, 0, 95, 255
                     ]
                 ),
                 # fmt: on
             ),
             (
                 "divide",
-                True,
                 # fmt: off
                 np.array(
                     [
-                        85, 127, 85, 148, 170, 106, 127, 21, 0, 152, 148, 136,
-                        148, 0, 170, 170, 148, 170, 0, 63, 51, 106, 56, 191, 63,
-                        63, 255, 136, 21, 119, 127, 113, 170, 170, 42, 56, 68,
-                        0, 152, 0, 28, 0, 42, 42, 141, 136, 127, 0, 85, 198,
-                        148, 148, 127, 0, 68, 21, 102, 63, 113, 0, 21, 21, 0,
-                        85, 191, 136, 85, 170, 0, 42, 191, 56, 152, 85, 51, 127,
-                        141, 127, 42, 106, 255,
-                    ]
-                )
-                # fmt: on
-            ),
-            (
-                "divide",
-                False,
-                # fmt: off
-                np.array(
-                    [
-                        127, 191, 127, 223, 255, 159, 191, 31, 0, 229, 223, 204,
-                        223, 0, 255, 255, 223, 255, 0, 63, 51, 106, 56, 191, 63,
-                        63, 255, 196, 0, 167, 182, 157, 255, 255, 36, 60, 113,
-                        0, 255, 0, 47, 0, 70, 70, 236, 174, 163, 0, 109, 255,
-                        191, 191, 163, 0, 152, 47, 229, 143, 255, 0, 47, 47, 0,
-                        113, 255, 181, 113, 226, 0, 56, 255, 75, 132, 51, 10,
-                        102, 118, 102, 0, 76, 255,
+                        127, 191, 127, 223, 255, 159, 191, 31, 0, 229, 223, 204, 223, 0,
+                        255, 255, 223, 255, 0, 63, 51, 106, 56, 191, 63, 63, 255, 196,
+                        0, 167, 182, 157, 255, 255, 36, 60, 113, 0, 255, 0, 47, 0, 70,
+                        70, 236, 174, 163, 0, 109, 255, 191, 191, 163, 0, 153, 47, 229,
+                        143, 255, 0, 47, 47, 0, 113, 255, 181, 113, 226, 0, 56, 255, 75,
+                        132, 51, 10, 102, 119, 102, 0, 76, 255
                     ]
                 )
                 # fmt: on
@@ -222,7 +181,7 @@ class TestRemoveStaticBackgroundEBSD:
         ],
     )
     def test_remove_static_background(
-        self, dummy_signal, dummy_background, operation, relative, answer
+        self, dummy_signal, dummy_background, operation, answer
     ):
         """This tests uses a hard-coded answer. If specifically
         improvements to the intensities produced by this correction is
@@ -231,7 +190,7 @@ class TestRemoveStaticBackgroundEBSD:
         """
 
         dummy_signal.remove_static_background(
-            operation=operation, relative=relative, static_bg=dummy_background
+            operation=operation, static_bg=dummy_background
         )
         answer = answer.reshape((3, 3, 3, 3)).astype(np.uint8)
         assert np.allclose(dummy_signal.data, answer)
@@ -243,7 +202,7 @@ class TestRemoveStaticBackgroundEBSD:
             (
                 None,
                 ValueError,
-                "`EBSD.static_background` is not a valid NumPy or Dask array",
+                "`EBSD.static_background` is not a valid array",
             ),
             (np.ones((3, 2), dtype=np.uint8), ValueError, "Signal"),
         ],
@@ -265,16 +224,13 @@ class TestRemoveStaticBackgroundEBSD:
         assert isinstance(dummy_signal.data, da.Array)
         dummy_signal.static_background = da.from_array(dummy_background)
         dummy_signal.remove_static_background()
+        dummy_signal.remove_static_background(static_bg=dummy_signal.static_background)
 
     def test_remove_static_background_scalebg(self, dummy_signal, dummy_background):
         dummy_signal2 = dummy_signal.deepcopy()
-
-        dummy_signal.remove_static_background(
-            scale_bg=True, relative=False, static_bg=dummy_background
-        )
-
+        dummy_signal.remove_static_background(scale_bg=True, static_bg=dummy_background)
         dummy_signal2.remove_static_background(
-            scale_bg=False, relative=False, static_bg=dummy_background
+            scale_bg=False, static_bg=dummy_background
         )
 
         p1 = dummy_signal.inav[0, 0].data
@@ -283,20 +239,16 @@ class TestRemoveStaticBackgroundEBSD:
         assert not np.allclose(p1, p2, atol=0.1)
         assert np.allclose(p1, np.array([[15, 150, 15], [180, 255, 120], [150, 0, 75]]))
 
-    def test_remove_static_background_relative_and_scalebg_raises(
-        self, dummy_signal, dummy_background
-    ):
-        with pytest.raises(ValueError, match="'scale_bg' must be False"):
-            dummy_signal.remove_static_background(
-                relative=True, scale_bg=True, static_bg=dummy_background
-            )
-
     def test_non_square_patterns(self):
         s = kp.data.nickel_ebsd_small()
         s = s.isig[:, :-5]  # Remove bottom five rows
         static_bg = s.mean(axis=(0, 1))
         static_bg.change_dtype(np.uint8)
         s.remove_static_background(static_bg=static_bg.data)
+
+    def test_deprecated_parameter_relative(self, dummy_signal):
+        with pytest.warns(np.VisibleDeprecationWarning):
+            dummy_signal.remove_static_background(relative=True)
 
 
 class TestRemoveDynamicBackgroundEBSD:
@@ -307,15 +259,18 @@ class TestRemoveDynamicBackgroundEBSD:
                 "subtract",
                 2,
                 # fmt: off
+                # Ten numbers on each line
                 np.array(
                     [
-                        170, 215, 181, 255, 221, 188, 221, 32, 0, 255, 198, 228,
-                        199, 0, 230, 229, 201, 174, 0, 84, 77, 147, 48, 255, 81,
-                        74, 249, 246, 0, 216, 177, 109, 255, 250, 40, 44, 120,
-                        2, 255, 8, 32, 0, 67, 63, 145, 255, 195, 0, 120, 229,
-                        237, 222, 196, 1, 164, 34, 255, 128, 173, 0, 47, 49, 7,
-                        133, 245, 218, 110, 166, 0, 59, 255, 60, 255, 71, 35,
-                        145, 108, 144, 0, 108, 253,
+                        170, 215, 181, 255, 221, 188, 221, 32, 0, 255,
+                        198, 228, 199, 0, 230, 229, 201, 174, 0, 84,
+                        77, 147, 48, 255, 81, 74, 249, 246, 0, 216,
+                        177, 109, 255, 250, 40, 44, 120, 2, 255, 8,
+                        32, 0, 67, 63, 145, 254, 195, 0, 120, 229,
+                        237, 222, 196, 1, 164, 34, 255, 128, 173, 0,
+                        47, 49, 7, 133, 245, 218, 110, 166, 0, 59,
+                        255, 60, 255, 71, 35, 145, 108, 144, 0, 108,
+                        253,
                     ],
                 ),
                 # fmt: on
@@ -326,13 +281,15 @@ class TestRemoveDynamicBackgroundEBSD:
                 # fmt: off
                 np.array(
                     [
-                        181, 218, 182, 255, 218, 182, 218, 36, 0, 255, 198, 226,
-                        198, 0, 226, 226, 198, 170, 0, 84, 84, 142, 56, 255, 84,
-                        84, 254, 254, 0, 218, 181, 109, 255, 254, 36, 36, 113,
-                        0, 255, 0, 28, 0, 57, 57, 141, 255, 191, 0, 127, 223,
-                        223, 223, 191, 0, 169, 42, 255, 127, 170, 0, 42, 42, 0,
-                        141, 254, 226, 113, 169, 0, 56, 255, 56, 255, 72, 36,
-                        145, 109, 145, 0, 109, 254,
+                        181, 218, 182, 255, 218, 182, 218, 36, 0, 255,
+                        198, 226, 198, 0, 226, 226, 198, 170, 0, 84,
+                        84, 142, 56, 255, 84, 84, 254, 254, 0, 218,
+                        181, 109, 255, 254, 36, 36, 113, 0, 255, 0,
+                        28, 0, 57, 57, 141, 255, 191, 0, 127, 223,
+                        223, 223, 191, 0, 169, 42, 255, 127, 170, 0,
+                        42, 42, 0, 141, 254, 226, 113, 169, 0, 56,
+                        255, 56, 255, 72, 36, 145, 109, 145, 0, 109,
+                        254,
                     ],
                 ),
                 # fmt: on
@@ -343,13 +300,15 @@ class TestRemoveDynamicBackgroundEBSD:
                 # fmt: off
                 np.array(
                     [
-                        176, 217, 186, 255, 225, 194, 225, 39, 0, 255, 199, 228,
-                        199, 0, 231, 230, 202, 174, 0, 93, 88, 159, 60, 255, 91,
-                        86, 245, 241, 0, 214, 174, 107, 255, 247, 37, 38, 127,
-                        0, 255, 0, 30, 0, 67, 63, 150, 255, 199, 0, 128, 234,
-                        244, 224, 201, 0, 166, 42, 255, 133, 180, 0, 47, 48, 0,
-                        132, 238, 212, 109, 164, 0, 56, 255, 57, 255, 72, 36,
-                        146, 109, 145, 0, 109, 252,
+                        176, 217, 186, 254, 225, 194, 225, 39, 0, 255,
+                        199, 228, 199, 0, 231, 230, 202, 174, 0, 93,
+                        88, 159, 60, 255, 91, 86, 245, 241, 0, 214,
+                        174, 107, 255, 247, 37, 38, 127, 0, 255, 0,
+                        30, 0, 67, 63, 150, 255, 199, 0, 128, 234,
+                        244, 224, 201, 0, 166, 42, 254, 133, 180, 0,
+                        47, 48, 0, 132, 238, 212, 109, 164, 0, 56,
+                        255, 57, 255, 72, 36, 146, 109, 145, 0, 109,
+                        252,
                     ],
                 ),
                 # fmt: on
@@ -360,13 +319,15 @@ class TestRemoveDynamicBackgroundEBSD:
                 # fmt: off
                 np.array(
                     [
-                        181, 218, 182, 255, 219, 182, 219, 36, 0, 255, 198, 226,
-                        198, 0, 226, 226, 198, 170, 0, 85, 85, 142, 56, 255, 85,
-                        85, 254, 254, 0, 218, 181, 109, 255, 254, 36, 36, 114,
-                        0, 255, 0, 28, 0, 57, 57, 142, 255, 191, 0, 127, 223,
-                        224, 223, 191, 0, 169, 42, 255, 127, 170, 0, 42, 42, 0,
-                        141, 253, 225, 113, 169, 0, 56, 255, 56, 255, 72, 36,
-                        145, 109, 145, 0, 109, 254,
+                        181, 218, 182, 255, 219, 182, 219, 36, 0, 255,
+                        198, 226, 198, 0, 226, 226, 198, 170, 0, 85,
+                        85, 142, 56, 255, 85, 85, 254, 254, 0, 218,
+                        181, 109, 254, 254, 36, 36, 114, 0, 255, 0,
+                        28, 0, 57, 57, 142, 255, 191, 0, 127, 223,
+                        224, 223, 191, 0, 169, 42, 255, 127, 170, 0,
+                        42, 42, 0, 141, 253, 225, 113, 169, 0, 56,
+                        254, 56, 255, 72, 36, 145, 109, 145, 0, 109,
+                        254,
                     ],
                 ),
                 # fmt: on
@@ -595,15 +556,18 @@ class TestAverageNeighbourPatternsEBSD:
                 (3, 3),
                 False,
                 # fmt: off
+                # Ten numbers per line
                 np.array(
                     [
-                        255, 109, 218, 218, 36, 236, 255, 36, 0, 143, 111, 255,
-                        159, 0, 207, 159, 63, 175, 136, 118, 33, 118, 0, 255,
-                        153, 118, 102, 182, 24, 255, 121, 109, 85, 133, 0, 12,
-                        255, 107, 228, 80, 40, 107, 161, 147, 0, 204, 0, 51, 51,
-                        51, 229, 25, 76, 255, 195, 104, 255, 135, 150, 59, 104,
-                        120, 0, 204, 102, 255, 89, 127, 0, 12, 140, 127, 255,
-                        185, 0, 69, 162, 46, 0, 208, 0
+                        255, 109, 218, 218, 36, 236, 255, 36, 0, 143,
+                        111, 255, 159, 0, 207, 159, 63, 175, 136, 118,
+                        33, 118, 0, 255, 153, 118, 102, 182, 24, 255,
+                        121, 109, 85, 133, 0, 12, 254, 107, 228, 80,
+                        40, 107, 161, 147, 0, 204, 0, 51, 51, 51,
+                        229, 25, 76, 255, 195, 104, 255, 134, 150, 59,
+                        104, 120, 0, 204, 102, 255, 89, 127, 0, 12,
+                        140, 127, 255, 185, 0, 69, 162, 46, 0, 208,
+                        0
                     ],
                 ),
                 # fmt: on
@@ -616,13 +580,15 @@ class TestAverageNeighbourPatternsEBSD:
                 # fmt: off
                 np.array(
                     [
-                        255, 223, 223, 255, 0, 223, 255, 63, 0, 109, 145, 145,
-                        200, 0, 255, 163, 54, 127, 119, 136, 153, 170, 0, 255,
-                        153, 136, 221, 212, 42, 255, 127, 0, 141, 184, 14, 28,
-                        210, 44, 179, 134, 0, 255, 210, 14, 29, 200, 109, 182,
-                        109, 0, 255, 182, 145, 182, 150, 34, 255, 57, 81, 0, 57,
-                        69, 11, 255, 38, 191, 63, 114, 38, 50, 89, 0, 255, 117,
-                        137, 19, 117, 0, 0, 176, 58
+                        255, 223, 223, 255, 0, 223, 255, 63, 0, 109,
+                        145, 145, 200, 0, 255, 163, 54, 127, 119, 136,
+                        153, 170, 0, 255, 153, 136, 221, 212, 42, 255,
+                        127, 0, 141, 184, 14, 28, 210, 44, 179, 134,
+                        0, 255, 210, 14, 29, 200, 109, 182, 109, 0,
+                        255, 182, 145, 182, 150, 34, 255, 57, 81, 0,
+                        57, 69, 11, 255, 38, 191, 63, 114, 38, 50,
+                        89, 0, 255, 117, 137, 19, 117, 0, 0, 176,
+                        58
                     ],
                 ),
                 # fmt: on
@@ -635,13 +601,15 @@ class TestAverageNeighbourPatternsEBSD:
                 # fmt: off
                 np.array(
                     [
-                        218, 46, 255, 139, 0, 150, 194, 3, 11, 211, 63, 196,
-                        145, 0, 255, 211, 33, 55, 175, 105, 155, 110, 0, 255,
-                        169, 135, 177, 184, 72, 255, 112, 59, 62, 115, 55, 0,
-                        255, 51, 225, 107, 21, 122, 85, 47, 0, 255, 129, 152,
-                        77, 0, 169, 48, 187, 170, 153, 36, 255, 63, 86, 0, 57,
-                        69, 4, 255, 45, 206, 58, 115, 16, 33, 98, 0, 255, 121,
-                        117, 32, 121, 14, 0, 174, 66
+                        218, 46, 255, 139, 0, 150, 194, 3, 11, 211,
+                        63, 196, 145, 0, 255, 211, 33, 55, 175, 105,
+                        155, 110, 0, 255, 169, 135, 177, 184, 72, 255,
+                        112, 59, 62, 115, 55, 0, 255, 51, 225, 107,
+                        21, 122, 85, 47, 0, 254, 129, 152, 77, 0,
+                        169, 48, 187, 170, 153, 36, 255, 63, 86, 0,
+                        57, 69, 4, 255, 45, 206, 58, 115, 16, 33,
+                        98, 0, 255, 121, 117, 32, 121, 14, 0, 174,
+                        66
                     ],
                 ),
                 # fmt: on
@@ -654,7 +622,6 @@ class TestAverageNeighbourPatternsEBSD:
     ):
         if lazy:
             dummy_signal = dummy_signal.as_lazy()
-
         if kwargs is None:
             dummy_signal.average_neighbour_patterns(
                 window=window, window_shape=window_shape
@@ -714,14 +681,15 @@ class TestAverageNeighbourPatternsEBSD:
         w = kp.filters.Window()
         dummy_signal.average_neighbour_patterns(w)
         # fmt: off
+        # 15 numbers on each line
         answer = np.array(
             [
-                255, 109, 218, 218, 36, 236, 255, 36, 0, 143, 111, 255, 159, 0,
-                207, 159, 63, 175, 136, 118, 33, 118, 0, 255, 153, 118, 102,
-                182, 24, 255, 121, 109, 85, 133, 0, 12, 255, 107, 228, 80, 40,
-                107, 161, 147, 0, 204, 0, 51, 51, 51, 229, 25, 76, 255, 195,
-                104, 255, 135, 150, 59, 104, 120, 0, 204, 102, 255, 89, 127, 0,
-                12, 140, 127, 255, 185, 0, 69, 162, 46, 0, 208, 0
+                255, 109, 218, 218, 36, 236, 255, 36, 0, 143, 111, 255, 159, 0, 207,
+                159, 63, 175, 136, 118, 33, 118, 0, 255, 153, 118, 102, 182, 24, 255,
+                121, 109, 85, 133, 0, 12, 254, 107, 228, 80, 40, 107, 161, 147, 0,
+                204, 0, 51, 51, 51, 229, 25, 76, 255, 195, 104, 255, 134, 150, 59,
+                104, 120, 0, 204, 102, 255, 89, 127, 0, 12, 140, 127, 255, 185, 0,
+                69, 162, 46, 0, 208, 0
             ],
             dtype=np.uint8
         ).reshape(dummy_signal.axes_manager.shape)
@@ -1160,16 +1128,20 @@ class TestEBSDXmapProperty:
         xmap_bad = get_single_phase_xmap(
             nav_shape=nav_shape[::-1], step_sizes=step_sizes
         )
-        with pytest.raises(ValueError, match="The crystal map shape"):
+
+        with pytest.raises(ValueError, match="The `xmap` shape"):
             s.xmap = xmap_bad
-        with pytest.raises(ValueError, match="The crystal map shape"):
-            s.axes_manager["x"].scale = 2
+
+        s.axes_manager["x"].scale = 2
+        with pytest.warns(UserWarning, match="The `xmap` step size"):
             s.xmap = xmap_good
-        with pytest.raises(ValueError, match="The crystal map shape"):
-            s.axes_manager["x"].scale = 1
-            s.axes_manager["x"].name = "x2"
+
+        s2 = s.inav[:, :-2]
+        with pytest.raises(ValueError, match="The `xmap` shape"):
+            s2.axes_manager["x"].scale = 1
+            s2.axes_manager["x"].name = "x2"
             with pytest.warns(UserWarning, match="The signal navigation axes"):
-                s.xmap = xmap_good
+                s2.xmap = xmap_good
 
     def test_attribute_carry_over_from_deepcopy(self, get_single_phase_xmap):
         s = kp.data.nickel_ebsd_small(lazy=True)
@@ -1868,7 +1840,7 @@ class TestEBSDRefinement:
         assert detector_refined.pc.shape == nav_shape + (3,)
 
     @pytest.mark.filterwarnings("ignore: The line search algorithm did not converge")
-    @pytest.mark.filterwarnings("ignore: Angles are assumed to be in radians, ")
+    #    @pytest.mark.filterwarnings("ignore: Angles are assumed to be in radians, ")
     @pytest.mark.parametrize(
         "method, method_kwargs",
         [

@@ -26,6 +26,7 @@ from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticePoint
 from hyperspy import __version__ as hs_version
 from hyperspy.misc.utils import DictionaryTreeBrowser
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import CrystalMap, create_coordinate_arrays, Phase, PhaseList
@@ -39,6 +40,8 @@ from kikuchipy.projections.ebsd_projections import (
     detector2direct_lattice,
 )
 
+
+matplotlib.use("agg")
 
 # ------------------------- Helper functions ------------------------- #
 
@@ -341,7 +344,7 @@ def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
     navigation_axes = (1, 2)[:nav_dim]
 
     n_hkl = bands.size
-    n_hkl2 = n_hkl ** 2
+    n_hkl2 = n_hkl**2
     uvw = np.cross(hkl[:, np.newaxis, :], hkl).reshape((n_hkl2, 3))
     not000 = np.count_nonzero(uvw, axis=1) != 0
     uvw = uvw[not000]

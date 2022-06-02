@@ -17,6 +17,7 @@
 
 import numpy as np
 import pytest
+from scipy.fft import fft2
 
 from kikuchipy.filters.window import Window
 from kikuchipy.pattern._pattern import (
@@ -29,8 +30,13 @@ from kikuchipy.pattern._pattern import (
     normalize_intensity,
     rescale_intensity,
     remove_dynamic_background,
-    _rescale_with_min_max,
     _dynamic_background_frequency_space_setup,
+    _get_image_quality_numba,
+    _remove_background_subtract,
+    _remove_background_divide,
+    _remove_static_background_subtract,
+    _remove_static_background_divide,
+    _rescale_with_min_max,
 )
 
 # Expected output intensities from various image processing methods
@@ -93,7 +99,6 @@ class TestRescaleIntensityPattern:
             with pytest.raises(KeyError, match="Could not set output"):
                 _ = rescale_intensity(
                     pattern=pattern,
-                    in_range=None,
                     out_range=out_range,
                     dtype_out=dtype_out,
                 )
@@ -101,7 +106,6 @@ class TestRescaleIntensityPattern:
         else:
             rescaled_pattern = rescale_intensity(
                 pattern=pattern,
-                in_range=None,
                 out_range=out_range,
                 dtype_out=dtype_out,
             )
@@ -122,6 +126,54 @@ class TestRescaleIntensityPattern:
 
         assert np.allclose(np.min(p2), omin)
         assert np.allclose(np.max(p2), omax)
+
+
+class TestRemoveStaticBackgroundPattern:
+    def test_remove_static_background_subtract(self, dummy_signal, dummy_background):
+        p = dummy_signal.inav[0, 0].data
+        dtype_out = p.dtype
+        dtype = np.float32
+        p = p.astype(dtype)
+        bg = dummy_background.astype(dtype)
+
+        p0 = p.copy()
+        p2 = _remove_static_background_subtract(p, bg, dtype_out, 0, 255, False)
+        p3 = _remove_static_background_subtract.py_func(p, bg, dtype_out, 0, 255, False)
+        p4 = _remove_static_background_subtract.py_func(p, bg, dtype_out, 0, 255, True)
+
+        assert p2.dtype == dtype_out
+        assert np.allclose(p2, p3)
+        assert not np.allclose(p2, p4)
+
+        # Cover Numba function
+        p5 = _remove_background_subtract.py_func(p.astype("float32"), bg, 0, 255)
+        assert p5.min() == 0
+        assert p5.max() == 255
+
+        assert np.allclose(p0, p)
+        assert p0.dtype == p.dtype
+
+    def test_remove_static_background_divide(self, dummy_signal, dummy_background):
+        p = dummy_signal.inav[0, 0].data
+        dtype_out = p.dtype
+        dtype = np.float32
+        bg = dummy_background.astype(dtype)
+
+        p0 = p.copy()
+        p2 = _remove_static_background_divide(p, bg, dtype_out, 0, 255, False)
+        p3 = _remove_static_background_divide.py_func(p, bg, dtype_out, 0, 255, False)
+        p4 = _remove_static_background_divide.py_func(p, bg, dtype_out, 0, 255, True)
+
+        assert np.allclose(p2, p3)
+        assert not np.allclose(p2, p4)
+
+        # Cover Numba function
+        p5 = _remove_background_divide.py_func(p.astype("float32"), bg, 0, 255)
+        assert p5.min() == 0
+        assert p5.max() == 255
+
+        assert np.allclose(p0, p)
+        assert p0.dtype == p.dtype
 
 
 class TestRemoveDynamicBackgroundPattern:
@@ -161,12 +213,7 @@ class TestRemoveDynamicBackgroundPattern:
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
 
         p2 = remove_dynamic_background(
-            pattern=p,
-            operation="subtract",
-            filter_domain="frequency",
-            std=std,
-            truncate=truncate,
-            dtype_out=np.uint8,
+            pattern=p, std=std, truncate=truncate, dtype_out=np.uint8
         )
 
         assert np.allclose(p2, answer)
@@ -247,7 +294,7 @@ class TestGetDynamicBackgroundPattern:
 
         p = dummy_signal.inav[0, 0].data.astype(answer.dtype)
 
-        bg = get_dynamic_background(pattern=p, filter_domain="frequency", std=std)
+        bg = get_dynamic_background(pattern=p, std=std)
 
         assert np.allclose(bg, answer, atol=1e-4)
 
@@ -282,7 +329,7 @@ class TestGetImageQuality:
 
     def test_get_image_quality_white_noise(self):
         p = np.random.random((1001, 1001))
-        iq = get_image_quality(pattern=p, normalize=True)
+        iq = get_image_quality(pattern=p)
 
         assert np.allclose(iq, 0, atol=1e-2)
 
@@ -317,6 +364,18 @@ class TestGetImageQuality:
 
         assert np.allclose(vec, answer)
 
+    def test_get_image_quality_numba(self, dummy_signal):
+        """Cover Numba function."""
+        p = dummy_signal.inav[0, 0].data.astype(np.float32)
+        p = normalize_intensity(p)
+        fft_pattern = fft2(p)
+        frequency_vectors = fft_frequency_vectors(p.shape)
+        inertia_max = np.sum(frequency_vectors) / p.size
+        iq = _get_image_quality_numba.py_func(
+            fft_pattern, frequency_vectors, inertia_max
+        )
+        assert np.isclose(iq, -0.02, atol=1e-2)
+
 
 class TestFFTPattern:
     @pytest.mark.parametrize(
@@ -333,18 +392,10 @@ class TestFFTPattern:
         p[50, 50] = 2
 
         kwargs = {}
-
-        p_fft = fft(
-            pattern=p,
-            shift=shift,
-            real_fft_only=real_fft_only,
-            **kwargs,
-        )
+        p_fft = fft(pattern=p, shift=shift, real_fft_only=real_fft_only, **kwargs)
 
         assert np.allclose(
-            np.sum(fft_spectrum.py_func(p_fft)),
-            expected_spectrum_sum,
-            atol=1e-3,
+            np.sum(fft_spectrum.py_func(p_fft)), expected_spectrum_sum, atol=1e-3
         )
 
     @pytest.mark.parametrize(
@@ -376,8 +427,8 @@ class TestFFTPattern:
     def test_ifft_pattern_real(self, shift):
         # Odd second dimension becomes even with only real valued FFT
         p = np.random.random((101, 100))
-        p_fft = fft(p, shift=shift, real_fft_only=False)
-        p_ifft = ifft(p_fft, shift=shift, real_fft_only=False)
+        p_fft = fft(p, shift=shift)
+        p_ifft = ifft(p_fft, shift=shift)
 
         p_rfft = fft(p, shift=shift, real_fft_only=True)
         p_irfft = ifft(p_rfft, shift=shift, real_fft_only=True)
