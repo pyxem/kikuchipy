@@ -42,7 +42,6 @@ with open("kikuchipy/release.py") as fid:
 # https://setuptools.readthedocs.io/en/latest/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
 # fmt: off
 extra_feature_requirements = {
-    "3d": ["pyvista"],
     "doc": [
         "furo",
         "nbsphinx                   >= 0.7",
