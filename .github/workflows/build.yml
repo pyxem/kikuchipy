@@ -102,7 +102,7 @@ jobs:
           xvfb-run pytest --cov=kikuchipy --pyargs kikuchipy
 
       - name: Run tests
-        if: ${{ matrix.os != ubuntu-latest && matrix.python-version != 3.9 }}
+        if: ${{ matrix.os != 'ubuntu-latest' && matrix.python-version != 3.9 }}
         run: pytest --cov=kikuchipy --pyargs kikuchipy
 
       - name: Generate line coverage
