@@ -40,26 +40,37 @@ with open("kikuchipy/release.py") as fid:
 # Projects with optional features for building the documentation and running
 # tests. From setuptools:
 # https://setuptools.readthedocs.io/en/latest/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
+# fmt: off
 extra_feature_requirements = {
     "doc": [
         "furo",
-        "nbsphinx >= 0.7",
-        "sphinx >= 3.0.2, <= 4.0.2",
-        "sphinx-copybutton >= 0.2.5",
-        "sphinx-autodoc-typehints >= 1.10.3",
-        "sphinx-gallery >= 0.6",
-        "sphinxcontrib-bibtex >= 1.0",
+        "nbsphinx                   >= 0.7",
+        "pythreejs",  # Used in the docs by PyVista
+        "sphinx                     >= 3.0.2",
+        "sphinx-copybutton          >= 0.2.5",
+        "sphinx-autodoc-typehints   >= 1.10.3",
+        "sphinx-gallery             >= 0.6",
+        "sphinxcontrib-bibtex       >= 1.0",
     ],
-    "tests": ["coverage >= 5.0", "pytest >= 5.4", "pytest-cov >= 2.8.1"],
+    "tests": [
+        "coverage                   >= 5.0",
+        "pytest                     >= 5.4",
+        "pytest-cov                 >= 2.8.1",
+    ],
+    "viz": [
+        "pyvista",
+    ],
 }
+# fmt: on
 
-# Create a development project, including both the doc and tests projects
+# Create a development project including all extra dependencies
 extra_feature_requirements["dev"] = [
     "black[jupyter]",
     "manifix",
     "outdated",
     "pre-commit >= 1.16",
 ] + list(chain(*list(extra_feature_requirements.values())))
+
 
 setup(
     # Package description
