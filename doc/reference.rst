@@ -397,7 +397,6 @@ Single and chunk pattern processing used by signals.
     ifft
     normalize_intensity
     remove_dynamic_background
-    remove_static_background
     rescale_intensity
 
 Functions operating on single EBSD patterns as :class:`~numpy.ndarray`.
@@ -558,6 +557,7 @@ See :class:`~hyperspy._signals.signal2d.Signal2D` for methods inherited from Hyp
 .. autosummary::
     get_patterns
     normalize_intensity
+    plot_spherical
     rescale_intensity
 
 .. autoclass:: kikuchipy.signals.EBSDMasterPattern

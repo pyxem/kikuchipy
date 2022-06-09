@@ -231,6 +231,12 @@ Tips for writing Jupyter Notebooks that are meant to be converted to reST text f
 
   Please see the `black documentation <https://black.readthedocs.io/en/stable/index.html>`_
   for more details.
+- Displaying interactive 3D plots with
+  `PyVista <https://docs.pyvista.org/user-guide/jupyter/index.html>`_ requires a Jupyter
+  backend, and we use `pythreejs <https://github.com/jupyter-widgets/pythreejs>`_. This
+  can either be passed to the plotting function, or it can be set in a hidden (see point
+  above) notebook cell at the top of the notebook via
+  ``pyvista.set_jupyter_backend("pythreejs")``.
 
 In general, we run all notebooks every time the documentation is built with Sphinx, to
 ensure that all notebooks are compatible with the current API at all times. This is
