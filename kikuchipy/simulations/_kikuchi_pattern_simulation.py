@@ -181,15 +181,12 @@ class GeometricalKikuchiPatternSimulation(KikuchiPatternSimulation):
             coords = coords[~np.isnan(coords).any(axis=-1)]
         return coords
 
-    def _set_lines_detector_coordinates(self) -> np.ndarray:
+    def _set_lines_detector_coordinates(self):
         """Start and end point coordinates of bands in uncalibrated
         detector coordinates (a scale of 1 and offset of 0).
 
-        Returns
-        -------
-        band_coords_detector : numpy.ndarray
-            Band coordinates (x0, y0, x1, y1) on the detector.
         """
+
         # Get PC coordinates and add two axes to get the shape
         # (navigation shape, 1, 1)
         det = self.detector
@@ -206,7 +203,7 @@ class GeometricalKikuchiPatternSimulation(KikuchiPatternSimulation):
 
         self._lines_detector_coordinates = coords_d
 
-    def _set_zone_axes_detector_coordinates(self) -> np.ndarray:
+    def _set_zone_axes_detector_coordinates(self):
         """Coordinates of zone axes in uncalibrated detector
         coordinates (a scale of 1 and offset of 0).
 
@@ -214,11 +211,8 @@ class GeometricalKikuchiPatternSimulation(KikuchiPatternSimulation):
         the coordinates of the zone axes outside the detector are set to
         `np.nan`.
 
-        Returns
-        -------
-        za_coords : numpy.ndarray
-            Zone axis coordinates (x, y) on the detector.
         """
+
         xyg = self.zone_axes._xy_within_r_gnomonic
         xg = xyg[..., 0]
         yg = xyg[..., 1]
@@ -290,9 +284,7 @@ class GeometricalKikuchiPatternSimulation(KikuchiPatternSimulation):
         return texts
 
     def _lines_as_markers(self, **kwargs) -> list:
-        coords = self.lines_coordinates(
-            index=(), coordinates="detector", exclude_nan=False
-        )
+        coords = self.lines_coordinates(index=(), exclude_nan=False)
         lines_list = []
         segment_defaults = dict(linewidth=1, color="r", alpha=1, zorder=1)
         for k, v in segment_defaults.items():

@@ -15,8 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Optional, Tuple
+from typing import Tuple, Union
 
+import dask.array as da
+from dask.diagnostics import ProgressBar
 from diffsims.crystallography import ReciprocalLatticeVector
 import matplotlib.pyplot as plt
 import numpy as np
@@ -53,7 +55,7 @@ class KikuchiPatternSimulator:
     ) -> GeometricalKikuchiPatternSimulation:
         lattice = self.phase.structure.lattice
         ref = self.reflectors
-        hkl = ref.hkl.round(0).astype(int)
+        hkl = ref.hkl.round().astype(int)
 
         # Transformation from detector reference frame CSd to sample
         # reference frame CSs
@@ -65,19 +67,21 @@ class KikuchiPatternSimulator:
         # CSc
         u_o = rotations.to_matrix()
         # Transform rotations once
-        u_os = np.matmul(u_o, u_s)
+        u_o = da.from_array(u_o)
+        u_s = da.from_array(u_s)
+        u_os = da.matmul(u_o, u_s)
         # Transformation from CSc to reciprocal crystal reference frame
         # CSk*
         u_astar = lattice.recbase.T
+        u_astar = da.from_array(u_astar)
 
         # Combine transformations
-        u_kstar = np.matmul(u_astar, u_os)
+        u_kstar = da.matmul(u_astar, u_os)
 
-        print(1)
         # Transform {hkl} from CSk* to CSd
-        hkl_d = np.matmul(hkl, u_kstar)
+        hkl_da = da.from_array(hkl)
+        hkl_d = da.matmul(hkl_da, u_kstar)
 
-        print(2)
         # Get vectors that are in some pattern
         nav_axes = (0, 1)[: rotations.ndim]
         hkl_is_upper, hkl_in_a_pattern = _get_coordinates_in_upper_hemisphere(
@@ -85,16 +89,52 @@ class KikuchiPatternSimulator:
         )
         hkl_in_pattern = hkl_is_upper[..., hkl_in_a_pattern]
         hkl_d = hkl_d[..., hkl_in_a_pattern, :]
+        hkl_in_a_pattern = hkl_in_a_pattern.compute()
 
-        print(3)
         # Visible reflectors
-        reflectors_visible = self.reflectors[hkl_in_a_pattern]
+        visible_reflectors = self.reflectors[hkl_in_a_pattern]
         hkl = hkl[hkl_in_a_pattern]
 
         # Max. gnomonic radius to consider
         max_r_gnomonic = detector.r_max[0]
 
-        print(4)
+        # Zone axes <uvw> from {hkl}
+        uvw = np.cross(hkl[:, None, :], hkl)
+        uvw = uvw[~np.isclose(uvw, 0).all(axis=-1)]
+        uvw = np.unique(uvw, axis=0)
+
+        # Reduce an index triplet to smallest integer
+        uvw = Miller(uvw=uvw, phase=self.phase)
+        uvw = uvw.round().unique()
+        uvw = uvw.coordinates
+
+        # Transformation from CSc to direct crystal reference frame CSk
+        u_a = lattice.base
+        u_a = da.from_array(u_a)
+
+        # Combine transformations
+        u_k = da.matmul(u_a, u_os)
+
+        # Transform direct lattice vectors from CSk to CSd
+        uvw_da = da.from_array(uvw)
+        uvw_d = da.matmul(uvw_da, u_k)
+
+        # Get vectors that are in some pattern
+        uvw_is_upper, uvw_in_a_pattern = _get_coordinates_in_upper_hemisphere(
+            z_coordinates=uvw_d[..., 2], navigation_axes=nav_axes
+        )
+        uvw_in_pattern = uvw_is_upper[..., uvw_in_a_pattern]
+        uvw_d = uvw_d[..., uvw_in_a_pattern, :]
+        uvw_in_a_pattern.compute()
+
+        # Visible zone axes
+        uvw = uvw[uvw_in_a_pattern]
+
+        with ProgressBar(minimum=1):
+            hkl_d, hkl_in_pattern, uvw_d, uvw_in_pattern = da.compute(
+                [hkl_d, hkl_in_pattern, uvw_d, uvw_in_pattern]
+            )[0]
+
         lines = KikuchiPatternLine(
             hkl=Miller(hkl=hkl, phase=self.phase),
             hkl_detector=Vector3d(hkl_d),
@@ -102,41 +142,6 @@ class KikuchiPatternSimulator:
             max_r_gnomonic=max_r_gnomonic,
         )
 
-        print(5)
-        # Zone axes <uvw> from {hkl}
-        uvw = np.cross(hkl[:, None, :], hkl)
-        uvw = uvw[~np.isclose(uvw, 0).all(axis=-1)]
-        uvw = np.unique(uvw, axis=0)
-
-        print(6)
-        # Reduce an index triplet to smallest integer
-        uvw = Miller(uvw=uvw, phase=self.phase)
-        uvw = uvw.round().unique(use_symmetry=False)
-        uvw = uvw.coordinates
-
-        # Transformation from CSc to direct crystal reference frame CSk
-        u_a = lattice.base
-
-        # Combine transformations
-        u_k = np.matmul(u_a, u_os)
-
-        print(7)
-        # Transform direct lattice vectors from CSk to CSd
-        uvw_d = np.matmul(uvw, u_k)
-
-        print(8)
-        # Get vectors that are in some pattern
-        uvw_is_upper, uvw_in_a_pattern = _get_coordinates_in_upper_hemisphere(
-            z_coordinates=uvw_d[..., 2], navigation_axes=nav_axes
-        )
-        uvw_in_pattern = uvw_is_upper[..., uvw_in_a_pattern]
-        uvw_d = uvw_d[..., uvw_in_a_pattern, :]
-
-        print(9)
-        # Visible zone axes
-        uvw = uvw[uvw_in_a_pattern]
-
-        print(10)
         zone_axes = KikuchiPatternZoneAxis(
             uvw=Miller(uvw=uvw, phase=self.phase),
             uvw_detector=Vector3d(uvw_d),
@@ -144,11 +149,10 @@ class KikuchiPatternSimulator:
             max_r_gnomonic=max_r_gnomonic,
         )
 
-        print(11)
         simulation = GeometricalKikuchiPatternSimulation(
             detector=detector,
             rotations=rotations,
-            reflectors=reflectors_visible,
+            reflectors=visible_reflectors,
             lines=lines,
             zone_axes=zone_axes,
         )
@@ -174,14 +178,13 @@ class KikuchiPatternSimulator:
                 "with `self.reflectors.calculate_theta()`."
             )
 
-        # Sort reflectors into groups with identical structure factors
         f_hkl = abs(ref.structure_factor)
         color = f_hkl / f_hkl.max()
         color = abs(color - color.min() - color.max())
         color = np.full((ref.size, 3), color[:, np.newaxis])
 
         if projection == "stereographic":
-            kwargs = dict(color=color, linewidth=1)
+            kwargs = dict(color=color, linewidth=0.5)
             if mode == "lines":
                 if figure is not None:
                     ref.draw_circle(figure=figure, **kwargs)
@@ -209,14 +212,14 @@ class KikuchiPatternSimulator:
 
 
 def _get_coordinates_in_upper_hemisphere(
-    z_coordinates: np.ndarray, navigation_axes: tuple
-) -> Tuple[np.ndarray, np.ndarray]:
+    z_coordinates: Union[da.Array, np.ndarray], navigation_axes: tuple
+) -> Tuple[da.Array, da.Array]:
     """Return two boolean arrays with True if a coordinate is in the
     upper hemisphere and if it is in the upper hemisphere in some
     pattern, respectively.
     """
-    upper_hemisphere = np.atleast_2d(z_coordinates) > 0
-    in_a_pattern = np.sum(upper_hemisphere, axis=navigation_axes) != 0
+    upper_hemisphere = da.atleast_2d(z_coordinates) > 0
+    in_a_pattern = da.sum(upper_hemisphere, axis=navigation_axes) != 0
     return upper_hemisphere, in_a_pattern
 
 
