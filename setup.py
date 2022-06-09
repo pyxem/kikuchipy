@@ -46,7 +46,7 @@ extra_feature_requirements = {
         "furo",
         "nbsphinx                   >= 0.7",
         "pythreejs",  # Used in the docs by PyVista
-        "sphinx                     >= 3.0.2, <= 4.0.2",
+        "sphinx                     >= 3.0.2",
         "sphinx-copybutton          >= 0.2.5",
         "sphinx-autodoc-typehints   >= 1.10.3",
         "sphinx-gallery             >= 0.6",
