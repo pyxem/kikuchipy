@@ -26,7 +26,6 @@ from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticePoint
 from hyperspy import __version__ as hs_version
 from hyperspy.misc.utils import DictionaryTreeBrowser
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import CrystalMap, create_coordinate_arrays, Phase, PhaseList
@@ -41,7 +40,11 @@ from kikuchipy.projections.ebsd_projections import (
 )
 
 
-matplotlib.use("agg")
+if kp._pyvista_installed:
+    import pyvista as pv
+
+    pv.OFF_SCREEN = True
+    pv.global_theme.interactive = False
 
 # ------------------------- Helper functions ------------------------- #
 
