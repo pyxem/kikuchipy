@@ -21,6 +21,11 @@ Contributors
 
 Added
 -----
+- ``EBSDMasterPattern.plot_spherical()`` for plotting a master pattern in the
+  stereographic projection on the 3D sphere.
+  (`#536 <https://github.com/pyxem/kikuchipy/pull/536>`_)
+- A new package dependency on `pyvista` for 3D plotting and on `pythreejs` for the docs
+  are introduced. (`#536 <https://github.com/pyxem/kikuchipy/pull/536>`_)
 - Reduce time and memory use of the following ``kikuchipy.signals.EBSD`` methods by
   using ``hyperspy.signal.BaseSignal.map()``: ``remove_static_background()``,
   ``remove_dynamic_background()`` and ``get_image_quality()``.
@@ -33,6 +38,9 @@ Added
 
 Changed
 -------
+- Chunking of EBSD signal navigation dimensions in
+  ``EBSD.average_neighbour_patterns()`` to reduce memory use.
+  (`#532 <https://github.com/pyxem/kikuchipy/pull/532>`_)
 - Remove requirement that the crystal map used for EBSD refinement has identical step
   size(s) to the EBSD signal's navigation axes. This raised an error previously, but now
   only emits a warning. (`#531 <https://github.com/pyxem/kikuchipy/pull/531>`_)
@@ -41,15 +49,20 @@ Changed
 - Restrict minimal version of SciPy to 1.7.
   (`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
 
+Deprecated
+----------
+- The following functions for processing of pattern chunks in the
+  ``kikuchipy.pattern.chunk`` module are deprecated in 0.6 and will be removed in 0.7:
+  ``get_image_quality()``, ``remove_dynamic_background()`` and
+  ``remove_static_background()``. Use the ``EBSD`` class for processing of many
+  patterns. (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_,
+  `#533 <https://github.com/pyxem/kikuchipy/pull/533>`_  )
+
 Removed
 -------
 - The ``relative`` parameter in ``kikuchipy.signals.EBSD.remove_static_background()``.
   The parameter is accepted but not used. Passing it after this release will result in
   an error. (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_)
-- The following functions for processing of pattern chunks in the
-  ``kikuchipy.pattern.chunk`` module: ``get_image_quality()``,
-  ``remove_dynamic_background()`` and ``remove_static_background()``.
-  (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_)
 
 Fixed
 -----

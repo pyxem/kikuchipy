@@ -28,13 +28,17 @@
 from typing import Union, Optional, Tuple, List
 
 import dask.array as da
+from numba import njit
 import numpy as np
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.exposure import equalize_adapthist
+from skimage.util.dtype import dtype_range
 
 import kikuchipy.pattern._pattern as pattern_processing
 import kikuchipy.filters.fft_barnes as barnes
 from kikuchipy.filters.window import Window
+from kikuchipy.pattern._pattern import _rescale_with_min_max
+from kikuchipy._util import deprecated
 
 
 def rescale_intensity(
@@ -93,6 +97,91 @@ def rescale_intensity(
     return rescaled_patterns
 
 
+@deprecated(
+    since=0.6,
+    removal=0.7,
+    alternative="kikuchipy.signals.EBSD.remove_static_background",
+)
+def remove_static_background(
+    patterns: Union[np.ndarray, da.Array],
+    static_bg: Union[np.ndarray, da.Array],
+    operation_func: Union[np.subtract, np.divide],
+    scale_bg: bool = False,
+    in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+    out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
+) -> np.ndarray:
+    """Remove the static background in a chunk of EBSD patterns.
+
+    Removal is performed by subtracting or dividing by a static
+    background pattern. Resulting pattern intensities are rescaled
+    keeping relative intensities or not and stretched to fill the
+    available grey levels in the patterns' data type range.
+
+    Parameters
+    ----------
+    patterns
+        EBSD patterns.
+    static_bg
+        Static background pattern. If None is passed (default) we try to
+        read it from the signal metadata.
+    operation_func
+        Function to subtract or divide by the dynamic background
+        pattern.
+    scale_bg
+        Whether to scale the static background pattern to each
+        individual pattern's data range before removal (default is
+        False).
+    in_range
+        Min./max. intensity values of input and output patterns. If None
+        (default), it is set to the overall pattern min./max, losing
+        relative intensities between patterns.
+    out_range
+        Min./max. intensity values of the output patterns. If None
+        (default), `out_range` is set to `dtype_out` min./max according
+        to `skimage.util.dtype.dtype_range`.
+    dtype_out
+        Data type of corrected patterns. If None (default), it is set to
+        input patterns' data type.
+
+    Returns
+    -------
+    corrected_patterns : numpy.ndarray
+        Patterns with the static background removed.
+    """
+    if dtype_out is None:
+        dtype_out = patterns.dtype.type
+
+    if out_range is None:
+        out_range = dtype_range[dtype_out]
+
+    corrected_patterns = np.empty_like(patterns, dtype=dtype_out)
+
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        # Get pattern
+        pattern = patterns[nav_idx]
+
+        # Scale background
+        new_static_bg = static_bg
+        if scale_bg:
+            new_static_bg = pattern_processing.rescale_intensity(
+                pattern=static_bg, out_range=(np.min(pattern), np.max(pattern))
+            )
+
+        # Remove the static background
+        corrected_pattern = operation_func(pattern, new_static_bg)
+
+        # Rescale the intensities
+        corrected_patterns[nav_idx] = pattern_processing.rescale_intensity(
+            pattern=corrected_pattern,
+            in_range=in_range,
+            out_range=out_range,
+            dtype_out=dtype_out,
+        )
+
+    return corrected_patterns
+
+
 def get_dynamic_background(
     patterns: Union[np.ndarray, da.Array],
     filter_func: Union[gaussian_filter, barnes.fft_filter],
@@ -131,6 +220,145 @@ def get_dynamic_background(
         background[nav_idx] = filter_func(patterns[nav_idx], **kwargs)
 
     return background
+
+
+@deprecated(
+    since=0.6,
+    removal=0.7,
+    alternative="kikuchipy.signals.EBSD.remove_dynamic_background",
+)
+def remove_dynamic_background(
+    patterns: Union[np.ndarray, da.Array],
+    filter_func: Union[gaussian_filter, barnes.fft_filter],
+    operation_func: Union[np.subtract, np.divide],
+    out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
+    **kwargs,
+) -> np.ndarray:
+    """Correct the dynamic background in a chunk of EBSD patterns.
+
+    The correction is performed by subtracting or dividing by a Gaussian
+    blurred version of each pattern. Returned pattern intensities are
+    rescaled to fill the input data type range.
+
+    Parameters
+    ----------
+    patterns
+        EBSD patterns.
+    filter_func
+        Function where a Gaussian convolution filter is applied, in the
+        frequency or spatial domain. Either
+        :func:`scipy.ndimage.gaussian_filter` or
+        :func:`kikuchipy.util.barnes_fftfilter.fft_filter`.
+    operation_func
+        Function to subtract or divide by the dynamic background
+        pattern.
+    out_range
+        Min./max. intensity values of the output patterns. If None
+        (default), `out_range` is set to `dtype_out` min./max according
+        to `skimage.util.dtype.dtype_range`.
+    dtype_out
+        Data type of corrected patterns. If None (default), it is set to
+        input patterns' data type.
+    kwargs :
+        Keyword arguments passed to the Gaussian blurring function
+        passed to `filter_func`.
+
+    Returns
+    -------
+    corrected_patterns : numpy.ndarray
+        Dynamic background corrected patterns.
+
+    See Also
+    --------
+    kikuchipy.signals.ebsd.EBSD.remove_dynamic_background
+    kikuchipy.util.pattern.remove_dynamic_background
+    """
+    if dtype_out is None:
+        dtype_out = patterns.dtype.type
+
+    if out_range is None:
+        out_range = dtype_range[dtype_out]
+
+    corrected_patterns = np.empty_like(patterns, dtype=dtype_out)
+
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        # Get pattern
+        pattern = patterns[nav_idx]
+
+        # Get dynamic background by Gaussian filtering in frequency or
+        # spatial domain
+        dynamic_bg = filter_func(pattern, **kwargs)
+
+        # Remove dynamic background
+        corrected_pattern = operation_func(pattern, dynamic_bg)
+
+        # Rescale intensities
+        corrected_patterns[nav_idx] = pattern_processing.rescale_intensity(
+            pattern=corrected_pattern,
+            out_range=out_range,
+            dtype_out=dtype_out,
+        )
+
+    return corrected_patterns
+
+
+@deprecated(
+    since=0.6, removal=0.7, alternative="kikuchipy.signals.EBSD.get_image_quality"
+)
+def get_image_quality(
+    patterns: Union[np.ndarray, da.Array],
+    frequency_vectors: Optional[np.ndarray] = None,
+    inertia_max: Union[None, int, float] = None,
+    normalize: bool = True,
+) -> np.ndarray:
+    """Compute the image quality in a chunk of EBSD patterns.
+
+    The image quality is calculated based on the procedure defined by
+    Krieger Lassen [Lassen1994]_.
+
+    Parameters
+    ----------
+    patterns
+        EBSD patterns.
+    frequency_vectors
+        Integer 2D array with values corresponding to the weight given
+        each FFT spectrum frequency component. If None (default), these
+        are calculated from
+        :func:`~kikuchipy.util.pattern.fft_frequency_vectors`.
+    inertia_max
+        Maximum inertia of the FFT power spectrum of the image. If None
+        (default), this is calculated from the `frequency_vectors`.
+    normalize
+        Whether to normalize patterns to a mean of zero and standard
+        deviation of 1 before calculating the image quality. Default
+        is True.
+
+    Returns
+    -------
+    image_quality_chunk : numpy.ndarray
+        Image quality of patterns.
+    """
+    dtype_out = np.float64
+
+    image_quality_chunk = np.empty(patterns.shape[:-2], dtype=dtype_out)
+
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        # Get (normalized) pattern
+        if normalize:
+            pattern = pattern_processing.normalize_intensity(pattern=patterns[nav_idx])
+        else:
+            pattern = patterns[nav_idx]
+
+        # Compute image quality
+        image_quality_chunk[nav_idx] = pattern_processing.get_image_quality(
+            pattern=pattern,
+            normalize=False,
+            frequency_vectors=frequency_vectors,
+            inertia_max=inertia_max,
+        )
+
+    return image_quality_chunk
 
 
 def adaptive_histogram_equalization(
@@ -320,9 +548,7 @@ def average_neighbour_patterns(
         dtype_out = patterns.dtype.type
 
     # Correlate patterns with window
-    correlated_patterns = correlate(
-        patterns.astype(np.float32), weights=window, mode="constant", cval=0
-    )
+    correlated_patterns = correlate(patterns, weights=window, mode="constant", cval=0)
 
     # Divide convolved patterns by number of neighbours averaged with
     averaged_patterns = np.empty_like(correlated_patterns, dtype=dtype_out)
@@ -333,3 +559,40 @@ def average_neighbour_patterns(
         )
 
     return averaged_patterns
+
+
+def _average_neighbour_patterns(
+    patterns: np.ndarray,
+    window_sums: np.ndarray,
+    window: Union[np.ndarray, Window],
+    dtype_out: np.dtype,
+    omin: float,
+    omax: float,
+) -> np.ndarray:
+    """See docstring of :func:`average_neighbour_patterns`."""
+    patterns = patterns.astype("float32")
+    correlated_patterns = correlate(patterns, weights=window, mode="constant")
+    rescaled_patterns = _rescale_neighbour_averaged_patterns(
+        correlated_patterns, window_sums, dtype_out, omin, omax
+    )
+    return rescaled_patterns
+
+
+@njit(cache=True, fastmath=True, nogil=True)
+def _rescale_neighbour_averaged_patterns(
+    patterns: np.ndarray,
+    window_sums: np.ndarray,
+    dtype_out: np.dtype,
+    omin: float,
+    omax: float,
+) -> np.ndarray:
+    """See docstring of :func:`average_neighbour_patterns`."""
+    rescaled_patterns = np.zeros(patterns.shape, dtype=dtype_out)
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        pattern_i = patterns[nav_idx] / window_sums[nav_idx]
+        imin = np.min(pattern_i)
+        imax = np.max(pattern_i)
+        rescaled_patterns[nav_idx] = _rescale_with_min_max(
+            pattern_i, imin, imax, omin, omax
+        )
+    return rescaled_patterns

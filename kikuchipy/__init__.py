@@ -15,8 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-# List of public modules
-# Import order must not be changed
+# Try to import only once
+try:
+    import pyvista
+
+    _pyvista_installed = True
+except ImportError:  # pragma: no cover
+    _pyvista_installed = False
+
+
+# List of public modules. Import order must not be changed.
 from kikuchipy import signals
 from kikuchipy import crystallography
 from kikuchipy import detectors

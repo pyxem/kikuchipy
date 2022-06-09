@@ -34,6 +34,7 @@ master_doc = "index"
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    "nbsphinx",
     "sphinxcontrib.bibtex",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
@@ -44,7 +45,6 @@ extensions = [
     "sphinx_autodoc_typehints",
     "sphinx_copybutton",
     "sphinx_gallery.load_style",
-    "nbsphinx",
 ]
 
 # Create links to references within kikuchipy's documentation to these
@@ -58,6 +58,7 @@ intersphinx_mapping = {
     "numpy": ("https://numpy.org/doc/stable", None),
     "orix": ("https://orix.readthedocs.io/en/stable", None),
     "python": ("https://docs.python.org/3", None),
+    "pyvista": ("https://docs.pyvista.org", None),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "skimage": ("https://scikit-image.org/docs/stable", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
@@ -89,11 +90,11 @@ pygments_style = "friendly"
 html_logo = "_static/logo/plasma_logo.svg"
 html_favicon = "_static/logo/plasma_favicon.png"
 
-# nbsphinx configuration
+# -- nbsphinx configuration --------------------------------------------
 # Taken from nbsphinx' own nbsphinx configuration file, with slight
-# modification to point nbviewer and Binder to the GitHub develop branch
-# links when the documentation is launched from a kikuchipy version with
-# "dev" in the version.
+# modifications to point nbviewer and Binder to the GitHub develop
+# branch links when the documentation is launched from a kikuchipy
+# version with "dev" in the version
 if "dev" in version:
     release_version = "develop"
 else:

@@ -17,7 +17,7 @@
 
 from typing import Callable, List, Optional, Tuple, Union
 
-import numba as nb
+from numba import njit
 import numpy as np
 from scipy.ndimage import gaussian_filter
 from scipy.fft import fft2, rfft2, ifft2, irfft2, fftshift, ifftshift
@@ -85,7 +85,7 @@ def rescale_intensity(
     return _rescale_with_min_max(pattern, imin, imax, omin, omax).astype(dtype_out)
 
 
-@nb.njit(cache=True, fastmath=True, nogil=True)
+@njit(cache=True, fastmath=True, nogil=True)
 def _rescale_with_min_max(
     pattern: np.ndarray,
     imin: Union[int, float],
@@ -103,7 +103,7 @@ def _rescale_with_min_max(
     return rescaled_pattern * (omax - omin) + omin
 
 
-@nb.njit("float32[:, :](float32[:, :])", cache=True, nogil=True, fastmath=True)
+@njit("float32[:, :](float32[:, :])", cache=True, nogil=True, fastmath=True)
 def _rescale_without_min_max(pattern: np.ndarray) -> np.ndarray:
     """Rescale a pattern to the intensity range [-1, 1].
 
@@ -126,7 +126,7 @@ def _normalize(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
     return patterns / patterns_norm_squared
 
 
-@nb.njit(cache=True, fastmath=True, nogil=True)
+@njit(cache=True, fastmath=True, nogil=True)
 def normalize_intensity(
     pattern: np.ndarray, num_std: int = 1, divide_by_square_root: bool = False
 ) -> np.ndarray:
@@ -302,7 +302,7 @@ def fft_filter(
     return np.real(ifft(filtered_fft, shift=shift))
 
 
-@nb.njit(cache=True, fastmath=True, nogil=True)
+@njit(cache=True, fastmath=True, nogil=True)
 def fft_spectrum(fft_pattern: np.ndarray) -> np.ndarray:
     """Compute the FFT spectrum of a Fourier transformed EBSD pattern.
 
@@ -346,7 +346,7 @@ def fft_frequency_vectors(shape: Tuple[int, int]) -> np.ndarray:
     return frequency_vectors
 
 
-@nb.njit(cache=True, fastmath=True, nogil=True)
+@njit(cache=True, fastmath=True, nogil=True)
 def _remove_static_background_subtract(
     pattern: np.ndarray,
     static_bg: np.ndarray,
@@ -369,7 +369,7 @@ def _remove_static_background_subtract(
     return pattern.astype(dtype_out)
 
 
-@nb.njit(cache=True, fastmath=True, nogil=True)
+@njit(cache=True, fastmath=True, nogil=True)
 def _remove_static_background_divide(
     pattern: np.ndarray,
     static_bg: np.ndarray,
@@ -437,7 +437,7 @@ def _remove_dynamic_background(
     return pattern.astype(dtype_out)
 
 
-@nb.njit(cache=True, fastmath=True, nogil=True)
+@njit(cache=True, fastmath=True, nogil=True)
 def _remove_background_subtract(
     pattern: np.ndarray,
     background: np.ndarray,
@@ -451,7 +451,7 @@ def _remove_background_subtract(
     return _rescale_with_min_max(pattern, imin, imax, omin, omax)
 
 
-@nb.njit(cache=True, fastmath=True, nogil=True)
+@njit(cache=True, fastmath=True, nogil=True)
 def _remove_background_divide(
     pattern: np.ndarray,
     background: np.ndarray,
@@ -699,6 +699,7 @@ def _get_image_quality(
     frequency_vectors: np.ndarray,
     inertia_max: float,
 ) -> float:
+    """See docstring of :func:`get_image_quality`."""
     pattern = pattern.astype(np.float32)
 
     if normalize:
@@ -711,7 +712,7 @@ def _get_image_quality(
     return _get_image_quality_numba(fft_pattern, frequency_vectors, inertia_max)
 
 
-@nb.njit(cache=True, fastmath=True, nogil=True)
+@njit(cache=True, fastmath=True, nogil=True)
 def _get_image_quality_numba(
     fft_pattern: np.ndarray, frequency_vectors: np.ndarray, inertia_max: float
 ) -> float:
