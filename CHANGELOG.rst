@@ -23,9 +23,9 @@ Added
 -----
 - ``EBSDMasterPattern.plot_spherical()`` for plotting a master pattern in the
   stereographic projection on the 3D sphere.
-  (`#518 <https://github.com/pyxem/kikuchipy/pull/518>`_)
+  (`#536 <https://github.com/pyxem/kikuchipy/pull/536>`_)
 - A new package dependency on `pyvista` for 3D plotting and on `pythreejs` for the docs
-  are introduced. (`#518 <https://github.com/pyxem/kikuchipy/pull/518>`_)
+  are introduced. (`#536 <https://github.com/pyxem/kikuchipy/pull/536>`_)
 - Reduce time and memory use of the following ``kikuchipy.signals.EBSD`` methods by
   using ``hyperspy.signal.BaseSignal.map()``: ``remove_static_background()``,
   ``remove_dynamic_background()`` and ``get_image_quality()``.
