@@ -65,16 +65,19 @@ jobs:
 
       - name: Install dependencies and package
         shell: bash
-        run: pip install -U -e .'[tests]'
+        run: |
+          pip install -U -e .'[tests]'
 
       - name: Install optional dependencies
         if: ${{ matrix.python-version == 3.9 }}
         shell: bash
-        run: pip install -e .'[viz]'
+        run: |
+          pip install -e .'[viz]'
 
       - name: Install oldest supported version
         if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
-        run: pip install ${{ matrix.DEPENDENCIES }}
+        run: |
+          pip install ${{ matrix.DEPENDENCIES }}
 
       - name: Install virtual buffer package necessary for PyVista
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 }}
@@ -83,18 +86,20 @@ jobs:
           sudo apt-get install xvfb
           /sbin/ldconfig -p | grep stdc++ # Temporarily check location
 
-      - name: Set up headless display necessary for PyVista
+      - name: Set up headless display necessary for PyVista on Windows
         if: ${{ matrix.os == 'windows-latest' && matrix.python-version == 3.9 }}
         uses: pyvista/setup-headless-display-action@v1
 
       - name: Display package versions
-        run: pip list
+        run: |
+          pip list
 
       - name: Run docstring tests
         continue-on-error: true
-        run: pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
+        run: |
+          pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
 
-      - name: Run tests in a virtual X server environment
+      - name: Run tests in a virtual X server environment on Ubuntu
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 }}
         run: |
           sudo apt-get update
@@ -102,14 +107,16 @@ jobs:
           xvfb-run pytest --cov=kikuchipy --pyargs kikuchipy
 
       - name: Run tests
-        if: ${{ matrix.os != 'ubuntu-latest' && matrix.python-version != 3.9 }}
-        run: pytest --cov=kikuchipy --pyargs kikuchipy
+        if: ${{ ! ( matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 ) }}
+        run: |
+          pytest --cov=kikuchipy --pyargs kikuchipy
 
       - name: Generate line coverage
-        if: ${{ matrix.python-version == 3.9 }}
-        run: coverage report --show-missing
+        run: |
+          coverage report --show-missing
 
       - name: Upload coverage to Coveralls
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: AndreMiras/coveralls-python-action@develop
         with:
           parallel: true
