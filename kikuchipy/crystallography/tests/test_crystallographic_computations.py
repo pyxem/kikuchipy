@@ -21,7 +21,7 @@ import pytest
 from orix.crystal_map import Phase
 
 from kikuchipy.crystallography._computations import (
-    _get_colors_for_allowed_vectors,
+    _get_colors_for_allowed_bands,
     _get_hkl_family,
     _get_uvw_from_hkl,
 )
@@ -175,7 +175,7 @@ class TestCrystallographicComputations:
         self, nickel_phase, highest_hkl, color_cycle, desired_hkl_colors
     ):
         """Desired colors for bands."""
-        hkl_colors = _get_colors_for_allowed_vectors(
+        hkl_colors = _get_colors_for_allowed_bands(
             phase=nickel_phase, highest_hkl=highest_hkl, color_cycle=color_cycle
         )
 
@@ -183,6 +183,6 @@ class TestCrystallographicComputations:
 
     def test_get_colors_for_allowed_bands_999(self, nickel_phase):
         """Not passing `highest_hkl` works fine."""
-        hkl_colors = _get_colors_for_allowed_vectors(phase=nickel_phase)
+        hkl_colors = _get_colors_for_allowed_bands(phase=nickel_phase)
 
         assert np.shape(hkl_colors) == (69, 2, 3)

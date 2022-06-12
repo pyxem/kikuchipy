@@ -19,13 +19,13 @@
 
 from typing import Union
 
-from diffsims.crystallography import ReciprocalLatticeVector
+from diffsims.crystallography import ReciprocalLatticePoint
 import numpy as np
 from orix.crystal_map import Phase
 from orix.vector import Vector3d
 
 
-class KikuchiBand(ReciprocalLatticeVector):
+class KikuchiBand(ReciprocalLatticePoint):
     """Kikuchi bands used in geometrical EBSD simulations."""
 
     def __init__(
@@ -40,7 +40,7 @@ class KikuchiBand(ReciprocalLatticeVector):
         simulated patterns.
 
         This class extends the
-        :class:`~diffsims.crystallography.ReciprocalLatticeVector` class
+        :class:`~diffsims.crystallography.ReciprocalLatticePoint` class
         with EBSD detector pixel and gnomonic coordinates for each band
         (or point).
 
@@ -304,7 +304,7 @@ class KikuchiBand(ReciprocalLatticeVector):
         raise NotImplementedError
 
 
-class ZoneAxis(ReciprocalLatticeVector):
+class ZoneAxis(ReciprocalLatticePoint):
     """Zone axes used in geometrical EBSD simulations."""
 
     def __init__(

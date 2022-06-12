@@ -17,15 +17,15 @@
 
 import logging
 from re import sub
-from typing import List, Optional, Union
+from typing import List, Optional
 
-import matplotlib.collections as mcollections
 import numpy as np
 from orix.quaternion.rotation import Rotation
 
 from kikuchipy.crystallography._computations import (
     _get_hkl_family,
-    _get_colors_for_allowed_vectors,
+    _get_colors_for_allowed_bands,
+    _is_equivalent,
 )
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.draw.markers import get_line_segment_list, get_point_list, get_text_list
@@ -78,17 +78,6 @@ class GeometricalEBSDSimulation:
         self.bands = bands
         self.zone_axes = zone_axes
 
-    def __repr__(self):
-        rotation_repr = repr(self.rotations).split("\n")[0]
-        band_repr = repr(self.bands).split("\n")[0]
-        return (
-            f"{self.__class__.__name__} {self.bands.navigation_shape}\n"
-            f"{self.detector}\n"
-            f"{self.bands.phase}\n"
-            f"{band_repr}\n"
-            f"{rotation_repr}"
-        )
-
     @property
     def bands_detector_coordinates(self) -> np.ndarray:
         """Start and end point coordinates of bands in uncalibrated
@@ -97,7 +86,7 @@ class GeometricalEBSDSimulation:
         Returns
         -------
         band_coords_detector : numpy.ndarray
-            Band coordinates (x0, y0, x1, y1) on the detector.
+            Band coordinates (y0, x0, y1, x1) on the detector.
         """
         # Get start and end points for the plane traces in gnomonic coordinates
         # and set up output array in uncalibrated detector coordinates
@@ -112,7 +101,7 @@ class GeometricalEBSDSimulation:
 
         # X and Y coordinates are now in place (0, 2) and (1, 3) respectively
         band_coords_detector[..., ::2] = (
-            band_coords_gnomonic[..., :2] + (pcx / pcz) * self.detector.aspect_ratio
+            band_coords_gnomonic[..., :2] + (pcx / pcz)
         ) / self.detector.x_scale[..., np.newaxis, np.newaxis]
         band_coords_detector[..., 1::2] = (
             -band_coords_gnomonic[..., 2:] + (pcy / pcz)
@@ -169,46 +158,6 @@ class GeometricalEBSDSimulation:
         za_coords[..., 1] -= 0.02 * self.detector.nrows
         return za_coords
 
-    @property
-    def zone_axes_within_gnomonic_bounds(self) -> np.ndarray:
-        """Return a boolean array with True for the zone axes within
-        the detector's gnomonic bounds.
-
-        Returns
-        -------
-        within_gnomonic_bounds : numpy.ndarray
-            Boolean array with True for zone axes within the detector's
-            gnomonic bounds.
-        """
-        # Get gnomonic bounds
-        x_range = self.detector.x_range
-        y_range = self.detector.y_range
-
-        # Extend gnomonic bounds by one detector pixel to include zone
-        # axes on the detector border
-        x_scale = self.detector.x_scale
-        y_scale = self.detector.y_scale
-        x_range[..., 0] -= x_scale
-        x_range[..., 1] += x_scale
-        y_range[..., 0] -= y_scale
-        y_range[..., 1] += y_scale
-
-        # Get gnomonic coordinates
-        xg = self.zone_axes.x_gnomonic
-        yg = self.zone_axes.y_gnomonic
-
-        # Add an extra dimension to account for n number of zone axes in
-        # the last dimension for the gnomonic coordinate arrays
-        x_range = np.expand_dims(x_range, axis=-2)
-        y_range = np.expand_dims(y_range, axis=-2)
-
-        # Get boolean array
-        within_x = np.logical_and(xg >= x_range[..., 0], xg <= x_range[..., 1])
-        within_y = np.logical_and(yg >= y_range[..., 0], yg <= y_range[..., 1])
-        within_gnomonic_bounds = within_x * within_y
-
-        return within_gnomonic_bounds.reshape(self.zone_axes._data_shape)
-
     def bands_as_markers(
         self, family_colors: Optional[List[str]] = None, **kwargs
     ) -> list:
@@ -236,22 +185,30 @@ class GeometricalEBSDSimulation:
         else:
             lines = self.bands_detector_coordinates
 
-        # Get dictionaries of families and in indices of bands in family
-        hkl = np.round(self.bands.hkl).astype(int)
-        gspacing = self.bands.gspacing
-        families, family_idx = _get_hkl_family(hkl, gspacing)
+        # Get dictionaries of families and in which a band belongs
+        families, families_idx = _get_hkl_family(self.bands.hkl.data)
 
         # Get family colors
+        # TODO: Perhaps move this outside this function (might be useful
+        #  elsewhere)
         if family_colors is None:
-            highest_hkl = np.max(np.abs(hkl), axis=0)
-            family_colors = _get_color_for_gspacing(
-                gspacing[family_idx], highest_hkl, self.bands.phase
+            family_colors = []
+            colors = _get_colors_for_allowed_bands(
+                phase=self.bands.phase,
+                highest_hkl=np.max(np.abs(self.bands.hkl.data), axis=0),
             )
+            for hkl in families.keys():
+                for table_hkl, color in colors:
+                    if _is_equivalent(hkl, table_hkl):
+                        family_colors.append(color)
+                        break
+                else:  # A non-allowed band is passed
+                    family_colors.append([1, 1, 1])
 
         # Append list of markers per family (colors changing with
         # family)
         marker_list = []
-        for i, idx in enumerate(families.values()):
+        for i, idx in enumerate(families_idx.values()):
             marker_list += get_line_segment_list(
                 lines=lines[..., idx, :],
                 linewidth=kwargs.pop("linewidth", 1),
@@ -304,7 +261,7 @@ class GeometricalEBSDSimulation:
         list
             List of text markers.
         """
-        za = np.round(self.zone_axes.hkl).astype(int)
+        za = self.zone_axes.hkl.data
         array_str = np.array2string(za, threshold=za.size)
         return get_text_list(
             texts=sub("[][ ]", "", array_str).split("\n"),
@@ -422,83 +379,53 @@ class GeometricalEBSDSimulation:
             markers += self.pc_as_markers(**pc_kwargs)
         return markers
 
-    def as_collections(
-        self,
-        index: Union[int, tuple, None] = None,
-        bands: bool = True,
-        bands_kwargs: Optional[dict] = None,
-        coordinates: str = "detector",
-    ) -> tuple:
-        """Return simulation features in one navigation position as
-        :class:`matplotlib.collections` to be added to an
-        :class:`matplotlib.axes.Axes` instance via
-        :meth:`matplotlib.axes.Axes.add_collection`.
-
-        Parameters
-        ----------
-        index
-        bands
-        bands_kwargs
-        coordinates
+    @property
+    def zone_axes_within_gnomonic_bounds(self) -> np.ndarray:
+        """Return a boolean array with True for the zone axes within
+        the detector's gnomonic bounds.
 
         Returns
         -------
-        out
+        within_gnomonic_bounds : numpy.ndarray
+            Boolean array with True for zone axes within the detector's
+            gnomonic bounds.
         """
-        if index is None:
-            index = (0, 0)[: self.bands.navigation_dimension]
+        # Get gnomonic bounds
+        x_range = self.detector.x_range
+        y_range = self.detector.y_range
 
-        out = ()
+        # Extend gnomonic bounds by one detector pixel to include zone
+        # axes on the detector border
+        x_scale = self.detector.x_scale
+        y_scale = self.detector.y_scale
+        x_range[..., 0] -= x_scale
+        x_range[..., 1] += x_scale
+        y_range[..., 0] -= y_scale
+        y_range[..., 1] += y_scale
 
-        if bands:
-            # Remove NaN and reshape to shape expected by Matplotlib
-            if coordinates == "detector":
-                band_coords = self.bands_detector_coordinates[index]
-            else:
-                band_coords = self.bands.plane_trace_coordinates[index]
-                band_coords[:, [0, 1, 2, 3]] = band_coords[:, [0, 2, 1, 3]]
+        # Get gnomonic coordinates
+        xg = self.zone_axes.x_gnomonic
+        yg = self.zone_axes.y_gnomonic
 
-            is_nan = np.isnan(band_coords).any(axis=-1)
-            band_coords = band_coords[~is_nan]
-            band_coords = band_coords.reshape((band_coords.shape[0], 2, 2))
+        # Add an extra dimension to account for n number of zone axes in
+        # the last dimension for the gnomonic coordinate arrays
+        x_range = np.expand_dims(x_range, axis=-2)
+        y_range = np.expand_dims(y_range, axis=-2)
 
-            # Determine vector families
-            bands = self.bands[index]
-            hkl = np.round(bands.hkl[~is_nan]).astype(int)
-            gspacing = bands.gspacing[~is_nan]
-            families, family_idx = _get_hkl_family(hkl, gspacing)
+        # Get boolean array
+        within_x = np.logical_and(xg >= x_range[..., 0], xg <= x_range[..., 1])
+        within_y = np.logical_and(yg >= y_range[..., 0], yg <= y_range[..., 1])
+        within_gnomonic_bounds = within_x * within_y
 
-            # Get family colors
-            highest_hkl = np.round(np.max(np.abs(hkl), axis=0)).astype(int)
-            family_colors = _get_color_for_gspacing(
-                gspacing[family_idx], highest_hkl, self.bands.phase
-            )
+        return within_gnomonic_bounds.reshape(self.zone_axes._data_shape)
 
-            if bands_kwargs is None:
-                bands_kwargs = {}
-            for i, (family, indices) in enumerate(families.items()):
-                band_collection_i = mcollections.LineCollection(
-                    segments=list(band_coords[indices]),
-                    linewidth=bands_kwargs.pop("linewidth", 1),
-                    color=family_colors[i],
-                    alpha=bands_kwargs.pop("alpha", 1),
-                    zorder=bands_kwargs.pop("zorder", 1),
-                    label=family,
-                    **bands_kwargs,
-                )
-
-                out += (band_collection_i,)
-
-        return out
-
-
-def _get_color_for_gspacing(gspacing, highest_hkl, phase):
-    hkl_lut, gspacing_lut, colors_lut = _get_colors_for_allowed_vectors(
-        phase=phase, highest_hkl=highest_hkl
-    )
-    colors = np.zeros((gspacing.size, 3))
-    for i, g in enumerate(gspacing):
-        j = np.where(np.isclose(g, gspacing_lut, atol=1e-6))[0]
-        if j.size != 0:
-            colors[i] = colors_lut[j[0]]
-    return colors
+    def __repr__(self):
+        rotation_repr = repr(self.rotations).split("\n")[0]
+        band_repr = repr(self.bands).split("\n")[0]
+        return (
+            f"{self.__class__.__name__} {self.bands.navigation_shape}\n"
+            f"{self.detector}\n"
+            f"{self.bands.phase}\n"
+            f"{band_repr}\n"
+            f"{rotation_repr}"
+        )

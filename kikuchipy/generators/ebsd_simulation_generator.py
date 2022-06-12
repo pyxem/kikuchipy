@@ -18,11 +18,10 @@
 from copy import deepcopy
 from typing import Optional, Tuple
 
-from diffsims.crystallography import ReciprocalLatticeVector
+from diffsims.crystallography import ReciprocalLatticePoint
 import numpy as np
 from orix.crystal_map import Phase
-from orix.quaternion import Rotation
-from orix.vector import Miller
+from orix.quaternion.rotation import Rotation
 
 from kikuchipy.crystallography._computations import _get_uvw_from_hkl
 from kikuchipy.detectors import EBSDDetector
@@ -136,7 +135,7 @@ class EBSDSimulationGenerator:
         )
 
     def geometrical_simulation(
-        self, reciprocal_lattice_vector: Optional[ReciprocalLatticeVector] = None
+        self, reciprocal_lattice_point: Optional[ReciprocalLatticePoint] = None
     ) -> GeometricalEBSDSimulation:
         """Project a set of Kikuchi bands and zone axes onto the
         detector, one set for each rotation of the unit cell.
@@ -145,7 +144,7 @@ class EBSDSimulationGenerator:
 
         Parameters
         ----------
-        reciprocal_lattice_vector
+        reciprocal_lattice_point
             Crystal planes to project onto the detector. If None, and
             the generator has a phase with a unit cell with a point
             group, a set of planes with minimum distance of 1 Å and
@@ -157,7 +156,7 @@ class EBSDSimulationGenerator:
 
         Examples
         --------
-        >>> from diffsims.crystallography import ReciprocalLatticeVector
+        >>> from diffsims.crystallography import ReciprocalLatticePoint
         >>> from orix import crystal_map, quaternion
         >>> import kikuchipy as kp
         >>> det = kp.detectors.EBSDDetector(
@@ -173,27 +172,27 @@ class EBSDSimulationGenerator:
         >>> sim1 = simgen.geometrical_simulation()
         >>> sim1.bands.size
         94
-        >>> rlv = ReciprocalLatticeVector(
+        >>> rlp = ReciprocalLatticePoint(
         ...     phase=p, hkl=[[1, 1, 1], [2, 0, 0]]
         ... ).symmetrise()
-        >>> sim2 = simgen.geometrical_simulation(rlv)
+        >>> sim2 = simgen.geometrical_simulation(rlp)
         >>> sim2.bands.size
         7
         """
-        rlv = reciprocal_lattice_vector
-        if rlv is None and (
+        rlp = reciprocal_lattice_point
+        if rlp is None and (
             hasattr(self.phase.point_group, "name")
             and hasattr(self.phase.structure.lattice, "abcABG")
         ):
-            rlv = ReciprocalLatticeVector.from_min_dspacing(self.phase, min_dspacing=1)
-            rlv = rlv[rlv.allowed].symmetrise()
-        elif rlv is None:
-            raise ValueError("A ReciprocalLatticeVector object must be passed")
-        self._rlv_phase_is_compatible(rlv)
+            rlp = ReciprocalLatticePoint.from_min_dspacing(self.phase, min_dspacing=1)
+            rlp = rlp[rlp.allowed].symmetrise()
+        elif rlp is None:
+            raise ValueError("A ReciprocalLatticePoint object must be passed")
+        self._rlp_phase_is_compatible(rlp)
 
         # Unit cell parameters (called more than once)
-        phase = rlv.phase
-        hkl = rlv.hkl
+        phase = rlp.phase
+        hkl = rlp.hkl.data
 
         # Get number of navigation dimensions and navigation axes
         # indices
@@ -210,7 +209,7 @@ class EBSDSimulationGenerator:
             lattice=phase.structure.lattice,
             rotation=self.rotations,
         )
-        # Output shape is (n hkl, n, 3) or (n hkl, ny, nx, 3)
+        # Output shape is (nhkl, n, 3) or (nhkl, ny, nx, 3)
         hkl_detector = np.tensordot(hkl, det2recip, axes=(1, 0))
         if n_nav_dims == 0:
             hkl_detector = hkl_detector.squeeze()
@@ -218,7 +217,6 @@ class EBSDSimulationGenerator:
         hkl_is_upper, hkl_in_a_pattern = _get_coordinates_in_upper_hemisphere(
             z_coordinates=hkl_detector[..., 2], navigation_axes=navigation_axes
         )
-
         hkl = hkl[hkl_in_a_pattern, ...]
         hkl_in_pattern = hkl_is_upper[hkl_in_a_pattern, ...].T
         # Get coordinates in the proper shape
@@ -268,17 +266,17 @@ class EBSDSimulationGenerator:
             zone_axes=zone_axes,
         )
 
-    def _rlv_phase_is_compatible(self, rlv: ReciprocalLatticeVector):
+    def _rlp_phase_is_compatible(self, rlp: ReciprocalLatticePoint):
         if (
             not np.allclose(
-                rlv.phase.structure.lattice.abcABG(),
+                rlp.phase.structure.lattice.abcABG(),
                 self.phase.structure.lattice.abcABG(),
                 atol=1e-4,
             )
-            or rlv.phase.point_group.name != self.phase.point_group.name
+            or rlp.phase.point_group.name != self.phase.point_group.name
         ):
             raise ValueError(
-                f"The lattice parameters and/or point group of {rlv.phase} are not the "
+                f"The lattice parameters and/or point group of {rlp.phase} are not the "
                 f"same as for {self.phase}"
             )
 
@@ -289,11 +287,11 @@ class EBSDSimulationGenerator:
         nav_shape = self.navigation_shape  # From rotations
         detector_nav_shape = self.detector.navigation_shape
         if detector_nav_shape == (1,):
-            self.detector.pc = np.full(nav_shape + (3,), fill_value=self.detector.pc[0])
+            self.detector.pc = np.ones(nav_shape + (3,)) * self.detector.pc[0]
         elif detector_nav_shape != nav_shape:
             raise ValueError(
                 f"The detector navigation shape {detector_nav_shape} must be (1,) or "
-                f"equal to the rotations' shape {self.rotations.shape}"
+                f"equal to the rotations's shape {self.rotations.shape}"
             )
         self.detector.navigation_shape = self.navigation_shape
 

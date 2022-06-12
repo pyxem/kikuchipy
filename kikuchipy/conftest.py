@@ -287,8 +287,6 @@ def nickel_kikuchi_band(nickel_rlp, nickel_rotations, pc1):
         binning=8,
         px_size=70,
         pc=np.ones(nav_shape + (3,)) * pc1,
-        sample_tilt=70,
-        tilt=0,
         convention="tsl",
     )
 
@@ -338,8 +336,6 @@ def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
         binning=8,
         px_size=70,
         pc=np.ones(nav_shape + (3,)) * pc1,
-        sample_tilt=70,
-        tilt=0,
         convention="tsl",
     )
 
