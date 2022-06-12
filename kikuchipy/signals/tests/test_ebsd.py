@@ -20,7 +20,7 @@ import os
 import dask
 import dask.array as da
 from hyperspy.utils.roi import RectangularROI
-from matplotlib.pyplot import close
+import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase
 import pytest
@@ -764,7 +764,7 @@ class TestVirtualBackscatterElectronImaging:
         roi = RectangularROI(left=0, top=0, right=1, bottom=1)
         dummy_signal.plot_virtual_bse_intensity(roi, out_signal_axes=out_signal_axes)
 
-        close("all")
+        plt.close("all")
 
     def test_get_virtual_image(self, dummy_signal):
         roi = RectangularROI(left=0, top=0, right=1, bottom=1)
@@ -1207,6 +1207,10 @@ class TestEBSDXmapProperty:
         r2 = s2.xmap.rotations.data
         assert not np.may_share_memory(r1, r2)
         assert np.allclose(r1, r2)
+
+        s._static_background = -1
+        s3 = s.deepcopy()
+        assert s3.static_background is None
 
 
 class TestEBSDDetectorProperty:
