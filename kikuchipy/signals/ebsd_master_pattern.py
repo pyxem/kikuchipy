@@ -69,6 +69,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
     phase = Phase()
     projection = None
     hemisphere = None
+    mode = None
 
     def __init__(self, *args, **kwargs):
         """Create an :class:`~kikuchipy.signals.EBSDMasterPattern`
@@ -81,6 +82,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         self.phase = kwargs.pop("phase", Phase())
         self.projection = kwargs.pop("projection", None)
         self.hemisphere = kwargs.pop("hemisphere", None)
+        self.mode = kwargs.pop("mode", None)
 
     def get_patterns(
         self,

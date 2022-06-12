@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from collections import defaultdict
 import logging
 from re import sub
 from typing import List, Optional, Union
