@@ -157,7 +157,7 @@ class KikuchiPatternZoneAxis(KikuchiPatternFeature):
         return self._r_gnomonic
 
     def _set_r_gnomonic(self):
-        self._r_gnomonic = np.sqrt(self.x_gnomonic ** 2 + self.y_gnomonic ** 2)
+        self._r_gnomonic = np.sqrt(self.x_gnomonic**2 + self.y_gnomonic**2)
 
     def _set_xy_within_r_gnomonic(self):
         xy = np.stack((self.x_gnomonic, self.y_gnomonic))
