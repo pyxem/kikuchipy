@@ -36,7 +36,7 @@ class TestEBSDDetector:
             shape=shape, px_size=px_size, binning=binning, tilt=tilt, pc=pc1
         )
         assert det.shape == shape
-        assert det.aspect_ratio == 0.5
+        assert det.aspect_ratio == 2
 
     @pytest.mark.parametrize(
         "nav_shape, desired_nav_shape, desired_nav_dim",
@@ -177,17 +177,17 @@ class TestEBSDDetector:
     @pytest.mark.parametrize(
         "shape, desired_x_range, desired_y_range",
         [
-            ((60, 60), [-0.833828, 1.1467617], [-0.4369182, 1.54367201]),
-            ((510, 510), [-0.833828, 1.1467617], [-0.4369182, 1.54367201]),
-            ((1, 1), [-0.833828, 1.1467617], [-0.4369182, 1.54367201]),
-            ((480, 640), [-0.6253713, 0.860071], [-0.4369182, 1.54367201]),
+            ((60, 60), [-0.833828, 1.146762], [-0.436918, 1.543672]),
+            ((510, 510), [-0.833828, 1.146762], [-0.436918, 1.543672]),
+            ((1, 1), [-0.833828, 1.146762], [-0.436918, 1.543672]),
+            ((480, 640), [-1.111771, 1.529016], [-0.436918, 1.543672]),
         ],
     )
     def test_gnomonic_range(self, pc1, shape, desired_x_range, desired_y_range):
         """Gnomonic x/y range, x depends on aspect ratio."""
         detector = kp.detectors.EBSDDetector(shape=shape, pc=pc1)
-        assert np.allclose(detector.x_range, desired_x_range)
-        assert np.allclose(detector.y_range, desired_y_range)
+        assert np.allclose(detector.x_range, desired_x_range, atol=1e-6)
+        assert np.allclose(detector.y_range, desired_y_range, atol=1e-6)
 
     @pytest.mark.parametrize(
         "shape, desired_x_scale, desired_y_scale",
@@ -195,11 +195,11 @@ class TestEBSDDetector:
             ((60, 60), 0.033569, 0.033569),
             ((510, 510), 0.003891, 0.003891),
             ((1, 1), 1.980590, 1.980590),
-            ((480, 640), 0.002324, 0.004134),
+            ((480, 640), 0.004133, 0.004135),
         ],
     )
     def test_gnomonic_scale(self, pc1, shape, desired_x_scale, desired_y_scale):
-        """Gnomonic x/y scale."""
+        """Gnomonic (x, y) scale."""
         detector = kp.detectors.EBSDDetector(shape=shape, pc=pc1)
         assert np.allclose(detector.x_scale, desired_x_scale, atol=1e-6)
         assert np.allclose(detector.y_scale, desired_y_scale, atol=1e-6)

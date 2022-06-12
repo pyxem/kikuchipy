@@ -38,6 +38,8 @@ Added
 
 Changed
 -------
+- Restrict minimal version of diffsims to 0.5.
+  (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - Chunking of EBSD signal navigation dimensions in
   ``EBSD.average_neighbour_patterns()`` to reduce memory use.
   (`#532 <https://github.com/pyxem/kikuchipy/pull/532>`_)

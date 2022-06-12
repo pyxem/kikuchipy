@@ -37,6 +37,7 @@ class EBSDDetector:
     Calculation of gnomonic coordinates is based on the work by Aimo
     Winkelmann in the supplementary material to
     :cite:`britton2016tutorial`.
+
     """
 
     def __init__(
@@ -125,7 +126,7 @@ class EBSDDetector:
 
         .. math::
 
-            x_B^* &= \frac{1}{2} + \frac{x_{pc}}{N_x b},\\
+            x_B^* &= \frac{1}{2} - \frac{x_{pc}}{N_x b},\\
             y_B^* &= \frac{1}{2} - \frac{y_{pc}}{N_y b},\\
             z_B^* &= \frac{L}{N_y b \delta},
 
@@ -411,9 +412,7 @@ class EBSDDetector:
         ----------
         version
             Which EMsoft PC convention to use. The direction of the x PC
-            coordinate, $x_{pc}$, flipped in version 5, because from
-            then on the EBSD patterns were viewed looking from detector
-            to sample, not the other way around.
+            coordinate, $x_{pc}$, flipped in version 5.
 
         Notes
         -----
@@ -424,7 +423,7 @@ class EBSDDetector:
 
         .. math::
 
-            x_{pc} &= N_x b \left(x_B^* - \frac{1}{2}\right),\\
+            x_{pc} &= N_x b \left(\frac{1}{2} - x_B^*\right),\\
             y_{pc} &= N_y b \left(\frac{1}{2} - y_B^*\right),\\
             L &= N_y b \delta z_B^*,
 
@@ -681,7 +680,7 @@ class EBSDDetector:
         pcx = self.pcx
         if version < 5:
             pcx = -pcx
-        new_pc[..., 0] = 0.5 + (pcx / (self.ncols * self.binning))
+        new_pc[..., 0] = 0.5 - (pcx / (self.ncols * self.binning))
         new_pc[..., 1] = 0.5 - (self.pcy / (self.nrows * self.binning))
         new_pc[..., 2] = self.pcz / (self.nrows * self.binning * self.px_size)
         return new_pc
@@ -694,7 +693,7 @@ class EBSDDetector:
 
     def _pc_bruker2emsoft(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc, dtype=np.float32)
-        new_pc[..., 0] = (self.pcx - 0.5) * self.ncols * self.binning
+        new_pc[..., 0] = (0.5 - self.pcx) * self.ncols * self.binning
         if version < 5:
             new_pc[..., 0] = -new_pc[..., 0]
         new_pc[..., 1] = (0.5 - self.pcy) * self.nrows * self.binning
