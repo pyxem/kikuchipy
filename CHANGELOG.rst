@@ -68,6 +68,8 @@ Removed
 
 Fixed
 -----
+- Plotting of geometrical simulation markers on rectangular patterns.
+  (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - Hopefully prevent EBSD refinement tests using random data to fail on Azure.
   (`#465 <https://github.com/pyxem/kikuchipy/pull/465>`_)
 

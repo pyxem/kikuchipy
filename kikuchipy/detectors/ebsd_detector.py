@@ -206,7 +206,7 @@ class EBSDDetector:
 
     @property
     def aspect_ratio(self) -> float:
-        """Number of detector rows divided by columns."""
+        """Number of detector columns divided by rows."""
         return self.ncols / self.nrows
 
     @property
@@ -687,7 +687,7 @@ class EBSDDetector:
 
     def _pc_tsl2bruker(self) -> np.ndarray:
         new_pc = deepcopy(self.pc)
-        new_pc[..., 1] = 1 - (self.pcy * self.aspect_ratio)
+        new_pc[..., 1] = 1 - self.pcy * self.aspect_ratio
         new_pc[..., 2] = new_pc[..., 2] * self.aspect_ratio
         return new_pc
 
@@ -702,6 +702,6 @@ class EBSDDetector:
 
     def _pc_bruker2tsl(self) -> np.ndarray:
         new_pc = deepcopy(self.pc)
-        new_pc[..., 1] = (1 - self.pcy) * self.aspect_ratio
-        new_pc[..., 2] = new_pc[..., 2] * self.aspect_ratio
+        new_pc[..., 1] = (1 - self.pcy) / self.aspect_ratio
+        new_pc[..., 2] = new_pc[..., 2] / self.aspect_ratio
         return new_pc

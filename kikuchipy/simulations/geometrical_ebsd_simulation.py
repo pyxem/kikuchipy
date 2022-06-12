@@ -101,7 +101,7 @@ class GeometricalEBSDSimulation:
 
         # X and Y coordinates are now in place (0, 2) and (1, 3) respectively
         band_coords_detector[..., ::2] = (
-            band_coords_gnomonic[..., :2] + (pcx / pcz)
+            band_coords_gnomonic[..., :2] + (pcx / pcz) * self.detector.aspect_ratio
         ) / self.detector.x_scale[..., np.newaxis, np.newaxis]
         band_coords_detector[..., 1::2] = (
             -band_coords_gnomonic[..., 2:] + (pcy / pcz)
@@ -134,7 +134,9 @@ class GeometricalEBSDSimulation:
         pcy = self.detector.pcy[..., np.newaxis]
         pcz = self.detector.pcz[..., np.newaxis]
 
-        za_coords[..., 0] = (xg + (pcx / pcz)) / self.detector.x_scale[..., np.newaxis]
+        za_coords[..., 0] = (
+            xg + (pcx / pcz) * self.detector.aspect_ratio
+        ) / self.detector.x_scale[..., np.newaxis]
         za_coords[..., 1] = (-yg + (pcy / pcz)) / self.detector.y_scale[..., np.newaxis]
 
         if self.exclude_outside_detector:
