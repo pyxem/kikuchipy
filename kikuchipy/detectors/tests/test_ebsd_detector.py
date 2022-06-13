@@ -17,9 +17,11 @@
 
 from copy import deepcopy
 
+import matplotlib
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
+from packaging.version import Version
 import pytest
 
 import kikuchipy as kp
@@ -380,16 +382,32 @@ class TestEBSDDetector:
             gnomonic_circles_kwargs=gnomonic_circles_kwargs,
             return_fig_ax=True,
         )
+
+        # Correct number of gnomonic circles are added to the patches
+        num_circles = 0
+        num_rectangles = 0
+        for patch in ax.patches:
+            if isinstance(patch, plt.Circle):
+                num_circles += 1
+            elif isinstance(patch, plt.Rectangle):
+                num_rectangles += 1
         if gnomonic_angles is None:
-            n_angles = 9
+            assert num_circles == 8  # Default
         else:
-            n_angles = len(gnomonic_angles) + 1
-        assert len(ax.patches) == n_angles
+            assert num_circles == len(gnomonic_angles)
+        if Version(matplotlib.__version__) < Version("3.5.0"):  # pragma: no cover
+            for artist in ax.artists:
+                if isinstance(artist, plt.Rectangle):
+                    num_rectangles += 1
+        assert num_rectangles == 1
+
+        # Circles are coloured correctly
         if gnomonic_circles_kwargs is None:
             edgecolor = "k"
         else:
             edgecolor = gnomonic_circles_kwargs["edgecolor"]
         assert np.allclose(ax.patches[1]._edgecolor[:3], mcolors.to_rgb(edgecolor))
+
         plt.close("all")
 
     @pytest.mark.parametrize("pattern", [np.ones((61, 61)), np.ones((59, 60))])
