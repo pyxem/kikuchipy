@@ -49,6 +49,7 @@ class deprecated:
         self,
         since: Union[str, int, float],
         alternative: Optional[str] = None,
+        alternative_is_function: bool = True,
         removal: Union[str, int, float, None] = None,
     ):
         """Visible deprecation warning.
@@ -60,18 +61,24 @@ class deprecated:
         alternative
             An alternative API that the user may use in place of the
             deprecated API.
+        alternative_is_function
+            Whether the alternative is a function. Default is ``True``.
         removal
             The expected removal version.
         """
         self.since = since
         self.alternative = alternative
+        self.alternative_is_function = alternative_is_function
         self.removal = removal
 
     def __call__(self, func: Callable):
         # Wrap function to raise warning when called, and add warning to
         # docstring
         if self.alternative is not None:
-            alt_msg = f" Use `{self.alternative}()` instead."
+            if self.alternative_is_function:
+                alt_msg = f" Use `{self.alternative}()` instead."
+            else:
+                alt_msg = f" Use `{self.alternative}` instead."
         else:
             alt_msg = ""
         if self.removal is not None:

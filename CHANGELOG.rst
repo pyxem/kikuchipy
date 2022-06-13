@@ -53,8 +53,11 @@ Changed
 
 Deprecated
 ----------
+- The ``kikuchipy.crystallography.matrices`` module is depreacted and will be removed in
+  version 0.7, access the matrices via :class:`diffpy.structure.Lattice` attributes
+  instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - The following functions for processing of pattern chunks in the
-  ``kikuchipy.pattern.chunk`` module are deprecated in 0.6 and will be removed in 0.7:
+  ``kikuchipy.pattern.chunk`` module are deprecated and will be removed in version 0.7:
   ``get_image_quality()``, ``remove_dynamic_background()`` and
   ``remove_static_background()``. Use the ``EBSD`` class for processing of many
   patterns. (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_,

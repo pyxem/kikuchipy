@@ -38,9 +38,10 @@ class TestCrystallographicMatrices:
         ],
     )
     def test_reciprocal_structure_matrix(self, lattice, desired_matrix):
-        assert np.allclose(
-            get_reciprocal_structure_matrix(lattice), desired_matrix, atol=1e-3
-        )
+        with pytest.warns(np.VisibleDeprecationWarning):
+            assert np.allclose(
+                get_reciprocal_structure_matrix(lattice), desired_matrix, atol=1e-3
+            )
 
     @pytest.mark.parametrize(
         "lattice, desired_matrix",
@@ -53,9 +54,10 @@ class TestCrystallographicMatrices:
         ],
     )
     def test_direct_structure_matrix(self, lattice, desired_matrix):
-        assert np.allclose(
-            get_direct_structure_matrix(lattice), desired_matrix, atol=1e-3
-        )
+        with pytest.warns(np.VisibleDeprecationWarning):
+            assert np.allclose(
+                get_direct_structure_matrix(lattice), desired_matrix, atol=1e-3
+            )
 
     @pytest.mark.parametrize(
         "lattice, desired_matrix",
@@ -68,6 +70,7 @@ class TestCrystallographicMatrices:
         ],
     )
     def test_reciprocal_metric_tensor(self, lattice, desired_matrix):
-        recip_metrics = get_reciprocal_metric_tensor(lattice)
+        with pytest.warns(np.VisibleDeprecationWarning):
+            recip_metrics = get_reciprocal_metric_tensor(lattice)
         assert np.allclose(recip_metrics, lattice.reciprocal().metrics, atol=1e-3)
         assert np.allclose(recip_metrics, desired_matrix, atol=1e-3)
