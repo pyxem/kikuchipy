@@ -367,7 +367,7 @@ class EBSD(CommonImage, Signal2D):
         --------
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
-        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
+        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1  # doctest: +SKIP
         ├── atom = Ni
         ├── coordinates = array([0, 0, 0])
         ├── debye_waller_factor = 0.0035
