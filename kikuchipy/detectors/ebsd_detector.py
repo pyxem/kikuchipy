@@ -557,7 +557,7 @@ class EBSDDetector:
         ... )
         >>> fig, ax = det.plot(
         ...     pattern=np.ones(det.shape),
-        ...     show_pc=True,
+        ...     pc=True,
         ...     return_fig_ax=True,
         ... )
         >>> fig.savefig("detector.png")

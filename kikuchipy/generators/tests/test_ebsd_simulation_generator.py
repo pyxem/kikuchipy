@@ -38,9 +38,10 @@ class TestEBSDSimulationGenerator:
         assert detector.navigation_shape == (1,)
         o_nickel = nickel_rotations.reshape(*nav_shape)
         assert o_nickel.shape == nav_shape
-        simgen = EBSDSimulationGenerator(
-            detector=detector, phase=nickel_phase, rotations=o_nickel
-        )
+        with pytest.warns(np.VisibleDeprecationWarning):
+            simgen = EBSDSimulationGenerator(
+                detector=detector, phase=nickel_phase, rotations=o_nickel
+            )
         assert simgen.detector.navigation_shape == simgen.rotations.shape
 
     @pytest.mark.parametrize("nav_shape", [(5, 5), (25,), (1, 25), (25, 1)])
@@ -81,9 +82,10 @@ class TestEBSDSimulationGenerator:
     ):
         """Setting rotations updates detector PC navigation shape."""
         r_nickel = nickel_rotations.reshape(*shape_in)
-        simgen = EBSDSimulationGenerator(
-            detector=detector, phase=nickel_phase, rotations=r_nickel
-        )
+        with pytest.warns(np.VisibleDeprecationWarning):
+            simgen = EBSDSimulationGenerator(
+                detector=detector, phase=nickel_phase, rotations=r_nickel
+            )
         assert simgen.navigation_shape == shape_in
         assert simgen.detector.navigation_shape == shape_in
         assert simgen.navigation_dimension == ndim_in

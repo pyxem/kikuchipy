@@ -16,13 +16,13 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
-from orix.vector import Vector3d
+from orix.vector import Miller, Vector3d
 
 
 class KikuchiPatternFeature:
     def __init__(
         self,
-        vector: Vector3d,
+        vector: Miller,
         vector_detector: Vector3d,
         in_pattern: np.ndarray,
         max_r_gnomonic: float = 10,
@@ -45,43 +45,6 @@ class KikuchiPatternFeature:
     def within_r_gnomonic(self) -> np.ndarray:
         return self._within_r_gnomonic
 
-    #    def __getitem__(self, key):
-    #        """Get a deepcopy subset of the simulation instance.
-    #
-    #        Properties have different shapes, so care must be taken when
-    #        slicing. As an example, consider a 2 x 3 map with 4 vectors.
-    #        Three data shapes are considered:
-    #        * navigation shape (2, 3) (x_gnomonic)
-    #        * vector shape (4,) (vector)
-    #        * full shape (2, 3, 4) (vector_detector, in_pattern)
-    #        """
-    #        n_keys = len(key) if hasattr(key, "__iter__") else 1
-    #        key = np.atleast_2d(key)
-    #        # These are overwritten as the input key length is investigated
-    #        nav_slice, sim_slice = key, key  # full_slice = key
-    #        ndim = self.ndim
-    #        if n_keys == 1:
-    #            if ndim != 0:
-    #                sim_slice = slice(None)
-    #        elif n_keys == 2:
-    #            if ndim == 0:
-    #                raise IndexError("Not enough axes to slice")
-    #            elif ndim == 1:
-    #                sim_slice = key[1]
-    #            else:  # nav_slice = key
-    #                sim_slice = slice(None)
-    #        elif n_keys == 3:  # Maximum number of slices
-    #            if ndim < 2:
-    #                raise IndexError("Not enough axes to slice")
-    #            else:
-    #                sim_slice = key[2]
-    #        return self.__class__(
-    #            self.vector[sim_slice],
-    #            self.vector_detector[sim_slice],
-    #            in_pattern=self.in_pattern[key],
-    #            max_r_gnomonic=self.max_r_gnomonic,
-    #        )
-
     def _set_within_r_gnomonic(self, coordinates):
         is_full_upper = np.atleast_2d(self.vector_detector.z) > -1e-5
         in_circle = coordinates < self.max_r_gnomonic
@@ -91,7 +54,7 @@ class KikuchiPatternFeature:
 class KikuchiPatternLine(KikuchiPatternFeature):
     def __init__(
         self,
-        hkl: Vector3d,
+        hkl: Miller,
         hkl_detector: Vector3d,
         in_pattern: np.ndarray,
         max_r_gnomonic: float = 10,
@@ -142,7 +105,7 @@ class KikuchiPatternLine(KikuchiPatternFeature):
 class KikuchiPatternZoneAxis(KikuchiPatternFeature):
     def __init__(
         self,
-        uvw: Vector3d,
+        uvw: Miller,
         uvw_detector: Vector3d,
         in_pattern: np.ndarray,
         max_r_gnomonic: float = 10,
@@ -164,19 +127,3 @@ class KikuchiPatternZoneAxis(KikuchiPatternFeature):
         xy = np.moveaxis(xy, 0, -1)
         xy[~self.within_r_gnomonic] = np.nan
         self._xy_within_r_gnomonic = xy
-
-
-def _get_dimension_str(nav_shape: tuple, sig_shape: tuple):
-    """Adapted from HyperSpy's AxesManager._get_dimension_str."""
-    dim_str = "("
-    if len(nav_shape) > 0:
-        for axis in nav_shape:
-            dim_str += f"{axis}, "
-    dim_str = dim_str.rstrip(", ")
-    dim_str += "|"
-    if len(sig_shape) > 0:
-        for axis in sig_shape:
-            dim_str += f"{axis}, "
-    dim_str = dim_str.rstrip(", ")
-    dim_str += ")"
-    return dim_str

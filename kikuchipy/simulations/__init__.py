@@ -21,10 +21,14 @@ zone axes.
 
 from kikuchipy.simulations.geometrical_ebsd_simulation import GeometricalEBSDSimulation
 from kikuchipy.simulations.kikuchi_pattern_simulator import KikuchiPatternSimulator
+from kikuchipy.simulations._kikuchi_pattern_simulation import (
+    GeometricalKikuchiPatternSimulation,
+)
 from kikuchipy.simulations import features
 
 __all__ = [
     "GeometricalEBSDSimulation",
+    "GeometricalKikuchiPatternSimulation",
     "KikuchiPatternSimulator",
     "features",
 ]

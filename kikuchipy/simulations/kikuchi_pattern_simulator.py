@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 from typing import Optional, Tuple, Union
 
 import dask.array as da
@@ -40,7 +41,8 @@ from kikuchipy.signals import EBSDMasterPattern
 
 
 class KikuchiPatternSimulator:
-    """Setup and calculation of Kikuchi pattern simulations.
+    """Setup and calculation of geometrical or kinematical Kikuchi
+    pattern simulations.
 
     Parameters
     ----------
@@ -76,7 +78,7 @@ class KikuchiPatternSimulator:
     def calculate_master_pattern(
         self,
         half_size: Optional[int] = 500,
-        hemisphere: Optional[str] = "north",
+        hemisphere: Optional[str] = "upper",
         scaling: Optional[str] = "linear",
     ) -> EBSDMasterPattern:
         r"""Calculate a kinematical master pattern in the stereographic
@@ -96,8 +98,8 @@ class KikuchiPatternSimulator:
             ``2 * half_size + 1``, given a master pattern of shape
             (1001, 1001) for the default value.
         hemisphere
-            Which hemisphere(s) to calculate. Options are ``"north"``
-            (default), ``"south"`` or ``"both"``.
+            Which hemisphere(s) to calculate. Options are ``"upper"``
+            (default), ``"lower"`` or ``"both"``.
         scaling
             Intensity scaling of the band kinematical intensities,
             either ``"linear"`` (default), :math:`|F|`, ``"square"``,
@@ -117,13 +119,13 @@ class KikuchiPatternSimulator:
         # Which hemisphere(s) to calculate
         if hemisphere == "both":
             poles = [-1, 1]
-        elif hemisphere == "north":
+        elif hemisphere == "upper":
             poles = [-1]
-        elif hemisphere == "south":
+        elif hemisphere == "lower":
             poles = [1]
         else:
             raise ValueError(
-                "Unknown `hemisphere`, valid options are 'north', 'south' or 'both'"
+                "Unknown `hemisphere`, valid options are 'upper', 'lower' or 'both'"
             )
 
         if scaling == "linear":
@@ -206,7 +208,7 @@ class KikuchiPatternSimulator:
         Parameters
         ----------
         detector
-            EBSD detector describing the detectors view of the sample.
+            EBSD detector describing the detector's view of the sample.
         rotations
             Crystal orientations assumed to be expressed with respect to
             the default EDAX TSL sample reference frame RD-TD-ND in the
@@ -215,11 +217,15 @@ class KikuchiPatternSimulator:
         Returns
         -------
         simulations
+
+        Notes
+        -----
+        This function is not optimized for large datasets, so use with
+        care.
         """
         lattice = self.phase.structure.lattice
         ref = self._reflectors
         hkl = ref.hkl
-        #        hkl = ref.hkl.round().astype(int)
 
         # Transformation from detector reference frame CSd to sample
         # reference frame CSs
@@ -227,13 +233,16 @@ class KikuchiPatternSimulator:
         u_s_bruker = Rotation.from_axes_angles((-1, 0, 0), total_tilt)
         u_s = Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
         u_s = u_s.to_matrix().squeeze()
+
         # Transformation from CSs to cartesian crystal reference frame
         # CSc
         u_o = rotations.to_matrix()
+
         # Transform rotations once
         u_o = da.from_array(u_o)
         u_s = da.from_array(u_s)
         u_os = da.matmul(u_o, u_s)
+
         # Transformation from CSc to reciprocal crystal reference frame
         # CSk*
         u_astar = lattice.recbase.T
@@ -246,14 +255,16 @@ class KikuchiPatternSimulator:
         hkl_da = da.from_array(hkl)
         hkl_d = da.matmul(hkl_da, u_kstar)
 
-        # Get vectors that are in some pattern
+        # Find bands that are in some pattern
         nav_axes = (0, 1)[: rotations.ndim]
         hkl_is_upper, hkl_in_a_pattern = _get_coordinates_in_upper_hemisphere(
             z_coordinates=hkl_d[..., 2], navigation_axes=nav_axes
         )
         hkl_in_pattern = hkl_is_upper[..., hkl_in_a_pattern]
         hkl_d = hkl_d[..., hkl_in_a_pattern, :]
-        hkl_in_a_pattern = hkl_in_a_pattern.compute()
+        with ProgressBar():
+            print("Finding bands that are in some pattern:", file=sys.stdout)
+            hkl_in_a_pattern = hkl_in_a_pattern.compute()
 
         # Visible reflectors
         visible_reflectors = self._reflectors[hkl_in_a_pattern]
@@ -283,18 +294,24 @@ class KikuchiPatternSimulator:
         uvw_da = da.from_array(uvw)
         uvw_d = da.matmul(uvw_da, u_k)
 
-        # Get vectors that are in some pattern
+        # Find zone axes that are in some pattern
         uvw_is_upper, uvw_in_a_pattern = _get_coordinates_in_upper_hemisphere(
             z_coordinates=uvw_d[..., 2], navigation_axes=nav_axes
         )
         uvw_in_pattern = uvw_is_upper[..., uvw_in_a_pattern]
         uvw_d = uvw_d[..., uvw_in_a_pattern, :]
-        uvw_in_a_pattern.compute()
+        with ProgressBar():
+            print("Finding zone axes that are in some pattern:", file=sys.stdout)
+            uvw_in_a_pattern = uvw_in_a_pattern.compute()
 
         # Visible zone axes
         uvw = uvw[uvw_in_a_pattern]
 
-        with ProgressBar(minimum=1):
+        with ProgressBar():
+            print(
+                "Calculating detector coordinates for bands and zone axes:",
+                file=sys.stdout,
+            )
             hkl_d, hkl_in_pattern, uvw_d, uvw_in_pattern = da.compute(
                 [hkl_d, hkl_in_pattern, uvw_d, uvw_in_pattern]
             )[0]
@@ -327,7 +344,7 @@ class KikuchiPatternSimulator:
         self,
         projection: Optional[str] = "stereographic",
         mode: Optional[str] = "lines",
-        hemisphere: Optional[str] = "north",
+        hemisphere: Optional[str] = "upper",
         figure: Optional[plt.Figure] = None,
         return_figure: bool = False,
         backend: str = "matplotlib",
@@ -346,8 +363,8 @@ class KikuchiPatternSimulator:
             calculated.
         hemisphere
             Which hemisphere to plot when
-            ``projection="stereographic"``. Options are ``"north"``
-            (default), ``"south"`` or ``"both"``. Ignored if ``figure``
+            ``projection="stereographic"``. Options are ``"upper"``
+            (default), ``"lower"`` or ``"both"``. Ignored if ``figure``
             is given.
         figure
             An existing :class:`~matplotlib.figure.Figure` to add the
@@ -422,14 +439,14 @@ class KikuchiPatternSimulator:
             return figure
 
     def _raise_if_no_theta(self):
-        if self.reflectors.theta[0] is None:
+        if np.isnan(self.reflectors.theta[0]):
             raise ValueError(
                 "Reflectors have no Bragg angles. Calculate with "
                 "`diffsims.crystallography.ReciprocalLatticeVector.calculate_theta()`."
             )
 
     def _raise_if_no_structure_factor(self):
-        if self.reflectors.structure_factor[0] is None:
+        if np.isnan(self.reflectors.structure_factor[0]):
             raise ValueError(
                 "Reflectors have no structure factors. Calculate with "
                 "`diffsims.crystallography.ReciprocalLatticeVector."

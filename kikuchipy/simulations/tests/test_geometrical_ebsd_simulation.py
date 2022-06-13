@@ -17,15 +17,11 @@
 
 from diffsims.crystallography import ReciprocalLatticePoint
 from hyperspy.utils.markers import line_segment, point, text
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
 from kikuchipy.signals import EBSD
-
-
-matplotlib.use("Agg")  # For plotting
 
 
 class TestGeometricalEBSDSimulation:

@@ -17,6 +17,7 @@
 
 from copy import deepcopy
 from typing import Optional, Tuple
+from warnings import warn
 
 from diffsims.crystallography import ReciprocalLatticePoint
 import numpy as np
@@ -34,8 +35,15 @@ from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
 
 
 class EBSDSimulationGenerator:
-    """A generator storing necessary parameters to simulate geometrical
-    EBSD patterns.
+    """*[Deprecated]* A generator storing necessary parameters to
+    simulate geometrical EBSD patterns.
+
+    Notes
+    -----
+    Deprecated since version 0.6: Class ``EBSDSimulationGenerator`` is
+    deprecated and will be removed in version 0.7. Use
+    :class:`~kikuchipy.simulations.KikuchiPatternSimulator` instead.
+
     """
 
     def __init__(self, detector: EBSDDetector, phase: Phase, rotations: Rotation):
@@ -67,13 +75,24 @@ class EBSDSimulationGenerator:
         ...     detector=det,
         ...     phase=p,
         ...     rotations=Rotation.from_euler([1.57, 0, 1.57])
-        ... )
+        ... )  # doctest: +SKIP
         >>> simgen
         EBSDSimulationGenerator (1,)
         EBSDDetector (60, 60), px_size 1 um, binning 1, tilt 0, azimuthal 0, pc (0.5, 0.5, 0.5)
         <name: ni. space group: Fm-3m. point group: m-3m. proper point group: 432. color: tab:blue>
         Rotation (1,)
+
         """
+
+        warn(
+            message=(
+                "Class `kikuchipy.generators.EBSDSimulationGenerator` is deprecated "
+                "and will be removed in version 0.7. Use "
+                "`kikuchipy.simulation.KikuchiPatternSimulator` instead."
+            ),
+            category=np.VisibleDeprecationWarning,
+        )
+
         self.detector = detector.deepcopy()
         self.phase = phase.deepcopy()
         self.rotations = deepcopy(rotations)
@@ -176,7 +195,7 @@ class EBSDSimulationGenerator:
         ...     phase=p, hkl=[[1, 1, 1], [2, 0, 0]]
         ... ).symmetrise()
         >>> sim2 = simgen.geometrical_simulation(rlp)
-        >>> sim2.bands.size
+        >>> sim2.bands.size  # doctest: +SKIP
         7
         """
         rlp = reciprocal_lattice_point

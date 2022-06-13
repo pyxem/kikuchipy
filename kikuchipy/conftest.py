@@ -20,6 +20,7 @@ from numbers import Number
 import os
 from packaging import version
 import tempfile
+import warnings
 
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
@@ -29,8 +30,8 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import CrystalMap, create_coordinate_arrays, Phase, PhaseList
-from orix.quaternion.rotation import Rotation
-from orix.vector import Vector3d, neo_euler
+from orix.quaternion import Rotation
+from orix.vector import Vector3d
 import pytest
 
 import kikuchipy as kp
@@ -45,6 +46,10 @@ if kp._pyvista_installed:
 
     pv.OFF_SCREEN = True
     pv.global_theme.interactive = False
+
+
+warnings.filterwarnings("always", category=DeprecationWarning)
+
 
 # ------------------------- Helper functions ------------------------- #
 
@@ -258,9 +263,7 @@ def nickel_rotations():
 @pytest.fixture
 def r_tsl2bruker():
     """A rotation from the TSL to Bruker crystal reference frame."""
-    yield Rotation.from_neo_euler(
-        neo_euler.AxAngle.from_axes_angles(Vector3d.zvector(), np.pi / 2)
-    )
+    yield Rotation.from_axes_angles(Vector3d.zvector(), np.pi / 2)
 
 
 @pytest.fixture
@@ -268,9 +271,10 @@ def nickel_ebsd_simulation_generator(nickel_phase, detector, nickel_rotations):
     """Generator for EBSD simulations of Kikuchi bands for the Nickel
     data set referenced above.
     """
-    yield kp.generators.EBSDSimulationGenerator(
-        detector=detector, phase=nickel_phase, rotations=nickel_rotations
-    )
+    with pytest.warns(np.VisibleDeprecationWarning):
+        yield kp.generators.EBSDSimulationGenerator(
+            detector=detector, phase=nickel_phase, rotations=nickel_rotations
+        )
 
 
 @pytest.fixture
