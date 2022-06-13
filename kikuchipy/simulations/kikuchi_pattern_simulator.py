@@ -29,6 +29,7 @@ from orix.plot._util import Arrow3D
 from orix.quaternion import Rotation
 from orix.vector import Miller, Vector3d
 
+from kikuchipy import _pyvista_installed
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.simulations._kikuchi_pattern_simulation import (
     GeometricalKikuchiPatternSimulation,
@@ -67,13 +68,7 @@ class KikuchiPatternSimulator:
 
     def __repr__(self) -> str:
         """String representation."""
-        ref = self.reflectors
-        name = self.__class__.__name__
-        shape = ref.shape
-        symmetry = self.phase.point_group.name
-        data = np.array_str(ref.coordinates, precision=0, suppress_small=True)
-        phase_name = self.phase.name
-        return f"{name} {shape}, {phase_name} ({symmetry})\n" f"{data}"
+        return f"{self.__class__.__name__}:\n" + repr(self.reflectors)
 
     def calculate_master_pattern(
         self,
@@ -125,7 +120,7 @@ class KikuchiPatternSimulator:
             poles = [1]
         else:
             raise ValueError(
-                "Unknown `hemisphere`, valid options are 'upper', 'lower' or 'both'"
+                "Unknown `hemisphere`, options are 'upper', 'lower' or 'both'"
             )
 
         if scaling == "linear":
@@ -137,7 +132,7 @@ class KikuchiPatternSimulator:
             intensity = np.ones(self.reflectors.size)
         else:
             raise ValueError(
-                "Unknown `scaling`, valid options are 'linear', 'square' or None"
+                "Unknown `scaling`, options are 'linear', 'square' or None"
             )
 
         # Get Dask arrays of reflector information
@@ -345,9 +340,11 @@ class KikuchiPatternSimulator:
         projection: Optional[str] = "stereographic",
         mode: Optional[str] = "lines",
         hemisphere: Optional[str] = "upper",
-        figure: Optional[plt.Figure] = None,
+        scaling: Optional[str] = "linear",
+        figure: Union[plt.Figure, "pyvista.Plotter", None] = None,
         return_figure: bool = False,
         backend: str = "matplotlib",
+        show_plotter: bool = True,
     ) -> Union[plt.Figure, "pyvista.Plotter"]:
         """Plot reflectors as lines or bands in the stereographic or
         spherical projection.
@@ -366,9 +363,15 @@ class KikuchiPatternSimulator:
             ``projection="stereographic"``. Options are ``"upper"``
             (default), ``"lower"`` or ``"both"``. Ignored if ``figure``
             is given.
+        scaling
+            Intensity scaling of the band kinematical intensities,
+            either ``"linear"`` (default), :math:`|F|`, ``"square"``,
+            :math:`|F|^2`, or ``"None"``, giving all bands the same
+            intensity.
         figure
-            An existing :class:`~matplotlib.figure.Figure` to add the
-            reflectors to. If not given, a new figure is created.
+            An existing :class:`~matplotlib.figure.Figure` or
+            :class:`~pyvista.Plotter` to add the reflectors to. If not
+            given, a new figure is created.
         return_figure
             Whether to return the figure. Default is ``False``. This is
             a :class:`~matplotlib.figure.Figure` if
@@ -379,6 +382,10 @@ class KikuchiPatternSimulator:
             ``projection="spherical"``, either ``"matplotlib"``
             (default) or ``"pyvista"``. The latter option requires that
             PyVista is installed.
+        show_plotter
+            Whether to show the :class:`~pyvista.Plotter` when
+            ``projection="spherical"`` and ``backend="pyvista"``.
+            Default is ``True``.
 
         Returns
         -------
@@ -387,21 +394,44 @@ class KikuchiPatternSimulator:
             :class:`~matplotlib.figure.Figure` or a
             :class:`~pyvista.Plotter` is returned.
         """
+        if (
+            projection == "spherical"
+            and backend == "pyvista"
+            and not _pyvista_installed
+        ):  # pragma: no cover
+            raise ImportError("Pyvista is not installed")
+
         ref = self._reflectors
 
         allowed_modes = ["lines", "bands"]
         if mode not in allowed_modes:
-            raise ValueError(f"`mode` must be either of {allowed_modes}")
-        if mode == "bands" and ref.theta[0] is None:
+            raise ValueError(f"Unknown `mode`, options are {allowed_modes}")
+        if mode == "bands" and np.isnan(ref.theta[0]):
             raise ValueError(
                 "Requires that reflectors have Bragg angles calculated with "
                 "`self.reflectors.calculate_theta()`."
             )
 
-        f_hkl = abs(ref.structure_factor)
-        color = f_hkl / f_hkl.max()
-        color = abs(color - color.min() - color.max())
-        color = np.full((ref.size, 3), color[:, np.newaxis])
+        if scaling == "linear":
+            intensity = abs(self.reflectors.structure_factor)
+            scaling_title = r"$|F_{hkl}|$"
+        elif scaling == "square":
+            factor = self.reflectors.structure_factor
+            intensity = abs(factor * factor.conjugate())
+            scaling_title = r"$|F|_{hkl}^2$"
+        elif scaling is None:
+            intensity = np.zeros(self.reflectors.size)
+            scaling_title = "None"
+        else:
+            raise ValueError(
+                "Unknown `scaling`, options are 'linear', 'square' or None"
+            )
+
+        # Invert the intensity
+        if scaling in ["linear", "square"]:
+            intensity = intensity / np.max(intensity)
+            intensity = abs(intensity - intensity.min() - intensity.max())
+        color = np.full((ref.size, 3), intensity[:, np.newaxis])  # RGB
 
         if projection == "stereographic":
             kwargs = dict(color=color, linewidth=0.5)
@@ -428,11 +458,12 @@ class KikuchiPatternSimulator:
                     )
                 v.draw_circle(opening_angle=np.pi / 2 + theta, figure=figure, **kwargs)
         elif projection == "spherical":
-            figure = _plot_spherical(mode, ref, color, backend, figure)
+            figure = _plot_spherical(
+                mode, ref, color, backend, figure, show_plotter, scaling_title
+            )
         else:
             raise ValueError(
-                "Unknown `projection`, valid options are 'stereographic' and "
-                "'spherical'"
+                "Unknown `projection`, options are 'stereographic' and 'spherical'"
             )
 
         if return_figure:
@@ -494,7 +525,13 @@ def _get_coordinates_in_upper_hemisphere(
 
 
 def _plot_spherical(
-    mode: str, ref: ReciprocalLatticeVector, color: np.ndarray, backend: str, figure
+    mode: str,
+    ref: ReciprocalLatticeVector,
+    color: np.ndarray,
+    backend: str,
+    figure: Union[plt.Figure, "pyvista.Plotter"],
+    show_plotter: bool,
+    scaling_title: str,
 ):
     v = Vector3d(ref).unit
 
@@ -553,7 +590,6 @@ def _plot_spherical(
         import pyvista as pv
 
         if figure is None:
-            show = True
             figure = pv.Plotter()
             figure.add_axes(
                 color="k", xlabel=labels[0], ylabel=labels[1], zlabel=labels[2]
@@ -564,8 +600,7 @@ def _plot_spherical(
             figure.set_background("w")
             figure.set_viewup((0, 1, 0))
         else:
-            show = False
-            # Assume that the existing plot has a sphere with a radius of 1
+            # Assume that the existing plot has a unit sphere
             v = Vector3d(circles)
             circles = Vector3d.from_polar(v.azimuth, v.polar, radial=1.01).data
 
@@ -590,10 +625,10 @@ def _plot_spherical(
             mesh,
             scalars=color,
             cmap="gray",
-            scalar_bar_args=dict(title=r"$F_{hkl}$"),
+            scalar_bar_args=dict(title=scaling_title),
         )
 
-        if show:
+        if show_plotter:
             figure.show()
 
     return figure

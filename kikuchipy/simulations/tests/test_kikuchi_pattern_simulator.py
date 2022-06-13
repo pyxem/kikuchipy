@@ -17,11 +17,13 @@
 
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticeVector
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import Phase
 from orix.plot import StereographicPlot
 from orix.quaternion import Rotation
+from packaging.version import Version
 import pytest
 
 import kikuchipy as kp
@@ -59,7 +61,8 @@ class TestKikuchiPatternSimulator:
         with pytest.raises(ValueError, match="Reflectors have no structure factors."):
             simulator1._raise_if_no_structure_factor()
         assert repr(simulator1) == (
-            "KikuchiPatternSimulator (4,), ni (m-3m)\n"
+            "KikuchiPatternSimulator:\n"
+            "ReciprocalLatticeVector (4,), ni (m-3m)\n"
             "[[1. 1. 1.]\n"
             " [2. 2. 0.]\n"
             " [2. 0. 0.]\n"
@@ -94,9 +97,9 @@ class TestCalculateMasterPattern:
 
     def test_raises(self):
         simulator = self.simulator
-        with pytest.raises(ValueError, match="Unknown `hemisphere`, valid options are"):
+        with pytest.raises(ValueError, match="Unknown `hemisphere`, options are"):
             _ = simulator.calculate_master_pattern(hemisphere="north")
-        with pytest.raises(ValueError, match="Unknown `scaling`, valid options are"):
+        with pytest.raises(ValueError, match="Unknown `scaling`, options are"):
             _ = simulator.calculate_master_pattern(scaling="cubic")
 
     def test_shape(self):
@@ -110,12 +113,18 @@ class TestCalculateMasterPattern:
 
         mp1 = simulator.calculate_master_pattern(half_size=100, scaling="linear")
         assert np.isclose(mp1.data.mean(), 3.53, atol=1e-2)
+        mp2 = simulator.calculate_master_pattern(
+            half_size=100,
+            scaling="linear",
+            hemisphere="lower",
+        )
+        assert np.isclose(mp2.data.mean(), 3.53, atol=1e-2)
 
-        mp2 = simulator.calculate_master_pattern(half_size=100, scaling="square")
-        assert np.isclose(mp2.data.mean(), 19.00, atol=1e-2)
+        mp3 = simulator.calculate_master_pattern(half_size=100, scaling="square")
+        assert np.isclose(mp3.data.mean(), 19.00, atol=1e-2)
 
-        mp3 = simulator.calculate_master_pattern(half_size=100, scaling=None)
-        assert np.isclose(mp3.data.mean(), 0.74, atol=1e-2)
+        mp4 = simulator.calculate_master_pattern(half_size=100, scaling=None)
+        assert np.isclose(mp4.data.mean(), 0.74, atol=1e-2)
 
 
 class TestOnDetector:
@@ -173,3 +182,139 @@ class TestPlot:
         assert isinstance(ax, StereographicPlot)
         assert ax.pole == -1
         assert len(ax.lines) == 4
+
+        with pytest.raises(ValueError, match="Unknown `projection`, options are "):
+            simulator.plot("lambert")
+
+        plt.close("all")
+
+    def test_modes(self):
+        simulator = self.simulator
+        ref = simulator.reflectors.unique(use_symmetry=True)
+        simulator._reflectors = ref  # Hack
+        assert simulator.reflectors.size == 4
+
+        # Correct number of lines added
+        fig1 = simulator.plot(mode="lines", return_figure=True)
+        assert len(fig1.axes[0].lines) == 4
+        fig2 = simulator.plot(mode="bands", return_figure=True)
+        assert len(fig2.axes[0].lines) == 8
+
+        # Adding to existing figure
+        simulator.plot(mode="lines", figure=fig2)
+        assert len(fig2.axes[0].lines) == 12
+        simulator.plot(mode="bands", figure=fig1)
+        assert len(fig1.axes[0].lines) == 12
+
+        plt.close("all")
+
+        # Raises errors
+        simulator._reflectors._theta = np.full(ref.size, np.nan)  # Hack
+        with pytest.raises(ValueError, match="Requires that reflectors have Bragg"):
+            _ = simulator.plot(mode="bands")
+        with pytest.raises(ValueError, match="Unknown `mode`, options are"):
+            _ = simulator.plot(mode="kinematical")
+
+    def test_hemisphere(self):
+        simulator = self.simulator
+        fig1 = simulator.plot(hemisphere="upper", return_figure=True)
+        assert len(fig1.axes) == 1
+        assert fig1.axes[0].pole == -1
+
+        fig2 = simulator.plot(hemisphere="lower", return_figure=True)
+        assert len(fig2.axes) == 1
+        assert fig2.axes[0].pole == 1
+
+        fig3 = simulator.plot(hemisphere="both", return_figure=True)
+        assert len(fig3.axes) == 2
+        assert fig3.axes[0].pole == -1
+        # Four [200] vectors and four [220] vectors lie on the equator,
+        # so 29 instead of just half of the vectors, 50, are included in
+        # each hemisphere
+        assert len(fig3.axes[0].lines) == 29
+        assert len(fig3.axes[0].lines) == 29
+        # Passing a figure with more than one hemisphere adds all
+        # vectors to all hemispheres
+        simulator.plot(figure=fig3)
+        assert len(fig3.axes[0].lines) == 29 * 2
+        assert len(fig3.axes[0].lines) == 29 * 2
+
+        plt.close("all")
+
+    def test_spherical(self):
+        simulator = self.simulator
+        fig1 = simulator.plot("spherical", return_figure=True)
+        ax1 = fig1.axes[0]
+        assert ax1.name == "3d"
+        assert len(ax1.lines) == simulator.reflectors.size
+
+        fig2 = simulator.plot("spherical", mode="bands", return_figure=True)
+        ax2 = fig2.axes[0]
+        assert len(ax2.lines) == simulator.reflectors.size * 2
+
+        simulator.plot("spherical", figure=fig2)
+        assert len(ax2.lines) == simulator.reflectors.size * 3
+        if Version(matplotlib.__version__) < Version("3.5.0"):
+            assert len(ax2.artists) == 6  # pragma: no cover
+        else:
+            assert len(ax2.patches) == 6  # Reference frame arrows added twice...
+
+        plt.close("all")
+
+    @pytest.mark.skipif(not kp._pyvista_installed, reason="Pyvista not installed")
+    def test_spherical_pyvista(self):
+        import pyvista as pv
+
+        simulator = self.simulator
+        fig1 = simulator.plot(
+            "spherical", backend="pyvista", return_figure=True, show_plotter=False
+        )
+        assert isinstance(fig1, pv.Plotter)
+        assert isinstance(fig1.mesh, pv.PolyData)
+        assert fig1.mesh.n_cells == simulator.reflectors.size
+        assert np.allclose(fig1.mesh.bounds, [-1, 1, -1, 1, -1, 1])
+
+        fig2 = simulator.plot("spherical", backend="pyvista", return_figure=True)
+        with pytest.raises(RuntimeError, match="This plotter has been closed "):
+            fig2.show()
+
+        # Add to existing Plotter
+        simulator.plot(
+            "spherical",
+            backend="pyvista",
+            mode="bands",
+            show_plotter=False,
+            figure=fig1,
+        )
+        assert fig1.mesh.n_cells == simulator.reflectors.size * 2
+
+        plt.close("all")
+
+    @pytest.mark.skipif(kp._pyvista_installed, reason="Pyvista installed")
+    def test_spherical_pyvista_raises(self):  # pragma: no cover
+        with pytest.raises(ImportError, match="Pyvista is not installed"):
+            _ = self.simulator.plot("spherical", backend="pyvista")
+
+    def test_scaling(self):
+        simulator = self.simulator
+
+        # Linear
+        fig1 = simulator.plot(return_figure=True)
+        colors1 = np.stack([line.get_color() for line in fig1.axes[0].lines])
+        unique_colors1 = np.unique(colors1.round(6), axis=0)
+        assert unique_colors1.shape[0] == 4
+
+        # Square
+        fig2 = simulator.plot(scaling="square", return_figure=True)
+        colors2 = np.stack([line.get_color() for line in fig2.axes[0].lines])
+        unique_colors2 = np.unique(colors2.round(6), axis=0)
+        assert unique_colors1.mean() > unique_colors2.mean()
+
+        # None
+        fig3 = simulator.plot(scaling=None, return_figure=True)
+        colors3 = np.stack([line.get_color() for line in fig3.axes[0].lines])
+        unique_colors3 = np.unique(colors3.round(6), axis=0)
+        assert unique_colors3.shape[0] == 1
+
+        with pytest.raises(ValueError, match="Unknown `scaling`, options are "):
+            _ = simulator.plot(scaling="cubic")

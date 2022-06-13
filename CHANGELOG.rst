@@ -24,7 +24,7 @@ Added
 - ``EBSDMasterPattern.plot_spherical()`` for plotting a master pattern in the
   stereographic projection on the 3D sphere.
   (`#536 <https://github.com/pyxem/kikuchipy/pull/536>`_)
-- A new package dependency on ``pyvista`` for 3D plotting and on ``pythreejs`` for the
+- New package dependencies on ``pyvista`` for 3D plotting and on ``pythreejs`` for the
   docs are introduced. (`#536 <https://github.com/pyxem/kikuchipy/pull/536>`_)
 - Reduce time and memory use of the following ``kikuchipy.signals.EBSD`` methods by
   using ``hyperspy.signal.BaseSignal.map()``: ``remove_static_background()``,
@@ -38,7 +38,7 @@ Added
 
 Changed
 -------
-- Restrict minimal version of diffsims to 0.5.
+- Increase minimal version of diffsims to 0.5.
   (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - Chunking of EBSD signal navigation dimensions in
   ``EBSD.average_neighbour_patterns()`` to reduce memory use.
@@ -46,13 +46,16 @@ Changed
 - Remove requirement that the crystal map used for EBSD refinement has identical step
   size(s) to the EBSD signal's navigation axes. This raised an error previously, but now
   only emits a warning. (`#531 <https://github.com/pyxem/kikuchipy/pull/531>`_)
-- Restrict minimal version of HyperSpy to 1.7.
+- Increase minimal version of HyperSpy to 1.7.
   (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_)
-- Restrict minimal version of SciPy to 1.7.
+- Increase minimal version of SciPy to 1.7.
   (`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
 
 Deprecated
 ----------
+- The ``kikuchipy.generators.EBSDSimulationGenerator`` class is deprecated and will be
+  removed in version 0.7. Use the ``kikuchipy.simulations.KikuchiPatternSimulator``
+  class instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - The ``kikuchipy.crystallography.matrices`` module is depreacted and will be removed in
   version 0.7, access the matrices via :class:`diffpy.structure.Lattice` attributes
   instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
