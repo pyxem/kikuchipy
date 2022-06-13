@@ -276,7 +276,7 @@ class TestEBSDDetector:
 
         pc_tsl = deepcopy(det.pc)
         pc_tsl[..., 1] = 1 - pc_tsl[..., 1]
-        pc_tsl[..., 1:] *= det.aspect_ratio
+        pc_tsl[..., 1:] /= det.aspect_ratio
         assert np.allclose(det.pc_tsl(), pc_tsl, atol=1e-5)
         assert np.allclose(det.pc_oxford(), pc_tsl, atol=1e-5)
 
@@ -351,13 +351,10 @@ class TestEBSDDetector:
         """Plotting detector works, *not* checking whether Matplotlib
         displays the pattern correctly.
         """
-        _, ax = detector.plot(
-            coordinates=coordinates,
-            show_pc=show_pc,
-            pattern=pattern,
-            zoom=zoom,
-            return_fig_ax=True,
-        )
+        kwargs = dict(show_pc=show_pc, pattern=pattern, zoom=zoom, return_fig_ax=True)
+        if coordinates is not None:
+            kwargs["coordinates"] = coordinates
+        _, ax = detector.plot(**kwargs)
         assert ax.get_xlabel() == f"x {desired_label}"
         assert ax.get_ylabel() == f"y {desired_label}"
         if isinstance(pattern, np.ndarray):
@@ -384,15 +381,15 @@ class TestEBSDDetector:
             return_fig_ax=True,
         )
         if gnomonic_angles is None:
-            n_angles = 8
+            n_angles = 9
         else:
-            n_angles = len(gnomonic_angles)
+            n_angles = len(gnomonic_angles) + 1
         assert len(ax.patches) == n_angles
         if gnomonic_circles_kwargs is None:
             edgecolor = "k"
         else:
             edgecolor = gnomonic_circles_kwargs["edgecolor"]
-        assert np.allclose(ax.patches[0]._edgecolor[:3], mcolors.to_rgb(edgecolor))
+        assert np.allclose(ax.patches[1]._edgecolor[:3], mcolors.to_rgb(edgecolor))
         plt.close("all")
 
     @pytest.mark.parametrize("pattern", [np.ones((61, 61)), np.ones((59, 60))])
