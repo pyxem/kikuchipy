@@ -16,7 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import sys
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
@@ -238,35 +238,29 @@ class KikuchiPatternSimulator:
         # reference frame CSs
         total_tilt = np.deg2rad(detector.sample_tilt - 90 - detector.tilt)
         u_s_bruker = Rotation.from_axes_angles((-1, 0, 0), total_tilt)
-        u_s = Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
-        u_s = u_s.to_matrix().squeeze()
+        u_s_rot = Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
+        u_s = da.from_array(u_s_rot.to_matrix().squeeze())
 
         # Transformation from CSs to cartesian crystal reference frame
         # CSc
-        u_o = rotations.to_matrix()
-
-        # Transform rotations once
-        u_o = da.from_array(u_o)
-        u_s = da.from_array(u_s)
+        u_o = da.from_array(rotations.to_matrix())
         u_os = da.matmul(u_o, u_s)
 
         # Transformation from CSc to reciprocal crystal reference frame
         # CSk*
-        u_astar = lattice.recbase.T
-        u_astar = da.from_array(u_astar)
+        u_astar = da.from_array(lattice.recbase.T)
 
         # Combine transformations
         u_kstar = da.matmul(u_astar, u_os)
 
         # Transform {hkl} from CSk* to CSd
-        hkl_da = da.from_array(hkl)
-        hkl_d = da.matmul(hkl_da, u_kstar)
+        hkl_d = da.matmul(da.from_array(hkl), u_kstar)
 
         nav_axes = (0, 1)[: rotations.ndim]
 
         # Find bands that are in some pattern
-        hkl_is_upper = da.atleast_2d(hkl_d[..., 2]) > 0
-        hkl_in_a_pattern = da.sum(hkl_is_upper, axis=nav_axes) != 0
+        hkl_is_upper = da.greater(da.atleast_2d(hkl_d[..., 2]), 0)
+        hkl_in_a_pattern = ~da.isclose(da.sum(hkl_is_upper, axis=nav_axes), 0)
         hkl_in_pattern = hkl_is_upper[..., hkl_in_a_pattern]
         hkl_d = hkl_d[..., hkl_in_a_pattern, :]
         with ProgressBar():
@@ -291,19 +285,17 @@ class KikuchiPatternSimulator:
         uvw = uvw.coordinates
 
         # Transformation from CSc to direct crystal reference frame CSk
-        u_a = lattice.base
-        u_a = da.from_array(u_a)
+        u_a = da.from_array(lattice.base)
 
         # Combine transformations
         u_k = da.matmul(u_a, u_os)
 
         # Transform direct lattice vectors from CSk to CSd
-        uvw_da = da.from_array(uvw)
-        uvw_d = da.matmul(uvw_da, u_k)
+        uvw_d = da.matmul(da.from_array(uvw), u_k)
 
         # Find zone axes that are in some pattern
-        uvw_is_upper = da.atleast_2d(uvw_d[..., 2]) > 0
-        uvw_in_a_pattern = da.sum(uvw_is_upper, axis=nav_axes) != 0
+        uvw_is_upper = da.greater(da.atleast_2d(uvw_d[..., 2]), 0)
+        uvw_in_a_pattern = ~da.isclose(da.sum(uvw_is_upper, axis=nav_axes), 0)
         uvw_in_pattern = uvw_is_upper[..., uvw_in_a_pattern]
         uvw_d = uvw_d[..., uvw_in_a_pattern, :]
         with ProgressBar():
@@ -322,8 +314,8 @@ class KikuchiPatternSimulator:
                 [hkl_d, hkl_in_pattern, uvw_d, uvw_in_pattern]
             )[0]
 
-        # TODO: Reduce memory use here by perhaps not using classes for
-        #  storing line and zone axis coordinates
+        # TODO: Reduce memory usage here by perhaps not using classes
+        #  for storing line and zone axis coordinates
 
         lines = KikuchiPatternLine(
             hkl=Miller(hkl=hkl, phase=self.phase),

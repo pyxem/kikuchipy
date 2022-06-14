@@ -57,13 +57,13 @@ class TestGeometricalKikuchiPatternSimulation:
         self.reflectors = setup_reflectors()
         self.detector = kp.detectors.EBSDDetector(shape=(60, 60))
         self.rotations = Rotation.stack(
-            (Rotation.from_axes_angles([(0, 0, 1), (0, 0, -1)], np.pi / 2),) * 2
+            (Rotation.from_axes_angles([(0, 0, 1), (0, 0, -1)], np.deg2rad(80)),) * 2
         )
 
     def test_init_attributes_repr(self):
         simulator = kp.simulations.KikuchiPatternSimulator(self.reflectors)
         det = self.detector
-        rot = Rotation.from_axes_angles((0, 0, 1), np.pi / 2)
+        rot = Rotation.from_axes_angles((0, 0, 1), np.deg2rad(80))
         sim = simulator.on_detector(det, rot)
 
         assert isinstance(sim.detector, kp.detectors.EBSDDetector)
@@ -82,7 +82,7 @@ class TestGeometricalKikuchiPatternSimulation:
         np.testing.assert_almost_equal(sim.rotations.data, rot.data)
 
         # Only half of vectors are within pattern
-        assert sim.reflectors.size == 25 < simulator.reflectors.size
+        assert sim.reflectors.size == 25 < self.reflectors.size
 
         sim_repr = repr(sim)
         sim_repr = sim_repr.split("\n")
@@ -110,12 +110,12 @@ class TestGeometricalKikuchiPatternSimulation:
         # Check Kikuchi line coordinates of two {200} lines (start-end)
         assert np.allclose(
             sim.lines_coordinates(),
-            [[29.5, -12.2, 29.5, 71.2], [-10.8, 18.8, 69.8, 18.8]],
+            [[24.4, -11.9, 38.0, 70.3], [-12.1, 26.6, 67.2, 11.7]],
             atol=0.1,
         )
         assert np.allclose(
             sim.lines_coordinates((1, 1)),
-            [[29.5, 71.2, 29.5, -12.2], [-10.8, 18.8, 69.8, 18.8]],
+            [[21.0, 70.3, 34.6, -11.9], [-8.2, 11.7, 71.1, 26.6]],
             atol=0.1,
         )
 
@@ -148,7 +148,7 @@ class TestAsCollections:
         self.reflectors = setup_reflectors()
         self.detector = kp.detectors.EBSDDetector(shape=(60, 60))
         self.rotations = Rotation.stack(
-            (Rotation.from_axes_angles([(0, 0, 1), (0, 0, -1)], np.pi / 2),) * 2
+            (Rotation.from_axes_angles([(0, 0, 1), (0, 0, -1)], np.deg2rad(80)),) * 2
         )
 
     def test_as_collections(self):
@@ -224,9 +224,9 @@ class TestAsCollections:
         # Extract the path of the first Kikuchi line and assert that
         # start-end coordinates are as expected
         coords1 = coll1[0].get_paths()[0].vertices.ravel()
-        assert np.allclose(coords1, [29.5, -12.2, 29.5, 71.2], atol=0.1)
+        assert np.allclose(coords1, [24.4, -11.92, 38.0, 70.3], atol=0.1)
         coords2 = coll2[0].get_paths()[0].vertices.ravel()
-        assert np.allclose(coords2, [0, 1.4, 0, -1.4], atol=0.1)
+        assert np.allclose(coords2, [-0.2, 1.4, 0.3, -1.4], atol=0.1)
 
         # Extract gnomonic coordinates of zone axes and zone axes labels
         za_coords2 = coll2[1].get_paths()[0].vertices
@@ -245,7 +245,7 @@ class TestAsMarkers:
         self.reflectors = setup_reflectors()
         self.detector = kp.detectors.EBSDDetector(shape=(60, 60))
         self.rotations = Rotation.stack(
-            (Rotation.from_axes_angles([(0, 0, 1), (0, 0, -1)], np.pi / 2),) * 2
+            (Rotation.from_axes_angles([(0, 0, 1), (0, 0, -1)], np.deg2rad(80)),) * 2
         )
 
     def test_as_markers(self):
