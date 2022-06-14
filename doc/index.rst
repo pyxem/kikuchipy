@@ -87,7 +87,7 @@ multi-dimensional data analysis provided by the HyperSpy library.
     user_guide/feature_maps.ipynb
     user_guide/virtual_backscatter_electron_imaging.ipynb
     user_guide/pattern_matching.ipynb
-    user_guide/geometrical_ebsd_simulations.ipynb
+    user_guide/kikuchi_pattern_simulations.ipynb
     user_guide/multivariate_analysis.ipynb
     user_guide/metadata_structure.ipynb
 
