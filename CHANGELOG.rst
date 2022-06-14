@@ -53,6 +53,14 @@ Changed
 
 Deprecated
 ----------
+- The ``kikuchipy.simulations.GeometricalEBSDSimulation`` class is deprecated and will
+  be removed in version 0.7. Obtain
+  ``kikuchipy.simulations.GeometricalKikuchiPatternSimulation``  via
+  ``kikuchipy.simulations.KikuchiPatternSimulator.on_detector()`` instead. The
+  ``kikuchipy.simulations.features`` module is also deprecated and will be removed in
+  version 0.7. Obtain Kikuchi line and zone axis detector/gnomonic coordinates of a
+  simulation via ``lines_coordinates()`` and ``zone_axes_coordinates()`` instead.
+  (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - The ``kikuchipy.generators.EBSDSimulationGenerator`` class is deprecated and will be
   removed in version 0.7. Use the ``kikuchipy.simulations.KikuchiPatternSimulator``
   class instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
