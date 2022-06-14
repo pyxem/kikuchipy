@@ -53,9 +53,9 @@ class GeometricalEBSDSimulation:
         bands: KikuchiBand,
         zone_axes: ZoneAxis,
     ):
-        """Create a geometrical EBSD simulation storing a set of center
-        positions of Kikuchi bands and zone axes on the detector, one
-        set for each orientation of the unit cell.
+        """*[Deprecated]* Create a geometrical EBSD simulation storing a
+        set of center positions of Kikuchi bands and zone axes on the
+        detector, one set for each orientation of the unit cell.
 
         Parameters
         ----------
@@ -72,6 +72,15 @@ class GeometricalEBSDSimulation:
         Returns
         -------
         GeometricalEBSDSimulation
+
+        Notes
+        -----
+        .. deprecated:: 0.6.0
+            ``GeometricalEBSDSimulation`` is deprecated and will be
+            removed in v0.7.0. Obtain
+            ``GeometricalKikuchiPatternSimulation`` instances via
+            :attr:`~kikuchipy.simulations.KikuchiPatternSimulator.on_detector`
+            instead.
         """
         self.detector = detector
         self.rotations = rotations

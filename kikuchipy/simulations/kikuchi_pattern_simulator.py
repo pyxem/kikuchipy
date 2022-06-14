@@ -15,8 +15,47 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+# The following copyright notice is included because a part of the
+# calculation of kinematical master patterns in the stereographic
+# projection in this file is derived from a similar routine in EMsoft
+# (specifically, the selection of which unit vectors that are within a
+# Kikuchi band):
+
+# #####################################################################
+# Copyright (c) 2013-2022, Marc De Graef Research Group/Carnegie Mellon
+# University
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are
+# met:
+#
+#  - Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  - Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the
+#    distribution.
+#  - Neither the names of Marc De Graef, Carnegie Mellon University nor
+#    the names of its contributors may be used to endorse or promote
+#    products derived from this software without specific prior written
+#    permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+# HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+# ######################################################################
+
 import sys
-from typing import Optional, Union
+from typing import Optional
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
@@ -47,7 +86,7 @@ class KikuchiPatternSimulator:
 
     Parameters
     ----------
-    reflectors : ReciprocalLatticeVector
+    reflectors : ~diffsims.crystallography.ReciprocalLatticeVector
         Reflectors to use in the simulation, flattened to one navigation
         dimension.
 
@@ -75,7 +114,7 @@ class KikuchiPatternSimulator:
         half_size: Optional[int] = 500,
         hemisphere: Optional[str] = "upper",
         scaling: Optional[str] = "linear",
-    ) -> EBSDMasterPattern:
+    ):
         r"""Calculate a kinematical master pattern in the stereographic
         projection.
 
@@ -103,8 +142,13 @@ class KikuchiPatternSimulator:
 
         Returns
         -------
-        master_pattern
+        master_pattern : ~kikuchipy.signals.EBSDMasterPattern
             Kinematical master pattern in the stereographic projection.
+
+        Notes
+        -----
+        The algorithm for selecting which unit vector is within a
+        Kikuchi band is derived from a similar routine in EMsoft.
         """
         self._raise_if_no_theta()
         self._raise_if_no_structure_factor()
@@ -157,7 +201,7 @@ class KikuchiPatternSimulator:
 
             # Angles between vectors and Kikuchi lines
             dp = da.einsum("ij,kj->ik", xyz_hemi, xyz_ref)
-            angles = da.arccos(dp)
+            angles = da.arccos(da.round(dp, 12))  # Avoid invalid values
 
             # Exclude Kikuchi bands with:
             #   1. Dot products lower than a threshold
@@ -194,9 +238,7 @@ class KikuchiPatternSimulator:
             mode="kinematical",
         )
 
-    def on_detector(
-        self, detector: EBSDDetector, rotations: Rotation
-    ) -> GeometricalKikuchiPatternSimulation:
+    def on_detector(self, detector: EBSDDetector, rotations: Rotation):
         """Project Kikuchi lines and zone axes onto a detector, one per
         crystal orientation.
 
@@ -215,7 +257,7 @@ class KikuchiPatternSimulator:
 
         Returns
         -------
-        simulations
+        simulations : ~kikuchipy.simulations.GeometricalKikuchiPatternSimulation
 
         Notes
         -----
@@ -347,11 +389,11 @@ class KikuchiPatternSimulator:
         mode: Optional[str] = "lines",
         hemisphere: Optional[str] = "upper",
         scaling: Optional[str] = "linear",
-        figure: Union[plt.Figure, "pyvista.Plotter", None] = None,
+        figure=None,
         return_figure: bool = False,
         backend: str = "matplotlib",
         show_plotter: bool = True,
-    ) -> Union[plt.Figure, "pyvista.Plotter"]:
+    ):
         """Plot reflectors as lines or bands in the stereographic or
         spherical projection.
 
@@ -374,7 +416,7 @@ class KikuchiPatternSimulator:
             either ``"linear"`` (default), :math:`|F|`, ``"square"``,
             :math:`|F|^2`, or ``"None"``, giving all bands the same
             intensity.
-        figure
+        figure : matplotlib.figure.Figure or pyvista.Plotter, optional
             An existing :class:`~matplotlib.figure.Figure` or
             :class:`~pyvista.Plotter` to add the reflectors to. If not
             given, a new figure is created.
@@ -395,7 +437,7 @@ class KikuchiPatternSimulator:
 
         Returns
         -------
-        figure
+        figure : matplotlib.figure.Figure or pyvista.Plotter
             If ``return_figure=True``, a
             :class:`~matplotlib.figure.Figure` or a
             :class:`~pyvista.Plotter` is returned.
@@ -420,13 +462,16 @@ class KikuchiPatternSimulator:
 
         if scaling == "linear":
             intensity = abs(self.reflectors.structure_factor)
+            order = np.argsort(intensity)
             scaling_title = r"$|F_{hkl}|$"
         elif scaling == "square":
             factor = self.reflectors.structure_factor
             intensity = abs(factor * factor.conjugate())
+            order = np.argsort(intensity)
             scaling_title = r"$|F|_{hkl}^2$"
         elif scaling is None:
             intensity = np.zeros(self.reflectors.size)
+            order = np.arange(ref.size)
             scaling_title = "None"
         else:
             raise ValueError(
@@ -438,6 +483,10 @@ class KikuchiPatternSimulator:
             intensity = intensity / np.max(intensity)
             intensity = abs(intensity - intensity.min() - intensity.max())
         color = np.full((ref.size, 3), intensity[:, np.newaxis])  # RGB
+
+        # Sort reflectors so that weakest are plotted first
+        ref = ref[order].deepcopy()
+        color = color[order]
 
         if projection == "stereographic":
             kwargs = dict(color=color, linewidth=0.5)
@@ -523,7 +572,7 @@ def _plot_spherical(
     ref: ReciprocalLatticeVector,
     color: np.ndarray,
     backend: str,
-    figure: Union[plt.Figure, "pyvista.Plotter"],
+    figure,
     show_plotter: bool,
     scaling_title: str,
 ):

@@ -152,7 +152,7 @@ class GeometricalKikuchiPatternSimulation:
 
         Returns
         -------
-        collections
+        collections : list
             List of Matplotlib collections.
 
         See Also
@@ -257,7 +257,7 @@ class GeometricalKikuchiPatternSimulation:
         index: Union[int, tuple, None] = None,
         coordinates: str = "detector",
         exclude_nan: bool = True,
-    ) -> np.ndarray:
+    ):
         """Get Kikuchi line coordinates of a single simulation.
 
         Parameters
@@ -276,7 +276,7 @@ class GeometricalKikuchiPatternSimulation:
 
         Returns
         -------
-        coords
+        coords : numpy.ndarray
             Kikuchi line coordinates.
 
         See Also
@@ -308,7 +308,7 @@ class GeometricalKikuchiPatternSimulation:
         zone_axes_labels_kwargs: Optional[dict] = None,
         pc_kwargs: Optional[dict] = None,
         return_figure: bool = False,
-    ) -> plt.Figure:
+    ):
         """Plot a single simulation on the detector.
 
         Parameters
@@ -355,7 +355,7 @@ class GeometricalKikuchiPatternSimulation:
 
         Returns
         -------
-        fig
+        fig : matplotlib.figure.Figure
             Returned if ``return_figure=True``.
 
         See Also
@@ -395,7 +395,7 @@ class GeometricalKikuchiPatternSimulation:
         index: Union[int, tuple, None] = None,
         coordinates: str = "detector",
         exclude_nan: bool = True,
-    ) -> np.ndarray:
+    ):
         """Get zone axis coordinates of a single simulation.
 
         Parameters
@@ -414,7 +414,7 @@ class GeometricalKikuchiPatternSimulation:
 
         Returns
         -------
-        coords
+        coords : numpy.ndarray
             Zone axis coordinates.
 
         See Also
