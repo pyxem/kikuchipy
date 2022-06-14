@@ -135,6 +135,8 @@ class TestGeometricalKikuchiPatternSimulation:
         )
         assert isinstance(fig, plt.Figure)
 
+        plt.close("all")
+
 
 class TestAsCollections:
     """Getting lines, zone axes, zone axes labels and PC as Matplotlib

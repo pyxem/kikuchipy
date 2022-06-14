@@ -641,7 +641,7 @@ class GeometricalKikuchiPatternSimulation:
             List of zone axes labels.
         """
         za = self._zone_axes
-        za_labels = za.vector.coordinates.round(0).astype(int)
+        za_labels = za.vector.coordinates.round(0).astype(np.int64)
         za_labels = za_labels[za.within_r_gnomonic[index]]
         za_labels_str = np.array2string(za_labels, threshold=za_labels.size)
         za_labels_list = re.sub(" ", "", za_labels_str[1:-1]).split("\n")
@@ -712,7 +712,7 @@ class GeometricalKikuchiPatternSimulation:
         if self.navigation_shape == (1,):
             coords = coords.squeeze()
 
-        zone_axes = self._zone_axes.vector.coordinates.round(0).astype(int)
+        zone_axes = self._zone_axes.vector.coordinates.round(0).astype(np.int64)
         array_str = np.array2string(zone_axes, threshold=zone_axes.size)
         texts = re.sub("[][ ]", "", array_str).split("\n")
 
