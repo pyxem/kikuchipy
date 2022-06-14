@@ -30,6 +30,7 @@ import kikuchipy as kp
 
 
 def _setup_method():
+    """Return simulator used in `setup_method` of multiple test classes."""
     phase = Phase(
         space_group=225,
         structure=Structure(
@@ -48,7 +49,10 @@ def _setup_method():
 
 
 class TestKikuchiPatternSimulator:
+    """General features of the KikuchiPatternSimulator class."""
+
     def test_init_attributes_repr(self, nickel_phase):
+        """Initialization, attributes and string representation."""
         ref = ReciprocalLatticeVector(
             nickel_phase, hkl=((1, 1, 1), (2, 0, 0), (2, 2, 0), (3, 1, 1))
         ).reshape(2, 2)
@@ -84,10 +88,13 @@ class TestKikuchiPatternSimulator:
 
 
 class TestCalculateMasterPattern:
+    """Calculation of master pattern."""
+
     def setup_method(self):
         self.simulator = _setup_method()
 
     def test_default(self):
+        """Default values are as expected."""
         simulator = self.simulator
         mp = simulator.calculate_master_pattern()
 
@@ -96,6 +103,7 @@ class TestCalculateMasterPattern:
         assert mp.mode == "kinematical"
 
     def test_raises(self):
+        """Appropriate error messages are raised."""
         simulator = self.simulator
         with pytest.raises(ValueError, match="Unknown `hemisphere`, options are"):
             _ = simulator.calculate_master_pattern(hemisphere="north")
@@ -103,12 +111,14 @@ class TestCalculateMasterPattern:
             _ = simulator.calculate_master_pattern(scaling="cubic")
 
     def test_shape(self):
+        """Output shape as expected."""
         simulator = self.simulator
         mp = simulator.calculate_master_pattern(half_size=100, hemisphere="both")
         assert mp.data.shape == (2, 201, 201)
         assert np.allclose(mp.data[0], mp.data[1])
 
     def test_scaling(self):
+        """Scaling options give expected output intensities."""
         simulator = self.simulator
 
         mp1 = simulator.calculate_master_pattern(half_size=100, scaling="linear")
@@ -128,11 +138,17 @@ class TestCalculateMasterPattern:
 
 
 class TestOnDetector:
+    """Test determination of detector coordinates of geometrical
+    simulations given a detector and rotation(s).
+
+    """
+
     def setup_method(self):
         self.simulator = _setup_method()
         self.detector = kp.detectors.EBSDDetector(shape=(60, 60))
 
     def test_1d(self):
+        """1D rotation instance works."""
         rot1 = Rotation.random()
         sim1 = self.simulator.on_detector(self.detector, rot1)
         assert np.allclose(sim1.rotations.data, rot1.data)
@@ -150,6 +166,7 @@ class TestOnDetector:
         plt.close("all")
 
     def test_2d(self):
+        """2D rotation instance works."""
         rot1 = Rotation.random((3, 1))
         sim1 = self.simulator.on_detector(self.detector, rot1)
         assert np.allclose(sim1.rotations.data, rot1.data)
@@ -166,12 +183,23 @@ class TestOnDetector:
 
         plt.close("all")
 
+    def test_raises_incompatible_shapes(self):
+        detector = self.detector
+        detector.pc = np.full((2, 3), detector.pc)
+        with pytest.raises(ValueError, match="`detector.navigation_shape` is not "):
+            _ = self.simulator.on_detector(detector, Rotation.random((3, 2)))
+
 
 class TestPlot:
+    """Test plot method."""
+
     def setup_method(self):
         self.simulator = _setup_method()
 
     def test_default(self):
+        """Default values are as expected, and appropriate errors are
+        raised.
+        """
         simulator = self.simulator
         ref = simulator.reflectors.unique(use_symmetry=True)
         simulator._reflectors = ref
@@ -189,6 +217,9 @@ class TestPlot:
         plt.close("all")
 
     def test_modes(self):
+        """Modes 'lines' and 'bands' works as expected, and appropriate
+        error is raised.
+        """
         simulator = self.simulator
         ref = simulator.reflectors.unique(use_symmetry=True)
         simulator._reflectors = ref  # Hack
@@ -216,6 +247,9 @@ class TestPlot:
             _ = simulator.plot(mode="kinematical")
 
     def test_hemisphere(self):
+        """Plotting upper, lower, or both hemispheres works, also
+        extending either of these by passing the figure on.
+        """
         simulator = self.simulator
         fig1 = simulator.plot(hemisphere="upper", return_figure=True)
         assert len(fig1.axes) == 1
@@ -242,6 +276,7 @@ class TestPlot:
         plt.close("all")
 
     def test_spherical(self):
+        """Spherical plot with Matplotlib."""
         simulator = self.simulator
         fig1 = simulator.plot("spherical", return_figure=True)
         ax1 = fig1.axes[0]
@@ -263,6 +298,7 @@ class TestPlot:
 
     @pytest.mark.skipif(not kp._pyvista_installed, reason="Pyvista not installed")
     def test_spherical_pyvista(self):
+        """Spherical plot with PyVista."""
         import pyvista as pv
 
         simulator = self.simulator
@@ -292,10 +328,14 @@ class TestPlot:
 
     @pytest.mark.skipif(kp._pyvista_installed, reason="Pyvista installed")
     def test_spherical_pyvista_raises(self):  # pragma: no cover
+        """Appropriate error message is raised when PyVista is
+        unavailable.
+        """
         with pytest.raises(ImportError, match="Pyvista is not installed"):
             _ = self.simulator.plot("spherical", backend="pyvista")
 
     def test_scaling(self):
+        """Intensity scaling works as expected."""
         simulator = self.simulator
 
         # Linear

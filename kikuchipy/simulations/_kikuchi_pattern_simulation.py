@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from copy import deepcopy
 import re
 from typing import Optional, Union
-import warnings
 
 from diffsims.crystallography import ReciprocalLatticeVector
 from hyperspy.utils.markers import line_segment, point, text
@@ -41,8 +41,8 @@ class GeometricalKikuchiPatternSimulation:
     plot onto :class:`kikuchipy.signals.EBSD` signals.
 
     Instances of this class are returned from
-    :meth:`kikuchipy.simulations.KikuchiPattern.Simulator.on_detector`
-    and not ment to be created directly.
+    :meth:`kikuchipy.simulations.KikuchiPattern.Simulator.on_detector`,
+    and *not* ment to be created directly.
 
     Parameters
     ----------
@@ -68,9 +68,9 @@ class GeometricalKikuchiPatternSimulation:
         lines: KikuchiPatternLine,
         zone_axes: KikuchiPatternZoneAxis,
     ):
-        self._detector = detector
-        self._rotations = rotations
-        self._reflectors = reflectors
+        self._detector = detector.deepcopy()
+        self._rotations = deepcopy(rotations)
+        self._reflectors = reflectors.deepcopy()
         self._lines = lines
         self._zone_axes = zone_axes
         self._set_lines_detector_coordinates()
@@ -99,101 +99,11 @@ class GeometricalKikuchiPatternSimulation:
         """
         return self._rotations.shape
 
-    def plot(
-        self,
-        index: Union[int, tuple, None] = None,
-        coordinates: str = "detector",
-        pattern: Optional[np.ndarray] = None,
-        lines: bool = True,
-        zone_axes: bool = True,
-        zone_axes_labels: bool = True,
-        pc: bool = True,
-        pattern_kwargs: dict = None,
-        lines_kwargs: dict = None,
-        zone_axes_kwargs: dict = None,
-        zone_axes_labels_kwargs: dict = None,
-        pc_kwargs: dict = None,
-        return_figure: bool = False,
-    ) -> plt.Figure:
-        """Plot a single simulation on the detector.
-
-        Parameters
-        ----------
-        index
-            Index of the simulation to plot. If not given, this is the
-            first simulation. If :attr:`navigation_shape` is 2D, and
-            ``index`` is passed, it must be a 2-tuple.
-        coordinates
-            The coordinates of the plot axes, either ``"detector"``
-            (default) or ``"gnomonic"``.
-        pattern
-            A pattern to plot the simulation onto. If not given, the
-            simulation is plotted on a gray background.
-        lines
-            Whether to show Kikuchi lines. Default is ``True``.
-        zone_axes
-            Whether to show zone axes. Default is ``True``.
-        zone_axes_labels
-            Whether to show zone axes labels. Default is ``True``.
-        pc
-            Whether to show the projection/pattern centre (PC). Default
-            is ``True``.
-        pattern_kwargs
-            Keyword arguments passed to
-            :meth:`matplotlib.axes.Axes.imshow` if ``pattern`` is given.
-        lines_kwargs
-            Keyword arguments passed to
-            :class:`matplotlib.collections.LineCollection` to format
-            Kikuchi lines if ``lines=True``.
-        zone_axes_kwargs
-            Keyword arguments passed to
-            :class:`matplotlib.collections.PathCollection` to format
-            zone axes if ``zone_axes=True``.
-        zone_axes_labels_kwargs
-            Keyword arguments passed to :class:`matplotlib.text.Text` to
-            format zone axes labels if ``zone_axes_labels=True``.
-        pc_kwargs
-            Keyword arguments passed to
-            :meth:`matplotlib.axes.Axes.scatter` to format the PC if
-            ``pc=True``.
-        return_figure
-            Whether to return the figure. Default is ``False``.
-
-        Returns
-        -------
-        fig
-            Returned if ``return_figure=True``.
-
-        See Also
-        --------
-        as_collections
-        """
-        fig, ax = self.detector.plot(
-            coordinates=coordinates,
-            pattern=pattern,
-            show_pc=pc,
-            pc_kwargs=pc_kwargs,
-            pattern_kwargs=pattern_kwargs,
-            return_fig_ax=True,
+    def __repr__(self) -> str:
+        """String representation."""
+        return f"{self.__class__.__name__} {self.navigation_shape}:\n" + repr(
+            self.reflectors
         )
-        collections = self.as_collections(
-            index,
-            coordinates,
-            lines,
-            zone_axes,
-            zone_axes_labels,
-            lines_kwargs,
-            zone_axes_kwargs,
-            zone_axes_labels_kwargs,
-        )
-        for c in collections:
-            if isinstance(c, list) and isinstance(c[0], mtext.Text):
-                for text_i in c:
-                    ax.add_artist(text_i)
-            else:
-                ax.add_collection(c)
-        if return_figure:
-            return fig
 
     def as_collections(
         self,
@@ -247,6 +157,7 @@ class GeometricalKikuchiPatternSimulation:
 
         See Also
         --------
+        as_markers
         plot
         """
         if index is None:
@@ -316,6 +227,11 @@ class GeometricalKikuchiPatternSimulation:
         -------
         markers : hyperspy.drawing.marker.MarkerBase
             List with all markers.
+
+        See Also
+        --------
+        as_collections
+        plot
         """
         markers = []
         if lines:
@@ -377,6 +293,103 @@ class GeometricalKikuchiPatternSimulation:
             coords = coords[~np.isnan(coords).any(axis=-1)]
         return coords
 
+    def plot(
+        self,
+        index: Union[int, tuple, None] = None,
+        coordinates: str = "detector",
+        pattern: Optional[np.ndarray] = None,
+        lines: bool = True,
+        zone_axes: bool = True,
+        zone_axes_labels: bool = True,
+        pc: bool = True,
+        pattern_kwargs: Optional[dict] = None,
+        lines_kwargs: Optional[dict] = None,
+        zone_axes_kwargs: Optional[dict] = None,
+        zone_axes_labels_kwargs: Optional[dict] = None,
+        pc_kwargs: Optional[dict] = None,
+        return_figure: bool = False,
+    ) -> plt.Figure:
+        """Plot a single simulation on the detector.
+
+        Parameters
+        ----------
+        index
+            Index of the simulation to plot. If not given, this is the
+            first simulation. If :attr:`navigation_shape` is 2D, and
+            ``index`` is passed, it must be a 2-tuple.
+        coordinates
+            The coordinates of the plot axes, either ``"detector"``
+            (default) or ``"gnomonic"``.
+        pattern
+            A pattern to plot the simulation onto. If not given, the
+            simulation is plotted on a gray background.
+        lines
+            Whether to show Kikuchi lines. Default is ``True``.
+        zone_axes
+            Whether to show zone axes. Default is ``True``.
+        zone_axes_labels
+            Whether to show zone axes labels. Default is ``True``.
+        pc
+            Whether to show the projection/pattern centre (PC). Default
+            is ``True``.
+        pattern_kwargs
+            Keyword arguments passed to
+            :meth:`matplotlib.axes.Axes.imshow` if ``pattern`` is given.
+        lines_kwargs
+            Keyword arguments passed to
+            :class:`matplotlib.collections.LineCollection` to format
+            Kikuchi lines if ``lines=True``.
+        zone_axes_kwargs
+            Keyword arguments passed to
+            :class:`matplotlib.collections.PathCollection` to format
+            zone axes if ``zone_axes=True``.
+        zone_axes_labels_kwargs
+            Keyword arguments passed to :class:`matplotlib.text.Text` to
+            format zone axes labels if ``zone_axes_labels=True``.
+        pc_kwargs
+            Keyword arguments passed to
+            :meth:`matplotlib.axes.Axes.scatter` to format the PC if
+            ``pc=True``.
+        return_figure
+            Whether to return the figure. Default is ``False``.
+
+        Returns
+        -------
+        fig
+            Returned if ``return_figure=True``.
+
+        See Also
+        --------
+        as_collections
+        as_markers
+        """
+        fig, ax = self.detector.plot(
+            coordinates=coordinates,
+            pattern=pattern,
+            show_pc=pc,
+            pc_kwargs=pc_kwargs,
+            pattern_kwargs=pattern_kwargs,
+            return_fig_ax=True,
+        )
+        collections = self.as_collections(
+            index,
+            coordinates,
+            lines,
+            zone_axes,
+            zone_axes_labels,
+            lines_kwargs,
+            zone_axes_kwargs,
+            zone_axes_labels_kwargs,
+        )
+        for c in collections:
+            if isinstance(c, list) and isinstance(c[0], mtext.Text):
+                for text_i in c:
+                    ax.add_artist(text_i)
+            else:
+                ax.add_collection(c)
+        if return_figure:
+            return fig
+
     def zone_axes_coordinates(
         self,
         index: Union[int, tuple, None] = None,
@@ -418,53 +431,6 @@ class GeometricalKikuchiPatternSimulation:
             coords = coords[~np.isnan(coords).any(axis=-1)]
         return coords
 
-    def _set_lines_detector_coordinates(self):
-        """Start and end point coordinates of bands in uncalibrated
-        detector coordinates (a scale of 1 and offset of 0).
-        """
-        # Get PC coordinates and add two axes to get the shape
-        # (navigation shape, 1, 1)
-        det = self.detector
-        pcx = det.pcx[..., None, None]
-        pcy = det.pcy[..., None, None]
-        pcz = det.pcz[..., None, None]
-
-        # Convert coordinates
-        coords_d = self._lines.plane_trace_coordinates.copy()
-        coords_d[..., [0, 2]] = coords_d[..., [0, 2]] + (pcx / pcz) * det.aspect_ratio
-        coords_d[..., [0, 2]] = coords_d[..., [0, 2]] / det.x_scale[..., None, None]
-        coords_d[..., [1, 3]] = -coords_d[..., [1, 3]] + (pcy / pcz)
-        coords_d[..., [1, 3]] = coords_d[..., [1, 3]] / det.y_scale[..., None, None]
-
-        self._lines_detector_coordinates = coords_d
-
-    def _set_zone_axes_detector_coordinates(self):
-        """Coordinates of zone axes in uncalibrated detector
-        coordinates (a scale of 1 and offset of 0).
-
-        If :attr:`GeometricalKikuchiPatternSimulation.exclude_outside_detector`
-        is ``True``, the coordinates of the zone axes outside the
-        detector are set to ``None``.
-        """
-        xyg = self._zone_axes._xy_within_r_gnomonic
-        xg = xyg[..., 0]
-        yg = xyg[..., 1]
-        coords_d = np.empty_like(xyg)
-
-        # Get projection center coordinates, and add one axis to get the
-        # shape (navigation shape, 1)
-        det = self.detector
-        pcx = det.pcx[..., None]
-        pcy = det.pcy[..., None]
-        pcz = det.pcz[..., None]
-
-        coords_d[..., 0] = (xg + (pcx / pcz) * det.aspect_ratio) / det.x_scale[
-            ..., None
-        ]
-        coords_d[..., 1] = (-yg + (pcy / pcz)) / det.y_scale[..., None]
-
-        self._zone_axes_detector_coordinates = coords_d
-
     def _lines_as_collection(
         self, index: Union[int, tuple], coordinates: str, **kwargs
     ) -> mcollections.LineCollection:
@@ -496,6 +462,125 @@ class GeometricalKikuchiPatternSimulation:
         for k, v in line_defaults.items():
             kwargs.setdefault(k, v)
         return mcollections.LineCollection(segments=list(coords), **kwargs)
+
+    def _lines_as_markers(self, **kwargs) -> list:
+        """Get Kikuchi lines as a list of HyperSpy markers.
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments passed to
+            :func:`~matplotlib.pyplot.axvline` to format the lines.
+
+        Returns
+        -------
+        lines_list
+            List with line segment markers.
+        """
+        coords = self.lines_coordinates(index=(), exclude_nan=False)
+        lines_list = []
+        segment_defaults = dict(color="r", zorder=1)
+        for k, v in segment_defaults.items():
+            kwargs.setdefault(k, v)
+
+        # Remove singleton navigation dimensions
+        if self.navigation_shape == (1,):
+            coords = coords.squeeze()
+
+        for i in range(self._lines.vector.size):
+            line = coords[..., i, :]
+            if not np.all(np.isnan(line)):
+                x1 = line[..., 0]
+                y1 = line[..., 1]
+                x2 = line[..., 2]
+                y2 = line[..., 3]
+                marker = line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kwargs)
+                lines_list.append(marker)
+
+        return lines_list
+
+    def _pc_as_markers(self, **kwargs) -> list:
+        """Return a list of projection center (PC) point markers.
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments passed to
+            :func:`~matplotlib.pyplot.scatter` to format the markers.
+
+        Returns
+        -------
+        pc_marker
+            List with a single PC marker.
+        """
+        det = self.detector
+        if det.navigation_shape == self.navigation_shape:
+            pcx = det.pc[..., 0]
+            pcy = det.pc[..., 1]
+        else:
+            pcx1, pcy1 = det.pc_average[:2]
+            pcx = np.full(self.navigation_shape, pcx1)
+            pcy = np.full(self.navigation_shape, pcy1)
+
+        if pcx.shape[0] == 1:
+            pcx = pcx.squeeze()
+            pcy = pcy.squeeze()
+
+        nrows, ncols = det.shape
+        if nrows > 1:
+            pcy *= nrows - 1
+        if ncols > 1:
+            pcx *= ncols - 1
+
+        for k, v in dict(size=300, marker="*", fc="gold", ec="k", zorder=4).items():
+            kwargs.setdefault(k, v)
+
+        pc_marker = point(x=pcx, y=pcy, **kwargs)
+
+        return [pc_marker]
+
+    def _set_lines_detector_coordinates(self):
+        """Start and end point coordinates of bands in uncalibrated
+        detector coordinates (a scale of 1 and offset of 0).
+        """
+        # Get PC coordinates and add two axes to get the shape
+        # (navigation shape, 1, 1)
+        det = self.detector
+        pcx = det.pcx[..., None, None]
+        pcy = det.pcy[..., None, None]
+        pcz = det.pcz[..., None, None]
+
+        # Convert coordinates
+        coords_d = self._lines.plane_trace_coordinates.copy()
+        coords_d[..., [0, 2]] = coords_d[..., [0, 2]] + (pcx / pcz) * det.aspect_ratio
+        coords_d[..., [0, 2]] = coords_d[..., [0, 2]] / det.x_scale[..., None, None]
+        coords_d[..., [1, 3]] = -coords_d[..., [1, 3]] + (pcy / pcz)
+        coords_d[..., [1, 3]] = coords_d[..., [1, 3]] / det.y_scale[..., None, None]
+
+        self._lines_detector_coordinates = coords_d
+
+    def _set_zone_axes_detector_coordinates(self):
+        """Coordinates of zone axes in uncalibrated detector
+        coordinates (a scale of 1 and offset of 0).
+        """
+        xyg = self._zone_axes._xy_within_r_gnomonic
+        xg = xyg[..., 0]
+        yg = xyg[..., 1]
+        coords_d = np.empty_like(xyg)
+
+        # Get projection center coordinates, and add one axis to get the
+        # shape (navigation shape, 1)
+        det = self.detector
+        pcx = det.pcx[..., None]
+        pcy = det.pcy[..., None]
+        pcz = det.pcz[..., None]
+
+        coords_d[..., 0] = (xg + (pcx / pcz) * det.aspect_ratio) / det.x_scale[
+            ..., None
+        ]
+        coords_d[..., 1] = (-yg + (pcy / pcz)) / det.y_scale[..., None]
+
+        self._zone_axes_detector_coordinates = coords_d
 
     def _zone_axes_as_collection(
         self, index: Union[int, tuple], coordinates: str, **kwargs
@@ -574,42 +659,6 @@ class GeometricalKikuchiPatternSimulation:
                 text_i = mtext.Text(x, y, label, **kwargs)
                 texts.append(text_i)
         return texts
-
-    def _lines_as_markers(self, **kwargs) -> list:
-        """Get Kikuchi lines as a list of HyperSpy markers.
-
-        Parameters
-        ----------
-        kwargs
-            Keyword arguments passed to
-            :func:`~matplotlib.pyplot.axvline` to format the lines.
-
-        Returns
-        -------
-        lines_list
-            List with line segment markers.
-        """
-        coords = self.lines_coordinates(index=(), exclude_nan=False)
-        lines_list = []
-        segment_defaults = dict(color="r", zorder=1)
-        for k, v in segment_defaults.items():
-            kwargs.setdefault(k, v)
-
-        # Remove singleton navigation dimensions
-        if self.navigation_shape == (1,):
-            coords = coords.squeeze()
-
-        for i in range(self._lines.vector.size):
-            line = coords[..., i, :]
-            if not np.all(np.isnan(line)):
-                x1 = line[..., 0]
-                y1 = line[..., 1]
-                x2 = line[..., 2]
-                y2 = line[..., 3]
-                marker = line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kwargs)
-                lines_list.append(marker)
-
-        return lines_list
 
     def _zone_axes_as_markers(self, **kwargs) -> list:
         """Return a list of zone axes point markers.
@@ -690,42 +739,3 @@ class GeometricalKikuchiPatternSimulation:
                 zone_axes_label_list.append(text_marker)
 
         return zone_axes_label_list
-
-    def _pc_as_markers(self, **kwargs) -> list:
-        """Return a list of projection center (PC) point markers.
-
-        Parameters
-        ----------
-        kwargs
-            Keyword arguments passed to
-            :func:`~matplotlib.pyplot.scatter` to format the markers.
-
-        Returns
-        -------
-        pc_marker
-            List with a single PC marker.
-        """
-        det = self.detector
-        if det.navigation_shape == self.navigation_shape:
-            pcx, pcy = det.pc[..., :2]
-        else:
-            pcx1, pcy1 = det.pc_average[:2]
-            pcx = np.full(self.navigation_shape, pcx1)
-            pcy = np.full(self.navigation_shape, pcy1)
-
-        if pcx.shape[0] == 1:
-            pcx = pcx.squeeze()
-            pcy = pcy.squeeze()
-
-        nrows, ncols = det.shape
-        if nrows > 1:
-            pcy *= nrows - 1
-        if ncols > 1:
-            pcx *= ncols - 1
-
-        for k, v in dict(size=300, marker="*", fc="gold", ec="k", zorder=4).items():
-            kwargs.setdefault(k, v)
-
-        pc_marker = point(x=pcx, y=pcy, **kwargs)
-
-        return [pc_marker]

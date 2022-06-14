@@ -204,10 +204,14 @@ class KikuchiPatternSimulator:
         ----------
         detector
             EBSD detector describing the detector's view of the sample.
+            If
+            :attr:`~kikuchipy.detectors.EBSDDetector.navigation_shape`
+            is anything else than ``(1,)``, it must be equal to the
+            shape of the input ``rotations``.
         rotations
             Crystal orientations assumed to be expressed with respect to
             the default EDAX TSL sample reference frame RD-TD-ND in the
-            Bunge convention.
+            Bunge convention. Rotation shape can be 1D or 2D.
 
         Returns
         -------
@@ -218,6 +222,14 @@ class KikuchiPatternSimulator:
         This function is not optimized for large datasets, so use with
         care.
         """
+        if (
+            detector.navigation_shape != (1,)
+            and detector.navigation_shape != rotations.shape
+        ):
+            raise ValueError(
+                "`detector.navigation_shape` is not (1,) or equal to `rotations.shape`"
+            )
+
         lattice = self.phase.structure.lattice
         ref = self._reflectors
         hkl = ref.hkl
@@ -250,11 +262,11 @@ class KikuchiPatternSimulator:
         hkl_da = da.from_array(hkl)
         hkl_d = da.matmul(hkl_da, u_kstar)
 
-        # Find bands that are in some pattern
         nav_axes = (0, 1)[: rotations.ndim]
-        hkl_is_upper, hkl_in_a_pattern = _get_coordinates_in_upper_hemisphere(
-            z_coordinates=hkl_d[..., 2], navigation_axes=nav_axes
-        )
+
+        # Find bands that are in some pattern
+        hkl_is_upper = da.atleast_2d(hkl_d[..., 2]) > 0
+        hkl_in_a_pattern = da.sum(hkl_is_upper, axis=nav_axes) != 0
         hkl_in_pattern = hkl_is_upper[..., hkl_in_a_pattern]
         hkl_d = hkl_d[..., hkl_in_a_pattern, :]
         with ProgressBar():
@@ -266,7 +278,7 @@ class KikuchiPatternSimulator:
         hkl = hkl[hkl_in_a_pattern]
 
         # Max. gnomonic radius to consider
-        max_r_gnomonic = detector.r_max[0]
+        max_r_gnomonic = np.max(detector.r_max)
 
         # Zone axes <uvw> from {hkl}
         uvw = np.cross(hkl[:, None, :], hkl)
@@ -290,9 +302,8 @@ class KikuchiPatternSimulator:
         uvw_d = da.matmul(uvw_da, u_k)
 
         # Find zone axes that are in some pattern
-        uvw_is_upper, uvw_in_a_pattern = _get_coordinates_in_upper_hemisphere(
-            z_coordinates=uvw_d[..., 2], navigation_axes=nav_axes
-        )
+        uvw_is_upper = da.atleast_2d(uvw_d[..., 2]) > 0
+        uvw_in_a_pattern = da.sum(uvw_is_upper, axis=nav_axes) != 0
         uvw_in_pattern = uvw_is_upper[..., uvw_in_a_pattern]
         uvw_d = uvw_d[..., uvw_in_a_pattern, :]
         with ProgressBar():
@@ -310,6 +321,9 @@ class KikuchiPatternSimulator:
             hkl_d, hkl_in_pattern, uvw_d, uvw_in_pattern = da.compute(
                 [hkl_d, hkl_in_pattern, uvw_d, uvw_in_pattern]
             )[0]
+
+        # TODO: Reduce memory use here by perhaps not using classes for
+        #  storing line and zone axis coordinates
 
         lines = KikuchiPatternLine(
             hkl=Miller(hkl=hkl, phase=self.phase),
@@ -510,18 +524,6 @@ def _get_pattern(
     part = 0.5 * np.sum(intensity_part, where=mask1, axis=1)
     part += np.sum(intensity_part, where=mask2, axis=1)
     return part
-
-
-def _get_coordinates_in_upper_hemisphere(
-    z_coordinates: Union[da.Array, np.ndarray], navigation_axes: tuple
-) -> Tuple[da.Array, da.Array]:
-    """Return two boolean arrays with True if a coordinate is in the
-    upper hemisphere and if it is in the upper hemisphere in some
-    pattern, respectively.
-    """
-    upper_hemisphere = da.atleast_2d(z_coordinates) > 0
-    in_a_pattern = da.sum(upper_hemisphere, axis=navigation_axes) != 0
-    return upper_hemisphere, in_a_pattern
 
 
 def _plot_spherical(
