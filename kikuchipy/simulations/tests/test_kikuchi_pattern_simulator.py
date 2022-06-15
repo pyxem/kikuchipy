@@ -100,7 +100,6 @@ class TestCalculateMasterPattern:
 
         assert isinstance(mp, kp.signals.EBSDMasterPattern)
         assert mp.data.shape == (1001, 1001)
-        assert mp.mode == "kinematical"
 
     def test_raises(self):
         """Appropriate error messages are raised."""
