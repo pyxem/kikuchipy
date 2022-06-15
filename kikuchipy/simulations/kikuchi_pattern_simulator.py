@@ -235,7 +235,6 @@ class KikuchiPatternSimulator:
             phase=self.phase,
             hemisphere=hemisphere,
             projection="stereographic",
-            mode="kinematical",
         )
 
     def on_detector(self, detector: EBSDDetector, rotations: Rotation):
