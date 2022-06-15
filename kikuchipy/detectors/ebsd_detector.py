@@ -21,6 +21,7 @@ from typing import List, Optional, Tuple, Union
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.markers import MarkerStyle
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -36,6 +37,7 @@ class EBSDDetector:
     Calculation of gnomonic coordinates is based on the work by Aimo
     Winkelmann in the supplementary material to
     :cite:`britton2016tutorial`.
+
     """
 
     def __init__(
@@ -204,8 +206,8 @@ class EBSDDetector:
 
     @property
     def aspect_ratio(self) -> float:
-        """Number of detector rows divided by columns."""
-        return self.nrows / self.ncols
+        """Number of detector columns divided by rows."""
+        return self.ncols / self.nrows
 
     @property
     def unbinned_shape(self) -> Tuple[int, int]:
@@ -410,9 +412,7 @@ class EBSDDetector:
         ----------
         version
             Which EMsoft PC convention to use. The direction of the x PC
-            coordinate, $x_{pc}$, flipped in version 5, because from
-            then on the EBSD patterns were viewed looking from detector
-            to sample, not the other way around.
+            coordinate, $x_{pc}$, flipped in version 5.
 
         Notes
         -----
@@ -479,7 +479,7 @@ class EBSDDetector:
 
     def plot(
         self,
-        coordinates: Optional[str] = None,
+        coordinates: str = "detector",
         show_pc: bool = True,
         pc_kwargs: Optional[dict] = None,
         pattern: Optional[np.ndarray] = None,
@@ -499,8 +499,8 @@ class EBSDDetector:
         Parameters
         ----------
         coordinates
-            Which coordinates to use, "detector" or "gnomonic". If None
-            (default), "detector" is used.
+            Which coordinates to use, "detector" (default) or
+            "gnomonic".
         show_pc
             Show the average projection center in the Bruker convention.
             Default is True.
@@ -557,7 +557,7 @@ class EBSDDetector:
         ... )
         >>> fig, ax = det.plot(
         ...     pattern=np.ones(det.shape),
-        ...     show_pc=True,
+        ...     pc=True,
         ...     return_fig_ax=True,
         ... )
         >>> fig.savefig("detector.png")
@@ -565,9 +565,9 @@ class EBSDDetector:
         sy, sx = self.shape
         pcx, pcy = self.pc_average[:2]
 
-        if coordinates in [None, "detector"]:
-            pcy *= sy
-            pcx *= sx
+        if coordinates == "detector":
+            pcy *= sy - 1
+            pcx *= sx - 1
             bounds = self.bounds
             bounds[2:] = bounds[2:][::-1]
             x_label = "x detector"
@@ -580,7 +580,7 @@ class EBSDDetector:
 
         fig, ax = plt.subplots()
         ax.axis(zoom * bounds)
-        ax.set_aspect(self.aspect_ratio)
+        ax.set_aspect("equal")
         ax.set_xlabel(x_label)
         ax.set_ylabel(y_label)
 
@@ -595,6 +595,13 @@ class EBSDDetector:
                 pattern_kwargs = {}
             pattern_kwargs.setdefault("cmap", "gray")
             ax.imshow(pattern, extent=bounds, **pattern_kwargs)
+        else:
+            origin = (bounds[0], bounds[2])
+            width = np.diff(bounds[:2])[0]
+            height = np.diff(bounds[2:])[0]
+            ax.add_artist(
+                mpatches.Rectangle(origin, width, height, fc=(0.5,) * 3, zorder=-1)
+            )
 
         # Show the projection center
         if show_pc:
@@ -605,8 +612,9 @@ class EBSDDetector:
                 facecolor="gold",
                 edgecolor="k",
                 marker=MarkerStyle(marker="*", fillstyle="full"),
+                zorder=10,
             )
-            [pc_kwargs.setdefault(k, v) for k, v in default_params_pc.items()]
+            _ = [pc_kwargs.setdefault(k, v) for k, v in default_params_pc.items()]
             ax.scatter(x=pcx, y=pcy, **pc_kwargs)
 
         # Draw gnomonic circles centered on the projection center
@@ -676,8 +684,8 @@ class EBSDDetector:
 
     def _pc_tsl2bruker(self) -> np.ndarray:
         new_pc = deepcopy(self.pc)
-        new_pc[..., 1] = 1 - (self.pcy / self.aspect_ratio)
-        new_pc[..., 2] = new_pc[..., 2] / self.aspect_ratio
+        new_pc[..., 1] = 1 - self.pcy * self.aspect_ratio
+        new_pc[..., 2] = new_pc[..., 2] * self.aspect_ratio
         return new_pc
 
     def _pc_bruker2emsoft(self, version: int = 5) -> np.ndarray:
@@ -691,6 +699,6 @@ class EBSDDetector:
 
     def _pc_bruker2tsl(self) -> np.ndarray:
         new_pc = deepcopy(self.pc)
-        new_pc[..., 1] = (1 - self.pcy) * self.aspect_ratio
-        new_pc[..., 2] = new_pc[..., 2] * self.aspect_ratio
+        new_pc[..., 1] = (1 - self.pcy) / self.aspect_ratio
+        new_pc[..., 2] = new_pc[..., 2] / self.aspect_ratio
         return new_pc

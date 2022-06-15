@@ -36,8 +36,8 @@ class KikuchiBand(ReciprocalLatticePoint):
         in_pattern: Union[np.ndarray, list, tuple],
         gnomonic_radius: Union[float, np.ndarray] = 10,
     ):
-        """Center positions of Kikuchi bands on the detector for n
-        simulated patterns.
+        """*[Deprecated]* Center positions of Kikuchi bands on the
+        detector for n simulated patterns.
 
         This class extends the
         :class:`~diffsims.crystallography.ReciprocalLatticePoint` class
@@ -88,6 +88,15 @@ class KikuchiBand(ReciprocalLatticePoint):
         Phase: ni (m-3m)
         [[-1  1  1]
          [-2  0  0]]
+
+        Notes
+        -----
+        .. deprecated:: 0.6.0
+            ``KikuchiBand`` is deprecated and will be removed in v0.7.0.
+            Access Kikuchi line coordinates after a geometrical
+            simuation via
+            :attr:`~kikuchipy.simulations.GeometricalKikuchiPatternSimulation.lines_coordinates`
+            instead.
         """
         super().__init__(phase=phase, hkl=hkl)
         self._hkl_detector = Vector3d(hkl_detector)
@@ -315,7 +324,7 @@ class ZoneAxis(ReciprocalLatticePoint):
         in_pattern: Union[np.ndarray, list, tuple],
         gnomonic_radius: Union[float, np.ndarray] = 10,
     ):
-        """Positions of zone axes on the detector.
+        """*[Deprecated]* Positions of zone axes on the detector.
 
         Parameters
         ----------
@@ -333,6 +342,15 @@ class ZoneAxis(ReciprocalLatticePoint):
             Only plane trace coordinates of bands with Hesse normal
             form distances below this radius is returned when called
             for.
+
+        Notes
+        -----
+        .. deprecated:: 0.6.0
+            ``ZoneAxis`` is deprecated and will be removed in v0.7.0.
+            Access zone axis coordinates after a geometrical simuation
+            via
+            :attr:`~kikuchipy.simulations.GeometricalKikuchiPatternSimulation.zone_axes_coordinates`
+            instead.
         """
         super().__init__(phase=phase, hkl=uvw)
         self._uvw_detector = Vector3d(uvw_detector)

@@ -18,11 +18,12 @@
 import os
 
 import dask.array as da
-from hyperspy.api import load as hs_load
+import hyperspy.api as hs
 from hyperspy._signals.signal2d import Signal2D
 import numpy as np
 from orix.crystal_map import Phase
 from orix.quaternion import Rotation
+from orix.vector import Vector3d
 import pytest
 
 import kikuchipy as kp
@@ -40,6 +41,7 @@ from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_for_single_pc_from_detector,
     _get_lambert_interpolation_parameters,
     _get_pixel_from_master_pattern,
+    _lambert2vector,
     _project_patterns_from_master_pattern,
     _project_single_pattern_from_master_pattern,
 )
@@ -83,7 +85,7 @@ class TestEBSDMasterPattern:
         assert isinstance(s.data, da.Array)
 
     def test_get_master_pattern_arrays_from_energy(self):
-        """Get northern and southern hemisphere of master pattern of the
+        """Get upper and lower hemisphere of master pattern of the
         last energy axis without providing the energy parameter.
         """
         shape = (2, 11, 11)
@@ -96,9 +98,9 @@ class TestEBSDMasterPattern:
                 {"size": 11, "name": "y"},
             ],
         )
-        mp_north, mp_south = mp._get_master_pattern_arrays_from_energy()
-        assert np.allclose(mp_north, data[1])
-        assert np.allclose(mp_south, data[1])
+        mp_upper, mp_lower = mp._get_master_pattern_arrays_from_energy()
+        assert np.allclose(mp_upper, data[1])
+        assert np.allclose(mp_lower, data[1])
 
 
 class TestIO:
@@ -114,12 +116,12 @@ class TestIO:
 
         s.save(save_path_hdf5)
 
-        s2 = hs_load(save_path_hdf5, signal_type="EBSDMasterPattern")
+        s2 = hs.load(save_path_hdf5, signal_type="EBSDMasterPattern")
         assert isinstance(s2, kp.signals.EBSDMasterPattern)
         assert_dictionary(s2.axes_manager.as_dictionary(), axes_manager)
         assert_dictionary(s2.metadata.as_dictionary(), METADATA)
 
-        s3 = hs_load(save_path_hdf5)
+        s3 = hs.load(save_path_hdf5)
         assert isinstance(s3, Signal2D)
         s3.set_signal_type("EBSDMasterPattern")
         assert isinstance(s3, kp.signals.EBSDMasterPattern)
@@ -144,7 +146,7 @@ class TestIO:
         assert [k in omd_dict_keys for k in desired_keys]
 
         s.save(save_path_hdf5)
-        s2 = hs_load(save_path_hdf5, signal_type="EBSDMasterPattern")
+        s2 = hs.load(save_path_hdf5, signal_type="EBSDMasterPattern")
         assert isinstance(s2, kp.signals.EBSDMasterPattern)
 
         omd_dict_keys2 = s2.original_metadata.as_dictionary().keys()
@@ -154,7 +156,7 @@ class TestIO:
 class TestProperties:
     @pytest.mark.parametrize(
         "projection, hemisphere",
-        [("lambert", "north"), ("stereographic", "south"), ("lambert", "both")],
+        [("lambert", "upper"), ("stereographic", "lower"), ("lambert", "both")],
     )
     def test_properties(self, projection, hemisphere):
         mp = nickel_ebsd_master_pattern_small(
@@ -177,6 +179,14 @@ class TestProperties:
         assert mp2.phase.point_group.name == mp.phase.point_group.name
         mp2.phase.space_group = 220
         assert mp2.phase.point_group.name != mp.phase.point_group.name
+
+    def test_hemisphere_warns(self):
+        mp = kp.data.nickel_ebsd_master_pattern_small(hemisphere="upper")
+        with pytest.warns(np.VisibleDeprecationWarning, match="`hemisphere` parameter"):
+            mp.hemisphere = "north"
+            assert mp.hemisphere == "upper"
+            mp.hemisphere = "south"
+            assert mp.hemisphere == "lower"
 
 
 class TestProjectingPatternsFromLambert:
@@ -361,16 +371,16 @@ class TestProjectingPatternsFromLambert:
         dc = _get_direction_cosines_for_single_pc_from_detector(self.detector)
 
         npx = npy = 101
-        mpn = mps = np.zeros((npy, npx))
+        mpu = mpl = np.zeros((npy, npx))
         patterns = _project_patterns_from_master_pattern.py_func(
             rotations=r.data,
             direction_cosines=dc,
-            master_north=mpn,
-            master_south=mps,
+            master_upper=mpu,
+            master_lower=mpl,
             npx=npx,
             npy=npy,
             scale=float((npx - 1) / 2),
-            dtype_out=mpn.dtype,
+            dtype_out=mpu.dtype,
             rescale=False,
             # Aren't used
             out_min=1,
@@ -388,13 +398,13 @@ class TestProjectingPatternsFromLambert:
         """Make sure the Numba function is covered."""
         dc = _get_direction_cosines_for_single_pc_from_detector(self.detector)
         npx = npy = 101
-        mpn = mps = np.random.random(npy * npx).reshape((npy, npx))
+        mpu = mpl = np.random.random(npy * npx).reshape((npy, npx))
 
         pattern = _project_single_pattern_from_master_pattern.py_func(
             rotation=np.array([1, 1, 0, 0], dtype=float),
             direction_cosines=dc.reshape((-1, 3)),
-            master_north=mpn,
-            master_south=mps,
+            master_upper=mpu,
+            master_lower=mpl,
             npx=npx,
             npy=npy,
             scale=1,
@@ -511,3 +521,69 @@ class TestMasterPatternPlotting:
         mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
         with pytest.raises(ImportError, match="`pyvista` is required"):
             _ = mp.plot_spherical()
+
+
+class TestAsLambert:
+    def test_as_lambert(self):
+        mp_sp = nickel_ebsd_master_pattern_small(projection="stereographic")
+        assert mp_sp.projection == "stereographic"
+        assert mp_sp.hemisphere == "upper"
+
+        # Upper hemisphere
+        mp_lp = mp_sp.as_lambert()
+        assert mp_lp.projection == "lambert"
+        assert mp_lp.data.shape == mp_sp.data.shape
+        assert np.issubdtype(mp_lp.data.dtype, np.float32)
+        assert mp_lp.hemisphere == mp_sp.hemisphere
+        assert mp_lp.phase.point_group == mp_sp.phase.point_group
+
+        # Warns and raises
+        mp_lp_ref = nickel_ebsd_master_pattern_small(projection="lambert")
+        with pytest.warns(UserWarning, match="Already in the Lambert projection, "):
+            mp_lp_ref2 = mp_lp_ref.as_lambert()
+            assert not np.may_share_memory(mp_lp_ref.data, mp_lp_ref2.data)
+
+        mp_sp_lazy = mp_sp.as_lazy()
+        with pytest.raises(NotImplementedError, match="Only implemented for non-lazy "):
+            _ = mp_sp_lazy.as_lambert()
+
+        # Quite similar to EMsoft's Lambert master pattern
+        ncc = NormalizedCrossCorrelationMetric(1, 1)
+        assert ncc(mp_lp.data, mp_lp_ref.data).compute() > 0.96
+
+        # "Lower" hemisphere identical to upper
+        mp_sp.hemisphere = "lower"
+        mp_lp2 = mp_sp.as_lambert()
+        assert mp_lp2.projection == "lambert"
+        assert np.allclose(mp_lp.data, mp_lp2.data)
+
+    def test_as_lambert_multiple_energies_hemispheres(self):
+        mp_both = nickel_ebsd_master_pattern_small(
+            projection="stereographic", hemisphere="both"
+        )
+
+        mp_lp_both = mp_both.as_lambert()
+        assert mp_lp_both.data.ndim == 3
+
+        # Create a signal with two "energies"
+        mp = hs.stack([mp_both, mp_both])
+        mp.axes_manager[1].name = "energy"
+        mp.hemisphere = mp_both.hemisphere
+        mp.projection = mp_both.projection
+        mp.phase = mp_both.phase.deepcopy()
+
+        mp_lp_energy = mp.as_lambert()
+        assert mp_lp_energy.data.ndim == 4
+
+    def test_lambert2stereographic_numba(self):
+        arr = np.linspace(-1, 1, 41, dtype=np.float64)
+        x_lambert, y_lambert = np.meshgrid(arr, arr)
+        x_lambert_flat = x_lambert.ravel()
+        y_lambert_flat = y_lambert.ravel()
+
+        xyz = _lambert2vector.py_func(x_lambert_flat, y_lambert_flat)
+
+        assert xyz.shape == (arr.size**2, 3)
+        assert np.all(xyz[:, 2] >= 0)
+        assert np.isclose(xyz.max(), 1)
+        assert np.isclose(xyz.min(), -1)

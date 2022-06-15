@@ -61,8 +61,8 @@ def _refine_orientation_objective_function(x: np.ndarray, *args: tuple) -> float
     simulated_pattern = _project_single_pattern_from_master_pattern(
         rotation=_rotation_from_euler(alpha=x[0], beta=x[1], gamma=x[2]),
         direction_cosines=args[1],
-        master_north=args[2],
-        master_south=args[3],
+        master_upper=args[2],
+        master_lower=args[3],
         npx=args[4],
         npy=args[5],
         scale=args[6],
@@ -123,8 +123,8 @@ def _refine_projection_center_objective_function(x: np.ndarray, *args: tuple) ->
     simulated_pattern = _project_single_pattern_from_master_pattern(
         rotation=args[1],
         direction_cosines=direction_cosines,
-        master_north=args[2],
-        master_south=args[3],
+        master_upper=args[2],
+        master_lower=args[3],
         npx=args[4],
         npy=args[5],
         scale=args[6],
@@ -188,8 +188,8 @@ def _refine_orientation_projection_center_objective_function(
     simulated_pattern = _project_single_pattern_from_master_pattern(
         rotation=rotation,
         direction_cosines=direction_cosines,
-        master_north=args[1],
-        master_south=args[2],
+        master_upper=args[1],
+        master_lower=args[2],
         npx=args[3],
         npy=args[4],
         scale=args[5],

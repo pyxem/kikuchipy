@@ -46,9 +46,9 @@ class TestData:
     @pytest.mark.parametrize(
         "projection, hemisphere, desired_shape",
         [
-            ("lambert", "north", (401, 401)),
+            ("lambert", "upper", (401, 401)),
             ("lambert", "both", (2, 401, 401)),
-            ("stereographic", "south", (401, 401)),
+            ("stereographic", "lower", (401, 401)),
             ("stereographic", "both", (2, 401, 401)),
         ],
     )
@@ -85,7 +85,7 @@ class TestData:
             os.rename(file, new_name)
 
         with pytest.raises(ValueError, match="Dataset nickel_ebsd_large/patterns.h5"):
-            _ = data.nickel_ebsd_large(allow_download=False)
+            _ = data.nickel_ebsd_large()
 
         # Revert rename
         if rename:  # pragma: no cover

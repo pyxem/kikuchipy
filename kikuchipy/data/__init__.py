@@ -108,7 +108,7 @@ def nickel_ebsd_small(**kwargs) -> EBSD:
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.nickel_ebsd_small()
-    >>> s
+    >>> s  # doctest: +SKIP
     <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
     """
     fname = _fetch("kikuchipy_h5ebsd/patterns.h5")
@@ -148,7 +148,7 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.nickel_ebsd_master_pattern_small()
-    >>> s
+    >>> s  # doctest: +SKIP
     <EBSDMasterPattern, title: ni_mc_mp_20kv_uint8_gzip_opts9, dimensions: (|401, 401)>
     >>> s.projection
     'stereographic'
@@ -177,10 +177,11 @@ def nickel_ebsd_large(
     allow_download : bool
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
-        the local cache with the pooch Python package. Default is False.
+        the local cache with the pooch Python package. Default is
+        ``False``.
     progressbar
         Whether to show a progressbar when downloading. Default is
-        False.
+        ``False``.
     kwargs
         Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
 
@@ -193,7 +194,7 @@ def nickel_ebsd_large(
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.nickel_ebsd_large(allow_download=True)
-    >>> s
+    >>> s  # doctest: +SKIP
     <EBSD, title: patterns Scan 1, dimensions: (75, 55|60, 60)>
     """
     fname = _fetch("nickel_ebsd_large/patterns.h5", allow_download, progressbar)
@@ -218,10 +219,11 @@ def silicon_ebsd_moving_screen_in(
     allow_download : bool
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
-        the local cache with the pooch Python package. Default is False.
+        the local cache with the pooch Python package. Default is
+        ``False``.
     progressbar
         Whether to show a progressbar when downloading. Default is
-        False.
+        ``False``.
     kwargs
         Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
 
@@ -239,7 +241,7 @@ def silicon_ebsd_moving_screen_in(
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
-    >>> s
+    >>> s  # doctest: +SKIP
     <EBSD, title: si_in Scan 1, dimensions: (|480, 480)>
     """
     fname = _fetch("silicon_ebsd_moving_screen/si_in.h5", allow_download, progressbar)
@@ -266,10 +268,11 @@ def silicon_ebsd_moving_screen_out5mm(
     allow_download : bool
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
-        the local cache with the pooch Python package. Default is False.
+        the local cache with the pooch Python package. Default is
+        ``False``.
     progressbar
         Whether to show a progressbar when downloading. Default is
-        False.
+        ``False``.
     kwargs
         Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
 
@@ -287,7 +290,7 @@ def silicon_ebsd_moving_screen_out5mm(
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.silicon_ebsd_moving_screen_out5mm(allow_download=True)
-    >>> s
+    >>> s  # doctest: +SKIP
     <EBSD, title: si_out5mm Scan 1, dimensions: (|480, 480)>
     """
     fname = _fetch(
@@ -316,10 +319,11 @@ def silicon_ebsd_moving_screen_out10mm(
     allow_download : bool
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
-        the local cache with the pooch Python package. Default is False.
+        the local cache with the pooch Python package. Default is
+        ``False``.
     progressbar
         Whether to show a progressbar when downloading. Default is
-        False.
+        ``False``.
     kwargs
         Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
 
@@ -337,7 +341,7 @@ def silicon_ebsd_moving_screen_out10mm(
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.silicon_ebsd_moving_screen_out10mm(allow_download=True)
-    >>> s
+    >>> s  # doctest: +SKIP
     <EBSD, title: si_out10mm Scan 1, dimensions: (|480, 480)>
     """
     fname = _fetch(

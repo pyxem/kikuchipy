@@ -367,7 +367,7 @@ class EBSD(CommonImage, Signal2D):
         --------
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
-        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
+        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1  # doctest: +SKIP
         ├── atom = Ni
         ├── coordinates = array([0, 0, 0])
         ├── debye_waller_factor = 0.0035
@@ -2012,14 +2012,14 @@ class EBSD(CommonImage, Signal2D):
 
     def deepcopy(self):
         new = super().deepcopy()
-        if self.xmap is not None:
+        try:
             new._xmap = self.xmap.deepcopy()
-        else:
-            new._xmap = copy.deepcopy(self.xmap)
-        if self.static_background is not None:
+        except AttributeError:
+            pass
+        try:
             new._static_background = self.static_background.copy()
-        else:
-            new._static_background = copy.deepcopy(self.static_background)
+        except AttributeError:
+            pass
         new._detector = self.detector.deepcopy()
         return new
 

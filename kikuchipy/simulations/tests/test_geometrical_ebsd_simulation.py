@@ -17,15 +17,11 @@
 
 from diffsims.crystallography import ReciprocalLatticePoint
 from hyperspy.utils.markers import line_segment, point, text
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
 from kikuchipy.signals import EBSD
-
-
-matplotlib.use("Agg")  # For plotting
 
 
 class TestGeometricalEBSDSimulation:
@@ -43,7 +39,7 @@ class TestGeometricalEBSDSimulation:
         assert sim.detector.navigation_shape == nav_shape
         assert sim.rotations.shape == nav_shape
         assert sim.bands.navigation_shape == nav_shape
-        assert sim.bands_detector_coordinates.shape == (nav_shape + (sim.bands.size, 4))
+        assert sim.bands_detector_coordinates.shape == nav_shape + (sim.bands.size, 4)
         n_za = sim.zone_axes.size
         za_shape = nav_shape + (n_za, 2)
         assert sim.zone_axes_detector_coordinates.shape == za_shape

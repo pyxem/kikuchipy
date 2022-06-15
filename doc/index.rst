@@ -3,7 +3,7 @@ kikuchipy
 =========
 
 .. Launch binder
-.. image:: https://mybinder.org/badge_logo.svg
+.. image:: https://static.mybinder.org/badge_logo.svg
     :target: https://mybinder.org/v2/gh/pyxem/kikuchipy/HEAD
     :alt: Launch binder
 
@@ -28,11 +28,11 @@ kikuchipy
 
 .. PyPI version
 .. image:: https://img.shields.io/pypi/v/kikuchipy.svg
-    :target: https://pypi.python.org/pypi/kikuchipy
+    :target: https://pypi.org/project/kikuchipy/
     :alt: PyPI version
 
 .. Downloads per month
-.. image:: https://pepy.tech/badge/kikuchipy/month
+.. image:: https://static.pepy.tech/badge/kikuchipy/month
     :target: https://pepy.tech/project/kikuchipy
     :alt: Downloads per month
 
@@ -54,7 +54,7 @@ multi-dimensional data analysis provided by the HyperSpy library.
   Notebooks with many links to detailed explanations of the input parameters and output
   of functions and class methods (the API reference). The notebooks can be inspected
   statically on the web page or via `nbviewer
-  <https://nbviewer.jupyter.org/github/pyxem/kikuchipy/tree/develop/doc/user_guide/>`_,
+  <https://nbviewer.org/github/pyxem/kikuchipy/tree/develop/doc/user_guide/>`_,
   downloaded and run locally, or run interactively in the browser by clicking the Binder
   link above and navigating to the `doc/user_guide` directory. We hope you find them
   useful!
@@ -87,7 +87,7 @@ multi-dimensional data analysis provided by the HyperSpy library.
     user_guide/feature_maps.ipynb
     user_guide/virtual_backscatter_electron_imaging.ipynb
     user_guide/pattern_matching.ipynb
-    user_guide/geometrical_ebsd_simulations.ipynb
+    user_guide/kikuchi_pattern_simulations.ipynb
     user_guide/multivariate_analysis.ipynb
     user_guide/metadata_structure.ipynb
 

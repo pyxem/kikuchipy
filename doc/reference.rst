@@ -613,8 +613,38 @@ simulations
 .. currentmodule:: kikuchipy.simulations
 
 .. autosummary::
-    GeometricalEBSDSimulation
+    KikuchiPatternSimulator
+    GeometricalKikuchiPatternSimulation
     features
+    GeometricalEBSDSimulation
+
+KikuchiPatternSimulator
+-----------------------
+
+.. currentmodule:: kikuchipy.simulations.KikuchiPatternSimulator
+
+.. autosummary::
+    calculate_master_pattern
+    on_detector
+    plot
+
+.. autoclass:: kikuchipy.simulations.KikuchiPatternSimulator
+    :members:
+
+GeometricalKikuchiPatternSimulation
+-----------------------------------
+
+.. currentmodule:: kikuchipy.simulations.GeometricalKikuchiPatternSimulation
+
+.. autosummary::
+    as_collections
+    as_markers
+    lines_coordinates
+    plot
+    zone_axes_coordinates
+
+.. autoclass:: kikuchipy.simulations.GeometricalKikuchiPatternSimulation
+    :members:
 
 GeometricalEBSDSimulation
 -------------------------
