@@ -290,7 +290,7 @@ class GeometricalKikuchiPatternSimulation:
             coords = self._lines.plane_trace_coordinates[index]
         if exclude_nan:
             coords = coords[~np.isnan(coords).any(axis=-1)]
-        return coords
+        return coords.copy()
 
     def plot(
         self,
@@ -428,7 +428,7 @@ class GeometricalKikuchiPatternSimulation:
             coords = self._zone_axes._xy_within_r_gnomonic[index]
         if exclude_nan:
             coords = coords[~np.isnan(coords).any(axis=-1)]
-        return coords
+        return coords.copy()
 
     def _lines_as_collection(
         self, index: Union[int, tuple], coordinates: str, **kwargs
@@ -577,6 +577,29 @@ class GeometricalKikuchiPatternSimulation:
         ]
         coords_d[..., 1] = (-yg + (pcy / pcz)) / det.y_scale[..., None]
 
+        # Set those outside gnomonic bounds in each pattern to None
+        # Get gnomonic bounds
+        x_range = self.detector.x_range
+        y_range = self.detector.y_range
+        # Extend gnomonic bounds by one detector pixel to include zone
+        # axes on the detector border
+        x_scale = self.detector.x_scale
+        y_scale = self.detector.y_scale
+        x_range[..., 0] -= x_scale
+        x_range[..., 1] += x_scale
+        y_range[..., 0] -= y_scale
+        y_range[..., 1] += y_scale
+        # Add an extra dimension to account for n number of zone axes in
+        # the last dimension for the gnomonic coordinate arrays
+        x_range = np.expand_dims(x_range, axis=-2)
+        y_range = np.expand_dims(y_range, axis=-2)
+        # Get boolean array
+        within_x = np.logical_and(xg >= x_range[..., 0], xg <= x_range[..., 1])
+        within_y = np.logical_and(yg >= y_range[..., 0], yg <= y_range[..., 1])
+        within_gnomonic_bounds = np.logical_and(within_x, within_y)
+
+        coords_d[~within_gnomonic_bounds] = np.nan
+
         self._zone_axes_detector_coordinates = coords_d
 
     def _zone_axes_as_collection(
@@ -642,7 +665,7 @@ class GeometricalKikuchiPatternSimulation:
         za_labels = za_labels[za.within_r_gnomonic[index]]
         za_labels_str = np.array2string(za_labels, threshold=za_labels.size)
         za_labels_list = re.sub("[][ ]", "", za_labels_str[1:-1]).split("\n")
-        xy = self.zone_axes_coordinates(index, coordinates)
+        xy = self.zone_axes_coordinates(index, coordinates, exclude_nan=False)
         if coordinates == "detector":
             xy[..., 1] -= 0.03 * self.detector.nrows
         else:  # gnomonic
