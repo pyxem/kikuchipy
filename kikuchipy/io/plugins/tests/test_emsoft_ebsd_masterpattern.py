@@ -21,7 +21,7 @@ from h5py import File
 import numpy as np
 import pytest
 
-from kikuchipy import load
+from kikuchipy import data, load
 from kikuchipy.conftest import assert_dictionary
 from kikuchipy.io.plugins.emsoft_ebsd_master_pattern import (
     _check_file_format,
@@ -182,10 +182,8 @@ class TestEMsoftEBSDMasterPatternReader:
 
     @pytest.mark.parametrize("projection", ["stereographic", "lambert"])
     def test_load_lazy(self, projection):
-        """The Lambert projection's southern hemisphere is stored
-        chunked.
-        """
-        s = load(EMSOFT_FILE, projection=projection, hemisphere="south", lazy=True)
+        """The Lambert projection's lower hemisphere is stored chunked."""
+        s = load(EMSOFT_FILE, projection=projection, hemisphere="lower", lazy=True)
 
         assert isinstance(s, LazyEBSDMasterPattern)
 
@@ -196,14 +194,14 @@ class TestEMsoftEBSDMasterPatternReader:
     @pytest.mark.parametrize(
         "projection, hemisphere, dataset_names",
         [
-            ("stereographic", "North", ["masterSPNH"]),
+            ("stereographic", "Upper", ["masterSPNH"]),
             ("stereographic", "both", ["masterSPNH", "masterSPSH"]),
-            ("lambert", "south", ["mLPSH"]),
+            ("lambert", "lower", ["mLPSH"]),
             ("Lambert", "BOTH", ["mLPNH", "mLPSH"]),
         ],
     )
     def test_get_datasets(self, projection, hemisphere, dataset_names):
-        with File(EMSOFT_FILE, mode="r") as f:
+        with File(EMSOFT_FILE) as f:
             datasets = _get_datasets(
                 data_group=f["EMData/EBSDmaster"],
                 projection=projection,
@@ -214,12 +212,12 @@ class TestEMsoftEBSDMasterPatternReader:
     @pytest.mark.parametrize(
         "projection, hemisphere, error_msg",
         [
-            ("stereographicl", "north", "'projection' value stereographicl "),
+            ("stereographicl", "upper", "'projection' value stereographicl "),
             ("lambert", "east", "'hemisphere' value east "),
         ],
     )
     def test_get_datasets_raises(self, projection, hemisphere, error_msg):
-        with File(EMSOFT_FILE, mode="r") as f:
+        with File(EMSOFT_FILE) as f:
             with pytest.raises(ValueError, match=error_msg):
                 _ = _get_datasets(
                     data_group=f["EMData/EBSDmaster"],
@@ -243,10 +241,22 @@ class TestEMsoftEBSDMasterPatternReader:
         s = load(EMSOFT_FILE, energy=energy, hemisphere="both")
         assert s.data.shape == desired_shape
 
-        s2 = load(EMSOFT_FILE, projection="lambert", energy=energy, hemisphere="north")
+        s2 = load(EMSOFT_FILE, projection="lambert", energy=energy, hemisphere="upper")
         sig_indx = s2.axes_manager.signal_indices_in_array
         assert np.allclose(s2.nanmean(axis=sig_indx).data, desired_mean_energies)
 
-        with File(EMSOFT_FILE, mode="r") as f:
-            mp_lambert_north = f["EMData/EBSDmaster/mLPNH"][:][0][energy_slice]
-            assert np.allclose(s2.data, mp_lambert_north)
+        with File(EMSOFT_FILE) as f:
+            mp_lambert_upper = f["EMData/EBSDmaster/mLPNH"][:][0][energy_slice]
+            assert np.allclose(s2.data, mp_lambert_upper)
+
+    def test_hemisphere_warns(self):
+        """Passing 'north' or 'south' as `hemisphere` gives a
+        deprecation warning.
+        """
+        with pytest.warns(np.VisibleDeprecationWarning, match="`hemisphere` parameter"):
+            s = data.nickel_ebsd_master_pattern_small(hemisphere="north")
+        assert s.hemisphere == "upper"
+
+        with pytest.warns(np.VisibleDeprecationWarning, match="`hemisphere` parameter"):
+            s = data.nickel_ebsd_master_pattern_small(hemisphere="south")
+        assert s.hemisphere == "lower"

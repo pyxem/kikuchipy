@@ -177,10 +177,11 @@ def nickel_ebsd_large(
     allow_download : bool
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
-        the local cache with the pooch Python package. Default is False.
+        the local cache with the pooch Python package. Default is
+        ``False``.
     progressbar
         Whether to show a progressbar when downloading. Default is
-        False.
+        ``False``.
     kwargs
         Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
 
@@ -218,10 +219,11 @@ def silicon_ebsd_moving_screen_in(
     allow_download : bool
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
-        the local cache with the pooch Python package. Default is False.
+        the local cache with the pooch Python package. Default is
+        ``False``.
     progressbar
         Whether to show a progressbar when downloading. Default is
-        False.
+        ``False``.
     kwargs
         Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
 
@@ -266,10 +268,11 @@ def silicon_ebsd_moving_screen_out5mm(
     allow_download : bool
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
-        the local cache with the pooch Python package. Default is False.
+        the local cache with the pooch Python package. Default is
+        ``False``.
     progressbar
         Whether to show a progressbar when downloading. Default is
-        False.
+        ``False``.
     kwargs
         Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
 
@@ -316,10 +319,11 @@ def silicon_ebsd_moving_screen_out10mm(
     allow_download : bool
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
-        the local cache with the pooch Python package. Default is False.
+        the local cache with the pooch Python package. Default is
+        ``False``.
     progressbar
         Whether to show a progressbar when downloading. Default is
-        False.
+        ``False``.
     kwargs
         Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
 
