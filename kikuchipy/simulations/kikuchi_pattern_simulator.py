@@ -319,20 +319,16 @@ class KikuchiPatternSimulator:
 
         # Visible reflectors
         visible_reflectors = self._reflectors[hkl_in_a_pattern]
-        hkl = hkl[hkl_in_a_pattern]
-
-        # Max. gnomonic radius to consider
-        max_r_gnomonic = np.max(detector.r_max)
+        ref2 = ref[hkl_in_a_pattern]
 
         # Zone axes <uvw> from {hkl}
-        uvw = np.cross(hkl[:, None, :], hkl)
-        uvw = uvw[~np.isclose(uvw, 0).all(axis=-1)]
-        uvw = np.unique(uvw, axis=0)
+        ref2 = ref2.reshape(ref2.size, 1)
+        uvw_miller = ref2.cross(ref2.transpose())
 
-        # Reduce an index triplet to smallest integer
-        uvw = Miller(uvw=uvw, phase=self.phase)
-        uvw = uvw.round().unique()
-        uvw = uvw.coordinates
+        # Remove [000] and reduce an index triplet to smallest integers
+        uvw_miller = uvw_miller[~np.isclose(uvw_miller.data, 0).all(axis=-1)]
+        uvw_miller = uvw_miller.round()
+        uvw_miller = uvw_miller.unique()
 
         # Transformation from CSc to direct crystal reference frame CSk
         u_a = da.from_array(lattice.base)
@@ -341,19 +337,45 @@ class KikuchiPatternSimulator:
         u_k = da.matmul(u_a, u_os)
 
         # Transform direct lattice vectors from CSk to CSd
-        uvw_d = da.matmul(da.from_array(uvw), u_k)
+        uvw_d = da.matmul(da.from_array(uvw_miller.uvw), u_k)
 
         # Find zone axes that are in some pattern
         uvw_is_upper = da.greater(da.atleast_2d(uvw_d[..., 2]), 0)
         uvw_in_a_pattern = ~da.isclose(da.sum(uvw_is_upper, axis=nav_axes), 0)
-        uvw_in_pattern = uvw_is_upper[..., uvw_in_a_pattern]
-        uvw_d = uvw_d[..., uvw_in_a_pattern, :]
+
+        # Exclude those outside gnomonic bounds
+        uvw_xg = uvw_d[..., 0] / uvw_d[..., 2]
+        uvw_yg = uvw_d[..., 1] / uvw_d[..., 2]
+        # Get gnomonic bounds
+        x_range = detector.x_range
+        y_range = detector.y_range
+        # Extend gnomonic bounds by one detector pixel to include zone
+        # axes on the detector border
+        x_scale = detector.x_scale
+        y_scale = detector.y_scale
+        x_range[..., 0] -= x_scale
+        x_range[..., 1] += x_scale
+        y_range[..., 0] -= y_scale
+        y_range[..., 1] += y_scale
+        # Add an extra dimension to account for n number of zone axes in
+        # the last dimension for the gnomonic coordinate arrays
+        x_range = np.expand_dims(x_range, axis=-2)
+        y_range = np.expand_dims(y_range, axis=-2)
+        # Get boolean array
+        within_x = da.logical_and(uvw_xg >= x_range[..., 0], uvw_xg <= x_range[..., 1])
+        within_y = da.logical_and(uvw_yg >= y_range[..., 0], uvw_yg <= y_range[..., 1])
+        within_gnomonic_bounds = da.any(within_x * within_y, axis=nav_axes)
+
+        uvw_in_a_pattern = da.logical_and(uvw_in_a_pattern, within_gnomonic_bounds)
+
         with ProgressBar():
             print("Finding zone axes that are in some pattern:", file=sys.stdout)
             uvw_in_a_pattern = uvw_in_a_pattern.compute()
+        uvw_in_pattern = uvw_is_upper[..., uvw_in_a_pattern]
+        uvw_d = uvw_d[..., uvw_in_a_pattern, :]
 
         # Visible zone axes
-        uvw = uvw[uvw_in_a_pattern]
+        uvw_miller = uvw_miller[uvw_in_a_pattern]
 
         with ProgressBar():
             print(
@@ -364,18 +386,18 @@ class KikuchiPatternSimulator:
                 [hkl_d, hkl_in_pattern, uvw_d, uvw_in_pattern]
             )[0]
 
-        # TODO: Reduce memory usage here by perhaps not using classes
-        #  for storing line and zone axis coordinates
+        # Max. gnomonic radius to consider
+        max_r_gnomonic = np.max(detector.r_max)
 
         lines = KikuchiPatternLine(
-            hkl=Miller(hkl=hkl, phase=self.phase),
+            hkl=ref2,
             hkl_detector=Vector3d(hkl_d),
             in_pattern=hkl_in_pattern,
             max_r_gnomonic=max_r_gnomonic,
         )
 
         zone_axes = KikuchiPatternZoneAxis(
-            uvw=Miller(uvw=uvw, phase=self.phase),
+            uvw=uvw_miller,
             uvw_detector=Vector3d(uvw_d),
             in_pattern=uvw_in_pattern,
             max_r_gnomonic=max_r_gnomonic,

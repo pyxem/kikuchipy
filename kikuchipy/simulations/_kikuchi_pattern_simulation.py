@@ -23,7 +23,6 @@ from diffsims.crystallography import ReciprocalLatticeVector
 from hyperspy.utils.markers import line_segment, point, text
 import matplotlib.collections as mcollections
 import matplotlib.path as mpath
-import matplotlib.pyplot as plt
 import matplotlib.text as mtext
 import numpy as np
 from orix.quaternion import Rotation
@@ -483,17 +482,14 @@ class GeometricalKikuchiPatternSimulation:
         for k, v in segment_defaults.items():
             kwargs.setdefault(k, v)
 
-        # Remove singleton navigation dimensions
-        if self.navigation_shape == (1,):
-            coords = coords.squeeze()
-
         for i in range(self._lines.vector.size):
             line = coords[..., i, :]
             if not np.all(np.isnan(line)):
-                x1 = line[..., 0]
-                y1 = line[..., 1]
-                x2 = line[..., 2]
-                y2 = line[..., 3]
+                # TODO: Inefficient, squeeze before the loop if possible
+                x1 = line[..., 0].squeeze()
+                y1 = line[..., 1].squeeze()
+                x2 = line[..., 2].squeeze()
+                y2 = line[..., 3].squeeze()
                 marker = line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kwargs)
                 lines_list.append(marker)
 
@@ -567,7 +563,7 @@ class GeometricalKikuchiPatternSimulation:
         xyg = self._zone_axes._xy_within_r_gnomonic
         xg = xyg[..., 0]
         yg = xyg[..., 1]
-        coords_d = np.empty_like(xyg)
+        coords_d = np.zeros_like(xyg)
 
         # Get projection center coordinates, and add one axis to get the
         # shape (navigation shape, 1)
@@ -580,30 +576,6 @@ class GeometricalKikuchiPatternSimulation:
             ..., None
         ]
         coords_d[..., 1] = (-yg + (pcy / pcz)) / det.y_scale[..., None]
-
-        # TODO: Exclude outside gnomonic bounds *before* creating
-        #  simulation
-        # Get gnomonic bounds
-        x_range = self.detector.x_range
-        y_range = self.detector.y_range
-        # Extend gnomonic bounds by one detector pixel to include zone
-        # axes on the detector border
-        x_scale = self.detector.x_scale
-        y_scale = self.detector.y_scale
-        x_range[..., 0] -= x_scale
-        x_range[..., 1] += x_scale
-        y_range[..., 0] -= y_scale
-        y_range[..., 1] += y_scale
-        # Add an extra dimension to account for n number of zone axes in
-        # the last dimension for the gnomonic coordinate arrays
-        x_range = np.expand_dims(x_range, axis=-2)
-        y_range = np.expand_dims(y_range, axis=-2)
-        # Get boolean array
-        within_x = np.logical_and(xg >= x_range[..., 0], xg <= x_range[..., 1])
-        within_y = np.logical_and(yg >= y_range[..., 0], yg <= y_range[..., 1])
-        within_gnomonic_bounds = within_x * within_y
-
-        coords_d[~within_gnomonic_bounds] = np.nan
 
         self._zone_axes_detector_coordinates = coords_d
 
@@ -702,15 +674,12 @@ class GeometricalKikuchiPatternSimulation:
         coords = self.zone_axes_coordinates(index=(), exclude_nan=False)
         zone_axes_list = []
 
-        # Remove singleton navigation dimensions
-        if self.navigation_shape == (1,):
-            coords = coords.squeeze()
-
         for k, v in dict(ec="none", zorder=2).items():
             kwargs.setdefault(k, v)
 
         for i in range(self._zone_axes.vector.size):
-            zone_axis = coords[..., i, :]
+            # TODO: Inefficient, squeeze before the loop if possible
+            zone_axis = coords[..., i, :].squeeze()
             if not np.all(np.isnan(zone_axis)):
                 marker = point(x=zone_axis[..., 0], y=zone_axis[..., 1], **kwargs)
                 zone_axes_list.append(marker)
@@ -732,10 +701,6 @@ class GeometricalKikuchiPatternSimulation:
             List of text markers.
         """
         coords = self.zone_axes_coordinates(index=(), exclude_nan=False)
-
-        # Remove singleton navigation dimensions
-        if self.navigation_shape == (1,):
-            coords = coords.squeeze()
 
         zone_axes = self._zone_axes.vector.coordinates.round(0).astype(np.int64)
         array_str = np.array2string(zone_axes, threshold=zone_axes.size)
@@ -760,6 +725,9 @@ class GeometricalKikuchiPatternSimulation:
                 y = coords[..., i, 1]
                 x[~is_finite[..., i]] = np.nan
                 y[~is_finite[..., i]] = np.nan
+                # TODO: Inefficient, squeeze before the loop if possible
+                x = x.squeeze()
+                y = y.squeeze()
                 text_marker = text(x=x, y=y, text=texts[i], **kwargs)
                 zone_axes_label_list.append(text_marker)
 
