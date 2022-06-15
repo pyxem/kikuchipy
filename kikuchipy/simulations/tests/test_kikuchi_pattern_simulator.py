@@ -116,17 +116,16 @@ class TestCalculateMasterPattern:
         assert mp.data.shape == (2, 201, 201)
         assert np.allclose(mp.data[0], mp.data[1])
 
+        axes_names = [a["name"] for a in mp.axes_manager.as_dictionary().values()]
+        assert axes_names == ["hemisphere", "height", "width"]
+
     def test_scaling(self):
         """Scaling options give expected output intensities."""
         simulator = self.simulator
 
-        mp1 = simulator.calculate_master_pattern(half_size=100, scaling="linear")
+        mp1 = simulator.calculate_master_pattern(half_size=100)
         assert np.isclose(mp1.data.mean(), 3.53, atol=1e-2)
-        mp2 = simulator.calculate_master_pattern(
-            half_size=100,
-            scaling="linear",
-            hemisphere="lower",
-        )
+        mp2 = simulator.calculate_master_pattern(half_size=100, hemisphere="lower")
         assert np.isclose(mp2.data.mean(), 3.53, atol=1e-2)
 
         mp3 = simulator.calculate_master_pattern(half_size=100, scaling="square")

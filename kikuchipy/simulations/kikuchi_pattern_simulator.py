@@ -230,8 +230,17 @@ class KikuchiPatternSimulator:
 
         master_pattern = master_pattern.reshape(shape_out)
 
+        if hemisphere == "both":
+            axes = [{"size": 2, "name": "hemisphere"}]
+        else:
+            axes = []
+        for i, name in zip(range(2), ["height", "width"]):
+            axis = {"size": size, "name": name, "offset": -size // 2, "units": "px"}
+            axes.append(axis)
+
         return EBSDMasterPattern(
             master_pattern,
+            axes=axes,
             phase=self.phase,
             hemisphere=hemisphere,
             projection="stereographic",
