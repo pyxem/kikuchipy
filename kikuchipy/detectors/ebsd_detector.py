@@ -566,8 +566,8 @@ class EBSDDetector:
         pcx, pcy = self.pc_average[:2]
 
         if coordinates == "detector":
-            pcy *= sy
-            pcx *= sx
+            pcy *= sy - 1
+            pcx *= sx - 1
             bounds = self.bounds
             bounds[2:] = bounds[2:][::-1]
             x_label = "x detector"
@@ -596,14 +596,11 @@ class EBSDDetector:
             pattern_kwargs.setdefault("cmap", "gray")
             ax.imshow(pattern, extent=bounds, **pattern_kwargs)
         else:
+            origin = (bounds[0], bounds[2])
+            width = np.diff(bounds[:2])[0]
+            height = np.diff(bounds[2:])[0]
             ax.add_artist(
-                mpatches.Rectangle(
-                    (bounds[0], bounds[2]),
-                    bounds[1],
-                    -bounds[2],
-                    fc=(0.5,) * 3,
-                    zorder=-1,
-                )
+                mpatches.Rectangle(origin, width, height, fc=(0.5,) * 3, zorder=-1)
             )
 
         # Show the projection center
