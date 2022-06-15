@@ -71,7 +71,7 @@ Code style
 ==========
 
 The code making up kikuchipy is formatted closely following the `Style Guide for Python
-Code <https://www.python.org/dev/peps/pep-0008/>`_ with `The Black Code style
+Code <https://peps.python.org/pep-0008/>`_ with `The Black Code style
 <https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html>`_. We
 use `pre-commit <https://pre-commit.com>`_ to run ``black`` automatically prior to each
 local commit. Please install it in your environment::
@@ -82,7 +82,7 @@ Next time you commit some code, your code will be formatted inplace according to
 ``black``.
 
 Note that ``black`` won't format `docstrings
-<https://www.python.org/dev/peps/pep-0257/>`_. We follow the `numpydoc
+<https://peps.python.org/pep-0257/>`_. We follow the `numpydoc
 <https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard>`_ standard.
 
 Comment lines should preferably be limited to 72 characters.
@@ -132,7 +132,7 @@ Add and commit your created, modified or deleted files::
 The ``-s`` makes sure that you sign your commit with your `GitHub-registered email
 <https://github.com/settings/emails>`_ as the author. You can set this up following
 `this GitHub guide
-<https://help.github.com/en/github/setting-up-and-managing-your-github-user-account/setting-your-commit-email-address>`_.
+<https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-personal-account-on-github/managing-email-preferences/setting-your-commit-email-address>`_.
 
 Keeping your branch up-to-date
 ==============================
@@ -161,8 +161,9 @@ Update your remote branch::
     git push -u origin your-awesome-feature-name
 
 You can then make a `pull request
-<https://guides.github.com/activities/forking/#making-a-pull-request>`_ to kikuchipy's
-``develop`` branch for new features and ``main`` branch for bug fixes. Good job!
+<https://docs.github.com/en/get-started/quickstart/contributing-to-projects#making-a-pull-request>`_
+to kikuchipy's ``develop`` branch for new features and ``main`` branch for bug fixes.
+Good job!
 
 Building and writing documentation
 ==================================
@@ -245,7 +246,7 @@ the documentation doesn't take too long to build, either by us locally or the Re
 Docs GitHub action. To check that the notebooks with stored cell outputs are compatible
 with the current API, we run a scheduled GitHub Action every Monday morning which checks
 that the notebooks run OK and that they produce the same output now as when they were
-last executed. We use `nbval <https://nbval.readthedocs.io>`_ for this.
+last executed. We use `nbval <https://nbval.readthedocs.io/en/latest/>`_ for this.
 
 Deprecations
 ============
@@ -277,8 +278,9 @@ answers. Install necessary dependencies to run the tests::
 
     pip install --editable .[tests]
 
-Some useful `fixtures <https://docs.pytest.org/en/latest/fixture.html>`_, like a dummy
-scan and corresponding background pattern, are available in the ``conftest.py`` file.
+Some useful `fixtures <https://docs.pytest.org/en/latest/explanation/fixtures.html>`_,
+like a dummy scan and corresponding background pattern, are available in the
+``conftest.py`` file.
 
 .. note::
 
@@ -309,7 +311,7 @@ e.g. when you're creating or updating a test. But remember to run the full test 
 before pushing!
 
 Docstring examples are tested `with pytest
-<https://docs.pytest.org/en/stable/doctest.html>`_ as well::
+<https://docs.pytest.org/en/stable/how-to/doctest.html>`_ as well::
 
     pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
 

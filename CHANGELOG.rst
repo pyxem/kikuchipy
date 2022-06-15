@@ -24,6 +24,9 @@ Added
 - ``EBSDMasterPattern.plot_spherical()`` for plotting a master pattern in the
   stereographic projection on the 3D sphere.
   (`#536 <https://github.com/pyxem/kikuchipy/pull/536>`_)
+- Projection of master pattern in the stereographic projection to the square Lambert
+  projection via ``EBSDMasterPattern.to_lambert()``.
+  (`#536 <https://github.com/pyxem/kikuchipy/pull/536>`_)
 - New package dependencies on ``pyvista`` for 3D plotting and on ``pythreejs`` for the
   docs are introduced. (`#536 <https://github.com/pyxem/kikuchipy/pull/536>`_)
 - Reduce time and memory use of the following ``kikuchipy.signals.EBSD`` methods by
@@ -38,6 +41,9 @@ Added
 
 Changed
 -------
+- Valid ``EBSDMasterPattern.hemisphere`` values from ``"north"`` and ``"south"`` to
+  ``"upper"`` and ``"lower"``, respectively, to be in line with `orix`.
+  (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - Increase minimal version of diffsims to 0.5.
   (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - Chunking of EBSD signal navigation dimensions in
