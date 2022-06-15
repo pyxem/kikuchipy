@@ -40,26 +40,37 @@ with open("kikuchipy/release.py") as fid:
 # Projects with optional features for building the documentation and running
 # tests. From setuptools:
 # https://setuptools.readthedocs.io/en/latest/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
+# fmt: off
 extra_feature_requirements = {
     "doc": [
         "furo",
-        "nbsphinx >= 0.7",
-        "sphinx >= 3.0.2, <= 4.0.2",
-        "sphinx-copybutton >= 0.2.5",
-        "sphinx-autodoc-typehints >= 1.10.3",
-        "sphinx-gallery >= 0.6",
-        "sphinxcontrib-bibtex >= 1.0",
+        "nbsphinx                   >= 0.7",
+        "pythreejs",  # Used in the docs by PyVista
+        "sphinx                     >= 3.0.2",
+        "sphinx-copybutton          >= 0.2.5",
+        "sphinx-autodoc-typehints   >= 1.10.3",
+        "sphinx-gallery             >= 0.6",
+        "sphinxcontrib-bibtex       >= 1.0",
     ],
-    "tests": ["coverage >= 5.0", "pytest >= 5.4", "pytest-cov >= 2.8.1"],
+    "tests": [
+        "coverage                   >= 5.0",
+        "pytest                     >= 5.4",
+        "pytest-cov                 >= 2.8.1",
+    ],
+    "viz": [
+        "pyvista",
+    ],
 }
+# fmt: on
 
-# Create a development project, including both the doc and tests projects
+# Create a development project including all extra dependencies
 extra_feature_requirements["dev"] = [
-    "black",
+    "black[jupyter]",
     "manifix",
     "outdated",
     "pre-commit >= 1.16",
 ] + list(chain(*list(extra_feature_requirements.values())))
+
 
 setup(
     # Package description
@@ -79,6 +90,7 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         (
@@ -119,19 +131,20 @@ setup(
     extras_require=extra_feature_requirements,
     # fmt: off
     install_requires=[
-        "dask[array]  >= 2021.8.1",
-        "diffsims     >= 0.4",
-        "hyperspy     >= 1.6.5",
-        "h5py         >= 2.10",
-        "matplotlib   >= 3.3",
-        "numba        >= 0.48",
-        "numpy        >= 1.19",
-        "orix         >= 0.9",
-        "pooch        >= 0.13",
-        "tqdm         >= 0.5.2",
-        "scikit-image >= 0.16.2",
+        "dask[array]        >= 2021.8.1",
+        "diffpy.structure   >= 3",
+        "diffsims           >= 0.5",
+        "hyperspy           >= 1.7",
+        "h5py               >= 2.10",
+        "matplotlib         >= 3.3",
+        "numba              >= 0.48",
+        "numpy              >= 1.19",
+        "orix               >= 0.9",
+        "pooch              >= 0.13",
+        "tqdm               >= 0.5.2",
+        "scikit-image       >= 0.16.2",
         "scikit-learn",
-        "scipy",
+        "scipy              >= 1.7",
     ],
     # fmt: on
     entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},

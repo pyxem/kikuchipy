@@ -21,6 +21,7 @@ format.
 
 import os
 from typing import List, Optional, Tuple
+import warnings
 
 import dask.array as da
 from h5py import File, Group, Dataset
@@ -52,7 +53,7 @@ def file_reader(
     filename: str,
     energy: Optional[range] = None,
     projection: str = "stereographic",
-    hemisphere: str = "north",
+    hemisphere: str = "upper",
     lazy: bool = False,
     **kwargs,
 ) -> List[dict]:
@@ -67,17 +68,17 @@ def file_reader(
         Desired beam energy or energy range. If None is passed
         (default), all available energies are read.
     projection
-        Projection(s) to read. Options are "stereographic" (default) or
-        "lambert".
+        Projection(s) to read. Options are ``"stereographic"`` (default)
+        or ``"lambert"``.
     hemisphere
-        Projection hemisphere(s) to read. Options are "north" (default),
-        "south" or "both". If "both", these will be stacked in the
-        vertical navigation axis.
+        Projection hemisphere(s) to read. Options are ``"upper"``
+        (default), ``"lower"`` or ``"both"``. If ``"both"``, these will
+        be stacked in the vertical navigation axis.
     lazy
         Open the data lazily without actually reading the data from disk
         until requested. Allows opening datasets larger than available
-        memory. Default is False.
-    kwargs :
+        memory. Default is ``False``.
+    kwargs
         Keyword arguments passed to h5py.File.
 
     Returns
@@ -85,6 +86,21 @@ def file_reader(
     signal_dict_list: list of dicts
         Data, axes, metadata and original metadata.
     """
+    if hemisphere.lower() not in ["upper", "lower", "both"]:
+        # TODO: Remove warning after 0.6 is released
+        warnings.warn(
+            (
+                "`hemisphere` parameter options 'north' and 'south' are deprecated and "
+                "will raise an error in version 0.7, use 'upper' and 'lower' instead. "
+                "Changed to 'upper' or 'lower'."
+            ),
+            np.VisibleDeprecationWarning,
+        )
+        if hemisphere == "north":
+            hemisphere = "upper"
+        elif hemisphere == "south":
+            hemisphere = "lower"
+
     mode = kwargs.pop("mode", "r")
     f = File(filename, mode=mode, **kwargs)
 
@@ -106,14 +122,13 @@ def file_reader(
     crystal_data = hdf5group2dict(f["CrystalData"])
     nml_params["CrystalData"] = crystal_data
     phase = _crystaldata2phase(crystal_data)
-
-    # Get the phase name
-    try:
-        xtal_name = os.path.split(nml_params["MCCLNameList"]["xtalname"])[0]
-        phase_name = os.path.splitext(xtal_name)[0]
-    except KeyError:
-        phase_name = None
-    phase.name = phase_name
+    if phase.name == "":
+        # Get the phase name
+        try:
+            xtal_name = nml_params["MCCLNameList"]["xtalname"]
+            phase.name = os.path.splitext(xtal_name)[0]
+        except KeyError:
+            pass
 
     # Get data shape and slices
     data_group = f["EMData/EBSDmaster"]
@@ -132,7 +147,7 @@ def file_reader(
 
     # TODO: Data shape and slices are easier to handle if the reader
     #  was a class (in addition to file_reader()) instead of a series of
-    #  function
+    #  functions
     dataset_shape = data_shape
     if projection.lower() == "lambert":
         data_slices = (slice(None, None),) + data_slices
@@ -171,6 +186,10 @@ def file_reader(
 
     # Remove 1-dimensions
     data = data.squeeze()
+
+    if projection.lower() == "stereographic":
+        # Mirror about horizontal (flip up-down)
+        data = data[..., ::-1, :]
 
     # Axes scales
     energy_scale = nml_params["MCCLNameList"]["Ebinsize"]
@@ -284,9 +303,9 @@ def _get_datasets(data_group: Group, projection: str, hemisphere: str) -> List[D
     data_group
         HDF5 data group with data sets.
     projection
-        "stereographic" or "lambert" projection.
+        ``"stereographic"`` or ``"lambert"`` projection.
     hemisphere
-        "north" hemisphere, "south" hemisphere, or "both".
+        ``"upper"`` hemisphere, ``"lower"`` hemisphere, or ``"both"``.
 
     Returns
     -------
@@ -297,7 +316,7 @@ def _get_datasets(data_group: Group, projection: str, hemisphere: str) -> List[D
     projection = projection.lower()
 
     projections = {"stereographic": "masterSP", "lambert": "mLP"}
-    hemispheres = {"north": "NH", "south": "SH"}
+    hemispheres = {"upper": "NH", "lower": "SH"}
 
     if projection not in projections.keys():
         raise ValueError(

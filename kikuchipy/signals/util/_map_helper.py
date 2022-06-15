@@ -176,7 +176,7 @@ def _neighbour_dot_products(
     if output is None:
         return np.nanmean(dot_products)
     else:
-        center_value = (pattern ** 2).sum()
+        center_value = (pattern**2).sum()
         output[pat_idx][flat_window_truthy_indices[center_index]] = center_value
         output[pat_idx][flat_window_truthy_indices[neighbour_idx]] = dot_products
         # Output variable is modified in place, but `_map_helper()`

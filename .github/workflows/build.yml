@@ -2,15 +2,23 @@ name: Build
 
 on: [push, pull_request]
 
+env:
+  MPLBACKEND: agg
+
 jobs:
   code:
     name: code style
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
     steps:
       - uses: actions/checkout@v2
+
       - uses: psf/black@stable
+
+      - name: Install Black with Jupyter extension
+        run: pip install black[jupyter]
+
+      - name: Check code style of Jupyter notebooks
+        run: black doc/*/*.ipynb
 
   # Make sure all necessary files are included in a release
   manifest:
@@ -18,51 +26,95 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
       - uses: actions/setup-python@v2
+
       - name: Install dependencies
         run: pip install manifix
+
       - name: Check MANIFEST.in file
         run: python setup.py manifix
 
   build-with-pip:
-    name: ${{ matrix.os }}/py${{ matrix.python-version }}/pip
+    name: ${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.LABEL }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
-    env:
-      MPLBACKEND: agg
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.8, 3.9]
+        python-version: [3.9, '3.10']
         include:
-          # Oldest supported version of main dependencies on Python 3.7
           - os: ubuntu-latest
             python-version: 3.7
             OLDEST_SUPPORTED_VERSION: true
-            DEPENDENCIES: dask==2021.8.1 diffsims==0.4.0 hyperspy==1.6.5 matplotlib==3.3 numba==0.48 numpy==1.19 orix==0.9.0 scikit-image==0.16.2
+            DEPENDENCIES: dask==2021.8.1 diffsims==0.5.0 hyperspy==1.7 matplotlib==3.3 numba==0.52 numpy==1.19 orix==0.9.0 scikit-image==0.16.2
+            LABEL: -oldest
     steps:
       - uses: actions/checkout@v2
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Display versions
-        run: python -V; pip -V
+
+      - name: Display Python and pip versions
+        run: |
+          python -V
+          pip -V
+
+      - name: Install dependencies and package
+        shell: bash
+        run: |
+          pip install -U -e .'[tests]'
+
+      - name: Install optional dependencies
+        if: ${{ matrix.python-version == 3.9 }}
+        shell: bash
+        run: |
+          pip install -e .'[viz]'
+
       - name: Install oldest supported version
         if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
-        run: pip install ${{ matrix.DEPENDENCIES }}
-      - name: Install depedencies and package
-        shell: bash
-        run: pip install -U -e .'[tests]'
+        run: |
+          pip install ${{ matrix.DEPENDENCIES }}
+
+      - name: Install virtual buffer package necessary for PyVista
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install xvfb
+          /sbin/ldconfig -p | grep stdc++ # Temporarily check location
+
+      - name: Set up headless display necessary for PyVista on Windows
+        if: ${{ matrix.os == 'windows-latest' && matrix.python-version == 3.9 }}
+        uses: pyvista/setup-headless-display-action@v1
+
+      - name: Display package versions
+        run: |
+          pip list
+
       - name: Run docstring tests
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
+        continue-on-error: true
+        run: |
+          pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
+
+      - name: Run tests in a virtual X server environment on Ubuntu
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install xvfb
+          xvfb-run pytest --cov=kikuchipy --pyargs kikuchipy
+
       - name: Run tests
-        run: pytest --cov=kikuchipy --pyargs kikuchipy
+        if: ${{ ! ( matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 ) }}
+        run: |
+          pytest --cov=kikuchipy --pyargs kikuchipy
+
       - name: Generate line coverage
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: coverage report --show-missing
+        run: |
+          coverage report --show-missing
+
       - name: Upload coverage to Coveralls
         if: ${{ matrix.os == 'ubuntu-latest' }}
         uses: AndreMiras/coveralls-python-action@develop

@@ -208,18 +208,19 @@ class TestRemoveStaticBackgroundChunk:
         dtype_proc = np.float32
 
         dask_array = get_dask_array(dummy_signal, dtype=dtype_proc)
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_static_background,
-            static_bg=dummy_background.astype(dtype_proc),
-            operation_func=operation_func,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-        )
+        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
+            corrected_patterns = dask_array.map_blocks(
+                func=chunk.remove_static_background,
+                static_bg=dummy_background.astype(dtype_proc),
+                operation_func=operation_func,
+                dtype_out=dtype_out,
+                dtype=dtype_out,
+            )
 
-        # Check for correct data type and gives expected output intensities
-        assert corrected_patterns.dtype == dtype_out
-        assert isinstance(corrected_patterns, da.Array)
-        assert np.allclose(corrected_patterns[0, 0].compute(), answer)
+            # Check for correct data type and gives expected output intensities
+            assert corrected_patterns.dtype == dtype_out
+            assert isinstance(corrected_patterns, da.Array)
+            assert np.allclose(corrected_patterns[0, 0].compute(), answer)
 
     def test_remove_static_background_chunk_out_range(
         self, dummy_signal, dummy_background
@@ -231,17 +232,18 @@ class TestRemoveStaticBackgroundChunk:
 
         dask_array = get_dask_array(dummy_signal, dtype=dtype_proc)
 
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_static_background,
-            static_bg=dummy_background.astype(dtype_proc),
-            operation_func=np.subtract,
-            dtype_out=dtype_out,
-            out_range=out_range,
-            dtype=dtype_out,
-        )
+        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
+            corrected_patterns = dask_array.map_blocks(
+                func=chunk.remove_static_background,
+                static_bg=dummy_background.astype(dtype_proc),
+                operation_func=np.subtract,
+                dtype_out=dtype_out,
+                out_range=out_range,
+                dtype=dtype_out,
+            )
 
-        assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(corrected_patterns[0, 0].compute(), STATIC_SUB_UINT8)
+            assert corrected_patterns.dtype == dtype_out
+            assert np.allclose(corrected_patterns[0, 0].compute(), STATIC_SUB_UINT8)
 
     def test_remove_static_background_chunk_scalebg(
         self, dummy_signal, dummy_background
@@ -251,17 +253,20 @@ class TestRemoveStaticBackgroundChunk:
 
         dask_array = get_dask_array(dummy_signal, dtype=dtype_proc)
 
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_static_background,
-            static_bg=dummy_background.astype(dtype_proc),
-            operation_func=np.subtract,
-            dtype_out=dtype_out,
-            scale_bg=True,
-            dtype=dtype_out,
-        )
+        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
+            corrected_patterns = dask_array.map_blocks(
+                func=chunk.remove_static_background,
+                static_bg=dummy_background.astype(dtype_proc),
+                operation_func=np.subtract,
+                dtype_out=dtype_out,
+                scale_bg=True,
+                dtype=dtype_out,
+            )
 
-        assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(corrected_patterns[0, 0].compute(), STATIC_SUB_SCALEBG_UINT8)
+            assert corrected_patterns.dtype == dtype_out
+            assert np.allclose(
+                corrected_patterns[0, 0].compute(), STATIC_SUB_SCALEBG_UINT8
+            )
 
     @pytest.mark.parametrize(
         "dtype_out, answer",
@@ -276,14 +281,15 @@ class TestRemoveStaticBackgroundChunk:
         dummy_signal.data = dummy_signal.data.astype(dtype_out)
         dummy_background = dummy_background.astype(dtype_out)
 
-        corrected_patterns = chunk.remove_static_background(
-            patterns=dummy_signal.data,
-            static_bg=dummy_background,
-            operation_func=np.subtract,
-        )
+        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
+            corrected_patterns = chunk.remove_static_background(
+                patterns=dummy_signal.data,
+                static_bg=dummy_background,
+                operation_func=np.subtract,
+            )
 
-        assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(corrected_patterns[0, 0], answer, atol=1e-4)
+            assert corrected_patterns.dtype == dtype_out
+            assert np.allclose(corrected_patterns[0, 0], answer, atol=1e-4)
 
 
 class TestRemoveDynamicBackgroundChunk:
@@ -298,38 +304,40 @@ class TestRemoveDynamicBackgroundChunk:
 
         kwargs = {"sigma": std}
 
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_dynamic_background,
-            filter_func=gaussian_filter,
-            operation_func=np.subtract,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-            **kwargs,
-        )
+        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
+            corrected_patterns = dask_array.map_blocks(
+                func=chunk.remove_dynamic_background,
+                filter_func=gaussian_filter,
+                operation_func=np.subtract,
+                dtype_out=dtype_out,
+                dtype=dtype_out,
+                **kwargs,
+            )
 
-        # Check for correct data type and gives expected output intensities
-        assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(corrected_patterns[0, 0].compute(), answer)
+            # Check for correct data type and gives expected output intensities
+            assert corrected_patterns.dtype == dtype_out
+            assert np.allclose(corrected_patterns[0, 0].compute(), answer)
 
     def test_remove_dynamic_background_spatial_uint16(self, dummy_signal):
         dtype_out = np.uint16
 
         dask_array = get_dask_array(dummy_signal, dtype=np.float32)
 
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_dynamic_background,
-            filter_func=gaussian_filter,
-            operation_func=np.subtract,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-            sigma=2,
-        )
+        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
+            corrected_patterns = dask_array.map_blocks(
+                func=chunk.remove_dynamic_background,
+                filter_func=gaussian_filter,
+                operation_func=np.subtract,
+                dtype_out=dtype_out,
+                dtype=dtype_out,
+                sigma=2,
+            )
 
-        # Check for correct data type and gives expected output intensities
-        assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(
-            corrected_patterns[0, 0].compute(), DYN_CORR_UINT16_SPATIAL_STD2
-        )
+            # Check for correct data type and gives expected output intensities
+            assert corrected_patterns.dtype == dtype_out
+            assert np.allclose(
+                corrected_patterns[0, 0].compute(), DYN_CORR_UINT16_SPATIAL_STD2
+            )
 
     @pytest.mark.parametrize(
         "std, truncate, answer",
@@ -358,18 +366,19 @@ class TestRemoveDynamicBackgroundChunk:
             truncate=truncate,
         )
 
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_dynamic_background,
-            filter_func=_fft_filter,
-            operation_func=np.subtract,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-            **kwargs,
-        )
+        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
+            corrected_patterns = dask_array.map_blocks(
+                func=chunk.remove_dynamic_background,
+                filter_func=_fft_filter,
+                operation_func=np.subtract,
+                dtype_out=dtype_out,
+                dtype=dtype_out,
+                **kwargs,
+            )
 
-        # Check for correct data type and gives expected output intensities
-        assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(corrected_patterns[0, 0].compute(), answer)
+            # Check for correct data type and gives expected output intensities
+            assert corrected_patterns.dtype == dtype_out
+            assert np.allclose(corrected_patterns[0, 0].compute(), answer)
 
     @pytest.mark.parametrize(
         "omax, answer",
@@ -385,19 +394,20 @@ class TestRemoveDynamicBackgroundChunk:
 
         dask_array = get_dask_array(dummy_signal, dtype=np.float32)
 
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_dynamic_background,
-            filter_func=gaussian_filter,
-            operation_func=np.subtract,
-            sigma=2,
-            out_range=out_range,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-        )
+        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
+            corrected_patterns = dask_array.map_blocks(
+                func=chunk.remove_dynamic_background,
+                filter_func=gaussian_filter,
+                operation_func=np.subtract,
+                sigma=2,
+                out_range=out_range,
+                dtype_out=dtype_out,
+                dtype=dtype_out,
+            )
 
-        assert corrected_patterns.dtype == dtype_out
-        assert corrected_patterns.max().compute() == omax
-        assert np.allclose(corrected_patterns[0, 0].compute(), answer)
+            assert corrected_patterns.dtype == dtype_out
+            assert corrected_patterns.max().compute() == omax
+            assert np.allclose(corrected_patterns[0, 0].compute(), answer)
 
     @pytest.mark.parametrize(
         "answer",
@@ -420,15 +430,16 @@ class TestRemoveDynamicBackgroundChunk:
         dtype_out = answer.dtype
         dummy_signal.data = dummy_signal.data.astype(dtype_out)
 
-        corrected_patterns = chunk.remove_dynamic_background(
-            patterns=dummy_signal.data,
-            filter_func=gaussian_filter,
-            operation_func=np.subtract,
-            sigma=2,
-        )
+        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
+            corrected_patterns = chunk.remove_dynamic_background(
+                patterns=dummy_signal.data,
+                filter_func=gaussian_filter,
+                operation_func=np.subtract,
+                sigma=2,
+            )
 
-        assert corrected_patterns.dtype == dtype_out
-        assert np.allclose(corrected_patterns[0, 0], answer, atol=1e-4)
+            assert corrected_patterns.dtype == dtype_out
+            assert np.allclose(corrected_patterns[0, 0], answer, atol=1e-4)
 
 
 class TestGetDynamicBackgroundChunk:
@@ -637,19 +648,23 @@ class TestGetImageQualityChunk:
         ],
     )
     def test_get_image_quality_chunk(self, dummy_signal, normalize, answer):
-        iq = chunk.get_image_quality(patterns=dummy_signal.data, normalize=normalize)
-
-        assert np.allclose(iq, answer, atol=1e-4)
+        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
+            iq = chunk.get_image_quality(
+                patterns=dummy_signal.data, normalize=normalize
+            )
+            assert np.allclose(iq, answer, atol=1e-4)
 
     def test_get_image_quality_chunk_white_noise(self):
         p = np.random.random((4, 1001, 1001))
-        iq = chunk.get_image_quality(patterns=p, normalize=True)
-        assert np.allclose(iq, 0, atol=1e-2)
+        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
+            iq = chunk.get_image_quality(patterns=p)
+            assert np.allclose(iq, 0, atol=1e-2)
 
     def test_get_image_quality_flat(self):
         p = np.ones((4, 1001, 1001))
-        iq = chunk.get_image_quality(patterns=p, normalize=False)
-        assert np.allclose(iq, 1, atol=1e-2)
+        with pytest.warns(np.VisibleDeprecationWarning, match="Function "):
+            iq = chunk.get_image_quality(patterns=p, normalize=False)
+            assert np.allclose(iq, 1, atol=1e-2)
 
 
 class TestFFTFilterChunk:

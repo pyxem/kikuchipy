@@ -20,6 +20,7 @@ from numbers import Number
 import os
 from packaging import version
 import tempfile
+import warnings
 
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
@@ -29,8 +30,8 @@ from hyperspy.misc.utils import DictionaryTreeBrowser
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import CrystalMap, create_coordinate_arrays, Phase, PhaseList
-from orix.quaternion.rotation import Rotation
-from orix.vector import Vector3d, neo_euler
+from orix.quaternion import Rotation
+from orix.vector import Vector3d
 import pytest
 
 import kikuchipy as kp
@@ -38,6 +39,16 @@ from kikuchipy.projections.ebsd_projections import (
     detector2reciprocal_lattice,
     detector2direct_lattice,
 )
+
+
+if kp._pyvista_installed:
+    import pyvista as pv
+
+    pv.OFF_SCREEN = True
+    pv.global_theme.interactive = False
+
+
+warnings.filterwarnings("always", category=DeprecationWarning)
 
 
 # ------------------------- Helper functions ------------------------- #
@@ -79,7 +90,7 @@ def pytest_sessionstart(session):  # pragma: no cover
 
 
 @pytest.fixture
-def dummy_signal():
+def dummy_signal(dummy_background):
     """Dummy signal of shape <(3, 3)|(3, 3)>. If this is changed, all
     tests using this signal will fail since they compare the output from
     methods using this signal (as input) to hard-coded outputs.
@@ -95,7 +106,7 @@ def dummy_signal():
         dtype=np.uint8
     ).reshape((3, 3, 3, 3))
     # fmt: on
-    s = kp.signals.EBSD(dummy_array)
+    s = kp.signals.EBSD(dummy_array, static_background=dummy_background)
     s.axes_manager.navigation_axes[1].name = "x"
     s.axes_manager.navigation_axes[0].name = "y"
     yield s
@@ -126,6 +137,7 @@ def ebsd_with_axes_and_random_data(request):
     nav_ndim = len(nav_shape)
     sig_ndim = len(sig_shape)
     data_shape = nav_shape + sig_shape
+    data_size = int(np.prod(data_shape))
     axes = []
     if nav_ndim == 1:
         axes.append(dict(name="x", size=nav_shape[0], scale=1))
@@ -135,11 +147,15 @@ def ebsd_with_axes_and_random_data(request):
     if sig_ndim == 2:
         axes.append(dict(name="dy", size=sig_shape[0], scale=1))
         axes.append(dict(name="dx", size=sig_shape[1], scale=1))
+    if np.issubdtype(dtype, np.integer):
+        data_kwds = dict(low=1, high=255, size=data_size)
+    else:
+        data_kwds = dict(low=0.1, high=1, size=data_size)
     if lazy:
-        data = da.random.random(data_shape).astype(dtype)
+        data = da.random.uniform(**data_kwds).reshape(data_shape).astype(dtype)
         yield kp.signals.LazyEBSD(data, axes=axes)
     else:
-        data = np.random.random(data_shape).astype(dtype)
+        data = np.random.uniform(**data_kwds).reshape(data_shape).astype(dtype)
         yield kp.signals.EBSD(data, axes=axes)
 
 
@@ -247,9 +263,7 @@ def nickel_rotations():
 @pytest.fixture
 def r_tsl2bruker():
     """A rotation from the TSL to Bruker crystal reference frame."""
-    yield Rotation.from_neo_euler(
-        neo_euler.AxAngle.from_axes_angles(Vector3d.zvector(), np.pi / 2)
-    )
+    yield Rotation.from_axes_angles(Vector3d.zvector(), np.pi / 2)
 
 
 @pytest.fixture
@@ -257,9 +271,10 @@ def nickel_ebsd_simulation_generator(nickel_phase, detector, nickel_rotations):
     """Generator for EBSD simulations of Kikuchi bands for the Nickel
     data set referenced above.
     """
-    yield kp.generators.EBSDSimulationGenerator(
-        detector=detector, phase=nickel_phase, rotations=nickel_rotations
-    )
+    with pytest.warns(np.VisibleDeprecationWarning):
+        yield kp.generators.EBSDSimulationGenerator(
+            detector=detector, phase=nickel_phase, rotations=nickel_rotations
+        )
 
 
 @pytest.fixture
@@ -276,8 +291,6 @@ def nickel_kikuchi_band(nickel_rlp, nickel_rotations, pc1):
         binning=8,
         px_size=70,
         pc=np.ones(nav_shape + (3,)) * pc1,
-        sample_tilt=70,
-        tilt=0,
         convention="tsl",
     )
 
@@ -327,8 +340,6 @@ def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
         binning=8,
         px_size=70,
         pc=np.ones(nav_shape + (3,)) * pc1,
-        sample_tilt=70,
-        tilt=0,
         convention="tsl",
     )
 
@@ -336,7 +347,7 @@ def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
     navigation_axes = (1, 2)[:nav_dim]
 
     n_hkl = bands.size
-    n_hkl2 = n_hkl ** 2
+    n_hkl2 = n_hkl**2
     uvw = np.cross(hkl[:, np.newaxis, :], hkl).reshape((n_hkl2, 3))
     not000 = np.count_nonzero(uvw, axis=1) != 0
     uvw = uvw[not000]

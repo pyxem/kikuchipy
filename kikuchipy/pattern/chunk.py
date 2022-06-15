@@ -17,11 +17,18 @@
 
 """Functions for operating on :class:`numpy.ndarray` or
 :class:`dask.array.Array` chunks of EBSD patterns.
+
+.. warning::
+
+    This module will be become private for internal use only in v0.7.
+    If you need to process multiple EBSD patterns at once, please do
+    this using :class:`~kikuchipy.signals.EBSD`.
 """
 
 from typing import Union, Optional, Tuple, List
 
 import dask.array as da
+from numba import njit
 import numpy as np
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.exposure import equalize_adapthist
@@ -30,6 +37,8 @@ from skimage.util.dtype import dtype_range
 import kikuchipy.pattern._pattern as pattern_processing
 import kikuchipy.filters.fft_barnes as barnes
 from kikuchipy.filters.window import Window
+from kikuchipy.pattern._pattern import _rescale_with_min_max
+from kikuchipy._util import deprecated
 
 
 def rescale_intensity(
@@ -88,6 +97,11 @@ def rescale_intensity(
     return rescaled_patterns
 
 
+@deprecated(
+    since=0.6,
+    removal=0.7,
+    alternative="kikuchipy.signals.EBSD.remove_static_background",
+)
 def remove_static_background(
     patterns: Union[np.ndarray, da.Array],
     static_bg: Union[np.ndarray, da.Array],
@@ -208,6 +222,11 @@ def get_dynamic_background(
     return background
 
 
+@deprecated(
+    since=0.6,
+    removal=0.7,
+    alternative="kikuchipy.signals.EBSD.remove_dynamic_background",
+)
 def remove_dynamic_background(
     patterns: Union[np.ndarray, da.Array],
     filter_func: Union[gaussian_filter, barnes.fft_filter],
@@ -284,56 +303,9 @@ def remove_dynamic_background(
     return corrected_patterns
 
 
-def adaptive_histogram_equalization(
-    patterns: Union[np.ndarray, da.Array],
-    kernel_size: Union[Tuple[int, int], List[int]],
-    clip_limit: Union[int, float] = 0,
-    nbins: int = 128,
-) -> np.ndarray:
-    """Local contrast enhancement of a chunk of EBSD patterns with
-    adaptive histogram equalization.
-
-    This method makes use of :func:`skimage.exposure.equalize_adapthist`.
-
-    Parameters
-    ----------
-    patterns
-        EBSD patterns.
-    kernel_size
-        Shape of contextual regions for adaptive histogram equalization.
-    clip_limit
-        Clipping limit, normalized between 0 and 1 (higher values give
-        more contrast). Default is 0.
-    nbins
-        Number of gray bins for histogram. Default is 128.
-
-    Returns
-    -------
-    equalized_patterns : numpy.ndarray
-        Patterns with enhanced contrast.
-    """
-    dtype_in = patterns.dtype.type
-
-    equalized_patterns = np.empty_like(patterns)
-
-    for nav_idx in np.ndindex(patterns.shape[:-2]):
-
-        # Adaptive histogram equalization
-        equalized_pattern = equalize_adapthist(
-            patterns[nav_idx],
-            kernel_size=kernel_size,
-            clip_limit=clip_limit,
-            nbins=nbins,
-        )
-
-        # Rescale intensities
-        equalized_patterns[nav_idx] = pattern_processing.rescale_intensity(
-            equalized_pattern, dtype_out=dtype_in
-        )
-
-    return equalized_patterns
-
-
+@deprecated(
+    since=0.6, removal=0.7, alternative="kikuchipy.signals.EBSD.get_image_quality"
+)
 def get_image_quality(
     patterns: Union[np.ndarray, da.Array],
     frequency_vectors: Optional[np.ndarray] = None,
@@ -387,6 +359,56 @@ def get_image_quality(
         )
 
     return image_quality_chunk
+
+
+def adaptive_histogram_equalization(
+    patterns: Union[np.ndarray, da.Array],
+    kernel_size: Union[Tuple[int, int], List[int]],
+    clip_limit: Union[int, float] = 0,
+    nbins: int = 128,
+) -> np.ndarray:
+    """Local contrast enhancement of a chunk of EBSD patterns with
+    adaptive histogram equalization.
+
+    This method makes use of :func:`skimage.exposure.equalize_adapthist`.
+
+    Parameters
+    ----------
+    patterns
+        EBSD patterns.
+    kernel_size
+        Shape of contextual regions for adaptive histogram equalization.
+    clip_limit
+        Clipping limit, normalized between 0 and 1 (higher values give
+        more contrast). Default is 0.
+    nbins
+        Number of gray bins for histogram. Default is 128.
+
+    Returns
+    -------
+    equalized_patterns : numpy.ndarray
+        Patterns with enhanced contrast.
+    """
+    dtype_in = patterns.dtype.type
+
+    equalized_patterns = np.empty_like(patterns)
+
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+
+        # Adaptive histogram equalization
+        equalized_pattern = equalize_adapthist(
+            patterns[nav_idx],
+            kernel_size=kernel_size,
+            clip_limit=clip_limit,
+            nbins=nbins,
+        )
+
+        # Rescale intensities
+        equalized_patterns[nav_idx] = pattern_processing.rescale_intensity(
+            equalized_pattern, dtype_out=dtype_in
+        )
+
+    return equalized_patterns
 
 
 def fft_filter(
@@ -526,9 +548,7 @@ def average_neighbour_patterns(
         dtype_out = patterns.dtype.type
 
     # Correlate patterns with window
-    correlated_patterns = correlate(
-        patterns.astype(np.float32), weights=window, mode="constant", cval=0
-    )
+    correlated_patterns = correlate(patterns, weights=window, mode="constant", cval=0)
 
     # Divide convolved patterns by number of neighbours averaged with
     averaged_patterns = np.empty_like(correlated_patterns, dtype=dtype_out)
@@ -539,3 +559,40 @@ def average_neighbour_patterns(
         )
 
     return averaged_patterns
+
+
+def _average_neighbour_patterns(
+    patterns: np.ndarray,
+    window_sums: np.ndarray,
+    window: Union[np.ndarray, Window],
+    dtype_out: np.dtype,
+    omin: float,
+    omax: float,
+) -> np.ndarray:
+    """See docstring of :func:`average_neighbour_patterns`."""
+    patterns = patterns.astype("float32")
+    correlated_patterns = correlate(patterns, weights=window, mode="constant")
+    rescaled_patterns = _rescale_neighbour_averaged_patterns(
+        correlated_patterns, window_sums, dtype_out, omin, omax
+    )
+    return rescaled_patterns
+
+
+@njit(cache=True, fastmath=True, nogil=True)
+def _rescale_neighbour_averaged_patterns(
+    patterns: np.ndarray,
+    window_sums: np.ndarray,
+    dtype_out: np.dtype,
+    omin: float,
+    omax: float,
+) -> np.ndarray:
+    """See docstring of :func:`average_neighbour_patterns`."""
+    rescaled_patterns = np.zeros(patterns.shape, dtype=dtype_out)
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        pattern_i = patterns[nav_idx] / window_sums[nav_idx]
+        imin = np.min(pattern_i)
+        imax = np.max(pattern_i)
+        rescaled_patterns[nav_idx] = _rescale_with_min_max(
+            pattern_i, imin, imax, omin, omax
+        )
+    return rescaled_patterns

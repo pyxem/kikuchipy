@@ -29,7 +29,6 @@ from dask.diagnostics import ProgressBar
 from hyperspy._signals.signal2d import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
-from hyperspy.misc.utils import DictionaryTreeBrowser
 from hyperspy.roi import BaseInteractiveROI
 from hyperspy.api import interactive
 from h5py import File
@@ -50,10 +49,15 @@ from kikuchipy.indexing._refinement._refinement import (
 from kikuchipy.indexing.similarity_metrics import metrics, SimilarityMetric
 from kikuchipy.io._io import _save
 from kikuchipy.pattern import chunk
+from kikuchipy.pattern.chunk import _average_neighbour_patterns
 from kikuchipy.pattern._pattern import (
     fft_frequency_vectors,
     fft_filter,
     _dynamic_background_frequency_space_setup,
+    _get_image_quality,
+    _remove_static_background_subtract,
+    _remove_static_background_divide,
+    _remove_dynamic_background,
 )
 from kikuchipy.signals.util._metadata import (
     ebsd_metadata,
@@ -76,7 +80,7 @@ from kikuchipy.signals.util._map_helper import (
 )
 from kikuchipy.signals._common_image import CommonImage
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
-from kikuchipy._util import deprecated
+from kikuchipy._util import deprecated, deprecated_argument
 
 
 class EBSD(CommonImage, Signal2D):
@@ -95,6 +99,7 @@ class EBSD(CommonImage, Signal2D):
     _signal_type = "EBSD"
     _alias_signal_types = ["electron_backscatter_diffraction"]
     _lazy = False
+    _custom_properties = ["detector", "static_background", "xmap"]
 
     def __init__(self, *args, **kwargs):
         """Create an :class:`~kikuchipy.signals.EBSD` instance from a
@@ -111,13 +116,14 @@ class EBSD(CommonImage, Signal2D):
                 px_size=self.axes_manager.signal_axes[0].scale,
             ),
         )
+        self._static_background = kwargs.pop("static_background", None)
         self._xmap = kwargs.pop("xmap", None)
 
         # Update metadata if object is initialised from numpy array
         if not self.metadata.has_item(metadata_nodes("ebsd")):
             md = self.metadata.as_dictionary()
             md.update(ebsd_metadata().as_dictionary())
-            self.metadata = DictionaryTreeBrowser(md)
+            self.metadata.add_dictionary(md)
         if not self.metadata.has_item("Sample.Phases"):
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
@@ -157,6 +163,19 @@ class EBSD(CommonImage, Signal2D):
             value, self.axes_manager.navigation_axes[::-1], raise_if_not=True
         ):
             self._xmap = value
+
+    @property
+    def static_background(self) -> Union[None, np.ndarray, da.Array]:
+        """Static background pattern."""
+        return self._static_background
+
+    @static_background.setter
+    def static_background(self, value: Union[np.ndarray, da.Array]):
+        if value.dtype != self.data.dtype:
+            warnings.warn("Background pattern has different data type from patterns")
+        if value.shape != self.axes_manager.signal_shape[::-1]:
+            warnings.warn("Background pattern has different shape from patterns")
+        self._static_background = value
 
     # ------------------------ Custom methods ------------------------ #
 
@@ -348,7 +367,7 @@ class EBSD(CommonImage, Signal2D):
         --------
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
-        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
+        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1  # doctest: +SKIP
         ├── atom = Ni
         ├── coordinates = array([0, 0, 0])
         ├── debye_waller_factor = 0.0035
@@ -453,14 +472,15 @@ class EBSD(CommonImage, Signal2D):
         dx.scale, dy.scale = (delta, delta)
         dx.offset, dy.offset = -centre
 
+    @deprecated_argument(name="relative", since="0.6", removal="0.7")
     def remove_static_background(
         self,
         operation: str = "subtract",
-        relative: bool = True,
+        relative: bool = False,
         static_bg: Union[None, np.ndarray, da.Array] = None,
         scale_bg: bool = False,
     ):
-        """Remove the static background in an EBSD scan inplace.
+        """Remove the static background inplace.
 
         The removal is performed by subtracting or dividing by a static
         background pattern. Resulting pattern intensities are rescaled
@@ -470,18 +490,29 @@ class EBSD(CommonImage, Signal2D):
         Parameters
         ----------
         operation
-            Whether to "subtract" (default) or "divide" by the static
-            background pattern.
+            Whether to ``"subtract"`` (default) or ``"divide"`` by the
+            static background pattern.
         relative
             Keep relative intensities between patterns. Default is
-            True.
+            ``False``.
+
+            .. deprecated:: 0.6
+
+                This parameter will be removed in version 0.7 due to the
+                implementation not working well for large datasets. It
+                was originally supported so that a virtual backscatter
+                electron (VBSE) image with meaningful contrast could be
+                navigated after static background removal. For an EBSD
+                signal ``s``, this image can be easily obtained with
+                ``s_mean = s.mean(s.axes_manager.signal_indices_in_array)``.
+
         static_bg
-            Static background pattern. If None is passed (default) we
-            try to read it from the signal metadata.
+            Static background pattern. If not given, the background is
+            obtained from the ``EBSD.static_background`` property.
         scale_bg
             Whether to scale the static background pattern to each
-            individual pattern's data range before removal. Must be
-            False if `relative` is True. Default is False.
+            individual pattern's data range before removal. Default is
+            ``False``.
 
         See Also
         --------
@@ -489,14 +520,13 @@ class EBSD(CommonImage, Signal2D):
 
         Examples
         --------
-        We assume that a static background pattern with the same shape
+        It is assumed that a static background pattern of the same shape
         and data type (e.g. 8-bit unsigned integer, ``uint8``) as the
         patterns is available in signal metadata:
 
         >>> import kikuchipy as kp
-        >>> node = kp.signals.util.metadata_nodes("ebsd")
         >>> s = kp.data.nickel_ebsd_small()
-        >>> s.metadata.get_item(node + '.static_background')
+        >>> s.static_background
         array([[84, 87, 90, ..., 27, 29, 30],
                [87, 90, 93, ..., 27, 28, 30],
                [92, 94, 97, ..., 39, 28, 29],
@@ -506,87 +536,73 @@ class EBSD(CommonImage, Signal2D):
                [76, 78, 80, ..., 26, 26, 25]], dtype=uint8)
 
         The static background can be removed by subtracting or dividing
-        this background from each pattern while keeping relative
-        intensities between patterns (or not):
+        this background from each pattern:
 
-        >>> s.remove_static_background(
-        ...     operation='subtract', relative=True
-        ... )  # doctest: +SKIP
+        >>> s.remove_static_background(operation="divide")  # doctest: +SKIP
 
-        If the metadata has no background pattern, this must be passed
-        in the `static_bg` parameter as a numpy or dask array.
+        If the ``static_background`` property is ``None``, this must be
+        passed in the ``static_bg`` parameter as a ``numpy`` or ``dask``
+        array.
+
         """
+        dtype = np.float32  # During processing
         dtype_out = self.data.dtype.type
+        omin, omax = dtype_range[dtype_out]
 
         # Get background pattern
         if static_bg is None:
+            static_bg = self.static_background
             try:
-                md = self.metadata
-                ebsd_node = metadata_nodes("ebsd")
-                static_bg_in_metadata = md.get_item(ebsd_node + ".static_background")
-                if isinstance(static_bg_in_metadata, (da.Array, np.ndarray)):
-                    static_bg = da.asarray(static_bg_in_metadata, chunks="auto")
-                else:
+                if not isinstance(static_bg, (np.ndarray, da.Array)):
                     raise ValueError
             except (AttributeError, ValueError):
-                raise ValueError(
-                    "`static_bg` is not a valid NumPy or Dask array or could not be "
-                    "read from signal metadata"
-                )
+                raise ValueError("`EBSD.static_background` is not a valid array")
+        if isinstance(static_bg, da.Array):
+            static_bg = static_bg.compute()
         if dtype_out != static_bg.dtype:
             raise ValueError(
                 f"Static background dtype_out {static_bg.dtype} is not the same as "
                 f"pattern dtype_out {dtype_out}"
             )
-        pat_shape = self.axes_manager.signal_shape[::-1]
+        pat_shape = self.axes_manager.signal_shape[::-1]  # xy -> ij
         bg_shape = static_bg.shape
         if bg_shape != pat_shape:
             raise ValueError(
                 f"Signal {pat_shape} and static background {bg_shape} shapes are not "
-                "identical"
+                "the same"
             )
-        dtype = np.float32
         static_bg = static_bg.astype(dtype)
 
-        if operation == "subtract":
-            operation_func = np.subtract
-        else:  # operation == "divide"
-            operation_func = np.divide
-
-        # Get min./max. input patterns intensity after correction
-        if relative is True and scale_bg is True:
-            raise ValueError("'scale_bg' must be False if 'relative' is True.")
-        elif relative is True:  # Scale relative to min./max. intensity in scan
-            signal_min = self.data.min(axis=(0, 1))
-            signal_max = self.data.max(axis=(0, 1))
-            in_range = (
-                operation_func(signal_min, static_bg).astype(dtype).min(),
-                operation_func(signal_max, static_bg).astype(dtype).max(),
-            )
-        else:  # Scale relative to min./max. intensity in each pattern
-            in_range = None
-
-        # Create a dask array of signal patterns and do the processing on this
-        dask_array = get_dask_array(signal=self, dtype=dtype)
-
-        # Remove the static background and rescale intensities chunk by chunk
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_static_background,
-            static_bg=static_bg,
-            operation_func=operation_func,
-            scale_bg=scale_bg,
-            in_range=in_range,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-        )
-
-        # Overwrite signal patterns
+        # Remove background and rescale to input data type
         if not self._lazy:
-            with ProgressBar():
-                print("Removing the static background:", file=sys.stdout)
-                corrected_patterns.store(self.data, compute=True)
+            print("Removing the static background:", file=sys.stdout)
+
+            # Register a progressbar. Remove once HyperSpy v1.7.1 is
+            # released: https://github.com/hyperspy/hyperspy/issues/2946
+            pbar = ProgressBar()
+            pbar.register()
+
+        if operation == "subtract":
+            operation_func = _remove_static_background_subtract
         else:
-            self.data = corrected_patterns
+            operation_func = _remove_static_background_divide
+
+        properties = self._get_custom_properties()
+        self.map(
+            operation_func,
+            show_progressbar=True,
+            parallel=True,
+            output_dtype=dtype_out,
+            static_bg=static_bg,
+            dtype_out=dtype_out,
+            omin=omin,
+            omax=omax,
+            scale_bg=scale_bg,
+        )
+        self._set_custom_properties(properties)
+
+        if not self._lazy:
+            pbar.unregister()
 
     def remove_dynamic_background(
         self,
@@ -606,21 +622,21 @@ class EBSD(CommonImage, Signal2D):
         Parameters
         ----------
         operation
-            Whether to "subtract" (default) or "divide" by the dynamic
-            background pattern.
+            Whether to ``"subtract"`` (default) or ``"divide"`` by the
+            dynamic background pattern.
         filter_domain
             Whether to obtain the dynamic background by applying a
-            Gaussian convolution filter in the "frequency" (default) or
-            "spatial" domain.
+            Gaussian convolution filter in the ``"frequency"`` (default)
+            or ``"spatial"`` domain.
         std
             Standard deviation of the Gaussian window. If None
             (default), it is set to width/8.
         truncate
             Truncate the Gaussian window at this many standard
-            deviations. Default is 4.0.
-        kwargs :
+            deviations. Default is ``4.0``.
+        kwargs
             Keyword arguments passed to the Gaussian blurring function
-            determined from `filter_domain`.
+            determined from ``filter_domain``.
 
         See Also
         --------
@@ -632,24 +648,14 @@ class EBSD(CommonImage, Signal2D):
         Examples
         --------
         Traditional background correction includes static and dynamic
-        corrections, loosing relative intensities between patterns after
-        dynamic corrections (whether `relative` is set to True or
-        False in :meth:`~remove_static_background`):
+        corrections:
 
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
-        >>> s.remove_static_background(operation="subtract")  # doctest: +SKIP
-        >>> s.remove_dynamic_background(
-        ...     operation="subtract",  # Default
-        ...     filter_domain="frequency",  # Default
-        ...     truncate=4.0,  # Default
-        ...     std=5,
-        ... )  # doctest: +SKIP
-        """
-        # Create a dask array of signal patterns and do the processing on this
-        dtype = np.float32
-        dask_array = get_dask_array(signal=self, dtype=dtype)
+        >>> s.remove_static_background()  # doctest: +SKIP
+        >>> s.remove_dynamic_background(operation="divide", std=5)  # doctest: +SKIP
 
+        """
         if std is None:
             std = self.axes_manager.signal_shape[0] / 8
 
@@ -676,32 +682,36 @@ class EBSD(CommonImage, Signal2D):
             filter_domains = ["frequency", "spatial"]
             raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
 
-        if operation == "subtract":
-            operation_func = np.subtract
-        else:  # operation == "divide"
-            operation_func = np.divide
+        map_func = _remove_dynamic_background
 
-        # Get output data type and output data type intensity range
         dtype_out = self.data.dtype.type
-        out_range = dtype_range[dtype_out]
+        omin, omax = dtype_range[dtype_out]
 
-        corrected_patterns = dask_array.map_blocks(
-            func=chunk.remove_dynamic_background,
+        if not self._lazy:
+            print("Removing the dynamic background:", file=sys.stdout)
+
+            # Register a progressbar. Remove once HyperSpy v1.7.1 is
+            # released: https://github.com/hyperspy/hyperspy/issues/2946
+            pbar = ProgressBar()
+            pbar.register()
+
+        properties = self._get_custom_properties()
+        self.map(
+            map_func,
+            show_progressbar=True,
+            parallel=True,
+            output_dtype=dtype_out,
             filter_func=filter_func,
-            operation_func=operation_func,
+            operation=operation,
             dtype_out=dtype_out,
-            out_range=out_range,
-            dtype=dtype_out,
+            omin=omin,
+            omax=omax,
             **kwargs,
         )
+        self._set_custom_properties(properties)
 
-        # Overwrite signal patterns
         if not self._lazy:
-            with ProgressBar():
-                print("Removing the dynamic background:", file=sys.stdout)
-                corrected_patterns.store(self.data, compute=True)
-        else:
-            self.data = corrected_patterns
+            pbar.unregister()
 
     def get_dynamic_background(
         self,
@@ -877,7 +887,7 @@ class EBSD(CommonImage, Signal2D):
         else:
             self.data = equalized_patterns
 
-    def get_image_quality(self, normalize: bool = True) -> np.ndarray:
+    def get_image_quality(self, normalize: bool = True) -> Union[np.ndarray, da.Array]:
         """Compute the image quality map of patterns in an EBSD scan.
 
         The image quality is calculated based on the procedure defined
@@ -888,12 +898,13 @@ class EBSD(CommonImage, Signal2D):
         normalize
             Whether to normalize patterns to a mean of zero and standard
             deviation of 1 before calculating the image quality. Default
-            is True.
+            is ``True``.
 
         Returns
         -------
-        image_quality_map : numpy.ndarray
-            Image quality map of same shape as signal navigation axes.
+        image_quality_map
+            Image quality map of same shape as navigation axes. This is
+            a Dask array if the signal is lazy.
 
         References
         ----------
@@ -906,38 +917,43 @@ class EBSD(CommonImage, Signal2D):
         >>> import matplotlib.pyplot as plt
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
-        >>> iq = s.get_image_quality(normalize=True)  # doctest: +SKIP
+        >>> iq = s.get_image_quality()  # doctest: +SKIP
         >>> plt.imshow(iq)  # doctest: +SKIP
 
         See Also
         --------
         kikuchipy.pattern.get_image_quality
+
         """
-        # Data set to operate on
-        dtype_out = np.float32
-        dask_array = get_dask_array(self, dtype=dtype_out)
 
         # Calculate frequency vectors
         sx, sy = self.axes_manager.signal_shape
         frequency_vectors = fft_frequency_vectors((sy, sx))
         inertia_max = np.sum(frequency_vectors) / (sy * sx)
 
-        # Calculate image quality per chunk
-        image_quality_map = dask_array.map_blocks(
-            func=chunk.get_image_quality,
+        if not self._lazy:
+            print("Calculating the image quality:", file=sys.stdout)
+
+            # Register a progressbar. Remove once HyperSpy v1.7.1 is
+            # released: https://github.com/hyperspy/hyperspy/issues/2946
+            pbar = ProgressBar()
+            pbar.register()
+
+        image_quality_map = self.map(
+            _get_image_quality,
+            show_progressbar=True,
+            parallel=True,
+            inplace=False,
+            output_dtype=np.float32,
+            normalize=normalize,
             frequency_vectors=frequency_vectors,
             inertia_max=inertia_max,
-            normalize=normalize,
-            dtype=dtype_out,
-            drop_axis=self.axes_manager.signal_indices_in_array,
         )
 
         if not self._lazy:
-            with ProgressBar():
-                print("Calculating the image quality:", file=sys.stdout)
-                image_quality_map = image_quality_map.compute()
+            pbar.unregister()
 
-        return image_quality_map
+        return image_quality_map.data
 
     def dictionary_indexing(
         self,
@@ -1751,8 +1767,7 @@ class EBSD(CommonImage, Signal2D):
         window_shape: Tuple[int, ...] = (3, 3),
         **kwargs,
     ):
-        """Average patterns in an EBSD scan inplace with its neighbours
-        within a window.
+        """Average patterns inplace with its neighbours within a window.
 
         The amount of averaging is specified by the window coefficients.
         All patterns are averaged with the same window. Map borders are
@@ -1768,8 +1783,8 @@ class EBSD(CommonImage, Signal2D):
         window
             Name of averaging window or an array. Available types are
             listed in :func:`scipy.signal.windows.get_window`, in
-            addition to a "circular" window (default) filled with ones
-            in which corner coefficients are set to zero. A window
+            addition to a ``"circular"`` window (default) filled with
+            ones in which corner coefficients are set to zero. A window
             element is considered to be in a corner if its radial
             distance to the origin (window centre) is shorter or equal
             to the half width of the window's longest axis. A 1D or 2D
@@ -1778,12 +1793,12 @@ class EBSD(CommonImage, Signal2D):
         window_shape
             Shape of averaging window. Not used if a custom window or
             :class:`~kikuchipy.util.window.Window` object is passed to
-            `window`. This can be either 1D or 2D, and can be
+            ``window``. This can be either 1D or 2D, and can be
             asymmetrical. Default is (3, 3).
-        **kwargs :
+        kwargs
             Keyword arguments passed to the available window type listed
-            in :func:`scipy.signal.windows.get_window`. If none are
-            passed, the default values of that particular window are used.
+            in :func:`scipy.signal.windows.get_window`. If not given,
+            the default values of that particular window are used.
 
         See Also
         --------
@@ -1796,10 +1811,10 @@ class EBSD(CommonImage, Signal2D):
         else:
             averaging_window = Window(window=window, shape=window_shape, **kwargs)
 
-        # Do nothing if a window of shape (1, ) or (1, 1) is passed
         nav_shape = self.axes_manager.navigation_shape[::-1]
         window_shape = averaging_window.shape
         if window_shape in [(1,), (1, 1)]:
+            # Do nothing if a window of shape (1,) or (1, 1) is passed
             return warnings.warn(
                 f"A window of shape {window_shape} was passed, no averaging is "
                 "therefore performed."
@@ -1813,20 +1828,22 @@ class EBSD(CommonImage, Signal2D):
             input=np.ones(nav_shape, dtype=int),
             weights=averaging_window,
             mode="constant",
-            cval=0,
         )
 
-        # Add signal dimensions to window array to enable its use with Dask's
-        # map_blocks()
+        # Add signal dimensions to window array to enable its use with
+        # Dask's map_overlap()
         sig_dim = self.axes_manager.signal_dimension
         averaging_window = averaging_window.reshape(
             averaging_window.shape + (1,) * sig_dim
         )
 
         # Create dask array of signal patterns and do processing on this
-        dask_array = get_dask_array(signal=self)
+        if self._lazy:
+            old_chunks = self.data.chunks
+        dask_array = get_dask_array(signal=self, chunk_bytes=8e6, rechunk=True)
 
-        # Add signal dimensions to array be able to use with Dask's map_blocks()
+        # Add signal dimensions to array be able to use with Dask's
+        # map_overlap()
         nav_dim = self.axes_manager.navigation_dimension
         for i in range(sig_dim):
             window_sums = np.expand_dims(window_sums, axis=window_sums.ndim)
@@ -1834,8 +1851,8 @@ class EBSD(CommonImage, Signal2D):
             window_sums, chunks=dask_array.chunks[:nav_dim] + (1,) * sig_dim
         )
 
-        # Create overlap between chunks to enable correlation with the window
-        # using Dask's map_blocks()
+        # Create overlap between chunks to enable correlation with the
+        # window using Dask's map_overlap()
         window_dim = averaging_window.ndim
         overlap_depth = {}
         for i in range(nav_dim):
@@ -1848,15 +1865,18 @@ class EBSD(CommonImage, Signal2D):
         )
 
         dtype_out = self.data.dtype
+        omin, omax = dtype_range[dtype_out.type]
         averaged_patterns = da.overlap.map_overlap(
-            chunk.average_neighbour_patterns,
+            _average_neighbour_patterns,
             dask_array,
             window_sums,
             window=averaging_window,
             dtype_out=dtype_out,
+            omin=omin,
+            omax=omax,
             dtype=dtype_out,
             depth=overlap_depth,
-            boundary=np.nan,
+            boundary="none",
         )
 
         # Overwrite signal patterns
@@ -1865,7 +1885,13 @@ class EBSD(CommonImage, Signal2D):
                 print("Averaging with the neighbour patterns:", file=sys.stdout)
                 averaged_patterns.store(self.data, compute=True)
         else:
+            # Revert original chunks
+            averaged_patterns = averaged_patterns.rechunk(old_chunks)
+
             self.data = averaged_patterns
+
+        # Don't sink
+        gc.collect()
 
     def plot_virtual_bse_intensity(
         self,
@@ -1978,12 +2004,22 @@ class EBSD(CommonImage, Signal2D):
 
     # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
 
+    def as_lazy(self, *args, **kwargs):
+        new = super().as_lazy(*args, **kwargs)
+        if self.static_background is not None:
+            new._static_background = da.asarray(self.static_background)
+        return new
+
     def deepcopy(self):
         new = super().deepcopy()
-        if self.xmap is not None:
+        try:
             new._xmap = self.xmap.deepcopy()
-        else:
-            new._xmap = copy.deepcopy(self.xmap)
+        except AttributeError:
+            pass
+        try:
+            new._static_background = self.static_background.copy()
+        except AttributeError:
+            pass
         new._detector = self.detector.deepcopy()
         return new
 
@@ -2188,6 +2224,13 @@ class EBSD(CommonImage, Signal2D):
         metric.raise_error_if_invalid()
         return metric
 
+    def _get_custom_properties(self) -> dict:
+        return {name: self.__getattribute__(name) for name in self._custom_properties}
+
+    def _set_custom_properties(self, properties: dict):
+        for name, value in properties.items():
+            self.__setattr__("_" + name, value)
+
 
 class LazyEBSD(LazySignal2D, EBSD):
     """Lazy implementation of the :class:`EBSD` class.
@@ -2204,10 +2247,14 @@ class LazyEBSD(LazySignal2D, EBSD):
         super().__init__(*args, **kwargs)
 
     def compute(self, *args, **kwargs):
-        xmap = self.xmap
+        properties = self._get_custom_properties()
+
         super().compute(*args, **kwargs)
         gc.collect()  # Don't sink
-        self._xmap = xmap
+
+        self._set_custom_properties(properties)
+        if isinstance(self.static_background, da.Array):
+            self._static_background = self._static_background.compute()
 
     def get_decomposition_model_write(
         self,

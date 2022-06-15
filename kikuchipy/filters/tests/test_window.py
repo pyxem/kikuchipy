@@ -465,7 +465,7 @@ class TestWindow:
     )
     def test_gaussian(self, std, shape, answer):
         w = Window("gaussian", std=std, shape=shape)
-        w = w / (2 * np.pi * std ** 2)
+        w = w / (2 * np.pi * std**2)
         w = w / np.sum(w)
 
         assert np.allclose(w, answer)

@@ -20,48 +20,51 @@ with the `Miniconda distribution <https://docs.conda.io/en/latest/miniconda.html
 the Anaconda Prompt, terminal, or Command Prompt, create an environment and activate
 it::
 
-   $ conda create --name kp-env python=3.9
-   $ conda activate kp-env
+   conda create --name kp-env python=3.9
+   conda activate kp-env
 
 If you prefer a graphical interface to manage packages and environments, you can install
 the `Anaconda distribution <https://docs.continuum.io/anaconda>`_ instead.
 
 Installing::
 
-    $ conda install kikuchipy --channel conda-forge
+    conda install kikuchipy --channel conda-forge
 
 To update kikuchipy to the latest release::
 
-    $ conda update kikuchipy
+    conda update kikuchipy
 
-To install a specific version of kikuchipy (say version 0.3.4)::
+To install a specific version of kikuchipy (say version 0.5.8)::
 
-    $ conda install kikuchipy==0.3.4
+    conda install kikuchipy==0.5.8
 
 .. _install-with-pip:
 
 With pip
 ========
 
-kikuchipy is listed in the `Python Package Index <https://pypi.org/project/kikuchipy/>`_
-(PyPI), and can therefore be installed with `pip <https://pip.pypa.io/en/stable>`_. To
-do so, run the following in the Anaconda Prompt, terminal or Command Prompt::
+kikuchipy is availabe from the `Python Package Index
+<https://pypi.org/project/kikuchipy/>`_ (PyPI), and can therefore be installed with `pip
+<https://pip.pypa.io/en/stable>`_. To do so, run the following in the Anaconda Prompt,
+terminal or Command Prompt::
 
-    $ pip install kikuchipy
-
-.. note::
-
-    kikuchipy builds upon HyperSpy, which depends upon a number of libraries that
-    usually need to be compiled. Installing kikuchipy with ``pip`` may therefore require
-    some development tools.
+    pip install kikuchipy
 
 To update kikuchipy to the latest release::
 
-    $ pip install --upgrade kikuchipy
+    pip install --upgrade kikuchipy
 
-To install a specific version of kikuchipy (say version 0.3.4)::
+To install a specific version of kikuchipy (say version 0.5.8)::
 
-    $ pip install kikuchipy==0.3.4
+    pip install kikuchipy==0.5.8
+
+Some dependencies are made optional and are available via the following selectors:
+
+- ``viz``: 3D plot of master patterns using `pyvista <https://docs.pyvista.org/>`_
+
+Installing optional dependencies::
+
+    pip install kikuchipy[viz]
 
 .. _install-from-source:
 
@@ -88,9 +91,9 @@ From source
 To install kikuchipy from source, clone the repository from `GitHub
 <https://github.com/pyxem/kikuchipy>`_, and install with ``pip``::
 
-    $ git clone https://github.com/pyxem/kikuchipy.git
-    $ cd kikuchipy
-    $ pip install --editable .
+    git clone https://github.com/pyxem/kikuchipy.git
+    cd kikuchipy
+    pip install --editable .
 
 See the :ref:`contributing guidelines <setting-up-a-development-installation>` for how
 to set up a development installation and keep it up to date.

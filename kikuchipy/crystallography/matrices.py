@@ -20,10 +20,15 @@
 from diffpy.structure import Lattice
 import numpy as np
 
-# TODO: Implement these in diffpy.structure (see
-#  https://github.com/diffpy/diffpy.structure/issues/46)
+from kikuchipy._util import deprecated
 
 
+@deprecated(
+    since="0.6",
+    alternative="diffpy.structure.Lattice.base",
+    alternative_is_function=False,
+    removal="0.7",
+)
 def get_direct_structure_matrix(lattice: Lattice) -> np.ndarray:
     """Direct structure matrix as defined in EMsoft.
 
@@ -47,6 +52,12 @@ def get_direct_structure_matrix(lattice: Lattice) -> np.ndarray:
     )
 
 
+@deprecated(
+    since="0.6",
+    alternative="diffpy.structure.Lattice.recbase",
+    alternative_is_function=False,
+    removal="0.7",
+)
 def get_reciprocal_structure_matrix(lattice: Lattice) -> np.ndarray:
     """Reciprocal structure matrix as defined in EMsoft.
 
@@ -57,10 +68,17 @@ def get_reciprocal_structure_matrix(lattice: Lattice) -> np.ndarray:
 
     Returns
     -------
+    numpy.ndarray
     """
     return np.linalg.inv(get_direct_structure_matrix(lattice)).T
 
 
+@deprecated(
+    since="0.6",
+    alternative="diffpy.structure.Lattice.reciprocal().metrics",
+    alternative_is_function=False,
+    removal="0.7",
+)
 def get_reciprocal_metric_tensor(lattice: Lattice) -> np.ndarray:
     """Reciprocal metric tensor as defined in EMsoft.
 
@@ -71,20 +89,18 @@ def get_reciprocal_metric_tensor(lattice: Lattice) -> np.ndarray:
 
     Returns
     -------
+    numpy.ndarray
     """
     a, b, c = lattice.abcABG()[:3]
     ca, cb, cg = lattice.ca, lattice.cb, lattice.cg
     sa, sb, sg = lattice.sa, lattice.sb, lattice.sg
-    terms_12_21 = a * b * (c ** 2) * (ca * cb - cg)
-    terms_13_31 = a * (b ** 2) * c * (cg * ca - cb)
-    terms_23_32 = (a ** 2) * b * c * (cb * cg - ca)
-    return (
-        np.array(
-            [
-                [(b * c * sa) ** 2, terms_12_21, terms_13_31],
-                [terms_12_21, (a * c * sb) ** 2, terms_23_32],
-                [terms_13_31, terms_23_32, (a * b * sg) ** 2],
-            ]
-        )
-        / np.linalg.det(lattice.metrics)
-    )
+    terms_12_21 = a * b * (c**2) * (ca * cb - cg)
+    terms_13_31 = a * (b**2) * c * (cg * ca - cb)
+    terms_23_32 = (a**2) * b * c * (cb * cg - ca)
+    return np.array(
+        [
+            [(b * c * sa) ** 2, terms_12_21, terms_13_31],
+            [terms_12_21, (a * c * sb) ** 2, terms_23_32],
+            [terms_13_31, terms_23_32, (a * b * sg) ** 2],
+        ]
+    ) / np.linalg.det(lattice.metrics)

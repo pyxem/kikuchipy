@@ -17,9 +17,11 @@
 
 from copy import deepcopy
 
+import matplotlib
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
+from packaging.version import Version
 import pytest
 
 import kikuchipy as kp
@@ -36,7 +38,7 @@ class TestEBSDDetector:
             shape=shape, px_size=px_size, binning=binning, tilt=tilt, pc=pc1
         )
         assert det.shape == shape
-        assert det.aspect_ratio == 0.5
+        assert det.aspect_ratio == 2
 
     @pytest.mark.parametrize(
         "nav_shape, desired_nav_shape, desired_nav_dim",
@@ -177,17 +179,17 @@ class TestEBSDDetector:
     @pytest.mark.parametrize(
         "shape, desired_x_range, desired_y_range",
         [
-            ((60, 60), [-0.833828, 1.1467617], [-0.4369182, 1.54367201]),
-            ((510, 510), [-0.833828, 1.1467617], [-0.4369182, 1.54367201]),
-            ((1, 1), [-0.833828, 1.1467617], [-0.4369182, 1.54367201]),
-            ((480, 640), [-0.6253713, 0.860071], [-0.4369182, 1.54367201]),
+            ((60, 60), [-0.833828, 1.146762], [-0.436918, 1.543672]),
+            ((510, 510), [-0.833828, 1.146762], [-0.436918, 1.543672]),
+            ((1, 1), [-0.833828, 1.146762], [-0.436918, 1.543672]),
+            ((480, 640), [-1.111771, 1.529016], [-0.436918, 1.543672]),
         ],
     )
     def test_gnomonic_range(self, pc1, shape, desired_x_range, desired_y_range):
         """Gnomonic x/y range, x depends on aspect ratio."""
         detector = kp.detectors.EBSDDetector(shape=shape, pc=pc1)
-        assert np.allclose(detector.x_range, desired_x_range)
-        assert np.allclose(detector.y_range, desired_y_range)
+        assert np.allclose(detector.x_range, desired_x_range, atol=1e-6)
+        assert np.allclose(detector.y_range, desired_y_range, atol=1e-6)
 
     @pytest.mark.parametrize(
         "shape, desired_x_scale, desired_y_scale",
@@ -195,11 +197,11 @@ class TestEBSDDetector:
             ((60, 60), 0.033569, 0.033569),
             ((510, 510), 0.003891, 0.003891),
             ((1, 1), 1.980590, 1.980590),
-            ((480, 640), 0.002324, 0.004134),
+            ((480, 640), 0.004133, 0.004135),
         ],
     )
     def test_gnomonic_scale(self, pc1, shape, desired_x_scale, desired_y_scale):
-        """Gnomonic x/y scale."""
+        """Gnomonic (x, y) scale."""
         detector = kp.detectors.EBSDDetector(shape=shape, pc=pc1)
         assert np.allclose(detector.x_scale, desired_x_scale, atol=1e-6)
         assert np.allclose(detector.y_scale, desired_y_scale, atol=1e-6)
@@ -276,7 +278,7 @@ class TestEBSDDetector:
 
         pc_tsl = deepcopy(det.pc)
         pc_tsl[..., 1] = 1 - pc_tsl[..., 1]
-        pc_tsl[..., 1:] *= det.aspect_ratio
+        pc_tsl[..., 1:] /= det.aspect_ratio
         assert np.allclose(det.pc_tsl(), pc_tsl, atol=1e-5)
         assert np.allclose(det.pc_oxford(), pc_tsl, atol=1e-5)
 
@@ -351,13 +353,10 @@ class TestEBSDDetector:
         """Plotting detector works, *not* checking whether Matplotlib
         displays the pattern correctly.
         """
-        _, ax = detector.plot(
-            coordinates=coordinates,
-            show_pc=show_pc,
-            pattern=pattern,
-            zoom=zoom,
-            return_fig_ax=True,
-        )
+        kwargs = dict(show_pc=show_pc, pattern=pattern, zoom=zoom, return_fig_ax=True)
+        if coordinates is not None:
+            kwargs["coordinates"] = coordinates
+        _, ax = detector.plot(**kwargs)
         assert ax.get_xlabel() == f"x {desired_label}"
         assert ax.get_ylabel() == f"y {desired_label}"
         if isinstance(pattern, np.ndarray):
@@ -383,16 +382,32 @@ class TestEBSDDetector:
             gnomonic_circles_kwargs=gnomonic_circles_kwargs,
             return_fig_ax=True,
         )
+
+        # Correct number of gnomonic circles are added to the patches
+        num_circles = 0
+        num_rectangles = 0
+        for patch in ax.patches:
+            if isinstance(patch, plt.Circle):
+                num_circles += 1
+            elif isinstance(patch, plt.Rectangle):
+                num_rectangles += 1
         if gnomonic_angles is None:
-            n_angles = 8
+            assert num_circles == 8  # Default
         else:
-            n_angles = len(gnomonic_angles)
-        assert len(ax.patches) == n_angles
+            assert num_circles == len(gnomonic_angles)
+        if Version(matplotlib.__version__) < Version("3.5.0"):  # pragma: no cover
+            for artist in ax.artists:
+                if isinstance(artist, plt.Rectangle):
+                    num_rectangles += 1
+        assert num_rectangles == 1
+
+        # Circles are coloured correctly
         if gnomonic_circles_kwargs is None:
             edgecolor = "k"
         else:
             edgecolor = gnomonic_circles_kwargs["edgecolor"]
-        assert np.allclose(ax.patches[0]._edgecolor[:3], mcolors.to_rgb(edgecolor))
+        assert np.allclose(ax.patches[1]._edgecolor[:3], mcolors.to_rgb(edgecolor))
+
         plt.close("all")
 
     @pytest.mark.parametrize("pattern", [np.ones((61, 61)), np.ones((59, 60))])

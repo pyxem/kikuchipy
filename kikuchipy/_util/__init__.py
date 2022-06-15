@@ -26,4 +26,4 @@ not for users.
     warning.
 """
 
-from kikuchipy._util._util import deprecated
+from kikuchipy._util._util import deprecated, deprecated_argument

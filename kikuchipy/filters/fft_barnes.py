@@ -21,11 +21,9 @@ via FFT written by Connelly Barnes (public domain, 2007).
 
 from typing import Union, Tuple, List
 
+import numba as nb
 import numpy as np
-from numpy.fft import rfft2, irfft2
-from scipy.fftpack import next_fast_len
-
-# from scipy.fft import next_fast_len, rfft2, irfft2
+from scipy.fft import next_fast_len, rfft2, irfft2
 
 from kikuchipy.filters.window import Window
 
@@ -37,10 +35,9 @@ def _fft_filter_setup(
     window_shape = window.shape
 
     # Optimal FFT shape
-    #    real_fft_only = True
     fft_shape = (
-        next_fast_len(image_shape[0] + window_shape[0] - 1),  # , real_fft_only),
-        next_fast_len(image_shape[1] + window_shape[1] - 1),  # , real_fft_only),
+        next_fast_len(image_shape[0] + window_shape[0] - 1, real=True),
+        next_fast_len(image_shape[1] + window_shape[1] - 1, real=True),
     )
 
     # Pad window to optimal FFT size
@@ -109,7 +106,6 @@ def _pad_window(
     wy, wx = window.shape
     window_pad = np.zeros(fft_shape, dtype=np.float32)
     window_pad[:wy, :wx] = np.flipud(np.fliplr(window))
-
     return window_pad
 
 
@@ -129,6 +125,7 @@ def _offset_after_ifft(
     return offset
 
 
+@nb.njit(cache=True, fastmath=True, nogil=True)
 def _pad_image(
     image: np.ndarray,
     fft_shape: Tuple[int, ...],

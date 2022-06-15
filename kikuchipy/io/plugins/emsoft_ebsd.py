@@ -235,7 +235,7 @@ def _crystaldata2phase(dictionary: dict) -> Phase:
                 atype=atom_types[i],
                 xyz=atom_data[:3, i],
                 occupancy=atom_data[3, i],
-                Uisoequiv=atom_data[4, i] / (8 * np.pi ** 2) * 1e2,  # Å^-2
+                Uisoequiv=atom_data[4, i] / (8 * np.pi**2) * 1e2,  # Å^-2
             )
         )
 

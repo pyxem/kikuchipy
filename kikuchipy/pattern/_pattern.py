@@ -15,12 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Union, Tuple, Optional, List
+from typing import Callable, List, Optional, Tuple, Union
 
-import numba as nb
+from numba import njit
 import numpy as np
-from numpy.fft import fft2, rfft2, ifft2, irfft2, fftshift, ifftshift
 from scipy.ndimage import gaussian_filter
+from scipy.fft import fft2, rfft2, ifft2, irfft2, fftshift, ifftshift
 from skimage.util.dtype import dtype_range
 
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
@@ -85,7 +85,7 @@ def rescale_intensity(
     return _rescale_with_min_max(pattern, imin, imax, omin, omax).astype(dtype_out)
 
 
-@nb.jit(nogil=True, nopython=True, cache=True)
+@njit(cache=True, fastmath=True, nogil=True)
 def _rescale_with_min_max(
     pattern: np.ndarray,
     imin: Union[int, float],
@@ -93,148 +93,45 @@ def _rescale_with_min_max(
     omin: Union[int, float],
     omax: Union[int, float],
 ) -> np.ndarray:
+    """Rescale a pattern to a certain intensity range.
+
+    The intensity range is typically given from a data type, e.g.
+    [0, 255] for uint8 or [-1, 1] for float32. The data type and shape
+    of ``pattern`` is arbitrary.
+    """
     rescaled_pattern = (pattern - imin) / float(imax - imin)
     return rescaled_pattern * (omax - omin) + omin
 
 
-@nb.jit("float32[:, :](float32[:, :])", cache=True, nopython=True, nogil=True)
+@njit("float32[:, :](float32[:, :])", cache=True, nogil=True, fastmath=True)
 def _rescale_without_min_max(pattern: np.ndarray) -> np.ndarray:
+    """Rescale a pattern to the intensity range [-1, 1].
+
+    ``pattern`` must be 2D array of data type float32.
+    """
     imin = np.min(pattern)
     imax = np.max(pattern)
     return _rescale_with_min_max(pattern, imin=imin, imax=imax, omin=-1, omax=1)
 
 
-def remove_dynamic_background(
-    pattern: np.ndarray,
-    operation: str = "subtract",
-    filter_domain: str = "frequency",
-    std: Union[None, int, float] = None,
-    truncate: Union[int, float] = 4.0,
-    dtype_out: Union[None, np.dtype, type, Tuple[int, int], Tuple[float, float]] = None,
+def _zero_mean(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
+    patterns_mean = np.nanmean(patterns, axis=axis, keepdims=True)
+    return patterns - patterns_mean
+
+
+def _normalize(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
+    patterns_squared = patterns**2
+    patterns_norm = np.nansum(patterns_squared, axis=axis, keepdims=True)
+    patterns_norm_squared = patterns_norm**0.5
+    return patterns / patterns_norm_squared
+
+
+@njit(cache=True, fastmath=True, nogil=True)
+def normalize_intensity(
+    pattern: np.ndarray, num_std: int = 1, divide_by_square_root: bool = False
 ) -> np.ndarray:
-    """Remove the dynamic background in an EBSD pattern.
-
-    The removal is performed by subtracting or dividing by a Gaussian
-    blurred version of the pattern. The blurred version is obtained
-    either in the frequency domain, by a low pass Fast Fourier Transform
-    (FFT) Gaussian filter, or in the spatial domain by a Gaussian
-    filter. Returned pattern intensities are rescaled to fill the input
-    data type range.
-
-    Parameters
-    ----------
-    pattern
-        EBSD pattern.
-    operation
-        Whether to "subtract" (default) or "divide" by the dynamic
-        background pattern.
-    filter_domain
-        Whether to obtain the dynamic background by applying a Gaussian
-        convolution filter in the "frequency" (default) or "spatial"
-        domain.
-    std
-        Standard deviation of the Gaussian window. If None (default), it
-        is set to width/8.
-    truncate
-        Truncate the Gaussian window at this many standard deviations.
-        Default is 4.0.
-    dtype_out
-        Data type of corrected pattern. If None (default), it is set to
-        input patterns' data type.
-
-    Returns
-    -------
-    corrected_pattern : numpy.ndarray
-        Pattern with the dynamic background removed.
-
-    See Also
-    --------
-    kikuchipy.signals.EBSD.remove_dynamic_background
-    kikuchipy.pattern.remove_dynamic_background
-    """
-    if std is None:
-        std = pattern.shape[1] / 8
-
-    if dtype_out is None:
-        dtype_out = pattern.dtype.type
-
-    if filter_domain == "frequency":
-        (
-            fft_shape,
-            kernel_shape,
-            kernel_fft,
-            offset_before_fft,
-            offset_after_ifft,
-        ) = _dynamic_background_frequency_space_setup(
-            pattern_shape=pattern.shape, std=std, truncate=truncate
-        )
-        dynamic_bg = _fft_filter(
-            image=pattern,
-            fft_shape=fft_shape,
-            window_shape=kernel_shape,
-            transfer_function=kernel_fft,
-            offset_before_fft=offset_before_fft,
-            offset_after_ifft=offset_after_ifft,
-        )
-    elif filter_domain == "spatial":
-        dynamic_bg = gaussian_filter(input=pattern, sigma=std, truncate=truncate)
-    else:
-        filter_domains = ["frequency", "spatial"]
-        raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
-
-    # Remove dynamic background
-    if operation == "subtract":
-        corrected_pattern = pattern - dynamic_bg
-    else:  # operation == "divide"
-        corrected_pattern = pattern / dynamic_bg
-
-    # Rescale intensity
-    corrected_pattern = rescale_intensity(corrected_pattern, dtype_out=dtype_out)
-
-    return corrected_pattern
-
-
-def _dynamic_background_frequency_space_setup(
-    pattern_shape: Union[List[int], Tuple[int, int]],
-    std: Union[int, float],
-    truncate: Union[int, float],
-) -> Tuple[
-    Tuple[int, int], Tuple[int, int], np.ndarray, Tuple[int, int], Tuple[int, int]
-]:
-    # Get Gaussian filtering window
-    shape = (int(truncate * std),) * 2
-    window = Window("gaussian", std=std, shape=shape)
-    window = window / (2 * np.pi * std ** 2)
-    window = window / np.sum(window)
-
-    # FFT filter setup
-    (
-        fft_shape,
-        transfer_function,
-        offset_before_fft,
-        offset_after_ifft,
-    ) = _fft_filter_setup(pattern_shape, window)
-
-    return (
-        fft_shape,
-        window.shape,
-        transfer_function,
-        offset_before_fft,
-        offset_after_ifft,
-    )
-
-
-def get_dynamic_background(
-    pattern: np.ndarray,
-    filter_domain: str = "frequency",
-    std: Union[None, int, float] = None,
-    truncate: Union[int, float] = 4.0,
-) -> np.ndarray:
-    """Get the dynamic background in an EBSD pattern.
-
-    The background is obtained either in the frequency domain, by a low
-    pass Fast Fourier Transform (FFT) Gaussian filter, or in the spatial
-    domain by a Gaussian filter.
+    """Normalize image intensities to a mean of zero and a given
+    standard deviation.
 
     Data type is preserved.
 
@@ -242,109 +139,33 @@ def get_dynamic_background(
     ----------
     pattern
         EBSD pattern.
-    filter_domain
-        Whether to obtain the dynamic background by applying a Gaussian
-        convolution filter in the "frequency" (default) or "spatial"
-        domain.
-    std
-        Standard deviation of the Gaussian window. If None (default), a
-        deviation of pattern width/8 is chosen.
-    truncate
-        Truncate the Gaussian window at this many standard deviations.
-        Default is 4.0.
+    num_std
+        Number of standard deviations of the output intensities (default
+        is 1).
+    divide_by_square_root
+        Whether to divide output intensities by the square root of the
+        image size (default is False).
 
     Returns
     -------
-    dynamic_bg : numpy.ndarray
-        The dynamic background.
-    """
-    if std is None:
-        std = pattern.shape[1] / 8
+    normalized_pattern : numpy.ndarray
+        Normalized pattern.
 
-    if filter_domain == "frequency":
-        (
-            fft_shape,
-            kernel_shape,
-            kernel_fft,
-            offset_before_fft,
-            offset_after_ifft,
-        ) = _dynamic_background_frequency_space_setup(
-            pattern_shape=pattern.shape, std=std, truncate=truncate
-        )
-        dynamic_bg = _fft_filter(
-            image=pattern,
-            fft_shape=fft_shape,
-            window_shape=kernel_shape,
-            transfer_function=kernel_fft,
-            offset_before_fft=offset_before_fft,
-            offset_after_ifft=offset_after_ifft,
-        )
-    elif filter_domain == "spatial":
-        dynamic_bg = gaussian_filter(input=pattern, sigma=std, truncate=truncate)
+    Notes
+    -----
+    Data type should always be changed to floating point, e.g.
+    ``np.float32`` with :meth:`numpy.ndarray.astype`, before normalizing
+    the intensities.
+    """
+    pattern_mean = np.mean(pattern)
+    pattern_std = np.std(pattern)
+
+    pattern = pattern - pattern_mean
+
+    if divide_by_square_root:
+        return pattern / (num_std * pattern_std * np.sqrt(pattern.size))
     else:
-        filter_domains = ["frequency", "spatial"]
-        raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
-
-    return dynamic_bg.astype(pattern.dtype)
-
-
-def get_image_quality(
-    pattern: np.ndarray,
-    normalize: bool = True,
-    frequency_vectors: Optional[np.ndarray] = None,
-    inertia_max: Union[None, int, float] = None,
-) -> float:
-    """Return the image quality of an EBSD pattern.
-
-    The image quality is calculated based on the procedure defined by
-    Krieger Lassen [Lassen1994]_.
-
-    Parameters
-    ----------
-    pattern
-        EBSD pattern.
-    normalize
-        Whether to normalize the pattern to a mean of zero and standard
-        deviation of 1 before calculating the image quality (default is
-        True).
-    frequency_vectors
-        Integer 2D array assigning each FFT spectrum frequency component
-        a weight. If None (default), these are calculated from
-        :func:`~kikuchipy.pattern.fft_frequency_vectors`. This only
-        depends on the pattern shape.
-    inertia_max
-        Maximum possible inertia of the FFT power spectrum of the image.
-        If None (default), this is calculated from the
-        `frequency_vectors`, which in this case *must* be passed. This
-        only depends on the pattern shape.
-
-    Returns
-    -------
-    image_quality : numpy.ndarray
-        Image quality of the pattern.
-    """
-    if frequency_vectors is None:
-        sy, sx = pattern.shape
-        frequency_vectors = fft_frequency_vectors((sy, sx))
-
-    if inertia_max is None:
-        sy, sx = pattern.shape
-        inertia_max = np.sum(frequency_vectors) / (sy * sx)
-
-    if normalize is True:
-        pattern = normalize_intensity(pattern)
-
-    # Compute FFT
-    # TODO: Reduce frequency vectors to real part only to enable real part FFT
-    fft_pattern = fft2(pattern)
-
-    # Obtain (un-shifted) FFT spectrum
-    spectrum = fft_spectrum(fft_pattern)
-
-    # Calculate inertia (see Lassen1994)
-    inertia = np.sum(spectrum * frequency_vectors) / np.sum(spectrum)
-
-    return 1 - (inertia / inertia_max)
+        return pattern / (num_std * pattern_std)
 
 
 def fft(
@@ -481,7 +302,7 @@ def fft_filter(
     return np.real(ifft(filtered_fft, shift=shift))
 
 
-@nb.jit(nopython=True, nogil=True, cache=True)
+@njit(cache=True, fastmath=True, nogil=True)
 def fft_spectrum(fft_pattern: np.ndarray) -> np.ndarray:
     """Compute the FFT spectrum of a Fourier transformed EBSD pattern.
 
@@ -495,49 +316,7 @@ def fft_spectrum(fft_pattern: np.ndarray) -> np.ndarray:
     fft_spectrum : numpy.ndarray
         2D FFT spectrum of the EBSD pattern.
     """
-    return np.sqrt(fft_pattern.real ** 2 + fft_pattern.imag ** 2)
-
-
-@nb.jit(nopython=True, nogil=True, cache=True)
-def normalize_intensity(
-    pattern: np.ndarray, num_std: int = 1, divide_by_square_root: bool = False
-) -> np.ndarray:
-    """Normalize image intensities to a mean of zero and a given
-    standard deviation.
-
-    Data type is preserved.
-
-    Parameters
-    ----------
-    pattern
-        EBSD pattern.
-    num_std
-        Number of standard deviations of the output intensities (default
-        is 1).
-    divide_by_square_root
-        Whether to divide output intensities by the square root of the
-        image size (default is False).
-
-    Returns
-    -------
-    normalized_pattern : numpy.ndarray
-        Normalized pattern.
-
-    Notes
-    -----
-    Data type should always be changed to floating point, e.g.
-    ``np.float32`` with :meth:`numpy.ndarray.astype`, before normalizing
-    the intensities.
-    """
-    pattern_mean = np.mean(pattern)
-    pattern_std = np.std(pattern)
-
-    if divide_by_square_root:
-        return (pattern - pattern_mean) / (
-            num_std * pattern_std * np.sqrt(pattern.size)
-        )
-    else:
-        return (pattern - pattern_mean) / (num_std * pattern_std)
+    return np.sqrt(fft_pattern.real**2 + fft_pattern.imag**2)
 
 
 def fft_frequency_vectors(shape: Tuple[int, int]) -> np.ndarray:
@@ -562,18 +341,385 @@ def fft_frequency_vectors(shape: Tuple[int, int]) -> np.ndarray:
 
     frequency_vectors = np.empty(shape=(sy, sx))
     for i in range(sy):
-        frequency_vectors[i] = liney[i] ** 2 + linex ** 2 - 1
+        frequency_vectors[i] = liney[i] ** 2 + linex**2 - 1
 
     return frequency_vectors
 
 
-def _zero_mean(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
-    patterns_mean = np.nanmean(patterns, axis=axis, keepdims=True)
-    return patterns - patterns_mean
+@njit(cache=True, fastmath=True, nogil=True)
+def _remove_static_background_subtract(
+    pattern: np.ndarray,
+    static_bg: np.ndarray,
+    dtype_out: np.dtype,
+    omin: Union[int, float],
+    omax: Union[int, float],
+    scale_bg: bool,
+) -> np.ndarray:
+    """Remove static background from a pattern by subtraction."""
+    pattern = pattern.astype(np.float32)
+    if scale_bg:
+        static_bg = _rescale_with_min_max(
+            static_bg,
+            imin=np.min(static_bg),
+            imax=np.max(static_bg),
+            omin=np.min(pattern),
+            omax=np.max(pattern),
+        )
+    pattern = _remove_background_subtract(pattern, static_bg, omin, omax)
+    return pattern.astype(dtype_out)
 
 
-def _normalize(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
-    patterns_squared = patterns ** 2
-    patterns_norm = np.nansum(patterns_squared, axis=axis, keepdims=True)
-    patterns_norm_squared = patterns_norm ** 0.5
-    return patterns / patterns_norm_squared
+@njit(cache=True, fastmath=True, nogil=True)
+def _remove_static_background_divide(
+    pattern: np.ndarray,
+    static_bg: np.ndarray,
+    dtype_out: np.dtype,
+    omin: Union[int, float],
+    omax: Union[int, float],
+    scale_bg: bool,
+) -> np.ndarray:
+    """Remove static background from a pattern by division."""
+    pattern = pattern.astype(np.float32)
+    if scale_bg:
+        static_bg = _rescale_with_min_max(
+            static_bg,
+            imin=np.min(static_bg),
+            imax=np.max(static_bg),
+            omin=np.min(pattern),
+            omax=np.max(pattern),
+        )
+    pattern = _remove_background_divide(pattern, static_bg, omin, omax)
+    return pattern.astype(dtype_out)
+
+
+def _remove_dynamic_background(
+    pattern: np.ndarray,
+    filter_func: Callable,
+    operation: str,
+    dtype_out: np.dtype,
+    omin: Union[int, float],
+    omax: Union[int, float],
+    **kwargs,
+) -> np.ndarray:
+    """Remove dynamic background from a pattern.
+
+    The dynamic background is generated by blurring the pattern in the
+    frequency or the spatial domain. The background is removed by
+    subtraction or division.
+
+    Parameters
+    ----------
+    pattern
+        Pattern to remove background from.
+    filter_func
+        Function to generate dynamic background with: either
+        :func:`kikuchipy._pattern.fft_barnes._fft_filter` or
+        :func:`scipy.ndimage.gaussian_filter`.
+    operation
+        Either ``"subtract"`` or ``"divide"``.
+    dtype_out
+        Data type to
+    omin, omax
+        Output intensity range.
+    kwargs
+        Keyword arguments passed to ``filter_func``.
+
+    Returns
+    -------
+    numpy.ndarray
+    """
+    pattern = pattern.astype(np.float32)
+    dynamic_bg = filter_func(pattern, **kwargs)
+    if operation == "subtract":
+        pattern = _remove_background_subtract(pattern, dynamic_bg, omin, omax)
+    else:
+        pattern = _remove_background_divide(pattern, dynamic_bg, omin, omax)
+    return pattern.astype(dtype_out)
+
+
+@njit(cache=True, fastmath=True, nogil=True)
+def _remove_background_subtract(
+    pattern: np.ndarray,
+    background: np.ndarray,
+    omin: Union[int, float],
+    omax: Union[int, float],
+) -> np.ndarray:
+    """Remove background from pattern by subtraction and rescale."""
+    pattern -= background
+    imin = np.min(pattern)
+    imax = np.max(pattern)
+    return _rescale_with_min_max(pattern, imin, imax, omin, omax)
+
+
+@njit(cache=True, fastmath=True, nogil=True)
+def _remove_background_divide(
+    pattern: np.ndarray,
+    background: np.ndarray,
+    omin: Union[int, float],
+    omax: Union[int, float],
+) -> np.ndarray:
+    """Remove background from pattern by division and rescale."""
+    pattern /= background
+    imin = np.min(pattern)
+    imax = np.max(pattern)
+    return _rescale_with_min_max(pattern, imin, imax, omin, omax)
+
+
+def remove_dynamic_background(
+    pattern: np.ndarray,
+    operation: str = "subtract",
+    filter_domain: str = "frequency",
+    std: Union[None, int, float] = None,
+    truncate: Union[int, float] = 4.0,
+    dtype_out: Union[None, np.dtype, type, Tuple[int, int], Tuple[float, float]] = None,
+) -> np.ndarray:
+    """Remove the dynamic background in an EBSD pattern.
+
+    The removal is performed by subtracting or dividing by a Gaussian
+    blurred version of the pattern. The blurred version is obtained
+    either in the frequency domain, by a low pass Fast Fourier Transform
+    (FFT) Gaussian filter, or in the spatial domain by a Gaussian
+    filter. Returned pattern intensities are rescaled to fill the input
+    data type range.
+
+    Parameters
+    ----------
+    pattern
+        EBSD pattern.
+    operation
+        Whether to "subtract" (default) or "divide" by the dynamic
+        background pattern.
+    filter_domain
+        Whether to obtain the dynamic background by applying a Gaussian
+        convolution filter in the "frequency" (default) or "spatial"
+        domain.
+    std
+        Standard deviation of the Gaussian window. If None (default), it
+        is set to width/8.
+    truncate
+        Truncate the Gaussian window at this many standard deviations.
+        Default is 4.0.
+    dtype_out
+        Data type of corrected pattern. If None (default), it is set to
+        input patterns' data type.
+
+    Returns
+    -------
+    corrected_pattern : numpy.ndarray
+        Pattern with the dynamic background removed.
+
+    See Also
+    --------
+    kikuchipy.signals.EBSD.remove_dynamic_background
+    kikuchipy.pattern.remove_dynamic_background
+    """
+    if std is None:
+        std = pattern.shape[1] / 8
+
+    if dtype_out is None:
+        dtype_out = pattern.dtype.type
+
+    if filter_domain == "frequency":
+        (
+            fft_shape,
+            kernel_shape,
+            kernel_fft,
+            offset_before_fft,
+            offset_after_ifft,
+        ) = _dynamic_background_frequency_space_setup(
+            pattern_shape=pattern.shape, std=std, truncate=truncate
+        )
+        dynamic_bg = _fft_filter(
+            image=pattern,
+            fft_shape=fft_shape,
+            window_shape=kernel_shape,
+            transfer_function=kernel_fft,
+            offset_before_fft=offset_before_fft,
+            offset_after_ifft=offset_after_ifft,
+        )
+    elif filter_domain == "spatial":
+        dynamic_bg = gaussian_filter(input=pattern, sigma=std, truncate=truncate)
+    else:
+        filter_domains = ["frequency", "spatial"]
+        raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
+
+    # Remove dynamic background
+    omin, omax = dtype_range[dtype_out]
+    if operation == "subtract":
+        corrected = _remove_background_subtract(pattern, dynamic_bg, omin, omax)
+    else:
+        corrected = _remove_background_divide(pattern, dynamic_bg, omin, omax)
+
+    return corrected.astype(dtype_out)
+
+
+def _dynamic_background_frequency_space_setup(
+    pattern_shape: Union[List[int], Tuple[int, int]],
+    std: Union[int, float],
+    truncate: Union[int, float],
+) -> Tuple[
+    Tuple[int, int], Tuple[int, int], np.ndarray, Tuple[int, int], Tuple[int, int]
+]:
+    # Get Gaussian filtering window
+    shape = (int(truncate * std),) * 2
+    window = Window("gaussian", std=std, shape=shape)
+    window = window / (2 * np.pi * std**2)
+    window /= np.sum(window)
+
+    # FFT filter setup
+    (
+        fft_shape,
+        transfer_function,
+        offset_before_fft,
+        offset_after_ifft,
+    ) = _fft_filter_setup(pattern_shape, window)
+
+    return (
+        fft_shape,
+        window.shape,
+        transfer_function,
+        offset_before_fft,
+        offset_after_ifft,
+    )
+
+
+def get_dynamic_background(
+    pattern: np.ndarray,
+    filter_domain: str = "frequency",
+    std: Union[None, int, float] = None,
+    truncate: Union[int, float] = 4.0,
+) -> np.ndarray:
+    """Get the dynamic background in an EBSD pattern.
+
+    The background is obtained either in the frequency domain, by a low
+    pass Fast Fourier Transform (FFT) Gaussian filter, or in the spatial
+    domain by a Gaussian filter.
+
+    Data type is preserved.
+
+    Parameters
+    ----------
+    pattern
+        EBSD pattern.
+    filter_domain
+        Whether to obtain the dynamic background by applying a Gaussian
+        convolution filter in the "frequency" (default) or "spatial"
+        domain.
+    std
+        Standard deviation of the Gaussian window. If None (default), a
+        deviation of pattern width/8 is chosen.
+    truncate
+        Truncate the Gaussian window at this many standard deviations.
+        Default is 4.0.
+
+    Returns
+    -------
+    dynamic_bg : numpy.ndarray
+        The dynamic background.
+    """
+    if std is None:
+        std = pattern.shape[1] / 8
+
+    if filter_domain == "frequency":
+        (
+            fft_shape,
+            kernel_shape,
+            kernel_fft,
+            offset_before_fft,
+            offset_after_ifft,
+        ) = _dynamic_background_frequency_space_setup(
+            pattern_shape=pattern.shape, std=std, truncate=truncate
+        )
+        dynamic_bg = _fft_filter(
+            image=pattern,
+            fft_shape=fft_shape,
+            window_shape=kernel_shape,
+            transfer_function=kernel_fft,
+            offset_before_fft=offset_before_fft,
+            offset_after_ifft=offset_after_ifft,
+        )
+    elif filter_domain == "spatial":
+        dynamic_bg = gaussian_filter(input=pattern, sigma=std, truncate=truncate)
+    else:
+        filter_domains = ["frequency", "spatial"]
+        raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
+
+    return dynamic_bg.astype(pattern.dtype)
+
+
+def get_image_quality(
+    pattern: np.ndarray,
+    normalize: bool = True,
+    frequency_vectors: Optional[np.ndarray] = None,
+    inertia_max: Union[None, int, float] = None,
+) -> float:
+    """Return the image quality of an EBSD pattern.
+
+    The image quality is calculated based on the procedure defined by
+    Krieger Lassen [Lassen1994]_.
+
+    Parameters
+    ----------
+    pattern
+        EBSD pattern.
+    normalize
+        Whether to normalize the pattern to a mean of zero and standard
+        deviation of 1 before calculating the image quality (default is
+        True).
+    frequency_vectors
+        Integer 2D array assigning each FFT spectrum frequency component
+        a weight. If None (default), these are calculated from
+        :func:`~kikuchipy.pattern.fft_frequency_vectors`. This only
+        depends on the pattern shape.
+    inertia_max
+        Maximum possible inertia of the FFT power spectrum of the image.
+        If None (default), this is calculated from the
+        `frequency_vectors`, which in this case *must* be passed. This
+        only depends on the pattern shape.
+
+    Returns
+    -------
+    image_quality : numpy.ndarray
+        Image quality of the pattern.
+    """
+    if frequency_vectors is None:
+        sy, sx = pattern.shape
+        frequency_vectors = fft_frequency_vectors((sy, sx))
+
+    if inertia_max is None:
+        sy, sx = pattern.shape
+        inertia_max = np.sum(frequency_vectors) / (sy * sx)
+
+    return _get_image_quality(pattern, normalize, frequency_vectors, inertia_max)
+
+
+def _get_image_quality(
+    pattern: np.ndarray,
+    normalize: bool,
+    frequency_vectors: np.ndarray,
+    inertia_max: float,
+) -> float:
+    """See docstring of :func:`get_image_quality`."""
+    pattern = pattern.astype(np.float32)
+
+    if normalize:
+        pattern = normalize_intensity(pattern)
+
+    # Compute FFT
+    # TODO: Reduce frequency vectors to real part only to enable real part FFT
+    fft_pattern = fft2(pattern)
+
+    return _get_image_quality_numba(fft_pattern, frequency_vectors, inertia_max)
+
+
+@njit(cache=True, fastmath=True, nogil=True)
+def _get_image_quality_numba(
+    fft_pattern: np.ndarray, frequency_vectors: np.ndarray, inertia_max: float
+) -> float:
+    # Obtain (un-shifted) FFT spectrum
+    spectrum = fft_spectrum(fft_pattern)
+
+    # Calculate inertia (see Lassen1994)
+    inertia = np.sum(spectrum * frequency_vectors) / np.sum(spectrum)
+
+    return 1 - (inertia / inertia_max)

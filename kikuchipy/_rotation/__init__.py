@@ -62,10 +62,17 @@ def _rotation_from_euler(alpha: float, beta: float, gamma: float) -> np.ndarray:
     c = np.cos(0.5 * beta)
     s = np.sin(0.5 * beta)
 
+    # fmt: off
     rotation = np.array(
-        (c * np.cos(sigma), -s * np.cos(delta), -s * np.sin(delta), -c * np.sin(sigma)),
+        (
+             c * np.cos(sigma),
+            -s * np.cos(delta),
+            -s * np.sin(delta),
+            -c * np.sin(sigma)
+        ),
         dtype=np.float64,
     )
+    # fmt: on
 
     if rotation[0] < 0:
         rotation = -rotation
@@ -102,10 +109,10 @@ def _rotate_vector(rotation: np.ndarray, vector: np.ndarray) -> np.ndarray:
     y = vector[:, 1]
     z = vector[:, 2]
     rotated_vector = np.zeros(vector.shape)
-    aa = a ** 2
-    bb = b ** 2
-    cc = c ** 2
-    dd = d ** 2
+    aa = a**2
+    bb = b**2
+    cc = c**2
+    dd = d**2
     ac = a * c
     ab = a * b
     ad = a * d

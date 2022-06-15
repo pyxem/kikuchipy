@@ -49,6 +49,7 @@ class deprecated:
         self,
         since: Union[str, int, float],
         alternative: Optional[str] = None,
+        alternative_is_function: bool = True,
         removal: Union[str, int, float, None] = None,
     ):
         """Visible deprecation warning.
@@ -60,18 +61,24 @@ class deprecated:
         alternative
             An alternative API that the user may use in place of the
             deprecated API.
+        alternative_is_function
+            Whether the alternative is a function. Default is ``True``.
         removal
             The expected removal version.
         """
         self.since = since
         self.alternative = alternative
+        self.alternative_is_function = alternative_is_function
         self.removal = removal
 
     def __call__(self, func: Callable):
         # Wrap function to raise warning when called, and add warning to
         # docstring
         if self.alternative is not None:
-            alt_msg = f" Use `{self.alternative}()` instead."
+            if self.alternative_is_function:
+                alt_msg = f" Use `{self.alternative}()` instead."
+            else:
+                alt_msg = f" Use `{self.alternative}` instead."
         else:
             alt_msg = ""
         if self.removal is not None:
@@ -104,5 +111,46 @@ class deprecated:
             f"   {msg.strip()}"  # Matplotlib uses three spaces
         )
         wrapped.__doc__ = new_doc
+
+        return wrapped
+
+
+class deprecated_argument:
+    """Decorator to remove an argument from a function or method's
+    signature.
+
+    Adapted from `scikit-image
+    <https://github.com/scikit-image/scikit-image/blob/main/skimage/_shared/utils.py#L115>`_.
+    """
+
+    def __init__(self, name, since, removal, alternative=None):
+        self.name = name
+        self.since = since
+        self.removal = removal
+        self.alternative = alternative
+
+    def __call__(self, func):
+        @functools.wraps(func)
+        def wrapped(*args, **kwargs):
+            if self.name in kwargs.keys():
+                msg = (
+                    f"Argument `{self.name}` is deprecated and will be removed in "
+                    f"version {self.removal}. To avoid this warning, please do not use "
+                    f"`{self.name}`. "
+                )
+                if self.alternative is not None:
+                    msg += f"Use `{self.alternative}` instead. "
+                msg += f"See the documentation of `{func.__name__}()` for more details."
+                warnings.simplefilter(
+                    action="always", category=np.VisibleDeprecationWarning
+                )
+                func_code = func.__code__
+                warnings.warn_explicit(
+                    message=msg,
+                    category=np.VisibleDeprecationWarning,
+                    filename=func_code.co_filename,
+                    lineno=func_code.co_firstlineno + 1,
+                )
+            return func(*args, **kwargs)
 
         return wrapped

@@ -12,6 +12,87 @@ best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
 Contributors to each release are listed in alphabetical order by first name. List
 entries are sorted in descending chronological order.
 
+0.6.0 (2022-06-16)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Added
+-----
+- ``EBSDMasterPattern.plot_spherical()`` for plotting a master pattern in the
+  stereographic projection on the 3D sphere.
+  (`#536 <https://github.com/pyxem/kikuchipy/pull/536>`_)
+- Projection of master pattern in the stereographic projection to the square Lambert
+  projection via ``EBSDMasterPattern.to_lambert()``.
+  (`#536 <https://github.com/pyxem/kikuchipy/pull/536>`_)
+- New package dependencies on ``pyvista`` for 3D plotting and on ``pythreejs`` for the
+  docs are introduced. (`#536 <https://github.com/pyxem/kikuchipy/pull/536>`_)
+- Reduce time and memory use of the following ``kikuchipy.signals.EBSD`` methods by
+  using ``hyperspy.signal.BaseSignal.map()``: ``remove_static_background()``,
+  ``remove_dynamic_background()`` and ``get_image_quality()``.
+  (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_)
+- ``progressbar`` parameter to functions downloading external datasets in the data
+  module. (`#515 <https://github.com/pyxem/kikuchipy/pull/515>`_)
+- Support for Python 3.10. (`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
+- ``EBSD.static_background`` property for easier access to the background pattern.
+  (`#475 <https://github.com/pyxem/kikuchipy/pull/475>`_)
+
+Changed
+-------
+- Valid ``EBSDMasterPattern.hemisphere`` values from ``"north"`` and ``"south"`` to
+  ``"upper"`` and ``"lower"``, respectively, to be in line with `orix`.
+  (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
+- Increase minimal version of diffsims to 0.5.
+  (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
+- Chunking of EBSD signal navigation dimensions in
+  ``EBSD.average_neighbour_patterns()`` to reduce memory use.
+  (`#532 <https://github.com/pyxem/kikuchipy/pull/532>`_)
+- Remove requirement that the crystal map used for EBSD refinement has identical step
+  size(s) to the EBSD signal's navigation axes. This raised an error previously, but now
+  only emits a warning. (`#531 <https://github.com/pyxem/kikuchipy/pull/531>`_)
+- Increase minimal version of HyperSpy to 1.7.
+  (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_)
+- Increase minimal version of SciPy to 1.7.
+  (`#504 <https://github.com/pyxem/kikuchipy/pull/504>`_)
+
+Deprecated
+----------
+- The ``kikuchipy.simulations.GeometricalEBSDSimulation`` class is deprecated and will
+  be removed in version 0.7. Obtain
+  ``kikuchipy.simulations.GeometricalKikuchiPatternSimulation``  via
+  ``kikuchipy.simulations.KikuchiPatternSimulator.on_detector()`` instead. The
+  ``kikuchipy.simulations.features`` module is also deprecated and will be removed in
+  version 0.7. Obtain Kikuchi line and zone axis detector/gnomonic coordinates of a
+  simulation via ``lines_coordinates()`` and ``zone_axes_coordinates()`` instead.
+  (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
+- The ``kikuchipy.generators.EBSDSimulationGenerator`` class is deprecated and will be
+  removed in version 0.7. Use the ``kikuchipy.simulations.KikuchiPatternSimulator``
+  class instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
+- The ``kikuchipy.crystallography.matrices`` module is depreacted and will be removed in
+  version 0.7, access the matrices via :class:`diffpy.structure.Lattice` attributes
+  instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
+- The following functions for processing of pattern chunks in the
+  ``kikuchipy.pattern.chunk`` module are deprecated and will be removed in version 0.7:
+  ``get_image_quality()``, ``remove_dynamic_background()`` and
+  ``remove_static_background()``. Use the ``EBSD`` class for processing of many
+  patterns. (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_,
+  `#533 <https://github.com/pyxem/kikuchipy/pull/533>`_  )
+
+Removed
+-------
+- The ``relative`` parameter in ``kikuchipy.signals.EBSD.remove_static_background()``.
+  The parameter is accepted but not used. Passing it after this release will result in
+  an error. (`#527 <https://github.com/pyxem/kikuchipy/pull/527>`_)
+
+Fixed
+-----
+- Plotting of geometrical simulation markers on rectangular patterns.
+  (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
+- Hopefully prevent EBSD refinement tests using random data to fail on Azure.
+  (`#465 <https://github.com/pyxem/kikuchipy/pull/465>`_)
+
 0.5.8 (2022-05-16)
 ==================
 
@@ -231,8 +312,7 @@ Added
   `#391 <https://github.com/pyxem/kikuchipy/pull/391>`_)
 - Unit testing of docstring examples.
   (`#350 <https://github.com/pyxem/kikuchipy/pull/350>`_)
-- Support for Python 3.9.
-  (`#348 <https://github.com/pyxem/kikuchipy/pull/348>`_)
+- Support for Python 3.9. (`#348 <https://github.com/pyxem/kikuchipy/pull/348>`_)
 - Projection/pattern center calibration via the moving screen technique in a
   kikuchipy.detectors.calibration module.
   (`#322 <https://github.com/pyxem/kikuchipy/pull/322>`_)
