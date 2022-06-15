@@ -19,6 +19,7 @@ import copy
 import gc
 import sys
 from typing import Tuple, Union
+import warnings
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
@@ -26,8 +27,12 @@ from hyperspy._lazy_signals import LazySignal2D
 from hyperspy._signals.signal2d import Signal2D
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList
+from orix.projections import StereographicProjection
 from orix.quaternion import Rotation
+from orix.vector import Vector3d
 from skimage.util.dtype import dtype_range
+from scipy.interpolate import interpn
+from tqdm import tqdm
 
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.signals import LazyEBSD, EBSD
@@ -35,6 +40,7 @@ from kikuchipy.signals._common_image import CommonImage
 from kikuchipy.signals.util._dask import get_chunking
 from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_for_single_pc_from_detector,
+    _lambert2vector,
     _project_patterns_from_master_pattern,
 )
 
@@ -51,13 +57,16 @@ class EBSDMasterPattern(CommonImage, Signal2D):
     Attributes
     ----------
     projection : str
-        Which projection the pattern is in, "stereographic" or
-        "lambert".
+        Which projection the pattern is in, ``"stereographic"`` or
+        ``"lambert"``.
     hemisphere : str
-        Which hemisphere the data contains: "north", "south" or "both".
-    phase : orix.crystal_map.phase_list.Phase
+        Which hemisphere the data contains: ``"upper"`` (previously
+        ``"north"``), ``"lower"`` (previously ``"south"``) or
+        ``"both"``.
+    phase : orix.crystal_map.Phase
         Phase describing the crystal structure used in the master
         pattern simulation.
+
     """
 
     _signal_type = "EBSDMasterPattern"
@@ -68,19 +77,44 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
     phase = Phase()
     projection = None
-    hemisphere = None
+    _hemisphere = None
 
     def __init__(self, *args, **kwargs):
-        """Create an :class:`~kikuchipy.signals.EBSDMasterPattern`
-        instance from a :class:`hyperspy.signals.Signal2D` or a
-        :class:`numpy.ndarray`. See the docstring of
-        :class:`hyperspy.signal.BaseSignal` for optional input
-        parameters.
-        """
         Signal2D.__init__(self, *args, **kwargs)
         self.phase = kwargs.pop("phase", Phase())
         self.projection = kwargs.pop("projection", None)
-        self.hemisphere = kwargs.pop("hemisphere", None)
+        self._hemisphere = kwargs.pop("hemisphere", None)
+
+    @property
+    def _has_multiple_energies(self):
+        return "energy" in [i.name for i in self.axes_manager.navigation_axes]
+
+    @property
+    def hemisphere(self) -> str:
+        if self._hemisphere in ["upper", "north"]:
+            return "upper"
+        elif self._hemisphere in ["lower", "south"]:
+            return "lower"
+        else:
+            return self._hemisphere
+
+    @hemisphere.setter
+    def hemisphere(self, value: str):
+        if value in ["north", "south"]:
+            # TODO: Remove warning after 0.6 is released
+            warnings.warn(
+                (
+                    "`hemisphere` parameter options 'north' and 'south' are deprecated "
+                    "and will raise an error in version 0.7, use 'upper' and 'lower'"
+                    " instead. Changed to 'upper' or 'lower'."
+                ),
+                np.VisibleDeprecationWarning,
+            )
+            if value == "north":
+                value = "upper"
+            else:
+                value = "lower"
+        self._hemisphere = value
 
     def get_patterns(
         self,
@@ -133,9 +167,9 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         Notes
         -----
         If the master pattern phase has a non-centrosymmetric point
-        group, both the northern and southern hemispheres must be
-        provided. For more details regarding the reference frame visit
-        the reference frame user guide.
+        group, both the upper and lower hemispheres must be provided.
+        For more details regarding the reference frame visit the
+        reference frame user guide.
         """
         self._is_suitable_for_projection(raise_if_not=True)
 
@@ -193,17 +227,16 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             drop_axis = 2
             new_axis = (2, 3)
 
-        master_north, master_south = self._get_master_pattern_arrays_from_energy(energy)
+        master_upper, master_lower = self._get_master_pattern_arrays_from_energy(energy)
 
         # Project simulated patterns onto detector
         npx, npy = self.axes_manager.signal_shape
         scale = (npx - 1) / 2
-        # TODO: Use dask.delayed instead?
         simulated = rot_da.map_blocks(
             _project_patterns_from_master_pattern,
             direction_cosines=direction_cosines,
-            master_north=master_north,
-            master_south=master_south,
+            master_upper=master_upper,
+            master_lower=master_lower,
             npx=int(npx),
             npy=int(npy),
             scale=float(scale),
@@ -327,15 +360,14 @@ class EBSDMasterPattern(CommonImage, Signal2D):
                 "hemispheres present if the phase is non-centrosymmetric"
             )
 
-        mp_north, mp_south = self._get_master_pattern_arrays_from_energy(energy)
+        mp_upper, mp_lower = self._get_master_pattern_arrays_from_energy(energy)
 
         # Remove data outside equator and combine into a 1D array
-        keep = mp_north != 0
-        data = np.ravel(np.stack((mp_north[keep], mp_south[keep])))
+        keep = mp_upper != 0
+        data = np.ravel(np.stack((mp_upper[keep], mp_lower[keep])))
 
-        # Get vectors for northern and southern hemisphere into a 1D
-        # array
-        size = mp_north.shape[0]
+        # Get vectors for upper and lower hemispheres into a 1D array
+        size = mp_upper.shape[0]
         x, y = np.meshgrid(np.linspace(-1, 1, size), np.linspace(-1, 1, size))
         x = x[keep]
         y = y[keep]
@@ -364,6 +396,79 @@ class EBSDMasterPattern(CommonImage, Signal2D):
                 show_kwargs = {}
             pl.show(**show_kwargs)
 
+    def as_lambert(self):
+        """Return a new master pattern in the Lambert projection.
+
+        Only implemented for non-lazy signals.
+
+        Returns
+        -------
+        EBSDMasterPattern
+            Master pattern in the Lambert projection with the same data
+            shape but in 32-bit floating point data dtype.
+
+        Examples
+        --------
+        >>> import kikuchipy as kp
+        >>> mp_sp = kp.data.nickel_ebsd_master_pattern_small()
+        >>> mp_sp.projection
+        'stereographic'
+        >>> mp_lp = mp_sp.as_lambert()  # doctest: +SKIP
+        >>> mp_lp.projection
+        'lambert'
+        """
+        if self.projection == "lambert":
+            warnings.warn(
+                "Already in the Lambert projection, returning a deepcopy", UserWarning
+            )
+            return self.deepcopy()
+
+        if self._lazy is True:
+            raise NotImplementedError("Only implemented for non-lazy signals")
+
+        # Set up square arrays
+        sig_shape = self.axes_manager.signal_shape[::-1]
+        arr = np.linspace(-1, 1, sig_shape[0], dtype=np.float64)
+        x_lambert, y_lambert = np.meshgrid(arr, arr)
+        x_lambert_flat = x_lambert.ravel()
+        y_lambert_flat = y_lambert.ravel()
+
+        # Get unit vectors per array coordinate, and then the
+        # corresponding (X, Y) coordinate in the stereographic
+        # projection
+        xyz_upper = _lambert2vector(x_lambert_flat, y_lambert_flat)
+        v = Vector3d(xyz_upper)
+        sp = StereographicProjection()
+        x_stereo, y_stereo = sp.vector2xy(v)
+        x_stereo += 1
+        y_stereo += 1
+
+        # Keyword arguments for interpolation
+        kwargs = {
+            "points": (arr + 1, arr + 1),
+            "xi": (y_stereo, x_stereo),
+            "method": "splinef2d",
+        }
+
+        nav_shape = self.axes_manager.navigation_shape
+        data_out = np.zeros(self.data.shape, dtype=np.float32)
+
+        n_iterations = self.axes_manager.navigation_size
+        if n_iterations == 0:
+            n_iterations = 1
+
+        for idx in tqdm(np.ndindex(nav_shape[::-1]), total=n_iterations):
+            data_i = interpn(values=self.data[idx], **kwargs)
+            data_out[idx] = data_i.reshape(sig_shape)
+
+        return self.__class__(
+            data_out,
+            axes=list(self.axes_manager.as_dictionary().values()),
+            phase=self.phase.deepcopy(),
+            projection="lambert",
+            hemisphere=copy.deepcopy(self.hemisphere),
+        )
+
     # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
 
     def deepcopy(self):
@@ -378,8 +483,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
     def _get_master_pattern_arrays_from_energy(
         self, energy: Union[int, float, None] = None
     ) -> Tuple[np.ndarray, np.ndarray]:
-        """Return northern and southern master patterns created with a
-        single, given energy.
+        """Return upper and lower master patterns created with a single,
+        given energy.
 
         Parameters
         ----------
@@ -390,20 +495,20 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         Returns
         -------
-        master_north, master_south
-            Northern and southern hemispheres of master pattern.
+        master_upper, master_lower
+            Upper and lower hemispheres of master pattern.
         """
-        if "energy" in [i.name for i in self.axes_manager.navigation_axes]:
+        if self._has_multiple_energies:
             if energy is None:
                 energy = self.axes_manager["energy"].axis[-1]
             master_patterns = self.inav[float(energy)].data
         else:  # Assume a single energy
             master_patterns = self.data
         if self.hemisphere == "both":
-            master_north, master_south = master_patterns
+            master_upper, master_lower = master_patterns
         else:
-            master_north = master_south = master_patterns
-        return master_north, master_south
+            master_upper = master_lower = master_patterns
+        return master_upper, master_lower
 
     def _is_suitable_for_projection(self, raise_if_not: bool = False):
         """Check whether the master pattern is suitable for projection
@@ -443,6 +548,7 @@ class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
     patterns. Methods inherited from HyperSpy can be found in the
     HyperSpy user guide. See docstring of :class:`EBSDMasterPattern`
     for attributes and methods.
+
     """
 
     _lazy = True

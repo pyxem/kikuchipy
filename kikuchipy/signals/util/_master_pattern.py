@@ -294,8 +294,8 @@ def _get_direction_cosines_for_multiple_pcs(
 def _project_patterns_from_master_pattern(
     rotations: np.ndarray,
     direction_cosines: np.ndarray,
-    master_north: np.ndarray,
-    master_south: np.ndarray,
+    master_upper: np.ndarray,
+    master_lower: np.ndarray,
     npx: int,
     npy: int,
     scale: float,
@@ -316,10 +316,10 @@ def _project_patterns_from_master_pattern(
     direction_cosines
         Direction cosines (unit vectors) between detector and sample of
         shape (nrows, ncols, 3).
-    master_north
-        Northern hemisphere of the master pattern.
-    master_south
-        Southern hemisphere of the master pattern.
+    master_upper
+        Upper hemisphere of the master pattern.
+    master_lower
+        Lower hemisphere of the master pattern.
     npx
         Number of pixels in the x-direction on the master pattern.
     npy
@@ -354,8 +354,8 @@ def _project_patterns_from_master_pattern(
         simulated[i] = _project_single_pattern_from_master_pattern(
             rotation=rotations[i],
             direction_cosines=direction_cosines_flat,
-            master_north=master_north,
-            master_south=master_south,
+            master_upper=master_upper,
+            master_lower=master_lower,
             npx=npx,
             npy=npy,
             scale=scale,
@@ -373,8 +373,8 @@ def _project_patterns_from_master_pattern(
 def _project_single_pattern_from_master_pattern(
     rotation: np.ndarray,
     direction_cosines: np.ndarray,
-    master_north: np.ndarray,
-    master_south: np.ndarray,
+    master_upper: np.ndarray,
+    master_lower: np.ndarray,
     npx: int,
     npy: int,
     scale: float,
@@ -395,10 +395,10 @@ def _project_single_pattern_from_master_pattern(
     direction_cosines
         Direction cosines (unit vectors) between detector and sample of
         shape (n_pixels, 3).
-    master_north
-        Northern hemisphere of the master pattern.
-    master_south
-        Southern hemisphere of the master pattern.
+    master_upper
+        Upper hemisphere of the master pattern.
+    master_lower
+        Lower hemisphere of the master pattern.
     npx
         Number of pixels in the x-direction on the master pattern.
     npy
@@ -435,9 +435,9 @@ def _project_single_pattern_from_master_pattern(
     pattern = np.zeros((n_pixels,))
     for i in nb.prange(n_pixels):
         if rotated_direction_cosines[i, 2] >= 0:
-            mp = master_north
+            mp = master_upper
         else:
-            mp = master_south
+            mp = master_lower
         pattern[i] = _get_pixel_from_master_pattern(
             mp, nii[i], nij[i], niip[i], nijp[i], di[i], dj[i], dim[i], djm[i]
         )
@@ -579,3 +579,50 @@ def _get_pixel_from_master_pattern(
         + mp[nii, nijp] * dim * dj
         + mp[niip, nijp] * di * dj
     )
+
+
+@nb.njit("float64[:, :](float64[:], float64[:])", cache=True, fastmath=True, nogil=True)
+def _lambert2vector(x: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Lambert (X, Y) to vector (x, y, z) projection
+    :cite:`callahan2013dynamical`.
+
+    Parameters
+    ----------
+    x, y
+        1D arrays of square grid x and y coordinates with 64- bit
+        floating point data type.
+
+    Returns
+    -------
+    cart
+        2D array (n, 3) of vectors. The vectors are not normalized, so
+        they might not be on the unit sphere.
+
+    Notes
+    -----
+    This function is optimized with Numba, so care must be taken with
+    array shapes and data types.
+    """
+    n = x.size
+    cart = np.zeros((n, 3), dtype=np.float64)
+
+    for i in nb.prange(n):
+        xi = x[i] * np.sqrt(np.pi / 2)
+        yi = y[i] * np.sqrt(np.pi / 2)
+
+        xi_abs = abs(xi)
+        yi_abs = abs(yi)
+
+        if max([xi_abs, yi_abs]) == 0:
+            cart[i] = [0, 0, 1]
+        else:
+            if xi_abs <= yi_abs:
+                q = 2 * yi * np.sqrt(np.pi - yi**2) / np.pi
+                qq = xi * np.pi * 0.25 / yi
+                cart[i] = [q * np.sin(qq), q * np.cos(qq), 1 - 2 * yi**2 / np.pi]
+            else:
+                q = 2 * xi * np.sqrt(np.pi - xi**2) / np.pi
+                qq = yi * np.pi * 0.25 / xi
+                cart[i] = [q * np.cos(qq), q * np.sin(qq), 1 - 2 * xi**2 / np.pi]
+
+    return cart
