@@ -339,7 +339,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         --------
         >>> import kikuchipy as kp
         >>> mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
-        >>> mp.plot_spherical()
+        >>> mp.plot_spherical()  # doctest: +SKIP
         """
         from kikuchipy import _pyvista_installed
 
