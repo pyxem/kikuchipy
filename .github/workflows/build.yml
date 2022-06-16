@@ -66,6 +66,7 @@ jobs:
       - name: Install dependencies and package
         shell: bash
         run: |
+          pip install wheel
           pip install -U -e .'[tests]'
 
       - name: Install optional dependencies
