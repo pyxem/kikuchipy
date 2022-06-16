@@ -75,7 +75,7 @@ class EBSDSimulationGenerator:
         ...     detector=det,
         ...     phase=p,
         ...     rotations=Rotation.from_euler([1.57, 0, 1.57])
-        ... )  # doctest: +SKIP
+        ... )
         >>> simgen
         EBSDSimulationGenerator (1,)
         EBSDDetector (60, 60), px_size 1 um, binning 1, tilt 0, azimuthal 0, pc (0.5, 0.5, 0.5)
