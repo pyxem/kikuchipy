@@ -662,7 +662,6 @@ class GeometricalKikuchiPatternSimulation:
         """
         za = self._zone_axes
         za_labels = za.vector.coordinates.round(0).astype(np.int64)
-        za_labels = za_labels[za.within_r_gnomonic[index]]
         za_labels_str = np.array2string(za_labels, threshold=za_labels.size)
         za_labels_list = re.sub("[][ ]", "", za_labels_str[1:-1]).split("\n")
         xy = self.zone_axes_coordinates(index, coordinates, exclude_nan=False)
