@@ -36,6 +36,18 @@ Fixed
 Security
 --------
 
+0.6.1 (2022-06-17)
+==================
+
+Contributors
+------------
+- Håkon Wiik Ånes
+
+Fixed
+-----
+- Incorrect filtering of zone axes labels in geometrical simulations.
+  (`#544 <https://github.com/pyxem/kikuchipy/pull/544>`_)
+
 0.6.0 (2022-06-16)
 ==================
 

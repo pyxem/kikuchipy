@@ -413,7 +413,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         >>> mp_sp = kp.data.nickel_ebsd_master_pattern_small()
         >>> mp_sp.projection
         'stereographic'
-        >>> mp_lp = mp_sp.as_lambert()  # doctest: +SKIP
+        >>> mp_lp = mp_sp.as_lambert()
         >>> mp_lp.projection
         'lambert'
         """
