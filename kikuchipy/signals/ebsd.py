@@ -966,7 +966,7 @@ class EBSD(CommonImage, Signal2D):
         dtype: Union[np.dtype, type, None] = None,
     ) -> CrystalMap:
         """Match each experimental pattern to a dictionary of simulated
-        patterns of known orientations to index the them
+        patterns of known orientations to index them
         :cite:`chen2015dictionary,jackson2019dictionary`.
 
         A suitable similarity metric, the normalized cross-correlation
