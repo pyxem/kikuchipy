@@ -28,6 +28,7 @@ credits = [
     "Tina Bergh",
     "Zhou Xu",
     "Eric Prestat",
+    "Magnus Nord",
 ]
 license = "GPLv3+"
 maintainer = "Håkon Wiik Ånes"
