@@ -12,5 +12,5 @@ include setup.cfg
 include setup.py
 
 recursive-include doc Makefile make.bat *.rst *.py *.ipynb *.bib
-recursive-include doc/_static *.png *.jpg *.svg
+recursive-include doc/_static *.png *.jpg *.svg *.css
 recursive-include kikuchipy/data *

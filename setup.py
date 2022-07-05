@@ -43,12 +43,13 @@ with open("kikuchipy/release.py") as fid:
 # fmt: off
 extra_feature_requirements = {
     "doc": [
-        "furo",
+        "pydata-sphinx-theme",
         "nbsphinx                   >= 0.7",
+        "sphinx-notfound-page",
+        "numpydoc",
         "pythreejs",  # Used in the docs by PyVista
         "sphinx                     >= 3.0.2",
         "sphinx-copybutton          >= 0.2.5",
-        "sphinx-autodoc-typehints   >= 1.10.3",
         "sphinx-gallery             >= 0.6",
         "sphinxcontrib-bibtex       >= 1.0",
     ],

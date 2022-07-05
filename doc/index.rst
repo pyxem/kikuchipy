@@ -2,50 +2,6 @@
 kikuchipy
 =========
 
-.. Launch binder
-.. image:: https://static.mybinder.org/badge_logo.svg
-    :target: https://mybinder.org/v2/gh/pyxem/kikuchipy/HEAD
-    :alt: Launch binder
-
-.. Gitter chat
-.. image:: https://badges.gitter.im/Join%20Chat.svg
-    :target: https://gitter.im/pyxem/kikuchipy
-
-.. Read the Docs
-.. image:: https://readthedocs.org/projects/kikuchipy/badge/?version=latest
-    :target: https://kikuchipy.org/en/latest/
-    :alt: Documentation status
-
-.. GitHub Actions
-.. image:: https://github.com/pyxem/kikuchipy/workflows/build/badge.svg
-    :target: https://github.com/pyxem/kikuchipy/actions
-    :alt: Build status
-
-.. Coveralls
-.. image:: https://coveralls.io/repos/github/pyxem/kikuchipy/badge.svg?branch=develop
-    :target: https://coveralls.io/github/pyxem/kikuchipy?branch=develop
-    :alt: Coveralls status
-
-.. PyPI version
-.. image:: https://img.shields.io/pypi/v/kikuchipy.svg
-    :target: https://pypi.org/project/kikuchipy/
-    :alt: PyPI version
-
-.. Downloads per month
-.. image:: https://static.pepy.tech/badge/kikuchipy/month
-    :target: https://pepy.tech/project/kikuchipy
-    :alt: Downloads per month
-
-.. Zenodo DOI
-.. image:: https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg
-    :target: https://doi.org/10.5281/zenodo.3597646
-    :alt: DOI
-
-.. Number of contributors
-.. image:: https://img.shields.io/github/all-contributors/pyxem/kikuchipy?color=%23A3A0CF&label=contributors
-    :target: https://github.com/pyxem/kikuchipy#contributors-
-    :alt: Number of contributors
-
 kikuchipy [ki-ko-chi-pai] is an open-source Python library for processing and analysis
 of electron backscatter diffraction (EBSD) patterns. The library builds on the tools for
 multi-dimensional data analysis provided by the HyperSpy library.
@@ -69,42 +25,88 @@ multi-dimensional data analysis provided by the HyperSpy library.
   `the changelog <https://kikuchipy.org/en/latest/changelog.html>`_ for all
   developments.
 
-
-.. toctree::
-    :hidden:
-    :caption: Getting started
-
-    installation.rst
-
-.. nbgallery::
-    :caption: User guide
-
-    user_guide/load_save_data.ipynb
-    user_guide/reference_frames.ipynb
-    user_guide/change_navigation_signal_shapes.ipynb
-    user_guide/pattern_processing.ipynb
-    user_guide/visualizing_patterns.ipynb
-    user_guide/feature_maps.ipynb
-    user_guide/virtual_backscatter_electron_imaging.ipynb
-    user_guide/pattern_matching.ipynb
-    user_guide/kikuchi_pattern_simulations.ipynb
-    user_guide/multivariate_analysis.ipynb
-    user_guide/metadata_structure.ipynb
-
 .. toctree::
     :hidden:
 
-    examples.rst
+    getting_started/index
+    user_guide/index
+    examples/index
+    reference/index
 
-.. toctree::
-    :hidden:
-    :caption: Help & reference
+Status
+======
 
-    reference.rst
-    bibliography.rst
-    contributing.rst
-    open_datasets.rst
-    changelog.rst
-    cite.rst
-    related_projects.rst
-    Code of Conduct <code_of_conduct.rst>
+.. |pypi| image:: https://img.shields.io/pypi/v/kikuchipy.svg?logo=python&logoColor=white
+    :target: https://pypi.org/project/kikuchipy/
+    :alt: PyPI version
+
+.. |conda| image:: https://img.shields.io/conda/vn/conda-forge/kikuchipy.svg?logo=conda-forge&logoColor=white
+    :target: https://anaconda.org/conda-forge/kikuchipy
+    :alt: Anaconda version
+
+.. |ci| image:: https://github.com/pyxem/kikuchipy/actions/workflows/build.yml/badge.svg
+    :target: https://github.com/pyxem/kikuchipy/actions/workflows/build.yml
+    :alt: Test status
+
+.. |docs| image:: https://readthedocs.org/projects/kikuchipy/badge/?version=latest
+    :target: https://kikuchipy.org/en/latest/
+    :alt: Documentation status
+
+.. |coverage| image:: https://coveralls.io/repos/github/pyxem/kikuchipy/badge.svg?branch=develop
+    :target: https://coveralls.io/github/pyxem/kikuchipy?branch=develop
+    :alt: Coverage status
+
+.. |PyPIact| image:: https://img.shields.io/pypi/dm/kikuchipy.svg?label=PyPI%20downloads
+    :target: https://pypi.org/project/kikuchipy/
+    :alt: PyPI downloads
+
+.. |condaact| image:: https://img.shields.io/conda/dn/conda-forge/kikuchipy.svg?label=Conda%20downloads
+    :target: https://anaconda.org/conda-forge/kikuchipy
+    :alt: Anaconda downloads
+
+.. |contributors| image:: https://img.shields.io/github/all-contributors/pyxem/kikuchipy?color=%23A3A0CF&label=contributors
+    :target: https://github.com/pyxem/kikuchipy#contributors-
+    :alt: Number of contributors
+
+.. |stars| image:: https://img.shields.io/github/stars/pyxem/kikuchipy.svg?style=social&label=Stars
+    :target: https://github.com/pyxem/kikuchipy
+    :alt: GitHub stars
+
+.. |zenodo| image:: https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg
+    :target: https://doi.org/10.5281/zenodo.3597646
+    :alt: Zenodo DOI
+
+.. |GPLv3| image:: https://img.shields.io/github/license/pyxem/kikuchipy
+    :target: https://opensource.org/licenses/GPL-3.0
+    :alt: License
+
+.. |gitter| image:: https://badges.gitter.im/Join%20Chat.svg
+    :target: https://gitter.im/pyxem/kikuchipy
+    :alt: Gitter chat
+
+.. |discuss| image:: https://img.shields.io/badge/GitHub-Discussions-green?logo=github
+    :target: https://github.com/pyxem/kikuchipy/discussions
+    :alt: GitHub discussions
+
++----------------------+----------------+------------+
+| Deployment           | |pypi|         | |conda|    |
++----------------------+----------------+------------+
+| Build Status         | |ci|           | |docs|     |
++----------------------+----------------+------------+
+| Metrics              | |coverage|     |            |
++----------------------+----------------+------------+
+| Activity             | |PyPIact|      | |condaact| |
++----------------------+----------------+------------+
+| GitHub               | |contributors| | |stars|    |
++----------------------+----------------+------------+
+| Citation             | |zenodo|       |            |
++----------------------+----------------+------------+
+| License              | |GPLv3|        |            |
++----------------------+----------------+------------+
+| Community            | |gitter|       | |discuss|  |
++----------------------+----------------+------------+
+
+Project index
+=============
+
+* :ref:`genindex`

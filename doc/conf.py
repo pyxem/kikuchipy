@@ -11,6 +11,8 @@ from os.path import relpath, dirname
 import re
 import sys
 
+from numpydoc.docscrape_sphinx import SphinxDocString
+
 from kikuchipy import release as kp_release
 import kikuchipy
 
@@ -30,19 +32,26 @@ release = kp_release.version
 
 master_doc = "index"
 
+if "dev" in version:
+    release_version = "develop"
+else:
+    release_version = "v" + version
+
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "nbsphinx",
+    "matplotlib.sphinxext.plot_directive",
+    #    "nbsphinx",
+    "notfound.extension",
+    "numpydoc",
     "sphinxcontrib.bibtex",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
+    "sphinx.ext.linkcode",
     "sphinx.ext.mathjax",
     "sphinx.ext.napoleon",
-    "sphinx.ext.linkcode",
-    "sphinx_autodoc_typehints",
     "sphinx_copybutton",
     "sphinx_gallery.load_style",
 ]
@@ -75,7 +84,23 @@ exclude_patterns = ["build", "_static/logo/*.ipynb"]
 
 # The theme to use for HTML and HTML Help pages. See the documentation
 # for a list of builtin themes.
-html_theme = "furo"
+html_theme = "pydata_sphinx_theme"
+html_theme_options = {
+    "logo": {
+        "text": "kikuchipy",
+    },
+    "show_prev_next": False,
+    "github_url": "https://github.com/pyxem/kikuchipy",
+}
+html_context = {
+    "github_user": "pyxem",
+    "github_repo": "kikuchipy",
+    "github_version": release_version,
+    "doc_path": "doc",
+}
+html_sidebars = {
+    "**": ["search-field.html", "sidebar-nav-bs.html", "sidebar-ethical-ads.html"]
+}
 
 # Add any paths that contain custom static files (such as style sheets)
 # here, relative to this directory. They are copied after the builtin
@@ -90,15 +115,12 @@ pygments_style = "friendly"
 html_logo = "_static/logo/plasma_logo.svg"
 html_favicon = "_static/logo/plasma_favicon.png"
 
-# -- nbsphinx configuration --------------------------------------------
+# -- nbsphinx configuration
 # Taken from nbsphinx' own nbsphinx configuration file, with slight
 # modifications to point nbviewer and Binder to the GitHub develop
 # branch links when the documentation is launched from a kikuchipy
 # version with "dev" in the version
-if "dev" in version:
-    release_version = "develop"
-else:
-    release_version = "v" + version
+
 # This is processed by Jinja2 and inserted before each notebook
 nbsphinx_prolog = (
     r"""
@@ -146,11 +168,11 @@ nbsphinx_execute_arguments = [
     "--InlineBackend.rc=font.size=15",
 ]
 
-# sphinxcontrib-bibtex configuration
+# -- sphinxcontrib-bibtex configuration
 bibtex_bibfiles = ["bibliography.bib"]
 
 
-# Relevant for the PDF build with LaTeX
+# -- Relevant for the PDF build with LaTeX
 latex_elements = {
     # pdflatex doesn't like some Unicode characters, so a replacement
     # for one of them is made here
@@ -160,7 +182,6 @@ latex_elements = {
 
 def linkcode_resolve(domain, info):
     """Determine the URL corresponding to Python object.
-
     This is taken from SciPy's conf.py:
     https://github.com/scipy/scipy/blob/develop/doc/source/conf.py.
     """
@@ -217,3 +238,60 @@ def linkcode_resolve(domain, info):
             return pre_link + "v%s/%s%s" % (kikuchipy.__version__, fn, linespec)
     else:
         return None
+
+
+# -- Custom 404 page
+notfound_context = {
+    "body": (
+        "<h1>Page not found.</h1>\n\nPerhaps try the "
+        "<a href='http://kikuchipy.org/user_guide/index.html'>user guide page</a>."
+    ),
+}
+notfound_no_urls_prefix = True
+
+
+# -- Copy button customization (taken from PyVista)
+# Exclude traditional Python prompts from the copied code
+copybutton_prompt_text = r">>> ?|\.\.\. "
+copybutton_prompt_is_regexp = True
+
+
+# -- sphinx.ext.autodoc
+autosummary_ignore_module_all = False
+autosummary_imported_members = True
+
+
+# -- numpydoc
+numpydoc_show_class_members = False
+numpydoc_use_plots = True
+
+
+# -- matplotlib.sphinxext.plot_directive
+plot_include_source = True
+plot_html_show_source_link = False
+plot_html_show_formats = False
+
+
+def _str_examples(self):
+    examples_str = "\n".join(self["Examples"])
+    if (
+        self.use_plots
+        and re.search(r"\b(.plot())\b", examples_str)
+        and "plot::" not in examples_str
+    ):
+        out = []
+        out += self._str_header("Examples")
+        out += [".. plot::", ""]
+        out += self._str_indent(self["Examples"])
+        out += [""]
+        return out
+    else:
+        return self._str_section("Examples")
+
+
+SphinxDocString._str_examples = _str_examples
+
+
+# -- CSS and other things
+def setup(app):
+    app.add_css_file("no_search_highlight.css")
