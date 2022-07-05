@@ -51,7 +51,6 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.linkcode",
     "sphinx.ext.mathjax",
-    "sphinx.ext.napoleon",
     "sphinx_copybutton",
     "sphinx_gallery.load_style",
 ]
@@ -259,11 +258,25 @@ copybutton_prompt_is_regexp = True
 # -- sphinx.ext.autodoc
 autosummary_ignore_module_all = False
 autosummary_imported_members = True
+autodoc_typehints_format = "short"
 
 
 # -- numpydoc
 numpydoc_show_class_members = False
 numpydoc_use_plots = True
+numpydoc_xref_param_type = True
+numpydoc_validate = True
+numpydoc_validation_checks = {
+    "all",  # All but the following:
+    "ES01",  # Not all docstrings need an extend summary.
+    "EX01",  # Examples: Will eventually enforce
+    "GL01",  # Contradicts numpydoc examples
+    "PR04",  # Doesn't seem to work with type hints?
+    "SA01",  # Not all docstrings need a "See Also"
+    "SA04",  # "See Also" section does not need descriptions
+    "SS06",  # Not possible to make all summaries one line
+    "YD01",  # Yields: No plan to enforce
+}
 
 
 # -- matplotlib.sphinxext.plot_directive

@@ -34,3 +34,6 @@ Modules
     data
     detectors
     draw
+    filters
+    generators
+    indexing

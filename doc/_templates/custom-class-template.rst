@@ -10,7 +10,7 @@
             .. autosummary::
                 :toctree:
                 {% for item in methods %}
-                    {% if item != "__init__" %}
+                    {% if item != "__init__" and item not in inherited_members %}
                         {{ name }}.{{ item }}
                     {% endif %}
                 {%- endfor %}
@@ -23,7 +23,7 @@
             .. autosummary::
                 :toctree:
                 {% for item in attributes %}
-                    {% if item.0 != item.upper().0 %}
+                    {% if item.0 != item.upper().0 and item not in inherited_members %}
                         {{ name }}.{{ item }}
                     {% endif %}
                 {%- endfor %}
