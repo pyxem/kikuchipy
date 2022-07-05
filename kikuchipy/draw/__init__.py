@@ -17,7 +17,7 @@
 
 """Creation of HyperSpy markers to add to signals and other tools."""
 
-from kikuchipy.draw import colors, markers
+from kikuchipy.draw import markers
 from kikuchipy.draw._navigators import get_rgb_navigator
 
-__all__ = ["colors", "get_rgb_navigator", "markers"]
+__all__ = ["get_rgb_navigator", "markers"]

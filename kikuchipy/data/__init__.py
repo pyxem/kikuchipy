@@ -15,15 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Test data.
+"""Example datasets for use when testing functionality.
 
-Some datasets must be downloaded from the web. For more test datasets,
-see :doc:`open datasets <open_datasets>`.
+Some datasets are packaged with the source code while others must be
+downloaded from the web. For more test datasets, see
+:doc:`open datasets <open_datasets>`.
 
-Some datasets must be downloaded from the web. Datasets are placed in a
-local cache, in the location returned from `pooch.os_cache("kikuchipy")`
-by default. The location can be overwritten with a global
-`KIKUCHIPY_DATA_DIR` environment variable.
+Datasets are placed in a local cache, in the location returned from
+``pooch.os_cache("kikuchipy")`` by default. The location can be
+overwritten with a global ``KIKUCHIPY_DATA_DIR`` environment variable.
 
 With every new version of kikuchipy, a new directory of datasets with
 the version name is added to the cache directory. Any old directories
@@ -101,7 +101,7 @@ def nickel_ebsd_small(**kwargs) -> EBSD:
 
     Returns
     -------
-    signal : EBSD
+    signal
         EBSD signal.
 
     Examples
@@ -129,7 +129,7 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
 
     Returns
     -------
-    signal : EBSDMasterPattern
+    signal
         EBSD master pattern signal.
 
     Notes
@@ -137,12 +137,13 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
     Initially generated using the EMsoft EMMCOpenCL and EMEBSDMaster
     programs. The included file was rewritten to disk with
     :mod:`h5py`, where the master patterns' data type is converted from
-    `float32` to `uint8` with
+    ``float32`` to ``uint8`` with
     :meth:`~kikuchipy.signals.EBSDMasterPattern.rescale_intensity`, all
     datasets were written with
     :meth:`~kikuchipy.io.plugins.h5ebsd.dict2h5ebsdgroup` with
-    keyword arguments `compression="gzip"` and `compression_opts=9`. All
-    other HDF5 groups and datasets are the same as in the original file.
+    keyword arguments ``compression="gzip"`` and ``compression_opts=9``.
+    All other HDF5 groups and datasets are the same as in the original
+    file.
 
     Examples
     --------
@@ -174,7 +175,7 @@ def nickel_ebsd_large(
 
     Parameters
     ----------
-    allow_download : bool
+    allow_download
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
         the local cache with the pooch Python package. Default is
@@ -187,7 +188,7 @@ def nickel_ebsd_large(
 
     Returns
     -------
-    signal : EBSD
+    signal
         EBSD signal.
 
     Examples
@@ -216,7 +217,7 @@ def silicon_ebsd_moving_screen_in(
 
     Parameters
     ----------
-    allow_download : bool
+    allow_download
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
         the local cache with the pooch Python package. Default is
@@ -229,13 +230,12 @@ def silicon_ebsd_moving_screen_in(
 
     Returns
     -------
-    signal : EBSD
+    signal
         EBSD signal.
 
     See Also
     --------
-    silicon_ebsd_moving_screen_out5mm
-    silicon_ebsd_moving_screen_out10mm
+    silicon_ebsd_moving_screen_out5mm, silicon_ebsd_moving_screen_out10mm
 
     Examples
     --------
@@ -265,7 +265,7 @@ def silicon_ebsd_moving_screen_out5mm(
 
     Parameters
     ----------
-    allow_download : bool
+    allow_download
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
         the local cache with the pooch Python package. Default is
@@ -278,13 +278,12 @@ def silicon_ebsd_moving_screen_out5mm(
 
     Returns
     -------
-    signal : EBSD
+    signal
         EBSD signal.
 
     See Also
     --------
-    silicon_ebsd_moving_screen_in
-    silicon_ebsd_moving_screen_out10mm
+    silicon_ebsd_moving_screen_in, silicon_ebsd_moving_screen_out10mm
 
     Examples
     --------
@@ -316,7 +315,7 @@ def silicon_ebsd_moving_screen_out10mm(
 
     Parameters
     ----------
-    allow_download : bool
+    allow_download
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
         the local cache with the pooch Python package. Default is
@@ -329,13 +328,12 @@ def silicon_ebsd_moving_screen_out10mm(
 
     Returns
     -------
-    signal : EBSD
+    signal
         EBSD signal.
 
     See Also
     --------
-    silicon_ebsd_moving_screen_in
-    silicon_ebsd_moving_screen_out5mm
+    silicon_ebsd_moving_screen_in, silicon_ebsd_moving_screen_out5mm
 
     Examples
     --------
