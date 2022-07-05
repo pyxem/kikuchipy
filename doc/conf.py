@@ -276,7 +276,7 @@ def _str_examples(self):
     examples_str = "\n".join(self["Examples"])
     if (
         self.use_plots
-        and re.search(r"\b(.plot())\b", examples_str)
+        and re.search(r"\b(.plot)\b", examples_str)
         and "plot::" not in examples_str
     ):
         out = []

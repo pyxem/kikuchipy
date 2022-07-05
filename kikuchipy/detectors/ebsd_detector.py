@@ -94,9 +94,9 @@ class EBSDDetector:
     The EMsoft PC coordinates :math:`(x_{pc}, y_{pc})` are defined as
     number of pixels (subpixel accuracy) with resepct to the center
     of the detector, with :math:`x_{pc}` towards the right and
-    :math:`y_{pc}` upwards. The final PC coordinate $L$ is the detector
-    distance in microns. Note that before EMsoft v5.0, :math:`x_{pc}`
-    was defined towards the left.
+    :math:`y_{pc}` upwards. The final PC coordinate :math:`L` is the
+    detector distance in microns. Note that before EMsoft v5.0,
+    :math:`x_{pc}` was defined towards the left.
 
     Given these definitions, the following is the conversion from
     TSL/Oxford to Bruker
@@ -550,26 +550,28 @@ class EBSDDetector:
 
         Examples
         --------
-        >>> import numpy as np
         >>> import kikuchipy as kp
         >>> det = kp.detectors.EBSDDetector(
         ...     shape=(60, 60),
-        ...     pc=np.ones((149, 200, 3)) * (0.421, 0.779, 0.505),
+        ...     pc=(0.4, 0.8, 0.5),
         ...     convention="tsl",
         ...     sample_tilt=70,
         ... )
         >>> det.plot()
+
+        Plot with gnomonic coordinates and circles
+
         >>> det.plot(
         ...     coordinates="gnomonic",
         ...     draw_gnomonic_circles=True,
         ...     gnomonic_circles_kwargs={"edgecolor": "b", "alpha": 0.3}
         ... )
-        >>> fig, ax = det.plot(
-        ...     pattern=np.ones(det.shape),
-        ...     show_pc=True,
-        ...     return_fig_ax=True,
-        ... )
-        >>> fig.savefig("detector.png")
+
+        Plot a pattern on the detector and save it
+
+        >>> s = kp.data.nickel_ebsd_small(lazy=True)
+        >>> fig, ax = det.plot(pattern=s.inav[0, 0].data, return_fig_ax=True)
+        >>> # fig.savefig("detector.png")
         """
         sy, sx = self.shape
         pcx, pcy = self.pc_average[:2]
