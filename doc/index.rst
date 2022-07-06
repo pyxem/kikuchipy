@@ -2,109 +2,96 @@
 kikuchipy
 =========
 
-kikuchipy [ki-ko-chi-pai] is an open-source Python library for processing and analysis
-of electron backscatter diffraction (EBSD) patterns. The library builds on the tools for
-multi-dimensional data analysis provided by the HyperSpy library.
-
-- **User guide and API reference**: https://kikuchipy.org. The guide consists of Jupyter
-  Notebooks with many links to detailed explanations of the input parameters and output
-  of functions and class methods (the API reference). The notebooks can be inspected
-  statically on the web page or via `nbviewer
-  <https://nbviewer.org/github/pyxem/kikuchipy/tree/develop/doc/user_guide/>`_,
-  downloaded and run locally, or run interactively in the browser by clicking the Binder
-  link above and navigating to the `doc/user_guide` directory. We hope you find them
-  useful!
-- **License**: kikuchipy is released under the GPLv3+ license.
-- **Cite**: If you find this project useful, please cite the DOI above.
-- **Contribute**: Do you have a question or want to contribute? Great! Our
-  `contributing guide <https://kikuchipy.org/en/latest/contributing.html>`_ explains how
-  to do this. (Or just explain what you want to do
-  `in an issue <https://github.com/pyxem/kikuchipy/issues/new>`_.)
-- **Changelog**: The library is in continuous development (alpha stage), so expect some
-  breaking changes with each release. Please see
-  `the changelog <https://kikuchipy.org/en/latest/changelog.html>`_ for all
-  developments.
+A library for processing, simulating and analyzing electron backscatter diffraction
+(EBSD) patterns in Python, built on the tools for multi-dimensional data analysis
+provided by the HyperSpy library.
 
 .. toctree::
+    :caption: Learning resources
     :hidden:
 
-    getting_started/index
-    user_guide/index
-    examples/index
-    reference/index
+    examples/index.rst
+    tutorials/index.rst
+    Reference <reference/index.rst>
+    related_projects.rst
+    bibliography.rst
+    open_datasets.rst
 
-Status
-======
+.. toctree::
+    :caption: Development
+    :hidden:
 
-.. |pypi| image:: https://img.shields.io/pypi/v/kikuchipy.svg?logo=python&logoColor=white
-    :target: https://pypi.org/project/kikuchipy/
-    :alt: PyPI version
+    changelog.rst
+    contributing.rst
+    License <https://github.com/pyxem/kikuchipy/blob/develop/LICENSE>
+    Code of Conduct <code_of_conduct.rst>
 
-.. |conda| image:: https://img.shields.io/conda/vn/conda-forge/kikuchipy.svg?logo=conda-forge&logoColor=white
-    :target: https://anaconda.org/conda-forge/kikuchipy
-    :alt: Anaconda version
+Installation
+============
 
-.. |ci| image:: https://github.com/pyxem/kikuchipy/actions/workflows/build.yml/badge.svg
-    :target: https://github.com/pyxem/kikuchipy/actions/workflows/build.yml
-    :alt: Test status
+kikuchipy can be installed using `pip <https://pypi.org/project/kikuchipy>`__ or
+`conda <https://anaconda.org/conda-forge/kikuchipy>`__:
 
-.. |docs| image:: https://readthedocs.org/projects/kikuchipy/badge/?version=latest
-    :target: https://kikuchipy.org/en/latest/
-    :alt: Documentation status
+.. tab-set::
 
-.. |coverage| image:: https://coveralls.io/repos/github/pyxem/kikuchipy/badge.svg?branch=develop
-    :target: https://coveralls.io/github/pyxem/kikuchipy?branch=develop
-    :alt: Coverage status
+    .. tab-item:: pip
 
-.. |PyPIact| image:: https://img.shields.io/pypi/dm/kikuchipy.svg?label=PyPI%20downloads
-    :target: https://pypi.org/project/kikuchipy/
-    :alt: PyPI downloads
+        .. code-block:: bash
 
-.. |condaact| image:: https://img.shields.io/conda/dn/conda-forge/kikuchipy.svg?label=Conda%20downloads
-    :target: https://anaconda.org/conda-forge/kikuchipy
-    :alt: Anaconda downloads
+            pip install kikuchipy
 
-.. |contributors| image:: https://img.shields.io/github/all-contributors/pyxem/kikuchipy?color=%23A3A0CF&label=contributors
-    :target: https://github.com/pyxem/kikuchipy#contributors-
-    :alt: Number of contributors
+    .. tab-item:: conda
 
-.. |stars| image:: https://img.shields.io/github/stars/pyxem/kikuchipy.svg?style=social&label=Stars
-    :target: https://github.com/pyxem/kikuchipy
-    :alt: GitHub stars
+        .. code-block:: bash
 
-.. |zenodo| image:: https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg
-    :target: https://doi.org/10.5281/zenodo.3597646
-    :alt: Zenodo DOI
+            conda install kikuchipy -c conda-forge
 
-.. |GPLv3| image:: https://img.shields.io/github/license/pyxem/kikuchipy
-    :target: https://opensource.org/licenses/GPL-3.0
-    :alt: License
+Further details are available in the :doc:`installation`.
 
-.. |gitter| image:: https://badges.gitter.im/Join%20Chat.svg
-    :target: https://gitter.im/pyxem/kikuchipy
-    :alt: Gitter chat
+Learning resources
+==================
 
-.. |discuss| image:: https://img.shields.io/badge/GitHub-Discussions-green?logo=github
-    :target: https://github.com/pyxem/kikuchipy/discussions
-    :alt: GitHub discussions
+.. card-carousel:: 3
 
-+----------------------+----------------+------------+
-| Deployment           | |pypi|         | |conda|    |
-+----------------------+----------------+------------+
-| Build Status         | |ci|           | |docs|     |
-+----------------------+----------------+------------+
-| Metrics              | |coverage|     |            |
-+----------------------+----------------+------------+
-| Activity             | |PyPIact|      | |condaact| |
-+----------------------+----------------+------------+
-| GitHub               | |contributors| | |stars|    |
-+----------------------+----------------+------------+
-| Citation             | |zenodo|       |            |
-+----------------------+----------------+------------+
-| License              | |GPLv3|        |            |
-+----------------------+----------------+------------+
-| Community            | |gitter|       | |discuss|  |
-+----------------------+----------------+------------+
+    .. card::
+        :link: examples/index
+        :link-type: doc
+
+        Examples
+        ^^^^^^^^
+
+        Short recipies to common tasks using kikuchipy.
+
+    .. card::
+        :link: tutorials/index
+        :link-type: doc
+
+        Tutorials
+        ^^^^^^^^^
+
+        In-depth guides for using kikuchipy.
+
+    .. card::
+        :link: reference/index
+        :link-type: doc
+
+        Reference
+        ^^^^^^^^^
+
+        Descriptions of functions, modules, and objects in kikuchipy.
+
+Contributing
+============
+
+kikuchipy is a community project maintained for and by its users. There are many ways
+you can help!
+
+- Help other users in `our GitHub discussions
+  <https://github.com/pyxem/kikuchipy/discussion>`__ or `on Gitter
+  <https://gitter.im/pyxem/kikuchipy>`__
+- report a bug or request a feature `on GitHub
+  <https://github.com/pyxem/kikuchipy/issues>`__
+- or improve the :doc:`documentation and code <contributing>`
 
 Project index
 =============

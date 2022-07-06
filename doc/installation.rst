@@ -1,6 +1,6 @@
-============
-Installation
-============
+==================
+Installation guide
+==================
 
 kikuchipy can be installed from `Anaconda
 <https://anaconda.org/conda-forge/kikuchipy>`_, the `Python Package Index
