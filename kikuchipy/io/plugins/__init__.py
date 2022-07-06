@@ -15,7 +15,22 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Input/output plugins."""
+"""Input/output plugins.
+
+.. currentmodule:: kikuchipy.io.plugins
+
+.. rubric:: Modules
+
+.. autosummary::
+    :toctree: ../../generated/
+    :template: custom-module-template.rst
+
+    emsoft_ebsd
+    emsoft_ebsd_master_pattern
+    h5ebsd
+    nordif
+    oxford_binary
+"""
 
 from kikuchipy.io.plugins import (
     emsoft_ebsd,

@@ -20,7 +20,8 @@ format.
 """
 
 import os
-from typing import List, Optional, Tuple
+from pathlib import Path
+from typing import List, Optional, Tuple, Union
 import warnings
 
 import dask.array as da
@@ -30,6 +31,8 @@ import numpy as np
 from kikuchipy.io.plugins.h5ebsd import hdf5group2dict
 from kikuchipy.io.plugins.emsoft_ebsd import _crystaldata2phase
 
+
+__all__ = ["file_reader"]
 
 # Plugin characteristics
 # ----------------------
@@ -50,7 +53,7 @@ footprint = ["emdata/ebsdmaster"]
 
 
 def file_reader(
-    filename: str,
+    filename: Union[str, Path],
     energy: Optional[range] = None,
     projection: str = "stereographic",
     hemisphere: str = "upper",
@@ -65,8 +68,8 @@ def file_reader(
     filename
         Full file path of the HDF file.
     energy
-        Desired beam energy or energy range. If None is passed
-        (default), all available energies are read.
+        Desired beam energy or energy range. If not given (default), all
+        available energies are read.
     projection
         Projection(s) to read. Options are ``"stereographic"`` (default)
         or ``"lambert"``.
@@ -78,12 +81,12 @@ def file_reader(
         Open the data lazily without actually reading the data from disk
         until requested. Allows opening datasets larger than available
         memory. Default is ``False``.
-    kwargs
-        Keyword arguments passed to h5py.File.
+    **kwargs
+        Keyword arguments passed to :class:`h5py.File`.
 
     Returns
     -------
-    signal_dict_list: list of dicts
+    signal_dict_list
         Data, axes, metadata and original metadata.
     """
     if hemisphere.lower() not in ["upper", "lower", "both"]:

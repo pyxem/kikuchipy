@@ -18,6 +18,7 @@
 """Read/write support for EBSD patterns in some HDF5 file formats."""
 
 import os
+from pathlib import Path
 from typing import Union, List, Tuple, Optional, Dict
 import warnings
 
@@ -40,6 +41,8 @@ from kikuchipy.signals.util._metadata import (
     _update_phase_info,
 )
 
+
+__all__ = ["file_reader", "file_writer"]
 
 # Plugin characteristics
 # ----------------------
@@ -64,15 +67,17 @@ footprint = ["manufacturer", "version"]
 
 
 def file_reader(
-    filename: str,
+    filename: Union[str, Path],
     scan_group_names: Union[None, str, List[str]] = None,
     lazy: bool = False,
     **kwargs,
 ) -> List[dict]:
     """Read electron backscatter diffraction patterns from an h5ebsd
-    file [Jackson2014]_. A valid h5ebsd file has at least one top group
-    with the subgroup 'EBSD' with the subgroups 'Data' (patterns etc.)
-    and 'Header' (``metadata`` etc.).
+    file :cite:`jackson2014h5ebsd`.
+
+    A valid h5ebsd file has at least one top group with the subgroup
+    'EBSD' with the subgroups 'Data' (patterns etc.) and 'Header'
+    (``metadata`` etc.).
 
     Parameters
     ----------
@@ -80,27 +85,19 @@ def file_reader(
         Full file path of the HDF file.
     scan_group_names
         Name or a list of names of HDF5 top group(s) containing the
-        scan(s) to return. If None, the first scan in the file is
-        returned.
+        scan(s) to return. If not given (default), the first scan in the
+        file is returned.
     lazy
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
-        is False.
-    kwargs
-        Key word arguments passed to :obj:`h5py:File`.
+        is ``False``.
+    **kwargs
+        Key word arguments passed to :class:`h5py.File`.
 
     Returns
     -------
-    scan_dict_list: list of dicts
+    scan_dict_list
         Data, axes, metadata and original metadata.
-
-    References
-    ----------
-    .. [Jackson2014] M. A. Jackson, M. A. Groeber, M. D. Uchic, D. J.
-        Rowenhorst and M. De Graef, "h5ebsd: an archival data format for
-        electron back-scatter diffraction data sets," *Integrating
-        Materials and Manufacturing Innovation* **3** (2014), doi:
-        https://doi.org/10.1186/2193-9772-3-4.
     """
     mode = kwargs.pop("mode", "r")
     f = h5py.File(filename, mode=mode, **kwargs)

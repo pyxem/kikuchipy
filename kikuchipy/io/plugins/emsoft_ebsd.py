@@ -18,6 +18,7 @@
 """Read support for simulated EBSD patterns in EMsoft's HDF5 format."""
 
 import os
+from pathlib import Path
 from typing import List, Tuple, Union
 
 import dask.array as da
@@ -34,6 +35,8 @@ from kikuchipy.signals.util._metadata import (
     _set_metadata_from_mapping,
 )
 
+
+__all__ = ["file_reader"]
 
 # Plugin characteristics
 # ----------------------
@@ -55,7 +58,7 @@ footprint = ["emdata/ebsd/ebsdpatterns"]
 
 
 def file_reader(
-    filename: str,
+    filename: Union[str, Path],
     scan_size: Union[None, int, Tuple[int, ...]] = None,
     lazy: bool = False,
     **kwargs,
@@ -72,13 +75,13 @@ def file_reader(
     lazy
         Open the data lazily without actually reading the data from disk
         until requested. Allows opening datasets larger than available
-        memory. Default is False.
-    kwargs :
-        Keyword arguments passed to h5py.File.
+        memory. Default is ``False``.
+    **kwargs
+        Keyword arguments passed to :class:`h5py.File`.
 
     Returns
     -------
-    signal_dict_list: list of dicts
+    signal_dict_list
         Data, axes, metadata and original metadata.
     """
     mode = kwargs.pop("mode", "r")

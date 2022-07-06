@@ -18,8 +18,9 @@
 """Read support for NORDIF's calibration patterns."""
 
 import os
+from pathlib import Path
 import re
-from typing import List, Tuple
+from typing import List, Tuple, Union
 import warnings
 
 from matplotlib.pyplot import imread
@@ -27,6 +28,8 @@ import numpy as np
 
 from kikuchipy.io.plugins.nordif import get_settings_from_file
 
+
+__all__ = ["file_reader"]
 
 # Plugin characteristics
 # ----------------------
@@ -40,7 +43,7 @@ default_extension = 0
 writes = False
 
 
-def file_reader(filename: str, lazy: bool = False) -> List[dict]:
+def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
     """Reader electron backscatter patterns from .bmp files stored in a
     NORDIF project directory, their filenames listed in a text file.
 
@@ -53,7 +56,7 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
 
     Returns
     -------
-    scan : list of dicts
+    scan
         Data, axes, metadata and original metadata.
     """
     # Get metadata from setting file

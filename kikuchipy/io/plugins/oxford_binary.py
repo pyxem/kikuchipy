@@ -22,6 +22,7 @@ Information about the file format was provided by Oxford Instruments.
 """
 
 import os
+from pathlib import Path
 import struct
 from typing import List, Tuple, Union
 
@@ -29,6 +30,9 @@ import dask.array as da
 import numpy as np
 
 from kikuchipy.signals.util._dask import get_chunking
+
+
+__all__ = ["file_reader"]
 
 # Plugin characteristics
 # ----------------------
@@ -42,7 +46,7 @@ default_extension = 0
 writes = False
 
 
-def file_reader(filename: str, lazy: bool = False) -> List[dict]:
+def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
     """Read EBSD patterns from an Oxford Instruments' binary .ebsp file.
 
     Only uncompressed patterns can be read. If only non-indexed patterns
@@ -54,7 +58,7 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
         File path to .ebsp file.
     lazy
         Read the data lazily without actually reading the data from disk
-        until required. Default is False.
+        until required. Default is ``False``.
 
     Returns
     -------

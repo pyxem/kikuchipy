@@ -16,6 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+from pathlib import Path
 from typing import List, Optional, Union
 
 from hyperspy.io_plugins import hspy
@@ -54,7 +55,7 @@ for plugin in plugins:
 
 
 def load(
-    filename: str, lazy: bool = False, **kwargs
+    filename: Union[str, Path], lazy: bool = False, **kwargs
 ) -> Union["EBSD", "EBSDMasterPattern", List["EBSD"], List["EBSDMasterPattern"]]:
     """Load an :class:`~kikuchipy.signals.EBSD` or
     :class:`~kikuchipy.signals.EBSDMasterPattern` object from a
