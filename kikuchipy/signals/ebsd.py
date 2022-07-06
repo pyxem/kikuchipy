@@ -46,7 +46,7 @@ from kikuchipy.indexing._refinement._refinement import (
     _refine_orientation_projection_center,
     _refine_projection_center,
 )
-from kikuchipy.indexing.similarity_metrics import metrics, SimilarityMetric
+from kikuchipy.indexing.similarity_metrics import SimilarityMetric, _METRICS
 from kikuchipy.io._io import _save
 from kikuchipy.pattern import chunk
 from kikuchipy.pattern.chunk import _average_neighbour_patterns
@@ -2205,15 +2205,15 @@ class EBSD(CommonImage, Signal2D):
         rechunk: bool,
         n_dictionary_patterns: int,
     ) -> SimilarityMetric:
-        if isinstance(metric, str) and metric in metrics:
-            metric_class = metrics[metric]
+        if isinstance(metric, str) and metric in _METRICS:
+            metric_class = _METRICS[metric]
             metric = metric_class()
             metric.rechunk = rechunk
         if not isinstance(metric, SimilarityMetric):
             raise ValueError(
-                f"'{metric}' must be either of {metrics.keys()} or a custom metric "
+                f"'{metric}' must be either of {_METRICS.keys()} or a custom metric "
                 "class inheriting from SimilarityMetric. See "
-                "kikuchipy.indexing.similarity_metrics.SimilarityMetric"
+                "kikuchipy.indexing.SimilarityMetric"
             )
         metric.n_experimental_patterns = max(self.axes_manager.navigation_size, 1)
         metric.n_dictionary_patterns = max(n_dictionary_patterns, 1)

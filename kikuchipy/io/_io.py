@@ -16,7 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from typing import Optional
+from typing import List, Optional, Union
 
 from hyperspy.io_plugins import hspy
 from hyperspy.misc.io.tools import overwrite as overwrite_method
@@ -53,7 +53,9 @@ for plugin in plugins:
         default_write_ext.add(plugin.file_extensions[plugin.default_extension])
 
 
-def load(filename: str, lazy: bool = False, **kwargs):
+def load(
+    filename: str, lazy: bool = False, **kwargs
+) -> Union["EBSD", "EBSDMasterPattern", List["EBSD"], List["EBSDMasterPattern"]]:
     """Load an :class:`~kikuchipy.signals.EBSD` or
     :class:`~kikuchipy.signals.EBSDMasterPattern` object from a
     supported file format.
@@ -67,20 +69,19 @@ def load(filename: str, lazy: bool = False, **kwargs):
     lazy
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
-        is False.
-    kwargs
+        is ``False``.
+    **kwargs
         Keyword arguments passed to the corresponding kikuchipy reader.
         See their individual documentation for available options.
 
     Returns
     -------
-    kikuchipy.signals.EBSD, kikuchipy.signals.EBSDMasterPattern, \
-        list of kikuchipy.signals.EBSD or \
-        list of kikuchipy.signals.EBSDMasterPattern
+    signals
+        Signal or a list of signals.
 
     Examples
     --------
-    Import nine patterns from an HDF5 file in a directory `DATA_DIR`
+    Import nine patterns from an HDF5 file in a directory ``DATA_DIR``
 
     >>> import kikuchipy as kp
     >>> s = kp.load(DATA_DIR + "/patterns.h5")

@@ -45,38 +45,38 @@ def merge_crystal_maps(
         their properties.
     mean_n_best
         Number of best metric results to take the mean of before
-        comparing. Default is 1. If given with a negative sign and
-        *greater_is_better* is not given, the n lowest valued metric
+        comparing. Default is ``1``. If given with a negative sign and
+        ``greater_is_better`` is not given, the n lowest valued metric
         results are chosen.
     greater_is_better
-        True if a higher score means a better match. Default is None, in
-        which case the sign of *mean_n_best* is used, with a positive
-        sign meaning True.
+        ``True`` if a higher score means a better match. If not given,
+        the sign of ``mean_n_best`` is used, with a positive sign
+        meaning ``True``.
     scores_prop
         Name of scores array in the crystal maps' properties. Default
-        is "scores".
+        is ``"scores"``.
     simulation_indices_prop
         Name of simulated indices array in the crystal maps' properties.
-        If None (default), the merged crystal map will not contain
+        If not given (default), the merged crystal map will not contain
         an array of merged simulation indices from the input crystal
         maps' properties. If a string, there must be as many simulation
         indices per point as there are scores.
 
     Returns
     -------
-    merged_xmap : ~orix.crystal_map.CrystalMap
+    merged_xmap
         A crystal map where the rotation of the phase with the best
         matching score(s) is assigned to each point. The best matching
         scores, merge sorted, are added to its properties with a name
-        equal to whatever passed to *scores_prop* with "merged" as a
-        suffix. If *simulation_indices_prop* is passed, the best
+        equal to whatever passed to ``scores_prop`` with "merged" as a
+        suffix. If ``simulation_indices_prop`` is passed, the best
         matching simulation indices are added in the same way as the
         scores.
 
     Notes
     -----
     .. versionchanged:: 0.5
-       The *greater_is_better* parameter replaced *metric*.
+       The ``greater_is_better`` parameter replaced ``metric``.
     """
     map_shapes = [xmap.shape for xmap in crystal_maps]
     if not np.sum(abs(np.diff(map_shapes, axis=0))) == 0:

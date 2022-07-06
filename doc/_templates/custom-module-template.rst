@@ -1,4 +1,4 @@
-{{ fullname | escape | underline}}
+{{ name | escape | underline}}
 
 .. automodule:: {{ fullname }}
 
@@ -8,10 +8,12 @@
             .. autosummary::
                 :toctree:
                 {% for item in attributes %}
-                    {{ item }}
+                    {% if item in members %}
+                        {{ item }}
+                    {% endif %}
                 {%- endfor %}
         {% endif %}
-   {% endblock %}
+    {% endblock %}
 
     {% block functions %}
         {% if functions %}
@@ -19,7 +21,9 @@
             .. autosummary::
                 :toctree:
                 {% for item in functions %}
-                    {{ item }}
+                    {% if item in members %}
+                        {{ item }}
+                    {% endif %}
                 {%- endfor %}
         {% endif %}
     {% endblock %}
@@ -31,7 +35,9 @@
                 :toctree:
                 :template: custom-class-template.rst
                 {% for item in classes %}
-                    {{ item }}
+                    {% if item in members %}
+                        {{ item }}
+                    {% endif %}
                 {%- endfor %}
         {% endif %}
     {% endblock %}
@@ -42,20 +48,24 @@
             .. autosummary::
                 :toctree:
                 {% for item in exceptions %}
-                    {{ item }}
+                    {% if item in members %}
+                        {{ item }}
+                    {% endif %}
                 {%- endfor %}
         {% endif %}
     {% endblock %}
 
-    {% block modules %}
-        {% if modules %}
-            .. rubric:: Modules
-            .. autosummary::
-                :toctree:
-                :template: custom-module-template.rst
-                :recursive:
+{% block modules %}
+    {% if modules %}
+        .. rubric:: {{ _('Modules') }}
+        .. autosummary::
+            :toctree:
+            :template: custom-module-template.rst
+            :recursive:
             {% for item in modules %}
-                {{ item }}
+                {% if item in members %}
+                    {{ item }}
+                {% endif %}
             {%- endfor %}
-        {% endif %}
-    {% endblock %}
+    {% endif %}
+{% endblock %}

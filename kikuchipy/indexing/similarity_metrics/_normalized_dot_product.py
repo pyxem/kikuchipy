@@ -38,18 +38,11 @@ class NormalizedDotProductMetric(SimilarityMetric):
     (inner) product of the pattern vectors :math:`\mathbf{X}` and
     :math:`\mathbf{Y}`.
 
-    See :class:`~kikuchipy.indexing.similarity_metrics.SimilarityMetric`
-    for remaining attributes.
-
-    Attributes
-    ----------
-    allowed_dtypes
-        :class:`~numpy.float32` and :class:`~numpy.float64`.
-    sign
-        +1, meaning greater is better.
+    See :class:`~kikuchipy.indexing.SimilarityMetric` for the list of
+    attributes.
     """
-    allowed_dtypes = [np.float32, np.float64]
-    sign = 1
+    _allowed_dtypes = [np.float32, np.float64]
+    _sign = 1
 
     def __call__(
         self,

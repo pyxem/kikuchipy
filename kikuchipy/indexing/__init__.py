@@ -18,8 +18,8 @@
 """Tools for indexing of EBSD patterns by matching to a dictionary of
 simulated patterns.
 
-The EBSD method :meth:`~kikuchipy.signals.EBSD.dictionary_indexing` uses
-some of these tools for dictionary indexing.
+Some of these tools are used in
+:meth:`~kikuchipy.signals.EBSD.dictionary_indexing`.
 """
 
 from kikuchipy.indexing._merge_crystal_maps import merge_crystal_maps
@@ -29,7 +29,11 @@ from kikuchipy.indexing._refinement._refinement import (
     compute_refine_orientation_projection_center_results,
     compute_refine_projection_center_results,
 )
-from kikuchipy.indexing import similarity_metrics
+from kikuchipy.indexing.similarity_metrics import (
+    NormalizedCrossCorrelationMetric,
+    NormalizedDotProductMetric,
+    SimilarityMetric,
+)
 
 __all__ = [
     "compute_refine_orientation_results",
@@ -37,5 +41,7 @@ __all__ = [
     "compute_refine_projection_center_results",
     "merge_crystal_maps",
     "orientation_similarity_map",
-    "similarity_metrics",
+    "NormalizedCrossCorrelationMetric",
+    "NormalizedDotProductMetric",
+    "SimilarityMetric",
 ]

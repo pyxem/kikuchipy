@@ -17,7 +17,7 @@
 
 import matplotlib.colors as mcolors
 
-from kikuchipy.draw._colors import TSL_COLORS
+from kikuchipy.draw.colors import TSL_COLORS
 
 
 class TestColors:

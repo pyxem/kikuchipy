@@ -25,7 +25,7 @@ import matplotlib.colors as mcolors
 import numpy as np
 from orix.crystal_map import Phase
 
-from kikuchipy.draw._colors import TSL_COLORS
+from kikuchipy.draw.colors import TSL_COLORS
 
 
 def _get_uvw_from_hkl(hkl: Union[np.ndarray, list, tuple]) -> np.ndarray:

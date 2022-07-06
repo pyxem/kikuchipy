@@ -11,6 +11,7 @@ from os.path import relpath, dirname
 import re
 import sys
 
+import matplotlib.pyplot as plt
 from numpydoc.docscrape_sphinx import SphinxDocString
 
 from kikuchipy import release as kp_release
@@ -32,11 +33,6 @@ release = kp_release.version
 
 master_doc = "index"
 
-if "dev" in version:
-    release_version = "develop"
-else:
-    release_version = "v" + version
-
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
@@ -52,6 +48,7 @@ extensions = [
     "sphinx.ext.linkcode",
     "sphinx.ext.mathjax",
     "sphinx_copybutton",
+    "sphinx_design",
     "sphinx_gallery.load_style",
 ]
 
@@ -83,23 +80,7 @@ exclude_patterns = ["build", "_static/logo/*.ipynb"]
 
 # The theme to use for HTML and HTML Help pages. See the documentation
 # for a list of builtin themes.
-html_theme = "pydata_sphinx_theme"
-html_theme_options = {
-    "logo": {
-        "text": "kikuchipy",
-    },
-    "show_prev_next": False,
-    "github_url": "https://github.com/pyxem/kikuchipy",
-}
-html_context = {
-    "github_user": "pyxem",
-    "github_repo": "kikuchipy",
-    "github_version": release_version,
-    "doc_path": "doc",
-}
-html_sidebars = {
-    "**": ["search-field.html", "sidebar-nav-bs.html", "sidebar-ethical-ads.html"]
-}
+html_theme = "furo"
 
 # Add any paths that contain custom static files (such as style sheets)
 # here, relative to this directory. They are copied after the builtin
@@ -119,7 +100,10 @@ html_favicon = "_static/logo/plasma_favicon.png"
 # modifications to point nbviewer and Binder to the GitHub develop
 # branch links when the documentation is launched from a kikuchipy
 # version with "dev" in the version
-
+if "dev" in version:
+    release_version = "develop"
+else:
+    release_version = "v" + version
 # This is processed by Jinja2 and inserted before each notebook
 nbsphinx_prolog = (
     r"""
@@ -259,37 +243,51 @@ copybutton_prompt_is_regexp = True
 autosummary_ignore_module_all = False
 autosummary_imported_members = True
 autodoc_typehints_format = "short"
+autodoc_default_options = {
+    "show-inheritance": True,
+}
 
 
 # -- numpydoc
 numpydoc_show_class_members = False
 numpydoc_use_plots = True
 numpydoc_xref_param_type = True
-numpydoc_validate = True
+# fmt: off
 numpydoc_validation_checks = {
-    "all",  # All but the following:
-    "ES01",  # Not all docstrings need an extend summary.
+    "all",   # All but the following:
+    "ES01",  # Not all docstrings need an extend summary
     "EX01",  # Examples: Will eventually enforce
     "GL01",  # Contradicts numpydoc examples
+    "GL02",  # Appears to be broken?
+    "GL07",  # Appears to be broken?
+    "GL08",  # Methods can be documented in super class
+    "PR01",  # Parameters can be documented in super class
+    "PR02",  # Properties with setters might have docstrings w/"Returns"
     "PR04",  # Doesn't seem to work with type hints?
+    "RT01",  # Abstract classes might not have return sections
     "SA01",  # Not all docstrings need a "See Also"
     "SA04",  # "See Also" section does not need descriptions
     "SS06",  # Not possible to make all summaries one line
     "YD01",  # Yields: No plan to enforce
 }
+# fmt: on
 
 
 # -- matplotlib.sphinxext.plot_directive
-plot_include_source = True
+plot_formats = ["png"]
 plot_html_show_source_link = False
 plot_html_show_formats = False
+plot_include_source = True
 
 
 def _str_examples(self):
     examples_str = "\n".join(self["Examples"])
     if (
         self.use_plots
-        and re.search(r"\b(.plot)\b", examples_str)
+        and (
+            re.search(r"\b(.plot)\b", examples_str)
+            or re.search(r"\b(.imshow)\b", examples_str)
+        )
         and "plot::" not in examples_str
     ):
         out = []
@@ -303,8 +301,3 @@ def _str_examples(self):
 
 
 SphinxDocString._str_examples = _str_examples
-
-
-# -- CSS and other things
-def setup(app):
-    app.add_css_file("no_search_highlight.css")

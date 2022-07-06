@@ -38,10 +38,10 @@ def orientation_similarity_map(
     footprint: Optional[np.ndarray] = None,
     center_index: int = 2,
 ) -> np.ndarray:
-    r"""Compute an orientation similarity map where the ranked list of
-    the dictionary indices of the best matching simulated patterns in
-    one point is compared to the corresponding lists in the nearest
-    neighbour points :cite:`marquardt2017quantitative`.
+    r"""Compute an orientation similarity map (OSM) where the ranked
+    list of the dictionary indices of the best matching simulated
+    patterns in one point is compared to the corresponding lists in the
+    nearest neighbour points :cite:`marquardt2017quantitative`.
 
     Parameters
     ----------
@@ -49,31 +49,31 @@ def orientation_similarity_map(
         A crystal map with a ranked list of the array indices of the
         best matching simulated patterns among its properties.
     n_best
-        Number of ranked indices to compare. If None (default), all
+        Number of ranked indices to compare. If not given (default), all
         indices are compared.
     simulation_indices_prop
         Name of simulated indices array in the crystal maps' properties.
-        Default is "simulation_indices".
+        Default is ``"simulation_indices"``.
     normalize
         Whether to normalize the number of equal indices to the range
-        [0, 1], by default False.
+        [0, 1], by default ``False``.
     from_n_best
-        Return an OSM for each n in the range [*from_n_best*, *n_best*].
-        If None (default), only the OSM for *n_best* indices is
+        Return an OSM for each n in the range ``[from_n_best, n_best]``.
+        If not given (default), the OSM for ``n_best`` indices is
         returned.
     footprint
         Boolean 2D array specifying which neighbouring points to compare
         lists with, by default the four nearest neighbours.
     center_index
         Flat index of central navigation point in the truthy values of
-        footprint, by default 2.
+        footprint, by default ``2``.
 
     Returns
     -------
-    osm : ~numpy.ndarray
-        Orientation similarity map(s). If *from_n_best* is not None,
-        the returned array has three dimensions, where *n_best* is at
-        array[:, :, 0] and *from_n_best* at array[:, :, -1].
+    osm
+        Orientation similarity map(s). If ``from_n_best`` is given, the
+        returned array has three dimensions, where ``n_best`` is at
+        ``osm[:, :, 0]`` and ``from_n_best`` at ``osm[:, :, -1]``.
 
     Notes
     -----
@@ -93,7 +93,7 @@ def orientation_similarity_map(
             \right).
 
     .. versionchanged:: 0.5
-       Default value of *normalize* changed to False.
+       Default value of ``normalize`` changed to ``False``.
     """
     simulation_indices = xmap.prop[simulation_indices_prop]
     nav_size, keep_n = simulation_indices.shape

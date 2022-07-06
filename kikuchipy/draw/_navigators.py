@@ -27,24 +27,26 @@ from skimage.exposure import rescale_intensity
 import hyperspy.api as hs
 
 
-def get_rgb_navigator(image, dtype: Union[type, np.dtype] = np.uint16):
+def get_rgb_navigator(
+    image: np.ndarray, dtype: Union[type, np.dtype] = np.uint16
+) -> hs.signals.Signal2D:
     """Create an RGB navigator signal which is suitable to pass to
-    :meth:`~hyperspy.signals.Signal2D.plot` as the `navigator`
+    :meth:`~hyperspy._signals.signal2d.Signal2D.plot` as the ``navigator``
     parameter.
 
     Parameters
     ----------
-    image : numpy.ndarray
+    image
         RGB color image of shape (n rows, n columns, 3).
-    dtype : numpy.dtype
-        Which data type to cast the signal data to, either uint16
-        (default) or uint8.
+    dtype
+        Which data type to cast the signal data to, either ``uint16``
+        (default) or ``uint8``.
 
     Returns
     -------
-    signal : hyperspy.signals.Signal2D
+    signal
         Signal with an (n columns, n rows) signal shape and no
-        navigation shape, of data type either rgb8 or rgb16.
+        navigation shape, of data type either ``rgb8`` or ``rgb16``.
     """
     image_rescaled = rescale_intensity(image, out_range=dtype).astype(dtype)
     s = hs.signals.Signal2D(image_rescaled)

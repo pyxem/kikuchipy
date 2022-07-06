@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Pattern filters used on signals."""
+"""Pattern filters used on signals, e.g. for pattern averaging."""
 
 from kikuchipy.filters.window import (
     distance_to_origin,
