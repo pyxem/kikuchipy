@@ -40,13 +40,14 @@ class LambertProjection:
         Parameters
         ----------
         v
-            Vectors of any shape as long as the last dimension is (3,).
+            Vectors of any shape as long as the last dimension is
+            ``(3,)``.
 
         Returns
         -------
         xy
             Vectors in the square Lambert projection, of the same shape
-            as the input vectors, with the last dimension as (2,).
+            as the input vectors, with the last dimension as ``(2,)``.
         """
         if isinstance(v, Vector3d):
             w = v.data
@@ -60,7 +61,18 @@ class LambertProjection:
 
     @staticmethod
     def xy2vector(xy: np.ndarray) -> Vector3d:
-        """Convert (n, 2) array from Lambert to Cartesian coordinates."""
+        """Convert (n, 2) array from Lambert to Cartesian coordinates.
+
+        Parameters
+        ----------
+        xy
+            Lambert coordinates.
+
+        Returns
+        -------
+        vectors
+            3D vectors.
+        """
         X = xy[..., 0]
         Y = xy[..., 1]
 
@@ -88,8 +100,19 @@ class LambertProjection:
 
     @staticmethod
     def lambert_to_gnomonic(xy: np.ndarray) -> np.ndarray:
-        """Convert (n,2) array from Lambert via Cartesian coordinates to
-        Gnomonic."""
+        """Convert (n, 2) array from Lambert via Cartesian coordinates
+        to Gnomonic.
+
+        Parameters
+        ----------
+        xy
+            Lambert coordinates.
+
+        Returns
+        -------
+        xy_gnomonic
+            Gnomonic coordinates.
+        """
         # These two functions could probably be combined into 1 to decrease
         # runtime
         v = LambertProjection.xy2vector(xy)
@@ -97,10 +120,21 @@ class LambertProjection:
 
     @staticmethod
     def gnomonic_to_lambert(xy: np.ndarray) -> np.ndarray:
-        """Convert (n,2) array from Gnomonic via Cartesian coordinates to
-        Lambert."""
-        # These two functions could probably be combined into 1 to decrease
-        # runtime
+        """Convert (n, 2) array from Gnomonic via Cartesian coordinates
+        to Lambert.
+
+        Parameters
+        ----------
+        xy
+            Gnomonic coordinates.
+
+        Returns
+        -------
+        xy_lambert
+            Lambert coordinates.
+        """
+        # These two functions could probably be combined into 1 to
+        # decrease runtime
         v = GnomonicProjection.xy2vector(xy)
         return LambertProjection.vector2xy(v)
 

@@ -17,18 +17,14 @@
 
 """Various projections and transformations relevant to EBSD."""
 
-from kikuchipy.projections import (
-    ebsd_projections,
-    gnomonic_projection,
-    hesse_normal_form,
-    lambert_projection,
-    spherical_projection,
-)
+from kikuchipy.projections.gnomonic_projection import GnomonicProjection
+from kikuchipy.projections.hesse_normal_form import HesseNormalForm
+from kikuchipy.projections.lambert_projection import LambertProjection
+from kikuchipy.projections.spherical_projection import SphericalProjection
 
 __all__ = [
-    "ebsd_projections",
-    "gnomonic_projection",
-    "hesse_normal_form",
-    "lambert_projection",
-    "spherical_projection",
+    "GnomonicProjection",
+    "HesseNormalForm",
+    "LambertProjection",
+    "SphericalProjection",
 ]

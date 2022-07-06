@@ -28,25 +28,25 @@ class GnomonicProjection(SphericalProjection):
 
     @classmethod
     def vector2xy(cls, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
-        """Convert from 3D cartesian coordinates (x, y, z) to 2D
-        Gnomonic coordinates (x_g, y_g).
+        r"""Convert from 3D cartesian coordinates :math:`(x, y, z)` to
+        2D Gnomonic coordinates :math:`(x_g, y_g)`.
 
         Parameters
         ----------
         v
-            3D vector(s) on the form [[x0, y0, z0], [x1, y1, z1], ...].
+            3D vector(s) on the form
+            ``[[x0, y0, z0], [x1, y1, z1], ...]``.
 
         Returns
         -------
         gnomonic_coordinates
-            Gnomonic coordinates on the form [[x0, y0], [x1, y1], ...].
+            Gnomonic coordinates on the form
+            ``[[x0, y0], [x1, y1], ...]``.
 
         Examples
         --------
         >>> import numpy as np
-        >>> from kikuchipy.projections.gnomonic_projection import (
-        ...     GnomonicProjection
-        ... )
+        >>> from kikuchipy.projections import GnomonicProjection
         >>> v = np.random.random_sample(30).reshape((10, 3))
         >>> xy = GnomonicProjection.vector2xy(v)
         """
@@ -72,27 +72,25 @@ class GnomonicProjection(SphericalProjection):
 
     @staticmethod
     def xy2vector(xy: np.ndarray) -> Vector3d:
-        """Convert from 2D Gnomonic coordinates (x_g, y_g) to 3D
-        cartesian coordiantes (x, y, z).
+        r"""Convert from 2D Gnomonic coordinates :math:`(x_g, y_g)` to
+        3D cartesian coordiantes :math:`(x, y, z)`.
 
         Parameters
         ----------
         xy
             2D coordinates on the form
-            [[x_g0, y_g0], [x_g1, y_g1], ...].
+            ``[[x_g0, y_g0], [x_g1, y_g1], ...]``.
 
         Returns
         -------
         cartesian_coordinates
-            Cartesian coordinates (x, y, z) on the form
-            [[x0, y0, z0], [x1, y1, z1], ...].
+            Cartesian coordinates :math:`(x, y, z)` on the form
+            ``[[x0, y0, z0], [x1, y1, z1], ...]``.
 
         Examples
         --------
         >>> import numpy as np
-        >>> from kikuchipy.projections.gnomonic_projection import (
-        ...     GnomonicProjection
-        ... )
+        >>> from kikuchipy.projections import GnomonicProjection
         >>> xy_g = np.random.random_sample(20).reshape((10, 2))
         >>> xyz = GnomonicProjection.xy2vector(xy_g)
         """
