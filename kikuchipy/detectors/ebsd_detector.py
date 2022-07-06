@@ -421,6 +421,11 @@ class EBSDDetector:
             Which EMsoft PC convention to use. The direction of the x PC
             coordinate, :math:`x_{pc}`, flipped in version 5.
 
+        Returns
+        -------
+        pc
+            PC in the EMsoft convention.
+
         Notes
         -----
         The PC coordinate conventions of Bruker, EDAX TSL, Oxford
@@ -445,11 +450,21 @@ class EBSDDetector:
     def pc_bruker(self) -> np.ndarray:
         """Return PC in the Bruker convention, given in the class
         description.
+
+        Returns
+        -------
+        pc
+            PC in the Bruker convention.
         """
         return self.pc
 
     def pc_tsl(self) -> np.ndarray:
         r"""Return PC in the EDAX TSL convention.
+
+        Returns
+        -------
+        pc
+            PC in the EDAX TSL convention.
 
         Notes
         -----
@@ -474,6 +489,11 @@ class EBSDDetector:
     def pc_oxford(self) -> np.ndarray:
         """Return PC in the Oxford convention.
 
+        Returns
+        -------
+        pc
+            PC in the Oxford convention.
+
         Notes
         -----
         The Oxford PC coordinates are identical to the TSL coordinates,
@@ -481,8 +501,14 @@ class EBSDDetector:
         """
         return self._pc_bruker2tsl()
 
-    def deepcopy(self):
-        """Return a deep copy using :func:`copy.deepcopy`."""
+    def deepcopy(self) -> "EBSDdetector":
+        """Return a deep copy using :func:`copy.deepcopy`.
+
+        Returns
+        -------
+        detector
+            Identical detector without shared memory.
+        """
         return deepcopy(self)
 
     def plot(
