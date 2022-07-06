@@ -1,31 +1,41 @@
-=============
-API reference
-=============
+=========
+Reference
+=========
 
-:Release: |version|
-:Date: |today|
+Release: |version|
 
-This reference describes the public modules, classes, and functions in kikuchipy. Many
-of the descriptions include brief examples. For learning how to use kikuchipy, see the
-user guide or examples.
+Date: |today|
+
+This reference manual describes the public functions, modules, and objects in kikuchipy.
+Many of the descriptions include brief examples. For learning how to use kikuchipy, see
+the :doc:`/examples/index` or :doc:`/tutorials/index`.
 
 .. caution::
 
     kikuchipy is in development, meaning that some breaking changes and changes to this
     reference are likely with each release.
 
+kikuchipy's import structure is designed to feel familiar to HyperSpy users. It is
+recommended to import functionality from the below list of functions and modules like
+this:
+
+.. code-block:: python
+
+    >>> import kikuchipy as kp
+    >>> s = kp.data.nickel_ebsd_small()
+    >>> s
+    <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
+
 .. currentmodule:: kikuchipy
 
-Functions
-=========
+.. rubric:: Functions
 
 .. autosummary::
     :toctree: generated/
 
     load
 
-Modules
-=======
+.. rubric:: Modules
 
 .. autosummary::
     :toctree: generated/
@@ -37,3 +47,8 @@ Modules
     filters
     generators
     indexing
+    io
+    pattern
+    projections
+    signals
+    simulations
