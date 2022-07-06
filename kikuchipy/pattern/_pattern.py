@@ -45,19 +45,19 @@ def rescale_intensity(
     pattern
         EBSD pattern.
     in_range
-        Min./max. intensity values of the input pattern. If None
-        (default), it is set to the pattern's min./max intensity.
+        Min./max. intensity values of the input pattern. If not given,
+        it is set to the pattern's min./max intensity.
     out_range
-        Min./max. intensity values of the rescaled pattern. If None
-        (default), it is set to `dtype_out` min./max according to
-        `skimage.util.dtype.dtype_range`.
+        Min./max. intensity values of the rescaled pattern. If not
+        given, it is set to ``dtype_out`` min./max according to
+        ``skimage.util.dtype.dtype_range``.
     dtype_out
-        Data type of the rescaled pattern. If None (default), it is set
-        to the same data type as the input pattern.
+        Data type of the rescaled pattern. If not given, it is set to
+        the same data type as the input pattern.
 
     Returns
     -------
-    rescaled_pattern : numpy.ndarray
+    rescaled_pattern
         Rescaled pattern.
     """
     if dtype_out is None:
@@ -141,20 +141,20 @@ def normalize_intensity(
         EBSD pattern.
     num_std
         Number of standard deviations of the output intensities (default
-        is 1).
+        is ``1``).
     divide_by_square_root
         Whether to divide output intensities by the square root of the
-        image size (default is False).
+        image size (default is ``False``).
 
     Returns
     -------
-    normalized_pattern : numpy.ndarray
+    normalized_pattern
         Normalized pattern.
 
     Notes
     -----
     Data type should always be changed to floating point, e.g.
-    ``np.float32`` with :meth:`numpy.ndarray.astype`, before normalizing
+    ``float32`` with :meth:`numpy.ndarray.astype`, before normalizing
     the intensities.
     """
     pattern_mean = np.mean(pattern)
@@ -180,7 +180,7 @@ def fft(
 
     Very light wrapper around routines in :mod:`scipy.fft`. The routines
     are wrapped instead of used directly to accommodate easy setting of
-    `shift` and `real_fft_only`.
+    ``shift`` and ``real_fft_only``.
 
     Parameters
     ----------
@@ -191,18 +191,18 @@ def fft(
         suppress streaks.
     shift
         Whether to shift the zero-frequency component to the centre of
-        the spectrum (default is False).
+        the spectrum (default is ``False``).
     real_fft_only
-        If True, the discrete FFT is computed for real input using
-        :func:`scipy.fft.rfft2`. If False (default), it is computed
+        If ``True``, the discrete FFT is computed for real input using
+        :func:`scipy.fft.rfft2`. If ``False`` (default), it is computed
         using :func:`scipy.fft.fft2`.
-    kwargs :
+    **kwargs
         Keyword arguments pass to :func:`scipy.fft.fft2` or
         :func:`scipy.fft.rfft2`.
 
     Returns
     -------
-    out : numpy.ndarray
+    out
         The result of the 2D FFT.
     """
     if apodization_window is not None:
@@ -232,7 +232,7 @@ def ifft(
 
     Very light wrapper around routines in :mod:`scipy.fft`. The routines
     are wrapped instead of used directly to accommodate easy setting of
-    `shift` and `real_fft_only`.
+    ``shift`` and ``real_fft_only``.
 
     Parameters
     ----------
@@ -240,17 +240,17 @@ def ifft(
         FFT of EBSD pattern.
     shift
         Whether to shift the zero-frequency component back to the
-        corners of the spectrum (default is False).
+        corners of the spectrum (default is ``False``).
     real_fft_only
-        If True, the discrete IFFT is computed for real input using
-        :func:`scipy.fft.irfft2`. If False (default), it is computed
+        If ``True``, the discrete IFFT is computed for real input using
+        :func:`scipy.fft.irfft2`. If ``False`` (default), it is computed
         using :func:`scipy.fft.ifft2`.
-    kwargs :
+    **kwargs
         Keyword arguments pass to :func:`scipy.fft.ifft`.
 
     Returns
     -------
-    pattern : numpy.ndarray
+    pattern
         Real part of the IFFT of the EBSD pattern.
     """
     if real_fft_only:
@@ -285,11 +285,11 @@ def fft_filter(
         suppress streaks.
     shift
         Whether to shift the zero-frequency component to the centre of
-        the spectrum. Default is False.
+        the spectrum. Default is ``False``.
 
     Returns
     -------
-    filtered_pattern : numpy.ndarray
+    filtered_pattern
         Filtered EBSD pattern.
     """
     # Get the FFT
@@ -313,7 +313,7 @@ def fft_spectrum(fft_pattern: np.ndarray) -> np.ndarray:
 
     Returns
     -------
-    fft_spectrum : numpy.ndarray
+    spectrum
         2D FFT spectrum of the EBSD pattern.
     """
     return np.sqrt(fft_pattern.real**2 + fft_pattern.imag**2)
@@ -329,7 +329,7 @@ def fft_frequency_vectors(shape: Tuple[int, int]) -> np.ndarray:
 
     Returns
     -------
-    frequency_vectors : numpy.ndarray
+    frequency_vectors
         Frequency vectors.
     """
     sy, sx = shape
@@ -487,30 +487,30 @@ def remove_dynamic_background(
     pattern
         EBSD pattern.
     operation
-        Whether to "subtract" (default) or "divide" by the dynamic
-        background pattern.
+        Whether to ``"subtract"`` (default) or ``"divide"`` by the
+        dynamic background pattern.
     filter_domain
         Whether to obtain the dynamic background by applying a Gaussian
-        convolution filter in the "frequency" (default) or "spatial"
-        domain.
+        convolution filter in the ``"frequency"`` (default) or
+        ``"spatial"`` domain.
     std
-        Standard deviation of the Gaussian window. If None (default), it
-        is set to width/8.
+        Standard deviation of the Gaussian window. If not given, it is
+        set to width/8.
     truncate
         Truncate the Gaussian window at this many standard deviations.
-        Default is 4.0.
+        Default is ``4.0``.
     dtype_out
-        Data type of corrected pattern. If None (default), it is set to
+        Data type of corrected pattern. If not given, it is set to
         input patterns' data type.
 
     Returns
     -------
-    corrected_pattern : numpy.ndarray
+    corrected_pattern
         Pattern with the dynamic background removed.
 
     See Also
     --------
-    kikuchipy.signals.EBSD.remove_dynamic_background
+    kikuchipy.signals.EBSD.remove_dynamic_background,
     kikuchipy.pattern.remove_dynamic_background
     """
     if std is None:
@@ -603,18 +603,18 @@ def get_dynamic_background(
         EBSD pattern.
     filter_domain
         Whether to obtain the dynamic background by applying a Gaussian
-        convolution filter in the "frequency" (default) or "spatial"
-        domain.
+        convolution filter in the ``"frequency"`` (default) or
+        ``"spatial"`` domain.
     std
-        Standard deviation of the Gaussian window. If None (default), a
+        Standard deviation of the Gaussian window. If not given, a
         deviation of pattern width/8 is chosen.
     truncate
         Truncate the Gaussian window at this many standard deviations.
-        Default is 4.0.
+        Default is ``4.0``.
 
     Returns
     -------
-    dynamic_bg : numpy.ndarray
+    dynamic_bg
         The dynamic background.
     """
     if std is None:
@@ -656,7 +656,7 @@ def get_image_quality(
     """Return the image quality of an EBSD pattern.
 
     The image quality is calculated based on the procedure defined by
-    Krieger Lassen [Lassen1994]_.
+    Krieger Lassen :cite:`lassen1994automated`.
 
     Parameters
     ----------
@@ -665,21 +665,21 @@ def get_image_quality(
     normalize
         Whether to normalize the pattern to a mean of zero and standard
         deviation of 1 before calculating the image quality (default is
-        True).
+        ``True``).
     frequency_vectors
         Integer 2D array assigning each FFT spectrum frequency component
-        a weight. If None (default), these are calculated from
+        a weight. If not given, these are calculated from
         :func:`~kikuchipy.pattern.fft_frequency_vectors`. This only
         depends on the pattern shape.
     inertia_max
         Maximum possible inertia of the FFT power spectrum of the image.
-        If None (default), this is calculated from the
-        `frequency_vectors`, which in this case *must* be passed. This
+        If not given, this is calculated from the
+        ``frequency_vectors``, which in this case *must* be passed. This
         only depends on the pattern shape.
 
     Returns
     -------
-    image_quality : numpy.ndarray
+    image_quality
         Image quality of the pattern.
     """
     if frequency_vectors is None:
