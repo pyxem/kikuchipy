@@ -22,7 +22,7 @@ import numpy as np
 
 
 def get_chunking(
-    signal=None,
+    signal: Optional[Union["EBSD", "LazyEBSD"]] = None,
     data_shape: Optional[tuple] = None,
     nav_dim: Optional[int] = None,
     sig_dim: Optional[int] = None,
@@ -33,43 +33,45 @@ def get_chunking(
     """Get a chunk tuple based on the shape of the signal data.
 
     The signal dimensions will not be chunked, and the navigation
-    dimensions will be chunked based on either `chunk_shape`, or be
-    optimized based on the `chunk_bytes`.
+    dimensions will be chunked based on either ``chunk_shape``, or be
+    optimized based on the ``chunk_bytes``.
 
-    This function is inspired by a similar function in pyxem.
+    This function is inspired by a similar function in :mod:`pyxem`.
 
     Parameters
     ----------
-    signal : kikuchipy.signals.EBSD, kikuchipy.signals.LazyEBSD or None
-        If None (default), the following must be passed: data shape to
-        be chunked `data_shape`, the number of navigation dimensions
-        `nav_dim`, the number of signal dimensions `sig_dim` and the
-        data array data type `dtype`.
+    signal
+        If not given, the following must be passed: data shape to
+        be chunked, ``data_shape``, the number of navigation dimensions
+        ,``nav_dim``, the number of signal dimensions, ``sig_dim``, and
+        the data array data type ``dtype``.
     data_shape
-        Data shape, must be passed if `signal` is None.
+        Data shape, must be passed if ``signal`` is not given.
     nav_dim
-        Number of navigation dimensions, must be passed if `signal` is
-        None.
+        Number of navigation dimensions, must be passed if ``signal`` is
+        not given.
     sig_dim
-        Number of signal dimensions, must be passed if `signal` is None.
+        Number of signal dimensions, must be passed if ``signal`` is not
+        given.
     chunk_shape
-        Shape of navigation chunks. If None (default), this size is
-        set automatically based on `chunk_bytes`. This is a square if
-        `signal` has two navigation dimensions.
+        Shape of navigation chunks. If not given, this size is set
+        automatically based on ``chunk_bytes``. This is a rectangle if
+        ``signal`` has two navigation dimensions.
     chunk_bytes
         Number of bytes in each chunk. Default is 30e6, i.e. 30 MB.
-        Only used if freedom is given to choose, i.e. if `chunk_shape`
-        is None. Various parameter types are allowed, e.g. 30000000,
-        "30 MB", "30MiB", or the default 30e6, all resulting in
-        approximately 30 MB chunks.
+        Only used if freedom is given to choose, i.e. if ``chunk_shape``
+        is not given. Various parameter types are allowed, e.g.
+        ``30000000``, ``"30 MB"``, ``"30MiB"``, or the default ``30e6``,
+        all resulting in approximately 30 MB chunks.
     dtype
         Data type of the array to chunk. Will take precedent over the
-        signal data type if `signal` is passed. Must be passed if
-        `signal` is None.
+        signal data type if ``signal`` is given. Must be given if
+        ``signal`` is not given.
 
     Returns
     -------
     chunks
+        Chunk tuple.
     """
     if signal is not None:
         data_shape = signal.data.shape
@@ -99,18 +101,19 @@ def get_chunking(
     return chunks
 
 
-def get_dask_array(signal, dtype: Optional[type] = None, **kwargs) -> da.Array:
+def get_dask_array(
+    signal: Union["EBSD", "LazyEBSD"], dtype: Optional[type] = None, **kwargs
+) -> da.Array:
     """Return dask array of patterns with appropriate chunking.
 
     Parameters
     ----------
-    signal : :class:`~kikuchipy.signals.ebsd.EBSD` or\
-            :class:`~kikuchipy.signals.ebsd.LazyEBSD`
+    signal
         Signal with data to return dask array from.
     dtype
         Data type of returned dask array. This is also passed on to
         :func:`~kikuchipy.signals.util.get_chunking`.
-    kwargs
+    **kwargs
         Keyword arguments passed to
         :func:`~kikuchipy.signals.util.get_chunking` to control the
         number of chunks the output data array is split into. Only

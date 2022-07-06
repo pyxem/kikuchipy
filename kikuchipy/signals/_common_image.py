@@ -46,12 +46,12 @@ class CommonImage(Signal2D):
         out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
         dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
         percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-    ):
+    ) -> None:
         """Rescale image intensities inplace.
 
-        Output min./max. intensity is determined from `out_range` or the
-        data type range of the :class:`numpy.dtype` passed to
-        `dtype_out` if `out_range` is None.
+        Output min./max. intensity is determined from ``out_range`` or
+        the data type range of the :class:`numpy.dtype` passed to
+        ``dtype_out`` if ``out_range`` is ``None``.
 
         This method is based on
         :func:`skimage.exposure.rescale_intensity`.
@@ -60,31 +60,36 @@ class CommonImage(Signal2D):
         ----------
         relative
             Whether to keep relative intensities between images (default
-            is False). If True, `in_range` must be None, because
-            `in_range` is in this case set to the global min./max.
-            intensity.
+            is ``False``). If ``True``, ``in_range`` must be ``None``,
+            because ``in_range`` is in this case set to the global
+            min./max. intensity.
         in_range
-            Min./max. intensity of input images. If None (default),
-            `in_range` is set to pattern min./max intensity. Contrast
-            stretching is performed when `in_range` is set to a narrower
-            intensity range than the input patterns. Must be None if
-            `relative` is True or `percentiles` are passed.
+            Min./max. intensity of input images. If not given,
+            ``in_range`` is set to pattern min./max intensity. Contrast
+            stretching is performed when ``in_range`` is set to a
+            narrower intensity range than the input patterns. Must be
+            ``None`` if ``relative=True`` or ``percentiles`` are passed.
         out_range
-            Min./max. intensity of output images. If None (default),
-            `out_range` is set to `dtype_out` min./max according to
-            `skimage.util.dtype.dtype_range`.
+            Min./max. intensity of output images. If not given,
+            ``out_range`` is set to ``dtype_out`` min./max according to
+            ``skimage.util.dtype.dtype_range``.
         dtype_out
             Data type of rescaled images, default is input images' data
             type.
         percentiles
             Disregard intensities outside these percentiles. Calculated
-            per image. Must be None if `in_range` or `relative` is
-            passed. Default is None.
+            per image. Must be ``None`` if ``in_range`` or ``relative``
+            is passed. Default is ``None``.
 
         See Also
         --------
         kikuchipy.pattern.rescale_intensity,
         :func:`skimage.exposure.rescale_intensity`
+
+        Notes
+        -----
+        Rescaling RGB images is not possible. Use RGB channel
+        normalization when creating the image instead.
 
         Examples
         --------
@@ -94,7 +99,7 @@ class CommonImage(Signal2D):
 
         Image intensities are stretched to fill the available grey
         levels in the input images' data type range or any
-        :class:`numpy.dtype` range passed to `dtype_out`, either
+        :class:`numpy.dtype` range passed to ``dtype_out``, either
         keeping relative intensities between images or not:
 
         >>> print(
@@ -123,11 +128,6 @@ class CommonImage(Signal2D):
         Here, the darkest and brightest pixels within the 1% percentile
         are set to the ends of the data type range, e.g. 0 and 255
         respectively for images of ``uint8`` data type.
-
-        Notes
-        -----
-        Rescaling RGB images is not possible. Use RGB channel
-        normalization when creating the image instead.
         """
         if self.data.dtype in rgb_dtypes.values():
             raise NotImplementedError(
@@ -179,7 +179,7 @@ class CommonImage(Signal2D):
         num_std: int = 1,
         divide_by_square_root: bool = False,
         dtype_out: Optional[np.dtype] = None,
-    ):
+    ) -> None:
         """Normalize image intensities in inplace to a mean of zero with
         a given standard deviation.
 
@@ -187,20 +187,23 @@ class CommonImage(Signal2D):
         ----------
         num_std
             Number of standard deviations of the output intensities.
-            Default is 1.
+            Default is ``1``.
         divide_by_square_root
             Whether to divide output intensities by the square root of
-            the signal dimension size. Default is False.
+            the signal dimension size. Default is ``False``.
         dtype_out
-            Data type of normalized images. If None (default), the input
+            Data type of normalized images. If not given, the input
             images' data type is used.
 
         Notes
         -----
         Data type should always be changed to floating point, e.g.
-        ``np.float32`` with
+        ``float32`` with
         :meth:`~hyperspy.signal.BaseSignal.change_dtype`, before
         normalizing the intensities.
+
+        Rescaling RGB images is not possible. Use RGB channel
+        normalization when creating the image instead.
 
         Examples
         --------
@@ -212,11 +215,6 @@ class CommonImage(Signal2D):
         >>> s.normalize_intensity(dtype_out=np.float32)  # doctest: +SKIP
         >>> np.mean(s.data)  # doctest: +SKIP
         2.6373216e-08
-
-        Notes
-        -----
-        Rescaling RGB images is not possible. Use RGB channel
-        normalization when creating the image instead.
         """
         if self.data.dtype in rgb_dtypes.values():
             raise NotImplementedError(

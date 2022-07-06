@@ -18,7 +18,7 @@
 import copy
 import gc
 import sys
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 import warnings
 
 import dask.array as da
@@ -49,24 +49,46 @@ class EBSDMasterPattern(CommonImage, Signal2D):
     """Simulated Electron Backscatter Diffraction (EBSD) master pattern.
 
     This class extends HyperSpy's Signal2D class for EBSD master
-    patterns. Methods inherited from HyperSpy can be found in the
-    HyperSpy user guide. See the docstring of
-    :class:`hyperspy.signal.BaseSignal` for a list of additional
-    attributes.
+    patterns.
 
-    Attributes
+    See the documentation of
+    :class:`~hyperspy._signals.signal2d.Signal2D` for the list of
+    inherited attributes and methods.
+
+    Parameters
     ----------
+    *args
+        See :class:`~hyperspy._signals.signal2d.Signal2D`.
+    hemisphere : str
+        Which hemisphere the data contains, either ``"upper"``,
+        ``"lower"``, or ``"both"``.
+    phase : ~orix.crystal_map.Phase
+        The phase describing the crystal structure used in the master
+        pattern simulation.
     projection : str
         Which projection the pattern is in, ``"stereographic"`` or
         ``"lambert"``.
-    hemisphere : str
-        Which hemisphere the data contains: ``"upper"`` (previously
-        ``"north"``), ``"lower"`` (previously ``"south"``) or
-        ``"both"``.
-    phase : orix.crystal_map.Phase
-        Phase describing the crystal structure used in the master
-        pattern simulation.
+    **kwargs
+        See :class:`~hyperspy._signals.signal2d.Signal2D`.
 
+    See Also
+    --------
+    kikuchipy.data.nickel_ebsd_master_pattern_small :
+        A nickel EBSD master pattern dynamically simulated with
+        *EMsoft*.
+
+    Examples
+    --------
+    >>> import kikuchipy as kp
+    >>> s = kp.data.nickel_ebsd_master_pattern_small()
+    >>> s
+    <EBSDMasterPattern, title: ni_mc_mp_20kv_uint8_gzip_opts9, dimensions: (|401, 401)>
+    >>> s.hemisphere
+    'upper'
+    >>> s.phase
+    <name: ni/ni. space group: Fm-3m. point group: m-3m. proper point group: 432. color: tab:blue>
+    >>> s.projection
+    'stereographic'
     """
 
     _signal_type = "EBSDMasterPattern"
@@ -75,15 +97,11 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
     # ---------------------- Custom properties ----------------------- #
 
-    phase = Phase()
-    projection = None
-    _hemisphere = None
-
     def __init__(self, *args, **kwargs):
         Signal2D.__init__(self, *args, **kwargs)
-        self.phase = kwargs.pop("phase", Phase())
-        self.projection = kwargs.pop("projection", None)
         self._hemisphere = kwargs.pop("hemisphere", None)
+        self._phase = kwargs.pop("phase", Phase())
+        self._projection = kwargs.pop("projection", None)
 
     @property
     def _has_multiple_energies(self):
@@ -91,6 +109,16 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
     @property
     def hemisphere(self) -> str:
+        """Return or set which hemisphere the data contains.
+
+        Options are ``"upper"`` (previously ``"north"``), ``"lower"``
+        (previously ``"south"``) or ``"both"``.
+
+        Parameters
+        ----------
+        value
+            Which projection the pattern is in.
+        """
         if self._hemisphere in ["upper", "north"]:
             return "upper"
         elif self._hemisphere in ["lower", "south"]:
@@ -116,12 +144,44 @@ class EBSDMasterPattern(CommonImage, Signal2D):
                 value = "lower"
         self._hemisphere = value
 
+    @property
+    def phase(self) -> Phase:
+        """Return or set the phase describing the crystal structure used
+        in the master pattern simulation.
+
+        Parameters
+        ----------
+        value
+            The phase used in the master pattern simulation.
+        """
+        return self._phase
+
+    @phase.setter
+    def phase(self, value: Phase):
+        self._phase = value
+
+    @property
+    def projection(self) -> str:
+        """Return or set which projection the pattern is in,
+        ``"stereographic"`` or ``"lambert"``.
+
+        Parameters
+        ----------
+        value
+            Which projection the pattern is in.
+        """
+        return self._projection
+
+    @projection.setter
+    def projection(self, value: str):
+        self._projection = value
+
     def get_patterns(
         self,
         rotations: Rotation,
         detector: EBSDDetector,
         energy: Union[int, float],
-        dtype_out: Union[type, np.dtype] = np.float32,
+        dtype_out: Union[type, np.dtype] = np.dtype("float32"),
         compute: bool = False,
         **kwargs,
     ) -> Union[EBSD, LazyEBSD]:
@@ -147,29 +207,29 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             energy is present in the signal, this will be returned no
             matter its energy.
         dtype_out
-            Data type of the returned patterns, by default np.float32.
+            Data type of the returned patterns, by default ``float32``.
         compute
-            Whether to return a lazy result, by default False. For more
-            information see :func:`~dask.array.Array.compute`.
-        kwargs
+            Whether to return a lazy result, by default ``False``. For
+            more information see :func:`~dask.array.Array.compute`.
+        **kwargs
             Keyword arguments passed to
             :func:`~kikuchipy.signals.util.get_chunking` to control the
             number of chunks the dictionary creation and the output data
-            array is split into. Only `chunk_shape`, `chunk_bytes` and
-            `dtype_out` (to `dtype`) are passed on.
+            array is split into. Only ``chunk_shape``, ``chunk_bytes``
+            and ``dtype_out`` (to ``dtype``) are passed on.
 
         Returns
         -------
-        EBSD or LazyEBSD
+        out
             Signal with navigation and signal shape equal to the
             rotation instance and detector shape, respectively.
 
         Notes
         -----
-        If the master pattern phase has a non-centrosymmetric point
-        group, both the upper and lower hemispheres must be provided.
-        For more details regarding the reference frame visit the
-        reference frame user guide.
+        If the master pattern :attr:`phase` has a non-centrosymmetric
+        point group, both the upper and lower hemispheres must be
+        provided. For more details regarding the reference frame visit
+        the reference frame tutorial.
         """
         self._is_suitable_for_projection(raise_if_not=True)
 
@@ -297,7 +357,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         style: str = "surface",
         plotter_kwargs: Union[dict] = None,
         show_kwargs: Union[dict] = None,
-    ):
+    ) -> "pyvista.Plotter":
         """Plot the master pattern sphere.
 
         This requires the master pattern to be in the stereographic
@@ -328,12 +388,13 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         Returns
         -------
-        pl : pyvista.Plotter
+        pl
             Only returned if ``return_figure`` is ``True``.
 
         Notes
         -----
-        Requires :mod:`pyvista`.
+        Requires :mod:`pyvista` (see :ref:`the installation guide
+        <install-with-pip>`).
 
         Examples
         --------
@@ -396,14 +457,15 @@ class EBSDMasterPattern(CommonImage, Signal2D):
                 show_kwargs = {}
             pl.show(**show_kwargs)
 
-    def as_lambert(self):
-        """Return a new master pattern in the Lambert projection.
+    def as_lambert(self) -> "EBSDMasterPattern":
+        """Return a new master pattern in the Lambert projection
+        :cite:`callahan2013dynamical`.
 
         Only implemented for non-lazy signals.
 
         Returns
         -------
-        EBSDMasterPattern
+        lambert_master_pattern
             Master pattern in the Lambert projection with the same data
             shape but in 32-bit floating point data dtype.
 
@@ -416,6 +478,9 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         >>> mp_lp = mp_sp.as_lambert()
         >>> mp_lp.projection
         'lambert'
+
+        >>> import hyperspy.api as hs
+        >>> _ = hs.plot.plot_images([mp_sp, mp_lp], per_row=2)
         """
         if self.projection == "lambert":
             warnings.warn(
@@ -471,12 +536,41 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
     # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
 
-    def deepcopy(self):
+    def deepcopy(self) -> "EBSDMasterPattern":
+        """Return a deep copy using :func:`copy.deepcopy`.
+
+        Parameters
+        ----------
+        new
+            Identical master pattern without shared memory.
+        """
         new = super().deepcopy()
         new.phase = self.phase.deepcopy()
         new.projection = copy.deepcopy(self.projection)
         new.hemisphere = copy.deepcopy(self.hemisphere)
         return new
+
+    # -- Inherited methods included here for documentation purposes -- #
+
+    def rescale_intensity(
+        self,
+        relative: bool = False,
+        in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
+        percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+    ) -> None:
+        return super().rescale_intensity(
+            relative, in_range, out_range, dtype_out, percentiles
+        )
+
+    def normalize_intensity(
+        self,
+        num_std: int = 1,
+        divide_by_square_root: bool = False,
+        dtype_out: Optional[np.dtype] = None,
+    ) -> None:
+        return super().normalize_intensity(num_std, divide_by_square_root, dtype_out)
 
     # ------------------------ Private methods ----------------------- #
 
@@ -495,8 +589,10 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         Returns
         -------
-        master_upper, master_lower
-            Upper and lower hemispheres of master pattern.
+        master_upper
+            Upper hemisphere of the master pattern.
+        master_lower
+            Lower hemisphere of master pattern.
         """
         if self._has_multiple_energies:
             if energy is None:
@@ -510,7 +606,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             master_upper = master_lower = master_patterns
         return master_upper, master_lower
 
-    def _is_suitable_for_projection(self, raise_if_not: bool = False):
+    def _is_suitable_for_projection(self, raise_if_not: bool = False) -> bool:
         """Check whether the master pattern is suitable for projection
         onto an EBSD detector and return a bool or raise an error
         message if desired.
@@ -542,13 +638,18 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
 
 class LazyEBSDMasterPattern(EBSDMasterPattern, LazySignal2D):
-    """Lazy implementation of the :class:`EBSDMasterPattern` class.
+    """Lazy implementation of the ``EBSDMasterPattern`` class.
 
     This class extends HyperSpy's LazySignal2D class for EBSD master
-    patterns. Methods inherited from HyperSpy can be found in the
-    HyperSpy user guide. See docstring of :class:`EBSDMasterPattern`
-    for attributes and methods.
+    patterns.
 
+    See the docstring of :class:`EBSDMasterPattern` for attributes and
+    methods.
+
+    See the documentation of
+    :class:`~hyperspy._signals.signal2d.LazySignal2D` for how to
+    initialize a ``LazyEBSDMasterPattern`` signal and the list of
+    inherited attributes and methods.
     """
 
     _lazy = True

@@ -17,6 +17,16 @@
 
 """Experimental and simulated diffraction patterns and virtual
 backscatter electron images.
+
+.. rubric:: Modules
+
+.. currentmodule:: kikuchipy.signals
+
+.. autosummary::
+    :toctree: ../generated/
+    :template: custom-module-template.rst
+
+    util
 """
 
 from kikuchipy.signals import util
@@ -29,8 +39,8 @@ from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 
 __all__ = [
     "EBSD",
-    "EBSDMasterPattern",
     "LazyEBSD",
+    "EBSDMasterPattern",
     "LazyEBSDMasterPattern",
     "util",
     "VirtualBSEImage",

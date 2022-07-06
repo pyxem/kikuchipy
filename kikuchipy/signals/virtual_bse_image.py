@@ -15,7 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Optional, Tuple, Union
+
 from hyperspy._signals.signal2d import Signal2D
+import numpy as np
 
 from kikuchipy.signals._common_image import CommonImage
 
@@ -25,11 +28,8 @@ class VirtualBSEImage(CommonImage, Signal2D):
 
     This class extends HyperSpy's Signal2D class for virtual BSE images.
 
-    Methods inherited from HyperSpy can be found in the HyperSpy user
-    guide.
-
-    See the docstring of :class:`hyperspy.signal.BaseSignal` for a list
-    of attributes.
+    See the docstring of :class:`~hyperspy._signals.signal2d.Signal2D`
+    for a list of attributes and methods.
     """
 
     _signal_type = "VirtualBSEImage"
@@ -38,3 +38,25 @@ class VirtualBSEImage(CommonImage, Signal2D):
 
     def __init__(self, *args, **kwargs):
         Signal2D.__init__(self, *args, **kwargs)
+
+    # -- Inherited methods included here for documentation purposes -- #
+
+    def rescale_intensity(
+        self,
+        relative: bool = False,
+        in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
+        percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+    ) -> None:
+        return super().rescale_intensity(
+            relative, in_range, out_range, dtype_out, percentiles
+        )
+
+    def normalize_intensity(
+        self,
+        num_std: int = 1,
+        divide_by_square_root: bool = False,
+        dtype_out: Optional[np.dtype] = None,
+    ) -> None:
+        return super().normalize_intensity(num_std, divide_by_square_root, dtype_out)

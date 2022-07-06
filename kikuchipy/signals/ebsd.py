@@ -86,14 +86,58 @@ from kikuchipy._util import deprecated, deprecated_argument
 class EBSD(CommonImage, Signal2D):
     """Scan of Electron Backscatter Diffraction (EBSD) patterns.
 
-    This class extends HyperSpy's Signal2D class for EBSD patterns, with
-    common intensity processing methods and some analysis methods.
+    This class extends HyperSpy's Signal2D class for EBSD patterns. See
+    the docstring of :class:`~hyperspy._signals.signal2d.Signal2D` for
+    the list of inherited attributes and methods.
 
-    Methods inherited from HyperSpy can be found in the HyperSpy user
-    guide.
+    Parameters
+    ----------
+    *args
+        See :class:`~hyperspy._signals.signal2d.Signal2D`.
+    detector : EBSDDetector, optional
+        Detector describing the EBSD detector-sample geometry. If not
+        given, this is a default detector (see :class:`EBSDDetector`).
+    static_background : ~numpy.ndarray or ~dask.array.Array, optional
+        Static background pattern. If not given, this is ``None``.
+    xmap : ~orix.crystal_map.CrystalMap
+        Crystal map containing the phases, unit cell rotations and
+        auxiliary properties of the EBSD dataset. If not given, this is
+        ``None``.
+    **kwargs
+        See :class:`~hyperspy._signals.signal2d.Signal2D`.
 
-    See the docstring of :class:`hyperspy.signal.BaseSignal` for a list
-    of attributes in addition to the ones listed below.
+    See Also
+    --------
+    kikuchipy.data.nickel_ebsd_small :
+        An EBSD signal with ``(3, 3)`` experimental nickel patterns.
+    kikuchipy.data.nickel_ebsd_large :
+        An EBSD signal with ``(55, 75)`` experimental nickel patterns.
+    kikuchipy.data.silicon_ebsd_moving_screen_in :
+        An EBSD signal with one experimental silicon patterns.
+    kikuchipy.data.silicon_ebsd_moving_screen_out5mm :
+        An EBSD signal with one experimental silicon patterns.
+    kikuchipy.data.silicon_ebsd_moving_screen_out10mm :
+        An EBSD signal with one experimental silicon patterns.
+
+    Examples
+    --------
+    Load one of the example datasets and inspect some properties
+
+    >>> import kikuchipy as kp
+    >>> s = kp.data.nickel_ebsd_small()
+    >>> s
+    <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
+    >>> s.detector
+    EBSDDetector (60, 60), px_size 1.0 um, binning 1, tilt 0, azimuthal 0, pc (0.5, 0.5, 0.5)
+    >>> s.static_background
+    array([[84, 87, 90, ..., 27, 29, 30],
+           [87, 90, 93, ..., 27, 28, 30],
+           [92, 94, 97, ..., 39, 28, 29],
+           ...,
+           [80, 82, 84, ..., 36, 30, 26],
+           [79, 80, 82, ..., 28, 26, 26],
+           [76, 78, 80, ..., 26, 26, 25]], dtype=uint8)
+    >>> s.xmap  # Empty, since it is not set
     """
 
     _signal_type = "EBSD"
@@ -102,11 +146,6 @@ class EBSD(CommonImage, Signal2D):
     _custom_properties = ["detector", "static_background", "xmap"]
 
     def __init__(self, *args, **kwargs):
-        """Create an :class:`~kikuchipy.signals.EBSD` instance from a
-        :class:`hyperspy.signals.Signal2D` or a :class:`numpy.ndarray`.
-        See the docstring of :class:`hyperspy.signal.BaseSignal` for
-        optional input parameters.
-        """
         Signal2D.__init__(self, *args, **kwargs)
 
         self._detector = kwargs.pop(
@@ -133,9 +172,13 @@ class EBSD(CommonImage, Signal2D):
 
     @property
     def detector(self) -> EBSDDetector:
-        """An :class:`~kikuchipy.detectors.ebsd_detector.EBSDDetector`
-        describing the EBSD detector dimensions, the projection/pattern
-        centre, and the detector-sample geometry.
+        """Return or set the detector describing the EBSD
+        detector-sample geometry.
+
+        Parameters
+        ----------
+        value
+            EBSD detector.
         """
         return self._detector
 
@@ -151,9 +194,14 @@ class EBSD(CommonImage, Signal2D):
 
     @property
     def xmap(self) -> CrystalMap:
-        """A :class:`~orix.crystal_map.CrystalMap` containing the
-        phases, unit cell rotations and auxiliary properties of the EBSD
-        data set.
+        """Return or set the crystal map containing the phases, unit
+        cell rotations and auxiliary properties of the EBSD dataset.
+
+        Parameters
+        ----------
+        value
+            Crystal map with the same shape as the signal navigation
+            shape.
         """
         return self._xmap
 
@@ -166,7 +214,14 @@ class EBSD(CommonImage, Signal2D):
 
     @property
     def static_background(self) -> Union[None, np.ndarray, da.Array]:
-        """Static background pattern."""
+        """Return or set the static background pattern.
+
+        Parameters
+        ----------
+        value
+            Static background pattern with the same (signal) shape and
+            data type as the EBSD signal.
+        """
         return self._static_background
 
     @static_background.setter
@@ -179,7 +234,9 @@ class EBSD(CommonImage, Signal2D):
 
     # ------------------------ Custom methods ------------------------ #
 
-    @deprecated(since="0.5", removal="0.6")
+    @deprecated(
+        since="0.5", removal="0.6", alternative="kikuchipy.detectors.EBSDDetector"
+    )
     def set_experimental_parameters(
         self,
         detector=None,
@@ -203,49 +260,39 @@ class EBSD(CommonImage, Signal2D):
         version=None,
         microscope=None,
         magnification=None,
-    ):
+    ) -> None:
         """Set experimental parameters in signal metadata.
 
         Parameters
         ----------
+        detector : str, optional
+            Detector manufacturer and model.
         azimuth_angle : float, optional
             Azimuth angle of the detector in degrees. If the azimuth is
             zero, the detector is perpendicular to the tilt axis.
-        beam_energy : float, optional
-            Energy of the electron beam in kV.
-        binning : int, optional
-            Camera binning.
-        detector : str, optional
-            Detector manufacturer and model.
         elevation_angle : float, optional
             Elevation angle of the detector in degrees. If the elevation
             is zero, the detector is perpendicular to the incident beam.
+        sample_tilt : float, optional
+            Sample tilt angle from horizontal in degrees.
+        working_distance : float, optional
+            Working distance in mm.
+        binning : int, optional
+            Camera binning.
         exposure_time : float, optional
             Camera exposure time in µs.
+        grid_type : str, optional
+            Scan grid type, only square grid is supported.
+        gain : float, optional
+            Camera gain, typically in dB.
         frame_number : float, optional
             Number of patterns integrated during acquisition.
         frame_rate : float, optional
             Frames per s.
-        gain : float, optional
-            Camera gain, typically in dB.
-        grid_type : str, optional
-            Scan grid type, only square grid is supported.
-        manufacturer : str, optional
-            Manufacturer of software used to collect patterns.
-        microscope : str, optional
-            Microscope used to collect patterns.
-        magnification : int, optional
-            Microscope magnification at which patterns were collected.
-        sample_tilt : float, optional
-            Sample tilt angle from horizontal in degrees.
         scan_time : float, optional
             Scan time in s.
-        static_background : numpy.ndarray, optional
-            Static background pattern.
-        version : str, optional
-            Version of software used to collect patterns.
-        working_distance : float, optional
-            Working distance in mm.
+        beam_energy : float, optional
+            Energy of the electron beam in kV.
         xpc : float, optional
             Pattern centre horizontal coordinate with respect to
             detector centre, as viewed from the detector to the sample.
@@ -254,20 +301,30 @@ class EBSD(CommonImage, Signal2D):
             detector centre, as viewed from the detector to the sample.
         zpc : float, optional
             Specimen to scintillator distance.
+        static_background : numpy.ndarray, optional
+            Static background pattern.
+        manufacturer : str, optional
+            Manufacturer of software used to collect patterns.
+        version : str, optional
+            Version of software used to collect patterns.
+        microscope : str, optional
+            Microscope used to collect patterns.
+        magnification : int, optional
+            Microscope magnification at which patterns were collected.
 
         See Also
         --------
-        ~kikuchipy.signals.EBSD.set_phase_parameters
+        set_phase_parameters
 
         Examples
         --------
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
         >>> node = kp.signals.util.metadata_nodes("ebsd")
-        >>> s.metadata.get_item(node + '.xpc')
+        >>> s.metadata.get_item(node + ".xpc")
         -5.64
         >>> s.set_experimental_parameters(xpc=0.50726)  # doctest: +SKIP
-        >>> s.metadata.get_item(node + '.xpc')  # doctest: +SKIP
+        >>> s.metadata.get_item(node + ".xpc")  # doctest: +SKIP
         0.50726
         """
         md = self.metadata
@@ -306,7 +363,12 @@ class EBSD(CommonImage, Signal2D):
             ebsd_node,
         )
 
-    @deprecated(since="0.5", removal="0.6")
+    @deprecated(
+        since="0.5",
+        removal="0.6",
+        alternative="kikuchipy.signals.EBSD.xmap",
+        alternative_is_function=False,
+    )
     def set_phase_parameters(
         self,
         number=1,
@@ -321,7 +383,7 @@ class EBSD(CommonImage, Signal2D):
         source=None,
         space_group=None,
         symmetry=None,
-    ):
+    ) -> None:
         """Set parameters for one phase in signal metadata.
 
         A phase node with default values is created if none is present
@@ -361,7 +423,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        ~kikuchipy.signals.EBSD.set_experimental_parameters
+        set_experimental_parameters
 
         Examples
         --------
@@ -374,11 +436,11 @@ class EBSD(CommonImage, Signal2D):
         └── site_occupation = 1
         >>> s.set_phase_parameters(
         ...     number=1,
-        ...     atom_coordinates={'1': {
-        ...         'atom': 'Fe',
-        ...         'coordinates': [0, 0, 0],
-        ...         'site_occupation': 1,
-        ...         'debye_waller_factor': 0.005
+        ...     atom_coordinates={"1": {
+        ...         "atom": "Fe",
+        ...         "coordinates": [0, 0, 0],
+        ...         "site_occupation": 1,
+        ...         "debye_waller_factor": 0.005
         ...     }}
         ... )  # doctest: +SKIP
         >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1  # doctest: +SKIP
@@ -414,7 +476,7 @@ class EBSD(CommonImage, Signal2D):
 
     def set_scan_calibration(
         self, step_x: Union[int, float] = 1.0, step_y: Union[int, float] = 1.0
-    ):
+    ) -> None:
         """Set the step size in microns.
 
         Parameters
@@ -426,7 +488,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        ~kikuchipy.signals.EBSD.set_detector_calibration
+        set_detector_calibration
 
         Examples
         --------
@@ -443,7 +505,7 @@ class EBSD(CommonImage, Signal2D):
         x.scale, y.scale = (step_x, step_y)
         x.units, y.units = ["um"] * 2
 
-    def set_detector_calibration(self, delta: Union[int, float]):
+    def set_detector_calibration(self, delta: Union[int, float]) -> None:
         """Set detector pixel size in microns. The offset is set to the
         the detector centre.
 
@@ -454,7 +516,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        ~kikuchipy.signals.EBSD.set_scan_calibration
+        set_scan_calibration
 
         Examples
         --------
@@ -479,7 +541,7 @@ class EBSD(CommonImage, Signal2D):
         relative: bool = False,
         static_bg: Union[None, np.ndarray, da.Array] = None,
         scale_bg: bool = False,
-    ):
+    ) -> None:
         """Remove the static background inplace.
 
         The removal is performed by subtracting or dividing by a static
@@ -516,7 +578,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        ~kikuchipy.signals.EBSD.remove_dynamic_background
+        remove_dynamic_background
 
         Examples
         --------
@@ -543,7 +605,6 @@ class EBSD(CommonImage, Signal2D):
         If the ``static_background`` property is ``None``, this must be
         passed in the ``static_bg`` parameter as a ``numpy`` or ``dask``
         array.
-
         """
         dtype = np.float32  # During processing
         dtype_out = self.data.dtype.type
@@ -611,7 +672,7 @@ class EBSD(CommonImage, Signal2D):
         std: Union[None, int, float] = None,
         truncate: Union[int, float] = 4.0,
         **kwargs,
-    ):
+    ) -> None:
         """Remove the dynamic background in an EBSD scan inplace.
 
         The removal is performed by subtracting or dividing by a
@@ -640,9 +701,9 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        kikuchipy.signals.EBSD.remove_static_background
-        kikuchipy.signals.EBSD.get_dynamic_background
-        kikuchipy.pattern.remove_dynamic_background
+        remove_static_background,
+        get_dynamic_background,
+        kikuchipy.pattern.remove_dynamic_background,
         kikuchipy.pattern.get_dynamic_background
 
         Examples
@@ -654,7 +715,6 @@ class EBSD(CommonImage, Signal2D):
         >>> s = kp.data.nickel_ebsd_small()
         >>> s.remove_static_background()  # doctest: +SKIP
         >>> s.remove_dynamic_background(operation="divide", std=5)  # doctest: +SKIP
-
         """
         if std is None:
             std = self.axes_manager.signal_shape[0] / 8
@@ -720,30 +780,30 @@ class EBSD(CommonImage, Signal2D):
         truncate: Union[int, float] = 4.0,
         dtype_out: Optional[np.dtype] = None,
         **kwargs,
-    ):
+    ) -> Union["EBSD", "LazyEBSD"]:
         """Get the dynamic background per EBSD pattern in a scan.
 
         Parameters
         ----------
         filter_domain
             Whether to apply a Gaussian convolution filter in the
-            "frequency" (default) or "spatial" domain.
+            ``"frequency"`` (default) or ``"spatial"`` domain.
         std
-            Standard deviation of the Gaussian window. If None
-            (default), it is set to width/8.
+            Standard deviation of the Gaussian window. If not given, it
+            is set to width/8.
         truncate
             Truncate the Gaussian filter at this many standard
-            deviations. Default is 4.0.
+            deviations. Default is ``4.0``.
         dtype_out
-            Data type of the background patterns. If None (default), it
-            is set to the same data type as the input pattern.
-        kwargs :
+            Data type of the background patterns. If not given, it is
+            set to the same data type as the input pattern.
+        **kwargs
             Keyword arguments passed to the Gaussian blurring function
-            determined from `filter_domain`.
+            determined from ``filter_domain``.
 
         Returns
         -------
-        background_signal : EBSD or LazyEBSD
+        background_signal
             Signal with the large scale variations across the detector.
         """
         if std is None:
@@ -802,7 +862,7 @@ class EBSD(CommonImage, Signal2D):
         kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
         clip_limit: Union[int, float] = 0,
         nbins: int = 128,
-    ):
+    ) -> None:
         """Enhance the local contrast in an EBSD scan inplace using
         adaptive histogram equalization.
 
@@ -816,46 +876,51 @@ class EBSD(CommonImage, Signal2D):
             image width.
         clip_limit
             Clipping limit, normalized between 0 and 1 (higher values
-            give more contrast). Default is 0.
+            give more contrast). Default is ``0``.
         nbins
             Number of gray bins for histogram ("data range"), default is
-            128.
+            ``128``.
 
-        See also
+        See Also
         --------
-        ~kikuchipy.signals.EBSD.rescale_intensity
-        ~kikuchipy.signals.EBSD.normalize_intensity
-
-        Examples
-        --------
-        To best understand how adaptive histogram equalization works,
-        we plot the histogram of the same image before and after
-        equalization:
-
-        >>> import numpy as np
-        >>> import matplotlib.pyplot as plt
-        >>> import kikuchipy as kp
-        >>> s = kp.data.nickel_ebsd_small()
-        >>> s2 = s.inav[0, 0].deepcopy()
-        >>> s2.adaptive_histogram_equalization()  # doctest: +SKIP
-        >>> hist, _ = np.histogram(
-        ...     s.inav[0, 0].data, bins=255, range=(0, 255)
-        ... )
-        >>> hist2, _ = np.histogram(s2.data, bins=255, range=(0, 255))
-        >>> fig, ax = plt.subplots(nrows=2, ncols=2)
-        >>> _ = ax[0, 0].imshow(s.inav[0, 0].data)
-        >>> _ = ax[1, 0].plot(hist)
-        >>> _ = ax[0, 1].imshow(s2.data)
-        >>> _ = ax[1, 1].plot(hist2)
+        kikuchipy.signals.EBSD.rescale_intensity,
+        kikuchipy.signals.EBSD.normalize_intensity
 
         Notes
         -----
-        * It is recommended to perform adaptive histogram equalization
-          only *after* static and dynamic background corrections,
-          otherwise some unwanted darkening towards the edges might
-          occur.
-        * The default window size might not fit all pattern sizes, so it
-          may be necessary to search for the optimal window size.
+        It is recommended to perform adaptive histogram equalization
+        only *after* static and dynamic background corrections,
+        otherwise some unwanted darkening towards the edges might
+        occur.
+
+        The default window size might not fit all pattern sizes, so it
+        may be necessary to search for the optimal window size.
+
+        Examples
+        --------
+        Load one pattern from the small nickel dataset, remove the
+        background and perform adaptive histogram equalization. A copy
+        without equalization is kept for comparison.
+
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small().inav[0, 0]
+        >>> s.remove_static_background()  # doctest: +SKIP
+        >>> s.remove_dynamic_background()  # doctest: +SKIP
+        >>> s2 = s.deepcopy()
+        >>> s2.adaptive_histogram_equalization()  # doctest: +SKIP
+
+        Compute the intensity histograms and plot the patterns and
+        histograms
+
+        >>> import numpy as np
+        >>> import matplotlib.pyplot as plt
+        >>> hist, _ = np.histogram(s.data, range=(0, 255))
+        >>> hist2, _ = np.histogram(s2.data, range=(0, 255))
+        >>> _, ((ax0, ax1), (ax2, ax3)) = plt.subplots(nrows=2, ncols=2)
+        >>> _ = ax0.imshow(s.data)
+        >>> _ = ax1.imshow(s2.data)
+        >>> _ = ax2.plot(hist)
+        >>> _ = ax3.plot(hist2)
         """
         # Determine window size (shape of contextual region)
         sig_shape = self.axes_manager.signal_shape
@@ -890,8 +955,8 @@ class EBSD(CommonImage, Signal2D):
     def get_image_quality(self, normalize: bool = True) -> Union[np.ndarray, da.Array]:
         """Compute the image quality map of patterns in an EBSD scan.
 
-        The image quality is calculated based on the procedure defined
-        by Krieger Lassen [Lassen1994]_.
+        The image quality :math:`Q` is calculated based on the procedure
+        defined by Krieger Lassen :cite:`lassen1994automated`.
 
         Parameters
         ----------
@@ -906,26 +971,27 @@ class EBSD(CommonImage, Signal2D):
             Image quality map of same shape as navigation axes. This is
             a Dask array if the signal is lazy.
 
-        References
-        ----------
-        .. [Lassen1994] N. C. K. Lassen, "Automated Determination of \
-            Crystal Orientations from Electron Backscattering \
-            Patterns," Institute of Mathematical Modelling, (1994).
-
-        Examples
-        --------
-        >>> import matplotlib.pyplot as plt
-        >>> import kikuchipy as kp
-        >>> s = kp.data.nickel_ebsd_small()
-        >>> iq = s.get_image_quality()  # doctest: +SKIP
-        >>> plt.imshow(iq)  # doctest: +SKIP
-
         See Also
         --------
         kikuchipy.pattern.get_image_quality
 
-        """
+        Examples
+        --------
+        Load an example dataset, remove the static and dynamic
+        background and compute :math:`Q`
 
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> s
+        <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
+        >>> s.remove_static_background()  # doctest: +SKIP
+        >>> s.remove_dynamic_background()  # doctest: +SKIP
+        >>> iq = s.get_image_quality()  # doctest: +SKIP
+        >>> iq  # doctest: +SKIP
+        array([[0.19935645, 0.16657268, 0.18803978],
+               [0.19040637, 0.1616931 , 0.17834103],
+               [0.19411428, 0.16031407, 0.18413563]], dtype=float32)
+        """
         # Calculate frequency vectors
         sx, sy = self.axes_manager.signal_shape
         frequency_vectors = fft_frequency_vectors((sy, sx))
@@ -957,7 +1023,7 @@ class EBSD(CommonImage, Signal2D):
 
     def dictionary_indexing(
         self,
-        dictionary,
+        dictionary: "EBSD",
         metric: Union[SimilarityMetric, str] = "ncc",
         keep_n: int = 20,
         n_per_iteration: Optional[int] = None,
@@ -969,90 +1035,91 @@ class EBSD(CommonImage, Signal2D):
         patterns of known orientations to index them
         :cite:`chen2015dictionary,jackson2019dictionary`.
 
-        A suitable similarity metric, the normalized cross-correlation
-        (:class:`~kikuchipy.indexing.similarity_metrics.NormalizedCrossCorrelationMetric`),
-        is used by default, but a valid user-defined similarity metric
-        may be used instead. The metric must be a class implementing the
-        :class:`~kikuchipy.indexing.similarity_metrics.SimilarityMetric`
-        abstract class methods. The normalized dot product
-        (:class:`~kikuchipy.indexing.similarity_metrics.NormalizedDotProductMetric`)
-        is available as well.
-
-        A :class:`~orix.crystal_map.CrystalMap` with "scores" and
-        "simulation_indices" as properties is returned.
+        A :class:`~orix.crystal_map.CrystalMap` with ``"scores"`` and
+        ``"simulation_indices"`` as properties is returned.
 
         Parameters
         ----------
-        dictionary : EBSD
+        dictionary
             EBSD signal with dictionary patterns. The signal must have a
-            1D navigation axis, an *xmap* property with crystal
+            1D navigation axis, an :attr:`xmap` property with crystal
             orientations set, and equal detector shape.
         metric
-            Similarity metric, by default "ncc" (normalized
-            cross-correlation). "ndp" (normalized dot product) is also
-            available.
+            Similarity metric, by default ``"ncc"`` (normalized
+            cross-correlation). ``"ndp"`` (normalized dot product) is
+            also available. A valid user-defined similarity metric
+            may be used instead. The metric must be a class implementing
+            the :class:`~kikuchipy.indexing.SimilarityMetric` abstract
+            class methods. See
+            :class:`~kikuchipy.indexing.NormalizedCrossCorrelationMetric`
+            and :class:`~kikuchipy.indexing.NormalizedDotProductMetric`
+            for examples.
         keep_n
             Number of best matches to keep, by default 20 or the number
             of dictionary patterns if fewer than 20 are available.
         n_per_iteration
             Number of dictionary patterns to compare to all experimental
             patterns in each indexing iteration. If not given, and the
-            dictionary is a LazyEBSD signal, it is equal to the chunk
-            size of the first pattern array axis, while if if is an EBSD
-            signal, it is set equal to the number of dictionary
-            patterns, yielding only one iteration. This parameter can be
-            increased to use less memory during indexing, but this will
-            increase the computation time.
+            dictionary is a ``LazyEBSD`` signal, it is equal to the
+            chunk size of the first pattern array axis, while if if is
+            an ``EBSD`` signal, it is set equal to the number of
+            dictionary patterns, yielding only one iteration. This
+            parameter can be increased to use less memory during
+            indexing, but this will increase the computation time.
+
+            .. versionadded:: 0.5
         signal_mask
             A boolean mask equal to the experimental patterns' detector
-            shape (n rows, n columns), where only pixels equal to False
-            are matched. If not given, all pixels are used.
+            shape ``(n rows, n columns)``, where only pixels equal to
+            ``False`` are matched. If not given, all pixels are used.
+
+            .. versionadded:: 0.5
         rechunk
-            Whether *metric* is allowed to rechunk experimental and
-            dictionary patterns before matching. Default is False. If a
-            custom *metric* is passed, whatever *metric.rechunk* is set
-            to will be used. Rechunking usually makes indexing faster,
-            but uses more memory.
+            Whether ``metric`` is allowed to rechunk experimental and
+            dictionary patterns before matching. Default is ``False``.
+            Rechunking usually makes indexing faster, but uses more
+            memory. If a custom ``metric`` is passed, whatever
+            :attr:`~kikuchipy.indexing.SimilarityMetric.rechunk` is set
+            to will be used.
+
+            .. versionadded:: 0.5
         dtype
-            Which data type *metric* shall cast the patterns to before
+            Which data type ``metric`` shall cast the patterns to before
             matching. If not given, :class:`~numpy.float32` will be
-            used unless a custom *metric* is passed and it has set the
-            *dtype* attribute, which will then be used instead.
-            :class:`~numpy.float32` and :class:`~numpy.float64` is
-            allowed for the available "ncc" and "ndp" metrics.
+            used unless a custom ``metric`` is passed and it has set the
+            :attr:`~kikuchipy.indexing.SimilarityMetric.dtype`, which
+            will then be used instead. :class:`~numpy.float32` and
+            :class:`~numpy.float64` are allowed for the available
+            ``"ncc"`` and ``"ndp"`` metrics.
+
+            .. versionadded:: 0.5
 
         Returns
         -------
-        xmap : ~orix.crystal_map.CrystalMap
-            A crystal map with *keep_n* rotations per point with the
+        xmap
+            A crystal map with ``keep_n`` rotations per point with the
             sorted best matching orientations in the dictionary. The
             corresponding best scores and indices into the dictionary
-            are stored in the *xmap.prop* dictionary as "scores" and
-            "simulation_indices".
-
-        Notes
-        -----
-        Merging of single phase crystal maps into one multi phase map
-        and calculations of an orientation similarity map can be done
-        afterwards with
-        :func:`~kikuchipy.indexing.merge_crystal_maps` and
-        :func:`~kikuchipy.indexing.orientation_similarity_map`,
-        respectively.
-
-        .. versionchanged:: 0.5
-           Only one dictionary can be passed, the *n_per_iteration*
-           parameter replaced *n_slices*, and the
-           *return_merged_crystal_map* and
-           *get_orientation_similarity_map* parameters were removed.
-
-        .. versionadded:: 0.5
-           The *signal_mask*, *rechunk*, and *dtype* parameters.
+            are stored in the ``xmap.prop`` dictionary as ``"scores"``
+            and ``"simulation_indices"``.
 
         See Also
         --------
-        ~kikuchipy.indexing.similarity_metrics.SimilarityMetric
-        ~kikuchipy.indexing.similarity_metrics.NormalizedCrossCorrelationMetric
-        ~kikuchipy.indexing.similarity_metrics.NormalizedDotProductMetric
+        kikuchipy.indexing.SimilarityMetric
+        kikuchipy.indexing.NormalizedCrossCorrelationMetric
+        kikuchipy.indexing.NormalizedDotProductMetric
+        kikuchipy.indexing.merge_crystal_maps :
+            Merge multiple single phase crystal maps into one multi
+            phase map.
+        kikuchipy.indexing.orientation_similarity_map :
+            Calculate an orientation similarity map.
+
+        Notes
+        -----
+        .. versionchanged:: 0.5
+           Only one dictionary can be passed and the
+           ``return_merged_crystal_map`` and
+           ``get_orientation_similarity_map`` parameters were removed.
         """
         exp_am = self.axes_manager
         dict_am = dictionary.axes_manager
@@ -1097,7 +1164,7 @@ class EBSD(CommonImage, Signal2D):
         self,
         xmap: CrystalMap,
         detector: EBSDDetector,
-        master_pattern,
+        master_pattern: "EBSDMasterPattern",
         energy: Union[int, float],
         mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
@@ -1106,19 +1173,18 @@ class EBSD(CommonImage, Signal2D):
         compute: bool = True,
         rechunk: bool = True,
         chunk_kwargs: Optional[dict] = None,
-    ):
+    ) -> Union[CrystalMap, da.Array]:
         r"""Refine orientations by searching orientation space around
         the best indexed solution using fixed projection centers.
 
-        Refinement attempts to optimize (maximize) the similarity
-        between patterns in this signal and simulated patterns
-        projected from a master pattern. The only supported similarity
-        metric is the normalized cross-correlation (NCC). The
-        orientation, represented by three Euler angles
-        (:math:`\phi_1`, :math:`\Phi`, :math:`\phi_2`), is changed
-        during projection, while the sample-detector geometry,
+        Refinement attempts to maximize the similarity between patterns
+        in this signal and simulated patterns projected from a master
+        pattern. The only supported similarity metric is the normalized
+        cross-correlation (NCC). The orientation, represented by three
+        Euler angles (:math:`\phi_1`, :math:`\Phi`, :math:`\phi_2`), is
+        changed during projection, while the sample-detector geometry,
         represented by the three projection center (PC) parameters
-        (PCx, PCy, PCz), are fixed.
+        (PCx, PCy, PCz), is fixed.
 
         A subset of the optimization methods in SciPy are available:
             - Local optimization:
@@ -1139,7 +1205,7 @@ class EBSD(CommonImage, Signal2D):
         detector
             Detector describing the detector-sample geometry with either
             one PC to be used for all map points or one for each point.
-        master_pattern : EBSDMasterPattern
+        master_pattern
             Master pattern in the square Lambert projection of the same
             phase as the one in the crystal map.
         energy
@@ -1148,49 +1214,50 @@ class EBSD(CommonImage, Signal2D):
             simulated patterns.
         mask
             Boolean mask of signal shape to be applied to the simulated
-            pattern before comparison. Pixels set to `True` are masked
+            pattern before comparison. Pixels set to ``True`` are masked
             away. If not given, all pixels are matched.
-        method : str, optional
+        method
             Name of the :mod:`scipy.optimize` optimization method, among
-            "minimize", "differential_evolution", "dual_annealing",
-            "basinhopping", and "shgo". Default is "minimize", which
-            by default performs local optimization with the Nelder-Mead
-            method unless another "minimize" method is passed to
-            `method_kwargs`.
+            ``"minimize"``, ``"differential_evolution"``,
+            ``"dual_annealing"``, ``"basinhopping"``, and ``"shgo"``.
+            Default is ``"minimize"``, which by default performs local
+            optimization with the Nelder-Mead method unless another
+            ``"minimize"`` method is passed to ``method_kwargs``.
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
-            `method`. For example, to perform refinement with the
-            modified Powell algorithm, pass `method="minimize"` and
-            `method_kwargs=dict(method="Powell")`.
+            ``method``. For example, to perform refinement with the
+            modified Powell algorithm, pass ``method="minimize"`` and
+            ``method_kwargs=dict(method="Powell")``.
         trust_region
             List of +/- angular deviation in degrees as bound
             constraints on the three Euler angles. If not given and
-            `method` requires bounds, they are set to [1, 1, 1]. If
-            given, `method` is assumed to support bounds and they are
-            passed to `method`.
+            ``method`` requires bounds, they are set to ``[1, 1, 1]``.
+            If given, ``method`` is assumed to support bounds and they
+            are passed to ``method``.
         compute
-            Whether to refine now (True) or later (False). Default is
-            True. See :meth:`~dask.array.Array.compute` for more
-            details.
+            Whether to refine now (``True``) or later (``False``).
+            Default is ``True``. See :meth:`~dask.array.Array.compute`
+            for more details.
         rechunk
-            If True (default), rechunk the dask array with patterns used
-            in refinement (not the signal data inplace) if it is
+            If ``True`` (default), rechunk the dask array with patterns
+            used in refinement (not the signal data inplace) if it is
             returned from :func:`~kikuchipy.signals.util.get_dask_array`
             in a single chunk. This ensures small data sets are
             rechunked so as to utilize multiple CPUs.
         chunk_kwargs
             Keyword arguments passed to
-            :func:`~kikuchipy.signals.util.get_chunking` if `rechunk` is
-            True and the dask array with patterns used in refinement is
-            returned from :func:`~kikuchipy.signals.util.get_dask_array`
-            in a single chunk.
+            :func:`~kikuchipy.signals.util.get_chunking` if
+            ``rechunk=True`` and the dask array with patterns used in
+            refinement is returned from
+            :func:`~kikuchipy.signals.util.get_dask_array` in a single
+            chunk.
 
         Returns
         -------
-        :class:`~orix.crystal_map.CrystalMap` or :class:`~dask.array.Array`
+        out
             Crystal map with refined orientations and similarity metrics
-            in a "scores" property if `compute` is True. If
-            `compute` is False, a dask array of navigation shape + (4,)
+            in a ``"scores"`` property if ``compute=True``. If
+            ``compute=False``, a dask array of navigation shape + (4,)
             is returned, to be computed later. See
             :func:`~kikuchipy.indexing.compute_refine_orientation_results`.
             Each navigation point has the optimized score and the three
@@ -1199,8 +1266,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        scipy.optimize
-        refine_projection_center
+        scipy.optimize, refine_projection_center,
         refine_orientation_projection_center
         """
         self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
@@ -1225,7 +1291,7 @@ class EBSD(CommonImage, Signal2D):
         self,
         xmap: CrystalMap,
         detector: EBSDDetector,
-        master_pattern,
+        master_pattern: "EBSDMasterPattern",
         energy: Union[int, float],
         mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
@@ -1234,17 +1300,17 @@ class EBSD(CommonImage, Signal2D):
         compute: bool = True,
         rechunk: bool = True,
         chunk_kwargs: Optional[dict] = None,
-    ):
+    ) -> Union[Tuple[np.ndarray, EBSDDetector], da.Array]:
         """Refine projection centers by searching the parameter space
         using fixed orientations.
 
-        Refinement attempts to optimize (maximize) the similarity
-        between patterns in this signal and simulated patterns projected
-        from a master pattern. The only supported similarity metric is
-        the normalized cross-correlation (NCC). The sample-detector
-        geometry, represented by the three projection center (PC)
-        parameters (PCx, PCy, PCz), is changed during projection, while
-        the orientations are fixed.
+        Refinement attempts to maximize the similarity between patterns
+        in this signal and simulated patterns projected from a master
+        pattern. The only supported similarity metric is the normalized
+        cross-correlation (NCC). The sample-detector geometry,
+        represented by the three projection center (PC) parameters
+        (PCx, PCy, PCz), is changed during projection, while the
+        orientations are fixed.
 
         A subset of the optimization methods in SciPy are available:
             - Local optimization:
@@ -1265,7 +1331,7 @@ class EBSD(CommonImage, Signal2D):
         detector
             Detector describing the detector-sample geometry with either
             one PC to be used for all map points or one for each point.
-        master_pattern : EBSDMasterPattern
+        master_pattern
             Master pattern in the square Lambert projection of the same
             phase as the one in the crystal map.
         energy
@@ -1274,49 +1340,50 @@ class EBSD(CommonImage, Signal2D):
             simulated patterns.
         mask
             Boolean mask of signal shape to be applied to the simulated
-            pattern before comparison. Pixels set to `True` are masked
+            pattern before comparison. Pixels set to ``True`` are masked
             away. If not given, all pixels are matched.
-        method : str, optional
+        method
             Name of the :mod:`scipy.optimize` optimization method, among
-            "minimize", "differential_evolution", "dual_annealing",
-            "basinhopping", and "shgo". Default is "minimize", which
-            by default performs local optimization with the Nelder-Mead
-            method unless another "minimize" method is passed to
-            `method_kwargs`.
+            ``"minimize"``, ``"differential_evolution"``,
+            ``"dual_annealing"``, ``"basinhopping"``, and ``"shgo"``.
+            Default is ``"minimize"``, which by default performs local
+            optimization with the Nelder-Mead method unless another
+            ``"minimize"`` method is passed to ``method_kwargs``.
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
-            `method`. For example, to perform refinement with the
-            modified Powell algorithm, pass `method="minimize"` and
-            `method_kwargs=dict(method="Powell")`.
+            ``method``. For example, to perform refinement with the
+            modified Powell algorithm, pass ``method="minimize"`` and
+            ``method_kwargs=dict(method="Powell")``.
         trust_region
             List of +/- percentage deviations as bound constraints on
             the PC parameters in the Bruker convention. The parameter
-            range is [0, 1]. If not given and `method` requires bounds,
-            they are set to [0.05, 0.05, 0.05]. If given, `method` is
-            assumed to support bounds and they are passed to `method`.
+            range is [0, 1]. If not given and ``method`` requires
+            bounds, they are set to ``[0.05, 0.05, 0.05]``. If given,
+            ``method`` is assumed to support bounds and they are passed
+            to ``method``.
         compute
-            Whether to refine now (True) or later (False). Default is
-            True. See :meth:`~dask.array.Array.compute` for more
-            details.
+            Whether to refine now (``True``) or later (``False``).
+            Default is ``True``. See :meth:`~dask.array.Array.compute`
+            for more details.
         rechunk
-            If True (default), rechunk the dask array with patterns used
-            in refinement (not the signal data inplace) if it is
+            If ``True`` (default), rechunk the dask array with patterns
+            used in refinement (not the signal data inplace) if it is
             returned from :func:`~kikuchipy.signals.util.get_dask_array`
             in a single chunk. This ensures small data sets are
             rechunked so as to utilize multiple CPUs.
         chunk_kwargs
             Keyword arguments passed to
-            :func:`~kikuchipy.signals.util.get_chunking` if `rechunk` is
-            True and the dask array with patterns used in refinement is
-            returned from :func:`~kikuchipy.signals.util.get_dask_array`
-            in a single chunk.
+            :func:`~kikuchipy.signals.util.get_chunking` if
+            ``rechunk=True`` and the dask array with patterns used in
+            refinement is returned from
+            :func:`~kikuchipy.signals.util.get_dask_array` in a single
+            chunk.
 
         Returns
         -------
-        :class:`numpy.ndarray` and :class:`~kikuchipy.detectors.EBSDDetector`,\
-        or :class:`~dask.array.Array`
+        out
             New similarity metrics and a new EBSD detector instance with
-            the refined PCs if `compute` is True. If `compute` is False,
+            the refined PCs if ``compute=True``. If ``compute=False``,
             a dask array of navigation shape + (4,) is returned, to be
             computed later. See
             :func:`~kikuchipy.indexing.compute_refine_projection_center_results`.
@@ -1326,8 +1393,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        scipy.optimize
-        refine_orientation
+        scipy.optimize, refine_orientation,
         refine_orientation_projection_center
         """
         self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
@@ -1352,7 +1418,7 @@ class EBSD(CommonImage, Signal2D):
         self,
         xmap: CrystalMap,
         detector: EBSDDetector,
-        master_pattern,
+        master_pattern: "EBSDMasterPattern",
         energy: Union[int, float],
         mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
@@ -1361,19 +1427,18 @@ class EBSD(CommonImage, Signal2D):
         compute: bool = True,
         rechunk: bool = True,
         chunk_kwargs: Optional[dict] = None,
-    ):
+    ) -> Union[Tuple[CrystalMap, EBSDDetector], da.Array]:
         r"""Refine orientations and projection centers simultaneously by
         searching the orientation and PC parameter space.
 
-        Refinement attempts to optimize (maximize) the similarity
-        between patterns in this signal and simulated patterns
-        projected from a master pattern. The only supported
-        similarity metric is the normalized cross-correlation (NCC).
-        The orientation, represented by three Euler angles
-        (:math:`\phi_1`, :math:`\Phi`, :math:`\phi_2`), and the
-        sample-detector geometry, represented by the three projection
-        center (PC) parameters (PCx, PCy, PCz), are changed during
-        projection.
+        Refinement attempts to maximize the similarity between patterns
+        in this signal and simulated patterns projected from a master
+        pattern. The only supported similarity metric is the normalized
+        cross-correlation (NCC). The orientation, represented by three
+        Euler angles (:math:`\phi_1`, :math:`\Phi`, :math:`\phi_2`), and
+        the sample-detector geometry, represented by the three
+        projection center (PC) parameters (PCx, PCy, PCz), are changed
+        during projection.
 
         A subset of the optimization methods in SciPy are available:
             - Local optimization:
@@ -1394,7 +1459,7 @@ class EBSD(CommonImage, Signal2D):
         detector
             Detector describing the detector-sample geometry with either
             one PC to be used for all map points or one for each point.
-        master_pattern : EBSDMasterPattern
+        master_pattern
             Master pattern in the square Lambert projection of the same
             phase as the one in the crystal map.
         energy
@@ -1403,52 +1468,53 @@ class EBSD(CommonImage, Signal2D):
             simulated patterns.
         mask
             Boolean mask of signal shape to be applied to the simulated
-            pattern before comparison. Pixels set to `True` are masked
+            pattern before comparison. Pixels set to ``True`` are masked
             away. If not given, all pixels are matched.
-        method : str, optional
+        method
             Name of the :mod:`scipy.optimize` optimization method, among
-            "minimize", "differential_evolution", "dual_annealing",
-            "basinhopping", and "shgo". Default is "minimize", which
-            by default performs local optimization with the Nelder-Mead
-            method unless another "minimize" method is passed to
-            `method_kwargs`.
+            ``"minimize"``, ``"differential_evolution"``,
+            ``"dual_annealing"``, ``"basinhopping"``, and ``"shgo"``.
+            Default is ``"minimize"``, which by default performs local
+            optimization with the Nelder-Mead method unless another
+            ``"minimize"`` method is passed to ``method_kwargs``.
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
-            `method`. For example, to perform refinement with the
-            modified Powell algorithm, pass `method="minimize"` and
-            `method_kwargs=dict(method="Powell")`.
+            ``method``. For example, to perform refinement with the
+            modified Powell algorithm, pass ``method="minimize"`` and
+            ``method_kwargs=dict(method="Powell")``.
         trust_region
             List of +/- angular deviations in degrees as bound
             constraints on the three Euler angles and +/- percentage
             deviations as bound constraints on the PC parameters in the
             Bruker convention. The latter parameter range is [0, 1]. If
-            not given and `method` requires bounds, they are set to
-            [1, 1, 1, 0.05, 0.05, 0.05]. If given, `method` is assumed
-            to support bounds and they are passed to `method`.
+            not given and ``method`` requires bounds, they are set to
+            ``[1, 1, 1, 0.05, 0.05, 0.05]``. If given, ``method`` is
+            assumed to support bounds and they are passed to ``method``.
         compute
-            Whether to refine now (True) or later (False). Default is
-            True. See :meth:`~dask.array.Array.compute` for more
-            details.
+            Whether to refine now (``True``) or later (``False``).
+            Default is ``True``. See :meth:`~dask.array.Array.compute`
+            for more details.
         rechunk
-            If True (default), rechunk the dask array with patterns used
-            in refinement (not the signal data inplace) if it is
+            If ``True`` (default), rechunk the dask array with patterns
+            used in refinement (not the signal data inplace) if it is
             returned from :func:`~kikuchipy.signals.util.get_dask_array`
             in a single chunk. This ensures small data sets are
             rechunked so as to utilize multiple CPUs.
         chunk_kwargs
             Keyword arguments passed to
-            :func:`~kikuchipy.signals.util.get_chunking` if `rechunk` is
-            True and the dask array with patterns used in refinement is
-            returned from :func:`~kikuchipy.signals.util.get_dask_array`
-            in a single chunk.
+            :func:`~kikuchipy.signals.util.get_chunking` if
+            ``rechunk=True`` and the dask array with patterns used in
+            refinement is returned from
+            :func:`~kikuchipy.signals.util.get_dask_array` in a single
+            chunk.
 
         Returns
         -------
-        :class:`~orix.crystal_map.CrystalMap` and :class:`~kikuchipy.detectors.EBSDDetector`, or :class:`~dask.array.Array`
+        out
             Crystal map with refined orientations and a new EBSD
-            detector instance with the refined PCs, if `compute` is
-            True. If `compute` is False, a dask array of navigation
-            shape + (7,) is returned, to be computed later. See
+            detector instance with the refined PCs, if ``compute=True``.
+            If ``compute=False``, a dask array of navigation shape +
+            (7,) is returned, to be computed later. See
             :func:`~kikuchipy.indexing.compute_refine_orientation_projection_center_results`.
             Each navigation point has the optimized score, the three
             Euler angles in radians, and the three PC parameters in the
@@ -1457,9 +1523,7 @@ class EBSD(CommonImage, Signal2D):
 
         See Also
         --------
-        scipy.optimize
-        refine_orientation
-        refine_projection_center
+        scipy.optimize, refine_orientation, refine_projection_center
 
         Notes
         -----
@@ -1494,17 +1558,17 @@ class EBSD(CommonImage, Signal2D):
         transfer_function: Union[np.ndarray, Window],
         function_domain: str,
         shift: bool = False,
-    ):
+    ) -> None:
         """Filter an EBSD scan inplace in the frequency domain.
 
         Patterns are transformed via the Fast Fourier Transform (FFT) to
         the frequency domain, where their spectrum is multiplied by the
-        `transfer_function`, and the filtered spectrum is subsequently
+        ``transfer_function``, and the filtered spectrum is subsequently
         transformed to the spatial domain via the inverse FFT (IFFT).
         Filtered patterns are rescaled to input data type range.
 
-        Note that if `function_domain` is "spatial", only real valued
-        FFT and IFFT is used.
+        Note that if ``function_domain`` is ``"spatial"``, only real
+        valued FFT and IFFT is used.
 
         Parameters
         ----------
@@ -1523,10 +1587,14 @@ class EBSD(CommonImage, Signal2D):
             Default is False. This is only used when
             `function_domain="frequency"`.
 
+        See Also
+        --------
+        Window
+
         Examples
         --------
         Applying a Gaussian low pass filter with a cutoff frequency of
-        20 to an EBSD object ``s``:
+        20:
 
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
@@ -1539,10 +1607,6 @@ class EBSD(CommonImage, Signal2D):
         ...     function_domain="frequency",
         ...     shift=True,
         ... )  # doctest: +SKIP
-
-        See Also
-        --------
-        ~kikuchipy.filters.window.Window
         """
         dtype_out = self.data.dtype
 
@@ -1593,7 +1657,7 @@ class EBSD(CommonImage, Signal2D):
         window: Optional[Window] = None,
         zero_mean: bool = True,
         normalize: bool = True,
-        dtype_out: np.dtype = np.float32,
+        dtype_out: np.dtype = np.dtype("float32"),
     ) -> Union[np.ndarray, da.Array]:
         """Get an array with dot products of a pattern and its
         neighbours within a window.
@@ -1602,24 +1666,26 @@ class EBSD(CommonImage, Signal2D):
         ----------
         window
             Window with integer coefficients defining the neighbours to
-            calculate the dot products with. If None (default), the four
+            calculate the dot products with. If not given, the four
             nearest neighbours are used. Must have the same number of
             dimensions as signal navigation dimensions.
         zero_mean
             Whether to subtract the mean of each pattern individually to
             center the intensities about zero before calculating the
-            dot products. Default is True.
+            dot products. Default is ``True``.
         normalize
             Whether to normalize the pattern intensities to a standard
             deviation of 1 before calculating the dot products. This
             operation is performed after centering the intensities if
-            `zero_mean` is True. Default is True.
+            ``zero_mean=True``. Default is ``True``.
         dtype_out
             Data type of the output map. Default is
-            :class:`numpy.float32`.
+            :class:`numpy.dtype.float32`.
 
         Returns
         -------
+        dp_matrices
+            Dot products between a pattern and its nearest neighbours.
         """
         if self.axes_manager.navigation_dimension == 0:
             raise ValueError("Signal must have at least one navigation dimension")
@@ -1667,7 +1733,7 @@ class EBSD(CommonImage, Signal2D):
         window: Optional[Window] = None,
         zero_mean: bool = True,
         normalize: bool = True,
-        dtype_out: np.dtype = np.float32,
+        dtype_out: type = np.dtype("float32"),
         dp_matrices: Optional[np.ndarray] = None,
     ) -> Union[np.ndarray, da.Array]:
         """Get a map of the average dot product between patterns and
@@ -1677,31 +1743,33 @@ class EBSD(CommonImage, Signal2D):
         ----------
         window
             Window with integer coefficients defining the neighbours to
-            calculate the average with. If None (default), the four
-            nearest neighbours are used. Must have the same number of
-            dimensions as signal navigation dimensions.
+            calculate the average with. If not given, the four nearest
+            neighbours are used. Must have the same number of dimensions
+            as signal navigation dimensions.
         zero_mean
             Whether to subtract the mean of each pattern individually to
             center the intensities about zero before calculating the
-            dot products. Default is True.
+            dot products. Default is ``True``.
         normalize
             Whether to normalize the pattern intensities to a standard
             deviation of 1 before calculating the dot products. This
             operation is performed after centering the intensities if
-            `zero_mean` is True. Default is True.
+            ``zero_mean=True``. Default is ``True``.
         dtype_out
             Data type of the output map. Default is
-            :class:`numpy.float32`.
+            :class:`numpy.dtype.float32`.
         dp_matrices
             Optional pre-calculated dot product matrices, by default
-            None. If an array is passed, the average dot product map
-            is calculated from this array. The `dp_matrices` array can
+            ``None``. If an array is passed, the average dot product map
+            is calculated from this array. The ``dp_matrices`` array can
             be obtained from :meth:`get_neighbour_dot_product_matrices`.
-            It's shape must correspond to the signal's navigation shape
+            Its shape must correspond to the signal's navigation shape
             and the window's shape.
 
         Returns
         -------
+        adp
+            Average dot product map.
         """
         if self.axes_manager.navigation_dimension == 0:
             raise ValueError("Signal must have at least one navigation dimension")
@@ -1766,7 +1834,7 @@ class EBSD(CommonImage, Signal2D):
         window: Union[str, np.ndarray, da.Array, Window] = "circular",
         window_shape: Tuple[int, ...] = (3, 3),
         **kwargs,
-    ):
+    ) -> None:
         """Average patterns inplace with its neighbours within a window.
 
         The amount of averaging is specified by the window coefficients.
@@ -1788,25 +1856,24 @@ class EBSD(CommonImage, Signal2D):
             element is considered to be in a corner if its radial
             distance to the origin (window centre) is shorter or equal
             to the half width of the window's longest axis. A 1D or 2D
-            :class:`numpy.ndarray`, :class:`dask.array.Array` or
+            :class:`~numpy.ndarray`, :class:`~dask.array.Array` or
             :class:`~kikuchipy.filters.Window` can also be passed.
         window_shape
             Shape of averaging window. Not used if a custom window or
-            :class:`~kikuchipy.util.window.Window` object is passed to
-            ``window``. This can be either 1D or 2D, and can be
-            asymmetrical. Default is (3, 3).
+            :class:`~kikuchipy.filters.Window` is passed to ``window``.
+            This can be either 1D or 2D, and can be asymmetrical.
+            Default is ``(3, 3)``.
         kwargs
             Keyword arguments passed to the available window type listed
-            in :func:`scipy.signal.windows.get_window`. If not given,
+            in :func:`~scipy.signal.windows.get_window`. If not given,
             the default values of that particular window are used.
 
         See Also
         --------
-        ~kikuchipy.filters.window.Window
-        :func:`scipy.signal.windows.get_window`
-        :func:`scipy.ndimage.correlate`
+        kikuchipy.filters.Window, scipy.signal.windows.get_window,
+        scipy.ndimage.correlate
         """
-        if isinstance(window, Window) and window.is_valid():
+        if isinstance(window, Window) and window.is_valid:
             averaging_window = copy.copy(window)
         else:
             averaging_window = Window(window=window, shape=window_shape, **kwargs)
@@ -1898,7 +1965,7 @@ class EBSD(CommonImage, Signal2D):
         roi: BaseInteractiveROI,
         out_signal_axes: Union[None, Iterable[int], Iterable[str]] = None,
         **kwargs,
-    ):
+    ) -> None:
         """Plot an interactive virtual backscatter electron (VBSE)
         image formed from intensities within a specified and adjustable
         region of interest (ROI) on the detector.
@@ -1912,11 +1979,14 @@ class EBSD(CommonImage, Signal2D):
             Any interactive ROI detailed in HyperSpy.
         out_signal_axes
             Which navigation axes to use as signal axes in the virtual
-            image. If None (default), the first two navigation axes are
-            used.
+            image. If not given, the first two navigation axes are used.
         **kwargs:
-            Keyword arguments passed to the `plot` method of the virtual
-            image.
+            Keyword arguments passed to the ``plot()`` method of the
+            virtual image.
+
+        See Also
+        --------
+        get_virtual_bse_intensity
 
         Examples
         --------
@@ -1927,10 +1997,6 @@ class EBSD(CommonImage, Signal2D):
         ...     left=0, right=5, top=0, bottom=5
         ... )
         >>> s.plot_virtual_bse_intensity(rect_roi)
-
-        See Also
-        --------
-        ~kikuchipy.signals.EBSD.get_virtual_bse_intensity
         """
         # Plot signal if necessary
         if self._plot is None or not self._plot.is_active:
@@ -1973,14 +2039,17 @@ class EBSD(CommonImage, Signal2D):
             Any interactive ROI detailed in HyperSpy.
         out_signal_axes
             Which navigation axes to use as signal axes in the virtual
-            image. If None (default), the first two navigation axes are
-            used.
+            image. If not given, the first two navigation axes are used.
 
         Returns
         -------
-        virtual_image : kikuchipy.signals.VirtualBSEImage
+        virtual_image
             VBSE image formed from detector intensities within an ROI
             on the detector.
+
+        See Also
+        --------
+        plot_virtual_bse_intensity
 
         Examples
         --------
@@ -1991,10 +2060,6 @@ class EBSD(CommonImage, Signal2D):
         ... )
         >>> s = kp.data.nickel_ebsd_small()
         >>> vbse_image = s.get_virtual_bse_intensity(rect_roi)
-
-        See Also
-        --------
-        ~kikuchipy.signals.EBSD.plot_virtual_bse_intensity
         """
         vbse = roi(self, axes=self.axes_manager.signal_axes)
         vbse_sum = self._get_sum_signal(vbse, out_signal_axes)
@@ -2004,13 +2069,13 @@ class EBSD(CommonImage, Signal2D):
 
     # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
 
-    def as_lazy(self, *args, **kwargs):
+    def as_lazy(self, *args, **kwargs) -> "EBSD":
         new = super().as_lazy(*args, **kwargs)
         if self.static_background is not None:
             new._static_background = da.asarray(self.static_background)
         return new
 
-    def deepcopy(self):
+    def deepcopy(self) -> "EBSD":
         new = super().deepcopy()
         try:
             new._xmap = self.xmap.deepcopy()
@@ -2029,18 +2094,15 @@ class EBSD(CommonImage, Signal2D):
         overwrite: Optional[bool] = None,
         extension: Optional[str] = None,
         **kwargs,
-    ):
+    ) -> None:
         """Write the signal to file in the specified format.
 
-        The function gets the format from the extension: `h5`, `hdf5` or
-        `h5ebsd` for kikuchipy's specification of the the h5ebsd
-        format, `dat` for the NORDIF binary format or `hspy` for
-        HyperSpy's HDF5 specification. If no extension is provided the
-        signal is written to a file in kikuchipy's h5ebsd format. Each
-        format accepts a different set of parameters.
-
-        For details see the specific format documentation under "See
-        Also" below.
+        The function gets the format from the extension: ``h5``,
+        ``hdf5`` or ``h5ebsd`` for kikuchipy's specification of the
+        h5ebsd format, ``dat`` for the NORDIF binary format or ``hspy``
+        for HyperSpy's HDF5 specification. If no extension is provided
+        the signal is written to a file in kikuchipy's h5ebsd format.
+        Each format accepts a different set of parameters.
 
         This method is a modified version of HyperSpy's function
         :meth:`hyperspy.signal.BaseSignal.save`.
@@ -2048,27 +2110,29 @@ class EBSD(CommonImage, Signal2D):
         Parameters
         ----------
         filename
-            If None (default) and `tmp_parameters.filename` and
-            `tmp_parameters.folder` in signal metadata are defined, the
-            filename and path will be taken from there. A valid
-            extension can be provided e.g. "data.h5", see `extension`.
+            If not given and ``tmp_parameters.filename`` and
+            ``tmp_parameters.folder`` in signal metadata are defined,
+            the filename and path will be taken from there. A valid
+            extension can be provided e.g. ``"data.h5"``, see
+            ``extension``.
         overwrite
-            If None and the file exists, it will query the user. If
-            True (False) it (does not) overwrite the file if it exists.
+            If not given and the file exists, it will query the user. If
+            ``True`` (``False``) it (does not) overwrite the file if it
+            exists.
         extension
             Extension of the file that defines the file format. Options
-            are "h5"/"hdf5"/"h5ebsd"/"dat"/"hspy". "h5"/"hdf5"/"h5ebsd"
-            are equivalent. If None, the extension is determined from
+            are ``"h5"``, ``"hdf5"``, ``"h5ebsd"``, ``"dat"``,
+            ``"hspy"``. ``"h5"``, ``"hdf5"``, and ``"h5ebsd"`` are
+            equivalent. If not given, the extension is determined from
             the following list in this order: i) the filename, ii)
-            `tmp_parameters.extension` or iii) "h5" (kikuchipy's h5ebsd
-            format).
-        **kwargs :
-            Keyword arguments passed to writer.
+            ``tmp_parameters.extension`` or iii) ``"h5"`` (kikuchipy's
+            h5ebsd format).
+        **kwargs
+            Keyword arguments passed to the writer.
 
         See Also
         --------
-        kikuchipy.io.plugins.h5ebsd.file_writer
-        kikuchipy.io.plugins.nordif.file_writer
+        kikuchipy.io.plugins
         """
         if filename is None:
             tmp_params = self.tmp_parameters
@@ -2087,33 +2151,36 @@ class EBSD(CommonImage, Signal2D):
     def get_decomposition_model(
         self,
         components: Union[None, int, List[int]] = None,
-        dtype_out: np.dtype = np.float32,
-    ):
+        dtype_out: np.dtype = np.dtype("float32"),
+    ) -> Union["EBSD", "LazyEBSD"]:
         """Get the model signal generated with the selected number of
         principal components from a decomposition.
 
         Calls HyperSpy's
-        :meth:`hyperspy.learn.mva.MVA.get_decomposition_model`.
+        :meth:`~hyperspy.learn.mva.MVA.get_decomposition_model`.
         Learning results are preconditioned before this call, doing the
-        following: (1) set :class:`numpy.dtype` to desired
-        `dtype_out`, (2) remove unwanted components, and (3) rechunk,
-        if :class:`dask.array.Array`, to suitable chunks.
+        following:
+
+        1. Set :class:`numpy.dtype` to desired ``dtype_out``.
+        2. Remove unwanted components.
+        3. Rechunk to suitable chunks if :class:`~dask.array.Array`.
 
         Parameters
         ----------
         components
-            If None (default), rebuilds the signal from all components.
-            If int, rebuilds signal from `components` in range 0-given
-            int. If list of ints, rebuilds signal from only `components`
-            in given list.
+            If not given, rebuilds the signal from all components.
+            If ``int``, rebuilds signal from ``components`` in range
+            0-given ``int``. If list of ``ints``, rebuilds signal from
+            only ``components`` in given list.
         dtype_out
             Data type to cast learning results to (default is
-            :class:`numpy.float32`). Note that HyperSpy casts them to
-            :class:`numpy.float64`.
+            :class:`numpy.dtype.float32`). Note that HyperSpy casts them
+            to :class:`numpy.dtype.float64`.
 
         Returns
         -------
-        s_model : EBSD or LazyEBSD
+        s_model
+            Model signal.
         """
         # Keep original results to revert back after updating
         factors_orig = self.learning_results.factors.copy()
@@ -2140,6 +2207,28 @@ class EBSD(CommonImage, Signal2D):
         s_model.learning_results = LearningResults()
 
         return s_model
+
+    # -- Inherited methods included here for documentation purposes -- #
+
+    def rescale_intensity(
+        self,
+        relative: bool = False,
+        in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
+        percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+    ) -> None:
+        return super().rescale_intensity(
+            relative, in_range, out_range, dtype_out, percentiles
+        )
+
+    def normalize_intensity(
+        self,
+        num_std: int = 1,
+        divide_by_square_root: bool = False,
+        dtype_out: Optional[np.dtype] = None,
+    ) -> None:
+        return super().normalize_intensity(num_std, divide_by_square_root, dtype_out)
 
     # ------------------------ Private methods ----------------------- #
 
@@ -2233,10 +2322,9 @@ class EBSD(CommonImage, Signal2D):
 
 
 class LazyEBSD(LazySignal2D, EBSD):
-    """Lazy implementation of the :class:`EBSD` class.
+    """Lazy implementation of the ``EBSD`` class.
 
     This class extends HyperSpy's LazySignal2D class for EBSD patterns.
-
     Methods inherited from HyperSpy can be found in the HyperSpy user
     guide.
 
@@ -2246,7 +2334,7 @@ class LazyEBSD(LazySignal2D, EBSD):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def compute(self, *args, **kwargs):
+    def compute(self, *args, **kwargs) -> None:
         properties = self._get_custom_properties()
 
         super().compute(*args, **kwargs)
@@ -2259,13 +2347,13 @@ class LazyEBSD(LazySignal2D, EBSD):
     def get_decomposition_model_write(
         self,
         components: Union[None, int, List[int]] = None,
-        dtype_learn: np.dtype = np.float32,
+        dtype_learn: np.dtype = np.dtype("float32"),
         mbytes_chunk: int = 100,
         dir_out: Optional[str] = None,
         fname_out: Optional[str] = None,
-    ):
+    ) -> None:
         """Write the model signal generated from the selected number of
-        principal components directly to an .hspy file.
+        principal components directly to an ``.hspy`` file.
 
         The model signal intensities are rescaled to the original
         signals' data type range, keeping relative intensities.
@@ -2273,13 +2361,13 @@ class LazyEBSD(LazySignal2D, EBSD):
         Parameters
         ----------
         components
-            If None (default), rebuilds the signal from all
-            `components`. If int, rebuilds signal from `components` in
-            range 0-given int. If list of ints, rebuilds signal from
-            only `components` in given list.
+            If not given, rebuilds the signal from all ``components``.
+            If ``int``, rebuilds signal from ``components`` in range
+            0-given ``int``. If list of ``int``, rebuilds signal from
+            only ``components`` in given list.
         dtype_learn
             Data type to set learning results to (default is
-            :class:`numpy.float32`) before multiplication.
+            :class:`numpy.dtype.float32`) before multiplication.
         mbytes_chunk
             Size of learning results chunks in MB, default is 100 MB as
             suggested in the Dask documentation.
