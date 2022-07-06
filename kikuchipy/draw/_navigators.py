@@ -28,23 +28,23 @@ import hyperspy.api as hs
 
 
 def get_rgb_navigator(
-    image: np.ndarray, dtype: Union[type, np.dtype] = np.uint16
+    image: np.ndarray, dtype: Union[type, np.dtype] = np.dtype("uint16")
 ) -> hs.signals.Signal2D:
     """Create an RGB navigator signal which is suitable to pass to
-    :meth:`~hyperspy._signals.signal2d.Signal2D.plot` as the ``navigator``
-    parameter.
+    :meth:`~hyperspy._signals.signal2d.Signal2D.plot` as the
+    ``navigator`` parameter.
 
     Parameters
     ----------
     image
-        RGB color image of shape (n rows, n columns, 3).
+        RGB color image of shape ``(n rows, n columns, 3)``.
     dtype
         Which data type to cast the signal data to, either ``uint16``
         (default) or ``uint8``.
 
     Returns
     -------
-    signal
+    s
         Signal with an (n columns, n rows) signal shape and no
         navigation shape, of data type either ``rgb8`` or ``rgb16``.
     """

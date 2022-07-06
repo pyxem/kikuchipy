@@ -55,8 +55,12 @@ class Window(np.ndarray):
         Shape of the window. Not used if a custom window is passed to
         ``window``. This can be either 1D or 2D, and can be
         asymmetrical. Default is ``(3, 3)``.
-    kwargs
+    **kwargs
         Required keyword arguments passed to the window type.
+
+    See Also
+    --------
+    scipy.signal.windows.get_window
 
     Examples
     --------
@@ -105,10 +109,6 @@ class Window(np.ndarray):
     [[0.7788 0.8825 0.7788]
      [0.8825 1.     0.8825]
      [0.7788 0.8825 0.7788]]
-
-    See Also
-    --------
-    :func:`scipy.signal.windows.get_window`
     """
 
     _name: str = None
@@ -282,6 +282,11 @@ class Window(np.ndarray):
         ----------
         shape
             Shape of data to apply window to.
+
+        Returns
+        -------
+        is_compatible
+            Whether the window shape is compatible with another shape.
         """
         # Number of window dimensions cannot be greater than data
         # dimensions, and a window axis cannot be greater than the
@@ -290,9 +295,10 @@ class Window(np.ndarray):
         if len(window_shape) > len(shape) or any(
             np.array(window_shape) > np.array(shape)
         ):
-            return False
+            is_compatible = False
         else:
-            return True
+            is_compatible = True
+        return is_compatible
 
     def plot(
         self,
@@ -332,6 +338,7 @@ class Window(np.ndarray):
         Returns
         -------
         fig
+            Figure returned if ``return_figure=True``.
 
         Examples
         --------
