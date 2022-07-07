@@ -12,6 +12,7 @@ import re
 import sys
 
 import matplotlib.pyplot as plt
+import pyvista
 from numpydoc.docscrape_sphinx import SphinxDocString
 
 from kikuchipy import release as kp_release
@@ -38,7 +39,7 @@ master_doc = "index"
 # ones.
 extensions = [
     "matplotlib.sphinxext.plot_directive",
-    #    "nbsphinx",
+    "nbsphinx",
     "notfound.extension",
     "numpydoc",
     "sphinxcontrib.bibtex",
@@ -227,10 +228,16 @@ def linkcode_resolve(domain, info):
 notfound_context = {
     "body": (
         "<h1>Page not found.</h1>\n\nPerhaps try the "
-        "<a href='http://kikuchipy.org/user_guide/index.html'>user guide page</a>."
+        "<a href='http://kikuchipy.org/en/latest/examples/index.html'>"
+        "user guide page</a>."
     ),
 }
 notfound_no_urls_prefix = True
+
+
+# -- PyVista configuration
+pyvista.global_theme.window_size = [700, 700]
+pyvista.set_jupyter_backend("pythreejs")
 
 
 # -- Copy button customization (taken from PyVista)

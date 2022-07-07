@@ -48,6 +48,7 @@ extra_feature_requirements = {
         "sphinx-notfound-page",
         "numpydoc",
         "pythreejs",  # Used in the docs by PyVista
+        "pyvista",
         "sphinx                     >= 3.0.2",
         "sphinx-copybutton          >= 0.2.5",
         "sphinx-design",
