@@ -24,7 +24,6 @@ provided by the HyperSpy library.
     installation.rst
     changelog.rst
     contributing.rst
-    cite.rst
     License <https://github.com/pyxem/kikuchipy/blob/develop/LICENSE>
     Code of Conduct <code_of_conduct.rst>
 
@@ -48,7 +47,7 @@ kikuchipy can be installed using `pip <https://pypi.org/project/kikuchipy>`__ or
 
             conda install kikuchipy -c conda-forge
 
-Further details are available in the :doc:`installation`.
+Further details are available in the :doc:`installation guide <installation>`.
 
 Learning resources
 ==================
@@ -91,6 +90,12 @@ you can help!
 - report a bug or request a feature `on GitHub
   <https://github.com/pyxem/kikuchipy/issues>`__
 - or improve the :doc:`documentation and code <contributing>`
+
+Citing kikuchipy
+================
+
+If you are using kikuchipy in your scientific research, please help our scientific
+visibility by citing the Zenodo DOI: https://doi.org/10.5281/zenodo.3597646.
 
 Project index
 =============

@@ -1,6 +1,6 @@
-=========
-Reference
-=========
+=============
+API reference
+=============
 
 **Release**: |version|
 

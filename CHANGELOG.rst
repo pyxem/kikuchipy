@@ -17,6 +17,8 @@ Unreleased
 
 Contributors
 ------------
+- Håkon Wiik Ånes
+- Magnus Nord
 
 Added
 -----
@@ -26,6 +28,9 @@ Changed
 
 Deprecated
 ----------
+- ``ebsd_metadata()`` and ``metadata_nodes()`` are deprecated and will be removed in
+  v0.8.
+  (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
 
 Removed
 -------

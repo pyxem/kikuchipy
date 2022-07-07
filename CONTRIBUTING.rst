@@ -110,6 +110,9 @@ docstring, for example::
             Explanation of returned values.
         """
 
+We use `numpydoc <https://numpydoc.readthedocs.io>`__ to check the docstrings when
+building the documentation.
+
 Making changes
 ==============
 

@@ -1,6 +1,6 @@
-==================
-Installation guide
-==================
+============
+Installation
+============
 
 kikuchipy can be installed from `Anaconda
 <https://anaconda.org/conda-forge/kikuchipy>`_, the `Python Package Index
@@ -58,6 +58,11 @@ To install a specific version of kikuchipy (say version 0.5.8)::
 
     pip install kikuchipy==0.5.8
 
+.. _optional-dependencies:
+
+Optional dependencies
+---------------------
+
 Some dependencies are made optional and are available via the following selectors:
 
 - ``viz``: 3D plot of master patterns using `pyvista <https://docs.pyvista.org/>`_
@@ -95,5 +100,5 @@ To install kikuchipy from source, clone the repository from `GitHub
     cd kikuchipy
     pip install --editable .
 
-See the :ref:`contributing guidelines <setting-up-a-development-installation>` for how
+See the :ref:`contributing guide <setting-up-a-development-installation>` for how
 to set up a development installation and keep it up to date.

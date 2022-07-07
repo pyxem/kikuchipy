@@ -394,7 +394,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         Notes
         -----
         Requires :mod:`pyvista` (see :ref:`the installation guide
-        <install-with-pip>`).
+        <optional-dependencies>`).
 
         Examples
         --------
