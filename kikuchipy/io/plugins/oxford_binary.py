@@ -67,8 +67,8 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
 
     Notes
     -----
-    Information about the .ebsp file format was provided by Oxford
-    Instruments.
+    Information about the .ebsp file format was generously provided by
+    Oxford Instruments.
     """
     with open(filename, mode="rb") as f:
         obf = OxfordBinaryFileReader(f)

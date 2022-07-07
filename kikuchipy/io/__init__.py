@@ -17,12 +17,12 @@
 
 """Read and write signals from and to file.
 
-.. rubric:: Modules
-
 .. currentmodule:: kikuchipy.io
 
+.. rubric:: Modules
+
 .. autosummary::
-    :toctree: generated/
+    :toctree: ../generated/
     :template: custom-module-template.rst
 
     plugins

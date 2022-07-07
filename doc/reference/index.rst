@@ -31,14 +31,14 @@ this:
 .. rubric:: Functions
 
 .. autosummary::
-    :toctree: generated/
+    :toctree: generated
 
     load
 
 .. rubric:: Modules
 
 .. autosummary::
-    :toctree: generated/
+    :toctree: generated
     :template: custom-module-template.rst
 
     data

@@ -22,13 +22,14 @@
 .. rubric:: Modules
 
 .. autosummary::
-    :toctree: generated/
+    :toctree: ../generated/
     :template: custom-module-template.rst
 
     emsoft_ebsd
     emsoft_ebsd_master_pattern
     h5ebsd
     nordif
+    nordif_calibration_patterns
     oxford_binary
 """
 
@@ -37,6 +38,7 @@ from kikuchipy.io.plugins import (
     emsoft_ebsd_master_pattern,
     h5ebsd,
     nordif,
+    nordif_calibration_patterns,
     oxford_binary,
 )
 
@@ -45,5 +47,6 @@ __all__ = [
     "emsoft_ebsd_master_pattern",
     "h5ebsd",
     "nordif",
+    "nordif_calibration_patterns",
     "oxford_binary",
 ]
