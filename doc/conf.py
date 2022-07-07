@@ -8,6 +8,7 @@ from datetime import datetime
 import inspect
 import os
 from os.path import relpath, dirname
+from pathlib import Path
 import re
 import sys
 
@@ -41,16 +42,16 @@ extensions = [
     "matplotlib.sphinxext.plot_directive",
     "nbsphinx",
     "notfound.extension",
-    "numpydoc",
     "sphinxcontrib.bibtex",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.linkcode",
     "sphinx.ext.mathjax",
+    "numpydoc",
     "sphinx_copybutton",
     "sphinx_design",
-    "sphinx_gallery.load_style",
+    "sphinx_gallery.gen_gallery",
 ]
 
 # Create links to references within kikuchipy's documentation to these
@@ -77,7 +78,10 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files. This image also
 # affects html_static_path and html_extra_path.
-exclude_patterns = ["build", "_static/logo/*.ipynb"]
+exclude_patterns = [
+    "build",
+    "_static/logo/*.ipynb",
+]
 
 # The theme to use for HTML and HTML Help pages. See the documentation
 # for a list of builtin themes.
@@ -88,6 +92,7 @@ html_theme = "furo"
 # static files, so a file named "default.css" will overwrite the builtin
 # "default.css".
 html_static_path = ["_static"]
+html_css_files = ["custom.css"]
 
 # Syntax highlighting
 pygments_style = "friendly"
@@ -280,7 +285,7 @@ numpydoc_validation_checks = {
 # fmt: on
 
 
-# -- matplotlib.sphinxext.plot_directive
+# -- matplotlib.sphinxext.plot_directive configuration
 plot_formats = ["png"]
 plot_html_show_source_link = False
 plot_html_show_formats = False
@@ -308,3 +313,16 @@ def _str_examples(self):
 
 
 SphinxDocString._str_examples = _str_examples
+
+
+# -- Sphinx-Gallery configuration
+sphinx_gallery_conf = {
+    "examples_dirs": "_examples",
+    "gallery_dirs": "examples",
+    "filename_pattern": "^((?!sgskip).)*$",
+    "reference_url": {"kikuchipy": None},
+    "backreferences_dir": "reference/generated",
+    "doc_module": ("kikuchipy",),
+    "run_stale_examples": True,
+}
+autosummary_generate = True

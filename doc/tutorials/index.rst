@@ -9,6 +9,12 @@ For shorter examples, see our :doc:`/examples/index`. For descriptions of
 the functions, modules, and objects in kikuchipy, see the
 :doc:`reference </reference/index>`.
 
+The tutorials are live and available on MyBinder:
+
+.. image:: https://static.mybinder.org/badge_logo.svg
+   :target: https://mybinder.org/v2/gh/pyxem/kikuchipy/develop?filepath=doc/tutorials
+   :alt: Launch on Binder
+
 Load and save data
 ==================
 
@@ -22,8 +28,8 @@ virtual backscatter electron images in the file formats supported in kikuchipy.
 Reference frames
 ================
 
-These tutorials cover the relevant reference frames in EBSD, as well how to determine
-the detector-sample geometry, also known as the projection/pattern center (PC).
+These tutorials cover the relevant reference frames in EBSD and how to determine the
+detector-sample geometry, also known as the projection/pattern center (PC).
 
 .. nbgallery::
 
