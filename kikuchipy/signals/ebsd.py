@@ -159,13 +159,13 @@ class EBSD(CommonImage, Signal2D):
         self._xmap = kwargs.pop("xmap", None)
 
         # Update metadata if object is initialised from numpy array
+        warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
         if not self.metadata.has_item(metadata_nodes("ebsd")):
             md = self.metadata.as_dictionary()
             md.update(ebsd_metadata().as_dictionary())
             self.metadata.add_dictionary(md)
         if not self.metadata.has_item("Sample.Phases"):
             with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
                 self.set_phase_parameters()
 
     # ---------------------- Custom properties ----------------------- #
@@ -294,11 +294,11 @@ class EBSD(CommonImage, Signal2D):
         beam_energy : float, optional
             Energy of the electron beam in kV.
         xpc : float, optional
-            Pattern centre horizontal coordinate with respect to
-            detector centre, as viewed from the detector to the sample.
+            Pattern center horizontal coordinate with respect to
+            detector center, as viewed from the detector to the sample.
         ypc : float, optional
-            Pattern centre vertical coordinate with respect to
-            detector centre, as viewed from the detector to the sample.
+            Pattern center vertical coordinate with respect to
+            detector center, as viewed from the detector to the sample.
         zpc : float, optional
             Specimen to scintillator distance.
         static_background : numpy.ndarray, optional
@@ -328,6 +328,7 @@ class EBSD(CommonImage, Signal2D):
         0.50726
         """
         md = self.metadata
+        warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
         sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
         _write_parameters_to_dictionary(
             {
@@ -507,7 +508,7 @@ class EBSD(CommonImage, Signal2D):
 
     def set_detector_calibration(self, delta: Union[int, float]) -> None:
         """Set detector pixel size in microns. The offset is set to the
-        the detector centre.
+        the detector center.
 
         Parameters
         ----------
@@ -528,11 +529,11 @@ class EBSD(CommonImage, Signal2D):
         >>> s.axes_manager['dx'].scale
         70.0
         """
-        centre = delta * np.array(self.axes_manager.signal_shape) / 2
+        center = delta * np.array(self.axes_manager.signal_shape) / 2
         dx, dy = self.axes_manager.signal_axes
         dx.units, dy.units = ["um"] * 2
         dx.scale, dy.scale = (delta, delta)
-        dx.offset, dy.offset = -centre
+        dx.offset, dy.offset = -center
 
     @deprecated_argument(name="relative", since="0.6", removal="0.7")
     def remove_static_background(
@@ -1576,20 +1577,20 @@ class EBSD(CommonImage, Signal2D):
             Filter to apply to patterns. This can either be a transfer
             function in the frequency domain of pattern shape or a
             kernel in the spatial domain. What is passed is determined
-            from `function_domain`.
+            from ``function_domain``.
         function_domain
-            Options are "frequency" and "spatial", indicating,
+            Options are ``"frequency"`` and ``"spatial"``, indicating,
             respectively, whether the filter function passed to
-            `filter_function` is a transfer function in the frequency
+            ``filter_function`` is a transfer function in the frequency
             domain or a kernel in the spatial domain.
         shift
-            Whether to shift the zero-frequency component to the centre.
-            Default is False. This is only used when
-            `function_domain="frequency"`.
+            Whether to shift the zero-frequency component to the center.
+            Default is ``False``. This is only used when
+            ``function_domain="frequency"``.
 
         See Also
         --------
-        Window
+        kikuchipy.filters.Window
 
         Examples
         --------
@@ -1854,7 +1855,7 @@ class EBSD(CommonImage, Signal2D):
             addition to a ``"circular"`` window (default) filled with
             ones in which corner coefficients are set to zero. A window
             element is considered to be in a corner if its radial
-            distance to the origin (window centre) is shorter or equal
+            distance to the origin (window center) is shorter or equal
             to the half width of the window's longest axis. A 1D or 2D
             :class:`~numpy.ndarray`, :class:`~dask.array.Array` or
             :class:`~kikuchipy.filters.Window` can also be passed.
@@ -2215,7 +2216,9 @@ class EBSD(CommonImage, Signal2D):
         relative: bool = False,
         in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
         out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-        dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
+        dtype_out: Union[
+            None, type, np.dtype, Tuple[int, int], Tuple[float, float]
+        ] = None,
         percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
     ) -> None:
         return super().rescale_intensity(
@@ -2226,7 +2229,7 @@ class EBSD(CommonImage, Signal2D):
         self,
         num_std: int = 1,
         divide_by_square_root: bool = False,
-        dtype_out: Optional[np.dtype] = None,
+        dtype_out: Union[None, type, np.dtype] = None,
     ) -> None:
         return super().normalize_intensity(num_std, divide_by_square_root, dtype_out)
 

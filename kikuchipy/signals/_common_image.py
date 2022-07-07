@@ -44,7 +44,9 @@ class CommonImage(Signal2D):
         relative: bool = False,
         in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
         out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-        dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
+        dtype_out: Union[
+            None, type, np.dtype, Tuple[int, int], Tuple[float, float]
+        ] = None,
         percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
     ) -> None:
         """Rescale image intensities inplace.
@@ -178,7 +180,7 @@ class CommonImage(Signal2D):
         self,
         num_std: int = 1,
         divide_by_square_root: bool = False,
-        dtype_out: Optional[np.dtype] = None,
+        dtype_out: Union[None, type, np.dtype] = None,
     ) -> None:
         """Normalize image intensities in inplace to a mean of zero with
         a given standard deviation.

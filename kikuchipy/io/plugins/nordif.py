@@ -98,7 +98,6 @@ def file_reader(
         f = open(filename, mode="rb")
 
     # Get metadata from setting file
-    ebsd_node = metadata_nodes("ebsd")
     folder, _ = os.path.split(filename)
     if setting_file is None:
         setting_file = os.path.join(folder, "Setting.txt")
@@ -115,6 +114,7 @@ def file_reader(
                 "No setting file found and no scan_size or pattern_size detected in "
                 "input arguments. These must be set if no setting file is provided"
             )
+        warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
         md = ebsd_metadata()
         omd = DictionaryTreeBrowser()
 
@@ -244,6 +244,7 @@ def get_settings_from_file(
     l_specimen = blocks["[Specimen]"]
 
     # Create metadata and original metadata structures
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     md = ebsd_metadata()
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     omd = DictionaryTreeBrowser()

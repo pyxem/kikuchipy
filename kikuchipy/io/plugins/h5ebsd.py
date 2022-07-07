@@ -352,6 +352,7 @@ def h5ebsd2signaldict(
     md.set_item("Signal.signal_type", "EBSD")
     md.set_item("Signal.record_by", "image")
 
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     static_bg_node = metadata_nodes("ebsd") + ".static_background"
     scan = {
         "metadata": md.as_dictionary(),
@@ -473,6 +474,7 @@ def h5ebsdheader2dicts(
     scan_size
         Scan, image, step and detector pixel size available in file.
     """
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     md = ebsd_metadata()
     title = (
         scan_group.file.filename.split("/")[-1].split(".")[0]
@@ -523,6 +525,7 @@ def kikuchipyheader2dicts(
     pattern_dset_names = list(manufacturer_pattern_names().values())
 
     omd = DictionaryTreeBrowser()
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     md.set_item(
         ebsd_node,
@@ -596,6 +599,7 @@ def edaxheader2dicts(
     )
 
     # Populate metadata dictionary
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     md.set_item(ebsd_node + ".azimuth_angle", hd["Camera Azimuthal Angle"])
     md.set_item(ebsd_node + ".elevation_angle", hd["Camera Elevation Angle"])
@@ -680,6 +684,7 @@ def brukerheader2dicts(
     )
 
     # Populate metadata dictionary
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     md.set_item(ebsd_node + ".elevation_angle", hd["CameraTilt"])
     grid_type = hd["Grid Type"]
@@ -883,6 +888,7 @@ def file_writer(
     ny, nx, sy, sx = data_shape
     scale_ny, scale_nx, scale_sy, _ = data_scales
     md = signal.metadata.deepcopy()
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     md.set_item(ebsd_node + ".pattern_width", sx)
     md.set_item(ebsd_node + ".pattern_height", sy)

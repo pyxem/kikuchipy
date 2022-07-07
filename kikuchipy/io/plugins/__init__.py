@@ -22,7 +22,7 @@
 .. rubric:: Modules
 
 .. autosummary::
-    :toctree: ../../generated/
+    :toctree: generated/
     :template: custom-module-template.rst
 
     emsoft_ebsd

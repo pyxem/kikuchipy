@@ -20,6 +20,7 @@
 import os
 from pathlib import Path
 from typing import List, Tuple, Union
+import warnings
 
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
@@ -193,6 +194,7 @@ def _get_metadata(omd: dict) -> dict:
     md
         Dictionary with metadata.
     """
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     md = ebsd_metadata()
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     md.set_item(f"{ebsd_node}.manufacturer", "EMsoft")

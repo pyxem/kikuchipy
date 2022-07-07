@@ -22,7 +22,7 @@
 .. currentmodule:: kikuchipy.io
 
 .. autosummary::
-    :toctree: ../generated/
+    :toctree: generated/
     :template: custom-module-template.rst
 
     plugins

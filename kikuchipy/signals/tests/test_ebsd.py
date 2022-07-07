@@ -53,7 +53,8 @@ class TestEBSD:
 
         # SEM metadata
         kp_md = kp.signals.util.ebsd_metadata()
-        sem_node = kp.signals.util.metadata_nodes("sem")
+        with pytest.warns(np.VisibleDeprecationWarning):
+            sem_node = kp.signals.util.metadata_nodes("sem")
         assert_dictionary(kp_md.get_item(sem_node), s1.metadata.get_item(sem_node))
 
         # Phases metadata
@@ -95,7 +96,8 @@ class TestEBSD:
             "magnification": 500,
         }
         dummy_signal.set_experimental_parameters(**p)
-        ebsd_node = kp.signals.util.metadata_nodes("ebsd")
+        with pytest.warns(np.VisibleDeprecationWarning):
+            ebsd_node = kp.signals.util.metadata_nodes("ebsd")
         md_dict = dummy_signal.metadata.get_item(ebsd_node).as_dictionary()
         assert_dictionary(p, md_dict)
 

@@ -557,7 +557,9 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         relative: bool = False,
         in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
         out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-        dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
+        dtype_out: Union[
+            None, type, np.dtype, Tuple[int, int], Tuple[float, float]
+        ] = None,
         percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
     ) -> None:
         return super().rescale_intensity(
@@ -568,7 +570,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         self,
         num_std: int = 1,
         divide_by_square_root: bool = False,
-        dtype_out: Optional[np.dtype] = None,
+        dtype_out: Union[None, type, np.dtype] = None,
     ) -> None:
         return super().normalize_intensity(num_std, divide_by_square_root, dtype_out)
 

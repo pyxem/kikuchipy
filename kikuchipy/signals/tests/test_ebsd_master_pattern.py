@@ -587,3 +587,16 @@ class TestAsLambert:
         assert np.all(xyz[:, 2] >= 0)
         assert np.isclose(xyz.max(), 1)
         assert np.isclose(xyz.min(), -1)
+
+
+class TestIntensityScaling:
+    def test_rescale_intensity(self):
+        mp = nickel_ebsd_master_pattern_small()
+        mp.rescale_intensity(dtype_out=np.float32)
+        assert np.allclose([mp.data.min(), mp.data.max()], [-1.0, 1.0])
+
+    def test_normalize_intensity(self):
+        mp = nickel_ebsd_master_pattern_small()
+        mp.change_dtype("float32")
+        mp.normalize_intensity()
+        assert np.allclose([mp.data.min(), mp.data.max()], [-1.33, 5.93], atol=1e-2)

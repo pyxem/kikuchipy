@@ -40,6 +40,7 @@ def ebsd_metadata() -> DictionaryTreeBrowser:
         EBSD metadata.
     """
     md = DictionaryTreeBrowser()
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     ebsd = {
         "azimuth_angle": -1.0,

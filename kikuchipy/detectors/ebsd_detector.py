@@ -66,8 +66,8 @@ class EBSDDetector:
         ``[[x0, y0, z0], [x1, y1, z1], ...]``. Default is
         ``[0.5, 0.5, 0.5]``.
     convention
-        PC convention. If None (default), Bruker's convention is
-        assumed. Options are ``"tsl"``, ``"oxford"``, ``"bruker"``,
+        PC convention. If not given, Bruker's convention is assumed.
+        Options are ``"tsl"``/``"edax"``, ``"oxford"``, ``"bruker"``,
         ``"emsoft"``, ``"emsoft4"``, and ``"emsoft5"``. ``"emsoft"`` and
         ``"emsoft5"`` is the same convention. See *Notes* for
         conversions between conventions.
@@ -92,10 +92,10 @@ class EBSDDetector:
     the lower left corner of the detector.
 
     The EMsoft PC coordinates :math:`(x_{pc}, y_{pc})` are defined as
-    number of pixels (subpixel accuracy) with resepct to the center
-    of the detector, with :math:`x_{pc}` towards the right and
+    number of pixels (subpixel accuracy) with respect to the center of
+    the detector, with :math:`x_{pc}` towards the right and
     :math:`y_{pc}` upwards. The final PC coordinate :math:`L` is the
-    detector distance in microns. Note that before EMsoft v5.0,
+    detector distance in microns. Note that prior to EMsoft v5.0,
     :math:`x_{pc}` was defined towards the left.
 
     Given these definitions, the following is the conversion from
@@ -116,15 +116,17 @@ class EBSDDetector:
         z_B^* &= \frac{L}{N_y b \delta},
 
     where :math:`\delta` is the unbinned detector pixel size in
-    microns, and $b$ is the binning factor.
+    microns, and :math:`b` is the binning factor.
 
     Examples
     --------
+    Create an EBSD detector and plot the PC on top of a pattern
+
     >>> import numpy as np
     >>> import kikuchipy as kp
     >>> det = kp.detectors.EBSDDetector(
     ...     shape=(60, 60),
-    ...     pc=np.ones((149, 200, 3)) * (0.421, 0.779, 0.505),
+    ...     pc=np.ones((10, 20, 3)) * (0.421, 0.779, 0.505),
     ...     convention="edax",
     ...     px_size=70,
     ...     binning=8,
@@ -133,13 +135,18 @@ class EBSDDetector:
     ... )
     >>> det
     EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 5, azimuthal 0, pc (0.421, 0.221, 0.505)
-    >>> det.navigation_shape  # (nrows, ncols)
-    (149, 200)
+    >>> det.navigation_shape
+    (10, 20)
     >>> det.bounds
     array([ 0, 59,  0, 59])
     >>> det.gnomonic_bounds[0, 0]
-    array([-0.83366337,  1.14653465, -0.83366337,  1.14653465])
-    >>> det.plot()
+    array([-0.83366337,  1.14653465, -1.54257426,  0.43762376])
+    >>> s = kp.data.nickel_ebsd_small()
+    >>> det.plot(
+    ...     pattern=s.inav[0, 0].data,
+    ...     coordinates="gnomonic",
+    ...     draw_gnomonic_circles=True
+    ... )
     """
 
     def __init__(
@@ -372,9 +379,7 @@ class EBSDDetector:
         """Return the detector bounds ``[x0, x1, y0, y1]`` in gnomonic
         coordinates.
         """
-        return np.concatenate((self.x_range, self.y_range)).reshape(
-            self.navigation_shape + (4,)
-        )
+        return np.concatenate((self.x_range, self.y_range), axis=-1)
 
     @property
     def _average_gnomonic_bounds(self) -> np.ndarray:
@@ -423,7 +428,7 @@ class EBSDDetector:
 
         Returns
         -------
-        pc
+        new_pc
             PC in the EMsoft convention.
 
         Notes
@@ -453,7 +458,7 @@ class EBSDDetector:
 
         Returns
         -------
-        pc
+        new_pc
             PC in the Bruker convention.
         """
         return self.pc
@@ -463,7 +468,7 @@ class EBSDDetector:
 
         Returns
         -------
-        pc
+        new_pc
             PC in the EDAX TSL convention.
 
         Notes
@@ -491,7 +496,7 @@ class EBSDDetector:
 
         Returns
         -------
-        pc
+        new_pc
             PC in the Oxford convention.
 
         Notes
@@ -595,8 +600,8 @@ class EBSDDetector:
 
         Plot a pattern on the detector and save it
 
-        >>> s = kp.data.nickel_ebsd_small(lazy=True)
-        >>> fig, ax = det.plot(pattern=s.inav[0, 0].data, return_fig_ax=True)
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> fig, _ = det.plot(pattern=s.inav[0, 0].data, return_fig_ax=True)
         >>> # fig.savefig("detector.png")
         """
         sy, sx = self.shape
