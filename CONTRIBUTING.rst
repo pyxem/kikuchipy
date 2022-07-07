@@ -171,6 +171,11 @@ Good job!
 Building and writing documentation
 ==================================
 
+The documentation contains three categories of documents: ``examples``, ``tutorials``,
+and the ``reference``. The documentation strategy is based on the
+`Diátaxis Framework <https://diataxis.fr/>`__. New documents should fit into one of
+these categories.
+
 We use `Sphinx <https://www.sphinx-doc.org/en/master/>`_ for documenting functionality.
 Install necessary dependencies to build the documentation::
 
@@ -204,8 +209,8 @@ Tips for writing Jupyter Notebooks that are meant to be converted to reST text f
 - Use ``_ = ax[0].imshow(...)`` to silence ``matplotlib`` output if a ``matplotlib``
   command is the last line in a cell.
 - Refer to our API reference with this general MD
-  ``[fft_filter()](../reference.rst#kikuchipy.signals.EBSD.fft_filter)``. Remember to
-  add the parentheses ``()`` to functions and methods.
+  ``[fft_filter()](../reference/generated/kikuchipy.signals.EBSD.fft_filter.rst)``.
+  Remember to add the parentheses ``()`` to functions and methods.
 - Reference external APIs via standard MD like
   ``[Signal2D](http://hyperspy.org/hyperspy-doc/current/api/hyperspy._signals.signal2d.html)``.
 - The Sphinx gallery thumbnail used for a notebook is set by adding the
