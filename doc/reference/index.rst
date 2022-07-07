@@ -2,9 +2,9 @@
 Reference
 =========
 
-Release: |version|
+**Release**: |version|
 
-Date: |today|
+**Date**: |today|
 
 This reference manual describes the public functions, modules, and objects in kikuchipy.
 Many of the descriptions include brief examples. For learning how to use kikuchipy, see
