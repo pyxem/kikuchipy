@@ -18,11 +18,13 @@ provided by the HyperSpy library.
     open_datasets.rst
 
 .. toctree::
-    :caption: Development
+    :caption: Help & development
     :hidden:
 
+    installation.rst
     changelog.rst
     contributing.rst
+    cite.rst
     License <https://github.com/pyxem/kikuchipy/blob/develop/LICENSE>
     Code of Conduct <code_of_conduct.rst>
 
@@ -53,30 +55,27 @@ Learning resources
 
 .. card-carousel:: 3
 
-    .. card::
+    .. card:: Examples
+        :img-top: _static/image/colormap_banners/banner0.png
         :link: examples/index
         :link-type: doc
-
-        Examples
-        ^^^^^^^^
+        :shadow: lg
 
         Short recipies to common tasks using kikuchipy.
 
-    .. card::
+    .. card:: Tutorials
+        :img-top: _static/image/colormap_banners/banner1.png
         :link: tutorials/index
         :link-type: doc
-
-        Tutorials
-        ^^^^^^^^^
+        :shadow: lg
 
         In-depth guides for using kikuchipy.
 
-    .. card::
+    .. card:: Reference
+        :img-top: _static/image/colormap_banners/banner2.png
         :link: reference/index
         :link-type: doc
-
-        Reference
-        ^^^^^^^^^
+        :shadow: lg
 
         Descriptions of functions, modules, and objects in kikuchipy.
 
@@ -87,7 +86,7 @@ kikuchipy is a community project maintained for and by its users. There are many
 you can help!
 
 - Help other users in `our GitHub discussions
-  <https://github.com/pyxem/kikuchipy/discussion>`__ or `on Gitter
+  <https://github.com/pyxem/kikuchipy/discussions>`__ or `on Gitter
   <https://gitter.im/pyxem/kikuchipy>`__
 - report a bug or request a feature `on GitHub
   <https://github.com/pyxem/kikuchipy/issues>`__
