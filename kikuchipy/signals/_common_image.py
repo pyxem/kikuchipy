@@ -19,8 +19,10 @@ import sys
 from typing import Union, Tuple, Optional
 
 from dask.diagnostics import ProgressBar
+import hyperspy.api as hs
 from hyperspy._signals.signal2d import Signal2D
 from hyperspy.misc.rgb_tools import rgb_dtypes
+from hyperspy.api import preferences
 import numpy as np
 from skimage.util.dtype import dtype_range
 
@@ -110,22 +112,22 @@ class CommonImage(Signal2D):
         ... )
         uint8 23 246 26 245
         >>> s2 = s.deepcopy()
-        >>> s.rescale_intensity(dtype_out=np.uint16)  # doctest: +SKIP
+        >>> s.rescale_intensity(dtype_out=np.uint16)
         >>> print(
         ...     s.data.dtype, s.data.min(), s.data.max(),
         ...     s.inav[0, 0].data.min(), s.inav[0, 0].data.max()
-        ... )  # doctest: +SKIP
+        ... )
         uint16 0 65535 0 65535
-        >>> s2.rescale_intensity(relative=True)  # doctest: +SKIP
+        >>> s2.rescale_intensity(relative=True)
         >>> print(
         ...     s2.data.dtype, s2.data.min(), s2.data.max(),
         ...     s2.inav[0, 0].data.min(), s2.inav[0, 0].data.max()
-        ... )  # doctest: +SKIP
+        ... )
         uint8 0 255 3 253
 
         Contrast stretching can be performed by passing percentiles
 
-        >>> s.rescale_intensity(percentiles=(1, 99))  # doctest: +SKIP
+        >>> s.rescale_intensity(percentiles=(1, 99))
 
         Here, the darkest and brightest pixels within the 1% percentile
         are set to the ends of the data type range, e.g. 0 and 255
@@ -167,11 +169,16 @@ class CommonImage(Signal2D):
 
         # Overwrite signal images
         if not self._lazy:
-            with ProgressBar():
-                if self.data.dtype != rescaled_images.dtype:
-                    self.change_dtype(dtype_out)
-                print("Rescaling the image intensities:", file=sys.stdout)
-                rescaled_images.store(self.data, compute=True)
+            pbar = ProgressBar()
+            if hs.preferences.General.show_progressbar:
+                pbar.register()
+
+            if self.data.dtype != rescaled_images.dtype:
+                self.change_dtype(dtype_out)
+            rescaled_images.store(self.data, compute=True)
+
+            if hs.preferences.General.show_progressbar:
+                pbar.unregister()
         else:
             self.data = rescaled_images
 
@@ -213,8 +220,8 @@ class CommonImage(Signal2D):
         >>> s = kp.data.nickel_ebsd_small()
         >>> np.mean(s.data)
         146.0670987654321
-        >>> s.normalize_intensity(dtype_out=np.float32)  # doctest: +SKIP
-        >>> np.mean(s.data)  # doctest: +SKIP
+        >>> s.normalize_intensity(dtype_out=np.float32)
+        >>> np.mean(s.data)
         2.6373216e-08
         """
         if self.data.dtype in rgb_dtypes.values():
@@ -243,8 +250,13 @@ class CommonImage(Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with ProgressBar():
-                print("Normalizing the image intensities:", file=sys.stdout)
-                normalized_images.store(self.data, compute=True)
+            if hs.preferences.General.show_progressbar:
+                pbar = ProgressBar()
+                pbar.register()
+
+            normalized_images.store(self.data, compute=True)
+
+            if hs.preferences.General.show_progressbar:
+                pbar.unregister()
         else:
             self.data = normalized_images

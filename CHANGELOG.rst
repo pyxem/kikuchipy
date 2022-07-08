@@ -22,9 +22,15 @@ Contributors
 
 Added
 -----
+- Whether to show progressbars from most ``EBSD`` methods (except indexing and
+  refinement) can be controlled by setting HyperSpy's
+  ``hs.preferences.General.show_progressbar`` (see their docs for details).
+  (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
 
 Changed
 -------
+- Minimal version of HyperSpy increased to >= 1.7.1.
+  (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
 
 Deprecated
 ----------
@@ -34,6 +40,9 @@ Deprecated
 
 Removed
 -------
+- The print information emitted from ``EBSD`` methods like
+  ``remove_static_background()`` is removed.
+  (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
 
 Fixed
 -----

@@ -5,7 +5,7 @@ Crop navigation and signal axes
 
 This example shows how to crop the navigation and signal axes of an
 :class:`~kikuchipy.signals.EBSD` signal using HyperSpy's ``inav`` and ``isig``,
-respectively (see the `HyperSpy user guide
+respectively (see the `HyperSpy documentation
 <https://hyperspy.org/hyperspy-doc/current/user_guide/signal.html#indexing>`__).
 """
 
@@ -13,7 +13,7 @@ import hyperspy.api as hs
 import kikuchipy as kp
 
 
-s = kp.data.nickel_ebsd_large(allow_download=True, lazy=True)
+s = kp.data.nickel_ebsd_large(lazy=True)
 print(s)
 
 ########################################################################################

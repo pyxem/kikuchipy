@@ -25,11 +25,11 @@ data[:, mask] = np.nan
 ########################################################################
 # Plot both hemispheres with labels
 
-fig, ax = plt.subplots(ncols=2)
-ax[0].imshow(data[0], cmap="gray")
-ax[1].imshow(data[1], cmap="gray")
-ax[0].axis("off")
-ax[1].axis("off")
-ax[0].set_title("Upper")
-ax[1].set_title("Lower")
+fig, (ax0, ax1) = plt.subplots(ncols=2)
+ax0.imshow(data[0], cmap="gray")
+ax1.imshow(data[1], cmap="gray")
+ax0.axis("off")
+ax1.axis("off")
+ax0.set_title("Upper")
+ax1.set_title("Lower")
 fig.tight_layout()

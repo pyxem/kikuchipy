@@ -384,13 +384,12 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             :class:`pyvista.Plotter`.
         show_kwargs
             Dictionary of keyword arguments passed to
-            :meth:`pyvista.Plotter.show` if ``return_figure`` is
-            ``False``.
+            :meth:`pyvista.Plotter.show` if ``return_figure=False``.
 
         Returns
         -------
         pl
-            Only returned if ``return_figure`` is ``True``.
+            Only returned if ``return_figure=True``.
 
         Notes
         -----
@@ -401,7 +400,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         --------
         >>> import kikuchipy as kp
         >>> mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
-        >>> mp.plot_spherical()  # doctest: +SKIP
+        >>> mp.plot_spherical()
         """
         from kikuchipy import _pyvista_installed
 

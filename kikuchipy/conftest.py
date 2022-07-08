@@ -25,7 +25,7 @@ import warnings
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticePoint
-from hyperspy import __version__ as hs_version
+import hyperspy.api as hs
 from hyperspy.misc.utils import DictionaryTreeBrowser
 import matplotlib.pyplot as plt
 import numpy as np
@@ -63,7 +63,9 @@ def assert_dictionary(dict1, dict2):
         dict1 = dict1.as_dictionary()
         dict2 = dict2.as_dictionary()
     for key in dict2.keys():
-        if key in ["is_binned", "binned"] and version.parse(hs_version) > version.parse(
+        if key in ["is_binned", "binned"] and version.parse(
+            hs.__version__
+        ) > version.parse(
             "1.6.2"
         ):  # pragma: no cover
             continue
@@ -547,7 +549,13 @@ def nickel_ebsd_small_di_xmap():
 @pytest.fixture(autouse=True)
 def doctest_setup_teardown(request):
     # Setup
-    plt.ioff()  # Interactive plotting off
+    # Temporarily turn off interactive plotting with Matplotlib
+    plt.ioff()
+
+    # Temporarily suppress HyperSpy's progressbar
+    hs.preferences.General.show_progressbar = False
+
+    # Temporary directory for saving files in
     temporary_directory = tempfile.TemporaryDirectory()
     original_directory = os.getcwd()
     os.chdir(temporary_directory.name)
@@ -556,7 +564,6 @@ def doctest_setup_teardown(request):
     # Teardown
     os.chdir(original_directory)
     temporary_directory.cleanup()
-    plt.close("all")
 
 
 @pytest.fixture(autouse=True)

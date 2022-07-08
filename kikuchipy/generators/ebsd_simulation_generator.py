@@ -187,13 +187,13 @@ class EBSDSimulationGenerator:
         ...     rotations=quaternion.Rotation.from_euler([0, 0, 0])
         ... )
         >>> sim1 = simgen.geometrical_simulation()
-        >>> sim1.bands.size  # doctest: +SKIP
+        >>> sim1.bands.size
         94
         >>> rlp = ReciprocalLatticePoint(
         ...     phase=p, hkl=[[1, 1, 1], [2, 0, 0]]
         ... ).symmetrise()
         >>> sim2 = simgen.geometrical_simulation(rlp)
-        >>> sim2.bands.size  # doctest: +SKIP
+        >>> sim2.bands.size
         7
         """
         rlp = reciprocal_lattice_point

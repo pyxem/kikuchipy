@@ -19,6 +19,7 @@ kikuchipy's import structure is designed to feel familiar to HyperSpy users. It 
 recommended to import functionality from the below list of functions and modules like
 this:
 
+.. autolink-skip::
 .. code-block:: python
 
     >>> import kikuchipy as kp

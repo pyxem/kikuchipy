@@ -26,11 +26,11 @@ import warnings
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
+import hyperspy.api as hs
 from hyperspy._signals.signal2d import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
 from hyperspy.roi import BaseInteractiveROI
-from hyperspy.api import interactive
 from h5py import File
 import numpy as np
 from orix.crystal_map import CrystalMap
@@ -83,7 +83,7 @@ from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 from kikuchipy._util import deprecated, deprecated_argument
 
 
-class EBSD(CommonImage, Signal2D):
+class EBSD(CommonImage, hs.signals.Signal2D):
     """Scan of Electron Backscatter Diffraction (EBSD) patterns.
 
     This class extends HyperSpy's Signal2D class for EBSD patterns. See
@@ -323,8 +323,8 @@ class EBSD(CommonImage, Signal2D):
         >>> node = kp.signals.util.metadata_nodes("ebsd")
         >>> s.metadata.get_item(node + ".xpc")
         -5.64
-        >>> s.set_experimental_parameters(xpc=0.50726)  # doctest: +SKIP
-        >>> s.metadata.get_item(node + ".xpc")  # doctest: +SKIP
+        >>> s.set_experimental_parameters(xpc=0.50726)
+        >>> s.metadata.get_item(node + ".xpc")
         0.50726
         """
         md = self.metadata
@@ -430,7 +430,7 @@ class EBSD(CommonImage, Signal2D):
         --------
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
-        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1  # doctest: +SKIP
+        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
         ├── atom = Ni
         ├── coordinates = array([0, 0, 0])
         ├── debye_waller_factor = 0.0035
@@ -443,8 +443,8 @@ class EBSD(CommonImage, Signal2D):
         ...         "site_occupation": 1,
         ...         "debye_waller_factor": 0.005
         ...     }}
-        ... )  # doctest: +SKIP
-        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1  # doctest: +SKIP
+        ... )
+        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
         ├── atom = Fe
         ├── coordinates = array([0, 0, 0])
         ├── debye_waller_factor = 0.005
@@ -601,7 +601,7 @@ class EBSD(CommonImage, Signal2D):
         The static background can be removed by subtracting or dividing
         this background from each pattern:
 
-        >>> s.remove_static_background(operation="divide")  # doctest: +SKIP
+        >>> s.remove_static_background(operation="divide")
 
         If the ``static_background`` property is ``None``, this must be
         passed in the ``static_bg`` parameter as a ``numpy`` or ``dask``
@@ -636,14 +636,6 @@ class EBSD(CommonImage, Signal2D):
         static_bg = static_bg.astype(dtype)
 
         # Remove background and rescale to input data type
-        if not self._lazy:
-            print("Removing the static background:", file=sys.stdout)
-
-            # Register a progressbar. Remove once HyperSpy v1.7.1 is
-            # released: https://github.com/hyperspy/hyperspy/issues/2946
-            pbar = ProgressBar()
-            pbar.register()
-
         if operation == "subtract":
             operation_func = _remove_static_background_subtract
         else:
@@ -652,7 +644,6 @@ class EBSD(CommonImage, Signal2D):
         properties = self._get_custom_properties()
         self.map(
             operation_func,
-            show_progressbar=True,
             parallel=True,
             output_dtype=dtype_out,
             static_bg=static_bg,
@@ -662,9 +653,6 @@ class EBSD(CommonImage, Signal2D):
             scale_bg=scale_bg,
         )
         self._set_custom_properties(properties)
-
-        if not self._lazy:
-            pbar.unregister()
 
     def remove_dynamic_background(
         self,
@@ -709,13 +697,12 @@ class EBSD(CommonImage, Signal2D):
 
         Examples
         --------
-        Traditional background correction includes static and dynamic
-        corrections:
+        Remove the static and dynamic background
 
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
-        >>> s.remove_static_background()  # doctest: +SKIP
-        >>> s.remove_dynamic_background(operation="divide", std=5)  # doctest: +SKIP
+        >>> s.remove_static_background()
+        >>> s.remove_dynamic_background(operation="divide", std=5)
         """
         if std is None:
             std = self.axes_manager.signal_shape[0] / 8
@@ -748,18 +735,9 @@ class EBSD(CommonImage, Signal2D):
         dtype_out = self.data.dtype.type
         omin, omax = dtype_range[dtype_out]
 
-        if not self._lazy:
-            print("Removing the dynamic background:", file=sys.stdout)
-
-            # Register a progressbar. Remove once HyperSpy v1.7.1 is
-            # released: https://github.com/hyperspy/hyperspy/issues/2946
-            pbar = ProgressBar()
-            pbar.register()
-
         properties = self._get_custom_properties()
         self.map(
             map_func,
-            show_progressbar=True,
             parallel=True,
             output_dtype=dtype_out,
             filter_func=filter_func,
@@ -770,9 +748,6 @@ class EBSD(CommonImage, Signal2D):
             **kwargs,
         )
         self._set_custom_properties(properties)
-
-        if not self._lazy:
-            pbar.unregister()
 
     def get_dynamic_background(
         self,
@@ -851,10 +826,16 @@ class EBSD(CommonImage, Signal2D):
             background_return = np.empty(
                 shape=background_patterns.shape, dtype=dtype_out
             )
-            with ProgressBar():
-                print("Getting the dynamic background:", file=sys.stdout)
-                background_patterns.store(background_return, compute=True)
-                background_signal = EBSD(background_return)
+
+            if hs.preferences.General.show_progressbar:
+                pbar = ProgressBar()
+                pbar.register()
+
+            background_patterns.store(background_return, compute=True)
+            background_signal = EBSD(background_return)
+
+            if hs.preferences.General.show_progressbar:
+                pbar.unregister()
         else:
             background_signal = LazyEBSD(background_patterns)
 
@@ -907,10 +888,10 @@ class EBSD(CommonImage, Signal2D):
 
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small().inav[0, 0]
-        >>> s.remove_static_background()  # doctest: +SKIP
-        >>> s.remove_dynamic_background()  # doctest: +SKIP
+        >>> s.remove_static_background()
+        >>> s.remove_dynamic_background()
         >>> s2 = s.deepcopy()
-        >>> s2.adaptive_histogram_equalization()  # doctest: +SKIP
+        >>> s2.adaptive_histogram_equalization()
 
         Compute the intensity histograms and plot the patterns and
         histograms
@@ -949,9 +930,14 @@ class EBSD(CommonImage, Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with ProgressBar():
-                print("Adaptive histogram equalization:", file=sys.stdout)
-                equalized_patterns.store(self.data, compute=True)
+            if hs.preferences.General.show_progressbar:
+                pbar = ProgressBar()
+                pbar.register()
+
+            equalized_patterns.store(self.data, compute=True)
+
+            if hs.preferences.General.show_progressbar:
+                pbar.unregister()
         else:
             self.data = equalized_patterns
 
@@ -987,10 +973,10 @@ class EBSD(CommonImage, Signal2D):
         >>> s = kp.data.nickel_ebsd_small()
         >>> s
         <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
-        >>> s.remove_static_background()  # doctest: +SKIP
-        >>> s.remove_dynamic_background()  # doctest: +SKIP
-        >>> iq = s.get_image_quality()  # doctest: +SKIP
-        >>> iq  # doctest: +SKIP
+        >>> s.remove_static_background()
+        >>> s.remove_dynamic_background()
+        >>> iq = s.get_image_quality()
+        >>> iq
         array([[0.19935645, 0.16657268, 0.18803978],
                [0.19040637, 0.1616931 , 0.17834103],
                [0.19411428, 0.16031407, 0.18413563]], dtype=float32)
@@ -1000,17 +986,8 @@ class EBSD(CommonImage, Signal2D):
         frequency_vectors = fft_frequency_vectors((sy, sx))
         inertia_max = np.sum(frequency_vectors) / (sy * sx)
 
-        if not self._lazy:
-            print("Calculating the image quality:", file=sys.stdout)
-
-            # Register a progressbar. Remove once HyperSpy v1.7.1 is
-            # released: https://github.com/hyperspy/hyperspy/issues/2946
-            pbar = ProgressBar()
-            pbar.register()
-
         image_quality_map = self.map(
             _get_image_quality,
-            show_progressbar=True,
             parallel=True,
             inplace=False,
             output_dtype=np.float32,
@@ -1018,9 +995,6 @@ class EBSD(CommonImage, Signal2D):
             frequency_vectors=frequency_vectors,
             inertia_max=inertia_max,
         )
-
-        if not self._lazy:
-            pbar.unregister()
 
         return image_quality_map.data
 
@@ -1609,7 +1583,7 @@ class EBSD(CommonImage, Signal2D):
         ...     transfer_function=w,
         ...     function_domain="frequency",
         ...     shift=True,
-        ... )  # doctest: +SKIP
+        ... )
         """
         dtype_out = self.data.dtype.type
 
@@ -1649,9 +1623,14 @@ class EBSD(CommonImage, Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with ProgressBar():
-                print("FFT filtering:", file=sys.stdout)
-                filtered_patterns.store(self.data, compute=True)
+            if hs.preferences.General.show_progressbar:
+                pbar = ProgressBar()
+                pbar.register()
+
+            filtered_patterns.store(self.data, compute=True)
+
+            if hs.preferences.General.show_progressbar:
+                pbar.unregister()
         else:
             self.data = filtered_patterns
 
@@ -1726,9 +1705,14 @@ class EBSD(CommonImage, Signal2D):
         )
 
         if not self._lazy:
-            with ProgressBar():
-                print("Calculating neighbour dot product matrices:", file=sys.stdout)
-                dp_matrices = dp_matrices.compute()
+            if hs.preferences.General.show_progressbar:
+                pbar = ProgressBar()
+                pbar.register()
+
+            dp_matrices = dp_matrices.compute()
+
+            if hs.preferences.General.show_progressbar:
+                pbar.unregister()
 
         return dp_matrices
 
@@ -1828,9 +1812,14 @@ class EBSD(CommonImage, Signal2D):
         adp = adp.rechunk(chunks=chunks)
 
         if not self._lazy:
-            with ProgressBar():
-                print("Calculating average neighbour dot product map:", file=sys.stdout)
-                adp = adp.compute()
+            if hs.preferences.General.show_progressbar:
+                pbar = ProgressBar()
+                pbar.register()
+
+            adp = adp.compute()
+
+            if hs.preferences.General.show_progressbar:
+                pbar.unregister()
 
         return adp
 
@@ -1953,9 +1942,14 @@ class EBSD(CommonImage, Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with ProgressBar():
-                print("Averaging with the neighbour patterns:", file=sys.stdout)
-                averaged_patterns.store(self.data, compute=True)
+            if hs.preferences.General.show_progressbar:
+                pbar = ProgressBar()
+                pbar.register()
+
+            averaged_patterns.store(self.data, compute=True)
+
+            if hs.preferences.General.show_progressbar:
+                pbar.unregister()
         else:
             # Revert original chunks
             averaged_patterns = averaged_patterns.rechunk(old_chunks)
@@ -2016,7 +2010,7 @@ class EBSD(CommonImage, Signal2D):
         out.metadata.General.title = "Virtual backscatter electron intensity"
 
         # Create the interactive signal
-        interactive(
+        hs.interactive(
             f=sliced_signal.nansum,
             axis=sliced_signal.axes_manager.signal_axes,
             event=roi.events.changed,
@@ -2332,8 +2326,8 @@ class LazyEBSD(LazySignal2D, EBSD):
     """Lazy implementation of the ``EBSD`` class.
 
     This class extends HyperSpy's LazySignal2D class for EBSD patterns.
-    Methods inherited from HyperSpy can be found in the HyperSpy user
-    guide.
+    Methods inherited from HyperSpy can be found in the HyperSpy
+    documentation.
 
     See docstring of :class:`EBSD` for attributes and methods.
     """

@@ -108,7 +108,7 @@ def nickel_ebsd_small(**kwargs) -> EBSD:
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.nickel_ebsd_small()
-    >>> s  # doctest: +SKIP
+    >>> s
     <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
     >>> s.plot()
     """
@@ -152,7 +152,7 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
 
     >>> import kikuchipy as kp
     >>> s = kp.data.nickel_ebsd_master_pattern_small()
-    >>> s  # doctest: +SKIP
+    >>> s
     <EBSDMasterPattern, title: ni_mc_mp_20kv_uint8_gzip_opts9, dimensions: (|401, 401)>
     >>> s.projection
     'stereographic'
@@ -199,7 +199,7 @@ def nickel_ebsd_large(
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.nickel_ebsd_large(allow_download=True)
-    >>> s  # doctest: +SKIP
+    >>> s
     <EBSD, title: patterns Scan 1, dimensions: (75, 55|60, 60)>
     >>> s.plot()
     """
@@ -246,7 +246,7 @@ def silicon_ebsd_moving_screen_in(
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
-    >>> s  # doctest: +SKIP
+    >>> s
     <EBSD, title: si_in Scan 1, dimensions: (|480, 480)>
     >>> s.plot()
     """
@@ -295,7 +295,7 @@ def silicon_ebsd_moving_screen_out5mm(
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.silicon_ebsd_moving_screen_out5mm(allow_download=True)
-    >>> s  # doctest: +SKIP
+    >>> s
     <EBSD, title: si_out5mm Scan 1, dimensions: (|480, 480)>
     >>> s.plot()
     """
@@ -346,7 +346,7 @@ def silicon_ebsd_moving_screen_out10mm(
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.silicon_ebsd_moving_screen_out10mm(allow_download=True)
-    >>> s  # doctest: +SKIP
+    >>> s
     <EBSD, title: si_out10mm Scan 1, dimensions: (|480, 480)>
     >>> s.plot()
     """

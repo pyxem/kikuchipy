@@ -16,8 +16,7 @@ import matplotlib.pyplot as plt
 import pyvista
 from numpydoc.docscrape_sphinx import SphinxDocString
 
-from kikuchipy import release as kp_release
-import kikuchipy
+import kikuchipy as kp
 
 
 # If extensions (or modules to document with autodoc) are in another
@@ -28,10 +27,10 @@ sys.path.append("../")
 
 # Project information
 project = "kikuchipy"
-copyright = f"2019-{datetime.now().year}, {kp_release.author}"
-author = kp_release.author
-version = kp_release.version
-release = kp_release.version
+copyright = f"2019-{datetime.now().year}, {kp.release.author}"
+author = kp.release.author
+version = kp.release.version
+release = kp.release.version
 
 master_doc = "index"
 
@@ -41,6 +40,7 @@ master_doc = "index"
 extensions = [
     "matplotlib.sphinxext.plot_directive",
     "nbsphinx",
+    "nbsphinx_link",
     "notfound.extension",
     "sphinxcontrib.bibtex",
     "sphinx.ext.autodoc",
@@ -49,9 +49,11 @@ extensions = [
     "sphinx.ext.linkcode",
     "sphinx.ext.mathjax",
     "numpydoc",
+    "sphinx_codeautolink",
     "sphinx_copybutton",
     "sphinx_design",
     "sphinx_gallery.gen_gallery",
+    "sphinx_last_updated_by_git",
 ]
 
 # Create links to references within kikuchipy's documentation to these
@@ -101,6 +103,8 @@ pygments_style = "friendly"
 html_logo = "_static/logo/plasma_logo.svg"
 html_favicon = "_static/logo/plasma_favicon.png"
 
+nitpicky = False
+
 # -- nbsphinx configuration
 # Taken from nbsphinx' own nbsphinx configuration file, with slight
 # modifications to point nbviewer and Binder to the GitHub develop
@@ -113,7 +117,7 @@ else:
 # This is processed by Jinja2 and inserted before each notebook
 nbsphinx_prolog = (
     r"""
-{% set docname = 'doc/' + env.doc2path(env.docname, base=None) %}
+{% set docname = env.doc2path(env.docname, base=None)[:-6] + 'ipynb' %}
 
 .. raw:: html
 
@@ -121,13 +125,13 @@ nbsphinx_prolog = (
 
     <div class="admonition note">
       This page was generated from
-      <a class="reference external" href="""
-    + f"'https://github.com/pyxem/kikuchipy/blob/{release_version}"
-    + r"""/{{ docname|e }}'>{{ docname|e }}</a>.
+      <a class="reference external" href="https://github.com/pyxem/kikuchipy/blob/"""
+    + release_version
+    + r"""/{{ docname|e }}">{{ docname|e }}</a>.
       Interactive online version:
-      <span style="white-space: nowrap;"><a href="""
-    + f"'https://mybinder.org/v2/gh/pyxem/kikuchipy/{release_version}"
-    + r"""?filepath={{ docname|e }}'><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
+      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/pyxem/kikuchipy/"""
+    + release_version
+    + r"""?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
       <script>
         if (document.location.host) {
           $(document.currentScript).replaceWith(
@@ -150,12 +154,13 @@ nbsphinx_prolog = (
 """
 )
 # https://nbsphinx.readthedocs.io/en/0.8.0/never-execute.html
-nbsphinx_execute = "never"  # always, auto, never
+nbsphinx_execute = "auto"  # always, auto, never
 nbsphinx_allow_errors = True
 nbsphinx_execute_arguments = [
     "--InlineBackend.rc=figure.facecolor='w'",
     "--InlineBackend.rc=font.size=15",
 ]
+
 
 # -- sphinxcontrib-bibtex configuration
 bibtex_bibfiles = ["bibliography.bib"]
@@ -213,18 +218,18 @@ def linkcode_resolve(domain, info):
     else:
         linespec = ""
 
-    startdir = os.path.abspath(os.path.join(dirname(kikuchipy.__file__), ".."))
+    startdir = os.path.abspath(os.path.join(dirname(kp.__file__), ".."))
     fn = relpath(fn, start=startdir).replace(os.path.sep, "/")
 
     if fn.startswith("kikuchipy/"):
-        m = re.match(r"^.*dev0\+([a-f0-9]+)$", kikuchipy.__version__)
+        m = re.match(r"^.*dev0\+([a-f0-9]+)$", version)
         pre_link = "https://github.com/pyxem/kikuchipy/blob/"
         if m:
             return pre_link + "%s/%s%s" % (m.group(1), fn, linespec)
-        elif "dev" in kikuchipy.__version__:
+        elif "dev" in version:
             return pre_link + "develop/%s%s" % (fn, linespec)
         else:
-            return pre_link + "v%s/%s%s" % (kikuchipy.__version__, fn, linespec)
+            return pre_link + "v%s/%s%s" % (version, fn, linespec)
     else:
         return None
 
@@ -319,11 +324,29 @@ SphinxDocString._str_examples = _str_examples
 sphinx_gallery_conf = {
     "backreferences_dir": "reference/generated",
     "doc_module": ("kikuchipy",),
-    "examples_dirs": "_examples",
+    "examples_dirs": "../examples",
     "filename_pattern": "^((?!sgskip).)*$",
     "gallery_dirs": "examples",
     "reference_url": {"kikuchipy": None},
-    "run_stale_examples": True,
     "show_memory": True,
 }
 autosummary_generate = True
+
+
+# Download example datasets prior to building the docs
+print("[kikuchipy] Download example datasets")
+_ = kp.data.nickel_ebsd_large(allow_download=True)
+_ = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
+
+
+# Create nbsphinx-link files in doc/tutorials/ directory prior to
+# building the docs
+print("[kikuchipy] Create nbsphinx-link files in doc/tutorial/")
+source_dir = "../tutorials"
+target_dir = "tutorials"
+for filename in os.listdir(source_dir):
+    fname, ext = os.path.splitext(filename)
+    new_file = fname + ".nblink"
+    if ext == ".ipynb" and not os.path.isfile(new_file):
+        with open(os.path.join(target_dir, new_file), mode="w") as f:
+            f.write('{\n  "path": "../../' + target_dir + "/" + filename + '"\n}')
