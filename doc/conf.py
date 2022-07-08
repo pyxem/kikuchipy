@@ -150,7 +150,7 @@ nbsphinx_prolog = (
 """
 )
 # https://nbsphinx.readthedocs.io/en/0.8.0/never-execute.html
-nbsphinx_execute = "auto"  # always, auto, never
+nbsphinx_execute = "never"  # always, auto, never
 nbsphinx_allow_errors = True
 nbsphinx_execute_arguments = [
     "--InlineBackend.rc=figure.facecolor='w'",
@@ -233,8 +233,8 @@ def linkcode_resolve(domain, info):
 notfound_context = {
     "body": (
         "<h1>Page not found.</h1>\n\nPerhaps try the "
-        "<a href='http://kikuchipy.org/en/latest/examples/index.html'>"
-        "user guide page</a>."
+        "<a href='https://kikuchipy.org/en/latest/examples/index.html'>"
+        "examples page</a>."
     ),
 }
 notfound_no_urls_prefix = True
