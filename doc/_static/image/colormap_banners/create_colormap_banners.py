@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 plt.rcParams["backend"] = "agg"
 
-cmaps = [mpl.cm.plasma, mpl.cm.viridis, mpl.cm.inferno]
+cmaps = [mpl.cm.plasma, mpl.cm.viridis, mpl.cm.cool]
 
 for i, cmap in enumerate(cmaps):
     fig, ax = plt.subplots(figsize=(15, 1))

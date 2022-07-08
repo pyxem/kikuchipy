@@ -4,7 +4,7 @@ Contributing
 
 kikuchipy is a community maintained project. We welcome contributions in the form of bug
 reports, documentation, code, feature requests, and more. The source code is hosted on
-`GitHub <https://github.com/pyxem/kikuchipy>`_. These guidelines provide resources on
+`GitHub <https://github.com/pyxem/kikuchipy>`__. These guidelines provide resources on
 how best to contribute.
 
 .. tip::
@@ -12,20 +12,20 @@ how best to contribute.
     This guide can look intimidating to people who want to contribute, but have limited
     experience with tools like ``git``, ``pytest``, and ``sphinx``. The shortest route
     to start contributing is to create a GitHub account and explain what you want to do
-    `in an issue <https://github.com/pyxem/kikuchipy/issues/new>`_.
+    `in an issue <https://github.com/pyxem/kikuchipy/issues/new>`__.
 
 This project follows the `all-contributors
-<https://github.com/all-contributors/all-contributors>`_ specification.
+<https://github.com/all-contributors/all-contributors>`__ specification.
 
 Questions, comments, and feedback
 =================================
 
 Have a question, comment, suggestion for improvements, or any other inquiries
 regarding the project? Feel free to `ask a question
-<https://github.com/pyxem/kikuchipy/discussions>`_, `open an issue
-<https://github.com/pyxem/kikuchipy/issues>`_ or `make a pull request
-<https://github.com/pyxem/kikuchipy/pulls>`_ in our GitHub repository. We also have a
-`Gitter chat <https://gitter.im/pyxem/kikuchipy>`_.
+<https://github.com/pyxem/kikuchipy/discussions>`__, `open an issue
+<https://github.com/pyxem/kikuchipy/issues>`__ or `make a pull request
+<https://github.com/pyxem/kikuchipy/pulls>`__ in our GitHub repository. We also have a
+`Gitter chat <https://gitter.im/pyxem/kikuchipy>`__.
 
 Code of Conduct
 ===============
@@ -39,8 +39,8 @@ Setting up a development installation
 =====================================
 
 You need a `fork
-<https://docs.github.com/en/get-started/quickstart/contributing-to-projects#about-forking>`_
-of the `repository <https://github.com/pyxem/kikuchipy>`_ in order to make changes to
+<https://docs.github.com/en/get-started/quickstart/contributing-to-projects#about-forking>`__
+of the `repository <https://github.com/pyxem/kikuchipy>`__ in order to make changes to
 kikuchipy.
 
 Make a local copy of your forked repository and change directories::
@@ -53,8 +53,8 @@ Set the ``upstream`` remote to the main kikuchipy repository::
     git remote add upstream https://github.com/pyxem/kikuchipy.git
 
 We recommend installing in a `conda environment
-<https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`_
-with the `Miniconda distribution <https://docs.conda.io/en/latest/miniconda.html>`_::
+<https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`__
+with the `Miniconda distribution <https://docs.conda.io/en/latest/miniconda.html>`__::
 
     conda create --name kp-dev
     conda activate kp-dev
@@ -71,9 +71,9 @@ Code style
 ==========
 
 The code making up kikuchipy is formatted closely following the `Style Guide for Python
-Code <https://peps.python.org/pep-0008/>`_ with `The Black Code style
-<https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html>`_. We
-use `pre-commit <https://pre-commit.com>`_ to run ``black`` automatically prior to each
+Code <https://peps.python.org/pep-0008/>`__ with `The Black Code style
+<https://black.readthedocs.io/en/stable/the_black_code_style/current_style.html>`__. We
+use `pre-commit <https://pre-commit.com>`__ to run ``black`` automatically prior to each
 local commit. Please install it in your environment::
 
     pre-commit install
@@ -82,8 +82,10 @@ Next time you commit some code, your code will be formatted inplace according to
 ``black``.
 
 Note that ``black`` won't format `docstrings
-<https://peps.python.org/pep-0257/>`_. We follow the `numpydoc
-<https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard>`_ standard.
+<https://peps.python.org/pep-0257/>`__. We follow the `numpydoc
+<https://numpydoc.readthedocs.io/en/latest/format.html#docstring-standard>`__ standard
+(with some exceptions), and the docstrings are checked against this standard when
+building the documentation.
 
 Comment lines should preferably be limited to 72 characters.
 
@@ -110,9 +112,6 @@ docstring, for example::
             Explanation of returned values.
         """
 
-We use `numpydoc <https://numpydoc.readthedocs.io>`__ to check the docstrings when
-building the documentation.
-
 Making changes
 ==============
 
@@ -133,9 +132,9 @@ Add and commit your created, modified or deleted files::
     git commit -s -m "An explanatory commit message"
 
 The ``-s`` makes sure that you sign your commit with your `GitHub-registered email
-<https://github.com/settings/emails>`_ as the author. You can set this up following
+<https://github.com/settings/emails>`__ as the author. You can set this up following
 `this GitHub guide
-<https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-personal-account-on-github/managing-email-preferences/setting-your-commit-email-address>`_.
+<https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-personal-account-on-github/managing-email-preferences/setting-your-commit-email-address>`__.
 
 Keeping your branch up-to-date
 ==============================
@@ -164,7 +163,7 @@ Update your remote branch::
     git push -u origin your-awesome-feature-name
 
 You can then make a `pull request
-<https://docs.github.com/en/get-started/quickstart/contributing-to-projects#making-a-pull-request>`_
+<https://docs.github.com/en/get-started/quickstart/contributing-to-projects#making-a-pull-request>`__
 to kikuchipy's ``develop`` branch for new features and ``main`` branch for bug fixes.
 Good job!
 
@@ -176,14 +175,14 @@ and the ``reference``. The documentation strategy is based on the
 `Diátaxis Framework <https://diataxis.fr/>`__. New documents should fit into one of
 these categories.
 
-We use `Sphinx <https://www.sphinx-doc.org/en/master/>`_ for documenting functionality.
+We use `Sphinx <https://www.sphinx-doc.org/en/master/>`__ for documenting functionality.
 Install necessary dependencies to build the documentation::
 
     pip install --editable .[doc]
 
 .. note::
 
-    The user guide notebooks require some small datasets to be downloaded via the
+    The tutorials and examples require some small datasets to be downloaded via the
     :mod:`kikuchipy.data` module upon building the documentation. See the section on the
     :ref:`data module <adding-data-to-data-module>` for more details.
 
@@ -194,13 +193,16 @@ Then, build the documentation from the ``doc`` directory::
 
 The documentation's HTML pages are built in the ``doc/build/html`` directory from files
 in the `reStructuredText (reST)
-<https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`_ plaintext
+<https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`__ plaintext
 markup language. They should be accessible in the browser by typing
 ``file:///your/absolute/path/to/kikuchipy/doc/build/html/index.html`` in the address
 bar.
 
+The gallery of examples in :doc:`examples/index` are built with `Sphinx-Gallery
+<https://sphinx-gallery.github.io/stable/index.html>`__.
+
 Tips for writing Jupyter Notebooks that are meant to be converted to reST text files by
-`nbsphinx <https://nbsphinx.readthedocs.io/en/latest/>`_:
+`nbsphinx <https://nbsphinx.readthedocs.io/en/latest/>`__:
 
 - All notebooks should have a Markdown (MD) cell with this message at the top, "This
   notebook is part of the kikuchipy documentation https://kikuchipy.org. Links to the
@@ -227,7 +229,8 @@ Tips for writing Jupyter Notebooks that are meant to be converted to reST text f
   within them are run and tested to ensure continued compatibility with code changes.
   Cell output should only be stored in notebooks which are too computationally intensive
   for the Read the Docs server to handle, which has a limit of 15 minutes and 3 GB of
-  memory per `documentation build <https://docs.readthedocs.io/en/stable/builds.html>`_.
+  memory per `documentation build
+  <https://docs.readthedocs.io/en/stable/builds.html>`__.
 - We also use ``black`` to format notebooks cells. To run the ``black`` formatter on
   your notebook(s) locally please specify the notebook(s), ie.
   ``black my_notebook.ipynb`` or ``black *.ipynb``, as ``black .`` will not format
@@ -238,14 +241,14 @@ Tips for writing Jupyter Notebooks that are meant to be converted to reST text f
       python_code_block = not_to_be_formatted
       # fmt: on
 
-  Please see the `black documentation <https://black.readthedocs.io/en/stable/index.html>`_
-  for more details.
+  Please see the `black documentation
+  <https://black.readthedocs.io/en/stable/index.html>`__ for more details.
 - Displaying interactive 3D plots with
-  `PyVista <https://docs.pyvista.org/user-guide/jupyter/index.html>`_ requires a Jupyter
-  backend, and we use `pythreejs <https://github.com/jupyter-widgets/pythreejs>`_. This
-  can either be passed to the plotting function, or it can be set in a hidden (see point
-  above) notebook cell at the top of the notebook via
-  ``pyvista.set_jupyter_backend("pythreejs")``.
+  `PyVista <https://docs.pyvista.org/user-guide/jupyter/index.html>`__ requires a
+  Jupyter backend, and we use `pythreejs
+  <https://github.com/jupyter-widgets/pythreejs>`__. This can either be passed to the
+  plotting function, or it can be set in a hidden (see point above) notebook cell at the
+  top of the notebook via ``pyvista.set_jupyter_backend("pythreejs")``.
 
 In general, we run all notebooks every time the documentation is built with Sphinx, to
 ensure that all notebooks are compatible with the current API at all times. This is
@@ -254,11 +257,11 @@ the documentation doesn't take too long to build, either by us locally or the Re
 Docs GitHub action. To check that the notebooks with stored cell outputs are compatible
 with the current API, we run a scheduled GitHub Action every Monday morning which checks
 that the notebooks run OK and that they produce the same output now as when they were
-last executed. We use `nbval <https://nbval.readthedocs.io/en/latest/>`_ for this.
+last executed. We use `nbval <https://nbval.readthedocs.io/en/latest/>`__ for this.
 
-The user guide notebooks can be run interactively in the browser with the help of
-Binder. When creating a server from the kikuchipy source code, Binder installs the
-packages listed in the environment.yml configuration file, which must include all doc
+The tutorial notebooks can be run interactively in the browser with the help of Binder.
+When creating a server from the kikuchipy source code, Binder installs the packages
+listed in the environment.yml configuration file, which must include all doc
 dependencies listed in setup.py necessary to run the notebooks.
 
 Deprecations
@@ -342,23 +345,24 @@ Tips for writing tests of Numba decorated functions:
 Adding data to the data module
 ==============================
 
-Test data for user guides and tests are included in the :mod:`kikuchipy.data` module via
-the `pooch <https://www.fatiando.org/pooch/latest/>`_ Python library. These are listed
-in a file registry (`kikuchipy.data._registry.py`) with their file verification string
-(hash, SHA256, obtain with e.g. `sha256sum <file>`) and location, the latter potentially
-not within the package but from the `kikuchipy-data
-<https://github.com/pyxem/kikuchipy-data>`_ repository or elsewhere, since some files
-are considered too large to include in the package.
+Example datasets used in the documentation and tests are included in the
+:mod:`kikuchipy.data` module via the `pooch <https://www.fatiando.org/pooch/latest/>`__
+Python library. These are listed in a file registry (``kikuchipy.data._registry.py``)
+with their file verification string (hash, SHA256, obtain with e.g.
+``sha256sum <file>``) and location, the latter potentially not within the package but
+from the `kikuchipy-data <https://github.com/pyxem/kikuchipy-data>`__ repository or
+elsewhere, since some files are considered too large to include in the package.
 
 If a required dataset isn't in the package, but is in the registry, it can be downloaded
-from the repository when the user passes `allow_download=True` to e.g.
+from the repository when the user passes ``allow_download=True`` to e.g.
 :func:`~kikuchipy.data.nickel_ebsd_large`. The dataset is then downloaded to a local
-cache, in the location returned from `pooch.os_cache("kikuchipy")`. The location can be
-set with a global `KIKUCHIPY_DATA_DIR` variable locally, e.g. by setting
-`export KIKUCHIPY_DATA_DIR=~/kikuchipy_data` in `~/.bashrc`. Pooch handles downloading,
-caching, version control, file verification (against hash) etc. of files not included in
-the package. If we have updated the file hash, pooch will re-download it. If the file is
-available in the cache, it can be loaded as the other files in the data module.
+cache, in the location returned from ``pooch.os_cache("kikuchipy")``. The location can
+be set with a global `KIKUCHIPY_DATA_DIR` variable locally, e.g. by setting
+``export KIKUCHIPY_DATA_DIR=~/kikuchipy_data`` in ``~/.bashrc``. Pooch handles
+downloading, caching, version control, file verification (against hash) etc. of files
+not included in the package. If we have updated the file hash, pooch will re-download
+it. If the file is available in the cache, it can be loaded as the other files in the
+data module.
 
 With every new version of kikuchipy, a new directory of datasets with the version name
 is added to the cache directory. Any old directories are not deleted automatically, and
@@ -369,16 +373,16 @@ Improving performance
 
 When we write code, it's important that we (1) get the correct result, (2) don't fill up
 memory, and (3) that the computation doesn't take too long. To keep memory in check, we
-should use `Dask <https://docs.dask.org/en/latest/>`_ wherever possible. To speed up
-computations, we should use `Numba <https://numba.pydata.org/numba-doc/dev/>`_ wherever
+should use `Dask <https://docs.dask.org/en/latest/>`__ wherever possible. To speed up
+computations, we should use `Numba <https://numba.pydata.org/numba-doc/dev/>`__ wherever
 possible.
 
 Continuous integration (CI)
 ===========================
 
-We use `GitHub Actions <https://github.com/pyxem/kikuchipy/actions>`_ to ensure that
+We use `GitHub Actions <https://github.com/pyxem/kikuchipy/actions>`__ to ensure that
 kikuchipy can be installed on Windows, macOS and Linux (Ubuntu). After a successful
 installation of the package, the CI server runs the tests. After the tests return no
 errors, code coverage is reported to `Coveralls
-<https://coveralls.io/github/pyxem/kikuchipy?branch=develop>`_. Add "[skip ci]" or to a
-commit message to skip this workflow on any commit to a pull request, as explained
+<https://coveralls.io/github/pyxem/kikuchipy?branch=develop>`__. Add ``"[skip ci]"``
+to a commit message to skip this workflow on any commit to a pull request.

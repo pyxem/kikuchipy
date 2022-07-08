@@ -6,8 +6,7 @@ This page contains more in-depth guides for using kikuchipy. It is broken up int
 sections covering specific topics.
 
 For shorter examples, see our :doc:`/examples/index`. For descriptions of
-the functions, modules, and objects in kikuchipy, see the
-:doc:`reference </reference/index>`.
+the functions, modules, and objects in kikuchipy, see the :doc:`/reference/index`.
 
 The tutorials are live and available on MyBinder:
 

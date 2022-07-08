@@ -13,7 +13,7 @@ import hyperspy.api as hs
 import kikuchipy as kp
 
 
-s = kp.data.nickel_ebsd_large(allow_download=True)
+s = kp.data.nickel_ebsd_large(allow_download=True, lazy=True)
 print(s)
 
 ########################################################################################
