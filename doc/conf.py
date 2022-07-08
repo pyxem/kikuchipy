@@ -317,12 +317,13 @@ SphinxDocString._str_examples = _str_examples
 
 # -- Sphinx-Gallery configuration
 sphinx_gallery_conf = {
-    "examples_dirs": "_examples",
-    "gallery_dirs": "examples",
-    "filename_pattern": "^((?!sgskip).)*$",
-    "reference_url": {"kikuchipy": None},
     "backreferences_dir": "reference/generated",
     "doc_module": ("kikuchipy",),
+    "examples_dirs": "_examples",
+    "filename_pattern": "^((?!sgskip).)*$",
+    "gallery_dirs": "examples",
+    "reference_url": {"kikuchipy": None},
     "run_stale_examples": True,
+    "show_memory": True,
 }
 autosummary_generate = True

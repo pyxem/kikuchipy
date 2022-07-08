@@ -44,8 +44,8 @@ with open("kikuchipy/release.py") as fid:
 extra_feature_requirements = {
     "doc": [
         "furo",
+        "memory_profiler",
         "nbsphinx                   >= 0.7",
-        "sphinx-notfound-page",
         "numpydoc",
         "pythreejs",  # Used in the docs by PyVista
         "pyvista",
@@ -53,13 +53,14 @@ extra_feature_requirements = {
         "sphinx-copybutton          >= 0.2.5",
         "sphinx-design",
         "sphinx-gallery             >= 0.6",
+        "sphinx-notfound-page",
         "sphinxcontrib-bibtex       >= 1.0",
     ],
     "tests": [
         "coverage                   >= 5.0",
+        "numpydoc",
         "pytest                     >= 5.4",
         "pytest-cov                 >= 2.8.1",
-        "numpydoc",
     ],
     "viz": [
         "pyvista",
