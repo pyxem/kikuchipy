@@ -12,7 +12,7 @@ import kikuchipy as kp
 import numpy as np
 
 
-s = kp.data.silicon_ebsd_moving_screen_in()
+s = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
 print(s)
 
 s.remove_static_background()
