@@ -198,22 +198,31 @@ markup language. They should be accessible in the browser by typing
 ``file:///your/absolute/path/to/kikuchipy/doc/build/html/index.html`` in the address
 bar.
 
-The gallery of examples in :doc:`examples/index` are built with `Sphinx-Gallery
-<https://sphinx-gallery.github.io/stable/index.html>`__.
+We use `Sphinx-Gallery <https://sphinx-gallery.github.io/stable/index.html>`__ to build
+the :doc:`examples/index`. The examples are located in the top source directory
+``examples/``, and a new directory ``doc/examples/`` is created when the docs are built.
 
-Tips for writing Jupyter Notebooks that are meant to be converted to reST text files by
-`nbsphinx <https://nbsphinx.readthedocs.io/en/latest/>`__:
+We use `nbsphinx <https://nbsphinx.readthedocs.io/en/latest/>`__ for converting
+notebooks into tutorials. The tutorials are located in the top source directory
+``tutorials/``, and links to these notebooks are added using
+`nbsphinx-link <https://github.com/vidartf/nbsphinx-link>`__.
 
-- All notebooks should have a Markdown (MD) cell with this message at the top, "This
+Here are some tips for writing tutorial notebooks:
+
+- All notebooks should have a Markdown cell with this message at the top, "This
   notebook is part of the kikuchipy documentation https://kikuchipy.org. Links to the
   documentation won't work from the notebook.", and have ``"nbsphinx": "hidden"`` in the
   cell metadata so that the message is not visible when displayed in the documentation.
 - Use ``_ = ax[0].imshow(...)`` to silence ``matplotlib`` output if a ``matplotlib``
   command is the last line in a cell.
-- Refer to our API reference with this general MD
+- Refer to our API reference with this general Markdown
   ``[fft_filter()](../reference/generated/kikuchipy.signals.EBSD.fft_filter.rst)``.
   Remember to add the parentheses ``()`` to functions and methods.
-- Reference external APIs via standard MD like
+- Reference sections in other tutorial notebooks using this general Markdown
+  ``[image quality](../tutorials/feature_maps.ipynb#image-quality)``. This is needed
+  because the notebooks are located in the top directory ``tutorials/``, while the
+  actual doc files when they are built are located in the directory ``doc/tutorials/``.
+- Reference external APIs via standard Markdown like
   ``[Signal2D](http://hyperspy.org/hyperspy-doc/current/api/hyperspy._signals.signal2d.html)``.
 - The Sphinx gallery thumbnail used for a notebook is set by adding the
   ``nbsphinx-thumbnail`` tag to a code cell with an image output. The notebook must be
@@ -327,9 +336,10 @@ e.g. when you're creating or updating a test. But remember to run the full test 
 before pushing!
 
 Docstring examples are tested `with pytest
-<https://docs.pytest.org/en/stable/how-to/doctest.html>`_ as well::
+<https://docs.pytest.org/en/stable/how-to/doctest.html>`_ as well. If you're in the top
+directory you can run::
 
-    pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
+    pytest --doctest-modules --ignore-glob=kikuchipy/*/tests kikuchipy/*.py
 
 Tips for writing tests of Numba decorated functions:
 
