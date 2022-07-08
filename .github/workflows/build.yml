@@ -18,7 +18,7 @@ jobs:
         run: pip install black[jupyter]
 
       - name: Check code style of Jupyter notebooks
-        run: black doc/*/*.ipynb
+        run: black tutorials/*.ipynb
 
   # Make sure all necessary files are included in a release
   manifest:
