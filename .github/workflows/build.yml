@@ -98,7 +98,7 @@ jobs:
       - name: Run docstring tests
         continue-on-error: true
         run: |
-          pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
+          pytest --doctest-modules --ignore-glob=kikuchipy/*/tests kikuchipy/*.py
 
       - name: Run tests in a virtual X server environment on Ubuntu
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 }}

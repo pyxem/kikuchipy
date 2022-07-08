@@ -103,7 +103,7 @@ pygments_style = "friendly"
 html_logo = "_static/logo/plasma_logo.svg"
 html_favicon = "_static/logo/plasma_favicon.png"
 
-nitpicky = False
+nitpicky = True
 
 # -- nbsphinx configuration
 # Taken from nbsphinx' own nbsphinx configuration file, with slight
