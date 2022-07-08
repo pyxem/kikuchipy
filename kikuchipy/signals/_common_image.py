@@ -42,12 +42,12 @@ class CommonImage(Signal2D):
     def rescale_intensity(
         self,
         relative: bool = False,
-        in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-        out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        in_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
+        out_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
         dtype_out: Union[
-            None, type, np.dtype, Tuple[int, int], Tuple[float, float]
+            str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
         ] = None,
-        percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
     ) -> None:
         """Rescale image intensities inplace.
 
@@ -100,9 +100,9 @@ class CommonImage(Signal2D):
         >>> s = kp.data.nickel_ebsd_small()
 
         Image intensities are stretched to fill the available grey
-        levels in the input images' data type range or any
-        :class:`numpy.dtype` range passed to ``dtype_out``, either
-        keeping relative intensities between images or not:
+        levels in the input images' data type range or any data type
+        range passed to ``dtype_out``, either keeping relative
+        intensities between images or not
 
         >>> print(
         ...     s.data.dtype, s.data.min(), s.data.max(),
@@ -123,7 +123,7 @@ class CommonImage(Signal2D):
         ... )  # doctest: +SKIP
         uint8 0 255 3 253
 
-        Contrast stretching can be performed by passing percentiles:
+        Contrast stretching can be performed by passing percentiles
 
         >>> s.rescale_intensity(percentiles=(1, 99))  # doctest: +SKIP
 
@@ -145,13 +145,12 @@ class CommonImage(Signal2D):
             in_range = (self.data.min(), self.data.max())
 
         if dtype_out is None:
-            dtype_out = self.data.dtype.type
+            dtype_out = self.data.dtype
+        else:
+            dtype_out = np.dtype(dtype_out)
 
         if out_range is None:
-            dtype_out_pass = dtype_out
-            if isinstance(dtype_out, np.dtype):
-                dtype_out_pass = dtype_out.type
-            out_range = dtype_range[dtype_out_pass]
+            out_range = dtype_range[dtype_out.type]
 
         # Create dask array of signal images and do processing on this
         dask_array = get_dask_array(signal=self)
@@ -180,7 +179,7 @@ class CommonImage(Signal2D):
         self,
         num_std: int = 1,
         divide_by_square_root: bool = False,
-        dtype_out: Union[None, type, np.dtype] = None,
+        dtype_out: Union[str, np.dtype, type, None] = None,
     ) -> None:
         """Normalize image intensities in inplace to a mean of zero with
         a given standard deviation.
@@ -225,6 +224,8 @@ class CommonImage(Signal2D):
 
         if dtype_out is None:
             dtype_out = self.data.dtype
+        else:
+            dtype_out = np.dtype(dtype_out)
 
         dask_array = get_dask_array(self, dtype=np.float32)
 

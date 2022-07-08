@@ -44,10 +44,12 @@ class VirtualBSEImage(CommonImage, Signal2D):
     def rescale_intensity(
         self,
         relative: bool = False,
-        in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-        out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-        dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
-        percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        in_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
+        out_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
+        dtype_out: Union[
+            str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
+        ] = None,
+        percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
     ) -> None:
         return super().rescale_intensity(
             relative, in_range, out_range, dtype_out, percentiles
@@ -57,6 +59,6 @@ class VirtualBSEImage(CommonImage, Signal2D):
         self,
         num_std: int = 1,
         divide_by_square_root: bool = False,
-        dtype_out: Optional[np.dtype] = None,
+        dtype_out: Union[str, np.dtype, type, None] = None,
     ) -> None:
         return super().normalize_intensity(num_std, divide_by_square_root, dtype_out)

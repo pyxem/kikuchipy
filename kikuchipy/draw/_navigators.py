@@ -21,14 +21,13 @@ navigators with :meth:`~hyperspy.signals.Signal2D.plot`.
 
 from typing import Union
 
+import hyperspy.api as hs
 import numpy as np
 from skimage.exposure import rescale_intensity
 
-import hyperspy.api as hs
-
 
 def get_rgb_navigator(
-    image: np.ndarray, dtype: Union[type, np.dtype] = np.dtype("uint16")
+    image: np.ndarray, dtype: Union[str, np.dtype, type] = "uint16"
 ) -> hs.signals.Signal2D:
     """Create an RGB navigator signal which is suitable to pass to
     :meth:`~hyperspy._signals.signal2d.Signal2D.plot` as the
@@ -39,8 +38,9 @@ def get_rgb_navigator(
     image
         RGB color image of shape ``(n rows, n columns, 3)``.
     dtype
-        Which data type to cast the signal data to, either ``uint16``
-        (default) or ``uint8``.
+        Which data type to cast the signal data to, either ``"uint16"``
+        (default) or ``"uint8"``. Must be a valid :class:`numpy.dtype`
+        identifier.
 
     Returns
     -------
@@ -48,8 +48,9 @@ def get_rgb_navigator(
         Signal with an (n columns, n rows) signal shape and no
         navigation shape, of data type either ``rgb8`` or ``rgb16``.
     """
-    image_rescaled = rescale_intensity(image, out_range=dtype).astype(dtype)
+    dtype = np.dtype(dtype)
+    image_rescaled = rescale_intensity(image, out_range=dtype.type).astype(dtype)
     s = hs.signals.Signal2D(image_rescaled)
     s = s.transpose(signal_axes=1)
-    s.change_dtype({"uint8": "rgb8", "uint16": "rgb16"}[np.dtype(dtype).name])
+    s.change_dtype({"uint8": "rgb8", "uint16": "rgb16"}[dtype.name])
     return s

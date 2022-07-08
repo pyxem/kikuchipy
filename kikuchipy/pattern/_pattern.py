@@ -31,7 +31,7 @@ def rescale_intensity(
     pattern: np.ndarray,
     in_range: Optional[Tuple[Union[int, float], ...]] = None,
     out_range: Optional[Tuple[Union[int, float], ...]] = None,
-    dtype_out: Union[None, np.dtype, type] = None,
+    dtype_out: Union[str, np.dtype, type, None] = None,
 ) -> np.ndarray:
     """Rescale intensities in an EBSD pattern.
 
@@ -61,7 +61,9 @@ def rescale_intensity(
         Rescaled pattern.
     """
     if dtype_out is None:
-        dtype_out = pattern.dtype.type
+        dtype_out = pattern.dtype
+    else:
+        dtype_out = np.dtype(dtype_out)
 
     if in_range is None:
         imin, imax = np.min(pattern), np.max(pattern)
@@ -71,9 +73,7 @@ def rescale_intensity(
 
     if out_range is None or out_range in dtype_range:
         try:
-            if isinstance(dtype_out, np.dtype):
-                dtype_out = dtype_out.type
-            omin, omax = dtype_range[dtype_out]
+            omin, omax = dtype_range[dtype_out.type]
         except KeyError:
             raise KeyError(
                 "Could not set output intensity range, since data type "
@@ -418,15 +418,16 @@ def _remove_dynamic_background(
     operation
         Either ``"subtract"`` or ``"divide"``.
     dtype_out
-        Data type to
+        Data type to cast the output pattern to.
     omin, omax
         Output intensity range.
-    kwargs
+    **kwargs
         Keyword arguments passed to ``filter_func``.
 
     Returns
     -------
-    numpy.ndarray
+    pattern_out
+        Pattern without dynamic background.
     """
     pattern = pattern.astype(np.float32)
     dynamic_bg = filter_func(pattern, **kwargs)
@@ -471,7 +472,9 @@ def remove_dynamic_background(
     filter_domain: str = "frequency",
     std: Union[None, int, float] = None,
     truncate: Union[int, float] = 4.0,
-    dtype_out: Union[None, np.dtype, type, Tuple[int, int], Tuple[float, float]] = None,
+    dtype_out: Union[
+        str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
+    ] = None,
 ) -> np.ndarray:
     """Remove the dynamic background in an EBSD pattern.
 
@@ -517,7 +520,9 @@ def remove_dynamic_background(
         std = pattern.shape[1] / 8
 
     if dtype_out is None:
-        dtype_out = pattern.dtype.type
+        dtype_out = pattern.dtype
+    else:
+        dtype_out = np.dtype(dtype_out)
 
     if filter_domain == "frequency":
         (
@@ -544,7 +549,7 @@ def remove_dynamic_background(
         raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
 
     # Remove dynamic background
-    omin, omax = dtype_range[dtype_out]
+    omin, omax = dtype_range[dtype_out.type]
     if operation == "subtract":
         corrected = _remove_background_subtract(pattern, dynamic_bg, omin, omax)
     else:

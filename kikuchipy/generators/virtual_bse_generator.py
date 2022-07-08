@@ -31,11 +31,6 @@ from kikuchipy.signals import VirtualBSEImage
 from kikuchipy.generators._transfer_axes import _transfer_navigation_axes_to_signal_axes
 from kikuchipy.pattern import rescale_intensity
 
-# See Also
-# --------
-# ~kikuchipy.signals.EBSD.plot_virtual_bse_intensity,
-# ~kikuchipy.signals.EBSD.get_virtual_bse_intensity
-
 
 class VirtualBSEGenerator:
     """Generates virtual backscatter electron (BSE) images for an
@@ -46,6 +41,11 @@ class VirtualBSEGenerator:
     ----------
     signal
         EBSD signal.
+
+    See Also
+    --------
+    kikuchipy.signals.EBSD.plot_virtual_bse_intensity,
+    kikuchipy.signals.EBSD.get_virtual_bse_intensity
     """
 
     def __init__(self, signal: Union[EBSD, LazyEBSD]):
@@ -95,7 +95,7 @@ class VirtualBSEGenerator:
         percentiles: Optional[Tuple] = None,
         normalize: bool = True,
         alpha: Union[None, np.ndarray, VirtualBSEImage] = None,
-        dtype_out: Union[np.uint8, np.uint16] = np.dtype("uint8"),
+        dtype_out: Union[str, np.dtype, type] = "uint8",
         add_bright: int = 0,
         contrast: float = 1.0,
     ) -> VirtualBSEImage:
@@ -132,8 +132,8 @@ class VirtualBSEGenerator:
             "Alpha channel". If not given (default), no "alpha channel"
             is added to the image.
         dtype_out
-            Output data type, either :class:`numpy.uint16` or
-            :class:`numpy.uint8` (default).
+            Output data type, either ``"uint8"`` (default) or
+            ``"uint16"``.
         add_bright
             Brightness offset to for each array. Default is ``0``.
         contrast
@@ -170,6 +170,7 @@ class VirtualBSEGenerator:
         if alpha is not None and isinstance(alpha, Signal2D):
             alpha = alpha.data
 
+        dtype_out = np.dtype(dtype_out)
         rgb_image = _get_rgb_image(
             channels=channels,
             normalize=normalize,
@@ -193,7 +194,7 @@ class VirtualBSEGenerator:
         return vbse_rgb_image
 
     def get_images_from_grid(
-        self, dtype_out: np.dtype = np.dtype("float32")
+        self, dtype_out: Union[str, np.dtype, type] = "float32"
     ) -> VirtualBSEImage:
         """Return an in-memory signal with a stack of virtual
         backscatter electron (BSE) images by integrating the intensities
@@ -203,7 +204,7 @@ class VirtualBSEGenerator:
         Parameters
         ----------
         dtype_out
-            Output data type, default is :class:`numpy.dtype.float32`.
+            Output data type, default is ``"float32"``.
 
         Returns
         -------
@@ -222,6 +223,8 @@ class VirtualBSEGenerator:
         >>> vbse
         <VirtualBSEImage, title: , dimensions: (5, 5|3, 3)>
         """
+        dtype_out = np.dtype(dtype_out)
+
         grid_shape = self.grid_shape
         new_shape = grid_shape + self.signal.axes_manager.navigation_shape[::-1]
         images = np.zeros(new_shape, dtype=dtype_out)
@@ -230,8 +233,6 @@ class VirtualBSEGenerator:
             images[row, col] = self.signal.get_virtual_bse_intensity(roi).data
 
         vbse_images = VirtualBSEImage(images)
-        # TODO: Transfer signal's detector axes to new navigation axes
-        #  with proper binning
         vbse_images.axes_manager = _transfer_navigation_axes_to_signal_axes(
             new_axes=vbse_images.axes_manager, old_axes=self.signal.axes_manager
         )
@@ -358,7 +359,7 @@ def _normalize_image(
     image: np.ndarray,
     add_bright: int = 0,
     contrast: float = 1.0,
-    dtype_out: Union[np.uint8, np.uint16] = np.dtype("uint8"),
+    dtype_out: Union[str, np.dtype, type] = "uint8",
 ) -> np.ndarray:
     """Normalize an image's intensities to a mean of 0 and a standard
     deviation of 1, with the possibility to also scale by a contrast
@@ -377,14 +378,14 @@ def _normalize_image(
     contrast
         Contrast factor for each array. Default is ``1.0``.
     dtype_out
-        Output data type, either :class:`numpy.dtype.uint16` or
-        :class:`numpy.dtype.uint8` (default).
+        Output data type, either ``"uint8"`` (default) or ``"uint16"``.
 
     Returns
     -------
     normalized_image
         Normalized image.
     """
+    dtype_out = np.dtype(dtype_out)
     dtype_max = np.iinfo(dtype_out).max
 
     offset = (dtype_max // 2) + add_bright
@@ -401,7 +402,7 @@ def _get_rgb_image(
     percentiles: Optional[Tuple] = None,
     normalize: bool = True,
     alpha: Optional[np.ndarray] = None,
-    dtype_out: Union[np.uint8, np.uint16] = np.dtype("uint8"),
+    dtype_out: Union[str, np.dtype, type] = "uint8",
     add_bright: int = 0,
     contrast: float = 1.0,
 ) -> np.ndarray:
@@ -425,8 +426,7 @@ def _get_rgb_image(
         Potential alpha channel. If not given (default), no alpha
         channel is added to the image.
     dtype_out
-        Output data type, either :class:`numpy.dtype.uint16` or
-        :class:`numpy.dtype.uint8` (default).
+        Output data type, either ``"uint8"`` (default) or ``"uint16"``.
     add_bright
         Brightness offset to for each array. Default is ``0``.
     contrast
@@ -437,6 +437,8 @@ def _get_rgb_image(
     rgb_image
         RGB image.
     """
+    dtype_out = np.dtype(dtype_out)
+
     n_channels = 3
     rgb_image = np.zeros(channels[0].shape + (n_channels,), np.float32)
     for i, channel in enumerate(channels):

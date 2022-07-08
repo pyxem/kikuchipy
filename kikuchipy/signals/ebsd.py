@@ -213,7 +213,7 @@ class EBSD(CommonImage, Signal2D):
             self._xmap = value
 
     @property
-    def static_background(self) -> Union[None, np.ndarray, da.Array]:
+    def static_background(self) -> Union[np.ndarray, da.Array, None]:
         """Return or set the static background pattern.
 
         Parameters
@@ -540,7 +540,7 @@ class EBSD(CommonImage, Signal2D):
         self,
         operation: str = "subtract",
         relative: bool = False,
-        static_bg: Union[None, np.ndarray, da.Array] = None,
+        static_bg: Union[np.ndarray, da.Array, None] = None,
         scale_bg: bool = False,
     ) -> None:
         """Remove the static background inplace.
@@ -670,7 +670,7 @@ class EBSD(CommonImage, Signal2D):
         self,
         operation: str = "subtract",
         filter_domain: str = "frequency",
-        std: Union[None, int, float] = None,
+        std: Union[int, float, None] = None,
         truncate: Union[int, float] = 4.0,
         **kwargs,
     ) -> None:
@@ -777,9 +777,9 @@ class EBSD(CommonImage, Signal2D):
     def get_dynamic_background(
         self,
         filter_domain: str = "frequency",
-        std: Union[None, int, float] = None,
+        std: Union[int, float, None] = None,
         truncate: Union[int, float] = 4.0,
-        dtype_out: Optional[np.dtype] = None,
+        dtype_out: Union[str, np.dtype, type, None] = None,
         **kwargs,
     ) -> Union["EBSD", "LazyEBSD"]:
         """Get the dynamic background per EBSD pattern in a scan.
@@ -834,7 +834,9 @@ class EBSD(CommonImage, Signal2D):
             raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
 
         if dtype_out is None:
-            dtype_out = self.data.dtype.type
+            dtype_out = self.data.dtype
+        else:
+            dtype_out = np.dtype(dtype_out)
         dask_array = get_dask_array(self, dtype=dtype_out)
 
         background_patterns = dask_array.map_blocks(
@@ -1030,7 +1032,7 @@ class EBSD(CommonImage, Signal2D):
         n_per_iteration: Optional[int] = None,
         signal_mask: Optional[np.ndarray] = None,
         rechunk: bool = False,
-        dtype: Union[np.dtype, type, None] = None,
+        dtype: Union[str, np.dtype, type, None] = None,
     ) -> CrystalMap:
         """Match each experimental pattern to a dictionary of simulated
         patterns of known orientations to index them
@@ -1086,12 +1088,12 @@ class EBSD(CommonImage, Signal2D):
             .. versionadded:: 0.5
         dtype
             Which data type ``metric`` shall cast the patterns to before
-            matching. If not given, :class:`~numpy.float32` will be
-            used unless a custom ``metric`` is passed and it has set the
+            matching. If not given, ``"float32"`` will be used unless a
+            custom ``metric`` is passed and it has set the
             :attr:`~kikuchipy.indexing.SimilarityMetric.dtype`, which
-            will then be used instead. :class:`~numpy.float32` and
-            :class:`~numpy.float64` are allowed for the available
-            ``"ncc"`` and ``"ndp"`` metrics.
+            will then be used instead. ``"float32"`` and ``"float64"``
+            are allowed for the available ``"ncc"`` and ``"ndp"``
+            metrics.
 
             .. versionadded:: 0.5
 
@@ -1609,7 +1611,7 @@ class EBSD(CommonImage, Signal2D):
         ...     shift=True,
         ... )  # doctest: +SKIP
         """
-        dtype_out = self.data.dtype
+        dtype_out = self.data.dtype.type
 
         dtype = np.float32
         dask_array = get_dask_array(signal=self, dtype=dtype)
@@ -1658,7 +1660,7 @@ class EBSD(CommonImage, Signal2D):
         window: Optional[Window] = None,
         zero_mean: bool = True,
         normalize: bool = True,
-        dtype_out: np.dtype = np.dtype("float32"),
+        dtype_out: Union[str, np.dtype, type] = "float32",
     ) -> Union[np.ndarray, da.Array]:
         """Get an array with dot products of a pattern and its
         neighbours within a window.
@@ -1680,8 +1682,7 @@ class EBSD(CommonImage, Signal2D):
             operation is performed after centering the intensities if
             ``zero_mean=True``. Default is ``True``.
         dtype_out
-            Data type of the output map. Default is
-            :class:`numpy.dtype.float32`.
+            Data type of the output map. Default is ``"float32"``.
 
         Returns
         -------
@@ -1706,6 +1707,8 @@ class EBSD(CommonImage, Signal2D):
             axes_manager=self.axes_manager,
             chunksize=dask_array.chunksize,
         )
+
+        dtype_out = np.dtype(dtype_out)
 
         dp_matrices = dask_array.map_overlap(
             _get_neighbour_dot_product_matrices,
@@ -1734,7 +1737,7 @@ class EBSD(CommonImage, Signal2D):
         window: Optional[Window] = None,
         zero_mean: bool = True,
         normalize: bool = True,
-        dtype_out: type = np.dtype("float32"),
+        dtype_out: Union[str, np.dtype, type] = "float32",
         dp_matrices: Optional[np.ndarray] = None,
     ) -> Union[np.ndarray, da.Array]:
         """Get a map of the average dot product between patterns and
@@ -1757,8 +1760,7 @@ class EBSD(CommonImage, Signal2D):
             operation is performed after centering the intensities if
             ``zero_mean=True``. Default is ``True``.
         dtype_out
-            Data type of the output map. Default is
-            :class:`numpy.dtype.float32`.
+            Data type of the output map. Default is ``"float32"``.
         dp_matrices
             Optional pre-calculated dot product matrices, by default
             ``None``. If an array is passed, the average dot product map
@@ -1801,6 +1803,8 @@ class EBSD(CommonImage, Signal2D):
             axes_manager=self.axes_manager,
             chunksize=dask_array.chunksize,
         )
+
+        dtype_out = np.dtype(dtype_out)
 
         adp = dask_array.map_overlap(
             _get_average_dot_product_map,
@@ -1964,7 +1968,7 @@ class EBSD(CommonImage, Signal2D):
     def plot_virtual_bse_intensity(
         self,
         roi: BaseInteractiveROI,
-        out_signal_axes: Union[None, Iterable[int], Iterable[str]] = None,
+        out_signal_axes: Union[Iterable[int], Iterable[str], None] = None,
         **kwargs,
     ) -> None:
         """Plot an interactive virtual backscatter electron (VBSE)
@@ -2026,7 +2030,7 @@ class EBSD(CommonImage, Signal2D):
     def get_virtual_bse_intensity(
         self,
         roi: BaseInteractiveROI,
-        out_signal_axes: Union[None, Iterable[int], Iterable[str]] = None,
+        out_signal_axes: Union[Iterable[int], Iterable[str], None] = None,
     ) -> VirtualBSEImage:
         """Get a virtual backscatter electron (VBSE) image formed from
         intensities within a region of interest (ROI) on the detector.
@@ -2151,8 +2155,8 @@ class EBSD(CommonImage, Signal2D):
 
     def get_decomposition_model(
         self,
-        components: Union[None, int, List[int]] = None,
-        dtype_out: np.dtype = np.dtype("float32"),
+        components: Union[int, List[int], None] = None,
+        dtype_out: Union[str, np.dtype, type] = "float32",
     ) -> Union["EBSD", "LazyEBSD"]:
         """Get the model signal generated with the selected number of
         principal components from a decomposition.
@@ -2175,8 +2179,7 @@ class EBSD(CommonImage, Signal2D):
             only ``components`` in given list.
         dtype_out
             Data type to cast learning results to (default is
-            :class:`numpy.dtype.float32`). Note that HyperSpy casts them
-            to :class:`numpy.dtype.float64`.
+            ``"float32``). Note that HyperSpy casts to ``"float64"``.
 
         Returns
         -------
@@ -2188,6 +2191,7 @@ class EBSD(CommonImage, Signal2D):
         loadings_orig = self.learning_results.loadings.copy()
 
         # Change data type, keep desired components and rechunk if lazy
+        dtype_out = np.dtype(dtype_out)
         (
             self.learning_results.factors,
             self.learning_results.loadings,
@@ -2214,12 +2218,12 @@ class EBSD(CommonImage, Signal2D):
     def rescale_intensity(
         self,
         relative: bool = False,
-        in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-        out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        in_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
+        out_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
         dtype_out: Union[
-            None, type, np.dtype, Tuple[int, int], Tuple[float, float]
+            str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
         ] = None,
-        percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
     ) -> None:
         return super().rescale_intensity(
             relative, in_range, out_range, dtype_out, percentiles
@@ -2229,7 +2233,7 @@ class EBSD(CommonImage, Signal2D):
         self,
         num_std: int = 1,
         divide_by_square_root: bool = False,
-        dtype_out: Union[None, type, np.dtype] = None,
+        dtype_out: Union[str, np.dtype, type, None] = None,
     ) -> None:
         return super().normalize_intensity(num_std, divide_by_square_root, dtype_out)
 
@@ -2239,7 +2243,7 @@ class EBSD(CommonImage, Signal2D):
         self,
         xmap: CrystalMap,
         detector: EBSDDetector,
-        mask: Union[np.ndarray, None],
+        mask: Optional[np.ndarray] = None,
     ):
         """Raise ValueError if EBSD refinement input is invalid."""
         _crystal_map_is_compatible_with_signal(
@@ -2293,7 +2297,7 @@ class EBSD(CommonImage, Signal2D):
         self,
         metric: Union[SimilarityMetric, str],
         signal_mask: Union[np.ndarray, None],
-        dtype: Optional[np.dtype],
+        dtype: Union[str, np.dtype, type, None],
         rechunk: bool,
         n_dictionary_patterns: int,
     ) -> SimilarityMetric:
@@ -2349,8 +2353,8 @@ class LazyEBSD(LazySignal2D, EBSD):
 
     def get_decomposition_model_write(
         self,
-        components: Union[None, int, List[int]] = None,
-        dtype_learn: np.dtype = np.dtype("float32"),
+        components: Union[int, List[int], None] = None,
+        dtype_learn: Union[str, np.dtype, type] = "float32",
         mbytes_chunk: int = 100,
         dir_out: Optional[str] = None,
         fname_out: Optional[str] = None,
@@ -2370,7 +2374,7 @@ class LazyEBSD(LazySignal2D, EBSD):
             only ``components`` in given list.
         dtype_learn
             Data type to set learning results to (default is
-            :class:`numpy.dtype.float32`) before multiplication.
+            ``"float32"``) before multiplication.
         mbytes_chunk
             Size of learning results chunks in MB, default is 100 MB as
             suggested in the Dask documentation.
@@ -2387,6 +2391,8 @@ class LazyEBSD(LazySignal2D, EBSD):
         file, read into dask arrays and multiplied using
         :func:`dask.array.matmul`, out of core.
         """
+        dtype_learn = np.dtype(dtype_learn)
+
         # Change data type, keep desired components and rechunk if lazy
         factors, loadings = _update_learning_results(
             self.learning_results, components=components, dtype_out=dtype_learn
@@ -2406,7 +2412,7 @@ class LazyEBSD(LazySignal2D, EBSD):
             f.create_dataset(name="loadings", data=loadings)
 
         # Matrix multiplication
-        with File(file_learn, mode="r") as f:
+        with File(file_learn) as f:
             # Read learning results from HDF5 file
             chunks = _rechunk_learning_results(
                 factors=factors, loadings=loadings, mbytes_chunk=mbytes_chunk

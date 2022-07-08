@@ -152,10 +152,10 @@ def file_reader(
         f.seek(0)
         data = np.fromfile(f, dtype="uint8", count=data_size)
     else:
-        data = np.memmap(f, mode=mmap_mode, dtype="uint8")
+        data = np.memmap(f.name, mode=mmap_mode, dtype="uint8")
 
     try:
-        data = data.reshape((ny, nx, sy, sx), order="C").squeeze()
+        data = data.reshape((ny, nx, sy, sx)).squeeze()
     except ValueError:
         warnings.warn(
             "Pattern size and scan size larger than file size! Will attempt to "
@@ -163,7 +163,7 @@ def file_reader(
         )
         # Data is stored image by image
         pw = [(0, ny * nx * sy * sx - data.size)]
-        data = np.pad(data, pw, mode="constant")
+        data = np.pad(data, pw)
         data = data.reshape((ny, nx, sy, sx))
     scan["data"] = data
 

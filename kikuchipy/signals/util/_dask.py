@@ -28,7 +28,7 @@ def get_chunking(
     sig_dim: Optional[int] = None,
     chunk_shape: Optional[int] = None,
     chunk_bytes: Union[int, float, str, None] = 30e6,
-    dtype: Union[type, np.dtype, None] = None,
+    dtype: Union[str, np.dtype, type, None] = None,
 ) -> tuple:
     """Get a chunk tuple based on the shape of the signal data.
 
@@ -79,6 +79,8 @@ def get_chunking(
         sig_dim = signal.axes_manager.signal_dimension
     if dtype is None:
         dtype = signal.data.dtype
+    else:
+        dtype = np.dtype(dtype)
 
     chunks_dict = {}
     # Set the desired navigation chunk shape
@@ -102,7 +104,9 @@ def get_chunking(
 
 
 def get_dask_array(
-    signal: Union["EBSD", "LazyEBSD"], dtype: Optional[type] = None, **kwargs
+    signal: Union["EBSD", "LazyEBSD"],
+    dtype: Union[str, np.dtype, type, None] = None,
+    **kwargs
 ) -> da.Array:
     """Return dask array of patterns with appropriate chunking.
 
@@ -127,6 +131,8 @@ def get_dask_array(
     """
     if dtype is None:
         dtype = signal.data.dtype
+    else:
+        dtype = np.dtype(dtype)
     if signal._lazy or isinstance(signal.data, da.Array):
         dask_array = signal.data
         if kwargs.pop("rechunk", False):
@@ -150,8 +156,10 @@ def get_dask_array(
 def _reduce_chunks(
     dask_array: da.Array,
     chunk_bytes: Union[int, float] = 8e6,
-    dtype_out: Union[np.dtype, str] = "float32",
+    dtype_out: Union[str, np.dtype, type] = "float32",
 ) -> tuple:
+    dtype_out = np.dtype(dtype_out)
+
     chunksize = dask_array.chunksize
     nav_chunksize = chunksize[:-2]
     nav_ndim = len(nav_chunksize)
@@ -162,7 +170,6 @@ def _reduce_chunks(
         idx_min = np.argmin(nav_chunksize)
         if nav_chunksize[idx_min] * np.prod(chunksize[-2:]) * 4 < chunk_bytes:
             chunks_dict[idx_min] = -1
-
     chunks = da.core.normalize_chunks(
         chunks=chunks_dict,
         shape=chunksize,
@@ -269,7 +276,7 @@ def _rechunk_learning_results(
 def _update_learning_results(
     learning_results,
     components: Union[None, int, List[int]],
-    dtype_out: Union[type, np.dtype],
+    dtype_out: Union[str, np.dtype, type],
 ) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
     """Update learning results before calling
     :meth:`hyperspy.learn.mva.MVA.get_decomposition_model` by
@@ -295,6 +302,8 @@ def _update_learning_results(
     loadings
         Updated component loadings in learning results.
     """
+    dtype_out = np.dtype(dtype_out)
+
     # Change data type
     factors = learning_results.factors.astype(dtype_out)
     loadings = learning_results.loadings.astype(dtype_out)

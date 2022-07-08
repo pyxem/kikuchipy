@@ -181,7 +181,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         rotations: Rotation,
         detector: EBSDDetector,
         energy: Union[int, float],
-        dtype_out: Union[type, np.dtype] = np.dtype("float32"),
+        dtype_out: Union[str, np.dtype, type] = "float32",
         compute: bool = False,
         **kwargs,
     ) -> Union[EBSD, LazyEBSD]:
@@ -207,7 +207,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             energy is present in the signal, this will be returned no
             matter its energy.
         dtype_out
-            Data type of the returned patterns, by default ``float32``.
+            Data type of the returned patterns, by default
+            ``"float32"``.
         compute
             Whether to return a lazy result, by default ``False``. For
             more information see :func:`~dask.array.Array.compute`.
@@ -238,6 +239,8 @@ class EBSDMasterPattern(CommonImage, Signal2D):
                 "Detector must have exactly one projection center"
             )
 
+        dtype_out = np.dtype(dtype_out)
+
         # Get suitable chunks when iterating over the rotations. Signal
         # axes are not chunked.
         nav_shape = rotations.shape
@@ -260,9 +263,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         # Whether to rescale pattern intensities after projection
         if dtype_out != self.data.dtype:
             rescale = True
-            if isinstance(dtype_out, np.dtype):
-                dtype_out = dtype_out.type
-            out_min, out_max = dtype_range[dtype_out]
+            out_min, out_max = dtype_range[dtype_out.type]
         else:
             rescale = False
             # Cannot be None due to Numba, so they are set to something
@@ -555,12 +556,12 @@ class EBSDMasterPattern(CommonImage, Signal2D):
     def rescale_intensity(
         self,
         relative: bool = False,
-        in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-        out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        in_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
+        out_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
         dtype_out: Union[
-            None, type, np.dtype, Tuple[int, int], Tuple[float, float]
+            str, np.dtype, Tuple[int, int], Tuple[float, float], None
         ] = None,
-        percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+        percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
     ) -> None:
         return super().rescale_intensity(
             relative, in_range, out_range, dtype_out, percentiles
@@ -570,7 +571,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         self,
         num_std: int = 1,
         divide_by_square_root: bool = False,
-        dtype_out: Union[None, type, np.dtype] = None,
+        dtype_out: Union[str, np.dtype, type, None] = None,
     ) -> None:
         return super().normalize_intensity(num_std, divide_by_square_root, dtype_out)
 

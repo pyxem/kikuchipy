@@ -16,7 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import abc
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import numpy as np
 
@@ -68,7 +68,7 @@ class SimilarityMetric(abc.ABC):
         n_experimental_patterns: Optional[int] = None,
         n_dictionary_patterns: Optional[int] = None,
         signal_mask: Optional[np.ndarray] = None,
-        dtype: type = np.dtype("float32"),
+        dtype: Union[str, np.dtype, type] = "float32",
         rechunk: bool = False,
     ):
         """Create a similarity metric matching experimental and
@@ -77,7 +77,7 @@ class SimilarityMetric(abc.ABC):
         self._n_experimental_patterns = n_experimental_patterns
         self._n_dictionary_patterns = n_dictionary_patterns
         self._signal_mask = signal_mask
-        self._dtype = dtype
+        self._dtype = np.dtype(dtype)
         self._rechunk = rechunk
 
     def __repr__(self):
@@ -89,14 +89,14 @@ class SimilarityMetric(abc.ABC):
         return string
 
     @property
-    def allowed_dtypes(self) -> List[type]:
+    def allowed_dtypes(self) -> List[np.dtype]:
         """Return the list of allowed array data types used during
         matching.
         """
         return self._allowed_dtypes
 
     @property
-    def dtype(self) -> type:
+    def dtype(self) -> np.dtype:
         """Return or set which data type to cast the patterns to before
         matching.
 
@@ -108,11 +108,11 @@ class SimilarityMetric(abc.ABC):
         return self._dtype
 
     @dtype.setter
-    def dtype(self, value: type):
+    def dtype(self, value: Union[str, np.dtype, type]):
         """Set which data type to cast the patterns to before
         matching.
         """
-        self._dtype = value
+        self._dtype = np.dtype(value)
 
     @property
     def n_dictionary_patterns(self) -> int:
@@ -223,6 +223,6 @@ class SimilarityMetric(abc.ABC):
         allowed_dtypes = self.allowed_dtypes
         if len(allowed_dtypes) != 0 and self.dtype not in allowed_dtypes:
             raise ValueError(
-                f"Data type {np.dtype(self.dtype).name} not among supported data types "
+                f"Data type {self.dtype} not among supported data types "
                 f"{allowed_dtypes}"
             )

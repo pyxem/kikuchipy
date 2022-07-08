@@ -108,7 +108,7 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
     return [scan]
 
 
-def _get_coordinates(filename: str) -> List[Tuple[int, int]]:
+def _get_coordinates(filename: str) -> List[Tuple[int]]:
     f = open(filename, "r", encoding="latin-1")
     err = "No calibration patterns found in settings file"
     content = f.read().splitlines()
