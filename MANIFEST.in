@@ -12,7 +12,7 @@ include setup.cfg
 include setup.py
 include tutorials/README.rst
 
-recursive-include doc Makefile make.bat *.rst *.py *.bib *.ipynb *.txt
+recursive-include doc Makefile make.bat *.rst *.py *.bib *.ipynb *.txt *.cfg
 recursive-include doc/_static *.png *.jpg *.svg *.css
 
 recursive-include kikuchipy/data *

@@ -12,17 +12,23 @@ jobs:
       MPLBACKEND: agg
     steps:
       - uses: actions/checkout@v2
+
       - name: Set up Python 3.9
         uses: actions/setup-python@v2
         with:
           python-version: '3.9'
+
       - name: Display versions
-        run: python -V; pip -V
-      - name: Install dependencies and package
+        run: |
+          python -V
+          pip -V
+
+      - name: Install package and dependencies
         shell: bash
         run: |
-          pip install -U -e .'[tests]'
+          pip install -U -e .'[tests,viz]'
           pip install nbval
+
       - name: Test documentation notebooks
         run: |
           pytest -v --nbval doc/user_guide doc/examples
