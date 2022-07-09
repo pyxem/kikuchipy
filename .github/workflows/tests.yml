@@ -81,7 +81,7 @@ jobs:
           pip install ${{ matrix.DEPENDENCIES }}
 
       - name: Set up headless display necessary for PyVista on Linux
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 }}
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt-get update
           sudo apt-get install xvfb
@@ -99,14 +99,14 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         continue-on-error: true
         run: |
-          pytest --doctest-modules --ignore-glob=kikuchipy/*/tests kikuchipy/*.py
+          xvfb-run pytest --doctest-modules --ignore-glob=kikuchipy/*/tests kikuchipy/*.py
 
       - name: Run tests in a virtual X server environment on Ubuntu
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 }}
         run: |
           sudo apt-get update
           sudo apt-get install xvfb
-          xvfb-run pytest --cov=kikuchipy --pyargs kikuchipy
+          xvfb-run pytest --cov=kikuchipy --pyargs kikuchipy -n 2
 
       - name: Run tests
         if: ${{ ! ( matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 ) }}
