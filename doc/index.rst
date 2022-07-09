@@ -30,7 +30,7 @@ provided by the HyperSpy library.
 Installation
 ============
 
-kikuchipy can be installed using `pip <https://pypi.org/project/kikuchipy>`__ or
+kikuchipy can be installed with `pip <https://pypi.org/project/kikuchipy>`__ or
 `conda <https://anaconda.org/conda-forge/kikuchipy>`__:
 
 .. tab-set::
@@ -52,29 +52,27 @@ Further details are available in the :doc:`installation guide <installation>`.
 Learning resources
 ==================
 
-.. card-carousel:: 3
+.. See: https://sphinx-design.readthedocs.io/en/furo-theme/grids.html
+.. grid:: 2 3 3 3
 
-    .. card:: Examples
+    .. grid-item-card:: Examples
         :img-top: _static/image/colormap_banners/banner0.png
         :link: examples/index
         :link-type: doc
-        :shadow: lg
 
         Short recipies to common tasks using kikuchipy.
 
-    .. card:: Tutorials
+    .. grid-item-card:: Tutorials
         :img-top: _static/image/colormap_banners/banner1.png
         :link: tutorials/index
         :link-type: doc
-        :shadow: lg
 
         In-depth guides for using kikuchipy.
 
-    .. card:: Reference
+    .. grid-item-card:: Reference
         :img-top: _static/image/colormap_banners/banner2.png
         :link: reference/index
         :link-type: doc
-        :shadow: lg
 
         Descriptions of functions, modules, and objects in kikuchipy.
 
