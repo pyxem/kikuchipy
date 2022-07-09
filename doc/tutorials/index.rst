@@ -8,11 +8,10 @@ sections covering specific topics.
 For shorter examples, see our :doc:`/examples/index`. For descriptions of
 the functions, modules, and objects in kikuchipy, see the :doc:`/reference/index`.
 
-The tutorials are live and available on MyBinder:
+The tutorials are live and available on MyBinder: |Binder|
 
-.. image:: https://static.mybinder.org/badge_logo.svg
+.. |Binder| image:: https://static.mybinder.org/badge_logo.svg
    :target: https://mybinder.org/v2/gh/pyxem/kikuchipy/develop?filepath=tutorials
-   :alt: Launch on Binder
 
 Load and save data
 ==================

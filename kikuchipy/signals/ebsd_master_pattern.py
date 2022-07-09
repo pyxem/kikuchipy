@@ -536,9 +536,9 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             n_iterations = 1
 
         iterable = np.ndindex(nav_shape[::-1])
-        if show_progressbar is None:
-            show_progressbar = hs.preferences.General.show_progressbar
-        if show_progressbar:
+        if show_progressbar or (
+            show_progressbar is None and hs.preferences.General.show_progressbar
+        ):
             iterable = tqdm(iterable, total=n_iterations)
 
         for idx in iterable:

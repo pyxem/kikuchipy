@@ -526,7 +526,7 @@ class TestMasterPatternPlotting:
 
 
 class TestAsLambert:
-    def test_as_lambert(self):
+    def test_as_lambert(self, capsys):
         mp_sp = nickel_ebsd_master_pattern_small(projection="stereographic")
         assert mp_sp.projection == "stereographic"
         assert mp_sp.hemisphere == "upper"
@@ -555,7 +555,9 @@ class TestAsLambert:
 
         # "Lower" hemisphere identical to upper
         mp_sp.hemisphere = "lower"
-        mp_lp2 = mp_sp.as_lambert()
+        mp_lp2 = mp_sp.as_lambert(show_progressbar=False)
+        out, _ = capsys.readouterr()
+        assert not out
         assert mp_lp2.projection == "lambert"
         assert np.allclose(mp_lp.data, mp_lp2.data)
 
