@@ -121,8 +121,8 @@ Deprecated
   removed in version 0.7. Use the ``kikuchipy.simulations.KikuchiPatternSimulator``
   class instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - The ``kikuchipy.crystallography.matrices`` module is depreacted and will be removed in
-  version 0.7, access the matrices via :class:`diffpy.structure.Lattice` attributes
-  instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
+  version 0.7, access the matrices via :class:`diffpy.structure.lattice.Lattice`
+  attributes instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - The following functions for processing of pattern chunks in the
   ``kikuchipy.pattern.chunk`` module are deprecated and will be removed in version 0.7:
   ``get_image_quality()``, ``remove_dynamic_background()`` and

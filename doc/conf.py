@@ -1,7 +1,5 @@
 # Configuration file for the Sphinx documentation app.
-
-# This file only contains a selection of the most common options. For a
-# full list see the documentation:
+# See the documentation for a full list of configuration options:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 from datetime import datetime
@@ -40,11 +38,11 @@ master_doc = "index"
 extensions = [
     "matplotlib.sphinxext.plot_directive",
     "nbsphinx",
-    "nbsphinx_link",
     "notfound.extension",
     "sphinxcontrib.bibtex",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    "sphinx.ext.doctest",
     "sphinx.ext.intersphinx",
     "sphinx.ext.linkcode",
     "sphinx.ext.mathjax",
@@ -80,13 +78,10 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files. This image also
 # affects html_static_path and html_extra_path.
-exclude_patterns = [
-    "build",
-    "_static/logo/*.ipynb",
-]
+exclude_patterns = ["build", "_static/logo/*.ipynb"]
 
-# The theme to use for HTML and HTML Help pages. See the documentation
-# for a list of builtin themes.
+# HTML theme: furo
+# https://pradyunsg.me/furo/
 html_theme = "furo"
 
 # Add any paths that contain custom static files (such as style sheets)
@@ -103,9 +98,11 @@ pygments_style = "friendly"
 html_logo = "_static/logo/plasma_logo.svg"
 html_favicon = "_static/logo/plasma_favicon.png"
 
+# Whether to show all warnings when building the documentation
 nitpicky = True
 
-# -- nbsphinx configuration
+# -- nbsphinx
+# https://nbsphinx.readthedocs.io
 # Taken from nbsphinx' own nbsphinx configuration file, with slight
 # modifications to point nbviewer and Binder to the GitHub develop
 # branch links when the documentation is launched from a kikuchipy
@@ -161,12 +158,11 @@ nbsphinx_execute_arguments = [
     "--InlineBackend.rc=font.size=15",
 ]
 
-
-# -- sphinxcontrib-bibtex configuration
+# -- sphinxcontrib-bibtex
+# https://sphinxcontrib-bibtex.readthedocs.io
 bibtex_bibfiles = ["bibliography.bib"]
 
-
-# -- Relevant for the PDF build with LaTeX
+# Relevant for the PDF build with LaTeX
 latex_elements = {
     # pdflatex doesn't like some Unicode characters, so a replacement
     # for one of them is made here
@@ -235,6 +231,7 @@ def linkcode_resolve(domain, info):
 
 
 # -- Custom 404 page
+# https://sphinx-notfound-page.readthedocs.io
 notfound_context = {
     "body": (
         "<h1>Page not found.</h1>\n\nPerhaps try the "
@@ -244,19 +241,18 @@ notfound_context = {
 }
 notfound_no_urls_prefix = True
 
-
-# -- PyVista configuration
+# -- PyVista
+# https://docs.pyvista.org
 pyvista.global_theme.window_size = [700, 700]
 pyvista.set_jupyter_backend("pythreejs")
-
 
 # -- Copy button customization (taken from PyVista)
 # Exclude traditional Python prompts from the copied code
 copybutton_prompt_text = r">>> ?|\.\.\. "
 copybutton_prompt_is_regexp = True
 
-
 # -- sphinx.ext.autodoc
+# https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html
 autosummary_ignore_module_all = False
 autosummary_imported_members = True
 autodoc_typehints_format = "short"
@@ -264,8 +260,8 @@ autodoc_default_options = {
     "show-inheritance": True,
 }
 
-
 # -- numpydoc
+# https://numpydoc.readthedocs.io
 numpydoc_show_class_members = False
 numpydoc_use_plots = True
 numpydoc_xref_param_type = True
@@ -289,8 +285,8 @@ numpydoc_validation_checks = {
 }
 # fmt: on
 
-
-# -- matplotlib.sphinxext.plot_directive configuration
+# -- matplotlib.sphinxext.plot_directive
+# https://matplotlib.org/stable/api/sphinxext_plot_directive_api.html
 plot_formats = ["png"]
 plot_html_show_source_link = False
 plot_html_show_formats = False
@@ -320,7 +316,8 @@ def _str_examples(self):
 SphinxDocString._str_examples = _str_examples
 
 
-# -- Sphinx-Gallery configuration
+# -- Sphinx-Gallery
+# https://sphinx-gallery.github.io
 sphinx_gallery_conf = {
     "backreferences_dir": "reference/generated",
     "doc_module": ("kikuchipy",),
@@ -328,25 +325,12 @@ sphinx_gallery_conf = {
     "filename_pattern": "^((?!sgskip).)*$",
     "gallery_dirs": "examples",
     "reference_url": {"kikuchipy": None},
+    "run_stale_examples": True,
     "show_memory": True,
 }
 autosummary_generate = True
 
-
 # Download example datasets prior to building the docs
-print("[kikuchipy] Download example datasets")
+print("[kikuchipy] Downloading example datasets")
 _ = kp.data.nickel_ebsd_large(allow_download=True)
 _ = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
-
-
-# Create nbsphinx-link files in doc/tutorials/ directory prior to
-# building the docs
-print("[kikuchipy] Create nbsphinx-link files in doc/tutorial/")
-source_dir = "../tutorials"
-target_dir = "tutorials"
-for filename in os.listdir(source_dir):
-    fname, ext = os.path.splitext(filename)
-    new_file = fname + ".nblink"
-    if ext == ".ipynb" and not os.path.isfile(new_file):
-        with open(os.path.join(target_dir, new_file), mode="w") as f:
-            f.write('{\n  "path": "../../' + target_dir + "/" + filename + '"\n}')

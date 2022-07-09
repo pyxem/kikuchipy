@@ -46,12 +46,11 @@ extra_feature_requirements = {
         "furo",
         "memory_profiler",
         "nbsphinx                   >= 0.7",
-        "nbsphinx-link",
         "numpydoc",
         "pythreejs",  # Used in the docs by PyVista
         "pyvista",
         "sphinx                     >= 3.0.2",
-        "sphinx-codeautolink",
+        "sphinx-codeautolink[ipython]",
         "sphinx-copybutton          >= 0.2.5",
         "sphinx-design",
         "sphinx-gallery             >= 0.6",
