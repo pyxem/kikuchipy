@@ -4,33 +4,51 @@
   </a>
 </div>
 
-kikuchipy [ki-ko-chi-pai] is an open-source Python library for processing and analysis
-of electron backscatter diffraction (EBSD) patterns. The library builds on the tools for
+kikuchipy [ki-ko-chi-pai] is a library for processing, simulating and analyzing electron
+backscatter diffraction (EBSD) patterns in Python, built on the tools for
 multi-dimensional data analysis provided by the HyperSpy library.
 
-[![Launch binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pyxem/kikuchipy/HEAD)
-[![Gitter chat](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pyxem/kikuchipy)
-[![Documentation status](https://readthedocs.org/projects/kikuchipy/badge/?version=latest)](https://kikuchipy.org/en/latest/)
-[![Build status](https://github.com/pyxem/kikuchipy/workflows/build/badge.svg)](https://github.com/pyxem/kikuchipy/actions)
-[![Coverage status](https://coveralls.io/repos/github/pyxem/kikuchipy/badge.svg?branch=develop)](https://coveralls.io/github/pyxem/kikuchipy?branch=develop)
-[![PyPI version](https://img.shields.io/pypi/v/kikuchipy.svg)](https://pypi.python.org/pypi/kikuchipy)
-[![Downloads per month](https://pepy.tech/badge/kikuchipy/month)](https://pepy.tech/project/kikuchipy)
-[![Zenodo DOI](https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg)](https://doi.org/10.5281/zenodo.3597646)
-[![All Contributors](https://img.shields.io/github/all-contributors/pyxem/kikuchipy?color=%23A3A0CF&label=contributors)](#contributors-)
+| Deployment    | [![PyPI version](https://img.shields.io/pypi/v/kikuchipy.svg?logo=python&logoColor=white)](https://pypi.org/project/kikuchipy/) | [![Anaconda version](https://img.shields.io/conda/vn/conda-forge/kikuchipy.svg?logo=conda-forge&logoColor=white)](https://anaconda.org/conda-forge/kikuchipy)|
+| :- | :- | :- |
+| **Build status**  | [![Test status](https://github.com/pyxem/kikuchipy/actions/workflows/tests.yml/badge.svg)](https://github.com/pyxem/kikuchipy/actions/workflows/tests.yml) |
+| **Documentation** | [![Documentation status](https://readthedocs.org/projects/kikuchipy/badge/?version=latest)](https://kikuchipy.org/en/latest/) | [![Launch binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pyxem/kikuchipy/HEAD) |
+| **Metrics**       | [![Coverage status](https://coveralls.io/repos/github/pyxem/kikuchipy/badge.svg?branch=develop)](https://coveralls.io/github/pyxem/kikuchipy?branch=develop) |
+| **Activity**      | [![PyPI downloads](https://img.shields.io/pypi/dm/kikuchipy.svg?label=pypi%20downloads)](https://pypi.org/project/kikuchipy/) | [![Anaconda downloads](https://img.shields.io/conda/dn/conda-forge/kikuchipy.svg?label=conda%20downloads)](ttps://anaconda.org/conda-forge/kikuchipy) |
+| **Citation**      | [![Zenodo DOI](https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg)](https://doi.org/10.5281/zenodo.3597646) |
+| **Community**     | [![Gitter chat](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/pyxem/kikuchipy) | [![GitHub discussion](https://img.shields.io/badge/GitHub-Discussions-green?logo=github)](https://github.com/pyxem/kikuchipy/discussions) |
+| **License**       | [![License](https://img.shields.io/github/license/pyxem/kikuchipy)](https://opensource.org/licenses/GPL-3.0) |
 
-- **User guide and API reference**: https://kikuchipy.org. The guide consists of Jupyter
-  Notebooks with many links to detailed explanations of the input parameters and output
-  of functions and class methods (the API reference). The notebooks can be inspected
-  statically on the web page or via
-  [nbviewer](https://nbviewer.jupyter.org/github/pyxem/kikuchipy/tree/develop/doc/user_guide/),
-  downloaded and run locally, or run interactively in the browser by clicking the Binder
-  link above and navigating to the `doc/user_guide` directory. We hope you find them
-  useful!
-- **License**: kikuchipy is released under the GPLv3+ license.
-- **Cite**: If you find this project useful, please cite the DOI above.
-- **Changelog**: The library is in continuous development (alpha stage), so expect some
-  breaking changes with each release. Please see
-  [the changelog](https://kikuchipy.org/en/latest/changelog.html) for all developments.
+## Documentation
+
+Refer to the [documentation](https://kikuchipy.org) for detailed installation
+instructions, a user guide, and the
+[changelog](https://kikuchipy.org/en/latest/changelog.html).
+
+## Installation
+
+kikuchipy can be installed with `pip`:
+
+```bash
+pip install kikuchipy
+```
+
+or `conda`:
+
+```bash
+conda install kikuchipy -c conda-forge
+```
+
+You can also visit [PyPI](https://pypi.org/project/kikuchipy),
+[Anaconda](https://anaconda.org/conda-forge/kikuchipy), or
+[GitHub](https://github.com/pyxem/kikuchipy) to download the source.
+
+Further details are available in the
+[installation guide](https://kikuchipy.org/en/latest/installation.html).
+
+## Citing kikuchipy
+
+If you are using kikuchipy in your scientific research, please help our scientific
+visibility by citing the Zenodo DOI: https://doi.org/10.5281/zenodo.3597646.
 
 ## Contributors ✨
 

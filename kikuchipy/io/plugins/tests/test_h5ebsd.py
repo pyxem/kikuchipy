@@ -203,7 +203,8 @@ class Testh5ebsd:
         # Change data set name and package version to make metadata equal, and
         # redo deleting of phases
         s_reload.metadata.General.title = s.metadata.General.title
-        ebsd_node = metadata_nodes("ebsd")
+        with pytest.warns(np.VisibleDeprecationWarning):
+            ebsd_node = metadata_nodes("ebsd")
         s_reload.metadata.set_item(
             ebsd_node + ".version", s.metadata.get_item(ebsd_node + ".version")
         )

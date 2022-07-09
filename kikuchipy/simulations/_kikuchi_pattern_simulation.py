@@ -17,12 +17,14 @@
 
 from copy import deepcopy
 import re
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from diffsims.crystallography import ReciprocalLatticeVector
+from hyperspy.drawing.marker import MarkerBase
 from hyperspy.utils.markers import line_segment, point, text
 import matplotlib.collections as mcollections
 import matplotlib.path as mpath
+import matplotlib.pyplot as plt
 import matplotlib.text as mtext
 import numpy as np
 from orix.quaternion import Rotation
@@ -37,10 +39,10 @@ from kikuchipy.simulations._kikuchi_pattern_features import (
 class GeometricalKikuchiPatternSimulation:
     """Collection of coordinates of Kikuchi lines and zone axes on an
     EBSD detector for simple plotting or creation of HyperSpy markers to
-    plot onto :class:`kikuchipy.signals.EBSD` signals.
+    plot onto :class:`~kikuchipy.signals.EBSD` signals.
 
     Instances of this class are returned from
-    :meth:`kikuchipy.simulations.KikuchiPattern.Simulator.on_detector`,
+    :meth:`kikuchipy.simulations.KikuchiPatternSimulator.on_detector`,
     and *not* ment to be created directly.
 
     Parameters
@@ -56,7 +58,6 @@ class GeometricalKikuchiPatternSimulation:
         Collection of coordinates of Kikuchi lines on the detector.
     zone_axes
         Collection of coordinates of zone axes on the detector.
-
     """
 
     def __init__(
@@ -78,23 +79,29 @@ class GeometricalKikuchiPatternSimulation:
 
     @property
     def detector(self) -> EBSDDetector:
-        """EBSD detector onto which simulations were generated."""
+        """Return the EBSD detector onto which simulations were
+        generated.
+        """
         return self._detector
 
     @property
     def rotations(self) -> Rotation:
-        """Crystal orientations for which simulations were generated."""
+        """Return the crystal orientations for which simulations were
+        generated.
+        """
         return self._rotations
 
     @property
     def reflectors(self) -> ReciprocalLatticeVector:
-        """Reciprocal lattice vectors used in the simulations."""
+        """Return the reciprocal lattice vectors used in the
+        simulations.
+        """
         return self._reflectors
 
     @property
     def navigation_shape(self) -> tuple:
-        """Navigation shape of the simulations equal to the shape of
-        :attr:`rotations`.
+        """Return the navigation shape of the simulations, equal to the
+        shape of :attr:`rotations`.
         """
         return self._rotations.shape
 
@@ -151,13 +158,12 @@ class GeometricalKikuchiPatternSimulation:
 
         Returns
         -------
-        collections : list
+        collection_list
             List of Matplotlib collections.
 
         See Also
         --------
-        as_markers
-        plot
+        as_markers, plot
         """
         if index is None:
             index = (0, 0)[: self.ndim]
@@ -194,7 +200,7 @@ class GeometricalKikuchiPatternSimulation:
         zone_axes_kwargs: Optional[dict] = None,
         zone_axes_labels_kwargs: Optional[dict] = None,
         pc_kwargs: Optional[dict] = None,
-    ) -> list:
+    ) -> List[MarkerBase]:
         """Return a list of simulation markers.
 
         Parameters
@@ -224,13 +230,12 @@ class GeometricalKikuchiPatternSimulation:
 
         Returns
         -------
-        markers : hyperspy.drawing.marker.MarkerBase
+        markers
             List with all markers.
 
         See Also
         --------
-        as_collections
-        plot
+        as_collections, plot
         """
         markers = []
         if lines:
@@ -256,7 +261,7 @@ class GeometricalKikuchiPatternSimulation:
         index: Union[int, tuple, None] = None,
         coordinates: str = "detector",
         exclude_nan: bool = True,
-    ):
+    ) -> np.ndarray:
         """Get Kikuchi line coordinates of a single simulation.
 
         Parameters
@@ -275,7 +280,7 @@ class GeometricalKikuchiPatternSimulation:
 
         Returns
         -------
-        coords : numpy.ndarray
+        coords
             Kikuchi line coordinates.
 
         See Also
@@ -307,7 +312,7 @@ class GeometricalKikuchiPatternSimulation:
         zone_axes_labels_kwargs: Optional[dict] = None,
         pc_kwargs: Optional[dict] = None,
         return_figure: bool = False,
-    ):
+    ) -> plt.Figure:
         """Plot a single simulation on the detector.
 
         Parameters
@@ -354,13 +359,12 @@ class GeometricalKikuchiPatternSimulation:
 
         Returns
         -------
-        fig : matplotlib.figure.Figure
+        fig
             Returned if ``return_figure=True``.
 
         See Also
         --------
-        as_collections
-        as_markers
+        as_collections, as_markers
         """
         fig, ax = self.detector.plot(
             coordinates=coordinates,
@@ -394,7 +398,7 @@ class GeometricalKikuchiPatternSimulation:
         index: Union[int, tuple, None] = None,
         coordinates: str = "detector",
         exclude_nan: bool = True,
-    ):
+    ) -> np.ndarray:
         """Get zone axis coordinates of a single simulation.
 
         Parameters
@@ -413,7 +417,7 @@ class GeometricalKikuchiPatternSimulation:
 
         Returns
         -------
-        coords : numpy.ndarray
+        coords
             Zone axis coordinates.
 
         See Also
@@ -443,7 +447,7 @@ class GeometricalKikuchiPatternSimulation:
         coordinates
             The coordinates of the lines, either ``"detector"``
             (default) or ``"gnomonic"``.
-        kwargs
+        **kwargs
             Keyword arguments passed to
             :class:`~matplotlib.collections.LineCollection` to format
             Kikuchi lines.
@@ -462,12 +466,12 @@ class GeometricalKikuchiPatternSimulation:
             kwargs.setdefault(k, v)
         return mcollections.LineCollection(segments=list(coords), **kwargs)
 
-    def _lines_as_markers(self, **kwargs) -> list:
+    def _lines_as_markers(self, **kwargs) -> List[line_segment]:
         """Get Kikuchi lines as a list of HyperSpy markers.
 
         Parameters
         ----------
-        kwargs
+        **kwargs
             Keyword arguments passed to
             :func:`~matplotlib.pyplot.axvline` to format the lines.
 
@@ -500,7 +504,7 @@ class GeometricalKikuchiPatternSimulation:
 
         Parameters
         ----------
-        kwargs
+        **kwargs
             Keyword arguments passed to
             :func:`~matplotlib.pyplot.scatter` to format the markers.
 
@@ -535,9 +539,10 @@ class GeometricalKikuchiPatternSimulation:
 
         return [pc_marker]
 
-    def _set_lines_detector_coordinates(self):
-        """Start and end point coordinates of bands in uncalibrated
-        detector coordinates (a scale of 1 and offset of 0).
+    def _set_lines_detector_coordinates(self) -> None:
+        """Set the start and end point coordinates of bands in
+        uncalibrated detector coordinates (a scale of 1 and offset of
+        0).
         """
         # Get PC coordinates and add two axes to get the shape
         # (navigation shape, 1, 1)
@@ -555,10 +560,10 @@ class GeometricalKikuchiPatternSimulation:
 
         self._lines_detector_coordinates = coords_d
 
-    def _set_zone_axes_detector_coordinates(self):
-        """Coordinates of zone axes in uncalibrated detector coordinates
-        (a scale of 1 and offset of 0) inside the gnomonic bounds of the
-        detector.
+    def _set_zone_axes_detector_coordinates(self) -> None:
+        """Set the coordinates of zone axes in uncalibrated detector
+        coordinates (a scale of 1 and offset of 0) inside the gnomonic
+        bounds of the detector.
         """
         xyg = self._zone_axes._xy_within_r_gnomonic
         xg = xyg[..., 0]
@@ -615,7 +620,7 @@ class GeometricalKikuchiPatternSimulation:
         coordinates
             The coordinates of the plot axes, either ``"detector"``
             (default) or ``"gnomonic"``.
-        kwargs
+        **kwargs
             Keyword arguments passed to
             :class:`~matplotlib.collections.PathCollection` to format
             zone axes.
@@ -651,7 +656,7 @@ class GeometricalKikuchiPatternSimulation:
         coordinates
             The coordinates of the zone axes labels, either
             ``"detector"`` (default) or ``"gnomonic"``.
-        kwargs
+        **kwargs
             Keyword arguments passed to :class:`~matplotlib.text.Text`
             to format zone axes labels.
 
@@ -684,7 +689,7 @@ class GeometricalKikuchiPatternSimulation:
 
         Parameters
         ----------
-        kwargs
+        **kwargs
             Keyword arguments passed to
             :func:`~matplotlib.pyplot.scatter` to format the markers.
 
@@ -713,7 +718,7 @@ class GeometricalKikuchiPatternSimulation:
 
         Parameters
         ----------
-        kwargs
+        **kwargs
             Keyword arguments passed to :func:`~matplotlib.text.Text` to
             format the labels.
 

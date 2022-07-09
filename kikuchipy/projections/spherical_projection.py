@@ -16,25 +16,18 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 """Spherical projection of a cartesian vector according to the ISO
-31-11 standard [SphericalWolfram]_.
+31-11 standard.
 """
 
 from typing import Union
 
 import numpy as np
-from orix.vector import Vector3d
-from orix.vector.spherical_region import SphericalRegion
+from orix.vector import SphericalRegion, Vector3d
 
 
 class SphericalProjection:
     """Spherical projection of a cartesian vector according to the ISO
-    31-11 standard [SphericalWolfram]_.
-
-    References
-    ----------
-    .. [SphericalWolfram] Weisstein, Eric W. "Spherical Coordinates,"
-        *From MathWorld--A Wolfram Web Resource*,
-        url: https://mathworld.wolfram.com/SphericalCoordinates.html
+    31-11 standard.
     """
 
     spherical_region = SphericalRegion([0, 0, 1])
@@ -42,25 +35,24 @@ class SphericalProjection:
     @classmethod
     def vector2xy(cls, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
         """Convert from cartesian to spherical coordinates according to
-        the ISO 31-11 standard [SphericalWolfram]_.
+        the ISO 31-11 standard.
 
         Parameters
         ----------
         v
-            3D vector(s) on the form [[x0, y0, z0], [x1, y1, z1], ...].
+            3D vector(s) on the form
+            ``[[x0, y0, z0], [x1, y1, z1], ...]``.
 
         Returns
         -------
         spherical_coordinates
             Spherical coordinates theta, phi and r on the form
-            [[theta1, phi1, r1], [theta2, phi2, r2], ...].
+            ``[[theta1, phi1, r1], [theta2, phi2, r2], ...]``.
 
         Examples
         --------
         >>> import numpy as np
-        >>> from kikuchipy.projections.spherical_projection import (
-        ...     SphericalProjection
-        ... )
+        >>> from kikuchipy.projections import SphericalProjection
         >>> v = np.random.random_sample(30).reshape((10, 3))
         >>> theta, phi, r = SphericalProjection.vector2xy(v).T
         >>> np.allclose(np.arccos(v[:, 2] / r), theta)
@@ -88,7 +80,7 @@ def _get_polar_coordinates(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
 
 def get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     """Get the polar spherical coordinate from cartesian according to
-    the ISO 31-11 standard [SphericalWolfram]_.
+    the ISO 31-11 standard.
 
     Parameters
     ----------
@@ -110,7 +102,7 @@ def get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
 
 def get_azimuth(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     """Get the azimuthal spherical coordinate from cartesian according
-    to the ISO 31-11 standard [SphericalWolfram]_.
+    to the ISO 31-11 standard.
 
     Parameters
     ----------

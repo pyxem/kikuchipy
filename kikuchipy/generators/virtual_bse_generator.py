@@ -33,36 +33,59 @@ from kikuchipy.pattern import rescale_intensity
 
 
 class VirtualBSEGenerator:
-    """Generates virtual backscatter electron (BSE) images for a
-    specified electron backscatter diffraction (EBSD) signal and a set
-    of EBSD detector areas.
+    """Generates virtual backscatter electron (BSE) images for an
+    electron backscatter diffraction (EBSD) signal and a set
+    of EBSD detector areas in a convenient manner.
 
-    Attributes
+    Parameters
     ----------
-    signal : kikuchipy.signals.EBSD
-    grid_shape : Tuple[int]
+    signal
+        EBSD signal.
+
+    See Also
+    --------
+    kikuchipy.signals.EBSD.plot_virtual_bse_intensity,
+    kikuchipy.signals.EBSD.get_virtual_bse_intensity
     """
 
     def __init__(self, signal: Union[EBSD, LazyEBSD]):
         self.signal = signal
-        self.grid_shape = (5, 5)
+        self._grid_shape = (5, 5)
 
     def __repr__(self):
         return f"VirtualBSEGenerator for {self.signal}"
 
     @property
     def grid_rows(self) -> np.ndarray:
-        """Return detector grid rows, defined by `grid_shape`."""
+        """Return the detector grid rows, defined by :attr:`grid_shape`."""
         gy = self.grid_shape[0]
         sy = self.signal.axes_manager.signal_shape[1]
         return np.linspace(0, sy, gy + 1)
 
     @property
     def grid_cols(self) -> np.ndarray:
-        """Return detector grid columns, defined by `grid_shape`."""
+        """Return the detector grid columns, defined by
+        :attr:`grid_shape`.
+        """
         gx = self.grid_shape[1]
         sx = self.signal.axes_manager.signal_shape[0]
         return np.linspace(0, sx, gx + 1)
+
+    @property
+    def grid_shape(self) -> tuple:
+        """Return or set the generator grid shape.
+
+        Parameters
+        ----------
+        shape : tuple or list of int
+            Generator grid shape.
+        """
+        return self._grid_shape
+
+    @grid_shape.setter
+    def grid_shape(self, shape: Union[Tuple[int, int], List[int]]):
+        """Set the generator grid shape."""
+        self._grid_shape = tuple(shape)
 
     def get_rgb_image(
         self,
@@ -72,8 +95,9 @@ class VirtualBSEGenerator:
         percentiles: Optional[Tuple] = None,
         normalize: bool = True,
         alpha: Union[None, np.ndarray, VirtualBSEImage] = None,
-        dtype_out: Union[np.uint8, np.uint16] = np.uint8,
-        **kwargs,
+        dtype_out: Union[str, np.dtype, type] = "uint8",
+        add_bright: int = 0,
+        contrast: float = 1.0,
     ) -> VirtualBSEImage:
         """Return an in-memory RGB virtual BSE image from three regions
         of interest (ROIs) on the EBSD detector, with a potential "alpha
@@ -96,32 +120,29 @@ class VirtualBSEGenerator:
             with detector grid indices specifying one or more ROI(s).
             Intensities within the specified ROI(s) are summed up to
             form the blue color channel.
+        percentiles
+            Whether to apply contrast stretching with a given percentile
+            tuple with percentages, e.g. (0.5, 99.5), after creating the
+            RGB image. If not given (default), no contrast stretching is
+            performed.
         normalize
             Whether to normalize the individual images (channels) before
             RGB image creation.
         alpha
-            "Alpha channel". If None (default), no "alpha channel" is
-            added to the image.
-        percentiles
-            Whether to apply contrast stretching with a given percentile
-            tuple with percentages, e.g. (0.5, 99.5), after creating the
-            RGB image. If None (default), no contrast stretching is
-            performed.
+            "Alpha channel". If not given (default), no "alpha channel"
+            is added to the image.
         dtype_out
-            Output data type, either np.uint16 or np.uint8 (default).
-        kwargs
-            Keyword arguments passed to
-            :func:`~kikuchipy.generators.virtual_bse_generator.get_rgb_image`.
+            Output data type, either ``"uint8"`` (default) or
+            ``"uint16"``.
+        add_bright
+            Brightness offset to for each array. Default is ``0``.
+        contrast
+            Contrast factor for each array. Default is ``1.0``.
 
         Returns
         -------
-        vbse_rgb_image : VirtualBSEImage
+        vbse_rgb_image
             Virtual RGB image in memory.
-
-        See Also
-        --------
-        ~kikuchipy.signals.EBSD.plot_virtual_bse_intensity
-        ~kikuchipy.signals.EBSD.get_virtual_bse_intensity
 
         Notes
         -----
@@ -149,13 +170,15 @@ class VirtualBSEGenerator:
         if alpha is not None and isinstance(alpha, Signal2D):
             alpha = alpha.data
 
-        rgb_image = get_rgb_image(
+        dtype_out = np.dtype(dtype_out)
+        rgb_image = _get_rgb_image(
             channels=channels,
             normalize=normalize,
             alpha=alpha,
             percentiles=percentiles,
             dtype_out=dtype_out,
-            **kwargs,
+            add_bright=add_bright,
+            contrast=contrast,
         )
 
         rgb_image = rgb_image.astype(dtype_out)
@@ -170,27 +193,29 @@ class VirtualBSEGenerator:
 
         return vbse_rgb_image
 
-    def get_images_from_grid(self, dtype_out: np.dtype = np.float32) -> VirtualBSEImage:
+    def get_images_from_grid(
+        self, dtype_out: Union[str, np.dtype, type] = "float32"
+    ) -> VirtualBSEImage:
         """Return an in-memory signal with a stack of virtual
         backscatter electron (BSE) images by integrating the intensities
-        within regions of interest (ROI) defined by the detector
-        `grid_shape`.
+        within regions of interest (ROI) defined by the generator
+        :attr:`grid_shape`.
 
         Parameters
         ----------
         dtype_out
-            Output data type, default is float32.
+            Output data type, default is ``"float32"``.
 
         Returns
         -------
-        vbse_images : VirtualBSEImage
+        vbse_images
             In-memory signal with virtual BSE images.
 
         Examples
         --------
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
-        >>> s  # doctest: +SKIP
+        >>> s
         <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
         >>> vbse_gen = kp.generators.VirtualBSEGenerator(s)
         >>> vbse_gen.grid_shape = (5, 5)
@@ -198,16 +223,16 @@ class VirtualBSEGenerator:
         >>> vbse
         <VirtualBSEImage, title: , dimensions: (5, 5|3, 3)>
         """
+        dtype_out = np.dtype(dtype_out)
+
         grid_shape = self.grid_shape
         new_shape = grid_shape + self.signal.axes_manager.navigation_shape[::-1]
         images = np.zeros(new_shape, dtype=dtype_out)
-        for row, col in np.ndindex(grid_shape):
+        for row, col in np.ndindex(*grid_shape):
             roi = self.roi_from_grid((row, col))
             images[row, col] = self.signal.get_virtual_bse_intensity(roi).data
 
         vbse_images = VirtualBSEImage(images)
-        # TODO: Transfer signal's detector axes to new navigation axes
-        #  with proper binning
         vbse_images.axes_manager = _transfer_navigation_axes_to_signal_axes(
             new_axes=vbse_images.axes_manager, old_axes=self.signal.axes_manager
         )
@@ -227,7 +252,7 @@ class VirtualBSEGenerator:
 
         Returns
         -------
-        roi : hyperspy.roi.RectangularROI
+        roi
             ROI defined by the grid indices.
         """
         rows = self.grid_rows
@@ -260,22 +285,22 @@ class VirtualBSEGenerator:
         ----------
         pattern_idx
             A tuple of integers defining the pattern to superimpose the
-            grid on. If None (default), the first pattern is used.
+            grid on. If not given (default), the first pattern is used.
         rgb_channels
             A list of tuple indices defining three or more detector grid
-            tiles which edges to color red, green and blue. If None (default),
-            no tiles' edges are colored.
+            tiles which edges to color red, green and blue. If not given
+            (default), no tiles' edges are colored.
         visible_indices
-            Whether to show grid indices. Default is True.
-        kwargs
+            Whether to show grid indices. Default is ``True``.
+        **kwargs
             Keyword arguments passed to
-            :func:`matplotlib.pyplot.axhline` and `axvline`, used by
+            :func:`matplotlib.pyplot.axhline` and ``axvline``, used by
             HyperSpy to draw lines.
 
         Returns
         -------
-        pattern : kikuchipy.signals.EBSD
-            A single pattern with the markers added.
+        pattern
+            A signal with a single pattern with the markers added.
         """
         # Get detector scales (column, row)
         axes_manager = self.signal.axes_manager
@@ -288,7 +313,7 @@ class VirtualBSEGenerator:
         markers = []
         if visible_indices:
             color = kwargs.pop("color", "r")
-            for row, col in np.ndindex(self.grid_shape):
+            for row, col in np.ndindex(*self.grid_shape):
                 markers.append(
                     Text(
                         x=cols[col] * dc,
@@ -330,17 +355,17 @@ class VirtualBSEGenerator:
         return pattern
 
 
-def normalize_image(
+def _normalize_image(
     image: np.ndarray,
     add_bright: int = 0,
-    contrast: int = 1.0,
-    dtype_out: Union[np.uint8, np.uint16] = np.uint8,
+    contrast: float = 1.0,
+    dtype_out: Union[str, np.dtype, type] = "uint8",
 ) -> np.ndarray:
     """Normalize an image's intensities to a mean of 0 and a standard
     deviation of 1, with the possibility to also scale by a contrast
     factor and shift the brightness values.
 
-    Clips intensities to uint8 data type range, [0, 255].
+    Clips intensities to uint8 data type range, ``[0, 255]``.
 
     Adapted from the aloe/xcdskd package.
 
@@ -349,16 +374,18 @@ def normalize_image(
     image
         Image to normalize.
     add_bright
-        Brightness offset. Default is 0.
+        Brightness offset to for each array. Default is ``0``.
     contrast
-        Contrast factor. Default is 1.0.
+        Contrast factor for each array. Default is ``1.0``.
     dtype_out
-        Output data type, either np.uint16 or np.uint8 (default).
+        Output data type, either ``"uint8"`` (default) or ``"uint16"``.
 
     Returns
     -------
-    image_out : np.ndarray
+    normalized_image
+        Normalized image.
     """
+    dtype_out = np.dtype(dtype_out)
     dtype_max = np.iinfo(dtype_out).max
 
     offset = (dtype_max // 2) + add_bright
@@ -370,13 +397,14 @@ def normalize_image(
     return np.clip(normalized_image, 0, dtype_max)
 
 
-def get_rgb_image(
+def _get_rgb_image(
     channels: List[np.ndarray],
     percentiles: Optional[Tuple] = None,
     normalize: bool = True,
     alpha: Optional[np.ndarray] = None,
-    dtype_out: Union[np.uint8, np.uint16] = np.uint8,
-    **kwargs,
+    dtype_out: Union[str, np.dtype, type] = "uint8",
+    add_bright: int = 0,
+    contrast: float = 1.0,
 ) -> np.ndarray:
     """Return an RGB image from three numpy arrays, with a potential
     alpha channel.
@@ -386,34 +414,40 @@ def get_rgb_image(
     channels
         A list of np.ndarray for the red, green and blue channel,
         respectively.
-    normalize
-        Whether to normalize the individual `channels` before
-        RGB image creation.
-    alpha
-        Potential alpha channel. If None (default), no alpha channel
-        is added to the image.
     percentiles
         Whether to apply contrast stretching with a given percentile
         tuple with percentages, e.g. (0.5, 99.5), after creating the
-        RGB image. If None (default), no contrast stretching is
+        RGB image. If not given (default), no contrast stretching is
         performed.
+    normalize
+        Whether to normalize the individual ``channels`` before
+        RGB image creation. Default is ``True``.
+    alpha
+        Potential alpha channel. If not given (default), no alpha
+        channel is added to the image.
     dtype_out
-        Output data type, either np.uint16 or np.uint8 (default).
-    kwargs :
-        Keyword arguments passed to
-        :func:`~kikuchipy.generators.virtual_bse_generator.normalize_image`.
+        Output data type, either ``"uint8"`` (default) or ``"uint16"``.
+    add_bright
+        Brightness offset to for each array. Default is ``0``.
+    contrast
+        Contrast factor for each array. Default is ``1.0``.
 
     Returns
     -------
-    rgb_image : np.ndarray
+    rgb_image
         RGB image.
     """
+    dtype_out = np.dtype(dtype_out)
+
     n_channels = 3
     rgb_image = np.zeros(channels[0].shape + (n_channels,), np.float32)
     for i, channel in enumerate(channels):
         if normalize:
-            channel = normalize_image(
-                channel.astype(np.float32), dtype_out=dtype_out, **kwargs
+            channel = _normalize_image(
+                channel.astype(np.float32),
+                dtype_out=dtype_out,
+                add_bright=add_bright,
+                contrast=contrast,
             )
         rgb_image[..., i] = channel
 

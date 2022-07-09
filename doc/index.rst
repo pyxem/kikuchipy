@@ -2,109 +2,95 @@
 kikuchipy
 =========
 
-.. Launch binder
-.. image:: https://static.mybinder.org/badge_logo.svg
-    :target: https://mybinder.org/v2/gh/pyxem/kikuchipy/HEAD
-    :alt: Launch binder
-
-.. Gitter chat
-.. image:: https://badges.gitter.im/Join%20Chat.svg
-    :target: https://gitter.im/pyxem/kikuchipy
-
-.. Read the Docs
-.. image:: https://readthedocs.org/projects/kikuchipy/badge/?version=latest
-    :target: https://kikuchipy.org/en/latest/
-    :alt: Documentation status
-
-.. GitHub Actions
-.. image:: https://github.com/pyxem/kikuchipy/workflows/build/badge.svg
-    :target: https://github.com/pyxem/kikuchipy/actions
-    :alt: Build status
-
-.. Coveralls
-.. image:: https://coveralls.io/repos/github/pyxem/kikuchipy/badge.svg?branch=develop
-    :target: https://coveralls.io/github/pyxem/kikuchipy?branch=develop
-    :alt: Coveralls status
-
-.. PyPI version
-.. image:: https://img.shields.io/pypi/v/kikuchipy.svg
-    :target: https://pypi.org/project/kikuchipy/
-    :alt: PyPI version
-
-.. Downloads per month
-.. image:: https://static.pepy.tech/badge/kikuchipy/month
-    :target: https://pepy.tech/project/kikuchipy
-    :alt: Downloads per month
-
-.. Zenodo DOI
-.. image:: https://zenodo.org/badge/doi/10.5281/zenodo.3597646.svg
-    :target: https://doi.org/10.5281/zenodo.3597646
-    :alt: DOI
-
-.. Number of contributors
-.. image:: https://img.shields.io/github/all-contributors/pyxem/kikuchipy?color=%23A3A0CF&label=contributors
-    :target: https://github.com/pyxem/kikuchipy#contributors-
-    :alt: Number of contributors
-
-kikuchipy [ki-ko-chi-pai] is an open-source Python library for processing and analysis
-of electron backscatter diffraction (EBSD) patterns. The library builds on the tools for
-multi-dimensional data analysis provided by the HyperSpy library.
-
-- **User guide and API reference**: https://kikuchipy.org. The guide consists of Jupyter
-  Notebooks with many links to detailed explanations of the input parameters and output
-  of functions and class methods (the API reference). The notebooks can be inspected
-  statically on the web page or via `nbviewer
-  <https://nbviewer.org/github/pyxem/kikuchipy/tree/develop/doc/user_guide/>`_,
-  downloaded and run locally, or run interactively in the browser by clicking the Binder
-  link above and navigating to the `doc/user_guide` directory. We hope you find them
-  useful!
-- **License**: kikuchipy is released under the GPLv3+ license.
-- **Cite**: If you find this project useful, please cite the DOI above.
-- **Contribute**: Do you have a question or want to contribute? Great! Our
-  `contributing guide <https://kikuchipy.org/en/latest/contributing.html>`_ explains how
-  to do this. (Or just explain what you want to do
-  `in an issue <https://github.com/pyxem/kikuchipy/issues/new>`_.)
-- **Changelog**: The library is in continuous development (alpha stage), so expect some
-  breaking changes with each release. Please see
-  `the changelog <https://kikuchipy.org/en/latest/changelog.html>`_ for all
-  developments.
-
+A library for processing, simulating and analyzing electron backscatter diffraction
+(EBSD) patterns in Python, built on the tools for multi-dimensional data analysis
+provided by the HyperSpy library.
 
 .. toctree::
+    :caption: Learning resources
     :hidden:
-    :caption: Getting started
+
+    examples/index.rst
+    tutorials/index.rst
+    Reference <reference/index.rst>
+    related_projects.rst
+    bibliography.rst
+    open_datasets.rst
+
+.. toctree::
+    :caption: Help & development
+    :hidden:
 
     installation.rst
-
-.. nbgallery::
-    :caption: User guide
-
-    user_guide/load_save_data.ipynb
-    user_guide/reference_frames.ipynb
-    user_guide/change_navigation_signal_shapes.ipynb
-    user_guide/pattern_processing.ipynb
-    user_guide/visualizing_patterns.ipynb
-    user_guide/feature_maps.ipynb
-    user_guide/virtual_backscatter_electron_imaging.ipynb
-    user_guide/pattern_matching.ipynb
-    user_guide/kikuchi_pattern_simulations.ipynb
-    user_guide/multivariate_analysis.ipynb
-    user_guide/metadata_structure.ipynb
-
-.. toctree::
-    :hidden:
-
-    examples.rst
-
-.. toctree::
-    :hidden:
-    :caption: Help & reference
-
-    reference.rst
-    bibliography.rst
-    contributing.rst
-    open_datasets.rst
     changelog.rst
-    cite.rst
-    related_projects.rst
+    contributing.rst
+    License <https://github.com/pyxem/kikuchipy/blob/develop/LICENSE>
     Code of Conduct <code_of_conduct.rst>
+
+Installation
+============
+
+kikuchipy can be installed with `pip <https://pypi.org/project/kikuchipy>`__ or
+`conda <https://anaconda.org/conda-forge/kikuchipy>`__:
+
+.. tab-set::
+
+    .. tab-item:: pip
+
+        .. code-block:: bash
+
+            pip install kikuchipy
+
+    .. tab-item:: conda
+
+        .. code-block:: bash
+
+            conda install kikuchipy -c conda-forge
+
+Further details are available in the :doc:`installation guide <installation>`.
+
+Learning resources
+==================
+
+.. See: https://sphinx-design.readthedocs.io/en/furo-theme/grids.html
+.. grid:: 2 3 3 3
+
+    .. grid-item-card:: Examples
+        :img-top: _static/image/colormap_banners/banner0.png
+        :link: examples/index
+        :link-type: doc
+
+        Short recipies to common tasks using kikuchipy.
+
+    .. grid-item-card:: Tutorials
+        :img-top: _static/image/colormap_banners/banner1.png
+        :link: tutorials/index
+        :link-type: doc
+
+        In-depth guides for using kikuchipy.
+
+    .. grid-item-card:: Reference
+        :img-top: _static/image/colormap_banners/banner2.png
+        :link: reference/index
+        :link-type: doc
+
+        Descriptions of functions, modules, and objects in kikuchipy.
+
+Contributing
+============
+
+kikuchipy is a community project maintained for and by its users. There are many ways
+you can help!
+
+- Help other users in `our GitHub discussions
+  <https://github.com/pyxem/kikuchipy/discussions>`__ or `on Gitter
+  <https://gitter.im/pyxem/kikuchipy>`__
+- report a bug or request a feature `on GitHub
+  <https://github.com/pyxem/kikuchipy/issues>`__
+- or improve the :doc:`documentation and code <contributing>`
+
+Citing kikuchipy
+================
+
+If you are using kikuchipy in your scientific research, please help our scientific
+visibility by citing the Zenodo DOI: https://doi.org/10.5281/zenodo.3597646.

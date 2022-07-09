@@ -17,18 +17,35 @@ Unreleased
 
 Contributors
 ------------
+- Håkon Wiik Ånes
+- Magnus Nord
 
 Added
 -----
+- Whether to show progressbars from most signal methods (except indexing and refinement)
+  can be controlled by passing ``show_progressbar`` or by setting HyperSpy's
+  ``hs.preferences.General.show_progressbar`` (see their docs for details).
+  (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
 
 Changed
 -------
+- Minimal version of HyperSpy increased to >= 1.7.1.
+  (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
+- ``progressbar`` parameter to ``show_progressbar`` in ``kikuchipy.data`` functions
+  which accepts a ``allow_download`` parameter. If not given, the value is retreived
+  from HyperSpy's preferences. (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
 
 Deprecated
 ----------
+- ``ebsd_metadata()`` and ``metadata_nodes()`` are deprecated and will be removed in
+  v0.8.
+  (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
 
 Removed
 -------
+- The print information emitted from ``EBSD`` methods like
+  ``remove_static_background()`` is removed.
+  (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
 
 Fixed
 -----
@@ -107,8 +124,8 @@ Deprecated
   removed in version 0.7. Use the ``kikuchipy.simulations.KikuchiPatternSimulator``
   class instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - The ``kikuchipy.crystallography.matrices`` module is depreacted and will be removed in
-  version 0.7, access the matrices via :class:`diffpy.structure.Lattice` attributes
-  instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
+  version 0.7, access the matrices via :class:`diffpy.structure.lattice.Lattice`
+  attributes instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - The following functions for processing of pattern chunks in the
   ``kikuchipy.pattern.chunk`` module are deprecated and will be removed in version 0.7:
   ``get_image_quality()``, ``remove_dynamic_background()`` and

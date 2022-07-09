@@ -15,4 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read and write signals from and to file."""
+"""Read and write signals from and to file.
+
+.. currentmodule:: kikuchipy.io
+
+.. rubric:: Modules
+
+.. autosummary::
+    :toctree: ../generated/
+    :template: custom-module-template.rst
+
+    plugins
+"""

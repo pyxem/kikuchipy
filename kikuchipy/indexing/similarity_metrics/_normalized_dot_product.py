@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Union
+from typing import List, Union
 
 import dask
 import dask.array as da
@@ -26,7 +26,9 @@ from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityM
 
 class NormalizedDotProductMetric(SimilarityMetric):
     r"""Similarity metric implementing the normalized dot product
-    :cite:`chen2015dictionary`
+    :cite:`chen2015dictionary`.
+
+    The metric is defined as
 
     .. math::
 
@@ -38,18 +40,12 @@ class NormalizedDotProductMetric(SimilarityMetric):
     (inner) product of the pattern vectors :math:`\mathbf{X}` and
     :math:`\mathbf{Y}`.
 
-    See :class:`~kikuchipy.indexing.similarity_metrics.SimilarityMetric`
-    for remaining attributes.
-
-    Attributes
-    ----------
-    allowed_dtypes
-        :class:`~numpy.float32` and :class:`~numpy.float64`.
-    sign
-        +1, meaning greater is better.
+    See :class:`~kikuchipy.indexing.SimilarityMetric` for the
+    description of the initialization parameters and the list of
+    attributes.
     """
-    allowed_dtypes = [np.float32, np.float64]
-    sign = 1
+    _allowed_dtypes: List[type] = [np.float32, np.float64]
+    _sign: int = 1
 
     def __call__(
         self,
@@ -85,6 +81,28 @@ class NormalizedDotProductMetric(SimilarityMetric):
     def prepare_experimental(
         self, patterns: Union[np.ndarray, da.Array]
     ) -> Union[np.ndarray, da.Array]:
+        """Prepare experimental patterns before matching to dictionary
+        patterns in :meth:`match`.
+
+        Patterns are prepared by:
+            1. Setting the data type to :attr:`~SimilarityMetric.dtype`.
+            2. Reshaping to shape ``(n_experimental_patterns, -1)``
+            3. Applying a signal mask if
+               :attr:`~SimilarityMetric.signal_mask` is set.
+            4. Rechunking if :attr:`~SimilarityMetric.rechunk` is
+               ``True``.
+            5. Normalizing to a mean of 0.
+
+        Parameters
+        ----------
+        patterns
+            Experimental patterns.
+
+        Returns
+        -------
+        prepared_patterns
+            Prepared experimental patterns.
+        """
         patterns = da.asarray(patterns).astype(self.dtype)
         patterns = patterns.reshape((self.n_experimental_patterns, -1))
         if self.signal_mask is not None:
@@ -97,6 +115,25 @@ class NormalizedDotProductMetric(SimilarityMetric):
     def prepare_dictionary(
         self, patterns: Union[np.ndarray, da.Array]
     ) -> Union[np.ndarray, da.Array]:
+        """Prepare dictionary patterns before matching to experimental
+        patterns in :meth:`match`.
+
+        Patterns are prepared by:
+            1. Setting the data type to :attr:`~SimilarityMetric.dtype`.
+            2. Applying a signal mask if
+               :attr:`~SimilarityMetric.signal_mask` is set.
+            3. Normalizing to a mean of 0.
+
+        Parameters
+        ----------
+        patterns
+            Dictionary patterns.
+
+        Returns
+        -------
+        prepared_patterns
+            Prepared dictionary patterns.
+        """
         patterns = patterns.astype(self.dtype)
         if self.signal_mask is not None:
             patterns = self._mask_patterns(patterns)
@@ -108,6 +145,21 @@ class NormalizedDotProductMetric(SimilarityMetric):
         experimental: Union[np.ndarray, da.Array],
         dictionary: Union[np.ndarray, da.Array],
     ) -> da.Array:
+        """Match all experimental patterns to all dictionary patterns
+        and return their similarities.
+
+        Parameters
+        ----------
+        experimental
+            Experimental patterns.
+        dictionary
+            Dictionary patterns.
+
+        Returns
+        -------
+        dot_products
+            Normalized dot products.
+        """
         return da.einsum(
             "ik,mk->im",
             experimental,

@@ -260,7 +260,9 @@ class TestProjectingPatternsFromLambert:
         mp4.projection = "lambert"
         mp4.phase = Phase("Ni", 225)
         out41 = mp4.get_patterns(r2, self.detector, 5)
-        out42 = mp4.get_patterns(r2, self.detector, 5, compute=True)
+        out42 = mp4.get_patterns(
+            r2, self.detector, 5, compute=True, show_progressbar=True
+        )
 
         assert isinstance(out41, kp.signals.LazyEBSD)
         assert isinstance(out42, kp.signals.EBSD)
@@ -524,13 +526,13 @@ class TestMasterPatternPlotting:
 
 
 class TestAsLambert:
-    def test_as_lambert(self):
+    def test_as_lambert(self, capsys):
         mp_sp = nickel_ebsd_master_pattern_small(projection="stereographic")
         assert mp_sp.projection == "stereographic"
         assert mp_sp.hemisphere == "upper"
 
         # Upper hemisphere
-        mp_lp = mp_sp.as_lambert()
+        mp_lp = mp_sp.as_lambert(show_progressbar=True)
         assert mp_lp.projection == "lambert"
         assert mp_lp.data.shape == mp_sp.data.shape
         assert np.issubdtype(mp_lp.data.dtype, np.float32)
@@ -553,7 +555,9 @@ class TestAsLambert:
 
         # "Lower" hemisphere identical to upper
         mp_sp.hemisphere = "lower"
-        mp_lp2 = mp_sp.as_lambert()
+        mp_lp2 = mp_sp.as_lambert(show_progressbar=False)
+        out, _ = capsys.readouterr()
+        assert not out
         assert mp_lp2.projection == "lambert"
         assert np.allclose(mp_lp.data, mp_lp2.data)
 
@@ -587,3 +591,16 @@ class TestAsLambert:
         assert np.all(xyz[:, 2] >= 0)
         assert np.isclose(xyz.max(), 1)
         assert np.isclose(xyz.min(), -1)
+
+
+class TestIntensityScaling:
+    def test_rescale_intensity(self):
+        mp = nickel_ebsd_master_pattern_small()
+        mp.rescale_intensity(dtype_out=np.float32)
+        assert np.allclose([mp.data.min(), mp.data.max()], [-1.0, 1.0])
+
+    def test_normalize_intensity(self):
+        mp = nickel_ebsd_master_pattern_small()
+        mp.change_dtype("float32")
+        mp.normalize_intensity()
+        assert np.allclose([mp.data.min(), mp.data.max()], [-1.33, 5.93], atol=1e-2)

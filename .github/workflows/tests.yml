@@ -1,4 +1,4 @@
-name: Build
+name: Tests
 
 on: [push, pull_request]
 
@@ -18,7 +18,7 @@ jobs:
         run: pip install black[jupyter]
 
       - name: Check code style of Jupyter notebooks
-        run: black doc/*/*.ipynb
+        run: black doc/tutorials/*.ipynb
 
   # Make sure all necessary files are included in a release
   manifest:
@@ -35,10 +35,10 @@ jobs:
       - name: Check MANIFEST.in file
         run: python setup.py manifix
 
-  build-with-pip:
+  tests:
     name: ${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.LABEL }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -80,8 +80,8 @@ jobs:
         run: |
           pip install ${{ matrix.DEPENDENCIES }}
 
-      - name: Install virtual buffer package necessary for PyVista
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 }}
+      - name: Set up headless display necessary for PyVista on Linux
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo apt-get update
           sudo apt-get install xvfb
@@ -96,21 +96,22 @@ jobs:
           pip list
 
       - name: Run docstring tests
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         continue-on-error: true
         run: |
-          pytest --doctest-modules --ignore-glob=kikuchipy/*/tests
+          xvfb-run pytest --doctest-modules --ignore-glob=kikuchipy/*/tests kikuchipy/*.py
 
       - name: Run tests in a virtual X server environment on Ubuntu
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 }}
         run: |
           sudo apt-get update
           sudo apt-get install xvfb
-          xvfb-run pytest --cov=kikuchipy --pyargs kikuchipy
+          xvfb-run pytest --cov=kikuchipy --pyargs kikuchipy -n 2
 
       - name: Run tests
         if: ${{ ! ( matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 ) }}
         run: |
-          pytest --cov=kikuchipy --pyargs kikuchipy
+          pytest --cov=kikuchipy --pyargs kikuchipy -n 2
 
       - name: Generate line coverage
         run: |
@@ -123,7 +124,7 @@ jobs:
           parallel: true
 
   coveralls-finish:
-    needs: build-with-pip
+    needs: tests
     runs-on: ubuntu-latest
     steps:
     - name: Coveralls finished

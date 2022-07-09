@@ -15,12 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""An EBSD detector and related quantities."""
+"""Tools for handling the EBSD detector-sample geometry."""
 
 from kikuchipy.detectors.calibration import PCCalibrationMovingScreen
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 
 __all__ = [
-    "PCCalibrationMovingScreen",
     "EBSDDetector",
+    "PCCalibrationMovingScreen",
 ]

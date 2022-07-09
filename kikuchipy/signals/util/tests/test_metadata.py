@@ -14,7 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
-
+import numpy as np
 import pytest
 
 from kikuchipy.signals.util._metadata import (
@@ -26,8 +26,10 @@ from kikuchipy.signals.util._metadata import (
 
 class TestMetadata:
     def test_ebsd_metadata(self):
-        sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
-        md = ebsd_metadata()
+        with pytest.warns(np.VisibleDeprecationWarning):
+            sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
+        with pytest.warns(np.VisibleDeprecationWarning):
+            md = ebsd_metadata()
         assert md.get_item(sem_node + ".microscope") == ""
         assert md.get_item(ebsd_node + ".xpc") == -1.0
 
@@ -35,17 +37,23 @@ class TestMetadata:
         sem_node = "Acquisition_instrument.SEM"
         ebsd_node = sem_node + ".Detector.EBSD"
 
-        assert metadata_nodes("sem") == sem_node
-        assert metadata_nodes("ebsd") == ebsd_node
-        assert metadata_nodes() == [sem_node, ebsd_node]
-        assert metadata_nodes(["ebsd", "sem"]) == [ebsd_node, sem_node]
+        with pytest.warns(np.VisibleDeprecationWarning):
+            assert metadata_nodes("sem") == sem_node
+        with pytest.warns(np.VisibleDeprecationWarning):
+            assert metadata_nodes("ebsd") == ebsd_node
+        with pytest.warns(np.VisibleDeprecationWarning):
+            assert metadata_nodes() == [sem_node, ebsd_node]
+        with pytest.warns(np.VisibleDeprecationWarning):
+            assert metadata_nodes(["ebsd", "sem"]) == [ebsd_node, sem_node]
 
     def test_set_metadata_from_mapping(self):
         """Updating DictionaryTreeBrowser with values from a dictionary
         via a mapping.
         """
-        sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
-        md = ebsd_metadata()
+        with pytest.warns(np.VisibleDeprecationWarning):
+            sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
+        with pytest.warns(np.VisibleDeprecationWarning):
+            md = ebsd_metadata()
 
         old_val1, new_val1 = (-1, 20)
         old_val2, new_val2 = (-1, 2)

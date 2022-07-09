@@ -45,7 +45,9 @@ def rescale_intensity(
     patterns: Union[np.ndarray, da.Array],
     in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
     out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
+    dtype_out: Union[
+        str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
+    ] = None,
     percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
 ) -> Union[np.ndarray, da.Array]:
     """Rescale pattern intensities in a chunk of EBSD patterns.
@@ -79,6 +81,7 @@ def rescale_intensity(
     rescaled_patterns : numpy.ndarray
         Rescaled patterns.
     """
+    dtype_out = np.dtype(dtype_out)
     rescaled_patterns = np.empty_like(patterns, dtype=dtype_out)
 
     for nav_idx in np.ndindex(patterns.shape[:-2]):
@@ -109,7 +112,9 @@ def remove_static_background(
     scale_bg: bool = False,
     in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
     out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
+    dtype_out: Union[
+        str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
+    ] = None,
 ) -> np.ndarray:
     """Remove the static background in a chunk of EBSD patterns.
 
@@ -151,6 +156,8 @@ def remove_static_background(
     """
     if dtype_out is None:
         dtype_out = patterns.dtype.type
+    elif not isinstance(dtype_out, tuple):
+        dtype_out = np.dtype(dtype_out).type
 
     if out_range is None:
         out_range = dtype_range[dtype_out]
@@ -185,7 +192,7 @@ def remove_static_background(
 def get_dynamic_background(
     patterns: Union[np.ndarray, da.Array],
     filter_func: Union[gaussian_filter, barnes.fft_filter],
-    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
+    dtype_out: Union[str, np.dtype, type, None] = None,
     **kwargs,
 ) -> np.ndarray:
     """Obtain the dynamic background in a chunk of EBSD patterns.
@@ -202,7 +209,7 @@ def get_dynamic_background(
     dtype_out
         Data type of background patterns. If None (default), it is set
         to input patterns' data type.
-    kwargs :
+    **kwargs
         Keyword arguments passed to the Gaussian blurring function
         passed to `filter_func`.
 
@@ -212,7 +219,9 @@ def get_dynamic_background(
         Large scale variations in the input EBSD patterns.
     """
     if dtype_out is None:
-        dtype_out = patterns.dtype.type
+        dtype_out = patterns.dtype
+    else:
+        dtype_out = np.dtype(dtype_out)
 
     background = np.empty_like(patterns, dtype=dtype_out)
 
@@ -232,7 +241,9 @@ def remove_dynamic_background(
     filter_func: Union[gaussian_filter, barnes.fft_filter],
     operation_func: Union[np.subtract, np.divide],
     out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
+    dtype_out: Union[
+        str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
+    ] = None,
     **kwargs,
 ) -> np.ndarray:
     """Correct the dynamic background in a chunk of EBSD patterns.
@@ -260,22 +271,24 @@ def remove_dynamic_background(
     dtype_out
         Data type of corrected patterns. If None (default), it is set to
         input patterns' data type.
-    kwargs :
+    **kwargs
         Keyword arguments passed to the Gaussian blurring function
         passed to `filter_func`.
 
     Returns
     -------
-    corrected_patterns : numpy.ndarray
+    corrected_patterns
         Dynamic background corrected patterns.
 
     See Also
     --------
-    kikuchipy.signals.ebsd.EBSD.remove_dynamic_background
-    kikuchipy.util.pattern.remove_dynamic_background
+    kikuchipy.signals.ebsd.EBSD.remove_dynamic_background,
+    kikuchipy.pattern.remove_dynamic_background
     """
     if dtype_out is None:
         dtype_out = patterns.dtype.type
+    elif not isinstance(dtype_out, tuple):
+        dtype_out = np.dtype(dtype_out).type
 
     if out_range is None:
         out_range = dtype_range[dtype_out]
@@ -415,7 +428,7 @@ def fft_filter(
     patterns: np.ndarray,
     filter_func: Union[pattern_processing.fft_filter, barnes._fft_filter],
     transfer_function: Union[np.ndarray, Window],
-    dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
+    dtype_out: Union[str, np.dtype, type, None] = None,
     **kwargs,
 ) -> np.ndarray:
     """Filter a chunk of EBSD patterns in the frequency domain.
@@ -439,16 +452,18 @@ def fft_filter(
     dtype_out
         Data type of output patterns. If None (default), it is set to
         the input patterns' data type.
-    kwargs :
+    **kwargs
         Keyword arguments passed to the `filter_func`.
 
     Returns
     -------
-    filtered_patterns : numpy.ndarray
+    filtered_patterns
         Filtered EBSD patterns.
     """
     if dtype_out is None:
         dtype_out = patterns.dtype.type
+    else:
+        dtype_out = np.dtype(dtype_out)
 
     filtered_patterns = np.empty_like(patterns, dtype=dtype_out)
 
@@ -469,7 +484,7 @@ def normalize_intensity(
     patterns: Union[np.ndarray, da.Array],
     num_std: int = 1,
     divide_by_square_root: bool = False,
-    dtype_out: Optional[np.dtype] = None,
+    dtype_out: Union[str, np.dtype, type, None] = None,
 ) -> np.ndarray:
     """Normalize intensities in a chunk of EBSD patterns to a mean of
     zero with a given standard deviation.
@@ -490,17 +505,19 @@ def normalize_intensity(
 
     Returns
     -------
-    normalized_patterns : numpy.ndarray
+    normalized_patterns
         Normalized patterns.
 
     Notes
     -----
     Data type should always be changed to floating point, e.g.
-    ``np.float32`` with :meth:`numpy.ndarray.astype`, before normalizing
+    ``"float32"`` with :meth:`numpy.ndarray.astype`, before normalizing
     the intensities.
     """
     if dtype_out is None:
-        dtype_out = patterns.dtype.type
+        dtype_out = patterns.dtype
+    else:
+        dtype_out = np.dtype(dtype_out)
 
     normalized_patterns = np.empty_like(patterns, dtype=dtype_out)
 
@@ -518,7 +535,7 @@ def average_neighbour_patterns(
     patterns: np.ndarray,
     window_sums: np.ndarray,
     window: Union[np.ndarray, Window],
-    dtype_out: Optional[np.dtype] = None,
+    dtype_out: Union[str, np.dtype, type, None] = None,
 ) -> np.ndarray:
     """Average a chunk of patterns with its neighbours within a window.
 
@@ -541,11 +558,13 @@ def average_neighbour_patterns(
 
     Returns
     -------
-    averaged_patterns : numpy.ndarray
+    averaged_patterns
         Averaged patterns.
     """
     if dtype_out is None:
-        dtype_out = patterns.dtype.type
+        dtype_out = patterns.dtype
+    else:
+        dtype_out = np.dtype(dtype_out)
 
     # Correlate patterns with window
     correlated_patterns = correlate(patterns, weights=window, mode="constant", cval=0)

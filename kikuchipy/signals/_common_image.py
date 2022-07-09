@@ -19,8 +19,10 @@ import sys
 from typing import Union, Tuple, Optional
 
 from dask.diagnostics import ProgressBar
+import hyperspy.api as hs
 from hyperspy._signals.signal2d import Signal2D
 from hyperspy.misc.rgb_tools import rgb_dtypes
+from hyperspy.api import preferences
 import numpy as np
 from skimage.util.dtype import dtype_range
 
@@ -42,16 +44,19 @@ class CommonImage(Signal2D):
     def rescale_intensity(
         self,
         relative: bool = False,
-        in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-        out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-        dtype_out: Union[None, np.dtype, Tuple[int, int], Tuple[float, float]] = None,
-        percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-    ):
+        in_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
+        out_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
+        dtype_out: Union[
+            str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
+        ] = None,
+        percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
+        show_progressbar: Optional[bool] = None,
+    ) -> None:
         """Rescale image intensities inplace.
 
-        Output min./max. intensity is determined from `out_range` or the
-        data type range of the :class:`numpy.dtype` passed to
-        `dtype_out` if `out_range` is None.
+        Output min./max. intensity is determined from ``out_range`` or
+        the data type range of the :class:`numpy.dtype` passed to
+        ``dtype_out`` if ``out_range`` is ``None``.
 
         This method is based on
         :func:`skimage.exposure.rescale_intensity`.
@@ -60,31 +65,40 @@ class CommonImage(Signal2D):
         ----------
         relative
             Whether to keep relative intensities between images (default
-            is False). If True, `in_range` must be None, because
-            `in_range` is in this case set to the global min./max.
-            intensity.
+            is ``False``). If ``True``, ``in_range`` must be ``None``,
+            because ``in_range`` is in this case set to the global
+            min./max. intensity.
         in_range
-            Min./max. intensity of input images. If None (default),
-            `in_range` is set to pattern min./max intensity. Contrast
-            stretching is performed when `in_range` is set to a narrower
-            intensity range than the input patterns. Must be None if
-            `relative` is True or `percentiles` are passed.
+            Min./max. intensity of input images. If not given,
+            ``in_range`` is set to pattern min./max intensity. Contrast
+            stretching is performed when ``in_range`` is set to a
+            narrower intensity range than the input patterns. Must be
+            ``None`` if ``relative=True`` or ``percentiles`` are passed.
         out_range
-            Min./max. intensity of output images. If None (default),
-            `out_range` is set to `dtype_out` min./max according to
-            `skimage.util.dtype.dtype_range`.
+            Min./max. intensity of output images. If not given,
+            ``out_range`` is set to ``dtype_out`` min./max according to
+            ``skimage.util.dtype.dtype_range``.
         dtype_out
             Data type of rescaled images, default is input images' data
             type.
         percentiles
             Disregard intensities outside these percentiles. Calculated
-            per image. Must be None if `in_range` or `relative` is
-            passed. Default is None.
+            per image. Must be ``None`` if ``in_range`` or ``relative``
+            is passed. Default is ``None``.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
 
         See Also
         --------
         kikuchipy.pattern.rescale_intensity,
         :func:`skimage.exposure.rescale_intensity`
+
+        Notes
+        -----
+        Rescaling RGB images is not possible. Use RGB channel
+        normalization when creating the image instead.
 
         Examples
         --------
@@ -93,9 +107,9 @@ class CommonImage(Signal2D):
         >>> s = kp.data.nickel_ebsd_small()
 
         Image intensities are stretched to fill the available grey
-        levels in the input images' data type range or any
-        :class:`numpy.dtype` range passed to `dtype_out`, either
-        keeping relative intensities between images or not:
+        levels in the input images' data type range or any data type
+        range passed to ``dtype_out``, either keeping relative
+        intensities between images or not
 
         >>> print(
         ...     s.data.dtype, s.data.min(), s.data.max(),
@@ -103,31 +117,26 @@ class CommonImage(Signal2D):
         ... )
         uint8 23 246 26 245
         >>> s2 = s.deepcopy()
-        >>> s.rescale_intensity(dtype_out=np.uint16)  # doctest: +SKIP
+        >>> s.rescale_intensity(dtype_out=np.uint16)
         >>> print(
         ...     s.data.dtype, s.data.min(), s.data.max(),
         ...     s.inav[0, 0].data.min(), s.inav[0, 0].data.max()
-        ... )  # doctest: +SKIP
+        ... )
         uint16 0 65535 0 65535
-        >>> s2.rescale_intensity(relative=True)  # doctest: +SKIP
+        >>> s2.rescale_intensity(relative=True)
         >>> print(
         ...     s2.data.dtype, s2.data.min(), s2.data.max(),
         ...     s2.inav[0, 0].data.min(), s2.inav[0, 0].data.max()
-        ... )  # doctest: +SKIP
+        ... )
         uint8 0 255 3 253
 
-        Contrast stretching can be performed by passing percentiles:
+        Contrast stretching can be performed by passing percentiles
 
-        >>> s.rescale_intensity(percentiles=(1, 99))  # doctest: +SKIP
+        >>> s.rescale_intensity(percentiles=(1, 99))
 
         Here, the darkest and brightest pixels within the 1% percentile
         are set to the ends of the data type range, e.g. 0 and 255
         respectively for images of ``uint8`` data type.
-
-        Notes
-        -----
-        Rescaling RGB images is not possible. Use RGB channel
-        normalization when creating the image instead.
         """
         if self.data.dtype in rgb_dtypes.values():
             raise NotImplementedError(
@@ -143,13 +152,12 @@ class CommonImage(Signal2D):
             in_range = (self.data.min(), self.data.max())
 
         if dtype_out is None:
-            dtype_out = self.data.dtype.type
+            dtype_out = self.data.dtype
+        else:
+            dtype_out = np.dtype(dtype_out)
 
         if out_range is None:
-            dtype_out_pass = dtype_out
-            if isinstance(dtype_out, np.dtype):
-                dtype_out_pass = dtype_out.type
-            out_range = dtype_range[dtype_out_pass]
+            out_range = dtype_range[dtype_out.type]
 
         # Create dask array of signal images and do processing on this
         dask_array = get_dask_array(signal=self)
@@ -166,11 +174,20 @@ class CommonImage(Signal2D):
 
         # Overwrite signal images
         if not self._lazy:
-            with ProgressBar():
-                if self.data.dtype != rescaled_images.dtype:
-                    self.change_dtype(dtype_out)
-                print("Rescaling the image intensities:", file=sys.stdout)
-                rescaled_images.store(self.data, compute=True)
+            pbar = ProgressBar()
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
+                pbar.register()
+
+            if self.data.dtype != rescaled_images.dtype:
+                self.change_dtype(dtype_out)
+            rescaled_images.store(self.data, compute=True)
+
+            try:
+                pbar.unregister()
+            except KeyError:
+                pass
         else:
             self.data = rescaled_images
 
@@ -178,8 +195,9 @@ class CommonImage(Signal2D):
         self,
         num_std: int = 1,
         divide_by_square_root: bool = False,
-        dtype_out: Optional[np.dtype] = None,
-    ):
+        dtype_out: Union[str, np.dtype, type, None] = None,
+        show_progressbar: Optional[bool] = None,
+    ) -> None:
         """Normalize image intensities in inplace to a mean of zero with
         a given standard deviation.
 
@@ -187,20 +205,27 @@ class CommonImage(Signal2D):
         ----------
         num_std
             Number of standard deviations of the output intensities.
-            Default is 1.
+            Default is ``1``.
         divide_by_square_root
             Whether to divide output intensities by the square root of
-            the signal dimension size. Default is False.
+            the signal dimension size. Default is ``False``.
         dtype_out
-            Data type of normalized images. If None (default), the input
+            Data type of normalized images. If not given, the input
             images' data type is used.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
 
         Notes
         -----
         Data type should always be changed to floating point, e.g.
-        ``np.float32`` with
+        ``float32`` with
         :meth:`~hyperspy.signal.BaseSignal.change_dtype`, before
         normalizing the intensities.
+
+        Rescaling RGB images is not possible. Use RGB channel
+        normalization when creating the image instead.
 
         Examples
         --------
@@ -209,14 +234,9 @@ class CommonImage(Signal2D):
         >>> s = kp.data.nickel_ebsd_small()
         >>> np.mean(s.data)
         146.0670987654321
-        >>> s.normalize_intensity(dtype_out=np.float32)  # doctest: +SKIP
-        >>> np.mean(s.data)  # doctest: +SKIP
+        >>> s.normalize_intensity(dtype_out=np.float32)
+        >>> np.mean(s.data)
         2.6373216e-08
-
-        Notes
-        -----
-        Rescaling RGB images is not possible. Use RGB channel
-        normalization when creating the image instead.
         """
         if self.data.dtype in rgb_dtypes.values():
             raise NotImplementedError(
@@ -225,6 +245,8 @@ class CommonImage(Signal2D):
 
         if dtype_out is None:
             dtype_out = self.data.dtype
+        else:
+            dtype_out = np.dtype(dtype_out)
 
         dask_array = get_dask_array(self, dtype=np.float32)
 
@@ -242,8 +264,17 @@ class CommonImage(Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            with ProgressBar():
-                print("Normalizing the image intensities:", file=sys.stdout)
-                normalized_images.store(self.data, compute=True)
+            pbar = ProgressBar()
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
+                pbar.register()
+
+            normalized_images.store(self.data, compute=True)
+
+            try:
+                pbar.unregister()
+            except KeyError:
+                pass
         else:
             self.data = normalized_images

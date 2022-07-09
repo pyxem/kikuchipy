@@ -1,0 +1,32 @@
+/* The following are adapted from Matplotlib's CSS file. */
+/* Hide "#" between thumbnail and caption showing upon hovering. */
+.sphx-glr-thumbcontainer a.headerlink {
+    visibility: hidden !important;
+}
+
+/* Hide notice linking to the bottom download section. */
+div.sphx-glr-download-link-note {
+    height: 0px;
+    visibility: hidden;
+}
+
+html[data-theme="dark"] .sphx-glr-thumbcontainer {
+    background-color: rgb(63, 63, 63);
+}
+
+/* Re-style the download button */
+div.sphx-glr-download a {
+    background-color: #E3F0F6;
+    background-image: none;
+    color: #11557c;
+    border: 0;
+}
+div.sphx-glr-download a:hover {
+    background-color: #BCD4DF;
+}
+/* The above are adapted from Matplotlib's CSS file. */
+
+.sphinx-codeautolink-a:hover {
+    text-decoration: underline;
+    color: #2A5ADF;
+}

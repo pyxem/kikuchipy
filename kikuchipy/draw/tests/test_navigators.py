@@ -34,7 +34,7 @@ def test_get_rgb_navigator():
     s.plot(navigator=s_rgb8)
 
     # Both rgb8 and rgb16 works
-    s_rgb16 = kp.draw.get_rgb_navigator(image, dtype=np.uint16)
+    s_rgb16 = kp.draw.get_rgb_navigator(image, dtype=np.dtype("uint16"))
     rgb16_data = s_rgb16.data
     assert rgb16_data.shape == nav_shape
     assert np.issubdtype(rgb16_data.dtype, rgb16)

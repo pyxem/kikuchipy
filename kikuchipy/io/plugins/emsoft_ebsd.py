@@ -18,7 +18,9 @@
 """Read support for simulated EBSD patterns in EMsoft's HDF5 format."""
 
 import os
+from pathlib import Path
 from typing import List, Tuple, Union
+import warnings
 
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
@@ -34,6 +36,8 @@ from kikuchipy.signals.util._metadata import (
     _set_metadata_from_mapping,
 )
 
+
+__all__ = ["file_reader"]
 
 # Plugin characteristics
 # ----------------------
@@ -55,7 +59,7 @@ footprint = ["emdata/ebsd/ebsdpatterns"]
 
 
 def file_reader(
-    filename: str,
+    filename: Union[str, Path],
     scan_size: Union[None, int, Tuple[int, ...]] = None,
     lazy: bool = False,
     **kwargs,
@@ -72,13 +76,13 @@ def file_reader(
     lazy
         Open the data lazily without actually reading the data from disk
         until requested. Allows opening datasets larger than available
-        memory. Default is False.
-    kwargs :
-        Keyword arguments passed to h5py.File.
+        memory. Default is ``False``.
+    **kwargs
+        Keyword arguments passed to :class:`h5py.File`.
 
     Returns
     -------
-    signal_dict_list: list of dicts
+    signal_dict_list
         Data, axes, metadata and original metadata.
     """
     mode = kwargs.pop("mode", "r")
@@ -190,6 +194,7 @@ def _get_metadata(omd: dict) -> dict:
     md
         Dictionary with metadata.
     """
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     md = ebsd_metadata()
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     md.set_item(f"{ebsd_node}.manufacturer", "EMsoft")

@@ -38,52 +38,49 @@ class EBSDSimulationGenerator:
     """*[Deprecated]* A generator storing necessary parameters to
     simulate geometrical EBSD patterns.
 
+    Parameters
+    ----------
+    detector
+        Detector describing the detector-sample geometry.
+    phase
+        A phase container with a crystal structure and a space and
+        point group describing the allowed symmetry operations.
+    rotations
+        Unit cell rotations to simulate patterns for. The
+        navigation shape of the resulting simulation is determined
+        from the rotations' shape, with a maximum dimension of 2.
+
     Notes
     -----
     Deprecated since version 0.6: Class ``EBSDSimulationGenerator`` is
     deprecated and will be removed in version 0.7. Use
     :class:`~kikuchipy.simulations.KikuchiPatternSimulator` instead.
 
+    Examples
+    --------
+    >>> from orix import crystal_map, quaternion
+    >>> import kikuchipy as kp
+    >>> det = kp.detectors.EBSDDetector(
+    ...     shape=(60, 60), sample_tilt=70, pc=[0.5,] * 3
+    ... )
+    >>> p = crystal_map.Phase(name="ni", space_group=225)
+    >>> p.structure.lattice.setLatPar(3.52, 3.52, 3.52, 90, 90, 90)
+    >>> simgen = kp.generators.EBSDSimulationGenerator(
+    ...     detector=det,
+    ...     phase=p,
+    ...     rotations=Rotation.from_euler([1.57, 0, 1.57])
+    ... )
+    >>> simgen
+    EBSDSimulationGenerator (1,)
+    EBSDDetector (60, 60), px_size 1 um, binning 1, tilt 0, azimuthal 0, pc (0.5, 0.5, 0.5)
+    <name: ni. space group: Fm-3m. point group: m-3m. proper point group: 432. color: tab:blue>
+    Rotation (1,)
     """
 
     def __init__(self, detector: EBSDDetector, phase: Phase, rotations: Rotation):
         """A generator storing necessary parameters to simulate
         geometrical EBSD patterns.
-
-        Parameters
-        ----------
-        detector
-            Detector describing the detector-sample geometry.
-        phase
-            A phase container with a crystal structure and a space and
-            point group describing the allowed symmetry operations.
-        rotations
-            Unit cell rotations to simulate patterns for. The
-            navigation shape of the resulting simulation is determined
-            from the rotations' shape, with a maximum dimension of 2.
-
-        Examples
-        --------
-        >>> from orix import crystal_map, quaternion
-        >>> import kikuchipy as kp
-        >>> det = kp.detectors.EBSDDetector(
-        ...     shape=(60, 60), sample_tilt=70, pc=[0.5,] * 3
-        ... )
-        >>> p = crystal_map.Phase(name="ni", space_group=225)
-        >>> p.structure.lattice.setLatPar(3.52, 3.52, 3.52, 90, 90, 90)
-        >>> simgen = kp.generators.EBSDSimulationGenerator(
-        ...     detector=det,
-        ...     phase=p,
-        ...     rotations=Rotation.from_euler([1.57, 0, 1.57])
-        ... )
-        >>> simgen
-        EBSDSimulationGenerator (1,)
-        EBSDDetector (60, 60), px_size 1 um, binning 1, tilt 0, azimuthal 0, pc (0.5, 0.5, 0.5)
-        <name: ni. space group: Fm-3m. point group: m-3m. proper point group: 432. color: tab:blue>
-        Rotation (1,)
-
         """
-
         warn(
             message=(
                 "Class `kikuchipy.generators.EBSDSimulationGenerator` is deprecated "
@@ -172,6 +169,7 @@ class EBSDSimulationGenerator:
         Returns
         -------
         GeometricalEBSDSimulation
+            Geometrical EBSD simulation.
 
         Examples
         --------
@@ -189,13 +187,13 @@ class EBSDSimulationGenerator:
         ...     rotations=quaternion.Rotation.from_euler([0, 0, 0])
         ... )
         >>> sim1 = simgen.geometrical_simulation()
-        >>> sim1.bands.size  # doctest: +SKIP
+        >>> sim1.bands.size
         94
         >>> rlp = ReciprocalLatticePoint(
         ...     phase=p, hkl=[[1, 1, 1], [2, 0, 0]]
         ... ).symmetrise()
         >>> sim2 = simgen.geometrical_simulation(rlp)
-        >>> sim2.bands.size  # doctest: +SKIP
+        >>> sim2.bands.size
         7
         """
         rlp = reciprocal_lattice_point

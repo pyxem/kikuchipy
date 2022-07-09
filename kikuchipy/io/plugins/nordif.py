@@ -19,6 +19,7 @@
 
 import datetime
 import os
+from pathlib import Path
 import re
 import time
 from typing import Dict, List, Optional, Tuple, Union
@@ -35,6 +36,8 @@ from kikuchipy.signals.util._metadata import (
 )
 
 
+__all__ = ["file_reader", "file_writer"]
+
 # Plugin characteristics
 # ----------------------
 format_name = "NORDIF"
@@ -48,7 +51,7 @@ writes = [(2, 2), (2, 1), (2, 0)]
 
 
 def file_reader(
-    filename: str,
+    filename: Union[str, Path],
     mmap_mode: Optional[str] = None,
     scan_size: Union[None, int, Tuple[int, ...]] = None,
     pattern_size: Optional[Tuple[int, ...]] = None,
@@ -62,6 +65,8 @@ def file_reader(
     filename
         File path to NORDIF data file.
     mmap_mode
+        Memory map mode. If not given, ``"r"`` is used unless
+        ``lazy=True``, in which case ``"c"`` is used.
     scan_size
         Scan size in number of patterns in width and height.
     pattern_size
@@ -72,11 +77,11 @@ def file_reader(
     lazy
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
-        is False.
+        is ``False``.
 
     Returns
     -------
-    scan : list of dicts
+    scan
         Data, axes, metadata and original metadata.
     """
     if mmap_mode is None:
@@ -93,7 +98,6 @@ def file_reader(
         f = open(filename, mode="rb")
 
     # Get metadata from setting file
-    ebsd_node = metadata_nodes("ebsd")
     folder, _ = os.path.split(filename)
     if setting_file is None:
         setting_file = os.path.join(folder, "Setting.txt")
@@ -110,6 +114,7 @@ def file_reader(
                 "No setting file found and no scan_size or pattern_size detected in "
                 "input arguments. These must be set if no setting file is provided"
             )
+        warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
         md = ebsd_metadata()
         omd = DictionaryTreeBrowser()
 
@@ -147,10 +152,10 @@ def file_reader(
         f.seek(0)
         data = np.fromfile(f, dtype="uint8", count=data_size)
     else:
-        data = np.memmap(f, mode=mmap_mode, dtype="uint8")
+        data = np.memmap(f.name, mode=mmap_mode, dtype="uint8")
 
     try:
-        data = data.reshape((ny, nx, sy, sx), order="C").squeeze()
+        data = data.reshape((ny, nx, sy, sx)).squeeze()
     except ValueError:
         warnings.warn(
             "Pattern size and scan size larger than file size! Will attempt to "
@@ -158,7 +163,7 @@ def file_reader(
         )
         # Data is stored image by image
         pw = [(0, ny * nx * sy * sx - data.size)]
-        data = np.pad(data, pw, mode="constant")
+        data = np.pad(data, pw)
         data = data.reshape((ny, nx, sy, sx))
     scan["data"] = data
 
@@ -239,6 +244,7 @@ def get_settings_from_file(
     l_specimen = blocks["[Specimen]"]
 
     # Create metadata and original metadata structures
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     md = ebsd_metadata()
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     omd = DictionaryTreeBrowser()
@@ -331,7 +337,7 @@ def get_string(content: list, expression: str, line_no: int, file) -> str:
         return match.group(1)
 
 
-def file_writer(filename: str, signal):
+def file_writer(filename: str, signal: Union["EBSD", "LazyEBSD"]):
     """Write an :class:`~kikuchipy.signals.EBSD` or
     :class:`~kikuchipy.signals.LazyEBSD` object to a NORDIF binary
     file.
@@ -340,7 +346,7 @@ def file_writer(filename: str, signal):
     ----------
     filename
         Full path of HDF file.
-    signal : kikuchipy.signals.EBSD or kikuchipy.signals.LazyEBSD
+    signal
         Signal instance.
     """
     with open(filename, "wb") as f:

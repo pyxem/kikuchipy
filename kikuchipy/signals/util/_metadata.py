@@ -16,15 +16,17 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import re
-from typing import Union, List
+from typing import List, Union
 import warnings
 
 import numpy as np
 from hyperspy.misc.utils import DictionaryTreeBrowser
 
 from kikuchipy.io._util import _get_nested_dictionary
+from kikuchipy._util import deprecated
 
 
+@deprecated(since=0.5, removal=0.7)
 def ebsd_metadata() -> DictionaryTreeBrowser:
     """Return a dictionary in HyperSpy's DictionaryTreeBrowser format
     with the default kikuchipy EBSD metadata.
@@ -34,13 +36,11 @@ def ebsd_metadata() -> DictionaryTreeBrowser:
 
     Returns
     -------
-    md : hyperspy.misc.utils.DictionaryTreeBrowser
-
-    Notes
-    -----
-    .. deprecated:: 0.5
+    md
+        EBSD metadata.
     """
     md = DictionaryTreeBrowser()
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     ebsd = {
         "azimuth_angle": -1.0,
@@ -70,6 +70,7 @@ def ebsd_metadata() -> DictionaryTreeBrowser:
     return md
 
 
+@deprecated(since=0.7, removal=0.8)
 def metadata_nodes(
     nodes: Union[None, str, List[str]] = None
 ) -> Union[List[str], str, List]:
@@ -81,12 +82,13 @@ def metadata_nodes(
     Parameters
     ----------
     nodes
-        Metadata nodes to return. Options are "sem", "ebsd", or None.
-        If None (default) is passed, all nodes are returned.
+        Metadata nodes to return. Options are ``"sem"`` and ``"ebsd"``.
+        If not specified, all nodes are returned.
 
     Returns
     -------
-    nodes_to_return : list of str or str
+    nodes_to_return
+        Metadata nodes.
     """
     available_nodes = {
         "sem": "Acquisition_instrument.SEM",
@@ -114,7 +116,8 @@ def _phase_metadata() -> dict:
 
     Returns
     -------
-    pd : dict
+    pd
+        Phase metadata.
     """
     pd = {
         "atom_coordinates": {

@@ -15,15 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Test data.
+"""Example datasets for use when testing functionality.
 
-Some datasets must be downloaded from the web. For more test datasets,
-see :doc:`open datasets <open_datasets>`.
+Some datasets are packaged with the source code while others must be
+downloaded from the web. For more test datasets, see
+:doc:`/open_datasets`.
 
-Some datasets must be downloaded from the web. Datasets are placed in a
-local cache, in the location returned from `pooch.os_cache("kikuchipy")`
-by default. The location can be overwritten with a global
-`KIKUCHIPY_DATA_DIR` environment variable.
+Datasets are placed in a local cache, in the location returned from
+``pooch.os_cache("kikuchipy")`` by default. The location can be
+overwritten with a global ``KIKUCHIPY_DATA_DIR`` environment variable.
 
 With every new version of kikuchipy, a new directory of datasets with
 the version name is added to the cache directory. Any old directories
@@ -33,7 +33,9 @@ desired.
 
 import os
 from pathlib import Path
+from typing import Optional
 
+import hyperspy.api as hs
 import pooch
 
 from kikuchipy.signals import EBSD, EBSDMasterPattern
@@ -63,7 +65,7 @@ _fetcher = pooch.create(
 )
 
 
-def _fetch(filename: str, allow_download: bool = False, progressbar=True) -> Path:
+def _fetch(filename: str, allow_download: bool = False, show_progressbar=None) -> Path:
     fname = "data/" + filename
     expected_hash = registry_hashes[fname]
     file_in_package = Path(os.path.dirname(__file__)) / ".." / fname
@@ -75,7 +77,9 @@ def _fetch(filename: str, allow_download: bool = False, progressbar=True) -> Pat
         if file_in_cache.exists():
             allow_download = True
         if allow_download:
-            downloader = pooch.HTTPDownloader(progressbar=progressbar)
+            if show_progressbar is None:
+                show_progressbar = hs.preferences.General.show_progressbar
+            downloader = pooch.HTTPDownloader(progressbar=show_progressbar)
             file_path = _fetcher.fetch(fname, downloader=downloader)
         else:
             raise ValueError(
@@ -96,40 +100,41 @@ def nickel_ebsd_small(**kwargs) -> EBSD:
 
     Parameters
     ----------
-    kwargs
-        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
+    **kwargs
+        Keyword arguments passed to :func:`~kikuchipy.load`.
 
     Returns
     -------
-    signal : EBSD
+    ebsd_signal
         EBSD signal.
 
     Examples
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.nickel_ebsd_small()
-    >>> s  # doctest: +SKIP
+    >>> s
     <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
+    >>> s.plot()
     """
     fname = _fetch("kikuchipy_h5ebsd/patterns.h5")
     return load(fname, **kwargs)
 
 
 def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
-    """(401, 401) `uint8` square Lambert or stereographic projection of the
-    northern and southern hemisphere of a Nickel master pattern at 20
-    keV accelerating voltage.
+    """(401, 401) ``uint8`` square Lambert or stereographic projection
+    of the northern and southern hemisphere of a Nickel master pattern
+    at 20 keV accelerating voltage.
 
     Carries a CC BY 4.0 license.
 
     Parameters
     ----------
-    kwargs
-        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
+    **kwargs
+        Keyword arguments passed to :func:`~kikuchipy.load`.
 
     Returns
     -------
-    signal : EBSDMasterPattern
+    ebsd_master_pattern_signal
         EBSD master pattern signal.
 
     Notes
@@ -137,34 +142,38 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
     Initially generated using the EMsoft EMMCOpenCL and EMEBSDMaster
     programs. The included file was rewritten to disk with
     :mod:`h5py`, where the master patterns' data type is converted from
-    `float32` to `uint8` with
+    ``float32`` to ``uint8`` with
     :meth:`~kikuchipy.signals.EBSDMasterPattern.rescale_intensity`, all
     datasets were written with
     :meth:`~kikuchipy.io.plugins.h5ebsd.dict2h5ebsdgroup` with
-    keyword arguments `compression="gzip"` and `compression_opts=9`. All
-    other HDF5 groups and datasets are the same as in the original file.
+    keyword arguments ``compression="gzip"`` and ``compression_opts=9``.
+    All other HDF5 groups and datasets are the same as in the original
+    file.
 
     Examples
     --------
+    Import master pattern in the stereographic projection
+
     >>> import kikuchipy as kp
     >>> s = kp.data.nickel_ebsd_master_pattern_small()
-    >>> s  # doctest: +SKIP
+    >>> s
     <EBSDMasterPattern, title: ni_mc_mp_20kv_uint8_gzip_opts9, dimensions: (|401, 401)>
     >>> s.projection
     'stereographic'
 
-    Import master pattern in the square Lambert projection
+    Import master pattern in the square Lambert projection and plot it
 
     >>> s2 = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
     >>> s2.projection
     'lambert'
+    >>> s2.plot()
     """
     fname = _fetch("emsoft_ebsd_master_pattern/ni_mc_mp_20kv_uint8_gzip_opts9.h5")
     return load(fname, **kwargs)
 
 
 def nickel_ebsd_large(
-    allow_download: bool = False, progressbar: bool = True, **kwargs
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """4125 EBSD patterns in a (55, 75) navigation shape of (60, 60)
     detector pixels from Nickel, acquired on a NORDIF UF-1100 detector
@@ -174,35 +183,38 @@ def nickel_ebsd_large(
 
     Parameters
     ----------
-    allow_download : bool
+    allow_download
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
         the local cache with the pooch Python package. Default is
         ``False``.
-    progressbar
-        Whether to show a progressbar when downloading. Default is
-        ``False``.
-    kwargs
-        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
+    **kwargs
+        Keyword arguments passed to :func:`~kikuchipy.load`.
 
     Returns
     -------
-    signal : EBSD
+    ebsd_signal
         EBSD signal.
 
     Examples
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.nickel_ebsd_large(allow_download=True)
-    >>> s  # doctest: +SKIP
+    >>> s
     <EBSD, title: patterns Scan 1, dimensions: (75, 55|60, 60)>
+    >>> s.plot()
     """
-    fname = _fetch("nickel_ebsd_large/patterns.h5", allow_download, progressbar)
+    fname = _fetch("nickel_ebsd_large/patterns.h5", allow_download, show_progressbar)
     return load(fname, **kwargs)
 
 
 def silicon_ebsd_moving_screen_in(
-    allow_download: bool = False, progressbar: bool = True, **kwargs
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
@@ -216,40 +228,44 @@ def silicon_ebsd_moving_screen_in(
 
     Parameters
     ----------
-    allow_download : bool
+    allow_download
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
         the local cache with the pooch Python package. Default is
         ``False``.
-    progressbar
-        Whether to show a progressbar when downloading. Default is
-        ``False``.
-    kwargs
-        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
+    **kwargs
+        Keyword arguments passed to :func:`~kikuchipy.load`.
 
     Returns
     -------
-    signal : EBSD
+    ebsd_signal
         EBSD signal.
 
     See Also
     --------
-    silicon_ebsd_moving_screen_out5mm
-    silicon_ebsd_moving_screen_out10mm
+    silicon_ebsd_moving_screen_out5mm, silicon_ebsd_moving_screen_out10mm
 
     Examples
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
-    >>> s  # doctest: +SKIP
+    >>> s
     <EBSD, title: si_in Scan 1, dimensions: (|480, 480)>
+    >>> s.plot()
     """
-    fname = _fetch("silicon_ebsd_moving_screen/si_in.h5", allow_download, progressbar)
+    fname = _fetch(
+        "silicon_ebsd_moving_screen/si_in.h5", allow_download, show_progressbar
+    )
     return load(fname, **kwargs)
 
 
 def silicon_ebsd_moving_screen_out5mm(
-    allow_download: bool = False, progressbar: bool = True, **kwargs
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
@@ -265,42 +281,44 @@ def silicon_ebsd_moving_screen_out5mm(
 
     Parameters
     ----------
-    allow_download : bool
+    allow_download
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
         the local cache with the pooch Python package. Default is
         ``False``.
-    progressbar
-        Whether to show a progressbar when downloading. Default is
-        ``False``.
-    kwargs
-        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
+    **kwargs
+        Keyword arguments passed to :func:`~kikuchipy.load`.
 
     Returns
     -------
-    signal : EBSD
+    ebsd_signal
         EBSD signal.
 
     See Also
     --------
-    silicon_ebsd_moving_screen_in
-    silicon_ebsd_moving_screen_out10mm
+    silicon_ebsd_moving_screen_in, silicon_ebsd_moving_screen_out10mm
 
     Examples
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.silicon_ebsd_moving_screen_out5mm(allow_download=True)
-    >>> s  # doctest: +SKIP
+    >>> s
     <EBSD, title: si_out5mm Scan 1, dimensions: (|480, 480)>
+    >>> s.plot()
     """
     fname = _fetch(
-        "silicon_ebsd_moving_screen/si_out5mm.h5", allow_download, progressbar
+        "silicon_ebsd_moving_screen/si_out5mm.h5", allow_download, show_progressbar
     )
     return load(fname, **kwargs)
 
 
 def silicon_ebsd_moving_screen_out10mm(
-    allow_download: bool = False, progressbar: bool = True, **kwargs
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
@@ -316,35 +334,37 @@ def silicon_ebsd_moving_screen_out10mm(
 
     Parameters
     ----------
-    allow_download : bool
+    allow_download
         Whether to allow downloading the dataset from the kikuchipy-data
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
         the local cache with the pooch Python package. Default is
         ``False``.
-    progressbar
-        Whether to show a progressbar when downloading. Default is
-        ``False``.
-    kwargs
-        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
+    **kwargs
+        Keyword arguments passed to :func:`~kikuchipy.load`.
 
     Returns
     -------
-    signal : EBSD
+    ebsd_signal
         EBSD signal.
 
     See Also
     --------
-    silicon_ebsd_moving_screen_in
-    silicon_ebsd_moving_screen_out5mm
+    silicon_ebsd_moving_screen_in, silicon_ebsd_moving_screen_out5mm
 
     Examples
     --------
     >>> import kikuchipy as kp
     >>> s = kp.data.silicon_ebsd_moving_screen_out10mm(allow_download=True)
-    >>> s  # doctest: +SKIP
+    >>> s
     <EBSD, title: si_out10mm Scan 1, dimensions: (|480, 480)>
+    >>> s.plot()
     """
     fname = _fetch(
-        "silicon_ebsd_moving_screen/si_out10mm.h5", allow_download, progressbar
+        "silicon_ebsd_moving_screen/si_out10mm.h5", allow_download, show_progressbar
     )
     return load(fname, **kwargs)
