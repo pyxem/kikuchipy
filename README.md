@@ -10,7 +10,7 @@ multi-dimensional data analysis provided by the HyperSpy library.
 
 | Deployment    | [![PyPI version](https://img.shields.io/pypi/v/kikuchipy.svg?logo=python&logoColor=white)](https://pypi.org/project/kikuchipy/) | [![Anaconda version](https://img.shields.io/conda/vn/conda-forge/kikuchipy.svg?logo=conda-forge&logoColor=white)](https://anaconda.org/conda-forge/kikuchipy)|
 | :- | :- | :- |
-| **Build status**  | [![Test status](https://github.com/pyxem/kikuchipy/actions/workflows/build.yml/badge.svg)](https://github.com/pyxem/kikuchipy/actions/workflows/build.yml) |
+| **Build status**  | [![Test status](https://github.com/pyxem/kikuchipy/actions/workflows/tests.yml/badge.svg)](https://github.com/pyxem/kikuchipy/actions/workflows/tests.yml) |
 | **Documentation** | [![Documentation status](https://readthedocs.org/projects/kikuchipy/badge/?version=latest)](https://kikuchipy.org/en/latest/) | [![Launch binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/pyxem/kikuchipy/HEAD) |
 | **Metrics**       | [![Coverage status](https://coveralls.io/repos/github/pyxem/kikuchipy/badge.svg?branch=develop)](https://coveralls.io/github/pyxem/kikuchipy?branch=develop) |
 | **Activity**      | [![PyPI downloads](https://img.shields.io/pypi/dm/kikuchipy.svg?label=pypi%20downloads)](https://pypi.org/project/kikuchipy/) | [![Anaconda downloads](https://img.shields.io/conda/dn/conda-forge/kikuchipy.svg?label=conda%20downloads)](ttps://anaconda.org/conda-forge/kikuchipy) |

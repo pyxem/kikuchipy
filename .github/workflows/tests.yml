@@ -1,4 +1,4 @@
-name: Build
+name: Tests
 
 on: [push, pull_request]
 
@@ -38,7 +38,7 @@ jobs:
   tests:
     name: ${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.LABEL }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -80,7 +80,7 @@ jobs:
         run: |
           pip install ${{ matrix.DEPENDENCIES }}
 
-      - name: Install virtual buffer package necessary for PyVista
+      - name: Set up headless display necessary for PyVista on Linux
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 }}
         run: |
           sudo apt-get update
@@ -96,6 +96,7 @@ jobs:
           pip list
 
       - name: Run docstring tests
+        if: ${{ matrix.os == 'ubuntu-latest' }}
         continue-on-error: true
         run: |
           pytest --doctest-modules --ignore-glob=kikuchipy/*/tests kikuchipy/*.py
@@ -110,7 +111,7 @@ jobs:
       - name: Run tests
         if: ${{ ! ( matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 ) }}
         run: |
-          pytest --cov=kikuchipy --pyargs kikuchipy
+          pytest --cov=kikuchipy --pyargs kikuchipy -n 2
 
       - name: Generate line coverage
         run: |
@@ -123,7 +124,7 @@ jobs:
           parallel: true
 
   coveralls-finish:
-    needs: build-with-pip
+    needs: tests
     runs-on: ubuntu-latest
     steps:
     - name: Coveralls finished
