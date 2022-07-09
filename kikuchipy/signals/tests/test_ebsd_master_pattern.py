@@ -260,7 +260,9 @@ class TestProjectingPatternsFromLambert:
         mp4.projection = "lambert"
         mp4.phase = Phase("Ni", 225)
         out41 = mp4.get_patterns(r2, self.detector, 5)
-        out42 = mp4.get_patterns(r2, self.detector, 5, compute=True)
+        out42 = mp4.get_patterns(
+            r2, self.detector, 5, compute=True, show_progressbar=True
+        )
 
         assert isinstance(out41, kp.signals.LazyEBSD)
         assert isinstance(out42, kp.signals.EBSD)
@@ -530,7 +532,7 @@ class TestAsLambert:
         assert mp_sp.hemisphere == "upper"
 
         # Upper hemisphere
-        mp_lp = mp_sp.as_lambert()
+        mp_lp = mp_sp.as_lambert(show_progressbar=True)
         assert mp_lp.projection == "lambert"
         assert mp_lp.data.shape == mp_sp.data.shape
         assert np.issubdtype(mp_lp.data.dtype, np.float32)

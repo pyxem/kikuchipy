@@ -33,7 +33,9 @@ desired.
 
 import os
 from pathlib import Path
+from typing import Optional
 
+import hyperspy.api as hs
 import pooch
 
 from kikuchipy.signals import EBSD, EBSDMasterPattern
@@ -63,7 +65,7 @@ _fetcher = pooch.create(
 )
 
 
-def _fetch(filename: str, allow_download: bool = False, progressbar=True) -> Path:
+def _fetch(filename: str, allow_download: bool = False, show_progressbar=None) -> Path:
     fname = "data/" + filename
     expected_hash = registry_hashes[fname]
     file_in_package = Path(os.path.dirname(__file__)) / ".." / fname
@@ -75,7 +77,9 @@ def _fetch(filename: str, allow_download: bool = False, progressbar=True) -> Pat
         if file_in_cache.exists():
             allow_download = True
         if allow_download:
-            downloader = pooch.HTTPDownloader(progressbar=progressbar)
+            if show_progressbar is None:
+                show_progressbar = hs.preferences.General.show_progressbar
+            downloader = pooch.HTTPDownloader(progressbar=show_progressbar)
             file_path = _fetcher.fetch(fname, downloader=downloader)
         else:
             raise ValueError(
@@ -169,7 +173,7 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
 
 
 def nickel_ebsd_large(
-    allow_download: bool = False, progressbar: bool = True, **kwargs
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """4125 EBSD patterns in a (55, 75) navigation shape of (60, 60)
     detector pixels from Nickel, acquired on a NORDIF UF-1100 detector
@@ -184,9 +188,11 @@ def nickel_ebsd_large(
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
         the local cache with the pooch Python package. Default is
         ``False``.
-    progressbar
-        Whether to show a progressbar when downloading. Default is
-        ``False``.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
     **kwargs
         Keyword arguments passed to :func:`~kikuchipy.load`.
 
@@ -203,12 +209,12 @@ def nickel_ebsd_large(
     <EBSD, title: patterns Scan 1, dimensions: (75, 55|60, 60)>
     >>> s.plot()
     """
-    fname = _fetch("nickel_ebsd_large/patterns.h5", allow_download, progressbar)
+    fname = _fetch("nickel_ebsd_large/patterns.h5", allow_download, show_progressbar)
     return load(fname, **kwargs)
 
 
 def silicon_ebsd_moving_screen_in(
-    allow_download: bool = False, progressbar: bool = True, **kwargs
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
@@ -227,9 +233,11 @@ def silicon_ebsd_moving_screen_in(
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
         the local cache with the pooch Python package. Default is
         ``False``.
-    progressbar
-        Whether to show a progressbar when downloading. Default is
-        ``False``.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
     **kwargs
         Keyword arguments passed to :func:`~kikuchipy.load`.
 
@@ -250,12 +258,14 @@ def silicon_ebsd_moving_screen_in(
     <EBSD, title: si_in Scan 1, dimensions: (|480, 480)>
     >>> s.plot()
     """
-    fname = _fetch("silicon_ebsd_moving_screen/si_in.h5", allow_download, progressbar)
+    fname = _fetch(
+        "silicon_ebsd_moving_screen/si_in.h5", allow_download, show_progressbar
+    )
     return load(fname, **kwargs)
 
 
 def silicon_ebsd_moving_screen_out5mm(
-    allow_download: bool = False, progressbar: bool = True, **kwargs
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
@@ -276,9 +286,11 @@ def silicon_ebsd_moving_screen_out5mm(
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
         the local cache with the pooch Python package. Default is
         ``False``.
-    progressbar
-        Whether to show a progressbar when downloading. Default is
-        ``False``.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
     **kwargs
         Keyword arguments passed to :func:`~kikuchipy.load`.
 
@@ -300,13 +312,13 @@ def silicon_ebsd_moving_screen_out5mm(
     >>> s.plot()
     """
     fname = _fetch(
-        "silicon_ebsd_moving_screen/si_out5mm.h5", allow_download, progressbar
+        "silicon_ebsd_moving_screen/si_out5mm.h5", allow_download, show_progressbar
     )
     return load(fname, **kwargs)
 
 
 def silicon_ebsd_moving_screen_out10mm(
-    allow_download: bool = False, progressbar: bool = True, **kwargs
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """One EBSD pattern of (480, 480) detector pixels from a single
     crystal Silicon sample, acquired on a NORDIF UF-420 detector.
@@ -327,9 +339,11 @@ def silicon_ebsd_moving_screen_out10mm(
         GitHub repository (https://github.com/pyxem/kikuchipy-data) to
         the local cache with the pooch Python package. Default is
         ``False``.
-    progressbar
-        Whether to show a progressbar when downloading. Default is
-        ``False``.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
     **kwargs
         Keyword arguments passed to :func:`~kikuchipy.load`.
 
@@ -351,6 +365,6 @@ def silicon_ebsd_moving_screen_out10mm(
     >>> s.plot()
     """
     fname = _fetch(
-        "silicon_ebsd_moving_screen/si_out10mm.h5", allow_download, progressbar
+        "silicon_ebsd_moving_screen/si_out10mm.h5", allow_download, show_progressbar
     )
     return load(fname, **kwargs)

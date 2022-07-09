@@ -18,7 +18,7 @@ jobs:
         run: pip install black[jupyter]
 
       - name: Check code style of Jupyter notebooks
-        run: black tutorials/*.ipynb
+        run: black doc/tutorials/*.ipynb
 
   # Make sure all necessary files are included in a release
   manifest:
@@ -35,7 +35,7 @@ jobs:
       - name: Check MANIFEST.in file
         run: python setup.py manifix
 
-  build-with-pip:
+  tests:
     name: ${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.LABEL }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20

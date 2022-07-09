@@ -542,6 +542,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         relative: bool = False,
         static_bg: Union[np.ndarray, da.Array, None] = None,
         scale_bg: bool = False,
+        show_progressbar: Optional[bool] = None,
     ) -> None:
         """Remove the static background inplace.
 
@@ -576,6 +577,10 @@ class EBSD(CommonImage, hs.signals.Signal2D):
             Whether to scale the static background pattern to each
             individual pattern's data range before removal. Default is
             ``False``.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
 
         See Also
         --------
@@ -644,6 +649,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         properties = self._get_custom_properties()
         self.map(
             operation_func,
+            show_progressbar=show_progressbar,
             parallel=True,
             output_dtype=dtype_out,
             static_bg=static_bg,
@@ -660,6 +666,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         filter_domain: str = "frequency",
         std: Union[int, float, None] = None,
         truncate: Union[int, float] = 4.0,
+        show_progressbar: Optional[bool] = None,
         **kwargs,
     ) -> None:
         """Remove the dynamic background in an EBSD scan inplace.
@@ -684,7 +691,11 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         truncate
             Truncate the Gaussian window at this many standard
             deviations. Default is ``4.0``.
-        kwargs
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
+        **kwargs
             Keyword arguments passed to the Gaussian blurring function
             determined from ``filter_domain``.
 
@@ -738,6 +749,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         properties = self._get_custom_properties()
         self.map(
             map_func,
+            show_progressbar=show_progressbar,
             parallel=True,
             output_dtype=dtype_out,
             filter_func=filter_func,
@@ -755,6 +767,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         std: Union[int, float, None] = None,
         truncate: Union[int, float] = 4.0,
         dtype_out: Union[str, np.dtype, type, None] = None,
+        show_progressbar: Optional[bool] = None,
         **kwargs,
     ) -> Union["EBSD", "LazyEBSD"]:
         """Get the dynamic background per EBSD pattern in a scan.
@@ -773,6 +786,10 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         dtype_out
             Data type of the background patterns. If not given, it is
             set to the same data type as the input pattern.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
         **kwargs
             Keyword arguments passed to the Gaussian blurring function
             determined from ``filter_domain``.
@@ -827,15 +844,19 @@ class EBSD(CommonImage, hs.signals.Signal2D):
                 shape=background_patterns.shape, dtype=dtype_out
             )
 
-            if hs.preferences.General.show_progressbar:
-                pbar = ProgressBar()
+            pbar = ProgressBar()
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
                 pbar.register()
 
             background_patterns.store(background_return, compute=True)
             background_signal = EBSD(background_return)
 
-            if hs.preferences.General.show_progressbar:
+            try:
                 pbar.unregister()
+            except KeyError:
+                pass
         else:
             background_signal = LazyEBSD(background_patterns)
 
@@ -846,6 +867,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
         clip_limit: Union[int, float] = 0,
         nbins: int = 128,
+        show_progressbar: Optional[bool] = None,
     ) -> None:
         """Enhance the local contrast in an EBSD scan inplace using
         adaptive histogram equalization.
@@ -864,6 +886,10 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         nbins
             Number of gray bins for histogram ("data range"), default is
             ``128``.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
 
         See Also
         --------
@@ -930,18 +956,26 @@ class EBSD(CommonImage, hs.signals.Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            if hs.preferences.General.show_progressbar:
-                pbar = ProgressBar()
+            pbar = ProgressBar()
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
                 pbar.register()
 
             equalized_patterns.store(self.data, compute=True)
 
-            if hs.preferences.General.show_progressbar:
+            try:
                 pbar.unregister()
+            except KeyError:
+                pass
         else:
             self.data = equalized_patterns
 
-    def get_image_quality(self, normalize: bool = True) -> Union[np.ndarray, da.Array]:
+    def get_image_quality(
+        self,
+        normalize: bool = True,
+        show_progressbar: Optional[bool] = None,
+    ) -> Union[np.ndarray, da.Array]:
         """Compute the image quality map of patterns in an EBSD scan.
 
         The image quality :math:`Q` is calculated based on the procedure
@@ -953,6 +987,10 @@ class EBSD(CommonImage, hs.signals.Signal2D):
             Whether to normalize patterns to a mean of zero and standard
             deviation of 1 before calculating the image quality. Default
             is ``True``.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
 
         Returns
         -------
@@ -988,6 +1026,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
 
         image_quality_map = self.map(
             _get_image_quality,
+            show_progressbar=show_progressbar,
             parallel=True,
             inplace=False,
             output_dtype=np.float32,
@@ -1535,6 +1574,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         transfer_function: Union[np.ndarray, Window],
         function_domain: str,
         shift: bool = False,
+        show_progressbar: Optional[bool] = None,
     ) -> None:
         """Filter an EBSD scan inplace in the frequency domain.
 
@@ -1563,6 +1603,10 @@ class EBSD(CommonImage, hs.signals.Signal2D):
             Whether to shift the zero-frequency component to the center.
             Default is ``False``. This is only used when
             ``function_domain="frequency"``.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
 
         See Also
         --------
@@ -1623,14 +1667,18 @@ class EBSD(CommonImage, hs.signals.Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            if hs.preferences.General.show_progressbar:
-                pbar = ProgressBar()
+            pbar = ProgressBar()
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
                 pbar.register()
 
             filtered_patterns.store(self.data, compute=True)
 
-            if hs.preferences.General.show_progressbar:
+            try:
                 pbar.unregister()
+            except KeyError:
+                pass
         else:
             self.data = filtered_patterns
 
@@ -1640,6 +1688,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         zero_mean: bool = True,
         normalize: bool = True,
         dtype_out: Union[str, np.dtype, type] = "float32",
+        show_progressbar: Optional[bool] = None,
     ) -> Union[np.ndarray, da.Array]:
         """Get an array with dot products of a pattern and its
         neighbours within a window.
@@ -1662,6 +1711,10 @@ class EBSD(CommonImage, hs.signals.Signal2D):
             ``zero_mean=True``. Default is ``True``.
         dtype_out
             Data type of the output map. Default is ``"float32"``.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
 
         Returns
         -------
@@ -1705,14 +1758,18 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         )
 
         if not self._lazy:
-            if hs.preferences.General.show_progressbar:
-                pbar = ProgressBar()
+            pbar = ProgressBar()
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
                 pbar.register()
 
             dp_matrices = dp_matrices.compute()
 
-            if hs.preferences.General.show_progressbar:
+            try:
                 pbar.unregister()
+            except KeyError:
+                pass
 
         return dp_matrices
 
@@ -1723,6 +1780,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         normalize: bool = True,
         dtype_out: Union[str, np.dtype, type] = "float32",
         dp_matrices: Optional[np.ndarray] = None,
+        show_progressbar: Optional[bool] = None,
     ) -> Union[np.ndarray, da.Array]:
         """Get a map of the average dot product between patterns and
         their neighbours within an averaging window.
@@ -1752,6 +1810,10 @@ class EBSD(CommonImage, hs.signals.Signal2D):
             be obtained from :meth:`get_neighbour_dot_product_matrices`.
             Its shape must correspond to the signal's navigation shape
             and the window's shape.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
 
         Returns
         -------
@@ -1812,14 +1874,18 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         adp = adp.rechunk(chunks=chunks)
 
         if not self._lazy:
-            if hs.preferences.General.show_progressbar:
-                pbar = ProgressBar()
+            pbar = ProgressBar()
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
                 pbar.register()
 
             adp = adp.compute()
 
-            if hs.preferences.General.show_progressbar:
+            try:
                 pbar.unregister()
+            except KeyError:
+                pass
 
         return adp
 
@@ -1827,6 +1893,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         self,
         window: Union[str, np.ndarray, da.Array, Window] = "circular",
         window_shape: Tuple[int, ...] = (3, 3),
+        show_progressbar: Optional[bool] = None,
         **kwargs,
     ) -> None:
         """Average patterns inplace with its neighbours within a window.
@@ -1857,7 +1924,11 @@ class EBSD(CommonImage, hs.signals.Signal2D):
             :class:`~kikuchipy.filters.Window` is passed to ``window``.
             This can be either 1D or 2D, and can be asymmetrical.
             Default is ``(3, 3)``.
-        kwargs
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
+        **kwargs
             Keyword arguments passed to the available window type listed
             in :func:`~scipy.signal.windows.get_window`. If not given,
             the default values of that particular window are used.
@@ -1942,14 +2013,18 @@ class EBSD(CommonImage, hs.signals.Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            if hs.preferences.General.show_progressbar:
-                pbar = ProgressBar()
+            pbar = ProgressBar()
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
                 pbar.register()
 
             averaged_patterns.store(self.data, compute=True)
 
-            if hs.preferences.General.show_progressbar:
+            try:
                 pbar.unregister()
+            except KeyError:
+                pass
         else:
             # Revert original chunks
             averaged_patterns = averaged_patterns.rechunk(old_chunks)
@@ -2218,9 +2293,15 @@ class EBSD(CommonImage, hs.signals.Signal2D):
             str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
         ] = None,
         percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
+        show_progressbar: Optional[bool] = None,
     ) -> None:
-        return super().rescale_intensity(
-            relative, in_range, out_range, dtype_out, percentiles
+        super().rescale_intensity(
+            relative,
+            in_range,
+            out_range,
+            dtype_out,
+            percentiles,
+            show_progressbar,
         )
 
     def normalize_intensity(
@@ -2228,8 +2309,11 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         num_std: int = 1,
         divide_by_square_root: bool = False,
         dtype_out: Union[str, np.dtype, type, None] = None,
+        show_progressbar: Optional[bool] = None,
     ) -> None:
-        return super().normalize_intensity(num_std, divide_by_square_root, dtype_out)
+        super().normalize_intensity(
+            num_std, divide_by_square_root, dtype_out, show_progressbar
+        )
 
     # ------------------------ Private methods ----------------------- #
 

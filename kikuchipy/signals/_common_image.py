@@ -50,6 +50,7 @@ class CommonImage(Signal2D):
             str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
         ] = None,
         percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
+        show_progressbar: Optional[bool] = None,
     ) -> None:
         """Rescale image intensities inplace.
 
@@ -84,6 +85,10 @@ class CommonImage(Signal2D):
             Disregard intensities outside these percentiles. Calculated
             per image. Must be ``None`` if ``in_range`` or ``relative``
             is passed. Default is ``None``.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
 
         See Also
         --------
@@ -170,15 +175,19 @@ class CommonImage(Signal2D):
         # Overwrite signal images
         if not self._lazy:
             pbar = ProgressBar()
-            if hs.preferences.General.show_progressbar:
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
                 pbar.register()
 
             if self.data.dtype != rescaled_images.dtype:
                 self.change_dtype(dtype_out)
             rescaled_images.store(self.data, compute=True)
 
-            if hs.preferences.General.show_progressbar:
+            try:
                 pbar.unregister()
+            except KeyError:
+                pass
         else:
             self.data = rescaled_images
 
@@ -187,6 +196,7 @@ class CommonImage(Signal2D):
         num_std: int = 1,
         divide_by_square_root: bool = False,
         dtype_out: Union[str, np.dtype, type, None] = None,
+        show_progressbar: Optional[bool] = None,
     ) -> None:
         """Normalize image intensities in inplace to a mean of zero with
         a given standard deviation.
@@ -202,6 +212,10 @@ class CommonImage(Signal2D):
         dtype_out
             Data type of normalized images. If not given, the input
             images' data type is used.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
 
         Notes
         -----
@@ -250,13 +264,17 @@ class CommonImage(Signal2D):
 
         # Overwrite signal patterns
         if not self._lazy:
-            if hs.preferences.General.show_progressbar:
-                pbar = ProgressBar()
+            pbar = ProgressBar()
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
                 pbar.register()
 
             normalized_images.store(self.data, compute=True)
 
-            if hs.preferences.General.show_progressbar:
+            try:
                 pbar.unregister()
+            except KeyError:
+                pass
         else:
             self.data = normalized_images

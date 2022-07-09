@@ -533,8 +533,10 @@ class TestAdaptiveHistogramEqualizationEBSD:
         s = kp.load(KIKUCHIPY_FILE)
 
         # These window sizes should work without issue
-        for kernel_size in [None, 10]:
-            s.adaptive_histogram_equalization(kernel_size=kernel_size)
+        for kernel_size, show_progressbar in zip([None, 10], [True, False]):
+            s.adaptive_histogram_equalization(
+                kernel_size=kernel_size, show_progressbar=show_progressbar
+            )
 
         # These window sizes should throw errors
         with pytest.raises(ValueError, match="invalid literal for int()"):
@@ -628,7 +630,9 @@ class TestAverageNeighbourPatternsEBSD:
             dummy_signal = dummy_signal.as_lazy()
         if kwargs is None:
             dummy_signal.average_neighbour_patterns(
-                window=window, window_shape=window_shape
+                window=window,
+                window_shape=window_shape,
+                show_progressbar=True,
             )
         else:
             dummy_signal.average_neighbour_patterns(
@@ -909,7 +913,7 @@ class TestGetDynamicBackgroundEBSD:
     def test_get_dynamic_background_spatial(self, dummy_signal):
         dtype_out = dummy_signal.data.dtype
         bg = dummy_signal.get_dynamic_background(
-            filter_domain="spatial", std=2, truncate=3
+            filter_domain="spatial", std=2, truncate=3, show_progressbar=True
         )
 
         assert bg.data.dtype == dtype_out
@@ -1019,7 +1023,10 @@ class TestFFTFilterEBSD:
         w = kp.filters.Window(transfer_function, shape=shape, **kwargs)
 
         dummy_signal.fft_filter(
-            transfer_function=w, function_domain="frequency", shift=shift
+            transfer_function=w,
+            function_domain="frequency",
+            shift=shift,
+            show_progressbar=True,
         )
 
         assert isinstance(dummy_signal, kp.signals.EBSD)
@@ -2120,9 +2127,13 @@ class TestAverageNeighbourDotProductMap:
     )
     def test_adp_dp_matrices(self, window):
         s = kp.data.nickel_ebsd_large()
-        dp_matrices = s.get_neighbour_dot_product_matrices(window=window)
+        dp_matrices = s.get_neighbour_dot_product_matrices(
+            window=window, show_progressbar=True
+        )
         adp1 = s.get_average_neighbour_dot_product_map(window=window)
-        adp2 = s.get_average_neighbour_dot_product_map(dp_matrices=dp_matrices)
+        adp2 = s.get_average_neighbour_dot_product_map(
+            dp_matrices=dp_matrices, show_progressbar=False
+        )
 
         assert np.allclose(adp1, adp2)
 
@@ -2130,7 +2141,7 @@ class TestAverageNeighbourDotProductMap:
     def test_adp_dp_matrices_shapes(self, slices):
         s = kp.data.nickel_ebsd_small().inav[slices]
         dp_matrices = s.get_neighbour_dot_product_matrices()
-        adp1 = s.get_average_neighbour_dot_product_map()
+        adp1 = s.get_average_neighbour_dot_product_map(show_progressbar=True)
         adp2 = s.get_average_neighbour_dot_product_map(dp_matrices=dp_matrices)
 
         assert np.allclose(adp1, adp2)

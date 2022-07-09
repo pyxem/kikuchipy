@@ -23,6 +23,7 @@ import warnings
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
+import hyperspy.api as hs
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy._signals.signal2d import Signal2D
 import numpy as np
@@ -183,6 +184,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         energy: Union[int, float],
         dtype_out: Union[str, np.dtype, type] = "float32",
         compute: bool = False,
+        show_progressbar: Optional[bool] = None,
         **kwargs,
     ) -> Union[EBSD, LazyEBSD]:
         """Return a dictionary of EBSD patterns projected onto a
@@ -212,6 +214,10 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         compute
             Whether to return a lazy result, by default ``False``. For
             more information see :func:`~dask.array.Array.compute`.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
         **kwargs
             Keyword arguments passed to
             :func:`~kikuchipy.signals.util.get_chunking` to control the
@@ -337,14 +343,20 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         ]
 
         if compute:
+            pbar = ProgressBar()
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
+                pbar.register()
+
             patterns = np.zeros(shape=simulated.shape, dtype=simulated.dtype)
-            with ProgressBar():
-                print(
-                    f"Creating a dictionary of {nav_shape} simulated patterns:",
-                    file=sys.stdout,
-                )
-                simulated.store(patterns, compute=True)
+            simulated.store(patterns, compute=True)
             out = EBSD(patterns, axes=axes, **kwargs)
+
+            try:
+                pbar.unregister()
+            except KeyError:
+                pass
         else:
             out = LazyEBSD(simulated, axes=axes, **kwargs)
         gc.collect()
@@ -457,7 +469,9 @@ class EBSDMasterPattern(CommonImage, Signal2D):
                 show_kwargs = {}
             pl.show(**show_kwargs)
 
-    def as_lambert(self) -> "EBSDMasterPattern":
+    def as_lambert(
+        self, show_progressbar: Optional[bool] = None
+    ) -> "EBSDMasterPattern":
         """Return a new master pattern in the Lambert projection
         :cite:`callahan2013dynamical`.
 
@@ -471,6 +485,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         Examples
         --------
+        >>> import hyperspy.api as hs
         >>> import kikuchipy as kp
         >>> mp_sp = kp.data.nickel_ebsd_master_pattern_small()
         >>> mp_sp.projection
@@ -478,8 +493,6 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         >>> mp_lp = mp_sp.as_lambert()
         >>> mp_lp.projection
         'lambert'
-
-        >>> import hyperspy.api as hs
         >>> _ = hs.plot.plot_images([mp_sp, mp_lp], per_row=2)
         """
         if self.projection == "lambert":
@@ -522,7 +535,13 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         if n_iterations == 0:
             n_iterations = 1
 
-        for idx in tqdm(np.ndindex(nav_shape[::-1]), total=n_iterations):
+        iterable = np.ndindex(nav_shape[::-1])
+        if show_progressbar is None:
+            show_progressbar = hs.preferences.General.show_progressbar
+        if show_progressbar:
+            iterable = tqdm(iterable, total=n_iterations)
+
+        for idx in iterable:
             data_i = interpn(values=self.data[idx], **kwargs)
             data_out[idx] = data_i.reshape(sig_shape)
 
@@ -561,9 +580,15 @@ class EBSDMasterPattern(CommonImage, Signal2D):
             str, np.dtype, Tuple[int, int], Tuple[float, float], None
         ] = None,
         percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
+        show_progressbar: Optional[bool] = None,
     ) -> None:
-        return super().rescale_intensity(
-            relative, in_range, out_range, dtype_out, percentiles
+        super().rescale_intensity(
+            relative,
+            in_range,
+            out_range,
+            dtype_out,
+            percentiles,
+            show_progressbar,
         )
 
     def normalize_intensity(
@@ -571,8 +596,14 @@ class EBSDMasterPattern(CommonImage, Signal2D):
         num_std: int = 1,
         divide_by_square_root: bool = False,
         dtype_out: Union[str, np.dtype, type, None] = None,
+        show_progressbar: Optional[bool] = None,
     ) -> None:
-        return super().normalize_intensity(num_std, divide_by_square_root, dtype_out)
+        super().normalize_intensity(
+            num_std,
+            divide_by_square_root,
+            dtype_out,
+            show_progressbar,
+        )
 
     # ------------------------ Private methods ----------------------- #
 

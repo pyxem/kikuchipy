@@ -12,10 +12,10 @@ import kikuchipy as kp
 import numpy as np
 
 
-s = kp.data.silicon_ebsd_moving_screen_in()
+s = kp.data.silicon_ebsd_moving_screen_in(allow_download=True, show_progressbar=False)
 print(s)
 
-s.remove_static_background()
+s.remove_static_background(show_progressbar=False)
 
 ########################################################################################
 # Rebin by passing the new shape (use ``(1, 1, 60, 60)`` if binning a 2D map)
@@ -46,5 +46,5 @@ print(s3.data.dtype)
 ########################################################################################
 # Rescale intensities to the initial data type
 
-s3.rescale_intensity(dtype_out=s.data.dtype)
+s3.rescale_intensity(dtype_out=s.data.dtype, show_progressbar=False)
 print(s3.data.dtype)

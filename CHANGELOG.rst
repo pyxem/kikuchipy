@@ -22,8 +22,8 @@ Contributors
 
 Added
 -----
-- Whether to show progressbars from most ``EBSD`` methods (except indexing and
-  refinement) can be controlled by setting HyperSpy's
+- Whether to show progressbars from most signal methods (except indexing and refinement)
+  can be controlled by passing ``show_progressbar`` or by setting HyperSpy's
   ``hs.preferences.General.show_progressbar`` (see their docs for details).
   (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
 
@@ -31,6 +31,9 @@ Changed
 -------
 - Minimal version of HyperSpy increased to >= 1.7.1.
   (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
+- ``progressbar`` parameter to ``show_progressbar`` in ``kikuchipy.data`` functions
+  which accepts a ``allow_download`` parameter. If not given, the value is retreived
+  from HyperSpy's preferences. (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
 
 Deprecated
 ----------
