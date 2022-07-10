@@ -22,25 +22,25 @@ from dask.array import Array
 import numpy as np
 import pytest
 
-from kikuchipy import data
-from kikuchipy.signals import EBSD, LazyEBSD, EBSDMasterPattern, LazyEBSDMasterPattern
+import kikuchipy as kp
+from kikuchipy.data._data import _fetcher
 
 
 class TestData:
     def test_load_nickel_ebsd_small(self):
-        s = data.nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
 
-        assert isinstance(s, EBSD)
+        assert isinstance(s, kp.signals.EBSD)
         assert s.data.shape == (3, 3, 60, 60)
 
-        s_lazy = data.nickel_ebsd_small(lazy=True)
+        s_lazy = kp.data.nickel_ebsd_small(lazy=True)
 
-        assert isinstance(s_lazy, LazyEBSD)
+        assert isinstance(s_lazy, kp.signals.LazyEBSD)
         assert isinstance(s_lazy.data, Array)
 
     def test_load_nickel_ebsd_master_pattern_small(self):
         """Can be read."""
-        mp = data.nickel_ebsd_master_pattern_small()
+        mp = kp.data.nickel_ebsd_master_pattern_small()
         assert mp.data.shape == (401, 401)
 
     @pytest.mark.parametrize(
@@ -58,24 +58,24 @@ class TestData:
         """Master patterns in both stereographic and Lambert projections
         can be loaded as expected.
         """
-        mp = data.nickel_ebsd_master_pattern_small(
+        mp = kp.data.nickel_ebsd_master_pattern_small(
             projection=projection, hemisphere=hemisphere
         )
 
-        assert isinstance(mp, EBSDMasterPattern)
+        assert isinstance(mp, kp.signals.EBSDMasterPattern)
         assert mp.data.shape == desired_shape
         assert np.issubdtype(mp.data.dtype, np.uint8)
         assert mp.projection == projection
         assert mp.hemisphere == hemisphere
 
-        mp_lazy = data.nickel_ebsd_master_pattern_small(lazy=True)
+        mp_lazy = kp.data.nickel_ebsd_master_pattern_small(lazy=True)
 
-        assert isinstance(mp_lazy, LazyEBSDMasterPattern)
+        assert isinstance(mp_lazy, kp.signals.LazyEBSDMasterPattern)
         assert isinstance(mp_lazy.data, Array)
 
     def test_not_allow_download_raises(self):
         """Not passing `allow_download` raises expected error."""
-        file = Path(data._fetcher.path, "data/nickel_ebsd_large/patterns.h5")
+        file = Path(_fetcher.path, "data/nickel_ebsd_large/patterns.h5")
 
         # Rename file (dangerous!)
         new_name = str(file) + ".bak"
@@ -85,7 +85,7 @@ class TestData:
             os.rename(file, new_name)
 
         with pytest.raises(ValueError, match="Dataset nickel_ebsd_large/patterns.h5"):
-            _ = data.nickel_ebsd_large()
+            _ = kp.data.nickel_ebsd_large()
 
         # Revert rename
         if rename:  # pragma: no cover
@@ -93,15 +93,15 @@ class TestData:
 
     def test_load_nickel_ebsd_large_allow_download(self):
         """Download from external."""
-        s = data.nickel_ebsd_large(lazy=True, allow_download=True)
+        s = kp.data.nickel_ebsd_large(lazy=True, allow_download=True)
 
-        assert isinstance(s, LazyEBSD)
+        assert isinstance(s, kp.signals.LazyEBSD)
         assert s.data.shape == (55, 75, 60, 60)
         assert np.issubdtype(s.data.dtype, np.uint8)
 
     def test_load_silicon_ebsd_moving_screen_in(self):
         """Download external Si pattern."""
-        s = data.silicon_ebsd_moving_screen_in(allow_download=True)
+        s = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
 
         assert s.data.shape == (480, 480)
         assert s.data.dtype == np.uint8
@@ -112,7 +112,7 @@ class TestData:
 
     def test_load_silicon_ebsd_moving_screen_out5mm(self):
         """Download external Si pattern."""
-        s = data.silicon_ebsd_moving_screen_out5mm(allow_download=True)
+        s = kp.data.silicon_ebsd_moving_screen_out5mm(allow_download=True)
 
         assert s.data.shape == (480, 480)
         assert s.data.dtype == np.uint8
@@ -123,7 +123,7 @@ class TestData:
 
     def test_load_silicon_ebsd_moving_screen_out10mm(self):
         """Download external Si pattern."""
-        s = data.silicon_ebsd_moving_screen_out10mm(allow_download=True)
+        s = kp.data.silicon_ebsd_moving_screen_out10mm(allow_download=True)
 
         assert s.data.shape == (480, 480)
         assert s.data.dtype == np.uint8

@@ -31,6 +31,7 @@ from kikuchipy.io.plugins.nordif import get_settings_from_file
 
 __all__ = ["file_reader"]
 
+
 # Plugin characteristics
 # ----------------------
 format_name = "NORDIF calibration patterns"

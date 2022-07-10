@@ -33,15 +33,6 @@
     oxford_binary
 """
 
-from kikuchipy.io.plugins import (
-    emsoft_ebsd,
-    emsoft_ebsd_master_pattern,
-    h5ebsd,
-    nordif,
-    nordif_calibration_patterns,
-    oxford_binary,
-)
-
 __all__ = [
     "emsoft_ebsd",
     "emsoft_ebsd_master_pattern",
@@ -50,3 +41,15 @@ __all__ = [
     "nordif_calibration_patterns",
     "oxford_binary",
 ]
+
+
+def __dir__():
+    return sorted(__all__)
+
+
+def __getattr__(name):
+    if name in __all__:
+        import importlib
+
+        return importlib.import_module("." + name, __name__)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

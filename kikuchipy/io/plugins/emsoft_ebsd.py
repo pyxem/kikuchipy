@@ -39,6 +39,7 @@ from kikuchipy.signals.util._metadata import (
 
 __all__ = ["file_reader"]
 
+
 # Plugin characteristics
 # ----------------------
 format_name = "emsoft_ebsd"
