@@ -112,6 +112,9 @@ docstring, for example::
             Explanation of returned values.
         """
 
+We import modules lazily using the specification in `PEP 562
+<https://peps.python.org/pep-0562/>`__.
+
 Making changes
 ==============
 

@@ -17,14 +17,31 @@
 
 """Various projections and transformations relevant to EBSD."""
 
-from kikuchipy.projections.gnomonic_projection import GnomonicProjection
-from kikuchipy.projections.hesse_normal_form import HesseNormalForm
-from kikuchipy.projections.lambert_projection import LambertProjection
-from kikuchipy.projections.spherical_projection import SphericalProjection
-
 __all__ = [
     "GnomonicProjection",
     "HesseNormalForm",
     "LambertProjection",
     "SphericalProjection",
 ]
+
+
+def __dir__():
+    return sorted(__all__)
+
+
+def __getattr__(name):
+    _import_mapping = {
+        "GnomonicProjection": "gnomonic_projection",
+        "HesseNormalForm": "hesse_normal_form",
+        "LambertProjection": "lambert_projection",
+        "SphericalProjection": "spherical_projection",
+    }
+    if name in __all__:
+        import importlib
+
+        if name in _import_mapping.keys():
+            import_path = f"{__name__}.{_import_mapping.get(name)}"
+            return getattr(importlib.import_module(import_path), name)
+        else:  # pragma: no cover
+            return importlib.import_module("." + name, __name__)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

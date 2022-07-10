@@ -27,7 +27,6 @@ import warnings
 import dask.array as da
 from dask.diagnostics import ProgressBar
 import hyperspy.api as hs
-from hyperspy._signals.signal2d import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
 from hyperspy.roi import BaseInteractiveROI
@@ -46,7 +45,11 @@ from kikuchipy.indexing._refinement._refinement import (
     _refine_orientation_projection_center,
     _refine_projection_center,
 )
-from kikuchipy.indexing.similarity_metrics import SimilarityMetric, _METRICS
+from kikuchipy.indexing.similarity_metrics import (
+    SimilarityMetric,
+    NormalizedCrossCorrelationMetric,
+    NormalizedDotProductMetric,
+)
 from kikuchipy.io._io import _save
 from kikuchipy.pattern import chunk
 from kikuchipy.pattern.chunk import _average_neighbour_patterns
@@ -146,7 +149,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
     _custom_properties = ["detector", "static_background", "xmap"]
 
     def __init__(self, *args, **kwargs):
-        Signal2D.__init__(self, *args, **kwargs)
+        hs.signals.Signal2D.__init__(self, *args, **kwargs)
 
         self._detector = kwargs.pop(
             "detector",
@@ -2379,13 +2382,17 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         rechunk: bool,
         n_dictionary_patterns: int,
     ) -> SimilarityMetric:
-        if isinstance(metric, str) and metric in _METRICS:
-            metric_class = _METRICS[metric]
+        metrics = {
+            "ncc": NormalizedCrossCorrelationMetric,
+            "ndp": NormalizedDotProductMetric,
+        }
+        if isinstance(metric, str) and metric in metrics:
+            metric_class = metrics[metric]
             metric = metric_class()
             metric.rechunk = rechunk
         if not isinstance(metric, SimilarityMetric):
             raise ValueError(
-                f"'{metric}' must be either of {_METRICS.keys()} or a custom metric "
+                f"'{metric}' must be either of {metrics.keys()} or a custom metric "
                 "class inheriting from SimilarityMetric. See "
                 "kikuchipy.indexing.SimilarityMetric"
             )

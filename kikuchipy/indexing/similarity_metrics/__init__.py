@@ -23,10 +23,6 @@ from kikuchipy.indexing.similarity_metrics._normalized_dot_product import (
     NormalizedDotProductMetric,
 )
 
-_METRICS = dict(
-    ncc=NormalizedCrossCorrelationMetric,
-    ndp=NormalizedDotProductMetric,
-)
 
 __all__ = [
     "NormalizedCrossCorrelationMetric",

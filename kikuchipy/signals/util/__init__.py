@@ -20,12 +20,31 @@ from signal methods, and for controlling chunking of lazy signal data in
 :class:`~dask.array.Array`.
 """
 
-from kikuchipy.signals.util._dask import get_chunking, get_dask_array
-from kikuchipy.signals.util._metadata import ebsd_metadata, metadata_nodes
-
 __all__ = [
     "ebsd_metadata",
     "get_chunking",
     "get_dask_array",
     "metadata_nodes",
 ]
+
+
+def __dir__():
+    return sorted(__all__)
+
+
+def __getattr__(name):
+    _import_mapping = {
+        "ebsd_metadata": "_metadata",
+        "get_chunking": "_dask",
+        "get_dask_array": "_dask",
+        "metadata_nodes": "_metadata",
+    }
+    if name in __all__:
+        import importlib
+
+        if name in _import_mapping.keys():
+            import_path = f"{__name__}.{_import_mapping.get(name)}"
+            return getattr(importlib.import_module(import_path), name)
+        else:  # pragma: no cover
+            return importlib.import_module("." + name, __name__)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

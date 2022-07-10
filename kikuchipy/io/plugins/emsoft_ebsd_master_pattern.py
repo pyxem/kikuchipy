@@ -34,6 +34,7 @@ from kikuchipy.io.plugins.emsoft_ebsd import _crystaldata2phase
 
 __all__ = ["file_reader"]
 
+
 # Plugin characteristics
 # ----------------------
 format_name = "emsoft_ebsd_master_pattern"

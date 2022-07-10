@@ -38,7 +38,6 @@ master_doc = "index"
 extensions = [
     "matplotlib.sphinxext.plot_directive",
     "nbsphinx",
-    "notfound.extension",
     "sphinxcontrib.bibtex",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
@@ -229,17 +228,6 @@ def linkcode_resolve(domain, info):
     else:
         return None
 
-
-# -- Custom 404 page
-# https://sphinx-notfound-page.readthedocs.io
-notfound_context = {
-    "body": (
-        "<h1>Page not found.</h1>\n\nPerhaps try the "
-        "<a href='https://kikuchipy.org/en/latest/examples/index.html'>"
-        "examples page</a>."
-    ),
-}
-notfound_no_urls_prefix = True
 
 # -- PyVista
 # https://docs.pyvista.org

@@ -2,12 +2,13 @@
 Changelog
 =========
 
-kikuchipy is an open-source Python library for processing and analysis of electron
-backscatter diffraction patterns: https://kikuchipy.org.
+kikuchipy is a library for processing, simulating, and analyzing electron backscatter
+diffraction (EBSD) patterns in Python, built on the tools for multi-dimensional data
+analysis provided by the HyperSpy library: https://kikuchipy.org.
 
-All notable changes to this project will be documented in this file. The format is based
-on `Keep a Changelog <https://keepachangelog.com/en/1.1.0>`_, and this project tries its
-best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
+All user facing changes to this project are documented in this file. The format is based
+on `Keep a Changelog <https://keepachangelog.com/en/1.1.0>`__, and this project tries
+its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`__.
 
 Contributors to each release are listed in alphabetical order by first name. List
 entries are sorted in descending chronological order.
@@ -29,6 +30,9 @@ Added
 
 Changed
 -------
+- Import modules lazily using the specification in `PEP 562
+  <https://peps.python.org/pep-0562/>`__.
+  (`#551 <https://github.com/pyxem/kikuchipy/pull/551>`_)
 - Minimal version of HyperSpy increased to >= 1.7.1.
   (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
 - ``progressbar`` parameter to ``show_progressbar`` in ``kikuchipy.data`` functions

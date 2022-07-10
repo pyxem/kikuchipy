@@ -44,6 +44,7 @@ from kikuchipy.signals.util._metadata import (
 
 __all__ = ["file_reader", "file_writer"]
 
+
 # Plugin characteristics
 # ----------------------
 format_name = "h5ebsd"
