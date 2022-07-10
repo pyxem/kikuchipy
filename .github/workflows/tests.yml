@@ -69,6 +69,8 @@ jobs:
           pip install wheel
           pip install -U -e .'[tests]'
 
+      # TODO: Allow installing on 3.10 once vtk is available on 3.10,
+      # see https://pypi.org/project/vtk/#files
       - name: Install optional dependencies
         if: ${{ matrix.python-version == 3.9 }}
         shell: bash
