@@ -55,7 +55,6 @@ extra_feature_requirements = {
         "sphinx-design",
         "sphinx-gallery             >= 0.6",
         "sphinx-last-updated-by-git",
-        "sphinx-notfound-page",
         "sphinxcontrib-bibtex       >= 1.0",
     ],
     "tests": [
