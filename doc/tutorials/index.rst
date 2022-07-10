@@ -11,7 +11,7 @@ the functions, modules, and objects in kikuchipy, see the :doc:`/reference/index
 The tutorials are live and available on MyBinder: |Binder|
 
 .. |Binder| image:: https://static.mybinder.org/badge_logo.svg
-   :target: https://mybinder.org/v2/gh/pyxem/kikuchipy/develop?filepath=tutorials
+   :target: https://mybinder.org/v2/gh/pyxem/kikuchipy/develop?filepath=doc/tutorials
 
 Load and save data
 ==================
