@@ -31,4 +31,4 @@ jobs:
 
       - name: Test documentation notebooks
         run: |
-          pytest -v --nbval doc/user_guide doc/examples
+          pytest -v --nbval doc/tutorials --sanitize-with doc/tutorials/tutorials_sanitize.cfg
