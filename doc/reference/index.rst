@@ -12,8 +12,8 @@ the :doc:`/examples/index` or :doc:`/tutorials/index`.
 
 .. caution::
 
-    kikuchipy is in development, meaning that some breaking changes and changes to this
-    reference are likely with each release.
+    kikuchipy is in continuous development, meaning that some breaking changes and
+    changes to this reference are likely with each release.
 
 kikuchipy's import structure is designed to feel familiar to HyperSpy users. It is
 recommended to import functionality from the below list of functions and modules like

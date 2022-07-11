@@ -54,6 +54,7 @@ Learning resources
 
 .. See: https://sphinx-design.readthedocs.io/en/furo-theme/grids.html
 .. grid:: 2 3 3 3
+    :gutter: 2
 
     .. grid-item-card:: Examples
         :img-top: _static/image/colormap_banners/banner0.png
