@@ -257,7 +257,7 @@ class PCCalibrationMovingScreen:
         line_kwargs: dict = dict(linewidth=2, zorder=1),
         scatter_kwargs: dict = dict(zorder=2),
         pc_kwargs: dict = dict(marker="*", s=300, facecolor="gold", edgecolor="k"),
-        return_fig_ax: bool = False,
+        return_figure: bool = False,
         **kwargs: dict,
     ) -> Union[None, Tuple[plt.Figure, List[plt.Axes]]]:
         """A convenience method of three images, the first two with the
@@ -278,7 +278,7 @@ class PCCalibrationMovingScreen:
         pc_kwargs
             Keyword arguments, along with `scatter_kwargs`, passed to
             :meth:`matplotlib.axes.Axes.scatter` when plotting the PCs.
-        return_fig_ax
+        return_figure
             Whether to return the figure and axes, default is ``False``.
         **kwargs
             Keyword arguments passed to
@@ -287,9 +287,7 @@ class PCCalibrationMovingScreen:
         Returns
         -------
         fig
-            Figure, returned if ``return_fig_ax`` is ``True``.
-        ax
-            Axes, returned if ``return_fig_ax`` is ``True``.
+            Figure, returned if ``return_figure=True``.
         """
         pat1, pat2 = self.patterns
         points1, points2 = self.points
@@ -334,8 +332,8 @@ class PCCalibrationMovingScreen:
         for i in range(ncols):
             ax[i].scatter(px, py, **pc_kwargs, **scatter_kwargs)
 
-        if return_fig_ax:
-            return fig, ax
+        if return_figure:
+            return fig
 
     def __repr__(self):
         name = self.__class__.__name__

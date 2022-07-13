@@ -20,9 +20,12 @@ Contributors
 ------------
 - Håkon Wiik Ånes
 - Magnus Nord
+- Zhou Xu
 
 Added
 -----
+- Figures of reference frames of other software added to the documentation.
+  (`#552 <https://github.com/pyxem/kikuchipy/pull/552>`_)
 - Whether to show progressbars from most signal methods (except indexing and refinement)
   can be controlled by passing ``show_progressbar`` or by setting HyperSpy's
   ``hs.preferences.General.show_progressbar`` (see their docs for details).
@@ -30,6 +33,9 @@ Added
 
 Changed
 -------
+- ``EBSDDetector.plot()`` and ``PCCalibrationMovingScreen.plot()`` parameter
+  ``return_fig_ax`` renamed to ``return_figure``.
+  (`#552 <https://github.com/pyxem/kikuchipy/pull/552>`_)
 - Import modules lazily using the specification in `PEP 562
   <https://peps.python.org/pep-0562/>`__.
   (`#551 <https://github.com/pyxem/kikuchipy/pull/551>`_)

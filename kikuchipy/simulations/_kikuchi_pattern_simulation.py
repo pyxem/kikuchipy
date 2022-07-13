@@ -366,13 +366,13 @@ class GeometricalKikuchiPatternSimulation:
         --------
         as_collections, as_markers
         """
-        fig, ax = self.detector.plot(
+        fig = self.detector.plot(
             coordinates=coordinates,
             pattern=pattern,
             show_pc=pc,
             pc_kwargs=pc_kwargs,
             pattern_kwargs=pattern_kwargs,
-            return_fig_ax=True,
+            return_figure=True,
         )
         collections = self.as_collections(
             index,
@@ -384,6 +384,7 @@ class GeometricalKikuchiPatternSimulation:
             zone_axes_kwargs,
             zone_axes_labels_kwargs,
         )
+        ax = fig.axes[0]
         for c in collections:
             if isinstance(c, list) and isinstance(c[0], mtext.Text):
                 for text_i in c:
