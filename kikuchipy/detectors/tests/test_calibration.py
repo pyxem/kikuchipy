@@ -109,11 +109,11 @@ class TestPCCalibrationMovingScreen:
 
     def test_plot(self, moving_screen_cal_instance):
         cal = moving_screen_cal_instance
-        fig, ax = cal.plot(return_fig_ax=True)
+        fig = cal.plot(return_figure=True)
 
         assert isinstance(fig, plt.Figure)
-        assert len(ax) == 3
-        assert isinstance(ax[0], plt.Subplot)
+        assert len(fig.axes) == 3
+        assert isinstance(fig.axes[0], plt.Subplot)
 
     def test_repr(self, moving_screen_cal_instance):
         assert repr(moving_screen_cal_instance) == (
