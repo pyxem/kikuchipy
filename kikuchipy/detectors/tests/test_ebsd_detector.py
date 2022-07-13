@@ -353,10 +353,11 @@ class TestEBSDDetector:
         """Plotting detector works, *not* checking whether Matplotlib
         displays the pattern correctly.
         """
-        kwargs = dict(show_pc=show_pc, pattern=pattern, zoom=zoom, return_fig_ax=True)
+        kwargs = dict(show_pc=show_pc, pattern=pattern, zoom=zoom, return_figure=True)
         if coordinates is not None:
             kwargs["coordinates"] = coordinates
-        _, ax = detector.plot(**kwargs)
+        fig = detector.plot(**kwargs)
+        ax = fig.axes[0]
         assert ax.get_xlabel() == f"x {desired_label}"
         assert ax.get_ylabel() == f"y {desired_label}"
         if isinstance(pattern, np.ndarray):
@@ -375,13 +376,14 @@ class TestEBSDDetector:
         self, detector, gnomonic_angles, gnomonic_circles_kwargs
     ):
         """Draw gnomonic circles."""
-        _, ax = detector.plot(
+        fig = detector.plot(
             coordinates="gnomonic",
             draw_gnomonic_circles=True,
             gnomonic_angles=gnomonic_angles,
             gnomonic_circles_kwargs=gnomonic_circles_kwargs,
-            return_fig_ax=True,
+            return_figure=True,
         )
+        ax = fig.axes[0]
 
         # Correct number of gnomonic circles are added to the patches
         num_circles = 0
@@ -391,6 +393,7 @@ class TestEBSDDetector:
                 num_circles += 1
             elif isinstance(patch, plt.Rectangle):
                 num_rectangles += 1
+
         if gnomonic_angles is None:
             assert num_circles == 8  # Default
         else:
@@ -422,14 +425,14 @@ class TestEBSDDetector:
     )
     def test_plot_pattern_kwargs(self, detector, pattern_kwargs):
         """Pass pattern kwargs to imshow()."""
-        _, ax = detector.plot(
+        fig = detector.plot(
             pattern=np.ones((60, 60)),
             pattern_kwargs=pattern_kwargs,
-            return_fig_ax=True,
+            return_figure=True,
         )
         if pattern_kwargs is None:
             pattern_kwargs = {"cmap": "gray"}
-        assert ax.images[0].cmap.name == pattern_kwargs["cmap"]
+        assert fig.axes[0].images[0].cmap.name == pattern_kwargs["cmap"]
         plt.close("all")
 
     @pytest.mark.parametrize(
@@ -437,11 +440,11 @@ class TestEBSDDetector:
     )
     def test_plot_pc_kwargs(self, detector, pc_kwargs):
         """Pass PC kwargs to scatter()."""
-        _, ax = detector.plot(show_pc=True, pc_kwargs=pc_kwargs, return_fig_ax=True)
+        fig = detector.plot(show_pc=True, pc_kwargs=pc_kwargs, return_figure=True)
         if pc_kwargs is None:
             pc_kwargs = {"facecolor": "gold"}
         assert np.allclose(
-            ax.collections[0].get_facecolor().squeeze()[:3],
+            fig.axes[0].collections[0].get_facecolor().squeeze()[:3],
             mcolors.to_rgb(pc_kwargs["facecolor"]),
         )
         plt.close("all")
@@ -449,10 +452,10 @@ class TestEBSDDetector:
     @pytest.mark.parametrize("coordinates", ["detector", "gnomonic"])
     def test_plot_extent(self, detector, coordinates):
         """Correct detector extent."""
-        _, ax = detector.plot(
+        fig = detector.plot(
             coordinates=coordinates,
             pattern=np.ones(detector.shape),
-            return_fig_ax=True,
+            return_figure=True,
         )
         if coordinates == "gnomonic":
             desired_data_lim = np.concatenate(
@@ -463,7 +466,7 @@ class TestEBSDDetector:
             )
         else:
             desired_data_lim = np.sort(detector.bounds)
-        assert np.allclose(ax.dataLim.bounds, desired_data_lim)
+        assert np.allclose(fig.axes[0].dataLim.bounds, desired_data_lim)
         plt.close("all")
 
     @pytest.mark.parametrize(

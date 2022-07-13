@@ -75,6 +75,7 @@ Fixed
 Contributors
 ------------
 - Håkon Wiik Ånes
+- Zhou Xu
 
 Added
 -----

@@ -18,7 +18,6 @@
 from copy import deepcopy
 from typing import List, Optional, Tuple, Union
 
-from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.markers import MarkerStyle
 import matplotlib.patches as mpatches
@@ -449,6 +448,21 @@ class EBSDDetector:
         pixel size, :math:`(x_B^*, y_B^*, z_B^*)` are the Bruker PC
         coordinates, and :math:`(x_{pc}, y_{pc}, L)` are the returned
         EMsoft PC coordinates.
+
+        Examples
+        --------
+        >>> import kikuchipy as kp
+        >>> det = kp.detectors.EBSDDetector(
+        ...     shape=(60, 80),
+        ...     pc=(0.4, 0.2, 0.6),
+        ...     convention="bruker",
+        ...     px_size=59.2,
+        ...     binning=8,
+        ... )
+        >>> det.pc_emsoft()
+        array([[   64. ,   144. , 17049.6]])
+        >>> det.pc_emsoft(4)
+        array([[  -64. ,   144. , 17049.6]])
         """
         return self._pc_bruker2emsoft(version=version)
 
@@ -488,6 +502,17 @@ class EBSDDetector:
         and rows, :math:`(x_B^*, y_B^*, z_B^*)` are the Bruker PC
         coordinates, and :math:`(x_T^*, y_T^*, z_T^*)` are the returned
         EDAX TSL PC coordinates.
+
+        Examples
+        --------
+        >>> import kikuchipy as kp
+        >>> det = kp.detectors.EBSDDetector(
+        ...     shape=(60, 80),
+        ...     pc=(0.4, 0.2, 0.6),
+        ...     convention="bruker",
+        ... )
+        >>> det.pc_tsl()
+        array([[0.4 , 0.6 , 0.45]])
         """
         return self._pc_bruker2tsl()
 
@@ -527,8 +552,8 @@ class EBSDDetector:
         gnomonic_angles: Union[None, list, np.ndarray] = None,
         gnomonic_circles_kwargs: Optional[dict] = None,
         zoom: float = 1,
-        return_fig_ax: bool = False,
-    ) -> Union[None, Tuple[Figure, Axes]]:
+        return_figure: bool = False,
+    ) -> Union[None, Figure]:
         """Plot the detector screen.
 
         The plotting of gnomonic circles and general style is adapted
@@ -568,16 +593,13 @@ class EBSDDetector:
             Whether to zoom in/out from the detector, e.g. to show the
             extent of the gnomonic projection circles. A zoom > 1 zooms
             out. Default is ``1``, i.e. no zoom.
-        return_fig_ax
-            Whether to return the figure and axes object created.
-            Default is ``False``.
+        return_figure
+            Whether to return the figure. Default is False.
 
         Returns
         -------
         fig
-            Matplotlib figure object, if `return_fig_ax` is True.
-        ax
-            Matplotlib axes object, if `return_fig_ax` is True.
+            Matplotlib figure instance, if `return_figure` is True.
 
         Examples
         --------
@@ -601,7 +623,7 @@ class EBSDDetector:
         Plot a pattern on the detector and save it
 
         >>> s = kp.data.nickel_ebsd_small()
-        >>> fig, _ = det.plot(pattern=s.inav[0, 0].data, return_fig_ax=True)
+        >>> fig = det.plot(pattern=s.inav[0, 0].data, return_figure=True)
         >>> # fig.savefig("detector.png")
         """
         sy, sx = self.shape
@@ -682,8 +704,8 @@ class EBSDDetector:
                     )
                 )
 
-        if return_fig_ax:
-            return fig, ax
+        if return_figure:
+            return fig
 
     # ------------------------ Private methods ----------------------- #
 
@@ -715,7 +737,7 @@ class EBSDDetector:
             )
 
     def _pc_emsoft2bruker(self, version: int = 5) -> np.ndarray:
-        new_pc = np.zeros_like(self.pc, dtype=np.float32)
+        new_pc = np.zeros_like(self.pc, dtype=float)
         pcx = self.pcx
         if version < 5:
             pcx = -pcx
@@ -731,7 +753,7 @@ class EBSDDetector:
         return new_pc
 
     def _pc_bruker2emsoft(self, version: int = 5) -> np.ndarray:
-        new_pc = np.zeros_like(self.pc, dtype=np.float32)
+        new_pc = np.zeros_like(self.pc, dtype=float)
         new_pc[..., 0] = (0.5 - self.pcx) * self.ncols * self.binning
         if version < 5:
             new_pc[..., 0] = -new_pc[..., 0]
