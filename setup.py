@@ -47,6 +47,7 @@ extra_feature_requirements = {
         "memory_profiler",
         "nbsphinx                   >= 0.7",
         "numpydoc",
+        "pyebsdindex                >= 0.1rc2",
         "pythreejs",  # Used in the docs by PyVista
         "pyvista",
         "sphinx                     >= 3.0.2",
