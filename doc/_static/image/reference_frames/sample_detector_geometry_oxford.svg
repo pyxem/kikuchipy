@@ -5,8 +5,8 @@
    viewBox="0 0 147.45492 110.66662"
    version="1.1"
    id="svg8"
-   inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
-   sodipodi:docname="detector_sample_geometry_oxford.svg"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="sample_detector_geometry_oxford.svg"
    inkscape:export-filename="/home/hakon/kode/kikuchipy/doc/_static/image/reference_frames/detector_sample_geometry.png"
    inkscape:export-xdpi="300"
    inkscape:export-ydpi="300"
@@ -850,17 +850,17 @@
      borderopacity="1.0"
      inkscape:pageopacity="1"
      inkscape:pageshadow="2"
-     inkscape:zoom="2.8163794"
-     inkscape:cx="278.54912"
-     inkscape:cy="209.13376"
+     inkscape:zoom="1.828426"
+     inkscape:cx="278.65497"
+     inkscape:cy="209.19632"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      inkscape:document-rotation="0"
      showgrid="false"
-     inkscape:window-width="2560"
-     inkscape:window-height="1403"
+     inkscape:window-width="1920"
+     inkscape:window-height="1016"
      inkscape:window-x="0"
-     inkscape:window-y="0"
+     inkscape:window-y="27"
      inkscape:window-maximized="1"
      inkscape:snap-bbox="true"
      fit-margin-top="0"
@@ -2731,36 +2731,32 @@
          x="61.277004"
          y="132.97951"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.29167px;font-family:Inconsolata;-inkscape-font-specification:Inconsolata;fill:#ffc900;fill-opacity:1;stroke:#000000;stroke-width:0.15;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1">PC</tspan></text>
-    <g
-       id="g2874"
-       transform="translate(-3.0135123)">
-      <text
-         xml:space="preserve"
-         style="font-size:7.05556px;line-height:2.40667px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;stroke-width:0.264583"
-         x="48.452362"
-         y="104.87638"
-         id="text81119"><tspan
-           sodipodi:role="line"
-           id="tspan81117"
-           style="font-weight:bold;stroke-width:0.264583"
-           x="48.452362"
-           y="104.87638">a</tspan></text>
-      <text
-         xml:space="preserve"
-         style="font-size:7.05556px;line-height:2.40667px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;stroke-width:0.264583;stroke-linecap:butt;stroke-linejoin:round"
-         x="47.986694"
-         y="100.17258"
-         id="text2825"><tspan
-           sodipodi:role="line"
-           id="tspan2823"
-           style="stroke-width:0.264583"
-           x="47.986694"
-           y="100.17258">Oxford</tspan></text>
-      <path
-         style="fill:none;stroke:#000000;stroke-width:0.25;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-         d="m 48.663925,100.88759 h 18.775"
-         id="path8523" />
-    </g>
+    <text
+       xml:space="preserve"
+       style="font-size:7.05556px;line-height:2.40667px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;stroke-width:0.264583"
+       x="45.43885"
+       y="104.87638"
+       id="text81119"><tspan
+         sodipodi:role="line"
+         id="tspan81117"
+         style="font-weight:bold;stroke-width:0.264583"
+         x="45.43885"
+         y="104.87638">a</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:7.05556px;line-height:2.40667px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;stroke-width:0.264583;stroke-linecap:butt;stroke-linejoin:round"
+       x="44.973183"
+       y="100.17258"
+       id="text2825"><tspan
+         sodipodi:role="line"
+         id="tspan2823"
+         style="stroke-width:0.264583"
+         x="44.973183"
+         y="100.17258">Oxford Instruments</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.25;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 45.650413,100.88759 H 101.98841"
+       id="path8523" />
     <path
        style="fill:#ff0000;fill-opacity:1;stroke:#fd0000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker8370-3)"
        d="m 57.677342,120.79739 7.461136,3.27439"
