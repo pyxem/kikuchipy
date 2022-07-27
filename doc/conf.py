@@ -63,6 +63,7 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org/stable", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "orix": ("https://orix.readthedocs.io/en/stable", None),
+    "pyebsdindex": ("https://pyebsdindex.readthedocs.io/en/stable", None),
     "python": ("https://docs.python.org/3", None),
     "pyvista": ("https://docs.pyvista.org", None),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
