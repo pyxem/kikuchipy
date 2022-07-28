@@ -72,6 +72,7 @@ indexing.
 .. nbgallery::
 
     pattern_matching
+    hough_indexing
 
 Simulations
 ===========
