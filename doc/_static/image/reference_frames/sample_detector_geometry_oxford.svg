@@ -842,6 +842,30 @@
          d="M 10,3 0,6 V 0 Z"
          id="path1521" />
     </marker>
+    <marker
+       id="marker8370-8"
+       refX="5"
+       refY="3"
+       orient="auto-start-reverse"
+       inkscape:stockid="ExperimentalArrow"
+       inkscape:isstock="true">
+      <path
+         style="fill:context-stroke"
+         d="M 10,3 0,6 V 0 Z"
+         id="path8368-89" />
+    </marker>
+    <marker
+       id="marker2820"
+       refX="5"
+       refY="3"
+       orient="auto-start-reverse"
+       inkscape:stockid="ExperimentalArrow"
+       inkscape:isstock="true">
+      <path
+         style="fill:context-stroke"
+         d="M 10,3 0,6 V 0 Z"
+         id="path2818" />
+    </marker>
   </defs>
   <sodipodi:namedview
      id="base"
@@ -2803,87 +2827,19 @@
          style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.29167px;font-family:Inconsolata;-inkscape-font-specification:Inconsolata;fill:#0000fc;fill-opacity:1;stroke-width:0.264583">Z<tspan
    style="font-style:normal;font-size:65%;baseline-shift:sub;fill:#0000fc;fill-opacity:1"
    id="tspan27963">d</tspan></tspan></text>
-    <g
-       id="g20411"
-       transform="translate(0.8125451,-0.1278162)"
-       style="stroke-linecap:butt;stroke-linejoin:round">
-      <g
-         id="g12225"
-         transform="translate(-0.52916667,-0.48135599)">
-        <path
-           style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-           d="m 68.656699,119.13368 v 3.70108"
-           id="path12136" />
-        <path
-           style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-           d="m 68.656699,119.13368 v 3.70108"
-           id="path12138" />
-        <path
-           style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-           d="m 69.185866,119.13368 v 3.70108"
-           id="path12220" />
-      </g>
-    </g>
-    <g
-       id="g2243"
-       transform="translate(3.4634242,0.44541923)"
-       style="stroke-linecap:butt;stroke-linejoin:round">
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.29167px;line-height:1.805px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#009600;fill-opacity:1;stroke:none;stroke-width:0.264583"
-         x="41.088188"
-         y="128.45711"
-         id="text26083"><tspan
-           sodipodi:role="line"
-           id="tspan26081"
-           x="41.088188"
-           y="128.45711"
-           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.29167px;font-family:Inconsolata;-inkscape-font-specification:Inconsolata;fill:#009600;fill-opacity:1;stroke-width:0.264583">Y<tspan
-   style="font-style:normal;font-size:65%;baseline-shift:sub;fill:#009600;fill-opacity:1"
-   id="tspan31802">d</tspan></tspan></text>
-      <g
-         id="g20421"
-         transform="translate(-21.658519,6.33042)">
-        <g
-           id="g20419"
-           transform="translate(-0.52916667,-0.48135599)">
-          <path
-             style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-             d="m 68.656699,119.13368 v 3.70108"
-             id="path20413" />
-          <path
-             style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-             d="m 68.656699,119.13368 v 3.70108"
-             id="path20415" />
-          <path
-             style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-             d="m 69.185866,119.13368 v 3.70108"
-             id="path20417" />
-        </g>
-      </g>
-      <text
-         xml:space="preserve"
-         style="font-size:5.29167px;line-height:1.805px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;stroke-width:0.264583"
-         x="48.231625"
-         y="128.72037"
-         id="text20427"><tspan
-           sodipodi:role="line"
-           id="tspan20425"
-           style="font-style:normal;font-size:5.29167px;stroke-width:0.264583"
-           x="48.231625"
-           y="128.72037">y*</tspan></text>
-    </g>
     <text
        xml:space="preserve"
-       style="font-size:5.29167px;line-height:1.805px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;stroke-width:0.264583;stroke-linecap:butt;stroke-linejoin:round"
-       x="70.659866"
-       y="122.35942"
-       id="text2357"><tspan
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.29167px;line-height:1.805px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;fill:#009600;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="52.570229"
+       y="125.98068"
+       id="text26083"><tspan
          sodipodi:role="line"
-         id="tspan2355"
-         style="font-size:5.29167px;stroke-width:0.264583"
-         x="70.659866"
-         y="122.35942">x*</tspan></text>
+         id="tspan26081"
+         x="52.570229"
+         y="125.98068"
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.29167px;font-family:Inconsolata;-inkscape-font-specification:Inconsolata;fill:#009600;fill-opacity:1;stroke-width:0.264583">Y<tspan
+   style="font-style:normal;font-size:65%;baseline-shift:sub;fill:#009600;fill-opacity:1"
+   id="tspan31802">d</tspan></tspan></text>
     <g
        id="g15950"
        transform="translate(-29.383484,25.241605)"
@@ -3061,5 +3017,39 @@
          style="font-size:5.29167px;stroke-width:0.264583"
          x="86.272995"
          y="129.91321">z*</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:5.29167px;line-height:1.805px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;stroke-width:0.264583;stroke-linecap:butt;stroke-linejoin:round"
+       x="52.738407"
+       y="146.08281"
+       id="text20427"><tspan
+         sodipodi:role="line"
+         id="tspan20425"
+         style="font-style:normal;font-size:5.29167px;stroke-width:0.264583"
+         x="52.738407"
+         y="146.08281">y*</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:5.29167px;line-height:1.805px;font-family:'CMU Sans Serif';-inkscape-font-specification:'CMU Sans Serif';letter-spacing:0px;word-spacing:0px;stroke-width:0.264583;stroke-linecap:butt;stroke-linejoin:round"
+       x="58.534081"
+       y="153.70865"
+       id="text2357"><tspan
+         sodipodi:role="line"
+         id="tspan2355"
+         style="font-size:5.29167px;stroke-width:0.264583"
+         x="58.534081"
+         y="153.70865">x*</tspan></text>
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000800;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker8370-8)"
+       d="m 57.863909,147.13673 -0.0662,-8.14775"
+       id="path1698"
+       inkscape:transform-center-x="0.0088941936"
+       inkscape:transform-center-y="-4.0083392" />
+    <path
+       style="fill:#000000;fill-opacity:1;stroke:#000800;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker8370-8)"
+       d="m 57.770019,147.06621 7.449481,3.30083"
+       id="path1922"
+       inkscape:transform-center-x="-3.655056"
+       inkscape:transform-center-y="1.6454304" />
   </g>
 </svg>

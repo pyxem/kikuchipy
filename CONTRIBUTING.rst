@@ -222,9 +222,7 @@ Here are some tips for writing tutorial notebooks:
   ``[fft_filter()](../reference/generated/kikuchipy.signals.EBSD.fft_filter.rst)``.
   Remember to add the parentheses ``()`` to functions and methods.
 - Reference sections in other tutorial notebooks using this general Markdown
-  ``[image quality](../tutorials/feature_maps.ipynb#image-quality)``. This is needed
-  because the notebooks are located in the top directory ``tutorials/``, while the
-  actual doc files when they are built are located in the directory ``doc/tutorials/``.
+  ``[image quality](feature_maps.ipynb#image-quality)``.
 - Reference external APIs via standard Markdown like
   ``[Signal2D](http://hyperspy.org/hyperspy-doc/current/api/hyperspy._signals.signal2d.html)``.
 - The Sphinx gallery thumbnail used for a notebook is set by adding the
