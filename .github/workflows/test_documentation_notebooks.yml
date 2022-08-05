@@ -3,6 +3,8 @@ name: Test documentation notebooks
 on:
   schedule:
     - cron: '15 6 * * 1'
+  workflow_dispatch:
+    workflow: "*"
 
 jobs:
   test-documentation-notebooks:
@@ -31,4 +33,4 @@ jobs:
 
       - name: Test documentation notebooks
         run: |
-          pytest -v --nbval doc/tutorials --sanitize-with doc/tutorials/tutorials_sanitize.cfg
+          ./doc/tutorials/run_nbval.sh
