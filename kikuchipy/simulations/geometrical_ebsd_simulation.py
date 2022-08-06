@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import logging
 from re import sub
 from typing import List, Optional
 
@@ -31,15 +30,6 @@ from kikuchipy.crystallography._computations import (
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.draw.markers import get_line_segment_list, get_point_list, get_text_list
 from kikuchipy.simulations.features import KikuchiBand, ZoneAxis
-
-
-class DisableMatplotlibWarningFilter(logging.Filter):
-    def filter(self):
-        message_to_disable = "posx and posy should be finite values"
-        return not self.msg == message_to_disable
-
-
-logging.getLogger("matplotlib.text").addFilter(DisableMatplotlibWarningFilter)
 
 
 class GeometricalEBSDSimulation:

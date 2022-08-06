@@ -19,6 +19,26 @@
 zone axes.
 """
 
+import logging
+
+
+class DisableMatplotlibWarningFilter(logging.Filter):
+    # Filter to suppress warnings with the below warning message
+    # emitted by Matplotlib whenever coordinate arrays of text
+    # positions contain NaN. This happens in most cases when we plot
+    # zone axes label markers with HyperSPy.
+    #
+    # Filter has to be placed here to be executed at all due to lazy
+    # imports.
+
+    def filter(self):
+        message_to_disable = "posx and posy should be finite values"
+        return not self.msg == message_to_disable
+
+
+logging.getLogger("matplotlib.text").addFilter(DisableMatplotlibWarningFilter)
+
+
 __all__ = [
     "GeometricalEBSDSimulation",
     "GeometricalKikuchiPatternSimulation",

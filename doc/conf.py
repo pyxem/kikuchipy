@@ -161,6 +161,13 @@ nbsphinx_execute_arguments = [
 # -- sphinxcontrib-bibtex
 # https://sphinxcontrib-bibtex.readthedocs.io
 bibtex_bibfiles = ["bibliography.bib"]
+bibtex_reference_style = "author_year"
+
+# -- sphinx-codeautolink
+codeautolink_custom_blocks = {
+    "python3": None,
+    "pycon3": "sphinx_codeautolink.clean_pycon",
+}
 
 # Relevant for the PDF build with LaTeX
 latex_elements = {
