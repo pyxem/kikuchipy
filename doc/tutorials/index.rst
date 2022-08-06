@@ -111,3 +111,4 @@ These hands-on tutorials were given at workshops.
 .. nbgallery::
 
     mandm2021_sunday_short_course
+    esteem2022_diffraction_workshop
