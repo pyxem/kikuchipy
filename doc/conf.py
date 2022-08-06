@@ -161,6 +161,7 @@ nbsphinx_execute_arguments = [
 # -- sphinxcontrib-bibtex
 # https://sphinxcontrib-bibtex.readthedocs.io
 bibtex_bibfiles = ["bibliography.bib"]
+bibtex_reference_style = "author_year"
 
 # Relevant for the PDF build with LaTeX
 latex_elements = {
