@@ -95,7 +95,7 @@ def file_reader(
         until required. Allows opening arbitrary sized datasets. Default
         is ``False``.
     **kwargs
-        Key word arguments passed to :class:`h5py.File`.
+        Keyword arguments passed to :class:`h5py.File`.
 
     Returns
     -------
@@ -989,7 +989,7 @@ def dict2h5ebsdgroup(dictionary: dict, group: h5py.Group, **kwargs):
         group[key][()] = val
 
 
-class H5ebsdFile:
+class H5EBSDFile:
     from kikuchipy.release import version as ver_signal
 
     manufacturer = "kikuchipy"
@@ -1195,5 +1195,5 @@ def file_writer(
     scan_number: int = 1,
     **kwargs,
 ):
-    f = H5ebsdFile(filename=filename, signal=signal)
+    f = H5EBSDFile(filename=filename, signal=signal)
     f.write(add_scan=add_scan, scan_number=scan_number, **kwargs)

@@ -212,7 +212,7 @@ def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
         if key in obj:
             return _exists(obj[key], chain) if chain else obj[key]
 
-    f = File(filename, mode="r")
+    f = File(filename)
     d = _hdfgroups2dict(f["/"])
 
     plugin = None
