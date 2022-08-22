@@ -28,7 +28,7 @@ jobs:
       - name: Install package and dependencies
         shell: bash
         run: |
-          pip install -U -e .'[tests,viz]'
+          pip install -U -e .'[doc,tests,viz]'
           pip install nbval
 
       - name: Test documentation notebooks
