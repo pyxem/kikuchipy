@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -25,16 +24,11 @@ from orix.crystal_map import CrystalMap
 import pytest
 
 from kikuchipy.io._io import load
-from kikuchipy.io.plugins.emsoft_ebsd import (
-    _check_file_format,
-    _crystaldata2phase,
-)
+from kikuchipy.io.plugins.emsoft_ebsd import _check_file_format, _crystaldata2phase
 from kikuchipy.io.plugins.h5ebsd import hdf5group2dict
 
 DIR_PATH = os.path.dirname(__file__)
-EMSOFT_FILE = os.path.join(
-    DIR_PATH, "../../../data/emsoft_ebsd/simulated_ebsd.h5"
-)
+EMSOFT_FILE = os.path.join(DIR_PATH, "../../../data/emsoft_ebsd/simulated_ebsd.h5")
 
 
 class TestEMsoftEBSDReader:
@@ -73,7 +67,7 @@ class TestEMsoftEBSDReader:
             g1 = f.create_group("EMheader")
             g2 = g1.create_group("EBSD")
             g2.create_dataset(
-                "ProgramName", data=np.array([b"EMEBSDD.f90"], dtype="S11"),
+                "ProgramName", data=np.array([b"EMEBSDD.f90"], dtype="S11")
             )
             with pytest.raises(IOError, match=".* is not in EMsoft's format "):
                 _ = _check_file_format(f)
@@ -98,10 +92,7 @@ class TestEMsoftEBSDReader:
         assert np.allclose(structure.occupancy, [1, 1])
         assert np.allclose(structure.Bisoequiv, [0.5] * 2)
         assert np.compare_chararrays(
-            structure.element,
-            np.array(["13", "29"], dtype="|S2"),
-            "==",
-            rstrip=False,
+            structure.element, np.array(["13", "29"], dtype="|S2"), "==", rstrip=False
         ).all()
 
     def test_crystaldata2phase_single_atom(self):

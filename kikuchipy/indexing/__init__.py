@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -16,23 +15,46 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Tools for indexing of EBSD patterns by comparison to simulated
-patterns.
+"""Tools for indexing of EBSD patterns by matching to a dictionary of
+simulated patterns.
 
-The EBSD method :meth:`~kikuchipy.signals.EBSD.match_patterns` uses
-these tools for pattern matching.
+Some of these tools are used in
+:meth:`~kikuchipy.signals.EBSD.dictionary_indexing`.
 """
 
-from kikuchipy.indexing._merge_crystal_maps import merge_crystal_maps
-from kikuchipy.indexing.orientation_similarity_map import (
-    orientation_similarity_map,
-)
-from kikuchipy.indexing import similarity_metrics
-from kikuchipy.indexing._static_pattern_matching import StaticPatternMatching
-
 __all__ = [
+    "NormalizedCrossCorrelationMetric",
+    "NormalizedDotProductMetric",
+    "SimilarityMetric",
+    "compute_refine_orientation_projection_center_results",
+    "compute_refine_orientation_results",
+    "compute_refine_projection_center_results",
     "merge_crystal_maps",
     "orientation_similarity_map",
-    "similarity_metrics",
-    "StaticPatternMatching",
 ]
+
+
+def __dir__():
+    return sorted(__all__)
+
+
+def __getattr__(name):
+    _import_mapping = {
+        "NormalizedCrossCorrelationMetric": "similarity_metrics",
+        "NormalizedDotProductMetric": "similarity_metrics",
+        "SimilarityMetric": "similarity_metrics",
+        "compute_refine_orientation_projection_center_results": "_refinement._refinement",
+        "compute_refine_orientation_results": "_refinement._refinement",
+        "compute_refine_projection_center_results": "_refinement._refinement",
+        "merge_crystal_maps": "_merge_crystal_maps",
+        "orientation_similarity_map": "_orientation_similarity_map",
+    }
+    if name in __all__:
+        import importlib
+
+        if name in _import_mapping.keys():
+            import_path = f"{__name__}.{_import_mapping.get(name)}"
+            return getattr(importlib.import_module(import_path), name)
+        else:  # pragma: no cover
+            return importlib.import_module("." + name, __name__)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

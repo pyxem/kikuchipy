@@ -1,13 +1,19 @@
+include CHANGELOG.rst
+include CODE_OF_CONDUCT.rst
+include CONTRIBUTING.rst
+include environment.yml
 include kikuchipy/hyperspy_extension.yaml
 include LICENSE
 include MANIFEST.in
-include pyproject.toml
-include setup.cfg
-include README.rst
+include README.md
+include readthedocs.yaml
 include RELEASE.rst
-include readthedocs.yml
+include setup.cfg
 include setup.py
+include tutorials/README.rst
 
-recursive-include doc Makefile make.bat *.rst *.py *.ipynb
-recursive-include doc/_static *.png *.jpg *.svg *.gif
+recursive-include doc Makefile make.bat *.rst *.py *.bib *.ipynb *.txt *.cfg *.sh
+recursive-include doc/_static *.png *.jpg *.svg *.css *.sh
+
 recursive-include kikuchipy/data *
+recursive-include examples *.txt *.py

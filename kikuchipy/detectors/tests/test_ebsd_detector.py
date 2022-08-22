@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -18,12 +17,14 @@
 
 from copy import deepcopy
 
+import matplotlib
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
+from packaging.version import Version
 import pytest
 
-from kikuchipy.detectors import EBSDDetector
+import kikuchipy as kp
 
 
 class TestEBSDDetector:
@@ -33,11 +34,11 @@ class TestEBSDDetector:
         px_size = 3
         binning = 4
         tilt = 5
-        det = EBSDDetector(
-            shape=shape, px_size=px_size, binning=binning, tilt=tilt, pc=pc1,
+        det = kp.detectors.EBSDDetector(
+            shape=shape, px_size=px_size, binning=binning, tilt=tilt, pc=pc1
         )
         assert det.shape == shape
-        assert det.aspect_ratio == 0.5
+        assert det.aspect_ratio == 2
 
     @pytest.mark.parametrize(
         "nav_shape, desired_nav_shape, desired_nav_dim",
@@ -48,18 +49,16 @@ class TestEBSDDetector:
             ((10, 10, 1), (10, 10), 2),
         ],
     )
-    def test_nav_shape_dim(
-        self, pc1, nav_shape, desired_nav_shape, desired_nav_dim
-    ):
+    def test_nav_shape_dim(self, pc1, nav_shape, desired_nav_shape, desired_nav_dim):
         """Navigation shape and dimension is derived correctly from PC shape."""
-        det = EBSDDetector(pc=np.tile(pc1, nav_shape))
+        det = kp.detectors.EBSDDetector(pc=np.tile(pc1, nav_shape))
         assert det.navigation_shape == desired_nav_shape
         assert det.navigation_dimension == desired_nav_dim
 
     @pytest.mark.parametrize("pc_type", [list, tuple, np.asarray])
     def test_pc_initialization(self, pc1, pc_type):
         """Initialize PC of valid types."""
-        det = EBSDDetector(pc=pc_type(pc1))
+        det = kp.detectors.EBSDDetector(pc=pc_type(pc1))
         assert isinstance(det.pc, np.ndarray)
 
     @pytest.mark.parametrize(
@@ -69,14 +68,8 @@ class TestEBSDDetector:
         ),
         [
             # fmt: off
-            (
-                (60, 60), 70, 8, [1, 1, 0.5], 16800, 33600, 33600, 3600,
-                (480, 480), 560,
-            ),
-            (
-                (60, 60), 70, 8, [1, 1, 0.7], 23520, 33600, 33600, 3600,
-                (480, 480), 560,
-            ),
+            ((60, 60), 70, 8, [1, 1, 0.5], 16800, 33600, 33600, 3600, (480, 480), 560),
+            ((60, 60), 70, 8, [1, 1, 0.7], 23520, 33600, 33600, 3600, (480, 480), 560),
             (
                 (480, 460), 70, 0.5, [1, 1, 0.7], 11760, 16100, 16800, 220800,
                 (240, 230), 35,
@@ -102,7 +95,7 @@ class TestEBSDDetector:
         px_size_binned,
     ):
         """Initialization yields expected derived values."""
-        detector = EBSDDetector(
+        detector = kp.detectors.EBSDDetector(
             shape=shape, px_size=px_size, binning=binning, pc=pc
         )
         assert detector.specimen_scintillator_distance == ssd
@@ -114,16 +107,17 @@ class TestEBSDDetector:
 
     def test_repr(self, pc1):
         """Expected string representation."""
-        assert repr(
-            EBSDDetector(shape=(1, 2), px_size=3, binning=4, tilt=5, pc=pc1)
-        ) == (
-            "EBSDDetector (1, 2), px_size 3 um, binning 4, tilt 5, pc "
+        det = kp.detectors.EBSDDetector(
+            shape=(1, 2), px_size=3, binning=4, tilt=5, azimuthal=2, pc=pc1
+        )
+        assert repr(det) == (
+            "EBSDDetector (1, 2), px_size 3 um, binning 4, tilt 5, azimuthal 2, pc "
             "(0.421, 0.779, 0.505)"
         )
 
     def test_deepcopy(self, pc1):
         """Yields the expected parameters and an actual deep copy."""
-        detector1 = EBSDDetector(pc=pc1)
+        detector1 = kp.detectors.EBSDDetector(pc=pc1)
         detector2 = detector1.deepcopy()
         detector1.pcx += 0.1
         assert np.allclose(detector1.pcx, 0.521)
@@ -134,7 +128,7 @@ class TestEBSDDetector:
         ny, nx = (2, 3)
         nav_shape = (ny, nx)
         n = ny * nx
-        detector = EBSDDetector(pc=np.tile(pc1, nav_shape + (1,)))
+        detector = kp.detectors.EBSDDetector(pc=np.tile(pc1, nav_shape + (1,)))
         assert detector.navigation_shape == nav_shape
 
         new_pc = np.zeros(nav_shape + (3,))
@@ -156,7 +150,9 @@ class TestEBSDDetector:
     )
     def test_pc_average(self, pc, desired_pc_average):
         """Calculation of PC average."""
-        assert np.allclose(EBSDDetector(pc=pc).pc_average, desired_pc_average)
+        assert np.allclose(
+            kp.detectors.EBSDDetector(pc=pc).pc_average, desired_pc_average
+        )
 
     @pytest.mark.parametrize(
         "pc, desired_nav_shape, desired_nav_ndim",
@@ -166,11 +162,9 @@ class TestEBSDDetector:
             (np.arange(30).reshape((2, 5, 3)), (10,), 1),
         ],
     )
-    def test_set_navigation_shape(
-        self, pc, desired_nav_shape, desired_nav_ndim
-    ):
+    def test_set_navigation_shape(self, pc, desired_nav_shape, desired_nav_ndim):
         """Change shape of PC array."""
-        detector = EBSDDetector(pc=pc)
+        detector = kp.detectors.EBSDDetector(pc=pc)
         detector.navigation_shape = desired_nav_shape
         assert detector.navigation_shape == desired_nav_shape
         assert detector.navigation_dimension == desired_nav_ndim
@@ -178,24 +172,24 @@ class TestEBSDDetector:
 
     def test_set_navigation_shape_raises(self, pc1):
         """Desired error message."""
-        detector = EBSDDetector(pc=pc1)
+        detector = kp.detectors.EBSDDetector(pc=pc1)
         with pytest.raises(ValueError, match="A maximum dimension of 2"):
             detector.navigation_shape = (1, 2, 3)
 
     @pytest.mark.parametrize(
         "shape, desired_x_range, desired_y_range",
         [
-            ((60, 60), [-0.833828, 1.1467617], [-0.4369182, 1.54367201]),
-            ((510, 510), [-0.833828, 1.1467617], [-0.4369182, 1.54367201]),
-            ((1, 1), [-0.833828, 1.1467617], [-0.4369182, 1.54367201]),
-            ((480, 640), [-0.6253713, 0.860071], [-0.4369182, 1.54367201]),
+            ((60, 60), [-0.833828, 1.146762], [-0.436918, 1.543672]),
+            ((510, 510), [-0.833828, 1.146762], [-0.436918, 1.543672]),
+            ((1, 1), [-0.833828, 1.146762], [-0.436918, 1.543672]),
+            ((480, 640), [-1.111771, 1.529016], [-0.436918, 1.543672]),
         ],
     )
     def test_gnomonic_range(self, pc1, shape, desired_x_range, desired_y_range):
         """Gnomonic x/y range, x depends on aspect ratio."""
-        detector = EBSDDetector(shape=shape, pc=pc1)
-        assert np.allclose(detector.x_range, desired_x_range)
-        assert np.allclose(detector.y_range, desired_y_range)
+        detector = kp.detectors.EBSDDetector(shape=shape, pc=pc1)
+        assert np.allclose(detector.x_range, desired_x_range, atol=1e-6)
+        assert np.allclose(detector.y_range, desired_y_range, atol=1e-6)
 
     @pytest.mark.parametrize(
         "shape, desired_x_scale, desired_y_scale",
@@ -203,12 +197,12 @@ class TestEBSDDetector:
             ((60, 60), 0.033569, 0.033569),
             ((510, 510), 0.003891, 0.003891),
             ((1, 1), 1.980590, 1.980590),
-            ((480, 640), 0.002324, 0.004134),
+            ((480, 640), 0.004133, 0.004135),
         ],
     )
     def test_gnomonic_scale(self, pc1, shape, desired_x_scale, desired_y_scale):
-        """Gnomonic x/y scale."""
-        detector = EBSDDetector(shape=shape, pc=pc1)
+        """Gnomonic (x, y) scale."""
+        detector = kp.detectors.EBSDDetector(shape=shape, pc=pc1)
         assert np.allclose(detector.x_scale, desired_x_scale, atol=1e-6)
         assert np.allclose(detector.y_scale, desired_y_scale, atol=1e-6)
 
@@ -221,7 +215,7 @@ class TestEBSDDetector:
                 59.2,
                 8,
                 4,
-                [0.50726, 0.26208, 0.55849],
+                [0.50726, 0.26208, 0.55488809122],
             ),
             (
                 (60, 60),
@@ -229,15 +223,15 @@ class TestEBSDDetector:
                 59.2,
                 8,
                 5,
-                [0.50726, 0.26208, 0.55849],
+                [0.50726, 0.26208, 0.55489],
             ),
             (
                 (61, 61),
-                [-10.632, 145.5187, 19918.9],
+                [-10.6320, 145.5187, 19918.9],
                 59.2,
                 8,
-                4,
-                [0.47821, 0.20181, 0.68948],
+                5,
+                [0.52178688525, 0.20180594262, 0.68948341272],
             ),
             (
                 (61, 61),
@@ -252,27 +246,25 @@ class TestEBSDDetector:
                 [-0.55, -13.00, 16075.2],
                 50,
                 6,
-                4,
-                [0.4991, 0.5271, 0.6698],
+                5,
+                [0.50153, 0.52708, 0.66980],
             ),
             (
                 (80, 60),
                 [0.55, -13.00, 16075.2],
                 50,
                 6,
-                5,
-                [0.4991, 0.5271, 0.6698],
+                4,
+                [0.50153, 0.52708, 0.66980],
             ),
             ((480, 640), [0, 0, 15000], 50, 1, 5, [0.5, 0.5, 0.625]),
         ],
     )
-    def test_set_pc_from_emsoft(
-        self, shape, pc, px_size, binning, version, desired_pc
-    ):
+    def test_set_pc_from_emsoft(self, shape, pc, px_size, binning, version, desired_pc):
         """PC EMsoft -> Bruker -> EMsoft, also checking to_tsl() and
         to_bruker().
         """
-        det = EBSDDetector(
+        det = kp.detectors.EBSDDetector(
             shape=shape,
             pc=pc,
             px_size=px_size,
@@ -280,45 +272,52 @@ class TestEBSDDetector:
             convention=f"emsoft{version}",
         )
 
-        assert np.allclose(det.pc, desired_pc, atol=1e-2)
-        assert np.allclose(det.pc_emsoft(version=version), pc, atol=1e-2)
-        assert np.allclose(det.pc_bruker(), desired_pc, atol=1e-2)
+        assert np.allclose(det.pc, desired_pc, atol=1e-5)
+        assert np.allclose(det.pc_emsoft(version=version), pc, atol=1e-5)
+        assert np.allclose(det.pc_bruker(), desired_pc, atol=1e-5)
 
         pc_tsl = deepcopy(det.pc)
         pc_tsl[..., 1] = 1 - pc_tsl[..., 1]
-        assert np.allclose(det.pc_tsl(), pc_tsl, atol=1e-2)
-        assert np.allclose(det.pc_oxford(), pc_tsl, atol=1e-2)
+        pc_tsl[..., 1:] /= det.aspect_ratio
+        assert np.allclose(det.pc_tsl(), pc_tsl, atol=1e-5)
+        assert np.allclose(det.pc_oxford(), pc_tsl, atol=1e-5)
 
     def test_set_pc_from_emsoft_no_version(self):
         """PC EMsoft -> Bruker, no EMsoft version specified gives v5."""
         assert np.allclose(
-            EBSDDetector(
+            kp.detectors.EBSDDetector(
                 shape=(60, 60),
-                pc=[-3.4848, 114.2016, 15767.7],
+                pc=[3.4848, 114.2016, 15767.7],
                 px_size=59.2,
                 binning=8,
                 convention="emsoft",
             ).pc,
-            [0.50726, 0.26208, 0.55849],
-            atol=1e-2,
+            [0.49274, 0.26208, 0.55489],
+            atol=1e-5,
         )
 
     @pytest.mark.parametrize(
-        "pc, convention, desired_pc",
+        "shape, pc, convention, desired_pc",
         [
-            ([0.35, 1, 0.65], "tsl", [0.35, 0, 0.65]),
-            ([0.25, 0, 0.75], "oxford", [0.25, 1, 0.75]),
-            ([0.1, 0.2, 0.3], "amatek", [0.1, 0.8, 0.3]),
-            ([0.6, 0.6, 0.6], "edax", [0.6, 0.4, 0.6]),
+            ((60, 60), [0.35, 1, 0.65], "tsl", [0.35, 0, 0.65]),
+            ((60, 80), [0.35, 1, 0.65], "tsl", [0.35, -0.33, 0.87]),
+            ((60, 60), [0.25, 0, 0.75], "oxford", [0.25, 1, 0.75]),
+            ((60, 80), [0.25, 0, 0.75], "oxford", [0.25, 1, 1]),
+            ((60, 60), [0.1, 0.2, 0.3], "amatek", [0.1, 0.8, 0.3]),
+            ((60, 80), [0.1, 0.2, 0.3], "amatek", [0.1, 0.73, 0.4]),
+            ((60, 60), [0.6, 0.6, 0.6], "edax", [0.6, 0.4, 0.6]),
+            ((60, 80), [0.6, 0.6, 0.6], "edax", [0.6, 0.2, 0.8]),
         ],
     )
-    def test_set_pc_from_tsl_oxford(self, pc, convention, desired_pc):
+    def test_set_pc_from_tsl_oxford(self, shape, pc, convention, desired_pc):
         """PC TSL -> Bruker -> TSL."""
-        det = EBSDDetector(pc=pc, convention=convention)
-        assert np.allclose(det.pc, desired_pc)
-        assert np.allclose(det.pc_tsl(), pc)
+        det = kp.detectors.EBSDDetector(shape=shape, pc=pc, convention=convention)
+        assert np.allclose(det.pc, desired_pc, atol=1e-2)
+        assert np.allclose(det.pc_tsl(), pc, atol=1e-3)
         assert np.allclose(
-            EBSDDetector(pc=det.pc_tsl(), convention="tsl").pc_tsl(), pc
+            kp.detectors.EBSDDetector(pc=det.pc_tsl(), convention="tsl").pc_tsl(),
+            pc,
+            atol=1e-2,
         )
 
     @pytest.mark.parametrize(
@@ -332,13 +331,13 @@ class TestEBSDDetector:
     )
     def test_set_pc_from_bruker(self, pc, convention):
         """PC Bruker returns Bruker PC, which is the default."""
-        det = EBSDDetector(pc=pc, convention=convention)
+        det = kp.detectors.EBSDDetector(pc=pc, convention=convention)
         assert np.allclose(det.pc, pc)
 
     def test_set_pc_convention_raises(self, pc1):
         """Wrong convention raises."""
         with pytest.raises(ValueError, match="Projection center convention "):
-            _ = EBSDDetector(pc=pc1, convention="nordif")
+            _ = kp.detectors.EBSDDetector(pc=pc1, convention="nordif")
 
     @pytest.mark.parametrize(
         "coordinates, show_pc, pattern, zoom, desired_label",
@@ -354,13 +353,11 @@ class TestEBSDDetector:
         """Plotting detector works, *not* checking whether Matplotlib
         displays the pattern correctly.
         """
-        _, ax = detector.plot(
-            coordinates=coordinates,
-            show_pc=show_pc,
-            pattern=pattern,
-            zoom=zoom,
-            return_fig_ax=True,
-        )
+        kwargs = dict(show_pc=show_pc, pattern=pattern, zoom=zoom, return_figure=True)
+        if coordinates is not None:
+            kwargs["coordinates"] = coordinates
+        fig = detector.plot(**kwargs)
+        ax = fig.axes[0]
         assert ax.get_xlabel() == f"x {desired_label}"
         assert ax.get_ylabel() == f"y {desired_label}"
         if isinstance(pattern, np.ndarray):
@@ -379,25 +376,41 @@ class TestEBSDDetector:
         self, detector, gnomonic_angles, gnomonic_circles_kwargs
     ):
         """Draw gnomonic circles."""
-        _, ax = detector.plot(
+        fig = detector.plot(
             coordinates="gnomonic",
             draw_gnomonic_circles=True,
             gnomonic_angles=gnomonic_angles,
             gnomonic_circles_kwargs=gnomonic_circles_kwargs,
-            return_fig_ax=True,
+            return_figure=True,
         )
+        ax = fig.axes[0]
+
+        # Correct number of gnomonic circles are added to the patches
+        num_circles = 0
+        num_rectangles = 0
+        for patch in ax.patches:
+            if isinstance(patch, plt.Circle):
+                num_circles += 1
+            elif isinstance(patch, plt.Rectangle):
+                num_rectangles += 1
+
         if gnomonic_angles is None:
-            n_angles = 8
+            assert num_circles == 8  # Default
         else:
-            n_angles = len(gnomonic_angles)
-        assert len(ax.artists) == n_angles
+            assert num_circles == len(gnomonic_angles)
+        if Version(matplotlib.__version__) < Version("3.5.0"):  # pragma: no cover
+            for artist in ax.artists:
+                if isinstance(artist, plt.Rectangle):
+                    num_rectangles += 1
+        assert num_rectangles == 1
+
+        # Circles are coloured correctly
         if gnomonic_circles_kwargs is None:
             edgecolor = "k"
         else:
             edgecolor = gnomonic_circles_kwargs["edgecolor"]
-        assert np.allclose(
-            ax.artists[0]._edgecolor[:3], mcolors.to_rgb(edgecolor)
-        )
+        assert np.allclose(ax.patches[1]._edgecolor[:3], mcolors.to_rgb(edgecolor))
+
         plt.close("all")
 
     @pytest.mark.parametrize("pattern", [np.ones((61, 61)), np.ones((59, 60))])
@@ -412,14 +425,14 @@ class TestEBSDDetector:
     )
     def test_plot_pattern_kwargs(self, detector, pattern_kwargs):
         """Pass pattern kwargs to imshow()."""
-        _, ax = detector.plot(
+        fig = detector.plot(
             pattern=np.ones((60, 60)),
             pattern_kwargs=pattern_kwargs,
-            return_fig_ax=True,
+            return_figure=True,
         )
         if pattern_kwargs is None:
             pattern_kwargs = {"cmap": "gray"}
-        assert ax.images[0].cmap.name == pattern_kwargs["cmap"]
+        assert fig.axes[0].images[0].cmap.name == pattern_kwargs["cmap"]
         plt.close("all")
 
     @pytest.mark.parametrize(
@@ -427,13 +440,11 @@ class TestEBSDDetector:
     )
     def test_plot_pc_kwargs(self, detector, pc_kwargs):
         """Pass PC kwargs to scatter()."""
-        _, ax = detector.plot(
-            show_pc=True, pc_kwargs=pc_kwargs, return_fig_ax=True
-        )
+        fig = detector.plot(show_pc=True, pc_kwargs=pc_kwargs, return_figure=True)
         if pc_kwargs is None:
             pc_kwargs = {"facecolor": "gold"}
         assert np.allclose(
-            ax.collections[0].get_facecolor().squeeze()[:3],
+            fig.axes[0].collections[0].get_facecolor().squeeze()[:3],
             mcolors.to_rgb(pc_kwargs["facecolor"]),
         )
         plt.close("all")
@@ -441,10 +452,10 @@ class TestEBSDDetector:
     @pytest.mark.parametrize("coordinates", ["detector", "gnomonic"])
     def test_plot_extent(self, detector, coordinates):
         """Correct detector extent."""
-        _, ax = detector.plot(
+        fig = detector.plot(
             coordinates=coordinates,
             pattern=np.ones(detector.shape),
-            return_fig_ax=True,
+            return_figure=True,
         )
         if coordinates == "gnomonic":
             desired_data_lim = np.concatenate(
@@ -455,7 +466,7 @@ class TestEBSDDetector:
             )
         else:
             desired_data_lim = np.sort(detector.bounds)
-        assert np.allclose(ax.dataLim.bounds, desired_data_lim)
+        assert np.allclose(fig.axes[0].dataLim.bounds, desired_data_lim)
         plt.close("all")
 
     @pytest.mark.parametrize(
@@ -476,7 +487,16 @@ class TestEBSDDetector:
             ),
             (
                 (10,),
-                [(4,), (10,), (10,), (10, 2), (10, 2), (10,), (10,), (10, 4),],
+                [
+                    (4,),
+                    (10,),
+                    (10,),
+                    (10, 2),
+                    (10, 2),
+                    (10,),
+                    (10,),
+                    (10, 4),
+                ],
             ),
             (
                 (10, 10),
@@ -521,7 +541,7 @@ class TestEBSDDetector:
     )
     def test_property_shapes(self, shape, desired_shapes):
         """Expected property shapes when varying navigation shape."""
-        det = EBSDDetector(pc=np.ones(shape + (3,)))
+        det = kp.detectors.EBSDDetector(pc=np.ones(shape + (3,)))
         assert det.bounds.shape == desired_shapes[0]
         assert det.x_min.shape == desired_shapes[1]
         assert det.y_min.shape == desired_shapes[2]

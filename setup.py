@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -41,24 +40,45 @@ with open("kikuchipy/release.py") as fid:
 # Projects with optional features for building the documentation and running
 # tests. From setuptools:
 # https://setuptools.readthedocs.io/en/latest/setuptools.html#declaring-extras-optional-features-with-their-own-dependencies
+# fmt: off
 extra_feature_requirements = {
     "doc": [
-        "nbsphinx >= 0.7",
-        "sphinx >= 3.0.2",
-        "sphinx-rtd-theme >= 0.4.3",
-        "sphinx-copybutton >= 0.2.5",
-        "sphinx-autodoc-typehints >= 1.10.3",
-        "sphinx-gallery >= 0.6",
-        "sphinxcontrib-bibtex >= 1.0",
+        "furo",
+        "memory_profiler",
+        "nbsphinx                   >= 0.7",
+        "numpydoc",
+        "pyebsdindex                >= 0.1",
+        "pythreejs",  # Used in the docs by PyVista
+        "pyvista",
+        "sphinx                     >= 3.0.2",
+        "sphinx-codeautolink[ipython]",
+        "sphinx-copybutton          >= 0.2.5",
+        "sphinx-design",
+        "sphinx-gallery             < 0.11",
+        "sphinx-last-updated-by-git",
+        "sphinxcontrib-bibtex       >= 1.0",
     ],
-    "tests": ["coverage >= 5.0", "pytest >= 5.4", "pytest-cov >= 2.8.1"],
+    "tests": [
+        "coverage                   >= 5.0",
+        "numpydoc",
+        "pytest                     >= 5.4",
+        "pytest-cov                 >= 2.8.1",
+        "pytest-xdist",
+    ],
+    "viz": [
+        "pyvista",
+    ],
 }
+# fmt: on
 
-# Create a development project, including both the doc and tests projects
+# Create a development project including all extra dependencies
 extra_feature_requirements["dev"] = [
-    "black >= 19.3b0",
+    "black[jupyter]",
+    "manifix",
+    "outdated",
     "pre-commit >= 1.16",
 ] + list(chain(*list(extra_feature_requirements.values())))
+
 
 setup(
     # Package description
@@ -71,13 +91,14 @@ setup(
         "Processing and analysis of electron backscatter diffraction (EBSD) "
         "patterns."
     ),
-    long_description=open("README.rst").read(),
-    long_description_content_type="text/x-rst",
+    long_description=open("README.md", encoding="utf-8").read(),
+    long_description_content_type="text/markdown",
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         (
@@ -116,29 +137,31 @@ setup(
     },
     # Dependencies
     extras_require=extra_feature_requirements,
+    # fmt: off
     install_requires=[
-        "dask[array] >= 2.18",
-        "diffsims >= 0.4",
-        "hyperspy >= 1.5.2",
-        "h5py >= 2.10",
-        "matplotlib >= 3.3",
-        "numpy >= 1.19",
-        "numba >= 0.48",
-        "orix >= 0.5.1",
-        "pooch >= 0.13",
-        "psutil",
-        "tqdm >= 0.5.2",
-        "scikit-image >= 0.16.2",
+        "dask[array]        >= 2021.8.1",
+        "diffpy.structure   >= 3",
+        "diffsims           >= 0.5",
+        "hyperspy           >= 1.7.1",
+        "h5py               >= 2.10",
+        "matplotlib         >= 3.3",
+        "numba              >= 0.48",
+        "numpy              >= 1.19",
+        "orix               >= 0.9",
+        "pooch              >= 0.13",
+        "tqdm               >= 0.5.2",
+        "scikit-image       >= 0.16.2",
         "scikit-learn",
-        "scipy",
+        "scipy              >= 1.7",
     ],
+    # fmt: on
     entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},
     # Files to include when distributing package
     packages=find_packages(),
     package_dir={"kikuchipy": "kikuchipy"},
     include_package_data=True,
     package_data={
-        "": ["LICENSE", "README.rst"],
+        "": ["LICENSE", "README.md"],
         "kikuchipy": ["*.py", "hyperspy_extension.yaml", "data/*"],
     },
 )

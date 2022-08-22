@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -16,18 +15,41 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Input/output plugins."""
+"""Input/output plugins.
 
-from kikuchipy.io.plugins import (
-    emsoft_ebsd,
-    emsoft_ebsd_master_pattern,
-    h5ebsd,
-    nordif,
-)
+.. currentmodule:: kikuchipy.io.plugins
+
+.. rubric:: Modules
+
+.. autosummary::
+    :toctree: ../generated/
+    :template: custom-module-template.rst
+
+    emsoft_ebsd
+    emsoft_ebsd_master_pattern
+    h5ebsd
+    nordif
+    nordif_calibration_patterns
+    oxford_binary
+"""
 
 __all__ = [
     "emsoft_ebsd",
     "emsoft_ebsd_master_pattern",
     "h5ebsd",
     "nordif",
+    "nordif_calibration_patterns",
+    "oxford_binary",
 ]
+
+
+def __dir__():
+    return sorted(__all__)
+
+
+def __getattr__(name):
+    if name in __all__:
+        import importlib
+
+        return importlib.import_module("." + name, __name__)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

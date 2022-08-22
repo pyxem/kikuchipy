@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -17,8 +16,8 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 # fmt: off
-registry = {
-    "data/kikuchipy/patterns.h5": "7a99ce88174c725f5407b6fcc1eab0c4255694ca8e6029fde7f372f3ab40897f",
+registry_hashes = {
+    "data/kikuchipy_h5ebsd/patterns.h5": "7a99ce88174c725f5407b6fcc1eab0c4255694ca8e6029fde7f372f3ab40897f",
     "data/emsoft_ebsd_master_pattern/ni_mc_mp_20kv_uint8_gzip_opts9.h5": "8a7c1fb471d9ce750f0332a154e87cf41eed7529be508548e0c0f51ec6f92bc2",
     "data/nickel_ebsd_large/patterns.h5": "3ea6e729c3adfdea9dce461806f011c24bf70b011dcf4d90a23a6aa29f15872c",
     "data/silicon_ebsd_moving_screen/si_in.h5": "de57b8ef7213420af694c191c939f44818979b3db9873e74cc85cabde824b7eb",

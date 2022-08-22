@@ -2,39 +2,96 @@
 kikuchipy
 =========
 
-.. include:: ../README.rst
+A library for processing, simulating and analyzing electron backscatter diffraction
+(EBSD) patterns in Python, built on the tools for multi-dimensional data analysis
+provided by the HyperSpy library.
 
 .. toctree::
+    :caption: Learning resources
     :hidden:
-    :caption: Getting started
+
+    examples/index.rst
+    tutorials/index.rst
+    Reference <reference/index.rst>
+    related_projects.rst
+    bibliography.rst
+    open_datasets.rst
+
+.. toctree::
+    :caption: Help & development
+    :hidden:
 
     installation.rst
-
-.. nbgallery::
-    :caption: User guide
-
-    load_save_data.ipynb
-    reference_frames.ipynb
-    change_navigation_signal_shapes.ipynb
-    pattern_processing.ipynb
-    visualizing_patterns.ipynb
-    feature_maps.ipynb
-    virtual_backscatter_electron_imaging.ipynb
-    pattern_matching.ipynb
-    geometrical_ebsd_simulations.ipynb
-    multivariate_analysis.ipynb
-    metadata_structure.ipynb
-
-.. toctree::
-    :hidden:
-    :caption: Help & reference
-
-    reference.rst
-    bibliography.rst
-    kikuchipy_h5ebsd_specification.rst
-    contributing.rst
-    open_datasets.rst
     changelog.rst
-    cite.rst
-    related_projects.rst
+    contributing.rst
+    License <https://github.com/pyxem/kikuchipy/blob/develop/LICENSE>
     Code of Conduct <code_of_conduct.rst>
+
+Installation
+============
+
+kikuchipy can be installed with `pip <https://pypi.org/project/kikuchipy>`__ or
+`conda <https://anaconda.org/conda-forge/kikuchipy>`__:
+
+.. tab-set::
+
+    .. tab-item:: pip
+
+        .. code-block:: bash
+
+            pip install kikuchipy
+
+    .. tab-item:: conda
+
+        .. code-block:: bash
+
+            conda install kikuchipy -c conda-forge
+
+Further details are available in the :doc:`installation guide <installation>`.
+
+Learning resources
+==================
+
+.. See: https://sphinx-design.readthedocs.io/en/furo-theme/grids.html
+.. grid:: 2 3 3 3
+    :gutter: 2
+
+    .. grid-item-card:: Examples
+        :img-top: _static/image/colormap_banners/banner0.png
+        :link: examples/index
+        :link-type: doc
+
+        Short recipies to common tasks using kikuchipy.
+
+    .. grid-item-card:: Tutorials
+        :img-top: _static/image/colormap_banners/banner1.png
+        :link: tutorials/index
+        :link-type: doc
+
+        In-depth guides for using kikuchipy.
+
+    .. grid-item-card:: Reference
+        :img-top: _static/image/colormap_banners/banner2.png
+        :link: reference/index
+        :link-type: doc
+
+        Descriptions of functions, modules, and objects in kikuchipy.
+
+Contributing
+============
+
+kikuchipy is a community project maintained for and by its users. There are many ways
+you can help!
+
+- Help other users in `our GitHub discussions
+  <https://github.com/pyxem/kikuchipy/discussions>`__ or `on Gitter
+  <https://gitter.im/pyxem/kikuchipy>`__
+- report a bug or request a feature `on GitHub
+  <https://github.com/pyxem/kikuchipy/issues>`__
+- or improve the :doc:`documentation and code <contributing>`
+
+Citing kikuchipy
+================
+
+If you are using kikuchipy in your scientific research, please help our scientific
+visibility by citing the Zenodo DOI: https://doi.org/10.5281/zenodo.3597646.

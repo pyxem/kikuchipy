@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -18,11 +17,18 @@
 
 """Functions for operating on :class:`numpy.ndarray` or
 :class:`dask.array.Array` chunks of EBSD patterns.
+
+.. warning::
+
+    This module will be become private for internal use only in v0.7.
+    If you need to process multiple EBSD patterns at once, please do
+    this using :class:`~kikuchipy.signals.EBSD`.
 """
 
 from typing import Union, Optional, Tuple, List
 
 import dask.array as da
+from numba import njit
 import numpy as np
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.exposure import equalize_adapthist
@@ -31,6 +37,8 @@ from skimage.util.dtype import dtype_range
 import kikuchipy.pattern._pattern as pattern_processing
 import kikuchipy.filters.fft_barnes as barnes
 from kikuchipy.filters.window import Window
+from kikuchipy.pattern._pattern import _rescale_with_min_max
+from kikuchipy._util import deprecated
 
 
 def rescale_intensity(
@@ -38,7 +46,7 @@ def rescale_intensity(
     in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
     out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
     dtype_out: Union[
-        None, np.dtype, Tuple[int, int], Tuple[float, float]
+        str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
     ] = None,
     percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
 ) -> Union[np.ndarray, da.Array]:
@@ -73,6 +81,7 @@ def rescale_intensity(
     rescaled_patterns : numpy.ndarray
         Rescaled patterns.
     """
+    dtype_out = np.dtype(dtype_out)
     rescaled_patterns = np.empty_like(patterns, dtype=dtype_out)
 
     for nav_idx in np.ndindex(patterns.shape[:-2]):
@@ -91,6 +100,11 @@ def rescale_intensity(
     return rescaled_patterns
 
 
+@deprecated(
+    since=0.6,
+    removal=0.7,
+    alternative="kikuchipy.signals.EBSD.remove_static_background",
+)
 def remove_static_background(
     patterns: Union[np.ndarray, da.Array],
     static_bg: Union[np.ndarray, da.Array],
@@ -99,7 +113,7 @@ def remove_static_background(
     in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
     out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
     dtype_out: Union[
-        None, np.dtype, Tuple[int, int], Tuple[float, float]
+        str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
     ] = None,
 ) -> np.ndarray:
     """Remove the static background in a chunk of EBSD patterns.
@@ -142,6 +156,8 @@ def remove_static_background(
     """
     if dtype_out is None:
         dtype_out = patterns.dtype.type
+    elif not isinstance(dtype_out, tuple):
+        dtype_out = np.dtype(dtype_out).type
 
     if out_range is None:
         out_range = dtype_range[dtype_out]
@@ -176,9 +192,7 @@ def remove_static_background(
 def get_dynamic_background(
     patterns: Union[np.ndarray, da.Array],
     filter_func: Union[gaussian_filter, barnes.fft_filter],
-    dtype_out: Union[
-        None, np.dtype, Tuple[int, int], Tuple[float, float]
-    ] = None,
+    dtype_out: Union[str, np.dtype, type, None] = None,
     **kwargs,
 ) -> np.ndarray:
     """Obtain the dynamic background in a chunk of EBSD patterns.
@@ -195,7 +209,7 @@ def get_dynamic_background(
     dtype_out
         Data type of background patterns. If None (default), it is set
         to input patterns' data type.
-    kwargs :
+    **kwargs
         Keyword arguments passed to the Gaussian blurring function
         passed to `filter_func`.
 
@@ -205,7 +219,9 @@ def get_dynamic_background(
         Large scale variations in the input EBSD patterns.
     """
     if dtype_out is None:
-        dtype_out = patterns.dtype.type
+        dtype_out = patterns.dtype
+    else:
+        dtype_out = np.dtype(dtype_out)
 
     background = np.empty_like(patterns, dtype=dtype_out)
 
@@ -215,13 +231,18 @@ def get_dynamic_background(
     return background
 
 
+@deprecated(
+    since=0.6,
+    removal=0.7,
+    alternative="kikuchipy.signals.EBSD.remove_dynamic_background",
+)
 def remove_dynamic_background(
     patterns: Union[np.ndarray, da.Array],
     filter_func: Union[gaussian_filter, barnes.fft_filter],
     operation_func: Union[np.subtract, np.divide],
     out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
     dtype_out: Union[
-        None, np.dtype, Tuple[int, int], Tuple[float, float]
+        str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
     ] = None,
     **kwargs,
 ) -> np.ndarray:
@@ -250,22 +271,24 @@ def remove_dynamic_background(
     dtype_out
         Data type of corrected patterns. If None (default), it is set to
         input patterns' data type.
-    kwargs :
+    **kwargs
         Keyword arguments passed to the Gaussian blurring function
         passed to `filter_func`.
 
     Returns
     -------
-    corrected_patterns : numpy.ndarray
+    corrected_patterns
         Dynamic background corrected patterns.
 
     See Also
     --------
-    kikuchipy.signals.ebsd.EBSD.remove_dynamic_background
-    kikuchipy.util.pattern.remove_dynamic_background
+    kikuchipy.signals.ebsd.EBSD.remove_dynamic_background,
+    kikuchipy.pattern.remove_dynamic_background
     """
     if dtype_out is None:
         dtype_out = patterns.dtype.type
+    elif not isinstance(dtype_out, tuple):
+        dtype_out = np.dtype(dtype_out).type
 
     if out_range is None:
         out_range = dtype_range[dtype_out]
@@ -285,10 +308,70 @@ def remove_dynamic_background(
 
         # Rescale intensities
         corrected_patterns[nav_idx] = pattern_processing.rescale_intensity(
-            pattern=corrected_pattern, out_range=out_range, dtype_out=dtype_out,
+            pattern=corrected_pattern,
+            out_range=out_range,
+            dtype_out=dtype_out,
         )
 
     return corrected_patterns
+
+
+@deprecated(
+    since=0.6, removal=0.7, alternative="kikuchipy.signals.EBSD.get_image_quality"
+)
+def get_image_quality(
+    patterns: Union[np.ndarray, da.Array],
+    frequency_vectors: Optional[np.ndarray] = None,
+    inertia_max: Union[None, int, float] = None,
+    normalize: bool = True,
+) -> np.ndarray:
+    """Compute the image quality in a chunk of EBSD patterns.
+
+    The image quality is calculated based on the procedure defined by
+    Krieger Lassen [Lassen1994]_.
+
+    Parameters
+    ----------
+    patterns
+        EBSD patterns.
+    frequency_vectors
+        Integer 2D array with values corresponding to the weight given
+        each FFT spectrum frequency component. If None (default), these
+        are calculated from
+        :func:`~kikuchipy.util.pattern.fft_frequency_vectors`.
+    inertia_max
+        Maximum inertia of the FFT power spectrum of the image. If None
+        (default), this is calculated from the `frequency_vectors`.
+    normalize
+        Whether to normalize patterns to a mean of zero and standard
+        deviation of 1 before calculating the image quality. Default
+        is True.
+
+    Returns
+    -------
+    image_quality_chunk : numpy.ndarray
+        Image quality of patterns.
+    """
+    dtype_out = np.float64
+
+    image_quality_chunk = np.empty(patterns.shape[:-2], dtype=dtype_out)
+
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        # Get (normalized) pattern
+        if normalize:
+            pattern = pattern_processing.normalize_intensity(pattern=patterns[nav_idx])
+        else:
+            pattern = patterns[nav_idx]
+
+        # Compute image quality
+        image_quality_chunk[nav_idx] = pattern_processing.get_image_quality(
+            pattern=pattern,
+            normalize=False,
+            frequency_vectors=frequency_vectors,
+            inertia_max=inertia_max,
+        )
+
+    return image_quality_chunk
 
 
 def adaptive_histogram_equalization(
@@ -341,70 +424,11 @@ def adaptive_histogram_equalization(
     return equalized_patterns
 
 
-def get_image_quality(
-    patterns: Union[np.ndarray, da.Array],
-    frequency_vectors: Optional[np.ndarray] = None,
-    inertia_max: Union[None, int, float] = None,
-    normalize: bool = True,
-) -> np.ndarray:
-    """Compute the image quality in a chunk of EBSD patterns.
-
-    The image quality is calculated based on the procedure defined by
-    Krieger Lassen [Lassen1994]_.
-
-    Parameters
-    ----------
-    patterns
-        EBSD patterns.
-    frequency_vectors
-        Integer 2D array with values corresponding to the weight given
-        each FFT spectrum frequency component. If None (default), these
-        are calculated from
-        :func:`~kikuchipy.util.pattern.fft_frequency_vectors`.
-    inertia_max
-        Maximum inertia of the FFT power spectrum of the image. If None
-        (default), this is calculated from the `frequency_vectors`.
-    normalize
-        Whether to normalize patterns to a mean of zero and standard
-        deviation of 1 before calculating the image quality. Default
-        is True.
-
-    Returns
-    -------
-    image_quality_chunk : numpy.ndarray
-        Image quality of patterns.
-    """
-    dtype_out = np.float64
-
-    image_quality_chunk = np.empty(patterns.shape[:-2], dtype=dtype_out)
-
-    for nav_idx in np.ndindex(patterns.shape[:-2]):
-        # Get (normalized) pattern
-        if normalize:
-            pattern = pattern_processing.normalize_intensity(
-                pattern=patterns[nav_idx]
-            )
-        else:
-            pattern = patterns[nav_idx]
-
-        # Compute image quality
-        image_quality_chunk[nav_idx] = pattern_processing.get_image_quality(
-            pattern=pattern,
-            normalize=False,
-            frequency_vectors=frequency_vectors,
-            inertia_max=inertia_max,
-        )
-
-    return image_quality_chunk
-
-
 def fft_filter(
     patterns: np.ndarray,
     filter_func: Union[pattern_processing.fft_filter, barnes._fft_filter],
     transfer_function: Union[np.ndarray, Window],
-    dtype_out: Union[
-        None, np.dtype, Tuple[int, int], Tuple[float, float]
-    ] = None,
+    dtype_out: Union[str, np.dtype, type, None] = None,
     **kwargs,
 ) -> np.ndarray:
     """Filter a chunk of EBSD patterns in the frequency domain.
@@ -428,16 +452,18 @@ def fft_filter(
     dtype_out
         Data type of output patterns. If None (default), it is set to
         the input patterns' data type.
-    kwargs :
+    **kwargs
         Keyword arguments passed to the `filter_func`.
 
     Returns
     -------
-    filtered_patterns : numpy.ndarray
+    filtered_patterns
         Filtered EBSD patterns.
     """
     if dtype_out is None:
         dtype_out = patterns.dtype.type
+    else:
+        dtype_out = np.dtype(dtype_out)
 
     filtered_patterns = np.empty_like(patterns, dtype=dtype_out)
 
@@ -458,7 +484,7 @@ def normalize_intensity(
     patterns: Union[np.ndarray, da.Array],
     num_std: int = 1,
     divide_by_square_root: bool = False,
-    dtype_out: Optional[np.dtype] = None,
+    dtype_out: Union[str, np.dtype, type, None] = None,
 ) -> np.ndarray:
     """Normalize intensities in a chunk of EBSD patterns to a mean of
     zero with a given standard deviation.
@@ -479,17 +505,19 @@ def normalize_intensity(
 
     Returns
     -------
-    normalized_patterns : numpy.ndarray
+    normalized_patterns
         Normalized patterns.
 
     Notes
     -----
     Data type should always be changed to floating point, e.g.
-    ``np.float32`` with :meth:`numpy.ndarray.astype`, before normalizing
+    ``"float32"`` with :meth:`numpy.ndarray.astype`, before normalizing
     the intensities.
     """
     if dtype_out is None:
-        dtype_out = patterns.dtype.type
+        dtype_out = patterns.dtype
+    else:
+        dtype_out = np.dtype(dtype_out)
 
     normalized_patterns = np.empty_like(patterns, dtype=dtype_out)
 
@@ -507,7 +535,7 @@ def average_neighbour_patterns(
     patterns: np.ndarray,
     window_sums: np.ndarray,
     window: Union[np.ndarray, Window],
-    dtype_out: Optional[np.dtype] = None,
+    dtype_out: Union[str, np.dtype, type, None] = None,
 ) -> np.ndarray:
     """Average a chunk of patterns with its neighbours within a window.
 
@@ -530,16 +558,16 @@ def average_neighbour_patterns(
 
     Returns
     -------
-    averaged_patterns : numpy.ndarray
+    averaged_patterns
         Averaged patterns.
     """
     if dtype_out is None:
-        dtype_out = patterns.dtype.type
+        dtype_out = patterns.dtype
+    else:
+        dtype_out = np.dtype(dtype_out)
 
     # Correlate patterns with window
-    correlated_patterns = correlate(
-        patterns.astype(np.float32), weights=window, mode="constant", cval=0,
-    )
+    correlated_patterns = correlate(patterns, weights=window, mode="constant", cval=0)
 
     # Divide convolved patterns by number of neighbours averaged with
     averaged_patterns = np.empty_like(correlated_patterns, dtype=dtype_out)
@@ -550,3 +578,40 @@ def average_neighbour_patterns(
         )
 
     return averaged_patterns
+
+
+def _average_neighbour_patterns(
+    patterns: np.ndarray,
+    window_sums: np.ndarray,
+    window: Union[np.ndarray, Window],
+    dtype_out: np.dtype,
+    omin: float,
+    omax: float,
+) -> np.ndarray:
+    """See docstring of :func:`average_neighbour_patterns`."""
+    patterns = patterns.astype("float32")
+    correlated_patterns = correlate(patterns, weights=window, mode="constant")
+    rescaled_patterns = _rescale_neighbour_averaged_patterns(
+        correlated_patterns, window_sums, dtype_out, omin, omax
+    )
+    return rescaled_patterns
+
+
+@njit(cache=True, fastmath=True, nogil=True)
+def _rescale_neighbour_averaged_patterns(
+    patterns: np.ndarray,
+    window_sums: np.ndarray,
+    dtype_out: np.dtype,
+    omin: float,
+    omax: float,
+) -> np.ndarray:
+    """See docstring of :func:`average_neighbour_patterns`."""
+    rescaled_patterns = np.zeros(patterns.shape, dtype=dtype_out)
+    for nav_idx in np.ndindex(patterns.shape[:-2]):
+        pattern_i = patterns[nav_idx] / window_sums[nav_idx]
+        imin = np.min(pattern_i)
+        imax = np.max(pattern_i)
+        rescaled_patterns[nav_idx] = _rescale_with_min_max(
+            pattern_i, imin, imax, omin, omax
+        )
+    return rescaled_patterns

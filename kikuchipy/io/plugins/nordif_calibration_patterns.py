@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -19,15 +18,18 @@
 """Read support for NORDIF's calibration patterns."""
 
 import os
+from pathlib import Path
 import re
-from typing import List, Tuple
+from typing import List, Tuple, Union
 import warnings
 
 from matplotlib.pyplot import imread
 import numpy as np
 
 from kikuchipy.io.plugins.nordif import get_settings_from_file
-from kikuchipy.signals.util._metadata import metadata_nodes
+
+
+__all__ = ["file_reader"]
 
 
 # Plugin characteristics
@@ -42,35 +44,37 @@ default_extension = 0
 writes = False
 
 
-def file_reader(filename: str, lazy: bool = False) -> List[dict]:
+def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
     """Reader electron backscatter patterns from .bmp files stored in a
     NORDIF project directory, their filenames listed in a text file.
-    
+
     Parameters
     ----------
     filename
         File path to the NORDIF settings text file.
     lazy
         This parameter is not used in this reader.
-   
+
     Returns
     -------
-    scan : list of dicts
+    scan
         Data, axes, metadata and original metadata.
     """
     # Get metadata from setting file
-    ebsd_node = metadata_nodes("ebsd")
     md, omd, _ = get_settings_from_file(filename)
     dirname = os.path.dirname(filename)
 
-    # Read static background image into metadata
+    scan = {}
+    # Read static background pattern, to be passed to EBSD.__init__() to
+    # set the EBSD.static_background property
     static_bg_file = os.path.join(dirname, "Background calibration pattern.bmp")
     try:
-        md.set_item(ebsd_node + ".static_background", imread(static_bg_file))
+        scan["static_background"] = imread(static_bg_file)
     except FileNotFoundError:
+        scan["static_background"] = None
         warnings.warn(
-            f"Could not read static background pattern '{static_bg_file}', "
-            "however it can be added using set_experimental_parameters()."
+            f"Could not read static background pattern '{static_bg_file}', however it "
+            "can be set as 'EBSD.static_background'"
         )
 
     # Set required and other parameters in metadata
@@ -79,7 +83,6 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
     md.set_item("Signal.signal_type", "EBSD")
     md.set_item("Signal.record_by", "image")
 
-    scan = {}
     scan["metadata"] = md.as_dictionary()
     scan["original_metadata"] = omd.as_dictionary()
 
@@ -106,7 +109,7 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
     return [scan]
 
 
-def _get_coordinates(filename: str) -> List[Tuple[int, int]]:
+def _get_coordinates(filename: str) -> List[Tuple[int]]:
     f = open(filename, "r", encoding="latin-1")
     err = "No calibration patterns found in settings file"
     content = f.read().splitlines()
@@ -118,7 +121,7 @@ def _get_coordinates(filename: str) -> List[Tuple[int, int]]:
         raise ValueError(err)
     xy = []
     for line in content[l_start + 1 :]:
-        match = re.search("Calibration \((.*)\)", line)
+        match = re.search(r"Calibration \((.*)\)", line)
         try:
             match = match.group(1)
             match = match.split(",")
@@ -130,9 +133,7 @@ def _get_coordinates(filename: str) -> List[Tuple[int, int]]:
     return xy
 
 
-def _get_patterns(
-    dirname: str, coordinates: List[Tuple[int, int]]
-) -> np.ndarray:
+def _get_patterns(dirname: str, coordinates: List[Tuple[int, int]]) -> np.ndarray:
     patterns = []
     for x, y in coordinates:
         fname_pattern = f"Calibration ({x},{y}).bmp"

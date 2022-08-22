@@ -1,0 +1,143 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    branches:
+      - '*'
+  workflow_dispatch:
+    workflow: '*'
+
+env:
+  MPLBACKEND: agg
+
+jobs:
+  code:
+    name: code style
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: psf/black@stable
+
+      - name: Install Black with Jupyter extension
+        run: pip install black[jupyter]
+
+      - name: Check code style of Jupyter notebooks
+        run: black doc/tutorials/*.ipynb
+
+  # Make sure all necessary files are included in a release
+  manifest:
+    name: check manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v2
+
+      - name: Install dependencies
+        run: pip install manifix
+
+      - name: Check MANIFEST.in file
+        run: python setup.py manifix
+
+  tests:
+    name: ${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.LABEL }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [3.9, '3.10']
+        include:
+          - os: ubuntu-latest
+            python-version: 3.7
+            OLDEST_SUPPORTED_VERSION: true
+            DEPENDENCIES: dask==2021.8.1 diffsims==0.5.0 hyperspy==1.7 matplotlib==3.3 numba==0.52 numpy==1.19 orix==0.9.0 scikit-image==0.16.2
+            LABEL: -oldest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Display Python and pip versions
+        run: |
+          python -V
+          pip -V
+
+      - name: Install dependencies and package
+        shell: bash
+        run: |
+          pip install wheel
+          pip install -U -e .'[tests]'
+
+      # TODO: Allow installing on 3.10 once vtk is available on 3.10,
+      # see https://pypi.org/project/vtk/#files
+      - name: Install optional dependencies
+        if: ${{ matrix.python-version == 3.9 }}
+        shell: bash
+        run: |
+          pip install -e .'[viz]'
+
+      - name: Install oldest supported version
+        if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
+        run: |
+          pip install ${{ matrix.DEPENDENCIES }}
+
+      - name: Set up headless display necessary for PyVista on Linux
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install xvfb
+          /sbin/ldconfig -p | grep stdc++ # Temporarily check location
+
+      - name: Set up headless display necessary for PyVista on Windows
+        if: ${{ matrix.os == 'windows-latest' && matrix.python-version == 3.9 }}
+        uses: pyvista/setup-headless-display-action@v1
+
+      - name: Display package versions
+        run: |
+          pip list
+
+      - name: Run docstring tests
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        continue-on-error: true
+        run: |
+          xvfb-run pytest --doctest-modules --ignore-glob=kikuchipy/*/tests kikuchipy/*.py
+
+      - name: Run tests in a virtual X server environment on Ubuntu
+        if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install xvfb
+          xvfb-run pytest --cov=kikuchipy --pyargs kikuchipy -n 2
+
+      - name: Run tests
+        if: ${{ ! ( matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 ) }}
+        run: |
+          pytest --cov=kikuchipy --pyargs kikuchipy -n 2
+
+      - name: Generate line coverage
+        run: |
+          coverage report --show-missing
+
+      - name: Upload coverage to Coveralls
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        uses: AndreMiras/coveralls-python-action@develop
+        with:
+          parallel: true
+
+  coveralls-finish:
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+    - name: Coveralls finished
+      uses: AndreMiras/coveralls-python-action@develop
+      with:
+        parallel-finished: true

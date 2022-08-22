@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -21,12 +20,15 @@ from datetime import datetime
 
 author = "kikuchipy developers"
 copyright = f"Copyright 2019-{datetime.now().year}, kikuchipy"
-# Initial commiter first, then sorted by line contributions
+# Initial committer first, then sorted by line contributions
 credits = [
     "Håkon Wiik Ånes",
+    "Lars Andreas Hastad Lervik",
     "Ole Natlandsmyr",
     "Tina Bergh",
-    "Lars Andreas Hastad Lervik",
+    "Zhou Xu",
+    "Eric Prestat",
+    "Magnus Nord",
 ]
 license = "GPLv3+"
 maintainer = "Håkon Wiik Ånes"
@@ -34,4 +36,4 @@ maintainer_email = "hakon.w.anes@ntnu.no"
 name = "kikuchipy"
 platforms = ["Linux", "MacOS X", "Windows"]
 status = "Development"
-version = "0.4.dev0"
+version = "0.7.dev0"

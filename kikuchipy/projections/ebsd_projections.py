@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -21,16 +20,20 @@ from :cite:`britton2016tutorial`.
 """
 
 from typing import Optional
+import warnings
+
 from diffpy.structure import Lattice
 import numpy as np
-from orix.quaternion.rotation import Rotation
-from orix.vector import neo_euler, Vector3d
+from orix.quaternion import Rotation
+from orix.vector import Vector3d
 
 from kikuchipy.crystallography import get_direct_structure_matrix
 
 
 def detector2sample(
-    sample_tilt: float, detector_tilt: float, convention: Optional[str] = None,
+    sample_tilt: float,
+    detector_tilt: float,
+    convention: Optional[str] = None,
 ) -> Rotation:
     """Rotation U_S to align detector frame D with sample frame S.
 
@@ -50,16 +53,12 @@ def detector2sample(
     """
     # Rotation about sample (microscope) X axis
     tilt = -np.deg2rad((sample_tilt - 90) - detector_tilt)
-    ax_angle = neo_euler.AxAngle.from_axes_angles(Vector3d.xvector(), tilt)
-    r = Rotation.from_neo_euler(ax_angle)
+    r = Rotation.from_axes_angles(Vector3d.xvector(), tilt)
 
     if convention != "bruker":
         # Followed by a 90 degree rotation about the sample Z axis,
         # if the TSL sample reference frame is used
-        ax_angle_bruker2tsl = neo_euler.AxAngle.from_axes_angles(
-            Vector3d.zvector(), np.pi / 2
-        )
-        r = Rotation.from_neo_euler(ax_angle_bruker2tsl) * r
+        r = Rotation.from_axes_angles(Vector3d.zvector(), np.pi / 2) * r
 
     return r.to_matrix()[0]
 
@@ -95,7 +94,9 @@ def detector2direct_lattice(
     sample2cartesian = rotation.to_matrix()
 
     # Rotation U_A from C to the direct crystal lattice frame K
-    structure_matrix = get_direct_structure_matrix(lattice)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+        structure_matrix = get_direct_structure_matrix(lattice)
     cartesian2direct = structure_matrix.T
 
     return cartesian2direct.dot(sample2cartesian).dot(_detector2sample)
@@ -132,7 +133,9 @@ def detector2reciprocal_lattice(
     sample2cartesian = rotation.to_matrix()
 
     # Rotation U_A from C to the reciprocal crystal lattice frame Kstar
-    structure_matrix = get_direct_structure_matrix(lattice)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+        structure_matrix = get_direct_structure_matrix(lattice)
     cartesian2reciprocal = np.linalg.inv(structure_matrix).T
 
     return cartesian2reciprocal.dot(sample2cartesian).dot(_detector2sample)

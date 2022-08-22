@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -70,9 +69,7 @@ def _get_hkl_family(
     return families, families_idx
 
 
-def _is_equivalent(
-    this_hkl: list, that_hkl: list, reduce: bool = False
-) -> bool:
+def _is_equivalent(this_hkl: list, that_hkl: list, reduce: bool = False) -> bool:
     """Determine whether two Miller index 3-tuples are equivalent.
     Symmetry is not considered.
     """
@@ -80,8 +77,7 @@ def _is_equivalent(
         this_hkl, _ = _reduce_hkl(this_hkl)
         that_hkl, _ = _reduce_hkl(that_hkl)
     return np.allclose(
-        np.sort(np.abs(this_hkl).astype(int)),
-        np.sort(np.abs(that_hkl).astype(int)),
+        np.sort(np.abs(this_hkl).astype(int)), np.sort(np.abs(that_hkl).astype(int))
     )
 
 
@@ -127,9 +123,7 @@ def _get_colors_for_allowed_bands(
     """
     if highest_hkl is None:
         highest_hkl = [9, 9, 9]
-    rlp = ReciprocalLatticePoint.from_highest_hkl(
-        phase=phase, highest_hkl=highest_hkl,
-    )
+    rlp = ReciprocalLatticePoint.from_highest_hkl(phase=phase, highest_hkl=highest_hkl)
 
     rlp2 = rlp[rlp.allowed]
     # TODO: Replace this ordering with future ordering method in

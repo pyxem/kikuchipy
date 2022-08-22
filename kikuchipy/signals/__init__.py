@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -18,21 +17,46 @@
 
 """Experimental and simulated diffraction patterns and virtual
 backscatter electron images.
-"""
 
-from kikuchipy.signals import util
-from kikuchipy.signals.ebsd import EBSD, LazyEBSD
-from kikuchipy.signals.ebsd_master_pattern import (
-    EBSDMasterPattern,
-    LazyEBSDMasterPattern,
-)
-from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
+.. rubric:: Modules
+
+.. currentmodule:: kikuchipy.signals
+
+.. autosummary::
+    :toctree: ../generated/
+    :template: custom-module-template.rst
+
+    util
+"""
 
 __all__ = [
     "EBSD",
     "EBSDMasterPattern",
     "LazyEBSD",
     "LazyEBSDMasterPattern",
-    "util",
     "VirtualBSEImage",
+    "util",
 ]
+
+
+def __dir__():
+    return sorted(__all__)
+
+
+def __getattr__(name):
+    _import_mapping = {
+        "EBSD": "ebsd",
+        "LazyEBSD": "ebsd",
+        "EBSDMasterPattern": "ebsd_master_pattern",
+        "LazyEBSDMasterPattern": "ebsd_master_pattern",
+        "VirtualBSEImage": "virtual_bse_image",
+    }
+    if name in __all__:
+        import importlib
+
+        if name in _import_mapping.keys():
+            import_path = f"{__name__}.{_import_mapping.get(name)}"
+            return getattr(importlib.import_module(import_path), name)
+        else:  # pragma: no cover
+            return importlib.import_module("." + name, __name__)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

@@ -1,0 +1,36 @@
+name: Test documentation notebooks
+
+on:
+  schedule:
+    - cron: '15 6 * * 1'
+  workflow_dispatch:
+    workflow: "*"
+
+jobs:
+  test-documentation-notebooks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      MPLBACKEND: agg
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      - name: Display versions
+        run: |
+          python -V
+          pip -V
+
+      - name: Install package and dependencies
+        shell: bash
+        run: |
+          pip install -U -e .'[tests,viz]'
+          pip install nbval
+
+      - name: Test documentation notebooks
+        run: |
+          ./doc/tutorials/run_nbval.sh

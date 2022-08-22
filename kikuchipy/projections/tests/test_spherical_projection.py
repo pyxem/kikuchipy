@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -21,9 +20,9 @@ from orix.vector import Vector3d
 
 from kikuchipy.projections.spherical_projection import (
     SphericalProjection,
-    get_theta,
-    get_phi,
-    get_r,
+    get_polar,
+    get_azimuth,
+    get_radial,
 )
 
 
@@ -34,19 +33,19 @@ def test_spherical_projection():
     v = Vector3d(v_arr)
 
     # Vector3d
-    polar = SphericalProjection.project(v_arr)
-    assert np.allclose(polar[..., 0], v.theta.data)
-    assert np.allclose(polar[..., 1], v.phi.data)
-    assert np.allclose(polar[..., 2], v.r.data)
-    assert np.allclose(get_theta(v), v.theta.data)
-    assert np.allclose(get_phi(v), v.phi.data)
-    assert np.allclose(get_r(v), v.r.data)
+    polar = SphericalProjection.vector2xy(v_arr)
+    assert np.allclose(polar[..., 0], v.polar.data)
+    assert np.allclose(polar[..., 1], v.azimuth.data)
+    assert np.allclose(polar[..., 2], v.radial.data)
+    assert np.allclose(get_polar(v), v.polar.data)
+    assert np.allclose(get_azimuth(v), v.azimuth.data)
+    assert np.allclose(get_radial(v), v.radial.data)
 
     # NumPy array
-    polar2 = SphericalProjection.project(v)
-    assert np.allclose(polar2[..., 0], v.theta.data)
-    assert np.allclose(polar2[..., 1], v.phi.data)
-    assert np.allclose(polar2[..., 2], v.r.data)
-    assert np.allclose(get_theta(v_arr), v.theta.data)
-    assert np.allclose(get_phi(v_arr), v.phi.data)
-    assert np.allclose(get_r(v_arr), v.r.data)
+    polar2 = SphericalProjection.vector2xy(v)
+    assert np.allclose(polar2[..., 0], v.polar.data)
+    assert np.allclose(polar2[..., 1], v.azimuth.data)
+    assert np.allclose(polar2[..., 2], v.radial.data)
+    assert np.allclose(get_polar(v_arr), v.polar.data)
+    assert np.allclose(get_azimuth(v_arr), v.azimuth.data)
+    assert np.allclose(get_radial(v_arr), v.radial.data)

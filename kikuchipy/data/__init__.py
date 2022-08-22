@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -16,271 +15,51 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Test data.
+"""Example datasets for use when testing functionality.
 
-Some datasets must be downloaded from the web. For more test datasets,
-see :doc:`open datasets <open_datasets>`.
+Some datasets are packaged with the source code while others must be
+downloaded from the web. For more test datasets, see
+:doc:`/open_datasets`.
+
+Datasets are placed in a local cache, in the location returned from
+``pooch.os_cache("kikuchipy")`` by default. The location can be
+overwritten with a global ``KIKUCHIPY_DATA_DIR`` environment variable.
+
+With every new version of kikuchipy, a new directory of datasets with
+the version name is added to the cache directory. Any old directories
+are not deleted automatically, and should then be deleted manually if
+desired.
 """
 
-from pathlib import Path
-import os
-from typing import Union
-
-import pooch as ppooch
-
-from kikuchipy.signals import EBSD, EBSDMasterPattern
-from kikuchipy import load
-from kikuchipy.release import version
-from kikuchipy.data._registry import registry, registry_urls
-
-
 __all__ = [
-    "nickel_ebsd_small",
     "nickel_ebsd_large",
     "nickel_ebsd_master_pattern_small",
+    "nickel_ebsd_small",
     "silicon_ebsd_moving_screen_in",
-    "silicon_ebsd_moving_screen_out5mm",
     "silicon_ebsd_moving_screen_out10mm",
+    "silicon_ebsd_moving_screen_out5mm",
 ]
 
 
-fetcher = ppooch.create(
-    path=ppooch.os_cache("kikuchipy"),
-    base_url="",
-    version=version.replace(".dev", "+"),
-    env="KIKUCHIPY_DATA_DIR",
-    registry=registry,
-    urls=registry_urls,
-)
-cache_data_path = fetcher.path.joinpath("data")
-package_data_path = Path(os.path.abspath(os.path.dirname(__file__)))
+def __dir__():
+    return sorted(__all__)
 
 
-def _has_hash(path, expected_hash):
-    """Check if the provided path has the expected hash."""
-    if not os.path.exists(path):
-        return False
-    else:
-        return ppooch.utils.file_hash(path) == expected_hash
+def __getattr__(name):
+    _import_mapping = {
+        "nickel_ebsd_large": "_data",
+        "nickel_ebsd_master_pattern_small": "_data",
+        "nickel_ebsd_small": "_data",
+        "silicon_ebsd_moving_screen_in": "_data",
+        "silicon_ebsd_moving_screen_out10mm": "_data",
+        "silicon_ebsd_moving_screen_out5mm": "_data",
+    }
+    if name in __all__:
+        import importlib
 
-
-def _cautious_downloader(url, output_file, pooch):
-    if pooch.allow_download:
-        delattr(pooch, "allow_download")
-        # HTTPDownloader() requires tqdm, a HyperSpy dependency, so
-        # adding it to our dependencies doesn't cost anything
-        download = ppooch.HTTPDownloader(progressbar=True)
-        download(url, output_file, pooch)
-    else:
-        raise ValueError(
-            "The dataset must be (re)downloaded from the kikuchipy-data "
-            "repository on GitHub (https://github.com/pyxem/kikuchipy-data) to "
-            "your local cache with the pooch Python package. Pass "
-            "`allow_download=True` to allow this download."
-        )
-
-
-def _fetch(filename: str, allow_download: bool = False):
-    resolved_path = os.path.join(package_data_path, "..", filename)
-    expected_hash = registry[filename]
-    if _has_hash(resolved_path, expected_hash):  # File already in data module
-        return resolved_path
-    else:  # Pooch must download the data to the local cache
-        fetcher.allow_download = allow_download  # Extremely ugly
-        resolved_path = fetcher.fetch(filename, downloader=_cautious_downloader)
-    return resolved_path
-
-
-def _load(filename: str, **kwargs) -> Union[EBSD, EBSDMasterPattern]:
-    allow_download = kwargs.pop("allow_download", False)
-    return load(_fetch(filename, allow_download=allow_download), **kwargs)
-
-
-def nickel_ebsd_small(**kwargs) -> EBSD:
-    """9 EBSD patterns in a (3, 3) navigation shape of (60, 60) detector
-    pixels from Nickel, acquired on a NORDIF UF-1100 detector
-    :cite:`aanes2019electron`.
-
-    Parameters
-    ----------
-    kwargs
-        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
-
-    Returns
-    -------
-    signal : EBSD
-        EBSD signal.
-    """
-    return _load(filename="data/kikuchipy/patterns.h5", **kwargs)
-
-
-def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
-    """(401, 401) `uint8` square Lambert or stereographic projection of the
-    northern and southern hemisphere of a Nickel master pattern at 20
-    keV accelerating voltage.
-
-    Parameters
-    ----------
-    kwargs
-        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
-
-    Returns
-    -------
-    signal : EBSDMasterPattern
-        EBSD master pattern signal.
-
-    Notes
-    -----
-    Initially generated using the EMsoft EMMCOpenCL and EMEBSDMaster
-    programs. The included file was rewritten to disk with
-    :mod:`h5py`, where the master patterns' data type is converted from
-    `float32` to `uint8` with
-    :meth:`~kikuchipy.signals.EBSDMasterPattern.rescale_intensity`, all
-    datasets were written with
-    :meth:`~kikuchipy.io.plugins.h5ebsd.dict2h5ebsdgroup` with
-    keyword arguments `compression="gzip"` and `compression_opts=9`. All
-    other HDF5 groups and datasets are the same as in the original file.
-    """
-    fname = "data/emsoft_ebsd_master_pattern/ni_mc_mp_20kv_uint8_gzip_opts9.h5"
-    return _load(fname, **kwargs)
-
-
-def nickel_ebsd_large(allow_download: bool = False, **kwargs) -> EBSD:
-    """4125 EBSD patterns in a (55, 75) navigation shape of (60, 60)
-    detector pixels from Nickel, acquired on a NORDIF UF-1100 detector
-    :cite:`aanes2019electron`.
-
-    Parameters
-    ----------
-    allow_download : bool
-        Whether to allow downloading the dataset from the kikuchipy-data
-        GitHub repository (https://github.com/pyxem/kikuchipy-data) to
-        the local cache with the pooch Python package. Default is False.
-    kwargs
-        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
-
-    Returns
-    -------
-    signal : EBSD
-        EBSD signal.
-    """
-    return _load(
-        filename="data/nickel_ebsd_large/patterns.h5",
-        allow_download=allow_download,
-        **kwargs,
-    )
-
-
-def silicon_ebsd_moving_screen_in(
-    allow_download: bool = False, **kwargs
-) -> EBSD:
-    """One EBSD pattern of (480, 480) detector pixels from a single
-    crystal Silicon sample, acquired on a NORDIF UF-420 detector.
-
-    This pattern and two other patterns from the same sample position
-    but with 5 mm and 10 mm greater sample-screen-distances were
-    acquired to test the moving-screen projection center estimation
-    technique :cite:`hjelen1991electron`.
-
-    Parameters
-    ----------
-    allow_download : bool
-        Whether to allow downloading the dataset from the kikuchipy-data
-        GitHub repository (https://github.com/pyxem/kikuchipy-data) to
-        the local cache with the pooch Python package. Default is False.
-    kwargs
-        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
-
-    Returns
-    -------
-    signal : EBSD
-        EBSD signal.
-    
-    See Also
-    --------
-    silicon_ebsd_moving_screen_out5mm
-    silicon_ebsd_moving_screen_out10mm
-    """
-    return _load(
-        filename="data/silicon_ebsd_moving_screen/si_in.h5",
-        allow_download=allow_download,
-        **kwargs,
-    )
-
-
-def silicon_ebsd_moving_screen_out5mm(
-    allow_download: bool = False, **kwargs
-) -> EBSD:
-    """One EBSD pattern of (480, 480) detector pixels from a single
-    crystal Silicon sample, acquired on a NORDIF UF-420 detector.
-
-    This pattern and two other patterns from the same sample position
-    but with sample-screen-distances 5 mm shorter
-    (:func:`silicon_ebsd_moving_screen_in`) and 5 mm greater
-    (:func:`silicon_ebsd_moving_screen_out10mm`) were acquired to test
-    the moving-screen projection center estimation technique
-    :cite:`hjelen1991electron`.
-
-    Parameters
-    ----------
-    allow_download : bool
-        Whether to allow downloading the dataset from the kikuchipy-data
-        GitHub repository (https://github.com/pyxem/kikuchipy-data) to
-        the local cache with the pooch Python package. Default is False.
-    kwargs
-        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
-
-    Returns
-    -------
-    signal : EBSD
-        EBSD signal.
-    
-    See Also
-    --------
-    silicon_ebsd_moving_screen_in
-    silicon_ebsd_moving_screen_out10mm
-    """
-    return _load(
-        filename="data/silicon_ebsd_moving_screen/si_out5mm.h5",
-        allow_download=allow_download,
-        **kwargs,
-    )
-
-
-def silicon_ebsd_moving_screen_out10mm(
-    allow_download: bool = False, **kwargs
-) -> EBSD:
-    """One EBSD pattern of (480, 480) detector pixels from a single
-    crystal Silicon sample, acquired on a NORDIF UF-420 detector.
-
-    This pattern and two other patterns from the same sample position
-    but with sample-screen-distances 10 mm shorter
-    (:func:`silicon_ebsd_moving_screen_in`) and 5 mm shorter
-    (:func:`silicon_ebsd_moving_screen_out5mm`) were acquired to test
-    the moving-screen projection center estimation technique
-    :cite:`hjelen1991electron`.
-
-    Parameters
-    ----------
-    allow_download : bool
-        Whether to allow downloading the dataset from the kikuchipy-data
-        GitHub repository (https://github.com/pyxem/kikuchipy-data) to
-        the local cache with the pooch Python package. Default is False.
-    kwargs
-        Keyword arguments passed to :func:`~kikuchipy.io._io.load`.
-
-    Returns
-    -------
-    signal : EBSD
-        EBSD signal.
-    
-    See Also
-    --------
-    silicon_ebsd_moving_screen_in
-    silicon_ebsd_moving_screen_out5mm
-    """
-    return _load(
-        filename="data/silicon_ebsd_moving_screen/si_out10mm.h5",
-        allow_download=allow_download,
-        **kwargs,
-    )
+        if name in _import_mapping.keys():
+            import_path = f"{__name__}.{_import_mapping.get(name)}"
+            return getattr(importlib.import_module(import_path), name)
+        else:  # pragma: no cover
+            return importlib.import_module("." + name, __name__)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

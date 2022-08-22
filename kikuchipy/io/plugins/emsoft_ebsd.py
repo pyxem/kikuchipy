@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -19,7 +18,9 @@
 """Read support for simulated EBSD patterns in EMsoft's HDF5 format."""
 
 import os
+from pathlib import Path
 from typing import List, Tuple, Union
+import warnings
 
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
@@ -36,13 +37,16 @@ from kikuchipy.signals.util._metadata import (
 )
 
 
+__all__ = ["file_reader"]
+
+
 # Plugin characteristics
 # ----------------------
 format_name = "emsoft_ebsd"
 description = (
-    "Read support for dynamically simulated electron backscatter diffraction "
-    "patterns stored in EMsoft's HDF5 file format produced by their EMEBSD.f90 "
-    "program."
+    "Read support for dynamically simulated electron backscatter "
+    "diffraction patterns stored in EMsoft's HDF5 file format produced "
+    "by their EMEBSD.f90 program."
 )
 full_support = False
 # Recognised file extension
@@ -56,7 +60,7 @@ footprint = ["emdata/ebsd/ebsdpatterns"]
 
 
 def file_reader(
-    filename: str,
+    filename: Union[str, Path],
     scan_size: Union[None, int, Tuple[int, ...]] = None,
     lazy: bool = False,
     **kwargs,
@@ -73,13 +77,13 @@ def file_reader(
     lazy
         Open the data lazily without actually reading the data from disk
         until requested. Allows opening datasets larger than available
-        memory. Default is False.
-    kwargs :
-        Keyword arguments passed to h5py.File.
+        memory. Default is ``False``.
+    **kwargs
+        Keyword arguments passed to :class:`h5py.File`.
 
     Returns
     -------
-    signal_dict_list: list of dicts
+    signal_dict_list
         Data, axes, metadata and original metadata.
     """
     mode = kwargs.pop("mode", "r")
@@ -88,9 +92,7 @@ def file_reader(
     _check_file_format(f)
 
     # Read original metadata
-    omd = hdf5group2dict(
-        f["/"], data_dset_names=["EBSDPatterns"], recursive=True
-    )
+    omd = hdf5group2dict(f["/"], data_dset_names=["EBSDPatterns"], recursive=True)
 
     # Set metadata and original metadata dictionaries
     md = _get_metadata(omd)
@@ -175,8 +177,8 @@ def _check_file_format(file: File):
             raise KeyError
     except KeyError:
         raise IOError(
-            f"'{file.filename}' is not in EMsoft's format returned by their "
-            "EMEBSD.f90 program."
+            f"'{file.filename}' is not in EMsoft's format returned by their EMEBSD.f90 "
+            "program."
         )
 
 
@@ -193,30 +195,19 @@ def _get_metadata(omd: dict) -> dict:
     md
         Dictionary with metadata.
     """
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     md = ebsd_metadata()
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     md.set_item(f"{ebsd_node}.manufacturer", "EMsoft")
     mapping = {
         f"{ebsd_node}.version": ["EMheader", "EBSD", "Version"],
         f"{ebsd_node}.binning": ["NMLparameters", "EBSDNameList", "binning"],
-        f"{ebsd_node}.elevation_angle": [
-            "NMLparameters",
-            "EBSDNameList",
-            "thetac",
-        ],
-        f"{ebsd_node}.exposure_time": [
-            "NMLparameters",
-            "EBSDNameList",
-            "dwelltime",
-        ],
+        f"{ebsd_node}.elevation_angle": ["NMLparameters", "EBSDNameList", "thetac"],
+        f"{ebsd_node}.exposure_time": ["NMLparameters", "EBSDNameList", "dwelltime"],
         f"{ebsd_node}.xpc": ["NMLparameters", "EBSDNameList", "xpc"],
         f"{ebsd_node}.ypc": ["NMLparameters", "EBSDNameList", "ypc"],
         f"{ebsd_node}.zpc": ["NMLparameters", "EBSDNameList", "L"],
-        f"{sem_node}.beam_energy": [
-            "NMLparameters",
-            "EBSDNameList",
-            "energymax",
-        ],
+        f"{sem_node}.beam_energy": ["NMLparameters", "EBSDNameList", "energymax"],
     }
     _set_metadata_from_mapping(omd, md, mapping)
     return md.as_dictionary()
@@ -250,7 +241,7 @@ def _crystaldata2phase(dictionary: dict) -> Phase:
                 atype=atom_types[i],
                 xyz=atom_data[:3, i],
                 occupancy=atom_data[3, i],
-                Uisoequiv=atom_data[4, i] / (8 * np.pi ** 2) * 1e2,  # Å^-2
+                Uisoequiv=atom_data[4, i] / (8 * np.pi**2) * 1e2,  # Å^-2
             )
         )
 

@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -18,6 +17,7 @@
 
 import numpy as np
 import pytest
+from scipy.fft import fft2
 
 from kikuchipy.filters.window import Window
 from kikuchipy.pattern._pattern import (
@@ -30,8 +30,13 @@ from kikuchipy.pattern._pattern import (
     normalize_intensity,
     rescale_intensity,
     remove_dynamic_background,
-    _rescale,
     _dynamic_background_frequency_space_setup,
+    _get_image_quality_numba,
+    _remove_background_subtract,
+    _remove_background_divide,
+    _remove_static_background_subtract,
+    _remove_static_background_divide,
+    _rescale_with_min_max,
 )
 
 # Expected output intensities from various image processing methods
@@ -45,9 +50,7 @@ RESCALED_FLOAT32 = np.array(
 RESCALED_UINT8_0100 = np.array(
     [[71, 85, 71], [100, 85, 71], [85, 14, 0]], dtype=np.uint8
 )
-STATIC_CORR_UINT8 = np.array(
-    [[0, 2, 0], [3, 3, 1], [2, 255, 255]], dtype=np.uint8
-)
+STATIC_CORR_UINT8 = np.array([[0, 2, 0], [3, 3, 1], [2, 255, 255]], dtype=np.uint8)
 DYN_CORR_UINT8_SPATIAL_STD2 = np.array(
     [[170, 215, 181], [255, 221, 188], [221, 32, 0]], dtype=np.uint8
 )
@@ -69,7 +72,8 @@ DYN_CORR_UINT16_SPATIAL_STD2 = np.array(
     dtype=np.uint16,
 )
 DYN_CORR_UINT8_SPATIAL_STD2_OMAX250 = np.array(
-    [[167, 210, 177], [250, 217, 184], [217, 31, 0]], dtype=np.uint8,
+    [[167, 210, 177], [250, 217, 184], [217, 31, 0]],
+    dtype=np.uint8,
 )
 ADAPT_EQ_UINT8 = np.array(
     [[127, 223, 127], [255, 223, 31], [223, 31, 0]], dtype=np.uint8
@@ -87,9 +91,7 @@ class TestRescaleIntensityPattern:
             (np.uint8, (0, 100), RESCALED_UINT8_0100),
         ],
     )
-    def test_rescale_intensity(
-        self, dummy_signal, dtype_out, out_range, answer
-    ):
+    def test_rescale_intensity(self, dummy_signal, dtype_out, out_range, answer):
         pattern = dummy_signal.inav[0, 0].data
 
         # Check for accepted data types
@@ -97,7 +99,6 @@ class TestRescaleIntensityPattern:
             with pytest.raises(KeyError, match="Could not set output"):
                 _ = rescale_intensity(
                     pattern=pattern,
-                    in_range=None,
                     out_range=out_range,
                     dtype_out=dtype_out,
                 )
@@ -105,7 +106,6 @@ class TestRescaleIntensityPattern:
         else:
             rescaled_pattern = rescale_intensity(
                 pattern=pattern,
-                in_range=None,
                 out_range=out_range,
                 dtype_out=dtype_out,
             )
@@ -120,12 +120,60 @@ class TestRescaleIntensityPattern:
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
         imin, imax = np.min(p), np.max(p)
         omin, omax = -3, 300.15
-        p2 = _rescale.py_func(
-            pattern=p, imin=imin, imax=imax, omin=omin, omax=omax,
+        p2 = _rescale_with_min_max.py_func(
+            pattern=p, imin=imin, imax=imax, omin=omin, omax=omax
         )
 
         assert np.allclose(np.min(p2), omin)
         assert np.allclose(np.max(p2), omax)
+
+
+class TestRemoveStaticBackgroundPattern:
+    def test_remove_static_background_subtract(self, dummy_signal, dummy_background):
+        p = dummy_signal.inav[0, 0].data
+        dtype_out = p.dtype
+        dtype = np.float32
+        p = p.astype(dtype)
+        bg = dummy_background.astype(dtype)
+
+        p0 = p.copy()
+        p2 = _remove_static_background_subtract(p, bg, dtype_out, 0, 255, False)
+        p3 = _remove_static_background_subtract.py_func(p, bg, dtype_out, 0, 255, False)
+        p4 = _remove_static_background_subtract.py_func(p, bg, dtype_out, 0, 255, True)
+
+        assert p2.dtype == dtype_out
+        assert np.allclose(p2, p3)
+        assert not np.allclose(p2, p4)
+
+        # Cover Numba function
+        p5 = _remove_background_subtract.py_func(p.astype("float32"), bg, 0, 255)
+        assert p5.min() == 0
+        assert p5.max() == 255
+
+        assert np.allclose(p0, p)
+        assert p0.dtype == p.dtype
+
+    def test_remove_static_background_divide(self, dummy_signal, dummy_background):
+        p = dummy_signal.inav[0, 0].data
+        dtype_out = p.dtype
+        dtype = np.float32
+        bg = dummy_background.astype(dtype)
+
+        p0 = p.copy()
+        p2 = _remove_static_background_divide(p, bg, dtype_out, 0, 255, False)
+        p3 = _remove_static_background_divide.py_func(p, bg, dtype_out, 0, 255, False)
+        p4 = _remove_static_background_divide.py_func(p, bg, dtype_out, 0, 255, True)
+
+        assert np.allclose(p2, p3)
+        assert not np.allclose(p2, p4)
+
+        # Cover Numba function
+        p5 = _remove_background_divide.py_func(p.astype("float32"), bg, 0, 255)
+        assert p5.min() == 0
+        assert p5.max() == 255
+
+        assert np.allclose(p0, p)
+        assert p0.dtype == p.dtype
 
 
 class TestRemoveDynamicBackgroundPattern:
@@ -165,12 +213,7 @@ class TestRemoveDynamicBackgroundPattern:
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
 
         p2 = remove_dynamic_background(
-            pattern=p,
-            operation="subtract",
-            filter_domain="frequency",
-            std=std,
-            truncate=truncate,
-            dtype_out=np.uint8,
+            pattern=p, std=std, truncate=truncate, dtype_out=np.uint8
         )
 
         assert np.allclose(p2, answer)
@@ -179,13 +222,9 @@ class TestRemoveDynamicBackgroundPattern:
         p = dummy_signal.inav[0, 0].data
         filter_domain = "Taldorei"
         with pytest.raises(ValueError, match=f"{filter_domain} must be "):
-            _ = remove_dynamic_background(
-                pattern=p, filter_domain=filter_domain,
-            )
+            _ = remove_dynamic_background(pattern=p, filter_domain=filter_domain)
 
-    def test_remove_dynamic_background_pattern_frequency_setup(
-        self, dummy_signal
-    ):
+    def test_remove_dynamic_background_pattern_frequency_setup(self, dummy_signal):
         std = 2
         truncate = 3.0
 
@@ -226,7 +265,7 @@ class TestGetDynamicBackgroundPattern:
     ):
         p = dummy_signal.inav[0, 0].data
         bg = get_dynamic_background(
-            pattern=p, filter_domain="spatial", std=std, truncate=truncate,
+            pattern=p, filter_domain="spatial", std=std, truncate=truncate
         )
 
         assert np.allclose(bg, answer)
@@ -255,9 +294,7 @@ class TestGetDynamicBackgroundPattern:
 
         p = dummy_signal.inav[0, 0].data.astype(answer.dtype)
 
-        bg = get_dynamic_background(
-            pattern=p, filter_domain="frequency", std=std,
-        )
+        bg = get_dynamic_background(pattern=p, std=std)
 
         assert np.allclose(bg, answer, atol=1e-4)
 
@@ -278,13 +315,7 @@ class TestGetImageQuality:
         ],
     )
     def test_get_image_quality_pattern(
-        self,
-        dummy_signal,
-        idx,
-        normalize,
-        frequency_vectors,
-        inertia_max,
-        answer,
+        self, dummy_signal, idx, normalize, frequency_vectors, inertia_max, answer
     ):
         p = dummy_signal.inav[idx].data.astype(np.float32)
         iq = get_image_quality(
@@ -298,7 +329,7 @@ class TestGetImageQuality:
 
     def test_get_image_quality_white_noise(self):
         p = np.random.random((1001, 1001))
-        iq = get_image_quality(pattern=p, normalize=True)
+        iq = get_image_quality(pattern=p)
 
         assert np.allclose(iq, 0, atol=1e-2)
 
@@ -333,6 +364,18 @@ class TestGetImageQuality:
 
         assert np.allclose(vec, answer)
 
+    def test_get_image_quality_numba(self, dummy_signal):
+        """Cover Numba function."""
+        p = dummy_signal.inav[0, 0].data.astype(np.float32)
+        p = normalize_intensity(p)
+        fft_pattern = fft2(p)
+        frequency_vectors = fft_frequency_vectors(p.shape)
+        inertia_max = np.sum(frequency_vectors) / p.size
+        iq = _get_image_quality_numba.py_func(
+            fft_pattern, frequency_vectors, inertia_max
+        )
+        assert np.isclose(iq, -0.02, atol=1e-2)
+
 
 class TestFFTPattern:
     @pytest.mark.parametrize(
@@ -349,24 +392,20 @@ class TestFFTPattern:
         p[50, 50] = 2
 
         kwargs = {}
-
-        p_fft = fft(
-            pattern=p, shift=shift, real_fft_only=real_fft_only, **kwargs,
-        )
+        p_fft = fft(pattern=p, shift=shift, real_fft_only=real_fft_only, **kwargs)
 
         assert np.allclose(
-            np.sum(fft_spectrum.py_func(p_fft)),
-            expected_spectrum_sum,
-            atol=1e-3,
+            np.sum(fft_spectrum.py_func(p_fft)), expected_spectrum_sum, atol=1e-3
         )
 
     @pytest.mark.parametrize(
-        "window", ["modified_hann", "tukey", "hamming"],
+        "window",
+        ["modified_hann", "tukey", "hamming"],
     )
     def test_fft_pattern_apodization_window(self, dummy_signal, window):
         p = dummy_signal.inav[0, 0].data
         w = Window(window, shape=p.shape)
-        p2 = fft(pattern=p, apodization_window=w, shift=True,)
+        p2 = fft(pattern=p, apodization_window=w, shift=True)
         p3 = fft(pattern=p * w, shift=True)
         p4 = fft(pattern=p, shift=True)
 
@@ -388,8 +427,8 @@ class TestFFTPattern:
     def test_ifft_pattern_real(self, shift):
         # Odd second dimension becomes even with only real valued FFT
         p = np.random.random((101, 100))
-        p_fft = fft(p, shift=shift, real_fft_only=False)
-        p_ifft = ifft(p_fft, shift=shift, real_fft_only=False)
+        p_fft = fft(p, shift=shift)
+        p_ifft = ifft(p_fft, shift=shift)
 
         p_rfft = fft(p, shift=shift, real_fft_only=True)
         p_irfft = ifft(p_rfft, shift=shift, real_fft_only=True)
@@ -443,9 +482,7 @@ class TestNormalizeIntensityPattern:
     ):
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
         p2 = normalize_intensity.py_func(
-            pattern=p,
-            num_std=num_std,
-            divide_by_square_root=divide_by_square_root,
+            pattern=p, num_std=num_std, divide_by_square_root=divide_by_square_root
         )
 
         assert np.allclose(np.mean(p2), 0, atol=1e-6)

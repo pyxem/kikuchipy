@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -115,9 +114,7 @@ class TestKikuchiBand:
         assert np.allclose(bands.gnomonic_radius, gnomonic_radius2)
 
         # Whether a band should be plotted or not
-        assert (
-            bands.within_gnomonic_radius.shape == within_gnomonic_radius.shape
-        )
+        assert bands.within_gnomonic_radius.shape == within_gnomonic_radius.shape
         assert np.allclose(bands.within_gnomonic_radius, within_gnomonic_radius)
 
         # Hesse distance and alpha
@@ -143,9 +140,7 @@ class TestKikuchiBand:
                 ),
                 10,
                 np.tile(
-                    np.array(
-                        [[7.3480, -8.1433, -6.7827, 5.8039], [np.nan] * 4]
-                    ),
+                    np.array([[7.3480, -8.1433, -6.7827, 5.8039], [np.nan] * 4]),
                     (2, 2, 1, 1),
                 ),
             ),
@@ -157,9 +152,7 @@ class TestKikuchiBand:
                 ),
                 10,
                 np.tile(
-                    np.array(
-                        [[7.3480, -8.1433, -6.7827, 5.8039], [np.nan] * 4]
-                    ),
+                    np.array([[7.3480, -8.1433, -6.7827, 5.8039], [np.nan] * 4]),
                     (5, 1, 1),
                 ),
             ),
@@ -171,9 +164,7 @@ class TestKikuchiBand:
                 ),
                 10,
                 np.tile(
-                    np.array(
-                        [[7.3480, -8.1433, -6.7827, 5.8039], [np.nan] * 4]
-                    ),
+                    np.array([[7.3480, -8.1433, -6.7827, 5.8039], [np.nan] * 4]),
                     (5, 1, 1, 1),  # shape (5, 1, 2, 3)
                 ),
             ),
@@ -185,21 +176,14 @@ class TestKikuchiBand:
                 ),
                 10,
                 np.tile(
-                    np.array(
-                        [[7.3480, -8.1433, -6.7827, 5.8039], [np.nan] * 4]
-                    ),
+                    np.array([[7.3480, -8.1433, -6.7827, 5.8039], [np.nan] * 4]),
                     (1, 5, 1, 1),  # shape (1, 5, 2, 3)
                 ),
             ),
         ],
     )
     def test_plane_trace_coordinates(
-        self,
-        nickel_phase,
-        hkl,
-        hkl_detector,
-        gnomonic_radius,
-        plane_trace_coordinates,
+        self, nickel_phase, hkl, hkl_detector, gnomonic_radius, plane_trace_coordinates
     ):
         """Desired gnomonic (P1, P2) coordinates."""
         bands = KikuchiBand(
@@ -210,9 +194,7 @@ class TestKikuchiBand:
             gnomonic_radius=gnomonic_radius,
         )
 
-        assert (
-            bands.plane_trace_coordinates.shape == plane_trace_coordinates.shape
-        )
+        assert bands.plane_trace_coordinates.shape == plane_trace_coordinates.shape
         assert np.allclose(
             bands.plane_trace_coordinates,
             plane_trace_coordinates,
@@ -343,9 +325,7 @@ class TestKikuchiBand:
 
         # One getitem key
         # All bands visible in first pattern
-        assert np.allclose(
-            bands[0].hkl_detector.data, bands.hkl_detector.data[0]
-        )
+        assert np.allclose(bands[0].hkl_detector.data, bands.hkl_detector.data[0])
         assert bands[0].navigation_shape == (5,)
 
         # Two getitem keys
@@ -376,14 +356,10 @@ class TestKikuchiBand:
         bands.calculate_theta(voltage=v)
 
         # All bands
-        assert np.allclose(
-            bands[2, 2:4].structure_factor, bands.structure_factor
-        )
+        assert np.allclose(bands[2, 2:4].structure_factor, bands.structure_factor)
         # Some bands
         new_bands = bands[2, 2:4, 3:15]
-        assert np.allclose(
-            new_bands.structure_factor, bands.structure_factor[3:15]
-        )
+        assert np.allclose(new_bands.structure_factor, bands.structure_factor[3:15])
         assert np.allclose(new_bands.theta, bands.theta[3:15])
 
     def test_unique(self, nickel_kikuchi_band):
@@ -476,7 +452,7 @@ class TestZoneAxis:
         assert np.allclose(za.y_gnomonic, desired_y_gnomonic)
         assert np.allclose(
             za.r_gnomonic,
-            np.sqrt(desired_x_gnomonic ** 2 + desired_y_gnomonic ** 2),
+            np.sqrt(desired_x_gnomonic**2 + desired_y_gnomonic**2),
         )
 
     @pytest.mark.parametrize(
@@ -514,10 +490,7 @@ class TestZoneAxis:
         )
 
     @pytest.mark.parametrize(
-        (
-            "uvw_detector, uvw_in_pattern, gr, desired_data_shape, "
-            "desired_within_gr"
-        ),
+        ("uvw_detector, uvw_in_pattern, gr, desired_data_shape, " "desired_within_gr"),
         [
             # 2D, (ny, nx, n, xyz): (2, 2, 2, 3)
             (
@@ -580,9 +553,7 @@ class TestZoneAxis:
         desired_xy[..., 0] = uvw_detector[..., 0] / uvw_detector[..., 2]
         desired_xy[..., 1] = uvw_detector[..., 1] / uvw_detector[..., 2]
         desired_xy[~desired_within_gr] = np.nan
-        assert np.allclose(
-            za._xy_within_gnomonic_radius, desired_xy, equal_nan=True
-        )
+        assert np.allclose(za._xy_within_gnomonic_radius, desired_xy, equal_nan=True)
 
     def test_get_item(self, nickel_zone_axes):
         """ZoneAxis.__getitem__() works as desired."""
@@ -594,9 +565,7 @@ class TestZoneAxis:
         assert za[:].navigation_shape == nav_shape
         assert np.allclose(za[()].uvw_detector.data, za.uvw_detector.data)
         assert za[()].navigation_shape == nav_shape
-        assert np.allclose(
-            za[slice(None)].uvw_detector.data, za.uvw_detector.data
-        )
+        assert np.allclose(za[slice(None)].uvw_detector.data, za.uvw_detector.data)
         assert za[slice(None)].navigation_shape == nav_shape
 
         # One getitem key
@@ -618,9 +587,7 @@ class TestZoneAxis:
             _ = za[0][0, :2, :3]
         this_slice = (0, slice(0, 2), slice(0, 3))
         bands2 = za[this_slice]
-        assert np.allclose(
-            bands2.uvw_detector.data, za.uvw_detector.data[this_slice]
-        )
+        assert np.allclose(bands2.uvw_detector.data, za.uvw_detector.data[this_slice])
         assert bands2.size == 3
         assert za[this_slice].navigation_shape == (2,)
 
@@ -635,9 +602,7 @@ class TestZoneAxis:
         assert np.allclose(za[2, 2:4].structure_factor, za.structure_factor)
         # Some bands
         new_bands = za[2, 2:4, 3:15]
-        assert np.allclose(
-            new_bands.structure_factor, za.structure_factor[3:15]
-        )
+        assert np.allclose(new_bands.structure_factor, za.structure_factor[3:15])
         assert np.allclose(new_bands.theta, za.theta[3:15])
 
     def test_unique(self, nickel_zone_axes):

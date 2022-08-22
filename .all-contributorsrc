@@ -1,0 +1,93 @@
+{
+  "files": [
+    "README.md"
+  ],
+  "imageSize": 100,
+  "commit": false,
+  "contributorsPerLine": 7,
+  "contributorsSortAlphabetically": true,
+  "badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-<%= contributors.length %>-yellow.svg)](#contributors-)",
+  "projectName": "kikuchipy",
+  "projectOwner": "pyxem",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "skipCi": true,
+  "commitConvention": "none",
+  "contributors": [
+    {
+      "login": "friedkitteh",
+      "name": "Lars Lervik",
+      "avatar_url": "https://avatars.githubusercontent.com/u/11888052?v=4",
+      "profile": "https://github.com/friedkitteh",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "question",
+        "review",
+        "test"
+      ]
+    },
+    {
+      "login": "hakonanes",
+      "name": "Håkon Wiik Ånes",
+      "avatar_url": "https://avatars.githubusercontent.com/u/12139781?v=4",
+      "profile": "https://www.ntnu.edu/employees/hakon.w.anes",
+      "contributions": []
+    },
+    {
+      "login": "onatlandsmyr",
+      "name": "Ole Natlandsmyr",
+      "avatar_url": "https://avatars.githubusercontent.com/u/34620114?v=4",
+      "profile": "https://github.com/onatlandsmyr",
+      "contributions": [
+        "code",
+        "doc",
+        "question",
+        "review",
+        "test"
+      ]
+    },
+    {
+      "login": "tinabe",
+      "name": "Tina Bergh",
+      "avatar_url": "https://avatars.githubusercontent.com/u/22915119?v=4",
+      "profile": "https://github.com/tinabe",
+      "contributions": [
+        "code",
+        "review"
+      ]
+    },
+    {
+      "login": "ericpre",
+      "name": "Eric Prestat",
+      "avatar_url": "https://avatars.githubusercontent.com/u/11851990?v=4",
+      "profile": "https://github.com/ericpre",
+      "contributions": [
+        "code",
+        "maintenance"
+      ]
+    },
+    {
+      "login": "IMBalENce",
+      "name": "Zhou Xu",
+      "avatar_url": "https://avatars.githubusercontent.com/u/2986794?v=4",
+      "profile": "https://github.com/IMBalENce",
+      "contributions": [
+        "bug",
+        "code",
+        "doc",
+        "test"
+      ]
+    },
+    {
+      "login": "magnunor",
+      "name": "Magnus Nord",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1690979?v=4",
+      "profile": "https://www.ntnu.edu/employees/magnus.nord",
+      "contributions": [
+        "doc"
+      ]
+    }
+  ]
+}

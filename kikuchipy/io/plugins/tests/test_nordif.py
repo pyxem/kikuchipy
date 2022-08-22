@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -194,14 +193,7 @@ ORIGINAL_METADATA = {
         "Calibration (294,532)\t294,532\tpx",
     ]
 }
-SCAN_SIZE_FILE = {
-    "nx": 3,
-    "ny": 3,
-    "sx": 60,
-    "sy": 60,
-    "step_x": 1.5,
-    "step_y": 1.5,
-}
+SCAN_SIZE_FILE = {"nx": 3, "ny": 3, "sx": 60, "sy": 60, "step_x": 1.5, "step_y": 1.5}
 AXES_MANAGER = {
     "axis-0": {
         "name": "y",
@@ -236,7 +228,6 @@ AXES_MANAGER = {
         "navigate": False,
     },
 }
-# AXES_MANAGER = make_dicts_compatible_with_hyperspy_v1_7(AXES_MANAGER)
 
 
 @pytest.fixture()
@@ -250,7 +241,6 @@ def save_path_nordif():
 class TestNORDIF:
     def test_get_settings_from_file(self):
         settings = get_settings_from_file(SETTING_FILE)
-
         answers = [METADATA, ORIGINAL_METADATA, SCAN_SIZE_FILE]
         assert len(settings) == len(answers)
         for setting_read, answer in zip(settings, answers):
@@ -281,10 +271,7 @@ class TestNORDIF:
         assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
 
         static_bg = imread(BG_FILE)
-        assert np.allclose(
-            s.metadata.Acquisition_instrument.SEM.Detector.EBSD.static_background,
-            static_bg,
-        )
+        assert np.allclose(s.static_background, static_bg)
 
     @pytest.mark.parametrize(
         "nav_shape, sig_shape",
@@ -304,15 +291,9 @@ class TestNORDIF:
                 # Check if zero padding user warning is raised if sum of data
                 # shape is bigger than file size
                 with pytest.warns(UserWarning):
-                    s = load(
-                        PATTERN_FILE,
-                        scan_size=nav_shape,
-                        pattern_size=sig_shape,
-                    )
+                    s = load(PATTERN_FILE, scan_size=nav_shape, pattern_size=sig_shape)
             else:
-                s = load(
-                    PATTERN_FILE, scan_size=nav_shape, pattern_size=sig_shape
-                )
+                s = load(PATTERN_FILE, scan_size=nav_shape, pattern_size=sig_shape)
             assert s.data.shape == nav_shape[::-1] + sig_shape
 
     def test_load_save_cycle(self, save_path_nordif):
@@ -321,13 +302,10 @@ class TestNORDIF:
         scan_time_string = s.original_metadata["nordif_header"][80][10:18]
         scan_time = time.strptime(scan_time_string, "%H:%M:%S")
         scan_time = datetime.timedelta(
-            hours=scan_time.tm_hour,
-            minutes=scan_time.tm_min,
-            seconds=scan_time.tm_sec,
+            hours=scan_time.tm_hour, minutes=scan_time.tm_min, seconds=scan_time.tm_sec
         ).total_seconds()
         assert (
-            s.metadata.Acquisition_instrument.SEM.Detector.EBSD.scan_time
-            == scan_time
+            s.metadata.Acquisition_instrument.SEM.Detector.EBSD.scan_time == scan_time
         )
         assert s.metadata.General.title == "Pattern"
 
@@ -338,9 +316,7 @@ class TestNORDIF:
         assert np.allclose(s.data, s_reload.data)
 
         # Add static background and change filename to make metadata equal
-        s_reload.metadata.Acquisition_instrument.SEM.Detector.EBSD.static_background = imread(
-            BG_FILE
-        )
+        s_reload.static_background = imread(BG_FILE)
         s_reload.metadata.General.original_filename = (
             s.metadata.General.original_filename
         )
@@ -355,11 +331,10 @@ class TestNORDIF:
     def test_load_save_lazy(self, save_path_nordif):
         s = load(PATTERN_FILE, lazy=True)
         assert isinstance(s.data, da.Array)
+        assert isinstance(s.static_background, np.ndarray)
         s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background pattern in directory
-            s_reload = load(
-                save_path_nordif, lazy=True, setting_file=SETTING_FILE
-            )
+            s_reload = load(save_path_nordif, lazy=True, setting_file=SETTING_FILE)
         assert s.data.shape == s_reload.data.shape
 
     def test_load_to_memory(self):
@@ -369,9 +344,10 @@ class TestNORDIF:
 
     def test_load_readonly(self):
         s = load(PATTERN_FILE, lazy=True)
+        keys = ["array-original", "original-array"]
         k = next(
             filter(
-                lambda x: isinstance(x, str) and x.startswith("array-original"),
+                lambda x: isinstance(x, str) and any([x.startswith(j) for j in keys]),
                 s.data.dask.keys(),
             )
         )
@@ -396,9 +372,7 @@ class TestNORDIF:
         s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background or setting files
             s_reload = load(
-                save_path_nordif,
-                scan_size=scan_size[::-1],
-                pattern_size=pattern_size,
+                save_path_nordif, scan_size=scan_size[::-1], pattern_size=pattern_size
             )
         assert np.allclose(s.data, s_reload.data)
 
@@ -410,9 +384,7 @@ class TestNORDIF:
         s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background or setting files
             s_reload = load(
-                save_path_nordif,
-                scan_size=scan_size,
-                pattern_size=pattern_size,
+                save_path_nordif, scan_size=scan_size, pattern_size=pattern_size
             )
         assert np.allclose(s.data, s_reload.data)
 
@@ -421,9 +393,7 @@ class TestNORDIF:
         s = EBSD((255 * np.random.rand(*pattern_size)).astype(np.uint8))
         s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background or setting files
-            s_reload = load(
-                save_path_nordif, scan_size=1, pattern_size=pattern_size
-            )
+            s_reload = load(save_path_nordif, scan_size=1, pattern_size=pattern_size)
         assert np.allclose(s.data, s_reload.data)
 
     def test_read_cutoff(self, save_path_nordif):

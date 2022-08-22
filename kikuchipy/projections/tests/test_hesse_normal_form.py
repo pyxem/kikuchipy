@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -20,7 +19,7 @@ import numpy as np
 import pytest
 
 from kikuchipy.projections.hesse_normal_form import HesseNormalForm
-from kikuchipy.projections.spherical_projection import _get_polar
+from kikuchipy.projections.spherical_projection import _get_polar_coordinates
 
 
 class TestHesseNormalForm:
@@ -64,7 +63,7 @@ class TestHesseNormalForm:
                 [0.7605, 0.0647, 0.9848],
             ]
         )
-        polar = _get_polar(v)
+        polar = _get_polar_coordinates(v)
         assert np.allclose(
             HesseNormalForm.project_polar(polar, radius=radius),
             desired_result,

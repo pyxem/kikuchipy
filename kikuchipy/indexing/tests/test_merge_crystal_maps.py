@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -21,22 +20,21 @@ from orix.crystal_map import CrystalMap, Phase, PhaseList
 from orix.quaternion import Rotation
 import pytest
 
-from kikuchipy.indexing._merge_crystal_maps import merge_crystal_maps
-from kikuchipy.indexing.similarity_metrics import make_similarity_metric
+from kikuchipy.indexing import merge_crystal_maps
 
 
 class TestMergeCrystalMaps:
     @pytest.mark.parametrize(
         "map_shape, rot_per_point, phase_names",
         [
-            ((0, 3), 10, ["a", "b"]),
-            ((0, 4), 1, ["a", "b", "c"]),
-            ((3, 0), 5, ["austenite", "ferrite"]),
-            ((4, 0), 1, ["al", "cu", "si"]),
+            ((3,), 10, ["a", "b"]),
+            ((4,), 1, ["a", "b", "c"]),
+            ((3,), 5, ["austenite", "ferrite"]),
+            ((4,), 1, ["al", "cu", "si"]),
         ],
     )
     def test_merge_crystal_maps_1d(
-        self, get_single_phase_xmap, map_shape, rot_per_point, phase_names
+        self, map_shape, rot_per_point, phase_names, get_single_phase_xmap
     ):
         """Crystal maps with a 1D navigation shape can be merged
         successfully and yields an expected output.
@@ -54,11 +52,16 @@ class TestMergeCrystalMaps:
         desired_idx = np.arange(np.prod(data_shape)).reshape(data_shape)
 
         xmaps = []
-        xmap_args = (map_shape, rot_per_point, [scores_prop, sim_idx_prop])
+        xmap_kwargs = dict(
+            nav_shape=map_shape,
+            rotations_per_point=rot_per_point,
+            prop_names=[scores_prop, sim_idx_prop],
+            step_sizes=(1,),
+        )
         phase_ids = np.arange(n_phases)
         for i in range(n_phases):
             xmap = get_single_phase_xmap(
-                *xmap_args, phase_names[i], phase_ids[i]
+                name=phase_names[i], phase_id=phase_ids[i], **xmap_kwargs
             )
             # All maps have at least one point with the best score
             xmap[i].prop[scores_prop] += i + 1
@@ -95,14 +98,8 @@ class TestMergeCrystalMaps:
         assert np.allclose(merged_xmap.rotations.data, desired_rot)
 
         desired_merged_shapes = (map_size, rot_per_point * n_phases)
-        assert (
-            merged_xmap.prop[f"merged_{scores_prop}"].shape
-            == desired_merged_shapes
-        )
-        assert (
-            merged_xmap.prop[f"merged_{sim_idx_prop}"].shape
-            == desired_merged_shapes
-        )
+        assert merged_xmap.prop[f"merged_{scores_prop}"].shape == desired_merged_shapes
+        assert merged_xmap.prop[f"merged_{sim_idx_prop}"].shape == desired_merged_shapes
 
     @pytest.mark.parametrize(
         "map_shape, rot_per_point, phase_names, mean_n_best",
@@ -141,9 +138,7 @@ class TestMergeCrystalMaps:
         phase_ids = np.arange(n_phases)
         ny, nx = map_shape
         for i in range(n_phases):
-            xmap = get_single_phase_xmap(
-                *xmap_args, phase_names[i], phase_ids[i]
-            )
+            xmap = get_single_phase_xmap(*xmap_args, phase_names[i], phase_ids[i])
             # All maps have at least one point with the best score along
             # the map diagonal
             idx = (i, i)
@@ -183,22 +178,13 @@ class TestMergeCrystalMaps:
         assert np.allclose(merged_xmap.rotations.data, desired_rot)
 
         desired_merged_shapes = (map_size, rot_per_point * n_phases)
-        assert (
-            merged_xmap.prop[f"merged_{scores_prop}"].shape
-            == desired_merged_shapes
-        )
-        assert (
-            merged_xmap.prop[f"merged_{sim_idx_prop}"].shape
-            == desired_merged_shapes
-        )
+        assert merged_xmap.prop[f"merged_{scores_prop}"].shape == desired_merged_shapes
+        assert merged_xmap.prop[f"merged_{sim_idx_prop}"].shape == desired_merged_shapes
 
     @pytest.mark.parametrize(
-        "scores_prop, sim_idx_prop",
-        [("scores", "sim_idx"), ("similar", "simulated")],
+        "scores_prop, sim_idx_prop", [("scores", "sim_idx"), ("similar", "simulated")]
     )
-    def test_property_names(
-        self, get_single_phase_xmap, scores_prop, sim_idx_prop
-    ):
+    def test_property_names(self, get_single_phase_xmap, scores_prop, sim_idx_prop):
         """Passing scores and simulation indices property names returns
         expected properties in merged map.
         """
@@ -215,6 +201,7 @@ class TestMergeCrystalMaps:
         xmap2[3, 3].prop[scores_prop] = 2
         merged_xmap = merge_crystal_maps(
             crystal_maps=[xmap1, xmap2],
+            greater_is_better=True,
             scores_prop=scores_prop,
             simulation_indices_prop=sim_idx_prop,
         )
@@ -223,21 +210,10 @@ class TestMergeCrystalMaps:
         assert sim_idx_prop in merged_xmap.prop.keys()
 
         desired_merged_shapes = (np.prod(map_shape), rot_per_point * 2)
-        assert (
-            merged_xmap.prop[f"merged_{scores_prop}"].shape
-            == desired_merged_shapes
-        )
-        assert (
-            merged_xmap.prop[f"merged_{sim_idx_prop}"].shape
-            == desired_merged_shapes
-        )
+        assert merged_xmap.prop[f"merged_{scores_prop}"].shape == desired_merged_shapes
+        assert merged_xmap.prop[f"merged_{sim_idx_prop}"].shape == desired_merged_shapes
 
-    def test_negative_metric(self, get_single_phase_xmap):
-        def negative_sad(p, t):  # pragma: no cover
-            return -np.sum(np.abs(p - t), axis=(2, 3))
-
-        metric = make_similarity_metric(negative_sad, greater_is_better=False)
-
+    def test_lower_is_better(self, get_single_phase_xmap):
         map_shape = (5, 6)
         rot_per_point = 5
         scores_prop = "scores"
@@ -256,7 +232,7 @@ class TestMergeCrystalMaps:
 
         merged_xmap = merge_crystal_maps(
             crystal_maps=[xmap1, xmap2],
-            metric=metric,
+            greater_is_better=False,
             simulation_indices_prop=sim_idx_prop,
         )
 
@@ -271,7 +247,7 @@ class TestMergeCrystalMaps:
         ],
     )
     def test_warning_merge_maps_with_same_phase(
-        self, get_single_phase_xmap, phase_names, desired_phase_names,
+        self, get_single_phase_xmap, phase_names, desired_phase_names
     ):
         n_phases = len(phase_names)
         scores_prop = "scores"
@@ -283,9 +259,7 @@ class TestMergeCrystalMaps:
         xmap_args = (map_shape, rot_per_point, [scores_prop, sim_idx_prop])
         phase_ids = np.arange(n_phases)
         for i in range(n_phases):
-            xmap = get_single_phase_xmap(
-                *xmap_args, phase_names[i], phase_ids[i]
-            )
+            xmap = get_single_phase_xmap(*xmap_args, phase_names[i], phase_ids[i])
             # All maps have at least one point with the best score
             xmap[i, i].scores += i + 1
             xmaps.append(xmap)
@@ -299,9 +273,7 @@ class TestMergeCrystalMaps:
                 simulation_indices_prop=sim_idx_prop,
             )
 
-        assert all(
-            [name in merged_xmap.phases.names for name in desired_phase_names]
-        )
+        assert all([name in merged_xmap.phases.names for name in desired_phase_names])
 
     @pytest.mark.parametrize(
         (
@@ -309,7 +281,7 @@ class TestMergeCrystalMaps:
             "desired_merged_sim_idx"
         ),
         [
-            ((2, 0), 1, 1, [[1, 1], [2, 1]], [[0, 2], [3, 1]]),
+            ((2,), 1, 1, [[1, 1], [2, 1]], [[0, 2], [3, 1]]),
             ((1, 2), 1, 1, [[1, 1], [2, 1]], [[0, 2], [3, 1]]),
             (
                 (1, 3),
@@ -357,7 +329,7 @@ class TestMergeCrystalMaps:
         desired_merged_scores,
         desired_merged_sim_idx,
     ):
-        """Ensure that the mergesorted scores and simulation index
+        """Ensure that the merge sorted scores and simulation index
         properties in the merged map has the correct values and shape.
         """
         prop_names = ["scores", "simulation_indices"]

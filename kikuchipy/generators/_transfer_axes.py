@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -37,9 +36,7 @@ def _transfer_navigation_axes_to_signal_axes(new_axes, old_axes):
     new_axes
         The new signal with calibrated signal axes.
     """
-    for i in range(
-        min(new_axes.signal_dimension, old_axes.navigation_dimension)
-    ):
+    for i in range(min(new_axes.signal_dimension, old_axes.navigation_dimension)):
         ax_new = new_axes.signal_axes[i]
         ax_old = old_axes.navigation_axes[i]
         ax_new.name = ax_old.name

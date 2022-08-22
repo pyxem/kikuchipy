@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -41,7 +40,7 @@ class TestGnomonicProjection:
                 [0.7585, 0.1885, 0.2678],
             ]
         )
-        xy = GnomonicProjection.project(v)
+        xy = GnomonicProjection.vector2xy(v)
 
         # Desired project result?
         assert np.allclose(
@@ -64,7 +63,7 @@ class TestGnomonicProjection:
         )
 
         # Same result passing Vector3d
-        assert np.allclose(xy, GnomonicProjection.project(Vector3d(v)))
+        assert np.allclose(xy, GnomonicProjection.vector2xy(Vector3d(v)))
 
     def test_iproject(self):
         """Projecting Gnomonic coordinates to cartesian coordinates
@@ -86,7 +85,7 @@ class TestGnomonicProjection:
         )
 
         assert np.allclose(
-            GnomonicProjection.iproject(xy).data,
+            GnomonicProjection.xy2vector(xy).data,
             np.array(
                 [
                     [0.5316, 0.7603, 0.3729],

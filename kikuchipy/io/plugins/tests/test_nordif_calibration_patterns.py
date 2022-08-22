@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -18,6 +17,8 @@
 
 import os
 
+from matplotlib.pyplot import imread
+import numpy as np
 import pytest
 
 from kikuchipy.io.plugins.nordif_calibration_patterns import _get_coordinates
@@ -26,16 +27,16 @@ from kikuchipy import load
 
 DIR_PATH = os.path.dirname(__file__)
 NORDIF_DIR = os.path.join(DIR_PATH, "../../../data/nordif")
+BG_FILE = os.path.join(NORDIF_DIR, "Background acquisition pattern.bmp")
 
 
 class TestNORDIFCalibrationPatterns:
     def test_read(self):
         s = load(os.path.join(NORDIF_DIR, "Setting.txt"))
         assert s.data.shape == (2, 60, 60)
+        assert np.allclose(s.static_background, imread(BG_FILE))
 
-    @pytest.mark.parametrize(
-        "setting_file", ["Setting_bad1.txt", "Setting_bad2.txt"]
-    )
+    @pytest.mark.parametrize("setting_file", ["Setting_bad1.txt", "Setting_bad2.txt"])
     def test_get_coordinates_raises(self, setting_file):
         with pytest.raises(ValueError, match="No calibration patterns found"):
             _ = _get_coordinates(os.path.join(NORDIF_DIR, setting_file))

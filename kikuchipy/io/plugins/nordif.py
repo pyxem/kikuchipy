@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -20,6 +19,7 @@
 
 import datetime
 import os
+from pathlib import Path
 import re
 import time
 from typing import Dict, List, Optional, Tuple, Union
@@ -36,6 +36,9 @@ from kikuchipy.signals.util._metadata import (
 )
 
 
+__all__ = ["file_reader", "file_writer"]
+
+
 # Plugin characteristics
 # ----------------------
 format_name = "NORDIF"
@@ -49,7 +52,7 @@ writes = [(2, 2), (2, 1), (2, 0)]
 
 
 def file_reader(
-    filename: str,
+    filename: Union[str, Path],
     mmap_mode: Optional[str] = None,
     scan_size: Union[None, int, Tuple[int, ...]] = None,
     pattern_size: Optional[Tuple[int, ...]] = None,
@@ -63,6 +66,8 @@ def file_reader(
     filename
         File path to NORDIF data file.
     mmap_mode
+        Memory map mode. If not given, ``"r"`` is used unless
+        ``lazy=True``, in which case ``"c"`` is used.
     scan_size
         Scan size in number of patterns in width and height.
     pattern_size
@@ -73,11 +78,11 @@ def file_reader(
     lazy
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
-        is False.
+        is ``False``.
 
     Returns
     -------
-    scan : list of dicts
+    scan
         Data, axes, metadata and original metadata.
     """
     if mmap_mode is None:
@@ -86,9 +91,7 @@ def file_reader(
     scan = {}
 
     # Make sure we open in correct mode
-    if "+" in mmap_mode or (
-        "write" in mmap_mode and "copyonwrite" != mmap_mode
-    ):
+    if "+" in mmap_mode or ("write" in mmap_mode and "copyonwrite" != mmap_mode):
         if lazy:
             raise ValueError("Lazy loading does not support in-place writing")
         f = open(filename, mode="r+b")
@@ -96,7 +99,6 @@ def file_reader(
         f = open(filename, mode="rb")
 
     # Get metadata from setting file
-    ebsd_node = metadata_nodes("ebsd")
     folder, _ = os.path.split(filename)
     if setting_file is None:
         setting_file = os.path.join(folder, "Setting.txt")
@@ -110,28 +112,28 @@ def file_reader(
     else:
         if scan_size is None and pattern_size is None:
             raise ValueError(
-                "No setting file found and no scan_size or pattern_size "
-                "detected in input arguments. These must be set if no setting "
-                "file is provided."
+                "No setting file found and no scan_size or pattern_size detected in "
+                "input arguments. These must be set if no setting file is provided"
             )
+        warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
         md = ebsd_metadata()
         omd = DictionaryTreeBrowser()
 
-    # Read static background image into metadata
+    # Read static background pattern, to be passed to EBSD.__init__() to
+    # set the EBSD.static_background property
     static_bg_file = os.path.join(folder, "Background acquisition pattern.bmp")
     try:
-        md.set_item(ebsd_node + ".static_background", imread(static_bg_file))
+        scan["static_background"] = imread(static_bg_file)
     except FileNotFoundError:
+        scan["static_background"] = None
         warnings.warn(
-            f"Could not read static background pattern '{static_bg_file}', "
-            "however it can be added using set_experimental_parameters()."
+            f"Could not read static background pattern '{static_bg_file}', however it "
+            "can be set as 'EBSD.static_background'"
         )
 
     # Set required and other parameters in metadata
     md.set_item("General.original_filename", filename)
-    md.set_item(
-        "General.title", os.path.splitext(os.path.split(filename)[1])[0]
-    )
+    md.set_item("General.title", os.path.splitext(os.path.split(filename)[1])[0])
     md.set_item("Signal.signal_type", "EBSD")
     md.set_item("Signal.record_by", "image")
     scan["metadata"] = md.as_dictionary()
@@ -151,10 +153,10 @@ def file_reader(
         f.seek(0)
         data = np.fromfile(f, dtype="uint8", count=data_size)
     else:
-        data = np.memmap(f, mode=mmap_mode, dtype="uint8")
+        data = np.memmap(f.name, mode=mmap_mode, dtype="uint8")
 
     try:
-        data = data.reshape((ny, nx, sy, sx), order="C").squeeze()
+        data = data.reshape((ny, nx, sy, sx)).squeeze()
     except ValueError:
         warnings.warn(
             "Pattern size and scan size larger than file size! Will attempt to "
@@ -162,7 +164,7 @@ def file_reader(
         )
         # Data is stored image by image
         pw = [(0, ny * nx * sy * sx - data.size)]
-        data = np.pad(data, pw, mode="constant")
+        data = np.pad(data, pw)
         data = data.reshape((ny, nx, sy, sx))
     scan["data"] = data
 
@@ -195,9 +197,7 @@ def file_reader(
 
     f.close()
 
-    return [
-        scan,
-    ]
+    return [scan]
 
 
 def get_settings_from_file(
@@ -245,6 +245,7 @@ def get_settings_from_file(
     l_specimen = blocks["[Specimen]"]
 
     # Create metadata and original metadata structures
+    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
     md = ebsd_metadata()
     sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
     omd = DictionaryTreeBrowser()
@@ -253,9 +254,7 @@ def get_settings_from_file(
     # Get metadata values from settings file using regular expressions
     azimuth_angle = get_string(content, "Azimuthal\t(.*)\t", l_ang + 4, f)
     md.set_item(ebsd_node + ".azimuth_angle", float(azimuth_angle))
-    beam_energy = get_string(
-        content, "Accelerating voltage\t(.*)\tkV", l_mic + 5, f
-    )
+    beam_energy = get_string(content, "Accelerating voltage\t(.*)\tkV", l_mic + 5, f)
     md.set_item(sem_node + ".beam_energy", float(beam_energy))
     detector = get_string(content, "Model\t(.*)\t", l_det + 1, f)
     detector = re.sub("[^a-zA-Z0-9]", repl="", string=detector)
@@ -278,16 +277,12 @@ def get_settings_from_file(
     scan_time = get_string(content, "Scan time\t(.*)\t", l_area + 7, f)
     scan_time = time.strptime(scan_time, "%H:%M:%S")
     scan_time = datetime.timedelta(
-        hours=scan_time.tm_hour,
-        minutes=scan_time.tm_min,
-        seconds=scan_time.tm_sec,
+        hours=scan_time.tm_hour, minutes=scan_time.tm_min, seconds=scan_time.tm_sec
     ).total_seconds()
     md.set_item(ebsd_node + ".scan_time", int(scan_time))
     version = get_string(content, "Software version\t(.*)\t", l_nordif + 1, f)
     md.set_item(ebsd_node + ".version", version)
-    working_distance = get_string(
-        content, "Working distance\t(.*)\tmm", l_mic + 6, f
-    )
+    working_distance = get_string(content, "Working distance\t(.*)\tmm", l_mic + 6, f)
     md.set_item(sem_node + ".working_distance", float(working_distance))
     md.set_item(ebsd_node + ".grid_type", "square")
     md.set_item(ebsd_node + ".manufacturer", "NORDIF")
@@ -335,15 +330,15 @@ def get_string(content: list, expression: str, line_no: int, file) -> str:
     match = re.search(expression, content[line_no])
     if match is None:
         warnings.warn(
-            f"Failed to read line {line_no - 1} in settings file '{file.name}' "
-            f"using regular expression '{expression}'."
+            f"Failed to read line {line_no - 1} in settings file '{file.name}' using "
+            f"regular expression '{expression}'"
         )
         return 0
     else:
         return match.group(1)
 
 
-def file_writer(filename: str, signal):
+def file_writer(filename: str, signal: Union["EBSD", "LazyEBSD"]):
     """Write an :class:`~kikuchipy.signals.EBSD` or
     :class:`~kikuchipy.signals.LazyEBSD` object to a NORDIF binary
     file.
@@ -352,7 +347,7 @@ def file_writer(filename: str, signal):
     ----------
     filename
         Full path of HDF file.
-    signal : kikuchipy.signals.EBSD or kikuchipy.signals.LazyEBSD
+    signal
         Signal instance.
     """
     with open(filename, "wb") as f:

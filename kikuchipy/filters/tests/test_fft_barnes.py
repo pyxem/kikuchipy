@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -25,7 +24,7 @@ from kikuchipy.filters.window import Window
 
 class TestBarnesFFTFilter:
     @pytest.mark.parametrize(
-        "shape, expected_offset", [((10, 10), (5, 5)), ((17, 31), (8, 15))],
+        "shape, expected_offset", [((10, 10), (5, 5)), ((17, 31), (8, 15))]
     )
     def test_offset_before_fft(self, shape, expected_offset):
         offset = barnes._offset_before_fft(shape)
@@ -36,7 +35,7 @@ class TestBarnesFFTFilter:
         assert np.issubdtype(type(offset[0]), np.signedinteger)
 
     @pytest.mark.parametrize(
-        "shape, expected_offset", [((10, 10), (4, 4)), ((17, 31), (8, 15))],
+        "shape, expected_offset", [((10, 10), (4, 4)), ((17, 31), (8, 15))]
     )
     def test_offset_after_ifft(self, shape, expected_offset):
         offset = barnes._offset_after_ifft(shape)
@@ -58,9 +57,7 @@ class TestBarnesFFTFilter:
         p = np.ones(image_shape, dtype=np.uint8)
         w = Window("gaussian", shape=(21, 23), std=5)
 
-        fft_shape, window_rfft, off1, off2 = barnes._fft_filter_setup(
-            image_shape=p.shape, window=w,
-        )
+        fft_shape, _, off1, _ = barnes._fft_filter_setup(image_shape=p.shape, window=w)
         p_padded = barnes._pad_image(
             image=p,
             fft_shape=fft_shape,
@@ -72,10 +69,18 @@ class TestBarnesFFTFilter:
         assert p_padded.shape == expected_shape
         assert np.allclose(np.sum(p_padded[:sy, :sx]), np.sum(p))
 
+        p_padded2 = barnes._pad_image.py_func(
+            image=p,
+            fft_shape=fft_shape,
+            window_shape=w.shape,
+            offset_before_fft=off1,
+        )
+        assert np.allclose(p_padded, p_padded2)
+
     def test_pad_window(self):
         window_shape = (5, 5)
         ky, kx = window_shape
-        w = Window("gaussian", shape=window_shape)
+        w = Window("gaussian", shape=window_shape, std=1)
         fft_shape = (10, 10)
         w_padded = barnes._pad_window(window=w, fft_shape=fft_shape)
 
@@ -83,7 +88,7 @@ class TestBarnesFFTFilter:
         assert np.allclose(np.sum(w_padded[:ky, :kx]), np.sum(w), atol=1e-5)
 
     def test_pad_window_raises(self):
-        w = Window("gaussian", shape=(5, 5))
+        w = Window("gaussian", shape=(5, 5), std=1)
         with pytest.raises(ValueError, match="could not broadcast input array"):
             _ = barnes._pad_window(window=w, fft_shape=(4, 4))
 
@@ -92,7 +97,7 @@ class TestBarnesFFTFilter:
         w = Window("gaussian", shape=(10, 10), std=5)
 
         fft_shape, window_rfft, off1, off2 = barnes._fft_filter_setup(
-            image_shape=p.shape, window=w,
+            image_shape=p.shape, window=w
         )
 
         assert isinstance(fft_shape, tuple)
@@ -113,7 +118,7 @@ class TestBarnesFFTFilter:
         w = Window("gaussian", shape=(10, 10), std=5)
 
         fft_shape, window_rfft, off1, off2 = barnes._fft_filter_setup(
-            image_shape=p.shape, window=w,
+            image_shape=p.shape, window=w
         )
 
         p_filtered = barnes._fft_filter(
@@ -130,11 +135,7 @@ class TestBarnesFFTFilter:
     @pytest.mark.parametrize(
         "image, w, answer",
         [
-            (
-                np.array([[1, 2], [3, 4]]),
-                np.array([[1]]),
-                np.array([[1, 2], [3, 4]]),
-            ),
+            (np.array([[1, 2], [3, 4]]), np.array([[1]]), np.array([[1, 2], [3, 4]])),
             (
                 np.array([[1, 2], [3, 4]]),
                 np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]]),

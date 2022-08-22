@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-# Copyright 2019-2021 The kikuchipy developers
+# Copyright 2019-2022 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -21,7 +20,9 @@ format.
 """
 
 import os
-from typing import List, Optional, Tuple
+from pathlib import Path
+from typing import List, Optional, Tuple, Union
+import warnings
 
 import dask.array as da
 from h5py import File, Group, Dataset
@@ -29,6 +30,9 @@ import numpy as np
 
 from kikuchipy.io.plugins.h5ebsd import hdf5group2dict
 from kikuchipy.io.plugins.emsoft_ebsd import _crystaldata2phase
+
+
+__all__ = ["file_reader"]
 
 
 # Plugin characteristics
@@ -50,10 +54,10 @@ footprint = ["emdata/ebsdmaster"]
 
 
 def file_reader(
-    filename: str,
+    filename: Union[str, Path],
     energy: Optional[range] = None,
     projection: str = "stereographic",
-    hemisphere: str = "north",
+    hemisphere: str = "upper",
     lazy: bool = False,
     **kwargs,
 ) -> List[dict]:
@@ -65,27 +69,42 @@ def file_reader(
     filename
         Full file path of the HDF file.
     energy
-        Desired beam energy or energy range. If None is passed
-        (default), all available energies are read.
+        Desired beam energy or energy range. If not given (default), all
+        available energies are read.
     projection
-        Projection(s) to read. Options are "stereographic" (default) or
-        "lambert".
+        Projection(s) to read. Options are ``"stereographic"`` (default)
+        or ``"lambert"``.
     hemisphere
-        Projection hemisphere(s) to read. Options are "north" (default),
-        "south" or "both". If "both", these will be stacked in the
-        vertical navigation axis.
+        Projection hemisphere(s) to read. Options are ``"upper"``
+        (default), ``"lower"`` or ``"both"``. If ``"both"``, these will
+        be stacked in the vertical navigation axis.
     lazy
         Open the data lazily without actually reading the data from disk
         until requested. Allows opening datasets larger than available
-        memory. Default is False.
-    kwargs :
-        Keyword arguments passed to h5py.File.
+        memory. Default is ``False``.
+    **kwargs
+        Keyword arguments passed to :class:`h5py.File`.
 
     Returns
     -------
-    signal_dict_list: list of dicts
+    signal_dict_list
         Data, axes, metadata and original metadata.
     """
+    if hemisphere.lower() not in ["upper", "lower", "both"]:
+        # TODO: Remove warning after 0.6 is released
+        warnings.warn(
+            (
+                "`hemisphere` parameter options 'north' and 'south' are deprecated and "
+                "will raise an error in version 0.7, use 'upper' and 'lower' instead. "
+                "Changed to 'upper' or 'lower'."
+            ),
+            np.VisibleDeprecationWarning,
+        )
+        if hemisphere == "north":
+            hemisphere = "upper"
+        elif hemisphere == "south":
+            hemisphere = "lower"
+
     mode = kwargs.pop("mode", "r")
     f = File(filename, mode=mode, **kwargs)
 
@@ -107,22 +126,19 @@ def file_reader(
     crystal_data = hdf5group2dict(f["CrystalData"])
     nml_params["CrystalData"] = crystal_data
     phase = _crystaldata2phase(crystal_data)
-
-    # Get the phase name
-    try:
-        xtal_name = os.path.split(nml_params["MCCLNameList"]["xtalname"])[0]
-        phase_name = os.path.splitext(xtal_name)[0]
-    except KeyError:
-        phase_name = None
-    phase.name = phase_name
+    if phase.name == "":
+        # Get the phase name
+        try:
+            xtal_name = nml_params["MCCLNameList"]["xtalname"]
+            phase.name = os.path.splitext(xtal_name)[0]
+        except KeyError:
+            pass
 
     # Get data shape and slices
     data_group = f["EMData/EBSDmaster"]
     energies = data_group["EkeVs"][()]
     data_shape, data_slices = _get_data_shape_slices(
-        npx=nml_params["EBSDMasterNameList"]["npx"],
-        energies=energies,
-        energy=energy,
+        npx=nml_params["EBSDMasterNameList"]["npx"], energies=energies, energy=energy
     )
     i_min = data_slices[0].start
     i_min = 0 if i_min is None else i_min
@@ -130,12 +146,12 @@ def file_reader(
 
     # Get HDF5 data sets
     datasets = _get_datasets(
-        data_group=data_group, projection=projection, hemisphere=hemisphere,
+        data_group=data_group, projection=projection, hemisphere=hemisphere
     )
 
     # TODO: Data shape and slices are easier to handle if the reader
     #  was a class (in addition to file_reader()) instead of a series of
-    #  function
+    #  functions
     dataset_shape = data_shape
     if projection.lower() == "lambert":
         data_slices = (slice(None, None),) + data_slices
@@ -160,8 +176,7 @@ def file_reader(
     data = data_read_func(datasets[0][data_slices], **data_kwargs)
     if data_shape[0] == 2:
         data = data_stack_func(
-            [data, data_read_func(datasets[1][data_slices], **data_kwargs)],
-            axis=0,
+            [data, data_read_func(datasets[1][data_slices], **data_kwargs)], axis=0
         )
 
     if projection.lower() == "lambert":
@@ -175,6 +190,10 @@ def file_reader(
 
     # Remove 1-dimensions
     data = data.squeeze()
+
+    if projection.lower() == "stereographic":
+        # Mirror about horizontal (flip up-down)
+        data = data[..., ::-1, :]
 
     # Axes scales
     energy_scale = nml_params["MCCLNameList"]["Ebinsize"]
@@ -233,13 +252,13 @@ def _check_file_format(file: File):
         if program_name != "EMEBSDmaster.f90":
             raise KeyError
     except KeyError:
-        raise IOError(
-            f"'{file.filename}' is not in EMsoft's master pattern format."
-        )
+        raise IOError(f"'{file.filename}' is not in EMsoft's master pattern format.")
 
 
 def _get_data_shape_slices(
-    npx: int, energies: np.ndarray, energy: Optional[tuple] = None,
+    npx: int,
+    energies: np.ndarray,
+    energy: Optional[tuple] = None,
 ) -> Tuple[Tuple, Tuple[slice, ...]]:
     """Determine the data shape from half the master pattern side
     length, number of asymmetric positions if the square Lambert
@@ -280,9 +299,7 @@ def _get_data_shape_slices(
     return data_shape, data_slices
 
 
-def _get_datasets(
-    data_group: Group, projection: str, hemisphere: str,
-) -> List[Dataset]:
+def _get_datasets(data_group: Group, projection: str, hemisphere: str) -> List[Dataset]:
     """Get datasets from projection and hemisphere.
 
     Parameters
@@ -290,9 +307,9 @@ def _get_datasets(
     data_group
         HDF5 data group with data sets.
     projection
-        "stereographic" or "lambert" projection.
+        ``"stereographic"`` or ``"lambert"`` projection.
     hemisphere
-        "north" hemisphere, "south" hemisphere, or "both".
+        ``"upper"`` hemisphere, ``"lower"`` hemisphere, or ``"both"``.
 
     Returns
     -------
@@ -303,12 +320,11 @@ def _get_datasets(
     projection = projection.lower()
 
     projections = {"stereographic": "masterSP", "lambert": "mLP"}
-    hemispheres = {"north": "NH", "south": "SH"}
+    hemispheres = {"upper": "NH", "lower": "SH"}
 
     if projection not in projections.keys():
         raise ValueError(
-            f"'projection' value {projection} must be one of "
-            f"{projections.keys()}"
+            f"'projection' value {projection} must be one of " f"{projections.keys()}"
         )
 
     if hemisphere == "both":
@@ -321,8 +337,7 @@ def _get_datasets(
         datasets = [data_group[dset_name]]
     else:
         raise ValueError(
-            f"'hemisphere' value {hemisphere} must be one of "
-            f"{hemispheres.keys()}."
+            f"'hemisphere' value {hemisphere} must be one of " f"{hemispheres.keys()}."
         )
 
     return datasets
