@@ -16,7 +16,6 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from time import sleep
 
 import dask.array as da
 from hyperspy.api import load as hs_load
@@ -37,7 +36,6 @@ from kikuchipy.io.plugins.h5ebsd import (
     hdf5group2dict,
 )
 from kikuchipy.signals.ebsd import EBSD
-from kikuchipy.signals.util._metadata import metadata_nodes
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -171,33 +169,24 @@ class TestKikuchipyH5EBSD:
         AXES_MANAGER["axis-1"]["size"] = new_n_columns
         assert_dictionary(s_reload.axes_manager.as_dictionary(), AXES_MANAGER)
 
-    @pytest.mark.parametrize("remove_phases", (True, False))
-    def test_load_save_cycle(self, save_path_hdf5, remove_phases):
+    def test_load_save_cycle(self, save_path_hdf5):
         s = load(KIKUCHIPY_FILE)
 
         # Check that metadata is read correctly
-        assert s.metadata.Acquisition_instrument.SEM.Detector.EBSD.xpc == -5.64
+        assert s.detector.binning == 8
         assert s.metadata.General.title == "patterns My awes0m4 ..."
 
-        if remove_phases:
-            del s.metadata.Sample.Phases
         s.save(save_path_hdf5, overwrite=True)
         s_reload = load(save_path_hdf5)
         np.testing.assert_equal(s.data, s_reload.data)
 
-        # Change data set name and package version to make metadata equal, and
-        # redo deleting of phases
-        s_reload.metadata.General.title = s.metadata.General.title
-        with pytest.warns(np.VisibleDeprecationWarning):
-            ebsd_node = metadata_nodes("ebsd")
-        s_reload.metadata.set_item(
-            ebsd_node + ".version", s.metadata.get_item(ebsd_node + ".version")
-        )
-        if remove_phases:
-            s.metadata.Sample.set_item("Phases", s_reload.metadata.Sample.Phases)
-        np.testing.assert_equal(
-            s_reload.metadata.as_dictionary(), s.metadata.as_dictionary()
-        )
+        # Change data set name and original filename to make metadata
+        # equal
+        md = s.metadata
+        md2 = s_reload.metadata
+        md2.General.title = md.General.title
+        md2.General.original_filename = md.General.original_filename
+        np.testing.assert_equal(md2.as_dictionary(), md.as_dictionary())
 
     def test_load_save_hyperspy_cycle(self, tmp_path):
         s = load(KIKUCHIPY_FILE)
@@ -356,14 +345,13 @@ class TestKikuchipyH5EBSD:
         s_x_only.save(save_path_hdf5, overwrite=True)
         s_x_only2 = load(save_path_hdf5)
         assert s_x_only2.data.shape == desired_shape
-        print(s_x_only)
-        print(s_x_only2)
         assert s_x_only2.axes_manager.navigation_axes[0].name == "x"
         assert s_x_only2.axes_manager.navigation_extent == desired_nav_extent
 
         # Maintain axis name
         s_y_only2.axes_manager["y"].name = "x"
-        s_y_only2.save(save_path_hdf5, overwrite=True)
+        with pytest.warns(UserWarning, match="^The `xmap`"):
+            s_y_only2.save(save_path_hdf5, overwrite=True)
         s_x_only3 = load(save_path_hdf5)
         assert s_x_only3.data.shape == desired_shape
         assert s_x_only3.axes_manager.navigation_axes[0].name == "x"
@@ -374,7 +362,8 @@ class TestKikuchipyH5EBSD:
         s = nickel_ebsd_small()
         s0 = s.inav[0, 0]
         s0.save(save_path_hdf5)
-        s1 = load(save_path_hdf5)
+        with pytest.warns(DeprecationWarning, match="Calling nonzero"):
+            s1 = load(save_path_hdf5)
         assert s1.data.shape == (60, 60)
         assert s1.axes_manager.navigation_axes == ()
 

@@ -382,7 +382,6 @@ class KikuchipyH5EBSDWriter:
 
         # --- Patterns
         (ny, nx, sy, sx), (dy, dx, px_size) = self.data_shape_scale
-        print(self.data_shape_scale)
         overwrite_dataset(
             group.create_group("EBSD/Data"),
             data=self.signal.data.reshape(ny * nx, sy, sx),
@@ -403,6 +402,9 @@ class KikuchipyH5EBSDWriter:
         )
 
         # --- Header
+        static_bg = self.signal.static_background
+        if static_bg is None:
+            static_bg = -1
         detector = self.signal.detector
         _dict2hdf5group(
             {
@@ -418,7 +420,7 @@ class KikuchipyH5EBSDWriter:
                 "pcz": detector.pcz,
                 "detector_pixel_size": detector.px_size,
                 "sample_tilt": detector.sample_tilt,
-                "static_background": self.signal.static_background,
+                "static_background": static_bg,
                 "step_x": dx,
                 "step_y": dy,
             },
