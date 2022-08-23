@@ -28,24 +28,30 @@ import numpy as np
 
 import kikuchipy.signals
 from kikuchipy.io.plugins import (
+    bruker_h5ebsd,
+    edax_h5ebsd,
     emsoft_ebsd,
     emsoft_ebsd_master_pattern,
-    h5ebsd,
+    kikuchipy_h5ebsd,
     nordif,
     nordif_calibration_patterns,
     oxford_binary,
+    oxford_h5ebsd,
 )
 from kikuchipy.io._util import _get_input_bool, _ensure_directory
 
 
 plugins = [
+    bruker_h5ebsd,
+    edax_h5ebsd,
     emsoft_ebsd,
     emsoft_ebsd_master_pattern,
     hspy,
-    h5ebsd,
+    kikuchipy_h5ebsd,
     nordif,
     nordif_calibration_patterns,
     oxford_binary,
+    oxford_h5ebsd,
 ]
 
 default_write_ext = set()
@@ -58,7 +64,7 @@ def load(
     filename: Union[str, Path], lazy: bool = False, **kwargs
 ) -> Union["EBSD", "EBSDMasterPattern", List["EBSD"], List["EBSDMasterPattern"]]:
     """Load an :class:`~kikuchipy.signals.EBSD` or
-    :class:`~kikuchipy.signals.EBSDMasterPattern` object from a
+    :class:`~kikuchipy.signals.EBSDMasterPattern` signal from a
     supported file format.
 
     This function is a modified version of :func:`hyperspy.io.load`.
@@ -79,6 +85,11 @@ def load(
     -------
     signals
         Signal or a list of signals.
+
+    Raises
+    ------
+    IOError
+        If the file was not found or could not be read.
 
     Examples
     --------
@@ -189,22 +200,25 @@ def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
     filename
         Input file name.
     plugins
-        Potential plugins.
+        Potential plugins reading HDF5 files.
 
     Returns
     -------
     plugin
-        One of the potential plugins, or None if no footprint was found.
+        One of the potential plugins, or ``None`` if no footprint was
+        found.
     """
 
-    def _hdfgroups2dict(group):
+    def _hdf5group2dict(group):
         d = {}
         for key, val in group.items():
-            key = key.lstrip().lower()
+            key_lower = key.lstrip().lower()
             if isinstance(val, Group):
-                d[key] = _hdfgroups2dict(val)
+                d[key_lower] = _hdf5group2dict(val)
+            elif key_lower == "manufacturer":
+                d[key_lower] = key
             else:
-                d[key] = 1
+                d[key_lower] = 1
         return d
 
     def _exists(obj, chain):
@@ -212,24 +226,39 @@ def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
         if key in obj:
             return _exists(obj[key], chain) if chain else obj[key]
 
-    f = File(filename)
-    d = _hdfgroups2dict(f["/"])
+    with File(filename) as f:
+        d = _hdf5group2dict(f["/"])
 
-    plugin = None
-    plugins_with_footprints = [p for p in plugins if hasattr(p, "footprint")]
-    for p in plugins_with_footprints:
-        n_matches = 0
-        n_desired_matches = len(p.footprint)
-        for fp in p.footprint:
-            fp = fp.lower().split("/")
-            if _exists(d, fp) is not None:
-                n_matches += 1
-        if n_matches == n_desired_matches:
-            plugin = p
+        plugins_with_footprints = [p for p in plugins if hasattr(p, "footprint")]
+        plugins_with_manufacturer = [
+            p for p in plugins_with_footprints if hasattr(p, "manufacturer")
+        ]
 
-    f.close()
+        matching_plugin = None
+        # Check manufacturer if possible (all h5ebsd files have this)
+        for key, val in d.items():
+            if key == "manufacturer":
+                # Extracting the manufacturer is finicky
+                man = f[val][()]
+                if isinstance(man, np.ndarray) and len(man) == 1:
+                    man = man[0]
+                if isinstance(man, bytes):
+                    man = man.decode("latin-1")
+                for p in plugins_with_manufacturer:
+                    if man.lower() == p.manufacturer:
+                        matching_plugin = p
+        else:  # If no match found, continue searching
+            for p in plugins_with_footprints:
+                n_matches = 0
+                n_desired_matches = len(p.footprint)
+                for fp in p.footprint:
+                    fp = fp.lower().split("/")
+                    if _exists(d, fp) is not None:
+                        n_matches += 1
+                if n_matches == n_desired_matches:
+                    matching_plugin = p
 
-    return plugin
+    return matching_plugin
 
 
 def _assign_signal_subclass(
@@ -370,7 +399,11 @@ def _save(
         is_file = os.path.isfile(filename)
 
         # Check if we are to add signal to an already existing h5ebsd file
-        if writer.format_name == "h5ebsd" and overwrite is not True and is_file:
+        if (
+            writer.format_name == "kikuchipy_h5ebsd"
+            and overwrite is not True
+            and is_file
+        ):
             if add_scan is None:
                 q = "Add scan to '{}' (y/n)?\n".format(filename)
                 add_scan = _get_input_bool(q)
