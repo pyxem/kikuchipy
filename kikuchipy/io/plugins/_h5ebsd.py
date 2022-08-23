@@ -17,6 +17,7 @@
 
 """Generic, private parent class for all h5ebsd file plugins."""
 
+import abc
 import os
 from pathlib import Path
 from typing import Union, List, Tuple, Optional, Dict
@@ -45,10 +46,10 @@ from kikuchipy.signals.util._metadata import (
 )
 
 
-__all__ = ["hdf5group2dict", "H5EBSDReader", "H5EBSDWriter"]
+__all__ = ["_hdf5group2dict", "H5EBSDReader", "H5EBSDWriter"]
 
 
-def hdf5group2dict(
+def _hdf5group2dict(
     group: h5py.Group,
     dictionary: Union[None, dict] = None,
     recursive: bool = False,
@@ -90,7 +91,7 @@ def hdf5group2dict(
         # Check whether to extract subgroup or write value to dictionary
         if isinstance(val, h5py.Group) and recursive:
             dictionary[key] = {}
-            hdf5group2dict(
+            _hdf5group2dict(
                 group=group[key],
                 dictionary=dictionary[key],
                 data_dset_names=data_dset_names,
@@ -103,9 +104,9 @@ def hdf5group2dict(
     return dictionary
 
 
-class H5EBSDReader:
-    """Generic h5ebsd file reader to be extended in manufacturer
-    specific readers.
+class H5EBSDReader(abc.ABC):
+    """Abstract class implementing a reader of an h5ebsd file in a
+    format specific to each manufacturer.
 
     Parameters
     ----------
@@ -119,22 +120,28 @@ class H5EBSDReader:
         "bruker nano": "RawPatterns",
         "edax": "Pattern",
         "kikuchipy": "patterns",
+        "oxford instruments": "Processed Patterns",
     }
 
     def __init__(self, filename: str, **kwargs):
         self.filename = filename
         self.file = h5py.File(filename, **kwargs)
         self.scan_groups = self.get_scan_groups()
-        self.manufacturer, self.version = self.check_file()
+        self.manufacturer, self.version = self.get_manufacturer_version()
+        self.check_file()
         self.patterns_name = self.manufacturer_patterns[self.manufacturer]
 
     def __repr__(self):
-        return f"{self.__class__.__name__}: {self.filename}"
+        return f"{self.__class__.__name__} ({self.version}): {self.filename}"
 
-    def check_file(self) -> Tuple[str, str]:
-        """Check if the HDF5 file is a valid h5ebsd file by searching
-        for datasets containing manufacturer, version and scans in the
-        top group.
+    @property
+    def scan_group_names(self) -> List[str]:
+        return [group.name.lstrip("/") for group in self.scan_groups]
+
+    def check_file(self):
+        """Check if the file is a valid h5ebsd file by searching for
+        datasets containing manufacturer, version and scans in the top
+        group.
 
         Raises
         ------
@@ -146,16 +153,9 @@ class H5EBSDReader:
             datasets ``"EBSD/Data"`` and ``"EBSD/Header"``.
         IOError
             If there is no reader for the file ``"manufacturer"``.
-
-        Returns
-        -------
-        manufacturer
-            File manufacturer.
-        version
-            File version.
         """
         error = None
-        if len(self.scan_groups) != len(self.file["/"].keys()) - 2:
+        if self.manufacturer is None or self.version is None:
             error = "manufacturer and/or version could not be read from its top group"
         if not any(
             "EBSD/Data" in group and "EBSD/Header" in group
@@ -175,11 +175,9 @@ class H5EBSDReader:
             )
         if error is not None:
             raise IOError(f"{self.filename} is not a supported h5ebsd file, as {error}")
-        else:
-            return man, ver
 
     def get_manufacturer_version(self) -> Tuple[str, str]:
-        """Get manufacturer and version from h5ebsd file.
+        """Get manufacturer and version from the top group.
 
         Returns
         -------
@@ -190,18 +188,17 @@ class H5EBSDReader:
         """
         manufacturer = None
         version = None
-        for key, val in hdf5group2dict(group=self.file["/"]).items():
+        for key, val in _hdf5group2dict(group=self.file["/"]).items():
             if key.lower() == "manufacturer":
-                manufacturer = val
-            elif key.lower() == "version":
-                version = val
+                manufacturer = val.lower()
+            elif key.lower() in ["version", "format version"]:
+                version = val.lower()
         return manufacturer, version
 
     def get_scan_groups(self) -> List[h5py.Group]:
-        """Return a list of the scan group names from an h5ebsd file.
+        """Return a list of the groups with scans.
 
-        These are all groups in the top group not named
-        ``"manufacturer"`` or ``"version"``.
+        Assumes all top groups contain a scan.
 
         Returns
         -------
@@ -209,21 +206,21 @@ class H5EBSDReader:
             List of available scan groups.
         """
         scan_groups = []
-        for key in self.file["/"].keys():
-            if key.lstrip().lower() not in ["manufacturer", "version"]:
+        for key in self.file.keys():
+            if isinstance(self.file[key], h5py.Group):
                 scan_groups.append(self.file[key])
         return scan_groups
 
     def get_desired_scan_groups(
-        self, scan_group_names: Union[None, str, List[str]] = None
+        self, group_names: Union[None, str, List[str]] = None
     ) -> List[h5py.Group]:
-        """Return desired HDF5 groups with scans within them.
+        """Return a list of the desired group(s) with scan(s).
 
         Parameters
         ----------
-        scan_group_names
-            Name or a list of names of the desired top HDF5 group(s). If
-            not given, the first scan group is returned.
+        group_names
+            Name or a list of names of the desired top group(s). If not
+            given, the first scan group is returned.
 
         Returns
         -------
@@ -232,24 +229,24 @@ class H5EBSDReader:
         """
         # Get desired scan groups
         scan_groups = []
-        if scan_group_names is None:  # Return the first scan group
+        if group_names is None:  # Return the first scan group
             scan_groups.append(self.scan_groups[0])
         else:
-            if isinstance(scan_group_names, str):
-                scan_group_names = [scan_group_names]
-            for desired_scan in scan_group_names:
+            if isinstance(group_names, str):
+                group_names = [group_names]
+            for desired_name in group_names:
                 scan_is_here = False
-                for scan in self.scan_groups:
-                    if desired_scan == scan.name.lstrip("/"):
+                for name, scan in zip(self.scan_group_names, self.scan_groups):
+                    if desired_name == name:
                         scan_groups.append(scan)
                         scan_is_here = True
                         break
                 if not scan_is_here:
                     error_str = (
-                        f"Scan '{desired_scan}' is not among the available scans "
-                        f"{self.scan_groups} in '{self.filename}'."
+                        f"Scan '{desired_name}' is not among the available scans "
+                        f"{self.scan_group_names} in '{self.filename}'."
                     )
-                    if len(scan_group_names) == 1:
+                    if len(group_names) == 1:
                         raise IOError(error_str)
                     else:
                         warnings.warn(error_str)
@@ -257,31 +254,58 @@ class H5EBSDReader:
 
     def read(
         self,
-        lazy: bool,
-        scan_group_names: Union[None, str, List[str]] = None,
+        group_names: Union[None, str, List[str]] = None,
+        lazy: bool = False,
     ) -> List[dict]:
         """Return a list of dictionaries which can be used to create
         :class:`~kikuchipy.signals.EBSD` signals.
 
         Parameters
         ----------
-        lazy
-            Read dataset lazily.
-        scan_group_names
+        group_names
             Name or a list of names of the desired top HDF5 group(s). If
             not given, the first scan group is returned.
+        lazy
+            Read dataset lazily (default is ``False``). If ``False``,
+            the file is closed after reading.
 
         Returns
         -------
         scan_list
             List of dictionaries with keys ``"axes"``, ``"data"``,
             ``"metadata"``, ``"original_metadata"``, ``"detector"``,
-            ``"static_background"``, and ``"xmap"``.
+            (possibly) ``"static_background"``, and ``"xmap"``.
         """
         scan_dict_list = []
-        for scan in self.get_desired_scan_groups(scan_group_names):
-            pass
+        for scan in self.get_desired_scan_groups(group_names):
+            scan_dict_list.append(self.scan2dict(scan, lazy))
+
+        if not lazy:
+            self.file.close()
+
         return scan_dict_list
+
+    @abc.abstractmethod
+    def scan2dict(self, group: h5py.Group, lazy: bool = False) -> dict:
+        """Read (possibly lazily) patterns from group.
+
+        Parameters
+        ----------
+        group
+            HDF5 group with patterns.
+        lazy
+            Read dataset lazily (default is ``False``).
+
+        Returns
+        -------
+        scan_dict
+            Dictionary with keys ``"axes"``, ``"data"``, ``"metadata"``,
+            ``"original_metadata"``, ``"detector"``,
+            ``"static_background"``, and ``"xmap"``. This dictionary can
+             be passed as keyword arguments to create an
+             :class:`~kikuchipy.signals.EBSD` signal.
+        """
+        return NotImplemented  # pragma: no cover
 
 
 class H5EBSDWriter:
@@ -407,7 +431,7 @@ class H5EBSDWriter:
             raise OSError("Cannot write to an already open file")
 
     def set_manufacturer(self):
-        for k, v in hdf5group2dict(group=self.file["/"]).items():
+        for k, v in _hdf5group2dict(group=self.file["/"]).items():
             if k.lower() == "manufacturer":
                 self.manufacturer = v
                 break
@@ -415,7 +439,7 @@ class H5EBSDWriter:
             self.manufacturer = None
 
     def set_version(self):
-        for k, v in hdf5group2dict(group=self.file["/"]).items():
+        for k, v in _hdf5group2dict(group=self.file["/"]).items():
             if k.lower() == "version":
                 self.version = v
                 break
