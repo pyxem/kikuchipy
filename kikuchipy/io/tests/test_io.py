@@ -23,7 +23,7 @@ import numpy as np
 import pytest
 
 from kikuchipy.io._io import load
-from kikuchipy.io.plugins import h5ebsd
+from kikuchipy.io.plugins import kikuchipy_h5ebsd
 from kikuchipy.io._io import _assign_signal_subclass, _dict2signal
 from kikuchipy.signals.ebsd import EBSD, LazyEBSD
 
@@ -49,7 +49,7 @@ class TestIO:
             gc.collect()
 
     def test_dict2signal(self):
-        scan_dict = h5ebsd.file_reader(KIKUCHIPY_FILE)[0]
+        scan_dict = kikuchipy_h5ebsd.file_reader(KIKUCHIPY_FILE)[0]
         scan_dict["metadata"]["Signal"]["record_by"] = "not-image"
         with pytest.raises(ValueError, match="kikuchipy only supports"):
             _ = _dict2signal(scan_dict)
