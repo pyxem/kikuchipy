@@ -49,51 +49,6 @@ METADATA = {
             "magnification": 200,
             "beam_energy": 20.0,
             "working_distance": 24.7,
-            "Detector": {
-                "EBSD": {
-                    "azimuth_angle": 0.0,
-                    "binning": 1,
-                    "detector": "NORDIF UF1100",
-                    "elevation_angle": 0.0,
-                    "exposure_time": 0.0035,
-                    "frame_number": -1,
-                    "frame_rate": 202,
-                    "gain": 0.0,
-                    "grid_type": "square",
-                    "sample_tilt": 70.0,
-                    "scan_time": 148,
-                    "static_background": -1,
-                    "xpc": -1.0,
-                    "ypc": -1.0,
-                    "zpc": -1.0,
-                    "version": "3.1.2",
-                    "manufacturer": "NORDIF",
-                }
-            },
-        }
-    },
-    "Sample": {
-        "Phases": {
-            "1": {
-                "atom_coordinates": {
-                    "1": {
-                        "atom": "",
-                        "coordinates": np.array([0.0, 0.0, 0.0]),
-                        "site_occupation": 0.0,
-                        "debye_waller_factor": 0.0,
-                    }
-                },
-                "formula": "",
-                "info": "",
-                "lattice_constants": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]),
-                "laue_group": "",
-                "material_name": "Ni",
-                "point_group": "",
-                "setting": 0,
-                "source": "",
-                "space_group": 0,
-                "symmetry": 0,
-            }
         }
     },
 }
@@ -194,6 +149,12 @@ ORIGINAL_METADATA = {
     ]
 }
 SCAN_SIZE_FILE = {"nx": 3, "ny": 3, "sx": 60, "sy": 60, "step_x": 1.5, "step_y": 1.5}
+DETECTOR = {
+    "shape": (60, 60),
+    "sample_tilt": 70,
+    "tilt": 0,
+    "azimuthal": 0,
+}
 AXES_MANAGER = {
     "axis-0": {
         "name": "y",
@@ -241,10 +202,10 @@ def save_path_nordif():
 class TestNORDIF:
     def test_get_settings_from_file(self):
         settings = get_settings_from_file(SETTING_FILE)
-        answers = [METADATA, ORIGINAL_METADATA, SCAN_SIZE_FILE]
+        answers = [METADATA, ORIGINAL_METADATA, SCAN_SIZE_FILE, DETECTOR]
         assert len(settings) == len(answers)
         for setting_read, answer in zip(settings, answers):
-            np.testing.assert_equal(setting_read.as_dictionary(), answer)
+            np.testing.assert_equal(setting_read, answer)
 
     @pytest.mark.parametrize("line_no, correct", [(10, True), (11, False)])
     def test_get_string(self, line_no, correct):
@@ -255,13 +216,13 @@ class TestNORDIF:
             sample_tilt = get_string(
                 content=content, expression=exp, line_no=line_no, file=f
             )
-            assert sample_tilt == str(70)
+            assert sample_tilt == "70"
         else:
             with pytest.warns(UserWarning):
                 sample_tilt = get_string(
                     content=content, expression=exp, line_no=line_no, file=f
                 )
-            assert sample_tilt == 0
+            assert sample_tilt == ""
 
     @pytest.mark.parametrize("setting_file", (None, SETTING_FILE))
     def test_load(self, setting_file):
@@ -301,11 +262,13 @@ class TestNORDIF:
 
         scan_time_string = s.original_metadata["nordif_header"][80][10:18]
         scan_time = time.strptime(scan_time_string, "%H:%M:%S")
-        scan_time = datetime.timedelta(
-            hours=scan_time.tm_hour, minutes=scan_time.tm_min, seconds=scan_time.tm_sec
-        ).total_seconds()
         assert (
-            s.metadata.Acquisition_instrument.SEM.Detector.EBSD.scan_time == scan_time
+            datetime.timedelta(
+                hours=scan_time.tm_hour,
+                minutes=scan_time.tm_min,
+                seconds=scan_time.tm_sec,
+            ).total_seconds()
+            == 148
         )
         assert s.metadata.General.title == "Pattern"
 
