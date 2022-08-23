@@ -19,8 +19,6 @@ import os
 
 import dask.array as da
 from hyperspy.api import load as hs_load
-from hyperspy.misc.utils import DictionaryTreeBrowser
-from hyperspy.exceptions import VisibleDeprecationWarning
 from h5py import File, Dataset
 import numpy as np
 from orix import quaternion
@@ -30,11 +28,7 @@ import kikuchipy as kp
 from kikuchipy.data import nickel_ebsd_small
 from kikuchipy.conftest import assert_dictionary
 from kikuchipy.io._io import load
-from kikuchipy.io.plugins.h5ebsd import (
-    check_h5ebsd,
-    dict2h5ebsdgroup,
-    hdf5group2dict,
-)
+from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
 from kikuchipy.signals.ebsd import EBSD
 
 
@@ -125,28 +119,6 @@ class TestKikuchipyH5EBSD:
             match="(.*) is not a supported h5ebsd file, as 'nope' is not among ",
         ):
             _ = load(save_path_hdf5)
-
-    @pytest.mark.parametrize(
-        "delete, error",
-        [
-            ("man_ver", ".* is not an h5ebsd file, as manufacturer"),
-            ("scans", ".* is not an h5ebsd file, as no top groups with "),
-        ],
-    )
-    def test_check_h5ebsd(self, save_path_hdf5, delete, error):
-        s = EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
-        s.save(save_path_hdf5)
-
-        with File(save_path_hdf5, mode="r+") as f:
-            if delete == "man_ver":
-                del f["manufacturer"]
-                del f["version"]
-                with pytest.raises(OSError, match=error):
-                    check_h5ebsd(f)
-            else:
-                del f["Scan 1"]
-                with pytest.raises(OSError, match=error):
-                    check_h5ebsd(f)
 
     def test_read_patterns(self, save_path_hdf5):
         s = EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
@@ -303,12 +275,12 @@ class TestKikuchipyH5EBSD:
         else:
             s2.save(save_path_hdf5, add_scan=True, scan_number=scan_number)
 
-    def test_dict2h5ebsdgroup(self, save_path_hdf5):
-        dictionary = {"a": [np.array(24.5)], "b": DictionaryTreeBrowser(), "c": set()}
+    def test_dict2hdf5roup(self, save_path_hdf5):
+        dictionary = {"a": [np.array(24.5)], "c": set()}
         with File(save_path_hdf5, mode="w") as f:
             group = f.create_group(name="a_group")
-            with pytest.warns(UserWarning, match="The hdf5 writer could not"):
-                dict2h5ebsdgroup(dictionary, group)
+            with pytest.warns(UserWarning, match="The HDF5 writer could not"):
+                _dict2hdf5group(dictionary, group)
 
     def test_read_lazily_no_chunks(self):
         # First, make sure the data image dataset is not actually chunked
@@ -320,11 +292,6 @@ class TestKikuchipyH5EBSD:
         # Then, make sure it can be read correctly
         s = load(KIKUCHIPY_FILE_NO_CHUNKS, lazy=True)
         assert s.data.chunks == ((60,), (60,))
-
-    def test_hdf5group2dict_raises_deprecation_warning(self):
-        f = File(KIKUCHIPY_FILE)
-        with pytest.warns(VisibleDeprecationWarning, match="The 'lazy' "):
-            _ = hdf5group2dict(group=f["/"], lazy=True)
 
     def test_save_load_1d_nav(self, save_path_hdf5):
         """Save-load cycle of signals with one navigation dimension."""
