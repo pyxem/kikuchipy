@@ -80,5 +80,5 @@ class TestEDAXH5EBSD:
 
     def test_save_error(self):
         s = load(EDAX_FILE)
-        with pytest.raises(OSError, match="Only writing to kikuchipy's"):
+        with pytest.raises(OSError, match="(.*) is not a supported kikuchipy"):
             s.save(EDAX_FILE, add_scan=True)

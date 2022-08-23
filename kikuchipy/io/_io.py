@@ -247,7 +247,10 @@ def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
                 for p in plugins_with_manufacturer:
                     if man.lower() == p.manufacturer:
                         matching_plugin = p
-        else:  # If no match found, continue searching
+                        break
+
+        # If no match found, continue searching
+        if matching_plugin is None:
             for p in plugins_with_footprints:
                 n_matches = 0
                 n_desired_matches = len(p.footprint)
@@ -257,6 +260,7 @@ def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
                         n_matches += 1
                 if n_matches == n_desired_matches:
                     matching_plugin = p
+                    break
 
     return matching_plugin
 

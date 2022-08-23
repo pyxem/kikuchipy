@@ -70,6 +70,7 @@ AXES_MANAGER = {
 
 class TestBrukerH5EBSD:
     def test_load(self):
+        # Cover grid type check
         with File(BRUKER_FILE, mode="r+") as f:
             grid = f["Scan 0/EBSD/Header/Grid Type"]
             grid[()] = "hexagonal".encode()

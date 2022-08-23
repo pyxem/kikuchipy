@@ -148,7 +148,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
     _custom_properties = ["detector", "static_background", "xmap"]
 
     def __init__(self, *args, **kwargs):
-        hs.signals.Signal2D.__init__(self, *args, **kwargs)
+        super(EBSD, self).__init__(*args, **kwargs)
 
         self._detector = kwargs.pop(
             "detector",

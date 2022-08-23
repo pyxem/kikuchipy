@@ -283,12 +283,15 @@ class TestImport:
         import kikuchipy.io.plugins
 
         assert dir(kikuchipy.io.plugins) == [
+            "bruker_h5ebsd",
+            "edax_h5ebsd",
             "emsoft_ebsd",
             "emsoft_ebsd_master_pattern",
-            "h5ebsd",
+            "kikuchipy_h5ebsd",
             "nordif",
             "nordif_calibration_patterns",
             "oxford_binary",
+            "oxford_h5ebsd",
         ]
 
     def test_dir_pattern(self):

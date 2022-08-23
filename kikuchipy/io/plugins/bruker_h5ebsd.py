@@ -137,7 +137,7 @@ class BrukerH5EBSDReader(H5EBSDReader):
         sy, sx = hd["PatternHeight"], hd["PatternWidth"]
         dy, dx = hd["YSTEP"], hd["XSTEP"]
         px_size = hd.get("DetectorFullHeightMicrons", 1) / hd.get(
-            "UnclippedPatternHeight", 1
+            "UnClippedPatternHeight", 1
         )
 
         # --- Metadata
