@@ -61,12 +61,6 @@ from kikuchipy.pattern._pattern import (
     _remove_static_background_divide,
     _remove_dynamic_background,
 )
-from kikuchipy.signals.util._metadata import (
-    ebsd_metadata,
-    metadata_nodes,
-    _update_phase_info,
-    _write_parameters_to_dictionary,
-)
 from kikuchipy.signals.util._dask import (
     get_dask_array,
     get_chunking,
@@ -82,7 +76,7 @@ from kikuchipy.signals.util._map_helper import (
 )
 from kikuchipy.signals._common_image import CommonImage
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
-from kikuchipy._util import deprecated, deprecated_argument
+from kikuchipy._util import deprecated_argument
 
 
 class EBSD(CommonImage, hs.signals.Signal2D):
@@ -150,7 +144,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
     def __init__(self, *args, **kwargs):
         super(EBSD, self).__init__(*args, **kwargs)
 
-        self._detector = kwargs.pop(
+        self._detector = kwargs.get(
             "detector",
             EBSDDetector(
                 shape=self.axes_manager.signal_shape,
@@ -159,16 +153,6 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         )
         self._static_background = kwargs.get("static_background")
         self._xmap = kwargs.get("xmap")
-
-        # Update metadata if object is initialised from numpy array
-        warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
-        if not self.metadata.has_item(metadata_nodes("ebsd")):
-            md = self.metadata.as_dictionary()
-            md.update(ebsd_metadata().as_dictionary())
-            self.metadata.add_dictionary(md)
-        if not self.metadata.has_item("Sample.Phases"):
-            with warnings.catch_warnings():
-                self.set_phase_parameters()
 
     # ---------------------- Custom properties ----------------------- #
 
@@ -235,247 +219,6 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         self._static_background = value
 
     # ------------------------ Custom methods ------------------------ #
-
-    @deprecated(
-        since="0.5", removal="0.6", alternative="kikuchipy.detectors.EBSDDetector"
-    )
-    def set_experimental_parameters(
-        self,
-        detector=None,
-        azimuth_angle=None,
-        elevation_angle=None,
-        sample_tilt=None,
-        working_distance=None,
-        binning=None,
-        exposure_time=None,
-        grid_type=None,
-        gain=None,
-        frame_number=None,
-        frame_rate=None,
-        scan_time=None,
-        beam_energy=None,
-        xpc=None,
-        ypc=None,
-        zpc=None,
-        static_background=None,
-        manufacturer=None,
-        version=None,
-        microscope=None,
-        magnification=None,
-    ) -> None:
-        """Set experimental parameters in signal metadata.
-
-        Parameters
-        ----------
-        detector : str, optional
-            Detector manufacturer and model.
-        azimuth_angle : float, optional
-            Azimuth angle of the detector in degrees. If the azimuth is
-            zero, the detector is perpendicular to the tilt axis.
-        elevation_angle : float, optional
-            Elevation angle of the detector in degrees. If the elevation
-            is zero, the detector is perpendicular to the incident beam.
-        sample_tilt : float, optional
-            Sample tilt angle from horizontal in degrees.
-        working_distance : float, optional
-            Working distance in mm.
-        binning : int, optional
-            Camera binning.
-        exposure_time : float, optional
-            Camera exposure time in µs.
-        grid_type : str, optional
-            Scan grid type, only square grid is supported.
-        gain : float, optional
-            Camera gain, typically in dB.
-        frame_number : float, optional
-            Number of patterns integrated during acquisition.
-        frame_rate : float, optional
-            Frames per s.
-        scan_time : float, optional
-            Scan time in s.
-        beam_energy : float, optional
-            Energy of the electron beam in kV.
-        xpc : float, optional
-            Pattern center horizontal coordinate with respect to
-            detector center, as viewed from the detector to the sample.
-        ypc : float, optional
-            Pattern center vertical coordinate with respect to
-            detector center, as viewed from the detector to the sample.
-        zpc : float, optional
-            Specimen to scintillator distance.
-        static_background : numpy.ndarray, optional
-            Static background pattern.
-        manufacturer : str, optional
-            Manufacturer of software used to collect patterns.
-        version : str, optional
-            Version of software used to collect patterns.
-        microscope : str, optional
-            Microscope used to collect patterns.
-        magnification : int, optional
-            Microscope magnification at which patterns were collected.
-
-        See Also
-        --------
-        set_phase_parameters
-
-        Examples
-        --------
-        >>> import kikuchipy as kp
-        >>> s = kp.data.nickel_ebsd_small()
-        >>> node = kp.signals.util.metadata_nodes("ebsd")
-        >>> s.metadata.get_item(node + ".xpc")
-        -5.64
-        >>> s.set_experimental_parameters(xpc=0.50726)
-        >>> s.metadata.get_item(node + ".xpc")
-        0.50726
-        """
-        md = self.metadata
-        warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
-        sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
-        _write_parameters_to_dictionary(
-            {
-                "beam_energy": beam_energy,
-                "magnification": magnification,
-                "microscope": microscope,
-                "working_distance": working_distance,
-            },
-            md,
-            sem_node,
-        )
-        _write_parameters_to_dictionary(
-            {
-                "azimuth_angle": azimuth_angle,
-                "binning": binning,
-                "detector": detector,
-                "elevation_angle": elevation_angle,
-                "exposure_time": exposure_time,
-                "frame_number": frame_number,
-                "frame_rate": frame_rate,
-                "gain": gain,
-                "grid_type": grid_type,
-                "manufacturer": manufacturer,
-                "version": version,
-                "sample_tilt": sample_tilt,
-                "scan_time": scan_time,
-                "xpc": xpc,
-                "ypc": ypc,
-                "zpc": zpc,
-                "static_background": static_background,
-            },
-            md,
-            ebsd_node,
-        )
-
-    @deprecated(
-        since="0.5",
-        removal="0.6",
-        alternative="kikuchipy.signals.EBSD.xmap",
-        alternative_is_function=False,
-    )
-    def set_phase_parameters(
-        self,
-        number=1,
-        atom_coordinates=None,
-        formula=None,
-        info=None,
-        lattice_constants=None,
-        laue_group=None,
-        material_name=None,
-        point_group=None,
-        setting=None,
-        source=None,
-        space_group=None,
-        symmetry=None,
-    ) -> None:
-        """Set parameters for one phase in signal metadata.
-
-        A phase node with default values is created if none is present
-        in the metadata when this method is called.
-
-        Parameters
-        ----------
-        number : int, optional
-            Phase number.
-        atom_coordinates : dict, optional
-            Dictionary of dictionaries with one or more of the atoms in
-            the unit cell, on the form `{'1': {'atom': 'Ni',
-            'coordinates': [0, 0, 0], 'site_occupation': 1,
-            'debye_waller_factor': 0}, '2': {'atom': 'O',... etc.`
-            `debye_waller_factor` in units of nm^2, and
-            `site_occupation` in range [0, 1].
-        formula : str, optional
-            Phase formula, e.g. 'Fe2' or 'Ni'.
-        info : str, optional
-            Whatever phase info the user finds relevant.
-        lattice_constants : numpy.ndarray or list of floats, optional
-            Six lattice constants a, b, c, alpha, beta, gamma.
-        laue_group : str, optional
-            Phase Laue group.
-        material_name : str, optional
-            Name of material.
-        point_group : str, optional
-            Phase point group.
-        setting : int, optional
-            Space group's origin setting.
-        source : str, optional
-            Literature reference for phase data.
-        space_group : int, optional
-            Number between 1 and 230.
-        symmetry : int, optional
-            Phase symmetry.
-
-        See Also
-        --------
-        set_experimental_parameters
-
-        Examples
-        --------
-        >>> import kikuchipy as kp
-        >>> s = kp.data.nickel_ebsd_small()
-        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
-        ├── atom = Ni
-        ├── coordinates = array([0, 0, 0])
-        ├── debye_waller_factor = 0.0035
-        └── site_occupation = 1
-        >>> s.set_phase_parameters(
-        ...     number=1,
-        ...     atom_coordinates={"1": {
-        ...         "atom": "Fe",
-        ...         "coordinates": [0, 0, 0],
-        ...         "site_occupation": 1,
-        ...         "debye_waller_factor": 0.005
-        ...     }}
-        ... )
-        >>> s.metadata.Sample.Phases.Number_1.atom_coordinates.Number_1
-        ├── atom = Fe
-        ├── coordinates = array([0, 0, 0])
-        ├── debye_waller_factor = 0.005
-        └── site_occupation = 1
-        """
-        # Ensure atom coordinates are numpy arrays
-        if atom_coordinates is not None:
-            for phase, _ in atom_coordinates.items():
-                atom_coordinates[phase]["coordinates"] = np.array(
-                    atom_coordinates[phase]["coordinates"]
-                )
-
-        inputs = {
-            "atom_coordinates": atom_coordinates,
-            "formula": formula,
-            "info": info,
-            "lattice_constants": lattice_constants,
-            "laue_group": laue_group,
-            "material_name": material_name,
-            "point_group": point_group,
-            "setting": setting,
-            "source": source,
-            "space_group": space_group,
-            "symmetry": symmetry,
-        }
-
-        # Remove None values
-        phase = {k: v for k, v in inputs.items() if v is not None}
-        _update_phase_info(self.metadata, phase, number)
 
     def set_scan_calibration(
         self, step_x: Union[int, float] = 1.0, step_y: Union[int, float] = 1.0
