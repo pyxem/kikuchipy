@@ -20,7 +20,6 @@ import datetime
 import gc
 import numbers
 import os
-import sys
 from typing import Union, List, Optional, Tuple, Iterable
 import warnings
 
@@ -158,8 +157,8 @@ class EBSD(CommonImage, hs.signals.Signal2D):
                 px_size=self.axes_manager.signal_axes[0].scale,
             ),
         )
-        self._static_background = kwargs.pop("static_background", None)
-        self._xmap = kwargs.pop("xmap", None)
+        self._static_background = kwargs.get("static_background")
+        self._xmap = kwargs.get("xmap")
 
         # Update metadata if object is initialised from numpy array
         warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
