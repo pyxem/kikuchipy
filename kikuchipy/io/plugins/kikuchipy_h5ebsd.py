@@ -17,20 +17,26 @@
 
 """Reader and writer of EBSD data from a kikuchipy h5ebsd file."""
 
+import os
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 import warnings
 
 import dask.array as da
 import h5py
+from hyperspy.io_plugins.hspy import overwrite_dataset
 import numpy as np
 from orix.crystal_map import CrystalMap
+from orix.io.plugins.orix_hdf5 import crystalmap2dict
+from orix import __version__ as orix_version
 
 from kikuchipy.detectors import EBSDDetector
-from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict, H5EBSDReader, H5EBSDWriter
+from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group, _hdf5group2dict, H5EBSDReader
+from kikuchipy.io._util import _get_input_variable
+from kikuchipy.release import version as kikuchipy_version
+from kikuchipy.signals.util._crystal_map import _crystal_map_is_compatible_with_signal
 
-
-__all__ = ["file_reader", "file_writer"]
+__all__ = ["file_reader"]
 
 
 class KikuchipyH5EBSDReader(H5EBSDReader):
@@ -188,37 +194,6 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
         return scan_dict
 
 
-#         dset_required_data = [
-#             "x",
-#             "y",
-#             "z",
-#             "phi1",
-#             "Phi",
-#             "phi2",
-#             "phase_id",
-#             "id",
-#             "is_in_data",
-#         ]
-#         dset_required_header = [
-#             "grid_type",
-#             "nz",
-#             "ny",
-#             "nx",
-#             "z_step",
-#             "y_step",
-#             "x_step",
-#             "rotations_per_point",
-#             "scan_unit",
-#         ]
-
-
-class KikuchipyH5EBSDWriter(H5EBSDWriter):
-    from kikuchipy.release import version as ver_signal
-
-    manufacturer = "kikuchipy"
-    version = ver_signal
-
-
 def file_reader(
     filename: Union[str, Path],
     scan_group_names: Union[None, str, List[str]] = None,
@@ -257,12 +232,230 @@ def file_reader(
     return reader.read(scan_group_names, lazy)
 
 
-# def file_writer(
-#    filename: str,
-#    signal,
-#    add_scan: Optional[bool] = None,
-#    scan_number: int = 1,
-#    **kwargs,
-# ):
-#    writer = H5EBSDWriter(filename=filename, signal=signal)
-#    writer.write(add_scan=add_scan, scan_number=scan_number, **kwargs)
+class KikuchipyH5EBSDWriter:
+    """kikuchipy h5ebsd file writer.
+
+    Parameters
+    ----------
+    filename
+        Full file path of the HDF5 file.
+    signal : kikuchipy.signals.EBSD
+        EBSD signal.
+    """
+
+    def __init__(self, filename: str, signal):
+        self.filename = filename
+        self.signal = signal
+        self.file_exists = os.path.isfile(filename)
+
+        if self.file_exists:
+            mode = "r+"
+        else:
+            mode = "w"
+        try:
+            self.file = h5py.File(self.filename, mode=mode)
+        except OSError:
+            raise OSError("Cannot write to an already open file")
+
+        self.scan_groups = self.get_scan_groups()
+
+        if self.file_exists:
+            self.check_file()
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}: {self.filename}"
+
+    @property
+    def data_shape_scale(self) -> Tuple[tuple, tuple]:
+        """Return the shape and scale of the data to write to file."""
+        data_shape = [1] * 4  # (ny, nx, sy, sx)
+        data_scales = [1] * 3  # (dy, dx, px_size)
+        am = self.signal.axes_manager
+        nav_axes = am.navigation_axes
+        nav_dim = am.navigation_dimension
+        if nav_dim == 1:
+            nav_axis = nav_axes[0]
+            if nav_axis.name == "y":
+                data_shape[0] = nav_axis.size
+                data_scales[0] = nav_axis.scale
+            else:  # nav_axis.name == "x", or something else
+                data_shape[1] = nav_axis.size
+                data_scales[1] = nav_axis.scale
+        elif nav_dim == 2:
+            data_shape[:2] = [a.size for a in nav_axes][::-1]
+            data_scales[:2] = [a.scale for a in nav_axes[::-1]]
+        data_shape[2:] = am.signal_shape[::-1]
+        data_scales[2] = am.signal_axes[0].scale
+        return tuple(data_shape), tuple(data_scales)
+
+    @property
+    def scan_group_names(self) -> List[str]:
+        """Return a list of available scan group names."""
+        return [group.name.lstrip("/") for group in self.scan_groups]
+
+    def check_file(self):
+        """Check if the file, if it is old, is a valid kikuchipy h5ebsd
+        file.
+
+        Raises
+        ------
+        IOError
+            If the file was not created with kikuchipy, or if there are
+            no groups in the top group containing the datasets
+            ``"EBSD/Data"`` and ``"EBSD/Header"``.
+        """
+        error = None
+        top_groups = _hdf5group2dict(self.file["/"])
+        if top_groups.get("manufacturer") != "kikuchipy":
+            error = "it was not created with kikuchipy"
+        if not any(
+            "EBSD/Data" in group and "EBSD/Header" in group
+            for group in self.scan_groups
+        ):
+            error = (
+                "no top groups with subgroup name 'EBSD' with subgroups 'Data' and"
+                "'Header' were found"
+            )
+        if error is not None:
+            raise IOError(
+                f"{self.filename} is not a supported kikuchipy h5ebsd file, as {error}"
+            )
+
+    def get_scan_groups(self) -> list:
+        """Return a list of groups with scans."""
+        scan_groups = []
+        if self.file_exists:
+            for key in self.file.keys():
+                if isinstance(self.file[key], h5py.Group) and key.startswith("/Scan"):
+                    scan_groups.append(self.file[key])
+        return scan_groups
+
+    def get_valid_scan_number(self, scan_number: int = 1) -> int:
+        """Return a valid scan number.
+
+        Parameters
+        ----------
+        scan_number
+            Scan number in the file, e.g. 1 for "Scan 1" (default).
+
+        Returns
+        -------
+        valid_scan_number
+            ``scan_number`` or a new valid number if an existing scan in
+            the file has this number.
+
+        Raises
+        ------
+        IOError
+            If asked for a new scan number and that scan number is not
+            a number.
+        """
+        scan_nos = [int(name.split()[-1]) for name in self.scan_group_names]
+        for i in scan_nos:
+            if i == scan_number:
+                q = f"Scan {i} already in file, enter another scan number:\n"
+                scan_number = _get_input_variable(q, int)
+                if scan_number in [None, i]:
+                    raise IOError("Invalid scan number")
+        return scan_number
+
+    def get_xmap_dict(self) -> dict:
+        """Return a dictionary produced from :attr:`signal.xmap` or an
+        empty one.
+        """
+        (ny, nx, *_), (dy, dx, _) = self.data_shape_scale
+        xmap = self.signal.xmap
+        if xmap is None or not _crystal_map_is_compatible_with_signal(
+            xmap, self.signal.axes_manager.navigation_axes[::-1]
+        ):
+            xmap = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
+        return crystalmap2dict(xmap)
+
+    def write(self, add_scan: Optional[bool] = None, scan_number: int = 1, **kwargs):
+        """Write an :class:`~kikuchipy.signals.EBSD` to file.
+
+        Parameters
+        ----------
+        add_scan
+            If the file to write to already exists, this must be
+            ``True``.
+        scan_number
+            Scan number in the file, e.g. "Scan 1" (default).
+        **kwargs
+            Keyword arguments passed to
+            :meth:`h5py.Group.require_dataset`.
+
+        Raises
+        ------
+        ValueError
+            If the file exists but ``add_scan`` is ``None`` or
+            ``False``.
+        """
+        if self.file_exists and add_scan in [None, False]:
+            raise ValueError("Set `add_scan=True` to write to an existing file")
+
+        if self.file_exists:
+            valid_scan_number = self.get_valid_scan_number(scan_number)
+        else:
+            valid_scan_number = scan_number
+            _dict2hdf5group(
+                {"manufacturer": "kikuchipy", "version": kikuchipy_version},
+                self.file["/"],
+                **kwargs,
+            )
+        group = self.file.create_group(f"Scan {valid_scan_number}")
+
+        # --- Patterns
+        (ny, nx, sy, sx), _ = self.data_shape_scale
+        overwrite_dataset(
+            group.create_group("EBSD/Data"),
+            data=self.signal.data.reshape(ny * nx, sy, sx),
+            key="patterns",
+            signal_axes=(2, 1),
+            **kwargs,
+        )
+
+        # --- Crystal map
+        _dict2hdf5group(
+            {
+                "manufacturer": "orix",
+                "version": orix_version,
+                "crystal_map": self.get_xmap_dict(),
+            },
+            group.create_group("EBSD/CrystalMap"),
+            **kwargs,
+        )
+
+        # --- Header
+        detector = self.signal.detector
+        _dict2hdf5group(
+            {
+                "azimuthal": detector.azimuthal,
+                "binning": detector.binning,
+                "px_size": detector.px_size,
+                "tilt": detector.tilt,
+                "sample_tilt": detector.sample_tilt,
+                "static_background": self.signal.static_background,
+                "pcx": detector.pcx,
+                "pcy": detector.pcy,
+                "pcz": detector.pcz,
+            },
+            group.create_group("EBSD/Header"),
+            **kwargs,
+        )
+
+        # --- SEM Header
+        md_sem = self.signal.metadata.get_item("Acquisition_instrument.SEM")
+        md_sem = md_sem.as_dictionary()
+        _dict2hdf5group(
+            {
+                "beam_energy": md_sem.get("beam_energy"),
+                "magnification": md_sem.get("magnification"),
+                "microscope": md_sem.get("microscope"),
+                "working_distance": md_sem.get("working_distance"),
+            },
+            group.create_group("SEM/Header"),
+            **kwargs,
+        )
+
+        self.file.close()
