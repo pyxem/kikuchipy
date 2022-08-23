@@ -18,11 +18,10 @@
 """Reader of EBSD data from an Oxford Instruments h5ebsd (H5OINA) file.
 """
 
+import os
 from pathlib import Path
-from typing import List, Optional, Union
-import warnings
+from typing import List, Union
 
-import dask.array as da
 import h5py
 import numpy as np
 from orix.crystal_map import CrystalMap
@@ -32,6 +31,26 @@ from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict, H5EBSDReader
 
 
 __all__ = ["file_reader"]
+
+
+# Plugin characteristics
+# ----------------------
+format_name = "oxford_h5ebsd"
+description = (
+    "Read support for electron backscatter diffraction patterns stored "
+    "in an HDF5 file formatted in Oxford Instruments' h5ebsd format, "
+    "named H5OINA. The format is similar to the format described in "
+    "Jackson et al.: h5ebsd: an archival data format for electron "
+    "back-scatter diffraction data sets. Integrating Materials and "
+    "Manufacturing Innovation 2014 3:4, doi: "
+    "https://dx.doi.org/10.1186/2193-9772-3-4."
+)
+full_support = False
+# Recognised file extension
+file_extensions = ["h5oina"]
+default_extension = 0
+# Writing capabilities (signal dimensions, navigation dimensions)
+writes = False
 
 
 class OxfordH5EBSDReader(H5EBSDReader):
@@ -56,7 +75,7 @@ class OxfordH5EBSDReader(H5EBSDReader):
         group
             Group with patterns.
         lazy
-            Read dataset lazily (default is ``False``).
+            Whether to read dataset lazily (default is ``False``).
 
         Returns
         -------
@@ -82,7 +101,7 @@ class OxfordH5EBSDReader(H5EBSDReader):
         px_size = 1.0
 
         # --- Metadata
-        fname = self.filename.split("/")[-1].split(".")[0]
+        fname = os.path.basename(self.filename).split(".")[0]
         title = fname + " " + group.name[1:].split("/")[0]
         if len(title) > 20:
             title = f"{title:.20}..."
@@ -111,72 +130,11 @@ class OxfordH5EBSDReader(H5EBSDReader):
         scan_dict = {"metadata": metadata}
 
         # --- Data
-        # Get HDF5 dataset with pattern array
-        try:
-            data_dset = group["EBSD/Data/" + self.patterns_name]
-        except KeyError:
-            raise KeyError(
-                "Could not find patterns in the expected dataset "
-                f"'EBSD/Data/{self.patterns_name}'"
-            )
-        # Get array from dataset
-        if lazy:
-            if data_dset.chunks is None:
-                chunks = "auto"
-            else:
-                chunks = data_dset.chunks
-            data = da.from_array(data_dset, chunks=chunks)
-        else:
-            data = np.asanyarray(data_dset)
-        # Reshape array
-        try:
-            data = data.reshape((ny, nx, sy, sx)).squeeze()
-        except ValueError:
-            warnings.warn(
-                f"Pattern size ({sx} x {sy}) and scan size ({nx} x {ny}) larger than "
-                "file size. Will attempt to load by zero padding incomplete frames"
-            )
-            # Data is stored image by image
-            pw = [(0, ny * nx * sy * sx - data.size)]
-            if lazy:
-                data = da.pad(data.flatten(), pw)
-            else:
-                data = np.pad(data.flatten(), pw)
-            data = data.reshape((ny, nx, sy, sx))
+        data = self.get_data(group, data_shape=(ny, nx, sy, sx), lazy=lazy)
         scan_dict["data"] = data
 
         # --- Axes
-        units = ["um"] * 4
-        scales = np.ones(4)
-        # Calibrate scan dimension and detector dimension
-        scales[0] *= dy
-        scales[1] *= dx
-        scales[2] *= px_size
-        scales[3] *= px_size
-        # Set axes names
-        names = ["y", "x", "dy", "dx"]
-        if data.ndim == 3:
-            if ny > nx:
-                names.remove("x")
-                scales = np.delete(scales, 1)
-            else:
-                names.remove("y")
-                scales = np.delete(scales, 0)
-        elif data.ndim == 2:
-            names = names[2:]
-            scales = scales[2:]
-        # Create list of axis objects
-        scan_dict["axes"] = [
-            {
-                "size": data.shape[i],
-                "index_in_array": i,
-                "name": names[i],
-                "scale": scales[i],
-                "offset": 0.0,
-                "units": units[i],
-            }
-            for i in range(data.ndim)
-        ]
+        scan_dict["axes"] = self.get_axes_list((ny, nx, sy, sx), (dy, dx, px_size))
 
         # --- Original metadata
         scan_dict["original_metadata"] = {
