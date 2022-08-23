@@ -94,7 +94,6 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
              be passed as keyword arguments to create an
              :class:`~kikuchipy.signals.EBSD` signal.
         """
-        # Get data shape
         hd = _hdf5group2dict(group["EBSD/Header"], recursive=True)
 
         # Note: When written, these were obtained from the
@@ -429,14 +428,14 @@ class KikuchipyH5EBSDWriter:
         )
 
         # --- SEM Header
-        md_sem = self.signal.metadata.get_item("Acquisition_instrument.SEM")
-        md_sem = md_sem.as_dictionary()
+        md = self.signal.metadata.as_dictionary()
+        md_sem = md.get("Acquisition_instrument", {}).get("SEM", {})
         _dict2hdf5group(
             {
-                "beam_energy": md_sem.get("beam_energy"),
-                "magnification": md_sem.get("magnification"),
-                "microscope": md_sem.get("microscope"),
-                "working_distance": md_sem.get("working_distance"),
+                "beam_energy": md_sem.get("beam_energy", 0),
+                "magnification": md_sem.get("magnification", 0),
+                "microscope": md_sem.get("microscope", ""),
+                "working_distance": md_sem.get("working_distance", 0),
             },
             group.create_group("SEM/Header"),
             **kwargs,
