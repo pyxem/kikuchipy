@@ -336,12 +336,7 @@ class TestImport:
     def test_dir_signals_util(self):
         import kikuchipy.signals.util
 
-        assert dir(kikuchipy.signals.util) == [
-            "ebsd_metadata",
-            "get_chunking",
-            "get_dask_array",
-            "metadata_nodes",
-        ]
+        assert dir(kikuchipy.signals.util) == ["get_chunking", "get_dask_array"]
 
     def test_dir_simulations(self):
         import kikuchipy.simulations

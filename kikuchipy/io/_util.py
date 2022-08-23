@@ -15,12 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from functools import reduce
 import os
-from typing import Union, Any, List, Optional
+from typing import Union, Any
 import warnings
-
-from hyperspy.misc.utils import DictionaryTreeBrowser
 
 
 def _get_input_bool(question: str) -> bool:
@@ -74,66 +71,6 @@ def _get_input_variable(question: str, var_type: Any) -> Union[None, Any]:
             " use `add_scan=True`"
         )
         return None
-
-
-def _delete_from_nested_dictionary(
-    dictionary: Union[dict, DictionaryTreeBrowser], keys: List[str]
-) -> Union[dict, DictionaryTreeBrowser]:
-    """Delete key(s) from a nested dictionary.
-
-    Parameters
-    ----------
-    dictionary
-        Dictionary to delete key(s) from.
-    keys
-        Key(s) to delete.
-
-    Returns
-    -------
-    modified_dict
-        Dictionary without deleted keys.
-    """
-    dict_type = type(dictionary)
-    if isinstance(dictionary, DictionaryTreeBrowser):
-        dictionary = dictionary.as_dictionary()
-    modified_dict = {}
-    for key, val in dictionary.items():
-        if key not in keys:
-            if isinstance(val, dict):
-                modified_dict[key] = _delete_from_nested_dictionary(val, keys)
-            else:
-                modified_dict[key] = val
-    if dict_type != dict:  # Revert to DictionaryTreeBrowser
-        modified_dict = DictionaryTreeBrowser(modified_dict)
-    return modified_dict
-
-
-def _get_nested_dictionary(
-    dictionary: Union[dict, DictionaryTreeBrowser],
-    keys: Union[str, List[str]],
-    default: Optional[Any] = None,
-) -> dict:
-    """Get key from a nested dictionary, returning a default value if
-    not found.
-
-    Parameters
-    ----------
-    dictionary
-        Dictionary to search through
-    keys
-        List of keys to get values from.
-    default
-        Default value to return if `keys` are not found.
-    """
-    if isinstance(dictionary, DictionaryTreeBrowser):
-        dictionary = dictionary.as_dictionary()
-    if not isinstance(keys, list):
-        keys = keys.split(".")
-    return reduce(
-        lambda d, key: d.get(key, default) if isinstance(d, dict) else default,
-        keys,
-        dictionary,
-    )
 
 
 def _ensure_directory(filename: str):
