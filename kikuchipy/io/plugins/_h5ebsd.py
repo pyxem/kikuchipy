@@ -270,6 +270,147 @@ class H5EBSDReader(abc.ABC):
                         warnings.warn(error_str)
         return scan_groups
 
+    def get_data(
+        self,
+        group: h5py.Group,
+        data_shape: tuple,
+        lazy: bool = False,
+        indices: Optional[np.ndarray] = None,
+    ) -> Union[np.ndarray, da.Array]:
+        """Read and return patterns from file as a NumPy or Dask array.
+
+        Parameters
+        ----------
+        group
+            Group with patterns.
+        data_shape
+            Output shape of pattern array, (ny, nx, sy, sx) = (
+            map rows, map columns, pattern rows, pattern columns).
+        lazy
+            Whether to read dataset lazily (default is ``False``).
+        indices
+            Mapping from pattern entry in the file to the 2D map, only
+            used in the Bruker Nano reader.
+
+        Returns
+        -------
+        data
+            Patterns, possibly padded.
+
+        Raises
+        ------
+        KeyError
+            If patterns cannot be found in the expected dataset.
+
+        Warns
+        -----
+        UserWarning
+            If pattern array is smaller than the data shape determined
+            from other datasets in the file.
+        """
+        ny, nx, sy, sx = data_shape
+
+        # Get HDF5 dataset with pattern array
+        try:
+            data_dset = group["EBSD/Data/" + self.patterns_name]
+        except KeyError:
+            raise KeyError(
+                "Could not find patterns in the expected dataset "
+                f"'EBSD/Data/{self.patterns_name}'"
+            )
+
+        # Get array from dataset
+        if lazy:
+            if data_dset.chunks is None:
+                chunks = "auto"
+            else:
+                chunks = data_dset.chunks
+            data = da.from_array(data_dset, chunks=chunks)
+        else:
+            data = np.asanyarray(data_dset)
+
+        # Reshape array
+        try:
+            if indices is not None:
+                data = data[indices]
+            data = data.reshape((ny, nx, sy, sx)).squeeze()
+        except ValueError:
+            warnings.warn(
+                f"Pattern size ({sx} x {sy}) and scan size ({nx} x {ny}) larger than "
+                "file size. Will attempt to load by zero padding incomplete frames"
+            )
+            # Data is stored image by image
+            pw = [(0, ny * nx * sy * sx - data.size)]
+            if lazy:
+                data = da.pad(data.flatten(), pw)
+            else:
+                data = np.pad(data.flatten(), pw)
+            data = data.reshape((ny, nx, sy, sx))
+
+        return data
+
+    @staticmethod
+    def get_axes_list(data_shape: tuple, data_scale: tuple) -> List[dict]:
+        """Return a description of each data axis.
+
+        Parameters
+        ----------
+        data_shape
+            4D shape of pattern array, ``(ny, nx, sy, sx)`` = (
+            map rows, map columns, pattern rows, pattern columns).
+        data_scale
+            Map scale and detector pixel size, ``(dy, dx, px_size)``.
+
+        Returns
+        -------
+        axes_list
+            Description of each data axis as a list of dictionaries.
+        """
+        ny, nx, sy, sx = data_shape
+        dy, dx, px_size = data_scale
+
+        data_ndim = sum([ny != 1, nx != 1]) + 2
+
+        units = ["um"] * 4
+        scales = np.ones(4)
+
+        # Calibrate scan dimension and detector dimension
+        scales[0] *= dy
+        scales[1] *= dx
+        scales[2] *= px_size
+        scales[3] *= px_size
+
+        # Set axes names
+        names = ["y", "x", "dy", "dx"]
+        if data_ndim == 3:
+            if ny > nx:
+                names.remove("x")
+                scales = np.delete(scales, 1)
+                data_shape = np.delete(data_shape, 1)
+            else:
+                names.remove("y")
+                scales = np.delete(scales, 0)
+                data_shape = np.delete(data_shape, 0)
+        elif data_ndim == 2:
+            names = names[2:]
+            scales = scales[2:]
+            data_shape = data_shape[2:]
+
+        # Create list of axis objects
+        axes_list = [
+            {
+                "size": data_shape[i],
+                "index_in_array": i,
+                "name": names[i],
+                "scale": scales[i],
+                "offset": 0.0,
+                "units": units[i],
+            }
+            for i in range(data_ndim)
+        ]
+
+        return axes_list
+
     def read(
         self,
         group_names: Union[None, str, List[str]] = None,
@@ -277,6 +418,8 @@ class H5EBSDReader(abc.ABC):
     ) -> List[dict]:
         """Return a list of dictionaries which can be used to create
         :class:`~kikuchipy.signals.EBSD` signals.
+
+        The file is closed after reading if ``lazy=False``.
 
         Parameters
         ----------

@@ -20,14 +20,12 @@
 import os
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
-import warnings
 
-import dask.array as da
 import h5py
 from hyperspy.io_plugins.hspy import overwrite_dataset
 import numpy as np
 from orix.crystal_map import CrystalMap
-from orix.io.plugins.orix_hdf5 import crystalmap2dict
+from orix.io.plugins.orix_hdf5 import crystalmap2dict, dict2crystalmap
 from orix import __version__ as orix_version
 
 from kikuchipy.detectors import EBSDDetector
@@ -36,7 +34,31 @@ from kikuchipy.io._util import _get_input_variable
 from kikuchipy.release import version as kikuchipy_version
 from kikuchipy.signals.util._crystal_map import _crystal_map_is_compatible_with_signal
 
-__all__ = ["file_reader"]
+
+__all__ = ["file_reader", "file_writer"]
+
+
+# Plugin characteristics
+# ----------------------
+format_name = "kikuchipy_h5ebsd"
+description = (
+    "Read/write support for electron backscatter diffraction patterns "
+    "stored in an HDF5 file formatted in kikuchipy's h5ebsd format, "
+    "similar to the format described in Jackson et al.: h5ebsd: an "
+    "archival data format for electron back-scatter diffraction data "
+    "sets. Integrating Materials and Manufacturing Innovation 2014 3:4,"
+    " doi: https://dx.doi.org/10.1186/2193-9772-3-4."
+)
+full_support = True
+# Recognised file extension
+file_extensions = ["h5", "hdf5", "h5ebsd"]
+default_extension = 1
+# Writing capabilities (signal dimensions, navigation dimensions)
+writes = [(2, 2), (2, 1), (2, 0)]
+
+# Unique HDF5 footprint
+footprint = ["manufacturer", "version"]
+manufacturer = "kikuchipy"
 
 
 class KikuchipyH5EBSDReader(H5EBSDReader):
@@ -61,7 +83,7 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
         group
             Group with patterns.
         lazy
-            Read dataset lazily (default is ``False``).
+            Whether to read dataset lazily (default is ``False``).
 
         Returns
         -------
@@ -74,14 +96,16 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
         """
         # Get data shape
         hd = _hdf5group2dict(group["EBSD/Header"], recursive=True)
-        # TODO: Make shape determination dependent on file version
+
+        # Note: When written, these were obtained from the
+        # `axes_manager` attribute, not the `xmap` one
         ny, nx = hd["n_rows"], hd["n_columns"]
         sy, sx = hd["pattern_height"], hd["pattern_width"]
         dy, dx = hd.get("step_y", 1), hd.get("step_x", 1)
         px_size = hd.get("detector_pixel_size", 1)
 
         # --- Metadata
-        fname = self.filename.split("/")[-1].split(".")[0]
+        fname = os.path.basename(self.filename).split(".")[0]
         title = fname + " " + group.name[1:].split("/")[0]
         if len(title) > 20:
             title = f"{title:.20}..."
@@ -97,73 +121,11 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
         scan_dict = {"metadata": metadata}
 
         # --- Data
-        # Get HDF5 dataset with pattern array
-        try:
-            data_dset = group["EBSD/Data/" + self.patterns_name]
-        except KeyError:
-            raise KeyError(
-                "Could not find patterns in the expected dataset "
-                f"'EBSD/Data/{self.patterns_name}'"
-            )
-        # Get array from dataset
-        if lazy:
-            if data_dset.chunks is None:
-                chunks = "auto"
-            else:
-                chunks = data_dset.chunks
-            data = da.from_array(data_dset, chunks=chunks)
-        else:
-            data = np.asanyarray(data_dset)
-        # Reshape array
-        try:
-            data = data.reshape((ny, nx, sy, sx)).squeeze()
-        except ValueError:
-            warnings.warn(
-                f"Pattern size ({sx} x {sy}) and scan size ({nx} x {ny}) larger than file "
-                "size. Will attempt to load by zero padding incomplete frames"
-            )
-            # Data is stored image by image
-            pw = [(0, ny * nx * sy * sx - data.size)]
-            if lazy:
-                data = da.pad(data.flatten(), pw)
-            else:
-                data = np.pad(data.flatten(), pw)
-            data = data.reshape((ny, nx, sy, sx))
+        data = self.get_data(group, data_shape=(ny, nx, sy, sx), lazy=lazy)
         scan_dict["data"] = data
 
         # --- Axes
-        units = ["um"] * 4
-        scales = np.ones(4)
-        # Calibrate scan dimension and detector dimension
-        # TODO: Make shape determination dependent on file version
-        scales[0] *= dy
-        scales[1] *= dx
-        scales[2] *= px_size
-        scales[3] *= px_size
-        # Set axes names
-        names = ["y", "x", "dy", "dx"]
-        if data.ndim == 3:
-            if ny > nx:
-                names.remove("x")
-                scales = np.delete(scales, 1)
-            else:
-                names.remove("y")
-                scales = np.delete(scales, 0)
-        elif data.ndim == 2:
-            names = names[2:]
-            scales = scales[2:]
-        # Create list of axis objects
-        scan_dict["axes"] = [
-            {
-                "size": data.shape[i],
-                "index_in_array": i,
-                "name": names[i],
-                "scale": scales[i],
-                "offset": 0.0,
-                "units": units[i],
-            }
-            for i in range(data.ndim)
-        ]
+        scan_dict["axes"] = self.get_axes_list((ny, nx, sy, sx), (dy, dx, px_size))
 
         # --- Original metadata
         scan_dict["original_metadata"] = {
@@ -173,15 +135,23 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
         scan_dict["original_metadata"].update(hd)
 
         # --- Crystal map
-        # TODO: Make crystal map creation dependent on file version
-        xmap = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
+        if "CrystalMap" in group["EBSD"]:
+            xmap = dict2crystalmap(
+                _hdf5group2dict(group["EBSD/CrystalMap/crystal_map"], recursive=True)
+            )
+        else:
+            xmap = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
         scan_dict["xmap"] = xmap
 
         # --- Static background
         scan_dict["static_background"] = hd.get("static_background")
 
         # --- Detector
-        # TODO: Make detector creation dependent on file version
+        pc = np.column_stack(
+            (hd.get("pcx", 0.5), hd.get("pcy", 0.5), hd.get("pcz", 0.5))
+        )
+        if pc.size > 3:
+            pc = pc.reshape((ny, nx, 3))
         scan_dict["detector"] = EBSDDetector(
             shape=(sy, sx),
             px_size=px_size,
@@ -189,6 +159,7 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
             tilt=hd.get("elevation_angle", 0),
             azimuthal=hd.get("azimuth_angle", 0),
             sample_tilt=hd.get("sample_tilt", 70),
+            pc=pc,
         )
 
         return scan_dict
@@ -203,6 +174,8 @@ def file_reader(
     """Read electron backscatter diffraction patterns, a crystal map,
     and an EBSD detector from a kikuchipy h5ebsd file
     :cite:`jackson2014h5ebsd`.
+
+    The file is closed after reading if ``lazy=False``.
 
     Parameters
     ----------
@@ -241,17 +214,23 @@ class KikuchipyH5EBSDWriter:
         Full file path of the HDF5 file.
     signal : kikuchipy.signals.EBSD
         EBSD signal.
+    add_scan
+        Whether to add the signal to the file if it exists and is
+        closed. If the file exists but this is not ``True``, the file
+        will be overwritten.
     """
 
-    def __init__(self, filename: str, signal):
+    def __init__(self, filename: str, signal, add_scan: Optional[bool] = None):
         self.filename = filename
         self.signal = signal
         self.file_exists = os.path.isfile(filename)
+        self.add_scan = add_scan
 
-        if self.file_exists:
+        if self.file_exists and self.add_scan:
             mode = "r+"
         else:
             mode = "w"
+            self.file_exists = False
         try:
             self.file = h5py.File(self.filename, mode=mode)
         except OSError:
@@ -326,7 +305,7 @@ class KikuchipyH5EBSDWriter:
         scan_groups = []
         if self.file_exists:
             for key in self.file.keys():
-                if isinstance(self.file[key], h5py.Group) and key.startswith("/Scan"):
+                if isinstance(self.file[key], h5py.Group) and key.startswith("Scan"):
                     scan_groups.append(self.file[key])
         return scan_groups
 
@@ -371,14 +350,13 @@ class KikuchipyH5EBSDWriter:
             xmap = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
         return crystalmap2dict(xmap)
 
-    def write(self, add_scan: Optional[bool] = None, scan_number: int = 1, **kwargs):
+    def write(self, scan_number: int = 1, **kwargs):
         """Write an :class:`~kikuchipy.signals.EBSD` to file.
+
+        The file is closed after writing.
 
         Parameters
         ----------
-        add_scan
-            If the file to write to already exists, this must be
-            ``True``.
         scan_number
             Scan number in the file, e.g. "Scan 1" (default).
         **kwargs
@@ -391,9 +369,6 @@ class KikuchipyH5EBSDWriter:
             If the file exists but ``add_scan`` is ``None`` or
             ``False``.
         """
-        if self.file_exists and add_scan in [None, False]:
-            raise ValueError("Set `add_scan=True` to write to an existing file")
-
         if self.file_exists:
             valid_scan_number = self.get_valid_scan_number(scan_number)
         else:
@@ -406,7 +381,8 @@ class KikuchipyH5EBSDWriter:
         group = self.file.create_group(f"Scan {valid_scan_number}")
 
         # --- Patterns
-        (ny, nx, sy, sx), _ = self.data_shape_scale
+        (ny, nx, sy, sx), (dy, dx, px_size) = self.data_shape_scale
+        print(self.data_shape_scale)
         overwrite_dataset(
             group.create_group("EBSD/Data"),
             data=self.signal.data.reshape(ny * nx, sy, sx),
@@ -430,15 +406,21 @@ class KikuchipyH5EBSDWriter:
         detector = self.signal.detector
         _dict2hdf5group(
             {
-                "azimuthal": detector.azimuthal,
+                "azimuth_angle": detector.azimuthal,
                 "binning": detector.binning,
-                "px_size": detector.px_size,
-                "tilt": detector.tilt,
-                "sample_tilt": detector.sample_tilt,
-                "static_background": self.signal.static_background,
+                "elevation_angle": detector.tilt,
+                "n_columns": nx,
+                "n_rows": ny,
+                "pattern_width": sx,
+                "pattern_height": sy,
                 "pcx": detector.pcx,
                 "pcy": detector.pcy,
                 "pcz": detector.pcz,
+                "detector_pixel_size": detector.px_size,
+                "sample_tilt": detector.sample_tilt,
+                "static_background": self.signal.static_background,
+                "step_x": dx,
+                "step_y": dy,
             },
             group.create_group("EBSD/Header"),
             **kwargs,
@@ -459,3 +441,35 @@ class KikuchipyH5EBSDWriter:
         )
 
         self.file.close()
+
+
+def file_writer(
+    filename: str,
+    signal,
+    add_scan: Optional[bool] = None,
+    scan_number: int = 1,
+    **kwargs,
+):
+    """Write an :class:`~kikuchipy.signals.EBSD` or
+    :class:`~kikuchipy.signals.LazyEBSD` signal to an existing but not
+    open or new h5ebsd file.
+
+    The file is closed after writing.
+
+    Parameters
+    ----------
+    filename
+        Full path of HDF5 file.
+    signal : kikuchipy.signals.EBSD or kikuchipy.signals.LazyEBSD
+        Signal instance.
+    add_scan
+        Add signal to an existing, but not open, h5ebsd file. If it does
+        not exist it is created and the signal is written to it.
+    scan_number
+        Scan number in name of HDF dataset when writing to an existing,
+        but not open, h5ebsd file.
+    **kwargs
+        Keyword arguments passed to :meth:`h5py.Group.require_dataset`.
+    """
+    writer = KikuchipyH5EBSDWriter(filename, signal, add_scan)
+    writer.write(scan_number, **kwargs)
