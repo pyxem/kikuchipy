@@ -58,6 +58,9 @@ manufacturer = "bruker nano"
 class BrukerH5EBSDReader(H5EBSDReader):
     """Bruker Nano h5ebsd file reader.
 
+    The file contents are ment to be used for initializing a
+    :class:`~kikuchipy.signals.EBSD` signal.
+
     Parameters
     ----------
     filename
@@ -141,10 +144,7 @@ class BrukerH5EBSDReader(H5EBSDReader):
         )
 
         # --- Metadata
-        fname = os.path.basename(self.filename).split(".")[0]
-        title = fname + " " + group.name[1:].split("/")[0]
-        if len(title) > 20:
-            title = f"{title:.20}..."
+        fname, title = self.get_metadata_filename_title(group.name)
         metadata = {
             "Acquisition_instrument": {
                 "SEM": {

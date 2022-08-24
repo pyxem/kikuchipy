@@ -18,6 +18,7 @@
 """Generic, private parent class for all h5ebsd file plugins."""
 
 import abc
+import os
 from typing import Union, List, Tuple, Optional
 import warnings
 
@@ -115,8 +116,8 @@ def _dict2hdf5group(dictionary: dict, group: h5py.Group, **kwargs):
                 dshape = np.shape(val)
             except TypeError:
                 warnings.warn(
-                    "The HDF5 writer could not write the following information to the "
-                    f"file '{key} : {val}'"
+                    "The HDF5 writer could not write the following (key, value) pair to"
+                    f" file: ({key}, {val})"
                 )
                 break  # or continue?
         group.create_dataset(key, shape=dshape, dtype=ddtype, **kwargs)
@@ -126,6 +127,9 @@ def _dict2hdf5group(dictionary: dict, group: h5py.Group, **kwargs):
 class H5EBSDReader(abc.ABC):
     """Abstract class implementing a reader of an h5ebsd file in a
     format specific to each manufacturer.
+
+    The file contents are ment to be used for initializing a
+    :class:`~kikuchipy.signals.EBSD` signal.
 
     Parameters
     ----------
@@ -175,7 +179,7 @@ class H5EBSDReader(abc.ABC):
         error = None
         if self.manufacturer is None or self.version is None:
             error = "manufacturer and/or version could not be read from its top group"
-        if not any(
+        elif not any(
             "EBSD/Data" in group and "EBSD/Header" in group
             for group in self.scan_groups
         ):
@@ -186,7 +190,7 @@ class H5EBSDReader(abc.ABC):
         man, ver = self.get_manufacturer_version()
         man = man.lower()
         supported_manufacturers = list(self.manufacturer_patterns.keys())
-        if man not in supported_manufacturers:
+        if man not in supported_manufacturers and error is None:
             error = (
                 f"'{man}' is not among supported manufacturers "
                 f"{supported_manufacturers}"
@@ -410,6 +414,28 @@ class H5EBSDReader(abc.ABC):
         ]
 
         return axes_list
+
+    def get_metadata_filename_title(self, group_name: str) -> Tuple[str, str]:
+        """Return filename without full path and a scan title for the
+        signal metadata.
+
+        Parameters
+        ----------
+        group_name
+            Name of scan group.
+
+        Returns
+        -------
+        fname
+            Filename without full path.
+        title
+            Scan title.
+        """
+        fname = os.path.basename(self.filename).split(".")[0]
+        title = fname + " " + group_name[1:].split("/")[0]
+        if len(title) > 20:
+            title = f"{title:.20}..."
+        return fname, title
 
     def read(
         self,

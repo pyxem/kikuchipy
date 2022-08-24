@@ -32,44 +32,10 @@ BRUKER_FILE_ROI = os.path.join(DATA_PATH, "bruker_h5ebsd/patterns_roi.h5")
 BRUKER_FILE_ROI_NONRECTANGULAR = os.path.join(
     DATA_PATH, "bruker_h5ebsd/patterns_roi_nonrectangular.h5"
 )
-AXES_MANAGER = {
-    "axis-0": {
-        "name": "y",
-        "scale": 1.5,
-        "offset": 0.0,
-        "size": 3,
-        "units": "um",
-        "navigate": True,
-    },
-    "axis-1": {
-        "name": "x",
-        "scale": 1.5,
-        "offset": 0.0,
-        "size": 3,
-        "units": "um",
-        "navigate": True,
-    },
-    "axis-2": {
-        "name": "dy",
-        "scale": 1.0,
-        "offset": 0.0,
-        "size": 60,
-        "units": "um",
-        "navigate": False,
-    },
-    "axis-3": {
-        "name": "dx",
-        "scale": 1.0,
-        "offset": 0.0,
-        "size": 60,
-        "units": "um",
-        "navigate": False,
-    },
-}
 
 
 class TestBrukerH5EBSD:
-    def test_load(self):
+    def test_load(self, ni_small_axes_manager):
         # Cover grid type check
         with File(BRUKER_FILE, mode="r+") as f:
             grid = f["Scan 0/EBSD/Header/Grid Type"]
@@ -82,7 +48,7 @@ class TestBrukerH5EBSD:
 
         s = load(BRUKER_FILE)
         assert s.data.shape == (3, 3, 60, 60)
-        assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
+        assert_dictionary(s.axes_manager.as_dictionary(), ni_small_axes_manager)
 
     def test_load_roi(self):
         s = load(BRUKER_FILE_ROI)

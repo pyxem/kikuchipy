@@ -92,16 +92,13 @@ def file_reader(
 
     # --- Metadata
     fname = os.path.basename(filename).split(".")[0]
-    title = fname + " " + group.name[1:].split("/")[0]
-    if len(title) > 20:
-        title = f"{title:.20}..."
     metadata = {
         "Acquisition_instrument": {
             "SEM": {
                 "beam_energy": nml_dict["energymax"],
             },
         },
-        "General": {"original_filename": fname, "title": title},
+        "General": {"original_filename": fname, "title": fname},
         "Signal": {"signal_type": "EBSD", "record_by": "image"},
     }
     scan = {"metadata": metadata, "original_metadata": hd}

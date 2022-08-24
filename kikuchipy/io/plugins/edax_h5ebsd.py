@@ -57,6 +57,9 @@ manufacturer = "edax"
 class EDAXH5EBSDReader(H5EBSDReader):
     """EDAX TSL h5ebsd file reader.
 
+    The file contents are ment to be used for initializing a
+    :class:`~kikuchipy.signals.EBSD` signal.
+
     Parameters
     ----------
     filename
@@ -110,10 +113,7 @@ class EDAXH5EBSDReader(H5EBSDReader):
         px_size = 1.0
 
         # --- Metadata
-        fname = os.path.basename(self.filename).split(".")[0]
-        title = fname + " " + group.name[1:].split("/")[0]
-        if len(title) > 20:
-            title = f"{title:.20}..."
+        fname, title = self.get_metadata_filename_title(group.name)
         metadata = {
             "Acquisition_instrument": {
                 "SEM": {
@@ -121,12 +121,7 @@ class EDAXH5EBSDReader(H5EBSDReader):
                     "magnification": sd.get("Header", {}).get("Mag"),
                 },
             },
-            "General": {
-                "authors": hd.get("Operator"),
-                "notes": hd.get("Notes"),
-                "original_filename": fname,
-                "title": title,
-            },
+            "General": {"original_filename": fname, "title": title},
             "Signal": {"signal_type": "EBSD", "record_by": "image"},
         }
         scan_dict = {"metadata": metadata}

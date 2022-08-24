@@ -29,6 +29,10 @@ from kikuchipy.data import nickel_ebsd_small
 from kikuchipy.conftest import assert_dictionary
 from kikuchipy.io._io import load
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
+from kikuchipy.io.plugins.kikuchipy_h5ebsd import (
+    KikuchipyH5EBSDReader,
+    KikuchipyH5EBSDWriter,
+)
 from kikuchipy.signals.ebsd import EBSD
 
 
@@ -40,48 +44,51 @@ KIKUCHIPY_FILE_NO_CHUNKS = os.path.join(
 )
 KIKUCHIPY_FILE_GROUP_NAMES = ["My awes0m4 Xcan #! with a long title", "Scan 2"]
 BG_FILE = os.path.join(DATA_PATH, "nordif/Background acquisition image.bmp")
-AXES_MANAGER = {
-    "axis-0": {
-        "name": "y",
-        "scale": 1.5,
-        "offset": 0.0,
-        "size": 3,
-        "units": "um",
-        "navigate": True,
-    },
-    "axis-1": {
-        "name": "x",
-        "scale": 1.5,
-        "offset": 0.0,
-        "size": 3,
-        "units": "um",
-        "navigate": True,
-    },
-    "axis-2": {
-        "name": "dy",
-        "scale": 1.0,
-        "offset": 0.0,
-        "size": 60,
-        "units": "um",
-        "navigate": False,
-    },
-    "axis-3": {
-        "name": "dx",
-        "scale": 1.0,
-        "offset": 0.0,
-        "size": 60,
-        "units": "um",
-        "navigate": False,
-    },
-}
+
+
+class TestH5EBSD:
+    def test_repr(self):
+        reader = KikuchipyH5EBSDReader(KIKUCHIPY_FILE)
+        repr_str_list = repr(reader).split(" ")
+        assert repr_str_list[:2] == ["KikuchipyH5EBSDReader", "(0.1):"]
+        assert repr_str_list[2].split("/")[-3:] == [
+            "data",
+            "kikuchipy_h5ebsd",
+            "patterns.h5",
+        ]
+
+    def test_check_file_invalid_version(self, save_path_hdf5):
+        f = File(save_path_hdf5, mode="w")
+        _dict2hdf5group({"manufacturer": "kikuchipy", "versionn": "0.1"}, f["/"])
+        f.close()
+        with pytest.raises(
+            IOError,
+            match=f"{save_path_hdf5} is not a supported h5ebsd file, as manufacturer",
+        ):
+            _ = KikuchipyH5EBSDReader(save_path_hdf5)
+
+    def test_check_file_no_scan_groups(self, save_path_hdf5):
+        f = File(save_path_hdf5, mode="w")
+        _dict2hdf5group({"manufacturer": "kikuchipy", "version": "0.1"}, f["/"])
+        f.close()
+        with pytest.raises(
+            IOError,
+            match=f"{save_path_hdf5} is not a supported h5ebsd file, as no top groups",
+        ):
+            _ = KikuchipyH5EBSDReader(save_path_hdf5)
+
+    def test_dict2hdf5roup(self, save_path_hdf5):
+        with File(save_path_hdf5, mode="w") as f:
+            with pytest.warns(UserWarning, match="(c, set())"):
+                _dict2hdf5group({"a": [np.array(24.5)], "c": set()}, f["/"])
 
 
 class TestKikuchipyH5EBSD:
-    def test_load(self):
+    def test_load(self, ni_small_axes_manager):
         s = load(KIKUCHIPY_FILE)
 
         assert s.data.shape == (3, 3, 60, 60)
-        assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
+        assert_dictionary(s.axes_manager.as_dictionary(), ni_small_axes_manager)
 
     def test_save_load_xmap(self, detector, save_path_hdf5):
         mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
@@ -129,7 +136,7 @@ class TestKikuchipyH5EBSD:
                 _ = load(save_path_hdf5)
 
     @pytest.mark.parametrize("lazy", (True, False))
-    def test_load_with_padding(self, save_path_hdf5, lazy):
+    def test_load_with_padding(self, save_path_hdf5, lazy, ni_small_axes_manager):
         s = load(KIKUCHIPY_FILE)
         s.save(save_path_hdf5)
 
@@ -138,8 +145,8 @@ class TestKikuchipyH5EBSD:
             f["Scan 1/EBSD/Header/n_columns"][()] = new_n_columns
         with pytest.warns(UserWarning, match="Will attempt to load by zero"):
             s_reload = load(save_path_hdf5, lazy=lazy)
-        AXES_MANAGER["axis-1"]["size"] = new_n_columns
-        assert_dictionary(s_reload.axes_manager.as_dictionary(), AXES_MANAGER)
+        ni_small_axes_manager["axis-1"]["size"] = new_n_columns
+        assert_dictionary(s_reload.axes_manager.as_dictionary(), ni_small_axes_manager)
 
     def test_load_save_cycle(self, save_path_hdf5):
         s = load(KIKUCHIPY_FILE)
@@ -275,13 +282,6 @@ class TestKikuchipyH5EBSD:
         else:
             s2.save(save_path_hdf5, add_scan=True, scan_number=scan_number)
 
-    def test_dict2hdf5roup(self, save_path_hdf5):
-        dictionary = {"a": [np.array(24.5)], "c": set()}
-        with File(save_path_hdf5, mode="w") as f:
-            group = f.create_group(name="a_group")
-            with pytest.warns(UserWarning, match="The HDF5 writer could not"):
-                _dict2hdf5group(dictionary, group)
-
     def test_read_lazily_no_chunks(self):
         # First, make sure the data image dataset is not actually chunked
         f = File(KIKUCHIPY_FILE_NO_CHUNKS)
@@ -345,3 +345,28 @@ class TestKikuchipyH5EBSD:
         s2 = load(save_path_hdf5)
         assert s.data.shape == s2.data.shape
         assert np.allclose(s.data, s2.data)
+
+    def test_load_with_detector_multiple_pc(self, ni_kikuchipy_h5ebsd_file):
+        s = kp.load(ni_kikuchipy_h5ebsd_file)
+        assert s.detector.pc.shape == (3, 3, 3)
+
+    def test_writer_check_file(self, save_path_hdf5):
+        s = kp.data.nickel_ebsd_small(lazy=True)
+        f = File(save_path_hdf5, mode="w")
+        _dict2hdf5group({"manufacturer": "kikuchipy", "version": "0.1"}, f["/"])
+        f.close()
+        with pytest.raises(
+            IOError,
+            match=(
+                f"{save_path_hdf5} is not a supported kikuchipy h5ebsd file, as no top"
+                " groups"
+            ),
+        ):
+            _ = KikuchipyH5EBSDWriter(save_path_hdf5, s, add_scan=True)
+
+    def test_writer_repr(self, tmp_path):
+        s = kp.data.nickel_ebsd_small()
+        writer = KikuchipyH5EBSDWriter(tmp_path / "patterns.h5", s)
+        repr_str_list = repr(writer).split(" ")
+        assert repr_str_list[0] == "KikuchipyH5EBSDWriter:"
+        assert repr_str_list[1].split("/")[-1] == "patterns.h5"

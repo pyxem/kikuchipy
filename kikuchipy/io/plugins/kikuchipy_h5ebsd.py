@@ -64,6 +64,9 @@ manufacturer = "kikuchipy"
 class KikuchipyH5EBSDReader(H5EBSDReader):
     """kikuchipy h5ebsd file reader.
 
+    The file contents are ment to be used for initializing a
+    :class:`~kikuchipy.signals.EBSD` signal.
+
     Parameters
     ----------
     filename
@@ -104,10 +107,7 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
         px_size = hd.get("detector_pixel_size", 1)
 
         # --- Metadata
-        fname = os.path.basename(self.filename).split(".")[0]
-        title = fname + " " + group.name[1:].split("/")[0]
-        if len(title) > 20:
-            title = f"{title:.20}..."
+        fname, title = self.get_metadata_filename_title(group.name)
         metadata = {
             "Acquisition_instrument": {
                 "SEM": _hdf5group2dict(
@@ -219,7 +219,9 @@ class KikuchipyH5EBSDWriter:
         will be overwritten.
     """
 
-    def __init__(self, filename: str, signal, add_scan: Optional[bool] = None):
+    def __init__(
+        self, filename: Union[str, Path], signal, add_scan: Optional[bool] = None
+    ):
         self.filename = filename
         self.signal = signal
         self.file_exists = os.path.isfile(filename)
@@ -286,7 +288,7 @@ class KikuchipyH5EBSDWriter:
         top_groups = _hdf5group2dict(self.file["/"])
         if top_groups.get("manufacturer") != "kikuchipy":
             error = "it was not created with kikuchipy"
-        if not any(
+        elif not any(
             "EBSD/Data" in group and "EBSD/Header" in group
             for group in self.scan_groups
         ):
