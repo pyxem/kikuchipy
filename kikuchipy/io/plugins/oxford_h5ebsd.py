@@ -18,7 +18,6 @@
 """Reader of EBSD data from an Oxford Instruments h5ebsd (H5OINA) file.
 """
 
-import os
 from pathlib import Path
 from typing import List, Union
 
@@ -55,6 +54,9 @@ writes = False
 
 class OxfordH5EBSDReader(H5EBSDReader):
     """Oxford Instruments h5ebsd (H5OINA) file reader.
+
+    The file contents are ment to be used for initializing a
+    :class:`~kikuchipy.signals.EBSD` signal.
 
     Parameters
     ----------
@@ -101,30 +103,16 @@ class OxfordH5EBSDReader(H5EBSDReader):
         px_size = 1.0
 
         # --- Metadata
-        fname = os.path.basename(self.filename).split(".")[0]
-        title = fname + " " + group.name[1:].split("/")[0]
-        if len(title) > 20:
-            title = f"{title:.20}..."
+        fname, title = self.get_metadata_filename_title(group.name)
         metadata = {
             "Acquisition_instrument": {
                 "SEM": {
                     "beam_energy": hd.get("Beam Voltage"),
                     "magnification": hd.get("Magnification"),
-                    "Stage": {
-                        "rotation": hd.get("Stage Position", {}).get("Rotation"),
-                        "tilt_alpha": hd.get("Stage Position", {}).get("Tilt"),
-                        "x": hd.get("Stage Position", {}).get("X"),
-                        "y": hd.get("Stage Position", {}).get("Y"),
-                        "z": hd.get("Stage Position", {}).get("Z"),
-                    },
                     "working_distance": hd.get("Working Distance"),
                 },
             },
-            "General": {
-                "notes": hd.get("Site Notes"),
-                "original_filename": fname,
-                "title": title,
-            },
+            "General": {"original_filename": fname, "title": title},
             "Signal": {"signal_type": "EBSD", "record_by": "image"},
         }
         scan_dict = {"metadata": metadata}
@@ -149,6 +137,9 @@ class OxfordH5EBSDReader(H5EBSDReader):
         xmap = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
         scan_dict["xmap"] = xmap
 
+        # --- Static background
+        scan_dict["static_background"] = hd.get("Processed Static Background")
+
         # --- Detector
         pc = np.column_stack(
             (
@@ -162,7 +153,7 @@ class OxfordH5EBSDReader(H5EBSDReader):
         scan_dict["detector"] = EBSDDetector(
             shape=(sy, sx),
             px_size=px_size,
-            sample_tilt=np.rad2deg(hd.get("Tilte Angle", np.deg2rad(70))),
+            sample_tilt=np.rad2deg(hd.get("Tilt Angle", np.deg2rad(70))),
             pc=pc,
             convention="oxford",
         )
