@@ -10,20 +10,16 @@ All user facing changes to this project are documented in this file. The format 
 on `Keep a Changelog <https://keepachangelog.com/en/1.1.0>`__, and this project tries
 its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`__.
 
-Contributors to each release are listed in alphabetical order by first name. List
-entries are sorted in descending chronological order.
+List entries are sorted in descending chronological order. Contributors to each release
+were listed in alphabetical order by first name until version 0.7.0.
 
 Unreleased
 ==========
 
-Contributors
-------------
-- Håkon Wiik Ånes
-- Magnus Nord
-- Zhou Xu
-
 Added
 -----
+- Reader of an ``EBSD`` signal from Oxford Instrument's h5ebsd format (H5OINA).
+  (`#562 <https://github.com/pyxem/kikuchipy/pull/562>`_)
 - Figures of reference frames of other software added to the documentation.
   (`#552 <https://github.com/pyxem/kikuchipy/pull/552>`_)
 - Whether to show progressbars from most signal methods (except indexing and refinement)
@@ -33,6 +29,12 @@ Added
 
 Changed
 -------
+- Most of the ``EBSD`` metadata structure is removed, in an effort to move all relevant
+  data to the attributes ``xmap``, ``static_background``, and ``detector``.
+  (`#562 <https://github.com/pyxem/kikuchipy/pull/562>`_)
+- h5ebsd plugin split into one plugin for each h5ebsd format (kikuchipy, EDAX TSL, and
+  Bruker Nano).
+  (`#562 <https://github.com/pyxem/kikuchipy/pull/562>`_)
 - ``EBSDDetector.plot()`` and ``PCCalibrationMovingScreen.plot()`` parameter
   ``return_fig_ax`` renamed to ``return_figure``.
   (`#552 <https://github.com/pyxem/kikuchipy/pull/552>`_)
@@ -45,14 +47,11 @@ Changed
   which accepts a ``allow_download`` parameter. If not given, the value is retreived
   from HyperSpy's preferences. (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
 
-Deprecated
-----------
-- ``ebsd_metadata()`` and ``metadata_nodes()`` are deprecated and will be removed in
-  v0.8.
-  (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
-
 Removed
 -------
+- Functions ``ebsd_metadata()`` and ``metadata_nodes()`` which have been deprecated
+  since v0.5. (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_,
+  `#562 <https://github.com/pyxem/kikuchipy/pull/562>`_)
 - The print information emitted from ``EBSD`` methods like
   ``remove_static_background()`` is removed.
   (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
