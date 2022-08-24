@@ -51,11 +51,7 @@ class TestH5EBSD:
         reader = KikuchipyH5EBSDReader(KIKUCHIPY_FILE)
         repr_str_list = repr(reader).split(" ")
         assert repr_str_list[:2] == ["KikuchipyH5EBSDReader", "(0.1):"]
-        assert repr_str_list[2].split("/")[-3:] == [
-            "data",
-            "kikuchipy_h5ebsd",
-            "patterns.h5",
-        ]
+        assert repr_str_list[2][-11:] == "patterns.h5"
 
     def test_check_file_invalid_version(self, save_path_hdf5):
         f = File(save_path_hdf5, mode="w")
@@ -369,4 +365,4 @@ class TestKikuchipyH5EBSD:
         writer = KikuchipyH5EBSDWriter(tmp_path / "patterns.h5", s)
         repr_str_list = repr(writer).split(" ")
         assert repr_str_list[0] == "KikuchipyH5EBSDWriter:"
-        assert repr_str_list[1].split("/")[-1] == "patterns.h5"
+        assert repr_str_list[1][-11:] == "patterns.h5"
