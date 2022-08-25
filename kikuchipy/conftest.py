@@ -26,7 +26,6 @@ import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticePoint
 import hyperspy.api as hs
-from hyperspy.misc.utils import DictionaryTreeBrowser
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import CrystalMap, create_coordinate_arrays, Phase, PhaseList
@@ -59,9 +58,6 @@ def assert_dictionary(dict1, dict2):
 
     Used to compare signal's axes managers or metadata in tests.
     """
-    if isinstance(dict1, DictionaryTreeBrowser):
-        dict1 = dict1.as_dictionary()
-        dict2 = dict2.as_dictionary()
     for key in dict2.keys():
         if key in ["is_binned", "binned"] and version.parse(
             hs.__version__
@@ -72,7 +68,9 @@ def assert_dictionary(dict1, dict2):
         if isinstance(dict2[key], dict):
             assert_dictionary(dict1[key], dict2[key])
         else:
-            if isinstance(dict2[key], list) or isinstance(dict1[key], list):
+            if isinstance(dict2[key], list) or isinstance(
+                dict1[key], list
+            ):  # pragma: no cover
                 dict2[key] = np.array(dict2[key])
                 dict1[key] = np.array(dict1[key])
             if isinstance(dict2[key], (np.ndarray, Number)):
@@ -167,8 +165,7 @@ def save_path_hdf5(request):
     to write, and sometimes read again, a signal to, and from, a file.
     """
     with tempfile.TemporaryDirectory() as tmp:
-        file_path = os.path.join(tmp, "patterns_temp." + request.param)
-        yield file_path
+        yield os.path.join(tmp, "patterns." + request.param)
         gc.collect()
 
 
@@ -541,6 +538,40 @@ def nickel_ebsd_small_di_xmap():
     )
     # fmt: on
     yield xmap
+
+
+@pytest.fixture
+def ni_kikuchipy_h5ebsd_file(tmp_path, nickel_ebsd_small_di_xmap, detector):
+    """Temporary file in kikuchipy's h5ebsd format with a crystal map
+    and detector stored.
+    """
+    s = kp.data.nickel_ebsd_small()
+    s.xmap = nickel_ebsd_small_di_xmap
+    detector.pc = np.ones((3, 3, 3)) * detector.pc
+    s.detector = detector
+    fname = tmp_path / "kp_file.h5"
+    s.save(fname)
+    yield fname
+
+
+@pytest.fixture
+def ni_small_axes_manager():
+    """Axes manager for :func:`kikuchipy.data.nickel_ebsd_small`."""
+    names = ["y", "x", "dy", "dx"]
+    scales = [1.5, 1.5, 1, 1]
+    sizes = [3, 3, 60, 60]
+    navigates = [True, True, False, False]
+    axes_manager = {}
+    for i in range(len(names)):
+        axes_manager[f"axis-{i}"] = {
+            "name": names[i],
+            "scale": scales[i],
+            "offset": 0.0,
+            "size": sizes[i],
+            "units": "um",
+            "navigate": navigates[i],
+        }
+    yield axes_manager
 
 
 # ---------------------- pytest doctest-modules ---------------------- #

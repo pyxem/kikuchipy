@@ -105,10 +105,7 @@ class TestData:
 
         assert s.data.shape == (480, 480)
         assert s.data.dtype == np.uint8
-        assert isinstance(
-            s.metadata.Acquisition_instrument.SEM.Detector.EBSD.static_background,
-            np.ndarray,
-        )
+        assert isinstance(s.static_background, np.ndarray)
 
     def test_load_silicon_ebsd_moving_screen_out5mm(self):
         """Download external Si pattern."""
@@ -116,10 +113,7 @@ class TestData:
 
         assert s.data.shape == (480, 480)
         assert s.data.dtype == np.uint8
-        assert isinstance(
-            s.metadata.Acquisition_instrument.SEM.Detector.EBSD.static_background,
-            np.ndarray,
-        )
+        assert isinstance(s.static_background, np.ndarray)
 
     def test_load_silicon_ebsd_moving_screen_out10mm(self):
         """Download external Si pattern."""
@@ -127,7 +121,4 @@ class TestData:
 
         assert s.data.shape == (480, 480)
         assert s.data.dtype == np.uint8
-        assert isinstance(
-            s.metadata.Acquisition_instrument.SEM.Detector.EBSD.static_background,
-            np.ndarray,
-        )
+        assert isinstance(s.static_background, np.ndarray)

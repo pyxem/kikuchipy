@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read support for NORDIF's calibration patterns."""
+"""Reader of EBSD calibration patterns from NORDIF files."""
 
 import os
 from pathlib import Path
@@ -48,6 +48,8 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
     """Reader electron backscatter patterns from .bmp files stored in a
     NORDIF project directory, their filenames listed in a text file.
 
+    Not ment to be used directly; use :func:`~kikuchipy.load`.
+
     Parameters
     ----------
     filename
@@ -61,7 +63,7 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
         Data, axes, metadata and original metadata.
     """
     # Get metadata from setting file
-    md, omd, _ = get_settings_from_file(filename)
+    md, omd, _, detector = get_settings_from_file(filename)
     dirname = os.path.dirname(filename)
 
     scan = {}
@@ -78,13 +80,19 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
         )
 
     # Set required and other parameters in metadata
-    md.set_item("General.original_filename", filename)
-    md.set_item("General.title", "Calibration patterns")
-    md.set_item("Signal.signal_type", "EBSD")
-    md.set_item("Signal.record_by", "image")
+    md.update(
+        {
+            "General": {
+                "original_filename": filename,
+                "title": "Calibration patterns",
+            },
+            "Signal": {"signal_type": "EBSD", "record_by": "image"},
+        }
+    )
+    scan["metadata"] = md
+    scan["original_metadata"] = omd
 
-    scan["metadata"] = md.as_dictionary()
-    scan["original_metadata"] = omd.as_dictionary()
+    scan["detector"] = detector
 
     coordinates = _get_coordinates(filename)
 
@@ -133,7 +141,7 @@ def _get_coordinates(filename: str) -> List[Tuple[int]]:
     return xy
 
 
-def _get_patterns(dirname: str, coordinates: List[Tuple[int, int]]) -> np.ndarray:
+def _get_patterns(dirname: str, coordinates: List[Tuple[int]]) -> np.ndarray:
     patterns = []
     for x, y in coordinates:
         fname_pattern = f"Calibration ({x},{y}).bmp"

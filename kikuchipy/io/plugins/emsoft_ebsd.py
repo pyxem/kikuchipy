@@ -15,12 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read support for simulated EBSD patterns in EMsoft's HDF5 format."""
+"""Reader of simulated EBSD patterns from an EMsoft HDF5 file."""
 
 import os
 from pathlib import Path
 from typing import List, Tuple, Union
-import warnings
 
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
@@ -29,12 +28,8 @@ import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList
 from orix.quaternion import Rotation
 
-from kikuchipy.io.plugins.h5ebsd import hdf5group2dict
-from kikuchipy.signals.util._metadata import (
-    ebsd_metadata,
-    metadata_nodes,
-    _set_metadata_from_mapping,
-)
+from kikuchipy.detectors import EBSDDetector
+from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
 
 
 __all__ = ["file_reader"]
@@ -68,6 +63,8 @@ def file_reader(
     """Read dynamically simulated electron backscatter diffraction
     patterns from EMsoft's format produced by their EMEBSD.f90 program.
 
+    Not ment to be used directly; use :func:`~kikuchipy.load`.
+
     Parameters
     ----------
     filename
@@ -91,71 +88,77 @@ def file_reader(
 
     _check_file_format(f)
 
-    # Read original metadata
-    omd = hdf5group2dict(f["/"], data_dset_names=["EBSDPatterns"], recursive=True)
+    group = f["/"]
+    hd = _hdf5group2dict(group, data_dset_names=["EBSDPatterns"], recursive=True)
+    nml_dict = hd["NMLparameters"]["EBSDNameList"]
 
-    # Set metadata and original metadata dictionaries
-    md = _get_metadata(omd)
-    md.update(
-        {
-            "Signal": {"signal_type": "EBSD", "record_by": "image"},
-            "General": {
-                "title": f.filename.split("/")[-1].split(".")[0],
-                "original_filename": f.filename.split("/")[-1],
-            },
-        }
-    )
-    scan = {"metadata": md, "original_metadata": omd}
+    # --- Metadata
+    fname = os.path.basename(filename).split(".")[0]
+    metadata = {
+        "Acquisition_instrument": {
+            "SEM": {"beam_energy": nml_dict["energymax"]},
+        },
+        "General": {"original_filename": fname, "title": fname},
+        "Signal": {"signal_type": "EBSD", "record_by": "image"},
+    }
+    scan = {"metadata": metadata, "original_metadata": hd}
 
-    # Read patterns
+    # --- Data
     dataset = f["EMData/EBSD/EBSDPatterns"]
     if lazy:
         chunks = "auto" if dataset.chunks is None else dataset.chunks
-        patterns = da.from_array(dataset, chunks=chunks)
+        data = da.from_array(dataset, chunks=chunks)
     else:
-        patterns = np.asanyarray(dataset)
-
+        data = np.asanyarray(dataset)
     # Reshape data if desired
-    sy = omd["NMLparameters"]["EBSDNameList"]["numsy"]
-    sx = omd["NMLparameters"]["EBSDNameList"]["numsx"]
+    sy = nml_dict["numsy"]
+    sx = nml_dict["numsx"]
     if scan_size is not None:
         if isinstance(scan_size, int):
             new_shape = (scan_size, sy, sx)
         else:
             new_shape = scan_size + (sy, sx)
-        patterns = patterns.reshape(new_shape)
+        data = data.reshape(new_shape)
+    scan["data"] = data
 
-    scan["data"] = patterns
-
-    # Set navigation and signal axes
-    pixel_size = omd["NMLparameters"]["EBSDNameList"]["delta"]
-    ndim = patterns.ndim
+    # --- Axes
+    px_size = nml_dict["delta"]
     units = ["px", "um", "um"]
     names = ["x", "dy", "dx"]
-    scales = np.array([1, pixel_size, pixel_size])
-    if ndim == 4:
+    scales = np.array([1, px_size, px_size])
+    if data.ndim == 4:
         units = ["px"] + units
         names = ["y"] + names
         scales = np.append([1], scales)
     scan["axes"] = [
         {
-            "size": patterns.shape[i],
+            "size": data.shape[i],
             "index_in_array": i,
             "name": names[i],
             "scale": scales[i],
             "offset": 0,
             "units": units[i],
         }
-        for i in range(patterns.ndim)
+        for i in range(data.ndim)
     ]
 
-    # Get crystal map
-    phase = _crystaldata2phase(hdf5group2dict(f["CrystalData"]))
+    # --- Crystal map
+    phase = _crystaldata2phase(_hdf5group2dict(f["CrystalData"]))
     xtal_fname = f["EMData/EBSD/xtalname"][()][0].decode().split("/")[-1]
     phase.name, _ = os.path.splitext(xtal_fname)
     scan["xmap"] = CrystalMap(
         rotations=Rotation.from_euler(f["EMData/EBSD/EulerAngles"][()]),
         phase_list=PhaseList(phase),
+    )
+
+    # --- Detector
+    scan["detector"] = EBSDDetector(
+        shape=(sy, sx),
+        binning=nml_dict["binning"],
+        px_size=px_size,
+        tilt=nml_dict["thetac"],
+        pc=(nml_dict["xpc"], nml_dict["ypc"], nml_dict["L"]),
+        convention="emsoft",
     )
 
     if not lazy:
@@ -180,37 +183,6 @@ def _check_file_format(file: File):
             f"'{file.filename}' is not in EMsoft's format returned by their EMEBSD.f90 "
             "program."
         )
-
-
-def _get_metadata(omd: dict) -> dict:
-    """Return metadata dictionary from original metadata dictionary.
-
-    Parameters
-    ----------
-    omd
-        Dictionary with original metadata.
-
-    Returns
-    -------
-    md
-        Dictionary with metadata.
-    """
-    warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
-    md = ebsd_metadata()
-    sem_node, ebsd_node = metadata_nodes(["sem", "ebsd"])
-    md.set_item(f"{ebsd_node}.manufacturer", "EMsoft")
-    mapping = {
-        f"{ebsd_node}.version": ["EMheader", "EBSD", "Version"],
-        f"{ebsd_node}.binning": ["NMLparameters", "EBSDNameList", "binning"],
-        f"{ebsd_node}.elevation_angle": ["NMLparameters", "EBSDNameList", "thetac"],
-        f"{ebsd_node}.exposure_time": ["NMLparameters", "EBSDNameList", "dwelltime"],
-        f"{ebsd_node}.xpc": ["NMLparameters", "EBSDNameList", "xpc"],
-        f"{ebsd_node}.ypc": ["NMLparameters", "EBSDNameList", "ypc"],
-        f"{ebsd_node}.zpc": ["NMLparameters", "EBSDNameList", "L"],
-        f"{sem_node}.beam_energy": ["NMLparameters", "EBSDNameList", "energymax"],
-    }
-    _set_metadata_from_mapping(omd, md, mapping)
-    return md.as_dictionary()
 
 
 def _crystaldata2phase(dictionary: dict) -> Phase:

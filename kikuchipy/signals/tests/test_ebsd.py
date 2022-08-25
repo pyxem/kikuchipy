@@ -51,15 +51,6 @@ class TestEBSD:
         s1 = kp.signals.EBSD(array1)
         assert array1.shape == s1.axes_manager.shape
 
-        # SEM metadata
-        kp_md = kp.signals.util.ebsd_metadata()
-        with pytest.warns(np.VisibleDeprecationWarning):
-            sem_node = kp.signals.util.metadata_nodes("sem")
-        assert_dictionary(kp_md.get_item(sem_node), s1.metadata.get_item(sem_node))
-
-        # Phases metadata
-        assert s1.metadata.has_item("Sample.Phases")
-
     def test_as_lazy(self, dummy_signal):
         lazy_signal = dummy_signal.as_lazy()
 
@@ -70,63 +61,6 @@ class TestEBSD:
         assert_dictionary(
             dummy_signal.metadata.as_dictionary(), lazy_signal.metadata.as_dictionary()
         )
-
-    def test_set_experimental_parameters(self, dummy_signal):
-        p = {
-            "detector": "NORDIF UF-1100",
-            "azimuth_angle": 1.0,
-            "elevation_angle": 1.0,
-            "sample_tilt": 70.0,
-            "working_distance": 23.2,
-            "binning": 8,
-            "exposure_time": 0.01,
-            "grid_type": "square",
-            "gain": 10,
-            "frame_number": 4,
-            "frame_rate": 100,
-            "scan_time": 60.0,
-            "beam_energy": 20.0,
-            "xpc": 0.5,
-            "ypc": 0.5,
-            "zpc": 15000.0,
-            "static_background": np.ones(shape=(10, 10)),
-            "manufacturer": "NORDIF",
-            "version": "3.1.2",
-            "microscope": "Hitachi SU-6600",
-            "magnification": 500,
-        }
-        dummy_signal.set_experimental_parameters(**p)
-        with pytest.warns(np.VisibleDeprecationWarning):
-            ebsd_node = kp.signals.util.metadata_nodes("ebsd")
-        md_dict = dummy_signal.metadata.get_item(ebsd_node).as_dictionary()
-        assert_dictionary(p, md_dict)
-
-    def test_set_phase_parameters(self, dummy_signal):
-        p = {
-            "number": 1,
-            "atom_coordinates": {
-                "1": {
-                    "atom": "Ni",
-                    "coordinates": [0, 0, 0],
-                    "site_occupation": 1,
-                    "debye_waller_factor": 0.0035,
-                }
-            },
-            "formula": "Ni",
-            "info": "Some sample info",
-            "lattice_constants": [0.35236, 0.35236, 0.35236, 90, 90, 90],
-            "laue_group": "m3m",
-            "material_name": "Ni",
-            "point_group": "432",
-            "space_group": 225,
-            "setting": 1,
-            "source": "Peng",
-            "symmetry": 43,
-        }
-        dummy_signal.set_phase_parameters(**p)
-        md_dict = dummy_signal.metadata.get_item("Sample.Phases.1").as_dictionary()
-        p.pop("number")
-        assert_dictionary(p, md_dict)
 
     def test_set_scan_calibration(self, dummy_signal):
         (new_step_x, new_step_y) = (2, 3)

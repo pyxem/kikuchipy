@@ -15,8 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read support for simulated EBSD master patterns in EMsoft's HDF5
-format.
+"""Reader of simulated EBSD master patterns from an EMsoft HDF5 file.
 """
 
 import os
@@ -28,7 +27,7 @@ import dask.array as da
 from h5py import File, Group, Dataset
 import numpy as np
 
-from kikuchipy.io.plugins.h5ebsd import hdf5group2dict
+from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
 from kikuchipy.io.plugins.emsoft_ebsd import _crystaldata2phase
 
 
@@ -63,6 +62,8 @@ def file_reader(
 ) -> List[dict]:
     """Read electron backscatter diffraction master patterns from
     EMsoft's HDF5 file format :cite:`callahan2013dynamical`.
+
+    Not ment to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------
@@ -119,11 +120,11 @@ def file_reader(
             "original_filename": f.filename.split("/")[-1],
         },
     }
-    nml_params = hdf5group2dict(f["NMLparameters"], recursive=True)
+    nml_params = _hdf5group2dict(f["NMLparameters"], recursive=True)
 
     # Get phase information and add it to both the original metadata and
     # a Phase object
-    crystal_data = hdf5group2dict(f["CrystalData"])
+    crystal_data = _hdf5group2dict(f["CrystalData"])
     nml_params["CrystalData"] = crystal_data
     phase = _crystaldata2phase(crystal_data)
     if phase.name == "":

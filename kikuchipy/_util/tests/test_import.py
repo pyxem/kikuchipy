@@ -283,12 +283,15 @@ class TestImport:
         import kikuchipy.io.plugins
 
         assert dir(kikuchipy.io.plugins) == [
+            "bruker_h5ebsd",
+            "edax_h5ebsd",
             "emsoft_ebsd",
             "emsoft_ebsd_master_pattern",
-            "h5ebsd",
+            "kikuchipy_h5ebsd",
             "nordif",
             "nordif_calibration_patterns",
             "oxford_binary",
+            "oxford_h5ebsd",
         ]
 
     def test_dir_pattern(self):
@@ -333,12 +336,7 @@ class TestImport:
     def test_dir_signals_util(self):
         import kikuchipy.signals.util
 
-        assert dir(kikuchipy.signals.util) == [
-            "ebsd_metadata",
-            "get_chunking",
-            "get_dask_array",
-            "metadata_nodes",
-        ]
+        assert dir(kikuchipy.signals.util) == ["get_chunking", "get_dask_array"]
 
     def test_dir_simulations(self):
         import kikuchipy.simulations

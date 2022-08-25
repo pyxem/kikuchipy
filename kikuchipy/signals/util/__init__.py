@@ -15,16 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Signal utilities for handling signal metadata and attributes, output
-from signal methods, and for controlling chunking of lazy signal data in
+"""Signal utilities for controlling chunking of lazy signal data in
 :class:`~dask.array.Array`.
 """
 
 __all__ = [
-    "ebsd_metadata",
     "get_chunking",
     "get_dask_array",
-    "metadata_nodes",
 ]
 
 
@@ -34,10 +31,8 @@ def __dir__():
 
 def __getattr__(name):
     _import_mapping = {
-        "ebsd_metadata": "_metadata",
         "get_chunking": "_dask",
         "get_dask_array": "_dask",
-        "metadata_nodes": "_metadata",
     }
     if name in __all__:
         import importlib

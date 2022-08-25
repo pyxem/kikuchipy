@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read support for uncompressed EBSD patterns in Oxford Instruments'
-binary .ebsp file format.
+"""Reader of uncompressed EBSD patterns from a Oxford Instruments binary
+.ebsp file.
 
 Information about the file format was provided by Oxford Instruments.
 """
@@ -52,6 +52,8 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
 
     Only uncompressed patterns can be read. If only non-indexed patterns
     are stored in the file, the navigation shape will be 1D.
+
+    Not ment to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------

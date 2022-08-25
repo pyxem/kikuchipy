@@ -19,22 +19,21 @@ import os
 
 import dask.array as da
 from hyperspy.api import load as hs_load
-from hyperspy.misc.utils import DictionaryTreeBrowser
-from hyperspy.exceptions import VisibleDeprecationWarning
 from h5py import File, Dataset
 import numpy as np
+from orix import quaternion
 import pytest
 
+import kikuchipy as kp
 from kikuchipy.data import nickel_ebsd_small
 from kikuchipy.conftest import assert_dictionary
 from kikuchipy.io._io import load
-from kikuchipy.io.plugins.h5ebsd import (
-    check_h5ebsd,
-    dict2h5ebsdgroup,
-    hdf5group2dict,
+from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
+from kikuchipy.io.plugins.kikuchipy_h5ebsd import (
+    KikuchipyH5EBSDReader,
+    KikuchipyH5EBSDWriter,
 )
 from kikuchipy.signals.ebsd import EBSD
-from kikuchipy.signals.util._metadata import metadata_nodes
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -44,90 +43,64 @@ KIKUCHIPY_FILE_NO_CHUNKS = os.path.join(
     DATA_PATH, "kikuchipy_h5ebsd/patterns_nochunks.h5"
 )
 KIKUCHIPY_FILE_GROUP_NAMES = ["My awes0m4 Xcan #! with a long title", "Scan 2"]
-EDAX_FILE = os.path.join(DATA_PATH, "edax_h5ebsd/patterns.h5")
-BRUKER_FILE = os.path.join(DATA_PATH, "bruker_h5ebsd/patterns.h5")
-BRUKER_FILE_ROI = os.path.join(DATA_PATH, "bruker_h5ebsd/patterns_roi.h5")
-BRUKER_FILE_ROI_NONRECTANGULAR = os.path.join(
-    DATA_PATH, "bruker_h5ebsd/patterns_roi_nonrectangular.h5"
-)
 BG_FILE = os.path.join(DATA_PATH, "nordif/Background acquisition image.bmp")
-AXES_MANAGER = {
-    "axis-0": {
-        "name": "y",
-        "scale": 1.5,
-        "offset": 0.0,
-        "size": 3,
-        "units": "um",
-        "navigate": True,
-    },
-    "axis-1": {
-        "name": "x",
-        "scale": 1.5,
-        "offset": 0.0,
-        "size": 3,
-        "units": "um",
-        "navigate": True,
-    },
-    "axis-2": {
-        "name": "dy",
-        "scale": 1.0,
-        "offset": 0.0,
-        "size": 60,
-        "units": "um",
-        "navigate": False,
-    },
-    "axis-3": {
-        "name": "dx",
-        "scale": 1.0,
-        "offset": 0.0,
-        "size": 60,
-        "units": "um",
-        "navigate": False,
-    },
-}
 
 
-class Testh5ebsd:
-    def test_load_kikuchipy(self):
+class TestH5EBSD:
+    def test_repr(self):
+        reader = KikuchipyH5EBSDReader(KIKUCHIPY_FILE)
+        repr_str_list = repr(reader).split(" ")
+        assert repr_str_list[:2] == ["KikuchipyH5EBSDReader", "(0.1):"]
+        assert repr_str_list[2][-11:] == "patterns.h5"
+
+    def test_check_file_invalid_version(self, save_path_hdf5):
+        f = File(save_path_hdf5, mode="w")
+        _dict2hdf5group({"manufacturer": "kikuchipy", "versionn": "0.1"}, f["/"])
+        f.close()
+        with pytest.raises(IOError, match="(.*) as manufacturer"):
+            _ = KikuchipyH5EBSDReader(save_path_hdf5)
+
+    def test_check_file_no_scan_groups(self, save_path_hdf5):
+        f = File(save_path_hdf5, mode="w")
+        _dict2hdf5group({"manufacturer": "kikuchipy", "version": "0.1"}, f["/"])
+        f.close()
+        with pytest.raises(IOError, match="(.*) as no top groups"):
+            _ = KikuchipyH5EBSDReader(save_path_hdf5)
+
+    def test_dict2hdf5roup(self, save_path_hdf5):
+        with File(save_path_hdf5, mode="w") as f:
+            with pytest.warns(UserWarning, match="(c, set())"):
+                _dict2hdf5group({"a": [np.array(24.5)], "c": set()}, f["/"])
+
+
+class TestKikuchipyH5EBSD:
+    def test_load(self, ni_small_axes_manager):
         s = load(KIKUCHIPY_FILE)
 
         assert s.data.shape == (3, 3, 60, 60)
-        assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
+        assert_dictionary(s.axes_manager.as_dictionary(), ni_small_axes_manager)
 
-    def test_load_edax(self):
-        with File(EDAX_FILE, mode="r+") as f:
-            grid = f["Scan 1/EBSD/Header/Grid Type"]
-            grid[()] = "HexGrid".encode()
-        with pytest.raises(IOError, match="Only square grids are"):
-            _ = load(EDAX_FILE)
-        with File(EDAX_FILE, mode="r+") as f:
-            grid = f["Scan 1/EBSD/Header/Grid Type"]
-            grid[()] = "SqrGrid".encode()
+    def test_save_load_xmap(self, detector, save_path_hdf5):
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
+        r = quaternion.Rotation.from_euler(np.deg2rad([[0, 0, 0], [45, 0, 0]]))
+        sim1 = mp.get_patterns(
+            rotations=r,
+            detector=detector,
+            energy=20,
+            dtype_out=np.uint8,
+            compute=True,
+        )
+        xmap1 = sim1.xmap.deepcopy()
+        assert xmap1.size == 2
+        assert np.allclose(xmap1.rotations.data, r.data)
+        pg = xmap1.phases[0].point_group.name
+        assert pg == mp.phase.point_group.name
+        sim1.save(save_path_hdf5)
 
-        s = load(EDAX_FILE)
-        assert s.data.shape == (3, 3, 60, 60)
-        assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
-
-    def test_load_bruker(self):
-        with File(BRUKER_FILE, mode="r+") as f:
-            grid = f["Scan 0/EBSD/Header/Grid Type"]
-            grid[()] = "hexagonal".encode()
-        with pytest.raises(IOError, match="Only square grids are"):
-            _ = load(BRUKER_FILE)
-        with File(BRUKER_FILE, mode="r+") as f:
-            grid = f["Scan 0/EBSD/Header/Grid Type"]
-            grid[()] = "isometric".encode()
-
-        s = load(BRUKER_FILE)
-        assert s.data.shape == (3, 3, 60, 60)
-        assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
-
-    def test_load_bruker_roi(self):
-        s = load(BRUKER_FILE_ROI)
-        assert s.data.shape == (3, 2, 60, 60)
-
-        with pytest.raises(ValueError, match="Only a rectangular region of"):
-            _ = load(BRUKER_FILE_ROI_NONRECTANGULAR)
+        sim2 = kp.load(save_path_hdf5)
+        xmap2 = sim2.xmap.deepcopy()
+        assert xmap2.size == xmap1.size
+        assert xmap2.phases[0].point_group.name == pg
 
     def test_load_manufacturer(self, save_path_hdf5):
         s = EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
@@ -139,31 +112,10 @@ class Testh5ebsd:
             manufacturer[()] = "Nope".encode()
 
         with pytest.raises(
-            OSError, match="Manufacturer Nope not among recognised manufacturers"
+            OSError,
+            match="(.*) is not a supported h5ebsd file, as 'nope' is not among ",
         ):
             _ = load(save_path_hdf5)
-
-    @pytest.mark.parametrize(
-        "delete, error",
-        [
-            ("man_ver", ".* is not an h5ebsd file, as manufacturer"),
-            ("scans", ".* is not an h5ebsd file, as no top groups with "),
-        ],
-    )
-    def test_check_h5ebsd(self, save_path_hdf5, delete, error):
-        s = EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
-        s.save(save_path_hdf5)
-
-        with File(save_path_hdf5, mode="r+") as f:
-            if delete == "man_ver":
-                del f["manufacturer"]
-                del f["version"]
-                with pytest.raises(OSError, match=error):
-                    check_h5ebsd(f)
-            else:
-                del f["Scan 1"]
-                with pytest.raises(OSError, match=error):
-                    check_h5ebsd(f)
 
     def test_read_patterns(self, save_path_hdf5):
         s = EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
@@ -174,7 +126,7 @@ class Testh5ebsd:
                 _ = load(save_path_hdf5)
 
     @pytest.mark.parametrize("lazy", (True, False))
-    def test_load_with_padding(self, save_path_hdf5, lazy):
+    def test_load_with_padding(self, save_path_hdf5, lazy, ni_small_axes_manager):
         s = load(KIKUCHIPY_FILE)
         s.save(save_path_hdf5)
 
@@ -183,36 +135,27 @@ class Testh5ebsd:
             f["Scan 1/EBSD/Header/n_columns"][()] = new_n_columns
         with pytest.warns(UserWarning, match="Will attempt to load by zero"):
             s_reload = load(save_path_hdf5, lazy=lazy)
-        AXES_MANAGER["axis-1"]["size"] = new_n_columns
-        assert_dictionary(s_reload.axes_manager.as_dictionary(), AXES_MANAGER)
+        ni_small_axes_manager["axis-1"]["size"] = new_n_columns
+        assert_dictionary(s_reload.axes_manager.as_dictionary(), ni_small_axes_manager)
 
-    @pytest.mark.parametrize("remove_phases", (True, False))
-    def test_load_save_cycle(self, save_path_hdf5, remove_phases):
+    def test_load_save_cycle(self, save_path_hdf5):
         s = load(KIKUCHIPY_FILE)
 
         # Check that metadata is read correctly
-        assert s.metadata.Acquisition_instrument.SEM.Detector.EBSD.xpc == -5.64
+        assert s.detector.binning == 8
         assert s.metadata.General.title == "patterns My awes0m4 ..."
 
-        if remove_phases:
-            del s.metadata.Sample.Phases
         s.save(save_path_hdf5, overwrite=True)
         s_reload = load(save_path_hdf5)
         np.testing.assert_equal(s.data, s_reload.data)
 
-        # Change data set name and package version to make metadata equal, and
-        # redo deleting of phases
-        s_reload.metadata.General.title = s.metadata.General.title
-        with pytest.warns(np.VisibleDeprecationWarning):
-            ebsd_node = metadata_nodes("ebsd")
-        s_reload.metadata.set_item(
-            ebsd_node + ".version", s.metadata.get_item(ebsd_node + ".version")
-        )
-        if remove_phases:
-            s.metadata.Sample.set_item("Phases", s_reload.metadata.Sample.Phases)
-        np.testing.assert_equal(
-            s_reload.metadata.as_dictionary(), s.metadata.as_dictionary()
-        )
+        # Change data set name and original filename to make metadata
+        # equal
+        md = s.metadata
+        md2 = s_reload.metadata
+        md2.General.title = md.General.title
+        md2.General.original_filename = md.General.original_filename
+        np.testing.assert_equal(md2.as_dictionary(), md.as_dictionary())
 
     def test_load_save_hyperspy_cycle(self, tmp_path):
         s = load(KIKUCHIPY_FILE)
@@ -224,7 +167,6 @@ class Testh5ebsd:
 
         # Write both patterns and learning results to the HSpy file
         # format
-        #        file = tmp_path / "patterns.hspy"
         os.chdir(tmp_path)
         file = "patterns.hspy"
         s.save(file)
@@ -330,21 +272,9 @@ class Testh5ebsd:
         else:
             s2.save(save_path_hdf5, add_scan=True, scan_number=scan_number)
 
-    def test_save_edax(self):
-        s = load(EDAX_FILE)
-        with pytest.raises(OSError, match="Only writing to kikuchipy's"):
-            s.save(EDAX_FILE, add_scan=True)
-
-    def test_dict2h5ebsdgroup(self, save_path_hdf5):
-        dictionary = {"a": [np.array(24.5)], "b": DictionaryTreeBrowser(), "c": set()}
-        with File(save_path_hdf5, mode="w") as f:
-            group = f.create_group(name="a_group")
-            with pytest.warns(UserWarning, match="The hdf5 writer could not"):
-                dict2h5ebsdgroup(dictionary, group)
-
     def test_read_lazily_no_chunks(self):
         # First, make sure the data image dataset is not actually chunked
-        f = File(KIKUCHIPY_FILE_NO_CHUNKS, mode="r")
+        f = File(KIKUCHIPY_FILE_NO_CHUNKS)
         data_dset = f["Scan 1/EBSD/Data/patterns"]
         assert data_dset.chunks is None
         f.close()
@@ -352,11 +282,6 @@ class Testh5ebsd:
         # Then, make sure it can be read correctly
         s = load(KIKUCHIPY_FILE_NO_CHUNKS, lazy=True)
         assert s.data.chunks == ((60,), (60,))
-
-    def test_hdf5group2dict_raises_deprecation_warning(self):
-        f = File(KIKUCHIPY_FILE, mode="r")
-        with pytest.warns(VisibleDeprecationWarning, match="The 'lazy' "):
-            _ = hdf5group2dict(group=f["/"], lazy=True)
 
     def test_save_load_1d_nav(self, save_path_hdf5):
         """Save-load cycle of signals with one navigation dimension."""
@@ -382,7 +307,8 @@ class Testh5ebsd:
 
         # Maintain axis name
         s_y_only2.axes_manager["y"].name = "x"
-        s_y_only2.save(save_path_hdf5, overwrite=True)
+        with pytest.warns(UserWarning, match="^The `xmap`"):
+            s_y_only2.save(save_path_hdf5, overwrite=True)
         s_x_only3 = load(save_path_hdf5)
         assert s_x_only3.data.shape == desired_shape
         assert s_x_only3.axes_manager.navigation_axes[0].name == "x"
@@ -393,7 +319,8 @@ class Testh5ebsd:
         s = nickel_ebsd_small()
         s0 = s.inav[0, 0]
         s0.save(save_path_hdf5)
-        s1 = load(save_path_hdf5)
+        with pytest.warns(DeprecationWarning, match="Calling nonzero"):
+            s1 = load(save_path_hdf5)
         assert s1.data.shape == (60, 60)
         assert s1.axes_manager.navigation_axes == ()
 
@@ -408,3 +335,22 @@ class Testh5ebsd:
         s2 = load(save_path_hdf5)
         assert s.data.shape == s2.data.shape
         assert np.allclose(s.data, s2.data)
+
+    def test_load_with_detector_multiple_pc(self, ni_kikuchipy_h5ebsd_file):
+        s = kp.load(ni_kikuchipy_h5ebsd_file)
+        assert s.detector.pc.shape == (3, 3, 3)
+
+    def test_writer_check_file(self, save_path_hdf5):
+        s = kp.data.nickel_ebsd_small(lazy=True)
+        f = File(save_path_hdf5, mode="w")
+        _dict2hdf5group({"manufacturer": "kikuchipy", "version": "0.1"}, f["/"])
+        f.close()
+        with pytest.raises(IOError, match="(.*) as no top groups"):
+            _ = KikuchipyH5EBSDWriter(save_path_hdf5, s, add_scan=True)
+
+    def test_writer_repr(self, save_path_hdf5):
+        s = kp.data.nickel_ebsd_small()
+        writer = KikuchipyH5EBSDWriter(save_path_hdf5, s)
+        repr_str_list = repr(writer).split(" ")
+        assert repr_str_list[0] == "KikuchipyH5EBSDWriter:"
+        assert repr_str_list[1][-11:] == "patterns.h5"
