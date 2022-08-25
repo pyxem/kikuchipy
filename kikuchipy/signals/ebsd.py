@@ -124,7 +124,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
     >>> s
     <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
     >>> s.detector
-    EBSDDetector (60, 60), px_size 1.0 um, binning 1, tilt 0, azimuthal 0, pc (0.5, 0.5, 0.5)
+    EBSDDetector (60, 60), px_size 1.0 um, binning 8, tilt 0, azimuthal 0, pc (0.5, 0.5, 0.5)
     >>> s.static_background
     array([[84, 87, 90, ..., 27, 29, 30],
            [87, 90, 93, ..., 27, 28, 30],
