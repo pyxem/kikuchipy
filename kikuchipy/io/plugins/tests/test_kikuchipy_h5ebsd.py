@@ -346,19 +346,17 @@ class TestKikuchipyH5EBSD:
         s = kp.load(ni_kikuchipy_h5ebsd_file)
         assert s.detector.pc.shape == (3, 3, 3)
 
-    def test_writer_check_file(self, save_path_hdf5):
+    def test_writer_check_file(self, tmp_path):
+        fname = tmp_path / "patterns.h5"
         s = kp.data.nickel_ebsd_small(lazy=True)
-        f = File(save_path_hdf5, mode="w")
+        f = File(fname, mode="w")
         _dict2hdf5group({"manufacturer": "kikuchipy", "version": "0.1"}, f["/"])
         f.close()
         with pytest.raises(
             IOError,
-            match=(
-                f"{save_path_hdf5} is not a supported kikuchipy h5ebsd file, as no top"
-                " groups"
-            ),
+            match=f"{fname} is not a supported kikuchipy h5ebsd file, as no top groups",
         ):
-            _ = KikuchipyH5EBSDWriter(save_path_hdf5, s, add_scan=True)
+            _ = KikuchipyH5EBSDWriter(fname, s, add_scan=True)
 
     def test_writer_repr(self, tmp_path):
         s = kp.data.nickel_ebsd_small()
