@@ -28,9 +28,11 @@ import time
 import dask.array as da
 from matplotlib.pyplot import imread
 import numpy as np
+from orix.crystal_map import CrystalMap
 import pytest
 
 from kikuchipy.conftest import assert_dictionary
+from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io._io import load
 from kikuchipy.io.plugins.nordif import get_settings_from_file, get_string
 from kikuchipy.signals.ebsd import EBSD
@@ -234,6 +236,9 @@ class TestNORDIF:
         static_bg = imread(BG_FILE)
         assert np.allclose(s.static_background, static_bg)
 
+        assert isinstance(s.xmap, CrystalMap)
+        assert isinstance(s.detector, EBSDDetector)
+
     @pytest.mark.parametrize(
         "nav_shape, sig_shape",
         [((3, 3), (60, 60)), ((3, 4), (60, 60)), (None, None)],
@@ -301,7 +306,7 @@ class TestNORDIF:
         assert s.data.shape == s_reload.data.shape
 
     def test_load_to_memory(self):
-        s = load(PATTERN_FILE, lazy=False)
+        s = load(PATTERN_FILE)
         assert isinstance(s.data, np.ndarray)
         assert not isinstance(s.data, np.memmap)
 

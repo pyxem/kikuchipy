@@ -94,9 +94,7 @@ def file_reader(
     fname = os.path.basename(filename).split(".")[0]
     metadata = {
         "Acquisition_instrument": {
-            "SEM": {
-                "beam_energy": nml_dict["energymax"],
-            },
+            "SEM": {"beam_energy": nml_dict["energymax"]},
         },
         "General": {"original_filename": fname, "title": fname},
         "Signal": {"signal_type": "EBSD", "record_by": "image"},

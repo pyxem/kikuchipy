@@ -25,6 +25,9 @@ import warnings
 
 import numpy as np
 from matplotlib.pyplot import imread
+from orix.crystal_map import CrystalMap
+
+from kikuchipy.detectors import EBSDDetector
 
 
 __all__ = ["file_reader", "file_writer"]
@@ -111,8 +114,7 @@ def file_reader(
         omd = {}
         detector_dict = None
 
-    # Read static background pattern, to be passed to EBSD.__init__() to
-    # set the EBSD.static_background property
+    # --- Static background
     static_bg_file = os.path.join(folder, "Background acquisition pattern.bmp")
     try:
         scan["static_background"] = imread(static_bg_file)
@@ -170,8 +172,10 @@ def file_reader(
     scales = np.ones(4)
 
     # Calibrate scan dimension
+    dy = dx = 1
     try:
-        scales[:2] = scales[:2] * scan_size_file["step_x"]
+        dy = dx = scan_size_file["step_x"]
+        scales[:2] = scales[:2] * dx
     except (TypeError, UnboundLocalError):
         warnings.warn(
             "Could not calibrate scan dimensions, this can be done using "
@@ -194,7 +198,10 @@ def file_reader(
 
     # --- Detector
     if detector_dict is not None:
-        scan["detector"] = detector_dict
+        scan["detector"] = EBSDDetector(**detector_dict)
+
+    # --- Crystal map
+    scan["xmap"] = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
 
     f.close()
 
