@@ -121,7 +121,7 @@ jobs:
       - name: Run tests
         if: ${{ ! ( matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 ) }}
         run: |
-          pytest --cov=kikuchipy --pyargs kikuchipy -n 2
+          pytest --cov=kikuchipy --pyargs kikuchipy -n 2 --reruns 3
 
       - name: Generate line coverage
         run: |
