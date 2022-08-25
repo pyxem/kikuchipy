@@ -116,7 +116,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install xvfb
-          xvfb-run pytest --cov=kikuchipy --pyargs kikuchipy -n 2
+          xvfb-run pytest --cov=kikuchipy --pyargs kikuchipy -n 2 --reruns 3
 
       - name: Run tests
         if: ${{ ! ( matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 ) }}
