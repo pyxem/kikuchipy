@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read/write support for EBSD patterns in NORDIF's binary format."""
+"""Reader and writer of EBSD patterns from a NORDIF binary file."""
 
 import os
 from pathlib import Path
@@ -54,6 +54,8 @@ def file_reader(
     lazy: bool = False,
 ) -> List[Dict]:
     """Read electron backscatter patterns from a NORDIF data file.
+
+    Not ment to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------

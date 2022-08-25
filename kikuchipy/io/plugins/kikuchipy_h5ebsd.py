@@ -174,6 +174,8 @@ def file_reader(
     and an EBSD detector from a kikuchipy h5ebsd file
     :cite:`jackson2014h5ebsd`.
 
+    Not ment to be used directly; use :func:`~kikuchipy.load`.
+
     The file is closed after reading if ``lazy=False``.
 
     Parameters
@@ -456,6 +458,9 @@ def file_writer(
     """Write an :class:`~kikuchipy.signals.EBSD` or
     :class:`~kikuchipy.signals.LazyEBSD` signal to an existing but not
     open or new h5ebsd file.
+
+    Not ment to be used directly; use
+    :func:`~kikuchipy.signals.EBSD.save`.
 
     The file is closed after writing.
 

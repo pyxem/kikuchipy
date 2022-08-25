@@ -15,8 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Signal utilities for handling signal metadata and attributes, output
-from signal methods, and for controlling chunking of lazy signal data in
+"""Signal utilities for controlling chunking of lazy signal data in
 :class:`~dask.array.Array`.
 """
 

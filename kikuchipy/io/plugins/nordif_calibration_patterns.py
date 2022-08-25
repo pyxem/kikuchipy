@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read support for NORDIF's calibration patterns."""
+"""Reader of EBSD calibration patterns from NORDIF files."""
 
 import os
 from pathlib import Path
@@ -47,6 +47,8 @@ writes = False
 def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
     """Reader electron backscatter patterns from .bmp files stored in a
     NORDIF project directory, their filenames listed in a text file.
+
+    Not ment to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------

@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read support for simulated EBSD patterns in EMsoft's HDF5 format."""
+"""Reader of simulated EBSD patterns from an EMsoft HDF5 file."""
 
 import os
 from pathlib import Path
@@ -62,6 +62,8 @@ def file_reader(
 ) -> List[dict]:
     """Read dynamically simulated electron backscatter diffraction
     patterns from EMsoft's format produced by their EMEBSD.f90 program.
+
+    Not ment to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------

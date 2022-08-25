@@ -17,7 +17,6 @@
 
 """Reader of EBSD data from a Bruker Nano h5ebsd file."""
 
-import os
 from pathlib import Path
 from typing import List, Union
 
@@ -228,6 +227,8 @@ def file_reader(
     """Read electron backscatter diffraction patterns, a crystal map,
     and an EBSD detector from a Bruker h5ebsd file
     :cite:`jackson2014h5ebsd`.
+
+    Not ment to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------

@@ -15,8 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read support for simulated EBSD master patterns in EMsoft's HDF5
-format.
+"""Reader of simulated EBSD master patterns from an EMsoft HDF5 file.
 """
 
 import os
@@ -63,6 +62,8 @@ def file_reader(
 ) -> List[dict]:
     """Read electron backscatter diffraction master patterns from
     EMsoft's HDF5 file format :cite:`callahan2013dynamical`.
+
+    Not ment to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------
