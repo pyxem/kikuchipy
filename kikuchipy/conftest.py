@@ -167,6 +167,7 @@ def save_path_hdf5(request):
     with tempfile.TemporaryDirectory() as tmp:
         file_path = os.path.join(tmp, "patterns_temp." + request.param)
         yield file_path
+        gc.collect()
 
 
 @pytest.fixture
