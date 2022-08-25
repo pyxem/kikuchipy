@@ -57,20 +57,14 @@ class TestH5EBSD:
         f = File(save_path_hdf5, mode="w")
         _dict2hdf5group({"manufacturer": "kikuchipy", "versionn": "0.1"}, f["/"])
         f.close()
-        with pytest.raises(
-            IOError,
-            match=f"{save_path_hdf5} is not a supported h5ebsd file, as manufacturer",
-        ):
+        with pytest.raises(IOError, match="(.*) as manufacturer"):
             _ = KikuchipyH5EBSDReader(save_path_hdf5)
 
     def test_check_file_no_scan_groups(self, save_path_hdf5):
         f = File(save_path_hdf5, mode="w")
         _dict2hdf5group({"manufacturer": "kikuchipy", "version": "0.1"}, f["/"])
         f.close()
-        with pytest.raises(
-            IOError,
-            match=f"{save_path_hdf5} is not a supported h5ebsd file, as no top groups",
-        ):
+        with pytest.raises(IOError, match="(.*) as no top groups"):
             _ = KikuchipyH5EBSDReader(save_path_hdf5)
 
     def test_dict2hdf5roup(self, save_path_hdf5):
@@ -346,21 +340,17 @@ class TestKikuchipyH5EBSD:
         s = kp.load(ni_kikuchipy_h5ebsd_file)
         assert s.detector.pc.shape == (3, 3, 3)
 
-    def test_writer_check_file(self, tmp_path):
-        fname = tmp_path / "patterns.h5"
+    def test_writer_check_file(self, save_path_hdf5):
         s = kp.data.nickel_ebsd_small(lazy=True)
-        f = File(fname, mode="w")
+        f = File(save_path_hdf5, mode="w")
         _dict2hdf5group({"manufacturer": "kikuchipy", "version": "0.1"}, f["/"])
         f.close()
-        with pytest.raises(
-            IOError,
-            match=f"{fname} is not a supported kikuchipy h5ebsd file, as no top groups",
-        ):
-            _ = KikuchipyH5EBSDWriter(fname, s, add_scan=True)
+        with pytest.raises(IOError, match="(.*) as no top groups"):
+            _ = KikuchipyH5EBSDWriter(save_path_hdf5, s, add_scan=True)
 
-    def test_writer_repr(self, tmp_path):
+    def test_writer_repr(self, save_path_hdf5):
         s = kp.data.nickel_ebsd_small()
-        writer = KikuchipyH5EBSDWriter(tmp_path / "patterns.h5", s)
+        writer = KikuchipyH5EBSDWriter(save_path_hdf5, s)
         repr_str_list = repr(writer).split(" ")
         assert repr_str_list[0] == "KikuchipyH5EBSDWriter:"
         assert repr_str_list[1][-11:] == "patterns.h5"

@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from datetime import datetime
 import gc
 from numbers import Number
 import os
@@ -166,9 +165,7 @@ def save_path_hdf5(request):
     to write, and sometimes read again, a signal to, and from, a file.
     """
     with tempfile.TemporaryDirectory() as tmp:
-        suffix = datetime.now().strftime("%y%m%d_%H%M%S")
-        file_path = os.path.join(tmp, f"patterns_{suffix}." + request.param)
-        yield file_path
+        yield os.path.join(tmp, "patterns." + request.param)
         gc.collect()
 
 
