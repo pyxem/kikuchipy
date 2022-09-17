@@ -49,6 +49,8 @@ Changed
 
 Removed
 -------
+- Remove the deprecated parameter ``relative`` in ``EBSD.remove_static_background()``
+  (`#563 <https://github.com/pyxem/kikuchipy/pull/563>`_).
 - Functions ``ebsd_metadata()`` and ``metadata_nodes()`` which have been deprecated
   since v0.5. (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_,
   `#562 <https://github.com/pyxem/kikuchipy/pull/562>`_)

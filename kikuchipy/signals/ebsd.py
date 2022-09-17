@@ -163,7 +163,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
 
         Parameters
         ----------
-        value
+        value : EBSDDetector
             EBSD detector.
         """
         return self._detector
@@ -185,7 +185,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
 
         Parameters
         ----------
-        value
+        value : ~orix.crystal_map.CrystalMap
             Crystal map with the same shape as the signal navigation
             shape.
         """
@@ -204,7 +204,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
 
         Parameters
         ----------
-        value
+        value : ~numpy.ndarray or ~dask.array.Array
             Static background pattern with the same (signal) shape and
             data type as the EBSD signal.
         """
@@ -280,11 +280,9 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         dx.scale, dy.scale = (delta, delta)
         dx.offset, dy.offset = -center
 
-    @deprecated_argument(name="relative", since="0.6", removal="0.7")
     def remove_static_background(
         self,
         operation: str = "subtract",
-        relative: bool = False,
         static_bg: Union[np.ndarray, da.Array, None] = None,
         scale_bg: bool = False,
         show_progressbar: Optional[bool] = None,
@@ -293,28 +291,14 @@ class EBSD(CommonImage, hs.signals.Signal2D):
 
         The removal is performed by subtracting or dividing by a static
         background pattern. Resulting pattern intensities are rescaled
-        keeping relative intensities or not and stretched to fill the
-        available grey levels in the patterns' data type range.
+        loosing relative intensities and stretched to fill the available
+        grey levels in the patterns' data type range.
 
         Parameters
         ----------
         operation
             Whether to ``"subtract"`` (default) or ``"divide"`` by the
             static background pattern.
-        relative
-            Keep relative intensities between patterns. Default is
-            ``False``.
-
-            .. deprecated:: 0.6
-
-                This parameter will be removed in version 0.7 due to the
-                implementation not working well for large datasets. It
-                was originally supported so that a virtual backscatter
-                electron (VBSE) image with meaningful contrast could be
-                navigated after static background removal. For an EBSD
-                signal ``s``, this image can be easily obtained with
-                ``s_mean = s.mean(s.axes_manager.signal_indices_in_array)``.
-
         static_bg
             Static background pattern. If not given, the background is
             obtained from the ``EBSD.static_background`` property.
