@@ -19,30 +19,10 @@ from diffpy.structure import Lattice
 import numpy as np
 import pytest
 
-from kikuchipy.crystallography import (
-    get_direct_structure_matrix,
-    get_reciprocal_structure_matrix,
-    get_reciprocal_metric_tensor,
-)
+from kikuchipy.crystallography import get_direct_structure_matrix
 
 
 class TestCrystallographicMatrices:
-    @pytest.mark.parametrize(
-        "lattice, desired_matrix",
-        [
-            (Lattice(3.52, 3.52, 3.52, 90, 90, 90), np.eye(3) / 3.52),
-            (
-                Lattice(3.52, 3.52, 10.5, 90, 90, 120),
-                np.array([[0.284, 0, 0], [0.164, 0.328, 0], [0, 0, 0.095]]),
-            ),
-        ],
-    )
-    def test_reciprocal_structure_matrix(self, lattice, desired_matrix):
-        with pytest.warns(np.VisibleDeprecationWarning):
-            assert np.allclose(
-                get_reciprocal_structure_matrix(lattice), desired_matrix, atol=1e-3
-            )
-
     @pytest.mark.parametrize(
         "lattice, desired_matrix",
         [
@@ -58,19 +38,3 @@ class TestCrystallographicMatrices:
             assert np.allclose(
                 get_direct_structure_matrix(lattice), desired_matrix, atol=1e-3
             )
-
-    @pytest.mark.parametrize(
-        "lattice, desired_matrix",
-        [
-            (Lattice(3.52, 3.52, 3.52, 90, 90, 90), np.eye(3) * 0.080),
-            (
-                Lattice(3.52, 3.52, 10.5, 90, 90, 120),
-                np.array([[0.107, 0.053, -0], [0.053, 0.107, -0], [-0, -0, 0.009]]),
-            ),
-        ],
-    )
-    def test_reciprocal_metric_tensor(self, lattice, desired_matrix):
-        with pytest.warns(np.VisibleDeprecationWarning):
-            recip_metrics = get_reciprocal_metric_tensor(lattice)
-        assert np.allclose(recip_metrics, lattice.reciprocal().metrics, atol=1e-3)
-        assert np.allclose(recip_metrics, desired_matrix, atol=1e-3)

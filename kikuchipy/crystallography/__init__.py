@@ -19,8 +19,6 @@
 
 __all__ = [
     "get_direct_structure_matrix",
-    "get_reciprocal_metric_tensor",
-    "get_reciprocal_structure_matrix",
 ]
 
 
@@ -29,11 +27,7 @@ def __dir__():
 
 
 def __getattr__(name):
-    _import_mapping = {
-        "get_direct_structure_matrix": "matrices",
-        "get_reciprocal_structure_matrix": "matrices",
-        "get_reciprocal_metric_tensor": "matrices",
-    }
+    _import_mapping = {"get_direct_structure_matrix": "matrices"}
     if name in __all__:
         import importlib
 

@@ -215,8 +215,6 @@ class TestImport:
 
         assert dir(kikuchipy.crystallography) == [
             "get_direct_structure_matrix",
-            "get_reciprocal_metric_tensor",
-            "get_reciprocal_structure_matrix",
         ]
 
     def test_dir_data(self):
