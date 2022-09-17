@@ -1680,7 +1680,7 @@ class TestEBSDRefinement:
             master_pattern=kp.data.nickel_ebsd_master_pattern_small(
                 energy=energy,
                 projection="lambert",
-                hemisphere="north",
+                hemisphere="upper",
             ),
             energy=energy,
         )

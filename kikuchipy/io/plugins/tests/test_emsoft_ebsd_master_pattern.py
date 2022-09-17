@@ -21,7 +21,7 @@ from h5py import File
 import numpy as np
 import pytest
 
-from kikuchipy import data, load
+from kikuchipy import load
 from kikuchipy.conftest import assert_dictionary
 from kikuchipy.io.plugins.emsoft_ebsd_master_pattern import (
     _check_file_format,
@@ -248,15 +248,3 @@ class TestEMsoftEBSDMasterPatternReader:
         with File(EMSOFT_FILE) as f:
             mp_lambert_upper = f["EMData/EBSDmaster/mLPNH"][:][0][energy_slice]
             assert np.allclose(s2.data, mp_lambert_upper)
-
-    def test_hemisphere_warns(self):
-        """Passing 'north' or 'south' as `hemisphere` gives a
-        deprecation warning.
-        """
-        with pytest.warns(np.VisibleDeprecationWarning, match="`hemisphere` parameter"):
-            s = data.nickel_ebsd_master_pattern_small(hemisphere="north")
-        assert s.hemisphere == "upper"
-
-        with pytest.warns(np.VisibleDeprecationWarning, match="`hemisphere` parameter"):
-            s = data.nickel_ebsd_master_pattern_small(hemisphere="south")
-        assert s.hemisphere == "lower"

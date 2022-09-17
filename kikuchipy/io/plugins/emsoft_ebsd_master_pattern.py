@@ -21,7 +21,6 @@
 import os
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
-import warnings
 
 import dask.array as da
 from h5py import File, Group, Dataset
@@ -91,21 +90,6 @@ def file_reader(
     signal_dict_list
         Data, axes, metadata and original metadata.
     """
-    if hemisphere.lower() not in ["upper", "lower", "both"]:
-        # TODO: Remove warning after 0.6 is released
-        warnings.warn(
-            (
-                "`hemisphere` parameter options 'north' and 'south' are deprecated and "
-                "will raise an error in version 0.7, use 'upper' and 'lower' instead. "
-                "Changed to 'upper' or 'lower'."
-            ),
-            np.VisibleDeprecationWarning,
-        )
-        if hemisphere == "north":
-            hemisphere = "upper"
-        elif hemisphere == "south":
-            hemisphere = "lower"
-
     mode = kwargs.pop("mode", "r")
     f = File(filename, mode=mode, **kwargs)
 
@@ -338,7 +322,7 @@ def _get_datasets(data_group: Group, projection: str, hemisphere: str) -> List[D
         datasets = [data_group[dset_name]]
     else:
         raise ValueError(
-            f"'hemisphere' value {hemisphere} must be one of " f"{hemispheres.keys()}."
+            f"'hemisphere' value {hemisphere} must be one of {list(hemispheres.keys())}"
         )
 
     return datasets
