@@ -28,8 +28,10 @@ from orix.quaternion import Rotation
 from orix.vector import Vector3d
 
 from kikuchipy.crystallography import get_direct_structure_matrix
+from kikuchipy._util import deprecated
 
 
+@deprecated(since="0.7", removal="0.8")
 def detector2sample(
     sample_tilt: float,
     detector_tilt: float,
@@ -63,6 +65,7 @@ def detector2sample(
     return r.to_matrix()[0]
 
 
+@deprecated(since="0.7", removal="0.8")
 def detector2direct_lattice(
     sample_tilt: float,
     detector_tilt: float,
@@ -102,6 +105,7 @@ def detector2direct_lattice(
     return cartesian2direct.dot(sample2cartesian).dot(_detector2sample)
 
 
+@deprecated(since="0.7", removal="0.8")
 def detector2reciprocal_lattice(
     sample_tilt: float,
     detector_tilt: float,
