@@ -17,7 +17,6 @@
 
 import copy
 import gc
-import sys
 from typing import Optional, Tuple, Union
 import warnings
 
@@ -112,37 +111,17 @@ class EBSDMasterPattern(CommonImage, Signal2D):
     def hemisphere(self) -> str:
         """Return or set which hemisphere the data contains.
 
-        Options are ``"upper"`` (previously ``"north"``), ``"lower"``
-        (previously ``"south"``) or ``"both"``.
+        Options are ``"upper"``, ``"lower"`` or ``"both"``.
 
         Parameters
         ----------
-        value
+        value : str
             Which projection the pattern is in.
         """
-        if self._hemisphere in ["upper", "north"]:
-            return "upper"
-        elif self._hemisphere in ["lower", "south"]:
-            return "lower"
-        else:
-            return self._hemisphere
+        return self._hemisphere
 
     @hemisphere.setter
     def hemisphere(self, value: str):
-        if value in ["north", "south"]:
-            # TODO: Remove warning after 0.6 is released
-            warnings.warn(
-                (
-                    "`hemisphere` parameter options 'north' and 'south' are deprecated "
-                    "and will raise an error in version 0.7, use 'upper' and 'lower'"
-                    " instead. Changed to 'upper' or 'lower'."
-                ),
-                np.VisibleDeprecationWarning,
-            )
-            if value == "north":
-                value = "upper"
-            else:
-                value = "lower"
         self._hemisphere = value
 
     @property
@@ -152,7 +131,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         Parameters
         ----------
-        value
+        value : ~orix.crystal_map.Phase
             The phase used in the master pattern simulation.
         """
         return self._phase
@@ -168,7 +147,7 @@ class EBSDMasterPattern(CommonImage, Signal2D):
 
         Parameters
         ----------
-        value
+        value : str
             Which projection the pattern is in.
         """
         return self._projection
