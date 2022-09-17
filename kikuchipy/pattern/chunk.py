@@ -25,7 +25,7 @@
     this using :class:`~kikuchipy.signals.EBSD`.
 """
 
-from typing import Union, Optional, Tuple, List
+from typing import Union, Tuple, List
 
 import dask.array as da
 from numba import njit
@@ -37,7 +37,6 @@ import kikuchipy.pattern._pattern as pattern_processing
 import kikuchipy.filters.fft_barnes as barnes
 from kikuchipy.filters.window import Window
 from kikuchipy.pattern._pattern import _rescale_with_min_max
-from kikuchipy._util import deprecated
 
 
 def rescale_intensity(
@@ -139,64 +138,6 @@ def get_dynamic_background(
         background[nav_idx] = filter_func(patterns[nav_idx], **kwargs)
 
     return background
-
-
-@deprecated(
-    since=0.6, removal=0.7, alternative="kikuchipy.signals.EBSD.get_image_quality"
-)
-def get_image_quality(
-    patterns: Union[np.ndarray, da.Array],
-    frequency_vectors: Optional[np.ndarray] = None,
-    inertia_max: Union[None, int, float] = None,
-    normalize: bool = True,
-) -> np.ndarray:
-    """Compute the image quality in a chunk of EBSD patterns.
-
-    The image quality is calculated based on the procedure defined by
-    Krieger Lassen [Lassen1994]_.
-
-    Parameters
-    ----------
-    patterns
-        EBSD patterns.
-    frequency_vectors
-        Integer 2D array with values corresponding to the weight given
-        each FFT spectrum frequency component. If None (default), these
-        are calculated from
-        :func:`~kikuchipy.util.pattern.fft_frequency_vectors`.
-    inertia_max
-        Maximum inertia of the FFT power spectrum of the image. If None
-        (default), this is calculated from the `frequency_vectors`.
-    normalize
-        Whether to normalize patterns to a mean of zero and standard
-        deviation of 1 before calculating the image quality. Default
-        is True.
-
-    Returns
-    -------
-    image_quality_chunk : numpy.ndarray
-        Image quality of patterns.
-    """
-    dtype_out = np.float64
-
-    image_quality_chunk = np.empty(patterns.shape[:-2], dtype=dtype_out)
-
-    for nav_idx in np.ndindex(patterns.shape[:-2]):
-        # Get (normalized) pattern
-        if normalize:
-            pattern = pattern_processing.normalize_intensity(pattern=patterns[nav_idx])
-        else:
-            pattern = patterns[nav_idx]
-
-        # Compute image quality
-        image_quality_chunk[nav_idx] = pattern_processing.get_image_quality(
-            pattern=pattern,
-            normalize=False,
-            frequency_vectors=frequency_vectors,
-            inertia_max=inertia_max,
-        )
-
-    return image_quality_chunk
 
 
 def adaptive_histogram_equalization(
