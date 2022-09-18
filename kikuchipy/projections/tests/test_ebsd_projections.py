@@ -15,11 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from diffpy.structure import Lattice
 import numpy as np
 from orix.quaternion import Rotation
 import pytest
 
-from kikuchipy.projections.ebsd_projections import detector2sample
+from kikuchipy.projections.ebsd_projections import (
+    detector2sample,
+    detector2direct_lattice,
+    detector2reciprocal_lattice,
+)
 
 
 class TestEBSDProjections:
@@ -50,3 +55,23 @@ class TestEBSDProjections:
             )
         r_bruker = Rotation.from_matrix(r_bruker_matrix)
         assert np.allclose((~r_tsl2bruker * r_tsl).data, r_bruker.data)
+
+    def test_detector2direct_lattice(self):
+        with pytest.warns(np.VisibleDeprecationWarning):
+            assert np.allclose(
+                detector2direct_lattice(
+                    70, 0, Lattice(1, 1, 1, 90, 90, 90), Rotation.identity()
+                ).squeeze(),
+                np.array([[0, -0.940, 0.342], [1, 0, 0], [0, 0.342, 0.940]]),
+                atol=1e-3,
+            )
+
+    def test_detector2reciprocal_lattice(self):
+        with pytest.warns(np.VisibleDeprecationWarning):
+            assert np.allclose(
+                detector2reciprocal_lattice(
+                    70, 0, Lattice(1, 1, 1, 90, 90, 90), Rotation.identity()
+                ).squeeze(),
+                np.array([[0, -0.940, 0.342], [1, 0, 0], [0, 0.342, 0.940]]),
+                atol=1e-3,
+            )
