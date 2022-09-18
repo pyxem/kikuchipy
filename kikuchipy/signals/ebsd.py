@@ -124,7 +124,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
     >>> s
     <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
     >>> s.detector
-    EBSDDetector (60, 60), px_size 1.0 um, binning 8, tilt 0, azimuthal 0, pc (0.5, 0.5, 0.5)
+    EBSDDetector (60, 60), px_size 1.0 um, binning 8, tilt 0.0, azimuthal 0.0, pc (0.5, 0.5, 0.5)
     >>> s.static_background
     array([[84, 87, 90, ..., 27, 29, 30],
            [87, 90, 93, ..., 27, 28, 30],
@@ -133,7 +133,11 @@ class EBSD(CommonImage, hs.signals.Signal2D):
            [80, 82, 84, ..., 36, 30, 26],
            [79, 80, 82, ..., 28, 26, 26],
            [76, 78, 80, ..., 26, 26, 25]], dtype=uint8)
-    >>> s.xmap  # Empty, since it is not set
+    >>> s.xmap
+    Phase  Orientations  Name  Space group  Point group  Proper point group     Color
+        0    9 (100.0%)  None         None         None                None  tab:blue
+    Properties:
+    Scan unit: px
     """
 
     _signal_type = "EBSD"
