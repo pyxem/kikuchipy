@@ -14,6 +14,10 @@ how best to contribute.
     to start contributing is to create a GitHub account and explain what you want to do
     `in an issue <https://github.com/pyxem/kikuchipy/issues/new>`__.
 
+
+    That said, our contributing workflow is typical for Python projects, so reading this
+    guide can make contributing to similar projects in the future much smoother!
+
 This project follows the `all-contributors
 <https://github.com/all-contributors/all-contributors>`__ specification.
 

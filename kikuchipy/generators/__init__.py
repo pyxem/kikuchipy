@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Generate signals and simulations, sometimes *from* other signals."""
+"""Generate signals from other signals."""
 
 __all__ = [
     "VirtualBSEGenerator",

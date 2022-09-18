@@ -12,7 +12,7 @@ provided by the HyperSpy library.
 
     examples/index.rst
     tutorials/index.rst
-    Reference <reference/index.rst>
+    reference/index.rst
     related_projects.rst
     bibliography.rst
     open_datasets.rst
