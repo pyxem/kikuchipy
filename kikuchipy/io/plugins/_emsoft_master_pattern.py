@@ -81,9 +81,10 @@ class EMsoftMasterPatternReader(abc.ABC):
 
         # Set data group names
         diff_type = self.diffraction_type
-        signal_type = f"{diff_type}MasterPattern"
-        if diff_type == "TKD":
-            signal_type = "EBSDMasterPattern"
+        #        signal_type = f"{diff_type}MasterPattern"
+        #        if diff_type == "TKD":
+        #            signal_type = "EBSDMasterPattern"
+        signal_type = "EBSDMasterPattern"
         data_group_path = f"EMData/{diff_type}master"
         name_list_name = f"{diff_type}MasterNameList"
 
