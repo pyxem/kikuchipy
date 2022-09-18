@@ -215,8 +215,6 @@ class TestImport:
 
         assert dir(kikuchipy.crystallography) == [
             "get_direct_structure_matrix",
-            "get_reciprocal_metric_tensor",
-            "get_reciprocal_structure_matrix",
         ]
 
     def test_dir_data(self):
@@ -256,7 +254,6 @@ class TestImport:
         import kikuchipy.generators
 
         assert dir(kikuchipy.generators) == [
-            "EBSDSimulationGenerator",
             "VirtualBSEGenerator",
         ]
 
@@ -342,8 +339,6 @@ class TestImport:
         import kikuchipy.simulations
 
         assert dir(kikuchipy.simulations) == [
-            "GeometricalEBSDSimulation",
             "GeometricalKikuchiPatternSimulation",
             "KikuchiPatternSimulator",
-            "features",
         ]

@@ -47,14 +47,32 @@ Changed
   which accepts a ``allow_download`` parameter. If not given, the value is retreived
   from HyperSpy's preferences. (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
 
+Deprecated
+----------
+- ``projections.ebsd_projections`` module.
+  (`#563 <https://github.com/pyxem/kikuchipy/pull/563>`_)
+
 Removed
 -------
+- ``EBSDSimulationGenerator`` and ``GeometricalEBSDSimulation`` (use
+  ``KikuchiPatternSimulator`` and ``GeometricalKikuchiPatternSimulation`` instead) and
+  ``simulations.features`` module.
+  (`#563 <https://github.com/pyxem/kikuchipy/pull/563>`_)
+- ``crystallography`` module. (`#563 <https://github.com/pyxem/kikuchipy/pull/563>`_)
+- Options ``"north"`` and ``"south"`` for property
+  ``EBSDMasterPattern.hemisphere`` and in the parameter ``"hemisphere"`` in
+  ``kikuchipy.data.nickel_ebsd_master_pattern_small()``; use ``"upper"`` and ``"lower"``
+  instead. (`#563 <https://github.com/pyxem/kikuchipy/pull/563>`_)
+- Functions ``remove_static_background()``, ``remove_dynamic_background()`` and
+  ``get_image_quality()`` from ``chunk`` module.
+  (`#563 <https://github.com/pyxem/kikuchipy/pull/563>`_)
+- Parameter ``relative`` in ``EBSD.remove_static_background()``.
+  (`#563 <https://github.com/pyxem/kikuchipy/pull/563>`_)
 - Functions ``ebsd_metadata()`` and ``metadata_nodes()`` which have been deprecated
   since v0.5. (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_,
   `#562 <https://github.com/pyxem/kikuchipy/pull/562>`_)
-- The print information emitted from ``EBSD`` methods like
-  ``remove_static_background()`` is removed.
-  (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
+- Print information emitted from ``EBSD`` methods like ``remove_static_background()`` is
+  removed. (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
 
 Fixed
 -----
@@ -132,7 +150,7 @@ Deprecated
 - The ``kikuchipy.generators.EBSDSimulationGenerator`` class is deprecated and will be
   removed in version 0.7. Use the ``kikuchipy.simulations.KikuchiPatternSimulator``
   class instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
-- The ``kikuchipy.crystallography.matrices`` module is depreacted and will be removed in
+- The ``kikuchipy.crystallography.matrices`` module is deprecated and will be removed in
   version 0.7, access the matrices via :class:`diffpy.structure.lattice.Lattice`
   attributes instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - The following functions for processing of pattern chunks in the
@@ -635,8 +653,7 @@ Contributors
 
 Added
 -----
-- Jupyter Notebooks with tutorials and example workflows available via
-  https://github.com/pyxem/kikuchipy-demos.
+- Jupyter Notebooks with tutorials and example workflows available.
 - Grey scale and RGB virtual backscatter electron (BSE) images can be easily generated
   with the VirtualBSEGenerator class. The generator return objects of the new signal
   class VirtualBSEImage, which inherit functionality from HyperSpy's Signal2D class.

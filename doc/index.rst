@@ -12,7 +12,7 @@ provided by the HyperSpy library.
 
     examples/index.rst
     tutorials/index.rst
-    Reference <reference/index.rst>
+    reference/index.rst
     related_projects.rst
     bibliography.rst
     open_datasets.rst
@@ -70,7 +70,7 @@ Learning resources
 
         In-depth guides for using kikuchipy.
 
-    .. grid-item-card:: Reference
+    .. grid-item-card:: API reference
         :img-top: _static/image/colormap_banners/banner2.png
         :link: reference/index
         :link-type: doc

@@ -182,10 +182,6 @@ class TestRemoveStaticBackgroundEBSD:
         static_bg.change_dtype(np.uint8)
         s.remove_static_background(static_bg=static_bg.data)
 
-    def test_deprecated_parameter_relative(self, dummy_signal):
-        with pytest.warns(np.VisibleDeprecationWarning):
-            dummy_signal.remove_static_background(relative=True)
-
 
 class TestRemoveDynamicBackgroundEBSD:
     @pytest.mark.parametrize(
@@ -1684,7 +1680,7 @@ class TestEBSDRefinement:
             master_pattern=kp.data.nickel_ebsd_master_pattern_small(
                 energy=energy,
                 projection="lambert",
-                hemisphere="north",
+                hemisphere="upper",
             ),
             energy=energy,
         )

@@ -15,10 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Generate signals and simulations, sometimes *from* other signals."""
+"""Generate signals from other signals."""
 
 __all__ = [
-    "EBSDSimulationGenerator",
     "VirtualBSEGenerator",
 ]
 
@@ -29,7 +28,6 @@ def __dir__():
 
 def __getattr__(name):
     _import_mapping = {
-        "EBSDSimulationGenerator": "ebsd_simulation_generator",
         "VirtualBSEGenerator": "virtual_bse_generator",
     }
     if name in __all__:

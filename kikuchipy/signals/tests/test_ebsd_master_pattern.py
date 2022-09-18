@@ -23,13 +23,12 @@ from hyperspy._signals.signal2d import Signal2D
 import numpy as np
 from orix.crystal_map import Phase
 from orix.quaternion import Rotation
-from orix.vector import Vector3d
 import pytest
 
 import kikuchipy as kp
 from kikuchipy import load
 from kikuchipy.data import nickel_ebsd_master_pattern_small
-from kikuchipy.io.plugins.tests.test_emsoft_ebsd_masterpattern import (
+from kikuchipy.io.plugins.tests.test_emsoft_ebsd_master_pattern import (
     setup_axes_manager,
     METADATA,
 )
@@ -179,14 +178,6 @@ class TestProperties:
         assert mp2.phase.point_group.name == mp.phase.point_group.name
         mp2.phase.space_group = 220
         assert mp2.phase.point_group.name != mp.phase.point_group.name
-
-    def test_hemisphere_warns(self):
-        mp = kp.data.nickel_ebsd_master_pattern_small(hemisphere="upper")
-        with pytest.warns(np.VisibleDeprecationWarning, match="`hemisphere` parameter"):
-            mp.hemisphere = "north"
-            assert mp.hemisphere == "upper"
-            mp.hemisphere = "south"
-            assert mp.hemisphere == "lower"
 
 
 class TestProjectingPatternsFromLambert:
