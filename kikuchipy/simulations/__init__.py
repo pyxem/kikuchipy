@@ -22,11 +22,11 @@ zone axes.
 import logging
 
 
-class DisableMatplotlibWarningFilter(logging.Filter):
+class DisableMatplotlibWarningFilter(logging.Filter):  # pragma: no cover
     # Filter to suppress warnings with the below warning message
     # emitted by Matplotlib whenever coordinate arrays of text
     # positions contain NaN. This happens in most cases when we plot
-    # zone axes label markers with HyperSPy.
+    # zone axes label markers with HyperSpy.
     #
     # Filter has to be placed here to be executed at all due to lazy
     # imports.
@@ -40,10 +40,8 @@ logging.getLogger("matplotlib.text").addFilter(DisableMatplotlibWarningFilter)
 
 
 __all__ = [
-    "GeometricalEBSDSimulation",
     "GeometricalKikuchiPatternSimulation",
     "KikuchiPatternSimulator",
-    "features",
 ]
 
 
@@ -53,7 +51,6 @@ def __dir__():
 
 def __getattr__(name):
     _import_mapping = {
-        "GeometricalEBSDSimulation": "geometrical_ebsd_simulation",
         "GeometricalKikuchiPatternSimulation": "_kikuchi_pattern_simulation",
         "KikuchiPatternSimulator": "kikuchi_pattern_simulator",
     }

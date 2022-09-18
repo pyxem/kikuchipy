@@ -254,7 +254,6 @@ class TestImport:
         import kikuchipy.generators
 
         assert dir(kikuchipy.generators) == [
-            "EBSDSimulationGenerator",
             "VirtualBSEGenerator",
         ]
 
@@ -340,8 +339,6 @@ class TestImport:
         import kikuchipy.simulations
 
         assert dir(kikuchipy.simulations) == [
-            "GeometricalEBSDSimulation",
             "GeometricalKikuchiPatternSimulation",
             "KikuchiPatternSimulator",
-            "features",
         ]
