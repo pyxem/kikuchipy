@@ -18,13 +18,42 @@
 from kikuchipy.release import version as __version__
 
 
-# Try to import only once
+# Attempt import only once
 try:
     import pyvista
 
     _pyvista_installed = True
 except ImportError:  # pragma: no cover
     _pyvista_installed = False
+
+
+def set_log_level(level: str):  # pragma: no cover
+    """Set level of kikuchipy logging messages.
+
+    Parameters
+    ----------
+    level
+        Any value accepted by :meth:`logging.Logger.setLevel()`. Levels
+        are ``"DEBUG"``, ``"INFO"``, ``"WARNING"``, ``"ERROR"`` and
+        ``"CRITICAL"``.
+
+    Notes
+    -----
+    See https://docs.python.org/3/howto/logging.html.
+
+    Examples
+    --------
+    >>> import kikuchipy as kp
+    >>> kp.set_log_level("DEBUG")
+    >>> s = kp.data.nickel_ebsd_small()
+    >>> s2 = s.deepcopy()  # doctest: +SKIP
+    DEBUG:kikuchipy.signals._kikuchipy_signal:Transfer custom properties when deep copying
+    """
+    import logging
+
+    logging.basicConfig()
+    logging.getLogger("kikuchipy").setLevel(level)
+
 
 __all__ = [
     "__version__",
@@ -41,6 +70,7 @@ __all__ = [
     "pattern",
     "projections",
     "release",
+    "set_log_level",
     "signals",
     "simulations",
 ]
