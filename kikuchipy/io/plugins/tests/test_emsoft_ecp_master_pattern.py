@@ -20,10 +20,7 @@ import os
 
 import pytest
 
-from kikuchipy import load
-
-# from kikuchipy.signals.ecp_master_pattern import ECPMasterPattern, LazyECPMasterPattern
-from kikuchipy.signals import EBSDMasterPattern, LazyEBSDMasterPattern
+import kikuchipy as kp
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -38,10 +35,9 @@ class TestEMsoftECPMasterPatternReader:
     """
 
     @pytest.mark.parametrize(
-        #        "lazy, class_type", [(False, ECPMasterPattern), (True, LazyECPMasterPattern)]
         "lazy, class_type",
-        [(False, EBSDMasterPattern), (True, LazyEBSDMasterPattern)],
+        [(False, kp.signals.ECPMasterPattern), (True, kp.signals.LazyECPMasterPattern)],
     )
     def test_file_reader(self, lazy, class_type):
-        s = load(EMSOFT_FILE, lazy=lazy)
+        s = kp.load(EMSOFT_FILE, lazy=lazy)
         assert isinstance(s, class_type)
