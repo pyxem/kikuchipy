@@ -66,9 +66,17 @@ for plugin in plugins:
 
 def load(
     filename: Union[str, Path], lazy: bool = False, **kwargs
-) -> Union["EBSD", "EBSDMasterPattern", List["EBSD"], List["EBSDMasterPattern"]]:
-    """Load an :class:`~kikuchipy.signals.EBSD` or
-    :class:`~kikuchipy.signals.EBSDMasterPattern` signal from a
+) -> Union[
+    "EBSD",
+    "EBSDMasterPattern",
+    "ECPMasterPattern",
+    List["EBSD"],
+    List["EBSDMasterPattern"],
+    List["ECPMasterPattern"],
+]:
+    """Load an :class:`~kikuchipy.signals.EBSD`,
+    :class:`~kikuchipy.signals.EBSDMasterPattern` or
+    :class:`~kikuchipy.signals.ECPMasterPattern` signal from a
     supported file format.
 
     This function is a modified version of :func:`hyperspy.io.load`.
@@ -87,7 +95,7 @@ def load(
 
     Returns
     -------
-    signals
+    out
         Signal or a list of signals.
 
     Raises
@@ -126,19 +134,19 @@ def load(
     # Get data and metadata (from potentially multiple signals if an h5ebsd
     # file)
     signal_dicts = reader.file_reader(filename, lazy=lazy, **kwargs)
-    signals = []
+    out = []
     for signal in signal_dicts:
-        signals.append(_dict2signal(signal, lazy=lazy))
+        out.append(_dict2signal(signal, lazy=lazy))
         directory, filename = os.path.split(os.path.abspath(filename))
         filename, extension = os.path.splitext(filename)
-        signals[-1].tmp_parameters.folder = directory
-        signals[-1].tmp_parameters.filename = filename
-        signals[-1].tmp_parameters.extension = extension.replace(".", "")
+        out[-1].tmp_parameters.folder = directory
+        out[-1].tmp_parameters.filename = filename
+        out[-1].tmp_parameters.extension = extension.replace(".", "")
 
-    if len(signals) == 1:
-        signals = signals[0]
+    if len(out) == 1:
+        out = out[0]
 
-    return signals
+    return out
 
 
 def _dict2signal(signal_dict: dict, lazy: bool = False):

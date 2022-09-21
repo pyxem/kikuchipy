@@ -32,8 +32,10 @@ backscatter electron images.
 __all__ = [
     "EBSD",
     "EBSDMasterPattern",
+    "ECPMasterPattern",
     "LazyEBSD",
     "LazyEBSDMasterPattern",
+    "LazyECPMasterPattern",
     "VirtualBSEImage",
     "util",
 ]
@@ -46,9 +48,11 @@ def __dir__():
 def __getattr__(name):
     _import_mapping = {
         "EBSD": "ebsd",
-        "LazyEBSD": "ebsd",
         "EBSDMasterPattern": "ebsd_master_pattern",
+        "ECPMasterPattern": "ecp_master_pattern",
+        "LazyEBSD": "ebsd",
         "LazyEBSDMasterPattern": "ebsd_master_pattern",
+        "LazyECPMasterPattern": "ecp_master_pattern",
         "VirtualBSEImage": "virtual_bse_image",
     }
     if name in __all__:
