@@ -17,13 +17,12 @@
 
 from typing import Optional, Tuple, Union
 
-from hyperspy._signals.signal2d import Signal2D
 import numpy as np
 
-from kikuchipy.signals._common_image import CommonImage
+from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D
 
 
-class VirtualBSEImage(CommonImage, Signal2D):
+class VirtualBSEImage(KikuchipySignal2D):
     """Virtual backscatter electron (BSE) image(s).
 
     This class extends HyperSpy's Signal2D class for virtual BSE images.
@@ -35,9 +34,6 @@ class VirtualBSEImage(CommonImage, Signal2D):
     _signal_type = "VirtualBSEImage"
     _alias_signal_types = ["virtual_backscatter_electron_image"]
     _lazy = False
-
-    def __init__(self, *args, **kwargs):
-        Signal2D.__init__(self, *args, **kwargs)
 
     # -- Inherited methods included here for documentation purposes -- #
 
