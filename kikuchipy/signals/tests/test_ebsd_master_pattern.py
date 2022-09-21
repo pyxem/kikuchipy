@@ -26,7 +26,6 @@ from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
-from kikuchipy import load
 from kikuchipy.data import nickel_ebsd_master_pattern_small
 from kikuchipy.io.plugins.tests.test_emsoft_ebsd_master_pattern import (
     setup_axes_manager,
@@ -71,13 +70,13 @@ class TestEBSDMasterPattern:
         assert s.projection == "lambert"
         assert s.hemisphere == "both"
 
-    def test_ebsd_masterpattern_lazy_data_init(self):
+    def test_ebsd_master_pattern_lazy_data_init(self):
         s = kp.signals.EBSDMasterPattern(da.zeros((2, 10, 11, 11)))
 
         assert isinstance(s, kp.signals.EBSDMasterPattern)
         assert isinstance(s.data, da.Array)
 
-    def test_ebsd_masterpattern_lazy_init(self):
+    def test_ebsd_master_pattern_lazy_init(self):
         s = kp.signals.LazyEBSDMasterPattern(da.zeros((2, 10, 11, 11)))
 
         assert isinstance(s, kp.signals.LazyEBSDMasterPattern)
@@ -105,7 +104,7 @@ class TestEBSDMasterPattern:
 class TestIO:
     @pytest.mark.parametrize("save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"])
     def test_save_load_hspy(self, save_path_hdf5):
-        s = load(EMSOFT_FILE)
+        s = kp.load(EMSOFT_FILE)
 
         axes_manager = setup_axes_manager(["energy", "height", "width"])
 
@@ -208,7 +207,7 @@ class TestProjectingPatternsFromLambert:
         assert np.allclose(dc, dc2)
 
     def test_get_patterns(self):
-        emsoft_key = load(EMSOFT_EBSD_FILE)
+        emsoft_key = kp.load(EMSOFT_EBSD_FILE)
         emsoft_key = emsoft_key.data[0]
 
         r = Rotation.from_euler(np.radians([120, 45, 60]))
