@@ -18,6 +18,21 @@ Unreleased
 
 Added
 -----
+- Improved handling of custom attributes ``xmap``, ``detector`` and
+  ``static_background`` in ``EBSD`` and ``hemisphere``, ``phase`` and ``projection`` in
+  EBSD/ECP master pattern classes when calling inherited HyperSpy ``Signal2D`` methods
+  ``as_lazy()``, ``change_dtype()``, ``compute()``, ``deepcopy()``,
+  ``set_signal_type()`` and ``squeeze()``.
+  (`#564 <https://github.com/pyxem/kikuchipy/pull/564>`_)
+- Reader of an electron channelig pattern (ECP) master pattern from an EMsoft HDF5 file
+  into an ``ECPMasterPattern`` signal.
+  (`#564 <https://github.com/pyxem/kikuchipy/pull/564>`_)
+- Reader of a transmission kikuchi diffraction (TKD) master pattern from an EMsoft HDF5
+  file into an ``EBSDMasterPattern`` signal.
+  (`#564 <https://github.com/pyxem/kikuchipy/pull/564>`_)
+- ``ECPMasterPattern`` class. (`#564 <https://github.com/pyxem/kikuchipy/pull/564>`_)
+- Some internal logging which can be controlled via ``kikuchipy.set_log_level()``.
+  (`#564 <https://github.com/pyxem/kikuchipy/pull/564>`_)
 - Reader of an ``EBSD`` signal from Oxford Instrument's h5ebsd format (H5OINA).
   (`#562 <https://github.com/pyxem/kikuchipy/pull/562>`_)
 - Figures of reference frames of other software added to the documentation.
