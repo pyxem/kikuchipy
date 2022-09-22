@@ -77,10 +77,7 @@ jobs:
           pip install wheel
           pip install -U -e .'[tests]'
 
-      # TODO: Allow installing on 3.10 once vtk is available on 3.10,
-      # see https://pypi.org/project/vtk/#files
       - name: Install optional dependencies
-        if: ${{ matrix.python-version == 3.9 }}
         shell: bash
         run: |
           pip install -e .'[viz]'
@@ -107,8 +104,9 @@ jobs:
 
       - name: Run docstring tests
         if: ${{ matrix.os == 'ubuntu-latest' }}
+        continue-on-error: true
         run: |
-          xvfb-run pytest --doctest-modules --ignore-glob=kikuchipy/*/tests kikuchipy/*.py
+          xvfb-run pytest --doctest-modules --doctest-continue-on-failure --ignore-glob=kikuchipy/*/tests kikuchipy/*.py
 
       - name: Run tests in a virtual X server environment on Ubuntu
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == 3.9 }}
