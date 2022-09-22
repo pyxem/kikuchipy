@@ -2,12 +2,12 @@ import os
 
 import numpy as np
 import h5py
+
+from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
 import kikuchipy as kp
 
 
-ddir = "/home/hakon/kode/kikuchipy/kikuchipy/data/emsoft_ebsd_master_pattern/"
-fname = "master_patterns.h5"
-f = h5py.File(os.path.join(ddir, fname), mode="w")
+f = h5py.File(os.path.join(os.path.dirname(__file__), "master_patterns.h5"), mode="w")
 
 npx = 6
 signal_shape = (npx * 2 + 1,) * 2
@@ -72,7 +72,7 @@ data = {
     },
 }
 
-kp.io.plugins.h5ebsd.dict2h5ebsdgroup(dictionary=data, group=f["/"])
+_dict2hdf5group(dictionary=data, group=f["/"])
 
 # One chunked data set
 f["EMData/EBSDmaster"].create_dataset("mLPSH", data=mp_lambert_south, chunks=True)

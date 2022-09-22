@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import annotations
 import copy
 import datetime
 import gc
@@ -26,7 +27,6 @@ import warnings
 import dask.array as da
 from dask.diagnostics import ProgressBar
 import hyperspy.api as hs
-from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.learn.mva import LearningResults
 from hyperspy.roi import BaseInteractiveROI
 from h5py import File
@@ -74,12 +74,11 @@ from kikuchipy.signals.util._map_helper import (
     _get_neighbour_dot_product_matrices,
     _get_average_dot_product_map,
 )
-from kikuchipy.signals._common_image import CommonImage
+from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
-from kikuchipy._util import deprecated_argument
 
 
-class EBSD(CommonImage, hs.signals.Signal2D):
+class EBSD(KikuchipySignal2D):
     """Scan of Electron Backscatter Diffraction (EBSD) patterns.
 
     This class extends HyperSpy's Signal2D class for EBSD patterns. See
@@ -109,11 +108,11 @@ class EBSD(CommonImage, hs.signals.Signal2D):
     kikuchipy.data.nickel_ebsd_large :
         An EBSD signal with ``(55, 75)`` experimental nickel patterns.
     kikuchipy.data.silicon_ebsd_moving_screen_in :
-        An EBSD signal with one experimental silicon patterns.
+        An EBSD signal with one experimental silicon pattern.
     kikuchipy.data.silicon_ebsd_moving_screen_out5mm :
-        An EBSD signal with one experimental silicon patterns.
+        An EBSD signal with one experimental silicon pattern.
     kikuchipy.data.silicon_ebsd_moving_screen_out10mm :
-        An EBSD signal with one experimental silicon patterns.
+        An EBSD signal with one experimental silicon pattern.
 
     Examples
     --------
@@ -142,11 +141,10 @@ class EBSD(CommonImage, hs.signals.Signal2D):
 
     _signal_type = "EBSD"
     _alias_signal_types = ["electron_backscatter_diffraction"]
-    _lazy = False
     _custom_properties = ["detector", "static_background", "xmap"]
 
     def __init__(self, *args, **kwargs):
-        super(EBSD, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self._detector = kwargs.get(
             "detector",
@@ -183,7 +181,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
             self._detector = value
 
     @property
-    def xmap(self) -> CrystalMap:
+    def xmap(self) -> Union[CrystalMap, None]:
         """Return or set the crystal map containing the phases, unit
         cell rotations and auxiliary properties of the EBSD dataset.
 
@@ -502,7 +500,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         dtype_out: Union[str, np.dtype, type, None] = None,
         show_progressbar: Optional[bool] = None,
         **kwargs,
-    ) -> Union["EBSD", "LazyEBSD"]:
+    ) -> Union[EBSD, LazyEBSD]:
         """Get the dynamic background per EBSD pattern in a scan.
 
         Parameters
@@ -772,7 +770,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
 
     def dictionary_indexing(
         self,
-        dictionary: "EBSD",
+        dictionary: EBSD,
         metric: Union[SimilarityMetric, str] = "ncc",
         keep_n: int = 20,
         n_per_iteration: Optional[int] = None,
@@ -1876,25 +1874,6 @@ class EBSD(CommonImage, hs.signals.Signal2D):
 
     # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
 
-    def as_lazy(self, *args, **kwargs) -> "EBSD":
-        new = super().as_lazy(*args, **kwargs)
-        if self.static_background is not None:
-            new._static_background = da.asarray(self.static_background)
-        return new
-
-    def deepcopy(self) -> "EBSD":
-        new = super().deepcopy()
-        try:
-            new._xmap = self.xmap.deepcopy()
-        except AttributeError:
-            pass
-        try:
-            new._static_background = self.static_background.copy()
-        except AttributeError:
-            pass
-        new._detector = self.detector.deepcopy()
-        return new
-
     def save(
         self,
         filename: Optional[str] = None,
@@ -1959,7 +1938,7 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         self,
         components: Union[int, List[int], None] = None,
         dtype_out: Union[str, np.dtype, type] = "float32",
-    ) -> Union["EBSD", "LazyEBSD"]:
+    ) -> Union[EBSD, LazyEBSD]:
         """Get the model signal generated with the selected number of
         principal components from a decomposition.
 
@@ -2014,39 +1993,6 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         s_model.learning_results = LearningResults()
 
         return s_model
-
-    # -- Inherited methods included here for documentation purposes -- #
-
-    def rescale_intensity(
-        self,
-        relative: bool = False,
-        in_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        out_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        dtype_out: Union[
-            str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
-        ] = None,
-        percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        show_progressbar: Optional[bool] = None,
-    ) -> None:
-        super().rescale_intensity(
-            relative,
-            in_range,
-            out_range,
-            dtype_out,
-            percentiles,
-            show_progressbar,
-        )
-
-    def normalize_intensity(
-        self,
-        num_std: int = 1,
-        divide_by_square_root: bool = False,
-        dtype_out: Union[str, np.dtype, type, None] = None,
-        show_progressbar: Optional[bool] = None,
-    ) -> None:
-        super().normalize_intensity(
-            num_std, divide_by_square_root, dtype_out, show_progressbar
-        )
 
     # ------------------------ Private methods ----------------------- #
 
@@ -2135,36 +2081,67 @@ class EBSD(CommonImage, hs.signals.Signal2D):
         metric.raise_error_if_invalid()
         return metric
 
-    def _get_custom_properties(self) -> dict:
-        return {name: self.__getattribute__(name) for name in self._custom_properties}
+    # --- Inherited methods from KikuchipySignal2D overwritten here for
+    # documentation purposes
 
-    def _set_custom_properties(self, properties: dict):
-        for name, value in properties.items():
-            self.__setattr__("_" + name, value)
+    def rescale_intensity(
+        self,
+        relative: bool = False,
+        in_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
+        out_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
+        dtype_out: Union[
+            str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
+        ] = None,
+        percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
+        show_progressbar: Optional[bool] = None,
+    ) -> None:
+        super().rescale_intensity(
+            relative,
+            in_range,
+            out_range,
+            dtype_out,
+            percentiles,
+            show_progressbar,
+        )
+
+    def normalize_intensity(
+        self,
+        num_std: int = 1,
+        divide_by_square_root: bool = False,
+        dtype_out: Union[str, np.dtype, type, None] = None,
+        show_progressbar: Optional[bool] = None,
+    ) -> None:
+        super().normalize_intensity(
+            num_std, divide_by_square_root, dtype_out, show_progressbar
+        )
+
+    def as_lazy(self, *args, **kwargs) -> LazyEBSD:
+        return super().as_lazy(*args, **kwargs)
+
+    def change_dtype(self, *args, **kwargs) -> None:
+        super().change_dtype(*args, **kwargs)
+        if isinstance(self, EBSD) and isinstance(
+            self._static_background, (np.ndarray, da.Array)
+        ):
+            self._static_background = self._static_background.astype(self.data.dtype)
+
+    def deepcopy(self) -> EBSD:
+        return super().deepcopy()
 
 
-class LazyEBSD(LazySignal2D, EBSD):
-    """Lazy implementation of the ``EBSD`` class.
+class LazyEBSD(LazyKikuchipySignal2D, EBSD):
+    """Lazy implementation of :class:`~kikuchipy.signals.EBSD`.
 
-    This class extends HyperSpy's LazySignal2D class for EBSD patterns.
-    Methods inherited from HyperSpy can be found in the HyperSpy
-    documentation.
+    See the documentation of ``EBSD`` for attributes and methods.
 
-    See docstring of :class:`EBSD` for attributes and methods.
+    This class extends HyperSpy's
+    :class:`~hyperspy._signals.signal2d.LazySignal2D` class for EBSD
+    patterns. See the documentation of that class for how to create
+    this signal and the list of inherited attributes and methods.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def compute(self, *args, **kwargs) -> None:
-        properties = self._get_custom_properties()
-
         super().compute(*args, **kwargs)
-        gc.collect()  # Don't sink
-
-        self._set_custom_properties(properties)
-        if isinstance(self.static_background, da.Array):
-            self._static_background = self._static_background.compute()
 
     def get_decomposition_model_write(
         self,

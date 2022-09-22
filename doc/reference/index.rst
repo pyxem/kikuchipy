@@ -35,6 +35,7 @@ this:
     :toctree: generated
 
     load
+    set_log_level
 
 .. rubric:: Modules
 

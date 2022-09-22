@@ -214,6 +214,9 @@ notebooks into tutorials. The tutorials are located in the top source directory
 ``tutorials/``, and links to these notebooks are added using
 `nbsphinx-link <https://github.com/vidartf/nbsphinx-link>`__.
 
+Writing tutorial notebooks
+--------------------------
+
 Here are some tips for writing tutorial notebooks:
 
 - All notebooks should have a Markdown cell with this message at the top, "This
@@ -277,6 +280,14 @@ The tutorial notebooks can be run interactively in the browser with the help of 
 When creating a server from the kikuchipy source code, Binder installs the packages
 listed in the environment.yml configuration file, which must include all doc
 dependencies listed in setup.py necessary to run the notebooks.
+
+Writing API reference
+---------------------
+
+Inherited attributes and methods are not listed in the API reference unless they are
+explicitly coded in the inheriting class. To see an example of this behaviour, see the
+source code of :class:`~kikuchipy.signals.EBSDMasterPattern`, which inherits attributes
+and methods from a private class ``KikuchiMasterPattern``.
 
 Deprecations
 ============

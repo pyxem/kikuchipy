@@ -66,7 +66,7 @@ from orix import projections
 from orix.crystal_map import Phase
 from orix.plot._util import Arrow3D
 from orix.quaternion import Rotation
-from orix.vector import Miller, Vector3d
+from orix.vector import Vector3d
 
 from kikuchipy import _pyvista_installed
 from kikuchipy.detectors import EBSDDetector
@@ -512,7 +512,7 @@ class KikuchiPatternSimulator:
 
         # Invert the intensity
         if scaling in ["linear", "square"]:
-            intensity = intensity / np.max(intensity)
+            intensity /= np.max(intensity)
             intensity = abs(intensity - intensity.min() - intensity.max())
         color = np.full((ref.size, 3), intensity[:, np.newaxis])  # RGB
 

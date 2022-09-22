@@ -206,6 +206,7 @@ class TestImport:
             "pattern",
             "projections",
             "release",
+            "set_log_level",
             "signals",
             "simulations",
         ]
@@ -284,6 +285,8 @@ class TestImport:
             "edax_h5ebsd",
             "emsoft_ebsd",
             "emsoft_ebsd_master_pattern",
+            "emsoft_ecp_master_pattern",
+            "emsoft_tkd_master_pattern",
             "kikuchipy_h5ebsd",
             "nordif",
             "nordif_calibration_patterns",
@@ -324,8 +327,10 @@ class TestImport:
         assert dir(kikuchipy.signals) == [
             "EBSD",
             "EBSDMasterPattern",
+            "ECPMasterPattern",
             "LazyEBSD",
             "LazyEBSDMasterPattern",
+            "LazyECPMasterPattern",
             "VirtualBSEImage",
             "util",
         ]

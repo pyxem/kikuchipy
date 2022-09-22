@@ -149,6 +149,7 @@ setup(
         "numpy              >= 1.19",
         "orix               >= 0.9",
         "pooch              >= 0.13",
+        "pyyaml",
         "tqdm               >= 0.5.2",
         "scikit-image       >= 0.16.2",
         "scikit-learn",

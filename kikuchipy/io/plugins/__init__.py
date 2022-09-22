@@ -29,6 +29,8 @@
     edax_h5ebsd
     emsoft_ebsd
     emsoft_ebsd_master_pattern
+    emsoft_ecp_master_pattern
+    emsoft_tkd_master_pattern
     kikuchipy_h5ebsd
     nordif
     nordif_calibration_patterns
@@ -41,6 +43,8 @@ __all__ = [
     "edax_h5ebsd",
     "emsoft_ebsd",
     "emsoft_ebsd_master_pattern",
+    "emsoft_ecp_master_pattern",
+    "emsoft_tkd_master_pattern",
     "kikuchipy_h5ebsd",
     "nordif",
     "nordif_calibration_patterns",

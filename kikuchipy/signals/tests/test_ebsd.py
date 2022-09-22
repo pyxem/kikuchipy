@@ -19,7 +19,7 @@ import os
 
 import dask
 import dask.array as da
-from hyperspy.utils.roi import RectangularROI
+import hyperspy.api as hs
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase
@@ -51,17 +51,6 @@ class TestEBSD:
         s1 = kp.signals.EBSD(array1)
         assert array1.shape == s1.axes_manager.shape
 
-    def test_as_lazy(self, dummy_signal):
-        lazy_signal = dummy_signal.as_lazy()
-
-        # Assert that lazy attribute and class changed, while metadata was not
-        # changed
-        assert lazy_signal._lazy is True
-        assert lazy_signal.__class__ == kp.signals.LazyEBSD
-        assert_dictionary(
-            dummy_signal.metadata.as_dictionary(), lazy_signal.metadata.as_dictionary()
-        )
-
     def test_set_scan_calibration(self, dummy_signal):
         (new_step_x, new_step_y) = (2, 3)
         dummy_signal.set_scan_calibration(step_x=new_step_x, step_y=new_step_y)
@@ -78,6 +67,176 @@ class TestEBSD:
         assert dx.units, dy.units == "um"
         assert dx.scale, dy.scale == delta
         assert dx.offset, dy.offset == -centre
+
+
+class TestEBSDXmapProperty:
+    def test_init_xmap(self, dummy_signal):
+        """The attribute is set correctly."""
+        assert dummy_signal.xmap is None
+
+        ssim = kp.load(EMSOFT_FILE)
+        xmap = ssim.xmap
+        assert xmap.phases[0].name == "ni"
+
+    def test_attribute_carry_over_from_lazy(self):
+        ssim = kp.load(EMSOFT_FILE, lazy=True)
+        xmap_lazy = ssim.xmap.deepcopy()
+        assert xmap_lazy.phases[0].name == "ni"
+
+        ssim.compute()
+        xmap = ssim.xmap
+        assert xmap.phases[0].name == "ni"
+        assert np.allclose(xmap.rotations.data, xmap_lazy.rotations.data)
+
+    def test_set_xmap(self, get_single_phase_xmap):
+        s = kp.data.nickel_ebsd_large(lazy=True)
+        nav_shape = s.axes_manager.navigation_shape[::-1]
+        step_sizes = (1.5, 1.5)
+
+        # Should succeed
+        xmap_good = get_single_phase_xmap(nav_shape=nav_shape, step_sizes=step_sizes)
+        s.xmap = xmap_good
+
+        # Should fail
+        xmap_bad = get_single_phase_xmap(
+            nav_shape=nav_shape[::-1], step_sizes=step_sizes
+        )
+
+        with pytest.raises(ValueError, match="The `xmap` shape"):
+            s.xmap = xmap_bad
+
+        s.axes_manager["x"].scale = 2
+        with pytest.warns(UserWarning, match="The `xmap` step size"):
+            s.xmap = xmap_good
+
+        s2 = s.inav[:, :-2]
+        with pytest.raises(ValueError, match="The `xmap` shape"):
+            s2.axes_manager["x"].scale = 1
+            s2.axes_manager["x"].name = "x2"
+            with pytest.warns(UserWarning, match="The signal navigation axes"):
+                s2.xmap = xmap_good
+
+    def test_attribute_carry_over_from_deepcopy(self, get_single_phase_xmap):
+        s = kp.data.nickel_ebsd_small(lazy=True)
+        nav_axes = s.axes_manager.navigation_axes[::-1]
+        nav_shape = tuple(a.size for a in nav_axes)
+        nav_scales = tuple(a.scale for a in nav_axes)
+
+        xmap = get_single_phase_xmap(nav_shape=nav_shape, step_sizes=nav_scales)
+        s.xmap = xmap
+
+        s2 = s.deepcopy()
+        r1 = s.xmap.rotations.data
+        r2 = s2.xmap.rotations.data
+        assert not np.may_share_memory(r1, r2)
+        assert np.allclose(r1, r2)
+
+        s._static_background = -1
+        s3 = s.deepcopy()
+        assert s3.static_background == -1
+
+
+class TestEBSDDetectorProperty:
+    def test_attribute_carry_over_from_deepcopy(self, dummy_signal):
+        dummy_signal2 = dummy_signal.deepcopy()
+
+        pc1 = dummy_signal.detector.pc
+        pc2 = dummy_signal2.detector.pc
+        assert not np.may_share_memory(pc1, pc2)
+        assert np.allclose(pc1, pc2)
+
+    def test_attribute_carry_over_from_lazy(self, dummy_signal):
+        dummy_signal_lazy = dummy_signal.deepcopy().as_lazy()
+        dummy_signal_lazy.compute()
+        pc = dummy_signal.detector.pc
+        pc_lazy = dummy_signal_lazy.detector.pc
+        assert not np.may_share_memory(pc, pc_lazy)
+        assert np.allclose(pc, pc_lazy)
+
+    def test_set_detector(self):
+        s = kp.data.nickel_ebsd_small(lazy=True)
+        sig_shape = s.axes_manager.signal_shape[::-1]
+
+        # Success
+        detector_good = kp.detectors.EBSDDetector(shape=sig_shape)
+        s.detector = detector_good
+
+        # Failure
+        with pytest.raises(ValueError, match="Detector and signal must have the same"):
+            s.detector = kp.detectors.EBSDDetector(shape=(59, 60))
+        with pytest.raises(ValueError, match="Detector must have exactly one "):
+            s.detector = kp.detectors.EBSDDetector(
+                shape=sig_shape, pc=np.ones((3, 4, 3))
+            )
+
+    @pytest.mark.parametrize(
+        "detector, signal_nav_shape, compatible, error_msg_start",
+        [
+            (((1,), (5, 5)), (2, 3), True, None),
+            (((2, 3), (5, 5)), (2, 3), True, None),
+            (((1,), (5, 4)), (2, 3), False, "Detector and signal must have the same"),
+            (((3, 2), (5, 5)), (2, 3), False, "Detector must have exactly"),
+            (((2, 3), (5, 5)), (), False, "Detector must have exactly"),
+        ],
+        indirect=["detector"],
+    )
+    def test_compatible_with_signal(
+        self, detector, signal_nav_shape, compatible, error_msg_start
+    ):
+        s = kp.signals.EBSD(np.ones(signal_nav_shape + (5, 5), dtype=int))
+        func_kwargs = dict(
+            detector=detector,
+            navigation_shape=s.axes_manager.navigation_shape[::-1],
+            signal_shape=s.axes_manager.signal_shape[::-1],
+        )
+        assert (
+            kp.signals.util._detector._detector_is_compatible_with_signal(**func_kwargs)
+            == compatible
+        )
+        if not compatible:
+            with pytest.raises(ValueError, match=error_msg_start):
+                kp.signals.util._detector._detector_is_compatible_with_signal(
+                    raise_if_not=True, **func_kwargs
+                )
+
+
+class TestStaticBackgroundProperty:
+    def test_background_carry_over_from_deepcopy(self, dummy_signal):
+        dummy_signal2 = dummy_signal.deepcopy()
+        bg1 = dummy_signal.static_background
+        bg2 = dummy_signal2.static_background
+        assert not np.may_share_memory(bg1, bg2)
+        assert np.allclose(bg1, bg2)
+
+    def test_background_carry_over_from_lazy(self, dummy_signal):
+        dummy_signal_lazy = dummy_signal.deepcopy().as_lazy()
+        assert isinstance(dummy_signal_lazy.static_background, da.Array)
+        dummy_signal_lazy.compute()
+        bg = dummy_signal.static_background
+        bg_lazy = dummy_signal_lazy.static_background
+        assert isinstance(bg_lazy, np.ndarray)
+        assert not np.may_share_memory(bg, bg_lazy)
+        assert np.allclose(bg, bg_lazy)
+
+    def test_set_background(self):
+        s = kp.data.nickel_ebsd_small(lazy=True)
+        sig_shape = s.axes_manager.signal_shape[::-1]
+        # Success
+        bg_good = np.arange(np.prod(sig_shape), dtype=s.data.dtype).reshape(sig_shape)
+        s.static_background = bg_good
+        # Warns, but allows
+        with pytest.warns(
+            UserWarning,
+            match="Background pattern has different data type from patterns",
+        ):
+            dtype = np.uint16
+            s.static_background = bg_good.astype(dtype)
+            assert s.static_background.dtype == dtype
+        with pytest.warns(
+            UserWarning, match="Background pattern has different shape from patterns"
+        ):
+            s.static_background = bg_good[:, :-2]
+            assert s.static_background.shape == (sig_shape[0], sig_shape[1] - 2)
 
 
 class TestRemoveStaticBackgroundEBSD:
@@ -709,13 +868,13 @@ class TestVirtualBackscatterElectronImaging:
         dummy_signal.axes_manager.navigation_axes[0].name = "x"
         dummy_signal.axes_manager.navigation_axes[1].name = "y"
 
-        roi = RectangularROI(left=0, top=0, right=1, bottom=1)
+        roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
         dummy_signal.plot_virtual_bse_intensity(roi, out_signal_axes=out_signal_axes)
 
         plt.close("all")
 
     def test_get_virtual_image(self, dummy_signal):
-        roi = RectangularROI(left=0, top=0, right=1, bottom=1)
+        roi = hs.roi.RectangularROI(left=0, top=0, right=1, bottom=1)
         virtual_image_signal = dummy_signal.get_virtual_bse_intensity(roi)
         assert (
             virtual_image_signal.data.shape
@@ -723,7 +882,7 @@ class TestVirtualBackscatterElectronImaging:
         )
 
     def test_virtual_backscatter_electron_imaging_raises(self, dummy_signal):
-        roi = RectangularROI(0, 0, 1, 1)
+        roi = hs.roi.RectangularROI(0, 0, 1, 1)
         with pytest.raises(ValueError):
             _ = dummy_signal.get_virtual_bse_intensity(roi, out_signal_axes=(0, 1, 2))
 
@@ -1103,174 +1262,6 @@ class TestNormalizeIntensityEBSD:
 
         assert isinstance(lazy_signal, kp.signals.LazyEBSD)
         assert np.allclose(np.mean(lazy_signal.data.compute()), 0, atol=1e-6)
-
-
-class TestEBSDXmapProperty:
-    def test_init_xmap(self, dummy_signal):
-        """The attribute is set correctly."""
-        assert dummy_signal.xmap is None
-
-        ssim = kp.load(EMSOFT_FILE)
-        xmap = ssim.xmap
-        assert xmap.phases[0].name == "ni"
-
-    def test_attribute_carry_over_from_lazy(self):
-        ssim = kp.load(EMSOFT_FILE, lazy=True)
-        xmap_lazy = ssim.xmap.deepcopy()
-        assert xmap_lazy.phases[0].name == "ni"
-
-        ssim.compute()
-        xmap = ssim.xmap
-        assert xmap.phases[0].name == "ni"
-        assert np.allclose(xmap.rotations.data, xmap_lazy.rotations.data)
-
-    def test_set_xmap(self, get_single_phase_xmap):
-        s = kp.data.nickel_ebsd_large(lazy=True)
-        nav_shape = s.axes_manager.navigation_shape[::-1]
-        step_sizes = (1.5, 1.5)
-
-        # Should succeed
-        xmap_good = get_single_phase_xmap(nav_shape=nav_shape, step_sizes=step_sizes)
-        s.xmap = xmap_good
-
-        # Should fail
-        xmap_bad = get_single_phase_xmap(
-            nav_shape=nav_shape[::-1], step_sizes=step_sizes
-        )
-
-        with pytest.raises(ValueError, match="The `xmap` shape"):
-            s.xmap = xmap_bad
-
-        s.axes_manager["x"].scale = 2
-        with pytest.warns(UserWarning, match="The `xmap` step size"):
-            s.xmap = xmap_good
-
-        s2 = s.inav[:, :-2]
-        with pytest.raises(ValueError, match="The `xmap` shape"):
-            s2.axes_manager["x"].scale = 1
-            s2.axes_manager["x"].name = "x2"
-            with pytest.warns(UserWarning, match="The signal navigation axes"):
-                s2.xmap = xmap_good
-
-    def test_attribute_carry_over_from_deepcopy(self, get_single_phase_xmap):
-        s = kp.data.nickel_ebsd_small(lazy=True)
-        nav_axes = s.axes_manager.navigation_axes[::-1]
-        nav_shape = tuple(a.size for a in nav_axes)
-        nav_scales = tuple(a.scale for a in nav_axes)
-
-        xmap = get_single_phase_xmap(nav_shape=nav_shape, step_sizes=nav_scales)
-        s.xmap = xmap
-
-        s2 = s.deepcopy()
-        r1 = s.xmap.rotations.data
-        r2 = s2.xmap.rotations.data
-        assert not np.may_share_memory(r1, r2)
-        assert np.allclose(r1, r2)
-
-        s._static_background = -1
-        s3 = s.deepcopy()
-        assert s3.static_background is None
-
-
-class TestEBSDDetectorProperty:
-    def test_attribute_carry_over_from_deepcopy(self, dummy_signal):
-        dummy_signal2 = dummy_signal.deepcopy()
-
-        pc1 = dummy_signal.detector.pc
-        pc2 = dummy_signal2.detector.pc
-        assert not np.may_share_memory(pc1, pc2)
-        assert np.allclose(pc1, pc2)
-
-    def test_attribute_carry_over_from_lazy(self, dummy_signal):
-        dummy_signal_lazy = dummy_signal.deepcopy().as_lazy()
-        dummy_signal_lazy.compute()
-        pc = dummy_signal.detector.pc
-        pc_lazy = dummy_signal_lazy.detector.pc
-        assert not np.may_share_memory(pc, pc_lazy)
-        assert np.allclose(pc, pc_lazy)
-
-    def test_set_detector(self):
-        s = kp.data.nickel_ebsd_small(lazy=True)
-        sig_shape = s.axes_manager.signal_shape[::-1]
-
-        # Success
-        detector_good = kp.detectors.EBSDDetector(shape=sig_shape)
-        s.detector = detector_good
-
-        # Failure
-        with pytest.raises(ValueError, match="Detector and signal must have the same"):
-            s.detector = kp.detectors.EBSDDetector(shape=(59, 60))
-        with pytest.raises(ValueError, match="Detector must have exactly one "):
-            s.detector = kp.detectors.EBSDDetector(
-                shape=sig_shape, pc=np.ones((3, 4, 3))
-            )
-
-    @pytest.mark.parametrize(
-        "detector, signal_nav_shape, compatible, error_msg_start",
-        [
-            (((1,), (5, 5)), (2, 3), True, None),
-            (((2, 3), (5, 5)), (2, 3), True, None),
-            (((1,), (5, 4)), (2, 3), False, "Detector and signal must have the same"),
-            (((3, 2), (5, 5)), (2, 3), False, "Detector must have exactly"),
-            (((2, 3), (5, 5)), (), False, "Detector must have exactly"),
-        ],
-        indirect=["detector"],
-    )
-    def test_compatible_with_signal(
-        self, detector, signal_nav_shape, compatible, error_msg_start
-    ):
-        s = kp.signals.EBSD(np.ones(signal_nav_shape + (5, 5), dtype=int))
-        func_kwargs = dict(
-            detector=detector,
-            navigation_shape=s.axes_manager.navigation_shape[::-1],
-            signal_shape=s.axes_manager.signal_shape[::-1],
-        )
-        assert (
-            kp.signals.util._detector._detector_is_compatible_with_signal(**func_kwargs)
-            == compatible
-        )
-        if not compatible:
-            with pytest.raises(ValueError, match=error_msg_start):
-                kp.signals.util._detector._detector_is_compatible_with_signal(
-                    raise_if_not=True, **func_kwargs
-                )
-
-
-class TestStaticBackgroundProperty:
-    def test_background_carry_over_from_deepcopy(self, dummy_signal):
-        dummy_signal2 = dummy_signal.deepcopy()
-        bg1 = dummy_signal.static_background
-        bg2 = dummy_signal2.static_background
-        assert not np.may_share_memory(bg1, bg2)
-        assert np.allclose(bg1, bg2)
-
-    def test_background_carry_over_from_lazy(self, dummy_signal):
-        dummy_signal_lazy = dummy_signal.deepcopy().as_lazy()
-        dummy_signal_lazy.compute()
-        bg = dummy_signal.static_background
-        bg_lazy = dummy_signal_lazy.static_background
-        assert not np.may_share_memory(bg, bg_lazy)
-        assert np.allclose(bg, bg_lazy)
-
-    def test_set_background(self):
-        s = kp.data.nickel_ebsd_small(lazy=True)
-        sig_shape = s.axes_manager.signal_shape[::-1]
-        # Success
-        bg_good = np.arange(np.prod(sig_shape), dtype=s.data.dtype).reshape(sig_shape)
-        s.static_background = bg_good
-        # Warns, but allows
-        with pytest.warns(
-            UserWarning,
-            match="Background pattern has different data type from patterns",
-        ):
-            dtype = np.uint16
-            s.static_background = bg_good.astype(dtype)
-            assert s.static_background.dtype == dtype
-        with pytest.warns(
-            UserWarning, match="Background pattern has different shape from patterns"
-        ):
-            s.static_background = bg_good[:, :-2]
-            assert s.static_background.shape == (sig_shape[0], sig_shape[1] - 2)
 
 
 class TestDictionaryIndexing:
@@ -2264,3 +2255,43 @@ class TestNeighbourDotProductMatrices:
         s = kp.signals.LazyEBSD(da.ones(nav_shape + (96, 96), dtype=np.uint8))
         dp_matrices = s.get_neighbour_dot_product_matrices()
         assert dp_matrices.shape == nav_shape + (1, 1)
+
+
+class TestSignal2DMethods:
+    """Test methods inherited from Signal2D."""
+
+    def test_as_lazy(self):
+        """Lazy attribute and class change while metadata is constant."""
+        s = kp.data.nickel_ebsd_small()
+        s_lazy = s.as_lazy()
+        assert s_lazy._lazy
+        assert isinstance(s_lazy, kp.signals.LazyEBSD)
+        assert_dictionary(s.metadata.as_dictionary(), s_lazy.metadata.as_dictionary())
+
+    def test_change_dtype(self, dummy_signal):
+        """Custom properties carry over and their data type are set
+        correctly.
+        """
+        assert dummy_signal.data.dtype.name == "uint8"
+        dummy_signal.change_dtype("float32")
+        assert dummy_signal.data.dtype.name == "float32"
+        assert dummy_signal.static_background.dtype.name == "float32"
+
+    def test_squeeze(self, dummy_signal):
+        """Custom properties carry over."""
+        s2 = dummy_signal.squeeze()
+        assert np.allclose(dummy_signal.static_background, s2.static_background)
+
+    def test_fft(self, dummy_signal):
+        """Test call to ``BaseSignal.fft()`` because it proved
+        challenging to overwrite ``BaseSignal.change_dtype()`` in
+        ``KikuchipySignal2D``, and the implementation may be unstable.
+        """
+        s_fft = dummy_signal.fft()
+        assert isinstance(s_fft, hs.signals.ComplexSignal2D)
+        assert not hasattr(s_fft, "_xmap")
+
+    def test_set_signal_type(self, dummy_signal):
+        """Custom properties does not carry over."""
+        s_mp = dummy_signal.set_signal_type("EBSDMasterPattern")
+        assert not hasattr(s_mp, "_xmap")
