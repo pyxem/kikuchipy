@@ -302,6 +302,9 @@ def _project_patterns_from_master_pattern(
     rescale: bool,
     out_min: Union[int, float],
     out_max: Union[int, float],
+    sig_shape: Tuple[int, int],
+    nav_shape: Union[int, Tuple[int, int]],
+    n_pixels: int,
     dtype_out: Optional[type] = np.float32,
 ) -> np.ndarray:
     """Project one simulated EBSD pattern onto a detector per rotation,
@@ -335,7 +338,7 @@ def _project_patterns_from_master_pattern(
 
     Returns
     -------
-    numpy.ndarray
+    simulated
         3D or 4D array with simulated patterns.
 
     Notes
@@ -343,17 +346,11 @@ def _project_patterns_from_master_pattern(
     This function is optimized with Numba, so care must be taken with
     array shapes and data types.
     """
-    nav_shape = rotations.shape[:-1]
-    sig_shape = direction_cosines.shape[:-1]
-    n_pixels = sig_shape[0] * sig_shape[1]
     simulated = np.zeros(nav_shape + (n_pixels,), dtype=dtype_out)
-
-    direction_cosines_flat = direction_cosines.reshape((-1, 3))
-
     for i in np.ndindex(nav_shape):
         simulated[i] = _project_single_pattern_from_master_pattern(
             rotation=rotations[i],
-            direction_cosines=direction_cosines_flat,
+            direction_cosines=direction_cosines[i],
             master_upper=master_upper,
             master_lower=master_lower,
             npx=npx,
@@ -365,7 +362,6 @@ def _project_patterns_from_master_pattern(
             out_max=out_max,
             dtype_out=dtype_out,
         )
-
     return simulated.reshape(nav_shape + sig_shape)
 
 
@@ -426,13 +422,13 @@ def _project_single_pattern_from_master_pattern(
     # Rotate the detector's view of the crystal
     rotated_direction_cosines = _rotate_vector(rotation, direction_cosines)
 
-    (nii, nij, niip, nijp, di, dj, dim, djm,) = _get_lambert_interpolation_parameters(
+    (nii, nij, niip, nijp, di, dj, dim, djm) = _get_lambert_interpolation_parameters(
         v=rotated_direction_cosines, npx=npx, npy=npy, scale=scale
     )
 
     # Loop over the detector pixels and fill in intensities one by one
     # from the correct hemisphere of the master pattern
-    pattern = np.zeros((n_pixels,))
+    pattern = np.zeros(n_pixels)
     for i in nb.prange(n_pixels):
         if rotated_direction_cosines[i, 2] >= 0:
             mp = master_upper

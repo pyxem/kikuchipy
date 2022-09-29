@@ -19,6 +19,7 @@ from __future__ import annotations
 import gc
 from typing import Optional, Tuple, Union
 
+import dask
 import dask.array as da
 from dask.diagnostics import ProgressBar
 import hyperspy.api as hs
@@ -33,6 +34,7 @@ from kikuchipy.signals._kikuchi_master_pattern import KikuchiMasterPattern
 from kikuchipy.signals._kikuchipy_signal import LazyKikuchipySignal2D
 from kikuchipy.signals.util._dask import get_chunking
 from kikuchipy.signals.util._master_pattern import (
+    _get_direction_cosines_for_multiple_pcs,
     _get_direction_cosines_for_single_pc_from_detector,
     _project_patterns_from_master_pattern,
 )
@@ -150,9 +152,10 @@ class EBSDMasterPattern(KikuchiMasterPattern):
         """
         self._is_suitable_for_projection(raise_if_not=True)
 
-        if len(detector.pc) > 1:
-            raise NotImplementedError(
-                "Detector must have exactly one projection center"
+        if rotations.shape != detector.navigation_shape and len(detector.pc) > 1:
+            raise ValueError(
+                "`detector.navigation_shape` must be equal to `rotations.shape`, or the"
+                "detector must have exactly one projection center"
             )
 
         dtype_out = np.dtype(dtype_out)
@@ -166,11 +169,12 @@ class EBSDMasterPattern(KikuchiMasterPattern):
                 "`rotations` can only have one or two dimensions, but an instance with "
                 f"{nav_dim} dimensions was passed"
             )
-        data_shape = nav_shape + detector.shape
+        sig_shape = detector.shape
+        data_shape = nav_shape + sig_shape
         chunks = get_chunking(
             data_shape=data_shape,
             nav_dim=nav_dim,
-            sig_dim=len(detector.shape),
+            sig_dim=2,
             chunk_shape=kwargs.pop("chunk_shape", None),
             chunk_bytes=kwargs.pop("chunk_bytes", None),
             dtype=dtype_out,
@@ -188,30 +192,51 @@ class EBSDMasterPattern(KikuchiMasterPattern):
 
         # Get direction cosines for each detector pixel relative to the
         # source point
-        direction_cosines = _get_direction_cosines_for_single_pc_from_detector(detector)
+        pcx, pcy, pcz = detector.pc.T
+        n_rot = rotations.size
+        if detector.navigation_shape == (1,):
+            pcx = np.full(n_rot, pcx)
+            pcy = np.full(n_rot, pcy)
+            pcz = np.full(n_rot, pcz)
+        pcx = pcx.flatten()
+        pcy = pcy.flatten()
+        pcz = pcz.flatten()
+        # TODO: Allow only one PC as well!
+        direction_cosines = dask.delayed(_get_direction_cosines_for_multiple_pcs)(
+            pcx,
+            pcy,
+            pcz,
+            detector.nrows,
+            detector.ncols,
+            float(detector.tilt),
+            float(detector.azimuthal),
+            float(detector.sample_tilt),
+        )
+        dc_da = da.from_delayed(
+            direction_cosines,
+            (n_rot, detector.nrows, detector.ncols, 3),
+            dtype=float,
+        )
+        dc_da = dc_da.reshape(nav_shape + (-1, 3))
+        dc_da = dc_da.rechunk(chunks[:nav_dim] + (-1, -1, -1))
 
         # Get dask array from rotations
         rot_da = da.from_array(rotations.data, chunks=chunks[:nav_dim] + (-1,))
 
-        # Which axes to drop and add when iterating over the rotations
-        # dask array to produce the EBSD signal array, i.e. drop the
-        # (4,)-shape quaternion axis and add detector shape axes, e.g.
-        # (60, 60)
         if nav_dim == 1:
-            drop_axis = 1
-            new_axis = (1, 2)
+            drop_axis = 3
         else:  # nav_dim == 2
-            drop_axis = 2
-            new_axis = (2, 3)
+            drop_axis = 4
 
         master_upper, master_lower = self._get_master_pattern_arrays_from_energy(energy)
 
         # Project simulated patterns onto detector
         npx, npy = self.axes_manager.signal_shape
         scale = (npx - 1) / 2
-        simulated = rot_da.map_blocks(
+        simulated = da.map_blocks(
             _project_patterns_from_master_pattern,
-            direction_cosines=direction_cosines,
+            rot_da,
+            dc_da,
             master_upper=master_upper,
             master_lower=master_lower,
             npx=int(npx),
@@ -221,10 +246,14 @@ class EBSDMasterPattern(KikuchiMasterPattern):
             rescale=rescale,
             out_min=out_min,
             out_max=out_max,
+            sig_shape=detector.shape,
+            nav_shape=nav_shape,
+            n_pixels=detector.size,
             drop_axis=drop_axis,
-            new_axis=new_axis,
             chunks=chunks,
             dtype=dtype_out,
+            enforce_ndim=True,
+            meta=np.array((), dtype=dtype_out),
         )
 
         # Add crystal map and detector to keyword arguments
