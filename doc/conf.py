@@ -6,11 +6,9 @@ from datetime import datetime
 import inspect
 import os
 from os.path import relpath, dirname
-from pathlib import Path
 import re
 import sys
 
-import matplotlib.pyplot as plt
 import pyvista
 from numpydoc.docscrape_sphinx import SphinxDocString
 
@@ -50,7 +48,6 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_design",
     "sphinx_gallery.gen_gallery",
-    "sphinx_last_updated_by_git",
 ]
 
 # Create links to references within kikuchipy's documentation to these

@@ -44,6 +44,8 @@ with open("kikuchipy/release.py") as fid:
 extra_feature_requirements = {
     "doc": [
         "furo",
+        # TODO: Remove once https://github.com/pyxem/kikuchipy/issues/566 is resolved
+        "ipywidgets                 <= 7.7",
         "memory_profiler",
         "nbsphinx                   >= 0.7",
         "numpydoc",
@@ -55,7 +57,6 @@ extra_feature_requirements = {
         "sphinx-copybutton          >= 0.2.5",
         "sphinx-design",
         "sphinx-gallery             < 0.11",
-        "sphinx-last-updated-by-git",
         "sphinxcontrib-bibtex       >= 1.0",
     ],
     "tests": [
