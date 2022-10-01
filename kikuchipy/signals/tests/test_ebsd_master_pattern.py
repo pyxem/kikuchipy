@@ -180,7 +180,7 @@ class TestProperties:
         assert mp2.phase.point_group.name != mp.phase.point_group.name
 
 
-class TestProjectingPatternsFromLambert:
+class TestProjectFromLambert:
     detector = kp.detectors.EBSDDetector(
         shape=(480, 640),
         px_size=50,
@@ -214,7 +214,7 @@ class TestProjectingPatternsFromLambert:
         r = Rotation.from_euler(np.radians([120, 45, 60]))
         mp1 = nickel_ebsd_master_pattern_small(projection="lambert", hemisphere="both")
         kp_pattern = mp1.get_patterns(
-            rotations=r, detector=self.detector, energy=20, dtype_out=emsoft_key.dtype
+            rotations=r, detector=self.detector, dtype_out=emsoft_key.dtype
         )
         kp_pat = kp_pattern.data[0].compute()
         assert kp_pat.dtype == emsoft_key.dtype
@@ -313,11 +313,40 @@ class TestProjectingPatternsFromLambert:
 
     @pytest.mark.parametrize("nav_shape", [(10, 20), (3, 5), (2, 6)])
     def test_get_patterns_navigation_shape(self, nav_shape):
+        """Output signal has the correct navigation shape, and that a
+        varying projection center gives different patterns.
+        """
         mp = nickel_ebsd_master_pattern_small(projection="lambert")
-        r = Rotation(np.random.uniform(low=0, high=1, size=nav_shape + (4,)))
-        detector = kp.detectors.EBSDDetector(shape=(60, 60))
-        sim = mp.get_patterns(rotations=r, detector=detector, energy=20)
-        assert sim.axes_manager.navigation_shape[::-1] == nav_shape
+
+        # 2D navigation shape, multiple PCs
+        rot1 = Rotation.identity(nav_shape)
+        det1 = kp.detectors.EBSDDetector(
+            shape=(10, 10),
+            pc=np.column_stack(
+                (
+                    np.linspace(0.4, 0.6, rot1.size),
+                    np.full(rot1.size, 0.5),
+                    np.full(rot1.size, 0.5),
+                )
+            ).reshape(nav_shape + (3,)),
+        )
+        sim1 = mp.get_patterns(rotations=rot1, detector=det1)
+        assert sim1.axes_manager.navigation_shape[::-1] == nav_shape
+        assert not np.allclose(sim1.data[0, 0], sim1.data[0, 1])
+
+        # 1D navigation shape, multiple PCs
+        rot2 = rot1.flatten()
+        det2 = det1.deepcopy()
+        det2.pc = det2.pc.reshape((-1, 3))
+        sim2 = mp.get_patterns(rot2, det2)
+        assert sim2.axes_manager.navigation_shape == (np.prod(nav_shape),)
+        assert np.allclose(sim1.data.reshape((-1,) + det1.shape), sim2.data)
+
+        # 2D navigation shape, single PC
+        det2.pc = det2.pc[0]
+        sim3 = mp.get_patterns(rot1, det2)
+        assert sim3.axes_manager.navigation_shape[::-1] == nav_shape
+        assert np.allclose(sim1.data[0, 0], sim3.data[0, 0])
 
     def test_get_patterns_navigation_shape_raises(self):
         mp = nickel_ebsd_master_pattern_small(projection="lambert")
@@ -355,8 +384,8 @@ class TestProjectingPatternsFromLambert:
         assert np.allclose(sim3.data.mean(), 43.39, atol=1e-2)
 
     def test_project_patterns_from_master_pattern(self):
-        """Make sure the Numba function is covered."""
-        r = Rotation.from_euler(((0, 0, 0), (1, 1, 1), (2, 2, 2)))
+        """Cover the Numba functions."""
+        r = Rotation.identity((3,))
         det = self.detector.deepcopy()
         det.pc = np.tile(det.pc, (3, 1))
         dc = _get_direction_cosines_from_detector(det)
@@ -364,9 +393,8 @@ class TestProjectingPatternsFromLambert:
 
         npx = npy = 101
         mpu = mpl = np.zeros((npy, npx))
-        patterns = _project_patterns_from_master_pattern_with_varying_pc.py_func(
+        kwargs = dict(
             rotations=r.data,
-            direction_cosines=dc,
             master_upper=mpu,
             master_lower=mpl,
             npx=npx,
@@ -377,12 +405,20 @@ class TestProjectingPatternsFromLambert:
             nav_shape=r.shape,
             sig_shape=det.shape,
             sig_size=det.size,
-            # Aren't used
+            # Are not used
             out_min=1,
             out_max=2,
         )
 
+        patterns = _project_patterns_from_master_pattern_with_varying_pc.py_func(
+            direction_cosines=dc, **kwargs
+        )
         assert patterns.shape == r.shape + det.shape
+
+        patterns2 = _project_patterns_from_master_pattern_with_fixed_pc.py_func(
+            direction_cosines=dc[0], **kwargs
+        )
+        assert patterns2.shape == r.shape + det.shape
 
     @pytest.mark.parametrize(
         "dtype_out, intensity_range", [(np.float32, (0, 1)), (np.uint8, (0, 255))]

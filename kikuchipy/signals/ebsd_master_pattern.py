@@ -35,7 +35,6 @@ from kikuchipy.signals._kikuchipy_signal import LazyKikuchipySignal2D
 from kikuchipy.signals.util._dask import get_chunking
 from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_from_detector,
-    _get_direction_cosines_for_varying_pc,
     _project_patterns_from_master_pattern_with_fixed_pc,
     _project_patterns_from_master_pattern_with_varying_pc,
 )
@@ -100,10 +99,10 @@ class EBSDMasterPattern(KikuchiMasterPattern):
         show_progressbar: Optional[bool] = None,
         **kwargs,
     ) -> Union[EBSD, LazyEBSD]:
-        """Return one or more EBSD patterns projected onto a
-        detector from a master pattern in the square Lambert
-        projection for rotation(s) relative to the EDAX TSL sample
-        reference frame (RD, TD, ND) :cite:`callahan2013dynamical`.
+        """Return one or more EBSD patterns projected onto a detector
+        from a master pattern in the square Lambert projection for
+        rotation(s) relative to the EDAX TSL sample reference frame (RD,
+        TD, ND) :cite:`callahan2013dynamical`.
 
         Parameters
         ----------
