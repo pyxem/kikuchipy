@@ -18,6 +18,12 @@ Unreleased
 
 Added
 -----
+- Ability to project simulate patterns from a master pattern using varying projection
+  centers (PCs) in ``EBSDMasterPattern.get_patterns()``. An example is added to the
+  method to show this. (`#567 <https://github.com/pyxem/kikuchipy/pull/567>`_)
+- Allow not setting ``energy`` parameter in ``EBSDMasterPattern.get_patterns()``, upon
+  which the highest energy available is used.
+  (`#567 <https://github.com/pyxem/kikuchipy/pull/567>`_)
 - Improved handling of custom attributes ``xmap``, ``detector`` and
   ``static_background`` in ``EBSD`` and ``hemisphere``, ``phase`` and ``projection`` in
   EBSD/ECP master pattern classes when calling inherited HyperSpy ``Signal2D`` methods
