@@ -152,6 +152,35 @@ class EBSDMasterPattern(KikuchiMasterPattern):
         point group, both the upper and lower hemispheres must be
         provided. For more details regarding the reference frame visit
         the reference frame tutorial.
+
+        Examples
+        --------
+        Get patterns for four identity rotations with varying projection
+        centers (PCs), the upper two with PCx increasing towards the
+        right, the lower two with increased PCz compared to the upper
+        two
+
+        >>> import numpy as np
+        >>> from orix.quaternion import Rotation
+        >>> import hyperspy.api as hs
+        >>> import kikuchipy as kp
+        >>> mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
+        >>> det = kp.detectors.EBSDDetector(
+        ...     shape=(60, 60),
+        ...     pc=np.array([
+        ...         [[0.4, 0.5, 0.4], [0.6, 0.5, 0.4]],
+        ...         [[0.4, 0.5, 0.6], [0.6, 0.5, 0.6]],
+        ...     ])
+        ... )
+        >>> rot = Rotation.identity(det.navigation_shape)
+        >>> s = mp.get_patterns(rot, det, compute=True, show_progressbar=False)
+        >>> _ = hs.plot.plot_images(
+        ...     s,
+        ...     per_row=2,
+        ...     cmap="inferno",
+        ...     label=np.array_str(det.pc.reshape((-1, 3)))[1:-1].split("\\n "),
+        ...     axes_decor=None,
+        ... )
         """
         self._is_suitable_for_projection(raise_if_not=True)
 
