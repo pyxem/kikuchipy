@@ -32,7 +32,7 @@ from kikuchipy.indexing._refinement._objective_functions import (
 )
 from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.pattern._pattern import _rescale_without_min_max
-from kikuchipy.signals.util._master_pattern import _get_direction_cosines_for_single_pc
+from kikuchipy.signals.util._master_pattern import _get_direction_cosines_for_fixed_pc
 
 
 def _refine_orientation_solver(
@@ -121,7 +121,7 @@ def _refine_orientation_solver(
         pattern = _rescale_without_min_max(pattern.astype(np.float32))
 
     if direction_cosines is None:
-        direction_cosines = _get_direction_cosines_for_single_pc(
+        direction_cosines = _get_direction_cosines_for_fixed_pc(
             pcx=pcx,
             pcy=pcy,
             pcz=pcz,

@@ -28,15 +28,17 @@ class TestRotationVectorTools:
         result as orix.
         """
         rot = np.array([0.7071, 0.7071, 0, 0])
-        dc = kp.signals.util._master_pattern._get_direction_cosines_for_single_pc.py_func(
-            pcx=0.5,
-            pcy=0.5,
-            pcz=0.5,
-            nrows=480,
-            ncols=640,
-            tilt=10,
-            azimuthal=0,
-            sample_tilt=70,
+        dc = (
+            kp.signals.util._master_pattern._get_direction_cosines_for_fixed_pc.py_func(
+                pcx=0.5,
+                pcy=0.5,
+                pcz=0.5,
+                nrows=480,
+                ncols=640,
+                tilt=10,
+                azimuthal=0,
+                sample_tilt=70,
+            )
         )
         dc = dc.reshape((-1, 3))
 
