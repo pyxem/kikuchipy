@@ -199,6 +199,7 @@ def _dictionary_indexing_info_message(
     n_experimental
     dictionary_size
     phase_name
+
     Returns
     -------
     msg

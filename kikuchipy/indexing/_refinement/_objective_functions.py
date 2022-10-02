@@ -28,7 +28,7 @@ from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import 
 from kikuchipy._rotation import _rotation_from_euler
 from kikuchipy.signals.util._master_pattern import (
     _project_single_pattern_from_master_pattern,
-    _get_direction_cosines_for_single_pc,
+    _get_direction_cosines_for_fixed_pc,
 )
 
 
@@ -66,7 +66,7 @@ def _refine_orientation_objective_function(x: np.ndarray, *args: tuple) -> float
         npx=args[4],
         npy=args[5],
         scale=args[6],
-        n_pixels=args[8],
+        sig_size=args[8],
         rescale=False,
         out_min=0,  # Required, but not used here
         out_max=1,  # Required, but not used here
@@ -110,7 +110,7 @@ def _refine_projection_center_objective_function(x: np.ndarray, *args: tuple) ->
         Objective function value (normalized cross-correlation score).
     """
     n_pixels = args[8]
-    direction_cosines = _get_direction_cosines_for_single_pc(
+    direction_cosines = _get_direction_cosines_for_fixed_pc(
         pcx=x[0],
         pcy=x[1],
         pcz=x[2],
@@ -128,7 +128,7 @@ def _refine_projection_center_objective_function(x: np.ndarray, *args: tuple) ->
         npx=args[4],
         npy=args[5],
         scale=args[6],
-        n_pixels=n_pixels,
+        sig_size=n_pixels,
         rescale=False,
         out_min=0,  # Required, but not used here
         out_max=1,  # Required, but not used here
@@ -175,7 +175,7 @@ def _refine_orientation_projection_center_objective_function(
     """
     rotation = _rotation_from_euler(alpha=x[0], beta=x[1], gamma=x[2])
     n_pixels = args[7]
-    direction_cosines = _get_direction_cosines_for_single_pc(
+    direction_cosines = _get_direction_cosines_for_fixed_pc(
         pcx=x[3],
         pcy=x[4],
         pcz=x[5],
@@ -193,7 +193,7 @@ def _refine_orientation_projection_center_objective_function(
         npx=args[3],
         npy=args[4],
         scale=args[5],
-        n_pixels=n_pixels,
+        sig_size=n_pixels,
         rescale=False,
         out_min=0,  # Required, but not used here
         out_max=1,  # Required, but not used here

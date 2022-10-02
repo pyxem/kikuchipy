@@ -24,6 +24,7 @@ import os
 from typing import Union, List, Optional, Tuple, Iterable
 import warnings
 
+import dask
 import dask.array as da
 from dask.diagnostics import ProgressBar
 import hyperspy.api as hs
@@ -782,9 +783,6 @@ class EBSD(KikuchipySignal2D):
         patterns of known orientations to index them
         :cite:`chen2015dictionary,jackson2019dictionary`.
 
-        A :class:`~orix.crystal_map.CrystalMap` with ``"scores"`` and
-        ``"simulation_indices"`` as properties is returned.
-
         Parameters
         ----------
         dictionary
@@ -896,16 +894,17 @@ class EBSD(KikuchipySignal2D):
 
         metric = self._prepare_metric(metric, signal_mask, dtype, rechunk, dict_size)
 
-        return _dictionary_indexing(
-            experimental=self.data,
-            experimental_nav_shape=exp_am.navigation_shape[::-1],
-            dictionary=dictionary.data,
-            step_sizes=tuple(a.scale for a in exp_am.navigation_axes[::-1]),
-            dictionary_xmap=dictionary.xmap,
-            keep_n=keep_n,
-            n_per_iteration=n_per_iteration,
-            metric=metric,
-        )
+        with dask.config.set(**{"array.slicing.split_large_chunks": False}):
+            return _dictionary_indexing(
+                experimental=self.data,
+                experimental_nav_shape=exp_am.navigation_shape[::-1],
+                dictionary=dictionary.data,
+                step_sizes=tuple(a.scale for a in exp_am.navigation_axes[::-1]),
+                dictionary_xmap=dictionary.xmap,
+                keep_n=keep_n,
+                n_per_iteration=n_per_iteration,
+                metric=metric,
+            )
 
     def refine_orientation(
         self,

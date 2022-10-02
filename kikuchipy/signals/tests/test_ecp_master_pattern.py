@@ -48,6 +48,8 @@ class TestECPMasterPattern:
         s = kp.signals.LazyECPMasterPattern(da.zeros((2, 10, 11, 11)))
         assert isinstance(s, kp.signals.LazyECPMasterPattern)
         assert isinstance(s.data, da.Array)
+        s.compute()
+        assert isinstance(s, kp.signals.ECPMasterPattern)
 
     def test_set_custom_properties(self):
         s = kp.load(ECP_FILE)

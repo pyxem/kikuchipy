@@ -50,7 +50,7 @@ mp_lp.rescale_intensity(dtype_out=dtype_out)
 mp_sp.rescale_intensity(dtype_out=dtype_out)
 
 # Get HDF5 groups and datasets in original EMsoft file
-f = File(os.path.join(datadir, phase, fname), mode="r")
+f = File(os.path.join(datadir, phase, fname))
 orig_data = kp.io.plugins.h5ebsd.hdf5group2dict(group=f["/"], recursive=True)
 
 # Overwrite master patterns in original data

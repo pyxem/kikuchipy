@@ -40,7 +40,7 @@ from kikuchipy.indexing._refinement._solvers import (
 from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.pattern import rescale_intensity
 from kikuchipy.signals.util._master_pattern import (
-    _get_direction_cosines_for_single_pc_from_detector,
+    _get_direction_cosines_from_detector,
 )
 
 
@@ -205,7 +205,7 @@ def _refine_orientation(
     else:
         # Patterns have been indexed with the same PC, so we use the
         # same direction cosines during refinement of all patterns
-        dc = _get_direction_cosines_for_single_pc_from_detector(detector)
+        dc = _get_direction_cosines_from_detector(detector)
         dc = dc.reshape((n_pixels, 3))
 
         output = da.map_blocks(

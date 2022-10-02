@@ -41,9 +41,9 @@ def get_chunking(
     Parameters
     ----------
     signal
-        If not given, the following must be passed: data shape to
-        be chunked, ``data_shape``, the number of navigation dimensions
-        ,``nav_dim``, the number of signal dimensions, ``sig_dim``, and
+        If not given, the following must be passed: data shape to be
+        chunked, ``data_shape``, the number of navigation dimensions,
+        ``nav_dim``, the number of signal dimensions, ``sig_dim``, and
         the data array data type ``dtype``.
     data_shape
         Data shape, must be passed if ``signal`` is not given.
@@ -212,7 +212,7 @@ def _get_chunk_overlap_depth(window, axes_manager, chunksize: tuple) -> dict:
 def _rechunk_learning_results(
     factors: Union[np.ndarray, da.Array],
     loadings: Union[np.ndarray, da.Array],
-    mbytes_chunk: int = 100,
+    mbytes_chunk: Union[int, float] = 100,
 ) -> list:
     """Return suggested data chunks for learning results.
 
