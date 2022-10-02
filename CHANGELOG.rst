@@ -97,6 +97,10 @@ Removed
 
 Fixed
 -----
+- Silence dask warning about splitting large chunks in ``EBSD.dictionary_indexing()``.
+  Memory use can be controlled by rechunking the dictionary or setting the ``rechunk``
+  or ``n_per_iteration`` parameters.
+  (`#567 <https://github.com/pyxem/kikuchipy/pull/567>`_)
 
 Security
 --------
