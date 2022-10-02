@@ -402,7 +402,6 @@ class TestProjectFromLambert:
             scale=float((npx - 1) / 2),
             dtype_out=mpu.dtype,
             rescale=False,
-            nav_shape=r.shape,
             sig_shape=det.shape,
             sig_size=det.size,
             # Are not used
