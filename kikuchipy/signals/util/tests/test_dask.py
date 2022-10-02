@@ -41,14 +41,14 @@ class TestDask:
     def test_chunk_bytes(self):
         s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint16))
         chunks = get_chunking(s, chunk_bytes=15e6)
-        assert chunks == ((8, 8, 8, 8), (8, 8, 8, 8), (256,), (256,))
+        assert chunks == ((10, 10, 10, 2), (10, 10, 10, 2), (256,), (256,))
 
     def test_get_chunking_dtype(self):
         s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint8))
         chunks0 = get_chunking(s, dtype=np.float32)
         chunks1 = get_chunking(s)
-        assert chunks0 == ((8, 8, 8, 8), (8, 8, 8, 8), (256,), (256,))
-        assert chunks1 == ((16, 16), (16, 16), (256,), (256,))
+        assert chunks0 == ((10, 10, 10, 2), (10, 10, 10, 2), (256,), (256,))
+        assert chunks1 == ((21, 11), (21, 11), (256,), (256,))
 
     @pytest.mark.parametrize(
         "shape, nav_dim, sig_dim, dtype, desired_chunks",
@@ -58,9 +58,9 @@ class TestDask:
                 2,
                 2,
                 np.uint16,
-                ((8, 8, 8, 8), (8, 8, 8, 8), (256,), (256,)),
+                ((15, 15, 2), (15, 15, 2), (256,), (256,)),
             ),
-            ((32, 32, 256, 256), 2, 2, np.uint8, ((16, 16), (16, 16), (256,), (256,))),
+            ((32, 32, 256, 256), 2, 2, np.uint8, ((21, 11), (21, 11), (256,), (256,))),
         ],
     )
     def test_get_chunking_no_signal(
@@ -85,7 +85,7 @@ class TestDask:
         s = EBSD(np.zeros((10, 10, 8, 8)))
         array_out0 = get_dask_array(s)
         array_out1 = get_dask_array(s, chunk_bytes="25KiB")
-        array_out2 = get_dask_array(s, chunk_bytes=25e3)
+        array_out2 = get_dask_array(s, chunk_bytes=30e3)
         assert array_out0.chunksize != array_out1.chunksize
         assert array_out1.chunksize == array_out2.chunksize
 
