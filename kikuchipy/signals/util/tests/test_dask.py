@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import sys
+
 import dask.array as da
 import numpy as np
 import pytest
@@ -38,11 +40,13 @@ class TestDask:
         chunks = get_chunking(s, chunk_shape=16)
         assert chunks == ((16, 16), (16, 16), (256,), (256,))
 
+    @pytest.mark.skipif(sys.version_info < (3, 8), reason="Requires Python >= 3.8")
     def test_chunk_bytes(self):
         s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint16))
         chunks = get_chunking(s, chunk_bytes=15e6)
         assert chunks == ((10, 10, 10, 2), (10, 10, 10, 2), (256,), (256,))
 
+    @pytest.mark.skipif(sys.version_info < (3, 8), reason="Requires Python >= 3.8")
     def test_get_chunking_dtype(self):
         s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint8))
         chunks0 = get_chunking(s, dtype=np.float32)
@@ -50,6 +54,7 @@ class TestDask:
         assert chunks0 == ((10, 10, 10, 2), (10, 10, 10, 2), (256,), (256,))
         assert chunks1 == ((21, 11), (21, 11), (256,), (256,))
 
+    @pytest.mark.skipif(sys.version_info < (3, 8), reason="Requires Python >= 3.8")
     @pytest.mark.parametrize(
         "shape, nav_dim, sig_dim, dtype, desired_chunks",
         [
