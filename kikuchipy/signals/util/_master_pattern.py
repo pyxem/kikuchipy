@@ -321,7 +321,6 @@ def _project_patterns_from_master_pattern_with_fixed_pc(
     rescale: bool,
     out_min: Union[int, float],
     out_max: Union[int, float],
-    nav_shape: Union[int, Tuple[int, int]],
     sig_shape: Tuple[int, int],
     sig_size: int,
     dtype_out: Optional[type] = np.float32,
@@ -354,8 +353,6 @@ def _project_patterns_from_master_pattern_with_fixed_pc(
         Minimum intensity of output patterns.
     out_max
         Maximum intensity of output patterns.
-    nav_shape
-        Navigation shape.
     sig_shape
         Signal/detector shape.
     sig_size
@@ -374,8 +371,9 @@ def _project_patterns_from_master_pattern_with_fixed_pc(
     This function is optimized with Numba, so care must be taken with
     array shapes and data types.
     """
-    simulated = np.zeros(nav_shape + (sig_size,), dtype=dtype_out)
-    for i in np.ndindex(nav_shape):
+    rot_shape = rotations.shape[:-1]
+    simulated = np.zeros(rot_shape + (sig_size,), dtype=dtype_out)
+    for i in np.ndindex(rot_shape):
         simulated[i] = _project_single_pattern_from_master_pattern(
             rotation=rotations[i],
             direction_cosines=direction_cosines,
@@ -390,7 +388,7 @@ def _project_patterns_from_master_pattern_with_fixed_pc(
             sig_size=sig_size,
             dtype_out=dtype_out,
         )
-    return simulated.reshape(nav_shape + sig_shape)
+    return simulated.reshape(rot_shape + sig_shape)
 
 
 @nb.jit(nogil=True, nopython=True)
@@ -405,7 +403,6 @@ def _project_patterns_from_master_pattern_with_varying_pc(
     rescale: bool,
     out_min: Union[int, float],
     out_max: Union[int, float],
-    nav_shape: Union[int, Tuple[int, int]],
     sig_shape: Tuple[int, int],
     sig_size: int,
     dtype_out: Optional[type] = np.float32,
@@ -439,8 +436,6 @@ def _project_patterns_from_master_pattern_with_varying_pc(
         Minimum intensity of output patterns.
     out_max
         Maximum intensity of output patterns.
-    nav_shape
-        Navigation shape.
     sig_shape
         Signal/detector shape.
     sig_size
@@ -459,8 +454,9 @@ def _project_patterns_from_master_pattern_with_varying_pc(
     This function is optimized with Numba, so care must be taken with
     array shapes and data types.
     """
-    simulated = np.zeros(nav_shape + (sig_size,), dtype=dtype_out)
-    for i in np.ndindex(nav_shape):
+    rot_shape = rotations.shape[:-1]
+    simulated = np.zeros(rot_shape + (sig_size,), dtype=dtype_out)
+    for i in np.ndindex(rot_shape):
         simulated[i] = _project_single_pattern_from_master_pattern(
             rotation=rotations[i],
             direction_cosines=direction_cosines[i],
@@ -475,7 +471,7 @@ def _project_patterns_from_master_pattern_with_varying_pc(
             sig_size=sig_size,
             dtype_out=dtype_out,
         )
-    return simulated.reshape(nav_shape + sig_shape)
+    return simulated.reshape(rot_shape + sig_shape)
 
 
 @nb.jit(nogil=True, nopython=True)

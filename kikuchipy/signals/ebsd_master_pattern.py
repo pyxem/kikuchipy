@@ -276,19 +276,17 @@ class EBSDMasterPattern(KikuchiMasterPattern):
             out_min=out_min,
             out_max=out_max,
             sig_shape=detector.shape,
-            nav_shape=nav_shape,
             sig_size=detector.size,
             drop_axis=drop_axis,
             new_axis=new_axis,
             chunks=chunks,
             dtype=dtype_out,
-            enforce_ndim=True,
-            meta=np.array((), dtype=dtype_out),
         )
+
         if nav_shape_det == (1,):
             kwargs_da["direction_cosines"] = dc
-            simulated = rot.map_blocks(
-                _project_patterns_from_master_pattern_with_fixed_pc, **kwargs_da
+            simulated = da.map_blocks(
+                _project_patterns_from_master_pattern_with_fixed_pc, rot, **kwargs_da
             )
         else:
             simulated = da.map_blocks(
@@ -330,7 +328,7 @@ class EBSDMasterPattern(KikuchiMasterPattern):
             ):
                 pbar.register()
 
-            patterns = np.zeros(shape=simulated.shape, dtype=simulated.dtype)
+            patterns = np.empty(shape=simulated.shape, dtype=simulated.dtype)
             simulated.store(patterns, compute=True)
             out = EBSD(patterns, **kwargs_new)
 
