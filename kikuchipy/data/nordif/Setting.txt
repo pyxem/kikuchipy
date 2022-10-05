@@ -51,7 +51,7 @@ Gain	0
 		
 [Calibration settings]		
 Frame rate	10	fps
-Resolution	480x480	px
+Resolution	60x60	px
 Exposure time	99950	µs
 Gain	8	
 		

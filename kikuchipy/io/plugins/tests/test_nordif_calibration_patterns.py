@@ -21,8 +21,8 @@ from matplotlib.pyplot import imread
 import numpy as np
 import pytest
 
+import kikuchipy as kp
 from kikuchipy.io.plugins.nordif_calibration_patterns import _get_coordinates
-from kikuchipy import load
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -32,9 +32,12 @@ BG_FILE = os.path.join(NORDIF_DIR, "Background acquisition pattern.bmp")
 
 class TestNORDIFCalibrationPatterns:
     def test_read(self):
-        s = load(os.path.join(NORDIF_DIR, "Setting.txt"))
+        s = kp.load(os.path.join(NORDIF_DIR, "Setting.txt"))
         assert s.data.shape == (2, 60, 60)
         assert np.allclose(s.static_background, imread(BG_FILE))
+        assert isinstance(s.detector, kp.detectors.EBSDDetector)
+        assert s.detector.shape == s.data.shape[1:]
+        assert s.detector.sample_tilt == 70
 
     @pytest.mark.parametrize("setting_file", ["Setting_bad1.txt", "Setting_bad2.txt"])
     def test_get_coordinates_raises(self, setting_file):
@@ -47,5 +50,5 @@ class TestNORDIFCalibrationPatterns:
         file_new = os.path.join(NORDIF_DIR, file_orig + ".bak")
         os.rename(file_orig, file_new)
         with pytest.warns(UserWarning, match="Could not read static"):
-            _ = load(os.path.join(NORDIF_DIR, "Setting.txt"))
+            _ = kp.load(os.path.join(NORDIF_DIR, "Setting.txt"))
         os.rename(file_new, file_orig)

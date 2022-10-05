@@ -97,6 +97,9 @@ Removed
 
 Fixed
 -----
+- ``detector`` attribute of ``EBSD`` signal returned from the NORDIF
+  calibration pattern reader is now an ``EBSDDetector`` and not just a dictionary.
+  (`#569 <https://github.com/pyxem/kikuchipy/pull/569>`_)
 - Silence dask warning about splitting large chunks in ``EBSD.dictionary_indexing()``.
   Memory use can be controlled by rechunking the dictionary or setting the ``rechunk``
   or ``n_per_iteration`` parameters.

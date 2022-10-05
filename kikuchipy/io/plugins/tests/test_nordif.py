@@ -109,7 +109,7 @@ ORIGINAL_METADATA = {
         "\t\t",
         "[Calibration settings]\t\t",
         "Frame rate\t10\tfps",
-        "Resolution\t480x480\tpx",
+        "Resolution\t60x60\tpx",
         "Exposure time\t99950\tµs",
         "Gain\t8\t",
         "\t\t",

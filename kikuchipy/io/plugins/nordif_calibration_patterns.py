@@ -26,6 +26,7 @@ import warnings
 from matplotlib.pyplot import imread
 import numpy as np
 
+from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins.nordif import get_settings_from_file
 
 
@@ -63,7 +64,7 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
         Data, axes, metadata and original metadata.
     """
     # Get metadata from setting file
-    md, omd, _, detector = get_settings_from_file(filename)
+    md, omd, _, detector = get_settings_from_file(filename, pattern_type="calibration")
     dirname = os.path.dirname(filename)
 
     scan = {}
@@ -92,7 +93,7 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
     scan["metadata"] = md
     scan["original_metadata"] = omd
 
-    scan["detector"] = detector
+    scan["detector"] = EBSDDetector(**detector)
 
     coordinates = _get_coordinates(filename)
 
