@@ -21,7 +21,7 @@ import dask.array as da
 from hyperspy.api import load as hs_load
 from h5py import File, Dataset
 import numpy as np
-from orix import quaternion
+from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
@@ -82,9 +82,9 @@ class TestKikuchipyH5EBSD:
 
     def test_save_load_xmap(self, detector, save_path_hdf5):
         mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
-        r = quaternion.Rotation.from_euler(np.deg2rad([[0, 0, 0], [45, 0, 0]]))
+        rot = Rotation.from_euler(np.deg2rad([[0, 0, 0], [45, 0, 0]]))
         sim1 = mp.get_patterns(
-            rotations=r,
+            rotations=rot,
             detector=detector,
             energy=20,
             dtype_out=np.uint8,
@@ -92,7 +92,7 @@ class TestKikuchipyH5EBSD:
         )
         xmap1 = sim1.xmap.deepcopy()
         assert xmap1.size == 2
-        assert np.allclose(xmap1.rotations.data, r.data)
+        assert np.allclose(xmap1.rotations.data, rot.data)
         pg = xmap1.phases[0].point_group.name
         assert pg == mp.phase.point_group.name
         sim1.save(save_path_hdf5)

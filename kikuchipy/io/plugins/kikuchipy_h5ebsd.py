@@ -20,6 +20,7 @@
 import os
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
+import warnings
 
 import h5py
 from hyperspy.io_plugins.hspy import overwrite_dataset
@@ -135,9 +136,15 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
 
         # --- Crystal map
         if "CrystalMap" in group["EBSD"]:
-            xmap = dict2crystalmap(
-                _hdf5group2dict(group["EBSD/CrystalMap/crystal_map"], recursive=True)
+            xmap_dict = _hdf5group2dict(
+                group["EBSD/CrystalMap/crystal_map"], recursive=True
             )
+            # TODO: Remove once orix v0.11.0 is released
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", "Argument `z`", np.VisibleDeprecationWarning
+                )
+                xmap = dict2crystalmap(xmap_dict)
         else:
             xmap = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
         scan_dict["xmap"] = xmap

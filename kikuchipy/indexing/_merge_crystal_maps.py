@@ -209,7 +209,6 @@ def merge_crystal_maps(
         phase_list=phase_list,
         x=crystal_maps[0].x,
         y=crystal_maps[0].y,
-        z=crystal_maps[0].z,
         prop=props,
         scan_unit=crystal_maps[0].scan_unit,
     )
