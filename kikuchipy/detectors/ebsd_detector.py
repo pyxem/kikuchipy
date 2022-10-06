@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import annotations
 from copy import deepcopy
 from typing import List, Optional, Tuple, Union
 
@@ -531,7 +532,7 @@ class EBSDDetector:
         """
         return self._pc_bruker2tsl()
 
-    def deepcopy(self) -> "EBSDdetector":
+    def deepcopy(self) -> EBSDDetector:
         """Return a deep copy using :func:`copy.deepcopy`.
 
         Returns
@@ -749,7 +750,7 @@ class EBSDDetector:
     def _pc_tsl2bruker(self) -> np.ndarray:
         new_pc = deepcopy(self.pc)
         new_pc[..., 1] = 1 - self.pcy * self.aspect_ratio
-        new_pc[..., 2] = new_pc[..., 2] * self.aspect_ratio
+        new_pc[..., 2] *= self.aspect_ratio
         return new_pc
 
     def _pc_bruker2emsoft(self, version: int = 5) -> np.ndarray:
@@ -764,5 +765,5 @@ class EBSDDetector:
     def _pc_bruker2tsl(self) -> np.ndarray:
         new_pc = deepcopy(self.pc)
         new_pc[..., 1] = (1 - self.pcy) / self.aspect_ratio
-        new_pc[..., 2] = new_pc[..., 2] / self.aspect_ratio
+        new_pc[..., 2] /= self.aspect_ratio
         return new_pc

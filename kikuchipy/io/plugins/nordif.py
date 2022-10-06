@@ -210,13 +210,18 @@ def file_reader(
     return [scan]
 
 
-def get_settings_from_file(filename: str) -> Tuple[dict, dict, dict, dict]:
+def get_settings_from_file(
+    filename: str, pattern_type: str = "acquisition"
+) -> Tuple[dict, dict, dict, dict]:
     """Return metadata with parameters from NORDIF setting file.
 
     Parameters
     ----------
     filename
         File path of NORDIF setting file.
+    pattern_type
+        Whether to read the ``"acquisition"`` (default) or
+        ``"calibration"`` settings.
 
     Returns
     -------
@@ -236,7 +241,7 @@ def get_settings_from_file(filename: str) -> Tuple[dict, dict, dict, dict]:
     blocks = {
         "[Microscope]": -1,
         "[Detector angles]": -1,
-        "[Acquisition settings]": -1,
+        f"[{pattern_type.capitalize()} settings]": -1,
         "[Area]": -1,
     }
     for i, line in enumerate(content):
@@ -245,7 +250,7 @@ def get_settings_from_file(filename: str) -> Tuple[dict, dict, dict, dict]:
                 blocks[block] = i
     l_mic = blocks["[Microscope]"]
     l_ang = blocks["[Detector angles]"]
-    l_acq = blocks["[Acquisition settings]"]
+    l_acq = blocks[f"[{pattern_type.capitalize()} settings]"]
     l_area = blocks["[Area]"]
 
     # Create metadata and original metadata structures
