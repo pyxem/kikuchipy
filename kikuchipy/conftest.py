@@ -245,6 +245,63 @@ def get_single_phase_xmap(rotations):
     return _get_single_phase_xmap
 
 
+@pytest.fixture(params=[(1, (2, 3), (60, 60), "uint8", 2, False)])
+def edax_binary_file(tmpdir, request):
+    """Create a dummy EDAX binary UP1/2 file.
+
+    The creation of dummy UP1/2 files is explained in more detail in
+    kikuchipy/data/edax_binary/create_dummy_edax_binary_file.py.
+
+    Parameters expected in `request`
+    -------------------------------
+    up_version : int
+    navigation_shape : tuple of ints
+    signal_shape : tuple of ints
+    dtype : str
+    version : int
+    is_hex : bool
+    """
+    # Unpack parameters
+    up_ver, (ny, nx), (sy, sx), dtype, ver, is_hex = request.param
+
+    if up_ver == 1:
+        fname = tmpdir.join("dummy_edax_file.up1")
+        file = open(fname, mode="w")
+
+        # File header: 16 bytes
+        # 4 bytes with the file version
+        np.array([ver], "uint32").tofile(file)
+        # 12 bytes with the pattern width, height and file offset position
+        np.array([sx, sy, 16], "uint32").tofile(file)
+
+        # Patterns
+        np.ones(ny * nx * sy * sx, dtype).tofile(file)
+    else:  # up_ver == 2
+        fname = tmpdir.join("dummy_edax_file.up2")
+        file = open(fname, mode="w")
+
+        # File header: 42 bytes
+        # 4 bytes with the file version
+        np.array([ver], "uint32").tofile(file)
+        # 12 bytes with the pattern width, height and file offset position
+        np.array([sx, sy, 42], "uint32").tofile(file)
+        # 1 byte with any "extra patterns" (?)
+        np.array([1], "uint8").tofile(file)
+        # 8 bytes with the map width and height (same as square)
+        np.array([nx, ny], "uint32").tofile(file)
+        # 1 byte to say whether the grid is hexagonal
+        np.array([int(is_hex)], "uint8").tofile(file)
+        # 16 bytes with the horizontal and vertical step sizes
+        np.array([np.pi, np.pi / 2], "float64").tofile(file)
+
+        # Patterns
+        np.ones((ny * nx + ny // 2) * sy * sx, dtype).tofile(file)
+
+    file.close()
+
+    yield file
+
+
 @pytest.fixture(params=[((2, 3), (60, 60), np.uint8, 2, False, True)])
 def oxford_binary_file(tmpdir, request):
     """Create a dummy Oxford Instruments' binary .ebsp file.
