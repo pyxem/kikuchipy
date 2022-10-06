@@ -29,6 +29,7 @@ import numpy as np
 import kikuchipy.signals
 from kikuchipy.io.plugins import (
     bruker_h5ebsd,
+    edax_binary,
     edax_h5ebsd,
     emsoft_ebsd,
     emsoft_ebsd_master_pattern,
@@ -45,6 +46,7 @@ from kikuchipy.io._util import _get_input_bool, _ensure_directory
 
 plugins = [
     bruker_h5ebsd,
+    edax_binary,
     edax_h5ebsd,
     emsoft_ebsd,
     emsoft_ebsd_master_pattern,
