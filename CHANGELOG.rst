@@ -18,6 +18,8 @@ Unreleased
 
 Added
 -----
+- Reader of an ``EBSD`` signal from EDAX TSL's binary UP1/UP2 file formats.
+  (`#569 <https://github.com/pyxem/kikuchipy/pull/569>`_)
 - Ability to project simulate patterns from a master pattern using varying projection
   centers (PCs) in ``EBSDMasterPattern.get_patterns()``. An example is added to the
   method to show this. (`#567 <https://github.com/pyxem/kikuchipy/pull/567>`_)
