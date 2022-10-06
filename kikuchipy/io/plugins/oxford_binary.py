@@ -24,7 +24,7 @@ Information about the file format was provided by Oxford Instruments.
 import os
 from pathlib import Path
 import struct
-from typing import List, Tuple, Union
+from typing import BinaryIO, List, Tuple, Union
 
 import dask.array as da
 import numpy as np
@@ -53,7 +53,7 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
     Only uncompressed patterns can be read. If only non-indexed patterns
     are stored in the file, the navigation shape will be 1D.
 
-    Not ment to be used directly; use :func:`~kikuchipy.load`.
+    Not meant to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------
@@ -80,7 +80,23 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
 
 
 class OxfordBinaryFileReader:
-    """Oxford Instruments' binary .ebsp file reader."""
+    """Oxford Instruments' binary .ebsp file reader.
+
+    File header, byte positions of patterns, and pattern headers and
+    footers are read upon initialization to determine the navigation
+    (map) shape, signal (detector) shape, signal data type (uint8 or
+    uint16), and whether all or only non-indexed patterns are stored in
+    the file.
+
+    A memory map (:func:`numpy.memmap`) is created at the end, pointing
+    to, but not reading, the patterns on disk.
+
+    Parameters
+    ----------
+    file
+        Open Oxford Instruments' binary .ebsp file with uncompressed
+        patterns.
+    """
 
     # Header for each pattern in the file
     pattern_header_size = 16
@@ -91,24 +107,9 @@ class OxfordBinaryFileReader:
         ("n_bytes", np.int32, (1,)),
     ]
 
-    def __init__(self, file: object):
+    def __init__(self, file: BinaryIO):
         """Prepare to read EBSD patterns from an open Oxford
         Instruments' binary .ebsp file.
-
-        File header, byte positions of patterns, and pattern headers and
-        footers are read upon initialization to determine the
-        navigation (map) shape, signal (detector) shape, signal data
-        type (uint8 or uint16), and whether all or only non-indexed
-        patterns are stored in the file.
-
-        A memory map (:func:`numpy.memmap`) is created at the end,
-        pointing to, but not reading, the patterns on disk.
-
-        Parameters
-        ----------
-        file
-            Open Oxford Instruments' binary .ebsp file with uncompressed
-            patterns.
         """
         self.file = file  # Already open file
 
@@ -246,7 +247,7 @@ class OxfordBinaryFileReader:
             file_dtype += footer_dtype
 
         return np.memmap(
-            self.file,
+            self.file.name,
             dtype=file_dtype,
             shape=self.n_patterns_present,
             mode="r",

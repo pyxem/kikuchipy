@@ -26,6 +26,7 @@
     :template: custom-module-template.rst
 
     bruker_h5ebsd
+    edax_binary
     edax_h5ebsd
     emsoft_ebsd
     emsoft_ebsd_master_pattern
@@ -40,6 +41,7 @@
 
 __all__ = [
     "bruker_h5ebsd",
+    "edax_binary",
     "edax_h5ebsd",
     "emsoft_ebsd",
     "emsoft_ebsd_master_pattern",

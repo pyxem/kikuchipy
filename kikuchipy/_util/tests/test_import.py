@@ -282,6 +282,7 @@ class TestImport:
 
         assert dir(kikuchipy.io.plugins) == [
             "bruker_h5ebsd",
+            "edax_binary",
             "edax_h5ebsd",
             "emsoft_ebsd",
             "emsoft_ebsd_master_pattern",
