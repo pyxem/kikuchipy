@@ -18,6 +18,10 @@ Unreleased
 
 Added
 -----
+- Dependency ``imageio`` needed for reading EBSD patterns in image files.
+  (`#570 <https://github.com/pyxem/kikuchipy/pull/570>`_)
+- Reader of an ``EBSD`` signal from all images in a directory assuming they are of the
+  same shape and data type. (`#570 <https://github.com/pyxem/kikuchipy/pull/570>`_)
 - Reader of an ``EBSD`` signal from EDAX TSL's binary UP1/UP2 file formats.
   (`#569 <https://github.com/pyxem/kikuchipy/pull/569>`_)
 - Ability to project simulate patterns from a master pattern using varying projection
