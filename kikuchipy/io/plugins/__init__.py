@@ -26,6 +26,7 @@
     :template: custom-module-template.rst
 
     bruker_h5ebsd
+    ebsd_directory
     edax_binary
     edax_h5ebsd
     emsoft_ebsd
@@ -41,6 +42,7 @@
 
 __all__ = [
     "bruker_h5ebsd",
+    "ebsd_directory",
     "edax_binary",
     "edax_h5ebsd",
     "emsoft_ebsd",

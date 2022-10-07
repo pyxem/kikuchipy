@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import glob
 import os
 from pathlib import Path
 from typing import List, Optional, Union
@@ -29,6 +30,7 @@ import numpy as np
 import kikuchipy.signals
 from kikuchipy.io.plugins import (
     bruker_h5ebsd,
+    ebsd_directory,
     edax_binary,
     edax_h5ebsd,
     emsoft_ebsd,
@@ -46,6 +48,7 @@ from kikuchipy.io._util import _get_input_bool, _ensure_directory
 
 plugins = [
     bruker_h5ebsd,
+    ebsd_directory,
     edax_binary,
     edax_h5ebsd,
     emsoft_ebsd,
@@ -115,7 +118,13 @@ def load(
     <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
     """
     if not os.path.isfile(filename):
-        raise IOError(f"No filename matches '{filename}'.")
+        is_wildcard = False
+        if isinstance(filename, str):
+            filenames = glob.glob(filename)
+            if len(filenames) > 0:
+                is_wildcard = True
+        if not is_wildcard:
+            raise IOError(f"No filename matches '{filename}'.")
 
     # Find matching reader for file extension
     extension = os.path.splitext(filename)[1][1:]
