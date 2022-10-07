@@ -55,7 +55,7 @@ def file_reader(
 ) -> List[Dict]:
     """Read electron backscatter patterns from a NORDIF data file.
 
-    Not ment to be used directly; use :func:`~kikuchipy.load`.
+    Not meant to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------

@@ -466,7 +466,7 @@ def file_writer(
     :class:`~kikuchipy.signals.LazyEBSD` signal to an existing but not
     open or new h5ebsd file.
 
-    Not ment to be used directly; use
+    Not meant to be used directly; use
     :func:`~kikuchipy.signals.EBSD.save`.
 
     The file is closed after writing.

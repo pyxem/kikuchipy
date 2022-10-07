@@ -145,6 +145,7 @@ setup(
         "diffsims           >= 0.5",
         "hyperspy           >= 1.7.1",
         "h5py               >= 2.10",
+        "imageio",
         "matplotlib         >= 3.3",
         "numba              >= 0.48",
         "numpy              >= 1.19",

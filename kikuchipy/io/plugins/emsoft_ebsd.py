@@ -63,7 +63,7 @@ def file_reader(
     """Read dynamically simulated electron backscatter diffraction
     patterns from EMsoft's format produced by their EMEBSD.f90 program.
 
-    Not ment to be used directly; use :func:`~kikuchipy.load`.
+    Not meant to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------

@@ -171,7 +171,7 @@ def file_reader(
     and an EBSD detector from an Oxford Instruments h5ebsd (H5OINA) file
     :cite:`jackson2014h5ebsd`.
 
-    Not ment to be used directly; use :func:`~kikuchipy.load`.
+    Not meant to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------
