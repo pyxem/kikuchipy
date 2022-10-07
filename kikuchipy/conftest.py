@@ -25,6 +25,7 @@ import warnings
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
 import hyperspy.api as hs
+import imageio.v3 as iio
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import CrystalMap, create_coordinate_arrays, Phase, PhaseList
@@ -462,6 +463,29 @@ def ni_small_axes_manager():
             "navigate": navigates[i],
         }
     yield axes_manager
+
+
+@pytest.fixture(params=[("_x{}y{}.tif", (3, 3))])
+def ebsd_directory(tmpdir, request):
+    """Temporary directory with EBSD files as .tif, .png or .bmp files.
+
+    Parameters expected in `request`
+    -------------------------------
+    xy_pattern : str
+    nav_shape : tuple of ints
+    """
+    s = kp.data.nickel_ebsd_small()
+    s.unfold_navigation_space()
+
+    xy_pattern, nav_shape = request.param
+    y, x = np.indices(nav_shape)
+    x = x.ravel()
+    y = y.ravel()
+    for i in range(s.axes_manager.navigation_size):
+        fname = os.path.join(tmpdir, "pattern" + xy_pattern.format(x[i], y[i]))
+        iio.imwrite(fname, s.data[i])
+
+    yield tmpdir
 
 
 # ---------------------- pytest doctest-modules ---------------------- #
