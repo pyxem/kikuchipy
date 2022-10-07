@@ -49,7 +49,7 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
     """Reader electron backscatter patterns from .bmp files stored in a
     NORDIF project directory, their filenames listed in a text file.
 
-    Not ment to be used directly; use :func:`~kikuchipy.load`.
+    Not meant to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------

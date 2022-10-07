@@ -172,7 +172,7 @@ def file_reader(
     and an EBSD detector from an EDAX h5ebsd file
     :cite:`jackson2014h5ebsd`.
 
-    Not ment to be used directly; use :func:`~kikuchipy.load`.
+    Not meant to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------
