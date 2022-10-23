@@ -830,7 +830,7 @@ def compute_refine_orientation_projection_center_results(
         computed_results = np.array(computed_results)
         # (n, score, phi1, Phi, phi2, PCx, PCy, PCz)
         xmap_refined = CrystalMap(
-            rotations=Rotation.from_euler(computed_results[:, 1:4]),
+            rotations=Rotation.from_neo_euler(Rodrigues(computed_results[:, 1:4])),
             phase_id=np.zeros(n_patterns),
             x=xmap.x,
             y=xmap.y,

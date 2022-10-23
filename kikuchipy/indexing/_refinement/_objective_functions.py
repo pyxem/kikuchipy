@@ -39,8 +39,8 @@ def _refine_orientation_objective_function(x: np.ndarray, *args) -> float:
     Parameters
     ----------
     x
-        1D array containing the current Euler angles (phi1, Phi, phi2)
-        in radians.
+        1D array containing the Rodrigues-Frank vector components (Rx,
+        Ry, Rz).
     *args
         Tuple of fixed parameters needed to completely specify the
         function. The expected contents are:
@@ -143,8 +143,8 @@ def _refine_orientation_projection_center_objective_function(
     Parameters
     ----------
     x
-        1D array containing the current Euler angles (phi1, Phi, phi2)
-        and PC parameters (PCx, PCy, PCz).
+        1D array containing the Rodrigues-Frank vector components (Rx,
+        Ry, Rz) and PC parameters (PCx, PCy, PCz).
     *args
         Tuple of fixed parameters needed to completely specify the
         function. The expected contents are:
