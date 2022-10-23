@@ -170,16 +170,10 @@ def _refine_orientation_solver(
             **method_kwargs,
         )
     elif SUPPORTED_OPTIMIZATION_METHODS[method_name]["supports_bounds"]:
-        alpha_dev, beta_dev, gamma_dev = trust_region
-        alpha, beta, gamma = rotation
         solution = method(
             func=_refine_orientation_objective_function,
             args=params,
-            bounds=[
-                [alpha - alpha_dev, alpha + alpha_dev],
-                [beta - beta_dev, beta + beta_dev],
-                [gamma - gamma_dev, gamma + gamma_dev],
-            ],
+            bounds=np.column_stack([rotation - trust_region, rotation + trust_region]),
             **method_kwargs,
         )
     else:  # Is always "basinhopping", due to prior check of method name
@@ -275,7 +269,7 @@ def _refine_projection_center_solver(
         solution = method(
             func=_refine_projection_center_objective_function,
             args=params,
-            bounds=Bounds(pc - trust_region, pc + trust_region),
+            bounds=np.column_stack([pc - trust_region, pc + trust_region]),
             **method_kwargs,
         )
     else:  # Is always "basinhopping", due to prior check of method name
@@ -361,25 +355,8 @@ def _refine_orientation_projection_center_solver(
 
     if method_name == "minimize":
         if trust_region_passed:
-            alpha_dev, beta_dev, gamma_dev, pcx_dev, pcy_dev, pcz_dev = trust_region
-            alpha, beta, gamma, pcx, pcy, pcz = rot_pc
             method_kwargs["bounds"] = Bounds(
-                [
-                    alpha - alpha_dev,
-                    beta - beta_dev,
-                    gamma - gamma_dev,
-                    pcx - pcx_dev,
-                    pcy - pcy_dev,
-                    pcz - pcz_dev,
-                ],
-                [
-                    alpha + alpha_dev,
-                    beta + beta_dev,
-                    gamma + gamma_dev,
-                    pcx + pcx_dev,
-                    pcy + pcy_dev,
-                    pcz + pcz_dev,
-                ],
+                rot_pc - trust_region, rot_pc + trust_region
             )
         solution = method(
             fun=_refine_orientation_projection_center_objective_function,
@@ -388,19 +365,10 @@ def _refine_orientation_projection_center_solver(
             **method_kwargs,
         )
     elif SUPPORTED_OPTIMIZATION_METHODS[method_name]["supports_bounds"]:
-        alpha_dev, beta_dev, gamma_dev, pcx_dev, pcy_dev, pcz_dev = trust_region
-        alpha, beta, gamma, pcx, pcy, pcz = rot_pc
         solution = method(
             func=_refine_orientation_projection_center_objective_function,
             args=params,
-            bounds=[
-                [alpha - alpha_dev, alpha + alpha_dev],
-                [beta - beta_dev, beta + beta_dev],
-                [gamma - gamma_dev, gamma + gamma_dev],
-                [pcx - pcx_dev, pcx + pcx_dev],
-                [pcy - pcy_dev, pcy + pcy_dev],
-                [pcz - pcz_dev, pcz + pcz_dev],
-            ],
+            bounds=np.column_stack([rot_pc - trust_region, rot_pc + trust_region]),
             **method_kwargs,
         )
     else:  # Is always "basinhopping", due to prior check of method name

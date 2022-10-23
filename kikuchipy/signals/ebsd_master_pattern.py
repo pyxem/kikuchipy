@@ -256,7 +256,6 @@ class EBSDMasterPattern(KikuchiMasterPattern):
             out_max=out_max,
             chunks=chunks,
             dtype=dtype_out,
-            enforce_ndim=True,
         )
 
         if nav_shape_det == (1,):
