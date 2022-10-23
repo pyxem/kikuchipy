@@ -20,7 +20,7 @@ Added
 -----
 - Signal mask passed to EBSD orientation and projection center refinement methods is now
   applied to the experimental pattern as well.
-  (`#572 <https://github.com/pyxem/kikuchipy/pull/572>`_)
+  (`#573 <https://github.com/pyxem/kikuchipy/pull/573>`_)
 - Dependency ``imageio`` needed for reading EBSD patterns in image files.
   (`#570 <https://github.com/pyxem/kikuchipy/pull/570>`_)
 - Reader of an ``EBSD`` signal from all images in a directory assuming they are of the
@@ -63,7 +63,7 @@ Changed
   orientation and projection center refinement methods. This means that if refinement is
   not directly but a Dask array is returned from any of these methods, the data which
   previously contained Euler angles now contain these vector components. This change was
-  done to speed up refinement. (`#572 <https://github.com/pyxem/kikuchipy/pull/572>`_)
+  done to speed up refinement. (`#573 <https://github.com/pyxem/kikuchipy/pull/573>`_)
 - Most of the ``EBSD`` metadata structure is removed, in an effort to move all relevant
   data to the attributes ``xmap``, ``static_background``, and ``detector``.
   (`#562 <https://github.com/pyxem/kikuchipy/pull/562>`_)
@@ -86,7 +86,7 @@ Deprecated
 ----------
 - ``mask`` parameter in EBSD orientation and projection center refinement is deprecated
   in favor of ``signal_mask``, and will be removed in version 0.8.0.
-  (`#572 <https://github.com/pyxem/kikuchipy/pull/572>`_)
+  (`#573 <https://github.com/pyxem/kikuchipy/pull/573>`_)
 - ``projections.ebsd_projections`` module.
   (`#563 <https://github.com/pyxem/kikuchipy/pull/563>`_)
 
