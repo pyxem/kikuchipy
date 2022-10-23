@@ -16,7 +16,6 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
-import gc
 from typing import Optional, Tuple, Union
 
 import dask
@@ -192,23 +191,24 @@ class EBSDMasterPattern(KikuchiMasterPattern):
 
         dtype_out = np.dtype(dtype_out)
 
-        # Get shape related quantities
-        nav_shape, sig_shape = rotations.shape, detector.shape
-        data_shape = nav_shape + sig_shape
-        nav_dim, sig_dim = rotations.ndim, 2
-        nav_size, sig_size = rotations.size, detector.size
-
-        # Get suitable chunks when iterating over navigation axes.
-        # Signal axes are not chunked.
+        # Get suitable chunks along flattened navigation axis
+        nav_dim = rotations.ndim
         if nav_dim > 2:
             raise ValueError(
                 "`rotations` can only have one or two dimensions, but an instance with "
                 f"{nav_dim} dimensions was passed"
             )
+        nav_size = rotations.size
+        nav_shape = rotations.shape
+        sig_size = detector.size
+        sig_shape = detector.shape
         chunks = get_chunking(
-            data_shape=data_shape,
-            nav_dim=nav_dim,
-            sig_dim=sig_dim,
+            data_shape=(
+                nav_size,
+                sig_size,
+            ),
+            nav_dim=1,
+            sig_dim=1,
             chunk_shape=kwargs.pop("chunk_shape", None),
             chunk_bytes=kwargs.pop("chunk_bytes", None),
             dtype=dtype_out,
@@ -230,35 +230,14 @@ class EBSDMasterPattern(KikuchiMasterPattern):
         if nav_shape_det == (1,):
             # Single set of direction cosines as NumPy array
             dc = _get_direction_cosines_from_detector(detector)
-            dc = dc.reshape((-1, 3))
         else:
             # Sets of direction cosines, one per PC, as Dask array
             dc = dask.delayed(_get_direction_cosines_from_detector(detector))
-            dc = da.from_delayed(dc, (nav_size,) + sig_shape + (3,), dtype=float)
-            dc = dc.reshape(nav_shape + (-1, 3))
-            dc = dc.rechunk(chunks[:nav_dim] + (-1, -1))
+            dc = da.from_delayed(dc, (nav_size, detector.size, 3), dtype=float)
+            dc = dc.rechunk(chunks[:-1] + (-1, -1))
 
         # Get dask array from rotations
-        rot = da.from_array(rotations.data, chunks=chunks[:nav_dim] + (-1,))
-
-        if nav_dim == 1:
-            if nav_shape_det == (1,):
-                # New signal shape determined from rotations array: Drop
-                # quaternion axis, add signal axes
-                drop_axis = 1
-                new_axis = (1, 2)
-            else:
-                # New signal shape determiend from direction cosines
-                # array: Drop PC coordinates, add no new axes
-                drop_axis = 2
-                new_axis = None
-        else:  # nav_dim == 2
-            if nav_shape_det == (1,):
-                drop_axis = 2
-                new_axis = (2, 3)
-            else:
-                drop_axis = 3
-                new_axis = None
+        rot = da.from_array(rotations.data.reshape(-1, 4), chunks=chunks[:-1] + (-1,))
 
         master_upper, master_lower = self._get_master_pattern_arrays_from_energy(energy)
 
@@ -275,26 +254,29 @@ class EBSDMasterPattern(KikuchiMasterPattern):
             rescale=rescale,
             out_min=out_min,
             out_max=out_max,
-            sig_shape=detector.shape,
-            sig_size=detector.size,
-            drop_axis=drop_axis,
-            new_axis=new_axis,
             chunks=chunks,
             dtype=dtype_out,
+            enforce_ndim=True,
         )
 
         if nav_shape_det == (1,):
-            kwargs_da["direction_cosines"] = dc
             simulated = da.map_blocks(
-                _project_patterns_from_master_pattern_with_fixed_pc, rot, **kwargs_da
+                _project_patterns_from_master_pattern_with_fixed_pc,
+                rot,
+                direction_cosines=dc,
+                drop_axis=1,
+                new_axis=1,
+                **kwargs_da,
             )
         else:
             simulated = da.map_blocks(
                 _project_patterns_from_master_pattern_with_varying_pc,
                 rot,
                 dc,
+                drop_axis=2,
                 **kwargs_da,
             )
+        simulated = simulated.reshape(nav_shape + sig_shape)
 
         # Add crystal map and detector to keyword arguments
         kwargs_new = dict(
@@ -311,7 +293,7 @@ class EBSDMasterPattern(KikuchiMasterPattern):
             scales = scales[1:]
         kwargs_new["axes"] = [
             dict(
-                size=data_shape[i],
+                size=simulated.shape[i],
                 index_in_array=i,
                 name=names[i],
                 scale=scales[i],
@@ -338,7 +320,6 @@ class EBSDMasterPattern(KikuchiMasterPattern):
                 pass
         else:
             out = LazyEBSD(simulated, **kwargs_new)
-        gc.collect()
 
         return out
 
