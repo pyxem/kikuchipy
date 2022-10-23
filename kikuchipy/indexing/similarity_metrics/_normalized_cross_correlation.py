@@ -19,7 +19,7 @@ from typing import List, Union
 
 import dask
 import dask.array as da
-import numba as nb
+from numba import njit
 import numpy as np
 
 from kikuchipy.indexing.similarity_metrics import SimilarityMetric
@@ -203,19 +203,22 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
         return patterns
 
 
-@nb.jit("float64(float32[:, :], float32[:, :])", cache=True, nogil=True, nopython=True)
+@njit("float64(float32[:, :], float32[:, :])", cache=True, nogil=True, fastmath=True)
 def _ncc_single_patterns_2d_float32(exp: np.ndarray, sim: np.ndarray) -> float:
     """Return the normalized cross-correlation (NCC) coefficient
     between two 2D patterns.
 
     Parameters
     ----------
-    exp, sim
-        2D arrays of equal shape and of data type 32-bit floats.
+    exp
+        2D array of shape (n_pixels,) and data type 32-bit floats.
+    sim
+        2D array of shape (n_pixels,) and data type 32-bit floats.
 
     Returns
     -------
-    NCC coefficient as 64-bit float.
+    ncc
+        NCC coefficient as 32-bit float.
     """
     exp_mean = np.mean(exp)
     sim_mean = np.mean(sim)
@@ -224,4 +227,32 @@ def _ncc_single_patterns_2d_float32(exp: np.ndarray, sim: np.ndarray) -> float:
     return np.divide(
         np.sum(exp_centered * sim_centered),
         np.sqrt(np.sum(np.square(exp_centered)) * np.sum(np.square(sim_centered))),
+    )
+
+
+@njit("float64(float32[:], float32[:], float32)", cache=True, nogil=True, fastmath=True)
+def _ncc_single_patterns_1d_float32_exp_centered(
+    exp: np.ndarray, sim: np.ndarray, exp_squared_norm: float
+) -> float:
+    """Return the normalized cross-correlation (NCC) coefficient
+    between two 1D patterns.
+
+    Parameters
+    ----------
+    exp
+        1D array of shape (n_pixels,) and data type 32-bit floats
+        already centered.
+    sim
+        1D array of shape (n_pixels,) and data type 32-bit floats.
+    exp_squared_norm
+        Squared norm of experimental pattern as 32-bit float.
+
+    Returns
+    -------
+    ncc
+        NCC coefficient as 32-bit float.
+    """
+    sim -= np.mean(sim)
+    return np.divide(
+        np.sum(exp * sim), np.sqrt(exp_squared_norm * np.sum(np.square(sim)))
     )

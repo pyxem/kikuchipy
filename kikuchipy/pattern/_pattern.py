@@ -85,7 +85,7 @@ def rescale_intensity(
     return _rescale_with_min_max(pattern, imin, imax, omin, omax).astype(dtype_out)
 
 
-@njit(cache=True, fastmath=True, nogil=True)
+@njit(cache=True, nogil=True, fastmath=True)
 def _rescale_with_min_max(
     pattern: np.ndarray,
     imin: Union[int, float],
@@ -109,9 +109,26 @@ def _rescale_without_min_max(pattern: np.ndarray) -> np.ndarray:
 
     ``pattern`` must be 2D array of data type float32.
     """
-    imin = np.min(pattern)
-    imax = np.max(pattern)
-    return _rescale_with_min_max(pattern, imin=imin, imax=imax, omin=-1, omax=1)
+    return _rescale_with_min_max(
+        pattern, imin=np.min(pattern), imax=np.max(pattern), omin=-1, omax=1
+    )
+
+
+@njit("float32[:](float32[:])", cache=True, nogil=True, fastmath=True)
+def _rescale_without_min_max_1d_float32(pattern: np.ndarray) -> np.ndarray:
+    """Rescale a pattern to the intensity range [-1, 1].
+
+    ``pattern`` must be 1D array of data type float32.
+    """
+    return _rescale_with_min_max(
+        pattern, imin=np.min(pattern), imax=np.max(pattern), omin=-1, omax=1
+    )
+
+
+@njit("Tuple((float32[:], float32))(float32[:])", cache=True, nogil=True, fastmath=True)
+def _zero_mean_sum_square_1d_float32(pattern: np.ndarray) -> Tuple[np.ndarray, float]:
+    pattern -= np.mean(pattern)
+    return pattern, np.square(pattern).sum()
 
 
 def _zero_mean(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
