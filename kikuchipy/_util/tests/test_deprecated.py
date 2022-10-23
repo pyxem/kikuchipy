@@ -118,7 +118,7 @@ class TestDeprecateArgument:
         with pytest.warns(np.VisibleDeprecationWarning) as record2:
             assert my_foo.bar_arg(a=2) == {"a": 2}
         assert str(record2[0].message) == (
-            r"Argument `a` is deprecated and will be removed in version 1.4. "
+            r"Parameter `a` is deprecated and will be removed in version 1.4. "
             r"To avoid this warning, please do not use `a`. See the documentation of "
             r"`bar_arg()` for more details."
         )
@@ -127,7 +127,7 @@ class TestDeprecateArgument:
         with pytest.warns(np.VisibleDeprecationWarning) as record3:
             assert my_foo.bar_arg_alt(a=3) == {"a": 3}
         assert str(record3[0].message) == (
-            r"Argument `a` is deprecated and will be removed in version 1.4. "
+            r"Parameter `a` is deprecated and will be removed in version 1.4. "
             r"To avoid this warning, please do not use `a`. Use `b` instead. See the "
             r"documentation of `bar_arg_alt()` for more details."
         )

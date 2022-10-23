@@ -20,7 +20,6 @@ centers by optimizing the similarity between experimental and simulated
 patterns.
 """
 
-import gc
 import sys
 from time import time
 from typing import Callable, Optional, Tuple, Union
@@ -30,6 +29,7 @@ import dask.array as da
 import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList
 from orix.quaternion import Rotation
+from orix.vector import Rodrigues
 import scipy.optimize
 
 from kikuchipy.indexing._refinement._solvers import (
@@ -44,8 +44,8 @@ from kikuchipy.signals.util._master_pattern import (
 )
 
 
-DEFAULT_TRUST_REGION_EULER_DEG = np.ones(3)
-DEFAULT_TRUST_REGION_PC = np.full(3, 0.05)
+DEFAULT_TRUST_REGION_ROT_DEG = np.ones(3, dtype=np.float64)
+DEFAULT_TRUST_REGION_PC = np.full(3, 0.05, dtype=np.float64)
 
 
 def _refine_setup(
@@ -54,30 +54,25 @@ def _refine_setup(
     master_pattern,
     energy: Union[int, float],
     patterns_dtype: np.dtype,
-    mask: Optional[np.ndarray] = None,
     method: Optional[str] = None,
     method_kwargs: Optional[dict] = None,
-) -> Tuple[Callable, dict, tuple, int, tuple, int, int, int, Rotation, dict, tuple]:
+) -> Tuple[
+    Callable,
+    dict,
+    tuple,
+    int,
+    int,
+    int,
+    Rotation,
+    dict,
+    Tuple[np.ndarray, np.ndarray, int, int, float],
+]:
     """Set up and return everything that is common to all refinement
     functions.
     """
-    method, method_kwargs = _get_optimization_method_with_kwargs(method, method_kwargs)
-
-    # Get navigation shape and signal shape
-    nav_shape = xmap.shape
-    n_patterns = xmap.size
-    sig_shape = detector.shape
-    nrows, ncols = sig_shape
-    n_pixels = detector.size
-
-    # Get rotations in the correct shape
-    if xmap.rotations_per_point > 1:
-        rotations = xmap.rotations[:, 0]
-    else:
-        rotations = xmap.rotations
-
     # Build up dictionary of keyword arguments to pass to the refinement
     # solver
+    method, method_kwargs = _get_optimization_method_with_kwargs(method, method_kwargs)
     solver_kwargs = dict(method=method, method_kwargs=method_kwargs)
 
     # Determine whether pattern intensities must be rescaled
@@ -90,18 +85,25 @@ def _refine_setup(
     # Prepare parameters for the objective function which are constant
     # during optimization
     fixed_parameters = _check_master_pattern_and_get_data(master_pattern, energy)
-    fixed_parameters += (_prepare_mask(mask),)
-    fixed_parameters += (n_pixels,)
+
+    # Get navigation shape and signal shape
+    nav_shape = xmap.shape
+    n_patterns = xmap.size
+    nrows, ncols = detector.shape
+
+    # Get rotations in the correct shape
+    if xmap.rotations_per_point > 1:
+        rotations = xmap.rotations[:, 0]
+    else:
+        rotations = xmap.rotations
 
     return (
         method,
         method_kwargs,
         nav_shape,
         n_patterns,
-        sig_shape,
         nrows,
         ncols,
-        n_pixels,
         rotations,
         solver_kwargs,
         fixed_parameters,
@@ -114,8 +116,7 @@ def _refine_orientation(
     master_pattern,
     energy: Union[int, float],
     patterns: Union[np.ndarray, da.Array],
-    signal_indices_in_array: tuple,
-    mask: Optional[np.ndarray] = None,
+    signal_mask: np.ndarray,
     method: Optional[str] = None,
     method_kwargs: Optional[dict] = None,
     trust_region: Union[None, np.ndarray, list] = None,
@@ -129,10 +130,8 @@ def _refine_orientation(
         method_kwargs,
         nav_shape,
         n_patterns,
-        sig_shape,
         nrows,
         ncols,
-        n_pixels,
         rotations,
         solver_kwargs,
         fixed_parameters,
@@ -142,23 +141,19 @@ def _refine_orientation(
         master_pattern=master_pattern,
         energy=energy,
         patterns_dtype=patterns.dtype,
-        mask=mask,
         method=method,
         method_kwargs=method_kwargs,
     )
 
-    chunks = patterns.chunksize[:-2] + (-1, -1)
+    chunks = patterns.chunksize[:-1] + (-1,)
 
-    # Get rotations in the correct shape into a Dask array. Expand the
-    # dimensions to fit the dimensions of the pattern array, assuming
-    # a 2D detector
-    euler = rotations.to_euler()
-    euler = euler.reshape(nav_shape + (3,))
-    euler = np.expand_dims(euler, axis=-1)
-    euler = da.from_array(euler, chunks=chunks)
+    # Get Dask array of rotations as Rodrigues-Frank vectors
+    rot = Rodrigues.from_rotation(rotations).data
+    rot = rot.reshape(nav_shape + (3,))
+    rot = da.from_array(rot, chunks=chunks)
 
     if trust_region is None:
-        trust_region = DEFAULT_TRUST_REGION_EULER_DEG
+        trust_region = DEFAULT_TRUST_REGION_ROT_DEG
         solver_kwargs["trust_region_passed"] = False
     else:
         solver_kwargs["trust_region_passed"] = True
@@ -172,16 +167,15 @@ def _refine_orientation(
     new_pc = np.prod(detector.navigation_shape) != 1 and n_patterns > 1
 
     map_blocks_kwargs = dict(
-        drop_axis=signal_indices_in_array, new_axis=(len(nav_shape),), dtype=np.float64
+        drop_axis=(patterns.ndim - 1,), new_axis=(len(nav_shape),), dtype=np.float64
     )
 
     if new_pc:
-        # Patterns have been indexed with varying PCs, so we
-        # re-compute the direction cosines for every pattern during
-        # refinement
+        # Patterns have been indexed with varying PCs, so we re-compute
+        # the direction cosines for every pattern during refinement
         pc = _prepare_projection_centers(
             detector=detector, n_patterns=n_patterns, nav_shape=nav_shape, chunks=chunks
-        )  # shape: nav_shape + (3, 1)
+        )  # shape: nav_shape + (3,)
         nav_slices = (slice(None, None),) * len(nav_shape)
         pcx = pc[nav_slices + (slice(0, 1),)]
         pcy = pc[nav_slices + (slice(1, 2),)]
@@ -190,7 +184,7 @@ def _refine_orientation(
         output = da.map_blocks(
             _refine_orientation_chunk,
             patterns,
-            euler,
+            rot,
             pcx,
             pcy,
             pcz,
@@ -199,20 +193,21 @@ def _refine_orientation(
             tilt=detector.tilt,
             azimuthal=detector.azimuthal,
             sample_tilt=detector.sample_tilt,
+            signal_mask=signal_mask,
             solver_kwargs=solver_kwargs,
             **map_blocks_kwargs,
         )
     else:
         # Patterns have been indexed with the same PC, so we use the
         # same direction cosines during refinement of all patterns
-        dc = _get_direction_cosines_from_detector(detector)
-        dc = dc.reshape((n_pixels, 3))
+        dc = _get_direction_cosines_from_detector(detector, signal_mask)
 
         output = da.map_blocks(
             _refine_orientation_chunk,
             patterns,
-            euler,
+            rot,
             direction_cosines=dc,
+            signal_mask=signal_mask,
             solver_kwargs=solver_kwargs,
             **map_blocks_kwargs,
         )
@@ -230,42 +225,34 @@ def _refine_orientation(
             results=output, xmap=xmap, master_pattern=master_pattern
         )
 
-    gc.collect()
-
     return output
 
 
 def _refine_orientation_chunk(
     patterns: np.ndarray,
     rotations: np.ndarray,
-    pcx=None,
-    pcy=None,
-    pcz=None,
-    direction_cosines=None,
-    nrows=None,
-    ncols=None,
-    tilt=None,
-    azimuthal=None,
-    sample_tilt=None,
-    solver_kwargs=None,
+    pcx: Optional[np.ndarray] = None,
+    pcy: Optional[np.ndarray] = None,
+    pcz: Optional[np.ndarray] = None,
+    signal_mask: Optional[np.ndarray] = None,
+    solver_kwargs: Optional[dict] = None,
+    direction_cosines: Optional[np.ndarray] = None,
+    nrows: Optional[int] = None,
+    ncols: Optional[int] = None,
+    tilt: Optional[float] = None,
+    azimuthal: Optional[float] = None,
+    sample_tilt: Optional[float] = None,
 ):
-    """Refine orientations using patterns in one dask array chunk.
+    """Refine orientations from patterns in one dask array chunk.
 
-    Note that `solver_kwargs` is required. It is set to None to enable
-    use of this function in :func:`~dask.array.Array.map_blocks.
+    Note that ``signal_mask`` and ``solver_kwargs`` are required. They
+    are set to ``None`` to enable use of this function in
+    :func:`~dask.array.Array.map_blocks`.
     """
-    nav_shape = patterns.shape[:-2]
+    nav_shape = patterns.shape[:-1]
     results = np.empty(nav_shape + (4,), dtype=np.float64)
     rotations = rotations.reshape(nav_shape + (3,))
-    if direction_cosines is not None:
-        for idx in np.ndindex(*nav_shape):
-            results[idx] = _refine_orientation_solver(
-                pattern=patterns[idx],
-                rotation=rotations[idx],
-                direction_cosines=direction_cosines,
-                **solver_kwargs,
-            )
-    else:
+    if direction_cosines is None:
         # Remove extra dimensions necessary for use of dask's map_blocks
         pcx = pcx.reshape(nav_shape)
         pcy = pcy.reshape(nav_shape)
@@ -282,6 +269,16 @@ def _refine_orientation_chunk(
                 tilt=tilt,
                 azimuthal=azimuthal,
                 sample_tilt=sample_tilt,
+                signal_mask=signal_mask,
+                **solver_kwargs,
+            )
+    else:
+        for idx in np.ndindex(*nav_shape):
+            results[idx] = _refine_orientation_solver(
+                pattern=patterns[idx],
+                rotation=rotations[idx],
+                direction_cosines=direction_cosines,
+                signal_mask=signal_mask,
                 **solver_kwargs,
             )
     return results
@@ -293,8 +290,7 @@ def _refine_projection_center(
     master_pattern,
     energy: Union[int, float],
     patterns: Union[np.ndarray, da.Array],
-    signal_indices_in_array: tuple,
-    mask: Optional[np.ndarray] = None,
+    signal_mask: np.ndarray,
     method: Optional[str] = None,
     method_kwargs: Optional[dict] = None,
     trust_region: Union[None, np.ndarray, list] = None,
@@ -308,10 +304,8 @@ def _refine_projection_center(
         method_kwargs,
         nav_shape,
         n_patterns,
-        sig_shape,
         nrows,
         ncols,
-        n_pixels,
         rotations,
         solver_kwargs,
         fixed_parameters,
@@ -321,20 +315,16 @@ def _refine_projection_center(
         master_pattern=master_pattern,
         energy=energy,
         patterns_dtype=patterns.dtype,
-        mask=mask,
         method=method,
         method_kwargs=method_kwargs,
     )
 
-    chunks = patterns.chunksize[:-2] + (-1, -1)
+    chunks = patterns.chunksize[:-1] + (-1,)
 
-    # Get rotations in the correct shape into a Dask array. Expand the
-    # dimensions to fit the dimensions of the pattern array, assuming a
-    # 2D detector
-    rotations = rotations.data
-    rotations = rotations.reshape(nav_shape + (4,))
-    rotations = np.expand_dims(rotations, axis=-1)
-    rotations = da.from_array(rotations, chunks=chunks)
+    # Get rotations in the correct shape into a Dask array
+    rot = rotations.data
+    rot = rot.reshape(nav_shape + (4,))
+    rot = da.from_array(rot, chunks=chunks)
 
     if trust_region is None:
         trust_region = DEFAULT_TRUST_REGION_PC
@@ -345,6 +335,7 @@ def _refine_projection_center(
 
     # Prepare parameters for the objective function which are constant
     # during optimization
+    fixed_parameters += (signal_mask,)
     fixed_parameters += (nrows,)
     fixed_parameters += (ncols,)
     fixed_parameters += (detector.tilt,)
@@ -362,10 +353,11 @@ def _refine_projection_center(
     output = da.map_blocks(
         _refine_projection_center_chunk,
         patterns,
-        rotations,
+        rot,
         pc,
+        signal_mask=signal_mask,
         solver_kwargs=solver_kwargs,
-        drop_axis=signal_indices_in_array,
+        drop_axis=(patterns.ndim - 1,),
         new_axis=(len(nav_shape),),
         dtype=np.float64,
     )
@@ -380,12 +372,8 @@ def _refine_projection_center(
     )
     if compute:
         output = compute_refine_projection_center_results(
-            results=output,
-            detector=detector,
-            xmap=xmap,
+            results=output, detector=detector, xmap=xmap
         )
-
-    gc.collect()
 
     return output
 
@@ -395,9 +383,10 @@ def _refine_projection_center_chunk(
     rotations: np.ndarray,
     pc: np.ndarray,
     solver_kwargs: dict,
+    signal_mask: np.ndarray,
 ):
     """Refine projection centers using patterns in one dask array chunk."""
-    nav_shape = patterns.shape[:-2]
+    nav_shape = patterns.shape[:-1]
     results = np.empty(nav_shape + (4,), dtype=np.float64)
     pc = pc.reshape(nav_shape + (3,))
     rotations = rotations.reshape(nav_shape + (4,))
@@ -406,6 +395,7 @@ def _refine_projection_center_chunk(
             pattern=patterns[idx],
             rotation=rotations[idx],
             pc=pc[idx],
+            signal_mask=signal_mask,
             **solver_kwargs,
         )
     return results
@@ -417,8 +407,7 @@ def _refine_orientation_projection_center(
     master_pattern,
     energy: Union[int, float],
     patterns: Union[np.ndarray, da.Array],
-    signal_indices_in_array: tuple,
-    mask: Optional[np.ndarray] = None,
+    signal_mask: Optional[np.ndarray] = None,
     method: Optional[str] = None,
     method_kwargs: Optional[dict] = None,
     trust_region: Union[None, np.ndarray, list] = None,
@@ -432,10 +421,8 @@ def _refine_orientation_projection_center(
         method_kwargs,
         nav_shape,
         n_patterns,
-        sig_shape,
         nrows,
         ncols,
-        n_pixels,
         rotations,
         solver_kwargs,
         fixed_parameters,
@@ -445,21 +432,20 @@ def _refine_orientation_projection_center(
         master_pattern=master_pattern,
         energy=energy,
         patterns_dtype=patterns.dtype,
-        mask=mask,
         method=method,
         method_kwargs=method_kwargs,
     )
 
-    chunks = patterns.chunksize[:-2] + (-1, -1)
+    chunks = patterns.chunksize[:-1] + (-1,)
 
-    # Get rotations in the correct shape into a Dask array
-    euler = rotations.to_euler()
-    euler = euler.reshape(nav_shape + (3,))
-    euler = np.expand_dims(euler, axis=-1)
+    # Get Dask array of rotations as Rodrigues-Frank vectors
+    rot = Rodrigues.from_rotation(rotations).data
+    rot = rot.reshape(nav_shape + (3,))
+    rot = da.from_array(rot, chunks=chunks)
 
     if trust_region is None:
         trust_region = np.concatenate(
-            [DEFAULT_TRUST_REGION_EULER_DEG, DEFAULT_TRUST_REGION_PC]
+            [DEFAULT_TRUST_REGION_ROT_DEG, DEFAULT_TRUST_REGION_PC]
         )
         solver_kwargs["trust_region_passed"] = False
     else:
@@ -469,6 +455,7 @@ def _refine_orientation_projection_center(
 
     # Prepare parameters for the objective function which are constant
     # during optimization
+    fixed_parameters += (signal_mask,)
     fixed_parameters += (nrows,)
     fixed_parameters += (ncols,)
     fixed_parameters += (detector.tilt,)
@@ -484,16 +471,16 @@ def _refine_orientation_projection_center(
     )
 
     # Stack Euler angles and PC parameters into one array of shape
-    # `nav_shape` + (6, 1). The last dimension is required to align this
-    # array with the shape of the pattern array
-    euler_pc = da.dstack((euler, pc))
+    # `nav_shape` + (6,)
+    rot_pc = da.dstack((rot, pc))
 
     output = da.map_blocks(
         _refine_orientation_projection_center_chunk,
         patterns,
-        euler_pc,
+        rot_pc,
+        signal_mask=signal_mask,
         solver_kwargs=solver_kwargs,
-        drop_axis=signal_indices_in_array,
+        drop_axis=(patterns.ndim - 1,),
         new_axis=(len(nav_shape),),
         dtype=np.float64,
     )
@@ -514,26 +501,26 @@ def _refine_orientation_projection_center(
             master_pattern=master_pattern,
         )
 
-    gc.collect()
-
     return output
 
 
 def _refine_orientation_projection_center_chunk(
     patterns: np.ndarray,
-    euler_pc: np.ndarray,
+    rot_pc: np.ndarray,
+    signal_mask: Optional[np.ndarray] = None,
     solver_kwargs: Optional[dict] = None,
 ):
     """Refine orientations and projection centers using all patterns in
     one dask array chunk.
     """
-    nav_shape = patterns.shape[:-2]
+    nav_shape = patterns.shape[:-1]
     results = np.empty(nav_shape + (7,), dtype=np.float64)
-    euler_pc = euler_pc.reshape(nav_shape + (6,))
+    rot_pc = rot_pc.reshape(nav_shape + (6,))
     for idx in np.ndindex(*nav_shape):
         results[idx] = _refine_orientation_projection_center_solver(
             pattern=patterns[idx],
-            euler_pc=euler_pc[idx],
+            rot_pc=rot_pc[idx],
+            signal_mask=signal_mask,
             **solver_kwargs,
         )
     return results
@@ -548,10 +535,10 @@ def _get_optimization_method_with_kwargs(
     Parameters
     ----------
     method
-        Name of a supported SciPy optimization method. See `method`
+        Name of a supported SciPy optimization method. See ``method``
         parameter in :meth:`kikuchipy.signals.EBSD.refine_orientation`.
-        Default is "minimize".
-    method_kwargs : dict, optional
+        Default is ``"minimize"``.
+    method_kwargs
         Keyword arguments to pass to function.
 
     Returns
@@ -577,14 +564,14 @@ def _get_optimization_method_with_kwargs(
 
 
 def _check_master_pattern_and_get_data(
-    master_pattern, energy: Union[int, float]
+    master_pattern: "EBSDMasterPattern", energy: Union[int, float]
 ) -> Tuple[np.ndarray, np.ndarray, int, int, float]:
     """Check whether the master pattern is suitable for projection, and
     return the northern and southern hemispheres along with their shape.
 
     Parameters
     ----------
-    master_pattern : kikuchipy.signals.EBSDMasterPattern
+    master_pattern
       Master pattern in the square Lambert projection.
     energy
         Accelerating voltage of the electron beam in kV specifying which
@@ -616,27 +603,8 @@ def _check_master_pattern_and_get_data(
     return master_north, master_south, npx, npy, scale
 
 
-def _prepare_mask(mask: Optional[np.ndarray] = None) -> Union[int, np.ndarray]:
-    """Ensure a valid mask or 1 is returned.
-
-    Parameters
-    ----------
-    mask
-
-    Returns
-    -------
-    mask
-        Either a 1D array or 1.
-    """
-    if mask is None:
-        mask = 1
-    else:
-        mask = ~mask.ravel()
-    return mask
-
-
 def _prepare_projection_centers(
-    detector,
+    detector: "EBSDDetector",
     n_patterns: int,
     nav_shape: tuple,
     chunks: tuple,
@@ -646,7 +614,7 @@ def _prepare_projection_centers(
 
     Parameters
     ----------
-    detector : ~kikuchipy.detectors.EBSDDetector
+    detector
         Detector with PCs.
     n_patterns
         Number of patterns to use in refinement.
@@ -658,10 +626,8 @@ def _prepare_projection_centers(
     Returns
     -------
     pc
-        PC dask array of shape nav_shape + (3, 1) of data type 64-bit
-        float. The final dimension is added so that the pc array has the
-        same number of dimensions as the pattern array, which is
-        necessary for use in :func:`~dask.array.Array.map_blocks`.
+        PC dask array of shape nav_shape + (3,) of data type 64-bit
+        float.
     """
     # Determine whether a new PC is used for every pattern
     new_pc = np.prod(detector.navigation_shape) != 1 and n_patterns > 1
@@ -676,9 +642,6 @@ def _prepare_projection_centers(
         # Patterns have been indexed with the same PC, so we use this as
         # the starting point for every pattern
         pc = np.full(shape, detector.pc[0], dtype=dtype)
-
-    # Expand dimensions to fit dimensions of patterns array
-    pc = np.expand_dims(pc, axis=-1)
 
     # Get dask array with proper chunks
     pc = da.from_array(pc, chunks=chunks)
@@ -762,7 +725,7 @@ def compute_refine_orientation_results(
         # (n, score, phi1, Phi, phi2)
         computed_results = np.array(computed_results)
         xmap_refined = CrystalMap(
-            rotations=Rotation.from_euler(computed_results[:, 1:]),
+            rotations=Rotation.from_neo_euler(Rodrigues(computed_results[:, 1:])),
             phase_id=np.zeros(n_patterns),
             x=xmap.x,
             y=xmap.y,
@@ -783,7 +746,7 @@ def compute_refine_projection_center_results(
     Parameters
     ----------
     results
-        The dask array returned from ``refine_projection_center()``.
+        Dask array returned from ``refine_projection_center()``.
     detector
         Detector passed to ``refine_projection_center()`` to obtain
         ``results``.
@@ -828,7 +791,7 @@ def compute_refine_orientation_projection_center_results(
     Parameters
     ----------
     results
-        The dask array returned from
+        Dask array returned from
         ``refine_orientation_projection_center()``.
     detector
         Detector passed to ``refine_orientation_projection_center()`` to
@@ -847,6 +810,10 @@ def compute_refine_orientation_projection_center_results(
         Crystal map with refined orientations and scores.
     new_detector
         EBSD detector with refined projection center parameters.
+
+    See Also
+    --------
+    kikuchipy.signals.EBSD.refine_orientation_projection_center
     """
     n_patterns = int(np.prod(results.shape[:-1]))
     nav_shape = xmap.shape
@@ -863,7 +830,7 @@ def compute_refine_orientation_projection_center_results(
         computed_results = np.array(computed_results)
         # (n, score, phi1, Phi, phi2, PCx, PCy, PCz)
         xmap_refined = CrystalMap(
-            rotations=Rotation.from_euler(computed_results[:, 1:4]),
+            rotations=Rotation.from_neo_euler(Rodrigues(computed_results[:, 1:4])),
             phase_id=np.zeros(n_patterns),
             x=xmap.x,
             y=xmap.y,

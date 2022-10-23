@@ -23,63 +23,58 @@ and simulated patterns.
 import numpy as np
 
 from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
-    _ncc_single_patterns_2d_float32,
+    _ncc_single_patterns_1d_float32_exp_centered,
 )
-from kikuchipy._rotation import _rotation_from_euler
+from kikuchipy._rotation import _rotation_from_rodrigues
 from kikuchipy.signals.util._master_pattern import (
     _project_single_pattern_from_master_pattern,
     _get_direction_cosines_for_fixed_pc,
 )
 
 
-def _refine_orientation_objective_function(x: np.ndarray, *args: tuple) -> float:
+def _refine_orientation_objective_function(x: np.ndarray, *args) -> float:
     """Objective function to be minimized when optimizing an orientation
     (Euler angles).
 
     Parameters
     ----------
     x
-        1D array containing the current Euler angles (phi1, Phi, phi2)
-        in radians.
-    args
+        1D array containing the Rodrigues-Frank vector components (Rx,
+        Ry, Rz).
+    *args
         Tuple of fixed parameters needed to completely specify the
         function. The expected contents are:
-            0. 2D experimental pattern of 32-bit floats
+            0. 1D centered experimental pattern of 32-bit floats
             1. 1D direction cosines
             2. 2D northern hemisphere of master pattern of 32-bit floats
             3. 2D southern hemisphere of master pattern of 32-bit floats
             4. Number of master pattern columns
             5. Number of master pattern rows
             6. Master pattern scale
-            7. 1D signal mask
-            8. Number of pattern pixels
+            7. Squared norm of centered experimental pattern as 32-bit
+               float
 
     Returns
     -------
         Objective function value (normalized cross-correlation score).
     """
-    simulated_pattern = _project_single_pattern_from_master_pattern(
-        rotation=_rotation_from_euler(alpha=x[0], beta=x[1], gamma=x[2]),
+    simulated = _project_single_pattern_from_master_pattern(
+        rotation=_rotation_from_rodrigues(*x),
         direction_cosines=args[1],
         master_upper=args[2],
         master_lower=args[3],
         npx=args[4],
         npy=args[5],
         scale=args[6],
-        sig_size=args[8],
         rescale=False,
         out_min=0,  # Required, but not used here
         out_max=1,  # Required, but not used here
         dtype_out=np.float32,
     )
-    simulated_pattern = simulated_pattern * args[7]  # Multiply by mask
-    experimental = args[0]
-    simulated_pattern = simulated_pattern.reshape(experimental.shape)
-    score = _ncc_single_patterns_2d_float32(exp=experimental, sim=simulated_pattern)
-    return 1 - score
+    return 1 - _ncc_single_patterns_1d_float32_exp_centered(args[0], simulated, args[7])
 
 
-def _refine_projection_center_objective_function(x: np.ndarray, *args: tuple) -> float:
+def _refine_projection_center_objective_function(x: np.ndarray, *args) -> float:
     """Objective function to be minimized when optimizing projection
     center (PC) parameters PCx, PCy, and PCz.
 
@@ -87,62 +82,60 @@ def _refine_projection_center_objective_function(x: np.ndarray, *args: tuple) ->
     ----------
     x
         1D array containing the current PC parameters (PCx, PCy, PCz).
-    args
+    *args
         Tuple of fixed parameters needed to completely specify the
         function. The expected contents are:
-            0. 2D experimental pattern of 32-bit floats
-            1. 1D rotation as quaternion
+            0. 1D centered experimental pattern of 32-bit floats
+            1. 1D quaternion
             2. 2D northern hemisphere of master pattern of 32-bit floats
             3. 2D southern hemisphere of master pattern of 32-bit floats
             4. Number of master pattern columns
             5. Number of master pattern rows
             6. Master pattern scale
             7. 1D signal mask
-            8. Number of pattern pixels
-            9. Number of pattern rows
-            10. Number of pattern columns
-            11. Detector tilt
-            12. Detector azimuthal angle
-            13. Sample tilt
+            8. Number of detector rows
+            9. Number of detector columns
+            10. Detector tilt
+            11. Detector azimuthal angle
+            12. Sample tilt
+            13. Squared norm of centered experimental pattern as 32-bit
+                float
 
     Returns
     -------
         Objective function value (normalized cross-correlation score).
     """
-    n_pixels = args[8]
-    direction_cosines = _get_direction_cosines_for_fixed_pc(
+    dc = _get_direction_cosines_for_fixed_pc(
         pcx=x[0],
         pcy=x[1],
         pcz=x[2],
-        nrows=args[9],
-        ncols=args[10],
-        tilt=args[11],
-        azimuthal=args[12],
-        sample_tilt=args[13],
-    ).reshape((n_pixels, 3))
-    simulated_pattern = _project_single_pattern_from_master_pattern(
+        nrows=args[8],
+        ncols=args[9],
+        tilt=args[10],
+        azimuthal=args[11],
+        sample_tilt=args[12],
+        mask=args[7],
+    )
+    simulated = _project_single_pattern_from_master_pattern(
         rotation=args[1],
-        direction_cosines=direction_cosines,
+        direction_cosines=dc,
         master_upper=args[2],
         master_lower=args[3],
         npx=args[4],
         npy=args[5],
         scale=args[6],
-        sig_size=n_pixels,
         rescale=False,
         out_min=0,  # Required, but not used here
         out_max=1,  # Required, but not used here
         dtype_out=np.float32,
     )
-    simulated_pattern = simulated_pattern * args[7]  # Multiply by mask
-    experimental = args[0]
-    simulated_pattern = simulated_pattern.reshape(experimental.shape)
-    score = _ncc_single_patterns_2d_float32(exp=experimental, sim=simulated_pattern)
-    return 1 - score
+    return 1 - _ncc_single_patterns_1d_float32_exp_centered(
+        args[0], simulated, args[13]
+    )
 
 
 def _refine_orientation_projection_center_objective_function(
-    x: np.ndarray, *args: tuple
+    x: np.ndarray, *args
 ) -> float:
     """Objective function to be minimized when optimizing orientations
     and projection center (PC) parameters PCx, PCy, and PCz.
@@ -150,57 +143,54 @@ def _refine_orientation_projection_center_objective_function(
     Parameters
     ----------
     x
-        1D array containing the current Euler angles (phi1, Phi, phi2)
-        and PC parameters (PCx, PCy, PCz).
-    args
+        1D array containing the Rodrigues-Frank vector components (Rx,
+        Ry, Rz) and PC parameters (PCx, PCy, PCz).
+    *args
         Tuple of fixed parameters needed to completely specify the
         function. The expected contents are:
-            0. 2D experimental pattern of 32-bit floats
+            0. 1D experimental pattern of 32-bit floats
             1. 2D northern hemisphere of master pattern of 32-bit floats
             2. 2D southern hemisphere of master pattern of 32-bit floats
             3. Number of master pattern columns
             4. Number of master pattern rows
             5. Master pattern scale
             6. 1D signal mask
-            7. Number of pattern pixels
-            8. Number of pattern rows
-            9. Number of pattern columns
-            10. Detector tilt
-            11. Detector azimuthal angle
-            12. Sample tilt
+            7. Number of pattern rows
+            8. Number of pattern columns
+            9. Detector tilt
+            10. Detector azimuthal angle
+            11. Sample tilt
+            12. Squared norm of centered experimental pattern as 32-bit
+                float
 
     Returns
     -------
         Objective function value (normalized cross-correlation score).
     """
-    rotation = _rotation_from_euler(alpha=x[0], beta=x[1], gamma=x[2])
-    n_pixels = args[7]
-    direction_cosines = _get_direction_cosines_for_fixed_pc(
+    dc = _get_direction_cosines_for_fixed_pc(
         pcx=x[3],
         pcy=x[4],
         pcz=x[5],
-        nrows=args[8],
-        ncols=args[9],
-        tilt=args[10],
-        azimuthal=args[11],
-        sample_tilt=args[12],
-    ).reshape((n_pixels, 3))
-    simulated_pattern = _project_single_pattern_from_master_pattern(
-        rotation=rotation,
-        direction_cosines=direction_cosines,
+        nrows=args[7],
+        ncols=args[8],
+        tilt=args[9],
+        azimuthal=args[10],
+        sample_tilt=args[11],
+        mask=args[6],
+    )
+    simulated = _project_single_pattern_from_master_pattern(
+        rotation=_rotation_from_rodrigues(*x[:3]),
+        direction_cosines=dc,
         master_upper=args[1],
         master_lower=args[2],
         npx=args[3],
         npy=args[4],
         scale=args[5],
-        sig_size=n_pixels,
         rescale=False,
         out_min=0,  # Required, but not used here
         out_max=1,  # Required, but not used here
         dtype_out=np.float32,
     )
-    simulated_pattern = simulated_pattern * args[6]  # Multiply by mask
-    experimental = args[0]
-    simulated_pattern = simulated_pattern.reshape(experimental.shape)
-    score = _ncc_single_patterns_2d_float32(exp=experimental, sim=simulated_pattern)
-    return 1 - score
+    return 1 - _ncc_single_patterns_1d_float32_exp_centered(
+        args[0], simulated, args[12]
+    )

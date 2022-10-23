@@ -85,9 +85,13 @@ class TestEBSDRefinementSetup:
         assert np.max(mpn) <= 1
 
 
-class TestRefinementSolvers:
-    def test_rescale_pattern_numba_function(self):
-        a = np.random.random(10).reshape((2, 5)).astype(np.float32)
-        b = kp.indexing._refinement._solvers._rescale_without_min_max.py_func(a)
-        assert not np.allclose(a, b)
-        assert b.dtype == a.dtype
+class TestRefinementSolverNumba:
+    def test_mask_pattern_numba(self):
+        p = np.arange(100).astype("float32")
+        mask = np.ones(p.size, dtype=bool)
+        mask[:10] = False
+        p_masked = kp.indexing._refinement._solvers._mask_pattern(p, mask)
+        p_masked2 = kp.indexing._refinement._solvers._mask_pattern.py_func(p, mask)
+        assert p_masked.size == 90
+        assert np.isclose(p_masked.mean(), 54.5)
+        assert np.allclose(p_masked, p_masked2)

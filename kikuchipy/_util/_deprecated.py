@@ -134,7 +134,7 @@ class deprecated_argument:
         def wrapped(*args, **kwargs):
             if self.name in kwargs.keys():
                 msg = (
-                    f"Argument `{self.name}` is deprecated and will be removed in "
+                    f"Parameter `{self.name}` is deprecated and will be removed in "
                     f"version {self.removal}. To avoid this warning, please do not use "
                     f"`{self.name}`. "
                 )

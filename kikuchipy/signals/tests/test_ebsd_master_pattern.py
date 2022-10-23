@@ -190,20 +190,24 @@ class TestProjectFromLambert:
     )
 
     def test_get_direction_cosines(self):
-        detector = self.detector
-        dc = _get_direction_cosines_from_detector(detector)
-        assert dc.shape == detector.shape + (3,)
+        det = self.detector
+        dc = _get_direction_cosines_from_detector(det)
+        assert dc.shape == (
+            det.size,
+            3,
+        )
         assert np.max(dc) <= 1
 
         dc2 = _get_direction_cosines_for_fixed_pc.py_func(
-            pcx=detector.pcx,
-            pcy=detector.pcy,
-            pcz=detector.pcz,
-            nrows=detector.nrows,
-            ncols=detector.ncols,
-            tilt=detector.tilt,
-            azimuthal=detector.azimuthal,
-            sample_tilt=detector.sample_tilt,
+            pcx=det.pcx,
+            pcy=det.pcy,
+            pcz=det.pcz,
+            nrows=det.nrows,
+            ncols=det.ncols,
+            tilt=det.tilt,
+            azimuthal=det.azimuthal,
+            sample_tilt=det.sample_tilt,
+            mask=np.ones(det.size, dtype=bool),
         )
         assert np.allclose(dc, dc2)
 
@@ -330,6 +334,7 @@ class TestProjectFromLambert:
                 )
             ).reshape(nav_shape + (3,)),
         )
+
         sim1 = mp.get_patterns(rotations=rot1, detector=det1)
         assert sim1.axes_manager.navigation_shape[::-1] == nav_shape
         assert not np.allclose(sim1.data[0, 0], sim1.data[0, 1])
@@ -402,8 +407,6 @@ class TestProjectFromLambert:
             scale=float((npx - 1) / 2),
             dtype_out=mpu.dtype,
             rescale=False,
-            sig_shape=det.shape,
-            sig_size=det.size,
             # Are not used
             out_min=1,
             out_max=2,
@@ -412,12 +415,12 @@ class TestProjectFromLambert:
         patterns = _project_patterns_from_master_pattern_with_varying_pc.py_func(
             direction_cosines=dc, **kwargs
         )
-        assert patterns.shape == r.shape + det.shape
+        assert patterns.shape == r.shape + (det.size,)
 
         patterns2 = _project_patterns_from_master_pattern_with_fixed_pc.py_func(
             direction_cosines=dc[0], **kwargs
         )
-        assert patterns2.shape == r.shape + det.shape
+        assert patterns2.shape == r.shape + (det.size,)
 
     @pytest.mark.parametrize(
         "dtype_out, intensity_range", [(np.float32, (0, 1)), (np.uint8, (0, 255))]
@@ -432,7 +435,7 @@ class TestProjectFromLambert:
 
         pattern = _project_single_pattern_from_master_pattern.py_func(
             rotation=np.array([1, 1, 0, 0], dtype=float),
-            direction_cosines=dc.reshape((-1, 3)),
+            direction_cosines=dc,
             master_upper=mpu,
             master_lower=mpl,
             npx=npx,
@@ -441,7 +444,6 @@ class TestProjectFromLambert:
             rescale=True,
             out_min=intensity_range[0],
             out_max=intensity_range[1],
-            sig_size=self.detector.size,
             dtype_out=dtype_out,
         )
         assert pattern.shape == (self.detector.size,)
@@ -456,7 +458,7 @@ class TestProjectFromLambert:
         npx = npy = 101
         scale = (npx - 1) // 2
         nii, nij, niip, nijp = _get_lambert_interpolation_parameters.py_func(
-            v=dc.reshape((-1, 3)), npx=npx, npy=npy, scale=scale
+            v=dc, npx=npx, npy=npy, scale=scale
         )[:4]
 
         assert np.all(nii <= niip)
@@ -484,9 +486,7 @@ class TestProjectFromLambert:
             dj,
             dim,
             djm,
-        ) = _get_lambert_interpolation_parameters(
-            v=dc.reshape((-1, 3)), npx=npx, npy=npy, scale=scale
-        )
+        ) = _get_lambert_interpolation_parameters(v=dc, npx=npx, npy=npy, scale=scale)
         mp = np.ones((npy, npx), dtype=float)
         value = _get_pixel_from_master_pattern.py_func(
             mp, nii[0], nij[0], niip[0], nijp[0], di[0], dj[0], dim[0], djm[0]
@@ -502,24 +502,25 @@ class TestProjectFromLambert:
 
     def test_get_direction_cosines_for_multiple_pcs(self):
         """Make sure the Numba function is covered."""
-        detector = self.detector
-        dc0 = _get_direction_cosines_from_detector(detector)
+        det = self.detector
+        dc0 = _get_direction_cosines_from_detector(det)
         nav_shape = (2, 3)
-        detector.pc = np.full(nav_shape + (3,), detector.pc)
-        nrows, ncols = detector.shape
+        det.pc = np.full(nav_shape + (3,), det.pc)
+        nrows, ncols = det.shape
         dc = _get_direction_cosines_for_varying_pc.py_func(
-            pcx=detector.pcx.ravel(),
-            pcy=detector.pcy.ravel(),
-            pcz=detector.pcz.ravel(),
+            pcx=det.pcx.ravel(),
+            pcy=det.pcy.ravel(),
+            pcz=det.pcz.ravel(),
             nrows=nrows,
             ncols=ncols,
-            tilt=detector.tilt,
-            azimuthal=detector.azimuthal,
-            sample_tilt=detector.sample_tilt,
+            tilt=det.tilt,
+            azimuthal=det.azimuthal,
+            sample_tilt=det.sample_tilt,
+            mask=np.ones(det.size, dtype=bool),
         )
 
         assert np.allclose(dc0, dc[0])
-        assert dc.shape == (np.prod(nav_shape), nrows, ncols, 3)
+        assert dc.shape == (np.prod(nav_shape), nrows * ncols, 3)
 
 
 class TestMasterPatternPlotting:

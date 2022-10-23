@@ -64,7 +64,7 @@ def get_chunking(
         ``30000000``, ``"30 MB"``, ``"30MiB"``, or the default ``30e6``,
         all resulting in approximately 30 MB chunks.
     dtype
-        Data type of the array to chunk. Will take precedent over the
+        Data type of the array to chunk. Will take precedence over the
         signal data type if ``signal`` is given. Must be given if
         ``signal`` is not given.
 

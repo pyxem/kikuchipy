@@ -77,6 +77,7 @@ from kikuchipy.signals.util._map_helper import (
 )
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
+from kikuchipy._util import deprecated_argument
 
 
 class EBSD(KikuchipySignal2D):
@@ -906,6 +907,9 @@ class EBSD(KikuchipySignal2D):
                 metric=metric,
             )
 
+    @deprecated_argument(
+        name="mask", since="0.7.0", removal="0.8.0", alternative="signal_mask"
+    )
     def refine_orientation(
         self,
         xmap: CrystalMap,
@@ -913,6 +917,7 @@ class EBSD(KikuchipySignal2D):
         master_pattern: "EBSDMasterPattern",
         energy: Union[int, float],
         mask: Optional[np.ndarray] = None,
+        signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
@@ -925,17 +930,16 @@ class EBSD(KikuchipySignal2D):
 
         Refinement attempts to maximize the similarity between patterns
         in this signal and simulated patterns projected from a master
-        pattern. The only supported similarity metric is the normalized
-        cross-correlation (NCC). The orientation, represented by three
-        Euler angles (:math:`\phi_1`, :math:`\Phi`, :math:`\phi_2`), is
-        changed during projection, while the sample-detector geometry,
-        represented by the three projection center (PC) parameters
-        (PCx, PCy, PCz), is fixed.
+        pattern. The similarity metric used is the normalized
+        cross-correlation (NCC). The orientation, represented by a
+        Rodrigues-Frank vector (:math:`R_x`, :math:`R_y`, :math:`R_z`),
+        is optimized during refinement, while the sample-detector
+        geometry, represented by the three projection center (PC)
+        parameters (PCx, PCy, PCz), is fixed.
 
         A subset of the optimization methods in SciPy are available:
-            - Local optimization:
-                - :func:`~scipy.optimize.minimize`
-                  (includes Nelder-Mead, Powell etc.)
+            - Local optimization via :func:`~scipy.optimize.minimize`
+              (includes Nelder-Mead, Powell etc.)
             - Global optimization:
                 - :func:`~scipy.optimize.differential_evolution`
                 - :func:`~scipy.optimize.dual_annealing`
@@ -959,9 +963,16 @@ class EBSD(KikuchipySignal2D):
             which master pattern energy to use during projection of
             simulated patterns.
         mask
-            Boolean mask of signal shape to be applied to the simulated
-            pattern before comparison. Pixels set to ``True`` are masked
-            away. If not given, all pixels are matched.
+            A boolean mask equal to the experimental patterns' detector
+            shape ``(n rows, n columns)``, where only pixels equal to
+            ``False`` are matched. If not given, all pixels are used.
+
+            .. deprecated:: 0.7.0
+                Use ``signal_mask`` instead.
+        signal_mask
+            A boolean mask equal to the experimental patterns' detector
+            shape ``(n rows, n columns)``, where only pixels equal to
+            ``False`` are matched. If not given, all pixels are used.
         method
             Name of the :mod:`scipy.optimize` optimization method, among
             ``"minimize"``, ``"differential_evolution"``,
@@ -976,10 +987,10 @@ class EBSD(KikuchipySignal2D):
             ``method_kwargs=dict(method="Powell")``.
         trust_region
             List of +/- angular deviation in degrees as bound
-            constraints on the three Euler angles. If not given and
-            ``method`` requires bounds, they are set to ``[1, 1, 1]``.
-            If given, ``method`` is assumed to support bounds and they
-            are passed to ``method``.
+            constraints on the three Rodrigues-Frank vector components.
+            If not given and ``method`` requires bounds, they are set to
+            ``[1, 1, 1]``. If given, ``method`` is assumed to support
+            bounds and they are passed to ``method``.
         compute
             Whether to refine now (``True``) or later (``False``).
             Default is ``True``. See :meth:`~dask.array.Array.compute`
@@ -1015,9 +1026,13 @@ class EBSD(KikuchipySignal2D):
         scipy.optimize, refine_projection_center,
         refine_orientation_projection_center
         """
-        self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
-        patterns = self._get_dask_array_for_refinement(
-            rechunk=rechunk, chunk_kwargs=chunk_kwargs
+        if mask is not None:
+            signal_mask = mask
+        self._check_refinement_parameters(
+            xmap=xmap, detector=detector, signal_mask=signal_mask
+        )
+        patterns, signal_mask = self._prepare_patterns_for_refinement(
+            signal_mask=signal_mask, rechunk=rechunk, chunk_kwargs=chunk_kwargs
         )
         return _refine_orientation(
             xmap=xmap,
@@ -1025,14 +1040,16 @@ class EBSD(KikuchipySignal2D):
             master_pattern=master_pattern,
             energy=energy,
             patterns=patterns,
-            signal_indices_in_array=self.axes_manager.signal_indices_in_array,
-            mask=mask,
+            signal_mask=signal_mask,
             method=method,
             method_kwargs=method_kwargs,
             trust_region=trust_region,
             compute=compute,
         )
 
+    @deprecated_argument(
+        name="mask", since="0.7.0", removal="0.8.0", alternative="signal_mask"
+    )
     def refine_projection_center(
         self,
         xmap: CrystalMap,
@@ -1040,6 +1057,7 @@ class EBSD(KikuchipySignal2D):
         master_pattern: "EBSDMasterPattern",
         energy: Union[int, float],
         mask: Optional[np.ndarray] = None,
+        signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
@@ -1052,10 +1070,10 @@ class EBSD(KikuchipySignal2D):
 
         Refinement attempts to maximize the similarity between patterns
         in this signal and simulated patterns projected from a master
-        pattern. The only supported similarity metric is the normalized
+        pattern. The similarity metric used is the normalized
         cross-correlation (NCC). The sample-detector geometry,
         represented by the three projection center (PC) parameters
-        (PCx, PCy, PCz), is changed during projection, while the
+        (PCx, PCy, PCz), is updated during refinement, while the
         orientations are fixed.
 
         A subset of the optimization methods in SciPy are available:
@@ -1085,9 +1103,16 @@ class EBSD(KikuchipySignal2D):
             which master pattern energy to use during projection of
             simulated patterns.
         mask
-            Boolean mask of signal shape to be applied to the simulated
-            pattern before comparison. Pixels set to ``True`` are masked
-            away. If not given, all pixels are matched.
+            A boolean mask equal to the experimental patterns' detector
+            shape ``(n rows, n columns)``, where only pixels equal to
+            ``False`` are matched. If not given, all pixels are used.
+
+            .. deprecated:: 0.7.0
+                Use ``signal_mask`` instead.
+        signal_mask
+            A boolean mask equal to the experimental patterns' detector
+            shape ``(n rows, n columns)``, where only pixels equal to
+            ``False`` are matched. If not given, all pixels are used.
         method
             Name of the :mod:`scipy.optimize` optimization method, among
             ``"minimize"``, ``"differential_evolution"``,
@@ -1142,9 +1167,13 @@ class EBSD(KikuchipySignal2D):
         scipy.optimize, refine_orientation,
         refine_orientation_projection_center
         """
-        self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
-        patterns = self._get_dask_array_for_refinement(
-            rechunk=rechunk, chunk_kwargs=chunk_kwargs
+        if mask is not None:
+            signal_mask = mask
+        self._check_refinement_parameters(
+            xmap=xmap, detector=detector, signal_mask=signal_mask
+        )
+        patterns, signal_mask = self._prepare_patterns_for_refinement(
+            signal_mask=signal_mask, rechunk=rechunk, chunk_kwargs=chunk_kwargs
         )
         return _refine_projection_center(
             xmap=xmap,
@@ -1152,14 +1181,16 @@ class EBSD(KikuchipySignal2D):
             master_pattern=master_pattern,
             energy=energy,
             patterns=patterns,
-            signal_indices_in_array=self.axes_manager.signal_indices_in_array,
-            mask=mask,
+            signal_mask=signal_mask,
             method=method,
             method_kwargs=method_kwargs,
             trust_region=trust_region,
             compute=compute,
         )
 
+    @deprecated_argument(
+        name="mask", since="0.7.0", removal="0.8.0", alternative="signal_mask"
+    )
     def refine_orientation_projection_center(
         self,
         xmap: CrystalMap,
@@ -1167,6 +1198,7 @@ class EBSD(KikuchipySignal2D):
         master_pattern: "EBSDMasterPattern",
         energy: Union[int, float],
         mask: Optional[np.ndarray] = None,
+        signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
@@ -1180,11 +1212,11 @@ class EBSD(KikuchipySignal2D):
         Refinement attempts to maximize the similarity between patterns
         in this signal and simulated patterns projected from a master
         pattern. The only supported similarity metric is the normalized
-        cross-correlation (NCC). The orientation, represented by three
-        Euler angles (:math:`\phi_1`, :math:`\Phi`, :math:`\phi_2`), and
-        the sample-detector geometry, represented by the three
-        projection center (PC) parameters (PCx, PCy, PCz), are changed
-        during projection.
+        cross-correlation (NCC). The orientation, represented by a
+        Rodrigues-Frank vector (:math:`R_x`, :math:`R_y`, :math:`R_z`),
+        and the sample-detector geometry, represented by the three
+        projection center (PC) parameters (PCx, PCy, PCz), are updated
+        during refinement.
 
         A subset of the optimization methods in SciPy are available:
             - Local optimization:
@@ -1213,9 +1245,16 @@ class EBSD(KikuchipySignal2D):
             which master pattern energy to use during projection of
             simulated patterns.
         mask
-            Boolean mask of signal shape to be applied to the simulated
-            pattern before comparison. Pixels set to ``True`` are masked
-            away. If not given, all pixels are matched.
+            A boolean mask equal to the experimental patterns' detector
+            shape ``(n rows, n columns)``, where only pixels equal to
+            ``False`` are matched. If not given, all pixels are used.
+
+            .. deprecated:: 0.7.0
+                Use ``signal_mask`` instead.
+        signal_mask
+            A boolean mask equal to the experimental patterns' detector
+            shape ``(n rows, n columns)``, where only pixels equal to
+            ``False`` are matched. If not given, all pixels are used.
         method
             Name of the :mod:`scipy.optimize` optimization method, among
             ``"minimize"``, ``"differential_evolution"``,
@@ -1230,12 +1269,13 @@ class EBSD(KikuchipySignal2D):
             ``method_kwargs=dict(method="Powell")``.
         trust_region
             List of +/- angular deviations in degrees as bound
-            constraints on the three Euler angles and +/- percentage
-            deviations as bound constraints on the PC parameters in the
-            Bruker convention. The latter parameter range is [0, 1]. If
-            not given and ``method`` requires bounds, they are set to
-            ``[1, 1, 1, 0.05, 0.05, 0.05]``. If given, ``method`` is
-            assumed to support bounds and they are passed to ``method``.
+            constraints on the three Rodrigues-Frank vector components
+            and +/- percentage deviations as bound constraints on the PC
+            parameters in the Bruker convention. The latter parameter
+            range is [0, 1]. If not given and ``method`` requires
+            bounds, they are set to ``[1, 1, 1, 0.05, 0.05, 0.05]``. If
+            given, ``method`` is assumed to support bounds and they are
+            passed to ``method``.
         compute
             Whether to refine now (``True``) or later (``False``).
             Default is ``True``. See :meth:`~dask.array.Array.compute`
@@ -1263,9 +1303,9 @@ class EBSD(KikuchipySignal2D):
             (7,) is returned, to be computed later. See
             :func:`~kikuchipy.indexing.compute_refine_orientation_projection_center_results`.
             Each navigation point has the optimized score, the three
-            Euler angles in radians, and the three PC parameters in the
-            Bruker convention in element 0, 1, 2, 3, 4, 5, and 6,
-            respectively.
+            Rodriues-Frank vector components in radians, and the three
+            PC parameters in the Bruker convention in element 0, 1, 2,
+            3, 4, 5, and 6, respectively.
 
         See Also
         --------
@@ -1277,13 +1317,17 @@ class EBSD(KikuchipySignal2D):
         center at the same time for each map point. The optimization
         landscape is sloppy :cite:`pang2020optimization`, where the
         orientation and PC can make up for each other. Thus, it is
-        possible that the set of parameters that yield the highest
-        similarity is incorrect. It is left to the user to ensure that
+        possible that the parameters that yield the highest similarity
+        are incorrect. As always, it is left to the user to ensure that
         the output is reasonable.
         """
-        self._check_refinement_parameters(xmap=xmap, detector=detector, mask=mask)
-        patterns = self._get_dask_array_for_refinement(
-            rechunk=rechunk, chunk_kwargs=chunk_kwargs
+        if mask is not None:
+            signal_mask = mask
+        self._check_refinement_parameters(
+            xmap=xmap, detector=detector, signal_mask=signal_mask
+        )
+        patterns, signal_mask = self._prepare_patterns_for_refinement(
+            signal_mask=signal_mask, rechunk=rechunk, chunk_kwargs=chunk_kwargs
         )
         return _refine_orientation_projection_center(
             xmap=xmap,
@@ -1291,8 +1335,7 @@ class EBSD(KikuchipySignal2D):
             master_pattern=master_pattern,
             energy=energy,
             patterns=patterns,
-            signal_indices_in_array=self.axes_manager.signal_indices_in_array,
-            mask=mask,
+            signal_mask=signal_mask,
             method=method,
             method_kwargs=method_kwargs,
             trust_region=trust_region,
@@ -1999,7 +2042,7 @@ class EBSD(KikuchipySignal2D):
         self,
         xmap: CrystalMap,
         detector: EBSDDetector,
-        mask: Optional[np.ndarray] = None,
+        signal_mask: Optional[np.ndarray] = None,
     ):
         """Raise ValueError if EBSD refinement input is invalid."""
         _crystal_map_is_compatible_with_signal(
@@ -2016,23 +2059,62 @@ class EBSD(KikuchipySignal2D):
         )
         if len(xmap.phases.ids) != 1:
             raise ValueError("Crystal map must have exactly one phase")
-        if mask is not None and sig_shape != mask.shape:
-            raise ValueError("Mask and signal must have the same shape")
+        if signal_mask is not None and sig_shape != signal_mask.shape:
+            raise ValueError("Signal mask and signal axes must have the same shape")
 
-    def _get_dask_array_for_refinement(
-        self, rechunk: bool, chunk_kwargs: Optional[dict] = None
-    ) -> da.Array:
-        """Possibly rechunk pattern array before refinement."""
+    def _prepare_patterns_for_refinement(
+        self,
+        signal_mask: Union[np.ndarray, None],
+        rechunk: bool,
+        chunk_kwargs: Optional[dict] = None,
+    ) -> Tuple[da.Array, Union[np.ndarray, bool]]:
+        """Prepare pattern array and mask for refinement.
+
+        Parameters
+        ----------
+        signal_mask
+            A boolean mask equal to the experimental patterns' detector
+            shape ``(n rows, n columns)``, where only pixels equal to
+            ``False`` are matched. If not given, all pixels are used.
+        rechunk
+            Whether to allow rechunking of Dask array produced from the
+            signal patterns if the array has only one chunk.
+        chunk_kwargs
+            Keyword arguments passed to
+            :func:`kikuchipy.signals.util._dask.get_chunking`.
+
+        Returns
+        -------
+        patterns
+            Dask array.
+        mask
+            If ``mask`` is not ``None``, a boolean mask is returned,
+            else ``False`` is returned.
+        """
         patterns = get_dask_array(signal=self)
 
-        # Rechunk if (1) only one chunk and (2) it's allowed
+        # Flatten signal dimensions
+        patterns = patterns.reshape(patterns.shape[:-2] + (-1,))
+
+        # Prepare mask
+        if signal_mask is None:
+            signal_mask = np.ones(self.axes_manager.signal_size, dtype=bool)
+        else:
+            signal_mask = ~signal_mask.ravel()
+
         if (patterns.chunksize == patterns.shape) and rechunk:
             if chunk_kwargs is None:
                 chunk_kwargs = dict(chunk_shape=16, chunk_bytes=None)
-            chunks = get_chunking(signal=self, **chunk_kwargs)
+            chunks = get_chunking(
+                data_shape=patterns.shape,
+                nav_dim=self.axes_manager.navigation_dimension,
+                sig_dim=1,
+                dtype=self.data.dtype,
+                **chunk_kwargs,
+            )
             patterns = patterns.rechunk(chunks)
 
-        return patterns
+        return patterns, signal_mask
 
     @staticmethod
     def _get_sum_signal(signal, out_signal_axes: Optional[List] = None):
