@@ -1566,7 +1566,7 @@ class TestEBSDRefinement:
         with pytest.raises(ValueError, match="Crystal map must have exactly one phase"):
             _ = s.refine_orientation(xmap=xmap, **refine_kwargs)
 
-    def test_refine_mask(self, dummy_signal, get_single_phase_xmap):
+    def test_refine_signal_mask(self, dummy_signal, get_single_phase_xmap):
         s = dummy_signal
         xmap = get_single_phase_xmap(
             nav_shape=s.axes_manager.navigation_shape[::-1],
