@@ -88,7 +88,7 @@ html_theme_options = {
         },
     ],
     "github_url": "https://github.com/pyxem/kikuchipy",
-    "header_links_before_dropdown": 6,
+    "header_links_before_dropdown": 5,
     "icon_links": [
         {
             "name": "Gitter",
@@ -101,7 +101,6 @@ html_theme_options = {
             "icon": "fa-solid fa-box",
         },
     ],
-    "logo": {"text": "kikuchipy", "alt_text": "kikuchipy"},
     "navigation_with_keys": False,
     "show_toc_level": 2,
     "use_edit_page_button": True,
@@ -124,7 +123,7 @@ html_css_files = ["custom.css"]
 pygments_style = "friendly"
 
 # Logo
-html_logo = "_static/logo/plasma_logo.svg"
+html_logo = "_static/logo/plasma_banner.svg"
 html_favicon = "_static/logo/plasma_favicon.png"
 
 # Whether to show all warnings when building the documentation
