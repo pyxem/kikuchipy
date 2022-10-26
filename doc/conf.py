@@ -77,9 +77,41 @@ templates_path = ["_templates"]
 # affects html_static_path and html_extra_path.
 exclude_patterns = ["build", "_static/logo/*.ipynb"]
 
-# HTML theme: furo
-# https://pradyunsg.me/furo/
-html_theme = "furo"
+# HTML theme: pydata-sphinx-theme
+# https://pydata-sphinx-theme.readthedocs.io
+html_theme = "pydata_sphinx_theme"
+html_theme_options = {
+    "external_links": [
+        {
+            "name": "License",
+            "url": "https://github.com/pyxem/kikuchipy/blob/develop/LICENSE",
+        },
+    ],
+    "github_url": "https://github.com/pyxem/kikuchipy",
+    "header_links_before_dropdown": 6,
+    "icon_links": [
+        {
+            "name": "Gitter",
+            "url": "https://gitter.im/pyxem/kikuchipy",
+            "icon": "fab fa-gitter",
+        },
+        {
+            "name": "PyPI",
+            "url": "https://pypi.org/project/kikuchipy",
+            "icon": "fa-solid fa-box",
+        },
+    ],
+    "logo": {"text": "kikuchipy", "alt_text": "kikuchipy"},
+    "navigation_with_keys": False,
+    "show_toc_level": 2,
+    "use_edit_page_button": True,
+}
+html_context = {
+    "github_user": "pyxem",
+    "github_repo": "kikuchipy",
+    "github_version": "develop",
+    "doc_path": "doc",
+}
 
 # Add any paths that contain custom static files (such as style sheets)
 # here, relative to this directory. They are copied after the builtin
@@ -147,7 +179,7 @@ nbsphinx_prolog = (
     \sphinxcode{\sphinxupquote{\strut {{ docname | escape_latex }}}} \dotfill}}
 """
 )
-# https://nbsphinx.readthedocs.io/en/0.8.0/never-execute.html
+# https://nbsphinx.readthedocs.io/en/0.8.9/never-execute.html
 nbsphinx_execute = "auto"  # always, auto, never
 nbsphinx_allow_errors = True
 nbsphinx_execute_arguments = [
@@ -324,6 +356,6 @@ sphinx_gallery_conf = {
 autosummary_generate = True
 
 # Download example datasets prior to building the docs
-print("[kikuchipy] Downloading example datasets")
+print("[kikuchipy] Downloading example datasets (if not found in cache)")
 _ = kp.data.nickel_ebsd_large(allow_download=True)
 _ = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)

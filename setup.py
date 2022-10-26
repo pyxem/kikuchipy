@@ -43,12 +43,12 @@ with open("kikuchipy/release.py") as fid:
 # fmt: off
 extra_feature_requirements = {
     "doc": [
-        "furo",
         # TODO: Remove once https://github.com/pyxem/kikuchipy/issues/566 is resolved
         "ipywidgets                 <= 7.7",
         "memory_profiler",
         "nbsphinx                   >= 0.7",
         "numpydoc",
+        "pydata-sphinx-theme",
         "pyebsdindex                >= 0.1",
         "pythreejs",  # Used in the docs by PyVista
         "pyvista",
