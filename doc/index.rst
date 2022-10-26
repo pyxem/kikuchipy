@@ -9,8 +9,8 @@ analysis provided by the HyperSpy library.
 .. toctree::
     :hidden:
 
-    tutorials/index.rst
     examples/index.rst
+    tutorials/index.rst
     Reference <reference/index.rst>
     contributing.rst
     changelog.rst
