@@ -71,6 +71,8 @@ globally (in the ``conda`` environment)::
 This installs all necessary development dependencies, including those for running tests
 and building documentation.
 
+.. _code-style:
+
 Code style
 ==========
 
@@ -84,6 +86,11 @@ local commit. Please install it in your environment::
 
 Next time you commit some code, your code will be formatted inplace according to
 ``black``.
+
+``black`` can format Jupyter notebooks as well. Code lines in tutorial notebooks should
+be limited to 80 characters to display nicely in the documentation::
+
+    black -l 80 <your_nice_notebook>.ipynb
 
 Note that ``black`` won't format `docstrings
 <https://peps.python.org/pep-0257/>`__. We follow the `numpydoc
@@ -210,9 +217,10 @@ the :doc:`examples/index`. The examples are located in the top source directory
 ``examples/``, and a new directory ``doc/examples/`` is created when the docs are built.
 
 We use `nbsphinx <https://nbsphinx.readthedocs.io/en/latest/>`__ for converting
-notebooks into tutorials. The tutorials are located in the top source directory
-``tutorials/``, and links to these notebooks are added using
-`nbsphinx-link <https://github.com/vidartf/nbsphinx-link>`__.
+notebooks into tutorials displayed in the documentation. The tutorials are located in
+the top source directory ``tutorials/``, and links to these notebooks are added using
+`nbsphinx-link <https://github.com/vidartf/nbsphinx-link>`__. Code lines in notebooks
+should be `formatted with black <code-style>`__.
 
 Writing tutorial notebooks
 --------------------------
@@ -231,15 +239,15 @@ Here are some tips for writing tutorial notebooks:
 - Reference sections in other tutorial notebooks using this general Markdown
   ``[image quality](feature_maps.ipynb#image-quality)``.
 - Reference external APIs via standard Markdown like
-  ``[Signal2D](http://hyperspy.org/hyperspy-doc/current/api/hyperspy._signals.signal2d.html)``.
+  ``[Signal2D](https://hyperspy.org/hyperspy-doc/current/api/hyperspy._signals.signal2d.html)``.
 - The Sphinx gallery thumbnail used for a notebook is set by adding the
   ``nbsphinx-thumbnail`` tag to a code cell with an image output. The notebook must be
   added to the gallery in the README.rst to be included in the documentation pages.
-- The ``furo`` Sphinx theme displays the documentation in a light or dark theme,
-  depending on the browser/OS setting. It is important to make sure the documentation is
-  readable with both themes. This means explicitly printing the signal axes manager,
-  like ``print(s.axes_manager)``, and displaying all figures with a white background for
-  axes labels and ticks and figure titles etc. to be readable.
+- ``pydata_sphinx_theme`` displays the documentation in a light or dark theme, depending
+  on the browser/OS setting. It is important to make sure the documentation is readable
+  with both themes. This means explicitly printing the signal axes manager, like
+  ``print(s.axes_manager)``, and displaying all figures with a white background for axes
+  labels and ticks and figure titles etc. to be readable.
 - Whenever the documentation is built (locally or on the Read the Docs server),
   ``nbsphinx`` only runs the notebooks *without* any cell output stored. It is
   recommended that notebooks are stored without cell output, so that functionality
@@ -285,7 +293,7 @@ Writing API reference
 ---------------------
 
 Inherited attributes and methods are not listed in the API reference unless they are
-explicitly coded in the inheriting class. To see an example of this behaviour, see the
+explicitly coded in the inheriting class. To see an example of this behavior, see the
 source code of :class:`~kikuchipy.signals.EBSDMasterPattern`, which inherits attributes
 and methods from a private class ``KikuchiMasterPattern``.
 
