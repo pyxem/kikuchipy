@@ -118,7 +118,7 @@ html_favicon = "_static/logo/plasma_favicon.png"
 # nbsphinx
 # --------
 # https://nbsphinx.readthedocs.io
-nbsphinx_execute = "never"  # always, auto, never
+nbsphinx_execute = "auto"  # always, auto, never
 nbsphinx_allow_errors = True
 nbsphinx_execute_arguments = [
     "--InlineBackend.rc=figure.facecolor='w'",

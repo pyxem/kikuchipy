@@ -153,8 +153,8 @@ setup(
         "orix               >= 0.9",
         "pooch              >= 0.13",
         # TODO: Remove once https://github.com/hyperspy/hyperspy/pull/3052 is fixed
-        "pyyaml",
         "pint               <= 0.19",
+        "pyyaml",
         "tqdm               >= 0.5.2",
         "scikit-image       >= 0.16.2",
         "scikit-learn",
