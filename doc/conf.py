@@ -77,6 +77,7 @@ intersphinx_mapping = {
     "defdap": ("https://defdap.readthedocs.io/en/latest", None),
     "nbsphinx": ("https://nbsphinx.readthedocs.io/en/latest", None),
     "nbval": ("https://nbval.readthedocs.io/en/latest", None),
+    "numpydoc": ("https://numpydoc.readthedocs.io/en/latest", None),
     "pythreejs": ("https://pythreejs.readthedocs.io/en/stable", None),
     "pyxem": ("https://pyxem.readthedocs.io/en/latest", None),
     "readthedocs": ("https://docs.readthedocs.io/en/stable", None),
