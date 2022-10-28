@@ -3,10 +3,9 @@ Installation
 ============
 
 kikuchipy can be installed with `pip <https://pypi.org/project/kikuchipy/>`__,
-`conda <https://anaconda.org/conda-forge/kikuchipy>`__, the `HyperSpy Bundle
-<http://hyperspy.org/hyperspy-doc/current/user_guide/install.html#hyperspy-bundle>`__,
-or from source, and supports Python >= 3.7. All alternatives are available on Windows,
-macOS and Linux.
+`conda <https://anaconda.org/conda-forge/kikuchipy>`__, the
+:ref:`hyperspy:hyperspy-bundle`, or from source, and supports Python >= 3.7.
+All alternatives are available on Windows, macOS and Linux.
 
 .. _install-with-pip:
 
@@ -14,7 +13,8 @@ With pip
 ========
 
 kikuchipy is availabe from the Python Package Index (PyPI), and can therefore be
-installed with `pip <https://pip.pypa.io/en/stable>`__. To install, run the following::
+installed with `pip <https://pip.pypa.io/en/stable>`__.
+To install, run the following::
 
     pip install kikuchipy
 
@@ -33,7 +33,11 @@ Optional dependencies
 
 Some dependencies are optional and available via the following selectors:
 
-- ``viz``: 3D plot of master patterns using `pyvista <https://docs.pyvista.org/>`_
+======== ====================================== ==========================
+Selector Package(s)                             Purpose
+======== ====================================== ==========================
+``viz``  `pyvista <https://docs.pyvista.org/>`_ 3D plot of master patterns
+======== ====================================== ==========================
 
 Installing optional dependencies::
 
@@ -72,9 +76,8 @@ To install a specific version of kikuchipy (say version 0.5.8)::
 With the HyperSpy Bundle
 ========================
 
-kikuchipy is available in the HyperSpy Bundle. See `HyperSpy's documentation
-<http://hyperspy.org/hyperspy-doc/current/user_guide/install.html#hyperspy-bundle>`__
-for instructions.
+kikuchipy is available in the HyperSpy Bundle. See :ref:`hyperspy:hyperspy-bundle` for
+instructions.
 
 .. warning::
 
@@ -95,5 +98,31 @@ To install kikuchipy from source, clone the repository from `GitHub
     cd kikuchipy
     pip install --editable .
 
-See the :ref:`contributing guide <setting-up-a-development-installation>` for how
-to set up a development installation and keep it up to date.
+See the contributing guide for :ref:`setting-up-a-development-installation` and keeping
+it up to date.
+
+Dependencies
+============
+
+kikuchipy builds on the great work and effort of many people.
+This is a list of explicit package dependencies (some are `Optional dependencies`_):
+
+============================================================== =====================================================================
+Package                                                        Purpose
+============================================================== =====================================================================
+`dask <https://docs.dask.org>`__                               Out-of-memory processing of data larger than RAM
+`diffpy.structure <https://www.diffpy.org/diffpy.structure>`__ Handling of crystal structures
+`diffsims <https://diffsims.readthedocs.io/en/latest>`__       Handling of reciprocal lattice vectors and structure factors
+`hyperspy <https://hyperspy.org/hyperspy-doc/current>`__       Multi-dimensional data handling (EBSD class etc.)
+`h5py <https://docs.h5py.org/en/stable>`__                     Read/write of HDF5 files
+`imageio <https://imageio.readthedocs.io/en/stable>`__         Read image formats
+`matplotlib <https://matplotlib.org/stable>`__                 Visualization
+`numba <https://numba.pydata.org/numba-doc/latest/>`__         CPU acceleration
+`numpy <https://numpy.org/doc/stable>`__                       Handling of N-dimensional arrays
+`orix <https://orix.readthedocs.io/en/stable>`__               Handling and plotting of rotations and vectors using crystal symmetry
+`pooch <https://www.fatiando.org/pooch/latest/>`__             Downloading and caching of datasets
+`tqdm <https://tqdm.github.io/>`__                             Progressbars
+`scikit-image <https://scikit-image.org/>`__                   Image processing like adaptive histogram equalization
+`scikit-learn <https://scikit-learn.org/stable/>`__            Multivariate analysis
+`scipy <https://docs.scipy.org/doc/scipy/>`__                  Optimization algorithms, filtering and more
+============================================================== =====================================================================

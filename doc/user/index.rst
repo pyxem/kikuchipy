@@ -1,3 +1,5 @@
+.. _user:
+
 ==========
 User guide
 ==========
@@ -9,15 +11,17 @@ User guide
     installation.rst
 
 .. toctree::
-    :caption: Examples
+    :caption: Usage
+    :maxdepth: 2
 
-    examples/index.rst
+    ../tutorials/index.rst
+    ../examples/index.rst
 
 .. toctree::
-    :caption: Tutorials
+    :caption: Resources
 
-    tutorials/index.rst
-
-    related_projects.rst
-    open_datasets.rst
     bibliography.rst
+    applications.rst
+    open_datasets.rst
+    related_projects.rst
+    License <https://github.com/pyxem/kikuchipy/blob/develop/LICENSE>
