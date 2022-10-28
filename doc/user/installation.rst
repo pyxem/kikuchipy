@@ -121,6 +121,7 @@ Package                                                        Purpose
 `numpy <https://numpy.org/doc/stable>`__                       Handling of N-dimensional arrays
 `orix <https://orix.readthedocs.io/en/stable>`__               Handling and plotting of rotations and vectors using crystal symmetry
 `pooch <https://www.fatiando.org/pooch/latest/>`__             Downloading and caching of datasets
+`pyyaml <https://pyyaml.org/>`__                               Parcing of YAML files
 `tqdm <https://tqdm.github.io/>`__                             Progressbars
 `scikit-image <https://scikit-image.org/>`__                   Image processing like adaptive histogram equalization
 `scikit-learn <https://scikit-learn.org/stable/>`__            Multivariate analysis
