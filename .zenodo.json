@@ -1,0 +1,32 @@
+{
+  "creators": [
+    {
+      "name": "Håkon Wiik Ånes",
+      "orcid": "0000-0002-1213-2911",
+      "affiliation": "Norwegian University of Science and Technology"
+    },
+    {
+      "name": "Lars Lervik"
+    },
+    {
+      "name": "Ole Natlandsmyr"
+    },
+    {
+      "name": "Tina Bergh",
+      "orcid": "0000-0003-3757-3876",
+      "affiliation": "Norwegian University of Science and Technology"
+    },
+    {
+      "name": "Zhou Xu",
+      "affiliation": "Monash Centre for Electron Microscopy"
+    },
+    {
+      "name": "Eric Prestat"
+    },
+    {
+      "name": "Magnus Nord",
+      "orcid": "0000-0001-7981-5293",
+      "affiliation": "Norwegian University of Science and Technology"
+    }
+  ]
+}
