@@ -22,5 +22,5 @@
 - [ ] New functions are imported in corresponding `__init__.py`.
 - [ ] New features, API changes, and deprecations are mentioned in the unreleased
       section in `CHANGELOG.rst`.
-- [ ] New contributors are added to `release.py` and `.all-contributorsrc` and the table 
-      is regenerated.
+- [ ] New contributors are added to `release.py`, `.zenodo.json` and
+      `.all-contributorsrc` with the table regenerated.
