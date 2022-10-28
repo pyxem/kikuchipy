@@ -2,7 +2,7 @@
 Pattern binning
 ===============
 
-This example shows how bin :class:`~kikuchipy.signals.EBSD` patterns using HyperSpy's
+This example shows how to bin :class:`~kikuchipy.signals.EBSD` patterns using HyperSpy's
 :meth:`~hyperspy.signal.BaseSignal.rebin`.
 """
 
