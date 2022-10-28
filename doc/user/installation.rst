@@ -36,7 +36,7 @@ Some dependencies are optional and available via the following selectors:
 ======== ====================================== ==========================
 Selector Package(s)                             Purpose
 ======== ====================================== ==========================
-``viz``  `pyvista <https://docs.pyvista.org/>`_ 3D plot of master patterns
+``viz``  :doc:`pyvista<pyvista:index>`          3D plot of master patterns
 ======== ====================================== ==========================
 
 Installing optional dependencies::
@@ -48,9 +48,9 @@ Installing optional dependencies::
 With Anaconda
 =============
 
-To install with Anaconda, we recommend you install it in a `conda environment
-<https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>`__
-with the `Miniconda distribution <https://docs.conda.io/en/latest/miniconda.html>`__.
+To install with Anaconda, we recommend you install it in a
+:doc:`conda environment <conda:user-guide/tasks/manage-environments>` with the
+`Miniconda distribution <https://docs.conda.io/en/latest/miniconda.html>`__.
 To create an environment and activate it, run the following::
 
    conda create --name kp-env python=3.9
@@ -107,23 +107,23 @@ Dependencies
 kikuchipy builds on the great work and effort of many people.
 This is a list of explicit package dependencies (some are `Optional dependencies`_):
 
-============================================================== =====================================================================
-Package                                                        Purpose
-============================================================== =====================================================================
-`dask <https://docs.dask.org>`__                               Out-of-memory processing of data larger than RAM
-`diffpy.structure <https://www.diffpy.org/diffpy.structure>`__ Handling of crystal structures
-`diffsims <https://diffsims.readthedocs.io/en/latest>`__       Handling of reciprocal lattice vectors and structure factors
-`hyperspy <https://hyperspy.org/hyperspy-doc/current>`__       Multi-dimensional data handling (EBSD class etc.)
-`h5py <https://docs.h5py.org/en/stable>`__                     Read/write of HDF5 files
-`imageio <https://imageio.readthedocs.io/en/stable>`__         Read image formats
-`matplotlib <https://matplotlib.org/stable>`__                 Visualization
-`numba <https://numba.pydata.org/numba-doc/latest/>`__         CPU acceleration
-`numpy <https://numpy.org/doc/stable>`__                       Handling of N-dimensional arrays
-`orix <https://orix.readthedocs.io/en/stable>`__               Handling and plotting of rotations and vectors using crystal symmetry
-`pooch <https://www.fatiando.org/pooch/latest/>`__             Downloading and caching of datasets
-`pyyaml <https://pyyaml.org/>`__                               Parcing of YAML files
-`tqdm <https://tqdm.github.io/>`__                             Progressbars
-`scikit-image <https://scikit-image.org/>`__                   Image processing like adaptive histogram equalization
-`scikit-learn <https://scikit-learn.org/stable/>`__            Multivariate analysis
-`scipy <https://docs.scipy.org/doc/scipy/>`__                  Optimization algorithms, filtering and more
-============================================================== =====================================================================
+==================================================== ============================================================
+Package                                              Purpose
+==================================================== ============================================================
+:doc:`dask<dask:index>`                              Out-of-memory processing of data larger than RAM
+:doc:`diffpy.structure <diffpy.structure:index>`     Handling of crystal structures
+:doc:`diffsims <diffsims:index>`                     Handling of reciprocal lattice vectors and structure factors
+:doc:`hyperspy <hyperspy:index>`                     Multi-dimensional data handling (EBSD class etc.)
+:doc:`h5py <h5py:index>`                             Read/write of HDF5 files
+:doc:`imageio <imageio:index>`                       Read image formats
+:doc:`matplotlib <matplotlib:index>`                 Visualization
+:doc:`numba <numba:index>`                           CPU acceleration
+:doc:`numpy <numpy:index>`                           Handling of N-dimensional arrays
+:doc:`orix <orix:index>`                             Handling of rotations and vectors using crystal symmetry
+:doc:`pooch <pooch:api/index>`                       Downloading and caching of datasets
+`pyyaml <https://pyyaml.org/>`__                     Parcing of YAML files
+`tqdm <https://tqdm.github.io/>`__                   Progressbars
+:doc:`scikit-image <skimage:index>`                  Image processing like adaptive histogram equalization
+`scikit-learn <https://scikit-learn.org/stable/>`__  Multivariate analysis
+:doc:`scipy <scipy:index>`                           Optimization algorithms, filtering and more
+==================================================== ============================================================

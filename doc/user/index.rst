@@ -12,7 +12,7 @@ User guide
 
 .. toctree::
     :caption: Usage
-    :maxdepth: 2
+    :maxdepth: 3
 
     ../tutorials/index.rst
     ../examples/index.rst

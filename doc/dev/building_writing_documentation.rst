@@ -7,7 +7,7 @@ The documentation strategy is based on the `Diátaxis Framework
 <https://diataxis.fr/>`__.
 New documents should fit into one of these categories.
 
-We use `Sphinx <https://www.sphinx-doc.org/en/master/>`__ for documenting functionality.
+We use :doc:`Sphinx <sphinx:index>` for documenting functionality.
 Install necessary dependencies to build the documentation::
 
     pip install --editable .[doc]
@@ -25,27 +25,24 @@ Then, build the documentation from the ``doc`` directory::
     make html
 
 The documentation's HTML pages are built in the ``doc/build/html`` directory from files
-in the `reStructuredText (reST)
-<https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`__ plaintext
+in the :doc:`reStructuredText (reST) <sphinx:usage/restructuredtext/basics>` plaintext
 markup language.
 They should be accessible in the browser by typing
 ``file:///your/absolute/path/to/kikuchipy/doc/build/html/index.html`` in the address
 bar.
 
-We can link to other documentation in reStructuredText files using `Intersphinx
-<https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html>`__.
+We can link to other documentation in reStructuredText files using
+:doc:`Intersphinx <sphinx:usage/extensions/intersphinx>`.
 Which links are available from a package's documentation can be obtained like so::
 
     python -m sphinx.ext.intersphinx https://hyperspy.org/hyperspy-doc/current/objects.inv
 
-We use :doc:`Sphinx-Gallery <sphinx-gallery:index>` to build the :doc:`/examples`.
+We use :doc:`Sphinx-Gallery <sphinx-gallery:index>` to build the :ref:`examples`.
 The examples are located in the top source directory ``examples/``, and a new directory
 ``doc/examples/`` is created when the docs are built.
 
 We use :doc:`nbsphinx <nbsphinx:index>` for converting notebooks into tutorials
 displayed in the documentation.
-The tutorials are located in the top source directory ``tutorials/``, and links to these
-notebooks are added using `nbsphinx-link <https://github.com/vidartf/nbsphinx-link>`__.
 Code lines in notebooks should be :ref:`formatted with black <code-style>`.
 
 Writing tutorial notebooks
@@ -83,8 +80,7 @@ Here are some tips for writing tutorial notebooks:
   within them are run and tested to ensure continued compatibility with code changes.
   Cell output should only be stored in notebooks which are too computationally intensive
   for the Read the Docs server to handle, which has a limit of 15 minutes and 3 GB of
-  memory per `documentation build
-  <https://docs.readthedocs.io/en/stable/builds.html>`__.
+  memory per :doc:`documentation build <readthedocs:builds>`.
 - We also use ``black`` to format notebooks cells. To run the ``black`` formatter on
   your notebook(s) locally please specify the notebook(s), ie.
   ``black my_notebook.ipynb`` or ``black *.ipynb``, as ``black .`` will not format
@@ -96,12 +92,9 @@ Here are some tips for writing tutorial notebooks:
       python_code_block = not_to_be_formatted
       # fmt: on
 
-  Please see the `black documentation
-  <https://black.readthedocs.io/en/stable/index.html>`__ for more details.
-- Displaying interactive 3D plots with
-  `PyVista <https://docs.pyvista.org/user-guide/jupyter/index.html>`__ requires a
-  Jupyter backend, and we use `pythreejs
-  <https://github.com/jupyter-widgets/pythreejs>`__.
+  Please see the :doc:`black documentation <black:index>` for more details.
+- Displaying interactive 3D plots with :doc:`PyVista <pyvista:index>` requires a Jupyter
+  backend, and we use :doc:`pythreejs <pythreejs:index>`.
   This can either be passed to the plotting function, or it can be set in a hidden (see
   point above) notebook cell at the top of the notebook via
   ``pyvista.set_jupyter_backend("pythreejs")``.

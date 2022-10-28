@@ -44,7 +44,7 @@ with open("kikuchipy/release.py") as fid:
 extra_feature_requirements = {
     "doc": [
         # TODO: Remove once https://github.com/pyxem/kikuchipy/issues/566 is resolved
-        "ipywidgets                 <= 7.7",
+        "ipywidgets                 ~= 7.7",
         "memory_profiler",
         "nbsphinx                   >= 0.7",
         "numpydoc",

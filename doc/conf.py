@@ -53,6 +53,7 @@ extensions = [
 # Create links to references within kikuchipy's documentation to these
 # packages
 intersphinx_mapping = {
+    # Package
     "dask": ("https://docs.dask.org/en/stable", None),
     "diffpy.structure": ("https://www.diffpy.org/diffpy.structure", None),
     "diffsims": ("https://diffsims.readthedocs.io/en/latest", None),
@@ -60,17 +61,28 @@ intersphinx_mapping = {
     "h5py": ("https://docs.h5py.org/en/stable", None),
     "imageio": ("https://imageio.readthedocs.io/en/stable", None),
     "matplotlib": ("https://matplotlib.org/stable", None),
-    "nbsphinx": ("https://nbsphinx.readthedocs.io/en/latest", None),
-    "nbval": ("https://nbval.readthedocs.io/en/latest", None),
+    "numba": ("https://numba.pydata.org/numba-doc/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "orix": ("https://orix.readthedocs.io/en/stable", None),
+    "pooch": ("https://www.fatiando.org/pooch/latest", None),
     "pyebsdindex": ("https://pyebsdindex.readthedocs.io/en/stable", None),
     "python": ("https://docs.python.org/3", None),
     "pyvista": ("https://docs.pyvista.org", None),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "skimage": ("https://scikit-image.org/docs/stable", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
+    # Docs
+    "black": ("https://black.readthedocs.io/en/stable", None),
+    "conda": ("https://conda.io/projects/conda/en/latest", None),
+    "defdap": ("https://defdap.readthedocs.io/en/latest", None),
+    "nbsphinx": ("https://nbsphinx.readthedocs.io/en/latest", None),
+    "nbval": ("https://nbval.readthedocs.io/en/latest", None),
+    "pythreejs": ("https://pythreejs.readthedocs.io/en/stable", None),
+    "pyxem": ("https://pyxem.readthedocs.io/en/latest", None),
+    "readthedocs": ("https://docs.readthedocs.io/en/stable", None),
+    "sphinx": ("https://www.sphinx-doc.org/en/master", None),
     "sphinx-gallery": ("https://sphinx-gallery.github.io/stable", None),
+    "xcdskd": ("https://xcdskd.readthedocs.io/en/latest", None),
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -151,7 +163,7 @@ nbsphinx_prolog = (
 )
 
 # Whether to show all warnings when building the documentation
-nitpicky = True
+nitpicky = False
 
 # sphinxcontrib-bibtex
 # --------------------
@@ -237,7 +249,7 @@ def linkcode_resolve(domain, info):
 # PyVista
 # -------
 # https://docs.pyvista.org
-pyvista.global_theme.window_size = [630, 630]
+pyvista.global_theme.window_size = [600, 600]
 pyvista.set_jupyter_backend("pythreejs")
 
 # -- Copy button customization (taken from PyVista)
