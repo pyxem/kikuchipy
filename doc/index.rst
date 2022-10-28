@@ -8,18 +8,12 @@ analysis provided by the HyperSpy library.
 
 .. toctree::
     :hidden:
+    :titlesonly:
 
-    examples/index.rst
-    tutorials/index.rst
-    Reference <reference/index.rst>
-    contributing.rst
+    user/index.rst
+    reference/index.rst
+    dev/index.rst
     changelog.rst
-    related_projects.rst
-    bibliography.rst
-    open_datasets.rst
-    installation.rst
-    Code of Conduct <code_of_conduct.rst>
-
 
 Installation
 ============
@@ -41,48 +35,51 @@ kikuchipy can be installed with `pip <https://pypi.org/project/kikuchipy>`__ or
 
             conda install kikuchipy -c conda-forge
 
-Further details are available in the :doc:`installation guide <installation>`.
+Further details are available in the :doc:`installation guide <user/installation>`.
 
 Learning resources
 ==================
 
 .. See: https://sphinx-design.readthedocs.io/en/furo-theme/grids.html
-.. grid:: 2 3 3 3
+.. grid:: 2
     :gutter: 2
 
-    .. grid-item-card:: Examples
-        :img-top: _static/image/colormap_banners/banner0.png
-        :link: examples/index
-        :link-type: doc
-
-        Short recipies to common tasks using kikuchipy.
-
-    .. grid-item-card:: Tutorials
-        :img-top: _static/image/colormap_banners/banner1.png
+    .. grid-item-card::
         :link: tutorials/index
         :link-type: doc
 
+        :octicon:`book;2em;sd-text-info` Tutorials
+        ^^^
+
         In-depth guides for using kikuchipy.
 
-    .. grid-item-card:: API reference
-        :img-top: _static/image/colormap_banners/banner2.png
+    .. grid-item-card::
+        :link: examples/index
+        :link-type: doc
+
+        :octicon:`zap;2em;sd-text-info` Examples
+        ^^^
+
+        Short recipies to common tasks using kikuchipy.
+
+    .. grid-item-card::
         :link: reference/index
         :link-type: doc
 
-        Descriptions of functions, modules, and objects in kikuchipy.
+        :octicon:`code;2em;sd-text-info` API reference
+        ^^^
 
-Contributing
-============
+        Descriptions of all functions, modules, and objects in kikuchipy.
 
-kikuchipy is a community project maintained for and by its users. There are many ways
-you can help!
+    .. grid-item-card::
+        :link: dev/index
+        :link-type: doc
 
-- Help other users in `our GitHub discussions
-  <https://github.com/pyxem/kikuchipy/discussions>`__ or `on Gitter
-  <https://gitter.im/pyxem/kikuchipy>`__
-- report a bug or request a feature `on GitHub
-  <https://github.com/pyxem/kikuchipy/issues>`__
-- or improve the :doc:`documentation and code <contributing>`
+        :octicon:`people;2em;sd-text-info` Contributing
+        ^^^
+
+        kikuchipy is a community project maintained for and by its users. There are many
+        ways you can help!
 
 Citing kikuchipy
 ================
