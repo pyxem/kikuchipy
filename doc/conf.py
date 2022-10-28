@@ -57,7 +57,11 @@ intersphinx_mapping = {
     "diffpy.structure": ("https://www.diffpy.org/diffpy.structure", None),
     "diffsims": ("https://diffsims.readthedocs.io/en/latest", None),
     "hyperspy": ("https://hyperspy.org/hyperspy-doc/current", None),
+    "h5py": ("https://docs.h5py.org/en/stable", None),
+    "imageio": ("https://imageio.readthedocs.io/en/stable", None),
     "matplotlib": ("https://matplotlib.org/stable", None),
+    "nbsphinx": ("https://nbsphinx.readthedocs.io/en/latest", None),
+    "nbval": ("https://nbval.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "orix": ("https://orix.readthedocs.io/en/stable", None),
     "pyebsdindex": ("https://pyebsdindex.readthedocs.io/en/stable", None),
@@ -66,7 +70,7 @@ intersphinx_mapping = {
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "skimage": ("https://scikit-image.org/docs/stable", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
-    "h5py": ("https://docs.h5py.org/en/stable", None),
+    "sphinx-gallery": ("https://sphinx-gallery.github.io/stable", None),
 }
 
 # Add any paths that contain templates here, relative to this directory.
@@ -77,30 +81,20 @@ templates_path = ["_templates"]
 # affects html_static_path and html_extra_path.
 exclude_patterns = ["build", "_static/logo/*.ipynb"]
 
-# HTML theme: pydata-sphinx-theme
+# HTML theming: pydata-sphinx-theme
 # https://pydata-sphinx-theme.readthedocs.io
 html_theme = "pydata_sphinx_theme"
 html_theme_options = {
-    "external_links": [
-        {
-            "name": "License",
-            "url": "https://github.com/pyxem/kikuchipy/blob/develop/LICENSE",
-        },
-    ],
     "github_url": "https://github.com/pyxem/kikuchipy",
-    "header_links_before_dropdown": 5,
+    "header_links_before_dropdown": 6,
     "icon_links": [
         {
             "name": "Gitter",
             "url": "https://gitter.im/pyxem/kikuchipy",
             "icon": "fab fa-gitter",
         },
-        {
-            "name": "PyPI",
-            "url": "https://pypi.org/project/kikuchipy",
-            "icon": "fa-solid fa-box",
-        },
     ],
+    "logo": {"alt_text": "kikuchipy"},
     "navigation_with_keys": False,
     "show_toc_level": 2,
     "use_edit_page_button": True,
@@ -111,11 +105,6 @@ html_context = {
     "github_version": "develop",
     "doc_path": "doc",
 }
-
-# Add any paths that contain custom static files (such as style sheets)
-# here, relative to this directory. They are copied after the builtin
-# static files, so a file named "default.css" will overwrite the builtin
-# "default.css".
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
 
@@ -123,14 +112,17 @@ html_css_files = ["custom.css"]
 pygments_style = "friendly"
 
 # Logo
-html_logo = "_static/logo/plasma_banner.svg"
+html_logo = "_static/logo/plasma_banner.png"
 html_favicon = "_static/logo/plasma_favicon.png"
 
-# Whether to show all warnings when building the documentation
-nitpicky = True
-
-# -- nbsphinx
+# nbsphinx
+# --------
 # https://nbsphinx.readthedocs.io
+nbsphinx_execute = "never"  # always, auto, never
+nbsphinx_allow_errors = True
+nbsphinx_execute_arguments = [
+    "--InlineBackend.rc=figure.facecolor='w'",
+]
 # Taken from nbsphinx' own nbsphinx configuration file, with slight
 # modifications to point nbviewer and Binder to the GitHub develop
 # branch links when the documentation is launched from a kikuchipy
@@ -139,59 +131,36 @@ if "dev" in version:
     release_version = "develop"
 else:
     release_version = "v" + version
-# This is processed by Jinja2 and inserted before each notebook
 nbsphinx_prolog = (
     r"""
 {% set docname = 'doc/' + env.doc2path(env.docname, base=None)[:-6] + '.ipynb' %}
 
-.. raw:: html
+.. admonition:: Live notebook
 
-    <style>a:hover { text-decoration: underline; }</style>
-
-    <div class="admonition note">
-      This page was generated from
-      <a class="reference external" href="https://github.com/pyxem/kikuchipy/blob/"""
+    You can run this notebook in a `live session <https://mybinder.org/v2/gh/pyxem/kikuchipy/"""
     + release_version
-    + r"""/{{ docname|e }}">{{ docname|e }}</a>.
-      Interactive online version:
-      <span style="white-space: nowrap;"><a href="https://mybinder.org/v2/gh/pyxem/kikuchipy/"""
+    + r"""?filepath={{ docname|e }}>`__ |Binder| or view it `on Github <https://github.com/pyxem/kikuchipy/blob/"""
     + release_version
-    + r"""?filepath={{ docname|e }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>.</span>
-      <script>
-        if (document.location.host) {
-          $(document.currentScript).replaceWith(
-            '<a class="reference external" ' +
-            'href="https://nbviewer.jupyter.org/url' +
-            (window.location.protocol == 'https:' ? 's/' : '/') +
-            window.location.host +
-            window.location.pathname.slice(0, -4) +
-            'ipynb">View in <em>nbviewer</em></a>.'
-          );
-        }
-      </script>
-    </div>
+    + r"""/{{ docname|e }}>`__.
 
-.. raw:: latex
-
-    \nbsphinxstartnotebook{\scriptsize\noindent\strut
-    \textcolor{gray}{The following section was generated from
-    \sphinxcode{\sphinxupquote{\strut {{ docname | escape_latex }}}} \dotfill}}
+.. |Binder| image:: https://static.mybinder.org/badge_logo.svg
+   :target: https://mybinder.org/v2/gh/pyxem/kikuchipy/"""
+    + release_version
+    + r"""?filepath={{ docname|e }}
 """
 )
-# https://nbsphinx.readthedocs.io/en/0.8.9/never-execute.html
-nbsphinx_execute = "auto"  # always, auto, never
-nbsphinx_allow_errors = True
-nbsphinx_execute_arguments = [
-    "--InlineBackend.rc=figure.facecolor='w'",
-    "--InlineBackend.rc=font.size=15",
-]
 
-# -- sphinxcontrib-bibtex
+# Whether to show all warnings when building the documentation
+nitpicky = True
+
+# sphinxcontrib-bibtex
+# --------------------
 # https://sphinxcontrib-bibtex.readthedocs.io
-bibtex_bibfiles = ["bibliography.bib"]
+bibtex_bibfiles = ["user/bibliography.bib"]
 bibtex_reference_style = "author_year"
 
-# -- sphinx-codeautolink
+# sphinx-codeautolink
+# -------------------
 codeautolink_custom_blocks = {
     "python3": None,
     "pycon3": "sphinx_codeautolink.clean_pycon",
@@ -265,9 +234,10 @@ def linkcode_resolve(domain, info):
         return None
 
 
-# -- PyVista
+# PyVista
+# -------
 # https://docs.pyvista.org
-pyvista.global_theme.window_size = [700, 700]
+pyvista.global_theme.window_size = [630, 630]
 pyvista.set_jupyter_backend("pythreejs")
 
 # -- Copy button customization (taken from PyVista)
@@ -275,7 +245,8 @@ pyvista.set_jupyter_backend("pythreejs")
 copybutton_prompt_text = r">>> ?|\.\.\. "
 copybutton_prompt_is_regexp = True
 
-# -- sphinx.ext.autodoc
+# sphinx.ext.autodoc
+# ------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html
 autosummary_ignore_module_all = False
 autosummary_imported_members = True
@@ -284,7 +255,8 @@ autodoc_default_options = {
     "show-inheritance": True,
 }
 
-# -- numpydoc
+# numpydoc
+# --------
 # https://numpydoc.readthedocs.io
 numpydoc_show_class_members = False
 numpydoc_use_plots = True
@@ -309,7 +281,8 @@ numpydoc_validation_checks = {
 }
 # fmt: on
 
-# -- matplotlib.sphinxext.plot_directive
+# matplotlib.sphinxext.plot_directive
+# -----------------------------------
 # https://matplotlib.org/stable/api/sphinxext_plot_directive_api.html
 plot_formats = ["png"]
 plot_html_show_source_link = False
@@ -339,8 +312,8 @@ def _str_examples(self):
 
 SphinxDocString._str_examples = _str_examples
 
-
-# -- Sphinx-Gallery
+# Sphinx-Gallery
+# --------------
 # https://sphinx-gallery.github.io
 sphinx_gallery_conf = {
     "backreferences_dir": "reference/generated",
@@ -349,7 +322,7 @@ sphinx_gallery_conf = {
     "filename_pattern": "^((?!sgskip).)*$",
     "gallery_dirs": "examples",
     "reference_url": {"kikuchipy": None},
-    "run_stale_examples": True,
+    "run_stale_examples": False,
     "show_memory": True,
 }
 autosummary_generate = True
