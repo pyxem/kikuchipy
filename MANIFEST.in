@@ -16,6 +16,6 @@ recursive-include doc Makefile make.bat *.rst *.py *.bib *.ipynb *.txt *.cfg *.s
 recursive-include doc/_static *.png *.jpg *.svg *.css *.sh
 
 recursive-include kikuchipy/data *
-recursive-include examples *.txt *.py
+recursive-include examples *.rst *.py
 
 recursive-include benchmarks *.py

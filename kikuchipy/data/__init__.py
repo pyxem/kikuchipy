@@ -19,7 +19,7 @@
 
 Some datasets are packaged with the source code while others must be
 downloaded from the web. For more test datasets, see
-:doc:`/open_datasets`.
+:doc:`/user/open_datasets`.
 
 Datasets are placed in a local cache, in the location returned from
 ``pooch.os_cache("kikuchipy")`` by default. The location can be

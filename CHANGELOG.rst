@@ -59,6 +59,8 @@ Added
 
 Changed
 -------
+- Documentation theme from *Furo* to *PyData*, as the growing API reference is easier to
+  navigate with the latter. (`#574 <https://github.com/pyxem/kikuchipy/pull/574>`_)
 - Use Rodrigues-Frank vector components (Rx, Ry, Rz) instead of Euler angles in EBSD
   orientation and projection center refinement methods. This means that if refinement is
   not directly but a Dask array is returned from any of these methods, the data which

@@ -1,2 +1,0 @@
-Select and bin patterns
------------------------
