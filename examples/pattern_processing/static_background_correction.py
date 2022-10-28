@@ -13,7 +13,7 @@ import kikuchipy as kp
 
 # Load high resolution Si pattern and check that the background pattern
 # is stored with the signal
-s = kp.data.silicon_ebsd_moving_screen_out5mm()
+s = kp.data.silicon_ebsd_moving_screen_in()
 print(s.static_background)
 
 # Keep original for comparison and remove background
