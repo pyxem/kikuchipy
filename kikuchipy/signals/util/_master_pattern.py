@@ -60,6 +60,7 @@ patterns into a detector.
 
 from typing import Optional, Tuple, Union
 
+from numba import njit
 import numba as nb
 import numpy as np
 
@@ -72,9 +73,34 @@ from kikuchipy._rotation import _rotate_vector
 SQRT_PI_HALF = np.sqrt(np.pi / 2)
 
 
-def _get_direction_cosines_for_single_pc_from_detector(detector) -> np.ndarray:
-    pcx, pcy, pcz = detector.pc[0].astype(float)
-    return _get_direction_cosines_for_single_pc(
+def _get_direction_cosines_from_detector(
+    detector: "EBSDDetector", mask: Optional[np.ndarray] = None
+) -> np.ndarray:
+    """Return direction cosines for one or more projection centers
+    (PCs).
+
+    Parameters
+    ----------
+    detector
+        EBSD detector with one or more PCs.
+    mask
+        1D signal mask with ``True`` values for pixels to get direction
+        cosines for.
+
+    Returns
+    -------
+    dc
+        Flattened direction cosines.
+    """
+    if detector.navigation_shape == (1,):
+        pcx, pcy, pcz = detector.pc.squeeze().astype(np.float64)
+        func = _get_direction_cosines_for_fixed_pc
+    else:
+        pcx, pcy, pcz = detector.pc.reshape((-1, 3)).T.astype(np.float64)
+        func = _get_direction_cosines_for_varying_pc
+    if mask is None:
+        mask = np.ones(detector.shape, dtype=bool).ravel()
+    return func(
         pcx=pcx,
         pcy=pcy,
         pcz=pcz,
@@ -83,13 +109,15 @@ def _get_direction_cosines_for_single_pc_from_detector(detector) -> np.ndarray:
         tilt=detector.tilt,
         azimuthal=detector.azimuthal,
         sample_tilt=detector.sample_tilt,
+        mask=mask,
     )
 
 
-@nb.jit(
+@njit(
     "Tuple((float64, float64, float64, float64))(float64, float64, float64)",
+    cache=True,
     nogil=True,
-    nopython=True,
+    fastmath=True,
 )
 def _get_cosine_sine_of_alpha_and_azimuthal(
     sample_tilt: float, tilt: float, azimuthal: float
@@ -99,15 +127,16 @@ def _get_cosine_sine_of_alpha_and_azimuthal(
     return np.cos(alpha), np.sin(alpha), np.cos(azimuthal), np.sin(azimuthal)
 
 
-@nb.jit(
+@njit(
     (
-        "float64[:, :, :]"
-        "(float64, float64, float64, int64, int64, float64, float64, float64)"
+        "float64[:, :]"
+        "(float64, float64, float64, int64, int64, float64, float64, float64, bool_[:])"
     ),
+    cache=True,
     nogil=True,
-    nopython=True,
+    fastmath=True,
 )
-def _get_direction_cosines_for_single_pc(
+def _get_direction_cosines_for_fixed_pc(
     pcx: float,
     pcy: float,
     pcz: float,
@@ -116,15 +145,16 @@ def _get_direction_cosines_for_single_pc(
     tilt: float,
     azimuthal: float,
     sample_tilt: float,
+    mask: np.ndarray,
 ) -> np.ndarray:
-    """Get the direction cosines between the detector and sample for a
-    single projection center, as implemented in EMsoft and shown in
-    :cite:`callahan2013dynamical`.
+    """Return direction cosines for a single projection center (PC).
+
+    Algorithm adapted from EMsoft, see :cite:`callahan2013dynamical`.
 
     Parameters
     ----------
     pcx
-        Projection center (PC) x coordinate.
+        PC x coordinate.
     pcy
         PC y coordinate.
     pcz
@@ -139,12 +169,15 @@ def _get_direction_cosines_for_single_pc(
         Sample tilt about the sample RD axis in degrees.
     sample_tilt
         Sample tilt from horizontal in degrees.
+    mask
+        1D signal mask with ``True`` values for pixels to get direction
+        cosines for.
 
     Returns
     -------
     r_g_array
-        Direction cosines for each detector pixel of shape (nrows,
-        ncols, 3) and data type of 64-bit floats.
+        Direction cosines for detector pixels in the mask of shape
+        (n_pixels, 3) and data type of 64-bit floats.
 
     See Also
     --------
@@ -155,7 +188,7 @@ def _get_direction_cosines_for_single_pc(
     This function is optimized with Numba, so care must be taken with
     array shapes and data types.
     """
-    nrows_array = np.arange(nrows)
+    nrows_array = np.arange(nrows - 1, -1, -1)
     ncols_array = np.arange(ncols)
 
     # Bruker to EMsoft's v5 PC convention
@@ -171,18 +204,18 @@ def _get_direction_cosines_for_single_pc(
         tilt=tilt,
         azimuthal=azimuthal,
     )
-
     Ls = -sw * det_x + zpc * cw
     Lc = cw * det_x + zpc * sw
 
-    r_g_array = np.zeros((nrows, ncols, 3))
-
-    for row in nb.prange(nrows):
-        rr = nrows - row - 1
-        for col in nb.prange(ncols):
-            r_g_array[row, col, 0] = det_y[rr] * ca + sa * Ls[col]
-            r_g_array[row, col, 1] = Lc[col]
-            r_g_array[row, col, 2] = -sa * det_y[rr] + ca * Ls[col]
+    idx_1d = np.arange(nrows * ncols)[mask]
+    rows = idx_1d // ncols
+    cols = np.mod(idx_1d, ncols)
+    n_pixels = idx_1d.size
+    r_g_array = np.zeros((n_pixels, 3), dtype=np.float64)
+    for i in nb.prange(n_pixels):
+        r_g_array[i, 0] = det_y[rows[i]] * ca + sa * Ls[cols[i]]
+        r_g_array[i, 1] = Lc[cols[i]]
+        r_g_array[i, 2] = -sa * det_y[rows[i]] + ca * Ls[cols[i]]
 
     # Normalize
     norm = np.sqrt(np.sum(np.square(r_g_array), axis=-1))
@@ -192,15 +225,16 @@ def _get_direction_cosines_for_single_pc(
     return r_g_array
 
 
-@nb.jit(
+@njit(
     (
-        "float64[:, :, :, :]"
-        "(float64[:], float64[:], float64[:], int64, int64, float64, float64, float64)"
+        "float64[:, :, :]"
+        "(float64[:], float64[:], float64[:], int64, int64, float64, float64, float64, bool_[:])"
     ),
+    cache=True,
     nogil=True,
-    nopython=True,
+    fastmath=True,
 )
-def _get_direction_cosines_for_multiple_pcs(
+def _get_direction_cosines_for_varying_pc(
     pcx: np.ndarray,
     pcy: np.ndarray,
     pcz: np.ndarray,
@@ -209,15 +243,17 @@ def _get_direction_cosines_for_multiple_pcs(
     tilt: float,
     azimuthal: float,
     sample_tilt: float,
+    mask: np.ndarray,
 ) -> np.ndarray:
-    """Get the direction cosines between the detector and sample for
-    multiple projection centers, as implemented in EMsoft and shown in
-    :cite:`callahan2013dynamical`.
+    """Return sets of direction cosines for varying projection centers
+    (PCs).
+
+    Algorithm adapted from EMsoft, see :cite:`callahan2013dynamical`.
 
     Parameters
     ----------
     pcx
-        Projection center (PC) x coordinates. Must be a 1D array.
+        PC x coordinates. Must be a 1D array.
     pcy
         PC y coordinates. Must be a 1D array.
     pcz
@@ -232,12 +268,15 @@ def _get_direction_cosines_for_multiple_pcs(
         Sample tilt about the sample RD axis in degrees.
     sample_tilt
         Sample tilt from horizontal in degrees.
+    mask
+        1D signal mask with ``True`` values for pixels to get direction
+        cosines for.
 
     Returns
     -------
     r_g_array
         Direction cosines for each detector pixel for each PC, of shape
-        (n PCs, nrows, ncols, 3) and data type of 64-bit floats.
+        (n PCs, n_pixels, 3) and data type of 64-bit floats.
 
     See Also
     --------
@@ -248,7 +287,7 @@ def _get_direction_cosines_for_multiple_pcs(
     This function is optimized with Numba, so care must be taken with
     array shapes and data types.
     """
-    nrows_array = np.arange(nrows)
+    nrows_array = np.arange(nrows - 1, -1, -1)
     ncols_array = np.arange(ncols)
 
     ca, sa, cw, sw = _get_cosine_sine_of_alpha_and_azimuthal(
@@ -260,14 +299,19 @@ def _get_direction_cosines_for_multiple_pcs(
     det_x_factor = (1 - ncols) * 0.5
     det_y_factor = (1 - nrows) * 0.5
 
-    n_pcs = pcx.size
-    r_g_array = np.zeros((n_pcs, nrows, ncols, 3))
+    idx_1d = np.arange(nrows * ncols)[mask]
+    rows = idx_1d // ncols
+    cols = np.mod(idx_1d, ncols)
 
-    for pci in nb.prange(n_pcs):
+    n_pcs = pcx.size
+    n_pixels = idx_1d.size
+    r_g_array = np.zeros((n_pcs, n_pixels, 3), dtype=np.float64)
+
+    for i in nb.prange(n_pcs):
         # Bruker to EMsoft's v5 PC convention
-        xpc = ncols * (0.5 - pcx[pci])
-        ypc = nrows * (0.5 - pcy[pci])
-        zpc = nrows * pcz[pci]
+        xpc = ncols * (0.5 - pcx[i])
+        ypc = nrows * (0.5 - pcy[i])
+        zpc = nrows * pcz[i]
 
         det_x = xpc + det_x_factor + ncols_array
         det_y = ypc - det_y_factor - nrows_array
@@ -275,12 +319,10 @@ def _get_direction_cosines_for_multiple_pcs(
         Ls = -sw * det_x + zpc * cw
         Lc = cw * det_x + zpc * sw
 
-        for row in nb.prange(nrows):
-            rr = nrows - row - 1
-            for col in nb.prange(ncols):
-                r_g_array[pci, row, col, 0] = det_y[rr] * ca + sa * Ls[col]
-                r_g_array[pci, row, col, 1] = Lc[col]
-                r_g_array[pci, row, col, 2] = -sa * det_y[rr] + ca * Ls[col]
+        for j in nb.prange(n_pixels):
+            r_g_array[i, j, 0] = det_y[rows[j]] * ca + sa * Ls[cols[j]]
+            r_g_array[i, j, 1] = Lc[cols[j]]
+            r_g_array[i, j, 2] = -sa * det_y[rows[j]] + ca * Ls[cols[j]]
 
     # Normalize
     norm = np.sqrt(np.sum(np.square(r_g_array), axis=-1))
@@ -290,8 +332,8 @@ def _get_direction_cosines_for_multiple_pcs(
     return r_g_array
 
 
-@nb.jit(nogil=True, nopython=True)
-def _project_patterns_from_master_pattern(
+@njit(cache=True, nogil=True, fastmath=True)
+def _project_patterns_from_master_pattern_with_fixed_pc(
     rotations: np.ndarray,
     direction_cosines: np.ndarray,
     master_upper: np.ndarray,
@@ -304,18 +346,16 @@ def _project_patterns_from_master_pattern(
     out_max: Union[int, float],
     dtype_out: Optional[type] = np.float32,
 ) -> np.ndarray:
-    """Project one simulated EBSD pattern onto a detector per rotation,
-    given one direction cosine per detector pixel, describing the
-    detector's view of the sample.
+    """Return one or more simulated EBSD patterns projected from a
+    master pattern with a fixed projection center (PC).
 
     Parameters
     ----------
     rotations
-        Array of rotations of shape (..., 4) for a given chunk as
-        quaternions.
+        2D array of quaternions of shape (n, 4) for a given chunk.
     direction_cosines
-        Direction cosines (unit vectors) between detector and sample of
-        shape (nrows, ncols, 3).
+        Single set of direction cosines (unit vectors) between detector
+        and sample of shape (m pixels, 3) (the PC).
     master_upper
         Upper hemisphere of the master pattern.
     master_lower
@@ -329,47 +369,120 @@ def _project_patterns_from_master_pattern(
         pattern.
     rescale
         Whether to rescale pattern intensities.
+    out_min
+        Minimum intensity of output patterns.
+    out_max
+        Maximum intensity of output patterns.
     dtype_out
         NumPy data type of the returned patterns, by default 32-bit
         float.
 
     Returns
     -------
-    numpy.ndarray
-        3D or 4D array with simulated patterns.
+    simulated
+        2D array of simulated patterns with flattened navigation and
+        signal dimensions.
 
     Notes
     -----
     This function is optimized with Numba, so care must be taken with
     array shapes and data types.
     """
-    nav_shape = rotations.shape[:-1]
-    sig_shape = direction_cosines.shape[:-1]
-    n_pixels = sig_shape[0] * sig_shape[1]
-    simulated = np.zeros(nav_shape + (n_pixels,), dtype=dtype_out)
-
-    direction_cosines_flat = direction_cosines.reshape((-1, 3))
-
-    for i in np.ndindex(nav_shape):
+    n = rotations.shape[0]
+    simulated = np.zeros((n, direction_cosines.shape[0]), dtype=dtype_out)
+    for i in range(n):
         simulated[i] = _project_single_pattern_from_master_pattern(
             rotation=rotations[i],
-            direction_cosines=direction_cosines_flat,
+            direction_cosines=direction_cosines,
             master_upper=master_upper,
             master_lower=master_lower,
             npx=npx,
             npy=npy,
             scale=scale,
-            n_pixels=n_pixels,
             rescale=rescale,
             out_min=out_min,
             out_max=out_max,
             dtype_out=dtype_out,
         )
+    return simulated
 
-    return simulated.reshape(nav_shape + sig_shape)
+
+@njit(cache=True, nogil=True, fastmath=True)
+def _project_patterns_from_master_pattern_with_varying_pc(
+    rotations: np.ndarray,
+    direction_cosines: np.ndarray,
+    master_upper: np.ndarray,
+    master_lower: np.ndarray,
+    npx: int,
+    npy: int,
+    scale: float,
+    rescale: bool,
+    out_min: Union[int, float],
+    out_max: Union[int, float],
+    dtype_out: Optional[type] = np.float32,
+) -> np.ndarray:
+    """Return simulated EBSD patterns projected from a master pattern
+    with varying projection centers (PCs).
+
+    Parameters
+    ----------
+    rotations
+        2D array of quaternions of shape (n, 4) for a given chunk.
+    direction_cosines
+        Sets of direction cosines (unit vectors) between detector and
+        sample of shape (n, m pixels, 3) (the PC), one set per rotation.
+    master_upper
+        Upper hemisphere of the master pattern.
+    master_lower
+        Lower hemisphere of the master pattern.
+    npx
+        Number of pixels in the x-direction on the master pattern.
+    npy
+        Number of pixels in the y-direction on the master pattern.
+    scale
+        Factor to scale up from square Lambert projection to the master
+        pattern.
+    rescale
+        Whether to rescale pattern intensities.
+    out_min
+        Minimum intensity of output patterns.
+    out_max
+        Maximum intensity of output patterns.
+    dtype_out
+        NumPy data type of the returned patterns, by default 32-bit
+        float.
+
+    Returns
+    -------
+    simulated
+        2D array of simulated patterns with flattened navigation and
+        signal dimensions.
+
+    Notes
+    -----
+    This function is optimized with Numba, so care must be taken with
+    array shapes and data types.
+    """
+    n = rotations.shape[0]
+    simulated = np.empty((n, direction_cosines.shape[1]), dtype=dtype_out)
+    for i in range(n):
+        simulated[i] = _project_single_pattern_from_master_pattern(
+            rotation=rotations[i],
+            direction_cosines=direction_cosines[i],
+            master_upper=master_upper,
+            master_lower=master_lower,
+            npx=npx,
+            npy=npy,
+            scale=scale,
+            rescale=rescale,
+            out_min=out_min,
+            out_max=out_max,
+            dtype_out=dtype_out,
+        )
+    return simulated
 
 
-@nb.jit(nogil=True, nopython=True)
+@njit(cache=True, nogil=True, fastmath=True)
 def _project_single_pattern_from_master_pattern(
     rotation: np.ndarray,
     direction_cosines: np.ndarray,
@@ -378,23 +491,20 @@ def _project_single_pattern_from_master_pattern(
     npx: int,
     npy: int,
     scale: float,
-    n_pixels: int,
     rescale: bool,
     out_min: Union[int, float],
     out_max: Union[int, float],
     dtype_out: type,
 ) -> np.ndarray:
-    """Project a single 1D EBSD pattern onto a detector given one
-    rotation and one direction cosine per detector pixel, describing the
-    detector's view of the sample.
+    """Return a single 1D EBSD pattern projected from a master pattern.
 
     Parameters
     ----------
     rotation
-        Array of one rotation of shape (4,).
+        Array of one quaternion of shape (4,).
     direction_cosines
-        Direction cosines (unit vectors) between detector and sample of
-        shape (n_pixels, 3).
+        Set of direction cosines (unit vectors) between detector and
+        sample of shape (m pixels, 3).
     master_upper
         Upper hemisphere of the master pattern.
     master_lower
@@ -406,8 +516,6 @@ def _project_single_pattern_from_master_pattern(
     scale
         Factor to scale up from square Lambert projection to the master
         pattern.
-    n_pixels
-        Number of detector pixels.
     rescale
         Whether to rescale pattern intensities.
     dtype_out
@@ -415,8 +523,8 @@ def _project_single_pattern_from_master_pattern(
 
     Returns
     -------
-    numpy.ndarray
-        1D simulated EBSD pattern of data type `dtype_out`.
+    patterns
+        1D array of a simulated EBSD pattern of data type ``dtype_out``.
 
     Notes
     -----
@@ -424,17 +532,17 @@ def _project_single_pattern_from_master_pattern(
     array shapes and data types.
     """
     # Rotate the detector's view of the crystal
-    rotated_direction_cosines = _rotate_vector(rotation, direction_cosines)
+    dc_rotated = _rotate_vector(rotation, direction_cosines)
 
-    (nii, nij, niip, nijp, di, dj, dim, djm,) = _get_lambert_interpolation_parameters(
-        v=rotated_direction_cosines, npx=npx, npy=npy, scale=scale
+    (nii, nij, niip, nijp, di, dj, dim, djm) = _get_lambert_interpolation_parameters(
+        v=dc_rotated, npx=npx, npy=npy, scale=scale
     )
 
     # Loop over the detector pixels and fill in intensities one by one
     # from the correct hemisphere of the master pattern
-    pattern = np.zeros((n_pixels,))
-    for i in nb.prange(n_pixels):
-        if rotated_direction_cosines[i, 2] >= 0:
+    pattern = np.zeros(direction_cosines.shape[0])
+    for i in nb.prange(pattern.size):
+        if dc_rotated[i, 2] >= 0:
             mp = master_upper
         else:
             mp = master_lower
@@ -451,20 +559,30 @@ def _project_single_pattern_from_master_pattern(
     return pattern.astype(dtype_out)
 
 
-@nb.jit(
+@njit(
     (
         "Tuple((int32[:], int32[:], int32[:], int32[:], float64[:], float64[:], "
         "float64[:], float64[:]))(float64[:, :], int64, int64, float64)"
     ),
+    cache=True,
     nogil=True,
-    nopython=True,
+    fastmath=True,
 )
 def _get_lambert_interpolation_parameters(
     v: np.ndarray,
     npx: int,
     npy: int,
     scale: float,
-) -> tuple:
+) -> Tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+]:
     """Return interpolation parameters in the square Lambert projection
     from vectors (direction cosines), as implemented in EMsoft.
 
@@ -483,26 +601,26 @@ def _get_lambert_interpolation_parameters(
 
     Returns
     -------
-    nii : numpy.ndarray
+    nii
         1D array of each vector's row coordinate as 32-bit integers.
-    nij : numpy.ndarray
+    nij
         1D array of each vector's column coordinate as 32-bit integers.
-    niip : numpy.ndarray
+    niip
         1D array of each vector's neighbouring row coordinate as 32-bit
         integers.
-    nijp : numpy.ndarray
+    nijp
         1D array of each vector's neighbouring column coordinate as
         32-bit integers.
-    di : numpy.ndarray
+    di
         1D array of each vector's row interpolation weight factor as
         64-bit floats.
-    dj : numpy.ndarray
+    dj
         1D array of each vector's column interpolation weight factor as
         64-bit floats.
-    dim : numpy.ndarray
+    dim
         1D array of each vector's neighbouring row interpolation weight
         factor as 64-bit floats.
-    djm : numpy.ndarray
+    djm
         1D array of each vector's neighbouring column interpolation
         weight factor as 64-bit floats.
     """
@@ -551,7 +669,7 @@ def _get_lambert_interpolation_parameters(
     return nii, nij, niip, nijp, di, dj, dim, djm
 
 
-@nb.jit(nogil=True, nopython=True)
+@njit(cache=True, nogil=True, fastmath=True)
 def _get_pixel_from_master_pattern(
     mp: np.ndarray,
     nii: int,
@@ -562,7 +680,7 @@ def _get_pixel_from_master_pattern(
     dj: float,
     dim: float,
     djm: float,
-):
+) -> np.ndarray:
     """Return an intensity from a master pattern in the square Lambert
     projection using bi-linear interpolation.
 
@@ -581,7 +699,7 @@ def _get_pixel_from_master_pattern(
     )
 
 
-@nb.njit("float64[:, :](float64[:], float64[:])", cache=True, fastmath=True, nogil=True)
+@njit("float64[:, :](float64[:], float64[:])", cache=True, nogil=True, fastmath=True)
 def _lambert2vector(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """Lambert (X, Y) to vector (x, y, z) projection
     :cite:`callahan2013dynamical`.

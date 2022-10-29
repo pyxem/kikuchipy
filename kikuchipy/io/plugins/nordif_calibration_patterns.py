@@ -15,17 +15,22 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read support for NORDIF's calibration patterns."""
+"""Reader of EBSD calibration patterns from NORDIF files."""
 
 import os
+from pathlib import Path
 import re
-from typing import List, Tuple
+from typing import List, Tuple, Union
 import warnings
 
 from matplotlib.pyplot import imread
 import numpy as np
 
+from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins.nordif import get_settings_from_file
+
+
+__all__ = ["file_reader"]
 
 
 # Plugin characteristics
@@ -40,9 +45,11 @@ default_extension = 0
 writes = False
 
 
-def file_reader(filename: str, lazy: bool = False) -> List[dict]:
+def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
     """Reader electron backscatter patterns from .bmp files stored in a
     NORDIF project directory, their filenames listed in a text file.
+
+    Not meant to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------
@@ -53,11 +60,11 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
 
     Returns
     -------
-    scan : list of dicts
+    scan
         Data, axes, metadata and original metadata.
     """
     # Get metadata from setting file
-    md, omd, _ = get_settings_from_file(filename)
+    md, omd, _, detector = get_settings_from_file(filename, pattern_type="calibration")
     dirname = os.path.dirname(filename)
 
     scan = {}
@@ -74,13 +81,19 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
         )
 
     # Set required and other parameters in metadata
-    md.set_item("General.original_filename", filename)
-    md.set_item("General.title", "Calibration patterns")
-    md.set_item("Signal.signal_type", "EBSD")
-    md.set_item("Signal.record_by", "image")
+    md.update(
+        {
+            "General": {
+                "original_filename": filename,
+                "title": "Calibration patterns",
+            },
+            "Signal": {"signal_type": "EBSD", "record_by": "image"},
+        }
+    )
+    scan["metadata"] = md
+    scan["original_metadata"] = omd
 
-    scan["metadata"] = md.as_dictionary()
-    scan["original_metadata"] = omd.as_dictionary()
+    scan["detector"] = EBSDDetector(**detector)
 
     coordinates = _get_coordinates(filename)
 
@@ -105,7 +118,7 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
     return [scan]
 
 
-def _get_coordinates(filename: str) -> List[Tuple[int, int]]:
+def _get_coordinates(filename: str) -> List[Tuple[int]]:
     f = open(filename, "r", encoding="latin-1")
     err = "No calibration patterns found in settings file"
     content = f.read().splitlines()
@@ -129,7 +142,7 @@ def _get_coordinates(filename: str) -> List[Tuple[int, int]]:
     return xy
 
 
-def _get_patterns(dirname: str, coordinates: List[Tuple[int, int]]) -> np.ndarray:
+def _get_patterns(dirname: str, coordinates: List[Tuple[int]]) -> np.ndarray:
     patterns = []
     for x, y in coordinates:
         fname_pattern = f"Calibration ({x},{y}).bmp"

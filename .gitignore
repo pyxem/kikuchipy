@@ -9,8 +9,6 @@ __pycache__/
 # Distribution / packaging
 .Python
 env/
-#doc/build/
-#doc/Makefile
 develop-eggs/
 dist/
 downloads/
@@ -46,6 +44,7 @@ coverage.xml
 *,cover
 .hypothesis/
 tests/result_images/
+.benchmarks/
 
 # Translations
 *.mo
@@ -63,7 +62,9 @@ instance/
 .scrapy
 
 # Sphinx documentation
-doc/_build/
+doc/build/
+doc/reference/generated/
+doc/examples/
 
 # PyBuilder
 target/
@@ -101,7 +102,7 @@ ENV/
 .vscode/
 *.code-workspace
 
-#auto changing files
+# Auto changing files
 build/
 src/
 

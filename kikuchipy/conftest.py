@@ -24,9 +24,8 @@ import warnings
 
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
-from diffsims.crystallography import ReciprocalLatticePoint
-from hyperspy import __version__ as hs_version
-from hyperspy.misc.utils import DictionaryTreeBrowser
+import hyperspy.api as hs
+import imageio.v3 as iio
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import CrystalMap, create_coordinate_arrays, Phase, PhaseList
@@ -35,10 +34,6 @@ from orix.vector import Vector3d
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.projections.ebsd_projections import (
-    detector2reciprocal_lattice,
-    detector2direct_lattice,
-)
 
 
 if kp._pyvista_installed:
@@ -59,18 +54,19 @@ def assert_dictionary(dict1, dict2):
 
     Used to compare signal's axes managers or metadata in tests.
     """
-    if isinstance(dict1, DictionaryTreeBrowser):
-        dict1 = dict1.as_dictionary()
-        dict2 = dict2.as_dictionary()
     for key in dict2.keys():
-        if key in ["is_binned", "binned"] and version.parse(hs_version) > version.parse(
+        if key in ["is_binned", "binned"] and version.parse(
+            hs.__version__
+        ) > version.parse(
             "1.6.2"
         ):  # pragma: no cover
             continue
         if isinstance(dict2[key], dict):
             assert_dictionary(dict1[key], dict2[key])
         else:
-            if isinstance(dict2[key], list) or isinstance(dict1[key], list):
+            if isinstance(dict2[key], list) or isinstance(
+                dict1[key], list
+            ):  # pragma: no cover
                 dict2[key] = np.array(dict2[key])
                 dict1[key] = np.array(dict1[key])
             if isinstance(dict2[key], (np.ndarray, Number)):
@@ -165,8 +161,7 @@ def save_path_hdf5(request):
     to write, and sometimes read again, a signal to, and from, a file.
     """
     with tempfile.TemporaryDirectory() as tmp:
-        file_path = os.path.join(tmp, "patterns_temp." + request.param)
-        yield file_path
+        yield os.path.join(tmp, "patterns." + request.param)
         gc.collect()
 
 
@@ -185,14 +180,6 @@ def nickel_phase(nickel_structure):
     symmetry operations.
     """
     yield Phase(name="ni", structure=nickel_structure, space_group=225)
-
-
-@pytest.fixture(params=[[[1, 1, 1], [2, 0, 0], [2, 2, 0]]])
-def nickel_rlp(request, nickel_phase):
-    """A set of reciprocal lattice points for a Nickel crystal
-    structure with a minimum interplanar spacing.
-    """
-    yield ReciprocalLatticePoint(phase=nickel_phase, hkl=request.param)
 
 
 @pytest.fixture
@@ -219,163 +206,9 @@ def detector(request, pc1):
 
 
 @pytest.fixture
-def nickel_rotations():
-    """A set of 25 rotations in a TSL crystal reference frame (RD-TD-ND).
-
-    The rotations are from an EMsoft indexing of patterns in the region
-    of interest (row0:row1, col0:col1) = (79:84, 134:139) of the first
-    Nickel data set in this set of scans:
-    https://zenodo.org/record/3265037.
-    """
-    yield Rotation(
-        np.array(
-            [
-                [0.8662, 0.2033, -0.3483, -0.2951],
-                [0.8888, 0.3188, -0.2961, -0.1439],
-                [0.8883, 0.3188, -0.2973, -0.1444],
-                [0.8884, 0.3187, -0.2975, -0.1437],
-                [0.9525, 0.1163, -0.218, -0.1782],
-                [0.8658, 0.2031, -0.3486, -0.296],
-                [0.8661, 0.203, -0.3486, -0.2954],
-                [0.8888, 0.3179, -0.297, -0.1439],
-                [0.9728, -0.1634, 0.0677, 0.1494],
-                [0.9526, 0.1143, -0.2165, -0.1804],
-                [0.8659, 0.2033, -0.3483, -0.2958],
-                [0.8663, 0.2029, -0.348, -0.2955],
-                [0.8675, 0.1979, -0.3455, -0.298],
-                [0.9728, -0.1633, 0.0685, 0.1494],
-                [0.9726, -0.1634, 0.0684, 0.1506],
-                [0.8657, 0.2031, -0.3481, -0.297],
-                [0.8666, 0.2033, -0.3475, -0.2949],
-                [0.9111, 0.3315, -0.1267, -0.2095],
-                [0.9727, -0.1635, 0.0681, 0.1497],
-                [0.9727, -0.1641, 0.0682, 0.1495],
-                [0.8657, 0.2024, -0.3471, -0.2986],
-                [0.9109, 0.3318, -0.1257, -0.2105],
-                [0.9113, 0.3305, -0.1257, -0.2112],
-                [0.9725, -0.1643, 0.0691, 0.1497],
-                [0.9727, -0.1633, 0.0685, 0.1499],
-            ]
-        )
-    )
-
-
-@pytest.fixture
 def r_tsl2bruker():
     """A rotation from the TSL to Bruker crystal reference frame."""
     yield Rotation.from_axes_angles(Vector3d.zvector(), np.pi / 2)
-
-
-@pytest.fixture
-def nickel_ebsd_simulation_generator(nickel_phase, detector, nickel_rotations):
-    """Generator for EBSD simulations of Kikuchi bands for the Nickel
-    data set referenced above.
-    """
-    with pytest.warns(np.VisibleDeprecationWarning):
-        yield kp.generators.EBSDSimulationGenerator(
-            detector=detector, phase=nickel_phase, rotations=nickel_rotations
-        )
-
-
-@pytest.fixture
-def nickel_kikuchi_band(nickel_rlp, nickel_rotations, pc1):
-    rlp = nickel_rlp.symmetrise()
-
-    phase = rlp.phase
-    hkl = rlp.hkl.data
-
-    nav_shape = (5, 5)
-
-    detector = kp.detectors.EBSDDetector(
-        shape=(60, 60),
-        binning=8,
-        px_size=70,
-        pc=np.ones(nav_shape + (3,)) * pc1,
-        convention="tsl",
-    )
-
-    nav_dim = detector.navigation_dimension
-    navigation_axes = (1, 2)[:nav_dim]
-
-    # Output shape is (3, n, 3) or (3, ny, nx, 3)
-    det2recip = detector2reciprocal_lattice(
-        sample_tilt=detector.sample_tilt,
-        detector_tilt=detector.tilt,
-        lattice=phase.structure.lattice,
-        rotation=nickel_rotations.reshape(*nav_shape),
-    )
-
-    # Output shape is (nhkl, n, 3) or (nhkl, ny, nx, 3)
-    hkl_detector = np.tensordot(hkl, det2recip, axes=(1, 0))
-    # Determine whether a band is visible in a pattern
-    upper_hemisphere = hkl_detector[..., 2] > 0
-    is_in_some_pattern = np.sum(upper_hemisphere, axis=navigation_axes) != 0
-    # Get bands that are in some pattern and their coordinates in the
-    # proper shape
-    hkl = hkl[is_in_some_pattern, ...]
-    hkl_in_pattern = upper_hemisphere[is_in_some_pattern, ...].T
-    hkl_detector = np.moveaxis(
-        hkl_detector[is_in_some_pattern], source=0, destination=nav_dim
-    )
-
-    yield kp.simulations.features.KikuchiBand(
-        phase=phase,
-        hkl=hkl,
-        hkl_detector=hkl_detector,
-        in_pattern=hkl_in_pattern,
-        gnomonic_radius=detector.r_max,
-    )
-
-
-@pytest.fixture
-def nickel_zone_axes(nickel_kikuchi_band, nickel_rotations, pc1):
-    bands = nickel_kikuchi_band
-    hkl = bands.hkl.data
-    phase = bands.phase
-
-    nav_shape = (5, 5)
-
-    detector = kp.detectors.EBSDDetector(
-        shape=(60, 60),
-        binning=8,
-        px_size=70,
-        pc=np.ones(nav_shape + (3,)) * pc1,
-        convention="tsl",
-    )
-
-    nav_dim = detector.navigation_dimension
-    navigation_axes = (1, 2)[:nav_dim]
-
-    n_hkl = bands.size
-    n_hkl2 = n_hkl**2
-    uvw = np.cross(hkl[:, np.newaxis, :], hkl).reshape((n_hkl2, 3))
-    not000 = np.count_nonzero(uvw, axis=1) != 0
-    uvw = uvw[not000]
-    with np.errstate(divide="ignore", invalid="ignore"):
-        uvw = uvw / np.gcd.reduce(uvw, axis=1)[:, np.newaxis]
-    uvw = np.unique(uvw, axis=0).astype(int)
-    det2direct = detector2direct_lattice(
-        sample_tilt=detector.sample_tilt,
-        detector_tilt=detector.tilt,
-        lattice=phase.structure.lattice,
-        rotation=nickel_rotations.reshape(*nav_shape),
-    )
-    uvw_detector = np.tensordot(uvw, det2direct, axes=(1, 0))
-    upper_hemisphere = uvw_detector[..., 2] > 0
-    is_in_some_pattern = np.sum(upper_hemisphere, axis=navigation_axes) != 0
-    uvw = uvw[is_in_some_pattern, ...]
-    uvw_in_pattern = upper_hemisphere[is_in_some_pattern, ...].T
-    uvw_detector = np.moveaxis(
-        uvw_detector[is_in_some_pattern], source=0, destination=nav_dim
-    )
-
-    yield kp.simulations.features.ZoneAxis(
-        phase=phase,
-        uvw=uvw,
-        uvw_detector=uvw_detector,
-        in_pattern=uvw_in_pattern,
-        gnomonic_radius=detector.r_max,
-    )
 
 
 @pytest.fixture
@@ -411,6 +244,63 @@ def get_single_phase_xmap(rotations):
         return CrystalMap(**d)
 
     return _get_single_phase_xmap
+
+
+@pytest.fixture(params=[(1, (2, 3), (60, 60), "uint8", 2, False)])
+def edax_binary_file(tmpdir, request):
+    """Create a dummy EDAX binary UP1/2 file.
+
+    The creation of dummy UP1/2 files is explained in more detail in
+    kikuchipy/data/edax_binary/create_dummy_edax_binary_file.py.
+
+    Parameters expected in `request`
+    -------------------------------
+    up_version : int
+    navigation_shape : tuple of ints
+    signal_shape : tuple of ints
+    dtype : str
+    version : int
+    is_hex : bool
+    """
+    # Unpack parameters
+    up_ver, (ny, nx), (sy, sx), dtype, ver, is_hex = request.param
+
+    if up_ver == 1:
+        fname = tmpdir.join("dummy_edax_file.up1")
+        file = open(fname, mode="w")
+
+        # File header: 16 bytes
+        # 4 bytes with the file version
+        np.array([ver], "uint32").tofile(file)
+        # 12 bytes with the pattern width, height and file offset position
+        np.array([sx, sy, 16], "uint32").tofile(file)
+
+        # Patterns
+        np.ones(ny * nx * sy * sx, dtype).tofile(file)
+    else:  # up_ver == 2
+        fname = tmpdir.join("dummy_edax_file.up2")
+        file = open(fname, mode="w")
+
+        # File header: 42 bytes
+        # 4 bytes with the file version
+        np.array([ver], "uint32").tofile(file)
+        # 12 bytes with the pattern width, height and file offset position
+        np.array([sx, sy, 42], "uint32").tofile(file)
+        # 1 byte with any "extra patterns" (?)
+        np.array([1], "uint8").tofile(file)
+        # 8 bytes with the map width and height (same as square)
+        np.array([nx, ny], "uint32").tofile(file)
+        # 1 byte to say whether the grid is hexagonal
+        np.array([int(is_hex)], "uint8").tofile(file)
+        # 16 bytes with the horizontal and vertical step sizes
+        np.array([np.pi, np.pi / 2], "float64").tofile(file)
+
+        # Patterns
+        np.ones((ny * nx + ny // 2) * sy * sx, dtype).tofile(file)
+
+    file.close()
+
+    yield file
 
 
 @pytest.fixture(params=[((2, 3), (60, 60), np.uint8, 2, False, True)])
@@ -541,13 +431,76 @@ def nickel_ebsd_small_di_xmap():
     yield xmap
 
 
+@pytest.fixture
+def ni_kikuchipy_h5ebsd_file(tmp_path, nickel_ebsd_small_di_xmap, detector):
+    """Temporary file in kikuchipy's h5ebsd format with a crystal map
+    and detector stored.
+    """
+    s = kp.data.nickel_ebsd_small()
+    s.xmap = nickel_ebsd_small_di_xmap
+    detector.pc = np.ones((3, 3, 3)) * detector.pc
+    s.detector = detector
+    fname = tmp_path / "kp_file.h5"
+    s.save(fname)
+    yield fname
+
+
+@pytest.fixture
+def ni_small_axes_manager():
+    """Axes manager for :func:`kikuchipy.data.nickel_ebsd_small`."""
+    names = ["y", "x", "dy", "dx"]
+    scales = [1.5, 1.5, 1, 1]
+    sizes = [3, 3, 60, 60]
+    navigates = [True, True, False, False]
+    axes_manager = {}
+    for i in range(len(names)):
+        axes_manager[f"axis-{i}"] = {
+            "name": names[i],
+            "scale": scales[i],
+            "offset": 0.0,
+            "size": sizes[i],
+            "units": "um",
+            "navigate": navigates[i],
+        }
+    yield axes_manager
+
+
+@pytest.fixture(params=[("_x{}y{}.tif", (3, 3))])
+def ebsd_directory(tmpdir, request):
+    """Temporary directory with EBSD files as .tif, .png or .bmp files.
+
+    Parameters expected in `request`
+    -------------------------------
+    xy_pattern : str
+    nav_shape : tuple of ints
+    """
+    s = kp.data.nickel_ebsd_small()
+    s.unfold_navigation_space()
+
+    xy_pattern, nav_shape = request.param
+    y, x = np.indices(nav_shape)
+    x = x.ravel()
+    y = y.ravel()
+    for i in range(s.axes_manager.navigation_size):
+        fname = os.path.join(tmpdir, "pattern" + xy_pattern.format(x[i], y[i]))
+        iio.imwrite(fname, s.data[i])
+
+    yield tmpdir
+
+
 # ---------------------- pytest doctest-modules ---------------------- #
 
 
 @pytest.fixture(autouse=True)
 def doctest_setup_teardown(request):
     # Setup
-    plt.ioff()  # Interactive plotting off
+    # Temporarily turn off interactive plotting with Matplotlib
+    plt.ioff()
+
+    # Temporarily suppress HyperSpy's progressbar
+    hs.preferences.General.show_progressbar = False
+
+    # Temporary directory for saving files in
     temporary_directory = tempfile.TemporaryDirectory()
     original_directory = os.getcwd()
     os.chdir(temporary_directory.name)
@@ -556,7 +509,6 @@ def doctest_setup_teardown(request):
     # Teardown
     os.chdir(original_directory)
     temporary_directory.cleanup()
-    plt.close("all")
 
 
 @pytest.fixture(autouse=True)

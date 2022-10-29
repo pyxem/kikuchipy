@@ -2,15 +2,127 @@
 Changelog
 =========
 
-kikuchipy is an open-source Python library for processing and analysis of electron
-backscatter diffraction patterns: https://kikuchipy.org.
+kikuchipy is a library for processing, simulating, and analyzing electron backscatter
+diffraction (EBSD) patterns in Python, built on the tools for multi-dimensional data
+analysis provided by the HyperSpy library: https://kikuchipy.org.
 
-All notable changes to this project will be documented in this file. The format is based
-on `Keep a Changelog <https://keepachangelog.com/en/1.1.0>`_, and this project tries its
-best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`_.
+All user facing changes to this project are documented in this file. The format is based
+on `Keep a Changelog <https://keepachangelog.com/en/1.1.0>`__, and this project tries
+its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>`__.
 
-Contributors to each release are listed in alphabetical order by first name. List
-entries are sorted in descending chronological order.
+List entries are sorted in descending chronological order. Contributors to each release
+were listed in alphabetical order by first name until version 0.7.0.
+
+0.7.0 (2022-10-29)
+==================
+
+Added
+-----
+- Signal mask passed to EBSD orientation and projection center refinement methods is now
+  applied to the experimental pattern as well.
+  (`#573 <https://github.com/pyxem/kikuchipy/pull/573>`_)
+- Dependency ``imageio`` needed for reading EBSD patterns in image files.
+  (`#570 <https://github.com/pyxem/kikuchipy/pull/570>`_)
+- Reader of an ``EBSD`` signal from all images in a directory assuming they are of the
+  same shape and data type. (`#570 <https://github.com/pyxem/kikuchipy/pull/570>`_)
+- Reader of an ``EBSD`` signal from EDAX TSL's binary UP1/UP2 file formats.
+  (`#569 <https://github.com/pyxem/kikuchipy/pull/569>`_)
+- Ability to project simulate patterns from a master pattern using varying projection
+  centers (PCs) in ``EBSDMasterPattern.get_patterns()``. An example is added to the
+  method to show this. (`#567 <https://github.com/pyxem/kikuchipy/pull/567>`_)
+- Allow not setting ``energy`` parameter in ``EBSDMasterPattern.get_patterns()``, upon
+  which the highest energy available is used.
+  (`#567 <https://github.com/pyxem/kikuchipy/pull/567>`_)
+- Improved handling of custom attributes ``xmap``, ``detector`` and
+  ``static_background`` in ``EBSD`` and ``hemisphere``, ``phase`` and ``projection`` in
+  EBSD/ECP master pattern classes when calling inherited HyperSpy ``Signal2D`` methods
+  ``as_lazy()``, ``change_dtype()``, ``compute()``, ``deepcopy()``,
+  ``set_signal_type()`` and ``squeeze()``.
+  (`#564 <https://github.com/pyxem/kikuchipy/pull/564>`_)
+- Reader of an electron channelig pattern (ECP) master pattern from an EMsoft HDF5 file
+  into an ``ECPMasterPattern`` signal.
+  (`#564 <https://github.com/pyxem/kikuchipy/pull/564>`_)
+- Reader of a transmission kikuchi diffraction (TKD) master pattern from an EMsoft HDF5
+  file into an ``EBSDMasterPattern`` signal.
+  (`#564 <https://github.com/pyxem/kikuchipy/pull/564>`_)
+- ``ECPMasterPattern`` class. (`#564 <https://github.com/pyxem/kikuchipy/pull/564>`_)
+- Some internal logging which can be controlled via ``kikuchipy.set_log_level()``.
+  (`#564 <https://github.com/pyxem/kikuchipy/pull/564>`_)
+- Reader of an ``EBSD`` signal from Oxford Instrument's h5ebsd format (H5OINA).
+  (`#562 <https://github.com/pyxem/kikuchipy/pull/562>`_)
+- Figures of reference frames of other software added to the documentation.
+  (`#552 <https://github.com/pyxem/kikuchipy/pull/552>`_)
+- Whether to show progressbars from most signal methods (except indexing and refinement)
+  can be controlled by passing ``show_progressbar`` or by setting HyperSpy's
+  ``hs.preferences.General.show_progressbar`` (see their docs for details).
+  (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
+
+Changed
+-------
+- Documentation theme from *Furo* to *PyData*, as the growing API reference is easier to
+  navigate with the latter. (`#574 <https://github.com/pyxem/kikuchipy/pull/574>`_)
+- Use Rodrigues-Frank vector components (Rx, Ry, Rz) instead of Euler angles in EBSD
+  orientation and projection center refinement methods. This means that if refinement is
+  not directly but a Dask array is returned from any of these methods, the data which
+  previously contained Euler angles now contain these vector components. This change was
+  done to speed up refinement. (`#573 <https://github.com/pyxem/kikuchipy/pull/573>`_)
+- Most of the ``EBSD`` metadata structure is removed, in an effort to move all relevant
+  data to the attributes ``xmap``, ``static_background``, and ``detector``.
+  (`#562 <https://github.com/pyxem/kikuchipy/pull/562>`_)
+- h5ebsd plugin split into one plugin for each h5ebsd format (kikuchipy, EDAX TSL, and
+  Bruker Nano).
+  (`#562 <https://github.com/pyxem/kikuchipy/pull/562>`_)
+- ``EBSDDetector.plot()`` and ``PCCalibrationMovingScreen.plot()`` parameter
+  ``return_fig_ax`` renamed to ``return_figure``.
+  (`#552 <https://github.com/pyxem/kikuchipy/pull/552>`_)
+- Import modules lazily using the specification in `PEP 562
+  <https://peps.python.org/pep-0562/>`__.
+  (`#551 <https://github.com/pyxem/kikuchipy/pull/551>`_)
+- Minimal version of HyperSpy increased to >= 1.7.1.
+  (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
+- ``progressbar`` parameter to ``show_progressbar`` in ``kikuchipy.data`` functions
+  which accepts a ``allow_download`` parameter. If not given, the value is retreived
+  from HyperSpy's preferences. (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
+
+Deprecated
+----------
+- ``mask`` parameter in EBSD orientation and projection center refinement is deprecated
+  in favor of ``signal_mask``, and will be removed in version 0.8.0.
+  (`#573 <https://github.com/pyxem/kikuchipy/pull/573>`_)
+- ``projections.ebsd_projections`` module.
+  (`#563 <https://github.com/pyxem/kikuchipy/pull/563>`_)
+
+Removed
+-------
+- ``EBSDSimulationGenerator`` and ``GeometricalEBSDSimulation`` (use
+  ``KikuchiPatternSimulator`` and ``GeometricalKikuchiPatternSimulation`` instead) and
+  ``simulations.features`` module.
+  (`#563 <https://github.com/pyxem/kikuchipy/pull/563>`_)
+- ``crystallography`` module. (`#563 <https://github.com/pyxem/kikuchipy/pull/563>`_)
+- Options ``"north"`` and ``"south"`` for property
+  ``EBSDMasterPattern.hemisphere`` and in the parameter ``"hemisphere"`` in
+  ``kikuchipy.data.nickel_ebsd_master_pattern_small()``; use ``"upper"`` and ``"lower"``
+  instead. (`#563 <https://github.com/pyxem/kikuchipy/pull/563>`_)
+- Functions ``remove_static_background()``, ``remove_dynamic_background()`` and
+  ``get_image_quality()`` from ``chunk`` module.
+  (`#563 <https://github.com/pyxem/kikuchipy/pull/563>`_)
+- Parameter ``relative`` in ``EBSD.remove_static_background()``.
+  (`#563 <https://github.com/pyxem/kikuchipy/pull/563>`_)
+- Functions ``ebsd_metadata()`` and ``metadata_nodes()`` which have been deprecated
+  since v0.5. (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_,
+  `#562 <https://github.com/pyxem/kikuchipy/pull/562>`_)
+- Print information emitted from ``EBSD`` methods like ``remove_static_background()`` is
+  removed. (`#550 <https://github.com/pyxem/kikuchipy/pull/550>`_)
+
+Fixed
+-----
+- ``detector`` attribute of ``EBSD`` signal returned from the NORDIF
+  calibration pattern reader is now an ``EBSDDetector`` and not just a dictionary.
+  (`#569 <https://github.com/pyxem/kikuchipy/pull/569>`_)
+- Silence dask warning about splitting large chunks in ``EBSD.dictionary_indexing()``.
+  Memory use can be controlled by rechunking the dictionary or setting the ``rechunk``
+  or ``n_per_iteration`` parameters.
+  (`#567 <https://github.com/pyxem/kikuchipy/pull/567>`_)
 
 0.6.1 (2022-06-17)
 ==================
@@ -82,9 +194,9 @@ Deprecated
 - The ``kikuchipy.generators.EBSDSimulationGenerator`` class is deprecated and will be
   removed in version 0.7. Use the ``kikuchipy.simulations.KikuchiPatternSimulator``
   class instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
-- The ``kikuchipy.crystallography.matrices`` module is depreacted and will be removed in
-  version 0.7, access the matrices via :class:`diffpy.structure.Lattice` attributes
-  instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
+- The ``kikuchipy.crystallography.matrices`` module is deprecated and will be removed in
+  version 0.7, access the matrices via :class:`diffpy.structure.lattice.Lattice`
+  attributes instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - The following functions for processing of pattern chunks in the
   ``kikuchipy.pattern.chunk`` module are deprecated and will be removed in version 0.7:
   ``get_image_quality()``, ``remove_dynamic_background()`` and
@@ -585,8 +697,7 @@ Contributors
 
 Added
 -----
-- Jupyter Notebooks with tutorials and example workflows available via
-  https://github.com/pyxem/kikuchipy-demos.
+- Jupyter Notebooks with tutorials and example workflows available.
 - Grey scale and RGB virtual backscatter electron (BSE) images can be easily generated
   with the VirtualBSEGenerator class. The generator return objects of the new signal
   class VirtualBSEImage, which inherit functionality from HyperSpy's Signal2D class.

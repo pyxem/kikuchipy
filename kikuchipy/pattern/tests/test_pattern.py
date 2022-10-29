@@ -37,6 +37,9 @@ from kikuchipy.pattern._pattern import (
     _remove_static_background_subtract,
     _remove_static_background_divide,
     _rescale_with_min_max,
+    _rescale_without_min_max,
+    _rescale_without_min_max_1d_float32,
+    _zero_mean_sum_square_1d_float32,
 )
 
 # Expected output intensities from various image processing methods
@@ -118,14 +121,35 @@ class TestRescaleIntensityPattern:
 
     def test_rescale_intensity_py_func(self, dummy_signal):
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
+
+        # With min/max
         imin, imax = np.min(p), np.max(p)
         omin, omax = -3, 300.15
         p2 = _rescale_with_min_max.py_func(
             pattern=p, imin=imin, imax=imax, omin=omin, omax=omax
         )
+        assert np.isclose(np.min(p2), omin)
+        assert np.isclose(np.max(p2), omax)
 
-        assert np.allclose(np.min(p2), omin)
-        assert np.allclose(np.max(p2), omax)
+        # Without min/max
+        p3 = _rescale_without_min_max.py_func(p)
+        p3_2 = _rescale_without_min_max(p)
+        p4 = _rescale_without_min_max_1d_float32.py_func(p.ravel())
+        p4_2 = _rescale_without_min_max_1d_float32(p.ravel())
+        assert np.isclose(np.min(p3), -1)
+        assert np.isclose(np.max(p3), 1)
+        assert np.allclose(p3.ravel(), p4)
+        assert np.allclose(p3, p3_2)
+        assert np.allclose(p4, p4_2)
+
+    def test_zero_mean_sum_square(self, dummy_signal):
+        p = dummy_signal.inav[0, 0].data.astype("float32")
+        p2, p2_norm = _zero_mean_sum_square_1d_float32.py_func(p.ravel())
+        p3, p3_norm = _zero_mean_sum_square_1d_float32(p.ravel())
+        assert np.isclose(np.mean(p2), 0, atol=1e-6)
+        assert np.isclose(p2_norm, np.square(np.linalg.norm(p2)))
+        assert np.allclose(p2, p3)
+        assert np.isclose(p2_norm, p3_norm)
 
 
 class TestRemoveStaticBackgroundPattern:

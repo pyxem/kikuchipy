@@ -25,7 +25,7 @@ import pytest
 
 from kikuchipy.io._io import load
 from kikuchipy.io.plugins.emsoft_ebsd import _check_file_format, _crystaldata2phase
-from kikuchipy.io.plugins.h5ebsd import hdf5group2dict
+from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
 
 DIR_PATH = os.path.dirname(__file__)
 EMSOFT_FILE = os.path.join(DIR_PATH, "../../../data/emsoft_ebsd/simulated_ebsd.h5")
@@ -74,8 +74,8 @@ class TestEMsoftEBSDReader:
 
     def test_crystaldata2phase(self):
         """A Phase object is correctly returned."""
-        with File(EMSOFT_FILE, mode="r") as f:
-            xtal_dict = hdf5group2dict(f["CrystalData"])
+        with File(EMSOFT_FILE) as f:
+            xtal_dict = _hdf5group2dict(f["CrystalData"])
         phase = _crystaldata2phase(xtal_dict)
 
         assert phase.name == ""
@@ -99,8 +99,8 @@ class TestEMsoftEBSDReader:
         """A Phase object is correctly returned when there is only one
         atom present.
         """
-        with File(EMSOFT_FILE, mode="r") as f:
-            xtal_dict = hdf5group2dict(f["CrystalData"])
+        with File(EMSOFT_FILE) as f:
+            xtal_dict = _hdf5group2dict(f["CrystalData"])
         xtal_dict["Natomtypes"] = 1
         xtal_dict["AtomData"] = xtal_dict["AtomData"][:, 0][..., np.newaxis]
         xtal_dict["Atomtypes"] = xtal_dict["Atomtypes"][0]

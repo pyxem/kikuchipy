@@ -79,6 +79,15 @@
         "doc",
         "test"
       ]
+    },
+    {
+      "login": "magnunor",
+      "name": "Magnus Nord",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1690979?v=4",
+      "profile": "https://www.ntnu.edu/employees/magnus.nord",
+      "contributions": [
+        "doc"
+      ]
     }
   ]
 }

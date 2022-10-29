@@ -15,11 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Union
+from typing import List, Union
 
 import dask
 import dask.array as da
-import numba as nb
+from numba import njit
 import numpy as np
 
 from kikuchipy.indexing.similarity_metrics import SimilarityMetric
@@ -27,7 +27,9 @@ from kikuchipy.indexing.similarity_metrics import SimilarityMetric
 
 class NormalizedCrossCorrelationMetric(SimilarityMetric):
     r"""Similarity metric implementing the normalized cross-correlation,
-    or Pearson Correlation Coefficient :cite:`gonzalez2017digital`
+    or Pearson Correlation Coefficient :cite:`gonzalez2017digital`.
+
+    The metric is defined as
 
     .. math::
 
@@ -48,18 +50,12 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
     with ``axes=([2, 3], [1, 2]))`` for 4D and 3D experimental and
     simulated data sets, respectively.
 
-    See :class:`~kikuchipy.indexing.similarity_metrics.SimilarityMetric`
-    for remaining attributes.
-
-    Attributes
-    ----------
-    allowed_dtypes
-        :class:`~numpy.float32` and :class:`~numpy.float64`.
-    sign
-        +1, meaning greater is better.
+    See :class:`~kikuchipy.indexing.SimilarityMetric` for the
+    description of the initialization parameters and the list of
+    attributes.
     """
-    allowed_dtypes = [np.float32, np.float64]
-    sign = 1
+    _allowed_dtypes: List[type] = [np.float32, np.float64]
+    _sign: int = 1
 
     def __call__(
         self,
@@ -95,30 +91,86 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
     def prepare_experimental(
         self, patterns: Union[np.ndarray, da.Array]
     ) -> Union[np.ndarray, da.Array]:
+        """Prepare experimental patterns before matching to dictionary
+        patterns in :meth:`match`.
+
+        Patterns are prepared by:
+            1. Setting the data type to :attr:`~SimilarityMetric.dtype`.
+            2. Reshaping to shape ``(n_experimental_patterns, -1)``
+            3. Applying a signal mask if
+               :attr:`~SimilarityMetric.signal_mask` is set.
+            4. Rechunking if :attr:`~SimilarityMetric.rechunk` is
+               ``True``.
+            5. Normalizing to a mean of 0 and a standard deviation of 1.
+
+        Parameters
+        ----------
+        patterns
+            Experimental patterns.
+
+        Returns
+        -------
+        prepared_patterns
+            Prepared experimental patterns.
+        """
         patterns = da.asarray(patterns).astype(self.dtype)
         patterns = patterns.reshape((self.n_experimental_patterns, -1))
         if self.signal_mask is not None:
             patterns = self._mask_patterns(patterns)
         if self.rechunk:
             patterns = patterns.rechunk(("auto", -1))
-        patterns = self._zero_mean_normalize_patterns(patterns)
-        return patterns
+        prepared_patterns = self._zero_mean_normalize_patterns(patterns)
+        return prepared_patterns
 
     def prepare_dictionary(
         self,
         patterns: Union[np.ndarray, da.Array],
     ) -> Union[np.ndarray, da.Array]:
+        """Prepare dictionary patterns before matching to experimental
+        patterns in :meth:`match`.
+
+        Patterns are prepared by:
+            1. Setting the data type to :attr:`~SimilarityMetric.dtype`.
+            2. Applying a signal mask if
+               :attr:`~SimilarityMetric.signal_mask` is set.
+            3. Normalizing to a mean of 0 and a standard deviation of 1.
+
+        Parameters
+        ----------
+        patterns
+            Dictionary patterns.
+
+        Returns
+        -------
+        prepared_patterns
+            Prepared dictionary patterns.
+        """
         patterns = patterns.astype(self.dtype)
         if self.signal_mask is not None:
             patterns = self._mask_patterns(patterns)
-        patterns = self._zero_mean_normalize_patterns(patterns)
-        return patterns
+        prepared_patterns = self._zero_mean_normalize_patterns(patterns)
+        return prepared_patterns
 
     def match(
         self,
         experimental: Union[np.ndarray, da.Array],
         dictionary: Union[np.ndarray, da.Array],
     ) -> da.Array:
+        """Match all experimental patterns to all dictionary patterns
+        and return their similarities.
+
+        Parameters
+        ----------
+        experimental
+            Experimental patterns.
+        dictionary
+            Dictionary patterns.
+
+        Returns
+        -------
+        scores
+            Normalized cross-correlation scores.
+        """
         return da.einsum(
             "ik,mk->im",
             experimental,
@@ -151,19 +203,22 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
         return patterns
 
 
-@nb.jit("float64(float32[:, :], float32[:, :])", cache=True, nogil=True, nopython=True)
+@njit("float64(float32[:, :], float32[:, :])", cache=True, nogil=True, fastmath=True)
 def _ncc_single_patterns_2d_float32(exp: np.ndarray, sim: np.ndarray) -> float:
     """Return the normalized cross-correlation (NCC) coefficient
     between two 2D patterns.
 
     Parameters
     ----------
-    exp, sim
-        2D arrays of equal shape and of data type 32-bit floats.
+    exp
+        2D array of shape (n_pixels,) and data type 32-bit floats.
+    sim
+        2D array of shape (n_pixels,) and data type 32-bit floats.
 
     Returns
     -------
-    NCC coefficient as 64-bit float.
+    ncc
+        NCC coefficient as 32-bit float.
     """
     exp_mean = np.mean(exp)
     sim_mean = np.mean(sim)
@@ -172,4 +227,32 @@ def _ncc_single_patterns_2d_float32(exp: np.ndarray, sim: np.ndarray) -> float:
     return np.divide(
         np.sum(exp_centered * sim_centered),
         np.sqrt(np.sum(np.square(exp_centered)) * np.sum(np.square(sim_centered))),
+    )
+
+
+@njit("float64(float32[:], float32[:], float32)", cache=True, nogil=True, fastmath=True)
+def _ncc_single_patterns_1d_float32_exp_centered(
+    exp: np.ndarray, sim: np.ndarray, exp_squared_norm: float
+) -> float:
+    """Return the normalized cross-correlation (NCC) coefficient
+    between two 1D patterns.
+
+    Parameters
+    ----------
+    exp
+        1D array of shape (n_pixels,) and data type 32-bit floats
+        already centered.
+    sim
+        1D array of shape (n_pixels,) and data type 32-bit floats.
+    exp_squared_norm
+        Squared norm of experimental pattern as 32-bit float.
+
+    Returns
+    -------
+    ncc
+        NCC coefficient as 32-bit float.
+    """
+    sim -= np.mean(sim)
+    return np.divide(
+        np.sum(exp * sim), np.sqrt(exp_squared_norm * np.sum(np.square(sim)))
     )

@@ -16,7 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 """Script to create a dummy Oxford Instruments' binary .ebsp file
-for testing and use in the user guide.
+for testing and use in the documentation.
 """
 
 import os

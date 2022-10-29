@@ -28,6 +28,7 @@ credits = [
     "Tina Bergh",
     "Zhou Xu",
     "Eric Prestat",
+    "Magnus Nord",
 ]
 license = "GPLv3+"
 maintainer = "Håkon Wiik Ånes"
@@ -35,4 +36,4 @@ maintainer_email = "hakon.w.anes@ntnu.no"
 name = "kikuchipy"
 platforms = ["Linux", "MacOS X", "Windows"]
 status = "Development"
-version = "0.6.1"
+version = "0.7.0"

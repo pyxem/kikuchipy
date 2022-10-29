@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
+
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticeVector
 import matplotlib.collections as mcollections
@@ -136,6 +138,10 @@ class TestGeometricalKikuchiPatternSimulation:
         assert isinstance(fig, plt.Figure)
 
         plt.close("all")
+
+    def test_matplotlib_text_logger_filters(self):
+        filters = logging.getLogger("matplotlib.text").filters
+        assert filters == [kp.simulations.DisableMatplotlibWarningFilter]
 
 
 class TestAsCollections:

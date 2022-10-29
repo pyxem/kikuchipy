@@ -81,7 +81,7 @@ class TestWindow:
         else:
             w = Window(window=window, shape=shape, kwargs=kwargs)
 
-        assert w.is_valid()
+        assert w.is_valid
         assert w.name == window_type
         assert w.shape == answer_shape
         assert w.circular is answer_circular
@@ -141,7 +141,7 @@ class TestWindow:
         window = "general_gaussian"
         shape = (5, 5)
         w = Window(window=window, shape=shape, p=0.5, std=2)
-        assert w.is_valid()
+        assert w.is_valid
         np.testing.assert_array_almost_equal(w.data, GENERAL_GAUSS55_PWR05_STD2)
         assert w.name == window
         assert w.shape == shape
@@ -165,16 +165,16 @@ class TestWindow:
                 valid_window = False
 
             if change_attribute[0]:  # Set type from str to int
-                w.name = 1
+                w._name = 1
             elif change_attribute[1]:  # Add a third axis
                 w = np.expand_dims(w, 1)
             elif change_attribute[2]:  # Change circular boolean value to str
-                w.circular = "True"
+                w._circular = "True"
 
             # Roll axis to change which attribute to change next time
             change_attribute = np.roll(change_attribute, 1)
 
-            assert w.is_valid() == valid_window
+            assert w.is_valid == valid_window
 
     @pytest.mark.parametrize(
         "window, shape, answer_coeff, answer_circular, answer_type",
@@ -221,7 +221,7 @@ class TestWindow:
 
     def test_plot_default_values(self):
         w = Window()
-        fig = w.plot(return_figure=True, colorbar=True)
+        fig = w.plot(return_figure=True)
         ax = fig.axes[0]
         im = ax.get_images()[0]
         cbar = im.colorbar
@@ -234,8 +234,8 @@ class TestWindow:
 
     def test_plot_invalid_window(self):
         w = Window()
-        w.name = 1
-        assert w.is_valid() is False
+        w._name = 1
+        assert not w.is_valid
         with pytest.raises(ValueError, match="Window is invalid."):
             w.plot()
 

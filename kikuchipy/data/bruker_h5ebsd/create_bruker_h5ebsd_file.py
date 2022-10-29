@@ -15,6 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+"""Creation of a dummy Bruker Nano h5ebsd file used when testing the
+Bruker h5ebsd reader.
+
+Only the groups and datasets read in the reader are included.
+"""
+
 import os
 
 from h5py import File

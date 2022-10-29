@@ -55,7 +55,7 @@
 # ######################################################################
 
 import sys
-from typing import Optional
+from typing import Optional, Union
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
@@ -66,7 +66,7 @@ from orix import projections
 from orix.crystal_map import Phase
 from orix.plot._util import Arrow3D
 from orix.quaternion import Rotation
-from orix.vector import Miller, Vector3d
+from orix.vector import Vector3d
 
 from kikuchipy import _pyvista_installed
 from kikuchipy.detectors import EBSDDetector
@@ -86,10 +86,9 @@ class KikuchiPatternSimulator:
 
     Parameters
     ----------
-    reflectors : ~diffsims.crystallography.ReciprocalLatticeVector
+    reflectors
         Reflectors to use in the simulation, flattened to one navigation
         dimension.
-
     """
 
     def __init__(self, reflectors: ReciprocalLatticeVector):
@@ -97,12 +96,12 @@ class KikuchiPatternSimulator:
 
     @property
     def reflectors(self) -> ReciprocalLatticeVector:
-        """Reflectors to use in the simulation."""
+        """Return the reflectors to use in the simulation."""
         return self._reflectors
 
     @property
     def phase(self) -> Phase:
-        """Phase with unit cell and symmetry."""
+        """Return the phase with unit cell and symmetry."""
         return self._reflectors.phase
 
     def __repr__(self) -> str:
@@ -114,12 +113,12 @@ class KikuchiPatternSimulator:
         half_size: Optional[int] = 500,
         hemisphere: Optional[str] = "upper",
         scaling: Optional[str] = "linear",
-    ):
+    ) -> EBSDMasterPattern:
         r"""Calculate a kinematical master pattern in the stereographic
         projection.
 
         Requires that the :attr:`reflectors` have structure factors
-        (:attr:`~diffsims.crystallography.ReciprocalLatticeVector.structure_factor)
+        (:attr:`~diffsims.crystallography.ReciprocalLatticeVector.structure_factor`)
         and Bragg angles
         (:attr:`~diffsims.crystallography.ReciprocalLatticeVector.theta`)
         calculated.
@@ -130,7 +129,7 @@ class KikuchiPatternSimulator:
             Number of pixels along the x-direction of the square master
             pattern. Default is ``500``. The full size will be
             ``2 * half_size + 1``, given a master pattern of shape
-            (1001, 1001) for the default value.
+            ``(1001, 1001)`` for the default value.
         hemisphere
             Which hemisphere(s) to calculate. Options are ``"upper"``
             (default), ``"lower"`` or ``"both"``.
@@ -142,7 +141,7 @@ class KikuchiPatternSimulator:
 
         Returns
         -------
-        master_pattern : ~kikuchipy.signals.EBSDMasterPattern
+        master_pattern
             Kinematical master pattern in the stereographic projection.
 
         Notes
@@ -246,7 +245,9 @@ class KikuchiPatternSimulator:
             projection="stereographic",
         )
 
-    def on_detector(self, detector: EBSDDetector, rotations: Rotation):
+    def on_detector(
+        self, detector: EBSDDetector, rotations: Rotation
+    ) -> GeometricalKikuchiPatternSimulation:
         """Project Kikuchi lines and zone axes onto a detector, one per
         crystal orientation.
 
@@ -265,7 +266,8 @@ class KikuchiPatternSimulator:
 
         Returns
         -------
-        simulations : ~kikuchipy.simulations.GeometricalKikuchiPatternSimulation
+        simulations
+            Geometrical Kikuchi pattern simulation.
 
         Notes
         -----
@@ -423,7 +425,7 @@ class KikuchiPatternSimulator:
         return_figure: bool = False,
         backend: str = "matplotlib",
         show_plotter: bool = True,
-    ):
+    ) -> Union[plt.Figure, "pyvista.Plotter"]:
         """Plot reflectors as lines or bands in the stereographic or
         spherical projection.
 
@@ -467,7 +469,7 @@ class KikuchiPatternSimulator:
 
         Returns
         -------
-        figure : matplotlib.figure.Figure or pyvista.Plotter
+        figure
             If ``return_figure=True``, a
             :class:`~matplotlib.figure.Figure` or a
             :class:`~pyvista.Plotter` is returned.
@@ -510,7 +512,7 @@ class KikuchiPatternSimulator:
 
         # Invert the intensity
         if scaling in ["linear", "square"]:
-            intensity = intensity / np.max(intensity)
+            intensity /= np.max(intensity)
             intensity = abs(intensity - intensity.min() - intensity.max())
         color = np.full((ref.size, 3), intensity[:, np.newaxis])  # RGB
 

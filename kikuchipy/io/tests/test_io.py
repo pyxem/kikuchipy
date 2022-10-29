@@ -22,10 +22,8 @@ import tempfile
 import numpy as np
 import pytest
 
-from kikuchipy.io._io import load
-from kikuchipy.io.plugins import h5ebsd
+import kikuchipy as kp
 from kikuchipy.io._io import _assign_signal_subclass, _dict2signal
-from kikuchipy.signals.ebsd import EBSD, LazyEBSD
 
 DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5")
@@ -36,20 +34,20 @@ class TestIO:
     def test_load(self, filename):
         if filename == "im_not_here.h5":
             with pytest.raises(IOError, match="No filename matches"):
-                _ = load(filename)
+                _ = kp.load(filename)
         else:
-            s = load(KIKUCHIPY_FILE)
+            s = kp.load(KIKUCHIPY_FILE)
             with tempfile.TemporaryDirectory() as tmp:
                 file_path = os.path.join(tmp, "supported.h5")
                 s.save(file_path)
                 new_file_path = os.path.join(tmp, filename)
                 os.rename(file_path, new_file_path)
                 with pytest.raises(IOError, match="Could not read"):
-                    _ = load(new_file_path)
+                    _ = kp.load(new_file_path)
             gc.collect()
 
     def test_dict2signal(self):
-        scan_dict = h5ebsd.file_reader(KIKUCHIPY_FILE)[0]
+        scan_dict = kp.io.plugins.kikuchipy_h5ebsd.file_reader(KIKUCHIPY_FILE)[0]
         scan_dict["metadata"]["Signal"]["record_by"] = "not-image"
         with pytest.raises(ValueError, match="kikuchipy only supports"):
             _ = _dict2signal(scan_dict)
@@ -97,13 +95,13 @@ class TestIO:
                 lazy=lazy,
             )
             if not lazy:
-                assert signal == EBSD
+                assert signal == kp.signals.EBSD
             else:
-                assert signal == LazyEBSD
+                assert signal == kp.signals.LazyEBSD
 
     @pytest.mark.parametrize("extension", ("", ".h4"))
     def test_save_extensions(self, extension):
-        s = load(KIKUCHIPY_FILE)
+        s = kp.load(KIKUCHIPY_FILE)
         with tempfile.TemporaryDirectory() as tmp:
             file_path = os.path.join(tmp, "supported" + extension)
             if extension == "":
@@ -116,13 +114,13 @@ class TestIO:
 
     @pytest.mark.filterwarnings("ignore:Using `set_signal_dimension`")
     def test_save_data_dimensions(self):
-        s = load(KIKUCHIPY_FILE)
+        s = kp.load(KIKUCHIPY_FILE)
         s.axes_manager.set_signal_dimension(3)
         with pytest.raises(ValueError, match="This file format cannot write"):
             s.save()
 
     def test_save_to_existing_file(self, save_path_hdf5):
-        s = load(KIKUCHIPY_FILE)
+        s = kp.load(KIKUCHIPY_FILE)
         s.save(save_path_hdf5)
         with pytest.warns(UserWarning, match="Your terminal does not"):
             s.save(save_path_hdf5, scan_number=2)
@@ -130,4 +128,4 @@ class TestIO:
             s.save(save_path_hdf5, scan_number=2, overwrite="False", add_scan=False)
         s.save(save_path_hdf5, scan_number=2, overwrite=False, add_scan=False)
         with pytest.raises(OSError, match="Scan 'Scan 2' is not among the"):
-            _ = load(save_path_hdf5, scan_group_names="Scan 2")
+            _ = kp.load(save_path_hdf5, scan_group_names="Scan 2")

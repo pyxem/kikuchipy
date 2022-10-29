@@ -22,54 +22,56 @@ import numpy as np
 
 
 def get_chunking(
-    signal=None,
+    signal: Optional[Union["EBSD", "LazyEBSD"]] = None,
     data_shape: Optional[tuple] = None,
     nav_dim: Optional[int] = None,
     sig_dim: Optional[int] = None,
     chunk_shape: Optional[int] = None,
     chunk_bytes: Union[int, float, str, None] = 30e6,
-    dtype: Union[type, np.dtype, None] = None,
+    dtype: Union[str, np.dtype, type, None] = None,
 ) -> tuple:
     """Get a chunk tuple based on the shape of the signal data.
 
     The signal dimensions will not be chunked, and the navigation
-    dimensions will be chunked based on either `chunk_shape`, or be
-    optimized based on the `chunk_bytes`.
+    dimensions will be chunked based on either ``chunk_shape``, or be
+    optimized based on the ``chunk_bytes``.
 
-    This function is inspired by a similar function in pyxem.
+    This function is inspired by a similar function in :mod:`pyxem`.
 
     Parameters
     ----------
-    signal : kikuchipy.signals.EBSD, kikuchipy.signals.LazyEBSD or None
-        If None (default), the following must be passed: data shape to
-        be chunked `data_shape`, the number of navigation dimensions
-        `nav_dim`, the number of signal dimensions `sig_dim` and the
-        data array data type `dtype`.
+    signal
+        If not given, the following must be passed: data shape to be
+        chunked, ``data_shape``, the number of navigation dimensions,
+        ``nav_dim``, the number of signal dimensions, ``sig_dim``, and
+        the data array data type ``dtype``.
     data_shape
-        Data shape, must be passed if `signal` is None.
+        Data shape, must be passed if ``signal`` is not given.
     nav_dim
-        Number of navigation dimensions, must be passed if `signal` is
-        None.
+        Number of navigation dimensions, must be passed if ``signal`` is
+        not given.
     sig_dim
-        Number of signal dimensions, must be passed if `signal` is None.
+        Number of signal dimensions, must be passed if ``signal`` is not
+        given.
     chunk_shape
-        Shape of navigation chunks. If None (default), this size is
-        set automatically based on `chunk_bytes`. This is a square if
-        `signal` has two navigation dimensions.
+        Shape of navigation chunks. If not given, this size is set
+        automatically based on ``chunk_bytes``. This is a rectangle if
+        ``signal`` has two navigation dimensions.
     chunk_bytes
         Number of bytes in each chunk. Default is 30e6, i.e. 30 MB.
-        Only used if freedom is given to choose, i.e. if `chunk_shape`
-        is None. Various parameter types are allowed, e.g. 30000000,
-        "30 MB", "30MiB", or the default 30e6, all resulting in
-        approximately 30 MB chunks.
+        Only used if freedom is given to choose, i.e. if ``chunk_shape``
+        is not given. Various parameter types are allowed, e.g.
+        ``30000000``, ``"30 MB"``, ``"30MiB"``, or the default ``30e6``,
+        all resulting in approximately 30 MB chunks.
     dtype
-        Data type of the array to chunk. Will take precedent over the
-        signal data type if `signal` is passed. Must be passed if
-        `signal` is None.
+        Data type of the array to chunk. Will take precedence over the
+        signal data type if ``signal`` is given. Must be given if
+        ``signal`` is not given.
 
     Returns
     -------
     chunks
+        Chunk tuple.
     """
     if signal is not None:
         data_shape = signal.data.shape
@@ -77,6 +79,8 @@ def get_chunking(
         sig_dim = signal.axes_manager.signal_dimension
     if dtype is None:
         dtype = signal.data.dtype
+    else:
+        dtype = np.dtype(dtype)
 
     chunks_dict = {}
     # Set the desired navigation chunk shape
@@ -99,18 +103,21 @@ def get_chunking(
     return chunks
 
 
-def get_dask_array(signal, dtype: Optional[type] = None, **kwargs) -> da.Array:
+def get_dask_array(
+    signal: Union["EBSD", "LazyEBSD"],
+    dtype: Union[str, np.dtype, type, None] = None,
+    **kwargs
+) -> da.Array:
     """Return dask array of patterns with appropriate chunking.
 
     Parameters
     ----------
-    signal : :class:`~kikuchipy.signals.ebsd.EBSD` or\
-            :class:`~kikuchipy.signals.ebsd.LazyEBSD`
+    signal
         Signal with data to return dask array from.
     dtype
         Data type of returned dask array. This is also passed on to
         :func:`~kikuchipy.signals.util.get_chunking`.
-    kwargs
+    **kwargs
         Keyword arguments passed to
         :func:`~kikuchipy.signals.util.get_chunking` to control the
         number of chunks the output data array is split into. Only
@@ -124,6 +131,8 @@ def get_dask_array(signal, dtype: Optional[type] = None, **kwargs) -> da.Array:
     """
     if dtype is None:
         dtype = signal.data.dtype
+    else:
+        dtype = np.dtype(dtype)
     if signal._lazy or isinstance(signal.data, da.Array):
         dask_array = signal.data
         if kwargs.pop("rechunk", False):
@@ -147,8 +156,10 @@ def get_dask_array(signal, dtype: Optional[type] = None, **kwargs) -> da.Array:
 def _reduce_chunks(
     dask_array: da.Array,
     chunk_bytes: Union[int, float] = 8e6,
-    dtype_out: Union[np.dtype, str] = "float32",
+    dtype_out: Union[str, np.dtype, type] = "float32",
 ) -> tuple:
+    dtype_out = np.dtype(dtype_out)
+
     chunksize = dask_array.chunksize
     nav_chunksize = chunksize[:-2]
     nav_ndim = len(nav_chunksize)
@@ -159,7 +170,6 @@ def _reduce_chunks(
         idx_min = np.argmin(nav_chunksize)
         if nav_chunksize[idx_min] * np.prod(chunksize[-2:]) * 4 < chunk_bytes:
             chunks_dict[idx_min] = -1
-
     chunks = da.core.normalize_chunks(
         chunks=chunks_dict,
         shape=chunksize,
@@ -202,7 +212,7 @@ def _get_chunk_overlap_depth(window, axes_manager, chunksize: tuple) -> dict:
 def _rechunk_learning_results(
     factors: Union[np.ndarray, da.Array],
     loadings: Union[np.ndarray, da.Array],
-    mbytes_chunk: int = 100,
+    mbytes_chunk: Union[int, float] = 100,
 ) -> list:
     """Return suggested data chunks for learning results.
 
@@ -266,7 +276,7 @@ def _rechunk_learning_results(
 def _update_learning_results(
     learning_results,
     components: Union[None, int, List[int]],
-    dtype_out: Union[type, np.dtype],
+    dtype_out: Union[str, np.dtype, type],
 ) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
     """Update learning results before calling
     :meth:`hyperspy.learn.mva.MVA.get_decomposition_model` by
@@ -292,6 +302,8 @@ def _update_learning_results(
     loadings
         Updated component loadings in learning results.
     """
+    dtype_out = np.dtype(dtype_out)
+
     # Change data type
     factors = learning_results.factors.astype(dtype_out)
     loadings = learning_results.loadings.astype(dtype_out)

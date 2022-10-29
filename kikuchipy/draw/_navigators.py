@@ -21,33 +21,36 @@ navigators with :meth:`~hyperspy.signals.Signal2D.plot`.
 
 from typing import Union
 
+import hyperspy.api as hs
 import numpy as np
 from skimage.exposure import rescale_intensity
 
-import hyperspy.api as hs
 
-
-def get_rgb_navigator(image, dtype: Union[type, np.dtype] = np.uint16):
+def get_rgb_navigator(
+    image: np.ndarray, dtype: Union[str, np.dtype, type] = "uint16"
+) -> hs.signals.Signal2D:
     """Create an RGB navigator signal which is suitable to pass to
-    :meth:`~hyperspy.signals.Signal2D.plot` as the `navigator`
-    parameter.
+    :meth:`~hyperspy._signals.signal2d.Signal2D.plot` as the
+    ``navigator`` parameter.
 
     Parameters
     ----------
-    image : numpy.ndarray
-        RGB color image of shape (n rows, n columns, 3).
-    dtype : numpy.dtype
-        Which data type to cast the signal data to, either uint16
-        (default) or uint8.
+    image
+        RGB color image of shape ``(n rows, n columns, 3)``.
+    dtype
+        Which data type to cast the signal data to, either ``"uint16"``
+        (default) or ``"uint8"``. Must be a valid :class:`numpy.dtype`
+        identifier.
 
     Returns
     -------
-    signal : hyperspy.signals.Signal2D
+    s
         Signal with an (n columns, n rows) signal shape and no
-        navigation shape, of data type either rgb8 or rgb16.
+        navigation shape, of data type either ``rgb8`` or ``rgb16``.
     """
-    image_rescaled = rescale_intensity(image, out_range=dtype).astype(dtype)
+    dtype = np.dtype(dtype)
+    image_rescaled = rescale_intensity(image, out_range=dtype.type).astype(dtype)
     s = hs.signals.Signal2D(image_rescaled)
     s = s.transpose(signal_axes=1)
-    s.change_dtype({"uint8": "rgb8", "uint16": "rgb16"}[np.dtype(dtype).name])
+    s.change_dtype({"uint8": "rgb8", "uint16": "rgb16"}[dtype.name])
     return s

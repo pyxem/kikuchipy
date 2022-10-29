@@ -17,39 +17,41 @@
 
 """Private tools for handling crystal orientations and directions.
 
-The functions here is taken directly from orix, but modified to use
-Numba. Ideally, these should be imported from orix instead.
+The functions here are taken directly from orix, but modified to use
+Numba.
 
 This module and documentation is only relevant for kikuchipy developers,
 not for users.
 
 .. warning:
+
     This module and its submodules are for internal use only.  Do not
     use them in your own code. We may change the API at any time with no
     warning.
 """
 
-# TODO: Implement these and similar functions in orix
-
-import numba as nb
+from numba import njit
 import numpy as np
 
 
-@nb.jit("float64[:](float64, float64, float64)", nogil=True, nopython=True)
-def _rotation_from_euler(alpha: float, beta: float, gamma: float) -> np.ndarray:
-    """Convert three Euler angles (alpha, beta, gamma) to a unit
-    quaternion.
+@njit("float64[:](float64, float64, float64)", cache=True, nogil=True, fastmath=True)
+def _rotation_from_rodrigues(rx: float, ry: float, rz: float) -> np.ndarray:
+    """Convert a Rodrigues-Frank vector to a unit quaternion.
 
-    Taken from :meth:`orix.quaternion.Rotation.from_euler`.
+    Taken from :meth:`orix.quaternion.Rotation.from_neo_euler`.
 
     Parameters
     ----------
-    alpha, beta, gamma
-        Euler angles in the Bunge convention in radians.
+    rx
+        X component.
+    ry
+        Y component.
+    rz
+        Z component.
 
     Returns
     -------
-    rotation
+    rot
         Unit quaternion.
 
     Notes
@@ -57,30 +59,24 @@ def _rotation_from_euler(alpha: float, beta: float, gamma: float) -> np.ndarray:
     This function is optimized with Numba, so care must be taken with
     array shapes and data types.
     """
-    sigma = 0.5 * (alpha + gamma)
-    delta = 0.5 * (alpha - gamma)
-    c = np.cos(0.5 * beta)
-    s = np.sin(0.5 * beta)
+    rod = np.array([rx, ry, rz])
+    norm = np.sqrt(np.sum(np.square(rod)))
+    half_angle = np.arctan(norm)
+    s = np.sin(half_angle)
 
-    # fmt: off
-    rotation = np.array(
-        (
-             c * np.cos(sigma),
-            -s * np.cos(delta),
-            -s * np.sin(delta),
-            -c * np.sin(sigma)
-        ),
-        dtype=np.float64,
-    )
-    # fmt: on
+    a = np.cos(half_angle)
+    b = s * rx / norm
+    c = s * ry / norm
+    d = s * rz / norm
+    rot = np.array([a, b, c, d], dtype="float64")
 
-    if rotation[0] < 0:
-        rotation = -rotation
+    if rot[0] < 0:  # pragma: no cover
+        rot = -rot
 
-    return rotation
+    return rot
 
 
-@nb.jit("float64[:, :](float64[:], float64[:, :])", nogil=True, nopython=True)
+@njit("float64[:, :](float64[:], float64[:, :])", cache=True, nogil=True, fastmath=True)
 def _rotate_vector(rotation: np.ndarray, vector: np.ndarray) -> np.ndarray:
     """Rotation of vector(s) by a quaternion.
 
@@ -98,6 +94,7 @@ def _rotate_vector(rotation: np.ndarray, vector: np.ndarray) -> np.ndarray:
     Returns
     -------
     rotated_vector
+        Rotated vector.
 
     Notes
     -----
@@ -108,7 +105,7 @@ def _rotate_vector(rotation: np.ndarray, vector: np.ndarray) -> np.ndarray:
     x = vector[:, 0]
     y = vector[:, 1]
     z = vector[:, 2]
-    rotated_vector = np.zeros(vector.shape)
+
     aa = a**2
     bb = b**2
     cc = c**2
@@ -119,7 +116,10 @@ def _rotate_vector(rotation: np.ndarray, vector: np.ndarray) -> np.ndarray:
     bc = b * c
     bd = b * d
     cd = c * d
+
+    rotated_vector = np.zeros(vector.shape)
     rotated_vector[:, 0] = (aa + bb - cc - dd) * x + 2 * ((ac + bd) * z + (bc - ad) * y)
     rotated_vector[:, 1] = (aa - bb + cc - dd) * y + 2 * ((ad + bc) * x + (cd - ab) * z)
     rotated_vector[:, 2] = (aa - bb - cc + dd) * z + 2 * ((ab + cd) * y + (bd - ac) * x)
+
     return rotated_vector

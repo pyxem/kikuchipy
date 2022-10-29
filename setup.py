@@ -43,19 +43,29 @@ with open("kikuchipy/release.py") as fid:
 # fmt: off
 extra_feature_requirements = {
     "doc": [
-        "furo",
+        # TODO: Remove once https://github.com/pyxem/kikuchipy/issues/566 is resolved
+        "ipywidgets                 ~= 7.7",
+        "memory_profiler",
         "nbsphinx                   >= 0.7",
+        "numpydoc",
+        "pydata-sphinx-theme",
+        "pyebsdindex                >= 0.1",
         "pythreejs",  # Used in the docs by PyVista
+        "pyvista",
         "sphinx                     >= 3.0.2",
+        "sphinx-codeautolink[ipython]",
         "sphinx-copybutton          >= 0.2.5",
-        "sphinx-autodoc-typehints   >= 1.10.3",
-        "sphinx-gallery             >= 0.6",
+        "sphinx-design",
+        "sphinx-gallery             < 0.11",
         "sphinxcontrib-bibtex       >= 1.0",
     ],
     "tests": [
         "coverage                   >= 5.0",
+        "numpydoc",
         "pytest                     >= 5.4",
+        "pytest-benchmark",
         "pytest-cov                 >= 2.8.1",
+        "pytest-xdist",
     ],
     "viz": [
         "pyvista",
@@ -134,13 +144,17 @@ setup(
         "dask[array]        >= 2021.8.1",
         "diffpy.structure   >= 3",
         "diffsims           >= 0.5",
-        "hyperspy           >= 1.7",
+        "hyperspy           >= 1.7.1",
         "h5py               >= 2.10",
+        "imageio",
         "matplotlib         >= 3.3",
         "numba              >= 0.48",
         "numpy              >= 1.19",
         "orix               >= 0.9",
         "pooch              >= 0.13",
+        # TODO: Remove once https://github.com/hyperspy/hyperspy/pull/3052 is fixed
+        "pint               <= 0.19",
+        "pyyaml",
         "tqdm               >= 0.5.2",
         "scikit-image       >= 0.16.2",
         "scikit-learn",

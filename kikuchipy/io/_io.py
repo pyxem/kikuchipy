@@ -15,8 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import glob
 import os
-from typing import Optional
+from pathlib import Path
+from typing import List, Optional, Union
 
 from hyperspy.io_plugins import hspy
 from hyperspy.misc.io.tools import overwrite as overwrite_method
@@ -27,24 +29,38 @@ import numpy as np
 
 import kikuchipy.signals
 from kikuchipy.io.plugins import (
+    bruker_h5ebsd,
+    ebsd_directory,
+    edax_binary,
+    edax_h5ebsd,
     emsoft_ebsd,
     emsoft_ebsd_master_pattern,
-    h5ebsd,
+    emsoft_ecp_master_pattern,
+    emsoft_tkd_master_pattern,
+    kikuchipy_h5ebsd,
     nordif,
     nordif_calibration_patterns,
     oxford_binary,
+    oxford_h5ebsd,
 )
 from kikuchipy.io._util import _get_input_bool, _ensure_directory
 
 
 plugins = [
+    bruker_h5ebsd,
+    ebsd_directory,
+    edax_binary,
+    edax_h5ebsd,
     emsoft_ebsd,
     emsoft_ebsd_master_pattern,
+    emsoft_ecp_master_pattern,
+    emsoft_tkd_master_pattern,
     hspy,
-    h5ebsd,
+    kikuchipy_h5ebsd,
     nordif,
     nordif_calibration_patterns,
     oxford_binary,
+    oxford_h5ebsd,
 ]
 
 default_write_ext = set()
@@ -53,9 +69,19 @@ for plugin in plugins:
         default_write_ext.add(plugin.file_extensions[plugin.default_extension])
 
 
-def load(filename: str, lazy: bool = False, **kwargs):
-    """Load an :class:`~kikuchipy.signals.EBSD` or
-    :class:`~kikuchipy.signals.EBSDMasterPattern` object from a
+def load(
+    filename: Union[str, Path], lazy: bool = False, **kwargs
+) -> Union[
+    "EBSD",
+    "EBSDMasterPattern",
+    "ECPMasterPattern",
+    List["EBSD"],
+    List["EBSDMasterPattern"],
+    List["ECPMasterPattern"],
+]:
+    """Load an :class:`~kikuchipy.signals.EBSD`,
+    :class:`~kikuchipy.signals.EBSDMasterPattern` or
+    :class:`~kikuchipy.signals.ECPMasterPattern` signal from a
     supported file format.
 
     This function is a modified version of :func:`hyperspy.io.load`.
@@ -67,20 +93,24 @@ def load(filename: str, lazy: bool = False, **kwargs):
     lazy
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
-        is False.
-    kwargs
+        is ``False``.
+    **kwargs
         Keyword arguments passed to the corresponding kikuchipy reader.
         See their individual documentation for available options.
 
     Returns
     -------
-    kikuchipy.signals.EBSD, kikuchipy.signals.EBSDMasterPattern, \
-        list of kikuchipy.signals.EBSD or \
-        list of kikuchipy.signals.EBSDMasterPattern
+    out
+        Signal or a list of signals.
+
+    Raises
+    ------
+    IOError
+        If the file was not found or could not be read.
 
     Examples
     --------
-    Import nine patterns from an HDF5 file in a directory `DATA_DIR`
+    Import nine patterns from an HDF5 file in a directory ``DATA_DIR``
 
     >>> import kikuchipy as kp
     >>> s = kp.load(DATA_DIR + "/patterns.h5")
@@ -88,7 +118,13 @@ def load(filename: str, lazy: bool = False, **kwargs):
     <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
     """
     if not os.path.isfile(filename):
-        raise IOError(f"No filename matches '{filename}'.")
+        is_wildcard = False
+        if isinstance(filename, str):
+            filenames = glob.glob(filename)
+            if len(filenames) > 0:
+                is_wildcard = True
+        if not is_wildcard:
+            raise IOError(f"No filename matches '{filename}'.")
 
     # Find matching reader for file extension
     extension = os.path.splitext(filename)[1][1:]
@@ -109,19 +145,19 @@ def load(filename: str, lazy: bool = False, **kwargs):
     # Get data and metadata (from potentially multiple signals if an h5ebsd
     # file)
     signal_dicts = reader.file_reader(filename, lazy=lazy, **kwargs)
-    signals = []
+    out = []
     for signal in signal_dicts:
-        signals.append(_dict2signal(signal, lazy=lazy))
+        out.append(_dict2signal(signal, lazy=lazy))
         directory, filename = os.path.split(os.path.abspath(filename))
         filename, extension = os.path.splitext(filename)
-        signals[-1].tmp_parameters.folder = directory
-        signals[-1].tmp_parameters.filename = filename
-        signals[-1].tmp_parameters.extension = extension.replace(".", "")
+        out[-1].tmp_parameters.folder = directory
+        out[-1].tmp_parameters.filename = filename
+        out[-1].tmp_parameters.extension = extension.replace(".", "")
 
-    if len(signals) == 1:
-        signals = signals[0]
+    if len(out) == 1:
+        out = out[0]
 
-    return signals
+    return out
 
 
 def _dict2signal(signal_dict: dict, lazy: bool = False):
@@ -187,22 +223,25 @@ def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
     filename
         Input file name.
     plugins
-        Potential plugins.
+        Potential plugins reading HDF5 files.
 
     Returns
     -------
     plugin
-        One of the potential plugins, or None if no footprint was found.
+        One of the potential plugins, or ``None`` if no footprint was
+        found.
     """
 
-    def _hdfgroups2dict(group):
+    def _hdf5group2dict(group):
         d = {}
         for key, val in group.items():
-            key = key.lstrip().lower()
+            key_lower = key.lstrip().lower()
             if isinstance(val, Group):
-                d[key] = _hdfgroups2dict(val)
+                d[key_lower] = _hdf5group2dict(val)
+            elif key_lower == "manufacturer":
+                d[key_lower] = key
             else:
-                d[key] = 1
+                d[key_lower] = 1
         return d
 
     def _exists(obj, chain):
@@ -210,24 +249,43 @@ def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
         if key in obj:
             return _exists(obj[key], chain) if chain else obj[key]
 
-    f = File(filename, mode="r")
-    d = _hdfgroups2dict(f["/"])
+    with File(filename) as f:
+        d = _hdf5group2dict(f["/"])
 
-    plugin = None
-    plugins_with_footprints = [p for p in plugins if hasattr(p, "footprint")]
-    for p in plugins_with_footprints:
-        n_matches = 0
-        n_desired_matches = len(p.footprint)
-        for fp in p.footprint:
-            fp = fp.lower().split("/")
-            if _exists(d, fp) is not None:
-                n_matches += 1
-        if n_matches == n_desired_matches:
-            plugin = p
+        plugins_with_footprints = [p for p in plugins if hasattr(p, "footprint")]
+        plugins_with_manufacturer = [
+            p for p in plugins_with_footprints if hasattr(p, "manufacturer")
+        ]
 
-    f.close()
+        matching_plugin = None
+        # Check manufacturer if possible (all h5ebsd files have this)
+        for key, val in d.items():
+            if key == "manufacturer":
+                # Extracting the manufacturer is finicky
+                man = f[val][()]
+                if isinstance(man, np.ndarray) and len(man) == 1:
+                    man = man[0]
+                if isinstance(man, bytes):
+                    man = man.decode("latin-1")
+                for p in plugins_with_manufacturer:
+                    if man.lower() == p.manufacturer:
+                        matching_plugin = p
+                        break
 
-    return plugin
+        # If no match found, continue searching
+        if matching_plugin is None:
+            for p in plugins_with_footprints:
+                n_matches = 0
+                n_desired_matches = len(p.footprint)
+                for fp in p.footprint:
+                    fp = fp.lower().split("/")
+                    if _exists(d, fp) is not None:
+                        n_matches += 1
+                if n_matches == n_desired_matches:
+                    matching_plugin = p
+                    break
+
+    return matching_plugin
 
 
 def _assign_signal_subclass(
@@ -368,7 +426,11 @@ def _save(
         is_file = os.path.isfile(filename)
 
         # Check if we are to add signal to an already existing h5ebsd file
-        if writer.format_name == "h5ebsd" and overwrite is not True and is_file:
+        if (
+            writer.format_name == "kikuchipy_h5ebsd"
+            and overwrite is not True
+            and is_file
+        ):
             if add_scan is None:
                 q = "Add scan to '{}' (y/n)?\n".format(filename)
                 add_scan = _get_input_bool(q)

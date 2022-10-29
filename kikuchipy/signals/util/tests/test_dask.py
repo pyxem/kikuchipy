@@ -35,48 +35,71 @@ class TestDask:
 
     def test_chunk_shape(self):
         s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint16))
-        chunks = get_chunking(s, chunk_shape=16)
-        assert chunks == ((16, 16), (16, 16), (256,), (256,))
+        assert get_chunking(s, chunk_shape=16) == da.core.normalize_chunks(
+            chunks={0: 16, 1: 16, 2: -1, 3: -1},
+            limit=30e6,
+            shape=s.data.shape,
+            dtype=s.data.dtype,
+        )
 
     def test_chunk_bytes(self):
         s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint16))
-        chunks = get_chunking(s, chunk_bytes=15e6)
-        assert chunks == ((8, 8, 8, 8), (8, 8, 8, 8), (256,), (256,))
+        assert get_chunking(s, chunk_bytes=15e6) == da.core.normalize_chunks(
+            chunks={0: "auto", 1: "auto", 2: -1, 3: -1},
+            limit=15e6,
+            shape=s.data.shape,
+            dtype=s.data.dtype,
+        )
 
     def test_get_chunking_dtype(self):
         s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint8))
-        chunks0 = get_chunking(s, dtype=np.float32)
-        chunks1 = get_chunking(s)
-        assert chunks0 == ((8, 8, 8, 8), (8, 8, 8, 8), (256,), (256,))
-        assert chunks1 == ((16, 16), (16, 16), (256,), (256,))
+        assert get_chunking(s) == da.core.normalize_chunks(
+            chunks={0: "auto", 1: "auto", 2: -1, 3: -1},
+            limit=30e6,
+            shape=s.data.shape,
+            dtype=s.data.dtype,
+        )
+        assert get_chunking(s, dtype=np.float32) == da.core.normalize_chunks(
+            chunks={0: "auto", 1: "auto", 2: -1, 3: -1},
+            limit=30e6,
+            shape=s.data.shape,
+            dtype=np.dtype("float32"),
+        )
 
     @pytest.mark.parametrize(
-        "shape, nav_dim, sig_dim, dtype, desired_chunks",
+        "shape, nav_dim, sig_dim, dtype",
         [
             (
                 (32, 32, 256, 256),
                 2,
                 2,
-                np.uint16,
-                ((8, 8, 8, 8), (8, 8, 8, 8), (256,), (256,)),
+                np.dtype("uint16"),
             ),
-            ((32, 32, 256, 256), 2, 2, np.uint8, ((16, 16), (16, 16), (256,), (256,))),
+            ((32, 32, 256, 256), 2, 2, np.dtype("uint8")),
         ],
     )
-    def test_get_chunking_no_signal(
-        self, shape, nav_dim, sig_dim, dtype, desired_chunks
-    ):
+    def test_get_chunking_no_signal(self, shape, nav_dim, sig_dim, dtype):
         chunks = get_chunking(
             data_shape=shape, nav_dim=nav_dim, sig_dim=sig_dim, dtype=dtype
         )
-        assert chunks == desired_chunks
+        assert chunks == da.core.normalize_chunks(
+            chunks={0: "auto", 1: "auto", 2: -1, 3: -1},
+            limit=30e6,
+            shape=shape,
+            dtype=dtype,
+        )
 
     def test_get_dask_array(self):
         s = EBSD((255 * np.random.rand(10, 10, 120, 120)).astype(np.uint8))
         dask_array = get_dask_array(s, chunk_shape=8)
-        assert dask_array.chunksize == (8, 8, 120, 120)
+        assert dask_array.chunks == da.core.normalize_chunks(
+            chunks={0: 8, 1: 8, 2: -1, 3: -1},
+            limit=30e6,
+            shape=s.data.shape,
+            dtype=s.data.dtype,
+        )
 
-        # Make data lazy
+        # Make data lazy (chunk size is kept)
         s.data = dask_array.rechunk((5, 5, 120, 120))
         dask_array = get_dask_array(s)
         assert dask_array.chunksize == (5, 5, 120, 120)
@@ -85,9 +108,9 @@ class TestDask:
         s = EBSD(np.zeros((10, 10, 8, 8)))
         array_out0 = get_dask_array(s)
         array_out1 = get_dask_array(s, chunk_bytes="25KiB")
-        array_out2 = get_dask_array(s, chunk_bytes=25e3)
-        assert array_out0.chunksize != array_out1.chunksize
-        assert array_out1.chunksize == array_out2.chunksize
+        array_out2 = get_dask_array(s, chunk_bytes=30e3)
+        assert array_out0.chunks != array_out1.chunks
+        assert array_out1.chunks == array_out2.chunks
 
     def test_rechunk_learning_results(self):
         data = da.from_array(np.random.rand(10, 100, 100, 5).astype(np.float32))

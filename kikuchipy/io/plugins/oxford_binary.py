@@ -15,20 +15,25 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Read support for uncompressed EBSD patterns in Oxford Instruments'
-binary .ebsp file format.
+"""Reader of uncompressed EBSD patterns from a Oxford Instruments binary
+.ebsp file.
 
 Information about the file format was provided by Oxford Instruments.
 """
 
 import os
+from pathlib import Path
 import struct
-from typing import List, Tuple, Union
+from typing import BinaryIO, List, Tuple, Union
 
 import dask.array as da
 import numpy as np
 
 from kikuchipy.signals.util._dask import get_chunking
+
+
+__all__ = ["file_reader"]
+
 
 # Plugin characteristics
 # ----------------------
@@ -42,11 +47,13 @@ default_extension = 0
 writes = False
 
 
-def file_reader(filename: str, lazy: bool = False) -> List[dict]:
+def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
     """Read EBSD patterns from an Oxford Instruments' binary .ebsp file.
 
     Only uncompressed patterns can be read. If only non-indexed patterns
     are stored in the file, the navigation shape will be 1D.
+
+    Not meant to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------
@@ -54,7 +61,7 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
         File path to .ebsp file.
     lazy
         Read the data lazily without actually reading the data from disk
-        until required. Default is False.
+        until required. Default is ``False``.
 
     Returns
     -------
@@ -63,8 +70,8 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
 
     Notes
     -----
-    Information about the .ebsp file format was provided by Oxford
-    Instruments.
+    Information about the .ebsp file format was generously provided by
+    Oxford Instruments.
     """
     with open(filename, mode="rb") as f:
         obf = OxfordBinaryFileReader(f)
@@ -73,7 +80,23 @@ def file_reader(filename: str, lazy: bool = False) -> List[dict]:
 
 
 class OxfordBinaryFileReader:
-    """Oxford Instruments' binary .ebsp file reader."""
+    """Oxford Instruments' binary .ebsp file reader.
+
+    File header, byte positions of patterns, and pattern headers and
+    footers are read upon initialization to determine the navigation
+    (map) shape, signal (detector) shape, signal data type (uint8 or
+    uint16), and whether all or only non-indexed patterns are stored in
+    the file.
+
+    A memory map (:func:`numpy.memmap`) is created at the end, pointing
+    to, but not reading, the patterns on disk.
+
+    Parameters
+    ----------
+    file
+        Open Oxford Instruments' binary .ebsp file with uncompressed
+        patterns.
+    """
 
     # Header for each pattern in the file
     pattern_header_size = 16
@@ -84,24 +107,9 @@ class OxfordBinaryFileReader:
         ("n_bytes", np.int32, (1,)),
     ]
 
-    def __init__(self, file: object):
+    def __init__(self, file: BinaryIO):
         """Prepare to read EBSD patterns from an open Oxford
         Instruments' binary .ebsp file.
-
-        File header, byte positions of patterns, and pattern headers and
-        footers are read upon initialization to determine the
-        navigation (map) shape, signal (detector) shape, signal data
-        type (uint8 or uint16), and whether all or only non-indexed
-        patterns are stored in the file.
-
-        A memory map (:func:`numpy.memmap`) is created at the end,
-        pointing to, but not reading, the patterns on disk.
-
-        Parameters
-        ----------
-        file
-            Open Oxford Instruments' binary .ebsp file with uncompressed
-            patterns.
         """
         self.file = file  # Already open file
 
@@ -239,7 +247,7 @@ class OxfordBinaryFileReader:
             file_dtype += footer_dtype
 
         return np.memmap(
-            self.file,
+            self.file.name,
             dtype=file_dtype,
             shape=self.n_patterns_present,
             mode="r",

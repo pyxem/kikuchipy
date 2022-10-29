@@ -10,7 +10,12 @@ include readthedocs.yaml
 include RELEASE.rst
 include setup.cfg
 include setup.py
+include tutorials/README.rst
 
-recursive-include doc Makefile make.bat *.rst *.py *.ipynb *.bib
-recursive-include doc/_static *.png *.jpg *.svg
+recursive-include doc Makefile make.bat *.rst *.py *.bib *.ipynb *.txt *.cfg *.sh
+recursive-include doc/_static *.png *.jpg *.svg *.css *.sh
+
 recursive-include kikuchipy/data *
+recursive-include examples *.rst *.py
+
+recursive-include benchmarks *.py
