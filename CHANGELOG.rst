@@ -18,6 +18,27 @@ Unreleased
 
 Added
 -----
+
+Changed
+-------
+
+Deprecated
+----------
+
+Removed
+-------
+
+Fixed
+-----
+
+Security
+--------
+
+0.7.0 (2022-10-29)
+==================
+
+Added
+-----
 - Signal mask passed to EBSD orientation and projection center refinement methods is now
   applied to the experimental pattern as well.
   (`#573 <https://github.com/pyxem/kikuchipy/pull/573>`_)
@@ -123,9 +144,6 @@ Fixed
   Memory use can be controlled by rechunking the dictionary or setting the ``rechunk``
   or ``n_per_iteration`` parameters.
   (`#567 <https://github.com/pyxem/kikuchipy/pull/567>`_)
-
-Security
---------
 
 0.6.1 (2022-06-17)
 ==================

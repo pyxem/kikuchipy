@@ -107,7 +107,10 @@ html_theme_options = {
             "icon": "fab fa-gitter",
         },
     ],
-    "logo": {"alt_text": "kikuchipy"},
+    "logo": {
+        "alt_text": "kikuchipy",
+        "image_dark": "logo/plasma_banner_dark.png",
+    },
     "navigation_with_keys": False,
     "show_toc_level": 2,
     "use_edit_page_button": True,
@@ -120,9 +123,6 @@ html_context = {
 }
 html_static_path = ["_static"]
 html_css_files = ["custom.css"]
-
-# Syntax highlighting
-pygments_style = "friendly"
 
 # Logo
 html_logo = "_static/logo/plasma_banner.png"
