@@ -907,16 +907,12 @@ class EBSD(KikuchipySignal2D):
                 metric=metric,
             )
 
-    @deprecated_argument(
-        name="mask", since="0.7.0", removal="0.8.0", alternative="signal_mask"
-    )
     def refine_orientation(
         self,
         xmap: CrystalMap,
         detector: EBSDDetector,
         master_pattern: "EBSDMasterPattern",
         energy: Union[int, float],
-        mask: Optional[np.ndarray] = None,
         signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
@@ -962,13 +958,6 @@ class EBSD(KikuchipySignal2D):
             Accelerating voltage of the electron beam in kV specifying
             which master pattern energy to use during projection of
             simulated patterns.
-        mask
-            A boolean mask equal to the experimental patterns' detector
-            shape ``(n rows, n columns)``, where only pixels equal to
-            ``False`` are matched. If not given, all pixels are used.
-
-            .. deprecated:: 0.7.0
-                Use ``signal_mask`` instead.
         signal_mask
             A boolean mask equal to the experimental patterns' detector
             shape ``(n rows, n columns)``, where only pixels equal to
@@ -1026,8 +1015,6 @@ class EBSD(KikuchipySignal2D):
         scipy.optimize, refine_projection_center,
         refine_orientation_projection_center
         """
-        if mask is not None:
-            signal_mask = mask
         self._check_refinement_parameters(
             xmap=xmap, detector=detector, signal_mask=signal_mask
         )
@@ -1047,16 +1034,12 @@ class EBSD(KikuchipySignal2D):
             compute=compute,
         )
 
-    @deprecated_argument(
-        name="mask", since="0.7.0", removal="0.8.0", alternative="signal_mask"
-    )
     def refine_projection_center(
         self,
         xmap: CrystalMap,
         detector: EBSDDetector,
         master_pattern: "EBSDMasterPattern",
         energy: Union[int, float],
-        mask: Optional[np.ndarray] = None,
         signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
@@ -1102,13 +1085,6 @@ class EBSD(KikuchipySignal2D):
             Accelerating voltage of the electron beam in kV specifying
             which master pattern energy to use during projection of
             simulated patterns.
-        mask
-            A boolean mask equal to the experimental patterns' detector
-            shape ``(n rows, n columns)``, where only pixels equal to
-            ``False`` are matched. If not given, all pixels are used.
-
-            .. deprecated:: 0.7.0
-                Use ``signal_mask`` instead.
         signal_mask
             A boolean mask equal to the experimental patterns' detector
             shape ``(n rows, n columns)``, where only pixels equal to
@@ -1167,8 +1143,6 @@ class EBSD(KikuchipySignal2D):
         scipy.optimize, refine_orientation,
         refine_orientation_projection_center
         """
-        if mask is not None:
-            signal_mask = mask
         self._check_refinement_parameters(
             xmap=xmap, detector=detector, signal_mask=signal_mask
         )
@@ -1188,16 +1162,12 @@ class EBSD(KikuchipySignal2D):
             compute=compute,
         )
 
-    @deprecated_argument(
-        name="mask", since="0.7.0", removal="0.8.0", alternative="signal_mask"
-    )
     def refine_orientation_projection_center(
         self,
         xmap: CrystalMap,
         detector: EBSDDetector,
         master_pattern: "EBSDMasterPattern",
         energy: Union[int, float],
-        mask: Optional[np.ndarray] = None,
         signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
@@ -1244,13 +1214,6 @@ class EBSD(KikuchipySignal2D):
             Accelerating voltage of the electron beam in kV specifying
             which master pattern energy to use during projection of
             simulated patterns.
-        mask
-            A boolean mask equal to the experimental patterns' detector
-            shape ``(n rows, n columns)``, where only pixels equal to
-            ``False`` are matched. If not given, all pixels are used.
-
-            .. deprecated:: 0.7.0
-                Use ``signal_mask`` instead.
         signal_mask
             A boolean mask equal to the experimental patterns' detector
             shape ``(n rows, n columns)``, where only pixels equal to
@@ -1321,8 +1284,6 @@ class EBSD(KikuchipySignal2D):
         are incorrect. As always, it is left to the user to ensure that
         the output is reasonable.
         """
-        if mask is not None:
-            signal_mask = mask
         self._check_refinement_parameters(
             xmap=xmap, detector=detector, signal_mask=signal_mask
         )

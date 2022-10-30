@@ -27,6 +27,8 @@ Deprecated
 
 Removed
 -------
+- ``mask`` parameter in EBSD refinement methods; use ``signal_mask`` instead.
+  (`#577 <https://github.com/pyxem/kikuchipy/pull/577>`_)
 
 Fixed
 -----

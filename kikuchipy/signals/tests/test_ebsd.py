@@ -1587,9 +1587,9 @@ class TestEBSDRefinement:
         signal_mask = np.zeros(s.axes_manager.signal_shape[::-1], dtype=bool)
         signal_mask[0, 0] = 1  # Mask away upper left pixel
 
-        # TODO: Remove after 0.7.0 is released
-        with pytest.warns(UserWarning, match="Parameter `mask` is deprecated and will"):
-            xmap_refined_mask = s.refine_orientation(mask=signal_mask, **refine_kwargs)
+        xmap_refined_mask = s.refine_orientation(
+            signal_mask=signal_mask, **refine_kwargs
+        )
 
         assert not np.allclose(
             xmap_refined_no_mask.rotations.data, xmap_refined_mask.rotations.data
@@ -1719,16 +1719,15 @@ class TestEBSDRefinement:
         xmap.phases[0].name = self.mp.phase.name
         method_kwargs.update(dict(options=dict(maxiter=10)))
         signal_mask = np.zeros(detector.shape, dtype=bool)
-        with pytest.warns(UserWarning, match="Parameter `mask` is deprecated and will"):
-            new_scores, new_detector = s.refine_projection_center(
-                xmap=xmap,
-                master_pattern=self.mp,
-                energy=20,
-                detector=detector,
-                mask=signal_mask,
-                trust_region=trust_region,
-                method_kwargs=method_kwargs,
-            )
+        new_scores, new_detector = s.refine_projection_center(
+            xmap=xmap,
+            master_pattern=self.mp,
+            energy=20,
+            detector=detector,
+            signal_mask=signal_mask,
+            trust_region=trust_region,
+            method_kwargs=method_kwargs,
+        )
         assert new_scores.shape == nav_shape
         assert not np.allclose(xmap.get_map_data("scores"), new_scores)
         assert isinstance(new_detector, kp.detectors.EBSDDetector)
@@ -1837,16 +1836,15 @@ class TestEBSDRefinement:
         detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
         method_kwargs.update(dict(options=dict(maxiter=10)))
         signal_mask = np.zeros(detector.shape, dtype=bool)
-        with pytest.warns(UserWarning, match="Parameter `mask` is deprecated and will"):
-            xmap_refined, detector_refined = s.refine_orientation_projection_center(
-                xmap=xmap,
-                master_pattern=self.mp,
-                energy=20,
-                detector=detector,
-                mask=signal_mask,
-                trust_region=trust_region,
-                method_kwargs=method_kwargs,
-            )
+        xmap_refined, detector_refined = s.refine_orientation_projection_center(
+            xmap=xmap,
+            master_pattern=self.mp,
+            energy=20,
+            detector=detector,
+            signal_mask=signal_mask,
+            trust_region=trust_region,
+            method_kwargs=method_kwargs,
+        )
         assert xmap_refined.shape == xmap.shape
         assert not np.allclose(xmap_refined.rotations.data, xmap.rotations.data)
         assert isinstance(detector_refined, kp.detectors.EBSDDetector)
