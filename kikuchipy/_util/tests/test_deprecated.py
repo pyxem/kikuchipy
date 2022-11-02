@@ -90,6 +90,28 @@ class TestDeprecationWarning:
             f"   {desired_msg}"
         )
 
+    def test_deprecate_class_attribute(self):
+        class Foo:
+            def __init__(self, a):
+                self.a = a
+
+            @property
+            @deprecated(since=0.7, alternative_is_function=False, alternative="c")
+            def b(self):
+                return 1
+
+        foo1 = Foo(1)
+        with pytest.warns(np.VisibleDeprecationWarning) as record:
+            assert foo1.b == 1
+        desired_msg = "Attribute `b` is deprecated. Use `c` instead."
+        assert str(record[0].message) == desired_msg
+        assert Foo.b.__doc__ == (
+            "[*Deprecated*] \n"
+            "\nNotes\n-----\n"
+            ".. deprecated:: 0.7\n"
+            f"   {desired_msg}"
+        )
+
 
 class TestDeprecateArgument:
     def test_deprecate_argument(self):
