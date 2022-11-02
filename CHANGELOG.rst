@@ -24,9 +24,16 @@ Changed
 
 Deprecated
 ----------
+- ``projections`` module with classes ``GnomonicProjection``, ``HesseNormalForm``,
+  ``LambertProjection`` and ``SphericalProjection``. These will be removed in version
+  0.9.0, as they are unused internally. If you depend on this module, please open an
+  issue at https://github.com/pyxem/kikuchipy/issues.
 
 Removed
 -------
+- ``mask`` parameter in EBSD refinement methods; use ``signal_mask`` instead.
+  (`#577 <https://github.com/pyxem/kikuchipy/pull/577>`_)
+- ``ebsd_projections`` module. (`#577 <https://github.com/pyxem/kikuchipy/pull/577>`_)
 
 Fixed
 -----

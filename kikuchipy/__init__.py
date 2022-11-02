@@ -58,7 +58,6 @@ def set_log_level(level: str):  # pragma: no cover
 __all__ = [
     "__version__",
     "_pyvista_installed",
-    "crystallography",
     "data",
     "detectors",
     "draw",

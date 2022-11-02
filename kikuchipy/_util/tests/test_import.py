@@ -39,17 +39,6 @@ class TestImport:
 
         assert isinstance(_pyvista_installed, bool)
 
-    def test_import_crystallography(self):
-        import kikuchipy.crystallography
-
-        for obj_name in kikuchipy.crystallography.__all__:
-            getattr(kikuchipy.crystallography, obj_name)
-        with pytest.raises(
-            AttributeError,
-            match="module 'kikuchipy.crystallography' has no attribute 'foo'",
-        ):
-            _ = kikuchipy.crystallography.foo
-
     def test_import_data(self):
         import kikuchipy.data
 
@@ -194,7 +183,6 @@ class TestImport:
         assert dir(kikuchipy) == [
             "__version__",
             "_pyvista_installed",
-            "crystallography",
             "data",
             "detectors",
             "draw",
@@ -209,13 +197,6 @@ class TestImport:
             "set_log_level",
             "signals",
             "simulations",
-        ]
-
-    def test_dir_crystallography(self):
-        import kikuchipy.crystallography
-
-        assert dir(kikuchipy.crystallography) == [
-            "get_direct_structure_matrix",
         ]
 
     def test_dir_data(self):

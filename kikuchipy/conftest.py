@@ -30,7 +30,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import CrystalMap, create_coordinate_arrays, Phase, PhaseList
 from orix.quaternion import Rotation
-from orix.vector import Vector3d
 import pytest
 
 import kikuchipy as kp
@@ -203,12 +202,6 @@ def detector(request, pc1):
         tilt=0,
         convention="tsl",
     )
-
-
-@pytest.fixture
-def r_tsl2bruker():
-    """A rotation from the TSL to Bruker crystal reference frame."""
-    yield Rotation.from_axes_angles(Vector3d.zvector(), np.pi / 2)
 
 
 @pytest.fixture
