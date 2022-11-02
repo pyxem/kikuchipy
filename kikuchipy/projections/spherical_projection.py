@@ -24,15 +24,24 @@ from typing import Union
 import numpy as np
 from orix.vector import SphericalRegion, Vector3d
 
+from kikuchipy._util import deprecated
+
 
 class SphericalProjection:
-    """Spherical projection of a cartesian vector according to the ISO
-    31-11 standard.
+    """[*Deprecated*] Spherical projection of a cartesian vector
+    according to the ISO 31-11 standard.
+
+    .. deprecated:: 0.8.0
+
+        This class is deprecated and will be removed in 0.9.0, since it
+        is not used internally. If you depend on this class, please open
+        an issue at https://github.com/pyxem/kikuchipy/issues.
     """
 
     spherical_region = SphericalRegion([0, 0, 1])
 
     @classmethod
+    @deprecated(since="0.8.0", removal="0.9.0")
     def vector2xy(cls, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
         """Convert from cartesian to spherical coordinates according to
         the ISO 31-11 standard.
@@ -78,6 +87,7 @@ def _get_polar_coordinates(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     return polar
 
 
+@deprecated(since="0.8.0", removal="0.9.0")
 def get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     """Get the polar spherical coordinate from cartesian according to
     the ISO 31-11 standard.
@@ -100,6 +110,7 @@ def get_polar(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     return np.arccos(z / r)
 
 
+@deprecated(since="0.8.0", removal="0.9.0")
 def get_azimuth(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     """Get the azimuthal spherical coordinate from cartesian according
     to the ISO 31-11 standard.
@@ -123,6 +134,7 @@ def get_azimuth(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     return azimuth
 
 
+@deprecated(since="0.8.0", removal="0.9.0")
 def get_radial(v: Union[Vector3d, np.ndarray]) -> np.ndarray:
     """Get the radial spherical coordinate from cartesian coordinates.
 

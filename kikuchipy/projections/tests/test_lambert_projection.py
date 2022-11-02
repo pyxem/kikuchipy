@@ -31,7 +31,8 @@ class TestLambertProjection:
         """Works for Vector3d objects with single and multiple vectors"""
 
         vector_one = Vector3d((0.578, 0.578, 0.578))
-        output_a = LambertProjection.vector2xy(vector_one)
+        with pytest.warns(np.VisibleDeprecationWarning):
+            output_a = LambertProjection.vector2xy(vector_one)
         expected_a = np.array((0.81417, 0.81417))
 
         assert np.allclose(output_a[..., 0, 0], expected_a[0], atol=1e-3)
@@ -40,7 +41,8 @@ class TestLambertProjection:
         vector_two = Vector3d(
             [[0.578, 0.578, 0.578], [0, 0.707, 0.707], [0.707, 0, 0.707]]
         )
-        output_b = LambertProjection.vector2xy(vector_two)
+        with pytest.warns(np.VisibleDeprecationWarning):
+            output_b = LambertProjection.vector2xy(vector_two)
 
         expected_x = np.array((0.81417, 0, 0.678))
         expected_y = np.array((0.81417, 0.678, 0))
@@ -54,7 +56,8 @@ class TestLambertProjection:
 
     def test_vector2xy_array(self):
         """Works for numpy arrays."""
-        output = LambertProjection.vector2xy(np.array([0.578, 0.578, 0.578]))
+        with pytest.warns(np.VisibleDeprecationWarning):
+            output = LambertProjection.vector2xy(np.array([0.578, 0.578, 0.578]))
         assert np.allclose(output, 0.81480, atol=1e-5)
 
         xyz = np.array(
@@ -79,13 +82,16 @@ class TestLambertProjection:
             [-np.sqrt(np.pi / 2), 0],
             [0, 0],
         ]
-        assert np.allclose(LambertProjection.vector2xy(xyz), lambert_xy)
+        with pytest.warns(np.VisibleDeprecationWarning):
+            assert np.allclose(LambertProjection.vector2xy(xyz), lambert_xy)
+
         assert np.allclose(_vector2xy.py_func(xyz), lambert_xy)
 
     def test_xy2vector(self):
         """Conversion from Lambert to Cartesian coordinates works"""
         lambert_xy = np.array([0.81480, 0.81480])
-        v = LambertProjection.xy2vector(lambert_xy)
+        with pytest.warns(np.VisibleDeprecationWarning):
+            v = LambertProjection.xy2vector(lambert_xy)
         assert np.allclose(v.data, 0.578, atol=1e-3)
 
     def test_eq_c(self):
@@ -100,14 +106,16 @@ class TestLambertProjection:
     def test_lambert_to_gnomonic(self):
         """Conversion from Lambert to Gnomonic works"""
         vec = np.array((0.81417, 0.81417))  # Should give x,y,z = 1/sqrt(3) (1, 1, 1)
-        output = LambertProjection.lambert_to_gnomonic(vec)
+        with pytest.warns(np.VisibleDeprecationWarning):
+            output = LambertProjection.lambert_to_gnomonic(vec)
         expected = np.array((1, 1))
         assert output[..., 0, 0] == pytest.approx(expected[0], abs=1e-2)
 
     def test_gnomonic_to_lambert(self):
         """Conversion from Gnomonic to Lambert works"""
         vec = np.array((1, 1))  # Similar to the case above
-        output = LambertProjection.gnomonic_to_lambert(vec)
+        with pytest.warns(np.VisibleDeprecationWarning):
+            output = LambertProjection.gnomonic_to_lambert(vec)
         expected = np.array((0.81417, 0.81417))
         assert output[..., 0, 0] == pytest.approx(expected[0], rel=1e-3)
 
@@ -119,9 +127,11 @@ class TestLambertProjection:
         assert v.shape == (sx, sx)
         assert v.data.shape == (sx, sx, 3)
         # Forward
-        xy_lambert = LambertProjection.vector2xy(v)
+        with pytest.warns(np.VisibleDeprecationWarning):
+            xy_lambert = LambertProjection.vector2xy(v)
         assert xy_lambert.shape == (sx, sx, 2)
         # and back
-        xyz_frm_lambert = LambertProjection.xy2vector(xy_lambert)
+        with pytest.warns(np.VisibleDeprecationWarning):
+            xyz_frm_lambert = LambertProjection.xy2vector(xy_lambert)
         assert xyz_frm_lambert.shape == v.shape
         assert xyz_frm_lambert.data.shape == v.data.shape
