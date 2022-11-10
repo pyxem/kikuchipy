@@ -31,6 +31,7 @@ import kikuchipy as kp
 from kikuchipy.conftest import assert_dictionary
 
 DIR_PATH = os.path.dirname(__file__)
+NORDIF_FILE = os.path.join(DIR_PATH, "../../data/nordif/Pattern.dat")
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5")
 EMSOFT_FILE = os.path.join(DIR_PATH, "../../data/emsoft_ebsd/simulated_ebsd.h5")
 
@@ -70,10 +71,8 @@ class TestEBSD:
 
 
 class TestEBSDXmapProperty:
-    def test_init_xmap(self, dummy_signal):
+    def test_init_xmap(self):
         """The attribute is set correctly."""
-        assert dummy_signal.xmap is None
-
         ssim = kp.load(EMSOFT_FILE)
         xmap = ssim.xmap
         assert xmap.phases[0].name == "ni"
@@ -1658,28 +1657,27 @@ class TestEBSDRefinement:
         )
         assert dask_array.chunksize == chunksize
 
-    def test_refine_orientation_nickel_ebsd_small(
-        self, nickel_ebsd_small_di_xmap, detector
-    ):
-        xmap = nickel_ebsd_small_di_xmap
-
+    def test_refine_orientation_nickel_ebsd_small(self):
         s = kp.data.nickel_ebsd_small()
         s.remove_static_background()
         s.remove_dynamic_background()
 
         energy = 20
+        signal_mask = kp.filters.Window("circular", s.axes_manager.signal_shape[::-1])
+        signal_mask = ~signal_mask.astype(bool)
         xmap_ref = s.refine_orientation(
-            xmap=xmap,
-            detector=detector,
+            xmap=s.xmap,
+            detector=s.detector,
             master_pattern=kp.data.nickel_ebsd_master_pattern_small(
                 energy=energy,
                 projection="lambert",
                 hemisphere="upper",
             ),
             energy=energy,
+            signal_mask=signal_mask,
         )
 
-        assert np.all(xmap_ref.scores > xmap.scores)
+        assert np.allclose(xmap_ref.scores, s.xmap.scores, atol=1e-3)
 
     # ------------------- Refine projection centers ------------------ #
 
@@ -2302,3 +2300,8 @@ class TestSignal2DMethods:
         """Custom properties does not carry over."""
         s_mp = dummy_signal.set_signal_type("EBSDMasterPattern")
         assert not hasattr(s_mp, "_xmap")
+
+    def test_add_gaussian_noise(self, dummy_signal):
+        """Custom properties carry over."""
+        dummy_signal.change_dtype("float32")
+        s2 = dummy_signal.add_gaussian_noise(std=1)

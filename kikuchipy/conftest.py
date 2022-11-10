@@ -86,10 +86,14 @@ def pytest_sessionstart(session):  # pragma: no cover
 
 @pytest.fixture
 def dummy_signal(dummy_background):
-    """Dummy signal of shape <(3, 3)|(3, 3)>. If this is changed, all
+    """Dummy signal of shape <3, 3|3, 3>. If this is changed, all
     tests using this signal will fail since they compare the output from
     methods using this signal (as input) to hard-coded outputs.
     """
+    nav_shape = (3, 3)
+    nav_size = int(np.prod(nav_shape))
+    sig_shape = (3, 3)
+
     # fmt: off
     dummy_array = np.array(
         [
@@ -99,11 +103,37 @@ def dummy_signal(dummy_background):
             2, 9, 2, 9, 4, 3, 6, 5, 6, 2, 5, 9
         ],
         dtype=np.uint8
-    ).reshape((3, 3, 3, 3))
+    ).reshape(nav_shape + sig_shape)
     # fmt: on
+
+    # Initialize and set static background attribute
     s = kp.signals.EBSD(dummy_array, static_background=dummy_background)
+
+    # Axes manager
     s.axes_manager.navigation_axes[1].name = "x"
     s.axes_manager.navigation_axes[0].name = "y"
+
+    # Crystal map
+    phase_list = PhaseList([Phase("a", space_group=225), Phase("b", space_group=227)])
+    y, x = np.indices(nav_shape)
+    s.xmap = CrystalMap(
+        rotations=Rotation.identity((nav_size,)),
+        # fmt: off
+        phase_id=np.array([
+            [0, 0, 1],
+            [1, 1, 0],
+            [0, 1, 0],
+        ]).ravel(),
+        # fmt: on
+        phase_list=phase_list,
+        x=x.ravel(),
+        y=y.ravel(),
+    )
+    s.detector = kp.detectors.EBSDDetector(
+        shape=sig_shape,
+        pc=np.full(nav_shape + (3,), [0.1, 0.2, 0.3]),
+    )
+
     yield s
 
 
@@ -374,71 +404,6 @@ def oxford_binary_file(tmpdir, request):
 
 
 @pytest.fixture
-def nickel_ebsd_small_di_xmap():
-    """Yield an :class:`~orix.crystal_map.CrystalMap` from dictionary
-    indexing of the :func:`kikuchipy.data.nickel_ebsd_small` data set.
-
-    Dictionary indexing was performed with the following script:
-
-    .. code-block:: python
-
-        import kikuchipy as kp
-        from orix.sampling import get_sample_fundamental
-
-
-        s = kp.data.nickel_ebsd_small()
-        s.remove_static_background()
-        s.remove_dynamic_background()
-
-        mp = kp.data.nickel_ebsd_master_pattern_small(energy=20, projection="lambert")
-        rot = get_sample_fundamental(resolution=1.4, point_group=mp.phase.point_group)
-        detector = kp.detectors.EBSDDetector(
-            shape=s.axes_manager.signal_shape[::-1],
-            sample_tilt=70,
-            pc=(0.421, 0.7794, 0.5049),
-            convention="tsl"
-        )
-        sim_dict = mp.get_patterns(rotations=rot, detector=detector, energy=20)
-        xmap = s.dictionary_indexing(dictionary=sim_dict, keep_n=1)
-    """
-    coords, _ = create_coordinate_arrays(shape=(3, 3), step_sizes=(1.5, 1.5))
-    # fmt: off
-    grain1 = (0.9542, -0.0183, -0.2806,  0.1018)
-    grain2 = (0.9542,  0.0608, -0.2295, -0.1818)
-    xmap = CrystalMap(
-        rotations=Rotation((
-            grain1, grain2, grain2,
-            grain1, grain2, grain2,
-            grain1, grain2, grain2
-        )),
-        x=coords["x"],
-        y=coords["y"],
-        prop=dict(scores=np.array((
-            0.4364652,  0.3772456,  0.4140171,
-            0.4537009,  0.37445727, 0.43675864,
-            0.42391658, 0.38740265, 0.41931134
-        ))),
-        phase_list=PhaseList(Phase("ni", 225, "m-3m")),
-    )
-    # fmt: on
-    yield xmap
-
-
-@pytest.fixture
-def ni_kikuchipy_h5ebsd_file(tmp_path, nickel_ebsd_small_di_xmap, detector):
-    """Temporary file in kikuchipy's h5ebsd format with a crystal map
-    and detector stored.
-    """
-    s = kp.data.nickel_ebsd_small()
-    s.xmap = nickel_ebsd_small_di_xmap
-    detector.pc = np.ones((3, 3, 3)) * detector.pc
-    s.detector = detector
-    fname = tmp_path / "kp_file.h5"
-    s.save(fname)
-    yield fname
-
-
-@pytest.fixture
 def ni_small_axes_manager():
     """Axes manager for :func:`kikuchipy.data.nickel_ebsd_small`."""
     names = ["y", "x", "dy", "dx"]
@@ -448,12 +413,14 @@ def ni_small_axes_manager():
     axes_manager = {}
     for i in range(len(names)):
         axes_manager[f"axis-{i}"] = {
+            "_type": "UniformDataAxis",
             "name": names[i],
-            "scale": scales[i],
-            "offset": 0.0,
-            "size": sizes[i],
             "units": "um",
             "navigate": navigates[i],
+            "is_binned": False,
+            "size": sizes[i],
+            "scale": scales[i],
+            "offset": 0.0,
         }
     yield axes_manager
 

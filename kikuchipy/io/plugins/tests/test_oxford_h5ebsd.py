@@ -29,7 +29,7 @@ OXFORD_FILE = os.path.join(DATA_PATH, "oxford_h5ebsd/patterns.h5oina")
 
 
 class TestOxfordH5EBSD:
-    def test_load(self, tmp_path, ni_small_axes_manager, nickel_ebsd_small_di_xmap):
+    def test_load(self, tmp_path, ni_small_axes_manager):
         s = kp.load(OXFORD_FILE)
         assert s.data.shape == (3, 3, 60, 60)
         assert_dictionary(s.axes_manager.as_dictionary(), ni_small_axes_manager)
