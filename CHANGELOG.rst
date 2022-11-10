@@ -21,6 +21,10 @@ Added
 
 Changed
 -------
+- EBSD signal loaded with ``nickel_ebsd_small()`` now contains a crystal map with
+  orientations and a detector with PC values found from Hough indexing with
+  *PyEBSDIndex* followed by orientation and PC refinement.
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
 
 Deprecated
 ----------
@@ -37,6 +41,10 @@ Removed
 
 Fixed
 -----
+- kikuchipy h5ebsd reader can read a signal with an EBSD detector with a PC array of
+  different navigation shape than determined from the HDF5 file's navigation shape
+  (e.g. ``Scan 1/EBSD/Header/n_columns`` and ``n_rows``).
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
 
 Security
 --------
