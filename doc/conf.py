@@ -74,11 +74,13 @@ intersphinx_mapping = {
     # Docs
     "black": ("https://black.readthedocs.io/en/stable", None),
     "conda": ("https://conda.io/projects/conda/en/latest", None),
+    "coverage": ("https://coverage.readthedocs.io/en/latest", None),
     "defdap": ("https://defdap.readthedocs.io/en/latest", None),
     "nbsphinx": ("https://nbsphinx.readthedocs.io/en/latest", None),
     "nbval": ("https://nbval.readthedocs.io/en/latest", None),
     "numpydoc": ("https://numpydoc.readthedocs.io/en/latest", None),
     "pythreejs": ("https://pythreejs.readthedocs.io/en/stable", None),
+    "pytest": ("https://docs.pytest.org/en/stable", None),
     "pyxem": ("https://pyxem.readthedocs.io/en/latest", None),
     "readthedocs": ("https://docs.readthedocs.io/en/stable", None),
     "sphinx": ("https://www.sphinx-doc.org/en/master", None),
