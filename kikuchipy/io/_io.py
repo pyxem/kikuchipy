@@ -81,8 +81,8 @@ def load(
 ]:
     """Load an :class:`~kikuchipy.signals.EBSD`,
     :class:`~kikuchipy.signals.EBSDMasterPattern` or
-    :class:`~kikuchipy.signals.ECPMasterPattern` signal from a
-    supported file format.
+    :class:`~kikuchipy.signals.ECPMasterPattern` signal from one of the
+    :ref:`/tutorials/load_save_data.ipynb#Supported-file-formats`.
 
     This function is a modified version of :func:`hyperspy.io.load`.
 
