@@ -295,22 +295,24 @@ class TestKikuchipyH5EBSD:
         # One column of patterns
         s_y_only = s.inav[0]
         s_y_only.save(save_path_hdf5)
-        with pytest.warns(UserWarning) as warninfo:
-            s_y_only2 = load(save_path_hdf5)
-        assert len(warninfo) == 2
+        s_y_only2 = load(save_path_hdf5)
         assert s_y_only2.data.shape == desired_shape
         assert s_y_only2.axes_manager.navigation_axes[0].name == "y"
         assert s_y_only2.axes_manager.navigation_extent == desired_nav_extent
+        assert s_y_only2.xmap.shape == (3,)
+        assert np.allclose(s_y_only2.xmap.y, np.arange(3) * 1.5)
+        assert s_y_only2.detector.pc.shape == (3, 3)
 
         # One row of patterns
         s_x_only = s.inav[:, 0]
         s_x_only.save(save_path_hdf5, overwrite=True)
-        with pytest.warns(UserWarning) as warninfo:
-            s_x_only2 = load(save_path_hdf5)
-        assert len(warninfo) == 2
+        s_x_only2 = load(save_path_hdf5)
         assert s_x_only2.data.shape == desired_shape
         assert s_x_only2.axes_manager.navigation_axes[0].name == "x"
         assert s_x_only2.axes_manager.navigation_extent == desired_nav_extent
+        assert s_x_only2.xmap.shape == (3,)
+        assert np.allclose(s_x_only2.xmap.x, np.arange(3) * 1.5)
+        assert s_x_only2.detector.pc.shape == (3, 3)
 
         # Maintain axis name
         s_y_only2.axes_manager["y"].name = "x"
@@ -326,10 +328,7 @@ class TestKikuchipyH5EBSD:
         s = nickel_ebsd_small()
         s0 = s.inav[0, 0]
         s0.save(save_path_hdf5)
-        with pytest.warns() as warninfo:
-            s1 = load(save_path_hdf5)
-        # Two UserWarning, one DeprecationWarning
-        assert len(warninfo) == 3
+        s1 = load(save_path_hdf5)
         assert s1.data.shape == (60, 60)
         assert s1.axes_manager.navigation_axes == ()
 

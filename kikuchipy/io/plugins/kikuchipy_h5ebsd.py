@@ -156,7 +156,6 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
         pc = np.dstack(
             (hd.get("pcx", 0.5), hd.get("pcy", 0.5), hd.get("pcz", 0.5))
         )
-        pc = pc.squeeze()
         if pc.size > 3:
             try:
                 pc = pc.reshape((ny, nx, 3))
@@ -181,6 +180,7 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
                         "(PCx, PCy, PCz) = (0.5, 0.5, 0.5)"
                     )
                     pc = (0.5, 0.5, 0.5)
+        pc = pc.squeeze()
 
         scan_dict["detector"] = EBSDDetector(
             shape=(sy, sx),

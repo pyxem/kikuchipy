@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 import os
 
 import dask
@@ -2452,3 +2453,121 @@ class TestSignal2DMethods:
 
         assert np.allclose(dummy_signal.static_background, static_bg_old[sig_slices])
         assert dummy_signal.detector.shape == sig_shape
+
+    def test_inav(self, dummy_signal):
+        """Slicing with inav carries over custom attributes."""
+        xmap0 = dummy_signal.xmap
+        rot0 = xmap0.rotations.reshape(*xmap0.shape)
+        pc0 = dummy_signal.detector.pc
+        x0 = xmap0.x.reshape(xmap0.shape)
+        y0 = xmap0.y.reshape(xmap0.shape)
+
+        # 2D
+        s2 = dummy_signal.inav[:2, :3]
+        assert np.allclose(s2.xmap.rotations.data, rot0[:3, :2].flatten().data)
+        assert np.allclose(s2.detector.pc, pc0[:3, :2])
+
+        # 1D
+        s3 = dummy_signal.inav[:, 1]
+        assert np.allclose(s3.xmap.rotations.data, rot0[1, :].flatten().data)
+        assert np.allclose(s3.detector.pc, pc0[1, :])
+        assert np.allclose(s3.xmap.x, x0[1, :].ravel())
+        assert s3.xmap.y is None
+
+        # 1D
+        s4 = dummy_signal.inav[2, :]
+        assert np.allclose(s4.xmap.rotations.data, rot0[:, 2].flatten().data)
+        assert np.allclose(s4.detector.pc, pc0[:, 2])
+        assert np.allclose(s4.xmap.y, y0[:, 2].ravel())
+        assert s4.xmap.x is None
+
+        # 0D
+        s5 = dummy_signal.inav[0, 0]
+        assert np.allclose(s5.xmap.rotations.data, rot0[0, 0].data)
+        assert np.allclose(s5.detector.pc, pc0[0, 0])
+        assert np.allclose(s5.xmap.x, x0[0, 0])
+        assert s5.xmap.y is None
+
+    def test_isig(self, dummy_signal):
+        """Slicing with isig carries over custom attributes."""
+        static_bg0 = dummy_signal.static_background
+        det0 = dummy_signal.detector
+
+        # 2D
+        s2 = dummy_signal.isig[:2, :3]
+        assert np.allclose(dummy_signal.static_background, static_bg0)
+        assert np.allclose(dummy_signal.detector.pc, det0.pc)
+        assert np.allclose(s2.static_background, static_bg0[:3, :2])
+        assert s2.detector.shape == (3, 2)
+
+        # 1D
+        s3 = dummy_signal.isig[:, 1]
+        assert isinstance(s3, hs.signals.Signal1D)
+
+        # 1D
+        s4 = dummy_signal.isig[2, :]
+        assert isinstance(s4, hs.signals.Signal1D)
+
+        # 0D
+        s5 = dummy_signal.isig[0, 0]
+        assert isinstance(s5, hs.signals.BaseSignal)
+
+    def test_rebin(self):
+        """Rebinning carries over custom attributes or not as
+        appropriate.
+        """
+        s = kp.data.nickel_ebsd_small()
+        static_bg0 = s.static_background.copy()
+        det0 = s.detector.deepcopy()
+        xmap0 = s.xmap.deepcopy()
+
+        # Nothing to do
+        s2 = s.rebin(scale=(1, 1, 1, 1))
+        assert np.allclose(s2.static_background, static_bg0)
+        assert np.allclose(s2.detector.pc, det0.pc)
+        assert np.allclose(s2.xmap.rotations.data, xmap0.rotations.data)
+
+        # Bin navigation shape
+        s3 = s.rebin(scale=(1, 2, 1, 1))
+        assert s3.static_background is None
+        assert s3.detector.navigation_shape == (1, 3)
+        assert np.allclose(s3.detector.pc, 0.5)
+        assert s3.xmap is None
+
+        # Bin signal shape
+        new_sig_shape = (30, 60)
+        s4 = s.rebin(new_shape=(3, 3) + new_sig_shape[::-1], dtype=np.float32)
+        assert s4.static_background.shape == new_sig_shape
+        assert s4.data.dtype == s4.static_background.dtype == np.float32
+        assert s4.detector.shape == new_sig_shape
+        assert np.allclose(s4.detector.pc, det0.pc)
+        assert np.allclose(s4.xmap.rotations.data, xmap0.rotations.data)
+
+        # Bin signal shape by passing `scale`
+        s5 = s4.deepcopy()
+        s.rebin(scale=(1, 1, 1, 2), out=s5)
+        assert s5.static_background.shape == new_sig_shape
+        assert s5.data.dtype == s5.static_background.dtype
+        assert s5.detector.shape == new_sig_shape
+        assert np.allclose(s5.detector.pc, det0.pc)
+        assert np.allclose(s5.xmap.rotations.data, xmap0.rotations.data)
+
+        # Bin both
+        s6 = s.rebin(scale=(3, 3, 2, 2))
+        assert s6.static_background is None
+        assert s6.detector.navigation_shape == (1, 1)
+        assert np.allclose(s6.detector.pc, 0.5)
+        assert s6.xmap is None
+
+    def test_update_custom_properties(self, caplog):
+        s = kp.data.nickel_ebsd_small()
+
+        s.detector.pc = s.detector.pc[:2, :1]
+        with caplog.at_level(logging.DEBUG, logger="kikuchipy"):
+            _ = s.inav[2:, 2:]
+        assert "Could not slice EBSD.detector.pc attribute array" in caplog.text
+
+        s._xmap = s.xmap[:1, :2]
+        with caplog.at_level(logging.DEBUG, logger="kikuchipy"):
+            _ = s.inav[2:, 2:]
+        assert "Could not slice EBSD.xmap attribute" in caplog.text
