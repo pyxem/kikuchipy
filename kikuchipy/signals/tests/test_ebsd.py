@@ -2303,5 +2303,118 @@ class TestSignal2DMethods:
 
     def test_add_gaussian_noise(self, dummy_signal):
         """Custom properties carry over."""
+        phase_id = dummy_signal.xmap.phase_id.copy()
+        pc = dummy_signal.detector.pc.copy()
+
         dummy_signal.change_dtype("float32")
-        s2 = dummy_signal.add_gaussian_noise(std=1)
+        dummy_signal.add_gaussian_noise(std=1)
+        assert np.allclose(dummy_signal.xmap.phase_id, phase_id)
+        assert np.allclose(dummy_signal.detector.pc, pc)
+
+    def test_add_poissonian_noise(self, dummy_signal):
+        """Custom properties carry over."""
+        phase_id = dummy_signal.xmap.phase_id.copy()
+        pc = dummy_signal.detector.pc.copy()
+
+        dummy_signal.change_dtype("float32")
+        dummy_signal.add_poissonian_noise()
+        assert np.allclose(dummy_signal.xmap.phase_id, phase_id)
+        assert np.allclose(dummy_signal.detector.pc, pc)
+
+    def test_add_ramp(self, dummy_signal):
+        """Custom properties carry over."""
+        phase_id = dummy_signal.xmap.phase_id.copy()
+        pc = dummy_signal.detector.pc.copy()
+
+        dummy_signal.change_dtype("int64")
+        dummy_signal.add_ramp(10, 10)
+        assert np.allclose(dummy_signal.xmap.phase_id, phase_id)
+        assert np.allclose(dummy_signal.detector.pc, pc)
+
+    @pytest.mark.parametrize(
+        "axis, start_end, nav_slices, sig_slices, sig_shape",
+        [
+            # Nothing changes
+            (
+                2,
+                (None, None),
+                (slice(None), slice(None)),
+                (slice(None), slice(None)),
+                (3, 3),
+            ),
+            # Keep first detector column
+            (
+                2,
+                (0, 1),
+                (slice(None), slice(None)),
+                (slice(None), slice(0, 1)),
+                (3, 1),
+            ),
+            # Keep last two detector rows
+            (
+                3,
+                (1, 3),
+                (slice(None), slice(None)),
+                (slice(1, 3), slice(None)),
+                (2, 3),
+            ),
+            # Keep first navigation column
+            (
+                0,
+                (0, 1),
+                (slice(None), slice(0, 1)),
+                (slice(None), slice(None)),
+                (3, 3)
+            ),
+            # Keep last two navigation columns
+            (
+                1,
+                (1, 3),
+                (slice(1, 3), slice(None)),
+                (slice(None), slice(None)),
+                (3, 3)
+            )
+        ],
+    )
+    def test_crop(
+        self, dummy_signal, axis, start_end, nav_slices, sig_slices, sig_shape
+    ):
+        """Custom properties are cropped correctly."""
+        xmap_old = dummy_signal.xmap
+        phase_id = xmap_old.phase_id.reshape(xmap_old.shape)
+        pc = dummy_signal.detector.pc.copy()
+        static_bg_old = dummy_signal.static_background.copy()
+
+        start, end = start_end
+        dummy_signal.crop(axis=axis, start=start, end=end)
+
+        xmap = dummy_signal.xmap
+        phase_id_new = xmap.phase_id.reshape(xmap.shape)
+        pc_new = dummy_signal.detector.pc
+
+        assert np.allclose(phase_id_new, phase_id[nav_slices])
+        assert np.allclose(pc_new, pc[nav_slices])
+        assert np.allclose(dummy_signal.static_background, static_bg_old[sig_slices])
+        assert dummy_signal.detector.shape == sig_shape
+
+    def test_crop_single_pc(self, dummy_signal):
+        """Cropping navigation dimension works with single PC."""
+        dummy_signal.detector.pc = dummy_signal.detector.pc_average
+        pc_old = dummy_signal.detector.pc.copy()
+        dummy_signal.crop(2, start=0, end=1)
+        assert np.allclose(dummy_signal.detector.pc, pc_old)
+
+    def test_crop_real_data(self):
+        """Cropping works on real data."""
+        s = kp.data.nickel_ebsd_small(lazy=True)
+        xmap_old = s.xmap.deepcopy()
+        det_old = s.detector.deepcopy()
+        static_bg_old = s.static_background.copy()
+
+        s.crop(0, start=0, end=2)
+        assert np.allclose(s.xmap.rotations.data, xmap_old[:, :2].rotations.data)
+        assert np.allclose(s.detector.pc, det_old.pc[:, :2])
+
+        s.crop(3, start=1, end=59)
+        assert np.allclose(s.static_background, static_bg_old[1:-1, :])
+        assert s.detector.shape == (58, 60)

@@ -18,6 +18,10 @@ Unreleased
 
 Added
 -----
+- When using the following HyperSpy ``Signal2D`` methods via the ``EBSD`` class, the
+  class methods ``xmap``, ``static_background`` and ``detector`` attributes are handled
+  correctly: ``crop()``.
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
 
 Changed
 -------

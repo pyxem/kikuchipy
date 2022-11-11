@@ -77,15 +77,15 @@ from kikuchipy.signals.util._map_helper import (
 )
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
-from kikuchipy._util import deprecated_argument
 
 
 class EBSD(KikuchipySignal2D):
     """Scan of Electron Backscatter Diffraction (EBSD) patterns.
 
-    This class extends HyperSpy's Signal2D class for EBSD patterns. See
-    the docstring of :class:`~hyperspy._signals.signal2d.Signal2D` for
-    the list of inherited attributes and methods.
+    This class extends HyperSpy's Signal2D class for EBSD patterns. Some
+    of the docstrings are obtained from HyperSpy. See the docstring of
+    :class:`~hyperspy._signals.signal2d.Signal2D` for the list of
+    inherited attributes and methods.
 
     Parameters
     ----------
@@ -1997,6 +1997,49 @@ class EBSD(KikuchipySignal2D):
 
         return s_model
 
+    def crop(self, *args, **kwargs) -> None:
+        props = self._get_custom_properties()
+        old_shape = self.data.shape
+
+        super().crop(*args, **kwargs)
+
+        # End if there is nothing to do
+        if (
+                ("start" not in kwargs or kwargs["start"] is None)
+            and ("end" not in kwargs or kwargs["end"] is None)
+        ):
+            return
+
+        # Get input parameters
+        start = kwargs.get("start", None)
+        end = kwargs.get("end", None)
+
+        # Determine which data axis changed
+        new_shape = self.data.shape
+        idx_data = np.nonzero(np.array(old_shape) - np.array(new_shape))[0][0]
+
+        am = self.axes_manager
+        nav_ndim = am.navigation_dimension
+
+        det = props["detector"]  # Shallow copy
+        if idx_data in am.signal_indices_in_array:
+            # Slice static background and update detector shape...
+            sig_slices = 2 * [slice(None)]
+            sig_slices[idx_data - nav_ndim] = slice(start, end)
+            sig_slices = tuple(sig_slices)
+            props["static_background"] = props["static_background"][sig_slices]
+            det.shape = am.signal_shape[::-1]
+        else:
+            # ... or slice crystal map and detector PC values
+            nav_slices = nav_ndim * [slice(None)]
+            nav_slices[idx_data] = slice(start, end)
+            nav_slices = tuple(nav_slices)
+            props["xmap"] = props["xmap"][nav_slices]
+            if det.navigation_shape != (1,):
+                det.pc = det.pc[nav_slices]
+
+        self._set_custom_properties(props)
+
     # ------------------------ Private methods ----------------------- #
 
     def _check_refinement_parameters(
@@ -2078,7 +2121,9 @@ class EBSD(KikuchipySignal2D):
         return patterns, signal_mask
 
     @staticmethod
-    def _get_sum_signal(signal, out_signal_axes: Optional[List] = None):
+    def _get_sum_signal(
+        signal, out_signal_axes: Optional[List] = None
+    ) -> hs.signals.Signal2D:
         out = signal.nansum(signal.axes_manager.signal_axes)
         if out_signal_axes is None:
             out_signal_axes = list(
