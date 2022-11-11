@@ -2418,3 +2418,37 @@ class TestSignal2DMethods:
         s.crop(3, start=1, end=59)
         assert np.allclose(s.static_background, static_bg_old[1:-1, :])
         assert s.detector.shape == (58, 60)
+
+    @pytest.mark.parametrize(
+        "top_bottom_left_right, sig_slices, sig_shape",
+        [
+            # Nothing changes
+            (
+                (None, None, None, None),
+                (slice(None), slice(None)),
+                (3, 3),
+            ),
+            # Keep first detector column
+            (
+                (0, 1, None, None),
+                (slice(0, 1), slice(None)),
+                (1, 3),
+            ),
+            # Keep bottom right (2, 1) detector pixels
+            (
+                (1, 3, 2, 3),
+                (slice(1, 3), slice(2, 3)),
+                (2, 1),
+            ),
+        ],
+    )
+    def test_crop_image(
+        self, dummy_signal, top_bottom_left_right, sig_slices, sig_shape
+    ):
+        """Custom properties are cropped correctly."""
+        static_bg_old = dummy_signal.static_background.copy()
+
+        dummy_signal.crop_image(*top_bottom_left_right)
+
+        assert np.allclose(dummy_signal.static_background, static_bg_old[sig_slices])
+        assert dummy_signal.detector.shape == sig_shape

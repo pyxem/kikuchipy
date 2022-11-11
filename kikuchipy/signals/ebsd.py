@@ -75,6 +75,7 @@ from kikuchipy.signals.util._map_helper import (
     _get_neighbour_dot_product_matrices,
     _get_average_dot_product_map,
 )
+from kikuchipy.signals.util._overwrite_hyperspy_methods import get_parameters
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 
@@ -2003,16 +2004,13 @@ class EBSD(KikuchipySignal2D):
 
         super().crop(*args, **kwargs)
 
-        # End if there is nothing to do
-        if (
-                ("start" not in kwargs or kwargs["start"] is None)
-            and ("end" not in kwargs or kwargs["end"] is None)
-        ):
-            return
-
         # Get input parameters
-        start = kwargs.get("start", None)
-        end = kwargs.get("end", None)
+        params = get_parameters(super().crop, ["start", "end"], args, kwargs)
+
+        # End if not all parameters of interest could be found or if
+        # there is nothing to do
+        if params is None or all(p is None for p in params.values()):
+            return
 
         # Determine which data axis changed
         new_shape = self.data.shape
@@ -2025,18 +2023,46 @@ class EBSD(KikuchipySignal2D):
         if idx_data in am.signal_indices_in_array:
             # Slice static background and update detector shape...
             sig_slices = 2 * [slice(None)]
-            sig_slices[idx_data - nav_ndim] = slice(start, end)
+            sig_slices[idx_data - nav_ndim] = slice(params["start"], params["end"])
             sig_slices = tuple(sig_slices)
             props["static_background"] = props["static_background"][sig_slices]
             det.shape = am.signal_shape[::-1]
         else:
             # ... or slice crystal map and detector PC values
             nav_slices = nav_ndim * [slice(None)]
-            nav_slices[idx_data] = slice(start, end)
+            nav_slices[idx_data] = slice(params["start"], params["end"])
             nav_slices = tuple(nav_slices)
             props["xmap"] = props["xmap"][nav_slices]
             if det.navigation_shape != (1,):
                 det.pc = det.pc[nav_slices]
+
+        self._set_custom_properties(props)
+
+    def crop_image(self, *args, **kwargs) -> None:
+        props = self._get_custom_properties()
+
+        super().crop_image(*args, **kwargs)
+
+        # Get input parameters
+        params = get_parameters(
+            super().crop_image, ["top", "bottom", "left", "right"], args, kwargs
+        )
+
+        # End if not all parameters of interest could be found or if
+        # there is nothing to do
+        if params is None or all(p is None for p in params.values()):
+            return
+
+        # Set signal slices
+        sig_slices = tuple((
+            slice(params["top"], params["bottom"]),
+            slice(params["left"], params["right"]),
+        ))
+
+        # Slice static background and update detector shape
+        det = props["detector"]  # Shallow copy
+        props["static_background"] = props["static_background"][sig_slices]
+        det.shape = self.axes_manager.signal_shape[::-1]
 
         self._set_custom_properties(props)
 
