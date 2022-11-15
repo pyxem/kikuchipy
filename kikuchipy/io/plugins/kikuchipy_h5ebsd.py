@@ -174,12 +174,12 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
                 pad_width.append((0, 0))
                 try:
                     pc = np.pad(pc, pad_width, constant_values=0.5)
-                except ValueError:
+                except ValueError:  # pragma: no cover
                     warnings.warn(
                         "Could not pad PC array, detector will have a single PC with "
                         "(PCx, PCy, PCz) = (0.5, 0.5, 0.5)"
                     )
-                    pc = (0.5, 0.5, 0.5)
+                    pc = np.array((0.5, 0.5, 0.5))
         pc = pc.squeeze()
 
         scan_dict["detector"] = EBSDDetector(
