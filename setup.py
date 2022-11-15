@@ -68,6 +68,7 @@ extra_feature_requirements = {
         "pytest-xdist",
     ],
     "viz": [
+        "matplotlib                 >= 3.5",
         "pyvista",
     ],
 }

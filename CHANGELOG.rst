@@ -36,6 +36,9 @@ Changed
   orientations and a detector with PC values found from Hough indexing with
   *PyEBSDIndex* followed by orientation and PC refinement.
   (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
+- Minimal version of *Matplotlib* is 3.5.0 when installing optional dependencies with
+  ``pip install kikuchipy[viz]`` since *PyVista* requires this.
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
 
 Deprecated
 ----------
