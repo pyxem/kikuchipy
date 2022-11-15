@@ -115,7 +115,7 @@ def load(
     >>> import kikuchipy as kp
     >>> s = kp.load(DATA_DIR + "/patterns.h5")
     >>> s
-    <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
+    <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
     """
     if not os.path.isfile(filename):
         is_wildcard = False

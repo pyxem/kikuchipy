@@ -129,7 +129,7 @@ class EBSD(KikuchipySignal2D):
     >>> import kikuchipy as kp
     >>> s = kp.data.nickel_ebsd_small()
     >>> s
-    <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
+    <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
     >>> s.detector
     EBSDDetector (60, 60), px_size 1 um, binning 8, tilt 0, azimuthal 0, pc (0.425, 0.213, 0.501)
     >>> s.static_background
@@ -749,7 +749,7 @@ class EBSD(KikuchipySignal2D):
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
         >>> s
-        <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
+        <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
         >>> s.remove_static_background()
         >>> s.remove_dynamic_background()
         >>> iq = s.get_image_quality()
