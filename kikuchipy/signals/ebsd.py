@@ -2460,9 +2460,9 @@ def _update_custom_attributes(
         if attributes["detector"].navigation_shape != (1,):
             pc = attributes["detector"].pc[nav_slices]
             if pc.size == 0:
-                _logger.debug((
+                _logger.debug(
                     "Could not slice EBSD.detector.pc attribute array, setting it to "
-                    "[0.5, 0.5, 0.5]")
+                    "[0.5, 0.5, 0.5]"
                 )
                 pc = [0.5, 0.5, 0.5]
             attributes["detector"].pc = pc

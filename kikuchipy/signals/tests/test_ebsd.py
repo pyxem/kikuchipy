@@ -2360,21 +2360,9 @@ class TestSignal2DMethods:
                 (2, 3),
             ),
             # Keep first navigation column
-            (
-                0,
-                (0, 1),
-                (slice(None), slice(0, 1)),
-                (slice(None), slice(None)),
-                (3, 3)
-            ),
+            (0, (0, 1), (slice(None), slice(0, 1)), (slice(None), slice(None)), (3, 3)),
             # Keep last two navigation columns
-            (
-                1,
-                (1, 3),
-                (slice(1, 3), slice(None)),
-                (slice(None), slice(None)),
-                (3, 3)
-            )
+            (1, (1, 3), (slice(1, 3), slice(None)), (slice(None), slice(None)), (3, 3)),
         ],
     )
     def test_crop(

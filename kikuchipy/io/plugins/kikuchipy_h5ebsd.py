@@ -153,9 +153,7 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
         scan_dict["static_background"] = hd.get("static_background")
 
         # --- Detector
-        pc = np.dstack(
-            (hd.get("pcx", 0.5), hd.get("pcy", 0.5), hd.get("pcz", 0.5))
-        )
+        pc = np.dstack((hd.get("pcx", 0.5), hd.get("pcy", 0.5), hd.get("pcz", 0.5)))
         if pc.size > 3:
             try:
                 pc = pc.reshape((ny, nx, 3))

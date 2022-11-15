@@ -22,10 +22,7 @@ from typing import Callable, List, Union
 
 
 def get_parameters(
-    method: Callable,
-    params_of_interest: List[str],
-    args: tuple,
-    kwargs: dict
+    method: Callable, params_of_interest: List[str], args: tuple, kwargs: dict
 ) -> Union[dict, None]:
     sig = inspect.signature(method)
 
