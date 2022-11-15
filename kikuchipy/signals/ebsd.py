@@ -2428,11 +2428,26 @@ class LazyEBSD(LazyKikuchipySignal2D, EBSD):
 
 def _update_custom_attributes(
     attributes: dict,
-    nav_slices: Union[slice, Tuple[slice, slice], int, None] = None,
-    sig_slices: Union[slice, Tuple[slice, slice], int, None] = None,
+    nav_slices: Union[slice, tuple, None] = None,
+    sig_slices: Union[slice, tuple, None] = None,
     new_nav_shape: Optional[tuple] = None,
     new_sig_shape: Optional[tuple] = None,
 ) -> dict:
+    """Update dictionary of custom attributes after slicing the signal
+    data.
+
+    Parameters
+    ----------
+    attributes
+        Dictionary of attribute keys ``"xmap"``, ``"static_background"``
+        and ``"detector"``.
+    nav_slices
+        Slice or tuple of slices or ints or a combination. If not given,
+        navigation dimensions of attributes are not updated.
+    sig_slices
+        Slice or tuple of slices or ints or a combination. If not given,
+        signal dimensions of attributes are not updated.
+    """
     if sig_slices is not None:
         try:
             static_bg = attributes["static_background"]
@@ -2440,7 +2455,34 @@ def _update_custom_attributes(
         except TypeError:
             _logger.debug("Could not slice EBSD.static_background attribute array")
 
-        attributes["detector"].shape = new_sig_shape
+        # Make slices into extent (top, bottom, left, right)
+        extent = [
+            sig_slices[0].start,
+            sig_slices[0].stop,
+            sig_slices[1].start,
+            sig_slices[1].stop,
+        ]
+        for i, new in enumerate([0, new_sig_shape[0], 0, new_sig_shape[1]]):
+            if extent[i] is None:
+                extent[i] = new
+
+        det = attributes["detector"]
+        try:
+            attributes["detector"] = det.crop(extent)
+        except ValueError:
+            _logger.debug(
+                "Could not crop EBSD.detector attribute, setting PC array to [0.5, 0.5,"
+                " 0.5]"
+            )
+            attributes["detector"] = EBSDDetector(
+                shape=new_sig_shape,
+                pc=[0.5, 0.5, 0.5],
+                sample_tilt=det.sample_tilt,
+                tilt=det.tilt,
+                azimuthal=det.azimuthal,
+                px_size=det.px_size,
+                binning=det.binning,
+            )
 
     if nav_slices is not None:
         try:

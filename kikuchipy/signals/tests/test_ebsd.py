@@ -2333,7 +2333,7 @@ class TestSignal2DMethods:
         assert np.allclose(dummy_signal.detector.pc, pc)
 
     @pytest.mark.parametrize(
-        "axis, start_end, nav_slices, sig_slices, sig_shape",
+        "axis, start_end, nav_slices, sig_slices, sig_shape, pc_new",
         [
             # Nothing changes
             (
@@ -2342,6 +2342,7 @@ class TestSignal2DMethods:
                 (slice(None), slice(None)),
                 (slice(None), slice(None)),
                 (3, 3),
+                None,
             ),
             # Keep first detector column
             (
@@ -2350,6 +2351,7 @@ class TestSignal2DMethods:
                 (slice(None), slice(None)),
                 (slice(None), slice(0, 1)),
                 (3, 1),
+                [1.385, 0.5, 0.538],
             ),
             # Keep last two detector rows
             (
@@ -2358,15 +2360,30 @@ class TestSignal2DMethods:
                 (slice(None), slice(None)),
                 (slice(1, 3), slice(None)),
                 (2, 3),
+                [0.462, 0.25, 0.808],
             ),
             # Keep first navigation column
-            (0, (0, 1), (slice(None), slice(0, 1)), (slice(None), slice(None)), (3, 3)),
+            (
+                0,
+                (0, 1),
+                (slice(None), slice(0, 1)),
+                (slice(None), slice(None)),
+                (3, 3),
+                None,
+            ),
             # Keep last two navigation columns
-            (1, (1, 3), (slice(1, 3), slice(None)), (slice(None), slice(None)), (3, 3)),
+            (
+                1,
+                (1, 3),
+                (slice(1, 3), slice(None)),
+                (slice(None), slice(None)),
+                (3, 3),
+                None,
+            ),
         ],
     )
     def test_crop(
-        self, dummy_signal, axis, start_end, nav_slices, sig_slices, sig_shape
+        self, dummy_signal, axis, start_end, nav_slices, sig_slices, sig_shape, pc_new
     ):
         """Custom properties are cropped correctly."""
         xmap_old = dummy_signal.xmap
@@ -2379,19 +2396,22 @@ class TestSignal2DMethods:
 
         xmap = dummy_signal.xmap
         phase_id_new = xmap.phase_id.reshape(xmap.shape)
-        pc_new = dummy_signal.detector.pc
 
         assert np.allclose(phase_id_new, phase_id[nav_slices])
-        assert np.allclose(pc_new, pc[nav_slices])
         assert np.allclose(dummy_signal.static_background, static_bg_old[sig_slices])
         assert dummy_signal.detector.shape == sig_shape
+        if pc_new is None:
+            assert np.allclose(dummy_signal.detector.pc, pc[nav_slices])
+        else:
+            assert np.allclose(dummy_signal.detector.pc_average, pc_new, atol=1e-3)
 
     def test_crop_single_pc(self, dummy_signal):
         """Cropping navigation dimension works with single PC."""
         dummy_signal.detector.pc = dummy_signal.detector.pc_average
-        pc_old = dummy_signal.detector.pc.copy()
         dummy_signal.crop(2, start=0, end=1)
-        assert np.allclose(dummy_signal.detector.pc, pc_old)
+        assert np.allclose(
+            dummy_signal.detector.pc_average, [1.385, 0.5, 0.538], atol=1e-3
+        )
 
     def test_crop_real_data(self):
         """Cropping works on real data."""
@@ -2487,18 +2507,19 @@ class TestSignal2DMethods:
         assert np.allclose(dummy_signal.detector.pc, det0.pc)
         assert np.allclose(s2.static_background, static_bg0[:3, :2])
         assert s2.detector.shape == (3, 2)
+        assert np.allclose(s2.detector.pc_average, [0.692, 0.5, 0.538], atol=1e-3)
 
         # 1D
-        s3 = dummy_signal.isig[:, 1]
-        assert isinstance(s3, hs.signals.Signal1D)
-
-        # 1D
-        s4 = dummy_signal.isig[2, :]
+        s4 = dummy_signal.isig[:, 1]
         assert isinstance(s4, hs.signals.Signal1D)
 
+        # 1D
+        s5 = dummy_signal.isig[2, :]
+        assert isinstance(s5, hs.signals.Signal1D)
+
         # 0D
-        s5 = dummy_signal.isig[0, 0]
-        assert isinstance(s5, hs.signals.BaseSignal)
+        s6 = dummy_signal.isig[0, 0]
+        assert isinstance(s6, hs.signals.BaseSignal)
 
     def test_rebin(self):
         """Rebinning carries over custom attributes or not as

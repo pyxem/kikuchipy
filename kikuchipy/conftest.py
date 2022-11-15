@@ -129,10 +129,9 @@ def dummy_signal(dummy_background):
         x=x.ravel(),
         y=y.ravel(),
     )
-    s.detector = kp.detectors.EBSDDetector(
-        shape=sig_shape,
-        pc=np.full(nav_shape + (3,), [0.1, 0.2, 0.3]),
-    )
+    pc = np.arange(np.prod(nav_shape) * 3).reshape(nav_shape + (3,))
+    pc = pc.astype(float) / pc.max()
+    s.detector = kp.detectors.EBSDDetector(shape=sig_shape, pc=pc)
 
     yield s
 
