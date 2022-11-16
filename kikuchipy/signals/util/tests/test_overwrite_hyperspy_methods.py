@@ -16,7 +16,10 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import kikuchipy as kp
-from kikuchipy.signals.util._overwrite_hyperspy_methods import get_parameters
+from kikuchipy.signals.util._overwrite_hyperspy_methods import (
+    get_parameters,
+    insert_doc_disclaimer,
+)
 
 
 def test_get_parameters():
@@ -41,3 +44,44 @@ def test_get_parameters():
         kp.signals.EBSD.remove_static_background, ["operation", "relative"], (), {}
     )
     assert out3 is None
+
+
+def test_insert_doc_disclaimer():
+    class A:
+        def __init__(self, number):
+            self.number = number
+
+        def add(self, number):
+            """A method.
+
+            Parameters
+            ----------
+            number
+
+            Returns
+            -------
+            new_number
+            """
+            return self.number + number
+
+        def subtract(self, number):
+            return self.number - number
+
+    class B(A):
+        @insert_doc_disclaimer(A, A.add)
+        def add(self, number):
+            return super().add(number)
+
+        @insert_doc_disclaimer(A, A.subtract)
+        def subtract(self, number):
+            return super().subtract(number)
+
+    b = B(1)
+
+    # Adds disclaimer
+    assert b.add(1) == 2
+    assert "HyperSpy" in b.add.__doc__
+
+    # Does not add disclaimer
+    assert b.subtract(1) == 0
+    assert b.subtract.__doc__ is None

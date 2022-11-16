@@ -23,6 +23,9 @@ Added
   correctly, which they were not before: ``inav``, ``isig``, ``crop()``,
   ``crop_image()``. If handling fails, the old behavior is retained. This handling is
   experimental. (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
+- ``EBSDDetector.crop()`` method to get a new detector with its shape cropped, also
+  updating the PC values accordingly.
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
 
 Changed
 -------
@@ -30,8 +33,9 @@ Changed
   ``xmap`` and ``static_background`` are set to ``None`` and ``detector.pc`` is set to
   ``[0.5, 0.5, 0.5]`` in the appropriate navigation shape. If the signal dimension(s)
   are binned, the ``static_background`` is binned similarly while the ``detector.shape``
-  is updated. If this handling of attributes fails, the old behavior is retained. This
-  handling is experimental. (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
+  and ``detector.binning`` are updated. If this handling of attributes fails, the old
+  behavior is retained. This handling is experimental.
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
 - EBSD signal loaded with ``nickel_ebsd_small()`` now contains a crystal map with
   orientations and a detector with PC values found from Hough indexing with
   *PyEBSDIndex* followed by orientation and PC refinement.

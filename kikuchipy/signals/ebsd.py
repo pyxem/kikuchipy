@@ -29,8 +29,8 @@ import dask
 import dask.array as da
 from dask.diagnostics import ProgressBar
 import hyperspy.api as hs
+from hyperspy.signals import Signal2D
 from hyperspy.learn.mva import LearningResults
-from hyperspy.misc.array_tools import rebin as hs_rebin
 from hyperspy.roi import BaseInteractiveROI
 from h5py import File
 import numpy as np
@@ -77,7 +77,10 @@ from kikuchipy.signals.util._map_helper import (
     _get_neighbour_dot_product_matrices,
     _get_average_dot_product_map,
 )
-from kikuchipy.signals.util._overwrite_hyperspy_methods import get_parameters
+from kikuchipy.signals.util._overwrite_hyperspy_methods import (
+    get_parameters,
+    insert_doc_disclaimer,
+)
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 
@@ -2003,6 +2006,7 @@ class EBSD(KikuchipySignal2D):
 
         return s_model
 
+    @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.crop)
     def crop(self, *args, **kwargs):
         # This method is called by crop_image(), so attributes are
         # handled correctly by that method as well
@@ -2047,6 +2051,7 @@ class EBSD(KikuchipySignal2D):
 
         self._set_custom_attributes(attrs)
 
+    @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.rebin)
     def rebin(self, *args, **kwargs):
         data_shape_old = self.data.shape
         am_old = self.axes_manager
@@ -2071,19 +2076,28 @@ class EBSD(KikuchipySignal2D):
 
         props = self._get_custom_attributes(make_deepcopy=True)
 
+        # Update static background
         static_bg = props["static_background"]
         if sig_shape_new != sig_shape_old and static_bg is not None:
-            sig_idx = am_old.signal_indices_in_array
+            sig_idx = am_old.signal_indices_in_array[::-1]
             if params["new_shape"] is not None:
                 params["new_shape"] = [params["new_shape"][i] for i in sig_idx]
             else:
                 params["scale"] = [params["scale"][i] for i in sig_idx]
-            static_bg2 = hs_rebin(static_bg, **params)
+            s_static_bg = hs.signals.Signal2D(static_bg)
+            s_static_bg2 = s_static_bg.rebin(**params)
+            static_bg2 = s_static_bg2.data
             static_bg2 = static_bg2.astype(new.data.dtype)
             props["static_background"] = static_bg2
 
-        # TODO: Update PC values
+        # Update detector shape and binning factor
         props["detector"].shape = sig_shape_new
+        factors = np.array(sig_shape_old) / np.array(sig_shape_new)
+        binning = props["detector"].binning * factors
+        if binning[0] == binning[1] and np.allclose(binning, binning.round(0)):
+            props["detector"].binning = int(binning[0])
+        else:
+            props["detector"].binning = 1
 
         if nav_shape_new != nav_shape_old:
             props["xmap"] = None
@@ -2270,8 +2284,9 @@ class EBSD(KikuchipySignal2D):
         out.set_signal_type("")
         return out.transpose(out_signal_axes)
 
-    # --- Inherited methods from KikuchipySignal2D overwritten here for
-    # documentation purposes
+    # --- Inherited methods from KikuchipySignal2D (possibly from
+    # Signal2D or BaseSignal) overwritten here for documentation
+    # purposes
 
     def rescale_intensity(
         self,
@@ -2314,6 +2329,7 @@ class EBSD(KikuchipySignal2D):
         ):
             self._static_background = self._static_background.astype(self.data.dtype)
 
+    @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.deepcopy)
     def deepcopy(self) -> EBSD:
         return super().deepcopy()
 

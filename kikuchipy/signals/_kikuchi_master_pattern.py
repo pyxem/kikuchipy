@@ -30,6 +30,7 @@ from tqdm import tqdm
 
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D
 from kikuchipy.signals.util._master_pattern import _lambert2vector
+from kikuchipy.signals.util._overwrite_hyperspy_methods import insert_doc_disclaimer
 
 
 _logger = logging.getLogger(__name__)
@@ -360,6 +361,9 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
 
     # --- Inherited methods from Signal2D overwritten
 
+    @insert_doc_disclaimer(
+        cls=hs.signals.Signal2D, meth=hs.signals.Signal2D.set_signal_type
+    )
     def set_signal_type(self, signal_type: str = "") -> None:
         if "master" in signal_type.lower():
             attrs = self._get_custom_attributes()

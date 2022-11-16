@@ -2549,6 +2549,7 @@ class TestSignal2DMethods:
         assert s4.static_background.shape == new_sig_shape
         assert s4.data.dtype == s4.static_background.dtype == np.float32
         assert s4.detector.shape == new_sig_shape
+        assert s4.detector.binning == 1
         assert np.allclose(s4.detector.pc, det0.pc)
         assert np.allclose(s4.xmap.rotations.data, xmap0.rotations.data)
 
@@ -2558,6 +2559,7 @@ class TestSignal2DMethods:
         assert s5.static_background.shape == new_sig_shape
         assert s5.data.dtype == s5.static_background.dtype
         assert s5.detector.shape == new_sig_shape
+        assert s5.detector.binning == 1
         assert np.allclose(s5.detector.pc, det0.pc)
         assert np.allclose(s5.xmap.rotations.data, xmap0.rotations.data)
 
@@ -2565,8 +2567,17 @@ class TestSignal2DMethods:
         s6 = s.rebin(scale=(3, 3, 2, 2))
         assert s6.static_background is None
         assert s6.detector.navigation_shape == (1, 1)
+        assert s6.detector.binning == 16
         assert np.allclose(s6.detector.pc, 0.5)
         assert s6.xmap is None
+
+        # Upscale
+        s7 = s.rebin(scale=(0.5, 0.5, 0.5, 0.5))
+        assert s7.static_background is None
+        assert s7.detector.navigation_shape == (6, 6)
+        assert s7.detector.binning == 4
+        assert np.allclose(s7.detector.pc, 0.5)
+        assert s7.xmap is None
 
     def test_update_custom_properties(self, caplog):
         s = kp.data.nickel_ebsd_small()

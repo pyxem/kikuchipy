@@ -24,15 +24,16 @@ from typing import Any, Union, Tuple, Optional
 import dask.array as da
 from dask.diagnostics import ProgressBar
 import hyperspy.api as hs
-from hyperspy._signals.signal2d import Signal2D
+from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.misc.rgb_tools import rgb_dtypes
 import numpy as np
 from skimage.util.dtype import dtype_range
 import yaml
 
-from kikuchipy.signals.util._dask import get_dask_array
 from kikuchipy.pattern import chunk
+from kikuchipy.signals.util._dask import get_dask_array
+from kikuchipy.signals.util._overwrite_hyperspy_methods import insert_doc_disclaimer
 
 
 _logger = logging.getLogger(__name__)
@@ -377,6 +378,7 @@ class KikuchipySignal2D(Signal2D):
 
     # --- Inherited methods from Signal2D overwritten
 
+    @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.as_lazy)
     def as_lazy(self, *args, **kwargs) -> Any:
         s_new = super().as_lazy(*args, **kwargs)
 
@@ -387,6 +389,7 @@ class KikuchipySignal2D(Signal2D):
 
         return s_new
 
+    @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.change_dtype)
     def change_dtype(self, *args, **kwargs) -> None:
         attrs = self._get_custom_attributes()
 
@@ -436,6 +439,7 @@ class LazyKikuchipySignal2D(LazySignal2D, KikuchipySignal2D):
     :class:`~kikuchipy.signals.LazyEBSD`.
     """
 
+    @insert_doc_disclaimer(cls=LazySignal2D, meth=LazySignal2D.compute)
     def compute(self, *args, **kwargs) -> None:
         attrs = self._get_custom_attributes()
         super().compute(*args, **kwargs)
