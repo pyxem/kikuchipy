@@ -2,7 +2,7 @@ Running and writing tests
 =========================
 
 All functionality in kikuchipy is tested via the :doc:`pytest <pytest:index>` framework.
-The tests reside in a ``test`` directory within each module.
+The tests reside in a ``tests/`` directory within each module.
 Tests are short methods that call functions in kikuchipy and compare resulting output
 values with known answers.
 Install necessary dependencies to run the tests::

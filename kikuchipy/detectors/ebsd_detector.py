@@ -439,6 +439,15 @@ class EBSDDetector:
         EBSDDetector (6, 6), px_size 1 um, binning 1, tilt 0, azimuthal 0, pc (0.5, 0.333, 0.5)
         >>> det.crop((1, 5, 2, 6))
         EBSDDetector (4, 4), px_size 1 um, binning 1, tilt 0, azimuthal 0, pc (0.25, 0.25, 0.75)
+
+        Plot a cropped detector with the PC on cropped a pattern
+
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> s.remove_static_background(show_progressbar=False)
+        >>> det2 = s.detector
+        >>> det2.plot(pattern=s.inav[0, 0].data)
+        >>> det3 = det2.crop((10, 50, 20, 60))
+        >>> det3.plot(pattern=s.inav[0, 0].data[10:50, 20:60])
         """
         ny, nx = self.shape
 
