@@ -2026,6 +2026,8 @@ class EBSD(KikuchipySignal2D):
         # Determine which data axis changed
         new_shape = self.data.shape
         diff_data = np.array(old_shape) - np.array(new_shape)
+        if not diff_data.any():
+            return
         idx_data = np.atleast_1d(diff_data).nonzero()[0][0]
 
         am = self.axes_manager

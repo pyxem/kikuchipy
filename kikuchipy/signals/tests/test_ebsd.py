@@ -2344,6 +2344,15 @@ class TestSignal2DMethods:
                 (3, 3),
                 None,
             ),
+            # Nothing changes
+            (
+                0,
+                (0, 3),
+                (slice(None), slice(0, 3)),
+                (slice(None), slice(None)),
+                (3, 3),
+                None,
+            ),
             # Keep first detector column
             (
                 2,
