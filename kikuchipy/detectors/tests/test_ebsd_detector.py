@@ -550,3 +550,38 @@ class TestEBSDDetector:
         assert det.x_scale.shape == desired_shapes[5]
         assert det.y_scale.shape == desired_shapes[6]
         assert det.gnomonic_bounds.shape == desired_shapes[7]
+
+    def test_crop(self):
+        det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
+        det2 = det.crop((1, 5, 2, 6))
+        assert det2.shape == (4, 4)
+        assert np.allclose(det2.pc, [0.25, 0.25, 0.75])
+
+        # "Real" example
+        s = kp.data.nickel_ebsd_small()
+        det3 = s.detector
+        det4 = det3.crop((-10, 50, 20, 70))  # (0, 50, 20, 60)
+        assert det4.shape == (50, 40)
+
+    def test_crop_raises(self):
+        det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
+        with pytest.raises(ValueError):
+            _ = det.crop((1.0, 5, 2, 6))
+        with pytest.raises(ValueError):
+            _ = det.crop((5, 1, 2, 6))
+        with pytest.raises(ValueError):
+            _ = det.crop((1, 5, 6, 2))
+
+    def test_crop_simulated(self):
+        s = kp.data.nickel_ebsd_small()
+
+        det2 = s.detector.crop((0, 50, 20, 60))
+
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
+        rot = s.xmap.rotations.reshape(*s.xmap.shape)
+
+        kwds = {"compute": True, "dtype_out": "uint8"}
+        sim1 = mp.get_patterns(rot, s.detector, **kwds)
+        sim2 = mp.get_patterns(rot, det2, **kwds)
+
+        assert np.allclose(sim2.data, sim1.isig[20:60, :50].data)

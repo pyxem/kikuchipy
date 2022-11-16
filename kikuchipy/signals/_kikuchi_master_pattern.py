@@ -30,6 +30,7 @@ from tqdm import tqdm
 
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D
 from kikuchipy.signals.util._master_pattern import _lambert2vector
+from kikuchipy.signals.util._overwrite_hyperspy_methods import insert_doc_disclaimer
 
 
 _logger = logging.getLogger(__name__)
@@ -58,7 +59,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         See :class:`~hyperspy._signals.signal2d.Signal2D`.
     """
 
-    _custom_properties = ["hemisphere", "phase", "projection"]
+    _custom_attributes = ["hemisphere", "phase", "projection"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -360,16 +361,19 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
 
     # --- Inherited methods from Signal2D overwritten
 
+    @insert_doc_disclaimer(
+        cls=hs.signals.Signal2D, meth=hs.signals.Signal2D.set_signal_type
+    )
     def set_signal_type(self, signal_type: str = "") -> None:
         if "master" in signal_type.lower():
-            properties = self._get_custom_properties()
+            attrs = self._get_custom_attributes()
             super().set_signal_type(signal_type)
-            self._set_custom_properties(properties)
+            self._set_custom_attributes(attrs)
         else:
-            properties = self._custom_properties
+            attrs = self._custom_attributes
             super().set_signal_type(signal_type)
-            _logger.info("Delete custom properties when setting signal type")
-            for name in properties:
+            _logger.info("Delete custom attributes when setting signal type")
+            for name in attrs:
                 try:
                     self.__delattr__("_" + name)
                 except AttributeError:  # pragma: no cover

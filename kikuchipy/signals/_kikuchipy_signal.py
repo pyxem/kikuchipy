@@ -24,15 +24,16 @@ from typing import Any, Union, Tuple, Optional
 import dask.array as da
 from dask.diagnostics import ProgressBar
 import hyperspy.api as hs
-from hyperspy._signals.signal2d import Signal2D
+from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.misc.rgb_tools import rgb_dtypes
 import numpy as np
 from skimage.util.dtype import dtype_range
 import yaml
 
-from kikuchipy.signals.util._dask import get_dask_array
 from kikuchipy.pattern import chunk
+from kikuchipy.signals.util._dask import get_dask_array
+from kikuchipy.signals.util._overwrite_hyperspy_methods import insert_doc_disclaimer
 
 
 _logger = logging.getLogger(__name__)
@@ -60,7 +61,7 @@ class KikuchipySignal2D(Signal2D):
     :class:`~kikuchipy.signals.EBSD`.
     """
 
-    _custom_properties = []
+    _custom_attributes = []
 
     def rescale_intensity(
         self,
@@ -299,85 +300,107 @@ class KikuchipySignal2D(Signal2D):
         else:
             self.data = normalized_images
 
-    def _get_custom_properties(self) -> dict:
-        """Return a dictionary of properties not in ``Signal2D``.
+    def _get_custom_attributes(self, make_deepcopy: bool = False) -> dict:
+        """Return a dictionary of attributes not in ``Signal2D``.
 
-        This is a quick way to get all custom properties of a class
+        This is a quick way to get all custom attributes of a class
         before calling a method of ``Signal2D`` which returns a new
         instance or operates in place on the current instance and does
-        not carry over these properties, like with ``deepcopy()``.
+        not carry over these attributes, like with ``deepcopy()``.
+
+        Parameters
+        ----------
+        make_deepcopy
+            Whether the returned dictionary should contain deep copies
+            of each attribute. Default is ``False``.
 
         Returns
         -------
         dictionary
-            Dictionary with custom properties.
+            Dictionary with custom attributes.
         """
-        return {name: self.__getattribute__(name) for name in self._custom_properties}
+        dictionary = {}
+        for name in self._custom_attributes:
+            attr = self.__getattribute__(name)
+            if make_deepcopy:
+                try:
+                    dictionary[name] = deepcopy(attr)
+                except ValueError:  # pragma: no cover
+                    _logger.debug(f"Could not deepcopy attribute {name}")
+                    dictionary[name] = attr
+            else:
+                dictionary[name] = attr
+        return dictionary
 
-    def _set_custom_properties(
+    def _set_custom_attributes(
         self,
-        properties: dict,
+        attributes: dict,
         make_deepcopy: bool = False,
         make_lazy: bool = False,
         unmake_lazy: bool = False,
     ):
-        """Set custom properties not in ``Signal2D``.
+        """Set custom attributes not in ``Signal2D``.
 
-        This is a quick way to set all custom properties of a class
+        This is a quick way to set all custom attributes of a class
         after calling a method of ``Signal2D`` which returns a new
         instance or operates in place on the current instance and does
-        not carry over these properties, like with ``deepcopy()``.
+        not carry over these attributes, like with ``deepcopy()``.
 
         Parameters
         ----------
-        properties
-            Dictionary of custom properties.
+        attributes
+            Dictionary of custom attributes.
         make_deepcopy
-            Whether to make a deepcopy of all properties before setting
+            Whether to make a deepcopy of all attributes before setting
             them in this instance. Default is ``False``.
         make_lazy
-            Whether to cast properties which are
+            Whether to cast attributes which are
             :class:`~numpy.ndarray` to :class:`~dask.array.Array` before
             setting them. Default is ``False``.
         unmake_lazy
-            Whether to cast properties which are
+            Whether to cast attributes which are
             :class:`~dask.array.Array` to :class:`~numpy.ndarray` before
             setting them. Default is ``False``. Ignored if both this and
             ``make_lazy`` are ``True``.
         """
-        for name, value in properties.items():
-            if name in self._custom_properties:
-                if make_lazy and isinstance(value, np.ndarray):
-                    value = da.from_array(value)
-                elif unmake_lazy and isinstance(value, da.Array):
-                    value = value.compute()
-                if make_deepcopy:
-                    value = deepcopy(value)
-                self.__setattr__("_" + name, value)
+        for name, value in attributes.items():
+            if name in self._custom_attributes:
+                try:
+                    if make_lazy and isinstance(value, np.ndarray):
+                        value = da.from_array(value)
+                    elif unmake_lazy and isinstance(value, da.Array):
+                        value = value.compute()
+                    if make_deepcopy:
+                        value = deepcopy(value)
+                    self.__setattr__("_" + name, value)
+                except ValueError:  # pragma: no cover
+                    _logger.debug(f"Could not set attribute {name}")
 
     # --- Inherited methods from Signal2D overwritten
 
+    @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.as_lazy)
     def as_lazy(self, *args, **kwargs) -> Any:
         s_new = super().as_lazy(*args, **kwargs)
 
         if s_new._signal_type in SIGNAL_TYPES:
-            properties = self._get_custom_properties()
-            _logger.debug("Transfer custom properties when making lazy")
-            s_new._set_custom_properties(properties, make_lazy=True)
+            attrs = self._get_custom_attributes()
+            _logger.debug("Try to transfer custom attributes when making lazy")
+            s_new._set_custom_attributes(attrs, make_lazy=True)
 
         return s_new
 
+    @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.change_dtype)
     def change_dtype(self, *args, **kwargs) -> None:
-        properties = self._get_custom_properties()
+        attrs = self._get_custom_attributes()
 
         super().change_dtype(*args, **kwargs)
 
         if self._signal_type in SIGNAL_TYPES:
-            _logger.debug("Transfer custom properties when changing dtype")
-            self._set_custom_properties(properties)
+            _logger.debug("Try to transfer custom attributes when changing dtype")
+            self._set_custom_attributes(attrs)
         else:
-            _logger.debug("Delete custom properties when changing dtype")
-            for name in properties.keys():
+            _logger.debug("Try to delete custom attributes when changing dtype")
+            for name in attrs.keys():
                 try:
                     self.__delattr__("_" + name)
                 except AttributeError:
@@ -387,20 +410,20 @@ class KikuchipySignal2D(Signal2D):
         s_new = super().deepcopy()
 
         if s_new._signal_type in SIGNAL_TYPES:
-            properties = self._get_custom_properties()
-            _logger.debug("Transfer custom properties when deep copying")
-            s_new._set_custom_properties(properties, make_deepcopy=True)
+            attrs = self._get_custom_attributes()
+            _logger.debug("Try to transfer custom attributes when deep copying")
+            s_new._set_custom_attributes(attrs, make_deepcopy=True)
 
         return s_new
 
     def _assign_subclass(self):
-        properties = self._custom_properties
+        attrs = self._custom_attributes
 
         super()._assign_subclass()
 
         if self._signal_type not in SIGNAL_TYPES:
-            _logger.debug("Delete custom properties when assigning subclass")
-            for name in properties:
+            _logger.debug("Try to delete custom attributes when assigning subclass")
+            for name in attrs:
                 try:
                     self.__delattr__("_" + name)
                 except AttributeError:  # pragma: no cover
@@ -416,8 +439,9 @@ class LazyKikuchipySignal2D(LazySignal2D, KikuchipySignal2D):
     :class:`~kikuchipy.signals.LazyEBSD`.
     """
 
+    @insert_doc_disclaimer(cls=LazySignal2D, meth=LazySignal2D.compute)
     def compute(self, *args, **kwargs) -> None:
-        properties = self._get_custom_properties()
+        attrs = self._get_custom_attributes()
         super().compute(*args, **kwargs)
         gc.collect()
-        self._set_custom_properties(properties, unmake_lazy=True)
+        self._set_custom_attributes(attrs, unmake_lazy=True)

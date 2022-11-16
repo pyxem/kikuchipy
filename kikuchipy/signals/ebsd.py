@@ -19,6 +19,7 @@ from __future__ import annotations
 import copy
 import datetime
 import gc
+import logging
 import numbers
 import os
 from typing import Union, List, Optional, Tuple, Iterable
@@ -28,6 +29,7 @@ import dask
 import dask.array as da
 from dask.diagnostics import ProgressBar
 import hyperspy.api as hs
+from hyperspy.signals import Signal2D
 from hyperspy.learn.mva import LearningResults
 from hyperspy.roi import BaseInteractiveROI
 from h5py import File
@@ -75,17 +77,24 @@ from kikuchipy.signals.util._map_helper import (
     _get_neighbour_dot_product_matrices,
     _get_average_dot_product_map,
 )
+from kikuchipy.signals.util._overwrite_hyperspy_methods import (
+    get_parameters,
+    insert_doc_disclaimer,
+)
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
-from kikuchipy._util import deprecated_argument
+
+
+_logger = logging.getLogger(__name__)
 
 
 class EBSD(KikuchipySignal2D):
     """Scan of Electron Backscatter Diffraction (EBSD) patterns.
 
-    This class extends HyperSpy's Signal2D class for EBSD patterns. See
-    the docstring of :class:`~hyperspy._signals.signal2d.Signal2D` for
-    the list of inherited attributes and methods.
+    This class extends HyperSpy's Signal2D class for EBSD patterns. Some
+    of the docstrings are obtained from HyperSpy. See the docstring of
+    :class:`~hyperspy._signals.signal2d.Signal2D` for the list of
+    inherited attributes and methods.
 
     Parameters
     ----------
@@ -123,9 +132,9 @@ class EBSD(KikuchipySignal2D):
     >>> import kikuchipy as kp
     >>> s = kp.data.nickel_ebsd_small()
     >>> s
-    <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
+    <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
     >>> s.detector
-    EBSDDetector (60, 60), px_size 1.0 um, binning 8, tilt 0.0, azimuthal 0.0, pc (0.5, 0.5, 0.5)
+    EBSDDetector (60, 60), px_size 1 um, binning 8, tilt 0, azimuthal 0, pc (0.425, 0.213, 0.501)
     >>> s.static_background
     array([[84, 87, 90, ..., 27, 29, 30],
            [87, 90, 93, ..., 27, 28, 30],
@@ -136,14 +145,14 @@ class EBSD(KikuchipySignal2D):
            [76, 78, 80, ..., 26, 26, 25]], dtype=uint8)
     >>> s.xmap
     Phase  Orientations  Name  Space group  Point group  Proper point group     Color
-        0    9 (100.0%)  None         None         None                None  tab:blue
-    Properties:
+        0    9 (100.0%)    ni        Fm-3m         m-3m                 432  tab:blue
+    Properties: scores
     Scan unit: px
     """
 
     _signal_type = "EBSD"
     _alias_signal_types = ["electron_backscatter_diffraction"]
-    _custom_properties = ["detector", "static_background", "xmap"]
+    _custom_attributes = ["detector", "static_background", "xmap"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -158,7 +167,7 @@ class EBSD(KikuchipySignal2D):
         self._static_background = kwargs.get("static_background")
         self._xmap = kwargs.get("xmap")
 
-    # ---------------------- Custom properties ----------------------- #
+    # ---------------------- Custom attributes ----------------------- #
 
     @property
     def detector(self) -> EBSDDetector:
@@ -379,7 +388,7 @@ class EBSD(KikuchipySignal2D):
         else:
             operation_func = _remove_static_background_divide
 
-        properties = self._get_custom_properties()
+        attrs = self._get_custom_attributes()
         self.map(
             operation_func,
             show_progressbar=show_progressbar,
@@ -391,7 +400,7 @@ class EBSD(KikuchipySignal2D):
             omax=omax,
             scale_bg=scale_bg,
         )
-        self._set_custom_properties(properties)
+        self._set_custom_attributes(attrs)
 
     def remove_dynamic_background(
         self,
@@ -479,7 +488,7 @@ class EBSD(KikuchipySignal2D):
         dtype_out = self.data.dtype.type
         omin, omax = dtype_range[dtype_out]
 
-        properties = self._get_custom_properties()
+        attrs = self._get_custom_attributes()
         self.map(
             map_func,
             show_progressbar=show_progressbar,
@@ -492,7 +501,7 @@ class EBSD(KikuchipySignal2D):
             omax=omax,
             **kwargs,
         )
-        self._set_custom_properties(properties)
+        self._set_custom_attributes(attrs)
 
     def get_dynamic_background(
         self,
@@ -743,7 +752,7 @@ class EBSD(KikuchipySignal2D):
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
         >>> s
-        <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
+        <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
         >>> s.remove_static_background()
         >>> s.remove_dynamic_background()
         >>> iq = s.get_image_quality()
@@ -1997,6 +2006,158 @@ class EBSD(KikuchipySignal2D):
 
         return s_model
 
+    @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.crop)
+    def crop(self, *args, **kwargs):
+        # This method is called by crop_image(), so attributes are
+        # handled correctly by that method as well
+
+        old_shape = self.data.shape
+
+        super().crop(*args, **kwargs)
+
+        # Get input parameters
+        params = get_parameters(super().crop, ["start", "end"], args, kwargs)
+
+        # End if not all parameters of interest could be found or if
+        # there is nothing to do
+        if params is None or all(p is None for p in params.values()):
+            return
+
+        # Determine which data axis changed
+        new_shape = self.data.shape
+        diff_data = np.array(old_shape) - np.array(new_shape)
+        if not diff_data.any():
+            return
+        idx_data = np.atleast_1d(diff_data).nonzero()[0][0]
+
+        am = self.axes_manager
+        nav_ndim = am.navigation_dimension
+
+        # Update attributes
+        attrs = self._get_custom_attributes()
+        if idx_data in am.signal_indices_in_array:
+            # Slice static background and update detector shape...
+            sig_slices = 2 * [slice(None)]
+            sig_slices[idx_data - nav_ndim] = slice(params["start"], params["end"])
+            sig_slices = tuple(sig_slices)
+            # TODO: Update PC values
+            attrs = _update_custom_attributes(
+                attrs, sig_slices=sig_slices, new_sig_shape=am.signal_shape[::-1]
+            )
+        else:
+            # ... or slice crystal map and detector PC values
+            nav_slices = nav_ndim * [slice(None)]
+            nav_slices[idx_data] = slice(params["start"], params["end"])
+            nav_slices = tuple(nav_slices)
+            attrs = _update_custom_attributes(attrs, nav_slices=nav_slices)
+
+        self._set_custom_attributes(attrs)
+
+    @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.rebin)
+    def rebin(self, *args, **kwargs):
+        data_shape_old = self.data.shape
+        am_old = self.axes_manager
+        nav_shape_old = am_old.navigation_shape[::-1]
+        sig_shape_old = am_old.signal_shape[::-1]
+
+        new = super().rebin(*args, **kwargs)
+
+        if new is None:
+            return
+        elif new.data.shape == data_shape_old:
+            return new
+
+        # Get input parameters
+        params = get_parameters(
+            super().rebin, ["new_shape", "scale", "crop", "dtype"], args, kwargs
+        )
+
+        am_new = new.axes_manager
+        nav_shape_new = am_new.navigation_shape[::-1]
+        sig_shape_new = am_new.signal_shape[::-1]
+
+        props = self._get_custom_attributes(make_deepcopy=True)
+
+        # Update static background
+        static_bg = props["static_background"]
+        if sig_shape_new != sig_shape_old and static_bg is not None:
+            sig_idx = am_old.signal_indices_in_array[::-1]
+            if params["new_shape"] is not None:
+                params["new_shape"] = [params["new_shape"][i] for i in sig_idx]
+            else:
+                params["scale"] = [params["scale"][i] for i in sig_idx]
+            s_static_bg = hs.signals.Signal2D(static_bg)
+            s_static_bg2 = s_static_bg.rebin(**params)
+            static_bg2 = s_static_bg2.data
+            static_bg2 = static_bg2.astype(new.data.dtype)
+            props["static_background"] = static_bg2
+
+        # Update detector shape and binning factor
+        props["detector"].shape = sig_shape_new
+        factors = np.array(sig_shape_old) / np.array(sig_shape_new)
+        binning = props["detector"].binning * factors
+        if binning[0] == binning[1] and np.allclose(binning, binning.round(0)):
+            props["detector"].binning = int(binning[0])
+        else:
+            props["detector"].binning = 1
+
+        if nav_shape_new != nav_shape_old:
+            props["xmap"] = None
+            props["detector"].pc = np.full(nav_shape_new + (3,), 0.5)
+            props["static_background"] = None
+
+        new._set_custom_attributes(props)
+
+        return new
+
+    def _slicer(self, *args, **kwargs):
+        # This method is called by inav and isig via FancySlicing
+
+        # Get input parameters
+        params = get_parameters(
+            super()._slicer, ["slices", "isNavigation"], args, kwargs
+        )
+
+        # Get slices prior to call
+        all_slices = self._get_array_slices(params["slices"], params["isNavigation"])
+        nav_ndim = self.axes_manager.navigation_dimension
+        if params["isNavigation"]:
+            slices = all_slices[:nav_ndim]
+        else:
+            slices = all_slices[nav_ndim:]
+
+        props = self._get_custom_attributes(make_deepcopy=True)
+
+        new = super()._slicer(*args, **kwargs)
+
+        if not isinstance(new, EBSD):
+            # Can be Signal1D when slicing the signal shape into a 1D
+            # array
+            return new
+
+        # Update attributes
+        if new is None:  # pragma: no cover
+            new_nav_shape = self.axes_manager.navigation_shape[::-1]
+            new_sig_shape = self.axes_manager.signal_shape[::-1]
+        else:
+            new_nav_shape = new.axes_manager.navigation_shape[::-1]
+            new_sig_shape = new.axes_manager.signal_shape[::-1]
+        if params["isNavigation"]:
+            props = _update_custom_attributes(
+                props, nav_slices=slices, new_nav_shape=new_nav_shape
+            )
+        else:
+            props = _update_custom_attributes(
+                props, sig_slices=slices, new_sig_shape=new_sig_shape
+            )
+
+        if new is None:  # pragma: no cover
+            self._set_custom_attributes(props)
+        else:
+            new._set_custom_attributes(props)
+
+        return new
+
     # ------------------------ Private methods ----------------------- #
 
     def _check_refinement_parameters(
@@ -2077,21 +2238,6 @@ class EBSD(KikuchipySignal2D):
 
         return patterns, signal_mask
 
-    @staticmethod
-    def _get_sum_signal(signal, out_signal_axes: Optional[List] = None):
-        out = signal.nansum(signal.axes_manager.signal_axes)
-        if out_signal_axes is None:
-            out_signal_axes = list(
-                np.arange(min(signal.axes_manager.navigation_dimension, 2))
-            )
-        if len(out_signal_axes) > signal.axes_manager.navigation_dimension:
-            raise ValueError(
-                "The length of 'out_signal_axes' cannot be longer than the navigation "
-                "dimension of the signal."
-            )
-        out.set_signal_type("")
-        return out.transpose(out_signal_axes)
-
     def _prepare_metric(
         self,
         metric: Union[SimilarityMetric, str],
@@ -2123,8 +2269,26 @@ class EBSD(KikuchipySignal2D):
         metric.raise_error_if_invalid()
         return metric
 
-    # --- Inherited methods from KikuchipySignal2D overwritten here for
-    # documentation purposes
+    @staticmethod
+    def _get_sum_signal(
+        signal, out_signal_axes: Optional[List] = None
+    ) -> hs.signals.Signal2D:
+        out = signal.nansum(signal.axes_manager.signal_axes)
+        if out_signal_axes is None:
+            out_signal_axes = list(
+                np.arange(min(signal.axes_manager.navigation_dimension, 2))
+            )
+        if len(out_signal_axes) > signal.axes_manager.navigation_dimension:
+            raise ValueError(
+                "The length of 'out_signal_axes' cannot be longer than the navigation "
+                "dimension of the signal."
+            )
+        out.set_signal_type("")
+        return out.transpose(out_signal_axes)
+
+    # --- Inherited methods from KikuchipySignal2D (possibly from
+    # Signal2D or BaseSignal) overwritten here for documentation
+    # purposes
 
     def rescale_intensity(
         self,
@@ -2167,6 +2331,7 @@ class EBSD(KikuchipySignal2D):
         ):
             self._static_background = self._static_background.astype(self.data.dtype)
 
+    @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.deepcopy)
     def deepcopy(self) -> EBSD:
         return super().deepcopy()
 
@@ -2277,3 +2442,89 @@ class LazyEBSD(LazyKikuchipySignal2D, EBSD):
         # Delete temporary files
         os.remove(file_learn)
         gc.collect()  # Don't sink
+
+
+def _update_custom_attributes(
+    attributes: dict,
+    nav_slices: Union[slice, tuple, None] = None,
+    sig_slices: Union[slice, tuple, None] = None,
+    new_nav_shape: Optional[tuple] = None,
+    new_sig_shape: Optional[tuple] = None,
+) -> dict:
+    """Update dictionary of custom attributes after slicing the signal
+    data.
+
+    Parameters
+    ----------
+    attributes
+        Dictionary of attribute keys ``"xmap"``, ``"static_background"``
+        and ``"detector"``.
+    nav_slices
+        Slice or tuple of slices or ints or a combination. If not given,
+        navigation dimensions of attributes are not updated.
+    sig_slices
+        Slice or tuple of slices or ints or a combination. If not given,
+        signal dimensions of attributes are not updated.
+    """
+    if sig_slices is not None:
+        try:
+            static_bg = attributes["static_background"]
+            attributes["static_background"] = static_bg[sig_slices]
+        except TypeError:
+            _logger.debug("Could not slice EBSD.static_background attribute array")
+
+        # Make slices into extent (top, bottom, left, right)
+        extent = [
+            sig_slices[0].start,
+            sig_slices[0].stop,
+            sig_slices[1].start,
+            sig_slices[1].stop,
+        ]
+        for i, new in enumerate([0, new_sig_shape[0], 0, new_sig_shape[1]]):
+            if extent[i] is None:
+                extent[i] = new
+
+        det = attributes["detector"]
+        try:
+            attributes["detector"] = det.crop(extent)
+        except ValueError:
+            _logger.debug(
+                "Could not crop EBSD.detector attribute, setting PC array to [0.5, 0.5,"
+                " 0.5]"
+            )
+            attributes["detector"] = EBSDDetector(
+                shape=new_sig_shape,
+                pc=[0.5, 0.5, 0.5],
+                sample_tilt=det.sample_tilt,
+                tilt=det.tilt,
+                azimuthal=det.azimuthal,
+                px_size=det.px_size,
+                binning=det.binning,
+            )
+
+    if nav_slices is not None:
+        try:
+            xmap = attributes["xmap"]
+            xmap = xmap[nav_slices]
+
+            # Remove singleton dimension to make a 1D crystal map
+            if new_nav_shape is not None and len(new_nav_shape) < len(xmap.shape):
+                if xmap.shape[0] == 1:
+                    xmap._y = None
+                else:
+                    xmap._x = None
+            attributes["xmap"] = xmap
+        except (IndexError, TypeError, ValueError):
+            _logger.debug("Could not slice EBSD.xmap attribute, setting it to None")
+
+        if attributes["detector"].navigation_shape != (1,):
+            pc = attributes["detector"].pc[nav_slices]
+            if pc.size == 0:
+                _logger.debug(
+                    "Could not slice EBSD.detector.pc attribute array, setting it to "
+                    "[0.5, 0.5, 0.5]"
+                )
+                pc = [0.5, 0.5, 0.5]
+            attributes["detector"].pc = pc
+
+    return attributes

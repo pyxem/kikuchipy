@@ -15,6 +15,10 @@ Most of these works are also listed when searching for "kikuchipy" `on Google Sc
 2022
 ====
 
+- O. M. Akselsen, R. Bjørge, H. W. Ånes, X. Ren, and B. Nyhus, "Microstructure and
+  Properties of Wire Arc Additive Manufacturing of Inconel 625," *Metals* **12(11)**
+  (2022).
+  https://doi.org/10.3390/met12111867
 - H. W. Ånes, A. T. J. van Helvoort, and K. Marthinsen, "Correlated subgrain and
   particle analysis of a recovered Al-Mn alloy by directly combining EBSD and
   backscatter electron imaging," *Materials Characterization* **193** (2022).

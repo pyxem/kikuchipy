@@ -340,8 +340,9 @@ class H5EBSDReader(abc.ABC):
             data = data.reshape((ny, nx, sy, sx)).squeeze()
         except ValueError:
             warnings.warn(
-                f"Pattern size ({sx} x {sy}) and scan size ({nx} x {ny}) larger than "
-                "file size. Will attempt to load by zero padding incomplete frames"
+                f"Signal shape ({sy}, {sy}) and navigation shape ({ny}, {nx}) larger "
+                "than file size. Will attempt to load by zero padding incomplete "
+                "patterns."
             )
             # Data is stored image by image
             pw = [(0, ny * nx * sy * sx - data.size)]

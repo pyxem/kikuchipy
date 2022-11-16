@@ -417,6 +417,81 @@ class EBSDDetector:
         corners[..., 3] = self.x_min**2 + self.y_min**2  # Lo. left
         return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
 
+    def crop(self, extent: Union[Tuple[int, int, int, int], List[int]]) -> EBSDDetector:
+        """Return a new detector with its :attr:`shape` cropped and
+        :attr:`pc` values updated accordingly.
+
+        Parameters
+        ----------
+        extent
+            Tuple with four integers: (top, bottom, left, right).
+
+        Returns
+        -------
+        new_detector
+            A new detector with a new shape and PC values.
+
+        Examples
+        --------
+        >>> import kikuchipy as kp
+        >>> det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
+        >>> det
+        EBSDDetector (6, 6), px_size 1 um, binning 1, tilt 0, azimuthal 0, pc (0.5, 0.333, 0.5)
+        >>> det.crop((1, 5, 2, 6))
+        EBSDDetector (4, 4), px_size 1 um, binning 1, tilt 0, azimuthal 0, pc (0.25, 0.25, 0.75)
+
+        Plot a cropped detector with the PC on cropped a pattern
+
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> s.remove_static_background(show_progressbar=False)
+        >>> det2 = s.detector
+        >>> det2.plot(pattern=s.inav[0, 0].data)
+        >>> det3 = det2.crop((10, 50, 20, 60))
+        >>> det3.plot(pattern=s.inav[0, 0].data[10:50, 20:60])
+        """
+        ny, nx = self.shape
+
+        # Unpack extent, making sure it does not go outside the original
+        # shape
+        top, bottom, left, right = extent
+        top = max(top, 0)
+        bottom = min(bottom, ny)
+        left = max(left, 0)
+        right = min(right, nx)
+
+        ny_new, nx_new = bottom - top, right - left
+        if any([ny_new <= 0, nx_new <= 0]) or any(
+            [not isinstance(e, int) for e in extent]
+        ):
+            raise ValueError(
+                "`extent` (top, bottom, left, right) must be integers and given so that"
+                " bottom > top and right > left"
+            )
+
+        pcx_new = (self.pcx * nx - left) / nx_new
+        pcy_new = (self.pcy * ny - top) / ny_new
+        pcz_new = self.pcz * ny / ny_new
+
+        return EBSDDetector(
+            shape=(ny_new, nx_new),
+            pc=np.dstack((pcx_new, pcy_new, pcz_new)),
+            tilt=self.tilt,
+            sample_tilt=self.sample_tilt,
+            binning=self.binning,
+            px_size=self.px_size,
+            azimuthal=self.azimuthal,
+        )
+
+    def deepcopy(self) -> EBSDDetector:
+        """Return a deep copy using :func:`copy.deepcopy`.
+
+        Returns
+        -------
+        detector
+            Identical detector without shared memory.
+        """
+        return deepcopy(self)
+
     def pc_emsoft(self, version: int = 5) -> np.ndarray:
         r"""Return PC in the EMsoft convention.
 
@@ -531,16 +606,6 @@ class EBSDDetector:
         see :meth:`pc_tsl`.
         """
         return self._pc_bruker2tsl()
-
-    def deepcopy(self) -> EBSDDetector:
-        """Return a deep copy using :func:`copy.deepcopy`.
-
-        Returns
-        -------
-        detector
-            Identical detector without shared memory.
-        """
-        return deepcopy(self)
 
     def plot(
         self,

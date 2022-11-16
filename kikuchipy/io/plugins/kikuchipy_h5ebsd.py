@@ -153,11 +153,33 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
         scan_dict["static_background"] = hd.get("static_background")
 
         # --- Detector
-        pc = np.column_stack(
-            (hd.get("pcx", 0.5), hd.get("pcy", 0.5), hd.get("pcz", 0.5))
-        )
+        pc = np.dstack((hd.get("pcx", 0.5), hd.get("pcy", 0.5), hd.get("pcz", 0.5)))
         if pc.size > 3:
-            pc = pc.reshape((ny, nx, 3))
+            try:
+                pc = pc.reshape((ny, nx, 3))
+            except ValueError:
+                nav_shape = (ny, nx)
+                nav_shape_pc = pc.shape[:2]
+                warnings.warn(
+                    f"Data navigation shape ({nav_shape}) greater than the navigation "
+                    f"shape of the projection center (PC) array {nav_shape_pc}. Will "
+                    "attempt to pad PC array with (PCx, PCy, PCz) = (0.5, 0.5, 0.5)"
+                )
+                pad_width = []
+                nav_shape_diff = np.array(nav_shape) - np.array(nav_shape_pc)
+                for diff_i in nav_shape_diff:
+                    pad_width.append((0, diff_i))
+                pad_width.append((0, 0))
+                try:
+                    pc = np.pad(pc, pad_width, constant_values=0.5)
+                except ValueError:  # pragma: no cover
+                    warnings.warn(
+                        "Could not pad PC array, detector will have a single PC with "
+                        "(PCx, PCy, PCz) = (0.5, 0.5, 0.5)"
+                    )
+                    pc = np.array((0.5, 0.5, 0.5))
+        pc = pc.squeeze()
+
         scan_dict["detector"] = EBSDDetector(
             shape=(sy, sx),
             px_size=px_size,

@@ -216,7 +216,7 @@ class VirtualBSEGenerator:
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
         >>> s
-        <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
+        <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
         >>> vbse_gen = kp.generators.VirtualBSEGenerator(s)
         >>> vbse_gen.grid_shape = (5, 5)
         >>> vbse = vbse_gen.get_images_from_grid()

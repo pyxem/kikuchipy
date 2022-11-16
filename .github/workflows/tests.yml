@@ -66,26 +66,27 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Display Python and pip versions
-        run: |
-          python -V
-          pip -V
-
       - name: Install dependencies and package
         shell: bash
         run: |
           pip install wheel
           pip install -U -e .'[tests]'
 
+      - name: Install oldest supported version
+        if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
+        run: |
+          pip install ${{ matrix.DEPENDENCIES }}
+
       - name: Install optional dependencies
         shell: bash
         run: |
           pip install -e .'[viz]'
 
-      - name: Install oldest supported version
-        if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
+      - name: Display Python, pip and package versions
         run: |
-          pip install ${{ matrix.DEPENDENCIES }}
+          python -V
+          pip -V
+          pip list
 
       - name: Set up headless display necessary for PyVista on Linux
         if: ${{ matrix.os == 'ubuntu-latest' }}

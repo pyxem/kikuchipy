@@ -18,9 +18,31 @@ Unreleased
 
 Added
 -----
+- When using the following HyperSpy ``Signal2D`` methods via the ``EBSD`` class, the
+  class attributes ``xmap``, ``static_background`` and ``detector`` are handled
+  correctly, which they were not before: ``inav``, ``isig``, ``crop()``,
+  ``crop_image()``. If handling fails, the old behavior is retained. This handling is
+  experimental. (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
+- ``EBSDDetector.crop()`` method to get a new detector with its shape cropped, also
+  updating the PC values accordingly.
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
 
 Changed
 -------
+- When binning the navigation dimension(s) with ``EBSD.rebin()``, the class attributes
+  ``xmap`` and ``static_background`` are set to ``None`` and ``detector.pc`` is set to
+  ``[0.5, 0.5, 0.5]`` in the appropriate navigation shape. If the signal dimension(s)
+  are binned, the ``static_background`` is binned similarly while the ``detector.shape``
+  and ``detector.binning`` are updated. If this handling of attributes fails, the old
+  behavior is retained. This handling is experimental.
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
+- EBSD signal loaded with ``nickel_ebsd_small()`` now contains a crystal map with
+  orientations and a detector with PC values found from Hough indexing with
+  *PyEBSDIndex* followed by orientation and PC refinement.
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
+- Minimal version of *Matplotlib* is 3.5.0 when installing optional dependencies with
+  ``pip install kikuchipy[viz]`` since *PyVista* requires this.
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
 
 Deprecated
 ----------
@@ -37,6 +59,10 @@ Removed
 
 Fixed
 -----
+- kikuchipy h5ebsd reader can read a signal with an EBSD detector with a PC array of
+  different navigation shape than determined from the HDF5 file's navigation shape
+  (e.g. ``Scan 1/EBSD/Header/n_columns`` and ``n_rows``).
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
 
 Security
 --------

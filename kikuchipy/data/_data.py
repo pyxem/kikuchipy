@@ -87,7 +87,7 @@ def nickel_ebsd_small(**kwargs) -> EBSD:
     >>> import kikuchipy as kp
     >>> s = kp.data.nickel_ebsd_small()
     >>> s
-    <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
+    <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
     >>> s.plot()
     """
     fname = _fetch("kikuchipy_h5ebsd/patterns.h5")
