@@ -29,12 +29,13 @@ import dask.array as da
 import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList
 from orix.quaternion import Rotation
-from orix.vector import Rodrigues
 import scipy.optimize
 
 from kikuchipy.indexing._refinement._solvers import (
     _refine_orientation_solver,
+    _refine_orientation_solver_nlopt,
     _refine_orientation_projection_center_solver,
+    _refine_orientation_projection_center_solver_nlopt,
     _refine_projection_center_solver,
 )
 from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
@@ -54,6 +55,7 @@ def _refine_setup(
     master_pattern,
     energy: Union[int, float],
     patterns_dtype: np.dtype,
+    dimension: int,
     method: Optional[str] = None,
     method_kwargs: Optional[dict] = None,
 ) -> Tuple[
@@ -66,13 +68,16 @@ def _refine_setup(
     Rotation,
     dict,
     Tuple[np.ndarray, np.ndarray, int, int, float],
+    str,
 ]:
     """Set up and return everything that is common to all refinement
     functions.
     """
     # Build up dictionary of keyword arguments to pass to the refinement
     # solver
-    method, method_kwargs = _get_optimization_method_with_kwargs(method, method_kwargs)
+    method, method_kwargs, pkg = _get_optimization_method_with_kwargs(
+        method, method_kwargs, dimension
+    )
     solver_kwargs = dict(method=method, method_kwargs=method_kwargs)
 
     # Determine whether pattern intensities must be rescaled
@@ -107,6 +112,7 @@ def _refine_setup(
         rotations,
         solver_kwargs,
         fixed_parameters,
+        pkg,
     )
 
 
@@ -120,6 +126,9 @@ def _refine_orientation(
     method: Optional[str] = None,
     method_kwargs: Optional[dict] = None,
     trust_region: Union[None, np.ndarray, list] = None,
+    initial_step: Optional[float] = None,
+    rtol: float = 1e-5,
+    maxiter: Optional[int] = None,
     compute: bool = True,
 ) -> CrystalMap:
     """See the docstring of
@@ -135,20 +144,22 @@ def _refine_orientation(
         rotations,
         solver_kwargs,
         fixed_parameters,
+        pkg,
     ) = _refine_setup(
         xmap=xmap,
         detector=detector,
         master_pattern=master_pattern,
         energy=energy,
         patterns_dtype=patterns.dtype,
+        dimension=3,
         method=method,
         method_kwargs=method_kwargs,
     )
 
     chunks = patterns.chunksize[:-1] + (-1,)
 
-    # Get Dask array of rotations as Rodrigues-Frank vectors
-    rot = Rodrigues.from_rotation(rotations).data
+    # Get Dask array of rotations as Euler angles
+    rot = rotations.to_euler()
     rot = rot.reshape(nav_shape + (3,))
     rot = da.from_array(rot, chunks=chunks)
 
@@ -159,16 +170,31 @@ def _refine_orientation(
         solver_kwargs["trust_region_passed"] = True
     solver_kwargs["trust_region"] = np.deg2rad(trust_region)
 
+    map_blocks_kwargs = dict(
+        drop_axis=(patterns.ndim - 1,), new_axis=(len(nav_shape),), dtype=np.float64
+    )
+
+    # Set up NLopt optimizer if requested
+    if pkg == "nlopt":
+        opt = solver_kwargs.pop("method")
+        map_blocks_kwargs["opt"] = _set_nlopt_parameters(
+            opt,
+            rtol=rtol,
+            initial_step=np.deg2rad(initial_step),
+            maxiter=maxiter,
+        )
+        for k in ["method_kwargs", "trust_region_passed"]:
+            _ = solver_kwargs.pop(k)
+        chunk_func = _refine_orientation_chunk_nlopt
+    else:
+        chunk_func = _refine_orientation_chunk
+
     # Parameters for the objective function which are constant during
     # optimization
     solver_kwargs["fixed_parameters"] = fixed_parameters
 
     # Determine whether a new PC is used for every pattern
     new_pc = np.prod(detector.navigation_shape) != 1 and n_patterns > 1
-
-    map_blocks_kwargs = dict(
-        drop_axis=(patterns.ndim - 1,), new_axis=(len(nav_shape),), dtype=np.float64
-    )
 
     if new_pc:
         # Patterns have been indexed with varying PCs, so we re-compute
@@ -182,7 +208,7 @@ def _refine_orientation(
         pcz = pc[nav_slices + (slice(2, 3),)]
 
         output = da.map_blocks(
-            _refine_orientation_chunk,
+            chunk_func,
             patterns,
             rot,
             pcx,
@@ -203,7 +229,7 @@ def _refine_orientation(
         dc = _get_direction_cosines_from_detector(detector, signal_mask)
 
         output = da.map_blocks(
-            _refine_orientation_chunk,
+            chunk_func,
             patterns,
             rot,
             direction_cosines=dc,
@@ -217,7 +243,8 @@ def _refine_orientation(
             method=method,
             method_kwargs=method_kwargs,
             trust_region=list(trust_region),
-            trust_region_passed=solver_kwargs["trust_region_passed"],
+            trust_region_passed=False,
+#            trust_region_passed=solver_kwargs["trust_region_passed"],
         )
     )
     if compute:
@@ -243,7 +270,8 @@ def _refine_orientation_chunk(
     azimuthal: Optional[float] = None,
     sample_tilt: Optional[float] = None,
 ):
-    """Refine orientations from patterns in one dask array chunk.
+    """Refine orientations from patterns in one dask array chunk using
+    *SciPy*.
 
     Note that ``signal_mask`` and ``solver_kwargs`` are required. They
     are set to ``None`` to enable use of this function in
@@ -275,6 +303,68 @@ def _refine_orientation_chunk(
     else:
         for idx in np.ndindex(*nav_shape):
             results[idx] = _refine_orientation_solver(
+                pattern=patterns[idx],
+                rotation=rotations[idx],
+                direction_cosines=direction_cosines,
+                signal_mask=signal_mask,
+                **solver_kwargs,
+            )
+    return results
+
+
+def _refine_orientation_chunk_nlopt(
+    patterns: np.ndarray,
+    rotations: np.ndarray,
+    opt: "nlopt.opt",
+    pcx: Optional[np.ndarray] = None,
+    pcy: Optional[np.ndarray] = None,
+    pcz: Optional[np.ndarray] = None,
+    signal_mask: Optional[np.ndarray] = None,
+    solver_kwargs: Optional[dict] = None,
+    direction_cosines: Optional[np.ndarray] = None,
+    nrows: Optional[int] = None,
+    ncols: Optional[int] = None,
+    tilt: Optional[float] = None,
+    azimuthal: Optional[float] = None,
+    sample_tilt: Optional[float] = None,
+):
+    """Refine orientations from patterns in one dask array chunk using
+    *NLopt*.
+
+    Note that ``signal_mask`` and ``solver_kwargs`` are required. They
+    are set to ``None`` to enable use of this function in
+    :func:`~dask.array.Array.map_blocks`.
+    """
+    import nlopt
+    opt = nlopt.opt(opt)
+    nav_shape = patterns.shape[:-1]
+    results = np.empty(nav_shape + (4,), dtype=np.float64)
+    rotations = rotations.reshape(nav_shape + (3,))
+    if direction_cosines is None:
+        # Remove extra dimensions necessary for use of dask's map_blocks
+        pcx = pcx.reshape(nav_shape)
+        pcy = pcy.reshape(nav_shape)
+        pcz = pcz.reshape(nav_shape)
+        for idx in np.ndindex(*nav_shape):
+            results[idx] = _refine_orientation_solver_nlopt(
+                opt=opt,
+                pattern=patterns[idx],
+                rotation=rotations[idx],
+                pcx=pcx[idx],
+                pcy=pcy[idx],
+                pcz=pcz[idx],
+                nrows=nrows,
+                ncols=ncols,
+                tilt=tilt,
+                azimuthal=azimuthal,
+                sample_tilt=sample_tilt,
+                signal_mask=signal_mask,
+                **solver_kwargs,
+            )
+    else:
+        for idx in np.ndindex(*nav_shape):
+            results[idx] = _refine_orientation_solver_nlopt(
+                opt=opt,
                 pattern=patterns[idx],
                 rotation=rotations[idx],
                 direction_cosines=direction_cosines,
@@ -438,8 +528,8 @@ def _refine_orientation_projection_center(
 
     chunks = patterns.chunksize[:-1] + (-1,)
 
-    # Get Dask array of rotations as Rodrigues-Frank vectors
-    rot = Rodrigues.from_rotation(rotations).data
+    # Get Dask array of rotations as Euler angles
+    rot = rotations.to_euler()
     rot = rot.reshape(nav_shape + (3,))
     rot = da.from_array(rot, chunks=chunks)
 
@@ -509,6 +599,7 @@ def _refine_orientation_projection_center_chunk(
     rot_pc: np.ndarray,
     signal_mask: Optional[np.ndarray] = None,
     solver_kwargs: Optional[dict] = None,
+    opt=None,
 ):
     """Refine orientations and projection centers using all patterns in
     one dask array chunk.
@@ -517,7 +608,8 @@ def _refine_orientation_projection_center_chunk(
     results = np.empty(nav_shape + (7,), dtype=np.float64)
     rot_pc = rot_pc.reshape(nav_shape + (6,))
     for idx in np.ndindex(*nav_shape):
-        results[idx] = _refine_orientation_projection_center_solver(
+        results[idx] = _refine_orientation_projection_center_solver_nlopt(
+            opt,
             pattern=patterns[idx],
             rot_pc=rot_pc[idx],
             signal_mask=signal_mask,
@@ -527,28 +619,39 @@ def _refine_orientation_projection_center_chunk(
 
 
 def _get_optimization_method_with_kwargs(
-    method: str = "minimize", method_kwargs: Optional[dict] = None
-) -> Tuple[Callable, dict]:
+    method: str = "minimize",
+    method_kwargs: Optional[dict] = None,
+    dimension: Optional[int] = None,
+) -> Tuple[Callable, dict, str]:
     """Return correct optimization function and reasonable keyword
     arguments if not given.
 
     Parameters
     ----------
     method
-        Name of a supported SciPy optimization method. See ``method``
-        parameter in :meth:`kikuchipy.signals.EBSD.refine_orientation`.
-        Default is ``"minimize"``.
+        Name of a supported SciPy optimization method or NLopt
+        algorithm. See ``method`` parameter in
+        :meth:`kikuchipy.signals.EBSD.refine_orientation`. Default is
+        ``"minimize"``.
     method_kwargs
-        Keyword arguments to pass to function.
+        Keyword arguments to pass to optimization method. Only
+        applicable if a SciPy function is requested.
+    dimension
+        Number of optimization parameters. Only applicable if a NLopt
+        algorithm is requested.
 
     Returns
     -------
     method
-        SciPy optimization function.
+        SciPy optimization function or NLopt optimizer.
     method_kwargs
-        Keyword arguments to pass to function.
+        Keyword arguments to pass to function. Only applicable if a
+        SciPy function is requested.
+    pkg
+        Optimization package, either ``"scipy"`` or ``"nlopt"``.
     """
     supported_methods = list(SUPPORTED_OPTIMIZATION_METHODS)
+    method = method.lower()
     if method not in supported_methods:
         raise ValueError(
             f"Method {method} not in the list of supported methods {supported_methods}"
@@ -559,8 +662,75 @@ def _get_optimization_method_with_kwargs(
         method_kwargs["method"] = "Nelder-Mead"
     if method == "basinhopping" and "minimizer_kwargs" not in method_kwargs:
         method_kwargs["minimizer_kwargs"] = {}
-    method = getattr(scipy.optimize, method)
-    return method, method_kwargs
+
+    pkg = SUPPORTED_OPTIMIZATION_METHODS[method]["package"]
+    if pkg == "scipy":
+        method = getattr(scipy.optimize, method)
+    else:
+        method = _initialize_nlopt_optimizer(method, dimension)
+
+    return method, method_kwargs, pkg
+
+
+def _initialize_nlopt_optimizer(method: str, dimension: int) -> "nlopt.opt":
+    """Initialize an NLopt optimizer.
+
+    Parameters
+    ----------
+    method
+        Supported algorithm, currently only ``"LN_NELDERMEAD"``.
+    dimension
+        Number of optimization parameters.
+
+    Returns
+    -------
+    opt
+        Optimizer instance.
+    """
+    from kikuchipy import _nlopt_installed
+    if not _nlopt_installed:
+        raise ImportError(
+            f"Package `nlopt` required for method {method} is not installed"
+        )
+    import nlopt
+    return nlopt.opt(method.upper(), dimension)
+
+
+def _set_nlopt_parameters(
+    opt: "nlopt.opt",
+    rtol: float = 1e-5,
+    initial_step: Union[
+        float,
+        Tuple[float, float, float],
+        Tuple[float, float, float, float, float, float],
+        None
+    ] = None,
+    maxiter: Optional[int] = None,
+) -> "nlopt.opt":
+    """Set NLopt optimization parameters.
+
+    Parameters
+    ----------
+    opt
+        Optimizer.
+    rtol
+        Relative tolerance stopping criterion.
+    initial_step
+        Initial parameter step(s).
+    maxiter
+        Maximum function evaluations stopping criterion.
+
+    Returns
+    -------
+    opt
+        Optimizer with parameters set.
+    """
+    opt.set_ftol_rel(rtol)
+    if initial_step is not None:
+        opt.set_initial_step(initial_step)
+    if maxiter is not None:
+        opt.set_numevals(maxiter)
+    return opt
 
 
 def _check_master_pattern_and_get_data(
@@ -650,7 +820,7 @@ def _prepare_projection_centers(
 
 
 def _refinement_info_message(
-    method: Callable,
+    method: Union[Callable, "nlopt.opt"],
     method_kwargs: dict,
     trust_region: list,
     trust_region_passed: bool,
@@ -660,7 +830,7 @@ def _refinement_info_message(
     Parameters
     ----------
     method
-        SciPy optimization method.
+        *SciPy* optimization method or *NLopt* optimizer.
     method_kwargs
         Keyword arguments to be passed to the optimization method.
     trust_region
@@ -674,7 +844,10 @@ def _refinement_info_message(
     msg
         Message with useful refinement information.
     """
-    method_name = method.__name__
+    if hasattr(method, "__name__"):
+        method_name = method.__name__
+    else:
+        method_name = "ln_neldermead"
     method_dict = SUPPORTED_OPTIMIZATION_METHODS[method_name]
     if method_name == "minimize":
         method_name = f"{method_kwargs['method']} (minimize)"
@@ -725,7 +898,7 @@ def compute_refine_orientation_results(
         # (n, score, phi1, Phi, phi2)
         computed_results = np.array(computed_results)
         xmap_refined = CrystalMap(
-            rotations=Rotation.from_neo_euler(Rodrigues(computed_results[:, 1:])),
+            rotations=Rotation.from_euler(computed_results[:, 1:]),
             phase_id=np.zeros(n_patterns),
             x=xmap.x,
             y=xmap.y,
@@ -830,7 +1003,7 @@ def compute_refine_orientation_projection_center_results(
         computed_results = np.array(computed_results)
         # (n, score, phi1, Phi, phi2, PCx, PCy, PCz)
         xmap_refined = CrystalMap(
-            rotations=Rotation.from_neo_euler(Rodrigues(computed_results[:, 1:4])),
+            rotations=Rotation.from_euler(computed_results[:, 1:4]),
             phase_id=np.zeros(n_patterns),
             x=xmap.x,
             y=xmap.y,

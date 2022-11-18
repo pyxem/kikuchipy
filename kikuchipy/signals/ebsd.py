@@ -926,6 +926,9 @@ class EBSD(KikuchipySignal2D):
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
         trust_region: Optional[list] = None,
+        initial_step: Optional[float] = None,
+        rtol: float = 1e-5,
+        maxiter: Optional[int] = None,
         compute: bool = True,
         rechunk: bool = True,
         chunk_kwargs: Optional[dict] = None,
@@ -937,14 +940,18 @@ class EBSD(KikuchipySignal2D):
         in this signal and simulated patterns projected from a master
         pattern. The similarity metric used is the normalized
         cross-correlation (NCC). The orientation, represented by a
-        Rodrigues-Frank vector (:math:`R_x`, :math:`R_y`, :math:`R_z`),
+        Euler angle triplet (:math:`phi_1`, :math:`Phi`, :math:`phi_2`),
         is optimized during refinement, while the sample-detector
         geometry, represented by the three projection center (PC)
         parameters (PCx, PCy, PCz), is fixed.
 
-        A subset of the optimization methods in SciPy are available:
-            - Local optimization via :func:`~scipy.optimize.minimize`
-              (includes Nelder-Mead, Powell etc.)
+        A subset of the optimization methods in *SciPy* and *NLopt* are
+        available:
+            - Local optimization:
+                - :func:`~scipy.optimize.minimize` (includes
+                  Nelder-Mead, Powell etc.).
+                - Nelder-Mead via `nlopt.LN_NELDMEAD
+                  <https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/#nelder-mead-simplex>`_
             - Global optimization:
                 - :func:`~scipy.optimize.differential_evolution`
                 - :func:`~scipy.optimize.dual_annealing`
@@ -972,23 +979,39 @@ class EBSD(KikuchipySignal2D):
             shape ``(n rows, n columns)``, where only pixels equal to
             ``False`` are matched. If not given, all pixels are used.
         method
-            Name of the :mod:`scipy.optimize` optimization method, among
-            ``"minimize"``, ``"differential_evolution"``,
-            ``"dual_annealing"``, ``"basinhopping"``, and ``"shgo"``.
-            Default is ``"minimize"``, which by default performs local
-            optimization with the Nelder-Mead method unless another
-            ``"minimize"`` method is passed to ``method_kwargs``.
+            Name of the :mod:`scipy.optimize` or *NLopt* optimization
+            method, among ``"minimize"``, ``"differential_evolution"``,
+            ``"dual_annealing"``, ``"basinhopping"``, ``"shgo"`` and
+            ``"ln_neldermead"`` (from *NLopt*). Default is
+            ``"minimize"``, which by default performs local optimization
+            with the Nelder-Mead method, unless another ``"minimize"``
+            method is passed to ``method_kwargs``.
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
             ``method``. For example, to perform refinement with the
-            modified Powell algorithm, pass ``method="minimize"`` and
-            ``method_kwargs=dict(method="Powell")``.
+            modified Powell algorithm from *SciPy*, pass
+            ``method="minimize"`` and
+            ``method_kwargs=dict(method="Powell")``. Not used if
+            ``method="LN_NELDERMEAD"``.
         trust_region
             List of +/- angular deviation in degrees as bound
-            constraints on the three Rodrigues-Frank vector components.
-            If not given and ``method`` requires bounds, they are set to
-            ``[1, 1, 1]``. If given, ``method`` is assumed to support
-            bounds and they are passed to ``method``.
+            constraints on the three Euler angles. If not given and
+            ``method`` requires bounds, they are set to ``[1, 1, 1]``.
+            If given, ``method`` is assumed to support bounds and they
+            are passed to ``method``.
+        initial_step
+            List of initial step size of the Euler angle in degrees.
+            Only used if ``method="LN_NELDERMEAD"``. If not given, this
+            is not set in the `NLopt` optimizer.
+        rtol
+            Stop optimization of a pattern when the difference in NCC
+            score between two iterations is below this value (relative
+            tolerance). Default is ``1e-5``. Only used if
+            ``method="LN_NELDERMEAD"``.
+        maxiter
+            Stop optimization of a pattern when the number of function
+            evaluations exceeds this value. Only used if
+            ``method="LN_NELDERMEAD"``.
         compute
             Whether to refine now (``True``) or later (``False``).
             Default is ``True``. See :meth:`~dask.array.Array.compute`
@@ -1023,6 +1046,13 @@ class EBSD(KikuchipySignal2D):
         --------
         scipy.optimize, refine_projection_center,
         refine_orientation_projection_center
+
+        Notes
+        -----
+        *NLopt* is an optional dependency, see
+        :doc:`optional-dependencies` for details.
+
+        Be aware that *NLopt* does not fail gracefully.
         """
         self._check_refinement_parameters(
             xmap=xmap, detector=detector, signal_mask=signal_mask
@@ -1040,6 +1070,9 @@ class EBSD(KikuchipySignal2D):
             method=method,
             method_kwargs=method_kwargs,
             trust_region=trust_region,
+            initial_step=initial_step,
+            rtol=rtol,
+            maxiter=maxiter,
             compute=compute,
         )
 
@@ -1192,7 +1225,7 @@ class EBSD(KikuchipySignal2D):
         in this signal and simulated patterns projected from a master
         pattern. The only supported similarity metric is the normalized
         cross-correlation (NCC). The orientation, represented by a
-        Rodrigues-Frank vector (:math:`R_x`, :math:`R_y`, :math:`R_z`),
+        Euler angle triplet (:math:`phi_1`, :math:`Phi`, :math:`phi_2`),
         and the sample-detector geometry, represented by the three
         projection center (PC) parameters (PCx, PCy, PCz), are updated
         during refinement.
@@ -1275,9 +1308,9 @@ class EBSD(KikuchipySignal2D):
             (7,) is returned, to be computed later. See
             :func:`~kikuchipy.indexing.compute_refine_orientation_projection_center_results`.
             Each navigation point has the optimized score, the three
-            Rodriues-Frank vector components in radians, and the three
-            PC parameters in the Bruker convention in element 0, 1, 2,
-            3, 4, 5, and 6, respectively.
+            Euler angles in radians, and the three PC parameters in the
+            Bruker convention in element 0, 1, 2, 3, 4, 5, and 6,
+            respectively.
 
         See Also
         --------
