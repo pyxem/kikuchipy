@@ -33,24 +33,33 @@ SUPPORTED_OPTIMIZATION_METHODS = {
     # Local
     "minimize": {
         "type": "local",
-        "supports_bounds": True
+        "supports_bounds": True,
+        "package": "scipy",
+    },
+    "ln_neldermead": {
+        "type": "local",
+        "package": "nlopt",
     },
     # Global
     "basinhopping": {
         "type": "global",
-        "supports_bounds": False
+        "supports_bounds": False,
+        "package": "scipy",
     },
     "differential_evolution": {
         "type": "global",
-        "supports_bounds": True
+        "supports_bounds": True,
+        "package": "scipy",
     },
     "dual_annealing": {
         "type": "global",
-        "supports_bounds": True
+        "supports_bounds": True,
+        "package": "scipy",
     },
     "shgo": {
         "type": "global",
-        "supports_bounds": True
+        "supports_bounds": True,
+        "package": "scipy",
     },
 }
 # fmt: on

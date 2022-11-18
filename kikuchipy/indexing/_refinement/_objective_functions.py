@@ -25,7 +25,7 @@ import numpy as np
 from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
     _ncc_single_patterns_1d_float32_exp_centered,
 )
-from kikuchipy._rotation import _rotation_from_rodrigues
+from kikuchipy._rotation import _rotation_from_euler
 from kikuchipy.signals.util._master_pattern import (
     _project_single_pattern_from_master_pattern,
     _get_direction_cosines_for_fixed_pc,
@@ -39,8 +39,7 @@ def _refine_orientation_objective_function(x: np.ndarray, *args) -> float:
     Parameters
     ----------
     x
-        1D array containing the Rodrigues-Frank vector components (Rx,
-        Ry, Rz).
+        1D array containing the Euler angles (phi1, Phi, phi2).
     *args
         Tuple of fixed parameters needed to completely specify the
         function. The expected contents are:
@@ -59,7 +58,7 @@ def _refine_orientation_objective_function(x: np.ndarray, *args) -> float:
         Objective function value (normalized cross-correlation score).
     """
     simulated = _project_single_pattern_from_master_pattern(
-        rotation=_rotation_from_rodrigues(*x),
+        rotation=_rotation_from_euler(*x),
         direction_cosines=args[1],
         master_upper=args[2],
         master_lower=args[3],
@@ -143,8 +142,8 @@ def _refine_orientation_projection_center_objective_function(
     Parameters
     ----------
     x
-        1D array containing the Rodrigues-Frank vector components (Rx,
-        Ry, Rz) and PC parameters (PCx, PCy, PCz).
+        1D array containing the Euler angle triplet (phi1, Phi, phi2)
+        and PC parameters (PCx, PCy, PCz).
     *args
         Tuple of fixed parameters needed to completely specify the
         function. The expected contents are:
@@ -179,7 +178,7 @@ def _refine_orientation_projection_center_objective_function(
         mask=args[6],
     )
     simulated = _project_single_pattern_from_master_pattern(
-        rotation=_rotation_from_rodrigues(*x[:3]),
+        rotation=_rotation_from_euler(*x[:3]),
         direction_cosines=dc,
         master_upper=args[1],
         master_lower=args[2],

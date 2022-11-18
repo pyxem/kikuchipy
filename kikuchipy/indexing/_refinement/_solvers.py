@@ -45,6 +45,8 @@ def _mask_pattern(pattern: np.ndarray, mask: np.ndarray) -> np.ndarray:
     return pattern[mask].reshape(-1)
 
 
+# --------------------------- SciPy solvers -------------------------- #
+
 def _refine_orientation_solver(
     pattern: np.ndarray,
     rescale: bool,
@@ -382,3 +384,95 @@ def _refine_orientation_projection_center_solver(
     x = solution.x
 
     return 1 - solution.fun, x[0], x[1], x[2], x[3], x[4], x[5]
+
+
+# #---------------------------- NLopt solvers ------------------------ #
+
+def _refine_orientation_solver_nlopt(
+    pattern: np.ndarray,
+    rescale: bool,
+    rotation: np.ndarray,
+    opt: "nlopt.opt",
+    fixed_parameters: Tuple[np.ndarray, np.ndarray, int, int, float],
+    trust_region: list,
+    signal_mask: np.ndarray,
+    direction_cosines: Optional[np.ndarray] = None,
+    pcx: Optional[float] = None,
+    pcy: Optional[float] = None,
+    pcz: Optional[float] = None,
+    nrows: Optional[int] = None,
+    ncols: Optional[int] = None,
+    tilt: Optional[float] = None,
+    azimuthal: Optional[float] = None,
+    sample_tilt: Optional[float] = None,
+):
+    # Apply mask
+    pattern = _mask_pattern(pattern.astype("float32"), signal_mask)
+
+    if rescale:
+        pattern = _rescale_without_min_max_1d_float32(pattern)
+
+    # Center intensities and get squared norm of centered pattern
+    pattern, squared_norm = _zero_mean_sum_square_1d_float32(pattern)
+
+    if direction_cosines is None:
+        direction_cosines = _get_direction_cosines_for_fixed_pc(
+            pcx=pcx,
+            pcy=pcy,
+            pcz=pcz,
+            nrows=nrows,
+            ncols=ncols,
+            tilt=tilt,
+            azimuthal=azimuthal,
+            sample_tilt=sample_tilt,
+            mask=signal_mask,
+        )
+
+    params = (pattern,) + (direction_cosines,) + fixed_parameters + (squared_norm,)
+
+    opt.set_lower_bounds(rotation - trust_region)
+    opt.set_upper_bounds(rotation + trust_region)
+
+    opt.set_min_objective(
+        lambda x, grad: _refine_orientation_objective_function(x, *params)
+    )
+
+    x = opt.optimize(rotation)
+    ncc = opt.last_optimum_value()
+
+    return 1 - ncc, x[0], x[1], x[2]
+
+
+def _refine_orientation_projection_center_solver_nlopt(
+    opt,
+    pattern: np.ndarray,
+    rescale: bool,
+    rot_pc: np.ndarray,
+    fixed_parameters: tuple,
+    trust_region: list,
+    signal_mask: np.ndarray,
+) -> Tuple[float, float, float, float, float, float, float]:
+    # Apply mask
+    pattern = _mask_pattern(pattern.astype("float32"), signal_mask)
+
+    if rescale:
+        pattern = _rescale_without_min_max_1d_float32(pattern)
+
+    # Center intensities and get squared norm of centered pattern
+    pattern, squared_norm = _zero_mean_sum_square_1d_float32(pattern)
+
+    params = (pattern,) + fixed_parameters + (squared_norm,)
+
+    opt.set_lower_bounds(rot_pc - trust_region)
+    opt.set_upper_bounds(rot_pc + trust_region)
+
+    opt.set_min_objective(
+        lambda x, grad: _refine_orientation_projection_center_objective_function(
+            x, *params
+        )
+    )
+
+    x = opt.optimize(rot_pc)
+    ncc = opt.last_optimum_value()
+
+    return 1 - ncc, x[0], x[1], x[2], x[3], x[4], x[5]
