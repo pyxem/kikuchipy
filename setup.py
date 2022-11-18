@@ -71,6 +71,9 @@ extra_feature_requirements = {
         "matplotlib                 >= 3.5",
         "pyvista",
     ],
+    "opt": [
+        "nlopt",
+    ]
 }
 # fmt: on
 

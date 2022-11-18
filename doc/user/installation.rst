@@ -33,11 +33,14 @@ Optional dependencies
 
 Some dependencies are optional and available via the following selectors:
 
-======== ====================================== ==========================
-Selector Package(s)                             Purpose
-======== ====================================== ==========================
-``viz``  :doc:`pyvista<pyvista:index>`          3D plot of master patterns
-======== ====================================== ==========================
+======== ============================= ==========================================
+Selector Package(s)                    Purpose
+======== ============================= ==========================================
+``viz``  :doc:`PyVista<pyvista:index>` 3D plot of master patterns
+``opt``  `NLopt<nlopt-docs>`_          Extra optimization algorithms beyond SciPy
+======== ============================= ==========================================
+
+.. _nlopt-docs: https://nlopt.readthedocs.io/en/stable
 
 Installing optional dependencies::
 
