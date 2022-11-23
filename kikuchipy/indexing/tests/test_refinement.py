@@ -68,7 +68,7 @@ class TestEBSDRefinementSetup:
             npx,
             npy,
             scale,
-        ) = kp.indexing._refinement._refinement._check_master_pattern_and_get_data(
+        ) = kp.indexing._refinement._refinement._get_master_pattern_data(
             master_pattern=mp,
             energy=20,
         )

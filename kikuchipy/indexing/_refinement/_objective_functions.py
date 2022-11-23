@@ -73,7 +73,7 @@ def _refine_orientation_objective_function(x: np.ndarray, *args) -> float:
     return 1 - _ncc_single_patterns_1d_float32_exp_centered(args[0], simulated, args[7])
 
 
-def _refine_projection_center_objective_function(x: np.ndarray, *args) -> float:
+def _refine_pc_objective_function(x: np.ndarray, *args) -> float:
     """Objective function to be minimized when optimizing projection
     center (PC) parameters PCx, PCy, and PCz.
 
@@ -133,9 +133,7 @@ def _refine_projection_center_objective_function(x: np.ndarray, *args) -> float:
     )
 
 
-def _refine_orientation_projection_center_objective_function(
-    x: np.ndarray, *args
-) -> float:
+def _refine_orientation_pc_objective_function(x: np.ndarray, *args) -> float:
     """Objective function to be minimized when optimizing orientations
     and projection center (PC) parameters PCx, PCy, and PCz.
 

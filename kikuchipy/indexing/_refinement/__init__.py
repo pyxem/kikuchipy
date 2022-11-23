@@ -38,6 +38,7 @@ SUPPORTED_OPTIMIZATION_METHODS = {
     },
     "ln_neldermead": {
         "type": "local",
+        "supports_bounds": True,
         "package": "nlopt",
     },
     # Global
