@@ -20,11 +20,10 @@ centers by optimizing the similarity between experimental and simulated
 patterns.
 """
 
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 from numba import njit
 import numpy as np
-from scipy.optimize import Bounds
 
 
 from kikuchipy.indexing._refinement._objective_functions import (
@@ -79,15 +78,13 @@ def _prepare_pattern(
 def _refine_orientation_solver_scipy(
     pattern: np.ndarray,
     rotation: np.ndarray,
-    lower_bounds: np.ndarray,
-    upper_bounds: np.ndarray,
+    bounds: np.ndarray,
     signal_mask: np.ndarray,
     rescale: bool,
     method: Callable,
     method_kwargs: dict,
-    fixed_parameters: Tuple[np.ndarray, np.ndarray, int, int, float],
-    trust_region: List[int],
     trust_region_passed: bool,
+    fixed_parameters: Tuple[np.ndarray, np.ndarray, int, int, float],
     direction_cosines: Optional[np.ndarray] = None,
     pcx: Optional[float] = None,
     pcy: Optional[float] = None,
@@ -123,12 +120,6 @@ def _refine_orientation_solver_scipy(
         list of possible arguments, see the SciPy documentation.
     fixed_parameters
         Fixed parameters used in the projection.
-    trust_region
-        List of +/- angular deviation in degrees as bound constraints on
-        the three vector components.
-    trust_region_passed
-        Whether ``trust_region`` was passed to the public refinement
-        method.
     direction_cosines
         Vector array of shape (n pixels, 3) and data type 32-bit floats.
         If not given, ``pcx``, ``pcy``, ``pcz``, ``nrows``, ``ncols``,
@@ -185,10 +176,7 @@ def _refine_orientation_solver_scipy(
 
     if method_name == "minimize":
         if trust_region_passed:
-            method_kwargs["bounds"] = Bounds(
-                rotation - trust_region,
-                rotation + trust_region,
-            )
+            method_kwargs["bounds"] = bounds
         res = method(
             fun=_refine_orientation_objective_function,
             x0=rotation,
@@ -199,7 +187,7 @@ def _refine_orientation_solver_scipy(
         res = method(
             func=_refine_orientation_objective_function,
             args=params,
-            bounds=np.column_stack([rotation - trust_region, rotation + trust_region]),
+            bounds=bounds,
             **method_kwargs,
         )
     else:  # Is always "basinhopping", due to prior check of method name
@@ -220,12 +208,12 @@ def _refine_pc_solver_scipy(
     pattern: np.ndarray,
     rotation: np.ndarray,
     pc: np.ndarray,
+    bounds: np.ndarray,
     signal_mask: np.ndarray,
     rescale: bool,
     method: Callable,
     method_kwargs: dict,
     fixed_parameters: tuple,
-    trust_region: list,
     trust_region_passed: bool,
 ) -> Tuple[float, float, float, float]:
     """Maximize the similarity between an experimental pattern and a
@@ -256,13 +244,8 @@ def _refine_pc_solver_scipy(
         list of possible arguments, see the SciPy documentation.
     fixed_parameters
         Fixed parameters used in the projection.
-    trust_region
-        List of +/- percentage deviations as bound constraints on
-        the PC parameters in the Bruker convention. The parameter
-        range is [0, 1].
     trust_region_passed
-        Whether `trust_region` was passed to the public refinement
-        method.
+        Whether ``trust_region`` was passed.
 
     Returns
     -------
@@ -278,7 +261,7 @@ def _refine_pc_solver_scipy(
 
     if method_name == "minimize":
         if trust_region_passed:
-            method_kwargs["bounds"] = Bounds(pc - trust_region, pc + trust_region)
+            method_kwargs["bounds"] = bounds
         solution = method(
             fun=_refine_pc_objective_function,
             x0=pc,
@@ -289,7 +272,7 @@ def _refine_pc_solver_scipy(
         solution = method(
             func=_refine_pc_objective_function,
             args=params,
-            bounds=np.column_stack([pc - trust_region, pc + trust_region]),
+            bounds=bounds,
             **method_kwargs,
         )
     else:  # Is always "basinhopping", due to prior check of method name
@@ -308,12 +291,12 @@ def _refine_pc_solver_scipy(
 def _refine_orientation_pc_solver_scipy(
     pattern: np.ndarray,
     rot_pc: np.ndarray,
+    bounds: np.ndarray,
     signal_mask: np.ndarray,
     rescale: bool,
     method: Callable,
     method_kwargs: dict,
     fixed_parameters: tuple,
-    trust_region: list,
     trust_region_passed: bool,
 ) -> Tuple[float, float, float, float, float, float, float]:
     """Maximize the similarity between an experimental pattern and a
@@ -343,11 +326,6 @@ def _refine_orientation_pc_solver_scipy(
         of possible arguments, see the SciPy documentation.
     fixed_parameters
         Fixed parameters used in the projection.
-    trust_region
-        List of +/- angular deviations in degrees as bound
-        constraints on the three Euler angles and +/- percentage
-        deviations as bound constraints on the PC parameters in the
-        Bruker convention.
     trust_region_passed
         Whether `trust_region` was passed to the public refinement
         method.
@@ -368,9 +346,7 @@ def _refine_orientation_pc_solver_scipy(
 
     if method_name == "minimize":
         if trust_region_passed:
-            method_kwargs["bounds"] = Bounds(
-                rot_pc - trust_region, rot_pc + trust_region
-            )
+            method_kwargs["bounds"] = bounds
         solution = method(
             fun=_refine_orientation_pc_objective_function,
             x0=rot_pc,
@@ -381,7 +357,7 @@ def _refine_orientation_pc_solver_scipy(
         solution = method(
             func=_refine_orientation_pc_objective_function,
             args=params,
-            bounds=np.column_stack([rot_pc - trust_region, rot_pc + trust_region]),
+            bounds=bounds,
             **method_kwargs,
         )
     else:  # Is always "basinhopping", due to prior check of method name
@@ -408,6 +384,7 @@ def _refine_orientation_solver_nlopt(
     upper_bounds: np.ndarray,
     signal_mask: np.ndarray,
     rescale: bool,
+    trust_region_passed: bool,
     fixed_parameters: Tuple[np.ndarray, np.ndarray, int, int, float],
     direction_cosines: Optional[np.ndarray] = None,
     pcx: Optional[float] = None,
@@ -439,8 +416,9 @@ def _refine_orientation_solver_nlopt(
     params = (pattern,) + (direction_cosines,) + fixed_parameters + (squared_norm,)
 
     # Prepare NLopt optimizer
-    opt.set_lower_bounds(lower_bounds)
-    opt.set_upper_bounds(upper_bounds)
+    if trust_region_passed:
+        opt.set_lower_bounds(lower_bounds)
+        opt.set_upper_bounds(upper_bounds)
     opt.set_min_objective(
         lambda x, grad: _refine_orientation_objective_function(x, *params)
     )
@@ -463,6 +441,7 @@ def _refine_pc_solver_nlopt(
     signal_mask: np.ndarray,
     rescale: bool,
     fixed_parameters: tuple,
+    trust_region_passed: bool,
 ) -> Tuple[float, float, float, float]:
     pattern, squared_norm = _prepare_pattern(pattern, rescale, signal_mask)
 
@@ -470,8 +449,9 @@ def _refine_pc_solver_nlopt(
     params = (pattern,) + (rotation,) + fixed_parameters + (squared_norm,)
 
     # Prepare NLopt optimizer
-    opt.set_lower_bounds(lower_bounds)
-    opt.set_upper_bounds(upper_bounds)
+    if trust_region_passed:
+        opt.set_lower_bounds(lower_bounds)
+        opt.set_upper_bounds(upper_bounds)
     opt.set_min_objective(lambda x, grad: _refine_pc_objective_function(x, *params))
 
     # Run optimization and extract optimized Euler angles and PC values
@@ -491,6 +471,7 @@ def _refine_orientation_pc_solver_nlopt(
     signal_mask: np.ndarray,
     rescale: bool,
     fixed_parameters: tuple,
+    trust_region_passed: bool,
 ) -> Tuple[float, float, float, float, float, float, float]:
     pattern, squared_norm = _prepare_pattern(pattern, rescale, signal_mask)
 
@@ -498,8 +479,9 @@ def _refine_orientation_pc_solver_nlopt(
     params = (pattern,) + fixed_parameters + (squared_norm,)
 
     # Prepare NLopt optimizer
-    opt.set_lower_bounds(lower_bounds)
-    opt.set_upper_bounds(upper_bounds)
+    if trust_region_passed:
+        opt.set_lower_bounds(lower_bounds)
+        opt.set_upper_bounds(upper_bounds)
     opt.set_min_objective(
         lambda x, grad: _refine_orientation_pc_objective_function(x, *params)
     )

@@ -44,11 +44,8 @@ from kikuchipy.filters.window import Window
 from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
 from kikuchipy.indexing._refinement._refinement import (
     _refine_orientation,
-    _refine_orientation2,
     _refine_orientation_pc,
-    _refine_orientation_pc2,
     _refine_pc,
-    _refine_pc2,
 )
 from kikuchipy.indexing.similarity_metrics import (
     SimilarityMetric,
@@ -928,9 +925,9 @@ class EBSD(KikuchipySignal2D):
         signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
-        trust_region: Union[tuple, list, np.ndarray] = (2, 2, 2),
+        trust_region: Union[tuple, list, np.ndarray, None] = None,
         initial_step: Union[float] = None,
-        rtol: float = 1e-5,
+        rtol: float = 1e-4,
         maxeval: Optional[int] = None,
         compute: bool = True,
         rechunk: bool = True,
@@ -997,13 +994,13 @@ class EBSD(KikuchipySignal2D):
             ``method_kwargs=dict(method="Powell")``. Not used if
             ``method="LN_NELDERMEAD"``.
         trust_region
-            List of three +/- angular deviation in degrees used to
+            List of three +/- angular deviations in degrees used to
             determine the bound constraints on the three Euler angles
-            per navigation point (default is 2 degrees for each angle).
-            Not passed to *SciPy* ``method`` if it does not support
-            bounds. The definition ranges of the Euler angles are
-            :math:`\phi_1 \in [0, 2\pi]`, :math:`\Phi \in [0, \pi]` and
-            :math:`\phi_2 \in [0, 2\pi]` in radians.
+            per navigation point, e.g. ``[2, 2, 2]``. Not passed to
+            *SciPy* ``method`` if it does not support bounds. The
+            definition ranges of the Euler angles are
+            :math:`\phi_1 \in [0, 360]`, :math:`\Phi \in [0, 180]` and
+            :math:`\phi_2 \in [0, 360]` in radians.
         initial_step
             A single initial step size for all Euler angle, in degrees.
             Only used if ``method="LN_NELDERMEAD"``. If not given, this
@@ -1011,11 +1008,11 @@ class EBSD(KikuchipySignal2D):
         rtol
             Stop optimization of a pattern when the difference in NCC
             score between two iterations is below this value (relative
-            tolerance). Default is ``1e-5``. Only used if
+            tolerance). Default is ``1e-4``. Only used if
             ``method="LN_NELDERMEAD"``.
         maxeval
             Stop optimization of a pattern when the number of function
-            evaluations exceeds this value. Only used if
+            evaluations exceeds this value, e.g. ``100``. Only used if
             ``method="LN_NELDERMEAD"``.
         compute
             Whether to refine now (``True``) or later (``False``).
@@ -1057,9 +1054,8 @@ class EBSD(KikuchipySignal2D):
         *NLopt* is for now an optional dependency, see
         :doc:`optional-dependencies` for details. Be aware that *NLopt*
         does not fail gracefully. If continued use of *NLopt* proves
-        stable enough on all supported operating systems, its
-        implementation of the Nelder-Mead algorithm might become the
-        default.
+        stable enough, its implementation of the Nelder-Mead algorithm
+        might become the default.
         """
         self._check_refinement_parameters(
             xmap=xmap,
@@ -1070,7 +1066,7 @@ class EBSD(KikuchipySignal2D):
         patterns, signal_mask = self._prepare_patterns_for_refinement(
             signal_mask=signal_mask, rechunk=rechunk, chunk_kwargs=chunk_kwargs
         )
-        return _refine_orientation2(
+        return _refine_orientation(
             xmap=xmap,
             detector=detector,
             master_pattern=master_pattern,
@@ -1095,9 +1091,9 @@ class EBSD(KikuchipySignal2D):
         signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
-        trust_region: Union[tuple, list, np.ndarray] = (0.05, 0.05, 0.05),
+        trust_region: Union[tuple, list, np.ndarray, None] = None,
         initial_step: Union[float] = None,
-        rtol: float = 1e-5,
+        rtol: float = 1e-4,
         maxeval: Optional[int] = None,
         compute: bool = True,
         rechunk: bool = True,
@@ -1165,21 +1161,21 @@ class EBSD(KikuchipySignal2D):
         trust_region
             List of three +/- deviations in the range [0, 1] used to
             determine the bounds constraints on the PC parameters per
-            navigation point (default is [0.05, 0.05, 0.05]). Not passed
-            to *SciPy* ``method`` if it does not support bounds. The
+            navigation point, e.g. ``[0.05, 0.05, 0.05]``. Not passed to
+            *SciPy* ``method`` if it does not support bounds. The
             definition range of the PC parameters are assumed to be
-            [-3, 3].
+            [-2, 2].
         initial_step
             A single initial step size for all PC parameters in the
             range [0, 1]. Only used if ``method="LN_NELDERMEAD"``.
         rtol
             Stop optimization of a pattern when the difference in NCC
             score between two iterations is below this value (relative
-            tolerance). Default is ``1e-5``. Only used if
+            tolerance). Default is ``1e-4``. Only used if
             ``method="LN_NELDERMEAD"``.
         maxeval
             Stop optimization of a pattern when the number of function
-            evaluations exceeds this value. Only used if
+            evaluations exceeds this value, e.g. ``100``. Only used if
             ``method="LN_NELDERMEAD"``.
         compute
             Whether to refine now (``True``) or later (``False``).
@@ -1221,9 +1217,8 @@ class EBSD(KikuchipySignal2D):
         *NLopt* is for now an optional dependency, see
         :doc:`optional-dependencies` for details. Be aware that *NLopt*
         does not fail gracefully. If continued use of *NLopt* proves
-        stable enough on all supported operating systems, its
-        implementation of the Nelder-Mead algorithm might become the
-        default.
+        stable enough, its implementation of the Nelder-Mead algorithm
+        might become the default.
         """
         self._check_refinement_parameters(
             xmap=xmap,
@@ -1234,7 +1229,7 @@ class EBSD(KikuchipySignal2D):
         patterns, signal_mask = self._prepare_patterns_for_refinement(
             signal_mask=signal_mask, rechunk=rechunk, chunk_kwargs=chunk_kwargs
         )
-        return _refine_pc2(
+        return _refine_pc(
             xmap=xmap,
             detector=detector,
             master_pattern=master_pattern,
@@ -1259,9 +1254,9 @@ class EBSD(KikuchipySignal2D):
         signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
-        trust_region: Union[tuple, list, np.ndarray] = (2, 2, 2, 0.05, 0.05, 0.05),
+        trust_region: Union[tuple, list, np.ndarray, None] = None,
         initial_step: Union[tuple, list, np.ndarray, None] = None,
-        rtol: Optional[float] = None,
+        rtol: Optional[float] = 1e-4,
         maxeval: Optional[int] = None,
         compute: bool = True,
         rechunk: bool = True,
@@ -1331,13 +1326,12 @@ class EBSD(KikuchipySignal2D):
             List of three +/- angular deviations in degrees as bound
             constraints on the three Euler angles and three +/-
             deviations in the range [0, 1] as bound constraints on the
-            PC parameters. Default is [5, 5, 5, 0.1, 0.1, 0.1]. Not
+            PC parameters, e.g. ``[2, 2, 2, 0.05, 0.05, 0.05]``. Not
             passed to *SciPy* ``method`` if it does not support bounds.
             The definition ranges of the Euler angles are
-            :math:`\phi_1 \in [0, 2\pi]`, :math:`\Phi \in [0, \pi]` and
-            :math:`\phi_2 \in [0, 2\pi]` in radians, while the
-            definition range of the PC parameters are assumed to be
-            [-3, 3].
+            :math:`\phi_1 \in [0, 360]`, :math:`\Phi \in [0, 180]` and
+            :math:`\phi_2 \in [0, 360]` in radians, while the definition
+            range of the PC parameters are assumed to be [-2, 2].
         initial_step
             A list of two initial step sizes to use, one in degrees for
             all Euler angles and one in the range [0, 1] for all PC
@@ -1346,10 +1340,10 @@ class EBSD(KikuchipySignal2D):
             Stop optimization of a pattern when the difference in NCC
             score between two iterations is below this value (relative
             tolerance). Only used if ``method="LN_NELDERMEAD"``. If not
-            given, this is set to ``1e-5``.
+            given, this is set to ``1e-4``.
         maxeval
             Stop optimization of a pattern when the number of function
-            evaluations exceeds this value. Only used if
+            evaluations exceeds this value, e.g. ``100``. Only used if
             ``method="LN_NELDERMEAD"``.
         compute
             Whether to refine now (``True``) or later (``False``).
@@ -1396,10 +1390,10 @@ class EBSD(KikuchipySignal2D):
         the output is reasonable.
 
         *NLopt* is for now an optional dependency, see
-        :doc:`optional-dependencies` for details. If the use of *NLopt*
-        proves stable enough on all supported operating systems, its
-        implementation of the Nelder-Mead algorithm might become the
-        default.
+        :doc:`optional-dependencies` for details. Be aware that *NLopt*
+        does not fail gracefully. If continued use of *NLopt* proves
+        stable enough, its implementation of the Nelder-Mead algorithm
+        might become the default.
         """
         self._check_refinement_parameters(
             xmap=xmap,
@@ -1410,7 +1404,7 @@ class EBSD(KikuchipySignal2D):
         patterns, signal_mask = self._prepare_patterns_for_refinement(
             signal_mask=signal_mask, rechunk=rechunk, chunk_kwargs=chunk_kwargs
         )
-        return _refine_orientation_pc2(
+        return _refine_orientation_pc(
             xmap=xmap,
             detector=detector,
             master_pattern=master_pattern,

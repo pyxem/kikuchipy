@@ -55,7 +55,7 @@ def _refine_orientation_objective_function(x: np.ndarray, *args) -> float:
 
     Returns
     -------
-        Objective function value (normalized cross-correlation score).
+        Normalized cross-correlation score.
     """
     simulated = _project_single_pattern_from_master_pattern(
         rotation=_rotation_from_euler(*x),
@@ -102,7 +102,7 @@ def _refine_pc_objective_function(x: np.ndarray, *args) -> float:
 
     Returns
     -------
-        Objective function value (normalized cross-correlation score).
+        Normalized cross-correlation score.
     """
     dc = _get_direction_cosines_for_fixed_pc(
         pcx=x[0],
@@ -162,7 +162,7 @@ def _refine_orientation_pc_objective_function(x: np.ndarray, *args) -> float:
 
     Returns
     -------
-        Objective function value (normalized cross-correlation score).
+        normalized cross-correlation score.
     """
     dc = _get_direction_cosines_for_fixed_pc(
         pcx=x[3],
