@@ -45,6 +45,8 @@ extra_feature_requirements = {
     "doc": [
         # TODO: Remove once https://github.com/pyxem/kikuchipy/issues/566 is resolved
         "ipywidgets                 ~= 7.7",
+        # TODO: Remove once https://github.com/spatialaudio/nbsphinx/issues/687 is resolved
+        "ipython                    != 8.7.0",
         "memory_profiler",
         "nbsphinx                   >= 0.7",
         "numpydoc",
