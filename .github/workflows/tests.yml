@@ -80,7 +80,7 @@ jobs:
       - name: Install optional dependencies
         shell: bash
         run: |
-          pip install -e .'[viz]'
+          pip install -e .'[opt,viz]'
 
       - name: Display Python, pip and package versions
         run: |
@@ -114,12 +114,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install xvfb
-          xvfb-run pytest --cov=kikuchipy --pyargs kikuchipy -n 2
+          xvfb-run pytest -n 2 --cov=kikuchipy --pyargs kikuchipy
 
       - name: Run tests on Windows and macOS
         if: ${{ matrix.os != 'ubuntu-latest' }}
         run: |
-          pytest --cov=kikuchipy --pyargs kikuchipy -n 2
+          pytest -n 2 --cov=kikuchipy --pyargs kikuchipy
 
       - name: Generate line coverage
         run: |
