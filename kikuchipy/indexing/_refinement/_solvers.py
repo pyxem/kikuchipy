@@ -22,9 +22,7 @@ patterns.
 
 from typing import Callable, Optional, Tuple
 
-from numba import njit
 import numpy as np
-
 
 from kikuchipy.indexing._refinement._objective_functions import (
     _refine_orientation_objective_function,
@@ -33,15 +31,11 @@ from kikuchipy.indexing._refinement._objective_functions import (
 )
 from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.pattern._pattern import (
+    _mask_pattern,
     _rescale_without_min_max_1d_float32,
     _zero_mean_sum_square_1d_float32,
 )
 from kikuchipy.signals.util._master_pattern import _get_direction_cosines_for_fixed_pc
-
-
-@njit("float32[:](float32[:],bool_[:])", cache=True, nogil=True, fastmath=True)
-def _mask_pattern(pattern: np.ndarray, mask: np.ndarray) -> np.ndarray:
-    return pattern[mask].reshape(-1)
 
 
 def _prepare_pattern(
@@ -373,7 +367,7 @@ def _refine_orientation_pc_solver_scipy(
     return 1 - solution.fun, x[0], x[1], x[2], x[3], x[4], x[5]
 
 
-# #---------------------------- NLopt solvers ------------------------ #
+# --------------------------- NLopt solvers -------------------------- #
 
 
 def _refine_orientation_solver_nlopt(

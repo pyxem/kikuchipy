@@ -41,6 +41,7 @@ SUPPORTED_OPTIMIZATION_METHODS = {
         "supports_bounds": True,
         "package": "nlopt",
     },
+
     # Global
     "basinhopping": {
         "type": "global",

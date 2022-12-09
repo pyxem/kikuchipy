@@ -711,6 +711,7 @@ def _refine_orientation_pc_chunk_nlopt(
 
 # ------------------------- Refinement setup ------------------------- #
 
+
 class _RefinementSetup:
     """Set up EBSD refinement.
 
@@ -752,6 +753,7 @@ class _RefinementSetup:
         See docstring of e.g.
         :meth:`~kikuchipy.signals.EBSD.refine_orientation`.
     """
+
     mode: str
     # Data parameters
     data_shape: tuple
@@ -852,6 +854,10 @@ class _RefinementSetup:
                 "dtype": np.float64,
             }
         )
+
+        # Have no idea how this can happen, but it does in tests...
+        if self.package == "scipy" and "opt" in self.map_blocks_kwargs:
+            del self.map_blocks_kwargs["opt"]
 
         chunk_funcs = {
             "ori": {
