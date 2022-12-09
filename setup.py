@@ -50,6 +50,7 @@ extra_feature_requirements = {
         "memory_profiler",
         "nbsphinx                   >= 0.7",
         "numpydoc",
+        "nlopt",
         "pydata-sphinx-theme",
         "pyebsdindex                >= 0.1",
         "pythreejs",  # Used in the docs by PyVista

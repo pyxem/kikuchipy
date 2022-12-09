@@ -469,9 +469,6 @@ def _refine_pc(
         signal_mask=signal_mask,
     )
 
-    rot = ref.rotations_array
-    pc = ref.pc_array
-
     # Get bounds on control variables. If a trust region is not passed,
     # these arrays are all 0, and not used in the objective functions.
     lower_bounds, upper_bounds = ref.get_bound_constraints(trust_region)
@@ -480,8 +477,8 @@ def _refine_pc(
     res = da.map_blocks(
         ref.chunk_func,
         patterns,
-        rot,
-        pc,
+        ref.rotations_array,
+        ref.pc_array,
         lower_bounds,
         upper_bounds,
         signal_mask=signal_mask,
@@ -1071,7 +1068,7 @@ class _RefinementSetup:
             data_to_optimize = self.rotations_pc_array
 
         lower_bounds = da.fmax(data_to_optimize - trust_region, lower_abs)
-        upper_bounds = da.fmax(data_to_optimize + trust_region, upper_abs)
+        upper_bounds = da.fmin(data_to_optimize + trust_region, upper_abs)
 
         return lower_bounds, upper_bounds
 

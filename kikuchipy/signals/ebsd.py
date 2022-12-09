@@ -953,6 +953,7 @@ class EBSD(KikuchipySignal2D):
                   Nelder-Mead, Powell etc.).
                 - Nelder-Mead via `nlopt.LN_NELDMEAD
                   <https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/#nelder-mead-simplex>`_
+
             - Global optimization:
                 - :func:`~scipy.optimize.differential_evolution`
                 - :func:`~scipy.optimize.dual_annealing`
@@ -1052,7 +1053,7 @@ class EBSD(KikuchipySignal2D):
         Notes
         -----
         *NLopt* is for now an optional dependency, see
-        :doc:`optional-dependencies` for details. Be aware that *NLopt*
+        :ref:`optional-dependencies` for details. Be aware that *NLopt*
         does not fail gracefully. If continued use of *NLopt* proves
         stable enough, its implementation of the Nelder-Mead algorithm
         might become the default.
@@ -1215,7 +1216,7 @@ class EBSD(KikuchipySignal2D):
         Notes
         -----
         *NLopt* is for now an optional dependency, see
-        :doc:`optional-dependencies` for details. Be aware that *NLopt*
+        :ref:`optional-dependencies` for details. Be aware that *NLopt*
         does not fail gracefully. If continued use of *NLopt* proves
         stable enough, its implementation of the Nelder-Mead algorithm
         might become the default.
@@ -1390,7 +1391,7 @@ class EBSD(KikuchipySignal2D):
         the output is reasonable.
 
         *NLopt* is for now an optional dependency, see
-        :doc:`optional-dependencies` for details. Be aware that *NLopt*
+        :ref:`optional-dependencies` for details. Be aware that *NLopt*
         does not fail gracefully. If continued use of *NLopt* proves
         stable enough, its implementation of the Nelder-Mead algorithm
         might become the default.
