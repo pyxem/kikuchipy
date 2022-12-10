@@ -44,7 +44,7 @@ with open("kikuchipy/release.py") as fid:
 extra_feature_requirements = {
     "doc": [
         # TODO: Remove once https://github.com/pyxem/kikuchipy/issues/566 is resolved
-        "ipywidgets                 ~= 7.7",
+        "ipywidgets                 <= 7.7.1",
         # TODO: Remove once https://github.com/spatialaudio/nbsphinx/issues/687 is resolved
         "ipython                    != 8.7.0",
         "memory_profiler",
@@ -53,7 +53,7 @@ extra_feature_requirements = {
         "nlopt",
         "pydata-sphinx-theme",
         "pyebsdindex                >= 0.1",
-        "pythreejs",  # Used in the docs by PyVista
+        "panel",  # Used in the docs by PyVista
         "pyvista",
         "sphinx                     >= 3.0.2",
         "sphinx-codeautolink[ipython]",

@@ -15,6 +15,12 @@ build:
   tools:
     python: "3.9"
     nodejs: "16"
+  # See https://docs.pyvista.org/user-guide/jupyter/panel.html#configuration-considerations.
+  # These packages are needed by PyVista/panel to render 3D plots from
+  # RTD's server.
+  apt_packages:
+    - libgl1-mesa-dev
+    - xvfb
 
 # Build doc in all formats (HTML, PDF and ePub)
 formats:

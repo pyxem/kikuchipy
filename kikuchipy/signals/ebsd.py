@@ -948,17 +948,17 @@ class EBSD(KikuchipySignal2D):
 
         A subset of the optimization methods in *SciPy* and *NLopt* are
         available:
-            - Local optimization:
-                - :func:`~scipy.optimize.minimize` (includes
-                  Nelder-Mead, Powell etc.).
-                - Nelder-Mead via `nlopt.LN_NELDMEAD
-                  <https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/#nelder-mead-simplex>`_
 
-            - Global optimization:
-                - :func:`~scipy.optimize.differential_evolution`
-                - :func:`~scipy.optimize.dual_annealing`
-                - :func:`~scipy.optimize.basinhopping`
-                - :func:`~scipy.optimize.shgo`
+        - Local optimization:
+            - :func:`~scipy.optimize.minimize` (includes Nelder-Mead,
+              Powell etc.).
+            - Nelder-Mead via `nlopt.LN_NELDERMEAD
+              <https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/#nelder-mead-simplex>`_
+        - Global optimization:
+            - :func:`~scipy.optimize.differential_evolution`
+            - :func:`~scipy.optimize.dual_annealing`
+            - :func:`~scipy.optimize.basinhopping`
+            - :func:`~scipy.optimize.shgo`
 
         Parameters
         ----------
@@ -1114,16 +1114,17 @@ class EBSD(KikuchipySignal2D):
 
         A subset of the optimization methods in *SciPy* and *NLopt* are
         available:
-            - Local optimization:
-                - :func:`~scipy.optimize.minimize` (includes
-                  Nelder-Mead, Powell etc.).
-                - Nelder-Mead via `nlopt.LN_NELDMEAD
-                  <https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/#nelder-mead-simplex>`_
-            - Global optimization:
-                - :func:`~scipy.optimize.differential_evolution`
-                - :func:`~scipy.optimize.dual_annealing`
-                - :func:`~scipy.optimize.basinhopping`
-                - :func:`~scipy.optimize.shgo`
+
+        - Local optimization:
+            - :func:`~scipy.optimize.minimize` (includes Nelder-Mead,
+              Powell etc.).
+            - Nelder-Mead via `nlopt.LN_NELDERMEAD
+              <https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/#nelder-mead-simplex>`_
+        - Global optimization:
+            - :func:`~scipy.optimize.differential_evolution`
+            - :func:`~scipy.optimize.dual_annealing`
+            - :func:`~scipy.optimize.basinhopping`
+            - :func:`~scipy.optimize.shgo`
 
         Parameters
         ----------
@@ -1278,16 +1279,17 @@ class EBSD(KikuchipySignal2D):
 
         A subset of the optimization methods in *SciPy* and *NLopt* are
         available:
-            - Local optimization:
-                - :func:`~scipy.optimize.minimize` (includes
-                  Nelder-Mead, Powell etc.).
-                - Nelder-Mead via `nlopt.LN_NELDMEAD
-                  <https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/#nelder-mead-simplex>`_
-            - Global optimization:
-                - :func:`~scipy.optimize.differential_evolution`
-                - :func:`~scipy.optimize.dual_annealing`
-                - :func:`~scipy.optimize.basinhopping`
-                - :func:`~scipy.optimize.shgo`
+
+        - Local optimization:
+            - :func:`~scipy.optimize.minimize` (includes Nelder-Mead,
+              Powell etc.).
+            - Nelder-Mead via `nlopt.LN_NELDERMEAD
+              <https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/#nelder-mead-simplex>`_
+        - Global optimization:
+            - :func:`~scipy.optimize.differential_evolution`
+            - :func:`~scipy.optimize.dual_annealing`
+            - :func:`~scipy.optimize.basinhopping`
+            - :func:`~scipy.optimize.shgo`
 
         Parameters
         ----------
