@@ -53,6 +53,15 @@ class TestRotationVectorTools:
         assert np.allclose(rotated_dc, rotated_dc_py, atol=1e-3)
         assert np.allclose(rotated_dc_py, rotated_dc_orix.data, atol=1e-3)
 
+    def test_rotation_from_euler(self):
+        euler = np.array([1, 2, 3])
+        rot_orix = Rotation.from_euler(euler).data
+        rot_numba = kp._rotation._rotation_from_euler(*euler)
+        rot_numba_py = kp._rotation._rotation_from_euler.py_func(*euler)
+
+        assert np.allclose(rot_numba, rot_numba_py)
+        assert np.allclose(rot_numba_py, rot_orix)
+
     def test_rotation_from_rodrigues(self):
         rod = np.array([1, 2, 3])
         rot_orix = Rotation.from_neo_euler(Rodrigues(rod)).data

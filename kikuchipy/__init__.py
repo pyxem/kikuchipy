@@ -25,6 +25,12 @@ try:
     _pyvista_installed = True
 except ImportError:  # pragma: no cover
     _pyvista_installed = False
+try:
+    import nlopt
+
+    _nlopt_installed = True
+except ImportError:  # pragma: no cover
+    _nlopt_installed = False
 
 
 def set_log_level(level: str):  # pragma: no cover

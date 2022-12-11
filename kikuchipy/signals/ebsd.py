@@ -44,8 +44,8 @@ from kikuchipy.filters.window import Window
 from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
 from kikuchipy.indexing._refinement._refinement import (
     _refine_orientation,
-    _refine_orientation_projection_center,
-    _refine_projection_center,
+    _refine_orientation_pc,
+    _refine_pc,
 )
 from kikuchipy.indexing.similarity_metrics import (
     SimilarityMetric,
@@ -925,7 +925,10 @@ class EBSD(KikuchipySignal2D):
         signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
-        trust_region: Optional[list] = None,
+        trust_region: Union[tuple, list, np.ndarray, None] = None,
+        initial_step: Union[float] = None,
+        rtol: float = 1e-4,
+        maxeval: Optional[int] = None,
         compute: bool = True,
         rechunk: bool = True,
         chunk_kwargs: Optional[dict] = None,
@@ -937,26 +940,31 @@ class EBSD(KikuchipySignal2D):
         in this signal and simulated patterns projected from a master
         pattern. The similarity metric used is the normalized
         cross-correlation (NCC). The orientation, represented by a
-        Rodrigues-Frank vector (:math:`R_x`, :math:`R_y`, :math:`R_z`),
-        is optimized during refinement, while the sample-detector
-        geometry, represented by the three projection center (PC)
-        parameters (PCx, PCy, PCz), is fixed.
+        Euler angle triplet (:math:`phi_1`, :math:`Phi`, :math:`phi_2`)
+        relative to the EDAX TSL sample reference frame RD-TD-ND, is
+        optimized during refinement, while the sample-detector geometry,
+        represented by the three projection center (PC) parameters
+        (PCx, PCy, PCz) in the Bruker convention, is fixed.
 
-        A subset of the optimization methods in SciPy are available:
-            - Local optimization via :func:`~scipy.optimize.minimize`
-              (includes Nelder-Mead, Powell etc.)
-            - Global optimization:
-                - :func:`~scipy.optimize.differential_evolution`
-                - :func:`~scipy.optimize.dual_annealing`
-                - :func:`~scipy.optimize.basinhopping`
-                - :func:`~scipy.optimize.shgo`
+        A subset of the optimization methods in *SciPy* and *NLopt* are
+        available:
+
+        - Local optimization:
+            - :func:`~scipy.optimize.minimize` (includes Nelder-Mead,
+              Powell etc.).
+            - Nelder-Mead via `nlopt.LN_NELDERMEAD
+              <https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/#nelder-mead-simplex>`_
+        - Global optimization:
+            - :func:`~scipy.optimize.differential_evolution`
+            - :func:`~scipy.optimize.dual_annealing`
+            - :func:`~scipy.optimize.basinhopping`
+            - :func:`~scipy.optimize.shgo`
 
         Parameters
         ----------
         xmap
             Single phase crystal map with at least one orientation per
-            point. The orientations are assumed to be relative to the
-            EDAX TSL sample reference frame RD-TD-ND.
+            point.
         detector
             Detector describing the detector-sample geometry with either
             one PC to be used for all map points or one for each point.
@@ -972,23 +980,41 @@ class EBSD(KikuchipySignal2D):
             shape ``(n rows, n columns)``, where only pixels equal to
             ``False`` are matched. If not given, all pixels are used.
         method
-            Name of the :mod:`scipy.optimize` optimization method, among
-            ``"minimize"``, ``"differential_evolution"``,
-            ``"dual_annealing"``, ``"basinhopping"``, and ``"shgo"``.
-            Default is ``"minimize"``, which by default performs local
-            optimization with the Nelder-Mead method unless another
-            ``"minimize"`` method is passed to ``method_kwargs``.
+            Name of the :mod:`scipy.optimize` or *NLopt* optimization
+            method, among ``"minimize"``, ``"differential_evolution"``,
+            ``"dual_annealing"``, ``"basinhopping"``, ``"shgo"`` and
+            ``"ln_neldermead"`` (from *NLopt*). Default is
+            ``"minimize"``, which by default performs local optimization
+            with the Nelder-Mead method, unless another ``"minimize"``
+            method is passed to ``method_kwargs``.
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
             ``method``. For example, to perform refinement with the
-            modified Powell algorithm, pass ``method="minimize"`` and
-            ``method_kwargs=dict(method="Powell")``.
+            modified Powell algorithm from *SciPy*, pass
+            ``method="minimize"`` and
+            ``method_kwargs=dict(method="Powell")``. Not used if
+            ``method="LN_NELDERMEAD"``.
         trust_region
-            List of +/- angular deviation in degrees as bound
-            constraints on the three Rodrigues-Frank vector components.
-            If not given and ``method`` requires bounds, they are set to
-            ``[1, 1, 1]``. If given, ``method`` is assumed to support
-            bounds and they are passed to ``method``.
+            List of three +/- angular deviations in degrees used to
+            determine the bound constraints on the three Euler angles
+            per navigation point, e.g. ``[2, 2, 2]``. Not passed to
+            *SciPy* ``method`` if it does not support bounds. The
+            definition ranges of the Euler angles are
+            :math:`\phi_1 \in [0, 360]`, :math:`\Phi \in [0, 180]` and
+            :math:`\phi_2 \in [0, 360]` in radians.
+        initial_step
+            A single initial step size for all Euler angle, in degrees.
+            Only used if ``method="LN_NELDERMEAD"``. If not given, this
+            is not set for the *NLopt* optimizer.
+        rtol
+            Stop optimization of a pattern when the difference in NCC
+            score between two iterations is below this value (relative
+            tolerance). Default is ``1e-4``. Only used if
+            ``method="LN_NELDERMEAD"``.
+        maxeval
+            Stop optimization of a pattern when the number of function
+            evaluations exceeds this value, e.g. ``100``. Only used if
+            ``method="LN_NELDERMEAD"``.
         compute
             Whether to refine now (``True``) or later (``False``).
             Default is ``True``. See :meth:`~dask.array.Array.compute`
@@ -1023,9 +1049,20 @@ class EBSD(KikuchipySignal2D):
         --------
         scipy.optimize, refine_projection_center,
         refine_orientation_projection_center
+
+        Notes
+        -----
+        *NLopt* is for now an optional dependency, see
+        :ref:`optional-dependencies` for details. Be aware that *NLopt*
+        does not fail gracefully. If continued use of *NLopt* proves
+        stable enough, its implementation of the Nelder-Mead algorithm
+        might become the default.
         """
         self._check_refinement_parameters(
-            xmap=xmap, detector=detector, signal_mask=signal_mask
+            xmap=xmap,
+            detector=detector,
+            master_pattern=master_pattern,
+            signal_mask=signal_mask,
         )
         patterns, signal_mask = self._prepare_patterns_for_refinement(
             signal_mask=signal_mask, rechunk=rechunk, chunk_kwargs=chunk_kwargs
@@ -1040,6 +1077,9 @@ class EBSD(KikuchipySignal2D):
             method=method,
             method_kwargs=method_kwargs,
             trust_region=trust_region,
+            initial_step=initial_step,
+            rtol=rtol,
+            maxeval=maxeval,
             compute=compute,
         )
 
@@ -1052,7 +1092,10 @@ class EBSD(KikuchipySignal2D):
         signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
-        trust_region: Optional[list] = None,
+        trust_region: Union[tuple, list, np.ndarray, None] = None,
+        initial_step: Union[float] = None,
+        rtol: float = 1e-4,
+        maxeval: Optional[int] = None,
         compute: bool = True,
         rechunk: bool = True,
         chunk_kwargs: Optional[dict] = None,
@@ -1065,25 +1108,29 @@ class EBSD(KikuchipySignal2D):
         pattern. The similarity metric used is the normalized
         cross-correlation (NCC). The sample-detector geometry,
         represented by the three projection center (PC) parameters
-        (PCx, PCy, PCz), is updated during refinement, while the
-        orientations are fixed.
+        (PCx, PCy, PCz) in the Bruker convention, is updated during
+        refinement, while the orientations, defined relative to the EDAX
+        TSL sample reference frame RD-TD-ND, are fixed.
 
-        A subset of the optimization methods in SciPy are available:
-            - Local optimization:
-                - :func:`~scipy.optimize.minimize`
-                  (includes Nelder-Mead, Powell etc.)
-            - Global optimization:
-                - :func:`~scipy.optimize.differential_evolution`
-                - :func:`~scipy.optimize.dual_annealing`
-                - :func:`~scipy.optimize.basinhopping`
-                - :func:`~scipy.optimize.shgo`
+        A subset of the optimization methods in *SciPy* and *NLopt* are
+        available:
+
+        - Local optimization:
+            - :func:`~scipy.optimize.minimize` (includes Nelder-Mead,
+              Powell etc.).
+            - Nelder-Mead via `nlopt.LN_NELDERMEAD
+              <https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/#nelder-mead-simplex>`_
+        - Global optimization:
+            - :func:`~scipy.optimize.differential_evolution`
+            - :func:`~scipy.optimize.dual_annealing`
+            - :func:`~scipy.optimize.basinhopping`
+            - :func:`~scipy.optimize.shgo`
 
         Parameters
         ----------
         xmap
             Single phase crystal map with at least one orientation per
-            point. The orientations are assumed to be relative to the
-            EDAX TSL sample reference frame RD-TD-ND.
+            point.
         detector
             Detector describing the detector-sample geometry with either
             one PC to be used for all map points or one for each point.
@@ -1099,24 +1146,39 @@ class EBSD(KikuchipySignal2D):
             shape ``(n rows, n columns)``, where only pixels equal to
             ``False`` are matched. If not given, all pixels are used.
         method
-            Name of the :mod:`scipy.optimize` optimization method, among
-            ``"minimize"``, ``"differential_evolution"``,
-            ``"dual_annealing"``, ``"basinhopping"``, and ``"shgo"``.
-            Default is ``"minimize"``, which by default performs local
-            optimization with the Nelder-Mead method unless another
-            ``"minimize"`` method is passed to ``method_kwargs``.
+            Name of the :mod:`scipy.optimize` or *NLopt* optimization
+            method, among ``"minimize"``, ``"differential_evolution"``,
+            ``"dual_annealing"``, ``"basinhopping"``, ``"shgo"`` and
+            ``"ln_neldermead"`` (from *NLopt*). Default is
+            ``"minimize"``, which by default performs local optimization
+            with the Nelder-Mead method, unless another ``"minimize"``
+            method is passed to ``method_kwargs``.
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
             ``method``. For example, to perform refinement with the
-            modified Powell algorithm, pass ``method="minimize"`` and
-            ``method_kwargs=dict(method="Powell")``.
+            modified Powell algorithm from *SciPy*, pass
+            ``method="minimize"`` and
+            ``method_kwargs=dict(method="Powell")``. Not used if
+            ``method="LN_NELDERMEAD"``.
         trust_region
-            List of +/- percentage deviations as bound constraints on
-            the PC parameters in the Bruker convention. The parameter
-            range is [0, 1]. If not given and ``method`` requires
-            bounds, they are set to ``[0.05, 0.05, 0.05]``. If given,
-            ``method`` is assumed to support bounds and they are passed
-            to ``method``.
+            List of three +/- deviations in the range [0, 1] used to
+            determine the bounds constraints on the PC parameters per
+            navigation point, e.g. ``[0.05, 0.05, 0.05]``. Not passed to
+            *SciPy* ``method`` if it does not support bounds. The
+            definition range of the PC parameters are assumed to be
+            [-2, 2].
+        initial_step
+            A single initial step size for all PC parameters in the
+            range [0, 1]. Only used if ``method="LN_NELDERMEAD"``.
+        rtol
+            Stop optimization of a pattern when the difference in NCC
+            score between two iterations is below this value (relative
+            tolerance). Default is ``1e-4``. Only used if
+            ``method="LN_NELDERMEAD"``.
+        maxeval
+            Stop optimization of a pattern when the number of function
+            evaluations exceeds this value, e.g. ``100``. Only used if
+            ``method="LN_NELDERMEAD"``.
         compute
             Whether to refine now (``True``) or later (``False``).
             Default is ``True``. See :meth:`~dask.array.Array.compute`
@@ -1151,14 +1213,25 @@ class EBSD(KikuchipySignal2D):
         --------
         scipy.optimize, refine_orientation,
         refine_orientation_projection_center
+
+        Notes
+        -----
+        *NLopt* is for now an optional dependency, see
+        :ref:`optional-dependencies` for details. Be aware that *NLopt*
+        does not fail gracefully. If continued use of *NLopt* proves
+        stable enough, its implementation of the Nelder-Mead algorithm
+        might become the default.
         """
         self._check_refinement_parameters(
-            xmap=xmap, detector=detector, signal_mask=signal_mask
+            xmap=xmap,
+            detector=detector,
+            master_pattern=master_pattern,
+            signal_mask=signal_mask,
         )
         patterns, signal_mask = self._prepare_patterns_for_refinement(
             signal_mask=signal_mask, rechunk=rechunk, chunk_kwargs=chunk_kwargs
         )
-        return _refine_projection_center(
+        return _refine_pc(
             xmap=xmap,
             detector=detector,
             master_pattern=master_pattern,
@@ -1168,6 +1241,9 @@ class EBSD(KikuchipySignal2D):
             method=method,
             method_kwargs=method_kwargs,
             trust_region=trust_region,
+            initial_step=initial_step,
+            rtol=rtol,
+            maxeval=maxeval,
             compute=compute,
         )
 
@@ -1180,7 +1256,10 @@ class EBSD(KikuchipySignal2D):
         signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
-        trust_region: Optional[list] = None,
+        trust_region: Union[tuple, list, np.ndarray, None] = None,
+        initial_step: Union[tuple, list, np.ndarray, None] = None,
+        rtol: Optional[float] = 1e-4,
+        maxeval: Optional[int] = None,
         compute: bool = True,
         rechunk: bool = True,
         chunk_kwargs: Optional[dict] = None,
@@ -1192,27 +1271,31 @@ class EBSD(KikuchipySignal2D):
         in this signal and simulated patterns projected from a master
         pattern. The only supported similarity metric is the normalized
         cross-correlation (NCC). The orientation, represented by a
-        Rodrigues-Frank vector (:math:`R_x`, :math:`R_y`, :math:`R_z`),
-        and the sample-detector geometry, represented by the three
-        projection center (PC) parameters (PCx, PCy, PCz), are updated
-        during refinement.
+        Euler angle triplet (:math:`phi_1`, :math:`Phi`, :math:`phi_2`)
+        relative to the EDAX TSL sample reference frame RD-TD-ND, and
+        the sample-detector geometry, represented by the three
+        projection center (PC) parameters (PCx, PCy, PCz) in the Bruker
+        convention, are updated during refinement.
 
-        A subset of the optimization methods in SciPy are available:
-            - Local optimization:
-                - :func:`~scipy.optimize.minimize`
-                  (includes Nelder-Mead, Powell etc.)
-            - Global optimization:
-                - :func:`~scipy.optimize.differential_evolution`
-                - :func:`~scipy.optimize.dual_annealing`
-                - :func:`~scipy.optimize.basinhopping`
-                - :func:`~scipy.optimize.shgo`
+        A subset of the optimization methods in *SciPy* and *NLopt* are
+        available:
+
+        - Local optimization:
+            - :func:`~scipy.optimize.minimize` (includes Nelder-Mead,
+              Powell etc.).
+            - Nelder-Mead via `nlopt.LN_NELDERMEAD
+              <https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/#nelder-mead-simplex>`_
+        - Global optimization:
+            - :func:`~scipy.optimize.differential_evolution`
+            - :func:`~scipy.optimize.dual_annealing`
+            - :func:`~scipy.optimize.basinhopping`
+            - :func:`~scipy.optimize.shgo`
 
         Parameters
         ----------
         xmap
             Single phase crystal map with at least one orientation per
-            point. The orientations are assumed to be relative to the
-            EDAX TSL sample reference frame RD-TD-ND.
+            point.
         detector
             Detector describing the detector-sample geometry with either
             one PC to be used for all map points or one for each point.
@@ -1228,26 +1311,43 @@ class EBSD(KikuchipySignal2D):
             shape ``(n rows, n columns)``, where only pixels equal to
             ``False`` are matched. If not given, all pixels are used.
         method
-            Name of the :mod:`scipy.optimize` optimization method, among
-            ``"minimize"``, ``"differential_evolution"``,
-            ``"dual_annealing"``, ``"basinhopping"``, and ``"shgo"``.
-            Default is ``"minimize"``, which by default performs local
-            optimization with the Nelder-Mead method unless another
-            ``"minimize"`` method is passed to ``method_kwargs``.
+            Name of the :mod:`scipy.optimize` or *NLopt* optimization
+            method, among ``"minimize"``, ``"differential_evolution"``,
+            ``"dual_annealing"``, ``"basinhopping"``, ``"shgo"`` and
+            ``"ln_neldermead"`` (from *NLopt*). Default is
+            ``"minimize"``, which by default performs local optimization
+            with the Nelder-Mead method, unless another ``"minimize"``
+            method is passed to ``method_kwargs``.
         method_kwargs
             Keyword arguments passed to the :mod:`scipy.optimize`
             ``method``. For example, to perform refinement with the
-            modified Powell algorithm, pass ``method="minimize"`` and
-            ``method_kwargs=dict(method="Powell")``.
+            modified Powell algorithm from *SciPy*, pass
+            ``method="minimize"`` and
+            ``method_kwargs=dict(method="Powell")``. Not used if
+            ``method="LN_NELDERMEAD"``.
         trust_region
-            List of +/- angular deviations in degrees as bound
-            constraints on the three Rodrigues-Frank vector components
-            and +/- percentage deviations as bound constraints on the PC
-            parameters in the Bruker convention. The latter parameter
-            range is [0, 1]. If not given and ``method`` requires
-            bounds, they are set to ``[1, 1, 1, 0.05, 0.05, 0.05]``. If
-            given, ``method`` is assumed to support bounds and they are
-            passed to ``method``.
+            List of three +/- angular deviations in degrees as bound
+            constraints on the three Euler angles and three +/-
+            deviations in the range [0, 1] as bound constraints on the
+            PC parameters, e.g. ``[2, 2, 2, 0.05, 0.05, 0.05]``. Not
+            passed to *SciPy* ``method`` if it does not support bounds.
+            The definition ranges of the Euler angles are
+            :math:`\phi_1 \in [0, 360]`, :math:`\Phi \in [0, 180]` and
+            :math:`\phi_2 \in [0, 360]` in radians, while the definition
+            range of the PC parameters are assumed to be [-2, 2].
+        initial_step
+            A list of two initial step sizes to use, one in degrees for
+            all Euler angles and one in the range [0, 1] for all PC
+            parameters. Only used if ``method="LN_NELDERMEAD"``.
+        rtol
+            Stop optimization of a pattern when the difference in NCC
+            score between two iterations is below this value (relative
+            tolerance). Only used if ``method="LN_NELDERMEAD"``. If not
+            given, this is set to ``1e-4``.
+        maxeval
+            Stop optimization of a pattern when the number of function
+            evaluations exceeds this value, e.g. ``100``. Only used if
+            ``method="LN_NELDERMEAD"``.
         compute
             Whether to refine now (``True``) or later (``False``).
             Default is ``True``. See :meth:`~dask.array.Array.compute`
@@ -1275,9 +1375,8 @@ class EBSD(KikuchipySignal2D):
             (7,) is returned, to be computed later. See
             :func:`~kikuchipy.indexing.compute_refine_orientation_projection_center_results`.
             Each navigation point has the optimized score, the three
-            Rodriues-Frank vector components in radians, and the three
-            PC parameters in the Bruker convention in element 0, 1, 2,
-            3, 4, 5, and 6, respectively.
+            Euler angles in radians, and the three PC parameters in
+            element 0, 1, 2, 3, 4, 5, and 6, respectively.
 
         See Also
         --------
@@ -1292,14 +1391,23 @@ class EBSD(KikuchipySignal2D):
         possible that the parameters that yield the highest similarity
         are incorrect. As always, it is left to the user to ensure that
         the output is reasonable.
+
+        *NLopt* is for now an optional dependency, see
+        :ref:`optional-dependencies` for details. Be aware that *NLopt*
+        does not fail gracefully. If continued use of *NLopt* proves
+        stable enough, its implementation of the Nelder-Mead algorithm
+        might become the default.
         """
         self._check_refinement_parameters(
-            xmap=xmap, detector=detector, signal_mask=signal_mask
+            xmap=xmap,
+            detector=detector,
+            master_pattern=master_pattern,
+            signal_mask=signal_mask,
         )
         patterns, signal_mask = self._prepare_patterns_for_refinement(
             signal_mask=signal_mask, rechunk=rechunk, chunk_kwargs=chunk_kwargs
         )
-        return _refine_orientation_projection_center(
+        return _refine_orientation_pc(
             xmap=xmap,
             detector=detector,
             master_pattern=master_pattern,
@@ -1309,6 +1417,9 @@ class EBSD(KikuchipySignal2D):
             method=method,
             method_kwargs=method_kwargs,
             trust_region=trust_region,
+            initial_step=initial_step,
+            rtol=rtol,
+            maxeval=maxeval,
             compute=compute,
         )
 
@@ -2164,6 +2275,7 @@ class EBSD(KikuchipySignal2D):
         self,
         xmap: CrystalMap,
         detector: EBSDDetector,
+        master_pattern: "EBSDMasterPattern",
         signal_mask: Optional[np.ndarray] = None,
     ):
         """Raise ValueError if EBSD refinement input is invalid."""
@@ -2183,6 +2295,7 @@ class EBSD(KikuchipySignal2D):
             raise ValueError("Crystal map must have exactly one phase")
         if signal_mask is not None and sig_shape != signal_mask.shape:
             raise ValueError("Signal mask and signal axes must have the same shape")
+        master_pattern._is_suitable_for_projection(raise_if_not=True)
 
     def _prepare_patterns_for_refinement(
         self,

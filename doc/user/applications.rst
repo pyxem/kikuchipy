@@ -5,16 +5,20 @@ Applications
 If you are using kikuchipy in your scientific research, please help our scientific
 visibility by citing the Zenodo DOI: https://doi.org/10.5281/zenodo.3597646.
 
-This is a tentative list of the works using kikuchipy.
+This is a tentative list of works using kikuchipy.
 If you think your work should be listed here, please raise an issue `on GitHub
 <https://github.com/pyxem/kikuchipy>`__ or `contact the developers
 <pyxem.team@gmail.com>`__.
-Most of these works are also listed when searching for "kikuchipy" `on Google Scholar
+Most of these works are also listed when searching for ``"kikuchipy"`` `on Google Scholar
 <https://scholar.google.com/scholar?hl=no&as_sdt=0%2C5&q=%22kikuchipy%22&btnG=>`__.
 
 2022
 ====
 
+- H. W. Ånes, A. T. J. van Helvoort, and K. Marthinsen, "Orientation dependent pinning
+  of (sub)grains by dispersoids during recovery and recrystallization in an Al-Mn
+  alloy," *arXiv:2212.03527* (2022).
+  https://doi.org/10.48550/arXiv.2212.03527.
 - O. M. Akselsen, R. Bjørge, H. W. Ånes, X. Ren, and B. Nyhus, "Microstructure and
   Properties of Wire Arc Additive Manufacturing of Inconel 625," *Metals* **12(11)**
   (2022).

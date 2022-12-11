@@ -33,15 +33,18 @@ Optional dependencies
 
 Some dependencies are optional and available via the following selectors:
 
-======== ====================================== ==========================
-Selector Package(s)                             Purpose
-======== ====================================== ==========================
-``viz``  :doc:`pyvista<pyvista:index>`          3D plot of master patterns
-======== ====================================== ==========================
+======== ============================= ==========================================
+Selector Package(s)                    Purpose
+======== ============================= ==========================================
+``viz``  :doc:`PyVista<pyvista:index>` 3D plot of master patterns
+``opt``  NLopt_                        Extra optimization algorithms beyond SciPy
+======== ============================= ==========================================
+
+.. _NLopt: https://nlopt.readthedocs.io/en/latest/NLopt_Python_Reference/
 
 Installing optional dependencies::
 
-    pip install kikuchipy[viz]
+    pip install kikuchipy[viz,opt]
 
 .. _install-with-anaconda:
 

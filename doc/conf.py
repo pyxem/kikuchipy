@@ -79,7 +79,8 @@ intersphinx_mapping = {
     "nbsphinx": ("https://nbsphinx.readthedocs.io/en/latest", None),
     "nbval": ("https://nbval.readthedocs.io/en/latest", None),
     "numpydoc": ("https://numpydoc.readthedocs.io/en/latest", None),
-    "pythreejs": ("https://pythreejs.readthedocs.io/en/stable", None),
+    "panel": ("https://panel.holoviz.org", None),
+    #    "pythreejs": ("https://pythreejs.readthedocs.io/en/stable", None),
     "pytest": ("https://docs.pytest.org/en/stable", None),
     "pyxem": ("https://pyxem.readthedocs.io/en/latest", None),
     "readthedocs": ("https://docs.readthedocs.io/en/stable", None),
@@ -253,7 +254,8 @@ def linkcode_resolve(domain, info):
 # -------
 # https://docs.pyvista.org
 pyvista.global_theme.window_size = [600, 600]
-pyvista.set_jupyter_backend("pythreejs")
+pyvista.set_jupyter_backend("panel")
+pyvista.start_xvfb()
 
 # -- Copy button customization (taken from PyVista)
 # Exclude traditional Python prompts from the copied code
