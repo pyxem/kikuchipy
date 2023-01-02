@@ -18,6 +18,9 @@ Unreleased
 
 Added
 -----
+- Full 510 MB dataset of (50, 50) patterns of (480, 480) pixels from a Si wafer,
+  available for download to the cache via ``si_wafer()``.
+  (`#579 <https://github.com/pyxem/kikuchipy/pull/579>`_)
 - When using the following HyperSpy ``Signal2D`` methods via the ``EBSD`` class, the
   class attributes ``xmap``, ``static_background`` and ``detector`` are handled
   correctly, which they were not before: ``inav``, ``isig``, ``crop()``,
@@ -36,10 +39,11 @@ Changed
   and ``detector.binning`` are updated. If this handling of attributes fails, the old
   behavior is retained. This handling is experimental.
   (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
-- EBSD signal loaded with ``nickel_ebsd_small()`` now contains a crystal map with
-  orientations and a detector with PC values found from Hough indexing with
-  *PyEBSDIndex* followed by orientation and PC refinement.
-  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
+- EBSD signal loaded with ``nickel_ebsd_small()`` and ``nickel_ebsd_large()`` now
+  contain crystal maps with orientations and detectors with PC values found from Hough
+  indexing with *PyEBSDIndex* followed by orientation and PC refinement.
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_,
+  `#579 <https://github.com/pyxem/kikuchipy/pull/579>`_)
 - Minimal version of *Matplotlib* is 3.5.0 when installing optional dependencies with
   ``pip install kikuchipy[viz]`` since *PyVista* requires this.
   (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
