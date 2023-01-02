@@ -23,11 +23,11 @@ import numpy as np
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.data._data import _fetcher
+from kikuchipy.data._data import Dataset, marshall
 
 
 class TestData:
-    def test_load_nickel_ebsd_small(self):
+    def test_load_ni_ebsd_small(self):
         s = kp.data.nickel_ebsd_small()
 
         assert isinstance(s, kp.signals.EBSD)
@@ -38,7 +38,10 @@ class TestData:
         assert isinstance(s_lazy, kp.signals.LazyEBSD)
         assert isinstance(s_lazy.data, Array)
 
-    def test_load_nickel_ebsd_master_pattern_small(self):
+        dset = Dataset("kikuchipy_h5ebsd/patterns.h5")
+        assert dset.url is None
+
+    def test_load_ni_ebsd_master_pattern_small(self):
         """Can be read."""
         mp = kp.data.nickel_ebsd_master_pattern_small()
         assert mp.data.shape == (401, 401)
@@ -52,7 +55,7 @@ class TestData:
             ("stereographic", "both", (2, 401, 401)),
         ],
     )
-    def test_load_nickel_ebsd_master_pattern_small_kwargs(
+    def test_load_ni_ebsd_master_pattern_small_kwargs(
         self, projection, hemisphere, desired_shape
     ):
         """Master patterns in both stereographic and Lambert projections
@@ -75,7 +78,7 @@ class TestData:
 
     def test_not_allow_download_raises(self):
         """Not passing `allow_download` raises expected error."""
-        file = Path(_fetcher.path, "data/nickel_ebsd_large/patterns.h5")
+        file = Path(marshall.path, "data/nickel_ebsd_large/patterns.h5")
 
         # Rename file (dangerous!)
         new_name = str(file) + ".bak"
@@ -84,14 +87,14 @@ class TestData:
             rename = True
             os.rename(file, new_name)
 
-        with pytest.raises(ValueError, match="Dataset nickel_ebsd_large/patterns.h5"):
+        with pytest.raises(ValueError, match="File data/nickel_ebsd_large/patterns.h5"):
             _ = kp.data.nickel_ebsd_large()
 
         # Revert rename
         if rename:  # pragma: no cover
             os.rename(new_name, file)
 
-    def test_load_nickel_ebsd_large_allow_download(self):
+    def test_load_ni_ebsd_large_allow_download(self):
         """Download from external."""
         s = kp.data.nickel_ebsd_large(lazy=True, allow_download=True)
 
@@ -99,7 +102,7 @@ class TestData:
         assert s.data.shape == (55, 75, 60, 60)
         assert np.issubdtype(s.data.dtype, np.uint8)
 
-    def test_load_silicon_ebsd_moving_screen_in(self):
+    def test_load_si_ebsd_moving_screen_in(self):
         """Download external Si pattern."""
         s = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
 
@@ -107,7 +110,7 @@ class TestData:
         assert s.data.dtype == np.uint8
         assert isinstance(s.static_background, np.ndarray)
 
-    def test_load_silicon_ebsd_moving_screen_out5mm(self):
+    def test_load_si_ebsd_moving_screen_out5mm(self):
         """Download external Si pattern."""
         s = kp.data.silicon_ebsd_moving_screen_out5mm(allow_download=True)
 
@@ -115,10 +118,33 @@ class TestData:
         assert s.data.dtype == np.uint8
         assert isinstance(s.static_background, np.ndarray)
 
-    def test_load_silicon_ebsd_moving_screen_out10mm(self):
+    def test_load_si_ebsd_moving_screen_out10mm(self):
         """Download external Si pattern."""
         s = kp.data.silicon_ebsd_moving_screen_out10mm(allow_download=True)
 
         assert s.data.shape == (480, 480)
         assert s.data.dtype == np.uint8
         assert isinstance(s.static_background, np.ndarray)
+
+    def test_si_wafer(self):
+        """Test set up of Si wafer dataset (without downloading)."""
+        with pytest.raises(ValueError, match="File data/si_wafer/Pattern.dat must be "):
+            _ = kp.data.si_wafer()
+
+        dset = Dataset("si_wafer/Pattern.dat", collection_name="ebsd_si_wafer.zip")
+        assert dset.file_path is None
+        assert dset.file_path_str is None
+        assert not dset.is_in_package
+        assert not dset.is_in_cache
+        assert dset.is_in_collection
+        assert isinstance(dset.file_relpath, Path)
+        assert (
+            str(dset.file_relpath)
+            == dset.file_relpath_str
+            == "data/si_wafer/Pattern.dat"
+        )
+        assert str(dset.file_directory) == "si_wafer"
+        assert dset.md5_hash is None
+
+        with pytest.raises(ValueError, match="File data/si_wafer/Pattern.dat must be "):
+            _ = dset.fetch_file_path()

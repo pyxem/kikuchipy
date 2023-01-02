@@ -206,6 +206,7 @@ class TestImport:
             "nickel_ebsd_large",
             "nickel_ebsd_master_pattern_small",
             "nickel_ebsd_small",
+            "si_wafer",
             "silicon_ebsd_moving_screen_in",
             "silicon_ebsd_moving_screen_out10mm",
             "silicon_ebsd_moving_screen_out5mm",
