@@ -446,7 +446,7 @@ class KikuchiPatternSimulator:
         scaling
             Intensity scaling of the band kinematical intensities,
             either ``"linear"`` (default), :math:`|F|`, ``"square"``,
-            :math:`|F|^2`, or ``"None"``, giving all bands the same
+            :math:`|F|^2`, or ``None``, giving all bands the same
             intensity.
         figure : matplotlib.figure.Figure or pyvista.Plotter, optional
             An existing :class:`~matplotlib.figure.Figure` or

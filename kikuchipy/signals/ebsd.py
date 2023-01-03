@@ -1386,7 +1386,7 @@ class EBSD(KikuchipySignal2D):
         -----
         The method attempts to refine the orientations and projection
         center at the same time for each map point. The optimization
-        landscape is sloppy :cite:`pang2020optimization`, where the
+        landscape is sloppy :cite:`pang2020global`, where the
         orientation and PC can make up for each other. Thus, it is
         possible that the parameters that yield the highest similarity
         are incorrect. As always, it is left to the user to ensure that
