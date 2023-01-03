@@ -44,8 +44,7 @@ class TestData:
         assert dset.is_in_package
         assert not dset.is_in_cache
         assert not dset.is_in_collection
-        assert isinstance(dset.file_relpath, Path)
-        assert str(dset.file_relpath) == dset.file_relpath_str == f"data/{file_path}"
+        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
         assert str(dset.file_directory) == file_path.split("/")[0]
         assert dset.md5_hash == "f5e24fc55befedd08ee1b5a507e413ad"
 
@@ -150,8 +149,7 @@ class TestData:
         assert not dset.is_in_package
         assert dset.is_in_collection
         assert dset.url is not None
-        assert isinstance(dset.file_relpath, Path)
-        assert str(dset.file_relpath) == dset.file_relpath_str == f"data/{file_path}"
+        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
         assert str(dset.file_directory) == file_path.split("/")[0]
 
         if dset.file_path.exists():  # pragma: no cover
@@ -172,7 +170,7 @@ class TestData:
         assert not dset.is_in_package
         assert dset.is_in_collection
         assert dset.url is not None
-        assert str(dset.file_relpath) == dset.file_relpath_str == f"data/{file_path}"
+        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
         assert str(dset.file_directory) == file_path.split("/")[0]
 
         if dset.file_path.exists():  # pragma: no cover
@@ -193,7 +191,7 @@ class TestData:
         assert not dset.is_in_package
         assert dset.is_in_collection
         assert dset.url is not None
-        assert str(dset.file_relpath) == dset.file_relpath_str == f"data/{file_path}"
+        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
         assert str(dset.file_directory) == file_path.split("/")[0]
 
         if dset.file_path.exists():  # pragma: no cover
@@ -214,7 +212,7 @@ class TestData:
         assert not dset.is_in_package
         assert not dset.is_in_collection
         assert dset.url is not None
-        assert str(dset.file_relpath) == dset.file_relpath_str == f"data/{file_path}"
+        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
         assert str(dset.file_directory) == file_path.split("/")[0]
 
         if dset.file_path.exists():  # pragma: no cover
@@ -235,7 +233,7 @@ class TestData:
         assert not dset.is_in_package
         assert not dset.is_in_collection
         assert dset.url is not None
-        assert str(dset.file_relpath) == dset.file_relpath_str == f"data/{file_path}"
+        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
         assert str(dset.file_directory) == file_path.split("/")[0]
 
         if dset.file_path.exists():  # pragma: no cover
