@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -192,7 +192,7 @@ class TestEBSDRefine:
     @pytest.mark.skipif(kp._nlopt_installed, reason="NLopt is installed")
     def test_refine_raises_nlopt_import_error(
         self, dummy_signal, get_single_phase_xmap
-    ):
+    ):  # pragma: no cover
         s = dummy_signal
         nav_shape = s.axes_manager.navigation_shape[::-1]
         xmap = get_single_phase_xmap(
@@ -714,7 +714,7 @@ class TestEBSDRefineOrientationPC(TestEBSDRefine):
         initial_step,
         maxeval,
         get_single_phase_xmap,
-    ):
+    ):  # pragma: no cover
         s = dummy_signal
         nav_shape = s.axes_manager.navigation_shape[::-1]
         xmap = get_single_phase_xmap(

@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -32,9 +32,14 @@ desired.
 """
 
 __all__ = [
+    "ni_ebsd_master_pattern",
+    "ni_gain0",
+    "ni_gain0_calibration",
     "nickel_ebsd_large",
     "nickel_ebsd_master_pattern_small",
     "nickel_ebsd_small",
+    "si_ebsd_master_pattern",
+    "si_wafer",
     "silicon_ebsd_moving_screen_in",
     "silicon_ebsd_moving_screen_out10mm",
     "silicon_ebsd_moving_screen_out5mm",
@@ -47,9 +52,14 @@ def __dir__():
 
 def __getattr__(name):
     _import_mapping = {
+        "ni_ebsd_master_pattern": "_data",
+        "ni_gain0": "_data",
+        "ni_gain0_calibration": "_data",
         "nickel_ebsd_large": "_data",
         "nickel_ebsd_master_pattern_small": "_data",
         "nickel_ebsd_small": "_data",
+        "si_ebsd_master_pattern": "_data",
+        "si_wafer": "_data",
         "silicon_ebsd_moving_screen_in": "_data",
         "silicon_ebsd_moving_screen_out10mm": "_data",
         "silicon_ebsd_moving_screen_out5mm": "_data",

@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -203,9 +203,14 @@ class TestImport:
         import kikuchipy.data
 
         assert dir(kikuchipy.data) == [
+            "ni_ebsd_master_pattern",
+            "ni_gain0",
+            "ni_gain0_calibration",
             "nickel_ebsd_large",
             "nickel_ebsd_master_pattern_small",
             "nickel_ebsd_small",
+            "si_ebsd_master_pattern",
+            "si_wafer",
             "silicon_ebsd_moving_screen_in",
             "silicon_ebsd_moving_screen_out10mm",
             "silicon_ebsd_moving_screen_out5mm",

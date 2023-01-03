@@ -18,6 +18,8 @@ corresponding background pattern, are available in the ``conftest.py`` file.
     distribution can be downloaded from the https://github.com/pyxem/kikuchipy-data
     GitHub repository, thus downloading some datasets of ~15 MB to your local cache.
 
+    This also means that running tests require an internet connection.
+
 To run the tests::
 
     pytest --cov --pyargs kikuchipy
