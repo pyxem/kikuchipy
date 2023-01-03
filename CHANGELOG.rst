@@ -38,6 +38,10 @@ Added
 
 Changed
 -------
+- Minimal version of HyperSpy increased to >= 1.7.3.
+  (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
+- Minimal version of Numba increased to >= 0.52.
+  (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
 - When binning the navigation dimension(s) with ``EBSD.rebin()``, the class attributes
   ``xmap`` and ``static_background`` are set to ``None`` and ``detector.pc`` is set to
   ``[0.5, 0.5, 0.5]`` in the appropriate navigation shape. If the signal dimension(s)
