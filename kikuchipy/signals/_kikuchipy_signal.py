@@ -384,7 +384,6 @@ class KikuchipySignal2D(Signal2D):
 
         if s_new._signal_type in SIGNAL_TYPES:
             attrs = self._get_custom_attributes()
-            _logger.debug("Try to transfer custom attributes when making lazy")
             s_new._set_custom_attributes(attrs, make_lazy=True)
 
         return s_new
@@ -396,10 +395,8 @@ class KikuchipySignal2D(Signal2D):
         super().change_dtype(*args, **kwargs)
 
         if self._signal_type in SIGNAL_TYPES:
-            _logger.debug("Try to transfer custom attributes when changing dtype")
             self._set_custom_attributes(attrs)
         else:
-            _logger.debug("Try to delete custom attributes when changing dtype")
             for name in attrs.keys():
                 try:
                     self.__delattr__("_" + name)
@@ -411,7 +408,6 @@ class KikuchipySignal2D(Signal2D):
 
         if s_new._signal_type in SIGNAL_TYPES:
             attrs = self._get_custom_attributes()
-            _logger.debug("Try to transfer custom attributes when deep copying")
             s_new._set_custom_attributes(attrs, make_deepcopy=True)
 
         return s_new
@@ -422,7 +418,6 @@ class KikuchipySignal2D(Signal2D):
         super()._assign_subclass()
 
         if self._signal_type not in SIGNAL_TYPES:
-            _logger.debug("Try to delete custom attributes when assigning subclass")
             for name in attrs:
                 try:
                     self.__delattr__("_" + name)

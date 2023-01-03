@@ -372,7 +372,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         else:
             attrs = self._custom_attributes
             super().set_signal_type(signal_type)
-            _logger.info("Delete custom attributes when setting signal type")
+            _logger.debug("Delete custom attributes when setting signal type")
             for name in attrs:
                 try:
                     self.__delattr__("_" + name)

@@ -25,14 +25,18 @@ class TestLogging:
         logger = logging.getLogger("kikuchipy")
         assert logger.level == 0  # Warning
 
+        dummy_signal.set_signal_type("EBSDMasterPattern")
+        dummy_signal2 = dummy_signal.deepcopy()
+
         # No info messages are logged
-        _ = dummy_signal.deepcopy()
+        dummy_signal.set_signal_type("EBSD")
         assert len(caplog.records) == 0
 
         kp.set_log_level("DEBUG")
         assert logger.level == 10
 
         # Info messages are logged
-        _ = dummy_signal.deepcopy()
+        dummy_signal2.set_signal_type("EBSD")
+        assert len(caplog.records) > 0
         for record in caplog.records:
             assert record.levelname == "DEBUG"

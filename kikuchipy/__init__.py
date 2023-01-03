@@ -62,9 +62,9 @@ def set_log_level(level: Union[int, str]):  # pragma: no cover
 
     >>> import kikuchipy as kp
     >>> kp.set_log_level("DEBUG")
-    >>> s = kp.data.nickel_ebsd_small()
-    >>> s2 = s.deepcopy()  # doctest: +SKIP
-    DEBUG:kikuchipy.signals._kikuchipy_signal:Transfer custom properties when deep copying
+    >>> s = kp.data.nickel_ebsd_master_pattern_small()
+    >>> s.set_signal_type("EBSD")
+    DEBUG:kikuchipy.signals._kikuchi_master_pattern:Delete custom attributes when setting signal type
     """
     import logging
 
