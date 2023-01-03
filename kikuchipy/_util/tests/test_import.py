@@ -203,6 +203,9 @@ class TestImport:
         import kikuchipy.data
 
         assert dir(kikuchipy.data) == [
+            "ni_ebsd_master_pattern",
+            "ni_gain0",
+            "ni_gain0_calibration",
             "nickel_ebsd_large",
             "nickel_ebsd_master_pattern_small",
             "nickel_ebsd_small",

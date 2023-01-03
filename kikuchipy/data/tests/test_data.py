@@ -38,8 +38,16 @@ class TestData:
         assert isinstance(s_lazy, kp.signals.LazyEBSD)
         assert isinstance(s_lazy.data, Array)
 
-        dset = Dataset("kikuchipy_h5ebsd/patterns.h5")
+        file_path = "kikuchipy_h5ebsd/patterns.h5"
+        dset = Dataset(file_path)
         assert dset.url is None
+        assert dset.is_in_package
+        assert not dset.is_in_cache
+        assert not dset.is_in_collection
+        assert isinstance(dset.file_relpath, Path)
+        assert str(dset.file_relpath) == dset.file_relpath_str == f"data/{file_path}"
+        assert str(dset.file_directory) == file_path.split("/")[0]
+        assert dset.md5_hash == "f5e24fc55befedd08ee1b5a507e413ad"
 
     def test_load_ni_ebsd_master_pattern_small(self):
         """Can be read."""
@@ -128,59 +136,99 @@ class TestData:
 
     def test_si_wafer(self):
         """Test set up of Si wafer dataset (without downloading)."""
-        with pytest.raises(ValueError, match="File data/si_wafer/Pattern.dat must be "):
-            _ = kp.data.si_wafer()
+        file_path = "si_wafer/Pattern.dat"
 
-        dset = Dataset("si_wafer/Pattern.dat", collection_name="ebsd_si_wafer.zip")
-        assert dset.file_path is None
-        assert dset.file_path_str is None
+        dset = Dataset(file_path, collection_name="ebsd_si_wafer.zip")
         assert not dset.is_in_package
-        assert not dset.is_in_cache
         assert dset.is_in_collection
+        assert dset.url is not None
         assert isinstance(dset.file_relpath, Path)
-        assert (
-            str(dset.file_relpath)
-            == dset.file_relpath_str
-            == "data/si_wafer/Pattern.dat"
-        )
-        assert str(dset.file_directory) == "si_wafer"
-        assert dset.md5_hash is None
+        assert str(dset.file_relpath) == dset.file_relpath_str == f"data/{file_path}"
+        assert str(dset.file_directory) == file_path.split("/")[0]
 
-        with pytest.raises(ValueError, match="File data/si_wafer/Pattern.dat must be "):
-            _ = dset.fetch_file_path()
+        if dset.file_path.exists():  # pragma: no cover
+            s = kp.data.si_wafer(lazy=True)
+            assert isinstance(s, kp.signals.LazyEBSD)
+        else:  # pragma: no cover
+            assert dset.md5_hash is None
+            with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
+                _ = kp.data.si_wafer()
 
     def test_ni_gain0(self):
         """Test set up of polycrystalline recrystallized Ni dataset
         (without downloading).
         """
-        with pytest.raises(ValueError, match="File data/ni_gain0/Pattern.dat must be "):
-            _ = kp.data.ni_gain0()
+        file_path = "ni_gain0/Pattern.dat"
 
-        dset = Dataset("ni_gain0/Pattern.dat", collection_name="scan1_gain0db.zip")
-        assert (
-            str(dset.file_relpath)
-            == dset.file_relpath_str
-            == "data/ni_gain0/Pattern.dat"
-        )
-        assert str(dset.file_directory) == "ni_gain0"
+        dset = Dataset(file_path, collection_name="scan1_gain0db.zip")
+        assert not dset.is_in_package
+        assert dset.is_in_collection
+        assert dset.url is not None
+        assert str(dset.file_relpath) == dset.file_relpath_str == f"data/{file_path}"
+        assert str(dset.file_directory) == file_path.split("/")[0]
 
-        with pytest.raises(ValueError, match="File data/ni_gain0/Pattern.dat must be "):
-            _ = dset.fetch_file_path()
+        if dset.file_path.exists():  # pragma: no cover
+            s = kp.data.ni_gain0(lazy=True)
+            assert isinstance(s, kp.signals.LazyEBSD)
+        else:  # pragma: no cover
+            assert dset.md5_hash is None
+            with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
+                _ = kp.data.ni_gain0()
 
     def test_ni_gain0_calibration(self):
         """Test set up of calibration patterns from polycrystalline
         recrystallized Ni dataset (without downloading).
         """
-        with pytest.raises(ValueError, match="File data/ni_gain0/Setting.txt must be "):
-            _ = kp.data.ni_gain0_calibration()
+        file_path = "ni_gain0/Setting.txt"
 
-        dset = Dataset("ni_gain0/Setting.txt", collection_name="scan1_gain0db.zip")
-        assert (
-            str(dset.file_relpath)
-            == dset.file_relpath_str
-            == "data/ni_gain0/Setting.txt"
-        )
-        assert str(dset.file_directory) == "ni_gain0"
+        dset = Dataset(file_path, collection_name="scan1_gain0db.zip")
+        assert not dset.is_in_package
+        assert dset.is_in_collection
+        assert dset.url is not None
+        assert str(dset.file_relpath) == dset.file_relpath_str == f"data/{file_path}"
+        assert str(dset.file_directory) == file_path.split("/")[0]
 
-        with pytest.raises(ValueError, match="File data/ni_gain0/Setting.txt must be "):
-            _ = dset.fetch_file_path()
+        if dset.file_path.exists():  # pragma: no cover
+            s = kp.data.ni_gain0_calibration(lazy=True)
+            assert isinstance(s, kp.signals.LazyEBSD)
+        else:  # pragma: no cover
+            assert dset.md5_hash is None
+            with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
+                _ = kp.data.ni_gain0_calibration()
+
+    def test_ni_ebsd_master_pattern(self):
+        """Test set up of Ni EBSD master pattern from Zenodo (without
+        downloading).
+        """
+        file_path = "ni_ebsd_master_pattern/ni_mc_mp_20kv.h5"
+
+        dset = Dataset(file_path)
+        assert not dset.is_in_package
+        assert not dset.is_in_collection
+        assert dset.url is not None
+        assert str(dset.file_relpath) == dset.file_relpath_str == f"data/{file_path}"
+        assert str(dset.file_directory) == file_path.split("/")[0]
+
+        if dset.file_path.exists():  # pragma: no cover
+            s = kp.data.ni_ebsd_master_pattern(lazy=True)
+            assert isinstance(s, kp.signals.LazyEBSDMasterPattern)
+        else:  # pragma: no cover
+            assert dset.md5_hash is None
+            with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
+                _ = kp.data.ni_ebsd_master_pattern()
+
+    def test_dataset_availability(self):
+        """Ping registry URLs of remote repositories (GitHub and Zenodo)
+        to check dataset availability.
+        """
+        datasets = [
+            "nickel_ebsd_large/patterns.h5",
+            "silicon_ebsd_moving_screen/si_in.h5",
+            "silicon_ebsd_moving_screen/si_out5mm.h5",
+            "silicon_ebsd_moving_screen/si_out10mm.h5",
+            "ebsd_si_wafer.zip",
+            "scan1_gain0db.zip",
+            "ni_ebsd_master_pattern/ni_mc_mp_20kv.h5",
+        ]
+        for dset in datasets:
+            assert marshall.is_available(f"data/{dset}")

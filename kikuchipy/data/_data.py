@@ -508,6 +508,55 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
     return load(file_path, **kwargs)
 
 
+def ni_ebsd_master_pattern(
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
+) -> EBSD:
+    """EBSD master pattern of nickel of (1001, 1001) pixel resolution in
+    both the square Lambert or stereographic projection at 5-20 kV
+    accelerating voltage.
+
+    Parameters
+    ----------
+    allow_download
+        Whether to allow downloading the dataset from the internet to
+        the local cache with the pooch Python package. Default is
+        ``False``.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
+    **kwargs
+        Keyword arguments passed to :func:`~kikuchipy.load`.
+
+    Returns
+    -------
+    ebsd_master_pattern_signal
+        EBSD master pattern signal.
+
+    Notes
+    -----
+    The master pattern HDF5 file is hosted in the Zenodo repository
+    https://doi.org/10.5281/zenodo.7498645 and comprises 306 MB.
+
+    The file carries a CC BY 4.0 license.
+
+    Examples
+    --------
+    Import master pattern in the stereographic projection
+
+    >>> import kikuchipy as kp
+    >>> s = kp.data.ni_ebsd_master_pattern(hemisphere="both")  # doctest: +SKIP
+    >>> s  # doctest: +SKIP
+    <EBSDMasterPattern, title: ni_mc_mp_20kv, dimensions: (16, 2|1001, 1001)>
+    >>> s.projection  # doctest: +SKIP
+    'stereographic'
+    """
+    NiEBSDMasterPattern = Dataset("ni_ebsd_master_pattern/ni_mc_mp_20kv.h5")
+    file_path = NiEBSDMasterPattern.fetch_file_path(allow_download, show_progressbar)
+    return load(file_path, **kwargs)  # pragma: no cover
+
+
 class Dataset:
     file_relpath: Path
     file_package_path: Path
@@ -553,24 +602,19 @@ class Dataset:
         return Path(os.path.join(*self.file_relpath.parts[1:-1]))
 
     @property
-    def file_path(self) -> Union[Path, None]:
+    def file_path(self) -> Path:
         if self.is_in_package:
             return self.file_package_path
-        elif self.is_in_cache:
-            return self.file_cache_path
         else:
-            return None
+            return self.file_cache_path
 
     @property
-    def file_path_str(self) -> Union[str, None]:
-        if self.file_path:
-            return self.file_path.as_posix()
-        else:
-            return None
+    def file_path_str(self) -> str:
+        return self.file_path.as_posix()
 
     @property
     def md5_hash(self) -> Union[str, None]:
-        if self.file_path:
+        if self.file_path.exists():
             return pooch.file_hash(self.file_path_str, alg="md5")
         else:
             return None

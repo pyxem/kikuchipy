@@ -17,7 +17,7 @@
 
 # All hashes are MD5 hashes and can be checked locally with e.g. md5sum.
 # All file paths are relative to the cache directory
-# kikuchipy/<version>/data unless stated otherwise.
+# kikuchipy/<version>/data/ unless stated otherwise.
 
 # fmt: off
 _registry_hashes = {
@@ -35,6 +35,7 @@ _registry_hashes = {
     "scan1_gain0db.zip": "md5:7393a03afe5d52aec56dfc62e5cefdc3",
     "ni_gain0/Pattern.dat": "md5:79febebf41b0d0a12781501a7564a721",
     "ni_gain0/Setting.txt": "md5:776b1a2da5c359b0d399b50be5b5144b",
+    "ni_ebsd_master_pattern/ni_mc_mp_20kv.h5": "md5:8b69c071a036ad3488d465093b67fe4d",
 }
 # How to use permanent links to files on GitHub:
 # https://docs.github.com/en/repositories/working-with-files/using-files/getting-permanent-links-to-files
@@ -48,6 +49,7 @@ _registry_urls = {
     # From Zenodo
     "ebsd_si_wafer.zip": "https://zenodo.org/record/7491388/files/ebsd_si_wafer.zip",
     "scan1_gain0db.zip": "https://zenodo.org/record/7498632/files/scan1_gain0db.zip",
+    "ni_ebsd_master_pattern/ni_mc_mp_20kv.h5": "https://zenodo.org/record/7498645/files/ni_mc_mp_20kv.h5",
 }
 # fmt: on
 
