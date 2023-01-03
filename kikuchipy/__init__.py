@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Union
+
 from kikuchipy.release import version as __version__
 
 
@@ -33,7 +35,7 @@ except ImportError:  # pragma: no cover
     _nlopt_installed = False
 
 
-def set_log_level(level: str):  # pragma: no cover
+def set_log_level(level: Union[int, str]):  # pragma: no cover
     """Set level of kikuchipy logging messages.
 
     Parameters
@@ -49,6 +51,15 @@ def set_log_level(level: str):  # pragma: no cover
 
     Examples
     --------
+    Note that you might have to set the logging level of the root stream
+    handler to display kikuchipy's debug messages, as this handler might
+    have been initialized by another package
+
+    >>> import logging
+    >>> logging.root.handlers[0]
+    <StreamHandler <stderr> (INFO)>
+    >>> logging.root.handlers[0].setLevel("DEBUG")
+
     >>> import kikuchipy as kp
     >>> kp.set_log_level("DEBUG")
     >>> s = kp.data.nickel_ebsd_small()
