@@ -16,12 +16,13 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 """Signal utilities for controlling chunking of lazy signal data in
-:class:`~dask.array.Array`.
+:class:`~dask.array.Array` and other array tools.
 """
 
 __all__ = [
     "get_chunking",
     "get_dask_array",
+    "grid_indices",
 ]
 
 
@@ -33,6 +34,7 @@ def __getattr__(name):
     _import_mapping = {
         "get_chunking": "_dask",
         "get_dask_array": "_dask",
+        "grid_indices": "array_tools",
     }
     if name in __all__:
         import importlib
