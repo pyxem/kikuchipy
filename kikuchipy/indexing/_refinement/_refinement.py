@@ -923,7 +923,7 @@ class _RefinementSetup:
 
             method_upper = method.upper()
             if not _nlopt_installed:
-                raise ImportError(
+                raise ImportError(  # pragma: no cover
                     f"Package `nlopt`, required for method {method_upper}, is not "
                     "installed"
                 )
