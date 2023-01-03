@@ -18,8 +18,10 @@ Unreleased
 
 Added
 -----
-- Full 510 MB dataset of (50, 50) patterns of (480, 480) pixels from a Si wafer,
-  available for download to the cache via ``si_wafer()``.
+- Two experimental EBSD datasets are added as optional downloads to the package cache
+  from Zenodo repositories: (50, 50) patterns of (480, 480) pixels from an Si wafer via
+  ``si_wafer()`` and the full Ni dataset of (149, 200) patterns of (60, 60) pixels via
+  ``ni_gain0()`` from which parts are already used in ``nickel_ebsd_small()/large()``.
   (`#579 <https://github.com/pyxem/kikuchipy/pull/579>`_)
 - When using the following HyperSpy ``Signal2D`` methods via the ``EBSD`` class, the
   class attributes ``xmap``, ``static_background`` and ``detector`` are handled

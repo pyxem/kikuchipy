@@ -120,6 +120,109 @@ def nickel_ebsd_large(
     return load(file_path, **kwargs)
 
 
+def ni_gain0(
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
+) -> EBSD:
+    """EBSD dataset of (149, 200) patterns of (60, 60) pixels from
+    polycrystalline recrystallized nickel, acquired on a NORDIF UF-1100
+    detector.
+
+    Parameters
+    ----------
+    allow_download
+        Whether to allow downloading the dataset from the internet to
+        the local cache with the pooch Python package. Default is
+        ``False``.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
+    **kwargs
+        Keyword arguments passed to :func:`~kikuchipy.load`.
+
+    Returns
+    -------
+    ebsd_signal
+        EBSD signal.
+
+    See Also
+    --------
+    nickel_ebsd_small, nickel_ebsd_large
+
+    Notes
+    -----
+    The dataset is hosted in the Zenodo repository
+    https://doi.org/10.5281/zenodo.7497682 and comprises 98 MB as a
+    zipped file and about 116 MB when unzipped. The zipped file is
+    deleted after it is unzipped.
+
+    The dataset carries a CC BY 4.0 license.
+
+    Examples
+    --------
+    >>> import kikuchipy as kp
+    >>> s = kp.data.ni_gain0(allow_download=True, lazy=True)  # doctest: +SKIP
+    >>> s  # doctest: +SKIP
+    <EBSD, title: ni_gain0, dimensions: (50, 50|480, 480)>
+    """
+    NiGain0 = Dataset("ni_gain0/Pattern.dat", collection_name="scan1_gain0db.zip")
+    file_path = NiGain0.fetch_file_path(allow_download, show_progressbar)
+    return load(file_path, **kwargs)  # pragma: no cover
+
+
+def ni_gain0_calibration(
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
+) -> EBSD:
+    """Nine EBSD patterns of (480, 480) pixels from polycrystalline
+    recrystallized nickel, acquired on a NORDIF UF-1100 detector.
+
+    Parameters
+    ----------
+    allow_download
+        Whether to allow downloading the dataset from the internet to
+        the local cache with the pooch Python package. Default is
+        ``False``.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
+    **kwargs
+        Keyword arguments passed to :func:`~kikuchipy.load`.
+
+    Returns
+    -------
+    ebsd_signal
+        EBSD signal.
+
+    See Also
+    --------
+    nickel_ebsd_small, nickel_ebsd_large
+
+    Notes
+    -----
+    The dataset is hosted in the Zenodo repository
+    https://doi.org/10.5281/zenodo.7497682 and comprises 98 MB as a
+    zipped file and about 116 MB when unzipped. The zipped file is
+    deleted after it is unzipped.
+
+    The dataset carries a CC BY 4.0 license.
+
+    Examples
+    --------
+    >>> import kikuchipy as kp
+    >>> s = kp.data.ni_gain0(allow_download=True, lazy=True)  # doctest: +SKIP
+    >>> s  # doctest: +SKIP
+    <EBSD, title: ni_gain0, dimensions: (50, 50|480, 480)>
+    """
+    NiGain0Calibration = Dataset(
+        "ni_gain0/Setting.txt", collection_name="scan1_gain0db.zip"
+    )
+    file_path = NiGain0Calibration.fetch_file_path(allow_download, show_progressbar)
+    return load(file_path, **kwargs)  # pragma: no cover
+
+
 def silicon_ebsd_moving_screen_in(
     allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
@@ -520,7 +623,7 @@ class Dataset:
 
         if self.is_in_package:
             if self.has_correct_hash:
-                # Bypass pooch
+                # Bypass pooch since the file is not in the cache
                 return self.file_path_str
             else:  # pragma: no cover
                 raise AttributeError(

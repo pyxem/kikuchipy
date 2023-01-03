@@ -148,3 +148,39 @@ class TestData:
 
         with pytest.raises(ValueError, match="File data/si_wafer/Pattern.dat must be "):
             _ = dset.fetch_file_path()
+
+    def test_ni_gain0(self):
+        """Test set up of polycrystalline recrystallized Ni dataset
+        (without downloading).
+        """
+        with pytest.raises(ValueError, match="File data/ni_gain0/Pattern.dat must be "):
+            _ = kp.data.ni_gain0()
+
+        dset = Dataset("ni_gain0/Pattern.dat", collection_name="scan1_gain0db.zip")
+        assert (
+            str(dset.file_relpath)
+            == dset.file_relpath_str
+            == "data/ni_gain0/Pattern.dat"
+        )
+        assert str(dset.file_directory) == "ni_gain0"
+
+        with pytest.raises(ValueError, match="File data/ni_gain0/Pattern.dat must be "):
+            _ = dset.fetch_file_path()
+
+    def test_ni_gain0_calibration(self):
+        """Test set up of calibration patterns from polycrystalline
+        recrystallized Ni dataset (without downloading).
+        """
+        with pytest.raises(ValueError, match="File data/ni_gain0/Setting.txt must be "):
+            _ = kp.data.ni_gain0_calibration()
+
+        dset = Dataset("ni_gain0/Setting.txt", collection_name="scan1_gain0db.zip")
+        assert (
+            str(dset.file_relpath)
+            == dset.file_relpath_str
+            == "data/ni_gain0/Setting.txt"
+        )
+        assert str(dset.file_directory) == "ni_gain0"
+
+        with pytest.raises(ValueError, match="File data/ni_gain0/Setting.txt must be "):
+            _ = dset.fetch_file_path()

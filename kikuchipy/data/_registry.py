@@ -32,6 +32,9 @@ _registry_hashes = {
     # From Zenodo
     "ebsd_si_wafer.zip": "md5:444ec4188ba8c8bda5948c2bf4f9a672",
     "si_wafer/Pattern.dat": "md5:58952a93c3ecacff22955f1ad7c61246",
+    "scan1_gain0db.zip": "md5:7393a03afe5d52aec56dfc62e5cefdc3",
+    "ni_gain0/Pattern.dat": "md5:79febebf41b0d0a12781501a7564a721",
+    "ni_gain0/Setting.txt": "md5:776b1a2da5c359b0d399b50be5b5144b",
 }
 # How to use permanent links to files on GitHub:
 # https://docs.github.com/en/repositories/working-with-files/using-files/getting-permanent-links-to-files
@@ -44,6 +47,7 @@ _registry_urls = {
     "silicon_ebsd_moving_screen/si_out10mm.h5": KP_DATA_REPO_URL + "bcab8f7a4ffdb86a97f14e2327a4813d3156a85e/silicon_ebsd_moving_screen/si_out10mm.h5",
     # From Zenodo
     "ebsd_si_wafer.zip": "https://zenodo.org/record/7491388/files/ebsd_si_wafer.zip",
+    "scan1_gain0db.zip": "https://zenodo.org/record/7498632/files/scan1_gain0db.zip",
 }
 # fmt: on
 
