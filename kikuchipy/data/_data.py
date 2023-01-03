@@ -458,6 +458,9 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
     of the northern and southern hemisphere of a nickel master pattern
     at 20 keV accelerating voltage.
 
+    The master pattern was simulated with *EMsoft*
+    :cite:`callahan2013dynamical`.
+
     Parameters
     ----------
     **kwargs
@@ -515,6 +518,9 @@ def ni_ebsd_master_pattern(
     both the square Lambert or stereographic projection at 5-20 kV
     accelerating voltage.
 
+    The master pattern was simulated with *EMsoft*
+    :cite:`callahan2013dynamical`.
+
     Parameters
     ----------
     allow_download
@@ -554,6 +560,58 @@ def ni_ebsd_master_pattern(
     """
     NiEBSDMasterPattern = Dataset("ni_ebsd_master_pattern/ni_mc_mp_20kv.h5")
     file_path = NiEBSDMasterPattern.fetch_file_path(allow_download, show_progressbar)
+    return load(file_path, **kwargs)  # pragma: no cover
+
+
+def si_ebsd_master_pattern(
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
+) -> EBSD:
+    """EBSD master pattern of silicon of (1001, 1001) pixel resolution
+    in both the square Lambert or stereographic projection at 5-20 kV
+    accelerating voltage.
+
+    The master pattern was simulated with *EMsoft*
+    :cite:`callahan2013dynamical`.
+
+    Parameters
+    ----------
+    allow_download
+        Whether to allow downloading the dataset from the internet to
+        the local cache with the pooch Python package. Default is
+        ``False``.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
+    **kwargs
+        Keyword arguments passed to :func:`~kikuchipy.load`.
+
+    Returns
+    -------
+    ebsd_master_pattern_signal
+        EBSD master pattern signal.
+
+    Notes
+    -----
+    The master pattern HDF5 file is hosted in the Zenodo repository
+    https://doi.org/10.5281/zenodo.7498729 and comprises 306 MB.
+
+    The file carries a CC BY 4.0 license.
+
+    Examples
+    --------
+    Import master pattern in the stereographic projection
+
+    >>> import kikuchipy as kp
+    >>> s = kp.data.si_ebsd_master_pattern(hemisphere="both")  # doctest: +SKIP
+    >>> s  # doctest: +SKIP
+    <EBSDMasterPattern, title: si_mc_mp_20kv, dimensions: (16, 2|1001, 1001)>
+    >>> s.projection  # doctest: +SKIP
+    'stereographic'
+    """
+    SiEBSDMasterPattern = Dataset("si_ebsd_master_pattern/si_mc_mp_20kv.h5")
+    file_path = SiEBSDMasterPattern.fetch_file_path(allow_download, show_progressbar)
     return load(file_path, **kwargs)  # pragma: no cover
 
 

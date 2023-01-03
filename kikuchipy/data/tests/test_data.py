@@ -85,8 +85,13 @@ class TestData:
         assert isinstance(mp_lazy.data, Array)
 
     def test_not_allow_download_raises(self):
-        """Not passing `allow_download` raises expected error."""
-        file = Path(marshall.path, "data/nickel_ebsd_large/patterns.h5")
+        """Not passing `allow_download` raises expected error.
+
+        Also tests that None is returened if the file does not exist but
+        the MD5 hash is sought.
+        """
+        file_path = "nickel_ebsd_large/patterns.h5"
+        file = Path(marshall.path, "data/" + file_path)
 
         # Rename file (dangerous!)
         new_name = str(file) + ".bak"
@@ -95,7 +100,10 @@ class TestData:
             rename = True
             os.rename(file, new_name)
 
-        with pytest.raises(ValueError, match="File data/nickel_ebsd_large/patterns.h5"):
+            dset = Dataset(file_path)
+            assert dset.md5_hash is None
+
+        with pytest.raises(ValueError, match=f"File data/{file_path}"):
             _ = kp.data.nickel_ebsd_large()
 
         # Revert rename
@@ -217,6 +225,27 @@ class TestData:
             with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
                 _ = kp.data.ni_ebsd_master_pattern()
 
+    def test_si_ebsd_master_pattern(self):
+        """Test set up of Si EBSD master pattern from Zenodo (without
+        downloading).
+        """
+        file_path = "si_ebsd_master_pattern/si_mc_mp_20kv.h5"
+
+        dset = Dataset(file_path)
+        assert not dset.is_in_package
+        assert not dset.is_in_collection
+        assert dset.url is not None
+        assert str(dset.file_relpath) == dset.file_relpath_str == f"data/{file_path}"
+        assert str(dset.file_directory) == file_path.split("/")[0]
+
+        if dset.file_path.exists():  # pragma: no cover
+            s = kp.data.si_ebsd_master_pattern(lazy=True)
+            assert isinstance(s, kp.signals.LazyEBSDMasterPattern)
+        else:  # pragma: no cover
+            assert dset.md5_hash is None
+            with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
+                _ = kp.data.si_ebsd_master_pattern()
+
     def test_dataset_availability(self):
         """Ping registry URLs of remote repositories (GitHub and Zenodo)
         to check dataset availability.
@@ -229,6 +258,7 @@ class TestData:
             "ebsd_si_wafer.zip",
             "scan1_gain0db.zip",
             "ni_ebsd_master_pattern/ni_mc_mp_20kv.h5",
+            "si_ebsd_master_pattern/si_mc_mp_20kv.h5",
         ]
         for dset in datasets:
             assert marshall.is_available(f"data/{dset}")
