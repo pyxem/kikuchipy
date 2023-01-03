@@ -64,6 +64,7 @@ from kikuchipy.pattern._pattern import (
     _remove_static_background_divide,
     _remove_dynamic_background,
 )
+from kikuchipy.signals.util.array_tools import grid_indices
 from kikuchipy.signals.util._dask import (
     get_dask_array,
     get_chunking,
@@ -232,6 +233,119 @@ class EBSD(KikuchipySignal2D):
         self._static_background = value
 
     # ------------------------ Custom methods ------------------------ #
+
+    def extract_grid(
+        self, grid_shape: Union[Tuple[int, int], int], return_indices: bool = False
+    ) -> Union[Union[EBSD, LazyEBSD], Tuple[Union[EBSD, LazyEBSD], np.ndarray]]:
+        """Return a new signal with patterns from positions in a grid of
+        shape ``grid_shape`` evenly spaced in navigation space.
+
+        Parameters
+        ----------
+        grid_shape
+            Tuple of integers or just an integer signifying the number
+            of grid indices in each dimension. If 2D, the shape is
+            (n columns, n rows).
+        return_indices
+            Whether to return the indices of the extracted patterns into
+            :attr:`data` as an array of shape ``(2,) + grid_shape``.
+            Default is ``False``.
+
+        Returns
+        -------
+        new
+            New signal with patterns from indices in a grid
+            corresponding to ``grid_shape``. Attributes :attr:`xmap`,
+            :attr:`static_background` and :attr:`detector` are deep
+            copied.
+        indices
+            Indices of the extracted patterns into :attr:`data`,
+            returned if ``return_indices=True``.
+
+        Examples
+        --------
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_large(lazy=True)
+        >>> s
+        <LazyEBSD, title: patterns Scan 1, dimensions: (75, 55|60, 60)>
+        >>> s2 = s.extract_grid((5, 4))
+        >>> s2
+        <LazyEBSD, title: patterns Scan 1, dimensions: (5, 4|60, 60)>
+        """
+        if isinstance(grid_shape, int):
+            grid_shape = (grid_shape,)
+
+        nav_shape = self.axes_manager.navigation_shape
+        if len(grid_shape) != len(nav_shape) or any(
+            [g > n for g, n in zip(grid_shape, nav_shape)]
+        ):
+            raise ValueError(
+                f"grid_shape {grid_shape} must be compatible with navigation shape "
+                f"{nav_shape}"
+            )
+
+        # NumPy order (rows, columns)
+        grid_shape = grid_shape[::-1]
+        nav_shape = nav_shape[::-1]
+
+        idx, spacing = grid_indices(grid_shape, nav_shape, return_spacing=True)
+        idx_tuple = tuple(idx)
+
+        # Data
+        if self._lazy:
+            data_new = self.data.vindex[idx_tuple]
+        else:
+            data_new = self.data[idx_tuple]
+
+        # Crystal map
+        if self.xmap is not None:
+            mask = np.zeros(nav_shape, dtype=bool)
+            mask[idx_tuple] = True
+            mask = mask.ravel()
+            xmap_new = self.xmap[mask].deepcopy()
+        else:
+            xmap_new = None
+
+        # EBSD detector
+        detector_new = self.detector.deepcopy()
+        if detector_new.navigation_shape == nav_shape:
+            detector_new.pc = detector_new.pc[idx_tuple]
+        elif detector_new.navigation_shape != (1,):
+            detector_new.pc = [0.5, 0.5, 0.5]
+
+        # Static background
+        bg_new = self.static_background
+        if bg_new is not None:
+            bg_new = bg_new.copy()
+
+        # Axes manager
+        am = self.axes_manager.deepcopy()
+        nav_idx = am.navigation_indices_in_array
+        for i, size, spacing_i in zip(nav_idx, grid_shape, spacing):
+            am[i].size = size
+            am[i].scale = spacing_i * am[i].scale
+        am_list = [a for a in am.as_dictionary().values()]
+
+        scan_dict = {
+            "data": data_new,
+            "xmap": xmap_new,
+            "detector": detector_new,
+            "static_background": bg_new,
+            "axes": am_list,
+            "metadata": self.metadata.as_dictionary(),
+            "original_metadata": self.original_metadata.as_dictionary(),
+        }
+
+        if self._lazy:
+            new = LazyEBSD(**scan_dict)
+        else:
+            new = EBSD(**scan_dict)
+
+        out = new
+        if return_indices:
+            out = (out, idx)
+
+        return out
 
     def set_scan_calibration(
         self, step_x: Union[int, float] = 1.0, step_y: Union[int, float] = 1.0
@@ -940,12 +1054,12 @@ class EBSD(KikuchipySignal2D):
         in this signal and simulated patterns projected from a master
         pattern. The similarity metric used is the normalized
         cross-correlation (NCC). The orientation, represented by a
-        Euler angle triplet (:math:`phi_1`, :math:`Phi`, :math:`phi_2`)
-        relative to the EDAX TSL sample reference frame RD-TD-ND, is
-        optimized during refinement, while the sample-detector geometry,
-        represented by the three projection center (PC) parameters
-        (PCx, PCy, PCz) in the Bruker convention, is fixed.
-
+        Euler angle triplet (:math:`\phi_1`, :math:`\Phi`,
+        :math:`\phi_2`) relative to the EDAX TSL sample reference frame
+        RD-TD-ND, is optimized during refinement, while the
+        sample-detector geometry, represented by the three projection
+        center (PC) parameters (PCx, PCy, PCz) in the Bruker convention,
+        is fixed.
         A subset of the optimization methods in *SciPy* and *NLopt* are
         available:
 
@@ -1271,11 +1385,12 @@ class EBSD(KikuchipySignal2D):
         in this signal and simulated patterns projected from a master
         pattern. The only supported similarity metric is the normalized
         cross-correlation (NCC). The orientation, represented by a
-        Euler angle triplet (:math:`phi_1`, :math:`Phi`, :math:`phi_2`)
-        relative to the EDAX TSL sample reference frame RD-TD-ND, and
-        the sample-detector geometry, represented by the three
-        projection center (PC) parameters (PCx, PCy, PCz) in the Bruker
-        convention, are updated during refinement.
+        Euler angle triplet (:math:`\phi_1`, :math:`\Phi`,
+        :math:`\phi_2`) relative to the EDAX TSL sample reference frame
+        RD-TD-ND, is optimized during refinement, while the
+        sample-detector geometry, represented by the three projection
+        center (PC) parameters (PCx, PCy, PCz) in the Bruker convention,
+        is fixed.
 
         A subset of the optimization methods in *SciPy* and *NLopt* are
         available:

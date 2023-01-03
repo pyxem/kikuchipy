@@ -18,6 +18,8 @@ Unreleased
 
 Added
 -----
+- Method ``EBSD.extract_grid()`` to get a new signal from grid positions evenly spaced
+  in navigation space. (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
 - Utility function ``grid_indices()`` to extract a smaller 1D or 2D grid of indices from
   a larger grid. (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
 - Two datasets ``ni/si_ebsd_master_pattern()`` of Ni and Si master patterns simulated
