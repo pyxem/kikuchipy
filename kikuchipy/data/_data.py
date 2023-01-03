@@ -125,7 +125,7 @@ def ni_gain0(
 ) -> EBSD:
     """EBSD dataset of (149, 200) patterns of (60, 60) pixels from
     polycrystalline recrystallized nickel, acquired on a NORDIF UF-1100
-    detector.
+    detector :cite:`aanes2019electron`.
 
     Parameters
     ----------
@@ -175,7 +175,8 @@ def ni_gain0_calibration(
     allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """Nine EBSD patterns of (480, 480) pixels from polycrystalline
-    recrystallized nickel, acquired on a NORDIF UF-1100 detector.
+    recrystallized nickel, acquired on a NORDIF UF-1100 detector
+    :cite:`aanes2019electron`.
 
     Parameters
     ----------
@@ -227,7 +228,8 @@ def silicon_ebsd_moving_screen_in(
     allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """One EBSD pattern of (480, 480) pixels from a single crystal
-    silicon sample, acquired on a NORDIF UF-420 detector.
+    silicon sample, acquired on a NORDIF UF-420 detector
+    :cite:`aanes2022electron3`.
 
     This pattern and two other patterns from the same sample position
     but with 5 mm and 10 mm greater sample-screen-distances were
@@ -282,7 +284,8 @@ def silicon_ebsd_moving_screen_out5mm(
     allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """One EBSD pattern of (480, 480) pixels from a single crystal
-    silicon sample, acquired on a NORDIF UF-420 detector.
+    silicon sample, acquired on a NORDIF UF-420 detector
+    :cite:`aanes2022electron3`.
 
     This pattern and two other patterns from the same sample position
     but with sample-screen-distances 5 mm shorter
@@ -340,7 +343,8 @@ def silicon_ebsd_moving_screen_out10mm(
     allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """One EBSD pattern of (480, 480) pixels from a single crystal
-    silicon sample, acquired on a NORDIF UF-420 detector.
+    silicon sample, acquired on a NORDIF UF-420 detector
+    :cite:`aanes2022electron3`.
 
     This pattern and two other patterns from the same sample position
     but with sample-screen-distances 10 mm shorter
@@ -398,7 +402,8 @@ def si_wafer(
     allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """EBSD dataset of (50, 50) patterns of (480, 480) pixels from a
-    single crystal silicon wafer, acquired on a NORDIF UF-420 detector.
+    single crystal silicon wafer, acquired on a NORDIF UF-420 detector
+    :cite:`aanes2022electron3`.
 
     The dataset was acquired in order to test various ways to calibrate
     projection centers (PCs), e.g. the moving-screen PC estimation
@@ -516,7 +521,7 @@ def ni_ebsd_master_pattern(
 ) -> EBSD:
     """EBSD master pattern of nickel of (1001, 1001) pixel resolution in
     both the square Lambert or stereographic projection at 5-20 kV
-    accelerating voltage.
+    accelerating voltage :cite:`aanes2023dynamical2`.
 
     The master pattern was simulated with *EMsoft*
     :cite:`callahan2013dynamical`.
@@ -568,7 +573,7 @@ def si_ebsd_master_pattern(
 ) -> EBSD:
     """EBSD master pattern of silicon of (1001, 1001) pixel resolution
     in both the square Lambert or stereographic projection at 5-20 kV
-    accelerating voltage.
+    accelerating voltage :cite:`aanes2023dynamical`.
 
     The master pattern was simulated with *EMsoft*
     :cite:`callahan2013dynamical`.
