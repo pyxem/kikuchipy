@@ -476,6 +476,10 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
     ebsd_master_pattern_signal
         EBSD master pattern signal.
 
+    See Also
+    --------
+    ni_ebsd_master_pattern, si_ebsd_master_pattern
+
     Notes
     -----
     The dataset carries a CC BY 4.0 license.
@@ -545,8 +549,15 @@ def ni_ebsd_master_pattern(
     ebsd_master_pattern_signal
         EBSD master pattern signal.
 
+    See Also
+    --------
+    nickel_ebsd_master_pattern_small, si_ebsd_master_pattern
+
     Notes
     -----
+    The master patterns with the lowest two energies (5 and 6 kV) are
+    blank due to insufficient electron scattering in the simulation.
+
     The master pattern HDF5 file is hosted in the Zenodo repository
     https://doi.org/10.5281/zenodo.7498645 and comprises 306 MB.
 
@@ -596,6 +607,10 @@ def si_ebsd_master_pattern(
     -------
     ebsd_master_pattern_signal
         EBSD master pattern signal.
+
+    See Also
+    --------
+    nickel_ebsd_master_pattern_small, ni_ebsd_master_pattern
 
     Notes
     -----
