@@ -201,7 +201,7 @@ class TestKikuchipyH5EBSD:
         elif scan_group_names == ["Scan 3"]:
             with pytest.raises(OSError, match="Scan 'Scan 3' is not among the"):
                 _ = load(KIKUCHIPY_FILE, scan_group_names=scan_group_names)
-            return 0
+            return
         elif scan_group_names == KIKUCHIPY_FILE_GROUP_NAMES:
             s1, s2 = load(KIKUCHIPY_FILE, scan_group_names=KIKUCHIPY_FILE_GROUP_NAMES)
         else:  # scan_group_names == "Scan 2"
