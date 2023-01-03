@@ -15,10 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 from typing import List, Optional, Tuple, Union
 
 import dask.array as da
 import numpy as np
+
+
+_logger = logging.getLogger(__name__)
 
 
 def get_chunking(
@@ -106,7 +110,7 @@ def get_chunking(
 def get_dask_array(
     signal: Union["EBSD", "LazyEBSD"],
     dtype: Union[str, np.dtype, type, None] = None,
-    **kwargs
+    **kwargs,
 ) -> da.Array:
     """Return dask array of patterns with appropriate chunking.
 
@@ -142,6 +146,7 @@ def get_dask_array(
                 dtype_out=dtype,
             )
             dask_array = dask_array.rechunk(new_chunks)
+            _logger.info(f"Rechunk Dask array: {dask_array}")
     else:
         chunks = get_chunking(
             signal=signal,
@@ -172,7 +177,7 @@ def _reduce_chunks(
             chunks_dict[idx_min] = -1
     chunks = da.core.normalize_chunks(
         chunks=chunks_dict,
-        shape=chunksize,
+        shape=dask_array.shape,
         limit=chunk_bytes,
         dtype=dtype_out,
     )
