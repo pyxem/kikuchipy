@@ -338,6 +338,11 @@ class EBSDDetector:
         return len(self.navigation_shape)
 
     @property
+    def navigation_size(self) -> int:
+        """Return the number of projection centers."""
+        return int(np.prod(self.navigation_shape))
+
+    @property
     def bounds(self) -> np.ndarray:
         """Return the detector bounds ``[x0, x1, y0, y1]`` in pixel
         coordinates.
