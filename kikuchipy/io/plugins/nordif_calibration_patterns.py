@@ -27,7 +27,7 @@ from matplotlib.pyplot import imread
 import numpy as np
 
 from kikuchipy.detectors import EBSDDetector
-from kikuchipy.io.plugins.nordif import get_settings_from_file
+from kikuchipy.io.plugins.nordif import _get_settings_from_file
 
 
 __all__ = ["file_reader"]
@@ -64,7 +64,7 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
         Data, axes, metadata and original metadata.
     """
     # Get metadata from setting file
-    md, omd, _, detector = get_settings_from_file(filename, pattern_type="calibration")
+    md, omd, _, detector = _get_settings_from_file(filename, pattern_type="calibration")
     dirname = os.path.dirname(filename)
 
     scan = {}
@@ -95,9 +95,9 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
 
     scan["detector"] = EBSDDetector(**detector)
 
-    coordinates = _get_coordinates(filename)
+    yx = omd["calibration_patterns"]["indices"]
 
-    data = _get_patterns(dirname=dirname, coordinates=coordinates)
+    data = _get_patterns(dirname=dirname, coordinates=yx)
     scan["data"] = data
 
     units = ["um"] * 3
@@ -118,33 +118,9 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
     return [scan]
 
 
-def _get_coordinates(filename: str) -> List[Tuple[int]]:
-    f = open(filename, "r", encoding="latin-1")
-    err = "No calibration patterns found in settings file"
-    content = f.read().splitlines()
-    for i, line in enumerate(content):
-        if "[Calibration patterns]" in line:
-            l_start = i
-            break
-    else:
-        raise ValueError(err)
-    xy = []
-    for line in content[l_start + 1 :]:
-        match = re.search(r"Calibration \((.*)\)", line)
-        try:
-            match = match.group(1)
-            match = match.split(",")
-            xy.append(tuple(int(i) for i in match))
-        except AttributeError:
-            pass
-    if len(xy) == 0:
-        raise ValueError(err)
-    return xy
-
-
 def _get_patterns(dirname: str, coordinates: List[Tuple[int]]) -> np.ndarray:
     patterns = []
-    for x, y in coordinates:
+    for y, x in coordinates:
         fname_pattern = f"Calibration ({x},{y}).bmp"
         file_pattern = os.path.join(dirname, fname_pattern)
         pattern = imread(file_pattern)
