@@ -186,7 +186,7 @@ def file_reader(
             "set_scan_calibration()"
         )
 
-    # Create axis objects for each axis
+    # Create axis instances for each axis
     axes = [
         {
             "size": data.shape[i],
@@ -297,6 +297,8 @@ def _get_settings_from_file(
         "tilt": -float(_get_string(content, "Elevation\t(.*)\t", l_ang + 5, f)),
         "azimuthal": float(_get_string(content, "Azimuthal\t(.*)\t", l_ang + 4, f)),
     }
+    if np.isclose(detector["tilt"], 0):  # Avoid -0.0
+        detector["tilt"] = -detector["tilt"]
 
     if pattern_type == "calibration":
         omd = _get_calibration_pattern_settings(
@@ -324,7 +326,7 @@ def _get_string(content: list, expression: str, line_no: int, file) -> str:
         Regular expression.
     line_no
         Line number to search in.
-    file : file object
+    file : file instance
         File handle of open setting file.
 
     Returns
@@ -341,27 +343,6 @@ def _get_string(content: list, expression: str, line_no: int, file) -> str:
         return ""
     else:
         return match.group(1)
-
-
-def file_writer(filename: str, signal: Union["EBSD", "LazyEBSD"]):
-    """Write an :class:`~kikuchipy.signals.EBSD` or
-    :class:`~kikuchipy.signals.LazyEBSD` object to a NORDIF binary
-    file.
-
-    Parameters
-    ----------
-    filename
-        Full path of HDF file.
-    signal
-        Signal instance.
-    """
-    with open(filename, "wb") as f:
-        if signal._lazy:
-            for pattern in signal._iterate_signal():
-                np.array(pattern.flatten()).tofile(f)
-        else:
-            for pattern in signal._iterate_signal():
-                pattern.flatten().tofile(f)
 
 
 def _get_calibration_pattern_settings(
@@ -395,11 +376,10 @@ def _get_calibration_pattern_settings(
     rc = np.array(rc)
     omd["calibration_patterns"] = {"indices": rc}
 
-    # Read width and height of area and ROI in area. This is added
-    # to the original metadata as it is only required if we want to
-    # know the sample position of each calibration pattern, e.g.
-    # when fitting a plane to projection centers found from the
-    # patterns.
+    # Read width and height of area and ROI in area. This is added to
+    # the original metadata as it is only required if we want to know
+    # the sample position of each calibration pattern, e.g. when fitting
+    # a plane to projection centers found from the patterns.
     l_img = blocks["[Electron image]"]
     img_string = re.search("(?<=Resolution)(.*)", content[l_img + 2])
     if img_string is not None:
@@ -410,28 +390,24 @@ def _get_calibration_pattern_settings(
         omd["area"] = {"shape": None}
         _logger.debug("Could not read area (electron image) shape")
 
-    keys = [
-        "top",
-        "left",
-        "width",
-        "height",
-        "width_scaled",
-    ]
+    keys = ["top", "left", "width", "height", "width_scaled"]
     roi = dict(zip(keys, len(keys) * [0]))
     for i, k in enumerate(keys[:4]):
         pattern = r"(?<=" + k.capitalize() + r")(.*)"
-        match = re.search(pattern, content[l_area + i + 1])
-        if match is not None:
+        try:
+            match = re.search(pattern, content[l_area + i + 1])
             matches = re.findall(r"\d+", match.group())
             roi[k] = int(matches[2])
             if k == "width":
                 roi[k + "_scaled"] = float(f"{matches[0]}.{matches[1]}")
-        else:
+        except (AttributeError, IndexError):
             _logger.debug(f"Could not read area ROI '{k.capitalize()}'")
+
     omd["roi"] = {
         "origin": (roi["top"], roi["left"]),
         "shape": (roi["height"], roi["width"]),
     }
+
     if roi["width_scaled"] != 0:
         factor = step_size * roi["width"] / roi["width_scaled"]
 
@@ -442,14 +418,16 @@ def _get_calibration_pattern_settings(
             return x_out
 
         omd["calibration_patterns"]["indices_scaled"] = scale(rc)
-        omd["area"]["shape_scaled"] = scale(omd["area"]["shape"], True)
         omd["roi"]["origin_scaled"] = scale(omd["roi"]["origin"], True)
         omd["roi"]["shape_scaled"] = scale(omd["roi"]["shape"], True)
 
+        if omd["area"]["shape"] is not None:
+            omd["area"]["shape_scaled"] = scale(omd["area"]["shape"], True)
+
         if omd["roi"]["shape_scaled"] != (ny, nx):
             _logger.debug(
-                f"Number of samples {(ny, nx)} differs from the one calculated from"
-                f" area/ROI shapes {omd['roi']['shape_scaled']}"
+                f"Number of samples {(ny, nx)} differs from the one calculated from "
+                f"area/ROI shapes {omd['roi']['shape_scaled']}"
             )
 
     # Try to read area overview image
@@ -460,3 +438,24 @@ def _get_calibration_pattern_settings(
         _logger.debug("No area image found")
 
     return omd
+
+
+def file_writer(filename: str, signal: Union["EBSD", "LazyEBSD"]):
+    """Write an :class:`~kikuchipy.signals.EBSD` or
+    :class:`~kikuchipy.signals.LazyEBSD` instance to a NORDIF binary
+    file.
+
+    Parameters
+    ----------
+    filename
+        Full path of HDF file.
+    signal
+        Signal instance.
+    """
+    with open(filename, "wb") as f:
+        if signal._lazy:
+            for pattern in signal._iterate_signal():
+                np.array(pattern.flatten()).tofile(f)
+        else:
+            for pattern in signal._iterate_signal():
+                pattern.flatten().tofile(f)

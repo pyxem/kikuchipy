@@ -1,0 +1,92 @@
+[NORDIF]		
+Software version	3.1.2	
+		
+[Microscope]		
+Manufacturer	Hitachi	
+Model	SU-6600	
+Magnification	200	#
+Scan direction	Direct	
+Accelerating voltage	20	kV
+Working distance	24.7	mm
+Tilt angle	70	�
+		
+[Signal voltages]		
+Minimum	0.0	V
+Maximum	1.0	V
+		
+[Deflection voltages]		
+Minimum	-5.5	V
+Maximum	5.5	V
+		
+[Electron image]		
+Frame rate	0.25	fps
+Resolutio	1000x1000	px
+Rotation	0	�
+Flip x-axis	False	
+Flip y-axis	False	
+Calibration factor	7273	�m/V
+Tilt axis	x-axis	
+		
+[Aspect ratio]		
+X-axis	1.000	
+Y-axis	1.000	
+		
+[EBSD detector]		
+Model	UF1100	
+Port position	90	
+Jumbo frames	False	
+		
+[Detector angles]		
+Euler 1	0	�
+Euler 2	0	�
+Euler 3	0	�
+Azimuthal	0	�
+Elevation	0	�
+		
+[Acquisition settings]		
+Frame rate	202	fps
+Resolution	60x60	px
+Exposure time	3500	�s
+Gain	0	
+		
+[Calibration settings]		
+Frame rate	10	fps
+Resolution	60x60	px
+Exposure time	99950	�s
+Gain	8	
+		
+[Specimen]		
+Name	Ni	
+Mounting	1. ND||EB TD||TA	
+		
+[Phase 1]		
+Name		
+Pearson S.T.		
+IT		
+		
+[Phase 2]		
+Name		
+Pearson S.T.		
+IT		
+		
+[Region of interest]		
+		
+[Area]		
+To	89.200 (223)	�m (px)
+Left	60.384 (152)	�m (px)
+Width	4.500 (11)	�m (px)
+Height	4.500 (11)	�m (px)
+Step size	1.000	�m
+Number of samples	3x3	#
+Scan time	00:02:28	
+		
+[Points of interest]		
+		
+[Acquisition patterns]		
+Acquisition (507,500)	507,500	px
+Acquisition (393,501)	393,501	px
+Acquisition (440,448)	440,448	px
+		
+[Calibration patterns]		
+Calibration (425,447)	425,447	px
+Calibration (294,532)	294,532	px
