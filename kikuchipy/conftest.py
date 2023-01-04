@@ -20,7 +20,6 @@ from numbers import Number
 import os
 from packaging import version
 import tempfile
-import warnings
 
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
@@ -40,9 +39,6 @@ if kp._pyvista_installed:
 
     pv.OFF_SCREEN = True
     pv.global_theme.interactive = False
-
-
-warnings.filterwarnings("always", category=DeprecationWarning)
 
 
 # ------------------------- Helper functions ------------------------- #
