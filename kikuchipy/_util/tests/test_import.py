@@ -224,7 +224,10 @@ class TestImport:
     def test_dir_draw(self):
         import kikuchipy.draw
 
-        assert dir(kikuchipy.draw) == ["get_rgb_navigator"]
+        assert dir(kikuchipy.draw) == [
+            "get_rgb_navigator",
+            "plot_pattern_positions_in_map",
+        ]
 
     def test_dir_filters(self):
         import kikuchipy.filters

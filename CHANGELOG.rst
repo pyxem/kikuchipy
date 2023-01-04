@@ -18,6 +18,9 @@ Unreleased
 
 Added
 -----
+- Convenience function ``kikuchipy.draw.plot_pattern_positions_in_map()`` to plot
+  positions of selected patterns (typically calibration patterns) in a 2D map.
+  (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
 - EBSD signal returned from NORDIF calibration pattern reader tries to add the following
   new info to the original metadata: Shapes of area and region of interest (ROI), offset
   of ROI, calibration pattern indices and area overview image. All shapes and
