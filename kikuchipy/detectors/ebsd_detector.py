@@ -26,6 +26,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
+CONVENTION_ALIAS = {
+    "bruker": ["bruker"],
+    "tsl": ["edax", "tsl", "amatek"],
+    "oxford": ["oxford", "aztec"],
+    "emsoft": ["emsoft", "emsoft4", "emsoft5"],
+}
+CONVENTION_ALIAS_ALL = list(np.concatenate(list(CONVENTION_ALIAS.values())))
+
+
 class EBSDDetector:
     r"""An EBSD detector class storing its shape, pixel size, binning
     factor, detector tilt, sample tilt and projection center (PC) per
@@ -780,32 +789,27 @@ class EBSDDetector:
 
     # ------------------------ Private methods ----------------------- #
 
-    def _set_pc_convention(self, convention: Optional[str] = None):
-        if convention is None or convention.lower() == "bruker":
-            pass
-        elif convention.lower() in ["tsl", "edax", "amatek"]:
-            self.pc = self._pc_tsl2bruker()
-        elif convention.lower() == "oxford":
-            self.pc = self._pc_tsl2bruker()
-        elif convention.lower() in ["emsoft", "emsoft4", "emsoft5"]:
+    def _get_pc_from_convention(self, convention: Optional[str] = None) -> np.ndarray:
+        if convention is None or convention.lower() in CONVENTION_ALIAS["bruker"]:
+            return self.pc
+
+        conv = convention.lower()
+        if conv in CONVENTION_ALIAS["tsl"] + CONVENTION_ALIAS["oxford"]:
+            return self._pc_tsl2bruker()
+        elif conv in CONVENTION_ALIAS["emsoft"]:
             try:
                 version = int(convention[-1])
             except ValueError:
                 version = 5
-            self.pc = self._pc_emsoft2bruker(version=version)
+            return self._pc_emsoft2bruker(version)
         else:
-            conventions = [
-                "bruker",
-                "emsoft",
-                "emsoft4",
-                "emsoft5",
-                "oxford",
-                "tsl",
-            ]
             raise ValueError(
                 f"Projection center convention '{convention}' not among the "
-                f"recognised conventions {conventions}."
+                f"recognised conventions {CONVENTION_ALIAS_ALL}."
             )
+
+    def _set_pc_convention(self, convention: Optional[str] = None):
+        self.pc = self._get_pc_from_convention(convention)
 
     def _pc_emsoft2bruker(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc, dtype=float)
