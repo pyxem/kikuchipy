@@ -87,6 +87,8 @@ Removed
 
 Fixed
 -----
+- ``EBSDDetector.pc_average`` no longer rounds the PC to three decimals.
+  (`#586 <https://github.com/pyxem/kikuchipy/pull/586>`_)
 - Microscope magnification is now read correctly from EDAX h5ebsd files.
   (`#586 <https://github.com/pyxem/kikuchipy/pull/586>`_)
 - kikuchipy h5ebsd reader can read a signal with an EBSD detector with a PC array of

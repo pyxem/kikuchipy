@@ -151,7 +151,9 @@ class TestEBSDDetector:
     def test_pc_average(self, pc, desired_pc_average):
         """Calculation of PC average."""
         assert np.allclose(
-            kp.detectors.EBSDDetector(pc=pc).pc_average, desired_pc_average
+            kp.detectors.EBSDDetector(pc=pc).pc_average,
+            desired_pc_average,
+            atol=1e-3,
         )
 
     @pytest.mark.parametrize(

@@ -76,10 +76,11 @@ class EBSDDetector:
         ``[0.5, 0.5, 0.5]``.
     convention
         PC convention. If not given, Bruker's convention is assumed.
-        Options are ``"tsl"``/``"edax"``, ``"oxford"``, ``"bruker"``,
-        ``"emsoft"``, ``"emsoft4"``, and ``"emsoft5"``. ``"emsoft"`` and
-        ``"emsoft5"`` is the same convention. See *Notes* for
-        conversions between conventions.
+        Options are ``"tsl"``/``"edax"``/``"amatek"``,
+        ``"oxford"``/``"aztec"``, ``"bruker"``, ``"emsoft"``,
+        ``"emsoft4"``, and ``"emsoft5"``. ``"emsoft"`` and ``"emsoft5"``
+        is the same convention. See *Notes* for conversions between
+        conventions.
 
     Notes
     -----
@@ -168,9 +169,11 @@ class EBSDDetector:
         sample_tilt: float = 70,
         pc: Union[np.ndarray, list, tuple] = (0.5, 0.5, 0.5),
         convention: Optional[str] = None,
-    ):
-        """Create an EBSD detector with a shape, pixel size, binning,
-        and projection/pattern center(s) (PC(s)).
+    ) -> None:
+        """Create an EBSD detector with a shape, pixel size, binning
+        factor, sample and detector tilt about the detector X axis,
+        azimuthal tilt about the detector Y axis and one or more
+        projection/pattern centers (PCs).
         """
         self.shape = shape
         self.px_size = px_size
@@ -179,13 +182,14 @@ class EBSDDetector:
         self.azimuthal = azimuthal
         self.sample_tilt = sample_tilt
         self.pc = pc
-        self._set_pc_convention(convention)
+        self._set_pc_from_convention(convention)
 
     def __repr__(self) -> str:
+        pc_average = tuple(self.pc_average.round(3))
         return (
-            f"{self.__class__.__name__} {self.shape}, "
+            f"{type(self).__name__} {self.shape}, "
             f"px_size {self.px_size} um, binning {self.binning}, "
-            f"tilt {self.tilt}, azimuthal {self.azimuthal}, pc {tuple(self.pc_average)}"
+            f"tilt {self.tilt}, azimuthal {self.azimuthal}, pc {pc_average}"
         )
 
     @property
@@ -254,6 +258,13 @@ class EBSDDetector:
         self._pc = np.atleast_2d(value)
 
     @property
+    def pc_flattened(self) -> np.ndarray:
+        """Return flattened array of projection center coordinates of
+        shape (:attr:`navigation_size`, 3).
+        """
+        return self.pc.reshape((-1, 3))
+
+    @property
     def pcx(self) -> np.ndarray:
         """Return or set the projection center x coordinates.
 
@@ -316,7 +327,7 @@ class EBSDDetector:
             axis += (0,)
         elif ndim == 3:
             axis += (0, 1)
-        return np.nanmean(self.pc, axis=axis).round(3)
+        return np.nanmean(self.pc, axis=axis)
 
     @property
     def navigation_shape(self) -> tuple:
@@ -724,9 +735,7 @@ class EBSDDetector:
 
         fig, ax = plt.subplots()
         ax.axis(zoom * bounds)
-        ax.set_aspect("equal")
-        ax.set_xlabel(x_label)
-        ax.set_ylabel(y_label)
+        ax.set(xlabel=x_label, ylabel=y_label, aspect="equal")
 
         # Plot a pattern on the detector
         if isinstance(pattern, np.ndarray):
@@ -808,7 +817,7 @@ class EBSDDetector:
                 f"recognised conventions {CONVENTION_ALIAS_ALL}."
             )
 
-    def _set_pc_convention(self, convention: Optional[str] = None):
+    def _set_pc_from_convention(self, convention: Optional[str] = None):
         self.pc = self._get_pc_from_convention(convention)
 
     def _pc_emsoft2bruker(self, version: int = 5) -> np.ndarray:
