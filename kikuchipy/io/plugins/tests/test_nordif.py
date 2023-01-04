@@ -34,7 +34,7 @@ import pytest
 from kikuchipy.conftest import assert_dictionary
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io._io import load
-from kikuchipy.io.plugins.nordif import get_settings_from_file, get_string
+from kikuchipy.io.plugins.nordif import _get_settings_from_file, _get_string
 from kikuchipy.signals.ebsd import EBSD
 
 DIR_PATH = os.path.dirname(__file__)
@@ -203,7 +203,7 @@ def save_path_nordif():
 
 class TestNORDIF:
     def test_get_settings_from_file(self):
-        settings = get_settings_from_file(SETTING_FILE)
+        settings = _get_settings_from_file(SETTING_FILE)
         answers = [METADATA, ORIGINAL_METADATA, SCAN_SIZE_FILE, DETECTOR]
         assert len(settings) == len(answers)
         for setting_read, answer in zip(settings, answers):
@@ -215,13 +215,13 @@ class TestNORDIF:
         content = f.read().splitlines()
         exp = "Tilt angle\t(.*)\t"
         if correct:
-            sample_tilt = get_string(
+            sample_tilt = _get_string(
                 content=content, expression=exp, line_no=line_no, file=f
             )
             assert sample_tilt == "70"
         else:
             with pytest.warns(UserWarning):
-                sample_tilt = get_string(
+                sample_tilt = _get_string(
                     content=content, expression=exp, line_no=line_no, file=f
                 )
             assert sample_tilt == ""

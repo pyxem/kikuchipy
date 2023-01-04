@@ -18,6 +18,12 @@ Unreleased
 
 Added
 -----
+- EBSD signal returned from NORDIF calibration pattern reader tries to add the following
+  new info to the original metadata: Shapes of area and region of interest (ROI), offset
+  of ROI, calibration pattern indices and area overview image. All shapes and
+  coordinates are given both in units of area overview image pixels and scaled according
+  to the pixels in the ROI (actual navigation shape).
+  (`#586 <https://github.com/pyxem/kikuchipy/pull/586>`_)
 - Method ``EBSD.extract_grid()`` to get a new signal from grid positions evenly spaced
   in navigation space. (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
 - Utility function ``grid_indices()`` to extract a smaller 1D or 2D grid of indices from
@@ -68,6 +74,7 @@ Deprecated
   ``LambertProjection`` and ``SphericalProjection``. These will be removed in version
   0.9.0, as they are unused internally. If you depend on this module, please open an
   issue at https://github.com/pyxem/kikuchipy/issues.
+  (`#577 <https://github.com/pyxem/kikuchipy/pull/577>`_)
 
 Removed
 -------
@@ -77,6 +84,8 @@ Removed
 
 Fixed
 -----
+- Microscope magnification is now read correctly from EDAX h5ebsd files.
+  (`#586 <https://github.com/pyxem/kikuchipy/pull/586>`_)
 - kikuchipy h5ebsd reader can read a signal with an EBSD detector with a PC array of
   different navigation shape than determined from the HDF5 file's navigation shape
   (e.g. ``Scan 1/EBSD/Header/n_columns`` and ``n_rows``).

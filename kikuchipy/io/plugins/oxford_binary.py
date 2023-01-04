@@ -99,8 +99,8 @@ class OxfordBinaryFileReader:
     """
 
     # Header for each pattern in the file
-    pattern_header_size = 16
-    pattern_header_dtype = [
+    pattern_header_size: int = 16
+    pattern_header_dtype: list = [
         ("is_compressed", np.int32, (1,)),
         ("nrows", np.int32, (1,)),
         ("ncols", np.int32, (1,)),
@@ -188,7 +188,7 @@ class OxfordBinaryFileReader:
     @property
     def n_patterns_present(self) -> int:
         """Number of patterns actually stored in the file."""
-        return np.sum(self.pattern_is_present)
+        return int(np.sum(self.pattern_is_present))
 
     @property
     def pattern_order(self) -> np.ndarray:
@@ -249,7 +249,7 @@ class OxfordBinaryFileReader:
         return np.memmap(
             self.file.name,
             dtype=file_dtype,
-            shape=self.n_patterns_present,
+            shape=(self.n_patterns_present,),
             mode="r",
             offset=self.first_pattern_position,
         )
@@ -299,8 +299,8 @@ class OxfordBinaryFileReader:
     def get_pattern_starts(self) -> np.ndarray:
         """Return the file byte positions of each pattern.
 
-        Parameters
-        ----------
+        Returns
+        -------
         pattern_starts
             Integer array of file byte positions.
         """
@@ -313,6 +313,11 @@ class OxfordBinaryFileReader:
 
         Parameters
         ----------
+        offset
+            File byte pattern start of the pattern of interest.
+
+        Returns
+        -------
         footer_dtype
             Format of each pattern footer as a list of tuples with a
             field name, data type and size. The format depends on the
@@ -379,7 +384,7 @@ class OxfordBinaryFileReader:
 
         return data
 
-    def get_single_pattern_footer(self, offset: int) -> tuple:
+    def get_single_pattern_footer(self, offset: int) -> np.ndarray:
         """Return a single pattern footer with pattern beam positions.
 
         Parameters
@@ -390,8 +395,7 @@ class OxfordBinaryFileReader:
         Returns
         -------
         footer
-            The format of this depends on the file
-            :attr:`~self.version`.
+            The format of this depends on the file :attr:`version`.
         """
         self.file.seek(offset + self.pattern_header_size + self.n_bytes)
         return np.fromfile(self.file, dtype=self.pattern_footer_dtype, count=1)
@@ -490,9 +494,9 @@ class OxfordBinaryFileReader:
             file_order=order,
         )
         if "beam_y" in self.memmap.dtype.names:
-            om["beam_y"] = beam_y = self.memmap["beam_y"][..., 0][order]
+            om["beam_y"] = self.memmap["beam_y"][..., 0][order]
         if "beam_x" in self.memmap.dtype.names:
-            om["beam_x"] = beam_x = self.memmap["beam_x"][..., 0][order]
+            om["beam_x"] = self.memmap["beam_x"][..., 0][order]
 
         scan = dict(
             axes=axes,
