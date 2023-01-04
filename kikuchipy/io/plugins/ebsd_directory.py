@@ -102,7 +102,7 @@ def file_reader(
     # Read all filenames
     filenames = glob.glob(filename)
     n_patterns = len(filenames)
-    _logger.info(f"{n_patterns} patterns found in directory")
+    _logger.debug(f"{n_patterns} patterns found in directory")
     ext = os.path.splitext(filename)[1]
 
     # Get regex pattern
@@ -141,13 +141,13 @@ def file_reader(
             )
             nav_shape = (n_patterns,)
 
-    _logger.info(f"Navigation shape is {nav_shape}")
+    _logger.debug(f"Navigation shape is {nav_shape}")
 
     # Read one pattern
     sample = iio.imread(filenames[0])
     sig_shape = sample.shape
     dtype = sample.dtype
-    _logger.info(f"Sample pattern has shape {sig_shape} and dtype {dtype}")
+    _logger.debug(f"Sample pattern has shape {sig_shape} and dtype {dtype}")
 
     # Read all patterns lazily
     lazy_patterns = [dask.delayed(iio.imread)(fn) for fn in filenames]

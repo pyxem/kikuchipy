@@ -18,15 +18,19 @@ Unreleased
 
 Added
 -----
+- Method ``EBSD.extract_grid()`` to get a new signal from grid positions evenly spaced
+  in navigation space. (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
+- Utility function ``grid_indices()`` to extract a smaller 1D or 2D grid of indices from
+  a larger grid. (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
 - Two datasets ``ni/si_ebsd_master_pattern()`` of Ni and Si master patterns simulated
   with EMsoft are available via the data module for download to the local cache.
-  (`#579 <https://github.com/pyxem/kikuchipy/pull/579>`_)
+  (`#584 <https://github.com/pyxem/kikuchipy/pull/584>`_)
 - Three experimental EBSD datasets are available for download to the local cache via the
   data module: (50, 50) patterns of (480, 480) pixels from an Si wafer via
   ``si_wafer()``, the full Ni dataset of (149, 200) patterns of (60, 60) pixels via
   ``ni_gain0()`` from which parts are already used in ``nickel_ebsd_small()/large()``
   and the calibration patterns of the latter dataset, ``ni_gain0_calibration()``.
-  (`#579 <https://github.com/pyxem/kikuchipy/pull/579>`_)
+  (`#584 <https://github.com/pyxem/kikuchipy/pull/584>`_)
 - When using the following HyperSpy ``Signal2D`` methods via the ``EBSD`` class, the
   class attributes ``xmap``, ``static_background`` and ``detector`` are handled
   correctly, which they were not before: ``inav``, ``isig``, ``crop()``,
@@ -38,6 +42,10 @@ Added
 
 Changed
 -------
+- Minimal version of HyperSpy increased to >= 1.7.3.
+  (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
+- Minimal version of Numba increased to >= 0.52.
+  (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
 - When binning the navigation dimension(s) with ``EBSD.rebin()``, the class attributes
   ``xmap`` and ``static_background`` are set to ``None`` and ``detector.pc`` is set to
   ``[0.5, 0.5, 0.5]`` in the appropriate navigation shape. If the signal dimension(s)
@@ -47,11 +55,11 @@ Changed
   (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
 - EBSD signal loaded with ``nickel_ebsd_small()`` and ``nickel_ebsd_large()`` now
   contain crystal maps with orientations and detectors with PC values found from Hough
-  indexing with *PyEBSDIndex* followed by orientation and PC refinement.
+  indexing with PyEBSDIndex followed by orientation and PC refinement.
   (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_,
-  `#579 <https://github.com/pyxem/kikuchipy/pull/579>`_)
-- Minimal version of *Matplotlib* is 3.5.0 when installing optional dependencies with
-  ``pip install kikuchipy[viz]`` since *PyVista* requires this.
+  `#584 <https://github.com/pyxem/kikuchipy/pull/584>`_)
+- Minimal version of Matplotlib is 3.5.0 when installing optional dependencies with
+  ``pip install kikuchipy[viz]`` since PyVista requires this.
   (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
 
 Deprecated

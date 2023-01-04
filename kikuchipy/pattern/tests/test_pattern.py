@@ -106,7 +106,7 @@ class TestRescaleIntensityPattern:
                     out_range=out_range,
                     dtype_out=dtype_out,
                 )
-            return 0  # So that the tests ends here
+            return
         else:
             rescaled_pattern = rescale_intensity(
                 pattern=pattern,

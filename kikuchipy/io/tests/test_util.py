@@ -42,7 +42,7 @@ class TestIO:
             with replace_stdin(io.StringIO(answer)):
                 with pytest.raises(EOFError):
                     _ = _get_input_bool(question)
-            return 0
+            return
         else:
             with replace_stdin(io.StringIO(answer)):
                 returns = _get_input_bool(question)
@@ -56,7 +56,7 @@ class TestIO:
             if isinstance(var_type, int):
                 with pytest.raises(EOFError):
                     _ = _get_input_variable(question, var_type)
-                return 0
+                return
             else:
                 returns = _get_input_variable(question, var_type)
         assert returns == var_type(answer)

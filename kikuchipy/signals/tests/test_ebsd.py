@@ -2048,3 +2048,71 @@ class TestSignal2DMethods:
         with caplog.at_level(logging.DEBUG, logger="kikuchipy"):
             _ = s.inav[2:, 2:]
         assert "Could not slice EBSD.xmap attribute" in caplog.text
+
+
+class TestExtractGrid:
+    def test_extract_grid_raises(self):
+        s = kp.data.nickel_ebsd_small(lazy=True)
+        with pytest.raises(ValueError):
+            _ = s.extract_grid((4, 3))
+        with pytest.raises(ValueError):
+            _ = s.extract_grid(4)
+
+    def test_extract_grid(self):
+        s = kp.data.nickel_ebsd_large()
+        s2 = s.extract_grid((5, 4))
+
+        assert s2.data.shape == (4, 5, 60, 60)
+        assert np.allclose(s.static_background, s2.static_background)
+        assert s2.detector.navigation_shape == (4, 5)
+
+        nav_shape = s.axes_manager.navigation_shape[::-1]
+        idx, spacing = kp.signals.util.grid_indices(
+            (4, 5), nav_shape, return_spacing=True
+        )
+        idx_tuple = tuple(idx)
+        mask = np.zeros(nav_shape, dtype=bool)
+        mask[idx_tuple] = True
+        mask = mask.ravel()
+
+        assert np.allclose(s.xmap[mask].rotations.data, s2.xmap.rotations.data)
+        assert np.allclose(s.detector.pc[idx_tuple], s2.detector.pc)
+        assert np.allclose(s.data[idx_tuple], s2.data)
+
+        scales = [a.scale for a in s2.axes_manager.navigation_axes]
+        desired_scales = np.array(
+            [
+                a.scale * sp
+                for a, sp in zip(s.axes_manager.navigation_axes, spacing[::-1])
+            ]
+        )
+        assert np.allclose(scales, desired_scales)
+
+    def test_extract_grid_lazy(self):
+        s = kp.data.nickel_ebsd_large(lazy=True)
+        s2, idx = s.extract_grid((2, 3), return_indices=True)
+        assert isinstance(s2, kp.signals.LazyEBSD)
+        assert np.allclose(
+            idx,
+            np.array([[[14, 14], [28, 28], [42, 42]], [[25, 50], [25, 50], [25, 50]]]),
+        )
+
+    def test_extract_grid_dummy_data(self):
+        s = kp.signals.EBSD(np.zeros((10, 10, 3, 3), dtype="uint8"))
+        s.detector.pc = np.zeros((2, 3, 3))
+        s2 = s.extract_grid((3, 4))
+        assert s2.xmap is None
+        assert np.allclose(s2.detector.pc, 0.5)
+
+    def test_extract_grid_1d(self):
+        s = kp.data.nickel_ebsd_large(lazy=True)
+
+        s2 = s.inav[0]
+        s3, idx3 = s2.extract_grid((3,), return_indices=True)
+        assert s3.data.shape == (3, 60, 60)
+        assert np.allclose(idx3, [14, 28, 42])
+
+        s4 = s.inav[:, 0]
+        s5, idx5 = s4.extract_grid((6,), return_indices=True)
+        assert s5.data.shape == (6, 60, 60)
+        assert np.allclose(idx5, [10, 21, 32, 43, 54, 65])

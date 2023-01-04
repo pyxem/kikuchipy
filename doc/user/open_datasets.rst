@@ -10,6 +10,7 @@ Open datasets
 This is a non-exhaustive list of EBSD datasets openly available on the internet which
 can be read by kikuchipy:
 
+- :cite:`jackson2019dictionary`
 - :cite:`shi2021high`
 - :cite:`shi2022high`
 - :cite:`wilkinson2018small`
