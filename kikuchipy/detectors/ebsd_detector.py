@@ -466,7 +466,7 @@ class EBSDDetector:
         >>> det.crop((1, 5, 2, 6))
         EBSDDetector (4, 4), px_size 1 um, binning 1, tilt 0, azimuthal 0, pc (0.25, 0.25, 0.75)
 
-        Plot a cropped detector with the PC on cropped a pattern
+        Plot a cropped detector with the PC on a cropped pattern
 
         >>> s = kp.data.nickel_ebsd_small()
         >>> s.remove_static_background(show_progressbar=False)
@@ -695,6 +695,7 @@ class EBSDDetector:
 
         Examples
         --------
+        >>> import matplotlib.pyplot as plt
         >>> import kikuchipy as kp
         >>> det = kp.detectors.EBSDDetector(
         ...     shape=(60, 60),
@@ -703,6 +704,7 @@ class EBSDDetector:
         ...     sample_tilt=70,
         ... )
         >>> det.plot()
+        >>> plt.show()
 
         Plot with gnomonic coordinates and circles
 
@@ -711,12 +713,12 @@ class EBSDDetector:
         ...     draw_gnomonic_circles=True,
         ...     gnomonic_circles_kwargs={"edgecolor": "b", "alpha": 0.3}
         ... )
+        >>> plt.show()
 
-        Plot a pattern on the detector and save it
+        Plot a pattern on the detector and return it for saving etc.
 
         >>> s = kp.data.nickel_ebsd_small()
         >>> fig = det.plot(pattern=s.inav[0, 0].data, return_figure=True)
-        >>> # fig.savefig("detector.png")
         """
         sy, sx = self.shape
         pcx, pcy = self.pc_average[:2]
@@ -816,11 +818,6 @@ class EBSDDetector:
             :attr:`navigation_dimension` must be 2.
         return_figure
             Whether to return the figure (default is ``False``).
-        fig
-            Figure to add axis/axes onto. If not given, a new figure is
-            created. Can be useful to pass a figure with a determined
-            figure size, as determining this size automatically is
-            challenging.
         orientation
             Whether to align the plots in a ``"horizontal"`` (default)
             or ``"vertical"`` orientation.
@@ -830,7 +827,9 @@ class EBSDDetector:
             ``False``.
         figure_kwargs
             Keyword arguments to pass to
-            :func:`matplotlib.pyplot.figure` upon figure creation.
+            :func:`matplotlib.pyplot.figure` upon figure creation. Note
+            that ``layout="tight"`` is used by default unless another
+            layout is passed.
         **kwargs
             Keyword arguments passed to the plotting function, which is
             :meth:`~matplotlib.axes.Axes.imshow` if ``mode="map"``,
@@ -842,6 +841,35 @@ class EBSDDetector:
         -------
         fig
             Figure is returned if ``return_figure=True``.
+
+        Examples
+        --------
+        Create a dummy detector with smoothly changing PC values
+
+        >>> import matplotlib.pyplot as plt
+        >>> import numpy as np
+        >>> import kikuchipy as kp
+        >>> ny, nx = (5, 10)
+        >>> n = ny * nx
+        >>> pcx = np.repeat(np.linspace(0.55, 0.45, nx), ny).reshape(nx, ny).T
+        >>> pcy = np.repeat(np.linspace(0.75, 0.70, ny), nx).reshape(ny, nx)
+        >>> pcz = np.repeat(np.linspace(0.50, 0.55, ny), nx).reshape(ny, nx)
+        >>> pc = np.stack((pcx, pcy, pcz), axis=2)
+        >>> det = kp.detectors.EBSDDetector(shape=(60, 60), pc=pc, sample_tilt=70)
+
+        Plot PC values in maps
+
+        >>> det.plot_pc()
+        >>> plt.show()
+
+        Plot in scatter plots in vertical orientation
+
+        >>> det.plot_pc("scatter", orientation="vertical", annotate=True)
+        >>> plt.show()
+
+        Plot in a 3D scatter plot, returning the figure for saving etc.
+
+        >>> fig = det.plot_pc("3d", return_figure=True)
         """
         # Ensure there are PCs to plot
         if self.navigation_size == 1:
@@ -853,12 +881,13 @@ class EBSDDetector:
         modes = ["map", "scatter", "3d"]
         if not isinstance(mode, str) or mode.lower() not in modes:
             raise ValueError(
-                f"Plot mode {mode} must be one of the following strings {modes}"
+                f"Plot mode '{mode}' must be one of the following strings {modes}"
             )
         mode = mode.lower()
 
         if figure_kwargs is None:
-            figure_kwargs = dict(layout="tight")
+            figure_kwargs = {}
+        figure_kwargs.setdefault("layout", "tight")
 
         # Prepare keyword arguments common to at least two modes
         if mode in ["map", "scatter"]:
@@ -902,10 +931,9 @@ class EBSDDetector:
             axes[1].invert_xaxis()
             axes[1].invert_yaxis()
         else:
-            fig = plt.figure()
             ax = fig.add_subplot(projection="3d")
 
-            pcx, pcy, pcz = self.pc.T
+            pcx, pcy, pcz = self.pc_flattened.T
             ax.scatter(pcx, pcz, pcy, **kwargs)
             nav_axes = tuple(np.arange(len(self.pc.shape))[: self.navigation_dimension])
             extent_min = np.min(self.pc, axis=nav_axes)

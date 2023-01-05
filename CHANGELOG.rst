@@ -18,6 +18,8 @@ Unreleased
 
 Added
 -----
+- Method ``EBSDDetector.plot_pc()`` to plot projection centers (PCs) in maps, scatter
+  plots or in 3D. (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
 - Convenience function ``kikuchipy.draw.plot_pattern_positions_in_map()`` to plot
   positions of selected patterns (typically calibration patterns) in a 2D map.
   (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)

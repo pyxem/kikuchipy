@@ -587,3 +587,123 @@ class TestEBSDDetector:
         sim2 = mp.get_patterns(rot, det2, **kwds)
 
         assert np.allclose(sim2.data, sim1.isig[20:60, :50].data)
+
+
+class TestPlotPC:
+    det = kp.detectors.EBSDDetector(
+        shape=(60, 60),
+        pc=np.stack(
+            (
+                np.repeat(np.linspace(0.55, 0.45, 30), 20).reshape(30, 20).T,
+                np.repeat(np.linspace(0.75, 0.70, 20), 30).reshape(20, 30),
+                np.repeat(np.linspace(0.50, 0.55, 20), 30).reshape(20, 30),
+            ),
+            axis=2,
+        ),
+        sample_tilt=70,
+    )
+
+    def test_plot_pc_raises(self):
+        det = self.det.deepcopy()
+        det.pc = det.pc_average
+        with pytest.raises(ValueError, match="Detector must have more than one PC "):
+            det.plot_pc()
+
+        det2 = self.det.deepcopy()
+        det2.pc = det2.pc[0]
+        with pytest.raises(ValueError, match="Detector's `navigation_dimension` must "):
+            det2.plot_pc()
+
+        with pytest.raises(ValueError, match="Plot mode 'stereographic' must be one "):
+            self.det.plot_pc("stereographic")
+
+    def test_plot_pc_map_horizontal(self):
+        fig = self.det.plot_pc(return_figure=True)
+
+        figsize = fig.get_size_inches()
+        assert (figsize[0] / figsize[1]) > 1
+
+        ax = fig.axes
+        assert len(ax) == 6
+        assert all([a.get_xlabel() == "Column" for a in ax[:3]])
+        assert all(
+            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "y", "z"])]
+        )
+
+        plt.close(fig)
+
+    def test_plot_pc_map_vertical(self):
+        fig = self.det.plot_pc(return_figure=True, orientation="vertical")
+
+        figsize = fig.get_size_inches()
+        assert (figsize[0] / figsize[1]) < 1
+
+        ax = fig.axes
+        assert len(ax) == 6
+        assert all([a.get_xlabel() == "Column" for a in ax[:3]])
+        assert all(
+            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "y", "z"])]
+        )
+
+        plt.close(fig)
+
+    def test_plot_pc_scatter_horizontal(self):
+        fig = self.det.plot_pc("scatter", return_figure=True, annotate=True)
+
+        figsize = fig.get_size_inches()
+        assert (figsize[0] / figsize[1]) > 1
+
+        ax = fig.axes
+        assert len(ax) == 3
+        assert all(
+            [a.get_xlabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "x", "z"])]
+        )
+        assert all(
+            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["y", "z", "y"])]
+        )
+
+        texts = ax[0].texts
+        assert len(texts) == self.det.navigation_size
+        assert texts[0].get_text() == "0"
+        assert texts[-1].get_text() == "599"
+
+        plt.close(fig)
+
+    def test_plot_pc_scatter_vertical(self):
+        fig = self.det.plot_pc("scatter", return_figure=True, orientation="vertical")
+
+        figsize = fig.get_size_inches()
+        assert (figsize[0] / figsize[1]) < 1
+
+        ax = fig.axes
+        assert len(ax) == 3
+        assert all(
+            [a.get_xlabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "x", "z"])]
+        )
+        assert all(
+            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["y", "z", "y"])]
+        )
+
+        plt.close(fig)
+
+    def test_plot_pc_3d(self):
+        fig = self.det.plot_pc("3d", return_figure=True, annotate=True)
+
+        texts = fig.axes[0].texts
+        assert len(texts) == self.det.navigation_size
+        assert texts[0].get_text() == "0"
+        assert texts[-1].get_text() == "599"
+
+        plt.close(fig)
+
+    def test_plot_pc_figure(self):
+        fig1 = self.det.plot_pc(figure_kwargs=dict(figsize=(9, 3)), return_figure=True)
+        assert fig1.get_tight_layout()
+
+        fig2 = self.det.plot_pc(
+            figure_kwargs=dict(figsize=(6, 3), layout="constrained"), return_figure=True
+        )
+        assert fig2.get_constrained_layout()
+        assert not np.allclose(fig1.get_size_inches(), fig2.get_size_inches())
+
+        plt.close("all")
