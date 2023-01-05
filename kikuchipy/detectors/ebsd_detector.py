@@ -23,6 +23,7 @@ from matplotlib.figure import Figure
 from matplotlib.markers import MarkerStyle
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 
 
@@ -792,6 +793,137 @@ class EBSDDetector:
                         (pcx, pcy), np.tan(np.deg2rad(angle)), **gnomonic_circles_kwargs
                     )
                 )
+
+        if return_figure:
+            return fig
+
+    def plot_pc(
+        self,
+        mode: str = "map",
+        return_figure: bool = False,
+        orientation: str = "horizontal",
+        annotate: bool = False,
+        figure_kwargs: Optional[dict] = None,
+        **kwargs,
+    ) -> Union[None, plt.Figure]:
+        """Plot all projection centers (PCs).
+
+        Parameters
+        ----------
+        mode
+            String describing how to plot PCs. Options are ``"map"``
+            (default), ``"scatter"`` and ``"3d"``. If ``mode="map"``,
+            :attr:`navigation_dimension` must be 2.
+        return_figure
+            Whether to return the figure (default is ``False``).
+        fig
+            Figure to add axis/axes onto. If not given, a new figure is
+            created. Can be useful to pass a figure with a determined
+            figure size, as determining this size automatically is
+            challenging.
+        orientation
+            Whether to align the plots in a ``"horizontal"`` (default)
+            or ``"vertical"`` orientation.
+        annotate
+            Whether to label each pattern with its 1D index into
+            :attr:`pc_flattened` when ``mode="scatter"``. Default is
+            ``False``.
+        figure_kwargs
+            Keyword arguments to pass to
+            :func:`matplotlib.pyplot.figure` upon figure creation.
+        **kwargs
+            Keyword arguments passed to the plotting function, which is
+            :meth:`~matplotlib.axes.Axes.imshow` if ``mode="map"``,
+            :meth:`~matplotlib.axes.Axes.scatter` if ``mode="scatter"``
+            and :meth:`~mpl_toolkits.mplot3d.axes3d.Axes3D.scatter`
+            if ``mode="3d"``.
+
+        Returns
+        -------
+        fig
+            Figure is returned if ``return_figure=True``.
+        """
+        # Ensure there are PCs to plot
+        if self.navigation_size == 1:
+            raise ValueError("Detector must have more than one PC value to plot")
+        if mode == "map" and self.navigation_dimension != 2:
+            raise ValueError("Detector's `navigation_dimension` must be 2D")
+
+        # Ensure mode is OK
+        modes = ["map", "scatter", "3d"]
+        if not isinstance(mode, str) or mode.lower() not in modes:
+            raise ValueError(
+                f"Plot mode {mode} must be one of the following strings {modes}"
+            )
+        mode = mode.lower()
+
+        if figure_kwargs is None:
+            figure_kwargs = dict(layout="tight")
+
+        # Prepare keyword arguments common to at least two modes
+        if mode in ["map", "scatter"]:
+            w, h = plt.rcParams["figure.figsize"]
+            k = max(w, h) / 3
+            if orientation == "horizontal":
+                figure_kwargs.setdefault("figsize", (6 * k, 2 * k))
+                subplots_kw = dict(ncols=3)
+            else:
+                figure_kwargs.setdefault("figsize", (2 * k, 6 * k))
+                subplots_kw = dict(nrows=3)
+
+        if mode in ["scatter", "3d"]:
+            kwargs.setdefault("c", np.arange(self.navigation_size))
+            kwargs.setdefault("ec", "k")
+            kwargs.setdefault("clip_on", False)
+
+        fig = plt.figure(**figure_kwargs)
+
+        labels = ["PCx", "PCy", "PCz"]
+        if mode == "map":
+            axes = fig.subplots(**subplots_kw)
+            for i, ax in enumerate(axes):
+                ax.set(xlabel="Column", ylabel="Row", aspect="equal")
+                im = ax.imshow(self.pc[..., i], **kwargs)
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes(position="right", size="5%", pad=0.1)
+                fig.colorbar(im, cax=cax, label=labels[i])
+        elif mode == "scatter":
+            pc_flat = self.pc_flattened
+            axes = fig.subplots(**subplots_kw)
+            for i, (j, k) in enumerate([[0, 1], [0, 2], [2, 1]]):
+                x_coord = pc_flat[:, j]
+                y_coord = pc_flat[:, k]
+                axes[i].scatter(x_coord, y_coord, **kwargs)
+                axes[i].set(xlabel=labels[j], ylabel=labels[k], aspect="equal")
+                if annotate:
+                    for l, (x, y) in enumerate(zip(x_coord, y_coord)):
+                        axes[i].text(x, y, l, ha="left", va="bottom")
+            axes[0].invert_xaxis()
+            axes[1].invert_xaxis()
+            axes[1].invert_yaxis()
+        else:
+            fig = plt.figure()
+            ax = fig.add_subplot(projection="3d")
+
+            pcx, pcy, pcz = self.pc.T
+            ax.scatter(pcx, pcz, pcy, **kwargs)
+            nav_axes = tuple(np.arange(len(self.pc.shape))[: self.navigation_dimension])
+            extent_min = np.min(self.pc, axis=nav_axes)
+            extent_max = np.max(self.pc, axis=nav_axes)
+            ax.set(
+                xlabel=labels[0],
+                ylabel=labels[2],
+                zlabel=labels[1],
+                aspect="equal",
+                xlim=[extent_min[0], extent_max[0]],
+                ylim=[extent_min[2], extent_max[2]],
+                zlim=[extent_min[1], extent_max[1]],
+            )
+            ax.invert_zaxis()
+
+            if annotate:
+                for i, (x, z, y) in enumerate(zip(pcx, pcz, pcy)):
+                    ax.text(x, z, y, i)
 
         if return_figure:
             return fig
