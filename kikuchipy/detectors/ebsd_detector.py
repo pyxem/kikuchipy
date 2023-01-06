@@ -29,6 +29,7 @@ import numpy as np
 from orix.quaternion import Rotation
 from orix.vector import Vector3d
 import scipy.stats as scs
+from skimage.transform import ProjectiveTransform
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 
 
@@ -600,7 +601,7 @@ class EBSDDetector:
         fit_pc
         """
         if self.navigation_size == 1:
-            raise ValueError("Estimation requires more than 1 PC")
+            raise ValueError("Estimation requires more than one projection center")
 
         if return_outliers:
             detect_outliers = True
@@ -716,7 +717,7 @@ class EBSDDetector:
         estimate_xtilt, fit_pc
         """
         if self.navigation_size == 1:
-            raise ValueError("Estimation requires more than 1 PC")
+            raise ValueError("Estimation requires more than one projection center")
 
         pc = self.pc
         if isinstance(is_outlier, np.ndarray):
@@ -754,9 +755,9 @@ class EBSDDetector:
         equations given in appendix A in :cite:`singh2017application`:
 
         .. math::
-            PC_x = \bar{PC_x} + (\bar{x} - x) \cdot \Delta x / (\delta \cdot N_x \cdot b),\\
-            PC_y = \bar{PC_y} + (\bar{y} - y) \cdot \Delta y \cdot \cos{\alpha} / (\delta \cdot N_y \cdot b),\\
-            PC_z = \bar{PC_z} - (\bar{y} - y) \cdot \Delta y \cdot \sin{\alpha} / (\delta \cdot N_y \cdot b),\\
+            PC_x &= \bar{PC_x} + (\bar{x} - x) \cdot \Delta x / (\delta \cdot N_x \cdot b),\\
+            PC_y &= \bar{PC_y} + (\bar{y} - y) \cdot \Delta y \cdot \cos{\alpha} / (\delta \cdot N_y \cdot b),\\
+            PC_z &= \bar{PC_z} - (\bar{y} - y) \cdot \Delta y \cdot \sin{\alpha} / (\delta \cdot N_y \cdot b),\\
 
         where :math:`(\Delta y, \Delta x)` are the vertical and
         horizontal step sizes, respectively, :math:`(N_y, N_x)` are the
@@ -838,6 +839,179 @@ class EBSDDetector:
         new_detector.binning = binning
 
         return new_detector
+
+    def fit_pc(
+        self,
+        pc_indices: Union[list, tuple, np.ndarray],
+        map_indices: Union[list, tuple, np.ndarray],
+        transformation: str = "projective",
+        is_outlier: Optional[np.ndarray] = None,
+        plot: bool = True,
+        return_figure: bool = False,
+        figure_kwargs: Optional[dict] = None,
+    ) -> Union[EBSDDetector, Tuple[EBSDDetector, plt.Figure]]:
+        """Return a new detector with interpolated projection centers
+        (PCs) for all points in a map by fitting a plane to :attr:`pc`
+        :cite:`winkelmann2020refined`.
+
+        Parameters
+        ----------
+        pc_indices
+            2D coordinates (row, column) of each :attr:`pc` in
+            ``map_coordinates``. Must be a flattened array of shape
+            (2,) + :attr:`navigation_shape`.
+        map_indices
+            2D coordinates (row, column) of all map points in a regular
+            grid to interpolate PCs for. Must be a flattened array of
+            shape ``(2,) + map_shape``.
+        transformation
+            Which transformation function to use when fitting PCs,
+            either ``"projective"`` (default) or ``"affine"``. Both
+            transformations perserve co-planarity of map points, while
+            the projective transformation allows parallel lines in the
+            map point grid to become non-parallel within the sample
+            plane.
+        is_outlier
+            Boolean array with ``True`` for PCs to not include in the
+            fit. If not given, all PCs are used. Must be of
+            :attr:`navigation_shape`.
+        plot
+            Whether to plot the experimental and estimated PCs (default
+            is ``True``).
+        return_figure
+            Whether to return the figure if ``plot=True`` (default is
+            ``False``).
+        figure_kwargs
+            Keyword arguments passed to
+            :func:`matplotlib.pyplot.Figure` if ``plot=True``.
+
+        Returns
+        -------
+        new_detector
+            New detector with as many interpolated PCs as indices given
+            in ``map_indices`` and an estimated sample tilt. The
+            detector tilt is assumed to be constant.
+        fig
+            Figure of experimental and estimated PCs, returned if
+            ``plot=True`` and ``return_figure=True``.
+
+        Raises
+        ------
+        ValueError
+            If :attr:`navigation_size` is 1 or if the ``pc_indices`` or
+            ``map_indices`` arrays have the incorrect shape.
+
+        See Also
+        --------
+        estimate_xtilt, estimate_xtilt_ztilt, extrapolate_pc
+
+        Notes
+        -----
+        This method is adapted from Aimo Winkelmann's functions
+        ``fit_affine()`` and ``fit_projective()`` in the *xcdskd* Python
+        package. Their uses are described in
+        :cite:`winkelmann2020refined`. Winkelmann refers to a code
+        example from StackOverflow
+        (https://stackoverflow.com/a/20555267/3228100) for the affine
+        transformation.
+        """
+        n_pc = self.navigation_size
+        if n_pc == 1:
+            raise ValueError("Fitting requires multiple projection centers (PCs)")
+
+        pc_indices = np.asarray(pc_indices)
+        map_indices = np.asarray(map_indices)
+
+        nav_shape = self.navigation_shape
+        if pc_indices.shape != (2,) + nav_shape:
+            raise ValueError(
+                f"`pc_indices` array shape {pc_indices.shape} must be equal to "
+                f"{(2,) + nav_shape}"
+            )
+
+        if map_indices.ndim not in [2, 3] or map_indices.shape[0] != 2:
+            raise ValueError(
+                f"`map_indices` array shape {map_indices.shape} must be (2, m columns) "
+                "or (2, n rows, m columns)"
+            )
+
+        if is_outlier is not None and (
+            not isinstance(is_outlier, np.ndarray)
+            or not np.issubdtype(is_outlier.dtype, np.bool_)
+            or is_outlier.size != n_pc
+        ):
+            raise ValueError(
+                "`is_outlier` must be a boolean array of a size equal to the number of "
+                "PCs"
+            )
+
+        # Prepare PCs and PC map indices for fitting
+        pc_flat = self.pc_flattened
+        pc_indices_flat = pc_indices.reshape((2, -1)).T
+        pc_indices_flat = np.column_stack((pc_indices_flat, np.ones(n_pc)))
+
+        # Prepare all map indices for projection
+        map_indices_flat = map_indices.reshape((2, -1)).T
+        map_indices_flat = np.column_stack(
+            (map_indices_flat, np.ones(map_indices_flat.shape[0]))
+        )
+
+        if isinstance(is_outlier, np.ndarray):
+            is_outlier = is_outlier.ravel()
+            nav_shape = (np.sum(~is_outlier),)
+            pc_flat = pc_flat[~is_outlier]
+            pc_indices_flat = pc_indices_flat[~is_outlier]
+
+        if transformation == "projective":
+            pc_average = np.mean(pc_flat, axis=0)
+            pc_flat_centered = pc_flat - pc_average
+            pc_fit, pc_fit_map = _fit_pc_projective(
+                pc_flat_centered,
+                pc_indices_flat,
+                map_indices_flat,
+            )
+            pc_fit += pc_average
+            pc_fit_map += pc_average
+        else:
+            pc_fit, pc_fit_map = _fit_pc_affine(
+                pc_flat, pc_indices_flat, map_indices_flat
+            )
+
+        max_err = np.max(np.abs(pc_flat - pc_fit), axis=0)
+        _logger.debug(f"Max. error for (PCx, PCy, PCz): {max_err}")
+
+        # Linear fit to YZ-plane to estimate tilt angle about detector X
+        slope, intercept, _, _, _ = scs.linregress(pc_fit[..., 2], pc_fit[..., 1])
+        x_tilt = np.pi / 2 + np.arctan(slope)
+        x_tilt_deg = np.rad2deg(x_tilt)
+        _logger.debug(f"Estimated detector X tilt: {x_tilt_deg:.5f} deg")
+
+        # Reshape new fitted PC array to desired map shape
+        pc_fit_map = pc_fit_map.reshape(map_indices.shape[1:] + (3,))
+
+        new_detector = self.deepcopy()
+        new_detector.pc = pc_fit_map
+        new_detector.sample_tilt = 90 - x_tilt_deg - new_detector.tilt
+
+        if plot:
+            if figure_kwargs is None:
+                figure_kwargs = {}
+            pc_fit_2d = pc_fit.reshape(nav_shape + (3,))
+            fig = _plot_pc_fit(
+                pc_flat,
+                pc_fit_2d,
+                intercept,
+                slope,
+                return_figure=return_figure,
+                figure_kwargs=figure_kwargs,
+            )
+        else:
+            fig = None
+
+        if return_figure and fig:
+            return new_detector, fig
+        else:
+            return new_detector
 
     def pc_emsoft(self, version: int = 5) -> np.ndarray:
         r"""Return PC in the EMsoft convention.
@@ -1165,18 +1339,22 @@ class EBSDDetector:
 
         Examples
         --------
-        Create a dummy detector with smoothly changing PC values
+        Create a detector with smoothly changing PC values, extrapolated
+        from a single PC (assumed to be in the upper left corner of a
+        map)
 
         >>> import matplotlib.pyplot as plt
-        >>> import numpy as np
         >>> import kikuchipy as kp
-        >>> ny, nx = (5, 10)
-        >>> n = ny * nx
-        >>> pcx = np.repeat(np.linspace(0.55, 0.45, nx), ny).reshape(nx, ny).T
-        >>> pcy = np.repeat(np.linspace(0.75, 0.70, ny), nx).reshape(ny, nx)
-        >>> pcz = np.repeat(np.linspace(0.50, 0.55, ny), nx).reshape(ny, nx)
-        >>> pc = np.stack((pcx, pcy, pcz), axis=2)
-        >>> det = kp.detectors.EBSDDetector(shape=(60, 60), pc=pc, sample_tilt=70)
+        >>> det0 = kp.detectors.EBSDDetector(
+        ... shape=(480, 640), pc=(0.4, 0.3, 0.5), px_size=70, sample_tilt=70
+        ... )
+        >>> det0
+        EBSDDetector (480, 640), px_size 70 um, binning 1, tilt 0, azimuthal 0, pc (0.4, 0.3, 0.5)
+        >>> det = det0.extrapolate_pc(
+        ... pc_indices=[0, 0], navigation_shape=(5, 10), step_sizes=(20, 20)
+        ... )
+        >>> det
+        EBSDDetector (480, 640), px_size 70 um, binning 1, tilt 0, azimuthal 0, pc (0.398, 0.299, 0.5)
 
         Plot PC values in maps
 
@@ -1194,7 +1372,9 @@ class EBSDDetector:
         """
         # Ensure there are PCs to plot
         if self.navigation_size == 1:
-            raise ValueError("Detector must have more than one PC value to plot")
+            raise ValueError(
+                "Detector must have more than one projection center value to plot"
+            )
         if mode == "map" and self.navigation_dimension != 2:
             raise ValueError("Detector's `navigation_dimension` must be 2D")
 
@@ -1370,3 +1550,120 @@ def _fit_hyperplane(
     )
 
     return x_tilt, z_tilt, rot_xtilt, rot_ztilt, pc_trim_mean
+
+
+def _fit_pc_projective(
+    pc_centered_flat: np.ndarray,
+    pc_indices_flat: np.ndarray,
+    map_indices_flat: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    *_, rot_xtilt, rot_ztilt, pc_trim_mean = _fit_hyperplane(pc_centered_flat)
+
+    v_pc_centered = Vector3d(pc_centered_flat)
+    v_pc_trim_mean = Vector3d(pc_trim_mean)
+    v_pc_plane = ~(rot_ztilt * rot_xtilt) * (v_pc_centered - v_pc_trim_mean)
+
+    # Get transformation matrix
+    tform = ProjectiveTransform()
+    status = tform.estimate(pc_indices_flat[:, :2], v_pc_plane.data[:, :2])
+    _logger.debug(f"Status of projective transformation: {status}")
+    matrix = tform.params.T
+
+    # PC coordinates projected from beam indices and tilt parameters
+    pc_fit = np.dot(pc_indices_flat, matrix)
+    pc_fit /= pc_fit[:, 2, None]
+    pc_fit[:, 2] = 0
+    v_pc_fit = rot_ztilt * rot_xtilt * Vector3d(pc_fit)
+    v_pc_fit += v_pc_trim_mean
+
+    # Do the same for interpolated PC coordinates
+    pc_fit_map = np.dot(map_indices_flat, matrix)
+    pc_fit_map /= pc_fit_map[:, 2, None]
+    pc_fit_map[:, 2] = 0
+    v_pc_fit_map = rot_ztilt * rot_xtilt * Vector3d(pc_fit_map)
+    v_pc_fit_map += v_pc_trim_mean
+
+    return v_pc_fit.data, v_pc_fit_map.data
+
+
+def _fit_pc_affine(
+    pc_flat: np.ndarray, pc_indices_flat: np.ndarray, map_indices_flat: np.ndarray
+) -> Tuple[np.array, np.ndarray]:
+    # Solve the least squares problem X * A = Y
+    # Source: https://stackoverflow.com/a/20555267/3228100
+    matrix, res, *_ = np.linalg.lstsq(pc_indices_flat, pc_flat, rcond=None)
+    _logger.debug(f"Residuals of least squares fit: {res}")
+
+    pc_fit = np.dot(pc_indices_flat, matrix)
+    pc_fit_map = np.dot(map_indices_flat, matrix)
+
+    return pc_fit, pc_fit_map
+
+
+def _plot_pc_fit(
+    pc: np.ndarray,
+    pc_fit: np.ndarray,
+    fit_intercept: float,
+    fit_slope: float,
+    figure_kwargs: dict,
+    return_figure: bool = False,
+) -> Union[None, plt.Figure]:
+    pcx, pcy, pcz = pc.T
+    pcx_fit_2d, pcy_fit_2d, pcz_fit_2d = pc_fit.T
+    pcx_fit = pcx_fit_2d.ravel()
+    pcy_fit = pcy_fit_2d.ravel()
+    pcz_fit = pcz_fit_2d.ravel()
+
+    pcy_fit_line = fit_intercept + fit_slope * pcz_fit
+
+    data_kw = dict(s=25, c="k")
+    fit_kw = dict(s=50, fc="gray", alpha=0.5, ec="k")
+
+    w, h = plt.rcParams["figure.figsize"]
+    figure_kwargs.setdefault("layout", "compressed")
+    figure_kwargs.setdefault("figsize", (w, h))
+
+    fig = plt.figure()
+    # PCx v PCy
+    ax0 = fig.add_subplot(221)
+    ax0.set(xlabel="PCx", ylabel="PCy", aspect="equal")
+    ax0.scatter(pcx_fit, pcy_fit, **fit_kw)
+    ax0.scatter(pcx, pcy, **data_kw)
+    ax0.invert_xaxis()
+    # PCx v PCz
+    ax1 = fig.add_subplot(222)
+    ax1.set(xlabel="PCx", ylabel="PCz", aspect="equal")
+    ax1.scatter(pcx, pcz, **data_kw)
+    ax1.scatter(pcx_fit, pcz_fit, **fit_kw)
+    ax1.invert_xaxis()
+    ax1.invert_yaxis()
+    # PCz v PCy
+    ax2 = fig.add_subplot(223)
+    ax2.set(xlabel="PCz", ylabel="PCy", aspect="equal")
+    ax2.scatter(pcz, pcy, label="Data", **data_kw)
+    ax2.scatter(pcz_fit, pcy_fit, label="Fit", **fit_kw)
+    ax2.plot(pcz_fit, pcy_fit_line, "r-", label="Linear fit")
+    ax2.legend(bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
+    # Plot PC values in 3D
+    ax3 = fig.add_subplot(224, projection="3d")
+    ax3.scatter(pcx, pcz, pcy, **data_kw)
+    ax3.scatter(pcx_fit, pcz_fit, pcy_fit, **fit_kw)
+    ax3.set(
+        xlabel="PCx",
+        ylabel="PCz",
+        zlabel="PCy",
+        aspect="equal",
+        xlim=[np.min([pcx, pcx_fit]), np.max([pcx, pcx_fit])],
+        ylim=[np.min([pcz, pcz_fit]), np.max([pcz, pcz_fit])],
+        zlim=[np.min([pcy, pcy_fit]), np.max([pcy, pcy_fit])],
+    )
+    ax3.invert_zaxis()
+
+    # Add 3D plane
+    if pcx_fit_2d.ndim == 2:
+        ax3.plot_surface(pcx_fit_2d, pcz_fit_2d, pcy_fit_2d, color="r", alpha=0.5)
+
+    fig.tight_layout()
+
+    if return_figure:
+        return fig

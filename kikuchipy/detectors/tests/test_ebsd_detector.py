@@ -18,12 +18,12 @@
 from copy import deepcopy
 
 import matplotlib
+import matplotlib.collections as mcollections
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 from packaging.version import Version
 import pytest
-from sklearn import linear_model
 
 import kikuchipy as kp
 
@@ -607,7 +607,7 @@ class TestPlotPC:
     def test_plot_pc_raises(self):
         det = self.det.deepcopy()
         det.pc = det.pc_average
-        with pytest.raises(ValueError, match="Detector must have more than one PC "):
+        with pytest.raises(ValueError, match="Detector must have more than one "):
             det.plot_pc()
 
         det2 = self.det.deepcopy()
@@ -720,7 +720,7 @@ class TestEstimateTilts:
     )
 
     def test_estimate_xtilt_raises(self):
-        with pytest.raises(ValueError, match="Estimation requires more than 1 PC"):
+        with pytest.raises(ValueError, match="Estimation requires more than one "):
             _ = self.det0.estimate_xtilt()
 
     def test_estimate_xtilt(self):
@@ -783,6 +783,10 @@ class TestEstimateTilts:
         xtilt3, ztilt3 = det2.estimate_xtilt_ztilt(degrees=True, is_outlier=is_outlier)
         assert np.isclose(xtilt3, 20)
         assert np.isclose(ztilt3, 0)
+
+    def test_estimate_xtilt_ztilt_raises(self):
+        with pytest.raises(ValueError, match="Estimation requires more than one "):
+            _ = self.det0.estimate_xtilt_ztilt()
 
 
 class TestExtrapolatePC:
@@ -871,3 +875,126 @@ class TestExtrapolatePC:
             is_outlier=[True, False, False, False],
         )
         assert np.allclose(det2.pc_average, [0.366, 0.236, 0.566], atol=1e-3)
+
+
+class TestFitPC:
+    def setup_method(self):
+        """Create a plane of PCs with a known mean, add some noise,
+        extract selected patterns, and try to 'reconstruct' the plane
+        by fitting.
+        """
+        det0 = kp.detectors.EBSDDetector(
+            shape=(240, 240),
+            pc=(0.5, 0.3, 0.5),
+            sample_tilt=70,
+        )
+
+        det = det0.extrapolate_pc(
+            pc_indices=[7, 15], navigation_shape=(15, 31), step_sizes=(50, 50)
+        )
+
+        # Add noise
+        rng = np.random.default_rng(42)
+        v = 0.005
+        det.pcy += rng.uniform(-v, v, det.navigation_size).reshape(det.navigation_shape)
+        det.pcz += rng.uniform(-v, v, det.navigation_size).reshape(det.navigation_shape)
+
+        self.det0 = det0
+        self.det = det
+        self.map_indices = np.stack(np.indices(det.navigation_shape))
+
+    def test_fit_pc_corner_patterns(self):
+        """Test projective fit."""
+        pc_indices = [[0, 0, 14, 14], [0, 30, 0, 30]]
+        det2 = self.det.deepcopy()
+        det2.pc = det2.pc[tuple(pc_indices)].reshape((2, 2, 3))
+        pc_indices = np.array(pc_indices).reshape((2, 2, 2))
+        det_fit, fig = det2.fit_pc(
+            pc_indices=pc_indices, map_indices=self.map_indices, return_figure=True
+        )
+        assert np.all(abs(det_fit.pc_flattened - self.det.pc_flattened).max(0) < 0.009)
+
+        # We have a plane in the 3D plot
+        assert isinstance(fig.axes[3].collections[2], mcollections.PolyCollection)
+
+        plt.close("all")
+
+    @pytest.mark.parametrize(
+        "grid_shape, max_error", [((3, 3), 0.009), ((5, 5), 0.0091), ((7, 7), 0.0064)]
+    )
+    def test_fit_pc_grid_patterns_33(self, grid_shape, max_error):
+        """Test projective fit."""
+        pc_indices = kp.signals.util.grid_indices(grid_shape, self.det.navigation_shape)
+        pc_indices = pc_indices.reshape(2, -1)
+        det2 = self.det.deepcopy()
+        det2.pc = det2.pc[tuple(pc_indices)]
+        det_fit = det2.fit_pc(
+            pc_indices=pc_indices, map_indices=self.map_indices, plot=False
+        )
+        assert np.all(
+            abs(det_fit.pc_flattened - self.det.pc_flattened).max(0) < max_error
+        )
+
+    def test_fit_pc_affine_outliers(self):
+        grid_shape = (7, 7)
+        pc_indices = kp.signals.util.grid_indices(grid_shape, self.det.navigation_shape)
+        pc_indices = pc_indices.reshape(2, -1)
+        det2 = self.det.deepcopy()
+        det2.pc = det2.pc[tuple(pc_indices)]
+
+        # Add outliers to extracted PCs
+        det2.pc = np.append(det2.pc, [[0.55, 0.15, 0.55], [0.6, 0.10, 0.6]], axis=0)
+        is_outlier = np.zeros(det2.navigation_size, dtype=bool)
+        is_outlier[[-2, -1]] = True
+        pc_indices = np.append(pc_indices, [[1, 1], [1, 2]], axis=1)
+
+        # Bad fit
+        det_fit1 = det2.fit_pc(
+            pc_indices=pc_indices,
+            map_indices=self.map_indices,
+            transformation="affine",
+        )
+        assert np.allclose(
+            abs(det_fit1.pc_flattened - self.det.pc_flattened).max(0),
+            [0.70, 0.35, 0.13],
+            atol=1e-2,
+        )
+
+        # Good fit
+        det_fit2, fig = det2.fit_pc(
+            pc_indices=pc_indices,
+            map_indices=self.map_indices,
+            transformation="affine",
+            is_outlier=is_outlier,
+            return_figure=True,
+        )
+        assert np.all(abs(det_fit2.pc_flattened - self.det.pc_flattened).max(0) < 0.009)
+        assert isinstance(fig, plt.Figure)
+        assert len(fig.axes) == 4
+
+        plt.close("all")
+
+    def test_fit_pc_raises(self):
+        grid_shape = (7, 5)
+        pc_indices = kp.signals.util.grid_indices(grid_shape, self.det.navigation_shape)
+        pc_indices = pc_indices.reshape(2, -1)
+        det2 = self.det.deepcopy()
+        det2.pc = det2.pc[tuple(pc_indices)]
+
+        with pytest.raises(ValueError, match="Fitting requires multiple projection "):
+            _ = self.det0.fit_pc(pc_indices, self.map_indices)
+
+        with pytest.raises(ValueError, match=r"`pc_indices` array shape \(2, 7, 5\) "):
+            _ = det2.fit_pc(pc_indices.reshape((2,) + grid_shape), self.map_indices)
+
+        with pytest.raises(ValueError, match=r"`map_indices` array shape \(930,\) "):
+            _ = det2.fit_pc(pc_indices, self.map_indices.ravel())
+
+        det2.pc = det2.pc.reshape(grid_shape + (3,))
+        with pytest.raises(ValueError, match=r"`pc_indices` array shape \(2, 35\) "):
+            _ = det2.fit_pc(pc_indices, self.map_indices)
+        det2.pc = det2.pc.reshape(-1, 3)
+
+        is_outlier = np.zeros(det2.navigation_size - 1, dtype=bool)
+        with pytest.raises(ValueError, match="`is_outlier` must be a boolean array of"):
+            _ = det2.fit_pc(pc_indices, self.map_indices, is_outlier=is_outlier)

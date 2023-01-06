@@ -18,9 +18,12 @@ Unreleased
 
 Added
 -----
+- Method ``EBSDDetector.fit_pc()`` to fit a plane using a projective or affine
+  transformation to projection centers following work by Winkelmann and co-workers
+  (2020). (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
 - Method ``EBSDDetector.extrapolate_pc()`` to return a new detector with a plane of
   projection centers (PCs) extrapolated from a mean PC calculated from one or more PCs
-  following work by Singh and DeGraef (2017).
+  following work by Singh et al. (2017).
   (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
 - Methods ``EBSDDetector.estimate_xtilt()`` and ``EBSDDetector.estimate_xtilt_ztilt()``
   to estimate the tilts about the detector X and Z axes which bring the detector plane
