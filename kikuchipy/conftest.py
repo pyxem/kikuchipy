@@ -146,8 +146,8 @@ def dummy_background():
 def ebsd_with_axes_and_random_data(request):
     """EBSD signal with minimally defined axes and random data.
 
-    Parameters
-    ----------
+    Parameters expected in `request`
+    -------------------------------
     navigation_shape : tuple
     signal_shape : tuple
     lazy : bool
@@ -239,7 +239,7 @@ def get_single_phase_xmap(rotations):
     def _get_single_phase_xmap(
         nav_shape,
         rotations_per_point=5,
-        prop_names=["scores", "simulation_indices"],
+        prop_names=("scores", "simulation_indices"),
         name="a",
         phase_id=0,
         step_sizes=None,
@@ -448,7 +448,6 @@ def ebsd_directory(tmpdir, request):
 
 @pytest.fixture(autouse=True)
 def doctest_setup_teardown(request):
-    # Setup
     # Temporarily turn off interactive plotting with Matplotlib
     plt.ioff()
 

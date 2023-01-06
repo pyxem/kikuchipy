@@ -17,13 +17,31 @@
 
 from __future__ import annotations
 from copy import deepcopy
+import logging
 from typing import List, Optional, Tuple, Union
 
 from matplotlib.figure import Figure
 from matplotlib.markers import MarkerStyle
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
+from orix.quaternion import Rotation
+from orix.vector import Vector3d
+import scipy.stats as scs
+from skimage.transform import ProjectiveTransform
+from sklearn.linear_model import LinearRegression, RANSACRegressor
+
+
+_logger = logging.getLogger(__name__)
+
+CONVENTION_ALIAS = {
+    "bruker": ["bruker"],
+    "tsl": ["edax", "tsl", "amatek"],
+    "oxford": ["oxford", "aztec"],
+    "emsoft": ["emsoft", "emsoft4", "emsoft5"],
+}
+CONVENTION_ALIAS_ALL = list(np.concatenate(list(CONVENTION_ALIAS.values())))
 
 
 class EBSDDetector:
@@ -67,10 +85,11 @@ class EBSDDetector:
         ``[0.5, 0.5, 0.5]``.
     convention
         PC convention. If not given, Bruker's convention is assumed.
-        Options are ``"tsl"``/``"edax"``, ``"oxford"``, ``"bruker"``,
-        ``"emsoft"``, ``"emsoft4"``, and ``"emsoft5"``. ``"emsoft"`` and
-        ``"emsoft5"`` is the same convention. See *Notes* for
-        conversions between conventions.
+        Options are ``"tsl"``/``"edax"``/``"amatek"``,
+        ``"oxford"``/``"aztec"``, ``"bruker"``, ``"emsoft"``,
+        ``"emsoft4"``, and ``"emsoft5"``. ``"emsoft"`` and ``"emsoft5"``
+        is the same convention. See *Notes* for conversions between
+        conventions.
 
     Notes
     -----
@@ -159,9 +178,11 @@ class EBSDDetector:
         sample_tilt: float = 70,
         pc: Union[np.ndarray, list, tuple] = (0.5, 0.5, 0.5),
         convention: Optional[str] = None,
-    ):
-        """Create an EBSD detector with a shape, pixel size, binning,
-        and projection/pattern center(s) (PC(s)).
+    ) -> None:
+        """Create an EBSD detector with a shape, pixel size, binning
+        factor, sample and detector tilt about the detector X axis,
+        azimuthal tilt about the detector Y axis and one or more
+        projection/pattern centers (PCs).
         """
         self.shape = shape
         self.px_size = px_size
@@ -170,13 +191,14 @@ class EBSDDetector:
         self.azimuthal = azimuthal
         self.sample_tilt = sample_tilt
         self.pc = pc
-        self._set_pc_convention(convention)
+        self._set_pc_from_convention(convention)
 
     def __repr__(self) -> str:
+        pc_average = tuple(self.pc_average.round(3))
         return (
-            f"{self.__class__.__name__} {self.shape}, "
+            f"{type(self).__name__} {self.shape}, "
             f"px_size {self.px_size} um, binning {self.binning}, "
-            f"tilt {self.tilt}, azimuthal {self.azimuthal}, pc {tuple(self.pc_average)}"
+            f"tilt {self.tilt}, azimuthal {self.azimuthal}, pc {pc_average}"
         )
 
     @property
@@ -245,6 +267,13 @@ class EBSDDetector:
         self._pc = np.atleast_2d(value)
 
     @property
+    def pc_flattened(self) -> np.ndarray:
+        """Return flattened array of projection center coordinates of
+        shape (:attr:`navigation_size`, 3).
+        """
+        return self.pc.reshape((-1, 3))
+
+    @property
     def pcx(self) -> np.ndarray:
         """Return or set the projection center x coordinates.
 
@@ -307,7 +336,7 @@ class EBSDDetector:
             axis += (0,)
         elif ndim == 3:
             axis += (0, 1)
-        return np.nanmean(self.pc, axis=axis).round(3)
+        return np.nanmean(self.pc, axis=axis)
 
     @property
     def navigation_shape(self) -> tuple:
@@ -336,6 +365,11 @@ class EBSDDetector:
         center array (a maximum of 2).
         """
         return len(self.navigation_shape)
+
+    @property
+    def navigation_size(self) -> int:
+        """Return the number of projection centers."""
+        return int(np.prod(self.navigation_shape))
 
     @property
     def bounds(self) -> np.ndarray:
@@ -440,7 +474,7 @@ class EBSDDetector:
         >>> det.crop((1, 5, 2, 6))
         EBSDDetector (4, 4), px_size 1 um, binning 1, tilt 0, azimuthal 0, pc (0.25, 0.25, 0.75)
 
-        Plot a cropped detector with the PC on cropped a pattern
+        Plot a cropped detector with the PC on a cropped pattern
 
         >>> s = kp.data.nickel_ebsd_small()
         >>> s.remove_static_background(show_progressbar=False)
@@ -491,6 +525,493 @@ class EBSDDetector:
             Identical detector without shared memory.
         """
         return deepcopy(self)
+
+    def estimate_xtilt(
+        self,
+        detect_outliers: bool = False,
+        plot: bool = True,
+        degrees: bool = False,
+        return_figure: bool = False,
+        return_outliers: bool = False,
+        figure_kwargs: Optional[dict] = None,
+    ) -> Union[
+        float,
+        Tuple[float, np.ndarray],
+        Tuple[float, plt.Figure],
+        Tuple[float, np.ndarray, plt.Figure],
+    ]:
+        r"""Estimate the tilt about the detector :math:`X_d` axis.
+
+        This tilt is assumed to bring the sample plane normal into
+        coincidence with the detector plane normal (but in the opposite
+        direction) :cite:`winkelmann2020refined`.
+
+        See the `reference frame tutorial
+        </doc/tutorials/reference_frames.ipynb>`_ for details on the
+        detector sample geometry.
+
+        An estimate is found by linear regression of :attr:`pcz` vs.
+        :attr:`pcy`.
+
+        Parameters
+        ----------
+        detect_outliers
+            Whether to attempt to detect outliers. If ``False``
+            (default), a linear fit to all points is performed. If
+            ``True``, a robust fit using the RANSAC algorithm is
+            performed instead, which also detects outliers.
+        plot
+            Whether to plot data points and the estimated line. Default
+            is ``True``.
+        degrees
+            Whether to return the estimated tilt in radians (``False``,
+            default) or degrees (``True``).
+        return_figure
+            Whether to return the plotted figure. Default is ``False``.
+        return_outliers
+            Whether to return a mask with ``True`` for PC values
+            considered outliers. Default is ``False``. If ``True``,
+            ``detect_outliers`` is assumed to be ``True`` and the value
+            passed is not considered.
+        figure_kwargs
+            Keyword arguments passed to
+            :func:`matplotlib.pyplot.Figure` if ``plot=True``.
+
+        Returns
+        -------
+        x_tilt
+            Estimated tilt about detector :math:`X_d` in radians
+            (``degrees=False``) or degrees (``degrees=True``).
+        outliers
+            Returned if ``return_outliers=True``.
+        fig
+            Returned if ``plot=True`` and ``return_figure=True``.
+
+        Notes
+        -----
+        This method is adapted from Aimo Winkelmann's function
+        ``fit_xtilt()`` in the *xcdskd* Python package. See
+        :cite:`winkelmann2020refined` for their use of related
+        functions.
+
+        See Also
+        --------
+        sklearn.linear_model.LinearRegression,
+        sklearn.linear_model.RANSACRegressor, estimate_xtilt_ztilt,
+        fit_pc
+        """
+        if self.navigation_size == 1:
+            raise ValueError("Estimation requires more than one projection center")
+
+        if return_outliers:
+            detect_outliers = True
+
+        # Get regressor
+        if detect_outliers:
+            regressor = RANSACRegressor()
+        else:
+            regressor = LinearRegression()
+
+        # Estimate slope
+        pcy = self.pcy.reshape((-1, 1))
+        pcz = self.pcz.reshape((-1, 1))
+        regressor.fit(pcz, pcy)
+        if detect_outliers:
+            slope = regressor.estimator_.coef_
+        else:
+            slope = regressor.coef_
+        slope = slope.squeeze()
+
+        # Get tilt from estimated coefficient
+        x_tilt = np.pi / 2 + np.arctan(slope)
+
+        # Get outliers (if possible)
+        if detect_outliers:
+            is_outlier = ~regressor.inlier_mask_
+        else:
+            is_outlier = np.zeros(self.navigation_size)
+
+        # Predict data of estimated model
+        pcz_fit = np.linspace(np.min(pcz), np.max(pcz), 2)
+        pcy_fit = regressor.predict(pcz_fit[:, np.newaxis])
+
+        if degrees:
+            x_tilt = np.rad2deg(x_tilt)
+
+        out = (x_tilt,)
+        if return_outliers:
+            out += (is_outlier,)
+
+        if plot:
+            if figure_kwargs is None:
+                figure_kwargs = {}
+            figure_kwargs.setdefault("layout", "tight")
+            fig = plt.figure(**figure_kwargs)
+            ax = fig.add_subplot()
+            ax.scatter(pcz, pcy, c="yellowgreen", ec="k", label="Data")
+            if detect_outliers:
+                ax.scatter(pcz[is_outlier], pcy[is_outlier], c="gold", label="Outliers")
+            fit_label = "Fit, tilt = " + f"{x_tilt:.2f}" + r"$^{\circ}$"
+            ax.plot(pcz_fit, pcy_fit, label=fit_label, c="C1")
+            ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
+            ax.set(aspect="equal", xlabel="PCz", ylabel="PCy")
+
+            if return_figure:
+                out += (fig,)
+
+        if len(out) == 1:
+            out = out[0]
+
+        return out
+
+    def estimate_xtilt_ztilt(
+        self,
+        degrees: bool = False,
+        is_outlier: Optional[Union[list, tuple, np.ndarray]] = None,
+    ) -> Union[float, Tuple[float, float]]:
+        r"""Estimate the tilts about the detector :math:`X_d` and
+        :math:`Z_d` axes.
+
+        These tilts bring the sample plane normal into coincidence with
+        the detector plane normal (but in the opposite direction)
+        :cite:`winkelmann2020refined`.
+
+        See the `reference frame tutorial
+        </doc/tutorials/reference_frames.ipynb>`_ for details on the
+        detector sample geometry.
+
+        Estimates are found by fitting a hyperplane to :attr:`pc` using
+        singular value decomposition.
+
+        Parameters
+        ----------
+        degrees
+            Whether to return the estimated tilts in radians (``False``,
+            default) or degrees (``True``).
+        is_outlier
+            Boolean array with ``True`` for PCs to not include in the
+            fit. If not given, all PCs are used. Must be of
+            :attr:`navigation_shape`.
+
+        Returns
+        -------
+        x_tilt
+            Estimated tilt about detector :math:`X_d` in radians
+            (``degrees=False``) or degrees (``degrees=True``).
+        z_tilt
+            Estimated tilt about detector :math:`Z_d` in radians
+            (``degrees=False``) or degrees (``degrees=True``).
+
+        Notes
+        -----
+        This method is adapted from Aimo Winkelmann's function
+        ``fit_plane()`` in the *xcdskd* Python package. Its use is
+        described in :cite:`winkelmann2020refined`.
+
+        Winkelmann refers to Gander & Hrebicek, "Solving Problems in
+        Scientific Computing", 3rd Ed., Chapter 6, p. 97 for the
+        implementation of the hyperplane fitting.
+
+        See Also
+        --------
+        estimate_xtilt, fit_pc
+        """
+        if self.navigation_size == 1:
+            raise ValueError("Estimation requires more than one projection center")
+
+        pc = self.pc
+        if isinstance(is_outlier, np.ndarray):
+            pc = pc[~is_outlier]
+        pc = pc.reshape((-1, 3))
+
+        pc_centered = pc - pc.mean(axis=0)
+        x_tilt, z_tilt, *_ = _fit_hyperplane(pc_centered)
+
+        if degrees:
+            x_tilt = np.rad2deg(x_tilt)
+            z_tilt = np.rad2deg(z_tilt)
+
+        return x_tilt, z_tilt
+
+    def extrapolate_pc(
+        self,
+        pc_indices: Union[tuple, list, np.ndarray],
+        navigation_shape: tuple,
+        step_sizes: tuple,
+        shape: Optional[tuple] = None,
+        px_size: float = None,
+        binning: int = None,
+        is_outlier: Optional[Union[tuple, list, np.ndarray]] = None,
+    ):
+        r"""Return a new detector with projection centers (PCs)
+        extrapolated from an average PC.
+
+        The average PC :math:`\bar{PC}` is calculated from :attr:`pc`,
+        possibly excluding some PCs based on the ``is_outlier`` mask.
+        The sample position having this PC, :math:`(\bar{x}, \bar{y})`,
+        is assumed to be the one obtained by averaging ``pc_indices``.
+        All other PCs :math:`(PC_x, PC_y, PC_z)` in positions
+        :math:`(x, y)` are then extrapolated based on the following
+        equations given in appendix A in :cite:`singh2017application`:
+
+        .. math::
+            PC_x &= \bar{PC_x} + (\bar{x} - x) \cdot \Delta x / (\delta \cdot N_x \cdot b),\\
+            PC_y &= \bar{PC_y} + (\bar{y} - y) \cdot \Delta y \cdot \cos{\alpha} / (\delta \cdot N_y \cdot b),\\
+            PC_z &= \bar{PC_z} - (\bar{y} - y) \cdot \Delta y \cdot \sin{\alpha} / (\delta \cdot N_y \cdot b),\\
+
+        where :math:`(\Delta y, \Delta x)` are the vertical and
+        horizontal step sizes, respectively, :math:`(N_y, N_x)` are the
+        number of binned detector rows and columns, respectively, the
+        angle :math:`\alpha = 90^{\circ} - \sigma + \theta`, where
+        :math:`\sigma` is the sample tilt and :math:`\theta` is the
+        detector tilt, :math:`\delta` is the unbinned detector pixel
+        size and :math:`b` is the binning factor.
+
+        Parameters
+        ----------
+        pc_indices
+            2D map pixel coordinates (row, column) of each :attr:`pc`,
+            possibly outside ``navigation_shape``. Must be a flattened
+            array of shape (2,) + :attr:`navigation_size`.
+        navigation_shape
+            Shape of the output PC array (n rows, n columns).
+        step_sizes
+            Vertical and horizontal step sizes (dy, dx).
+        shape
+            Detector (signal) shape (n rows, n columns). If not given,
+            (:attr:`nrows`, :attr:`ncols`) is used.
+        px_size
+            Unbinned detector pixel size. If not given, :attr:`px_size`
+            is used.
+        binning
+            Detector binning factor. If not given, :attr:`binning` is
+            used.
+        is_outlier
+            Boolean array with ``True`` for PCs to not include in the
+            fit. If not given, all PCs are used. Must be of
+            :attr:`navigation_shape`.
+
+        Returns
+        -------
+        new_detector
+            Detector with :attr:`navigation_shape` given by
+            input ``navigation_shape``.
+        """
+        # Parse input parameters
+        dy, dx = step_sizes
+        pc_indices = np.atleast_2d(pc_indices).T
+        ny, nx = navigation_shape
+        if not shape:
+            shape = self.shape
+        nrows, ncols = shape
+        if not px_size:
+            px_size = self.px_size
+        if not binning:
+            binning = self.binning
+
+        pc = self.pc_flattened
+
+        if is_outlier is not None:
+            is_outlier = np.asarray(is_outlier)
+            pc = pc[~is_outlier]
+            pc_indices = pc_indices[:, ~is_outlier]
+
+        # Calculate mean PC and position
+        pc_mean = pc.mean(axis=0)
+        pc_indices_mean = pc_indices.mean(axis=1)
+        pc_indices_mean = np.round(pc_indices_mean).astype(int)
+
+        # Make PC plane
+        alpha = np.deg2rad(90 - self.sample_tilt + self.tilt)
+        y, x = np.indices((ny, nx), dtype=float)
+        factor = px_size * binning
+        d_pcx = -(pc_indices_mean[1] - x) * dx / (factor * ncols)
+        d_pcy = -(pc_indices_mean[0] - y) * dy * np.cos(alpha) / (factor * nrows)
+        d_pcz = +(pc_indices_mean[0] - y) * dy * np.sin(alpha) / (factor * nrows)
+        pcx = pc_mean[0] - d_pcx
+        pcy = pc_mean[1] - d_pcy
+        pcz = pc_mean[2] - d_pcz
+
+        new_detector = self.deepcopy()
+        new_detector.pc = np.stack((pcx, pcy, pcz), axis=2)
+        new_detector.shape = shape
+        new_detector.px_size = px_size
+        new_detector.binning = binning
+
+        return new_detector
+
+    def fit_pc(
+        self,
+        pc_indices: Union[list, tuple, np.ndarray],
+        map_indices: Union[list, tuple, np.ndarray],
+        transformation: str = "projective",
+        is_outlier: Optional[np.ndarray] = None,
+        plot: bool = True,
+        return_figure: bool = False,
+        figure_kwargs: Optional[dict] = None,
+    ) -> Union[EBSDDetector, Tuple[EBSDDetector, plt.Figure]]:
+        """Return a new detector with interpolated projection centers
+        (PCs) for all points in a map by fitting a plane to :attr:`pc`
+        :cite:`winkelmann2020refined`.
+
+        Parameters
+        ----------
+        pc_indices
+            2D coordinates (row, column) of each :attr:`pc` in
+            ``map_coordinates``. Must be a flattened array of shape
+            (2,) + :attr:`navigation_shape`.
+        map_indices
+            2D coordinates (row, column) of all map points in a regular
+            grid to interpolate PCs for. Must be a flattened array of
+            shape ``(2,) + map_shape``.
+        transformation
+            Which transformation function to use when fitting PCs,
+            either ``"projective"`` (default) or ``"affine"``. Both
+            transformations perserve co-planarity of map points, while
+            the projective transformation allows parallel lines in the
+            map point grid to become non-parallel within the sample
+            plane.
+        is_outlier
+            Boolean array with ``True`` for PCs to not include in the
+            fit. If not given, all PCs are used. Must be of
+            :attr:`navigation_shape`.
+        plot
+            Whether to plot the experimental and estimated PCs (default
+            is ``True``).
+        return_figure
+            Whether to return the figure if ``plot=True`` (default is
+            ``False``).
+        figure_kwargs
+            Keyword arguments passed to
+            :func:`matplotlib.pyplot.Figure` if ``plot=True``.
+
+        Returns
+        -------
+        new_detector
+            New detector with as many interpolated PCs as indices given
+            in ``map_indices`` and an estimated sample tilt. The
+            detector tilt is assumed to be constant.
+        fig
+            Figure of experimental and estimated PCs, returned if
+            ``plot=True`` and ``return_figure=True``.
+
+        Raises
+        ------
+        ValueError
+            If :attr:`navigation_size` is 1 or if the ``pc_indices`` or
+            ``map_indices`` arrays have the incorrect shape.
+
+        See Also
+        --------
+        estimate_xtilt, estimate_xtilt_ztilt, extrapolate_pc
+
+        Notes
+        -----
+        This method is adapted from Aimo Winkelmann's functions
+        ``fit_affine()`` and ``fit_projective()`` in the *xcdskd* Python
+        package. Their uses are described in
+        :cite:`winkelmann2020refined`. Winkelmann refers to a code
+        example from StackOverflow
+        (https://stackoverflow.com/a/20555267/3228100) for the affine
+        transformation.
+        """
+        n_pc = self.navigation_size
+        if n_pc == 1:
+            raise ValueError("Fitting requires multiple projection centers (PCs)")
+
+        pc_indices = np.asarray(pc_indices)
+        map_indices = np.asarray(map_indices)
+
+        nav_shape = self.navigation_shape
+        if pc_indices.shape != (2,) + nav_shape:
+            raise ValueError(
+                f"`pc_indices` array shape {pc_indices.shape} must be equal to "
+                f"{(2,) + nav_shape}"
+            )
+
+        if map_indices.ndim not in [2, 3] or map_indices.shape[0] != 2:
+            raise ValueError(
+                f"`map_indices` array shape {map_indices.shape} must be (2, m columns) "
+                "or (2, n rows, m columns)"
+            )
+
+        if is_outlier is not None and (
+            not isinstance(is_outlier, np.ndarray)
+            or not np.issubdtype(is_outlier.dtype, np.bool_)
+            or is_outlier.size != n_pc
+        ):
+            raise ValueError(
+                "`is_outlier` must be a boolean array of a size equal to the number of "
+                "PCs"
+            )
+
+        # Prepare PCs and PC map indices for fitting
+        pc_flat = self.pc_flattened
+        pc_indices_flat = pc_indices.reshape((2, -1)).T
+        pc_indices_flat = np.column_stack((pc_indices_flat, np.ones(n_pc)))
+
+        # Prepare all map indices for projection
+        map_indices_flat = map_indices.reshape((2, -1)).T
+        map_indices_flat = np.column_stack(
+            (map_indices_flat, np.ones(map_indices_flat.shape[0]))
+        )
+
+        if isinstance(is_outlier, np.ndarray):
+            is_outlier = is_outlier.ravel()
+            nav_shape = (np.sum(~is_outlier),)
+            pc_flat = pc_flat[~is_outlier]
+            pc_indices_flat = pc_indices_flat[~is_outlier]
+
+        if transformation == "projective":
+            pc_average = np.mean(pc_flat, axis=0)
+            pc_flat_centered = pc_flat - pc_average
+            pc_fit, pc_fit_map = _fit_pc_projective(
+                pc_flat_centered,
+                pc_indices_flat,
+                map_indices_flat,
+            )
+            pc_fit += pc_average
+            pc_fit_map += pc_average
+        else:
+            pc_fit, pc_fit_map = _fit_pc_affine(
+                pc_flat, pc_indices_flat, map_indices_flat
+            )
+
+        max_err = np.max(np.abs(pc_flat - pc_fit), axis=0)
+        _logger.debug(f"Max. error for (PCx, PCy, PCz): {max_err}")
+
+        # Linear fit to YZ-plane to estimate tilt angle about detector X
+        slope, intercept, _, _, _ = scs.linregress(pc_fit[..., 2], pc_fit[..., 1])
+        x_tilt = np.pi / 2 + np.arctan(slope)
+        x_tilt_deg = np.rad2deg(x_tilt)
+        _logger.debug(f"Estimated detector X tilt: {x_tilt_deg:.5f} deg")
+
+        # Reshape new fitted PC array to desired map shape
+        pc_fit_map = pc_fit_map.reshape(map_indices.shape[1:] + (3,))
+
+        new_detector = self.deepcopy()
+        new_detector.pc = pc_fit_map
+        new_detector.sample_tilt = 90 - x_tilt_deg - new_detector.tilt
+
+        if plot:
+            if figure_kwargs is None:
+                figure_kwargs = {}
+            pc_fit_2d = pc_fit.reshape(nav_shape + (3,))
+            fig = _plot_pc_fit(
+                pc_flat,
+                pc_fit_2d,
+                intercept,
+                slope,
+                return_figure=return_figure,
+                figure_kwargs=figure_kwargs,
+            )
+        else:
+            fig = None
+
+        if return_figure and fig:
+            return new_detector, fig
+        else:
+            return new_detector
 
     def pc_emsoft(self, version: int = 5) -> np.ndarray:
         r"""Return PC in the EMsoft convention.
@@ -669,6 +1190,7 @@ class EBSDDetector:
 
         Examples
         --------
+        >>> import matplotlib.pyplot as plt
         >>> import kikuchipy as kp
         >>> det = kp.detectors.EBSDDetector(
         ...     shape=(60, 60),
@@ -677,6 +1199,7 @@ class EBSDDetector:
         ...     sample_tilt=70,
         ... )
         >>> det.plot()
+        >>> plt.show()
 
         Plot with gnomonic coordinates and circles
 
@@ -685,12 +1208,12 @@ class EBSDDetector:
         ...     draw_gnomonic_circles=True,
         ...     gnomonic_circles_kwargs={"edgecolor": "b", "alpha": 0.3}
         ... )
+        >>> plt.show()
 
-        Plot a pattern on the detector and save it
+        Plot a pattern on the detector and return it for saving etc.
 
         >>> s = kp.data.nickel_ebsd_small()
         >>> fig = det.plot(pattern=s.inav[0, 0].data, return_figure=True)
-        >>> # fig.savefig("detector.png")
         """
         sy, sx = self.shape
         pcx, pcy = self.pc_average[:2]
@@ -710,9 +1233,7 @@ class EBSDDetector:
 
         fig, ax = plt.subplots()
         ax.axis(zoom * bounds)
-        ax.set_aspect("equal")
-        ax.set_xlabel(x_label)
-        ax.set_ylabel(y_label)
+        ax.set(xlabel=x_label, ylabel=y_label, aspect="equal")
 
         # Plot a pattern on the detector
         if isinstance(pattern, np.ndarray):
@@ -773,34 +1294,191 @@ class EBSDDetector:
         if return_figure:
             return fig
 
+    def plot_pc(
+        self,
+        mode: str = "map",
+        return_figure: bool = False,
+        orientation: str = "horizontal",
+        annotate: bool = False,
+        figure_kwargs: Optional[dict] = None,
+        **kwargs,
+    ) -> Union[None, plt.Figure]:
+        """Plot all projection centers (PCs).
+
+        Parameters
+        ----------
+        mode
+            String describing how to plot PCs. Options are ``"map"``
+            (default), ``"scatter"`` and ``"3d"``. If ``mode="map"``,
+            :attr:`navigation_dimension` must be 2.
+        return_figure
+            Whether to return the figure (default is ``False``).
+        orientation
+            Whether to align the plots in a ``"horizontal"`` (default)
+            or ``"vertical"`` orientation.
+        annotate
+            Whether to label each pattern with its 1D index into
+            :attr:`pc_flattened` when ``mode="scatter"``. Default is
+            ``False``.
+        figure_kwargs
+            Keyword arguments to pass to
+            :func:`matplotlib.pyplot.figure` upon figure creation. Note
+            that ``layout="tight"`` is used by default unless another
+            layout is passed.
+        **kwargs
+            Keyword arguments passed to the plotting function, which is
+            :meth:`~matplotlib.axes.Axes.imshow` if ``mode="map"``,
+            :meth:`~matplotlib.axes.Axes.scatter` if ``mode="scatter"``
+            and :meth:`~mpl_toolkits.mplot3d.axes3d.Axes3D.scatter`
+            if ``mode="3d"``.
+
+        Returns
+        -------
+        fig
+            Figure is returned if ``return_figure=True``.
+
+        Examples
+        --------
+        Create a detector with smoothly changing PC values, extrapolated
+        from a single PC (assumed to be in the upper left corner of a
+        map)
+
+        >>> import matplotlib.pyplot as plt
+        >>> import kikuchipy as kp
+        >>> det0 = kp.detectors.EBSDDetector(
+        ... shape=(480, 640), pc=(0.4, 0.3, 0.5), px_size=70, sample_tilt=70
+        ... )
+        >>> det0
+        EBSDDetector (480, 640), px_size 70 um, binning 1, tilt 0, azimuthal 0, pc (0.4, 0.3, 0.5)
+        >>> det = det0.extrapolate_pc(
+        ... pc_indices=[0, 0], navigation_shape=(5, 10), step_sizes=(20, 20)
+        ... )
+        >>> det
+        EBSDDetector (480, 640), px_size 70 um, binning 1, tilt 0, azimuthal 0, pc (0.398, 0.299, 0.5)
+
+        Plot PC values in maps
+
+        >>> det.plot_pc()
+        >>> plt.show()
+
+        Plot in scatter plots in vertical orientation
+
+        >>> det.plot_pc("scatter", orientation="vertical", annotate=True)
+        >>> plt.show()
+
+        Plot in a 3D scatter plot, returning the figure for saving etc.
+
+        >>> fig = det.plot_pc("3d", return_figure=True)
+        """
+        # Ensure there are PCs to plot
+        if self.navigation_size == 1:
+            raise ValueError(
+                "Detector must have more than one projection center value to plot"
+            )
+        if mode == "map" and self.navigation_dimension != 2:
+            raise ValueError("Detector's `navigation_dimension` must be 2D")
+
+        # Ensure mode is OK
+        modes = ["map", "scatter", "3d"]
+        if not isinstance(mode, str) or mode.lower() not in modes:
+            raise ValueError(
+                f"Plot mode '{mode}' must be one of the following strings {modes}"
+            )
+        mode = mode.lower()
+
+        if figure_kwargs is None:
+            figure_kwargs = {}
+        figure_kwargs.setdefault("layout", "tight")
+
+        # Prepare keyword arguments common to at least two modes
+        if mode in ["map", "scatter"]:
+            w, h = plt.rcParams["figure.figsize"]
+            k = max(w, h) / 3
+            if orientation == "horizontal":
+                figure_kwargs.setdefault("figsize", (6 * k, 2 * k))
+                subplots_kw = dict(ncols=3)
+            else:
+                figure_kwargs.setdefault("figsize", (2 * k, 6 * k))
+                subplots_kw = dict(nrows=3)
+
+        if mode in ["scatter", "3d"]:
+            kwargs.setdefault("c", np.arange(self.navigation_size))
+            kwargs.setdefault("ec", "k")
+            kwargs.setdefault("clip_on", False)
+
+        fig = plt.figure(**figure_kwargs)
+
+        labels = ["PCx", "PCy", "PCz"]
+        if mode == "map":
+            axes = fig.subplots(**subplots_kw)
+            for i, ax in enumerate(axes):
+                ax.set(xlabel="Column", ylabel="Row", aspect="equal")
+                im = ax.imshow(self.pc[..., i], **kwargs)
+                divider = make_axes_locatable(ax)
+                cax = divider.append_axes(position="right", size="5%", pad=0.1)
+                fig.colorbar(im, cax=cax, label=labels[i])
+        elif mode == "scatter":
+            pc_flat = self.pc_flattened
+            axes = fig.subplots(**subplots_kw)
+            for i, (j, k) in enumerate([[0, 1], [0, 2], [2, 1]]):
+                x_coord = pc_flat[:, j]
+                y_coord = pc_flat[:, k]
+                axes[i].scatter(x_coord, y_coord, **kwargs)
+                axes[i].set(xlabel=labels[j], ylabel=labels[k], aspect="equal")
+                if annotate:
+                    for l, (x, y) in enumerate(zip(x_coord, y_coord)):
+                        axes[i].text(x, y, l, ha="left", va="bottom")
+            axes[0].invert_xaxis()
+            axes[1].invert_xaxis()
+            axes[1].invert_yaxis()
+        else:
+            ax = fig.add_subplot(projection="3d")
+
+            pcx, pcy, pcz = self.pc_flattened.T
+            ax.scatter(pcx, pcz, pcy, **kwargs)
+            nav_axes = tuple(np.arange(len(self.pc.shape))[: self.navigation_dimension])
+            extent_min = np.min(self.pc, axis=nav_axes)
+            extent_max = np.max(self.pc, axis=nav_axes)
+            ax.set(
+                xlabel=labels[0],
+                ylabel=labels[2],
+                zlabel=labels[1],
+                xlim=[extent_min[0], extent_max[0]],
+                ylim=[extent_min[2], extent_max[2]],
+                zlim=[extent_min[1], extent_max[1]],
+            )
+            ax.invert_zaxis()
+
+            if annotate:
+                for i, (x, z, y) in enumerate(zip(pcx, pcz, pcy)):
+                    ax.text(x, z, y, i)
+
+        if return_figure:
+            return fig
+
     # ------------------------ Private methods ----------------------- #
 
-    def _set_pc_convention(self, convention: Optional[str] = None):
-        if convention is None or convention.lower() == "bruker":
-            pass
-        elif convention.lower() in ["tsl", "edax", "amatek"]:
-            self.pc = self._pc_tsl2bruker()
-        elif convention.lower() == "oxford":
-            self.pc = self._pc_tsl2bruker()
-        elif convention.lower() in ["emsoft", "emsoft4", "emsoft5"]:
+    def _get_pc_from_convention(self, convention: Optional[str] = None) -> np.ndarray:
+        if convention is None or convention.lower() in CONVENTION_ALIAS["bruker"]:
+            return self.pc
+
+        conv = convention.lower()
+        if conv in CONVENTION_ALIAS["tsl"] + CONVENTION_ALIAS["oxford"]:
+            return self._pc_tsl2bruker()
+        elif conv in CONVENTION_ALIAS["emsoft"]:
             try:
                 version = int(convention[-1])
             except ValueError:
                 version = 5
-            self.pc = self._pc_emsoft2bruker(version=version)
+            return self._pc_emsoft2bruker(version)
         else:
-            conventions = [
-                "bruker",
-                "emsoft",
-                "emsoft4",
-                "emsoft5",
-                "oxford",
-                "tsl",
-            ]
             raise ValueError(
                 f"Projection center convention '{convention}' not among the "
-                f"recognised conventions {conventions}."
+                f"recognised conventions {CONVENTION_ALIAS_ALL}."
             )
+
+    def _set_pc_from_convention(self, convention: Optional[str] = None):
+        self.pc = self._get_pc_from_convention(convention)
 
     def _pc_emsoft2bruker(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc, dtype=float)
@@ -832,3 +1510,158 @@ class EBSDDetector:
         new_pc[..., 1] = (1 - self.pcy) / self.aspect_ratio
         new_pc[..., 2] /= self.aspect_ratio
         return new_pc
+
+
+def _fit_hyperplane(
+    pc_centered: np.ndarray,
+) -> Tuple[float, float, Rotation, Rotation, np.ndarray]:
+    # Hyperplane fit
+    pc_trim_mean = scs.trim_mean(pc_centered, proportiontocut=0.1)
+    pc_trim_centered = pc_centered - pc_trim_mean[np.newaxis, :]
+    # u @ np.diag(s) @ vh = (u * s) @ vh
+    u, s, vh = np.linalg.svd(pc_trim_centered, full_matrices=False)
+
+    # Check handedness of the coordinate system spanned by the plane
+    # normals. The determinant should be 1.
+    determinant = np.linalg.det(vh)
+    _logger.debug(f"Determinant of SVD: {determinant:.7f}")
+
+    # Extract estimated sample plane unit normal vector
+    sample_normal = Vector3d(vh[2])
+    sample_normal = sample_normal.unit
+    if sample_normal.z < 0:
+        # Make normal point towards detector screen
+        sample_normal = -sample_normal
+    _logger.debug(f"Sample plane normal from SVD: {sample_normal.data.squeeze()}")
+
+    # Tilt about the detector x and z axes
+    vx, vy, vz = sample_normal.data.squeeze()
+    x_tilt = np.arccos(vz)
+    z_tilt = np.pi / 2 - np.arctan2(vy, vx)
+
+    # Check that rotation of [001] gives the surface normal in the
+    # detector system
+    rot_xtilt = Rotation.from_axes_angles([1, 0, 0], -x_tilt)
+    rot_ztilt = Rotation.from_axes_angles([0, 0, 1], -z_tilt)
+    sample_normal_tilts = rot_ztilt * rot_xtilt * Vector3d.zvector()
+    _logger.debug(
+        f"Sample plane normal from tilts: {sample_normal_tilts.data.squeeze()}"
+    )
+
+    return x_tilt, z_tilt, rot_xtilt, rot_ztilt, pc_trim_mean
+
+
+def _fit_pc_projective(
+    pc_centered_flat: np.ndarray,
+    pc_indices_flat: np.ndarray,
+    map_indices_flat: np.ndarray,
+) -> Tuple[np.ndarray, np.ndarray]:
+    *_, rot_xtilt, rot_ztilt, pc_trim_mean = _fit_hyperplane(pc_centered_flat)
+
+    v_pc_centered = Vector3d(pc_centered_flat)
+    v_pc_trim_mean = Vector3d(pc_trim_mean)
+    v_pc_plane = ~(rot_ztilt * rot_xtilt) * (v_pc_centered - v_pc_trim_mean)
+
+    # Get transformation matrix
+    tform = ProjectiveTransform()
+    status = tform.estimate(pc_indices_flat[:, :2], v_pc_plane.data[:, :2])
+    _logger.debug(f"Status of projective transformation: {status}")
+    matrix = tform.params.T
+
+    # PC coordinates projected from beam indices and tilt parameters
+    pc_fit = np.dot(pc_indices_flat, matrix)
+    pc_fit /= pc_fit[:, 2, None]
+    pc_fit[:, 2] = 0
+    v_pc_fit = rot_ztilt * rot_xtilt * Vector3d(pc_fit)
+    v_pc_fit += v_pc_trim_mean
+
+    # Do the same for interpolated PC coordinates
+    pc_fit_map = np.dot(map_indices_flat, matrix)
+    pc_fit_map /= pc_fit_map[:, 2, None]
+    pc_fit_map[:, 2] = 0
+    v_pc_fit_map = rot_ztilt * rot_xtilt * Vector3d(pc_fit_map)
+    v_pc_fit_map += v_pc_trim_mean
+
+    return v_pc_fit.data, v_pc_fit_map.data
+
+
+def _fit_pc_affine(
+    pc_flat: np.ndarray, pc_indices_flat: np.ndarray, map_indices_flat: np.ndarray
+) -> Tuple[np.array, np.ndarray]:
+    # Solve the least squares problem X * A = Y
+    # Source: https://stackoverflow.com/a/20555267/3228100
+    matrix, res, *_ = np.linalg.lstsq(pc_indices_flat, pc_flat, rcond=None)
+    _logger.debug(f"Residuals of least squares fit: {res}")
+
+    pc_fit = np.dot(pc_indices_flat, matrix)
+    pc_fit_map = np.dot(map_indices_flat, matrix)
+
+    return pc_fit, pc_fit_map
+
+
+def _plot_pc_fit(
+    pc: np.ndarray,
+    pc_fit: np.ndarray,
+    fit_intercept: float,
+    fit_slope: float,
+    figure_kwargs: dict,
+    return_figure: bool = False,
+) -> Union[None, plt.Figure]:
+    pcx, pcy, pcz = pc.T
+    pcx_fit_2d, pcy_fit_2d, pcz_fit_2d = pc_fit.T
+    pcx_fit = pcx_fit_2d.ravel()
+    pcy_fit = pcy_fit_2d.ravel()
+    pcz_fit = pcz_fit_2d.ravel()
+
+    pcy_fit_line = fit_intercept + fit_slope * pcz_fit
+
+    data_kw = dict(s=25, c="k")
+    fit_kw = dict(s=50, fc="gray", alpha=0.5, ec="k")
+
+    w, h = plt.rcParams["figure.figsize"]
+    figure_kwargs.setdefault("layout", "compressed")
+    figure_kwargs.setdefault("figsize", (w, h))
+
+    fig = plt.figure()
+    # PCx v PCy
+    ax0 = fig.add_subplot(221)
+    ax0.set(xlabel="PCx", ylabel="PCy", aspect="equal")
+    ax0.scatter(pcx_fit, pcy_fit, **fit_kw)
+    ax0.scatter(pcx, pcy, **data_kw)
+    ax0.invert_xaxis()
+    # PCx v PCz
+    ax1 = fig.add_subplot(222)
+    ax1.set(xlabel="PCx", ylabel="PCz", aspect="equal")
+    ax1.scatter(pcx, pcz, **data_kw)
+    ax1.scatter(pcx_fit, pcz_fit, **fit_kw)
+    ax1.invert_xaxis()
+    ax1.invert_yaxis()
+    # PCz v PCy
+    ax2 = fig.add_subplot(223)
+    ax2.set(xlabel="PCz", ylabel="PCy", aspect="equal")
+    ax2.scatter(pcz, pcy, label="Data", **data_kw)
+    ax2.scatter(pcz_fit, pcy_fit, label="Fit", **fit_kw)
+    ax2.plot(pcz_fit, pcy_fit_line, "r-", label="Linear fit")
+    ax2.legend(bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
+    # Plot PC values in 3D
+    ax3 = fig.add_subplot(224, projection="3d")
+    ax3.scatter(pcx, pcz, pcy, **data_kw)
+    ax3.scatter(pcx_fit, pcz_fit, pcy_fit, **fit_kw)
+    ax3.set(
+        xlabel="PCx",
+        ylabel="PCz",
+        zlabel="PCy",
+        xlim=[np.min([pcx, pcx_fit]), np.max([pcx, pcx_fit])],
+        ylim=[np.min([pcz, pcz_fit]), np.max([pcz, pcz_fit])],
+        zlim=[np.min([pcy, pcy_fit]), np.max([pcy, pcy_fit])],
+    )
+    ax3.invert_zaxis()
+
+    # Add 3D plane
+    if pcx_fit_2d.ndim == 2:
+        ax3.plot_surface(pcx_fit_2d, pcz_fit_2d, pcy_fit_2d, color="r", alpha=0.5)
+
+    fig.tight_layout()
+
+    if return_figure:
+        return fig

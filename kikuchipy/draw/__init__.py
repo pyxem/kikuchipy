@@ -17,7 +17,10 @@
 
 """Tools for use in plotting of signals."""
 
-__all__ = ["get_rgb_navigator"]
+__all__ = [
+    "get_rgb_navigator",
+    "plot_pattern_positions_in_map",
+]
 
 
 def __dir__():
@@ -27,6 +30,7 @@ def __dir__():
 def __getattr__(name):
     _import_mapping = {
         "get_rgb_navigator": "_navigators",
+        "plot_pattern_positions_in_map": "_plot_pattern_positions_in_map",
     }
     if name in __all__:
         import importlib

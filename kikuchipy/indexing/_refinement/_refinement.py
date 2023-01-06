@@ -75,8 +75,10 @@ def compute_refine_orientation_results(
         time_start = time()
         computed_results = results.compute().reshape((-1, 4))
         total_time = time() - time_start
-        patterns_per_second = int(np.floor(n_patterns / total_time))
-        print(f"Refinement speed: {patterns_per_second} patterns/s", file=sys.stdout)
+        patterns_per_second = n_patterns / total_time
+        print(
+            f"Refinement speed: {patterns_per_second:.5f} patterns/s", file=sys.stdout
+        )
         # (n, score, phi1, Phi, phi2)
         computed_results = np.array(computed_results)
         xmap_refined = CrystalMap(
@@ -123,8 +125,10 @@ def compute_refine_projection_center_results(
         time_start = time()
         computed_results = results.compute().reshape((-1, 4))
         total_time = time() - time_start
-        patterns_per_second = int(np.floor(n_patterns / total_time))
-        print(f"Refinement speed: {patterns_per_second} patterns/s", file=sys.stdout)
+        patterns_per_second = n_patterns / total_time
+        print(
+            f"Refinement speed: {patterns_per_second:.5f} patterns/s", file=sys.stdout
+        )
         # (n, score, PCx, PCy, PCz)
         computed_results = np.array(computed_results)
         new_detector = detector.deepcopy()
@@ -180,8 +184,10 @@ def compute_refine_orientation_projection_center_results(
         time_start = time()
         computed_results = results.compute().reshape((-1, 7))
         total_time = time() - time_start
-        patterns_per_second = int(np.floor(n_patterns / total_time))
-        print(f"Refinement speed: {patterns_per_second} patterns/s", file=sys.stdout)
+        patterns_per_second = n_patterns / total_time
+        print(
+            f"Refinement speed: {patterns_per_second:.5f} patterns/s", file=sys.stdout
+        )
         computed_results = np.array(computed_results)
         # (n, score, phi1, Phi, phi2, PCx, PCy, PCz)
         xmap_refined = CrystalMap(
@@ -827,7 +833,7 @@ class _RefinementSetup:
         self.rotations_array = da.from_array(rot, chunks=self.chunks)
 
         # Relevant data from the detector
-        self.unique_pc = np.prod(detector.navigation_shape) != 1 and self.nav_size > 1
+        self.unique_pc = detector.navigation_size != 1 and self.nav_size > 1
         dtype = np.float64
         pc_shape = self.nav_shape + (3,)
         if self.unique_pc:
@@ -841,7 +847,10 @@ class _RefinementSetup:
         self.pc_array = da.from_array(pc, chunks=self.chunks)
 
         if mode == "ori_pc":
-            self.rotations_pc_array = da.dstack((self.rotations_array, self.pc_array))
+            nav_ndim = len(self.nav_shape)
+            self.rotations_pc_array = da.concatenate(
+                [self.rotations_array, self.pc_array], axis=nav_ndim
+            )
 
         # Keyword arguments passed to Dask when iterating over chunks
         self.map_blocks_kwargs.update(
@@ -1045,8 +1054,17 @@ class _RefinementSetup:
             upper_bounds = lower_bounds.copy()
             return lower_bounds, upper_bounds
 
-        eu_lower = 3 * [0]
-        eu_upper = [2 * np.pi, np.pi, 2 * np.pi]
+        # Absolute constraints for Euler angles and PCs. Note that
+        # constraints on the angles need some leeway since NLopt can
+        # throw a RuntimeError when a starting Euler angle is too close
+        # to the constraint.
+        angle_leeway = np.deg2rad(5)
+        eu_lower = 3 * [-angle_leeway]
+        eu_upper = [
+            2 * np.pi + angle_leeway,
+            np.pi + angle_leeway,
+            2 * np.pi + angle_leeway,
+        ]
         pc_lower = 3 * [-2]
         pc_upper = 3 * [2]
 

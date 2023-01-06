@@ -18,6 +18,22 @@ Unreleased
 
 Added
 -----
+- Method ``EBSDDetector.fit_pc()`` to fit a plane using a projective or affine
+  transformation to projection centers following work by Winkelmann and co-workers
+  (2020). (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
+- Method ``EBSDDetector.extrapolate_pc()`` to return a new detector with a plane of
+  projection centers (PCs) extrapolated from a mean PC calculated from one or more PCs
+  following work by Singh et al. (2017).
+  (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
+- Methods ``EBSDDetector.estimate_xtilt()`` and ``EBSDDetector.estimate_xtilt_ztilt()``
+  to estimate the tilts about the detector X and Z axes which bring the detector plane
+  normal parallel to the sample plane normal, following work by Winkelmann and
+  co-workers (2020). (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
+- Method ``EBSDDetector.plot_pc()`` to plot projection centers (PCs) in maps, scatter
+  plots or in 3D. (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
+- Convenience function ``kikuchipy.draw.plot_pattern_positions_in_map()`` to plot
+  positions of selected patterns (typically calibration patterns) in a 2D map.
+  (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
 - EBSD signal returned from NORDIF calibration pattern reader tries to add the following
   new info to the original metadata: Shapes of area and region of interest (ROI), offset
   of ROI, calibration pattern indices and area overview image. All shapes and
@@ -84,6 +100,8 @@ Removed
 
 Fixed
 -----
+- ``EBSDDetector.pc_average`` no longer rounds the PC to three decimals.
+  (`#586 <https://github.com/pyxem/kikuchipy/pull/586>`_)
 - Microscope magnification is now read correctly from EDAX h5ebsd files.
   (`#586 <https://github.com/pyxem/kikuchipy/pull/586>`_)
 - kikuchipy h5ebsd reader can read a signal with an EBSD detector with a PC array of

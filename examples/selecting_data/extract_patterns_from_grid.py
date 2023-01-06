@@ -9,8 +9,9 @@ positions in a grid evenly spaced in navigation space.
 import hyperspy.api as hs
 import kikuchipy as kp
 import matplotlib.pyplot as plt
-import numpy as np
 
+
+plt.rcParams["font.size"] = 15
 
 # Silence progressbars
 hs.preferences.General.show_progressbar = False
@@ -31,11 +32,11 @@ vbse_img.compute()  # Drop if data was not loaded lazily
 vbse_img.rescale_intensity(dtype_out="float32", percentiles=(0.5, 99.5))
 
 # Plot grid of extracted patterns
-fig, ax = plt.subplots()
-ax.imshow(vbse_img.data, cmap="gray")
-ax.scatter(*idx[::-1], c=np.arange(s2.axes_manager.navigation_size), s=400, ec="k")
-ax.axis("off")
-fig.tight_layout()
+kp.draw.plot_pattern_positions_in_map(
+    idx.reshape(2, -1).T,
+    roi_shape=s.axes_manager.navigation_shape[::-1],
+    roi_image=vbse_img.data,
+)
 
 # Plot extracted patterns
 s2.remove_static_background()
