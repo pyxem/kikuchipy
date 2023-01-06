@@ -773,11 +773,13 @@ class TestEstimateTilts:
         # Add outliers
         det2 = det1.deepcopy()
         outlier_idx = [[0, 0], [0, 10]]
-        det2.pc[outlier_idx] = (0.5, 0.5, 0.5)
+        det2.pc[tuple(outlier_idx)] = (0.5, 0.4, 0.5)
+
+        np.random.seed(42)
 
         xtilt2, ztilt2 = det2.estimate_xtilt_ztilt(degrees=True)
-        assert np.isclose(xtilt2, 0.554, atol=1e-3)
-        assert np.isclose(ztilt2, 88.044, atol=1e-3)
+        assert np.isclose(xtilt2, 0.169, atol=1e-3)
+        assert np.isclose(ztilt2, -74.339, atol=1e-3)
 
         is_outlier = np.ravel_multi_index(outlier_idx, det1.navigation_shape)
         xtilt3, ztilt3 = det2.estimate_xtilt_ztilt(degrees=True, is_outlier=is_outlier)
