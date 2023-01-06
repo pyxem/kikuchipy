@@ -18,6 +18,14 @@ Unreleased
 
 Added
 -----
+- Method ``EBSDDetector.extrapolate_pc()`` to return a new detector with a plane of
+  projection centers (PCs) extrapolated from a mean PC calculated from one or more PCs
+  following work by Singh and DeGraef (2017).
+  (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
+- Method ``EBSDDetector.estimate_xtilt()`` to estimate the tilt about the detector X
+  axis which brings the detector plane normal parallel to the sample plane normal,
+  following work by Winkelmann and co-workers (2020).
+  (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
 - Method ``EBSDDetector.plot_pc()`` to plot projection centers (PCs) in maps, scatter
   plots or in 3D. (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
 - Convenience function ``kikuchipy.draw.plot_pattern_positions_in_map()`` to plot

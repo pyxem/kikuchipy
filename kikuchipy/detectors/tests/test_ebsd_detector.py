@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from packaging.version import Version
 import pytest
+from sklearn import linear_model
 
 import kikuchipy as kp
 
@@ -707,3 +708,142 @@ class TestPlotPC:
         assert not np.allclose(fig1.get_size_inches(), fig2.get_size_inches())
 
         plt.close("all")
+
+
+class TestEstimateTilts:
+    det0 = kp.detectors.EBSDDetector(
+        shape=(480, 480),
+        pc=(0.5, 0.3, 0.5),
+        sample_tilt=70,
+        tilt=0,
+        px_size=70,
+    )
+
+    def test_estimate_xtilt_raises(self):
+        with pytest.raises(ValueError, match="Estimation requires more than 1 PC"):
+            _ = self.det0.estimate_xtilt()
+
+    def test_estimate_xtilt(self):
+        det = self.det0.extrapolate_pc(
+            pc_indices=[0, 0],
+            navigation_shape=(15, 20),
+            step_sizes=(50, 50),
+        )
+
+        xtilt = det.estimate_xtilt(degrees=True)
+        assert np.isclose(xtilt, 90 - self.det0.sample_tilt + self.det0.tilt)
+        assert plt.get_fignums() == [1]
+        ax = plt.gca()
+        assert not any(["Outliers" in t.get_text() for t in ax.get_legend().texts])
+
+        xtilt, is_outliers, fig = det.estimate_xtilt(
+            return_outliers=True, return_figure=True
+        )
+        assert isinstance(is_outliers, np.ndarray)
+        assert is_outliers.sum() == 0
+
+        plt.close("all")
+
+    def test_estimate_xtilt_outliers(self):
+        det = self.det0.extrapolate_pc(
+            pc_indices=[0, 0],
+            navigation_shape=(15, 20),
+            step_sizes=(50, 50),
+        )
+        det.pc[0, 0] = (0.5, 0.5, 0.5)
+
+        xtilt, is_outliers, fig = det.estimate_xtilt(
+            return_outliers=True, return_figure=True
+        )
+        assert isinstance(is_outliers, np.ndarray)
+        assert is_outliers.sum() == 1
+        assert np.allclose(np.where(is_outliers)[0], [0, 0])
+        assert any(["Outliers" in t.get_text() for t in fig.axes[0].get_legend().texts])
+
+
+class TestExtrapolatePC:
+    det0 = kp.detectors.EBSDDetector(
+        shape=(240, 240),
+        pc=(0.5, 0.3, 0.5),
+        sample_tilt=70,
+        tilt=0,
+        px_size=70,
+        binning=2,
+    )
+
+    def test_extrapolate_pc(self):
+        det = self.det0.extrapolate_pc(
+            pc_indices=[7, 15],
+            navigation_shape=(15, 31),
+            step_sizes=(50, 50),
+        )
+        assert det.navigation_shape == (15, 31)
+        assert np.allclose(
+            [
+                self.det0.nrows,
+                self.det0.ncols,
+                self.det0.sample_tilt,
+                self.det0.tilt,
+                self.det0.px_size,
+                self.det0.binning,
+                self.det0.azimuthal,
+            ],
+            [
+                det.nrows,
+                det.ncols,
+                det.sample_tilt,
+                det.tilt,
+                det.px_size,
+                det.binning,
+                det.azimuthal,
+            ],
+        )
+        assert np.allclose(det.pc_average, self.det0.pc)
+        assert np.allclose(det.pc_flattened.min(0), [0.4777, 0.2902, 0.4964], atol=1e-4)
+        assert np.allclose(det.pc_flattened.max(0), [0.5223, 0.3098, 0.5036], atol=1e-4)
+
+    def test_extrapolate_pc_multiple_indices(self):
+        det1 = self.det0.deepcopy()
+        # Specify PC values in four corners of the map, visualized here
+        # as they would show up in the (PCx, PCy) scatter plot
+        # fmt: off
+        det1.pc = [
+            [0.5, 0.3, 0.5],                [0.3, 0.3, 0.5],
+
+
+
+
+            [0.5, 0.2, 0.6],                [0.3, 0.2, 0.6],
+        ]
+        # fmt: on
+
+        det2 = det1.extrapolate_pc(
+            pc_indices=[[0, 0], [0, 10], [20, 0], [20, 10]],
+            navigation_shape=(11, 21),
+            step_sizes=(11, 11),
+        )
+        assert np.allclose(det1.pc_average, det2.pc_average, atol=1e-2)
+
+        det3 = det1.extrapolate_pc(
+            pc_indices=[[0, 0], [0, 10], [20, 0], [20, 10]],
+            navigation_shape=(11, 21),
+            step_sizes=(5, 5),
+            shape=(60, 60),
+            binning=8,
+            px_size=70 * 8,
+        )
+        assert np.allclose(det1.pc_average, det3.pc_average, atol=1e-2)
+        assert det3.shape == (60, 60)
+        assert det3.binning == 8
+        assert det3.px_size == 70 * 8
+
+    def test_extrapolate_pc_outliers(self):
+        det1 = self.det0.deepcopy()
+        det1.pc = [[0.5, 0.3, 0.5], [0.3, 0.3, 0.5], [0.5, 0.2, 0.6], [0.3, 0.2, 0.6]]
+        det2 = det1.extrapolate_pc(
+            pc_indices=[[0, 0], [0, 10], [20, 0], [20, 10]],
+            navigation_shape=(11, 21),
+            step_sizes=(11, 11),
+            is_outlier=[True, False, False, False],
+        )
+        assert np.allclose(det2.pc_average, [0.366, 0.236, 0.566], atol=1e-3)

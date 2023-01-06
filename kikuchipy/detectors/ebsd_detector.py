@@ -25,6 +25,7 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
+from sklearn.linear_model import LinearRegression, RANSACRegressor
 
 
 CONVENTION_ALIAS = {
@@ -517,6 +518,251 @@ class EBSDDetector:
             Identical detector without shared memory.
         """
         return deepcopy(self)
+
+    def estimate_xtilt(
+        self,
+        detect_outliers: bool = False,
+        plot: bool = True,
+        degrees: bool = False,
+        return_figure: bool = False,
+        return_outliers: bool = False,
+        figure_kwargs: Optional[dict] = None,
+    ) -> Union[
+        float,
+        Tuple[float, np.ndarray],
+        Tuple[float, plt.Figure],
+        Tuple[float, np.ndarray, plt.Figure],
+    ]:
+        r"""Estimate the tilt about the detector :math:`X_d` axis.
+
+        This tilt is assumed to bring the sample plane normal into
+        coincidence with the detector plane normal (but in the opposite
+        direction) :cite:`winkelmann2020refined`.
+
+        See the `reference frame tutorial
+        </doc/tutorials/reference_frames.ipynb>`_ for details on the
+        detector sample geometry.
+
+        An estimate is found by linear regression of :attr:`pcz` vs.
+        :attr:`pcy`.
+
+        Parameters
+        ----------
+        detect_outliers
+            Whether to attempt to detect outliers. If ``False``
+            (default), a linear fit to all points is performed. If
+            ``True``, a robust fit using the RANSAC algorithm is
+            performed instead, which also detects outliers.
+        plot
+            Whether to plot data points and the estimated line. Default
+            is ``True``.
+        degrees
+            Whether to return the estimated tilt in radians (``False``,
+            default) or degrees (``True``).
+        return_figure
+            Whether to return the plotted figure. Default is ``False``.
+        return_outliers
+            Whether to return a mask with ``True`` for PC values
+            considered outliers. Default is ``False``. If ``True``,
+            ``detect_outliers`` is assumed to be ``True`` and the value
+            passed is not considered.
+        figure_kwargs
+            Keyword arguments passed to
+            :func:`matplotlib.pyplot.Figure` if ``plot=True``.
+
+        Returns
+        -------
+        x_tilt
+            Estimated tilt about detector :math:`X_d` in radians
+            (``degrees=False``) or degrees (``degrees=True``).
+        outliers
+            Returned if ``return_outliers=True``.
+        fig
+            Returned if ``plot=True`` and ``return_figure=True``.
+
+        Notes
+        -----
+        This method is adapted from Aimo Winkelmann's function
+        `fit_xtilt()` in the *xcdskd* Python package. See
+        :cite:`winkelmann2020refined` for their use of related
+        functions.
+
+        See Also
+        --------
+        sklearn.linear_model.LinearRegression,
+        sklearn.linear_model.RANSACRegressor, estimate_xtilt_ztilt,
+        fit_pc
+        """
+        if self.navigation_size == 1:
+            raise ValueError("Estimation requires more than 1 PC")
+
+        if return_outliers:
+            detect_outliers = True
+
+        # Get regressor
+        if detect_outliers:
+            regressor = RANSACRegressor()
+        else:
+            regressor = LinearRegression()
+
+        # Estimate slope
+        pcy = self.pcy.reshape((-1, 1))
+        pcz = self.pcz.reshape((-1, 1))
+        regressor.fit(pcz, pcy)
+        if detect_outliers:
+            slope = regressor.estimator_.coef_
+        else:
+            slope = regressor.coef_
+        slope = slope.squeeze()
+
+        # Get tilt from estimated coefficient
+        x_tilt = np.pi / 2 + np.arctan(slope)
+
+        # Get outliers (if possible)
+        if detect_outliers:
+            is_outlier = ~regressor.inlier_mask_
+        else:
+            is_outlier = np.zeros(self.navigation_size)
+
+        # Predict data of estimated model
+        pcz_fit = np.linspace(np.min(pcz), np.max(pcz), 2)
+        pcy_fit = regressor.predict(pcz_fit[:, np.newaxis])
+
+        if degrees:
+            x_tilt = np.rad2deg(x_tilt)
+
+        out = (x_tilt,)
+        if return_outliers:
+            out += (is_outlier,)
+
+        if plot:
+            if figure_kwargs is None:
+                figure_kwargs = {}
+            figure_kwargs.setdefault("layout", "tight")
+            fig = plt.figure(**figure_kwargs)
+            ax = fig.add_subplot()
+            ax.scatter(pcz, pcy, c="yellowgreen", ec="k", label="Data")
+            if detect_outliers:
+                ax.scatter(pcz[is_outlier], pcy[is_outlier], c="gold", label="Outliers")
+            fit_label = "Fit, tilt = " + f"{x_tilt:.2f}" + r"$^{\circ}$"
+            ax.plot(pcz_fit, pcy_fit, label=fit_label, c="C1")
+            ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
+            ax.set(aspect="equal", xlabel="PCz", ylabel="PCy")
+
+            if return_figure:
+                out += (fig,)
+
+        if len(out) == 1:
+            out = out[0]
+
+        return out
+
+    def extrapolate_pc(
+        self,
+        pc_indices: Union[tuple, list, np.ndarray],
+        navigation_shape: tuple,
+        step_sizes: tuple,
+        shape: Optional[tuple] = None,
+        px_size: float = None,
+        binning: int = None,
+        is_outlier: Optional[Union[tuple, list, np.ndarray]] = None,
+    ):
+        r"""Return a new detector with projection centers (PCs)
+        extrapolated from an average PC.
+
+        The average PC :math:`\bar{PC}` is calculated from :attr:`pc`,
+        possibly excluding some PCs based on the ``is_outlier`` mask.
+        The sample position having this PC, :math:`(\bar{x}, \bar{y})`,
+        is assumed to be the one obtained by averaging ``pc_indices``.
+        All other PCs :math:`(PC_x, PC_y, PC_z)` in positions
+        :math:`(x, y)` are then extrapolated based on the following
+        equations given in appendix A in :cite:`singh2017application`:
+
+        .. math::
+            PC_x = \bar{PC_x} + (\bar{x} - x) \cdot \Delta x / (\delta \cdot N_x \cdot b),\\
+            PC_y = \bar{PC_y} + (\bar{y} - y) \cdot \Delta y \cdot \cos{\alpha} / (\delta \cdot N_y \cdot b),\\
+            PC_z = \bar{PC_z} - (\bar{y} - y) \cdot \Delta y \cdot \sin{\alpha} / (\delta \cdot N_y \cdot b),\\
+
+        where :math:`(\Delta y, \Delta x)` are the vertical and
+        horizontal step sizes, respectively, :math:`(N_y, N_x)` are the
+        number of binned detector rows and columns, respectively, the
+        angle :math:`\alpha = 90^{\circ} - \sigma + \theta`, where
+        :math:`\sigma` is the sample tilt and :math:`\theta` is the
+        detector tilt, :math:`\delta` is the unbinned detector pixel
+        size and :math:`b` is the binning factor.
+
+        Parameters
+        ----------
+        pc_indices
+            2D map pixel coordinates (row, column) of each :attr:`pc`,
+            possibly outside ``navigation_shape``. Must be a flattened
+            array of shape (2,) + :attr:`navigation_size`.
+        navigation_shape
+            Shape of the output PC array (n rows, n columns).
+        step_sizes
+            Vertical and horizontal step sizes (dy, dx).
+        shape
+            Detector (signal) shape (n rows, n columns). If not given,
+            (:attr:`nrows`, :attr:`ncols`) is used.
+        px_size
+            Unbinned detector pixel size. If not given, :attr:`px_size`
+            is used.
+        binning
+            Detector binning factor. If not given, :attr:`binning` is
+            used.
+        is_outlier
+            Boolean array with ``True`` for PCs to not include in the
+            fit. If not given, all PCs are used. Must be of
+            :attr:`navigation_shape`.
+
+        Returns
+        -------
+        new_detector
+            Detector with :attr:`navigation_shape` given by
+            input ``navigation_shape``.
+        """
+        # Parse input parameters
+        dy, dx = step_sizes
+        pc_indices = np.atleast_2d(pc_indices).T
+        ny, nx = navigation_shape
+        if not shape:
+            shape = self.shape
+        nrows, ncols = shape
+        if not px_size:
+            px_size = self.px_size
+        if not binning:
+            binning = self.binning
+
+        pc = self.pc_flattened
+
+        if is_outlier is not None:
+            is_outlier = np.asarray(is_outlier)
+            pc = pc[~is_outlier]
+            pc_indices = pc_indices[:, ~is_outlier]
+
+        # Calculate mean PC and position
+        pc_mean = pc.mean(axis=0)
+        pc_indices_mean = pc_indices.mean(axis=1)
+        pc_indices_mean = np.round(pc_indices_mean).astype(int)
+
+        # Make PC plane
+        alpha = np.deg2rad(90 - self.sample_tilt + self.tilt)
+        y, x = np.indices((ny, nx), dtype=float)
+        factor = px_size * binning
+        d_pcx = -(pc_indices_mean[1] - x) * dx / (factor * ncols)
+        d_pcy = -(pc_indices_mean[0] - y) * dy * np.cos(alpha) / (factor * nrows)
+        d_pcz = +(pc_indices_mean[0] - y) * dy * np.sin(alpha) / (factor * nrows)
+        pcx = pc_mean[0] - d_pcx
+        pcy = pc_mean[1] - d_pcy
+        pcz = pc_mean[2] - d_pcz
+
+        new_detector = self.deepcopy()
+        new_detector.pc = np.stack((pcx, pcy, pcz), axis=2)
+        new_detector.shape = shape
+        new_detector.px_size = px_size
+        new_detector.binning = binning
+
+        return new_detector
 
     def pc_emsoft(self, version: int = 5) -> np.ndarray:
         r"""Return PC in the EMsoft convention.
