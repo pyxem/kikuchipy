@@ -760,6 +760,30 @@ class TestEstimateTilts:
         assert np.allclose(np.where(is_outliers)[0], [0, 0])
         assert any(["Outliers" in t.get_text() for t in fig.axes[0].get_legend().texts])
 
+    def test_estimate_xtilt_ztilt(self):
+        det1 = self.det0.extrapolate_pc(
+            pc_indices=[0, 0],
+            navigation_shape=(15, 20),
+            step_sizes=(1, 1),
+        )
+        xtilt, ztilt = det1.estimate_xtilt_ztilt(degrees=True)
+        assert np.isclose(xtilt, 20)
+        assert np.isclose(ztilt, 0)
+
+        # Add outliers
+        det2 = det1.deepcopy()
+        outlier_idx = [[0, 0], [0, 10]]
+        det2.pc[outlier_idx] = (0.5, 0.5, 0.5)
+
+        xtilt2, ztilt2 = det2.estimate_xtilt_ztilt(degrees=True)
+        assert np.isclose(xtilt2, 0.554, atol=1e-3)
+        assert np.isclose(ztilt2, 88.044, atol=1e-3)
+
+        is_outlier = np.ravel_multi_index(outlier_idx, det1.navigation_shape)
+        xtilt3, ztilt3 = det2.estimate_xtilt_ztilt(degrees=True, is_outlier=is_outlier)
+        assert np.isclose(xtilt3, 20)
+        assert np.isclose(ztilt3, 0)
+
 
 class TestExtrapolatePC:
     det0 = kp.detectors.EBSDDetector(

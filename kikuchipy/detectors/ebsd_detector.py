@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 from copy import deepcopy
+import logging
 from typing import List, Optional, Tuple, Union
 
 from matplotlib.figure import Figure
@@ -25,8 +26,13 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
+from orix.quaternion import Rotation
+from orix.vector import Vector3d
+import scipy.stats as scs
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 
+
+_logger = logging.getLogger(__name__)
 
 CONVENTION_ALIAS = {
     "bruker": ["bruker"],
@@ -583,7 +589,7 @@ class EBSDDetector:
         Notes
         -----
         This method is adapted from Aimo Winkelmann's function
-        `fit_xtilt()` in the *xcdskd* Python package. See
+        ``fit_xtilt()`` in the *xcdskd* Python package. See
         :cite:`winkelmann2020refined` for their use of related
         functions.
 
@@ -656,6 +662,75 @@ class EBSDDetector:
             out = out[0]
 
         return out
+
+    def estimate_xtilt_ztilt(
+        self,
+        degrees: bool = False,
+        is_outlier: Optional[Union[list, tuple, np.ndarray]] = None,
+    ) -> Union[float, Tuple[float, float]]:
+        r"""Estimate the tilts about the detector :math:`X_d` and
+        :math:`Z_d` axes.
+
+        These tilts bring the sample plane normal into coincidence with
+        the detector plane normal (but in the opposite direction)
+        :cite:`winkelmann2020refined`.
+
+        See the `reference frame tutorial
+        </doc/tutorials/reference_frames.ipynb>`_ for details on the
+        detector sample geometry.
+
+        Estimates are found by fitting a hyperplane to :attr:`pc` using
+        singular value decomposition.
+
+        Parameters
+        ----------
+        degrees
+            Whether to return the estimated tilts in radians (``False``,
+            default) or degrees (``True``).
+        is_outlier
+            Boolean array with ``True`` for PCs to not include in the
+            fit. If not given, all PCs are used. Must be of
+            :attr:`navigation_shape`.
+
+        Returns
+        -------
+        x_tilt
+            Estimated tilt about detector :math:`X_d` in radians
+            (``degrees=False``) or degrees (``degrees=True``).
+        z_tilt
+            Estimated tilt about detector :math:`Z_d` in radians
+            (``degrees=False``) or degrees (``degrees=True``).
+
+        Notes
+        -----
+        This method is adapted from Aimo Winkelmann's function
+        ``fit_plane()`` in the *xcdskd* Python package. Its use is
+        described in :cite:`winkelmann2020refined`.
+
+        Winkelmann refers to Gander & Hrebicek, "Solving Problems in
+        Scientific Computing", 3rd Ed., Chapter 6, p. 97 for the
+        implementation of the hyperplane fitting.
+
+        See Also
+        --------
+        estimate_xtilt, fit_pc
+        """
+        if self.navigation_size == 1:
+            raise ValueError("Estimation requires more than 1 PC")
+
+        pc = self.pc
+        if isinstance(is_outlier, np.ndarray):
+            pc = pc[~is_outlier]
+        pc = pc.reshape((-1, 3))
+
+        pc_centered = pc - pc.mean(axis=0)
+        x_tilt, z_tilt, *_ = _fit_hyperplane(pc_centered)
+
+        if degrees:
+            x_tilt = np.rad2deg(x_tilt)
+            z_tilt = np.rad2deg(z_tilt)
+
+        return x_tilt, z_tilt
 
     def extrapolate_pc(
         self,
@@ -1256,3 +1331,42 @@ class EBSDDetector:
         new_pc[..., 1] = (1 - self.pcy) / self.aspect_ratio
         new_pc[..., 2] /= self.aspect_ratio
         return new_pc
+
+
+def _fit_hyperplane(
+    pc_centered: np.ndarray,
+) -> Tuple[float, float, Rotation, Rotation, np.ndarray]:
+    # Hyperplane fit
+    pc_trim_mean = scs.trim_mean(pc_centered, proportiontocut=0.1)
+    pc_trim_centered = pc_centered - pc_trim_mean[np.newaxis, :]
+    # u @ np.diag(s) @ vh = (u * s) @ vh
+    u, s, vh = np.linalg.svd(pc_trim_centered, full_matrices=False)
+
+    # Check handedness of the coordinate system spanned by the plane
+    # normals. The determinant should be 1.
+    determinant = np.linalg.det(vh)
+    _logger.debug(f"Determinant of SVD: {determinant:.7f}")
+
+    # Extract estimated sample plane unit normal vector
+    sample_normal = Vector3d(vh[2])
+    sample_normal = sample_normal.unit
+    if sample_normal.z < 0:
+        # Make normal point towards detector screen
+        sample_normal = -sample_normal
+    _logger.debug(f"Sample plane normal from SVD: {sample_normal.data.squeeze()}")
+
+    # Tilt about the detector x and z axes
+    vx, vy, vz = sample_normal.data.squeeze()
+    x_tilt = np.arccos(vz)
+    z_tilt = np.pi / 2 - np.arctan2(vy, vx)
+
+    # Check that rotation of [001] gives the surface normal in the
+    # detector system
+    rot_xtilt = Rotation.from_axes_angles([1, 0, 0], -x_tilt)
+    rot_ztilt = Rotation.from_axes_angles([0, 0, 1], -z_tilt)
+    sample_normal_tilts = rot_ztilt * rot_xtilt * Vector3d.zvector()
+    _logger.debug(
+        f"Sample plane normal from tilts: {sample_normal_tilts.data.squeeze()}"
+    )
+
+    return x_tilt, z_tilt, rot_xtilt, rot_ztilt, pc_trim_mean
