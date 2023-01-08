@@ -170,6 +170,7 @@ setup(
     # Files to include when distributing package
     packages=find_packages(),
     package_dir={"kikuchipy": "kikuchipy"},
+    include_package_data=True,
     package_data={
         "": ["LICENSE", "README.md"],
         "kikuchipy": ["*.py", "hyperspy_extension.yaml", "data/*"],
