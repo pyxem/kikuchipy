@@ -18,6 +18,12 @@ Unreleased
 
 Added
 -----
+- Two tutorials showing projection center (PC) fitting and extrapolation to obtain a
+  plane of PCs to index a full dataset.
+  (`#588 <https://github.com/pyxem/kikuchipy/pull/588>`_)
+- Tutorial showing sloppy projection center (PC)/orientation optimization landscape of
+  the Ni dataset from Jackson et al. (2019), replicating the results from Pang et al.
+  (2020). (`#588 <https://github.com/pyxem/kikuchipy/pull/588>`_)
 - Method ``EBSDDetector.fit_pc()`` to fit a plane using a projective or affine
   transformation to projection centers following work by Winkelmann and co-workers
   (2020). (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
