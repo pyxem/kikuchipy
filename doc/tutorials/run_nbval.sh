@@ -7,6 +7,7 @@
 # List notebooks that nbval should skip
 declare -a SKIP=(\
   "esteem2022_diffraction_workshop.ipynb"\
+  "pc_orientation_dependence.ipynb"\
 )
 
 # Find all notebooks in the doc/tutorials directory
