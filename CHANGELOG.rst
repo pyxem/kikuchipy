@@ -70,6 +70,8 @@ Added
 
 Changed
 -------
+- Exclude documentation and tests from source distribution.
+  (`#588 <https://github.com/pyxem/kikuchipy/pull/588>`_)
 - Minimal version of HyperSpy increased to >= 1.7.3.
   (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
 - Minimal version of Numba increased to >= 0.52.
