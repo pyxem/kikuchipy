@@ -36,7 +36,7 @@ def xmap_from_hough_indexing_data(
     data: np.ndarray,
     phase_list: PhaseList,
     data_index: int = -1,
-    nav_shape: Optional[tuple] = None,
+    navigation_shape: Optional[tuple] = None,
     step_sizes: Optional[tuple] = None,
     scan_unit: str = "px",
 ) -> CrystalMap:
@@ -57,7 +57,7 @@ def xmap_from_hough_indexing_data(
         Default is ``-1``, which returns the most probable (best)
         solutions in each map point. Other options depend on the number
         of phases used in indexing, and starts with ``0``.
-    nav_shape
+    navigation_shape
         Navigation shape of resulting map. If not given, a 1D crystal
         map is returned. Maximum of two dimensions.
     step_sizes
@@ -71,14 +71,16 @@ def xmap_from_hough_indexing_data(
     xmap
         Crystal map.
     """
-    if nav_shape is None:
-        nav_shape = (data.shape[1],)
-    elif len(nav_shape) > 2 or not all(isinstance(n_i, int) for n_i in nav_shape):
+    if navigation_shape is None:
+        navigation_shape = (data.shape[1],)
+    elif len(navigation_shape) > 2 or not all(
+        isinstance(n_i, int) for n_i in navigation_shape
+    ):
         raise ValueError("`nav_shape` cannot be a tuple of more than two integers")
 
-    xy, _ = create_coordinate_arrays(nav_shape, step_sizes)
+    xy, _ = create_coordinate_arrays(navigation_shape, step_sizes)
     xmap_kwargs = {"x": xy["x"]}
-    if len(nav_shape) == 2:
+    if len(navigation_shape) == 2:
         xmap_kwargs["y"] = xy["y"]
 
     phase_list_id = phase_list.ids
@@ -119,15 +121,12 @@ def _get_indexer_from_detector(
     tilt: float,
     **kwargs,
 ) -> "EBSDIndexer":
-    """Return a PyEBSDIndex indexer instance.
-
-    Function can only be called if PyEBSDIndex is installed.
+    """Return a PyEBSDIndex EBSD indexer.
 
     Parameters
     ----------
     phase_list
-        List of supported phases (so far only ``"FCC"`` and/or
-        ``"BCC"``).
+        List of supported phases, only ``"FCC"`` and/or ``"BCC"``.
     shape
         Detector shape (n rows, n columns).
     pc
@@ -143,9 +142,15 @@ def _get_indexer_from_detector(
     Returns
     -------
     indexer
-        Indexer instance.
+        EBSD indexer.
+
+    Notes
+    -----
+    Requires that :mod:`pyebsdindex` is installed, which is an optional
+    dependency of kikuchipy. See :ref:`optional-dependencies` for
+    details.
     """
-    if not _pyebsdindex_installed:
+    if not _pyebsdindex_installed:  # pragma: no cover
         raise ValueError(
             "pyebsdindex must be installed. Install with pip install pyebsdindex. "
             "See https://kikuchipy.org/en/stable/user/installation.html for "
@@ -154,10 +159,7 @@ def _get_indexer_from_detector(
 
     from pyebsdindex.ebsd_index import EBSDIndexer
 
-    phase_list_pei = []
-    for _i, phase in phase_list:
-        bravais_lattice = phase.space_group.short_name[0] + "CC"
-        phase_list_pei.append(bravais_lattice)
+    phase_list_pei = _get_pyebsdindex_phaselist(phase_list)
 
     indexer = EBSDIndexer(
         phaselist=phase_list_pei,
@@ -229,33 +231,24 @@ def _hough_indexing(
     xmap = xmap_from_hough_indexing_data(
         data=index_data,
         phase_list=phase_list,
-        nav_shape=nav_shape,
+        navigation_shape=nav_shape,
         step_sizes=step_sizes,
     )
 
     return xmap, index_data, band_data
 
 
-def _get_pyebsdindex_phaselist(
-    phase_list: PhaseList, raise_if_not_compatible: bool = False
-) -> Tuple[bool, List[str]]:
-    """Check whether a phase list can be used in Hough indexing with
-    PyEBSDIndex and return the ``phaselist`` accepted by
-    :class:`~pyebsdindex.ebsd_index.EBSDIndexer` if it is compatible.
+def _get_pyebsdindex_phaselist(phase_list: PhaseList) -> List[str]:
+    """Return a phase list compatible with PyEBSDIndex or raise a
+    ``ValueError`` if the given phase list is incompatible.
 
     Parameters
     ----------
     phase_list
-        Phase list to check.
-    raise_if_not_compatible
-        Whether to raise an error if the phase list is not compatible.
-        Default is ``False``.
+        Phase list to convert to one compatible with PyEBSDIndex.
 
     Returns
     -------
-    compatible
-        Whether ``phase_list`` is compatible. Not returned if
-        ``compatible`` is ``False`` and ``raise_if_not=True``.
     phase_list_pei
         Phase list compatible with PyEBSDIndex.
 
@@ -280,24 +273,27 @@ def _get_pyebsdindex_phaselist(
         error_msg = msg_supported_phases
 
     sg = phase_list.space_groups
+    centering = None
     if compatible and any(sg_i is None for sg_i in sg):
         compatible = False
         error_msg = (
             "Space group for each phase must be set, otherwise the Bravais lattice(s) "
             "cannot be determined."
         )
+    else:
+        centering = [sg_i.short_name[0] for sg_i in sg]
+        if "I" in centering:
+            centering[centering.index("I")] = "B"
+        allowed_centering = [["F"], ["B"], ["F", "B"], ["B", "F"]]
+        if compatible and centering not in allowed_centering:
+            compatible = False
+            error_msg = msg_supported_phases
 
-    centering = [sg_i.short_name[0] for sg_i in sg]
-    allowed_centering = [["F"], ["B"], ["F", "B"], ["B", "F"]]
-    if compatible and centering not in allowed_centering:
-        compatible = False
-        error_msg = msg_supported_phases
-
-    if not compatible and raise_if_not_compatible:
+    if not compatible:
         raise ValueError(error_msg)
     else:
         phase_list_pei = [c + "CC" for c in centering]
-        return compatible, phase_list_pei
+        return phase_list_pei
 
 
 def _indexer_is_compatible_with_kikuchipy(
@@ -375,12 +371,8 @@ def _indexer_is_compatible_with_kikuchipy(
         return compatible
 
 
-def _indexer_is_compatible_with_phase_list(
-    indexer, phase_list: PhaseList, raise_if_not: bool = True
-) -> bool:
-    _, phase_list_pei = _get_pyebsdindex_phaselist(
-        phase_list, raise_if_not_compatible=True
-    )
+def _indexer_is_compatible_with_phase_list(indexer, phase_list: PhaseList):
+    phase_list_pei = _get_pyebsdindex_phaselist(phase_list)
     if indexer.phaselist != phase_list_pei:
         raise ValueError(
             f"EBSDIndexer.phaselist {indexer.phaselist} must be the same as the one"

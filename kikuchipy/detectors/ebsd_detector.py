@@ -1018,25 +1018,23 @@ class EBSDDetector:
         else:
             return new_detector
 
-    def get_indexer(
-        self, phase_list: Optional[PhaseList] = None, **kwargs
-    ) -> "EBSDIndexer":
+    def get_indexer(self, phase_list: PhaseList, **kwargs) -> "EBSDIndexer":
         """Return a PyEBSDIndex EBSD indexer.
 
         Parameters
         ----------
         phase_list
-            List of phases. :class:`pyebsdindex.ebsd_index.EBSDIndexer`
+            List of phases. :class:`~pyebsdindex.ebsd_index.EBSDIndexer`
             only supports a list containing one face-centered cubic
-            (FCC) phase, one body-centered cubic (BCC) phase or both. If
-            not given, the default in ``EBSDIndexer`` is used.
+            (FCC) phase, one body-centered cubic (BCC) phase or both.
         **kwargs
             Keyword arguments passed to
-            :class:`pyebsdindex.ebsd_index.EBSDIndexer`, except for the
-            following arguments which are determined from the detector
-            or otherwise unused: ``phaselist`` (not to be confused with
-            ``phase_list``), ``vendor``, ``PC``, ``sampleTilt``,
-            ``camElev`` and ``patDim``.
+            :class:`~pyebsdindex.ebsd_index.EBSDIndexer`, except for the
+            following arguments which cannot be passed since they are
+            determined from the detector or ``phase_list``:
+            ``phaselist`` (not to be confused with ``phase_list``),
+            ``vendor``, ``PC``, ``sampleTilt``, ``camElev`` and
+            ``patDim``.
 
         Returns
         -------
@@ -1047,9 +1045,9 @@ class EBSDDetector:
 
         Notes
         -----
-        Requires that :mod:`pyebsdindex` is installed, which is an
-        optional dependency of kikuchipy. See
-        :ref:`optional-dependencies` for details.
+        Requires that PyEBSDIndex is installed, which is an optional
+        dependency of kikuchipy. See :ref:`optional-dependencies` for
+        details.
         """
         return _get_indexer_from_detector(
             phase_list=phase_list,

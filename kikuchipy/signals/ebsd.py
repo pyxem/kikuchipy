@@ -974,7 +974,7 @@ class EBSD(KikuchipySignal2D):
         uses a single thread. If you need the fastest indexing, refer to
         the PyEBSDIndex documentation for multi-threading and more.
         """
-        if not _pyebsdindex_installed:
+        if not _pyebsdindex_installed:  # pragma: no cover
             raise ValueError(
                 "Hough indexing requires pyebsdindex to be installed. Install it with "
                 "pip install pyebsdindex. See "
@@ -988,16 +988,14 @@ class EBSD(KikuchipySignal2D):
         step_sizes = tuple([a.scale for a in am.navigation_axes[::-1]])
 
         # Check indexer
-        _, phase_list_pei = _get_pyebsdindex_phaselist(
-            phase_list, raise_if_not_compatible=True
-        )
+        phase_list_pei = _get_pyebsdindex_phaselist(phase_list)
         _ = _indexer_is_compatible_with_kikuchipy(
             indexer, sig_shape, nav_size, raise_if_not=True
         )
         if indexer.phaselist != phase_list_pei:
             raise ValueError(
-                f"EBSDIndexer.phaselist {indexer.phaselist} must be the same as the one"
-                f" determined from `phase_list`, {phase_list_pei}"
+                f"`indexer.phaselist` {indexer.phaselist} and the list determined from"
+                f" `phase_list` {phase_list_pei} must be the same"
             )
 
         # Prepare patterns

@@ -22,6 +22,7 @@ import matplotlib.collections as mcollections
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
+from orix.crystal_map import PhaseList
 from packaging.version import Version
 import pytest
 
@@ -1003,8 +1004,66 @@ class TestFitPC:
 
 
 class TestGetIndexer:
+    def setup_method(self):
+        det0 = kp.detectors.EBSDDetector(
+            shape=(10, 12),
+            pc=(0.5, 0.3, 0.5),
+            sample_tilt=69.5,
+            tilt=10.5,
+        )
+        det = det0.extrapolate_pc(
+            pc_indices=[0, 0], navigation_shape=(2, 3), step_sizes=(1, 1)
+        )
+        self.det = det
+
+    @pytest.mark.skipif(kp._pyebsdindex_installed, reason="pyebsdindex is installed")
+    def test_get_indexer_raises(self):  # pragma: no cover
+        pl = PhaseList(names=["al", "si"], space_groups=[225, 227])
+        with pytest.raises(ValueError, match="pyebsdindex must be installed. Install "):
+            _ = self.det.get_indexer(pl)
+
     @pytest.mark.skipif(
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
     )
-    def test_get_index(self):
-        pass
+    def test_get_indexer_invalid_phase_lists(self):
+        # More than two phases
+        with pytest.raises(ValueError, match="Hough indexing only supports indexing "):
+            _ = self.det.get_indexer(
+                PhaseList(names=["a", "b", "c"], space_groups=[225, 227, 229])
+            )
+
+        # Not all phases have space groups
+        pl = PhaseList(names=["a", "b"], point_groups=["m-3m", "432"])
+        pl["a"].space_group = 225
+        with pytest.raises(ValueError, match="Space group for each phase must be set,"):
+            _ = self.det.get_indexer(pl)
+
+        # Not FCC or BCC
+        with pytest.raises(ValueError, match="Hough indexing only supports indexing "):
+            _ = self.det.get_indexer(PhaseList(names="sic", space_groups=186))
+
+    @pytest.mark.skipif(
+        not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
+    )
+    def test_get_indexer(self):
+        indexer1 = self.det.get_indexer(
+            PhaseList(names=["a", "b"], space_groups=[225, 229]), nBands=6
+        )
+        assert indexer1.vendor == "KIKUCHIPY"
+        assert np.isclose(indexer1.sampleTilt, self.det.sample_tilt)
+        assert np.isclose(indexer1.camElev, self.det.tilt)
+        assert tuple(indexer1.bandDetectPlan.patDim) == self.det.shape
+        assert indexer1.bandDetectPlan.nBands == 6
+        assert np.allclose(indexer1.PC, self.det.pc_flattened)
+        assert indexer1.phaselist == ["FCC", "BCC"]
+
+        indexer2 = self.det.get_indexer(PhaseList(names="a", space_groups=225))
+        assert indexer2.phaselist == ["FCC"]
+
+        indexer3 = self.det.get_indexer(PhaseList(names="a", space_groups=220))
+        assert indexer3.phaselist == ["BCC"]
+
+        indexer4 = self.det.get_indexer(
+            PhaseList(names=["a", "b"], space_groups=[220, 225])
+        )
+        assert indexer4.phaselist == ["BCC", "FCC"]
