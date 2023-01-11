@@ -31,6 +31,7 @@ __all__ = [
     "compute_refine_projection_center_results",
     "merge_crystal_maps",
     "orientation_similarity_map",
+    "xmap_from_hough_indexing_data",
 ]
 
 
@@ -48,6 +49,7 @@ def __getattr__(name):
         "compute_refine_projection_center_results": "_refinement._refinement",
         "merge_crystal_maps": "_merge_crystal_maps",
         "orientation_similarity_map": "_orientation_similarity_map",
+        "xmap_from_hough_indexing_data": "_hough_indexing",
     }
     if name in __all__:
         import importlib
