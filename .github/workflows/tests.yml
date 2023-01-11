@@ -80,7 +80,7 @@ jobs:
       - name: Install optional dependencies
         shell: bash
         run: |
-          pip install -e .'[opt,viz]'
+          pip install -e .'[all]'
 
       - name: Display Python, pip and package versions
         run: |

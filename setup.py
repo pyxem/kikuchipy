@@ -70,13 +70,17 @@ extra_feature_requirements = {
         "pytest-cov                 >= 2.8.1",
         "pytest-xdist",
     ],
+    "all": [
+        "matplotlib                 >= 3.5",
+        "nlopt",
+        "pyebsdindex                >= 0.1.1",
+        "pyvista",
+    ],
+    # TODO: Remove this option in release 0.9
     "viz": [
         "matplotlib                 >= 3.5",
         "pyvista",
     ],
-    "opt": [
-        "nlopt",
-    ]
 }
 # fmt: on
 
