@@ -1000,3 +1000,11 @@ class TestFitPC:
         is_outlier = np.zeros(det2.navigation_size - 1, dtype=bool)
         with pytest.raises(ValueError, match="`is_outlier` must be a boolean array of"):
             _ = det2.fit_pc(pc_indices, self.map_indices, is_outlier=is_outlier)
+
+
+class TestGetIndexer:
+    @pytest.mark.skipif(
+        not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
+    )
+    def test_get_index(self):
+        pass

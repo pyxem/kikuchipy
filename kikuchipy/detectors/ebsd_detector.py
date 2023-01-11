@@ -26,11 +26,14 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
+from orix.crystal_map import PhaseList
 from orix.quaternion import Rotation
 from orix.vector import Vector3d
 import scipy.stats as scs
 from skimage.transform import ProjectiveTransform
 from sklearn.linear_model import LinearRegression, RANSACRegressor
+
+from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
 
 
 _logger = logging.getLogger(__name__)
@@ -635,10 +638,12 @@ class EBSDDetector:
         pcz_fit = np.linspace(np.min(pcz), np.max(pcz), 2)
         pcy_fit = regressor.predict(pcz_fit[:, np.newaxis])
 
-        if degrees:
-            x_tilt = np.rad2deg(x_tilt)
+        x_tilt_deg = np.rad2deg(x_tilt)
 
-        out = (x_tilt,)
+        if degrees:
+            out = (x_tilt_deg,)
+        else:
+            out = (x_tilt,)
         if return_outliers:
             out += (is_outlier,)
 
@@ -651,7 +656,7 @@ class EBSDDetector:
             ax.scatter(pcz, pcy, c="yellowgreen", ec="k", label="Data")
             if detect_outliers:
                 ax.scatter(pcz[is_outlier], pcy[is_outlier], c="gold", label="Outliers")
-            fit_label = "Fit, tilt = " + f"{x_tilt:.2f}" + r"$^{\circ}$"
+            fit_label = "Fit, tilt = " + f"{x_tilt_deg:.2f}" + r"$^{\circ}$"
             ax.plot(pcz_fit, pcy_fit, label=fit_label, c="C1")
             ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
             ax.set(aspect="equal", xlabel="PCz", ylabel="PCy")
@@ -1012,6 +1017,48 @@ class EBSDDetector:
             return new_detector, fig
         else:
             return new_detector
+
+    def get_indexer(
+        self, phase_list: Optional[PhaseList] = None, **kwargs
+    ) -> "EBSDIndexer":
+        """Return a PyEBSDIndex EBSD indexer.
+
+        Parameters
+        ----------
+        phase_list
+            List of phases. :class:`pyebsdindex.ebsd_index.EBSDIndexer`
+            only supports a list containing one face-centered cubic
+            (FCC) phase, one body-centered cubic (BCC) phase or both. If
+            not given, the default in ``EBSDIndexer`` is used.
+        **kwargs
+            Keyword arguments passed to
+            :class:`pyebsdindex.ebsd_index.EBSDIndexer`, except for the
+            following arguments which are determined from the detector
+            or otherwise unused: ``phaselist`` (not to be confused with
+            ``phase_list``), ``vendor``, ``PC``, ``sampleTilt``,
+            ``camElev`` and ``patDim``.
+
+        Returns
+        -------
+        indexer : pyebsdindex.ebsd_index.EBSDIndexer
+            Indexer instance for use with PyEBSDIndex or in
+            :meth:`~kikuchipy.signals.EBSD.hough_indexing`.
+            ``indexer.PC`` is set equal to :attr:`pc_flattened`.
+
+        Notes
+        -----
+        Requires that :mod:`pyebsdindex` is installed, which is an
+        optional dependency of kikuchipy. See
+        :ref:`optional-dependencies` for details.
+        """
+        return _get_indexer_from_detector(
+            phase_list=phase_list,
+            shape=self.shape,
+            pc=self.pc_flattened.squeeze(),
+            sample_tilt=self.sample_tilt,
+            tilt=self.tilt,
+            **kwargs,
+        )
 
     def pc_emsoft(self, version: int = 5) -> np.ndarray:
         r"""Return PC in the EMsoft convention.

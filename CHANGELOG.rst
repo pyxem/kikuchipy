@@ -18,6 +18,9 @@ Unreleased
 
 Added
 -----
+- Method to get a PyEBSDIndex ``EBSDIndexer`` instance from an ``EBSDDetector``,
+  convenient for either indexing with PyEBSDIndex or for use with kikuchipy.
+  (`#590 <https://github.com/pyxem/kikuchipy/pull/590>`_)
 - Convenience function to get a ``CrystalMap`` from a PyEBSDIndex Hough indexing result
   array. (`#590 <https://github.com/pyxem/kikuchipy/pull/590>`_)
 - PyEBSDIndex as an optional dependency.
