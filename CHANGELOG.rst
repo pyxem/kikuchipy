@@ -18,6 +18,8 @@ Unreleased
 
 Added
 -----
+- Convenience function to get a ``CrystalMap`` from a PyEBSDIndex Hough indexing result
+  array. (`#590 <https://github.com/pyxem/kikuchipy/pull/590>`_)
 - PyEBSDIndex as an optional dependency.
   (`#590 <https://github.com/pyxem/kikuchipy/pull/590>`_)
 - Two tutorials showing projection center (PC) fitting and extrapolation to obtain a

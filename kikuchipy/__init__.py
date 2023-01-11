@@ -33,6 +33,12 @@ try:
     _nlopt_installed = True
 except ImportError:  # pragma: no cover
     _nlopt_installed = False
+try:
+    from pyebsdindex import pcopt, ebsd_index
+
+    _pyebsdindex_installed = True
+except ImportError:  # pragma: no cover
+    _pyebsdindex_installed = False
 
 
 def set_log_level(level: Union[int, str]):  # pragma: no cover
@@ -74,6 +80,7 @@ def set_log_level(level: Union[int, str]):  # pragma: no cover
 
 __all__ = [
     "__version__",
+    "_pyebsdindex_installed",
     "_pyvista_installed",
     "data",
     "detectors",

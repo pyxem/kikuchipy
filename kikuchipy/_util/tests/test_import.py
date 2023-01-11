@@ -182,6 +182,7 @@ class TestImport:
 
         assert dir(kikuchipy) == [
             "__version__",
+            "_pyebsdindex_installed",
             "_pyvista_installed",
             "data",
             "detectors",
@@ -259,6 +260,7 @@ class TestImport:
             "compute_refine_projection_center_results",
             "merge_crystal_maps",
             "orientation_similarity_map",
+            "xmap_from_hough_indexing_data",
         ]
 
     def test_dir_io(self):
