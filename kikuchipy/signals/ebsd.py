@@ -34,14 +34,21 @@ from hyperspy.learn.mva import LearningResults
 from hyperspy.roi import BaseInteractiveROI
 from h5py import File
 import numpy as np
-from orix.crystal_map import CrystalMap
+from orix.crystal_map import CrystalMap, PhaseList
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
+from kikuchipy import _pyebsdindex_installed
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
 from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
+from kikuchipy.indexing._hough_indexing import (
+    _get_pyebsdindex_phaselist,
+    _indexer_is_compatible_with_kikuchipy,
+    _hough_indexing,
+    _optimize_pc,
+)
 from kikuchipy.indexing._refinement._refinement import (
     _refine_orientation,
     _refine_orientation_pc,
@@ -186,8 +193,8 @@ class EBSD(KikuchipySignal2D):
     def detector(self, value: EBSDDetector):
         if _detector_is_compatible_with_signal(
             detector=value,
-            navigation_shape=self.axes_manager.navigation_shape[::-1],
-            signal_shape=self.axes_manager.signal_shape[::-1],
+            nav_shape=self.axes_manager.navigation_shape[::-1],
+            sig_shape=self.axes_manager.signal_shape[::-1],
             raise_if_not=True,
         ):
             self._detector = value
@@ -893,6 +900,234 @@ class EBSD(KikuchipySignal2D):
 
         return image_quality_map.data
 
+    def hough_indexing(
+        self,
+        phase_list: PhaseList,
+        indexer: "EBSDIndexer",
+        chunksize: int = 528,
+        verbose: int = 1,
+        return_index_data: bool = False,
+        return_band_data: bool = False,
+    ) -> Union[
+        CrystalMap,
+        Tuple[CrystalMap, np.ndarray],
+        Tuple[CrystalMap, np.ndarray, np.ndarray],
+    ]:
+        """Index patterns by Hough indexing using :mod:`pyebsdindex`.
+
+        See :meth:`~pyebsdindex.ebsd_index.EBSDIndexer` and
+        :meth:`~pyebsdindex.ebsd_index.EBSDIndexer.index_pats` for
+        details.
+
+        Currently, PyEBSDIndex only supports indexing with a single
+        mean projection center (PC).
+
+        Parameters
+        ----------
+        phase_list
+            List of phases. The list can only contain one face-centered
+            cubic (FCC) phase, one body-centered cubic (BCC) phase or
+            both types.
+        indexer
+            PyEBSDIndex EBSD indexer instance of which the
+            :meth:`~pyebsdindex.ebsd_index.EBSDIndexer.index_pats`
+            method is called. Its `phaselist` must be compatible with
+            the given ``phase_list``, and the ``indexer.vendor`` must be
+            ``"KIKUCHIPY"``. An indexer can be obtained with
+            :meth:`~kikuchipy.detectors.EBSDDetector.get_indexer`.
+        chunksize
+            Number of patterns to index at a time. Default is the
+            minimum of 528 or the number of patterns in the signal.
+            Increasing the chunksize may give faster indexing but
+            increases memory use.
+        verbose
+            Which information to print from PyEBSDIndex. Options are
+            0 - no output, 1 - timings (default), 2 - timings and the
+            Hough transform of the first pattern with detected bands
+            highlighted.
+        return_index_data
+            Whether to return the index data array returned from
+            ``EBSDIndexer.index_pats()`` in addition to the resulting
+            crystal map. Default is ``False``.
+        return_band_data
+            Whether to return the band data array returned from
+            ``EBSDIndexer.index_pats()``. Default is ``False``.
+
+        Returns
+        -------
+        xmap
+            Crystal map with indexing results.
+        index_data
+            Array returned from ``EBSDIndexer.index_pats()``, returned
+            if ``return_index_data=True``.
+        band_data
+            Array returned from ``EBSDIndexer.index_pats()``, returned
+            if ``return_band_data=True``.
+
+        Notes
+        -----
+        Requires :mod:`pyebsdindex` to be installed. See
+        :ref:`optional-dependencies` for further details.
+
+        This wrapper of PyEBSDIndex is meant for convenience more than
+        speed. It uses the GPU if :mod:`pyopencl` is installed, but only
+        uses a single thread. If you need the fastest indexing, refer to
+        the PyEBSDIndex documentation for multi-threading and more.
+        """
+        if not _pyebsdindex_installed:
+            raise ValueError(
+                "Hough indexing requires pyebsdindex to be installed. Install it with "
+                "pip install pyebsdindex. See "
+                "https://kikuchipy.org/en/stable/user/installation.html for details."
+            )
+
+        am = self.axes_manager
+        nav_shape = am.navigation_shape[::-1]
+        nav_size = int(np.prod(nav_shape))
+        sig_shape = am.signal_shape[::-1]
+        step_sizes = tuple([a.scale for a in am.navigation_axes[::-1]])
+
+        # Check indexer
+        _, phase_list_pei = _get_pyebsdindex_phaselist(
+            phase_list, raise_if_not_compatible=True
+        )
+        _ = _indexer_is_compatible_with_kikuchipy(
+            indexer, sig_shape, nav_size, raise_if_not=True
+        )
+        if indexer.phaselist != phase_list_pei:
+            raise ValueError(
+                f"EBSDIndexer.phaselist {indexer.phaselist} must be the same as the one"
+                f" determined from `phase_list`, {phase_list_pei}"
+            )
+
+        # Prepare patterns
+        chunksize = min(chunksize, max(am.navigation_size, 1))
+        patterns = self.data.reshape((-1,) + sig_shape)
+        if self._lazy:
+            patterns = patterns.rechunk({0: chunksize, 1: -1, 2: -1})
+
+        xmap, index_data, band_data = _hough_indexing(
+            patterns=patterns,
+            phase_list=phase_list,
+            nav_shape=nav_shape,
+            step_sizes=step_sizes,
+            indexer=indexer,
+            chunksize=chunksize,
+            verbose=verbose,
+        )
+
+        # Set scan unit
+        if len(nav_shape) > 0:  # Navigation shape can be (1,)
+            scan_unit = str(am.navigation_axes[0].units)
+            if scan_unit != "<undefined>":
+                xmap.scan_unit = scan_unit
+
+        if return_index_data and return_band_data:
+            return xmap, index_data, band_data
+        elif return_index_data and not return_band_data:
+            return xmap, index_data
+        elif not return_index_data and return_band_data:
+            return xmap, band_data
+        else:
+            return xmap
+
+    def hough_indexing_optimize_pc(
+        self,
+        pc0: Union[list, tuple, np.ndarray],
+        indexer: "EBSDIndexer",
+        batch: bool = False,
+        method: str = "Nelder-Mead",
+    ) -> "EBSDDetector":
+        """Return a detector with one projection center (PC) per
+        pattern optimized using Hough indexing from :mod:`pyebsdindex`.
+
+        See :mod:`~pyebsdindex.pcopt.optimize` for details.
+
+        Parameters
+        ----------
+        pc0
+            A single initial guess of PC for all patterns in Brukers
+            convention, (PCx, PCy, PCz).
+        indexer
+            PyEBSDIndex EBSD indexer instance to pass on to the
+            optimization function. Its `phaselist` must be compatible
+            with ``phase_list``, if given, and the ``indexer.vendor``
+            must be ``"KIKUCHIPY"``. An indexer can be obtained with
+            :meth:`~kikuchipy.detectors.EBSDDetector.get_indexer`.
+        batch
+            Whether the fit for the patterns should be optimized using
+            the cumulative fit for all patterns (``False``, default), or
+            if an optimization is run for each pattern individually.
+        method
+            Which optimization method to use, either ``"Nelder-Mead"``
+            from SciPy (default) or ``"PSO"`` (particle swarm). The
+            latter method does not support ``batch=True``.
+
+        Returns
+        -------
+        new_detector
+            EBSD detector with one PC if ``batch=False`` or one PC per
+            pattern if ``batch=True``. The detector attributes are
+            extracted from ``indexer.sampleTilt`` etc.
+
+        Notes
+        -----
+        Requires :mod:`pyebsdindex` to be installed. See
+        :ref:`optional-dependencies` for further details.
+        """
+        if not _pyebsdindex_installed:
+            raise ValueError(
+                "Hough indexing requires pyebsdindex to be installed. Install it with "
+                "pip install pyebsdindex. See "
+                "https://kikuchipy.org/en/stable/user/installation.html for details."
+            )
+
+        supported_methods = ["nelder-mead", "pso"]
+        method = method.lower()
+        if method not in supported_methods:
+            raise ValueError(
+                "`method` {method} must be one of the supported methods "
+                f"{supported_methods}."
+            )
+        elif batch and method == "pso":
+            raise ValueError("PSO optimization method does not support `batch=True`.")
+
+        pc0 = np.asarray(pc0)
+        if pc0.size != 3:
+            raise ValueError("`pc0` must be of size 3")
+        pc0 = list(pc0)
+
+        am = self.axes_manager
+        nav_shape = am.navigation_shape[::-1]
+        nav_size = int(np.prod(nav_shape))
+        sig_shape = am.signal_shape[::-1]
+
+        # Check indexer
+        _ = _indexer_is_compatible_with_kikuchipy(
+            indexer, sig_shape, nav_size, check_pc=False, raise_if_not=True
+        )
+
+        # Prepare patterns
+        patterns = self.data.reshape((-1,) + sig_shape)
+        if self._lazy:
+            patterns = patterns.rechunk({0: "auto", 1: -1, 2: -1})
+
+        pc = _optimize_pc(
+            pc0=pc0, patterns=patterns, indexer=indexer, batch=batch, method=method
+        )
+
+        if batch:
+            pc = pc.reshape(nav_shape + (3,))
+
+        new_detector = EBSDDetector(
+            shape=sig_shape,
+            pc=pc,
+            sample_tilt=indexer.sampleTilt,
+            tilt=indexer.camElev,
+        )
+
+        return new_detector
+
     def dictionary_indexing(
         self,
         dictionary: EBSD,
@@ -903,8 +1138,8 @@ class EBSD(KikuchipySignal2D):
         rechunk: bool = False,
         dtype: Union[str, np.dtype, type, None] = None,
     ) -> CrystalMap:
-        """Match each experimental pattern to a dictionary of simulated
-        patterns of known orientations to index them
+        """Index patterns by matching each pattern to a dictionary of
+        simulated patterns of known orientations
         :cite:`chen2015dictionary,jackson2019dictionary`.
 
         Parameters
@@ -2402,8 +2637,8 @@ class EBSD(KikuchipySignal2D):
         sig_shape = self.axes_manager.signal_shape[::-1]
         _detector_is_compatible_with_signal(
             detector=detector,
-            navigation_shape=self.axes_manager.navigation_shape[::-1],
-            signal_shape=sig_shape,
+            nav_shape=self.axes_manager.navigation_shape[::-1],
+            sig_shape=sig_shape,
             raise_if_not=True,
         )
         if len(xmap.phases.ids) != 1:

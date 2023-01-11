@@ -25,11 +25,11 @@ from kikuchipy.detectors import EBSDDetector
 
 def _detector_is_compatible_with_signal(
     detector: EBSDDetector,
-    navigation_shape: tuple,
-    signal_shape: tuple,
+    nav_shape: tuple,
+    sig_shape: tuple,
     raise_if_not: bool = False,
 ) -> bool:
-    """Check whether a signal's navigation and signal shape is
+    """Check whether a signal's navigation and signal shapes are
     compatible with a detector and return a bool or raise a ValueError
     if it is not.
     """
@@ -37,12 +37,15 @@ def _detector_is_compatible_with_signal(
     compatible = True
     error_msg = None
 
-    if signal_shape != detector.shape:
+    if sig_shape != detector.shape:
         compatible = False
-        error_msg = "Detector and signal must have the same signal shape"
+        error_msg = (
+            f"Detector shape {detector.shape} must be equal to the signal shape "
+            f"{sig_shape}"
+        )
 
     detector_nav_shape = detector.navigation_shape
-    if detector_nav_shape != (1,) and detector_nav_shape != navigation_shape:
+    if detector_nav_shape != (1,) and detector_nav_shape != nav_shape:
         compatible = False
         error_msg = (
             "Detector must have exactly one projection center (PC), or one PC per "

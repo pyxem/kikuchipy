@@ -51,7 +51,7 @@ class TestEBSDRefine:
     @pytest.mark.parametrize(
         "ebsd_with_axes_and_random_data, detector, error_msg",
         [
-            (((2,), (3, 2), True, np.float32), ((2,), (2, 3)), "Detector and signal m"),
+            (((2,), (3, 2), True, np.float32), ((2,), (2, 3)), r"Detector shape \(2, "),
             (((3,), (2, 3), True, np.float32), ((2,), (2, 3)), "Detector must have ex"),
         ],
         indirect=["ebsd_with_axes_and_random_data", "detector"],
