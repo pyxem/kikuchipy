@@ -337,7 +337,7 @@ def _indexer_is_compatible_with_kikuchipy(
 
     # Detector shape
     sig_shape_indexer = tuple(indexer.bandDetectPlan.patDim)
-    if sig_shape != sig_shape_indexer:
+    if compatible and sig_shape != sig_shape_indexer:
         compatible = False
         error_msg = (
             f"Indexer signal shape {sig_shape_indexer} must be equal to the signal "
@@ -351,8 +351,8 @@ def _indexer_is_compatible_with_kikuchipy(
         allowed_shapes_str = "(3,)"
         if nav_size is not None:
             allowed_shapes.append((nav_size, 3))
-            allowed_shapes_str += f" or ({nav_size, 3})"
-        if len(pc_shape) > 2 or pc_shape not in allowed_shapes:
+            allowed_shapes_str += f" or ({nav_size}, 3)"
+        if compatible and (len(pc_shape) > 2 or pc_shape not in allowed_shapes):
             compatible = False
             error_msg = (
                 f"`indexer.PC` must be an array of shape {allowed_shapes_str}, but was "
@@ -361,7 +361,7 @@ def _indexer_is_compatible_with_kikuchipy(
 
     phase_list_pei = indexer.phaselist
     allowed_lists = [["FCC"], ["BCC"], ["FCC", "BCC"], ["BCC", "FCC"]]
-    if phase_list_pei not in allowed_lists:
+    if compatible and phase_list_pei not in allowed_lists:
         compatible = False
         error_msg = f"`indexer.phaselist` must be one of {allowed_lists}"
 
@@ -369,15 +369,6 @@ def _indexer_is_compatible_with_kikuchipy(
         raise ValueError(error_msg)
     else:
         return compatible
-
-
-def _indexer_is_compatible_with_phase_list(indexer, phase_list: PhaseList):
-    phase_list_pei = _get_pyebsdindex_phaselist(phase_list)
-    if indexer.phaselist != phase_list_pei:
-        raise ValueError(
-            f"EBSDIndexer.phaselist {indexer.phaselist} must be the same as the one"
-            f" determined from `phase_list`, {phase_list_pei}"
-        )
 
 
 def _get_info_message(nav_size: int, chunksize: int, indexer: "EBSDIndexer") -> str:

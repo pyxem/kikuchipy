@@ -983,7 +983,7 @@ class EBSD(KikuchipySignal2D):
         if self._lazy:
             from pyebsdindex import _pyopencl_installed
 
-            if not _pyopencl_installed:
+            if not _pyopencl_installed:  # pragma: no cover
                 raise ValueError(
                     "Hough indexing of lazy signals must use the GPU, which requires "
                     "pyopencl to be installed. See "
@@ -1011,7 +1011,7 @@ class EBSD(KikuchipySignal2D):
         # Prepare patterns
         chunksize = min(chunksize, max(am.navigation_size, 1))
         patterns = self.data.reshape((-1,) + sig_shape)
-        if self._lazy:
+        if self._lazy:  # pragma: no cover
             patterns = patterns.rechunk({0: chunksize, 1: -1, 2: -1})
 
         xmap, index_data, band_data = _hough_indexing(
@@ -1083,27 +1083,37 @@ class EBSD(KikuchipySignal2D):
         Requires :mod:`pyebsdindex` to be installed. See
         :ref:`optional-dependencies` for further details.
         """
-        if not _pyebsdindex_installed:
+        if not _pyebsdindex_installed:  # pragma: no cover
             raise ValueError(
                 "Hough indexing requires pyebsdindex to be installed. Install it with "
                 "pip install pyebsdindex. See "
                 "https://kikuchipy.org/en/stable/user/installation.html for details."
             )
+        if self._lazy:
+            from pyebsdindex import _pyopencl_installed
 
-        supported_methods = ["nelder-mead", "pso"]
-        method = method.lower()
-        if method not in supported_methods:
-            raise ValueError(
-                "`method` {method} must be one of the supported methods "
-                f"{supported_methods}."
-            )
-        elif batch and method == "pso":
-            raise ValueError("PSO optimization method does not support `batch=True`.")
+            if not _pyopencl_installed:  # pragma: no cover
+                raise ValueError(
+                    "Hough indexing of lazy signals must use the GPU, which requires "
+                    "pyopencl to be installed. See "
+                    "https://documen.tician.de/pyopencl/misc.html for installation "
+                    "instructions."
+                )
 
         pc0 = np.asarray(pc0)
         if pc0.size != 3:
             raise ValueError("`pc0` must be of size 3")
         pc0 = list(pc0)
+
+        supported_methods = ["nelder-mead", "pso"]
+        method = method.lower()
+        if method not in supported_methods:
+            raise ValueError(
+                f"`method` '{method}' must be one of the supported methods "
+                f"{supported_methods}."
+            )
+        elif batch and method == "pso":
+            raise ValueError("PSO optimization method does not support `batch=True`.")
 
         am = self.axes_manager
         nav_shape = am.navigation_shape[::-1]
@@ -1117,7 +1127,7 @@ class EBSD(KikuchipySignal2D):
 
         # Prepare patterns
         patterns = self.data.reshape((-1,) + sig_shape)
-        if self._lazy:
+        if self._lazy:  # pragma: no cover
             patterns = patterns.rechunk({0: "auto", 1: -1, 2: -1})
 
         pc = _optimize_pc(

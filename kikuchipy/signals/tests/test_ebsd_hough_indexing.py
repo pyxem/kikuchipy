@@ -21,7 +21,10 @@ from orix.crystal_map import CrystalMap, PhaseList
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.indexing._hough_indexing import _get_info_message
+from kikuchipy.indexing._hough_indexing import (
+    _get_info_message,
+    _indexer_is_compatible_with_kikuchipy,
+)
 
 
 class TestHoughIndexing:
@@ -93,7 +96,7 @@ class TestHoughIndexing:
     @pytest.mark.skipif(
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
     )
-    def test_hough_indexing_lazy(self):
+    def test_hough_indexing_lazy(self):  # pragma: no cover
         s = self.signal.as_lazy()
 
         from pyebsdindex import _pyopencl_installed
@@ -101,7 +104,7 @@ class TestHoughIndexing:
         if not _pyopencl_installed:
             with pytest.raises(ValueError, match="Hough indexing of lazy signals must"):
                 _ = s.hough_indexing(self.phase_list, self.indexer, verbose=2)
-        else:  # pragma: no cover
+        else:
             xmap1 = s.hough_indexing(self.phase_list, self.indexer)
             xmap2 = self.signal.hough_indexing(self.phase_list, self.indexer)
             assert np.allclose(xmap1.rotations.data, xmap2.rotations.data)
@@ -115,23 +118,41 @@ class TestHoughIndexing:
         xmap, index_data = self.signal.hough_indexing(
             phase_list, self.indexer, return_index_data=True
         )
-        assert list(index_data.dtype.fields.keys()) == [
-            "quat",
-            "iq",
-            "pq",
-            "cm",
-            "phase",
-            "fit",
-            "nmatch",
-            "matchattempts",
-            "totvotes",
-        ]
+
+        index_data_dtypes = index_data.dtype.fields.keys()
+        for field in ["quat", "iq", "pq", "cm", "phase", "fit", "nmatch"]:
+            assert field in index_data_dtypes
+        assert index_data.shape == (
+            len(self.indexer.phaselist) + 1,
+            self.signal.axes_manager.navigation_size,
+        )
+        xmap2 = kp.indexing.xmap_from_hough_indexing_data(index_data, phase_list)
+        assert xmap2.shape == (9,)
+        assert np.allclose(xmap2.rotations.data, xmap.rotations.data)
+        assert np.allclose(xmap2.fit, xmap.fit)
+        assert np.allclose(xmap2.cm, xmap.cm)
+
+    @pytest.mark.skipif(
+        not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
+    )
+    def test_hough_indexing_return_band_data(self):
+        indexer = self.detector.get_indexer(self.phase_list, nBands=8)
+        _, band_data = self.signal.hough_indexing(
+            self.phase_list, indexer, return_band_data=True
+        )
+        assert isinstance(band_data, np.ndarray)
+        assert band_data.shape == (
+            self.signal.axes_manager.navigation_size,
+            indexer.bandDetectPlan.nBands,
+        )
+
+        _, index_data, band_data = self.signal.hough_indexing(
+            self.phase_list, self.indexer, return_index_data=True, return_band_data=True
+        )
+        assert isinstance(index_data, np.ndarray)
+        assert isinstance(band_data, np.ndarray)
         assert index_data.shape == (2, 9)
-        xmap3 = kp.indexing.xmap_from_hough_indexing_data(index_data, phase_list)
-        assert xmap3.shape == (9,)
-        assert np.allclose(xmap3.rotations.data, xmap.rotations.data)
-        assert np.allclose(xmap3.fit, xmap.fit)
-        assert np.allclose(xmap3.cm, xmap.cm)
+        assert band_data.shape == (9, 9)
 
     @pytest.mark.skipif(
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
@@ -142,7 +163,7 @@ class TestHoughIndexing:
             _ = self.signal.hough_indexing(phase_list, self.indexer)
 
     @pytest.mark.skipif(kp._pyebsdindex_installed, reason="pyebsdindex is installed")
-    def test_hough_indexing_raises_pyebsdindex(self):
+    def test_hough_indexing_raises_pyebsdindex(self):  # pragma: no cover
         with pytest.raises(ValueError, match="Hough indexing requires pyebsdindex to "):
             _ = self.signal.hough_indexing(self.phase_list, self.indexer)
 
@@ -150,7 +171,51 @@ class TestHoughIndexing:
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
     )
     def test_indexer_is_compatible_with_signal(self):
-        pass
+        indexer = self.indexer
+
+        # Vendor
+        indexer.vendor = "EDAX"
+        assert not _indexer_is_compatible_with_kikuchipy(indexer, (60, 60), 9)
+        with pytest.raises(ValueError, match="`indexer.vendor` must be 'kikuchipy', "):
+            _indexer_is_compatible_with_kikuchipy(indexer, (60, 60), raise_if_not=True)
+        indexer.vendor = "kikuchipy"
+
+        # Signal shape
+        assert not _indexer_is_compatible_with_kikuchipy(indexer, (60, 59), 9)
+        with pytest.raises(ValueError, match=r"Indexer signal shape \(60, 60\) must "):
+            _indexer_is_compatible_with_kikuchipy(indexer, (60, 59), raise_if_not=True)
+        det2 = self.detector.deepcopy()
+        det2.shape = (60, 59)
+        indexer2 = det2.get_indexer(self.phase_list)
+        assert not _indexer_is_compatible_with_kikuchipy(indexer2, (60, 60), 9)
+        with pytest.raises(ValueError, match=r"Indexer signal shape \(60, 59\) must "):
+            _indexer_is_compatible_with_kikuchipy(indexer2, (60, 60), raise_if_not=True)
+
+        # PC
+        assert not _indexer_is_compatible_with_kikuchipy(indexer, (60, 60))
+        with pytest.raises(
+            ValueError, match=r"`indexer.PC` must be an array of shape \(3,\), but was "
+        ):
+            _indexer_is_compatible_with_kikuchipy(indexer, (60, 60), raise_if_not=True)
+        assert not _indexer_is_compatible_with_kikuchipy(indexer, (60, 60), 8)
+        with pytest.raises(
+            ValueError,
+            match=r"`indexer.PC` must be an array of shape \(3,\) or \(8, 3\), but was ",
+        ):
+            _indexer_is_compatible_with_kikuchipy(
+                indexer, (60, 60), 8, raise_if_not=True
+            )
+
+        # Phase list
+        indexer.phaselist = ["FCC", "FCC"]
+        assert not _indexer_is_compatible_with_kikuchipy(indexer, (60, 60), 9)
+        with pytest.raises(
+            ValueError,
+            match=r"`indexer.phaselist` must be one of \[\['FCC'\], \['BCC'\], \['FCC',",
+        ):
+            _indexer_is_compatible_with_kikuchipy(
+                indexer, (60, 60), 9, raise_if_not=True
+            )
 
     @pytest.mark.skipif(
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
@@ -191,19 +256,67 @@ class TestHoughIndexing:
         assert xmap2.dy == 2
         assert xmap2.dx == 3
 
-
-class TestOptimizePC:
     @pytest.mark.skipif(
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
     )
     def test_optimize_pc(self):
-        pass
+        # Batch
+        det2 = self.signal.hough_indexing_optimize_pc(
+            self.detector.pc_average, self.indexer
+        )
+        assert det2.navigation_shape == (1,)
+        assert np.allclose(det2.pc_average, self.detector.pc_average, atol=1e-2)
+        det3 = self.signal.hough_indexing_optimize_pc(
+            self.detector.pc_average, self.indexer, batch=True
+        )
+        assert det3.navigation_shape == (3, 3)
+        assert np.allclose(det2.pc_average, det3.pc_average, atol=1e-2)
+
+        # Detector parameters
+        assert det2.shape == self.detector.shape
+        assert np.isclose(det2.sample_tilt, self.detector.sample_tilt)
+        assert np.isclose(det2.tilt, self.detector.tilt)
+        assert np.isclose(det2.px_size, self.detector.px_size)
+
+        # Nelder-Mead vs. PSO (the latter is not deterministic)
+        det4 = self.signal.hough_indexing_optimize_pc(
+            self.detector.pc_average, self.indexer, method="PSO"
+        )
+        assert np.allclose(det4.pc_average, det2.pc_average, atol=1e-2)
 
     @pytest.mark.skipif(
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
     )
     def test_optimize_pc_raises(self):
-        pass
+        with pytest.raises(ValueError, match="`pc0` must be of size 3"):
+            _ = self.signal.hough_indexing_optimize_pc([0.5, 0.5], self.indexer)
 
-    def test_optimize_pc_raises_pyebsdindex(self):
-        pass
+        with pytest.raises(ValueError, match="`method` 'powell' must be one of the "):
+            _ = self.signal.hough_indexing_optimize_pc(
+                [0.5, 0.5, 0.5], self.indexer, method="Powell"
+            )
+
+        with pytest.raises(ValueError, match="PSO optimization method does not "):
+            _ = self.signal.hough_indexing_optimize_pc(
+                [0.5, 0.5, 0.5], self.indexer, method="PSO", batch=True
+            )
+
+    @pytest.mark.skipif(
+        not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
+    )
+    def test_optimize_pc_lazy(self):  # pragma: no cover
+        s = self.signal.as_lazy()
+
+        from pyebsdindex import _pyopencl_installed
+
+        if not _pyopencl_installed:
+            with pytest.raises(ValueError, match="Hough indexing of lazy signals must"):
+                _ = s.hough_indexing_optimize_pc(self.detector.pc_average, self.indexer)
+        else:
+            det = s.hough_indexing_optimize_pc(self.detector.pc_average, self.indexer)
+            assert np.allclose(det.pc_average, self.detector.pc_average, atol=1e-2)
+
+    @pytest.mark.skipif(kp._pyebsdindex_installed, reason="pyebsdindex is installed")
+    def test_optimize_pc_raises_pyebsdindex(self):  # pragma: no cover
+        with pytest.raises(ValueError, match="Hough indexing requires pyebsdindex to "):
+            _ = self.signal.hough_indexing_optimize_pc([0.5, 0.5, 0.5], self.indexer)
