@@ -278,11 +278,15 @@ class TestHoughIndexing:
         assert np.isclose(det2.tilt, self.detector.tilt)
         assert np.isclose(det2.px_size, self.detector.px_size)
 
-        # Nelder-Mead vs. PSO (the latter is not deterministic)
-        det4 = self.signal.hough_indexing_optimize_pc(
+    @pytest.mark.skipif(
+        not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
+    )
+    def test_optimize_pc_pso(self):
+        np.random.seed(42)  # Make PSO deterministic
+        det = self.signal.hough_indexing_optimize_pc(
             self.detector.pc_average, self.indexer, method="PSO"
         )
-        assert np.allclose(det4.pc_average, det2.pc_average, atol=1e-2)
+        assert np.allclose(det.pc_average, [0.422, 0.218, 0.500], atol=1e-3)
 
     @pytest.mark.skipif(
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
