@@ -18,6 +18,13 @@ Unreleased
 
 Added
 -----
+- Method to get a PyEBSDIndex ``EBSDIndexer`` instance from an ``EBSDDetector``,
+  convenient for either indexing with PyEBSDIndex or for use with kikuchipy.
+  (`#590 <https://github.com/pyxem/kikuchipy/pull/590>`_)
+- Convenience function to get a ``CrystalMap`` from a PyEBSDIndex Hough indexing result
+  array. (`#590 <https://github.com/pyxem/kikuchipy/pull/590>`_)
+- PyEBSDIndex as an optional dependency.
+  (`#590 <https://github.com/pyxem/kikuchipy/pull/590>`_)
 - Two tutorials showing projection center (PC) fitting and extrapolation to obtain a
   plane of PCs to index a full dataset.
   (`#588 <https://github.com/pyxem/kikuchipy/pull/588>`_)
@@ -94,6 +101,10 @@ Changed
 
 Deprecated
 ----------
+- The PyPI selector ``viz`` is replaced by ``all``, which installs all optional
+  dependencies. ``viz`` will be removed in version 0.9. Install optional dependencies
+  manually or via ``pip install kikuchipy[all]``.
+  (`#590 <https://github.com/pyxem/kikuchipy/pull/590>`_)
 - ``projections`` module with classes ``GnomonicProjection``, ``HesseNormalForm``,
   ``LambertProjection`` and ``SphericalProjection``. These will be removed in version
   0.9.0, as they are unused internally. If you depend on this module, please open an

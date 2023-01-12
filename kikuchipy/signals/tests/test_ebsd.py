@@ -18,12 +18,11 @@
 import logging
 import os
 
-import dask
 import dask.array as da
 import hyperspy.api as hs
 import matplotlib.pyplot as plt
 import numpy as np
-from orix.crystal_map import CrystalMap, Phase
+from orix.crystal_map import CrystalMap
 import pytest
 from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
@@ -162,7 +161,7 @@ class TestEBSDDetectorProperty:
         s.detector = detector_good
 
         # Failure
-        with pytest.raises(ValueError, match="Detector and signal must have the same"):
+        with pytest.raises(ValueError, match=r"Detector shape \(59, 60\) must be "):
             s.detector = kp.detectors.EBSDDetector(shape=(59, 60))
         with pytest.raises(ValueError, match="Detector must have exactly one "):
             s.detector = kp.detectors.EBSDDetector(
@@ -174,7 +173,7 @@ class TestEBSDDetectorProperty:
         [
             (((1,), (5, 5)), (2, 3), True, None),
             (((2, 3), (5, 5)), (2, 3), True, None),
-            (((1,), (5, 4)), (2, 3), False, "Detector and signal must have the same"),
+            (((1,), (5, 4)), (2, 3), False, r"Detector shape \(5, 4\) must be equal "),
             (((3, 2), (5, 5)), (2, 3), False, "Detector must have exactly"),
             (((2, 3), (5, 5)), (), False, "Detector must have exactly"),
         ],
@@ -186,8 +185,8 @@ class TestEBSDDetectorProperty:
         s = kp.signals.EBSD(np.ones(signal_nav_shape + (5, 5), dtype=int))
         func_kwargs = dict(
             detector=detector,
-            navigation_shape=s.axes_manager.navigation_shape[::-1],
-            signal_shape=s.axes_manager.signal_shape[::-1],
+            nav_shape=s.axes_manager.navigation_shape[::-1],
+            sig_shape=s.axes_manager.signal_shape[::-1],
         )
         assert (
             kp.signals.util._detector._detector_is_compatible_with_signal(**func_kwargs)

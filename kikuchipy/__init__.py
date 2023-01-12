@@ -33,6 +33,12 @@ try:
     _nlopt_installed = True
 except ImportError:  # pragma: no cover
     _nlopt_installed = False
+try:
+    from pyebsdindex import pcopt, ebsd_index
+
+    _pyebsdindex_installed = True
+except ImportError:  # pragma: no cover
+    _pyebsdindex_installed = False
 
 
 def set_log_level(level: Union[int, str]):  # pragma: no cover
@@ -56,14 +62,14 @@ def set_log_level(level: Union[int, str]):  # pragma: no cover
     have been initialized by another package
 
     >>> import logging
-    >>> logging.root.handlers[0]
+    >>> logging.root.handlers[0]  # doctest: +SKIP
     <StreamHandler <stderr> (INFO)>
     >>> logging.root.handlers[0].setLevel("DEBUG")
 
     >>> import kikuchipy as kp
     >>> kp.set_log_level("DEBUG")
     >>> s = kp.data.nickel_ebsd_master_pattern_small()
-    >>> s.set_signal_type("EBSD")
+    >>> s.set_signal_type("EBSD")  # doctest: +SKIP
     DEBUG:kikuchipy.signals._kikuchi_master_pattern:Delete custom attributes when setting signal type
     """
     import logging
@@ -74,6 +80,7 @@ def set_log_level(level: Union[int, str]):  # pragma: no cover
 
 __all__ = [
     "__version__",
+    "_pyebsdindex_installed",
     "_pyvista_installed",
     "data",
     "detectors",

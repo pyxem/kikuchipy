@@ -462,7 +462,6 @@ def doctest_setup_teardown(request):
 
     # Teardown
     os.chdir(original_directory)
-    temporary_directory.cleanup()
 
 
 @pytest.fixture(autouse=True)
