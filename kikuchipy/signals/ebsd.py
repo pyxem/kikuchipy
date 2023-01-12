@@ -980,6 +980,16 @@ class EBSD(KikuchipySignal2D):
                 "pip install pyebsdindex. See "
                 "https://kikuchipy.org/en/stable/user/installation.html for details."
             )
+        if self._lazy:
+            from pyebsdindex import _pyopencl_installed
+
+            if not _pyopencl_installed:
+                raise ValueError(
+                    "Hough indexing of lazy signals must use the GPU, which requires "
+                    "pyopencl to be installed. See "
+                    "https://documen.tician.de/pyopencl/misc.html for installation "
+                    "instructions."
+                )
 
         am = self.axes_manager
         nav_shape = am.navigation_shape[::-1]

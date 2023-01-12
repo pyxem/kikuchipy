@@ -84,14 +84,28 @@ class TestHoughIndexing:
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
     )
     def test_hough_indexing_plot_transform(self):
-        # Also test lazy
-        s = self.signal.as_lazy()
-
-        _ = s.hough_indexing(self.phase_list, self.indexer, verbose=2)
+        _ = self.signal.hough_indexing(self.phase_list, self.indexer, verbose=2)
         ax = plt.gca()
         assert len(ax.texts) == 9
         for i, text in enumerate(ax.texts):
             assert text.get_text() == str(i + 1)
+
+    @pytest.mark.skipif(
+        not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
+    )
+    def test_hough_indexing_lazy(self):
+        s = self.signal.as_lazy()
+
+        from pyebsdindex import _pyopencl_installed
+
+        if not _pyopencl_installed:
+            with pytest.raises(ValueError, match="Hough indexing of lazy signals must"):
+                _ = s.hough_indexing(self.phase_list, self.indexer, verbose=2)
+        else:  # pragma: no cover
+            xmap1 = s.hough_indexing(self.phase_list, self.indexer)
+            xmap2 = self.signal.hough_indexing(self.phase_list, self.indexer)
+            assert np.allclose(xmap1.rotations.data, xmap2.rotations.data)
+            assert np.allclose(xmap1.fit, xmap2.fit)
 
     @pytest.mark.skipif(
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
