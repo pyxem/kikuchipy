@@ -62,14 +62,14 @@ def set_log_level(level: Union[int, str]):  # pragma: no cover
     have been initialized by another package
 
     >>> import logging
-    >>> logging.root.handlers[0]
+    >>> logging.root.handlers[0]  # doctest: +SKIP
     <StreamHandler <stderr> (INFO)>
     >>> logging.root.handlers[0].setLevel("DEBUG")
 
     >>> import kikuchipy as kp
     >>> kp.set_log_level("DEBUG")
     >>> s = kp.data.nickel_ebsd_master_pattern_small()
-    >>> s.set_signal_type("EBSD")
+    >>> s.set_signal_type("EBSD")  # doctest: +SKIP
     DEBUG:kikuchipy.signals._kikuchi_master_pattern:Delete custom attributes when setting signal type
     """
     import logging
