@@ -41,12 +41,13 @@ manually:
   optimization algorithms used in EBSD orientation and/or projection center refinement.
 - :doc:`pyvista<pyvista:index>`: 3D plotting of master patterns.
 
-Install optional dependencies::
+Install all optional dependencies::
 
     pip install kikuchipy[all]
 
 Note that this command will not install ``pyopencl``, which is required for GPU support
-in ``pyebsdindex``.
+in ``pyebsdindex``. If the above command failed for some reason, one can try to install
+each optional dependency individually.
 
 .. warning::
 
