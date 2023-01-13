@@ -2,8 +2,14 @@
 Pattern binning
 ===============
 
-This example shows how to bin :class:`~kikuchipy.signals.EBSD` patterns using HyperSpy's
+This example shows how to bin :class:`~kikuchipy.signals.EBSD` patterns using
+:meth:`~kikuchipy.signals.EBSD.downsample` or HyperSpy's
 :meth:`~kikuchipy.signals.EBSD.rebin` (see :ref:`hyperspy:rebin-label` for details).
+
+.. note::
+
+    In general, better contrast is obtained by removing the static (and dynamic)
+    background prior to binning instead of after it.
 """
 
 import hyperspy.api as hs
@@ -19,34 +25,29 @@ print(s.static_background.shape)
 print(s.detector)
 
 ########################################################################################
-# Rebin by passing the new shape (use ``(1, 1, 60, 60)`` if binning a 2D map). Note how
-# the :attr:`~kikuchipy.signals.EBSD.static_background` and
+# Downsample by a factor of 8 while maintaining the data type (achieved by rescaling the
+# pattern intensity). Note how the :attr:`~kikuchipy.signals.EBSD.static_background` and
 # :attr:`~kikuchipy.signals.EBSD.detector` attributes are updated.
 
-s2 = s.rebin(new_shape=(60, 60))
-
-_ = hs.plot.plot_images(
-    [s, s2],
-    axes_decor="off",
-    tight_layout=True,
-    label=None,
-    colorbar=False,
-)
+s2 = s.deepcopy()
+s2.downsample(8)
+_ = hs.plot.plot_images([s, s2], axes_decor="off", tight_layout=True, label=None)
 print(s2.static_background.shape)
 print(s2.detector)
 
 ########################################################################################
-# Rebin by passing the new:old pixel ratio (again, use ``(1, 1, 8, 8)`` for a 2D map)
+# Rebin by passing the new shape (use ``(1, 1, 60, 60)`` if binning a 2D map). Note how
+# the pattern is not rescaled and the data type is cast to either ``int64`` or
+# ``float64`` depending on the initial data type.
 
-s3 = s.rebin(scale=(8, 8))
-print(np.allclose(s2.data, s3.data))
-print(s3.static_background.shape)
-print(s3.detector)
+s3 = s.rebin(new_shape=(60, 60))
+print(s3.data.dtype)
+print(s3.data.min(), s3.data.max())
 
 ########################################################################################
-# Notice how ``rebin()`` casts the data to ``uint64``, increasing the memory use by a
-# factor of eight (so be careful...). Rescale intensities with
-# :meth:`~kikuchipy.signals.EBSD.rescale_intensity` if desirable.
+# The latter method is more flexible in that it allows for different binning factors in
+# each axis, the factors are not restricted to being integers and the factors do not
+# have to be divisors of the initial signal shape.
 
-print(s.data.dtype)
-print(s3.data.dtype)
+s4 = s.rebin(scale=(8, 9))
+print(s4.data.shape)
