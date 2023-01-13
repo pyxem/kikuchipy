@@ -294,52 +294,6 @@ class TestAdaptiveHistogramEqualizationChunk:
         assert np.allclose(equalized_patterns[0, 0].compute(), ADAPT_EQ_UINT8)
 
 
-class TestAverageNeighbourPatternsChunk:
-    @pytest.mark.parametrize("dtype_in", [None, np.uint8])
-    def test_average_neighbour_patterns_chunk(self, dummy_signal, dtype_in):
-        w = Window()
-
-        # Get array to operate on
-        dask_array = get_dask_array(dummy_signal)
-        dtype_out = dask_array.dtype
-
-        # Get sum of window data for each image
-        nav_shape = dummy_signal.axes_manager.navigation_shape
-        w_sums = convolve(
-            input=np.ones(nav_shape[::-1], dtype=int),
-            weights=w.data,
-            mode="constant",
-            cval=0,
-        )
-
-        # Add signal dimensions to arrays to enable their use with
-        # Dask's map_blocks()
-        sig_dim = dummy_signal.axes_manager.signal_dimension
-        nav_dim = dummy_signal.axes_manager.navigation_dimension
-        for _ in range(sig_dim):
-            w_sums = np.expand_dims(w_sums, axis=w_sums.ndim)
-            w = np.expand_dims(w, axis=w.ndim)
-        w_sums = da.from_array(
-            w_sums, chunks=dask_array.chunks[:nav_dim] + (1,) * sig_dim
-        )
-
-        averaged_patterns = dask_array.map_blocks(
-            func=chunk.average_neighbour_patterns,
-            window_sums=w_sums,
-            window=w,
-            dtype_out=dtype_in,
-            dtype=dtype_out,
-        )
-
-        answer = np.array(
-            [255, 109, 218, 218, 36, 236, 255, 36, 0], dtype=np.uint8
-        ).reshape((3, 3))
-
-        # Check for correct data type and gives expected output intensities
-        assert averaged_patterns.dtype == dtype_out
-        assert np.allclose(averaged_patterns[0, 0].compute(), answer)
-
-
 class TestFFTFilterChunk:
     @pytest.mark.parametrize(
         "shift, transfer_function, kwargs, dtype_out, expected_spectrum_sum",

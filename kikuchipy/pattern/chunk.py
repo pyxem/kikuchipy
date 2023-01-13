@@ -15,14 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Functions for operating on :class:`numpy.ndarray` or
+"""Private functions for operating on :class:`numpy.ndarray` or
 :class:`dask.array.Array` chunks of EBSD patterns.
-
-.. warning::
-
-    This module will be become private for internal use only in v0.7.
-    If you need to process multiple EBSD patterns at once, please do
-    this using :class:`~kikuchipy.signals.EBSD`.
 """
 
 from typing import Union, Tuple, List
@@ -295,55 +289,6 @@ def normalize_intensity(
         )
 
     return normalized_patterns
-
-
-def average_neighbour_patterns(
-    patterns: np.ndarray,
-    window_sums: np.ndarray,
-    window: Union[np.ndarray, Window],
-    dtype_out: Union[str, np.dtype, type, None] = None,
-) -> np.ndarray:
-    """Average a chunk of patterns with its neighbours within a window.
-
-    The amount of averaging is specified by the window coefficients.
-    All patterns are averaged with the same window. Map borders are
-    extended with zeros. Resulting pattern intensities are rescaled
-    to fill the input patterns' data type range individually.
-
-    Parameters
-    ----------
-    patterns
-        Patterns to average, with some overlap with surrounding chunks.
-    window_sums
-        Sum of window data for each image.
-    window
-        Averaging window.
-    dtype_out
-        Data type of averaged patterns. If None (default), it is set to
-        the same data type as the input patterns.
-
-    Returns
-    -------
-    averaged_patterns
-        Averaged patterns.
-    """
-    if dtype_out is None:
-        dtype_out = patterns.dtype
-    else:
-        dtype_out = np.dtype(dtype_out)
-
-    # Correlate patterns with window
-    correlated_patterns = correlate(patterns, weights=window, mode="constant", cval=0)
-
-    # Divide convolved patterns by number of neighbours averaged with
-    averaged_patterns = np.empty_like(correlated_patterns, dtype=dtype_out)
-    for nav_idx in np.ndindex(patterns.shape[:-2]):
-        averaged_patterns[nav_idx] = pattern_processing.rescale_intensity(
-            pattern=correlated_patterns[nav_idx] / window_sums[nav_idx],
-            dtype_out=dtype_out,
-        )
-
-    return averaged_patterns
 
 
 def _average_neighbour_patterns(

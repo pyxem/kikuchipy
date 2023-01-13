@@ -18,6 +18,8 @@ Unreleased
 
 Added
 -----
+- Downsampling of EBSD patterns which maintain the data type by also rescaling to the
+  data type range. (`#592 <https://github.com/pyxem/kikuchipy/pull/592>`_)
 - Method to get a PyEBSDIndex ``EBSDIndexer`` instance from an ``EBSDDetector``,
   convenient for either indexing with PyEBSDIndex or for use with kikuchipy.
   (`#590 <https://github.com/pyxem/kikuchipy/pull/590>`_)

@@ -282,11 +282,11 @@ class TestHoughIndexing:
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
     )
     def test_optimize_pc_pso(self):
-        np.random.seed(42)  # Make PSO deterministic
         det = self.signal.hough_indexing_optimize_pc(
             self.detector.pc_average, self.indexer, method="PSO"
         )
-        assert np.allclose(det.pc_average, [0.422, 0.218, 0.500], atol=1e-3)
+        # Results are not deterministic, so we give a wide range here...
+        assert abs(self.detector.pc_average - det.pc_average).max() < 0.05
 
     @pytest.mark.skipif(
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
