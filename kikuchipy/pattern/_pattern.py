@@ -775,8 +775,8 @@ def _bin2d(pattern: np.ndarray, factor: int) -> np.ndarray:
 def _downsample2d(
     pattern: np.ndarray,
     factor: int,
-    omin: int | float,
-    omax: int | float,
+    omin: Union[int, float],
+    omax: Union[int, float],
     dtype_out: np.dtype,
 ) -> np.ndarray:
     pattern = pattern.astype(np.dtype("float32"))
