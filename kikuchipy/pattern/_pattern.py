@@ -143,7 +143,7 @@ def _normalize(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
     return patterns / patterns_norm_squared
 
 
-@njit("float32[:](float32[:],bool_[:])", cache=True, nogil=True, fastmath=True)
+@njit("float32[:](float32[:], bool_[:])", cache=True, nogil=True, fastmath=True)
 def _mask_pattern(pattern: np.ndarray, mask: np.ndarray) -> np.ndarray:
     # Used in refinement solvers
     return pattern[mask].reshape(-1)
@@ -751,3 +751,37 @@ def _get_image_quality_numba(
     inertia = np.sum(spectrum * frequency_vectors) / np.sum(spectrum)
 
     return 1 - (inertia / inertia_max)
+
+
+@njit("float32[:, :](float32[:, :], int64)", cache=True, fastmath=True, nogil=True)
+def _bin2d(pattern: np.ndarray, factor: int) -> np.ndarray:
+    n_rows_new = pattern.shape[0] // factor
+    n_cols_new = pattern.shape[1] // factor
+
+    new_pattern = np.zeros((n_rows_new, n_cols_new), dtype=pattern.dtype)
+
+    for r in range(n_rows_new):
+        for rr in range(r * factor, (r + 1) * factor):
+            for c in range(n_cols_new):
+                value = new_pattern[r, c]
+                for cc in range(c * factor, (c + 1) * factor):
+                    value += pattern[rr, cc]
+                new_pattern[r, c] = value
+
+    return new_pattern
+
+
+@njit(cache=True, fastmath=True, nogil=True)
+def _downsample2d(
+    pattern: np.ndarray,
+    factor: int,
+    omin: int | float,
+    omax: int | float,
+    dtype_out: np.dtype,
+) -> np.ndarray:
+    pattern = pattern.astype(np.dtype("float32"))
+    binned_pattern = _bin2d(pattern, factor)
+    imin = binned_pattern.min()
+    imax = binned_pattern.max()
+    rescaled_pattern = _rescale_with_min_max(binned_pattern, imin, imax, omin, omax)
+    return rescaled_pattern.astype(dtype_out)

@@ -65,6 +65,7 @@ from kikuchipy.pattern.chunk import _average_neighbour_patterns
 from kikuchipy.pattern._pattern import (
     fft_frequency_vectors,
     fft_filter,
+    _downsample2d,
     _dynamic_background_frequency_space_setup,
     _get_image_quality,
     _remove_static_background_subtract,
@@ -834,6 +835,436 @@ class EBSD(KikuchipySignal2D):
         else:
             self.data = equalized_patterns
 
+    def fft_filter(
+        self,
+        transfer_function: Union[np.ndarray, Window],
+        function_domain: str,
+        shift: bool = False,
+        show_progressbar: Optional[bool] = None,
+    ) -> None:
+        """Filter an EBSD scan inplace in the frequency domain.
+
+        Patterns are transformed via the Fast Fourier Transform (FFT) to
+        the frequency domain, where their spectrum is multiplied by the
+        ``transfer_function``, and the filtered spectrum is subsequently
+        transformed to the spatial domain via the inverse FFT (IFFT).
+        Filtered patterns are rescaled to input data type range.
+
+        Note that if ``function_domain`` is ``"spatial"``, only real
+        valued FFT and IFFT is used.
+
+        Parameters
+        ----------
+        transfer_function
+            Filter to apply to patterns. This can either be a transfer
+            function in the frequency domain of pattern shape or a
+            kernel in the spatial domain. What is passed is determined
+            from ``function_domain``.
+        function_domain
+            Options are ``"frequency"`` and ``"spatial"``, indicating,
+            respectively, whether the filter function passed to
+            ``filter_function`` is a transfer function in the frequency
+            domain or a kernel in the spatial domain.
+        shift
+            Whether to shift the zero-frequency component to the center.
+            Default is ``False``. This is only used when
+            ``function_domain="frequency"``.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
+
+        See Also
+        --------
+        kikuchipy.filters.Window
+
+        Examples
+        --------
+        Applying a Gaussian low pass filter with a cutoff frequency of
+        20:
+
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> pattern_shape = s.axes_manager.signal_shape[::-1]
+        >>> w = kp.filters.Window(
+        ...     "lowpass", cutoff=20, shape=pattern_shape
+        ... )
+        >>> s.fft_filter(
+        ...     transfer_function=w,
+        ...     function_domain="frequency",
+        ...     shift=True,
+        ... )
+        """
+        dtype_out = self.data.dtype.type
+
+        dtype = np.float32
+        dask_array = get_dask_array(signal=self, dtype=dtype)
+
+        kwargs = {}
+        if function_domain == "frequency":
+            filter_func = fft_filter
+            kwargs["shift"] = shift
+        elif function_domain == "spatial":
+            filter_func = _fft_filter  # Barnes
+            kwargs["window_shape"] = transfer_function.shape
+
+            # FFT filter setup
+            (
+                kwargs["fft_shape"],
+                transfer_function,  # Padded
+                kwargs["offset_before_fft"],
+                kwargs["offset_after_ifft"],
+            ) = _fft_filter_setup(
+                image_shape=self.axes_manager.signal_shape[::-1],
+                window=transfer_function,
+            )
+        else:
+            function_domains = ["frequency", "spatial"]
+            raise ValueError(f"{function_domain} must be either of {function_domains}.")
+
+        filtered_patterns = dask_array.map_blocks(
+            func=chunk.fft_filter,
+            filter_func=filter_func,
+            transfer_function=transfer_function,
+            dtype_out=dtype_out,
+            dtype=dtype_out,
+            **kwargs,
+        )
+
+        # Overwrite signal patterns
+        if not self._lazy:
+            pbar = ProgressBar()
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
+                pbar.register()
+
+            filtered_patterns.store(self.data, compute=True)
+
+            try:
+                pbar.unregister()
+            except KeyError:
+                pass
+        else:
+            self.data = filtered_patterns
+
+    def average_neighbour_patterns(
+        self,
+        window: Union[str, np.ndarray, da.Array, Window] = "circular",
+        window_shape: Tuple[int, ...] = (3, 3),
+        show_progressbar: Optional[bool] = None,
+        **kwargs,
+    ) -> None:
+        """Average patterns inplace with its neighbours within a window.
+
+        The amount of averaging is specified by the window coefficients.
+        All patterns are averaged with the same window. Map borders are
+        extended with zeros. Resulting pattern intensities are rescaled
+        to fill the input patterns' data type range individually.
+
+        Averaging is accomplished by correlating the window with the
+        extended array of patterns using
+        :func:`scipy.ndimage.correlate`.
+
+        Parameters
+        ----------
+        window
+            Name of averaging window or an array. Available types are
+            listed in :func:`scipy.signal.windows.get_window`, in
+            addition to a ``"circular"`` window (default) filled with
+            ones in which corner coefficients are set to zero. A window
+            element is considered to be in a corner if its radial
+            distance to the origin (window center) is shorter or equal
+            to the half width of the window's longest axis. A 1D or 2D
+            :class:`~numpy.ndarray`, :class:`~dask.array.Array` or
+            :class:`~kikuchipy.filters.Window` can also be passed.
+        window_shape
+            Shape of averaging window. Not used if a custom window or
+            :class:`~kikuchipy.filters.Window` is passed to ``window``.
+            This can be either 1D or 2D, and can be asymmetrical.
+            Default is ``(3, 3)``.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
+        **kwargs
+            Keyword arguments passed to the available window type listed
+            in :func:`~scipy.signal.windows.get_window`. If not given,
+            the default values of that particular window are used.
+
+        See Also
+        --------
+        kikuchipy.filters.Window, scipy.signal.windows.get_window,
+        scipy.ndimage.correlate
+        """
+        if isinstance(window, Window) and window.is_valid:
+            averaging_window = copy.copy(window)
+        else:
+            averaging_window = Window(window=window, shape=window_shape, **kwargs)
+
+        nav_shape = self.axes_manager.navigation_shape[::-1]
+        window_shape = averaging_window.shape
+        if window_shape in [(1,), (1, 1)]:
+            # Do nothing if a window of shape (1,) or (1, 1) is passed
+            return warnings.warn(
+                f"A window of shape {window_shape} was passed, no averaging is "
+                "therefore performed."
+            )
+        elif len(nav_shape) > len(window_shape):
+            averaging_window = averaging_window.reshape(window_shape + (1,))
+
+        # Get sum of window data for each pattern, to normalize with
+        # after correlation
+        window_sums = correlate(
+            input=np.ones(nav_shape, dtype=int),
+            weights=averaging_window,
+            mode="constant",
+        )
+
+        # Add signal dimensions to window array to enable its use with
+        # Dask's map_overlap()
+        sig_dim = self.axes_manager.signal_dimension
+        averaging_window = averaging_window.reshape(
+            averaging_window.shape + (1,) * sig_dim
+        )
+
+        # Create dask array of signal patterns and do processing on this
+        if self._lazy:
+            old_chunks = self.data.chunks
+        dask_array = get_dask_array(signal=self, chunk_bytes=8e6, rechunk=True)
+
+        # Add signal dimensions to array be able to use with Dask's
+        # map_overlap()
+        nav_dim = self.axes_manager.navigation_dimension
+        for i in range(sig_dim):
+            window_sums = np.expand_dims(window_sums, axis=window_sums.ndim)
+        window_sums = da.from_array(
+            window_sums, chunks=dask_array.chunks[:nav_dim] + (1,) * sig_dim
+        )
+
+        # Create overlap between chunks to enable correlation with the
+        # window using Dask's map_overlap()
+        window_dim = averaging_window.ndim
+        overlap_depth = {}
+        for i in range(nav_dim):
+            if i < window_dim and dask_array.chunks[i][0] < dask_array.shape[i]:
+                overlap_depth[i] = (window_shape[i] // 2) + 1
+            else:
+                overlap_depth[i] = 1
+        overlap_depth.update(
+            {i: 0 for i in self.axes_manager.signal_indices_in_array[::-1]}
+        )
+
+        dtype_out = self.data.dtype
+        omin, omax = dtype_range[dtype_out.type]
+        averaged_patterns = da.overlap.map_overlap(
+            _average_neighbour_patterns,
+            dask_array,
+            window_sums,
+            window=averaging_window,
+            dtype_out=dtype_out,
+            omin=omin,
+            omax=omax,
+            dtype=dtype_out,
+            depth=overlap_depth,
+            boundary="none",
+        )
+
+        # Overwrite signal patterns
+        if not self._lazy:
+            pbar = ProgressBar()
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
+                pbar.register()
+
+            averaged_patterns.store(self.data, compute=True)
+
+            try:
+                pbar.unregister()
+            except KeyError:
+                pass
+        else:
+            # Revert original chunks
+            averaged_patterns = averaged_patterns.rechunk(old_chunks)
+
+            self.data = averaged_patterns
+
+        # Don't sink
+        gc.collect()
+
+    def downsample(
+        self,
+        factor: int,
+        dtype_out: Optional[str] = None,
+        show_progressbar: Optional[bool] = None,
+    ) -> None:
+        r"""Downsample the pattern shape by an integer factor and
+        rescale intensities to fill the data type range inplace.
+
+        Parameters
+        ----------
+        factor
+            Integer binning factor to downsample by. Must be a divisor
+            of the initial pattern shape :math:`(s_y, s_x)`. The new
+            pattern shape given by the ``factor`` :math:`k` is
+            :math:`(s_y / k, s_x / k)`.
+        dtype_out
+            Name of the data type of the new patterns overwriting
+            :attr:`data`. Contrast between patterns is lost. If not
+            given, patterns maintain their data type and. Patterns are
+            rescaled to fill the data type range.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
+
+        See Also
+        --------
+        rebin, crop
+
+        Notes
+        -----
+        This method differs from :meth:`rebin` in that intensities are
+        rescaled after binning in order to maintain the data type. If
+        rescaling is undesirable, use :meth:`rebin` instead.
+        """
+        if not isinstance(factor, int) or factor <= 1:
+            raise ValueError(f"Binning `factor` {factor} must be an integer > 1.")
+        else:
+            factor = np.int64(factor)
+
+        sig_shape_old = self.axes_manager.signal_shape
+        rest = np.mod(sig_shape_old, factor)
+        if not all(rest == 0):
+            raise ValueError(
+                f"Binning `factor` {factor} must be a divisor of the initial pattern "
+                f"shape {sig_shape_old}, but {tuple(rest)} pixels remain.\n"
+                "You might try to crop away these pixels first using EBSD.crop()."
+            )
+        sig_shape_new = tuple(np.array(sig_shape_old) // factor)
+
+        if dtype_out is not None:
+            dtype_out = np.dtype(dtype_out).type
+        else:
+            dtype_out = self.data.dtype.type
+        omin, omax = dtype_range[dtype_out]
+
+        attrs = self._get_custom_attributes()
+
+        # Update static background
+        static_bg = attrs["static_background"]
+        if static_bg is not None:
+            static_bg_new = _downsample2d(static_bg, factor, omin, omax, dtype_out)
+            attrs["static_background"] = static_bg_new
+
+        # Update detector shape and binning factor
+        attrs["detector"].shape = sig_shape_new
+        attrs["detector"].binning *= factor
+
+        self.map(
+            _downsample2d,
+            show_progressbar=show_progressbar,
+            parallel=True,
+            output_dtype=dtype_out,
+            factor=factor,
+            omin=omin,
+            omax=omax,
+            dtype_out=dtype_out,
+        )
+        self._set_custom_attributes(attrs)
+
+    def get_neighbour_dot_product_matrices(
+        self,
+        window: Optional[Window] = None,
+        zero_mean: bool = True,
+        normalize: bool = True,
+        dtype_out: Union[str, np.dtype, type] = "float32",
+        show_progressbar: Optional[bool] = None,
+    ) -> Union[np.ndarray, da.Array]:
+        """Get an array with dot products of a pattern and its
+        neighbours within a window.
+
+        Parameters
+        ----------
+        window
+            Window with integer coefficients defining the neighbours to
+            calculate the dot products with. If not given, the four
+            nearest neighbours are used. Must have the same number of
+            dimensions as signal navigation dimensions.
+        zero_mean
+            Whether to subtract the mean of each pattern individually to
+            center the intensities about zero before calculating the
+            dot products. Default is ``True``.
+        normalize
+            Whether to normalize the pattern intensities to a standard
+            deviation of 1 before calculating the dot products. This
+            operation is performed after centering the intensities if
+            ``zero_mean=True``. Default is ``True``.
+        dtype_out
+            Data type of the output map. Default is ``"float32"``.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
+
+        Returns
+        -------
+        dp_matrices
+            Dot products between a pattern and its nearest neighbours.
+        """
+        if self.axes_manager.navigation_dimension == 0:
+            raise ValueError("Signal must have at least one navigation dimension")
+
+        # Create dask array of signal patterns and do processing on this
+        dask_array = get_dask_array(signal=self)
+
+        # Default to the nearest neighbours
+        nav_dim = self.axes_manager.navigation_dimension
+        if window is None:
+            window = Window(window="circular", shape=(3, 3)[:nav_dim])
+
+        # Set overlap depth between navigation chunks equal to the max.
+        # number of nearest neighbours in each navigation axis
+        overlap_depth = _get_chunk_overlap_depth(
+            window=window,
+            axes_manager=self.axes_manager,
+            chunksize=dask_array.chunksize,
+        )
+
+        dtype_out = np.dtype(dtype_out)
+
+        dp_matrices = dask_array.map_overlap(
+            _get_neighbour_dot_product_matrices,
+            window=window,
+            sig_dim=self.axes_manager.signal_dimension,
+            sig_size=self.axes_manager.signal_size,
+            zero_mean=zero_mean,
+            normalize=normalize,
+            dtype_out=dtype_out,
+            drop_axis=self.axes_manager.signal_indices_in_array[::-1],
+            new_axis=tuple(np.arange(window.ndim) + nav_dim),
+            dtype=dtype_out,
+            depth=overlap_depth,
+            boundary="none",
+        )
+
+        if not self._lazy:
+            pbar = ProgressBar()
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
+                pbar.register()
+
+            dp_matrices = dp_matrices.compute()
+
+            try:
+                pbar.unregister()
+            except KeyError:
+                pass
+
+        return dp_matrices
+
     def get_image_quality(
         self,
         normalize: bool = True,
@@ -899,6 +1330,229 @@ class EBSD(KikuchipySignal2D):
         )
 
         return image_quality_map.data
+
+    def get_average_neighbour_dot_product_map(
+        self,
+        window: Optional[Window] = None,
+        zero_mean: bool = True,
+        normalize: bool = True,
+        dtype_out: Union[str, np.dtype, type] = "float32",
+        dp_matrices: Optional[np.ndarray] = None,
+        show_progressbar: Optional[bool] = None,
+    ) -> Union[np.ndarray, da.Array]:
+        """Get a map of the average dot product between patterns and
+        their neighbours within an averaging window.
+
+        Parameters
+        ----------
+        window
+            Window with integer coefficients defining the neighbours to
+            calculate the average with. If not given, the four nearest
+            neighbours are used. Must have the same number of dimensions
+            as signal navigation dimensions.
+        zero_mean
+            Whether to subtract the mean of each pattern individually to
+            center the intensities about zero before calculating the
+            dot products. Default is ``True``.
+        normalize
+            Whether to normalize the pattern intensities to a standard
+            deviation of 1 before calculating the dot products. This
+            operation is performed after centering the intensities if
+            ``zero_mean=True``. Default is ``True``.
+        dtype_out
+            Data type of the output map. Default is ``"float32"``.
+        dp_matrices
+            Optional pre-calculated dot product matrices, by default
+            ``None``. If an array is passed, the average dot product map
+            is calculated from this array. The ``dp_matrices`` array can
+            be obtained from :meth:`get_neighbour_dot_product_matrices`.
+            Its shape must correspond to the signal's navigation shape
+            and the window's shape.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
+
+        Returns
+        -------
+        adp
+            Average dot product map.
+        """
+        if self.axes_manager.navigation_dimension == 0:
+            raise ValueError("Signal must have at least one navigation dimension")
+
+        # Default to the nearest neighbours
+        nav_dim = self.axes_manager.navigation_dimension
+        if window is None:
+            window = Window(window="circular", shape=(3, 3)[:nav_dim])
+
+        if dp_matrices is not None:
+            nan_slices = [slice(None) for _ in range(nav_dim)]
+            nan_slices += [slice(i, i + 1) for i in window.origin]
+            dp_matrices2 = dp_matrices.copy()
+            dp_matrices2[tuple(nan_slices)] = np.nan
+            if nav_dim == 1:
+                mean_axis = 1
+            else:  # == 2
+                mean_axis = (2, 3)
+            return np.nanmean(dp_matrices2, axis=mean_axis)
+
+        # Create dask array of signal data and do processing on this
+        dask_array = get_dask_array(signal=self)
+
+        # Set overlap depth between navigation chunks equal to the max.
+        # number of nearest neighbours in each navigation axis
+        overlap_depth = _get_chunk_overlap_depth(
+            window=window,
+            axes_manager=self.axes_manager,
+            chunksize=dask_array.chunksize,
+        )
+
+        dtype_out = np.dtype(dtype_out)
+
+        adp = dask_array.map_overlap(
+            _get_average_dot_product_map,
+            window=window,
+            sig_dim=self.axes_manager.signal_dimension,
+            sig_size=self.axes_manager.signal_size,
+            zero_mean=zero_mean,
+            normalize=normalize,
+            dtype_out=dtype_out,
+            drop_axis=self.axes_manager.signal_indices_in_array,
+            dtype=dtype_out,
+            depth=overlap_depth,
+            boundary="none",
+        )
+        chunks = get_chunking(
+            data_shape=self.axes_manager.navigation_shape[::-1],
+            nav_dim=nav_dim,
+            sig_dim=0,
+            dtype=dtype_out,
+        )
+        adp = adp.rechunk(chunks=chunks)
+
+        if not self._lazy:
+            pbar = ProgressBar()
+            if show_progressbar or (
+                show_progressbar is None and hs.preferences.General.show_progressbar
+            ):
+                pbar.register()
+
+            adp = adp.compute()
+
+            try:
+                pbar.unregister()
+            except KeyError:
+                pass
+
+        return adp
+
+    def plot_virtual_bse_intensity(
+        self,
+        roi: BaseInteractiveROI,
+        out_signal_axes: Union[Iterable[int], Iterable[str], None] = None,
+        **kwargs,
+    ) -> None:
+        """Plot an interactive virtual backscatter electron (VBSE)
+        image formed from intensities within a specified and adjustable
+        region of interest (ROI) on the detector.
+
+        Adapted from
+        :meth:`pyxem.signals.common_diffraction.CommonDiffraction.plot_integrated_intensity`.
+
+        Parameters
+        ----------
+        roi
+            Any interactive ROI detailed in HyperSpy.
+        out_signal_axes
+            Which navigation axes to use as signal axes in the virtual
+            image. If not given, the first two navigation axes are used.
+        **kwargs:
+            Keyword arguments passed to the ``plot()`` method of the
+            virtual image.
+
+        See Also
+        --------
+        get_virtual_bse_intensity
+
+        Examples
+        --------
+        >>> import hyperspy.api as hs
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> rect_roi = hs.roi.RectangularROI(
+        ...     left=0, right=5, top=0, bottom=5
+        ... )
+        >>> s.plot_virtual_bse_intensity(rect_roi)
+        """
+        # Plot signal if necessary
+        if self._plot is None or not self._plot.is_active:
+            self.plot()
+
+        # Get the sliced signal from the ROI
+        sliced_signal = roi.interactive(self, axes=self.axes_manager.signal_axes)
+
+        # Create an output signal for the virtual backscatter electron
+        # calculation
+        out = self._get_sum_signal(self, out_signal_axes)
+        out.metadata.General.title = "Virtual backscatter electron intensity"
+
+        # Create the interactive signal
+        hs.interactive(
+            f=sliced_signal.nansum,
+            axis=sliced_signal.axes_manager.signal_axes,
+            event=roi.events.changed,
+            recompute_out_event=None,
+            out=out,
+        )
+
+        # Plot the result
+        out.plot(**kwargs)
+
+    def get_virtual_bse_intensity(
+        self,
+        roi: BaseInteractiveROI,
+        out_signal_axes: Union[Iterable[int], Iterable[str], None] = None,
+    ) -> VirtualBSEImage:
+        """Get a virtual backscatter electron (VBSE) image formed from
+        intensities within a region of interest (ROI) on the detector.
+
+        Adapted from
+        :meth:`pyxem.signals.common_diffraction.CommonDiffraction.get_integrated_intensity`.
+
+        Parameters
+        ----------
+        roi
+            Any interactive ROI detailed in HyperSpy.
+        out_signal_axes
+            Which navigation axes to use as signal axes in the virtual
+            image. If not given, the first two navigation axes are used.
+
+        Returns
+        -------
+        virtual_image
+            VBSE image formed from detector intensities within an ROI
+            on the detector.
+
+        See Also
+        --------
+        plot_virtual_bse_intensity
+
+        Examples
+        --------
+        >>> import hyperspy.api as hs
+        >>> import kikuchipy as kp
+        >>> rect_roi = hs.roi.RectangularROI(
+        ...     left=0, right=5, top=0, bottom=5
+        ... )
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> vbse_image = s.get_virtual_bse_intensity(rect_roi)
+        """
+        vbse = roi(self, axes=self.axes_manager.signal_axes)
+        vbse_sum = self._get_sum_signal(vbse, out_signal_axes)
+        vbse_sum.metadata.General.title = "Virtual backscatter electron image"
+        vbse_sum.set_signal_type("VirtualBSEImage")
+        return vbse_sum
 
     def hough_indexing(
         self,
@@ -1791,578 +2445,6 @@ class EBSD(KikuchipySignal2D):
             compute=compute,
         )
 
-    def fft_filter(
-        self,
-        transfer_function: Union[np.ndarray, Window],
-        function_domain: str,
-        shift: bool = False,
-        show_progressbar: Optional[bool] = None,
-    ) -> None:
-        """Filter an EBSD scan inplace in the frequency domain.
-
-        Patterns are transformed via the Fast Fourier Transform (FFT) to
-        the frequency domain, where their spectrum is multiplied by the
-        ``transfer_function``, and the filtered spectrum is subsequently
-        transformed to the spatial domain via the inverse FFT (IFFT).
-        Filtered patterns are rescaled to input data type range.
-
-        Note that if ``function_domain`` is ``"spatial"``, only real
-        valued FFT and IFFT is used.
-
-        Parameters
-        ----------
-        transfer_function
-            Filter to apply to patterns. This can either be a transfer
-            function in the frequency domain of pattern shape or a
-            kernel in the spatial domain. What is passed is determined
-            from ``function_domain``.
-        function_domain
-            Options are ``"frequency"`` and ``"spatial"``, indicating,
-            respectively, whether the filter function passed to
-            ``filter_function`` is a transfer function in the frequency
-            domain or a kernel in the spatial domain.
-        shift
-            Whether to shift the zero-frequency component to the center.
-            Default is ``False``. This is only used when
-            ``function_domain="frequency"``.
-        show_progressbar
-            Whether to show a progressbar. If not given, the value of
-            :obj:`hyperspy.api.preferences.General.show_progressbar`
-            is used.
-
-        See Also
-        --------
-        kikuchipy.filters.Window
-
-        Examples
-        --------
-        Applying a Gaussian low pass filter with a cutoff frequency of
-        20:
-
-        >>> import kikuchipy as kp
-        >>> s = kp.data.nickel_ebsd_small()
-        >>> pattern_shape = s.axes_manager.signal_shape[::-1]
-        >>> w = kp.filters.Window(
-        ...     "lowpass", cutoff=20, shape=pattern_shape
-        ... )
-        >>> s.fft_filter(
-        ...     transfer_function=w,
-        ...     function_domain="frequency",
-        ...     shift=True,
-        ... )
-        """
-        dtype_out = self.data.dtype.type
-
-        dtype = np.float32
-        dask_array = get_dask_array(signal=self, dtype=dtype)
-
-        kwargs = {}
-        if function_domain == "frequency":
-            filter_func = fft_filter
-            kwargs["shift"] = shift
-        elif function_domain == "spatial":
-            filter_func = _fft_filter  # Barnes
-            kwargs["window_shape"] = transfer_function.shape
-
-            # FFT filter setup
-            (
-                kwargs["fft_shape"],
-                transfer_function,  # Padded
-                kwargs["offset_before_fft"],
-                kwargs["offset_after_ifft"],
-            ) = _fft_filter_setup(
-                image_shape=self.axes_manager.signal_shape[::-1],
-                window=transfer_function,
-            )
-        else:
-            function_domains = ["frequency", "spatial"]
-            raise ValueError(f"{function_domain} must be either of {function_domains}.")
-
-        filtered_patterns = dask_array.map_blocks(
-            func=chunk.fft_filter,
-            filter_func=filter_func,
-            transfer_function=transfer_function,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-            **kwargs,
-        )
-
-        # Overwrite signal patterns
-        if not self._lazy:
-            pbar = ProgressBar()
-            if show_progressbar or (
-                show_progressbar is None and hs.preferences.General.show_progressbar
-            ):
-                pbar.register()
-
-            filtered_patterns.store(self.data, compute=True)
-
-            try:
-                pbar.unregister()
-            except KeyError:
-                pass
-        else:
-            self.data = filtered_patterns
-
-    def get_neighbour_dot_product_matrices(
-        self,
-        window: Optional[Window] = None,
-        zero_mean: bool = True,
-        normalize: bool = True,
-        dtype_out: Union[str, np.dtype, type] = "float32",
-        show_progressbar: Optional[bool] = None,
-    ) -> Union[np.ndarray, da.Array]:
-        """Get an array with dot products of a pattern and its
-        neighbours within a window.
-
-        Parameters
-        ----------
-        window
-            Window with integer coefficients defining the neighbours to
-            calculate the dot products with. If not given, the four
-            nearest neighbours are used. Must have the same number of
-            dimensions as signal navigation dimensions.
-        zero_mean
-            Whether to subtract the mean of each pattern individually to
-            center the intensities about zero before calculating the
-            dot products. Default is ``True``.
-        normalize
-            Whether to normalize the pattern intensities to a standard
-            deviation of 1 before calculating the dot products. This
-            operation is performed after centering the intensities if
-            ``zero_mean=True``. Default is ``True``.
-        dtype_out
-            Data type of the output map. Default is ``"float32"``.
-        show_progressbar
-            Whether to show a progressbar. If not given, the value of
-            :obj:`hyperspy.api.preferences.General.show_progressbar`
-            is used.
-
-        Returns
-        -------
-        dp_matrices
-            Dot products between a pattern and its nearest neighbours.
-        """
-        if self.axes_manager.navigation_dimension == 0:
-            raise ValueError("Signal must have at least one navigation dimension")
-
-        # Create dask array of signal patterns and do processing on this
-        dask_array = get_dask_array(signal=self)
-
-        # Default to the nearest neighbours
-        nav_dim = self.axes_manager.navigation_dimension
-        if window is None:
-            window = Window(window="circular", shape=(3, 3)[:nav_dim])
-
-        # Set overlap depth between navigation chunks equal to the max.
-        # number of nearest neighbours in each navigation axis
-        overlap_depth = _get_chunk_overlap_depth(
-            window=window,
-            axes_manager=self.axes_manager,
-            chunksize=dask_array.chunksize,
-        )
-
-        dtype_out = np.dtype(dtype_out)
-
-        dp_matrices = dask_array.map_overlap(
-            _get_neighbour_dot_product_matrices,
-            window=window,
-            sig_dim=self.axes_manager.signal_dimension,
-            sig_size=self.axes_manager.signal_size,
-            zero_mean=zero_mean,
-            normalize=normalize,
-            dtype_out=dtype_out,
-            drop_axis=self.axes_manager.signal_indices_in_array[::-1],
-            new_axis=tuple(np.arange(window.ndim) + nav_dim),
-            dtype=dtype_out,
-            depth=overlap_depth,
-            boundary="none",
-        )
-
-        if not self._lazy:
-            pbar = ProgressBar()
-            if show_progressbar or (
-                show_progressbar is None and hs.preferences.General.show_progressbar
-            ):
-                pbar.register()
-
-            dp_matrices = dp_matrices.compute()
-
-            try:
-                pbar.unregister()
-            except KeyError:
-                pass
-
-        return dp_matrices
-
-    def get_average_neighbour_dot_product_map(
-        self,
-        window: Optional[Window] = None,
-        zero_mean: bool = True,
-        normalize: bool = True,
-        dtype_out: Union[str, np.dtype, type] = "float32",
-        dp_matrices: Optional[np.ndarray] = None,
-        show_progressbar: Optional[bool] = None,
-    ) -> Union[np.ndarray, da.Array]:
-        """Get a map of the average dot product between patterns and
-        their neighbours within an averaging window.
-
-        Parameters
-        ----------
-        window
-            Window with integer coefficients defining the neighbours to
-            calculate the average with. If not given, the four nearest
-            neighbours are used. Must have the same number of dimensions
-            as signal navigation dimensions.
-        zero_mean
-            Whether to subtract the mean of each pattern individually to
-            center the intensities about zero before calculating the
-            dot products. Default is ``True``.
-        normalize
-            Whether to normalize the pattern intensities to a standard
-            deviation of 1 before calculating the dot products. This
-            operation is performed after centering the intensities if
-            ``zero_mean=True``. Default is ``True``.
-        dtype_out
-            Data type of the output map. Default is ``"float32"``.
-        dp_matrices
-            Optional pre-calculated dot product matrices, by default
-            ``None``. If an array is passed, the average dot product map
-            is calculated from this array. The ``dp_matrices`` array can
-            be obtained from :meth:`get_neighbour_dot_product_matrices`.
-            Its shape must correspond to the signal's navigation shape
-            and the window's shape.
-        show_progressbar
-            Whether to show a progressbar. If not given, the value of
-            :obj:`hyperspy.api.preferences.General.show_progressbar`
-            is used.
-
-        Returns
-        -------
-        adp
-            Average dot product map.
-        """
-        if self.axes_manager.navigation_dimension == 0:
-            raise ValueError("Signal must have at least one navigation dimension")
-
-        # Default to the nearest neighbours
-        nav_dim = self.axes_manager.navigation_dimension
-        if window is None:
-            window = Window(window="circular", shape=(3, 3)[:nav_dim])
-
-        if dp_matrices is not None:
-            nan_slices = [slice(None) for _ in range(nav_dim)]
-            nan_slices += [slice(i, i + 1) for i in window.origin]
-            dp_matrices2 = dp_matrices.copy()
-            dp_matrices2[tuple(nan_slices)] = np.nan
-            if nav_dim == 1:
-                mean_axis = 1
-            else:  # == 2
-                mean_axis = (2, 3)
-            return np.nanmean(dp_matrices2, axis=mean_axis)
-
-        # Create dask array of signal data and do processing on this
-        dask_array = get_dask_array(signal=self)
-
-        # Set overlap depth between navigation chunks equal to the max.
-        # number of nearest neighbours in each navigation axis
-        overlap_depth = _get_chunk_overlap_depth(
-            window=window,
-            axes_manager=self.axes_manager,
-            chunksize=dask_array.chunksize,
-        )
-
-        dtype_out = np.dtype(dtype_out)
-
-        adp = dask_array.map_overlap(
-            _get_average_dot_product_map,
-            window=window,
-            sig_dim=self.axes_manager.signal_dimension,
-            sig_size=self.axes_manager.signal_size,
-            zero_mean=zero_mean,
-            normalize=normalize,
-            dtype_out=dtype_out,
-            drop_axis=self.axes_manager.signal_indices_in_array,
-            dtype=dtype_out,
-            depth=overlap_depth,
-            boundary="none",
-        )
-        chunks = get_chunking(
-            data_shape=self.axes_manager.navigation_shape[::-1],
-            nav_dim=nav_dim,
-            sig_dim=0,
-            dtype=dtype_out,
-        )
-        adp = adp.rechunk(chunks=chunks)
-
-        if not self._lazy:
-            pbar = ProgressBar()
-            if show_progressbar or (
-                show_progressbar is None and hs.preferences.General.show_progressbar
-            ):
-                pbar.register()
-
-            adp = adp.compute()
-
-            try:
-                pbar.unregister()
-            except KeyError:
-                pass
-
-        return adp
-
-    def average_neighbour_patterns(
-        self,
-        window: Union[str, np.ndarray, da.Array, Window] = "circular",
-        window_shape: Tuple[int, ...] = (3, 3),
-        show_progressbar: Optional[bool] = None,
-        **kwargs,
-    ) -> None:
-        """Average patterns inplace with its neighbours within a window.
-
-        The amount of averaging is specified by the window coefficients.
-        All patterns are averaged with the same window. Map borders are
-        extended with zeros. Resulting pattern intensities are rescaled
-        to fill the input patterns' data type range individually.
-
-        Averaging is accomplished by correlating the window with the
-        extended array of patterns using
-        :func:`scipy.ndimage.correlate`.
-
-        Parameters
-        ----------
-        window
-            Name of averaging window or an array. Available types are
-            listed in :func:`scipy.signal.windows.get_window`, in
-            addition to a ``"circular"`` window (default) filled with
-            ones in which corner coefficients are set to zero. A window
-            element is considered to be in a corner if its radial
-            distance to the origin (window center) is shorter or equal
-            to the half width of the window's longest axis. A 1D or 2D
-            :class:`~numpy.ndarray`, :class:`~dask.array.Array` or
-            :class:`~kikuchipy.filters.Window` can also be passed.
-        window_shape
-            Shape of averaging window. Not used if a custom window or
-            :class:`~kikuchipy.filters.Window` is passed to ``window``.
-            This can be either 1D or 2D, and can be asymmetrical.
-            Default is ``(3, 3)``.
-        show_progressbar
-            Whether to show a progressbar. If not given, the value of
-            :obj:`hyperspy.api.preferences.General.show_progressbar`
-            is used.
-        **kwargs
-            Keyword arguments passed to the available window type listed
-            in :func:`~scipy.signal.windows.get_window`. If not given,
-            the default values of that particular window are used.
-
-        See Also
-        --------
-        kikuchipy.filters.Window, scipy.signal.windows.get_window,
-        scipy.ndimage.correlate
-        """
-        if isinstance(window, Window) and window.is_valid:
-            averaging_window = copy.copy(window)
-        else:
-            averaging_window = Window(window=window, shape=window_shape, **kwargs)
-
-        nav_shape = self.axes_manager.navigation_shape[::-1]
-        window_shape = averaging_window.shape
-        if window_shape in [(1,), (1, 1)]:
-            # Do nothing if a window of shape (1,) or (1, 1) is passed
-            return warnings.warn(
-                f"A window of shape {window_shape} was passed, no averaging is "
-                "therefore performed."
-            )
-        elif len(nav_shape) > len(window_shape):
-            averaging_window = averaging_window.reshape(window_shape + (1,))
-
-        # Get sum of window data for each pattern, to normalize with
-        # after correlation
-        window_sums = correlate(
-            input=np.ones(nav_shape, dtype=int),
-            weights=averaging_window,
-            mode="constant",
-        )
-
-        # Add signal dimensions to window array to enable its use with
-        # Dask's map_overlap()
-        sig_dim = self.axes_manager.signal_dimension
-        averaging_window = averaging_window.reshape(
-            averaging_window.shape + (1,) * sig_dim
-        )
-
-        # Create dask array of signal patterns and do processing on this
-        if self._lazy:
-            old_chunks = self.data.chunks
-        dask_array = get_dask_array(signal=self, chunk_bytes=8e6, rechunk=True)
-
-        # Add signal dimensions to array be able to use with Dask's
-        # map_overlap()
-        nav_dim = self.axes_manager.navigation_dimension
-        for i in range(sig_dim):
-            window_sums = np.expand_dims(window_sums, axis=window_sums.ndim)
-        window_sums = da.from_array(
-            window_sums, chunks=dask_array.chunks[:nav_dim] + (1,) * sig_dim
-        )
-
-        # Create overlap between chunks to enable correlation with the
-        # window using Dask's map_overlap()
-        window_dim = averaging_window.ndim
-        overlap_depth = {}
-        for i in range(nav_dim):
-            if i < window_dim and dask_array.chunks[i][0] < dask_array.shape[i]:
-                overlap_depth[i] = (window_shape[i] // 2) + 1
-            else:
-                overlap_depth[i] = 1
-        overlap_depth.update(
-            {i: 0 for i in self.axes_manager.signal_indices_in_array[::-1]}
-        )
-
-        dtype_out = self.data.dtype
-        omin, omax = dtype_range[dtype_out.type]
-        averaged_patterns = da.overlap.map_overlap(
-            _average_neighbour_patterns,
-            dask_array,
-            window_sums,
-            window=averaging_window,
-            dtype_out=dtype_out,
-            omin=omin,
-            omax=omax,
-            dtype=dtype_out,
-            depth=overlap_depth,
-            boundary="none",
-        )
-
-        # Overwrite signal patterns
-        if not self._lazy:
-            pbar = ProgressBar()
-            if show_progressbar or (
-                show_progressbar is None and hs.preferences.General.show_progressbar
-            ):
-                pbar.register()
-
-            averaged_patterns.store(self.data, compute=True)
-
-            try:
-                pbar.unregister()
-            except KeyError:
-                pass
-        else:
-            # Revert original chunks
-            averaged_patterns = averaged_patterns.rechunk(old_chunks)
-
-            self.data = averaged_patterns
-
-        # Don't sink
-        gc.collect()
-
-    def plot_virtual_bse_intensity(
-        self,
-        roi: BaseInteractiveROI,
-        out_signal_axes: Union[Iterable[int], Iterable[str], None] = None,
-        **kwargs,
-    ) -> None:
-        """Plot an interactive virtual backscatter electron (VBSE)
-        image formed from intensities within a specified and adjustable
-        region of interest (ROI) on the detector.
-
-        Adapted from
-        :meth:`pyxem.signals.common_diffraction.CommonDiffraction.plot_integrated_intensity`.
-
-        Parameters
-        ----------
-        roi
-            Any interactive ROI detailed in HyperSpy.
-        out_signal_axes
-            Which navigation axes to use as signal axes in the virtual
-            image. If not given, the first two navigation axes are used.
-        **kwargs:
-            Keyword arguments passed to the ``plot()`` method of the
-            virtual image.
-
-        See Also
-        --------
-        get_virtual_bse_intensity
-
-        Examples
-        --------
-        >>> import hyperspy.api as hs
-        >>> import kikuchipy as kp
-        >>> s = kp.data.nickel_ebsd_small()
-        >>> rect_roi = hs.roi.RectangularROI(
-        ...     left=0, right=5, top=0, bottom=5
-        ... )
-        >>> s.plot_virtual_bse_intensity(rect_roi)
-        """
-        # Plot signal if necessary
-        if self._plot is None or not self._plot.is_active:
-            self.plot()
-
-        # Get the sliced signal from the ROI
-        sliced_signal = roi.interactive(self, axes=self.axes_manager.signal_axes)
-
-        # Create an output signal for the virtual backscatter electron
-        # calculation
-        out = self._get_sum_signal(self, out_signal_axes)
-        out.metadata.General.title = "Virtual backscatter electron intensity"
-
-        # Create the interactive signal
-        hs.interactive(
-            f=sliced_signal.nansum,
-            axis=sliced_signal.axes_manager.signal_axes,
-            event=roi.events.changed,
-            recompute_out_event=None,
-            out=out,
-        )
-
-        # Plot the result
-        out.plot(**kwargs)
-
-    def get_virtual_bse_intensity(
-        self,
-        roi: BaseInteractiveROI,
-        out_signal_axes: Union[Iterable[int], Iterable[str], None] = None,
-    ) -> VirtualBSEImage:
-        """Get a virtual backscatter electron (VBSE) image formed from
-        intensities within a region of interest (ROI) on the detector.
-
-        Adapted from
-        :meth:`pyxem.signals.common_diffraction.CommonDiffraction.get_integrated_intensity`.
-
-        Parameters
-        ----------
-        roi
-            Any interactive ROI detailed in HyperSpy.
-        out_signal_axes
-            Which navigation axes to use as signal axes in the virtual
-            image. If not given, the first two navigation axes are used.
-
-        Returns
-        -------
-        virtual_image
-            VBSE image formed from detector intensities within an ROI
-            on the detector.
-
-        See Also
-        --------
-        plot_virtual_bse_intensity
-
-        Examples
-        --------
-        >>> import hyperspy.api as hs
-        >>> import kikuchipy as kp
-        >>> rect_roi = hs.roi.RectangularROI(
-        ...     left=0, right=5, top=0, bottom=5
-        ... )
-        >>> s = kp.data.nickel_ebsd_small()
-        >>> vbse_image = s.get_virtual_bse_intensity(rect_roi)
-        """
-        vbse = roi(self, axes=self.axes_manager.signal_axes)
-        vbse_sum = self._get_sum_signal(vbse, out_signal_axes)
-        vbse_sum.metadata.General.title = "Virtual backscatter electron image"
-        vbse_sum.set_signal_type("VirtualBSEImage")
-        return vbse_sum
-
     # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
 
     def save(
@@ -2555,10 +2637,10 @@ class EBSD(KikuchipySignal2D):
         nav_shape_new = am_new.navigation_shape[::-1]
         sig_shape_new = am_new.signal_shape[::-1]
 
-        props = self._get_custom_attributes(make_deepcopy=True)
+        attrs = self._get_custom_attributes(make_deepcopy=True)
 
         # Update static background
-        static_bg = props["static_background"]
+        static_bg = attrs["static_background"]
         if sig_shape_new != sig_shape_old and static_bg is not None:
             sig_idx = am_old.signal_indices_in_array[::-1]
             if params["new_shape"] is not None:
@@ -2569,23 +2651,23 @@ class EBSD(KikuchipySignal2D):
             s_static_bg2 = s_static_bg.rebin(**params)
             static_bg2 = s_static_bg2.data
             static_bg2 = static_bg2.astype(new.data.dtype)
-            props["static_background"] = static_bg2
+            attrs["static_background"] = static_bg2
 
         # Update detector shape and binning factor
-        props["detector"].shape = sig_shape_new
+        attrs["detector"].shape = sig_shape_new
         factors = np.array(sig_shape_old) / np.array(sig_shape_new)
-        binning = props["detector"].binning * factors
+        binning = attrs["detector"].binning * factors
         if binning[0] == binning[1] and np.allclose(binning, binning.round(0)):
-            props["detector"].binning = int(binning[0])
+            attrs["detector"].binning = int(binning[0])
         else:
-            props["detector"].binning = 1
+            attrs["detector"].binning = 1
 
         if nav_shape_new != nav_shape_old:
-            props["xmap"] = None
-            props["detector"].pc = np.full(nav_shape_new + (3,), 0.5)
-            props["static_background"] = None
+            attrs["xmap"] = None
+            attrs["detector"].pc = np.full(nav_shape_new + (3,), 0.5)
+            attrs["static_background"] = None
 
-        new._set_custom_attributes(props)
+        new._set_custom_attributes(attrs)
 
         return new
 
