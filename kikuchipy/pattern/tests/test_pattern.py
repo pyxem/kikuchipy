@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import dask.array as da
 import numpy as np
 import pytest
 from scipy.fft import fft2
@@ -30,6 +31,8 @@ from kikuchipy.pattern._pattern import (
     normalize_intensity,
     rescale_intensity,
     remove_dynamic_background,
+    _bin2d,
+    _downsample2d,
     _dynamic_background_frequency_space_setup,
     _get_image_quality_numba,
     _mask_pattern,
@@ -524,3 +527,24 @@ class TestMaskPattern:
         assert p_masked.size == 90
         assert np.isclose(p_masked.mean(), 54.5)
         assert np.allclose(p_masked, p_masked2)
+
+
+class TestDownsample:
+    def test_downsample_numba(self):
+        data = np.arange(1000, dtype="float32").reshape((20, 50))
+        data_da = da.from_array(data)
+
+        data_binned_da = da.coarsen(np.sum, data_da, {0: 2, 1: 2})
+        data_binned_kp = _bin2d(data, 2)
+        data_binned_kp2 = _bin2d.py_func(data, 2)
+
+        assert np.allclose(data_binned_da, data_binned_kp)
+        assert np.allclose(data_binned_kp, data_binned_kp2)
+
+        data_downsampled = _rescale_with_min_max(
+            data_binned_kp, data_binned_kp.min(), data_binned_kp.max(), omin=-1, omax=1
+        )
+        data_downsampled2 = _downsample2d(data, 2, -1, 1, np.float32)
+        data_downsampled3 = _downsample2d.py_func(data, 2, -1, 1, np.float32)
+        assert np.allclose(data_downsampled, data_downsampled2)
+        assert np.allclose(data_downsampled, data_downsampled3)

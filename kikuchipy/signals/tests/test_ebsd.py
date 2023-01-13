@@ -2115,3 +2115,57 @@ class TestExtractGrid:
         s5, idx5 = s4.extract_grid((6,), return_indices=True)
         assert s5.data.shape == (6, 60, 60)
         assert np.allclose(idx5, [10, 21, 32, 43, 54, 65])
+
+
+class TestDownsample:
+    def test_downsample(self):
+        s = kp.data.nickel_ebsd_small()
+        s2 = s.deepcopy()
+
+        s2.downsample(factor=2)
+
+        # Initial signal unaffected
+        assert s.data.shape == (3, 3, 60, 60)
+        assert s.detector.shape == (60, 60)
+        assert s.static_background.shape == (60, 60)
+
+        # Correct shape and data type
+        assert s2.data.shape == (3, 3, 30, 30)
+        assert s2.data.dtype == s.data.dtype
+        assert s2.detector.shape == (30, 30)
+        assert s2.static_background.shape == (30, 30)
+        assert s2.static_background.dtype == s.static_background.dtype
+
+    def test_downsample_lazy(self):
+        s = kp.data.nickel_ebsd_small(lazy=True)
+
+        s.downsample(factor=3)
+
+        assert isinstance(s, kp.signals.LazyEBSD)
+        assert isinstance(s.data, da.Array)
+
+        s.compute()
+
+        assert isinstance(s, kp.signals.EBSD)
+        assert isinstance(s.data, np.ndarray)
+
+    def test_downsample_dtype(self):
+        s = kp.data.nickel_ebsd_small()
+
+        s2 = s.deepcopy()
+        s2.downsample(factor=2, dtype_out="uint16")
+        assert s2.data.dtype.name == "uint16"
+
+    def test_downsample_raises(self):
+        s = kp.data.nickel_ebsd_small(lazy=True)
+
+        with pytest.raises(ValueError, match="Binning `factor` 2.5 must be an integer"):
+            s.downsample(2.5)
+
+        with pytest.raises(ValueError, match="Binning `factor` 1 must be an integer >"):
+            s.downsample(1)
+
+        with pytest.raises(
+            ValueError, match="Binning `factor` 7 must be a divisor of the initial "
+        ):
+            s.downsample(7)
