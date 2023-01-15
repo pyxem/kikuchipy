@@ -33,7 +33,7 @@ class TestSimilarityMetric:
         ncc = NormalizedCrossCorrelationMetric(1, 1)
         assert repr(ncc) == (
             "NormalizedCrossCorrelationMetric: float32, greater is better, "
-            "rechunk: False, signal mask: False"
+            "rechunk: False, navigation mask: False, signal mask: False"
         )
 
 

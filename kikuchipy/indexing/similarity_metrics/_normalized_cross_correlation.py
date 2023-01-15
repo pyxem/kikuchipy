@@ -95,13 +95,13 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
         patterns in :meth:`match`.
 
         Patterns are prepared by:
-            1. Setting the data type to :attr:`~SimilarityMetric.dtype`.
-            2. Reshaping to shape ``(n_experimental_patterns, -1)``
-            3. Applying a signal mask if
-               :attr:`~SimilarityMetric.signal_mask` is set.
-            4. Rechunking if :attr:`~SimilarityMetric.rechunk` is
-               ``True``.
-            5. Normalizing to a mean of 0 and a standard deviation of 1.
+            1. Setting the data type to :attr:`dtype`.
+            2. Excluding the experimental patterns where
+               :attr:`navigation_mask` is ``False`` if the mask is set.
+            3. Reshaping to shape ``(n_experimental_patterns, -1)``
+            4. Applying a signal mask if :attr:`signal_mask` is set.
+            5. Rechunking if :attr:`rechunk` is ``True``.
+            6. Normalizing to a mean of 0 and a standard deviation of 1.
 
         Parameters
         ----------
@@ -114,12 +114,20 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
             Prepared experimental patterns.
         """
         patterns = da.asarray(patterns).astype(self.dtype)
+
         patterns = patterns.reshape((self.n_experimental_patterns, -1))
+
+        if self.navigation_mask is not None:
+            patterns = patterns[~self.navigation_mask.ravel()]
+
         if self.signal_mask is not None:
             patterns = self._mask_patterns(patterns)
+
         if self.rechunk:
             patterns = patterns.rechunk(("auto", -1))
+
         prepared_patterns = self._zero_mean_normalize_patterns(patterns)
+
         return prepared_patterns
 
     def prepare_dictionary(
@@ -130,9 +138,8 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
         patterns in :meth:`match`.
 
         Patterns are prepared by:
-            1. Setting the data type to :attr:`~SimilarityMetric.dtype`.
-            2. Applying a signal mask if
-               :attr:`~SimilarityMetric.signal_mask` is set.
+            1. Setting the data type to :attr:`dtype`.
+            2. Applying a signal mask if :attr:`signal_mask` is set.
             3. Normalizing to a mean of 0 and a standard deviation of 1.
 
         Parameters
@@ -145,10 +152,14 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
         prepared_patterns
             Prepared dictionary patterns.
         """
+
         patterns = patterns.astype(self.dtype)
+
         if self.signal_mask is not None:
             patterns = self._mask_patterns(patterns)
+
         prepared_patterns = self._zero_mean_normalize_patterns(patterns)
+
         return prepared_patterns
 
     def match(
@@ -172,18 +183,14 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
             Normalized cross-correlation scores.
         """
         return da.einsum(
-            "ik,mk->im",
-            experimental,
-            dictionary,
-            optimize=True,
-            dtype=self.dtype,
+            "ik,mk->im", experimental, dictionary, optimize=True, dtype=self.dtype
         )
 
     def _mask_patterns(
         self, patterns: Union[da.Array, np.ndarray]
     ) -> Union[da.Array, np.ndarray]:
         with dask.config.set(**{"array.slicing.split_large_chunks": False}):
-            patterns = patterns[:, self.signal_mask.ravel()]
+            patterns = patterns[:, ~self.signal_mask.ravel()]
         return patterns
 
     @staticmethod
@@ -194,12 +201,17 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
             dispatcher = da
         else:
             dispatcher = np
-        patterns_mean = dispatcher.mean(patterns, axis=-1, keepdims=True)
+
+        # Center
+        patterns_mean = dispatcher.mean(patterns, axis=-1)[..., np.newaxis]
         patterns = patterns - patterns_mean
+
+        # Normalize
         patterns_norm = dispatcher.sqrt(
-            dispatcher.sum(dispatcher.square(patterns), axis=-1, keepdims=True)
-        )
+            dispatcher.sum(dispatcher.square(patterns), axis=-1)
+        )[..., np.newaxis]
         patterns = patterns / patterns_norm
+
         return patterns
 
 

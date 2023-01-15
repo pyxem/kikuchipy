@@ -121,6 +121,11 @@ Removed
 
 Fixed
 -----
+- Inversion of ``signal_mask`` in the normalized cross-correlation and normalized dot
+  product metrics is now done internally, to be in line with the docstrings (does not
+  affect the use of this parameter and ``metric="ncc"`` or ``metric="ndp"`` in
+  ``EBSD.dictionary_indexing()``.
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - ``EBSDDetector.pc_average`` no longer rounds the PC to three decimals.
   (`#586 <https://github.com/pyxem/kikuchipy/pull/586>`_)
 - Microscope magnification is now read correctly from EDAX h5ebsd files.

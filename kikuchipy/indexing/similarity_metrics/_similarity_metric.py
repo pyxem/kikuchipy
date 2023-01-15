@@ -45,10 +45,14 @@ class SimilarityMetric(abc.ABC):
     ----------
     n_experimental_patterns
         Number of experimental patterns. If not given, this is set
-        to None and must be set later. Must be at least 1.
+        to ``None`` and must be set later. Must be at least ``1``.
     n_dictionary_patterns
         Number of dictionary patterns. If not given, this is set to
-        None and must be set later. Must be at least 1.
+        ``None`` and must be set later. Must be at least ``1``.
+    navigation_mask
+        A boolean mask equal to the experimental patterns' navigation
+        (map) shape, where only patterns equal to ``False`` are matched.
+        If not given, all patterns are used.
     signal_mask
         A boolean mask equal to the experimental patterns' detector
         shape ``(n rows, n columns)``, where only pixels equal to
@@ -67,6 +71,7 @@ class SimilarityMetric(abc.ABC):
         self,
         n_experimental_patterns: Optional[int] = None,
         n_dictionary_patterns: Optional[int] = None,
+        navigation_mask: Optional[np.ndarray] = None,
         signal_mask: Optional[np.ndarray] = None,
         dtype: Union[str, np.dtype, type] = "float32",
         rechunk: bool = False,
@@ -76,6 +81,7 @@ class SimilarityMetric(abc.ABC):
         """
         self._n_experimental_patterns = n_experimental_patterns
         self._n_dictionary_patterns = n_dictionary_patterns
+        self._navigation_mask = navigation_mask
         self._signal_mask = signal_mask
         self._dtype = np.dtype(dtype)
         self._rechunk = rechunk
@@ -85,6 +91,7 @@ class SimilarityMetric(abc.ABC):
         sign_string = {1: "greater is better", -1: "lower is better"}
         string += sign_string[self.sign]
         string += f", rechunk: {self.rechunk}, "
+        string += f"navigation mask: {self.signal_mask is not None}, "
         string += f"signal mask: {self.signal_mask is not None}"
         return string
 
@@ -153,9 +160,28 @@ class SimilarityMetric(abc.ABC):
         self._n_experimental_patterns = value
 
     @property
+    def navigation_mask(self) -> np.ndarray:
+        """Return or set the boolean mask of patterns to match, equal to
+        the navigation (map) shape.
+
+        Parameters
+        ----------
+        value
+            Navigation mask where points set to ``False`` are matched.
+        """
+        return self._navigation_mask
+
+    @navigation_mask.setter
+    def navigation_mask(self, value: np.ndarray):
+        """Set the boolean mask of patterns to match, equal to the
+        navigation (map) shape.
+        """
+        self._navigation_mask = value
+
+    @property
     def signal_mask(self) -> np.ndarray:
         """Return or set the boolean mask equal to the experimental
-        patterns' detector shape ``(n rows, n columns)``.
+        patterns' detector shape ``(s rows, s columns)``.
 
         Parameters
         ----------
@@ -167,7 +193,7 @@ class SimilarityMetric(abc.ABC):
     @signal_mask.setter
     def signal_mask(self, value: np.ndarray):
         """Set the boolean mask equal to the experimental patterns'
-        detector shape ``(n rows, n columns)``.
+        detector shape ``(s rows, s columns)``.
         """
         self._signal_mask = value
 

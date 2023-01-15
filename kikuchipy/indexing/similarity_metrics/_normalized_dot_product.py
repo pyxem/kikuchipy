@@ -172,7 +172,7 @@ class NormalizedDotProductMetric(SimilarityMetric):
         self, patterns: Union[da.Array, np.ndarray]
     ) -> Union[da.Array, np.ndarray]:
         with dask.config.set(**{"array.slicing.split_large_chunks": False}):
-            patterns = patterns[:, self.signal_mask.ravel()]
+            patterns = patterns[:, ~self.signal_mask.ravel()]
         return patterns
 
     @staticmethod
