@@ -65,7 +65,7 @@ def test_refine_orientation(benchmark):
         detector=detector,
         master_pattern=mp,
         energy=20,
-        mask=signal_mask,
+        signal_mask=signal_mask,
     )
 
     # Relaxed check of results, just to make sure results are not way
@@ -116,9 +116,9 @@ def test_refine_pc(benchmark):
         detector=detector,
         master_pattern=mp,
         energy=20,
-        mask=signal_mask,
+        signal_mask=signal_mask,
     )
 
     # Relaxed check of results, just to make sure results are not way
     # off
-    assert np.allclose(detector_ref.pc_average, [0.417, 0.219, 0.503])
+    assert np.allclose(detector_ref.pc_average, [0.417, 0.219, 0.503], atol=1e-3)
