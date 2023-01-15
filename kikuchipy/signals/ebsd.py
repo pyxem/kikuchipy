@@ -1806,6 +1806,7 @@ class EBSD(KikuchipySignal2D):
         metric: Union[SimilarityMetric, str] = "ncc",
         keep_n: int = 20,
         n_per_iteration: Optional[int] = None,
+        navigation_mask: Optional[np.ndarray] = None,
         signal_mask: Optional[np.ndarray] = None,
         rechunk: bool = False,
         dtype: Union[str, np.dtype, type, None] = None,
@@ -1817,9 +1818,9 @@ class EBSD(KikuchipySignal2D):
         Parameters
         ----------
         dictionary
-            EBSD signal with dictionary patterns. The signal must have a
-            1D navigation axis, an :attr:`xmap` property with crystal
-            orientations set, and equal detector shape.
+            One EBSD signal with dictionary patterns. The signal must
+            have a 1D navigation axis, an :attr:`xmap` property with
+            crystal orientations set, and equal detector shape.
         metric
             Similarity metric, by default ``"ncc"`` (normalized
             cross-correlation). ``"ndp"`` (normalized dot product) is
@@ -1842,14 +1843,14 @@ class EBSD(KikuchipySignal2D):
             dictionary patterns, yielding only one iteration. This
             parameter can be increased to use less memory during
             indexing, but this will increase the computation time.
-
-            .. versionadded:: 0.5
+        navigation_mask
+            A boolean mask equal to the signal's navigation (map) shape
+            ``(n rows, n columns)``, where only patterns equal to
+            ``False`` are matched. If not given, all patterns are used.
         signal_mask
             A boolean mask equal to the experimental patterns' detector
-            shape ``(n rows, n columns)``, where only pixels equal to
+            shape ``(s rows, s columns)``, where only pixels equal to
             ``False`` are matched. If not given, all pixels are used.
-
-            .. versionadded:: 0.5
         rechunk
             Whether ``metric`` is allowed to rechunk experimental and
             dictionary patterns before matching. Default is ``False``.
@@ -1857,8 +1858,6 @@ class EBSD(KikuchipySignal2D):
             memory. If a custom ``metric`` is passed, whatever
             :attr:`~kikuchipy.indexing.SimilarityMetric.rechunk` is set
             to will be used.
-
-            .. versionadded:: 0.5
         dtype
             Which data type ``metric`` shall cast the patterns to before
             matching. If not given, ``"float32"`` will be used unless a
@@ -1867,8 +1866,6 @@ class EBSD(KikuchipySignal2D):
             will then be used instead. ``"float32"`` and ``"float64"``
             are allowed for the available ``"ncc"`` and ``"ndp"``
             metrics.
-
-            .. versionadded:: 0.5
 
         Returns
         -------
@@ -1889,17 +1886,10 @@ class EBSD(KikuchipySignal2D):
             phase map.
         kikuchipy.indexing.orientation_similarity_map :
             Calculate an orientation similarity map.
-
-        Notes
-        -----
-        .. versionchanged:: 0.5
-           Only one dictionary can be passed and the
-           ``return_merged_crystal_map`` and
-           ``get_orientation_similarity_map`` parameters were removed.
         """
-        exp_am = self.axes_manager
-        dict_am = dictionary.axes_manager
-        dict_size = dict_am.navigation_size
+        am_exp = self.axes_manager
+        am_dict = dictionary.axes_manager
+        dict_size = am_dict.navigation_size
 
         if n_per_iteration is None:
             if isinstance(dictionary.data, da.Array):
@@ -1907,12 +1897,25 @@ class EBSD(KikuchipySignal2D):
             else:
                 n_per_iteration = dict_size
 
-        exp_sig_shape = exp_am.signal_shape[::-1]
-        dict_sig_shape = dict_am.signal_shape[::-1]
-        if exp_sig_shape != dict_sig_shape:
+        nav_shape_exp = am_exp.navigation_shape[::-1]
+        if navigation_mask is not None:
+            if navigation_mask.shape != nav_shape_exp:
+                raise ValueError(
+                    f"The `navigation_mask` shape {navigation_mask.shape} and the "
+                    f"signal's navigation shape {nav_shape_exp} must be identical."
+                )
+            elif navigation_mask.all():
+                raise ValueError(
+                    "The `navigation_mask` must allow for indexing of at least one "
+                    "pattern (at least one value equal to `False`)."
+                )
+
+        sig_shape_exp = am_exp.signal_shape[::-1]
+        sig_shape_dict = am_dict.signal_shape[::-1]
+        if sig_shape_exp != sig_shape_dict:
             raise ValueError(
-                f"Experimental {exp_sig_shape} and dictionary {dict_sig_shape} signal "
-                "shapes must be identical"
+                f"Experimental {sig_shape_exp} and dictionary {sig_shape_dict} signal "
+                "shapes must be identical."
             )
 
         dict_xmap = dictionary.xmap
@@ -1920,22 +1923,32 @@ class EBSD(KikuchipySignal2D):
             raise ValueError(
                 "Dictionary signal must have a non-empty `EBSD.xmap` property of equal "
                 "size as the number of dictionary patterns, and both the signal and"
-                "crystal map must have only one navigation dimension"
+                "crystal map must have only one navigation dimension."
             )
 
-        metric = self._prepare_metric(metric, signal_mask, dtype, rechunk, dict_size)
+        metric = self._prepare_metric(
+            metric, navigation_mask, signal_mask, dtype, rechunk, dict_size
+        )
 
         with dask.config.set(**{"array.slicing.split_large_chunks": False}):
-            return _dictionary_indexing(
+            xmap = _dictionary_indexing(
                 experimental=self.data,
-                experimental_nav_shape=exp_am.navigation_shape[::-1],
+                experimental_nav_shape=am_exp.navigation_shape[::-1],
                 dictionary=dictionary.data,
-                step_sizes=tuple(a.scale for a in exp_am.navigation_axes[::-1]),
+                step_sizes=tuple(a.scale for a in am_exp.navigation_axes[::-1]),
                 dictionary_xmap=dictionary.xmap,
                 keep_n=keep_n,
                 n_per_iteration=n_per_iteration,
                 metric=metric,
             )
+
+        # Set scan unit
+        if len(nav_shape_exp) > 0:  # Navigation shape can be (1,)
+            scan_unit = str(am_exp.navigation_axes[0].units)
+            if scan_unit != "<undefined>":
+                xmap.scan_unit = scan_unit
+
+        return xmap
 
     def refine_orientation(
         self,
@@ -2804,6 +2817,7 @@ class EBSD(KikuchipySignal2D):
     def _prepare_metric(
         self,
         metric: Union[SimilarityMetric, str],
+        navigation_mask: Union[np.ndarray, None],
         signal_mask: Union[np.ndarray, None],
         dtype: Union[str, np.dtype, type, None],
         rechunk: bool,
@@ -2817,19 +2831,28 @@ class EBSD(KikuchipySignal2D):
             metric_class = metrics[metric]
             metric = metric_class()
             metric.rechunk = rechunk
+
         if not isinstance(metric, SimilarityMetric):
             raise ValueError(
                 f"'{metric}' must be either of {metrics.keys()} or a custom metric "
                 "class inheriting from SimilarityMetric. See "
                 "kikuchipy.indexing.SimilarityMetric"
             )
+
         metric.n_experimental_patterns = max(self.axes_manager.navigation_size, 1)
         metric.n_dictionary_patterns = max(n_dictionary_patterns, 1)
+
+        if navigation_mask is not None:
+            metric.navigation_mask = navigation_mask
+
         if signal_mask is not None:
-            metric.signal_mask = ~signal_mask
+            metric.signal_mask = signal_mask
+
         if dtype is not None:
             metric.dtype = dtype
+
         metric.raise_error_if_invalid()
+
         return metric
 
     @staticmethod

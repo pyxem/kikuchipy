@@ -1372,6 +1372,9 @@ class TestDictionaryIndexing:
         assert xmap.shape == nav_shape
         assert np.allclose(xmap.scores[:, 0], np.ones(int(np.prod(nav_shape))))
 
+    def test_dictionary_indexing_navigation_mask(self):
+        pass
+
 
 class TestAverageNeighbourDotProductMap:
     def test_adp_0d(self):
