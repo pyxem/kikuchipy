@@ -78,10 +78,7 @@ def xmap_from_hough_indexing_data(
     ):
         raise ValueError("`nav_shape` cannot be a tuple of more than two integers")
 
-    xy, _ = create_coordinate_arrays(navigation_shape, step_sizes)
-    xmap_kwargs = {"x": xy["x"]}
-    if len(navigation_shape) == 2:
-        xmap_kwargs["y"] = xy["y"]
+    coords, _ = create_coordinate_arrays(navigation_shape, step_sizes)
 
     phase_list_id = phase_list.ids
     if data_index != -1 and data_index not in phase_list_id:
@@ -107,7 +104,7 @@ def xmap_from_hough_indexing_data(
             nmatch=data_index["nmatch"],
         ),
         scan_unit=scan_unit,
-        **xmap_kwargs,
+        **coords,
     )
 
     return xmap
