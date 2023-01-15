@@ -203,33 +203,6 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
         return patterns
 
 
-@njit("float64(float32[:, :], float32[:, :])", cache=True, nogil=True, fastmath=True)
-def _ncc_single_patterns_2d_float32(exp: np.ndarray, sim: np.ndarray) -> float:
-    """Return the normalized cross-correlation (NCC) coefficient
-    between two 2D patterns.
-
-    Parameters
-    ----------
-    exp
-        2D array of shape (n_pixels,) and data type 32-bit floats.
-    sim
-        2D array of shape (n_pixels,) and data type 32-bit floats.
-
-    Returns
-    -------
-    ncc
-        NCC coefficient as 32-bit float.
-    """
-    exp_mean = np.mean(exp)
-    sim_mean = np.mean(sim)
-    exp_centered = exp - exp_mean
-    sim_centered = sim - sim_mean
-    return np.divide(
-        np.sum(exp_centered * sim_centered),
-        np.sqrt(np.sum(np.square(exp_centered)) * np.sum(np.square(sim_centered))),
-    )
-
-
 @njit("float64(float32[:], float32[:], float32)", cache=True, nogil=True, fastmath=True)
 def _ncc_single_patterns_1d_float32_exp_centered(
     exp: np.ndarray, sim: np.ndarray, exp_squared_norm: float
