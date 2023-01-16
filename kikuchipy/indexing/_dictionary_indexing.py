@@ -20,7 +20,7 @@ dictionary of simulated patterns with known orientations.
 """
 
 from time import sleep, time
-from typing import ClassVar, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
@@ -143,7 +143,7 @@ def _dictionary_indexing(
         xmap_kw["is_in_data"] = nav_mask
 
         rot = Rotation.identity((n_experimental_all, keep_n))
-        rot[nav_mask] = dictionary_xmap.rotations[simulation_indices]
+        rot[nav_mask] = dictionary_xmap.rotations[simulation_indices].data
         xmap_kw["rotations"] = rot
 
         scores_all = np.empty((n_experimental_all, keep_n), dtype=scores.dtype)
@@ -199,7 +199,7 @@ def _match_chunk(
 
 
 def _dictionary_indexing_info_message(
-    metric: ClassVar,
+    metric,
     n_experimental_all: int,
     dictionary_size: int,
     phase_name: str,
