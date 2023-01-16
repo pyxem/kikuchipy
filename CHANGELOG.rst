@@ -18,6 +18,10 @@ Unreleased
 
 Added
 -----
+- Which points to consider when merging crystal maps can be controlled by passing
+  navigation masks.  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+- Which patterns to do dictionary indexing of can be controlled by passing a navigation
+  mask. (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - Downsampling of EBSD patterns which maintain the data type by also rescaling to the
   data type range. (`#592 <https://github.com/pyxem/kikuchipy/pull/592>`_)
 - Method to get a PyEBSDIndex ``EBSDIndexer`` instance from an ``EBSDDetector``,
@@ -79,6 +83,9 @@ Added
 
 Changed
 -------
+- Passing two crystal maps with identical phases when merging returns a map with one
+  phase instead of two and does not raise a warning, as before.
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - Exclude documentation and tests from source distribution.
   (`#588 <https://github.com/pyxem/kikuchipy/pull/588>`_)
 - Minimal version of HyperSpy increased to >= 1.7.3.
