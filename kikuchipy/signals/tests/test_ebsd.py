@@ -1299,6 +1299,12 @@ class TestDictionaryIndexing:
         )
         assert np.allclose(xmap.scores[:, 0], 1)
 
+        # Raises
+        with pytest.raises(ValueError, match="The `signal_mask` must be a NumPy array"):
+            _ = dummy_signal.dictionary_indexing(
+                s_dict, signal_mask=da.from_array(signal_mask)
+            )
+
     def test_dictionary_indexing_n_per_iteration_from_lazy(self, dummy_signal):
         """Getting number of iterations from Dask array chunk works, and
         NDP rechunking of experimental patterns works.
@@ -1351,19 +1357,23 @@ class TestDictionaryIndexing:
             _ = dummy_signal.dictionary_indexing(s_dict)
 
     @pytest.mark.parametrize(
-        "nav_slice, nav_shape",
+        "nav_slice, nav_shape, unit",
         [
-            ((0, 0), ()),  # 0D
-            ((0, slice(0, 1)), ()),  # 0D
-            ((0, slice(0, 3)), (3,)),  # 1D
-            ((slice(0, 3), slice(0, 2)), (2, 3)),  # 2D
+            ((0, 0), (), "px"),  # 0D
+            ((0, slice(0, 1)), (), "um"),  # 0D
+            ((0, slice(0, 3)), (3,), "um"),  # 1D
+            ((slice(0, 3), slice(0, 2)), (2, 3), "um"),  # 2D
         ],
     )
-    def test_dictionary_indexing_nav_shape(self, dummy_signal, nav_slice, nav_shape):
+    def test_dictionary_indexing_nav_shape(
+        self, dummy_signal, nav_slice, nav_shape, unit
+    ):
         """Dictionary indexing handles experimental datasets of all
         allowed navigation shapes of 0D, 1D and 2D.
         """
         s = dummy_signal.inav[nav_slice]
+        for ax in s.axes_manager.navigation_axes:
+            ax.units = "um"
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
         s_dict.axes_manager[0].name = "x"
         dict_size = s_dict.axes_manager.navigation_size
@@ -1371,9 +1381,40 @@ class TestDictionaryIndexing:
         xmap = s.dictionary_indexing(s_dict)
         assert xmap.shape == nav_shape
         assert np.allclose(xmap.scores[:, 0], np.ones(int(np.prod(nav_shape))))
+        assert xmap.scan_unit == unit
 
-    def test_dictionary_indexing_navigation_mask(self):
-        pass
+    def test_dictionary_indexing_navigation_mask_raises(self, dummy_signal):
+        s = dummy_signal
+        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
+        s_dict.axes_manager[0].name = "x"
+        s_dict.xmap = CrystalMap.empty((s_dict.axes_manager.navigation_size,))
+
+        nav_mask1 = np.ones(8, dtype=bool)
+        with pytest.raises(ValueError, match=r"The `navigation_mask` shape \(8,\) and"):
+            _ = s.dictionary_indexing(s_dict, navigation_mask=nav_mask1)
+
+        nav_mask2 = np.ones((3, 3), dtype=bool)
+        with pytest.raises(ValueError, match=r"The `navigation_mask` must allow for "):
+            _ = s.dictionary_indexing(s_dict, navigation_mask=nav_mask2)
+
+        nav_mask3 = da.ones((3, 3), dtype=bool)
+        nav_mask3[0, 0] = False
+        with pytest.raises(ValueError, match=r"The `navigation_mask` must be a NumPy "):
+            _ = s.dictionary_indexing(s_dict, navigation_mask=nav_mask3)
+
+    def test_dictionary_indexing_navigation_mask(self, dummy_signal):
+        s = dummy_signal
+        nav_shape = s.axes_manager.navigation_shape[::-1]
+        nav_size = int(np.prod(nav_shape))
+        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(nav_size, 3, 3))
+        s_dict.axes_manager[0].name = "x"
+        s_dict.xmap = CrystalMap.empty((nav_size,))
+
+        nav_mask = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]], dtype=bool)
+        xmap1 = s.dictionary_indexing(s_dict, navigation_mask=nav_mask)
+        xmap2 = s.dictionary_indexing(s_dict, metric="ndp", navigation_mask=~nav_mask)
+        assert xmap1.size == 8
+        assert xmap2.size == 1
 
 
 class TestAverageNeighbourDotProductMap:

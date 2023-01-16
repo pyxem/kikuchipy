@@ -131,8 +131,7 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
         return prepared_patterns
 
     def prepare_dictionary(
-        self,
-        patterns: Union[np.ndarray, da.Array],
+        self, patterns: Union[np.ndarray, da.Array]
     ) -> Union[np.ndarray, da.Array]:
         """Prepare dictionary patterns before matching to experimental
         patterns in :meth:`match`.
@@ -197,22 +196,10 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
     def _zero_mean_normalize_patterns(
         patterns: Union[da.Array, np.ndarray]
     ) -> Union[da.Array, np.ndarray]:
-        if isinstance(patterns, da.Array):
-            dispatcher = da
+        if isinstance(patterns, np.ndarray):
+            return _zero_mean_normalize_patterns_numpy(patterns)
         else:
-            dispatcher = np
-
-        # Center
-        patterns_mean = dispatcher.mean(patterns, axis=-1)[..., np.newaxis]
-        patterns = patterns - patterns_mean
-
-        # Normalize
-        patterns_norm = dispatcher.sqrt(
-            dispatcher.sum(dispatcher.square(patterns), axis=-1)
-        )[..., np.newaxis]
-        patterns = patterns / patterns_norm
-
-        return patterns
+            return _zero_mean_normalize_patterns_dask(patterns)
 
 
 @njit("float64(float32[:], float32[:], float32)", cache=True, nogil=True, fastmath=True)
@@ -241,3 +228,19 @@ def _ncc_single_patterns_1d_float32_exp_centered(
     return np.divide(
         np.sum(exp * sim), np.sqrt(exp_squared_norm * np.sum(np.square(sim)))
     )
+
+
+def _zero_mean_normalize_patterns_numpy(patterns: np.ndarray) -> np.ndarray:
+    patterns_mean = np.mean(patterns, axis=1, keepdims=True)
+    patterns -= patterns_mean
+    patterns_norm = np.sqrt(np.sum(np.square(patterns), axis=1, keepdims=True))
+    patterns /= patterns_norm
+    return patterns
+
+
+def _zero_mean_normalize_patterns_dask(patterns: da.Array) -> da.Array:
+    patterns_mean = da.mean(patterns, axis=1, keepdims=True)
+    patterns -= patterns_mean
+    patterns_norm = da.sqrt(da.sum(da.square(patterns), axis=1, keepdims=True))
+    patterns /= patterns_norm
+    return patterns

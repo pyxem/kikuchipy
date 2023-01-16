@@ -29,6 +29,7 @@ import dask
 import dask.array as da
 from dask.diagnostics import ProgressBar
 import hyperspy.api as hs
+from hyperspy.axes import AxesManager
 from hyperspy.signals import Signal2D
 from hyperspy.learn.mva import LearningResults
 from hyperspy.roi import BaseInteractiveROI
@@ -1678,11 +1679,7 @@ class EBSD(KikuchipySignal2D):
             verbose=verbose,
         )
 
-        # Set scan unit
-        if len(nav_shape) > 0:  # Navigation shape can be (1,)
-            scan_unit = str(am.navigation_axes[0].units)
-            if scan_unit != "<undefined>":
-                xmap.scan_unit = scan_unit
+        xmap.scan_unit = _get_navigation_axes_unit(am)
 
         if return_index_data and return_band_data:
             return xmap, index_data, band_data
@@ -1846,11 +1843,15 @@ class EBSD(KikuchipySignal2D):
         navigation_mask
             A boolean mask equal to the signal's navigation (map) shape
             ``(n rows, n columns)``, where only patterns equal to
-            ``False`` are matched. If not given, all patterns are used.
+            ``False`` are matched. This can be used by ``metric`` in
+            :meth:`~kikuchipy.indexing.SimilarityMetric.prepare_experimental`.
+            If not given, all patterns are used.
         signal_mask
             A boolean mask equal to the experimental patterns' detector
             shape ``(s rows, s columns)``, where only pixels equal to
-            ``False`` are matched. If not given, all pixels are used.
+            ``False`` are matched. This can be used by ``metric`` in
+            :meth:`~kikuchipy.indexing.SimilarityMetric.prepare_experimental`.
+            If not given, all pixels are used.
         rechunk
             Whether ``metric`` is allowed to rechunk experimental and
             dictionary patterns before matching. Default is ``False``.
@@ -1909,6 +1910,12 @@ class EBSD(KikuchipySignal2D):
                     "The `navigation_mask` must allow for indexing of at least one "
                     "pattern (at least one value equal to `False`)."
                 )
+            elif not isinstance(navigation_mask, np.ndarray):
+                raise ValueError("The `navigation_mask` must be a NumPy array.")
+
+        if signal_mask is not None:
+            if not isinstance(signal_mask, np.ndarray):
+                raise ValueError("The `signal_mask` must be a NumPy array.")
 
         sig_shape_exp = am_exp.signal_shape[::-1]
         sig_shape_dict = am_dict.signal_shape[::-1]
@@ -1922,7 +1929,7 @@ class EBSD(KikuchipySignal2D):
         if dict_xmap is None or dict_xmap.shape != (dict_size,):
             raise ValueError(
                 "Dictionary signal must have a non-empty `EBSD.xmap` property of equal "
-                "size as the number of dictionary patterns, and both the signal and"
+                "size as the number of dictionary patterns, and both the signal and "
                 "crystal map must have only one navigation dimension."
             )
 
@@ -1942,11 +1949,7 @@ class EBSD(KikuchipySignal2D):
                 metric=metric,
             )
 
-        # Set scan unit
-        if len(nav_shape_exp) > 0:  # Navigation shape can be (1,)
-            scan_unit = str(am_exp.navigation_axes[0].units)
-            if scan_unit != "<undefined>":
-                xmap.scan_unit = scan_unit
+        xmap.scan_unit = _get_navigation_axes_unit(am_exp)
 
         return xmap
 
@@ -3114,3 +3117,13 @@ def _update_custom_attributes(
             attributes["detector"].pc = pc
 
     return attributes
+
+
+def _get_navigation_axes_unit(axes_manager: AxesManager) -> str:
+    nav_shape = axes_manager.navigation_shape[::-1]
+    scan_unit = "px"
+    if len(nav_shape) > 0:  # Navigation shape can be (1,)
+        scan_unit_hs = str(axes_manager.navigation_axes[0].units)
+        if scan_unit_hs != "<undefined>":
+            scan_unit = scan_unit_hs
+    return scan_unit
