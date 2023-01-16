@@ -144,7 +144,6 @@ def _dictionary_indexing(
 
         rot = Rotation.identity((n_experimental_all, keep_n))
         rot[nav_mask] = dictionary_xmap.rotations[simulation_indices].data
-        xmap_kw["rotations"] = rot
 
         scores_all = np.empty((n_experimental_all, keep_n), dtype=scores.dtype)
         scores_all[nav_mask] = scores
@@ -152,6 +151,11 @@ def _dictionary_indexing(
             (n_experimental_all, keep_n), dtype=simulation_indices.dtype
         )
         simulation_indices_all[nav_mask] = simulation_indices
+        if keep_n == 1:
+            rot = rot.flatten()
+            scores_all = scores_all.squeeze()
+            simulation_indices_all = simulation_indices_all.squeeze()
+        xmap_kw["rotations"] = rot
         xmap_kw["prop"] = {
             "scores": scores_all,
             "simulation_indices": simulation_indices_all,
