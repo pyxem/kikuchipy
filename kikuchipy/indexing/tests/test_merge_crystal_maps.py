@@ -42,7 +42,7 @@ class TestMergeCrystalMaps:
         n_phases = len(phase_names)
         scores_prop, sim_idx_prop = "scores", "sim_idx"
 
-        map_size = np.sum(map_shape)
+        map_size = int(np.sum(map_shape))
         data_shape = (map_size,)
         if rot_per_point > 1:
             data_shape += (rot_per_point,)
@@ -246,7 +246,7 @@ class TestMergeCrystalMaps:
             (["1"] * 5, ["1", "11", "12", "13", "14"]),
         ],
     )
-    def test_warning_merge_maps_with_same_phase(
+    def test_warning_merge_maps_with_same_phase_name(
         self, get_single_phase_xmap, phase_names, desired_phase_names
     ):
         n_phases = len(phase_names)
@@ -260,12 +260,13 @@ class TestMergeCrystalMaps:
         phase_ids = np.arange(n_phases)
         for i in range(n_phases):
             xmap = get_single_phase_xmap(*xmap_args, phase_names[i], phase_ids[i])
+            xmap.phases[phase_ids[i]].space_group = i + 1
             # All maps have at least one point with the best score
             xmap[i, i].scores += i + 1
             xmaps.append(xmap)
 
         with pytest.warns(
-            UserWarning, match=f"There are duplicates of phase {phase_names[0]}"
+            UserWarning, match=f"There are duplicates of phase '{phase_names[0]}'"
         ):
             merged_xmap = merge_crystal_maps(
                 crystal_maps=xmaps,
@@ -382,7 +383,7 @@ class TestMergeCrystalMaps:
     def test_merging_maps_different_shapes_raises(self, get_single_phase_xmap):
         xmap1 = get_single_phase_xmap((4, 3))
         xmap2 = get_single_phase_xmap((3, 4))
-        with pytest.raises(ValueError, match="All crystal maps must have the"):
+        with pytest.raises(ValueError, match=r"Crystal maps \(and/or navigation masks"):
             _ = merge_crystal_maps([xmap1, xmap2])
 
     def test_merging_maps_different_number_of_scores_raises(
@@ -394,13 +395,13 @@ class TestMergeCrystalMaps:
         xmap2[0, 1].scores = 2.0  # Both maps in both merged maps
 
         crystal_maps = [xmap1, xmap2]
-        with pytest.raises(ValueError, match="All crystal maps must have the"):
+        with pytest.raises(ValueError, match="Crystal maps must have the"):
             _ = merge_crystal_maps(crystal_maps)
 
     def test_merging_refined_maps(self):
         ny, nx = (3, 3)
         nav_size = ny * nx
-        r = Rotation.from_euler(np.ones((nav_size, 3)))
+        rot = Rotation.from_euler(np.ones((nav_size, 3)))
         x = np.tile(np.arange(ny), nx)
         y = np.repeat(np.arange(nx), ny)
 
@@ -419,7 +420,7 @@ class TestMergeCrystalMaps:
         scores2 = 2 * np.ones(nav_size)
 
         xmap1 = CrystalMap(
-            rotations=r,
+            rotations=rot,
             phase_id=np.ones(nav_size) * 0,
             phase_list=PhaseList(Phase(name="a")),
             x=x,
@@ -427,7 +428,7 @@ class TestMergeCrystalMaps:
             prop={"simulation_indices": sim_indices1, "scores": scores1},
         )
         xmap2 = CrystalMap(
-            rotations=r,
+            rotations=rot,
             phase_id=np.ones(nav_size),
             phase_list=PhaseList(Phase(name="b")),
             x=x,
@@ -444,3 +445,6 @@ class TestMergeCrystalMaps:
                 crystal_maps=[xmap1, xmap2],
                 simulation_indices_prop="simulation_indices",
             )
+
+    def test_merging_navigation_masks(self):
+        pass
