@@ -1841,15 +1841,15 @@ class EBSD(KikuchipySignal2D):
             parameter can be increased to use less memory during
             indexing, but this will increase the computation time.
         navigation_mask
-            A boolean mask equal to the signal's navigation (map) shape
-            ``(n rows, n columns)``, where only patterns equal to
-            ``False`` are matched. This can be used by ``metric`` in
+            A boolean mask equal to the signal's navigation (map) shape,
+            where only patterns equal to ``False`` are matched. This can
+            be used by ``metric`` in
             :meth:`~kikuchipy.indexing.SimilarityMetric.prepare_experimental`.
             If not given, all patterns are used.
         signal_mask
             A boolean mask equal to the experimental patterns' detector
-            shape ``(s rows, s columns)``, where only pixels equal to
-            ``False`` are matched. This can be used by ``metric`` in
+            shape, where only pixels equal to ``False`` are matched.
+            This can be used by ``metric`` in
             :meth:`~kikuchipy.indexing.SimilarityMetric.prepare_experimental`.
             If not given, all pixels are used.
         rechunk
@@ -2014,8 +2014,8 @@ class EBSD(KikuchipySignal2D):
             simulated patterns.
         signal_mask
             A boolean mask equal to the experimental patterns' detector
-            shape ``(n rows, n columns)``, where only pixels equal to
-            ``False`` are matched. If not given, all pixels are used.
+            shape, where only pixels equal to ``False`` are matched.
+            If not given, all pixels are used.
         method
             Name of the :mod:`scipy.optimize` or *NLopt* optimization
             method, among ``"minimize"``, ``"differential_evolution"``,
@@ -2180,8 +2180,8 @@ class EBSD(KikuchipySignal2D):
             simulated patterns.
         signal_mask
             A boolean mask equal to the experimental patterns' detector
-            shape ``(n rows, n columns)``, where only pixels equal to
-            ``False`` are matched. If not given, all pixels are used.
+            shape, where only pixels equal to ``False`` are matched.
+            If not given, all pixels are used.
         method
             Name of the :mod:`scipy.optimize` or *NLopt* optimization
             method, among ``"minimize"``, ``"differential_evolution"``,
@@ -2346,8 +2346,8 @@ class EBSD(KikuchipySignal2D):
             simulated patterns.
         signal_mask
             A boolean mask equal to the experimental patterns' detector
-            shape ``(n rows, n columns)``, where only pixels equal to
-            ``False`` are matched. If not given, all pixels are used.
+            shape, where only pixels equal to ``False`` are matched.
+            If not given, all pixels are used.
         method
             Name of the :mod:`scipy.optimize` or *NLopt* optimization
             method, among ``"minimize"``, ``"differential_evolution"``,
