@@ -1038,7 +1038,7 @@ class EBSDDetector:
 
         Returns
         -------
-        indexer : pyebsdindex.ebsd_index.EBSDIndexer
+        pyebsdindex.ebsd_index.EBSDIndexer
             Indexer instance for use with PyEBSDIndex or in
             :meth:`~kikuchipy.signals.EBSD.hough_indexing`.
             ``indexer.PC`` is set equal to :attr:`pc_flattened`.
