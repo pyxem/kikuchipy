@@ -45,7 +45,7 @@ class TestEBSDRefine:
         axes=axes,
         projection="lambert",
         hemisphere="both",
-        phase=Phase("ni", 225),
+        phase=Phase("a", 225),
     )
 
     @pytest.mark.parametrize(
@@ -68,7 +68,6 @@ class TestEBSDRefine:
             nav_shape=s.axes_manager.navigation_shape[::-1],
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
         with pytest.raises(ValueError, match=error_msg):
             _ = s.refine_orientation(
                 xmap=xmap, master_pattern=self.mp, detector=detector, energy=20
@@ -80,21 +79,20 @@ class TestEBSDRefine:
             nav_shape=s.axes_manager.navigation_shape[::-1],
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
         detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
         refine_kwargs = dict(master_pattern=self.mp, energy=20, detector=detector)
 
-        with pytest.raises(ValueError, match="Method a not in the list of supported"):
+        with pytest.raises(ValueError, match="Method 'a' not in the list of supported"):
             _ = s.refine_orientation(xmap=xmap, method="a", **refine_kwargs)
 
-        with pytest.raises(ValueError, match="Signal mask and signal axes must have "):
+        with pytest.raises(ValueError, match=r"Signal mask shape \(10, 20\) and "):
             _ = s.refine_orientation(
                 xmap=xmap, signal_mask=np.zeros((10, 20)), **refine_kwargs
             )
 
         xmap.phases.add(Phase(name="b", point_group="m-3m"))
         xmap._phase_id[0] = 1
-        with pytest.raises(ValueError, match="Crystal map must have exactly one phase"):
+        with pytest.raises(ValueError, match="Points to refine in crystal map must "):
             _ = s.refine_orientation(xmap=xmap, **refine_kwargs)
 
     def test_refine_signal_mask(self, dummy_signal, get_single_phase_xmap):
@@ -104,26 +102,23 @@ class TestEBSDRefine:
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
-        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
-        refine_kwargs = dict(
+        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        ref_kw = dict(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
-            detector=detector,
+            detector=det,
             method="minimize",
             method_kwargs=dict(method="Nelder-Mead", options=dict(maxiter=10)),
         )
-        xmap_refined_no_mask = s.refine_orientation(**refine_kwargs)
+        xmap_ref_no_mask = s.refine_orientation(**ref_kw)
         signal_mask = np.zeros(s.axes_manager.signal_shape[::-1], dtype=bool)
         signal_mask[0, 0] = 1  # Mask away upper left pixel
 
-        xmap_refined_mask = s.refine_orientation(
-            signal_mask=signal_mask, **refine_kwargs
-        )
+        xmap_ref_mask = s.refine_orientation(signal_mask=signal_mask, **ref_kw)
 
         assert not np.allclose(
-            xmap_refined_no_mask.rotations.data, xmap_refined_mask.rotations.data
+            xmap_ref_no_mask.rotations.data, xmap_ref_mask.rotations.data
         )
 
     @pytest.mark.parametrize(
@@ -134,21 +129,21 @@ class TestEBSDRefine:
                 ((5, 4), (10, 8)),
                 False,
                 None,
-                (5, 4, 1),
+                (20, 1),
             ),
             (
                 ((5, 4), (10, 8), True, np.float32),
                 ((5, 4), (10, 8)),
                 True,
                 dict(chunk_shape=3),
-                (3, 3, 1),
+                (3, 1),
             ),
             (
                 ((5, 4), (10, 8), True, np.float32),
                 ((5, 4), (10, 8)),
                 False,
                 dict(chunk_shape=3),
-                (5, 4, 1),
+                (20, 1),
             ),
         ],
         indirect=["ebsd_with_axes_and_random_data", "detector"],
@@ -177,8 +172,8 @@ class TestEBSDRefine:
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
-        dask_array = s.refine_orientation(
+
+        dask_arr = s.refine_orientation(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
@@ -187,7 +182,7 @@ class TestEBSDRefine:
             rechunk=rechunk,
             chunk_kwargs=chunk_kwargs,
         )
-        assert dask_array.chunksize == chunksize
+        assert dask_arr.chunksize == chunksize
 
     @pytest.mark.skipif(kp._nlopt_installed, reason="NLopt is installed")
     def test_refine_raises_nlopt_import_error(
@@ -200,14 +195,14 @@ class TestEBSDRefine:
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
-        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+
         with pytest.raises(ImportError, match="Package `nlopt`, required for method "):
             _ = s.refine_orientation_projection_center(
                 xmap=xmap,
                 master_pattern=self.mp,
                 energy=20,
-                detector=detector,
+                detector=det,
                 method="LN_NELDERMEAD",
             )
 
@@ -222,14 +217,16 @@ class TestEBSDRefine:
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
-        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
-        with pytest.raises(ValueError, match="`initial_step` must be a single number"):
+        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+
+        with pytest.raises(
+            ValueError, match="The initial step must be a single number"
+        ):
             _ = s.refine_orientation_projection_center(
                 xmap=xmap,
                 master_pattern=self.mp,
                 energy=20,
-                detector=detector,
+                detector=det,
                 method="LN_NELDERMEAD",
                 initial_step=[1, 1, 1],
             )
@@ -268,9 +265,9 @@ class TestEBSDRefineOrientation(TestEBSDRefine):
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
         method_kwargs.update(dict(options=dict(maxiter=10)))
-        xmap_refined = s.refine_orientation(
+
+        xmap_ref = s.refine_orientation(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
@@ -278,8 +275,8 @@ class TestEBSDRefineOrientation(TestEBSDRefine):
             trust_region=trust_region,
             method_kwargs=method_kwargs,
         )
-        assert xmap_refined.shape == xmap.shape
-        assert not np.allclose(xmap_refined.rotations.data, xmap.rotations.data)
+        assert xmap_ref.shape == xmap.shape
+        assert not np.allclose(xmap_ref.rotations.data, xmap.rotations.data)
 
     @pytest.mark.parametrize(
         (
@@ -326,8 +323,8 @@ class TestEBSDRefineOrientation(TestEBSDRefine):
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
-        xmap_refined = s.refine_orientation(
+
+        xmap_ref = s.refine_orientation(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
@@ -338,8 +335,8 @@ class TestEBSDRefineOrientation(TestEBSDRefine):
             rtol=rtol,
             maxeval=maxeval,
         )
-        assert xmap_refined.shape == xmap.shape
-        assert not np.allclose(xmap_refined.rotations.data, xmap.rotations.data)
+        assert xmap_ref.shape == xmap.shape
+        assert not np.allclose(xmap_ref.rotations.data, xmap.rotations.data)
 
     def test_refine_orientation_not_compute(
         self,
@@ -351,20 +348,20 @@ class TestEBSDRefineOrientation(TestEBSDRefine):
             nav_shape=s.axes_manager.navigation_shape[::-1],
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
-        xmap.phases[0].name = self.mp.phase.name
-        dask_array = s.refine_orientation(
+        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+
+        dask_arr = s.refine_orientation(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
-            detector=detector,
+            detector=det,
             method_kwargs=dict(options=dict(maxiter=10)),
             compute=False,
         )
-        assert isinstance(dask_array, da.Array)
-        assert dask.is_dask_collection(dask_array)
-        # Should ideally be (3, 3, 4) with better use of map_blocks()
-        assert dask_array.shape == s.axes_manager.navigation_shape[::-1] + (1,)
+        assert isinstance(dask_arr, da.Array)
+        assert dask.is_dask_collection(dask_arr)
+        # Should ideally be (9, 4) with better use of map_blocks()
+        assert dask_arr.shape == (9, 1)
 
     @pytest.mark.parametrize(
         "method, method_kwargs",
@@ -395,24 +392,23 @@ class TestEBSDRefineOrientation(TestEBSDRefine):
         get_single_phase_xmap,
     ):
         s = ebsd_with_axes_and_random_data
-        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
         xmap = get_single_phase_xmap(
             nav_shape=s.axes_manager.navigation_shape[::-1],
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
-        xmap_refined = s.refine_orientation(
+        xmap_ref = s.refine_orientation(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
-            detector=detector,
+            detector=det,
             method=method,
             method_kwargs=method_kwargs,
             trust_region=(0.5, 0.5, 0.5),
         )
-        assert xmap_refined.shape == xmap.shape
-        assert not np.allclose(xmap_refined.rotations.data, xmap.rotations.data)
+        assert xmap_ref.shape == xmap.shape
+        assert not np.allclose(xmap_ref.rotations.data, xmap.rotations.data)
 
     def test_refine_orientation_nickel_ebsd_small(self):
         """Refine already refined orientations with SciPy, which should
@@ -429,9 +425,7 @@ class TestEBSDRefineOrientation(TestEBSDRefine):
             xmap=s.xmap,
             detector=s.detector,
             master_pattern=kp.data.nickel_ebsd_master_pattern_small(
-                energy=energy,
-                projection="lambert",
-                hemisphere="upper",
+                energy=energy, projection="lambert"
             ),
             energy=energy,
             signal_mask=signal_mask,
@@ -450,13 +444,13 @@ class TestEBSDRefineOrientation(TestEBSDRefine):
         energy = 20
         signal_mask = kp.filters.Window("circular", s.axes_manager.signal_shape[::-1])
         signal_mask = ~signal_mask.astype(bool)
+
         xmap_ref = s.refine_orientation(
             xmap=s.xmap,
             detector=s.detector,
             master_pattern=kp.data.nickel_ebsd_master_pattern_small(
                 energy=energy,
                 projection="lambert",
-                hemisphere="upper",
             ),
             energy=energy,
             signal_mask=signal_mask,
@@ -499,10 +493,10 @@ class TestEBSDRefinePC(TestEBSDRefine):
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
         method_kwargs.update(dict(options=dict(maxiter=10)))
         signal_mask = np.zeros(detector.shape, dtype=bool)
-        new_scores, new_detector = s.refine_projection_center(
+
+        scores_ref, det_ref = s.refine_projection_center(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
@@ -511,10 +505,10 @@ class TestEBSDRefinePC(TestEBSDRefine):
             trust_region=trust_region,
             method_kwargs=method_kwargs,
         )
-        assert new_scores.shape == nav_shape
-        assert not np.allclose(xmap.get_map_data("scores"), new_scores)
-        assert isinstance(new_detector, kp.detectors.EBSDDetector)
-        assert new_detector.pc.shape == nav_shape + (3,)
+        assert scores_ref.shape == nav_shape
+        assert not np.allclose(xmap.get_map_data("scores"), scores_ref)
+        assert isinstance(det_ref, kp.detectors.EBSDDetector)
+        assert det_ref.pc.shape == nav_shape + (3,)
 
     @pytest.mark.parametrize(
         (
@@ -562,9 +556,9 @@ class TestEBSDRefinePC(TestEBSDRefine):
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
         signal_mask = np.zeros(detector.shape, dtype=bool)
-        new_scores, new_detector = s.refine_projection_center(
+
+        scores_ref, det_ref = s.refine_projection_center(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
@@ -576,10 +570,10 @@ class TestEBSDRefinePC(TestEBSDRefine):
             maxeval=maxeval,
             initial_step=initial_step,
         )
-        assert new_scores.shape == nav_shape
-        assert not np.allclose(xmap.get_map_data("scores"), new_scores)
-        assert isinstance(new_detector, kp.detectors.EBSDDetector)
-        assert new_detector.pc.shape == nav_shape + (3,)
+        assert scores_ref.shape == nav_shape
+        assert not np.allclose(xmap.get_map_data("scores"), scores_ref)
+        assert isinstance(det_ref, kp.detectors.EBSDDetector)
+        assert det_ref.pc.shape == nav_shape + (3,)
 
     @pytest.mark.parametrize(
         "method, method_kwargs",
@@ -617,8 +611,8 @@ class TestEBSDRefinePC(TestEBSDRefine):
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
-        new_scores, new_detector = s.refine_projection_center(
+
+        scores_ref, det_ref = s.refine_projection_center(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
@@ -627,9 +621,9 @@ class TestEBSDRefinePC(TestEBSDRefine):
             method_kwargs=method_kwargs,
             trust_region=(0.01, 0.01, 0.01),
         )
-        assert new_scores.shape == xmap.shape
-        assert not np.allclose(new_scores, xmap.get_map_data("scores"))
-        assert isinstance(new_detector, kp.detectors.EBSDDetector)
+        assert scores_ref.shape == xmap.shape
+        assert not np.allclose(scores_ref, xmap.get_map_data("scores"))
+        assert isinstance(det_ref, kp.detectors.EBSDDetector)
 
     def test_refine_projection_center_not_compute(
         self,
@@ -641,20 +635,20 @@ class TestEBSDRefinePC(TestEBSDRefine):
             nav_shape=s.axes_manager.navigation_shape[::-1],
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
-        xmap.phases[0].name = self.mp.phase.name
-        dask_array = s.refine_projection_center(
+        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+
+        dask_arr = s.refine_projection_center(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
-            detector=detector,
+            detector=det,
             method_kwargs=dict(options=dict(maxiter=10)),
             compute=False,
         )
-        assert isinstance(dask_array, da.Array)
-        assert dask.is_dask_collection(dask_array)
-        # Should ideally be (3, 3, 4) with better use of map_blocks()
-        assert dask_array.shape == (3, 3, 1)
+        assert isinstance(dask_arr, da.Array)
+        assert dask.is_dask_collection(dask_arr)
+        # Should ideally be (9, 4) with better use of map_blocks()
+        assert dask_arr.shape == (9, 1)
 
 
 class TestEBSDRefineOrientationPC(TestEBSDRefine):
@@ -679,23 +673,23 @@ class TestEBSDRefineOrientationPC(TestEBSDRefine):
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
-        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
         method_kwargs.update(dict(options=dict(maxiter=10)))
-        signal_mask = np.zeros(detector.shape, dtype=bool)
-        xmap_refined, detector_refined = s.refine_orientation_projection_center(
+        signal_mask = np.zeros(det.shape, dtype=bool)
+
+        xmap_ref, det_ref = s.refine_orientation_projection_center(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
-            detector=detector,
+            detector=det,
             signal_mask=signal_mask,
             trust_region=trust_region,
             method_kwargs=method_kwargs,
         )
-        assert xmap_refined.shape == xmap.shape
-        assert not np.allclose(xmap_refined.rotations.data, xmap.rotations.data)
-        assert isinstance(detector_refined, kp.detectors.EBSDDetector)
-        assert detector_refined.pc.shape == nav_shape + (3,)
+        assert xmap_ref.shape == xmap.shape
+        assert not np.allclose(xmap_ref.rotations.data, xmap.rotations.data)
+        assert isinstance(det_ref, kp.detectors.EBSDDetector)
+        assert det_ref.pc.shape == nav_shape + (3,)
 
     @pytest.mark.parametrize(
         "method, trust_region, rtol, initial_step, maxeval",
@@ -722,14 +716,14 @@ class TestEBSDRefineOrientationPC(TestEBSDRefine):
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
-        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
-        signal_mask = np.zeros(detector.shape, dtype=bool)
-        xmap_refined, detector_refined = s.refine_orientation_projection_center(
+        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        signal_mask = np.zeros(det.shape, dtype=bool)
+
+        xmap_ref, det_ref = s.refine_orientation_projection_center(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
-            detector=detector,
+            detector=det,
             signal_mask=signal_mask,
             method=method,
             trust_region=trust_region,
@@ -737,10 +731,10 @@ class TestEBSDRefineOrientationPC(TestEBSDRefine):
             initial_step=initial_step,
             maxeval=maxeval,
         )
-        assert xmap_refined.shape == xmap.shape
-        assert not np.allclose(xmap_refined.rotations.data, xmap.rotations.data)
-        assert isinstance(detector_refined, kp.detectors.EBSDDetector)
-        assert detector_refined.pc.shape == nav_shape + (3,)
+        assert xmap_ref.shape == xmap.shape
+        assert not np.allclose(xmap_ref.rotations.data, xmap.rotations.data)
+        assert isinstance(det_ref, kp.detectors.EBSDDetector)
+        assert det_ref.pc.shape == nav_shape + (3,)
 
     @pytest.mark.parametrize(
         "method, method_kwargs",
@@ -771,26 +765,26 @@ class TestEBSDRefineOrientationPC(TestEBSDRefine):
         get_single_phase_xmap,
     ):
         s = dummy_signal
-        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
         xmap = get_single_phase_xmap(
             nav_shape=s.axes_manager.navigation_shape[::-1],
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
-        xmap_refined, new_detector = s.refine_orientation_projection_center(
+
+        xmap_ref, det_ref = s.refine_orientation_projection_center(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
-            detector=detector,
+            detector=det,
             method=method,
             method_kwargs=method_kwargs,
             trust_region=[0.5, 0.5, 0.5, 0.01, 0.01, 0.01],
         )
-        assert xmap_refined.shape == xmap.shape
-        assert not np.allclose(xmap_refined.rotations.data, xmap.rotations.data)
-        assert isinstance(new_detector, kp.detectors.EBSDDetector)
-        assert not np.allclose(detector.pc, new_detector.pc[0, 0])
+        assert xmap_ref.shape == xmap.shape
+        assert not np.allclose(xmap_ref.rotations.data, xmap.rotations.data)
+        assert isinstance(det_ref, kp.detectors.EBSDDetector)
+        assert not np.allclose(det.pc, det_ref.pc[0, 0])
 
     def test_refine_orientation_projection_center_not_compute(
         self, dummy_signal, get_single_phase_xmap
@@ -801,17 +795,17 @@ class TestEBSDRefineOrientationPC(TestEBSDRefine):
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        xmap.phases[0].name = self.mp.phase.name
-        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+
         dask_array = s.refine_orientation_projection_center(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
-            detector=detector,
+            detector=det,
             method_kwargs=dict(options=dict(maxiter=1)),
             compute=False,
         )
         assert isinstance(dask_array, da.Array)
         assert dask.is_dask_collection(dask_array)
-        # Should ideally be (3, 3, 7) with better use of map_blocks()
-        assert dask_array.shape == (3, 3, 1)
+        # Should ideally be (9, 7) with better use of map_blocks()
+        assert dask_array.shape == (9, 1)

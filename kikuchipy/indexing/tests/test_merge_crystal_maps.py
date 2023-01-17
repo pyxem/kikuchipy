@@ -124,21 +124,27 @@ class TestMergeCrystalMaps:
         n_phases = len(phase_names)
         scores_prop, sim_idx_prop = "scores", "sim_idx"
 
-        map_size = np.prod(map_shape)
+        map_size = int(np.prod(map_shape))
         data_shape = (map_size,)
         if rot_per_point > 1:
             data_shape += (rot_per_point,)
 
         desired_phase_ids = np.zeros(map_size)
         desired_scores = np.ones(data_shape)
-        desired_idx = np.arange(np.prod(data_shape)).reshape(data_shape)
+        desired_idx = np.arange(int(np.prod(data_shape))).reshape(data_shape)
 
         xmaps = []
-        xmap_args = (map_shape, rot_per_point, [scores_prop, sim_idx_prop])
+        xmap_kw = dict(
+            nav_shape=map_shape,
+            rotations_per_point=rot_per_point,
+            prop_names=[scores_prop, sim_idx_prop],
+        )
         phase_ids = np.arange(n_phases)
         ny, nx = map_shape
         for i in range(n_phases):
-            xmap = get_single_phase_xmap(*xmap_args, phase_names[i], phase_ids[i])
+            xmap = get_single_phase_xmap(
+                name=phase_names[i], phase_id=phase_ids[i], **xmap_kw
+            )
             # All maps have at least one point with the best score along
             # the map diagonal
             idx = (i, i)
@@ -192,10 +198,10 @@ class TestMergeCrystalMaps:
         rot_per_point = 50
 
         xmap1 = get_single_phase_xmap(
-            map_shape, rot_per_point, [scores_prop, sim_idx_prop], "a", 0
+            map_shape, rot_per_point, [scores_prop, sim_idx_prop], "a", phase_id=0
         )
         xmap2 = get_single_phase_xmap(
-            map_shape, rot_per_point, [scores_prop, sim_idx_prop], "b", 1
+            map_shape, rot_per_point, [scores_prop, sim_idx_prop], "b", phase_id=1
         )
 
         xmap2[3, 3].prop[scores_prop] = 2
@@ -220,10 +226,10 @@ class TestMergeCrystalMaps:
         sim_idx_prop = "simulation_indices"
 
         xmap1 = get_single_phase_xmap(
-            map_shape, rot_per_point, [scores_prop, sim_idx_prop], "a", 0
+            map_shape, rot_per_point, [scores_prop, sim_idx_prop], "a", phase_id=0
         )
         xmap2 = get_single_phase_xmap(
-            map_shape, rot_per_point, [scores_prop, sim_idx_prop], "b", 1
+            map_shape, rot_per_point, [scores_prop, sim_idx_prop], "b", phase_id=1
         )
 
         xmap2[0, 3].prop[scores_prop] = 0
@@ -256,10 +262,16 @@ class TestMergeCrystalMaps:
         rot_per_point = 5
 
         xmaps = []
-        xmap_args = (map_shape, rot_per_point, [scores_prop, sim_idx_prop])
+        xmap_kw = dict(
+            nav_shape=map_shape,
+            rotations_per_point=rot_per_point,
+            prop_names=[scores_prop, sim_idx_prop],
+        )
         phase_ids = np.arange(n_phases)
         for i in range(n_phases):
-            xmap = get_single_phase_xmap(*xmap_args, phase_names[i], phase_ids[i])
+            xmap = get_single_phase_xmap(
+                name=phase_names[i], phase_id=phase_ids[i], **xmap_kw
+            )
             xmap.phases[phase_ids[i]].space_group = i + 1
             # All maps have at least one point with the best score
             xmap[i, i].scores += i + 1

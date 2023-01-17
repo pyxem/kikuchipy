@@ -101,15 +101,15 @@ class TestEBSDXmapProperty:
             nav_shape=nav_shape[::-1], step_sizes=step_sizes
         )
 
-        with pytest.raises(ValueError, match="The `xmap` shape"):
+        with pytest.raises(ValueError, match=r"Crystal map shape \(75, 55\) and "):
             s.xmap = xmap_bad
 
         s.axes_manager["x"].scale = 2
-        with pytest.warns(UserWarning, match="The `xmap` step size"):
+        with pytest.warns(UserWarning, match=r"Crystal map step size\(s\) \[1.5, 1.5"):
             s.xmap = xmap_good
 
         s2 = s.inav[:, :-2]
-        with pytest.raises(ValueError, match="The `xmap` shape"):
+        with pytest.raises(ValueError, match=r"Crystal map shape \(55, 75\) and "):
             s2.axes_manager["x"].scale = 1
             s2.axes_manager["x"].name = "x2"
             with pytest.warns(UserWarning, match="The signal navigation axes"):
