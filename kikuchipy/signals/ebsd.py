@@ -1574,7 +1574,7 @@ class EBSD(KikuchipySignal2D):
     ]:
         """Index patterns by Hough indexing using :mod:`pyebsdindex`.
 
-        See :meth:`~pyebsdindex.ebsd_index.EBSDIndexer` and
+        See :class:`~pyebsdindex.ebsd_index.EBSDIndexer` and
         :meth:`~pyebsdindex.ebsd_index.EBSDIndexer.index_pats` for
         details.
 
@@ -1704,7 +1704,8 @@ class EBSD(KikuchipySignal2D):
         """Return a detector with one projection center (PC) per
         pattern optimized using Hough indexing from :mod:`pyebsdindex`.
 
-        See :mod:`~pyebsdindex.pcopt.optimize` for details.
+        See :class:`~pyebsdindex.ebsd_index.EBSDIndexer` and
+        :mod:`~pyebsdindex.pcopt.optimize` for details.
 
         Parameters
         ----------

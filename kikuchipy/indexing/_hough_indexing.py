@@ -41,13 +41,13 @@ def xmap_from_hough_indexing_data(
     scan_unit: str = "px",
 ) -> CrystalMap:
     """Convert Hough indexing result array from :mod:`pyebsdindex` to a
-    crystal map (xmap).
+    :class:`~orix.crystal_map.CrystalMap`.
 
     Parameters
     ----------
     data
-        Array with the following data type field names: "quat", "phase",
-        "fit", "cm", "pq" and "nmatch".
+        Array with the following data type field names: ``"quat"``,
+        ``"phase"``, ``"fit"``, ``"cm"``, ``"pq"`` and ``"nmatch"``.
     phase_list
         List of phases. If ``data_index=-1``, the phase IDs in the list
         must match the phase IDs in ``data[-1]["phase"]``. If
