@@ -613,7 +613,7 @@ class TestPlotPC:
 
         det2 = self.det.deepcopy()
         det2.pc = det2.pc[0]
-        with pytest.raises(ValueError, match="Detector's `navigation_dimension` must "):
+        with pytest.raises(ValueError, match="Detector's navigation dimension must be"):
             det2.plot_pc()
 
         with pytest.raises(ValueError, match="Plot mode 'stereographic' must be one "):
