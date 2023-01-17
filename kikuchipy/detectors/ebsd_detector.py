@@ -1284,8 +1284,8 @@ class EBSDDetector:
         if isinstance(pattern, np.ndarray):
             if pattern.shape != (sy, sx):
                 raise ValueError(
-                    f"Pattern shape {pattern.shape} must equal the detector "
-                    f"shape {(sy, sx)}"
+                    f"Pattern shape {pattern.shape} must equal the detector shape "
+                    f"{(sy, sx)}"
                 )
             if pattern_kwargs is None:
                 pattern_kwargs = {}
@@ -1421,7 +1421,9 @@ class EBSDDetector:
                 "Detector must have more than one projection center value to plot"
             )
         if mode == "map" and self.navigation_dimension != 2:
-            raise ValueError("Detector's `navigation_dimension` must be 2D")
+            raise ValueError(
+                "Detector's navigation dimension must be 2D when plotting PCs in a map"
+            )
 
         # Ensure mode is OK
         modes = ["map", "scatter", "3d"]
@@ -1519,7 +1521,7 @@ class EBSDDetector:
         else:
             raise ValueError(
                 f"Projection center convention '{convention}' not among the "
-                f"recognised conventions {CONVENTION_ALIAS_ALL}."
+                f"recognised conventions {CONVENTION_ALIAS_ALL}"
             )
 
     def _set_pc_from_convention(self, convention: Optional[str] = None):
