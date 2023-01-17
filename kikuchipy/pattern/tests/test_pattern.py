@@ -35,7 +35,6 @@ from kikuchipy.pattern._pattern import (
     _downsample2d,
     _dynamic_background_frequency_space_setup,
     _get_image_quality_numba,
-    _mask_pattern,
     _remove_background_subtract,
     _remove_background_divide,
     _remove_static_background_subtract,
@@ -515,18 +514,6 @@ class TestNormalizeIntensityPattern:
 
         assert np.allclose(np.mean(p2), 0, atol=1e-6)
         assert np.allclose(p2, answer, atol=1e-4)
-
-
-class TestMaskPattern:
-    def test_mask_pattern_numba(self):
-        p = np.arange(100).astype("float32")
-        mask = np.ones(p.size, dtype=bool)
-        mask[:10] = False
-        p_masked = _mask_pattern(p, mask)
-        p_masked2 = _mask_pattern.py_func(p, mask)
-        assert p_masked.size == 90
-        assert np.isclose(p_masked.mean(), 54.5)
-        assert np.allclose(p_masked, p_masked2)
 
 
 class TestDownsample:
