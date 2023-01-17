@@ -143,12 +143,6 @@ def _normalize(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
     return patterns / patterns_norm_squared
 
 
-@njit("float32[:](float32[:], bool_[:])", cache=True, nogil=True, fastmath=True)
-def _mask_pattern(pattern: np.ndarray, mask: np.ndarray) -> np.ndarray:
-    # Used in refinement solvers
-    return pattern[mask].reshape(-1)
-
-
 @njit(cache=True, fastmath=True, nogil=True)
 def normalize_intensity(
     pattern: np.ndarray, num_std: int = 1, divide_by_square_root: bool = False
