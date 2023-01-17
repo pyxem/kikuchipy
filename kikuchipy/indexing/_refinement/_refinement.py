@@ -74,7 +74,7 @@ def compute_refine_orientation_results(
 
     Returns
     -------
-    refined_xmap
+    xmap_refined
         Crystal map with refined orientations and scores.
     """
     points_to_refine, phase_id = _get_points_in_data_in_xmap(xmap, navigation_mask)
@@ -83,12 +83,8 @@ def compute_refine_orientation_results(
     nav_size_in_data = points_to_refine.sum()
 
     phase_list = PhaseList(phases=master_pattern.phase, ids=phase_id)
-    coords, _ = create_coordinate_arrays(xmap.shape, step_sizes=(xmap.dy, xmap.dx))
-    scan_unit = xmap.scan_unit
-    phase_id_arr = np.zeros(nav_size, dtype="int32")
-    phase_id_arr[points_to_refine] = phase_id
-    scores = np.zeros(nav_size, dtype="float")
-    rot = Rotation.identity((nav_size,))
+    xmap_kw = _get_crystal_map_parameters(xmap, nav_size)
+    xmap_kw["phase_id"][points_to_refine] = phase_id
 
     with ProgressBar():
         print(f"Refining {nav_size_in_data} orientation(s):", file=sys.stdout)
@@ -102,16 +98,12 @@ def compute_refine_orientation_results(
 
         # (n, score, phi1, Phi, phi2)
         computed_results = np.array(computed_results)
-        scores[points_to_refine] = computed_results[:, 0]
-        rot[points_to_refine] = Rotation.from_euler(computed_results[:, 1:]).data
+        xmap_kw["prop"]["scores"][points_to_refine] = computed_results[:, 0]
+        xmap_kw["rotations"][points_to_refine] = Rotation.from_euler(
+            computed_results[:, 1:]
+        ).data
         xmap_refined = CrystalMap(
-            rotations=rot,
-            phase_id=phase_id_arr,
-            phase_list=phase_list,
-            prop=dict(scores=scores),
-            scan_unit=scan_unit,
-            is_in_data=points_to_refine,
-            **coords,
+            phase_list=phase_list, is_in_data=points_to_refine, **xmap_kw
         )
 
     return xmap_refined
@@ -228,12 +220,9 @@ def compute_refine_orientation_projection_center_results(
     nav_size_in_data = points_to_refine.sum()
 
     phase_list = PhaseList(phases=master_pattern.phase, ids=phase_id)
-    coords, _ = create_coordinate_arrays(xmap.shape, step_sizes=(xmap.dy, xmap.dx))
-    scan_unit = xmap.scan_unit
-    phase_id_arr = np.zeros(nav_size, dtype="int32")
-    phase_id_arr[points_to_refine] = phase_id
-    scores = np.zeros(nav_size, dtype="float")
-    rot = Rotation.identity((nav_size,))
+
+    xmap_kw = _get_crystal_map_parameters(xmap, nav_size)
+    xmap_kw["phase_id"][points_to_refine] = phase_id
 
     new_detector = detector.deepcopy()
 
@@ -252,16 +241,12 @@ def compute_refine_orientation_projection_center_results(
 
         # (n, score, phi1, Phi, phi2, PCx, PCy, PCz)
         computed_results = np.array(computed_results)
-        scores[points_to_refine] = computed_results[:, 0]
-        rot[points_to_refine] = Rotation.from_euler(computed_results[:, 1:4]).data
-        xmap_ref = CrystalMap(
-            rotations=rot,
-            phase_id=phase_id_arr,
-            phase_list=phase_list,
-            prop=dict(scores=scores),
-            scan_unit=scan_unit,
-            is_in_data=points_to_refine,
-            **coords,
+        xmap_kw["prop"]["scores"][points_to_refine] = computed_results[:, 0]
+        xmap_kw["rotations"][points_to_refine] = Rotation.from_euler(
+            computed_results[:, 1:4]
+        ).data
+        xmap_refined = CrystalMap(
+            phase_list=phase_list, is_in_data=points_to_refine, **xmap_kw
         )
 
         new_pc = computed_results[:, 4:]
@@ -272,7 +257,26 @@ def compute_refine_orientation_projection_center_results(
 
     new_detector.pc = new_pc
 
-    return xmap_ref, new_detector
+    return xmap_refined, new_detector
+
+
+def _get_crystal_map_parameters(xmap: CrystalMap, nav_size: int) -> dict:
+    step_sizes = ()
+    for step_size in [xmap.dy, xmap.dx]:
+        if step_size != 0:
+            step_sizes += (step_size,)
+
+    xmap_dict, _ = create_coordinate_arrays(xmap.shape, step_sizes=step_sizes)
+    xmap_dict.update(
+        {
+            "rotations": Rotation.identity((nav_size,)),
+            "phase_id": np.zeros(nav_size, dtype="int32"),
+            "scan_unit": xmap.scan_unit,
+            "prop": {"scores": np.zeros(nav_size, dtype="float")},
+        }
+    )
+
+    return xmap_dict
 
 
 # -------------------------- Refine orientation ---------------------- #
@@ -958,7 +962,7 @@ class _RefinementSetup:
 
         if method not in supported_methods:
             raise ValueError(
-                f"Method {method} not in the list of supported methods "
+                f"Method '{method}' not in the list of supported methods "
                 f"{supported_methods}"
             )
 
