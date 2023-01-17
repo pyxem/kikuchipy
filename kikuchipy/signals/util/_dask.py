@@ -45,18 +45,17 @@ def get_chunking(
     Parameters
     ----------
     signal
-        If not given, the following must be passed: data shape to be
-        chunked, ``data_shape``, the number of navigation dimensions,
+        If not given, the following must be: data shape to be chunked,
+        ``data_shape``, the number of navigation dimensions,
         ``nav_dim``, the number of signal dimensions, ``sig_dim``, and
         the data array data type ``dtype``.
     data_shape
-        Data shape, must be passed if ``signal`` is not given.
+        Data shape, must be given if ``signal`` is not.
     nav_dim
-        Number of navigation dimensions, must be passed if ``signal`` is
-        not given.
+        Number of navigation dimensions, must be given if ``signal`` is
+        not.
     sig_dim
-        Number of signal dimensions, must be passed if ``signal`` is not
-        given.
+        Number of signal dimensions, must be given if ``signal`` is not.
     chunk_shape
         Shape of navigation chunks. If not given, this size is set
         automatically based on ``chunk_bytes``. This is a rectangle if
@@ -70,7 +69,7 @@ def get_chunking(
     dtype
         Data type of the array to chunk. Will take precedence over the
         signal data type if ``signal`` is given. Must be given if
-        ``signal`` is not given.
+        ``signal`` is not.
 
     Returns
     -------

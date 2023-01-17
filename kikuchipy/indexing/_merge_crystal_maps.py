@@ -20,8 +20,10 @@ from typing import List, Optional, Union
 import warnings
 
 import numpy as np
-from orix.crystal_map import create_coordinate_arrays, CrystalMap, Phase, PhaseList
+from orix.crystal_map import create_coordinate_arrays, CrystalMap, PhaseList
 from orix.quaternion import Rotation
+
+from kikuchipy.signals.util._crystal_map import _equal_phase
 
 
 def merge_crystal_maps(
@@ -328,21 +330,3 @@ def merge_crystal_maps(
         scan_unit=crystal_maps[0].scan_unit,
         **coords,
     )
-
-
-# TODO: Move to orix' Phase.__eq__
-def _equal_phase(phase1: Phase, phase2: Phase) -> bool:
-    try:
-        equal_sg = phase1.space_group.number == phase2.space_group.number
-    except AttributeError:
-        equal_sg = True
-    equal_pg = phase1.point_group == phase2.point_group
-    equal_structure = len(phase1.structure) == len(phase2.structure)
-    if equal_structure:
-        for atom1, atom2 in zip(phase1.structure, phase2.structure):
-            equal_structure *= atom1.element == atom2.element
-            equal_structure *= np.allclose(atom1.xyz, atom2.xyz)
-            equal_structure *= np.isclose(atom1.occupancy, atom2.occupancy)
-            if not equal_structure:
-                break
-    return bool(equal_sg * equal_pg * equal_structure)

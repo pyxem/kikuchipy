@@ -33,7 +33,6 @@ def _detector_is_compatible_with_signal(
     compatible with a detector and return a bool or raise a ValueError
     if it is not.
     """
-    # TODO: Check pixel scale
     compatible = True
     error_msg = None
 
@@ -41,7 +40,7 @@ def _detector_is_compatible_with_signal(
         compatible = False
         error_msg = (
             f"Detector shape {detector.shape} must be equal to the signal shape "
-            f"{sig_shape}"
+            f"{sig_shape}."
         )
 
     detector_nav_shape = detector.navigation_shape
@@ -49,7 +48,7 @@ def _detector_is_compatible_with_signal(
         compatible = False
         error_msg = (
             "Detector must have exactly one projection center (PC), or one PC per "
-            "pattern in an array of shape signal's navigation shape + (3,)"
+            "pattern in an array of shape equal to signal's navigation shape + (3,)."
         )
 
     if raise_if_not and not compatible:
