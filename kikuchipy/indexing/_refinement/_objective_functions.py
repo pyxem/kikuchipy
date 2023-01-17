@@ -113,7 +113,7 @@ def _refine_pc_objective_function(x: np.ndarray, *args) -> float:
         tilt=args[10],
         azimuthal=args[11],
         sample_tilt=args[12],
-        mask=args[7],
+        signal_mask=args[7],
     )
     simulated = _project_single_pattern_from_master_pattern(
         rotation=args[1],
@@ -173,7 +173,7 @@ def _refine_orientation_pc_objective_function(x: np.ndarray, *args) -> float:
         tilt=args[9],
         azimuthal=args[10],
         sample_tilt=args[11],
-        mask=args[6],
+        signal_mask=args[6],
     )
     simulated = _project_single_pattern_from_master_pattern(
         rotation=_rotation_from_euler(*x[:3]),
