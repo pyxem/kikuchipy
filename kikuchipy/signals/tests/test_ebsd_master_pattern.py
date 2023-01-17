@@ -207,7 +207,7 @@ class TestProjectFromLambert:
             tilt=det.tilt,
             azimuthal=det.azimuthal,
             sample_tilt=det.sample_tilt,
-            mask=np.ones(det.size, dtype=bool),
+            signal_mask=np.ones(det.size, dtype=bool),
         )
         assert np.allclose(dc, dc2)
 
@@ -516,7 +516,7 @@ class TestProjectFromLambert:
             tilt=det.tilt,
             azimuthal=det.azimuthal,
             sample_tilt=det.sample_tilt,
-            mask=np.ones(det.size, dtype=bool),
+            signal_mask=np.ones(det.size, dtype=bool),
         )
 
         assert np.allclose(dc0, dc[0])

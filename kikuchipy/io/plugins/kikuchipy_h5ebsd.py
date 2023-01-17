@@ -33,7 +33,7 @@ from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group, _hdf5group2dict, H5EBSDReader
 from kikuchipy.io._util import _get_input_variable
 from kikuchipy.release import version as kikuchipy_version
-from kikuchipy.signals.util._crystal_map import _crystal_map_is_compatible_with_signal
+from kikuchipy.signals.util._crystal_map import _xmap_is_compatible_with_signal
 
 
 __all__ = ["file_reader", "file_writer"]
@@ -376,7 +376,7 @@ class KikuchipyH5EBSDWriter:
         """
         (ny, nx, *_), (dy, dx, _) = self.data_shape_scale
         xmap = self.signal.xmap
-        if xmap is None or not _crystal_map_is_compatible_with_signal(
+        if xmap is None or not _xmap_is_compatible_with_signal(
             xmap, self.signal.axes_manager.navigation_axes[::-1]
         ):
             xmap = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
