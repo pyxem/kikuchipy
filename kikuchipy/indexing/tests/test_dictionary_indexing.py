@@ -171,7 +171,9 @@ class TestDictionaryIndexing:
         s_dict.xmap = CrystalMap.empty((nav_size,))
 
         nav_mask = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]], dtype=bool)
-        xmap1 = s.dictionary_indexing(s_dict, navigation_mask=nav_mask)
+        xmap1 = s.dictionary_indexing(s_dict, keep_n=1, navigation_mask=nav_mask)
         xmap2 = s.dictionary_indexing(s_dict, metric="ndp", navigation_mask=~nav_mask)
         assert xmap1.size == 8
+        assert xmap1.rotations_per_point == 1
         assert xmap2.size == 1
+        assert xmap2.rotations_per_point == s_dict.xmap.size

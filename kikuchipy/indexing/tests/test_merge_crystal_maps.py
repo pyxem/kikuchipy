@@ -269,8 +269,9 @@ class TestMergeCrystalMaps:
         )
         phase_ids = np.arange(n_phases)
         for i in range(n_phases):
+            # Same name, different space groups
             xmap = get_single_phase_xmap(
-                name=phase_names[i], phase_id=phase_ids[i], **xmap_kw
+                name=phase_names[i], space_group=i + 1, phase_id=phase_ids[i], **xmap_kw
             )
             xmap.phases[phase_ids[i]].space_group = i + 1
             # All maps have at least one point with the best score
@@ -458,5 +459,191 @@ class TestMergeCrystalMaps:
                 simulation_indices_prop="simulation_indices",
             )
 
-    def test_merging_navigation_masks(self):
-        pass
+    def test_merging_with_navigation_masks(self):
+        # Setup map 1
+        xmap1 = CrystalMap.empty((3, 4))
+        xmap1.prop["scores"] = np.arange(xmap1.size)
+        xmap1.prop["simulation_indices"] = np.arange(xmap1.size)
+        xmap1.phases[0].name = "a"
+        # Setup map 2
+        xmap2 = xmap1.deepcopy()
+        xmap2.phase_id = 1
+        xmap2.phases = PhaseList(names="b", ids=1)
+        xmap2.simulation_indices += xmap2.size
+        xmap2[0, 0].scores = 1
+
+        # Works without masks
+        xmap3 = merge_crystal_maps(
+            [xmap1, xmap2], simulation_indices_prop="simulation_indices"
+        )
+        # fmt: off
+        assert np.allclose(
+            xmap3.phase_id,
+            [
+                1, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+            ]
+        )
+        assert np.allclose(
+            xmap3.scores,
+            [
+                1, 1,  2,  3,
+                4, 5,  6,  7,
+                8, 9, 10, 11,
+            ]
+        )
+        assert np.allclose(
+            xmap3.simulation_indices,
+            [
+                12,  1,  2,  3,
+                 4,  5,  6,  7,
+                 8,  9, 10, 11,
+            ]
+        )
+        # fmt: on
+
+        # Use internal masks via CrystalMap.is_in_data (xmap[:1, 1:] is
+        # a view and not a copy)
+        xmap4 = merge_crystal_maps(
+            [xmap1[1:, 1:], xmap2[1:, 1:]], simulation_indices_prop="simulation_indices"
+        )
+        # fmt: off
+        assert np.allclose(
+            xmap4.phase_id,
+            [
+                0, 0, 0,
+                0, 0, 0,
+            ]
+        )
+        assert np.allclose(
+            xmap4.scores,
+            [
+                5,  6,  7,
+                9, 10, 11,
+            ]
+        )
+        assert np.allclose(
+            xmap4.simulation_indices,
+            [
+                5,  6,  7,
+                9, 10, 11,
+            ]
+        )
+        # fmt: on
+
+        nav_mask1 = np.ones(xmap1.shape, dtype=bool)
+        nav_mask1[1:, 1:] = False
+        nav_mask2 = ~nav_mask1
+
+        # Equal number of a map's points in data and number of False
+        # entries in a navigation mask
+        xmap5 = merge_crystal_maps(
+            [xmap1[~nav_mask1.ravel()], xmap2[~nav_mask2.ravel()]],
+            navigation_masks=[nav_mask1, nav_mask2],
+            simulation_indices_prop="simulation_indices",
+        )
+        # fmt: off
+        assert np.allclose(
+            xmap5.phase_id,
+            [
+                1, 1, 1, 1,
+                1, 0, 0, 0,
+                1, 0, 0, 0
+            ]
+        )
+        assert np.allclose(
+            xmap5.simulation_indices,
+            [
+                12, 13, 14, 15,
+                16,  5,  6,  7,
+                20,  9, 10, 11,
+            ]
+        )
+        # fmt: on
+
+        # All points in a map should be used, but not in another one:
+        # Only consider xmap1 in the first row and first column (mask it
+        # out everywhere else)
+        xmap6 = merge_crystal_maps(
+            [xmap1[nav_mask1.ravel()], xmap2], navigation_masks=[~nav_mask1, None]
+        )
+        # fmt: off
+        assert np.allclose(
+            xmap6.phase_id,
+            [
+                1, 0, 0, 0,
+                0, 1, 1, 1,
+                0, 1, 1, 1,
+            ]
+        )
+        # fmt: on
+
+        # Only consider xmap1 in the lower right corner (mask it out
+        # everywhere else)
+        xmap7 = merge_crystal_maps(
+            [xmap1[~nav_mask1.ravel()], xmap2], navigation_masks=[nav_mask1, None]
+        )
+        # fmt: off
+        assert np.allclose(
+            xmap7.phase_id,
+            [
+                1, 1, 1, 1,
+                1, 0, 0, 0,
+                1, 0, 0, 0,
+            ]
+        )
+        # fmt: on
+
+    def test_merging_with_navigation_masks_equal_phase(self):
+        # Setup map 1
+        xmap1 = CrystalMap.empty((3, 4))
+        xmap1.prop["scores"] = np.arange(xmap1.size)
+        xmap1.phases[0].name = "a"
+        # Setup map 2
+        xmap2 = xmap1.deepcopy()
+        xmap2.phase_id = 1
+        xmap2.phases = PhaseList(names="a", ids=1)
+        xmap2[0, 0].scores = 1
+
+        xmap3 = merge_crystal_maps([xmap1, xmap2])
+        assert np.allclose(xmap3.phase_id, 0)
+
+    def test_merging_with_navigation_masks_raises(self):
+        # Setup map 1
+        xmap1 = CrystalMap.empty((3, 4))
+        xmap1.prop["scores"] = np.arange(xmap1.size)
+        xmap1.phases[0].name = "a"
+        # Setup map 2
+        xmap2 = xmap1.deepcopy()
+        xmap2.phase_id = 1
+        xmap2.phases = PhaseList(names="b", ids=1)
+        xmap2[0, 0].scores = 1
+
+        nav_mask1 = np.ones(xmap1.shape, dtype=bool)
+        nav_mask1[1:, 1:] = False
+        nav_mask2 = ~nav_mask1
+
+        # Unequal number of maps and masks
+        with pytest.raises(ValueError, match="Number of crystal maps and navigation "):
+            _ = merge_crystal_maps([xmap1, xmap2], navigation_masks=nav_mask1)
+
+        # Unequal shape of maps
+        with pytest.raises(ValueError, match=r"Crystal maps \(and/or navigation masks"):
+            _ = merge_crystal_maps(
+                [xmap1[~nav_mask1.ravel()], xmap2[~nav_mask2.ravel()]],
+            )
+
+        # Must be as many points in a map's data as there are False
+        # entries in a mask
+        with pytest.raises(ValueError, match="0. navigation mask does not have as "):
+            _ = merge_crystal_maps(
+                [xmap1, xmap2], navigation_masks=[nav_mask1, nav_mask2]
+            )
+
+        # A mask is not a NumPy array
+        with pytest.raises(ValueError, match="1. navigation mask must be a NumPy "):
+            _ = merge_crystal_maps(
+                [xmap1[~nav_mask1.ravel()], xmap2[~nav_mask2.ravel()]],
+                navigation_masks=[nav_mask1, list(nav_mask2)],
+            )

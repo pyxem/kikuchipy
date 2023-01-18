@@ -34,9 +34,8 @@ def merge_crystal_maps(
     simulation_indices_prop: Optional[str] = None,
     navigation_masks: Optional[List[Union[None, np.ndarray]]] = None,
 ) -> CrystalMap:
-    """Merge a list of at least two single phase
-    :class:`~orix.crystal_map.CrystalMap` with a 1D or 2D navigation
-    shape into one multi phase map.
+    """Return a multi phase :class:`~orix.crystal_map.CrystalMap` by
+    merging maps of 1D or 2D navigation shape based on scores.
 
     It is required that all maps have the same number of rotations and
     scores (and simulation indices if applicable) per point.
@@ -44,8 +43,11 @@ def merge_crystal_maps(
     Parameters
     ----------
     crystal_maps
-        A list of crystal maps with simulated indices and scores among
-        their properties.
+        A list of at least two crystal maps with simulated indices and
+        scores among their properties. The maps must have the same
+        shape, unless navigation masks are passed (see
+        ``navigation_masks``). Identical phases are considered as one
+        phase in the returned map.
     mean_n_best
         Number of best metric results to take the mean of before
         comparing. Default is ``1``. If given with a negative sign and
@@ -95,18 +97,20 @@ def merge_crystal_maps(
     # Set `navigation_masks` if any of the maps have some points not in
     # the data
     if navigation_masks is None:
-        is_in_data = [xmap.is_in_data.all() for xmap in crystal_maps]
-        if not all(is_in_data):
+        all_is_in_data = [xmap.is_in_data.all() for xmap in crystal_maps]
+        if not all(all_is_in_data):
             navigation_masks = []
-            for i, xmap in enumerate(crystal_maps):
-                navigation_masks.append(~xmap.is_in_data.reshape(xmap.shape))
+            for xmap in crystal_maps:
+                slice_i = xmap._data_slices_from_coordinates()
+                is_in_data2d_i = xmap.is_in_data.reshape(xmap._original_shape)[slice_i]
+                navigation_masks.append(~is_in_data2d_i)
 
     # Get map shapes of all maps. We can get this from either
     # `CrystalMap.shape` or `mask.shape` for masks in `navigation_masks`
     if navigation_masks is not None:
         if len(navigation_masks) != n_maps:
             raise ValueError(
-                "Number of crystal maps and navigation masks must be equal."
+                "Number of crystal maps and navigation masks must be equal"
             )
 
         map_shapes = []
@@ -118,21 +122,21 @@ def merge_crystal_maps(
                     raise ValueError(
                         f"{i}. navigation mask does not have as many 'False', "
                         f"{mask_is_in_data}, as there are points in the crystal map, "
-                        f"{map_is_in_data}."
+                        f"{map_is_in_data}"
                     )
                 map_shapes.append(mask.shape)
             elif mask is None:
                 map_shapes.append(xmap.shape)
             else:
                 raise ValueError(
-                    f"{i}. navigation mask must be a NumPy array or 'None'."
+                    f"{i}. navigation mask must be a NumPy array or 'None'"
                 )
     else:
         map_shapes = [xmap.shape for xmap in crystal_maps]
 
     if not np.sum(abs(np.diff(map_shapes, axis=0))) == 0:
         raise ValueError(
-            "Crystal maps (and/or navigation masks) must have the same navigation shape."
+            "Crystal maps (and/or navigation masks) must have the same navigation shape"
         )
     else:
         map_shape = map_shapes[0]
@@ -153,7 +157,7 @@ def merge_crystal_maps(
     rot_per_point_per_map = [xmap.rotations_per_point for xmap in crystal_maps]
     if not all(np.diff(rot_per_point_per_map) == 0):
         raise ValueError(
-            "Crystal maps must have the same number of rotations and scores per point."
+            "Crystal maps must have the same number of rotations and scores per point"
         )
     else:
         n_scores_per_point = rot_per_point_per_map[0]
@@ -162,7 +166,7 @@ def merge_crystal_maps(
         n_sim_idx = crystal_maps[0].prop[simulation_indices_prop].shape
         if len(n_sim_idx) > 1 and n_sim_idx[1] > n_scores_per_point:
             raise ValueError(
-                "Cannot merge maps with more simulation indices than scores per point."
+                "Cannot merge maps with more simulation indices than scores per point"
             )
 
     if greater_is_better is None:
@@ -226,14 +230,15 @@ def merge_crystal_maps(
             if phase.name in phase_list.names:
                 # If they are equal, do not duplicate it in the phase
                 # list but update the phase ID
-                if _equal_phase(phase, phase_list[phase.name]):
+                equal_phases, different = _equal_phase(phase, phase_list[phase.name])
+                if equal_phases:
                     phase_id[phase_mask] = phase_list.id_from_name(phase.name)
                 else:
                     name = phase.name
                     warnings.warn(
-                        f"There are duplicates of phase '{name}' but the phases are not"
-                        " identical, will therefore rename this phase's name to "
-                        f"'{name + str(i)}' in the merged PhaseList.",
+                        f"There are duplicates of phase '{name}' but the phases have "
+                        f"different {different}, will therefore rename this phase's "
+                        f"name to '{name + str(i)}' in the merged PhaseList",
                     )
                     phase.name = name + str(i)
                     phase_list.add(phase)

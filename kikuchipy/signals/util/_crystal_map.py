@@ -62,21 +62,50 @@ def _xmap_is_compatible_with_signal(
 
 
 # TODO: Move to orix' Phase.__eq__
-def _equal_phase(phase1: Phase, phase2: Phase) -> bool:
-    try:
-        equal_sg = phase1.space_group.number == phase2.space_group.number
-    except AttributeError:
-        equal_sg = True
-    equal_pg = phase1.point_group == phase2.point_group
-    equal_structure = len(phase1.structure) == len(phase2.structure)
-    if equal_structure:
-        for atom1, atom2 in zip(phase1.structure, phase2.structure):
-            equal_structure *= atom1.element == atom2.element
-            equal_structure *= np.allclose(atom1.xyz, atom2.xyz)
-            equal_structure *= np.isclose(atom1.occupancy, atom2.occupancy)
-            if not equal_structure:
-                break
-    return bool(equal_sg * equal_pg * equal_structure)
+def _equal_phase(phase1: Phase, phase2: Phase) -> Tuple[bool, Union[str, None]]:
+    if phase1.name != phase2.name:
+        return False, "names"
+
+    space_groups = []
+    point_groups = []
+    for phase in [phase1, phase2]:
+        if hasattr(phase.space_group, "number"):
+            space_groups.append(phase.space_group.number)
+        else:
+            space_groups.append(np.nan)
+        if phase.point_group is not None:
+            point_groups.append(phase.point_group.data)
+        else:
+            point_groups.append(np.nan)
+
+    # Check space groups
+    if not np.allclose(*space_groups, equal_nan=True):
+        return False, "space groups"
+
+    # Check point groups
+    if np.size(point_groups[0]) != np.size(point_groups[1]) or not np.allclose(
+        *point_groups, equal_nan=True
+    ):
+        return False, "point groups"
+
+    # Compare number of atoms, lattice parameters and atom element,
+    # coordinate and occupancy
+    structure1 = phase1.structure
+    structure2 = phase2.structure
+    if len(structure1) != len(structure2):
+        return False, "number of atoms"
+    if not np.allclose(structure1.lattice.abcABG(), structure2.lattice.abcABG()):
+        return False, "lattice parameters"
+
+    for atom1, atom2 in zip(structure1, structure2):
+        if (
+            atom1.element != atom2.element
+            or not np.allclose(atom1.xyz, atom2.xyz)
+            or not np.isclose(atom1.occupancy, atom2.occupancy)
+        ):
+            return False, "atoms"
+
+    return True, None
 
 
 def _get_points_in_data_in_xmap(

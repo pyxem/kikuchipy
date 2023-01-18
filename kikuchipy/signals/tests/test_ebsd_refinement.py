@@ -17,11 +17,13 @@
 
 import dask
 import dask.array as da
+from diffpy.structure import Atom, Lattice, Structure
 import numpy as np
 from orix.crystal_map import Phase
 import pytest
 
 import kikuchipy as kp
+from kikuchipy.signals.util._crystal_map import _equal_phase
 
 
 class EBSDRefineTestSetup:
@@ -256,6 +258,92 @@ class TestEBSDRefine(EBSDRefineTestSetup):
         )
         assert xmap_ref.size == 1
         assert xmap_ref.shape == (1, 1)
+
+        # Raises error when navigation mask is incorrect
+        nav_mask2 = np.ones((xmap.shape[0] - 1, xmap.shape[1] - 1), dtype=bool)
+        nav_mask2[0, 0] = False
+
+        with pytest.raises(ValueError, match=r"Navigation mask shape \(2, 2\) and "):
+            _ = dummy_signal.refine_orientation(
+                xmap=xmap,
+                detector=det,
+                master_pattern=self.mp,
+                energy=20,
+                navigation_mask=nav_mask2,
+            )
+
+    def test_equal_phase(self):
+        assert _equal_phase(Phase(), Phase()) == (True, None)
+
+        # Name
+        assert _equal_phase(Phase("a"), Phase("a")) == (True, None)
+        assert _equal_phase(Phase("a"), Phase("b")) == (False, "names")
+
+        # Space group
+        assert _equal_phase(Phase(space_group=1), Phase(space_group=1)) == (True, None)
+        assert _equal_phase(Phase(), Phase(space_group=2)) == (False, "space groups")
+        assert _equal_phase(Phase(space_group=1), Phase(space_group=2)) == (
+            False,
+            "space groups",
+        )
+
+        # Point group
+        assert _equal_phase(Phase(), Phase(point_group="m-3m")) == (
+            False,
+            "point groups",
+        )
+        assert _equal_phase(Phase(point_group="4"), Phase(point_group="m-3m")) == (
+            False,
+            "point groups",
+        )
+
+        # Structure
+        atom_al = Atom("Al", [0, 0, 0])
+        atom_al2 = Atom("Al", [0.5, 0.5, 0.5])
+        atom_al3 = Atom("Al", [0, 0, 0], occupancy=0.5)
+        atom_mn = Atom("Mn", [0, 0, 0])
+        assert _equal_phase(
+            Phase(structure=Structure(atoms=[atom_al, atom_mn])),
+            Phase(structure=Structure(atoms=[atom_al, atom_mn])),
+        ) == (True, None)
+        assert _equal_phase(
+            Phase(structure=Structure(atoms=[atom_al])),
+            Phase(structure=Structure(atoms=[atom_al, atom_mn])),
+        ) == (False, "number of atoms")
+        assert _equal_phase(
+            Phase(structure=Structure(atoms=[atom_al2, atom_mn])),
+            Phase(structure=Structure(atoms=[atom_al, atom_mn])),
+        ) == (False, "atoms")
+        assert _equal_phase(
+            Phase(structure=Structure(atoms=[atom_al, atom_mn])),
+            Phase(structure=Structure(atoms=[atom_al3, atom_mn])),
+        ) == (False, "atoms")
+
+        # Lattice
+        assert _equal_phase(
+            Phase(structure=Structure(lattice=Lattice(1, 2, 3, 90, 100, 110))),
+            Phase(structure=Structure(lattice=Lattice(1, 2, 3, 90, 100, 110))),
+        ) == (True, None)
+        assert _equal_phase(
+            Phase(structure=Structure(lattice=Lattice(1, 2, 4, 90, 100, 110))),
+            Phase(structure=Structure(lattice=Lattice(1, 2, 3, 90, 100, 110))),
+        ) == (False, "lattice parameters")
+
+    def test_refinement_invalid_phase(self, dummy_signal, get_single_phase_xmap):
+        am = dummy_signal.axes_manager
+        xmap = get_single_phase_xmap(
+            nav_shape=am.navigation_shape[::-1],
+            rotations_per_point=1,
+            step_sizes=tuple(a.scale for a in am.navigation_axes)[::-1],
+        )
+        xmap.phases[0].name = "b"
+        det = dummy_signal.detector.deepcopy()
+        det.pc = det.pc_average
+
+        with pytest.raises(ValueError, match="Master pattern phase 'a' and phase of "):
+            _ = dummy_signal.refine_orientation(
+                xmap=xmap, detector=det, master_pattern=self.mp, energy=20
+            )
 
 
 class TestEBSDRefineOrientation(EBSDRefineTestSetup):

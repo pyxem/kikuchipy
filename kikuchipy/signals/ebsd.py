@@ -2882,10 +2882,12 @@ class EBSD(KikuchipySignal2D):
 
         xmap_phase = xmap.phases_in_data[phase_id]
         mp_phase = master_pattern.phase
-        if not _equal_phase(mp_phase, xmap_phase):
+        equal_phases, are_different = _equal_phase(mp_phase, xmap_phase)
+        if not equal_phases:
             raise ValueError(
-                f"Master pattern phase {mp_phase} and phase of points to refine in "
-                f"crystal map {xmap_phase} must be the same"
+                f"Master pattern phase '{mp_phase.name}' and phase of points to refine "
+                f"in crystal map '{xmap_phase.name}' must be the same, but have "
+                f"different {are_different}"
             )
 
         return points_to_refine
