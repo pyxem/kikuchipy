@@ -24,15 +24,7 @@ import pytest
 import kikuchipy as kp
 
 
-class TestEBSDRefine:
-    """Note that it is the calls to the :mod:`scipy.optimize` and
-    NLopt methods that take up test time. The setup and array sizes do
-    not matter that much.
-
-    Tests relevant for all three refinement cases (orientation, PC and
-    orientation/PC) goes in this class.
-    """
-
+class EBSDRefineTestSetup:
     axes = [
         dict(name="hemisphere", size=2, scale=1),
         dict(name="energy", size=5, offset=16, scale=1),
@@ -47,6 +39,16 @@ class TestEBSDRefine:
         hemisphere="both",
         phase=Phase("a", 225),
     )
+
+
+class TestEBSDRefine(EBSDRefineTestSetup):
+    """Note that it is the calls to the :mod:`scipy.optimize` and
+    NLopt methods that take up test time. The setup and array sizes do
+    not matter that much.
+
+    Tests relevant for all three refinement cases (orientation, PC and
+    orientation/PC) goes in this class.
+    """
 
     @pytest.mark.parametrize(
         "ebsd_with_axes_and_random_data, detector, error_msg",
@@ -92,7 +94,7 @@ class TestEBSDRefine:
 
         xmap.phases.add(Phase(name="b", point_group="m-3m"))
         xmap._phase_id[0] = 1
-        with pytest.raises(ValueError, match="Points to refine in crystal map must "):
+        with pytest.raises(ValueError, match="Points in data in crystal map must have"):
             _ = s.refine_orientation(xmap=xmap, **refine_kwargs)
 
     def test_refine_signal_mask(self, dummy_signal, get_single_phase_xmap):
@@ -231,8 +233,32 @@ class TestEBSDRefine:
                 initial_step=[1, 1, 1],
             )
 
+    def test_refine_single_point(self, dummy_signal, get_single_phase_xmap):
+        am = dummy_signal.axes_manager
+        xmap = get_single_phase_xmap(
+            nav_shape=am.navigation_shape[::-1],
+            rotations_per_point=1,
+            step_sizes=tuple(a.scale for a in am.navigation_axes)[::-1],
+        )
+        det = dummy_signal.detector.deepcopy()
+        det.pc = det.pc_average
 
-class TestEBSDRefineOrientation(TestEBSDRefine):
+        nav_mask1 = np.ones(xmap.shape, dtype=bool)
+        nav_mask1[0, 0] = False
+
+        xmap_ref = dummy_signal.refine_orientation(
+            xmap=xmap,
+            detector=det,
+            master_pattern=self.mp,
+            energy=20,
+            method_kwargs=dict(tol=0.1, options=dict(maxiter=10)),
+            navigation_mask=nav_mask1,
+        )
+        assert xmap_ref.size == 1
+        assert xmap_ref.shape == (1, 1)
+
+
+class TestEBSDRefineOrientation(EBSDRefineTestSetup):
     @pytest.mark.parametrize(
         "ebsd_with_axes_and_random_data, detector, method_kwargs, trust_region",
         [
@@ -459,7 +485,7 @@ class TestEBSDRefineOrientation(TestEBSDRefine):
         assert xmap_ref.scores.mean() > s.xmap.scores.mean()
 
 
-class TestEBSDRefinePC(TestEBSDRefine):
+class TestEBSDRefinePC(EBSDRefineTestSetup):
     @pytest.mark.parametrize(
         "ebsd_with_axes_and_random_data, detector, method_kwargs, trust_region",
         [
@@ -651,7 +677,7 @@ class TestEBSDRefinePC(TestEBSDRefine):
         assert dask_arr.shape == (9, 1)
 
 
-class TestEBSDRefineOrientationPC(TestEBSDRefine):
+class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
     @pytest.mark.parametrize(
         "method_kwargs, trust_region",
         [
