@@ -19,7 +19,7 @@
 and an :class:`~kikuchipy.signals.EBSD` signal.
 """
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 import warnings
 
 import numpy as np
@@ -82,28 +82,43 @@ def _equal_phase(phase1: Phase, phase2: Phase) -> bool:
 def _get_points_in_data_in_xmap(
     xmap: CrystalMap,
     navigation_mask: Optional[np.ndarray] = None,
-) -> Tuple[np.ndarray, int]:
-    points_to_refine = xmap.is_in_data
+) -> Tuple[np.ndarray, int, bool, Union[Tuple[int], Tuple[int, int]]]:
+    points_in_data = xmap.is_in_data
 
     if navigation_mask is not None:
+        # Keep only points in the mask that are already in the data
         nav_mask_shape = navigation_mask.shape
         if navigation_mask.shape != xmap.shape:
             raise ValueError(
                 f"Navigation mask shape {nav_mask_shape} and crystal map shape "
                 f"{xmap.shape} must be the same"
             )
-        points_to_refine_in_mask = ~navigation_mask.ravel()
-        points_to_refine_in_data = points_to_refine_in_mask[points_to_refine]
-        points_to_refine = np.logical_and(points_to_refine, points_to_refine_in_mask)
-        phase_id = np.unique(xmap.phase_id[points_to_refine_in_data])
+        points_in_mask = ~navigation_mask.ravel()
+        points_in_mask_in_data = points_in_mask[points_in_data]
+        points_in_data = np.logical_and(points_in_data, points_in_mask)
+        phase_id = np.unique(xmap.phase_id[points_in_mask_in_data])
     else:
         phase_id = np.unique(xmap.phase_id)
 
+    # Check if the (possibly combined) mask is continuous
+    if xmap.ndim == 1:
+        points_in_data_idx = np.where(points_in_data)[0]
+        mask_size = points_in_data_idx[-1] - points_in_data_idx[0] + 1
+        mask_is_continuous = mask_size == points_in_data.sum()
+        mask_shape = (mask_size,)
+    else:
+        points_to_refine2d = points_in_data.reshape(xmap.shape)
+        r_points, c_points = np.where(points_to_refine2d)
+        r_size = r_points.max() - r_points.min() + 1
+        c_size = c_points.max() - c_points.min() + 1
+        mask_is_continuous = (r_size * c_size) == points_in_data.sum()
+        mask_shape = (r_size, c_size)
+
     if phase_id.size != 1:
         raise ValueError(
-            "Points to refine in crystal map must have only one phase, but had the "
-            f"phase IDs {list(phase_id)}"
+            "Points in data in crystal map must have only one phase, but had the phase "
+            f"IDs {list(phase_id)}"
         )
     unique_phase_id = phase_id[0]
 
-    return points_to_refine, unique_phase_id
+    return points_in_data, unique_phase_id, mask_is_continuous, mask_shape

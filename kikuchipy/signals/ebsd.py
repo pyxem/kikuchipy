@@ -1884,6 +1884,9 @@ class EBSD(KikuchipySignal2D):
 
         See Also
         --------
+        refine_orientation
+        refine_projection_center
+        refine_orientation_projection_center
         kikuchipy.indexing.SimilarityMetric
         kikuchipy.indexing.NormalizedCrossCorrelationMetric
         kikuchipy.indexing.NormalizedDotProductMetric
@@ -1907,20 +1910,20 @@ class EBSD(KikuchipySignal2D):
         if navigation_mask is not None:
             if navigation_mask.shape != nav_shape_exp:
                 raise ValueError(
-                    f"The `navigation_mask` shape {navigation_mask.shape} and the "
+                    f"The navigation mask shape {navigation_mask.shape} and the "
                     f"signal's navigation shape {nav_shape_exp} must be identical"
                 )
             elif navigation_mask.all():
                 raise ValueError(
-                    "The `navigation_mask` must allow for indexing of at least one "
+                    "The navigation mask must allow for indexing of at least one "
                     "pattern (at least one value equal to `False`)"
                 )
             elif not isinstance(navigation_mask, np.ndarray):
-                raise ValueError("The `navigation_mask` must be a NumPy array")
+                raise ValueError("The navigation mask must be a NumPy array")
 
         if signal_mask is not None:
             if not isinstance(signal_mask, np.ndarray):
-                raise ValueError("The `signal_mask` must be a NumPy array")
+                raise ValueError("The signal mask must be a NumPy array")
 
         sig_shape_exp = am_exp.signal_shape[::-1]
         sig_shape_dict = am_dict.signal_shape[::-1]
@@ -1933,8 +1936,8 @@ class EBSD(KikuchipySignal2D):
         dict_xmap = dictionary.xmap
         if dict_xmap is None or dict_xmap.shape != (dict_size,):
             raise ValueError(
-                "Dictionary signal must have a non-empty `EBSD.xmap` property of equal "
-                "size as the number of dictionary patterns, and both the signal and "
+                "Dictionary signal must have a non-empty `EBSD.xmap` attribute of equal"
+                " size as the number of dictionary patterns, and both the signal and "
                 "crystal map must have only one navigation dimension"
             )
 
@@ -2871,7 +2874,9 @@ class EBSD(KikuchipySignal2D):
 
         # Checks navigation mask shape and whether there is only one
         # phase ID in points to refine
-        points_to_refine, phase_id = _get_points_in_data_in_xmap(xmap, navigation_mask)
+        points_to_refine, phase_id, *_ = _get_points_in_data_in_xmap(
+            xmap, navigation_mask
+        )
 
         master_pattern._is_suitable_for_projection(raise_if_not=True)
 

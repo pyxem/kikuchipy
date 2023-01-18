@@ -77,7 +77,7 @@ def compute_refine_orientation_results(
     xmap_refined
         Crystal map with refined orientations and scores.
     """
-    points_to_refine, phase_id = _get_points_in_data_in_xmap(xmap, navigation_mask)
+    points_to_refine, phase_id, *_ = _get_points_in_data_in_xmap(xmap, navigation_mask)
 
     nav_size = points_to_refine.size
     nav_size_in_data = points_to_refine.sum()
@@ -141,7 +141,9 @@ def compute_refine_projection_center_results(
     new_detector
         EBSD detector with refined projection center parameters.
     """
-    points_to_refine, _ = _get_points_in_data_in_xmap(xmap, navigation_mask)
+    points_to_refine, _, mask_is_continuous, mask_shape = _get_points_in_data_in_xmap(
+        xmap, navigation_mask
+    )
     nav_size_in_data = points_to_refine.sum()
 
     new_detector = detector.deepcopy()
@@ -160,10 +162,9 @@ def compute_refine_projection_center_results(
         scores = computed_results[:, 0]
         new_pc = computed_results[:, 1:]
 
-    nav_shape = xmap.shape
-    if nav_size_in_data == int(np.prod(nav_shape)):
-        scores = scores.reshape(nav_shape)
-        new_pc = new_pc.reshape(nav_shape + (3,))
+    if mask_is_continuous:
+        scores = scores.reshape(mask_shape)
+        new_pc = new_pc.reshape(mask_shape + (3,))
 
     new_detector.pc = new_pc
 
@@ -214,7 +215,12 @@ def compute_refine_orientation_projection_center_results(
     --------
     kikuchipy.signals.EBSD.refine_orientation_projection_center
     """
-    points_to_refine, phase_id = _get_points_in_data_in_xmap(xmap, navigation_mask)
+    (
+        points_to_refine,
+        phase_id,
+        mask_is_continuous,
+        mask_shape,
+    ) = _get_points_in_data_in_xmap(xmap, navigation_mask)
 
     nav_size = points_to_refine.size
     nav_size_in_data = points_to_refine.sum()
@@ -251,9 +257,8 @@ def compute_refine_orientation_projection_center_results(
 
         new_pc = computed_results[:, 4:]
 
-    nav_shape = xmap.shape
-    if nav_size_in_data == int(np.prod(nav_shape)):
-        new_pc = new_pc.reshape(nav_shape + (3,))
+    if mask_is_continuous:
+        new_pc = new_pc.reshape(mask_shape + (3,))
 
     new_detector.pc = new_pc
 
