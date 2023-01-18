@@ -86,25 +86,23 @@ def compute_refine_orientation_results(
     xmap_kw = _get_crystal_map_parameters(xmap, nav_size)
     xmap_kw["phase_id"][points_to_refine] = phase_id
 
+    print(f"Refining {nav_size_in_data} orientation(s):", file=sys.stdout)
+    time_start = time()
     with ProgressBar():
-        print(f"Refining {nav_size_in_data} orientation(s):", file=sys.stdout)
-        time_start = time()
         computed_results = results.compute()
-        total_time = time() - time_start
-        patterns_per_second = nav_size_in_data / total_time
-        print(
-            f"Refinement speed: {patterns_per_second:.5f} patterns/s", file=sys.stdout
-        )
+    total_time = time() - time_start
+    patterns_per_second = nav_size_in_data / total_time
+    print(f"Refinement speed: {patterns_per_second:.5f} patterns/s", file=sys.stdout)
 
-        # (n, score, phi1, Phi, phi2)
-        computed_results = np.array(computed_results)
-        xmap_kw["prop"]["scores"][points_to_refine] = computed_results[:, 0]
-        xmap_kw["rotations"][points_to_refine] = Rotation.from_euler(
-            computed_results[:, 1:]
-        ).data
-        xmap_refined = CrystalMap(
-            phase_list=phase_list, is_in_data=points_to_refine, **xmap_kw
-        )
+    # (n, score, phi1, Phi, phi2)
+    computed_results = np.array(computed_results)
+    xmap_kw["prop"]["scores"][points_to_refine] = computed_results[:, 0]
+    xmap_kw["rotations"][points_to_refine] = Rotation.from_euler(
+        computed_results[:, 1:]
+    ).data
+    xmap_refined = CrystalMap(
+        phase_list=phase_list, is_in_data=points_to_refine, **xmap_kw
+    )
 
     return xmap_refined
 
@@ -148,19 +146,17 @@ def compute_refine_projection_center_results(
 
     new_detector = detector.deepcopy()
 
+    print(f"Refining {nav_size_in_data} projection center(s):", file=sys.stdout)
+    time_start = time()
     with ProgressBar():
-        print(f"Refining {nav_size_in_data} projection center(s):", file=sys.stdout)
-        time_start = time()
         computed_results = results.compute()
-        total_time = time() - time_start
-        patterns_per_second = nav_size_in_data / total_time
-        print(
-            f"Refinement speed: {patterns_per_second:.5f} patterns/s", file=sys.stdout
-        )
-        # (n, score, PCx, PCy, PCz)
-        computed_results = np.array(computed_results)
-        scores = computed_results[:, 0]
-        new_pc = computed_results[:, 1:]
+    total_time = time() - time_start
+    patterns_per_second = nav_size_in_data / total_time
+    print(f"Refinement speed: {patterns_per_second:.5f} patterns/s", file=sys.stdout)
+    # (n, score, PCx, PCy, PCz)
+    computed_results = np.array(computed_results)
+    scores = computed_results[:, 0]
+    new_pc = computed_results[:, 1:]
 
     if mask_is_continuous:
         scores = scores.reshape(mask_shape)
@@ -232,30 +228,28 @@ def compute_refine_orientation_projection_center_results(
 
     new_detector = detector.deepcopy()
 
+    print(
+        f"Refining {nav_size_in_data} orientation(s) and projection center(s):",
+        file=sys.stdout,
+    )
+    time_start = time()
     with ProgressBar():
-        print(
-            f"Refining {nav_size_in_data} orientation(s) and projection center(s):",
-            file=sys.stdout,
-        )
-        time_start = time()
         computed_results = results.compute()
-        total_time = time() - time_start
-        patterns_per_second = nav_size_in_data / total_time
-        print(
-            f"Refinement speed: {patterns_per_second:.5f} patterns/s", file=sys.stdout
-        )
+    total_time = time() - time_start
+    patterns_per_second = nav_size_in_data / total_time
+    print(f"Refinement speed: {patterns_per_second:.5f} patterns/s", file=sys.stdout)
 
-        # (n, score, phi1, Phi, phi2, PCx, PCy, PCz)
-        computed_results = np.array(computed_results)
-        xmap_kw["prop"]["scores"][points_to_refine] = computed_results[:, 0]
-        xmap_kw["rotations"][points_to_refine] = Rotation.from_euler(
-            computed_results[:, 1:4]
-        ).data
-        xmap_refined = CrystalMap(
-            phase_list=phase_list, is_in_data=points_to_refine, **xmap_kw
-        )
+    # (n, score, phi1, Phi, phi2, PCx, PCy, PCz)
+    computed_results = np.array(computed_results)
+    xmap_kw["prop"]["scores"][points_to_refine] = computed_results[:, 0]
+    xmap_kw["rotations"][points_to_refine] = Rotation.from_euler(
+        computed_results[:, 1:4]
+    ).data
+    xmap_refined = CrystalMap(
+        phase_list=phase_list, is_in_data=points_to_refine, **xmap_kw
+    )
 
-        new_pc = computed_results[:, 4:]
+    new_pc = computed_results[:, 4:]
 
     if mask_is_continuous:
         new_pc = new_pc.reshape(mask_shape + (3,))
@@ -875,7 +869,7 @@ class _RefinementSetup:
         self.chunks = (patterns.chunksize[0], -1)
 
         # Relevant data from the crystal map
-        self.nav_size = xmap.size
+        self.nav_size = points_to_refine.sum()
         points_to_refine_in_data = points_to_refine[xmap.is_in_data]
         if xmap.rotations_per_point > 1:
             rot = xmap.rotations[points_to_refine_in_data, 0]
