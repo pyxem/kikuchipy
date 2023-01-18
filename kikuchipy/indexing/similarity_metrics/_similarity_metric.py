@@ -91,12 +91,12 @@ class SimilarityMetric(abc.ABC):
         sign_string = {1: "greater is better", -1: "lower is better"}
         string += sign_string[self.sign]
         string += f", rechunk: {self.rechunk}, "
-        string += f"navigation mask: {self.signal_mask is not None}, "
+        string += f"navigation mask: {self.navigation_mask is not None}, "
         string += f"signal mask: {self.signal_mask is not None}"
         return string
 
     @property
-    def allowed_dtypes(self) -> List[np.dtype]:
+    def allowed_dtypes(self) -> List[type]:
         """Return the list of allowed array data types used during
         matching.
         """
