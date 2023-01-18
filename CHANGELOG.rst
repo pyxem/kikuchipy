@@ -18,6 +18,8 @@ Unreleased
 
 Added
 -----
+- Which points in a crystal map to refine can be controlled by passing a navigation
+  mask. (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - Which points to consider when merging crystal maps can be controlled by passing
   navigation masks.  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - Which patterns to do dictionary indexing of can be controlled by passing a navigation
@@ -83,6 +85,10 @@ Added
 
 Changed
 -------
+- Stricter phase comparison in EBSD refinement. The phase in the crystal map points to
+  refine must have the same name, space group, point group and structure (atoms and
+  lattice) as the master pattern phase.
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - Passing two crystal maps with identical phases when merging returns a map with one
   phase instead of two and does not raise a warning, as before.
   (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
