@@ -75,7 +75,8 @@ def compute_refine_orientation_results(
     Returns
     -------
     xmap_refined
-        Crystal map with refined orientations and scores.
+        Crystal map with refined orientations, scores and the number of
+        function evaluations.
     """
     points_to_refine, phase_id, *_ = _get_points_in_data_in_xmap(xmap, navigation_mask)
 
@@ -94,11 +95,12 @@ def compute_refine_orientation_results(
     patterns_per_second = nav_size_in_data / total_time
     print(f"Refinement speed: {patterns_per_second:.5f} patterns/s", file=sys.stdout)
 
-    # (n, score, phi1, Phi, phi2)
+    # n x (score, number of evaluations, phi1, Phi, phi2)
     computed_results = np.array(computed_results)
     xmap_kw["prop"]["scores"][points_to_refine] = computed_results[:, 0]
+    xmap_kw["prop"]["num_evals"][points_to_refine] = computed_results[:, 1]
     xmap_kw["rotations"][points_to_refine] = Rotation.from_euler(
-        computed_results[:, 1:]
+        computed_results[:, 2:]
     ).data
     xmap_refined = CrystalMap(
         phase_list=phase_list, is_in_data=points_to_refine, **xmap_kw
@@ -112,10 +114,11 @@ def compute_refine_projection_center_results(
     detector: "EBSDDetector",
     xmap: CrystalMap,
     navigation_mask: Optional[np.ndarray] = None,
-) -> Tuple[np.ndarray, "EBSDDetector"]:
+) -> Tuple[np.ndarray, "EBSDDetector", np.ndarray]:
     """Compute the results from
     :meth:`~kikuchipy.signals.EBSD.refine_projection_center` and return
-    the score array and :class:`~kikuchipy.detectors.EBSDDetector`.
+    the score array, :class:`~kikuchipy.detectors.EBSDDetector` and
+    number of function evaluations per pattern.
 
     Parameters
     ----------
@@ -138,6 +141,8 @@ def compute_refine_projection_center_results(
         Score array.
     new_detector
         EBSD detector with refined projection center parameters.
+    num_evals
+        Number of function evaluations per pattern.
     """
     points_to_refine, _, mask_is_continuous, mask_shape = _get_points_in_data_in_xmap(
         xmap, navigation_mask
@@ -153,18 +158,20 @@ def compute_refine_projection_center_results(
     total_time = time() - time_start
     patterns_per_second = nav_size_in_data / total_time
     print(f"Refinement speed: {patterns_per_second:.5f} patterns/s", file=sys.stdout)
-    # (n, score, PCx, PCy, PCz)
+    # n x (score, number of evaluations, PCx, PCy, PCz)
     computed_results = np.array(computed_results)
     scores = computed_results[:, 0]
-    new_pc = computed_results[:, 1:]
+    num_evals = computed_results[:, 1]
+    new_pc = computed_results[:, 2:]
 
     if mask_is_continuous:
         scores = scores.reshape(mask_shape)
+        num_evals = num_evals.reshape(mask_shape)
         new_pc = new_pc.reshape(mask_shape + (3,))
 
     new_detector.pc = new_pc
 
-    return scores, new_detector
+    return scores, new_detector, num_evals
 
 
 def compute_refine_orientation_projection_center_results(
@@ -203,7 +210,8 @@ def compute_refine_orientation_projection_center_results(
     Returns
     -------
     xmap_refined
-        Crystal map with refined orientations and scores.
+        Crystal map with refined orientations, scores and the number of
+        function evaluations per pattern.
     new_detector
         EBSD detector with refined projection center parameters.
 
@@ -239,17 +247,18 @@ def compute_refine_orientation_projection_center_results(
     patterns_per_second = nav_size_in_data / total_time
     print(f"Refinement speed: {patterns_per_second:.5f} patterns/s", file=sys.stdout)
 
-    # (n, score, phi1, Phi, phi2, PCx, PCy, PCz)
+    # n x (score, number of evaluations, phi1, Phi, phi2, PCx, PCy, PCz)
     computed_results = np.array(computed_results)
     xmap_kw["prop"]["scores"][points_to_refine] = computed_results[:, 0]
+    xmap_kw["prop"]["num_evals"][points_to_refine] = computed_results[:, 1]
     xmap_kw["rotations"][points_to_refine] = Rotation.from_euler(
-        computed_results[:, 1:4]
+        computed_results[:, 2:5]
     ).data
     xmap_refined = CrystalMap(
         phase_list=phase_list, is_in_data=points_to_refine, **xmap_kw
     )
 
-    new_pc = computed_results[:, 4:]
+    new_pc = computed_results[:, 5:]
 
     if mask_is_continuous:
         new_pc = new_pc.reshape(mask_shape + (3,))
@@ -271,7 +280,10 @@ def _get_crystal_map_parameters(xmap: CrystalMap, nav_size: int) -> dict:
             "rotations": Rotation.identity((nav_size,)),
             "phase_id": np.zeros(nav_size, dtype="int32"),
             "scan_unit": xmap.scan_unit,
-            "prop": {"scores": np.zeros(nav_size, dtype="float")},
+            "prop": {
+                "scores": np.zeros(nav_size, dtype="float64"),
+                "num_evals": np.zeros(nav_size, dtype="int32"),
+            },
         }
     )
 
@@ -321,11 +333,14 @@ def _refine_orientation(
 
     if ref.unique_pc:
         # Patterns have been indexed with varying PCs, so we re-compute
-        # the direction cosines for every pattern during refinement
+        # the direction cosines for every pattern during refinement.
+        # Since we're iterating over (n patterns, x parameters) in each
+        # Dask array, we need the PC arrays to be 2D (hence the 'weird'
+        # slicing.
         pc = ref.pc_array
-        pcx = pc[:, 0]
-        pcy = pc[:, 1]
-        pcz = pc[:, 2]
+        pcx = pc[:, 0:1]
+        pcy = pc[:, 1:2]
+        pcz = pc[:, 2:3]
 
         res = da.map_blocks(
             ref.chunk_func,
@@ -401,7 +416,7 @@ def _refine_orientation_chunk_scipy(
     :func:`~dask.array.Array.map_blocks`.
     """
     nav_size = patterns.shape[0]
-    results = np.empty((nav_size, 4), dtype=np.float64)
+    results = np.empty((nav_size, 5), dtype=np.float64)
 
     # SciPy requires a sequence of (min, max) for each control variable
     bounds = np.stack((lower_bounds, upper_bounds), axis=lower_bounds.ndim)
@@ -412,9 +427,9 @@ def _refine_orientation_chunk_scipy(
                 pattern=patterns[i],
                 rotation=rotations[i],
                 bounds=bounds[i],
-                pcx=pcx[i],
-                pcy=pcy[i],
-                pcz=pcz[i],
+                pcx=float(pcx[i]),
+                pcy=float(pcy[i]),
+                pcz=float(pcz[i]),
                 nrows=nrows,
                 ncols=ncols,
                 tilt=tilt,
@@ -468,7 +483,7 @@ def _refine_orientation_chunk_nlopt(
     opt = nlopt.opt(opt)
 
     nav_size = patterns.shape[0]
-    results = np.empty((nav_size, 4), dtype=np.float64)
+    results = np.empty((nav_size, 5), dtype=np.float64)
 
     if direction_cosines is None:
         for i in range(nav_size):
@@ -479,9 +494,9 @@ def _refine_orientation_chunk_nlopt(
                 lower_bounds=lower_bounds[i],
                 upper_bounds=upper_bounds[i],
                 signal_mask=signal_mask,
-                pcx=pcx[i],
-                pcy=pcy[i],
-                pcz=pcz[i],
+                pcx=float(pcx[i]),
+                pcy=float(pcy[i]),
+                pcz=float(pcz[i]),
                 nrows=nrows,
                 ncols=ncols,
                 tilt=tilt,
@@ -579,7 +594,7 @@ def _refine_pc_chunk_scipy(
     """Refine projection centers using patterns in one dask array chunk."""
 
     nav_size = patterns.shape[0]
-    results = np.empty((nav_size, 4), dtype=np.float64)
+    results = np.empty((nav_size, 5), dtype=np.float64)
 
     # SciPy requires a sequence of (min, max) for each control variable
     bounds = np.stack((lower_bounds, upper_bounds), axis=lower_bounds.ndim)
@@ -612,7 +627,7 @@ def _refine_pc_chunk_nlopt(
     opt = nlopt.opt(opt)
 
     nav_size = patterns.shape[0]
-    results = np.empty((nav_size, 4), dtype=np.float64)
+    results = np.empty((nav_size, 5), dtype=np.float64)
 
     for i in range(nav_size):
         results[i] = _refine_pc_solver_nlopt(
@@ -667,8 +682,8 @@ def _refine_orientation_pc(
         signal_mask=signal_mask,
     )
 
-    # Stack Euler angles and PC parameters into one array of shape
-    # `nav_shape` + (6,)
+    # Stack Euler angles and PC parameters into one array of shape:
+    # navigation shape + (6,)
     rot_pc = ref.rotations_pc_array
 
     # Get bounds on control variables. If a trust region is not passed,
@@ -712,7 +727,7 @@ def _refine_orientation_pc_chunk_scipy(
     one dask array chunk using *SciPy*.
     """
     nav_size = patterns.shape[0]
-    results = np.empty((nav_size, 7), dtype=np.float64)
+    results = np.empty((nav_size, 8), dtype=np.float64)
 
     # SciPy requires a sequence of (min, max) for each control variable
     bounds = np.stack((lower_bounds, upper_bounds), axis=lower_bounds.ndim)
@@ -745,7 +760,7 @@ def _refine_orientation_pc_chunk_nlopt(
     opt = nlopt.opt(opt)
 
     nav_size = patterns.shape[0]
-    results = np.empty((nav_size, 7), dtype=np.float64)
+    results = np.empty((nav_size, 8), dtype=np.float64)
 
     for i in range(nav_size):
         results[i] = _refine_orientation_pc_solver_nlopt(

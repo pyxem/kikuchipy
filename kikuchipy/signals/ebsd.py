@@ -1992,6 +1992,7 @@ class EBSD(KikuchipySignal2D):
         sample-detector geometry, represented by the three projection
         center (PC) parameters (PCx, PCy, PCz) in the Bruker convention,
         is fixed.
+
         A subset of the optimization methods in *SciPy* and *NLopt* are
         available:
 
@@ -2092,14 +2093,16 @@ class EBSD(KikuchipySignal2D):
         Returns
         -------
         out
-            Crystal map with refined orientations and similarity metrics
-            in a ``"scores"`` property if ``compute=True``. If
-            ``compute=False``, a dask array of navigation size + (4,)
-            is returned, to be computed later. See
+            Crystal map with refined orientations, NCC scores in a
+            ``"scores"`` property and the number of function
+            evaluations in a ``"num_evals"`` property if
+            ``compute=True``. If ``compute=False``, a dask array of
+            navigation size + (5,) is returned, to be computed later.
+            See
             :func:`~kikuchipy.indexing.compute_refine_orientation_results`.
-            Each navigation point in the data has the optimized score
-            and the three Euler angles in radians in element 0, 1, 2,
-            and 3, respectively.
+            Each navigation point in the data has the optimized score,
+            the number of function evaluations and the three Euler
+            angles in radians in element 0, 1, 2, 3 and 4, respectively.
 
         See Also
         --------
@@ -2162,7 +2165,7 @@ class EBSD(KikuchipySignal2D):
         compute: bool = True,
         rechunk: bool = True,
         chunk_kwargs: Optional[dict] = None,
-    ) -> Union[Tuple[np.ndarray, EBSDDetector], da.Array]:
+    ) -> Union[Tuple[np.ndarray, EBSDDetector, np.ndarray], da.Array]:
         """Refine projection centers by searching the parameter space
         using fixed orientations.
 
@@ -2275,14 +2278,16 @@ class EBSD(KikuchipySignal2D):
         Returns
         -------
         out
-            New similarity metrics and a new EBSD detector instance with
-            the refined PCs if ``compute=True``. If ``compute=False``,
-            a dask array of navigation size + (4,) is returned, to be
-            computed later. See
+            New similarity metrics, a new EBSD detector instance with
+            the refined PCs and the number of function evaluations if
+            ``compute=True``. If ``compute=False``, a dask array of
+            navigation size + (5,) is returned, to be computed later.
+            See
             :func:`~kikuchipy.indexing.compute_refine_projection_center_results`.
-            Each navigation point has the optimized score and the three
-            PC parameters in the Bruker convention in element 0, 1, 2,
-            and 3, respectively.
+            Each navigation point has the optimized score, the three
+            PC parameters in the Bruker convention and the number of
+            function evaluations in element 0, 1, 2, 3 and 4,
+            respectively.
 
         See Also
         --------
@@ -2469,9 +2474,10 @@ class EBSD(KikuchipySignal2D):
             If ``compute=False``, a dask array of navigation size + (7,)
             is returned, to be computed later. See
             :func:`~kikuchipy.indexing.compute_refine_orientation_projection_center_results`.
-            Each navigation point has the optimized score, the three
-            Euler angles in radians, and the three PC parameters in
-            element 0, 1, 2, 3, 4, 5, and 6, respectively.
+            Each navigation point has the score, the number of function
+            evaulations, the three Euler angles in radians, and the
+            three PC parameters in element 0, 1, 2, 3, 4, 5, 6 and 7,
+            respectively.
 
         See Also
         --------
@@ -2924,7 +2930,11 @@ class EBSD(KikuchipySignal2D):
             1D NumPy array with points to use in refinement equal to
             ``True``.
         """
-        patterns = get_dask_array(signal=self, dtype="float32")
+        # Could cast pattern array to float32 here already, but
+        # have found that this gives different results than doing it
+        # in the Numba accelerated function preparing each pattern for
+        # refinement...
+        patterns = get_dask_array(signal=self)
 
         # Flatten dimensions for masking
         am = self.axes_manager
@@ -2947,7 +2957,7 @@ class EBSD(KikuchipySignal2D):
                 data_shape=patterns.shape,
                 nav_dim=1,
                 sig_dim=1,
-                dtype=self.data.dtype,
+                dtype="float32",
                 **chunk_kwargs,
             )
             patterns = patterns.rechunk(chunks)
