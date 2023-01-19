@@ -49,3 +49,4 @@ class TestNumbaAcceleratedMetrics:
             exp, sim, exp_squared_norm
         )
         assert np.isclose(r1, r2)
+        assert np.isclose(r1, 0.99999994, atol=1e-8)

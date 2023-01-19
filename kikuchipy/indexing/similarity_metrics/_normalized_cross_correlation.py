@@ -222,7 +222,7 @@ def _ncc_single_patterns_1d_float32_exp_centered(
     Returns
     -------
     ncc
-        NCC coefficient as 32-bit float.
+        NCC coefficient as 64-bit float.
     """
     sim -= np.mean(sim)
     return np.divide(
