@@ -18,6 +18,8 @@ Unreleased
 
 Added
 -----
+- EBSD refinement methods now return the number of function evaluations.
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - Which points in a crystal map to refine can be controlled by passing a navigation
   mask. (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - Which points to consider when merging crystal maps can be controlled by passing
@@ -85,6 +87,9 @@ Added
 
 Changed
 -------
+- Dask arrays returned from EBSD refinement methods has the number of function
+  evaluations as the second element after the score.
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - Stricter phase comparison in EBSD refinement. The phase in the crystal map points to
   refine must have the same name, space group, point group and structure (atoms and
   lattice) as the master pattern phase.
