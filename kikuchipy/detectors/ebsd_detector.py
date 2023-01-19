@@ -586,7 +586,8 @@ class EBSDDetector:
             Estimated tilt about detector :math:`X_d` in radians
             (``degrees=False``) or degrees (``degrees=True``).
         outliers
-            Returned if ``return_outliers=True``.
+            Returned if ``return_outliers=True``, in the shape of
+            :attr:`navigation_shape`.
         fig
             Returned if ``plot=True`` and ``return_figure=True``.
 
@@ -645,7 +646,8 @@ class EBSDDetector:
         else:
             out = (x_tilt,)
         if return_outliers:
-            out += (is_outlier,)
+            is_outlier2d = is_outlier.reshape(self.navigation_shape)
+            out += (is_outlier2d,)
 
         if plot:
             if figure_kwargs is None:
@@ -962,10 +964,10 @@ class EBSDDetector:
         )
 
         if isinstance(is_outlier, np.ndarray):
-            is_outlier = is_outlier.ravel()
-            nav_shape = (np.sum(~is_outlier),)
-            pc_flat = pc_flat[~is_outlier]
-            pc_indices_flat = pc_indices_flat[~is_outlier]
+            is_inlier = ~is_outlier.ravel()
+            nav_shape = (np.sum(is_inlier),)
+            pc_flat = pc_flat[is_inlier]
+            pc_indices_flat = pc_indices_flat[is_inlier]
 
         if transformation == "projective":
             pc_average = np.mean(pc_flat, axis=0)

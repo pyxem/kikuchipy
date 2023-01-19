@@ -23,6 +23,7 @@ from orix.crystal_map import Phase
 import pytest
 
 import kikuchipy as kp
+from kikuchipy.indexing._refinement._solvers import _prepare_pattern
 from kikuchipy.signals.util._crystal_map import _equal_phase
 
 
@@ -113,7 +114,7 @@ class TestEBSDRefine(EBSDRefineTestSetup):
             energy=20,
             detector=det,
             method="minimize",
-            method_kwargs=dict(method="Nelder-Mead", options=dict(maxiter=10)),
+            method_kwargs=dict(method="Nelder-Mead", options=dict(maxfev=10)),
         )
         xmap_ref_no_mask = s.refine_orientation(**ref_kw)
         signal_mask = np.zeros(s.axes_manager.signal_shape[::-1], dtype=bool)
@@ -253,7 +254,7 @@ class TestEBSDRefine(EBSDRefineTestSetup):
             detector=det,
             master_pattern=self.mp,
             energy=20,
-            method_kwargs=dict(tol=0.1, options=dict(maxiter=10)),
+            method_kwargs=dict(tol=0.1, options=dict(maxfev=10)),
             navigation_mask=nav_mask1,
         )
         assert xmap_ref.size == 1
@@ -379,7 +380,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        method_kwargs.update(dict(options=dict(maxiter=10)))
+        method_kwargs.update(dict(options=dict(maxfev=10)))
 
         xmap_ref = s.refine_orientation(
             xmap=xmap,
@@ -469,7 +470,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
             master_pattern=self.mp,
             energy=20,
             detector=det,
-            method_kwargs=dict(options=dict(maxiter=10)),
+            method_kwargs=dict(options=dict(maxfev=10)),
             compute=False,
         )
         assert isinstance(dask_arr, da.Array)
@@ -490,7 +491,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
                 "shgo",
                 dict(
                     sampling_method="sobol",
-                    options=dict(f_tol=1e-3, maxiter=1),
+                    options=dict(f_tol=1e-3, maxfev=1),
                     minimizer_kwargs=dict(
                         method="Nelder-Mead", options=dict(fatol=1e-3)
                     ),
@@ -607,10 +608,10 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        method_kwargs.update(dict(options=dict(maxiter=10)))
+        method_kwargs.update(dict(options=dict(maxfev=10)))
         signal_mask = np.zeros(detector.shape, dtype=bool)
 
-        scores_ref, det_ref = s.refine_projection_center(
+        scores_ref, det_ref, num_evals_ref = s.refine_projection_center(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
@@ -623,6 +624,8 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
         assert not np.allclose(xmap.get_map_data("scores"), scores_ref)
         assert isinstance(det_ref, kp.detectors.EBSDDetector)
         assert det_ref.pc.shape == nav_shape + (3,)
+        assert num_evals_ref.shape == nav_shape
+        assert num_evals_ref.max() == 10
 
     @pytest.mark.parametrize(
         (
@@ -672,7 +675,7 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
         )
         signal_mask = np.zeros(detector.shape, dtype=bool)
 
-        scores_ref, det_ref = s.refine_projection_center(
+        scores_ref, det_ref, num_evals_ref = s.refine_projection_center(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
@@ -688,6 +691,9 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
         assert not np.allclose(xmap.get_map_data("scores"), scores_ref)
         assert isinstance(det_ref, kp.detectors.EBSDDetector)
         assert det_ref.pc.shape == nav_shape + (3,)
+        assert num_evals_ref.shape == nav_shape
+        if maxeval:
+            assert num_evals_ref.max() == maxeval
 
     @pytest.mark.parametrize(
         "method, method_kwargs",
@@ -703,7 +709,7 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
                 "shgo",
                 dict(
                     sampling_method="sobol",
-                    options=dict(f_tol=1e-3, maxiter=1),
+                    options=dict(f_tol=1e-3, maxfev=1),
                     minimizer_kwargs=dict(
                         method="Nelder-Mead", options=dict(fatol=1e-3)
                     ),
@@ -726,7 +732,7 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
 
-        scores_ref, det_ref = s.refine_projection_center(
+        scores_ref, det_ref, num_evals_ref = s.refine_projection_center(
             xmap=xmap,
             master_pattern=self.mp,
             energy=20,
@@ -738,6 +744,7 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
         assert scores_ref.shape == xmap.shape
         assert not np.allclose(scores_ref, xmap.get_map_data("scores"))
         assert isinstance(det_ref, kp.detectors.EBSDDetector)
+        assert num_evals_ref.shape == xmap.shape
 
     def test_refine_projection_center_not_compute(
         self,
@@ -756,12 +763,12 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
             master_pattern=self.mp,
             energy=20,
             detector=det,
-            method_kwargs=dict(options=dict(maxiter=10)),
+            method_kwargs=dict(options=dict(maxfev=10)),
             compute=False,
         )
         assert isinstance(dask_arr, da.Array)
         assert dask.is_dask_collection(dask_arr)
-        # Should ideally be (9, 4) with better use of map_blocks()
+        # Should ideally be (9, 5) with better use of map_blocks()
         assert dask_arr.shape == (9, 1)
 
 
@@ -788,7 +795,7 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
         det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
-        method_kwargs.update(dict(options=dict(maxiter=10)))
+        method_kwargs.update(dict(options=dict(maxfev=10)))
         signal_mask = np.zeros(det.shape, dtype=bool)
 
         xmap_ref, det_ref = s.refine_orientation_projection_center(
@@ -863,7 +870,7 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
                 "shgo",
                 dict(
                     sampling_method="sobol",
-                    options=dict(f_tol=1e-3, maxiter=1),
+                    options=dict(f_tol=1e-3, maxfev=1),
                     minimizer_kwargs=dict(
                         method="Nelder-Mead", options=dict(fatol=1e-3)
                     ),
@@ -916,10 +923,10 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
             master_pattern=self.mp,
             energy=20,
             detector=det,
-            method_kwargs=dict(options=dict(maxiter=1)),
+            method_kwargs=dict(options=dict(maxfev=1)),
             compute=False,
         )
         assert isinstance(dask_array, da.Array)
         assert dask.is_dask_collection(dask_array)
-        # Should ideally be (9, 7) with better use of map_blocks()
+        # Should ideally be (9, 8) with better use of map_blocks()
         assert dask_array.shape == (9, 1)

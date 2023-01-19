@@ -757,6 +757,7 @@ class TestEstimateTilts:
             return_outliers=True, return_figure=True
         )
         assert isinstance(is_outliers, np.ndarray)
+        assert is_outliers.shape == det.navigation_shape
         assert is_outliers.sum() == 1
         assert np.allclose(np.where(is_outliers)[0], [0, 0])
         assert any(["Outliers" in t.get_text() for t in fig.axes[0].get_legend().texts])
