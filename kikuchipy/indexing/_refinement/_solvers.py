@@ -56,7 +56,7 @@ def _prepare_pattern(pattern: np.ndarray, rescale: bool) -> Tuple[np.ndarray, fl
     squared_norm
         Squared norm of the centered pattern.
     """
-    pattern = pattern.astype("float32")
+    pattern = pattern.astype(np.float32)
     if rescale:
         pattern = _rescale_without_min_max_1d_float32(pattern)
     prepared_pattern, squared_norm = _zero_mean_sum_square_1d_float32(pattern)

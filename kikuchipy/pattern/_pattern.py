@@ -773,9 +773,9 @@ def _downsample2d(
     omax: Union[int, float],
     dtype_out: np.dtype,
 ) -> np.ndarray:
-    pattern = pattern.astype(np.dtype("float32"))
+    pattern = pattern.astype(np.float32)
     binned_pattern = _bin2d(pattern, factor)
-    imin = binned_pattern.min()
-    imax = binned_pattern.max()
+    imin = np.min(binned_pattern)
+    imax = np.max(binned_pattern)
     rescaled_pattern = _rescale_with_min_max(binned_pattern, imin, imax, omin, omax)
     return rescaled_pattern.astype(dtype_out)
