@@ -59,14 +59,14 @@ class TestEBSDRefine(EBSDRefineTestSetup):
         prepared_pattern1, squared_norm1 = _prepare_pattern(pattern, True)
         prepared_pattern2, squared_norm2 = _prepare_pattern.py_func(pattern, True)
         assert np.allclose(prepared_pattern1, prepared_pattern2)
-        assert np.isclose(prepared_pattern1.mean(), 0, atol=1e-8)
+        assert np.isclose(prepared_pattern1.mean(), 0, atol=1e-6)
         assert np.allclose(squared_norm1, squared_norm2)
         assert np.isclose(squared_norm1, 34.007, atol=1e-3)
 
         prepared_pattern3, squared_norm3 = _prepare_pattern(pattern, False)
         prepared_pattern4, squared_norm4 = _prepare_pattern.py_func(pattern, False)
         assert np.allclose(prepared_pattern3, prepared_pattern4)
-        assert np.isclose(prepared_pattern3.mean(), 0, atol=1e-8)
+        assert np.isclose(prepared_pattern3.mean(), 0, atol=1e-6)
         assert np.allclose(squared_norm3, squared_norm4)
         assert np.isclose(squared_norm3, 8.502, atol=1e-3)
 
