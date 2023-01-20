@@ -21,6 +21,7 @@ EBSD patterns.
 Most of these tools are private and not meant to be used by users.
 """
 
+from time import time
 from typing import List, Optional, Tuple, Union
 
 import dask.array as da
@@ -215,15 +216,21 @@ def _hough_indexing(
         :meth:`~pyebsdindex.ebsd_index.EBSDIndexer.index_pats` for
         details.
     """
-    info_message = _get_info_message(patterns.shape[0], chunksize, indexer)
+    n_patterns = patterns.shape[0]
+
+    info_message = _get_info_message(n_patterns, chunksize, indexer)
     print(info_message)
 
     if verbose == 2:
         plt.figure()
 
+    tic = time()
     index_data, band_data, _, _ = indexer.index_pats(
         patsin=patterns, verbose=verbose, chunksize=chunksize
     )
+    toc = time()
+    patterns_per_second = n_patterns / (toc - tic)
+    print(f"  Indexing speed: {patterns_per_second:.5f} patterns/s")
 
     xmap = xmap_from_hough_indexing_data(
         data=index_data,
