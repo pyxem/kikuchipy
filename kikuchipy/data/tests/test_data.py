@@ -160,11 +160,11 @@ class TestData:
             with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
                 _ = kp.data.si_wafer()
 
-    def test_ni_gain0(self):
+    def test_ni1_gain(self):
         """Test set up of polycrystalline recrystallized Ni dataset
         (without downloading).
         """
-        file_path = "ni_gain0/Pattern.dat"
+        file_path = "ni1_gain/Pattern.dat"
 
         dset = Dataset(file_path, collection_name="scan1_gain0db.zip")
         assert not dset.is_in_package
@@ -174,18 +174,18 @@ class TestData:
         assert str(dset.file_directory) == file_path.split("/")[0]
 
         if dset.file_path.exists():  # pragma: no cover
-            s = kp.data.ni_gain0(lazy=True)
+            s = kp.data.ni1_gain(lazy=True)
             assert isinstance(s, kp.signals.LazyEBSD)
         else:  # pragma: no cover
             assert dset.md5_hash is None
             with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
-                _ = kp.data.ni_gain0()
+                _ = kp.data.ni1_gain()
 
-    def test_ni_gain0_calibration(self):
+    def test_ni1_gain_calibration(self):
         """Test set up of calibration patterns from polycrystalline
         recrystallized Ni dataset (without downloading).
         """
-        file_path = "ni_gain0/Setting.txt"
+        file_path = "ni1_gain/Setting.txt"
 
         dset = Dataset(file_path, collection_name="scan1_gain0db.zip")
         assert not dset.is_in_package
@@ -195,12 +195,54 @@ class TestData:
         assert str(dset.file_directory) == file_path.split("/")[0]
 
         if dset.file_path.exists():  # pragma: no cover
-            s = kp.data.ni_gain0_calibration(lazy=True)
+            s = kp.data.ni1_gain_calibration(lazy=True)
             assert isinstance(s, kp.signals.LazyEBSD)
         else:  # pragma: no cover
             assert dset.md5_hash is None
             with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
-                _ = kp.data.ni_gain0_calibration()
+                _ = kp.data.ni1_gain_calibration()
+
+    def test_ni10_gain(self):
+        """Test set up of polycrystalline recrystallized Ni dataset
+        (without downloading).
+        """
+        file_path = "ni10_gain/Pattern.dat"
+
+        dset = Dataset(file_path, collection_name="scan10_gain24db.zip")
+        assert not dset.is_in_package
+        assert dset.is_in_collection
+        assert dset.url is not None
+        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
+        assert str(dset.file_directory) == file_path.split("/")[0]
+
+        if dset.file_path.exists():  # pragma: no cover
+            s = kp.data.ni10_gain(lazy=True)
+            assert isinstance(s, kp.signals.LazyEBSD)
+        else:  # pragma: no cover
+            assert dset.md5_hash is None
+            with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
+                _ = kp.data.ni10_gain()
+
+    def test_ni10_gain_calibration(self):
+        """Test set up of calibration patterns from polycrystalline
+        recrystallized Ni dataset (without downloading).
+        """
+        file_path = "ni10_gain/Setting.txt"
+
+        dset = Dataset(file_path, collection_name="scan10_gain24db.zip")
+        assert not dset.is_in_package
+        assert dset.is_in_collection
+        assert dset.url is not None
+        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
+        assert str(dset.file_directory) == file_path.split("/")[0]
+
+        if dset.file_path.exists():  # pragma: no cover
+            s = kp.data.ni10_gain_calibration(lazy=True)
+            assert isinstance(s, kp.signals.LazyEBSD)
+        else:  # pragma: no cover
+            assert dset.md5_hash is None
+            with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
+                _ = kp.data.ni10_gain_calibration()
 
     def test_ni_ebsd_master_pattern(self):
         """Test set up of Ni EBSD master pattern from Zenodo (without

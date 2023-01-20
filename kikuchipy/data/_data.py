@@ -120,12 +120,16 @@ def nickel_ebsd_large(
     return load(file_path, **kwargs)
 
 
-def ni_gain0(
+def ni1_gain(
     allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """EBSD dataset of (149, 200) patterns of (60, 60) pixels from
-    polycrystalline recrystallized nickel, acquired on a NORDIF UF-1100
+    polycrystalline recrystallized Ni, acquired on a NORDIF UF-1100
     detector :cite:`aanes2019electron`.
+
+    The dataset is the first out of ten datasets from the same region of
+    interest acquired with increasing gain on the detector, from no gain
+    (this dataset) to maximum gain (22 dB).
 
     Parameters
     ----------
@@ -148,6 +152,7 @@ def ni_gain0(
 
     See Also
     --------
+    ni1_gain_calibration, ni10_gain, ni10_gain_calibration,
     nickel_ebsd_small, nickel_ebsd_large
 
     Notes
@@ -162,21 +167,24 @@ def ni_gain0(
     Examples
     --------
     >>> import kikuchipy as kp
-    >>> s = kp.data.ni_gain0(allow_download=True, lazy=True)  # doctest: +SKIP
+    >>> s = kp.data.ni1_gain(allow_download=True, lazy=True)  # doctest: +SKIP
     >>> s  # doctest: +SKIP
-    <EBSD, title: ni_gain0, dimensions: (50, 50|480, 480)>
+    <LazyEBSD, title: Pattern, dimensions: (200, 149|60, 60)>
     """
-    NiGain0 = Dataset("ni_gain0/Pattern.dat", collection_name="scan1_gain0db.zip")
-    file_path = NiGain0.fetch_file_path(allow_download, show_progressbar)
+    Ni1Gain = Dataset("ni1_gain/Pattern.dat", collection_name="scan1_gain0db.zip")
+    file_path = Ni1Gain.fetch_file_path(allow_download, show_progressbar)
     return load(file_path, **kwargs)  # pragma: no cover
 
 
-def ni_gain0_calibration(
+def ni1_gain_calibration(
     allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
     """Nine EBSD patterns of (480, 480) pixels from polycrystalline
-    recrystallized nickel, acquired on a NORDIF UF-1100 detector
+    recrystallized Ni, acquired on a NORDIF UF-1100 detector
     :cite:`aanes2019electron`.
+
+    These are the calibration patterns for the dataset in
+    :func:`~kikuchipy.data.ni1_gain`.
 
     Parameters
     ----------
@@ -199,6 +207,65 @@ def ni_gain0_calibration(
 
     See Also
     --------
+    ni1_gain, ni10_gain, ni10_gain_calibration, nickel_ebsd_small,
+    nickel_ebsd_large
+
+    Notes
+    -----
+    The dataset is hosted in the Zenodo repository
+    https://doi.org/10.5281/zenodo.7497682 and comprises 98 MB as a
+    zipped file and about 116 MB when unzipped. The zipped file is
+    deleted after it is unzipped.
+
+    The dataset carries a CC BY 4.0 license.
+
+    Examples
+    --------
+    >>> import kikuchipy as kp
+    >>> s = kp.data.ni1_gain_calibration(allow_download=True, lazy=True)  # doctest: +SKIP
+    >>> s  # doctest: +SKIP
+    <LazyEBSD, title: Calibration patterns, dimensions: (9|480, 480)>
+    """
+    Ni1GainCalibration = Dataset(
+        "ni1_gain/Setting.txt", collection_name="scan1_gain0db.zip"
+    )
+    file_path = Ni1GainCalibration.fetch_file_path(allow_download, show_progressbar)
+    return load(file_path, **kwargs)  # pragma: no cover
+
+
+def ni10_gain(
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
+) -> EBSD:
+    """EBSD dataset of (149, 200) patterns of (60, 60) pixels from
+    polycrystalline recrystallized Ni, acquired on a NORDIF UF-1100
+    detector :cite:`aanes2019electron`.
+
+    The dataset is the tenth out of ten datasets from the same region of
+    interest acquired with increasing gain on the detector, from no gain
+    to maximum gain (24 dB, this dataset).
+
+    Parameters
+    ----------
+    allow_download
+        Whether to allow downloading the dataset from the internet to
+        the local cache with the pooch Python package. Default is
+        ``False``.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
+    **kwargs
+        Keyword arguments passed to :func:`~kikuchipy.load`.
+
+    Returns
+    -------
+    ebsd_signal
+        EBSD signal.
+
+    See Also
+    --------
+    ni10_gain_calibration, ni1_gain, ni1_gain_calibration,
     nickel_ebsd_small, nickel_ebsd_large
 
     Notes
@@ -213,14 +280,69 @@ def ni_gain0_calibration(
     Examples
     --------
     >>> import kikuchipy as kp
-    >>> s = kp.data.ni_gain0(allow_download=True, lazy=True)  # doctest: +SKIP
+    >>> s = kp.data.ni10_gain(allow_download=True, lazy=True)  # doctest: +SKIP
     >>> s  # doctest: +SKIP
-    <EBSD, title: ni_gain0, dimensions: (50, 50|480, 480)>
+    <LazyEBSD, title: Pattern, dimensions: (200, 149|60, 60)>
     """
-    NiGain0Calibration = Dataset(
-        "ni_gain0/Setting.txt", collection_name="scan1_gain0db.zip"
+    Ni10Gain = Dataset("ni10_gain/Pattern.dat", collection_name="scan10_gain24db.zip")
+    file_path = Ni10Gain.fetch_file_path(allow_download, show_progressbar)
+    return load(file_path, **kwargs)  # pragma: no cover
+
+
+def ni10_gain_calibration(
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
+) -> EBSD:
+    """Seven EBSD patterns of (480, 480) pixels from polycrystalline
+    recrystallized Ni, acquired on a NORDIF UF-1100 detector
+    :cite:`aanes2019electron`.
+
+    These are the calibration patterns for the dataset in
+    :func:`~kikuchipy.data.ni10_gain`.
+
+    Parameters
+    ----------
+    allow_download
+        Whether to allow downloading the dataset from the internet to
+        the local cache with the pooch Python package. Default is
+        ``False``.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
+    **kwargs
+        Keyword arguments passed to :func:`~kikuchipy.load`.
+
+    Returns
+    -------
+    ebsd_signal
+        EBSD signal.
+
+    See Also
+    --------
+    ni10_gain, ni1_gain, ni1_gain_calibration, nickel_ebsd_small,
+    nickel_ebsd_large
+
+    Notes
+    -----
+    The dataset is hosted in the Zenodo repository
+    https://doi.org/10.5281/zenodo.7497682 and comprises 98 MB as a
+    zipped file and about 116 MB when unzipped. The zipped file is
+    deleted after it is unzipped.
+
+    The dataset carries a CC BY 4.0 license.
+
+    Examples
+    --------
+    >>> import kikuchipy as kp
+    >>> s = kp.data.ni10_gain_calibration(allow_download=True, lazy=True)  # doctest: +SKIP
+    >>> s  # doctest: +SKIP
+    <LazyEBSD, title: Calibration patterns, dimensions: (7|480, 480)>
+    """
+    Ni1GainCalibration = Dataset(
+        "ni10_gain/Setting.txt", collection_name="scan10_gain24db.zip"
     )
-    file_path = NiGain0Calibration.fetch_file_path(allow_download, show_progressbar)
+    file_path = Ni1GainCalibration.fetch_file_path(allow_download, show_progressbar)
     return load(file_path, **kwargs)  # pragma: no cover
 
 
@@ -448,7 +570,7 @@ def si_wafer(
     >>> import kikuchipy as kp
     >>> s = kp.data.si_wafer(allow_download=True, lazy=True)  # doctest: +SKIP
     >>> s  # doctest: +SKIP
-    <EBSD, title: si_wafer, dimensions: (50, 50|480, 480)>
+    <EBSD, title: Pattern, dimensions: (50, 50|480, 480)>
     """
     SiWafer = Dataset("si_wafer/Pattern.dat", collection_name="ebsd_si_wafer.zip")
     file_path = SiWafer.fetch_file_path(allow_download, show_progressbar)

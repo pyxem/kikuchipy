@@ -70,12 +70,14 @@ Added
 - Two datasets ``ni/si_ebsd_master_pattern()`` of Ni and Si master patterns simulated
   with EMsoft are available via the data module for download to the local cache.
   (`#584 <https://github.com/pyxem/kikuchipy/pull/584>`_)
-- Three experimental EBSD datasets are available for download to the local cache via the
+- Six experimental EBSD datasets are available for download to the local cache via the
   data module: (50, 50) patterns of (480, 480) pixels from an Si wafer via
-  ``si_wafer()``, the full Ni dataset of (149, 200) patterns of (60, 60) pixels via
-  ``ni_gain0()`` from which parts are already used in ``nickel_ebsd_small()/large()``
-  and the calibration patterns of the latter dataset, ``ni_gain0_calibration()``.
-  (`#584 <https://github.com/pyxem/kikuchipy/pull/584>`_)
+  ``si_wafer()``, two full Ni datasets of (149, 200) patterns of (60, 60) pixels via
+  ``ni1_gain()`` and ``ni10_gain()`` (parts of the former are used in
+  ``nickel_ebsd_small()/large()``) and the calibration patterns of the two Ni datasets,
+  ``ni1_gain_calibration()`` and ``ni10_gain_calibration()``.
+  (`#584 <https://github.com/pyxem/kikuchipy/pull/584>`_,
+  `#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - When using the following HyperSpy ``Signal2D`` methods via the ``EBSD`` class, the
   class attributes ``xmap``, ``static_background`` and ``detector`` are handled
   correctly, which they were not before: ``inav``, ``isig``, ``crop()``,
@@ -142,7 +144,7 @@ Fixed
 - Inversion of ``signal_mask`` in the normalized cross-correlation and normalized dot
   product metrics is now done internally, to be in line with the docstrings (does not
   affect the use of this parameter and ``metric="ncc"`` or ``metric="ndp"`` in
-  ``EBSD.dictionary_indexing()``.
+  ``EBSD.dictionary_indexing()``).
   (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - ``EBSDDetector.pc_average`` no longer rounds the PC to three decimals.
   (`#586 <https://github.com/pyxem/kikuchipy/pull/586>`_)
