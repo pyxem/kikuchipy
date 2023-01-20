@@ -19,13 +19,14 @@
 and an :class:`~kikuchipy.signals.EBSD` signal.
 """
 
+from typing import Optional, Tuple, Union
 import warnings
 
 import numpy as np
-from orix.crystal_map import CrystalMap
+from orix.crystal_map import CrystalMap, Phase
 
 
-def _crystal_map_is_compatible_with_signal(
+def _xmap_is_compatible_with_signal(
     xmap: CrystalMap, navigation_axes: tuple, raise_if_not: bool = False
 ) -> bool:
     """Check whether a signal's navigation axes are compatible with a
@@ -38,23 +39,115 @@ def _crystal_map_is_compatible_with_signal(
         xmap_scale = list([xmap._step_sizes[a.name] for a in navigation_axes])
     except KeyError:
         warnings.warn(
-            "The signal navigation axes must be named 'x' and/or 'y' in order to "
-            "compare the signal navigation scale to the CrystalMap step sizes 'dx' and "
-            "'dy' (see `EBSD.axes_manager`)"
+            "Signal navigation axes must be named 'x' and/or 'y' in order to compare "
+            "the signal navigation scales to the crystal map step sizes 'dx' and 'dy' "
+            "(see `EBSD.axes_manager`)"
         )
         xmap_scale = list(xmap._step_sizes.values())[-len(navigation_axes) :]
 
     compatible = xmap.shape == nav_shape
     if compatible and not np.allclose(xmap_scale, nav_scale, atol=1e-6):
         warnings.warn(
-            f"The `xmap` step size(s) {xmap_scale} are different from the signal's "
-            f"step size(s) {nav_scale} (see `EBSD.axes_manager`)"
+            f"Crystal map step size(s) {xmap_scale} and signal's step size(s) "
+            f"{nav_scale} must be the same (see `EBSD.axes_manager`)"
         )
+
     if not compatible and raise_if_not:
         raise ValueError(
-            f"The `xmap` shape {xmap.shape} and step size(s) {xmap_scale} are not "
-            f"compatible with the signal navigation shape {nav_shape} and step size(s) "
-            f"{nav_scale} (see `EBSD.axes_manager`)"
+            f"Crystal map shape {xmap.shape} and signal's navigation shape {nav_shape} "
+            "must be the same (see `EBSD.axes_manager`)"
         )
     else:
         return compatible
+
+
+# TODO: Move to orix' Phase.__eq__
+def _equal_phase(phase1: Phase, phase2: Phase) -> Tuple[bool, Union[str, None]]:
+    if phase1.name != phase2.name:
+        return False, "names"
+
+    space_groups = []
+    point_groups = []
+    for phase in [phase1, phase2]:
+        if hasattr(phase.space_group, "number"):
+            space_groups.append(phase.space_group.number)
+        else:
+            space_groups.append(np.nan)
+        if phase.point_group is not None:
+            point_groups.append(phase.point_group.data)
+        else:
+            point_groups.append(np.nan)
+
+    # Check space groups
+    if not np.allclose(*space_groups, equal_nan=True):
+        return False, "space groups"
+
+    # Check point groups
+    if np.size(point_groups[0]) != np.size(point_groups[1]) or not np.allclose(
+        *point_groups, equal_nan=True
+    ):
+        return False, "point groups"
+
+    # Compare number of atoms, lattice parameters and atom element,
+    # coordinate and occupancy
+    structure1 = phase1.structure
+    structure2 = phase2.structure
+    if len(structure1) != len(structure2):
+        return False, "number of atoms"
+    if not np.allclose(structure1.lattice.abcABG(), structure2.lattice.abcABG()):
+        return False, "lattice parameters"
+
+    for atom1, atom2 in zip(structure1, structure2):
+        if (
+            atom1.element != atom2.element
+            or not np.allclose(atom1.xyz, atom2.xyz)
+            or not np.isclose(atom1.occupancy, atom2.occupancy)
+        ):
+            return False, "atoms"
+
+    return True, None
+
+
+def _get_points_in_data_in_xmap(
+    xmap: CrystalMap,
+    navigation_mask: Optional[np.ndarray] = None,
+) -> Tuple[np.ndarray, int, bool, Union[Tuple[int], Tuple[int, int]]]:
+    points_in_data = xmap.is_in_data
+
+    if navigation_mask is not None:
+        # Keep only points in the mask that are already in the data
+        nav_mask_shape = navigation_mask.shape
+        if navigation_mask.shape != xmap.shape:
+            raise ValueError(
+                f"Navigation mask shape {nav_mask_shape} and crystal map shape "
+                f"{xmap.shape} must be the same"
+            )
+        points_in_mask = ~navigation_mask.ravel()
+        points_in_mask_in_data = points_in_mask[points_in_data]
+        points_in_data = np.logical_and(points_in_data, points_in_mask)
+        phase_id = np.unique(xmap.phase_id[points_in_mask_in_data])
+    else:
+        phase_id = np.unique(xmap.phase_id)
+
+    # Check if the (possibly combined) mask is continuous
+    if xmap.ndim == 1:
+        points_in_data_idx = np.where(points_in_data)[0]
+        mask_size = points_in_data_idx[-1] - points_in_data_idx[0] + 1
+        mask_is_continuous = mask_size == points_in_data.sum()
+        mask_shape = (mask_size,)
+    else:
+        points_to_refine2d = points_in_data.reshape(xmap.shape)
+        r_points, c_points = np.where(points_to_refine2d)
+        r_size = r_points.max() - r_points.min() + 1
+        c_size = c_points.max() - c_points.min() + 1
+        mask_is_continuous = (r_size * c_size) == points_in_data.sum()
+        mask_shape = (r_size, c_size)
+
+    if phase_id.size != 1:
+        raise ValueError(
+            "Points in data in crystal map must have only one phase, but had the phase "
+            f"IDs {list(phase_id)}"
+        )
+    unique_phase_id = phase_id[0]
+
+    return points_in_data, unique_phase_id, mask_is_continuous, mask_shape

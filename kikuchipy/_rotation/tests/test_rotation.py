@@ -39,7 +39,7 @@ class TestRotationVectorTools:
                 tilt=10,
                 azimuthal=0,
                 sample_tilt=70,
-                mask=np.ones(sig_shape[0] * sig_shape[1], dtype=bool),
+                signal_mask=np.ones(sig_shape[0] * sig_shape[1], dtype=bool),
             )
         )
 

@@ -613,7 +613,7 @@ class TestPlotPC:
 
         det2 = self.det.deepcopy()
         det2.pc = det2.pc[0]
-        with pytest.raises(ValueError, match="Detector's `navigation_dimension` must "):
+        with pytest.raises(ValueError, match="Detector's navigation dimension must be"):
             det2.plot_pc()
 
         with pytest.raises(ValueError, match="Plot mode 'stereographic' must be one "):
@@ -757,6 +757,7 @@ class TestEstimateTilts:
             return_outliers=True, return_figure=True
         )
         assert isinstance(is_outliers, np.ndarray)
+        assert is_outliers.shape == det.navigation_shape
         assert is_outliers.sum() == 1
         assert np.allclose(np.where(is_outliers)[0], [0, 0])
         assert any(["Outliers" in t.get_text() for t in fig.axes[0].get_legend().texts])
@@ -871,13 +872,14 @@ class TestExtrapolatePC:
     def test_extrapolate_pc_outliers(self):
         det1 = self.det0.deepcopy()
         det1.pc = [[0.5, 0.3, 0.5], [0.3, 0.3, 0.5], [0.5, 0.2, 0.6], [0.3, 0.2, 0.6]]
+        pc_indices = np.array([[0, 0], [0, 10], [20, 0], [20, 10]]).T
         det2 = det1.extrapolate_pc(
-            pc_indices=[[0, 0], [0, 10], [20, 0], [20, 10]],
+            pc_indices=pc_indices,
             navigation_shape=(11, 21),
             step_sizes=(11, 11),
             is_outlier=[True, False, False, False],
         )
-        assert np.allclose(det2.pc_average, [0.366, 0.236, 0.566], atol=1e-3)
+        assert np.allclose(det2.pc_average, [0.366, 0.233, 0.567], atol=1e-3)
 
 
 class TestFitPC:

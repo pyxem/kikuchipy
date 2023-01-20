@@ -22,6 +22,7 @@ patterns.
 
 from typing import Callable, Optional, Tuple
 
+from numba import njit
 import numpy as np
 
 from kikuchipy.indexing._refinement._objective_functions import (
@@ -31,16 +32,14 @@ from kikuchipy.indexing._refinement._objective_functions import (
 )
 from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.pattern._pattern import (
-    _mask_pattern,
     _rescale_without_min_max_1d_float32,
     _zero_mean_sum_square_1d_float32,
 )
 from kikuchipy.signals.util._master_pattern import _get_direction_cosines_for_fixed_pc
 
 
-def _prepare_pattern(
-    pattern: np.ndarray, rescale: bool, signal_mask: np.ndarray
-) -> Tuple[np.ndarray, float]:
+@njit(cache=True, nogil=True, fastmath=True)
+def _prepare_pattern(pattern: np.ndarray, rescale: bool) -> Tuple[np.ndarray, float]:
     """Prepare experimental pattern.
 
     Parameters
@@ -49,8 +48,6 @@ def _prepare_pattern(
         Experimental pattern.
     rescale
         Whether to rescale pattern.
-    signal_mask
-        Signal mask.
 
     Returns
     -------
@@ -59,7 +56,7 @@ def _prepare_pattern(
     squared_norm
         Squared norm of the centered pattern.
     """
-    pattern = _mask_pattern(pattern.astype("float32"), signal_mask)
+    pattern = pattern.astype(np.float32)
     if rescale:
         pattern = _rescale_without_min_max_1d_float32(pattern)
     prepared_pattern, squared_norm = _zero_mean_sum_square_1d_float32(pattern)
@@ -88,7 +85,7 @@ def _refine_orientation_solver_scipy(
     tilt: Optional[float] = None,
     azimuthal: Optional[float] = None,
     sample_tilt: Optional[float] = None,
-) -> Tuple[float, float, float, float]:
+) -> Tuple[float, int, float, float, float]:
     """Maximize the similarity between an experimental pattern and a
     projected simulated pattern by optimizing the orientation
     (Rodrigues-Frank vector) used in the projection.
@@ -147,10 +144,12 @@ def _refine_orientation_solver_scipy(
     -------
     score
         Highest normalized cross-correlation score.
+    num_evals
+        Number of optimization evaluations.
     phi1, Phi, phi2
         Optimized orientation (Euler angles) in radians.
     """
-    pattern, squared_norm = _prepare_pattern(pattern, rescale, signal_mask)
+    pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
     if direction_cosines is None:
         direction_cosines = _get_direction_cosines_for_fixed_pc(
@@ -162,7 +161,7 @@ def _refine_orientation_solver_scipy(
             tilt=tilt,
             azimuthal=azimuthal,
             sample_tilt=sample_tilt,
-            mask=signal_mask,
+            signal_mask=signal_mask,
         )
 
     params = (pattern,) + (direction_cosines,) + fixed_parameters + (squared_norm,)
@@ -192,10 +191,11 @@ def _refine_orientation_solver_scipy(
             **method_kwargs,
         )
 
-    phi1, Phi, phi2 = res.x
     ncc = 1 - res.fun
+    num_evals = res.nfev
+    phi1, Phi, phi2 = res.x
 
-    return ncc, phi1, Phi, phi2
+    return ncc, num_evals, phi1, Phi, phi2
 
 
 def _refine_pc_solver_scipy(
@@ -203,13 +203,12 @@ def _refine_pc_solver_scipy(
     rotation: np.ndarray,
     pc: np.ndarray,
     bounds: np.ndarray,
-    signal_mask: np.ndarray,
     rescale: bool,
     method: Callable,
     method_kwargs: dict,
     fixed_parameters: tuple,
     trust_region_passed: bool,
-) -> Tuple[float, float, float, float]:
+) -> Tuple[float, int, float, float, float]:
     """Maximize the similarity between an experimental pattern and a
     projected simulated pattern by optimizing the projection center (PC)
     parameters used in the projection.
@@ -222,10 +221,6 @@ def _refine_pc_solver_scipy(
         Rotation as a quaternion array with shape (4,).
     pc
         Projection center (PC) coordinates (PCx, PCy, PCz).
-    signal_mask
-        Boolean mask equal to the experimental patterns' detector shape
-        ``(n rows, n columns)``, where only pixels equal to ``False``
-        are matched.
     rescale
         Whether pattern intensities must be rescaled to [-1, 1] and data
         type 32-bit floats.
@@ -245,10 +240,12 @@ def _refine_pc_solver_scipy(
     -------
     score
         Highest normalized cross-correlation score.
+    num_evals
+        Number of optimization evaluations.
     pcx_refined, pcy_refined, pcz_refined
         Optimized PC parameters in the Bruker convention.
     """
-    pattern, squared_norm = _prepare_pattern(pattern, rescale, signal_mask)
+    pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
     params = (pattern,) + (rotation,) + fixed_parameters + (squared_norm,)
     method_name = method.__name__
@@ -256,14 +253,14 @@ def _refine_pc_solver_scipy(
     if method_name == "minimize":
         if trust_region_passed:
             method_kwargs["bounds"] = bounds
-        solution = method(
+        res = method(
             fun=_refine_pc_objective_function,
             x0=pc,
             args=params,
             **method_kwargs,
         )
     elif SUPPORTED_OPTIMIZATION_METHODS[method_name]["supports_bounds"]:
-        solution = method(
+        res = method(
             func=_refine_pc_objective_function,
             args=params,
             bounds=bounds,
@@ -271,28 +268,29 @@ def _refine_pc_solver_scipy(
         )
     else:  # Is always "basinhopping", due to prior check of method name
         method_kwargs["minimizer_kwargs"].update(args=params)
-        solution = method(
+        res = method(
             func=_refine_pc_objective_function,
             x0=pc,
             **method_kwargs,
         )
 
-    x = solution.x
+    ncc = 1 - res.fun
+    num_evals = res.nfev
+    pcx, pcy, pcz = res.x
 
-    return 1 - solution.fun, x[0], x[1], x[2]
+    return ncc, num_evals, pcx, pcy, pcz
 
 
 def _refine_orientation_pc_solver_scipy(
     pattern: np.ndarray,
     rot_pc: np.ndarray,
     bounds: np.ndarray,
-    signal_mask: np.ndarray,
     rescale: bool,
     method: Callable,
     method_kwargs: dict,
     fixed_parameters: tuple,
     trust_region_passed: bool,
-) -> Tuple[float, float, float, float, float, float, float]:
+) -> Tuple[float, int, float, float, float, float, float, float]:
     """Maximize the similarity between an experimental pattern and a
     projected simulated pattern by optimizing the orientation and
     projection center (PC) parameters used in the projection.
@@ -304,10 +302,6 @@ def _refine_orientation_pc_solver_scipy(
     rot_pc
         Array with Euler angles (phi1, Phi, phi2) in radians and PC
         parameters (PCx, PCy, PCz) in range [0, 1].
-    signal_mask
-        Boolean mask equal to the experimental patterns' detector shape
-        ``(n rows, n columns)``, where only pixels equal to ``False``
-        are matched.
     rescale
         Whether pattern intensities must be rescaled to [-1, 1] and data
         type 32-bit floats.
@@ -328,12 +322,14 @@ def _refine_orientation_pc_solver_scipy(
     -------
     score
         Highest normalized cross-correlation score.
+    num_evals
+        Number of optimization evaluations.
     phi1, Phi, phi2
         Optimized orientation (Euler angles) in radians.
     pcx_refined, pcy_refined, pcz_refined
         Optimized PC parameters in the Bruker convention.
     """
-    pattern, squared_norm = _prepare_pattern(pattern, rescale, signal_mask)
+    pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
     params = (pattern,) + fixed_parameters + (squared_norm,)
     method_name = method.__name__
@@ -341,14 +337,14 @@ def _refine_orientation_pc_solver_scipy(
     if method_name == "minimize":
         if trust_region_passed:
             method_kwargs["bounds"] = bounds
-        solution = method(
+        res = method(
             fun=_refine_orientation_pc_objective_function,
             x0=rot_pc,
             args=params,
             **method_kwargs,
         )
     elif SUPPORTED_OPTIMIZATION_METHODS[method_name]["supports_bounds"]:
-        solution = method(
+        res = method(
             func=_refine_orientation_pc_objective_function,
             args=params,
             bounds=bounds,
@@ -356,15 +352,17 @@ def _refine_orientation_pc_solver_scipy(
         )
     else:  # Is always "basinhopping", due to prior check of method name
         method_kwargs["minimizer_kwargs"].update(args=params)
-        solution = method(
+        res = method(
             func=_refine_orientation_pc_objective_function,
             x0=rot_pc,
             **method_kwargs,
         )
 
-    x = solution.x
+    ncc = 1 - res.fun
+    phi1, Phi, phi2, pcx, pcy, pcz = res.x
+    num_evals = res.nfev
 
-    return 1 - solution.fun, x[0], x[1], x[2], x[3], x[4], x[5]
+    return ncc, num_evals, phi1, Phi, phi2, pcx, pcy, pcz
 
 
 # --------------------------- NLopt solvers -------------------------- #
@@ -389,8 +387,8 @@ def _refine_orientation_solver_nlopt(
     tilt: Optional[float] = None,
     azimuthal: Optional[float] = None,
     sample_tilt: Optional[float] = None,
-):
-    pattern, squared_norm = _prepare_pattern(pattern, rescale, signal_mask)
+) -> Tuple[float, int, float, float, float]:
+    pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
     # Get direction cosines if a unique PC per pattern is used
     if direction_cosines is None:
@@ -403,7 +401,7 @@ def _refine_orientation_solver_nlopt(
             tilt=tilt,
             azimuthal=azimuthal,
             sample_tilt=sample_tilt,
-            mask=signal_mask,
+            signal_mask=signal_mask,
         )
 
     # Combine tuple of fixed parameters passed to the objective function
@@ -421,8 +419,9 @@ def _refine_orientation_solver_nlopt(
     # optimized normalized cross-correlation (NCC) score
     phi1, Phi, phi2 = opt.optimize(rotation)
     ncc = 1 - opt.last_optimum_value()
+    num_evals = opt.get_numevals()
 
-    return ncc, phi1, Phi, phi2
+    return ncc, num_evals, phi1, Phi, phi2
 
 
 def _refine_pc_solver_nlopt(
@@ -432,12 +431,11 @@ def _refine_pc_solver_nlopt(
     rotation: np.ndarray,
     lower_bounds: np.ndarray,
     upper_bounds: np.ndarray,
-    signal_mask: np.ndarray,
     rescale: bool,
     fixed_parameters: tuple,
     trust_region_passed: bool,
-) -> Tuple[float, float, float, float]:
-    pattern, squared_norm = _prepare_pattern(pattern, rescale, signal_mask)
+) -> Tuple[float, int, float, float, float]:
+    pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
     # Combine tuple of fixed parameters passed to the objective function
     params = (pattern,) + (rotation,) + fixed_parameters + (squared_norm,)
@@ -452,8 +450,9 @@ def _refine_pc_solver_nlopt(
     # and the optimized normalized cross-correlation (NCC) score
     pcx, pcy, pcz = opt.optimize(pc)
     ncc = 1 - opt.last_optimum_value()
+    num_evals = opt.get_numevals()
 
-    return ncc, pcx, pcy, pcz
+    return ncc, num_evals, pcx, pcy, pcz
 
 
 def _refine_orientation_pc_solver_nlopt(
@@ -462,12 +461,11 @@ def _refine_orientation_pc_solver_nlopt(
     rot_pc: np.ndarray,
     lower_bounds: np.ndarray,
     upper_bounds: np.ndarray,
-    signal_mask: np.ndarray,
     rescale: bool,
     fixed_parameters: tuple,
     trust_region_passed: bool,
-) -> Tuple[float, float, float, float, float, float, float]:
-    pattern, squared_norm = _prepare_pattern(pattern, rescale, signal_mask)
+) -> Tuple[float, int, float, float, float, float, float, float]:
+    pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
     # Combine tuple of fixed parameters passed to the objective function
     params = (pattern,) + fixed_parameters + (squared_norm,)
@@ -484,5 +482,6 @@ def _refine_orientation_pc_solver_nlopt(
     # and the optimized normalized cross-correlation (NCC) score
     phi1, Phi, phi2, pcx, pcy, pcz = opt.optimize(rot_pc)
     ncc = 1 - opt.last_optimum_value()
+    num_evals = opt.get_numevals()
 
-    return ncc, phi1, Phi, phi2, pcx, pcy, pcz
+    return ncc, num_evals, phi1, Phi, phi2, pcx, pcy, pcz

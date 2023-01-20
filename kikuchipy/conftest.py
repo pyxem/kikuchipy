@@ -241,6 +241,7 @@ def get_single_phase_xmap(rotations):
         rotations_per_point=5,
         prop_names=("scores", "simulation_indices"),
         name="a",
+        space_group=225,
         phase_id=0,
         step_sizes=None,
     ):
@@ -253,7 +254,7 @@ def get_single_phase_xmap(rotations):
             data_shape += (rotations_per_point,)
         d["rotations"] = rotations[rot_idx].reshape(*data_shape)
         d["phase_id"] = np.ones(map_size) * phase_id
-        d["phase_list"] = PhaseList(Phase(name=name))
+        d["phase_list"] = PhaseList(Phase(name=name, space_group=space_group))
         # Scores and simulation indices
         d["prop"] = {
             prop_names[0]: np.ones(data_shape, dtype=np.float32),

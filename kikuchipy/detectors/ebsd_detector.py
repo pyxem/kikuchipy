@@ -586,7 +586,8 @@ class EBSDDetector:
             Estimated tilt about detector :math:`X_d` in radians
             (``degrees=False``) or degrees (``degrees=True``).
         outliers
-            Returned if ``return_outliers=True``.
+            Returned if ``return_outliers=True``, in the shape of
+            :attr:`navigation_shape`.
         fig
             Returned if ``plot=True`` and ``return_figure=True``.
 
@@ -645,7 +646,8 @@ class EBSDDetector:
         else:
             out = (x_tilt,)
         if return_outliers:
-            out += (is_outlier,)
+            is_outlier2d = is_outlier.reshape(self.navigation_shape)
+            out += (is_outlier2d,)
 
         if plot:
             if figure_kwargs is None:
@@ -817,9 +819,9 @@ class EBSDDetector:
         pc = self.pc_flattened
 
         if is_outlier is not None:
-            is_outlier = np.asarray(is_outlier)
-            pc = pc[~is_outlier]
-            pc_indices = pc_indices[:, ~is_outlier]
+            is_inlier = ~np.asarray(is_outlier)
+            pc = pc[is_inlier]
+            pc_indices = pc_indices[is_inlier]
 
         # Calculate mean PC and position
         pc_mean = pc.mean(axis=0)
@@ -962,10 +964,10 @@ class EBSDDetector:
         )
 
         if isinstance(is_outlier, np.ndarray):
-            is_outlier = is_outlier.ravel()
-            nav_shape = (np.sum(~is_outlier),)
-            pc_flat = pc_flat[~is_outlier]
-            pc_indices_flat = pc_indices_flat[~is_outlier]
+            is_inlier = ~is_outlier.ravel()
+            nav_shape = (np.sum(is_inlier),)
+            pc_flat = pc_flat[is_inlier]
+            pc_indices_flat = pc_indices_flat[is_inlier]
 
         if transformation == "projective":
             pc_average = np.mean(pc_flat, axis=0)
@@ -1038,7 +1040,7 @@ class EBSDDetector:
 
         Returns
         -------
-        indexer : pyebsdindex.ebsd_index.EBSDIndexer
+        pyebsdindex.ebsd_index.EBSDIndexer
             Indexer instance for use with PyEBSDIndex or in
             :meth:`~kikuchipy.signals.EBSD.hough_indexing`.
             ``indexer.PC`` is set equal to :attr:`pc_flattened`.
@@ -1284,8 +1286,8 @@ class EBSDDetector:
         if isinstance(pattern, np.ndarray):
             if pattern.shape != (sy, sx):
                 raise ValueError(
-                    f"Pattern shape {pattern.shape} must equal the detector "
-                    f"shape {(sy, sx)}"
+                    f"Pattern shape {pattern.shape} must equal the detector shape "
+                    f"{(sy, sx)}"
                 )
             if pattern_kwargs is None:
                 pattern_kwargs = {}
@@ -1421,7 +1423,9 @@ class EBSDDetector:
                 "Detector must have more than one projection center value to plot"
             )
         if mode == "map" and self.navigation_dimension != 2:
-            raise ValueError("Detector's `navigation_dimension` must be 2D")
+            raise ValueError(
+                "Detector's navigation dimension must be 2D when plotting PCs in a map"
+            )
 
         # Ensure mode is OK
         modes = ["map", "scatter", "3d"]
@@ -1519,7 +1523,7 @@ class EBSDDetector:
         else:
             raise ValueError(
                 f"Projection center convention '{convention}' not among the "
-                f"recognised conventions {CONVENTION_ALIAS_ALL}."
+                f"recognised conventions {CONVENTION_ALIAS_ALL}"
             )
 
     def _set_pc_from_convention(self, convention: Optional[str] = None):

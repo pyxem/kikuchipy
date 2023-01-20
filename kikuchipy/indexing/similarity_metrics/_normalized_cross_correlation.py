@@ -95,13 +95,13 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
         patterns in :meth:`match`.
 
         Patterns are prepared by:
-            1. Setting the data type to :attr:`~SimilarityMetric.dtype`.
-            2. Reshaping to shape ``(n_experimental_patterns, -1)``
-            3. Applying a signal mask if
-               :attr:`~SimilarityMetric.signal_mask` is set.
-            4. Rechunking if :attr:`~SimilarityMetric.rechunk` is
-               ``True``.
-            5. Normalizing to a mean of 0 and a standard deviation of 1.
+            1. Setting the data type to :attr:`dtype`.
+            2. Excluding the experimental patterns where
+               :attr:`navigation_mask` is ``False`` if the mask is set.
+            3. Reshaping to shape ``(n_experimental_patterns, -1)``
+            4. Applying a signal mask if :attr:`signal_mask` is set.
+            5. Rechunking if :attr:`rechunk` is ``True``.
+            6. Normalizing to a mean of 0 and a standard deviation of 1.
 
         Parameters
         ----------
@@ -114,25 +114,31 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
             Prepared experimental patterns.
         """
         patterns = da.asarray(patterns).astype(self.dtype)
+
         patterns = patterns.reshape((self.n_experimental_patterns, -1))
+
+        if self.navigation_mask is not None:
+            patterns = patterns[~self.navigation_mask.ravel()]
+
         if self.signal_mask is not None:
             patterns = self._mask_patterns(patterns)
+
         if self.rechunk:
             patterns = patterns.rechunk(("auto", -1))
+
         prepared_patterns = self._zero_mean_normalize_patterns(patterns)
+
         return prepared_patterns
 
     def prepare_dictionary(
-        self,
-        patterns: Union[np.ndarray, da.Array],
+        self, patterns: Union[np.ndarray, da.Array]
     ) -> Union[np.ndarray, da.Array]:
         """Prepare dictionary patterns before matching to experimental
         patterns in :meth:`match`.
 
         Patterns are prepared by:
-            1. Setting the data type to :attr:`~SimilarityMetric.dtype`.
-            2. Applying a signal mask if
-               :attr:`~SimilarityMetric.signal_mask` is set.
+            1. Setting the data type to :attr:`dtype`.
+            2. Applying a signal mask if :attr:`signal_mask` is set.
             3. Normalizing to a mean of 0 and a standard deviation of 1.
 
         Parameters
@@ -145,10 +151,14 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
         prepared_patterns
             Prepared dictionary patterns.
         """
+
         patterns = patterns.astype(self.dtype)
+
         if self.signal_mask is not None:
             patterns = self._mask_patterns(patterns)
+
         prepared_patterns = self._zero_mean_normalize_patterns(patterns)
+
         return prepared_patterns
 
     def match(
@@ -172,62 +182,24 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
             Normalized cross-correlation scores.
         """
         return da.einsum(
-            "ik,mk->im",
-            experimental,
-            dictionary,
-            optimize=True,
-            dtype=self.dtype,
+            "ik,mk->im", experimental, dictionary, optimize=True, dtype=self.dtype
         )
 
     def _mask_patterns(
         self, patterns: Union[da.Array, np.ndarray]
     ) -> Union[da.Array, np.ndarray]:
         with dask.config.set(**{"array.slicing.split_large_chunks": False}):
-            patterns = patterns[:, self.signal_mask.ravel()]
+            patterns = patterns[:, ~self.signal_mask.ravel()]
         return patterns
 
     @staticmethod
     def _zero_mean_normalize_patterns(
         patterns: Union[da.Array, np.ndarray]
     ) -> Union[da.Array, np.ndarray]:
-        if isinstance(patterns, da.Array):
-            dispatcher = da
+        if isinstance(patterns, np.ndarray):
+            return _zero_mean_normalize_patterns_numpy(patterns)
         else:
-            dispatcher = np
-        patterns_mean = dispatcher.mean(patterns, axis=-1, keepdims=True)
-        patterns = patterns - patterns_mean
-        patterns_norm = dispatcher.sqrt(
-            dispatcher.sum(dispatcher.square(patterns), axis=-1, keepdims=True)
-        )
-        patterns = patterns / patterns_norm
-        return patterns
-
-
-@njit("float64(float32[:, :], float32[:, :])", cache=True, nogil=True, fastmath=True)
-def _ncc_single_patterns_2d_float32(exp: np.ndarray, sim: np.ndarray) -> float:
-    """Return the normalized cross-correlation (NCC) coefficient
-    between two 2D patterns.
-
-    Parameters
-    ----------
-    exp
-        2D array of shape (n_pixels,) and data type 32-bit floats.
-    sim
-        2D array of shape (n_pixels,) and data type 32-bit floats.
-
-    Returns
-    -------
-    ncc
-        NCC coefficient as 32-bit float.
-    """
-    exp_mean = np.mean(exp)
-    sim_mean = np.mean(sim)
-    exp_centered = exp - exp_mean
-    sim_centered = sim - sim_mean
-    return np.divide(
-        np.sum(exp_centered * sim_centered),
-        np.sqrt(np.sum(np.square(exp_centered)) * np.sum(np.square(sim_centered))),
-    )
+            return _zero_mean_normalize_patterns_dask(patterns)
 
 
 @njit("float64(float32[:], float32[:], float32)", cache=True, nogil=True, fastmath=True)
@@ -250,9 +222,25 @@ def _ncc_single_patterns_1d_float32_exp_centered(
     Returns
     -------
     ncc
-        NCC coefficient as 32-bit float.
+        NCC coefficient as 64-bit float.
     """
     sim -= np.mean(sim)
     return np.divide(
         np.sum(exp * sim), np.sqrt(exp_squared_norm * np.sum(np.square(sim)))
     )
+
+
+def _zero_mean_normalize_patterns_numpy(patterns: np.ndarray) -> np.ndarray:
+    patterns_mean = np.mean(patterns, axis=1, keepdims=True)
+    patterns -= patterns_mean
+    patterns_norm = np.sqrt(np.sum(np.square(patterns), axis=1, keepdims=True))
+    patterns /= patterns_norm
+    return patterns
+
+
+def _zero_mean_normalize_patterns_dask(patterns: da.Array) -> da.Array:
+    patterns_mean = da.mean(patterns, axis=1, keepdims=True)
+    patterns -= patterns_mean
+    patterns_norm = da.sqrt(da.sum(da.square(patterns), axis=1, keepdims=True))
+    patterns /= patterns_norm
+    return patterns

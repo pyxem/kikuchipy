@@ -29,6 +29,7 @@ import dask
 import dask.array as da
 from dask.diagnostics import ProgressBar
 import hyperspy.api as hs
+from hyperspy.axes import AxesManager
 from hyperspy.signals import Signal2D
 from hyperspy.learn.mva import LearningResults
 from hyperspy.roi import BaseInteractiveROI
@@ -81,7 +82,11 @@ from kikuchipy.signals.util._dask import (
     _update_learning_results,
 )
 from kikuchipy.signals.util._detector import _detector_is_compatible_with_signal
-from kikuchipy.signals.util._crystal_map import _crystal_map_is_compatible_with_signal
+from kikuchipy.signals.util._crystal_map import (
+    _get_points_in_data_in_xmap,
+    _equal_phase,
+    _xmap_is_compatible_with_signal,
+)
 from kikuchipy.signals.util._map_helper import (
     _get_neighbour_dot_product_matrices,
     _get_average_dot_product_map,
@@ -215,7 +220,7 @@ class EBSD(KikuchipySignal2D):
 
     @xmap.setter
     def xmap(self, value: CrystalMap):
-        if _crystal_map_is_compatible_with_signal(
+        if _xmap_is_compatible_with_signal(
             value, self.axes_manager.navigation_axes[::-1], raise_if_not=True
         ):
             self._xmap = value
@@ -603,7 +608,7 @@ class EBSD(KikuchipySignal2D):
             kwargs["truncate"] = truncate
         else:
             filter_domains = ["frequency", "spatial"]
-            raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
+            raise ValueError(f"{filter_domain} must be either of {filter_domains}")
 
         map_func = _remove_dynamic_background
 
@@ -687,7 +692,7 @@ class EBSD(KikuchipySignal2D):
             kwargs["truncate"] = truncate
         else:
             filter_domains = ["frequency", "spatial"]
-            raise ValueError(f"{filter_domain} must be either of {filter_domains}.")
+            raise ValueError(f"{filter_domain} must be either of {filter_domains}")
 
         if dtype_out is None:
             dtype_out = self.data.dtype
@@ -920,7 +925,7 @@ class EBSD(KikuchipySignal2D):
             )
         else:
             function_domains = ["frequency", "spatial"]
-            raise ValueError(f"{function_domain} must be either of {function_domains}.")
+            raise ValueError(f"{function_domain} must be either of {function_domains}")
 
         filtered_patterns = dask_array.map_blocks(
             func=chunk.fft_filter,
@@ -1008,7 +1013,7 @@ class EBSD(KikuchipySignal2D):
             # Do nothing if a window of shape (1,) or (1, 1) is passed
             return warnings.warn(
                 f"A window of shape {window_shape} was passed, no averaging is "
-                "therefore performed."
+                "therefore performed"
             )
         elif len(nav_shape) > len(window_shape):
             averaging_window = averaging_window.reshape(window_shape + (1,))
@@ -1130,7 +1135,7 @@ class EBSD(KikuchipySignal2D):
         rescaling is undesirable, use :meth:`rebin` instead.
         """
         if not isinstance(factor, int) or factor <= 1:
-            raise ValueError(f"Binning `factor` {factor} must be an integer > 1.")
+            raise ValueError(f"Binning `factor` {factor} must be an integer > 1")
         else:
             factor = np.int64(factor)
 
@@ -1140,7 +1145,7 @@ class EBSD(KikuchipySignal2D):
             raise ValueError(
                 f"Binning `factor` {factor} must be a divisor of the initial pattern "
                 f"shape {sig_shape_old}, but {tuple(rest)} pixels remain.\n"
-                "You might try to crop away these pixels first using EBSD.crop()."
+                "You might try to crop away these pixels first using EBSD.crop()"
             )
         sig_shape_new = tuple(np.array(sig_shape_old) // factor)
 
@@ -1569,7 +1574,7 @@ class EBSD(KikuchipySignal2D):
     ]:
         """Index patterns by Hough indexing using :mod:`pyebsdindex`.
 
-        See :meth:`~pyebsdindex.ebsd_index.EBSDIndexer` and
+        See :class:`~pyebsdindex.ebsd_index.EBSDIndexer` and
         :meth:`~pyebsdindex.ebsd_index.EBSDIndexer.index_pats` for
         details.
 
@@ -1632,7 +1637,7 @@ class EBSD(KikuchipySignal2D):
             raise ValueError(
                 "Hough indexing requires pyebsdindex to be installed. Install it with "
                 "pip install pyebsdindex. See "
-                "https://kikuchipy.org/en/stable/user/installation.html for details."
+                "https://kikuchipy.org/en/stable/user/installation.html for details"
             )
         if self._lazy:
             from pyebsdindex import _pyopencl_installed
@@ -1642,7 +1647,7 @@ class EBSD(KikuchipySignal2D):
                     "Hough indexing of lazy signals must use the GPU, which requires "
                     "pyopencl to be installed. See "
                     "https://documen.tician.de/pyopencl/misc.html for installation "
-                    "instructions."
+                    "instructions"
                 )
 
         am = self.axes_manager
@@ -1678,11 +1683,7 @@ class EBSD(KikuchipySignal2D):
             verbose=verbose,
         )
 
-        # Set scan unit
-        if len(nav_shape) > 0:  # Navigation shape can be (1,)
-            scan_unit = str(am.navigation_axes[0].units)
-            if scan_unit != "<undefined>":
-                xmap.scan_unit = scan_unit
+        xmap.scan_unit = _get_navigation_axes_unit(am)
 
         if return_index_data and return_band_data:
             return xmap, index_data, band_data
@@ -1703,7 +1704,8 @@ class EBSD(KikuchipySignal2D):
         """Return a detector with one projection center (PC) per
         pattern optimized using Hough indexing from :mod:`pyebsdindex`.
 
-        See :mod:`~pyebsdindex.pcopt.optimize` for details.
+        See :class:`~pyebsdindex.ebsd_index.EBSDIndexer` and
+        :mod:`~pyebsdindex.pcopt.optimize` for details.
 
         Parameters
         ----------
@@ -1741,7 +1743,7 @@ class EBSD(KikuchipySignal2D):
             raise ValueError(
                 "Hough indexing requires pyebsdindex to be installed. Install it with "
                 "pip install pyebsdindex. See "
-                "https://kikuchipy.org/en/stable/user/installation.html for details."
+                "https://kikuchipy.org/en/stable/user/installation.html for details"
             )
         if self._lazy:
             from pyebsdindex import _pyopencl_installed
@@ -1751,7 +1753,7 @@ class EBSD(KikuchipySignal2D):
                     "Hough indexing of lazy signals must use the GPU, which requires "
                     "pyopencl to be installed. See "
                     "https://documen.tician.de/pyopencl/misc.html for installation "
-                    "instructions."
+                    "instructions"
                 )
 
         pc0 = np.asarray(pc0)
@@ -1764,10 +1766,10 @@ class EBSD(KikuchipySignal2D):
         if method not in supported_methods:
             raise ValueError(
                 f"`method` '{method}' must be one of the supported methods "
-                f"{supported_methods}."
+                f"{supported_methods}"
             )
         elif batch and method == "pso":
-            raise ValueError("PSO optimization method does not support `batch=True`.")
+            raise ValueError("PSO optimization method does not support `batch=True`")
 
         am = self.axes_manager
         nav_shape = am.navigation_shape[::-1]
@@ -1806,6 +1808,7 @@ class EBSD(KikuchipySignal2D):
         metric: Union[SimilarityMetric, str] = "ncc",
         keep_n: int = 20,
         n_per_iteration: Optional[int] = None,
+        navigation_mask: Optional[np.ndarray] = None,
         signal_mask: Optional[np.ndarray] = None,
         rechunk: bool = False,
         dtype: Union[str, np.dtype, type, None] = None,
@@ -1817,9 +1820,9 @@ class EBSD(KikuchipySignal2D):
         Parameters
         ----------
         dictionary
-            EBSD signal with dictionary patterns. The signal must have a
-            1D navigation axis, an :attr:`xmap` property with crystal
-            orientations set, and equal detector shape.
+            One EBSD signal with dictionary patterns. The signal must
+            have a 1D navigation axis, an :attr:`xmap` property with
+            crystal orientations set, and equal detector shape.
         metric
             Similarity metric, by default ``"ncc"`` (normalized
             cross-correlation). ``"ndp"`` (normalized dot product) is
@@ -1842,14 +1845,18 @@ class EBSD(KikuchipySignal2D):
             dictionary patterns, yielding only one iteration. This
             parameter can be increased to use less memory during
             indexing, but this will increase the computation time.
-
-            .. versionadded:: 0.5
+        navigation_mask
+            A boolean mask equal to the signal's navigation (map) shape,
+            where only patterns equal to ``False`` are indexed. This can
+            be used by ``metric`` in
+            :meth:`~kikuchipy.indexing.SimilarityMetric.prepare_experimental`.
+            If not given, all patterns are indexed.
         signal_mask
             A boolean mask equal to the experimental patterns' detector
-            shape ``(n rows, n columns)``, where only pixels equal to
-            ``False`` are matched. If not given, all pixels are used.
-
-            .. versionadded:: 0.5
+            shape, where only pixels equal to ``False`` are matched.
+            This can be used by ``metric`` in
+            :meth:`~kikuchipy.indexing.SimilarityMetric.prepare_experimental`.
+            If not given, all pixels are used.
         rechunk
             Whether ``metric`` is allowed to rechunk experimental and
             dictionary patterns before matching. Default is ``False``.
@@ -1857,8 +1864,6 @@ class EBSD(KikuchipySignal2D):
             memory. If a custom ``metric`` is passed, whatever
             :attr:`~kikuchipy.indexing.SimilarityMetric.rechunk` is set
             to will be used.
-
-            .. versionadded:: 0.5
         dtype
             Which data type ``metric`` shall cast the patterns to before
             matching. If not given, ``"float32"`` will be used unless a
@@ -1867,8 +1872,6 @@ class EBSD(KikuchipySignal2D):
             will then be used instead. ``"float32"`` and ``"float64"``
             are allowed for the available ``"ncc"`` and ``"ndp"``
             metrics.
-
-            .. versionadded:: 0.5
 
         Returns
         -------
@@ -1881,6 +1884,9 @@ class EBSD(KikuchipySignal2D):
 
         See Also
         --------
+        refine_orientation
+        refine_projection_center
+        refine_orientation_projection_center
         kikuchipy.indexing.SimilarityMetric
         kikuchipy.indexing.NormalizedCrossCorrelationMetric
         kikuchipy.indexing.NormalizedDotProductMetric
@@ -1889,17 +1895,10 @@ class EBSD(KikuchipySignal2D):
             phase map.
         kikuchipy.indexing.orientation_similarity_map :
             Calculate an orientation similarity map.
-
-        Notes
-        -----
-        .. versionchanged:: 0.5
-           Only one dictionary can be passed and the
-           ``return_merged_crystal_map`` and
-           ``get_orientation_similarity_map`` parameters were removed.
         """
-        exp_am = self.axes_manager
-        dict_am = dictionary.axes_manager
-        dict_size = dict_am.navigation_size
+        am_exp = self.axes_manager
+        am_dict = dictionary.axes_manager
+        dict_size = am_dict.navigation_size
 
         if n_per_iteration is None:
             if isinstance(dictionary.data, da.Array):
@@ -1907,35 +1906,60 @@ class EBSD(KikuchipySignal2D):
             else:
                 n_per_iteration = dict_size
 
-        exp_sig_shape = exp_am.signal_shape[::-1]
-        dict_sig_shape = dict_am.signal_shape[::-1]
-        if exp_sig_shape != dict_sig_shape:
+        nav_shape_exp = am_exp.navigation_shape[::-1]
+        if navigation_mask is not None:
+            if navigation_mask.shape != nav_shape_exp:
+                raise ValueError(
+                    f"The navigation mask shape {navigation_mask.shape} and the "
+                    f"signal's navigation shape {nav_shape_exp} must be identical"
+                )
+            elif navigation_mask.all():
+                raise ValueError(
+                    "The navigation mask must allow for indexing of at least one "
+                    "pattern (at least one value equal to `False`)"
+                )
+            elif not isinstance(navigation_mask, np.ndarray):
+                raise ValueError("The navigation mask must be a NumPy array")
+
+        if signal_mask is not None:
+            if not isinstance(signal_mask, np.ndarray):
+                raise ValueError("The signal mask must be a NumPy array")
+
+        sig_shape_exp = am_exp.signal_shape[::-1]
+        sig_shape_dict = am_dict.signal_shape[::-1]
+        if sig_shape_exp != sig_shape_dict:
             raise ValueError(
-                f"Experimental {exp_sig_shape} and dictionary {dict_sig_shape} signal "
+                f"Experimental {sig_shape_exp} and dictionary {sig_shape_dict} signal "
                 "shapes must be identical"
             )
 
         dict_xmap = dictionary.xmap
         if dict_xmap is None or dict_xmap.shape != (dict_size,):
             raise ValueError(
-                "Dictionary signal must have a non-empty `EBSD.xmap` property of equal "
-                "size as the number of dictionary patterns, and both the signal and"
+                "Dictionary signal must have a non-empty `EBSD.xmap` attribute of equal"
+                " size as the number of dictionary patterns, and both the signal and "
                 "crystal map must have only one navigation dimension"
             )
 
-        metric = self._prepare_metric(metric, signal_mask, dtype, rechunk, dict_size)
+        metric = self._prepare_metric(
+            metric, navigation_mask, signal_mask, dtype, rechunk, dict_size
+        )
 
         with dask.config.set(**{"array.slicing.split_large_chunks": False}):
-            return _dictionary_indexing(
+            xmap = _dictionary_indexing(
                 experimental=self.data,
-                experimental_nav_shape=exp_am.navigation_shape[::-1],
+                experimental_nav_shape=am_exp.navigation_shape[::-1],
                 dictionary=dictionary.data,
-                step_sizes=tuple(a.scale for a in exp_am.navigation_axes[::-1]),
+                step_sizes=tuple(a.scale for a in am_exp.navigation_axes[::-1]),
                 dictionary_xmap=dictionary.xmap,
                 keep_n=keep_n,
                 n_per_iteration=n_per_iteration,
                 metric=metric,
             )
+
+        xmap.scan_unit = _get_navigation_axes_unit(am_exp)
+
+        return xmap
 
     def refine_orientation(
         self,
@@ -1943,6 +1967,7 @@ class EBSD(KikuchipySignal2D):
         detector: EBSDDetector,
         master_pattern: "EBSDMasterPattern",
         energy: Union[int, float],
+        navigation_mask: Optional[np.ndarray] = None,
         signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
@@ -1967,6 +1992,7 @@ class EBSD(KikuchipySignal2D):
         sample-detector geometry, represented by the three projection
         center (PC) parameters (PCx, PCy, PCz) in the Bruker convention,
         is fixed.
+
         A subset of the optimization methods in *SciPy* and *NLopt* are
         available:
 
@@ -1984,8 +2010,11 @@ class EBSD(KikuchipySignal2D):
         Parameters
         ----------
         xmap
-            Single phase crystal map with at least one orientation per
-            point.
+            Crystal map with points to refine. Only the points in the
+            data (see :class:`~orix.crystal_map.CrystalMap`) are
+            refined. If a ``navigation_mask`` is given, points equal to
+            points in the data and points equal to ``False`` in this
+            mask are refined.
         detector
             Detector describing the detector-sample geometry with either
             one PC to be used for all map points or one for each point.
@@ -1996,10 +2025,17 @@ class EBSD(KikuchipySignal2D):
             Accelerating voltage of the electron beam in kV specifying
             which master pattern energy to use during projection of
             simulated patterns.
+        navigation_mask
+            A boolean mask of points in the crystal map to refine (equal
+            to ``False``, i.e. points to *mask out* are ``True``). The
+            mask must be of equal shape to the signal's navigation
+            shape. If not given, all points in the crystal map data are
+            refined.
         signal_mask
-            A boolean mask equal to the experimental patterns' detector
-            shape ``(n rows, n columns)``, where only pixels equal to
-            ``False`` are matched. If not given, all pixels are used.
+            A boolean mask of detector pixels to use in refinement
+            (equal to ``False``, i.e. pixels to *mask out* are
+            ``True``). The mask must be of equal shape to the signal's
+            signal shape. If not given, all pixels are used.
         method
             Name of the :mod:`scipy.optimize` or *NLopt* optimization
             method, among ``"minimize"``, ``"differential_evolution"``,
@@ -2057,14 +2093,16 @@ class EBSD(KikuchipySignal2D):
         Returns
         -------
         out
-            Crystal map with refined orientations and similarity metrics
-            in a ``"scores"`` property if ``compute=True``. If
-            ``compute=False``, a dask array of navigation shape + (4,)
-            is returned, to be computed later. See
+            Crystal map with refined orientations, NCC scores in a
+            ``"scores"`` property and the number of function
+            evaluations in a ``"num_evals"`` property if
+            ``compute=True``. If ``compute=False``, a dask array of
+            navigation size + (5,) is returned, to be computed later.
+            See
             :func:`~kikuchipy.indexing.compute_refine_orientation_results`.
-            Each navigation point has the optimized score and the three
-            Euler angles in radians in element 0, 1, 2, and 3,
-            respectively.
+            Each navigation point in the data has the optimized score,
+            the number of function evaluations and the three Euler
+            angles in radians in element 0, 1, 2, 3 and 4, respectively.
 
         See Also
         --------
@@ -2079,14 +2117,18 @@ class EBSD(KikuchipySignal2D):
         stable enough, its implementation of the Nelder-Mead algorithm
         might become the default.
         """
-        self._check_refinement_parameters(
+        points_to_refine = self._check_refinement_parameters(
             xmap=xmap,
             detector=detector,
             master_pattern=master_pattern,
+            navigation_mask=navigation_mask,
             signal_mask=signal_mask,
         )
         patterns, signal_mask = self._prepare_patterns_for_refinement(
-            signal_mask=signal_mask, rechunk=rechunk, chunk_kwargs=chunk_kwargs
+            points_to_refine=points_to_refine,
+            signal_mask=signal_mask,
+            rechunk=rechunk,
+            chunk_kwargs=chunk_kwargs,
         )
         return _refine_orientation(
             xmap=xmap,
@@ -2094,6 +2136,7 @@ class EBSD(KikuchipySignal2D):
             master_pattern=master_pattern,
             energy=energy,
             patterns=patterns,
+            points_to_refine=points_to_refine,
             signal_mask=signal_mask,
             method=method,
             method_kwargs=method_kwargs,
@@ -2102,6 +2145,7 @@ class EBSD(KikuchipySignal2D):
             rtol=rtol,
             maxeval=maxeval,
             compute=compute,
+            navigation_mask=navigation_mask,
         )
 
     def refine_projection_center(
@@ -2110,6 +2154,7 @@ class EBSD(KikuchipySignal2D):
         detector: EBSDDetector,
         master_pattern: "EBSDMasterPattern",
         energy: Union[int, float],
+        navigation_mask: Optional[np.ndarray] = None,
         signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
@@ -2120,7 +2165,7 @@ class EBSD(KikuchipySignal2D):
         compute: bool = True,
         rechunk: bool = True,
         chunk_kwargs: Optional[dict] = None,
-    ) -> Union[Tuple[np.ndarray, EBSDDetector], da.Array]:
+    ) -> Union[Tuple[np.ndarray, EBSDDetector, np.ndarray], da.Array]:
         """Refine projection centers by searching the parameter space
         using fixed orientations.
 
@@ -2150,11 +2195,16 @@ class EBSD(KikuchipySignal2D):
         Parameters
         ----------
         xmap
-            Single phase crystal map with at least one orientation per
-            point.
+            Crystal map with points to use in refinement. Only the
+            points in the data
+            (see :class:`~orix.crystal_map.CrystalMap`) are used. If a
+            ``navigation_mask`` is given, points equal to points in the
+            data and points equal to ``False`` in this mask are used.
         detector
             Detector describing the detector-sample geometry with either
             one PC to be used for all map points or one for each point.
+            Which PCs are refined depend on ``xmap`` and
+            ``navigation_mask``.
         master_pattern
             Master pattern in the square Lambert projection of the same
             phase as the one in the crystal map.
@@ -2162,10 +2212,17 @@ class EBSD(KikuchipySignal2D):
             Accelerating voltage of the electron beam in kV specifying
             which master pattern energy to use during projection of
             simulated patterns.
+        navigation_mask
+            A boolean mask of points in the crystal map to use in
+            refinement (equal to ``False``, i.e. points to *mask out*
+            are ``True``). The mask must be of equal shape to the
+            signal's navigation shape. If not given, all points in
+            the crystal map data are used.
         signal_mask
-            A boolean mask equal to the experimental patterns' detector
-            shape ``(n rows, n columns)``, where only pixels equal to
-            ``False`` are matched. If not given, all pixels are used.
+            A boolean mask of detector pixels to use in refinement
+            (equal to ``False``, i.e. pixels to *mask out* are
+            ``True``). The mask must be of equal shape to the signal's
+            signal shape. If not given, all pixels are used.
         method
             Name of the :mod:`scipy.optimize` or *NLopt* optimization
             method, among ``"minimize"``, ``"differential_evolution"``,
@@ -2221,14 +2278,16 @@ class EBSD(KikuchipySignal2D):
         Returns
         -------
         out
-            New similarity metrics and a new EBSD detector instance with
-            the refined PCs if ``compute=True``. If ``compute=False``,
-            a dask array of navigation shape + (4,) is returned, to be
-            computed later. See
+            New similarity metrics, a new EBSD detector instance with
+            the refined PCs and the number of function evaluations if
+            ``compute=True``. If ``compute=False``, a dask array of
+            navigation size + (5,) is returned, to be computed later.
+            See
             :func:`~kikuchipy.indexing.compute_refine_projection_center_results`.
-            Each navigation point has the optimized score and the three
-            PC parameters in the Bruker convention in element 0, 1, 2,
-            and 3, respectively.
+            Each navigation point has the optimized score, the three
+            PC parameters in the Bruker convention and the number of
+            function evaluations in element 0, 1, 2, 3 and 4,
+            respectively.
 
         See Also
         --------
@@ -2243,14 +2302,18 @@ class EBSD(KikuchipySignal2D):
         stable enough, its implementation of the Nelder-Mead algorithm
         might become the default.
         """
-        self._check_refinement_parameters(
+        points_to_refine = self._check_refinement_parameters(
             xmap=xmap,
             detector=detector,
             master_pattern=master_pattern,
+            navigation_mask=navigation_mask,
             signal_mask=signal_mask,
         )
         patterns, signal_mask = self._prepare_patterns_for_refinement(
-            signal_mask=signal_mask, rechunk=rechunk, chunk_kwargs=chunk_kwargs
+            points_to_refine=points_to_refine,
+            signal_mask=signal_mask,
+            rechunk=rechunk,
+            chunk_kwargs=chunk_kwargs,
         )
         return _refine_pc(
             xmap=xmap,
@@ -2258,6 +2321,7 @@ class EBSD(KikuchipySignal2D):
             master_pattern=master_pattern,
             energy=energy,
             patterns=patterns,
+            points_to_refine=points_to_refine,
             signal_mask=signal_mask,
             method=method,
             method_kwargs=method_kwargs,
@@ -2266,6 +2330,7 @@ class EBSD(KikuchipySignal2D):
             rtol=rtol,
             maxeval=maxeval,
             compute=compute,
+            navigation_mask=navigation_mask,
         )
 
     def refine_orientation_projection_center(
@@ -2274,6 +2339,7 @@ class EBSD(KikuchipySignal2D):
         detector: EBSDDetector,
         master_pattern: "EBSDMasterPattern",
         energy: Union[int, float],
+        navigation_mask: Optional[np.ndarray] = None,
         signal_mask: Optional[np.ndarray] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
@@ -2316,11 +2382,16 @@ class EBSD(KikuchipySignal2D):
         Parameters
         ----------
         xmap
-            Single phase crystal map with at least one orientation per
-            point.
+            Crystal map with points to refine. Only the points in the
+            data (see :class:`~orix.crystal_map.CrystalMap`) are
+            refined. If a ``navigation_mask`` is given, points equal to
+            points in the data and points equal to ``False`` in this
+            mask are refined.
         detector
             Detector describing the detector-sample geometry with either
             one PC to be used for all map points or one for each point.
+            Which PCs are refined depend on ``xmap`` and
+            ``navigation_mask``.
         master_pattern
             Master pattern in the square Lambert projection of the same
             phase as the one in the crystal map.
@@ -2328,10 +2399,17 @@ class EBSD(KikuchipySignal2D):
             Accelerating voltage of the electron beam in kV specifying
             which master pattern energy to use during projection of
             simulated patterns.
+        navigation_mask
+            A boolean mask of points in the crystal map to refine (equal
+            to ``False``, i.e. points to *mask out* are ``True``). The
+            mask must be of equal shape to the signal's navigation
+            shape. If not given, all points in the crystal map data are
+            refined.
         signal_mask
-            A boolean mask equal to the experimental patterns' detector
-            shape ``(n rows, n columns)``, where only pixels equal to
-            ``False`` are matched. If not given, all pixels are used.
+            A boolean mask of detector pixels to use in refinement
+            (equal to ``False``, i.e. pixels to *mask out* are
+            ``True``). The mask must be of equal shape to the signal's
+            signal shape. If not given, all pixels are used.
         method
             Name of the :mod:`scipy.optimize` or *NLopt* optimization
             method, among ``"minimize"``, ``"differential_evolution"``,
@@ -2393,12 +2471,13 @@ class EBSD(KikuchipySignal2D):
         out
             Crystal map with refined orientations and a new EBSD
             detector instance with the refined PCs, if ``compute=True``.
-            If ``compute=False``, a dask array of navigation shape +
-            (7,) is returned, to be computed later. See
+            If ``compute=False``, a dask array of navigation size + (7,)
+            is returned, to be computed later. See
             :func:`~kikuchipy.indexing.compute_refine_orientation_projection_center_results`.
-            Each navigation point has the optimized score, the three
-            Euler angles in radians, and the three PC parameters in
-            element 0, 1, 2, 3, 4, 5, and 6, respectively.
+            Each navigation point has the score, the number of function
+            evaulations, the three Euler angles in radians, and the
+            three PC parameters in element 0, 1, 2, 3, 4, 5, 6 and 7,
+            respectively.
 
         See Also
         --------
@@ -2420,14 +2499,18 @@ class EBSD(KikuchipySignal2D):
         stable enough, its implementation of the Nelder-Mead algorithm
         might become the default.
         """
-        self._check_refinement_parameters(
+        points_to_refine = self._check_refinement_parameters(
             xmap=xmap,
             detector=detector,
             master_pattern=master_pattern,
+            navigation_mask=navigation_mask,
             signal_mask=signal_mask,
         )
         patterns, signal_mask = self._prepare_patterns_for_refinement(
-            signal_mask=signal_mask, rechunk=rechunk, chunk_kwargs=chunk_kwargs
+            points_to_refine=points_to_refine,
+            signal_mask=signal_mask,
+            rechunk=rechunk,
+            chunk_kwargs=chunk_kwargs,
         )
         return _refine_orientation_pc(
             xmap=xmap,
@@ -2435,6 +2518,7 @@ class EBSD(KikuchipySignal2D):
             master_pattern=master_pattern,
             energy=energy,
             patterns=patterns,
+            points_to_refine=points_to_refine,
             signal_mask=signal_mask,
             method=method,
             method_kwargs=method_kwargs,
@@ -2443,6 +2527,7 @@ class EBSD(KikuchipySignal2D):
             rtol=rtol,
             maxeval=maxeval,
             compute=compute,
+            navigation_mask=navigation_mask,
         )
 
     # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
@@ -2501,7 +2586,7 @@ class EBSD(KikuchipySignal2D):
             elif self.metadata.has_item("General.original_filename"):
                 filename = self.metadata.General.original_filename
             else:
-                raise ValueError("Filename not defined.")
+                raise ValueError("Filename not defined")
         if extension is not None:
             basename, _ = os.path.splitext(filename)
             filename = basename + "." + extension
@@ -2726,41 +2811,110 @@ class EBSD(KikuchipySignal2D):
         xmap: CrystalMap,
         detector: EBSDDetector,
         master_pattern: "EBSDMasterPattern",
+        navigation_mask: Optional[np.ndarray] = None,
         signal_mask: Optional[np.ndarray] = None,
-    ):
-        """Raise ValueError if EBSD refinement input is invalid."""
-        _crystal_map_is_compatible_with_signal(
-            xmap=xmap,
-            navigation_axes=self.axes_manager.navigation_axes[::-1],
-            raise_if_not=True,
-        )
-        sig_shape = self.axes_manager.signal_shape[::-1]
-        _detector_is_compatible_with_signal(
+    ) -> np.ndarray:
+        """Check compatibility of refinement parameters with refinement.
+
+        No checks of the parameters should be necessary after this
+        function runs successfully.
+
+        Checks of the refinement algorithm and parameters used in this
+        algorithm are done in the refinement setup.
+
+        Parameters
+        ----------
+        xmap
+            Crystal map with rotation(s) to refine. Its shape must be
+            equal to the signal's navigation shape, and the points to
+            refine must contain only one phase, equal to the master
+            pattern phase. Only points which are ``True`` in the map's
+            ``is_in_data`` 1D array are refined.
+        detector
+            Detector with projection center(s) (PCs) to use in
+            refinement. Its navigation shape must be equal to the
+            signal's navigation shape, or it must only contain one PC.
+        master_pattern
+            Must be in the Lambert projection and have a phase equal to
+            the crystal map phase in the points to refine.
+        navigation_mask
+            Navigation mask of points to refine, equal to ``False``. Its
+            shape must be equal to the signal's navigation shape. If
+            given, this mask is combined with the crystal map's
+            ``is_in_data`` 1D array.
+        signal_mask
+            Signal mask of detector pixels to use in refinement, equal
+            to ``False``. Its shape must be equal to the signal's signal
+            shape.
+
+        Returns
+        -------
+        points_to_refine
+            1D mask of points to refine in the crystal map.
+
+        Raises
+        ------
+        ValueError
+            If refinement parameters are not compatible with the signal
+            or if they are not suitable for refinement.
+        """
+        am = self.axes_manager
+        nav_shape = am.navigation_shape[::-1]
+        sig_shape = am.signal_shape[::-1]
+
+        _ = _detector_is_compatible_with_signal(
             detector=detector,
-            nav_shape=self.axes_manager.navigation_shape[::-1],
+            nav_shape=nav_shape,
             sig_shape=sig_shape,
             raise_if_not=True,
         )
-        if len(xmap.phases.ids) != 1:
-            raise ValueError("Crystal map must have exactly one phase")
         if signal_mask is not None and sig_shape != signal_mask.shape:
-            raise ValueError("Signal mask and signal axes must have the same shape")
+            raise ValueError(
+                f"Signal mask shape {signal_mask.shape} and signal's signal shape "
+                f"{sig_shape} must be the same shape"
+            )
+
+        _ = _xmap_is_compatible_with_signal(
+            xmap=xmap, navigation_axes=am.navigation_axes[::-1], raise_if_not=True
+        )
+
+        # Checks navigation mask shape and whether there is only one
+        # phase ID in points to refine
+        points_to_refine, phase_id, *_ = _get_points_in_data_in_xmap(
+            xmap, navigation_mask
+        )
+
         master_pattern._is_suitable_for_projection(raise_if_not=True)
+
+        xmap_phase = xmap.phases_in_data[phase_id]
+        mp_phase = master_pattern.phase
+        equal_phases, are_different = _equal_phase(mp_phase, xmap_phase)
+        if not equal_phases:
+            raise ValueError(
+                f"Master pattern phase '{mp_phase.name}' and phase of points to refine "
+                f"in crystal map '{xmap_phase.name}' must be the same, but have "
+                f"different {are_different}"
+            )
+
+        return points_to_refine
 
     def _prepare_patterns_for_refinement(
         self,
+        points_to_refine: np.ndarray,
         signal_mask: Union[np.ndarray, None],
         rechunk: bool,
         chunk_kwargs: Optional[dict] = None,
-    ) -> Tuple[da.Array, Union[np.ndarray, bool]]:
+    ) -> Tuple[da.Array, np.ndarray]:
         """Prepare pattern array and mask for refinement.
 
         Parameters
         ----------
+        points_to_refine
+            1D mask of points (patterns) to use in refinement.
         signal_mask
-            A boolean mask equal to the experimental patterns' detector
-            shape ``(n rows, n columns)``, where only pixels equal to
-            ``False`` are matched. If not given, all pixels are used.
+            A boolean mask equal to the signal's signal shape, where
+            only pixels equal to ``False`` are used in refimement. If
+            not given, all pixels are used.
         rechunk
             Whether to allow rechunking of Dask array produced from the
             signal patterns if the array has only one chunk.
@@ -2771,30 +2925,39 @@ class EBSD(KikuchipySignal2D):
         Returns
         -------
         patterns
-            Dask array.
-        mask
-            If ``mask`` is not ``None``, a boolean mask is returned,
-            else ``False`` is returned.
+            2D Dask array.
+        signal_mask
+            1D NumPy array with points to use in refinement equal to
+            ``True``.
         """
+        # Could cast pattern array to float32 here already, but
+        # have found that this gives different results than doing it
+        # in the Numba accelerated function preparing each pattern for
+        # refinement...
         patterns = get_dask_array(signal=self)
 
-        # Flatten signal dimensions
-        patterns = patterns.reshape(patterns.shape[:-2] + (-1,))
+        # Flatten dimensions for masking
+        am = self.axes_manager
+        patterns = da.atleast_3d(patterns)
+        patterns = patterns.reshape((am.navigation_size, am.signal_size))
 
-        # Prepare mask
+        if not points_to_refine.all():
+            patterns = patterns[points_to_refine]
+
         if signal_mask is None:
             signal_mask = np.ones(self.axes_manager.signal_size, dtype=bool)
         else:
             signal_mask = ~signal_mask.ravel()
+            patterns = patterns[:, signal_mask]
 
         if (patterns.chunksize == patterns.shape) and rechunk:
             if chunk_kwargs is None:
                 chunk_kwargs = dict(chunk_shape=16, chunk_bytes=None)
             chunks = get_chunking(
                 data_shape=patterns.shape,
-                nav_dim=self.axes_manager.navigation_dimension,
+                nav_dim=1,
                 sig_dim=1,
-                dtype=self.data.dtype,
+                dtype="float32",
                 **chunk_kwargs,
             )
             patterns = patterns.rechunk(chunks)
@@ -2804,6 +2967,7 @@ class EBSD(KikuchipySignal2D):
     def _prepare_metric(
         self,
         metric: Union[SimilarityMetric, str],
+        navigation_mask: Union[np.ndarray, None],
         signal_mask: Union[np.ndarray, None],
         dtype: Union[str, np.dtype, type, None],
         rechunk: bool,
@@ -2817,19 +2981,28 @@ class EBSD(KikuchipySignal2D):
             metric_class = metrics[metric]
             metric = metric_class()
             metric.rechunk = rechunk
+
         if not isinstance(metric, SimilarityMetric):
             raise ValueError(
                 f"'{metric}' must be either of {metrics.keys()} or a custom metric "
                 "class inheriting from SimilarityMetric. See "
                 "kikuchipy.indexing.SimilarityMetric"
             )
+
         metric.n_experimental_patterns = max(self.axes_manager.navigation_size, 1)
         metric.n_dictionary_patterns = max(n_dictionary_patterns, 1)
+
+        if navigation_mask is not None:
+            metric.navigation_mask = navigation_mask
+
         if signal_mask is not None:
-            metric.signal_mask = ~signal_mask
+            metric.signal_mask = signal_mask
+
         if dtype is not None:
             metric.dtype = dtype
+
         metric.raise_error_if_invalid()
+
         return metric
 
     @staticmethod
@@ -2844,7 +3017,7 @@ class EBSD(KikuchipySignal2D):
         if len(out_signal_axes) > signal.axes_manager.navigation_dimension:
             raise ValueError(
                 "The length of 'out_signal_axes' cannot be longer than the navigation "
-                "dimension of the signal."
+                "dimension of the signal"
             )
         out.set_signal_type("")
         return out.transpose(out_signal_axes)
@@ -3091,3 +3264,13 @@ def _update_custom_attributes(
             attributes["detector"].pc = pc
 
     return attributes
+
+
+def _get_navigation_axes_unit(axes_manager: AxesManager) -> str:
+    nav_shape = axes_manager.navigation_shape[::-1]
+    scan_unit = "px"
+    if len(nav_shape) > 0:  # Navigation shape can be (1,)
+        scan_unit_hs = str(axes_manager.navigation_axes[0].units)
+        if scan_unit_hs != "<undefined>":
+            scan_unit = scan_unit_hs
+    return scan_unit

@@ -74,7 +74,7 @@ SQRT_PI_HALF = np.sqrt(np.pi / 2)
 
 
 def _get_direction_cosines_from_detector(
-    detector: "EBSDDetector", mask: Optional[np.ndarray] = None
+    detector: "EBSDDetector", signal_mask: Optional[np.ndarray] = None
 ) -> np.ndarray:
     """Return direction cosines for one or more projection centers
     (PCs).
@@ -83,7 +83,7 @@ def _get_direction_cosines_from_detector(
     ----------
     detector
         EBSD detector with one or more PCs.
-    mask
+    signal_mask
         1D signal mask with ``True`` values for pixels to get direction
         cosines for.
 
@@ -96,11 +96,14 @@ def _get_direction_cosines_from_detector(
         pcx, pcy, pcz = detector.pc.squeeze().astype(np.float64)
         func = _get_direction_cosines_for_fixed_pc
     else:
-        pcx, pcy, pcz = detector.pc.reshape((-1, 3)).T.astype(np.float64)
+        pcx, pcy, pcz = detector.pc_flattened.T.astype(np.float64)
         func = _get_direction_cosines_for_varying_pc
-    if mask is None:
-        mask = np.ones(detector.shape, dtype=bool).ravel()
-    return func(
+
+    if signal_mask is None:
+        # Required since the Numba functions expect a boolean array
+        signal_mask = np.ones(detector.size, dtype=bool)
+
+    dc = func(
         pcx=pcx,
         pcy=pcy,
         pcz=pcz,
@@ -109,8 +112,10 @@ def _get_direction_cosines_from_detector(
         tilt=detector.tilt,
         azimuthal=detector.azimuthal,
         sample_tilt=detector.sample_tilt,
-        mask=mask,
+        signal_mask=signal_mask,
     )
+
+    return dc
 
 
 @njit(
@@ -145,7 +150,7 @@ def _get_direction_cosines_for_fixed_pc(
     tilt: float,
     azimuthal: float,
     sample_tilt: float,
-    mask: np.ndarray,
+    signal_mask: np.ndarray,
 ) -> np.ndarray:
     """Return direction cosines for a single projection center (PC).
 
@@ -169,7 +174,7 @@ def _get_direction_cosines_for_fixed_pc(
         Sample tilt about the sample RD axis in degrees.
     sample_tilt
         Sample tilt from horizontal in degrees.
-    mask
+    signal_mask
         1D signal mask with ``True`` values for pixels to get direction
         cosines for.
 
@@ -207,7 +212,7 @@ def _get_direction_cosines_for_fixed_pc(
     Ls = -sw * det_x + zpc * cw
     Lc = cw * det_x + zpc * sw
 
-    idx_1d = np.arange(nrows * ncols)[mask]
+    idx_1d = np.arange(nrows * ncols)[signal_mask]
     rows = idx_1d // ncols
     cols = np.mod(idx_1d, ncols)
     n_pixels = idx_1d.size
@@ -243,7 +248,7 @@ def _get_direction_cosines_for_varying_pc(
     tilt: float,
     azimuthal: float,
     sample_tilt: float,
-    mask: np.ndarray,
+    signal_mask: np.ndarray,
 ) -> np.ndarray:
     """Return sets of direction cosines for varying projection centers
     (PCs).
@@ -268,7 +273,7 @@ def _get_direction_cosines_for_varying_pc(
         Sample tilt about the sample RD axis in degrees.
     sample_tilt
         Sample tilt from horizontal in degrees.
-    mask
+    signal_mask
         1D signal mask with ``True`` values for pixels to get direction
         cosines for.
 
@@ -299,7 +304,7 @@ def _get_direction_cosines_for_varying_pc(
     det_x_factor = (1 - ncols) * 0.5
     det_y_factor = (1 - nrows) * 0.5
 
-    idx_1d = np.arange(nrows * ncols)[mask]
+    idx_1d = np.arange(nrows * ncols)[signal_mask]
     rows = idx_1d // ncols
     cols = np.mod(idx_1d, ncols)
 

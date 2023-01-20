@@ -41,6 +41,7 @@ Indexing
 
     hough_indexing
     pattern_matching
+    hybrid_indexing
     pc_orientation_dependence
     pc_fit_plane
     pc_extrapolate_plane

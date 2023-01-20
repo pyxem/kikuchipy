@@ -18,11 +18,8 @@
 import numpy as np
 import pytest
 
-from kikuchipy.indexing.similarity_metrics import (
-    NormalizedCrossCorrelationMetric,
-)
+from kikuchipy.indexing.similarity_metrics import NormalizedCrossCorrelationMetric
 from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
-    _ncc_single_patterns_2d_float32,
     _ncc_single_patterns_1d_float32_exp_centered,
 )
 
@@ -36,18 +33,11 @@ class TestSimilarityMetric:
         ncc = NormalizedCrossCorrelationMetric(1, 1)
         assert repr(ncc) == (
             "NormalizedCrossCorrelationMetric: float32, greater is better, "
-            "rechunk: False, signal mask: False"
+            "rechunk: False, navigation mask: False, signal mask: False"
         )
 
 
 class TestNumbaAcceleratedMetrics:
-    def test_ncc_single_patterns_2d_float32(self):
-        r = _ncc_single_patterns_2d_float32.py_func(
-            exp=np.linspace(0, 0.5, 100, dtype=np.float32).reshape((10, 10)),
-            sim=np.linspace(0.5, 1, 100, dtype=np.float32).reshape((10, 10)),
-        )
-        assert r == 1
-
     def test_ncc_single_patterns_1d_float32(self):
         exp = np.linspace(0, 0.5, 100, dtype=np.float32)
         sim = np.linspace(0.5, 1, 100, dtype=np.float32)
@@ -58,8 +48,5 @@ class TestNumbaAcceleratedMetrics:
         r2 = _ncc_single_patterns_1d_float32_exp_centered.py_func(
             exp, sim, exp_squared_norm
         )
-        r3 = _ncc_single_patterns_2d_float32(
-            exp.reshape((10, 10)), sim.reshape((10, 10))
-        )
         assert np.isclose(r1, r2)
-        assert np.isclose(r1, r3)
+        assert np.isclose(r1, 0.99999994, atol=1e-8)

@@ -18,6 +18,14 @@ Unreleased
 
 Added
 -----
+- EBSD refinement methods now return the number of function evaluations.
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+- Which points in a crystal map to refine can be controlled by passing a navigation
+  mask. (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+- Which points to consider when merging crystal maps can be controlled by passing
+  navigation masks.  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+- Which patterns to do dictionary indexing of can be controlled by passing a navigation
+  mask. (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - Downsampling of EBSD patterns which maintain the data type by also rescaling to the
   data type range. (`#592 <https://github.com/pyxem/kikuchipy/pull/592>`_)
 - Method to get a PyEBSDIndex ``EBSDIndexer`` instance from an ``EBSDDetector``,
@@ -62,12 +70,14 @@ Added
 - Two datasets ``ni/si_ebsd_master_pattern()`` of Ni and Si master patterns simulated
   with EMsoft are available via the data module for download to the local cache.
   (`#584 <https://github.com/pyxem/kikuchipy/pull/584>`_)
-- Three experimental EBSD datasets are available for download to the local cache via the
+- Six experimental EBSD datasets are available for download to the local cache via the
   data module: (50, 50) patterns of (480, 480) pixels from an Si wafer via
-  ``si_wafer()``, the full Ni dataset of (149, 200) patterns of (60, 60) pixels via
-  ``ni_gain0()`` from which parts are already used in ``nickel_ebsd_small()/large()``
-  and the calibration patterns of the latter dataset, ``ni_gain0_calibration()``.
-  (`#584 <https://github.com/pyxem/kikuchipy/pull/584>`_)
+  ``si_wafer()``, two full Ni datasets of (149, 200) patterns of (60, 60) pixels via
+  ``ni1_gain()`` and ``ni10_gain()`` (parts of the former are used in
+  ``nickel_ebsd_small()/large()``) and the calibration patterns of the two Ni datasets,
+  ``ni1_gain_calibration()`` and ``ni10_gain_calibration()``.
+  (`#584 <https://github.com/pyxem/kikuchipy/pull/584>`_,
+  `#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - When using the following HyperSpy ``Signal2D`` methods via the ``EBSD`` class, the
   class attributes ``xmap``, ``static_background`` and ``detector`` are handled
   correctly, which they were not before: ``inav``, ``isig``, ``crop()``,
@@ -79,6 +89,16 @@ Added
 
 Changed
 -------
+- Dask arrays returned from EBSD refinement methods has the number of function
+  evaluations as the second element after the score.
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+- Stricter phase comparison in EBSD refinement. The phase in the crystal map points to
+  refine must have the same name, space group, point group and structure (atoms and
+  lattice) as the master pattern phase.
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+- Passing two crystal maps with identical phases when merging returns a map with one
+  phase instead of two and does not raise a warning, as before.
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - Exclude documentation and tests from source distribution.
   (`#588 <https://github.com/pyxem/kikuchipy/pull/588>`_)
 - Minimal version of HyperSpy increased to >= 1.7.3.
@@ -121,6 +141,11 @@ Removed
 
 Fixed
 -----
+- Inversion of ``signal_mask`` in the normalized cross-correlation and normalized dot
+  product metrics is now done internally, to be in line with the docstrings (does not
+  affect the use of this parameter and ``metric="ncc"`` or ``metric="ndp"`` in
+  ``EBSD.dictionary_indexing()``).
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - ``EBSDDetector.pc_average`` no longer rounds the PC to three decimals.
   (`#586 <https://github.com/pyxem/kikuchipy/pull/586>`_)
 - Microscope magnification is now read correctly from EDAX h5ebsd files.

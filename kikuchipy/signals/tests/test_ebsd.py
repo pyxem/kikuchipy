@@ -101,15 +101,15 @@ class TestEBSDXmapProperty:
             nav_shape=nav_shape[::-1], step_sizes=step_sizes
         )
 
-        with pytest.raises(ValueError, match="The `xmap` shape"):
+        with pytest.raises(ValueError, match=r"Crystal map shape \(75, 55\) and "):
             s.xmap = xmap_bad
 
         s.axes_manager["x"].scale = 2
-        with pytest.warns(UserWarning, match="The `xmap` step size"):
+        with pytest.warns(UserWarning, match=r"Crystal map step size\(s\) \[1.5, 1.5"):
             s.xmap = xmap_good
 
         s2 = s.inav[:, :-2]
-        with pytest.raises(ValueError, match="The `xmap` shape"):
+        with pytest.raises(ValueError, match=r"Crystal map shape \(55, 75\) and "):
             s2.axes_manager["x"].scale = 1
             s2.axes_manager["x"].name = "x2"
             with pytest.warns(UserWarning, match="The signal navigation axes"):
@@ -1261,116 +1261,6 @@ class TestNormalizeIntensityEBSD:
 
         assert isinstance(lazy_signal, kp.signals.LazyEBSD)
         assert np.allclose(np.mean(lazy_signal.data.compute()), 0, atol=1e-6)
-
-
-class TestDictionaryIndexing:
-    def test_dictionary_indexing_doesnt_change_data(self, dummy_signal):
-        """Scores are all 1 for a dictionary containing all patterns
-        from dummy_signal().
-        """
-        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
-        s_dict.axes_manager[0].name = "x"
-        s_dict.xmap = CrystalMap.empty((9,))
-        dummy_signal2 = dummy_signal.deepcopy()
-        s_dict2 = s_dict.deepcopy()
-        xmap = dummy_signal2.dictionary_indexing(s_dict2, metric="ndp", rechunk=True)
-
-        assert isinstance(xmap, CrystalMap)
-        assert np.allclose(xmap.scores[:, 0], 1)
-
-        # Data is not affected by indexing method
-        assert np.allclose(dummy_signal.data, dummy_signal2.data)
-        assert np.allclose(s_dict.data, s_dict2.data)
-
-    def test_dictionary_indexing_signal_mask(self, dummy_signal):
-        """Passing a signal mask works, using 64-bit floats works,
-        rechunking of experimental patterns works.
-        """
-        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
-        s_dict.axes_manager[0].name = "x"
-        s_dict.xmap = CrystalMap.empty((9,))
-        signal_mask = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]], dtype=bool)
-        xmap = dummy_signal.dictionary_indexing(
-            s_dict,
-            dtype=np.float64,
-            n_per_iteration=2,
-            signal_mask=signal_mask,
-            rechunk=True,
-        )
-        assert np.allclose(xmap.scores[:, 0], 1)
-
-    def test_dictionary_indexing_n_per_iteration_from_lazy(self, dummy_signal):
-        """Getting number of iterations from Dask array chunk works, and
-        NDP rechunking of experimental patterns works.
-        """
-        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
-        s_dict.axes_manager[0].name = "x"
-        s_dict.xmap = CrystalMap.empty((9,))
-        s_dict_lazy = s_dict.as_lazy()
-        s_dict_lazy.xmap = s_dict.xmap
-        signal_mask = np.array([[0, 0, 0], [0, 1, 0], [0, 0, 0]], dtype=bool)
-        xmap = dummy_signal.dictionary_indexing(
-            s_dict_lazy, metric="ndp", signal_mask=signal_mask
-        )
-        assert np.allclose(xmap.scores[:, 0], 1)
-
-        # So that computing parts of the dictionary during indexing is
-        # covered, and NDP rechunking
-        xmap4 = dummy_signal.dictionary_indexing(
-            s_dict_lazy, metric="ndp", n_per_iteration=2, rechunk=True
-        )
-        assert np.allclose(xmap4.scores[:, 0], 1)
-
-    def test_dictionary_indexing_invalid_metric(self, dummy_signal):
-        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
-        s_dict.axes_manager[0].name = "x"
-        s_dict.xmap = CrystalMap.empty((9,))
-        with pytest.raises(ValueError, match="'invalid' must be either of "):
-            _ = dummy_signal.dictionary_indexing(s_dict, metric="invalid")
-
-    def test_dictionary_indexing_invalid_signal_shapes(self, dummy_signal):
-        s_dict_data = dummy_signal.data[:, :, :2, :2].reshape((-1, 2, 2))
-        s_dict = kp.signals.EBSD(s_dict_data)
-        s_dict.axes_manager[0].name = "x"
-        s_dict.xmap = CrystalMap.empty((9,))
-        with pytest.raises(ValueError):
-            _ = dummy_signal.dictionary_indexing(s_dict)
-
-    def test_dictionary_indexing_invalid_dictionary(self, dummy_signal):
-        s_dict = kp.signals.EBSD(dummy_signal.data)
-        s_dict.axes_manager[0].name = "x"
-        s_dict.axes_manager[1].name = "y"
-
-        # Dictionary xmap property is empty
-        with pytest.raises(ValueError, match="Dictionary signal must have a non-empty"):
-            _ = dummy_signal.dictionary_indexing(s_dict)
-
-        # Dictionary not 1 navigation dimension
-        s_dict.xmap = CrystalMap.empty((3, 3))
-        with pytest.raises(ValueError, match="Dictionary signal must have a non-empty"):
-            _ = dummy_signal.dictionary_indexing(s_dict)
-
-    @pytest.mark.parametrize(
-        "nav_slice, nav_shape",
-        [
-            ((0, 0), ()),  # 0D
-            ((0, slice(0, 1)), ()),  # 0D
-            ((0, slice(0, 3)), (3,)),  # 1D
-            ((slice(0, 3), slice(0, 2)), (2, 3)),  # 2D
-        ],
-    )
-    def test_dictionary_indexing_nav_shape(self, dummy_signal, nav_slice, nav_shape):
-        """Dictionary indexing handles experimental datasets of all
-        allowed navigation shapes of 0D, 1D and 2D.
-        """
-        s = dummy_signal.inav[nav_slice]
-        s_dict = kp.signals.EBSD(dummy_signal.data.reshape(-1, 3, 3))
-        s_dict.axes_manager[0].name = "x"
-        dict_size = s_dict.axes_manager.navigation_size
-        s_dict.xmap = CrystalMap.empty((dict_size,))
-        xmap = s.dictionary_indexing(s_dict)
-        assert xmap.shape == nav_shape
-        assert np.allclose(xmap.scores[:, 0], np.ones(int(np.prod(nav_shape))))
 
 
 class TestAverageNeighbourDotProductMap:

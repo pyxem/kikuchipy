@@ -21,6 +21,7 @@ EBSD patterns.
 Most of these tools are private and not meant to be used by users.
 """
 
+from time import time
 from typing import List, Optional, Tuple, Union
 
 import dask.array as da
@@ -41,13 +42,13 @@ def xmap_from_hough_indexing_data(
     scan_unit: str = "px",
 ) -> CrystalMap:
     """Convert Hough indexing result array from :mod:`pyebsdindex` to a
-    crystal map (xmap).
+    :class:`~orix.crystal_map.CrystalMap`.
 
     Parameters
     ----------
     data
-        Array with the following data type field names: "quat", "phase",
-        "fit", "cm", "pq" and "nmatch".
+        Array with the following data type field names: ``"quat"``,
+        ``"phase"``, ``"fit"``, ``"cm"``, ``"pq"`` and ``"nmatch"``.
     phase_list
         List of phases. If ``data_index=-1``, the phase IDs in the list
         must match the phase IDs in ``data[-1]["phase"]``. If
@@ -78,10 +79,7 @@ def xmap_from_hough_indexing_data(
     ):
         raise ValueError("`nav_shape` cannot be a tuple of more than two integers")
 
-    xy, _ = create_coordinate_arrays(navigation_shape, step_sizes)
-    xmap_kwargs = {"x": xy["x"]}
-    if len(navigation_shape) == 2:
-        xmap_kwargs["y"] = xy["y"]
+    coords, _ = create_coordinate_arrays(navigation_shape, step_sizes)
 
     phase_list_id = phase_list.ids
     if data_index != -1 and data_index not in phase_list_id:
@@ -107,7 +105,7 @@ def xmap_from_hough_indexing_data(
             nmatch=data_index["nmatch"],
         ),
         scan_unit=scan_unit,
-        **xmap_kwargs,
+        **coords,
     )
 
     return xmap
@@ -218,15 +216,21 @@ def _hough_indexing(
         :meth:`~pyebsdindex.ebsd_index.EBSDIndexer.index_pats` for
         details.
     """
-    info_message = _get_info_message(patterns.shape[0], chunksize, indexer)
+    n_patterns = patterns.shape[0]
+
+    info_message = _get_info_message(n_patterns, chunksize, indexer)
     print(info_message)
 
     if verbose == 2:
         plt.figure()
 
+    tic = time()
     index_data, band_data, _, _ = indexer.index_pats(
         patsin=patterns, verbose=verbose, chunksize=chunksize
     )
+    toc = time()
+    patterns_per_second = n_patterns / (toc - tic)
+    print(f"  Indexing speed: {patterns_per_second:.5f} patterns/s")
 
     xmap = xmap_from_hough_indexing_data(
         data=index_data,

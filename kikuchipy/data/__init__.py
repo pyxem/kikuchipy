@@ -33,8 +33,10 @@ desired.
 
 __all__ = [
     "ni_ebsd_master_pattern",
-    "ni_gain0",
-    "ni_gain0_calibration",
+    "ni1_gain",
+    "ni10_gain",
+    "ni1_gain_calibration",
+    "ni10_gain_calibration",
     "nickel_ebsd_large",
     "nickel_ebsd_master_pattern_small",
     "nickel_ebsd_small",
@@ -53,8 +55,10 @@ def __dir__():
 def __getattr__(name):
     _import_mapping = {
         "ni_ebsd_master_pattern": "_data",
-        "ni_gain0": "_data",
-        "ni_gain0_calibration": "_data",
+        "ni1_gain": "_data",
+        "ni10_gain": "_data",
+        "ni1_gain_calibration": "_data",
+        "ni10_gain_calibration": "_data",
         "nickel_ebsd_large": "_data",
         "nickel_ebsd_master_pattern_small": "_data",
         "nickel_ebsd_small": "_data",

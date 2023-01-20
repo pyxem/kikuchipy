@@ -33,8 +33,11 @@ _registry_hashes = {
     "ebsd_si_wafer.zip": "md5:444ec4188ba8c8bda5948c2bf4f9a672",
     "si_wafer/Pattern.dat": "md5:58952a93c3ecacff22955f1ad7c61246",
     "scan1_gain0db.zip": "md5:7393a03afe5d52aec56dfc62e5cefdc3",
-    "ni_gain0/Pattern.dat": "md5:79febebf41b0d0a12781501a7564a721",
-    "ni_gain0/Setting.txt": "md5:776b1a2da5c359b0d399b50be5b5144b",
+    "ni1_gain/Pattern.dat": "md5:79febebf41b0d0a12781501a7564a721",
+    "ni1_gain/Setting.txt": "md5:776b1a2da5c359b0d399b50be5b5144b",
+    "scan10_gain24db.zip": "md5:d1d75a8cc182bb0e7e79bdacb8fc3603",
+    "ni10_gain/Pattern.dat": "md5:bd9be321d3a4cd8f3954bb8774fc70ba",
+    "ni10_gain/Setting.txt": "md5:515b3d8e4657dbc0b7566977b4a3eaca",
     "ni_ebsd_master_pattern/ni_mc_mp_20kv.h5": "md5:8b69c071a036ad3488d465093b67fe4d",
     "si_ebsd_master_pattern/si_mc_mp_20kv.h5": "md5:d4962b97bf364c42e3bd5ce1b2711d02",
 }
@@ -50,6 +53,7 @@ _registry_urls = {
     # From Zenodo
     "ebsd_si_wafer.zip": "https://zenodo.org/record/7491388/files/ebsd_si_wafer.zip",
     "scan1_gain0db.zip": "https://zenodo.org/record/7498632/files/scan1_gain0db.zip",
+    "scan10_gain24db.zip": "https://zenodo.org/record/7498632/files/scan10_gain24db.zip",
     "ni_ebsd_master_pattern/ni_mc_mp_20kv.h5": "https://zenodo.org/record/7498645/files/ni_mc_mp_20kv.h5",
     "si_ebsd_master_pattern/si_mc_mp_20kv.h5": "https://zenodo.org/record/7498729/files/si_mc_mp_20kv.h5",
 }
