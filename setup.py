@@ -158,7 +158,7 @@ setup(
         "imageio",
         "matplotlib         >= 3.3",
         "numba              >= 0.52",
-        "numpy              >= 1.19",
+        "numpy              >= 1.20",
         "orix               >= 0.9",
         "pooch              >= 0.13",
         "pyyaml",

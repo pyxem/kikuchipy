@@ -56,7 +56,7 @@ jobs:
           - os: ubuntu-latest
             python-version: 3.7
             OLDEST_SUPPORTED_VERSION: true
-            DEPENDENCIES: dask==2021.8.1 diffsims==0.5.0 hyperspy==1.7.3 matplotlib==3.3 numba==0.52 numpy==1.19 orix==0.9.0 scikit-image==0.16.2
+            DEPENDENCIES: dask==2021.8.1 diffsims==0.5.0 hyperspy==1.7.3 matplotlib==3.3 numba==0.52 numpy==1.20 orix==0.9.0 scikit-image==0.16.2
             LABEL: -oldest
     steps:
       - uses: actions/checkout@v3
