@@ -819,9 +819,9 @@ class EBSDDetector:
         pc = self.pc_flattened
 
         if is_outlier is not None:
-            is_outlier = np.asarray(is_outlier)
-            pc = pc[~is_outlier]
-            pc_indices = pc_indices[:, ~is_outlier]
+            is_inlier = ~np.asarray(is_outlier)
+            pc = pc[is_inlier]
+            pc_indices = pc_indices[is_inlier]
 
         # Calculate mean PC and position
         pc_mean = pc.mean(axis=0)
