@@ -101,7 +101,7 @@ def test_refine_pc(benchmark):
         navigation_mask=nav_mask1,
     )
 
-    scores_ref, detector_ref = benchmark(
+    _, detector_ref, _ = benchmark(
         s.refine_projection_center,
         xmap=xmap,
         detector=detector,
