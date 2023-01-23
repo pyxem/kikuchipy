@@ -18,6 +18,8 @@ Unreleased
 
 Added
 -----
+- Saving and loading of an ``EBSDDetector``.
+  (`#595 <https://github.com/pyxem/kikuchipy/pull/595>`_)
 - EBSD refinement methods now return the number of function evaluations.
   (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
 - Which points in a crystal map to refine can be controlled by passing a navigation
