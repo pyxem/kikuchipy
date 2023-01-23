@@ -2950,9 +2950,16 @@ class EBSD(KikuchipySignal2D):
             signal_mask = ~signal_mask.ravel()
             patterns = patterns[:, signal_mask]
 
-        if (patterns.chunksize == patterns.shape) and rechunk:
+        if patterns.shape[0] == patterns.chunksize[0] and not rechunk:
+            pass
+        else:
             if chunk_kwargs is None:
-                chunk_kwargs = dict(chunk_shape=16, chunk_bytes=None)
+                chunk_kwargs = {}
+            if "chunk_shape" not in chunk_kwargs:
+                chunk_shape = patterns.chunksize[0]
+                if chunk_shape == patterns.shape[0]:
+                    chunk_shape = 64
+                chunk_kwargs["chunk_shape"] = chunk_shape
             chunks = get_chunking(
                 data_shape=patterns.shape,
                 nav_dim=1,
