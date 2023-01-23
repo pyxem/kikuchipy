@@ -1069,3 +1069,60 @@ class TestGetIndexer:
             PhaseList(names=["a", "b"], space_groups=[220, 225])
         )
         assert indexer4.phaselist == ["BCC", "FCC"]
+
+
+class TestSaveLoadDetector:
+    @pytest.mark.parametrize(
+        "nav_shape, shape, convention, sample_tilt, tilt, px_size, binning, azimuthal",
+        [
+            ((3, 4), (10, 20), "bruker", 70, 0, 70, 1, 0),
+            ((1, 5), (5, 5), "tsl", 69.5, 3.14, 57.2, 2, 3.7),
+            ((4, 3), (6, 7), "emsoft", -69.5, -3.14, 57.2, 2, -3.7),
+        ],
+    )
+    def test_save_load_detector(
+        self,
+        tmp_path,
+        nav_shape,
+        shape,
+        convention,
+        sample_tilt,
+        tilt,
+        px_size,
+        binning,
+        azimuthal,
+    ):
+        det0 = kp.detectors.EBSDDetector(
+            shape=shape,
+            pc=(0.4, 0.3, 0.6),
+            sample_tilt=sample_tilt,
+            tilt=tilt,
+            px_size=px_size,
+            binning=binning,
+            azimuthal=azimuthal,
+            convention=convention,
+        )
+        det1 = det0.extrapolate_pc(
+            pc_indices=[0, 0],
+            navigation_shape=nav_shape,
+            step_sizes=(2, 2),
+        )
+        if any(i == 1 for i in nav_shape):
+            det1.pc = det1.pc.reshape(-1, 3)
+        fname = tmp_path / "det_temp.txt"
+        det1.save(fname, convention=convention)
+
+        det2 = kp.detectors.EBSDDetector.load(fname)
+
+        assert det2.shape == det1.shape
+        assert np.allclose(det2.pc, det1.pc, atol=1e-7)
+        assert np.isclose(det2.sample_tilt, det1.sample_tilt)
+        assert np.isclose(det2.tilt, det1.tilt)
+        assert np.isclose(det2.px_size, det1.px_size)
+        assert det2.binning == det1.binning
+        assert np.isclose(det2.azimuthal, det1.azimuthal)
+
+    def test_save_detector_raises(self, tmp_path):
+        det = kp.detectors.EBSDDetector()
+        with pytest.raises(ValueError, match="Projection center convention 'EMsofts' "):
+            det.save(tmp_path / "det_temp.txt", convention="EMsofts")

@@ -17,7 +17,10 @@
 
 from __future__ import annotations
 from copy import deepcopy
+from datetime import datetime
 import logging
+from pathlib import Path
+import re
 from typing import List, Optional, Tuple, Union
 
 from matplotlib.figure import Figure
@@ -33,6 +36,7 @@ import scipy.stats as scs
 from skimage.transform import ProjectiveTransform
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 
+from kikuchipy import __version__
 from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
 
 
@@ -63,35 +67,33 @@ class EBSDDetector:
     ----------
     shape
         Number of detector rows and columns in pixels. Default is
-        ``(1, 1)``.
+        (1, 1).
     px_size
         Size of unbinned detector pixel in um, assuming a square
-        pixel shape. Default is ``1``.
+        pixel shape. Default is 1.
     binning
         Detector binning, i.e. how many pixels are binned into one.
-        Default is ``1``, i.e. no binning.
+        Default is 1, i.e. no binning.
     tilt
-        Detector tilt from horizontal in degrees. Default is ``0``.
+        Detector tilt from horizontal in degrees. Default is 0.
     azimuthal
         Sample tilt about the sample RD (downwards) axis. A positive
         angle means the sample normal moves towards the right
-        looking from the sample to the detector. Default is ``0``.
+        looking from the sample to the detector. Default is 0.
     sample_tilt
-        Sample tilt from horizontal in degrees. Default is ``70``.
+        Sample tilt from horizontal in degrees. Default is 70.
     pc
         X, Y and Z coordinates of the projection/pattern centers
         (PCs), describing the location of the beam on the sample
         measured relative to the detection screen. See *Notes* for
         the definition and conversions between conventions. If
         multiple PCs are passed, they are assumed to be on the form
-        ``[[x0, y0, z0], [x1, y1, z1], ...]``. Default is
-        ``[0.5, 0.5, 0.5]``.
+        [[x0, y0, z0], [x1, y1, z1], ...]. Default is [0.5, 0.5, 0.5].
     convention
         PC convention. If not given, Bruker's convention is assumed.
-        Options are ``"tsl"``/``"edax"``/``"amatek"``,
-        ``"oxford"``/``"aztec"``, ``"bruker"``, ``"emsoft"``,
-        ``"emsoft4"``, and ``"emsoft5"``. ``"emsoft"`` and ``"emsoft5"``
-        is the same convention. See *Notes* for conversions between
+        Options are "tsl"/"edax"/"amatek", "oxford"/"aztec", "bruker",
+        "emsoft", "emsoft4", and "emsoft5". "emsoft" and "emsoft5" is
+        the same convention. See *Notes* for conversions between
         conventions.
 
     Notes
@@ -194,7 +196,9 @@ class EBSDDetector:
         self.azimuthal = azimuthal
         self.sample_tilt = sample_tilt
         self.pc = pc
-        self._set_pc_from_convention(convention)
+        if convention is None:
+            convention = "bruker"
+        self._set_pc_in_bruker_convention(convention)
 
     def __repr__(self) -> str:
         pc_average = tuple(self.pc_average.round(3))
@@ -453,6 +457,72 @@ class EBSDDetector:
         corners[..., 2] = self.x_max**2 + self.y_max**2  # Lo. right
         corners[..., 3] = self.x_min**2 + self.y_min**2  # Lo. left
         return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
+
+    @classmethod
+    def load(cls, fname: Union[Path, str]) -> EBSDDetector:
+        """Return an EBSD detector loaded from a text file saved with
+        :meth:`save`.
+
+        Parameters
+        ----------
+        fname
+            Full path to file.
+
+        Returns
+        -------
+        detector
+            Loaded EBSD detector.
+        """
+        pc = np.loadtxt(fname)
+
+        keys = [
+            "shape",
+            "px_size",
+            "binning",
+            "tilt",
+            "azimuthal",
+            "sample_tilt",
+            "convention",
+            "navigation_shape",
+        ]
+
+        detector_kw = dict(zip(keys, [None] * len(keys)))
+        with open(fname, mode="r") as f:
+            header = []
+            for line in f.readlines():
+                if line[0] == "#":
+                    line = line[2:-1].lstrip(" ")
+                    if len(line) > 0:
+                        header.append(line)
+                        match = re.match(r"^(\w+|\w+\s\w+): (.*)", line)
+                        if match:
+                            groups = match.groups()
+                            if groups[0] in detector_kw and len(groups) > 1:
+                                detector_kw[groups[0]] = groups[1]
+                else:
+                    break
+
+        for k in ["shape", "navigation_shape"]:
+            shape = detector_kw[k]
+            try:
+                detector_kw[k] = tuple(int(i) for i in shape[1:-1].split(","))
+            except ValueError:  # pragma: no cover
+                detector_kw[k] = None
+        for k, dtype in zip(
+            ["px_size", "binning", "tilt", "azimuthal", "sample_tilt"],
+            [float, int, float, float, float],
+        ):
+            value = detector_kw[k].rstrip(" deg")
+            try:
+                detector_kw[k] = dtype(value)
+            except ():  # pragma: no cover
+                detector_kw[k] = None
+
+        nav_shape = detector_kw.pop("navigation_shape")
+        if isinstance(nav_shape, tuple):
+            pc = pc.reshape(nav_shape + (3,))
+
+        return cls(pc=pc, **detector_kw)
 
     def crop(self, extent: Union[Tuple[int, int, int, int], List[int]]) -> EBSDDetector:
         """Return a new detector with its :attr:`shape` cropped and
@@ -750,8 +820,8 @@ class EBSDDetector:
         binning: int = None,
         is_outlier: Optional[Union[tuple, list, np.ndarray]] = None,
     ):
-        r"""Return a new detector with projection centers (PCs)
-        extrapolated from an average PC.
+        r"""Return a new detector with projection centers (PCs) in a 2D
+        map extrapolated from an average PC.
 
         The average PC :math:`\bar{PC}` is calculated from :attr:`pc`,
         possibly excluding some PCs based on the ``is_outlier`` mask.
@@ -1505,14 +1575,71 @@ class EBSDDetector:
         if return_figure:
             return fig
 
+    def save(self, filename: str, convention: str = "Bruker", **kwargs) -> None:
+        """Save detector in a text file with projection centers (PCs) in
+        the given convention.
+
+        Parameters
+        ----------
+        filename
+            Name of text file to write to. See :func:`~numpy.savetxt`
+            for supported file formats.
+        convention
+            PC convention. Default is Bruker's convention. Options are
+            "tsl"/"edax", "oxford", "bruker", "emsoft", "emsoft4", and
+            "emsoft5". "emsoft" and "emsoft5" is the same convention.
+            See *Notes* in :class:`EBSDDetector` for conversions between
+            conventions.
+        **kwargs
+            Keyword arguments passed to :func:`~numpy.savetxt`, e.g.
+            ``fmt="%.4f"`` to reduce the number of PC decimals from the
+            default 7 to 4.
+        """
+        pc = self._get_pc_in_convention(convention)
+        pc = pc.reshape(-1, 3)
+
+        time_now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        kwargs.setdefault(
+            "header",
+            (
+                f"EBSDDetector\n"
+                f"  shape: {self.shape}\n"
+                f"  px_size: {self.px_size}\n"
+                f"  binning: {self.binning}\n"
+                f"  tilt: {self.tilt} deg\n"
+                f"  azimuthal: {self.azimuthal} deg\n"
+                f"  sample_tilt: {self.sample_tilt} deg\n"
+                f"  convention: {convention}\n"
+                f"  navigation_shape: {self.navigation_shape}\n\n"
+                f"kikuchipy version: {__version__}\n"
+                f"Time: {time_now}\n\n"
+                "Column names: PCx, PCy, PCz"
+            ),
+        )
+        kwargs.setdefault("fmt", "%.7f")
+        np.savetxt(fname=filename, X=pc, **kwargs)
+
     # ------------------------ Private methods ----------------------- #
 
-    def _get_pc_from_convention(self, convention: Optional[str] = None) -> np.ndarray:
-        if convention is None or convention.lower() in CONVENTION_ALIAS["bruker"]:
-            return self.pc
+    def _get_pc_in_bruker_convention(self, convention: str = "bruker") -> np.ndarray:
+        """Convert current :attr:`pc` to Bruker's convention from
+        another convention.
 
+        Parameters
+        ----------
+        convention
+            Convention of the current PCs. Default is "bruker".
+
+        Returns
+        -------
+        pc
+            PC array in Bruker's convention.
+        """
         conv = convention.lower()
-        if conv in CONVENTION_ALIAS["tsl"] + CONVENTION_ALIAS["oxford"]:
+        if conv in CONVENTION_ALIAS["bruker"]:
+            return self.pc
+        elif conv in CONVENTION_ALIAS["tsl"] + CONVENTION_ALIAS["oxford"]:
             return self._pc_tsl2bruker()
         elif conv in CONVENTION_ALIAS["emsoft"]:
             try:
@@ -1526,8 +1653,40 @@ class EBSDDetector:
                 f"recognised conventions {CONVENTION_ALIAS_ALL}"
             )
 
-    def _set_pc_from_convention(self, convention: Optional[str] = None):
-        self.pc = self._get_pc_from_convention(convention)
+    def _set_pc_in_bruker_convention(self, convention: str = "bruker"):
+        self.pc = self._get_pc_in_bruker_convention(convention)
+
+    def _get_pc_in_convention(self, convention: str = "bruker") -> np.ndarray:
+        """Convert current :attr:`pc` from Bruker's convention to
+        another convention.
+
+        Parameters
+        ----------
+        convention
+            Convention of the output PCs. Default is "bruker", which
+            means the PCs are returned without conversion.
+
+        Returns
+        -------
+        pc
+            PC array in specified convention.
+        """
+        conv = convention.lower()
+        if conv in CONVENTION_ALIAS["bruker"]:
+            return self.pc
+        elif conv in CONVENTION_ALIAS["tsl"] + CONVENTION_ALIAS["oxford"]:
+            return self._pc_bruker2tsl()
+        elif conv in CONVENTION_ALIAS["emsoft"]:
+            try:
+                version = int(convention[-1])
+            except ValueError:
+                version = 5
+            return self._pc_bruker2emsoft(version)
+        else:
+            raise ValueError(
+                f"Projection center convention '{convention}' not among the "
+                f"recognised conventions {CONVENTION_ALIAS_ALL}"
+            )
 
     def _pc_emsoft2bruker(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc, dtype=float)
