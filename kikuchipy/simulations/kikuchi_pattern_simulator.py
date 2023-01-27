@@ -60,6 +60,7 @@ from typing import Optional, Union
 import dask.array as da
 from dask.diagnostics import ProgressBar
 from diffsims.crystallography import ReciprocalLatticeVector
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 from orix import projections
@@ -421,10 +422,12 @@ class KikuchiPatternSimulator:
         mode: Optional[str] = "lines",
         hemisphere: Optional[str] = "upper",
         scaling: Optional[str] = "linear",
-        figure=None,
+        figure: Union[None, plt.Figure, "pyvista.Plotter"] = None,
         return_figure: bool = False,
         backend: str = "matplotlib",
         show_plotter: bool = True,
+        color: str = "k",
+        **kwargs,
     ) -> Union[plt.Figure, "pyvista.Plotter"]:
         """Plot reflectors as lines or bands in the stereographic or
         spherical projection.
@@ -448,7 +451,7 @@ class KikuchiPatternSimulator:
             either ``"linear"`` (default), :math:`|F|`, ``"square"``,
             :math:`|F|^2`, or ``None``, giving all bands the same
             intensity.
-        figure : matplotlib.figure.Figure or pyvista.Plotter, optional
+        figure
             An existing :class:`~matplotlib.figure.Figure` or
             :class:`~pyvista.Plotter` to add the reflectors to. If not
             given, a new figure is created.
@@ -466,6 +469,9 @@ class KikuchiPatternSimulator:
             Whether to show the :class:`~pyvista.Plotter` when
             ``projection="spherical"`` and ``backend="pyvista"``.
             Default is ``True``.
+        color
+            String signifying a valid Matplotlib color to give
+            intensities if ``scaling=None``.
 
         Returns
         -------
@@ -514,34 +520,45 @@ class KikuchiPatternSimulator:
         if scaling in ["linear", "square"]:
             intensity /= np.max(intensity)
             intensity = abs(intensity - intensity.min() - intensity.max())
-        color = np.full((ref.size, 3), intensity[:, np.newaxis])  # RGB
+        #        color = np.full((ref.size, 3), intensity[:, np.newaxis])
+        #        else:
+        #            color = np.full((ref.size, 3), mcolors.to_rgb(color))
+        #        color = np.full((ref.size, 3), intensity[:, np.newaxis]) * mcolors.to_rgb(color)
+        color = np.full((ref.size, 3), mcolors.to_rgb(color))
+        if scaling in ["linear", "square"]:
+            color = np.column_stack((color, intensity))
 
         # Sort reflectors so that weakest are plotted first
         ref = ref[order].deepcopy()
         color = color[order]
 
+        if kwargs is None:
+            kwargs = {}
+
         if projection == "stereographic":
-            kwargs = dict(color=color, linewidth=0.5)
+            kwargs.setdefault("color", color)
+            if all(i not in kwargs for i in ["linewidth", "lw"]):
+                kwargs.setdefault("linewidth", 0.5)
             if mode == "lines":
-                if figure is not None:
-                    ref.draw_circle(figure=figure, **kwargs)
-                else:
+                if figure is None:
                     figure = ref.draw_circle(
                         hemisphere=hemisphere, return_figure=True, **kwargs
                     )
+                else:
+                    ref.draw_circle(figure=figure, **kwargs)
             else:  # bands
                 v = Vector3d(ref)
                 theta = ref.theta
-                if figure is not None:
-                    v.draw_circle(
-                        opening_angle=np.pi / 2 - theta, figure=figure, **kwargs
-                    )
-                else:
+                if figure is None:
                     figure = v.draw_circle(
                         opening_angle=np.pi / 2 - theta,
                         hemisphere=hemisphere,
                         return_figure=True,
                         **kwargs,
+                    )
+                else:
+                    v.draw_circle(
+                        opening_angle=np.pi / 2 - theta, figure=figure, **kwargs
                     )
                 v.draw_circle(opening_angle=np.pi / 2 + theta, figure=figure, **kwargs)
         elif projection == "spherical":
@@ -555,6 +572,8 @@ class KikuchiPatternSimulator:
 
         if return_figure:
             return figure
+
+        return color
 
     def _raise_if_no_theta(self):
         if np.isnan(self.reflectors.theta[0]):
