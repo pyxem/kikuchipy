@@ -36,6 +36,7 @@ from hyperspy.roi import BaseInteractiveROI
 from h5py import File
 import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList
+from orix.quaternion import Rotation
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
@@ -1969,6 +1970,7 @@ class EBSD(KikuchipySignal2D):
         energy: Union[int, float],
         navigation_mask: Optional[np.ndarray] = None,
         signal_mask: Optional[np.ndarray] = None,
+        rotations_ps: Optional[Rotation] = None,
         method: Optional[str] = "minimize",
         method_kwargs: Optional[dict] = None,
         trust_region: Union[tuple, list, np.ndarray, None] = None,
@@ -2036,6 +2038,15 @@ class EBSD(KikuchipySignal2D):
             (equal to ``False``, i.e. pixels to *mask out* are
             ``True``). The mask must be of equal shape to the signal's
             signal shape. If not given, all pixels are used.
+        rotations_ps
+            Pseudo-symmetry operators as rotations. If given, each
+            map point will be refined using the map orientation and the
+            orientation after applying each operator. The chosen
+            solution is the one with the highest score. If two operators
+            are given, each map point is refined three times. If given,
+            the returned crystal map will have a property array with the
+            operator index giving the best score, with 0 meaning the
+            original map point gave the best score.
         method
             Name of the :mod:`scipy.optimize` or *NLopt* optimization
             method, among ``"minimize"``, ``"differential_evolution"``,
@@ -2093,16 +2104,19 @@ class EBSD(KikuchipySignal2D):
         Returns
         -------
         out
-            Crystal map with refined orientations, NCC scores in a
-            ``"scores"`` property and the number of function
-            evaluations in a ``"num_evals"`` property if
-            ``compute=True``. If ``compute=False``, a dask array of
-            navigation size + (5,) is returned, to be computed later.
-            See
+            If ``compute=True``, a crystal map with refined
+            orientations, NCC scores in a ``"scores"`` property, the
+            number of function evaluations in a ``"num_evals"``
+            property and which pseudo-symmetry operator gave the best
+            score if ``rotations_ps`` is given is returned.. If
+            ``compute=False``, a dask array of navigation size + (5,)
+            (or (6,) if ``rotations_ps`` is passed) is returned, to be
+            computed later. See
             :func:`~kikuchipy.indexing.compute_refine_orientation_results`.
             Each navigation point in the data has the optimized score,
-            the number of function evaluations and the three Euler
-            angles in radians in element 0, 1, 2, 3 and 4, respectively.
+            the number of function evaluations, the three Euler angles
+            in radians and potentially the pseudo-symmetry operator
+            index in element 0, 1, 2, 3, 4 and 5, respectively.
 
         See Also
         --------
@@ -2138,11 +2152,12 @@ class EBSD(KikuchipySignal2D):
             patterns=patterns,
             points_to_refine=points_to_refine,
             signal_mask=signal_mask,
+            trust_region=trust_region,
+            rtol=rtol,
+            rotations_ps=rotations_ps,
             method=method,
             method_kwargs=method_kwargs,
-            trust_region=trust_region,
             initial_step=initial_step,
-            rtol=rtol,
             maxeval=maxeval,
             compute=compute,
             navigation_mask=navigation_mask,

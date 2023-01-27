@@ -52,6 +52,7 @@ def compute_refine_orientation_results(
     xmap: CrystalMap,
     master_pattern: "EBSDMasterPattern",
     navigation_mask: Optional[np.ndarray] = None,
+    pseudo_symmetry_checked: bool = False,
 ) -> CrystalMap:
     """Compute the results from
     :meth:`~kikuchipy.signals.EBSD.refine_orientation` and return the
@@ -71,6 +72,7 @@ def compute_refine_orientation_results(
         Navigation mask passed to ``refine_orientation()`` to obtain
         ``results``. If not given, it is assumed that it was not given
         to ``refine_orientation()`` either.
+    pseudo_symmetry_checked
 
     Returns
     -------
@@ -84,7 +86,7 @@ def compute_refine_orientation_results(
     nav_size_in_data = points_to_refine.sum()
 
     phase_list = PhaseList(phases=master_pattern.phase, ids=phase_id)
-    xmap_kw = _get_crystal_map_parameters(xmap, nav_size)
+    xmap_kw = _get_crystal_map_parameters(xmap, nav_size, pseudo_symmetry_checked)
     xmap_kw["phase_id"][points_to_refine] = phase_id
 
     print(f"Refining {nav_size_in_data} orientation(s):", file=sys.stdout)
@@ -95,13 +97,17 @@ def compute_refine_orientation_results(
     patterns_per_second = nav_size_in_data / total_time
     print(f"Refinement speed: {patterns_per_second:.5f} patterns/s", file=sys.stdout)
 
-    # n x (score, number of evaluations, phi1, Phi, phi2)
+    # n x (score, number of evaluations, phi1, Phi, phi2, [pseudo-symmetry index])
     computed_results = np.array(computed_results)
     xmap_kw["prop"]["scores"][points_to_refine] = computed_results[:, 0]
     xmap_kw["prop"]["num_evals"][points_to_refine] = computed_results[:, 1]
     xmap_kw["rotations"][points_to_refine] = Rotation.from_euler(
-        computed_results[:, 2:]
+        computed_results[:, 2:5]
     ).data
+    if pseudo_symmetry_checked:
+        xmap_kw["prop"]["pseudo_symmetry_index"][points_to_refine] = computed_results[
+            :, 5
+        ]
     xmap_refined = CrystalMap(
         phase_list=phase_list, is_in_data=points_to_refine, **xmap_kw
     )
@@ -268,7 +274,11 @@ def compute_refine_orientation_projection_center_results(
     return xmap_refined, new_detector
 
 
-def _get_crystal_map_parameters(xmap: CrystalMap, nav_size: int) -> dict:
+def _get_crystal_map_parameters(
+    xmap: CrystalMap,
+    nav_size: int,
+    pseudo_symmetry_checked: bool = False,
+) -> dict:
     step_sizes = ()
     for step_size in [xmap.dy, xmap.dx]:
         if step_size != 0:
@@ -278,14 +288,17 @@ def _get_crystal_map_parameters(xmap: CrystalMap, nav_size: int) -> dict:
     xmap_dict.update(
         {
             "rotations": Rotation.identity((nav_size,)),
-            "phase_id": np.zeros(nav_size, dtype="int32"),
+            "phase_id": np.zeros(nav_size, dtype=np.int32),
             "scan_unit": xmap.scan_unit,
             "prop": {
-                "scores": np.zeros(nav_size, dtype="float64"),
-                "num_evals": np.zeros(nav_size, dtype="int32"),
+                "scores": np.zeros(nav_size, dtype=np.float64),
+                "num_evals": np.zeros(nav_size, dtype=np.int32),
             },
         }
     )
+
+    if pseudo_symmetry_checked:
+        xmap_dict["prop"]["pseudo_symmetry_index"] = np.zeros(nav_size, dtype=np.int32)
 
     return xmap_dict
 
@@ -303,6 +316,7 @@ def _refine_orientation(
     signal_mask: np.ndarray,
     trust_region: Union[tuple, list, np.ndarray, None],
     rtol: float,
+    rotations_ps: Optional[Rotation] = None,
     method: Optional[str] = None,
     method_kwargs: Optional[dict] = None,
     initial_step: Optional[float] = None,
@@ -324,12 +338,15 @@ def _refine_orientation(
         maxeval=maxeval,
         points_to_refine=points_to_refine,
         signal_mask=signal_mask,
+        rotations_ps=rotations_ps,
     )
 
     # Get bounds on control variables. If a trust region is not passed,
     # these arrays are all 0, and not used in the objective functions.
     lower_bounds, upper_bounds = ref.get_bound_constraints(trust_region)
     ref.solver_kwargs["trust_region_passed"] = trust_region is not None
+
+    patterns = patterns[:, :, np.newaxis]
 
     if ref.unique_pc:
         # Patterns have been indexed with varying PCs, so we re-compute
@@ -357,6 +374,7 @@ def _refine_orientation(
             azimuthal=detector.azimuthal,
             sample_tilt=detector.sample_tilt,
             signal_mask=signal_mask,
+            n_ps_operators=ref.n_ps_operators,
             solver_kwargs=ref.solver_kwargs,
             **ref.map_blocks_kwargs,
         )
@@ -373,6 +391,7 @@ def _refine_orientation(
             upper_bounds,
             direction_cosines=dc,
             signal_mask=signal_mask,
+            n_ps_operators=ref.n_ps_operators,
             solver_kwargs=ref.solver_kwargs,
             **ref.map_blocks_kwargs,
         )
@@ -386,6 +405,7 @@ def _refine_orientation(
             xmap=xmap,
             master_pattern=master_pattern,
             navigation_mask=navigation_mask,
+            pseudo_symmetry_checked=rotations_ps is not None,
         )
 
     return res
@@ -469,6 +489,7 @@ def _refine_orientation_chunk_nlopt(
     tilt: Optional[float] = None,
     azimuthal: Optional[float] = None,
     sample_tilt: Optional[float] = None,
+    n_ps_operators: int = 0,
 ):
     """Refine orientations from patterns in one dask array chunk using
     *NLopt*.
@@ -483,7 +504,15 @@ def _refine_orientation_chunk_nlopt(
     opt = nlopt.opt(opt)
 
     nav_size = patterns.shape[0]
-    results = np.empty((nav_size, 5), dtype=np.float64)
+    value_size = 5
+    if n_ps_operators > 0:
+        value_size += 1
+    results = np.empty((nav_size, value_size), dtype=np.float64)
+
+    patterns = patterns[..., 0]
+    pcx = pcx[..., 0]
+    pcy = pcy[..., 0]
+    pcz = pcz[..., 0]
 
     if direction_cosines is None:
         for i in range(nav_size):
@@ -502,6 +531,7 @@ def _refine_orientation_chunk_nlopt(
                 tilt=tilt,
                 azimuthal=azimuthal,
                 sample_tilt=sample_tilt,
+                n_ps_operators=n_ps_operators,
                 **solver_kwargs,
             )
     else:
@@ -514,6 +544,7 @@ def _refine_orientation_chunk_nlopt(
                 upper_bounds=upper_bounds[i],
                 signal_mask=signal_mask,
                 direction_cosines=direction_cosines,
+                n_ps_operators=n_ps_operators,
                 **solver_kwargs,
             )
 
@@ -822,12 +853,16 @@ class _RefinementSetup:
     signal_mask
         A 1D boolean array of equal size as the pattern signal
         dimension, with values equal to ``True`` to use in refinement.
+    rotations_ps
+        See docstring of e.g.
+        :meth:`~kikuchipy.signals.EBSD.refine_orientation`.
     """
 
     mode: str
     # Data parameters
     data_shape: tuple
     nav_size: int
+    n_ps_operators: int = 0
     rotations_array: da.Array
     rotations_pc_array: Optional[da.Array] = None
     # Optimization parameters
@@ -859,6 +894,7 @@ class _RefinementSetup:
         initial_step: Optional[float] = None,
         maxeval: Optional[int] = None,
         signal_mask: Optional[np.ndarray] = None,
+        rotations_ps: Optional[Rotation] = None,
     ):
         """Set up EBSD refinement."""
         self.mode = mode
@@ -881,7 +917,7 @@ class _RefinementSetup:
 
         # Relevant information from pattern array
         self.solver_kwargs["rescale"] = patterns.dtype == np.float32
-        self.chunks = (patterns.chunksize[0], -1)
+        self.chunks = (patterns.chunksize[0], -1, -1)
 
         # Relevant data from the crystal map
         self.nav_size = points_to_refine.sum()
@@ -890,11 +926,17 @@ class _RefinementSetup:
             rot = xmap.rotations[points_to_refine_in_data, 0]
         else:
             rot = xmap.rotations[points_to_refine_in_data]
+        if rotations_ps is not None:
+            rot_ps = rotations_ps.flatten().outer(rot).transpose()
+            self.n_ps_operators = rotations_ps.size
+            rot = Rotation(np.column_stack((rot.data[:, np.newaxis], rot_ps.data)))
         if self.mode == "pc":
-            rot = rot.data
+            rot_data = rot.data
         else:
-            rot = rot.to_euler()
-        self.rotations_array = da.from_array(rot, chunks=self.chunks)
+            rot_data = rot.to_euler()
+        self.rotations_array = da.from_array(
+            np.atleast_3d(rot_data), chunks=self.chunks
+        )
 
         # Relevant data from the detector
         self.unique_pc = detector.navigation_size != 1 and self.nav_size > 1
@@ -907,7 +949,7 @@ class _RefinementSetup:
             # Patterns have been initially indexed with the same PC, so
             # we use this as the starting point for every pattern
             pc = np.full((int(points_to_refine.sum()), 3), detector.pc[0], dtype=dtype)
-        self.pc_array = da.from_array(pc, chunks=self.chunks)
+        self.pc_array = da.from_array(np.atleast_3d(pc), chunks=self.chunks)
 
         if mode == "ori_pc":
             self.rotations_pc_array = da.concatenate(
@@ -916,7 +958,7 @@ class _RefinementSetup:
 
         # Keyword arguments passed to Dask when iterating over chunks
         self.map_blocks_kwargs.update(
-            {"drop_axis": (1,), "new_axis": (1,), "dtype": np.float64}
+            {"drop_axis": (1, 2), "new_axis": (1,), "dtype": np.float64}
         )
 
         # Have no idea how this can happen, but it does in tests...
@@ -1107,7 +1149,7 @@ class _RefinementSetup:
                 chunks = self.pc_array.chunks
             else:
                 chunks = self.rotations_pc_array.chunks
-            shape = (self.nav_size, self.n_control_variables)
+            shape = (self.nav_size, self.n_control_variables, self.n_ps_operators)
             lower_bounds = da.zeros(shape, dtype="uint8", chunks=chunks)
             upper_bounds = lower_bounds.copy()
             return lower_bounds, upper_bounds
@@ -1185,6 +1227,8 @@ class _RefinementSetup:
                 info += f"\n  Initial step(s): {self.initial_step}"
             if self.maxeval:
                 info += f"\n  Max. function evaulations: {self.maxeval}"
+
+        info += f"\n  No. pseudo-symmetry operators: {self.n_ps_operators}"
 
         return info
 
