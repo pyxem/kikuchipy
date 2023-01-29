@@ -162,7 +162,7 @@ def _rotate_vector(rotation: np.ndarray, vector: np.ndarray) -> np.ndarray:
     bd = b * d
     cd = c * d
 
-    rotated_vector = np.zeros(vector.shape)
+    rotated_vector = np.zeros(vector.shape, dtype=np.float64)
     rotated_vector[:, 0] = (aa + bb - cc - dd) * x + 2 * ((ac + bd) * z + (bc - ad) * y)
     rotated_vector[:, 1] = (aa - bb + cc - dd) * y + 2 * ((ad + bc) * x + (cd - ab) * z)
     rotated_vector[:, 2] = (aa - bb - cc + dd) * z + 2 * ((ab + cd) * y + (bd - ac) * x)
