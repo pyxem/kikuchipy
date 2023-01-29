@@ -20,9 +20,6 @@ projection centers by optimizing the similarity between experimental
 and simulated patterns.
 """
 
-from typing import Tuple
-
-from numba import njit
 import numpy as np
 
 from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
