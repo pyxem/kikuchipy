@@ -20,7 +20,7 @@ centers by optimizing the similarity between experimental and simulated
 patterns.
 """
 
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Tuple, Union
 
 from numba import njit
 import numpy as np
@@ -85,7 +85,11 @@ def _refine_orientation_solver_scipy(
     tilt: Optional[float] = None,
     azimuthal: Optional[float] = None,
     sample_tilt: Optional[float] = None,
-) -> Tuple[float, int, float, float, float]:
+    n_pseudo_symmetry_ops: int = 0,
+) -> Union[
+    Tuple[float, int, float, float, float],
+    Tuple[float, int, int, float, float, float],
+]:
     """Maximize the similarity between an experimental pattern and a
     projected simulated pattern by optimizing the orientation
     (Rodrigues-Frank vector) used in the projection.
@@ -139,6 +143,8 @@ def _refine_orientation_solver_scipy(
     sample_tilt
         Sample tilt from horizontal in degrees. Must be passed if
         ``direction_cosines`` is not given.
+    n_pseudo_symmetry_ops
+        Number of pseudo-symmetry operators. Default is 0.
 
     Returns
     -------
@@ -167,35 +173,74 @@ def _refine_orientation_solver_scipy(
     params = (pattern,) + (direction_cosines,) + fixed_parameters + (squared_norm,)
     method_name = method.__name__
 
-    if method_name == "minimize":
-        if trust_region_passed:
-            method_kwargs["bounds"] = bounds
-        res = method(
-            fun=_refine_orientation_objective_function,
-            x0=rotation,
-            args=params,
-            **method_kwargs,
-        )
-    elif SUPPORTED_OPTIMIZATION_METHODS[method_name]["supports_bounds"]:
-        res = method(
-            func=_refine_orientation_objective_function,
-            args=params,
-            bounds=bounds,
-            **method_kwargs,
-        )
-    else:  # Is always "basinhopping", due to prior check of method name
-        method_kwargs["minimizer_kwargs"].update(args=params)
-        res = method(
-            func=_refine_orientation_objective_function,
-            x0=rotation,
-            **method_kwargs,
-        )
+    if n_pseudo_symmetry_ops == 0:
+        if method_name == "minimize":
+            if trust_region_passed:
+                method_kwargs["bounds"] = bounds[0]
+            res = method(
+                fun=_refine_orientation_objective_function,
+                x0=rotation[0],
+                args=params,
+                **method_kwargs,
+            )
+        elif SUPPORTED_OPTIMIZATION_METHODS[method_name]["supports_bounds"]:
+            res = method(
+                func=_refine_orientation_objective_function,
+                args=params,
+                bounds=bounds[0],
+                **method_kwargs,
+            )
+        else:  # Is always "basinhopping", due to prior check of method name
+            method_kwargs["minimizer_kwargs"].update(args=params)
+            res = method(
+                func=_refine_orientation_objective_function,
+                x0=rotation[0],
+                **method_kwargs,
+            )
 
-    ncc = 1 - res.fun
-    num_evals = res.nfev
-    phi1, Phi, phi2 = res.x
+        ncc = 1 - res.fun
+        num_evals = res.nfev
+        phi1, Phi, phi2 = res.x
 
-    return ncc, num_evals, phi1, Phi, phi2
+        return ncc, num_evals, phi1, Phi, phi2
+    else:
+        res_list = []
+        for i in range(n_pseudo_symmetry_ops + 1):
+            if method_name == "minimize":
+                if trust_region_passed:
+                    method_kwargs["bounds"] = bounds[i]
+                res = method(
+                    fun=_refine_orientation_objective_function,
+                    x0=rotation[i],
+                    args=params,
+                    **method_kwargs,
+                )
+            elif SUPPORTED_OPTIMIZATION_METHODS[method_name]["supports_bounds"]:
+                res = method(
+                    func=_refine_orientation_objective_function,
+                    args=params,
+                    bounds=bounds[i],
+                    **method_kwargs,
+                )
+            else:  # Is always "basinhopping", due to prior check of method name
+                method_kwargs["minimizer_kwargs"].update(args=params)
+                res = method(
+                    func=_refine_orientation_objective_function,
+                    x0=rotation[i],
+                    **method_kwargs,
+                )
+
+            res_list.append(res)
+
+        ncc_all = [1 - res.fun for res in res_list]
+        best_idx = int(np.argmax(ncc_all))
+
+        best_res = res_list[best_idx]
+        ncc = ncc_all[best_idx]
+        num_evals = best_res.nfev
+        phi1, Phi, phi2 = best_res.x
+
+        return ncc, num_evals, phi1, Phi, phi2, best_idx
 
 
 def _refine_pc_solver_scipy(
@@ -290,7 +335,11 @@ def _refine_orientation_pc_solver_scipy(
     method_kwargs: dict,
     fixed_parameters: tuple,
     trust_region_passed: bool,
-) -> Tuple[float, int, float, float, float, float, float, float]:
+    n_pseudo_symmetry_ops: int = 0,
+) -> Union[
+    Tuple[float, int, float, float, float, float, float, float],
+    Tuple[float, int, int, float, float, float, float, float, float],
+]:
     """Maximize the similarity between an experimental pattern and a
     projected simulated pattern by optimizing the orientation and
     projection center (PC) parameters used in the projection.
@@ -328,41 +377,81 @@ def _refine_orientation_pc_solver_scipy(
         Optimized orientation (Euler angles) in radians.
     pcx_refined, pcy_refined, pcz_refined
         Optimized PC parameters in the Bruker convention.
+    best_idx
     """
     pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
     params = (pattern,) + fixed_parameters + (squared_norm,)
     method_name = method.__name__
 
-    if method_name == "minimize":
-        if trust_region_passed:
-            method_kwargs["bounds"] = bounds
-        res = method(
-            fun=_refine_orientation_pc_objective_function,
-            x0=rot_pc,
-            args=params,
-            **method_kwargs,
-        )
-    elif SUPPORTED_OPTIMIZATION_METHODS[method_name]["supports_bounds"]:
-        res = method(
-            func=_refine_orientation_pc_objective_function,
-            args=params,
-            bounds=bounds,
-            **method_kwargs,
-        )
-    else:  # Is always "basinhopping", due to prior check of method name
-        method_kwargs["minimizer_kwargs"].update(args=params)
-        res = method(
-            func=_refine_orientation_pc_objective_function,
-            x0=rot_pc,
-            **method_kwargs,
-        )
+    if n_pseudo_symmetry_ops == 0:
+        if method_name == "minimize":
+            if trust_region_passed:
+                method_kwargs["bounds"] = bounds[0]
+            res = method(
+                fun=_refine_orientation_pc_objective_function,
+                x0=rot_pc[0],
+                args=params,
+                **method_kwargs,
+            )
+        elif SUPPORTED_OPTIMIZATION_METHODS[method_name]["supports_bounds"]:
+            res = method(
+                func=_refine_orientation_pc_objective_function,
+                args=params,
+                bounds=bounds[0],
+                **method_kwargs,
+            )
+        else:  # Is always "basinhopping", due to prior check of method name
+            method_kwargs["minimizer_kwargs"].update(args=params)
+            res = method(
+                func=_refine_orientation_pc_objective_function,
+                x0=rot_pc[0],
+                **method_kwargs,
+            )
 
-    ncc = 1 - res.fun
-    phi1, Phi, phi2, pcx, pcy, pcz = res.x
-    num_evals = res.nfev
+        ncc = 1 - res.fun
+        phi1, Phi, phi2, pcx, pcy, pcz = res.x
+        num_evals = res.nfev
 
-    return ncc, num_evals, phi1, Phi, phi2, pcx, pcy, pcz
+        return ncc, num_evals, phi1, Phi, phi2, pcx, pcy, pcz
+    else:
+        res_list = []
+        for i in range(n_pseudo_symmetry_ops + 1):
+            if method_name == "minimize":
+                if trust_region_passed:
+                    method_kwargs["bounds"] = bounds[i]
+                res = method(
+                    fun=_refine_orientation_pc_objective_function,
+                    x0=rot_pc[i],
+                    args=params,
+                    **method_kwargs,
+                )
+            elif SUPPORTED_OPTIMIZATION_METHODS[method_name]["supports_bounds"]:
+                res = method(
+                    func=_refine_orientation_pc_objective_function,
+                    args=params,
+                    bounds=bounds[i],
+                    **method_kwargs,
+                )
+            else:  # Is always "basinhopping", due to prior check of method name
+                method_kwargs["minimizer_kwargs"].update(args=params)
+                res = method(
+                    func=_refine_orientation_pc_objective_function,
+                    x0=rot_pc[i],
+                    **method_kwargs,
+                )
+
+            res_list.append(res)
+
+        ncc_all = [1 - res.fun for res in res_list]
+        best_idx = int(np.argmax(ncc_all))
+
+        best_res = res_list[best_idx]
+        ncc = ncc_all[best_idx]
+        num_evals = best_res.nfev
+        phi1, Phi, phi2, pcx, pcy, pcz = best_res.x
+
+        return ncc, num_evals, phi1, Phi, phi2, pcx, pcy, pcz, best_idx
 
 
 # --------------------------- NLopt solvers -------------------------- #
@@ -387,7 +476,11 @@ def _refine_orientation_solver_nlopt(
     tilt: Optional[float] = None,
     azimuthal: Optional[float] = None,
     sample_tilt: Optional[float] = None,
-) -> Tuple[float, int, float, float, float]:
+    n_pseudo_symmetry_ops: int = 0,
+) -> Union[
+    Tuple[float, int, float, float, float],
+    Tuple[float, int, int, float, float, float],
+]:
     pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
     # Get direction cosines if a unique PC per pattern is used
@@ -407,21 +500,40 @@ def _refine_orientation_solver_nlopt(
     # Combine tuple of fixed parameters passed to the objective function
     params = (pattern,) + (direction_cosines,) + fixed_parameters + (squared_norm,)
 
-    # Prepare NLopt optimizer
-    if trust_region_passed:
-        opt.set_lower_bounds(lower_bounds)
-        opt.set_upper_bounds(upper_bounds)
     opt.set_min_objective(
         lambda x, grad: _refine_orientation_objective_function(x, *params)
     )
 
-    # Run optimization and extract optimized Euler angles and the
-    # optimized normalized cross-correlation (NCC) score
-    phi1, Phi, phi2 = opt.optimize(rotation)
-    ncc = 1 - opt.last_optimum_value()
-    num_evals = opt.get_numevals()
+    if n_pseudo_symmetry_ops == 0:
+        if trust_region_passed:
+            opt.set_lower_bounds(lower_bounds[0])
+            opt.set_upper_bounds(upper_bounds[0])
 
-    return ncc, num_evals, phi1, Phi, phi2
+        phi1, Phi, phi2 = opt.optimize(rotation[0])
+        ncc = 1 - opt.last_optimum_value()
+        num_evals = opt.get_numevals()
+
+        return ncc, num_evals, phi1, Phi, phi2
+    else:
+        n_rot = n_pseudo_symmetry_ops + 1
+        eu_all = np.zeros((n_rot, 3), dtype=np.float64)
+        ncc_inv_all = np.zeros(n_rot, dtype=np.float64)
+        num_evals_all = np.zeros(n_rot, dtype=np.int32)
+        for i in range(n_rot):
+            if trust_region_passed:
+                opt.set_lower_bounds(lower_bounds[i])
+                opt.set_upper_bounds(upper_bounds[i])
+
+            eu_all[i] = opt.optimize(rotation[i])
+            ncc_inv_all[i] = opt.last_optimum_value()
+            num_evals_all[i] = opt.get_numevals()
+
+        best_idx = int(np.argmin(ncc_inv_all))
+        ncc = 1 - ncc_inv_all[best_idx]
+        num_evals = num_evals_all[best_idx]
+        phi1, Phi, phi2 = eu_all[best_idx]
+
+        return ncc, num_evals, phi1, Phi, phi2, best_idx
 
 
 def _refine_pc_solver_nlopt(
@@ -464,24 +576,47 @@ def _refine_orientation_pc_solver_nlopt(
     rescale: bool,
     fixed_parameters: tuple,
     trust_region_passed: bool,
-) -> Tuple[float, int, float, float, float, float, float, float]:
+    n_pseudo_symmetry_ops: int = 0,
+) -> Union[
+    Tuple[float, int, float, float, float, float, float, float],
+    Tuple[float, int, int, float, float, float, float, float, float],
+]:
     pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
     # Combine tuple of fixed parameters passed to the objective function
     params = (pattern,) + fixed_parameters + (squared_norm,)
 
-    # Prepare NLopt optimizer
-    if trust_region_passed:
-        opt.set_lower_bounds(lower_bounds)
-        opt.set_upper_bounds(upper_bounds)
     opt.set_min_objective(
         lambda x, grad: _refine_orientation_pc_objective_function(x, *params)
     )
 
-    # Run optimization and extract optimized Euler angles and PC values
-    # and the optimized normalized cross-correlation (NCC) score
-    phi1, Phi, phi2, pcx, pcy, pcz = opt.optimize(rot_pc)
-    ncc = 1 - opt.last_optimum_value()
-    num_evals = opt.get_numevals()
+    if n_pseudo_symmetry_ops == 0:
+        if trust_region_passed:
+            opt.set_lower_bounds(lower_bounds[0])
+            opt.set_upper_bounds(upper_bounds[0])
 
-    return ncc, num_evals, phi1, Phi, phi2, pcx, pcy, pcz
+        phi1, Phi, phi2, pcx, pcy, pcz = opt.optimize(rot_pc[0])
+        ncc = 1 - opt.last_optimum_value()
+        num_evals = opt.get_numevals()
+
+        return ncc, num_evals, phi1, Phi, phi2, pcx, pcy, pcz
+    else:
+        n_rot = n_pseudo_symmetry_ops + 1
+        eu_pc_all = np.zeros((n_rot, 6), dtype=np.float64)
+        ncc_inv_all = np.zeros(n_rot, dtype=np.float64)
+        num_evals_all = np.zeros(n_rot, dtype=np.int32)
+        for i in range(n_rot):
+            if trust_region_passed:
+                opt.set_lower_bounds(lower_bounds[i])
+                opt.set_upper_bounds(upper_bounds[i])
+
+            eu_pc_all[i] = opt.optimize(rot_pc[i])
+            ncc_inv_all[i] = opt.last_optimum_value()
+            num_evals_all[i] = opt.get_numevals()
+
+        best_idx = int(np.argmin(ncc_inv_all))
+        ncc = 1 - ncc_inv_all[best_idx]
+        num_evals = num_evals_all[best_idx]
+        phi1, Phi, phi2, pcx, pcy, pcz = eu_pc_all[best_idx]
+
+        return ncc, num_evals, phi1, Phi, phi2, pcx, pcy, pcz, best_idx

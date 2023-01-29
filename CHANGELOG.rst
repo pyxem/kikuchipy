@@ -18,6 +18,9 @@ Unreleased
 
 Added
 -----
+- Passing pseudo-symmetry operators to orientation and orientation/PC EBSD refinement
+  methods in order to find the best match among pseudo-symmetric variants.
+  (`#598 <https://github.com/pyxem/kikuchipy/pull/598>`_)
 - Saving and loading of an ``EBSDDetector``.
   (`#595 <https://github.com/pyxem/kikuchipy/pull/595>`_)
 - EBSD refinement methods now return the number of function evaluations.

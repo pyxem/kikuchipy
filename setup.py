@@ -44,39 +44,39 @@ with open("kikuchipy/release.py") as fid:
 extra_feature_requirements = {
     "doc": [
         # TODO: Remove once https://github.com/pyxem/kikuchipy/issues/566 is resolved
-        "ipywidgets                 <= 7.7.1",
+        "ipywidgets                     <= 7.7.1",
         "memory_profiler",
-        "nbsphinx                   >= 0.7",
+        "nbsphinx                       >= 0.7",
         "numpydoc",
         "nlopt",
         "panel",  # Used in the docs by PyVista
         "pydata-sphinx-theme",
-        "pyebsdindex                >= 0.1.1",
+        "pyebsdindex                    >= 0.1.1",
         "pyvista",
-        "sphinx                     >= 3.0.2",
-        "sphinx-codeautolink[ipython]",
-        "sphinx-copybutton          >= 0.2.5",
+        "sphinx                         >= 3.0.2",
+        "sphinx-codeautolink[ipython]   < 0.14",
+        "sphinx-copybutton              >= 0.2.5",
         "sphinx-design",
-        "sphinx-gallery             < 0.11",
-        "sphinxcontrib-bibtex       >= 1.0",
+        "sphinx-gallery                 < 0.11",
+        "sphinxcontrib-bibtex           >= 1.0",
     ],
     "tests": [
-        "coverage                   >= 5.0",
+        "coverage                       >= 5.0",
         "numpydoc",
-        "pytest                     >= 5.4",
+        "pytest                         >= 5.4",
         "pytest-benchmark",
-        "pytest-cov                 >= 2.8.1",
+        "pytest-cov                     >= 2.8.1",
         "pytest-xdist",
     ],
     "all": [
-        "matplotlib                 >= 3.5",
+        "matplotlib                     >= 3.5",
         "nlopt",
-        "pyebsdindex                >= 0.1.1",
+        "pyebsdindex                    >= 0.1.1",
         "pyvista",
     ],
     # TODO: Remove this option in release 0.9
     "viz": [
-        "matplotlib                 >= 3.5",
+        "matplotlib                     >= 3.5",
         "pyvista",
     ],
 }

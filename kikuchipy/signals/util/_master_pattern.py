@@ -225,7 +225,7 @@ def _get_direction_cosines_for_fixed_pc(
     # Normalize
     norm = np.sqrt(np.sum(np.square(r_g_array), axis=-1))
     norm = np.expand_dims(norm, axis=-1)
-    r_g_array = np.divide(r_g_array, norm)
+    r_g_array = np.true_divide(r_g_array, norm)
 
     return r_g_array
 
@@ -332,7 +332,7 @@ def _get_direction_cosines_for_varying_pc(
     # Normalize
     norm = np.sqrt(np.sum(np.square(r_g_array), axis=-1))
     norm = np.expand_dims(norm, axis=-1)
-    r_g_array = np.divide(r_g_array, norm)
+    r_g_array = np.true_divide(r_g_array, norm)
 
     return r_g_array
 
@@ -469,7 +469,7 @@ def _project_patterns_from_master_pattern_with_varying_pc(
     array shapes and data types.
     """
     n = rotations.shape[0]
-    simulated = np.empty((n, direction_cosines.shape[1]), dtype=dtype_out)
+    simulated = np.zeros((n, direction_cosines.shape[1]), dtype=dtype_out)
     for i in range(n):
         simulated[i] = _project_single_pattern_from_master_pattern(
             rotation=rotations[i],
@@ -545,15 +545,20 @@ def _project_single_pattern_from_master_pattern(
 
     # Loop over the detector pixels and fill in intensities one by one
     # from the correct hemisphere of the master pattern
-    pattern = np.zeros(direction_cosines.shape[0])
-    for i in nb.prange(pattern.size):
+    pattern = np.zeros(direction_cosines.shape[0], dtype=np.float64)
+    for i in range(pattern.size):
+        # fmt: off
         if dc_rotated[i, 2] >= 0:
-            mp = master_upper
+            pattern[i] = _get_pixel_from_master_pattern(
+                master_upper,
+                nii[i], nij[i], niip[i], nijp[i], di[i], dj[i], dim[i], djm[i]
+            )
         else:
-            mp = master_lower
-        pattern[i] = _get_pixel_from_master_pattern(
-            mp, nii[i], nij[i], niip[i], nijp[i], di[i], dj[i], dim[i], djm[i]
-        )
+            pattern[i] = _get_pixel_from_master_pattern(
+                master_lower,
+                nii[i], nij[i], niip[i], nijp[i], di[i], dj[i], dim[i], djm[i]
+            )
+        # fmt: on
 
     # Potentially rescale pattern intensities to desired data type
     if rescale:
@@ -645,7 +650,7 @@ def _get_lambert_interpolation_parameters(
     dim = np.zeros(n)
     djm = np.zeros(n)
     # Use loop to avoid numpy.where() for the conditionals
-    for ii in nb.prange(n):
+    for ii in range(n):
         i_this = i[ii]
         j_this = j[ii]
 
@@ -704,7 +709,12 @@ def _get_pixel_from_master_pattern(
     )
 
 
-@njit("float64[:, :](float64[:], float64[:])", cache=True, nogil=True, fastmath=True)
+@njit(
+    "float64[:, :](float64[:], float64[:])",
+    cache=True,
+    nogil=True,
+    fastmath=True,
+)
 def _lambert2vector(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     """Lambert (X, Y) to vector (x, y, z) projection
     :cite:`callahan2013dynamical`.
@@ -729,7 +739,7 @@ def _lambert2vector(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     n = x.size
     cart = np.zeros((n, 3), dtype=np.float64)
 
-    for i in nb.prange(n):
+    for i in range(n):
         xi = x[i] * np.sqrt(np.pi / 2)
         yi = y[i] * np.sqrt(np.pi / 2)
 
