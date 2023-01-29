@@ -964,16 +964,16 @@ class _RefinementSetup:
 
         # Relevant projection centers as a Dask array of shape
         # (navigation size, 1, n variables)
-        self.unique_pc = detector.navigation_size != 1 and self.nav_size > 1
-        dtype = np.float64
+        self.unique_pc = detector.navigation_size > 1
         if self.unique_pc:
             # Patterns have been initially indexed with varying PCs, so
             # we use these as the starting point for every pattern
-            pc = detector.pc_flattened[points_to_refine].astype(dtype)
+            pc = detector.pc_flattened[points_to_refine]
         else:
             # Patterns have been initially indexed with the same PC, so
             # we use this as the starting point for every pattern
-            pc = np.full((int(points_to_refine.sum()), 3), detector.pc[0], dtype=dtype)
+            pc = np.full((int(points_to_refine.sum()), 3), detector.pc[0])
+        pc = pc.astype(np.float64)
         pc = np.expand_dims(pc, 1)  # Pseudo-symmetry operator axis
         self.pc_array = da.from_array(pc, chunks=self.chunks)
 

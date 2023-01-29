@@ -20,6 +20,7 @@ import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
 import numpy as np
 from orix.crystal_map import Phase
+from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
@@ -28,16 +29,18 @@ from kikuchipy.signals.util._crystal_map import _equal_phase
 
 
 class EBSDRefineTestSetup:
-    axes = [
-        dict(name="hemisphere", size=2, scale=1),
-        dict(name="energy", size=5, offset=16, scale=1),
-        dict(name="dy", size=5, scale=1),
-        dict(name="dx", size=5, scale=1),
-    ]
-    mp_data = np.random.rand(2, 5, 5, 5).astype(np.float32)
+    nickel_ebsd_small = kp.data.nickel_ebsd_small()
+    nickel_ebsd_small.remove_static_background()
+    nickel_ebsd_small.remove_dynamic_background()
+
     mp = kp.signals.EBSDMasterPattern(
-        mp_data,
-        axes=axes,
+        np.random.rand(2, 5, 5, 5).astype(np.float32),
+        axes=[
+            dict(name="hemisphere", size=2, scale=1),
+            dict(name="energy", size=5, offset=16, scale=1),
+            dict(name="dy", size=5, scale=1),
+            dict(name="dx", size=5, scale=1),
+        ],
         projection="lambert",
         hemisphere="both",
         phase=Phase("a", 225),
@@ -546,9 +549,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         """Refine already refined orientations with SciPy, which should
         produce comparable results.
         """
-        s = kp.data.nickel_ebsd_small()
-        s.remove_static_background()
-        s.remove_dynamic_background()
+        s = self.nickel_ebsd_small
 
         energy = 20
         signal_mask = kp.filters.Window("circular", s.axes_manager.signal_shape[::-1])
@@ -569,9 +570,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         """Refine already refined orientations with NLopt, which should
         produce slightly better results.
         """
-        s = kp.data.nickel_ebsd_small()
-        s.remove_static_background()
-        s.remove_dynamic_background()
+        s = self.nickel_ebsd_small
 
         energy = 20
         signal_mask = kp.filters.Window("circular", s.axes_manager.signal_shape[::-1])
@@ -587,8 +586,88 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
             energy=energy,
             signal_mask=signal_mask,
             method="LN_NELDERMEAD",
+            trust_region=[2, 2, 2],
         )
         assert xmap_ref.scores.mean() > s.xmap.scores.mean()
+
+    @pytest.mark.skipif(not kp._nlopt_installed, reason="NLopt is not installed")
+    def test_refine_orientation_pseudo_symmetry_nlopt(self):
+        s = self.nickel_ebsd_small
+
+        energy = 20
+        signal_mask = kp.filters.Window("circular", s.axes_manager.signal_shape[::-1])
+        signal_mask = ~signal_mask.astype(bool)
+
+        rot_ps = Rotation.from_axes_angles([[0, 0, 1], [0, 0, -1]], np.deg2rad(30))
+
+        # Apply the first rotation so that the second rotation (the
+        # inverse) is the best match
+        xmap = s.xmap.deepcopy()
+        xmap._rotations[0] = (rot_ps[0] * xmap.rotations[0]).data
+
+        xmap_ref = s.refine_orientation(
+            xmap=xmap,
+            detector=s.detector,
+            master_pattern=kp.data.nickel_ebsd_master_pattern_small(
+                energy=energy,
+                projection="lambert",
+            ),
+            energy=energy,
+            signal_mask=signal_mask,
+            method="LN_NELDERMEAD",
+            trust_region=[2, 2, 2],
+            pseudo_symmetry_ops=rot_ps,
+        )
+        assert xmap_ref.scores.mean() > xmap.scores.mean()
+        assert np.allclose(xmap_ref.pseudo_symmetry_index, [2, 0, 0, 0, 0, 0, 0, 0, 0])
+
+    def test_refine_orientation_pseudo_symmetry_scipy(self):
+        s = self.nickel_ebsd_small
+
+        energy = 20
+        signal_mask = kp.filters.Window("circular", s.axes_manager.signal_shape[::-1])
+        signal_mask = ~signal_mask.astype(bool)
+
+        rot_ps = Rotation.from_axes_angles([[0, 0, 1], [0, 0, -1]], np.deg2rad(30))
+
+        # Apply the second rotation so that the first rotation (the
+        # inverse) is the best match
+        xmap = s.xmap.deepcopy()
+        xmap._rotations[5] = (rot_ps[1] * xmap.rotations[5]).data
+
+        ref_kw = dict(
+            xmap=xmap,
+            detector=s.detector,
+            master_pattern=kp.data.nickel_ebsd_master_pattern_small(
+                energy=energy,
+                projection="lambert",
+            ),
+            energy=energy,
+            signal_mask=signal_mask,
+            pseudo_symmetry_ops=rot_ps,
+            trust_region=[2, 2, 2],
+        )
+
+        # Nelder-Mead
+        xmap_ref = s.refine_orientation(**ref_kw)
+        assert xmap_ref.scores.mean() > xmap.scores.mean()
+        assert np.allclose(xmap_ref.pseudo_symmetry_index, [0, 0, 0, 0, 0, 1, 0, 0, 0])
+
+        # Global: Basin-hopping
+        nav_mask = np.array([1, 1, 1, 1, 1, 0, 1, 1, 1], dtype=bool).reshape(xmap.shape)
+        _ = s.refine_orientation(
+            method="basinhopping",
+            method_kwargs=dict(minimizer_kwargs=dict(method="Nelder-Mead"), niter=1),
+            navigation_mask=nav_mask,
+            **ref_kw,
+        )
+
+        # Global: Differential evolution
+        _ = s.refine_orientation(
+            method="differential_evolution",
+            navigation_mask=nav_mask,
+            **ref_kw,
+        )
 
 
 class TestEBSDRefinePC(EBSDRefineTestSetup):
@@ -949,3 +1028,83 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         assert dask.is_dask_collection(dask_array)
         # Should ideally be (9, 8) with better use of map_blocks()
         assert dask_array.shape == (9, 1)
+
+    @pytest.mark.skipif(not kp._nlopt_installed, reason="NLopt is not installed")
+    def test_refine_orientation_pc_pseudo_symmetry_nlopt(self):
+        s = self.nickel_ebsd_small
+
+        energy = 20
+        signal_mask = kp.filters.Window("circular", s.axes_manager.signal_shape[::-1])
+        signal_mask = ~signal_mask.astype(bool)
+
+        rot_ps = Rotation.from_axes_angles([[0, 0, 1], [0, 0, -1]], np.deg2rad(30))
+
+        # Apply the first rotation so that the second rotation (the
+        # inverse) is the best match
+        xmap = s.xmap.deepcopy()
+        xmap._rotations[0] = (rot_ps[0] * xmap.rotations[0]).data
+
+        xmap_ref, det_ref = s.refine_orientation_projection_center(
+            xmap=xmap,
+            detector=s.detector,
+            master_pattern=kp.data.nickel_ebsd_master_pattern_small(
+                energy=energy,
+                projection="lambert",
+            ),
+            energy=energy,
+            signal_mask=signal_mask,
+            method="LN_NELDERMEAD",
+            trust_region=[2, 2, 2, 0.05, 0.05, 0.05],
+            pseudo_symmetry_ops=rot_ps,
+        )
+        assert xmap_ref.scores.mean() > xmap.scores.mean()
+        assert np.allclose(xmap_ref.pseudo_symmetry_index, [2, 0, 0, 0, 0, 0, 0, 0, 0])
+
+    def test_refine_orientation_pc_pseudo_symmetry_scipy(self):
+        s = self.nickel_ebsd_small
+
+        energy = 20
+        signal_mask = kp.filters.Window("circular", s.axes_manager.signal_shape[::-1])
+        signal_mask = ~signal_mask.astype(bool)
+
+        rot_ps = Rotation.from_axes_angles([[0, 0, 1], [0, 0, -1]], np.deg2rad(30))
+
+        # Apply the second rotation so that the first rotation (the
+        # inverse) is the best match
+        xmap = s.xmap.deepcopy()
+        xmap._rotations[5] = (rot_ps[1] * xmap.rotations[5]).data
+
+        ref_kw = dict(
+            xmap=xmap,
+            detector=s.detector,
+            master_pattern=kp.data.nickel_ebsd_master_pattern_small(
+                energy=energy,
+                projection="lambert",
+            ),
+            energy=energy,
+            signal_mask=signal_mask,
+            pseudo_symmetry_ops=rot_ps,
+        )
+
+        # Nelder-Mead
+        xmap_ref, det_ref = s.refine_orientation_projection_center(
+            trust_region=[2, 2, 2, 0.05, 0.05, 0.05], **ref_kw
+        )
+        assert xmap_ref.scores.mean() > xmap.scores.mean()
+        assert np.allclose(xmap_ref.pseudo_symmetry_index, [0, 0, 0, 0, 0, 1, 0, 0, 0])
+
+        # Global: Basin-hopping
+        nav_mask = np.array([1, 1, 1, 1, 1, 0, 1, 1, 1], dtype=bool).reshape(xmap.shape)
+        _, _ = s.refine_orientation_projection_center(
+            method="basinhopping",
+            method_kwargs=dict(minimizer_kwargs=dict(method="Nelder-Mead"), niter=1),
+            navigation_mask=nav_mask,
+            **ref_kw,
+        )
+
+        # Global: Differential evolution
+        _, _ = s.refine_orientation_projection_center(
+            method="differential_evolution",
+            navigation_mask=nav_mask,
+            **ref_kw,
+        )
