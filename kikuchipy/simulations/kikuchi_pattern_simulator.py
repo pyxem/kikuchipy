@@ -535,9 +535,6 @@ class KikuchiPatternSimulator:
         ref = ref[order].deepcopy()
         color = color[order]
 
-        if kwargs is None:
-            kwargs = {}
-
         if projection == "stereographic":
             kwargs.setdefault("color", color)
             if all(i not in kwargs for i in ["linewidth", "lw"]):
