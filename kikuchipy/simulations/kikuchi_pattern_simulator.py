@@ -450,7 +450,7 @@ class KikuchiPatternSimulator:
             Intensity scaling of the band kinematical intensities,
             either ``"linear"`` (default), :math:`|F|`, ``"square"``,
             :math:`|F|^2`, or ``None``, giving all bands the same
-            intensity.
+            intensity. The intensity range is [0, highest intensity].
         figure
             An existing :class:`~matplotlib.figure.Figure` or
             :class:`~pyvista.Plotter` to add the reflectors to. If not
@@ -507,16 +507,16 @@ class KikuchiPatternSimulator:
         if scaling == "linear":
             intensity = abs(self.reflectors.structure_factor)
             order = np.argsort(intensity)
-            scaling_title = r"$|F_{hkl}|$"
+            scaling_title = "|F_hkl|"
         elif scaling == "square":
             factor = self.reflectors.structure_factor
             intensity = abs(factor * factor.conjugate())
             order = np.argsort(intensity)
-            scaling_title = r"$|F|_{hkl}^2$"
+            scaling_title = "|F_hkl|^2"
         elif scaling is None:
             intensity = np.ones(self.reflectors.size)
             order = np.arange(ref.size)
-            scaling_title = "None"
+            scaling_title = None
         else:
             raise ValueError(
                 "Unknown `scaling`, options are 'linear', 'square' or None"
@@ -527,9 +527,11 @@ class KikuchiPatternSimulator:
         else:
             color_rgb = mcolors.to_rgb(color)
         if scaling in ["linear", "square"]:
-            intensity /= np.max(intensity)
+            intensity_scaled = intensity / np.max(intensity)
+        else:
+            intensity_scaled = intensity.copy()
         rgb = np.full((ref.size, 3), color_rgb)  # RGB
-        color = np.column_stack((rgb, intensity[:, np.newaxis]))  # RGBA
+        color = np.column_stack((rgb, intensity_scaled[:, np.newaxis]))  # RGBA
 
         # Sort reflectors so that weakest are plotted first
         ref = ref[order].deepcopy()
@@ -564,7 +566,14 @@ class KikuchiPatternSimulator:
                 v.draw_circle(opening_angle=np.pi / 2 + theta, figure=figure, **kwargs)
         elif projection == "spherical":
             figure = _plot_spherical(
-                mode, ref, color, backend, figure, show_plotter, scaling_title
+                mode,
+                ref,
+                color,
+                backend,
+                figure,
+                show_plotter,
+                scaling_title,
+                intensity[order],
             )
         else:
             raise ValueError(
@@ -625,6 +634,7 @@ def _plot_spherical(
     figure,
     show_plotter: bool,
     scaling_title: str,
+    intensity: np.ndarray,
 ):
     v = Vector3d(ref).unit
 
@@ -701,25 +711,28 @@ def _plot_spherical(
             circles_shape = circles.shape[:-1]
             circles = circles.reshape((-1, 3))
             lines = np.arange(circles.shape[0]).reshape(circles_shape)
-            color = color[:, -1]
         else:  # bands
             circles = np.vstack(circles)
             circles_shape = circles.shape[:-1]
             circles = circles.reshape((-1, 3))
             lines = np.arange(circles.shape[0]).reshape(circles_shape)
-            color = np.tile(color[:, -1], 2)
+            intensity = np.tile(intensity, 2)
+
+        if scaling_title is None:
+            mesh_kw = dict(show_scalar_bar=False, cmap="gray")
+        else:
+            mesh_kw = dict(
+                scalar_bar_args=dict(title=scaling_title, color="k"),
+                clim=[0, np.max(intensity)],
+                cmap="gray_r",
+            )
 
         # Create mesh from vertices (3D coordinates) and line
         # connectivity arrays
         lines = np.insert(lines, 0, steps, axis=1)
         lines = lines.ravel()
         mesh = pv.PolyData(circles, lines=lines)
-        figure.add_mesh(
-            mesh,
-            scalars=color,
-            cmap="gray",
-            scalar_bar_args=dict(title=scaling_title),
-        )
+        figure.add_mesh(mesh, scalars=intensity, **mesh_kw)
 
         if show_plotter:
             figure.show()
