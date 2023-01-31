@@ -18,6 +18,7 @@
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticeVector
 import matplotlib
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import Phase
@@ -138,7 +139,6 @@ class TestCalculateMasterPattern:
 class TestOnDetector:
     """Test determination of detector coordinates of geometrical
     simulations given a detector and rotation(s).
-
     """
 
     def setup_method(self):
@@ -332,7 +332,7 @@ class TestPlot:
         with pytest.raises(ImportError, match="Pyvista is not installed"):
             _ = self.simulator.plot("spherical", backend="pyvista")
 
-    def test_scaling(self):
+    def test_plot_scaling(self):
         """Intensity scaling works as expected."""
         simulator = self.simulator
 
@@ -356,3 +356,24 @@ class TestPlot:
 
         with pytest.raises(ValueError, match="Unknown `scaling`, options are "):
             _ = simulator.plot(scaling="cubic")
+
+    def test_plot_color(self):
+        """Passing a color works."""
+        simulator = self.simulator
+
+        # Black (default)
+        fig1 = simulator.plot(return_figure=True)
+        colors1 = np.stack([line.get_color() for line in fig1.axes[0].lines])
+        assert colors1.shape[-1] == 4  # RGBA
+        assert np.allclose(colors1[:, :3], [0, 0, 0])
+
+        # Red
+        fig2 = simulator.plot(return_figure=True, color="r", scaling="square")
+        colors2 = np.stack([line.get_color() for line in fig2.axes[0].lines])
+        assert np.allclose(colors2[:, :3], [1, 0, 0])
+
+        # Color of phase
+        simulator.phase.color = "lime"
+        fig3 = simulator.plot(return_figure=True, color="phase")
+        colors3 = np.stack([line.get_color() for line in fig3.axes[0].lines])
+        assert np.allclose(colors3[:, :3], mcolors.to_rgb("lime"))
