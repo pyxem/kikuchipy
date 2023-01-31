@@ -62,7 +62,6 @@ from dask.diagnostics import ProgressBar
 from diffsims.crystallography import ReciprocalLatticeVector
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
-import numba as nb
 import numpy as np
 from orix import projections
 from orix.crystal_map import Phase
@@ -594,13 +593,6 @@ class KikuchiPatternSimulator:
             )
 
 
-@nb.njit(
-    "float64[:](float64[:], bool_[:, :], bool_[:, :])",
-    cache=True,
-    nogil=True,
-    fastmath=True,
-    parallel=True,
-)
 def _get_pattern(
     intensity: np.ndarray, mask1: np.ndarray, mask2: np.ndarray
 ) -> np.ndarray:
@@ -622,14 +614,9 @@ def _get_pattern(
     part
         Master pattern part.
     """
-    n_pixels, n_ref = mask1.shape
-    part = np.zeros(n_pixels, dtype=np.float64)
-    for i in nb.prange(n_pixels):
-        for j in nb.prange(n_ref):
-            if mask1[i, j]:
-                part[i] += 0.5 * intensity[j]
-            if mask2[i, j]:
-                part[i] += intensity[j]
+    intensity_part = np.full(mask1.shape, intensity)
+    part = 0.5 * np.sum(intensity_part, where=mask1, axis=1)
+    part += np.sum(intensity_part, where=mask2, axis=1)
     return part
 
 
