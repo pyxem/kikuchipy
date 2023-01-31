@@ -301,26 +301,33 @@ class TestPlot:
 
         simulator = self.simulator
         fig1 = simulator.plot(
-            "spherical", backend="pyvista", return_figure=True, show_plotter=False
+            "spherical",
+            backend="pyvista",
+            return_figure=True,
+            show_plotter=False,
+            scaling=None,
         )
         assert isinstance(fig1, pv.Plotter)
         assert isinstance(fig1.mesh, pv.PolyData)
         assert fig1.mesh.n_cells == simulator.reflectors.size
         assert np.allclose(fig1.mesh.bounds, [-1, 1, -1, 1, -1, 1])
+        assert len(fig1.scalar_bars) == 0
 
         fig2 = simulator.plot("spherical", backend="pyvista", return_figure=True)
         with pytest.raises(RuntimeError, match="This plotter has been closed "):
             fig2.show()
 
         # Add to existing Plotter
-        simulator.plot(
+        fig3 = simulator.plot(
             "spherical",
             backend="pyvista",
             mode="bands",
             show_plotter=False,
             figure=fig1,
+            return_figure=True,
         )
         assert fig1.mesh.n_cells == simulator.reflectors.size * 2
+        assert "|F_hkl|" in fig3.scalar_bars
 
         plt.close("all")
 
