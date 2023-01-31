@@ -18,6 +18,8 @@ Unreleased
 
 Added
 -----
+- Allow providing a color for simulator reflections when plotting with Matplotlib.
+  (`#599 <https://github.com/pyxem/kikuchipy/pull/599>`_)
 - Passing pseudo-symmetry operators to orientation and orientation/PC EBSD refinement
   methods in order to find the best match among pseudo-symmetric variants.
   (`#598 <https://github.com/pyxem/kikuchipy/pull/598>`_)
@@ -146,6 +148,10 @@ Removed
 
 Fixed
 -----
+- Range of (kinematical) intensities in ``KikuchiPatternSimulator.plot()`` maximizes the
+  strongest reflectors (make black) instead of minimizing the weakest reflectors (make
+  white), which was the previous behavior.
+  (`#599 <https://github.com/pyxem/kikuchipy/pull/599>`_)
 - Inversion of ``signal_mask`` in the normalized cross-correlation and normalized dot
   product metrics is now done internally, to be in line with the docstrings (does not
   affect the use of this parameter and ``metric="ncc"`` or ``metric="ndp"`` in
