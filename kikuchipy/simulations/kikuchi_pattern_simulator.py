@@ -62,6 +62,7 @@ from dask.diagnostics import ProgressBar
 from diffsims.crystallography import ReciprocalLatticeVector
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
+import numba as nb
 import numpy as np
 from orix import projections
 from orix.crystal_map import Phase
@@ -470,8 +471,14 @@ class KikuchiPatternSimulator:
             ``projection="spherical"`` and ``backend="pyvista"``.
             Default is ``True``.
         color
-            String signifying a valid Matplotlib color to give
-            intensities if ``scaling=None``.
+            Color to give reflectors. Either a string signifying a valid
+            Matplotlib color or ``"phase"``, which then uses the
+            :attr:`~orix.crystal_map.Phase.color_rgb` of the
+            :attr:`~kikuchipy.simulations.KikuchiPatternSimulator.phase`.
+            Default is black (``"k"``). Only used with Matplotlib.
+        **kwargs
+            Keyword arguments passed to
+            :meth:`~orix.vector.Vector3d.draw_circle`.
 
         Returns
         -------
@@ -508,7 +515,7 @@ class KikuchiPatternSimulator:
             order = np.argsort(intensity)
             scaling_title = r"$|F|_{hkl}^2$"
         elif scaling is None:
-            intensity = np.zeros(self.reflectors.size)
+            intensity = np.ones(self.reflectors.size)
             order = np.arange(ref.size)
             scaling_title = "None"
         else:
@@ -516,17 +523,14 @@ class KikuchiPatternSimulator:
                 "Unknown `scaling`, options are 'linear', 'square' or None"
             )
 
-        # Invert the intensity
+        if color == "phase":
+            color_rgb = self.phase.color_rgb
+        else:
+            color_rgb = mcolors.to_rgb(color)
         if scaling in ["linear", "square"]:
             intensity /= np.max(intensity)
-            intensity = abs(intensity - intensity.min() - intensity.max())
-        #        color = np.full((ref.size, 3), intensity[:, np.newaxis])
-        #        else:
-        #            color = np.full((ref.size, 3), mcolors.to_rgb(color))
-        #        color = np.full((ref.size, 3), intensity[:, np.newaxis]) * mcolors.to_rgb(color)
-        color = np.full((ref.size, 3), mcolors.to_rgb(color))
-        if scaling in ["linear", "square"]:
-            color = np.column_stack((color, intensity))
+        rgb = np.full((ref.size, 3), color_rgb)  # RGB
+        color = np.column_stack((rgb, intensity[:, np.newaxis]))  # RGBA
 
         # Sort reflectors so that weakest are plotted first
         ref = ref[order].deepcopy()
@@ -539,6 +543,7 @@ class KikuchiPatternSimulator:
             kwargs.setdefault("color", color)
             if all(i not in kwargs for i in ["linewidth", "lw"]):
                 kwargs.setdefault("linewidth", 0.5)
+
             if mode == "lines":
                 if figure is None:
                     figure = ref.draw_circle(
@@ -573,8 +578,6 @@ class KikuchiPatternSimulator:
         if return_figure:
             return figure
 
-        return color
-
     def _raise_if_no_theta(self):
         if np.isnan(self.reflectors.theta[0]):
             raise ValueError(
@@ -591,6 +594,13 @@ class KikuchiPatternSimulator:
             )
 
 
+@nb.njit(
+    "float64[:](float64[:], bool_[:, :], bool_[:, :])",
+    cache=True,
+    nogil=True,
+    fastmath=True,
+    parallel=True,
+)
 def _get_pattern(
     intensity: np.ndarray, mask1: np.ndarray, mask2: np.ndarray
 ) -> np.ndarray:
@@ -612,9 +622,14 @@ def _get_pattern(
     part
         Master pattern part.
     """
-    intensity_part = np.full(mask1.shape, intensity)
-    part = 0.5 * np.sum(intensity_part, where=mask1, axis=1)
-    part += np.sum(intensity_part, where=mask2, axis=1)
+    n_pixels, n_ref = mask1.shape
+    part = np.zeros(n_pixels, dtype=np.float64)
+    for i in nb.prange(n_pixels):
+        for j in nb.prange(n_ref):
+            if mask1[i, j]:
+                part[i] += 0.5 * intensity[j]
+            if mask2[i, j]:
+                part[i] += intensity[j]
     return part
 
 
@@ -702,13 +717,13 @@ def _plot_spherical(
             circles_shape = circles.shape[:-1]
             circles = circles.reshape((-1, 3))
             lines = np.arange(circles.shape[0]).reshape(circles_shape)
-            color = color[:, 0]
+            color = color[:, -1]
         else:  # bands
             circles = np.vstack(circles)
             circles_shape = circles.shape[:-1]
             circles = circles.reshape((-1, 3))
             lines = np.arange(circles.shape[0]).reshape(circles_shape)
-            color = np.tile(color[:, 0], 2)
+            color = np.tile(color[:, -1], 2)
 
         # Create mesh from vertices (3D coordinates) and line
         # connectivity arrays
