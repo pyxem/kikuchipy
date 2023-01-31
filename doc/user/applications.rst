@@ -14,7 +14,6 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
 
 2023
 ====
-
 - T. Bergh, H. W. Ånes, R. Aune, S. Wenner, R. Holmestad, X. Ren and P. E. Vullum,
   "Intermetallic Phase Layers in Cold Metal Transfer Aluminium-Steel Welds with an
   Al-Si–Mn Filler Alloy," *Materials Transactions* **64(2)** (2023).
