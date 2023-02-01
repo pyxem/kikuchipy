@@ -84,10 +84,10 @@ extra_feature_requirements = {
 
 # Create a development project including all extra dependencies
 extra_feature_requirements["dev"] = [
-    "black[jupyter]",
+    "black[jupyter]                     >= 23.1",
     "manifix",
     "outdated",
-    "pre-commit >= 1.16",
+    "pre-commit                         >= 1.16",
 ] + list(chain(*list(extra_feature_requirements.values())))
 
 
