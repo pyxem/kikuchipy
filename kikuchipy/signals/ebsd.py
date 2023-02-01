@@ -1711,7 +1711,7 @@ class EBSD(KikuchipySignal2D):
         Parameters
         ----------
         pc0
-            A single initial guess of PC for all patterns in Brukers
+            A single initial guess of PC for all patterns in Bruker's
             convention, (PCx, PCy, PCz).
         indexer
             PyEBSDIndex EBSD indexer instance to pass on to the

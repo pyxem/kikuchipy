@@ -333,7 +333,7 @@ class VirtualBSEGenerator:
             for channels, color in zip(rgb_channels, ["r", "g", "b"]):
                 if isinstance(channels, tuple):
                     channels = (channels,)
-                for (row, col) in channels:
+                for row, col in channels:
                     kwargs.update({"color": color, "zorder": 3, "linewidth": 2})
                     roi = self.roi_from_grid((row, col))
                     markers += [

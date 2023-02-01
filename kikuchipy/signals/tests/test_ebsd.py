@@ -910,7 +910,6 @@ class TestDecomposition:
     def test_get_decomposition_model(
         self, dummy_signal, components, dtype_out, mean_intensity
     ):
-
         # Decomposition
         dummy_signal.change_dtype(np.float32)
         dummy_signal.decomposition()

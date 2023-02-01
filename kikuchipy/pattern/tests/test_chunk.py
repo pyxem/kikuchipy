@@ -207,7 +207,6 @@ class TestGetDynamicBackgroundChunk:
         ],
     )
     def test_get_dynamic_background_frequency(self, dummy_signal, std, answer):
-
         dtype_out = answer.dtype
 
         dask_array = get_dask_array(dummy_signal, dtype=np.float32)

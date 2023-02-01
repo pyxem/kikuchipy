@@ -318,7 +318,6 @@ class TestGetDynamicBackgroundPattern:
         ],
     )
     def test_get_dynamic_background_frequency(self, dummy_signal, std, answer):
-
         p = dummy_signal.inav[0, 0].data.astype(answer.dtype)
 
         bg = get_dynamic_background(pattern=p, std=std)
