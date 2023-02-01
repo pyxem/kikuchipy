@@ -167,7 +167,6 @@ def adaptive_histogram_equalization(
     equalized_patterns = np.empty_like(patterns)
 
     for nav_idx in np.ndindex(patterns.shape[:-2]):
-
         # Adaptive histogram equalization
         equalized_pattern = equalize_adapthist(
             patterns[nav_idx],
