@@ -148,6 +148,9 @@ Removed
 
 Fixed
 -----
+- When loading EBSD patterns from H5OINA files, the detector tilt and binning are
+  available in the returned signal's ``detector`` attribute.
+  (`#600 <https://github.com/pyxem/kikuchipy/pull/600>`_)
 - Range of (kinematical) intensities in ``KikuchiPatternSimulator.plot()`` maximizes the
   strongest reflectors (make black) instead of minimizing the weakest reflectors (make
   white), which was the previous behavior.
