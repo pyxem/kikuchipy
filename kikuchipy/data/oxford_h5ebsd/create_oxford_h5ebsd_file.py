@@ -119,5 +119,9 @@ header.create_dataset(
     "Processed Static Background", dtype="uint8", data=s.static_background
 )
 header.create_dataset("Tilt Angle", dtype="float32", data=np.deg2rad(69.9))
+header.create_dataset(
+    "Detector Orientation Euler", dtype="float32", data=np.deg2rad([0, 91.5, 0])
+)
+header.create_dataset("Camera Binning Mode", data=b"8x8 (60x60 px)")
 
 f.close()

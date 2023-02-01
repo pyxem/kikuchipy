@@ -34,10 +34,15 @@ class TestOxfordH5EBSD:
         assert s.data.shape == (3, 3, 60, 60)
         assert_dictionary(s.axes_manager.as_dictionary(), ni_small_axes_manager)
         assert s.metadata.Acquisition_instrument.SEM.beam_energy == 20
-        assert s.detector.pc.shape == (3, 3, 3)
-        assert np.isclose(s.detector.sample_tilt, 69.9, atol=0.1)
 
         s2 = kp.data.nickel_ebsd_small()
         s2.remove_static_background()
         assert np.allclose(s.data, s2.data)
         assert np.allclose(s.static_background, s2.static_background)
+
+        # Detector
+        det = s.detector
+        assert det.pc.shape == (3, 3, 3)
+        assert np.isclose(det.sample_tilt, 69.9, atol=0.1)
+        assert det.binning == 8
+        assert np.isclose(det.tilt, 1.5)
