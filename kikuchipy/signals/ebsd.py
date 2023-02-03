@@ -185,16 +185,6 @@ class EBSD(KikuchipySignal2D):
     # ---------------------- Custom attributes ----------------------- #
 
     @property
-    def _signal_shape_rc(self) -> tuple:
-        """Return the signal's signal shape as (row, column)."""
-        return self.axes_manager.signal_shape[::-1]
-
-    @property
-    def _navigation_shape_rc(self) -> tuple:
-        """Return the signal's navigation shape as (row, column)."""
-        return self.axes_manager.navigation_shape[::-1]
-
-    @property
     def detector(self) -> EBSDDetector:
         """Return or set the detector describing the EBSD
         detector-sample geometry.
@@ -210,8 +200,8 @@ class EBSD(KikuchipySignal2D):
     def detector(self, value: EBSDDetector):
         if _detector_is_compatible_with_signal(
             detector=value,
-            nav_shape=self.axes_manager.navigation_shape[::-1],
-            sig_shape=self.axes_manager.signal_shape[::-1],
+            nav_shape=self._navigation_shape_rc,
+            sig_shape=self._signal_shape_rc,
             raise_if_not=True,
         ):
             self._detector = value
@@ -252,7 +242,7 @@ class EBSD(KikuchipySignal2D):
     def static_background(self, value: Union[np.ndarray, da.Array]):
         if value.dtype != self.data.dtype:
             warnings.warn("Background pattern has different data type from patterns")
-        if value.shape != self.axes_manager.signal_shape[::-1]:
+        if value.shape != self._signal_shape_rc:
             warnings.warn("Background pattern has different shape from patterns")
         self._static_background = value
 
@@ -511,7 +501,7 @@ class EBSD(KikuchipySignal2D):
                 f"Static background dtype_out {static_bg.dtype} is not the same as "
                 f"pattern dtype_out {dtype_out}"
             )
-        pat_shape = self.axes_manager.signal_shape[::-1]  # xy -> ij
+        pat_shape = self._signal_shape_rc  # xy -> ij
         bg_shape = static_bg.shape
         if bg_shape != pat_shape:
             raise ValueError(
@@ -609,7 +599,7 @@ class EBSD(KikuchipySignal2D):
                 kwargs["offset_before_fft"],
                 kwargs["offset_after_ifft"],
             ) = _dynamic_background_frequency_space_setup(
-                pattern_shape=self.axes_manager.signal_shape[::-1],
+                pattern_shape=self._signal_shape_rc,
                 std=std,
                 truncate=truncate,
             )
@@ -693,7 +683,7 @@ class EBSD(KikuchipySignal2D):
                 kwargs["offset_before_fft"],
                 kwargs["offset_after_ifft"],
             ) = _dynamic_background_frequency_space_setup(
-                pattern_shape=self.axes_manager.signal_shape[::-1],
+                pattern_shape=self._signal_shape_rc,
                 std=std,
                 truncate=truncate,
             )
@@ -931,7 +921,7 @@ class EBSD(KikuchipySignal2D):
                 kwargs["offset_before_fft"],
                 kwargs["offset_after_ifft"],
             ) = _fft_filter_setup(
-                image_shape=self.axes_manager.signal_shape[::-1],
+                image_shape=self._signal_shape_rc,
                 window=transfer_function,
             )
         else:
@@ -1018,7 +1008,7 @@ class EBSD(KikuchipySignal2D):
         else:
             averaging_window = Window(window=window, shape=window_shape, **kwargs)
 
-        nav_shape = self.axes_manager.navigation_shape[::-1]
+        nav_shape = self._navigation_shape_rc
         window_shape = averaging_window.shape
         if window_shape in [(1,), (1, 1)]:
             # Do nothing if a window of shape (1,) or (1, 1) is passed
@@ -1440,7 +1430,7 @@ class EBSD(KikuchipySignal2D):
             boundary="none",
         )
         chunks = get_chunking(
-            data_shape=self.axes_manager.navigation_shape[::-1],
+            data_shape=self._navigation_shape_rc,
             nav_dim=nav_dim,
             sig_dim=0,
             dtype=dtype_out,
@@ -2825,11 +2815,11 @@ class EBSD(KikuchipySignal2D):
 
         # Update attributes
         if new is None:  # pragma: no cover
-            new_nav_shape = self.axes_manager.navigation_shape[::-1]
-            new_sig_shape = self.axes_manager.signal_shape[::-1]
+            new_nav_shape = self._navigation_shape_rc
+            new_sig_shape = self._signal_shape_rc
         else:
-            new_nav_shape = new.axes_manager.navigation_shape[::-1]
-            new_sig_shape = new.axes_manager.signal_shape[::-1]
+            new_nav_shape = new._navigation_shape_rc
+            new_sig_shape = new._signal_shape_rc
         if params["isNavigation"]:
             props = _update_custom_attributes(
                 props, nav_slices=slices, new_nav_shape=new_nav_shape

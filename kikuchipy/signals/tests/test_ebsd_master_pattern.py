@@ -336,7 +336,7 @@ class TestProjectFromLambert:
         )
 
         sim1 = mp.get_patterns(rotations=rot1, detector=det1)
-        assert sim1.axes_manager.navigation_shape[::-1] == nav_shape
+        assert sim1._navigation_shape_rc == nav_shape
         assert not np.allclose(sim1.data[0, 0], sim1.data[0, 1])
 
         # 1D navigation shape, multiple PCs
@@ -350,7 +350,7 @@ class TestProjectFromLambert:
         # 2D navigation shape, single PC
         det2.pc = det2.pc[0]
         sim3 = mp.get_patterns(rot1, det2)
-        assert sim3.axes_manager.navigation_shape[::-1] == nav_shape
+        assert sim3._navigation_shape_rc == nav_shape
         assert np.allclose(sim1.data[0, 0], sim3.data[0, 0])
 
     def test_get_patterns_navigation_shape_raises(self):

@@ -89,7 +89,7 @@ class TestEBSDXmapProperty:
 
     def test_set_xmap(self, get_single_phase_xmap):
         s = kp.data.nickel_ebsd_large(lazy=True)
-        nav_shape = s.axes_manager.navigation_shape[::-1]
+        nav_shape = s._navigation_shape_rc
         step_sizes = (1.5, 1.5)
 
         # Should succeed
@@ -154,7 +154,7 @@ class TestEBSDDetectorProperty:
 
     def test_set_detector(self):
         s = kp.data.nickel_ebsd_small(lazy=True)
-        sig_shape = s.axes_manager.signal_shape[::-1]
+        sig_shape = s._signal_shape_rc
 
         # Success
         detector_good = kp.detectors.EBSDDetector(shape=sig_shape)
@@ -185,8 +185,8 @@ class TestEBSDDetectorProperty:
         s = kp.signals.EBSD(np.ones(signal_nav_shape + (5, 5), dtype=int))
         func_kwargs = dict(
             detector=detector,
-            nav_shape=s.axes_manager.navigation_shape[::-1],
-            sig_shape=s.axes_manager.signal_shape[::-1],
+            nav_shape=s._navigation_shape_rc,
+            sig_shape=s._signal_shape_rc,
         )
         assert (
             kp.signals.util._detector._detector_is_compatible_with_signal(**func_kwargs)
@@ -200,12 +200,12 @@ class TestEBSDDetectorProperty:
 
     def test_detector_shape(self):
         s1 = kp.signals.EBSD(np.ones((1, 2, 3, 4)))
-        assert s1.data.shape == (1, 2, 3, 4)
-        assert s1.detector.shape == (3, 4)
+        assert s1._navigation_shape_rc == (1, 2)
+        assert s1.detector.shape == s1._signal_shape_rc == (3, 4)
 
         s2 = kp.signals.EBSD(np.ones((1, 2, 4, 3)))
-        assert s2.data.shape == (1, 2, 4, 3)
-        assert s2.detector.shape == (4, 3)
+        assert s2._navigation_shape_rc == (1, 2)
+        assert s2.detector.shape == s2._signal_shape_rc == (4, 3)
 
 
 class TestStaticBackgroundProperty:
@@ -228,7 +228,7 @@ class TestStaticBackgroundProperty:
 
     def test_set_background(self):
         s = kp.data.nickel_ebsd_small(lazy=True)
-        sig_shape = s.axes_manager.signal_shape[::-1]
+        sig_shape = s._signal_shape_rc
         # Success
         bg_good = np.arange(np.prod(sig_shape), dtype=s.data.dtype).reshape(sig_shape)
         s.static_background = bg_good
@@ -1963,7 +1963,7 @@ class TestExtractGrid:
         assert np.allclose(s.static_background, s2.static_background)
         assert s2.detector.navigation_shape == (4, 5)
 
-        nav_shape = s.axes_manager.navigation_shape[::-1]
+        nav_shape = s._navigation_shape_rc
         idx, spacing = kp.signals.util.grid_indices(
             (4, 5), nav_shape, return_spacing=True
         )

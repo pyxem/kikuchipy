@@ -164,7 +164,7 @@ class TestDictionaryIndexing:
 
     def test_dictionary_indexing_navigation_mask(self, dummy_signal):
         s = dummy_signal
-        nav_shape = s.axes_manager.navigation_shape[::-1]
+        nav_shape = s._navigation_shape_rc
         nav_size = int(np.prod(nav_shape))
         s_dict = kp.signals.EBSD(dummy_signal.data.reshape(nav_size, 3, 3))
         s_dict.axes_manager[0].name = "x"

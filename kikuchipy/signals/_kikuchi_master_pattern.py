@@ -152,7 +152,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
             raise NotImplementedError("Only implemented for non-lazy signals")
 
         # Set up square arrays
-        sig_shape = self.axes_manager.signal_shape[::-1]
+        sig_shape = self._signal_shape_rc
         arr = np.linspace(-1, 1, sig_shape[0], dtype=np.float64)
         x_lambert, y_lambert = np.meshgrid(arr, arr)
         x_lambert_flat = x_lambert.ravel()
