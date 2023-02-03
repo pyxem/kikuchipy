@@ -18,9 +18,11 @@
 """Reader of uncompressed EBSD patterns from a Oxford Instruments binary
 .ebsp file.
 
-Information about the file format was provided by Oxford Instruments.
+Information about the file format was generously provided by Oxford
+Instruments.
 """
 
+import logging
 import os
 from pathlib import Path
 import struct
@@ -34,6 +36,8 @@ from kikuchipy.signals.util._dask import get_chunking
 
 __all__ = ["file_reader"]
 
+
+_logger = logging.getLogger(__name__)
 
 # Plugin characteristics
 # ----------------------
@@ -114,6 +118,14 @@ class OxfordBinaryFileReader:
         self.file = file  # Already open file
 
         self.version = self.get_version()
+        _logger.debug(f"Reading Oxford binary file of version {self.version}")
+
+        # If version > 3, read in the extra byte after file version and
+        # add it to the debug log
+        if self.version > 3:  # pragma: no cover
+            self.file.seek(self.pattern_starts_byte_position - 1)
+            unknown_byte = np.fromfile(self.file, dtype=np.uint8, count=1)[0]
+            _logger.debug(f"Unknown byte (uint8) in file of version 4: {unknown_byte}")
 
         # Number of patterns in the file is not known, so this is
         # guessed from the file header where the file byte positions of
@@ -204,13 +216,16 @@ class OxfordBinaryFileReader:
     @property
     def pattern_starts_byte_position(self) -> int:
         """File byte position of file byte positions of patterns. For
-        .ebsp file version 0, this is at the first byte, while for later
-        versions, this is at the ninth byte, after the file version.
+        .ebsp file version 0, this is at the first byte, for versions
+        1-3 this is at the ninth byte, while for version 4 this is at
+        the tenth byte.
         """
-        if self.version != 0:
-            return 8
-        else:
+        if self.version == 0:
             return 0
+        elif self.version > 3:
+            return 9
+        else:
+            return 8
 
     def get_memmap(self) -> np.memmap:
         """Return a memory map of the pattern header, actual patterns,
