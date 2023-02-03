@@ -148,6 +148,8 @@ Removed
 
 Fixed
 -----
+- Oxford Instruments .ebsp files of version 4 can now be read.
+  (`#602 <https://github.com/pyxem/kikuchipy/pull/602>`_)
 - When loading EBSD patterns from H5OINA files, the detector tilt and binning are
   available in the returned signal's ``detector`` attribute.
   (`#600 <https://github.com/pyxem/kikuchipy/pull/600>`_)
