@@ -344,7 +344,7 @@ def oxford_binary_file(tmpdir, request):
     fname = tmpdir.join("dummy_oxford_file.ebsp")
     f = open(fname, mode="w")
 
-    if ver != 0:
+    if ver > 0:
         np.array(-ver, dtype=np.int64).tofile(f)
 
     pattern_header_size = 16
@@ -366,8 +366,11 @@ def oxford_binary_file(tmpdir, request):
     pattern_starts = np.arange(n_patterns, dtype=np.int64)
     pattern_starts *= pattern_header_size + n_bytes + pattern_footer_size
     pattern_starts += n_patterns * 8
-    if ver != 0:
+    if ver in [1, 2, 3]:
         pattern_starts += 8
+    elif ver > 3:
+        np.array(0, dtype=np.uint8).tofile(f)
+        pattern_starts += 9
 
     pattern_starts = np.roll(pattern_starts, shift=1)
     if not all_present:

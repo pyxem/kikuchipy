@@ -92,6 +92,7 @@ class TestOxfordBinaryReader:
             (((2, 3), (60, 60), np.uint8, 2, False, True), 2, (2, 3)),
             (((2, 3), (60, 60), np.uint16, 1, False, True), 1, (2, 3)),
             (((2, 3), (60, 60), np.uint8, 0, False, True), 0, (6,)),
+            (((2, 3), (60, 60), np.uint8, 4, False, True), 4, (2, 3)),
         ],
         indirect=["oxford_binary_file"],
     )
