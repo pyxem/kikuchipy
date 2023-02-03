@@ -198,6 +198,15 @@ class TestEBSDDetectorProperty:
                     raise_if_not=True, **func_kwargs
                 )
 
+    def test_detector_shape(self):
+        s1 = kp.signals.EBSD(np.ones((1, 2, 3, 4)))
+        assert s1.data.shape == (1, 2, 3, 4)
+        assert s1.detector.shape == (3, 4)
+
+        s2 = kp.signals.EBSD(np.ones((1, 2, 4, 3)))
+        assert s2.data.shape == (1, 2, 4, 3)
+        assert s2.detector.shape == (4, 3)
+
 
 class TestStaticBackgroundProperty:
     def test_background_carry_over_from_deepcopy(self, dummy_signal):

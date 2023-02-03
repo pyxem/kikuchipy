@@ -175,7 +175,7 @@ class EBSD(KikuchipySignal2D):
         self._detector = kwargs.get(
             "detector",
             EBSDDetector(
-                shape=self.axes_manager.signal_shape,
+                shape=self._signal_shape_rc,
                 px_size=self.axes_manager.signal_axes[0].scale,
             ),
         )
@@ -183,6 +183,16 @@ class EBSD(KikuchipySignal2D):
         self._xmap = kwargs.get("xmap")
 
     # ---------------------- Custom attributes ----------------------- #
+
+    @property
+    def _signal_shape_rc(self) -> tuple:
+        """Return the signal's signal shape as (row, column)."""
+        return self.axes_manager.signal_shape[::-1]
+
+    @property
+    def _navigation_shape_rc(self) -> tuple:
+        """Return the signal's navigation shape as (row, column)."""
+        return self.axes_manager.navigation_shape[::-1]
 
     @property
     def detector(self) -> EBSDDetector:
