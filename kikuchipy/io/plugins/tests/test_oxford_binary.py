@@ -99,7 +99,7 @@ class TestOxfordBinaryReader:
     def test_versions(self, oxford_binary_file, ver, desired_nav_shape):
         """Ensure that versions 0, 1 and > 1 can be read."""
         s = kp.load(oxford_binary_file.name)
-        assert s.axes_manager.navigation_shape[::-1] == desired_nav_shape
+        assert s._navigation_shape_rc == desired_nav_shape
         if ver > 0:
             assert s.original_metadata.has_item("beam_x")
             assert s.original_metadata.has_item("beam_y")

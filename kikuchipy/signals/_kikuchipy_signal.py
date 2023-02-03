@@ -63,6 +63,16 @@ class KikuchipySignal2D(Signal2D):
 
     _custom_attributes = []
 
+    @property
+    def _signal_shape_rc(self) -> tuple:
+        """Return the signal's signal shape as (row, column)."""
+        return self.axes_manager.signal_shape[::-1]
+
+    @property
+    def _navigation_shape_rc(self) -> tuple:
+        """Return the signal's navigation shape as (row, column)."""
+        return self.axes_manager.navigation_shape[::-1]
+
     def rescale_intensity(
         self,
         relative: bool = False,

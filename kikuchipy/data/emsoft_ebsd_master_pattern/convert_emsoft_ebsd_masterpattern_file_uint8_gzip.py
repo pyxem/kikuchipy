@@ -54,10 +54,10 @@ f = File(os.path.join(datadir, phase, fname))
 orig_data = kp.io.plugins.h5ebsd.hdf5group2dict(group=f["/"], recursive=True)
 
 # Overwrite master patterns in original data
-lp_shape = (1, 1) + mp_lp.axes_manager.signal_shape[::-1]
+lp_shape = (1, 1) + mp_lp._signal_shape_rc
 orig_data["EMData"]["EBSDmaster"]["mLPNH"] = mp_lp.inav[0].data.reshape(lp_shape)
 orig_data["EMData"]["EBSDmaster"]["mLPSH"] = mp_lp.inav[1].data.reshape(lp_shape)
-sp_shape = (1,) + mp_sp.axes_manager.signal_shape[::-1]
+sp_shape = (1,) + mp_sp._signal_shape_rc
 orig_data["EMData"]["EBSDmaster"]["masterSPNH"] = mp_sp.inav[0].data.reshape(sp_shape)
 orig_data["EMData"]["EBSDmaster"]["masterSPSH"] = mp_sp.inav[1].data.reshape(sp_shape)
 

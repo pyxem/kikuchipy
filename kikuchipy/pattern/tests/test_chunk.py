@@ -219,7 +219,7 @@ class TestGetDynamicBackgroundChunk:
             kwargs["offset_before_fft"],
             kwargs["offset_after_ifft"],
         ) = _dynamic_background_frequency_space_setup(
-            pattern_shape=dummy_signal.axes_manager.signal_shape[::-1],
+            pattern_shape=dummy_signal._signal_shape_rc,
             std=std,
             truncate=4.0,
         )
@@ -262,7 +262,7 @@ class TestGetDynamicBackgroundChunk:
             kwargs["offset_before_fft"],
             kwargs["offset_after_ifft"],
         ) = _dynamic_background_frequency_space_setup(
-            pattern_shape=dummy_signal.axes_manager.signal_shape[::-1],
+            pattern_shape=dummy_signal._signal_shape_rc,
             std=2,
             truncate=4.0,
         )

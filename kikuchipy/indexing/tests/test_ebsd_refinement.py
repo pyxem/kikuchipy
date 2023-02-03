@@ -90,7 +90,7 @@ class TestEBSDRefine(EBSDRefineTestSetup):
     ):
         s = ebsd_with_axes_and_random_data
         xmap = get_single_phase_xmap(
-            nav_shape=s.axes_manager.navigation_shape[::-1],
+            nav_shape=s._navigation_shape_rc,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
         with pytest.raises(ValueError, match=error_msg):
@@ -101,10 +101,10 @@ class TestEBSDRefine(EBSDRefineTestSetup):
     def test_refine_raises(self, dummy_signal, get_single_phase_xmap):
         s = dummy_signal
         xmap = get_single_phase_xmap(
-            nav_shape=s.axes_manager.navigation_shape[::-1],
+            nav_shape=s._navigation_shape_rc,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        detector = kp.detectors.EBSDDetector(shape=s._signal_shape_rc)
         refine_kwargs = dict(master_pattern=self.mp, energy=20, detector=detector)
 
         with pytest.raises(ValueError, match="Method 'a' not in the list of supported"):
@@ -123,11 +123,11 @@ class TestEBSDRefine(EBSDRefineTestSetup):
     def test_refine_signal_mask(self, dummy_signal, get_single_phase_xmap):
         s = dummy_signal
         xmap = get_single_phase_xmap(
-            nav_shape=s.axes_manager.navigation_shape[::-1],
+            nav_shape=s._navigation_shape_rc,
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s._signal_shape_rc)
         ref_kw = dict(
             xmap=xmap,
             master_pattern=self.mp,
@@ -137,7 +137,7 @@ class TestEBSDRefine(EBSDRefineTestSetup):
             method_kwargs=dict(method="Nelder-Mead", options=dict(maxfev=10)),
         )
         xmap_ref_no_mask = s.refine_orientation(**ref_kw)
-        signal_mask = np.zeros(s.axes_manager.signal_shape[::-1], dtype=bool)
+        signal_mask = np.zeros(s._signal_shape_rc, dtype=bool)
         signal_mask[0, 0] = 1  # Mask away upper left pixel
 
         xmap_ref_mask = s.refine_orientation(signal_mask=signal_mask, **ref_kw)
@@ -193,7 +193,7 @@ class TestEBSDRefine(EBSDRefineTestSetup):
         """
         s = ebsd_with_axes_and_random_data
         xmap = get_single_phase_xmap(
-            nav_shape=s.axes_manager.navigation_shape[::-1],
+            nav_shape=s._navigation_shape_rc,
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
@@ -214,13 +214,13 @@ class TestEBSDRefine(EBSDRefineTestSetup):
         self, dummy_signal, get_single_phase_xmap
     ):  # pragma: no cover
         s = dummy_signal
-        nav_shape = s.axes_manager.navigation_shape[::-1]
+        nav_shape = s._navigation_shape_rc
         xmap = get_single_phase_xmap(
             nav_shape=nav_shape,
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s._signal_shape_rc)
 
         with pytest.raises(ImportError, match="Package `nlopt`, required for method "):
             _ = s.refine_orientation_projection_center(
@@ -236,13 +236,13 @@ class TestEBSDRefine(EBSDRefineTestSetup):
         self, dummy_signal, get_single_phase_xmap
     ):
         s = dummy_signal
-        nav_shape = s.axes_manager.navigation_shape[::-1]
+        nav_shape = s._navigation_shape_rc
         xmap = get_single_phase_xmap(
             nav_shape=nav_shape,
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s._signal_shape_rc)
 
         with pytest.raises(
             ValueError, match="The initial step must be a single number"
@@ -396,7 +396,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
     ):
         s = ebsd_with_axes_and_random_data
         xmap = get_single_phase_xmap(
-            nav_shape=s.axes_manager.navigation_shape[::-1],
+            nav_shape=s._navigation_shape_rc,
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
@@ -454,7 +454,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
     ):
         s = ebsd_with_axes_and_random_data
         xmap = get_single_phase_xmap(
-            nav_shape=s.axes_manager.navigation_shape[::-1],
+            nav_shape=s._navigation_shape_rc,
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
@@ -480,10 +480,10 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
     ):
         s = dummy_signal
         xmap = get_single_phase_xmap(
-            nav_shape=s.axes_manager.navigation_shape[::-1],
+            nav_shape=s._navigation_shape_rc,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s._signal_shape_rc)
 
         dask_arr = s.refine_orientation(
             xmap=xmap,
@@ -527,9 +527,9 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         get_single_phase_xmap,
     ):
         s = ebsd_with_axes_and_random_data
-        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s._signal_shape_rc)
         xmap = get_single_phase_xmap(
-            nav_shape=s.axes_manager.navigation_shape[::-1],
+            nav_shape=s._navigation_shape_rc,
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
@@ -552,7 +552,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         s = self.nickel_ebsd_small
 
         energy = 20
-        signal_mask = kp.filters.Window("circular", s.axes_manager.signal_shape[::-1])
+        signal_mask = kp.filters.Window("circular", s._signal_shape_rc)
         signal_mask = ~signal_mask.astype(bool)
         xmap_ref = s.refine_orientation(
             xmap=s.xmap,
@@ -573,7 +573,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         s = self.nickel_ebsd_small
 
         energy = 20
-        signal_mask = kp.filters.Window("circular", s.axes_manager.signal_shape[::-1])
+        signal_mask = kp.filters.Window("circular", s._signal_shape_rc)
         signal_mask = ~signal_mask.astype(bool)
 
         xmap_ref = s.refine_orientation(
@@ -595,7 +595,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         s = self.nickel_ebsd_small
 
         energy = 20
-        signal_mask = kp.filters.Window("circular", s.axes_manager.signal_shape[::-1])
+        signal_mask = kp.filters.Window("circular", s._signal_shape_rc)
         signal_mask = ~signal_mask.astype(bool)
 
         rot_ps = Rotation.from_axes_angles([[0, 0, 1], [0, 0, -1]], np.deg2rad(30))
@@ -625,7 +625,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         s = self.nickel_ebsd_small
 
         energy = 20
-        signal_mask = kp.filters.Window("circular", s.axes_manager.signal_shape[::-1])
+        signal_mask = kp.filters.Window("circular", s._signal_shape_rc)
         signal_mask = ~signal_mask.astype(bool)
 
         rot_ps = Rotation.from_axes_angles([[0, 0, 1], [0, 0, -1]], np.deg2rad(30))
@@ -698,7 +698,7 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
         get_single_phase_xmap,
     ):
         s = ebsd_with_axes_and_random_data
-        nav_shape = s.axes_manager.navigation_shape[::-1]
+        nav_shape = s._navigation_shape_rc
         xmap = get_single_phase_xmap(
             nav_shape=nav_shape,
             rotations_per_point=1,
@@ -765,7 +765,7 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
         get_single_phase_xmap,
     ):
         s = ebsd_with_axes_and_random_data
-        nav_shape = s.axes_manager.navigation_shape[::-1]
+        nav_shape = s._navigation_shape_rc
         xmap = get_single_phase_xmap(
             nav_shape=nav_shape,
             rotations_per_point=1,
@@ -823,9 +823,9 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
         get_single_phase_xmap,
     ):
         s = ebsd_with_axes_and_random_data
-        detector = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        detector = kp.detectors.EBSDDetector(shape=s._signal_shape_rc)
         xmap = get_single_phase_xmap(
-            nav_shape=s.axes_manager.navigation_shape[::-1],
+            nav_shape=s._navigation_shape_rc,
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
@@ -851,10 +851,10 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
     ):
         s = dummy_signal
         xmap = get_single_phase_xmap(
-            nav_shape=s.axes_manager.navigation_shape[::-1],
+            nav_shape=s._navigation_shape_rc,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s._signal_shape_rc)
 
         dask_arr = s.refine_projection_center(
             xmap=xmap,
@@ -886,13 +886,13 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         get_single_phase_xmap,
     ):
         s = dummy_signal
-        nav_shape = s.axes_manager.navigation_shape[::-1]
+        nav_shape = s._navigation_shape_rc
         xmap = get_single_phase_xmap(
             nav_shape=nav_shape,
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s._signal_shape_rc)
         method_kwargs.update(dict(options=dict(maxfev=10)))
         signal_mask = np.zeros(det.shape, dtype=bool)
 
@@ -929,13 +929,13 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         get_single_phase_xmap,
     ):  # pragma: no cover
         s = dummy_signal
-        nav_shape = s.axes_manager.navigation_shape[::-1]
+        nav_shape = s._navigation_shape_rc
         xmap = get_single_phase_xmap(
             nav_shape=nav_shape,
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s._signal_shape_rc)
         signal_mask = np.zeros(det.shape, dtype=bool)
 
         xmap_ref, det_ref = s.refine_orientation_projection_center(
@@ -984,9 +984,9 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         get_single_phase_xmap,
     ):
         s = dummy_signal
-        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s._signal_shape_rc)
         xmap = get_single_phase_xmap(
-            nav_shape=s.axes_manager.navigation_shape[::-1],
+            nav_shape=s._navigation_shape_rc,
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
@@ -1010,11 +1010,11 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
     ):
         s = dummy_signal
         xmap = get_single_phase_xmap(
-            nav_shape=s.axes_manager.navigation_shape[::-1],
+            nav_shape=s._navigation_shape_rc,
             rotations_per_point=1,
             step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
         )
-        det = kp.detectors.EBSDDetector(shape=s.axes_manager.signal_shape[::-1])
+        det = kp.detectors.EBSDDetector(shape=s._signal_shape_rc)
 
         dask_array = s.refine_orientation_projection_center(
             xmap=xmap,
@@ -1034,7 +1034,7 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         s = self.nickel_ebsd_small
 
         energy = 20
-        signal_mask = kp.filters.Window("circular", s.axes_manager.signal_shape[::-1])
+        signal_mask = kp.filters.Window("circular", s._signal_shape_rc)
         signal_mask = ~signal_mask.astype(bool)
 
         rot_ps = Rotation.from_axes_angles([[0, 0, 1], [0, 0, -1]], np.deg2rad(30))
@@ -1064,7 +1064,7 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         s = self.nickel_ebsd_small
 
         energy = 20
-        signal_mask = kp.filters.Window("circular", s.axes_manager.signal_shape[::-1])
+        signal_mask = kp.filters.Window("circular", s._signal_shape_rc)
         signal_mask = ~signal_mask.astype(bool)
 
         rot_ps = Rotation.from_axes_angles([[0, 0, 1], [0, 0, -1]], np.deg2rad(30))

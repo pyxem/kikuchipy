@@ -37,9 +37,9 @@ rot = Rotation([grain1, grain2, grain2, grain1, grain2, grain2, grain1, grain2, 
 euler = rot.to_euler()
 
 s = kp.data.nickel_ebsd_small()
-ny, nx = s.axes_manager.navigation_shape[::-1]
+ny, nx = s._navigation_shape_rc
 n = ny * nx
-sy, sx = s.axes_manager.signal_shape[::-1]
+sy, sx = s._signal_shape_rc
 dx = s.axes_manager["x"].scale
 
 dir_data = os.path.abspath(os.path.dirname(__file__))

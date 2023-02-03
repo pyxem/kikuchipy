@@ -154,9 +154,7 @@ class VirtualBSEGenerator:
             if isinstance(rois, tuple) or hasattr(rois, "__iter__") is False:
                 rois = (rois,)
 
-            image = np.zeros(
-                self.signal.axes_manager.navigation_shape[::-1], dtype=np.float64
-            )
+            image = np.zeros(self.signal._navigation_shape_rc, dtype=np.float64)
             for roi in rois:
                 if isinstance(roi, tuple):
                     roi = self.roi_from_grid(roi)

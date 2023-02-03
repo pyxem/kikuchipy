@@ -31,14 +31,14 @@ import kikuchipy as kp
 
 
 s = kp.data.nickel_ebsd_small()
-ny, nx = s.axes_manager.navigation_shape[::-1]
+ny, nx = s._navigation_shape_rc
 n = ny * nx
-sy, sx = s.axes_manager.signal_shape[::-1]
+sy, sx = s._signal_shape_rc
 
 dir_data = os.path.abspath(os.path.dirname(__file__))
 
 
-## File with no region of interest (ROI)
+# --- File with no region of interest (ROI)
 f1 = File(os.path.join(dir_data, "patterns.h5"), mode="w")
 
 # Top group
@@ -141,7 +141,7 @@ sem.create_dataset("SEM ZOffset", dtype=float, data=0)
 f1.close()
 
 
-## File with rectangular ROI (SEM group under EBSD group as well)
+# --- File with rectangular ROI (SEM group under EBSD group as well)
 f2 = File(os.path.join(dir_data, "patterns_roi.h5"), mode="w")
 
 # Top group
@@ -253,7 +253,7 @@ sem.create_dataset("ZOffset", dtype=float, data=0)
 f2.close()
 
 
-## File with non-rectangular ROI (SEM group under EBSD group as well)
+# --- File with non-rectangular ROI (SEM group under EBSD group as well)
 f3 = File(os.path.join(dir_data, "patterns_roi_nonrectangular.h5"), mode="w")
 
 # Top group
