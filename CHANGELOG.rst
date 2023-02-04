@@ -148,6 +148,9 @@ Removed
 
 Fixed
 -----
+- Conversion from EDAX TSL projection center (PC) convention for (PCy, PCz) for
+  rectangular detectors are corrected.
+  (`#604 <https://github.com/pyxem/kikuchipy/pull/604>`_)
 - Default ``EBSD.detector.shape`` is now correct when a detector is not passed upon
   initialization. (`#603 <https://github.com/pyxem/kikuchipy/pull/603>`_)
 - Oxford Instruments .ebsp files of version 4 can now be read.
