@@ -18,6 +18,11 @@ Unreleased
 
 Added
 -----
+- Option to return a new signal (lazy or not) instead of operating inplace is added to
+  many methods in all classes via ``inplace`` and ``lazy_output`` boolean parameters.
+  (`#605 <https://github.com/pyxem/kikuchipy/pull/605>`_)
+- Lazy version of the ``VirtualBSEImage`` class.
+  (`#605 <https://github.com/pyxem/kikuchipy/pull/605>`_)
 - Allow providing a color for simulator reflections when plotting with Matplotlib.
   (`#599 <https://github.com/pyxem/kikuchipy/pull/599>`_)
 - Passing pseudo-symmetry operators to orientation and orientation/PC EBSD refinement
