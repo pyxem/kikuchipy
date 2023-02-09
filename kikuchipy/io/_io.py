@@ -117,12 +117,13 @@ def load(
     >>> s
     <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
     """
+    filename = str(filename)
+
     if not os.path.isfile(filename):
         is_wildcard = False
-        if isinstance(filename, str):
-            filenames = glob.glob(filename)
-            if len(filenames) > 0:
-                is_wildcard = True
+        filenames = glob.glob(filename)
+        if len(filenames) > 0:
+            is_wildcard = True
         if not is_wildcard:
             raise IOError(f"No filename matches '{filename}'.")
 
@@ -363,7 +364,7 @@ def _assign_signal_subclass(
 
 
 def _save(
-    filename: str,
+    filename: Union[str, Path],
     signal,
     overwrite: Optional[bool] = None,
     add_scan: Optional[bool] = None,
@@ -388,6 +389,8 @@ def _save(
     **kwargs :
         Keyword arguments passed to the writer.
     """
+    filename = str(filename)
+
     ext = os.path.splitext(filename)[1][1:]
     if ext == "":  # Will write to kikuchipy's h5ebsd format
         ext = "h5"

@@ -22,8 +22,6 @@ import os
 from typing import Any, Union, Tuple, Optional
 
 import dask.array as da
-from dask.diagnostics import ProgressBar
-import hyperspy.api as hs
 from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.misc.rgb_tools import rgb_dtypes
@@ -31,8 +29,7 @@ import numpy as np
 from skimage.util.dtype import dtype_range
 import yaml
 
-from kikuchipy.pattern import chunk
-from kikuchipy.signals.util._dask import get_dask_array
+from kikuchipy.pattern import normalize_intensity, rescale_intensity
 from kikuchipy.signals.util._overwrite_hyperspy_methods import insert_doc_disclaimer
 
 
@@ -83,8 +80,10 @@ class KikuchipySignal2D(Signal2D):
         ] = None,
         percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
         show_progressbar: Optional[bool] = None,
-    ) -> None:
-        """Rescale image intensities inplace.
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, Any]:
+        """Rescale image intensities.
 
         Output min./max. intensity is determined from ``out_range`` or
         the data type range of the :class:`numpy.dtype` passed to
@@ -99,7 +98,9 @@ class KikuchipySignal2D(Signal2D):
             Whether to keep relative intensities between images (default
             is ``False``). If ``True``, ``in_range`` must be ``None``,
             because ``in_range`` is in this case set to the global
-            min./max. intensity.
+            min./max. intensity. Use with care, as this requires the
+            computation of the min./max. intensity of the signal before
+            rescaling.
         in_range
             Min./max. intensity of input images. If not given,
             ``in_range`` is set to pattern min./max intensity. Contrast
@@ -121,6 +122,19 @@ class KikuchipySignal2D(Signal2D):
             Whether to show a progressbar. If not given, the value of
             :obj:`hyperspy.api.preferences.General.show_progressbar`
             is used.
+        inplace
+            Whether to operate on the current signal or return a new
+            one. Default is ``True``.
+        lazy_output
+            Whether the returned signal is lazy. If not given this
+            follows from the current signal. Can only be ``True`` if
+            ``inplace=False``.
+
+        Returns
+        -------
+        s_out
+            Rescaled signal, returned if ``inplace=False``. Whether
+            it is lazy is determined from ``lazy_output``.
 
         See Also
         --------
@@ -169,6 +183,9 @@ class KikuchipySignal2D(Signal2D):
         are set to the ends of the data type range, e.g. 0 and 255
         respectively for images of ``uint8`` data type.
         """
+        if lazy_output and inplace:
+            raise ValueError("`lazy_output=True` requires `inplace=False`")
+
         if self.data.dtype in rgb_dtypes.values():
             raise NotImplementedError(
                 "Use RGB channel normalization when creating the image instead."
@@ -181,6 +198,7 @@ class KikuchipySignal2D(Signal2D):
             raise ValueError("'in_range' must be None if 'relative' is True.")
         elif relative:  # Scale relative to min./max. intensity in images
             in_range = (self.data.min(), self.data.max())
+            in_range = tuple(da.compute(in_range)[0])
 
         if dtype_out is None:
             dtype_out = self.data.dtype
@@ -190,37 +208,25 @@ class KikuchipySignal2D(Signal2D):
         if out_range is None:
             out_range = dtype_range[dtype_out.type]
 
-        # Create dask array of signal images and do processing on this
-        dask_array = get_dask_array(signal=self)
-
-        # Rescale images
-        rescaled_images = dask_array.map_blocks(
-            func=chunk.rescale_intensity,
+        map_kw = dict(
+            show_progressbar=show_progressbar,
+            parallel=True,
+            output_dtype=dtype_out,
             in_range=in_range,
             out_range=out_range,
             dtype_out=dtype_out,
             percentiles=percentiles,
-            dtype=dtype_out,
         )
-
-        # Overwrite signal images
-        if not self._lazy:
-            pbar = ProgressBar()
-            if show_progressbar or (
-                show_progressbar is None and hs.preferences.General.show_progressbar
-            ):
-                pbar.register()
-
-            if self.data.dtype != rescaled_images.dtype:
-                self.change_dtype(dtype_out)
-            rescaled_images.store(self.data, compute=True)
-
-            try:
-                pbar.unregister()
-            except KeyError:
-                pass
+        attrs = self._get_custom_attributes()
+        if inplace:
+            self.map(rescale_intensity, inplace=True, **map_kw)
+            self._set_custom_attributes(attrs)
         else:
-            self.data = rescaled_images
+            s_out = self.map(
+                rescale_intensity, inplace=False, lazy_output=lazy_output, **map_kw
+            )
+            s_out._set_custom_attributes(attrs)
+            return s_out
 
     def normalize_intensity(
         self,
@@ -228,9 +234,11 @@ class KikuchipySignal2D(Signal2D):
         divide_by_square_root: bool = False,
         dtype_out: Union[str, np.dtype, type, None] = None,
         show_progressbar: Optional[bool] = None,
-    ) -> None:
-        """Normalize image intensities in inplace to a mean of zero with
-        a given standard deviation.
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, Any]:
+        """Normalize image intensities to a mean of zero with a given
+        standard deviation.
 
         Parameters
         ----------
@@ -247,6 +255,19 @@ class KikuchipySignal2D(Signal2D):
             Whether to show a progressbar. If not given, the value of
             :obj:`hyperspy.api.preferences.General.show_progressbar`
             is used.
+        inplace
+            Whether to operate on the current signal or return a new
+            one. Default is ``True``.
+        lazy_output
+            Whether the returned signal is lazy. If not given this
+            follows from the current signal. Can only be ``True`` if
+            ``inplace=False``.
+
+        Returns
+        -------
+        s_out
+            Normalized signal, returned if ``inplace=False``. Whether
+            it is lazy is determined from ``lazy_output``.
 
         Notes
         -----
@@ -269,6 +290,9 @@ class KikuchipySignal2D(Signal2D):
         >>> np.mean(s.data)
         2.6373216e-08
         """
+        if lazy_output and inplace:
+            raise ValueError("`lazy_output=True` requires `inplace=False`")
+
         if self.data.dtype in rgb_dtypes.values():
             raise NotImplementedError(
                 "Use RGB channel normalization when creating the image instead."
@@ -279,36 +303,24 @@ class KikuchipySignal2D(Signal2D):
         else:
             dtype_out = np.dtype(dtype_out)
 
-        dask_array = get_dask_array(self, dtype=np.float32)
-
-        normalized_images = dask_array.map_blocks(
-            func=chunk.normalize_intensity,
+        map_kw = dict(
+            show_progressbar=show_progressbar,
+            parallel=True,
+            output_dtype=dtype_out,
             num_std=num_std,
             divide_by_square_root=divide_by_square_root,
             dtype_out=dtype_out,
-            dtype=dtype_out,
         )
-
-        # Change data type if requested
-        if dtype_out != self.data.dtype:
-            self.change_dtype(dtype_out)
-
-        # Overwrite signal patterns
-        if not self._lazy:
-            pbar = ProgressBar()
-            if show_progressbar or (
-                show_progressbar is None and hs.preferences.General.show_progressbar
-            ):
-                pbar.register()
-
-            normalized_images.store(self.data, compute=True)
-
-            try:
-                pbar.unregister()
-            except KeyError:
-                pass
+        attrs = self._get_custom_attributes()
+        if inplace:
+            self.map(normalize_intensity, inplace=True, **map_kw)
+            self._set_custom_attributes(attrs)
         else:
-            self.data = normalized_images
+            s_out = self.map(
+                normalize_intensity, inplace=False, lazy_output=lazy_output, **map_kw
+            )
+            s_out._set_custom_attributes(attrs)
+            return s_out
 
     def _get_custom_attributes(self, make_deepcopy: bool = False) -> dict:
         """Return a dictionary of attributes not in ``Signal2D``.
@@ -448,5 +460,5 @@ class LazyKikuchipySignal2D(LazySignal2D, KikuchipySignal2D):
     def compute(self, *args, **kwargs) -> None:
         attrs = self._get_custom_attributes()
         super().compute(*args, **kwargs)
-        gc.collect()
         self._set_custom_attributes(attrs, unmake_lazy=True)
+        gc.collect()

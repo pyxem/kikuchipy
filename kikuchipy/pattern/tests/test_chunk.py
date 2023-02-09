@@ -17,10 +17,9 @@
 
 from packaging import version
 
-import dask.array as da
 import numpy as np
 import pytest
-from scipy.ndimage import convolve, gaussian_filter
+from scipy.ndimage import gaussian_filter
 from skimage import __version__ as skimage_version
 
 from kikuchipy.filters.fft_barnes import _fft_filter
@@ -40,127 +39,6 @@ if version.parse(skimage_version) < version.parse("0.17"):  # pragma: no cover
     ADAPT_EQ_UINT8 = np.array(
         [[127, 223, 127], [255, 223, 31], [223, 31, 0]], dtype=np.uint8
     )
-
-
-class TestRescaleIntensityChunk:
-    @pytest.mark.parametrize(
-        "dtype_out, answer",
-        [
-            (
-                np.uint8,
-                np.array([[182, 218, 182], [255, 218, 182], [218, 36, 0]]),
-            ),
-            (
-                np.float32,
-                np.array(
-                    [
-                        [0.4285, 0.7142, 0.4285],
-                        [1, 0.7142, 0.4285],
-                        [0.7142, -0.7142, -1],
-                    ],
-                    dtype=np.float32,
-                ),
-            ),
-        ],
-    )
-    def test_rescale_intensity(self, dummy_signal, dtype_out, answer):
-        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
-
-        rescaled_patterns = dask_array.map_blocks(
-            func=chunk.rescale_intensity, dtype_out=dtype_out, dtype=dtype_out
-        )
-
-        assert isinstance(rescaled_patterns, da.Array)
-        assert rescaled_patterns.dtype == dtype_out
-        assert np.allclose(rescaled_patterns[0, 0].compute(), answer, atol=1e-4)
-
-    @pytest.mark.parametrize(
-        "out_range, dtype_out, answer",
-        [
-            (
-                (0, 255),
-                np.uint8,
-                np.array([[182, 218, 182], [255, 218, 182], [218, 36, 0]]),
-            ),
-            (
-                (5, 200),
-                np.uint8,
-                np.array([[144, 172, 144], [200, 172, 144], [172, 32, 5]]),
-            ),
-            (
-                (-1, 1),
-                np.float32,
-                np.array(
-                    [
-                        [0.4285, 0.7142, 0.4285],
-                        [1.0, 0.7142, 0.4285],
-                        [0.7142, -0.7142, -1],
-                    ],
-                    dtype=np.float32,
-                ),
-            ),
-        ],
-    )
-    def test_rescale_intensity_out_range(
-        self, dummy_signal, out_range, dtype_out, answer
-    ):
-        dummy_signal.data = dummy_signal.data.astype(np.float32)
-
-        rescaled_patterns = chunk.rescale_intensity(
-            patterns=dummy_signal.data, out_range=out_range, dtype_out=dtype_out
-        )
-
-        assert isinstance(rescaled_patterns, np.ndarray)
-        assert rescaled_patterns.dtype == dtype_out
-        assert np.allclose(rescaled_patterns[0, 0], answer, atol=1e-4)
-
-    @pytest.mark.parametrize(
-        "in_range, answer",
-        [
-            ((2, 250), np.array([[3, 4, 3], [5, 4, 3], [4, 0, 0]])),
-            ((3, 250), np.array([[2, 3, 2], [4, 3, 2], [3, 0, 0]])),
-        ],
-    )
-    def test_rescale_intensity_in_range(self, dummy_signal, in_range, answer):
-        dtype_out = dummy_signal.data.dtype
-        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
-
-        rescaled_patterns = dask_array.map_blocks(
-            func=chunk.rescale_intensity,
-            in_range=in_range,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-        )
-
-        assert isinstance(rescaled_patterns, da.Array)
-        assert rescaled_patterns.dtype == dtype_out
-        assert np.allclose(rescaled_patterns[0, 0].compute(), answer)
-
-    @pytest.mark.parametrize(
-        "percentiles, answer",
-        [
-            ((10, 90), np.array([[198, 245, 198], [254, 245, 198], [245, 9, 0]])),
-            ((1, 99), np.array([[183, 220, 183], [255, 220, 183], [220, 34, 0]])),
-        ],
-    )
-    def test_rescale_intensity_percentiles(self, dummy_signal, percentiles, answer):
-        dtype_out = dummy_signal.data.dtype
-        dask_array = get_dask_array(dummy_signal, dtype=np.float32)
-
-        rescaled_patterns = dask_array.map_blocks(
-            func=chunk.rescale_intensity,
-            percentiles=percentiles,
-            dtype_out=dtype_out,
-            dtype=dtype_out,
-        )
-
-        p1 = rescaled_patterns[0, 0].compute()
-        p2 = rescaled_patterns[0, 1].compute()
-
-        assert isinstance(rescaled_patterns, da.Array)
-        assert rescaled_patterns.dtype == dtype_out
-        assert np.allclose(p1, answer)
-        assert not np.allclose(p1, p2, atol=1)
 
 
 class TestGetDynamicBackgroundChunk:
@@ -346,69 +224,3 @@ class TestFFTFilterChunk:
         assert np.allclose(
             np.sum(fft_spectrum.py_func(this_fft)), expected_spectrum_sum, atol=1e-4
         )
-
-
-class TestNormalizeIntensityChunk:
-    @pytest.mark.parametrize(
-        "num_std, divide_by_square_root, dtype_out, answer",
-        [
-            (
-                1,
-                True,
-                np.float32,
-                np.array(
-                    [
-                        [0.0653, 0.2124, 0.0653],
-                        [0.3595, 0.2124, 0.0653],
-                        [0.2124, -0.5229, -0.6700],
-                    ]
-                ),
-            ),
-            (
-                2,
-                True,
-                np.float32,
-                np.array(
-                    [
-                        [0.0326, 0.1062, 0.0326],
-                        [0.1797, 0.1062, 0.0326],
-                        [0.1062, -0.2614, -0.3350],
-                    ]
-                ),
-            ),
-            (
-                1,
-                False,
-                np.float32,
-                np.array(
-                    [
-                        [0.1961, 0.6373, 0.1961],
-                        [1.0786, 0.6373, 0.1961],
-                        [0.6373, -1.5689, -2.0101],
-                    ]
-                ),
-            ),
-            (1, False, None, np.array([[0, 0, 0], [1, 0, 0], [0, -1, -2]])),
-        ],
-    )
-    def test_normalize_intensity(
-        self, dummy_signal, num_std, divide_by_square_root, dtype_out, answer
-    ):
-        if dtype_out is None:
-            dummy_signal.data = dummy_signal.data.astype(np.int8)
-
-        normalized_patterns = chunk.normalize_intensity(
-            patterns=dummy_signal.data,
-            num_std=num_std,
-            divide_by_square_root=divide_by_square_root,
-            dtype_out=dtype_out,
-        )
-
-        if dtype_out is None:
-            dtype_out = dummy_signal.data.dtype
-        else:
-            assert np.allclose(np.mean(normalized_patterns), 0, atol=1e-6)
-
-        assert normalized_patterns.dtype == dtype_out
-        assert isinstance(normalized_patterns, np.ndarray)
-        assert np.allclose(normalized_patterns[0, 0], answer, atol=1e-4)

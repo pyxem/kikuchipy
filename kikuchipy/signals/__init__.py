@@ -36,6 +36,7 @@ __all__ = [
     "LazyEBSD",
     "LazyEBSDMasterPattern",
     "LazyECPMasterPattern",
+    "LazyVirtualBSEImage",
     "VirtualBSEImage",
     "util",
 ]
@@ -53,6 +54,7 @@ def __getattr__(name):
         "LazyEBSD": "ebsd",
         "LazyEBSDMasterPattern": "ebsd_master_pattern",
         "LazyECPMasterPattern": "ecp_master_pattern",
+        "LazyVirtualBSEImage": "virtual_bse_image",
         "VirtualBSEImage": "virtual_bse_image",
     }
     if name in __all__:

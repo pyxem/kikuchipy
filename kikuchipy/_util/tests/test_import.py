@@ -326,6 +326,7 @@ class TestImport:
             "LazyEBSD",
             "LazyEBSDMasterPattern",
             "LazyECPMasterPattern",
+            "LazyVirtualBSEImage",
             "VirtualBSEImage",
             "util",
         ]
