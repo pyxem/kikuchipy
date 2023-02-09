@@ -21,6 +21,7 @@ from numba import njit
 import numpy as np
 from scipy.ndimage import gaussian_filter
 from scipy.fft import fft2, rfft2, ifft2, irfft2, fftshift, ifftshift
+from skimage.exposure import equalize_adapthist
 from skimage.util.dtype import dtype_range
 
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
@@ -70,10 +71,10 @@ def rescale_intensity(
         dtype_out = np.dtype(dtype_out)
 
     if percentiles is not None:
-        in_range = np.percentile(pattern, q=percentiles)
+        in_range = np.nanpercentile(pattern, q=percentiles)
 
     if in_range is None:
-        imin, imax = np.min(pattern), np.max(pattern)
+        imin, imax = np.nanmin(pattern), np.nanmax(pattern)
     else:
         imin, imax = in_range
         pattern = np.clip(pattern, imin, imax)
@@ -804,3 +805,44 @@ def _downsample2d(
     imax = np.max(binned_pattern)
     rescaled_pattern = _rescale_with_min_max(binned_pattern, imin, imax, omin, omax)
     return rescaled_pattern.astype(dtype_out)
+
+
+def _adaptive_histogram_equalization(
+    image: np.ndarray,
+    kernel_size: Union[Tuple[int, int], List[int]],
+    clip_limit: Union[int, float] = 0,
+    nbins: int = 128,
+) -> np.ndarray:
+    """Local contrast enhancement with adaptive histogram equalization.
+
+    This method makes use of :func:`skimage.exposure.equalize_adapthist`.
+
+    Parameters
+    ----------
+    image
+        Image (e.g. EBSD pattern).
+    kernel_size
+        Shape of contextual regions for adaptive histogram equalization.
+    clip_limit
+        Clipping limit, normalized between 0 and 1 (higher values give
+        more contrast). Default is 0.
+    nbins
+        Number of gray bins for histogram. Default is 128.
+
+    Returns
+    -------
+    image_eq
+        Image with enhanced contrast.
+    """
+    dtype_in = image.dtype.type
+
+    image_eq = equalize_adapthist(
+        image,
+        kernel_size=kernel_size,
+        clip_limit=clip_limit,
+        nbins=nbins,
+    )
+
+    image_eq = rescale_intensity(image_eq, dtype_out=dtype_in)
+
+    return image_eq
