@@ -18,6 +18,7 @@
 import numpy as np
 import pytest
 
+import hyperspy.api as hs
 import kikuchipy as kp
 
 
@@ -112,3 +113,11 @@ class TestVirtualBSEImage:
         vbse_img3 = vbse_img.as_lazy()
         vbse_img4 = vbse_img3.normalize_intensity(inplace=False, lazy_output=False)
         assert isinstance(vbse_img4, kp.signals.VirtualBSEImage)
+
+    def test_adaptive_histogram_equalization(self):
+        data = np.random.random(4800).reshape((40, 30, 2, 2))
+        s = kp.signals.EBSD(data)
+        vbse_img = s.get_virtual_bse_intensity(hs.roi.RectangularROI(0, 0, 2, 2))
+        vbse_img.rescale_intensity(dtype_out=np.uint8)
+        vbse_img.adaptive_histogram_equalization()
+        assert abs(np.unique(vbse_img.data).size - 255) <= 5
