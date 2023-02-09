@@ -179,3 +179,9 @@ class TestECPMasterPattern:
         mp3 = mp.as_lazy()
         mp4 = mp3.normalize_intensity(inplace=False, lazy_output=False)
         assert isinstance(mp4, kp.signals.ECPMasterPattern)
+
+    def test_adaptive_histogram_equalization(self):
+        mp = kp.load(ECP_FILE)
+        mp.rescale_intensity(dtype_out=np.uint8)
+        mp.adaptive_histogram_equalization()
+        assert all([mp.data.min() >= 0, mp.data.max() <= 255])
