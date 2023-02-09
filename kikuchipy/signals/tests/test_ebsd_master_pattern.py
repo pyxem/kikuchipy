@@ -633,3 +633,71 @@ class TestIntensityScaling:
         mp.change_dtype("float32")
         mp.normalize_intensity()
         assert np.allclose([mp.data.min(), mp.data.max()], [-1.33, 5.93], atol=1e-2)
+
+    def test_rescale_intensity_inplace(self):
+        mp = nickel_ebsd_master_pattern_small()
+
+        # Current signal is unaffected
+        mp2 = mp.deepcopy()
+        mp3 = mp.normalize_intensity(inplace=False)
+        assert isinstance(mp3, kp.signals.EBSDMasterPattern)
+        assert np.allclose(mp2.data, mp.data)
+
+        # Operating on current signal gives same result as output
+        mp.normalize_intensity()
+        assert np.allclose(mp3.data, mp.data)
+
+        # Operating on lazy signal returns lazy signal
+        mp4 = mp2.as_lazy()
+        mp5 = mp4.normalize_intensity(inplace=False)
+        assert isinstance(mp5, kp.signals.LazyEBSDMasterPattern)
+        mp5.compute()
+        assert np.allclose(mp5.data, mp.data)
+
+    def test_rescale_intensity_lazy_output(self):
+        mp = nickel_ebsd_master_pattern_small()
+        with pytest.raises(
+            ValueError, match="`lazy_output=True` requires `inplace=False`"
+        ):
+            _ = mp.normalize_intensity(lazy_output=True)
+
+        mp2 = mp.normalize_intensity(inplace=False, lazy_output=True)
+        assert isinstance(mp2, kp.signals.LazyEBSDMasterPattern)
+
+        mp3 = mp.as_lazy()
+        mp4 = mp3.normalize_intensity(inplace=False, lazy_output=False)
+        assert isinstance(mp4, kp.signals.EBSDMasterPattern)
+
+    def test_normalize_intensity_inplace(self):
+        mp = nickel_ebsd_master_pattern_small()
+
+        # Current signal is unaffected
+        mp2 = mp.deepcopy()
+        mp3 = mp.normalize_intensity(inplace=False)
+        assert isinstance(mp3, kp.signals.EBSDMasterPattern)
+        assert np.allclose(mp2.data, mp.data)
+
+        # Operating on current signal gives same result as output
+        mp.normalize_intensity()
+        assert np.allclose(mp3.data, mp.data)
+
+        # Operating on lazy signal returns lazy signal
+        mp4 = mp2.as_lazy()
+        mp5 = mp4.normalize_intensity(inplace=False)
+        assert isinstance(mp5, kp.signals.LazyEBSDMasterPattern)
+        mp5.compute()
+        assert np.allclose(mp5.data, mp.data)
+
+    def test_normalize_intensity_lazy_output(self):
+        mp = nickel_ebsd_master_pattern_small()
+        with pytest.raises(
+            ValueError, match="`lazy_output=True` requires `inplace=False`"
+        ):
+            _ = mp.normalize_intensity(lazy_output=True)
+
+        mp2 = mp.normalize_intensity(inplace=False, lazy_output=True)
+        assert isinstance(mp2, kp.signals.LazyEBSDMasterPattern)
+
+        mp3 = mp.as_lazy()
+        mp4 = mp3.normalize_intensity(inplace=False, lazy_output=False)
+        assert isinstance(mp4, kp.signals.EBSDMasterPattern)
