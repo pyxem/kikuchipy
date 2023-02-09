@@ -19,9 +19,7 @@ import kikuchipy as kp
 s = kp.data.nickel_ebsd_small()
 print(s.static_background)
 
-# Keep original for comparison and remove background
-s2 = s.deepcopy()
-s2.remove_static_background()
+s2 = s.remove_static_background(inplace=False)
 
 # Plot pattern before and after correction and the intensity histograms
 patterns = [s.inav[0, 0].data, s2.inav[0, 0].data]

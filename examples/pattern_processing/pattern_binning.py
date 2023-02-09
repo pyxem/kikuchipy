@@ -14,7 +14,6 @@ This example shows how to bin :class:`~kikuchipy.signals.EBSD` patterns using
 
 import hyperspy.api as hs
 import kikuchipy as kp
-import numpy as np
 
 
 s = kp.data.silicon_ebsd_moving_screen_in(allow_download=True, show_progressbar=False)
@@ -29,8 +28,7 @@ print(s.detector)
 # pattern intensity). Note how the :attr:`~kikuchipy.signals.EBSD.static_background` and
 # :attr:`~kikuchipy.signals.EBSD.detector` attributes are updated.
 
-s2 = s.deepcopy()
-s2.downsample(8)
+s2 = s.downsample(8, inplace=False)
 _ = hs.plot.plot_images([s, s2], axes_decor="off", tight_layout=True, label=None)
 print(s2.static_background.shape)
 print(s2.detector)
