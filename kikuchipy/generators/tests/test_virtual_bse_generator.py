@@ -141,6 +141,10 @@ class TestGetImagesFromGrid:
         assert all([vbse_sig_axes[i].name == s_nav_axes[i].name for i in range(2)])
         assert all([vbse_sig_axes[i].units == s_nav_axes[i].units for i in range(2)])
 
+    def test_get_images_lazy(self, dummy_signal):
+        vbse_gen = VirtualBSEGenerator(dummy_signal.as_lazy())
+        vbse_img = vbse_gen.get_images_from_grid()
+
 
 class TestGetRGBImage:
     def test_get_rgb_image_rois(self):
