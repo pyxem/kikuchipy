@@ -701,3 +701,23 @@ class TestIntensityScaling:
         mp3 = mp.as_lazy()
         mp4 = mp3.normalize_intensity(inplace=False, lazy_output=False)
         assert isinstance(mp4, kp.signals.EBSDMasterPattern)
+
+    def test_adaptive_histogram_equalization(self):
+        mp_sp = nickel_ebsd_master_pattern_small()
+
+        # Float warns
+        mp_sp.change_dtype(np.float32)
+        mp_sp2 = mp_sp.rescale_intensity(inplace=False)
+        with pytest.warns(UserWarning, match="Equalization of signals with floating "):
+            mp_sp2.adaptive_histogram_equalization()
+
+        # NaN warns
+        mp_sp.data[mp_sp.data == 0] = np.nan
+        with pytest.warns(UserWarning, match="Equalization of signals with NaN "):
+            mp_sp.adaptive_histogram_equalization()
+
+        # Spreads intensities within data range
+        mp_lp = nickel_ebsd_master_pattern_small(projection="lambert")
+        mp_lp2 = mp_lp.adaptive_histogram_equalization(inplace=False)
+        assert all([mp_lp2.data.min() >= 0, mp_lp2.data.max() <= 255])
+        assert abs(np.unique(mp_lp2.data).size - 255) < 2
