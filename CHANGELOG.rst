@@ -18,6 +18,8 @@ Unreleased
 
 Added
 -----
+- Adaptive histogram equalization is available to all signals.
+  (`#606 <https://github.com/pyxem/kikuchipy/pull/606>`_)
 - Option to return a new signal (lazy or not) instead of operating inplace is added to
   many methods in all classes via ``inplace`` and ``lazy_output`` boolean parameters.
   (`#605 <https://github.com/pyxem/kikuchipy/pull/605>`_)
@@ -101,6 +103,9 @@ Added
 
 Changed
 -------
+- Added warnings when trying to perform adaptive histogram equalization on a signal with
+  data in floating type or when some of the data is NaN.
+  (`#606 <https://github.com/pyxem/kikuchipy/pull/606>`_)
 - Dask arrays returned from EBSD refinement methods has the number of function
   evaluations as the second element after the score.
   (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
