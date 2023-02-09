@@ -23,10 +23,12 @@ jobs:
       - uses: psf/black@stable
 
       - name: Install Black with Jupyter extension
-        run: pip install black[jupyter]
+        run: |
+          pip install black[jupyter]
 
       - name: Check code style of Jupyter notebooks
-        run: black --diff --line-length 77 doc/tutorials/*.ipynb
+        run: |
+          black --diff --line-length 77 doc/tutorials/*.ipynb
 
   # Make sure all necessary files are included in a release
   manifest:
@@ -36,12 +38,16 @@ jobs:
       - uses: actions/checkout@v3
 
       - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install manifix
+        run: |
+          pip install manifix
 
       - name: Check MANIFEST.in file
-        run: python setup.py manifix
+        run: |
+          python setup.py manifix
 
   tests:
     name: ${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.LABEL }}
