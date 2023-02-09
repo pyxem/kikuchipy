@@ -33,65 +33,6 @@ from kikuchipy.filters.window import Window
 from kikuchipy.pattern._pattern import _rescale_with_min_max
 
 
-def rescale_intensity(
-    patterns: Union[np.ndarray, da.Array],
-    in_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-    out_range: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-    dtype_out: Union[
-        str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
-    ] = None,
-    percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
-) -> Union[np.ndarray, da.Array]:
-    """Rescale pattern intensities in a chunk of EBSD patterns.
-
-    Chunk max./min. intensity is determined from `out_range` or the
-    data type range of :class:`numpy.dtype` passed to `dtype_out`.
-
-    Parameters
-    ----------
-    patterns
-        EBSD patterns.
-    in_range
-        Min./max. intensity of input patterns. If None (default),
-        `in_range` is set to pattern min./max. Contrast stretching is
-        performed when `in_range` is set to a narrower intensity range
-        than the input patterns.
-    out_range
-        Min./max. intensity of output patterns. If None (default),
-        `out_range` is set to `dtype_out` min./max according to
-        `skimage.util.dtype.dtype_range`.
-    dtype_out
-        Data type of rescaled patterns. If None (default), it is set to
-        the same data type as the input patterns.
-    percentiles
-        Disregard intensities outside these percentiles. Calculated
-        per pattern. Must be None if `in_range` is passed (default
-        is None).
-
-    Returns
-    -------
-    rescaled_patterns : numpy.ndarray
-        Rescaled patterns.
-    """
-    dtype_out = np.dtype(dtype_out)
-    rescaled_patterns = np.empty_like(patterns, dtype=dtype_out)
-
-    for nav_idx in np.ndindex(patterns.shape[:-2]):
-        pattern = patterns[nav_idx]
-
-        if percentiles is not None:
-            in_range = np.percentile(pattern, q=percentiles)
-
-        rescaled_patterns[nav_idx] = pattern_processing.rescale_intensity(
-            pattern=pattern,
-            in_range=in_range,
-            out_range=out_range,
-            dtype_out=dtype_out,
-        )
-
-    return rescaled_patterns
-
-
 def get_dynamic_background(
     patterns: Union[np.ndarray, da.Array],
     filter_func: Union[gaussian_filter, barnes.fft_filter],
@@ -237,57 +178,6 @@ def fft_filter(
         )
 
     return filtered_patterns
-
-
-def normalize_intensity(
-    patterns: Union[np.ndarray, da.Array],
-    num_std: int = 1,
-    divide_by_square_root: bool = False,
-    dtype_out: Union[str, np.dtype, type, None] = None,
-) -> np.ndarray:
-    """Normalize intensities in a chunk of EBSD patterns to a mean of
-    zero with a given standard deviation.
-
-    Parameters
-    ----------
-    patterns
-        Patterns to normalize the intensity in.
-    num_std
-        Number of standard deviations of the output intensities. Default
-        is 1.
-    divide_by_square_root
-        Whether to divide output intensities by the square root of the
-        pattern size. Default is False.
-    dtype_out
-        Data type of normalized patterns. If None (default), the input
-        patterns' data type is used.
-
-    Returns
-    -------
-    normalized_patterns
-        Normalized patterns.
-
-    Notes
-    -----
-    Data type should always be changed to floating point, e.g.
-    ``"float32"`` with :meth:`numpy.ndarray.astype`, before normalizing
-    the intensities.
-    """
-    if dtype_out is None:
-        dtype_out = patterns.dtype
-    else:
-        dtype_out = np.dtype(dtype_out)
-
-    normalized_patterns = np.empty_like(patterns, dtype=dtype_out)
-
-    for nav_idx in np.ndindex(patterns.shape[:-2]):
-        normalized_patterns[nav_idx] = pattern_processing.normalize_intensity(
-            pattern=patterns[nav_idx],
-            num_std=num_std,
-            divide_by_square_root=divide_by_square_root,
-        )
-
-    return normalized_patterns
 
 
 def _average_neighbour_patterns(

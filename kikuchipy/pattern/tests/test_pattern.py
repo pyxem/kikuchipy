@@ -35,6 +35,7 @@ from kikuchipy.pattern._pattern import (
     _downsample2d,
     _dynamic_background_frequency_space_setup,
     _get_image_quality_numba,
+    _normalize_intensity,
     _remove_background_subtract,
     _remove_background_divide,
     _remove_static_background_subtract,
@@ -507,12 +508,25 @@ class TestNormalizeIntensityPattern:
         self, dummy_signal, num_std, divide_by_square_root, answer
     ):
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
-        p2 = normalize_intensity.py_func(
+
+        # Numba function
+        p2 = _normalize_intensity(
             pattern=p, num_std=num_std, divide_by_square_root=divide_by_square_root
         )
-
         assert np.allclose(np.mean(p2), 0, atol=1e-6)
         assert np.allclose(p2, answer, atol=1e-4)
+
+        # Python function
+        p3 = _normalize_intensity.py_func(
+            pattern=p, num_std=num_std, divide_by_square_root=divide_by_square_root
+        )
+        assert np.allclose(np.mean(p3), 0, atol=1e-6)
+        assert np.allclose(p3, answer, atol=1e-4)
+
+    def test_normalize_intensity_pattern_dtype(self, dummy_signal):
+        p = dummy_signal.inav[0, 0].data.astype(np.float32)
+        p2 = normalize_intensity(p, dtype_out=np.float64)
+        assert p2.dtype == np.float64
 
 
 class TestDownsample:

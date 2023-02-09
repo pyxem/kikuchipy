@@ -32,6 +32,7 @@ def rescale_intensity(
     in_range: Optional[Tuple[Union[int, float], ...]] = None,
     out_range: Optional[Tuple[Union[int, float], ...]] = None,
     dtype_out: Union[str, np.dtype, type, None] = None,
+    percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
 ) -> np.ndarray:
     """Rescale intensities in an EBSD pattern.
 
@@ -54,6 +55,9 @@ def rescale_intensity(
     dtype_out
         Data type of the rescaled pattern. If not given, it is set to
         the same data type as the input pattern.
+    percentiles
+        Disregard intensities outside these percentiles. Calculated
+        per pattern. Will overwrite ``in_range`` if given.
 
     Returns
     -------
@@ -64,6 +68,9 @@ def rescale_intensity(
         dtype_out = pattern.dtype
     else:
         dtype_out = np.dtype(dtype_out)
+
+    if percentiles is not None:
+        in_range = np.percentile(pattern, q=percentiles)
 
     if in_range is None:
         imin, imax = np.min(pattern), np.max(pattern)
@@ -143,9 +150,11 @@ def _normalize(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
     return patterns / patterns_norm_squared
 
 
-@njit(cache=True, fastmath=True, nogil=True)
 def normalize_intensity(
-    pattern: np.ndarray, num_std: int = 1, divide_by_square_root: bool = False
+    pattern: np.ndarray,
+    num_std: int = 1,
+    divide_by_square_root: bool = False,
+    dtype_out: Union[type, None] = None,
 ) -> np.ndarray:
     """Normalize image intensities to a mean of zero and a given
     standard deviation.
@@ -162,6 +171,9 @@ def normalize_intensity(
     divide_by_square_root
         Whether to divide output intensities by the square root of the
         image size (default is ``False``).
+    dtype_out
+        Data type of the normalized pattern. If not given, it is set to
+        the same data type as the input pattern.
 
     Returns
     -------
@@ -174,11 +186,23 @@ def normalize_intensity(
     ``float32`` with :meth:`numpy.ndarray.astype`, before normalizing
     the intensities.
     """
+    normalized_pattern = _normalize_intensity(pattern, num_std, divide_by_square_root)
+
+    if dtype_out is not None:
+        normalized_pattern = normalized_pattern.astype(dtype_out)
+
+    return normalized_pattern
+
+
+@njit(cache=True, fastmath=True, nogil=True)
+def _normalize_intensity(
+    pattern: np.ndarray,
+    num_std: int = 1,
+    divide_by_square_root: bool = False,
+) -> np.ndarray:
     pattern_mean = np.mean(pattern)
     pattern_std = np.std(pattern)
-
     pattern = pattern - pattern_mean
-
     if divide_by_square_root:
         return pattern / (num_std * pattern_std * np.sqrt(pattern.size))
     else:
@@ -223,7 +247,8 @@ def fft(
         The result of the 2D FFT.
     """
     if apodization_window is not None:
-        pattern = pattern * apodization_window
+        pattern = pattern.astype(np.float64)
+        pattern *= apodization_window
 
     if real_fft_only:
         fft_use = rfft2
