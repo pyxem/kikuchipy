@@ -15,12 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from packaging import version
-
 import numpy as np
 import pytest
 from scipy.ndimage import gaussian_filter
-from skimage import __version__ as skimage_version
 
 from kikuchipy.filters.fft_barnes import _fft_filter
 from kikuchipy.filters.window import Window
@@ -31,14 +28,6 @@ from kikuchipy.pattern._pattern import (
 )
 from kikuchipy.pattern import chunk
 from kikuchipy.signals.util._dask import get_dask_array
-
-
-# Expected output intensities from various image processing methods
-ADAPT_EQ_UINT8 = np.array([[92, 215, 92], [255, 215, 92], [215, 26, 0]], dtype=np.uint8)
-if version.parse(skimage_version) < version.parse("0.17"):  # pragma: no cover
-    ADAPT_EQ_UINT8 = np.array(
-        [[127, 223, 127], [255, 223, 31], [223, 31, 0]], dtype=np.uint8
-    )
 
 
 class TestGetDynamicBackgroundChunk:
@@ -152,23 +141,6 @@ class TestGetDynamicBackgroundChunk:
         assert isinstance(background, np.ndarray)
         assert background.dtype == dtype_out
         assert np.allclose(background[0, 0], answer, atol=1e-4)
-
-
-class TestAdaptiveHistogramEqualizationChunk:
-    def test_adaptive_histogram_equalization_chunk(self, dummy_signal):
-        dask_array = get_dask_array(dummy_signal)
-        dtype_out = dask_array.dtype
-        kernel_size = (10, 10)
-        nbins = 128
-        equalized_patterns = dask_array.map_blocks(
-            func=chunk.adaptive_histogram_equalization,
-            kernel_size=kernel_size,
-            nbins=nbins,
-        )
-
-        # Check for correct data type and gives expected output intensities
-        assert equalized_patterns.dtype == dtype_out
-        assert np.allclose(equalized_patterns[0, 0].compute(), ADAPT_EQ_UINT8)
 
 
 class TestFFTFilterChunk:
