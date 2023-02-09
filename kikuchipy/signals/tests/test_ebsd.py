@@ -22,13 +22,13 @@ import dask.array as da
 import hyperspy.api as hs
 import matplotlib.pyplot as plt
 import numpy as np
-from orix.crystal_map import CrystalMap
 import pytest
 from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
 
 import kikuchipy as kp
 from kikuchipy.conftest import assert_dictionary
+
 
 DIR_PATH = os.path.dirname(__file__)
 NORDIF_FILE = os.path.join(DIR_PATH, "../../data/nordif/Pattern.dat")
@@ -349,6 +349,42 @@ class TestRemoveStaticBackgroundEBSD:
         static_bg.change_dtype(np.uint8)
         s.remove_static_background(static_bg=static_bg.data)
 
+    def test_inplace(self, dummy_signal):
+        # Current signal is unaffected
+        s = dummy_signal.deepcopy()
+        s2 = dummy_signal.remove_static_background(inplace=False)
+        assert np.allclose(s.data, dummy_signal.data)
+
+        # Custom properties carry over
+        assert isinstance(s2, kp.signals.EBSD)
+        assert np.allclose(s2.static_background, dummy_signal.static_background)
+        assert np.allclose(s2.detector.pc, dummy_signal.detector.pc)
+        assert np.allclose(s2.xmap.rotations.data, dummy_signal.xmap.rotations.data)
+
+        # Operating on current signal gives same result as output
+        dummy_signal.remove_static_background()
+        assert np.allclose(s2.data, dummy_signal.data)
+
+        # Operating on lazy signal returns lazy signal
+        s3 = s.as_lazy()
+        s4 = s3.remove_static_background(inplace=False)
+        assert isinstance(s4, kp.signals.LazyEBSD)
+        s4.compute()
+        assert np.allclose(s4.data, dummy_signal.data)
+
+    def test_lazy_output(self, dummy_signal):
+        with pytest.raises(
+            ValueError, match="`lazy_output=True` requires `inplace=False`"
+        ):
+            _ = dummy_signal.remove_static_background(lazy_output=True)
+
+        s2 = dummy_signal.remove_static_background(inplace=False, lazy_output=True)
+        assert isinstance(s2, kp.signals.LazyEBSD)
+
+        s3 = dummy_signal.as_lazy()
+        s4 = s3.remove_static_background(inplace=False, lazy_output=False)
+        assert isinstance(s4, kp.signals.EBSD)
+
 
 class TestRemoveDynamicBackgroundEBSD:
     @pytest.mark.parametrize(
@@ -521,6 +557,42 @@ class TestRemoveDynamicBackgroundEBSD:
         with pytest.raises(ValueError, match=f"{filter_domain} must be "):
             dummy_signal.remove_dynamic_background(filter_domain=filter_domain)
 
+    def test_inplace(self, dummy_signal):
+        # Current signal is unaffected
+        s = dummy_signal.deepcopy()
+        s2 = dummy_signal.remove_dynamic_background(inplace=False)
+        assert np.allclose(s.data, dummy_signal.data)
+
+        # Custom properties carry over
+        assert isinstance(s2, kp.signals.EBSD)
+        assert np.allclose(s2.static_background, dummy_signal.static_background)
+        assert np.allclose(s2.detector.pc, dummy_signal.detector.pc)
+        assert np.allclose(s2.xmap.rotations.data, dummy_signal.xmap.rotations.data)
+
+        # Operating on current signal gives same result as output
+        dummy_signal.remove_dynamic_background()
+        assert np.allclose(s2.data, dummy_signal.data)
+
+        # Operating on lazy signal returns lazy signal
+        s3 = s.as_lazy()
+        s4 = s3.remove_dynamic_background(inplace=False)
+        assert isinstance(s4, kp.signals.LazyEBSD)
+        s4.compute()
+        assert np.allclose(s4.data, dummy_signal.data)
+
+    def test_lazy_output(self, dummy_signal):
+        with pytest.raises(
+            ValueError, match="`lazy_output=True` requires `inplace=False`"
+        ):
+            _ = dummy_signal.remove_dynamic_background(lazy_output=True)
+
+        s2 = dummy_signal.remove_dynamic_background(inplace=False, lazy_output=True)
+        assert isinstance(s2, kp.signals.LazyEBSD)
+
+        s3 = dummy_signal.as_lazy()
+        s4 = s3.remove_dynamic_background(inplace=False, lazy_output=False)
+        assert isinstance(s4, kp.signals.EBSD)
+
 
 class TestRescaleIntensityEBSD:
     @pytest.mark.parametrize(
@@ -625,6 +697,42 @@ class TestRescaleIntensityEBSD:
         with pytest.raises(ValueError, match="'in_range' must be None if "):
             dummy_signal.rescale_intensity(in_range=(1, 254), relative=True)
 
+    def test_inplace(self, dummy_signal):
+        # Current signal is unaffected
+        s = dummy_signal.deepcopy()
+        s2 = dummy_signal.rescale_intensity(inplace=False)
+        assert np.allclose(s.data, dummy_signal.data)
+
+        # Custom properties carry over
+        assert isinstance(s2, kp.signals.EBSD)
+        assert np.allclose(s2.static_background, dummy_signal.static_background)
+        assert np.allclose(s2.detector.pc, dummy_signal.detector.pc)
+        assert np.allclose(s2.xmap.rotations.data, dummy_signal.xmap.rotations.data)
+
+        # Operating on current signal gives same result as output
+        dummy_signal.rescale_intensity()
+        assert np.allclose(s2.data, dummy_signal.data)
+
+        # Operating on lazy signal returns lazy signal
+        s3 = s.as_lazy()
+        s4 = s3.rescale_intensity(inplace=False)
+        assert isinstance(s4, kp.signals.LazyEBSD)
+        s4.compute()
+        assert np.allclose(s4.data, dummy_signal.data)
+
+    def test_lazy_output(self, dummy_signal):
+        with pytest.raises(
+            ValueError, match="`lazy_output=True` requires `inplace=False`"
+        ):
+            _ = dummy_signal.rescale_intensity(lazy_output=True)
+
+        s2 = dummy_signal.rescale_intensity(inplace=False, lazy_output=True)
+        assert isinstance(s2, kp.signals.LazyEBSD)
+
+        s3 = dummy_signal.as_lazy()
+        s4 = s3.rescale_intensity(inplace=False, lazy_output=False)
+        assert isinstance(s4, kp.signals.EBSD)
+
 
 class TestAdaptiveHistogramEqualizationEBSD:
     def test_adaptive_histogram_equalization(self, capsys):
@@ -654,6 +762,45 @@ class TestAdaptiveHistogramEqualizationEBSD:
         s = kp.load(KIKUCHIPY_FILE, lazy=True)
         s.adaptive_histogram_equalization()
         assert isinstance(s.data, da.Array)
+
+    def test_inplace(self):
+        s = kp.data.nickel_ebsd_small()
+
+        # Current signal is unaffected
+        s2 = s.deepcopy()
+        s3 = s2.adaptive_histogram_equalization(inplace=False)
+        assert np.allclose(s.data, s2.data)
+
+        # Custom properties carry over
+        assert isinstance(s3, kp.signals.EBSD)
+        assert np.allclose(s3.static_background, s.static_background)
+        assert np.allclose(s3.detector.pc, s.detector.pc)
+        assert np.allclose(s3.xmap.rotations.data, s.xmap.rotations.data)
+
+        # Operating on current signal gives same result as output
+        s2.adaptive_histogram_equalization()
+        assert np.allclose(s3.data, s2.data)
+
+        # Operating on lazy signal returns lazy signal
+        s4 = s.as_lazy()
+        s5 = s4.adaptive_histogram_equalization(inplace=False)
+        assert isinstance(s5, kp.signals.LazyEBSD)
+        s5.compute()
+        assert np.allclose(s5.data, s2.data)
+
+    def test_lazy_output(self):
+        s = kp.data.nickel_ebsd_small()
+        with pytest.raises(
+            ValueError, match="`lazy_output=True` requires `inplace=False`"
+        ):
+            _ = s.adaptive_histogram_equalization(lazy_output=True)
+
+        s2 = s.adaptive_histogram_equalization(inplace=False, lazy_output=True)
+        assert isinstance(s2, kp.signals.LazyEBSD)
+
+        s3 = s.as_lazy()
+        s4 = s3.adaptive_histogram_equalization(inplace=False, lazy_output=False)
+        assert isinstance(s4, kp.signals.EBSD)
 
 
 class TestAverageNeighbourPatternsEBSD:
@@ -869,6 +1016,42 @@ class TestAverageNeighbourPatternsEBSD:
         )
         assert np.allclose(rescaled_patterns, s.data)
 
+    def test_inplace(self, dummy_signal):
+        # Current signal is unaffected
+        s2 = dummy_signal.deepcopy()
+        s3 = s2.average_neighbour_patterns(inplace=False)
+        assert np.allclose(dummy_signal.data, s2.data)
+
+        # Custom properties carry over
+        assert isinstance(s3, kp.signals.EBSD)
+        assert np.allclose(s3.static_background, dummy_signal.static_background)
+        assert np.allclose(s3.detector.pc, dummy_signal.detector.pc)
+        assert np.allclose(s3.xmap.rotations.data, dummy_signal.xmap.rotations.data)
+
+        # Operating on current signal gives same result as output
+        s2.average_neighbour_patterns()
+        assert np.allclose(s3.data, s2.data)
+
+        # Operating on lazy signal returns lazy signal
+        s4 = dummy_signal.as_lazy()
+        s5 = s4.average_neighbour_patterns(inplace=False)
+        assert isinstance(s5, kp.signals.LazyEBSD)
+        s5.compute()
+        assert np.allclose(s5.data, s2.data)
+
+    def test_lazy_output(self, dummy_signal):
+        with pytest.raises(
+            ValueError, match="`lazy_output=True` requires `inplace=False`"
+        ):
+            _ = dummy_signal.average_neighbour_patterns(lazy_output=True)
+
+        s2 = dummy_signal.average_neighbour_patterns(inplace=False, lazy_output=True)
+        assert isinstance(s2, kp.signals.LazyEBSD)
+
+        s3 = dummy_signal.as_lazy()
+        s4 = s3.average_neighbour_patterns(inplace=False, lazy_output=False)
+        assert isinstance(s4, kp.signals.EBSD)
+
 
 class TestVirtualBackscatterElectronImaging:
     @pytest.mark.parametrize("out_signal_axes", [None, (0, 1), ("x", "y")])
@@ -1052,6 +1235,22 @@ class TestGetDynamicBackgroundEBSD:
         bg.compute()
         assert isinstance(bg, kp.signals.EBSD)
 
+    def test_lazy_output(self, dummy_signal):
+        s = dummy_signal.get_dynamic_background(lazy_output=True)
+        assert isinstance(s, kp.signals.LazyEBSD)
+
+        # Custom properties carry over
+        assert np.allclose(s.static_background, dummy_signal.static_background)
+        assert np.allclose(s.detector.pc, dummy_signal.detector.pc)
+        assert np.allclose(s.xmap.rotations.data, dummy_signal.xmap.rotations.data)
+
+        s2 = dummy_signal.as_lazy()
+        s3 = s2.get_dynamic_background()
+        assert isinstance(s3, kp.signals.LazyEBSD)
+
+        s4 = s2.get_dynamic_background(lazy_output=False)
+        assert isinstance(s4, kp.signals.EBSD)
+
 
 class TestGetImageQualityEBSD:
     @pytest.mark.parametrize(
@@ -1192,6 +1391,51 @@ class TestFFTFilterEBSD:
         assert isinstance(lazy_signal, kp.signals.LazyEBSD)
         assert lazy_signal.data.dtype == dummy_signal.data.dtype
 
+    def test_inplace(self, dummy_signal):
+        filter_kw = dict(
+            transfer_function=np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]]),
+            function_domain="spatial",
+        )
+
+        # Current signal is unaffected
+        s2 = dummy_signal.deepcopy()
+        s3 = s2.fft_filter(inplace=False, **filter_kw)
+        assert np.allclose(dummy_signal.data, s2.data)
+
+        # Custom properties carry over
+        assert isinstance(s3, kp.signals.EBSD)
+        assert np.allclose(s3.static_background, dummy_signal.static_background)
+        assert np.allclose(s3.detector.pc, dummy_signal.detector.pc)
+        assert np.allclose(s3.xmap.rotations.data, dummy_signal.xmap.rotations.data)
+
+        # Operating on current signal gives same result as output
+        s2.fft_filter(**filter_kw)
+        assert np.allclose(s3.data, s2.data)
+
+        # Operating on lazy signal returns lazy signal
+        s4 = dummy_signal.as_lazy()
+        s5 = s4.fft_filter(inplace=False, **filter_kw)
+        assert isinstance(s5, kp.signals.LazyEBSD)
+        s5.compute()
+        assert np.allclose(s5.data, s2.data)
+
+    def test_lazy_output(self, dummy_signal):
+        filter_kw = dict(
+            transfer_function=np.array([[1, 0, -1], [2, 0, -2], [1, 0, -1]]),
+            function_domain="spatial",
+        )
+        with pytest.raises(
+            ValueError, match="`lazy_output=True` requires `inplace=False`"
+        ):
+            _ = dummy_signal.fft_filter(lazy_output=True, **filter_kw)
+
+        s2 = dummy_signal.fft_filter(inplace=False, lazy_output=True, **filter_kw)
+        assert isinstance(s2, kp.signals.LazyEBSD)
+
+        s3 = dummy_signal.as_lazy()
+        s4 = s3.fft_filter(inplace=False, lazy_output=False, **filter_kw)
+        assert isinstance(s4, kp.signals.EBSD)
+
 
 class TestNormalizeIntensityEBSD:
     @pytest.mark.parametrize(
@@ -1239,9 +1483,8 @@ class TestNormalizeIntensityEBSD:
     def test_normalize_intensity(
         self, dummy_signal, num_std, divide_by_square_root, dtype_out, answer, capsys
     ):
-        int16 = np.int16
         if dtype_out is None:
-            dummy_signal.data = dummy_signal.data.astype(int16)
+            dummy_signal.change_dtype(np.int16)
 
         dummy_signal.normalize_intensity(
             num_std=num_std,
@@ -1253,7 +1496,7 @@ class TestNormalizeIntensityEBSD:
         assert "Completed" in out
 
         if dtype_out is None:
-            dtype_out = int16
+            dtype_out = np.int16
         else:
             assert np.allclose(np.mean(dummy_signal.data), 0, atol=1e-6)
 
@@ -1269,6 +1512,42 @@ class TestNormalizeIntensityEBSD:
 
         assert isinstance(lazy_signal, kp.signals.LazyEBSD)
         assert np.allclose(np.mean(lazy_signal.data.compute()), 0, atol=1e-6)
+
+    def test_inplace(self, dummy_signal):
+        # Current signal is unaffected
+        s = dummy_signal.deepcopy()
+        s2 = dummy_signal.normalize_intensity(inplace=False)
+        assert np.allclose(s.data, dummy_signal.data)
+
+        # Custom properties carry over
+        assert isinstance(s2, kp.signals.EBSD)
+        assert np.allclose(s2.static_background, dummy_signal.static_background)
+        assert np.allclose(s2.detector.pc, dummy_signal.detector.pc)
+        assert np.allclose(s2.xmap.rotations.data, dummy_signal.xmap.rotations.data)
+
+        # Operating on current signal gives same result as output
+        dummy_signal.normalize_intensity()
+        assert np.allclose(s2.data, dummy_signal.data)
+
+        # Operating on lazy signal returns lazy signal
+        s3 = s.as_lazy()
+        s4 = s3.normalize_intensity(inplace=False)
+        assert isinstance(s4, kp.signals.LazyEBSD)
+        s4.compute()
+        assert np.allclose(s4.data, dummy_signal.data)
+
+    def test_lazy_output(self, dummy_signal):
+        with pytest.raises(
+            ValueError, match="`lazy_output=True` requires `inplace=False`"
+        ):
+            _ = dummy_signal.normalize_intensity(lazy_output=True)
+
+        s2 = dummy_signal.normalize_intensity(inplace=False, lazy_output=True)
+        assert isinstance(s2, kp.signals.LazyEBSD)
+
+        s3 = dummy_signal.as_lazy()
+        s4 = s3.normalize_intensity(inplace=False, lazy_output=False)
+        assert isinstance(s4, kp.signals.EBSD)
 
 
 class TestAverageNeighbourDotProductMap:
@@ -2041,11 +2320,13 @@ class TestDownsample:
 
         assert isinstance(s, kp.signals.LazyEBSD)
         assert isinstance(s.data, da.Array)
+        assert isinstance(s.static_background, np.ndarray)
 
         s.compute()
 
         assert isinstance(s, kp.signals.EBSD)
         assert isinstance(s.data, np.ndarray)
+        assert isinstance(s.static_background, np.ndarray)
 
     def test_downsample_dtype(self):
         s = kp.data.nickel_ebsd_small()
@@ -2063,7 +2344,44 @@ class TestDownsample:
         with pytest.raises(ValueError, match="Binning `factor` 1 must be an integer >"):
             s.downsample(1)
 
-        with pytest.raises(
-            ValueError, match="Binning `factor` 7 must be a divisor of the initial "
-        ):
+        with pytest.raises(ValueError, match="Binning `factor` 7 must be a divisor of"):
             s.downsample(7)
+
+    def test_inplace(self):
+        s = kp.data.nickel_ebsd_small()
+
+        # Current signal is unaffected
+        s2 = s.deepcopy()
+        s3 = s2.downsample(2, inplace=False)
+        assert np.allclose(s.data, s2.data)
+
+        # Custom properties carry over
+        assert isinstance(s3, kp.signals.EBSD)
+        assert s3.static_background.shape == (30, 30)
+        assert np.allclose(s3.detector.pc, s.detector.pc)
+        assert np.allclose(s3.xmap.rotations.data, s.xmap.rotations.data)
+
+        # Operating on current signal gives same result as output
+        s2.downsample(2)
+        assert np.allclose(s3.data, s2.data)
+
+        # Operating on lazy signal returns lazy signal
+        s4 = s.as_lazy()
+        s5 = s4.downsample(2, inplace=False)
+        assert isinstance(s5, kp.signals.LazyEBSD)
+        s5.compute()
+        assert np.allclose(s5.data, s2.data)
+
+    def test_lazy_output(self):
+        s = kp.data.nickel_ebsd_small()
+        with pytest.raises(
+            ValueError, match="`lazy_output=True` requires `inplace=False`"
+        ):
+            _ = s.downsample(2, lazy_output=True)
+
+        s2 = s.downsample(2, inplace=False, lazy_output=True)
+        assert isinstance(s2, kp.signals.LazyEBSD)
+
+        s3 = s.as_lazy()
+        s4 = s3.downsample(2, inplace=False, lazy_output=False)
+        assert isinstance(s4, kp.signals.EBSD)

@@ -427,8 +427,10 @@ class EBSD(KikuchipySignal2D):
         static_bg: Union[np.ndarray, da.Array, None] = None,
         scale_bg: bool = False,
         show_progressbar: Optional[bool] = None,
-    ) -> None:
-        """Remove the static background inplace.
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, EBSD, LazyEBSD]:
+        """Remove the static background.
 
         The removal is performed by subtracting or dividing by a static
         background pattern. Resulting pattern intensities are rescaled
@@ -451,6 +453,19 @@ class EBSD(KikuchipySignal2D):
             Whether to show a progressbar. If not given, the value of
             :obj:`hyperspy.api.preferences.General.show_progressbar`
             is used.
+        inplace
+            Whether to operate on the current signal or return a new
+            one. Default is ``True``.
+        lazy_output
+            Whether the returned signal is lazy. If not given this
+            follows from the current signal. Can only be ``True`` if
+            ``inplace=False``.
+
+        Returns
+        -------
+        s_out
+            Background corrected signal, returned if ``inplace=False``.
+            Whether it is lazy is determined from ``lazy_output``.
 
         See Also
         --------
@@ -482,6 +497,9 @@ class EBSD(KikuchipySignal2D):
         passed in the ``static_bg`` parameter as a ``numpy`` or ``dask``
         array.
         """
+        if lazy_output and inplace:
+            raise ValueError("`lazy_output=True` requires `inplace=False`")
+
         dtype = np.float32  # During processing
         dtype_out = self.data.dtype.type
         omin, omax = dtype_range[dtype_out]
@@ -516,9 +534,7 @@ class EBSD(KikuchipySignal2D):
         else:
             operation_func = _remove_static_background_divide
 
-        attrs = self._get_custom_attributes()
-        self.map(
-            operation_func,
+        map_kw = dict(
             show_progressbar=show_progressbar,
             parallel=True,
             output_dtype=dtype_out,
@@ -528,7 +544,16 @@ class EBSD(KikuchipySignal2D):
             omax=omax,
             scale_bg=scale_bg,
         )
-        self._set_custom_attributes(attrs)
+        attrs = self._get_custom_attributes()
+        if inplace:
+            self.map(operation_func, inplace=True, **map_kw)
+            self._set_custom_attributes(attrs)
+        else:
+            s_out = self.map(
+                operation_func, inplace=False, lazy_output=lazy_output, **map_kw
+            )
+            s_out._set_custom_attributes(attrs)
+            return s_out
 
     def remove_dynamic_background(
         self,
@@ -537,9 +562,11 @@ class EBSD(KikuchipySignal2D):
         std: Union[int, float, None] = None,
         truncate: Union[int, float] = 4.0,
         show_progressbar: Optional[bool] = None,
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
         **kwargs,
-    ) -> None:
-        """Remove the dynamic background in an EBSD scan inplace.
+    ) -> Union[None, EBSD, LazyEBSD]:
+        """Remove the dynamic background.
 
         The removal is performed by subtracting or dividing by a
         Gaussian blurred version of each pattern. Resulting pattern
@@ -565,9 +592,22 @@ class EBSD(KikuchipySignal2D):
             Whether to show a progressbar. If not given, the value of
             :obj:`hyperspy.api.preferences.General.show_progressbar`
             is used.
+        inplace
+            Whether to operate on the current signal or return a new
+            one. Default is ``True``.
+        lazy_output
+            Whether the returned signal is lazy. If not given this
+            follows from the current signal. Can only be ``True`` if
+            ``inplace=False``.
         **kwargs
             Keyword arguments passed to the Gaussian blurring function
             determined from ``filter_domain``.
+
+        Returns
+        -------
+        s_out
+            Background corrected signal, returned if ``inplace=False``.
+            Whether it is lazy is determined from ``lazy_output``.
 
         See Also
         --------
@@ -585,6 +625,9 @@ class EBSD(KikuchipySignal2D):
         >>> s.remove_static_background()
         >>> s.remove_dynamic_background(operation="divide", std=5)
         """
+        if lazy_output and inplace:
+            raise ValueError("`lazy_output=True` requires `inplace=False`")
+
         if std is None:
             std = self.axes_manager.signal_shape[0] / 8
 
@@ -616,9 +659,7 @@ class EBSD(KikuchipySignal2D):
         dtype_out = self.data.dtype.type
         omin, omax = dtype_range[dtype_out]
 
-        attrs = self._get_custom_attributes()
-        self.map(
-            map_func,
+        map_kw = dict(
             show_progressbar=show_progressbar,
             parallel=True,
             output_dtype=dtype_out,
@@ -629,7 +670,14 @@ class EBSD(KikuchipySignal2D):
             omax=omax,
             **kwargs,
         )
-        self._set_custom_attributes(attrs)
+        attrs = self._get_custom_attributes()
+        if inplace:
+            self.map(map_func, inplace=True, **map_kw)
+            self._set_custom_attributes(attrs)
+        else:
+            s_out = self.map(map_func, inplace=False, lazy_output=lazy_output, **map_kw)
+            s_out._set_custom_attributes(attrs)
+            return s_out
 
     def get_dynamic_background(
         self,
@@ -638,9 +686,10 @@ class EBSD(KikuchipySignal2D):
         truncate: Union[int, float] = 4.0,
         dtype_out: Union[str, np.dtype, type, None] = None,
         show_progressbar: Optional[bool] = None,
+        lazy_output: Optional[bool] = None,
         **kwargs,
     ) -> Union[EBSD, LazyEBSD]:
-        """Get the dynamic background per EBSD pattern in a scan.
+        """Return the dynamic background per pattern in a new signal.
 
         Parameters
         ----------
@@ -660,14 +709,18 @@ class EBSD(KikuchipySignal2D):
             Whether to show a progressbar. If not given, the value of
             :obj:`hyperspy.api.preferences.General.show_progressbar`
             is used.
+        lazy_output
+            Whether the returned signal is lazy. If not given this
+            follows from the current signal.
         **kwargs
             Keyword arguments passed to the Gaussian blurring function
             determined from ``filter_domain``.
 
         Returns
         -------
-        background_signal
+        s_out
             Signal with the large scale variations across the detector.
+            Whether it is lazy is determined from ``lazy_output``.
         """
         if std is None:
             std = self.axes_manager.signal_shape[-1] / 8
@@ -709,7 +762,10 @@ class EBSD(KikuchipySignal2D):
             **kwargs,
         )
 
-        if not self._lazy:
+        attrs = self._get_custom_attributes()
+        if lazy_output or (lazy_output is None and self._lazy):
+            s_out = LazyEBSD(background_patterns, **attrs)
+        else:
             background_return = np.empty(
                 shape=background_patterns.shape, dtype=dtype_out
             )
@@ -721,16 +777,14 @@ class EBSD(KikuchipySignal2D):
                 pbar.register()
 
             background_patterns.store(background_return, compute=True)
-            background_signal = EBSD(background_return)
+            s_out = EBSD(background_return, **attrs)
 
             try:
                 pbar.unregister()
             except KeyError:
                 pass
-        else:
-            background_signal = LazyEBSD(background_patterns)
 
-        return background_signal
+        return s_out
 
     def adaptive_histogram_equalization(
         self,
@@ -738,9 +792,11 @@ class EBSD(KikuchipySignal2D):
         clip_limit: Union[int, float] = 0,
         nbins: int = 128,
         show_progressbar: Optional[bool] = None,
-    ) -> None:
-        """Enhance the local contrast in an EBSD scan inplace using
-        adaptive histogram equalization.
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, EBSD, LazyEBSD]:
+        """Enhance the local contrast using adaptive histogram
+        equalization.
 
         This method uses :func:`skimage.exposure.equalize_adapthist`.
 
@@ -760,6 +816,19 @@ class EBSD(KikuchipySignal2D):
             Whether to show a progressbar. If not given, the value of
             :obj:`hyperspy.api.preferences.General.show_progressbar`
             is used.
+        inplace
+            Whether to operate on the current signal or return a new
+            one. Default is ``True``.
+        lazy_output
+            Whether the returned signal is lazy. If not given this
+            follows from the current signal. Can only be ``True`` if
+            ``inplace=False``.
+
+        Returns
+        -------
+        s_out
+            Equalized signal, returned if ``inplace=False``. Whether it
+            is lazy is determined from ``lazy_output``.
 
         See Also
         --------
@@ -802,6 +871,9 @@ class EBSD(KikuchipySignal2D):
         >>> _ = ax2.plot(hist)
         >>> _ = ax3.plot(hist2)
         """
+        if lazy_output and inplace:
+            raise ValueError("`lazy_output=True` requires `inplace=False`")
+
         # Determine window size (shape of contextual region)
         sig_shape = self.axes_manager.signal_shape
         if kernel_size is None:
@@ -824,22 +896,30 @@ class EBSD(KikuchipySignal2D):
             dtype=self.data.dtype,
         )
 
-        # Overwrite signal patterns
-        if not self._lazy:
+        return_lazy = lazy_output or (lazy_output is None and self._lazy)
+        register_pbar = show_progressbar or (
+            show_progressbar is not None and hs.preferences.General.show_progressbar
+        )
+        if not return_lazy and register_pbar:
             pbar = ProgressBar()
-            if show_progressbar or (
-                show_progressbar is None and hs.preferences.General.show_progressbar
-            ):
-                pbar.register()
+            pbar.register()
 
-            equalized_patterns.store(self.data, compute=True)
-
-            try:
-                pbar.unregister()
-            except KeyError:
-                pass
+        if inplace:
+            if not return_lazy:
+                equalized_patterns.store(self.data, compute=True)
+            else:
+                self.data = equalized_patterns
+            s_out = None
         else:
-            self.data = equalized_patterns
+            s_out = LazyEBSD(equalized_patterns, **self._get_custom_attributes())
+            if not return_lazy:
+                s_out.compute()
+
+        if not return_lazy and register_pbar:
+            pbar.unregister()
+
+        if s_out:
+            return s_out
 
     def fft_filter(
         self,
@@ -847,8 +927,10 @@ class EBSD(KikuchipySignal2D):
         function_domain: str,
         shift: bool = False,
         show_progressbar: Optional[bool] = None,
-    ) -> None:
-        """Filter an EBSD scan inplace in the frequency domain.
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, EBSD, LazyEBSD]:
+        """Filter patterns in the frequency domain.
 
         Patterns are transformed via the Fast Fourier Transform (FFT) to
         the frequency domain, where their spectrum is multiplied by the
@@ -879,6 +961,19 @@ class EBSD(KikuchipySignal2D):
             Whether to show a progressbar. If not given, the value of
             :obj:`hyperspy.api.preferences.General.show_progressbar`
             is used.
+        inplace
+            Whether to operate on the current signal or return a new
+            one. Default is ``True``.
+        lazy_output
+            Whether the returned signal is lazy. If not given this
+            follows from the current signal. Can only be ``True`` if
+            ``inplace=False``.
+
+        Returns
+        -------
+        s_out
+            Filtered signal, returned if ``inplace=False``. Whether it
+            is lazy is determined from ``lazy_output``.
 
         See Also
         --------
@@ -901,8 +996,10 @@ class EBSD(KikuchipySignal2D):
         ...     shift=True,
         ... )
         """
-        dtype_out = self.data.dtype.type
+        if lazy_output and inplace:
+            raise ValueError("`lazy_output=True` requires `inplace=False`")
 
+        dtype_out = self.data.dtype.type
         dtype = np.float32
         dask_array = get_dask_array(signal=self, dtype=dtype)
 
@@ -937,31 +1034,41 @@ class EBSD(KikuchipySignal2D):
             **kwargs,
         )
 
-        # Overwrite signal patterns
-        if not self._lazy:
+        return_lazy = lazy_output or (lazy_output is None and self._lazy)
+        register_pbar = show_progressbar or (
+            show_progressbar is not None and hs.preferences.General.show_progressbar
+        )
+        if not return_lazy and register_pbar:
             pbar = ProgressBar()
-            if show_progressbar or (
-                show_progressbar is None and hs.preferences.General.show_progressbar
-            ):
-                pbar.register()
+            pbar.register()
 
-            filtered_patterns.store(self.data, compute=True)
-
-            try:
-                pbar.unregister()
-            except KeyError:
-                pass
+        if inplace:
+            if not return_lazy:
+                filtered_patterns.store(self.data, compute=True)
+            else:
+                self.data = filtered_patterns
+            s_out = None
         else:
-            self.data = filtered_patterns
+            s_out = LazyEBSD(filtered_patterns, **self._get_custom_attributes())
+            if not return_lazy:
+                s_out.compute()
+
+        if not return_lazy and register_pbar:
+            pbar.unregister()
+
+        if s_out:
+            return s_out
 
     def average_neighbour_patterns(
         self,
         window: Union[str, np.ndarray, da.Array, Window] = "circular",
         window_shape: Tuple[int, ...] = (3, 3),
         show_progressbar: Optional[bool] = None,
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
         **kwargs,
-    ) -> None:
-        """Average patterns inplace with its neighbours within a window.
+    ) -> Union[None, EBSD, LazyEBSD]:
+        """Average patterns with its neighbours within a window.
 
         The amount of averaging is specified by the window coefficients.
         All patterns are averaged with the same window. Map borders are
@@ -993,16 +1100,32 @@ class EBSD(KikuchipySignal2D):
             Whether to show a progressbar. If not given, the value of
             :obj:`hyperspy.api.preferences.General.show_progressbar`
             is used.
+        inplace
+            Whether to operate on the current signal or return a new
+            one. Default is ``True``.
+        lazy_output
+            Whether the returned signal is lazy. If not given this
+            follows from the current signal. Can only be ``True`` if
+            ``inplace=False``.
         **kwargs
             Keyword arguments passed to the available window type listed
             in :func:`~scipy.signal.windows.get_window`. If not given,
             the default values of that particular window are used.
+
+        Returns
+        -------
+        s_out
+            Averaged signal, returned if ``inplace=False``. Whether it
+            is lazy is determined from ``lazy_output``.
 
         See Also
         --------
         kikuchipy.filters.Window, scipy.signal.windows.get_window,
         scipy.ndimage.correlate
         """
+        if lazy_output and inplace:
+            raise ValueError("`lazy_output=True` requires `inplace=False`")
+
         if isinstance(window, Window) and window.is_valid:
             averaging_window = copy.copy(window)
         else:
@@ -1012,10 +1135,11 @@ class EBSD(KikuchipySignal2D):
         window_shape = averaging_window.shape
         if window_shape in [(1,), (1, 1)]:
             # Do nothing if a window of shape (1,) or (1, 1) is passed
-            return warnings.warn(
+            warnings.warn(
                 f"A window of shape {window_shape} was passed, no averaging is "
                 "therefore performed"
             )
+            return
         elif len(nav_shape) > len(window_shape):
             averaging_window = averaging_window.reshape(window_shape + (1,))
 
@@ -1076,37 +1200,45 @@ class EBSD(KikuchipySignal2D):
             boundary="none",
         )
 
-        # Overwrite signal patterns
-        if not self._lazy:
+        return_lazy = lazy_output or (lazy_output is None and self._lazy)
+        register_pbar = show_progressbar or (
+            show_progressbar is not None and hs.preferences.General.show_progressbar
+        )
+        if not return_lazy and register_pbar:
             pbar = ProgressBar()
-            if show_progressbar or (
-                show_progressbar is None and hs.preferences.General.show_progressbar
-            ):
-                pbar.register()
+            pbar.register()
 
-            averaged_patterns.store(self.data, compute=True)
-
-            try:
-                pbar.unregister()
-            except KeyError:
-                pass
+        if inplace:
+            if not return_lazy:
+                averaged_patterns.store(self.data, compute=True)
+            else:
+                averaged_patterns = averaged_patterns.rechunk(old_chunks)
+                self.data = averaged_patterns
+            s_out = None
         else:
-            # Revert original chunks
-            averaged_patterns = averaged_patterns.rechunk(old_chunks)
-
-            self.data = averaged_patterns
+            s_out = LazyEBSD(averaged_patterns, **self._get_custom_attributes())
+            if not return_lazy:
+                s_out.compute()
 
         # Don't sink
         gc.collect()
+
+        if not return_lazy and register_pbar:
+            pbar.unregister()
+
+        if s_out:
+            return s_out
 
     def downsample(
         self,
         factor: int,
         dtype_out: Optional[str] = None,
         show_progressbar: Optional[bool] = None,
-    ) -> None:
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, EBSD, LazyEBSD]:
         r"""Downsample the pattern shape by an integer factor and
-        rescale intensities to fill the data type range inplace.
+        rescale intensities to fill the data type range.
 
         Parameters
         ----------
@@ -1124,6 +1256,19 @@ class EBSD(KikuchipySignal2D):
             Whether to show a progressbar. If not given, the value of
             :obj:`hyperspy.api.preferences.General.show_progressbar`
             is used.
+        inplace
+            Whether to operate on the current signal or return a new
+            one. Default is ``True``.
+        lazy_output
+            Whether the returned signal is lazy. If not given this
+            follows from the current signal. Can only be ``True`` if
+            ``inplace=False``.
+
+        Returns
+        -------
+        s_out
+            Downsampled signal, returned if ``inplace=False``. Whether
+            it is lazy is determined from ``lazy_output``.
 
         See Also
         --------
@@ -1135,6 +1280,9 @@ class EBSD(KikuchipySignal2D):
         rescaled after binning in order to maintain the data type. If
         rescaling is undesirable, use :meth:`rebin` instead.
         """
+        if lazy_output and inplace:
+            raise ValueError("`lazy_output=True` requires `inplace=False`")
+
         if not isinstance(factor, int) or factor <= 1:
             raise ValueError(f"Binning `factor` {factor} must be an integer > 1")
         else:
@@ -1161,6 +1309,8 @@ class EBSD(KikuchipySignal2D):
         # Update static background
         static_bg = attrs["static_background"]
         if static_bg is not None:
+            if isinstance(static_bg, da.Array):
+                static_bg = static_bg.compute()
             static_bg_new = _downsample2d(static_bg, factor, omin, omax, dtype_out)
             attrs["static_background"] = static_bg_new
 
@@ -1168,8 +1318,7 @@ class EBSD(KikuchipySignal2D):
         attrs["detector"].shape = sig_shape_new
         attrs["detector"].binning *= factor
 
-        self.map(
-            _downsample2d,
+        map_kw = dict(
             show_progressbar=show_progressbar,
             parallel=True,
             output_dtype=dtype_out,
@@ -1178,7 +1327,15 @@ class EBSD(KikuchipySignal2D):
             omax=omax,
             dtype_out=dtype_out,
         )
-        self._set_custom_attributes(attrs)
+        if inplace:
+            self.map(_downsample2d, inplace=True, **map_kw)
+            self._set_custom_attributes(attrs)
+        else:
+            s_out = self.map(
+                _downsample2d, inplace=False, lazy_output=lazy_output, **map_kw
+            )
+            s_out._set_custom_attributes(attrs)
+            return s_out
 
     def get_neighbour_dot_product_matrices(
         self,
@@ -3079,14 +3236,18 @@ class EBSD(KikuchipySignal2D):
         ] = None,
         percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
         show_progressbar: Optional[bool] = None,
-    ) -> None:
-        super().rescale_intensity(
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, EBSD, LazyEBSD]:
+        return super().rescale_intensity(
             relative,
             in_range,
             out_range,
             dtype_out,
             percentiles,
             show_progressbar,
+            inplace,
+            lazy_output,
         )
 
     def normalize_intensity(
@@ -3095,9 +3256,16 @@ class EBSD(KikuchipySignal2D):
         divide_by_square_root: bool = False,
         dtype_out: Union[str, np.dtype, type, None] = None,
         show_progressbar: Optional[bool] = None,
-    ) -> None:
-        super().normalize_intensity(
-            num_std, divide_by_square_root, dtype_out, show_progressbar
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, EBSD, LazyEBSD]:
+        return super().normalize_intensity(
+            num_std,
+            divide_by_square_root,
+            dtype_out,
+            show_progressbar,
+            inplace,
+            lazy_output,
         )
 
     def as_lazy(self, *args, **kwargs) -> LazyEBSD:
