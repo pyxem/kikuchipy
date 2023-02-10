@@ -18,5 +18,3 @@ can be read by kikuchipy:
 - :cite:`aanes2022electron`
 - :cite:`aanes2022electron2`
 - :cite:`aanes2022electron3`
-- :cite:`aanes2023dynamical`
-- :cite:`aanes2023dynamical2`

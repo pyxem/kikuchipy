@@ -50,6 +50,7 @@ this:
     draw
     filters
     generators
+    imaging
     indexing
     io
     pattern
