@@ -52,7 +52,7 @@ class VirtualBSEGenerator:
     -----
     Deprecated since version 0.8: Class ``VirtualBSEGenerator`` is
     deprecated and will be removed in version 0.9. Use
-    :class:`~kikuchipy.imaging.VBSEImager` instead.
+    :class:`~kikuchipy.imaging.VirtualBSEImager` instead.
     """
 
     def __init__(self, signal: Union[EBSD, LazyEBSD]):

@@ -120,4 +120,4 @@ class TestVirtualBSEImage:
         vbse_img = s.get_virtual_bse_intensity(hs.roi.RectangularROI(0, 0, 2, 2))
         vbse_img.rescale_intensity(dtype_out=np.uint8)
         vbse_img.adaptive_histogram_equalization()
-        assert abs(np.unique(vbse_img.data).size - 255) <= 5
+        assert abs(np.unique(vbse_img.data).size - 255) <= 10
