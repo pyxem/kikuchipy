@@ -31,14 +31,14 @@ KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5
 
 class TestVirtualBSEImager:
     def test_init(self, dummy_signal):
-        vbse_imager = kp.imaging.VBSEImager(dummy_signal)
+        vbse_imager = kp.imaging.VirtualBSEImager(dummy_signal)
 
         assert isinstance(vbse_imager.signal, kp.signals.EBSD)
         assert vbse_imager.grid_shape == (5, 5)
 
     def test_init_lazy(self, dummy_signal):
         lazy_signal = dummy_signal.as_lazy()
-        vbse_imager = kp.imaging.VBSEImager(lazy_signal)
+        vbse_imager = kp.imaging.VirtualBSEImager(lazy_signal)
 
         assert isinstance(vbse_imager.signal, kp.signals.LazyEBSD)
 
@@ -59,7 +59,7 @@ class TestVirtualBSEImager:
     )
     def test_set_grid_shape(self, grid_shape, desired_rows, desired_cols):
         s = kp.load(KIKUCHIPY_FILE)
-        vbse_imager = kp.imaging.VBSEImager(s)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
         vbse_imager.grid_shape = grid_shape
 
         assert vbse_imager.grid_shape == grid_shape
@@ -67,10 +67,10 @@ class TestVirtualBSEImager:
         assert np.allclose(vbse_imager.grid_cols, desired_cols)
 
     def test_repr(self, dummy_signal):
-        vbse_imager = kp.imaging.VBSEImager(dummy_signal)
+        vbse_imager = kp.imaging.VirtualBSEImager(dummy_signal)
 
         assert repr(vbse_imager) == (
-            "VBSEImager for <EBSD, title: , dimensions: (3, 3|3, 3)>"
+            "VirtualBSEImager for <EBSD, title: , dimensions: (3, 3|3, 3)>"
         )
 
     @pytest.mark.parametrize(
@@ -79,7 +79,7 @@ class TestVirtualBSEImager:
     )
     def test_plot_grid(self, grid_shape, desired_n_markers):
         s = kp.load(KIKUCHIPY_FILE)
-        vbse_imager = kp.imaging.VBSEImager(s)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
         vbse_imager.grid_shape = grid_shape
         rgb_channels = [(0, 0), (0, 1), (1, 0)]
         pattern_idx = (2, 2)
@@ -103,7 +103,7 @@ class TestVirtualBSEImager:
     @pytest.mark.parametrize("color", ["c", "m", "k"])
     def test_plot_grid_text_color(self, color):
         s = kp.load(KIKUCHIPY_FILE)
-        vbse_imager = kp.imaging.VBSEImager(s)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
         p = vbse_imager.plot_grid(color=color)
 
         assert p.metadata.Markers["text"].marker._color == color
@@ -113,7 +113,7 @@ class TestVirtualBSEImager:
 
 class TestGetImagesFromGrid:
     def test_get_single_image_from_grid(self, dummy_signal):
-        vbse_imager = kp.imaging.VBSEImager(dummy_signal)
+        vbse_imager = kp.imaging.VirtualBSEImager(dummy_signal)
         vbse_imager.grid_shape = (1, 1)
         vbse_img = vbse_imager.get_images_from_grid()
 
@@ -121,7 +121,7 @@ class TestGetImagesFromGrid:
 
     @pytest.mark.parametrize("dtype_out", [np.float32, np.float64])
     def test_dtype_out(self, dummy_signal, dtype_out):
-        vbse_imager = kp.imaging.VBSEImager(dummy_signal)
+        vbse_imager = kp.imaging.VirtualBSEImager(dummy_signal)
         vbse_imager.grid_shape = (1, 1)
         vbse_images = vbse_imager.get_images_from_grid(dtype_out=dtype_out)
 
@@ -129,7 +129,7 @@ class TestGetImagesFromGrid:
 
     def test_axes_manager_transfer(self):
         s = kp.load(KIKUCHIPY_FILE)
-        vbse_imager = kp.imaging.VBSEImager(s)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
         vbse_img = vbse_imager.get_images_from_grid()
 
         s_nav_axes = s.axes_manager.navigation_axes
@@ -140,14 +140,14 @@ class TestGetImagesFromGrid:
         assert all([vbse_sig_axes[i].units == s_nav_axes[i].units for i in range(2)])
 
     def test_get_images_lazy(self, dummy_signal):
-        vbse_imager = kp.imaging.VBSEImager(dummy_signal.as_lazy())
+        vbse_imager = kp.imaging.VirtualBSEImager(dummy_signal.as_lazy())
         vbse_img = vbse_imager.get_images_from_grid()
 
 
 class TestGetRGBImage:
     def test_get_rgb_image_rois(self):
         s = kp.load(KIKUCHIPY_FILE)
-        vbse_imager = kp.imaging.VBSEImager(s)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
 
         # Get channels by ROIs
         rois1 = [
@@ -170,7 +170,7 @@ class TestGetRGBImage:
 
     def test_get_rgb_image_dtype(self):
         s = kp.load(KIKUCHIPY_FILE)
-        vbse_imager = kp.imaging.VBSEImager(s)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
         vbse_rgb_img = vbse_imager.get_rgb_image(
             r=(0, 0), g=(0, 1), b=(0, 2), dtype_out=np.uint16
         )
@@ -187,7 +187,7 @@ class TestGetRGBImage:
         self, percentile, desired_mean_intensity
     ):
         s = kp.load(KIKUCHIPY_FILE)
-        vbse_imager = kp.imaging.VBSEImager(s)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
         vbse_rgb_img = vbse_imager.get_rgb_image(
             r=(0, 0), g=(0, 1), b=(0, 2), percentiles=percentile
         )
@@ -200,7 +200,7 @@ class TestGetRGBImage:
     )
     def test_get_rgb_alpha(self, alpha_add, desired_mean_intensity):
         s = kp.load(KIKUCHIPY_FILE)
-        vbse_imager = kp.imaging.VBSEImager(s)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
 
         alpha = np.arange(9).reshape((3, 3))
         alpha[0] += alpha_add
@@ -214,7 +214,7 @@ class TestGetRGBImage:
 
     def test_get_rgb_alpha_signal(self):
         s = kp.load(KIKUCHIPY_FILE)
-        vbse_imager = kp.imaging.VBSEImager(s)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
 
         vbse_img = s.get_virtual_bse_intensity(roi=RectangularROI(0, 0, 10, 10))
 
@@ -231,7 +231,7 @@ class TestGetRGBImage:
 
     def test_get_rgb_image_lazy(self):
         s = kp.load(KIKUCHIPY_FILE, lazy=True)
-        vbse_imager = kp.imaging.VBSEImager(s)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
 
         assert isinstance(vbse_imager.signal, kp.signals.LazyEBSD)
 
@@ -241,7 +241,7 @@ class TestGetRGBImage:
 
     def test_get_rgb_1d(self):
         s = kp.signals.EBSD(np.random.random(9 * 3600).reshape((9, 60, 60)))
-        vbse_imager = kp.imaging.VBSEImager(s)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
 
         with pytest.raises(ValueError, match="The signal dimension cannot be "):
             _ = vbse_imager.get_rgb_image(r=(0, 0), g=(0, 1), b=(0, 2))
@@ -255,7 +255,7 @@ class TestGetRGBImage:
     )
     def test_get_rgb_multiple_rois_per_channel(self, r, g, b, desired_mean_intensity):
         s = kp.load(KIKUCHIPY_FILE)
-        vbse_imager = kp.imaging.VBSEImager(s)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
 
         vbse_rgb_img1 = vbse_imager.get_rgb_image(r=r, g=g, b=b)
         vbse_rgb_img1.change_dtype("uint8")
