@@ -19,13 +19,12 @@
 :class:`dask.array.Array` chunks of EBSD patterns.
 """
 
-from typing import Union, Tuple, List
+from typing import Union
 
 import dask.array as da
 from numba import njit
 import numpy as np
 from scipy.ndimage import correlate, gaussian_filter
-from skimage.exposure import equalize_adapthist
 
 import kikuchipy.pattern._pattern as pattern_processing
 import kikuchipy.filters.fft_barnes as barnes
@@ -73,55 +72,6 @@ def get_dynamic_background(
         background[nav_idx] = filter_func(patterns[nav_idx], **kwargs)
 
     return background
-
-
-def adaptive_histogram_equalization(
-    patterns: Union[np.ndarray, da.Array],
-    kernel_size: Union[Tuple[int, int], List[int]],
-    clip_limit: Union[int, float] = 0,
-    nbins: int = 128,
-) -> np.ndarray:
-    """Local contrast enhancement of a chunk of EBSD patterns with
-    adaptive histogram equalization.
-
-    This method makes use of :func:`skimage.exposure.equalize_adapthist`.
-
-    Parameters
-    ----------
-    patterns
-        EBSD patterns.
-    kernel_size
-        Shape of contextual regions for adaptive histogram equalization.
-    clip_limit
-        Clipping limit, normalized between 0 and 1 (higher values give
-        more contrast). Default is 0.
-    nbins
-        Number of gray bins for histogram. Default is 128.
-
-    Returns
-    -------
-    equalized_patterns : numpy.ndarray
-        Patterns with enhanced contrast.
-    """
-    dtype_in = patterns.dtype.type
-
-    equalized_patterns = np.empty_like(patterns)
-
-    for nav_idx in np.ndindex(patterns.shape[:-2]):
-        # Adaptive histogram equalization
-        equalized_pattern = equalize_adapthist(
-            patterns[nav_idx],
-            kernel_size=kernel_size,
-            clip_limit=clip_limit,
-            nbins=nbins,
-        )
-
-        # Rescale intensities
-        equalized_patterns[nav_idx] = pattern_processing.rescale_intensity(
-            equalized_pattern, dtype_out=dtype_in
-        )
-
-    return equalized_patterns
 
 
 def fft_filter(

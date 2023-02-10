@@ -20,7 +20,6 @@ import copy
 import datetime
 import gc
 import logging
-import numbers
 import os
 from typing import Union, List, Optional, Tuple, Iterable
 import warnings
@@ -785,141 +784,6 @@ class EBSD(KikuchipySignal2D):
                 pass
 
         return s_out
-
-    def adaptive_histogram_equalization(
-        self,
-        kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
-        clip_limit: Union[int, float] = 0,
-        nbins: int = 128,
-        show_progressbar: Optional[bool] = None,
-        inplace: bool = True,
-        lazy_output: Optional[bool] = None,
-    ) -> Union[None, EBSD, LazyEBSD]:
-        """Enhance the local contrast using adaptive histogram
-        equalization.
-
-        This method uses :func:`skimage.exposure.equalize_adapthist`.
-
-        Parameters
-        ----------
-        kernel_size
-            Shape of contextual regions for adaptive histogram
-            equalization, default is 1/4 of image height and 1/4 of
-            image width.
-        clip_limit
-            Clipping limit, normalized between 0 and 1 (higher values
-            give more contrast). Default is ``0``.
-        nbins
-            Number of gray bins for histogram ("data range"), default is
-            ``128``.
-        show_progressbar
-            Whether to show a progressbar. If not given, the value of
-            :obj:`hyperspy.api.preferences.General.show_progressbar`
-            is used.
-        inplace
-            Whether to operate on the current signal or return a new
-            one. Default is ``True``.
-        lazy_output
-            Whether the returned signal is lazy. If not given this
-            follows from the current signal. Can only be ``True`` if
-            ``inplace=False``.
-
-        Returns
-        -------
-        s_out
-            Equalized signal, returned if ``inplace=False``. Whether it
-            is lazy is determined from ``lazy_output``.
-
-        See Also
-        --------
-        kikuchipy.signals.EBSD.rescale_intensity,
-        kikuchipy.signals.EBSD.normalize_intensity
-
-        Notes
-        -----
-        It is recommended to perform adaptive histogram equalization
-        only *after* static and dynamic background corrections,
-        otherwise some unwanted darkening towards the edges might
-        occur.
-
-        The default window size might not fit all pattern sizes, so it
-        may be necessary to search for the optimal window size.
-
-        Examples
-        --------
-        Load one pattern from the small nickel dataset, remove the
-        background and perform adaptive histogram equalization. A copy
-        without equalization is kept for comparison.
-
-        >>> import kikuchipy as kp
-        >>> s = kp.data.nickel_ebsd_small().inav[0, 0]
-        >>> s.remove_static_background()
-        >>> s.remove_dynamic_background()
-        >>> s2 = s.deepcopy()
-        >>> s2.adaptive_histogram_equalization()
-
-        Compute the intensity histograms and plot the patterns and
-        histograms
-
-        >>> import numpy as np
-        >>> import matplotlib.pyplot as plt
-        >>> hist, _ = np.histogram(s.data, range=(0, 255))
-        >>> hist2, _ = np.histogram(s2.data, range=(0, 255))
-        >>> _, ((ax0, ax1), (ax2, ax3)) = plt.subplots(nrows=2, ncols=2)
-        >>> _ = ax0.imshow(s.data)
-        >>> _ = ax1.imshow(s2.data)
-        >>> _ = ax2.plot(hist)
-        >>> _ = ax3.plot(hist2)
-        """
-        if lazy_output and inplace:
-            raise ValueError("`lazy_output=True` requires `inplace=False`")
-
-        # Determine window size (shape of contextual region)
-        sig_shape = self.axes_manager.signal_shape
-        if kernel_size is None:
-            kernel_size = (sig_shape[0] // 4, sig_shape[1] // 4)
-        elif isinstance(kernel_size, numbers.Number):
-            kernel_size = (kernel_size,) * self.axes_manager.signal_dimension
-        elif len(kernel_size) != self.axes_manager.signal_dimension:
-            raise ValueError(f"Incorrect value of `shape`: {kernel_size}")
-        kernel_size = [int(k) for k in kernel_size]
-
-        # Create dask array of signal patterns and do processing on this
-        dask_array = get_dask_array(signal=self)
-
-        # Local contrast enhancement
-        equalized_patterns = dask_array.map_blocks(
-            func=chunk.adaptive_histogram_equalization,
-            kernel_size=kernel_size,
-            clip_limit=clip_limit,
-            nbins=nbins,
-            dtype=self.data.dtype,
-        )
-
-        return_lazy = lazy_output or (lazy_output is None and self._lazy)
-        register_pbar = show_progressbar or (
-            show_progressbar is not None and hs.preferences.General.show_progressbar
-        )
-        if not return_lazy and register_pbar:
-            pbar = ProgressBar()
-            pbar.register()
-
-        if inplace:
-            if not return_lazy:
-                equalized_patterns.store(self.data, compute=True)
-            else:
-                self.data = equalized_patterns
-            s_out = None
-        else:
-            s_out = LazyEBSD(equalized_patterns, **self._get_custom_attributes())
-            if not return_lazy:
-                s_out.compute()
-
-        if not return_lazy and register_pbar:
-            pbar.unregister()
-
-        if s_out:
-            return s_out
 
     def fft_filter(
         self,
@@ -3263,6 +3127,24 @@ class EBSD(KikuchipySignal2D):
             num_std,
             divide_by_square_root,
             dtype_out,
+            show_progressbar,
+            inplace,
+            lazy_output,
+        )
+
+    def adaptive_histogram_equalization(
+        self,
+        kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
+        clip_limit: Union[int, float] = 0,
+        nbins: int = 128,
+        show_progressbar: Optional[bool] = None,
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, EBSD, LazyEBSD]:
+        return super().adaptive_histogram_equalization(
+            kernel_size,
+            clip_limit,
+            nbins,
             show_progressbar,
             inplace,
             lazy_output,

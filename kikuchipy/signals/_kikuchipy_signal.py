@@ -18,8 +18,10 @@
 from copy import deepcopy
 import gc
 import logging
+import numbers
 import os
-from typing import Any, Union, Tuple, Optional
+from typing import Any, List, Optional, Union, Tuple
+import warnings
 
 import dask.array as da
 from hyperspy.signals import Signal2D
@@ -30,6 +32,7 @@ from skimage.util.dtype import dtype_range
 import yaml
 
 from kikuchipy.pattern import normalize_intensity, rescale_intensity
+from kikuchipy.pattern._pattern import _adaptive_histogram_equalization
 from kikuchipy.signals.util._overwrite_hyperspy_methods import insert_doc_disclaimer
 
 
@@ -318,6 +321,145 @@ class KikuchipySignal2D(Signal2D):
         else:
             s_out = self.map(
                 normalize_intensity, inplace=False, lazy_output=lazy_output, **map_kw
+            )
+            s_out._set_custom_attributes(attrs)
+            return s_out
+
+    def adaptive_histogram_equalization(
+        self,
+        kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
+        clip_limit: Union[int, float] = 0,
+        nbins: int = 128,
+        show_progressbar: Optional[bool] = None,
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, Any]:
+        """Enhance the local contrast using adaptive histogram
+        equalization.
+
+        This method uses :func:`skimage.exposure.equalize_adapthist`.
+
+        Parameters
+        ----------
+        kernel_size
+            Shape of contextual regions for adaptive histogram
+            equalization, default is 1/4 of image height and 1/4 of
+            image width.
+        clip_limit
+            Clipping limit, normalized between 0 and 1 (higher values
+            give more contrast). Default is ``0``.
+        nbins
+            Number of gray bins for histogram ("data range"), default is
+            ``128``.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
+        inplace
+            Whether to operate on the current signal or return a new
+            one. Default is ``True``.
+        lazy_output
+            Whether the returned signal is lazy. If not given this
+            follows from the current signal. Can only be ``True`` if
+            ``inplace=False``.
+
+        Returns
+        -------
+        s_out
+            Equalized signal, returned if ``inplace=False``. Whether it
+            is lazy is determined from ``lazy_output``.
+
+        See Also
+        --------
+        rescale_intensity,
+        normalize_intensity
+
+        Notes
+        -----
+        It is recommended to perform adaptive histogram equalization
+        only *after* static and dynamic background corrections of EBSD
+        patterns, otherwise some unwanted darkening towards the edges
+        might occur.
+
+        The default window size might not fit all pattern sizes, so it
+        may be necessary to search for the optimal window size.
+
+        Examples
+        --------
+        Load one pattern from the small nickel dataset, remove the
+        background and perform adaptive histogram equalization. A copy
+        without equalization is kept for comparison.
+
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small().inav[0, 0]
+        >>> s.remove_static_background()
+        >>> s.remove_dynamic_background()
+        >>> s2 = s.deepcopy()
+        >>> s2.adaptive_histogram_equalization()
+
+        Compute the intensity histograms and plot the patterns and
+        histograms
+
+        >>> import numpy as np
+        >>> import matplotlib.pyplot as plt
+        >>> hist, _ = np.histogram(s.data, range=(0, 255))
+        >>> hist2, _ = np.histogram(s2.data, range=(0, 255))
+        >>> _, ((ax0, ax1), (ax2, ax3)) = plt.subplots(nrows=2, ncols=2)
+        >>> _ = ax0.imshow(s.data)
+        >>> _ = ax1.imshow(s2.data)
+        >>> _ = ax2.plot(hist)
+        >>> _ = ax3.plot(hist2)
+        """
+        if lazy_output and inplace:
+            raise ValueError("`lazy_output=True` requires `inplace=False`")
+
+        dtype_out = self.data.dtype
+        if np.issubdtype(dtype_out, np.floating):
+            warnings.warn(
+                (
+                    "Equalization of signals with floating point data type has been "
+                    "shown to give bad results. Rescaling intensities to integer "
+                    "intensities is recommended."
+                ),
+                UserWarning,
+            )
+        if not self._lazy and np.isnan(self.data).any():
+            warnings.warn(
+                (
+                    "Equalization of signals with NaN data has been shown to give bad "
+                    "results"
+                ),
+                UserWarning,
+            )
+
+        # Determine window size (shape of contextual region)
+        sig_shape = self.axes_manager.signal_shape
+        if kernel_size is None:
+            kernel_size = (sig_shape[0] // 4, sig_shape[1] // 4)
+        elif isinstance(kernel_size, numbers.Number):
+            kernel_size = (kernel_size,) * self.axes_manager.signal_dimension
+        elif len(kernel_size) != self.axes_manager.signal_dimension:
+            raise ValueError(f"Incorrect value of `shape`: {kernel_size}")
+        kernel_size = [int(k) for k in kernel_size]
+
+        map_kw = dict(
+            show_progressbar=show_progressbar,
+            parallel=True,
+            output_dtype=dtype_out,
+            kernel_size=kernel_size,
+            clip_limit=clip_limit,
+            nbins=nbins,
+        )
+        attrs = self._get_custom_attributes()
+        if inplace:
+            self.map(_adaptive_histogram_equalization, inplace=True, **map_kw)
+            self._set_custom_attributes(attrs)
+        else:
+            s_out = self.map(
+                _adaptive_histogram_equalization,
+                inplace=False,
+                lazy_output=lazy_output,
+                **map_kw,
             )
             s_out._set_custom_attributes(attrs)
             return s_out

@@ -16,7 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import dask
 import dask.array as da
@@ -465,6 +465,24 @@ class EBSDMasterPattern(KikuchiMasterPattern):
             show_progressbar=show_progressbar,
             inplace=inplace,
             lazy_output=lazy_output,
+        )
+
+    def adaptive_histogram_equalization(
+        self,
+        kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
+        clip_limit: Union[int, float] = 0,
+        nbins: int = 128,
+        show_progressbar: Optional[bool] = None,
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, EBSDMasterPattern, LazyEBSDMasterPattern]:
+        return super().adaptive_histogram_equalization(
+            kernel_size,
+            clip_limit,
+            nbins,
+            show_progressbar,
+            inplace,
+            lazy_output,
         )
 
     # --- Inherited methods from Signal2D overwritten. If the inherited

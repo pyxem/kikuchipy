@@ -16,7 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -76,6 +76,24 @@ class VirtualBSEImage(KikuchipySignal2D):
             divide_by_square_root,
             show_progressbar,
             dtype_out,
+            inplace,
+            lazy_output,
+        )
+
+    def adaptive_histogram_equalization(
+        self,
+        kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
+        clip_limit: Union[int, float] = 0,
+        nbins: int = 128,
+        show_progressbar: Optional[bool] = None,
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, VirtualBSEImage, LazyVirtualBSEImage]:
+        return super().adaptive_histogram_equalization(
+            kernel_size,
+            clip_limit,
+            nbins,
+            show_progressbar,
             inplace,
             lazy_output,
         )
