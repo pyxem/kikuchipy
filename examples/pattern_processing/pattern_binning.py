@@ -16,7 +16,7 @@ import hyperspy.api as hs
 import kikuchipy as kp
 
 
-s = kp.data.silicon_ebsd_moving_screen_in(allow_download=True, show_progressbar=False)
+s = kp.data.si_ebsd_moving_screen(allow_download=True, show_progressbar=False)
 s.remove_static_background(show_progressbar=False)
 
 print(s)

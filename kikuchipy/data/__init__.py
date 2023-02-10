@@ -32,16 +32,14 @@ desired.
 """
 
 __all__ = [
-    "ni_ebsd_master_pattern",
-    "ni1_gain",
-    "ni10_gain",
-    "ni1_gain_calibration",
-    "ni10_gain_calibration",
+    "ebsd_master_pattern",
+    "ni_gain",
+    "ni_gain_calibration",
     "nickel_ebsd_large",
     "nickel_ebsd_master_pattern_small",
     "nickel_ebsd_small",
-    "si_ebsd_master_pattern",
     "si_wafer",
+    "si_ebsd_moving_screen",
     "silicon_ebsd_moving_screen_in",
     "silicon_ebsd_moving_screen_out10mm",
     "silicon_ebsd_moving_screen_out5mm",
@@ -54,16 +52,14 @@ def __dir__():
 
 def __getattr__(name):
     _import_mapping = {
-        "ni_ebsd_master_pattern": "_data",
-        "ni1_gain": "_data",
-        "ni10_gain": "_data",
-        "ni1_gain_calibration": "_data",
-        "ni10_gain_calibration": "_data",
+        "ebsd_master_pattern": "_data",
+        "ni_gain": "_data",
+        "ni_gain_calibration": "_data",
         "nickel_ebsd_large": "_data",
         "nickel_ebsd_master_pattern_small": "_data",
         "nickel_ebsd_small": "_data",
-        "si_ebsd_master_pattern": "_data",
         "si_wafer": "_data",
+        "si_ebsd_moving_screen": "_data",
         "silicon_ebsd_moving_screen_in": "_data",
         "silicon_ebsd_moving_screen_out10mm": "_data",
         "silicon_ebsd_moving_screen_out5mm": "_data",

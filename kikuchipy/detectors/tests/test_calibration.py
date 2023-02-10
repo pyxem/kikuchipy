@@ -31,8 +31,8 @@ PX_SIZE = 46 / 508  # mm / px
 @pytest.fixture
 def moving_screen_cal_instance(request):
     return PCCalibrationMovingScreen(
-        pattern_in=data.silicon_ebsd_moving_screen_in(allow_download=True),
-        pattern_out=data.silicon_ebsd_moving_screen_out5mm(allow_download=True),
+        pattern_in=data.si_ebsd_moving_screen(0, allow_download=True),
+        pattern_out=data.si_ebsd_moving_screen(5, allow_download=True),
         points_in=POINTS_IN,
         points_out=POINTS_OUT,
         delta_z=5,  # mm

@@ -117,29 +117,54 @@ class TestData:
         assert s.data.shape == (55, 75, 60, 60)
         assert np.issubdtype(s.data.dtype, np.uint8)
 
+    # TODO: Remove test after 0.8 is released
     def test_load_si_ebsd_moving_screen_in(self):
         """Download external Si pattern."""
-        s = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
+        with pytest.warns(
+            np.VisibleDeprecationWarning,
+            match=r"Function `silicon_ebsd_moving_screen_in\(\)` is deprecated and ",
+        ):
+            s = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
 
         assert s.data.shape == (480, 480)
         assert s.data.dtype == np.uint8
         assert isinstance(s.static_background, np.ndarray)
 
+    # TODO: Remove test after 0.8 is released
     def test_load_si_ebsd_moving_screen_out5mm(self):
         """Download external Si pattern."""
-        s = kp.data.silicon_ebsd_moving_screen_out5mm(allow_download=True)
+        with pytest.warns(
+            np.VisibleDeprecationWarning,
+            match=r"Function `silicon_ebsd_moving_screen_out5mm\(\)` is deprecated ",
+        ):
+            s = kp.data.silicon_ebsd_moving_screen_out5mm(allow_download=True)
 
         assert s.data.shape == (480, 480)
         assert s.data.dtype == np.uint8
         assert isinstance(s.static_background, np.ndarray)
 
+    # TODO: Remove test after 0.8 is released
     def test_load_si_ebsd_moving_screen_out10mm(self):
         """Download external Si pattern."""
-        s = kp.data.silicon_ebsd_moving_screen_out10mm(allow_download=True)
+        with pytest.warns(
+            np.VisibleDeprecationWarning,
+            match=r"Function `silicon_ebsd_moving_screen_out10mm\(\)` is deprecated ",
+        ):
+            s = kp.data.silicon_ebsd_moving_screen_out10mm(allow_download=True)
 
         assert s.data.shape == (480, 480)
         assert s.data.dtype == np.uint8
         assert isinstance(s.static_background, np.ndarray)
+
+    def test_load_si_ebsd_moving_screen(self):
+        """Download external Si pattern."""
+        s = kp.data.si_ebsd_moving_screen(allow_download=True)
+        assert s.data.shape == (480, 480)
+        assert s.data.dtype == np.uint8
+        assert isinstance(s.static_background, np.ndarray)
+
+        _ = kp.data.si_ebsd_moving_screen(5)
+        _ = kp.data.si_ebsd_moving_screen(10)
 
     def test_si_wafer(self):
         """Test set up of Si wafer dataset (without downloading)."""
@@ -160,96 +185,98 @@ class TestData:
             with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
                 _ = kp.data.si_wafer()
 
-    def test_ni1_gain(self):
-        """Test set up of polycrystalline recrystallized Ni dataset
+    @pytest.mark.parametrize(
+        "number, gain",
+        [
+            (1, 0),
+            (2, 3),
+            (3, 6),
+            (4, 9),
+            (5, 12),
+            (6, 15),
+            (7, 17),
+            (8, 20),
+            (9, 22),
+            (10, 24),
+        ],
+    )
+    def test_ni_gain(self, number, gain):
+        """Test set up of polycrystalline recrystallized Ni datasets
         (without downloading).
         """
-        file_path = "ni1_gain/Pattern.dat"
+        file_path = f"ni_gain/{number}/Pattern.dat"
 
-        dset = Dataset(file_path, collection_name="scan1_gain0db.zip")
+        dset = Dataset(file_path, collection_name=f"scan{number}_gain{gain}db.zip")
         assert not dset.is_in_package
         assert dset.is_in_collection
         assert dset.url is not None
         assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
-        assert str(dset.file_directory) == file_path.split("/")[0]
+        assert str(dset.file_directory) == str(
+            Path(file_path.split("/")[0]) / str(number)
+        )
 
         if dset.file_path.exists():  # pragma: no cover
-            s = kp.data.ni1_gain(lazy=True)
+            s = kp.data.ni_gain(number, lazy=True)
             assert isinstance(s, kp.signals.LazyEBSD)
         else:  # pragma: no cover
             assert dset.md5_hash is None
             with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
-                _ = kp.data.ni1_gain()
+                _ = kp.data.ni_gain(number)
 
-    def test_ni1_gain_calibration(self):
+    @pytest.mark.parametrize(
+        "number, gain",
+        [
+            (1, 0),
+            (2, 3),
+            (3, 6),
+            (4, 9),
+            (5, 12),
+            (6, 15),
+            (7, 17),
+            (8, 20),
+            (9, 22),
+            (10, 24),
+        ],
+    )
+    def test_ni_gain_calibration(self, number, gain):
         """Test set up of calibration patterns from polycrystalline
-        recrystallized Ni dataset (without downloading).
+        recrystallized Ni datasets (without downloading).
         """
-        file_path = "ni1_gain/Setting.txt"
+        file_path = f"ni_gain/{number}/Setting.txt"
 
-        dset = Dataset(file_path, collection_name="scan1_gain0db.zip")
+        dset = Dataset(file_path, collection_name=f"scan{number}_gain{gain}db.zip")
         assert not dset.is_in_package
         assert dset.is_in_collection
         assert dset.url is not None
         assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
-        assert str(dset.file_directory) == file_path.split("/")[0]
+        assert str(dset.file_directory) == str(
+            Path(file_path.split("/")[0]) / str(number)
+        )
 
         if dset.file_path.exists():  # pragma: no cover
-            s = kp.data.ni1_gain_calibration(lazy=True)
+            s = kp.data.ni_gain_calibration(number, lazy=True)
             assert isinstance(s, kp.signals.LazyEBSD)
         else:  # pragma: no cover
             assert dset.md5_hash is None
             with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
-                _ = kp.data.ni1_gain_calibration()
+                _ = kp.data.ni_gain_calibration(number)
 
-    def test_ni10_gain(self):
-        """Test set up of polycrystalline recrystallized Ni dataset
-        (without downloading).
+    @pytest.mark.parametrize(
+        "phase, file_path",
+        [
+            ("al", "ebsd_master_pattern/al_mc_mp_20kv.h5"),
+            ("ni", "ebsd_master_pattern/ni_mc_mp_20kv.h5"),
+            ("si", "ebsd_master_pattern/si_mc_mp_20kv.h5"),
+            ("austenite", "ebsd_master_pattern/austenite_mc_mp_20kv.h5"),
+            ("ferrite", "ebsd_master_pattern/ferrite_mc_mp_20kv.h5"),
+            ("steel_chi", "ebsd_master_pattern/steel_chi_mc_mp_20kv.h5"),
+            ("steel_sigma", "ebsd_master_pattern/steel_sigma_mc_mp_20kv.h5"),
+        ],
+    )
+    def test_ebsd_master_pattern_dataset(self, phase, file_path):
+        """Test set up of (large) EBSD master pattern file from Zenodo
+        (without downloading it).
         """
-        file_path = "ni10_gain/Pattern.dat"
-
-        dset = Dataset(file_path, collection_name="scan10_gain24db.zip")
-        assert not dset.is_in_package
-        assert dset.is_in_collection
-        assert dset.url is not None
-        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
-        assert str(dset.file_directory) == file_path.split("/")[0]
-
-        if dset.file_path.exists():  # pragma: no cover
-            s = kp.data.ni10_gain(lazy=True)
-            assert isinstance(s, kp.signals.LazyEBSD)
-        else:  # pragma: no cover
-            assert dset.md5_hash is None
-            with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
-                _ = kp.data.ni10_gain()
-
-    def test_ni10_gain_calibration(self):
-        """Test set up of calibration patterns from polycrystalline
-        recrystallized Ni dataset (without downloading).
-        """
-        file_path = "ni10_gain/Setting.txt"
-
-        dset = Dataset(file_path, collection_name="scan10_gain24db.zip")
-        assert not dset.is_in_package
-        assert dset.is_in_collection
-        assert dset.url is not None
-        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
-        assert str(dset.file_directory) == file_path.split("/")[0]
-
-        if dset.file_path.exists():  # pragma: no cover
-            s = kp.data.ni10_gain_calibration(lazy=True)
-            assert isinstance(s, kp.signals.LazyEBSD)
-        else:  # pragma: no cover
-            assert dset.md5_hash is None
-            with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
-                _ = kp.data.ni10_gain_calibration()
-
-    def test_ni_ebsd_master_pattern(self):
-        """Test set up of Ni EBSD master pattern from Zenodo (without
-        downloading).
-        """
-        file_path = "ni_ebsd_master_pattern/ni_mc_mp_20kv.h5"
-
         dset = Dataset(file_path)
         assert not dset.is_in_package
         assert not dset.is_in_collection
@@ -258,33 +285,12 @@ class TestData:
         assert str(dset.file_directory) == file_path.split("/")[0]
 
         if dset.file_path.exists():  # pragma: no cover
-            s = kp.data.ni_ebsd_master_pattern(lazy=True)
+            s = kp.data.ebsd_master_pattern(phase, lazy=True)
             assert isinstance(s, kp.signals.LazyEBSDMasterPattern)
         else:  # pragma: no cover
             assert dset.md5_hash is None
             with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
-                _ = kp.data.ni_ebsd_master_pattern()
-
-    def test_si_ebsd_master_pattern(self):
-        """Test set up of Si EBSD master pattern from Zenodo (without
-        downloading).
-        """
-        file_path = "si_ebsd_master_pattern/si_mc_mp_20kv.h5"
-
-        dset = Dataset(file_path)
-        assert not dset.is_in_package
-        assert not dset.is_in_collection
-        assert dset.url is not None
-        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
-        assert str(dset.file_directory) == file_path.split("/")[0]
-
-        if dset.file_path.exists():  # pragma: no cover
-            s = kp.data.si_ebsd_master_pattern(lazy=True)
-            assert isinstance(s, kp.signals.LazyEBSDMasterPattern)
-        else:  # pragma: no cover
-            assert dset.md5_hash is None
-            with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
-                _ = kp.data.si_ebsd_master_pattern()
+                _ = kp.data.ebsd_master_pattern(phase)
 
     def test_dataset_availability(self):
         """Ping registry URLs of remote repositories (GitHub and Zenodo)
@@ -297,8 +303,22 @@ class TestData:
             "silicon_ebsd_moving_screen/si_out10mm.h5",
             "ebsd_si_wafer.zip",
             "scan1_gain0db.zip",
-            "ni_ebsd_master_pattern/ni_mc_mp_20kv.h5",
-            "si_ebsd_master_pattern/si_mc_mp_20kv.h5",
+            "scan2_gain3db.zip",
+            "scan3_gain6db.zip",
+            "scan4_gain9db.zip",
+            "scan5_gain12db.zip",
+            "scan6_gain15db.zip",
+            "scan7_gain17db.zip",
+            "scan8_gain20db.zip",
+            "scan9_gain22db.zip",
+            "scan10_gain24db.zip",
+            "ebsd_master_pattern/al_mc_mp_20kv.h5",
+            "ebsd_master_pattern/ni_mc_mp_20kv.h5",
+            "ebsd_master_pattern/si_mc_mp_20kv.h5",
+            "ebsd_master_pattern/austenite_mc_mp_20kv.h5",
+            "ebsd_master_pattern/ferrite_mc_mp_20kv.h5",
+            "ebsd_master_pattern/steel_chi_mc_mp_20kv.h5",
+            "ebsd_master_pattern/steel_sigma_mc_mp_20kv.h5",
         ]
         for dset in datasets:
             assert marshall.is_available(f"data/{dset}")
