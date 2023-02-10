@@ -13,8 +13,8 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
-Unreleased
-==========
+0.8.0 (2023-02-11)
+==================
 
 Added
 -----
@@ -197,9 +197,6 @@ Fixed
   different navigation shape than determined from the HDF5 file's navigation shape
   (e.g. ``Scan 1/EBSD/Header/n_columns`` and ``n_rows``).
   (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
-
-Security
---------
 
 0.7.0 (2022-10-29)
 ==================
