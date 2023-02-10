@@ -24,21 +24,21 @@ import kikuchipy as kp
 
 class TestVirtualBSEImage:
     def test_rescale_rgb_raises(self, dummy_signal):
-        vbse_gen = kp.generators.VirtualBSEGenerator(dummy_signal)
+        vbse_gen = kp.imaging.VirtualBSEImager(dummy_signal)
         vbse_gen.grid_shape = (3, 3)
         rgb = vbse_gen.get_rgb_image(r=(0, 0), g=(0, 1), b=(1, 0))
         with pytest.raises(NotImplementedError):
             rgb.rescale_intensity()
 
     def test_normalize_rgb_raises(self, dummy_signal):
-        vbse_gen = kp.generators.VirtualBSEGenerator(dummy_signal)
+        vbse_gen = kp.imaging.VirtualBSEImager(dummy_signal)
         vbse_gen.grid_shape = (3, 3)
         rgb = vbse_gen.get_rgb_image(r=(0, 0), g=(0, 1), b=(1, 0))
         with pytest.raises(NotImplementedError):
             rgb.normalize_intensity()
 
     def test_rescale_intensity_inplace(self, dummy_signal):
-        vbse_gen = kp.generators.VirtualBSEGenerator(dummy_signal)
+        vbse_gen = kp.imaging.VirtualBSEImager(dummy_signal)
         vbse_gen.grid_shape = (3, 3)
         vbse_img = vbse_gen.get_images_from_grid()
 
@@ -60,7 +60,7 @@ class TestVirtualBSEImage:
         assert np.allclose(mp5.data, vbse_img.data)
 
     def test_rescale_intensity_lazy_output(self, dummy_signal):
-        vbse_gen = kp.generators.VirtualBSEGenerator(dummy_signal)
+        vbse_gen = kp.imaging.VirtualBSEImager(dummy_signal)
         vbse_gen.grid_shape = (3, 3)
         vbse_img = vbse_gen.get_images_from_grid()
 
@@ -77,7 +77,7 @@ class TestVirtualBSEImage:
         assert isinstance(vbse_img4, kp.signals.VirtualBSEImage)
 
     def test_normalize_intensity_inplace(self, dummy_signal):
-        vbse_gen = kp.generators.VirtualBSEGenerator(dummy_signal)
+        vbse_gen = kp.imaging.VirtualBSEImager(dummy_signal)
         vbse_gen.grid_shape = (3, 3)
         vbse_img = vbse_gen.get_images_from_grid()
 
@@ -99,7 +99,7 @@ class TestVirtualBSEImage:
         assert np.allclose(vbse_img5.data, vbse_img.data)
 
     def test_normalize_intensity_lazy_output(self, dummy_signal):
-        vbse_gen = kp.generators.VirtualBSEGenerator(dummy_signal)
+        vbse_gen = kp.imaging.VirtualBSEImager(dummy_signal)
         vbse_gen.grid_shape = (3, 3)
         vbse_img = vbse_gen.get_images_from_grid()
         with pytest.raises(

@@ -15,13 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""*[Deprecated]* Generate signals from other signals.
-
-Use :mod:`kikuchipy.imaging` instead.
-"""
+"""Imaging using the EBSD detector."""
 
 __all__ = [
-    "VirtualBSEGenerator",
+    "VirtualBSEImager",
 ]
 
 
@@ -31,7 +28,7 @@ def __dir__():
 
 def __getattr__(name):
     _import_mapping = {
-        "VirtualBSEGenerator": "virtual_bse_generator",
+        "VirtualBSEImager": "vbse",
     }
     if name in __all__:
         import importlib

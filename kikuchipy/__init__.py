@@ -87,6 +87,7 @@ __all__ = [
     "draw",
     "filters",
     "generators",
+    "imaging",
     "indexing",
     "io",
     "load",
