@@ -143,6 +143,10 @@ Changed
 
 Deprecated
 ----------
+- The data module functions ``silicon_ebsd_moving_screen_x()``, where "x" is "in",
+  "out5mm" or "out10mm", are deprecated and will be removed in v0.9. Use
+  ``si_ebsd_moving_screen(distance)`` instead, where ``distance`` is ``0`` (in), ``5``
+  or ``10``. (`#607 <https://github.com/pyxem/kikuchipy/pull/607>`_)
 - The PyPI selector ``viz`` is replaced by ``all``, which installs all optional
   dependencies. ``viz`` will be removed in version 0.9. Install optional dependencies
   manually or via ``pip install kikuchipy[all]``.
