@@ -157,7 +157,7 @@ setup(
         "h5py               >= 2.10",
         "imageio",
         "matplotlib         >= 3.3",
-        "numba              >= 0.52",
+        "numba              >= 0.55",
         "numpy              >= 1.19",
         "orix               >= 0.11",
         "pooch              >= 0.13",
