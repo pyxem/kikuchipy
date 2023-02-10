@@ -26,6 +26,7 @@ from kikuchipy.signals import EBSD, EBSDMasterPattern
 from kikuchipy import load
 from kikuchipy.release import version
 from kikuchipy.data._registry import registry_hashes, registry_urls
+from kikuchipy._util import deprecated
 
 
 marshall = pooch.create(
@@ -120,19 +121,26 @@ def nickel_ebsd_large(
     return load(file_path, **kwargs)
 
 
-def ni1_gain(
-    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
+def ni_gain(
+    number: int = 1,
+    allow_download: bool = False,
+    show_progressbar: Optional[bool] = None,
+    **kwargs,
 ) -> EBSD:
     """EBSD dataset of (149, 200) patterns of (60, 60) pixels from
     polycrystalline recrystallized Ni, acquired on a NORDIF UF-1100
     detector :cite:`aanes2019electron`.
 
-    The dataset is the first out of ten datasets from the same region of
-    interest acquired with increasing gain on the detector, from no gain
-    (this dataset) to maximum gain (22 dB).
+    Ten datasets are available from the same region of interest,
+    acquired with increasing gain on the detector, from no gain to
+    maximum gain.
 
     Parameters
     ----------
+    number
+        Dataset number 1-10. The camera gains in dB are 0, 3,
+        6, 9, 12, 15, 17, 20, 22 and 24. Default is dataset number 1,
+        acquired without detector gain.
     allow_download
         Whether to allow downloading the dataset from the internet to
         the local cache with the pooch Python package. Default is
@@ -152,42 +160,53 @@ def ni1_gain(
 
     See Also
     --------
-    ni1_gain_calibration, ni10_gain, ni10_gain_calibration,
-    nickel_ebsd_small, nickel_ebsd_large
+    ni_gain_calibration, nickel_ebsd_small, nickel_ebsd_large
 
     Notes
     -----
-    The dataset is hosted in the Zenodo repository
-    https://doi.org/10.5281/zenodo.7497682 and comprises 98 MB as a
-    zipped file and about 116 MB when unzipped. The zipped file is
-    deleted after it is unzipped.
+    The datasets are hosted in the Zenodo repository
+    https://doi.org/10.5281/zenodo.7497682 and comprise about 100 MB
+    each as zipped files and about 116 MB when unzipped. Each zipped
+    file is deleted after it is unzipped.
 
-    The dataset carries a CC BY 4.0 license.
+    The datasets carry a CC BY 4.0 license.
 
     Examples
     --------
     >>> import kikuchipy as kp
-    >>> s = kp.data.ni1_gain(allow_download=True, lazy=True)  # doctest: +SKIP
+    >>> s = kp.data.ni_gain(allow_download=True, lazy=True)  # doctest: +SKIP
     >>> s  # doctest: +SKIP
     <LazyEBSD, title: Pattern, dimensions: (200, 149|60, 60)>
     """
-    Ni1Gain = Dataset("ni1_gain/Pattern.dat", collection_name="scan1_gain0db.zip")
-    file_path = Ni1Gain.fetch_file_path(allow_download, show_progressbar)
+    gain = [0, 3, 6, 9, 12, 15, 17, 20, 22, 24]
+    collection_name = f"scan{number}_gain{gain[number - 1]}.zip"
+
+    NiGain = Dataset(f"ni_gain/{number}/Pattern.dat", collection_name=collection_name)
+    file_path = NiGain.fetch_file_path(allow_download, show_progressbar)
+
     return load(file_path, **kwargs)  # pragma: no cover
 
 
-def ni1_gain_calibration(
-    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
+def ni_gain_calibration(
+    number: int = 1,
+    allow_download: bool = False,
+    show_progressbar: Optional[bool] = None,
+    **kwargs,
 ) -> EBSD:
-    """Nine EBSD patterns of (480, 480) pixels from polycrystalline
-    recrystallized Ni, acquired on a NORDIF UF-1100 detector
-    :cite:`aanes2019electron`.
+    """A few EBSD calibration patterns of (480, 480) pixels from
+    polycrystalline recrystallized Ni, acquired on a NORDIF UF-1100
+    detector :cite:`aanes2019electron`.
 
-    These are the calibration patterns for the dataset in
-    :func:`~kikuchipy.data.ni1_gain`.
+    The patterns are used to calibrate the detector-sample geometry
+    of the datasets in :func:`~kikuchipy.data.ni_gain`. The calibration
+    patterns were acquired with no gain on the detector.
 
     Parameters
     ----------
+    number
+        Dataset number 1-10. Default is dataset number 1, i.e. the
+        calibration patterns used to calibrate the detector-sample
+        geometry for the dataset acquired without detector gain.
     allow_download
         Whether to allow downloading the dataset from the internet to
         the local cache with the pooch Python package. Default is
@@ -207,45 +226,57 @@ def ni1_gain_calibration(
 
     See Also
     --------
-    ni1_gain, ni10_gain, ni10_gain_calibration, nickel_ebsd_small,
-    nickel_ebsd_large
+    ni_gain, nickel_ebsd_small, nickel_ebsd_large
 
     Notes
     -----
-    The dataset is hosted in the Zenodo repository
-    https://doi.org/10.5281/zenodo.7497682 and comprises 98 MB as a
-    zipped file and about 116 MB when unzipped. The zipped file is
-    deleted after it is unzipped.
+    The datasets are hosted in the Zenodo repository
+    https://doi.org/10.5281/zenodo.7497682 and comprise about 100 MB
+    each as zipped files and about 116 MB when unzipped. Each zipped
+    file is deleted after it is unzipped.
 
-    The dataset carries a CC BY 4.0 license.
+    The datasets carry a CC BY 4.0 license.
 
     Examples
     --------
     >>> import kikuchipy as kp
-    >>> s = kp.data.ni1_gain_calibration(allow_download=True, lazy=True)  # doctest: +SKIP
+    >>> s = kp.data.ni_gain_calibration(allow_download=True, lazy=True)  # doctest: +SKIP
     >>> s  # doctest: +SKIP
     <LazyEBSD, title: Calibration patterns, dimensions: (9|480, 480)>
     """
-    Ni1GainCalibration = Dataset(
-        "ni1_gain/Setting.txt", collection_name="scan1_gain0db.zip"
+    gain = [0, 3, 6, 9, 12, 15, 17, 20, 22, 24]
+    collection_name = f"scan{number}_gain{gain[number - 1]}.zip"
+
+    NiGainCalibration = Dataset(
+        f"ni_gain/{number}/Setting.txt", collection_name=collection_name
     )
-    file_path = Ni1GainCalibration.fetch_file_path(allow_download, show_progressbar)
+    file_path = NiGainCalibration.fetch_file_path(allow_download, show_progressbar)
+
     return load(file_path, **kwargs)  # pragma: no cover
 
 
-def ni10_gain(
-    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
+def si_ebsd_moving_screen(
+    distance: int = 0,
+    allow_download: bool = False,
+    show_progressbar: Optional[bool] = None,
+    **kwargs,
 ) -> EBSD:
-    """EBSD dataset of (149, 200) patterns of (60, 60) pixels from
-    polycrystalline recrystallized Ni, acquired on a NORDIF UF-1100
-    detector :cite:`aanes2019electron`.
+    """One EBSD pattern of (480, 480) pixels from a single crystal
+    silicon sample, acquired on a NORDIF UF-420 detector
+    :cite:`aanes2022electron3`.
 
-    The dataset is the tenth out of ten datasets from the same region of
-    interest acquired with increasing gain on the detector, from no gain
-    to maximum gain (24 dB, this dataset).
+    Three patterns are available from the same sample position but with
+    different sample-screen distances: normal position (``0``) and 5 mm
+    and 10 mm greater than the normal position (``5`` and ``10``).
+
+    They were acquired to test the moving-screen projection center
+    estimation technique :cite:`hjelen1991electron`.
 
     Parameters
     ----------
+    distance
+        Sample-screen distance away from the normal position, either 0,
+        5 or 10.
     allow_download
         Whether to allow downloading the dataset from the internet to
         the local cache with the pooch Python package. Default is
@@ -265,87 +296,33 @@ def ni10_gain(
 
     See Also
     --------
-    ni10_gain_calibration, ni1_gain, ni1_gain_calibration,
-    nickel_ebsd_small, nickel_ebsd_large
+    si_wafer
 
     Notes
     -----
-    The dataset is hosted in the Zenodo repository
-    https://doi.org/10.5281/zenodo.7497682 and comprises 98 MB as a
-    zipped file and about 116 MB when unzipped. The zipped file is
-    deleted after it is unzipped.
+    The datasets are hosted in the GitHub repository
+    https://github.com/pyxem/kikuchipy-data.
 
-    The dataset carries a CC BY 4.0 license.
+    The datasets carry a CC BY 4.0 license.
 
     Examples
     --------
     >>> import kikuchipy as kp
-    >>> s = kp.data.ni10_gain(allow_download=True, lazy=True)  # doctest: +SKIP
-    >>> s  # doctest: +SKIP
-    <LazyEBSD, title: Pattern, dimensions: (200, 149|60, 60)>
+    >>> s = kp.data.silicon_ebsd_moving_screen(allow_download=True)
+    >>> s
+    <EBSD, title: si_in Scan 1, dimensions: (|480, 480)>
+    >>> s.plot()
     """
-    Ni10Gain = Dataset("ni10_gain/Pattern.dat", collection_name="scan10_gain24db.zip")
-    file_path = Ni10Gain.fetch_file_path(allow_download, show_progressbar)
-    return load(file_path, **kwargs)  # pragma: no cover
+    datasets = {0: "in", 5: "out5mm", 10: "out10mm"}
+    suffix = datasets[int(distance)]
+
+    SiEBSDMovingScreen = Dataset(f"silicon_ebsd_moving_screen/si_{suffix}.h5")
+    file_path = SiEBSDMovingScreen.fetch_file_path(allow_download, show_progressbar)
+
+    return load(file_path, **kwargs)
 
 
-def ni10_gain_calibration(
-    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
-) -> EBSD:
-    """Seven EBSD patterns of (480, 480) pixels from polycrystalline
-    recrystallized Ni, acquired on a NORDIF UF-1100 detector
-    :cite:`aanes2019electron`.
-
-    These are the calibration patterns for the dataset in
-    :func:`~kikuchipy.data.ni10_gain`.
-
-    Parameters
-    ----------
-    allow_download
-        Whether to allow downloading the dataset from the internet to
-        the local cache with the pooch Python package. Default is
-        ``False``.
-    show_progressbar
-        Whether to show a progressbar when downloading. If not given,
-        the value of
-        :obj:`hyperspy.api.preferences.General.show_progressbar` is
-        used.
-    **kwargs
-        Keyword arguments passed to :func:`~kikuchipy.load`.
-
-    Returns
-    -------
-    ebsd_signal
-        EBSD signal.
-
-    See Also
-    --------
-    ni10_gain, ni1_gain, ni1_gain_calibration, nickel_ebsd_small,
-    nickel_ebsd_large
-
-    Notes
-    -----
-    The dataset is hosted in the Zenodo repository
-    https://doi.org/10.5281/zenodo.7497682 and comprises 98 MB as a
-    zipped file and about 116 MB when unzipped. The zipped file is
-    deleted after it is unzipped.
-
-    The dataset carries a CC BY 4.0 license.
-
-    Examples
-    --------
-    >>> import kikuchipy as kp
-    >>> s = kp.data.ni10_gain_calibration(allow_download=True, lazy=True)  # doctest: +SKIP
-    >>> s  # doctest: +SKIP
-    <LazyEBSD, title: Calibration patterns, dimensions: (7|480, 480)>
-    """
-    Ni1GainCalibration = Dataset(
-        "ni10_gain/Setting.txt", collection_name="scan10_gain24db.zip"
-    )
-    file_path = Ni1GainCalibration.fetch_file_path(allow_download, show_progressbar)
-    return load(file_path, **kwargs)  # pragma: no cover
-
-
+@deprecated("0.8", "si_ebsd_moving_screen", removal="0.9")
 def silicon_ebsd_moving_screen_in(
     allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
@@ -402,6 +379,7 @@ def silicon_ebsd_moving_screen_in(
     return load(file_path, **kwargs)
 
 
+@deprecated("0.8", "si_ebsd_moving_screen", removal="0.9")
 def silicon_ebsd_moving_screen_out5mm(
     allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
@@ -461,6 +439,7 @@ def silicon_ebsd_moving_screen_out5mm(
     return load(file_path, **kwargs)
 
 
+@deprecated("0.8", "si_ebsd_moving_screen", removal="0.9")
 def silicon_ebsd_moving_screen_out10mm(
     allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
@@ -600,7 +579,7 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
 
     See Also
     --------
-    ni_ebsd_master_pattern, si_ebsd_master_pattern
+    ebsd_master_pattern
 
     Notes
     -----
@@ -642,18 +621,24 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
     return load(file_path, **kwargs)
 
 
-def ni_ebsd_master_pattern(
-    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
-) -> EBSD:
-    """EBSD master pattern of nickel of (1001, 1001) pixel resolution in
-    both the square Lambert or stereographic projection at 5-20 kV
-    accelerating voltage :cite:`aanes2023dynamical2`.
+def ebsd_master_pattern(
+    phase: str,
+    allow_download: bool = False,
+    show_progressbar: Optional[bool] = None,
+    **kwargs,
+) -> EBSDMasterPattern:
+    r"""EBSD master pattern of an available phase of (1001, 1001) pixel
+    resolution in both the square Lambert or stereographic projection.
 
-    The master pattern was simulated with *EMsoft*
+    Master patterns were simulated with *EMsoft*
     :cite:`callahan2013dynamical`.
 
     Parameters
     ----------
+    phase
+        Name of available phase. Options are (see :ref:`Notes` for
+        details): ni, al, si, austenite, ferrite, steel_chi,
+        steel_sigma.
     allow_download
         Whether to allow downloading the dataset from the internet to
         the local cache with the pooch Python package. Default is
@@ -677,83 +662,45 @@ def ni_ebsd_master_pattern(
 
     Notes
     -----
-    The master patterns with the lowest two energies (5 and 6 kV) are
-    blank due to insufficient electron scattering in the simulation.
+    The master patterns are downloaded in HDF5 files (carrying a CC BY
+    4.0 license) from Zenodo.
 
-    The master pattern HDF5 file is hosted in the Zenodo repository
-    https://doi.org/10.5281/zenodo.7498645 and comprises 306 MB.
-
-    The file carries a CC BY 4.0 license.
+    ===========  =========  =================  ============  ==============  ======================
+    phase        Name       Symbol             Energy [keV]  File size [GB]  Zenodo DOI
+    ===========  =========  =================  ============  ==============  ======================
+    ni           nickel     Ni                 5-20          0.3             10.5281/zenodo.7628443
+    al           aluminium  Al                 10-20         0.2             10.5281/zenodo.7628365
+    si           silicon    Si                 5-20          0.3             10.5281/zenodo.7498729
+    austenite    austenite  :math:`\gamma`-Fe  10-20         0.3             10.5281/zenodo.7628387
+    ferrite      ferrite    :math:`\alpha`-Fe  5-20          0.3             10.5281/zenodo.7628394
+    steel_chi    chi        Fe36Cr15Mo7        10-20         0.6             10.5281/zenodo.7628417
+    steel_sigma  sigma      FeCr               5-20          1.5             10.5281/zenodo.7628443
+    ===========  =========  =================  ============  ==============  ======================
 
     Examples
     --------
     Import master pattern in the stereographic projection
 
     >>> import kikuchipy as kp
-    >>> s = kp.data.ni_ebsd_master_pattern(hemisphere="both")  # doctest: +SKIP
+    >>> s = kp.data.ebsd_master_pattern("ni", hemisphere="both")  # doctest: +SKIP
     >>> s  # doctest: +SKIP
     <EBSDMasterPattern, title: ni_mc_mp_20kv, dimensions: (16, 2|1001, 1001)>
     >>> s.projection  # doctest: +SKIP
     'stereographic'
     """
-    NiEBSDMasterPattern = Dataset("ni_ebsd_master_pattern/ni_mc_mp_20kv.h5")
-    file_path = NiEBSDMasterPattern.fetch_file_path(allow_download, show_progressbar)
-    return load(file_path, **kwargs)  # pragma: no cover
+    datasets = {
+        "ni": "ni_mc_mp_20kv.h5",
+        "al": "al_mc_mp_20kv.h5",
+        "si": "si_mc_mp_20kv.h5",
+        "austenite": "austenite_mc_mp_20kv.h5",
+        "ferrite": "ferrite_mc_mp_20kv.h5",
+        "steel_chi": "steel_chi_mc_mp_20kv.h5",
+        "steel_sigma": "steel_sigma_mc_mp_20kv.h5",
+    }
 
+    dset = Dataset("ebsd_master_pattern/" + datasets[phase.lower()])
+    file_path = dset.fetch_file_path(allow_download, show_progressbar)
 
-def si_ebsd_master_pattern(
-    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
-) -> EBSD:
-    """EBSD master pattern of silicon of (1001, 1001) pixel resolution
-    in both the square Lambert or stereographic projection at 5-20 kV
-    accelerating voltage :cite:`aanes2023dynamical`.
-
-    The master pattern was simulated with *EMsoft*
-    :cite:`callahan2013dynamical`.
-
-    Parameters
-    ----------
-    allow_download
-        Whether to allow downloading the dataset from the internet to
-        the local cache with the pooch Python package. Default is
-        ``False``.
-    show_progressbar
-        Whether to show a progressbar when downloading. If not given,
-        the value of
-        :obj:`hyperspy.api.preferences.General.show_progressbar` is
-        used.
-    **kwargs
-        Keyword arguments passed to :func:`~kikuchipy.load`.
-
-    Returns
-    -------
-    ebsd_master_pattern_signal
-        EBSD master pattern signal.
-
-    See Also
-    --------
-    nickel_ebsd_master_pattern_small, ni_ebsd_master_pattern
-
-    Notes
-    -----
-    The master pattern HDF5 file is hosted in the Zenodo repository
-    https://doi.org/10.5281/zenodo.7498729 and comprises 306 MB.
-
-    The file carries a CC BY 4.0 license.
-
-    Examples
-    --------
-    Import master pattern in the stereographic projection
-
-    >>> import kikuchipy as kp
-    >>> s = kp.data.si_ebsd_master_pattern(hemisphere="both")  # doctest: +SKIP
-    >>> s  # doctest: +SKIP
-    <EBSDMasterPattern, title: si_mc_mp_20kv, dimensions: (16, 2|1001, 1001)>
-    >>> s.projection  # doctest: +SKIP
-    'stereographic'
-    """
-    SiEBSDMasterPattern = Dataset("si_ebsd_master_pattern/si_mc_mp_20kv.h5")
-    file_path = SiEBSDMasterPattern.fetch_file_path(allow_download, show_progressbar)
     return load(file_path, **kwargs)  # pragma: no cover
 
 

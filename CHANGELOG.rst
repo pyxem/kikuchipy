@@ -81,17 +81,20 @@ Added
   in navigation space. (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
 - Utility function ``grid_indices()`` to extract a smaller 1D or 2D grid of indices from
   a larger grid. (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
-- Two datasets ``ni/si_ebsd_master_pattern()`` of Ni and Si master patterns simulated
-  with EMsoft are available via the data module for download to the local cache.
-  (`#584 <https://github.com/pyxem/kikuchipy/pull/584>`_)
-- Six experimental EBSD datasets are available for download to the local cache via the
+- Seven EBSD master pattern files simulated with EMsoft are available from
+  ``ebsd_master_pattern()`` via the data module for download to the local cache:
+  aluminium, nickel, silicon, austenite, ferrite, a chi-phase in steel and a sigma-phase
+  in steel. (`#584 <https://github.com/pyxem/kikuchipy/pull/584>`_,
+  `#607 <https://github.com/pyxem/kikuchipy/pull/607>`_)
+- Some experimental EBSD datasets are available for download to the local cache via the
   data module: (50, 50) patterns of (480, 480) pixels from an Si wafer via
-  ``si_wafer()``, two full Ni datasets of (149, 200) patterns of (60, 60) pixels via
-  ``ni1_gain()`` and ``ni10_gain()`` (parts of the former are used in
-  ``nickel_ebsd_small()/large()``) and the calibration patterns of the two Ni datasets,
-  ``ni1_gain_calibration()`` and ``ni10_gain_calibration()``.
+  ``si_wafer()``, ten full Ni datasets of (149, 200) patterns of (60, 60) pixels via
+  ``ni_gain(number)`` (number 1-10) (parts of number 1 are used in
+  ``nickel_ebsd_small()/large()``) and the calibration patterns of the ten Ni datasets,
+  ``ni_gain_calibration(number)``.
   (`#584 <https://github.com/pyxem/kikuchipy/pull/584>`_,
-  `#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+  `#593 <https://github.com/pyxem/kikuchipy/pull/593>`_,
+  `#607 <https://github.com/pyxem/kikuchipy/pull/607>`_)
 - When using the following HyperSpy ``Signal2D`` methods via the ``EBSD`` class, the
   class attributes ``xmap``, ``static_background`` and ``detector`` are handled
   correctly, which they were not before: ``inav``, ``isig``, ``crop()``,
