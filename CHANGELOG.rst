@@ -109,6 +109,8 @@ Added
 
 Changed
 -------
+- Set minimal version of orix to >= 0.11.
+  (`#608 <https://github.com/pyxem/kikuchipy/pull/608>`_)
 - Added warnings when trying to perform adaptive histogram equalization on a signal with
   data in floating type or when some of the data is NaN.
   (`#606 <https://github.com/pyxem/kikuchipy/pull/606>`_)

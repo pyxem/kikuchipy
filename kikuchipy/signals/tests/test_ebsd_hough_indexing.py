@@ -80,7 +80,7 @@ class TestHoughIndexing:
 
         assert isinstance(xmap, CrystalMap)
         assert xmap.phases.names == phase_list.names
-        angles = np.rad2deg(xmap.orientations.angle_with(xmap_ref.orientations))
+        angles = xmap.orientations.angle_with(xmap_ref.orientations, degrees=True)
         assert np.all(angles < 1)
 
     @pytest.mark.skipif(
