@@ -211,7 +211,9 @@ class TestData:
         assert dset.is_in_collection
         assert dset.url is not None
         assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
-        assert str(dset.file_directory) == file_path.split("/")[0] + "/" + str(number)
+        assert str(dset.file_directory) == str(
+            Path(file_path.split("/")[0]) / str(number)
+        )
 
         if dset.file_path.exists():  # pragma: no cover
             s = kp.data.ni_gain(number, lazy=True)
@@ -247,7 +249,9 @@ class TestData:
         assert dset.is_in_collection
         assert dset.url is not None
         assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
-        assert str(dset.file_directory) == file_path.split("/")[0] + "/" + str(number)
+        assert str(dset.file_directory) == str(
+            Path(file_path.split("/")[0]) / str(number)
+        )
 
         if dset.file_path.exists():  # pragma: no cover
             s = kp.data.ni_gain_calibration(number, lazy=True)
