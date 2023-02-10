@@ -28,6 +28,7 @@ from pathlib import Path
 import struct
 from typing import BinaryIO, List, Tuple, Union
 
+import dask
 import dask.array as da
 import numpy as np
 
@@ -386,7 +387,8 @@ class OxfordBinaryFileReader:
             data = data[self.pattern_order]
 
         if data.shape != self.data_shape:
-            data = data.reshape(self.data_shape)
+            with dask.config.set(**{"array.slicing.split_large_chunks": False}):
+                data = data.reshape(self.data_shape)
 
         if lazy:
             chunks = get_chunking(
