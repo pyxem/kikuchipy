@@ -179,7 +179,7 @@ def ni_gain(
     <LazyEBSD, title: Pattern, dimensions: (200, 149|60, 60)>
     """
     gain = [0, 3, 6, 9, 12, 15, 17, 20, 22, 24]
-    collection_name = f"scan{number}_gain{gain[number - 1]}.zip"
+    collection_name = f"scan{number}_gain{gain[number - 1]}db.zip"
 
     NiGain = Dataset(f"ni_gain/{number}/Pattern.dat", collection_name=collection_name)
     file_path = NiGain.fetch_file_path(allow_download, show_progressbar)
@@ -245,7 +245,7 @@ def ni_gain_calibration(
     <LazyEBSD, title: Calibration patterns, dimensions: (9|480, 480)>
     """
     gain = [0, 3, 6, 9, 12, 15, 17, 20, 22, 24]
-    collection_name = f"scan{number}_gain{gain[number - 1]}.zip"
+    collection_name = f"scan{number}_gain{gain[number - 1]}db.zip"
 
     NiGainCalibration = Dataset(
         f"ni_gain/{number}/Setting.txt", collection_name=collection_name
@@ -308,7 +308,7 @@ def si_ebsd_moving_screen(
     Examples
     --------
     >>> import kikuchipy as kp
-    >>> s = kp.data.silicon_ebsd_moving_screen(allow_download=True)
+    >>> s = kp.data.si_ebsd_moving_screen(allow_download=True)
     >>> s
     <EBSD, title: si_in Scan 1, dimensions: (|480, 480)>
     >>> s.plot()
@@ -354,11 +354,6 @@ def silicon_ebsd_moving_screen_in(
     ebsd_signal
         EBSD signal.
 
-    See Also
-    --------
-    silicon_ebsd_moving_screen_out5mm,
-    silicon_ebsd_moving_screen_out10mm
-
     Notes
     -----
     The dataset is hosted in the GitHub repository
@@ -369,7 +364,7 @@ def silicon_ebsd_moving_screen_in(
     Examples
     --------
     >>> import kikuchipy as kp
-    >>> s = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
+    >>> s = kp.data.si_ebsd_moving_screen(0, allow_download=True)
     >>> s
     <EBSD, title: si_in Scan 1, dimensions: (|480, 480)>
     >>> s.plot()
@@ -413,10 +408,6 @@ def silicon_ebsd_moving_screen_out5mm(
     ebsd_signal
         EBSD signal.
 
-    See Also
-    --------
-    silicon_ebsd_moving_screen_in, silicon_ebsd_moving_screen_out10mm
-
     Notes
     -----
     The dataset is hosted in the GitHub repository
@@ -427,7 +418,7 @@ def silicon_ebsd_moving_screen_out5mm(
     Examples
     --------
     >>> import kikuchipy as kp
-    >>> s = kp.data.silicon_ebsd_moving_screen_out5mm(allow_download=True)
+    >>> s = kp.data.si_ebsd_moving_screen(5, allow_download=True)
     >>> s
     <EBSD, title: si_out5mm Scan 1, dimensions: (|480, 480)>
     >>> s.plot()
@@ -473,10 +464,6 @@ def silicon_ebsd_moving_screen_out10mm(
     ebsd_signal
         EBSD signal.
 
-    See Also
-    --------
-    silicon_ebsd_moving_screen_in, silicon_ebsd_moving_screen_out5mm
-
     Notes
     -----
     The dataset is hosted in the GitHub repository
@@ -487,7 +474,7 @@ def silicon_ebsd_moving_screen_out10mm(
     Examples
     --------
     >>> import kikuchipy as kp
-    >>> s = kp.data.silicon_ebsd_moving_screen_out10mm(allow_download=True)
+    >>> s = kp.data.si_ebsd_moving_screen(10, allow_download=True)
     >>> s
     <EBSD, title: si_out10mm Scan 1, dimensions: (|480, 480)>
     >>> s.plot()
@@ -636,9 +623,8 @@ def ebsd_master_pattern(
     Parameters
     ----------
     phase
-        Name of available phase. Options are (see :ref:`Notes` for
-        details): ni, al, si, austenite, ferrite, steel_chi,
-        steel_sigma.
+        Name of available phase. Options are (see *Notes* for details):
+        ni, al, si, austenite, ferrite, steel_chi, steel_sigma.
     allow_download
         Whether to allow downloading the dataset from the internet to
         the local cache with the pooch Python package. Default is

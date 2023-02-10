@@ -347,4 +347,4 @@ autosummary_generate = True
 # Download example datasets prior to building the docs
 print("[kikuchipy] Downloading example datasets (if not found in cache)")
 _ = kp.data.nickel_ebsd_large(allow_download=True)
-_ = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
+_ = kp.data.si_ebsd_moving_screen(0, allow_download=True)
