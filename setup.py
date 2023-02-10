@@ -71,7 +71,7 @@ extra_feature_requirements = {
     "all": [
         "matplotlib                     >= 3.5",
         "nlopt",
-        "pyebsdindex                    >= 0.1.1",
+        "pyebsdindex                    ~= 0.1",
         "pyvista",
     ],
     # TODO: Remove this option in release 0.9
