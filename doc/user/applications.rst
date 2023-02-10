@@ -24,8 +24,8 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
 
 - H. W. Ånes, A. T. J. van Helvoort and K. Marthinsen, "Orientation dependent pinning
   of (sub)grains by dispersoids during recovery and recrystallization in an Al-Mn
-  alloy," *arXiv:2212.03527* (2022).
-  https://doi.org/10.48550/arXiv.2212.03527.
+  alloy," *Acta Materialia* 118761 (2023).
+  https://doi.org/10.1016/j.actamat.2023.118761.
 - O. M. Akselsen, R. Bjørge, H. W. Ånes, X. Ren, and B. Nyhus, "Microstructure and
   Properties of Wire Arc Additive Manufacturing of Inconel 625," *Metals* **12(11)**
   (2022).

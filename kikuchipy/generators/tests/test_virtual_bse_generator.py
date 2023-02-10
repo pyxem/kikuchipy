@@ -31,9 +31,14 @@ DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5")
 
 
+@pytest.mark.filterwarnings("ignore:Class `VirtualBSEGenerator` ")
 class TestVirtualBSEGenerator:
     def test_init(self, dummy_signal):
-        vbse_gen = VirtualBSEGenerator(dummy_signal)
+        with pytest.warns(
+            np.VisibleDeprecationWarning,
+            match="Class `VirtualBSEGenerator` is deprecated and will be removed in ",
+        ):
+            vbse_gen = VirtualBSEGenerator(dummy_signal)
 
         assert isinstance(vbse_gen.signal, EBSD)
         assert vbse_gen.grid_shape == (5, 5)
@@ -113,6 +118,7 @@ class TestVirtualBSEGenerator:
         close("all")
 
 
+@pytest.mark.filterwarnings("ignore:Class `VirtualBSEGenerator` ")
 class TestGetImagesFromGrid:
     def test_get_single_image_from_grid(self, dummy_signal):
         vbse_gen = VirtualBSEGenerator(dummy_signal)
@@ -146,6 +152,7 @@ class TestGetImagesFromGrid:
         vbse_img = vbse_gen.get_images_from_grid()
 
 
+@pytest.mark.filterwarnings("ignore:Class `VirtualBSEGenerator` ")
 class TestGetRGBImage:
     def test_get_rgb_image_rois(self):
         s = load(KIKUCHIPY_FILE)

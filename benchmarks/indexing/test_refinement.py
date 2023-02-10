@@ -82,7 +82,7 @@ def test_refine_orientation(benchmark):
 
     # Relaxed check of results, just to make sure results are not way
     # off
-    assert np.all(xmap_ref.rotations.angle_with(rot) < np.deg2rad(0.8))
+    assert np.all(xmap_ref.rotations.angle_with(rot, degrees=True) < 0.8)
 
 
 def test_refine_pc(benchmark):

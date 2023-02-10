@@ -18,6 +18,9 @@ Unreleased
 
 Added
 -----
+- ``kikuchipy.imaging.VirtualBSEImager`` replaces the
+  ``kikuchipy.generators.VirtualBSEGenerator`` class.
+  (`#608 <https://github.com/pyxem/kikuchipy/pull/608>`_)
 - Adaptive histogram equalization is available to all signals.
   (`#606 <https://github.com/pyxem/kikuchipy/pull/606>`_)
 - Option to return a new signal (lazy or not) instead of operating inplace is added to
@@ -106,6 +109,8 @@ Added
 
 Changed
 -------
+- Minimal version of orix set to >= 0.11 and of numba set to >= 0.55.
+  (`#608 <https://github.com/pyxem/kikuchipy/pull/608>`_)
 - Added warnings when trying to perform adaptive histogram equalization on a signal with
   data in floating type or when some of the data is NaN.
   (`#606 <https://github.com/pyxem/kikuchipy/pull/606>`_)
@@ -143,6 +148,9 @@ Changed
 
 Deprecated
 ----------
+- ``kikuchipy.generators.VirtualBSEGenerator`` class is deprecated and will be removed
+  in version 0.9. Use ``kikuchipy.imaging.VirtualBSEImager`` instead.
+  (`#608 <https://github.com/pyxem/kikuchipy/pull/608>`_)
 - The data module functions ``silicon_ebsd_moving_screen_x()``, where "x" is "in",
   "out5mm" or "out10mm", are deprecated and will be removed in v0.9. Use
   ``si_ebsd_moving_screen(distance)`` instead, where ``distance`` is ``0`` (in), ``5``

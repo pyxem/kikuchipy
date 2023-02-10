@@ -89,6 +89,16 @@ class TestImport:
         ):
             _ = kikuchipy.generators.foo
 
+    def test_import_imaging(self):
+        import kikuchipy.imaging
+
+        for obj_name in kikuchipy.imaging.__all__:
+            getattr(kikuchipy.imaging, obj_name)
+        with pytest.raises(
+            AttributeError, match="module 'kikuchipy.imaging' has no attribute 'foo'"
+        ):
+            _ = kikuchipy.imaging.foo
+
     def test_import_indexing(self):
         import kikuchipy.indexing
 
@@ -189,6 +199,7 @@ class TestImport:
             "draw",
             "filters",
             "generators",
+            "imaging",
             "indexing",
             "io",
             "load",
@@ -246,6 +257,13 @@ class TestImport:
 
         assert dir(kikuchipy.generators) == [
             "VirtualBSEGenerator",
+        ]
+
+    def test_dir_imaging(self):
+        import kikuchipy.imaging
+
+        assert dir(kikuchipy.imaging) == [
+            "VirtualBSEImager",
         ]
 
     def test_dir_indexing(self):
