@@ -21,10 +21,10 @@ jobs:
   upload:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
 
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '3.x'
 
@@ -39,6 +39,7 @@ jobs:
 
     - name: Publish package to TestPyPI
       uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+      continue-on-error: true
       with:
         user: __token__
         password: ${{ secrets.TEST_PYPI_API_TOKEN }}

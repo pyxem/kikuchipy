@@ -14,16 +14,20 @@ jobs:
   make-tagged-release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
+
     - uses: r-lib/actions/setup-pandoc@v1
+
     - name: Set up Python ${{ runner.python-version }}
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v4
       with:
         python-version: '3.x'
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install outdated
+
     - name: Check whether a tagged release draft should be made
       run: |
         cd .github/workflows
@@ -31,9 +35,12 @@ jobs:
         echo "MAKE_RELEASE=${x[0]}" >> $GITHUB_ENV
         echo "PYPI_VERSION=${x[1]}" >> $GITHUB_ENV
         echo "BRANCH_VERSION=${x[2]}" >> $GITHUB_ENV
+
     - name: Make tagged release draft body from changelog
       if: ${{ env.MAKE_RELEASE == 'true' }}
-      run: pandoc .github/workflows/release_part_in_changelog.rst -f rst -t markdown -o release_part_in_changelog.md --wrap=none
+      run: |
+        pandoc .github/workflows/release_part_in_changelog.rst -f rst -t markdown -o release_part_in_changelog.md --wrap=none
+
     - name: Make tagged release draft
       if: ${{ env.MAKE_RELEASE == 'true' }}
       uses: actions/create-release@v1

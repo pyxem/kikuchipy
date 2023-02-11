@@ -90,7 +90,7 @@ class TestMergeCrystalMaps:
             if v1 is None:
                 assert v1 is v2
             else:
-                np.allclose(v1, v2)
+                assert np.allclose(v1, v2)
 
         assert np.allclose(merged_xmap.phase_id, desired_phase_ids)
         assert np.allclose(merged_xmap.prop[scores_prop], desired_scores)

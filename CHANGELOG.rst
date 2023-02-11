@@ -18,6 +18,24 @@ Unreleased
 
 Added
 -----
+
+Changed
+-------
+
+Deprecated
+----------
+
+Removed
+-------
+
+Fixed
+-----
+
+0.8.0 (2023-02-11)
+==================
+
+Added
+-----
 - ``kikuchipy.imaging.VirtualBSEImager`` replaces the
   ``kikuchipy.generators.VirtualBSEGenerator`` class.
   (`#608 <https://github.com/pyxem/kikuchipy/pull/608>`_)
@@ -109,7 +127,7 @@ Added
 
 Changed
 -------
-- Minimal version of orix set to >= 0.11 and of numba set to >= 0.55.
+- Minimal version of orix set to >= 0.11 and of Numba set to >= 0.55.
   (`#608 <https://github.com/pyxem/kikuchipy/pull/608>`_)
 - Added warnings when trying to perform adaptive histogram equalization on a signal with
   data in floating type or when some of the data is NaN.
@@ -127,8 +145,6 @@ Changed
 - Exclude documentation and tests from source distribution.
   (`#588 <https://github.com/pyxem/kikuchipy/pull/588>`_)
 - Minimal version of HyperSpy increased to >= 1.7.3.
-  (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
-- Minimal version of Numba increased to >= 0.52.
   (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
 - When binning the navigation dimension(s) with ``EBSD.rebin()``, the class attributes
   ``xmap`` and ``static_background`` are set to ``None`` and ``detector.pc`` is set to
@@ -197,9 +213,6 @@ Fixed
   different navigation shape than determined from the HDF5 file's navigation shape
   (e.g. ``Scan 1/EBSD/Header/n_columns`` and ``n_rows``).
   (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
-
-Security
---------
 
 0.7.0 (2022-10-29)
 ==================
