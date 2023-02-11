@@ -27,6 +27,8 @@ Deprecated
 
 Removed
 -------
+- Removed ``generators`` and ``projections`` modules which were deprecated in version
+  0.8. (`#612 <https://github.com/pyxem/kikuchipy/pull/612>`_)
 
 Fixed
 -----
