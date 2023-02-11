@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -64,11 +64,12 @@ class TestHesseNormalForm:
             ]
         )
         polar = _get_polar_coordinates(v)
-        assert np.allclose(
-            HesseNormalForm.project_polar(polar, radius=radius),
-            desired_result,
-            atol=1e-3,
-        )
+        with pytest.warns(np.VisibleDeprecationWarning):
+            assert np.allclose(
+                HesseNormalForm.project_polar(polar, radius=radius),
+                desired_result,
+                atol=1e-3,
+            )
 
     @pytest.mark.parametrize(
         "radius, desired_result",
@@ -110,8 +111,9 @@ class TestHesseNormalForm:
                 [0.7605, 0.0647, 0.9848],
             ]
         )
-        assert np.allclose(
-            HesseNormalForm.project_cartesian(v, radius=radius),
-            desired_result,
-            atol=1e-3,
-        )
+        with pytest.warns(np.VisibleDeprecationWarning):
+            assert np.allclose(
+                HesseNormalForm.project_cartesian(v, radius=radius),
+                desired_result,
+                atol=1e-3,
+            )

@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -18,9 +18,11 @@
 from copy import deepcopy
 
 import matplotlib
+import matplotlib.collections as mcollections
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
+from orix.crystal_map import PhaseList
 from packaging.version import Version
 import pytest
 
@@ -151,7 +153,9 @@ class TestEBSDDetector:
     def test_pc_average(self, pc, desired_pc_average):
         """Calculation of PC average."""
         assert np.allclose(
-            kp.detectors.EBSDDetector(pc=pc).pc_average, desired_pc_average
+            kp.detectors.EBSDDetector(pc=pc).pc_average,
+            desired_pc_average,
+            atol=1e-3,
         )
 
     @pytest.mark.parametrize(
@@ -550,3 +554,575 @@ class TestEBSDDetector:
         assert det.x_scale.shape == desired_shapes[5]
         assert det.y_scale.shape == desired_shapes[6]
         assert det.gnomonic_bounds.shape == desired_shapes[7]
+
+    def test_crop(self):
+        det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
+        det2 = det.crop((1, 5, 2, 6))
+        assert det2.shape == (4, 4)
+        assert np.allclose(det2.pc, [0.25, 0.25, 0.75])
+
+        # "Real" example
+        s = kp.data.nickel_ebsd_small()
+        det3 = s.detector
+        det4 = det3.crop((-10, 50, 20, 70))  # (0, 50, 20, 60)
+        assert det4.shape == (50, 40)
+
+    def test_crop_raises(self):
+        det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
+        with pytest.raises(ValueError):
+            _ = det.crop((1.0, 5, 2, 6))
+        with pytest.raises(ValueError):
+            _ = det.crop((5, 1, 2, 6))
+        with pytest.raises(ValueError):
+            _ = det.crop((1, 5, 6, 2))
+
+    def test_crop_simulated(self):
+        s = kp.data.nickel_ebsd_small()
+
+        det2 = s.detector.crop((0, 50, 20, 60))
+
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
+        rot = s.xmap.rotations.reshape(*s.xmap.shape)
+
+        kwds = {"compute": True, "dtype_out": "uint8"}
+        sim1 = mp.get_patterns(rot, s.detector, **kwds)
+        sim2 = mp.get_patterns(rot, det2, **kwds)
+
+        assert np.allclose(sim2.data, sim1.isig[20:60, :50].data)
+
+
+class TestPlotPC:
+    det = kp.detectors.EBSDDetector(
+        shape=(60, 60),
+        pc=np.stack(
+            (
+                np.repeat(np.linspace(0.55, 0.45, 30), 20).reshape(30, 20).T,
+                np.repeat(np.linspace(0.75, 0.70, 20), 30).reshape(20, 30),
+                np.repeat(np.linspace(0.50, 0.55, 20), 30).reshape(20, 30),
+            ),
+            axis=2,
+        ),
+        sample_tilt=70,
+    )
+
+    def test_plot_pc_raises(self):
+        det = self.det.deepcopy()
+        det.pc = det.pc_average
+        with pytest.raises(ValueError, match="Detector must have more than one "):
+            det.plot_pc()
+
+        det2 = self.det.deepcopy()
+        det2.pc = det2.pc[0]
+        with pytest.raises(ValueError, match="Detector's navigation dimension must be"):
+            det2.plot_pc()
+
+        with pytest.raises(ValueError, match="Plot mode 'stereographic' must be one "):
+            self.det.plot_pc("stereographic")
+
+    def test_plot_pc_map_horizontal(self):
+        fig = self.det.plot_pc(return_figure=True)
+
+        figsize = fig.get_size_inches()
+        assert (figsize[0] / figsize[1]) > 1
+
+        ax = fig.axes
+        assert len(ax) == 6
+        assert all([a.get_xlabel() == "Column" for a in ax[:3]])
+        assert all(
+            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "y", "z"])]
+        )
+
+        plt.close(fig)
+
+    def test_plot_pc_map_vertical(self):
+        fig = self.det.plot_pc(return_figure=True, orientation="vertical")
+
+        figsize = fig.get_size_inches()
+        assert (figsize[0] / figsize[1]) < 1
+
+        ax = fig.axes
+        assert len(ax) == 6
+        assert all([a.get_xlabel() == "Column" for a in ax[:3]])
+        assert all(
+            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "y", "z"])]
+        )
+
+        plt.close(fig)
+
+    def test_plot_pc_scatter_horizontal(self):
+        fig = self.det.plot_pc("scatter", return_figure=True, annotate=True)
+
+        figsize = fig.get_size_inches()
+        assert (figsize[0] / figsize[1]) > 1
+
+        ax = fig.axes
+        assert len(ax) == 3
+        assert all(
+            [a.get_xlabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "x", "z"])]
+        )
+        assert all(
+            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["y", "z", "y"])]
+        )
+
+        texts = ax[0].texts
+        assert len(texts) == self.det.navigation_size
+        assert texts[0].get_text() == "0"
+        assert texts[-1].get_text() == "599"
+
+        plt.close(fig)
+
+    def test_plot_pc_scatter_vertical(self):
+        fig = self.det.plot_pc("scatter", return_figure=True, orientation="vertical")
+
+        figsize = fig.get_size_inches()
+        assert (figsize[0] / figsize[1]) < 1
+
+        ax = fig.axes
+        assert len(ax) == 3
+        assert all(
+            [a.get_xlabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "x", "z"])]
+        )
+        assert all(
+            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["y", "z", "y"])]
+        )
+
+        plt.close(fig)
+
+    def test_plot_pc_3d(self):
+        fig = self.det.plot_pc("3d", return_figure=True, annotate=True)
+
+        texts = fig.axes[0].texts
+        assert len(texts) == self.det.navigation_size
+        assert texts[0].get_text() == "0"
+        assert texts[-1].get_text() == "599"
+
+        plt.close(fig)
+
+    def test_plot_pc_figure(self):
+        fig1 = self.det.plot_pc(figure_kwargs=dict(figsize=(9, 3)), return_figure=True)
+        assert fig1.get_tight_layout()
+
+        fig2 = self.det.plot_pc(
+            figure_kwargs=dict(figsize=(6, 3), layout="constrained"), return_figure=True
+        )
+        assert fig2.get_constrained_layout()
+        assert not np.allclose(fig1.get_size_inches(), fig2.get_size_inches())
+
+        plt.close("all")
+
+
+class TestEstimateTilts:
+    det0 = kp.detectors.EBSDDetector(
+        shape=(480, 480),
+        pc=(0.5, 0.3, 0.5),
+        sample_tilt=70,
+        tilt=0,
+        px_size=70,
+    )
+
+    def test_estimate_xtilt_raises(self):
+        with pytest.raises(ValueError, match="Estimation requires more than one "):
+            _ = self.det0.estimate_xtilt()
+
+    def test_estimate_xtilt(self):
+        det = self.det0.extrapolate_pc(
+            pc_indices=[0, 0],
+            navigation_shape=(15, 20),
+            step_sizes=(50, 50),
+        )
+
+        xtilt = det.estimate_xtilt(degrees=True)
+        assert np.isclose(xtilt, 90 - self.det0.sample_tilt + self.det0.tilt)
+        assert plt.get_fignums() == [1]
+        ax = plt.gca()
+        assert not any(["Outliers" in t.get_text() for t in ax.get_legend().texts])
+
+        xtilt, is_outliers, fig = det.estimate_xtilt(
+            return_outliers=True, return_figure=True
+        )
+        assert isinstance(is_outliers, np.ndarray)
+        assert is_outliers.sum() == 0
+
+        plt.close("all")
+
+    def test_estimate_xtilt_outliers(self):
+        det = self.det0.extrapolate_pc(
+            pc_indices=[0, 0],
+            navigation_shape=(15, 20),
+            step_sizes=(50, 50),
+        )
+        det.pc[0, 0] = (0.5, 0.5, 0.5)
+
+        xtilt, is_outliers, fig = det.estimate_xtilt(
+            return_outliers=True, return_figure=True
+        )
+        assert isinstance(is_outliers, np.ndarray)
+        assert is_outliers.shape == det.navigation_shape
+        assert is_outliers.sum() == 1
+        assert np.allclose(np.where(is_outliers)[0], [0, 0])
+        assert any(["Outliers" in t.get_text() for t in fig.axes[0].get_legend().texts])
+
+    def test_estimate_xtilt_ztilt(self):
+        det1 = self.det0.extrapolate_pc(
+            pc_indices=[0, 0],
+            navigation_shape=(15, 20),
+            step_sizes=(1, 1),
+        )
+        xtilt, ztilt = det1.estimate_xtilt_ztilt(degrees=True)
+        assert np.isclose(xtilt, 20)
+        assert np.isclose(ztilt, 0)
+
+        # Add outliers
+        det2 = det1.deepcopy()
+        outlier_idx = [[0, 0], [0, 10]]
+        det2.pc[tuple(outlier_idx)] = (0.5, 0.4, 0.5)
+
+        np.random.seed(42)
+
+        xtilt2, ztilt2 = det2.estimate_xtilt_ztilt(degrees=True)
+        assert np.isclose(xtilt2, 0.169, atol=1e-3)
+        assert np.isclose(ztilt2, -74.339, atol=1e-3)
+
+        is_outlier = np.ravel_multi_index(outlier_idx, det1.navigation_shape)
+        xtilt3, ztilt3 = det2.estimate_xtilt_ztilt(degrees=True, is_outlier=is_outlier)
+        assert np.isclose(xtilt3, 20)
+        assert np.isclose(ztilt3, 0)
+
+    def test_estimate_xtilt_ztilt_raises(self):
+        with pytest.raises(ValueError, match="Estimation requires more than one "):
+            _ = self.det0.estimate_xtilt_ztilt()
+
+
+class TestExtrapolatePC:
+    det0 = kp.detectors.EBSDDetector(
+        shape=(240, 240),
+        pc=(0.5, 0.3, 0.5),
+        sample_tilt=70,
+        tilt=0,
+        px_size=70,
+        binning=2,
+    )
+
+    def test_extrapolate_pc(self):
+        det = self.det0.extrapolate_pc(
+            pc_indices=[7, 15],
+            navigation_shape=(15, 31),
+            step_sizes=(50, 50),
+        )
+        assert det.navigation_shape == (15, 31)
+        assert np.allclose(
+            [
+                self.det0.nrows,
+                self.det0.ncols,
+                self.det0.sample_tilt,
+                self.det0.tilt,
+                self.det0.px_size,
+                self.det0.binning,
+                self.det0.azimuthal,
+            ],
+            [
+                det.nrows,
+                det.ncols,
+                det.sample_tilt,
+                det.tilt,
+                det.px_size,
+                det.binning,
+                det.azimuthal,
+            ],
+        )
+        assert np.allclose(det.pc_average, self.det0.pc)
+        assert np.allclose(det.pc_flattened.min(0), [0.4777, 0.2902, 0.4964], atol=1e-4)
+        assert np.allclose(det.pc_flattened.max(0), [0.5223, 0.3098, 0.5036], atol=1e-4)
+
+    def test_extrapolate_pc_multiple_indices(self):
+        det1 = self.det0.deepcopy()
+        # Specify PC values in four corners of the map, visualized here
+        # as they would show up in the (PCx, PCy) scatter plot
+        # fmt: off
+        det1.pc = [
+            [0.5, 0.3, 0.5],                [0.3, 0.3, 0.5],
+
+
+
+
+            [0.5, 0.2, 0.6],                [0.3, 0.2, 0.6],
+        ]
+        # fmt: on
+
+        det2 = det1.extrapolate_pc(
+            pc_indices=[[0, 0], [0, 10], [20, 0], [20, 10]],
+            navigation_shape=(11, 21),
+            step_sizes=(11, 11),
+        )
+        assert np.allclose(det1.pc_average, det2.pc_average, atol=1e-2)
+
+        det3 = det1.extrapolate_pc(
+            pc_indices=[[0, 0], [0, 10], [20, 0], [20, 10]],
+            navigation_shape=(11, 21),
+            step_sizes=(5, 5),
+            shape=(60, 60),
+            binning=8,
+            px_size=70 * 8,
+        )
+        assert np.allclose(det1.pc_average, det3.pc_average, atol=1e-2)
+        assert det3.shape == (60, 60)
+        assert det3.binning == 8
+        assert det3.px_size == 70 * 8
+
+    def test_extrapolate_pc_outliers(self):
+        det1 = self.det0.deepcopy()
+        det1.pc = [[0.5, 0.3, 0.5], [0.3, 0.3, 0.5], [0.5, 0.2, 0.6], [0.3, 0.2, 0.6]]
+        pc_indices = np.array([[0, 0], [0, 10], [20, 0], [20, 10]]).T
+        det2 = det1.extrapolate_pc(
+            pc_indices=pc_indices,
+            navigation_shape=(11, 21),
+            step_sizes=(11, 11),
+            is_outlier=[True, False, False, False],
+        )
+        assert np.allclose(det2.pc_average, [0.366, 0.233, 0.567], atol=1e-3)
+
+
+class TestFitPC:
+    def setup_method(self):
+        """Create a plane of PCs with a known mean, add some noise,
+        extract selected patterns, and try to 'reconstruct' the plane
+        by fitting.
+        """
+        det0 = kp.detectors.EBSDDetector(
+            shape=(240, 240),
+            pc=(0.5, 0.3, 0.5),
+            sample_tilt=70,
+        )
+
+        det = det0.extrapolate_pc(
+            pc_indices=[7, 15], navigation_shape=(15, 31), step_sizes=(50, 50)
+        )
+
+        # Add noise
+        rng = np.random.default_rng(42)
+        v = 0.005
+        det.pcy += rng.uniform(-v, v, det.navigation_size).reshape(det.navigation_shape)
+        det.pcz += rng.uniform(-v, v, det.navigation_size).reshape(det.navigation_shape)
+
+        self.det0 = det0
+        self.det = det
+        self.map_indices = np.stack(np.indices(det.navigation_shape))
+
+    def test_fit_pc_corner_patterns(self):
+        """Test projective fit."""
+        pc_indices = [[0, 0, 14, 14], [0, 30, 0, 30]]
+        det2 = self.det.deepcopy()
+        det2.pc = det2.pc[tuple(pc_indices)].reshape((2, 2, 3))
+        pc_indices = np.array(pc_indices).reshape((2, 2, 2))
+        det_fit, fig = det2.fit_pc(
+            pc_indices=pc_indices, map_indices=self.map_indices, return_figure=True
+        )
+        assert np.all(abs(det_fit.pc_flattened - self.det.pc_flattened).max(0) < 0.009)
+
+        # We have a plane in the 3D plot
+        assert isinstance(fig.axes[3].collections[2], mcollections.PolyCollection)
+
+        plt.close("all")
+
+    @pytest.mark.parametrize(
+        "grid_shape, max_error", [((3, 3), 0.009), ((5, 5), 0.0091), ((7, 7), 0.0064)]
+    )
+    def test_fit_pc_grid_patterns_33(self, grid_shape, max_error):
+        """Test projective fit."""
+        pc_indices = kp.signals.util.grid_indices(grid_shape, self.det.navigation_shape)
+        pc_indices = pc_indices.reshape(2, -1)
+        det2 = self.det.deepcopy()
+        det2.pc = det2.pc[tuple(pc_indices)]
+        det_fit = det2.fit_pc(
+            pc_indices=pc_indices, map_indices=self.map_indices, plot=False
+        )
+        assert np.all(
+            abs(det_fit.pc_flattened - self.det.pc_flattened).max(0) < max_error
+        )
+
+    def test_fit_pc_affine_outliers(self):
+        grid_shape = (7, 7)
+        pc_indices = kp.signals.util.grid_indices(grid_shape, self.det.navigation_shape)
+        pc_indices = pc_indices.reshape(2, -1)
+        det2 = self.det.deepcopy()
+        det2.pc = det2.pc[tuple(pc_indices)]
+
+        # Add outliers to extracted PCs
+        det2.pc = np.append(det2.pc, [[0.55, 0.15, 0.55], [0.6, 0.10, 0.6]], axis=0)
+        is_outlier = np.zeros(det2.navigation_size, dtype=bool)
+        is_outlier[[-2, -1]] = True
+        pc_indices = np.append(pc_indices, [[1, 1], [1, 2]], axis=1)
+
+        # Bad fit
+        det_fit1 = det2.fit_pc(
+            pc_indices=pc_indices,
+            map_indices=self.map_indices,
+            transformation="affine",
+        )
+        assert np.allclose(
+            abs(det_fit1.pc_flattened - self.det.pc_flattened).max(0),
+            [0.70, 0.35, 0.13],
+            atol=1e-2,
+        )
+
+        # Good fit
+        det_fit2, fig = det2.fit_pc(
+            pc_indices=pc_indices,
+            map_indices=self.map_indices,
+            transformation="affine",
+            is_outlier=is_outlier,
+            return_figure=True,
+        )
+        assert np.all(abs(det_fit2.pc_flattened - self.det.pc_flattened).max(0) < 0.009)
+        assert isinstance(fig, plt.Figure)
+        assert len(fig.axes) == 4
+
+        plt.close("all")
+
+    def test_fit_pc_raises(self):
+        grid_shape = (7, 5)
+        pc_indices = kp.signals.util.grid_indices(grid_shape, self.det.navigation_shape)
+        pc_indices = pc_indices.reshape(2, -1)
+        det2 = self.det.deepcopy()
+        det2.pc = det2.pc[tuple(pc_indices)]
+
+        with pytest.raises(ValueError, match="Fitting requires multiple projection "):
+            _ = self.det0.fit_pc(pc_indices, self.map_indices)
+
+        with pytest.raises(ValueError, match=r"`pc_indices` array shape \(2, 7, 5\) "):
+            _ = det2.fit_pc(pc_indices.reshape((2,) + grid_shape), self.map_indices)
+
+        with pytest.raises(ValueError, match=r"`map_indices` array shape \(930,\) "):
+            _ = det2.fit_pc(pc_indices, self.map_indices.ravel())
+
+        det2.pc = det2.pc.reshape(grid_shape + (3,))
+        with pytest.raises(ValueError, match=r"`pc_indices` array shape \(2, 35\) "):
+            _ = det2.fit_pc(pc_indices, self.map_indices)
+        det2.pc = det2.pc.reshape(-1, 3)
+
+        is_outlier = np.zeros(det2.navigation_size - 1, dtype=bool)
+        with pytest.raises(ValueError, match="`is_outlier` must be a boolean array of"):
+            _ = det2.fit_pc(pc_indices, self.map_indices, is_outlier=is_outlier)
+
+
+class TestGetIndexer:
+    def setup_method(self):
+        det0 = kp.detectors.EBSDDetector(
+            shape=(10, 12),
+            pc=(0.5, 0.3, 0.5),
+            sample_tilt=69.5,
+            tilt=10.5,
+        )
+        det = det0.extrapolate_pc(
+            pc_indices=[0, 0], navigation_shape=(2, 3), step_sizes=(1, 1)
+        )
+        self.det = det
+
+    @pytest.mark.skipif(kp._pyebsdindex_installed, reason="pyebsdindex is installed")
+    def test_get_indexer_raises(self):  # pragma: no cover
+        pl = PhaseList(names=["al", "si"], space_groups=[225, 227])
+        with pytest.raises(ValueError, match="pyebsdindex must be installed. Install "):
+            _ = self.det.get_indexer(pl)
+
+    @pytest.mark.skipif(
+        not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
+    )
+    def test_get_indexer_invalid_phase_lists(self):
+        # More than two phases
+        with pytest.raises(ValueError, match="Hough indexing only supports indexing "):
+            _ = self.det.get_indexer(
+                PhaseList(names=["a", "b", "c"], space_groups=[225, 227, 229])
+            )
+
+        # Not all phases have space groups
+        pl = PhaseList(names=["a", "b"], point_groups=["m-3m", "432"])
+        pl["a"].space_group = 225
+        with pytest.raises(ValueError, match="Space group for each phase must be set,"):
+            _ = self.det.get_indexer(pl)
+
+        # Not FCC or BCC
+        with pytest.raises(ValueError, match="Hough indexing only supports indexing "):
+            _ = self.det.get_indexer(PhaseList(names="sic", space_groups=186))
+
+    @pytest.mark.skipif(
+        not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
+    )
+    def test_get_indexer(self):
+        indexer1 = self.det.get_indexer(
+            PhaseList(names=["a", "b"], space_groups=[225, 229]), nBands=6
+        )
+        assert indexer1.vendor == "KIKUCHIPY"
+        assert np.isclose(indexer1.sampleTilt, self.det.sample_tilt)
+        assert np.isclose(indexer1.camElev, self.det.tilt)
+        assert tuple(indexer1.bandDetectPlan.patDim) == self.det.shape
+        assert indexer1.bandDetectPlan.nBands == 6
+        assert np.allclose(indexer1.PC, self.det.pc_flattened)
+        assert indexer1.phaselist == ["FCC", "BCC"]
+
+        indexer2 = self.det.get_indexer(PhaseList(names="a", space_groups=225))
+        assert indexer2.phaselist == ["FCC"]
+
+        indexer3 = self.det.get_indexer(PhaseList(names="a", space_groups=220))
+        assert indexer3.phaselist == ["BCC"]
+
+        indexer4 = self.det.get_indexer(
+            PhaseList(names=["a", "b"], space_groups=[220, 225])
+        )
+        assert indexer4.phaselist == ["BCC", "FCC"]
+
+
+class TestSaveLoadDetector:
+    @pytest.mark.parametrize(
+        "nav_shape, shape, convention, sample_tilt, tilt, px_size, binning, azimuthal",
+        [
+            ((3, 4), (10, 20), "bruker", 70, 0, 70, 1, 0),
+            ((1, 5), (5, 5), "tsl", 69.5, 3.14, 57.2, 2, 3.7),
+            ((4, 3), (6, 7), "emsoft", -69.5, -3.14, 57.2, 2, -3.7),
+        ],
+    )
+    def test_save_load_detector(
+        self,
+        tmp_path,
+        nav_shape,
+        shape,
+        convention,
+        sample_tilt,
+        tilt,
+        px_size,
+        binning,
+        azimuthal,
+    ):
+        det0 = kp.detectors.EBSDDetector(
+            shape=shape,
+            pc=(0.4, 0.3, 0.6),
+            sample_tilt=sample_tilt,
+            tilt=tilt,
+            px_size=px_size,
+            binning=binning,
+            azimuthal=azimuthal,
+            convention=convention,
+        )
+        det1 = det0.extrapolate_pc(
+            pc_indices=[0, 0],
+            navigation_shape=nav_shape,
+            step_sizes=(2, 2),
+        )
+        if any(i == 1 for i in nav_shape):
+            det1.pc = det1.pc.reshape(-1, 3)
+        fname = tmp_path / "det_temp.txt"
+        det1.save(fname, convention=convention)
+
+        det2 = kp.detectors.EBSDDetector.load(fname)
+
+        assert det2.shape == det1.shape
+        assert np.allclose(det2.pc, det1.pc, atol=1e-7)
+        assert np.isclose(det2.sample_tilt, det1.sample_tilt)
+        assert np.isclose(det2.tilt, det1.tilt)
+        assert np.isclose(det2.px_size, det1.px_size)
+        assert det2.binning == det1.binning
+        assert np.isclose(det2.azimuthal, det1.azimuthal)
+
+    def test_save_detector_raises(self, tmp_path):
+        det = kp.detectors.EBSDDetector()
+        with pytest.raises(ValueError, match="Projection center convention 'EMsofts' "):
+            det.save(tmp_path / "det_temp.txt", convention="EMsofts")

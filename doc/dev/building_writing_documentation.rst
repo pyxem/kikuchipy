@@ -66,8 +66,8 @@ Here are some tips for writing tutorial notebooks:
   ``[Signal2D](https://hyperspy.org/hyperspy-doc/current/api/hyperspy._signals.signal2d.html)``.
 - The Sphinx gallery thumbnail used for a notebook is set by adding the
   ``nbsphinx-thumbnail`` tag to a code cell with an image output.
-  The notebook must be added to the gallery in the README.rst to be included in the
-  documentation pages.
+  The notebook must be added to the appropriate topic in ``doc/tutorials/index.rst`` to
+  be included in the documentation pages.
 - ``pydata_sphinx_theme`` displays the documentation in a light or dark theme, depending
   on the browser/OS setting.
   It is important to make sure the documentation is readable with both themes.
@@ -81,10 +81,8 @@ Here are some tips for writing tutorial notebooks:
   Cell output should only be stored in notebooks which are too computationally intensive
   for the Read the Docs server to handle, which has a limit of 15 minutes and 3 GB of
   memory per :doc:`documentation build <readthedocs:builds>`.
-- We also use ``black`` to format notebooks cells. To run the ``black`` formatter on
-  your notebook(s) locally please specify the notebook(s), ie.
-  ``black my_notebook.ipynb`` or ``black *.ipynb``, as ``black .`` will not format
-  ``.ipynb`` files without explicit consent.
+- We also use ``black`` to format notebooks cells, see the page on :ref:`code-style` for
+  details.
   To prevent ``black`` from automatically formatting regions of your code, please wrap
   these code blocks with the following::
 
@@ -94,10 +92,10 @@ Here are some tips for writing tutorial notebooks:
 
   Please see the :doc:`black documentation <black:index>` for more details.
 - Displaying interactive 3D plots with :doc:`PyVista <pyvista:index>` requires a Jupyter
-  backend, and we use :doc:`pythreejs <pythreejs:index>`.
+  backend, and we use :doc:`panel <panel:index>`.
   This can either be passed to the plotting function, or it can be set in a hidden (see
   point above) notebook cell at the top of the notebook via
-  ``pyvista.set_jupyter_backend("pythreejs")``.
+  ``pyvista.set_jupyter_backend("panel")``.
 
 In general, we run all notebooks every time the documentation is built with Sphinx, to
 ensure that all notebooks are compatible with the current API at all times.

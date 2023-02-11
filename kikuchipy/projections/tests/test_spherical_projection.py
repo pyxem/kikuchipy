@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -17,6 +17,7 @@
 
 import numpy as np
 from orix.vector import Vector3d
+import pytest
 
 from kikuchipy.projections.spherical_projection import (
     SphericalProjection,
@@ -33,19 +34,27 @@ def test_spherical_projection():
     v = Vector3d(v_arr)
 
     # Vector3d
-    polar = SphericalProjection.vector2xy(v_arr)
+    with pytest.warns(np.VisibleDeprecationWarning):
+        polar = SphericalProjection.vector2xy(v_arr)
     assert np.allclose(polar[..., 0], v.polar.data)
     assert np.allclose(polar[..., 1], v.azimuth.data)
     assert np.allclose(polar[..., 2], v.radial.data)
-    assert np.allclose(get_polar(v), v.polar.data)
-    assert np.allclose(get_azimuth(v), v.azimuth.data)
-    assert np.allclose(get_radial(v), v.radial.data)
+    with pytest.warns(np.VisibleDeprecationWarning):
+        assert np.allclose(get_polar(v), v.polar.data)
+    with pytest.warns(np.VisibleDeprecationWarning):
+        assert np.allclose(get_azimuth(v), v.azimuth.data)
+    with pytest.warns(np.VisibleDeprecationWarning):
+        assert np.allclose(get_radial(v), v.radial.data)
 
     # NumPy array
-    polar2 = SphericalProjection.vector2xy(v)
+    with pytest.warns(np.VisibleDeprecationWarning):
+        polar2 = SphericalProjection.vector2xy(v)
     assert np.allclose(polar2[..., 0], v.polar.data)
     assert np.allclose(polar2[..., 1], v.azimuth.data)
     assert np.allclose(polar2[..., 2], v.radial.data)
-    assert np.allclose(get_polar(v_arr), v.polar.data)
-    assert np.allclose(get_azimuth(v_arr), v.azimuth.data)
-    assert np.allclose(get_radial(v_arr), v.radial.data)
+    with pytest.warns(np.VisibleDeprecationWarning):
+        assert np.allclose(get_polar(v_arr), v.polar.data)
+    with pytest.warns(np.VisibleDeprecationWarning):
+        assert np.allclose(get_azimuth(v_arr), v.azimuth.data)
+    with pytest.warns(np.VisibleDeprecationWarning):
+        assert np.allclose(get_radial(v_arr), v.radial.data)

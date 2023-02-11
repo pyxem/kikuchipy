@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -76,6 +76,51 @@ def _rotation_from_rodrigues(rx: float, ry: float, rz: float) -> np.ndarray:
     return rot
 
 
+@njit("float64[:](float64, float64, float64)", cache=True, nogil=True, fastmath=True)
+def _rotation_from_euler(alpha: float, beta: float, gamma: float) -> np.ndarray:
+    """Convert three Euler angles (alpha, beta, gamma) to a unit
+    quaternion.
+
+    Taken from :meth:`orix.quaternion.Rotation.from_euler`.
+
+    Parameters
+    ----------
+    alpha, beta, gamma
+        Euler angles in the Bunge convention in radians.
+
+    Returns
+    -------
+    rotation
+        Unit quaternion.
+
+    Notes
+    -----
+    This function is optimized with Numba, so care must be taken with
+    array shapes and data types.
+    """
+    sigma = 0.5 * (alpha + gamma)
+    delta = 0.5 * (alpha - gamma)
+    c = np.cos(0.5 * beta)
+    s = np.sin(0.5 * beta)
+
+    # fmt: off
+    rotation = np.array(
+        (
+             c * np.cos(sigma),
+            -s * np.cos(delta),
+            -s * np.sin(delta),
+            -c * np.sin(sigma)
+        ),
+        dtype=np.float64,
+    )
+    # fmt: on
+
+    if rotation[0] < 0:
+        rotation = -rotation
+
+    return rotation
+
+
 @njit("float64[:, :](float64[:], float64[:, :])", cache=True, nogil=True, fastmath=True)
 def _rotate_vector(rotation: np.ndarray, vector: np.ndarray) -> np.ndarray:
     """Rotation of vector(s) by a quaternion.
@@ -117,7 +162,7 @@ def _rotate_vector(rotation: np.ndarray, vector: np.ndarray) -> np.ndarray:
     bd = b * d
     cd = c * d
 
-    rotated_vector = np.zeros(vector.shape)
+    rotated_vector = np.zeros(vector.shape, dtype=np.float64)
     rotated_vector[:, 0] = (aa + bb - cc - dd) * x + 2 * ((ac + bd) * z + (bc - ad) * y)
     rotated_vector[:, 1] = (aa - bb + cc - dd) * y + 2 * ((ad + bc) * x + (cd - ab) * z)
     rotated_vector[:, 2] = (aa - bb - cc + dd) * z + 2 * ((ab + cd) * y + (bd - ac) * x)

@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -17,6 +17,7 @@
 
 """Reader and writer of EBSD patterns from a NORDIF binary file."""
 
+import logging
 import os
 from pathlib import Path
 import re
@@ -32,6 +33,7 @@ from kikuchipy.detectors import EBSDDetector
 
 __all__ = ["file_reader", "file_writer"]
 
+_logger = logging.getLogger(__name__)
 
 # Plugin characteristics
 # ----------------------
@@ -100,7 +102,7 @@ def file_reader(
         setting_file = os.path.join(folder, "Setting.txt")
     setting_file_exists = os.path.isfile(setting_file)
     if setting_file_exists:
-        md, omd, scan_size_file, detector_dict = get_settings_from_file(setting_file)
+        md, omd, scan_size_file, detector_dict = _get_settings_from_file(setting_file)
         if not scan_size:
             scan_size = (scan_size_file["nx"], scan_size_file["ny"])
         if not pattern_size:
@@ -184,7 +186,7 @@ def file_reader(
             "set_scan_calibration()"
         )
 
-    # Create axis objects for each axis
+    # Create axis instances for each axis
     axes = [
         {
             "size": data.shape[i],
@@ -210,7 +212,7 @@ def file_reader(
     return [scan]
 
 
-def get_settings_from_file(
+def _get_settings_from_file(
     filename: str, pattern_type: str = "acquisition"
 ) -> Tuple[dict, dict, dict, dict]:
     """Return metadata with parameters from NORDIF setting file.
@@ -240,9 +242,11 @@ def get_settings_from_file(
     # Get line numbers of setting blocks
     blocks = {
         "[Microscope]": -1,
+        "[Electron image]": -1,
         "[Detector angles]": -1,
         f"[{pattern_type.capitalize()} settings]": -1,
         "[Area]": -1,
+        "[Calibration patterns]": -1,
     }
     for i, line in enumerate(content):
         for block in blocks:
@@ -254,11 +258,11 @@ def get_settings_from_file(
     l_area = blocks["[Area]"]
 
     # Create metadata and original metadata structures
-    beam_energy = get_string(content, "Accelerating voltage\t(.*)\tkV", l_mic + 5, f)
-    mic_manufacturer = get_string(content, "Manufacturer\t(.*)\t", l_mic + 1, f)
-    mic_model = get_string(content, "Model\t(.*)\t", l_mic + 2, f)
-    mag = get_string(content, "Magnification\t(.*)\t#", l_mic + 3, f)
-    wd = get_string(content, "Working distance\t(.*)\tmm", l_mic + 6, f)
+    beam_energy = _get_string(content, "Accelerating voltage\t(.*)\tkV", l_mic + 5, f)
+    mic_manufacturer = _get_string(content, "Manufacturer\t(.*)\t", l_mic + 1, f)
+    mic_model = _get_string(content, "Model\t(.*)\t", l_mic + 2, f)
+    mag = _get_string(content, "Magnification\t(.*)\t#", l_mic + 3, f)
+    wd = _get_string(content, "Working distance\t(.*)\tmm", l_mic + 6, f)
     md = {
         "Acquisition_instrument": {
             "SEM": {
@@ -272,11 +276,11 @@ def get_settings_from_file(
     omd = {"nordif_header": content}
 
     # Get scan size values
-    num_samp = get_string(content, "Number of samples\t(.*)\t#", l_area + 6, f)
+    num_samp = _get_string(content, "Number of samples\t(.*)\t#", l_area + 6, f)
     ny, nx = [int(i) for i in num_samp.split("x")]
-    pattern_size = get_string(content, "Resolution\t(.*)\tpx", l_acq + 2, f)
+    pattern_size = _get_string(content, "Resolution\t(.*)\tpx", l_acq + 2, f)
     sx, sy = [int(i) for i in pattern_size.split("x")]
-    step_size = float(get_string(content, "Step size\t(.*)\t", l_area + 5, f))
+    step_size = float(_get_string(content, "Step size\t(.*)\t", l_area + 5, f))
     scan_size = {
         "ny": ny,
         "nx": nx,
@@ -289,15 +293,29 @@ def get_settings_from_file(
     # Detector
     detector = {
         "shape": (sy, sx),
-        "sample_tilt": float(get_string(content, "Tilt angle\t(.*)\t", l_mic + 7, f)),
-        "tilt": float(get_string(content, "Elevation\t(.*)\t", l_ang + 5, f)),
-        "azimuthal": float(get_string(content, "Azimuthal\t(.*)\t", l_ang + 4, f)),
+        "sample_tilt": float(_get_string(content, "Tilt angle\t(.*)\t", l_mic + 7, f)),
+        "tilt": -float(_get_string(content, "Elevation\t(.*)\t", l_ang + 5, f)),
+        "azimuthal": float(_get_string(content, "Azimuthal\t(.*)\t", l_ang + 4, f)),
     }
+    if np.isclose(detector["tilt"], 0):  # Avoid -0.0
+        detector["tilt"] = -detector["tilt"]
+
+    if pattern_type == "calibration":
+        omd = _get_calibration_pattern_settings(
+            filename=filename,
+            content=content,
+            blocks=blocks,
+            omd=omd,
+            l_area=l_area,
+            step_size=step_size,
+            ny=ny,
+            nx=nx,
+        )
 
     return md, omd, scan_size, detector
 
 
-def get_string(content: list, expression: str, line_no: int, file) -> str:
+def _get_string(content: list, expression: str, line_no: int, file) -> str:
     """Get relevant part of string using regular expression.
 
     Parameters
@@ -308,7 +326,7 @@ def get_string(content: list, expression: str, line_no: int, file) -> str:
         Regular expression.
     line_no
         Line number to search in.
-    file : file object
+    file : file instance
         File handle of open setting file.
 
     Returns
@@ -327,9 +345,104 @@ def get_string(content: list, expression: str, line_no: int, file) -> str:
         return match.group(1)
 
 
+def _get_calibration_pattern_settings(
+    filename: str,
+    content: list,
+    blocks: dict,
+    omd: dict,
+    l_area: int,
+    step_size: float,
+    ny: int,
+    nx: int,
+) -> dict:
+    l_cal = blocks["[Calibration patterns]"]
+    err = "No calibration patterns found in settings file"
+    if l_cal == -1:
+        raise ValueError(err)
+
+    # Read required calibration coordinates in the area region of
+    # interest
+    rc = []
+    for line in content[l_cal + 1 :]:
+        match = re.search(r"Calibration \((.*)\)", line)
+        try:
+            match = match.group(1)
+            match = match.split(",")
+            rc.append(tuple(map(int, match))[::-1])
+        except AttributeError:
+            pass
+    if len(rc) == 0:
+        raise ValueError(err)
+    rc = np.array(rc)
+    omd["calibration_patterns"] = {"indices": rc}
+
+    # Read width and height of area and ROI in area. This is added to
+    # the original metadata as it is only required if we want to know
+    # the sample position of each calibration pattern, e.g. when fitting
+    # a plane to projection centers found from the patterns.
+    l_img = blocks["[Electron image]"]
+    img_string = re.search("(?<=Resolution)(.*)", content[l_img + 2])
+    if img_string is not None:
+        area_shape_match = re.findall(r"\d+", img_string.group())
+        if len(area_shape_match) == 2:
+            omd["area"] = {"shape": tuple(map(int, area_shape_match[::-1]))}
+    else:
+        omd["area"] = {"shape": None}
+        _logger.debug("Could not read area (electron image) shape")
+
+    keys = ["top", "left", "width", "height", "width_scaled"]
+    roi = dict(zip(keys, len(keys) * [0]))
+    for i, k in enumerate(keys[:4]):
+        pattern = r"(?<=" + k.capitalize() + r")(.*)"
+        try:
+            match = re.search(pattern, content[l_area + i + 1])
+            matches = re.findall(r"\d+", match.group())
+            roi[k] = int(matches[2])
+            if k == "width":
+                roi[k + "_scaled"] = float(f"{matches[0]}.{matches[1]}")
+        except (AttributeError, IndexError):
+            _logger.debug(f"Could not read area ROI '{k.capitalize()}'")
+
+    omd["roi"] = {
+        "origin": (roi["top"], roi["left"]),
+        "shape": (roi["height"], roi["width"]),
+    }
+
+    if roi["width_scaled"] != 0:
+        factor = step_size * roi["width"] / roi["width_scaled"]
+
+        def scale(x, return_tuple: bool = False):
+            x_out = np.round(np.asarray(x) / factor).astype(int)
+            if return_tuple:
+                x_out = tuple(x_out)
+            return x_out
+
+        omd["calibration_patterns"]["indices_scaled"] = scale(rc)
+        omd["roi"]["origin_scaled"] = scale(omd["roi"]["origin"], True)
+        omd["roi"]["shape_scaled"] = scale(omd["roi"]["shape"], True)
+
+        if omd["area"]["shape"] is not None:
+            omd["area"]["shape_scaled"] = scale(omd["area"]["shape"], True)
+
+        if omd["roi"]["shape_scaled"] != (ny, nx):
+            _logger.debug(
+                f"Number of samples {(ny, nx)} differs from the one calculated from "
+                f"area/ROI shapes {omd['roi']['shape_scaled']}"
+            )
+
+    # Try to read area overview image
+    filename_img = os.path.join(os.path.dirname(filename), "Area.bmp")
+    try:
+        omd["area_image"] = imread(filename_img)
+    except FileNotFoundError:
+        _logger.debug("No area image found")
+
+    return omd
+
+
 def file_writer(filename: str, signal: Union["EBSD", "LazyEBSD"]):
     """Write an :class:`~kikuchipy.signals.EBSD` or
-    :class:`~kikuchipy.signals.LazyEBSD` object to a NORDIF binary
+    :class:`~kikuchipy.signals.LazyEBSD` instance to a NORDIF binary
     file.
 
     Parameters

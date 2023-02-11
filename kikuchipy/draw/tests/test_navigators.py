@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -24,7 +24,7 @@ import kikuchipy as kp
 
 def test_get_rgb_navigator():
     s = kp.data.nickel_ebsd_small(lazy=True).inav[:2, :3]
-    nav_shape = s.axes_manager.navigation_shape[::-1]
+    nav_shape = s._navigation_shape_rc
     image = np.random.random(np.prod(nav_shape) * 3).reshape(nav_shape + (3,))
 
     s_rgb8 = kp.draw.get_rgb_navigator(image, dtype=np.uint8)

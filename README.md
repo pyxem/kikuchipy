@@ -43,7 +43,7 @@ You can also visit [PyPI](https://pypi.org/project/kikuchipy),
 [GitHub](https://github.com/pyxem/kikuchipy) to download the source.
 
 Further details are available in the
-[installation guide](https://kikuchipy.org/en/latest/installation.html).
+[installation guide](https://kikuchipy.org/en/latest/user/installation.html).
 
 ## Citing kikuchipy
 
@@ -76,6 +76,6 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 
 This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification.
 Contributions of any kind welcome! Please see our
-[contributing guide](https://kikuchipy.org/en/latest/contributing.html) for information
+[contributing guide](https://kikuchipy.org/en/latest/dev/index.html) for information
 on how best to contribute (or just explain what you want to do
 [in an issue](https://github.com/pyxem/kikuchipy/issues/new)).

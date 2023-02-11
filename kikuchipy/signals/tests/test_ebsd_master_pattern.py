@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -207,7 +207,7 @@ class TestProjectFromLambert:
             tilt=det.tilt,
             azimuthal=det.azimuthal,
             sample_tilt=det.sample_tilt,
-            mask=np.ones(det.size, dtype=bool),
+            signal_mask=np.ones(det.size, dtype=bool),
         )
         assert np.allclose(dc, dc2)
 
@@ -336,7 +336,7 @@ class TestProjectFromLambert:
         )
 
         sim1 = mp.get_patterns(rotations=rot1, detector=det1)
-        assert sim1.axes_manager.navigation_shape[::-1] == nav_shape
+        assert sim1._navigation_shape_rc == nav_shape
         assert not np.allclose(sim1.data[0, 0], sim1.data[0, 1])
 
         # 1D navigation shape, multiple PCs
@@ -350,7 +350,7 @@ class TestProjectFromLambert:
         # 2D navigation shape, single PC
         det2.pc = det2.pc[0]
         sim3 = mp.get_patterns(rot1, det2)
-        assert sim3.axes_manager.navigation_shape[::-1] == nav_shape
+        assert sim3._navigation_shape_rc == nav_shape
         assert np.allclose(sim1.data[0, 0], sim3.data[0, 0])
 
     def test_get_patterns_navigation_shape_raises(self):
@@ -516,7 +516,7 @@ class TestProjectFromLambert:
             tilt=det.tilt,
             azimuthal=det.azimuthal,
             sample_tilt=det.sample_tilt,
-            mask=np.ones(det.size, dtype=bool),
+            signal_mask=np.ones(det.size, dtype=bool),
         )
 
         assert np.allclose(dc0, dc[0])
@@ -633,3 +633,91 @@ class TestIntensityScaling:
         mp.change_dtype("float32")
         mp.normalize_intensity()
         assert np.allclose([mp.data.min(), mp.data.max()], [-1.33, 5.93], atol=1e-2)
+
+    def test_rescale_intensity_inplace(self):
+        mp = nickel_ebsd_master_pattern_small()
+
+        # Current signal is unaffected
+        mp2 = mp.deepcopy()
+        mp3 = mp.normalize_intensity(inplace=False)
+        assert isinstance(mp3, kp.signals.EBSDMasterPattern)
+        assert np.allclose(mp2.data, mp.data)
+
+        # Operating on current signal gives same result as output
+        mp.normalize_intensity()
+        assert np.allclose(mp3.data, mp.data)
+
+        # Operating on lazy signal returns lazy signal
+        mp4 = mp2.as_lazy()
+        mp5 = mp4.normalize_intensity(inplace=False)
+        assert isinstance(mp5, kp.signals.LazyEBSDMasterPattern)
+        mp5.compute()
+        assert np.allclose(mp5.data, mp.data)
+
+    def test_rescale_intensity_lazy_output(self):
+        mp = nickel_ebsd_master_pattern_small()
+        with pytest.raises(
+            ValueError, match="`lazy_output=True` requires `inplace=False`"
+        ):
+            _ = mp.normalize_intensity(lazy_output=True)
+
+        mp2 = mp.normalize_intensity(inplace=False, lazy_output=True)
+        assert isinstance(mp2, kp.signals.LazyEBSDMasterPattern)
+
+        mp3 = mp.as_lazy()
+        mp4 = mp3.normalize_intensity(inplace=False, lazy_output=False)
+        assert isinstance(mp4, kp.signals.EBSDMasterPattern)
+
+    def test_normalize_intensity_inplace(self):
+        mp = nickel_ebsd_master_pattern_small()
+
+        # Current signal is unaffected
+        mp2 = mp.deepcopy()
+        mp3 = mp.normalize_intensity(inplace=False)
+        assert isinstance(mp3, kp.signals.EBSDMasterPattern)
+        assert np.allclose(mp2.data, mp.data)
+
+        # Operating on current signal gives same result as output
+        mp.normalize_intensity()
+        assert np.allclose(mp3.data, mp.data)
+
+        # Operating on lazy signal returns lazy signal
+        mp4 = mp2.as_lazy()
+        mp5 = mp4.normalize_intensity(inplace=False)
+        assert isinstance(mp5, kp.signals.LazyEBSDMasterPattern)
+        mp5.compute()
+        assert np.allclose(mp5.data, mp.data)
+
+    def test_normalize_intensity_lazy_output(self):
+        mp = nickel_ebsd_master_pattern_small()
+        with pytest.raises(
+            ValueError, match="`lazy_output=True` requires `inplace=False`"
+        ):
+            _ = mp.normalize_intensity(lazy_output=True)
+
+        mp2 = mp.normalize_intensity(inplace=False, lazy_output=True)
+        assert isinstance(mp2, kp.signals.LazyEBSDMasterPattern)
+
+        mp3 = mp.as_lazy()
+        mp4 = mp3.normalize_intensity(inplace=False, lazy_output=False)
+        assert isinstance(mp4, kp.signals.EBSDMasterPattern)
+
+    def test_adaptive_histogram_equalization(self):
+        mp_sp = nickel_ebsd_master_pattern_small()
+
+        # Float warns
+        mp_sp.change_dtype(np.float32)
+        mp_sp2 = mp_sp.rescale_intensity(inplace=False)
+        with pytest.warns(UserWarning, match="Equalization of signals with floating "):
+            mp_sp2.adaptive_histogram_equalization()
+
+        # NaN warns
+        mp_sp.data[mp_sp.data == 0] = np.nan
+        with pytest.warns(UserWarning, match="Equalization of signals with NaN "):
+            mp_sp.adaptive_histogram_equalization()
+
+        # Spreads intensities within data range
+        mp_lp = nickel_ebsd_master_pattern_small(projection="lambert")
+        mp_lp2 = mp_lp.adaptive_histogram_equalization(inplace=False)
+        assert all([mp_lp2.data.min() >= 0, mp_lp2.data.max() <= 255])
+        assert abs(np.unique(mp_lp2.data).size - 255) < 2

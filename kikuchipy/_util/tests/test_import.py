@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -38,17 +38,6 @@ class TestImport:
         from kikuchipy import _pyvista_installed
 
         assert isinstance(_pyvista_installed, bool)
-
-    def test_import_crystallography(self):
-        import kikuchipy.crystallography
-
-        for obj_name in kikuchipy.crystallography.__all__:
-            getattr(kikuchipy.crystallography, obj_name)
-        with pytest.raises(
-            AttributeError,
-            match="module 'kikuchipy.crystallography' has no attribute 'foo'",
-        ):
-            _ = kikuchipy.crystallography.foo
 
     def test_import_data(self):
         import kikuchipy.data
@@ -99,6 +88,16 @@ class TestImport:
             AttributeError, match="module 'kikuchipy.generators' has no attribute 'foo'"
         ):
             _ = kikuchipy.generators.foo
+
+    def test_import_imaging(self):
+        import kikuchipy.imaging
+
+        for obj_name in kikuchipy.imaging.__all__:
+            getattr(kikuchipy.imaging, obj_name)
+        with pytest.raises(
+            AttributeError, match="module 'kikuchipy.imaging' has no attribute 'foo'"
+        ):
+            _ = kikuchipy.imaging.foo
 
     def test_import_indexing(self):
         import kikuchipy.indexing
@@ -193,13 +192,14 @@ class TestImport:
 
         assert dir(kikuchipy) == [
             "__version__",
+            "_pyebsdindex_installed",
             "_pyvista_installed",
-            "crystallography",
             "data",
             "detectors",
             "draw",
             "filters",
             "generators",
+            "imaging",
             "indexing",
             "io",
             "load",
@@ -211,20 +211,18 @@ class TestImport:
             "simulations",
         ]
 
-    def test_dir_crystallography(self):
-        import kikuchipy.crystallography
-
-        assert dir(kikuchipy.crystallography) == [
-            "get_direct_structure_matrix",
-        ]
-
     def test_dir_data(self):
         import kikuchipy.data
 
         assert dir(kikuchipy.data) == [
+            "ebsd_master_pattern",
+            "ni_gain",
+            "ni_gain_calibration",
             "nickel_ebsd_large",
             "nickel_ebsd_master_pattern_small",
             "nickel_ebsd_small",
+            "si_ebsd_moving_screen",
+            "si_wafer",
             "silicon_ebsd_moving_screen_in",
             "silicon_ebsd_moving_screen_out10mm",
             "silicon_ebsd_moving_screen_out5mm",
@@ -238,7 +236,10 @@ class TestImport:
     def test_dir_draw(self):
         import kikuchipy.draw
 
-        assert dir(kikuchipy.draw) == ["get_rgb_navigator"]
+        assert dir(kikuchipy.draw) == [
+            "get_rgb_navigator",
+            "plot_pattern_positions_in_map",
+        ]
 
     def test_dir_filters(self):
         import kikuchipy.filters
@@ -258,6 +259,13 @@ class TestImport:
             "VirtualBSEGenerator",
         ]
 
+    def test_dir_imaging(self):
+        import kikuchipy.imaging
+
+        assert dir(kikuchipy.imaging) == [
+            "VirtualBSEImager",
+        ]
+
     def test_dir_indexing(self):
         import kikuchipy.indexing
 
@@ -270,6 +278,7 @@ class TestImport:
             "compute_refine_projection_center_results",
             "merge_crystal_maps",
             "orientation_similarity_map",
+            "xmap_from_hough_indexing_data",
         ]
 
     def test_dir_io(self):
@@ -333,6 +342,7 @@ class TestImport:
             "LazyEBSD",
             "LazyEBSDMasterPattern",
             "LazyECPMasterPattern",
+            "LazyVirtualBSEImage",
             "VirtualBSEImage",
             "util",
         ]
@@ -340,7 +350,11 @@ class TestImport:
     def test_dir_signals_util(self):
         import kikuchipy.signals.util
 
-        assert dir(kikuchipy.signals.util) == ["get_chunking", "get_dask_array"]
+        assert dir(kikuchipy.signals.util) == [
+            "get_chunking",
+            "get_dask_array",
+            "grid_indices",
+        ]
 
     def test_dir_simulations(self):
         import kikuchipy.simulations

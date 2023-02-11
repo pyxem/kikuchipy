@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -18,14 +18,17 @@
 """Reader of uncompressed EBSD patterns from a Oxford Instruments binary
 .ebsp file.
 
-Information about the file format was provided by Oxford Instruments.
+Information about the file format was generously provided by Oxford
+Instruments.
 """
 
+import logging
 import os
 from pathlib import Path
 import struct
 from typing import BinaryIO, List, Tuple, Union
 
+import dask
 import dask.array as da
 import numpy as np
 
@@ -34,6 +37,8 @@ from kikuchipy.signals.util._dask import get_chunking
 
 __all__ = ["file_reader"]
 
+
+_logger = logging.getLogger(__name__)
 
 # Plugin characteristics
 # ----------------------
@@ -99,8 +104,8 @@ class OxfordBinaryFileReader:
     """
 
     # Header for each pattern in the file
-    pattern_header_size = 16
-    pattern_header_dtype = [
+    pattern_header_size: int = 16
+    pattern_header_dtype: list = [
         ("is_compressed", np.int32, (1,)),
         ("nrows", np.int32, (1,)),
         ("ncols", np.int32, (1,)),
@@ -114,6 +119,14 @@ class OxfordBinaryFileReader:
         self.file = file  # Already open file
 
         self.version = self.get_version()
+        _logger.debug(f"Reading Oxford binary file of version {self.version}")
+
+        # If version > 3, read in the extra byte after file version and
+        # add it to the debug log
+        if self.version > 3:  # pragma: no cover
+            self.file.seek(self.pattern_starts_byte_position - 1)
+            unknown_byte = np.fromfile(self.file, dtype=np.uint8, count=1)[0]
+            _logger.debug(f"Unknown byte (uint8) in file of version 4: {unknown_byte}")
 
         # Number of patterns in the file is not known, so this is
         # guessed from the file header where the file byte positions of
@@ -188,7 +201,7 @@ class OxfordBinaryFileReader:
     @property
     def n_patterns_present(self) -> int:
         """Number of patterns actually stored in the file."""
-        return np.sum(self.pattern_is_present)
+        return int(np.sum(self.pattern_is_present))
 
     @property
     def pattern_order(self) -> np.ndarray:
@@ -204,13 +217,16 @@ class OxfordBinaryFileReader:
     @property
     def pattern_starts_byte_position(self) -> int:
         """File byte position of file byte positions of patterns. For
-        .ebsp file version 0, this is at the first byte, while for later
-        versions, this is at the ninth byte, after the file version.
+        .ebsp file version 0, this is at the first byte, for versions
+        1-3 this is at the ninth byte, while for version 4 this is at
+        the tenth byte.
         """
-        if self.version != 0:
-            return 8
-        else:
+        if self.version == 0:
             return 0
+        elif self.version > 3:
+            return 9
+        else:
+            return 8
 
     def get_memmap(self) -> np.memmap:
         """Return a memory map of the pattern header, actual patterns,
@@ -249,7 +265,7 @@ class OxfordBinaryFileReader:
         return np.memmap(
             self.file.name,
             dtype=file_dtype,
-            shape=self.n_patterns_present,
+            shape=(self.n_patterns_present,),
             mode="r",
             offset=self.first_pattern_position,
         )
@@ -299,8 +315,8 @@ class OxfordBinaryFileReader:
     def get_pattern_starts(self) -> np.ndarray:
         """Return the file byte positions of each pattern.
 
-        Parameters
-        ----------
+        Returns
+        -------
         pattern_starts
             Integer array of file byte positions.
         """
@@ -313,6 +329,11 @@ class OxfordBinaryFileReader:
 
         Parameters
         ----------
+        offset
+            File byte pattern start of the pattern of interest.
+
+        Returns
+        -------
         footer_dtype
             Format of each pattern footer as a list of tuples with a
             field name, data type and size. The format depends on the
@@ -366,7 +387,8 @@ class OxfordBinaryFileReader:
             data = data[self.pattern_order]
 
         if data.shape != self.data_shape:
-            data = data.reshape(self.data_shape)
+            with dask.config.set(**{"array.slicing.split_large_chunks": False}):
+                data = data.reshape(self.data_shape)
 
         if lazy:
             chunks = get_chunking(
@@ -379,7 +401,7 @@ class OxfordBinaryFileReader:
 
         return data
 
-    def get_single_pattern_footer(self, offset: int) -> tuple:
+    def get_single_pattern_footer(self, offset: int) -> np.ndarray:
         """Return a single pattern footer with pattern beam positions.
 
         Parameters
@@ -390,8 +412,7 @@ class OxfordBinaryFileReader:
         Returns
         -------
         footer
-            The format of this depends on the file
-            :attr:`~self.version`.
+            The format of this depends on the file :attr:`version`.
         """
         self.file.seek(offset + self.pattern_header_size + self.n_bytes)
         return np.fromfile(self.file, dtype=self.pattern_footer_dtype, count=1)
@@ -490,9 +511,9 @@ class OxfordBinaryFileReader:
             file_order=order,
         )
         if "beam_y" in self.memmap.dtype.names:
-            om["beam_y"] = beam_y = self.memmap["beam_y"][..., 0][order]
+            om["beam_y"] = self.memmap["beam_y"][..., 0][order]
         if "beam_x" in self.memmap.dtype.names:
-            om["beam_x"] = beam_x = self.memmap["beam_x"][..., 0][order]
+            om["beam_x"] = self.memmap["beam_x"][..., 0][order]
 
         scan = dict(
             axes=axes,

@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -92,13 +92,14 @@ class TestOxfordBinaryReader:
             (((2, 3), (60, 60), np.uint8, 2, False, True), 2, (2, 3)),
             (((2, 3), (60, 60), np.uint16, 1, False, True), 1, (2, 3)),
             (((2, 3), (60, 60), np.uint8, 0, False, True), 0, (6,)),
+            (((2, 3), (60, 60), np.uint8, 4, False, True), 4, (2, 3)),
         ],
         indirect=["oxford_binary_file"],
     )
     def test_versions(self, oxford_binary_file, ver, desired_nav_shape):
         """Ensure that versions 0, 1 and > 1 can be read."""
         s = kp.load(oxford_binary_file.name)
-        assert s.axes_manager.navigation_shape[::-1] == desired_nav_shape
+        assert s._navigation_shape_rc == desired_nav_shape
         if ver > 0:
             assert s.original_metadata.has_item("beam_x")
             assert s.original_metadata.has_item("beam_y")

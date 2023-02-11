@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -89,4 +89,4 @@ class TestEDAXBinaryReader:
     def test_nav_shape_up2_not_hex(self, edax_binary_file):
         """Test navigation shape when not hex."""
         s = kp.load(edax_binary_file.name)
-        assert s.axes_manager.navigation_shape[::-1] == (2, 3)
+        assert s._navigation_shape_rc == (2, 3)

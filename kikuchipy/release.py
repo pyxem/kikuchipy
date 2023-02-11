@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -36,4 +36,4 @@ maintainer_email = "hakon.w.anes@ntnu.no"
 name = "kikuchipy"
 platforms = ["Linux", "MacOS X", "Windows"]
 status = "Development"
-version = "0.7.0"
+version = "0.8.0"

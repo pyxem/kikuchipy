@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -18,21 +18,22 @@
 from copy import deepcopy
 import gc
 import logging
+import numbers
 import os
-from typing import Any, Union, Tuple, Optional
+from typing import Any, List, Optional, Union, Tuple
+import warnings
 
 import dask.array as da
-from dask.diagnostics import ProgressBar
-import hyperspy.api as hs
-from hyperspy._signals.signal2d import Signal2D
+from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.misc.rgb_tools import rgb_dtypes
 import numpy as np
 from skimage.util.dtype import dtype_range
 import yaml
 
-from kikuchipy.signals.util._dask import get_dask_array
-from kikuchipy.pattern import chunk
+from kikuchipy.pattern import normalize_intensity, rescale_intensity
+from kikuchipy.pattern._pattern import _adaptive_histogram_equalization
+from kikuchipy.signals.util._overwrite_hyperspy_methods import insert_doc_disclaimer
 
 
 _logger = logging.getLogger(__name__)
@@ -60,7 +61,17 @@ class KikuchipySignal2D(Signal2D):
     :class:`~kikuchipy.signals.EBSD`.
     """
 
-    _custom_properties = []
+    _custom_attributes = []
+
+    @property
+    def _signal_shape_rc(self) -> tuple:
+        """Return the signal's signal shape as (row, column)."""
+        return self.axes_manager.signal_shape[::-1]
+
+    @property
+    def _navigation_shape_rc(self) -> tuple:
+        """Return the signal's navigation shape as (row, column)."""
+        return self.axes_manager.navigation_shape[::-1]
 
     def rescale_intensity(
         self,
@@ -72,8 +83,10 @@ class KikuchipySignal2D(Signal2D):
         ] = None,
         percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
         show_progressbar: Optional[bool] = None,
-    ) -> None:
-        """Rescale image intensities inplace.
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, Any]:
+        """Rescale image intensities.
 
         Output min./max. intensity is determined from ``out_range`` or
         the data type range of the :class:`numpy.dtype` passed to
@@ -88,7 +101,9 @@ class KikuchipySignal2D(Signal2D):
             Whether to keep relative intensities between images (default
             is ``False``). If ``True``, ``in_range`` must be ``None``,
             because ``in_range`` is in this case set to the global
-            min./max. intensity.
+            min./max. intensity. Use with care, as this requires the
+            computation of the min./max. intensity of the signal before
+            rescaling.
         in_range
             Min./max. intensity of input images. If not given,
             ``in_range`` is set to pattern min./max intensity. Contrast
@@ -110,6 +125,19 @@ class KikuchipySignal2D(Signal2D):
             Whether to show a progressbar. If not given, the value of
             :obj:`hyperspy.api.preferences.General.show_progressbar`
             is used.
+        inplace
+            Whether to operate on the current signal or return a new
+            one. Default is ``True``.
+        lazy_output
+            Whether the returned signal is lazy. If not given this
+            follows from the current signal. Can only be ``True`` if
+            ``inplace=False``.
+
+        Returns
+        -------
+        s_out
+            Rescaled signal, returned if ``inplace=False``. Whether
+            it is lazy is determined from ``lazy_output``.
 
         See Also
         --------
@@ -158,6 +186,9 @@ class KikuchipySignal2D(Signal2D):
         are set to the ends of the data type range, e.g. 0 and 255
         respectively for images of ``uint8`` data type.
         """
+        if lazy_output and inplace:
+            raise ValueError("`lazy_output=True` requires `inplace=False`")
+
         if self.data.dtype in rgb_dtypes.values():
             raise NotImplementedError(
                 "Use RGB channel normalization when creating the image instead."
@@ -170,6 +201,7 @@ class KikuchipySignal2D(Signal2D):
             raise ValueError("'in_range' must be None if 'relative' is True.")
         elif relative:  # Scale relative to min./max. intensity in images
             in_range = (self.data.min(), self.data.max())
+            in_range = tuple(da.compute(in_range)[0])
 
         if dtype_out is None:
             dtype_out = self.data.dtype
@@ -179,37 +211,25 @@ class KikuchipySignal2D(Signal2D):
         if out_range is None:
             out_range = dtype_range[dtype_out.type]
 
-        # Create dask array of signal images and do processing on this
-        dask_array = get_dask_array(signal=self)
-
-        # Rescale images
-        rescaled_images = dask_array.map_blocks(
-            func=chunk.rescale_intensity,
+        map_kw = dict(
+            show_progressbar=show_progressbar,
+            parallel=True,
+            output_dtype=dtype_out,
             in_range=in_range,
             out_range=out_range,
             dtype_out=dtype_out,
             percentiles=percentiles,
-            dtype=dtype_out,
         )
-
-        # Overwrite signal images
-        if not self._lazy:
-            pbar = ProgressBar()
-            if show_progressbar or (
-                show_progressbar is None and hs.preferences.General.show_progressbar
-            ):
-                pbar.register()
-
-            if self.data.dtype != rescaled_images.dtype:
-                self.change_dtype(dtype_out)
-            rescaled_images.store(self.data, compute=True)
-
-            try:
-                pbar.unregister()
-            except KeyError:
-                pass
+        attrs = self._get_custom_attributes()
+        if inplace:
+            self.map(rescale_intensity, inplace=True, **map_kw)
+            self._set_custom_attributes(attrs)
         else:
-            self.data = rescaled_images
+            s_out = self.map(
+                rescale_intensity, inplace=False, lazy_output=lazy_output, **map_kw
+            )
+            s_out._set_custom_attributes(attrs)
+            return s_out
 
     def normalize_intensity(
         self,
@@ -217,9 +237,11 @@ class KikuchipySignal2D(Signal2D):
         divide_by_square_root: bool = False,
         dtype_out: Union[str, np.dtype, type, None] = None,
         show_progressbar: Optional[bool] = None,
-    ) -> None:
-        """Normalize image intensities in inplace to a mean of zero with
-        a given standard deviation.
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, Any]:
+        """Normalize image intensities to a mean of zero with a given
+        standard deviation.
 
         Parameters
         ----------
@@ -236,6 +258,19 @@ class KikuchipySignal2D(Signal2D):
             Whether to show a progressbar. If not given, the value of
             :obj:`hyperspy.api.preferences.General.show_progressbar`
             is used.
+        inplace
+            Whether to operate on the current signal or return a new
+            one. Default is ``True``.
+        lazy_output
+            Whether the returned signal is lazy. If not given this
+            follows from the current signal. Can only be ``True`` if
+            ``inplace=False``.
+
+        Returns
+        -------
+        s_out
+            Normalized signal, returned if ``inplace=False``. Whether
+            it is lazy is determined from ``lazy_output``.
 
         Notes
         -----
@@ -258,6 +293,9 @@ class KikuchipySignal2D(Signal2D):
         >>> np.mean(s.data)
         2.6373216e-08
         """
+        if lazy_output and inplace:
+            raise ValueError("`lazy_output=True` requires `inplace=False`")
+
         if self.data.dtype in rgb_dtypes.values():
             raise NotImplementedError(
                 "Use RGB channel normalization when creating the image instead."
@@ -268,116 +306,262 @@ class KikuchipySignal2D(Signal2D):
         else:
             dtype_out = np.dtype(dtype_out)
 
-        dask_array = get_dask_array(self, dtype=np.float32)
-
-        normalized_images = dask_array.map_blocks(
-            func=chunk.normalize_intensity,
+        map_kw = dict(
+            show_progressbar=show_progressbar,
+            parallel=True,
+            output_dtype=dtype_out,
             num_std=num_std,
             divide_by_square_root=divide_by_square_root,
             dtype_out=dtype_out,
-            dtype=dtype_out,
         )
-
-        # Change data type if requested
-        if dtype_out != self.data.dtype:
-            self.change_dtype(dtype_out)
-
-        # Overwrite signal patterns
-        if not self._lazy:
-            pbar = ProgressBar()
-            if show_progressbar or (
-                show_progressbar is None and hs.preferences.General.show_progressbar
-            ):
-                pbar.register()
-
-            normalized_images.store(self.data, compute=True)
-
-            try:
-                pbar.unregister()
-            except KeyError:
-                pass
+        attrs = self._get_custom_attributes()
+        if inplace:
+            self.map(normalize_intensity, inplace=True, **map_kw)
+            self._set_custom_attributes(attrs)
         else:
-            self.data = normalized_images
+            s_out = self.map(
+                normalize_intensity, inplace=False, lazy_output=lazy_output, **map_kw
+            )
+            s_out._set_custom_attributes(attrs)
+            return s_out
 
-    def _get_custom_properties(self) -> dict:
-        """Return a dictionary of properties not in ``Signal2D``.
+    def adaptive_histogram_equalization(
+        self,
+        kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
+        clip_limit: Union[int, float] = 0,
+        nbins: int = 128,
+        show_progressbar: Optional[bool] = None,
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, Any]:
+        """Enhance the local contrast using adaptive histogram
+        equalization.
 
-        This is a quick way to get all custom properties of a class
+        This method uses :func:`skimage.exposure.equalize_adapthist`.
+
+        Parameters
+        ----------
+        kernel_size
+            Shape of contextual regions for adaptive histogram
+            equalization, default is 1/4 of image height and 1/4 of
+            image width.
+        clip_limit
+            Clipping limit, normalized between 0 and 1 (higher values
+            give more contrast). Default is ``0``.
+        nbins
+            Number of gray bins for histogram ("data range"), default is
+            ``128``.
+        show_progressbar
+            Whether to show a progressbar. If not given, the value of
+            :obj:`hyperspy.api.preferences.General.show_progressbar`
+            is used.
+        inplace
+            Whether to operate on the current signal or return a new
+            one. Default is ``True``.
+        lazy_output
+            Whether the returned signal is lazy. If not given this
+            follows from the current signal. Can only be ``True`` if
+            ``inplace=False``.
+
+        Returns
+        -------
+        s_out
+            Equalized signal, returned if ``inplace=False``. Whether it
+            is lazy is determined from ``lazy_output``.
+
+        See Also
+        --------
+        rescale_intensity,
+        normalize_intensity
+
+        Notes
+        -----
+        It is recommended to perform adaptive histogram equalization
+        only *after* static and dynamic background corrections of EBSD
+        patterns, otherwise some unwanted darkening towards the edges
+        might occur.
+
+        The default window size might not fit all pattern sizes, so it
+        may be necessary to search for the optimal window size.
+
+        Examples
+        --------
+        Load one pattern from the small nickel dataset, remove the
+        background and perform adaptive histogram equalization. A copy
+        without equalization is kept for comparison.
+
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small().inav[0, 0]
+        >>> s.remove_static_background()
+        >>> s.remove_dynamic_background()
+        >>> s2 = s.deepcopy()
+        >>> s2.adaptive_histogram_equalization()
+
+        Compute the intensity histograms and plot the patterns and
+        histograms
+
+        >>> import numpy as np
+        >>> import matplotlib.pyplot as plt
+        >>> hist, _ = np.histogram(s.data, range=(0, 255))
+        >>> hist2, _ = np.histogram(s2.data, range=(0, 255))
+        >>> _, ((ax0, ax1), (ax2, ax3)) = plt.subplots(nrows=2, ncols=2)
+        >>> _ = ax0.imshow(s.data)
+        >>> _ = ax1.imshow(s2.data)
+        >>> _ = ax2.plot(hist)
+        >>> _ = ax3.plot(hist2)
+        """
+        if lazy_output and inplace:
+            raise ValueError("`lazy_output=True` requires `inplace=False`")
+
+        dtype_out = self.data.dtype
+        if np.issubdtype(dtype_out, np.floating):
+            warnings.warn(
+                (
+                    "Equalization of signals with floating point data type has been "
+                    "shown to give bad results. Rescaling intensities to integer "
+                    "intensities is recommended."
+                ),
+                UserWarning,
+            )
+        if not self._lazy and np.isnan(self.data).any():
+            warnings.warn(
+                (
+                    "Equalization of signals with NaN data has been shown to give bad "
+                    "results"
+                ),
+                UserWarning,
+            )
+
+        # Determine window size (shape of contextual region)
+        sig_shape = self.axes_manager.signal_shape
+        if kernel_size is None:
+            kernel_size = (sig_shape[0] // 4, sig_shape[1] // 4)
+        elif isinstance(kernel_size, numbers.Number):
+            kernel_size = (kernel_size,) * self.axes_manager.signal_dimension
+        elif len(kernel_size) != self.axes_manager.signal_dimension:
+            raise ValueError(f"Incorrect value of `shape`: {kernel_size}")
+        kernel_size = [int(k) for k in kernel_size]
+
+        map_kw = dict(
+            show_progressbar=show_progressbar,
+            parallel=True,
+            output_dtype=dtype_out,
+            kernel_size=kernel_size,
+            clip_limit=clip_limit,
+            nbins=nbins,
+        )
+        attrs = self._get_custom_attributes()
+        if inplace:
+            self.map(_adaptive_histogram_equalization, inplace=True, **map_kw)
+            self._set_custom_attributes(attrs)
+        else:
+            s_out = self.map(
+                _adaptive_histogram_equalization,
+                inplace=False,
+                lazy_output=lazy_output,
+                **map_kw,
+            )
+            s_out._set_custom_attributes(attrs)
+            return s_out
+
+    def _get_custom_attributes(self, make_deepcopy: bool = False) -> dict:
+        """Return a dictionary of attributes not in ``Signal2D``.
+
+        This is a quick way to get all custom attributes of a class
         before calling a method of ``Signal2D`` which returns a new
         instance or operates in place on the current instance and does
-        not carry over these properties, like with ``deepcopy()``.
+        not carry over these attributes, like with ``deepcopy()``.
+
+        Parameters
+        ----------
+        make_deepcopy
+            Whether the returned dictionary should contain deep copies
+            of each attribute. Default is ``False``.
 
         Returns
         -------
         dictionary
-            Dictionary with custom properties.
+            Dictionary with custom attributes.
         """
-        return {name: self.__getattribute__(name) for name in self._custom_properties}
+        dictionary = {}
+        for name in self._custom_attributes:
+            attr = self.__getattribute__(name)
+            if make_deepcopy:
+                try:
+                    dictionary[name] = deepcopy(attr)
+                except ValueError:  # pragma: no cover
+                    _logger.debug(f"Could not deepcopy attribute {name}")
+                    dictionary[name] = attr
+            else:
+                dictionary[name] = attr
+        return dictionary
 
-    def _set_custom_properties(
+    def _set_custom_attributes(
         self,
-        properties: dict,
+        attributes: dict,
         make_deepcopy: bool = False,
         make_lazy: bool = False,
         unmake_lazy: bool = False,
     ):
-        """Set custom properties not in ``Signal2D``.
+        """Set custom attributes not in ``Signal2D``.
 
-        This is a quick way to set all custom properties of a class
+        This is a quick way to set all custom attributes of a class
         after calling a method of ``Signal2D`` which returns a new
         instance or operates in place on the current instance and does
-        not carry over these properties, like with ``deepcopy()``.
+        not carry over these attributes, like with ``deepcopy()``.
 
         Parameters
         ----------
-        properties
-            Dictionary of custom properties.
+        attributes
+            Dictionary of custom attributes.
         make_deepcopy
-            Whether to make a deepcopy of all properties before setting
+            Whether to make a deepcopy of all attributes before setting
             them in this instance. Default is ``False``.
         make_lazy
-            Whether to cast properties which are
+            Whether to cast attributes which are
             :class:`~numpy.ndarray` to :class:`~dask.array.Array` before
             setting them. Default is ``False``.
         unmake_lazy
-            Whether to cast properties which are
+            Whether to cast attributes which are
             :class:`~dask.array.Array` to :class:`~numpy.ndarray` before
             setting them. Default is ``False``. Ignored if both this and
             ``make_lazy`` are ``True``.
         """
-        for name, value in properties.items():
-            if name in self._custom_properties:
-                if make_lazy and isinstance(value, np.ndarray):
-                    value = da.from_array(value)
-                elif unmake_lazy and isinstance(value, da.Array):
-                    value = value.compute()
-                if make_deepcopy:
-                    value = deepcopy(value)
-                self.__setattr__("_" + name, value)
+        for name, value in attributes.items():
+            if name in self._custom_attributes:
+                try:
+                    if make_lazy and isinstance(value, np.ndarray):
+                        value = da.from_array(value)
+                    elif unmake_lazy and isinstance(value, da.Array):
+                        value = value.compute()
+                    if make_deepcopy:
+                        value = deepcopy(value)
+                    self.__setattr__("_" + name, value)
+                except ValueError:  # pragma: no cover
+                    _logger.debug(f"Could not set attribute {name}")
 
     # --- Inherited methods from Signal2D overwritten
 
+    @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.as_lazy)
     def as_lazy(self, *args, **kwargs) -> Any:
         s_new = super().as_lazy(*args, **kwargs)
 
         if s_new._signal_type in SIGNAL_TYPES:
-            properties = self._get_custom_properties()
-            _logger.debug("Transfer custom properties when making lazy")
-            s_new._set_custom_properties(properties, make_lazy=True)
+            attrs = self._get_custom_attributes()
+            s_new._set_custom_attributes(attrs, make_lazy=True)
 
         return s_new
 
+    @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.change_dtype)
     def change_dtype(self, *args, **kwargs) -> None:
-        properties = self._get_custom_properties()
+        attrs = self._get_custom_attributes()
 
         super().change_dtype(*args, **kwargs)
 
         if self._signal_type in SIGNAL_TYPES:
-            _logger.debug("Transfer custom properties when changing dtype")
-            self._set_custom_properties(properties)
+            self._set_custom_attributes(attrs)
         else:
-            _logger.debug("Delete custom properties when changing dtype")
-            for name in properties.keys():
+            for name in attrs.keys():
                 try:
                     self.__delattr__("_" + name)
                 except AttributeError:
@@ -387,20 +571,18 @@ class KikuchipySignal2D(Signal2D):
         s_new = super().deepcopy()
 
         if s_new._signal_type in SIGNAL_TYPES:
-            properties = self._get_custom_properties()
-            _logger.debug("Transfer custom properties when deep copying")
-            s_new._set_custom_properties(properties, make_deepcopy=True)
+            attrs = self._get_custom_attributes()
+            s_new._set_custom_attributes(attrs, make_deepcopy=True)
 
         return s_new
 
     def _assign_subclass(self):
-        properties = self._custom_properties
+        attrs = self._custom_attributes
 
         super()._assign_subclass()
 
         if self._signal_type not in SIGNAL_TYPES:
-            _logger.debug("Delete custom properties when assigning subclass")
-            for name in properties:
+            for name in attrs:
                 try:
                     self.__delattr__("_" + name)
                 except AttributeError:  # pragma: no cover
@@ -416,8 +598,9 @@ class LazyKikuchipySignal2D(LazySignal2D, KikuchipySignal2D):
     :class:`~kikuchipy.signals.LazyEBSD`.
     """
 
+    @insert_doc_disclaimer(cls=LazySignal2D, meth=LazySignal2D.compute)
     def compute(self, *args, **kwargs) -> None:
-        properties = self._get_custom_properties()
+        attrs = self._get_custom_attributes()
         super().compute(*args, **kwargs)
+        self._set_custom_attributes(attrs, unmake_lazy=True)
         gc.collect()
-        self._set_custom_properties(properties, unmake_lazy=True)

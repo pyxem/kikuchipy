@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -42,7 +42,7 @@ KIKUCHIPY_FILE = os.path.join(DATA_PATH, "kikuchipy_h5ebsd/patterns.h5")
 KIKUCHIPY_FILE_NO_CHUNKS = os.path.join(
     DATA_PATH, "kikuchipy_h5ebsd/patterns_nochunks.h5"
 )
-KIKUCHIPY_FILE_GROUP_NAMES = ["My awes0m4 Xcan #! with a long title", "Scan 2"]
+KIKUCHIPY_FILE_GROUP_NAMES = ["Scan 1", "Scan 2"]
 BG_FILE = os.path.join(DATA_PATH, "nordif/Background acquisition image.bmp")
 
 
@@ -50,7 +50,7 @@ class TestH5EBSD:
     def test_repr(self):
         reader = KikuchipyH5EBSDReader(KIKUCHIPY_FILE)
         repr_str_list = repr(reader).split(" ")
-        assert repr_str_list[:2] == ["KikuchipyH5EBSDReader", "(0.1):"]
+        assert repr_str_list[:2] == ["KikuchipyH5EBSDReader", "(0.8.dev0):"]
         assert repr_str_list[2][-11:] == "patterns.h5"
 
     def test_check_file_invalid_version(self, save_path_hdf5):
@@ -133,8 +133,11 @@ class TestKikuchipyH5EBSD:
         new_n_columns = 4
         with File(save_path_hdf5, mode="r+") as f:
             f["Scan 1/EBSD/Header/n_columns"][()] = new_n_columns
-        with pytest.warns(UserWarning, match="Will attempt to load by zero"):
+
+        with pytest.warns(UserWarning) as warninfo:
             s_reload = load(save_path_hdf5, lazy=lazy)
+        assert len(warninfo) == 2
+
         ni_small_axes_manager["axis-1"]["size"] = new_n_columns
         assert_dictionary(s_reload.axes_manager.as_dictionary(), ni_small_axes_manager)
 
@@ -143,7 +146,7 @@ class TestKikuchipyH5EBSD:
 
         # Check that metadata is read correctly
         assert s.detector.binning == 8
-        assert s.metadata.General.title == "patterns My awes0m4 ..."
+        assert s.metadata.General.title == "patterns Scan 1"
 
         s.save(save_path_hdf5, overwrite=True)
         s_reload = load(save_path_hdf5)
@@ -198,7 +201,7 @@ class TestKikuchipyH5EBSD:
         elif scan_group_names == ["Scan 3"]:
             with pytest.raises(OSError, match="Scan 'Scan 3' is not among the"):
                 _ = load(KIKUCHIPY_FILE, scan_group_names=scan_group_names)
-            return 0
+            return
         elif scan_group_names == KIKUCHIPY_FILE_GROUP_NAMES:
             s1, s2 = load(KIKUCHIPY_FILE, scan_group_names=KIKUCHIPY_FILE_GROUP_NAMES)
         else:  # scan_group_names == "Scan 2"
@@ -210,7 +213,7 @@ class TestKikuchipyH5EBSD:
         with pytest.raises(
             AssertionError,
             match="\nItems are not equal:\nkey='title'\nkey='General'\n\n "
-            "ACTUAL: 'patterns My awes0m4 ...'\n DESIRED: 'patterns Scan 2'",
+            "ACTUAL: 'patterns Scan 1'\n DESIRED: 'patterns Scan 2'",
         ):
             np.testing.assert_equal(
                 s1.metadata.as_dictionary(), s2.metadata.as_dictionary()
@@ -296,6 +299,9 @@ class TestKikuchipyH5EBSD:
         assert s_y_only2.data.shape == desired_shape
         assert s_y_only2.axes_manager.navigation_axes[0].name == "y"
         assert s_y_only2.axes_manager.navigation_extent == desired_nav_extent
+        assert s_y_only2.xmap.shape == (3,)
+        assert np.allclose(s_y_only2.xmap.y, np.arange(3) * 1.5)
+        assert s_y_only2.detector.pc.shape == (3, 3)
 
         # One row of patterns
         s_x_only = s.inav[:, 0]
@@ -304,10 +310,13 @@ class TestKikuchipyH5EBSD:
         assert s_x_only2.data.shape == desired_shape
         assert s_x_only2.axes_manager.navigation_axes[0].name == "x"
         assert s_x_only2.axes_manager.navigation_extent == desired_nav_extent
+        assert s_x_only2.xmap.shape == (3,)
+        assert np.allclose(s_x_only2.xmap.x, np.arange(3) * 1.5)
+        assert s_x_only2.detector.pc.shape == (3, 3)
 
         # Maintain axis name
         s_y_only2.axes_manager["y"].name = "x"
-        with pytest.warns(UserWarning, match="^The `xmap`"):
+        with pytest.warns(UserWarning, match=r"Crystal map step size\(s\) \[0\] and "):
             s_y_only2.save(save_path_hdf5, overwrite=True)
         s_x_only3 = load(save_path_hdf5)
         assert s_x_only3.data.shape == desired_shape
@@ -319,8 +328,7 @@ class TestKikuchipyH5EBSD:
         s = nickel_ebsd_small()
         s0 = s.inav[0, 0]
         s0.save(save_path_hdf5)
-        with pytest.warns(DeprecationWarning, match="Calling nonzero"):
-            s1 = load(save_path_hdf5)
+        s1 = load(save_path_hdf5)
         assert s1.data.shape == (60, 60)
         assert s1.axes_manager.navigation_axes == ()
 
@@ -336,8 +344,8 @@ class TestKikuchipyH5EBSD:
         assert s.data.shape == s2.data.shape
         assert np.allclose(s.data, s2.data)
 
-    def test_load_with_detector_multiple_pc(self, ni_kikuchipy_h5ebsd_file):
-        s = kp.load(ni_kikuchipy_h5ebsd_file)
+    def test_load_with_detector_multiple_pc(self):
+        s = kp.data.nickel_ebsd_small()
         assert s.detector.pc.shape == (3, 3, 3)
 
     def test_writer_check_file(self, save_path_hdf5):

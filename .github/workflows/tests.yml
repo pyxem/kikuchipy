@@ -18,30 +18,36 @@ jobs:
     name: code style
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - uses: psf/black@stable
 
       - name: Install Black with Jupyter extension
-        run: pip install black[jupyter]
+        run: |
+          pip install black[jupyter]
 
       - name: Check code style of Jupyter notebooks
-        run: black --diff --line-length 77 doc/tutorials/*.ipynb
+        run: |
+          black --diff --line-length 77 doc/tutorials/*.ipynb
 
   # Make sure all necessary files are included in a release
   manifest:
     name: check manifest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install manifix
+        run: |
+          pip install manifix
 
       - name: Check MANIFEST.in file
-        run: python setup.py manifix
+        run: |
+          python setup.py manifix
 
   tests:
     name: ${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.LABEL }}
@@ -56,20 +62,15 @@ jobs:
           - os: ubuntu-latest
             python-version: 3.7
             OLDEST_SUPPORTED_VERSION: true
-            DEPENDENCIES: dask==2021.8.1 diffsims==0.5.0 hyperspy==1.7 matplotlib==3.3 numba==0.52 numpy==1.19 orix==0.9.0 scikit-image==0.16.2
+            DEPENDENCIES: dask==2021.8.1 diffsims==0.5.0 hyperspy==1.7.3 matplotlib==3.3 numba==0.55 numpy==1.19 orix==0.11.0 scikit-image==0.16.2
             LABEL: -oldest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-
-      - name: Display Python and pip versions
-        run: |
-          python -V
-          pip -V
 
       - name: Install dependencies and package
         shell: bash
@@ -77,15 +78,21 @@ jobs:
           pip install wheel
           pip install -U -e .'[tests]'
 
-      - name: Install optional dependencies
-        shell: bash
-        run: |
-          pip install -e .'[viz]'
-
       - name: Install oldest supported version
         if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
         run: |
           pip install ${{ matrix.DEPENDENCIES }}
+
+      - name: Install optional dependencies
+        shell: bash
+        run: |
+          pip install -e .'[all]'
+
+      - name: Display Python, pip and package versions
+        run: |
+          python -V
+          pip -V
+          pip list
 
       - name: Set up headless display necessary for PyVista on Linux
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -113,12 +120,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install xvfb
-          xvfb-run pytest --cov=kikuchipy --pyargs kikuchipy -n 2
+          xvfb-run pytest -n 2 --cov=kikuchipy --pyargs kikuchipy
 
       - name: Run tests on Windows and macOS
         if: ${{ matrix.os != 'ubuntu-latest' }}
         run: |
-          pytest --cov=kikuchipy --pyargs kikuchipy -n 2
+          pytest -n 2 --cov=kikuchipy --pyargs kikuchipy
 
       - name: Generate line coverage
         run: |

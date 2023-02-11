@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -59,6 +59,12 @@ signals:
     dtype: real
     lazy: True
     module: kikuchipy.signals.ecp_master_pattern
+  LazyVirtualBSEImage:
+    signal_type: VirtualBSEImage
+    signal_dimension: 2
+    dtype: real
+    lazy: True
+    module: kikuchipy.signals.virtual_bse_image
   VirtualBSEImage:
     signal_type: VirtualBSEImage
     signal_type_aliases:

@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from typing import Union
+
 from kikuchipy.release import version as __version__
 
 
@@ -25,9 +27,21 @@ try:
     _pyvista_installed = True
 except ImportError:  # pragma: no cover
     _pyvista_installed = False
+try:
+    import nlopt
+
+    _nlopt_installed = True
+except ImportError:  # pragma: no cover
+    _nlopt_installed = False
+try:
+    from pyebsdindex import pcopt, ebsd_index
+
+    _pyebsdindex_installed = True
+except ImportError:  # pragma: no cover
+    _pyebsdindex_installed = False
 
 
-def set_log_level(level: str):  # pragma: no cover
+def set_log_level(level: Union[int, str]):  # pragma: no cover
     """Set level of kikuchipy logging messages.
 
     Parameters
@@ -43,11 +57,20 @@ def set_log_level(level: str):  # pragma: no cover
 
     Examples
     --------
+    Note that you might have to set the logging level of the root stream
+    handler to display kikuchipy's debug messages, as this handler might
+    have been initialized by another package
+
+    >>> import logging
+    >>> logging.root.handlers[0]  # doctest: +SKIP
+    <StreamHandler <stderr> (INFO)>
+    >>> logging.root.handlers[0].setLevel("DEBUG")
+
     >>> import kikuchipy as kp
     >>> kp.set_log_level("DEBUG")
-    >>> s = kp.data.nickel_ebsd_small()
-    >>> s2 = s.deepcopy()  # doctest: +SKIP
-    DEBUG:kikuchipy.signals._kikuchipy_signal:Transfer custom properties when deep copying
+    >>> s = kp.data.nickel_ebsd_master_pattern_small()
+    >>> s.set_signal_type("EBSD")  # doctest: +SKIP
+    DEBUG:kikuchipy.signals._kikuchi_master_pattern:Delete custom attributes when setting signal type
     """
     import logging
 
@@ -57,13 +80,14 @@ def set_log_level(level: str):  # pragma: no cover
 
 __all__ = [
     "__version__",
+    "_pyebsdindex_installed",
     "_pyvista_installed",
-    "crystallography",
     "data",
     "detectors",
     "draw",
     "filters",
     "generators",
+    "imaging",
     "indexing",
     "io",
     "load",

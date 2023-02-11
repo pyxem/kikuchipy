@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -21,6 +21,7 @@ from numba import njit
 import numpy as np
 from scipy.ndimage import gaussian_filter
 from scipy.fft import fft2, rfft2, ifft2, irfft2, fftshift, ifftshift
+from skimage.exposure import equalize_adapthist
 from skimage.util.dtype import dtype_range
 
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
@@ -32,6 +33,7 @@ def rescale_intensity(
     in_range: Optional[Tuple[Union[int, float], ...]] = None,
     out_range: Optional[Tuple[Union[int, float], ...]] = None,
     dtype_out: Union[str, np.dtype, type, None] = None,
+    percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
 ) -> np.ndarray:
     """Rescale intensities in an EBSD pattern.
 
@@ -54,6 +56,9 @@ def rescale_intensity(
     dtype_out
         Data type of the rescaled pattern. If not given, it is set to
         the same data type as the input pattern.
+    percentiles
+        Disregard intensities outside these percentiles. Calculated
+        per pattern. Will overwrite ``in_range`` if given.
 
     Returns
     -------
@@ -65,8 +70,11 @@ def rescale_intensity(
     else:
         dtype_out = np.dtype(dtype_out)
 
+    if percentiles is not None:
+        in_range = np.nanpercentile(pattern, q=percentiles)
+
     if in_range is None:
-        imin, imax = np.min(pattern), np.max(pattern)
+        imin, imax = np.nanmin(pattern), np.nanmax(pattern)
     else:
         imin, imax = in_range
         pattern = np.clip(pattern, imin, imax)
@@ -143,9 +151,11 @@ def _normalize(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
     return patterns / patterns_norm_squared
 
 
-@njit(cache=True, fastmath=True, nogil=True)
 def normalize_intensity(
-    pattern: np.ndarray, num_std: int = 1, divide_by_square_root: bool = False
+    pattern: np.ndarray,
+    num_std: int = 1,
+    divide_by_square_root: bool = False,
+    dtype_out: Union[type, None] = None,
 ) -> np.ndarray:
     """Normalize image intensities to a mean of zero and a given
     standard deviation.
@@ -162,6 +172,9 @@ def normalize_intensity(
     divide_by_square_root
         Whether to divide output intensities by the square root of the
         image size (default is ``False``).
+    dtype_out
+        Data type of the normalized pattern. If not given, it is set to
+        the same data type as the input pattern.
 
     Returns
     -------
@@ -174,11 +187,23 @@ def normalize_intensity(
     ``float32`` with :meth:`numpy.ndarray.astype`, before normalizing
     the intensities.
     """
+    normalized_pattern = _normalize_intensity(pattern, num_std, divide_by_square_root)
+
+    if dtype_out is not None:
+        normalized_pattern = normalized_pattern.astype(dtype_out)
+
+    return normalized_pattern
+
+
+@njit(cache=True, fastmath=True, nogil=True)
+def _normalize_intensity(
+    pattern: np.ndarray,
+    num_std: int = 1,
+    divide_by_square_root: bool = False,
+) -> np.ndarray:
     pattern_mean = np.mean(pattern)
     pattern_std = np.std(pattern)
-
     pattern = pattern - pattern_mean
-
     if divide_by_square_root:
         return pattern / (num_std * pattern_std * np.sqrt(pattern.size))
     else:
@@ -223,7 +248,8 @@ def fft(
         The result of the 2D FFT.
     """
     if apodization_window is not None:
-        pattern = pattern * apodization_window
+        pattern = pattern.astype(np.float64)
+        pattern *= apodization_window
 
     if real_fft_only:
         fft_use = rfft2
@@ -745,3 +771,78 @@ def _get_image_quality_numba(
     inertia = np.sum(spectrum * frequency_vectors) / np.sum(spectrum)
 
     return 1 - (inertia / inertia_max)
+
+
+@njit("float32[:, :](float32[:, :], int64)", cache=True, fastmath=True, nogil=True)
+def _bin2d(pattern: np.ndarray, factor: int) -> np.ndarray:
+    n_rows_new = pattern.shape[0] // factor
+    n_cols_new = pattern.shape[1] // factor
+
+    new_pattern = np.zeros((n_rows_new, n_cols_new), dtype=pattern.dtype)
+
+    for r in range(n_rows_new):
+        for rr in range(r * factor, (r + 1) * factor):
+            for c in range(n_cols_new):
+                value = new_pattern[r, c]
+                for cc in range(c * factor, (c + 1) * factor):
+                    value += pattern[rr, cc]
+                new_pattern[r, c] = value
+
+    return new_pattern
+
+
+@njit(cache=True, fastmath=True, nogil=True)
+def _downsample2d(
+    pattern: np.ndarray,
+    factor: int,
+    omin: Union[int, float],
+    omax: Union[int, float],
+    dtype_out: np.dtype,
+) -> np.ndarray:
+    pattern = pattern.astype(np.float32)
+    binned_pattern = _bin2d(pattern, factor)
+    imin = np.min(binned_pattern)
+    imax = np.max(binned_pattern)
+    rescaled_pattern = _rescale_with_min_max(binned_pattern, imin, imax, omin, omax)
+    return rescaled_pattern.astype(dtype_out)
+
+
+def _adaptive_histogram_equalization(
+    image: np.ndarray,
+    kernel_size: Union[Tuple[int, int], List[int]],
+    clip_limit: Union[int, float] = 0,
+    nbins: int = 128,
+) -> np.ndarray:
+    """Local contrast enhancement with adaptive histogram equalization.
+
+    This method makes use of :func:`skimage.exposure.equalize_adapthist`.
+
+    Parameters
+    ----------
+    image
+        Image (e.g. EBSD pattern).
+    kernel_size
+        Shape of contextual regions for adaptive histogram equalization.
+    clip_limit
+        Clipping limit, normalized between 0 and 1 (higher values give
+        more contrast). Default is 0.
+    nbins
+        Number of gray bins for histogram. Default is 128.
+
+    Returns
+    -------
+    image_eq
+        Image with enhanced contrast.
+    """
+    dtype_in = image.dtype.type
+
+    image_eq = equalize_adapthist(
+        image,
+        kernel_size=kernel_size,
+        clip_limit=clip_limit,
+        nbins=nbins,
+    )
+
+    image_eq = rescale_intensity(image_eq, dtype_out=dtype_in)
+
+    return image_eq

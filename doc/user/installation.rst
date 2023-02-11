@@ -31,17 +31,29 @@ To install a specific version of kikuchipy (say version 0.5.8)::
 Optional dependencies
 ---------------------
 
-Some dependencies are optional and available via the following selectors:
+Some functionality is optional and requires extra dependencies which must be installed
+manually:
 
-======== ====================================== ==========================
-Selector Package(s)                             Purpose
-======== ====================================== ==========================
-``viz``  :doc:`pyvista<pyvista:index>`          3D plot of master patterns
-======== ====================================== ==========================
+- :doc:`pyebsdindex<pyebsdindex:index>`: Hough indexing. We recommend to install with
+  optional GPU support via :doc:`pyopencl<pyopencl:index>` with
+  ``pip install pyebsdindex[gpu]`` or ``conda install pyebsdindex``.
+- `nlopt <https://nlopt.readthedocs.io/en/latest/NLopt_Python_Reference/>`_: Extra
+  optimization algorithms used in EBSD orientation and/or projection center refinement.
+- :doc:`pyvista<pyvista:index>`: 3D plotting of master patterns.
 
-Installing optional dependencies::
+Install all optional dependencies::
 
-    pip install kikuchipy[viz]
+    pip install kikuchipy[all]
+
+Note that this command will not install ``pyopencl``, which is required for GPU support
+in ``pyebsdindex``. If the above command failed for some reason, one can try to install
+each optional dependency individually.
+
+.. warning::
+
+    The option to install optional dependency ``pyvista`` via
+    ``pip install kikuchipy[viz]`` will be removed in version 0.9. Please install
+    manually or via ``pip install kikuchipy[all]`` instead.
 
 .. _install-with-anaconda:
 

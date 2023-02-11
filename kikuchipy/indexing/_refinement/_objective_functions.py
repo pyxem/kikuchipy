@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -25,7 +25,7 @@ import numpy as np
 from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
     _ncc_single_patterns_1d_float32_exp_centered,
 )
-from kikuchipy._rotation import _rotation_from_rodrigues
+from kikuchipy._rotation import _rotation_from_euler
 from kikuchipy.signals.util._master_pattern import (
     _project_single_pattern_from_master_pattern,
     _get_direction_cosines_for_fixed_pc,
@@ -39,8 +39,7 @@ def _refine_orientation_objective_function(x: np.ndarray, *args) -> float:
     Parameters
     ----------
     x
-        1D array containing the Rodrigues-Frank vector components (Rx,
-        Ry, Rz).
+        1D array containing the Euler angles (phi1, Phi, phi2).
     *args
         Tuple of fixed parameters needed to completely specify the
         function. The expected contents are:
@@ -56,10 +55,10 @@ def _refine_orientation_objective_function(x: np.ndarray, *args) -> float:
 
     Returns
     -------
-        Objective function value (normalized cross-correlation score).
+        Normalized cross-correlation score.
     """
     simulated = _project_single_pattern_from_master_pattern(
-        rotation=_rotation_from_rodrigues(*x),
+        rotation=_rotation_from_euler(*x),
         direction_cosines=args[1],
         master_upper=args[2],
         master_lower=args[3],
@@ -74,7 +73,7 @@ def _refine_orientation_objective_function(x: np.ndarray, *args) -> float:
     return 1 - _ncc_single_patterns_1d_float32_exp_centered(args[0], simulated, args[7])
 
 
-def _refine_projection_center_objective_function(x: np.ndarray, *args) -> float:
+def _refine_pc_objective_function(x: np.ndarray, *args) -> float:
     """Objective function to be minimized when optimizing projection
     center (PC) parameters PCx, PCy, and PCz.
 
@@ -103,7 +102,7 @@ def _refine_projection_center_objective_function(x: np.ndarray, *args) -> float:
 
     Returns
     -------
-        Objective function value (normalized cross-correlation score).
+        Normalized cross-correlation score.
     """
     dc = _get_direction_cosines_for_fixed_pc(
         pcx=x[0],
@@ -114,7 +113,7 @@ def _refine_projection_center_objective_function(x: np.ndarray, *args) -> float:
         tilt=args[10],
         azimuthal=args[11],
         sample_tilt=args[12],
-        mask=args[7],
+        signal_mask=args[7],
     )
     simulated = _project_single_pattern_from_master_pattern(
         rotation=args[1],
@@ -134,17 +133,15 @@ def _refine_projection_center_objective_function(x: np.ndarray, *args) -> float:
     )
 
 
-def _refine_orientation_projection_center_objective_function(
-    x: np.ndarray, *args
-) -> float:
+def _refine_orientation_pc_objective_function(x: np.ndarray, *args) -> float:
     """Objective function to be minimized when optimizing orientations
     and projection center (PC) parameters PCx, PCy, and PCz.
 
     Parameters
     ----------
     x
-        1D array containing the Rodrigues-Frank vector components (Rx,
-        Ry, Rz) and PC parameters (PCx, PCy, PCz).
+        1D array containing the Euler angle triplet (phi1, Phi, phi2)
+        and PC parameters (PCx, PCy, PCz).
     *args
         Tuple of fixed parameters needed to completely specify the
         function. The expected contents are:
@@ -165,7 +162,7 @@ def _refine_orientation_projection_center_objective_function(
 
     Returns
     -------
-        Objective function value (normalized cross-correlation score).
+        normalized cross-correlation score.
     """
     dc = _get_direction_cosines_for_fixed_pc(
         pcx=x[3],
@@ -176,10 +173,10 @@ def _refine_orientation_projection_center_objective_function(
         tilt=args[9],
         azimuthal=args[10],
         sample_tilt=args[11],
-        mask=args[6],
+        signal_mask=args[6],
     )
     simulated = _project_single_pattern_from_master_pattern(
-        rotation=_rotation_from_rodrigues(*x[:3]),
+        rotation=_rotation_from_euler(*x[:3]),
         direction_cosines=dc,
         master_upper=args[1],
         master_lower=args[2],

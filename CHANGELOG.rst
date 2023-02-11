@@ -13,6 +13,191 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+0.8.0 (2023-02-11)
+==================
+
+Added
+-----
+- ``kikuchipy.imaging.VirtualBSEImager`` replaces the
+  ``kikuchipy.generators.VirtualBSEGenerator`` class.
+  (`#608 <https://github.com/pyxem/kikuchipy/pull/608>`_)
+- Adaptive histogram equalization is available to all signals.
+  (`#606 <https://github.com/pyxem/kikuchipy/pull/606>`_)
+- Option to return a new signal (lazy or not) instead of operating inplace is added to
+  many methods in all classes via ``inplace`` and ``lazy_output`` boolean parameters.
+  (`#605 <https://github.com/pyxem/kikuchipy/pull/605>`_)
+- Lazy version of the ``VirtualBSEImage`` class.
+  (`#605 <https://github.com/pyxem/kikuchipy/pull/605>`_)
+- Allow providing a color for simulator reflections when plotting with Matplotlib.
+  (`#599 <https://github.com/pyxem/kikuchipy/pull/599>`_)
+- Passing pseudo-symmetry operators to orientation and orientation/PC EBSD refinement
+  methods in order to find the best match among pseudo-symmetric variants.
+  (`#598 <https://github.com/pyxem/kikuchipy/pull/598>`_)
+- Saving and loading of an ``EBSDDetector``.
+  (`#595 <https://github.com/pyxem/kikuchipy/pull/595>`_)
+- EBSD refinement methods now return the number of function evaluations.
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+- Which points in a crystal map to refine can be controlled by passing a navigation
+  mask. (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+- Which points to consider when merging crystal maps can be controlled by passing
+  navigation masks.  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+- Which patterns to do dictionary indexing of can be controlled by passing a navigation
+  mask. (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+- Downsampling of EBSD patterns which maintain the data type by also rescaling to the
+  data type range. (`#592 <https://github.com/pyxem/kikuchipy/pull/592>`_)
+- Method to get a PyEBSDIndex ``EBSDIndexer`` instance from an ``EBSDDetector``,
+  convenient for either indexing with PyEBSDIndex or for use with kikuchipy.
+  (`#590 <https://github.com/pyxem/kikuchipy/pull/590>`_)
+- Convenience function to get a ``CrystalMap`` from a PyEBSDIndex Hough indexing result
+  array. (`#590 <https://github.com/pyxem/kikuchipy/pull/590>`_)
+- PyEBSDIndex as an optional dependency.
+  (`#590 <https://github.com/pyxem/kikuchipy/pull/590>`_)
+- Two tutorials showing projection center (PC) fitting and extrapolation to obtain a
+  plane of PCs to index a full dataset.
+  (`#588 <https://github.com/pyxem/kikuchipy/pull/588>`_)
+- Tutorial showing sloppy projection center (PC)/orientation optimization landscape of
+  the Ni dataset from Jackson et al. (2019), replicating the results from Pang et al.
+  (2020). (`#588 <https://github.com/pyxem/kikuchipy/pull/588>`_)
+- Method ``EBSDDetector.fit_pc()`` to fit a plane using a projective or affine
+  transformation to projection centers following work by Winkelmann and co-workers
+  (2020). (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
+- Method ``EBSDDetector.extrapolate_pc()`` to return a new detector with a plane of
+  projection centers (PCs) extrapolated from a mean PC calculated from one or more PCs
+  following work by Singh et al. (2017).
+  (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
+- Methods ``EBSDDetector.estimate_xtilt()`` and ``EBSDDetector.estimate_xtilt_ztilt()``
+  to estimate the tilts about the detector X and Z axes which bring the detector plane
+  normal parallel to the sample plane normal, following work by Winkelmann and
+  co-workers (2020). (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
+- Method ``EBSDDetector.plot_pc()`` to plot projection centers (PCs) in maps, scatter
+  plots or in 3D. (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
+- Convenience function ``kikuchipy.draw.plot_pattern_positions_in_map()`` to plot
+  positions of selected patterns (typically calibration patterns) in a 2D map.
+  (`#587 <https://github.com/pyxem/kikuchipy/pull/587>`_)
+- EBSD signal returned from NORDIF calibration pattern reader tries to add the following
+  new info to the original metadata: Shapes of area and region of interest (ROI), offset
+  of ROI, calibration pattern indices and area overview image. All shapes and
+  coordinates are given both in units of area overview image pixels and scaled according
+  to the pixels in the ROI (actual navigation shape).
+  (`#586 <https://github.com/pyxem/kikuchipy/pull/586>`_)
+- Method ``EBSD.extract_grid()`` to get a new signal from grid positions evenly spaced
+  in navigation space. (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
+- Utility function ``grid_indices()`` to extract a smaller 1D or 2D grid of indices from
+  a larger grid. (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
+- Seven EBSD master pattern files simulated with EMsoft are available from
+  ``ebsd_master_pattern()`` via the data module for download to the local cache:
+  aluminium, nickel, silicon, austenite, ferrite, a chi-phase in steel and a sigma-phase
+  in steel. (`#584 <https://github.com/pyxem/kikuchipy/pull/584>`_,
+  `#607 <https://github.com/pyxem/kikuchipy/pull/607>`_)
+- Some experimental EBSD datasets are available for download to the local cache via the
+  data module: (50, 50) patterns of (480, 480) pixels from an Si wafer via
+  ``si_wafer()``, ten full Ni datasets of (149, 200) patterns of (60, 60) pixels via
+  ``ni_gain(number)`` (number 1-10) (parts of number 1 are used in
+  ``nickel_ebsd_small()/large()``) and the calibration patterns of the ten Ni datasets,
+  ``ni_gain_calibration(number)``.
+  (`#584 <https://github.com/pyxem/kikuchipy/pull/584>`_,
+  `#593 <https://github.com/pyxem/kikuchipy/pull/593>`_,
+  `#607 <https://github.com/pyxem/kikuchipy/pull/607>`_)
+- When using the following HyperSpy ``Signal2D`` methods via the ``EBSD`` class, the
+  class attributes ``xmap``, ``static_background`` and ``detector`` are handled
+  correctly, which they were not before: ``inav``, ``isig``, ``crop()``,
+  ``crop_image()``. If handling fails, the old behavior is retained. This handling is
+  experimental. (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
+- ``EBSDDetector.crop()`` method to get a new detector with its shape cropped, also
+  updating the PC values accordingly.
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
+
+Changed
+-------
+- Minimal version of orix set to >= 0.11 and of numba set to >= 0.55.
+  (`#608 <https://github.com/pyxem/kikuchipy/pull/608>`_)
+- Added warnings when trying to perform adaptive histogram equalization on a signal with
+  data in floating type or when some of the data is NaN.
+  (`#606 <https://github.com/pyxem/kikuchipy/pull/606>`_)
+- Dask arrays returned from EBSD refinement methods has the number of function
+  evaluations as the second element after the score.
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+- Stricter phase comparison in EBSD refinement. The phase in the crystal map points to
+  refine must have the same name, space group, point group and structure (atoms and
+  lattice) as the master pattern phase.
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+- Passing two crystal maps with identical phases when merging returns a map with one
+  phase instead of two and does not raise a warning, as before.
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+- Exclude documentation and tests from source distribution.
+  (`#588 <https://github.com/pyxem/kikuchipy/pull/588>`_)
+- Minimal version of HyperSpy increased to >= 1.7.3.
+  (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
+- Minimal version of Numba increased to >= 0.52.
+  (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
+- When binning the navigation dimension(s) with ``EBSD.rebin()``, the class attributes
+  ``xmap`` and ``static_background`` are set to ``None`` and ``detector.pc`` is set to
+  ``[0.5, 0.5, 0.5]`` in the appropriate navigation shape. If the signal dimension(s)
+  are binned, the ``static_background`` is binned similarly while the ``detector.shape``
+  and ``detector.binning`` are updated. If this handling of attributes fails, the old
+  behavior is retained. This handling is experimental.
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
+- EBSD signal loaded with ``nickel_ebsd_small()`` and ``nickel_ebsd_large()`` now
+  contain crystal maps with orientations and detectors with PC values found from Hough
+  indexing with PyEBSDIndex followed by orientation and PC refinement.
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_,
+  `#584 <https://github.com/pyxem/kikuchipy/pull/584>`_)
+- Minimal version of Matplotlib is 3.5.0 when installing optional dependencies with
+  ``pip install kikuchipy[viz]`` since PyVista requires this.
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
+
+Deprecated
+----------
+- ``kikuchipy.generators.VirtualBSEGenerator`` class is deprecated and will be removed
+  in version 0.9. Use ``kikuchipy.imaging.VirtualBSEImager`` instead.
+  (`#608 <https://github.com/pyxem/kikuchipy/pull/608>`_)
+- The data module functions ``silicon_ebsd_moving_screen_x()``, where "x" is "in",
+  "out5mm" or "out10mm", are deprecated and will be removed in v0.9. Use
+  ``si_ebsd_moving_screen(distance)`` instead, where ``distance`` is ``0`` (in), ``5``
+  or ``10``. (`#607 <https://github.com/pyxem/kikuchipy/pull/607>`_)
+- The PyPI selector ``viz`` is replaced by ``all``, which installs all optional
+  dependencies. ``viz`` will be removed in version 0.9. Install optional dependencies
+  manually or via ``pip install kikuchipy[all]``.
+  (`#590 <https://github.com/pyxem/kikuchipy/pull/590>`_)
+- ``projections`` module with classes ``GnomonicProjection``, ``HesseNormalForm``,
+  ``LambertProjection`` and ``SphericalProjection``. These will be removed in version
+  0.9.0, as they are unused internally. If you depend on this module, please open an
+  issue at https://github.com/pyxem/kikuchipy/issues.
+  (`#577 <https://github.com/pyxem/kikuchipy/pull/577>`_)
+
+Removed
+-------
+- ``mask`` parameter in EBSD refinement methods; use ``signal_mask`` instead.
+  (`#577 <https://github.com/pyxem/kikuchipy/pull/577>`_)
+- ``ebsd_projections`` module. (`#577 <https://github.com/pyxem/kikuchipy/pull/577>`_)
+
+Fixed
+-----
+- Default ``EBSD.detector.shape`` is now correct when a detector is not passed upon
+  initialization. (`#603 <https://github.com/pyxem/kikuchipy/pull/603>`_)
+- Oxford Instruments .ebsp files of version 4 can now be read.
+  (`#602 <https://github.com/pyxem/kikuchipy/pull/602>`_)
+- When loading EBSD patterns from H5OINA files, the detector tilt and binning are
+  available in the returned signal's ``detector`` attribute.
+  (`#600 <https://github.com/pyxem/kikuchipy/pull/600>`_)
+- Range of (kinematical) intensities in ``KikuchiPatternSimulator.plot()`` maximizes the
+  strongest reflectors (make black) instead of minimizing the weakest reflectors (make
+  white), which was the previous behavior.
+  (`#599 <https://github.com/pyxem/kikuchipy/pull/599>`_)
+- Inversion of ``signal_mask`` in the normalized cross-correlation and normalized dot
+  product metrics is now done internally, to be in line with the docstrings (does not
+  affect the use of this parameter and ``metric="ncc"`` or ``metric="ndp"`` in
+  ``EBSD.dictionary_indexing()``).
+  (`#593 <https://github.com/pyxem/kikuchipy/pull/593>`_)
+- ``EBSDDetector.pc_average`` no longer rounds the PC to three decimals.
+  (`#586 <https://github.com/pyxem/kikuchipy/pull/586>`_)
+- Microscope magnification is now read correctly from EDAX h5ebsd files.
+  (`#586 <https://github.com/pyxem/kikuchipy/pull/586>`_)
+- kikuchipy h5ebsd reader can read a signal with an EBSD detector with a PC array of
+  different navigation shape than determined from the HDF5 file's navigation shape
+  (e.g. ``Scan 1/EBSD/Header/n_columns`` and ``n_rows``).
+  (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
+
 0.7.0 (2022-10-29)
 ==================
 

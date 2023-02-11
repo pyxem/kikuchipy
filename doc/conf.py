@@ -54,7 +54,11 @@ extensions = [
 # packages
 intersphinx_mapping = {
     # Package
+    "black": ("https://black.readthedocs.io/en/stable", None),
+    "conda": ("https://conda.io/projects/conda/en/latest", None),
+    "coverage": ("https://coverage.readthedocs.io/en/latest", None),
     "dask": ("https://docs.dask.org/en/stable", None),
+    "defdap": ("https://defdap.readthedocs.io/en/latest", None),
     "diffpy.structure": ("https://www.diffpy.org/diffpy.structure", None),
     "diffsims": ("https://diffsims.readthedocs.io/en/latest", None),
     "hyperspy": ("https://hyperspy.org/hyperspy-doc/current", None),
@@ -63,24 +67,23 @@ intersphinx_mapping = {
     "matplotlib": ("https://matplotlib.org/stable", None),
     "numba": ("https://numba.pydata.org/numba-doc/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
-    "orix": ("https://orix.readthedocs.io/en/stable", None),
-    "pooch": ("https://www.fatiando.org/pooch/latest", None),
-    "pyebsdindex": ("https://pyebsdindex.readthedocs.io/en/stable", None),
-    "python": ("https://docs.python.org/3", None),
-    "pyvista": ("https://docs.pyvista.org", None),
-    "scipy": ("https://docs.scipy.org/doc/scipy", None),
-    "skimage": ("https://scikit-image.org/docs/stable", None),
-    "sklearn": ("https://scikit-learn.org/stable", None),
-    # Docs
-    "black": ("https://black.readthedocs.io/en/stable", None),
-    "conda": ("https://conda.io/projects/conda/en/latest", None),
-    "defdap": ("https://defdap.readthedocs.io/en/latest", None),
     "nbsphinx": ("https://nbsphinx.readthedocs.io/en/latest", None),
     "nbval": ("https://nbval.readthedocs.io/en/latest", None),
     "numpydoc": ("https://numpydoc.readthedocs.io/en/latest", None),
-    "pythreejs": ("https://pythreejs.readthedocs.io/en/stable", None),
+    "orix": ("https://orix.readthedocs.io/en/stable", None),
+    "panel": ("https://panel.holoviz.org", None),
+    "pooch": ("https://www.fatiando.org/pooch/latest", None),
+    "pyebsdindex": ("https://pyebsdindex.readthedocs.io/en/stable", None),
+    "pyopencl": ("https://documen.tician.de/pyopencl/", None),
+    "pytest": ("https://docs.pytest.org/en/stable", None),
+    #    "pythreejs": ("https://pythreejs.readthedocs.io/en/stable", None),
+    "python": ("https://docs.python.org/3", None),
+    "pyvista": ("https://docs.pyvista.org", None),
     "pyxem": ("https://pyxem.readthedocs.io/en/latest", None),
     "readthedocs": ("https://docs.readthedocs.io/en/stable", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
+    "skimage": ("https://scikit-image.org/docs/stable", None),
+    "sklearn": ("https://scikit-learn.org/stable", None),
     "sphinx": ("https://www.sphinx-doc.org/en/master", None),
     "sphinx-gallery": ("https://sphinx-gallery.github.io/stable", None),
     "xcdskd": ("https://xcdskd.readthedocs.io/en/latest", None),
@@ -251,7 +254,8 @@ def linkcode_resolve(domain, info):
 # -------
 # https://docs.pyvista.org
 pyvista.global_theme.window_size = [600, 600]
-pyvista.set_jupyter_backend("pythreejs")
+pyvista.set_jupyter_backend("panel")
+pyvista.start_xvfb()
 
 # -- Copy button customization (taken from PyVista)
 # Exclude traditional Python prompts from the copied code
@@ -343,4 +347,4 @@ autosummary_generate = True
 # Download example datasets prior to building the docs
 print("[kikuchipy] Downloading example datasets (if not found in cache)")
 _ = kp.data.nickel_ebsd_large(allow_download=True)
-_ = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
+_ = kp.data.si_ebsd_moving_screen(0, allow_download=True)

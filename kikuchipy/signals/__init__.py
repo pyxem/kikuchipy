@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -36,6 +36,7 @@ __all__ = [
     "LazyEBSD",
     "LazyEBSDMasterPattern",
     "LazyECPMasterPattern",
+    "LazyVirtualBSEImage",
     "VirtualBSEImage",
     "util",
 ]
@@ -53,6 +54,7 @@ def __getattr__(name):
         "LazyEBSD": "ebsd",
         "LazyEBSDMasterPattern": "ebsd_master_pattern",
         "LazyECPMasterPattern": "ecp_master_pattern",
+        "LazyVirtualBSEImage": "virtual_bse_image",
         "VirtualBSEImage": "virtual_bse_image",
     }
     if name in __all__:

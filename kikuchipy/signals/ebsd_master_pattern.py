@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -16,7 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import dask
 import dask.array as da
@@ -431,12 +431,16 @@ class EBSDMasterPattern(KikuchiMasterPattern):
         divide_by_square_root: bool = False,
         dtype_out: Union[str, np.dtype, type, None] = None,
         show_progressbar: Optional[bool] = None,
-    ) -> None:
-        super().normalize_intensity(
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, EBSDMasterPattern, LazyEBSDMasterPattern]:
+        return super().normalize_intensity(
             num_std=num_std,
             divide_by_square_root=divide_by_square_root,
             dtype_out=dtype_out,
             show_progressbar=show_progressbar,
+            inplace=inplace,
+            lazy_output=lazy_output,
         )
 
     def rescale_intensity(
@@ -449,14 +453,36 @@ class EBSDMasterPattern(KikuchiMasterPattern):
         ] = None,
         percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
         show_progressbar: Optional[bool] = None,
-    ) -> None:
-        super().rescale_intensity(
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, EBSDMasterPattern, LazyEBSDMasterPattern]:
+        return super().rescale_intensity(
             relative=relative,
             in_range=in_range,
             out_range=out_range,
             dtype_out=dtype_out,
             percentiles=percentiles,
             show_progressbar=show_progressbar,
+            inplace=inplace,
+            lazy_output=lazy_output,
+        )
+
+    def adaptive_histogram_equalization(
+        self,
+        kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
+        clip_limit: Union[int, float] = 0,
+        nbins: int = 128,
+        show_progressbar: Optional[bool] = None,
+        inplace: bool = True,
+        lazy_output: Optional[bool] = None,
+    ) -> Union[None, EBSDMasterPattern, LazyEBSDMasterPattern]:
+        return super().adaptive_histogram_equalization(
+            kernel_size,
+            clip_limit,
+            nbins,
+            show_progressbar,
+            inplace,
+            lazy_output,
         )
 
     # --- Inherited methods from Signal2D overwritten. If the inherited

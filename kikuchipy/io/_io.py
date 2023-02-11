@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -81,8 +81,8 @@ def load(
 ]:
     """Load an :class:`~kikuchipy.signals.EBSD`,
     :class:`~kikuchipy.signals.EBSDMasterPattern` or
-    :class:`~kikuchipy.signals.ECPMasterPattern` signal from a
-    supported file format.
+    :class:`~kikuchipy.signals.ECPMasterPattern` signal from one of the
+    :ref:`/tutorials/load_save_data.ipynb#Supported-file-formats`.
 
     This function is a modified version of :func:`hyperspy.io.load`.
 
@@ -115,14 +115,15 @@ def load(
     >>> import kikuchipy as kp
     >>> s = kp.load(DATA_DIR + "/patterns.h5")
     >>> s
-    <EBSD, title: patterns My awes0m4 ..., dimensions: (3, 3|60, 60)>
+    <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
     """
+    filename = str(filename)
+
     if not os.path.isfile(filename):
         is_wildcard = False
-        if isinstance(filename, str):
-            filenames = glob.glob(filename)
-            if len(filenames) > 0:
-                is_wildcard = True
+        filenames = glob.glob(filename)
+        if len(filenames) > 0:
+            is_wildcard = True
         if not is_wildcard:
             raise IOError(f"No filename matches '{filename}'.")
 
@@ -363,7 +364,7 @@ def _assign_signal_subclass(
 
 
 def _save(
-    filename: str,
+    filename: Union[str, Path],
     signal,
     overwrite: Optional[bool] = None,
     add_scan: Optional[bool] = None,
@@ -388,6 +389,8 @@ def _save(
     **kwargs :
         Keyword arguments passed to the writer.
     """
+    filename = str(filename)
+
     ext = os.path.splitext(filename)[1][1:]
     if ext == "":  # Will write to kikuchipy's h5ebsd format
         ext = "h5"

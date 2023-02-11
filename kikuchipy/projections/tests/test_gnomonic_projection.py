@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -17,6 +17,7 @@
 
 from orix.vector import Vector3d
 import numpy as np
+import pytest
 
 from kikuchipy.projections.gnomonic_projection import GnomonicProjection
 
@@ -40,7 +41,8 @@ class TestGnomonicProjection:
                 [0.7585, 0.1885, 0.2678],
             ]
         )
-        xy = GnomonicProjection.vector2xy(v)
+        with pytest.warns(np.VisibleDeprecationWarning):
+            xy = GnomonicProjection.vector2xy(v)
 
         # Desired project result?
         assert np.allclose(
@@ -63,7 +65,8 @@ class TestGnomonicProjection:
         )
 
         # Same result passing Vector3d
-        assert np.allclose(xy, GnomonicProjection.vector2xy(Vector3d(v)))
+        with pytest.warns(np.VisibleDeprecationWarning):
+            assert np.allclose(xy, GnomonicProjection.vector2xy(Vector3d(v)))
 
     def test_iproject(self):
         """Projecting Gnomonic coordinates to cartesian coordinates
@@ -84,21 +87,22 @@ class TestGnomonicProjection:
             ]
         )
 
-        assert np.allclose(
-            GnomonicProjection.xy2vector(xy).data,
-            np.array(
-                [
-                    [0.5316, 0.7603, 0.3729],
-                    [0.4538, 0.6761, 0.5803],
-                    [0.6800, 0.5954, 0.4278],
-                    [0.5272, 0.6809, 0.5082],
-                    [0.6103, 0.0519, 0.7904],
-                    [0.6563, 0.4426, 0.6109],
-                    [0.4308, 0.6657, 0.6091],
-                    [0.7374, 0.4275, 0.5228],
-                    [0.1784, 0.9818, 0.06480],
-                    [0.9181, 0.2281, 0.3240],
-                ]
-            ),
-            atol=1e-2,
-        )
+        with pytest.warns(np.VisibleDeprecationWarning):
+            assert np.allclose(
+                GnomonicProjection.xy2vector(xy).data,
+                np.array(
+                    [
+                        [0.5316, 0.7603, 0.3729],
+                        [0.4538, 0.6761, 0.5803],
+                        [0.6800, 0.5954, 0.4278],
+                        [0.5272, 0.6809, 0.5082],
+                        [0.6103, 0.0519, 0.7904],
+                        [0.6563, 0.4426, 0.6109],
+                        [0.4308, 0.6657, 0.6091],
+                        [0.7374, 0.4275, 0.5228],
+                        [0.1784, 0.9818, 0.06480],
+                        [0.9181, 0.2281, 0.3240],
+                    ]
+                ),
+                atol=1e-2,
+            )

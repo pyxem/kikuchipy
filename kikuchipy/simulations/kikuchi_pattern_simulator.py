@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -60,6 +60,7 @@ from typing import Optional, Union
 import dask.array as da
 from dask.diagnostics import ProgressBar
 from diffsims.crystallography import ReciprocalLatticeVector
+import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 from orix import projections
@@ -421,10 +422,12 @@ class KikuchiPatternSimulator:
         mode: Optional[str] = "lines",
         hemisphere: Optional[str] = "upper",
         scaling: Optional[str] = "linear",
-        figure=None,
+        figure: Union[None, plt.Figure, "pyvista.Plotter"] = None,
         return_figure: bool = False,
         backend: str = "matplotlib",
         show_plotter: bool = True,
+        color: str = "k",
+        **kwargs,
     ) -> Union[plt.Figure, "pyvista.Plotter"]:
         """Plot reflectors as lines or bands in the stereographic or
         spherical projection.
@@ -446,9 +449,9 @@ class KikuchiPatternSimulator:
         scaling
             Intensity scaling of the band kinematical intensities,
             either ``"linear"`` (default), :math:`|F|`, ``"square"``,
-            :math:`|F|^2`, or ``"None"``, giving all bands the same
-            intensity.
-        figure : matplotlib.figure.Figure or pyvista.Plotter, optional
+            :math:`|F|^2`, or ``None``, giving all bands the same
+            intensity. The intensity range is [0, highest intensity].
+        figure
             An existing :class:`~matplotlib.figure.Figure` or
             :class:`~pyvista.Plotter` to add the reflectors to. If not
             given, a new figure is created.
@@ -466,6 +469,15 @@ class KikuchiPatternSimulator:
             Whether to show the :class:`~pyvista.Plotter` when
             ``projection="spherical"`` and ``backend="pyvista"``.
             Default is ``True``.
+        color
+            Color to give reflectors. Either a string signifying a valid
+            Matplotlib color or ``"phase"``, which then uses the
+            :attr:`~orix.crystal_map.Phase.color_rgb` of the
+            :attr:`~kikuchipy.simulations.KikuchiPatternSimulator.phase`.
+            Default is black (``"k"``). Only used with Matplotlib.
+        **kwargs
+            Keyword arguments passed to
+            :meth:`~orix.vector.Vector3d.draw_circle`.
 
         Returns
         -------
@@ -495,58 +507,73 @@ class KikuchiPatternSimulator:
         if scaling == "linear":
             intensity = abs(self.reflectors.structure_factor)
             order = np.argsort(intensity)
-            scaling_title = r"$|F_{hkl}|$"
+            scaling_title = "|F_hkl|"
         elif scaling == "square":
             factor = self.reflectors.structure_factor
             intensity = abs(factor * factor.conjugate())
             order = np.argsort(intensity)
-            scaling_title = r"$|F|_{hkl}^2$"
+            scaling_title = "|F_hkl|^2"
         elif scaling is None:
-            intensity = np.zeros(self.reflectors.size)
+            intensity = np.ones(self.reflectors.size)
             order = np.arange(ref.size)
-            scaling_title = "None"
+            scaling_title = None
         else:
             raise ValueError(
                 "Unknown `scaling`, options are 'linear', 'square' or None"
             )
 
-        # Invert the intensity
+        if color == "phase":
+            color_rgb = self.phase.color_rgb
+        else:
+            color_rgb = mcolors.to_rgb(color)
         if scaling in ["linear", "square"]:
-            intensity /= np.max(intensity)
-            intensity = abs(intensity - intensity.min() - intensity.max())
-        color = np.full((ref.size, 3), intensity[:, np.newaxis])  # RGB
+            intensity_scaled = intensity / np.max(intensity)
+        else:
+            intensity_scaled = intensity.copy()
+        rgb = np.full((ref.size, 3), color_rgb)  # RGB
+        color = np.column_stack((rgb, intensity_scaled[:, np.newaxis]))  # RGBA
 
         # Sort reflectors so that weakest are plotted first
         ref = ref[order].deepcopy()
         color = color[order]
 
         if projection == "stereographic":
-            kwargs = dict(color=color, linewidth=0.5)
+            kwargs.setdefault("color", color)
+            if all(i not in kwargs for i in ["linewidth", "lw"]):
+                kwargs.setdefault("linewidth", 0.5)
+
             if mode == "lines":
-                if figure is not None:
-                    ref.draw_circle(figure=figure, **kwargs)
-                else:
+                if figure is None:
                     figure = ref.draw_circle(
                         hemisphere=hemisphere, return_figure=True, **kwargs
                     )
+                else:
+                    ref.draw_circle(figure=figure, **kwargs)
             else:  # bands
                 v = Vector3d(ref)
                 theta = ref.theta
-                if figure is not None:
-                    v.draw_circle(
-                        opening_angle=np.pi / 2 - theta, figure=figure, **kwargs
-                    )
-                else:
+                if figure is None:
                     figure = v.draw_circle(
                         opening_angle=np.pi / 2 - theta,
                         hemisphere=hemisphere,
                         return_figure=True,
                         **kwargs,
                     )
+                else:
+                    v.draw_circle(
+                        opening_angle=np.pi / 2 - theta, figure=figure, **kwargs
+                    )
                 v.draw_circle(opening_angle=np.pi / 2 + theta, figure=figure, **kwargs)
         elif projection == "spherical":
             figure = _plot_spherical(
-                mode, ref, color, backend, figure, show_plotter, scaling_title
+                mode,
+                ref,
+                color,
+                backend,
+                figure,
+                show_plotter,
+                scaling_title,
+                intensity[order],
             )
         else:
             raise ValueError(
@@ -607,6 +634,7 @@ def _plot_spherical(
     figure,
     show_plotter: bool,
     scaling_title: str,
+    intensity: np.ndarray,
 ):
     v = Vector3d(ref).unit
 
@@ -683,25 +711,28 @@ def _plot_spherical(
             circles_shape = circles.shape[:-1]
             circles = circles.reshape((-1, 3))
             lines = np.arange(circles.shape[0]).reshape(circles_shape)
-            color = color[:, 0]
         else:  # bands
             circles = np.vstack(circles)
             circles_shape = circles.shape[:-1]
             circles = circles.reshape((-1, 3))
             lines = np.arange(circles.shape[0]).reshape(circles_shape)
-            color = np.tile(color[:, 0], 2)
+            intensity = np.tile(intensity, 2)
+
+        if scaling_title is None:
+            mesh_kw = dict(show_scalar_bar=False, cmap="gray")
+        else:
+            mesh_kw = dict(
+                scalar_bar_args=dict(title=scaling_title, color="k"),
+                clim=[0, np.max(intensity)],
+                cmap="gray_r",
+            )
 
         # Create mesh from vertices (3D coordinates) and line
         # connectivity arrays
         lines = np.insert(lines, 0, steps, axis=1)
         lines = lines.ravel()
         mesh = pv.PolyData(circles, lines=lines)
-        figure.add_mesh(
-            mesh,
-            scalars=color,
-            cmap="gray",
-            scalar_bar_args=dict(title=scaling_title),
-        )
+        figure.add_mesh(mesh, scalars=intensity, **mesh_kw)
 
         if show_plotter:
             figure.show()

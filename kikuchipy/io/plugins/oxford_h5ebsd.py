@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -18,6 +18,7 @@
 """Reader of EBSD data from an Oxford Instruments h5ebsd (H5OINA) file.
 """
 
+import logging
 from pathlib import Path
 from typing import List, Union
 
@@ -30,6 +31,8 @@ from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict, H5EBSDReader
 
 
 __all__ = ["file_reader"]
+
+_logger = logging.getLogger(__name__)
 
 
 # Plugin characteristics
@@ -150,13 +153,23 @@ class OxfordH5EBSDReader(H5EBSDReader):
         )
         if pc.size > 3:
             pc = pc.reshape((ny, nx, 3))
-        scan_dict["detector"] = EBSDDetector(
+        detector_kw = dict(
             shape=(sy, sx),
-            px_size=px_size,
-            sample_tilt=np.rad2deg(hd.get("Tilt Angle", np.deg2rad(70))),
             pc=pc,
+            sample_tilt=np.rad2deg(hd.get("Tilt Angle", np.deg2rad(70))),
             convention="oxford",
         )
+        detector_tilt_euler = hd.get("Detector Orientation Euler")
+        binning_str = hd.get("Camera Binning Mode")
+        try:
+            detector_kw["tilt"] = np.rad2deg(detector_tilt_euler[1]) - 90
+        except (IndexError, TypeError):  # pragma: no cover
+            _logger.debug("Could not read detector tilt")
+        try:
+            detector_kw["binning"] = int(binning_str.split("x")[0])
+        except IndexError:  # pragma: no cover
+            _logger.debug("Could not read detector binning")
+        scan_dict["detector"] = EBSDDetector(**detector_kw)
 
         return scan_dict
 

@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -20,7 +20,6 @@ from numbers import Number
 import os
 from packaging import version
 import tempfile
-import warnings
 
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
@@ -30,7 +29,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import CrystalMap, create_coordinate_arrays, Phase, PhaseList
 from orix.quaternion import Rotation
-from orix.vector import Vector3d
 import pytest
 
 import kikuchipy as kp
@@ -41,9 +39,6 @@ if kp._pyvista_installed:
 
     pv.OFF_SCREEN = True
     pv.global_theme.interactive = False
-
-
-warnings.filterwarnings("always", category=DeprecationWarning)
 
 
 # ------------------------- Helper functions ------------------------- #
@@ -87,10 +82,14 @@ def pytest_sessionstart(session):  # pragma: no cover
 
 @pytest.fixture
 def dummy_signal(dummy_background):
-    """Dummy signal of shape <(3, 3)|(3, 3)>. If this is changed, all
+    """Dummy signal of shape <3, 3|3, 3>. If this is changed, all
     tests using this signal will fail since they compare the output from
     methods using this signal (as input) to hard-coded outputs.
     """
+    nav_shape = (3, 3)
+    nav_size = int(np.prod(nav_shape))
+    sig_shape = (3, 3)
+
     # fmt: off
     dummy_array = np.array(
         [
@@ -100,11 +99,36 @@ def dummy_signal(dummy_background):
             2, 9, 2, 9, 4, 3, 6, 5, 6, 2, 5, 9
         ],
         dtype=np.uint8
-    ).reshape((3, 3, 3, 3))
+    ).reshape(nav_shape + sig_shape)
     # fmt: on
+
+    # Initialize and set static background attribute
     s = kp.signals.EBSD(dummy_array, static_background=dummy_background)
+
+    # Axes manager
     s.axes_manager.navigation_axes[1].name = "x"
     s.axes_manager.navigation_axes[0].name = "y"
+
+    # Crystal map
+    phase_list = PhaseList([Phase("a", space_group=225), Phase("b", space_group=227)])
+    y, x = np.indices(nav_shape)
+    s.xmap = CrystalMap(
+        rotations=Rotation.identity((nav_size,)),
+        # fmt: off
+        phase_id=np.array([
+            [0, 0, 1],
+            [1, 1, 0],
+            [0, 1, 0],
+        ]).ravel(),
+        # fmt: on
+        phase_list=phase_list,
+        x=x.ravel(),
+        y=y.ravel(),
+    )
+    pc = np.arange(np.prod(nav_shape) * 3).reshape(nav_shape + (3,))
+    pc = pc.astype(float) / pc.max()
+    s.detector = kp.detectors.EBSDDetector(shape=sig_shape, pc=pc)
+
     yield s
 
 
@@ -122,8 +146,8 @@ def dummy_background():
 def ebsd_with_axes_and_random_data(request):
     """EBSD signal with minimally defined axes and random data.
 
-    Parameters
-    ----------
+    Parameters expected in `request`
+    -------------------------------
     navigation_shape : tuple
     signal_shape : tuple
     lazy : bool
@@ -206,12 +230,6 @@ def detector(request, pc1):
 
 
 @pytest.fixture
-def r_tsl2bruker():
-    """A rotation from the TSL to Bruker crystal reference frame."""
-    yield Rotation.from_axes_angles(Vector3d.zvector(), np.pi / 2)
-
-
-@pytest.fixture
 def rotations():
     return Rotation([(2, 4, 6, 8), (-1, -3, -5, -7)])
 
@@ -221,8 +239,9 @@ def get_single_phase_xmap(rotations):
     def _get_single_phase_xmap(
         nav_shape,
         rotations_per_point=5,
-        prop_names=["scores", "simulation_indices"],
+        prop_names=("scores", "simulation_indices"),
         name="a",
+        space_group=225,
         phase_id=0,
         step_sizes=None,
     ):
@@ -235,7 +254,7 @@ def get_single_phase_xmap(rotations):
             data_shape += (rotations_per_point,)
         d["rotations"] = rotations[rot_idx].reshape(*data_shape)
         d["phase_id"] = np.ones(map_size) * phase_id
-        d["phase_list"] = PhaseList(Phase(name=name))
+        d["phase_list"] = PhaseList(Phase(name=name, space_group=space_group))
         # Scores and simulation indices
         d["prop"] = {
             prop_names[0]: np.ones(data_shape, dtype=np.float32),
@@ -325,7 +344,7 @@ def oxford_binary_file(tmpdir, request):
     fname = tmpdir.join("dummy_oxford_file.ebsp")
     f = open(fname, mode="w")
 
-    if ver != 0:
+    if ver > 0:
         np.array(-ver, dtype=np.int64).tofile(f)
 
     pattern_header_size = 16
@@ -347,8 +366,11 @@ def oxford_binary_file(tmpdir, request):
     pattern_starts = np.arange(n_patterns, dtype=np.int64)
     pattern_starts *= pattern_header_size + n_bytes + pattern_footer_size
     pattern_starts += n_patterns * 8
-    if ver != 0:
+    if ver in [1, 2, 3]:
         pattern_starts += 8
+    elif ver > 3:
+        np.array(0, dtype=np.uint8).tofile(f)
+        pattern_starts += 9
 
     pattern_starts = np.roll(pattern_starts, shift=1)
     if not all_present:
@@ -381,71 +403,6 @@ def oxford_binary_file(tmpdir, request):
 
 
 @pytest.fixture
-def nickel_ebsd_small_di_xmap():
-    """Yield an :class:`~orix.crystal_map.CrystalMap` from dictionary
-    indexing of the :func:`kikuchipy.data.nickel_ebsd_small` data set.
-
-    Dictionary indexing was performed with the following script:
-
-    .. code-block:: python
-
-        import kikuchipy as kp
-        from orix.sampling import get_sample_fundamental
-
-
-        s = kp.data.nickel_ebsd_small()
-        s.remove_static_background()
-        s.remove_dynamic_background()
-
-        mp = kp.data.nickel_ebsd_master_pattern_small(energy=20, projection="lambert")
-        rot = get_sample_fundamental(resolution=1.4, point_group=mp.phase.point_group)
-        detector = kp.detectors.EBSDDetector(
-            shape=s.axes_manager.signal_shape[::-1],
-            sample_tilt=70,
-            pc=(0.421, 0.7794, 0.5049),
-            convention="tsl"
-        )
-        sim_dict = mp.get_patterns(rotations=rot, detector=detector, energy=20)
-        xmap = s.dictionary_indexing(dictionary=sim_dict, keep_n=1)
-    """
-    coords, _ = create_coordinate_arrays(shape=(3, 3), step_sizes=(1.5, 1.5))
-    # fmt: off
-    grain1 = (0.9542, -0.0183, -0.2806,  0.1018)
-    grain2 = (0.9542,  0.0608, -0.2295, -0.1818)
-    xmap = CrystalMap(
-        rotations=Rotation((
-            grain1, grain2, grain2,
-            grain1, grain2, grain2,
-            grain1, grain2, grain2
-        )),
-        x=coords["x"],
-        y=coords["y"],
-        prop=dict(scores=np.array((
-            0.4364652,  0.3772456,  0.4140171,
-            0.4537009,  0.37445727, 0.43675864,
-            0.42391658, 0.38740265, 0.41931134
-        ))),
-        phase_list=PhaseList(Phase("ni", 225, "m-3m")),
-    )
-    # fmt: on
-    yield xmap
-
-
-@pytest.fixture
-def ni_kikuchipy_h5ebsd_file(tmp_path, nickel_ebsd_small_di_xmap, detector):
-    """Temporary file in kikuchipy's h5ebsd format with a crystal map
-    and detector stored.
-    """
-    s = kp.data.nickel_ebsd_small()
-    s.xmap = nickel_ebsd_small_di_xmap
-    detector.pc = np.ones((3, 3, 3)) * detector.pc
-    s.detector = detector
-    fname = tmp_path / "kp_file.h5"
-    s.save(fname)
-    yield fname
-
-
-@pytest.fixture
 def ni_small_axes_manager():
     """Axes manager for :func:`kikuchipy.data.nickel_ebsd_small`."""
     names = ["y", "x", "dy", "dx"]
@@ -455,12 +412,14 @@ def ni_small_axes_manager():
     axes_manager = {}
     for i in range(len(names)):
         axes_manager[f"axis-{i}"] = {
+            "_type": "UniformDataAxis",
             "name": names[i],
-            "scale": scales[i],
-            "offset": 0.0,
-            "size": sizes[i],
             "units": "um",
             "navigate": navigates[i],
+            "is_binned": False,
+            "size": sizes[i],
+            "scale": scales[i],
+            "offset": 0.0,
         }
     yield axes_manager
 
@@ -493,7 +452,6 @@ def ebsd_directory(tmpdir, request):
 
 @pytest.fixture(autouse=True)
 def doctest_setup_teardown(request):
-    # Setup
     # Temporarily turn off interactive plotting with Matplotlib
     plt.ioff()
 
@@ -508,7 +466,6 @@ def doctest_setup_teardown(request):
 
     # Teardown
     os.chdir(original_directory)
-    temporary_directory.cleanup()
 
 
 @pytest.fixture(autouse=True)

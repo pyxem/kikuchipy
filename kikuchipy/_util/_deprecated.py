@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -85,7 +85,10 @@ class deprecated:
             rm_msg = f" and will be removed in version {self.removal}"
         else:
             rm_msg = ""
-        msg = f"Function `{func.__name__}()` is deprecated{rm_msg}.{alt_msg}"
+        if self.alternative_is_function:
+            msg = f"Function `{func.__name__}()` is deprecated{rm_msg}.{alt_msg}"
+        else:
+            msg = f"Attribute `{func.__name__}` is deprecated{rm_msg}.{alt_msg}"
 
         @functools.wraps(func)
         def wrapped(*args, **kwargs):

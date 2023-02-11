@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -22,6 +22,7 @@ import numpy as np
 from orix.vector import Vector3d
 
 from kikuchipy.projections.gnomonic_projection import GnomonicProjection
+from kikuchipy._util import deprecated
 
 
 # Reusable constants
@@ -31,9 +32,18 @@ TWO_OVER_SQRT_PI = 2 / SQRT_PI
 
 
 class LambertProjection:
-    """Lambert projection of a vector :cite:`callahan2013dynamical`."""
+    """[*Deprecated*] Lambert projection of a vector
+    :cite:`callahan2013dynamical`.
+
+    .. deprecated:: 0.8.0
+
+        This class is deprecated and will be removed in 0.9.0, since it
+        is not used internally. If you depend on this class, please open
+        an issue at https://github.com/pyxem/kikuchipy/issues.
+    """
 
     @classmethod
+    @deprecated(since="0.8.0", removal="0.9.0")
     def vector2xy(cls, v: Union[Vector3d, np.ndarray]) -> np.ndarray:
         """Convert vector(s) from Cartesian to the Lambert projection.
 
@@ -60,6 +70,7 @@ class LambertProjection:
         return xy
 
     @staticmethod
+    @deprecated(since="0.8.0", removal="0.9.0")
     def xy2vector(xy: np.ndarray) -> Vector3d:
         """Convert (n, 2) array from Lambert to Cartesian coordinates.
 
@@ -99,6 +110,7 @@ class LambertProjection:
         return Vector3d(cart)
 
     @staticmethod
+    @deprecated(since="0.8.0", removal="0.9.0")
     def lambert_to_gnomonic(xy: np.ndarray) -> np.ndarray:
         """Convert (n, 2) array from Lambert via Cartesian coordinates
         to Gnomonic.
@@ -119,6 +131,7 @@ class LambertProjection:
         return GnomonicProjection.vector2xy(v)
 
     @staticmethod
+    @deprecated(since="0.8.0", removal="0.9.0")
     def gnomonic_to_lambert(xy: np.ndarray) -> np.ndarray:
         """Convert (n, 2) array from Gnomonic via Cartesian coordinates
         to Lambert.

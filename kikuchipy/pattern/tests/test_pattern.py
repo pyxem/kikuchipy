@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import dask.array as da
 import numpy as np
 import pytest
 from scipy.fft import fft2
@@ -30,8 +31,11 @@ from kikuchipy.pattern._pattern import (
     normalize_intensity,
     rescale_intensity,
     remove_dynamic_background,
+    _bin2d,
+    _downsample2d,
     _dynamic_background_frequency_space_setup,
     _get_image_quality_numba,
+    _normalize_intensity,
     _remove_background_subtract,
     _remove_background_divide,
     _remove_static_background_subtract,
@@ -105,7 +109,7 @@ class TestRescaleIntensityPattern:
                     out_range=out_range,
                     dtype_out=dtype_out,
                 )
-            return 0  # So that the tests ends here
+            return
         else:
             rescaled_pattern = rescale_intensity(
                 pattern=pattern,
@@ -315,7 +319,6 @@ class TestGetDynamicBackgroundPattern:
         ],
     )
     def test_get_dynamic_background_frequency(self, dummy_signal, std, answer):
-
         p = dummy_signal.inav[0, 0].data.astype(answer.dtype)
 
         bg = get_dynamic_background(pattern=p, std=std)
@@ -505,9 +508,43 @@ class TestNormalizeIntensityPattern:
         self, dummy_signal, num_std, divide_by_square_root, answer
     ):
         p = dummy_signal.inav[0, 0].data.astype(np.float32)
-        p2 = normalize_intensity.py_func(
+
+        # Numba function
+        p2 = _normalize_intensity(
             pattern=p, num_std=num_std, divide_by_square_root=divide_by_square_root
         )
-
         assert np.allclose(np.mean(p2), 0, atol=1e-6)
         assert np.allclose(p2, answer, atol=1e-4)
+
+        # Python function
+        p3 = _normalize_intensity.py_func(
+            pattern=p, num_std=num_std, divide_by_square_root=divide_by_square_root
+        )
+        assert np.allclose(np.mean(p3), 0, atol=1e-6)
+        assert np.allclose(p3, answer, atol=1e-4)
+
+    def test_normalize_intensity_pattern_dtype(self, dummy_signal):
+        p = dummy_signal.inav[0, 0].data.astype(np.float32)
+        p2 = normalize_intensity(p, dtype_out=np.float64)
+        assert p2.dtype == np.float64
+
+
+class TestDownsample:
+    def test_downsample_numba(self):
+        data = np.arange(1000, dtype="float32").reshape((20, 50))
+        data_da = da.from_array(data)
+
+        data_binned_da = da.coarsen(np.sum, data_da, {0: 2, 1: 2})
+        data_binned_kp = _bin2d(data, 2)
+        data_binned_kp2 = _bin2d.py_func(data, 2)
+
+        assert np.allclose(data_binned_da, data_binned_kp)
+        assert np.allclose(data_binned_kp, data_binned_kp2)
+
+        data_downsampled = _rescale_with_min_max(
+            data_binned_kp, data_binned_kp.min(), data_binned_kp.max(), omin=-1, omax=1
+        )
+        data_downsampled2 = _downsample2d(data, 2, -1, 1, np.float32)
+        data_downsampled3 = _downsample2d.py_func(data, 2, -1, 1, np.float32)
+        assert np.allclose(data_downsampled, data_downsampled2)
+        assert np.allclose(data_downsampled, data_downsampled3)

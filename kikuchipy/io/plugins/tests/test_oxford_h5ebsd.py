@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -29,15 +29,20 @@ OXFORD_FILE = os.path.join(DATA_PATH, "oxford_h5ebsd/patterns.h5oina")
 
 
 class TestOxfordH5EBSD:
-    def test_load(self, tmp_path, ni_small_axes_manager, nickel_ebsd_small_di_xmap):
+    def test_load(self, tmp_path, ni_small_axes_manager):
         s = kp.load(OXFORD_FILE)
         assert s.data.shape == (3, 3, 60, 60)
         assert_dictionary(s.axes_manager.as_dictionary(), ni_small_axes_manager)
         assert s.metadata.Acquisition_instrument.SEM.beam_energy == 20
-        assert s.detector.pc.shape == (3, 3, 3)
-        assert np.isclose(s.detector.sample_tilt, 69.9, atol=0.1)
 
         s2 = kp.data.nickel_ebsd_small()
         s2.remove_static_background()
         assert np.allclose(s.data, s2.data)
         assert np.allclose(s.static_background, s2.static_background)
+
+        # Detector
+        det = s.detector
+        assert det.pc.shape == (3, 3, 3)
+        assert np.isclose(det.sample_tilt, 69.9, atol=0.1)
+        assert det.binning == 8
+        assert np.isclose(det.tilt, 1.5)

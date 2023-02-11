@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -37,9 +37,9 @@ rot = Rotation([grain1, grain2, grain2, grain1, grain2, grain2, grain1, grain2, 
 euler = rot.to_euler()
 
 s = kp.data.nickel_ebsd_small()
-ny, nx = s.axes_manager.navigation_shape[::-1]
+ny, nx = s._navigation_shape_rc
 n = ny * nx
-sy, sx = s.axes_manager.signal_shape[::-1]
+sy, sx = s._signal_shape_rc
 dx = s.axes_manager["x"].scale
 
 dir_data = os.path.abspath(os.path.dirname(__file__))
@@ -119,5 +119,9 @@ header.create_dataset(
     "Processed Static Background", dtype="uint8", data=s.static_background
 )
 header.create_dataset("Tilt Angle", dtype="float32", data=np.deg2rad(69.9))
+header.create_dataset(
+    "Detector Orientation Euler", dtype="float32", data=np.deg2rad([0, 91.5, 0])
+)
+header.create_dataset("Camera Binning Mode", data=b"8x8 (60x60 px)")
 
 f.close()

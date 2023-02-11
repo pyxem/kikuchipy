@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -96,7 +96,7 @@ class EDAXH5EBSDReader(H5EBSDReader):
         """
         hd = _hdf5group2dict(group["EBSD/Header"], recursive=True)
         if "SEM-PRIAS Images" in group.keys():
-            sd = _hdf5group2dict(group["SEM-PRIAS Images"])
+            sd = _hdf5group2dict(group["SEM-PRIAS Images/Header"])
         else:
             sd = {}
 
@@ -117,7 +117,7 @@ class EDAXH5EBSDReader(H5EBSDReader):
             "Acquisition_instrument": {
                 "SEM": {
                     "working_distance": hd.get("Working Distance"),
-                    "magnification": sd.get("Header", {}).get("Mag"),
+                    "magnification": sd.get("Mag"),
                 },
             },
             "General": {"original_filename": fname, "title": title},

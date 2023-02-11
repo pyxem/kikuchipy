@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -24,12 +24,22 @@ from typing import Optional
 import numpy as np
 
 from kikuchipy.projections.spherical_projection import get_polar
+from kikuchipy._util import deprecated
 
 
 class HesseNormalForm:
-    """Hessian normal form of a plane given by polar coordinates."""
+    """[*Deprecated*] Hessian normal form of a plane given by polar
+    coordinates.
+
+    .. deprecated:: 0.8.0
+
+        This class is deprecated and will be removed in 0.9.0, since it
+        is not used internally. If you depend on this class, please open
+        an issue at https://github.com/pyxem/kikuchipy/issues.
+    """
 
     @staticmethod
+    @deprecated(since="0.8.0", removal="0.9.0")
     def project_polar(polar: np.ndarray, radius: Optional[float] = 10) -> np.ndarray:
         """Return the Hesse normal form of plane(s) given by spherical
         coordinates.
@@ -53,6 +63,7 @@ class HesseNormalForm:
         return hesse
 
     @staticmethod
+    @deprecated(since="0.8.0", removal="0.9.0")
     def project_cartesian(
         cartesian: np.ndarray, radius: Optional[float] = 10
     ) -> np.ndarray:

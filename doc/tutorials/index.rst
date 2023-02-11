@@ -23,7 +23,6 @@ Fundamentals and usage
     visualizing_patterns
     pattern_processing
     reference_frames
-    pc_calibration_moving_screen_technique
 
 Feature maps
 ============
@@ -40,8 +39,13 @@ Indexing
 .. nbgallery::
     :caption: Indexing
 
-    pattern_matching
     hough_indexing
+    pattern_matching
+    hybrid_indexing
+    pc_orientation_dependence
+    pc_fit_plane
+    pc_extrapolate_plane
+    pc_calibration_moving_screen_technique
 
 Simulations
 ===========

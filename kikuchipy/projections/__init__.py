@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -15,7 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Various projections and transformations relevant to EBSD."""
+"""[*Deprecated*] Various projections and transformations relevant to
+EBSD.
+
+.. deprecated:: 0.8.0
+    This module is deprecated and will be removed in 0.9.0, since it
+    is not used internally. If you depend on it, please open an issue at
+    https://github.com/pyxem/kikuchipy/issues.
+"""
 
 __all__ = [
     "GnomonicProjection",

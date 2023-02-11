@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -15,7 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Generate signals from other signals."""
+"""*[Deprecated]* Generate signals from other signals.
+
+Use :mod:`kikuchipy.imaging` instead.
+"""
 
 __all__ = [
     "VirtualBSEGenerator",

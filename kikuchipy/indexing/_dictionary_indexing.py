@@ -1,4 +1,4 @@
-# Copyright 2019-2022 The kikuchipy developers
+# Copyright 2019-2023 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -20,12 +20,13 @@ dictionary of simulated patterns with known orientations.
 """
 
 from time import sleep, time
-from typing import ClassVar, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
 import numpy as np
 from orix.crystal_map import create_coordinate_arrays, CrystalMap
+from orix.quaternion import Rotation
 from tqdm import tqdm
 
 from kikuchipy.indexing.similarity_metrics import SimilarityMetric
@@ -41,8 +42,8 @@ def _dictionary_indexing(
     keep_n: int,
     n_per_iteration: int,
 ) -> CrystalMap:
-    """Dictionary indexing of experimental to a dictionary of simulated
-    patterns of known orientations.
+    """Dictionary indexing matching experimental patterns to a
+    dictionary of simulated patterns of known orientations.
 
     See :meth:`~kikuchipy.signals.EBSD.dictionary_indexing`.
 
@@ -62,17 +63,20 @@ def _dictionary_indexing(
     xmap
     """
     dictionary_size = metric.n_dictionary_patterns
-    n_experimental = int(np.prod(experimental_nav_shape))
     keep_n = min(keep_n, dictionary_size)
     n_iterations = int(np.ceil(dictionary_size / n_per_iteration))
 
     experimental = metric.prepare_experimental(experimental)
     dictionary = dictionary.reshape((dictionary_size, -1))
 
+    n_experimental_all = int(np.prod(experimental_nav_shape))
+    n_experimental = experimental.shape[0]
+
     phase_name = dictionary_xmap.phases.names[0]
     print(
         _dictionary_indexing_info_message(
             metric=metric,
+            n_experimental_all=n_experimental_all,
             n_experimental=n_experimental,
             dictionary_size=dictionary_size,
             phase_name=phase_name,
@@ -82,10 +86,7 @@ def _dictionary_indexing(
     time_start = time()
     if dictionary_size == n_per_iteration:
         simulation_indices, scores = _match_chunk(
-            experimental,
-            dictionary,
-            keep_n=keep_n,
-            metric=metric,
+            experimental, dictionary, keep_n=keep_n, metric=metric
         )
         with ProgressBar():
             simulation_indices, scores = da.compute(simulation_indices, scores)
@@ -95,14 +96,14 @@ def _dictionary_indexing(
         simulation_indices = np.zeros((n_experimental, keep_n), dtype=np.int32)
         scores = np.full((n_experimental, keep_n), negative_sign, dtype=metric.dtype)
 
-        lazy_dictionary = isinstance(dictionary, da.Array)
+        dictionary_is_lazy = isinstance(dictionary, da.Array)
 
         chunk_starts = np.cumsum([0] + [n_per_iteration] * (n_iterations - 1))
         chunk_ends = np.cumsum([n_per_iteration] * n_iterations)
         chunk_ends[-1] = max(chunk_ends[-1], dictionary_size)
         for start, end in tqdm(zip(chunk_starts, chunk_ends), total=n_iterations):
             dictionary_chunk = dictionary[start:end]
-            if lazy_dictionary:
+            if dictionary_is_lazy:
                 dictionary_chunk = dictionary_chunk.compute()
 
             simulation_indices_i, scores_i = _match_chunk(
@@ -126,27 +127,43 @@ def _dictionary_indexing(
             )
 
     total_time = time() - time_start
-    patterns_per_second = int(np.floor(n_experimental / total_time))
-    comparisons_per_second = int(
-        np.floor(n_experimental * dictionary_size / total_time)
-    )
+    patterns_per_second = n_experimental / total_time
+    comparisons_per_second = n_experimental * dictionary_size / total_time
     # Without this pause, a part of the red tqdm progressbar background
     # is displayed below this print
     sleep(0.2)
     print(
-        f"\tIndexing speed: {patterns_per_second} patterns/s, "
-        f"{comparisons_per_second} comparisons/s"
+        f"  Indexing speed: {patterns_per_second:.5f} patterns/s, "
+        f"{comparisons_per_second:.5f} comparisons/s"
     )
 
-    coordinate_arrays, _ = create_coordinate_arrays(
-        shape=experimental_nav_shape, step_sizes=step_sizes
-    )
-    xmap = CrystalMap(
-        rotations=dictionary_xmap.rotations[simulation_indices],
-        phase_list=dictionary_xmap.phases_in_data,
-        prop={"scores": scores, "simulation_indices": simulation_indices},
-        **coordinate_arrays,
-    )
+    xmap_kw, _ = create_coordinate_arrays(experimental_nav_shape, step_sizes)
+    if metric.navigation_mask is not None:
+        nav_mask = ~metric.navigation_mask.ravel()
+        xmap_kw["is_in_data"] = nav_mask
+
+        rot = Rotation.identity((n_experimental_all, keep_n))
+        rot[nav_mask] = dictionary_xmap.rotations[simulation_indices].data
+
+        scores_all = np.empty((n_experimental_all, keep_n), dtype=scores.dtype)
+        scores_all[nav_mask] = scores
+        simulation_indices_all = np.empty(
+            (n_experimental_all, keep_n), dtype=simulation_indices.dtype
+        )
+        simulation_indices_all[nav_mask] = simulation_indices
+        if keep_n == 1:
+            rot = rot.flatten()
+            scores_all = scores_all.squeeze()
+            simulation_indices_all = simulation_indices_all.squeeze()
+        xmap_kw["rotations"] = rot
+        xmap_kw["prop"] = {
+            "scores": scores_all,
+            "simulation_indices": simulation_indices_all,
+        }
+    else:
+        xmap_kw["rotations"] = dictionary_xmap.rotations[simulation_indices]
+        xmap_kw["prop"] = {"scores": scores, "simulation_indices": simulation_indices}
+    xmap = CrystalMap(phase_list=dictionary_xmap.phases_in_data, **xmap_kw)
 
     return xmap
 
@@ -186,29 +203,34 @@ def _match_chunk(
 
 
 def _dictionary_indexing_info_message(
-    metric: ClassVar,
-    n_experimental: int,
+    metric,
+    n_experimental_all: int,
     dictionary_size: int,
     phase_name: str,
+    n_experimental: Optional[int] = None,
 ) -> str:
     """Return a message with useful dictionary indexing information.
 
     Parameters
     ----------
     metric : SimilarityMetric
-    n_experimental
+    n_experimental_all
     dictionary_size
     phase_name
+    n_experimental
 
     Returns
     -------
     msg
         Message with useful dictionary indexing information.
     """
-    return (
-        "Dictionary indexing information:\n"
-        f"\tPhase name: {phase_name}\n"
-        f"\tMatching {n_experimental} experimental pattern(s) to {dictionary_size} "
-        f"dictionary pattern(s)\n"
-        f"\t{metric}"
-    )
+    info = "Dictionary indexing information:\n" f"  Phase name: {phase_name}\n"
+    if n_experimental is not None and n_experimental != n_experimental_all:
+        info += (
+            f"  Matching {n_experimental}/{n_experimental_all} experimental pattern(s)"
+        )
+    else:
+        info += f"  Matching {n_experimental_all} experimental pattern(s)"
+    info += f" to {dictionary_size} dictionary pattern(s)\n  {metric}"
+
+    return info
