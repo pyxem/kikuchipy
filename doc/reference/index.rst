@@ -49,7 +49,6 @@ this:
     detectors
     draw
     filters
-    generators
     imaging
     indexing
     io

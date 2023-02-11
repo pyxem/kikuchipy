@@ -86,7 +86,6 @@ __all__ = [
     "detectors",
     "draw",
     "filters",
-    "generators",
     "imaging",
     "indexing",
     "io",

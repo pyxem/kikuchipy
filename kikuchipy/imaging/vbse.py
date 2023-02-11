@@ -196,7 +196,7 @@ class VirtualBSEImager:
     ) -> VirtualBSEImage:
         """Return an in-memory signal with a stack of virtual
         backscatter electron (BSE) images by integrating the intensities
-        within regions of interest (ROI) defined by the generator
+        within regions of interest (ROI) defined by the image generator
         :attr:`grid_shape`.
 
         Parameters
@@ -215,9 +215,9 @@ class VirtualBSEImager:
         >>> s = kp.data.nickel_ebsd_small()
         >>> s
         <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
-        >>> vbse_gen = kp.generators.VirtualBSEGenerator(s)
-        >>> vbse_gen.grid_shape = (5, 5)
-        >>> vbse = vbse_gen.get_images_from_grid()
+        >>> vbse_imager = kp.imaging.VirtualBSEImager(s)
+        >>> vbse_imager.grid_shape = (5, 5)
+        >>> vbse = vbse_imager.get_images_from_grid()
         >>> vbse
         <VirtualBSEImage, title: , dimensions: (5, 5|3, 3)>
         """

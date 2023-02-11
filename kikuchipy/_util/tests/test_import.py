@@ -79,16 +79,6 @@ class TestImport:
         ):
             _ = kikuchipy.filters.foo
 
-    def test_import_generators(self):
-        import kikuchipy.generators
-
-        for obj_name in kikuchipy.generators.__all__:
-            getattr(kikuchipy.generators, obj_name)
-        with pytest.raises(
-            AttributeError, match="module 'kikuchipy.generators' has no attribute 'foo'"
-        ):
-            _ = kikuchipy.generators.foo
-
     def test_import_imaging(self):
         import kikuchipy.imaging
 
@@ -198,7 +188,6 @@ class TestImport:
             "detectors",
             "draw",
             "filters",
-            "generators",
             "imaging",
             "indexing",
             "io",
@@ -250,13 +239,6 @@ class TestImport:
             "highpass_fft_filter",
             "lowpass_fft_filter",
             "modified_hann",
-        ]
-
-    def test_dir_generators(self):
-        import kikuchipy.generators
-
-        assert dir(kikuchipy.generators) == [
-            "VirtualBSEGenerator",
         ]
 
     def test_dir_imaging(self):
