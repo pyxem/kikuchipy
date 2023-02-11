@@ -91,7 +91,6 @@ __all__ = [
     "io",
     "load",
     "pattern",
-    "projections",
     "release",
     "set_log_level",
     "signals",

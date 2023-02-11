@@ -53,6 +53,5 @@ this:
     indexing
     io
     pattern
-    projections
     signals
     simulations
