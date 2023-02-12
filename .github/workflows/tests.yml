@@ -61,9 +61,11 @@ jobs:
         include:
           - os: ubuntu-latest
             python-version: 3.7
-            OLDEST_SUPPORTED_VERSION: true
             DEPENDENCIES: dask==2021.8.1 diffsims==0.5.0 hyperspy==1.7.3 matplotlib==3.3 numba==0.55 numpy==1.19 orix==0.11.0 scikit-image==0.16.2
             LABEL: -oldest
+          - os: ubuntu-latest
+            python-version: 3.10
+            LABEL: -minimum_requirement
     steps:
       - uses: actions/checkout@v3
 
@@ -79,11 +81,12 @@ jobs:
           pip install -U -e .'[tests]'
 
       - name: Install oldest supported version
-        if: ${{ matrix.OLDEST_SUPPORTED_VERSION }}
+        if: contains(matrix.LABEL, 'oldest')
         run: |
           pip install ${{ matrix.DEPENDENCIES }}
 
       - name: Install optional dependencies
+        if: ${{ contains(matrix.LABEL, 'minimum_requirement') == false }}
         shell: bash
         run: |
           pip install -e .'[all]'
