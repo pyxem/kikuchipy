@@ -900,7 +900,7 @@ class EBSD(KikuchipySignal2D):
 
         return_lazy = lazy_output or (lazy_output is None and self._lazy)
         register_pbar = show_progressbar or (
-            show_progressbar is not None and hs.preferences.General.show_progressbar
+            show_progressbar is None and hs.preferences.General.show_progressbar
         )
         if not return_lazy and register_pbar:
             pbar = ProgressBar()
@@ -1066,7 +1066,7 @@ class EBSD(KikuchipySignal2D):
 
         return_lazy = lazy_output or (lazy_output is None and self._lazy)
         register_pbar = show_progressbar or (
-            show_progressbar is not None and hs.preferences.General.show_progressbar
+            show_progressbar is None and hs.preferences.General.show_progressbar
         )
         if not return_lazy and register_pbar:
             pbar = ProgressBar()
