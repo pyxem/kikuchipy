@@ -20,25 +20,41 @@ from typing import Union
 from kikuchipy.release import version as __version__
 
 
-# Attempt import only once
+# Attempt (and fail) import of optional dependencies only once
 try:
     import pyvista
 
     _pyvista_installed = True
 except ImportError:  # pragma: no cover
     _pyvista_installed = False
+
 try:
     import nlopt
 
     _nlopt_installed = True
 except ImportError:  # pragma: no cover
     _nlopt_installed = False
+
 try:
     from pyebsdindex import pcopt, ebsd_index
 
     _pyebsdindex_installed = True
 except ImportError:  # pragma: no cover
     _pyebsdindex_installed = False
+
+# PyOpenCL compatible device available for use with PyEBSDIndex?
+# PyOpenCL is an optional dependency of PyEBSDIndex, so it should not be
+# an (optional) dependency of kikuchipy.
+try:
+    import pyopencl as cl
+
+    platforms = cl.get_platforms()
+    assert len(platforms) > 0
+    _pyopencl_driver_available = True
+except:  # pragma: no cover
+    # Have to use bare except because PyOpenCL might raise its own
+    # LogicError, but we also want to catch import errors here
+    _pyopencl_driver_available = False
 
 
 def set_log_level(level: Union[int, str]):  # pragma: no cover
