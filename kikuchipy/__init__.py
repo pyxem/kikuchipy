@@ -42,19 +42,24 @@ try:
 except ImportError:  # pragma: no cover
     _pyebsdindex_installed = False
 
-# PyOpenCL compatible device available for use with PyEBSDIndex?
+# PyOpenCL context available for use with PyEBSDIndex? Required for
+# Hough indexing of Dask arrays.
 # PyOpenCL is an optional dependency of PyEBSDIndex, so it should not be
-# an (optional) dependency of kikuchipy.
-try:
+# an optional kikuchipy dependency.
+try:  # pragma: no cover
     import pyopencl as cl
 
-    platforms = cl.get_platforms()
-    assert len(platforms) > 0
-    _pyopencl_driver_available = True
+    platform = cl.get_platforms()[0]
+    gpu = platform.get_devices(device_type=cl.device_type.GPU)
+    ctx = cl.Context(devices=gpu)
+    if ctx is None:
+        _pyopencl_context_available = False
+    else:
+        _pyopencl_context_available = True
 except:  # pragma: no cover
     # Have to use bare except because PyOpenCL might raise its own
     # LogicError, but we also want to catch import errors here
-    _pyopencl_driver_available = False
+    _pyopencl_context_available = False
 
 
 def set_log_level(level: Union[int, str]):  # pragma: no cover

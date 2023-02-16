@@ -39,7 +39,7 @@ from orix.quaternion import Rotation
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
-from kikuchipy import _pyebsdindex_installed
+from kikuchipy import _pyebsdindex_installed, _pyopencl_context_available
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
@@ -1661,16 +1661,12 @@ class EBSD(KikuchipySignal2D):
                 "pip install pyebsdindex. See "
                 "https://kikuchipy.org/en/stable/user/installation.html for details"
             )
-        if self._lazy:
-            from pyebsdindex import _pyopencl_installed
-
-            if not _pyopencl_installed:  # pragma: no cover
-                raise ValueError(
-                    "Hough indexing of lazy signals must use the GPU, which requires "
-                    "pyopencl to be installed. See "
-                    "https://documen.tician.de/pyopencl/misc.html for installation "
-                    "instructions"
-                )
+        if self._lazy and not _pyopencl_context_available:  # pragma: no cover
+            raise ValueError(
+                "Hough indexing of lazy signals must use PyOpenCL, which must be able "
+                "to create a context. See https://documen.tician.de/pyopencl/misc.html "
+                "for details"
+            )
 
         am = self.axes_manager
         nav_shape = am.navigation_shape[::-1]
@@ -1767,16 +1763,12 @@ class EBSD(KikuchipySignal2D):
                 "pip install pyebsdindex. See "
                 "https://kikuchipy.org/en/stable/user/installation.html for details"
             )
-        if self._lazy:
-            from pyebsdindex import _pyopencl_installed
-
-            if not _pyopencl_installed:  # pragma: no cover
-                raise ValueError(
-                    "Hough indexing of lazy signals must use the GPU, which requires "
-                    "pyopencl to be installed. See "
-                    "https://documen.tician.de/pyopencl/misc.html for installation "
-                    "instructions"
-                )
+        if self._lazy and not _pyopencl_context_available:  # pragma: no cover
+            raise ValueError(
+                "Hough indexing of lazy signals must use PyOpenCL, which must be able "
+                "to create a context. See https://documen.tician.de/pyopencl/misc.html "
+                "for details"
+            )
 
         pc0 = np.asarray(pc0)
         if pc0.size != 3:

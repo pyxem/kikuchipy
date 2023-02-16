@@ -52,10 +52,12 @@ class TestHoughIndexing:
             self.signal.axes_manager.navigation_size, chunksize=3, indexer=indexer1
         )
         info_list = info.split("\n")
-        assert info_list[0] == "Hough indexing with PyEBSDIndex information:"
-        assert info_list[1][:7] == "  GPU: "  # GPU not available on test machines
-        assert info_list[2] == "  Projection center (mean): (0.4251, 0.2134, 0.5007)"
-        assert info_list[3] == "  Indexing 9 pattern(s) in 3 chunk(s)"
+        # fmt: off
+        assert info_list[0] ==     "Hough indexing with PyEBSDIndex information:"
+        assert info_list[1][:12] == "  PyOpenCL: "
+        assert info_list[2] ==     "  Projection center (mean): (0.4251, 0.2134, 0.5007)"
+        assert info_list[3] ==     "  Indexing 9 pattern(s) in 3 chunk(s)"
+        # fmt: on
 
         det_pc_mean = det.deepcopy()
         det_pc_mean.pc = det_pc_mean.pc_average
@@ -90,16 +92,14 @@ class TestHoughIndexing:
     def test_hough_indexing_lazy(self):  # pragma: no cover
         s = self.signal.as_lazy()
 
-        from pyebsdindex import _pyopencl_installed
-
-        if not _pyopencl_installed:
-            with pytest.raises(ValueError, match="Hough indexing of lazy signals must"):
-                _ = s.hough_indexing(self.phase_list, self.indexer, verbose=2)
-        else:
+        if kp._pyopencl_context_available:
             xmap1 = s.hough_indexing(self.phase_list, self.indexer)
             xmap2 = self.signal.hough_indexing(self.phase_list, self.indexer)
             assert np.allclose(xmap1.rotations.data, xmap2.rotations.data)
             assert np.allclose(xmap1.fit, xmap2.fit)
+        else:
+            with pytest.raises(ValueError, match="Hough indexing of lazy signals must"):
+                _ = s.hough_indexing(self.phase_list, self.indexer, verbose=2)
 
     def test_hough_indexing_return_index_data(self):
         phase_list = self.phase_list
@@ -267,21 +267,19 @@ class TestHoughIndexing:
                 [0.5, 0.5, 0.5], self.indexer, method="PSO", batch=True
             )
 
-    def test_optimize_pc_lazy(self):
+    def test_optimize_pc_lazy(self):  # pragma: no cover
         s = self.signal.as_lazy()
 
-        from pyebsdindex import _pyopencl_installed
-
-        if not _pyopencl_installed:
-            with pytest.raises(ValueError, match="Hough indexing of lazy signals must"):
-                _ = s.hough_indexing_optimize_pc(self.detector.pc_average, self.indexer)
-        else:  # pragma: no cover
+        if kp._pyopencl_context_available:
             det = s.hough_indexing_optimize_pc(self.detector.pc_average, self.indexer)
             assert np.allclose(det.pc_average, self.detector.pc_average, atol=1e-2)
+        else:
+            with pytest.raises(ValueError, match="Hough indexing of lazy signals must"):
+                _ = s.hough_indexing_optimize_pc(self.detector.pc_average, self.indexer)
 
 
 @pytest.mark.skipif(kp._pyebsdindex_installed, reason="pyebsdindex is installed")
-class TestHoughIndexingNopyebsdindex:
+class TestHoughIndexingNopyebsdindex:  # pragma: no cover
     def setup_method(self):
         s = kp.data.nickel_ebsd_small()
 
@@ -291,7 +289,7 @@ class TestHoughIndexingNopyebsdindex:
         with pytest.raises(ValueError, match="pyebsdindex must be installed"):
             _ = self.signal.detector.get_indexer(None)
 
-    def test_hough_indexing_raises_pyebsdindex(self):  # pragma: no cover
+    def test_hough_indexing_raises_pyebsdindex(self):
         with pytest.raises(ValueError, match="pyebsdindex to be installed"):
             _ = self.signal.hough_indexing(None, None)
 
