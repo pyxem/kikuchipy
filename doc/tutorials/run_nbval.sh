@@ -4,29 +4,20 @@
 #   $ chmod u+x ./doc/tutorials/run_nbval.sh
 #   $ ./doc/tutorials/run_nbval.sh
 
-# List notebooks that nbval should skip
-declare -a SKIP=(\
-  "esteem2022_diffraction_workshop.ipynb"\
-  "pc_orientation_dependence.ipynb"\
+# List notebooks that nbval should run
+declare -a NOTEBOOKS=(\
+  "hough_indexing.ipynb"\
+  "hybrid_indexing.ipynb"\
+  "mandm2021_sunday_short_course.ipynb"\
+  "pattern_matching.ipynb"\
+  "pc_extrapolate_plane.ipynb"\
+  "pc_fit_plane.ipynb"\
 )
 
-# Find all notebooks in the doc/tutorials directory
-readarray -t ALL_NOTEBOOKS < <(find doc/tutorials -maxdepth 1 -type f -name "*.ipynb")
-declare -a ALL_NOTEBOOKS
-
-# Remove notebooks to skip
-for i in "${!ALL_NOTEBOOKS[@]}"; do
-  NOTEBOOK="${ALL_NOTEBOOKS[i]}"
-  SKIP_THIS=0
-  for j in "${!SKIP[@]}"; do
-    if [[ "${NOTEBOOK}" = doc/tutorials/"${SKIP[j]}" ]]; then
-      SKIP_THIS=1
-    fi
-  done
-  if [[ "${SKIP_THIS}" = 0 ]]; then
-    NOTEBOOKS[$i]="${NOTEBOOK}"
-  fi
+# Append relative path to notebook names
+for i in "${!NOTEBOOKS[@]}"; do
+  NOTEBOOKS[i]=doc/tutorials/"${NOTEBOOKS[i]}"
 done
 
 # Test with nbval
-pytest -v --nbval "${NOTEBOOKS[@]}" --sanitize-with doc/tutorials/tutorials_sanitize.cfg
+pytest -v --nbval "${NOTEBOOKS[@]}" --nbval-sanitize-with doc/tutorials/tutorials_sanitize.cfg
