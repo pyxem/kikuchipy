@@ -16,7 +16,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - uses: r-lib/actions/setup-pandoc@v1
+    - uses: r-lib/actions/setup-pandoc@v2
 
     - name: Set up Python ${{ runner.python-version }}
       uses: actions/setup-python@v4
@@ -43,13 +43,13 @@ jobs:
 
     - name: Make tagged release draft
       if: ${{ env.MAKE_RELEASE == 'true' }}
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        draft: true
-        tag_name: v${{ env.BRANCH_VERSION }}
-        release_name: kikuchipy ${{ env.BRANCH_VERSION }}
-        commitish: main
         body_path: release_part_in_changelog.md
+        draft: true
         prerelease: false
+        name: kikuchipy ${{ env.BRANCH_VERSION }}
+        tag_name: v${{ env.BRANCH_VERSION }}
+        target_commitish: main

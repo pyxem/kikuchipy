@@ -26,8 +26,8 @@ credits = [
     "Lars Andreas Hastad Lervik",
     "Ole Natlandsmyr",
     "Tina Bergh",
-    "Zhou Xu",
     "Eric Prestat",
+    "Zhou Xu",
     "Magnus Nord",
 ]
 license = "GPLv3+"

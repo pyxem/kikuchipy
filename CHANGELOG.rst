@@ -33,6 +33,20 @@ Removed
 Fixed
 -----
 
+Security
+--------
+
+0.8.1 (2023-02-20)
+==================
+
+Fixed
+-----
+- Hough indexing with PyEBSDIndex of a lazy EBSD signal requires not only PyOpenCL to be
+  installed, but also for PyOpenCL to be able to create a context.
+  (`#615 <https://github.com/pyxem/kikuchipy/pull/615>`_)
+- Missing progressbars for ``EBSD`` methods ``average_neighbour_patterns()`` and
+  ``fft_filter()`` reintroduced. (`#615 <https://github.com/pyxem/kikuchipy/pull/615>`_)
+
 0.8.0 (2023-02-11)
 ==================
 
