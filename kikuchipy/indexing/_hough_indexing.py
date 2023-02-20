@@ -376,11 +376,11 @@ def _indexer_is_compatible_with_kikuchipy(
 
 
 def _get_info_message(nav_size: int, chunksize: int, indexer: "EBSDIndexer") -> str:
-    from pyebsdindex import _pyopencl_installed
+    from kikuchipy import _pyopencl_context_available
 
     info = (
         "Hough indexing with PyEBSDIndex information:\n"
-        f"  GPU: {_pyopencl_installed}\n"
+        f"  PyOpenCL: {_pyopencl_context_available}\n"
         "  Projection center"
     )
 

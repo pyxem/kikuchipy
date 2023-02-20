@@ -20,25 +20,46 @@ from typing import Union
 from kikuchipy.release import version as __version__
 
 
-# Attempt import only once
+# Attempt (and fail) import of optional dependencies only once
 try:
     import pyvista
 
     _pyvista_installed = True
 except ImportError:  # pragma: no cover
     _pyvista_installed = False
+
 try:
     import nlopt
 
     _nlopt_installed = True
 except ImportError:  # pragma: no cover
     _nlopt_installed = False
+
 try:
     from pyebsdindex import pcopt, ebsd_index
 
     _pyebsdindex_installed = True
 except ImportError:  # pragma: no cover
     _pyebsdindex_installed = False
+
+# PyOpenCL context available for use with PyEBSDIndex? Required for
+# Hough indexing of Dask arrays.
+# PyOpenCL is an optional dependency of PyEBSDIndex, so it should not be
+# an optional kikuchipy dependency.
+try:  # pragma: no cover
+    import pyopencl as cl
+
+    platform = cl.get_platforms()[0]
+    gpu = platform.get_devices(device_type=cl.device_type.GPU)
+    ctx = cl.Context(devices=gpu)
+    if ctx is None:
+        _pyopencl_context_available = False
+    else:
+        _pyopencl_context_available = True
+except:  # pragma: no cover
+    # Have to use bare except because PyOpenCL might raise its own
+    # LogicError, but we also want to catch import errors here
+    _pyopencl_context_available = False
 
 
 def set_log_level(level: Union[int, str]):  # pragma: no cover
