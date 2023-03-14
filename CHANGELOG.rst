@@ -13,6 +13,14 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+0.8.2 (2023-03-14)
+==================
+
+Changed
+-------
+- Set minimal version of orix to >= 0.11.1 
+  (`#623 <https://github.com/pyxem/kikuchipy/pull/623>`_)
+
 0.8.1 (2023-02-20)
 ==================
 
