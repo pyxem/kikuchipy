@@ -279,7 +279,7 @@ class TestHoughIndexing:
 
 
 @pytest.mark.skipif(kp._pyebsdindex_installed, reason="pyebsdindex is installed")
-class TestHoughIndexingNopyebsdindex:  # pragma: no cover
+class TestHoughIndexingNopyebsdindex:
     def setup_method(self):
         s = kp.data.nickel_ebsd_small()
 
@@ -289,7 +289,7 @@ class TestHoughIndexingNopyebsdindex:  # pragma: no cover
         with pytest.raises(ValueError, match="pyebsdindex must be installed"):
             _ = self.signal.detector.get_indexer(None)
 
-    def test_hough_indexing_raises_pyebsdindex(self):
+    def test_hough_indexing_raises_pyebsdindex(self):  # pragma: no cover
         with pytest.raises(ValueError, match="pyebsdindex to be installed"):
             _ = self.signal.hough_indexing(None, None)
 

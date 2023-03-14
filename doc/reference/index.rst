@@ -49,11 +49,9 @@ this:
     detectors
     draw
     filters
-    generators
     imaging
     indexing
     io
     pattern
-    projections
     signals
     simulations
