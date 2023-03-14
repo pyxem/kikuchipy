@@ -43,8 +43,6 @@ with open("kikuchipy/release.py") as fid:
 # fmt: off
 extra_feature_requirements = {
     "doc": [
-        # TODO: Remove once https://github.com/pyxem/kikuchipy/issues/566 is resolved
-        "ipywidgets                     <= 7.7.1",
         "memory_profiler",
         "nbsphinx                       >= 0.7",
         "numpydoc",
@@ -57,7 +55,7 @@ extra_feature_requirements = {
         "sphinx-codeautolink[ipython]   < 0.14",
         "sphinx-copybutton              >= 0.2.5",
         "sphinx-design",
-        "sphinx-gallery                 < 0.11",
+        "sphinx-gallery",
         "sphinxcontrib-bibtex           >= 1.0",
     ],
     "tests": [
@@ -159,7 +157,7 @@ setup(
         "matplotlib         >= 3.3",
         "numba              >= 0.55",
         "numpy              >= 1.19",
-        "orix               >= 0.11",
+        "orix               >= 0.11.1",
         "pooch              >= 0.13",
         "pyyaml",
         "tqdm               >= 0.5.2",

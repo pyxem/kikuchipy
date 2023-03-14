@@ -88,6 +88,15 @@
       "contributions": [
         "doc"
       ]
+    },
+    {
+      "login": "Erlendos12",
+      "name": "erlenmos",
+      "avatar_url": "https://avatars.githubusercontent.com/u/99336047?v=4",
+      "profile": "https://github.com/Erlendos12",
+      "contributions": [
+        "bug"
+      ]
     }
   ]
 }
