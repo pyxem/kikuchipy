@@ -28,6 +28,7 @@ credits = [
     "Tina Bergh",
     "Eric Prestat",
     "Zhou Xu",
+    "Erlend Mikkelsen Østvold",
     "Magnus Nord",
 ]
 license = "GPLv3+"
