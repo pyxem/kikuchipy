@@ -18,7 +18,7 @@ were listed in alphabetical order by first name until version 0.7.0.
 
 Changed
 -------
-- Set minimal version of orix to >= 0.11.1 
+- Set minimal version of orix to >= 0.11.1.
   (`#623 <https://github.com/pyxem/kikuchipy/pull/623>`_)
 
 0.8.1 (2023-02-20)
