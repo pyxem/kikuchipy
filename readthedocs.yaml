@@ -16,9 +16,10 @@ build:
     python: "3.10"
     nodejs: "19"
   # See https://docs.pyvista.org/user-guide/jupyter/panel.html#configuration-considerations.
-  # These packages are needed by PyVista/panel to render 3D plots from
-  # RTD's server.
+  # Some of these packages are needed by PyVista/panel to render 3D
+  # plots from RTD's server.
   apt_packages:
+    - imagemagick
     - libgl1-mesa-dev
     - xvfb
 
