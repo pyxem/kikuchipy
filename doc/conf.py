@@ -186,7 +186,10 @@ codeautolink_custom_blocks = {
 latex_elements = {
     # pdflatex doesn't like some Unicode characters, so a replacement
     # for one of them is made here
-    "preamble": r"\DeclareUnicodeCharacter{2588}{-}"
+    "preamble": r"""
+    \DeclareUnicodeCharacter{2588}{-}
+    \DeclareUnicodeCharacter{03BC}{u}
+    """
 }
 
 
