@@ -24,9 +24,11 @@ build:
     - xvfb
 
 # Build doc in all formats (HTML, PDF and ePub)
+# TODO: Enable PDF build when issues like this
+#  (https://github.com/readthedocs/readthedocs.org/issues/10150) are addressed by RTD.
 formats:
-  - pdf
-#  - htmlzip
+  - htmlzip
+#  - pdf
 
 # Python environment for building the docs
 python:
