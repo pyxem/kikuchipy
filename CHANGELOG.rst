@@ -19,8 +19,7 @@ were listed in alphabetical order by first name until version 0.7.0.
 Changed
 -------
 - ``EBSD.hough_indexing()`` info message now informs that the given projection center is
-  in Bruker's convention.
-  (`#628 <https://github.com/pyxem/kikuchipy/pull/628>`_)
+  in Bruker's convention. (`#628 <https://github.com/pyxem/kikuchipy/pull/628>`_)
 
 0.8.2 (2023-03-14)
 ==================

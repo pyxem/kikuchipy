@@ -69,8 +69,8 @@ class EBSDDetector:
         Number of detector rows and columns in pixels. Default is
         (1, 1).
     px_size
-        Size of unbinned detector pixel in um, assuming a square
-        pixel shape. Default is 1.
+        Size of unbinned detector pixel in um, assuming a square pixel
+        shape. Default is 1.
     binning
         Detector binning, i.e. how many pixels are binned into one.
         Default is 1, i.e. no binning.
@@ -78,29 +78,32 @@ class EBSDDetector:
         Detector tilt from horizontal in degrees. Default is 0.
     azimuthal
         Sample tilt about the sample RD (downwards) axis. A positive
-        angle means the sample normal moves towards the right
-        looking from the sample to the detector. Default is 0.
+        angle means the sample normal moves towards the right looking
+        from the sample to the detector. Default is 0.
     sample_tilt
         Sample tilt from horizontal in degrees. Default is 70.
     pc
-        X, Y and Z coordinates of the projection/pattern centers
-        (PCs), describing the location of the beam on the sample
-        measured relative to the detection screen. See *Notes* for
-        the definition and conversions between conventions. If
-        multiple PCs are passed, they are assumed to be on the form
+        X, Y and Z coordinates of the projection/pattern centers (PCs),
+        describing the location of the beam on the sample measured
+        relative to the detection screen. PCs are stored and used in
+        Bruker's convention. See *Notes* for the definition and
+        conversions between conventions. If multiple PCs are passed,
+        they are assumed to be on the form
         [[x0, y0, z0], [x1, y1, z1], ...]. Default is [0.5, 0.5, 0.5].
     convention
-        PC convention. If not given, Bruker's convention is assumed.
-        Options are "tsl"/"edax"/"amatek", "oxford"/"aztec", "bruker",
-        "emsoft", "emsoft4", and "emsoft5". "emsoft" and "emsoft5" is
-        the same convention. See *Notes* for conversions between
-        conventions.
+        Convention of input PC, to determine which conversion to
+        Bruker's definition to use. If not given, Bruker's convention is
+        assumed. Options are "tsl"/"edax"/"amatek", "oxford"/"aztec",
+        "bruker", "emsoft", "emsoft4", and "emsoft5". "emsoft" and
+        "emsoft5" is the same convention. See *Notes* for conversions
+        between conventions.
 
     Notes
     -----
     The pattern on the detector is always viewed *from* the detector
-    *towards*  the sample. Pattern width and height is here given as
-    :math:`N_x` and :math:`N_y` (possibly binned).
+    *towards* the sample. Pattern width and height is here given as
+    :math:`N_x` and :math:`N_y` (possibly binned). PCs are stored and
+    used in Bruker's convention.
 
     The Bruker PC coordinates :math:`(x_B^*, y_B^*, z_B^*)` are defined
     in fractions of :math:`N_x`, :math:`N_y`, and :math:`N_y`,
@@ -263,14 +266,16 @@ class EBSDDetector:
         ----------
         value : numpy.ndarray, list or tuple
             Projection center coordinates. If multiple PCs are passed,
-            they are assumed to be on the form ``[[x0, y0, z0],
-            [x1, y1, z1], ...]``. Default is ``[[0.5, 0.5, 0.5]]``.
+            they are assumed to be on the form [[x0, y0, z0],
+            [x1, y1, z1], ...]. Default is [[0.5, 0.5, 0.5]].
         """
         return self._pc
 
     @pc.setter
     def pc(self, value: Union[np.ndarray, List, Tuple]):
-        """Set all projection center coordinates."""
+        """Set all projection center coordinates, assuming Bruker's
+        convention.
+        """
         self._pc = np.atleast_2d(value)
 
     @property
@@ -287,9 +292,9 @@ class EBSDDetector:
         Parameters
         ----------
         value : numpy.ndarray, list, tuple or float
-            Projection center x coordinates. If multiple x coordinates
-            are passed, they are assumed to be on the form
-            ``[x0, x1,...]``.
+            Projection center x coordinates in Bruker's convention. If
+            multiple x coordinates are passed, they are assumed to be on
+            the form [x0, x1,...].
         """
         return self.pc[..., 0]
 
@@ -305,9 +310,9 @@ class EBSDDetector:
         Parameters
         ----------
         value : numpy.ndarray, list, tuple or float
-            Projection center y coordinates. If multiple y coordinates
-            are passed, they are assumed to be on the form
-            ``[y0, y1,...]``.
+            Projection center y coordinates in Bruker's convention. If
+            multiple y coordinates are passed, they are assumed to be on
+            the form [y0, y1,...].
         """
         return self.pc[..., 1]
 
@@ -323,9 +328,9 @@ class EBSDDetector:
         Parameters
         ----------
         value : numpy.ndarray, list, tuple or float
-            Projection center z coordinates. If multiple z coordinates
-            are passed, they are assumed to be on the form
-            ``[z0, z1,...]``.
+            Projection center z coordinates in Bruker's convention. If
+            multiple z coordinates are passed, they are assumed to be on
+            the form [z0, z1,...].
         """
         return self.pc[..., 2]
 
@@ -380,7 +385,7 @@ class EBSDDetector:
 
     @property
     def bounds(self) -> np.ndarray:
-        """Return the detector bounds ``[x0, x1, y0, y1]`` in pixel
+        """Return the detector bounds [x0, x1, y0, y1] in pixel
         coordinates.
         """
         return np.array([0, self.ncols - 1, 0, self.nrows - 1])
@@ -417,7 +422,7 @@ class EBSDDetector:
 
     @property
     def gnomonic_bounds(self) -> np.ndarray:
-        """Return the detector bounds ``[x0, x1, y0, y1]`` in gnomonic
+        """Return the detector bounds [x0, x1, y0, y1] in gnomonic
         coordinates.
         """
         return np.concatenate((self.x_range, self.y_range), axis=-1)
@@ -1258,7 +1263,8 @@ class EBSDDetector:
         zoom: float = 1,
         return_figure: bool = False,
     ) -> Union[None, Figure]:
-        """Plot the detector screen.
+        """Plot the detector screen viewed from the detector towards the
+        sample.
 
         The plotting of gnomonic circles and general style is adapted
         from the supplementary material to :cite:`britton2016tutorial`
@@ -1296,7 +1302,7 @@ class EBSDDetector:
         zoom
             Whether to zoom in/out from the detector, e.g. to show the
             extent of the gnomonic projection circles. A zoom > 1 zooms
-            out. Default is ``1``, i.e. no zoom.
+            out. Default is 1, i.e. no zoom.
         return_figure
             Whether to return the figure. Default is False.
 
