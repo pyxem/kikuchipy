@@ -55,7 +55,7 @@ class TestHoughIndexing:
         # fmt: off
         assert info_list[0] ==     "Hough indexing with PyEBSDIndex information:"
         assert info_list[1][:12] == "  PyOpenCL: "
-        assert info_list[2] ==     "  Projection center (mean): (0.4251, 0.2134, 0.5007)"
+        assert info_list[2] ==     "  Projection center (Bruker, mean): (0.4251, 0.2134, 0.5007)"
         assert info_list[3] ==     "  Indexing 9 pattern(s) in 3 chunk(s)"
         # fmt: on
 
@@ -66,7 +66,7 @@ class TestHoughIndexing:
             self.signal.axes_manager.navigation_size, chunksize=3, indexer=indexer2
         )
         info_list2 = info2.split("\n")
-        assert info_list2[2] == "  Projection center: (0.4251, 0.2134, 0.5007)"
+        assert info_list2[2] == "  Projection center (Bruker): (0.4251, 0.2134, 0.5007)"
 
     def test_hough_indexing(self):
         # Reference results (Hough indexing + refinement)
