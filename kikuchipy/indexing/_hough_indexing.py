@@ -388,7 +388,9 @@ def _get_info_message(nav_size: int, chunksize: int, indexer: "EBSDIndexer") -> 
     pc = indexer.PC.squeeze()
     if pc.size > 3:
         pc = pc.mean(0)
-        info += " (mean)"
+        info += " (Bruker, mean)"
+    else:
+        info += " (Bruker)"
     pc = pc.round(4)
     info += (
         f": {tuple(pc)}\n" f"  Indexing {nav_size} pattern(s) in {n_chunks} chunk(s)"
