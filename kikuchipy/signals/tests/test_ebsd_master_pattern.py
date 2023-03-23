@@ -43,6 +43,7 @@ from kikuchipy.signals.util._master_pattern import (
     _project_patterns_from_master_pattern_with_fixed_pc,
     _project_patterns_from_master_pattern_with_varying_pc,
     _project_single_pattern_from_master_pattern,
+    _vector2lambert,
 )
 from kikuchipy.indexing.similarity_metrics import (
     NormalizedCrossCorrelationMetric,
@@ -721,3 +722,33 @@ class TestIntensityScaling:
         mp_lp2 = mp_lp.adaptive_histogram_equalization(inplace=False)
         assert all([mp_lp2.data.min() >= 0, mp_lp2.data.max() <= 255])
         assert abs(np.unique(mp_lp2.data).size - 255) < 2
+
+
+class TestLambertProjection:
+    def test_vector2xy(self):
+        """Works for numpy arrays."""
+        xyz = np.array(
+            [
+                [0, 0, 1],
+                [0, 1, 0],
+                [2, 0, 0],
+                [0, 0, -3],
+                [0, 0, -1],
+                [0, -1, 0],
+                [-2, 0, 0],
+                [0, 0, 3],
+            ],
+            dtype=np.float64,
+        )
+        lambert_xy = [
+            [0, 0],
+            [0, np.sqrt(np.pi / 2)],
+            [np.sqrt(np.pi / 2), 0],
+            [0, 0],
+            [0, 0],
+            [0, -np.sqrt(np.pi / 2)],
+            [-np.sqrt(np.pi / 2), 0],
+            [0, 0],
+        ]
+        assert np.allclose(_vector2lambert.py_func(xyz), lambert_xy)
+        assert np.allclose(_vector2lambert(xyz), lambert_xy)

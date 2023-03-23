@@ -33,7 +33,7 @@ Preparation
 - Make a PR of the release branch to ``main``.
   Discuss the changelog with others, and make any changes *directly* to the release
   branch.
-  Merge the branch onto ``main``.
+  Merge the branch into ``main``.
 
 Tag and release
 ---------------
@@ -51,7 +51,7 @@ Tag and release
 Post-release action
 -------------------
 - Monitor the `documentation build <https://readthedocs.org/projects/kikuchipy/builds>`__
-  ensure that the new stable documentation is successfully built from the release.
+  to ensure that the new stable documentation is successfully built from the release.
 
 - Ensure that `Zenodo <https://doi.org/10.5281/zenodo.3597646>`__ displays the new
   release.

@@ -148,7 +148,7 @@ def _get_indexer_from_detector(
     dependency of kikuchipy. See :ref:`optional-dependencies` for
     details.
     """
-    if not _pyebsdindex_installed:  # pragma: no cover
+    if not _pyebsdindex_installed:
         raise ValueError(
             "pyebsdindex must be installed. Install with pip install pyebsdindex. "
             "See https://kikuchipy.org/en/stable/user/installation.html for "
