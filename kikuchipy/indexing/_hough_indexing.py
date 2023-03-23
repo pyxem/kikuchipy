@@ -381,17 +381,17 @@ def _get_info_message(nav_size: int, chunksize: int, indexer: "EBSDIndexer") -> 
     info = (
         "Hough indexing with PyEBSDIndex information:\n"
         f"  PyOpenCL: {_pyopencl_context_available}\n"
-        "  Projection center"
+        "  Projection center (Bruker"
     )
 
     n_chunks = int(np.ceil(nav_size / chunksize))
     pc = indexer.PC.squeeze()
     if pc.size > 3:
         pc = pc.mean(0)
-        info += " (mean)"
+        info += ", mean"
     pc = pc.round(4)
     info += (
-        f": {tuple(pc)}\n" f"  Indexing {nav_size} pattern(s) in {n_chunks} chunk(s)"
+        f"): {tuple(pc)}\n" f"  Indexing {nav_size} pattern(s) in {n_chunks} chunk(s)"
     )
 
     return info
