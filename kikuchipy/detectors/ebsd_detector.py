@@ -624,8 +624,8 @@ class EBSDDetector:
         coincidence with the detector plane normal (but in the opposite
         direction) :cite:`winkelmann2020refined`.
 
-        See the `reference frame tutorial
-        </doc/tutorials/reference_frames.ipynb>`_ for details on the
+        See the :ref:`reference frame tutorial
+        </tutorials/reference_frames.ipynb>` for details on the
         detector sample geometry.
 
         An estimate is found by linear regression of :attr:`pcz` vs.
@@ -758,8 +758,8 @@ class EBSDDetector:
         the detector plane normal (but in the opposite direction)
         :cite:`winkelmann2020refined`.
 
-        See the `reference frame tutorial
-        </doc/tutorials/reference_frames.ipynb>`_ for details on the
+        See the :ref:`reference frame tutorial
+        </tutorials/reference_frames.ipynb>` for details on the
         detector sample geometry.
 
         Estimates are found by fitting a hyperplane to :attr:`pc` using
