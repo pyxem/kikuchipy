@@ -14,6 +14,10 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
 
 2023
 ====
+- H. W. Ånes, A. T. J. van Helvoort and K. Marthinsen, "Orientation dependent pinning
+  of (sub)grains by dispersoids during recovery and recrystallization in an Al-Mn
+  alloy," *Acta Materialia* **248** (2023).
+  https://doi.org/10.1016/j.actamat.2023.118761.
 - T. Bergh, H. W. Ånes, R. Aune, S. Wenner, R. Holmestad, X. Ren and P. E. Vullum,
   "Intermetallic Phase Layers in Cold Metal Transfer Aluminium-Steel Welds with an
   Al-Si–Mn Filler Alloy," *Materials Transactions* **64(2)** (2023).
@@ -21,11 +25,6 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
 
 2022
 ====
-
-- H. W. Ånes, A. T. J. van Helvoort and K. Marthinsen, "Orientation dependent pinning
-  of (sub)grains by dispersoids during recovery and recrystallization in an Al-Mn
-  alloy," *Acta Materialia* 118761 (2023).
-  https://doi.org/10.1016/j.actamat.2023.118761.
 - O. M. Akselsen, R. Bjørge, H. W. Ånes, X. Ren, and B. Nyhus, "Microstructure and
   Properties of Wire Arc Additive Manufacturing of Inconel 625," *Metals* **12(11)**
   (2022).
@@ -36,7 +35,7 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
   https://doi.org/10.1016/j.matchar.2022.112228.
 - J. Schultheiß, F. Xue, E. Roede, H. W. Ånes, F. H. Danmo, S. M. Selbach, L.-Q. Chen
   and D. Meier, "Confinement-driven inverse domain scaling in polycrystalline ErMnO3,"
-  *Advanced Materials*, 2203449 (2022).
+  *Advanced Materials*, **34** (2022).
   https://doi.org/10.1002/adma.202203449.
 
 2021
