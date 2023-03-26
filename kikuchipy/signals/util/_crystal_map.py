@@ -108,11 +108,11 @@ def _equal_phase(phase1: Phase, phase2: Phase) -> Tuple[bool, Union[str, None]]:
     return True, None
 
 
-def _get_points_in_data_in_xmap(
+def _get_indexed_points_in_data_in_xmap(
     xmap: CrystalMap,
     navigation_mask: Optional[np.ndarray] = None,
-) -> Tuple[np.ndarray, int, bool, Union[Tuple[int], Tuple[int, int]]]:
-    points_in_data = xmap.is_in_data
+) -> Tuple[np.ndarray, np.ndarray, int, Union[Tuple[int], Tuple[int, int], None]]:
+    in_data = xmap.is_in_data.copy()
 
     if navigation_mask is not None:
         # Keep only points in the mask that are already in the data
@@ -122,32 +122,38 @@ def _get_points_in_data_in_xmap(
                 f"Navigation mask shape {nav_mask_shape} and crystal map shape "
                 f"{xmap.shape} must be the same"
             )
-        points_in_mask = ~navigation_mask.ravel()
-        points_in_mask_in_data = points_in_mask[points_in_data]
-        points_in_data = np.logical_and(points_in_data, points_in_mask)
-        phase_id = np.unique(xmap.phase_id[points_in_mask_in_data])
-    else:
-        phase_id = np.unique(xmap.phase_id)
 
-    # Check if the (possibly combined) mask is continuous
-    if xmap.ndim == 1:
-        points_in_data_idx = np.where(points_in_data)[0]
-        mask_size = points_in_data_idx[-1] - points_in_data_idx[0] + 1
-        mask_is_continuous = mask_size == points_in_data.sum()
-        mask_shape = (mask_size,)
+        in_mask = ~navigation_mask.ravel()
+        in_mask_and_data = in_mask[in_data]
+        in_data = np.logical_and(in_data, in_mask)
+        phase_id = np.unique(xmap.phase_id[in_mask_and_data])
     else:
-        points_to_refine2d = points_in_data.reshape(xmap.shape)
-        r_points, c_points = np.where(points_to_refine2d)
-        r_size = r_points.max() - r_points.min() + 1
-        c_size = c_points.max() - c_points.min() + 1
-        mask_is_continuous = (r_size * c_size) == points_in_data.sum()
-        mask_shape = (r_size, c_size)
+        phase_id = np.unique(xmap.phase_id[xmap.is_indexed])
 
-    if phase_id.size != 1:
+    if not (phase_id.size == 1 or (phase_id.size == 2 and -1 in phase_id)):
         raise ValueError(
             "Points in data in crystal map must have only one phase, but had the phase "
             f"IDs {list(phase_id)}"
         )
-    unique_phase_id = phase_id[0]
+    unique_phase_id = phase_id[phase_id != -1][0]
 
-    return points_in_data, unique_phase_id, mask_is_continuous, mask_shape
+    # Check if the (possibly combined) mask is continuous
+    if xmap.ndim == 1:
+        points_in_data_idx = np.where(in_data)[0]
+        mask_size = points_in_data_idx[-1] - points_in_data_idx[0] + 1
+        mask_is_continuous = mask_size == in_data.sum()
+        mask_shape = (mask_size,)
+    else:
+        in_data2d = in_data.reshape(xmap.shape)
+        r_points, c_points = np.where(in_data2d)
+        r_size = r_points.max() - r_points.min() + 1
+        c_size = c_points.max() - c_points.min() + 1
+        mask_is_continuous = (r_size * c_size) == in_data.sum()
+        mask_shape = (r_size, c_size)
+
+    in_data_indexed = np.logical_and(in_data, xmap.is_indexed)
+
+    if not np.allclose(in_data_indexed, in_data) or not mask_is_continuous:
+        mask_shape = None
+
+    return in_data_indexed, in_data, unique_phase_id, mask_shape

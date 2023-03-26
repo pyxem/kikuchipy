@@ -83,7 +83,7 @@ from kikuchipy.signals.util._dask import (
 )
 from kikuchipy.signals.util._detector import _detector_is_compatible_with_signal
 from kikuchipy.signals.util._crystal_map import (
-    _get_points_in_data_in_xmap,
+    _get_indexed_points_in_data_in_xmap,
     _equal_phase,
     _xmap_is_compatible_with_signal,
 )
@@ -2138,6 +2138,9 @@ class EBSD(KikuchipySignal2D):
 
         Notes
         -----
+        If the crystal map to refine contains points marked as not
+        indexed, the detector might not have a 2D navigation shape.
+
         *NLopt* is for now an optional dependency, see
         :ref:`optional-dependencies` for details. Be aware that *NLopt*
         does not fail gracefully. If continued use of *NLopt* proves
@@ -2324,6 +2327,9 @@ class EBSD(KikuchipySignal2D):
 
         Notes
         -----
+        If the crystal map to refine contains points marked as not
+        indexed, the detector might not have a 2D navigation shape.
+
         *NLopt* is for now an optional dependency, see
         :ref:`optional-dependencies` for details. Be aware that *NLopt*
         does not fail gracefully. If continued use of *NLopt* proves
@@ -2529,6 +2535,9 @@ class EBSD(KikuchipySignal2D):
 
         Notes
         -----
+        If the crystal map to refine contains points marked as not
+        indexed, the detector might not have a 2D navigation shape.
+
         The method attempts to refine the orientations and projection
         center at the same time for each map point. The optimization
         landscape is sloppy :cite:`pang2020global`, where the
@@ -2925,7 +2934,7 @@ class EBSD(KikuchipySignal2D):
 
         # Checks navigation mask shape and whether there is only one
         # phase ID in points to refine
-        points_to_refine, phase_id, *_ = _get_points_in_data_in_xmap(
+        points_to_refine, _, phase_id, _ = _get_indexed_points_in_data_in_xmap(
             xmap, navigation_mask
         )
 
