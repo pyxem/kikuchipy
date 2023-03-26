@@ -669,6 +669,44 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
             **ref_kw,
         )
 
+    def test_refine_orientation_not_indexed(self, dummy_signal, get_single_phase_xmap):
+        """Test refinining crystal map with some points considered
+        not-indexed (phase ID of -1). Also test combined with mask with
+        and without points not indexed.
+        """
+        s = dummy_signal
+        xmap = get_single_phase_xmap(
+            nav_shape=s._navigation_shape_rc,
+            rotations_per_point=1,
+            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
+        )
+        xmap.phases.add_not_indexed()
+        xmap[1, 2].phase_id = -1
+
+        ref_kw = dict(detector=s.detector, master_pattern=self.mp, energy=20)
+
+        # Single point not-indexed
+        xmap_ref = s.refine_orientation(xmap, **ref_kw)
+        assert np.allclose(xmap_ref.is_in_data, xmap.is_in_data)
+        assert np.allclose(xmap_ref.phase_id, xmap.phase_id)
+        assert "not_indexed" in xmap_ref.phases.names
+
+        # Within navigation mask (exclude two first points)
+        nav_mask2 = np.array([1, 1, 0, 0, 0, 0, 0, 0, 0], dtype=bool)
+        nav_mask2_2d = nav_mask2.reshape(xmap.shape)
+        xmap_ref2 = s.refine_orientation(xmap, navigation_mask=nav_mask2_2d, **ref_kw)
+        assert np.allclose(xmap_ref2.is_in_data, ~nav_mask2)
+        assert np.allclose(xmap_ref2.phase_id, xmap.phase_id[~nav_mask2])
+        assert "not_indexed" in xmap_ref2.phases.names
+
+        # Without navigation mask (exclude point considered not indexed)
+        nav_mask3 = np.array([0, 0, 0, 0, 0, 1, 0, 0, 0], dtype=bool)
+        nav_mask3_2d = nav_mask3.reshape((3, 3))
+        xmap_ref3 = s.refine_orientation(xmap, navigation_mask=nav_mask3_2d, **ref_kw)
+        assert np.allclose(xmap_ref3.is_in_data, ~nav_mask3)
+        assert np.allclose(xmap_ref3.phase_id, xmap.phase_id[~nav_mask3])
+        assert "not_indexed" not in xmap_ref3.phases_in_data.names
+
 
 class TestEBSDRefinePC(EBSDRefineTestSetup):
     @pytest.mark.parametrize(
@@ -1108,3 +1146,47 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
             navigation_mask=nav_mask,
             **ref_kw,
         )
+
+    def test_refine_orientation_pc_not_indexed(
+        self, dummy_signal, get_single_phase_xmap
+    ):
+        """Test refinining orientations and PC with some points
+        considered not-indexed (phase ID of -1). Also test combined with
+        mask with and without points not indexed.
+        """
+        s = dummy_signal
+        xmap = get_single_phase_xmap(
+            nav_shape=s._navigation_shape_rc,
+            rotations_per_point=1,
+            step_sizes=tuple(a.scale for a in s.axes_manager.navigation_axes)[::-1],
+        )
+        xmap.phases.add_not_indexed()
+        xmap[1, 2].phase_id = -1
+
+        ref_kw = dict(xmap=xmap, detector=s.detector, master_pattern=self.mp, energy=20)
+
+        # Single point not-indexed
+        xmap_ref, det_ref = s.refine_orientation_projection_center(**ref_kw)
+        assert np.allclose(xmap_ref.is_in_data, xmap.is_in_data)
+        assert np.allclose(xmap_ref.phase_id, xmap.phase_id)
+        assert "not_indexed" in xmap_ref.phases.names
+
+        # Within navigation mask (exclude two first points)
+        nav_mask2 = np.array([1, 1, 0, 0, 0, 0, 0, 0, 0], dtype=bool)
+        nav_mask2_2d = nav_mask2.reshape(xmap.shape)
+        xmap_ref2, det_ref2 = s.refine_orientation_projection_center(
+            navigation_mask=nav_mask2_2d, **ref_kw
+        )
+        assert np.allclose(xmap_ref2.is_in_data, ~nav_mask2)
+        assert np.allclose(xmap_ref2.phase_id, xmap.phase_id[~nav_mask2])
+        assert "not_indexed" in xmap_ref2.phases.names
+
+        # Without navigation mask (exclude point considered not indexed)
+        nav_mask3 = np.array([0, 0, 0, 0, 0, 1, 0, 0, 0], dtype=bool)
+        nav_mask3_2d = nav_mask3.reshape((3, 3))
+        xmap_ref3, det_ref3 = s.refine_orientation_projection_center(
+            navigation_mask=nav_mask3_2d, **ref_kw
+        )
+        assert np.allclose(xmap_ref3.is_in_data, ~nav_mask3)
+        assert np.allclose(xmap_ref3.phase_id, xmap.phase_id[~nav_mask3])
+        assert "not_indexed" not in xmap_ref3.phases_in_data.names
