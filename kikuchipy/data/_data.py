@@ -120,6 +120,49 @@ def nickel_ebsd_large(
     file_path = NiEBSDLarge.fetch_file_path(allow_download, show_progressbar)
     return load(file_path, **kwargs)
 
+def sdss_ebsd(
+    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
+) -> EBSD:
+    """3600 EBSD patterns in a (60, 60) navigation shape of (48, 48)
+    pixels from super duplex stainless steel, acquired on a NORDIF NICE detector.
+
+    Parameters
+    ----------
+    allow_download
+        Whether to allow downloading the dataset from the internet to
+        the local cache with the pooch Python package. Default is
+        ``False``.
+    show_progressbar
+        Whether to show a progressbar when downloading. If not given,
+        the value of
+        :obj:`hyperspy.api.preferences.General.show_progressbar` is
+        used.
+    **kwargs
+        Keyword arguments passed to :func:`~kikuchipy.load`.
+
+    Returns
+    -------
+    ebsd_signal
+        EBSD signal.
+
+    Notes
+    -----
+    The dataset is hosted in the GitHub repository
+    https://github.com/pyxem/kikuchipy-data.
+
+    The dataset carries a CC BY 4.0 license.
+
+    Examples
+    --------
+    >>> import kikuchipy as kp
+    >>> s = kp.data.sdss_ebsd(allow_download=True)
+    >>> s
+    <EBSD, title: patterns Scan 1, dimensions: (60, 60|48, 48)>
+    >>> s.plot()
+    """
+    SdssEBSD = Dataset("sdss_ebsd/patterns.h5")
+    file_path = SdssEBSD.fetch_file_path(allow_download, show_progressbar)
+    return load(file_path, **kwargs)
 
 def ni_gain(
     number: int = 1,

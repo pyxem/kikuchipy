@@ -43,6 +43,7 @@ __all__ = [
     "silicon_ebsd_moving_screen_in",
     "silicon_ebsd_moving_screen_out10mm",
     "silicon_ebsd_moving_screen_out5mm",
+    "sdss_ebsd",
 ]
 
 
@@ -63,6 +64,7 @@ def __getattr__(name):
         "silicon_ebsd_moving_screen_in": "_data",
         "silicon_ebsd_moving_screen_out10mm": "_data",
         "silicon_ebsd_moving_screen_out5mm": "_data",
+        "sdss_ebsd": "_data",
     }
     if name in __all__:
         import importlib

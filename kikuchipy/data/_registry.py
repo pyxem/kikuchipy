@@ -29,6 +29,7 @@ _registry_hashes = {
     "silicon_ebsd_moving_screen/si_in.h5":                          "md5:d8561736f6174e6520a45c3be19eb23a",
     "silicon_ebsd_moving_screen/si_out5mm.h5":                      "md5:77dd01cc2cae6c1c5af6708260c94cab",
     "silicon_ebsd_moving_screen/si_out10mm.h5":                     "md5:0b4ece1533f380a42b9b81cfd0dd202c",
+    "sdss_ebsd/patterns.h5":                                        "md5:1051caae473ab061f28bad6399d8d0a3",
     # From Zenodo
     "ebsd_si_wafer.zip":                                            "md5:444ec4188ba8c8bda5948c2bf4f9a672",
     "si_wafer/Pattern.dat":                                         "md5:58952a93c3ecacff22955f1ad7c61246",
@@ -76,6 +77,7 @@ KP_DATA_REPO_URL = "https://raw.githubusercontent.com/pyxem/kikuchipy-data/"
 _registry_urls = {
     # From GitHub
     "nickel_ebsd_large/patterns.h5":                    KP_DATA_REPO_URL + "bcab8f7a4ffdb86a97f14e2327a4813d3156a85e/nickel_ebsd_large/patterns_v2.h5",
+    "sdss_ebsd/patterns.h5":                            KP_DATA_REPO_URL + "bcab8f7a4ffdb86a97f14e2327a4813d3156a85e/sdss_ebsd/patterns.h5",
     "silicon_ebsd_moving_screen/si_in.h5":              KP_DATA_REPO_URL + "bcab8f7a4ffdb86a97f14e2327a4813d3156a85e/silicon_ebsd_moving_screen/si_in.h5",
     "silicon_ebsd_moving_screen/si_out5mm.h5":          KP_DATA_REPO_URL + "bcab8f7a4ffdb86a97f14e2327a4813d3156a85e/silicon_ebsd_moving_screen/si_out5mm.h5",
     "silicon_ebsd_moving_screen/si_out10mm.h5":         KP_DATA_REPO_URL + "bcab8f7a4ffdb86a97f14e2327a4813d3156a85e/silicon_ebsd_moving_screen/si_out10mm.h5",
