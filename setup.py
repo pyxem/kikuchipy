@@ -97,8 +97,8 @@ setup(
     url="https://kikuchipy.org",
     python_requires=">=3.7",
     description=(
-        "Processing and analysis of electron backscatter diffraction (EBSD) "
-        "patterns."
+        "Processing, simulating and indexing of electron backscatter diffraction "
+        "(EBSD) patterns."
     ),
     long_description=open("README.md", encoding="utf-8").read(),
     long_description_content_type="text/markdown",

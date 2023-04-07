@@ -27,7 +27,7 @@ from typing import Callable, Optional, Tuple, Union
 from dask.diagnostics import ProgressBar
 import dask.array as da
 import numpy as np
-from orix.crystal_map import create_coordinate_arrays, CrystalMap, PhaseList
+from orix.crystal_map import create_coordinate_arrays, CrystalMap, Phase, PhaseList
 from orix.quaternion import Rotation
 import scipy.optimize
 
@@ -41,7 +41,7 @@ from kikuchipy.indexing._refinement._solvers import (
 )
 from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.pattern import rescale_intensity
-from kikuchipy.signals.util._crystal_map import _get_points_in_data_in_xmap
+from kikuchipy.signals.util._crystal_map import _get_indexed_points_in_data_in_xmap
 from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_from_detector,
 )
@@ -84,14 +84,21 @@ def compute_refine_orientation_results(
         ``pseudo_symmetry_checked=True``. See the docstring of
         ``refine_orientation()`` for details.
     """
-    points_to_refine, phase_id, *_ = _get_points_in_data_in_xmap(xmap, navigation_mask)
+    points_to_refine, is_in_data, phase_id, _ = _get_indexed_points_in_data_in_xmap(
+        xmap, navigation_mask
+    )
 
     nav_size = points_to_refine.size
     nav_size_in_data = points_to_refine.sum()
 
-    xmap_kw = _get_crystal_map_parameters(xmap, nav_size, pseudo_symmetry_checked)
-    xmap_kw["phase_list"] = PhaseList(phases=master_pattern.phase, ids=phase_id)
+    xmap_kw = _get_crystal_map_parameters(
+        xmap, nav_size, master_pattern.phase, phase_id, pseudo_symmetry_checked
+    )
     xmap_kw["phase_id"][points_to_refine] = phase_id
+
+    is_indexed = np.zeros_like(is_in_data)
+    is_indexed[xmap.is_in_data] = xmap.is_indexed
+    xmap_kw["phase_id"][~is_indexed] = -1
 
     print(f"Refining {nav_size_in_data} orientation(s):", file=sys.stdout)
     time_start = time()
@@ -110,7 +117,7 @@ def compute_refine_orientation_results(
     if pseudo_symmetry_checked:
         xmap_kw["prop"]["pseudo_symmetry_index"][points_to_refine] = res[:, 5]
 
-    xmap_refined = CrystalMap(is_in_data=points_to_refine, **xmap_kw)
+    xmap_refined = CrystalMap(is_in_data=is_in_data, **xmap_kw)
 
     return xmap_refined
 
@@ -150,7 +157,7 @@ def compute_refine_projection_center_results(
     num_evals
         Number of function evaluations per pattern.
     """
-    points_to_refine, _, mask_is_continuous, mask_shape = _get_points_in_data_in_xmap(
+    (points_to_refine, *_, mask_shape) = _get_indexed_points_in_data_in_xmap(
         xmap, navigation_mask
     )
     nav_size_in_data = points_to_refine.sum()
@@ -171,7 +178,7 @@ def compute_refine_projection_center_results(
     num_evals = res[:, 1].astype(np.int32)
     new_pc = res[:, 2:]
 
-    if mask_is_continuous:
+    if mask_shape is not None:
         scores = scores.reshape(mask_shape)
         num_evals = num_evals.reshape(mask_shape)
         new_pc = new_pc.reshape(mask_shape + (3,))
@@ -235,17 +242,22 @@ def compute_refine_orientation_projection_center_results(
     """
     (
         points_to_refine,
+        is_in_data,
         phase_id,
-        mask_is_continuous,
         mask_shape,
-    ) = _get_points_in_data_in_xmap(xmap, navigation_mask)
+    ) = _get_indexed_points_in_data_in_xmap(xmap, navigation_mask)
 
     nav_size = points_to_refine.size
     nav_size_in_data = points_to_refine.sum()
 
-    xmap_kw = _get_crystal_map_parameters(xmap, nav_size, pseudo_symmetry_checked)
-    xmap_kw["phase_list"] = PhaseList(phases=master_pattern.phase, ids=phase_id)
+    xmap_kw = _get_crystal_map_parameters(
+        xmap, nav_size, master_pattern.phase, phase_id, pseudo_symmetry_checked
+    )
     xmap_kw["phase_id"][points_to_refine] = phase_id
+
+    is_indexed = np.zeros_like(is_in_data)
+    is_indexed[xmap.is_in_data] = xmap.is_indexed
+    xmap_kw["phase_id"][~is_indexed] = -1
 
     new_detector = detector.deepcopy()
 
@@ -269,10 +281,10 @@ def compute_refine_orientation_projection_center_results(
     if pseudo_symmetry_checked:
         xmap_kw["prop"]["pseudo_symmetry_index"][points_to_refine] = res[:, 8]
 
-    xmap_refined = CrystalMap(is_in_data=points_to_refine, **xmap_kw)
+    xmap_refined = CrystalMap(is_in_data=is_in_data, **xmap_kw)
 
     new_pc = res[:, 5:8]
-    if mask_is_continuous:
+    if mask_shape is not None:
         new_pc = new_pc.reshape(mask_shape + (3,))
     new_detector.pc = new_pc
 
@@ -282,6 +294,8 @@ def compute_refine_orientation_projection_center_results(
 def _get_crystal_map_parameters(
     xmap: CrystalMap,
     nav_size: int,
+    master_pattern_phase: Phase,
+    phase_id: int,
     pseudo_symmetry_checked: bool = False,
 ) -> dict:
     step_sizes = ()
@@ -294,6 +308,7 @@ def _get_crystal_map_parameters(
         {
             "rotations": Rotation.identity((nav_size,)),
             "phase_id": np.zeros(nav_size, dtype=np.int32),
+            "phase_list": PhaseList(phases=master_pattern_phase, ids=phase_id),
             "scan_unit": xmap.scan_unit,
             "prop": {
                 "scores": np.zeros(nav_size, dtype=np.float64),
@@ -304,6 +319,9 @@ def _get_crystal_map_parameters(
 
     if pseudo_symmetry_checked:
         xmap_dict["prop"]["pseudo_symmetry_index"] = np.zeros(nav_size, dtype=np.int32)
+
+    if "not_indexed" in xmap.phases.names:
+        xmap_dict["phase_list"].add_not_indexed()
 
     return xmap_dict
 
