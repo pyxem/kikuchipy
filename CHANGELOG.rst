@@ -13,6 +13,22 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+0.8.4 (2023-04-07)
+==================
+
+Fixed
+-----
+- Points considered not-indexed in a crystal map are maintained after EBSD refinement.
+  (`#632 <https://github.com/pyxem/kikuchipy/pull/632>`_)
+
+Changed
+-------
+- EBSD detector returned from combined EBSD and projection center (PC) refinement now
+  has PC values equal to the number of indexed points, accounting for points not being
+  in the data, navigation mask *and* points considered as not-indexed. This means that
+  it might not have a 2D navigation shape, even though the returned crystal map has.
+  (`#632 <https://github.com/pyxem/kikuchipy/pull/632>`_)
+
 0.8.3 (2023-03-23)
 ==================
 
