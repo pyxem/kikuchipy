@@ -47,7 +47,7 @@ if make_release:
                 changelog_end = i - 1
     with open("release_part_in_changelog.rst", mode="w") as f:
         f.write(
-            "kikuchipy is an open-source Python library for processing and analysis of electron backscatter diffraction (EBSD) patterns.\n\n"
+            "kikuchipy is an open-source Python library for processing, simulating and indexing of electron backscatter diffraction (EBSD) patterns.\n\n"
             f"See below, the `changelog <https://kikuchipy.org/en/stable/changelog.html>`_ or the `GitHub changelog <https://github.com/pyxem/kikuchipy/compare/v{pypi_version}...v{branch_version}>`_ for all updates from the previous release.\n\n"
         )
         for line in content[changelog_start:changelog_end]:
