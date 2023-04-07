@@ -2138,9 +2138,6 @@ class EBSD(KikuchipySignal2D):
 
         Notes
         -----
-        If the crystal map to refine contains points marked as not
-        indexed, the detector might not have a 2D navigation shape.
-
         *NLopt* is for now an optional dependency, see
         :ref:`optional-dependencies` for details. Be aware that *NLopt*
         does not fail gracefully. If continued use of *NLopt* proves
@@ -2328,7 +2325,8 @@ class EBSD(KikuchipySignal2D):
         Notes
         -----
         If the crystal map to refine contains points marked as not
-        indexed, the detector might not have a 2D navigation shape.
+        indexed, the returned detector might not have a 2D navigation
+        shape.
 
         *NLopt* is for now an optional dependency, see
         :ref:`optional-dependencies` for details. Be aware that *NLopt*
@@ -2536,7 +2534,8 @@ class EBSD(KikuchipySignal2D):
         Notes
         -----
         If the crystal map to refine contains points marked as not
-        indexed, the detector might not have a 2D navigation shape.
+        indexed, the returned detector might not have a 2D navigation
+        shape.
 
         The method attempts to refine the orientations and projection
         center at the same time for each map point. The optimization

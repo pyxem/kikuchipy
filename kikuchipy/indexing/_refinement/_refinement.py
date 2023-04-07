@@ -95,7 +95,10 @@ def compute_refine_orientation_results(
         xmap, nav_size, master_pattern.phase, phase_id, pseudo_symmetry_checked
     )
     xmap_kw["phase_id"][points_to_refine] = phase_id
-    xmap_kw["phase_id"][~xmap.is_indexed] = -1
+
+    is_indexed = np.zeros_like(is_in_data)
+    is_indexed[xmap.is_in_data] = xmap.is_indexed
+    xmap_kw["phase_id"][~is_indexed] = -1
 
     print(f"Refining {nav_size_in_data} orientation(s):", file=sys.stdout)
     time_start = time()
@@ -154,11 +157,9 @@ def compute_refine_projection_center_results(
     num_evals
         Number of function evaluations per pattern.
     """
-    (
-        points_to_refine,
-        *_,
-        mask_shape
-    ) = _get_indexed_points_in_data_in_xmap(xmap, navigation_mask)
+    (points_to_refine, *_, mask_shape) = _get_indexed_points_in_data_in_xmap(
+        xmap, navigation_mask
+    )
     nav_size_in_data = points_to_refine.sum()
 
     new_detector = detector.deepcopy()
@@ -253,7 +254,10 @@ def compute_refine_orientation_projection_center_results(
         xmap, nav_size, master_pattern.phase, phase_id, pseudo_symmetry_checked
     )
     xmap_kw["phase_id"][points_to_refine] = phase_id
-    xmap_kw["phase_id"][~xmap.is_indexed] = -1
+
+    is_indexed = np.zeros_like(is_in_data)
+    is_indexed[xmap.is_in_data] = xmap.is_indexed
+    xmap_kw["phase_id"][~is_indexed] = -1
 
     new_detector = detector.deepcopy()
 

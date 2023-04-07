@@ -137,6 +137,11 @@ def _get_indexed_points_in_data_in_xmap(
         )
     unique_phase_id = phase_id[phase_id != -1][0]
 
+    # xmap.is_indexed might have fewer elements than the in_data array
+    is_indexed = np.zeros_like(in_data)
+    is_indexed[xmap.is_in_data] = xmap.is_indexed
+    in_data_indexed = np.logical_and(in_data, is_indexed)
+
     # Check if the (possibly combined) mask is continuous
     if xmap.ndim == 1:
         points_in_data_idx = np.where(in_data)[0]
@@ -150,9 +155,6 @@ def _get_indexed_points_in_data_in_xmap(
         c_size = c_points.max() - c_points.min() + 1
         mask_is_continuous = (r_size * c_size) == in_data.sum()
         mask_shape = (r_size, c_size)
-
-    in_data_indexed = np.logical_and(in_data, xmap.is_indexed)
-
     if not np.allclose(in_data_indexed, in_data) or not mask_is_continuous:
         mask_shape = None
 
