@@ -39,7 +39,10 @@ class DIIndexer(abc.ABC):
 
     _allowed_dtypes: List[type] = []
 
-    def __init__(self, dtype: Union[str, np.dtype, type]):
+    def __init__(
+        self,
+        dtype: Union[str, np.dtype, type]
+    ):
         """Create a similarity metric matching experimental and
         simulated EBSD patterns in a dictionary.
         """
@@ -63,11 +66,10 @@ class DIIndexer(abc.ABC):
         keep_n
             Number of best matches to keep.
         """
-        self.dictionary_patterns = dictionary_patterns.astype(self._dtype)
         self._keep_n = keep_n
         assert len(dictionary_patterns.shape) == 2
         assert dictionary_patterns.shape[0] > 0 and dictionary_patterns.shape[1] > 0
-        self.prepare_dictionary()
+        self.prepare_dictionary(dictionary_patterns)
 
     @property
     def allowed_dtypes(self) -> List[type]:

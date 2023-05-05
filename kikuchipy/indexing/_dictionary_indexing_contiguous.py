@@ -34,16 +34,16 @@ from tqdm import tqdm
 
 
 def _custom_dictionary_indexing(
-    experimental: Union[np.ndarray, da.Array],
-    experimental_nav_shape: tuple,
-    dictionary: Union[np.ndarray, da.Array],
-    step_sizes: tuple,
-    dictionary_xmap: CrystalMap,
-    indexer: DIIndexer,
-    keep_n: int,
-    n_per_iteration: int,
-    navigation_mask: Union[np.ndarray, None],
-    signal_mask: Union[np.ndarray, None],
+        experimental: Union[np.ndarray, da.Array],
+        experimental_nav_shape: tuple,
+        dictionary: Union[np.ndarray, da.Array],
+        step_sizes: tuple,
+        dictionary_xmap: CrystalMap,
+        indexer: DIIndexer,
+        keep_n: int,
+        n_per_iteration: int,
+        navigation_mask: Union[np.ndarray, None],
+        signal_mask: Union[np.ndarray, None],
 ) -> CrystalMap:
     """Dictionary indexing matching experimental patterns to a
     dictionary of simulated patterns of known orientations.
@@ -116,9 +116,8 @@ def _custom_dictionary_indexing(
         experimental_chunk = experimental[start:end]
         if experimental_is_lazy:
             experimental_chunk = experimental_chunk.compute()
-        simulation_indices[start:end], scores[start:end] = indexer.query(
-            experimental_chunk
-        )
+        simulation_indices[start:end], scores[start:end] = indexer.query(experimental_chunk)
+        del experimental_chunk
     query_time = time() - time_start
 
     patterns_per_second = n_experimental_all / query_time
