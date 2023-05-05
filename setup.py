@@ -164,6 +164,7 @@ setup(
         "scikit-image       >= 0.16.2",
         "scikit-learn",
         "scipy              >= 1.7",
+        "hnswlib            >= 0.7.0",
     ],
     # fmt: on
     entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},

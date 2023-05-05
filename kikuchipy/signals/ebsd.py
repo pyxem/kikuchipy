@@ -44,6 +44,7 @@ from kikuchipy.detectors import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
 from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
+from kikuchipy.indexing._custom_dictionary_indexing import _custom_dictionary_indexing
 from kikuchipy.indexing._hough_indexing import (
     _get_pyebsdindex_phaselist,
     _indexer_is_compatible_with_kikuchipy,
@@ -60,6 +61,8 @@ from kikuchipy.indexing.similarity_metrics import (
     NormalizedCrossCorrelationMetric,
     NormalizedDotProductMetric,
 )
+from kikuchipy.indexing.di_indexers import DIIndexer
+
 from kikuchipy.io._io import _save
 from kikuchipy.pattern import chunk
 from kikuchipy.pattern.chunk import _average_neighbour_patterns
@@ -97,7 +100,6 @@ from kikuchipy.signals.util._overwrite_hyperspy_methods import (
 )
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
-
 
 _logger = logging.getLogger(__name__)
 
@@ -1837,6 +1839,10 @@ class EBSD(KikuchipySignal2D):
             One EBSD signal with dictionary patterns. The signal must
             have a 1D navigation axis, an :attr:`xmap` property with
             crystal orientations set, and equal detector shape.
+        approx
+            Whether to use the approximate indexing algorithm (hnswlib).
+            If ``True``, then the keep_n parameter is used to set the
+            number of neighbors to search for.
         metric
             Similarity metric, by default ``"ncc"`` (normalized
             cross-correlation). ``"ndp"`` (normalized dot product) is
@@ -1854,7 +1860,7 @@ class EBSD(KikuchipySignal2D):
             Number of dictionary patterns to compare to all experimental
             patterns in each indexing iteration. If not given, and the
             dictionary is a ``LazyEBSD`` signal, it is equal to the
-            chunk size of the first pattern array axis, while if if is
+            chunk size of the first pattern array axis, while if it is
             an ``EBSD`` signal, it is set equal to the number of
             dictionary patterns, yielding only one iteration. This
             parameter can be increased to use less memory during
@@ -1969,6 +1975,120 @@ class EBSD(KikuchipySignal2D):
                 keep_n=keep_n,
                 n_per_iteration=n_per_iteration,
                 metric=metric,
+            )
+
+        xmap.scan_unit = _get_navigation_axes_unit(am_exp)
+
+        return xmap
+
+    def custom_di_indexing(
+        self,
+        dictionary: EBSD,
+        indexer: DIIndexer,
+        keep_n: int = 5,
+        n_per_iteration: Optional[int] = None,
+        navigation_mask: Optional[np.ndarray] = None,
+        signal_mask: Optional[np.ndarray] = None,
+    ) -> CrystalMap:
+        """Index patterns by matching each pattern to a dictionary of
+        simulated patterns of known orientations
+        :cite:`chen2015dictionary,jackson2019dictionary`.
+
+        Parameters
+        ----------
+        dictionary
+            One EBSD signal with dictionary patterns. The signal must
+            have a 1D navigation axis, an :attr:`xmap` property with
+            crystal orientations set, and equal detector shape.
+        indexer
+            A custom indexer that implements the :class:`DIIndexer`
+        keep_n
+            Number of best matches to keep, by default 5 or the number
+            of dictionary patterns if fewer than 5 are available.
+        n_per_iteration
+            Number of experimental patterns to index per iteration. If
+            not given, the number of experimental patterns is used.
+        navigation_mask
+            A boolean mask equal to the signal's navigation (map) shape,
+            where only patterns equal to ``False`` are indexed. If not
+            given, all patterns are indexed.
+        signal_mask
+            A boolean mask equal to the experimental patterns' detector
+            shape, where only pixels equal to ``False`` are matched. If
+            not given, all pixels are used.
+
+        Returns
+        -------
+        xmap
+            A crystal map with ``keep_n`` rotations per point with the
+            sorted best matching orientations in the dictionary. The
+            corresponding best scores and indices into the dictionary
+            are stored in the ``xmap.prop`` dictionary as ``"scores"``
+            and ``"simulation_indices"``.
+
+        See Also
+        --------
+        refine_orientation
+        refine_projection_center
+        refine_orientation_projection_center
+        kikuchipy.indexing.merge_crystal_maps :
+            Merge multiple single phase crystal maps into one multiphase map.
+        kikuchipy.indexing.orientation_similarity_map :
+            Calculate an orientation similarity map.
+        """
+        am_exp = self.axes_manager
+        am_dict = dictionary.axes_manager
+        dict_size = am_dict.navigation_size
+
+        keep_n = min(keep_n, dict_size)
+
+        nav_shape_exp = am_exp.navigation_shape[::-1]
+        if navigation_mask is not None:
+            if navigation_mask.shape != nav_shape_exp:
+                raise ValueError(
+                    f"The navigation mask shape {navigation_mask.shape} and the "
+                    f"signal's navigation shape {nav_shape_exp} must be identical"
+                )
+            elif navigation_mask.all():
+                raise ValueError(
+                    "The navigation mask must allow for indexing of at least one "
+                    "pattern (at least one value equal to `False`)"
+                )
+            elif not isinstance(navigation_mask, np.ndarray):
+                raise ValueError("The navigation mask must be a NumPy array")
+
+        if signal_mask is not None:
+            if not isinstance(signal_mask, np.ndarray):
+                raise ValueError("The signal mask must be a NumPy array")
+
+        sig_shape_exp = am_exp.signal_shape[::-1]
+        sig_shape_dict = am_dict.signal_shape[::-1]
+        if sig_shape_exp != sig_shape_dict:
+            raise ValueError(
+                f"Experimental {sig_shape_exp} and dictionary {sig_shape_dict} signal "
+                "shapes must be identical"
+            )
+
+        dict_xmap = dictionary.xmap
+        if dict_xmap is None or dict_xmap.shape != (dict_size,):
+            raise ValueError(
+                "Dictionary signal must have a non-empty `EBSD.xmap` attribute of equal"
+                " size as the number of dictionary patterns, and both the signal and "
+                "crystal map must have only one navigation dimension"
+            )
+
+        with dask.config.set(**{"array.slicing.split_large_chunks": False}):
+            xmap = _custom_dictionary_indexing(
+                experimental=self.data,
+                experimental_nav_shape=am_exp.navigation_shape[::-1],
+                dictionary=dictionary.data,
+                step_sizes=tuple(a.scale for a in am_exp.navigation_axes[::-1]),
+                dictionary_xmap=dictionary.xmap,
+                indexer=indexer,
+                keep_n=keep_n,
+                n_per_iteration=n_per_iteration,
+                navigation_mask=navigation_mask,
+                signal_mask=signal_mask,
             )
 
         xmap.scan_unit = _get_navigation_axes_unit(am_exp)
