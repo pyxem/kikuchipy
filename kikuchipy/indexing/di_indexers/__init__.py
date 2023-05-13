@@ -28,15 +28,11 @@ from kikuchipy.indexing.di_indexers._pca_indexer_jax import (
 from kikuchipy.indexing.di_indexers._pca_indexer_cuml import (
     PCAIndexerCuml,
 )
-from kikuchipy.indexing.di_indexers._cuml_exhaustive_indexer import (
-    CumlExhaustiveIndexer,
-)
 
 __all__ = [
     "PCAIndexer",
     "PCAIndexerBLAST",
     "PCAIndexerJAX",
     "PCAIndexerCuml",
-    "CumlExhaustiveIndexer",
     "DIIndexer"
 ]

@@ -44,9 +44,7 @@ class PCAIndexerCuml(DIIndexer):
     EBSD patterns in a dictionary using cuml. The dictionary must be able
     to fit in memory. The dictionary is indexed using the cuml library,
     specifically the NearestNeighbors class. More information can be found
-    at the cuml documentation:
-
-    https://docs.rapids.ai/api/cuml/stable/api.html#nearest-neighbors
+    at the cuml documentation.
 
     """
 
@@ -60,7 +58,7 @@ class PCAIndexerCuml(DIIndexer):
                  whiten: bool = True,
                  datatype: Union[str, np.dtype, type] = np.float32
                  ):
-        """Initialize the HNSWlib indexer.
+        """
 
         Parameters
         ----------

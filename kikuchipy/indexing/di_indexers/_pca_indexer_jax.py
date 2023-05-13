@@ -1,8 +1,12 @@
 from typing import Tuple
-import jax
-import jax.numpy as jnp
 import numpy as np
-from jax import jit
+try:
+    import jax
+    import jax.numpy as jnp
+    from jax import jit
+except ImportError:
+    "jax is required to use for PCAIndexerJax"
+
 import functools
 from kikuchipy.indexing.di_indexers._di_indexer import DIIndexer
 

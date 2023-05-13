@@ -1,9 +1,14 @@
 import numpy as np
 from numba import njit, prange
 import heapq
-import pyopencl as cl
-from pyopencl.array import Array, arange, empty, zeros
-import pyclblast
+
+try:
+    import pyopencl as cl
+    from pyopencl.array import Array, arange, empty, zeros
+    import pyclblast
+except ImportError:
+    "pyopencl and pyclblast are required for PCAIndexerBLAST."
+
 from scipy.linalg.lapack import dsyevd
 from kikuchipy.indexing.di_indexers._di_indexer import DIIndexer
 from typing import List, Union
@@ -497,7 +502,7 @@ class PCAIndexerBLAST(DIIndexer):
                  n_components: int = 500,
                  whiten: bool = True,
                  ):
-        """Initialize the HNSWlib indexer.
+        """
 
         Parameters
         ----------
