@@ -19,20 +19,8 @@ from kikuchipy.indexing.di_indexers._di_indexer import DIIndexer
 from kikuchipy.indexing.di_indexers._pca_indexer import (
     PCAIndexer,
 )
-from kikuchipy.indexing.di_indexers._pca_indexer_pyclblast import (
-    PCAIndexerBLAST,
-)
-from kikuchipy.indexing.di_indexers._pca_indexer_jax import (
-    PCAIndexerJAX,
-)
-from kikuchipy.indexing.di_indexers._pca_indexer_cuml import (
-    PCAIndexerCuml,
-)
 
 __all__ = [
     "PCAIndexer",
-    "PCAIndexerBLAST",
-    "PCAIndexerJAX",
-    "PCAIndexerCuml",
     "DIIndexer"
 ]
