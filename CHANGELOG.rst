@@ -19,6 +19,8 @@ Unreleased
 Added
 -----
 
+Fast PCA Dictionary Indexing
+
 Changed
 -------
 
