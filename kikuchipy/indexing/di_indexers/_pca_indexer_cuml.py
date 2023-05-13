@@ -19,23 +19,23 @@
  patterns to a dictionary of simulated patterns with known orientations.
 """
 
-from typing import List, Union, Optional
+from typing import List, Union
 import numpy as np
 
 # try to import cuml and notify user if not available
 try:
-    from cuml import NearestNeighbors
+    from cuml import PCA, NearestNeighbors
+    from cuml.preprocessing import StandardScaler
 except ImportError:
     cuml = None
     print(
-        "cuml is not installed. "
-        "Will not be available for use."
+        "cuml is not installed and will not be available for use."
     )
 
 from kikuchipy.indexing.di_indexers._di_indexer import DIIndexer
 
 
-class CumlExhaustiveIndexer(DIIndexer):
+class PCAIndexerCuml(DIIndexer):
     """Dictionary indexing using cuml.
 
     Summary
@@ -53,54 +53,64 @@ class CumlExhaustiveIndexer(DIIndexer):
     _allowed_dtypes: List[type] = [np.float32, np.float64]
 
     def __init__(self,
-                 dtype: Union[str, np.dtype, type],
-                 normalize: bool = True,
                  zero_mean: bool = True,
+                 unit_var: bool = True,
                  space: str = "cosine",
+                 n_components: int = 700,
+                 whiten: bool = True,
+                 datatype: Union[str, np.dtype, type] = np.float32
                  ):
         """Initialize the HNSWlib indexer.
 
         Parameters
         ----------
-        dtype : numpy.dtype
-            Data type of the dictionary and experimental patterns.
-        kwargs
-            Additional keyword arguments to pass to the HNSWlib library.
-            See the HNSWlib GitHub repository for more information.
+        zero_mean
+            Whether to zero mean the patterns before indexing.
+        unit_var
+            Whether to normalize the patterns to unit variance before indexing.
+        space
+            The space to use for indexing. See cuml documentation for more
+            information.
+        n_components
+            The number of components to use for PCA.
+        whiten
+            Whether to whiten the patterns before indexing.
+        datatype
+            The datatype to cast the patterns to before indexing.
 
         """
-        super().__init__(dtype=dtype)
-        self._normalize = normalize
+        super().__init__(datatype=datatype)
+        self._unit_var = unit_var
         self._zero_mean = zero_mean
-        self.space = space
-        self._graph = None
+        self._preprocessor = StandardScaler(with_mean=zero_mean, with_std=unit_var)
+        self._space = space
+        self._n_components = n_components
+        self._whiten = whiten
+        self._pca = None
+        self._dictionary_pca_components = None
+        self._knn_lookup_object = None
 
     def prepare_dictionary(self, dictionary_patterns: np.ndarray):
         """Prepare the dictionary_patterns for indexing.
 
         """
-        if self._normalize:
-            self.dictionary_patterns = _normalize_patterns(dictionary_patterns)
-        if self._zero_mean:
-            self.dictionary_patterns = _zero_mean_patterns(dictionary_patterns)
-        self.dictionary_patterns = self.dictionary_patterns.astype(self.dtype)
+        dictionary_patterns = self._preprocessor.fit_transform(dictionary_patterns)
+
+        # change dictionary to datatype
+        dictionary_patterns = dictionary_patterns.astype(self.datatype)
+
+        # make incremental PCA object
+        self._pca = PCA(n_components=self._n_components, whiten=self._whiten)
+
         # make the cuml nearest neighbors object
-        self._graph = NearestNeighbors(n_neighbors=self.keep_n,
-                                       algorithm="brute",
-                                       metric=self.space,
-                                       )
-        self._graph.fit(self.dictionary_patterns, convert_dtype=False)
+        self._dictionary_pca_components = self._pca.fit_transform(dictionary_patterns)
 
-    def prepare_experimental(self, experimental_patterns: np.ndarray) -> np.ndarray:
-        """Prepare the experimental_patterns for indexing.
+        # we don't need the dictionary patterns anymore
+        del dictionary_patterns
 
-        """
-        experimental_patterns = experimental_patterns.astype(self.dtype)
-        if self._normalize:
-            experimental_patterns = _normalize_patterns(experimental_patterns)
-        if self._zero_mean:
-            experimental_patterns = _zero_mean_patterns(experimental_patterns)
-        return experimental_patterns
+        # fit the knn lookup object
+        self._knn_lookup_object = NearestNeighbors(n_neighbors=self.keep_n, metric=self._space)
+        self._knn_lookup_object.fit(self._dictionary_pca_components)
 
     def query(self, experimental_patterns: np.ndarray):
         """Query the dictionary.
@@ -117,20 +127,7 @@ class CumlExhaustiveIndexer(DIIndexer):
             patterns.
 
         """
-        experimental_patterns = self.prepare_experimental(experimental_patterns)
-        distances, indices = self._graph.kneighbors(experimental_patterns.astype(self.dtype), convert_dtype=False)
+        experimental_patterns = self._preprocessor.transform(experimental_patterns.astype(self.datatype))
+        experimental_pca_components = self._pca.transform(experimental_patterns)
+        distances, indices = self._knn_lookup_object.kneighbors(experimental_pca_components)
         return indices, distances
-
-
-def _normalize_patterns(patterns: np.ndarray) -> np.ndarray:
-    """Normalize the patterns.
-    """
-    patterns /= np.linalg.norm(patterns, axis=1)[:, None]
-    return patterns
-
-
-def _zero_mean_patterns(patterns: np.ndarray) -> np.ndarray:
-    """Zero mean the patterns.
-    """
-    patterns -= np.mean(patterns, axis=1)[:, None]
-    return patterns

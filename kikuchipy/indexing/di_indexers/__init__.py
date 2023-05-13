@@ -16,21 +16,27 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from kikuchipy.indexing.di_indexers._di_indexer import DIIndexer
-from kikuchipy.indexing.di_indexers._pyopencl_indexer import (
-    PyOpenCLIndexer,
+from kikuchipy.indexing.di_indexers._pca_indexer import (
+    PCAIndexer,
+)
+from kikuchipy.indexing.di_indexers._pca_indexer_pyclblast import (
+    PCAIndexerBLAST,
+)
+from kikuchipy.indexing.di_indexers._pca_indexer_jax import (
+    PCAIndexerJAX,
+)
+from kikuchipy.indexing.di_indexers._pca_indexer_cuml import (
+    PCAIndexerCuml,
 )
 from kikuchipy.indexing.di_indexers._cuml_exhaustive_indexer import (
     CumlExhaustiveIndexer,
 )
-from kikuchipy.indexing.di_indexers._hnsw_indexer import (
-    HNSWlibIndexer,
-)
-from kikuchipy.indexing.di_indexers._cuhnsw_indexer import (
-    CUHNSWlibIndexer,
-)
 
-__all__ = ["HNSWlibIndexer",
-           "CUHNSWlibIndexer",
-           "PyOpenCLIndexer",
-           "CumlExhaustiveIndexer",
-           "DIIndexer"]
+__all__ = [
+    "PCAIndexer",
+    "PCAIndexerBLAST",
+    "PCAIndexerJAX",
+    "PCAIndexerCuml",
+    "CumlExhaustiveIndexer",
+    "DIIndexer"
+]

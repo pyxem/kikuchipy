@@ -20,7 +20,7 @@
 """
 
 from time import sleep, time
-from typing import Optional, Tuple, Union
+from typing import Union
 
 import dask
 import dask.array as da
@@ -33,7 +33,7 @@ from kikuchipy.indexing.di_indexers import DIIndexer
 from tqdm import tqdm
 
 
-def _custom_dictionary_indexing(
+def _pca_dictionary_indexing(
         experimental: Union[np.ndarray, da.Array],
         experimental_nav_shape: tuple,
         dictionary: Union[np.ndarray, da.Array],
@@ -41,7 +41,7 @@ def _custom_dictionary_indexing(
         dictionary_xmap: CrystalMap,
         indexer: DIIndexer,
         keep_n: int,
-        n_per_iteration: int,
+        n_experimental_per_iteration: int,
         navigation_mask: Union[np.ndarray, None],
         signal_mask: Union[np.ndarray, None],
 ) -> CrystalMap:
@@ -59,7 +59,9 @@ def _custom_dictionary_indexing(
     dictionary_xmap
     indexer
     keep_n
-    n_per_iteration
+    n_dictionary_per_iteration
+    keep_dictionary_lazy
+    n_experimental_per_iteration
     navigation_mask
     signal_mask
 
@@ -67,12 +69,7 @@ def _custom_dictionary_indexing(
     -------
     xmap
     """
-    # the load and save paths must be different if both are specified (to avoid
-    # overwriting the original graph with a new one with different parameters)
-
-    # the entire dictionary must fit in memory
-    if isinstance(dictionary, da.Array):
-        dictionary = dictionary.compute()
+    # handle dictionary reshaping
     dictionary_size = dictionary.shape[0]
     dictionary = dictionary.reshape((dictionary_size, -1))
 
@@ -80,52 +77,62 @@ def _custom_dictionary_indexing(
     n_experimental_all = int(np.prod(experimental_nav_shape))
     experimental = experimental.reshape((n_experimental_all, -1))
 
-    # set n_per_iteration to the maximum possible value if it is 0
-    if n_per_iteration == 0:
-        n_per_iteration = n_experimental_all
-
-    # if n_per_iteration is larger than the number of experimental patterns,
-    # set it to the number of experimental patterns
-    n_per_iteration = min(n_per_iteration, n_experimental_all)
-
+    # mask the dictionary and the experimental patterns
     if signal_mask is not None:
         dictionary = dictionary[:, ~signal_mask.ravel()]
         with dask.config.set(**{"array.slicing.split_large_chunks": False}):
             experimental = experimental[:, ~signal_mask.ravel()]
 
-    keep_n = min(keep_n, dictionary_size)
+    # cap out the number of experimental patterns per iteration
+    n_experimental_per_iteration = min(n_experimental_per_iteration, n_experimental_all)
 
+    # cap out the number of dictionary patterns to keep
+    if keep_n >= dictionary_size:
+        raise ValueError(f"keep_n of {keep_n} must be smaller than the dictionary size of {dictionary_size}")
+
+    # prepare the output arrays
     simulation_indices = np.zeros((n_experimental_all, keep_n), dtype=np.int32)
-    scores = np.empty((n_experimental_all, keep_n), dtype=np.float32)
+    distances = np.full((n_experimental_all, keep_n), np.inf, dtype=np.float32)
 
-    n_iterations = int(np.ceil(n_experimental_all / n_per_iteration))
+    # dictionary must fit into memory
+    if isinstance(dictionary, da.Array):
+        dictionary = dictionary.compute()
 
-    chunk_starts = np.cumsum([0] + [n_per_iteration] * (n_iterations - 1))
-    chunk_ends = np.cumsum([n_per_iteration] * n_iterations)
-    chunk_ends[-1] = max(chunk_ends[-1], n_experimental_all)
+    # calculate the number of loops for the experimental patterns and the start and end indices for each loop
+    n_experimental_iterations = int(np.ceil(n_experimental_all / n_experimental_per_iteration))
+    experimental_chunk_starts = np.cumsum([0] + [n_experimental_per_iteration] * (n_experimental_iterations - 1))
+    experimental_chunk_ends = np.cumsum([n_experimental_per_iteration] * n_experimental_iterations)
+    experimental_chunk_ends[-1] = max(experimental_chunk_ends[-1], n_experimental_all)
 
-    experimental_is_lazy = isinstance(experimental, da.Array)
-
-    # ingest the dictionary into the indexing function
+    # start timer
     time_start = time()
+
+    # set the indexer with the dictionary chunk
     indexer(dictionary, keep_n)
-    build_time = time() - time_start
 
-    time_start = time()
-    for start, end in tqdm(zip(chunk_starts, chunk_ends), total=n_iterations):
-        experimental_chunk = experimental[start:end]
-        if experimental_is_lazy:
+    # inner loop over experimental pattern chunks
+    for exp_start, exp_end in tqdm(zip(experimental_chunk_starts, experimental_chunk_ends),
+                                   total=n_experimental_iterations,
+                                   desc="Experiment loop",
+                                   position=1,
+                                   leave=False):
+        experimental_chunk = experimental[exp_start:exp_end]
+        # if the experimental chunk is lazy, compute it
+        if isinstance(experimental_chunk, da.Array):
             experimental_chunk = experimental_chunk.compute()
-        simulation_indices[start:end], scores[start:end] = indexer.query(experimental_chunk)
-        del experimental_chunk
-    query_time = time() - time_start
+        # query the experimental chunk
+        simulation_indices_mini, distances_mini = indexer.query(experimental_chunk)
+        # simulation_indices_mini, distances_mini = simulation_indices_mini, distances_mini
+        # fill the new indices and scores with the mini indices and scores
+        simulation_indices[exp_start:exp_end] = simulation_indices_mini
+        distances[exp_start:exp_end] = distances_mini
 
+    # stop timer and calculate indexing speed
+    query_time = time() - time_start
     patterns_per_second = n_experimental_all / query_time
-    # Without this pause, a part of the red tqdm progressbar background
-    # is displayed below this print
+    # Without this pause, a part of the red tqdm progressbar background is displayed below this print
     sleep(0.2)
     print(
-        f"  Graph build (or load) time: {build_time:.5f} s, "
         f"  Indexing speed: {patterns_per_second:.5f} patterns/s, "
     )
 
@@ -137,8 +144,8 @@ def _custom_dictionary_indexing(
         rot = Rotation.identity((n_experimental_all, keep_n))
         rot[nav_mask] = dictionary_xmap.rotations[simulation_indices].data
 
-        scores_all = np.empty((n_experimental_all, keep_n), dtype=scores.dtype)
-        scores_all[nav_mask] = scores
+        scores_all = np.empty((n_experimental_all, keep_n), dtype=distances.dtype)
+        scores_all[nav_mask] = distances
         simulation_indices_all = np.empty(
             (n_experimental_all, keep_n), dtype=simulation_indices.dtype
         )
@@ -154,7 +161,7 @@ def _custom_dictionary_indexing(
         }
     else:
         xmap_kw["rotations"] = dictionary_xmap.rotations[simulation_indices.squeeze()]
-        xmap_kw["prop"] = {"scores": scores, "simulation_indices": simulation_indices}
+        xmap_kw["prop"] = {"scores": distances, "simulation_indices": simulation_indices}
     xmap = CrystalMap(phase_list=dictionary_xmap.phases_in_data, **xmap_kw)
 
     return xmap

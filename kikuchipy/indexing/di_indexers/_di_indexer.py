@@ -33,7 +33,7 @@ class DIIndexer(abc.ABC):
 
     Parameters
     ----------
-    dtype
+    datatype
         Which data type to cast the patterns to before matching to.
     """
 
@@ -41,17 +41,17 @@ class DIIndexer(abc.ABC):
 
     def __init__(
         self,
-        dtype: Union[str, np.dtype, type]
+        datatype: Union[str, np.dtype, type]
     ):
         """Create a similarity metric matching experimental and
         simulated EBSD patterns in a dictionary.
         """
         self.dictionary_patterns = None
         self._keep_n = None
-        self._dtype = np.dtype(dtype)
+        self._datatype = np.dtype(datatype)
 
     def __repr__(self):
-        string = f"{self.__class__.__name__}: {np.dtype(self._dtype).name}"
+        string = f"{self.__class__.__name__}: {np.dtype(self._datatype).name}"
         return string
 
     def __call__(self, dictionary_patterns: np.ndarray, keep_n: int):
@@ -79,20 +79,20 @@ class DIIndexer(abc.ABC):
         return self._allowed_dtypes
 
     @property
-    def dtype(self) -> np.dtype:
+    def datatype(self) -> np.dtype:
         """Return or set which data type to cast the patterns to before
         matching.
 
             Data type listed in :attr:`allowed_dtypes`.
         """
-        return self._dtype
+        return self._datatype
 
-    @dtype.setter
-    def dtype(self, value: Union[str, np.dtype, type]):
+    @datatype.setter
+    def datatype(self, value: Union[str, np.dtype, type]):
         """Set which data type to cast the patterns to before
         matching.
         """
-        self._dtype = np.dtype(value)
+        self._datatype = np.dtype(value)
 
     @property
     def keep_n(self) -> int:
@@ -110,39 +110,16 @@ class DIIndexer(abc.ABC):
         """
         self._keep_n = value
 
-    @property
-    def dictionary_patterns(self) -> np.ndarray:
-        """Return or set which data type to cast the patterns to before
-        matching.
-
-            Data type listed in :attr:`allowed_dtypes`.
-        """
-        return self._dictionary_patterns
-
-    @dictionary_patterns.setter
-    def dictionary_patterns(self, dictionary_patterns: np.ndarray):
-        """Set which data type to cast the patterns to before
-        matching.
-        """
-        self._dictionary_patterns = dictionary_patterns
-
     @abc.abstractmethod
     def prepare_dictionary(self, *args, **kwargs):
         """Prepare all dictionary patterns before matching to experimental
         patterns in :meth:`match`.
         """
-        return NotImplemented  # pragma: no cover
-
-    @abc.abstractmethod
-    def prepare_experimental(self, *args, **kwargs):
-        """Prepare experimental patterns block before matching to dictionary
-        patterns in :meth:`match`.
-        """
-        return NotImplemented  # pragma: no cover
+        return NotImplemented
 
     @abc.abstractmethod
     def query(self, experimental_patterns: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """Match all experimental patterns block to dictionary patterns
         and return their similarities.
         """
-        return NotImplemented  # pragma: no cover
+        return NotImplemented

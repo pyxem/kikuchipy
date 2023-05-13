@@ -148,9 +148,7 @@ def _custom_dictionary_indexing(
                 experimental_chunk = experimental_chunk.compute()
             # query the experimental chunk
             simulation_indices_mini, distances_mini = indexer.query(experimental_chunk)
-            # don't need the chunk anymore, so delete it
-            del experimental_chunk
-            simulation_indices_mini, distances_mini = da.compute(simulation_indices_mini, distances_mini)
+            # simulation_indices_mini, distances_mini = simulation_indices_mini, distances_mini
             # fill the new indices and scores with the mini indices and scores
             simulation_indices_new[exp_start:exp_end] = simulation_indices_mini
             distances_new[exp_start:exp_end] = distances_mini

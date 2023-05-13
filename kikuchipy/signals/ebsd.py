@@ -44,7 +44,7 @@ from kikuchipy.detectors import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
 from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
-from kikuchipy.indexing._dictionary_indexing_chunked import _custom_dictionary_indexing
+from kikuchipy.indexing._dictionary_indexing_contiguous import _pca_dictionary_indexing
 from kikuchipy.indexing._hough_indexing import (
     _get_pyebsdindex_phaselist,
     _indexer_is_compatible_with_kikuchipy,
@@ -1982,12 +1982,11 @@ class EBSD(KikuchipySignal2D):
 
         return xmap
 
-    def custom_di_indexing(
+    def pca_dictionary_indexing(
             self,
             dictionary: EBSD,
             indexer: DIIndexer,
             keep_n: int = 5,
-            n_dictionary_per_iteration: Optional[int] = None,
             keep_dictionary_lazy: bool = False,
             n_experimental_per_iteration: Optional[int] = None,
             navigation_mask: Optional[np.ndarray] = None,
@@ -2008,9 +2007,6 @@ class EBSD(KikuchipySignal2D):
         keep_n
             Number of best matches to keep, by default 5 or the number
             of dictionary patterns if fewer than 5 are available.
-        n_dictionary_per_iteration
-            Number of dictionary patterns to use per iteration. If not
-            given, all dictionary patterns will be used.
         keep_dictionary_lazy
             If ``True``, the dictionary will be kept in memory as a
             :class:`dask.array.Array` with the same chunks as the
@@ -2088,7 +2084,7 @@ class EBSD(KikuchipySignal2D):
             )
 
         with dask.config.set(**{"array.slicing.split_large_chunks": False}):
-            xmap = _custom_dictionary_indexing(
+            xmap = _pca_dictionary_indexing(
                 experimental=self.data,
                 experimental_nav_shape=am_exp.navigation_shape[::-1],
                 dictionary=dictionary.data,
@@ -2096,8 +2092,6 @@ class EBSD(KikuchipySignal2D):
                 dictionary_xmap=dictionary.xmap,
                 indexer=indexer,
                 keep_n=keep_n,
-                n_dictionary_per_iteration=n_dictionary_per_iteration,
-                keep_dictionary_lazy=keep_dictionary_lazy,
                 n_experimental_per_iteration=n_experimental_per_iteration,
                 navigation_mask=navigation_mask,
                 signal_mask=signal_mask,
