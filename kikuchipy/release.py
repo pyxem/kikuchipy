@@ -37,4 +37,4 @@ maintainer_email = "hakon.w.anes@ntnu.no"
 name = "kikuchipy"
 platforms = ["Linux", "MacOS X", "Windows"]
 status = "Development"
-version = "0.8.4"
+version = "0.8.5"
