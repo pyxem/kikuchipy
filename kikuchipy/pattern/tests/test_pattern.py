@@ -181,6 +181,7 @@ class TestRemoveStaticBackgroundPattern:
         assert np.allclose(p0, p)
         assert p0.dtype == p.dtype
 
+    @pytest.mark.filterwarnings("ignore:invalid value")
     def test_remove_static_background_divide(self, dummy_signal, dummy_background):
         p = dummy_signal.inav[0, 0].data
         dtype_out = p.dtype
