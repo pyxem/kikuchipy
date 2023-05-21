@@ -40,6 +40,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.doctest",
+    "sphinx.ext.imgconverter",
     "sphinx.ext.intersphinx",
     "sphinx.ext.linkcode",
     "sphinx.ext.mathjax",
@@ -76,7 +77,6 @@ intersphinx_mapping = {
     "pyebsdindex": ("https://pyebsdindex.readthedocs.io/en/stable", None),
     "pyopencl": ("https://documen.tician.de/pyopencl/", None),
     "pytest": ("https://docs.pytest.org/en/stable", None),
-    #    "pythreejs": ("https://pythreejs.readthedocs.io/en/stable", None),
     "python": ("https://docs.python.org/3", None),
     "pyvista": ("https://docs.pyvista.org", None),
     "pyxem": ("https://pyxem.readthedocs.io/en/latest", None),
@@ -186,7 +186,10 @@ codeautolink_custom_blocks = {
 latex_elements = {
     # pdflatex doesn't like some Unicode characters, so a replacement
     # for one of them is made here
-    "preamble": r"\DeclareUnicodeCharacter{2588}{-}"
+    "preamble": r"""
+    \DeclareUnicodeCharacter{2588}{-}
+    \DeclareUnicodeCharacter{03BC}{u}
+    """
 }
 
 
