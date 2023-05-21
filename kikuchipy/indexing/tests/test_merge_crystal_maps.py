@@ -559,7 +559,7 @@ class TestMergeCrystalMaps:
         )
         # fmt: on
 
-        # All points in a map should be used, but not in another one:
+        # All points in one map should be used, but not in another:
         # Only consider xmap1 in the first row and first column (mask it
         # out everywhere else)
         xmap6 = merge_crystal_maps(
@@ -644,3 +644,41 @@ class TestMergeCrystalMaps:
                 [xmap1[~nav_mask1.ravel()], xmap2[~nav_mask2.ravel()]],
                 navigation_masks=[nav_mask1, list(nav_mask2)],
             )
+
+    def test_not_indexed(self):
+        xmap_a = CrystalMap.empty((4, 3))
+        is_indexed_a = np.array(
+            [[1, 1, 0], [1, 0, 1], [0, 1, 1], [0, 1, 1]], dtype=bool
+        ).ravel()
+        xmap_a.phases.add_not_indexed()
+        xmap_a.phases[0].name = "a"
+        xmap_a[~is_indexed_a].phase_id = -1
+        xmap_a.prop["scores"] = np.array(
+            [[2, 2, 0], [3, 0, 4], [0, 4, 3], [0, 2, 1]], dtype=float
+        ).ravel()
+        xmap_a._rotations = xmap_a.rotations * Rotation.from_axes_angles(
+            [0, 0, 1], 30, degrees=True
+        )
+
+        xmap_b = CrystalMap.empty((4, 3))
+        is_indexed_b = np.array(
+            [[1, 1, 0], [1, 1, 1], [0, 1, 1], [0, 1, 0]], dtype=bool
+        ).ravel()
+        xmap_b.phases.add_not_indexed()
+        xmap_b.phases[0].name = "b"
+        xmap_b[~is_indexed_b].phase_id = -1
+        xmap_b.prop["scores"] = np.array(
+            [[3, 1, 0], [2, 1, 5], [0, 2, 4], [0, 1, 0]], dtype=float
+        ).ravel()
+        xmap_b._rotations = xmap_b.rotations * Rotation.from_axes_angles(
+            [0, 0, 1], 60, degrees=True
+        )
+
+        xmap_ab = merge_crystal_maps([xmap_a, xmap_b])
+
+        assert np.allclose(xmap_ab.phase_id, [1, 0, -1, 0, 1, 1, -1, 0, 1, -1, 0, 0])
+        assert np.allclose(
+            xmap_ab["indexed"].rotations.angle,
+            np.deg2rad([60, 30, 30, 60, 60, 30, 60, 30, 30]),
+        )
+        assert np.allclose(xmap_ab["indexed"].scores, [3, 2, 3, 1, 5, 4, 4, 2, 1])

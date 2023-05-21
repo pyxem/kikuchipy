@@ -557,6 +557,7 @@ class TestRemoveDynamicBackgroundEBSD:
         with pytest.raises(ValueError, match=f"{filter_domain} must be "):
             dummy_signal.remove_dynamic_background(filter_domain=filter_domain)
 
+    @pytest.mark.filterwarnings("ignore:invalid value")
     def test_inplace(self, dummy_signal):
         # Current signal is unaffected
         s = dummy_signal.deepcopy()
@@ -580,6 +581,7 @@ class TestRemoveDynamicBackgroundEBSD:
         s4.compute()
         assert np.allclose(s4.data, dummy_signal.data)
 
+    @pytest.mark.filterwarnings("ignore:invalid value")
     def test_lazy_output(self, dummy_signal):
         with pytest.raises(
             ValueError, match="`lazy_output=True` requires `inplace=False`"

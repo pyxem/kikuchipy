@@ -13,6 +13,14 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+0.8.5 (2023-05-21)
+==================
+
+Fixed
+-----
+- Not-indexed points in crystal maps are handled correctly when merging.
+  (`#639 <https://github.com/pyxem/kikuchipy/pull/639>`_)
+
 0.8.4 (2023-04-07)
 ==================
 
