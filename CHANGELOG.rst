@@ -36,6 +36,14 @@ Fixed
 Security
 --------
 
+0.8.5 (2023-05-21)
+==================
+
+Fixed
+-----
+- Not-indexed points in crystal maps are handled correctly when merging.
+  (`#639 <https://github.com/pyxem/kikuchipy/pull/639>`_)
+
 0.8.4 (2023-04-07)
 ==================
 

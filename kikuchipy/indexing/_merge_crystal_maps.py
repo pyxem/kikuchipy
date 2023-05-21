@@ -194,7 +194,9 @@ def merge_crystal_maps(
 
     # Combined (unsorted) scores array of shape (M, N, K) or (M, K)
     scores_dtype = crystal_maps[0].prop[scores_prop].dtype
-    combined_scores = np.full(comb_shape, np.nan, dtype=scores_dtype)
+    combined_scores = np.full(
+        comb_shape, np.nan, dtype=np.dtype(f"f{scores_dtype.itemsize}")
+    )
     for i, (mask, xmap) in enumerate(zip(navigation_masks1d, crystal_maps)):
         if mask is not None:
             combined_scores[mask, ..., i] = xmap.prop[scores_prop]
@@ -212,6 +214,18 @@ def merge_crystal_maps(
     # Phase of best score in each map point
     phase_id = np.nanargmax(sign * best_scores, axis=1)
 
+    # Set the phase ID of points marked as not-indexed in all maps to -1
+    not_indexed = np.zeros((n_maps, map_size), dtype=bool)
+    for i in range(n_maps):
+        mask = navigation_masks1d[i]
+        xmap = crystal_maps[i]
+        if mask is not None:
+            not_indexed[i, mask][xmap.phase_id == -1] = True
+        else:
+            not_indexed[i, xmap.phase_id == -1] = True
+    not_indexed = np.logical_and.reduce(not_indexed)
+    phase_id[not_indexed] = -1
+
     # Get the new crystal map's rotations, scores and indices,
     # restricted to one phase per point (uncombined)
     new_rotations = np.zeros(comb_shape[:-1] + (4,), dtype="float")
@@ -221,12 +235,16 @@ def merge_crystal_maps(
         new_indices = np.zeros(comb_shape[:-1], dtype="int32")
 
     phase_list = PhaseList()
+    if -1 in phase_id:
+        phase_list.add_not_indexed()
     for i, (nav_mask1d, xmap) in enumerate(zip(navigation_masks1d, crystal_maps)):
         phase_mask = phase_id == i
 
         if phase_mask.any():
-            current_id = xmap.phases_in_data.ids[0]
-            phase = xmap.phases_in_data[current_id].deepcopy()
+            phase_ids = xmap.phases_in_data.ids
+            if -1 in phase_ids:
+                phase_ids.remove(-1)
+            phase = xmap.phases_in_data[phase_ids[0]].deepcopy()
             if phase.name in phase_list.names:
                 # If they are equal, do not duplicate it in the phase
                 # list but update the phase ID
@@ -235,12 +253,12 @@ def merge_crystal_maps(
                     phase_id[phase_mask] = phase_list.id_from_name(phase.name)
                 else:
                     name = phase.name
+                    phase.name = name + str(i)
                     warnings.warn(
                         f"There are duplicates of phase '{name}' but the phases have "
                         f"different {different}, will therefore rename this phase's "
-                        f"name to '{name + str(i)}' in the merged PhaseList",
+                        f"name to '{phase.name}' in the merged PhaseList",
                     )
-                    phase.name = name + str(i)
                     phase_list.add(phase)
             else:
                 phase_list.add(phase)
