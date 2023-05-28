@@ -80,16 +80,15 @@ class OxfordH5EBSDReader(H5EBSDReader):
         group
             Group with patterns.
         lazy
-            Whether to read dataset lazily (default is ``False``).
+            Whether to read dataset lazily (default is False).
 
         Returns
         -------
         scan_dict
-            Dictionary with keys ``"axes"``, ``"data"``, ``"metadata"``,
-            ``"original_metadata"``, ``"detector"``,
-            ``"static_background"``, and ``"xmap"``. This dictionary can
-             be passed as keyword arguments to create an
-             :class:`~kikuchipy.signals.EBSD` signal.
+            Dictionary with keys "axes", "data", "metadata",
+            "original_metadata", "detector", "static_background", and
+            "xmap". This dictionary can be passed as keyword arguments
+            to create an :class:`~kikuchipy.signals.EBSD` signal.
 
         Raises
         ------
@@ -160,14 +159,14 @@ class OxfordH5EBSDReader(H5EBSDReader):
             convention="oxford",
         )
         detector_tilt_euler = hd.get("Detector Orientation Euler")
-        binning_str = hd.get("Camera Binning Mode")
         try:
             detector_kw["tilt"] = np.rad2deg(detector_tilt_euler[1]) - 90
         except (IndexError, TypeError):  # pragma: no cover
             _logger.debug("Could not read detector tilt")
+        binning_str = hd.get("Camera Binning Mode")
         try:
             detector_kw["binning"] = int(binning_str.split("x")[0])
-        except IndexError:  # pragma: no cover
+        except (IndexError, ValueError):  # pragma: no cover
             _logger.debug("Could not read detector binning")
         scan_dict["detector"] = EBSDDetector(**detector_kw)
 
@@ -197,16 +196,15 @@ def file_reader(
     lazy
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
-        is ``False``.
+        is False.
     **kwargs
         Keyword arguments passed to :class:`h5py.File`.
 
     Returns
     -------
     scan_dict_list
-        List of one or more dictionaries with the keys ``"axes"``,
-        ``"data"``, ``"metadata"``, ``"original_metadata"``,
-        ``"detector"``, and ``"xmap"``. This
+        List of one or more dictionaries with the keys "axes", "data",
+        "metadata", "original_metadata", "detector", and "xmap". This
         dictionary can be passed as keyword arguments to create an
         :class:`~kikuchipy.signals.EBSD` signal.
     """
