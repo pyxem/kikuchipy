@@ -45,8 +45,7 @@ def _hdf5group2dict(
     dictionary
         To fill dataset values into.
     recursive
-        Whether to add subgroups to ``dictionary`` (default is
-        ``False``).
+        Whether to add subgroups to ``dictionary`` (default is False).
     data_dset_names
         List of names of HDF5 data sets with data to not read.
 
@@ -171,10 +170,10 @@ class H5EBSDReader(abc.ABC):
         ------
         IOError
             If there are no datasets in the top group named
-            ``"manufacturer"`` and ``"version"``, or if there are no
-            groups in the top group containing the datasets
-            ``"EBSD/Data"`` and ``"EBSD/Header"``, or if there is no
-            reader for the file ``"manufacturer"``.
+            "manufacturer" and "version", or if there are no groups in
+            the top group containing the datasets
+            "EBSD/Data" and "EBSD/Header", or if there is no reader for
+            the file "manufacturer".
         """
         error = None
         if self.manufacturer is None or self.version is None:
@@ -291,7 +290,7 @@ class H5EBSDReader(abc.ABC):
             Output shape of pattern array, (ny, nx, sy, sx) = (
             map rows, map columns, pattern rows, pattern columns).
         lazy
-            Whether to read dataset lazily (default is ``False``).
+            Whether to read dataset lazily (default is False).
         indices
             Mapping from pattern entry in the file to the 2D map, only
             used in the Bruker Nano reader.
@@ -361,10 +360,10 @@ class H5EBSDReader(abc.ABC):
         Parameters
         ----------
         data_shape
-            4D shape of pattern array, ``(ny, nx, sy, sx)`` = (
-            map rows, map columns, pattern rows, pattern columns).
+            4D shape of pattern array, (ny, nx, sy, sx) = ( map rows,
+            map columns, pattern rows, pattern columns).
         data_scale
-            Map scale and detector pixel size, ``(dy, dx, px_size)``.
+            Map scale and detector pixel size, (dy, dx, px_size).
 
         Returns
         -------
@@ -454,15 +453,15 @@ class H5EBSDReader(abc.ABC):
             Name or a list of names of the desired top HDF5 group(s). If
             not given, the first scan group is returned.
         lazy
-            Read dataset lazily (default is ``False``). If ``False``,
-            the file is closed after reading.
+            Read dataset lazily (default is False). If False, the file
+            is closed after reading.
 
         Returns
         -------
         scan_list
-            List of dictionaries with keys ``"axes"``, ``"data"``,
-            ``"metadata"``, ``"original_metadata"``, ``"detector"``,
-            (possibly) ``"static_background"``, and ``"xmap"``.
+            List of dictionaries with keys "axes", "data", "metadata",
+            "original_metadata", "detector", (possibly)
+            "static_background", and "xmap".
         """
         scan_dict_list = []
         for scan in self.get_desired_scan_groups(group_names):
@@ -482,15 +481,14 @@ class H5EBSDReader(abc.ABC):
         group
             HDF5 group with patterns.
         lazy
-            Read dataset lazily (default is ``False``).
+            Read dataset lazily (default is False).
 
         Returns
         -------
         scan_dict
-            Dictionary with keys ``"axes"``, ``"data"``, ``"metadata"``,
-            ``"original_metadata"``, ``"detector"``,
-            ``"static_background"``, and ``"xmap"``. This dictionary can
-             be passed as keyword arguments to create an
-             :class:`~kikuchipy.signals.EBSD` signal.
+            Dictionary with keys "axes", "data", "metadata",
+            "original_metadata", "detector", "static_background", and
+            "xmap". This dictionary can be passed as keyword arguments
+            to create an :class:`~kikuchipy.signals.EBSD` signal.
         """
         return NotImplemented  # pragma: no cover
