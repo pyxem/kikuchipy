@@ -20,7 +20,6 @@
 The reader is adapted from the EDAX UP1/2 reader in PyEBSDIndex.
 """
 
-import os
 from pathlib import Path
 from typing import BinaryIO, Dict, List, Optional, Tuple, Union
 import warnings
@@ -39,9 +38,8 @@ __all__ = ["file_reader"]
 format_name = "EDAX binary"
 description = (
     "Read support for electron backscatter diffraction patterns stored "
-    "in a binary file formatted in EDAX TSL's UP1/UP2 format with file "
-    "extension '.up1' or '.up2'. The reader is adapted from the EDAX "
-    "UP1/2 reader in PyEBSDIndex."
+    "in a binary EDAX TSL's UP1/UP2 file extension '.up1' or '.up2'. "
+    "The reader is adapted from the EDAX UP1/2 reader in PyEBSDIndex."
 )
 full_support = False
 # Recognised file extension
@@ -75,7 +73,7 @@ def file_reader(
         parameter's value.
     lazy
         Read the data lazily without actually reading the data from disk
-        until required. Default is ``False``.
+        until required. Default is False.
 
     Returns
     -------
@@ -103,7 +101,7 @@ def file_reader(
     """
     with open(filename, mode="rb") as f:
         reader = EDAXBinaryFileReader(f)
-        scan = reader.read_scan(nav_shape=nav_shape, lazy=lazy)
+        scan = reader.read_scan(nav_shape, lazy)
     return [scan]
 
 
@@ -118,9 +116,9 @@ class EDAXBinaryFileReader:
 
     def __init__(self, file: BinaryIO):
         """Prepare to read EBSD patterns from an open EDAX UP1/2 file."""
-        self.file = file  # Already open file
+        self.file = file
 
-        ext = os.path.splitext(file.name)[1][1:].lower()
+        ext = Path(file.name).suffix[1:].lower()
         self.dtype = {"up1": np.uint8, "up2": np.uint16}[ext]
 
         file.seek(0)
@@ -140,27 +138,28 @@ class EDAXBinaryFileReader:
         file_size = Path(self.file.name).stat().st_size
 
         if self.version == 1:
-            n_patterns = int(
-                (file_size - pattern_offset) / (sx * sy * self.dtype(0).nbytes)
-            )
+            n_patterns = (file_size - pattern_offset) / (sx * sy * self.dtype(0).nbytes)
+            n_patterns = int(n_patterns)
             nx, ny = n_patterns, 1
             dx, dy = 1, 1
             is_hex = False
         else:  # Version >= 3
             nx, ny = np.fromfile(self.file, "uint32", 2, offset=1)
 
-            is_hex = bool(np.fromfile(self.file, "uint8", 1)[0])
+            is_hex = np.fromfile(self.file, "uint8", 1)[0]
+            is_hex = bool(is_hex)
             if is_hex:
                 warnings.warn(
                     "Returned signal has one navigation dimension since an hexagonal "
                     "grid is not supported"
                 )
-                n_patterns = int(
-                    (file_size - pattern_offset) / (sx * sy * self.dtype(0).nbytes)
+                n_patterns = (file_size - pattern_offset) / (
+                    sx * sy * self.dtype(0).nbytes
                 )
+                n_patterns = int(n_patterns)
                 nx, ny = n_patterns, 1
             else:
-                n_patterns = int(nx * ny)
+                n_patterns = nx * ny
 
             dx, dy = np.fromfile(self.file, "float64", 2)
 
@@ -185,9 +184,9 @@ class EDAXBinaryFileReader:
         ----------
         nav_shape
             Navigation shape, as (n map rows, n map columns). Default is
-            ``None``.
+            None.
         lazy
-            Whether to reader patterns lazily. Default is ``False``.
+            Whether to reader patterns lazily. Default is False.
 
         Returns
         -------
@@ -206,7 +205,6 @@ class EDAXBinaryFileReader:
                 )
         else:
             ny, nx = header["ny"], header["nx"]
-            n_patterns = header["n_patterns"]
 
         sy, sx = header["sy"], header["sx"]
         data_shape = (ny, nx, sy, sx)
@@ -215,22 +213,20 @@ class EDAXBinaryFileReader:
         ndim = len(data_shape)
         nav_dim = ndim - 2
 
+        data = np.memmap(
+            self.file.name,
+            dtype=self.dtype,
+            shape=data_shape,
+            mode="c",
+            offset=header["pattern_offset"],
+        )
+
         if lazy:
-            data = np.memmap(
-                self.file,
-                dtype=self.dtype,
-                shape=data_shape,
-                mode="r",
-                offset=header["pattern_offset"],
-            )
             data = da.from_array(data)
             chunks = get_chunking(
                 data_shape=data_shape, nav_dim=nav_dim, sig_dim=2, dtype=self.dtype
             )
             data = data.rechunk(chunks)
-        else:
-            data = np.fromfile(self.file, self.dtype, n_patterns * sy * sx)
-            data = data.reshape(data_shape)
 
         units = ["um"] * ndim
         scales = [header["dy"], header["dx"]] + [1, 1][:nav_dim]
@@ -247,18 +243,14 @@ class EDAXBinaryFileReader:
             for i in range(ndim)
         ]
         fname = self.file.name
-        metadata = dict(
-            General=dict(
-                original_filename=fname,
-                title=os.path.splitext(os.path.split(fname)[1])[0],
-            ),
-            Signal=dict(signal_type="EBSD", record_by="image"),
-        )
+        metadata = {
+            "General": {
+                "original_filename": fname,
+                "title": Path(fname).stem,
+            },
+            "Signal": {"signal_type": "EBSD", "record_by": "image"},
+        }
 
-        scan = dict(
-            axes=axes,
-            data=data,
-            metadata=metadata,
-        )
+        scan = {"axes": axes, "data": data, "metadata": metadata}
 
         return scan
