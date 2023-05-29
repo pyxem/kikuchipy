@@ -644,7 +644,7 @@ def ebsd_master_pattern(
 
     See Also
     --------
-    nickel_ebsd_master_pattern_small, si_ebsd_master_pattern
+    nickel_ebsd_master_pattern_small, ebsd_master_pattern
 
     Notes
     -----

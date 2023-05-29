@@ -21,7 +21,7 @@ testing the Oxford h5ebsd reader.
 Only the groups and datasets read in the reader are included.
 """
 
-import os
+from pathlib import Path
 
 from h5py import File
 import numpy as np
@@ -42,10 +42,10 @@ n = ny * nx
 sy, sx = s._signal_shape_rc
 dx = s.axes_manager["x"].scale
 
-dir_data = os.path.abspath(os.path.dirname(__file__))
+dir_data = Path(__file__).parent
 
 
-f = File(os.path.join(dir_data, "patterns.h5oina"), mode="w")
+f = File(dir_data / "patterns.h5oina", mode="w")
 
 # Top group
 f.create_dataset("Format Version", data=b"5.0")

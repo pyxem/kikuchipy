@@ -14,6 +14,14 @@ Most of these works are also listed when searching for ``"kikuchipy"`` `on Googl
 
 2023
 ====
+- A. V. Bugten, L. Michels, R. B. Brurok, C. Hartung, E. Ott, L. Vines, Y. Li,
+  L. Arnberg and M. Di Sabatino, "The Role of Boron in Low Copper Spheroidal Graphite
+  Irons," *Metallurgical and Materials Transactions A* (2023).
+  https://doi.org/10.1007/s11661-023-07014-y.
+- O. W. Sandvik, A. M. Müller, H. W. Ånes, M. Zahn, J. He, M. Fiebig, T. Lottermoser,
+  Th. Rojac, D. Meier and J. Schultheiß, "Pressure-control of non-ferroelastic
+  ferroelectric domains in ErMnO3," *arXiv* (2023).
+  https://doi.org/10.48550/arXiv.2304.08423.
 - H. W. Ånes, A. T. J. van Helvoort and K. Marthinsen, "Orientation dependent pinning
   of (sub)grains by dispersoids during recovery and recrystallization in an Al-Mn
   alloy," *Acta Materialia* **248** (2023).
