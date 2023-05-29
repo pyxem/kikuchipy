@@ -19,7 +19,6 @@
 in the documentation.
 """
 
-import os
 from pathlib import Path
 
 import numpy as np
@@ -35,11 +34,11 @@ nx, ny = s.axes_manager.navigation_shape
 n_patterns = ny * nx
 step_size = s.axes_manager["x"].scale
 
-dir_data = Path(os.path.dirname(__file__))
+DIR_DATA = Path(__file__).parent
 
 # UP1, version 1
 # --------------
-with open(dir_data / "edax_binary.up1", mode="w") as file1:
+with open(DIR_DATA / "edax_binary.up1", mode="w") as file1:
     # File header: 16 bytes
     # 4 bytes with the file version
     np.array([1], "uint32").tofile(file1)
@@ -57,7 +56,7 @@ with open(dir_data / "edax_binary.up1", mode="w") as file1:
 # x x x x #
 #  x x x  #
 # ------- #
-with open(dir_data / "edax_binary.up2", mode="w") as file2:
+with open(DIR_DATA / "edax_binary.up2", mode="w") as file2:
     # File header: 42 bytes
     # 4 bytes with the file version
     np.array([3], "uint32").tofile(file2)

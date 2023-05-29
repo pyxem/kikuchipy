@@ -13,6 +13,24 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+0.8.6 (2023-05-29)
+==================
+
+Changed
+-------
+- Use memory mapping (``numpy.memmap()``) instead of reading into memory
+  (``numpy.fromfile()``) for non-lazy reading of EBSD patterns from EDAX binary .up1/2
+  files. (`#641 <https://github.com/pyxem/kikuchipy/pull/641>`_)
+
+Fixed
+-----
+- EBSD patterns from some EDAX binary .up1/2 files were incorrectly read due to an
+  incorrect file offset, making the patterns appear shifted horizontally.
+  (`#641 <https://github.com/pyxem/kikuchipy/pull/641>`_)
+- Reading of EBSD patterns from H5OINA files with the "Camera Binning Mode" dataset not
+  containing the detector binning.
+  (`#641 <https://github.com/pyxem/kikuchipy/pull/641>`_)
+
 0.8.5 (2023-05-21)
 ==================
 

@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
+from pathlib import Path
 
 import dask.array as da
 import numpy as np
@@ -24,10 +24,9 @@ import pytest
 import kikuchipy as kp
 
 
-DIR_PATH = os.path.dirname(__file__)
-EDAX_PATH = os.path.join(DIR_PATH, "../../../data/edax_binary")
-FILE_UP1 = os.path.join(EDAX_PATH, "edax_binary.up1")
-FILE_UP2 = os.path.join(EDAX_PATH, "edax_binary.up2")
+EDAX_PATH = Path(__file__).parent / "../../../data/edax_binary"
+FILE_UP1 = EDAX_PATH / "edax_binary.up1"
+FILE_UP2 = EDAX_PATH / "edax_binary.up2"
 
 
 class TestEDAXBinaryReader:

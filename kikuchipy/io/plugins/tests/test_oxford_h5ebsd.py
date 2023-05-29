@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
+from pathlib import Path
 
 import numpy as np
 
@@ -23,9 +23,7 @@ import kikuchipy as kp
 from kikuchipy.conftest import assert_dictionary
 
 
-DIR_PATH = os.path.dirname(__file__)
-DATA_PATH = os.path.join(DIR_PATH, "../../../data")
-OXFORD_FILE = os.path.join(DATA_PATH, "oxford_h5ebsd/patterns.h5oina")
+OXFORD_FILE = Path(__file__).parent / "../../../data/oxford_h5ebsd/patterns.h5oina"
 
 
 class TestOxfordH5EBSD:
