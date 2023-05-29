@@ -79,16 +79,6 @@ class TestImport:
         ):
             _ = kikuchipy.filters.foo
 
-    def test_import_generators(self):
-        import kikuchipy.generators
-
-        for obj_name in kikuchipy.generators.__all__:
-            getattr(kikuchipy.generators, obj_name)
-        with pytest.raises(
-            AttributeError, match="module 'kikuchipy.generators' has no attribute 'foo'"
-        ):
-            _ = kikuchipy.generators.foo
-
     def test_import_imaging(self):
         import kikuchipy.imaging
 
@@ -144,17 +134,6 @@ class TestImport:
         ):
             _ = kikuchipy.pattern.foo
 
-    def test_import_projections(self):
-        import kikuchipy.projections
-
-        for obj_name in kikuchipy.projections.__all__:
-            getattr(kikuchipy.projections, obj_name)
-        with pytest.raises(
-            AttributeError,
-            match="module 'kikuchipy.projections' has no attribute 'foo'",
-        ):
-            _ = kikuchipy.projections.foo
-
     def test_import_signals(self):
         import kikuchipy.signals
 
@@ -198,13 +177,11 @@ class TestImport:
             "detectors",
             "draw",
             "filters",
-            "generators",
             "imaging",
             "indexing",
             "io",
             "load",
             "pattern",
-            "projections",
             "release",
             "set_log_level",
             "signals",
@@ -250,13 +227,6 @@ class TestImport:
             "highpass_fft_filter",
             "lowpass_fft_filter",
             "modified_hann",
-        ]
-
-    def test_dir_generators(self):
-        import kikuchipy.generators
-
-        assert dir(kikuchipy.generators) == [
-            "VirtualBSEGenerator",
         ]
 
     def test_dir_imaging(self):
@@ -320,16 +290,6 @@ class TestImport:
             "normalize_intensity",
             "remove_dynamic_background",
             "rescale_intensity",
-        ]
-
-    def test_dir_projections(self):
-        import kikuchipy.projections
-
-        assert dir(kikuchipy.projections) == [
-            "GnomonicProjection",
-            "HesseNormalForm",
-            "LambertProjection",
-            "SphericalProjection",
         ]
 
     def test_dir_signals(self):
