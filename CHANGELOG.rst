@@ -21,6 +21,10 @@ Added
 
 Changed
 -------
+- ``zone_axes_kwargs`` parameter in
+  ``GeometricalKikuchiPatternSimulation.as_collections()`` does not use ``color``
+  internally to set the default color to white anymore, but uses ``fc`` (facecolor)
+  instead. This change was necessary to improve handling of other keyword arguments.
 
 Deprecated
 ----------
