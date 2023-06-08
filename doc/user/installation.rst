@@ -49,12 +49,6 @@ Note that this command will not install ``pyopencl``, which is required for GPU 
 in ``pyebsdindex``. If the above command failed for some reason, one can try to install
 each optional dependency individually.
 
-.. warning::
-
-    The option to install optional dependency ``pyvista`` via
-    ``pip install kikuchipy[viz]`` will be removed in version 0.9. Please install
-    manually or via ``pip install kikuchipy[all]`` instead.
-
 .. _install-with-anaconda:
 
 With Anaconda

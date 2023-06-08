@@ -72,11 +72,6 @@ extra_feature_requirements = {
         "pyebsdindex                    ~= 0.1",
         "pyvista",
     ],
-    # TODO: Remove this option in release 0.9
-    "viz": [
-        "matplotlib                     >= 3.5",
-        "pyvista",
-    ],
 }
 # fmt: on
 
