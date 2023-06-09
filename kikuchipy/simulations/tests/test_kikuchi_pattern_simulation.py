@@ -52,7 +52,6 @@ def setup_reflectors():
 class TestGeometricalKikuchiPatternSimulation:
     """General features of the GeometricalKikuchiPatternSimulation
     class.
-
     """
 
     def setup_method(self):
@@ -147,7 +146,6 @@ class TestGeometricalKikuchiPatternSimulation:
 class TestAsCollections:
     """Getting lines, zone axes, zone axes labels and PC as Matplotlib
     collections.
-
     """
 
     def setup_method(self):
@@ -207,13 +205,14 @@ class TestAsCollections:
         coll = sim.as_collections(
             zone_axes=True,
             zone_axes_labels=True,
-            lines_kwargs=dict(linewidth=2),  # Default is 1
-            zone_axes_kwargs=dict(color="k"),  # Default is white
-            zone_axes_labels_kwargs=dict(fontsize=5),  # Default is 10
+            lines_kwargs={"linewidth": 2},  # Default is 1
+            zone_axes_kwargs={"fc": "r", "ec": "b"},
+            zone_axes_labels_kwargs={"fontsize": 5},  # Default is 10
         )
 
         assert coll[0].get_linewidth() == 2
-        assert np.allclose(coll[1].get_facecolor()[0][:3], 0)
+        assert np.allclose(coll[1].get_facecolor()[0][:3], [1, 0, 0])
+        assert np.allclose(coll[1].get_edgecolor()[0][:3], [0, 0, 1])
         assert coll[2][0].get_fontsize() == 5
 
     def test_coordinates(self):
@@ -244,7 +243,6 @@ class TestAsCollections:
 class TestAsMarkers:
     """Getting lines, zone axes, zone axes labels and PC as HyperSpy
     markers.
-
     """
 
     def setup_method(self):

@@ -21,6 +21,11 @@ Added
 
 Changed
 -------
+- ``zone_axes_kwargs`` parameter in
+  ``GeometricalKikuchiPatternSimulation.as_collections()`` does not use ``color``
+  internally to set the default color to white anymore, but uses ``fc`` (facecolor)
+  instead. This change was necessary to improve handling of other keyword arguments.
+  (`#643 <https://github.com/pyxem/kikuchipy/pull/643>`_)
 
 Deprecated
 ----------
@@ -29,6 +34,8 @@ Removed
 -------
 - Removed ``generators`` and ``projections`` modules which were deprecated in version
   0.8. (`#612 <https://github.com/pyxem/kikuchipy/pull/612>`_)
+- The deprecated PyPI selector ``viz`` is removed.
+  (`#643 <https://github.com/pyxem/kikuchipy/pull/643>`_)
 
 Fixed
 -----
