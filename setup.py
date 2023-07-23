@@ -49,7 +49,7 @@ extra_feature_requirements = {
         "nlopt",
         "panel",  # Used in the docs by PyVista
         "pydata-sphinx-theme",
-        "pyebsdindex                    >= 0.1.1",
+        "pyebsdindex                    ~= 0.1",
         "pyvista",
         "sphinx                         >= 3.0.2",
         "sphinx-codeautolink[ipython]   < 0.14",
@@ -103,6 +103,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         (
@@ -153,7 +154,7 @@ setup(
         "numba              >= 0.55",
         "numpy              >= 1.19",
         "orix               >= 0.11.1",
-        "pooch              >= 0.13",
+        "pooch              >= 1.3.0",
         "pyyaml",
         "tqdm               >= 0.5.2",
         "scikit-image       >= 0.16.2",
