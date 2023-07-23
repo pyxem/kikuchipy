@@ -112,7 +112,7 @@ html_theme_options = {
     ],
     "logo": {
         "alt_text": "kikuchipy",
-        "image_dark": "logo/plasma_banner_dark.png",
+        "image_dark": "_static/logo/plasma_banner_dark.png",
     },
     "navigation_with_keys": False,
     "show_toc_level": 2,
@@ -351,3 +351,9 @@ autosummary_generate = True
 print("[kikuchipy] Downloading example datasets (if not found in cache)")
 _ = kp.data.nickel_ebsd_large(allow_download=True)
 _ = kp.data.si_ebsd_moving_screen(0, allow_download=True)
+
+
+def setup(app):
+    # Ignore .ipynb and .html files (see https://github.com/executablebooks/MyST-NB/issues/363).
+    app.registry.source_suffix.pop(".ipynb", None)
+    app.registry.source_suffix.pop(".html", None)
