@@ -351,9 +351,3 @@ autosummary_generate = True
 print("[kikuchipy] Downloading example datasets (if not found in cache)")
 _ = kp.data.nickel_ebsd_large(allow_download=True)
 _ = kp.data.si_ebsd_moving_screen(0, allow_download=True)
-
-
-def setup(app):
-    # Ignore .ipynb and .html files (see https://github.com/executablebooks/MyST-NB/issues/363).
-    app.registry.source_suffix.pop(".ipynb", None)
-    app.registry.source_suffix.pop(".html", None)
