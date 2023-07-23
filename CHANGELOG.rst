@@ -18,6 +18,8 @@ Unreleased
 
 Added
 -----
+- Explicit support for Python 3.11.
+  (`#645 <https://github.com/pyxem/kikuchipy/pull/645>`_)
 
 Changed
 -------
