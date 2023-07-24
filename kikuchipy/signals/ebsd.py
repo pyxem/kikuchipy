@@ -1773,7 +1773,7 @@ class EBSD(KikuchipySignal2D):
         pc0 = np.asarray(pc0)
         if pc0.size != 3:
             raise ValueError("`pc0` must be of size 3")
-        pc0 = list(pc0)
+        pc0 = list(pc0.squeeze())
 
         supported_methods = ["nelder-mead", "pso"]
         method = method.lower()
