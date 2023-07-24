@@ -19,7 +19,7 @@ Preparation
 
 - Run tutorial notebooks and examples in the documentation locally and confirm that they
   produce the expected results.
-  From time to time, check the documentation links (``make linkchecker``) and fix any
+  From time to time, check the documentation links (``make linkcheck``) and fix any
   broken ones.
 
 - Review the contributor list ``__credits__`` in ``kikuchipy/release.py`` to ensure all
