@@ -112,7 +112,7 @@ html_theme_options = {
     ],
     "logo": {
         "alt_text": "kikuchipy",
-        "image_dark": "logo/plasma_banner_dark.png",
+        "image_dark": "_static/logo/plasma_banner_dark.png",
     },
     "navigation_with_keys": False,
     "show_toc_level": 2,

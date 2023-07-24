@@ -22,9 +22,9 @@ To update kikuchipy to the latest release::
 
     pip install --upgrade kikuchipy
 
-To install a specific version of kikuchipy (say version 0.5.8)::
+To install a specific version of kikuchipy (say version 0.8.5)::
 
-    pip install kikuchipy==0.5.8
+    pip install kikuchipy==0.8.5
 
 .. _optional-dependencies:
 
@@ -59,7 +59,7 @@ To install with Anaconda, we recommend you install it in a
 `Miniconda distribution <https://docs.conda.io/en/latest/miniconda.html>`__.
 To create an environment and activate it, run the following::
 
-   conda create --name kp-env python=3.9
+   conda create --name kp-env python=3.11
    conda activate kp-env
 
 If you prefer a graphical interface to manage packages and environments, you can install
@@ -73,9 +73,9 @@ To update kikuchipy to the latest release::
 
     conda update kikuchipy
 
-To install a specific version of kikuchipy (say version 0.5.8)::
+To install a specific version of kikuchipy (say version 0.8.5)::
 
-    conda install kikuchipy==0.5.8
+    conda install kikuchipy==0.8.5
 
 .. _install-with-hyperspy-bundle:
 
