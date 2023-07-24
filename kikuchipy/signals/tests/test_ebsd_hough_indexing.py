@@ -228,15 +228,15 @@ class TestHoughIndexing:
         assert xmap2.dx == 3
 
     def test_optimize_pc(self):
-        # Batch
         det2 = self.signal.hough_indexing_optimize_pc(
             self.detector.pc_average, self.indexer
         )
         assert det2.navigation_shape == (1,)
         assert np.allclose(det2.pc_average, self.detector.pc_average, atol=1e-2)
-        det3 = self.signal.hough_indexing_optimize_pc(
-            self.detector.pc_average, self.indexer, batch=True
-        )
+
+        # Batch with PC array with more than one dimension
+        pc0 = np.atleast_2d(self.detector.pc_average)
+        det3 = self.signal.hough_indexing_optimize_pc(pc0, self.indexer, batch=True)
         assert det3.navigation_shape == (3, 3)
         assert np.allclose(det2.pc_average, det3.pc_average, atol=1e-2)
 

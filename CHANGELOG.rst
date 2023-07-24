@@ -43,6 +43,15 @@ Fixed
 Security
 --------
 
+0.8.7 (2023-07-24)
+==================
+
+Fixed
+-----
+- Passing a 3-component PC array with more than one dimension to
+  ``EBSD.hough_indexing_optimize_pc()`` works.
+  (`#647 <https://github.com/pyxem/kikuchipy/pull/647>`_)
+
 0.8.6 (2023-05-29)
 ==================
 
