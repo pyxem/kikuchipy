@@ -13,6 +13,36 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+Unreleased
+==========
+
+Added
+-----
+
+Changed
+-------
+- ``zone_axes_kwargs`` parameter in
+  ``GeometricalKikuchiPatternSimulation.as_collections()`` does not use ``color``
+  internally to set the default color to white anymore, but uses ``fc`` (facecolor)
+  instead. This change was necessary to improve handling of other keyword arguments.
+  (`#643 <https://github.com/pyxem/kikuchipy/pull/643>`_)
+
+Deprecated
+----------
+
+Removed
+-------
+- Removed ``generators`` and ``projections`` modules which were deprecated in version
+  0.8. (`#612 <https://github.com/pyxem/kikuchipy/pull/612>`_)
+- The deprecated PyPI selector ``viz`` is removed.
+  (`#643 <https://github.com/pyxem/kikuchipy/pull/643>`_)
+
+Fixed
+-----
+
+Security
+--------
+
 0.8.7 (2023-07-24)
 ==================
 
@@ -187,7 +217,7 @@ Added
 
 Changed
 -------
-- Minimal version of orix set to >= 0.11 and of numba set to >= 0.55.
+- Minimal version of orix set to >= 0.11 and of Numba set to >= 0.55.
   (`#608 <https://github.com/pyxem/kikuchipy/pull/608>`_)
 - Added warnings when trying to perform adaptive histogram equalization on a signal with
   data in floating type or when some of the data is NaN.
@@ -205,8 +235,6 @@ Changed
 - Exclude documentation and tests from source distribution.
   (`#588 <https://github.com/pyxem/kikuchipy/pull/588>`_)
 - Minimal version of HyperSpy increased to >= 1.7.3.
-  (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
-- Minimal version of Numba increased to >= 0.52.
   (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
 - When binning the navigation dimension(s) with ``EBSD.rebin()``, the class attributes
   ``xmap`` and ``static_background`` are set to ``None`` and ``detector.pc`` is set to

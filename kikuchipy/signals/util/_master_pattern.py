@@ -65,12 +65,14 @@ import numba as nb
 import numpy as np
 
 from kikuchipy.pattern._pattern import _rescale_with_min_max
-from kikuchipy.projections.lambert_projection import _vector2xy
 from kikuchipy._rotation import _rotate_vector
 
 
 # Reusable constants
+SQRT_PI = np.sqrt(np.pi)
 SQRT_PI_HALF = np.sqrt(np.pi / 2)
+SQRT_PI_OVER_2 = SQRT_PI / 2
+TWO_OVER_SQRT_PI = 2 / SQRT_PI
 
 
 def _get_direction_cosines_from_detector(
@@ -569,6 +571,47 @@ def _project_single_pattern_from_master_pattern(
     return pattern.astype(dtype_out)
 
 
+@nb.jit("float64[:, :](float64[:, :])", nogil=True, cache=True, nopython=True)
+def _vector2lambert(v: np.ndarray) -> np.ndarray:
+    """Lambert projection of vector(s) :cite:`callahan2013dynamical`.
+
+    Parameters
+    ----------
+    v
+        Vector(s) in an array of shape (n, 3) and 64-bit float data
+        type in Cartesian coordinates.
+
+    Returns
+    -------
+    lambert
+        Square Lambert coordinates (X, Y) in array of shape (n, 2) and
+        data type 64-bit float.
+    """
+    # Normalize vectors (vectorized operation is faster than per vector)
+    norm = np.sqrt(np.sum(np.square(v), axis=1))
+    norm = np.expand_dims(norm, axis=1)
+    w = v / norm
+
+    n_vectors = v.shape[0]
+    lambert_xy = np.zeros((n_vectors, 2))
+    for i in nb.prange(n_vectors):
+        x, y, z = w[i]
+        abs_z = np.abs(z)
+        sqrt_z = np.sqrt(2 * (1 - abs_z))
+        if abs_z == 1:  # (X, Y) = (0, 0)
+            continue
+        elif np.abs(y) <= np.abs(x):
+            sign_x = np.sign(x)
+            lambert_xy[i, 0] = sign_x * sqrt_z * SQRT_PI_OVER_2
+            lambert_xy[i, 1] = sign_x * sqrt_z * TWO_OVER_SQRT_PI * np.arctan(y / x)
+        else:
+            sign_y = np.sign(y)
+            lambert_xy[i, 0] = sign_y * sqrt_z * TWO_OVER_SQRT_PI * np.arctan(x / y)
+            lambert_xy[i, 1] = sign_y * sqrt_z * SQRT_PI_OVER_2
+
+    return lambert_xy
+
+
 @njit(
     (
         "Tuple((int32[:], int32[:], int32[:], int32[:], float64[:], float64[:], "
@@ -634,7 +677,7 @@ def _get_lambert_interpolation_parameters(
         1D array of each vector's neighbouring column interpolation
         weight factor as 64-bit floats.
     """
-    xy = scale * _vector2xy(v) / SQRT_PI_HALF
+    xy = scale * _vector2lambert(v) / SQRT_PI_HALF
 
     i = xy[:, 1]
     j = xy[:, 0]

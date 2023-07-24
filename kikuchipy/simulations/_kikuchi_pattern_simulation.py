@@ -460,12 +460,15 @@ class GeometricalKikuchiPatternSimulation:
         """
         coords = self.lines_coordinates(index, coordinates)
         coords = coords.reshape((coords.shape[0], 2, 2))
-        line_defaults = dict(
-            color="r", linewidth=1, alpha=1, zorder=1, label="kikuchi_lines"
-        )
-        for k, v in line_defaults.items():
-            kwargs.setdefault(k, v)
-        return mcollections.LineCollection(segments=list(coords), **kwargs)
+        kw = {
+            "color": "r",
+            "linewidth": 1,
+            "alpha": 1,
+            "zorder": 1,
+            "label": "kikuchi_lines",
+        }
+        kw.update(kwargs)
+        return mcollections.LineCollection(segments=list(coords), **kw)
 
     def _lines_as_markers(self, **kwargs) -> List[line_segment]:
         """Get Kikuchi lines as a list of HyperSpy markers.
@@ -483,9 +486,8 @@ class GeometricalKikuchiPatternSimulation:
         """
         coords = self.lines_coordinates(index=(), exclude_nan=False)
         lines_list = []
-        segment_defaults = dict(color="r", zorder=1)
-        for k, v in segment_defaults.items():
-            kwargs.setdefault(k, v)
+        kw = {"color": "r", "zorder": 1}
+        kw.update(kwargs)
 
         for i in range(self._lines.vector.size):
             line = coords[..., i, :]
@@ -495,7 +497,7 @@ class GeometricalKikuchiPatternSimulation:
                 y1 = line[..., 1].squeeze()
                 x2 = line[..., 2].squeeze()
                 y2 = line[..., 3].squeeze()
-                marker = line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kwargs)
+                marker = line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kw)
                 lines_list.append(marker)
 
         return lines_list
@@ -533,10 +535,10 @@ class GeometricalKikuchiPatternSimulation:
         if ncols > 1:
             pcx *= ncols - 1
 
-        for k, v in dict(size=300, marker="*", fc="gold", ec="k", zorder=4).items():
-            kwargs.setdefault(k, v)
+        kw = {"size": 300, "marker": "*", "fc": "gold", "ec": "k", "zorder": 4}
+        kw.update(kwargs)
 
-        pc_marker = point(x=pcx, y=pcy, **kwargs)
+        pc_marker = point(x=pcx, y=pcy, **kw)
 
         return [pc_marker]
 
@@ -639,10 +641,9 @@ class GeometricalKikuchiPatternSimulation:
         circles = []
         for x, y in coords:
             circles.append(mpath.Path.circle((x, y), scatter_size))
-        path_defaults = dict(color="w", ec="k", zorder=1, label="zone_axes")
-        for k, v in path_defaults.items():
-            kwargs.setdefault(k, v)
-        return mcollections.PathCollection(circles, **kwargs)
+        kw = {"ec": "k", "fc": "w", "zorder": 1, "label": "zone_axes"}
+        kw.update(kwargs)
+        return mcollections.PathCollection(circles, **kw)
 
     def _zone_axes_labels_as_list(
         self, index: Union[int, tuple], coordinates: str, **kwargs
@@ -667,7 +668,7 @@ class GeometricalKikuchiPatternSimulation:
             List of zone axes labels.
         """
         za = self._zone_axes
-        za_labels = za.vector.coordinates.round(0).astype(np.int64)
+        za_labels = za.vector.coordinates.round().astype(np.int64)
         za_labels_str = np.array2string(za_labels, threshold=za_labels.size)
         za_labels_list = re.sub("[][ ]", "", za_labels_str[1:-1]).split("\n")
         xy = self.zone_axes_coordinates(index, coordinates, exclude_nan=False)
@@ -675,13 +676,12 @@ class GeometricalKikuchiPatternSimulation:
             xy[..., 1] -= 0.03 * self.detector.nrows
         else:  # gnomonic
             xy[..., 1] += 0.03 * np.diff(self.detector.y_range)[0]
-        text_defaults = dict(ha="center", bbox=dict(boxstyle="square", fc="w", pad=0.1))
-        for k, v in text_defaults.items():
-            kwargs.setdefault(k, v)
+        kw = {"ha": "center", "bbox": {"boxstyle": "square", "fc": "w", "pad": 0.1}}
+        kw.update(kwargs)
         texts = []
         for (x, y), label in zip(xy, za_labels_list):
             if np.all(~np.isnan([x, y])):
-                text_i = mtext.Text(x, y, label, **kwargs)
+                text_i = mtext.Text(x, y, label, **kw)
                 texts.append(text_i)
         return texts
 
@@ -702,14 +702,14 @@ class GeometricalKikuchiPatternSimulation:
         coords = self.zone_axes_coordinates(index=(), exclude_nan=False)
         zone_axes_list = []
 
-        for k, v in dict(ec="none", zorder=2).items():
-            kwargs.setdefault(k, v)
+        kw = {"ec": "none", "zorder": 2}
+        kw.update(kwargs)
 
         for i in range(self._zone_axes.vector.size):
             # TODO: Inefficient, squeeze before the loop if possible
             zone_axis = coords[..., i, :].squeeze()
             if not np.all(np.isnan(zone_axis)):
-                marker = point(x=zone_axis[..., 0], y=zone_axis[..., 1], **kwargs)
+                marker = point(x=zone_axis[..., 0], y=zone_axis[..., 1], **kw)
                 zone_axes_list.append(marker)
 
         return zone_axes_list
@@ -730,18 +730,18 @@ class GeometricalKikuchiPatternSimulation:
         """
         coords = self.zone_axes_coordinates(index=(), exclude_nan=False)
 
-        zone_axes = self._zone_axes.vector.coordinates.round(0).astype(np.int64)
+        zone_axes = self._zone_axes.vector.coordinates.round().astype(np.int64)
         array_str = np.array2string(zone_axes, threshold=zone_axes.size)
         texts = re.sub("[][ ]", "", array_str).split("\n")
 
-        for k, v in dict(
-            color="k",
-            zorder=3,
-            ha="center",
-            va="bottom",
-            bbox=dict(fc="w", ec="k", boxstyle="square", pad=0.2),
-        ).items():
-            kwargs.setdefault(k, v)
+        kw = {
+            "color": "k",
+            "zorder": 3,
+            "ha": "center",
+            "va": "bottom",
+            "bbox": {"fc": "w", "ec": "k", "boxstyle": "square", "pad": 0.2},
+        }
+        kw.update(kwargs)
 
         zone_axes_label_list = []
         is_finite = np.isfinite(coords)[..., 0]
@@ -756,7 +756,7 @@ class GeometricalKikuchiPatternSimulation:
                 # TODO: Inefficient, squeeze before the loop if possible
                 x = x.squeeze()
                 y = y.squeeze()
-                text_marker = text(x=x, y=y, text=texts[i], **kwargs)
+                text_marker = text(x=x, y=y, text=texts[i], **kw)
                 zone_axes_label_list.append(text_marker)
 
         return zone_axes_label_list
