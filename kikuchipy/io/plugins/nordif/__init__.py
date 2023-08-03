@@ -14,3 +14,22 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+
+"""Reader and writer of EBSD patterns from a NORDIF binary file."""
+
+from kikuchipy.io.plugins.nordif._api import file_reader, file_writer
+
+
+__all__ = ["file_reader", "file_writer"]
+
+
+def __dir__():
+    return sorted(__all__)
+
+
+def __getattr__(name):
+    if name in __all__:
+        import importlib
+
+        return importlib.import_module("." + name, __name__)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

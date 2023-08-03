@@ -29,7 +29,7 @@ from kikuchipy.data import nickel_ebsd_small
 from kikuchipy.conftest import assert_dictionary
 from kikuchipy.io._io import load
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
-from kikuchipy.io.plugins.kikuchipy_h5ebsd import (
+from kikuchipy.io.plugins.kikuchipy_h5ebsd._api import (
     KikuchipyH5EBSDReader,
     KikuchipyH5EBSDWriter,
 )

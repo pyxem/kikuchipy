@@ -30,10 +30,6 @@ from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
 
 
-# Unique HDF5 footprint
-footprint = ["emdata/ebsd/ebsdpatterns"]
-
-
 def file_reader(
     filename: Union[str, Path],
     scan_size: Union[None, int, Tuple[int, ...]] = None,

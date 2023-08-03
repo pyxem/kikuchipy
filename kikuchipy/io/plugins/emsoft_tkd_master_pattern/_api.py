@@ -21,10 +21,6 @@ from typing import List, Optional, Union
 from kikuchipy.io.plugins._emsoft_master_pattern import EMsoftMasterPatternReader
 
 
-# Unique HDF5 footprint
-footprint = ["emdata/tkdmaster"]
-
-
 class EMsoftTKDMasterPatternReader(EMsoftMasterPatternReader):
     diffraction_type = "TKD"
     cl_parameters_group_name = "MCCLfoil"  # Monte Carlo openCL

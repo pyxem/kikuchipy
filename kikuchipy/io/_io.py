@@ -16,57 +16,37 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import glob
+import importlib
 import os
 from pathlib import Path
 from typing import List, Optional, Union
 
-from hyperspy.io_plugins import hspy
-from hyperspy.misc.io.tools import overwrite as overwrite_method
 from hyperspy.misc.utils import strlist2enumeration, find_subclasses
 from hyperspy.signal import BaseSignal
 from h5py import File, is_hdf5, Group
 import numpy as np
+from rsciio import IO_PLUGINS
+from rsciio.utils.tools import overwrite as overwrite_method
+import yaml
 
 import kikuchipy.signals
-from kikuchipy.io.plugins import (
-    bruker_h5ebsd,
-    ebsd_directory,
-    edax_binary,
-    edax_h5ebsd,
-    emsoft_ebsd,
-    emsoft_ebsd_master_pattern,
-    emsoft_ecp_master_pattern,
-    emsoft_tkd_master_pattern,
-    kikuchipy_h5ebsd,
-    nordif,
-    nordif_calibration_patterns,
-    oxford_binary,
-    oxford_h5ebsd,
-)
 from kikuchipy.io._util import _get_input_bool, _ensure_directory
 
 
-plugins = [
-    bruker_h5ebsd,
-    ebsd_directory,
-    edax_binary,
-    edax_h5ebsd,
-    emsoft_ebsd,
-    emsoft_ebsd_master_pattern,
-    emsoft_ecp_master_pattern,
-    emsoft_tkd_master_pattern,
-    hspy,
-    kikuchipy_h5ebsd,
-    nordif,
-    nordif_calibration_patterns,
-    oxford_binary,
-    oxford_h5ebsd,
-]
-
-default_write_ext = set()
-for plugin in plugins:
-    if plugin.writes:
-        default_write_ext.add(plugin.file_extensions[plugin.default_extension])
+plugins = []
+write_extensions = []
+specification_paths = list(Path(__file__).parent.rglob("specification.yaml"))
+for path in specification_paths:
+    with open(path) as f:
+        spec = yaml.safe_load(f)
+        spec["api"] = f"kikuchipy.io.plugins.{path.parts[-2]}"
+        plugins.append(spec)
+        if spec["writes"]:
+            for ext in spec["file_extensions"]:
+                write_extensions.append(ext)
+for plugin in IO_PLUGINS:
+    if plugin["name"] in ["HSPY", "ZSPY"]:
+        plugins.append(plugin)
 
 
 def load(
@@ -131,7 +111,7 @@ def load(
     extension = os.path.splitext(filename)[1][1:]
     readers = []
     for plugin in plugins:
-        if extension.lower() in plugin.file_extensions:
+        if extension.lower() in plugin["file_extensions"]:
             readers.append(plugin)
     if len(readers) == 0:
         raise IOError(
@@ -139,13 +119,15 @@ def load(
             "report this error"
         )
     elif len(readers) > 1 and is_hdf5(filename):
-        reader = _plugin_from_footprints(filename, plugins=readers)
+        reader = _hdf5_plugin_from_footprints(filename, plugins=readers)
     else:
         reader = readers[0]
 
-    # Get data and metadata (from potentially multiple signals if an h5ebsd
-    # file)
-    signal_dicts = reader.file_reader(filename, lazy=lazy, **kwargs)
+    # Get data and metadata (from potentially multiple signals if an
+    # h5ebsd file)
+    signal_dicts = importlib.import_module(reader["api"]).file_reader(
+        filename, lazy=lazy, **kwargs
+    )
     out = []
     for signal in signal_dicts:
         out.append(_dict2signal(signal, lazy=lazy))
@@ -208,7 +190,7 @@ def _dict2signal(signal_dict: dict, lazy: bool = False):
     return signal
 
 
-def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
+def _hdf5_plugin_from_footprints(filename: str, plugins: list) -> Optional[dict]:
     """Get HDF5 correct plugin from a list of potential plugins based on
     their unique footprints.
 
@@ -253,13 +235,10 @@ def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
     with File(filename) as f:
         d = _hdf5group2dict(f["/"])
 
-        plugins_with_footprints = [p for p in plugins if hasattr(p, "footprint")]
-        plugins_with_manufacturer = [
-            p for p in plugins_with_footprints if hasattr(p, "manufacturer")
-        ]
-
         matching_plugin = None
-        # Check manufacturer if possible (all h5ebsd files have this)
+
+        match_manufacturer = []
+        # Search for the manufacturer (all h5ebsd files have this)
         for key, val in d.items():
             if key == "manufacturer":
                 # Extracting the manufacturer is finicky
@@ -268,23 +247,26 @@ def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
                     man = man[0]
                 if isinstance(man, bytes):
                     man = man.decode("latin-1")
-                for p in plugins_with_manufacturer:
-                    if man.lower() == p.manufacturer:
-                        matching_plugin = p
-                        break
+                for p in plugins:
+                    if man.lower() == p["manufacturer"]:
+                        match_manufacturer.append(p)
 
-        # If no match found, continue searching
-        if matching_plugin is None:
-            for p in plugins_with_footprints:
+        if len(match_manufacturer) == 1:
+            matching_plugin = match_manufacturer[0]
+        else:
+            # Search for a unique footprint
+            match_footprint = []
+            for p in plugins:
                 n_matches = 0
-                n_desired_matches = len(p.footprint)
-                for fp in p.footprint:
+                n_desired_matches = len(p["footprints"])
+                for fp in p["footprints"]:
                     fp = fp.lower().split("/")
                     if _exists(d, fp) is not None:
                         n_matches += 1
-                if n_matches == n_desired_matches:
-                    matching_plugin = p
-                    break
+                if n_matches > 0 and n_matches == n_desired_matches:
+                    match_footprint.append(p)
+            if len(match_footprint) == 1:
+                matching_plugin = match_footprint[0]
 
     return matching_plugin
 
@@ -398,26 +380,26 @@ def _save(
 
     writer = None
     for plugin in plugins:
-        if ext.lower() in plugin.file_extensions and plugin.writes:
+        if ext.lower() in plugin["file_extensions"] and plugin["writes"]:
             writer = plugin
             break
 
     if writer is None:
         raise ValueError(
             f"'{ext}' does not correspond to any supported format. Supported file "
-            f"extensions are: '{strlist2enumeration(default_write_ext)}'"
+            f"extensions are: '{write_extensions}'"
         )
     else:
         sd = signal.axes_manager.signal_dimension
         nd = signal.axes_manager.navigation_dimension
-        if writer.writes is not True and (sd, nd) not in writer.writes:
+        if writer["writes"] is not True and [sd, nd] not in writer["writes"]:
             # Get writers that can write this data
             writing_plugins = []
             for plugin in plugins:
                 if (
-                    plugin.writes is True
-                    or plugin.writes is not False
-                    and (sd, nd) in plugin.writes
+                    plugin["writes"] is True
+                    or plugin["writes"] is not False
+                    and (sd, nd) in plugin["writes"]
                 ):
                     writing_plugins.append(plugin)
             raise ValueError(
@@ -429,11 +411,7 @@ def _save(
         is_file = os.path.isfile(filename)
 
         # Check if we are to add signal to an already existing h5ebsd file
-        if (
-            writer.format_name == "kikuchipy_h5ebsd"
-            and overwrite is not True
-            and is_file
-        ):
+        if writer["name"] == "kikuchipy_h5ebsd" and overwrite is not True and is_file:
             if add_scan is None:
                 q = "Add scan to '{}' (y/n)?\n".format(filename)
                 add_scan = _get_input_bool(q)
@@ -456,7 +434,9 @@ def _save(
 
         # Finally, write file
         if write:
-            writer.file_writer(filename, signal, **kwargs)
+            importlib.import_module(writer["api"]).file_writer(
+                filename, signal, **kwargs
+            )
             directory, filename = os.path.split(os.path.abspath(filename))
             signal.tmp_parameters.set_item("folder", directory)
             signal.tmp_parameters.set_item("filename", os.path.splitext(filename)[0])

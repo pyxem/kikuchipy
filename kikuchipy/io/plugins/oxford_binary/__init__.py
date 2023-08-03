@@ -14,3 +14,27 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+
+"""Reader of uncompressed EBSD patterns from a Oxford Instruments binary
+.ebsp file.
+
+Information about the file format was generously provided by Oxford
+Instruments.
+"""
+
+from kikuchipy.io.plugins.oxford_binary._api import file_reader
+
+
+__all__ = ["file_reader"]
+
+
+def __dir__():
+    return sorted(__all__)
+
+
+def __getattr__(name):
+    if name in __all__:
+        import importlib
+
+        return importlib.import_module("." + name, __name__)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

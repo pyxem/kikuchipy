@@ -25,11 +25,6 @@ from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict, H5EBSDReader
 
 
-# Unique HDF5 footprint
-footprint = ["manufacturer", "version"]
-manufacturer = "edax"
-
-
 class EDAXH5EBSDReader(H5EBSDReader):
     """EDAX TSL h5ebsd file reader.
 

@@ -14,3 +14,22 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+
+"""Reader of EBSD patterns from a dictionary of images."""
+
+from kikuchipy.io.plugins.ebsd_directory._api import file_reader
+
+
+__all__ = ["file_reader"]
+
+
+def __dir__():
+    return sorted(__all__)
+
+
+def __getattr__(name):
+    if name in __all__:
+        import importlib
+
+        return importlib.import_module("." + name, __name__)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

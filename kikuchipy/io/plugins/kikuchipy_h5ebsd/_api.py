@@ -34,11 +34,6 @@ from kikuchipy.release import version as kikuchipy_version
 from kikuchipy.signals.util._crystal_map import _xmap_is_compatible_with_signal
 
 
-# Unique HDF5 footprint
-footprint = ["manufacturer", "version"]
-manufacturer = "kikuchipy"
-
-
 class KikuchipyH5EBSDReader(H5EBSDReader):
     """kikuchipy h5ebsd file reader.
 

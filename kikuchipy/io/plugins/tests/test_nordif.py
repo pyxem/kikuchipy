@@ -34,7 +34,7 @@ import pytest
 from kikuchipy.conftest import assert_dictionary
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io._io import load
-from kikuchipy.io.plugins.nordif import _get_settings_from_file, _get_string
+from kikuchipy.io.plugins.nordif._api import _get_settings_from_file, _get_string
 from kikuchipy.signals.ebsd import EBSD
 
 DIR_PATH = os.path.dirname(__file__)

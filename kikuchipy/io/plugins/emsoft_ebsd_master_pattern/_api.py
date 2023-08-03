@@ -21,10 +21,6 @@ from typing import List, Optional, Union
 from kikuchipy.io.plugins._emsoft_master_pattern import EMsoftMasterPatternReader
 
 
-# Unique HDF5 footprint
-footprint = ["emdata/ebsdmaster"]
-
-
 class EMsoftEBSDMasterPatternReader(EMsoftMasterPatternReader):
     diffraction_type = "EBSD"
     cl_parameters_group_name = "MCCL"  # Monte Carlo openCL

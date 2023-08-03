@@ -1,0 +1,7 @@
+name: oxford_binary
+description: Read support for Oxford Instruments' binary .ebsp file.
+file_extensions: ['ebsp']
+default_extension: 0
+writes: False
+manufacturer: oxford
+footprints: []

@@ -1,0 +1,7 @@
+name: nordif
+description: Read/write support for NORDIF's binary pattern file
+file_extensions: ['dat']
+default_extension: 0
+writes: [[2, 2], [2, 1], [2, 0]]
+manufacturer: nordif
+footprints: []

@@ -24,7 +24,7 @@ from matplotlib.pyplot import imread
 import numpy as np
 
 from kikuchipy.detectors import EBSDDetector
-from kikuchipy.io.plugins.nordif.nordif import _get_settings_from_file
+from kikuchipy.io.plugins.nordif._api import _get_settings_from_file
 
 
 def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:

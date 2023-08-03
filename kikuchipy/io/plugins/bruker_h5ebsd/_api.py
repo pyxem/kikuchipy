@@ -26,11 +26,6 @@ from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict, H5EBSDReader
 
 
-# Unique HDF5 footprint
-footprint = ["manufacturer", "version"]
-manufacturer = "bruker nano"
-
-
 class BrukerH5EBSDReader(H5EBSDReader):
     """Bruker Nano h5ebsd file reader.
 
