@@ -221,9 +221,6 @@ def _hough_indexing(
     info_message = _get_info_message(n_patterns, chunksize, indexer)
     print(info_message)
 
-    if verbose == 2:
-        plt.figure()
-
     tic = time()
     index_data, band_data, _, _ = indexer.index_pats(
         patsin=patterns, verbose=verbose, chunksize=chunksize
