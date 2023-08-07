@@ -25,7 +25,6 @@ from time import time
 from typing import List, Optional, Tuple, Union
 
 import dask.array as da
-import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import create_coordinate_arrays, CrystalMap, PhaseList
 from orix.quaternion import Rotation
@@ -400,9 +399,10 @@ def _optimize_pc(
     indexer: "EBSDIndexer",
     batch: bool,
     method: str,
+    **kwargs,
 ) -> np.ndarray:
     if method == "pso":
         from pyebsdindex.pcopt import optimize_pso as optimize_func
     else:
         from pyebsdindex.pcopt import optimize as optimize_func
-    return optimize_func(pats=patterns, indexer=indexer, PC0=pc0, batch=batch)
+    return optimize_func(pats=patterns, indexer=indexer, PC0=pc0, batch=batch, **kwargs)

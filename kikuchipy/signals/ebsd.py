@@ -1718,6 +1718,7 @@ class EBSD(KikuchipySignal2D):
         indexer: "EBSDIndexer",
         batch: bool = False,
         method: str = "Nelder-Mead",
+        **kwargs,
     ) -> "EBSDDetector":
         """Return a detector with one projection center (PC) per
         pattern optimized using Hough indexing from :mod:`pyebsdindex`.
@@ -1732,9 +1733,7 @@ class EBSD(KikuchipySignal2D):
             convention, (PCx, PCy, PCz).
         indexer
             PyEBSDIndex EBSD indexer instance to pass on to the
-            optimization function. Its `phaselist` must be compatible
-            with ``phase_list``, if given, and the ``indexer.vendor``
-            must be ``"KIKUCHIPY"``. An indexer can be obtained with
+            optimization function. An indexer can be obtained with
             :meth:`~kikuchipy.detectors.EBSDDetector.get_indexer`.
         batch
             Whether the fit for the patterns should be optimized using
@@ -1742,8 +1741,10 @@ class EBSD(KikuchipySignal2D):
             if an optimization is run for each pattern individually.
         method
             Which optimization method to use, either ``"Nelder-Mead"``
-            from SciPy (default) or ``"PSO"`` (particle swarm). The
-            latter method does not support ``batch=True``.
+            from SciPy (default) or ``"PSO"`` (particle swarm).
+        **kwargs
+            Keyword arguments passed on to PyEBSDIndex' optimization
+            method (depending on the chosen ``method``).
 
         Returns
         -------
@@ -1782,8 +1783,6 @@ class EBSD(KikuchipySignal2D):
                 f"`method` '{method}' must be one of the supported methods "
                 f"{supported_methods}"
             )
-        elif batch and method == "pso":
-            raise ValueError("PSO optimization method does not support `batch=True`")
 
         am = self.axes_manager
         nav_shape = am.navigation_shape[::-1]
@@ -1801,7 +1800,12 @@ class EBSD(KikuchipySignal2D):
             patterns = patterns.rechunk({0: "auto", 1: -1, 2: -1})
 
         pc = _optimize_pc(
-            pc0=pc0, patterns=patterns, indexer=indexer, batch=batch, method=method
+            pc0=pc0,
+            patterns=patterns,
+            indexer=indexer,
+            batch=batch,
+            method=method,
+            **kwargs,
         )
 
         if batch:

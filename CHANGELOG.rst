@@ -20,6 +20,12 @@ Added
 -----
 - Explicit support for Python 3.11.
   (`#645 <https://github.com/pyxem/kikuchipy/pull/645>`_)
+- Allow passing keyword arguments to ``EBSD.hough_indexing_optimize_pc()`` to control
+  particle swarm optimization (PSO). These are passed on to the new PSO algorithm in
+  PyEBSDIndex v0.2. (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Allow getting one projection center (PC) per pattern when optimizing PCs using the new
+  particle swarm optimization in PyEBSDIndex v0.2.
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
 
 Changed
 -------

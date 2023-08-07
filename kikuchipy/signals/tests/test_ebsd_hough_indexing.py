@@ -229,31 +229,60 @@ class TestHoughIndexing:
         assert xmap2.dy == 2
         assert xmap2.dx == 3
 
+
+@pytest.mark.skipif(
+    not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
+)
+class TestPCOptimization:
+    def setup_method(self):
+        s = kp.data.nickel_ebsd_small()
+        s.remove_static_background()
+        s.remove_dynamic_background()
+
+        self.signal = s
+        self.xmap = s.xmap
+        self.phase_list = s.xmap.phases
+        self.detector = s.detector
+        self.indexer = s.detector.get_indexer(s.xmap.phases)
+
     def test_optimize_pc(self):
-        det2 = self.signal.hough_indexing_optimize_pc(
+        det = self.signal.hough_indexing_optimize_pc(
             self.detector.pc_average, self.indexer
         )
-        assert det2.navigation_shape == (1,)
-        assert np.allclose(det2.pc_average, self.detector.pc_average, atol=1e-2)
+        assert det.navigation_shape == (1,)
+        assert np.allclose(det.pc_average, self.detector.pc_average, atol=1e-2)
 
         # Batch with PC array with more than one dimension
-        pc0 = np.atleast_2d(self.detector.pc_average)
-        det3 = self.signal.hough_indexing_optimize_pc(pc0, self.indexer, batch=True)
-        assert det3.navigation_shape == (3, 3)
-        assert np.allclose(det2.pc_average, det3.pc_average, atol=1e-2)
+        det2 = self.signal.hough_indexing_optimize_pc(
+            self.detector.pc_average, self.indexer, batch=True
+        )
+        assert det2.navigation_shape == (3, 3)
+        assert np.allclose(det.pc_average, det2.pc_average, atol=1e-2)
 
         # Detector parameters
-        assert det2.shape == self.detector.shape
-        assert np.isclose(det2.sample_tilt, self.detector.sample_tilt)
-        assert np.isclose(det2.tilt, self.detector.tilt)
-        assert np.isclose(det2.px_size, self.detector.px_size)
+        assert det.shape == self.detector.shape
+        assert np.isclose(det.sample_tilt, self.detector.sample_tilt)
+        assert np.isclose(det.tilt, self.detector.tilt)
+        assert np.isclose(det.px_size, self.detector.px_size)
 
-    def test_optimize_pc_pso(self):
+    def test_optimize_pc_pso(self, worker_id):
         det = self.signal.hough_indexing_optimize_pc(
             self.detector.pc_average, self.indexer, method="PSO"
         )
         # Results are not deterministic, so we give a wide range here...
-        assert abs(self.detector.pc_average - det.pc_average).max() < 0.05
+        assert abs(self.detector.pc_average - det.pc_average).max() < 0.03
+
+        if worker_id == "master":  # pragma: no cover
+            # Batch with PC array with more than one dimension
+            det2 = self.signal.hough_indexing_optimize_pc(
+                self.detector.pc_average,
+                self.indexer,
+                batch=True,
+                method="PSO",
+                search_limit=0.1,
+            )
+            assert det2.navigation_shape == (3, 3)
+            assert abs(det.pc_average - det2.pc_average).max() < 0.03
 
     def test_optimize_pc_raises(self):
         with pytest.raises(ValueError, match="`pc0` must be of size 3"):
@@ -262,11 +291,6 @@ class TestHoughIndexing:
         with pytest.raises(ValueError, match="`method` 'powell' must be one of the "):
             _ = self.signal.hough_indexing_optimize_pc(
                 [0.5, 0.5, 0.5], self.indexer, method="Powell"
-            )
-
-        with pytest.raises(ValueError, match="PSO optimization method does not "):
-            _ = self.signal.hough_indexing_optimize_pc(
-                [0.5, 0.5, 0.5], self.indexer, method="PSO", batch=True
             )
 
     def test_optimize_pc_lazy(self):  # pragma: no cover
@@ -281,7 +305,7 @@ class TestHoughIndexing:
 
 
 @pytest.mark.skipif(kp._pyebsdindex_installed, reason="pyebsdindex is installed")
-class TestHoughIndexingNopyebsdindex:
+class TestHoughIndexingNoPyEBSDIndex:
     def setup_method(self):
         s = kp.data.nickel_ebsd_small()
 
