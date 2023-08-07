@@ -46,6 +46,9 @@ If you're in the top directory you can run::
 
     pytest --doctest-modules --ignore-glob=kikuchipy/*/tests kikuchipy/*.py
 
+Functionality using Numba
+-------------------------
+
 Tips for writing tests of Numba decorated functions:
 
 - A Numba decorated function ``numba_func()`` is only covered if it is called in the
@@ -55,3 +58,15 @@ Tips for writing tests of Numba decorated functions:
   results on different OS with the same Python code.
   See this issue https://github.com/pyxem/kikuchipy/issues/496 for a case where this
   happened.
+
+Functionality using multiprocessing
+-----------------------------------
+
+Some functionality may run in parallel using :mod:`multiprocessing`, such as
+:func:`pyebsdindex.pcopt.optimize_pso` which is used in
+:meth:`~kikuchipy.signals.ebsd.hough_indexing_optimize_pc`.
+A test of this functionality may hang when run in a parallel test run using
+:mod:`pytest-xdist`.
+To ensure the multiprocessing-part only runs when pytest-xdist is not used, we can
+ensure that the value of the ``worker_id`` fixture provided by pytest-xdist is
+``"master"``.
