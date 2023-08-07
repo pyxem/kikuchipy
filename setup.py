@@ -69,7 +69,7 @@ extra_feature_requirements = {
     "all": [
         "matplotlib                     >= 3.5",
         "nlopt",
-        "pyebsdindex                    ~= 0.1",
+        "pyebsdindex                    >= 0.2",
         "pyvista",
     ],
 }

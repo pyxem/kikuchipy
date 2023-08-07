@@ -34,8 +34,10 @@ Changed
   internally to set the default color to white anymore, but uses ``fc`` (facecolor)
   instead. This change was necessary to improve handling of other keyword arguments.
   (`#643 <https://github.com/pyxem/kikuchipy/pull/643>`_)
-- Increase minimal versions of diffsims, NumPy, and Matplotlib to 0.5.1, 1.21.6, and
-  3.5 respectively. (`#645 <https://github.com/pyxem/kikuchipy/pull/645>`_)
+- Increase minimal versions of diffsims, NumPy, Matplotlib, and PyEBSDIndex to 0.5.1,
+  1.21.6, 3.5, and 0.2, respectively.
+  (`#645 <https://github.com/pyxem/kikuchipy/pull/645>`_,
+  `#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
 
 Deprecated
 ----------
