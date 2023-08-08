@@ -49,7 +49,7 @@ extra_feature_requirements = {
         "nlopt",
         "panel",  # Used in the docs by PyVista
         "pydata-sphinx-theme",
-        "pyebsdindex                    ~= 0.1",
+        "pyebsdindex                    ~= 0.2",
         "pyvista",
         "sphinx                         >= 3.0.2",
         "sphinx-codeautolink[ipython]   < 0.14",
@@ -69,7 +69,12 @@ extra_feature_requirements = {
     "all": [
         "matplotlib                     >= 3.5",
         "nlopt",
-        "pyebsdindex                    >= 0.2",
+        # We ask for a compatible release of PyEBSDIndex as we
+        # anticipate breaking changes in coming releases because there
+        # were breaking changes between 0.1.2 and 0.2.0. We can change
+        # from ~= to >= once a minor release with no or only minor
+        # breaking changes is made.
+        "pyebsdindex                    ~= 0.2",
         "pyvista",
     ],
 }
