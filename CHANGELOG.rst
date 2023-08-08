@@ -51,9 +51,9 @@ Removed
 
 Fixed
 -----
-
-Security
---------
+- Conversion from EDAX TSL projection center (PC) convention for (PCy, PCz) for
+  rectangular detectors is corrected.
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
 
 0.8.7 (2023-07-24)
 ==================

@@ -113,10 +113,13 @@ class EBSDDetector:
     of the documentation when there is no reference to Bruker
     specifically.
 
-    The EDAX TSL PC coordinates :math:`(x_T^*, y_T^*, z_T^*)` and Oxford
-    Instruments PC coordinates :math:`(x_O^*, y_O^*, z_O^*)` are
-    identical and defined in fractions of :math:`N_x` with respect to
-    the lower left corner of the detector.
+    The EDAX TSL PC coordinates :math:`(x_T^*, y_T^*, z_T^*)` are
+    defined in fractions of :math:`(N_x, N_y, min(N_x, N_y))` with
+    respect to the lower left corner of the detector.
+
+    The Oxford Instruments PC coordinates :math:`(x_O^*, y_O^*, z_O^*)`
+    are defined in fractions of :math:`N_x` with respect to the lower
+    left corner of the detector.
 
     The EMsoft PC coordinates :math:`(x_{pc}, y_{pc})` are defined as
     number of pixels (subpixel accuracy) with respect to the center of
@@ -125,14 +128,22 @@ class EBSDDetector:
     detector distance in microns. Note that prior to EMsoft v5.0,
     :math:`x_{pc}` was defined towards the left.
 
-    Given these definitions, the following is the conversion from
-    TSL/Oxford to Bruker
+    Given these definitions, the following is the conversion from EDAX
+    TSL to Bruker
 
     .. math::
 
         x_B^* &= x_T^*,\\
-        y_B^* &= 1 - \frac{N_x}{N_y} y_T^*,\\
-        z_B^* &= \frac{N_x}{N_y} z_T^*.
+        y_B^* &= 1 - y_T^*,\\
+        z_B^* &= \frac{min(N_x, N_y)}{N_y} z_T^*.
+
+    The conversion from Oxford Instruments to Bruker is given as
+
+    .. math::
+
+        x_B^* &= x_O^*,\\
+        y_B^* &= 1 - y_O^* \frac{N_x}{N_y},\\
+        z_B^* &= \frac{N_x}{N_y} z_O^*.
 
     The conversion from EMsoft to Bruker is given as
 
@@ -1095,8 +1106,15 @@ class EBSDDetector:
         else:
             return new_detector
 
-    def get_indexer(self, phase_list: PhaseList, **kwargs) -> "EBSDIndexer":
-        """Return a PyEBSDIndex EBSD indexer.
+    def get_indexer(
+        self,
+        phase_list: PhaseList,
+        reflectors: Optional[
+            List[Union["ReciprocalLatticeVector", np.ndarray, None]]
+        ] = None,
+        **kwargs,
+    ) -> "EBSDIndexer":
+        r"""Return a PyEBSDIndex EBSD indexer.
 
         Parameters
         ----------
@@ -1104,6 +1122,14 @@ class EBSDDetector:
             List of phases. :class:`~pyebsdindex.ebsd_index.EBSDIndexer`
             only supports a list containing one face-centered cubic
             (FCC) phase, one body-centered cubic (BCC) phase or both.
+        reflectors
+            List of unique reflectors :math:`\{hkl\}` to use in indexing
+            for each phase. If not passed, the default in
+            :func:`pyebsdindex.tripletvote.addphase` is used. For each
+            phase, the reflector list can either be None, a NumPy array,
+            or a
+            :class:`~diffsis.crystallography.ReciprocalLatticeVector`.
+            If None is passed, the default in PyEBSDIndex is used.
         **kwargs
             Keyword arguments passed to
             :class:`~pyebsdindex.ebsd_index.EBSDIndexer`, except for the
@@ -1132,6 +1158,7 @@ class EBSDDetector:
             pc=self.pc_flattened.squeeze(),
             sample_tilt=self.sample_tilt,
             tilt=self.tilt,
+            reflectors=reflectors,
             **kwargs,
         )
 
@@ -1242,13 +1269,8 @@ class EBSDDetector:
         -------
         new_pc
             PC in the Oxford convention.
-
-        Notes
-        -----
-        The Oxford PC coordinates are identical to the TSL coordinates,
-        see :meth:`pc_tsl`.
         """
-        return self._pc_bruker2tsl()
+        return self._pc_bruker2oxford()
 
     def plot(
         self,
@@ -1645,8 +1667,10 @@ class EBSDDetector:
         conv = convention.lower()
         if conv in CONVENTION_ALIAS["bruker"]:
             return self.pc
-        elif conv in CONVENTION_ALIAS["tsl"] + CONVENTION_ALIAS["oxford"]:
+        elif conv in CONVENTION_ALIAS["tsl"]:
             return self._pc_tsl2bruker()
+        elif conv in CONVENTION_ALIAS["oxford"]:
+            return self._pc_oxford2bruker()
         elif conv in CONVENTION_ALIAS["emsoft"]:
             try:
                 version = int(convention[-1])
@@ -1680,8 +1704,10 @@ class EBSDDetector:
         conv = convention.lower()
         if conv in CONVENTION_ALIAS["bruker"]:
             return self.pc
-        elif conv in CONVENTION_ALIAS["tsl"] + CONVENTION_ALIAS["oxford"]:
+        elif conv in CONVENTION_ALIAS["tsl"]:
             return self._pc_bruker2tsl()
+        elif conv in CONVENTION_ALIAS["oxford"]:
+            return self._pc_bruker2oxford()
         elif conv in CONVENTION_ALIAS["emsoft"]:
             try:
                 version = int(convention[-1])
@@ -1706,6 +1732,12 @@ class EBSDDetector:
 
     def _pc_tsl2bruker(self) -> np.ndarray:
         new_pc = deepcopy(self.pc)
+        new_pc[..., 1] = 1 - self.pcy
+        new_pc[..., 2] *= min([self.nrows, self.ncols]) / self.nrows
+        return new_pc
+
+    def _pc_oxford2bruker(self) -> np.ndarray:
+        new_pc = deepcopy(self.pc)
         new_pc[..., 1] = 1 - self.pcy * self.aspect_ratio
         new_pc[..., 2] *= self.aspect_ratio
         return new_pc
@@ -1720,6 +1752,12 @@ class EBSDDetector:
         return new_pc
 
     def _pc_bruker2tsl(self) -> np.ndarray:
+        new_pc = deepcopy(self.pc)
+        new_pc[..., 1] = 1 - self.pcy
+        new_pc[..., 2] /= min([self.nrows, self.ncols]) / self.nrows
+        return new_pc
+
+    def _pc_bruker2oxford(self) -> np.ndarray:
         new_pc = deepcopy(self.pc)
         new_pc[..., 1] = (1 - self.pcy) / self.aspect_ratio
         new_pc[..., 2] /= self.aspect_ratio
