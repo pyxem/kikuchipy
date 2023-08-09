@@ -70,10 +70,11 @@ extra_feature_requirements = {
         "matplotlib                     >= 3.5",
         "nlopt",
         # We ask for a compatible release of PyEBSDIndex as we
-        # anticipate breaking changes in coming releases because there
-        # were breaking changes between 0.1.2 and 0.2.0. We can change
-        # from ~= to >= once a minor release with no or only minor
-        # breaking changes is made.
+        # anticipate breaking changes in coming releases. We do so
+        # because there were breaking changes between 0.1.2 and 0.2.0.
+        # We can change from ~= to >= once we consider PyEBSDIndex
+        # stable. This is typically when a minor release with no or
+        # only minor breaking changes is made available.
         "pyebsdindex                    ~= 0.2",
         "pyvista",
     ],

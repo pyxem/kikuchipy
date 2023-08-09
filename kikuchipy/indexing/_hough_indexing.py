@@ -25,6 +25,7 @@ from time import time
 from typing import List, Optional, Tuple, Union
 
 import dask.array as da
+from diffsims.crystallography import ReciprocalLatticeVector
 import numpy as np
 from orix.crystal_map import create_coordinate_arrays, CrystalMap, PhaseList
 from orix.quaternion import Rotation
@@ -116,14 +117,15 @@ def _get_indexer_from_detector(
     pc: np.ndarray,
     sample_tilt: float,
     tilt: float,
+    reflectors: Optional[List[Union[ReciprocalLatticeVector, np.ndarray, None]]] = None,
     **kwargs,
 ) -> "EBSDIndexer":
-    """Return a PyEBSDIndex EBSD indexer.
+    r"""Return a PyEBSDIndex EBSD indexer.
 
     Parameters
     ----------
     phase_list
-        List of supported phases, only ``"FCC"`` and/or ``"BCC"``.
+        List of phases.
     shape
         Detector shape (n rows, n columns).
     pc
@@ -132,6 +134,14 @@ def _get_indexer_from_detector(
         Sample tilt in degrees.
     tilt
         Detector tilt in degrees.
+    reflectors
+        List of unique reflectors :math:`\{hkl\}` to use in indexing for
+        each phase. If not passed, the default in
+        :func:`pyebsdindex.tripletvote.addphase` is used. For each
+        phase, the reflector list can either be None, a NumPy array,
+        or a
+        :class:`~diffsis.crystallography.ReciprocalLatticeVector`.
+        If None is passed, the default in PyEBSDIndex is used.
     **kwargs
         Keyword arguments passed to
         :class:`~pyebsdindex.ebsd_index.EBSDIndexer`.
@@ -156,7 +166,7 @@ def _get_indexer_from_detector(
 
     from pyebsdindex.ebsd_index import EBSDIndexer
 
-    phase_list_pei = _get_pyebsdindex_phaselist(phase_list)
+    phase_list_pei = _get_pyebsdindex_phaselist(phase_list, reflectors)
 
     indexer = EBSDIndexer(
         phaselist=phase_list_pei,
@@ -182,7 +192,7 @@ def _hough_indexing(
 ) -> Tuple[CrystalMap, np.ndarray, np.ndarray]:
     """Perform Hough indexing with PyEBSDIndex.
 
-    Function can only be called if PyEBSDIndex is installed.
+    Requires PyEBSDIndex to be installed.
 
     Parameters
     ----------
@@ -238,14 +248,25 @@ def _hough_indexing(
     return xmap, index_data, band_data
 
 
-def _get_pyebsdindex_phaselist(phase_list: PhaseList) -> List[str]:
-    """Return a phase list compatible with PyEBSDIndex or raise a
+def _get_pyebsdindex_phaselist(
+    phase_list: PhaseList,
+    reflectors: Optional[List[Union[ReciprocalLatticeVector, np.ndarray, None]]] = None,
+) -> List["BandIndexer"]:
+    r"""Return a phase list compatible with PyEBSDIndex or raise a
     ``ValueError`` if the given phase list is incompatible.
 
     Parameters
     ----------
     phase_list
         Phase list to convert to one compatible with PyEBSDIndex.
+    reflectors
+        List of unique reflectors :math:`\{hkl\}` to use in indexing for
+        each phase. If not passed, the default in
+        :func:`pyebsdindex.tripletvote.addphase` is used. For each
+        phase, the reflector list can either be None, a NumPy array,
+        or a
+        :class:`~diffsis.crystallography.ReciprocalLatticeVector`.
+        If None is passed, the default in PyEBSDIndex is used.
 
     Returns
     -------
@@ -255,45 +276,55 @@ def _get_pyebsdindex_phaselist(phase_list: PhaseList) -> List[str]:
     Raises
     ------
     ValueError
-        Raised if the phase list has more than two phases, if one of the
-        phases are not FCC or BCC, or if both phases are either FCC or
-        BCC.
+        Raised if the phase list contains a phase without a space group
+        set or if the reflector list is invalid.
     """
-    compatible = True
-    error_msg = None
+    from pyebsdindex.tripletvote import addphase
 
-    msg_supported_phases = (
-        "Hough indexing only supports indexing of generic face-centered cubic (FCC) and"
-        " body-centered cubic (BCC) phases.\nThus the phase list can only contain one "
-        "FCC and/or one BCC phase."
-    )
+    if reflectors is None:
+        reflectors = [None] * phase_list.size
+    elif isinstance(reflectors, (np.ndarray, ReciprocalLatticeVector)):
+        reflectors = [
+            reflectors,
+        ]
 
-    if phase_list.size > 2:
-        compatible = False
-        error_msg = msg_supported_phases
-
-    sg = phase_list.space_groups
-    centering = None
-    if compatible and any(sg_i is None for sg_i in sg):
-        compatible = False
-        error_msg = (
-            "Space group for each phase must be set, otherwise the Bravais lattice(s) "
-            "cannot be determined."
+    if len(reflectors) != phase_list.size:
+        raise ValueError(
+            "One list of reflectors (or None) must be passed per phase in the phase "
+            "list."
         )
-    else:
-        centering = [sg_i.short_name[0] for sg_i in sg]
-        if "I" in centering:
-            centering[centering.index("I")] = "B"
-        allowed_centering = [["F"], ["B"], ["F", "B"], ["B", "F"]]
-        if compatible and centering not in allowed_centering:
-            compatible = False
-            error_msg = msg_supported_phases
 
-    if not compatible:
-        raise ValueError(error_msg)
-    else:
-        phase_list_pei = [c + "CC" for c in centering]
-        return phase_list_pei
+    phase_list_pei = []
+    i = 0
+    for _, phase in phase_list:
+        sg = phase.space_group
+        if sg is None:
+            raise ValueError(
+                "Space group for each phase must be set, otherwise the Bravais "
+                "lattice(s) cannot be determined."
+            )
+
+        ref = reflectors[i]
+        if isinstance(ref, ReciprocalLatticeVector):
+            ref = ref.unique(use_symmetry=True).hkl
+        elif isinstance(ref, np.ndarray):
+            # Ensure uniqueness
+            ref = ReciprocalLatticeVector(phase, hkl=ref).unique(use_symmetry=True).hkl
+        else:
+            ref = None
+
+        phase_pei = addphase(
+            phasename=phase.name,
+            spacegroup=sg.number,
+            latticeparameter=phase.structure.lattice.abcABG(),
+            polefamilies=ref,
+        )
+
+        phase_list_pei.append(phase_pei)
+
+        i += 1
+
+    return phase_list_pei
 
 
 def _indexer_is_compatible_with_kikuchipy(
@@ -359,11 +390,11 @@ def _indexer_is_compatible_with_kikuchipy(
                 f"{pc_shape} instead."
             )
 
-    phase_list_pei = indexer.phaselist
-    allowed_lists = [["FCC"], ["BCC"], ["FCC", "BCC"], ["BCC", "FCC"]]
-    if compatible and phase_list_pei not in allowed_lists:
-        compatible = False
-        error_msg = f"`indexer.phaselist` must be one of {allowed_lists}"
+    #    phase_list_pei = indexer.phaselist
+    #    allowed_lists = [["FCC"], ["BCC"], ["FCC", "BCC"], ["BCC", "FCC"]]
+    #    if compatible and phase_list_pei not in allowed_lists:
+    #        compatible = False
+    #        error_msg = f"`indexer.phaselist` must be one of {allowed_lists}"
 
     if raise_if_not and not compatible:
         raise ValueError(error_msg)
