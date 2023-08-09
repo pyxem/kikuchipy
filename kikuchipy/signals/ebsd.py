@@ -1674,16 +1674,16 @@ class EBSD(KikuchipySignal2D):
         sig_shape = am.signal_shape[::-1]
         step_sizes = tuple([a.scale for a in am.navigation_axes[::-1]])
 
-        # Check indexer
+        # Check indexer (but not the reflectors)
         phase_list_pei = _get_pyebsdindex_phaselist(phase_list)
         _ = _indexer_is_compatible_with_kikuchipy(
             indexer, sig_shape, nav_size, raise_if_not=True
         )
-        if indexer.phaselist != phase_list_pei:
-            raise ValueError(
-                f"`indexer.phaselist` {indexer.phaselist} and the list determined from"
-                f" `phase_list` {phase_list_pei} must be the same"
-            )
+        #        if indexer.phaselist != phase_list_pei:
+        #            raise ValueError(
+        #                f"`indexer.phaselist` {indexer.phaselist} and the list determined from"
+        #                f" `phase_list` {phase_list_pei} must be the same"
+        #            )
 
         # Prepare patterns
         chunksize = min(chunksize, max(am.navigation_size, 1))
