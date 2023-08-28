@@ -117,6 +117,14 @@ class TestData:
         assert s.data.shape == (55, 75, 60, 60)
         assert np.issubdtype(s.data.dtype, np.uint8)
 
+    def test_load_sdss_ebsd_allow_download(self):
+        """Download from external."""
+        s = kp.data.sdss_ebsd(lazy=True, allow_download=True)
+
+        assert isinstance(s, kp.signals.LazyEBSD)
+        assert s.data.shape == (60, 60, 48, 48)
+        assert np.issubdtype(s.data.dtype, np.uint8)
+
     # TODO: Remove test after 0.8 is released
     def test_load_si_ebsd_moving_screen_in(self):
         """Download external Si pattern."""
@@ -298,6 +306,7 @@ class TestData:
         """
         datasets = [
             "nickel_ebsd_large/patterns.h5",
+            "sdss_ebsd_large/patterns.h5",
             "silicon_ebsd_moving_screen/si_in.h5",
             "silicon_ebsd_moving_screen/si_out5mm.h5",
             "silicon_ebsd_moving_screen/si_out10mm.h5",
