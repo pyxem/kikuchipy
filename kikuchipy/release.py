@@ -29,6 +29,7 @@ credits = [
     "Eric Prestat",
     "Erlend Mikkelsen Østvold",
     "Zhou Xu",
+    "Andreas V. Bugten",
     "Magnus Nord",
 ]
 license = "GPLv3+"
