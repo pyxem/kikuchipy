@@ -44,6 +44,7 @@ from kikuchipy.detectors import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
 from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
+from kikuchipy.indexing._dictionary_indexing_contiguous import _pca_dictionary_indexing
 from kikuchipy.indexing._hough_indexing import (
     _get_pyebsdindex_phaselist,
     _indexer_is_compatible_with_kikuchipy,
@@ -60,6 +61,8 @@ from kikuchipy.indexing.similarity_metrics import (
     NormalizedCrossCorrelationMetric,
     NormalizedDotProductMetric,
 )
+from kikuchipy.indexing.di_indexers import DIIndexer
+
 from kikuchipy.io._io import _save
 from kikuchipy.pattern import chunk
 from kikuchipy.pattern.chunk import _average_neighbour_patterns
@@ -97,7 +100,6 @@ from kikuchipy.signals.util._overwrite_hyperspy_methods import (
 )
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
-
 
 _logger = logging.getLogger(__name__)
 
@@ -198,10 +200,10 @@ class EBSD(KikuchipySignal2D):
     @detector.setter
     def detector(self, value: EBSDDetector):
         if _detector_is_compatible_with_signal(
-            detector=value,
-            nav_shape=self._navigation_shape_rc,
-            sig_shape=self._signal_shape_rc,
-            raise_if_not=True,
+                detector=value,
+                nav_shape=self._navigation_shape_rc,
+                sig_shape=self._signal_shape_rc,
+                raise_if_not=True,
         ):
             self._detector = value
 
@@ -221,7 +223,7 @@ class EBSD(KikuchipySignal2D):
     @xmap.setter
     def xmap(self, value: CrystalMap):
         if _xmap_is_compatible_with_signal(
-            value, self.axes_manager.navigation_axes[::-1], raise_if_not=True
+                value, self.axes_manager.navigation_axes[::-1], raise_if_not=True
         ):
             self._xmap = value
 
@@ -248,7 +250,7 @@ class EBSD(KikuchipySignal2D):
     # ------------------------ Custom methods ------------------------ #
 
     def extract_grid(
-        self, grid_shape: Union[Tuple[int, int], int], return_indices: bool = False
+            self, grid_shape: Union[Tuple[int, int], int], return_indices: bool = False
     ) -> Union[Union[EBSD, LazyEBSD], Tuple[Union[EBSD, LazyEBSD], np.ndarray]]:
         """Return a new signal with patterns from positions in a grid of
         shape ``grid_shape`` evenly spaced in navigation space.
@@ -290,7 +292,7 @@ class EBSD(KikuchipySignal2D):
 
         nav_shape = self.axes_manager.navigation_shape
         if len(grid_shape) != len(nav_shape) or any(
-            [g > n for g, n in zip(grid_shape, nav_shape)]
+                [g > n for g, n in zip(grid_shape, nav_shape)]
         ):
             raise ValueError(
                 f"grid_shape {grid_shape} must be compatible with navigation shape "
@@ -361,7 +363,7 @@ class EBSD(KikuchipySignal2D):
         return out
 
     def set_scan_calibration(
-        self, step_x: Union[int, float] = 1.0, step_y: Union[int, float] = 1.0
+            self, step_x: Union[int, float] = 1.0, step_y: Union[int, float] = 1.0
     ) -> None:
         """Set the step size in microns.
 
@@ -421,13 +423,13 @@ class EBSD(KikuchipySignal2D):
         dx.offset, dy.offset = -center
 
     def remove_static_background(
-        self,
-        operation: str = "subtract",
-        static_bg: Union[np.ndarray, da.Array, None] = None,
-        scale_bg: bool = False,
-        show_progressbar: Optional[bool] = None,
-        inplace: bool = True,
-        lazy_output: Optional[bool] = None,
+            self,
+            operation: str = "subtract",
+            static_bg: Union[np.ndarray, da.Array, None] = None,
+            scale_bg: bool = False,
+            show_progressbar: Optional[bool] = None,
+            inplace: bool = True,
+            lazy_output: Optional[bool] = None,
     ) -> Union[None, EBSD, LazyEBSD]:
         """Remove the static background.
 
@@ -505,6 +507,7 @@ class EBSD(KikuchipySignal2D):
 
         # Get background pattern
         if static_bg is None:
+
             static_bg = self.static_background
             try:
                 if not isinstance(static_bg, (np.ndarray, da.Array)):
@@ -555,15 +558,15 @@ class EBSD(KikuchipySignal2D):
             return s_out
 
     def remove_dynamic_background(
-        self,
-        operation: str = "subtract",
-        filter_domain: str = "frequency",
-        std: Union[int, float, None] = None,
-        truncate: Union[int, float] = 4.0,
-        show_progressbar: Optional[bool] = None,
-        inplace: bool = True,
-        lazy_output: Optional[bool] = None,
-        **kwargs,
+            self,
+            operation: str = "subtract",
+            filter_domain: str = "frequency",
+            std: Union[int, float, None] = None,
+            truncate: Union[int, float] = 4.0,
+            show_progressbar: Optional[bool] = None,
+            inplace: bool = True,
+            lazy_output: Optional[bool] = None,
+            **kwargs,
     ) -> Union[None, EBSD, LazyEBSD]:
         """Remove the dynamic background.
 
@@ -679,14 +682,14 @@ class EBSD(KikuchipySignal2D):
             return s_out
 
     def get_dynamic_background(
-        self,
-        filter_domain: str = "frequency",
-        std: Union[int, float, None] = None,
-        truncate: Union[int, float] = 4.0,
-        dtype_out: Union[str, np.dtype, type, None] = None,
-        show_progressbar: Optional[bool] = None,
-        lazy_output: Optional[bool] = None,
-        **kwargs,
+            self,
+            filter_domain: str = "frequency",
+            std: Union[int, float, None] = None,
+            truncate: Union[int, float] = 4.0,
+            dtype_out: Union[str, np.dtype, type, None] = None,
+            show_progressbar: Optional[bool] = None,
+            lazy_output: Optional[bool] = None,
+            **kwargs,
     ) -> Union[EBSD, LazyEBSD]:
         """Return the dynamic background per pattern in a new signal.
 
@@ -771,7 +774,7 @@ class EBSD(KikuchipySignal2D):
 
             pbar = ProgressBar()
             if show_progressbar or (
-                show_progressbar is None and hs.preferences.General.show_progressbar
+                    show_progressbar is None and hs.preferences.General.show_progressbar
             ):
                 pbar.register()
 
@@ -786,13 +789,13 @@ class EBSD(KikuchipySignal2D):
         return s_out
 
     def fft_filter(
-        self,
-        transfer_function: Union[np.ndarray, Window],
-        function_domain: str,
-        shift: bool = False,
-        show_progressbar: Optional[bool] = None,
-        inplace: bool = True,
-        lazy_output: Optional[bool] = None,
+            self,
+            transfer_function: Union[np.ndarray, Window],
+            function_domain: str,
+            shift: bool = False,
+            show_progressbar: Optional[bool] = None,
+            inplace: bool = True,
+            lazy_output: Optional[bool] = None,
     ) -> Union[None, EBSD, LazyEBSD]:
         """Filter patterns in the frequency domain.
 
@@ -900,7 +903,7 @@ class EBSD(KikuchipySignal2D):
 
         return_lazy = lazy_output or (lazy_output is None and self._lazy)
         register_pbar = show_progressbar or (
-            show_progressbar is None and hs.preferences.General.show_progressbar
+                show_progressbar is None and hs.preferences.General.show_progressbar
         )
         if not return_lazy and register_pbar:
             pbar = ProgressBar()
@@ -924,13 +927,13 @@ class EBSD(KikuchipySignal2D):
             return s_out
 
     def average_neighbour_patterns(
-        self,
-        window: Union[str, np.ndarray, da.Array, Window] = "circular",
-        window_shape: Tuple[int, ...] = (3, 3),
-        show_progressbar: Optional[bool] = None,
-        inplace: bool = True,
-        lazy_output: Optional[bool] = None,
-        **kwargs,
+            self,
+            window: Union[str, np.ndarray, da.Array, Window] = "circular",
+            window_shape: Tuple[int, ...] = (3, 3),
+            show_progressbar: Optional[bool] = None,
+            inplace: bool = True,
+            lazy_output: Optional[bool] = None,
+            **kwargs,
     ) -> Union[None, EBSD, LazyEBSD]:
         """Average patterns with its neighbours within a window.
 
@@ -1066,7 +1069,7 @@ class EBSD(KikuchipySignal2D):
 
         return_lazy = lazy_output or (lazy_output is None and self._lazy)
         register_pbar = show_progressbar or (
-            show_progressbar is None and hs.preferences.General.show_progressbar
+                show_progressbar is None and hs.preferences.General.show_progressbar
         )
         if not return_lazy and register_pbar:
             pbar = ProgressBar()
@@ -1094,12 +1097,12 @@ class EBSD(KikuchipySignal2D):
             return s_out
 
     def downsample(
-        self,
-        factor: int,
-        dtype_out: Optional[str] = None,
-        show_progressbar: Optional[bool] = None,
-        inplace: bool = True,
-        lazy_output: Optional[bool] = None,
+            self,
+            factor: int,
+            dtype_out: Optional[str] = None,
+            show_progressbar: Optional[bool] = None,
+            inplace: bool = True,
+            lazy_output: Optional[bool] = None,
     ) -> Union[None, EBSD, LazyEBSD]:
         r"""Downsample the pattern shape by an integer factor and
         rescale intensities to fill the data type range.
@@ -1202,12 +1205,12 @@ class EBSD(KikuchipySignal2D):
             return s_out
 
     def get_neighbour_dot_product_matrices(
-        self,
-        window: Optional[Window] = None,
-        zero_mean: bool = True,
-        normalize: bool = True,
-        dtype_out: Union[str, np.dtype, type] = "float32",
-        show_progressbar: Optional[bool] = None,
+            self,
+            window: Optional[Window] = None,
+            zero_mean: bool = True,
+            normalize: bool = True,
+            dtype_out: Union[str, np.dtype, type] = "float32",
+            show_progressbar: Optional[bool] = None,
     ) -> Union[np.ndarray, da.Array]:
         """Get an array with dot products of a pattern and its
         neighbours within a window.
@@ -1279,7 +1282,7 @@ class EBSD(KikuchipySignal2D):
         if not self._lazy:
             pbar = ProgressBar()
             if show_progressbar or (
-                show_progressbar is None and hs.preferences.General.show_progressbar
+                    show_progressbar is None and hs.preferences.General.show_progressbar
             ):
                 pbar.register()
 
@@ -1293,9 +1296,9 @@ class EBSD(KikuchipySignal2D):
         return dp_matrices
 
     def get_image_quality(
-        self,
-        normalize: bool = True,
-        show_progressbar: Optional[bool] = None,
+            self,
+            normalize: bool = True,
+            show_progressbar: Optional[bool] = None,
     ) -> Union[np.ndarray, da.Array]:
         """Compute the image quality map of patterns in an EBSD scan.
 
@@ -1359,13 +1362,13 @@ class EBSD(KikuchipySignal2D):
         return image_quality_map.data
 
     def get_average_neighbour_dot_product_map(
-        self,
-        window: Optional[Window] = None,
-        zero_mean: bool = True,
-        normalize: bool = True,
-        dtype_out: Union[str, np.dtype, type] = "float32",
-        dp_matrices: Optional[np.ndarray] = None,
-        show_progressbar: Optional[bool] = None,
+            self,
+            window: Optional[Window] = None,
+            zero_mean: bool = True,
+            normalize: bool = True,
+            dtype_out: Union[str, np.dtype, type] = "float32",
+            dp_matrices: Optional[np.ndarray] = None,
+            show_progressbar: Optional[bool] = None,
     ) -> Union[np.ndarray, da.Array]:
         """Get a map of the average dot product between patterns and
         their neighbours within an averaging window.
@@ -1461,7 +1464,7 @@ class EBSD(KikuchipySignal2D):
         if not self._lazy:
             pbar = ProgressBar()
             if show_progressbar or (
-                show_progressbar is None and hs.preferences.General.show_progressbar
+                    show_progressbar is None and hs.preferences.General.show_progressbar
             ):
                 pbar.register()
 
@@ -1475,10 +1478,10 @@ class EBSD(KikuchipySignal2D):
         return adp
 
     def plot_virtual_bse_intensity(
-        self,
-        roi: BaseInteractiveROI,
-        out_signal_axes: Union[Iterable[int], Iterable[str], None] = None,
-        **kwargs,
+            self,
+            roi: BaseInteractiveROI,
+            out_signal_axes: Union[Iterable[int], Iterable[str], None] = None,
+            **kwargs,
     ) -> None:
         """Plot an interactive virtual backscatter electron (VBSE)
         image formed from intensities within a specified and adjustable
@@ -1537,9 +1540,9 @@ class EBSD(KikuchipySignal2D):
         out.plot(**kwargs)
 
     def get_virtual_bse_intensity(
-        self,
-        roi: BaseInteractiveROI,
-        out_signal_axes: Union[Iterable[int], Iterable[str], None] = None,
+            self,
+            roi: BaseInteractiveROI,
+            out_signal_axes: Union[Iterable[int], Iterable[str], None] = None,
     ) -> VirtualBSEImage:
         """Get a virtual backscatter electron (VBSE) image formed from
         intensities within a region of interest (ROI) on the detector.
@@ -1582,13 +1585,13 @@ class EBSD(KikuchipySignal2D):
         return vbse_sum
 
     def hough_indexing(
-        self,
-        phase_list: PhaseList,
-        indexer: "EBSDIndexer",
-        chunksize: int = 528,
-        verbose: int = 1,
-        return_index_data: bool = False,
-        return_band_data: bool = False,
+            self,
+            phase_list: PhaseList,
+            indexer: "EBSDIndexer",
+            chunksize: int = 528,
+            verbose: int = 1,
+            return_index_data: bool = False,
+            return_band_data: bool = False,
     ) -> Union[
         CrystalMap,
         Tuple[CrystalMap, np.ndarray],
@@ -1713,11 +1716,11 @@ class EBSD(KikuchipySignal2D):
             return xmap
 
     def hough_indexing_optimize_pc(
-        self,
-        pc0: Union[list, tuple, np.ndarray],
-        indexer: "EBSDIndexer",
-        batch: bool = False,
-        method: str = "Nelder-Mead",
+            self,
+            pc0: Union[list, tuple, np.ndarray],
+            indexer: "EBSDIndexer",
+            batch: bool = False,
+            method: str = "Nelder-Mead",
     ) -> "EBSDDetector":
         """Return a detector with one projection center (PC) per
         pattern optimized using Hough indexing from :mod:`pyebsdindex`.
@@ -1817,15 +1820,15 @@ class EBSD(KikuchipySignal2D):
         return new_detector
 
     def dictionary_indexing(
-        self,
-        dictionary: EBSD,
-        metric: Union[SimilarityMetric, str] = "ncc",
-        keep_n: int = 20,
-        n_per_iteration: Optional[int] = None,
-        navigation_mask: Optional[np.ndarray] = None,
-        signal_mask: Optional[np.ndarray] = None,
-        rechunk: bool = False,
-        dtype: Union[str, np.dtype, type, None] = None,
+            self,
+            dictionary: EBSD,
+            metric: Union[SimilarityMetric, str] = "ncc",
+            keep_n: int = 20,
+            n_per_iteration: Optional[int] = None,
+            navigation_mask: Optional[np.ndarray] = None,
+            signal_mask: Optional[np.ndarray] = None,
+            rechunk: bool = False,
+            dtype: Union[str, np.dtype, type, None] = None,
     ) -> CrystalMap:
         """Index patterns by matching each pattern to a dictionary of
         simulated patterns of known orientations
@@ -1837,6 +1840,10 @@ class EBSD(KikuchipySignal2D):
             One EBSD signal with dictionary patterns. The signal must
             have a 1D navigation axis, an :attr:`xmap` property with
             crystal orientations set, and equal detector shape.
+        approx
+            Whether to use the approximate indexing algorithm (hnswlib).
+            If ``True``, then the keep_n parameter is used to set the
+            number of neighbors to search for.
         metric
             Similarity metric, by default ``"ncc"`` (normalized
             cross-correlation). ``"ndp"`` (normalized dot product) is
@@ -1854,7 +1861,7 @@ class EBSD(KikuchipySignal2D):
             Number of dictionary patterns to compare to all experimental
             patterns in each indexing iteration. If not given, and the
             dictionary is a ``LazyEBSD`` signal, it is equal to the
-            chunk size of the first pattern array axis, while if if is
+            chunk size of the first pattern array axis, while if it is
             an ``EBSD`` signal, it is set equal to the number of
             dictionary patterns, yielding only one iteration. This
             parameter can be increased to use less memory during
@@ -1975,24 +1982,143 @@ class EBSD(KikuchipySignal2D):
 
         return xmap
 
+    def pca_dictionary_indexing(
+            self,
+            dictionary: EBSD,
+            indexer: DIIndexer,
+            keep_n: int = 5,
+            keep_dictionary_lazy: bool = False,
+            n_experimental_per_iteration: Optional[int] = None,
+            navigation_mask: Optional[np.ndarray] = None,
+            signal_mask: Optional[np.ndarray] = None,
+    ) -> CrystalMap:
+        """Index patterns by matching each pattern to a dictionary of
+        simulated patterns of known orientations
+        :cite:`chen2015dictionary,jackson2019dictionary`.
+
+        Parameters
+        ----------
+        dictionary
+            One EBSD signal with dictionary patterns. The signal must
+            have a 1D navigation axis, an :attr:`xmap` property with
+            crystal orientations set, and equal detector shape.
+        indexer
+            A custom indexer that implements the :class:`DIIndexer`
+        keep_n
+            Number of best matches to keep, by default 5 or the number
+            of dictionary patterns if fewer than 5 are available.
+        keep_dictionary_lazy
+            If ``True``, the dictionary will be kept in memory as a
+            :class:`dask.array.Array` with the same chunks as the
+            dictionary signal.
+        n_experimental_per_iteration
+            Number of experimental patterns to use per iteration. If not
+            given, all experimental patterns will be used.
+        navigation_mask
+            A boolean mask equal to the signal's navigation (map) shape,
+            where only patterns equal to ``False`` are indexed. If not
+            given, all patterns are indexed.
+        signal_mask
+            A boolean mask equal to the experimental patterns' detector
+            shape, where only pixels equal to ``False`` are matched. If
+            not given, all pixels are used.
+
+        Returns
+        -------
+        xmap
+            A crystal map with ``keep_n`` rotations per point with the
+            sorted best matching orientations in the dictionary. The
+            corresponding best scores and indices into the dictionary
+            are stored in the ``xmap.prop`` dictionary as ``"scores"``
+            and ``"simulation_indices"``.
+
+        See Also
+        --------
+        refine_orientation
+        refine_projection_center
+        refine_orientation_projection_center
+        kikuchipy.indexing.merge_crystal_maps :
+            Merge multiple single phase crystal maps into one multiphase map.
+        kikuchipy.indexing.orientation_similarity_map :
+            Calculate an orientation similarity map.
+        """
+        am_exp = self.axes_manager
+        am_dict = dictionary.axes_manager
+        dict_size = am_dict.navigation_size
+
+        keep_n = min(keep_n, dict_size)
+
+        nav_shape_exp = am_exp.navigation_shape[::-1]
+        if navigation_mask is not None:
+            if navigation_mask.shape != nav_shape_exp:
+                raise ValueError(
+                    f"The navigation mask shape {navigation_mask.shape} and the "
+                    f"signal's navigation shape {nav_shape_exp} must be identical"
+                )
+            elif navigation_mask.all():
+                raise ValueError(
+                    "The navigation mask must allow for indexing of at least one "
+                    "pattern (at least one value equal to `False`)"
+                )
+            elif not isinstance(navigation_mask, np.ndarray):
+                raise ValueError("The navigation mask must be a NumPy array")
+
+        if signal_mask is not None:
+            if not isinstance(signal_mask, np.ndarray):
+                raise ValueError("The signal mask must be a NumPy array")
+
+        sig_shape_exp = am_exp.signal_shape[::-1]
+        sig_shape_dict = am_dict.signal_shape[::-1]
+        if sig_shape_exp != sig_shape_dict:
+            raise ValueError(
+                f"Experimental {sig_shape_exp} and dictionary {sig_shape_dict} signal "
+                "shapes must be identical"
+            )
+
+        dict_xmap = dictionary.xmap
+        if dict_xmap is None or dict_xmap.shape != (dict_size,):
+            raise ValueError(
+                "Dictionary signal must have a non-empty `EBSD.xmap` attribute of equal"
+                " size as the number of dictionary patterns, and both the signal and "
+                "crystal map must have only one navigation dimension"
+            )
+
+        with dask.config.set(**{"array.slicing.split_large_chunks": False}):
+            xmap = _pca_dictionary_indexing(
+                experimental=self.data,
+                experimental_nav_shape=am_exp.navigation_shape[::-1],
+                dictionary=dictionary.data,
+                step_sizes=tuple(a.scale for a in am_exp.navigation_axes[::-1]),
+                dictionary_xmap=dictionary.xmap,
+                indexer=indexer,
+                keep_n=keep_n,
+                n_experimental_per_iteration=n_experimental_per_iteration,
+                navigation_mask=navigation_mask,
+                signal_mask=signal_mask,
+            )
+
+        xmap.scan_unit = _get_navigation_axes_unit(am_exp)
+
+        return xmap
+
     def refine_orientation(
-        self,
-        xmap: CrystalMap,
-        detector: EBSDDetector,
-        master_pattern: "EBSDMasterPattern",
-        energy: Union[int, float],
-        navigation_mask: Optional[np.ndarray] = None,
-        signal_mask: Optional[np.ndarray] = None,
-        pseudo_symmetry_ops: Optional[Rotation] = None,
-        method: Optional[str] = "minimize",
-        method_kwargs: Optional[dict] = None,
-        trust_region: Union[tuple, list, np.ndarray, None] = None,
-        initial_step: Union[float] = None,
-        rtol: float = 1e-4,
-        maxeval: Optional[int] = None,
-        compute: bool = True,
-        rechunk: bool = True,
-        chunk_kwargs: Optional[dict] = None,
+            self,
+            xmap: CrystalMap,
+            detector: EBSDDetector,
+            master_pattern: "EBSDMasterPattern",
+            energy: Union[int, float],
+            navigation_mask: Optional[np.ndarray] = None,
+            signal_mask: Optional[np.ndarray] = None,
+            pseudo_symmetry_ops: Optional[Rotation] = None,
+            method: Optional[str] = "minimize",
+            method_kwargs: Optional[dict] = None,
+            trust_region: Union[tuple, list, np.ndarray, None] = None,
+            initial_step: Union[float] = None,
+            rtol: float = 1e-4,
+            maxeval: Optional[int] = None,
+            compute: bool = True,
+            rechunk: bool = True,
+            chunk_kwargs: Optional[dict] = None,
     ) -> Union[CrystalMap, da.Array]:
         r"""Refine orientations by searching orientation space around
         the best indexed solution using fixed projection centers.
@@ -2177,22 +2303,22 @@ class EBSD(KikuchipySignal2D):
         )
 
     def refine_projection_center(
-        self,
-        xmap: CrystalMap,
-        detector: EBSDDetector,
-        master_pattern: "EBSDMasterPattern",
-        energy: Union[int, float],
-        navigation_mask: Optional[np.ndarray] = None,
-        signal_mask: Optional[np.ndarray] = None,
-        method: Optional[str] = "minimize",
-        method_kwargs: Optional[dict] = None,
-        trust_region: Union[tuple, list, np.ndarray, None] = None,
-        initial_step: Union[float] = None,
-        rtol: float = 1e-4,
-        maxeval: Optional[int] = None,
-        compute: bool = True,
-        rechunk: bool = True,
-        chunk_kwargs: Optional[dict] = None,
+            self,
+            xmap: CrystalMap,
+            detector: EBSDDetector,
+            master_pattern: "EBSDMasterPattern",
+            energy: Union[int, float],
+            navigation_mask: Optional[np.ndarray] = None,
+            signal_mask: Optional[np.ndarray] = None,
+            method: Optional[str] = "minimize",
+            method_kwargs: Optional[dict] = None,
+            trust_region: Union[tuple, list, np.ndarray, None] = None,
+            initial_step: Union[float] = None,
+            rtol: float = 1e-4,
+            maxeval: Optional[int] = None,
+            compute: bool = True,
+            rechunk: bool = True,
+            chunk_kwargs: Optional[dict] = None,
     ) -> Union[Tuple[np.ndarray, EBSDDetector, np.ndarray], da.Array]:
         """Refine projection centers by searching the parameter space
         using fixed orientations.
@@ -2366,23 +2492,23 @@ class EBSD(KikuchipySignal2D):
         )
 
     def refine_orientation_projection_center(
-        self,
-        xmap: CrystalMap,
-        detector: EBSDDetector,
-        master_pattern: "EBSDMasterPattern",
-        energy: Union[int, float],
-        navigation_mask: Optional[np.ndarray] = None,
-        signal_mask: Optional[np.ndarray] = None,
-        pseudo_symmetry_ops: Optional[Rotation] = None,
-        method: Optional[str] = "minimize",
-        method_kwargs: Optional[dict] = None,
-        trust_region: Union[tuple, list, np.ndarray, None] = None,
-        initial_step: Union[tuple, list, np.ndarray, None] = None,
-        rtol: Optional[float] = 1e-4,
-        maxeval: Optional[int] = None,
-        compute: bool = True,
-        rechunk: bool = True,
-        chunk_kwargs: Optional[dict] = None,
+            self,
+            xmap: CrystalMap,
+            detector: EBSDDetector,
+            master_pattern: "EBSDMasterPattern",
+            energy: Union[int, float],
+            navigation_mask: Optional[np.ndarray] = None,
+            signal_mask: Optional[np.ndarray] = None,
+            pseudo_symmetry_ops: Optional[Rotation] = None,
+            method: Optional[str] = "minimize",
+            method_kwargs: Optional[dict] = None,
+            trust_region: Union[tuple, list, np.ndarray, None] = None,
+            initial_step: Union[tuple, list, np.ndarray, None] = None,
+            rtol: Optional[float] = 1e-4,
+            maxeval: Optional[int] = None,
+            compute: bool = True,
+            rechunk: bool = True,
+            chunk_kwargs: Optional[dict] = None,
     ) -> Union[Tuple[CrystalMap, EBSDDetector], da.Array]:
         r"""Refine orientations and projection centers simultaneously by
         searching the orientation and PC parameter space.
@@ -2586,11 +2712,11 @@ class EBSD(KikuchipySignal2D):
     # ------ Methods overwritten from hyperspy.signals.Signal2D ------ #
 
     def save(
-        self,
-        filename: Optional[str] = None,
-        overwrite: Optional[bool] = None,
-        extension: Optional[str] = None,
-        **kwargs,
+            self,
+            filename: Optional[str] = None,
+            overwrite: Optional[bool] = None,
+            extension: Optional[str] = None,
+            **kwargs,
     ) -> None:
         """Write the signal to file in the specified format.
 
@@ -2646,9 +2772,9 @@ class EBSD(KikuchipySignal2D):
         _save(filename, self, overwrite=overwrite, **kwargs)
 
     def get_decomposition_model(
-        self,
-        components: Union[int, List[int], None] = None,
-        dtype_out: Union[str, np.dtype, type] = "float32",
+            self,
+            components: Union[int, List[int], None] = None,
+            dtype_out: Union[str, np.dtype, type] = "float32",
     ) -> Union[EBSD, LazyEBSD]:
         """Get the model signal generated with the selected number of
         principal components from a decomposition.
@@ -2860,12 +2986,12 @@ class EBSD(KikuchipySignal2D):
     # ------------------------ Private methods ----------------------- #
 
     def _check_refinement_parameters(
-        self,
-        xmap: CrystalMap,
-        detector: EBSDDetector,
-        master_pattern: "EBSDMasterPattern",
-        navigation_mask: Optional[np.ndarray] = None,
-        signal_mask: Optional[np.ndarray] = None,
+            self,
+            xmap: CrystalMap,
+            detector: EBSDDetector,
+            master_pattern: "EBSDMasterPattern",
+            navigation_mask: Optional[np.ndarray] = None,
+            signal_mask: Optional[np.ndarray] = None,
     ) -> np.ndarray:
         """Check compatibility of refinement parameters with refinement.
 
@@ -2952,11 +3078,11 @@ class EBSD(KikuchipySignal2D):
         return points_to_refine
 
     def _prepare_patterns_for_refinement(
-        self,
-        points_to_refine: np.ndarray,
-        signal_mask: Union[np.ndarray, None],
-        rechunk: bool,
-        chunk_kwargs: Optional[dict] = None,
+            self,
+            points_to_refine: np.ndarray,
+            signal_mask: Union[np.ndarray, None],
+            rechunk: bool,
+            chunk_kwargs: Optional[dict] = None,
     ) -> Tuple[da.Array, np.ndarray]:
         """Prepare pattern array and mask for refinement.
 
@@ -3029,13 +3155,13 @@ class EBSD(KikuchipySignal2D):
         return patterns, signal_mask
 
     def _prepare_metric(
-        self,
-        metric: Union[SimilarityMetric, str],
-        navigation_mask: Union[np.ndarray, None],
-        signal_mask: Union[np.ndarray, None],
-        dtype: Union[str, np.dtype, type, None],
-        rechunk: bool,
-        n_dictionary_patterns: int,
+            self,
+            metric: Union[SimilarityMetric, str],
+            navigation_mask: Union[np.ndarray, None],
+            signal_mask: Union[np.ndarray, None],
+            dtype: Union[str, np.dtype, type, None],
+            rechunk: bool,
+            n_dictionary_patterns: int,
     ) -> SimilarityMetric:
         metrics = {
             "ncc": NormalizedCrossCorrelationMetric,
@@ -3071,7 +3197,7 @@ class EBSD(KikuchipySignal2D):
 
     @staticmethod
     def _get_sum_signal(
-        signal, out_signal_axes: Optional[List] = None
+            signal, out_signal_axes: Optional[List] = None
     ) -> hs.signals.Signal2D:
         out = signal.nansum(signal.axes_manager.signal_axes)
         if out_signal_axes is None:
@@ -3091,17 +3217,17 @@ class EBSD(KikuchipySignal2D):
     # purposes
 
     def rescale_intensity(
-        self,
-        relative: bool = False,
-        in_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        out_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        dtype_out: Union[
-            str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
-        ] = None,
-        percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        show_progressbar: Optional[bool] = None,
-        inplace: bool = True,
-        lazy_output: Optional[bool] = None,
+            self,
+            relative: bool = False,
+            in_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
+            out_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
+            dtype_out: Union[
+                str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
+            ] = None,
+            percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
+            show_progressbar: Optional[bool] = None,
+            inplace: bool = True,
+            lazy_output: Optional[bool] = None,
     ) -> Union[None, EBSD, LazyEBSD]:
         return super().rescale_intensity(
             relative,
@@ -3115,13 +3241,13 @@ class EBSD(KikuchipySignal2D):
         )
 
     def normalize_intensity(
-        self,
-        num_std: int = 1,
-        divide_by_square_root: bool = False,
-        dtype_out: Union[str, np.dtype, type, None] = None,
-        show_progressbar: Optional[bool] = None,
-        inplace: bool = True,
-        lazy_output: Optional[bool] = None,
+            self,
+            num_std: int = 1,
+            divide_by_square_root: bool = False,
+            dtype_out: Union[str, np.dtype, type, None] = None,
+            show_progressbar: Optional[bool] = None,
+            inplace: bool = True,
+            lazy_output: Optional[bool] = None,
     ) -> Union[None, EBSD, LazyEBSD]:
         return super().normalize_intensity(
             num_std,
@@ -3133,13 +3259,13 @@ class EBSD(KikuchipySignal2D):
         )
 
     def adaptive_histogram_equalization(
-        self,
-        kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
-        clip_limit: Union[int, float] = 0,
-        nbins: int = 128,
-        show_progressbar: Optional[bool] = None,
-        inplace: bool = True,
-        lazy_output: Optional[bool] = None,
+            self,
+            kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
+            clip_limit: Union[int, float] = 0,
+            nbins: int = 128,
+            show_progressbar: Optional[bool] = None,
+            inplace: bool = True,
+            lazy_output: Optional[bool] = None,
     ) -> Union[None, EBSD, LazyEBSD]:
         return super().adaptive_histogram_equalization(
             kernel_size,
@@ -3156,7 +3282,7 @@ class EBSD(KikuchipySignal2D):
     def change_dtype(self, *args, **kwargs) -> None:
         super().change_dtype(*args, **kwargs)
         if isinstance(self, EBSD) and isinstance(
-            self._static_background, (np.ndarray, da.Array)
+                self._static_background, (np.ndarray, da.Array)
         ):
             self._static_background = self._static_background.astype(self.data.dtype)
 
@@ -3180,12 +3306,12 @@ class LazyEBSD(LazyKikuchipySignal2D, EBSD):
         super().compute(*args, **kwargs)
 
     def get_decomposition_model_write(
-        self,
-        components: Union[int, List[int], None] = None,
-        dtype_learn: Union[str, np.dtype, type] = "float32",
-        mbytes_chunk: int = 100,
-        dir_out: Optional[str] = None,
-        fname_out: Optional[str] = None,
+            self,
+            components: Union[int, List[int], None] = None,
+            dtype_learn: Union[str, np.dtype, type] = "float32",
+            mbytes_chunk: int = 100,
+            dir_out: Optional[str] = None,
+            fname_out: Optional[str] = None,
     ) -> None:
         """Write the model signal generated from the selected number of
         principal components directly to an ``.hspy`` file.
@@ -3274,11 +3400,11 @@ class LazyEBSD(LazyKikuchipySignal2D, EBSD):
 
 
 def _update_custom_attributes(
-    attributes: dict,
-    nav_slices: Union[slice, tuple, None] = None,
-    sig_slices: Union[slice, tuple, None] = None,
-    new_nav_shape: Optional[tuple] = None,
-    new_sig_shape: Optional[tuple] = None,
+        attributes: dict,
+        nav_slices: Union[slice, tuple, None] = None,
+        sig_slices: Union[slice, tuple, None] = None,
+        new_nav_shape: Optional[tuple] = None,
+        new_sig_shape: Optional[tuple] = None,
 ) -> dict:
     """Update dictionary of custom attributes after slicing the signal
     data.

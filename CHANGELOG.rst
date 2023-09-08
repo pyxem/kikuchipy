@@ -21,6 +21,8 @@ Added
 - Explicit support for Python 3.11.
   (`#645 <https://github.com/pyxem/kikuchipy/pull/645>`_)
 
+Fast PCA Dictionary Indexing
+
 Changed
 -------
 - ``zone_axes_kwargs`` parameter in
