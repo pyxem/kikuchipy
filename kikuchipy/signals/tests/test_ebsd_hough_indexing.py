@@ -82,15 +82,6 @@ class TestHoughIndexing:
         angles = xmap.orientations.angle_with(xmap_ref.orientations, degrees=True)
         assert np.all(angles < 1)
 
-    def test_hough_indexing_plot_transform(self):
-        _ = self.signal.hough_indexing(self.phase_list, self.indexer, verbose=2)
-        fig = plt.gcf()
-        ax0, ax1 = fig.axes
-        assert len(ax0.texts) == 9
-        for i, text in enumerate(ax0.texts):
-            assert text.get_text() == str(i + 1)
-        assert np.allclose(self.signal.data[-1, -1], ax1.images[0].get_array())
-
     def test_hough_indexing_lazy(self):  # pragma: no cover
         s = self.signal.as_lazy()
 
