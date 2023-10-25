@@ -143,7 +143,7 @@ class TestHoughIndexing:
 
     def test_hough_indexing_raises_dissimilar_phase_lists(self):
         phase_list = PhaseList(names=["a", "b"], space_groups=[225, 229])
-        with pytest.raises(ValueError, match=r"`indexer.phaselist` \['FCC'\] and the "):
+        with pytest.raises(ValueError, match=r"`phase_list` and `indexer.phaselist` "):
             _ = self.signal.hough_indexing(phase_list, self.indexer)
 
     def test_indexer_is_compatible_with_signal(self):
@@ -180,17 +180,6 @@ class TestHoughIndexing:
         ):
             _indexer_is_compatible_with_kikuchipy(
                 indexer, (60, 60), 8, raise_if_not=True
-            )
-
-        # Phase list
-        indexer.phaselist = ["FCC", "FCC"]
-        assert not _indexer_is_compatible_with_kikuchipy(indexer, (60, 60), 9)
-        with pytest.raises(
-            ValueError,
-            match=r"`indexer.phaselist` must be one of \[\['FCC'\], \['BCC'\], \['FCC',",
-        ):
-            _indexer_is_compatible_with_kikuchipy(
-                indexer, (60, 60), 9, raise_if_not=True
             )
 
     def test_hough_indexing_get_xmap_from_index_data(self):

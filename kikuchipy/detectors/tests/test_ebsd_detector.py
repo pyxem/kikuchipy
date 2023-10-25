@@ -1052,47 +1052,34 @@ class TestGetIndexer:
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
     )
     def test_get_indexer_invalid_phase_lists(self):
-        # More than two phases
-        with pytest.raises(ValueError, match="Hough indexing only supports indexing "):
-            _ = self.det.get_indexer(
-                PhaseList(names=["a", "b", "c"], space_groups=[225, 227, 229])
-            )
-
         # Not all phases have space groups
         pl = PhaseList(names=["a", "b"], point_groups=["m-3m", "432"])
         pl["a"].space_group = 225
         with pytest.raises(ValueError, match="Space group for each phase must be set,"):
             _ = self.det.get_indexer(pl)
 
-        # Not FCC or BCC
-        with pytest.raises(ValueError, match="Hough indexing only supports indexing "):
-            _ = self.det.get_indexer(PhaseList(names="sic", space_groups=186))
-
     @pytest.mark.skipif(
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
     )
     def test_get_indexer(self):
-        indexer1 = self.det.get_indexer(
-            PhaseList(names=["a", "b"], space_groups=[225, 229]), nBands=6
-        )
-        assert indexer1.vendor == "KIKUCHIPY"
-        assert np.isclose(indexer1.sampleTilt, self.det.sample_tilt)
-        assert np.isclose(indexer1.camElev, self.det.tilt)
-        assert tuple(indexer1.bandDetectPlan.patDim) == self.det.shape
-        assert indexer1.bandDetectPlan.nBands == 6
-        assert np.allclose(indexer1.PC, self.det.pc_flattened)
-        assert indexer1.phaselist == ["FCC", "BCC"]
+        # fmt: off
+        #               -1  2/m  222   -3   -3m   4/m   4/mmm   6/m  6/mmm    m-3  m-3m
+        space_groups = [ 1,  15,  74,  75,  142,  143,    167,  168,   194,   195,  207]
+        laue_codes =   [ 1,   2,  22,   4,   42,    3,     32,    6,    62,    23,   43]
+        # fmt: on
+        names = "abcdefghijk"
 
-        indexer2 = self.det.get_indexer(PhaseList(names="a", space_groups=225))
-        assert indexer2.phaselist == ["FCC"]
-
-        indexer3 = self.det.get_indexer(PhaseList(names="a", space_groups=220))
-        assert indexer3.phaselist == ["BCC"]
-
-        indexer4 = self.det.get_indexer(
-            PhaseList(names=["a", "b"], space_groups=[220, 225])
-        )
-        assert indexer4.phaselist == ["BCC", "FCC"]
+        pl = PhaseList(names=list(names), space_groups=space_groups)
+        indexer = self.det.get_indexer(pl, nBands=6)
+        assert indexer.vendor == "KIKUCHIPY"
+        assert np.isclose(indexer.sampleTilt, self.det.sample_tilt)
+        assert np.isclose(indexer.camElev, self.det.tilt)
+        assert tuple(indexer.bandDetectPlan.patDim) == self.det.shape
+        assert indexer.bandDetectPlan.nBands == 6
+        assert np.allclose(indexer.PC, self.det.pc_flattened)
+        for phase, sg, code in zip(indexer.phaselist, pl.space_groups, laue_codes):
+            assert phase.spacegroup == sg.number
+            assert phase.lauecode == code
 
 
 class TestSaveLoadDetector:

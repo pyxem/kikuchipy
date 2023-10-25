@@ -1110,7 +1110,7 @@ class EBSDDetector:
         self,
         phase_list: PhaseList,
         reflectors: Optional[
-            List[Union["ReciprocalLatticeVector", np.ndarray, None]]
+            List[Union["ReciprocalLatticeVector", np.ndarray, list, tuple, None]]
         ] = None,
         **kwargs,
     ) -> "EBSDIndexer":
@@ -1123,13 +1123,13 @@ class EBSDDetector:
             only supports a list containing one face-centered cubic
             (FCC) phase, one body-centered cubic (BCC) phase or both.
         reflectors
-            List of unique reflectors :math:`\{hkl\}` to use in indexing
-            for each phase. If not passed, the default in
+            List of reflectors or pole families :math:`\{hkl\}` to use
+            in indexing for each phase. If not passed, the default in
             :func:`pyebsdindex.tripletvote.addphase` is used. For each
-            phase, the reflector list can either be None, a NumPy array,
-            or a
-            :class:`~diffsis.crystallography.ReciprocalLatticeVector`.
-            If None is passed, the default in PyEBSDIndex is used.
+            phase, the reflectors can either be a NumPy array, a list,
+            a tuple, a
+            :class:`~diffsis.crystallography.ReciprocalLatticeVector`,
+            or None.
         **kwargs
             Keyword arguments passed to
             :class:`~pyebsdindex.ebsd_index.EBSDIndexer`, except for the
@@ -1151,6 +1151,10 @@ class EBSDDetector:
         Requires that PyEBSDIndex is installed, which is an optional
         dependency of kikuchipy. See :ref:`optional-dependencies` for
         details.
+
+        See Also
+        --------
+        pyebsdindex.tripletvote.addphase
         """
         return _get_indexer_from_detector(
             phase_list=phase_list,
