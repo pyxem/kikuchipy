@@ -159,11 +159,10 @@ def _get_indexer_from_detector(
     dependency of kikuchipy. See :ref:`optional-dependencies` for
     details.
     """
-    if not _pyebsdindex_installed:
+    if not _pyebsdindex_installed:  # pragma: no cover
         raise ValueError(
             "pyebsdindex must be installed. Install with pip install pyebsdindex. "
-            "See https://kikuchipy.org/en/stable/user/installation.html for "
-            "details."
+            "See https://kikuchipy.org/en/stable/user/installation.html for details."
         )
 
     from pyebsdindex.ebsd_index import EBSDIndexer
@@ -293,9 +292,9 @@ def _get_pyebsdindex_phaselist(
     # Make list of reflectors iterable
     if reflectors is None:
         reflectors = [None] * phase_list.size
-    elif isinstance(reflectors, (np.ndarray, ReciprocalLatticeVector)):
-        reflectors = [reflectors]
-    elif isinstance(reflectors, (list, tuple)) and len(reflectors) != phase_list.size:
+    elif isinstance(reflectors, (np.ndarray, ReciprocalLatticeVector)) or (
+        isinstance(reflectors, (list, tuple)) and len(reflectors) != phase_list.size
+    ):
         reflectors = [reflectors]
 
     if len(reflectors) != phase_list.size:
