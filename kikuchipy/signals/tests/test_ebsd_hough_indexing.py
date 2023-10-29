@@ -18,7 +18,7 @@
 from diffpy.structure import Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticeVector
 import numpy as np
-from orix.crystal_map import CrystalMap, PhaseList
+from orix.crystal_map import CrystalMap, Phase, PhaseList
 import pytest
 
 import kikuchipy as kp
@@ -135,7 +135,9 @@ class TestHoughIndexing:
 
     def test_hough_indexing_raises_dissimilar_phase_lists(self):
         phase_list = PhaseList(names=["a", "b"], space_groups=[225, 229])
-        with pytest.raises(ValueError, match=r"`phase_list` and `indexer.phaselist` "):
+        with pytest.raises(
+            ValueError, match=r"`phase_list` \(2\) and `indexer.phaselist` \(1\) have "
+        ):
             _ = self.signal.hough_indexing(phase_list, self.indexer)
 
     def test_indexer_is_compatible_with_signal(self):
@@ -227,6 +229,21 @@ class TestHoughIndexing:
 
             assert np.allclose(indexer.phaselist[0].polefamilies, hkl)
 
+    def test_reflector_lists(self):
+        phase_list = PhaseList(names=["a", "b"], space_groups=[186, 225])
+        hkl = [
+            [[0, 0, 6], [0, 0, -6], [1, 0, 0], [2, 0, 0]],
+            [[2, 0, 0], [2, 2, 0]],
+            [[1, 1, 1], [3, 1, 1], [3, 3, 1]],
+        ]
+
+        _ = self.signal.detector.get_indexer(phase_list, hkl[:2])
+        _ = self.signal.detector.get_indexer(phase_list, [hkl[0], None])
+        _ = self.signal.detector.get_indexer(phase_list, [None, None])
+
+        with pytest.raises(ValueError, match="One set of reflectors or None must be "):
+            _ = self.signal.detector.get_indexer(phase_list, hkl)
+
     def test_compatible_phase_lists(self):
         phase_list = PhaseList(
             names=["a", "b"],
@@ -239,6 +256,32 @@ class TestHoughIndexing:
         indexer = self.signal.detector.get_indexer(phase_list)
 
         assert _phase_lists_are_compatible(phase_list, indexer, True)
+
+        # Differing number of phases
+        phase_list2 = phase_list.deepcopy()
+        phase_list2.add(Phase("c", space_group=1))
+        assert not _phase_lists_are_compatible(phase_list2, indexer)
+        with pytest.raises(
+            ValueError, match=r"`phase_list` \(3\) and `indexer.phaselist` \(2\)"
+        ):
+            _ = _phase_lists_are_compatible(phase_list2, indexer, True)
+
+        # Differing lattice parameters
+        phase_list3 = phase_list.deepcopy()
+        lat = phase_list3["a"].structure.lattice
+        lat.setLatPar(lat.a * 10)
+        with pytest.raises(
+            ValueError, match="Phase 'a' in `phase_list` and phase number 0 in "
+        ):
+            _ = _phase_lists_are_compatible(phase_list3, indexer, True)
+
+        # Differing space groups
+        phase_list4 = phase_list.deepcopy()
+        phase_list4["b"].space_group = 224
+        with pytest.raises(
+            ValueError, match="Phase 'b' in `phase_list` and phase number 1 in "
+        ):
+            _ = _phase_lists_are_compatible(phase_list4, indexer, True)
 
 
 @pytest.mark.skipif(

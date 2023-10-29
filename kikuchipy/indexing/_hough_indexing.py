@@ -452,10 +452,11 @@ def _phase_lists_are_compatible(
     if n_phases != n_phases_pei:
         compatible = False
         msg = (
-            f"`phase_list` and `indexer.phaselist` have unequal lengths {n_phases} and "
-            f"{n_phases_pei}"
+            f"`phase_list` ({n_phases}) and `indexer.phaselist` ({n_phases_pei}) have "
+            "unequal number of phases"
         )
     else:
+        i = 0
         for (_, phase), phase_pei in zip(phase_list, phase_list_pei):
             lat = phase.structure.lattice.abcABG()
             lat_pei = phase_pei.latticeparameter
@@ -465,7 +466,7 @@ def _phase_lists_are_compatible(
             if not np.allclose(lat, lat_pei, atol=1e-12):
                 compatible = False
                 msg = (
-                    f"Phase '{phase.name}' in `phase_list` and {phase_pei} in "
+                    f"Phase '{phase.name}' in `phase_list` and phase number {i} in "
                     f"`indexer.phaselist` have unequal lattice parameters {lat} and "
                     f"{lat_pei}"
                 )
@@ -473,11 +474,13 @@ def _phase_lists_are_compatible(
             elif sg != sg_pei:
                 compatible = False
                 msg = (
-                    f"Phase '{phase.name}' in `phase_list` and {phase_pei} in "
+                    f"Phase '{phase.name}' in `phase_list` and phase number {i} in "
                     f"`indexer.phaselist` have unequal space group numbers {sg} and "
                     f"{sg_pei}"
                 )
                 break
+
+            i += 1
 
     if raise_if_not and not compatible:
         raise ValueError(msg)
