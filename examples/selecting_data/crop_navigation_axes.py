@@ -23,7 +23,7 @@ print(s)
 print(s.xmap.shape)
 print(s.detector.navigation_shape)
 
-########################################################################################
+# %%
 # Get a new signal with the patterns in the first row using ``inav``. Note how the
 # :attr:`~kikuchipy.signals.EBSD.xmap` and :attr:`~kikuchipy.signals.EBSD.detector`
 # attributes are updated.
@@ -35,7 +35,7 @@ print(s2)
 print(s2.xmap.shape)
 print(s2.detector.navigation_shape)
 
-########################################################################################
+# %%
 # Get the first column using ``crop()``, which overwrites the signal inplace
 
 s3 = s.deepcopy()
@@ -46,7 +46,7 @@ print(s3)
 print(s3.xmap.shape)
 print(s3.detector.navigation_shape)
 
-########################################################################################
+# %%
 # While ``inav`` returned a signal with only one navigation dimension, ``crop()`` left a
 # single row. We can remove this ``(1,)`` dimension using
 # :meth:`~hyperspy.signal.BaseSignal.squeeze`, but note that the custom ``EBSD``
