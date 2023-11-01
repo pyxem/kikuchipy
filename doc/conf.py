@@ -257,7 +257,8 @@ def linkcode_resolve(domain, info):
 # -------
 # https://docs.pyvista.org
 pyvista.global_theme.window_size = [600, 600]
-pyvista.set_jupyter_backend("panel")
+pyvista.global_theme.trame.server_proxy_enabled = True
+pyvista.set_jupyter_backend("trame")
 pyvista.start_xvfb()
 
 # -- Copy button customization (taken from PyVista)

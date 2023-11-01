@@ -15,8 +15,7 @@ build:
   tools:
     python: "3.11"
     nodejs: "19"
-  # See https://docs.pyvista.org/user-guide/jupyter/panel.html#configuration-considerations.
-  # Some of these packages are needed by PyVista/panel to render 3D
+  # Some of these packages are needed by PyVista/Trame to render 3D
   # plots from RTD's server.
   apt_packages:
     - imagemagick

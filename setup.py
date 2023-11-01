@@ -47,7 +47,6 @@ extra_feature_requirements = {
         "nbsphinx                       >= 0.7",
         "numpydoc",
         "nlopt",
-        "panel",  # Used in the docs by PyVista
         "pydata-sphinx-theme",
         "pyebsdindex                    ~= 0.2",
         "pyvista",
@@ -57,6 +56,10 @@ extra_feature_requirements = {
         "sphinx-design",
         "sphinx-gallery",
         "sphinxcontrib-bibtex           >= 1.0",
+        # Required by PyVista
+        "ipywidgets",
+        "jupyter-server-proxy",
+        "trame",
     ],
     "tests": [
         "coverage                       >= 5.0",
