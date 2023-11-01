@@ -266,7 +266,7 @@ pv.global_theme.window_size = [600, 600]
 # Use static display until trame works with nbsphinx:
 # https://github.com/pyvista/pyvista/discussions/4809
 pv.set_jupyter_backend("static")
-# pv.start_xvfb()
+pv.start_xvfb()
 
 # -- Copy button customization (taken from PyVista)
 # Exclude traditional Python prompts from the copied code
