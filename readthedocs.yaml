@@ -7,7 +7,6 @@ version: 2
 
 # Build documentation in the doc/ directory with Sphinx
 sphinx:
-  builder: html
   configuration: doc/conf.py
 
 # Set the version of Python and other tools you might need
@@ -21,6 +20,7 @@ build:
   apt_packages:
     - imagemagick
     - libgl1-mesa-dev
+    - pandoc
     - xvfb
 
 # Build doc in all formats (HTML, PDF and ePub)
