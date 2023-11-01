@@ -10,9 +10,6 @@ on:
   workflow_dispatch:
     workflow: '*'
 
-env:
-  MPLBACKEND: agg
-
 jobs:
   code:
     name: code style
@@ -53,6 +50,9 @@ jobs:
     name: ${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.LABEL }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
+    env:
+      MPLBACKEND: agg
+      PYTEST_ARGS: --pyargs kikuchipy --reruns 2 -n 2 --cov=kikuchipy
     strategy:
       fail-fast: false
       matrix:
@@ -120,12 +120,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install xvfb
-          xvfb-run pytest -n 2 --cov=kikuchipy --pyargs kikuchipy
+          xvfb-run pytest ${{ env.PYTEST_ARGS }}
 
       - name: Run tests on Windows or macOS
         if: ${{ matrix.os != 'ubuntu-latest' }}
         run: |
-          pytest -n 2 --cov=kikuchipy --pyargs kikuchipy
+          pytest ${{ env.PYTEST_ARGS }}
 
       - name: Generate line coverage
         run: |

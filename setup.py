@@ -63,6 +63,7 @@ extra_feature_requirements = {
         "pytest                         >= 5.4",
         "pytest-benchmark",
         "pytest-cov                     >= 2.8.1",
+        "pytest-rerunfailures",
         "pytest-xdist",
     ],
     "all": [
