@@ -56,10 +56,6 @@ extra_feature_requirements = {
         "sphinx-design",
         "sphinx-gallery",
         "sphinxcontrib-bibtex           >= 1.0",
-        # Required by PyVista
-        "ipywidgets",
-        "jupyter-server-proxy",
-        "trame",
     ],
     "tests": [
         "coverage                       >= 5.0",

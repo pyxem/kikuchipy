@@ -19,8 +19,8 @@ build:
   # plots from RTD's server.
   apt_packages:
     - imagemagick
-    - libgl1-mesa-dev
-    - xvfb
+#    - libgl1-mesa-dev
+#    - xvfb
 
 # Build doc in all formats (HTML, PDF and ePub)
 formats:

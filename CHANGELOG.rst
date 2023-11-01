@@ -19,12 +19,14 @@ Unreleased
 Added
 -----
 - Explicit support for Python 3.11.
-  (`#645 <https://github.com/pyxem/kikuchipy/pull/645>`_)
+  (`#646 <https://github.com/pyxem/kikuchipy/pull/646>`_)
+- Allow Hough indexing of all Laue groups with PyEBSDIndex v0.2 (not just *m-3m*, i.e.
+  FCC and BCC). (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
 - Allow passing keyword arguments to ``EBSD.hough_indexing_optimize_pc()`` to control
   particle swarm optimization (PSO). These are passed on to the new PSO algorithm in
   PyEBSDIndex v0.2. (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
 - Allow getting one projection center (PC) per pattern when optimizing PCs using the new
-  particle swarm optimization in PyEBSDIndex v0.2.
+  particle swarm optimization in PyEBSDIndex v0.2 (passing ``batch=True``).
   (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
 
 Changed
@@ -36,8 +38,11 @@ Changed
   (`#643 <https://github.com/pyxem/kikuchipy/pull/643>`_)
 - Increase minimal versions of diffsims, NumPy, Matplotlib, and PyEBSDIndex to 0.5.1,
   1.21.6, 3.5, and 0.2, respectively.
-  (`#645 <https://github.com/pyxem/kikuchipy/pull/645>`_,
+  (`#646 <https://github.com/pyxem/kikuchipy/pull/646>`_,
   `#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Remove dependency on panel for documentation, and with that interactive 3D
+  visualization of master patterns in the documentation (the hope is to reintroduce it
+  with trame at some point). (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
 
 Deprecated
 ----------
