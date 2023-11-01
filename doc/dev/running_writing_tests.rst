@@ -9,7 +9,7 @@ Install necessary dependencies to run the tests::
 
     pip install --editable .[tests]
 
-Some useful :doc:`fixtures <pytest:explanation/fixtures>`, like a dummy scan and
+Some useful :doc:`fixtures <pytest:explanation/fixtures>`, like a dummy EBSD scan and a
 corresponding background pattern, are available in the ``conftest.py`` file.
 
 .. note::
@@ -33,13 +33,22 @@ For an even nicer presentation, you can use ``coverage.py`` directly::
 Then, you can open the created ``htmlcov/index.html`` in the browser and inspect the
 coverage in more detail.
 
-To run only a specific test function or class, .e.g the ``TestEBSD`` class::
+We can run tests in parallel on four CPUs using pytest-xdist::
+
+    pytest -n 4
+
+To run only a specific test function or class, e.g. the ``TestEBSD`` class::
 
     pytest -k TestEBSD
 
-This is useful when you only want to run a specific test and not the full test suite,
-e.g. when you're creating or updating a test.
-But remember to run the full test suite before pushing!
+This is useful when we only want to run a specific test and not the full test suite,
+e.g. when we're creating or updating a test.
+We have to remember to run the full test suite before pushing, though!
+
+We can automatically rerun so-called flaky tests (tests yielding both passing and
+failing results without code changes) using the pytest plugin pytest-rerunfailures::
+
+    pytest --reruns 2
 
 Docstring examples are tested :doc:`with pytest <pytest:how-to/doctest>` as well.
 If you're in the top directory you can run::
