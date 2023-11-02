@@ -22,6 +22,10 @@ Added
   (`#646 <https://github.com/pyxem/kikuchipy/pull/646>`_)
 - Allow Hough indexing of all Laue groups with PyEBSDIndex v0.2 (not just *m-3m*, i.e.
   FCC and BCC). (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Control of reflector lists in Hough indexing. One reflector list per phase in the
+  phase list can be passed to ``EBSDDetector.get_indexer()`` when obtaining the
+  ``EBSDIndexer`` for use in ``EBSD.hough_indexing()``.
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
 - Allow passing keyword arguments to ``EBSD.hough_indexing_optimize_pc()`` to control
   particle swarm optimization (PSO). These are passed on to the new PSO algorithm in
   PyEBSDIndex v0.2. (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
