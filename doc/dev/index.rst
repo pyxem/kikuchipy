@@ -44,4 +44,5 @@ regarding the project? Feel free to `ask a question
     adding_to_data_module.rst
     improving_performance.rst
     continuous_integration.rst
+    maintaining_package_credits.rst
     Code of conduct <code_of_conduct.rst>
