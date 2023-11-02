@@ -30,6 +30,7 @@ credits = [
     "Erlend Mikkelsen Østvold",
     "Zhou Xu",
     "Andreas V. Bugten",
+    "Carter Francis",
     "Magnus Nord",
 ]
 license = "GPLv3+"
