@@ -769,12 +769,12 @@ class Dataset:
         self, downloader: pooch.HTTPDownloader
     ) -> file_path:  # pragma: no cover
         file_paths = marshall.fetch(
-            os.path.join("data", self.collection_name),
+            "data/" + self.collection_name,
             downloader=downloader,
             processor=pooch.Unzip(extract_dir=self.file_directory),
         )
 
-        os.remove(os.path.join(marshall.path, "data", self.collection_name))
+        os.remove(Path(marshall.path) / "data" / self.collection_name)
 
         # Ensure the file is in the collection
         desired_name = self.file_relpath.name
