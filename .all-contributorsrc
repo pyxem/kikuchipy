@@ -65,7 +65,8 @@
       "profile": "https://github.com/ericpre",
       "contributions": [
         "code",
-        "maintenance"
+        "maintenance",
+        "bug"
       ]
     },
     {
@@ -96,6 +97,24 @@
       "profile": "https://github.com/Erlendos12",
       "contributions": [
         "bug"
+      ]
+    },
+    {
+      "login": "AndreasBugten",
+      "name": "AndreasBugten",
+      "avatar_url": "https://avatars.githubusercontent.com/u/106192446?v=4",
+      "profile": "https://github.com/AndreasBugten",
+      "contributions": [
+        "doc"
+      ]
+    },
+    {
+      "login": "CSSFrancis",
+      "name": "Carter Francis",
+      "avatar_url": "https://avatars.githubusercontent.com/u/41125831?v=4",
+      "profile": "https://github.com/CSSFrancis",
+      "contributions": [
+        "doc"
       ]
     }
   ]

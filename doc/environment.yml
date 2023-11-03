@@ -1,0 +1,6 @@
+channels:
+  - conda-forge
+dependencies:
+  - pip
+  - python=3.11
+  - pandoc>=2.14.2, <4.0.0

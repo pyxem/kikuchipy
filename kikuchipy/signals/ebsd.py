@@ -45,10 +45,10 @@ from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
 from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
 from kikuchipy.indexing._hough_indexing import (
-    _get_pyebsdindex_phaselist,
     _indexer_is_compatible_with_kikuchipy,
     _hough_indexing,
     _optimize_pc,
+    _phase_lists_are_compatible,
 )
 from kikuchipy.indexing._refinement._refinement import (
     _refine_orientation,
@@ -1606,9 +1606,8 @@ class EBSD(KikuchipySignal2D):
         Parameters
         ----------
         phase_list
-            List of phases. The list can only contain one face-centered
-            cubic (FCC) phase, one body-centered cubic (BCC) phase or
-            both types.
+            List of phases. The list must correspond to the phase list
+            in the passed.
         indexer
             PyEBSDIndex EBSD indexer instance of which the
             :meth:`~pyebsdindex.ebsd_index.EBSDIndexer.index_pats`
@@ -1674,16 +1673,11 @@ class EBSD(KikuchipySignal2D):
         sig_shape = am.signal_shape[::-1]
         step_sizes = tuple([a.scale for a in am.navigation_axes[::-1]])
 
-        # Check indexer
-        phase_list_pei = _get_pyebsdindex_phaselist(phase_list)
+        # Check indexer (but not the reflectors)
         _ = _indexer_is_compatible_with_kikuchipy(
             indexer, sig_shape, nav_size, raise_if_not=True
         )
-        if indexer.phaselist != phase_list_pei:
-            raise ValueError(
-                f"`indexer.phaselist` {indexer.phaselist} and the list determined from"
-                f" `phase_list` {phase_list_pei} must be the same"
-            )
+        _ = _phase_lists_are_compatible(phase_list, indexer, raise_if_not=True)
 
         # Prepare patterns
         chunksize = min(chunksize, max(am.navigation_size, 1))
@@ -1718,12 +1712,13 @@ class EBSD(KikuchipySignal2D):
         indexer: "EBSDIndexer",
         batch: bool = False,
         method: str = "Nelder-Mead",
+        **kwargs,
     ) -> "EBSDDetector":
         """Return a detector with one projection center (PC) per
         pattern optimized using Hough indexing from :mod:`pyebsdindex`.
 
         See :class:`~pyebsdindex.ebsd_index.EBSDIndexer` and
-        :mod:`~pyebsdindex.pcopt.optimize` for details.
+        :mod:`~pyebsdindex.pcopt` for details.
 
         Parameters
         ----------
@@ -1732,9 +1727,7 @@ class EBSD(KikuchipySignal2D):
             convention, (PCx, PCy, PCz).
         indexer
             PyEBSDIndex EBSD indexer instance to pass on to the
-            optimization function. Its `phaselist` must be compatible
-            with ``phase_list``, if given, and the ``indexer.vendor``
-            must be ``"KIKUCHIPY"``. An indexer can be obtained with
+            optimization function. An indexer can be obtained with
             :meth:`~kikuchipy.detectors.EBSDDetector.get_indexer`.
         batch
             Whether the fit for the patterns should be optimized using
@@ -1742,8 +1735,10 @@ class EBSD(KikuchipySignal2D):
             if an optimization is run for each pattern individually.
         method
             Which optimization method to use, either ``"Nelder-Mead"``
-            from SciPy (default) or ``"PSO"`` (particle swarm). The
-            latter method does not support ``batch=True``.
+            from SciPy (default) or ``"PSO"`` (particle swarm).
+        **kwargs
+            Keyword arguments passed on to PyEBSDIndex' optimization
+            method (depending on the chosen ``method``).
 
         Returns
         -------
@@ -1782,8 +1777,6 @@ class EBSD(KikuchipySignal2D):
                 f"`method` '{method}' must be one of the supported methods "
                 f"{supported_methods}"
             )
-        elif batch and method == "pso":
-            raise ValueError("PSO optimization method does not support `batch=True`")
 
         am = self.axes_manager
         nav_shape = am.navigation_shape[::-1]
@@ -1801,7 +1794,12 @@ class EBSD(KikuchipySignal2D):
             patterns = patterns.rechunk({0: "auto", 1: -1, 2: -1})
 
         pc = _optimize_pc(
-            pc0=pc0, patterns=patterns, indexer=indexer, batch=batch, method=method
+            pc0=pc0,
+            patterns=patterns,
+            indexer=indexer,
+            batch=batch,
+            method=method,
+            **kwargs,
         )
 
         if batch:

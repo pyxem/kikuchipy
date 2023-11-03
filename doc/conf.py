@@ -9,7 +9,7 @@ from os.path import relpath, dirname
 import re
 import sys
 
-import pyvista
+import pyvista as pv
 from numpydoc.docscrape_sphinx import SphinxDocString
 
 import kikuchipy as kp
@@ -40,6 +40,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     "sphinx.ext.doctest",
+    "sphinx.ext.imgconverter",
     "sphinx.ext.intersphinx",
     "sphinx.ext.linkcode",
     "sphinx.ext.mathjax",
@@ -71,12 +72,10 @@ intersphinx_mapping = {
     "nbval": ("https://nbval.readthedocs.io/en/latest", None),
     "numpydoc": ("https://numpydoc.readthedocs.io/en/latest", None),
     "orix": ("https://orix.readthedocs.io/en/stable", None),
-    "panel": ("https://panel.holoviz.org", None),
     "pooch": ("https://www.fatiando.org/pooch/latest", None),
     "pyebsdindex": ("https://pyebsdindex.readthedocs.io/en/stable", None),
     "pyopencl": ("https://documen.tician.de/pyopencl/", None),
     "pytest": ("https://docs.pytest.org/en/stable", None),
-    #    "pythreejs": ("https://pythreejs.readthedocs.io/en/stable", None),
     "python": ("https://docs.python.org/3", None),
     "pyvista": ("https://docs.pyvista.org", None),
     "pyxem": ("https://pyxem.readthedocs.io/en/latest", None),
@@ -95,7 +94,14 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files. This image also
 # affects html_static_path and html_extra_path.
-exclude_patterns = ["build", "_static/logo/*.ipynb"]
+exclude_patterns = [
+    "build",
+    "_static/logo/*.ipynb",
+    # Suppress warnings from Sphinx regarding "duplicate source files":
+    # https://github.com/executablebooks/MyST-NB/issues/363#issuecomment-1682540222
+    "examples/*/*.ipynb",
+    "examples/*/*.py",
+]
 
 # HTML theming: pydata-sphinx-theme
 # https://pydata-sphinx-theme.readthedocs.io
@@ -112,9 +118,9 @@ html_theme_options = {
     ],
     "logo": {
         "alt_text": "kikuchipy",
-        "image_dark": "logo/plasma_banner_dark.png",
+        "image_dark": "_static/logo/plasma_banner_dark.png",
     },
-    "navigation_with_keys": False,
+    "navigation_with_keys": True,
     "show_toc_level": 2,
     "use_edit_page_button": True,
 }
@@ -186,7 +192,10 @@ codeautolink_custom_blocks = {
 latex_elements = {
     # pdflatex doesn't like some Unicode characters, so a replacement
     # for one of them is made here
-    "preamble": r"\DeclareUnicodeCharacter{2588}{-}"
+    "preamble": r"""
+    \DeclareUnicodeCharacter{2588}{-}
+    \DeclareUnicodeCharacter{03BC}{u}
+    """
 }
 
 
@@ -253,9 +262,11 @@ def linkcode_resolve(domain, info):
 # PyVista
 # -------
 # https://docs.pyvista.org
-pyvista.global_theme.window_size = [600, 600]
-pyvista.set_jupyter_backend("panel")
-pyvista.start_xvfb()
+pv.global_theme.window_size = [600, 600]
+# Use static display until trame works with nbsphinx:
+# https://github.com/pyvista/pyvista/discussions/4809
+pv.set_jupyter_backend("static")
+pv.start_xvfb()
 
 # -- Copy button customization (taken from PyVista)
 # Exclude traditional Python prompts from the copied code

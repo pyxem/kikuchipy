@@ -27,8 +27,10 @@ credits = [
     "Ole Natlandsmyr",
     "Tina Bergh",
     "Eric Prestat",
+    "Andreas V. Bugten",
     "Erlend Mikkelsen Østvold",
     "Zhou Xu",
+    "Carter Francis",
     "Magnus Nord",
 ]
 license = "GPLv3+"
@@ -37,4 +39,4 @@ maintainer_email = "hakon.w.anes@ntnu.no"
 name = "kikuchipy"
 platforms = ["Linux", "MacOS X", "Windows"]
 status = "Development"
-version = "0.8.7"
+version = "0.9.0"

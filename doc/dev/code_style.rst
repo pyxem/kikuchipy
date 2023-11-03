@@ -24,7 +24,8 @@ Note that ``black`` won't format `docstrings <https://peps.python.org/pep-0257/>
 We follow the :doc:`numpydoc <numpydoc:format>` standard (with some exceptions), and the
 docstrings are checked against this standard when building the documentation.
 
-Comment lines should preferably be limited to 72 characters.
+Comment and docstring lines should preferably be limited to 72 characters (including
+leading whitespaces).
 
 Package imports should be structured into three blocks with blank lines between them
 (descending order): standard library (like ``os`` and ``typing``), third party packages

@@ -47,9 +47,8 @@ extra_feature_requirements = {
         "nbsphinx                       >= 0.7",
         "numpydoc",
         "nlopt",
-        "panel",  # Used in the docs by PyVista
         "pydata-sphinx-theme",
-        "pyebsdindex                    >= 0.1.1",
+        "pyebsdindex                    ~= 0.2",
         "pyvista",
         "sphinx                         >= 3.0.2",
         "sphinx-codeautolink[ipython]   < 0.14",
@@ -64,17 +63,19 @@ extra_feature_requirements = {
         "pytest                         >= 5.4",
         "pytest-benchmark",
         "pytest-cov                     >= 2.8.1",
+        "pytest-rerunfailures",
         "pytest-xdist",
     ],
     "all": [
         "matplotlib                     >= 3.5",
         "nlopt",
-        "pyebsdindex                    ~= 0.1",
-        "pyvista",
-    ],
-    # TODO: Remove this option in release 0.9
-    "viz": [
-        "matplotlib                     >= 3.5",
+        # We ask for a compatible release of PyEBSDIndex as we
+        # anticipate breaking changes in coming releases. We do so
+        # because there were breaking changes between 0.1.2 and 0.2.0.
+        # We can change from ~= to >= once we consider PyEBSDIndex
+        # stable. This is typically when a minor release with no or
+        # only minor breaking changes is made available.
+        "pyebsdindex                    ~= 0.2",
         "pyvista",
     ],
 }
@@ -108,6 +109,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
         (
@@ -150,15 +152,15 @@ setup(
     install_requires=[
         "dask[array]        >= 2021.8.1",
         "diffpy.structure   >= 3",
-        "diffsims           >= 0.5",
-        "hyperspy           >= 1.7.3",
+        "diffsims           >= 0.5.1",
+        "hyperspy           >= 1.7.3, < 2",
         "h5py               >= 2.10",
         "imageio",
-        "matplotlib         >= 3.3",
+        "matplotlib         >= 3.5",
         "numba              >= 0.55",
-        "numpy              >= 1.19",
+        "numpy              >= 1.21.6",
         "orix               >= 0.11.1",
-        "pooch              >= 0.13",
+        "pooch              >= 1.3.0",
         "pyyaml",
         "tqdm               >= 0.5.2",
         "scikit-image       >= 0.16.2",

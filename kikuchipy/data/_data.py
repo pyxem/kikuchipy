@@ -26,7 +26,6 @@ from kikuchipy.signals import EBSD, EBSDMasterPattern
 from kikuchipy import load
 from kikuchipy.release import version
 from kikuchipy.data._registry import registry_hashes, registry_urls
-from kikuchipy._util import deprecated
 
 
 marshall = pooch.create(
@@ -322,170 +321,6 @@ def si_ebsd_moving_screen(
     return load(file_path, **kwargs)
 
 
-@deprecated("0.8", "si_ebsd_moving_screen", removal="0.9")
-def silicon_ebsd_moving_screen_in(
-    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
-) -> EBSD:
-    """One EBSD pattern of (480, 480) pixels from a single crystal
-    silicon sample, acquired on a NORDIF UF-420 detector
-    :cite:`aanes2022electron3`.
-
-    This pattern and two other patterns from the same sample position
-    but with 5 mm and 10 mm greater sample-screen-distances were
-    acquired to test the moving-screen projection center estimation
-    technique :cite:`hjelen1991electron`.
-
-    Parameters
-    ----------
-    allow_download
-        Whether to allow downloading the dataset from the internet to
-        the local cache with the pooch Python package. Default is
-        ``False``.
-    show_progressbar
-        Whether to show a progressbar when downloading. If not given,
-        the value of
-        :obj:`hyperspy.api.preferences.General.show_progressbar` is
-        used.
-    **kwargs
-        Keyword arguments passed to :func:`~kikuchipy.load`.
-
-    Returns
-    -------
-    ebsd_signal
-        EBSD signal.
-
-    Notes
-    -----
-    The dataset is hosted in the GitHub repository
-    https://github.com/pyxem/kikuchipy-data.
-
-    The dataset carries a CC BY 4.0 license.
-
-    Examples
-    --------
-    >>> import kikuchipy as kp
-    >>> s = kp.data.si_ebsd_moving_screen(0, allow_download=True)
-    >>> s
-    <EBSD, title: si_in Scan 1, dimensions: (|480, 480)>
-    >>> s.plot()
-    """
-    SiEBSDMovingScreenIn = Dataset("silicon_ebsd_moving_screen/si_in.h5")
-    file_path = SiEBSDMovingScreenIn.fetch_file_path(allow_download, show_progressbar)
-    return load(file_path, **kwargs)
-
-
-@deprecated("0.8", "si_ebsd_moving_screen", removal="0.9")
-def silicon_ebsd_moving_screen_out5mm(
-    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
-) -> EBSD:
-    """One EBSD pattern of (480, 480) pixels from a single crystal
-    silicon sample, acquired on a NORDIF UF-420 detector
-    :cite:`aanes2022electron3`.
-
-    This pattern and two other patterns from the same sample position
-    but with sample-screen-distances 5 mm shorter
-    (:func:`silicon_ebsd_moving_screen_in`) and 5 mm greater
-    (:func:`silicon_ebsd_moving_screen_out10mm`) were acquired to test
-    the moving-screen projection center estimation technique
-    :cite:`hjelen1991electron`.
-
-    Parameters
-    ----------
-    allow_download
-        Whether to allow downloading the dataset from the internet to
-        the local cache with the pooch Python package. Default is
-        ``False``.
-    show_progressbar
-        Whether to show a progressbar when downloading. If not given,
-        the value of
-        :obj:`hyperspy.api.preferences.General.show_progressbar` is
-        used.
-    **kwargs
-        Keyword arguments passed to :func:`~kikuchipy.load`.
-
-    Returns
-    -------
-    ebsd_signal
-        EBSD signal.
-
-    Notes
-    -----
-    The dataset is hosted in the GitHub repository
-    https://github.com/pyxem/kikuchipy-data.
-
-    The dataset carries a CC BY 4.0 license.
-
-    Examples
-    --------
-    >>> import kikuchipy as kp
-    >>> s = kp.data.si_ebsd_moving_screen(5, allow_download=True)
-    >>> s
-    <EBSD, title: si_out5mm Scan 1, dimensions: (|480, 480)>
-    >>> s.plot()
-    """
-    SiEBSDMovingScreenOut5mm = Dataset("silicon_ebsd_moving_screen/si_out5mm.h5")
-    file_path = SiEBSDMovingScreenOut5mm.fetch_file_path(
-        allow_download, show_progressbar
-    )
-    return load(file_path, **kwargs)
-
-
-@deprecated("0.8", "si_ebsd_moving_screen", removal="0.9")
-def silicon_ebsd_moving_screen_out10mm(
-    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
-) -> EBSD:
-    """One EBSD pattern of (480, 480) pixels from a single crystal
-    silicon sample, acquired on a NORDIF UF-420 detector
-    :cite:`aanes2022electron3`.
-
-    This pattern and two other patterns from the same sample position
-    but with sample-screen-distances 10 mm shorter
-    (:func:`silicon_ebsd_moving_screen_in`) and 5 mm shorter
-    (:func:`silicon_ebsd_moving_screen_out5mm`) were acquired to test
-    the moving-screen projection center estimation technique
-    :cite:`hjelen1991electron`.
-
-    Parameters
-    ----------
-    allow_download
-        Whether to allow downloading the dataset from the internet to
-        the local cache with the pooch Python package. Default is
-        ``False``.
-    show_progressbar
-        Whether to show a progressbar when downloading. If not given,
-        the value of
-        :obj:`hyperspy.api.preferences.General.show_progressbar` is
-        used.
-    **kwargs
-        Keyword arguments passed to :func:`~kikuchipy.load`.
-
-    Returns
-    -------
-    ebsd_signal
-        EBSD signal.
-
-    Notes
-    -----
-    The dataset is hosted in the GitHub repository
-    https://github.com/pyxem/kikuchipy-data.
-
-    The dataset carries a CC BY 4.0 license.
-
-    Examples
-    --------
-    >>> import kikuchipy as kp
-    >>> s = kp.data.si_ebsd_moving_screen(10, allow_download=True)
-    >>> s
-    <EBSD, title: si_out10mm Scan 1, dimensions: (|480, 480)>
-    >>> s.plot()
-    """
-    SiEBSDMovingScreenOut10mm = Dataset("silicon_ebsd_moving_screen/si_out10mm.h5")
-    file_path = SiEBSDMovingScreenOut10mm.fetch_file_path(
-        allow_download, show_progressbar
-    )
-    return load(file_path, **kwargs)
-
-
 def si_wafer(
     allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
 ) -> EBSD:
@@ -769,12 +604,12 @@ class Dataset:
         self, downloader: pooch.HTTPDownloader
     ) -> file_path:  # pragma: no cover
         file_paths = marshall.fetch(
-            os.path.join("data", self.collection_name),
+            "data/" + self.collection_name,
             downloader=downloader,
             processor=pooch.Unzip(extract_dir=self.file_directory),
         )
 
-        os.remove(os.path.join(marshall.path, "data", self.collection_name))
+        os.remove(Path(marshall.path) / "data" / self.collection_name)
 
         # Ensure the file is in the collection
         desired_name = self.file_relpath.name

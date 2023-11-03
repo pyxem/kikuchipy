@@ -38,12 +38,12 @@ det = det0.extrapolate_pc(
     step_sizes=(50, 50),
 )
 
-# Add +/- 0.0025 as random noise to PCy and PCz
+# Add +/- 0.001 as random noise to PCy and PCz
 rng = np.random.default_rng()
 det.pcy += rng.uniform(-0.001, 0.001, det.navigation_size).reshape(nav_shape)
 det.pcz += rng.uniform(-0.001, 0.001, det.navigation_size).reshape(nav_shape)
 
-# Add outliers by adding more noise
+# Add outliers by adding more noise to PCz
 outlier_idx1d = rng.choice(det.navigation_size, 10, replace=False)
 is_outlier = np.zeros(det.navigation_size, dtype=bool)
 is_outlier[outlier_idx1d] = True
@@ -52,7 +52,7 @@ outlier_idx2d = np.unravel_index(outlier_idx1d, shape=det.navigation_shape)
 det.pcz[outlier_idx2d] += noise_outlier
 
 # Robust estimation by detecting outliers
-xtilt, detected_outliers = det.estimate_xtilt(
+xtilt, outlier_detected_2d = det.estimate_xtilt(
     detect_outliers=True, degrees=True, return_outliers=True
 )
 
@@ -60,5 +60,9 @@ xtilt, detected_outliers = det.estimate_xtilt(
 true_tilt = 90 - det.sample_tilt + det.tilt
 print(f"True/estimated tilt about detector x [deg]: {true_tilt:.2f}/{xtilt:.2f}")
 
-correct_outliers = np.isin(outlier_idx1d, np.where(detected_outliers)[0])
+outlier_idx2d_detected = np.where(outlier_detected_2d)
+outlier_idx1d_detected = np.ravel_multi_index(
+    outlier_idx2d_detected, det.navigation_shape
+)
+correct_outliers = np.isin(outlier_idx1d, outlier_idx1d_detected)
 print(f"{correct_outliers.sum()}/{outlier_idx1d.size} of added outliers detected")

@@ -13,6 +13,63 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+0.9.0 (2023-11-03)
+==================
+
+Added
+-----
+- Explicit support for Python 3.11.
+  (`#646 <https://github.com/pyxem/kikuchipy/pull/646>`_)
+- Allow Hough indexing of all Laue groups with PyEBSDIndex v0.2 (not just *m-3m*, i.e.
+  FCC and BCC). (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Control of reflector lists in Hough indexing. One reflector list per phase in the
+  phase list can be passed to ``EBSDDetector.get_indexer()`` to obtain an
+  ``EBSDIndexer`` for use in ``EBSD.hough_indexing()``.
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Allow passing keyword arguments to ``EBSD.hough_indexing_optimize_pc()`` to control
+  the new particle swarm optimization algorithm in PyEBSDIndex v0.2.
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Allow getting one projection center (PC) per pattern when optimizing PCs using the new
+  particle swarm optimization in PyEBSDIndex v0.2 (passing ``batch=True``).
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+
+Changed
+-------
+- Parameter ``zone_axes_kwargs`` in
+  ``GeometricalKikuchiPatternSimulation.as_collections()`` does not accept ``color``
+  internally to set the default color to white anymore. It accepts ``fc`` (facecolor)
+  instead. This change was necessary to improve handling of other keyword arguments.
+  (`#643 <https://github.com/pyxem/kikuchipy/pull/643>`_)
+- Increase minimal versions of diffsims, NumPy, Matplotlib, and PyEBSDIndex to 0.5.1,
+  1.21.6, 3.5, and 0.2, respectively.
+  (`#646 <https://github.com/pyxem/kikuchipy/pull/646>`_,
+  `#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Remove dependency on Panel for documentation, and with that the interactive 3D
+  visualization of master patterns in the documentation. The plan is to reintroduce the
+  interactive plots with trame later on.
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Restrict HyperSpy to below the forthcoming version 2. The plan is to remove this
+  restriction once kikuchipy is compatible with this version.
+  (`#657 <https://github.com/pyxem/kikuchipy/pull/657>`_)
+
+Removed
+-------
+- ``generators`` and ``projections`` modules which were deprecated in version 0.8.
+  (`#612 <https://github.com/pyxem/kikuchipy/pull/612>`_)
+- The deprecated PyPI selector ``viz`` is removed.
+  (`#643 <https://github.com/pyxem/kikuchipy/pull/643>`_)
+- The data module functions ``silicon_ebsd_moving_screen_x()``, where "x" is "in",
+  "out5mm" or "out10mm". They were deprecated in version 0.8.
+  (`#656 <https://github.com/pyxem/kikuchipy/pull/656>`_)
+
+Fixed
+-----
+- Conversion from EDAX TSL projection center (PC) convention for (PCy, PCz) for
+  rectangular detectors is corrected.
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Downloading files in the ``data`` module to the local cache on Windows.
+  (`#655 <https://github.com/pyxem/kikuchipy/pull/655>`_)
+
 0.8.7 (2023-07-24)
 ==================
 
@@ -187,7 +244,7 @@ Added
 
 Changed
 -------
-- Minimal version of orix set to >= 0.11 and of numba set to >= 0.55.
+- Minimal version of orix set to >= 0.11 and of Numba set to >= 0.55.
   (`#608 <https://github.com/pyxem/kikuchipy/pull/608>`_)
 - Added warnings when trying to perform adaptive histogram equalization on a signal with
   data in floating type or when some of the data is NaN.
@@ -205,8 +262,6 @@ Changed
 - Exclude documentation and tests from source distribution.
   (`#588 <https://github.com/pyxem/kikuchipy/pull/588>`_)
 - Minimal version of HyperSpy increased to >= 1.7.3.
-  (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
-- Minimal version of Numba increased to >= 0.52.
   (`#585 <https://github.com/pyxem/kikuchipy/pull/585>`_)
 - When binning the navigation dimension(s) with ``EBSD.rebin()``, the class attributes
   ``xmap`` and ``static_background`` are set to ``None`` and ``detector.pc`` is set to

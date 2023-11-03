@@ -2,7 +2,7 @@ name: doc-dependencies-for-binder
 channels:
   - conda-forge
 dependencies:
-  - python=3.9
+  - python=3.11
   - pip
   - pip:
-      - --editable .[doc,viz]
+      - --editable .[doc,all]

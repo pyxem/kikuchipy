@@ -3,9 +3,9 @@
 
 
 #### Progress of the PR
-- [ ] [Docstrings for all functions](https://github.com/numpy/numpy/blob/master/doc/example.py)
+- [ ] [Docstrings for all functions](https://numpydoc.readthedocs.io/en/latest/example.html)
 - [ ] Unit tests with pytest for all lines
-- [ ] Clean code style by [running black via pre-commit](https://kikuchipy.org/en/latest/contributing.html#code-style)
+- [ ] Clean code style by [running black via pre-commit](https://kikuchipy.org/en/latest/dev/code_style.html)
 
 #### Minimal example of the bug fix or new feature
 ```python

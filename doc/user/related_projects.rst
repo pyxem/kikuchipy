@@ -23,13 +23,16 @@ EBSD data that users of kikuchipy might find useful:
   kikuchipy depends on this library for Hough indexing.
 - `OpenECCI <https://github.com/gorliks/OpenECCI>`__: GUI-based software for controlled
   Electron Channelling Contrast Imaging (ECCI) analysis of crystal defects in an SEM.
-- `MTEX <https://mtex-toolbox.github.io/>`__: Matlab toolbox for analyzing and modeling
+- `MTEX <https://mtex-toolbox.github.io/>`__: MATLAB toolbox for analyzing and modeling
   crystallographic textures by means of EBSD or pole figure data.
-- `AstroEBSD <https://github.com/benjaminbritton/AstroEBSD>`__: Matlab package with
+- `DREAM.3D <http://dream3d.bluequartz.net/>`__: C++ library to reconstruct, instatiate,
+  quantify, mesh, handle, and visualize multidimensional (3D), multimodal data (mainly
+  EBSD orientation data).
+- `AstroEBSD <https://github.com/benjaminbritton/AstroEBSD>`__: MATLAB package with
   indexing tools for EBSD patterns.
 - :doc:`xcdskd <xcdskd:index>`: Python library with tools for Kikuchi Diffraction in the
   SEM, with example Jupyter Notebooks.
-- `OpenXY <https://github.com/BYU-MicrostructureOfMaterials/OpenXY>`_: Matlab tool for
+- `OpenXY <https://github.com/BYU-MicrostructureOfMaterials/OpenXY>`_: MATLAB tool for
   cross-correlation analysis of EBSD patterns.
 - :doc:`DefDAP <defdap:index>`: Python package for correlating EBSD and high-resolution
   digital image correlation data.

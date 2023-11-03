@@ -6,30 +6,32 @@ on:
   workflow_dispatch:
     workflow: "*"
 
+env:
+  MPLBACKEND: agg
+
 jobs:
   test-documentation-notebooks:
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    env:
-      MPLBACKEND: agg
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v2
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
-
-      - name: Display versions
-        run: |
-          python -V
-          pip -V
+          python-version: '3.11'
 
       - name: Install package and dependencies
         shell: bash
         run: |
-          pip install -U -e .'[doc,tests,viz]'
-          pip install nbval
+          pip install -U -e .'[doc,tests,all]'
+          pip install -U nbval pyopencl
+
+      - name: Display Python, pip and package versions
+        run: |
+          python -V
+          pip -V
+          pip list
 
       - name: Test documentation notebooks
         run: |

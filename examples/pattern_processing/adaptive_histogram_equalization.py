@@ -44,7 +44,7 @@ for ax, pattern in zip(axes[1], mps_data):
     ax.set(xlabel="Gray level", ylabel="Frequency")
 fig.tight_layout()
 
-########################################################################################
+# %%
 # Let's show that intensities are approximately the same in patterns where one is
 # equalized while the other is projected from a master pattern which itself is
 # equalized.

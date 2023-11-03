@@ -40,9 +40,6 @@ __all__ = [
     "nickel_ebsd_small",
     "si_wafer",
     "si_ebsd_moving_screen",
-    "silicon_ebsd_moving_screen_in",
-    "silicon_ebsd_moving_screen_out10mm",
-    "silicon_ebsd_moving_screen_out5mm",
 ]
 
 
@@ -60,9 +57,6 @@ def __getattr__(name):
         "nickel_ebsd_small": "_data",
         "si_wafer": "_data",
         "si_ebsd_moving_screen": "_data",
-        "silicon_ebsd_moving_screen_in": "_data",
-        "silicon_ebsd_moving_screen_out10mm": "_data",
-        "silicon_ebsd_moving_screen_out5mm": "_data",
     }
     if name in __all__:
         import importlib
