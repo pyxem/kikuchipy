@@ -376,7 +376,7 @@ def _save(
     ext = os.path.splitext(filename)[1][1:]
     if ext == "":  # Will write to kikuchipy's h5ebsd format
         ext = "h5"
-        filename = filename + "." + ext
+        filename += "." + ext
 
     writer = None
     for plugin in plugins:
@@ -428,15 +428,17 @@ def _save(
             write = False  # Don't write the file
         else:
             raise ValueError(
-                "overwrite parameter can only be None, True or False, and not "
+                "overwrite parameter can only be None, True, or False, and not "
                 f"{overwrite}"
             )
 
-        # Finally, write file
         if write:
+            if writer["name"] in ["HSPY", "ZSPY"]:
+                signal = signal._to_dictionary()
             importlib.import_module(writer["api"]).file_writer(
                 filename, signal, **kwargs
             )
+
             directory, filename = os.path.split(os.path.abspath(filename))
             signal.tmp_parameters.set_item("folder", directory)
             signal.tmp_parameters.set_item("filename", os.path.splitext(filename)[0])

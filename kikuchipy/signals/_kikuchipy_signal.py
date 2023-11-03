@@ -55,7 +55,7 @@ with open(os.path.join(DIR_PATH, "../hyperspy_extension.yaml")) as f:
 class KikuchipySignal2D(Signal2D):
     """General class for image signals in kikuchipy, extending
     HyperSpy's Signal2D class with some methods for carrying over custom
-    properties and some methods for intensity manipulation.
+    properties and others for manipulation of image intensities.
 
     Not meant to be used directly, see derived classes like
     :class:`~kikuchipy.signals.EBSD`.
