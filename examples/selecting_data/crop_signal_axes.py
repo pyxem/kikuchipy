@@ -24,7 +24,7 @@ print(s)
 print(s.static_background.shape)
 print(s.detector)
 
-########################################################################################
+# %%
 # Get a new signal, removing the first and last ten rows of pixels and first and last
 # five columns of pixels. Note how the :attr:`~kikuchipy.signals.EBSD.static_background`
 # and :attr:`~kikuchipy.signals.EBSD.detector` attributes are updated.
@@ -36,7 +36,7 @@ print(s2)
 print(s2.static_background.shape)
 print(s2.detector)
 
-########################################################################################
+# %%
 # Do the same inplace using :meth:`~kikuchipy.signals.EBSD.crop`
 
 s3 = s.deepcopy()
@@ -48,7 +48,7 @@ print(s3)
 print(s3.static_background.shape)
 print(s3.detector)
 
-########################################################################################
+# %%
 # Do the same inplace using ``crop_image()``
 
 s4 = s.deepcopy()

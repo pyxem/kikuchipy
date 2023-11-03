@@ -19,7 +19,19 @@ Unreleased
 Added
 -----
 - Explicit support for Python 3.11.
-  (`#645 <https://github.com/pyxem/kikuchipy/pull/645>`_)
+  (`#646 <https://github.com/pyxem/kikuchipy/pull/646>`_)
+- Allow Hough indexing of all Laue groups with PyEBSDIndex v0.2 (not just *m-3m*, i.e.
+  FCC and BCC). (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Control of reflector lists in Hough indexing. One reflector list per phase in the
+  phase list can be passed to ``EBSDDetector.get_indexer()`` when obtaining the
+  ``EBSDIndexer`` for use in ``EBSD.hough_indexing()``.
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Allow passing keyword arguments to ``EBSD.hough_indexing_optimize_pc()`` to control
+  particle swarm optimization (PSO). These are passed on to the new PSO algorithm in
+  PyEBSDIndex v0.2. (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Allow getting one projection center (PC) per pattern when optimizing PCs using the new
+  particle swarm optimization in PyEBSDIndex v0.2 (passing ``batch=True``).
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
 
 Changed
 -------
@@ -28,8 +40,13 @@ Changed
   internally to set the default color to white anymore, but uses ``fc`` (facecolor)
   instead. This change was necessary to improve handling of other keyword arguments.
   (`#643 <https://github.com/pyxem/kikuchipy/pull/643>`_)
-- Increase minimal versions of diffsims, NumPy, and Matplotlib to 0.5.1, 1.21.6, and
-  3.5 respectively. (`#645 <https://github.com/pyxem/kikuchipy/pull/645>`_)
+- Increase minimal versions of diffsims, NumPy, Matplotlib, and PyEBSDIndex to 0.5.1,
+  1.21.6, 3.5, and 0.2, respectively.
+  (`#646 <https://github.com/pyxem/kikuchipy/pull/646>`_,
+  `#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Remove dependency on panel for documentation, and with that interactive 3D
+  visualization of master patterns in the documentation (the hope is to reintroduce it
+  with trame at some point). (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
 
 Deprecated
 ----------
@@ -43,9 +60,9 @@ Removed
 
 Fixed
 -----
-
-Security
---------
+- Conversion from EDAX TSL projection center (PC) convention for (PCy, PCz) for
+  rectangular detectors is corrected.
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
 
 0.8.7 (2023-07-24)
 ==================

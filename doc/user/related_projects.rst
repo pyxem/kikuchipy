@@ -25,7 +25,7 @@ EBSD data that users of kikuchipy might find useful:
   Electron Channelling Contrast Imaging (ECCI) analysis of crystal defects in an SEM.
 - `MTEX <https://mtex-toolbox.github.io/>`__: MATLAB toolbox for analyzing and modeling
   crystallographic textures by means of EBSD or pole figure data.
-- `Dream.3D <http://dream3d.bluequartz.net/>`__: C++ library to reconstruct, instatiate,
+- `DREAM.3D <http://dream3d.bluequartz.net/>`__: C++ library to reconstruct, instatiate,
   quantify, mesh, handle, and visualize multidimensional (3D), multimodal data (mainly
   EBSD orientation data).
 - `AstroEBSD <https://github.com/benjaminbritton/AstroEBSD>`__: MATLAB package with

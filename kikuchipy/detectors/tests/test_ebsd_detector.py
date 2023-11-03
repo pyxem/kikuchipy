@@ -265,8 +265,8 @@ class TestEBSDDetector:
         ],
     )
     def test_set_pc_from_emsoft(self, shape, pc, px_size, binning, version, desired_pc):
-        """PC EMsoft -> Bruker -> EMsoft, also checking to_tsl() and
-        to_bruker().
+        """PC EMsoft -> Bruker -> EMsoft, also checking to_tsl(),
+        to_oxford(), and to_bruker().
         """
         det = kp.detectors.EBSDDetector(
             shape=shape,
@@ -280,11 +280,17 @@ class TestEBSDDetector:
         assert np.allclose(det.pc_emsoft(version=version), pc, atol=1e-5)
         assert np.allclose(det.pc_bruker(), desired_pc, atol=1e-5)
 
+        # EDAX
         pc_tsl = deepcopy(det.pc)
         pc_tsl[..., 1] = 1 - pc_tsl[..., 1]
-        pc_tsl[..., 1:] /= det.aspect_ratio
+        pc_tsl[..., 2] /= min([det.nrows, det.ncols]) / det.nrows
         assert np.allclose(det.pc_tsl(), pc_tsl, atol=1e-5)
-        assert np.allclose(det.pc_oxford(), pc_tsl, atol=1e-5)
+
+        # Oxford
+        pc_oxford = deepcopy(det.pc)
+        pc_oxford[..., 1] = 1 - pc_oxford[..., 1]
+        pc_oxford[..., 1:] /= det.aspect_ratio
+        assert np.allclose(det.pc_oxford(), pc_oxford, atol=1e-5)
 
     def test_set_pc_from_emsoft_no_version(self):
         """PC EMsoft -> Bruker, no EMsoft version specified gives v5."""
@@ -304,22 +310,40 @@ class TestEBSDDetector:
         "shape, pc, convention, desired_pc",
         [
             ((60, 60), [0.35, 1, 0.65], "tsl", [0.35, 0, 0.65]),
-            ((60, 80), [0.35, 1, 0.65], "tsl", [0.35, -0.33, 0.87]),
-            ((60, 60), [0.25, 0, 0.75], "oxford", [0.25, 1, 0.75]),
-            ((60, 80), [0.25, 0, 0.75], "oxford", [0.25, 1, 1]),
+            ((60, 80), [0.35, 1, 0.65], "tsl", [0.35, 0, 0.65]),
             ((60, 60), [0.1, 0.2, 0.3], "amatek", [0.1, 0.8, 0.3]),
-            ((60, 80), [0.1, 0.2, 0.3], "amatek", [0.1, 0.73, 0.4]),
+            ((60, 80), [0.1, 0.2, 0.3], "amatek", [0.1, 0.8, 0.3]),
             ((60, 60), [0.6, 0.6, 0.6], "edax", [0.6, 0.4, 0.6]),
-            ((60, 80), [0.6, 0.6, 0.6], "edax", [0.6, 0.2, 0.8]),
+            ((60, 80), [0.6, 0.6, 0.6], "edax", [0.6, 0.4, 0.6]),
         ],
     )
-    def test_set_pc_from_tsl_oxford(self, shape, pc, convention, desired_pc):
+    def test_set_pc_from_tsl(self, shape, pc, convention, desired_pc):
         """PC TSL -> Bruker -> TSL."""
         det = kp.detectors.EBSDDetector(shape=shape, pc=pc, convention=convention)
         assert np.allclose(det.pc, desired_pc, atol=1e-2)
         assert np.allclose(det.pc_tsl(), pc, atol=1e-3)
         assert np.allclose(
             kp.detectors.EBSDDetector(pc=det.pc_tsl(), convention="tsl").pc_tsl(),
+            pc,
+            atol=1e-2,
+        )
+
+    @pytest.mark.parametrize(
+        "shape, pc, desired_pc",
+        [
+            ((60, 60), [0.25, 0, 0.75], [0.25, 1, 0.75]),
+            ((60, 80), [0.25, 0, 0.75], [0.25, 1, 1]),
+        ],
+    )
+    def test_set_pc_from_oxford(self, shape, pc, desired_pc):
+        """PC Oxford -> Bruker -> Oxford."""
+        det = kp.detectors.EBSDDetector(shape=shape, pc=pc, convention="oxford")
+        assert np.allclose(det.pc, desired_pc, atol=1e-2)
+        assert np.allclose(det.pc_oxford(), pc, atol=1e-3)
+        assert np.allclose(
+            kp.detectors.EBSDDetector(
+                pc=det.pc_oxford(), convention="oxford"
+            ).pc_oxford(),
             pc,
             atol=1e-2,
         )
@@ -1028,47 +1052,34 @@ class TestGetIndexer:
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
     )
     def test_get_indexer_invalid_phase_lists(self):
-        # More than two phases
-        with pytest.raises(ValueError, match="Hough indexing only supports indexing "):
-            _ = self.det.get_indexer(
-                PhaseList(names=["a", "b", "c"], space_groups=[225, 227, 229])
-            )
-
         # Not all phases have space groups
         pl = PhaseList(names=["a", "b"], point_groups=["m-3m", "432"])
         pl["a"].space_group = 225
         with pytest.raises(ValueError, match="Space group for each phase must be set,"):
             _ = self.det.get_indexer(pl)
 
-        # Not FCC or BCC
-        with pytest.raises(ValueError, match="Hough indexing only supports indexing "):
-            _ = self.det.get_indexer(PhaseList(names="sic", space_groups=186))
-
     @pytest.mark.skipif(
         not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
     )
     def test_get_indexer(self):
-        indexer1 = self.det.get_indexer(
-            PhaseList(names=["a", "b"], space_groups=[225, 229]), nBands=6
-        )
-        assert indexer1.vendor == "KIKUCHIPY"
-        assert np.isclose(indexer1.sampleTilt, self.det.sample_tilt)
-        assert np.isclose(indexer1.camElev, self.det.tilt)
-        assert tuple(indexer1.bandDetectPlan.patDim) == self.det.shape
-        assert indexer1.bandDetectPlan.nBands == 6
-        assert np.allclose(indexer1.PC, self.det.pc_flattened)
-        assert indexer1.phaselist == ["FCC", "BCC"]
+        # fmt: off
+        #               -1  2/m  222   -3   -3m   4/m   4/mmm   6/m  6/mmm    m-3  m-3m
+        space_groups = [ 1,  15,  74,  75,  142,  143,    167,  168,   194,   195,  207]
+        laue_codes =   [ 1,   2,  22,   4,   42,    3,     32,    6,    62,    23,   43]
+        # fmt: on
+        names = "abcdefghijk"
 
-        indexer2 = self.det.get_indexer(PhaseList(names="a", space_groups=225))
-        assert indexer2.phaselist == ["FCC"]
-
-        indexer3 = self.det.get_indexer(PhaseList(names="a", space_groups=220))
-        assert indexer3.phaselist == ["BCC"]
-
-        indexer4 = self.det.get_indexer(
-            PhaseList(names=["a", "b"], space_groups=[220, 225])
-        )
-        assert indexer4.phaselist == ["BCC", "FCC"]
+        pl = PhaseList(names=list(names), space_groups=space_groups)
+        indexer = self.det.get_indexer(pl, nBands=6)
+        assert indexer.vendor == "KIKUCHIPY"
+        assert np.isclose(indexer.sampleTilt, self.det.sample_tilt)
+        assert np.isclose(indexer.camElev, self.det.tilt)
+        assert tuple(indexer.bandDetectPlan.patDim) == self.det.shape
+        assert indexer.bandDetectPlan.nBands == 6
+        assert np.allclose(indexer.PC, self.det.pc_flattened)
+        for phase, sg, code in zip(indexer.phaselist, pl.space_groups, laue_codes):
+            assert phase.spacegroup == sg.number
+            assert phase.lauecode == code
 
 
 class TestSaveLoadDetector:
@@ -1078,6 +1089,7 @@ class TestSaveLoadDetector:
             ((3, 4), (10, 20), "bruker", 70, 0, 70, 1, 0),
             ((1, 5), (5, 5), "tsl", 69.5, 3.14, 57.2, 2, 3.7),
             ((4, 3), (6, 7), "emsoft", -69.5, -3.14, 57.2, 2, -3.7),
+            ((3, 2), (5, 7), "oxford", 71.3, 1.2, 90.3, 3, 0.1),
         ],
     )
     def test_save_load_detector(

@@ -92,10 +92,12 @@ Here are some tips for writing tutorial notebooks:
 
   Please see the :doc:`black documentation <black:index>` for more details.
 - Displaying interactive 3D plots with :doc:`PyVista <pyvista:index>` requires a Jupyter
-  backend, and we use :doc:`panel <panel:index>`.
-  This can either be passed to the plotting function, or it can be set in a hidden (see
-  point above) notebook cell at the top of the notebook via
-  ``pyvista.set_jupyter_backend("panel")``.
+  backend.
+  We previously used ``panel``, which PyVista does not support anymore.
+  Instead, they recommend using ``trame``, but this does not work with ``nbsphinx`` yet.
+  Thus, the previously interactive 3D plots are now static.
+  The Jupyter backend used by PyVista can be set in a notebook cell at the top of the
+  notebook via ``pyvista.set_jupyter_backend("static")``.
 
 In general, we run all notebooks every time the documentation is built with Sphinx, to
 ensure that all notebooks are compatible with the current API at all times.

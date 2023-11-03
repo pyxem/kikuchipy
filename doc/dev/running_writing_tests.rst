@@ -9,7 +9,7 @@ Install necessary dependencies to run the tests::
 
     pip install --editable .[tests]
 
-Some useful :doc:`fixtures <pytest:explanation/fixtures>`, like a dummy scan and
+Some useful :doc:`fixtures <pytest:explanation/fixtures>`, like a dummy EBSD scan and the
 corresponding background pattern, are available in the ``conftest.py`` file.
 
 .. note::
@@ -33,18 +33,30 @@ For an even nicer presentation, you can use ``coverage.py`` directly::
 Then, you can open the created ``htmlcov/index.html`` in the browser and inspect the
 coverage in more detail.
 
-To run only a specific test function or class, .e.g the ``TestEBSD`` class::
+We can run tests in parallel on four CPUs using pytest-xdist::
+
+    pytest -n 4
+
+To run only a specific test function or class, e.g. the ``TestEBSD`` class::
 
     pytest -k TestEBSD
 
-This is useful when you only want to run a specific test and not the full test suite,
-e.g. when you're creating or updating a test.
-But remember to run the full test suite before pushing!
+This is useful when we only want to run a specific test and not the full test suite,
+e.g. when we're creating or updating a test.
+We have to remember to run the full test suite before pushing, though!
+
+We can automatically rerun so-called flaky tests (tests yielding both passing and
+failing results without code changes) using the pytest plugin pytest-rerunfailures::
+
+    pytest --reruns 2
 
 Docstring examples are tested :doc:`with pytest <pytest:how-to/doctest>` as well.
 If you're in the top directory you can run::
 
     pytest --doctest-modules --ignore-glob=kikuchipy/*/tests kikuchipy/*.py
+
+Functionality using Numba
+-------------------------
 
 Tips for writing tests of Numba decorated functions:
 
@@ -55,3 +67,15 @@ Tips for writing tests of Numba decorated functions:
   results on different OS with the same Python code.
   See this issue https://github.com/pyxem/kikuchipy/issues/496 for a case where this
   happened.
+
+Functionality using multiprocessing
+-----------------------------------
+
+Some functionality may run in parallel using :mod:`multiprocessing`, such as
+:func:`pyebsdindex.pcopt.optimize_pso` which is used in
+:meth:`~kikuchipy.signals.ebsd.hough_indexing_optimize_pc`.
+A test of this functionality may hang when run in a parallel test run using
+:mod:`pytest-xdist`.
+To ensure the multiprocessing-part only runs when pytest-xdist is not used, we can
+ensure that the value of the ``worker_id`` fixture provided by pytest-xdist is
+``"master"``.
