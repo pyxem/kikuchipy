@@ -47,6 +47,9 @@ Changed
 - Remove dependency on panel for documentation, and with that interactive 3D
   visualization of master patterns in the documentation (the hope is to reintroduce it
   with trame at some point). (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Restrict HyperSpy to below the forthcoming version 2. The plan is to remove this
+  restriction once kikuchipy is compatible with this version.
+  (`#657 <https://github.com/pyxem/kikuchipy/pull/657>`_)
 
 Deprecated
 ----------
