@@ -200,9 +200,6 @@ class TestImport:
             "nickel_ebsd_small",
             "si_ebsd_moving_screen",
             "si_wafer",
-            "silicon_ebsd_moving_screen_in",
-            "silicon_ebsd_moving_screen_out10mm",
-            "silicon_ebsd_moving_screen_out5mm",
         ]
 
     def test_dir_detectors(self):

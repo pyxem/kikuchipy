@@ -117,45 +117,6 @@ class TestData:
         assert s.data.shape == (55, 75, 60, 60)
         assert np.issubdtype(s.data.dtype, np.uint8)
 
-    # TODO: Remove test after 0.8 is released
-    def test_load_si_ebsd_moving_screen_in(self):
-        """Download external Si pattern."""
-        with pytest.warns(
-            np.VisibleDeprecationWarning,
-            match=r"Function `silicon_ebsd_moving_screen_in\(\)` is deprecated and ",
-        ):
-            s = kp.data.silicon_ebsd_moving_screen_in(allow_download=True)
-
-        assert s.data.shape == (480, 480)
-        assert s.data.dtype == np.uint8
-        assert isinstance(s.static_background, np.ndarray)
-
-    # TODO: Remove test after 0.8 is released
-    def test_load_si_ebsd_moving_screen_out5mm(self):
-        """Download external Si pattern."""
-        with pytest.warns(
-            np.VisibleDeprecationWarning,
-            match=r"Function `silicon_ebsd_moving_screen_out5mm\(\)` is deprecated ",
-        ):
-            s = kp.data.silicon_ebsd_moving_screen_out5mm(allow_download=True)
-
-        assert s.data.shape == (480, 480)
-        assert s.data.dtype == np.uint8
-        assert isinstance(s.static_background, np.ndarray)
-
-    # TODO: Remove test after 0.8 is released
-    def test_load_si_ebsd_moving_screen_out10mm(self):
-        """Download external Si pattern."""
-        with pytest.warns(
-            np.VisibleDeprecationWarning,
-            match=r"Function `silicon_ebsd_moving_screen_out10mm\(\)` is deprecated ",
-        ):
-            s = kp.data.silicon_ebsd_moving_screen_out10mm(allow_download=True)
-
-        assert s.data.shape == (480, 480)
-        assert s.data.dtype == np.uint8
-        assert isinstance(s.static_background, np.ndarray)
-
     def test_load_si_ebsd_moving_screen(self):
         """Download external Si pattern."""
         s = kp.data.si_ebsd_moving_screen(allow_download=True)
@@ -163,8 +124,8 @@ class TestData:
         assert s.data.dtype == np.uint8
         assert isinstance(s.static_background, np.ndarray)
 
-        _ = kp.data.si_ebsd_moving_screen(5)
-        _ = kp.data.si_ebsd_moving_screen(10)
+        _ = kp.data.si_ebsd_moving_screen(5, allow_download=True)
+        _ = kp.data.si_ebsd_moving_screen(10, allow_download=True)
 
     def test_si_wafer(self):
         """Test set up of Si wafer dataset (without downloading)."""
