@@ -153,7 +153,7 @@ setup(
         "dask[array]        >= 2021.8.1",
         "diffpy.structure   >= 3",
         "diffsims           >= 0.5.1",
-        "hyperspy           >= 1.7.3",
+        "hyperspy           >= 1.7.3, < 2",
         "h5py               >= 2.10",
         "imageio",
         "matplotlib         >= 3.5",
