@@ -27,9 +27,9 @@ credits = [
     "Ole Natlandsmyr",
     "Tina Bergh",
     "Eric Prestat",
+    "Andreas V. Bugten",
     "Erlend Mikkelsen Østvold",
     "Zhou Xu",
-    "Andreas V. Bugten",
     "Carter Francis",
     "Magnus Nord",
 ]
