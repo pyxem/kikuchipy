@@ -27,9 +27,9 @@ credits = [
     "Ole Natlandsmyr",
     "Tina Bergh",
     "Eric Prestat",
+    "Andreas V. Bugten",
     "Erlend Mikkelsen Østvold",
     "Zhou Xu",
-    "Andreas V. Bugten",
     "Carter Francis",
     "Magnus Nord",
 ]
@@ -39,4 +39,4 @@ maintainer_email = "hakon.w.anes@ntnu.no"
 name = "kikuchipy"
 platforms = ["Linux", "MacOS X", "Windows"]
 status = "Development"
-version = "0.9.dev0"
+version = "0.10.dev0"
