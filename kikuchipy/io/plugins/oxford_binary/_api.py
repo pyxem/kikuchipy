@@ -15,13 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Reader of uncompressed EBSD patterns from a Oxford Instruments binary
-.ebsp file.
-
-Information about the file format was generously provided by Oxford
-Instruments.
-"""
-
 import logging
 import os
 from pathlib import Path
@@ -35,21 +28,7 @@ import numpy as np
 from kikuchipy.signals.util._dask import get_chunking
 
 
-__all__ = ["file_reader"]
-
-
 _logger = logging.getLogger(__name__)
-
-# Plugin characteristics
-# ----------------------
-format_name = "Oxford binary"
-description = "Read support for Oxford Instruments' binary .ebsp file."
-full_support = False
-# Recognised file extension
-file_extensions = ["ebsp"]
-default_extension = 0
-# Writing capabilities (signal dimensions, navigation dimensions)
-writes = False
 
 
 def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:

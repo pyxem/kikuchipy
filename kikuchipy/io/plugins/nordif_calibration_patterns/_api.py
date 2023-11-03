@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Reader of EBSD calibration patterns from NORDIF files."""
-
 import os
 from pathlib import Path
 from typing import List, Tuple, Union
@@ -26,22 +24,7 @@ from matplotlib.pyplot import imread
 import numpy as np
 
 from kikuchipy.detectors import EBSDDetector
-from kikuchipy.io.plugins.nordif import _get_settings_from_file
-
-
-__all__ = ["file_reader"]
-
-
-# Plugin characteristics
-# ----------------------
-format_name = "NORDIF calibration patterns"
-description = "Read support for NORDIF's calibration patterns"
-full_support = False
-# Recognised file extension
-file_extensions = ["txt"]
-default_extension = 0
-# Writing capabilities (signal dimensions, navigation dimensions)
-writes = False
+from kikuchipy.io.plugins.nordif.nordif import _get_settings_from_file
 
 
 def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:

@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Reader of simulated EBSD patterns from an EMsoft HDF5 file."""
-
 import os
 from pathlib import Path
 from typing import List, Tuple, Union
@@ -31,24 +29,6 @@ from orix.quaternion import Rotation
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
 
-
-__all__ = ["file_reader"]
-
-
-# Plugin characteristics
-# ----------------------
-format_name = "emsoft_ebsd"
-description = (
-    "Read support for dynamically simulated electron backscatter "
-    "diffraction patterns stored in EMsoft's HDF5 file format produced "
-    "by their EMEBSD.f90 program."
-)
-full_support = False
-# Recognised file extension
-file_extensions = ["h5", "hdf5"]
-default_extension = 0
-# Writing capabilities
-writes = False
 
 # Unique HDF5 footprint
 footprint = ["emdata/ebsd/ebsdpatterns"]

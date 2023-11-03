@@ -15,19 +15,17 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Reader and writer of EBSD data from a kikuchipy h5ebsd file."""
-
 import os
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 import warnings
 
 import h5py
-from hyperspy.io_plugins.hspy import overwrite_dataset
 import numpy as np
 from orix.crystal_map import CrystalMap
 from orix.io.plugins.orix_hdf5 import crystalmap2dict, dict2crystalmap
 from orix import __version__ as orix_version
+from rsciio.hspy._api import overwrite_dataset
 
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group, _hdf5group2dict, H5EBSDReader
@@ -35,27 +33,6 @@ from kikuchipy.io._util import _get_input_variable
 from kikuchipy.release import version as kikuchipy_version
 from kikuchipy.signals.util._crystal_map import _xmap_is_compatible_with_signal
 
-
-__all__ = ["file_reader", "file_writer"]
-
-
-# Plugin characteristics
-# ----------------------
-format_name = "kikuchipy_h5ebsd"
-description = (
-    "Read/write support for electron backscatter diffraction patterns "
-    "stored in an HDF5 file formatted in kikuchipy's h5ebsd format, "
-    "similar to the format described in Jackson et al.: h5ebsd: an "
-    "archival data format for electron back-scatter diffraction data "
-    "sets. Integrating Materials and Manufacturing Innovation 2014 3:4,"
-    " doi: https://dx.doi.org/10.1186/2193-9772-3-4."
-)
-full_support = True
-# Recognised file extension
-file_extensions = ["h5", "hdf5", "h5ebsd"]
-default_extension = 1
-# Writing capabilities (signal dimensions, navigation dimensions)
-writes = [(2, 2), (2, 1), (2, 0)]
 
 # Unique HDF5 footprint
 footprint = ["manufacturer", "version"]

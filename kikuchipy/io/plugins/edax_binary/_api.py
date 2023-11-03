@@ -15,11 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Reader of EBSD data from EDAX TSL UP1/2 files.
-
-The reader is adapted from the EDAX UP1/2 reader in PyEBSDIndex.
-"""
-
 from pathlib import Path
 from typing import BinaryIO, Dict, List, Optional, Tuple, Union
 import warnings
@@ -28,25 +23,6 @@ import dask.array as da
 import numpy as np
 
 from kikuchipy.signals.util import get_chunking
-
-
-__all__ = ["file_reader"]
-
-
-# Plugin characteristics
-# ----------------------
-format_name = "EDAX binary"
-description = (
-    "Read support for electron backscatter diffraction patterns stored "
-    "in a binary EDAX TSL's UP1/UP2 file extension '.up1' or '.up2'. "
-    "The reader is adapted from the EDAX UP1/2 reader in PyEBSDIndex."
-)
-full_support = False
-# Recognised file extension
-file_extensions = ["up1", "up2"]
-default_extension = 0
-# Writing capabilities (signal dimensions, navigation dimensions)
-writes = False
 
 
 def file_reader(

@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Reader and writer of EBSD patterns from a NORDIF binary file."""
-
 import logging
 import os
 from pathlib import Path
@@ -31,20 +29,7 @@ from orix.crystal_map import CrystalMap
 from kikuchipy.detectors import EBSDDetector
 
 
-__all__ = ["file_reader", "file_writer"]
-
 _logger = logging.getLogger(__name__)
-
-# Plugin characteristics
-# ----------------------
-format_name = "NORDIF"
-description = "Read/write support for NORDIF pattern and setting files"
-full_support = False
-# Recognised file extension
-file_extensions = ["dat"]
-default_extension = 0
-# Writing capabilities (signal dimensions, navigation dimensions)
-writes = [(2, 2), (2, 1), (2, 0)]
 
 
 def file_reader(

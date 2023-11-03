@@ -15,10 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Reader of EBSD data from an Oxford Instruments h5ebsd (H5OINA) file.
-"""
-
-import logging
 from pathlib import Path
 from typing import List, Union
 
@@ -30,33 +26,13 @@ from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict, H5EBSDReader
 
 
-__all__ = ["file_reader"]
-
-_logger = logging.getLogger(__name__)
-
-
-# Plugin characteristics
-# ----------------------
-format_name = "oxford_h5ebsd"
-description = (
-    "Read support for electron backscatter diffraction patterns stored "
-    "in an HDF5 file formatted in Oxford Instruments' h5ebsd format, "
-    "named H5OINA. The format is similar to the format described in "
-    "Jackson et al.: h5ebsd: an archival data format for electron "
-    "back-scatter diffraction data sets. Integrating Materials and "
-    "Manufacturing Innovation 2014 3:4, doi: "
-    "https://dx.doi.org/10.1186/2193-9772-3-4."
-)
-full_support = False
-# Recognised file extension
-file_extensions = ["h5oina"]
-default_extension = 0
-# Writing capabilities (signal dimensions, navigation dimensions)
-writes = False
+# Unique HDF5 footprint
+footprint = ["manufacturer", "version"]
+manufacturer = "bruker nano"
 
 
-class OxfordH5EBSDReader(H5EBSDReader):
-    """Oxford Instruments h5ebsd (H5OINA) file reader.
+class BrukerH5EBSDReader(H5EBSDReader):
+    """Bruker Nano h5ebsd file reader.
 
     The file contents are ment to be used for initializing a
     :class:`~kikuchipy.signals.EBSD` signal.
@@ -80,47 +56,94 @@ class OxfordH5EBSDReader(H5EBSDReader):
         group
             Group with patterns.
         lazy
-            Whether to read dataset lazily (default is False).
+            Whether to read dataset lazily (default is ``False``).
 
         Returns
         -------
         scan_dict
-            Dictionary with keys "axes", "data", "metadata",
-            "original_metadata", "detector", "static_background", and
-            "xmap". This dictionary can be passed as keyword arguments
-            to create an :class:`~kikuchipy.signals.EBSD` signal.
+            Dictionary with keys ``"axes"``, ``"data"``, ``"metadata"``,
+            ``"original_metadata"``, ``"detector"``,
+            ``"static_background"``, and ``"xmap"``. This dictionary can
+             be passed as keyword arguments to create an
+             :class:`~kikuchipy.signals.EBSD` signal.
 
         Raises
         ------
         IOError
             If patterns are not acquired in a square grid.
+        KeyError
+            If patterns cannot be found in the expected dataset.
+        ValueError
+            If a non-rectangular region of interest is used.
+
+        Warns
+        -----
+        UserWarning
+            If pattern array is smaller than the data shape determined
+            from other datasets in the file.
         """
         hd = _hdf5group2dict(group["EBSD/Header"], recursive=True)
         dd = _hdf5group2dict(group["EBSD/Data"], data_dset_names=self.patterns_name)
 
-        # Get data shapes
-        ny, nx = hd["Y Cells"], hd["X Cells"]
-        sy, sx = hd["Pattern Height"], hd["Pattern Width"]
-        dy, dx = hd.get("Y Step", 1), hd.get("X Step", 1)
-        px_size = 1.0
+        # Ensure file can be read
+        grid_type = hd.get("Grid Type")
+        if grid_type != "isometric":
+            raise IOError(f"Only square grids are supported, not {grid_type}")
+
+        # Get region of interest (ROI, only rectangular shape supported)
+        indices = None
+        roi = False
+        try:
+            sd = _hdf5group2dict(group["EBSD/SEM"])
+            iy = sd["IY"][()]
+            ix = sd["IX"][()]
+            roi = True
+        except KeyError:
+            ny = hd["NROWS"]
+            nx = hd["NCOLS"]
+        if roi:
+            ny_roi, nx_roi, is_rectangular = _bruker_roi_is_rectangular(iy, ix)
+            if is_rectangular:
+                ny = ny_roi
+                nx = nx_roi
+                # Get indices of patterns in the 2D map
+                idx = np.array([iy - iy.min(), ix - ix.min()])
+                indices = np.ravel_multi_index(idx, (ny, nx)).argsort()
+            else:
+                raise ValueError("Only a rectangular region of interest is supported")
+
+        # Get other data shapes
+        sy, sx = hd["PatternHeight"], hd["PatternWidth"]
+        dy, dx = hd["YSTEP"], hd["XSTEP"]
+        px_size = hd.get("DetectorFullHeightMicrons", 1) / hd.get(
+            "UnClippedPatternHeight", 1
+        )
 
         # --- Metadata
         fname, title = self.get_metadata_filename_title(group.name)
         metadata = {
             "Acquisition_instrument": {
                 "SEM": {
-                    "beam_energy": hd.get("Beam Voltage"),
+                    "beam_energy": hd.get("KV"),
                     "magnification": hd.get("Magnification"),
-                    "working_distance": hd.get("Working Distance"),
+                    "working_distance": hd.get("WD"),
                 },
             },
-            "General": {"original_filename": fname, "title": title},
+            "General": {
+                "original_filename": hd.get("OriginalFile", fname),
+                "title": title,
+            },
             "Signal": {"signal_type": "EBSD", "record_by": "image"},
         }
         scan_dict = {"metadata": metadata}
 
         # --- Data
-        data = self.get_data(group, data_shape=(ny, nx, sy, sx), lazy=lazy)
+        data = self.get_data(
+            group,
+            data_shape=(ny, nx, sy, sx),
+            lazy=lazy,
+            indices=indices,
+        )
         scan_dict["data"] = data
 
         # --- Axes
@@ -134,43 +157,42 @@ class OxfordH5EBSDReader(H5EBSDReader):
         scan_dict["original_metadata"].update(hd)
 
         # --- Crystal map
-        # TODO: Implement reader of Oxford Instruments h5ebsd crystal
-        #  maps in orix
+        # TODO: Use reader from orix
         xmap = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
         scan_dict["xmap"] = xmap
 
         # --- Static background
-        scan_dict["static_background"] = hd.get("Processed Static Background")
+        scan_dict["static_background"] = hd.get("StaticBackground")
 
         # --- Detector
         pc = np.column_stack(
-            (
-                dd.get("Pattern Center X", 0.5),
-                dd.get("Pattern Center Y", 0.5),
-                dd.get("Detector Distance", 0.5),
-            )
+            (dd.get("PCX", 0.5), dd.get("PCY", 0.5), dd.get("DD", 0.5))
         )
         if pc.size > 3:
             pc = pc.reshape((ny, nx, 3))
-        detector_kw = dict(
+        scan_dict["detector"] = EBSDDetector(
             shape=(sy, sx),
+            px_size=px_size,
+            tilt=hd.get("CameraTilt", 0),
+            sample_tilt=hd.get("Sample Tilt", 70),
             pc=pc,
-            sample_tilt=np.rad2deg(hd.get("Tilt Angle", np.deg2rad(70))),
-            convention="oxford",
         )
-        detector_tilt_euler = hd.get("Detector Orientation Euler")
-        try:
-            detector_kw["tilt"] = np.rad2deg(detector_tilt_euler[1]) - 90
-        except (IndexError, TypeError):  # pragma: no cover
-            _logger.debug("Could not read detector tilt")
-        binning_str = hd.get("Camera Binning Mode")
-        try:
-            detector_kw["binning"] = int(binning_str.split("x")[0])
-        except (IndexError, ValueError):  # pragma: no cover
-            _logger.debug("Could not read detector binning")
-        scan_dict["detector"] = EBSDDetector(**detector_kw)
 
         return scan_dict
+
+
+def _bruker_roi_is_rectangular(iy, ix):
+    iy_unique, iy_unique_counts = np.unique(iy, return_counts=True)
+    ix_unique, ix_unique_counts = np.unique(ix, return_counts=True)
+    is_rectangular = (
+        np.all(np.diff(np.sort(iy_unique)) == 1)
+        and np.all(np.diff(np.sort(ix_unique)) == 1)
+        and np.unique(iy_unique_counts).size == 1
+        and np.unique(ix_unique_counts).size == 1
+    )
+    iy2 = np.max(iy) - np.min(iy) + 1
+    ix2 = np.max(ix) - np.min(ix) + 1
+    return iy2, ix2, is_rectangular
 
 
 def file_reader(
@@ -180,10 +202,10 @@ def file_reader(
     **kwargs,
 ) -> List[dict]:
     """Read electron backscatter diffraction patterns, a crystal map,
-    and an EBSD detector from an Oxford Instruments h5ebsd (H5OINA) file
+    and an EBSD detector from a Bruker h5ebsd file
     :cite:`jackson2014h5ebsd`.
 
-    Not meant to be used directly; use :func:`~kikuchipy.load`.
+    Not ment to be used directly; use :func:`~kikuchipy.load`.
 
     Parameters
     ----------
@@ -196,17 +218,18 @@ def file_reader(
     lazy
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
-        is False.
+        is ``False``.
     **kwargs
         Keyword arguments passed to :class:`h5py.File`.
 
     Returns
     -------
     scan_dict_list
-        List of one or more dictionaries with the keys "axes", "data",
-        "metadata", "original_metadata", "detector", and "xmap". This
+        List of one or more dictionaries with the keys ``"axes"``,
+        ``"data"``, ``"metadata"``, ``"original_metadata"``,
+        ``"detector"``, ``"static_background"``, and ``"xmap"``. This
         dictionary can be passed as keyword arguments to create an
         :class:`~kikuchipy.signals.EBSD` signal.
     """
-    reader = OxfordH5EBSDReader(filename, **kwargs)
+    reader = BrukerH5EBSDReader(filename, **kwargs)
     return reader.read(scan_group_names, lazy)

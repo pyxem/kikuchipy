@@ -32,32 +32,64 @@ Added
 - Allow getting one projection center (PC) per pattern when optimizing PCs using the new
   particle swarm optimization in PyEBSDIndex v0.2 (passing ``batch=True``).
   (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Dependency on RosettaSciIO 0.1 for read/write support previously imported from
+  HyperSpy. (`#651 <https://github.com/pyxem/kikuchipy/pull/651>`_)
 
 Changed
 -------
-- ``zone_axes_kwargs`` parameter in
-  ``GeometricalKikuchiPatternSimulation.as_collections()`` does not use ``color``
-  internally to set the default color to white anymore, but uses ``fc`` (facecolor)
-  instead. This change was necessary to improve handling of other keyword arguments.
-  (`#643 <https://github.com/pyxem/kikuchipy/pull/643>`_)
-- Increase minimal versions of diffsims, NumPy, Matplotlib, and PyEBSDIndex to 0.5.1,
-  1.21.6, 3.5, and 0.2, respectively.
-  (`#646 <https://github.com/pyxem/kikuchipy/pull/646>`_,
-  `#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
-- Remove dependency on panel for documentation, and with that interactive 3D
-  visualization of master patterns in the documentation (the hope is to reintroduce it
-  with trame at some point). (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
-- Restrict HyperSpy to below the forthcoming version 2. The plan is to remove this
-  restriction once kikuchipy is compatible with this version.
-  (`#657 <https://github.com/pyxem/kikuchipy/pull/657>`_)
 
 Deprecated
 ----------
 
 Removed
 -------
-- Removed ``generators`` and ``projections`` modules which were deprecated in version
-  0.8. (`#612 <https://github.com/pyxem/kikuchipy/pull/612>`_)
+
+Fixed
+-----
+
+0.9.0 (2023-11-03)
+==================
+
+Added
+-----
+- Explicit support for Python 3.11.
+  (`#646 <https://github.com/pyxem/kikuchipy/pull/646>`_)
+- Allow Hough indexing of all Laue groups with PyEBSDIndex v0.2 (not just *m-3m*, i.e.
+  FCC and BCC). (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Control of reflector lists in Hough indexing. One reflector list per phase in the
+  phase list can be passed to ``EBSDDetector.get_indexer()`` to obtain an
+  ``EBSDIndexer`` for use in ``EBSD.hough_indexing()``.
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Allow passing keyword arguments to ``EBSD.hough_indexing_optimize_pc()`` to control
+  the new particle swarm optimization algorithm in PyEBSDIndex v0.2.
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Allow getting one projection center (PC) per pattern when optimizing PCs using the new
+  particle swarm optimization in PyEBSDIndex v0.2 (passing ``batch=True``).
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+
+Changed
+-------
+- Parameter ``zone_axes_kwargs`` in
+  ``GeometricalKikuchiPatternSimulation.as_collections()`` does not accept ``color``
+  internally to set the default color to white anymore. It accepts ``fc`` (facecolor)
+  instead. This change was necessary to improve handling of other keyword arguments.
+  (`#643 <https://github.com/pyxem/kikuchipy/pull/643>`_)
+- Increase minimal versions of diffsims, NumPy, Matplotlib, and PyEBSDIndex to 0.5.1,
+  1.21.6, 3.5, and 0.2, respectively.
+  (`#646 <https://github.com/pyxem/kikuchipy/pull/646>`_,
+  `#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Remove dependency on Panel for documentation, and with that the interactive 3D
+  visualization of master patterns in the documentation. The plan is to reintroduce the
+  interactive plots with trame later on.
+  (`#652 <https://github.com/pyxem/kikuchipy/pull/652>`_)
+- Restrict HyperSpy to below the forthcoming version 2. The plan is to remove this
+  restriction once kikuchipy is compatible with this version.
+  (`#657 <https://github.com/pyxem/kikuchipy/pull/657>`_)
+
+Removed
+-------
+- ``generators`` and ``projections`` modules which were deprecated in version 0.8.
+  (`#612 <https://github.com/pyxem/kikuchipy/pull/612>`_)
 - The deprecated PyPI selector ``viz`` is removed.
   (`#643 <https://github.com/pyxem/kikuchipy/pull/643>`_)
 - The data module functions ``silicon_ebsd_moving_screen_x()``, where "x" is "in",

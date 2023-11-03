@@ -162,6 +162,7 @@ setup(
         "orix               >= 0.11.1",
         "pooch              >= 1.3.0",
         "pyyaml",
+        "rosettasciio",
         "tqdm               >= 0.5.2",
         "scikit-image       >= 0.16.2",
         "scikit-learn",
