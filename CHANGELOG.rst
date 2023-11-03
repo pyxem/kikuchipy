@@ -57,6 +57,9 @@ Removed
   0.8. (`#612 <https://github.com/pyxem/kikuchipy/pull/612>`_)
 - The deprecated PyPI selector ``viz`` is removed.
   (`#643 <https://github.com/pyxem/kikuchipy/pull/643>`_)
+- The data module functions ``silicon_ebsd_moving_screen_x()``, where "x" is "in",
+  "out5mm" or "out10mm". They were deprecated in version 0.8.
+  (`#656 <https://github.com/pyxem/kikuchipy/pull/656>`_)
 
 Fixed
 -----
