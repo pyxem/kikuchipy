@@ -25,14 +25,12 @@ from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.data import nickel_ebsd_small
 from kikuchipy.conftest import assert_dictionary
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
 from kikuchipy.io.plugins.kikuchipy_h5ebsd._api import (
     KikuchipyH5EBSDReader,
     KikuchipyH5EBSDWriter,
 )
-from kikuchipy.signals.ebsd import EBSD
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -101,8 +99,8 @@ class TestKikuchipyH5EBSD:
         assert xmap2.size == xmap1.size
         assert xmap2.phases[0].point_group.name == pg
 
-    def test_load_manufacturer(self, save_path_hdf5):
-        s = EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
+    def test_load_unrecognizable_manufacturer(self, save_path_hdf5):
+        s = kp.signals.EBSD((255 * np.random.rand(2, 3, 4, 4)).astype(np.uint8))
         s.save(save_path_hdf5)
 
         # Change manufacturer
@@ -114,10 +112,10 @@ class TestKikuchipyH5EBSD:
             OSError,
             match="(.*) is not a supported h5ebsd file, as 'nope' is not among ",
         ):
-            _ = kp.load(save_path_hdf5)
+            _ = KikuchipyH5EBSDReader(str(save_path_hdf5))
 
     def test_read_patterns(self, save_path_hdf5):
-        s = EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
+        s = kp.signals.EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
         s.save(save_path_hdf5)
         with File(save_path_hdf5, mode="r+") as f:
             del f["Scan 1/EBSD/Data/patterns"]
@@ -178,7 +176,7 @@ class TestKikuchipyH5EBSD:
         s_reload.set_signal_type("EBSD")
 
         # Check signal type, patterns and learning results
-        assert isinstance(s_reload, EBSD)
+        assert isinstance(s_reload, kp.signals.EBSD)
         assert np.allclose(s.data, s_reload.data)
         assert np.allclose(
             s.learning_results.factors, s_reload.learning_results.factors
@@ -249,7 +247,7 @@ class TestKikuchipyH5EBSD:
         scan_size = (10, 3)
         pattern_size = (5, 5)
         data_shape = scan_size + pattern_size
-        s = EBSD((255 * np.random.rand(*data_shape)).astype(np.uint8))
+        s = kp.signals.EBSD((255 * np.random.rand(*data_shape)).astype(np.uint8))
         s.save(save_path_hdf5, overwrite=True)
         s_reload = kp.load(save_path_hdf5)
         np.testing.assert_equal(s.data, s_reload.data)
@@ -291,7 +289,7 @@ class TestKikuchipyH5EBSD:
         """Save-load cycle of signals with one navigation dimension."""
         desired_shape = (3, 60, 60)
         desired_nav_extent = (0, 3)
-        s = nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
 
         # One column of patterns
         s_y_only = s.inav[0]
@@ -326,7 +324,7 @@ class TestKikuchipyH5EBSD:
 
     def test_save_load_0d_nav(self, save_path_hdf5):
         """Save-load cycle of a signal with no navigation dimension."""
-        s = nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
         s0 = s.inav[0, 0]
         s0.save(save_path_hdf5)
         s1 = kp.load(save_path_hdf5)
@@ -339,7 +337,7 @@ class TestKikuchipyH5EBSD:
         data = np.random.randint(
             low=0, high=256, size=np.prod(data_shape), dtype=np.uint8
         ).reshape(data_shape)
-        s = EBSD(data)
+        s = kp.signals.EBSD(data)
         s.save(save_path_hdf5)
         s2 = kp.load(save_path_hdf5)
         assert s.data.shape == s2.data.shape

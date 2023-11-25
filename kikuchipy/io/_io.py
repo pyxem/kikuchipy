@@ -27,6 +27,7 @@ from h5py import File, is_hdf5, Group
 import numpy as np
 from rsciio import IO_PLUGINS
 from rsciio.utils.tools import overwrite as overwrite_method
+from rsciio.utils.tools import get_object_package_info
 import yaml
 
 import kikuchipy.signals
@@ -113,15 +114,18 @@ def load(
     for plugin in plugins:
         if extension.lower() in plugin["file_extensions"]:
             readers.append(plugin)
-    if len(readers) == 0:
+
+    reader = None
+    if len(readers) == 1:
+        reader = readers[0]
+    elif len(readers) > 1 and is_hdf5(filename):
+        reader = _hdf5_plugin_from_footprints(filename, plugins=readers)
+
+    if len(readers) == 0 or reader is None:
         raise IOError(
             f"Could not read '{filename}'. If the file format is supported, please "
             "report this error"
         )
-    elif len(readers) > 1 and is_hdf5(filename):
-        reader = _hdf5_plugin_from_footprints(filename, plugins=readers)
-    else:
-        reader = readers[0]
 
     # Get data and metadata (from potentially multiple signals if an
     # h5ebsd file)
@@ -191,11 +195,11 @@ def _dict2signal(signal_dict: dict, lazy: bool = False):
 
 
 def _hdf5_plugin_from_footprints(filename: str, plugins: list) -> Optional[dict]:
-    """Get HDF5 correct plugin from a list of potential plugins based on
+    """Get correct HDF5 plugin from a list of potential plugins based on
     their unique footprints.
 
-    The unique footprint is a list of strings that can take on either of
-    two formats:
+    A plugin's unique footprint is a list of strings that can take on
+    either of two formats:
         * group/dataset names separated by "/", indicating nested
           groups/datasets
         * single group/dataset name indicating that the groups/datasets
@@ -434,10 +438,13 @@ def _save(
 
         if write:
             if writer["name"] in ["HSPY", "ZSPY"]:
-                signal = signal._to_dictionary()
-            importlib.import_module(writer["api"]).file_writer(
-                filename, signal, **kwargs
-            )
+                signal_dict = signal._to_dictionary(add_models=True)
+                signal_dict["package_info"] = get_object_package_info(signal)
+                kwargs["signal"] = signal_dict
+            else:
+                kwargs["signal"] = signal
+
+            importlib.import_module(writer["api"]).file_writer(filename, **kwargs)
 
             directory, filename = os.path.split(os.path.abspath(filename))
             signal.tmp_parameters.set_item("folder", directory)

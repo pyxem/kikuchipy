@@ -28,7 +28,7 @@ def __dir__():
 
 
 def __getattr__(name):
-    if name in __all__:
+    if name in __all__:  # pragma: no cover
         import importlib
 
         return importlib.import_module("." + name, __name__)

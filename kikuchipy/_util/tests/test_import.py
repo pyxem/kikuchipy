@@ -28,7 +28,7 @@ class TestImport:
         import kikuchipy
 
         for obj_name in kikuchipy.__all__:
-            getattr(kikuchipy, obj_name)
+            _ = getattr(kikuchipy, obj_name)
         with pytest.raises(
             AttributeError, match="module 'kikuchipy' has no attribute 'foo'"
         ):
@@ -43,7 +43,7 @@ class TestImport:
         import kikuchipy.data
 
         for obj_name in kikuchipy.data.__all__:
-            getattr(kikuchipy.data, obj_name)
+            _ = getattr(kikuchipy.data, obj_name)
         with pytest.raises(
             AttributeError, match="module 'kikuchipy.data' has no attribute 'foo'"
         ):
@@ -53,7 +53,7 @@ class TestImport:
         import kikuchipy.detectors
 
         for obj_name in kikuchipy.detectors.__all__:
-            getattr(kikuchipy.detectors, obj_name)
+            _ = getattr(kikuchipy.detectors, obj_name)
         with pytest.raises(
             AttributeError, match="module 'kikuchipy.detectors' has no attribute 'foo'"
         ):
@@ -63,7 +63,7 @@ class TestImport:
         import kikuchipy.draw
 
         for obj_name in kikuchipy.draw.__all__:
-            getattr(kikuchipy.draw, obj_name)
+            _ = getattr(kikuchipy.draw, obj_name)
         with pytest.raises(
             AttributeError, match="module 'kikuchipy.draw' has no attribute 'foo'"
         ):
@@ -73,7 +73,7 @@ class TestImport:
         import kikuchipy.filters
 
         for obj_name in kikuchipy.filters.__all__:
-            getattr(kikuchipy.filters, obj_name)
+            _ = getattr(kikuchipy.filters, obj_name)
         with pytest.raises(
             AttributeError, match="module 'kikuchipy.filters' has no attribute 'foo'"
         ):
@@ -83,7 +83,7 @@ class TestImport:
         import kikuchipy.imaging
 
         for obj_name in kikuchipy.imaging.__all__:
-            getattr(kikuchipy.imaging, obj_name)
+            _ = getattr(kikuchipy.imaging, obj_name)
         with pytest.raises(
             AttributeError, match="module 'kikuchipy.imaging' has no attribute 'foo'"
         ):
@@ -93,7 +93,7 @@ class TestImport:
         import kikuchipy.indexing
 
         for obj_name in kikuchipy.indexing.__all__:
-            getattr(kikuchipy.indexing, obj_name)
+            _ = getattr(kikuchipy.indexing, obj_name)
         with pytest.raises(
             AttributeError, match="module 'kikuchipy.indexing' has no attribute 'foo'"
         ):
@@ -103,7 +103,7 @@ class TestImport:
         import kikuchipy.io
 
         for obj_name in kikuchipy.io.__all__:
-            getattr(kikuchipy.io, obj_name)
+            _ = getattr(kikuchipy.io, obj_name)
         with pytest.raises(
             AttributeError, match="module 'kikuchipy.io' has no attribute 'foo'"
         ):
@@ -113,7 +113,15 @@ class TestImport:
         import kikuchipy.io.plugins
 
         for obj_name in kikuchipy.io.plugins.__all__:
-            getattr(kikuchipy.io.plugins, obj_name)
+            plugin_module = getattr(kikuchipy.io.plugins, obj_name)
+            for obj_name2 in plugin_module.__all__:
+                _ = getattr(plugin_module, obj_name2)
+            plugin_module_name = plugin_module.__name__
+            with pytest.raises(
+                AttributeError, match=f"module '{plugin_module_name}' has no attribute"
+            ):
+                _ = getattr(plugin_module, "foo")
+
         with pytest.raises(
             AttributeError, match="module 'kikuchipy.io.plugins' has no attribute 'foo'"
         ):
@@ -128,7 +136,7 @@ class TestImport:
         import kikuchipy.pattern
 
         for obj_name in kikuchipy.pattern.__all__:
-            getattr(kikuchipy.pattern, obj_name)
+            _ = getattr(kikuchipy.pattern, obj_name)
         with pytest.raises(
             AttributeError, match="module 'kikuchipy.pattern' has no attribute 'foo'"
         ):
@@ -138,7 +146,7 @@ class TestImport:
         import kikuchipy.signals
 
         for obj_name in kikuchipy.signals.__all__:
-            getattr(kikuchipy.signals, obj_name)
+            _ = getattr(kikuchipy.signals, obj_name)
         with pytest.raises(
             AttributeError, match="module 'kikuchipy.signals' has no attribute 'foo'"
         ):
@@ -148,7 +156,7 @@ class TestImport:
         import kikuchipy.signals.util
 
         for obj_name in kikuchipy.signals.util.__all__:
-            getattr(kikuchipy.signals.util, obj_name)
+            _ = getattr(kikuchipy.signals.util, obj_name)
         with pytest.raises(
             AttributeError,
             match="module 'kikuchipy.signals.util' has no attribute 'foo'",
@@ -159,7 +167,7 @@ class TestImport:
         import kikuchipy.simulations
 
         for obj_name in kikuchipy.simulations.__all__:
-            getattr(kikuchipy.simulations, obj_name)
+            _ = getattr(kikuchipy.simulations, obj_name)
         with pytest.raises(
             AttributeError,
             match="module 'kikuchipy.simulations' has no attribute 'foo'",
@@ -255,6 +263,7 @@ class TestImport:
 
     def test_dir_io_plugins(self):
         import kikuchipy.io.plugins
+        from kikuchipy.io._io import plugins as plugins_list
 
         assert dir(kikuchipy.io.plugins) == [
             "bruker_h5ebsd",
@@ -271,6 +280,16 @@ class TestImport:
             "oxford_binary",
             "oxford_h5ebsd",
         ]
+
+        for spec in plugins_list:
+            plugin_name = spec["name"]
+            if plugin_name in ["HSPY", "ZSPY"]:
+                continue
+            plugin_dir = ["file_reader"]
+            if spec["writes"]:
+                plugin_dir.append("file_writer")
+            plugin_module = getattr(kikuchipy.io.plugins, plugin_name)
+            assert dir(plugin_module) == plugin_dir
 
     def test_dir_pattern(self):
         import kikuchipy.pattern

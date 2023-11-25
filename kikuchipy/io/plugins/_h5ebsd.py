@@ -163,7 +163,7 @@ class H5EBSDReader(abc.ABC):
 
     def check_file(self):
         """Check if the file is a valid h5ebsd file by searching for
-        datasets containing manufacturer, version and scans in the top
+        datasets containing manufacturer, version, and scans in the top
         group.
 
         Raises
@@ -194,7 +194,7 @@ class H5EBSDReader(abc.ABC):
                 f"'{man}' is not among supported manufacturers "
                 f"{supported_manufacturers}"
             )
-        if error is not None:
+        if error:
             raise IOError(f"{self.filename} is not a supported h5ebsd file, as {error}")
 
     def get_manufacturer_version(self) -> Tuple[str, str]:

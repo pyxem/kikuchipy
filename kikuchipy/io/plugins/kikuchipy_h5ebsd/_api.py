@@ -299,7 +299,7 @@ class KikuchipyH5EBSDWriter:
                 "no top groups with subgroup name 'EBSD' with subgroups 'Data' and"
                 "'Header' were found"
             )
-        if error is not None:
+        if error:
             raise IOError(
                 f"{self.filename} is not a supported kikuchipy h5ebsd file, as {error}"
             )
