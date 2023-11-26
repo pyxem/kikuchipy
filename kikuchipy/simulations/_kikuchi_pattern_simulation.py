@@ -20,8 +20,7 @@ import re
 from typing import List, Optional, Union
 
 from diffsims.crystallography import ReciprocalLatticeVector
-from hyperspy.drawing.marker import MarkerBase
-from hyperspy.utils.markers import line_segment, point, text
+import hyperspy.api as hs
 import matplotlib.collections as mcollections
 import matplotlib.path as mpath
 import matplotlib.pyplot as plt
@@ -200,7 +199,7 @@ class GeometricalKikuchiPatternSimulation:
         zone_axes_kwargs: Optional[dict] = None,
         zone_axes_labels_kwargs: Optional[dict] = None,
         pc_kwargs: Optional[dict] = None,
-    ) -> List[MarkerBase]:
+    ) -> List[hs.plot.markers.Markers]:
         """Return a list of simulation markers.
 
         Parameters
@@ -470,7 +469,7 @@ class GeometricalKikuchiPatternSimulation:
         kw.update(kwargs)
         return mcollections.LineCollection(segments=list(coords), **kw)
 
-    def _lines_as_markers(self, **kwargs) -> List[line_segment]:
+    def _lines_as_markers(self, **kwargs) -> hs.plot.markers.Lines:
         """Get Kikuchi lines as a list of HyperSpy markers.
 
         Parameters
@@ -497,7 +496,8 @@ class GeometricalKikuchiPatternSimulation:
                 y1 = line[..., 1].squeeze()
                 x2 = line[..., 2].squeeze()
                 y2 = line[..., 3].squeeze()
-                marker = line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kw)
+                #                marker = hs.plot.markers.Lines(x1=x1, y1=y1, x2=x2, y2=y2, **kw)
+                marker = hs.plot.markers.Lines([[x1, y1], [x2, y2]], **kw)
                 lines_list.append(marker)
 
         return lines_list
@@ -538,7 +538,8 @@ class GeometricalKikuchiPatternSimulation:
         kw = {"size": 300, "marker": "*", "fc": "gold", "ec": "k", "zorder": 4}
         kw.update(kwargs)
 
-        pc_marker = point(x=pcx, y=pcy, **kw)
+        #        pc_marker = point(x=pcx, y=pcy, **kw)
+        pc_marker = hs.plot.markers.Points([pcx, pcy], **kw)
 
         return [pc_marker]
 
@@ -709,7 +710,10 @@ class GeometricalKikuchiPatternSimulation:
             # TODO: Inefficient, squeeze before the loop if possible
             zone_axis = coords[..., i, :].squeeze()
             if not np.all(np.isnan(zone_axis)):
-                marker = point(x=zone_axis[..., 0], y=zone_axis[..., 1], **kw)
+                #                marker = point(x=zone_axis[..., 0], y=zone_axis[..., 1], **kw)
+                marker = hs.plot.markers.Points(
+                    [zone_axis[..., 0], zone_axis[..., 1]], **kw
+                )
                 zone_axes_list.append(marker)
 
         return zone_axes_list
@@ -756,7 +760,8 @@ class GeometricalKikuchiPatternSimulation:
                 # TODO: Inefficient, squeeze before the loop if possible
                 x = x.squeeze()
                 y = y.squeeze()
-                text_marker = text(x=x, y=y, text=texts[i], **kw)
+                #                text_marker = text(x=x, y=y, text=texts[i], **kw)
+                text_marker = hs.plot.markers.Texts([x, y], s=texts[i], **kw)
                 zone_axes_label_list.append(text_marker)
 
         return zone_axes_label_list

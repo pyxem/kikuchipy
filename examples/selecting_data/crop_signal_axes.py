@@ -5,7 +5,7 @@ Crop signal axes
 This example shows various ways to crop the signal axes of an
 :class:`~kikuchipy.signals.EBSD` signal using HyperSpy's ``isig`` slicer and the
 :meth:`~kikuchipy.signals.EBSD.crop` and
-:meth:`~hyperspy._signals.signal2d.Signal2D.crop_image` methods (see
+:meth:`~hyperspy._signals.signal2d.Signal2D.crop_signal` methods (see
 :ref:`hyperspy:signal.indexing` for details).
 """
 
@@ -49,10 +49,10 @@ print(s3.static_background.shape)
 print(s3.detector)
 
 # %%
-# Do the same inplace using ``crop_image()``
+# Do the same inplace using :meth:`~hyperspy._signals.signal2d.Signal2D.crop_signal`
 
 s4 = s.deepcopy()
-s4.crop_image(top=10, bottom=50, left=5, right=55)
+s4.crop_signal(top=10, bottom=50, left=5, right=55)
 
 _ = hs.plot.plot_images(s4, **plot_kwds)
 print(s4)

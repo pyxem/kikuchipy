@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from hyperspy.utils.markers import line_segment, point, text
+import hyperspy.api as hs
 import numpy as np
 import pytest
 
@@ -35,7 +35,7 @@ class TestMarkers:
         # Number of markers
         assert isinstance(line_markers, list)
         assert len(line_markers) == n_lines
-        assert isinstance(line_markers[0], line_segment)
+        assert isinstance(line_markers, hs.plot.markers.Lines)
 
         # Coordinates, data shape and marker properties
         for line, marker in zip(lines, line_markers):
@@ -119,7 +119,7 @@ class TestMarkers:
         # Number of markers
         assert isinstance(point_markers, list)
         assert len(point_markers) == n_points
-        assert isinstance(point_markers[0], point)
+        assert isinstance(point_markers, hs.plot.markers.Points)
 
         # Coordinates, data shape and marker properties
         for i, marker in zip(points, point_markers):
@@ -212,7 +212,7 @@ class TestMarkers:
         # Number of markers
         assert isinstance(text_markers, list)
         assert len(text_markers) == n_labels
-        assert isinstance(text_markers[0], text)
+        assert isinstance(text_markers, hs.plot.markers.Texts)
 
         # Coordinates, data shape and marker properties
         for i, (t, marker) in enumerate(zip(text_coords, text_markers)):

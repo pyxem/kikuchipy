@@ -19,7 +19,7 @@
 
 from typing import Union
 
-from hyperspy.utils.markers import line_segment, point, text
+import hyperspy.api as hs
 import numpy as np
 
 
@@ -50,7 +50,7 @@ def get_line_segment_list(lines: Union[list, np.ndarray], **kwargs) -> list:
             y1 = lines[..., i, 1]
             x2 = lines[..., i, 2]
             y2 = lines[..., i, 3]
-            marker_list.append(line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kwargs))
+            marker_list.append(hs.plot.markers.Lines([[x1, y1], [x2, y2]], **kwargs))
     return marker_list
 
 
@@ -77,7 +77,7 @@ def get_point_list(points: Union[list, np.ndarray], **kwargs) -> list:
     for i in range(points.shape[-2]):  # Iterate over zone axes
         if not np.allclose(points[..., i, :], np.nan, equal_nan=True):
             marker_list.append(
-                point(x=points[..., i, 0], y=points[..., i, 1], **kwargs)
+                hs.plot.markers.Points([points[..., i, 0], points[..., i, 1]], **kwargs)
             )
     return marker_list
 
@@ -114,6 +114,6 @@ def get_text_list(
             y = coordinates[..., i, 1]
             x[~is_finite[..., i]] = np.nan
             y[~is_finite[..., i]] = np.nan
-            text_marker = text(x=x, y=y, text=texts[i], **kwargs)
+            text_marker = hs.plot.markers.Texts([x, y], s=texts[i], **kwargs)
             marker_list.append(text_marker)
     return marker_list

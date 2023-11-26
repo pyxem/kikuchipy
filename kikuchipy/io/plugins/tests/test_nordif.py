@@ -31,11 +31,9 @@ import numpy as np
 from orix.crystal_map import CrystalMap
 import pytest
 
+import kikuchipy as kp
 from kikuchipy.conftest import assert_dictionary
-from kikuchipy.detectors import EBSDDetector
-from kikuchipy.io._io import load
 from kikuchipy.io.plugins.nordif._api import _get_settings_from_file, _get_string
-from kikuchipy.signals.ebsd import EBSD
 
 DIR_PATH = os.path.dirname(__file__)
 NORDIF_PATH = os.path.join(DIR_PATH, "../../../data/nordif")
@@ -211,7 +209,7 @@ class TestNORDIF:
 
     @pytest.mark.parametrize("line_no, correct", [(10, True), (11, False)])
     def test_get_string(self, line_no, correct):
-        f = open(SETTING_FILE, "r", encoding="latin-1")
+        f = open(SETTING_FILE, encoding="latin-1")
         content = f.read().splitlines()
         exp = "Tilt angle\t(.*)\t"
         if correct:
@@ -228,7 +226,7 @@ class TestNORDIF:
 
     @pytest.mark.parametrize("setting_file", (None, SETTING_FILE))
     def test_load(self, setting_file):
-        s = load(PATTERN_FILE, setting_file=SETTING_FILE)
+        s = kp.load(PATTERN_FILE, setting_file=SETTING_FILE)
 
         assert s.data.shape == (3, 3, 60, 60)
         assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
@@ -237,7 +235,7 @@ class TestNORDIF:
         assert np.allclose(s.static_background, static_bg)
 
         assert isinstance(s.xmap, CrystalMap)
-        assert isinstance(s.detector, EBSDDetector)
+        assert isinstance(s.detector, kp.detectors.EBSDDetector)
 
     @pytest.mark.parametrize(
         "nav_shape, sig_shape",
@@ -246,7 +244,7 @@ class TestNORDIF:
     def test_load_parameters(self, nav_shape, sig_shape):
         if nav_shape is None and sig_shape is None:
             with pytest.raises(ValueError):
-                _ = load(
+                _ = kp.load(
                     PATTERN_FILE,
                     setting_file="Setting.txt",
                     scan_size=nav_shape,
@@ -257,13 +255,15 @@ class TestNORDIF:
                 # Check if zero padding user warning is raised if sum of data
                 # shape is bigger than file size
                 with pytest.warns(UserWarning):
-                    s = load(PATTERN_FILE, scan_size=nav_shape, pattern_size=sig_shape)
+                    s = kp.load(
+                        PATTERN_FILE, scan_size=nav_shape, pattern_size=sig_shape
+                    )
             else:
-                s = load(PATTERN_FILE, scan_size=nav_shape, pattern_size=sig_shape)
+                s = kp.load(PATTERN_FILE, scan_size=nav_shape, pattern_size=sig_shape)
             assert s.data.shape == nav_shape[::-1] + sig_shape
 
     def test_load_save_cycle(self, save_path_nordif):
-        s = load(PATTERN_FILE)
+        s = kp.load(PATTERN_FILE)
 
         scan_time_string = s.original_metadata["nordif_header"][80][10:18]
         scan_time = time.strptime(scan_time_string, "%H:%M:%S")
@@ -279,7 +279,7 @@ class TestNORDIF:
 
         s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background pattern in directory
-            s_reload = load(save_path_nordif, setting_file=SETTING_FILE)
+            s_reload = kp.load(save_path_nordif, setting_file=SETTING_FILE)
 
         assert np.allclose(s.data, s_reload.data)
 
@@ -297,21 +297,21 @@ class TestNORDIF:
         del s_reload
 
     def test_load_save_lazy(self, save_path_nordif):
-        s = load(PATTERN_FILE, lazy=True)
+        s = kp.load(PATTERN_FILE, lazy=True)
         assert isinstance(s.data, da.Array)
         assert isinstance(s.static_background, np.ndarray)
         s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background pattern in directory
-            s_reload = load(save_path_nordif, lazy=True, setting_file=SETTING_FILE)
+            s_reload = kp.load(save_path_nordif, lazy=True, setting_file=SETTING_FILE)
         assert s.data.shape == s_reload.data.shape
 
     def test_load_to_memory(self):
-        s = load(PATTERN_FILE)
+        s = kp.load(PATTERN_FILE)
         assert isinstance(s.data, np.ndarray)
         assert not isinstance(s.data, np.memmap)
 
     def test_load_readonly(self):
-        s = load(PATTERN_FILE, lazy=True)
+        s = kp.load(PATTERN_FILE, lazy=True)
         keys = ["array-original", "original-array"]
         k = next(
             filter(
@@ -327,71 +327,66 @@ class TestNORDIF:
     def test_load_inplace(self, lazy):
         if lazy:
             with pytest.raises(ValueError):
-                _ = load(PATTERN_FILE, lazy=lazy, mmap_mode="r+")
+                _ = kp.load(PATTERN_FILE, lazy=lazy, mmap_mode="r+")
         else:
-            s = load(PATTERN_FILE, lazy=lazy, mmap_mode="r+")
+            s = kp.load(PATTERN_FILE, lazy=lazy, mmap_mode="r+")
             assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
 
     def test_save_fresh(self, save_path_nordif):
-        scan_size = (10, 3)
-        pattern_size = (5, 5)
+        scan_size = (2, 3)
+        pattern_size = (4, 5)
         data_shape = scan_size + pattern_size
-        s = EBSD((255 * np.random.rand(*data_shape)).astype(np.uint8))
+        s = kp.signals.EBSD((255 * np.random.rand(*data_shape)).astype(np.uint8))
         s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background or setting files
-            s_reload = load(
-                save_path_nordif, scan_size=scan_size[::-1], pattern_size=pattern_size
+            s_reload = kp.load(
+                save_path_nordif,
+                scan_size=scan_size[::-1],
+                pattern_size=pattern_size[::-1],
             )
         assert np.allclose(s.data, s_reload.data)
 
     def test_write_data_line(self, save_path_nordif):
         scan_size = 3
-        pattern_size = (5, 5)
+        pattern_size = (4, 5)
         data_shape = (scan_size,) + pattern_size
-        s = EBSD((255 * np.random.rand(*data_shape)).astype(np.uint8))
+        s = kp.signals.EBSD((255 * np.random.rand(*data_shape)).astype(np.uint8))
         s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background or setting files
-            s_reload = load(
-                save_path_nordif, scan_size=scan_size, pattern_size=pattern_size
+            s_reload = kp.load(
+                save_path_nordif, scan_size=scan_size, pattern_size=pattern_size[::-1]
             )
         assert np.allclose(s.data, s_reload.data)
 
     def test_write_data_single(self, save_path_nordif):
-        pattern_size = (5, 5)
-        s = EBSD((255 * np.random.rand(*pattern_size)).astype(np.uint8))
+        pattern_size = (4, 5)
+        s = kp.signals.EBSD((255 * np.random.rand(*pattern_size)).astype(np.uint8))
         s.save(save_path_nordif, overwrite=True)
         with pytest.warns(UserWarning):  # No background or setting files
-            s_reload = load(save_path_nordif, scan_size=1, pattern_size=pattern_size)
+            s_reload = kp.load(
+                save_path_nordif, scan_size=1, pattern_size=pattern_size[::-1]
+            )
         assert np.allclose(s.data, s_reload.data)
 
     def test_read_cutoff(self, save_path_nordif):
-        scan_size = (10, 3)
-        scan_size_reloaded = (10, 20)
-        pattern_size = (5, 5)
+        scan_size = (2, 3)
+        scan_size_reloaded = (2, 4)
+        pattern_size = (4, 5)
         data_shape = scan_size + pattern_size
-        s = EBSD((255 * np.random.rand(*data_shape)).astype(np.uint8))
-        s.save(save_path_nordif, overwrite=True)
+        s = kp.signals.EBSD((255 * np.random.rand(*data_shape)).astype(np.uint8))
+        s.save(save_path_nordif)
 
         # Reload data but with a scan_size bigger than available file bytes,
         # so that the data has to be padded
-        with pytest.warns(UserWarning):  # No background or setting files
-            s_reload = load(
+        with pytest.warns(UserWarning, match="Pattern size and scan size larger than "):
+            s_reload = kp.load(
                 save_path_nordif,
                 scan_size=scan_size_reloaded[::-1],
-                pattern_size=pattern_size,
+                pattern_size=pattern_size[::-1],
             )
 
         # To check if the data padding works as expected, the original data is
         # padded and compared to the reloaded data
-        cut_data = s.data.flatten()
-        pw = [
-            (
-                0,
-                (scan_size_reloaded[1] - scan_size[1])
-                * scan_size[0]
-                * np.prod(pattern_size),
-            )
-        ]
-        cut_data = np.pad(cut_data, pw, mode="constant")
-        cut_data = cut_data.reshape(scan_size_reloaded + pattern_size)
+        cut_data = np.pad(s.data.ravel(), [0, s_reload.data.size - s.data.size])
+        cut_data = cut_data.reshape(s_reload.data.shape)
         assert np.allclose(cut_data, s_reload.data)

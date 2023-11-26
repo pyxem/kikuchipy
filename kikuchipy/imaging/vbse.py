@@ -18,12 +18,8 @@
 from typing import List, Optional, Tuple, Union
 
 from dask.array import Array
-from hyperspy.drawing._markers.horizontal_line import HorizontalLine
-from hyperspy.drawing._markers.vertical_line import VerticalLine
-from hyperspy.drawing._markers.rectangle import Rectangle
-from hyperspy.drawing._markers.text import Text
-from hyperspy.roi import BaseInteractiveROI, RectangularROI
-from hyperspy._signals.signal2d import Signal2D
+import hyperspy.api as hs
+from hyperspy.roi import BaseInteractiveROI
 import numpy as np
 
 from kikuchipy.signals import EBSD, LazyEBSD
@@ -165,7 +161,7 @@ class VirtualBSEImager:
 
             channels.append(image)
 
-        if alpha is not None and isinstance(alpha, Signal2D):
+        if alpha is not None and isinstance(alpha, hs.signals.Signal2D):
             alpha = alpha.data
 
         dtype_out = np.dtype(dtype_out)
@@ -237,7 +233,7 @@ class VirtualBSEImager:
 
         return vbse_images
 
-    def roi_from_grid(self, index: Union[Tuple, List[Tuple]]) -> RectangularROI:
+    def roi_from_grid(self, index: Union[Tuple, List[Tuple]]) -> hs.roi.RectangularROI:
         """Return a rectangular region of interest (ROI) on the EBSD
         detector from one or multiple grid tile indices as row(s) and
         column(s).
@@ -266,7 +262,9 @@ class VirtualBSEImager:
         min_row = rows[min(index[:, 0])] * dr
         max_row = (rows[max(index[:, 0])] + rows[1]) * dr
 
-        return RectangularROI(left=min_col, top=min_row, right=max_col, bottom=max_row)
+        return hs.roi.RectangularROI(
+            left=min_col, top=min_row, right=max_col, bottom=max_row
+        )
 
     def plot_grid(
         self,
@@ -313,18 +311,21 @@ class VirtualBSEImager:
             color = kwargs.pop("color", "r")
             for row, col in np.ndindex(*self.grid_shape):
                 markers.append(
-                    Text(
-                        x=cols[col] * dc,
-                        y=(rows[row] + (0.1 * rows[1])) * dr,
-                        text=f"{row,col}",
+                    hs.plot.markers.Texts(
+                        [cols[col] * dc, (rows[row] + (0.1 * rows[1])) * dr],
+                        texts=f"{row,col}",
                         color=color,
                     )
                 )
 
         # Set lines
         kwargs.setdefault("color", "w")
-        markers += [HorizontalLine((i - 0.5) * dr, **kwargs) for i in rows]
-        markers += [VerticalLine((j - 0.5) * dc, **kwargs) for j in cols]
+        markers += [
+            hs.plot.markers.HorizontalLines((i - 0.5) * dr, **kwargs) for i in rows
+        ]
+        markers += [
+            hs.plot.markers.VerticalLines((j - 0.5) * dc, **kwargs) for j in cols
+        ]
 
         # Color RGB tiles
         if rgb_channels is not None:
@@ -334,12 +335,12 @@ class VirtualBSEImager:
                 for row, col in channels:
                     kwargs.update({"color": color, "zorder": 3, "linewidth": 2})
                     roi = self.roi_from_grid((row, col))
+
                     markers += [
-                        Rectangle(
-                            x1=(roi.left - 0.5) * dc,
-                            y1=(roi.top - 0.5) * dc,
-                            x2=(roi.right - 0.5) * dr,
-                            y2=(roi.bottom - 0.5) * dr,
+                        hs.plot.markers.Rectangles(
+                            [(roi.left - 0.5) * dc, (roi.top - 0.5) * dr],
+                            (roi.right - roi.left) * dc,
+                            (roi.bottom - roi.top) * dr,
                             **kwargs,
                         )
                     ]

@@ -151,7 +151,7 @@ def file_reader(
             "load by zero padding incomplete frames."
         )
         # Data is stored image by image
-        pw = [(0, ny * nx * sy * sx - data.size)]
+        pw = [0, ny * nx * sy * sx - data.size]
         data = np.pad(data, pw)
         data = data.reshape((ny, nx, sy, sx))
     scan["data"] = data
@@ -439,8 +439,8 @@ def file_writer(filename: str, signal: Union["EBSD", "LazyEBSD"]):
     """
     with open(filename, "wb") as f:
         if signal._lazy:
-            for pattern in signal._iterate_signal():
-                np.array(pattern.flatten()).tofile(f)
+            for pattern in signal._iterate_signal("flyback"):
+                np.asanyarray(pattern.ravel()).tofile(f)
         else:
-            for pattern in signal._iterate_signal():
-                pattern.flatten().tofile(f)
+            for pattern in signal._iterate_signal("flyback"):
+                pattern.ravel().tofile(f)
