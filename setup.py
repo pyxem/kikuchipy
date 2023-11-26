@@ -43,6 +43,7 @@ with open("kikuchipy/release.py") as fid:
 # fmt: off
 extra_feature_requirements = {
     "doc": [
+        "ipykernel",  # Required by nbsphinx
         "memory_profiler",
         "nbsphinx                       >= 0.7",
         "numpydoc",
