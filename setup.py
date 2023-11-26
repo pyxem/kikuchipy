@@ -153,7 +153,9 @@ setup(
         "dask[array]        >= 2021.8.1",
         "diffpy.structure   >= 3",
         "diffsims           >= 0.5.1",
-        "hyperspy           >= 1.7.3, < 2",
+        # TODO: Update before release of version compatible with HS 2.0
+#        "hyperspy           >= 1.7.3, < 2",
+        "hyperspy           ~= 2.0.rc0",
         "h5py               >= 2.10",
         "imageio",
         "matplotlib         >= 3.5",

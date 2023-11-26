@@ -66,6 +66,10 @@ jobs:
           - os: ubuntu-latest
             python-version: 3.11
             LABEL: -minimum_requirement
+          - os: ubuntu-latest
+            python-version: 3.11
+            DEPENDENCIES: hyperspy~=2.0.rc0
+            LABEL: -hyperspy2.0
     steps:
       - uses: actions/checkout@v3
 
@@ -80,8 +84,8 @@ jobs:
           pip install wheel
           pip install -U -e .'[tests]'
 
-      - name: Install oldest supported version
-        if: contains(matrix.LABEL, 'oldest')
+      - name: Install special versions of dependencies
+        if: ${{ contains(matrix.LABEL, 'oldest') || contains(matrix.Label, 'hyperspy-2.0') }}
         run: |
           pip install ${{ matrix.DEPENDENCIES }}
 
