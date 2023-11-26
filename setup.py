@@ -165,7 +165,7 @@ setup(
         "pyyaml",
         "rosettasciio",
         "tqdm               >= 0.5.2",
-        "scikit-image       >= 0.16.2",
+        "scikit-image       >= 0.18",
         "scikit-learn",
         "scipy              >= 1.7",
     ],

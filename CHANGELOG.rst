@@ -23,6 +23,8 @@ Added
 
 Changed
 -------
+- New minimal versions of HyperSpy and scikit-image are >= 2.0 and >= 0.18.
+ (`#651 <https://github.com/pyxem/kikuchipy/pull/651>`_)
 
 Deprecated
 ----------
