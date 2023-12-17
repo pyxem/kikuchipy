@@ -42,7 +42,7 @@ class GeometricalKikuchiPatternSimulation:
 
     Instances of this class are returned from
     :meth:`kikuchipy.simulations.KikuchiPatternSimulator.on_detector`,
-    and *not* ment to be created directly.
+    and *not* meant to be created directly.
 
     Parameters
     ----------
@@ -240,19 +240,19 @@ class GeometricalKikuchiPatternSimulation:
         if lines:
             if lines_kwargs is None:
                 lines_kwargs = {}
-            markers += self._lines_as_markers(**lines_kwargs)
+            markers.append(self._lines_as_markers(**lines_kwargs))
         if zone_axes:
             if zone_axes_kwargs is None:
                 zone_axes_kwargs = {}
-            markers += self._zone_axes_as_markers(**zone_axes_kwargs)
+            markers.append(self._zone_axes_as_markers(**zone_axes_kwargs))
         if zone_axes_labels:
             if zone_axes_labels_kwargs is None:
                 zone_axes_labels_kwargs = {}
-            markers += self._zone_axes_labels_as_markers(**zone_axes_labels_kwargs)
+            markers.append(self._zone_axes_labels_as_markers(**zone_axes_labels_kwargs))
         if pc:
             if pc_kwargs is None:
                 pc_kwargs = {}
-            markers += self._pc_as_markers(**pc_kwargs)
+            markers.append(self._pc_as_markers(**pc_kwargs))
         return markers
 
     def lines_coordinates(
@@ -292,9 +292,11 @@ class GeometricalKikuchiPatternSimulation:
             coords = self._lines_detector_coordinates[index]
         else:  # gnomonic
             coords = self._lines.plane_trace_coordinates[index]
-        if exclude_nan:
-            coords = coords[~np.isnan(coords).any(axis=-1)]
-        return coords.copy()
+            if exclude_nan:
+                is_nan = np.isnan(coords[:, 0])
+                coords = coords[~is_nan]
+#        return coords.copy()
+        return coords
 
     def plot(
         self,
@@ -458,7 +460,6 @@ class GeometricalKikuchiPatternSimulation:
             Collection of lines.
         """
         coords = self.lines_coordinates(index, coordinates)
-        coords = coords.reshape((coords.shape[0], 2, 2))
         kw = {
             "color": "r",
             "linewidth": 1,
@@ -470,7 +471,7 @@ class GeometricalKikuchiPatternSimulation:
         return mcollections.LineCollection(segments=list(coords), **kw)
 
     def _lines_as_markers(self, **kwargs) -> hs.plot.markers.Lines:
-        """Get Kikuchi lines as a list of HyperSpy markers.
+        """Get Kikuchi lines as HyperSpy line markers.
 
         Parameters
         ----------
@@ -480,29 +481,15 @@ class GeometricalKikuchiPatternSimulation:
 
         Returns
         -------
-        lines_list
-            List with line segment markers.
+        line_markers
+            Line markers.
         """
-        coords = self.lines_coordinates(index=(), exclude_nan=False)
-        lines_list = []
+        coords = self.lines_coordinates(index=()).T
         kw = {"color": "r", "zorder": 1}
         kw.update(kwargs)
+        return hs.plot.markers.Lines(coords, **kw)
 
-        for i in range(self._lines.vector.size):
-            line = coords[..., i, :]
-            if not np.all(np.isnan(line)):
-                # TODO: Inefficient, squeeze before the loop if possible
-                x1 = line[..., 0].squeeze()
-                y1 = line[..., 1].squeeze()
-                x2 = line[..., 2].squeeze()
-                y2 = line[..., 3].squeeze()
-                #                marker = hs.plot.markers.Lines(x1=x1, y1=y1, x2=x2, y2=y2, **kw)
-                marker = hs.plot.markers.Lines([[x1, y1], [x2, y2]], **kw)
-                lines_list.append(marker)
-
-        return lines_list
-
-    def _pc_as_markers(self, **kwargs) -> list:
+    def _pc_as_markers(self, **kwargs) -> hs.plot.markers.Points:
         """Return a list of projection center (PC) point markers.
 
         Parameters
@@ -514,7 +501,7 @@ class GeometricalKikuchiPatternSimulation:
         Returns
         -------
         pc_marker
-            List with a single PC marker.
+            PC as a single point marker.
         """
         det = self.detector
         if det.navigation_shape == self.navigation_shape:
@@ -538,15 +525,14 @@ class GeometricalKikuchiPatternSimulation:
         kw = {"size": 300, "marker": "*", "fc": "gold", "ec": "k", "zorder": 4}
         kw.update(kwargs)
 
-        #        pc_marker = point(x=pcx, y=pcy, **kw)
-        pc_marker = hs.plot.markers.Points([pcx, pcy], **kw)
-
-        return [pc_marker]
+        return hs.plot.markers.Points([pcx, pcy], **kw)
 
     def _set_lines_detector_coordinates(self) -> None:
         """Set the start and end point coordinates of bands in
         uncalibrated detector coordinates (a scale of 1 and offset of
         0).
+
+        NaN values are excluded from the ragged coordinate array.
         """
         # Get PC coordinates and add two axes to get the shape
         # (navigation shape, 1, 1)
@@ -556,11 +542,18 @@ class GeometricalKikuchiPatternSimulation:
         pcz = det.pcz[..., None, None]
 
         # Convert coordinates
-        coords_d = self._lines.plane_trace_coordinates.copy()
-        coords_d[..., [0, 2]] = coords_d[..., [0, 2]] + (pcx / pcz) * det.aspect_ratio
-        coords_d[..., [0, 2]] = coords_d[..., [0, 2]] / det.x_scale[..., None, None]
-        coords_d[..., [1, 3]] = -coords_d[..., [1, 3]] + (pcy / pcz)
-        coords_d[..., [1, 3]] = coords_d[..., [1, 3]] / det.y_scale[..., None, None]
+        coords_d0 = self._lines.plane_trace_coordinates.copy()
+        coords_d0[..., [0, 2]] = coords_d0[..., [0, 2]] + (pcx / pcz) * det.aspect_ratio
+        coords_d0[..., [0, 2]] = coords_d0[..., [0, 2]] / det.x_scale[..., None, None]
+        coords_d0[..., [1, 3]] = -coords_d0[..., [1, 3]] + (pcy / pcz)
+        coords_d0[..., [1, 3]] = coords_d0[..., [1, 3]] / det.y_scale[..., None, None]
+
+        # Create ragged array and fill in coordinates of present lines
+        not_nan = ~np.isnan(coords_d0[..., 0])
+        coords_d = np.empty(self.navigation_shape, dtype=object)
+        for idx in np.ndindex(self.navigation_shape):
+            coords_i = coords_d0[idx[0], idx[1], not_nan[idx]]
+            coords_d[idx] = coords_i.reshape(coords_i.shape[0], 2, 2)
 
         self._lines_detector_coordinates = coords_d
 
@@ -686,8 +679,8 @@ class GeometricalKikuchiPatternSimulation:
                 texts.append(text_i)
         return texts
 
-    def _zone_axes_as_markers(self, **kwargs) -> list:
-        """Return a list of zone axes point markers.
+    def _zone_axes_as_markers(self, **kwargs) -> hs.plot.markers.Points:
+        """Return zone axes point markers.
 
         Parameters
         ----------
@@ -697,29 +690,27 @@ class GeometricalKikuchiPatternSimulation:
 
         Returns
         -------
-        zone_axes_list
-            List with zone axes markers.
+        zone_axes_markers
+            Zone axes as point markers.
         """
         coords = self.zone_axes_coordinates(index=(), exclude_nan=False)
-        zone_axes_list = []
-
         kw = {"ec": "none", "zorder": 2}
         kw.update(kwargs)
+        return hs.plot.markers.Points(coords, **kw)
 
-        for i in range(self._zone_axes.vector.size):
-            # TODO: Inefficient, squeeze before the loop if possible
-            zone_axis = coords[..., i, :].squeeze()
-            if not np.all(np.isnan(zone_axis)):
-                #                marker = point(x=zone_axis[..., 0], y=zone_axis[..., 1], **kw)
-                marker = hs.plot.markers.Points(
-                    [zone_axis[..., 0], zone_axis[..., 1]], **kw
-                )
-                zone_axes_list.append(marker)
+    #        zone_axes_list = []
+    #        for i in range(self._zone_axes.vector.size):
+    #            # TODO: Inefficient, squeeze before the loop if possible
+    #            zone_axis = coords[..., i, :].squeeze()
+    #            if not np.all(np.isnan(zone_axis)):
+    #                marker = hs.plot.markers.Points(
+    #                    [zone_axis[..., 0], zone_axis[..., 1]], **kw
+    #                )
+    #                zone_axes_list.append(marker)
+    #        return zone_axes_list
 
-        return zone_axes_list
-
-    def _zone_axes_labels_as_markers(self, **kwargs) -> list:
-        """Return a list of zone axes label text markers.
+    def _zone_axes_labels_as_markers(self, **kwargs) -> hs.plot.markers.Texts:
+        """Return zone axes label text markers.
 
         Parameters
         ----------
@@ -729,8 +720,8 @@ class GeometricalKikuchiPatternSimulation:
 
         Returns
         -------
-        zone_axes_label_list
-            List of text markers.
+        zone_axes_label_markers
+            Zone axes labels as text markers.
         """
         coords = self.zone_axes_coordinates(index=(), exclude_nan=False)
 
@@ -747,21 +738,21 @@ class GeometricalKikuchiPatternSimulation:
         }
         kw.update(kwargs)
 
-        zone_axes_label_list = []
-        is_finite = np.isfinite(coords)[..., 0]
-        coords[~is_finite] = -1
+        return hs.plot.markers.Texts(coords, s=texts, **kw)
 
-        for i in range(zone_axes.shape[0]):
-            if not np.allclose(coords[..., i, :], -1):  # All NaNs
-                x = coords[..., i, 0]
-                y = coords[..., i, 1]
-                x[~is_finite[..., i]] = np.nan
-                y[~is_finite[..., i]] = np.nan
-                # TODO: Inefficient, squeeze before the loop if possible
-                x = x.squeeze()
-                y = y.squeeze()
-                #                text_marker = text(x=x, y=y, text=texts[i], **kw)
-                text_marker = hs.plot.markers.Texts([x, y], s=texts[i], **kw)
-                zone_axes_label_list.append(text_marker)
 
-        return zone_axes_label_list
+#        is_finite = np.isfinite(coords)[..., 0]
+#        coords[~is_finite] = -1
+#        zone_axes_label_list = []
+#        for i in range(zone_axes.shape[0]):
+#            if not np.allclose(coords[..., i, :], -1):  # All NaNs
+#                x = coords[..., i, 0]
+#                y = coords[..., i, 1]
+#                x[~is_finite[..., i]] = np.nan
+#                y[~is_finite[..., i]] = np.nan
+#                # TODO: Inefficient, squeeze before the loop if possible
+#                x = x.squeeze()
+#                y = y.squeeze()
+#                text_marker = hs.plot.markers.Texts([x, y], s=texts[i], **kw)
+#                zone_axes_label_list.append(text_marker)
+#        return zone_axes_label_list

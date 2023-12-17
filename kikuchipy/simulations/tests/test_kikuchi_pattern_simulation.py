@@ -19,6 +19,7 @@ import logging
 
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticeVector
+import hyperspy.api as hs
 import matplotlib.collections as mcollections
 import matplotlib.pyplot as plt
 import matplotlib.text as mtext
@@ -58,13 +59,13 @@ class TestGeometricalKikuchiPatternSimulation:
         self.reflectors = setup_reflectors()
         self.detector = kp.detectors.EBSDDetector(shape=(60, 60))
         self.rotations = Rotation.stack(
-            (Rotation.from_axes_angles([(0, 0, 1), (0, 0, -1)], np.deg2rad(80)),) * 2
+            (Rotation.from_axes_angles([(0, 0, 1), (0, 0, -1)], 80, degrees=True),) * 2
         )
 
     def test_init_attributes_repr(self):
         simulator = kp.simulations.KikuchiPatternSimulator(self.reflectors)
         det = self.detector
-        rot = Rotation.from_axes_angles((0, 0, 1), np.deg2rad(80))
+        rot = Rotation.from_axes_angles((0, 0, 1), 80, degrees=True)
         sim = simulator.on_detector(det, rot)
 
         assert isinstance(sim.detector, kp.detectors.EBSDDetector)
@@ -152,7 +153,7 @@ class TestAsCollections:
         self.reflectors = setup_reflectors()
         self.detector = kp.detectors.EBSDDetector(shape=(60, 60))
         self.rotations = Rotation.stack(
-            (Rotation.from_axes_angles([(0, 0, 1), (0, 0, -1)], np.deg2rad(80)),) * 2
+            (Rotation.from_axes_angles([(0, 0, 1), (0, 0, -1)], 80, degrees=True),) * 2
         )
 
     def test_as_collections(self):
@@ -241,7 +242,7 @@ class TestAsCollections:
 
 
 class TestAsMarkers:
-    """Getting lines, zone axes, zone axes labels and PC as HyperSpy
+    """Getting lines, zone axes, zone axes labels, and PC as HyperSpy
     markers.
     """
 
@@ -249,7 +250,7 @@ class TestAsMarkers:
         self.reflectors = setup_reflectors()
         self.detector = kp.detectors.EBSDDetector(shape=(60, 60))
         self.rotations = Rotation.stack(
-            (Rotation.from_axes_angles([(0, 0, 1), (0, 0, -1)], np.deg2rad(80)),) * 2
+            (Rotation.from_axes_angles([(0, 0, 1), (0, 0, -1)], 80, degrees=True),) * 2
         )
 
     def test_as_markers(self):
@@ -260,7 +261,7 @@ class TestAsMarkers:
 
         # Default
         markers0 = sim.as_markers()
-        assert len(markers0) == 3
+        assert len(markers0) == 1
 
         markers = sim.as_markers(
             zone_axes=True,
@@ -272,15 +273,26 @@ class TestAsMarkers:
             pc_kwargs=dict(color="r"),
         )
         assert isinstance(markers, list)
-        assert len(markers) == 6
-        for marker, color in zip(markers, ["b", "b", "b", "g", "y", "r"]):
-            print(dir(marker))
-        #            assert marker.marker_properties["color"] == color
+        assert len(markers) == 4
+        for marker, color in zip(markers, ["b", "g", "y", "r"]):
+            assert marker.kwargs["color"] == (color,)
 
-        # Third line [0-20] is not present in the first two patterns
-        assert np.all(np.isnan(markers[2].data["x1"][()][0]))
+        # Third and fourth line not visible in first two patterns,
+        # second and fourth line not visible in final two patterns
+        line_segments = markers[0].kwargs["segments"].reshape((4, 4, 4))
+        assert np.allclose(
+            np.isnan(line_segments).all(-1),
+            np.array(
+                [
+                    [False, False, True, True],
+                    [False, False, True, True],
+                    [False, True, False, True],
+                    [False, True, False, True],
+                ]
+            ),
+        )
 
-    def test_add_markers(self):
+    def test_add_markers_1d(self):
         hkl_sets = self.reflectors.get_hkl_sets()
         ref200 = self.reflectors[hkl_sets[2, 0, 0]]
         simulator = kp.simulations.KikuchiPatternSimulator(ref200)
@@ -294,8 +306,20 @@ class TestAsMarkers:
             plot_marker=False,
             permanent=True,
         )
-        assert len(s.metadata.Markers) == 5
+        assert len(s.metadata.Markers) == 4
+        for (name, markers), desired_name, desired_length in zip(
+            s.metadata.Markers,
+            ["Lines", "Points", "Points1", "Texts"],
+            [3, 1, 2, 1],
+        ):
+            assert name == desired_name
+            assert len(markers) == desired_length
         s.plot()
+
+    def test_add_markers_2d(self):
+        hkl_sets = self.reflectors.get_hkl_sets()
+        ref200 = self.reflectors[hkl_sets[2, 0, 0]]
+        simulator = kp.simulations.KikuchiPatternSimulator(ref200)
 
         sim2d = simulator.on_detector(self.detector, self.rotations)
         n_patterns = np.prod(sim2d.navigation_shape)
@@ -304,7 +328,5 @@ class TestAsMarkers:
         )
         s2 = kp.signals.EBSD(data2d)
         s2.add_marker(sim2d.as_markers(), plot_marker=False, permanent=True)
-        assert len(s2.metadata.Markers) == 3
+        assert len(s2.metadata.Markers.Lines) == 2
         s2.plot()
-
-        plt.close("all")
