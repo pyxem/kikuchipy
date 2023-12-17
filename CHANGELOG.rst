@@ -18,15 +18,20 @@ Unreleased
 
 Added
 -----
+- Dependency on RosettaSciIO 0.1 for read/write support previously imported from
+  HyperSpy. (`#651 <https://github.com/pyxem/kikuchipy/pull/651>`_)
 
 Changed
 -------
+- New minimal versions of HyperSpy and scikit-image are >= 2.0 and >= 0.18.
+ (`#651 <https://github.com/pyxem/kikuchipy/pull/651>`_)
 
 Deprecated
 ----------
 
 Removed
 -------
+- Support for Python 3.7. (`#651 <https://github.com/pyxem/kikuchipy/pull/651>`_)
 
 Fixed
 -----

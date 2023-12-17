@@ -11,3 +11,4 @@ include setup.cfg
 include setup.py
 
 recursive-include kikuchipy/data *
+include kikuchipy/io/plugins/*/specification.yaml

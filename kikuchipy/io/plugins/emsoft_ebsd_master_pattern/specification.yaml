@@ -1,0 +1,9 @@
+name: emsoft_ebsd_master_pattern
+description: >
+  Read support for simulated electron backscatter diffraction (EBSD)
+  master patterns stored in an EMsoft HDF5 file.
+file_extensions: ['h5', 'hdf5']
+default_extension: 0
+writes: False
+manufacturer: emsoft
+footprints: ['emdata/ebsdmaster']

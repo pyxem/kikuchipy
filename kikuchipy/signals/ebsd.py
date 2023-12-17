@@ -535,7 +535,6 @@ class EBSD(KikuchipySignal2D):
 
         map_kw = dict(
             show_progressbar=show_progressbar,
-            parallel=True,
             output_dtype=dtype_out,
             static_bg=static_bg,
             dtype_out=dtype_out,
@@ -660,7 +659,6 @@ class EBSD(KikuchipySignal2D):
 
         map_kw = dict(
             show_progressbar=show_progressbar,
-            parallel=True,
             output_dtype=dtype_out,
             filter_func=filter_func,
             operation=operation,
@@ -1184,7 +1182,6 @@ class EBSD(KikuchipySignal2D):
 
         map_kw = dict(
             show_progressbar=show_progressbar,
-            parallel=True,
             output_dtype=dtype_out,
             factor=factor,
             omin=omin,
@@ -1348,7 +1345,6 @@ class EBSD(KikuchipySignal2D):
         image_quality_map = self.map(
             _get_image_quality,
             show_progressbar=show_progressbar,
-            parallel=True,
             inplace=False,
             output_dtype=np.float32,
             normalize=normalize,
@@ -2705,7 +2701,7 @@ class EBSD(KikuchipySignal2D):
 
     @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.crop)
     def crop(self, *args, **kwargs):
-        # This method is called by crop_image(), so attributes are
+        # This method is called by crop_signal(), so attributes are
         # handled correctly by that method as well
 
         old_shape = self.data.shape

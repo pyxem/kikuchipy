@@ -43,6 +43,7 @@ with open("kikuchipy/release.py") as fid:
 # fmt: off
 extra_feature_requirements = {
     "doc": [
+        "ipykernel",  # Required by nbsphinx
         "memory_profiler",
         "nbsphinx                       >= 0.7",
         "numpydoc",
@@ -105,7 +106,6 @@ setup(
     long_description_content_type="text/markdown",
     classifiers=[
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
@@ -153,7 +153,9 @@ setup(
         "dask[array]        >= 2021.8.1",
         "diffpy.structure   >= 3",
         "diffsims           >= 0.5.1",
-        "hyperspy           >= 1.7.3, < 2",
+        # TODO: Update before release of version compatible with HS 2.0
+#        "hyperspy           >= 1.7.3, < 2",
+        "hyperspy           ~= 2.0.rc0",
         "h5py               >= 2.10",
         "imageio",
         "matplotlib         >= 3.5",
@@ -162,8 +164,9 @@ setup(
         "orix               >= 0.11.1",
         "pooch              >= 1.3.0",
         "pyyaml",
+        "rosettasciio",
         "tqdm               >= 0.5.2",
-        "scikit-image       >= 0.16.2",
+        "scikit-image       >= 0.18",
         "scikit-learn",
         "scipy              >= 1.7",
     ],

@@ -1,0 +1,7 @@
+name: ebsd_directory
+description: Read support for patterns in image files in a directory
+file_extensions: ['tif', 'tiff', 'bmp', 'png']
+default_extension: 0
+writes: False
+manufacturer: None
+footprints: []

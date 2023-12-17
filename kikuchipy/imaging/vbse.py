@@ -18,17 +18,11 @@
 from typing import List, Optional, Tuple, Union
 
 from dask.array import Array
-from hyperspy.drawing._markers.horizontal_line import HorizontalLine
-from hyperspy.drawing._markers.vertical_line import VerticalLine
-from hyperspy.drawing._markers.rectangle import Rectangle
-from hyperspy.drawing._markers.text import Text
-from hyperspy.roi import BaseInteractiveROI, RectangularROI
-from hyperspy._signals.signal2d import Signal2D
+import hyperspy.api as hs
+from hyperspy.roi import BaseInteractiveROI
 import numpy as np
 
-from kikuchipy.signals import EBSD, LazyEBSD
-from kikuchipy.signals import VirtualBSEImage
-from kikuchipy.pattern import rescale_intensity
+import kikuchipy as kp
 from kikuchipy._util._transfer_axes import _transfer_navigation_axes_to_signal_axes
 
 
@@ -48,7 +42,7 @@ class VirtualBSEImager:
     kikuchipy.signals.EBSD.get_virtual_bse_intensity
     """
 
-    def __init__(self, signal: Union[EBSD, LazyEBSD]):
+    def __init__(self, signal: Union[kp.signals.EBSD, kp.signals.LazyEBSD]):
         self.signal = signal
         self._grid_shape = (5, 5)
 
@@ -94,11 +88,11 @@ class VirtualBSEImager:
         b: Union[BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple]],
         percentiles: Optional[Tuple] = None,
         normalize: bool = True,
-        alpha: Union[None, np.ndarray, VirtualBSEImage] = None,
+        alpha: Union[None, np.ndarray, kp.signals.VirtualBSEImage] = None,
         dtype_out: Union[str, np.dtype, type] = "uint8",
         add_bright: int = 0,
         contrast: float = 1.0,
-    ) -> VirtualBSEImage:
+    ) -> kp.signals.VirtualBSEImage:
         """Return an in-memory RGB virtual BSE image from three regions
         of interest (ROIs) on the EBSD detector, with a potential "alpha
         channel" in which all three arrays are multiplied by a fourth.
@@ -165,7 +159,7 @@ class VirtualBSEImager:
 
             channels.append(image)
 
-        if alpha is not None and isinstance(alpha, Signal2D):
+        if alpha is not None and isinstance(alpha, hs.signals.Signal2D):
             alpha = alpha.data
 
         dtype_out = np.dtype(dtype_out)
@@ -180,7 +174,7 @@ class VirtualBSEImager:
         )
 
         rgb_image = rgb_image.astype(dtype_out)
-        vbse_rgb_image = VirtualBSEImage(rgb_image).transpose(signal_axes=1)
+        vbse_rgb_image = kp.signals.VirtualBSEImage(rgb_image).transpose(signal_axes=1)
 
         dtype_rgb = "rgb" + str(8 * np.iinfo(dtype_out).dtype.itemsize)
         vbse_rgb_image.change_dtype(dtype_rgb)
@@ -193,7 +187,7 @@ class VirtualBSEImager:
 
     def get_images_from_grid(
         self, dtype_out: Union[str, np.dtype, type] = "float32"
-    ) -> VirtualBSEImage:
+    ) -> kp.signals.VirtualBSEImage:
         """Return an in-memory signal with a stack of virtual
         backscatter electron (BSE) images by integrating the intensities
         within regions of interest (ROI) defined by the image generator
@@ -230,14 +224,14 @@ class VirtualBSEImager:
             roi = self.roi_from_grid((row, col))
             images[row, col] = self.signal.get_virtual_bse_intensity(roi).data
 
-        vbse_images = VirtualBSEImage(images)
+        vbse_images = kp.signals.VirtualBSEImage(images)
         vbse_images.axes_manager = _transfer_navigation_axes_to_signal_axes(
             new_axes=vbse_images.axes_manager, old_axes=self.signal.axes_manager
         )
 
         return vbse_images
 
-    def roi_from_grid(self, index: Union[Tuple, List[Tuple]]) -> RectangularROI:
+    def roi_from_grid(self, index: Union[Tuple, List[Tuple]]) -> hs.roi.RectangularROI:
         """Return a rectangular region of interest (ROI) on the EBSD
         detector from one or multiple grid tile indices as row(s) and
         column(s).
@@ -266,7 +260,9 @@ class VirtualBSEImager:
         min_row = rows[min(index[:, 0])] * dr
         max_row = (rows[max(index[:, 0])] + rows[1]) * dr
 
-        return RectangularROI(left=min_col, top=min_row, right=max_col, bottom=max_row)
+        return hs.roi.RectangularROI(
+            left=min_col, top=min_row, right=max_col, bottom=max_row
+        )
 
     def plot_grid(
         self,
@@ -274,7 +270,7 @@ class VirtualBSEImager:
         rgb_channels: Union[None, List[Tuple], List[List[Tuple]]] = None,
         visible_indices: bool = True,
         **kwargs,
-    ) -> EBSD:
+    ) -> kp.signals.EBSD:
         """Plot a pattern with the detector grid superimposed,
         potentially coloring the edges of three grid tiles red, green
         and blue.
@@ -311,38 +307,38 @@ class VirtualBSEImager:
         markers = []
         if visible_indices:
             color = kwargs.pop("color", "r")
-            for row, col in np.ndindex(*self.grid_shape):
-                markers.append(
-                    Text(
-                        x=cols[col] * dc,
-                        y=(rows[row] + (0.1 * rows[1])) * dr,
-                        text=f"{row,col}",
-                        color=color,
-                    )
+            for r, c in np.ndindex(self.grid_shape):
+                text_marker = hs.plot.markers.Texts(
+                    [cols[c], rows[r]],
+                    texts=[f"({r}, {c})"],
+                    color=color,
+                    horizontalalignment="left",
+                    verticalalignment="top",
                 )
+                markers.append(text_marker)
 
         # Set lines
         kwargs.setdefault("color", "w")
-        markers += [HorizontalLine((i - 0.5) * dr, **kwargs) for i in rows]
-        markers += [VerticalLine((j - 0.5) * dc, **kwargs) for j in cols]
+        markers.append(hs.plot.markers.HorizontalLines((rows - 0.5) * dr, **kwargs))
+        markers.append(hs.plot.markers.VerticalLines((cols - 0.5) * dc, **kwargs))
 
         # Color RGB tiles
         if rgb_channels is not None:
             for channels, color in zip(rgb_channels, ["r", "g", "b"]):
                 if isinstance(channels, tuple):
                     channels = (channels,)
+                kwargs.update({"ec": color, "fc": "none", "zorder": 3, "linewidth": 2})
                 for row, col in channels:
-                    kwargs.update({"color": color, "zorder": 3, "linewidth": 2})
                     roi = self.roi_from_grid((row, col))
-                    markers += [
-                        Rectangle(
-                            x1=(roi.left - 0.5) * dc,
-                            y1=(roi.top - 0.5) * dc,
-                            x2=(roi.right - 0.5) * dr,
-                            y2=(roi.bottom - 0.5) * dr,
-                            **kwargs,
-                        )
-                    ]
+                    width = roi.right - roi.left
+                    height = roi.bottom - roi.top
+                    rect_marker = hs.plot.markers.Rectangles(
+                        [roi.left - 0.5 + width / 2, roi.top - 0.5 + height / 2],
+                        width,
+                        height,
+                        **kwargs,
+                    )
+                    markers.append(rect_marker)
 
         # Get pattern and add list of markers
         if pattern_idx is None:
@@ -461,6 +457,8 @@ def _get_rgb_image(
         in_range = tuple(np.percentile(rgb_image, q=percentiles))
     else:
         in_range = None
-    rgb_image = rescale_intensity(rgb_image, in_range=in_range, dtype_out=dtype_out)
+    rgb_image = kp.pattern.rescale_intensity(
+        rgb_image, in_range=in_range, dtype_out=dtype_out
+    )
 
     return rgb_image.astype(dtype_out)

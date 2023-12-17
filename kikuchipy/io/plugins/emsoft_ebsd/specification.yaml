@@ -1,0 +1,10 @@
+name: emsoft_ebsd
+description: >
+  Read support for dynamically simulated electron backscatter
+  diffraction patterns stored in EMsoft's HDF5 file format produced by
+  their EMEBSD.f90 program."
+file_extensions: ['h5', 'hdf5']
+default_extension: 0
+writes: False
+manufacturer: emsoft
+footprints: ['emdata/ebsd/ebsdpatterns']

@@ -318,7 +318,9 @@ class KikuchiPatternSimulator:
         hkl_d = hkl_d[..., hkl_in_a_pattern, :]
         with ProgressBar():
             print("Finding bands that are in some pattern:", file=sys.stdout)
-            hkl_in_a_pattern = hkl_in_a_pattern.compute()
+            [hkl_d, hkl_in_a_pattern, hkl_in_pattern] = da.compute(
+                [hkl_d, hkl_in_a_pattern, hkl_in_pattern]
+            )[0]
 
         # Visible reflectors
         visible_reflectors = self._reflectors[hkl_in_a_pattern]
@@ -381,13 +383,8 @@ class KikuchiPatternSimulator:
         uvw_miller = uvw_miller[uvw_in_a_pattern]
 
         with ProgressBar():
-            print(
-                "Calculating detector coordinates for bands and zone axes:",
-                file=sys.stdout,
-            )
-            hkl_d, hkl_in_pattern, uvw_d, uvw_in_pattern = da.compute(
-                [hkl_d, hkl_in_pattern, uvw_d, uvw_in_pattern]
-            )[0]
+            print("Calculating detector coordinates of zone axes:", file=sys.stdout)
+            uvw_d, uvw_in_pattern = da.compute([uvw_d, uvw_in_pattern])[0]
 
         # Max. gnomonic radius to consider
         max_r_gnomonic = np.max(detector.r_max)

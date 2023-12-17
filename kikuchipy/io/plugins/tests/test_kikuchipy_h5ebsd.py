@@ -25,15 +25,12 @@ from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.data import nickel_ebsd_small
 from kikuchipy.conftest import assert_dictionary
-from kikuchipy.io._io import load
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
-from kikuchipy.io.plugins.kikuchipy_h5ebsd import (
+from kikuchipy.io.plugins.kikuchipy_h5ebsd._api import (
     KikuchipyH5EBSDReader,
     KikuchipyH5EBSDWriter,
 )
-from kikuchipy.signals.ebsd import EBSD
 
 
 DIR_PATH = os.path.dirname(__file__)
@@ -75,7 +72,7 @@ class TestH5EBSD:
 
 class TestKikuchipyH5EBSD:
     def test_load(self, ni_small_axes_manager):
-        s = load(KIKUCHIPY_FILE)
+        s = kp.load(KIKUCHIPY_FILE)
 
         assert s.data.shape == (3, 3, 60, 60)
         assert_dictionary(s.axes_manager.as_dictionary(), ni_small_axes_manager)
@@ -102,8 +99,8 @@ class TestKikuchipyH5EBSD:
         assert xmap2.size == xmap1.size
         assert xmap2.phases[0].point_group.name == pg
 
-    def test_load_manufacturer(self, save_path_hdf5):
-        s = EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
+    def test_load_unrecognizable_manufacturer(self, save_path_hdf5):
+        s = kp.signals.EBSD((255 * np.random.rand(2, 3, 4, 4)).astype(np.uint8))
         s.save(save_path_hdf5)
 
         # Change manufacturer
@@ -115,19 +112,19 @@ class TestKikuchipyH5EBSD:
             OSError,
             match="(.*) is not a supported h5ebsd file, as 'nope' is not among ",
         ):
-            _ = load(save_path_hdf5)
+            _ = KikuchipyH5EBSDReader(str(save_path_hdf5))
 
     def test_read_patterns(self, save_path_hdf5):
-        s = EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
+        s = kp.signals.EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
         s.save(save_path_hdf5)
         with File(save_path_hdf5, mode="r+") as f:
             del f["Scan 1/EBSD/Data/patterns"]
             with pytest.raises(KeyError, match="Could not find patterns"):
-                _ = load(save_path_hdf5)
+                _ = kp.load(save_path_hdf5)
 
     @pytest.mark.parametrize("lazy", (True, False))
     def test_load_with_padding(self, save_path_hdf5, lazy, ni_small_axes_manager):
-        s = load(KIKUCHIPY_FILE)
+        s = kp.load(KIKUCHIPY_FILE)
         s.save(save_path_hdf5)
 
         new_n_columns = 4
@@ -135,21 +132,21 @@ class TestKikuchipyH5EBSD:
             f["Scan 1/EBSD/Header/n_columns"][()] = new_n_columns
 
         with pytest.warns(UserWarning) as warninfo:
-            s_reload = load(save_path_hdf5, lazy=lazy)
+            s_reload = kp.load(save_path_hdf5, lazy=lazy)
         assert len(warninfo) == 2
 
         ni_small_axes_manager["axis-1"]["size"] = new_n_columns
         assert_dictionary(s_reload.axes_manager.as_dictionary(), ni_small_axes_manager)
 
     def test_load_save_cycle(self, save_path_hdf5):
-        s = load(KIKUCHIPY_FILE)
+        s = kp.load(KIKUCHIPY_FILE)
 
         # Check that metadata is read correctly
         assert s.detector.binning == 8
         assert s.metadata.General.title == "patterns Scan 1"
 
         s.save(save_path_hdf5, overwrite=True)
-        s_reload = load(save_path_hdf5)
+        s_reload = kp.load(save_path_hdf5)
         np.testing.assert_equal(s.data, s_reload.data)
 
         # Change data set name and original filename to make metadata
@@ -161,9 +158,9 @@ class TestKikuchipyH5EBSD:
         np.testing.assert_equal(md2.as_dictionary(), md.as_dictionary())
 
     def test_load_save_hyperspy_cycle(self, tmp_path):
-        s = load(KIKUCHIPY_FILE)
+        s = kp.load(KIKUCHIPY_FILE)
 
-        # Perform decomposition to tests if learning results are
+        # Perform decomposition to test if learning results are
         # maintained after saving, reloading and using set_signal_type
         s.change_dtype(np.float32)
         s.decomposition()
@@ -179,7 +176,7 @@ class TestKikuchipyH5EBSD:
         s_reload.set_signal_type("EBSD")
 
         # Check signal type, patterns and learning results
-        assert isinstance(s_reload, EBSD)
+        assert isinstance(s_reload, kp.signals.EBSD)
         assert np.allclose(s.data, s_reload.data)
         assert np.allclose(
             s.learning_results.factors, s_reload.learning_results.factors
@@ -197,17 +194,19 @@ class TestKikuchipyH5EBSD:
     def test_load_multiple(self, scan_group_names):
         if scan_group_names == KIKUCHIPY_FILE_GROUP_NAMES + ["Scan 3"]:
             with pytest.warns(UserWarning, match="Scan 'Scan 3' is not among "):
-                s1, s2 = load(KIKUCHIPY_FILE, scan_group_names=scan_group_names)
+                s1, s2 = kp.load(KIKUCHIPY_FILE, scan_group_names=scan_group_names)
         elif scan_group_names == ["Scan 3"]:
             with pytest.raises(OSError, match="Scan 'Scan 3' is not among the"):
-                _ = load(KIKUCHIPY_FILE, scan_group_names=scan_group_names)
+                _ = kp.load(KIKUCHIPY_FILE, scan_group_names=scan_group_names)
             return
         elif scan_group_names == KIKUCHIPY_FILE_GROUP_NAMES:
-            s1, s2 = load(KIKUCHIPY_FILE, scan_group_names=KIKUCHIPY_FILE_GROUP_NAMES)
+            s1, s2 = kp.load(
+                KIKUCHIPY_FILE, scan_group_names=KIKUCHIPY_FILE_GROUP_NAMES
+            )
         else:  # scan_group_names == "Scan 2"
-            s2 = load(KIKUCHIPY_FILE, scan_group_names=scan_group_names)
+            s2 = kp.load(KIKUCHIPY_FILE, scan_group_names=scan_group_names)
             assert s2.metadata.General.title == "patterns Scan 2"
-            s1 = load(KIKUCHIPY_FILE)
+            s1 = kp.load(KIKUCHIPY_FILE)
 
         assert np.allclose(s1.data, s2.data)
         with pytest.raises(
@@ -224,16 +223,16 @@ class TestKikuchipyH5EBSD:
         )
 
     def test_load_save_lazy(self, save_path_hdf5):
-        s = load(KIKUCHIPY_FILE, lazy=True)
+        s = kp.load(KIKUCHIPY_FILE, lazy=True)
         assert isinstance(s.data, da.Array)
         s.save(save_path_hdf5)
-        s_reload = load(save_path_hdf5, lazy=True)
+        s_reload = kp.load(save_path_hdf5, lazy=True)
         assert s.data.shape == s_reload.data.shape
         with pytest.raises(OSError, match="Cannot write to an already open"):
             s_reload.save(save_path_hdf5, add_scan=True, scan_number=2)
 
     def test_load_readonly(self):
-        s = load(KIKUCHIPY_FILE, lazy=True)
+        s = kp.load(KIKUCHIPY_FILE, lazy=True)
         keys = ["array-original", "original-array"]
         k = next(
             filter(
@@ -248,9 +247,9 @@ class TestKikuchipyH5EBSD:
         scan_size = (10, 3)
         pattern_size = (5, 5)
         data_shape = scan_size + pattern_size
-        s = EBSD((255 * np.random.rand(*data_shape)).astype(np.uint8))
+        s = kp.signals.EBSD((255 * np.random.rand(*data_shape)).astype(np.uint8))
         s.save(save_path_hdf5, overwrite=True)
-        s_reload = load(save_path_hdf5)
+        s_reload = kp.load(save_path_hdf5)
         np.testing.assert_equal(s.data, s_reload.data)
 
         # Test writing of signal to file when no file name is passed to save()
@@ -264,7 +263,7 @@ class TestKikuchipyH5EBSD:
 
     @pytest.mark.parametrize("scan_number", (1, 2))
     def test_save_multiple(self, save_path_hdf5, scan_number):
-        s1, s2 = load(KIKUCHIPY_FILE, scan_group_names=KIKUCHIPY_FILE_GROUP_NAMES)
+        s1, s2 = kp.load(KIKUCHIPY_FILE, scan_group_names=KIKUCHIPY_FILE_GROUP_NAMES)
         s1.save(save_path_hdf5)
         error = "Invalid scan number"
         with pytest.raises(OSError, match=error), pytest.warns(UserWarning):
@@ -283,19 +282,19 @@ class TestKikuchipyH5EBSD:
         f.close()
 
         # Then, make sure it can be read correctly
-        s = load(KIKUCHIPY_FILE_NO_CHUNKS, lazy=True)
+        s = kp.load(KIKUCHIPY_FILE_NO_CHUNKS, lazy=True)
         assert s.data.chunks == ((60,), (60,))
 
     def test_save_load_1d_nav(self, save_path_hdf5):
         """Save-load cycle of signals with one navigation dimension."""
         desired_shape = (3, 60, 60)
         desired_nav_extent = (0, 3)
-        s = nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
 
         # One column of patterns
         s_y_only = s.inav[0]
         s_y_only.save(save_path_hdf5)
-        s_y_only2 = load(save_path_hdf5)
+        s_y_only2 = kp.load(save_path_hdf5)
         assert s_y_only2.data.shape == desired_shape
         assert s_y_only2.axes_manager.navigation_axes[0].name == "y"
         assert s_y_only2.axes_manager.navigation_extent == desired_nav_extent
@@ -306,7 +305,7 @@ class TestKikuchipyH5EBSD:
         # One row of patterns
         s_x_only = s.inav[:, 0]
         s_x_only.save(save_path_hdf5, overwrite=True)
-        s_x_only2 = load(save_path_hdf5)
+        s_x_only2 = kp.load(save_path_hdf5)
         assert s_x_only2.data.shape == desired_shape
         assert s_x_only2.axes_manager.navigation_axes[0].name == "x"
         assert s_x_only2.axes_manager.navigation_extent == desired_nav_extent
@@ -318,17 +317,17 @@ class TestKikuchipyH5EBSD:
         s_y_only2.axes_manager["y"].name = "x"
         with pytest.warns(UserWarning, match=r"Crystal map step size\(s\) \[0\] and "):
             s_y_only2.save(save_path_hdf5, overwrite=True)
-        s_x_only3 = load(save_path_hdf5)
+        s_x_only3 = kp.load(save_path_hdf5)
         assert s_x_only3.data.shape == desired_shape
         assert s_x_only3.axes_manager.navigation_axes[0].name == "x"
         assert s_x_only3.axes_manager.navigation_extent == desired_nav_extent
 
     def test_save_load_0d_nav(self, save_path_hdf5):
         """Save-load cycle of a signal with no navigation dimension."""
-        s = nickel_ebsd_small()
+        s = kp.data.nickel_ebsd_small()
         s0 = s.inav[0, 0]
         s0.save(save_path_hdf5)
-        s1 = load(save_path_hdf5)
+        s1 = kp.load(save_path_hdf5)
         assert s1.data.shape == (60, 60)
         assert s1.axes_manager.navigation_axes == ()
 
@@ -338,9 +337,9 @@ class TestKikuchipyH5EBSD:
         data = np.random.randint(
             low=0, high=256, size=np.prod(data_shape), dtype=np.uint8
         ).reshape(data_shape)
-        s = EBSD(data)
+        s = kp.signals.EBSD(data)
         s.save(save_path_hdf5)
-        s2 = load(save_path_hdf5)
+        s2 = kp.load(save_path_hdf5)
         assert s.data.shape == s2.data.shape
         assert np.allclose(s.data, s2.data)
 

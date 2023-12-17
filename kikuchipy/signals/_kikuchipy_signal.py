@@ -26,8 +26,8 @@ import warnings
 import dask.array as da
 from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
-from hyperspy.misc.rgb_tools import rgb_dtypes
 import numpy as np
+from rsciio.utils.rgb_tools import rgb_dtypes
 from skimage.util.dtype import dtype_range
 import yaml
 
@@ -55,7 +55,7 @@ with open(os.path.join(DIR_PATH, "../hyperspy_extension.yaml")) as f:
 class KikuchipySignal2D(Signal2D):
     """General class for image signals in kikuchipy, extending
     HyperSpy's Signal2D class with some methods for carrying over custom
-    properties and some methods for intensity manipulation.
+    properties and others for manipulation of image intensities.
 
     Not meant to be used directly, see derived classes like
     :class:`~kikuchipy.signals.EBSD`.
@@ -213,7 +213,6 @@ class KikuchipySignal2D(Signal2D):
 
         map_kw = dict(
             show_progressbar=show_progressbar,
-            parallel=True,
             output_dtype=dtype_out,
             in_range=in_range,
             out_range=out_range,
@@ -308,7 +307,6 @@ class KikuchipySignal2D(Signal2D):
 
         map_kw = dict(
             show_progressbar=show_progressbar,
-            parallel=True,
             output_dtype=dtype_out,
             num_std=num_std,
             divide_by_square_root=divide_by_square_root,
@@ -444,7 +442,6 @@ class KikuchipySignal2D(Signal2D):
 
         map_kw = dict(
             show_progressbar=show_progressbar,
-            parallel=True,
             output_dtype=dtype_out,
             kernel_size=kernel_size,
             clip_limit=clip_limit,

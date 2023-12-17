@@ -18,7 +18,6 @@
 import os
 
 from hyperspy.roi import RectangularROI
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
@@ -75,7 +74,7 @@ class TestVirtualBSEImager:
 
     @pytest.mark.parametrize(
         "grid_shape, desired_n_markers",
-        [((3, 3), 9 + 3 + 8), ((1, 1), 1 + 3 + 4), ((2, 3), 6 + 3 + 7)],
+        [((3, 3), 1 + 1 + 3 + 9), ((1, 1), 1 + 1 + 3 + 1), ((2, 3), 1 + 1 + 3 + 6)],
     )
     def test_plot_grid(self, grid_shape, desired_n_markers):
         s = kp.load(KIKUCHIPY_FILE)
@@ -93,22 +92,17 @@ class TestVirtualBSEImager:
 
         # Check markers
         assert len(p.metadata.Markers) == desired_n_markers
-        assert p.metadata.Markers.has_item("text")
-        assert p.metadata.Markers["text"].marker._color == "r"
-        assert p.metadata.Markers["horizontal_line"].marker._color == "w"
-        assert p.metadata.Markers["rectangle"].marker._edgecolor == (1, 0, 0, 1)
-
-        plt.close("all")
+        assert p.metadata.Markers.has_item("Texts")
+        assert p.metadata.Markers.Texts.kwargs["color"] == ("r",)
+        assert p.metadata.Markers.HorizontalLines.kwargs["color"] == ("w",)
+        assert p.metadata.Markers.Rectangles.kwargs["ec"] == "r"
 
     @pytest.mark.parametrize("color", ["c", "m", "k"])
     def test_plot_grid_text_color(self, color):
         s = kp.load(KIKUCHIPY_FILE)
         vbse_imager = kp.imaging.VirtualBSEImager(s)
         p = vbse_imager.plot_grid(color=color)
-
-        assert p.metadata.Markers["text"].marker._color == color
-
-        plt.close("all")
+        assert p.metadata.Markers["Texts"].kwargs["color"] == (color,)
 
 
 class TestGetImagesFromGrid:
@@ -139,9 +133,10 @@ class TestGetImagesFromGrid:
         assert all([vbse_sig_axes[i].name == s_nav_axes[i].name for i in range(2)])
         assert all([vbse_sig_axes[i].units == s_nav_axes[i].units for i in range(2)])
 
-    def test_get_images_lazy(self, dummy_signal):
-        vbse_imager = kp.imaging.VirtualBSEImager(dummy_signal.as_lazy())
-        vbse_img = vbse_imager.get_images_from_grid()
+    def test_get_images_lazy(self):
+        s = kp.load(KIKUCHIPY_FILE, lazy=True)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
+        _ = vbse_imager.get_images_from_grid()
 
 
 class TestGetRGBImage:

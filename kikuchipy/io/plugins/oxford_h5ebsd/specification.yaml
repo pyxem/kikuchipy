@@ -1,0 +1,14 @@
+name: oxford_h5ebsd
+description: >
+  Read support for electron backscatter diffraction patterns stored in
+  an HDF5 file formatted in Oxford Instruments' h5ebsd format, named
+  H5OINA. The format is similar to the format described in Jackson et
+  al.: h5ebsd: an archival data format for electron back-scatter
+  diffraction data sets. Integrating Materials and Manufacturing
+  Innovation 2014 3:4,
+  doi: https://dx.doi.org/10.1186/2193-9772-3-4.
+file_extensions: ['h5oina']
+default_extension: 0
+writes: False
+manufacturer: oxford
+footprints: []

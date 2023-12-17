@@ -2086,13 +2086,13 @@ class TestSignal2DMethods:
             ),
         ],
     )
-    def test_crop_image(
+    def test_crop_signal(
         self, dummy_signal, top_bottom_left_right, sig_slices, sig_shape
     ):
         """Custom properties are cropped correctly."""
         static_bg_old = dummy_signal.static_background.copy()
 
-        dummy_signal.crop_image(*top_bottom_left_right)
+        dummy_signal.crop_signal(*top_bottom_left_right)
 
         assert np.allclose(dummy_signal.static_background, static_bg_old[sig_slices])
         assert dummy_signal.detector.shape == sig_shape

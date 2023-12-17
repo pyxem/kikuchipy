@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Reader of EBSD patterns from a dictionary of images."""
-
 import glob
 import logging
 import os
@@ -32,22 +30,7 @@ import imageio.v3 as iio
 import numpy as np
 
 
-__all__ = ["file_reader"]
-
-
 _logger = logging.getLogger(__name__)
-
-
-# Plugin characteristics
-# ----------------------
-format_name = "Directory of EBSD patterns"
-description = "Read support for patterns in image files in a directory"
-full_support = False
-# Recognised file extension
-file_extensions = ["tif", "tiff", "bmp", "png"]
-default_extension = 0
-# Writing capabilities (signal dimensions, navigation dimensions)
-writes = False
 
 
 def file_reader(

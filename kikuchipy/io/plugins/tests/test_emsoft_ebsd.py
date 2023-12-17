@@ -24,7 +24,7 @@ from orix.crystal_map import CrystalMap
 import pytest
 
 from kikuchipy.io._io import load
-from kikuchipy.io.plugins.emsoft_ebsd import _check_file_format, _crystaldata2phase
+from kikuchipy.io.plugins.emsoft_ebsd._api import _check_file_format, _crystaldata2phase
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
 
 DIR_PATH = os.path.dirname(__file__)

@@ -60,12 +60,16 @@ jobs:
         python-version: ['3.10', '3.11']
         include:
           - os: ubuntu-latest
-            python-version: 3.7
-            DEPENDENCIES: dask==2021.8.1 diffsims==0.5.1 hyperspy==1.7.3 matplotlib==3.5 numba==0.55 numpy==1.21.6 orix==0.11.1 pooch==1.3.0 pyebsdindex==0.2 scikit-image==0.16.2
+            python-version: 3.8
+            DEPENDENCIES: dask==2021.8.1 diffsims==0.5.1 hyperspy~=2.0.rc0 matplotlib==3.5 numba==0.55 numpy==1.21.6 orix==0.11.1 pooch==1.3.0 pyebsdindex==0.2 scikit-image==0.18
             LABEL: -oldest
           - os: ubuntu-latest
             python-version: 3.11
             LABEL: -minimum_requirement
+          - os: ubuntu-latest
+            python-version: 3.11
+            DEPENDENCIES: hyperspy~=2.0.rc0
+            LABEL: -hyperspy2.0
     steps:
       - uses: actions/checkout@v3
 
@@ -80,8 +84,8 @@ jobs:
           pip install wheel
           pip install -U -e .'[tests]'
 
-      - name: Install oldest supported version
-        if: contains(matrix.LABEL, 'oldest')
+      - name: Install special versions of dependencies
+        if: ${{ contains(matrix.LABEL, 'oldest') || contains(matrix.Label, 'hyperspy-2.0') }}
         run: |
           pip install ${{ matrix.DEPENDENCIES }}
 

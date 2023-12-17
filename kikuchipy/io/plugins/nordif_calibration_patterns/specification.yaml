@@ -1,0 +1,7 @@
+name: nordif_calibration_patterns
+description: Read support for NORDIF's calibration patterns.
+file_extensions: ['txt']
+default_extension: 0
+writes: False
+manufacturer: nordif
+footprints: []
