@@ -2298,21 +2298,24 @@ class TestExtractGrid:
 
 class TestDownsample:
     def test_downsample(self):
-        s = kp.data.nickel_ebsd_small()
+        s = kp.signals.EBSD(
+            np.ones((3, 3, 60, 50), dtype=float),
+            static_background=np.ones((60, 50), dtype=float),
+        )
         s2 = s.deepcopy()
 
         s2.downsample(factor=2)
 
         # Initial signal unaffected
-        assert s.data.shape == (3, 3, 60, 60)
-        assert s.detector.shape == (60, 60)
-        assert s.static_background.shape == (60, 60)
+        assert s.data.shape == (3, 3, 60, 50)
+        assert s.detector.shape == (60, 50)
+        assert s.static_background.shape == (60, 50)
 
         # Correct shape and data type
-        assert s2.data.shape == (3, 3, 30, 30)
+        assert s2.data.shape == (3, 3, 30, 25)
         assert s2.data.dtype == s.data.dtype
-        assert s2.detector.shape == (30, 30)
-        assert s2.static_background.shape == (30, 30)
+        assert s2.detector.shape == (30, 25)
+        assert s2.static_background.shape == (30, 25)
         assert s2.static_background.dtype == s.static_background.dtype
 
     def test_downsample_lazy(self):

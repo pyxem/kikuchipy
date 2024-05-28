@@ -1150,7 +1150,7 @@ class EBSD(KikuchipySignal2D):
         if not isinstance(factor, int) or factor <= 1:
             raise ValueError(f"Binning `factor` {factor} must be an integer > 1")
         else:
-            factor = np.int64(factor)
+            factor = int(factor)
 
         sig_shape_old = self.axes_manager.signal_shape
         rest = np.mod(sig_shape_old, factor)
@@ -1161,6 +1161,7 @@ class EBSD(KikuchipySignal2D):
                 "You might try to crop away these pixels first using EBSD.crop()"
             )
         sig_shape_new = tuple(np.array(sig_shape_old) // factor)
+        sig_shape_new = sig_shape_new[::-1]
 
         if dtype_out is not None:
             dtype_out = np.dtype(dtype_out).type
@@ -1170,7 +1171,6 @@ class EBSD(KikuchipySignal2D):
 
         attrs = self._get_custom_attributes()
 
-        # Update static background
         static_bg = attrs["static_background"]
         if static_bg is not None:
             if isinstance(static_bg, da.Array):
@@ -1178,19 +1178,18 @@ class EBSD(KikuchipySignal2D):
             static_bg_new = _downsample2d(static_bg, factor, omin, omax, dtype_out)
             attrs["static_background"] = static_bg_new
 
-        # Update detector shape and binning factor
         attrs["detector"].shape = sig_shape_new
         attrs["detector"].binning *= factor
 
-        map_kw = dict(
-            show_progressbar=show_progressbar,
-            parallel=True,
-            output_dtype=dtype_out,
-            factor=factor,
-            omin=omin,
-            omax=omax,
-            dtype_out=dtype_out,
-        )
+        map_kw = {
+            "show_progressbar": show_progressbar,
+            "parallel": True,
+            "output_dtype": dtype_out,
+            "factor": factor,
+            "omin": omin,
+            "omax": omax,
+            "dtype_out": dtype_out,
+        }
         if inplace:
             self.map(_downsample2d, inplace=True, **map_kw)
             self._set_custom_attributes(attrs)
