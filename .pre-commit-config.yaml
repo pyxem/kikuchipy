@@ -1,5 +1,12 @@
 repos:
-  - repo: https://github.com/psf/black
-    rev: 23.1.0
-    hooks:
-      - id: black
+    # https://black.readthedocs.io/en/stable/index.html
+    - repo: https://github.com/psf/black-pre-commit-mirror
+      rev: 24.4.2
+      hooks:
+        - id: black
+          language_version: python3.11
+    # https://pycqa.github.io/isort/
+    - repo: https://github.com/pycqa/isort
+      rev: 5.13.2
+      hooks:
+        - id: isort
