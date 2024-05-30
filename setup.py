@@ -16,8 +16,8 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from itertools import chain
-from setuptools import setup, find_packages
 
+from setuptools import find_packages, setup
 
 # Get release information without importing anything from the project
 with open("kikuchipy/release.py") as fid:
@@ -84,6 +84,7 @@ extra_feature_requirements = {
 # Create a development project including all extra dependencies
 extra_feature_requirements["dev"] = [
     "black[jupyter]                     >= 23.1",
+    "isort",
     "manifix",
     "outdated",
     "pre-commit                         >= 1.16",
