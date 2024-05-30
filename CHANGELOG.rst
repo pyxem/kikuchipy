@@ -23,6 +23,12 @@ Changed
 -------
 - Minimum Python version is now 3.8.
   (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
+- Minimum NumPy version is now 1.23.0.
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
+- Minimum Numba version is now 0.57.0.
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
+- Minimum scikit-image version is now 0.22.0.
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
 
 Deprecated
 ----------

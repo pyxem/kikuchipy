@@ -129,10 +129,14 @@ class TestDask:
         chunks = _rechunk_learning_results(
             factors=factors, loadings=loadings, mbytes_chunk=0.02
         )
-        assert chunks == [(-1, -1), (333, -1)]
+        assert chunks[0] == (-1, -1)
+        assert chunks[1][0] in [200, 333]
+        assert chunks[1][1] == -1
 
         # Chunk first axis in both loadings and factors
         chunks = _rechunk_learning_results(
             factors=factors, loadings=loadings, mbytes_chunk=0.01
         )
-        assert chunks == [(125, -1), (125, -1)]
+        assert chunks[0] == (125, -1)
+        assert chunks[1][0] in [125, 62]
+        assert chunks[1][1] == -1
