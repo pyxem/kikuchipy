@@ -27,7 +27,7 @@ from typing import List, Optional, Tuple, Union
 import dask.array as da
 from diffsims.crystallography import ReciprocalLatticeVector
 import numpy as np
-from orix.crystal_map import create_coordinate_arrays, CrystalMap, PhaseList
+from orix.crystal_map import CrystalMap, PhaseList, create_coordinate_arrays
 from orix.quaternion import Rotation
 
 from kikuchipy import _pyebsdindex_installed

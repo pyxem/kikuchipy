@@ -11,8 +11,8 @@ More details are given in the
 """
 
 import matplotlib.pyplot as plt
-import kikuchipy as kp
 
+import kikuchipy as kp
 
 # Load low resolution Ni patterns and check that the *static* background
 # pattern is stored with the signal

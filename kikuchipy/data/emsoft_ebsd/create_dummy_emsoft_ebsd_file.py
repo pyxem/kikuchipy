@@ -1,9 +1,9 @@
 import os
 
-import numpy as np
 import h5py
-import kikuchipy as kp
+import numpy as np
 
+import kikuchipy as kp
 
 ddir = "/home/hakon/kode/kikuchipy/kikuchipy/data/emsoft_ebsd"
 fname = "simulated_ebsd.h5"

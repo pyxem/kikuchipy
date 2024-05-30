@@ -18,7 +18,6 @@
 import gc
 from numbers import Number
 import os
-from packaging import version
 import tempfile
 
 import dask.array as da
@@ -27,12 +26,12 @@ import hyperspy.api as hs
 import imageio.v3 as iio
 import matplotlib.pyplot as plt
 import numpy as np
-from orix.crystal_map import CrystalMap, create_coordinate_arrays, Phase, PhaseList
+from orix.crystal_map import CrystalMap, Phase, PhaseList, create_coordinate_arrays
 from orix.quaternion import Rotation
+from packaging import version
 import pytest
 
 import kikuchipy as kp
-
 
 if kp._pyvista_installed:
     import pyvista as pv

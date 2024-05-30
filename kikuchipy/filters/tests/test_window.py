@@ -17,20 +17,20 @@
 
 import os
 
+from matplotlib.colorbar import Colorbar
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
-from matplotlib.colorbar import Colorbar
 from matplotlib.pyplot import imread
 import numpy as np
 import pytest
 from scipy.signal.windows import gaussian, general_gaussian
 
 from kikuchipy.filters.window import (
+    Window,
+    distance_to_origin,
     highpass_fft_filter,
     lowpass_fft_filter,
     modified_hann,
-    distance_to_origin,
-    Window,
 )
 
 # Window data used to check results in tests

@@ -16,23 +16,24 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
+
 import copy
 import datetime
 import gc
 import logging
 import os
-from typing import Union, List, Optional, Tuple, Iterable
+from typing import Iterable, List, Optional, Tuple, Union
 import warnings
 
 import dask
 import dask.array as da
 from dask.diagnostics import ProgressBar
+from h5py import File
 import hyperspy.api as hs
 from hyperspy.axes import AxesManager
-from hyperspy.signals import Signal2D
 from hyperspy.learn.mva import LearningResults
 from hyperspy.roi import BaseInteractiveROI
-from h5py import File
+from hyperspy.signals import Signal2D
 import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList
 from orix.quaternion import Rotation
@@ -45,8 +46,8 @@ from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
 from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
 from kikuchipy.indexing._hough_indexing import (
-    _indexer_is_compatible_with_kikuchipy,
     _hough_indexing,
+    _indexer_is_compatible_with_kikuchipy,
     _optimize_pc,
     _phase_lists_are_compatible,
 )
@@ -56,48 +57,47 @@ from kikuchipy.indexing._refinement._refinement import (
     _refine_pc,
 )
 from kikuchipy.indexing.similarity_metrics import (
-    SimilarityMetric,
     NormalizedCrossCorrelationMetric,
     NormalizedDotProductMetric,
+    SimilarityMetric,
 )
 from kikuchipy.io._io import _save
 from kikuchipy.pattern import chunk
-from kikuchipy.pattern.chunk import _average_neighbour_patterns
 from kikuchipy.pattern._pattern import (
-    fft_frequency_vectors,
-    fft_filter,
     _downsample2d,
     _dynamic_background_frequency_space_setup,
     _get_image_quality,
-    _remove_static_background_subtract,
-    _remove_static_background_divide,
     _remove_dynamic_background,
+    _remove_static_background_divide,
+    _remove_static_background_subtract,
+    fft_filter,
+    fft_frequency_vectors,
 )
-from kikuchipy.signals.util.array_tools import grid_indices
+from kikuchipy.pattern.chunk import _average_neighbour_patterns
+from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
+from kikuchipy.signals.util._crystal_map import (
+    _equal_phase,
+    _get_indexed_points_in_data_in_xmap,
+    _xmap_is_compatible_with_signal,
+)
 from kikuchipy.signals.util._dask import (
-    get_dask_array,
-    get_chunking,
     _get_chunk_overlap_depth,
     _rechunk_learning_results,
     _update_learning_results,
+    get_chunking,
+    get_dask_array,
 )
 from kikuchipy.signals.util._detector import _detector_is_compatible_with_signal
-from kikuchipy.signals.util._crystal_map import (
-    _get_indexed_points_in_data_in_xmap,
-    _equal_phase,
-    _xmap_is_compatible_with_signal,
-)
 from kikuchipy.signals.util._map_helper import (
-    _get_neighbour_dot_product_matrices,
     _get_average_dot_product_map,
+    _get_neighbour_dot_product_matrices,
 )
 from kikuchipy.signals.util._overwrite_hyperspy_methods import (
     get_parameters,
     insert_doc_disclaimer,
 )
-from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
+from kikuchipy.signals.util.array_tools import grid_indices
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
-
 
 _logger = logging.getLogger(__name__)
 

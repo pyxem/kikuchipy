@@ -12,9 +12,9 @@ More details are given in the
 """
 
 import hyperspy.api as hs
-import kikuchipy as kp
 import matplotlib.pyplot as plt
 
+import kikuchipy as kp
 
 # Silence progressbars
 hs.preferences.General.show_progressbar = False

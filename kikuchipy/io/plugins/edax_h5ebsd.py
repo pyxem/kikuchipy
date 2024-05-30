@@ -24,8 +24,7 @@ import h5py
 from orix.crystal_map import CrystalMap
 
 from kikuchipy.detectors import EBSDDetector
-from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict, H5EBSDReader
-
+from kikuchipy.io.plugins._h5ebsd import H5EBSDReader, _hdf5group2dict
 
 __all__ = ["file_reader"]
 

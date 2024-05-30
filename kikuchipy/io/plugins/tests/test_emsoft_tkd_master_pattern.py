@@ -26,7 +26,6 @@ from kikuchipy.signals.ebsd_master_pattern import (
     LazyEBSDMasterPattern,
 )
 
-
 DIR_PATH = os.path.dirname(__file__)
 EMSOFT_FILE = os.path.join(
     DIR_PATH, "../../../data/emsoft_tkd_master_pattern/tkd_master_pattern.h5"

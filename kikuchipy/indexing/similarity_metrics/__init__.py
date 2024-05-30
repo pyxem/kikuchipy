@@ -15,14 +15,13 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
 from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
     NormalizedCrossCorrelationMetric,
 )
 from kikuchipy.indexing.similarity_metrics._normalized_dot_product import (
     NormalizedDotProductMetric,
 )
-
+from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
 
 __all__ = [
     "NormalizedCrossCorrelationMetric",

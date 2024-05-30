@@ -25,7 +25,6 @@ import numpy as np
 
 import kikuchipy as kp
 
-
 s = kp.data.nickel_ebsd_small()
 
 sc, sr = s.axes_manager.signal_shape

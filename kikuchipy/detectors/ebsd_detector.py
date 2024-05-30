@@ -16,6 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
+
 from copy import deepcopy
 from datetime import datetime
 import logging
@@ -38,7 +39,6 @@ from sklearn.linear_model import LinearRegression, RANSACRegressor
 
 from kikuchipy import __version__
 from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
-
 
 _logger = logging.getLogger(__name__)
 

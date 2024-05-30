@@ -17,11 +17,11 @@ using the normalized cross-correlation (NCC) metric instead.
 """
 
 import hyperspy.api as hs
-import kikuchipy as kp
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from orix.quaternion import Rotation
 
+import kikuchipy as kp
 
 hs.preferences.General.show_progressbar = False
 

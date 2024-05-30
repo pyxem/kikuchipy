@@ -16,6 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
+
 from typing import List, Optional, Tuple, Union
 
 import dask
@@ -28,7 +29,7 @@ from orix.quaternion import Rotation
 from skimage.util.dtype import dtype_range
 
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
-from kikuchipy.signals import LazyEBSD, EBSD
+from kikuchipy.signals import EBSD, LazyEBSD
 from kikuchipy.signals._kikuchi_master_pattern import KikuchiMasterPattern
 from kikuchipy.signals._kikuchipy_signal import LazyKikuchipySignal2D
 from kikuchipy.signals.util._dask import get_chunking

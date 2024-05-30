@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import hyperspy.api as hs
 import numpy as np
 import pytest
 
-import hyperspy.api as hs
 import kikuchipy as kp
 
 

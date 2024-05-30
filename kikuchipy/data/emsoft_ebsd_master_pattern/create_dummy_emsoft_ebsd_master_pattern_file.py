@@ -1,11 +1,10 @@
 import os
 
-import numpy as np
 import h5py
+import numpy as np
 
-from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
 import kikuchipy as kp
-
+from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
 
 f = h5py.File(os.path.join(os.path.dirname(__file__), "master_patterns.h5"), mode="w")
 

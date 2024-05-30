@@ -22,7 +22,6 @@ import numpy as np
 import kikuchipy as kp
 from kikuchipy.conftest import assert_dictionary
 
-
 OXFORD_FILE = Path(__file__).parent / "../../../data/oxford_h5ebsd/patterns.h5oina"
 
 
