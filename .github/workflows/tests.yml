@@ -92,12 +92,19 @@ jobs:
         run: |
           pip install ${{ matrix.DEPENDENCIES }}
 
-      - name: Install optional dependencies
-        if: ${{ contains(matrix.LABEL, 'minimum_requirement') == false }}
+      - name: Install optional dependencies on Linux and Windows
+        if: ${{ contains(matrix.LABEL, 'minimum_requirement') == false && matrix.os != 'macos-latest' }}
         shell: bash
         run: |
           pip install -e .'[all]'
           pip install pyopencl
+
+      - name: Install optional dependencies on macOS (without nlopt)
+        if: ${{ contains(matrix.LABEL, 'minimum_requirement') == false && matrix.os == 'macos-latest' }}
+        shell: bash
+        run: |
+          pip install -e .
+          pip install 'pyebsdindex[gpu]' pyvista
 
       - name: Display Python, pip and package versions
         run: |
