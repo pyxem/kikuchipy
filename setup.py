@@ -67,7 +67,6 @@ extra_feature_requirements = {
         "pytest-xdist",
     ],
     "all": [
-        "matplotlib                     >= 3.5",
         "nlopt",
         # We ask for a compatible release of PyEBSDIndex as we
         # anticipate breaking changes in coming releases. We do so
@@ -97,7 +96,7 @@ setup(
     version=VERSION,
     license=LICENSE,
     url="https://kikuchipy.org",
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     description=(
         "Processing, simulating and indexing of electron backscatter diffraction "
         "(EBSD) patterns."
@@ -106,7 +105,6 @@ setup(
     long_description_content_type="text/markdown",
     classifiers=[
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",

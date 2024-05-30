@@ -21,6 +21,8 @@ Added
 
 Changed
 -------
+- Minimum Python version is now 3.8.
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
 
 Deprecated
 ----------
@@ -32,7 +34,8 @@ Fixed
 -----
 - The order of the new shape of the detector of a downsampled EBSD signal, returned from
   ``downsample()``, was previously previously incorrect, (n columns, n rows). This is
-  now correct, (n rows, n columns). (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+  now correct, (n rows, n columns).
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
   
 0.9.0 (2023-11-03)
 ==================
