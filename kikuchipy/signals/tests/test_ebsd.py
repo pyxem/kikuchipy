@@ -29,7 +29,6 @@ from skimage.exposure import rescale_intensity
 import kikuchipy as kp
 from kikuchipy.conftest import assert_dictionary
 
-
 DIR_PATH = os.path.dirname(__file__)
 NORDIF_FILE = os.path.join(DIR_PATH, "../../data/nordif/Pattern.dat")
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5")
@@ -104,15 +103,15 @@ class TestEBSDXmapProperty:
         with pytest.raises(ValueError, match=r"Crystal map shape \(75, 55\) and "):
             s.xmap = xmap_bad
 
-        s.axes_manager["x"].scale = 2
+        s.axes_manager["x"].scale = 2.0
         with pytest.warns(UserWarning, match=r"Crystal map step size\(s\) \[1.5, 1.5"):
             s.xmap = xmap_good
 
         s2 = s.inav[:, :-2]
         with pytest.raises(ValueError, match=r"Crystal map shape \(55, 75\) and "):
-            s2.axes_manager["x"].scale = 1
+            s2.axes_manager["x"].scale = 1.0
             s2.axes_manager["x"].name = "x2"
-            with pytest.warns(UserWarning, match="The signal navigation axes"):
+            with pytest.warns(UserWarning, match="Signal navigation axes must be"):
                 s2.xmap = xmap_good
 
     def test_attribute_carry_over_from_deepcopy(self, get_single_phase_xmap):
