@@ -19,9 +19,8 @@ import os
 
 import matplotlib.pyplot as plt
 
-from kikuchipy.detectors import EBSDDetector
 from kikuchipy import load
-
+from kikuchipy.detectors import EBSDDetector
 
 data = "/home/hakon/kode/kikuchipy/kikuchipy/data/kikuchipy_h5ebsd/patterns.h5"
 outdir = "/home/hakon/kode/kikuchipy/doc/_static/image"

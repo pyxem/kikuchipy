@@ -28,7 +28,6 @@ import numpy as np
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins.nordif import _get_settings_from_file
 
-
 __all__ = ["file_reader"]
 
 

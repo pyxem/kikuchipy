@@ -21,6 +21,14 @@ Added
 
 Changed
 -------
+- Minimum Python version is now 3.8.
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
+- Minimum NumPy version is now 1.23.0.
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
+- Minimum Numba version is now 0.57.0.
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
+- Minimum scikit-image version is now 0.22.0.
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
 
 Deprecated
 ----------
@@ -30,7 +38,11 @@ Removed
 
 Fixed
 -----
-
+- The order of the new shape of the detector of a downsampled EBSD signal, returned from
+  ``downsample()``, was previously previously incorrect, (n columns, n rows). This is
+  now correct, (n rows, n columns).
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
+  
 0.9.0 (2023-11-03)
 ==================
 
@@ -531,8 +543,8 @@ Deprecated
   removed in version 0.7. Use the ``kikuchipy.simulations.KikuchiPatternSimulator``
   class instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - The ``kikuchipy.crystallography.matrices`` module is deprecated and will be removed in
-  version 0.7, access the matrices via :class:`diffpy.structure.lattice.Lattice`
-  attributes instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
+  version 0.7, access the matrices via ``diffpy.structure.lattice.Lattice`` attributes
+  instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - The following functions for processing of pattern chunks in the
   ``kikuchipy.pattern.chunk`` module are deprecated and will be removed in version 0.7:
   ``get_image_quality()``, ``remove_dynamic_background()`` and

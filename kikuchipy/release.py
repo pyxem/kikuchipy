@@ -17,7 +17,6 @@
 
 from datetime import datetime
 
-
 author = "kikuchipy developers"
 copyright = f"Copyright 2019-{datetime.now().year}, kikuchipy"
 # Initial committer first, then sorted by line contributions

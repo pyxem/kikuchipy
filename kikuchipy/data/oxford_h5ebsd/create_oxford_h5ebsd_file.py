@@ -29,7 +29,6 @@ from orix.quaternion import Rotation
 
 import kikuchipy as kp
 
-
 # Orientations determined from indexing
 grain1 = (0.9542, -0.0183, -0.2806, 0.1018)
 grain2 = (0.9542, 0.0608, -0.2295, -0.1818)

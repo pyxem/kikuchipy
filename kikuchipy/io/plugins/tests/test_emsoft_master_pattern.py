@@ -27,7 +27,6 @@ from kikuchipy.io.plugins._emsoft_master_pattern import (
     _get_datasets,
 )
 
-
 DIR_PATH = os.path.dirname(__file__)
 EMSOFT_FILE = os.path.join(
     DIR_PATH, "../../../data/emsoft_ebsd_master_pattern/master_patterns.h5"

@@ -23,7 +23,6 @@ from typing import List, Optional, Union
 
 from kikuchipy.io.plugins._emsoft_master_pattern import EMsoftMasterPatternReader
 
-
 __all__ = ["file_reader"]
 
 

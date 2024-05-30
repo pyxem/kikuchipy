@@ -19,9 +19,9 @@ from copy import copy
 from typing import List, Optional, Sequence, Tuple, Union
 
 from dask.array import Array
+from matplotlib.colorbar import Colorbar
 from matplotlib.figure import Figure
 from matplotlib.image import AxesImage
-from matplotlib.colorbar import Colorbar
 from matplotlib.pyplot import subplots
 from numba import njit
 import numpy as np

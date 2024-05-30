@@ -23,7 +23,6 @@ import pytest
 
 import kikuchipy as kp
 
-
 DIR_PATH = os.path.dirname(__file__)
 OXFORD_PATH = os.path.join(DIR_PATH, "../../../data/oxford_binary")
 OXFORD_FILE = os.path.join(OXFORD_PATH, "patterns.ebsp")

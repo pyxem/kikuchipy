@@ -34,7 +34,6 @@ import numpy as np
 
 from kikuchipy.signals.util._dask import get_chunking
 
-
 __all__ = ["file_reader"]
 
 

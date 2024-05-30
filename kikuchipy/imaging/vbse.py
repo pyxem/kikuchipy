@@ -18,18 +18,17 @@
 from typing import List, Optional, Tuple, Union
 
 from dask.array import Array
+from hyperspy._signals.signal2d import Signal2D
 from hyperspy.drawing._markers.horizontal_line import HorizontalLine
-from hyperspy.drawing._markers.vertical_line import VerticalLine
 from hyperspy.drawing._markers.rectangle import Rectangle
 from hyperspy.drawing._markers.text import Text
+from hyperspy.drawing._markers.vertical_line import VerticalLine
 from hyperspy.roi import BaseInteractiveROI, RectangularROI
-from hyperspy._signals.signal2d import Signal2D
 import numpy as np
 
-from kikuchipy.signals import EBSD, LazyEBSD
-from kikuchipy.signals import VirtualBSEImage
-from kikuchipy.pattern import rescale_intensity
 from kikuchipy._util._transfer_axes import _transfer_navigation_axes_to_signal_axes
+from kikuchipy.pattern import rescale_intensity
+from kikuchipy.signals import EBSD, LazyEBSD, VirtualBSEImage
 
 
 class VirtualBSEImager:

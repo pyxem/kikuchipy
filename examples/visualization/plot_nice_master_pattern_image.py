@@ -7,10 +7,10 @@ More details are given in the
 :doc:`visualization tutorial </tutorials/visualizing_patterns>`.
 """
 
-import kikuchipy as kp
 import matplotlib.pyplot as plt
 import numpy as np
 
+import kikuchipy as kp
 
 # Load both hemispheres of master pattern in stereographic projection
 mp = kp.data.nickel_ebsd_master_pattern_small(hemisphere="both")

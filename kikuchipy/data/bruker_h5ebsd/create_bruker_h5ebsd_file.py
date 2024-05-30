@@ -29,7 +29,6 @@ import skimage.color as skc
 
 import kikuchipy as kp
 
-
 s = kp.data.nickel_ebsd_small()
 ny, nx = s._navigation_shape_rc
 n = ny * nx

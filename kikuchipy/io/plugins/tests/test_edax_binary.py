@@ -23,7 +23,6 @@ import pytest
 
 import kikuchipy as kp
 
-
 EDAX_PATH = Path(__file__).parent / "../../../data/edax_binary"
 FILE_UP1 = EDAX_PATH / "edax_binary.up1"
 FILE_UP2 = EDAX_PATH / "edax_binary.up2"

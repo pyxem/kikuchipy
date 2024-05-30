@@ -22,6 +22,19 @@ from scipy.fft import fft2
 
 from kikuchipy.filters.window import Window
 from kikuchipy.pattern._pattern import (
+    _bin2d,
+    _downsample2d,
+    _dynamic_background_frequency_space_setup,
+    _get_image_quality_numba,
+    _normalize_intensity,
+    _remove_background_divide,
+    _remove_background_subtract,
+    _remove_static_background_divide,
+    _remove_static_background_subtract,
+    _rescale_with_min_max,
+    _rescale_without_min_max,
+    _rescale_without_min_max_1d_float32,
+    _zero_mean_sum_square_1d_float32,
     fft,
     fft_frequency_vectors,
     fft_spectrum,
@@ -29,21 +42,8 @@ from kikuchipy.pattern._pattern import (
     get_image_quality,
     ifft,
     normalize_intensity,
-    rescale_intensity,
     remove_dynamic_background,
-    _bin2d,
-    _downsample2d,
-    _dynamic_background_frequency_space_setup,
-    _get_image_quality_numba,
-    _normalize_intensity,
-    _remove_background_subtract,
-    _remove_background_divide,
-    _remove_static_background_subtract,
-    _remove_static_background_divide,
-    _rescale_with_min_max,
-    _rescale_without_min_max,
-    _rescale_without_min_max_1d_float32,
-    _zero_mean_sum_square_1d_float32,
+    rescale_intensity,
 )
 
 # Expected output intensities from various image processing methods

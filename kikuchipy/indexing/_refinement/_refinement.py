@@ -24,27 +24,25 @@ import sys
 from time import time
 from typing import Callable, Optional, Tuple, Union
 
-from dask.diagnostics import ProgressBar
 import dask.array as da
+from dask.diagnostics import ProgressBar
 import numpy as np
-from orix.crystal_map import create_coordinate_arrays, CrystalMap, Phase, PhaseList
+from orix.crystal_map import CrystalMap, Phase, PhaseList, create_coordinate_arrays
 from orix.quaternion import Rotation
 import scipy.optimize
 
+from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.indexing._refinement._solvers import (
-    _refine_orientation_solver_nlopt,
-    _refine_orientation_solver_scipy,
     _refine_orientation_pc_solver_nlopt,
     _refine_orientation_pc_solver_scipy,
+    _refine_orientation_solver_nlopt,
+    _refine_orientation_solver_scipy,
     _refine_pc_solver_nlopt,
     _refine_pc_solver_scipy,
 )
-from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.pattern import rescale_intensity
 from kikuchipy.signals.util._crystal_map import _get_indexed_points_in_data_in_xmap
-from kikuchipy.signals.util._master_pattern import (
-    _get_direction_cosines_from_detector,
-)
+from kikuchipy.signals.util._master_pattern import _get_direction_cosines_from_detector
 
 
 def compute_refine_orientation_results(

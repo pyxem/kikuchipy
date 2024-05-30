@@ -24,7 +24,6 @@ import pytest
 from kikuchipy import load
 from kikuchipy.conftest import assert_dictionary
 
-
 DIR_PATH = os.path.dirname(__file__)
 DATA_PATH = os.path.join(DIR_PATH, "../../../data")
 EDAX_FILE = os.path.join(DATA_PATH, "edax_h5ebsd/patterns.h5")

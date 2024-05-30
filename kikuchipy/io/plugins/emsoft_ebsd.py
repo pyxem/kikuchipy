@@ -31,7 +31,6 @@ from orix.quaternion import Rotation
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
 
-
 __all__ = ["file_reader"]
 
 

@@ -27,7 +27,6 @@ import numpy as np
 
 import kikuchipy as kp
 
-
 # Read data
 datadir = "/home/hakon/kode/emsoft/emdata/crystal_data"
 phase = "ni"

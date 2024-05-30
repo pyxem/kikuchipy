@@ -19,7 +19,6 @@ import re
 
 from outdated import check_outdated
 
-
 with open("../../kikuchipy/release.py") as fid:
     for line in fid:
         if line.startswith("version"):

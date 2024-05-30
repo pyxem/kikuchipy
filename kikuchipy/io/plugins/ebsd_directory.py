@@ -31,7 +31,6 @@ from dask.diagnostics import ProgressBar
 import imageio.v3 as iio
 import numpy as np
 
-
 __all__ = ["file_reader"]
 
 

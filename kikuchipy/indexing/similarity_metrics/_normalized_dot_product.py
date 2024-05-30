@@ -44,6 +44,7 @@ class NormalizedDotProductMetric(SimilarityMetric):
     description of the initialization parameters and the list of
     attributes.
     """
+
     _allowed_dtypes: List[type] = [np.float32, np.float64]
     _sign: int = 1
 

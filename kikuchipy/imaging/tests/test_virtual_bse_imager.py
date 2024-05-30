@@ -24,7 +24,6 @@ import pytest
 
 import kikuchipy as kp
 
-
 DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5")
 

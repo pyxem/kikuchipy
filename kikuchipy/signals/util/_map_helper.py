@@ -27,7 +27,6 @@ from scipy.ndimage import generic_filter
 from kikuchipy.filters import Window
 from kikuchipy.pattern._pattern import _normalize, _zero_mean
 
-
 # This private module is tested indirectly via the EBSD methods
 # get_average_neighbour_dot_product_map() and
 # get_neighbour_dot_product_matrices()

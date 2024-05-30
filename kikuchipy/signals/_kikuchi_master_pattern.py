@@ -32,7 +32,6 @@ from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D
 from kikuchipy.signals.util._master_pattern import _lambert2vector
 from kikuchipy.signals.util._overwrite_hyperspy_methods import insert_doc_disclaimer
 
-
 _logger = logging.getLogger(__name__)
 
 

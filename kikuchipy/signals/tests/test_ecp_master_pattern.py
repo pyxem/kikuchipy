@@ -24,7 +24,6 @@ import pytest
 
 import kikuchipy as kp
 
-
 DIR_PATH = os.path.dirname(__file__)
 ECP_FILE = os.path.join(
     DIR_PATH, "../../data/emsoft_ecp_master_pattern/ecp_master_pattern.h5"

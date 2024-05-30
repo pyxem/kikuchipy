@@ -18,8 +18,8 @@
 import os
 
 import dask.array as da
-import hyperspy.api as hs
 from hyperspy._signals.signal2d import Signal2D
+import hyperspy.api as hs
 import numpy as np
 from orix.crystal_map import Phase
 from orix.quaternion import Rotation
@@ -27,16 +27,20 @@ import pytest
 
 import kikuchipy as kp
 from kikuchipy.data import nickel_ebsd_master_pattern_small
+from kikuchipy.indexing.similarity_metrics import (
+    NormalizedCrossCorrelationMetric,
+    NormalizedDotProductMetric,
+)
 from kikuchipy.io.plugins.tests.test_emsoft_ebsd_master_pattern import (
-    setup_axes_manager,
     METADATA,
+    setup_axes_manager,
 )
 from kikuchipy.signals.tests.test_ebsd import assert_dictionary
 from kikuchipy.signals.util._master_pattern import (
     _get_cosine_sine_of_alpha_and_azimuthal,
-    _get_direction_cosines_from_detector,
     _get_direction_cosines_for_fixed_pc,
     _get_direction_cosines_for_varying_pc,
+    _get_direction_cosines_from_detector,
     _get_lambert_interpolation_parameters,
     _get_pixel_from_master_pattern,
     _lambert2vector,
@@ -45,11 +49,6 @@ from kikuchipy.signals.util._master_pattern import (
     _project_single_pattern_from_master_pattern,
     _vector2lambert,
 )
-from kikuchipy.indexing.similarity_metrics import (
-    NormalizedCrossCorrelationMetric,
-    NormalizedDotProductMetric,
-)
-
 
 DIR_PATH = os.path.dirname(__file__)
 EMSOFT_FILE = os.path.join(

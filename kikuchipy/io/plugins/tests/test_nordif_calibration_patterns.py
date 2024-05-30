@@ -24,7 +24,6 @@ import pytest
 
 import kikuchipy as kp
 
-
 DIR_PATH = Path(os.path.dirname(__file__))
 NORDIF_DIR = DIR_PATH / "../../../data/nordif"
 BG_FILE = NORDIF_DIR / "Background acquisition pattern.bmp"

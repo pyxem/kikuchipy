@@ -5,15 +5,14 @@
 from datetime import datetime
 import inspect
 import os
-from os.path import relpath, dirname
+from os.path import dirname, relpath
 import re
 import sys
 
-import pyvista as pv
 from numpydoc.docscrape_sphinx import SphinxDocString
+import pyvista as pv
 
 import kikuchipy as kp
-
 
 # If extensions (or modules to document with autodoc) are in another
 # directory, add these directories to sys.path here. If the directory

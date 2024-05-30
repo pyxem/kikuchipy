@@ -13,8 +13,8 @@ This example shows how to bin :class:`~kikuchipy.signals.EBSD` patterns using
 """
 
 import hyperspy.api as hs
-import kikuchipy as kp
 
+import kikuchipy as kp
 
 s = kp.data.si_ebsd_moving_screen(allow_download=True, show_progressbar=False)
 s.remove_static_background(show_progressbar=False)

@@ -16,9 +16,9 @@ of a map, assuming a nominal sample tilt of 70 degrees, a detector tilt of 0 deg
 detector pixel size of 70 microns and a sample step size of 50 microns.
 """
 
-import kikuchipy as kp
 import numpy as np
 
+import kikuchipy as kp
 
 # Create an initial detector with one PC assumed to be for the upper
 # left corner of a map
