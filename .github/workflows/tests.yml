@@ -98,6 +98,7 @@ jobs:
         run: |
           pip install -e .'[all]'
           pip install pyopencl
+          pip install git+https://github.com/drowenhorst-nrl/PyEBSDIndex.git@NLPARDebug
 
       - name: Install optional dependencies on macOS (without nlopt)
         if: ${{ contains(matrix.LABEL, 'minimum_requirement') == false && matrix.os == 'macos-latest' }}
@@ -105,6 +106,7 @@ jobs:
         run: |
           pip install -e .
           pip install 'pyebsdindex[gpu]' pyvista
+          pip install git+https://github.com/drowenhorst-nrl/PyEBSDIndex.git@NLPARDebug
 
       - name: Display Python, pip and package versions
         run: |

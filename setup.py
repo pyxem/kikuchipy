@@ -74,7 +74,7 @@ extra_feature_requirements = {
         # We can change from ~= to >= once we consider PyEBSDIndex
         # stable. This is typically when a minor release with no or
         # only minor breaking changes is made available.
-        "pyebsdindex                    ~= 0.2",
+        "pyebsdindex                    >= 0.2",
         "pyvista",
     ],
 }
