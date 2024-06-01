@@ -22,7 +22,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 import re
-from typing import List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 from matplotlib.figure import Figure
 from matplotlib.markers import MarkerStyle
@@ -39,6 +39,11 @@ from sklearn.linear_model import LinearRegression, RANSACRegressor
 
 from kikuchipy import __version__
 from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
+
+if TYPE_CHECKING:  # pragma: no cover
+    from diffsims.crystallography import ReciprocalLatticeVector
+    from pyebsdindex import EBSDIndexer
+
 
 _logger = logging.getLogger(__name__)
 
@@ -204,22 +209,32 @@ class EBSDDetector:
         projection/pattern centers (PCs).
         """
         self.shape = shape
-        self.px_size = px_size
-        self.binning = binning
-        self.tilt = tilt
-        self.azimuthal = azimuthal
-        self.sample_tilt = sample_tilt
+        self.px_size = float(px_size)
+        self.binning = float(binning)
+        self.tilt = float(tilt)
+        self.azimuthal = float(azimuthal)
+        self.sample_tilt = float(sample_tilt)
         self.pc = pc
         if convention is None:
             convention = "bruker"
         self._set_pc_in_bruker_convention(convention)
 
     def __repr__(self) -> str:
-        pc_average = tuple(self.pc_average.round(3))
+        decimals = 3
+        pc_average = tuple(self.pc_average.round(decimals))
+        sample_tilt = np.round(self.sample_tilt, decimals)
+        tilt = np.round(self.tilt, decimals)
+        azimuthal = np.round(self.azimuthal, decimals)
+        px_size = np.round(self.px_size, decimals)
         return (
-            f"{type(self).__name__} {self.shape}, "
-            f"px_size {self.px_size} um, binning {self.binning}, "
-            f"tilt {self.tilt}, azimuthal {self.azimuthal}, pc {pc_average}"
+            f"{type(self).__name__}"
+            f"(shape={self.shape}, "
+            f"pc={pc_average!r}, "
+            f"sample_tilt={sample_tilt}, "
+            f"tilt={tilt}, "
+            f"azimuthal={azimuthal}, "
+            f"binning={self.binning}, "
+            f"px_size={px_size} um)"
         )
 
     @property
@@ -287,7 +302,7 @@ class EBSDDetector:
         """Set all projection center coordinates, assuming Bruker's
         convention.
         """
-        self._pc = np.atleast_2d(value)
+        self._pc = np.atleast_2d(value).astype(float)
 
     @property
     def pc_flattened(self) -> np.ndarray:
@@ -312,7 +327,7 @@ class EBSDDetector:
     @pcx.setter
     def pcx(self, value: Union[np.ndarray, list, tuple, float]):
         """Set the x projection center coordinates."""
-        self._pc[..., 0] = np.atleast_2d(value)
+        self._pc[..., 0] = np.atleast_2d(value).astype(float)
 
     @property
     def pcy(self) -> np.ndarray:
@@ -330,7 +345,7 @@ class EBSDDetector:
     @pcy.setter
     def pcy(self, value: Union[np.ndarray, list, tuple, float]):
         """Set y projection center coordinates."""
-        self._pc[..., 1] = np.atleast_2d(value)
+        self._pc[..., 1] = np.atleast_2d(value).astype(float)
 
     @property
     def pcz(self) -> np.ndarray:
@@ -348,7 +363,7 @@ class EBSDDetector:
     @pcz.setter
     def pcz(self, value: Union[np.ndarray, list, tuple, float]):
         """Set z projection center coordinates."""
-        self._pc[..., 2] = np.atleast_2d(value)
+        self._pc[..., 2] = np.atleast_2d(value).astype(float)
 
     @property
     def pc_average(self) -> np.ndarray:
@@ -524,13 +539,10 @@ class EBSDDetector:
                 detector_kw[k] = tuple(int(i) for i in shape[1:-1].split(","))
             except ValueError:  # pragma: no cover
                 detector_kw[k] = None
-        for k, dtype in zip(
-            ["px_size", "binning", "tilt", "azimuthal", "sample_tilt"],
-            [float, int, float, float, float],
-        ):
+        for k in ["px_size", "binning", "tilt", "azimuthal", "sample_tilt"]:
             value = detector_kw[k].rstrip(" deg")
             try:
-                detector_kw[k] = dtype(value)
+                detector_kw[k] = float(value)
             except ():  # pragma: no cover
                 detector_kw[k] = None
 
