@@ -187,13 +187,11 @@ class BrukerH5EBSDReader(H5EBSDReader):
         )
         if pc.size > 3:
             pc = pc.reshape((ny, nx, 3))
-        tilt = hd.get("CameraTilt", 0.0)
-        sample_tilt = hd.get("SampleTilt", 0.0)
         scan_dict["detector"] = EBSDDetector(
             shape=(sy, sx),
             px_size=px_size,
-            tilt=hd.get("CameraTilt", 0),
-            sample_tilt=hd.get("Sample Tilt", 70),
+            tilt=hd.get("CameraTilt", 0.0),
+            sample_tilt=hd.get("Sample Tilt", 0.0),
             pc=pc,
         )
 
