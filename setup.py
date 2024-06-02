@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -68,7 +68,7 @@ extra_feature_requirements = {
     ],
     "all": [
         "nlopt",
-        "pyebsdindex                    >= 0.2",
+        "pyebsdindex                    >= 0.2, != 0.3.1, != 0.3.1",
         "pyvista",
     ],
 }
@@ -145,14 +145,14 @@ setup(
     install_requires=[
         "dask[array]        >= 2021.8.1",
         "diffpy.structure   >= 3",
-        "diffsims           >= 0.5.1",
+        "diffsims           >= 0.5.2",
         "hyperspy           >= 1.7.3, < 2",
         "h5py               >= 2.10",
         "imageio",
         "matplotlib         >= 3.5",
-        "numba              >= 0.55",
-        "numpy              >= 1.21.6",
-        "orix               >= 0.11.1",
+        "numba              >= 0.57",
+        "numpy              >= 1.23.0",
+        "orix               >= 0.12.1",
         "pooch              >= 1.3.0",
         "pyyaml",
         "tqdm               >= 0.5.2",
