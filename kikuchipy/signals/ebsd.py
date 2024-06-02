@@ -148,7 +148,7 @@ class EBSD(KikuchipySignal2D):
     >>> s
     <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
     >>> s.detector
-    EBSDDetector (60, 60), px_size 1 um, binning 8, tilt 0, azimuthal 0, pc (0.425, 0.213, 0.501)
+    EBSDDetector(shape=(60, 60), pc=(0.425, 0.213, 0.501), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=8.0, px_size=1.0 um)
     >>> s.static_background
     array([[84, 87, 90, ..., 27, 29, 30],
            [87, 90, 93, ..., 27, 28, 30],
@@ -160,7 +160,7 @@ class EBSD(KikuchipySignal2D):
     >>> s.xmap
     Phase  Orientations  Name  Space group  Point group  Proper point group     Color
         0    9 (100.0%)    ni        Fm-3m         m-3m                 432  tab:blue
-    Properties: scores
+    Properties: scores, z
     Scan unit: px
     """
 
@@ -1335,9 +1335,9 @@ class EBSD(KikuchipySignal2D):
         >>> s.remove_dynamic_background()
         >>> iq = s.get_image_quality()
         >>> iq
-        array([[0.19935645, 0.16657268, 0.18803978],
-               [0.19040637, 0.1616931 , 0.17834103],
-               [0.19411428, 0.16031407, 0.18413563]], dtype=float32)
+        array([[0.19935645, 0.16657268, 0.18802597],
+               [0.19040637, 0.16169308, 0.17834103],
+               [0.19411428, 0.16031112, 0.18414427]], dtype=float32)
         """
         # Calculate frequency vectors
         sx, sy = self.axes_manager.signal_shape

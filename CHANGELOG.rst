@@ -29,6 +29,11 @@ Changed
   (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
 - Minimum scikit-image version is now 0.22.0.
   (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
+- Upon creation of an ``EBSDDetector``, the following attributes are forced to be
+  floats: sample tilt, tilt, azimuthal angle, binning, pixel size, and the projection
+  centers (PCs). (`#677 <https://github.com/pyxem/kikuchipy/pull/677>`_)
+- Simpler string representation of an ``EBSDDetector``, also showing the sample tilt.
+  (`#677 <https://github.com/pyxem/kikuchipy/pull/677>`_)
 
 Deprecated
 ----------
