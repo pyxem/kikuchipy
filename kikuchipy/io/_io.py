@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -20,14 +20,14 @@ import os
 from pathlib import Path
 from typing import List, Optional, Union
 
+from h5py import File, Group, is_hdf5
 from hyperspy.io_plugins import hspy
 from hyperspy.misc.io.tools import overwrite as overwrite_method
-from hyperspy.misc.utils import strlist2enumeration, find_subclasses
+from hyperspy.misc.utils import find_subclasses, strlist2enumeration
 from hyperspy.signal import BaseSignal
-from h5py import File, is_hdf5, Group
 import numpy as np
 
-import kikuchipy.signals
+from kikuchipy.io._util import _ensure_directory, _get_input_bool
 from kikuchipy.io.plugins import (
     bruker_h5ebsd,
     ebsd_directory,
@@ -43,8 +43,7 @@ from kikuchipy.io.plugins import (
     oxford_binary,
     oxford_h5ebsd,
 )
-from kikuchipy.io._util import _get_input_bool, _ensure_directory
-
+import kikuchipy.signals
 
 plugins = [
     bruker_h5ebsd,
@@ -69,9 +68,7 @@ for plugin in plugins:
         default_write_ext.add(plugin.file_extensions[plugin.default_extension])
 
 
-def load(
-    filename: Union[str, Path], lazy: bool = False, **kwargs
-) -> Union[
+def load(filename: Union[str, Path], lazy: bool = False, **kwargs) -> Union[
     "EBSD",
     "EBSDMasterPattern",
     "ECPMasterPattern",

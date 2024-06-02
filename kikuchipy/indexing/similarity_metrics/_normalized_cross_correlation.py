@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -54,6 +54,7 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
     description of the initialization parameters and the list of
     attributes.
     """
+
     _allowed_dtypes: List[type] = [np.float32, np.float64]
     _sign: int = 1
 

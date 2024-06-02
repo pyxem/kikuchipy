@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -23,8 +23,8 @@ import dask.array as da
 from h5py import Dataset, File, Group
 import numpy as np
 
-from kikuchipy.io.plugins.emsoft_ebsd import _crystaldata2phase
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
+from kikuchipy.io.plugins.emsoft_ebsd import _crystaldata2phase
 
 
 class EMsoftMasterPatternReader(abc.ABC):

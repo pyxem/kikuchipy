@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -22,7 +22,6 @@ from pathlib import Path
 from typing import List, Optional, Union
 
 from kikuchipy.io.plugins._emsoft_master_pattern import EMsoftMasterPatternReader
-
 
 __all__ = ["file_reader"]
 

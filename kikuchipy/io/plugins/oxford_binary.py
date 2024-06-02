@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -33,7 +33,6 @@ import dask.array as da
 import numpy as np
 
 from kikuchipy.signals.util._dask import get_chunking
-
 
 __all__ = ["file_reader"]
 

@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -27,8 +27,7 @@ import numpy as np
 from orix.crystal_map import CrystalMap
 
 from kikuchipy.detectors import EBSDDetector
-from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict, H5EBSDReader
-
+from kikuchipy.io.plugins._h5ebsd import H5EBSDReader, _hdf5group2dict
 
 __all__ = ["file_reader"]
 

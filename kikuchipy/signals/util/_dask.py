@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -20,7 +20,6 @@ from typing import List, Optional, Tuple, Union
 
 import dask.array as da
 import numpy as np
-
 
 _logger = logging.getLogger(__name__)
 

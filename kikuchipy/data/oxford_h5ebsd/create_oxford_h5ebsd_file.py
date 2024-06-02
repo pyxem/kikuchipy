@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -28,7 +28,6 @@ import numpy as np
 from orix.quaternion import Rotation
 
 import kikuchipy as kp
-
 
 # Orientations determined from indexing
 grain1 = (0.9542, -0.0183, -0.2806, 0.1018)

@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -58,14 +58,17 @@
 patterns into a detector.
 """
 
-from typing import Optional, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Tuple, Union
 
-from numba import njit
 import numba as nb
+from numba import njit
 import numpy as np
 
-from kikuchipy.pattern._pattern import _rescale_with_min_max
 from kikuchipy._rotation import _rotate_vector
+from kikuchipy.pattern._pattern import _rescale_with_min_max
+
+if TYPE_CHECKING:  # pragma: no cover
+    from kikuchipy.detectors import EBSDDetector
 
 
 # Reusable constants

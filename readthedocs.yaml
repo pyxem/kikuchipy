@@ -24,7 +24,6 @@ build:
 
 # Build doc in all formats (HTML, PDF and ePub)
 formats:
-  - htmlzip
   - pdf
 
 conda:

@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -18,7 +18,6 @@
 import re
 
 from outdated import check_outdated
-
 
 with open("../../kikuchipy/release.py") as fid:
     for line in fid:

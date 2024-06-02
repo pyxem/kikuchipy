@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -28,7 +28,6 @@ import numpy as np
 import skimage.color as skc
 
 import kikuchipy as kp
-
 
 s = kp.data.nickel_ebsd_small()
 ny, nx = s._navigation_shape_rc

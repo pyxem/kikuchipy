@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -21,7 +21,6 @@ import pytest
 
 from kikuchipy import data
 from kikuchipy.detectors import PCCalibrationMovingScreen
-
 
 POINTS_IN = [(109, 131), (390, 139), (246, 232), (129, 228), (364, 237)]
 POINTS_OUT = [(77, 146), (424, 156), (246, 269), (104, 265), (392, 276)]

@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -19,8 +19,8 @@ from typing import Callable, List, Optional, Tuple, Union
 
 from numba import njit
 import numpy as np
+from scipy.fft import fft2, fftshift, ifft2, ifftshift, irfft2, rfft2
 from scipy.ndimage import gaussian_filter
-from scipy.fft import fft2, rfft2, ifft2, irfft2, fftshift, ifftshift
 from skimage.exposure import equalize_adapthist
 from skimage.util.dtype import dtype_range
 

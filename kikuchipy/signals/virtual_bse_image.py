@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -16,6 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
+
 from typing import List, Optional, Tuple, Union
 
 import numpy as np

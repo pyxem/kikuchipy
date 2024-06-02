@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -21,12 +21,12 @@ from scipy.ndimage import gaussian_filter
 
 from kikuchipy.filters.fft_barnes import _fft_filter
 from kikuchipy.filters.window import Window
+from kikuchipy.pattern import chunk
 from kikuchipy.pattern._pattern import (
     _dynamic_background_frequency_space_setup,
     fft_filter,
     fft_spectrum,
 )
-from kikuchipy.pattern import chunk
 from kikuchipy.signals.util._dask import get_dask_array
 
 

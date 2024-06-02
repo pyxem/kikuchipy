@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -30,7 +30,6 @@ from orix.quaternion import Rotation
 
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
-
 
 __all__ = ["file_reader"]
 

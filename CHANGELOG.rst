@@ -13,6 +13,36 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+0.10.0 (2024-06-02)
+===================
+
+Changed
+-------
+- Minimum Python version is now 3.8.
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
+- Minimum NumPy version is now 1.23.0.
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
+- Minimum Numba version is now 0.57.0.
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
+- Minimum scikit-image version is now 0.22.0.
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
+- Upon creation of an ``EBSDDetector``, the following attributes are forced to be
+  floats: sample tilt, tilt, azimuthal angle, binning, pixel size, and the projection
+  centers (PCs). (`#677 <https://github.com/pyxem/kikuchipy/pull/677>`_)
+- Simpler string representation of an ``EBSDDetector``, also showing the sample tilt.
+  (`#677 <https://github.com/pyxem/kikuchipy/pull/677>`_)
+- Exclude PyEBSDIndex versions 0.3.0 and 0.3.1 since these versions cannot perform Hough
+  indexing with Dask arrays. This was previously unintentionally supported due to a
+  side-effect. It should now be supported going forward.
+  (`#678 <https://github.com/pyxem/kikuchipy/pull/678>`_)
+
+Fixed
+-----
+- The order of the new shape of the detector of a downsampled EBSD signal, returned from
+  ``downsample()``, was previously previously incorrect, (n columns, n rows). This is
+  now correct, (n rows, n columns).
+  (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
+  
 0.9.0 (2023-11-03)
 ==================
 
@@ -513,8 +543,8 @@ Deprecated
   removed in version 0.7. Use the ``kikuchipy.simulations.KikuchiPatternSimulator``
   class instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - The ``kikuchipy.crystallography.matrices`` module is deprecated and will be removed in
-  version 0.7, access the matrices via :class:`diffpy.structure.lattice.Lattice`
-  attributes instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
+  version 0.7, access the matrices via ``diffpy.structure.lattice.Lattice`` attributes
+  instead. (`#537 <https://github.com/pyxem/kikuchipy/pull/537>`_)
 - The following functions for processing of pattern chunks in the
   ``kikuchipy.pattern.chunk`` module are deprecated and will be removed in version 0.7:
   ``get_image_quality()``, ``remove_dynamic_background()`` and

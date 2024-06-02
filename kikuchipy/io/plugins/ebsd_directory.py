@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -30,7 +30,6 @@ import dask.array as da
 from dask.diagnostics import ProgressBar
 import imageio.v3 as iio
 import numpy as np
-
 
 __all__ = ["file_reader"]
 

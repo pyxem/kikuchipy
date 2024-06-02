@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -22,7 +22,6 @@ import numpy as np
 import pytest
 
 import kikuchipy as kp
-
 
 EDAX_PATH = Path(__file__).parent / "../../../data/edax_binary"
 FILE_UP1 = EDAX_PATH / "edax_binary.up1"

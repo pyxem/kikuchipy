@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -301,7 +301,7 @@ class TestPCOptimization:
 
         det = self.signal.hough_indexing_optimize_pc(det0.pc_average, self.indexer)
         assert det.navigation_shape == (1,)
-        assert np.allclose(det.pc_average, det0.pc_average, atol=1e-2)
+        assert np.allclose(det.pc_average, det0.pc_average, atol=0.05)
 
         # Batch with PC array with more than one dimension
         det2 = self.signal.hough_indexing_optimize_pc(

@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -20,7 +20,7 @@ from typing import List, Optional, Union
 import warnings
 
 import numpy as np
-from orix.crystal_map import create_coordinate_arrays, CrystalMap, PhaseList
+from orix.crystal_map import CrystalMap, PhaseList, create_coordinate_arrays
 from orix.quaternion import Rotation
 
 from kikuchipy.signals.util._crystal_map import _equal_phase

@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -21,7 +21,6 @@ import numpy as np
 
 import kikuchipy as kp
 from kikuchipy.conftest import assert_dictionary
-
 
 OXFORD_FILE = Path(__file__).parent / "../../../data/oxford_h5ebsd/patterns.h5oina"
 

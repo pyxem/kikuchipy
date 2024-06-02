@@ -9,8 +9,8 @@ details).
 """
 
 import hyperspy.api as hs
-import kikuchipy as kp
 
+import kikuchipy as kp
 
 # Import data
 s = kp.data.nickel_ebsd_small()

@@ -7,9 +7,9 @@ positions in a grid evenly spaced in navigation space.
 """
 
 import hyperspy.api as hs
-import kikuchipy as kp
 import matplotlib.pyplot as plt
 
+import kikuchipy as kp
 
 plt.rcParams["font.size"] = 15
 

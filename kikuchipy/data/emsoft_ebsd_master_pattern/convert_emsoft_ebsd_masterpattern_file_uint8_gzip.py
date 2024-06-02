@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -26,7 +26,6 @@ from h5py import File
 import numpy as np
 
 import kikuchipy as kp
-
 
 # Read data
 datadir = "/home/hakon/kode/emsoft/emdata/crystal_data"

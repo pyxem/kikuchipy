@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -22,11 +22,10 @@ from typing import Optional, Union
 import hyperspy.api as hs
 import pooch
 
-from kikuchipy.signals import EBSD, EBSDMasterPattern
 from kikuchipy import load
-from kikuchipy.release import version
 from kikuchipy.data._registry import registry_hashes, registry_urls
-
+from kikuchipy.release import version
+from kikuchipy.signals import EBSD, EBSDMasterPattern
 
 marshall = pooch.create(
     path=pooch.os_cache("kikuchipy"),

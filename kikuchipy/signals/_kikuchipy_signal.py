@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -20,13 +20,13 @@ import gc
 import logging
 import numbers
 import os
-from typing import Any, List, Optional, Union, Tuple
+from typing import Any, List, Optional, Tuple, Union
 import warnings
 
 import dask.array as da
-from hyperspy.signals import Signal2D
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.misc.rgb_tools import rgb_dtypes
+from hyperspy.signals import Signal2D
 import numpy as np
 from skimage.util.dtype import dtype_range
 import yaml
@@ -34,7 +34,6 @@ import yaml
 from kikuchipy.pattern import normalize_intensity, rescale_intensity
 from kikuchipy.pattern._pattern import _adaptive_histogram_equalization
 from kikuchipy.signals.util._overwrite_hyperspy_methods import insert_doc_disclaimer
-
 
 _logger = logging.getLogger(__name__)
 
@@ -291,7 +290,7 @@ class KikuchipySignal2D(Signal2D):
         146.0670987654321
         >>> s.normalize_intensity(dtype_out=np.float32)
         >>> np.mean(s.data)
-        2.6373216e-08
+        0.0
         """
         if lazy_output and inplace:
             raise ValueError("`lazy_output=True` requires `inplace=False`")

@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -23,7 +23,6 @@ import numpy as np
 import pytest
 
 import kikuchipy as kp
-
 
 DIR_PATH = Path(os.path.dirname(__file__))
 NORDIF_DIR = DIR_PATH / "../../../data/nordif"

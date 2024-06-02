@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -25,7 +25,6 @@ from kikuchipy.signals.ebsd_master_pattern import (
     EBSDMasterPattern,
     LazyEBSDMasterPattern,
 )
-
 
 DIR_PATH = os.path.dirname(__file__)
 EMSOFT_FILE = os.path.join(

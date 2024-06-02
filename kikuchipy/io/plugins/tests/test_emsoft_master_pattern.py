@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -26,7 +26,6 @@ from kikuchipy.io.plugins._emsoft_master_pattern import (
     _get_data_shape_slices,
     _get_datasets,
 )
-
 
 DIR_PATH = os.path.dirname(__file__)
 EMSOFT_FILE = os.path.join(

@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -17,7 +17,7 @@
 
 from copy import deepcopy
 import logging
-from typing import Any, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Union
 from warnings import warn
 
 import hyperspy.api as hs
@@ -31,6 +31,9 @@ from tqdm import tqdm
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D
 from kikuchipy.signals.util._master_pattern import _lambert2vector
 from kikuchipy.signals.util._overwrite_hyperspy_methods import insert_doc_disclaimer
+
+if TYPE_CHECKING:  # pragma: no cover
+    from pyvista import Plotter
 
 
 _logger = logging.getLogger(__name__)
@@ -207,7 +210,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         style: str = "surface",
         plotter_kwargs: Union[dict] = None,
         show_kwargs: Union[dict] = None,
-    ) -> "pyvista.Plotter":
+    ) -> "Plotter":
         """Plot the master pattern sphere.
 
         This requires the master pattern to be in the stereographic

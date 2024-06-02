@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -16,23 +16,24 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from __future__ import annotations
+
 import copy
 import datetime
 import gc
 import logging
 import os
-from typing import Union, List, Optional, Tuple, Iterable
+from typing import Iterable, List, Optional, Tuple, Union
 import warnings
 
 import dask
 import dask.array as da
 from dask.diagnostics import ProgressBar
+from h5py import File
 import hyperspy.api as hs
 from hyperspy.axes import AxesManager
-from hyperspy.signals import Signal2D
 from hyperspy.learn.mva import LearningResults
 from hyperspy.roi import BaseInteractiveROI
-from h5py import File
+from hyperspy.signals import Signal2D
 import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList
 from orix.quaternion import Rotation
@@ -45,8 +46,8 @@ from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
 from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
 from kikuchipy.indexing._hough_indexing import (
-    _indexer_is_compatible_with_kikuchipy,
     _hough_indexing,
+    _indexer_is_compatible_with_kikuchipy,
     _optimize_pc,
     _phase_lists_are_compatible,
 )
@@ -56,48 +57,47 @@ from kikuchipy.indexing._refinement._refinement import (
     _refine_pc,
 )
 from kikuchipy.indexing.similarity_metrics import (
-    SimilarityMetric,
     NormalizedCrossCorrelationMetric,
     NormalizedDotProductMetric,
+    SimilarityMetric,
 )
 from kikuchipy.io._io import _save
 from kikuchipy.pattern import chunk
-from kikuchipy.pattern.chunk import _average_neighbour_patterns
 from kikuchipy.pattern._pattern import (
-    fft_frequency_vectors,
-    fft_filter,
     _downsample2d,
     _dynamic_background_frequency_space_setup,
     _get_image_quality,
-    _remove_static_background_subtract,
-    _remove_static_background_divide,
     _remove_dynamic_background,
+    _remove_static_background_divide,
+    _remove_static_background_subtract,
+    fft_filter,
+    fft_frequency_vectors,
 )
-from kikuchipy.signals.util.array_tools import grid_indices
+from kikuchipy.pattern.chunk import _average_neighbour_patterns
+from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
+from kikuchipy.signals.util._crystal_map import (
+    _equal_phase,
+    _get_indexed_points_in_data_in_xmap,
+    _xmap_is_compatible_with_signal,
+)
 from kikuchipy.signals.util._dask import (
-    get_dask_array,
-    get_chunking,
     _get_chunk_overlap_depth,
     _rechunk_learning_results,
     _update_learning_results,
+    get_chunking,
+    get_dask_array,
 )
 from kikuchipy.signals.util._detector import _detector_is_compatible_with_signal
-from kikuchipy.signals.util._crystal_map import (
-    _get_indexed_points_in_data_in_xmap,
-    _equal_phase,
-    _xmap_is_compatible_with_signal,
-)
 from kikuchipy.signals.util._map_helper import (
-    _get_neighbour_dot_product_matrices,
     _get_average_dot_product_map,
+    _get_neighbour_dot_product_matrices,
 )
 from kikuchipy.signals.util._overwrite_hyperspy_methods import (
     get_parameters,
     insert_doc_disclaimer,
 )
-from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
+from kikuchipy.signals.util.array_tools import grid_indices
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
-
 
 _logger = logging.getLogger(__name__)
 
@@ -148,7 +148,7 @@ class EBSD(KikuchipySignal2D):
     >>> s
     <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
     >>> s.detector
-    EBSDDetector (60, 60), px_size 1 um, binning 8, tilt 0, azimuthal 0, pc (0.425, 0.213, 0.501)
+    EBSDDetector(shape=(60, 60), pc=(0.425, 0.213, 0.501), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=8.0, px_size=1.0 um)
     >>> s.static_background
     array([[84, 87, 90, ..., 27, 29, 30],
            [87, 90, 93, ..., 27, 28, 30],
@@ -160,7 +160,7 @@ class EBSD(KikuchipySignal2D):
     >>> s.xmap
     Phase  Orientations  Name  Space group  Point group  Proper point group     Color
         0    9 (100.0%)    ni        Fm-3m         m-3m                 432  tab:blue
-    Properties: scores
+    Properties: scores, z
     Scan unit: px
     """
 
@@ -1150,7 +1150,7 @@ class EBSD(KikuchipySignal2D):
         if not isinstance(factor, int) or factor <= 1:
             raise ValueError(f"Binning `factor` {factor} must be an integer > 1")
         else:
-            factor = np.int64(factor)
+            factor = int(factor)
 
         sig_shape_old = self.axes_manager.signal_shape
         rest = np.mod(sig_shape_old, factor)
@@ -1161,6 +1161,7 @@ class EBSD(KikuchipySignal2D):
                 "You might try to crop away these pixels first using EBSD.crop()"
             )
         sig_shape_new = tuple(np.array(sig_shape_old) // factor)
+        sig_shape_new = sig_shape_new[::-1]
 
         if dtype_out is not None:
             dtype_out = np.dtype(dtype_out).type
@@ -1170,7 +1171,6 @@ class EBSD(KikuchipySignal2D):
 
         attrs = self._get_custom_attributes()
 
-        # Update static background
         static_bg = attrs["static_background"]
         if static_bg is not None:
             if isinstance(static_bg, da.Array):
@@ -1178,19 +1178,18 @@ class EBSD(KikuchipySignal2D):
             static_bg_new = _downsample2d(static_bg, factor, omin, omax, dtype_out)
             attrs["static_background"] = static_bg_new
 
-        # Update detector shape and binning factor
         attrs["detector"].shape = sig_shape_new
         attrs["detector"].binning *= factor
 
-        map_kw = dict(
-            show_progressbar=show_progressbar,
-            parallel=True,
-            output_dtype=dtype_out,
-            factor=factor,
-            omin=omin,
-            omax=omax,
-            dtype_out=dtype_out,
-        )
+        map_kw = {
+            "show_progressbar": show_progressbar,
+            "parallel": True,
+            "output_dtype": dtype_out,
+            "factor": factor,
+            "omin": omin,
+            "omax": omax,
+            "dtype_out": dtype_out,
+        }
         if inplace:
             self.map(_downsample2d, inplace=True, **map_kw)
             self._set_custom_attributes(attrs)
@@ -1336,9 +1335,9 @@ class EBSD(KikuchipySignal2D):
         >>> s.remove_dynamic_background()
         >>> iq = s.get_image_quality()
         >>> iq
-        array([[0.19935645, 0.16657268, 0.18803978],
-               [0.19040637, 0.1616931 , 0.17834103],
-               [0.19411428, 0.16031407, 0.18413563]], dtype=float32)
+        array([[0.19935645, 0.16657268, 0.18802597],
+               [0.19040637, 0.16169308, 0.17834103],
+               [0.19411428, 0.16031112, 0.18414427]], dtype=float32)
         """
         # Calculate frequency vectors
         sx, sy = self.axes_manager.signal_shape

@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -18,15 +18,15 @@
 import os
 
 import dask.array as da
+from h5py import Dataset, File
 from hyperspy.api import load as hs_load
-from h5py import File, Dataset
 import numpy as np
 from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.data import nickel_ebsd_small
 from kikuchipy.conftest import assert_dictionary
+from kikuchipy.data import nickel_ebsd_small
 from kikuchipy.io._io import load
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
 from kikuchipy.io.plugins.kikuchipy_h5ebsd import (
@@ -34,7 +34,6 @@ from kikuchipy.io.plugins.kikuchipy_h5ebsd import (
     KikuchipyH5EBSDWriter,
 )
 from kikuchipy.signals.ebsd import EBSD
-
 
 DIR_PATH = os.path.dirname(__file__)
 DATA_PATH = os.path.join(DIR_PATH, "../../../data")

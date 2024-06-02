@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -24,12 +24,11 @@ import re
 from typing import Dict, List, Optional, Tuple, Union
 import warnings
 
-import numpy as np
 from matplotlib.pyplot import imread
+import numpy as np
 from orix.crystal_map import CrystalMap
 
 from kikuchipy.detectors import EBSDDetector
-
 
 __all__ = ["file_reader", "file_writer"]
 

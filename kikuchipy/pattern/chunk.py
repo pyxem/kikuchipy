@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -26,9 +26,9 @@ from numba import njit
 import numpy as np
 from scipy.ndimage import correlate, gaussian_filter
 
-import kikuchipy.pattern._pattern as pattern_processing
 import kikuchipy.filters.fft_barnes as barnes
 from kikuchipy.filters.window import Window
+import kikuchipy.pattern._pattern as pattern_processing
 from kikuchipy.pattern._pattern import _rescale_with_min_max
 
 

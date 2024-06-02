@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -25,12 +25,12 @@ from typing import Callable, Optional, Tuple, Union
 from numba import njit
 import numpy as np
 
+from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.indexing._refinement._objective_functions import (
     _refine_orientation_objective_function,
     _refine_orientation_pc_objective_function,
     _refine_pc_objective_function,
 )
-from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.pattern._pattern import (
     _rescale_without_min_max_1d_float32,
     _zero_mean_sum_square_1d_float32,

@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -25,8 +25,7 @@ import numpy as np
 from orix.crystal_map import CrystalMap
 
 from kikuchipy.detectors import EBSDDetector
-from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict, H5EBSDReader
-
+from kikuchipy.io.plugins._h5ebsd import H5EBSDReader, _hdf5group2dict
 
 __all__ = ["file_reader"]
 
@@ -169,25 +168,20 @@ class BrukerH5EBSDReader(H5EBSDReader):
         )
         scan_dict["data"] = data
 
-        # --- Axes
         scan_dict["axes"] = self.get_axes_list((ny, nx, sy, sx), (dy, dx, px_size))
 
-        # --- Original metadata
         scan_dict["original_metadata"] = {
             "manufacturer": self.manufacturer,
             "version": self.version,
         }
         scan_dict["original_metadata"].update(hd)
 
-        # --- Crystal map
         # TODO: Use reader from orix
         xmap = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
         scan_dict["xmap"] = xmap
 
-        # --- Static background
         scan_dict["static_background"] = hd.get("StaticBackground")
 
-        # --- Detector
         pc = np.column_stack(
             (dd.get("PCX", 0.5), dd.get("PCY", 0.5), dd.get("DD", 0.5))
         )
@@ -196,8 +190,8 @@ class BrukerH5EBSDReader(H5EBSDReader):
         scan_dict["detector"] = EBSDDetector(
             shape=(sy, sx),
             px_size=px_size,
-            tilt=hd.get("CameraTilt", 0),
-            sample_tilt=hd.get("Sample Tilt", 70),
+            tilt=hd.get("CameraTilt", 0.0),
+            sample_tilt=hd.get("Sample Tilt", 0.0),
             pc=pc,
         )
 

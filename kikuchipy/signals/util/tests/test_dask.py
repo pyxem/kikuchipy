@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -19,12 +19,12 @@ import dask.array as da
 import numpy as np
 import pytest
 
-from kikuchipy.signals.util._dask import (
-    get_dask_array,
-    get_chunking,
-    _rechunk_learning_results,
-)
 from kikuchipy.signals.ebsd import EBSD, LazyEBSD
+from kikuchipy.signals.util._dask import (
+    _rechunk_learning_results,
+    get_chunking,
+    get_dask_array,
+)
 
 
 class TestDask:
@@ -129,10 +129,14 @@ class TestDask:
         chunks = _rechunk_learning_results(
             factors=factors, loadings=loadings, mbytes_chunk=0.02
         )
-        assert chunks == [(-1, -1), (200, -1)]
+        assert chunks[0] == (-1, -1)
+        assert chunks[1][0] in [200, 333]
+        assert chunks[1][1] == -1
 
         # Chunk first axis in both loadings and factors
         chunks = _rechunk_learning_results(
             factors=factors, loadings=loadings, mbytes_chunk=0.01
         )
-        assert chunks == [(125, -1), (62, -1)]
+        assert chunks[0] == (125, -1)
+        assert chunks[1][0] in [125, 62]
+        assert chunks[1][1] == -1

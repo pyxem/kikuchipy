@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -19,13 +19,12 @@
 
 import abc
 import os
-from typing import Union, List, Tuple, Optional
+from typing import List, Optional, Tuple, Union
 import warnings
 
 import dask.array as da
 import h5py
 import numpy as np
-
 
 __all__ = ["_dict2hdf5group", "_hdf5group2dict", "H5EBSDReader"]
 

@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -23,7 +23,6 @@ from orix.crystal_map import Phase
 import pytest
 
 import kikuchipy as kp
-
 
 DIR_PATH = os.path.dirname(__file__)
 ECP_FILE = os.path.join(

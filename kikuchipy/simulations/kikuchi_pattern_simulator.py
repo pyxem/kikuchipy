@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -71,14 +71,14 @@ from orix.vector import Vector3d
 
 from kikuchipy import _pyvista_installed
 from kikuchipy.detectors import EBSDDetector
-from kikuchipy.simulations._kikuchi_pattern_simulation import (
-    GeometricalKikuchiPatternSimulation,
-)
+from kikuchipy.signals import EBSDMasterPattern
 from kikuchipy.simulations._kikuchi_pattern_features import (
     KikuchiPatternLine,
     KikuchiPatternZoneAxis,
 )
-from kikuchipy.signals import EBSDMasterPattern
+from kikuchipy.simulations._kikuchi_pattern_simulation import (
+    GeometricalKikuchiPatternSimulation,
+)
 
 
 class KikuchiPatternSimulator:

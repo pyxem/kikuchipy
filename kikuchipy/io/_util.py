@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -16,7 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from typing import Union, Any
+from typing import Any, Union
 import warnings
 
 

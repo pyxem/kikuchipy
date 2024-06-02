@@ -12,10 +12,10 @@ degrees, a detector tilt of 0 degrees, a detector pixel size of 70 microns and a
 step size of 50 microns.
 """
 
-import kikuchipy as kp
 import matplotlib.pyplot as plt
 import numpy as np
 
+import kikuchipy as kp
 
 plt.rcParams["font.size"] = 10
 

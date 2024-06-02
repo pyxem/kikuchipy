@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -16,7 +16,6 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from datetime import datetime
-
 
 author = "kikuchipy developers"
 copyright = f"Copyright 2019-{datetime.now().year}, kikuchipy"
@@ -39,4 +38,4 @@ maintainer_email = "hakon.w.anes@ntnu.no"
 name = "kikuchipy"
 platforms = ["Linux", "MacOS X", "Windows"]
 status = "Development"
-version = "0.9.0"
+version = "0.10.0"

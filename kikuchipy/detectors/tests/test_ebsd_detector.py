@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -41,6 +41,9 @@ class TestEBSDDetector:
         )
         assert det.shape == shape
         assert det.aspect_ratio == 2
+        assert np.issubdtype(det.pc.dtype, np.floating)
+        for attr in [det.sample_tilt, det.tilt, det.azimuthal, det.px_size]:
+            assert type(attr) is float
 
     @pytest.mark.parametrize(
         "nav_shape, desired_nav_shape, desired_nav_dim",
@@ -97,15 +100,16 @@ class TestEBSDDetector:
         px_size_binned,
     ):
         """Initialization yields expected derived values."""
-        detector = kp.detectors.EBSDDetector(
+        det = kp.detectors.EBSDDetector(
             shape=shape, px_size=px_size, binning=binning, pc=pc
         )
-        assert detector.specimen_scintillator_distance == ssd
-        assert detector.width == width
-        assert detector.height == height
-        assert detector.size == size
-        assert detector.unbinned_shape == shape_unbinned
-        assert detector.px_size_binned == px_size_binned
+        print(det)
+        assert det.specimen_scintillator_distance == ssd
+        assert det.width == width
+        assert det.height == height
+        assert det.size == size
+        assert det.unbinned_shape == shape_unbinned
+        assert det.px_size_binned == px_size_binned
 
     def test_repr(self, pc1):
         """Expected string representation."""
@@ -113,8 +117,8 @@ class TestEBSDDetector:
             shape=(1, 2), px_size=3, binning=4, tilt=5, azimuthal=2, pc=pc1
         )
         assert repr(det) == (
-            "EBSDDetector (1, 2), px_size 3 um, binning 4, tilt 5, azimuthal 2, pc "
-            "(0.421, 0.779, 0.505)"
+            "EBSDDetector(shape=(1, 2), pc=(0.421, 0.779, 0.505), sample_tilt=70.0, "
+            "tilt=5.0, azimuthal=2.0, binning=4.0, px_size=3.0 um)"
         )
 
     def test_deepcopy(self, pc1):

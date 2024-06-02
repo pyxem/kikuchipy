@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -23,7 +23,6 @@ import numpy as np
 import pytest
 
 import kikuchipy as kp
-
 
 DIR_PATH = os.path.dirname(__file__)
 KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5")

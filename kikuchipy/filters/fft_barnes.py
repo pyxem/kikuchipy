@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -19,11 +19,11 @@
 via FFT written by Connelly Barnes (public domain, 2007).
 """
 
-from typing import Union, Tuple, List
+from typing import List, Tuple, Union
 
 import numba as nb
 import numpy as np
-from scipy.fft import next_fast_len, rfft2, irfft2
+from scipy.fft import irfft2, next_fast_len, rfft2
 
 from kikuchipy.filters.window import Window
 

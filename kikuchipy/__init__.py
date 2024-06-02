@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -19,7 +19,6 @@ from typing import Union
 
 from kikuchipy.release import version as __version__
 
-
 # Attempt (and fail) import of optional dependencies only once
 try:
     import pyvista
@@ -36,7 +35,7 @@ except ImportError:  # pragma: no cover
     _nlopt_installed = False
 
 try:
-    from pyebsdindex import pcopt, ebsd_index
+    from pyebsdindex import ebsd_index, pcopt
 
     _pyebsdindex_installed = True
 except ImportError:  # pragma: no cover

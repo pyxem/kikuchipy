@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -15,14 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
-from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
-    NormalizedCrossCorrelationMetric,
-)
-from kikuchipy.indexing.similarity_metrics._normalized_dot_product import (
-    NormalizedDotProductMetric,
-)
+# isort: off
+from ._similarity_metric import SimilarityMetric
+from ._normalized_cross_correlation import NormalizedCrossCorrelationMetric
+from ._normalized_dot_product import NormalizedDotProductMetric
 
+# isort: on
 
 __all__ = [
     "NormalizedCrossCorrelationMetric",

@@ -16,10 +16,10 @@ of a map, assuming a nominal sample tilt of 70 degrees, a detector tilt of 0 deg
 detector pixel size of 70 microns and a sample step size of 50 microns.
 """
 
-import kikuchipy as kp
 import matplotlib.pyplot as plt
 import numpy as np
 
+import kikuchipy as kp
 
 plt.rcParams["font.size"] = 18
 

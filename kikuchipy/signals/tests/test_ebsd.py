@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -28,7 +28,6 @@ from skimage.exposure import rescale_intensity
 
 import kikuchipy as kp
 from kikuchipy.conftest import assert_dictionary
-
 
 DIR_PATH = os.path.dirname(__file__)
 NORDIF_FILE = os.path.join(DIR_PATH, "../../data/nordif/Pattern.dat")
@@ -104,15 +103,15 @@ class TestEBSDXmapProperty:
         with pytest.raises(ValueError, match=r"Crystal map shape \(75, 55\) and "):
             s.xmap = xmap_bad
 
-        s.axes_manager["x"].scale = 2
+        s.axes_manager["x"].scale = 2.0
         with pytest.warns(UserWarning, match=r"Crystal map step size\(s\) \[1.5, 1.5"):
             s.xmap = xmap_good
 
         s2 = s.inav[:, :-2]
         with pytest.raises(ValueError, match=r"Crystal map shape \(55, 75\) and "):
-            s2.axes_manager["x"].scale = 1
+            s2.axes_manager["x"].scale = 1.0
             s2.axes_manager["x"].name = "x2"
-            with pytest.warns(UserWarning, match="The signal navigation axes"):
+            with pytest.warns(UserWarning, match="Signal navigation axes must be"):
                 s2.xmap = xmap_good
 
     def test_attribute_carry_over_from_deepcopy(self, get_single_phase_xmap):
@@ -2298,21 +2297,24 @@ class TestExtractGrid:
 
 class TestDownsample:
     def test_downsample(self):
-        s = kp.data.nickel_ebsd_small()
+        s = kp.signals.EBSD(
+            np.ones((3, 3, 60, 50), dtype=float),
+            static_background=np.ones((60, 50), dtype=float),
+        )
         s2 = s.deepcopy()
 
         s2.downsample(factor=2)
 
         # Initial signal unaffected
-        assert s.data.shape == (3, 3, 60, 60)
-        assert s.detector.shape == (60, 60)
-        assert s.static_background.shape == (60, 60)
+        assert s.data.shape == (3, 3, 60, 50)
+        assert s.detector.shape == (60, 50)
+        assert s.static_background.shape == (60, 50)
 
         # Correct shape and data type
-        assert s2.data.shape == (3, 3, 30, 30)
+        assert s2.data.shape == (3, 3, 30, 25)
         assert s2.data.dtype == s.data.dtype
-        assert s2.detector.shape == (30, 30)
-        assert s2.static_background.shape == (30, 30)
+        assert s2.detector.shape == (30, 25)
+        assert s2.static_background.shape == (30, 25)
         assert s2.static_background.dtype == s.static_background.dtype
 
     def test_downsample_lazy(self):

@@ -8,16 +8,23 @@ on:
     branches:
       - '*'
   workflow_dispatch:
-    workflow: '*'
 
 jobs:
   code:
     name: code style
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: psf/black@stable
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - uses: isort/isort-action@master
+        with:
+          configuration: --profile black --filter-files --force-sort-within-sections --check-only --diff
 
       - name: Install Black with Jupyter extension
         run: |
@@ -32,9 +39,9 @@ jobs:
     name: check manifest
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -60,17 +67,17 @@ jobs:
         python-version: ['3.10', '3.11']
         include:
           - os: ubuntu-latest
-            python-version: 3.7
-            DEPENDENCIES: dask==2021.8.1 diffsims==0.5.1 hyperspy==1.7.3 matplotlib==3.5 numba==0.55 numpy==1.21.6 orix==0.11.1 pooch==1.3.0 pyebsdindex==0.2 scikit-image==0.16.2
+            python-version: 3.8
+            DEPENDENCIES: dask==2021.8.1 diffsims==0.5.2 hyperspy==1.7.3 matplotlib==3.5 numba==0.57 numpy==1.23.0 orix==0.12.1 pooch==1.3.0 pyebsdindex==0.2.0 scikit-image==0.21.0
             LABEL: -oldest
           - os: ubuntu-latest
             python-version: 3.11
             LABEL: -minimum_requirement
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -85,12 +92,19 @@ jobs:
         run: |
           pip install ${{ matrix.DEPENDENCIES }}
 
-      - name: Install optional dependencies
-        if: ${{ contains(matrix.LABEL, 'minimum_requirement') == false }}
+      - name: Install optional dependencies on Linux and Windows
+        if: ${{ contains(matrix.LABEL, 'minimum_requirement') == false && matrix.os != 'macos-latest' }}
         shell: bash
         run: |
           pip install -e .'[all]'
           pip install pyopencl
+
+      - name: Install optional dependencies on macOS (without nlopt)
+        if: ${{ contains(matrix.LABEL, 'minimum_requirement') == false && matrix.os == 'macos-latest' }}
+        shell: bash
+        run: |
+          pip install -e .
+          pip install 'pyebsdindex[gpu]' pyvista
 
       - name: Display Python, pip and package versions
         run: |

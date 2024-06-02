@@ -1,4 +1,4 @@
-# Copyright 2019-2023 The kikuchipy developers
+# Copyright 2019-2024 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -27,7 +27,6 @@ import numpy as np
 
 from kikuchipy.detectors import EBSDDetector
 from kikuchipy.io.plugins.nordif import _get_settings_from_file
-
 
 __all__ = ["file_reader"]
 
