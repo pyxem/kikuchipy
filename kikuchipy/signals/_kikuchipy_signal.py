@@ -290,7 +290,7 @@ class KikuchipySignal2D(Signal2D):
         146.0670987654321
         >>> s.normalize_intensity(dtype_out=np.float32)
         >>> np.mean(s.data)
-        2.6373216e-08
+        0.0
         """
         if lazy_output and inplace:
             raise ValueError("`lazy_output=True` requires `inplace=False`")

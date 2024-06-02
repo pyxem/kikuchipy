@@ -58,7 +58,7 @@
 patterns into a detector.
 """
 
-from typing import Optional, Tuple, Union
+from typing import TYPE_CHECKING, Optional, Tuple, Union
 
 import numba as nb
 from numba import njit
@@ -66,6 +66,10 @@ import numpy as np
 
 from kikuchipy._rotation import _rotate_vector
 from kikuchipy.pattern._pattern import _rescale_with_min_max
+
+if TYPE_CHECKING:  # pragma: no cover
+    from kikuchipy.detectors import EBSDDetector
+
 
 # Reusable constants
 SQRT_PI = np.sqrt(np.pi)

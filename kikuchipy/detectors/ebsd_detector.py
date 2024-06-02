@@ -177,7 +177,7 @@ class EBSDDetector:
     ...     sample_tilt=70,
     ... )
     >>> det
-    EBSDDetector (60, 60), px_size 70 um, binning 8, tilt 5, azimuthal 0, pc (0.421, 0.221, 0.505)
+    EBSDDetector(shape=(60, 60), pc=(0.421, 0.221, 0.505), sample_tilt=70.0, tilt=5.0, azimuthal=0.0, binning=8.0, px_size=70.0 um)
     >>> det.navigation_shape
     (10, 20)
     >>> det.bounds
@@ -571,9 +571,9 @@ class EBSDDetector:
         >>> import kikuchipy as kp
         >>> det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
         >>> det
-        EBSDDetector (6, 6), px_size 1 um, binning 1, tilt 0, azimuthal 0, pc (0.5, 0.333, 0.5)
+        EBSDDetector(shape=(6, 6), pc=(0.5, 0.333, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=1.0, px_size=1.0 um)
         >>> det.crop((1, 5, 2, 6))
-        EBSDDetector (4, 4), px_size 1 um, binning 1, tilt 0, azimuthal 0, pc (0.25, 0.25, 0.75)
+        EBSDDetector(shape=(4, 4), pc=(0.25, 0.25, 0.75), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=1.0, px_size=1.0 um)
 
         Plot a cropped detector with the PC on a cropped pattern
 
@@ -1274,7 +1274,7 @@ class EBSDDetector:
         ...     convention="bruker",
         ... )
         >>> det.pc_tsl()
-        array([[0.4 , 0.6 , 0.45]])
+        array([[0.4, 0.8, 0.6]])
         """
         return self._pc_bruker2tsl()
 
@@ -1510,12 +1510,12 @@ class EBSDDetector:
         ... shape=(480, 640), pc=(0.4, 0.3, 0.5), px_size=70, sample_tilt=70
         ... )
         >>> det0
-        EBSDDetector (480, 640), px_size 70 um, binning 1, tilt 0, azimuthal 0, pc (0.4, 0.3, 0.5)
+        EBSDDetector(shape=(480, 640), pc=(0.4, 0.3, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=1.0, px_size=70.0 um)
         >>> det = det0.extrapolate_pc(
         ... pc_indices=[0, 0], navigation_shape=(5, 10), step_sizes=(20, 20)
         ... )
         >>> det
-        EBSDDetector (480, 640), px_size 70 um, binning 1, tilt 0, azimuthal 0, pc (0.398, 0.299, 0.5)
+        EBSDDetector(shape=(480, 640), pc=(0.398, 0.299, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=1.0, px_size=70.0 um)
 
         Plot PC values in maps
 
