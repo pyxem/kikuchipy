@@ -284,7 +284,6 @@ class EBSDDetector:
         ----------
         value : float
             The desired detector azimuthal angle in degrees.
-
         """
         return self._azimuthal
 
@@ -314,7 +313,6 @@ class EBSDDetector:
         ----------
         value : np.ndarray, list or tuple of three floats
             The desired values of the detector Euler angles in degrees.
-
         """
         return self._euler
 
@@ -582,6 +580,30 @@ class EBSDDetector:
         corners[..., 2] = self.x_max**2 + self.y_max**2  # Lo. right
         corners[..., 3] = self.x_min**2 + self.y_min**2  # Lo. left
         return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
+
+    @property
+    def u_s(self) -> np.ndarray:
+        """Return the orientation matrix, u_s, which transforms
+        vectors in the sample reference frame, CSs, to the
+        detector reference frame, CSd.
+        """
+        u_sample = Rotation.from_euler([0, self.sample_tilt, 0], degrees=True)
+        u_d = Rotation.from_euler(self.euler, degrees=True)
+        u_d_g = u_d.to_matrix().squeeze()
+        u_detector = Rotation.from_matrix(u_d_g.T)
+        u_s_bruker = u_sample * u_detector
+        u_s_rot = Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
+        u_s = u_s_rot.to_matrix().squeeze()
+        return u_s
+
+    @property
+    def u_s_inv(self) -> np.ndarray:
+        """Return the orientation matrix, u_s_inv, which transforms
+        vectors in the detector reference frame, CSd, to the
+        sample reference frame, CSs, i.e. the inverse of u_s,
+        providing the opposite rotation.
+        """
+        return np.linalg.inv(self.u_s)
 
     @classmethod
     def load(cls, fname: Path | str) -> EBSDDetector:
