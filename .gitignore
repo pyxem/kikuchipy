@@ -110,10 +110,5 @@ src/
 # Backport
 .backportrc.json
 
-# All Contributors CLI
-node_modules/
-package.json
-package-lock.json
-
 # Dask
 dask-worker-space

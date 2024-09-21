@@ -1,14 +1,14 @@
 name: Perhaps make a tagged release
 
-# Trigger workflow when commits to the main branch contain a change in the
-# kikuchipy/release.py file. This is because this workflow should only run when a
-# tagged release draft is to be made.
+# Trigger workflow when commits to the main branch contain a change in
+# the kikuchipy/__init__.py file. This is because this workflow should
+# only run when a tagged release draft is to be made.
 on:
   push:
     branches:
       - main
     paths:
-      - "kikuchipy/release.py"
+      - "kikuchipy/__init__.py"
 
 jobs:
   make-tagged-release:
