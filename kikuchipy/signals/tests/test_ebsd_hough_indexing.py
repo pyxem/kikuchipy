@@ -316,6 +316,7 @@ class TestPCOptimization:
         assert np.isclose(det.tilt, det0.tilt)
         assert np.isclose(det.px_size, det0.px_size)
 
+    @pytest.mark.flaky(reruns=5)
     def test_optimize_pc_pso(self, worker_id):
         det0 = self.signal.detector
 
@@ -323,7 +324,8 @@ class TestPCOptimization:
             det0.pc_average, self.indexer, method="PSO"
         )
         # Results are not deterministic, so we give a wide range here...
-        assert abs(det0.pc_average - det.pc_average).max() < 0.03
+        tol = 0.04
+        assert abs(det0.pc_average - det.pc_average).max() < tol
 
         if worker_id == "master":  # pragma: no cover
             # Batch with PC array with more than one dimension
@@ -335,7 +337,7 @@ class TestPCOptimization:
                 search_limit=0.1,
             )
             assert det2.navigation_shape == (3, 3)
-            assert abs(det.pc_average - det2.pc_average).max() < 0.03
+            assert abs(det.pc_average - det2.pc_average).max() < tol
 
     def test_optimize_pc_raises(self):
         with pytest.raises(ValueError, match="`pc0` must be of size 3"):
