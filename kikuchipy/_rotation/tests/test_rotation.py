@@ -17,7 +17,7 @@
 
 import numpy as np
 from orix.quaternion import Rotation
-from orix.vector import Rodrigues, Vector3d
+from orix.vector import Vector3d
 
 import kikuchipy as kp
 
@@ -64,7 +64,7 @@ class TestRotationVectorTools:
 
     def test_rotation_from_rodrigues(self):
         rod = np.array([1, 2, 3])
-        rot_orix = Rotation.from_neo_euler(Rodrigues(rod)).data
+        rot_orix = Rotation.from_rodrigues(rod).data
         rot_numba = kp._rotation._rotation_from_rodrigues(*rod)
         rot_numba_py = kp._rotation._rotation_from_rodrigues.py_func(*rod)
 

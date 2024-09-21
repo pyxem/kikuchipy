@@ -38,7 +38,7 @@ import numpy as np
 def _rotation_from_rodrigues(rx: float, ry: float, rz: float) -> np.ndarray:
     """Convert a Rodrigues-Frank vector to a unit quaternion.
 
-    Taken from :meth:`orix.quaternion.Rotation.from_neo_euler`.
+    Taken from :meth:`orix.quaternion.Rotation.from_rodrigues`.
 
     Parameters
     ----------
