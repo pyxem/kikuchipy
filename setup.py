@@ -68,7 +68,7 @@ extra_feature_requirements = {
     ],
     "all": [
         "nlopt",
-        "pyebsdindex                    >= 0.2, != 0.3.1, != 0.3.1",
+        "pyebsdindex                    >= 0.2, != 0.3.1",
         "pyvista",
     ],
 }
@@ -158,7 +158,8 @@ setup(
         "tqdm               >= 0.5.2",
         "scikit-image       >= 0.16.2",
         "scikit-learn",
-        "scipy              >= 1.7",
+        # TODO: Remove < 1.14 when HyperSpy 2.0 is supported
+        "scipy              >= 1.7, < 1.14",
     ],
     # fmt: on
     entry_points={"hyperspy.extensions": "kikuchipy = kikuchipy"},
