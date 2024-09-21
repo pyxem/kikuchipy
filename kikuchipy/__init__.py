@@ -125,7 +125,6 @@ __all__ = [
     "io",
     "load",
     "pattern",
-    "release",
     "set_log_level",
     "signals",
     "simulations",
