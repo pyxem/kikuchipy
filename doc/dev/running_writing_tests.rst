@@ -7,7 +7,7 @@ Tests are short methods that call functions in kikuchipy and compare resulting o
 values with known answers.
 Install necessary dependencies to run the tests::
 
-    pip install --editable .[tests]
+    pip install -e ".[tests,coverage]"
 
 Some useful :doc:`fixtures <pytest:explanation/fixtures>`, like a dummy EBSD scan and the
 corresponding background pattern, are available in the ``conftest.py`` file.

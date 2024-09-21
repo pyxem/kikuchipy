@@ -66,7 +66,7 @@ jobs:
         shell: bash
         run: |
           pip install wheel
-          pip install -U -e .'[tests]'
+          pip install -U -e ".[tests,coverage]"
 
       - name: Install oldest supported version
         if: contains(matrix.LABEL, 'oldest')
@@ -77,7 +77,7 @@ jobs:
         if: ${{ contains(matrix.LABEL, 'minimum_requirement') == false && matrix.os != 'macos-latest' }}
         shell: bash
         run: |
-          pip install -e .'[all]'
+          pip install -e ".[all]"
           pip install pyopencl
 
       - name: Install optional dependencies on macOS (without nlopt)
@@ -85,7 +85,7 @@ jobs:
         shell: bash
         run: |
           pip install -e .
-          pip install 'pyebsdindex[gpu]' pyvista
+          pip install "pyebsdindex[gpu]" pyvista
 
       - name: Display Python, pip and package versions
         run: |
