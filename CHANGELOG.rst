@@ -21,6 +21,21 @@ Added
 
 Changed
 -------
+
+Removed
+-------
+
+Fixed
+-----
+
+Deprecated
+----------
+
+0.10.0 (2024-06-02)
+===================
+
+Changed
+-------
 - Minimum Python version is now 3.8.
   (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
 - Minimum NumPy version is now 1.23.0.
@@ -34,12 +49,10 @@ Changed
   centers (PCs). (`#677 <https://github.com/pyxem/kikuchipy/pull/677>`_)
 - Simpler string representation of an ``EBSDDetector``, also showing the sample tilt.
   (`#677 <https://github.com/pyxem/kikuchipy/pull/677>`_)
-
-Deprecated
-----------
-
-Removed
--------
+- Exclude PyEBSDIndex versions 0.3.0 and 0.3.1 since these versions cannot perform Hough
+  indexing with Dask arrays. This was previously unintentionally supported due to a
+  side-effect. It should now be supported going forward.
+  (`#678 <https://github.com/pyxem/kikuchipy/pull/678>`_)
 
 Fixed
 -----
