@@ -105,7 +105,6 @@ ENV/
 
 # Auto changing files
 build/
-src/
 
 # Backport
 .backportrc.json

@@ -63,11 +63,6 @@ dependencies = [
 [project.entry-points."hyperspy.extensions"]
 kikuchipy = "kikuchipy"
 
-# TODO: Remove this section and the duplicated file when HS 2.0 is
-# supported
-[tool.hatch.build.force-include]
-"hyperspy_extension.yaml" = "hyperspy_extension.yaml"
-
 [project.urls]
 Documentation = "https://kikuchipy.org"
 Download = "https://pypi.python.org/pypi/kikuchipy"
@@ -117,14 +112,28 @@ dev = [
 ]
 
 [tool.hatch.version]
-path = "kikuchipy/__init__.py"
+path = "src/kikuchipy/__init__.py"
+
+# TODO: Remove this section and the duplicated file when HS 2.0 is
+# supported
+[tool.hatch.build.force-include]
+"hyperspy_extension.yaml" = "hyperspy_extension.yaml"
+
+# https://github.com/pypa/hatch/discussions/427
+# https://github.com/pypa/hatch/issues/492
+[tool.hatch.build.targets.wheel]
+include = [
+    "src/kikuchipy",
+]
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
 
 [tool.coverage.report]
 precision = 2
 
 [tool.coverage.run]
 branch = false
-source = ["kikuchipy"]
+source = ["src/kikuchipy"]
 relative_files = true
 
 [tool.pytest.ini_options]
