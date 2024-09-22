@@ -22,10 +22,9 @@ sys.path.append("../")
 
 # Project information
 project = "kikuchipy"
-copyright = f"2019-{datetime.now().year}, {kp.release.author}"
-author = kp.release.author
-version = kp.release.version
-release = kp.release.version
+author = "kikuchipy developers"
+copyright = f"2019-{datetime.now().year}, {author}"
+release = kp.__version__
 
 master_doc = "index"
 
@@ -148,10 +147,10 @@ nbsphinx_execute_arguments = [
 # modifications to point nbviewer and Binder to the GitHub develop
 # branch links when the documentation is launched from a kikuchipy
 # version with "dev" in the version
-if "dev" in version:
+if "dev" in release:
     release_version = "develop"
 else:
-    release_version = "v" + version
+    release_version = "v" + release
 nbsphinx_prolog = (
     r"""
 {% set docname = 'doc/' + env.doc2path(env.docname, base=None)[:-6] + '.ipynb' %}
@@ -246,14 +245,14 @@ def linkcode_resolve(domain, info):
     fn = relpath(fn, start=startdir).replace(os.path.sep, "/")
 
     if fn.startswith("kikuchipy/"):
-        m = re.match(r"^.*dev0\+([a-f0-9]+)$", version)
+        m = re.match(r"^.*dev0\+([a-f0-9]+)$", release)
         pre_link = "https://github.com/pyxem/kikuchipy/blob/"
         if m:
             return pre_link + "%s/%s%s" % (m.group(1), fn, linespec)
-        elif "dev" in version:
+        elif "dev" in release:
             return pre_link + "develop/%s%s" % (fn, linespec)
         else:
-            return pre_link + "v%s/%s%s" % (version, fn, linespec)
+            return pre_link + "v%s/%s%s" % (release, fn, linespec)
     else:
         return None
 
