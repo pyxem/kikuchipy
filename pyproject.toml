@@ -43,8 +43,8 @@ dependencies = [
     "diffpy.structure >= 3",
     "diffsims         >= 0.5.2",
     # TODO: Remove python_version once HyperSpy 2.0 is supported
-    "hyperspy         >= 1.7.3, < 2; python_version <  '3.12'",
-    "hyperspy         >= 1.7.3, < 2; python_version >= '3.12'",
+    "hyperspy         >= 1.7.3, < 2; python_version < '3.12'",
+    "hyperspy         == 1.7.6; python_version >= '3.12'",
     "h5py             >= 2.10",
     "imageio",
     "matplotlib       >= 3.5",
@@ -72,7 +72,7 @@ Changelog = "https://kikuchipy.org/en/stable/changelog.html"
 
 [project.optional-dependencies]
 all = [
-    "nlopt",
+#    "nlopt",
     "pyebsdindex                  >= 0.2, != 0.3.1",
     "pyvista",
 ]
@@ -80,7 +80,7 @@ doc = [
     "memory_profiler",
     "nbsphinx                     >= 0.7",
     "numpydoc",
-    "nlopt",
+#    "nlopt",
     "pydata-sphinx-theme",
     "pyebsdindex                  ~= 0.2",
     "pyvista",
