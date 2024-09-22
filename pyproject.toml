@@ -77,7 +77,7 @@ Changelog = "https://kikuchipy.org/en/stable/changelog.html"
 
 [project.optional-dependencies]
 all = [
-#    "nlopt",
+    "nlopt",
     "pyebsdindex                  >= 0.2, != 0.3.1",
     "pyvista",
 ]
@@ -85,7 +85,7 @@ doc = [
     "memory_profiler",
     "nbsphinx                     >= 0.7",
     "numpydoc",
-#    "nlopt",
+    "nlopt",
     "pydata-sphinx-theme",
     "pyebsdindex                  ~= 0.2",
     "pyvista",
