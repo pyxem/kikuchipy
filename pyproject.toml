@@ -63,9 +63,10 @@ dependencies = [
 [project.entry-points."hyperspy.extensions"]
 kikuchipy = "kikuchipy"
 
-# TODO: Remove when HyperSpy 2.0 is supported
+# TODO: Remove this section and the duplicated file when HS 2.0 is
+# supported
 [tool.hatch.build.force-include]
-"kikuchipy/hyperspy_extension.yaml" = "hyperspy_extension.yaml"
+"hyperspy_extension.yaml" = "hyperspy_extension.yaml"
 
 [project.urls]
 Documentation = "https://kikuchipy.org"

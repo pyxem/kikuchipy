@@ -1,0 +1,75 @@
+# Copyright 2019-2024 The kikuchipy developers
+#
+# This file is part of kikuchipy.
+#
+# kikuchipy is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# kikuchipy is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+
+signals:
+  EBSD:
+    signal_type: EBSD
+    signal_type_aliases:
+      - electron_backscatter_diffraction
+    signal_dimension: 2
+    dtype: real
+    lazy: False
+    module: kikuchipy.signals.ebsd
+  LazyEBSD:
+    signal_type: EBSD
+    signal_dimension: 2
+    dtype: real
+    lazy: True
+    module: kikuchipy.signals.ebsd
+  EBSDMasterPattern:
+    signal_type: EBSDMasterPattern
+    signal_type_aliases:
+      - ebsd_master_pattern
+      - master_pattern
+    signal_dimension: 2
+    dtype: real
+    lazy: False
+    module: kikuchipy.signals.ebsd_master_pattern
+  LazyEBSDMasterPattern:
+    signal_type: EBSDMasterPattern
+    signal_dimension: 2
+    dtype: real
+    lazy: True
+    module: kikuchipy.signals.ebsd_master_pattern
+  ECPMasterPattern:
+    signal_type: ECPMasterPattern
+    signal_type_aliases:
+      - ecp_master_pattern
+    signal_dimension: 2
+    dtype: real
+    lazy: False
+    module: kikuchipy.signals.ecp_master_pattern
+  LazyECPMasterPattern:
+    signal_type: ECPMasterPattern
+    signal_dimension: 2
+    dtype: real
+    lazy: True
+    module: kikuchipy.signals.ecp_master_pattern
+  LazyVirtualBSEImage:
+    signal_type: VirtualBSEImage
+    signal_dimension: 2
+    dtype: real
+    lazy: True
+    module: kikuchipy.signals.virtual_bse_image
+  VirtualBSEImage:
+    signal_type: VirtualBSEImage
+    signal_type_aliases:
+      - virtual_backscatter_electron_image
+    signal_dimension: 2
+    dtype: real
+    lazy: False
+    module: kikuchipy.signals.virtual_bse_image
