@@ -65,7 +65,7 @@ jobs:
       - name: Install dependencies and package
         shell: bash
         run: |
-          pip install -U build wheel
+          pip install wheel
           pip install -U -e ".[tests,coverage]"
 
       - name: Install oldest supported version
