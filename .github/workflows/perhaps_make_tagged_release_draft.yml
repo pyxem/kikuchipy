@@ -1,32 +1,32 @@
 name: Perhaps make a tagged release
 
-# Trigger workflow when commits to the main branch contain a change in the
-# kikuchipy/release.py file. This is because this workflow should only run when a
-# tagged release draft is to be made.
+# Trigger workflow when commits to the main branch contain a change in
+# the kikuchipy/__init__.py file. This is because this workflow should
+# only run when a tagged release draft is to be made.
 on:
   push:
     branches:
       - main
     paths:
-      - "kikuchipy/release.py"
+      - "kikuchipy/__init__.py"
 
 jobs:
   make-tagged-release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - uses: r-lib/actions/setup-pandoc@v2
 
     - name: Set up Python ${{ runner.python-version }}
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.x'
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install outdated
+        python -m pip install -U pip
+        python -m pip install outdated
 
     - name: Check whether a tagged release draft should be made
       run: |

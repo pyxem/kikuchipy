@@ -182,7 +182,6 @@ class TestImport:
             "io",
             "load",
             "pattern",
-            "release",
             "set_log_level",
             "signals",
             "simulations",

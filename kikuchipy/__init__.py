@@ -17,7 +17,21 @@
 
 from typing import Union
 
-from kikuchipy.release import version as __version__
+# Initial committer first, then sorted by line contributions
+credits = [
+    "Håkon Wiik Ånes",
+    "Lars Andreas Hastad Lervik",
+    "Ole Natlandsmyr",
+    "Tina Bergh",
+    "Eric Prestat",
+    "Andreas V. Bugten",
+    "Erlend Mikkelsen Østvold",
+    "Zhou Xu",
+    "Carter Francis",
+    "Magnus Nord",
+]
+__version__ = "0.11.dev0"
+
 
 # Attempt (and fail) import of optional dependencies only once
 try:
@@ -111,7 +125,6 @@ __all__ = [
     "io",
     "load",
     "pattern",
-    "release",
     "set_log_level",
     "signals",
     "simulations",

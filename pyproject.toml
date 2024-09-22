@@ -1,0 +1,161 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "kikuchipy"
+authors = [{name = "kikuchipy developers"}]
+maintainers = [{name = "Håkon Wiik Ånes", email = "hwaanes@gmail.com"}]
+description = "Processing, simulating, and indexing of electron backscatter diffraction (EBSD) patterns"
+license = {file = "LICENSE"}
+readme = {file = "README.rst", content-type = "text/x-rst"}
+dynamic = ["version"]
+requires-python = ">= 3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+keywords=[
+    "EBSD",
+    "electron backscatter diffraction",
+    "EBSP",
+    "electron backscatter pattern",
+    "BKD",
+    "backscatter kikuchi diffraction",
+    "SEM",
+    "scanning electron microscopy",
+    "kikuchi pattern",
+    "dictionary indexing",
+]
+dependencies = [
+    "dask[array]      >= 2021.8.1",
+    "diffpy.structure >= 3",
+    "diffsims         >= 0.5.2",
+    # TODO: Remove python_version once HyperSpy 2.0 is supported
+    "hyperspy         >= 1.7.3, < 2; python_version < '3.12'",
+    "hyperspy         == 1.7.6; python_version >= '3.12'",
+    "h5py             >= 2.10",
+    "imageio",
+    "matplotlib       >= 3.5",
+    "numba            >= 0.57",
+    "numpy            >= 1.23.0",
+    "orix             >= 0.12.1",
+    "pooch            >= 1.3.0",
+    "pyyaml",
+    "tqdm             >= 0.5.2",
+    "scikit-image     >= 0.16.2",
+    "scikit-learn",
+    # TODO: Remove < 1.14 when HyperSpy 2.0 is supported
+    "scipy            >= 1.7, < 1.14",
+]
+
+[project.entry-points."hyperspy.extensions"]
+kikuchipy = "kikuchipy"
+
+# TODO: Remove this section and the duplicated file when HS 2.0 is
+# supported
+[tool.hatch.build.force-include]
+"hyperspy_extension.yaml" = "hyperspy_extension.yaml"
+
+[project.urls]
+Documentation = "https://kikuchipy.org"
+Download = "https://pypi.python.org/pypi/kikuchipy"
+"Bug Tracker" = "https://github.com/pyxem/kikuchipy/issues"
+"Source Code" = "https://github.com/pyxem/kikuchipy"
+Changelog = "https://kikuchipy.org/en/stable/changelog.html"
+
+[project.optional-dependencies]
+all = [
+    "nlopt",
+    "pyebsdindex                  >= 0.2, != 0.3.1",
+    "pyvista",
+]
+doc = [
+    "memory_profiler",
+    "nbsphinx                     >= 0.7",
+    "numpydoc",
+    "nlopt",
+    "pydata-sphinx-theme",
+    "pyebsdindex                  ~= 0.2",
+    "pyvista",
+    "sphinx                       >= 3.0.2",
+    "sphinx-codeautolink[ipython] < 0.14",
+    "sphinx-copybutton            >= 0.2.5",
+    "sphinx-design",
+    "sphinx-gallery",
+    "sphinxcontrib-bibtex         >= 1.0",
+]
+tests = [
+    "numpydoc",
+    "pytest                       >= 5.4",
+    "pytest-benchmark",
+    "pytest-rerunfailures",
+    "pytest-xdist",
+]
+coverage = [
+    "coverage                     >= 5.0",
+    "pytest-cov                   >= 2.8.1",
+]
+dev = [
+    "black[jupyter]               >= 23.1",
+    "hatch",
+    "isort",
+    "outdated",
+    "pre-commit                   >= 1.16",
+    "kikuchipy[doc,tests,coverage]",
+]
+
+[tool.hatch.version]
+path = "kikuchipy/__init__.py"
+
+[tool.coverage.report]
+precision = 2
+
+[tool.coverage.run]
+branch = false
+source = ["kikuchipy"]
+relative_files = true
+
+[tool.pytest.ini_options]
+addopts = [
+    "-ra",
+    # Skip benchmarks, enable with --benchmark-enable or --benchmark-only
+    # https://pytest-benchmark.readthedocs.io/en/stable/usage.html#commandline-options
+    "--benchmark-skip",
+    # Documentation scripts
+    "--ignore=doc/_static/image/doc_reference_frames.py",
+    # Examples
+    "--ignore=examples/*/*.py",
+    # Scripts for creating dummy data
+    "--ignore=kikuchipy/data/bruker_h5ebsd/create_bruker_h5ebsd_file.py",
+    "--ignore=kikuchipy/data/edax_binary/create_edax_binary_file.py",
+    "--ignore=kikuchipy/data/emsoft_ebsd/create_dummy_emsoft_ebsd_file.py",
+    "--ignore=kikuchipy/data/oxford_h5ebsd/create_oxford_h5ebsd_file.py",
+    "--ignore=kikuchipy/data/oxford_binary/create_oxford_binary_file.py",
+    "--ignore-glob=kikuchipy/data/emsoft_ebsd_master_pattern/*.py",
+]
+doctest_optionflags = "NORMALIZE_WHITESPACE"
+filterwarnings = [
+    "ignore:Deprecated call to `pkg_resources:DeprecationWarning",
+    "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
+    # From Traits
+    "ignore:module \\'sre_:DeprecationWarning",
+    # From tqdm: 'tqdm_notebook' object has no attribute 'disp'
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+]
+
+[tool.isort]
+profile = "black"
+filter_files = true
+force_sort_within_sections = true

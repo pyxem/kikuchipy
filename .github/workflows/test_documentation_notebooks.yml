@@ -4,7 +4,6 @@ on:
   schedule:
     - cron: '15 6 * * 1'
   workflow_dispatch:
-    workflow: "*"
 
 env:
   MPLBACKEND: agg
@@ -14,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 

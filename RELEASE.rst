@@ -23,11 +23,10 @@ Preparation
   Fix broken links.
 
 - Ensure all contributors are included and sorted correctly by reviewing the contributor
-  list ``__credits__`` in ``kikuchipy/release.py``.
+  list ``__credits__`` in ``kikuchipy/__init__.py``.
   Do the same for the Zenodo contributors file ``.zenodo.json``.
-  Review ``.all-contributorsrc`` and regenerate the table if necessary.
 
-- Increment the version number in ``kikuchipy/release.py``.
+- Increment the version number in ``kikuchipy/__init__.py``.
   Review and clean up ``CHANGELOG.rst`` as per Keep a Changelog.
 
 - Make a PR of the release branch to ``main``.
@@ -37,7 +36,7 @@ Preparation
 
 Tag and release
 ---------------
-- If the ``__version__`` in ``kikuchipy/release.py`` on ``main`` has changed in a new
+- If the ``__version__`` in ``kikuchipy/__init__.py`` on ``main`` has changed in a new
   commit, a tagged, annotated release *draft* is automatically created.
   If ``__version__`` is now "0.42.0", the release name is "kikuchipy 0.42.0" and the
   tag name is "v0.42.0".
