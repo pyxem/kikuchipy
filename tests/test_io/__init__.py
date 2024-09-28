@@ -14,3 +14,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+
+# Many of these tests are inspired by the tests written for the block_file
+# reader/writer available in HyperSpy: https://github.com/hyperspy/hyperspy/
+# blob/RELEASE_next_minor/hyperspy/tests/io/test_blockfile.py

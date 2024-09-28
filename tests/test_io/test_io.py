@@ -15,9 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import gc
 import os
-import tempfile
 
 import numpy as np
 import pytest
@@ -25,29 +23,26 @@ import pytest
 import kikuchipy as kp
 from kikuchipy.io._io import _assign_signal_subclass, _dict2signal
 
-DIR_PATH = os.path.dirname(__file__)
-KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5")
-
 
 class TestIO:
     @pytest.mark.parametrize("filename", ("im_not_here.h5", "unsupported.h4"))
-    def test_load(self, filename):
+    def test_load(self, kikuchipy_h5ebsd_path, tmpdir, filename):
         if filename == "im_not_here.h5":
             with pytest.raises(IOError, match="No filename matches"):
                 _ = kp.load(filename)
         else:
-            s = kp.load(KIKUCHIPY_FILE)
-            with tempfile.TemporaryDirectory() as tmp:
-                file_path = os.path.join(tmp, "supported.h5")
-                s.save(file_path)
-                new_file_path = os.path.join(tmp, filename)
-                os.rename(file_path, new_file_path)
-                with pytest.raises(IOError, match="Could not read"):
-                    _ = kp.load(new_file_path)
-            gc.collect()
+            s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
+            file_path = tmpdir / "supported.h5"
+            s.save(file_path)
+            new_file_path = tmpdir / filename
+            file_path.rename(new_file_path)
+            with pytest.raises(IOError, match="Could not read"):
+                _ = kp.load(new_file_path)
 
-    def test_dict2signal(self):
-        scan_dict = kp.io.plugins.kikuchipy_h5ebsd.file_reader(KIKUCHIPY_FILE)[0]
+    def test_dict2signal(self, kikuchipy_h5ebsd_path):
+        scan_dict = kp.io.plugins.kikuchipy_h5ebsd.file_reader(
+            kikuchipy_h5ebsd_path / "patterns.h5"
+        )[0]
         scan_dict["metadata"]["Signal"]["record_by"] = "not-image"
         with pytest.raises(ValueError, match="kikuchipy only supports"):
             _ = _dict2signal(scan_dict)
@@ -100,27 +95,25 @@ class TestIO:
                 assert signal == kp.signals.LazyEBSD
 
     @pytest.mark.parametrize("extension", ("", ".h4"))
-    def test_save_extensions(self, extension):
-        s = kp.load(KIKUCHIPY_FILE)
-        with tempfile.TemporaryDirectory() as tmp:
-            file_path = os.path.join(tmp, "supported" + extension)
-            if extension == "":
+    def test_save_extensions(self, kikuchipy_h5ebsd_path, extension, tmpdir):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
+        file_path = tmpdir / ("supported" + extension)
+        if extension == "":
+            s.save(file_path)
+            assert os.path.exists(file_path + ".h5") is True
+        else:  # extension == '.h4'
+            with pytest.raises(ValueError, match="'h4' does not"):
                 s.save(file_path)
-                assert os.path.isfile(file_path + ".h5") is True
-            else:  # extension == '.h4'
-                with pytest.raises(ValueError, match="'h4' does not"):
-                    s.save(file_path)
-            gc.collect()
 
     @pytest.mark.filterwarnings("ignore:Using `set_signal_dimension`")
-    def test_save_data_dimensions(self):
-        s = kp.load(KIKUCHIPY_FILE)
+    def test_save_data_dimensions(self, kikuchipy_h5ebsd_path):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
         s.axes_manager.set_signal_dimension(3)
         with pytest.raises(ValueError, match="This file format cannot write"):
             s.save()
 
-    def test_save_to_existing_file(self, save_path_hdf5):
-        s = kp.load(KIKUCHIPY_FILE)
+    def test_save_to_existing_file(self, save_path_hdf5, kikuchipy_h5ebsd_path):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
         s.save(save_path_hdf5)
         with pytest.warns(UserWarning, match="Your terminal does not"):
             s.save(save_path_hdf5, scan_number=2)

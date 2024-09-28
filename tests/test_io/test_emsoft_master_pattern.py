@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from h5py import File
 import numpy as np
 import pytest
@@ -25,11 +23,6 @@ from kikuchipy.io.plugins._emsoft_master_pattern import (
     _check_file_format,
     _get_data_shape_slices,
     _get_datasets,
-)
-
-DIR_PATH = os.path.dirname(__file__)
-EMSOFT_FILE = os.path.join(
-    DIR_PATH, "../../../data/emsoft_ebsd_master_pattern/master_patterns.h5"
 )
 
 
@@ -114,8 +107,10 @@ class TestEMsoftEBSDMasterPatternReader:
             ("Lambert", "BOTH", ["mLPNH", "mLPSH"]),
         ],
     )
-    def test_get_datasets(self, projection, hemisphere, dataset_names):
-        with File(EMSOFT_FILE) as f:
+    def test_get_datasets(
+        self, emsoft_ebsd_master_pattern_file, projection, hemisphere, dataset_names
+    ):
+        with File(emsoft_ebsd_master_pattern_file) as f:
             datasets = _get_datasets(
                 data_group=f["EMData/EBSDmaster"],
                 projection=projection,
@@ -130,8 +125,10 @@ class TestEMsoftEBSDMasterPatternReader:
             ("lambert", "east", "'hemisphere' value east "),
         ],
     )
-    def test_get_datasets_raises(self, projection, hemisphere, error_msg):
-        with File(EMSOFT_FILE) as f:
+    def test_get_datasets_raises(
+        self, emsoft_ebsd_master_pattern_file, projection, hemisphere, error_msg
+    ):
+        with File(emsoft_ebsd_master_pattern_file) as f:
             with pytest.raises(ValueError, match=error_msg):
                 _ = _get_datasets(
                     data_group=f["EMData/EBSDmaster"],

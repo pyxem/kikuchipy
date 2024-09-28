@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 import imageio.v3 as iio
 import numpy as np
 import pytest
@@ -28,23 +26,23 @@ class TestEBSDDirectory:
     def test_load(self, ebsd_directory):
         """Patterns are read correctly."""
         s_ref = kp.data.nickel_ebsd_small()
-        s = kp.load(os.path.join(ebsd_directory, "*.tif"))
+        s = kp.load(ebsd_directory / "*.tif")
         assert isinstance(s, kp.signals.EBSD)
         assert np.allclose(s.data, s_ref.data)
 
     def test_load_progressbar(self, ebsd_directory, capsys):
         """Asking for a progressbar works."""
-        _ = kp.load(os.path.join(ebsd_directory, "*.tif"))
+        _ = kp.load(ebsd_directory / "*.tif")
         captured = capsys.readouterr()
         assert captured.out == ""
 
-        _ = kp.load(os.path.join(ebsd_directory, "*.tif"), show_progressbar=True)
+        _ = kp.load(ebsd_directory / "*.tif", show_progressbar=True)
         captured = capsys.readouterr()
         assert "100% Completed" in captured.out
 
     def test_load_lazy(self, ebsd_directory):
         """Lazy loading works."""
-        s_lazy = kp.load(os.path.join(ebsd_directory, "*.tif"), lazy=True)
+        s_lazy = kp.load(ebsd_directory / "*.tif", lazy=True)
         assert isinstance(s_lazy, kp.signals.LazyEBSD)
 
     @pytest.mark.parametrize(
@@ -58,7 +56,7 @@ class TestEBSDDirectory:
     )
     def test_xy_pattern(self, ebsd_directory, xy_pattern, nav_shape, fname):
         """Passing various filename patterns work."""
-        s = kp.load(os.path.join(ebsd_directory, fname), xy_pattern=xy_pattern)
+        s = kp.load(ebsd_directory / fname, xy_pattern=xy_pattern)
         assert s.data.shape == nav_shape + (60, 60)
 
     @pytest.mark.parametrize(
@@ -69,10 +67,10 @@ class TestEBSDDirectory:
         filenames suggest.
         """
         s0 = kp.data.nickel_ebsd_small()
-        iio.imwrite(os.path.join(ebsd_directory, "pattern_x10y50.tif"), s0.data[0, 0])
+        iio.imwrite(str(ebsd_directory / "pattern_x10y50.tif"), s0.data[0, 0])
 
         with pytest.warns(UserWarning, match="Returned signal will have one "):
-            s = kp.load(os.path.join(ebsd_directory, "*.tif"))
+            s = kp.load(ebsd_directory / "*.tif")
         assert s.axes_manager.navigation_shape == (10,)
 
     @pytest.mark.parametrize(
@@ -83,5 +81,5 @@ class TestEBSDDirectory:
         filenames.
         """
         with pytest.warns(UserWarning, match="Returned signal will have one "):
-            s = kp.load(os.path.join(ebsd_directory, "*.tif"))
+            s = kp.load(ebsd_directory / "*.tif")
         assert s.axes_manager.navigation_shape == (9,)

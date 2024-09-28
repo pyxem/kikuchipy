@@ -16,16 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 import pytest
 
 import kikuchipy as kp
-
-DIR_PATH = os.path.dirname(__file__)
-EMSOFT_FILE = os.path.join(
-    DIR_PATH, "../../../data/emsoft_ecp_master_pattern/ecp_master_pattern.h5"
-)
 
 
 class TestEMsoftECPMasterPatternReader:
@@ -37,6 +30,6 @@ class TestEMsoftECPMasterPatternReader:
         "lazy, class_type",
         [(False, kp.signals.ECPMasterPattern), (True, kp.signals.LazyECPMasterPattern)],
     )
-    def test_file_reader(self, lazy, class_type):
-        s = kp.load(EMSOFT_FILE, lazy=lazy)
+    def test_file_reader(self, emsoft_ecp_master_pattern_file, lazy, class_type):
+        s = kp.load(emsoft_ecp_master_pattern_file, lazy=lazy)
         assert isinstance(s, class_type)

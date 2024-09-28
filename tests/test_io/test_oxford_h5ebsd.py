@@ -15,19 +15,16 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from pathlib import Path
-
 import numpy as np
 
 import kikuchipy as kp
-from kikuchipy.conftest import assert_dictionary
 
-OXFORD_FILE = Path(__file__).parent / "../../../data/oxford_h5ebsd/patterns.h5oina"
+from ..conftest import assert_dictionary
 
 
 class TestOxfordH5EBSD:
-    def test_load(self, tmp_path, ni_small_axes_manager):
-        s = kp.load(OXFORD_FILE)
+    def test_load(self, oxford_h5ebsd_path, ni_small_axes_manager):
+        s = kp.load(oxford_h5ebsd_path / "patterns.h5oina")
         assert s.data.shape == (3, 3, 60, 60)
         assert_dictionary(s.axes_manager.as_dictionary(), ni_small_axes_manager)
         assert s.metadata.Acquisition_instrument.SEM.beam_energy == 20

@@ -15,41 +15,34 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from pathlib import Path
-
 import dask.array as da
 import numpy as np
 import pytest
 
 import kikuchipy as kp
 
-EDAX_PATH = Path(__file__).parent / "../../../data/edax_binary"
-FILE_UP1 = EDAX_PATH / "edax_binary.up1"
-FILE_UP2 = EDAX_PATH / "edax_binary.up2"
-
 
 class TestEDAXBinaryReader:
-    def test_load_up1(self):
+    def test_load_up1(self, edax_binary_path):
         """Load UP1 file into memory."""
         s = kp.data.nickel_ebsd_small()
-        s1 = kp.load(FILE_UP1)
+        s1 = kp.load(edax_binary_path / "edax_binary.up1")
         assert isinstance(s1, kp.signals.EBSD)
         assert np.allclose(s1.data, s.data.reshape((-1, 60, 60)))
 
-    def test_load_up2(self):
+    def test_load_up2(self, edax_binary_path):
         """Load UP2 file into memory."""
         s = kp.data.nickel_ebsd_small()
         data_up2 = s.data.reshape((-1, 60, 60)).astype("uint16")
         data_up2 = np.append(data_up2, np.zeros((1, 60, 60), "uint16"), axis=0)
 
         with pytest.warns(UserWarning, match="Returned signal has one navigation "):
-            s2 = kp.load(FILE_UP2)
+            s2 = kp.load(edax_binary_path / "edax_binary.up2")
             assert isinstance(s2, kp.signals.EBSD)
             assert np.allclose(s2.data, data_up2)
 
-    def test_load_lazy(self):
-        """Load lazily."""
-        s = kp.load(FILE_UP1, lazy=True)
+    def test_load_lazy(self, edax_binary_path):
+        s = kp.load(edax_binary_path / "edax_binary.up1", lazy=True)
         s2 = kp.data.nickel_ebsd_small()
 
         assert isinstance(s, kp.signals.LazyEBSD)
@@ -67,17 +60,18 @@ class TestEDAXBinaryReader:
         with pytest.raises(ValueError, match="Only files with version 1 or >= 3"):
             _ = kp.load(edax_binary_file.name)
 
-    def test_nav_shape(self):
+    def test_nav_shape(self, edax_binary_path):
         """Ensure navigation shape can be set, and that an error is
         raised if the shape does not correspond to the number of
         patterns.
         """
-        s = kp.load(FILE_UP1, nav_shape=(3, 3))
+        file = edax_binary_path / "edax_binary.up1"
+        s = kp.load(file, nav_shape=(3, 3))
         s2 = kp.data.nickel_ebsd_small()
         assert np.allclose(s.data, s2.data)
 
         with pytest.raises(ValueError, match=r"Given `nav_shape` \(3, 4\) does not "):
-            _ = kp.load(FILE_UP1, nav_shape=(3, 4))
+            _ = kp.load(file, nav_shape=(3, 4))
 
     @pytest.mark.parametrize(
         "edax_binary_file",

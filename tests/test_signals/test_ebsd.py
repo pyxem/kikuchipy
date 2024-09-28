@@ -27,7 +27,8 @@ from scipy.ndimage import correlate
 from skimage.exposure import rescale_intensity
 
 import kikuchipy as kp
-from kikuchipy.conftest import assert_dictionary
+
+from ..conftest import assert_dictionary
 
 DIR_PATH = os.path.dirname(__file__)
 NORDIF_FILE = os.path.join(DIR_PATH, "../../data/nordif/Pattern.dat")

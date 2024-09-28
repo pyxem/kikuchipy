@@ -72,7 +72,7 @@ Documentation
 
 Refer to the `documentation <https://kikuchipy.org>`__ for detailed installation
 instructions, a user guide, and the
-`changelog <https://kikuchipy.org/en/latest/changelog.html>`__.
+`changelog <https://kikuchipy.org/en/stable/changelog.html>`__.
 
 Installation
 ------------
@@ -90,7 +90,7 @@ You can also visit `PyPI <https://pypi.org/project/kikuchipy>`__,
 `GitHub <https://github.com/pyxem/kikuchipy>`__ to download the source.
 
 Further details are available in the
-`installation guide <https://kikuchipy.org/en/latest/user/installation.html>`__.
+`installation guide <https://kikuchipy.org/en/stable/user/installation.html>`__.
 
 Citing kikuchipy
 ----------------

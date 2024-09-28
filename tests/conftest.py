@@ -15,10 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import gc
 from numbers import Number
 import os
+from pathlib import Path
 import tempfile
+from typing import Callable, Generator
 
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
@@ -28,7 +29,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList, create_coordinate_arrays
 from orix.quaternion import Rotation
-from packaging import version
 import pytest
 
 import kikuchipy as kp
@@ -40,21 +40,17 @@ if kp._pyvista_installed:
     pv.global_theme.interactive = False
 
 
+DATA_PATH = Path(__file__).parent.parent / "src/kikuchipy/data"
+
 # ------------------------- Helper functions ------------------------- #
 
 
-def assert_dictionary(dict1, dict2):
+def assert_dictionary(dict1: dict, dict2: dict) -> None:
     """Assert that two dictionaries are (almost) equal.
 
     Used to compare signal's axes managers or metadata in tests.
     """
     for key in dict2.keys():
-        if key in ["is_binned", "binned"] and version.parse(
-            hs.__version__
-        ) > version.parse(
-            "1.6.2"
-        ):  # pragma: no cover
-            continue
         if isinstance(dict2[key], dict):
             assert_dictionary(dict1[key], dict2[key])
         else:
@@ -72,15 +68,42 @@ def assert_dictionary(dict1, dict2):
 # ------------------------------ Setup ------------------------------ #
 
 
-def pytest_sessionstart(session):  # pragma: no cover
+def pytest_sessionstart(session) -> None:  # pragma: no cover
     _ = kp.data.nickel_ebsd_large(allow_download=True)
+    plt.rcParams["backend"] = "agg"
+
+
+# ---------------------- pytest doctest-modules ---------------------- #
+
+
+@pytest.fixture(autouse=True)
+def doctest_setup_teardown(request) -> Generator[None, None, None]:
+    # Temporarily turn off interactive plotting with Matplotlib
+    plt.ioff()
+
+    # Temporarily suppress HyperSpy's progressbar
+    hs.preferences.General.show_progressbar = False
+
+    # Temporary directory for saving files in
+    temporary_directory = tempfile.TemporaryDirectory()
+    original_directory = os.getcwd()
+    os.chdir(temporary_directory.name)
+    yield
+
+    # Teardown
+    os.chdir(original_directory)
+
+
+@pytest.fixture(autouse=True)
+def import_to_namespace(doctest_namespace) -> None:
+    doctest_namespace["DATA_DIR"] = DATA_PATH / "kikuchipy_h5ebsd"
 
 
 # ----------------------------- Fixtures ----------------------------- #
 
 
 @pytest.fixture
-def dummy_signal(dummy_background):
+def dummy_signal(dummy_background: np.ndarray) -> kp.signals.EBSD:
     """Dummy signal of shape <3, 3|3, 3>. If this is changed, all
     tests using this signal will fail since they compare the output from
     methods using this signal (as input) to hard-coded outputs.
@@ -128,21 +151,21 @@ def dummy_signal(dummy_background):
     pc = pc.astype(float) / pc.max()
     s.detector = kp.detectors.EBSDDetector(shape=sig_shape, pc=pc)
 
-    yield s
+    return s
 
 
 @pytest.fixture
-def dummy_background():
+def dummy_background() -> np.ndarray:
     """Dummy static background image for the dummy signal. If this is
     changed, all tests using this background will fail since they
     compare the output from methods using this background (as input) to
     hard-coded outputs.
     """
-    yield np.array([5, 4, 5, 4, 3, 4, 4, 4, 3], dtype=np.uint8).reshape((3, 3))
+    return np.array([5, 4, 5, 4, 3, 4, 4, 4, 3], dtype=np.uint8).reshape((3, 3))
 
 
 @pytest.fixture(params=[[(3, 3), (3, 3), False, np.float32]])
-def ebsd_with_axes_and_random_data(request):
+def ebsd_with_axes_and_random_data(request) -> kp.signals.EBSD:
     """EBSD signal with minimally defined axes and random data.
 
     Parameters expected in `request`
@@ -159,65 +182,53 @@ def ebsd_with_axes_and_random_data(request):
     data_size = int(np.prod(data_shape))
     axes = []
     if nav_ndim == 1:
-        axes.append(dict(name="x", size=nav_shape[0], scale=1))
+        axes.append({"name": "x", "size": nav_shape[0], "scale": 1})
     if nav_ndim == 2:
-        axes.append(dict(name="y", size=nav_shape[0], scale=1))
-        axes.append(dict(name="x", size=nav_shape[1], scale=1))
+        axes.append({"name": "y", "size": nav_shape[0], "scale": 1})
+        axes.append({"name": "x", "size": nav_shape[1], "scale": 1})
     if sig_ndim == 2:
-        axes.append(dict(name="dy", size=sig_shape[0], scale=1))
-        axes.append(dict(name="dx", size=sig_shape[1], scale=1))
+        axes.append({"name": "dy", "size": sig_shape[0], "scale": 1})
+        axes.append({"name": "dx", "size": sig_shape[1], "scale": 1})
     if np.issubdtype(dtype, np.integer):
-        data_kwds = dict(low=1, high=255, size=data_size)
+        kw = {"low": 1, "high": 255, "size": data_size}
     else:
-        data_kwds = dict(low=0.1, high=1, size=data_size)
+        kw = {"low": 0.1, "high": 1, "size": data_size}
     if lazy:
-        data = da.random.uniform(**data_kwds).reshape(data_shape).astype(dtype)
-        yield kp.signals.LazyEBSD(data, axes=axes)
+        data = da.random.uniform(**kw).reshape(data_shape).astype(dtype)
+        s = kp.signals.LazyEBSD(data, axes=axes)
     else:
-        data = np.random.uniform(**data_kwds).reshape(data_shape).astype(dtype)
-        yield kp.signals.EBSD(data, axes=axes)
-
-
-@pytest.fixture(params=["h5"])
-def save_path_hdf5(request):
-    """Temporary file in a temporary directory for use when tests need
-    to write, and sometimes read again, a signal to, and from, a file.
-    """
-    with tempfile.TemporaryDirectory() as tmp:
-        yield os.path.join(tmp, "patterns." + request.param)
-        gc.collect()
+        data = np.random.uniform(**kw).reshape(data_shape).astype(dtype)
+        s = kp.signals.EBSD(data, axes=axes)
+    return s
 
 
 @pytest.fixture
-def nickel_structure():
+def nickel_structure() -> Structure:
     """A diffpy.structure with a Nickel crystal structure."""
-    yield Structure(
+    return Structure(
         atoms=[Atom("Ni", [0, 0, 0])],
         lattice=Lattice(3.5236, 3.5236, 3.5236, 90, 90, 90),
     )
 
 
 @pytest.fixture
-def nickel_phase(nickel_structure):
-    """A orix.crystal_map.Phase with a Nickel crystal structure and
-    symmetry operations.
-    """
-    yield Phase(name="ni", structure=nickel_structure, space_group=225)
+def nickel_phase(nickel_structure) -> Phase:
+    return Phase(name="ni", structure=nickel_structure, space_group=225)
 
 
 @pytest.fixture
-def pc1():
+def pc1() -> list[float]:
     """One projection center (PC) in TSL convention."""
-    yield [0.4210, 0.7794, 0.5049]
+    return [0.4210, 0.7794, 0.5049]
 
 
 @pytest.fixture(params=[[(1,), (60, 60)]])
-def detector(request, pc1):
+def detector(request, pc1) -> kp.detectors.EBSDDetector:
     """An EBSD detector of a given shape with a number of PCs given by
     a navigation shape.
     """
     nav_shape, sig_shape = request.param
-    yield kp.detectors.EBSDDetector(
+    return kp.detectors.EBSDDetector(
         shape=sig_shape,
         binning=8,
         px_size=70,
@@ -229,12 +240,12 @@ def detector(request, pc1):
 
 
 @pytest.fixture
-def rotations():
+def rotations() -> Rotation:
     return Rotation([(2, 4, 6, 8), (-1, -3, -5, -7)])
 
 
 @pytest.fixture
-def get_single_phase_xmap(rotations):
+def get_single_phase_xmap(rotations) -> Callable:
     def _get_single_phase_xmap(
         nav_shape,
         rotations_per_point=5,
@@ -264,6 +275,79 @@ def get_single_phase_xmap(rotations):
     return _get_single_phase_xmap
 
 
+# ---------------------------- IO fixtures --------------------------- #
+
+
+@pytest.fixture(params=["h5"])
+def save_path_hdf5(request) -> Generator[Path, None, None]:
+    """Temporary file in a temporary directory for use when tests need
+    to write, and sometimes read again, a signal to, and from, a file.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        yield Path(tmp) / ("patterns." + request.param)
+
+
+@pytest.fixture
+def ni_small_axes_manager() -> dict:
+    """Axes manager for :func:`kikuchipy.data.nickel_ebsd_small`."""
+    names = ["y", "x", "dy", "dx"]
+    scales = [1.5, 1.5, 1, 1]
+    sizes = [3, 3, 60, 60]
+    navigates = [True, True, False, False]
+    axes_manager = {}
+    for i in range(len(names)):
+        axes_manager[f"axis-{i}"] = {
+            "_type": "UniformDataAxis",
+            "name": names[i],
+            "units": "um",
+            "navigate": navigates[i],
+            "is_binned": False,
+            "size": sizes[i],
+            "scale": scales[i],
+            "offset": 0.0,
+        }
+    return axes_manager
+
+
+@pytest.fixture(params=[("_x{}y{}.tif", (3, 3))])
+def ebsd_directory(tmpdir, request):
+    """Temporary directory with EBSD files as .tif, .png or .bmp files.
+
+    Parameters expected in `request`
+    -------------------------------
+    xy_pattern : str
+    nav_shape : tuple of ints
+    """
+    s = kp.data.nickel_ebsd_small()
+    s.unfold_navigation_space()
+
+    xy_pattern, nav_shape = request.param
+    y, x = np.indices(nav_shape)
+    x = x.ravel()
+    y = y.ravel()
+    for i in range(s.axes_manager.navigation_size):
+        fname = os.path.join(tmpdir, "pattern" + xy_pattern.format(x[i], y[i]))
+        iio.imwrite(fname, s.data[i])
+
+    yield tmpdir
+
+
+# ------------------------ kikuchipy formats ------------------------- #
+
+
+@pytest.fixture
+def kikuchipy_h5ebsd_path() -> Path:
+    return DATA_PATH / "kikuchipy_h5ebsd"
+
+
+# --------------------------- EDAX formats --------------------------- #
+
+
+@pytest.fixture
+def edax_binary_path() -> Path:
+    return DATA_PATH / "edax_binary"
+
+
 @pytest.fixture(params=[(1, (2, 3), (60, 60), "uint8", 2, False)])
 def edax_binary_file(tmpdir, request):
     """Create a dummy EDAX binary UP1/2 file.
@@ -285,40 +369,58 @@ def edax_binary_file(tmpdir, request):
 
     if up_ver == 1:
         fname = tmpdir.join("dummy_edax_file.up1")
-        file = open(fname, mode="w")
+        f = open(fname, mode="w")
 
         # File header: 16 bytes
         # 4 bytes with the file version
-        np.array([ver], "uint32").tofile(file)
+        np.array([ver], "uint32").tofile(f)
         # 12 bytes with the pattern width, height and file offset position
-        np.array([sx, sy, 16], "uint32").tofile(file)
+        np.array([sx, sy, 16], "uint32").tofile(f)
 
         # Patterns
-        np.ones(ny * nx * sy * sx, dtype).tofile(file)
+        np.ones(ny * nx * sy * sx, dtype).tofile(f)
     else:  # up_ver == 2
         fname = tmpdir.join("dummy_edax_file.up2")
-        file = open(fname, mode="w")
+        f = open(fname, mode="w")
 
         # File header: 42 bytes
         # 4 bytes with the file version
-        np.array([ver], "uint32").tofile(file)
+        np.array([ver], "uint32").tofile(f)
         # 12 bytes with the pattern width, height and file offset position
-        np.array([sx, sy, 42], "uint32").tofile(file)
+        np.array([sx, sy, 42], "uint32").tofile(f)
         # 1 byte with any "extra patterns" (?)
-        np.array([1], "uint8").tofile(file)
+        np.array([1], "uint8").tofile(f)
         # 8 bytes with the map width and height (same as square)
-        np.array([nx, ny], "uint32").tofile(file)
+        np.array([nx, ny], "uint32").tofile(f)
         # 1 byte to say whether the grid is hexagonal
-        np.array([int(is_hex)], "uint8").tofile(file)
+        np.array([int(is_hex)], "uint8").tofile(f)
         # 16 bytes with the horizontal and vertical step sizes
-        np.array([np.pi, np.pi / 2], "float64").tofile(file)
+        np.array([np.pi, np.pi / 2], "float64").tofile(f)
 
         # Patterns
-        np.ones((ny * nx + ny // 2) * sy * sx, dtype).tofile(file)
+        np.ones((ny * nx + ny // 2) * sy * sx, dtype).tofile(f)
 
-    file.close()
+    f.close()
 
-    yield file
+    yield f
+
+
+@pytest.fixture
+def edax_h5ebsd_path() -> Path:
+    return DATA_PATH / "edax_h5ebsd"
+
+
+# -------------------- Oxford Instruments formats -------------------- #
+
+
+@pytest.fixture
+def oxford_binary_path() -> Path:
+    return DATA_PATH / "oxford_binary"
+
+
+@pytest.fixture
+def oxford_h5ebsd_path() -> Path:
+    return DATA_PATH / "oxford_h5ebsd"
 
 
 @pytest.fixture(params=[((2, 3), (60, 60), np.uint8, 2, False, True)])
@@ -401,73 +503,111 @@ def oxford_binary_file(tmpdir, request):
     yield f
 
 
+# -------------------------- EMsoft formats -------------------------- #
+
+
 @pytest.fixture
-def ni_small_axes_manager():
-    """Axes manager for :func:`kikuchipy.data.nickel_ebsd_small`."""
-    names = ["y", "x", "dy", "dx"]
-    scales = [1.5, 1.5, 1, 1]
-    sizes = [3, 3, 60, 60]
-    navigates = [True, True, False, False]
-    axes_manager = {}
-    for i in range(len(names)):
-        axes_manager[f"axis-{i}"] = {
-            "_type": "UniformDataAxis",
-            "name": names[i],
-            "units": "um",
-            "navigate": navigates[i],
-            "is_binned": False,
-            "size": sizes[i],
-            "scale": scales[i],
-            "offset": 0.0,
-        }
-    yield axes_manager
+def emsoft_ebsd_master_pattern_file() -> Path:
+    return DATA_PATH / "emsoft_ebsd_master_pattern/master_patterns.h5"
 
 
-@pytest.fixture(params=[("_x{}y{}.tif", (3, 3))])
-def ebsd_directory(tmpdir, request):
-    """Temporary directory with EBSD files as .tif, .png or .bmp files.
-
-    Parameters expected in `request`
-    -------------------------------
-    xy_pattern : str
-    nav_shape : tuple of ints
-    """
-    s = kp.data.nickel_ebsd_small()
-    s.unfold_navigation_space()
-
-    xy_pattern, nav_shape = request.param
-    y, x = np.indices(nav_shape)
-    x = x.ravel()
-    y = y.ravel()
-    for i in range(s.axes_manager.navigation_size):
-        fname = os.path.join(tmpdir, "pattern" + xy_pattern.format(x[i], y[i]))
-        iio.imwrite(fname, s.data[i])
-
-    yield tmpdir
+@pytest.fixture
+def emsoft_ecp_master_pattern_file() -> Path:
+    return DATA_PATH / "emsoft_ecp_master_pattern/ecp_master_pattern.h5"
 
 
-# ---------------------- pytest doctest-modules ---------------------- #
+@pytest.fixture
+def emsoft_tkd_master_pattern_file() -> Path:
+    return DATA_PATH / "emsoft_tkd_master_pattern/tkd_master_pattern.h5"
 
 
-@pytest.fixture(autouse=True)
-def doctest_setup_teardown(request):
-    # Temporarily turn off interactive plotting with Matplotlib
-    plt.ioff()
-
-    # Temporarily suppress HyperSpy's progressbar
-    hs.preferences.General.show_progressbar = False
-
-    # Temporary directory for saving files in
-    temporary_directory = tempfile.TemporaryDirectory()
-    original_directory = os.getcwd()
-    os.chdir(temporary_directory.name)
-    yield
-
-    # Teardown
-    os.chdir(original_directory)
+@pytest.fixture
+def emsoft_ebsd_path() -> Path:
+    return DATA_PATH / "emsoft_ebsd"
 
 
-@pytest.fixture(autouse=True)
-def import_to_namespace(doctest_namespace):
-    dir_path = os.path.dirname(__file__)
-    doctest_namespace["DATA_DIR"] = os.path.join(dir_path, "data/kikuchipy_h5ebsd")
+@pytest.fixture
+def emsoft_ebsd_file(emsoft_ebsd_path) -> Path:
+    return emsoft_ebsd_path / "EBSD_TEST_Ni.h5"
+
+
+@pytest.fixture
+def emsoft_ebsd_master_pattern_metadata() -> dict:
+    return {
+        "General": {
+            "original_filename": "master_patterns.h5",
+            "title": "master_patterns",
+        },
+        #        "Signal": {"binned": False, "signal_type": "EBSDMasterPattern"},
+        "Signal": {"signal_type": "EBSDMasterPattern"},
+    }
+
+
+@pytest.fixture(params=[["hemisphere", "energy", "height", "width"]])
+def emsoft_ebsd_master_pattern_axes_manager(request) -> dict:
+    axes = request.param
+    am = {
+        "hemisphere": {
+            "name": "hemisphere",
+            "scale": 1,
+            "offset": 0,
+            "size": 2,
+            "units": "",
+            "navigate": True,
+        },
+        "energy": {
+            "name": "energy",
+            "scale": 1,
+            "offset": 10.0,
+            "size": 11,
+            "units": "keV",
+            "navigate": True,
+        },
+        "height": {
+            "name": "height",
+            "scale": 1,
+            "offset": -7.0,
+            "size": 13,
+            "units": "px",
+            "navigate": False,
+        },
+        "width": {
+            "name": "width",
+            "scale": 1,
+            "offset": -7.0,
+            "size": 13,
+            "units": "px",
+            "navigate": False,
+        },
+    }
+    d = {}
+    for i, a in enumerate(axes):
+        d["axis-" + str(i)] = am[a]
+    return d
+
+
+# -------------------------- NORDIF formats -------------------------- #
+
+
+@pytest.fixture
+def nordif_path() -> Path:
+    return DATA_PATH / "nordif"
+
+
+@pytest.fixture
+def nordif_renamed_calibration_pattern(
+    nordif_path: Path,
+) -> Generator[Path, None, None]:
+    fname = "Background calibration pattern.bmp"
+    f1 = nordif_path / fname
+    f2 = f1.rename(f1.with_suffix(".bak"))
+    yield f2
+    f2.rename(f1)
+
+
+# -------------------------- Bruker formats -------------------------- #
+
+
+@pytest.fixture
+def bruker_path() -> Path:
+    return DATA_PATH / "bruker_h5ebsd"

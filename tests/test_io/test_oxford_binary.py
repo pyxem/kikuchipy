@@ -15,31 +15,25 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 import dask.array as da
 import numpy as np
 import pytest
 
 import kikuchipy as kp
 
-DIR_PATH = os.path.dirname(__file__)
-OXFORD_PATH = os.path.join(DIR_PATH, "../../../data/oxford_binary")
-OXFORD_FILE = os.path.join(OXFORD_PATH, "patterns.ebsp")
-
 
 class TestOxfordBinaryReader:
-    def test_load(self):
+    def test_load(self, oxford_binary_path):
         """Load into memory."""
-        s = kp.load(OXFORD_FILE)
+        s = kp.load(oxford_binary_path / "patterns.ebsp")
         s2 = kp.data.nickel_ebsd_small()
 
         assert isinstance(s, kp.signals.EBSD)
         assert np.allclose(s.data, s2.data)
 
-    def test_load_lazy(self):
+    def test_load_lazy(self, oxford_binary_path):
         """Load lazily."""
-        s = kp.load(OXFORD_FILE, lazy=True)
+        s = kp.load(oxford_binary_path / "patterns.ebsp", lazy=True)
         s2 = kp.data.nickel_ebsd_small()
 
         assert isinstance(s, kp.signals.LazyEBSD)

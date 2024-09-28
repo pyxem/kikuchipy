@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 import dask.array as da
 from hyperspy._signals.signal2d import Signal2D
 import hyperspy.api as hs
@@ -31,11 +29,6 @@ from kikuchipy.indexing.similarity_metrics import (
     NormalizedCrossCorrelationMetric,
     NormalizedDotProductMetric,
 )
-from kikuchipy.io.plugins.tests.test_emsoft_ebsd_master_pattern import (
-    METADATA,
-    setup_axes_manager,
-)
-from kikuchipy.signals.tests.test_ebsd import assert_dictionary
 from kikuchipy.signals.util._master_pattern import (
     _get_cosine_sine_of_alpha_and_azimuthal,
     _get_direction_cosines_for_fixed_pc,
@@ -50,11 +43,7 @@ from kikuchipy.signals.util._master_pattern import (
     _vector2lambert,
 )
 
-DIR_PATH = os.path.dirname(__file__)
-EMSOFT_FILE = os.path.join(
-    DIR_PATH, "../../data/emsoft_ebsd_master_pattern/master_patterns.h5"
-)
-EMSOFT_EBSD_FILE = os.path.join(DIR_PATH, "../../data/emsoft_ebsd/EBSD_TEST_Ni.h5")
+from ..conftest import assert_dictionary
 
 
 class TestEBSDMasterPattern:
@@ -103,29 +92,46 @@ class TestEBSDMasterPattern:
 
 
 class TestIO:
+    @pytest.mark.parametrize(
+        "emsoft_ebsd_master_pattern_axes_manager",
+        ["energy", "height", "width"],
+        indirect=["emsoft_ebsd_master_pattern_axes_manager"],
+    )
     @pytest.mark.parametrize("save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"])
-    def test_save_load_hspy(self, save_path_hdf5):
-        s = kp.load(EMSOFT_FILE)
+    def test_save_load_hspy(
+        self,
+        emsoft_ebsd_master_pattern_file,
+        emsoft_ebsd_master_pattern_axes_manager,
+        emsoft_ebsd_master_pattern_metadata,
+        save_path_hdf5,
+    ):
+        s = kp.load(emsoft_ebsd_master_pattern_file)
 
-        axes_manager = setup_axes_manager(["energy", "height", "width"])
+        axman = emsoft_ebsd_master_pattern_axes_manager
 
         assert isinstance(s, kp.signals.EBSDMasterPattern)
-        assert_dictionary(s.axes_manager.as_dictionary(), axes_manager)
-        assert_dictionary(s.metadata.as_dictionary(), METADATA)
+        assert_dictionary(s.axes_manager.as_dictionary(), axman)
+        assert_dictionary(
+            s.metadata.as_dictionary(), emsoft_ebsd_master_pattern_metadata
+        )
 
         s.save(save_path_hdf5)
 
         s2 = hs.load(save_path_hdf5, signal_type="EBSDMasterPattern")
         assert isinstance(s2, kp.signals.EBSDMasterPattern)
-        assert_dictionary(s2.axes_manager.as_dictionary(), axes_manager)
-        assert_dictionary(s2.metadata.as_dictionary(), METADATA)
+        assert_dictionary(s2.axes_manager.as_dictionary(), axman)
+        assert_dictionary(
+            s2.metadata.as_dictionary(), emsoft_ebsd_master_pattern_metadata
+        )
 
         s3 = hs.load(save_path_hdf5)
         assert isinstance(s3, Signal2D)
         s3.set_signal_type("EBSDMasterPattern")
         assert isinstance(s3, kp.signals.EBSDMasterPattern)
-        assert_dictionary(s3.axes_manager.as_dictionary(), axes_manager)
-        assert_dictionary(s.metadata.as_dictionary(), METADATA)
+        assert_dictionary(s3.axes_manager.as_dictionary(), axman)
+        assert_dictionary(
+            s.metadata.as_dictionary(), emsoft_ebsd_master_pattern_metadata
+        )
 
     @pytest.mark.parametrize("save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"])
     def test_original_metadata_save_load_cycle(self, save_path_hdf5):
@@ -211,8 +217,8 @@ class TestProjectFromLambert:
         )
         assert np.allclose(dc, dc2)
 
-    def test_get_patterns(self):
-        emsoft_key = kp.load(EMSOFT_EBSD_FILE)
+    def test_get_patterns(self, emsoft_ebsd_file):
+        emsoft_key = kp.load(emsoft_ebsd_file)
         emsoft_key = emsoft_key.data[0]
 
         r = Rotation.from_euler(np.radians([120, 45, 60]))

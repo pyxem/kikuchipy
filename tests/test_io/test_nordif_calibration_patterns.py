@@ -15,27 +15,23 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-from pathlib import Path
-
 from matplotlib.pyplot import imread
 import numpy as np
 import pytest
 
 import kikuchipy as kp
 
-DIR_PATH = Path(os.path.dirname(__file__))
-NORDIF_DIR = DIR_PATH / "../../../data/nordif"
-BG_FILE = NORDIF_DIR / "Background acquisition pattern.bmp"
-
 
 class TestNORDIFCalibrationPatterns:
-    def test_read(self, caplog):
+    def test_read(self, nordif_path, caplog):
         caplog.set_level("DEBUG", logger="kikuchipy")
 
-        s = kp.load(NORDIF_DIR / "Setting.txt")
+        s = kp.load(nordif_path / "Setting.txt")
         assert s.data.shape == (2, 60, 60)
-        assert np.allclose(s.static_background, imread(BG_FILE))
+        assert np.allclose(
+            s.static_background,
+            imread(nordif_path / "Background acquisition pattern.bmp"),
+        )
         assert isinstance(s.detector, kp.detectors.EBSDDetector)
         assert s.detector.shape == s.data.shape[1:]
         assert s.detector.sample_tilt == 70
@@ -63,23 +59,22 @@ class TestNORDIFCalibrationPatterns:
         assert (record.levelname, record.message) == ("DEBUG", "No area image found")
 
     @pytest.mark.parametrize("setting_file", ["Setting_bad1.txt", "Setting_bad2.txt"])
-    def test_no_patterns_raises(self, setting_file):
+    def test_no_patterns_raises(self, nordif_path, setting_file):
         with pytest.raises(ValueError, match="No calibration patterns found"):
-            _ = kp.load(NORDIF_DIR / setting_file)
+            _ = kp.load(nordif_path / setting_file)
 
-    def test_background_file_not_found(self):
-        fname_orig = "Background calibration pattern.bmp"
-        file_orig = NORDIF_DIR / fname_orig
-        file_new = NORDIF_DIR / (fname_orig + ".bak")
-        os.rename(file_orig, file_new)
+    def test_background_file_not_found(
+        self, nordif_path, nordif_renamed_calibration_pattern
+    ):
+        # The unused fixture renames a permanent file, yields, and then
+        # reverts the renaming
         with pytest.warns(UserWarning, match="Could not read static"):
-            _ = kp.load(NORDIF_DIR / "Setting.txt")
-        os.rename(file_new, file_orig)
+            _ = kp.load(nordif_path / "Setting.txt")
 
-    def test_logs_incorrect_shapes(self, caplog):
+    def test_logs_incorrect_shapes(self, caplog, nordif_path):
         caplog.set_level("DEBUG", logger="kikuchipy")
 
-        s = kp.load(NORDIF_DIR / "Setting_bad3.txt")
+        s = kp.load(nordif_path / "Setting_bad3.txt")
         omd = s.original_metadata.as_dictionary()
 
         assert omd["area"]["shape"] is None

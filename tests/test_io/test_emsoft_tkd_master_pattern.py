@@ -16,20 +16,9 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 import pytest
 
-from kikuchipy import load
-from kikuchipy.signals.ebsd_master_pattern import (
-    EBSDMasterPattern,
-    LazyEBSDMasterPattern,
-)
-
-DIR_PATH = os.path.dirname(__file__)
-EMSOFT_FILE = os.path.join(
-    DIR_PATH, "../../../data/emsoft_tkd_master_pattern/tkd_master_pattern.h5"
-)
+import kikuchipy as kp
 
 
 class TestEMsoftTKDMasterPatternReader:
@@ -38,8 +27,12 @@ class TestEMsoftTKDMasterPatternReader:
     """
 
     @pytest.mark.parametrize(
-        "lazy, class_type", [(False, EBSDMasterPattern), (True, LazyEBSDMasterPattern)]
+        "lazy, class_type",
+        [
+            (False, kp.signals.EBSDMasterPattern),
+            (True, kp.signals.LazyEBSDMasterPattern),
+        ],
     )
-    def test_file_reader(self, lazy, class_type):
-        s = load(EMSOFT_FILE, lazy=lazy)
+    def test_file_reader(self, emsoft_tkd_master_pattern_file, lazy, class_type):
+        s = kp.load(emsoft_tkd_master_pattern_file, lazy=lazy)
         assert isinstance(s, class_type)

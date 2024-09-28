@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 import dask.array as da
 from h5py import File
 import numpy as np
@@ -27,14 +25,11 @@ from kikuchipy.io._io import load
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
 from kikuchipy.io.plugins.emsoft_ebsd import _check_file_format, _crystaldata2phase
 
-DIR_PATH = os.path.dirname(__file__)
-EMSOFT_FILE = os.path.join(DIR_PATH, "../../../data/emsoft_ebsd/simulated_ebsd.h5")
-
 
 class TestEMsoftEBSDReader:
-    def test_file_reader(self):
+    def test_file_reader(self, emsoft_ebsd_path):
         """Test correct data shape, axes properties and metadata."""
-        s = load(EMSOFT_FILE)
+        s = load(emsoft_ebsd_path / "simulated_ebsd.h5")
 
         assert isinstance(s.xmap, CrystalMap)
         assert s.data.shape == (10, 10, 10)
@@ -43,9 +38,9 @@ class TestEMsoftEBSDReader:
         assert s.axes_manager["x"].units == "px"
 
     @pytest.mark.parametrize("scan_size", [10, (1, 10), (5, 2)])
-    def test_scan_size(self, scan_size):
+    def test_scan_size(self, emsoft_ebsd_path, scan_size):
         """Scan size parameter works as expected."""
-        s = load(EMSOFT_FILE, scan_size=scan_size)
+        s = load(emsoft_ebsd_path / "simulated_ebsd.h5", scan_size=scan_size)
 
         sy, sx = (10, 10)
         if isinstance(scan_size, int):
@@ -55,10 +50,9 @@ class TestEMsoftEBSDReader:
 
         assert s.data.shape == desired_shape
 
-    def test_read_lazy(self):
+    def test_read_lazy(self, emsoft_ebsd_path):
         """Lazy parameter works as expected."""
-        s = load(EMSOFT_FILE, lazy=True)
-
+        s = load(emsoft_ebsd_path / "simulated_ebsd.h5", lazy=True)
         assert isinstance(s.data, da.Array)
 
     def test_check_file_format(self, save_path_hdf5):
@@ -72,9 +66,9 @@ class TestEMsoftEBSDReader:
             with pytest.raises(IOError, match=".* is not in EMsoft's format "):
                 _ = _check_file_format(f)
 
-    def test_crystaldata2phase(self):
+    def test_crystaldata2phase(self, emsoft_ebsd_path):
         """A Phase object is correctly returned."""
-        with File(EMSOFT_FILE) as f:
+        with File(emsoft_ebsd_path / "simulated_ebsd.h5") as f:
             xtal_dict = _hdf5group2dict(f["CrystalData"])
         phase = _crystaldata2phase(xtal_dict)
 
@@ -95,11 +89,11 @@ class TestEMsoftEBSDReader:
             structure.element, np.array(["13", "29"], dtype="|S2"), "==", rstrip=False
         ).all()
 
-    def test_crystaldata2phase_single_atom(self):
+    def test_crystaldata2phase_single_atom(self, emsoft_ebsd_path):
         """A Phase object is correctly returned when there is only one
         atom present.
         """
-        with File(EMSOFT_FILE) as f:
+        with File(emsoft_ebsd_path / "simulated_ebsd.h5") as f:
             xtal_dict = _hdf5group2dict(f["CrystalData"])
         xtal_dict["Natomtypes"] = 1
         xtal_dict["AtomData"] = xtal_dict["AtomData"][:, 0][..., np.newaxis]
