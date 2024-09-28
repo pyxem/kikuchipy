@@ -83,31 +83,15 @@ class TestData:
         assert isinstance(mp_lazy, kp.signals.LazyEBSDMasterPattern)
         assert isinstance(mp_lazy.data, Array)
 
-    def test_not_allow_download_raises(self):
+    def test_not_allow_download_raises(self, nickel_ebsd_large_h5ebsd_renamed):
         """Not passing `allow_download` raises expected error.
 
-        Also tests that None is returened if the file does not exist but
+        Also tests that None is returned if the file does not exist but
         the MD5 hash is sought.
         """
         file_path = "nickel_ebsd_large/patterns.h5"
-        file = Path(marshall.path, "data/" + file_path)
-
-        # Rename file (dangerous!)
-        new_name = str(file) + ".bak"
-        rename = False
-        if file.exists():  # pragma: no cover
-            rename = True
-            os.rename(file, new_name)
-
-            dset = Dataset(file_path)
-            assert dset.md5_hash is None
-
         with pytest.raises(ValueError, match=f"File data/{file_path}"):
             _ = kp.data.nickel_ebsd_large()
-
-        # Revert rename
-        if rename:  # pragma: no cover
-            os.rename(new_name, file)
 
     def test_load_ni_ebsd_large_allow_download(self):
         """Download from external."""
@@ -138,10 +122,10 @@ class TestData:
         assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
         assert str(dset.file_directory) == file_path.split("/")[0]
 
-        if dset.file_path.exists():  # pragma: no cover
+        if dset.file_path.exists():
             s = kp.data.si_wafer(lazy=True)
             assert isinstance(s, kp.signals.LazyEBSD)
-        else:  # pragma: no cover
+        else:
             assert dset.md5_hash is None
             with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
                 _ = kp.data.si_wafer()
@@ -176,10 +160,10 @@ class TestData:
             Path(file_path.split("/")[0]) / str(number)
         )
 
-        if dset.file_path.exists():  # pragma: no cover
+        if dset.file_path.exists():
             s = kp.data.ni_gain(number, lazy=True)
             assert isinstance(s, kp.signals.LazyEBSD)
-        else:  # pragma: no cover
+        else:
             assert dset.md5_hash is None
             with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
                 _ = kp.data.ni_gain(number)
@@ -214,10 +198,10 @@ class TestData:
             Path(file_path.split("/")[0]) / str(number)
         )
 
-        if dset.file_path.exists():  # pragma: no cover
+        if dset.file_path.exists():
             s = kp.data.ni_gain_calibration(number, lazy=True)
             assert isinstance(s, kp.signals.LazyEBSD)
-        else:  # pragma: no cover
+        else:
             assert dset.md5_hash is None
             with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
                 _ = kp.data.ni_gain_calibration(number)
@@ -245,10 +229,10 @@ class TestData:
         assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
         assert str(dset.file_directory) == file_path.split("/")[0]
 
-        if dset.file_path.exists():  # pragma: no cover
+        if dset.file_path.exists():
             s = kp.data.ebsd_master_pattern(phase, lazy=True)
             assert isinstance(s, kp.signals.LazyEBSDMasterPattern)
-        else:  # pragma: no cover
+        else:
             assert dset.md5_hash is None
             with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
                 _ = kp.data.ebsd_master_pattern(phase)

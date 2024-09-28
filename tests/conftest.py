@@ -32,6 +32,7 @@ from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
+from kikuchipy.data._data import Dataset, marshall
 
 if kp._pyvista_installed:
     import pyvista as pv
@@ -54,9 +55,7 @@ def assert_dictionary(dict1: dict, dict2: dict) -> None:
         if isinstance(dict2[key], dict):
             assert_dictionary(dict1[key], dict2[key])
         else:
-            if isinstance(dict2[key], list) or isinstance(
-                dict1[key], list
-            ):  # pragma: no cover
+            if isinstance(dict2[key], list) or isinstance(dict1[key], list):
                 dict2[key] = np.array(dict2[key])
                 dict1[key] = np.array(dict1[key])
             if isinstance(dict2[key], (np.ndarray, Number)):
@@ -68,7 +67,7 @@ def assert_dictionary(dict1: dict, dict2: dict) -> None:
 # ------------------------------ Setup ------------------------------ #
 
 
-def pytest_sessionstart(session) -> None:  # pragma: no cover
+def pytest_sessionstart(session) -> None:
     _ = kp.data.nickel_ebsd_large(allow_download=True)
     plt.rcParams["backend"] = "agg"
 
@@ -338,6 +337,14 @@ def ebsd_directory(tmpdir, request):
 @pytest.fixture
 def kikuchipy_h5ebsd_path() -> Path:
     return DATA_PATH / "kikuchipy_h5ebsd"
+
+
+@pytest.fixture
+def nickel_ebsd_large_h5ebsd_renamed() -> Generator[Path, None, None]:
+    f1 = Path(marshall.path, "data/" + "nickel_ebsd_large/patterns.h5")
+    f2 = f1.rename(f1.with_suffix(".bak"))
+    yield f2
+    f2.rename(f1)
 
 
 # --------------------------- EDAX formats --------------------------- #

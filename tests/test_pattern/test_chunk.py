@@ -19,8 +19,8 @@ import numpy as np
 import pytest
 from scipy.ndimage import gaussian_filter
 
+import kikuchipy as kp
 from kikuchipy.filters.fft_barnes import _fft_filter
-from kikuchipy.filters.window import Window
 from kikuchipy.pattern import chunk
 from kikuchipy.pattern._pattern import (
     _dynamic_background_frequency_space_setup,
@@ -175,7 +175,7 @@ class TestFFTFilterChunk:
         this_id = 2
         p[this_id, 50, 50] = 2
 
-        w = Window(transfer_function, shape=shape, **kwargs)
+        w = kp.filters.Window(transfer_function, shape=shape, **kwargs)
 
         filter_func = fft_filter
 

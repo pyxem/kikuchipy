@@ -81,7 +81,7 @@ class TestHoughIndexing:
         angles = xmap.orientations.angle_with(xmap_ref.orientations, degrees=True)
         assert np.all(angles < 1)
 
-    def test_hough_indexing_lazy(self):  # pragma: no cover
+    def test_hough_indexing_lazy(self):
         s = self.signal.as_lazy()
 
         phase_list = self.signal.xmap.phases
@@ -327,7 +327,7 @@ class TestPCOptimization:
         tol = 0.04
         assert abs(det0.pc_average - det.pc_average).max() < tol
 
-        if worker_id == "master":  # pragma: no cover
+        if worker_id == "master":
             # Batch with PC array with more than one dimension
             det2 = self.signal.hough_indexing_optimize_pc(
                 det0.pc_average,
@@ -348,7 +348,7 @@ class TestPCOptimization:
                 [0.5, 0.5, 0.5], self.indexer, method="Powell"
             )
 
-    def test_optimize_pc_lazy(self):  # pragma: no cover
+    def test_optimize_pc_lazy(self):
         s = self.signal.as_lazy()
         det = self.signal.detector
 
@@ -361,7 +361,7 @@ class TestPCOptimization:
 
 
 @pytest.mark.skipif(kp._pyebsdindex_installed, reason="pyebsdindex is installed")
-class TestHoughIndexingNoPyEBSDIndex:  # pragma: no cover
+class TestHoughIndexingNoPyEBSDIndex:
     def setup_method(self):
         s = kp.data.nickel_ebsd_small()
 

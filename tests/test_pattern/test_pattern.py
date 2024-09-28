@@ -20,7 +20,7 @@ import numpy as np
 import pytest
 from scipy.fft import fft2
 
-from kikuchipy.filters.window import Window
+import kikuchipy as kp
 from kikuchipy.pattern._pattern import (
     _bin2d,
     _downsample2d,
@@ -432,7 +432,7 @@ class TestFFTPattern:
     )
     def test_fft_pattern_apodization_window(self, dummy_signal, window):
         p = dummy_signal.inav[0, 0].data
-        w = Window(window, shape=p.shape)
+        w = kp.filters.Window(window, shape=p.shape)
         p2 = fft(pattern=p, apodization_window=w, shift=True)
         p3 = fft(pattern=p * w, shift=True)
         p4 = fft(pattern=p, shift=True)

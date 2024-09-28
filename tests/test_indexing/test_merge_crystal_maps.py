@@ -20,7 +20,7 @@ from orix.crystal_map import CrystalMap, Phase, PhaseList
 from orix.quaternion import Rotation
 import pytest
 
-from kikuchipy.indexing import merge_crystal_maps
+import kikuchipy as kp
 
 
 class TestMergeCrystalMaps:
@@ -76,7 +76,7 @@ class TestMergeCrystalMaps:
             else:
                 desired_rot[i] = xmap[i].rotations.data
 
-        merged_xmap = merge_crystal_maps(
+        merged_xmap = kp.indexing.merge_crystal_maps(
             crystal_maps=xmaps,
             scores_prop=scores_prop,
             simulation_indices_prop=sim_idx_prop,
@@ -161,7 +161,7 @@ class TestMergeCrystalMaps:
             else:
                 desired_rot[j] = xmap[idx].rotations.data
 
-        merged_xmap = merge_crystal_maps(
+        merged_xmap = kp.indexing.merge_crystal_maps(
             crystal_maps=xmaps,
             mean_n_best=mean_n_best,
             scores_prop=scores_prop,
@@ -202,7 +202,7 @@ class TestMergeCrystalMaps:
         )
 
         xmap2[3, 3].prop[scores_prop] = 2
-        merged_xmap = merge_crystal_maps(
+        merged_xmap = kp.indexing.merge_crystal_maps(
             crystal_maps=[xmap1, xmap2],
             greater_is_better=True,
             scores_prop=scores_prop,
@@ -233,7 +233,7 @@ class TestMergeCrystalMaps:
         desired_phase_id = np.zeros(np.prod(map_shape))
         desired_phase_id[3] = 1
 
-        merged_xmap = merge_crystal_maps(
+        merged_xmap = kp.indexing.merge_crystal_maps(
             crystal_maps=[xmap1, xmap2],
             greater_is_better=False,
             simulation_indices_prop=sim_idx_prop,
@@ -278,7 +278,7 @@ class TestMergeCrystalMaps:
         with pytest.warns(
             UserWarning, match=f"There are duplicates of phase '{phase_names[0]}'"
         ):
-            merged_xmap = merge_crystal_maps(
+            merged_xmap = kp.indexing.merge_crystal_maps(
                 crystal_maps=xmaps,
                 scores_prop=scores_prop,
                 simulation_indices_prop=sim_idx_prop,
@@ -357,7 +357,7 @@ class TestMergeCrystalMaps:
         all_sim_idx = np.dstack([xmap.simulation_indices for xmap in xmaps])
         assert np.sum(np.diff(all_sim_idx)) == 0
 
-        merged_xmap = merge_crystal_maps(
+        merged_xmap = kp.indexing.merge_crystal_maps(
             crystal_maps=xmaps,
             mean_n_best=mean_n_best,
             simulation_indices_prop=prop_names[1],
@@ -384,8 +384,8 @@ class TestMergeCrystalMaps:
         xmap2[0, 1].scores = 2.0  # Both maps in both merged maps
 
         crystal_maps = [xmap1, xmap2]
-        merged_xmap1 = merge_crystal_maps(crystal_maps, mean_n_best=2)
-        merged_xmap2 = merge_crystal_maps(crystal_maps, mean_n_best=3)
+        merged_xmap1 = kp.indexing.merge_crystal_maps(crystal_maps, mean_n_best=2)
+        merged_xmap2 = kp.indexing.merge_crystal_maps(crystal_maps, mean_n_best=3)
 
         assert np.allclose(merged_xmap1.phase_id, [0, 1, 0, 0, 0, 0])
         assert np.allclose(merged_xmap2.phase_id, [1, 1, 0, 0, 0, 0])
@@ -394,7 +394,7 @@ class TestMergeCrystalMaps:
         xmap1 = get_single_phase_xmap((4, 3))
         xmap2 = get_single_phase_xmap((3, 4))
         with pytest.raises(ValueError, match=r"Crystal maps \(and/or navigation masks"):
-            _ = merge_crystal_maps([xmap1, xmap2])
+            _ = kp.indexing.merge_crystal_maps([xmap1, xmap2])
 
     def test_merging_maps_different_number_of_scores_raises(
         self, get_single_phase_xmap
@@ -406,7 +406,7 @@ class TestMergeCrystalMaps:
 
         crystal_maps = [xmap1, xmap2]
         with pytest.raises(ValueError, match="Crystal maps must have the"):
-            _ = merge_crystal_maps(crystal_maps)
+            _ = kp.indexing.merge_crystal_maps(crystal_maps)
 
     def test_merging_refined_maps(self):
         ny, nx = (3, 3)
@@ -445,13 +445,13 @@ class TestMergeCrystalMaps:
             y=y,
             prop={"simulation_indices": sim_indices2, "scores": scores2},
         )
-        xmap_merged = merge_crystal_maps(crystal_maps=[xmap1, xmap2])
+        xmap_merged = kp.indexing.merge_crystal_maps(crystal_maps=[xmap1, xmap2])
 
         assert "simulation_indices" not in xmap_merged.prop.keys()
         assert "merged_simulation_indices" not in xmap_merged.prop.keys()
 
         with pytest.raises(ValueError, match="Cannot merge maps with more"):
-            _ = merge_crystal_maps(
+            _ = kp.indexing.merge_crystal_maps(
                 crystal_maps=[xmap1, xmap2],
                 simulation_indices_prop="simulation_indices",
             )
@@ -470,7 +470,7 @@ class TestMergeCrystalMaps:
         xmap2[0, 0].scores = 1
 
         # Works without masks
-        xmap3 = merge_crystal_maps(
+        xmap3 = kp.indexing.merge_crystal_maps(
             [xmap1, xmap2], simulation_indices_prop="simulation_indices"
         )
         # fmt: off
@@ -502,7 +502,7 @@ class TestMergeCrystalMaps:
 
         # Use internal masks via CrystalMap.is_in_data (xmap[:1, 1:] is
         # a view and not a copy)
-        xmap4 = merge_crystal_maps(
+        xmap4 = kp.indexing.merge_crystal_maps(
             [xmap1[1:, 1:], xmap2[1:, 1:]], simulation_indices_prop="simulation_indices"
         )
         # fmt: off
@@ -535,7 +535,7 @@ class TestMergeCrystalMaps:
 
         # Equal number of a map's points in data and number of False
         # entries in a navigation mask
-        xmap5 = merge_crystal_maps(
+        xmap5 = kp.indexing.merge_crystal_maps(
             [xmap1[~nav_mask1.ravel()], xmap2[~nav_mask2.ravel()]],
             navigation_masks=[nav_mask1, nav_mask2],
             simulation_indices_prop="simulation_indices",
@@ -562,7 +562,7 @@ class TestMergeCrystalMaps:
         # All points in one map should be used, but not in another:
         # Only consider xmap1 in the first row and first column (mask it
         # out everywhere else)
-        xmap6 = merge_crystal_maps(
+        xmap6 = kp.indexing.merge_crystal_maps(
             [xmap1[nav_mask1.ravel()], xmap2], navigation_masks=[~nav_mask1, None]
         )
         # fmt: off
@@ -578,7 +578,7 @@ class TestMergeCrystalMaps:
 
         # Only consider xmap1 in the lower right corner (mask it out
         # everywhere else)
-        xmap7 = merge_crystal_maps(
+        xmap7 = kp.indexing.merge_crystal_maps(
             [xmap1[~nav_mask1.ravel()], xmap2], navigation_masks=[nav_mask1, None]
         )
         # fmt: off
@@ -603,7 +603,7 @@ class TestMergeCrystalMaps:
         xmap2.phases = PhaseList(names="a", ids=1)
         xmap2[0, 0].scores = 1
 
-        xmap3 = merge_crystal_maps([xmap1, xmap2])
+        xmap3 = kp.indexing.merge_crystal_maps([xmap1, xmap2])
         assert np.allclose(xmap3.phase_id, 0)
 
     def test_merging_with_navigation_masks_raises(self):
@@ -623,24 +623,26 @@ class TestMergeCrystalMaps:
 
         # Unequal number of maps and masks
         with pytest.raises(ValueError, match="Number of crystal maps and navigation "):
-            _ = merge_crystal_maps([xmap1, xmap2], navigation_masks=nav_mask1)
+            _ = kp.indexing.merge_crystal_maps(
+                [xmap1, xmap2], navigation_masks=nav_mask1
+            )
 
         # Unequal shape of maps
         with pytest.raises(ValueError, match=r"Crystal maps \(and/or navigation masks"):
-            _ = merge_crystal_maps(
+            _ = kp.indexing.merge_crystal_maps(
                 [xmap1[~nav_mask1.ravel()], xmap2[~nav_mask2.ravel()]],
             )
 
         # Must be as many points in a map's data as there are False
         # entries in a mask
         with pytest.raises(ValueError, match="0. navigation mask does not have as "):
-            _ = merge_crystal_maps(
+            _ = kp.indexing.merge_crystal_maps(
                 [xmap1, xmap2], navigation_masks=[nav_mask1, nav_mask2]
             )
 
         # A mask is not a NumPy array
         with pytest.raises(ValueError, match="1. navigation mask must be a NumPy "):
-            _ = merge_crystal_maps(
+            _ = kp.indexing.merge_crystal_maps(
                 [xmap1[~nav_mask1.ravel()], xmap2[~nav_mask2.ravel()]],
                 navigation_masks=[nav_mask1, list(nav_mask2)],
             )
@@ -674,7 +676,7 @@ class TestMergeCrystalMaps:
             [0, 0, 1], 60, degrees=True
         )
 
-        xmap_ab = merge_crystal_maps([xmap_a, xmap_b])
+        xmap_ab = kp.indexing.merge_crystal_maps([xmap_a, xmap_b])
 
         assert np.allclose(xmap_ab.phase_id, [1, 0, -1, 0, 1, 1, -1, 0, 1, -1, 0, 0])
         assert np.allclose(

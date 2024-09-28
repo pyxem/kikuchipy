@@ -19,8 +19,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-from kikuchipy import data
-from kikuchipy.detectors import PCCalibrationMovingScreen
+import kikuchipy as kp
 
 POINTS_IN = [(109, 131), (390, 139), (246, 232), (129, 228), (364, 237)]
 POINTS_OUT = [(77, 146), (424, 156), (246, 269), (104, 265), (392, 276)]
@@ -29,9 +28,9 @@ PX_SIZE = 46 / 508  # mm / px
 
 @pytest.fixture
 def moving_screen_cal_instance(request):
-    return PCCalibrationMovingScreen(
-        pattern_in=data.si_ebsd_moving_screen(0, allow_download=True),
-        pattern_out=data.si_ebsd_moving_screen(5, allow_download=True),
+    return kp.detectors.PCCalibrationMovingScreen(
+        pattern_in=kp.data.si_ebsd_moving_screen(0, allow_download=True),
+        pattern_out=kp.data.si_ebsd_moving_screen(5, allow_download=True),
         points_in=POINTS_IN,
         points_out=POINTS_OUT,
         delta_z=5,  # mm
@@ -85,7 +84,7 @@ class TestPCCalibrationMovingScreen:
 
     def test_pc_convention(self, moving_screen_cal_instance):
         cal_tsl = moving_screen_cal_instance
-        cal_bruker = PCCalibrationMovingScreen(
+        cal_bruker = kp.detectors.PCCalibrationMovingScreen(
             pattern_in=cal_tsl.patterns[0],
             pattern_out=cal_tsl.patterns[1],
             points_in=cal_tsl.points[0],

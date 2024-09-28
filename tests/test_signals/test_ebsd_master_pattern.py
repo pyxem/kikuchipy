@@ -24,11 +24,6 @@ from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.data import nickel_ebsd_master_pattern_small
-from kikuchipy.indexing.similarity_metrics import (
-    NormalizedCrossCorrelationMetric,
-    NormalizedDotProductMetric,
-)
 from kikuchipy.signals.util._master_pattern import (
     _get_cosine_sine_of_alpha_and_azimuthal,
     _get_direction_cosines_for_fixed_pc,
@@ -94,7 +89,7 @@ class TestEBSDMasterPattern:
 class TestIO:
     @pytest.mark.parametrize(
         "emsoft_ebsd_master_pattern_axes_manager",
-        ["energy", "height", "width"],
+        [["energy", "height", "width"]],
         indirect=["emsoft_ebsd_master_pattern_axes_manager"],
     )
     @pytest.mark.parametrize("save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"])
@@ -135,7 +130,7 @@ class TestIO:
 
     @pytest.mark.parametrize("save_path_hdf5", ["hspy"], indirect=["save_path_hdf5"])
     def test_original_metadata_save_load_cycle(self, save_path_hdf5):
-        s = nickel_ebsd_master_pattern_small()
+        s = kp.data.nickel_ebsd_master_pattern_small()
 
         omd_dict_keys = s.original_metadata.as_dictionary().keys()
         desired_keys = [
@@ -164,7 +159,7 @@ class TestProperties:
         [("lambert", "upper"), ("stereographic", "lower"), ("lambert", "both")],
     )
     def test_properties(self, projection, hemisphere):
-        mp = nickel_ebsd_master_pattern_small(
+        mp = kp.data.nickel_ebsd_master_pattern_small(
             projection=projection, hemisphere=hemisphere, lazy=True
         )
         assert mp.projection == projection
@@ -222,18 +217,20 @@ class TestProjectFromLambert:
         emsoft_key = emsoft_key.data[0]
 
         r = Rotation.from_euler(np.radians([120, 45, 60]))
-        mp1 = nickel_ebsd_master_pattern_small(projection="lambert", hemisphere="both")
+        mp1 = kp.data.nickel_ebsd_master_pattern_small(
+            projection="lambert", hemisphere="both"
+        )
         kp_pattern = mp1.get_patterns(
             rotations=r, detector=self.detector, dtype_out=emsoft_key.dtype
         )
         kp_pat = kp_pattern.data[0].compute()
         assert kp_pat.dtype == emsoft_key.dtype
 
-        ncc = NormalizedCrossCorrelationMetric(1, 1)
+        ncc = kp.indexing.NormalizedCrossCorrelationMetric(1, 1)
         ncc1 = ncc(kp_pat, emsoft_key).compute()[0][0]
         assert ncc1 >= 0.935
 
-        ndp = NormalizedDotProductMetric(1, 1)
+        ndp = kp.indexing.NormalizedDotProductMetric(1, 1)
         ndp1 = ndp(kp_pat, emsoft_key).compute()[0][0]
         assert ndp1 >= 0.935
 
@@ -296,7 +293,7 @@ class TestProjectFromLambert:
 
     def test_get_patterns_dtype(self):
         r = Rotation.identity()
-        mp = nickel_ebsd_master_pattern_small(projection="lambert")
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
         dtype_out = np.dtype("float64")
         pattern = mp.get_patterns(
             rotations=r, detector=self.detector, energy=20, dtype_out=dtype_out
@@ -304,7 +301,7 @@ class TestProjectFromLambert:
         assert pattern.data.dtype == dtype_out
 
     def test_simulated_patterns_xmap_detector(self):
-        mp = nickel_ebsd_master_pattern_small(projection="lambert")
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
         r = Rotation.from_euler([[0, 0, 0], [0, np.pi / 2, 0]])
         detector = kp.detectors.EBSDDetector(
             shape=(60, 60),
@@ -326,7 +323,7 @@ class TestProjectFromLambert:
         """Output signal has the correct navigation shape, and that a
         varying projection center gives different patterns.
         """
-        mp = nickel_ebsd_master_pattern_small(projection="lambert")
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
 
         # 2D navigation shape, multiple PCs
         rot1 = Rotation.identity(nav_shape)
@@ -360,7 +357,7 @@ class TestProjectFromLambert:
         assert np.allclose(sim1.data[0, 0], sim3.data[0, 0])
 
     def test_get_patterns_navigation_shape_raises(self):
-        mp = nickel_ebsd_master_pattern_small(projection="lambert")
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
         r = Rotation(np.random.uniform(low=0, high=1, size=(1, 2, 3, 4)))
         detector = kp.detectors.EBSDDetector(shape=(60, 60))
         with pytest.raises(ValueError, match="`rotations` can only have one or two "):
@@ -382,7 +379,7 @@ class TestProjectFromLambert:
         det3 = det1.deepcopy()
         det3.azimuthal = -10
 
-        mp = nickel_ebsd_master_pattern_small(projection="lambert")
+        mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
         r = Rotation.identity()
 
         kwargs = dict(rotations=r, energy=20, compute=True, dtype_out=np.uint8)
@@ -553,7 +550,7 @@ class TestMasterPatternPlotting:
             mp.plot_spherical()
 
     @pytest.mark.skipif(kp._pyvista_installed, reason="PyVista is installed")
-    def test_plot_spherical_raises(self):  # pragma: no cover
+    def test_plot_spherical_raises(self):
         """Raise ImportError when PyVista is not installed."""
         mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
         with pytest.raises(ImportError, match="`pyvista` is required"):
@@ -562,7 +559,7 @@ class TestMasterPatternPlotting:
 
 class TestAsLambert:
     def test_as_lambert(self, capsys):
-        mp_sp = nickel_ebsd_master_pattern_small(projection="stereographic")
+        mp_sp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
         assert mp_sp.projection == "stereographic"
         assert mp_sp.hemisphere == "upper"
 
@@ -575,7 +572,7 @@ class TestAsLambert:
         assert mp_lp.phase.point_group == mp_sp.phase.point_group
 
         # Warns and raises
-        mp_lp_ref = nickel_ebsd_master_pattern_small(projection="lambert")
+        mp_lp_ref = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
         with pytest.warns(UserWarning, match="Already in the Lambert projection, "):
             mp_lp_ref2 = mp_lp_ref.as_lambert()
             assert not np.may_share_memory(mp_lp_ref.data, mp_lp_ref2.data)
@@ -585,7 +582,7 @@ class TestAsLambert:
             _ = mp_sp_lazy.as_lambert()
 
         # Quite similar to EMsoft's Lambert master pattern
-        ncc = NormalizedCrossCorrelationMetric(1, 1)
+        ncc = kp.indexing.NormalizedCrossCorrelationMetric(1, 1)
         assert ncc(mp_lp.data, mp_lp_ref.data).compute() > 0.96
 
         # "Lower" hemisphere identical to upper
@@ -597,7 +594,7 @@ class TestAsLambert:
         assert np.allclose(mp_lp.data, mp_lp2.data)
 
     def test_as_lambert_multiple_energies_hemispheres(self):
-        mp_both = nickel_ebsd_master_pattern_small(
+        mp_both = kp.data.nickel_ebsd_master_pattern_small(
             projection="stereographic", hemisphere="both"
         )
 
@@ -630,18 +627,18 @@ class TestAsLambert:
 
 class TestIntensityScaling:
     def test_rescale_intensity(self):
-        mp = nickel_ebsd_master_pattern_small()
+        mp = kp.data.nickel_ebsd_master_pattern_small()
         mp.rescale_intensity(dtype_out=np.float32)
         assert np.allclose([mp.data.min(), mp.data.max()], [-1.0, 1.0])
 
     def test_normalize_intensity(self):
-        mp = nickel_ebsd_master_pattern_small()
+        mp = kp.data.nickel_ebsd_master_pattern_small()
         mp.change_dtype("float32")
         mp.normalize_intensity()
         assert np.allclose([mp.data.min(), mp.data.max()], [-1.33, 5.93], atol=1e-2)
 
     def test_rescale_intensity_inplace(self):
-        mp = nickel_ebsd_master_pattern_small()
+        mp = kp.data.nickel_ebsd_master_pattern_small()
 
         # Current signal is unaffected
         mp2 = mp.deepcopy()
@@ -661,7 +658,7 @@ class TestIntensityScaling:
         assert np.allclose(mp5.data, mp.data)
 
     def test_rescale_intensity_lazy_output(self):
-        mp = nickel_ebsd_master_pattern_small()
+        mp = kp.data.nickel_ebsd_master_pattern_small()
         with pytest.raises(
             ValueError, match="`lazy_output=True` requires `inplace=False`"
         ):
@@ -675,7 +672,7 @@ class TestIntensityScaling:
         assert isinstance(mp4, kp.signals.EBSDMasterPattern)
 
     def test_normalize_intensity_inplace(self):
-        mp = nickel_ebsd_master_pattern_small()
+        mp = kp.data.nickel_ebsd_master_pattern_small()
 
         # Current signal is unaffected
         mp2 = mp.deepcopy()
@@ -695,7 +692,7 @@ class TestIntensityScaling:
         assert np.allclose(mp5.data, mp.data)
 
     def test_normalize_intensity_lazy_output(self):
-        mp = nickel_ebsd_master_pattern_small()
+        mp = kp.data.nickel_ebsd_master_pattern_small()
         with pytest.raises(
             ValueError, match="`lazy_output=True` requires `inplace=False`"
         ):
@@ -709,7 +706,7 @@ class TestIntensityScaling:
         assert isinstance(mp4, kp.signals.EBSDMasterPattern)
 
     def test_adaptive_histogram_equalization(self):
-        mp_sp = nickel_ebsd_master_pattern_small()
+        mp_sp = kp.data.nickel_ebsd_master_pattern_small()
 
         # Float warns
         mp_sp.change_dtype(np.float32)
@@ -723,7 +720,7 @@ class TestIntensityScaling:
             mp_sp.adaptive_histogram_equalization()
 
         # Spreads intensities within data range
-        mp_lp = nickel_ebsd_master_pattern_small(projection="lambert")
+        mp_lp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
         mp_lp2 = mp_lp.adaptive_histogram_equalization(inplace=False)
         assert all([mp_lp2.data.min() >= 0, mp_lp2.data.max() <= 255])
         assert abs(np.unique(mp_lp2.data).size - 255) < 2

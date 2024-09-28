@@ -15,17 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 from hyperspy.roi import RectangularROI
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
 import kikuchipy as kp
-
-DIR_PATH = os.path.dirname(__file__)
-KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5")
 
 
 class TestVirtualBSEImager:
@@ -56,8 +51,10 @@ class TestVirtualBSEImager:
             ),
         ],
     )
-    def test_set_grid_shape(self, grid_shape, desired_rows, desired_cols):
-        s = kp.load(KIKUCHIPY_FILE)
+    def test_set_grid_shape(
+        self, kikuchipy_h5ebsd_path, grid_shape, desired_rows, desired_cols
+    ):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
         vbse_imager = kp.imaging.VirtualBSEImager(s)
         vbse_imager.grid_shape = grid_shape
 
@@ -76,8 +73,8 @@ class TestVirtualBSEImager:
         "grid_shape, desired_n_markers",
         [((3, 3), 9 + 3 + 8), ((1, 1), 1 + 3 + 4), ((2, 3), 6 + 3 + 7)],
     )
-    def test_plot_grid(self, grid_shape, desired_n_markers):
-        s = kp.load(KIKUCHIPY_FILE)
+    def test_plot_grid(self, kikuchipy_h5ebsd_path, grid_shape, desired_n_markers):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
         vbse_imager = kp.imaging.VirtualBSEImager(s)
         vbse_imager.grid_shape = grid_shape
         rgb_channels = [(0, 0), (0, 1), (1, 0)]
@@ -100,8 +97,8 @@ class TestVirtualBSEImager:
         plt.close("all")
 
     @pytest.mark.parametrize("color", ["c", "m", "k"])
-    def test_plot_grid_text_color(self, color):
-        s = kp.load(KIKUCHIPY_FILE)
+    def test_plot_grid_text_color(self, kikuchipy_h5ebsd_path, color):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
         vbse_imager = kp.imaging.VirtualBSEImager(s)
         p = vbse_imager.plot_grid(color=color)
 
@@ -126,8 +123,8 @@ class TestGetImagesFromGrid:
 
         assert vbse_images.data.dtype == dtype_out
 
-    def test_axes_manager_transfer(self):
-        s = kp.load(KIKUCHIPY_FILE)
+    def test_axes_manager_transfer(self, kikuchipy_h5ebsd_path):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
         vbse_imager = kp.imaging.VirtualBSEImager(s)
         vbse_img = vbse_imager.get_images_from_grid()
 
@@ -144,8 +141,8 @@ class TestGetImagesFromGrid:
 
 
 class TestGetRGBImage:
-    def test_get_rgb_image_rois(self):
-        s = kp.load(KIKUCHIPY_FILE)
+    def test_get_rgb_image_rois(self, kikuchipy_h5ebsd_path):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
         vbse_imager = kp.imaging.VirtualBSEImager(s)
 
         # Get channels by ROIs
@@ -167,8 +164,8 @@ class TestGetRGBImage:
         vbse_rgb_img2.change_dtype("uint8")
         assert np.allclose(vbse_rgb_img1.data, vbse_rgb_img2.data)
 
-    def test_get_rgb_image_dtype(self):
-        s = kp.load(KIKUCHIPY_FILE)
+    def test_get_rgb_image_dtype(self, kikuchipy_h5ebsd_path):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
         vbse_imager = kp.imaging.VirtualBSEImager(s)
         vbse_rgb_img = vbse_imager.get_rgb_image(
             r=(0, 0), g=(0, 1), b=(0, 2), dtype_out=np.uint16
@@ -183,9 +180,9 @@ class TestGetRGBImage:
         [(None, 136.481481), ((1, 99), 134.740740)],
     )
     def test_get_rgb_image_contrast_stretching(
-        self, percentile, desired_mean_intensity
+        self, kikuchipy_h5ebsd_path, percentile, desired_mean_intensity
     ):
-        s = kp.load(KIKUCHIPY_FILE)
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
         vbse_imager = kp.imaging.VirtualBSEImager(s)
         vbse_rgb_img = vbse_imager.get_rgb_image(
             r=(0, 0), g=(0, 1), b=(0, 2), percentiles=percentile
@@ -197,8 +194,10 @@ class TestGetRGBImage:
     @pytest.mark.parametrize(
         "alpha_add, desired_mean_intensity", [(0, 88.5), (10, 107.9)]
     )
-    def test_get_rgb_alpha(self, alpha_add, desired_mean_intensity):
-        s = kp.load(KIKUCHIPY_FILE)
+    def test_get_rgb_alpha(
+        self, kikuchipy_h5ebsd_path, alpha_add, desired_mean_intensity
+    ):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
         vbse_imager = kp.imaging.VirtualBSEImager(s)
 
         alpha = np.arange(9).reshape((3, 3))
@@ -211,8 +210,8 @@ class TestGetRGBImage:
 
         assert np.allclose(vbse_rgb_img.data.mean(), desired_mean_intensity, atol=0.1)
 
-    def test_get_rgb_alpha_signal(self):
-        s = kp.load(KIKUCHIPY_FILE)
+    def test_get_rgb_alpha_signal(self, kikuchipy_h5ebsd_path):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
         vbse_imager = kp.imaging.VirtualBSEImager(s)
 
         vbse_img = s.get_virtual_bse_intensity(roi=RectangularROI(0, 0, 10, 10))
@@ -228,8 +227,8 @@ class TestGetRGBImage:
 
         assert np.allclose(vbse_rgb_img1.data, vbse_rgb_img2.data)
 
-    def test_get_rgb_image_lazy(self):
-        s = kp.load(KIKUCHIPY_FILE, lazy=True)
+    def test_get_rgb_image_lazy(self, kikuchipy_h5ebsd_path):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5", lazy=True)
         vbse_imager = kp.imaging.VirtualBSEImager(s)
 
         assert isinstance(vbse_imager.signal, kp.signals.LazyEBSD)
@@ -252,8 +251,10 @@ class TestGetRGBImage:
             ([(2, 1), (2, 2)], [(3, 1), (3, 2)], [(4, 1), (4, 2)], 109.0),
         ],
     )
-    def test_get_rgb_multiple_rois_per_channel(self, r, g, b, desired_mean_intensity):
-        s = kp.load(KIKUCHIPY_FILE)
+    def test_get_rgb_multiple_rois_per_channel(
+        self, kikuchipy_h5ebsd_path, r, g, b, desired_mean_intensity
+    ):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
         vbse_imager = kp.imaging.VirtualBSEImager(s)
 
         vbse_rgb_img1 = vbse_imager.get_rgb_image(r=r, g=g, b=b)

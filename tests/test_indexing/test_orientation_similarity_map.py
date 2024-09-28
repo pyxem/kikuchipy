@@ -20,7 +20,7 @@ from orix.crystal_map import CrystalMap
 from orix.quaternion import Rotation
 import pytest
 
-from kikuchipy.indexing import orientation_similarity_map
+import kikuchipy as kp
 
 
 class TestOrientationSimilarityMap:
@@ -31,10 +31,13 @@ class TestOrientationSimilarityMap:
             x=np.tile(np.arange(10), 10),
             y=np.tile(np.arange(10), 10),
         )
-        assert np.allclose(orientation_similarity_map(xmap), np.full((10, 10), 5))
+        assert np.allclose(
+            kp.indexing.orientation_similarity_map(xmap), np.full((10, 10), 5)
+        )
 
         assert np.allclose(
-            orientation_similarity_map(xmap, normalize=True), np.ones((10, 10))
+            kp.indexing.orientation_similarity_map(xmap, normalize=True),
+            np.ones((10, 10)),
         )
 
     def test_n_best_too_great(self):
@@ -45,7 +48,7 @@ class TestOrientationSimilarityMap:
             y=np.tile(np.arange(10), 10),
         )
         with pytest.raises(ValueError, match="n_best 6 cannot be greater than"):
-            orientation_similarity_map(xmap, n_best=6)
+            kp.indexing.orientation_similarity_map(xmap, n_best=6)
 
     def test_from_n_best(self):
         sim_idx_prop = "simulated_indices"
@@ -55,7 +58,7 @@ class TestOrientationSimilarityMap:
             x=np.tile(np.arange(10), 10),
             y=np.tile(np.arange(10), 10),
         )
-        osm = orientation_similarity_map(
+        osm = kp.indexing.orientation_similarity_map(
             xmap, simulation_indices_prop=sim_idx_prop, from_n_best=2
         )
         assert osm.shape == (10, 10, 4)

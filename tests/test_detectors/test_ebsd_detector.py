@@ -17,13 +17,11 @@
 
 from copy import deepcopy
 
-import matplotlib
 import matplotlib.collections as mcollections
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import PhaseList
-from packaging.version import Version
 import pytest
 
 import kikuchipy as kp
@@ -430,10 +428,6 @@ class TestEBSDDetector:
             assert num_circles == 8  # Default
         else:
             assert num_circles == len(gnomonic_angles)
-        if Version(matplotlib.__version__) < Version("3.5.0"):  # pragma: no cover
-            for artist in ax.artists:
-                if isinstance(artist, plt.Rectangle):
-                    num_rectangles += 1
         assert num_rectangles == 1
 
         # Circles are coloured correctly
@@ -1047,7 +1041,7 @@ class TestGetIndexer:
         self.det = det
 
     @pytest.mark.skipif(kp._pyebsdindex_installed, reason="pyebsdindex is installed")
-    def test_get_indexer_raises(self):  # pragma: no cover
+    def test_get_indexer_raises(self):
         pl = PhaseList(names=["al", "si"], space_groups=[225, 227])
         with pytest.raises(ValueError, match="pyebsdindex must be installed. Install "):
             _ = self.det.get_indexer(pl)

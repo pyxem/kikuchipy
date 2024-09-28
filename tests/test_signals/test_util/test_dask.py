@@ -19,7 +19,7 @@ import dask.array as da
 import numpy as np
 import pytest
 
-from kikuchipy.signals.ebsd import EBSD, LazyEBSD
+import kikuchipy as kp
 from kikuchipy.signals.util._dask import (
     _rechunk_learning_results,
     get_chunking,
@@ -29,12 +29,12 @@ from kikuchipy.signals.util._dask import (
 
 class TestDask:
     def test_get_chunking_no_parameters(self):
-        s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint16))
+        s = kp.signals.LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint16))
         chunks = get_chunking(s)
         assert len(chunks) == 4
 
     def test_chunk_shape(self):
-        s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint16))
+        s = kp.signals.LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint16))
         assert get_chunking(s, chunk_shape=16) == da.core.normalize_chunks(
             chunks={0: 16, 1: 16, 2: -1, 3: -1},
             limit=30e6,
@@ -43,7 +43,7 @@ class TestDask:
         )
 
     def test_chunk_bytes(self):
-        s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint16))
+        s = kp.signals.LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint16))
         assert get_chunking(s, chunk_bytes=15e6) == da.core.normalize_chunks(
             chunks={0: "auto", 1: "auto", 2: -1, 3: -1},
             limit=15e6,
@@ -52,7 +52,7 @@ class TestDask:
         )
 
     def test_get_chunking_dtype(self):
-        s = LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint8))
+        s = kp.signals.LazyEBSD(da.zeros((32, 32, 256, 256), dtype=np.uint8))
         assert get_chunking(s) == da.core.normalize_chunks(
             chunks={0: "auto", 1: "auto", 2: -1, 3: -1},
             limit=30e6,
@@ -90,7 +90,7 @@ class TestDask:
         )
 
     def test_get_dask_array(self):
-        s = EBSD((255 * np.random.rand(10, 10, 120, 120)).astype(np.uint8))
+        s = kp.signals.EBSD((255 * np.random.rand(10, 10, 120, 120)).astype(np.uint8))
         dask_array = get_dask_array(s, chunk_shape=8)
         assert dask_array.chunks == da.core.normalize_chunks(
             chunks={0: 8, 1: 8, 2: -1, 3: -1},
@@ -105,7 +105,7 @@ class TestDask:
         assert dask_array.chunksize == (5, 5, 120, 120)
 
     def test_chunk_bytes_indirectly(self):
-        s = EBSD(np.zeros((10, 10, 8, 8)))
+        s = kp.signals.EBSD(np.zeros((10, 10, 8, 8)))
         array_out0 = get_dask_array(s)
         array_out1 = get_dask_array(s, chunk_bytes="25KiB")
         array_out2 = get_dask_array(s, chunk_bytes=30e3)
@@ -114,7 +114,7 @@ class TestDask:
 
     def test_rechunk_learning_results(self):
         data = da.from_array(np.random.rand(10, 100, 100, 5).astype(np.float32))
-        lazy_signal = LazyEBSD(data)
+        lazy_signal = kp.signals.LazyEBSD(data)
 
         # Decomposition
         lazy_signal.decomposition(algorithm="PCA", output_dimension=10)

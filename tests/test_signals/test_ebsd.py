@@ -16,7 +16,6 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-import os
 
 import dask.array as da
 import hyperspy.api as hs
@@ -29,11 +28,6 @@ from skimage.exposure import rescale_intensity
 import kikuchipy as kp
 
 from ..conftest import assert_dictionary
-
-DIR_PATH = os.path.dirname(__file__)
-NORDIF_FILE = os.path.join(DIR_PATH, "../../data/nordif/Pattern.dat")
-KIKUCHIPY_FILE = os.path.join(DIR_PATH, "../../data/kikuchipy_h5ebsd/patterns.h5")
-EMSOFT_FILE = os.path.join(DIR_PATH, "../../data/emsoft_ebsd/simulated_ebsd.h5")
 
 
 class TestEBSD:
@@ -71,14 +65,14 @@ class TestEBSD:
 
 
 class TestEBSDXmapProperty:
-    def test_init_xmap(self):
+    def test_init_xmap(self, emsoft_ebsd_path):
         """The attribute is set correctly."""
-        ssim = kp.load(EMSOFT_FILE)
+        ssim = kp.load(emsoft_ebsd_path / "simulated_ebsd.h5")
         xmap = ssim.xmap
         assert xmap.phases[0].name == "ni"
 
-    def test_attribute_carry_over_from_lazy(self):
-        ssim = kp.load(EMSOFT_FILE, lazy=True)
+    def test_attribute_carry_over_from_lazy(self, emsoft_ebsd_path):
+        ssim = kp.load(emsoft_ebsd_path / "simulated_ebsd.h5", lazy=True)
         xmap_lazy = ssim.xmap.deepcopy()
         assert xmap_lazy.phases[0].name == "ni"
 
@@ -737,11 +731,11 @@ class TestRescaleIntensityEBSD:
 
 
 class TestAdaptiveHistogramEqualizationEBSD:
-    def test_adaptive_histogram_equalization(self, capsys):
+    def test_adaptive_histogram_equalization(self, kikuchipy_h5ebsd_path, capsys):
         """Test setup of equalization only. Tests of the result of the
         actual equalization are found elsewhere.
         """
-        s = kp.load(KIKUCHIPY_FILE)
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
 
         # These window sizes should work without issue
         for kernel_size, show_progressbar in zip([None, 10], [True, False]):
@@ -760,8 +754,8 @@ class TestAdaptiveHistogramEqualizationEBSD:
         with pytest.raises(ValueError, match="Incorrect value of `shape"):
             s.adaptive_histogram_equalization(kernel_size=(10, 10, 10))
 
-    def test_lazy_adaptive_histogram_equalization(self):
-        s = kp.load(KIKUCHIPY_FILE, lazy=True)
+    def test_lazy_adaptive_histogram_equalization(self, kikuchipy_h5ebsd_path):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5", lazy=True)
         s.adaptive_histogram_equalization()
         assert isinstance(s.data, da.Array)
 
@@ -1178,7 +1172,7 @@ class TestDecomposition:
         lazy_signal.get_decomposition_model_write(
             components=components, dir_out=tmp_path, fname_out=fname_out
         )
-        s_reload = kp.load(os.path.join(tmp_path, fname_out))
+        s_reload = kp.load(tmp_path / fname_out)
 
         # ... data type, data shape and mean intensity
         assert s_reload.data.dtype == lazy_signal.data.dtype

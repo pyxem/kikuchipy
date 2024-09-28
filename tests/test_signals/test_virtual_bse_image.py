@@ -67,7 +67,7 @@ class TestVirtualBSEImage:
         with pytest.raises(
             ValueError, match="`lazy_output=True` requires `inplace=False`"
         ):
-            _ = vbse_img.normalize_intensity(lazy_output=True)
+            vbse_img.normalize_intensity(lazy_output=True)
 
         vbse_img2 = vbse_img.normalize_intensity(inplace=False, lazy_output=True)
         assert isinstance(vbse_img2, kp.signals.LazyVirtualBSEImage)
@@ -105,7 +105,7 @@ class TestVirtualBSEImage:
         with pytest.raises(
             ValueError, match="`lazy_output=True` requires `inplace=False`"
         ):
-            _ = vbse_img.normalize_intensity(lazy_output=True)
+            vbse_img.normalize_intensity(lazy_output=True)
 
         vbse_img2 = vbse_img.normalize_intensity(inplace=False, lazy_output=True)
         assert isinstance(vbse_img2, kp.signals.LazyVirtualBSEImage)

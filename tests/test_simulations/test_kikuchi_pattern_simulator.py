@@ -30,7 +30,7 @@ import pytest
 import kikuchipy as kp
 
 
-def _setup_method():
+def setup_method():
     """Return simulator used in `setup_method` of multiple test classes."""
     phase = Phase(
         space_group=225,
@@ -92,7 +92,7 @@ class TestCalculateMasterPattern:
     """Calculation of master pattern."""
 
     def setup_method(self):
-        self.simulator = _setup_method()
+        self.simulator = setup_method()
 
     def test_default(self):
         """Default values are as expected."""
@@ -142,7 +142,7 @@ class TestOnDetector:
     """
 
     def setup_method(self):
-        self.simulator = _setup_method()
+        self.simulator = setup_method()
         self.detector = kp.detectors.EBSDDetector(shape=(60, 60))
 
     def test_1d(self):
@@ -192,7 +192,7 @@ class TestPlot:
     """Test plot method."""
 
     def setup_method(self):
-        self.simulator = _setup_method()
+        self.simulator = setup_method()
 
     def test_default(self):
         """Default values are as expected, and appropriate errors are
@@ -288,7 +288,7 @@ class TestPlot:
         simulator.plot("spherical", figure=fig2)
         assert len(ax2.lines) == simulator.reflectors.size * 3
         if Version(matplotlib.__version__) < Version("3.5.0"):
-            assert len(ax2.artists) == 6  # pragma: no cover
+            assert len(ax2.artists) == 6
         else:
             assert len(ax2.patches) == 6  # Reference frame arrows added twice...
 
@@ -332,7 +332,7 @@ class TestPlot:
         plt.close("all")
 
     @pytest.mark.skipif(kp._pyvista_installed, reason="Pyvista is installed")
-    def test_spherical_pyvista_raises(self):  # pragma: no cover
+    def test_spherical_pyvista_raises(self):
         """Appropriate error message is raised when PyVista is
         unavailable.
         """

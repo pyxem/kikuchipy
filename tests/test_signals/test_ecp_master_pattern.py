@@ -15,19 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
-
 import dask.array as da
 import numpy as np
 from orix.crystal_map import Phase
 import pytest
 
 import kikuchipy as kp
-
-DIR_PATH = os.path.dirname(__file__)
-ECP_FILE = os.path.join(
-    DIR_PATH, "../../data/emsoft_ecp_master_pattern/ecp_master_pattern.h5"
-)
 
 
 class TestECPMasterPattern:
@@ -50,8 +43,8 @@ class TestECPMasterPattern:
         s.compute()
         assert isinstance(s, kp.signals.ECPMasterPattern)
 
-    def test_set_custom_properties(self):
-        s = kp.load(ECP_FILE)
+    def test_set_custom_properties(self, emsoft_ecp_master_pattern_file):
+        s = kp.load(emsoft_ecp_master_pattern_file)
 
         # phase
         s.phase = Phase("b")
@@ -84,18 +77,18 @@ class TestECPMasterPattern:
         assert np.allclose(mp_lower, data[1])
 
     @pytest.mark.skipif(not kp._pyvista_installed, reason="PyVista is not installed")
-    def test_plot_spherical(self):
+    def test_plot_spherical(self, emsoft_ecp_master_pattern_file):
         """Cover inherited method only included for documentation
         purposes (tested rigorously elsewhere).
         """
-        s = kp.load(ECP_FILE)
+        s = kp.load(emsoft_ecp_master_pattern_file)
         s.plot_spherical()
 
-    def test_inherited_methods(self):
+    def test_inherited_methods(self, emsoft_ecp_master_pattern_file):
         """Cover inherited method only included for documentation
         purposes (tested rigorously elsewhere).
         """
-        s = kp.load(ECP_FILE)
+        s = kp.load(emsoft_ecp_master_pattern_file)
 
         # as_lambert()
         s2 = s.as_lambert()
@@ -111,8 +104,8 @@ class TestECPMasterPattern:
         s3 = s.deepcopy()
         assert not np.may_share_memory(s.data, s3.data)
 
-    def test_rescale_intensity_inplace(self):
-        mp = kp.load(ECP_FILE)
+    def test_rescale_intensity_inplace(self, emsoft_ecp_master_pattern_file):
+        mp = kp.load(emsoft_ecp_master_pattern_file)
 
         # Current signal is unaffected
         mp2 = mp.deepcopy()
@@ -131,12 +124,12 @@ class TestECPMasterPattern:
         mp5.compute()
         assert np.allclose(mp5.data, mp.data)
 
-    def test_rescale_intensity_lazy_output(self):
-        mp = kp.load(ECP_FILE)
+    def test_rescale_intensity_lazy_output(self, emsoft_ecp_master_pattern_file):
+        mp = kp.load(emsoft_ecp_master_pattern_file)
         with pytest.raises(
             ValueError, match="`lazy_output=True` requires `inplace=False`"
         ):
-            _ = mp.normalize_intensity(lazy_output=True)
+            mp.normalize_intensity(lazy_output=True)
 
         mp2 = mp.normalize_intensity(inplace=False, lazy_output=True)
         assert isinstance(mp2, kp.signals.LazyECPMasterPattern)
@@ -145,8 +138,8 @@ class TestECPMasterPattern:
         mp4 = mp3.normalize_intensity(inplace=False, lazy_output=False)
         assert isinstance(mp4, kp.signals.ECPMasterPattern)
 
-    def test_normalize_intensity_inplace(self):
-        mp = kp.load(ECP_FILE)
+    def test_normalize_intensity_inplace(self, emsoft_ecp_master_pattern_file):
+        mp = kp.load(emsoft_ecp_master_pattern_file)
 
         # Current signal is unaffected
         mp2 = mp.deepcopy()
@@ -165,12 +158,12 @@ class TestECPMasterPattern:
         mp5.compute()
         assert np.allclose(mp5.data, mp.data)
 
-    def test_normalize_intensity_lazy_output(self):
-        mp = kp.load(ECP_FILE)
+    def test_normalize_intensity_lazy_output(self, emsoft_ecp_master_pattern_file):
+        mp = kp.load(emsoft_ecp_master_pattern_file)
         with pytest.raises(
             ValueError, match="`lazy_output=True` requires `inplace=False`"
         ):
-            _ = mp.normalize_intensity(lazy_output=True)
+            mp.normalize_intensity(lazy_output=True)
 
         mp2 = mp.normalize_intensity(inplace=False, lazy_output=True)
         assert isinstance(mp2, kp.signals.LazyECPMasterPattern)
@@ -179,8 +172,8 @@ class TestECPMasterPattern:
         mp4 = mp3.normalize_intensity(inplace=False, lazy_output=False)
         assert isinstance(mp4, kp.signals.ECPMasterPattern)
 
-    def test_adaptive_histogram_equalization(self):
-        mp = kp.load(ECP_FILE)
+    def test_adaptive_histogram_equalization(self, emsoft_ecp_master_pattern_file):
+        mp = kp.load(emsoft_ecp_master_pattern_file)
         mp.rescale_intensity(dtype_out=np.uint8)
         mp.adaptive_histogram_equalization()
         assert all([mp.data.min() >= 0, mp.data.max() <= 255])
