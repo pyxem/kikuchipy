@@ -27,8 +27,6 @@ from skimage.exposure import rescale_intensity
 
 import kikuchipy as kp
 
-from ..conftest import assert_dictionary
-
 
 class TestEBSD:
     def test_init(self):
@@ -1886,13 +1884,15 @@ class TestNeighbourDotProductMatrices:
 class TestSignal2DMethods:
     """Test methods inherited from Signal2D."""
 
-    def test_as_lazy(self):
+    def test_as_lazy(self, assert_dictionary_func):
         """Lazy attribute and class change while metadata is constant."""
         s = kp.data.nickel_ebsd_small()
         s_lazy = s.as_lazy()
         assert s_lazy._lazy
         assert isinstance(s_lazy, kp.signals.LazyEBSD)
-        assert_dictionary(s.metadata.as_dictionary(), s_lazy.metadata.as_dictionary())
+        assert_dictionary_func(
+            s.metadata.as_dictionary(), s_lazy.metadata.as_dictionary()
+        )
 
     def test_change_dtype(self, dummy_signal):
         """Custom properties carry over and their data type are set

@@ -19,14 +19,14 @@ import numpy as np
 
 import kikuchipy as kp
 
-from ..conftest import assert_dictionary
-
 
 class TestOxfordH5EBSD:
-    def test_load(self, oxford_h5ebsd_path, ni_small_axes_manager):
+    def test_load(
+        self, oxford_h5ebsd_path, ni_small_axes_manager, assert_dictionary_func
+    ):
         s = kp.load(oxford_h5ebsd_path / "patterns.h5oina")
         assert s.data.shape == (3, 3, 60, 60)
-        assert_dictionary(s.axes_manager.as_dictionary(), ni_small_axes_manager)
+        assert_dictionary_func(s.axes_manager.as_dictionary(), ni_small_axes_manager)
         assert s.metadata.Acquisition_instrument.SEM.beam_energy == 20
 
         s2 = kp.data.nickel_ebsd_small()

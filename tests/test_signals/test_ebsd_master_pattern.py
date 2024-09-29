@@ -38,8 +38,6 @@ from kikuchipy.signals.util._master_pattern import (
     _vector2lambert,
 )
 
-from ..conftest import assert_dictionary
-
 
 class TestEBSDMasterPattern:
     def test_init_no_metadata(self):
@@ -99,14 +97,15 @@ class TestIO:
         emsoft_ebsd_master_pattern_axes_manager,
         emsoft_ebsd_master_pattern_metadata,
         save_path_hdf5,
+        assert_dictionary_func,
     ):
         s = kp.load(emsoft_ebsd_master_pattern_file)
 
         axman = emsoft_ebsd_master_pattern_axes_manager
 
         assert isinstance(s, kp.signals.EBSDMasterPattern)
-        assert_dictionary(s.axes_manager.as_dictionary(), axman)
-        assert_dictionary(
+        assert_dictionary_func(s.axes_manager.as_dictionary(), axman)
+        assert_dictionary_func(
             s.metadata.as_dictionary(), emsoft_ebsd_master_pattern_metadata
         )
 
@@ -114,8 +113,8 @@ class TestIO:
 
         s2 = hs.load(save_path_hdf5, signal_type="EBSDMasterPattern")
         assert isinstance(s2, kp.signals.EBSDMasterPattern)
-        assert_dictionary(s2.axes_manager.as_dictionary(), axman)
-        assert_dictionary(
+        assert_dictionary_func(s2.axes_manager.as_dictionary(), axman)
+        assert_dictionary_func(
             s2.metadata.as_dictionary(), emsoft_ebsd_master_pattern_metadata
         )
 
@@ -123,8 +122,8 @@ class TestIO:
         assert isinstance(s3, Signal2D)
         s3.set_signal_type("EBSDMasterPattern")
         assert isinstance(s3, kp.signals.EBSDMasterPattern)
-        assert_dictionary(s3.axes_manager.as_dictionary(), axman)
-        assert_dictionary(
+        assert_dictionary_func(s3.axes_manager.as_dictionary(), axman)
+        assert_dictionary_func(
             s.metadata.as_dictionary(), emsoft_ebsd_master_pattern_metadata
         )
 

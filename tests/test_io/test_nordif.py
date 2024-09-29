@@ -34,8 +34,6 @@ import pytest
 import kikuchipy as kp
 from kikuchipy.io.plugins.nordif import _get_settings_from_file, _get_string
 
-from ..conftest import assert_dictionary
-
 # Settings content
 METADATA = {
     "Acquisition_instrument": {
@@ -219,13 +217,13 @@ class TestNORDIF:
                 )
             assert sample_tilt == ""
 
-    def test_load(self, nordif_path):
+    def test_load(self, nordif_path, assert_dictionary_func):
         s = kp.load(
             nordif_path / "Pattern.dat", setting_file=nordif_path / "Setting.txt"
         )
 
         assert s.data.shape == (3, 3, 60, 60)
-        assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
+        assert_dictionary_func(s.axes_manager.as_dictionary(), AXES_MANAGER)
 
         static_bg = imread(nordif_path / "Background acquisition pattern.bmp")
         assert np.allclose(s.static_background, static_bg)
@@ -322,13 +320,13 @@ class TestNORDIF:
         assert not mm.flags["WRITEABLE"]
 
     @pytest.mark.parametrize("lazy", [True, False])
-    def test_load_inplace(self, nordif_path, lazy):
+    def test_load_inplace(self, nordif_path, assert_dictionary_func, lazy):
         if lazy:
             with pytest.raises(ValueError):
                 _ = kp.load(nordif_path / "Pattern.dat", lazy=lazy, mmap_mode="r+")
         else:
             s = kp.load(nordif_path / "Pattern.dat", lazy=lazy, mmap_mode="r+")
-            assert_dictionary(s.axes_manager.as_dictionary(), AXES_MANAGER)
+            assert_dictionary_func(s.axes_manager.as_dictionary(), AXES_MANAGER)
 
     def test_save_fresh(self, save_path_nordif):
         scan_size = (10, 3)

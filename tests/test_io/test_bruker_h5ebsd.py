@@ -20,30 +20,30 @@ import pytest
 
 import kikuchipy as kp
 
-from ..conftest import assert_dictionary
-
 
 class TestBrukerH5EBSD:
-    def test_load(self, bruker_h5ebsd_file_path, ni_small_axes_manager):
+    def test_load(
+        self, bruker_h5ebsd_file, ni_small_axes_manager, assert_dictionary_func
+    ):
         # Cover grid type check
-        with h5py.File(bruker_h5ebsd_file_path, mode="r+") as f:
+        with h5py.File(bruker_h5ebsd_file, mode="r+") as f:
             grid = f["Scan 0/EBSD/Header/Grid Type"]
             grid[()] = "hexagonal".encode()
         with pytest.raises(IOError, match="Only square grids are"):
-            kp.load(bruker_h5ebsd_file_path)
-        with h5py.File(bruker_h5ebsd_file_path, mode="r+") as f:
+            kp.load(bruker_h5ebsd_file)
+        with h5py.File(bruker_h5ebsd_file, mode="r+") as f:
             grid = f["Scan 0/EBSD/Header/Grid Type"]
             grid[()] = "isometric".encode()
 
-        s = kp.load(bruker_h5ebsd_file_path)
+        s = kp.load(bruker_h5ebsd_file)
         assert s.data.shape == (3, 3, 60, 60)
-        assert_dictionary(s.axes_manager.as_dictionary(), ni_small_axes_manager)
+        assert_dictionary_func(s.axes_manager.as_dictionary(), ni_small_axes_manager)
 
     def test_load_roi(
-        self, bruker_h5ebsd_file_roi_path, bruker_h5ebsd_file_nonrectangular_roi_path
+        self, bruker_h5ebsd_roi_file, bruker_h5ebsd_nonrectangular_roi_file
     ):
-        s = kp.load(bruker_h5ebsd_file_roi_path)
+        s = kp.load(bruker_h5ebsd_roi_file)
         assert s.data.shape == (3, 2, 60, 60)
 
         with pytest.raises(ValueError, match="Only a rectangular region of"):
-            kp.load(bruker_h5ebsd_file_nonrectangular_roi_path)
+            kp.load(bruker_h5ebsd_nonrectangular_roi_file)

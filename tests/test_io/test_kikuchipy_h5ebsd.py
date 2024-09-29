@@ -31,8 +31,6 @@ from kikuchipy.io.plugins.kikuchipy_h5ebsd import (
     KikuchipyH5EBSDWriter,
 )
 
-from ..conftest import assert_dictionary
-
 KIKUCHIPY_FILE_GROUP_NAMES = ["Scan 1", "Scan 2"]
 
 
@@ -64,11 +62,13 @@ class TestH5EBSD:
 
 
 class TestKikuchipyH5EBSD:
-    def test_load(self, kikuchipy_h5ebsd_path, ni_small_axes_manager):
+    def test_load(
+        self, kikuchipy_h5ebsd_path, ni_small_axes_manager, assert_dictionary_func
+    ):
         s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
 
         assert s.data.shape == (3, 3, 60, 60)
-        assert_dictionary(s.axes_manager.as_dictionary(), ni_small_axes_manager)
+        assert_dictionary_func(s.axes_manager.as_dictionary(), ni_small_axes_manager)
 
     def test_save_load_xmap(self, detector, save_path_hdf5):
         mp = kp.data.nickel_ebsd_master_pattern_small(projection="lambert")
@@ -117,7 +117,12 @@ class TestKikuchipyH5EBSD:
 
     @pytest.mark.parametrize("lazy", (True, False))
     def test_load_with_padding(
-        self, save_path_hdf5, kikuchipy_h5ebsd_path, lazy, ni_small_axes_manager
+        self,
+        save_path_hdf5,
+        kikuchipy_h5ebsd_path,
+        lazy,
+        ni_small_axes_manager,
+        assert_dictionary_func,
     ):
         s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
         s.save(save_path_hdf5)
@@ -131,7 +136,9 @@ class TestKikuchipyH5EBSD:
         assert len(warninfo) == 2
 
         ni_small_axes_manager["axis-1"]["size"] = new_n_columns
-        assert_dictionary(s_reload.axes_manager.as_dictionary(), ni_small_axes_manager)
+        assert_dictionary_func(
+            s_reload.axes_manager.as_dictionary(), ni_small_axes_manager
+        )
 
     def test_load_save_cycle(self, save_path_hdf5, kikuchipy_h5ebsd_path):
         s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")

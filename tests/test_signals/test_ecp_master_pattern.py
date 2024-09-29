@@ -90,17 +90,13 @@ class TestECPMasterPattern:
         """
         s = kp.load(emsoft_ecp_master_pattern_file)
 
-        # as_lambert()
         s2 = s.as_lambert()
         assert s2.projection == "lambert"
 
-        # normalize_intensity()
         s.normalize_intensity()
 
-        # rescale_intensity()
         s.rescale_intensity()
 
-        # deepcopy()
         s3 = s.deepcopy()
         assert not np.may_share_memory(s.data, s3.data)
 

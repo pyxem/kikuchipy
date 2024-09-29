@@ -22,15 +22,15 @@ import pytest
 
 import kikuchipy as kp
 
-from ..conftest import assert_dictionary
-
 
 class TestEDAXH5EBSD:
-    def test_load(self, edax_h5ebsd_path, tmp_path, ni_small_axes_manager):
+    def test_load(
+        self, edax_h5ebsd_path, tmp_path, ni_small_axes_manager, assert_dictionary_func
+    ):
         file = edax_h5ebsd_path / "patterns.h5"
         s = kp.load(file)
         assert s.data.shape == (3, 3, 60, 60)
-        assert_dictionary(s.axes_manager.as_dictionary(), ni_small_axes_manager)
+        assert_dictionary_func(s.axes_manager.as_dictionary(), ni_small_axes_manager)
         mag = s.metadata.Acquisition_instrument.SEM.magnification
 
         # No 'SEM-PRIAS' group available

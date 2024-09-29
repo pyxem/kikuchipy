@@ -21,8 +21,6 @@ import pytest
 
 import kikuchipy as kp
 
-from ..conftest import assert_dictionary
-
 
 class TestEMsoftEBSDMasterPatternReader:
     @pytest.mark.parametrize(
@@ -35,14 +33,15 @@ class TestEMsoftEBSDMasterPatternReader:
         emsoft_ebsd_master_pattern_file,
         emsoft_ebsd_master_pattern_metadata,
         emsoft_ebsd_master_pattern_axes_manager,
+        assert_dictionary_func,
     ):
         s = kp.load(emsoft_ebsd_master_pattern_file)
 
         assert s.data.shape == (11, 13, 13)
-        assert_dictionary(
+        assert_dictionary_func(
             s.axes_manager.as_dictionary(), emsoft_ebsd_master_pattern_axes_manager
         )
-        assert_dictionary(
+        assert_dictionary_func(
             s.metadata.as_dictionary(), emsoft_ebsd_master_pattern_metadata
         )
 
@@ -50,14 +49,17 @@ class TestEMsoftEBSDMasterPatternReader:
         assert np.allclose(s.max(axis=signal_indx).data, s.axes_manager["energy"].axis)
 
     def test_projection_lambert(
-        self, emsoft_ebsd_master_pattern_file, emsoft_ebsd_master_pattern_axes_manager
+        self,
+        emsoft_ebsd_master_pattern_file,
+        emsoft_ebsd_master_pattern_axes_manager,
+        assert_dictionary_func,
     ):
         s = kp.load(
             emsoft_ebsd_master_pattern_file, projection="lambert", hemisphere="both"
         )
 
         assert s.data.shape == (2, 11, 13, 13)
-        assert_dictionary(
+        assert_dictionary_func(
             s.axes_manager.as_dictionary(), emsoft_ebsd_master_pattern_axes_manager
         )
 
