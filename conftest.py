@@ -289,12 +289,12 @@ def get_single_phase_xmap(rotations) -> Generator[Callable, None, None]:
 
 
 @pytest.fixture(params=["h5"])
-def save_path_hdf5(request) -> Generator[Path, None, None]:
+def save_path_hdf5(request, tmpdir) -> Generator[Path, None, None]:
     """Temporary file in a temporary directory for use when tests need
     to write, and sometimes read again, a signal to, and from, a file.
     """
-    with tempfile.TemporaryDirectory() as tmp:
-        yield Path(tmp) / ("patterns." + request.param)
+    ext = request.param
+    yield Path(tmpdir / f"patterns.{ext}")
 
 
 @pytest.fixture
