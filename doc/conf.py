@@ -6,7 +6,6 @@ from datetime import datetime
 import inspect
 import os
 from os.path import dirname, relpath
-from pathlib import Path
 import re
 import sys
 

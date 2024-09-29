@@ -156,12 +156,12 @@ addopts = [
 ]
 doctest_optionflags = "NORMALIZE_WHITESPACE"
 filterwarnings = [
-    "ignore:Deprecated call to `pkg_resources:DeprecationWarning",
-    "ignore:pkg_resources is deprecated as an API:DeprecationWarning",
     # From Traits
     "ignore:module \\'sre_:DeprecationWarning",
     # From tqdm: 'tqdm_notebook' object has no attribute 'disp'
-    "ignore::pytest.PytestUnraisableExceptionWarning",
+#    "ignore::pytest.PytestUnraisableExceptionWarning",
+    # From pytools
+    "ignore:Unable to import recommended hash 'siphash24.siphash13'",
 ]
 
 [tool.isort]

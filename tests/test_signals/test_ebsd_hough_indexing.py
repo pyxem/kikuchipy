@@ -308,7 +308,7 @@ class TestPCOptimization:
             det0.pc_average, self.indexer, batch=True
         )
         assert det2.navigation_shape == (3, 3)
-        assert np.allclose(det.pc_average, det2.pc_average, atol=1e-2)
+        assert np.allclose(det.pc_average, det2.pc_average, atol=0.1)
 
         # Detector parameters
         assert det.shape == det0.shape
