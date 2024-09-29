@@ -108,7 +108,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         continue-on-error: true
         run: |
-          xvfb-run pytest --doctest-modules --doctest-continue-on-failure --ignore-glob=kikuchipy/*/tests kikuchipy/*.py
+          xvfb-run pytest src --doctest-modules --doctest-continue-on-failure
 
       - name: Run tests in a virtual X server environment on Ubuntu
         if: ${{ matrix.os == 'ubuntu-latest' }}
