@@ -148,12 +148,10 @@ addopts = [
     # Examples
     "--ignore=examples/*/*.py",
     # Scripts for creating dummy data
-    "--ignore=kikuchipy/data/bruker_h5ebsd/create_bruker_h5ebsd_file.py",
-    "--ignore=kikuchipy/data/edax_binary/create_edax_binary_file.py",
-    "--ignore=kikuchipy/data/emsoft_ebsd/create_dummy_emsoft_ebsd_file.py",
-    "--ignore=kikuchipy/data/oxford_h5ebsd/create_oxford_h5ebsd_file.py",
-    "--ignore=kikuchipy/data/oxford_binary/create_oxford_binary_file.py",
-    "--ignore-glob=kikuchipy/data/emsoft_ebsd_master_pattern/*.py",
+    "--ignore=src/kikuchipy/data/emsoft_ebsd/create_dummy_emsoft_ebsd_file.py",
+    "--ignore=src/kikuchipy/data/oxford_h5ebsd/create_oxford_h5ebsd_file.py",
+    "--ignore=src/kikuchipy/data/oxford_binary/create_oxford_binary_file.py",
+    "--ignore-glob=src/kikuchipy/data/emsoft_ebsd_master_pattern/*.py",
 ]
 doctest_optionflags = "NORMALIZE_WHITESPACE"
 filterwarnings = [
