@@ -13,7 +13,7 @@ sphinx:
 build:
   os: ubuntu-24.04
   tools:
-    python: "mambaforge-22.9"
+    python: "3"
     nodejs: "19"
   # Some of these packages are needed by PyVista/Trame to render 3D
   # plots from RTD's server.
@@ -22,7 +22,7 @@ build:
     - libgl1-mesa-dev
     - xvfb
 
-# Build doc in all formats (HTML, PDF and ePub)
+# Optionally build your docs in additional formats such as PDF and ePub
 formats:
   - pdf
 
