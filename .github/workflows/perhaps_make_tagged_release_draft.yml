@@ -8,7 +8,7 @@ on:
     branches:
       - main
     paths:
-      - "kikuchipy/__init__.py"
+      - "src/kikuchipy/__init__.py"
 
 jobs:
   make-tagged-release:
