@@ -62,7 +62,7 @@ instance/
 .scrapy
 
 # Sphinx documentation
-doc/build/
+doc/_build/
 doc/reference/generated/
 doc/examples/
 sg_execution_times.rst
