@@ -110,7 +110,7 @@ def load(filename: Union[str, Path], lazy: bool = False, **kwargs) -> Union[
     Import nine patterns from an HDF5 file in a directory ``DATA_DIR``
 
     >>> import kikuchipy as kp
-    >>> s = kp.load(DATA_DIR + "/patterns.h5")
+    >>> s = kp.load(DATA_DIR / "patterns.h5")
     >>> s
     <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
     """
