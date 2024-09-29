@@ -15,11 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from io import TextIOWrapper
 from numbers import Number
 import os
 from pathlib import Path
 import tempfile
-from typing import Callable, Generator
+from typing import Callable, Generator, List
 
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
@@ -211,23 +212,23 @@ def nickel_structure() -> Structure:
 
 
 @pytest.fixture
-def nickel_phase(nickel_structure) -> Phase:
-    return Phase(name="ni", structure=nickel_structure, space_group=225)
+def nickel_phase(nickel_structure) -> Generator[Phase, None, None]:
+    yield Phase(name="ni", structure=nickel_structure, space_group=225)
 
 
 @pytest.fixture
-def pc1() -> list[float]:
+def pc1() -> Generator[List[float], None, None]:
     """One projection center (PC) in TSL convention."""
-    return [0.4210, 0.7794, 0.5049]
+    yield [0.4210, 0.7794, 0.5049]
 
 
 @pytest.fixture(params=[[(1,), (60, 60)]])
-def detector(request, pc1) -> kp.detectors.EBSDDetector:
+def detector(request, pc1) -> Generator[kp.detectors.EBSDDetector, None, None]:
     """An EBSD detector of a given shape with a number of PCs given by
     a navigation shape.
     """
     nav_shape, sig_shape = request.param
-    return kp.detectors.EBSDDetector(
+    yield kp.detectors.EBSDDetector(
         shape=sig_shape,
         binning=8,
         px_size=70,
@@ -239,12 +240,12 @@ def detector(request, pc1) -> kp.detectors.EBSDDetector:
 
 
 @pytest.fixture
-def rotations() -> Rotation:
-    return Rotation([(2, 4, 6, 8), (-1, -3, -5, -7)])
+def rotations() -> Generator[Rotation, None, None]:
+    yield Rotation([(2, 4, 6, 8), (-1, -3, -5, -7)])
 
 
 @pytest.fixture
-def get_single_phase_xmap(rotations) -> Callable:
+def get_single_phase_xmap(rotations) -> Generator[Callable, None, None]:
     def _get_single_phase_xmap(
         nav_shape,
         rotations_per_point=5,
@@ -271,7 +272,7 @@ def get_single_phase_xmap(rotations) -> Callable:
         }
         return CrystalMap(**d)
 
-    return _get_single_phase_xmap
+    yield _get_single_phase_xmap
 
 
 # ---------------------------- IO fixtures --------------------------- #
@@ -287,7 +288,7 @@ def save_path_hdf5(request) -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-def ni_small_axes_manager() -> dict:
+def ni_small_axes_manager() -> Generator[dict, None, None]:
     """Axes manager for :func:`kikuchipy.data.nickel_ebsd_small`."""
     names = ["y", "x", "dy", "dx"]
     scales = [1.5, 1.5, 1, 1]
@@ -305,11 +306,11 @@ def ni_small_axes_manager() -> dict:
             "scale": scales[i],
             "offset": 0.0,
         }
-    return axes_manager
+    yield axes_manager
 
 
 @pytest.fixture(params=[("_x{}y{}.tif", (3, 3))])
-def ebsd_directory(tmpdir, request):
+def ebsd_directory(tmpdir, request) -> Generator[Path, None, None]:
     """Temporary directory with EBSD files as .tif, .png or .bmp files.
 
     Parameters expected in `request`
@@ -335,8 +336,8 @@ def ebsd_directory(tmpdir, request):
 
 
 @pytest.fixture
-def kikuchipy_h5ebsd_path() -> Path:
-    return DATA_PATH / "kikuchipy_h5ebsd"
+def kikuchipy_h5ebsd_path() -> Generator[Path, None, None]:
+    yield DATA_PATH / "kikuchipy_h5ebsd"
 
 
 @pytest.fixture
@@ -351,12 +352,12 @@ def nickel_ebsd_large_h5ebsd_renamed() -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-def edax_binary_path() -> Path:
-    return DATA_PATH / "edax_binary"
+def edax_binary_path() -> Generator[Path, None, None]:
+    yield DATA_PATH / "edax_binary"
 
 
 @pytest.fixture(params=[(1, (2, 3), (60, 60), "uint8", 2, False)])
-def edax_binary_file(tmpdir, request):
+def edax_binary_file(tmpdir, request) -> Generator[TextIOWrapper, None, None]:
     """Create a dummy EDAX binary UP1/2 file.
 
     The creation of dummy UP1/2 files is explained in more detail in
@@ -413,25 +414,25 @@ def edax_binary_file(tmpdir, request):
 
 
 @pytest.fixture
-def edax_h5ebsd_path() -> Path:
-    return DATA_PATH / "edax_h5ebsd"
+def edax_h5ebsd_path() -> Generator[Path, None, None]:
+    yield DATA_PATH / "edax_h5ebsd"
 
 
 # -------------------- Oxford Instruments formats -------------------- #
 
 
 @pytest.fixture
-def oxford_binary_path() -> Path:
-    return DATA_PATH / "oxford_binary"
+def oxford_binary_path() -> Generator[Path, None, None]:
+    yield DATA_PATH / "oxford_binary"
 
 
 @pytest.fixture
-def oxford_h5ebsd_path() -> Path:
-    return DATA_PATH / "oxford_h5ebsd"
+def oxford_h5ebsd_path() -> Generator[Path, None, None]:
+    yield DATA_PATH / "oxford_h5ebsd"
 
 
 @pytest.fixture(params=[((2, 3), (60, 60), np.uint8, 2, False, True)])
-def oxford_binary_file(tmpdir, request):
+def oxford_binary_file(tmpdir, request) -> Generator[TextIOWrapper, None, None]:
     """Create a dummy Oxford Instruments' binary .ebsp file.
 
     The creation of a dummy .ebsp file is explained in more detail in
@@ -514,33 +515,33 @@ def oxford_binary_file(tmpdir, request):
 
 
 @pytest.fixture
-def emsoft_ebsd_master_pattern_file() -> Path:
-    return DATA_PATH / "emsoft_ebsd_master_pattern/master_patterns.h5"
+def emsoft_ebsd_master_pattern_file() -> Generator[Path, None, None]:
+    yield DATA_PATH / "emsoft_ebsd_master_pattern/master_patterns.h5"
 
 
 @pytest.fixture
-def emsoft_ecp_master_pattern_file() -> Path:
-    return DATA_PATH / "emsoft_ecp_master_pattern/ecp_master_pattern.h5"
+def emsoft_ecp_master_pattern_file() -> Generator[Path, None, None]:
+    yield DATA_PATH / "emsoft_ecp_master_pattern/ecp_master_pattern.h5"
 
 
 @pytest.fixture
-def emsoft_tkd_master_pattern_file() -> Path:
-    return DATA_PATH / "emsoft_tkd_master_pattern/tkd_master_pattern.h5"
+def emsoft_tkd_master_pattern_file() -> Generator[Path, None, None]:
+    yield DATA_PATH / "emsoft_tkd_master_pattern/tkd_master_pattern.h5"
 
 
 @pytest.fixture
-def emsoft_ebsd_path() -> Path:
-    return DATA_PATH / "emsoft_ebsd"
+def emsoft_ebsd_path() -> Generator[Path, None, None]:
+    yield DATA_PATH / "emsoft_ebsd"
 
 
 @pytest.fixture
-def emsoft_ebsd_file(emsoft_ebsd_path) -> Path:
-    return emsoft_ebsd_path / "EBSD_TEST_Ni.h5"
+def emsoft_ebsd_file(emsoft_ebsd_path) -> Generator[Path, None, None]:
+    yield emsoft_ebsd_path / "EBSD_TEST_Ni.h5"
 
 
 @pytest.fixture
-def emsoft_ebsd_master_pattern_metadata() -> dict:
-    return {
+def emsoft_ebsd_master_pattern_metadata() -> Generator[dict, None, None]:
+    yield {
         "General": {
             "original_filename": "master_patterns.h5",
             "title": "master_patterns",
@@ -551,7 +552,7 @@ def emsoft_ebsd_master_pattern_metadata() -> dict:
 
 
 @pytest.fixture(params=[["hemisphere", "energy", "height", "width"]])
-def emsoft_ebsd_master_pattern_axes_manager(request) -> dict:
+def emsoft_ebsd_master_pattern_axes_manager(request) -> Generator[dict, None, None]:
     axes = request.param
     am = {
         "hemisphere": {
@@ -590,15 +591,15 @@ def emsoft_ebsd_master_pattern_axes_manager(request) -> dict:
     d = {}
     for i, a in enumerate(axes):
         d["axis-" + str(i)] = am[a]
-    return d
+    yield d
 
 
 # -------------------------- NORDIF formats -------------------------- #
 
 
 @pytest.fixture
-def nordif_path() -> Path:
-    return DATA_PATH / "nordif"
+def nordif_path() -> Generator[Path, None, None]:
+    yield DATA_PATH / "nordif"
 
 
 @pytest.fixture
@@ -616,5 +617,5 @@ def nordif_renamed_calibration_pattern(
 
 
 @pytest.fixture
-def bruker_path() -> Path:
-    return DATA_PATH / "bruker_h5ebsd"
+def bruker_path() -> Generator[Path, None, None]:
+    yield DATA_PATH / "bruker_h5ebsd"
