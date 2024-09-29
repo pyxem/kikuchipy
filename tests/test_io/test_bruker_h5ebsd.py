@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from h5py import File
+import h5py
 import pytest
 
 import kikuchipy as kp
@@ -24,25 +24,26 @@ from ..conftest import assert_dictionary
 
 
 class TestBrukerH5EBSD:
-    def test_load(self, bruker_path, ni_small_axes_manager):
-        bruker_file = bruker_path / "patterns.h5"
+    def test_load(self, bruker_h5ebsd_file_path, ni_small_axes_manager):
         # Cover grid type check
-        with File(bruker_file, mode="r+") as f:
+        with h5py.File(bruker_h5ebsd_file_path, mode="r+") as f:
             grid = f["Scan 0/EBSD/Header/Grid Type"]
             grid[()] = "hexagonal".encode()
         with pytest.raises(IOError, match="Only square grids are"):
-            kp.load(bruker_file)
-        with File(bruker_file, mode="r+") as f:
+            kp.load(bruker_h5ebsd_file_path)
+        with h5py.File(bruker_h5ebsd_file_path, mode="r+") as f:
             grid = f["Scan 0/EBSD/Header/Grid Type"]
             grid[()] = "isometric".encode()
 
-        s = kp.load(bruker_file)
+        s = kp.load(bruker_h5ebsd_file_path)
         assert s.data.shape == (3, 3, 60, 60)
         assert_dictionary(s.axes_manager.as_dictionary(), ni_small_axes_manager)
 
-    def test_load_roi(self, bruker_path):
-        s = kp.load(bruker_path / "patterns_roi.h5")
+    def test_load_roi(
+        self, bruker_h5ebsd_file_roi_path, bruker_h5ebsd_file_nonrectangular_roi_path
+    ):
+        s = kp.load(bruker_h5ebsd_file_roi_path)
         assert s.data.shape == (3, 2, 60, 60)
 
         with pytest.raises(ValueError, match="Only a rectangular region of"):
-            kp.load(bruker_path / "patterns_roi_nonrectangular.h5")
+            kp.load(bruker_h5ebsd_file_nonrectangular_roi_path)
