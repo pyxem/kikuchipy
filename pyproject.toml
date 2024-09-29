@@ -139,6 +139,7 @@ relative_files = true
 [tool.pytest.ini_options]
 addopts = [
     "-ra",
+    "--import-mode=importlib",
     # Skip benchmarks, enable with --benchmark-enable or --benchmark-only
     # https://pytest-benchmark.readthedocs.io/en/stable/usage.html#commandline-options
     "--benchmark-skip",
