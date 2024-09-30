@@ -541,11 +541,9 @@ def emsoft_ebsd_file(emsoft_ebsd_path) -> Generator[Path, None, None]:
 
 @pytest.fixture
 def emsoft_ebsd_master_pattern_metadata() -> Generator[dict, None, None]:
+    fname = "master_patterns.h5"
     yield {
-        "General": {
-            "original_filename": "master_patterns.h5",
-            "title": "master_patterns",
-        },
+        "General": {"original_filename": fname, "title": fname.split(".")[0]},
         "Signal": {"signal_type": "EBSDMasterPattern"},
     }
 

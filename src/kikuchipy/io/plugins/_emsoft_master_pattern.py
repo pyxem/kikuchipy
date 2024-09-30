@@ -17,6 +17,7 @@
 
 import abc
 import os
+from pathlib import Path
 from typing import List, Optional, Tuple
 
 import dask.array as da
@@ -74,8 +75,10 @@ class EMsoftMasterPatternReader(abc.ABC):
         signal_dict_list
             Data, axes, metadata and original metadata.
         """
+        fpath = Path(self.filename)
+
         mode = kwargs.pop("mode", "r")
-        f = File(self.filename, mode=mode, **kwargs)
+        f = File(fpath, mode=mode, **kwargs)
 
         _check_file_format(f, self.diffraction_type)
 
@@ -91,8 +94,8 @@ class EMsoftMasterPatternReader(abc.ABC):
         md = {
             "Signal": {"signal_type": signal_type, "record_by": "image"},
             "General": {
-                "title": f.filename.split("/")[-1].split(".")[0],
-                "original_filename": f.filename.split("/")[-1],
+                "title": fpath.stem,
+                "original_filename": fpath.name,
             },
         }
         nml_params = _hdf5group2dict(f["NMLparameters"], recursive=True)
