@@ -246,7 +246,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         Notes
         -----
         Requires :mod:`pyvista` (see :ref:`the installation guide
-        <optional-dependencies>`).
+        <dependencies>`).
 
         Examples
         --------

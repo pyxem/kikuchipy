@@ -1646,7 +1646,7 @@ class EBSD(KikuchipySignal2D):
         Notes
         -----
         Requires :mod:`pyebsdindex` to be installed. See
-        :ref:`optional-dependencies` for further details.
+        :ref:`dependencies` for further details.
 
         This wrapper of PyEBSDIndex is meant for convenience more than
         speed. It uses the GPU if :mod:`pyopencl` is installed, but only
@@ -1749,7 +1749,7 @@ class EBSD(KikuchipySignal2D):
         Notes
         -----
         Requires :mod:`pyebsdindex` to be installed. See
-        :ref:`optional-dependencies` for further details.
+        :ref:`dependencies` for further details.
         """
         if not _pyebsdindex_installed:  # pragma: no cover
             raise ValueError(
@@ -2136,7 +2136,7 @@ class EBSD(KikuchipySignal2D):
         Notes
         -----
         *NLopt* is for now an optional dependency, see
-        :ref:`optional-dependencies` for details. Be aware that *NLopt*
+        :ref:`dependencies` for details. Be aware that *NLopt*
         does not fail gracefully. If continued use of *NLopt* proves
         stable enough, its implementation of the Nelder-Mead algorithm
         might become the default.
@@ -2326,7 +2326,7 @@ class EBSD(KikuchipySignal2D):
         shape.
 
         *NLopt* is for now an optional dependency, see
-        :ref:`optional-dependencies` for details. Be aware that *NLopt*
+        :ref:`dependencies` for details. Be aware that *NLopt*
         does not fail gracefully. If continued use of *NLopt* proves
         stable enough, its implementation of the Nelder-Mead algorithm
         might become the default.
@@ -2543,7 +2543,7 @@ class EBSD(KikuchipySignal2D):
         the output is reasonable.
 
         *NLopt* is for now an optional dependency, see
-        :ref:`optional-dependencies` for details. Be aware that *NLopt*
+        :ref:`dependencies` for details. Be aware that *NLopt*
         does not fail gracefully. If continued use of *NLopt* proves
         stable enough, its implementation of the Nelder-Mead algorithm
         might become the default.

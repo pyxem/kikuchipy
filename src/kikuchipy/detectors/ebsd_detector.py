@@ -1161,8 +1161,7 @@ class EBSDDetector:
         Notes
         -----
         Requires that PyEBSDIndex is installed, which is an optional
-        dependency of kikuchipy. See :ref:`optional-dependencies` for
-        details.
+        dependency of kikuchipy. See :ref:`dependencies` for details.
 
         See Also
         --------

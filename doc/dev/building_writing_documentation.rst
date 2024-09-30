@@ -10,7 +10,7 @@ New documents should fit into one of these categories.
 We use :doc:`Sphinx <sphinx:index>` for documenting functionality.
 Install necessary dependencies to build the documentation::
 
-    pip install --editable .[doc]
+    pip install --editable ".[doc]"
 
 .. note::
 
@@ -24,11 +24,11 @@ Then, build the documentation from the ``doc`` directory::
     cd doc
     make html
 
-The documentation's HTML pages are built in the ``doc/build/html`` directory from files
+The documentation's HTML pages are built in the ``doc/_build/html`` directory from files
 in the :doc:`reStructuredText (reST) <sphinx:usage/restructuredtext/basics>` plaintext
 markup language.
 They should be accessible in the browser by typing
-``file:///your/absolute/path/to/kikuchipy/doc/build/html/index.html`` in the address
+``file:///your/absolute/path/to/kikuchipy/doc/_build/html/index.html`` in the address
 bar.
 
 We can link to other documentation in reStructuredText files using
