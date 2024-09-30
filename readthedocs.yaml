@@ -11,7 +11,7 @@ sphinx:
 
 # Set the version of Python and other tools you might need
 build:
-  os: ubuntu-22.04
+  os: ubuntu-24.04
   tools:
     python: "mambaforge-22.9"
     nodejs: "19"
@@ -22,7 +22,7 @@ build:
     - libgl1-mesa-dev
     - xvfb
 
-# Build doc in all formats (HTML, PDF and ePub)
+# Optionally build your docs in additional formats such as PDF and ePub
 formats:
   - pdf
 

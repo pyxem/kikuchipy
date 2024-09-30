@@ -4,7 +4,7 @@ Installation
 
 kikuchipy can be installed with `pip <https://pypi.org/project/kikuchipy/>`__,
 `conda <https://anaconda.org/conda-forge/kikuchipy>`__, the
-:ref:`hyperspy:hyperspy-bundle`, or from source, and supports Python >= 3.7.
+:ref:`hyperspy:hyperspy-bundle`, or from source, and supports Python >= 3.8.
 All alternatives are available on Windows, macOS and Linux.
 
 .. _install-with-pip:
@@ -26,29 +26,6 @@ To install a specific version of kikuchipy (say version 0.8.5)::
 
     pip install kikuchipy==0.8.5
 
-.. _optional-dependencies:
-
-Optional dependencies
----------------------
-
-Some functionality is optional and requires extra dependencies which must be installed
-manually:
-
-- :doc:`pyebsdindex<pyebsdindex:index>`: Hough indexing. We recommend to install with
-  optional GPU support via :doc:`pyopencl<pyopencl:index>` with
-  ``pip install pyebsdindex[gpu]`` or ``conda install pyebsdindex``.
-- `nlopt <https://nlopt.readthedocs.io/en/latest/NLopt_Python_Reference/>`_: Extra
-  optimization algorithms used in EBSD orientation and/or projection center refinement.
-- :doc:`pyvista<pyvista:index>`: 3D plotting of master patterns.
-
-Install all optional dependencies::
-
-    pip install kikuchipy[all]
-
-Note that this command will not install ``pyopencl``, which is required for GPU support
-in ``pyebsdindex``. If the above command failed for some reason, one can try to install
-each optional dependency individually.
-
 .. _install-with-anaconda:
 
 With Anaconda
@@ -59,7 +36,7 @@ To install with Anaconda, we recommend you install it in a
 `Miniconda distribution <https://docs.conda.io/en/latest/miniconda.html>`__.
 To create an environment and activate it, run the following::
 
-   conda create --name kp-env python=3.11
+   conda create --name kp-env python=3.12
    conda activate kp-env
 
 If you prefer a graphical interface to manage packages and environments, you can install
@@ -107,29 +84,47 @@ To install kikuchipy from source, clone the repository from `GitHub
 See the contributing guide for :ref:`setting-up-a-development-installation` and keeping
 it up to date.
 
+.. _dependencies:
+
 Dependencies
 ============
 
 kikuchipy builds on the great work and effort of many people.
-This is a list of explicit package dependencies (some are `Optional dependencies`_):
+This is a list of core package dependencies:
 
-==================================================== ============================================================
-Package                                              Purpose
-==================================================== ============================================================
-:doc:`dask<dask:index>`                              Out-of-memory processing of data larger than RAM
-:doc:`diffpy.structure <diffpy.structure:index>`     Handling of crystal structures
-:doc:`diffsims <diffsims:index>`                     Handling of reciprocal lattice vectors and structure factors
-:doc:`hyperspy <hyperspy:index>`                     Multi-dimensional data handling (EBSD class etc.)
-:doc:`h5py <h5py:index>`                             Read/write of HDF5 files
-:doc:`imageio <imageio:index>`                       Read image formats
-:doc:`matplotlib <matplotlib:index>`                 Visualization
-:doc:`numba <numba:index>`                           CPU acceleration
-:doc:`numpy <numpy:index>`                           Handling of N-dimensional arrays
-:doc:`orix <orix:index>`                             Handling of rotations and vectors using crystal symmetry
-:doc:`pooch <pooch:api/index>`                       Downloading and caching of datasets
-`pyyaml <https://pyyaml.org/>`__                     Parcing of YAML files
-`tqdm <https://tqdm.github.io/>`__                   Progressbars
-:doc:`scikit-image <skimage:index>`                  Image processing like adaptive histogram equalization
-`scikit-learn <https://scikit-learn.org/stable/>`__  Multivariate analysis
-:doc:`scipy <scipy:index>`                           Optimization algorithms, filtering and more
-==================================================== ============================================================
+* :doc:`dask<dask:index>`: Out-of-memory processing of data larger than RAM
+* :doc:`diffpy.structure <diffpy.structure:index>`: Handling of crystal structures
+* :doc:`diffsims <diffsims:index>`: Handling of reciprocal lattice vectors and structure
+  factors
+* :doc:`hyperspy <hyperspy:index>`: Multi-dimensional data handling (EBSD class etc.)
+* :doc:`h5py <h5py:index>`: Read/write of HDF5 files
+* :doc:`imageio <imageio:index>`: Read image formats
+* :doc:`matplotlib <matplotlib:index>`: Visualization
+* :doc:`numba <numba:index>`: CPU acceleration via just-in-time compilation
+* :doc:`numpy <numpy:index>`: Handling of N-dimensional arrays
+* :doc:`orix <orix:index>`: Handling of rotations and vectors using crystal symmetry
+* :doc:`pooch <pooch:api/index>`: Downloading and caching of datasets
+* `pyyaml <https://pyyaml.org/>`__: Parcing of YAML files
+* `tqdm <https://tqdm.github.io/>`__: Progressbars
+* :doc:`scikit-image <skimage:index>`: Image processing like adaptive histogram
+  equalization
+* `scikit-learn <https://scikit-learn.org/stable/>`__: Multivariate analysis
+* :doc:`scipy <scipy:index>`: Optimization algorithms, filtering and more
+
+Some functionality requires optional dependencies:
+
+* :doc:`pyebsdindex <pyebsdindex:index>`: Hough indexing. We recommend to install with
+  optional GPU support via :doc:`pyopencl<pyopencl:index>` with
+  ``pip install "pyebsdindex[gpu]""`` or ``conda install pyebsdindex -c conda-forge``.
+* `nlopt <https://nlopt.readthedocs.io/en/latest/NLopt_Python_Reference/>`__: Extra
+  optimization algorithms used in EBSD orientation and/or projection center refinement.
+  Installation from conda ``conda install nlopt -c conda-forge`` is recommended.
+* :doc:`pyvista<pyvista:index>`: 3D plotting of master patterns.
+
+Install all optional dependencies::
+
+    pip install "kikuchipy[all]"
+
+Note that this command will not install ``pyopencl``, which is required for GPU support
+in ``pyebsdindex``. If the above command failed for some reason, you can try to install
+each optional dependency individually.

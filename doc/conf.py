@@ -18,7 +18,8 @@ import kikuchipy as kp
 # directory, add these directories to sys.path here. If the directory
 # is relative to the documentation root, use os.path.abspath to make it
 # absolute, like shown here.
-sys.path.append("../")
+sys.path.append(os.path.abspath("."))
+sys.path.append(".")
 
 # Project information
 project = "kikuchipy"
@@ -54,7 +55,7 @@ extensions = [
 intersphinx_mapping = {
     # Package
     "black": ("https://black.readthedocs.io/en/stable", None),
-    "conda": ("https://conda.io/projects/conda/en/latest", None),
+    "conda": ("https://docs.conda.io/projects/conda/en/latest", None),
     "coverage": ("https://coverage.readthedocs.io/en/latest", None),
     "dask": ("https://docs.dask.org/en/stable", None),
     "defdap": ("https://defdap.readthedocs.io/en/latest", None),
@@ -64,7 +65,7 @@ intersphinx_mapping = {
     "h5py": ("https://docs.h5py.org/en/stable", None),
     "imageio": ("https://imageio.readthedocs.io/en/stable", None),
     "matplotlib": ("https://matplotlib.org/stable", None),
-    "numba": ("https://numba.pydata.org/numba-doc/latest", None),
+    "numba": ("https://numba.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "nbsphinx": ("https://nbsphinx.readthedocs.io/en/latest", None),
     "nbval": ("https://nbval.readthedocs.io/en/latest", None),
@@ -72,7 +73,7 @@ intersphinx_mapping = {
     "orix": ("https://orix.readthedocs.io/en/stable", None),
     "pooch": ("https://www.fatiando.org/pooch/latest", None),
     "pyebsdindex": ("https://pyebsdindex.readthedocs.io/en/stable", None),
-    "pyopencl": ("https://documen.tician.de/pyopencl/", None),
+    "pyopencl": ("https://documen.tician.de/pyopencl", None),
     "pytest": ("https://docs.pytest.org/en/stable", None),
     "python": ("https://docs.python.org/3", None),
     "pyvista": ("https://docs.pyvista.org", None),
@@ -93,7 +94,7 @@ templates_path = ["_templates"]
 # directories to ignore when looking for source files. This image also
 # affects html_static_path and html_extra_path.
 exclude_patterns = [
-    "build",
+    "_build",
     "_static/logo/*.ipynb",
     # Suppress warnings from Sphinx regarding "duplicate source files":
     # https://github.com/executablebooks/MyST-NB/issues/363#issuecomment-1682540222
@@ -264,7 +265,10 @@ pv.global_theme.window_size = [600, 600]
 # Use static display until trame works with nbsphinx:
 # https://github.com/pyvista/pyvista/discussions/4809
 pv.set_jupyter_backend("static")
-pv.start_xvfb()
+try:
+    pv.start_xvfb()
+except:
+    pass
 
 # -- Copy button customization (taken from PyVista)
 # Exclude traditional Python prompts from the copied code

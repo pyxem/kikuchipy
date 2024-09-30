@@ -22,7 +22,7 @@ corresponding background pattern, are available in the ``conftest.py`` file.
 
 To run the tests::
 
-    pytest --cov --pyargs kikuchipy
+    pytest --cov
 
 The ``--cov`` flag makes :doc:`coverage.py <coverage:index>` print a nice report in the
 terminal.
@@ -53,7 +53,7 @@ failing results without code changes) using the pytest plugin pytest-rerunfailur
 Docstring examples are tested :doc:`with pytest <pytest:how-to/doctest>` as well.
 If you're in the top directory you can run::
 
-    pytest --doctest-modules --ignore-glob=kikuchipy/*/tests kikuchipy/*.py
+    pytest --doctest-modules src
 
 Functionality using Numba
 -------------------------

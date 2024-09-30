@@ -40,7 +40,7 @@ jobs:
     timeout-minutes: 15
     env:
       MPLBACKEND: agg
-      PYTEST_ARGS: --pyargs kikuchipy --reruns 2 -n 2 --cov=kikuchipy
+      PYTEST_ARGS: --reruns 2 -n 2 --cov=kikuchipy
     strategy:
       fail-fast: false
       matrix:
@@ -108,7 +108,7 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         continue-on-error: true
         run: |
-          xvfb-run pytest --doctest-modules --doctest-continue-on-failure --ignore-glob=kikuchipy/*/tests kikuchipy/*.py
+          xvfb-run pytest src --doctest-modules --doctest-continue-on-failure
 
       - name: Run tests in a virtual X server environment on Ubuntu
         if: ${{ matrix.os == 'ubuntu-latest' }}
