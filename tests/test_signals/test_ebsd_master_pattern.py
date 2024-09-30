@@ -526,7 +526,9 @@ class TestProjectFromLambert:
 
 
 class TestMasterPatternPlotting:
-    @pytest.mark.skipif(not kp._pyvista_installed, reason="PyVista is not installed")
+    @pytest.mark.skipif(
+        not kp.constants.installed["pyvista"], reason="PyVista is not installed"
+    )
     def test_plot_spherical(self):
         """Returns expected data and raises correct error."""
         import pyvista as pv
@@ -548,7 +550,9 @@ class TestMasterPatternPlotting:
         with pytest.raises(ValueError):
             mp.plot_spherical()
 
-    @pytest.mark.skipif(kp._pyvista_installed, reason="PyVista is installed")
+    @pytest.mark.skipif(
+        kp.constants.installed["pyvista"], reason="PyVista is installed"
+    )
     def test_plot_spherical_raises(self):
         """Raise ImportError when PyVista is not installed."""
         mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")

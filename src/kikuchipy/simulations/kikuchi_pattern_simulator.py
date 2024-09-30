@@ -69,7 +69,7 @@ from orix.plot._util import Arrow3D
 from orix.quaternion import Rotation
 from orix.vector import Vector3d
 
-from kikuchipy import _pyvista_installed
+from kikuchipy.constants import installed
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 from kikuchipy.simulations._kikuchi_pattern_features import (
@@ -489,7 +489,7 @@ class KikuchiPatternSimulator:
         if (
             projection == "spherical"
             and backend == "pyvista"
-            and not _pyvista_installed
+            and not installed["pyvista"]
         ):  # pragma: no cover
             raise ImportError("Pyvista is not installed")
 

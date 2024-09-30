@@ -30,7 +30,7 @@ from kikuchipy.indexing._hough_indexing import (
 
 
 @pytest.mark.skipif(
-    not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
+    not kp.constants.installed["pyebsdindex"], reason="pyebsdindex is not installed"
 )
 class TestHoughIndexing:
     def setup_method(self):
@@ -85,7 +85,7 @@ class TestHoughIndexing:
         s = self.signal.as_lazy()
 
         phase_list = self.signal.xmap.phases
-        if kp._pyopencl_context_available:
+        if kp.constants.pyopencl_context_available:
             xmap1 = s.hough_indexing(phase_list, self.indexer)
             xmap2 = self.signal.hough_indexing(phase_list, self.indexer)
             assert np.allclose(xmap1.rotations.data, xmap2.rotations.data)
@@ -285,7 +285,7 @@ class TestHoughIndexing:
 
 
 @pytest.mark.skipif(
-    not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
+    not kp.constants.installed["pyebsdindex"], reason="pyebsdindex is not installed"
 )
 class TestPCOptimization:
     def setup_method(self):
@@ -352,7 +352,7 @@ class TestPCOptimization:
         s = self.signal.as_lazy()
         det = self.signal.detector
 
-        if kp._pyopencl_context_available:
+        if kp.constants.pyopencl_context_available:
             det = s.hough_indexing_optimize_pc(det.pc_average, self.indexer)
             assert np.allclose(det.pc_average, det.pc_average, atol=1e-2)
         else:
@@ -360,7 +360,9 @@ class TestPCOptimization:
                 _ = s.hough_indexing_optimize_pc(det.pc_average, self.indexer)
 
 
-@pytest.mark.skipif(kp._pyebsdindex_installed, reason="pyebsdindex is installed")
+@pytest.mark.skipif(
+    kp.constants.installed["pyebsdindex"], reason="pyebsdindex is installed"
+)
 class TestHoughIndexingNoPyEBSDIndex:
     def setup_method(self):
         s = kp.data.nickel_ebsd_small()

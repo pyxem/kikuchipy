@@ -40,7 +40,7 @@ from orix.quaternion import Rotation
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
-from kikuchipy import _pyebsdindex_installed, _pyopencl_context_available
+from kikuchipy.constants import installed, pyopencl_context_available
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
@@ -1658,13 +1658,13 @@ class EBSD(KikuchipySignal2D):
         uses a single thread. If you need the fastest indexing, refer to
         the PyEBSDIndex documentation for multi-threading and more.
         """
-        if not _pyebsdindex_installed:  # pragma: no cover
+        if not installed["pyebsdindex"]:  # pragma: no cover
             raise ValueError(
                 "Hough indexing requires pyebsdindex to be installed. Install it with "
                 "pip install pyebsdindex. See "
                 "https://kikuchipy.org/en/stable/user/installation.html for details"
             )
-        if self._lazy and not _pyopencl_context_available:  # pragma: no cover
+        if self._lazy and not pyopencl_context_available:  # pragma: no cover
             raise ValueError(
                 "Hough indexing of lazy signals must use PyOpenCL, which must be able "
                 "to create a context. See https://documen.tician.de/pyopencl/misc.html "
@@ -1756,13 +1756,13 @@ class EBSD(KikuchipySignal2D):
         Requires :mod:`pyebsdindex` to be installed. See
         :ref:`dependencies` for further details.
         """
-        if not _pyebsdindex_installed:  # pragma: no cover
+        if not installed["pyebsdindex"]:  # pragma: no cover
             raise ValueError(
                 "Hough indexing requires pyebsdindex to be installed. Install it with "
                 "pip install pyebsdindex. See "
                 "https://kikuchipy.org/en/stable/user/installation.html for details"
             )
-        if self._lazy and not _pyopencl_context_available:  # pragma: no cover
+        if self._lazy and not pyopencl_context_available:  # pragma: no cover
             raise ValueError(
                 "Hough indexing of lazy signals must use PyOpenCL, which must be able "
                 "to create a context. See https://documen.tician.de/pyopencl/misc.html "

@@ -1093,10 +1093,10 @@ class _RefinementSetup:
         self.package = method_dict["package"]
 
         if self.package == "nlopt":
-            from kikuchipy import _nlopt_installed
+            from kikuchipy.constants import installed
 
             method_upper = method.upper()
-            if not _nlopt_installed:
+            if not installed["nlopt"]:
                 raise ImportError(  # pragma: no cover
                     f"Package `nlopt`, required for method {method_upper}, is not "
                     "installed"
