@@ -29,9 +29,9 @@ from orix.quaternion import Rotation
 from skimage.util.dtype import dtype_range
 
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
-from kikuchipy.signals import EBSD, LazyEBSD
 from kikuchipy.signals._kikuchi_master_pattern import KikuchiMasterPattern
 from kikuchipy.signals._kikuchipy_signal import LazyKikuchipySignal2D
+from kikuchipy.signals.ebsd import EBSD, LazyEBSD
 from kikuchipy.signals.util._dask import get_chunking
 from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_from_detector,

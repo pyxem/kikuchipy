@@ -28,7 +28,7 @@ import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList
 from orix.quaternion import Rotation
 
-from kikuchipy.detectors import EBSDDetector
+from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
 
 __all__ = ["file_reader"]

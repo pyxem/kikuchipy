@@ -18,7 +18,7 @@
 import glob
 import os
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 from h5py import File, Group, is_hdf5
 from hyperspy.io_plugins import hspy
@@ -61,6 +61,11 @@ plugins = [
     oxford_binary,
     oxford_h5ebsd,
 ]
+
+if TYPE_CHECKING:  # pragma: no cover
+    from kikuchipy.signals.ebsd import EBSD
+    from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
+    from kikuchipy.signals.ecp_master_pattern import ECPMasterPattern
 
 default_write_ext = set()
 for plugin in plugins:
@@ -332,11 +337,10 @@ def _assign_signal_subclass(
         )
 
     # Get possible signal classes
-    signals = {
-        key: value
-        for key, value in find_subclasses(kikuchipy.signals, BaseSignal).items()
-        if value._lazy == lazy
-    }
+    signals = {}
+    for k, v in find_subclasses(kikuchipy.signals, BaseSignal).items():
+        if v._lazy == lazy:
+            signals[k] = v
 
     # Get signals matching both input signal's dtype and signal dimension
     dtype_matches = [s for s in signals.values() if s._dtype == dtype]

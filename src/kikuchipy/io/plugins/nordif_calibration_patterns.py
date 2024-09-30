@@ -25,7 +25,7 @@ import warnings
 from matplotlib.pyplot import imread
 import numpy as np
 
-from kikuchipy.detectors import EBSDDetector
+from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.io.plugins.nordif import _get_settings_from_file
 
 __all__ = ["file_reader"]

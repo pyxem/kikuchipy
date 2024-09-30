@@ -41,7 +41,7 @@ from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
 from kikuchipy import _pyebsdindex_installed, _pyopencl_context_available
-from kikuchipy.detectors import EBSDDetector
+from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
 from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
@@ -56,13 +56,14 @@ from kikuchipy.indexing._refinement._refinement import (
     _refine_orientation_pc,
     _refine_pc,
 )
-from kikuchipy.indexing.similarity_metrics import (
+from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
     NormalizedCrossCorrelationMetric,
-    NormalizedDotProductMetric,
-    SimilarityMetric,
 )
+from kikuchipy.indexing.similarity_metrics._normalized_dot_product import (
+    NormalizedDotProductMetric,
+)
+from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
 from kikuchipy.io._io import _save
-from kikuchipy.pattern import chunk
 from kikuchipy.pattern._pattern import (
     _downsample2d,
     _dynamic_background_frequency_space_setup,
@@ -73,7 +74,11 @@ from kikuchipy.pattern._pattern import (
     fft_filter,
     fft_frequency_vectors,
 )
-from kikuchipy.pattern.chunk import _average_neighbour_patterns
+from kikuchipy.pattern.chunk import (
+    _average_neighbour_patterns,
+    fft_filter,
+    get_dynamic_background,
+)
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
 from kikuchipy.signals.util._crystal_map import (
     _equal_phase,
@@ -754,7 +759,7 @@ class EBSD(KikuchipySignal2D):
         dask_array = get_dask_array(self, dtype=dtype_out)
 
         background_patterns = dask_array.map_blocks(
-            func=chunk.get_dynamic_background,
+            func=get_dynamic_background,
             filter_func=filter_func,
             dtype_out=dtype_out,
             dtype=dtype_out,
@@ -890,7 +895,7 @@ class EBSD(KikuchipySignal2D):
             raise ValueError(f"{function_domain} must be either of {function_domains}")
 
         filtered_patterns = dask_array.map_blocks(
-            func=chunk.fft_filter,
+            func=fft_filter,
             filter_func=filter_func,
             transfer_function=transfer_function,
             dtype_out=dtype_out,

@@ -29,7 +29,7 @@ from orix.crystal_map import CrystalMap, create_coordinate_arrays
 from orix.quaternion import Rotation
 from tqdm import tqdm
 
-from kikuchipy.indexing.similarity_metrics import SimilarityMetric
+from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
 
 
 def _dictionary_indexing(

@@ -15,16 +15,30 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Tools for indexing of EBSD patterns by matching to a dictionary of
-simulated patterns.
+from . import chunk
+from ._pattern import (
+    fft,
+    fft_filter,
+    fft_frequency_vectors,
+    fft_spectrum,
+    get_dynamic_background,
+    get_image_quality,
+    ifft,
+    normalize_intensity,
+    remove_dynamic_background,
+    rescale_intensity,
+)
 
-Some of these tools are used in
-:meth:`~kikuchipy.signals.EBSD.dictionary_indexing`.
-"""
-
-import lazy_loader
-
-__getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
-
-
-del lazy_loader
+__all__ = [
+    "chunk",
+    "fft",
+    "fft_filter",
+    "fft_frequency_vectors",
+    "fft_spectrum",
+    "get_dynamic_background",
+    "get_image_quality",
+    "ifft",
+    "normalize_intensity",
+    "remove_dynamic_background",
+    "rescale_intensity",
+]

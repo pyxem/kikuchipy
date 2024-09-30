@@ -47,6 +47,7 @@ dependencies = [
     "hyperspy         == 1.7.6; python_version >= '3.12'",
     "h5py             >= 2.10",
     "imageio",
+    "lazy_loader",
     "matplotlib       >= 3.5",
     "numba            >= 0.57",
     "numpy            >= 1.23.0",

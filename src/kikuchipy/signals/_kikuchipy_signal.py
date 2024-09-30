@@ -31,8 +31,11 @@ import numpy as np
 from skimage.util.dtype import dtype_range
 import yaml
 
-from kikuchipy.pattern import normalize_intensity, rescale_intensity
-from kikuchipy.pattern._pattern import _adaptive_histogram_equalization
+from kikuchipy.pattern._pattern import (
+    _adaptive_histogram_equalization,
+    normalize_intensity,
+    rescale_intensity,
+)
 from kikuchipy.signals.util._overwrite_hyperspy_methods import insert_doc_disclaimer
 
 _logger = logging.getLogger(__name__)

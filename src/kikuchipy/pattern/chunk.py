@@ -26,15 +26,16 @@ from numba import njit
 import numpy as np
 from scipy.ndimage import correlate, gaussian_filter
 
-import kikuchipy.filters.fft_barnes as barnes
+from kikuchipy.filters.fft_barnes import fft_filter as fft_filter_barnes
 from kikuchipy.filters.window import Window
-import kikuchipy.pattern._pattern as pattern_processing
 from kikuchipy.pattern._pattern import _rescale_with_min_max
+from kikuchipy.pattern._pattern import fft_filter as fft_filter_pattern
+from kikuchipy.pattern._pattern import rescale_intensity
 
 
 def get_dynamic_background(
     patterns: Union[np.ndarray, da.Array],
-    filter_func: Union[gaussian_filter, barnes.fft_filter],
+    filter_func: Union[gaussian_filter, fft_filter_barnes],
     dtype_out: Union[str, np.dtype, type, None] = None,
     **kwargs,
 ) -> np.ndarray:
@@ -76,7 +77,7 @@ def get_dynamic_background(
 
 def fft_filter(
     patterns: np.ndarray,
-    filter_func: Union[pattern_processing.fft_filter, barnes._fft_filter],
+    filter_func: Union[fft_filter_pattern, fft_filter_barnes],
     transfer_function: Union[np.ndarray, Window],
     dtype_out: Union[str, np.dtype, type, None] = None,
     **kwargs,
@@ -122,8 +123,7 @@ def fft_filter(
             patterns[nav_idx], transfer_function=transfer_function, **kwargs
         )
 
-        # Rescale the pattern intensity
-        filtered_patterns[nav_idx] = pattern_processing.rescale_intensity(
+        filtered_patterns[nav_idx] = rescale_intensity(
             filtered_pattern, dtype_out=dtype_out
         )
 

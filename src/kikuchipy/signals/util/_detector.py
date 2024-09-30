@@ -20,7 +20,7 @@
 :class:`kikuchipy.signals.EBSD`.
 """
 
-from kikuchipy.detectors import EBSDDetector
+from kikuchipy.detectors.ebsd_detector import EBSDDetector
 
 
 def _detector_is_compatible_with_signal(

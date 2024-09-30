@@ -24,7 +24,7 @@ from typing import Callable, Optional, Tuple, Union
 import numpy as np
 from scipy.ndimage import generic_filter
 
-from kikuchipy.filters import Window
+from kikuchipy.filters.window import Window
 from kikuchipy.pattern._pattern import _normalize, _zero_mean
 
 # This private module is tested indirectly via the EBSD methods

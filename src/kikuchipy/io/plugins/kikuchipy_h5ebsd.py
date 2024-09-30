@@ -30,7 +30,7 @@ from orix.crystal_map import CrystalMap
 from orix.io.plugins.orix_hdf5 import crystalmap2dict, dict2crystalmap
 
 from kikuchipy import __version__ as kikuchipy_version
-from kikuchipy.detectors import EBSDDetector
+from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.io._util import _get_input_variable
 from kikuchipy.io.plugins._h5ebsd import H5EBSDReader, _dict2hdf5group, _hdf5group2dict
 from kikuchipy.signals.util._crystal_map import _xmap_is_compatible_with_signal

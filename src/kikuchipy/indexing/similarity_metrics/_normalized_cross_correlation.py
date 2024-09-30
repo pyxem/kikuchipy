@@ -22,7 +22,7 @@ import dask.array as da
 from numba import njit
 import numpy as np
 
-from kikuchipy.indexing.similarity_metrics import SimilarityMetric
+from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
 
 
 class NormalizedCrossCorrelationMetric(SimilarityMetric):

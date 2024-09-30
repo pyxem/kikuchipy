@@ -70,8 +70,8 @@ from orix.quaternion import Rotation
 from orix.vector import Vector3d
 
 from kikuchipy import _pyvista_installed
-from kikuchipy.detectors import EBSDDetector
-from kikuchipy.signals import EBSDMasterPattern
+from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 from kikuchipy.simulations._kikuchi_pattern_features import (
     KikuchiPatternLine,
     KikuchiPatternZoneAxis,

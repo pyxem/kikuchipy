@@ -15,16 +15,20 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Tools for indexing of EBSD patterns by matching to a dictionary of
-simulated patterns.
+from . import util
+from .ebsd import EBSD, LazyEBSD
+from .ebsd_master_pattern import EBSDMasterPattern, LazyEBSDMasterPattern
+from .ecp_master_pattern import ECPMasterPattern, LazyECPMasterPattern
+from .virtual_bse_image import LazyVirtualBSEImage, VirtualBSEImage
 
-Some of these tools are used in
-:meth:`~kikuchipy.signals.EBSD.dictionary_indexing`.
-"""
-
-import lazy_loader
-
-__getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
-
-
-del lazy_loader
+__all__ = [
+    "EBSD",
+    "EBSDMasterPattern",
+    "ECPMasterPattern",
+    "LazyEBSD",
+    "LazyEBSDMasterPattern",
+    "LazyECPMasterPattern",
+    "LazyVirtualBSEImage",
+    "VirtualBSEImage",
+    "util",
+]

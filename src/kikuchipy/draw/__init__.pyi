@@ -15,16 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Tools for indexing of EBSD patterns by matching to a dictionary of
-simulated patterns.
+from ._navigators import get_rgb_navigator
+from ._plot_pattern_positions_in_map import plot_pattern_positions_in_map
 
-Some of these tools are used in
-:meth:`~kikuchipy.signals.EBSD.dictionary_indexing`.
-"""
-
-import lazy_loader
-
-__getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
-
-
-del lazy_loader
+__all__ = [
+    "get_rgb_navigator",
+    "plot_pattern_positions_in_map",
+]

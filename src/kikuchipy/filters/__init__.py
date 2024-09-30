@@ -17,33 +17,9 @@
 
 """Pattern filters used on signals, e.g. for pattern averaging."""
 
-__all__ = [
-    "Window",
-    "distance_to_origin",
-    "highpass_fft_filter",
-    "lowpass_fft_filter",
-    "modified_hann",
-]
+import lazy_loader
+
+__getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
 
 
-def __dir__():
-    return sorted(__all__)
-
-
-def __getattr__(name):
-    _import_mapping = {
-        "Window": "window",
-        "distance_to_origin": "window",
-        "highpass_fft_filter": "window",
-        "lowpass_fft_filter": "window",
-        "modified_hann": "window",
-    }
-    if name in __all__:
-        import importlib
-
-        if name in _import_mapping.keys():
-            import_path = f"{__name__}.{_import_mapping.get(name)}"
-            return getattr(importlib.import_module(import_path), name)
-        else:  # pragma: no cover
-            return importlib.import_module("." + name, __name__)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+del lazy_loader
