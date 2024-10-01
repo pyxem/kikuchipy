@@ -99,6 +99,7 @@ This is a list of core package dependencies:
 * :doc:`hyperspy <hyperspy:index>`: Multi-dimensional data handling (EBSD class etc.)
 * :doc:`h5py <h5py:index>`: Read/write of HDF5 files
 * :doc:`imageio <imageio:index>`: Read image formats
+* `lazy_loader`_: Lazy loading of functions, classes, and modules
 * :doc:`matplotlib <matplotlib:index>`: Visualization
 * :doc:`numba <numba:index>`: CPU acceleration via just-in-time compilation
 * :doc:`numpy <numpy:index>`: Handling of N-dimensional arrays
@@ -110,6 +111,8 @@ This is a list of core package dependencies:
   equalization
 * `scikit-learn <https://scikit-learn.org/stable/>`__: Multivariate analysis
 * :doc:`scipy <scipy:index>`: Optimization algorithms, filtering and more
+
+.. _lazy_loader: https://scientific-python.org/specs/spec-0001/#lazy_loader
 
 Some functionality requires optional dependencies:
 

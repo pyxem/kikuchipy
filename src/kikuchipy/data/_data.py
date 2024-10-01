@@ -22,9 +22,11 @@ from typing import Optional, Union
 import hyperspy.api as hs
 import pooch
 
-from kikuchipy import __version__, load
+from kikuchipy import __version__
 from kikuchipy.data._registry import registry_hashes, registry_urls
-from kikuchipy.signals import EBSD, EBSDMasterPattern
+from kikuchipy.io._io import load
+from kikuchipy.signals.ebsd import EBSD
+from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 
 marshall = pooch.create(
     path=pooch.os_cache("kikuchipy"),

@@ -16,10 +16,13 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from typing import List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 
 import dask.array as da
 import numpy as np
+
+if TYPE_CHECKING:  # pragma: no cover
+    from kikuchipy.signals.ebsd import EBSD, LazyEBSD
 
 _logger = logging.getLogger(__name__)
 

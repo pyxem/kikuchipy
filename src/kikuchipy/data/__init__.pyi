@@ -15,16 +15,24 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Tools for indexing of EBSD patterns by matching to a dictionary of
-simulated patterns.
+from ._data import (
+    ebsd_master_pattern,
+    ni_gain,
+    ni_gain_calibration,
+    nickel_ebsd_large,
+    nickel_ebsd_master_pattern_small,
+    nickel_ebsd_small,
+    si_ebsd_moving_screen,
+    si_wafer,
+)
 
-Some of these tools are used in
-:meth:`~kikuchipy.signals.EBSD.dictionary_indexing`.
-"""
-
-import lazy_loader
-
-__getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
-
-
-del lazy_loader
+__all__ = [
+    "ebsd_master_pattern",
+    "ni_gain",
+    "ni_gain_calibration",
+    "nickel_ebsd_large",
+    "nickel_ebsd_master_pattern_small",
+    "nickel_ebsd_small",
+    "si_wafer",
+    "si_ebsd_moving_screen",
+]

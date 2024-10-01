@@ -31,39 +31,9 @@ are not deleted automatically, and should then be deleted manually if
 desired.
 """
 
-__all__ = [
-    "ebsd_master_pattern",
-    "ni_gain",
-    "ni_gain_calibration",
-    "nickel_ebsd_large",
-    "nickel_ebsd_master_pattern_small",
-    "nickel_ebsd_small",
-    "si_wafer",
-    "si_ebsd_moving_screen",
-]
+import lazy_loader
+
+__getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
 
 
-def __dir__():
-    return sorted(__all__)
-
-
-def __getattr__(name):
-    _import_mapping = {
-        "ebsd_master_pattern": "_data",
-        "ni_gain": "_data",
-        "ni_gain_calibration": "_data",
-        "nickel_ebsd_large": "_data",
-        "nickel_ebsd_master_pattern_small": "_data",
-        "nickel_ebsd_small": "_data",
-        "si_wafer": "_data",
-        "si_ebsd_moving_screen": "_data",
-    }
-    if name in __all__:
-        import importlib
-
-        if name in _import_mapping.keys():
-            import_path = f"{__name__}.{_import_mapping.get(name)}"
-            return getattr(importlib.import_module(import_path), name)
-        else:  # pragma: no cover
-            return importlib.import_module("." + name, __name__)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+del lazy_loader

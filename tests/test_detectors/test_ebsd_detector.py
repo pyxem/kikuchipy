@@ -1040,14 +1040,16 @@ class TestGetIndexer:
         )
         self.det = det
 
-    @pytest.mark.skipif(kp._pyebsdindex_installed, reason="pyebsdindex is installed")
+    @pytest.mark.skipif(
+        kp.constants.installed["pyebsdindex"], reason="pyebsdindex is installed"
+    )
     def test_get_indexer_raises(self):
         pl = PhaseList(names=["al", "si"], space_groups=[225, 227])
         with pytest.raises(ValueError, match="pyebsdindex must be installed. Install "):
             _ = self.det.get_indexer(pl)
 
     @pytest.mark.skipif(
-        not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
+        not kp.constants.installed["pyebsdindex"], reason="pyebsdindex is not installed"
     )
     def test_get_indexer_invalid_phase_lists(self):
         # Not all phases have space groups
@@ -1057,7 +1059,7 @@ class TestGetIndexer:
             _ = self.det.get_indexer(pl)
 
     @pytest.mark.skipif(
-        not kp._pyebsdindex_installed, reason="pyebsdindex is not installed"
+        not kp.constants.installed["pyebsdindex"], reason="pyebsdindex is not installed"
     )
     def test_get_indexer(self):
         # fmt: off

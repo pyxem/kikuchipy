@@ -40,30 +40,9 @@
     oxford_h5ebsd
 """
 
-__all__ = [
-    "bruker_h5ebsd",
-    "ebsd_directory",
-    "edax_binary",
-    "edax_h5ebsd",
-    "emsoft_ebsd",
-    "emsoft_ebsd_master_pattern",
-    "emsoft_ecp_master_pattern",
-    "emsoft_tkd_master_pattern",
-    "kikuchipy_h5ebsd",
-    "nordif",
-    "nordif_calibration_patterns",
-    "oxford_binary",
-    "oxford_h5ebsd",
-]
+import lazy_loader
+
+__getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
 
 
-def __dir__():
-    return sorted(__all__)
-
-
-def __getattr__(name):
-    if name in __all__:
-        import importlib
-
-        return importlib.import_module("." + name, __name__)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+del lazy_loader

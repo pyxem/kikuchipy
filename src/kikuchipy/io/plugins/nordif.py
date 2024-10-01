@@ -28,7 +28,7 @@ from matplotlib.pyplot import imread
 import numpy as np
 from orix.crystal_map import CrystalMap
 
-from kikuchipy.detectors import EBSDDetector
+from kikuchipy.detectors.ebsd_detector import EBSDDetector
 
 __all__ = ["file_reader", "file_writer"]
 

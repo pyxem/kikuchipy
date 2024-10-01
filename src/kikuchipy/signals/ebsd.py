@@ -40,8 +40,8 @@ from orix.quaternion import Rotation
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
-from kikuchipy import _pyebsdindex_installed, _pyopencl_context_available
-from kikuchipy.detectors import EBSDDetector
+from kikuchipy.constants import installed, pyopencl_context_available
+from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
 from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
@@ -56,13 +56,14 @@ from kikuchipy.indexing._refinement._refinement import (
     _refine_orientation_pc,
     _refine_pc,
 )
-from kikuchipy.indexing.similarity_metrics import (
+from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
     NormalizedCrossCorrelationMetric,
-    NormalizedDotProductMetric,
-    SimilarityMetric,
 )
+from kikuchipy.indexing.similarity_metrics._normalized_dot_product import (
+    NormalizedDotProductMetric,
+)
+from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityMetric
 from kikuchipy.io._io import _save
-from kikuchipy.pattern import chunk
 from kikuchipy.pattern._pattern import (
     _downsample2d,
     _dynamic_background_frequency_space_setup,
@@ -74,6 +75,8 @@ from kikuchipy.pattern._pattern import (
     fft_frequency_vectors,
 )
 from kikuchipy.pattern.chunk import _average_neighbour_patterns
+from kikuchipy.pattern.chunk import fft_filter as fft_filter_chunk
+from kikuchipy.pattern.chunk import get_dynamic_background
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
 from kikuchipy.signals.util._crystal_map import (
     _equal_phase,
@@ -754,7 +757,7 @@ class EBSD(KikuchipySignal2D):
         dask_array = get_dask_array(self, dtype=dtype_out)
 
         background_patterns = dask_array.map_blocks(
-            func=chunk.get_dynamic_background,
+            func=get_dynamic_background,
             filter_func=filter_func,
             dtype_out=dtype_out,
             dtype=dtype_out,
@@ -890,7 +893,7 @@ class EBSD(KikuchipySignal2D):
             raise ValueError(f"{function_domain} must be either of {function_domains}")
 
         filtered_patterns = dask_array.map_blocks(
-            func=chunk.fft_filter,
+            func=fft_filter_chunk,
             filter_func=filter_func,
             transfer_function=transfer_function,
             dtype_out=dtype_out,
@@ -1653,13 +1656,13 @@ class EBSD(KikuchipySignal2D):
         uses a single thread. If you need the fastest indexing, refer to
         the PyEBSDIndex documentation for multi-threading and more.
         """
-        if not _pyebsdindex_installed:  # pragma: no cover
+        if not installed["pyebsdindex"]:  # pragma: no cover
             raise ValueError(
                 "Hough indexing requires pyebsdindex to be installed. Install it with "
                 "pip install pyebsdindex. See "
                 "https://kikuchipy.org/en/stable/user/installation.html for details"
             )
-        if self._lazy and not _pyopencl_context_available:  # pragma: no cover
+        if self._lazy and not pyopencl_context_available:  # pragma: no cover
             raise ValueError(
                 "Hough indexing of lazy signals must use PyOpenCL, which must be able "
                 "to create a context. See https://documen.tician.de/pyopencl/misc.html "
@@ -1751,13 +1754,13 @@ class EBSD(KikuchipySignal2D):
         Requires :mod:`pyebsdindex` to be installed. See
         :ref:`dependencies` for further details.
         """
-        if not _pyebsdindex_installed:  # pragma: no cover
+        if not installed["pyebsdindex"]:  # pragma: no cover
             raise ValueError(
                 "Hough indexing requires pyebsdindex to be installed. Install it with "
                 "pip install pyebsdindex. See "
                 "https://kikuchipy.org/en/stable/user/installation.html for details"
             )
-        if self._lazy and not _pyopencl_context_available:  # pragma: no cover
+        if self._lazy and not pyopencl_context_available:  # pragma: no cover
             raise ValueError(
                 "Hough indexing of lazy signals must use PyOpenCL, which must be able "
                 "to create a context. See https://documen.tician.de/pyopencl/misc.html "

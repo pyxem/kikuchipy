@@ -29,40 +29,9 @@ backscatter electron images.
     util
 """
 
-__all__ = [
-    "EBSD",
-    "EBSDMasterPattern",
-    "ECPMasterPattern",
-    "LazyEBSD",
-    "LazyEBSDMasterPattern",
-    "LazyECPMasterPattern",
-    "LazyVirtualBSEImage",
-    "VirtualBSEImage",
-    "util",
-]
+import lazy_loader
+
+__getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
 
 
-def __dir__():
-    return sorted(__all__)
-
-
-def __getattr__(name):
-    _import_mapping = {
-        "EBSD": "ebsd",
-        "EBSDMasterPattern": "ebsd_master_pattern",
-        "ECPMasterPattern": "ecp_master_pattern",
-        "LazyEBSD": "ebsd",
-        "LazyEBSDMasterPattern": "ebsd_master_pattern",
-        "LazyECPMasterPattern": "ecp_master_pattern",
-        "LazyVirtualBSEImage": "virtual_bse_image",
-        "VirtualBSEImage": "virtual_bse_image",
-    }
-    if name in __all__:
-        import importlib
-
-        if name in _import_mapping.keys():
-            import_path = f"{__name__}.{_import_mapping.get(name)}"
-            return getattr(importlib.import_module(import_path), name)
-        else:  # pragma: no cover
-            return importlib.import_module("." + name, __name__)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+del lazy_loader

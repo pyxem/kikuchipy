@@ -42,7 +42,7 @@ import kikuchipy as kp
 from kikuchipy.data._data import marshall
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
 
-if kp._pyvista_installed:
+if kp.constants.installed["pyvista"]:
     import pyvista as pv
 
     pv.OFF_SCREEN = True

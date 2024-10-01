@@ -30,7 +30,7 @@ import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList, create_coordinate_arrays
 from orix.quaternion import Rotation
 
-from kikuchipy import _pyebsdindex_installed
+from kikuchipy.constants import installed
 
 
 def xmap_from_hough_indexing_data(
@@ -158,7 +158,7 @@ def _get_indexer_from_detector(
     Requires that :mod:`pyebsdindex` is installed, which is an optional
     dependency of kikuchipy. See :ref:`dependencies` for details.
     """
-    if not _pyebsdindex_installed:  # pragma: no cover
+    if not installed["pyebsdindex"]:  # pragma: no cover
         raise ValueError(
             "pyebsdindex must be installed. Install with pip install pyebsdindex. "
             "See https://kikuchipy.org/en/stable/user/installation.html for details."
@@ -488,11 +488,11 @@ def _phase_lists_are_compatible(
 
 
 def _get_info_message(nav_size: int, chunksize: int, indexer: "EBSDIndexer") -> str:
-    from kikuchipy import _pyopencl_context_available
+    from kikuchipy.constants import pyopencl_context_available
 
     info = (
         "Hough indexing with PyEBSDIndex information:\n"
-        f"  PyOpenCL: {_pyopencl_context_available}\n"
+        f"  PyOpenCL: {pyopencl_context_available}\n"
         "  Projection center (Bruker"
     )
 

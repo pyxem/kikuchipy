@@ -28,18 +28,9 @@
     plugins
 """
 
-__all__ = [
-    "plugins",
-]
+import lazy_loader
+
+__getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
 
 
-def __dir__():
-    return sorted(__all__)
-
-
-def __getattr__(name):
-    if name in __all__:  # pragma: no cover
-        import importlib
-
-        return importlib.import_module("." + name, __name__)
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+del lazy_loader

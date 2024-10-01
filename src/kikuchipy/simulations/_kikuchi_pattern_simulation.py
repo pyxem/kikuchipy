@@ -29,7 +29,7 @@ import matplotlib.text as mtext
 import numpy as np
 from orix.quaternion import Rotation
 
-from kikuchipy.detectors import EBSDDetector
+from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.simulations._kikuchi_pattern_features import (
     KikuchiPatternLine,
     KikuchiPatternZoneAxis,

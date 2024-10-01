@@ -76,7 +76,9 @@ class TestECPMasterPattern:
         assert np.allclose(mp_upper, data[1])
         assert np.allclose(mp_lower, data[1])
 
-    @pytest.mark.skipif(not kp._pyvista_installed, reason="PyVista is not installed")
+    @pytest.mark.skipif(
+        not kp.constants.installed["pyvista"], reason="PyVista is not installed"
+    )
     def test_plot_spherical(self, emsoft_ecp_master_pattern_file):
         """Cover inherited method only included for documentation
         purposes (tested rigorously elsewhere).
