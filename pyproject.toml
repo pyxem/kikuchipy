@@ -40,9 +40,7 @@ dependencies = [
     "dask[array]      >= 2021.8.1",
     "diffpy.structure >= 3",
     "diffsims         >= 0.5.2",
-    # TODO: Remove python_version once HyperSpy 2.0 is supported
-    "hyperspy         >= 1.7.3, < 2; python_version < '3.12'",
-    "hyperspy         == 1.7.6; python_version >= '3.12'",
+    "hyperspy         >= 2",
     "h5py             >= 2.10",
     "imageio",
     "lazy_loader",
@@ -56,8 +54,7 @@ dependencies = [
     "tqdm             >= 0.5.2",
     "scikit-image     >= 0.16.2",
     "scikit-learn",
-    # TODO: Remove < 1.14 once HyperSpy 2.0 is supported
-    "scipy            >= 1.7, < 1.14",
+    "scipy            >= 1.7",
 ]
 
 [project.entry-points."hyperspy.extensions"]
@@ -85,7 +82,7 @@ doc = [
     "pyebsdindex                  ~= 0.2",
     "pyvista",
     "sphinx                       >= 3.0.2",
-    "sphinx-codeautolink[ipython] < 0.14",
+    "sphinx-codeautolink[ipython] <  0.14",
     "sphinx-copybutton            >= 0.2.5",
     "sphinx-design",
     "sphinx-gallery",
