@@ -74,11 +74,9 @@ from kikuchipy.pattern._pattern import (
     fft_filter,
     fft_frequency_vectors,
 )
-from kikuchipy.pattern.chunk import (
-    _average_neighbour_patterns,
-    fft_filter,
-    get_dynamic_background,
-)
+from kikuchipy.pattern.chunk import _average_neighbour_patterns
+from kikuchipy.pattern.chunk import fft_filter as fft_filter_chunk
+from kikuchipy.pattern.chunk import get_dynamic_background
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
 from kikuchipy.signals.util._crystal_map import (
     _equal_phase,
@@ -895,7 +893,7 @@ class EBSD(KikuchipySignal2D):
             raise ValueError(f"{function_domain} must be either of {function_domains}")
 
         filtered_patterns = dask_array.map_blocks(
-            func=fft_filter,
+            func=fft_filter_chunk,
             filter_func=filter_func,
             transfer_function=transfer_function,
             dtype_out=dtype_out,
