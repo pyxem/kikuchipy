@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import List, Optional, Tuple, Union
-
 from dask.array import Array
 from hyperspy._signals.signal2d import Signal2D
 from hyperspy.drawing._markers.horizontal_line import HorizontalLine
@@ -48,11 +46,11 @@ class VirtualBSEImager:
     kikuchipy.signals.EBSD.get_virtual_bse_intensity
     """
 
-    def __init__(self, signal: Union[EBSD, LazyEBSD]):
+    def __init__(self, signal: EBSD | LazyEBSD) -> None:
         self.signal = signal
         self._grid_shape = (5, 5)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__class__.__name__ + " for " + repr(self.signal)
 
     @property
@@ -83,19 +81,19 @@ class VirtualBSEImager:
         return self._grid_shape
 
     @grid_shape.setter
-    def grid_shape(self, shape: Union[Tuple[int, int], List[int]]):
+    def grid_shape(self, shape: tuple[int, int] | list[int]) -> None:
         """Set the generator grid shape."""
         self._grid_shape = tuple(shape)
 
     def get_rgb_image(
         self,
-        r: Union[BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple]],
-        g: Union[BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple]],
-        b: Union[BaseInteractiveROI, Tuple, List[BaseInteractiveROI], List[Tuple]],
-        percentiles: Optional[Tuple] = None,
+        r: BaseInteractiveROI | tuple | list[BaseInteractiveROI] | list[tuple],
+        g: BaseInteractiveROI | tuple | list[BaseInteractiveROI] | list[tuple],
+        b: BaseInteractiveROI | tuple | list[BaseInteractiveROI] | list[tuple],
+        percentiles: tuple | None = None,
         normalize: bool = True,
-        alpha: Union[None, np.ndarray, VirtualBSEImage] = None,
-        dtype_out: Union[str, np.dtype, type] = "uint8",
+        alpha: np.ndarray | VirtualBSEImage | None = None,
+        dtype_out: str | np.dtype | type = "uint8",
         add_bright: int = 0,
         contrast: float = 1.0,
     ) -> VirtualBSEImage:
@@ -192,7 +190,7 @@ class VirtualBSEImager:
         return vbse_rgb_image
 
     def get_images_from_grid(
-        self, dtype_out: Union[str, np.dtype, type] = "float32"
+        self, dtype_out: str | np.dtype | type = "float32"
     ) -> VirtualBSEImage:
         """Return an in-memory signal with a stack of virtual
         backscatter electron (BSE) images by integrating the intensities
@@ -237,7 +235,7 @@ class VirtualBSEImager:
 
         return vbse_images
 
-    def roi_from_grid(self, index: Union[Tuple, List[Tuple]]) -> RectangularROI:
+    def roi_from_grid(self, index: tuple | list[tuple]) -> RectangularROI:
         """Return a rectangular region of interest (ROI) on the EBSD
         detector from one or multiple grid tile indices as row(s) and
         column(s).
@@ -270,8 +268,8 @@ class VirtualBSEImager:
 
     def plot_grid(
         self,
-        pattern_idx: Optional[Tuple[int, ...]] = None,
-        rgb_channels: Union[None, List[Tuple], List[List[Tuple]]] = None,
+        pattern_idx: tuple[int, ...] | None = None,
+        rgb_channels: list[tuple] | list[list[tuple]] | None = None,
         visible_indices: bool = True,
         **kwargs,
     ) -> EBSD:
@@ -357,7 +355,7 @@ def _normalize_image(
     image: np.ndarray,
     add_bright: int = 0,
     contrast: float = 1.0,
-    dtype_out: Union[str, np.dtype, type] = "uint8",
+    dtype_out: str | np.dtype | type = "uint8",
 ) -> np.ndarray:
     """Normalize an image's intensities to a mean of 0 and a standard
     deviation of 1, with the possibility to also scale by a contrast
@@ -396,11 +394,11 @@ def _normalize_image(
 
 
 def _get_rgb_image(
-    channels: List[np.ndarray],
-    percentiles: Optional[Tuple] = None,
+    channels: list[np.ndarray],
+    percentiles: tuple | None = None,
     normalize: bool = True,
-    alpha: Optional[np.ndarray] = None,
-    dtype_out: Union[str, np.dtype, type] = "uint8",
+    alpha: np.ndarray | None = None,
+    dtype_out: str | np.dtype | type = "uint8",
     add_bright: int = 0,
     contrast: float = 1.0,
 ) -> np.ndarray:
