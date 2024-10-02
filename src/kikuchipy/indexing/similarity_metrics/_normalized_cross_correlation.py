@@ -15,8 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import List, Union
-
 import dask
 import dask.array as da
 from numba import njit
@@ -55,13 +53,11 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
     attributes.
     """
 
-    _allowed_dtypes: List[type] = [np.float32, np.float64]
+    _allowed_dtypes: list[type] = [np.float32, np.float64]
     _sign: int = 1
 
     def __call__(
-        self,
-        experimental: Union[da.Array, np.ndarray],
-        dictionary: Union[da.Array, np.ndarray],
+        self, experimental: da.Array | np.ndarray, dictionary: da.Array | np.ndarray
     ) -> da.Array:
         """Compute the similarities between experimental patterns and
         simulated dictionary patterns.
@@ -90,8 +86,8 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
         return self.match(experimental, dictionary)
 
     def prepare_experimental(
-        self, patterns: Union[np.ndarray, da.Array]
-    ) -> Union[np.ndarray, da.Array]:
+        self, patterns: np.ndarray | da.Array
+    ) -> np.ndarray | da.Array:
         """Prepare experimental patterns before matching to dictionary
         patterns in :meth:`match`.
 
@@ -132,8 +128,8 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
         return prepared_patterns
 
     def prepare_dictionary(
-        self, patterns: Union[np.ndarray, da.Array]
-    ) -> Union[np.ndarray, da.Array]:
+        self, patterns: np.ndarray | da.Array
+    ) -> np.ndarray | da.Array:
         """Prepare dictionary patterns before matching to experimental
         patterns in :meth:`match`.
 
@@ -164,8 +160,8 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
 
     def match(
         self,
-        experimental: Union[np.ndarray, da.Array],
-        dictionary: Union[np.ndarray, da.Array],
+        experimental: np.ndarray | da.Array,
+        dictionary: np.ndarray | da.Array,
     ) -> da.Array:
         """Match all experimental patterns to all dictionary patterns
         and return their similarities.
@@ -186,17 +182,15 @@ class NormalizedCrossCorrelationMetric(SimilarityMetric):
             "ik,mk->im", experimental, dictionary, optimize=True, dtype=self.dtype
         )
 
-    def _mask_patterns(
-        self, patterns: Union[da.Array, np.ndarray]
-    ) -> Union[da.Array, np.ndarray]:
+    def _mask_patterns(self, patterns: da.Array | np.ndarray) -> da.Array | np.ndarray:
         with dask.config.set(**{"array.slicing.split_large_chunks": False}):
             patterns = patterns[:, ~self.signal_mask.ravel()]
         return patterns
 
     @staticmethod
     def _zero_mean_normalize_patterns(
-        patterns: Union[da.Array, np.ndarray]
-    ) -> Union[da.Array, np.ndarray]:
+        patterns: da.Array | np.ndarray,
+    ) -> da.Array | np.ndarray:
         if isinstance(patterns, np.ndarray):
             return _zero_mean_normalize_patterns_numpy(patterns)
         else:

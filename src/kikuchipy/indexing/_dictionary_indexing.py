@@ -20,7 +20,6 @@ dictionary of simulated patterns with known orientations.
 """
 
 from time import sleep, time
-from typing import Optional, Tuple, Union
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
@@ -33,9 +32,9 @@ from kikuchipy.indexing.similarity_metrics._similarity_metric import SimilarityM
 
 
 def _dictionary_indexing(
-    experimental: Union[np.ndarray, da.Array],
+    experimental: np.ndarray | da.Array,
     experimental_nav_shape: tuple,
-    dictionary: Union[np.ndarray, da.Array],
+    dictionary: np.ndarray | da.Array,
     step_sizes: tuple,
     dictionary_xmap: CrystalMap,
     metric: SimilarityMetric,
@@ -169,11 +168,11 @@ def _dictionary_indexing(
 
 
 def _match_chunk(
-    experimental: Union[np.ndarray, da.Array],
-    simulated: Union[np.ndarray, da.Array],
+    experimental: np.ndarray | da.Array,
+    simulated: np.ndarray | da.Array,
     keep_n: int,
     metric: SimilarityMetric,
-) -> Tuple[da.Array, da.Array]:
+) -> tuple[da.Array, da.Array]:
     """Match all experimental patterns to part of or the entire
     dictionary of simulated patterns.
 
@@ -207,7 +206,7 @@ def _dictionary_indexing_info_message(
     n_experimental_all: int,
     dictionary_size: int,
     phase_name: str,
-    n_experimental: Optional[int] = None,
+    n_experimental: int | None = None,
 ) -> str:
     """Return a message with useful dictionary indexing information.
 

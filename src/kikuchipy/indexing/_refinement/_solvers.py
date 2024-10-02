@@ -20,7 +20,7 @@ centers by optimizing the similarity between experimental and simulated
 patterns.
 """
 
-from typing import Callable, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Callable
 
 from numba import njit
 import numpy as np
@@ -37,9 +37,15 @@ from kikuchipy.pattern._pattern import (
 )
 from kikuchipy.signals.util._master_pattern import _get_direction_cosines_for_fixed_pc
 
+if TYPE_CHECKING:  # pragma: no cover
+    from kikuchipy.constants import installed
+
+    if installed["nlopt"]:
+        import nlopt
+
 
 @njit(cache=True, nogil=True, fastmath=True)
-def _prepare_pattern(pattern: np.ndarray, rescale: bool) -> Tuple[np.ndarray, float]:
+def _prepare_pattern(pattern: np.ndarray, rescale: bool) -> tuple[np.ndarray, float]:
     """Prepare experimental pattern.
 
     Parameters
@@ -75,21 +81,20 @@ def _refine_orientation_solver_scipy(
     method: Callable,
     method_kwargs: dict,
     trust_region_passed: bool,
-    fixed_parameters: Tuple[np.ndarray, np.ndarray, int, int, float],
-    direction_cosines: Optional[np.ndarray] = None,
-    pcx: Optional[float] = None,
-    pcy: Optional[float] = None,
-    pcz: Optional[float] = None,
-    nrows: Optional[int] = None,
-    ncols: Optional[int] = None,
-    tilt: Optional[float] = None,
-    azimuthal: Optional[float] = None,
-    sample_tilt: Optional[float] = None,
+    fixed_parameters: tuple[np.ndarray, np.ndarray, int, int, float],
+    direction_cosines: np.ndarray | None = None,
+    pcx: float | None = None,
+    pcy: float | None = None,
+    pcz: float | None = None,
+    nrows: int | None = None,
+    ncols: int | None = None,
+    tilt: float | None = None,
+    azimuthal: float | None = None,
+    sample_tilt: float | None = None,
     n_pseudo_symmetry_ops: int = 0,
-) -> Union[
-    Tuple[float, int, float, float, float],
-    Tuple[float, int, int, float, float, float],
-]:
+) -> (
+    tuple[float, int, float, float, float] | tuple[float, int, int, float, float, float]
+):
     """Maximize the similarity between an experimental pattern and a
     projected simulated pattern by optimizing the orientation
     (Rodrigues-Frank vector) used in the projection.
@@ -253,7 +258,7 @@ def _refine_pc_solver_scipy(
     method_kwargs: dict,
     fixed_parameters: tuple,
     trust_region_passed: bool,
-) -> Tuple[float, int, float, float, float]:
+) -> tuple[float, int, float, float, float]:
     """Maximize the similarity between an experimental pattern and a
     projected simulated pattern by optimizing the projection center (PC)
     parameters used in the projection.
@@ -336,10 +341,10 @@ def _refine_orientation_pc_solver_scipy(
     fixed_parameters: tuple,
     trust_region_passed: bool,
     n_pseudo_symmetry_ops: int = 0,
-) -> Union[
-    Tuple[float, int, float, float, float, float, float, float],
-    Tuple[float, int, int, float, float, float, float, float, float],
-]:
+) -> (
+    tuple[float, int, float, float, float, float, float, float]
+    | tuple[float, int, int, float, float, float, float, float, float]
+):
     """Maximize the similarity between an experimental pattern and a
     projected simulated pattern by optimizing the orientation and
     projection center (PC) parameters used in the projection.
@@ -466,21 +471,20 @@ def _refine_orientation_solver_nlopt(
     signal_mask: np.ndarray,
     rescale: bool,
     trust_region_passed: bool,
-    fixed_parameters: Tuple[np.ndarray, np.ndarray, int, int, float],
-    direction_cosines: Optional[np.ndarray] = None,
-    pcx: Optional[float] = None,
-    pcy: Optional[float] = None,
-    pcz: Optional[float] = None,
-    nrows: Optional[int] = None,
-    ncols: Optional[int] = None,
-    tilt: Optional[float] = None,
-    azimuthal: Optional[float] = None,
-    sample_tilt: Optional[float] = None,
+    fixed_parameters: tuple[np.ndarray, np.ndarray, int, int, float],
+    direction_cosines: np.ndarray | None = None,
+    pcx: float | None = None,
+    pcy: float | None = None,
+    pcz: float | None = None,
+    nrows: int | None = None,
+    ncols: int | None = None,
+    tilt: float | None = None,
+    azimuthal: float | None = None,
+    sample_tilt: float | None = None,
     n_pseudo_symmetry_ops: int = 0,
-) -> Union[
-    Tuple[float, int, float, float, float],
-    Tuple[float, int, int, float, float, float],
-]:
+) -> (
+    tuple[float, int, float, float, float] | tuple[float, int, int, float, float, float]
+):
     pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
     # Get direction cosines if a unique PC per pattern is used
@@ -546,7 +550,7 @@ def _refine_pc_solver_nlopt(
     rescale: bool,
     fixed_parameters: tuple,
     trust_region_passed: bool,
-) -> Tuple[float, int, float, float, float]:
+) -> tuple[float, int, float, float, float]:
     pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
     # Combine tuple of fixed parameters passed to the objective function
@@ -577,10 +581,10 @@ def _refine_orientation_pc_solver_nlopt(
     fixed_parameters: tuple,
     trust_region_passed: bool,
     n_pseudo_symmetry_ops: int = 0,
-) -> Union[
-    Tuple[float, int, float, float, float, float, float, float],
-    Tuple[float, int, int, float, float, float, float, float, float],
-]:
+) -> (
+    tuple[float, int, float, float, float, float, float, float]
+    | tuple[float, int, int, float, float, float, float, float, float]
+):
     pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
     # Combine tuple of fixed parameters passed to the objective function
