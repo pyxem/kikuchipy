@@ -70,7 +70,7 @@ def _rotation_from_rodrigues(rx: float, ry: float, rz: float) -> np.ndarray:
     d = s * rz / norm
     rot = np.array([a, b, c, d], dtype="float64")
 
-    if rot[0] < 0:  # pragma: no cover
+    if rot[0] < 0:
         rot = -rot
 
     return rot
