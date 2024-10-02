@@ -19,8 +19,6 @@
 via FFT written by Connelly Barnes (public domain, 2007).
 """
 
-from typing import List, Tuple, Union
-
 import numba as nb
 import numpy as np
 from scipy.fft import irfft2, next_fast_len, rfft2
@@ -29,9 +27,9 @@ from kikuchipy.filters.window import Window
 
 
 def _fft_filter_setup(
-    image_shape: Tuple[int, int],
-    window: Union[np.ndarray, Window],
-) -> Tuple[Tuple[int, int], np.ndarray, Tuple[int, int], Tuple[int, int]]:
+    image_shape: tuple[int, int],
+    window: np.ndarray | Window,
+) -> tuple[tuple[int, int], np.ndarray, tuple[int, int], tuple[int, int]]:
     window_shape = window.shape
 
     # Optimal FFT shape
@@ -53,10 +51,7 @@ def _fft_filter_setup(
     return fft_shape, transfer_function, offset_before, offset_after
 
 
-def fft_filter(
-    image: np.ndarray,
-    window: Union[np.ndarray, Window],
-) -> np.ndarray:
+def fft_filter(image: np.ndarray, window: np.ndarray | Window) -> np.ndarray:
     """Filter a 2D image in the frequency domain with a window defined
     in the spatial domain.
 
@@ -100,8 +95,8 @@ def fft_filter(
 
 
 def _pad_window(
-    window: Union[np.ndarray, Window],
-    fft_shape: Union[Tuple[int, ...], List[int], np.ndarray],
+    window: np.ndarray | Window,
+    fft_shape: tuple[int, ...] | list[int] | np.ndarray,
 ) -> np.ndarray:
     wy, wx = window.shape
     window_pad = np.zeros(fft_shape, dtype=np.float32)
@@ -109,17 +104,13 @@ def _pad_window(
     return window_pad
 
 
-def _offset_before_fft(
-    window_shape: Union[Tuple[int, int], np.ndarray]
-) -> Tuple[int, int]:
+def _offset_before_fft(window_shape: tuple[int, int] | np.ndarray) -> tuple[int, int]:
     wy, wx = window_shape
     offset = (wy - ((wy - 1) // 2) - 1, wx - ((wx - 1) // 2) - 1)
     return offset
 
 
-def _offset_after_ifft(
-    window_shape: Union[Tuple[int, int], np.ndarray]
-) -> Tuple[int, int]:
+def _offset_after_ifft(window_shape: tuple[int, int] | np.ndarray) -> tuple[int, int]:
     wy, wx = window_shape
     offset = ((wy - 1) // 2, (wx - 1) // 2)
     return offset
@@ -128,9 +119,9 @@ def _offset_after_ifft(
 @nb.njit(cache=True, fastmath=True, nogil=True)
 def _pad_image(
     image: np.ndarray,
-    fft_shape: Tuple[int, ...],
-    window_shape: Tuple[int, int],
-    offset_before_fft: Tuple[int, int],
+    fft_shape: tuple[int, ...],
+    window_shape: tuple[int, int],
+    offset_before_fft: tuple[int, int],
 ) -> np.ndarray:
     iy, ix = image.shape
     wy, wx = window_shape
@@ -164,10 +155,10 @@ def _pad_image(
 def _fft_filter(
     image: np.ndarray,
     transfer_function: np.ndarray,
-    fft_shape: Tuple[int, int],
-    window_shape: Tuple[int, int],
-    offset_before_fft: Tuple[int, int],
-    offset_after_ifft: Tuple[int, int],
+    fft_shape: tuple[int, int],
+    window_shape: tuple[int, int],
+    offset_before_fft: tuple[int, int],
+    offset_after_ifft: tuple[int, int],
 ) -> np.ndarray:
     # Create new image array to pad with the image in the top left
     # corner

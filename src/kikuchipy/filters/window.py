@@ -16,10 +16,10 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from copy import copy
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import Self, Sequence
 
 from dask.array import Array
-from matplotlib.figure import Figure
+import matplotlib.figure as mfigure
 from matplotlib.pyplot import subplots
 from numba import njit
 import numpy as np
@@ -109,15 +109,15 @@ class Window(np.ndarray):
      [0.7788 0.8825 0.7788]]
     """
 
-    _name: str = None
+    _name: str | None = None
     _circular: bool = False
 
     def __new__(
         cls,
-        window: Union[None, str, np.ndarray, Array] = None,
-        shape: Optional[Sequence[int]] = None,
+        window: str | np.ndarray | Array | None = None,
+        shape: Sequence[int] | None = None,
         **kwargs,
-    ):
+    ) -> Self:
         if window is None:
             window = "circular"
 
@@ -191,13 +191,13 @@ class Window(np.ndarray):
 
         return obj
 
-    def __array_finalize__(self, obj):
+    def __array_finalize__(self, obj: Self | None) -> None:
         if obj is None:
             return
         self._name = getattr(obj, "_name", None)
         self._circular = getattr(obj, "_circular", False)
 
-    def __array_wrap__(self, obj):
+    def __array_wrap__(self, obj: Self) -> Self | np.ndarray:
         if obj.shape == ():
             return obj[()]
         else:
@@ -250,7 +250,7 @@ class Window(np.ndarray):
         """Return the window origin."""
         return tuple(i // 2 for i in self.shape)
 
-    def make_circular(self):
+    def make_circular(self) -> None:
         """Make the window circular.
 
         The data of window elements who's radial distance to the
@@ -272,7 +272,7 @@ class Window(np.ndarray):
         if self.name in ["rectangular", "boxcar"]:
             self._name = "circular"
 
-    def shape_compatible(self, shape: Tuple[int]) -> bool:
+    def shape_compatible(self, shape: tuple[int, ...]) -> bool:
         """Return whether the window shape is compatible with another
         shape.
 
@@ -302,41 +302,41 @@ class Window(np.ndarray):
         self,
         grid: bool = True,
         show_values: bool = True,
-        textcolors: Optional[List[str]] = None,
+        textcolors: list[str] | None = None,
         cmap: str = "viridis",
         cmap_label: str = "Value",
         colorbar: bool = True,
         return_figure: bool = False,
-    ) -> Figure:
+    ) -> mfigure.Figure | None:
         """Plot window values with indices relative to the origin.
 
         Parameters
         ----------
         grid
             Whether to separate each value with a white spacing in a
-            grid. Default is ``True``.
+            grid. Default is True.
         show_values
             Whether to show values as text in centre of element. Default
-            is ``True``.
+            is True.
         textcolors
             A list of two color specifications. The first is used for
             values below a threshold, the second for those above. If
-            not given (default), this is set to ``["white", "black"]``.
+            not given (default), this is set to ["white", "black"].
         cmap
             A colormap to color data with, available in
             :class:`matplotlib.colors.ListedColormap`. Default is
-            ``"viridis"``.
+            "viridis".
         cmap_label
-            Colormap label. Default is ``"Value"``.
+            Colormap label. Default is "Value".
         colorbar
-            Whether to show the colorbar. Default is ``True``.
+            Whether to show the colorbar. Default is True.
         return_figure
-            Whether to return the figure. Default is ``False``.
+            Whether to return the figure. Default is False.
 
         Returns
         -------
         fig
-            Figure returned if ``return_figure=True``.
+            Figure returned if *return_figure* is True.
 
         Examples
         --------
@@ -399,8 +399,8 @@ class Window(np.ndarray):
 
 
 def distance_to_origin(
-    shape: Union[Tuple[int], Tuple[int, int]],
-    origin: Union[None, Tuple[int], Tuple[int, int]] = None,
+    shape: tuple[int] | tuple[int, int],
+    origin: tuple[int] | tuple[int, int] | None = None,
 ) -> np.ndarray:
     """Return the distance to the window origin in pixels.
 
@@ -468,9 +468,9 @@ def modified_hann(Nx: int) -> np.ndarray:
 
 
 def lowpass_fft_filter(
-    shape: Tuple[int, int],
-    cutoff: Union[int, float],
-    cutoff_width: Union[None, int, float] = None,
+    shape: tuple[int, int],
+    cutoff: int | float,
+    cutoff_width: int | float | None = None,
 ) -> np.ndarray:
     r"""Return a frequency domain low-pass filter transfer function in
     2D.
@@ -535,9 +535,9 @@ def lowpass_fft_filter(
 
 
 def highpass_fft_filter(
-    shape: Tuple[int, int],
-    cutoff: Union[int, float],
-    cutoff_width: Union[None, int, float] = None,
+    shape: tuple[int, int],
+    cutoff: int | float,
+    cutoff_width: int | float | None = None,
 ) -> np.ndarray:
     r"""Return a frequency domain high-pass filter transfer function in
     2D.
