@@ -22,8 +22,8 @@ calibration patterns. These are acquired manually within a region of
 interest within a larger area.
 """
 
-from typing import Optional
-
+import matplotlib.axes as maxes
+import matplotlib.figure as mfigure
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
@@ -33,13 +33,13 @@ def plot_pattern_positions_in_map(
     rc: np.ndarray,
     roi_shape: tuple,
     roi_origin: tuple = (0, 0),
-    area_shape: Optional[tuple] = None,
-    roi_image: Optional[np.ndarray] = None,
-    area_image: Optional[np.ndarray] = None,
-    axis: Optional[plt.Axes] = None,
+    area_shape: tuple | None = None,
+    roi_image: np.ndarray | None = None,
+    area_image: np.ndarray | None = None,
+    axis: maxes.Axes | None = None,
     return_figure: bool = False,
-    color: Optional[str] = "k",
-) -> Optional[plt.Figure]:
+    color: str | None = "k",
+) -> mfigure.Figure | mfigure.SubFigure | None:
     """Plot pattern positions in a 2D map within a region of interest
     (ROI), the ROI potentially within a larger area.
 
@@ -85,7 +85,7 @@ def plot_pattern_positions_in_map(
     roi_rect_kw = dict(fc="none", lw=2, clip_on=False, zorder=5)
     roi_ny, roi_nx = roi_shape
 
-    if isinstance(axis, plt.Axes):
+    if isinstance(axis, maxes.Axes):
         new_axis = False
         ax = axis
         fig = ax.figure

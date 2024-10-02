@@ -19,15 +19,13 @@
 navigators with :meth:`~hyperspy.signals.Signal2D.plot`.
 """
 
-from typing import Union
-
 import hyperspy.api as hs
 import numpy as np
 from skimage.exposure import rescale_intensity
 
 
 def get_rgb_navigator(
-    image: np.ndarray, dtype: Union[str, np.dtype, type] = "uint16"
+    image: np.ndarray, dtype: str | np.dtype | type = "uint16"
 ) -> hs.signals.Signal2D:
     """Create an RGB navigator signal which is suitable to pass to
     :meth:`~hyperspy._signals.signal2d.Signal2D.plot` as the
