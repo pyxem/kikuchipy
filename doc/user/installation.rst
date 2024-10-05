@@ -106,11 +106,12 @@ This is a list of core package dependencies:
 * :doc:`orix <orix:index>`: Handling of rotations and vectors using crystal symmetry
 * :doc:`pooch <pooch:api/index>`: Downloading and caching of datasets
 * `pyyaml <https://pyyaml.org/>`__: Parcing of YAML files
-* `tqdm <https://tqdm.github.io/>`__: Progressbars
+* :doc:`rosettasciio <rosettasciio:index>`: Read/write of some file formats
 * :doc:`scikit-image <skimage:index>`: Image processing like adaptive histogram
   equalization
 * `scikit-learn <https://scikit-learn.org/stable/>`__: Multivariate analysis
 * :doc:`scipy <scipy:index>`: Optimization algorithms, filtering and more
+* `tqdm <https://tqdm.github.io/>`__: Progressbars
 
 .. _lazy_loader: https://scientific-python.org/specs/spec-0001/#lazy_loader
 

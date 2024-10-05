@@ -46,15 +46,15 @@ dependencies = [
     "lazy_loader",
     "matplotlib       >= 3.5",
     "numba            >= 0.57",
-    # TODO: Remove pinning of NumPy <2 once HyperSpy 2.0 is supported
-    "numpy            >= 1.23.0, <2",
+    "numpy            >= 1.23.0",
     "orix             >= 0.12.1",
     "pooch            >= 1.3.0",
     "pyyaml",
-    "tqdm             >= 0.5.2",
+    "rosettasciio",
     "scikit-image     >= 0.16.2",
     "scikit-learn",
     "scipy            >= 1.7",
+    "tqdm             >= 0.5.2",
 ]
 
 [project.entry-points."hyperspy.extensions"]
@@ -111,19 +111,15 @@ dev = [
 [tool.hatch.version]
 path = "src/kikuchipy/__init__.py"
 
-# TODO: Remove this section and the duplicated file when HS 2.0 is
-# supported
-[tool.hatch.build.force-include]
-"hyperspy_extension.yaml" = "hyperspy_extension.yaml"
-
 # https://github.com/pypa/hatch/discussions/427
 # https://github.com/pypa/hatch/issues/492
+[tool.hatch.build.targets.wheel.sources]
+"src" = ""
+
 [tool.hatch.build.targets.wheel]
 include = [
     "src/kikuchipy",
 ]
-[tool.hatch.build.targets.wheel.sources]
-"src" = ""
 
 [tool.coverage.report]
 precision = 2

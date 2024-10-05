@@ -18,6 +18,8 @@ Unreleased
 
 Added
 -----
+- Dependency on RosettaSciIO for read/write of some file formats.
+  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
 
 Changed
 -------
