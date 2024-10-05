@@ -15,8 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from __future__ import annotations
+
 from copy import copy
-from typing import Self, Sequence
+from typing import Sequence
 
 from dask.array import Array
 import matplotlib.figure as mfigure
@@ -117,7 +119,7 @@ class Window(np.ndarray):
         window: str | np.ndarray | Array | None = None,
         shape: Sequence[int] | None = None,
         **kwargs,
-    ) -> Self:
+    ) -> Window:
         if window is None:
             window = "circular"
 
@@ -197,7 +199,7 @@ class Window(np.ndarray):
         self._name = getattr(obj, "_name", None)
         self._circular = getattr(obj, "_circular", False)
 
-    def __array_wrap__(self, obj: Self) -> Self | np.ndarray:
+    def __array_wrap__(self, obj: Self) -> Window | np.ndarray:
         if obj.shape == ():
             return obj[()]
         else:

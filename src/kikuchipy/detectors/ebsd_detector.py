@@ -22,7 +22,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 import re
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING
 
 from diffsims.crystallography import ReciprocalLatticeVector
 from matplotlib.figure import Figure
@@ -495,7 +495,7 @@ class EBSDDetector:
         return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
 
     @classmethod
-    def load(cls, fname: Path | str) -> Self:
+    def load(cls, fname: Path | str) -> EBSDDetector:
         """Return an EBSD detector loaded from a text file saved with
         :meth:`save`.
 
@@ -557,7 +557,7 @@ class EBSDDetector:
 
         return cls(pc=pc, **detector_kw)
 
-    def crop(self, extent: tuple[int, int, int, int] | list[int]) -> Self:
+    def crop(self, extent: tuple[int, int, int, int] | list[int]) -> EBSDDetector:
         """Return a new detector with its :attr:`shape` cropped and
         :attr:`pc` values updated accordingly.
 
@@ -622,7 +622,7 @@ class EBSDDetector:
             azimuthal=self.azimuthal,
         )
 
-    def deepcopy(self) -> Self:
+    def deepcopy(self) -> EBSDDetector:
         """Return a deep copy using :func:`copy.deepcopy`.
 
         Returns
@@ -852,7 +852,7 @@ class EBSDDetector:
         px_size: float | None = None,
         binning: int | None = None,
         is_outlier: tuple | list | np.ndarray | None = None,
-    ) -> Self:
+    ) -> EBSDDetector:
         r"""Return a new detector with projection centers (PCs) in a 2D
         map extrapolated from an average PC.
 
@@ -959,7 +959,7 @@ class EBSDDetector:
         plot: bool = True,
         return_figure: bool = False,
         figure_kwargs: dict | None = None,
-    ) -> Self | tuple[EBSDDetector, Figure]:
+    ) -> EBSDDetector | tuple[EBSDDetector, Figure]:
         """Return a new detector with interpolated projection centers
         (PCs) for all points in a map by fitting a plane to :attr:`pc`
         :cite:`winkelmann2020refined`.
