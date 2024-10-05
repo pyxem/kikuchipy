@@ -22,7 +22,7 @@ Added
 Changed
 -------
 - Minimum Python version is now 3.10.
-  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+  (`#689 <https://github.com/pyxem/kikuchipy/pull/689>`_)
 
 Removed
 -------
