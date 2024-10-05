@@ -16,11 +16,11 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
-from typing import Any, Union
+from typing import Any
 import warnings
 
 
-def _get_input_bool(question: str) -> bool:
+def _get_input_bool(question: str) -> bool | None:
     """Get input from user on boolean choice, returning the answer.
 
     Parameters
@@ -46,7 +46,7 @@ def _get_input_bool(question: str) -> bool:
         return False
 
 
-def _get_input_variable(question: str, var_type: Any) -> Union[None, Any]:
+def _get_input_variable(question: str, var_type: Any) -> Any | None:
     """Get variable input from user, returning the variable.
 
     Parameters
@@ -73,7 +73,7 @@ def _get_input_variable(question: str, var_type: Any) -> Union[None, Any]:
         return None
 
 
-def _ensure_directory(filename: str):
+def _ensure_directory(filename: str) -> None:
     """Check if the filename path exists, create it if not."""
     directory = os.path.split(filename)[0]
     if directory and not os.path.exists(directory):

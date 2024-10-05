@@ -18,15 +18,14 @@
 """Constants and such useful across modules."""
 
 from importlib.metadata import version
-from typing import Dict, List
 
 # NB! Update project config file if this list is updated!
-optional_deps: List[str] = [
+optional_deps: list[str] = [
     "pyvista",
     "nlopt",
     "pyebsdindex",
 ]
-installed: Dict[str, bool] = {}
+installed: dict[str, bool] = {}
 for pkg in optional_deps:
     try:
         _ = version(pkg)

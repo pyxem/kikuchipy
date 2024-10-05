@@ -17,8 +17,6 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple, Union
-
 import numpy as np
 
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
@@ -42,16 +40,16 @@ class VirtualBSEImage(KikuchipySignal2D):
     def rescale_intensity(
         self,
         relative: bool = False,
-        in_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        out_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        dtype_out: Union[
-            str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
-        ] = None,
-        percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        show_progressbar: Optional[bool] = None,
+        in_range: tuple[int, int] | tuple[float, float] | None = None,
+        out_range: tuple[int, int] | tuple[float, float] | None = None,
+        dtype_out: (
+            str | np.dtype | type | tuple[int, int] | tuple[float, float] | None
+        ) = None,
+        percentiles: tuple[int, int] | tuple[float, float] | None = None,
+        show_progressbar: bool | None = None,
         inplace: bool = True,
-        lazy_output: Optional[bool] = None,
-    ) -> Union[None, VirtualBSEImage, LazyVirtualBSEImage]:
+        lazy_output: bool | None = None,
+    ) -> VirtualBSEImage | LazyVirtualBSEImage | None:
         return super().rescale_intensity(
             relative,
             in_range,
@@ -67,11 +65,11 @@ class VirtualBSEImage(KikuchipySignal2D):
         self,
         num_std: int = 1,
         divide_by_square_root: bool = False,
-        dtype_out: Union[str, np.dtype, type, None] = None,
-        show_progressbar: Optional[bool] = None,
+        dtype_out: str | np.dtype | type | None = None,
+        show_progressbar: bool | None = None,
         inplace: bool = True,
-        lazy_output: Optional[bool] = None,
-    ) -> Union[None, VirtualBSEImage, LazyVirtualBSEImage]:
+        lazy_output: bool | None = None,
+    ) -> VirtualBSEImage | LazyVirtualBSEImage | None:
         return super().normalize_intensity(
             num_std,
             divide_by_square_root,
@@ -83,13 +81,13 @@ class VirtualBSEImage(KikuchipySignal2D):
 
     def adaptive_histogram_equalization(
         self,
-        kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
-        clip_limit: Union[int, float] = 0,
+        kernel_size: tuple[int, int] | list[int] | None = None,
+        clip_limit: int | float = 0.0,
         nbins: int = 128,
-        show_progressbar: Optional[bool] = None,
+        show_progressbar: bool | None = None,
         inplace: bool = True,
-        lazy_output: Optional[bool] = None,
-    ) -> Union[None, VirtualBSEImage, LazyVirtualBSEImage]:
+        lazy_output: bool | None = None,
+    ) -> VirtualBSEImage | LazyVirtualBSEImage | None:
         return super().adaptive_histogram_equalization(
             kernel_size,
             clip_limit,

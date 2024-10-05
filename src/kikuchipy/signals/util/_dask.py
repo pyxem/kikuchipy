@@ -16,7 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 
 import dask.array as da
 import numpy as np
@@ -28,13 +28,13 @@ _logger = logging.getLogger(__name__)
 
 
 def get_chunking(
-    signal: Optional[Union["EBSD", "LazyEBSD"]] = None,
-    data_shape: Optional[tuple] = None,
-    nav_dim: Optional[int] = None,
-    sig_dim: Optional[int] = None,
-    chunk_shape: Optional[int] = None,
-    chunk_bytes: Union[int, float, str, None] = 30e6,
-    dtype: Union[str, np.dtype, type, None] = None,
+    signal: "EBSD | LazyEBSD | None" = None,
+    data_shape: tuple[int, ...] | None = None,
+    nav_dim: int | None = None,
+    sig_dim: int | None = None,
+    chunk_shape: int | None = None,
+    chunk_bytes: int | float | str | None = 30e6,
+    dtype: str | np.dtype | type | None = None,
 ) -> tuple:
     """Get a chunk tuple based on the shape of the signal data.
 
@@ -109,9 +109,7 @@ def get_chunking(
 
 
 def get_dask_array(
-    signal: Union["EBSD", "LazyEBSD"],
-    dtype: Union[str, np.dtype, type, None] = None,
-    **kwargs,
+    signal: "EBSD |LazyEBSD", dtype: str | np.dtype | type | None = None, **kwargs
 ) -> da.Array:
     """Return dask array of patterns with appropriate chunking.
 
@@ -161,8 +159,8 @@ def get_dask_array(
 
 def _reduce_chunks(
     dask_array: da.Array,
-    chunk_bytes: Union[int, float] = 8e6,
-    dtype_out: Union[str, np.dtype, type] = "float32",
+    chunk_bytes: int | float = 8e6,
+    dtype_out: str | np.dtype | type = "float32",
 ) -> tuple:
     dtype_out = np.dtype(dtype_out)
 
@@ -216,9 +214,9 @@ def _get_chunk_overlap_depth(window, axes_manager, chunksize: tuple) -> dict:
 
 
 def _rechunk_learning_results(
-    factors: Union[np.ndarray, da.Array],
-    loadings: Union[np.ndarray, da.Array],
-    mbytes_chunk: Union[int, float] = 100,
+    factors: np.ndarray | da.Array,
+    loadings: np.ndarray | da.Array,
+    mbytes_chunk: int | float = 100,
 ) -> list:
     """Return suggested data chunks for learning results.
 
@@ -281,9 +279,9 @@ def _rechunk_learning_results(
 
 def _update_learning_results(
     learning_results,
-    components: Union[None, int, List[int]],
-    dtype_out: Union[str, np.dtype, type],
-) -> Tuple[Union[np.ndarray, da.Array], Union[np.ndarray, da.Array]]:
+    components: int | list[int] | None,
+    dtype_out: str | np.dtype | type,
+) -> tuple[np.ndarray | da.Array, np.ndarray | da.Array]:
     """Update learning results before calling
     :meth:`hyperspy.learn.mva.MVA.get_decomposition_model` by
     changing data type, keeping only desired components and rechunking

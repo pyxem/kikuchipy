@@ -24,7 +24,7 @@ from numbers import Number
 import os
 from pathlib import Path
 import tempfile
-from typing import Callable, Generator, List
+from typing import Callable, Generator
 
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
@@ -39,10 +39,11 @@ import pytest
 import skimage.color as skc
 
 import kikuchipy as kp
+from kikuchipy import constants
 from kikuchipy.data._data import marshall
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
 
-if kp.constants.installed["pyvista"]:
+if constants.installed["pyvista"]:
     import pyvista as pv
 
     pv.OFF_SCREEN = True
@@ -227,7 +228,7 @@ def nickel_phase(nickel_structure) -> Generator[Phase, None, None]:
 
 
 @pytest.fixture
-def pc1() -> Generator[List[float], None, None]:
+def pc1() -> Generator[list[float], None, None]:
     """One projection center (PC) in TSL convention."""
     yield [0.4210, 0.7794, 0.5049]
 

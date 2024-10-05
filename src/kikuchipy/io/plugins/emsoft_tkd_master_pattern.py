@@ -19,7 +19,6 @@
 """
 
 from pathlib import Path
-from typing import List, Optional, Union
 
 from kikuchipy.io.plugins._emsoft_master_pattern import EMsoftMasterPatternReader
 
@@ -45,19 +44,27 @@ footprint = ["emdata/tkdmaster"]
 
 
 class EMsoftTKDMasterPatternReader(EMsoftMasterPatternReader):
-    diffraction_type = "TKD"
-    cl_parameters_group_name = "MCCLfoil"  # Monte Carlo openCL
-    energy_string = "EkeVs"
+    @property
+    def diffraction_type(self) -> str:
+        return "TKD"
+
+    @property
+    def cl_parameters_group_name(self) -> str:
+        return "MCCLfoil"  # Monte Carlo openCL
+
+    @property
+    def energy_string(self) -> str:
+        return "EkeVs"
 
 
 def file_reader(
-    filename: Union[str, Path],
-    energy: Optional[range] = None,
+    filename: str | Path,
+    energy: range | None = None,
     projection: str = "stereographic",
     hemisphere: str = "upper",
     lazy: bool = False,
     **kwargs,
-) -> List[dict]:
+) -> list[dict]:
     """Read simulated transmission kikuchi diffraction master patterns
     from EMsoft's HDF5 file format :cite:`callahan2013dynamical`.
 

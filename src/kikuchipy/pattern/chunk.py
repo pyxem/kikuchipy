@@ -19,24 +19,21 @@
 :class:`dask.array.Array` chunks of EBSD patterns.
 """
 
-from typing import Union
+from typing import Callable
 
 import dask.array as da
 from numba import njit
 import numpy as np
-from scipy.ndimage import correlate, gaussian_filter
+from scipy.ndimage import correlate
 
-from kikuchipy.filters.fft_barnes import fft_filter as fft_filter_barnes
 from kikuchipy.filters.window import Window
-from kikuchipy.pattern._pattern import _rescale_with_min_max
-from kikuchipy.pattern._pattern import fft_filter as fft_filter_pattern
-from kikuchipy.pattern._pattern import rescale_intensity
+from kikuchipy.pattern._pattern import _rescale_with_min_max, rescale_intensity
 
 
 def get_dynamic_background(
-    patterns: Union[np.ndarray, da.Array],
-    filter_func: Union[gaussian_filter, fft_filter_barnes],
-    dtype_out: Union[str, np.dtype, type, None] = None,
+    patterns: np.ndarray | da.Array,
+    filter_func: Callable,
+    dtype_out: str | np.dtype | type | None = None,
     **kwargs,
 ) -> np.ndarray:
     """Obtain the dynamic background in a chunk of EBSD patterns.
@@ -77,9 +74,9 @@ def get_dynamic_background(
 
 def fft_filter(
     patterns: np.ndarray,
-    filter_func: Union[fft_filter_pattern, fft_filter_barnes],
-    transfer_function: Union[np.ndarray, Window],
-    dtype_out: Union[str, np.dtype, type, None] = None,
+    filter_func: Callable,
+    transfer_function: np.ndarray | Window,
+    dtype_out: str | np.dtype | type | None = None,
     **kwargs,
 ) -> np.ndarray:
     """Filter a chunk of EBSD patterns in the frequency domain.
@@ -133,7 +130,7 @@ def fft_filter(
 def _average_neighbour_patterns(
     patterns: np.ndarray,
     window_sums: np.ndarray,
-    window: Union[np.ndarray, Window],
+    window: np.ndarray | Window,
     dtype_out: np.dtype,
     omin: float,
     omax: float,

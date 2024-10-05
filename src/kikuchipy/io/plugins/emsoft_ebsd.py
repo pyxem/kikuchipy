@@ -19,11 +19,10 @@
 
 import os
 from pathlib import Path
-from typing import List, Tuple, Union
 
 import dask.array as da
 from diffpy.structure import Atom, Lattice, Structure
-from h5py import File
+import h5py
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList
 from orix.quaternion import Rotation
@@ -54,11 +53,11 @@ footprint = ["emdata/ebsd/ebsdpatterns"]
 
 
 def file_reader(
-    filename: Union[str, Path],
-    scan_size: Union[None, int, Tuple[int, ...]] = None,
+    filename: str | Path,
+    scan_size: int | tuple[int, ...] | None = None,
     lazy: bool = False,
     **kwargs,
-) -> List[dict]:
+) -> list[dict]:
     """Read dynamically simulated electron backscatter diffraction
     patterns from EMsoft's format produced by their EMEBSD.f90 program.
 
@@ -83,7 +82,7 @@ def file_reader(
         Data, axes, metadata and original metadata.
     """
     mode = kwargs.pop("mode", "r")
-    f = File(filename, mode=mode, **kwargs)
+    f = h5py.File(filename, mode=mode, **kwargs)
 
     _check_file_format(f)
 
@@ -166,7 +165,7 @@ def file_reader(
     return [scan]
 
 
-def _check_file_format(file: File):
+def _check_file_format(file: h5py.File) -> None:
     """Return whether the HDF file is in EMsoft's format.
 
     Parameters

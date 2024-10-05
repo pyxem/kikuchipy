@@ -16,10 +16,9 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from typing import Union
 
 
-def set_log_level(level: Union[int, str]):  # pragma: no cover
+def set_log_level(level: int | str):  # pragma: no cover
     """Set level of kikuchipy logging messages.
 
     Parameters

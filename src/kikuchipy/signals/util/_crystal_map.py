@@ -19,7 +19,6 @@
 and an :class:`~kikuchipy.signals.EBSD` signal.
 """
 
-from typing import Optional, Tuple, Union
 import warnings
 
 import numpy as np
@@ -62,7 +61,7 @@ def _xmap_is_compatible_with_signal(
 
 
 # TODO: Move to orix' Phase.__eq__
-def _equal_phase(phase1: Phase, phase2: Phase) -> Tuple[bool, Union[str, None]]:
+def _equal_phase(phase1: Phase, phase2: Phase) -> tuple[bool, str | None]:
     if phase1.name != phase2.name:
         return False, "names"
 
@@ -110,8 +109,8 @@ def _equal_phase(phase1: Phase, phase2: Phase) -> Tuple[bool, Union[str, None]]:
 
 def _get_indexed_points_in_data_in_xmap(
     xmap: CrystalMap,
-    navigation_mask: Optional[np.ndarray] = None,
-) -> Tuple[np.ndarray, np.ndarray, int, Union[Tuple[int], Tuple[int, int], None]]:
+    navigation_mask: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray, int, tuple[int] | tuple[int, int] | None]:
     in_data = xmap.is_in_data.copy()
 
     if navigation_mask is not None:

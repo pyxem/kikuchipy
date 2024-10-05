@@ -18,10 +18,9 @@
 import abc
 import os
 from pathlib import Path
-from typing import List, Optional, Tuple
 
 import dask.array as da
-from h5py import Dataset, File, Group
+import h5py
 import numpy as np
 
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
@@ -35,12 +34,12 @@ class EMsoftMasterPatternReader(abc.ABC):
 
     def __init__(
         self,
-        filename: str,
-        energy: Optional[range] = None,
+        filename: str | Path,
+        energy: range | None = None,
         projection: str = "stereographic",
         hemisphere: "str" = "upper",
         lazy: bool = False,
-    ):
+    ) -> None:
         self.filename = filename
         self.energy = energy
         self.projection = projection.lower()
@@ -49,20 +48,20 @@ class EMsoftMasterPatternReader(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def diffraction_type(self):
+    def diffraction_type(self) -> str:
         return NotImplemented  # pragma: no cover
 
     @property
     @abc.abstractmethod
-    def cl_parameters_group_name(self):
+    def cl_parameters_group_name(self) -> str:
         return NotImplemented  # pragma: no cover
 
     @property
     @abc.abstractmethod
-    def energy_string(self):
+    def energy_string(self) -> str:
         return NotImplemented  # pragma: no cover
 
-    def read(self, **kwargs) -> List[dict]:
+    def read(self, **kwargs) -> list[dict]:
         """Read kikuchi diffraction master patterns.
 
         Parameters
@@ -78,7 +77,7 @@ class EMsoftMasterPatternReader(abc.ABC):
         fpath = Path(self.filename)
 
         mode = kwargs.pop("mode", "r")
-        f = File(fpath, mode=mode, **kwargs)
+        f = h5py.File(fpath, mode=mode, **kwargs)
 
         _check_file_format(f, self.diffraction_type)
 
@@ -221,7 +220,7 @@ class EMsoftMasterPatternReader(abc.ABC):
         return [output]
 
 
-def _check_file_format(file: File, diffraction_type: str):
+def _check_file_format(file: h5py.File, diffraction_type: str) -> None:
     """Raise an error if the HDF5 file is not in EMsoft's master
     pattern file format.
 
@@ -252,8 +251,8 @@ def _check_file_format(file: File, diffraction_type: str):
 def _get_data_shape_slices(
     npx: int,
     energies: np.ndarray,
-    energy: Optional[tuple] = None,
-) -> Tuple[Tuple, Tuple[slice, ...]]:
+    energy: tuple | None = None,
+) -> tuple[tuple, tuple[slice, ...]]:
     """Return data shape from half the master pattern side length,
     number of asymmetric positions if the square Lambert projection is
     to be read, and an energy or energy range.
@@ -294,7 +293,9 @@ def _get_data_shape_slices(
     return data_shape, data_slices
 
 
-def _get_datasets(data_group: Group, projection: str, hemisphere: str) -> List[Dataset]:
+def _get_datasets(
+    data_group: h5py.Group, projection: str, hemisphere: str
+) -> list[h5py.Dataset]:
     """Return datasets from projection and hemisphere.
 
     Parameters

@@ -18,7 +18,6 @@
 """Reader of EBSD data from an EDAX TSL h5ebsd file."""
 
 from pathlib import Path
-from typing import List, Union
 
 import h5py
 from orix.crystal_map import CrystalMap
@@ -66,7 +65,7 @@ class EDAXH5EBSDReader(H5EBSDReader):
         Keyword arguments passed to :class:`h5py.File`.
     """
 
-    def __init__(self, filename: str, **kwargs):
+    def __init__(self, filename: str, **kwargs) -> None:
         super().__init__(filename, **kwargs)
 
     def scan2dict(self, group: h5py.Group, lazy: bool = False) -> dict:
@@ -162,11 +161,11 @@ class EDAXH5EBSDReader(H5EBSDReader):
 
 
 def file_reader(
-    filename: Union[str, Path],
-    scan_group_names: Union[None, str, List[str]] = None,
+    filename: str | Path,
+    scan_group_names: str | list[str] | None = None,
     lazy: bool = False,
     **kwargs,
-) -> List[dict]:
+) -> list[dict]:
     """Read electron backscatter diffraction patterns, a crystal map,
     and an EBSD detector from an EDAX h5ebsd file
     :cite:`jackson2014h5ebsd`.

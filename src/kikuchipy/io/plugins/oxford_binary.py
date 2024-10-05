@@ -26,7 +26,7 @@ import logging
 import os
 from pathlib import Path
 import struct
-from typing import BinaryIO, List, Tuple, Union
+from typing import BinaryIO
 
 import dask
 import dask.array as da
@@ -35,7 +35,6 @@ import numpy as np
 from kikuchipy.signals.util._dask import get_chunking
 
 __all__ = ["file_reader"]
-
 
 _logger = logging.getLogger(__name__)
 
@@ -51,7 +50,7 @@ default_extension = 0
 writes = False
 
 
-def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
+def file_reader(filename: str | Path, lazy: bool = False) -> list[dict]:
     """Read EBSD patterns from an Oxford Instruments' binary .ebsp file.
 
     Only uncompressed patterns can be read. If only non-indexed patterns
@@ -111,7 +110,7 @@ class OxfordBinaryFileReader:
         ("n_bytes", np.int32, (1,)),
     ]
 
-    def __init__(self, file: BinaryIO):
+    def __init__(self, file: BinaryIO) -> None:
         """Prepare to read EBSD patterns from an open Oxford
         Instruments' binary .ebsp file.
         """
@@ -177,7 +176,7 @@ class OxfordBinaryFileReader:
         """Whether all or only non-indexed patterns are stored in the
         file.
         """
-        return self.pattern_is_present.all()
+        return bool(self.pattern_is_present.all())
 
     @property
     def data_shape(self) -> tuple:
@@ -269,7 +268,7 @@ class OxfordBinaryFileReader:
             offset=self.first_pattern_position,
         )
 
-    def get_navigation_shape_and_step_size(self) -> Tuple[int, int, int]:
+    def get_navigation_shape_and_step_size(self) -> tuple[int, int, int]:
         """Return the navigation shape and step size.
 
         An equal step size between rows and columns is assumed.
@@ -322,7 +321,7 @@ class OxfordBinaryFileReader:
         self.file.seek(self.pattern_starts_byte_position)
         return np.fromfile(self.file, dtype=np.int64, count=self.n_patterns)
 
-    def get_pattern_footer_dtype(self, offset: int) -> List[tuple]:
+    def get_pattern_footer_dtype(self, offset: int) -> list[tuple]:
         """Return the pattern footer data types to be used when memory
         mapping.
 
@@ -359,7 +358,7 @@ class OxfordBinaryFileReader:
             self.pattern_footer_size = 0
         return list(footer_dtype)
 
-    def get_patterns(self, lazy: bool) -> Union[np.ndarray, da.Array]:
+    def get_patterns(self, lazy: bool) -> np.ndarray | da.Array:
         """Return the EBSD patterns in the file.
 
         The patterns are read from the memory map. They are sorted into
@@ -416,7 +415,7 @@ class OxfordBinaryFileReader:
         self.file.seek(offset + self.pattern_header_size + self.n_bytes)
         return np.fromfile(self.file, dtype=self.pattern_footer_dtype, count=1)
 
-    def get_single_pattern_header(self, offset: int) -> Tuple[bool, int, int, int]:
+    def get_single_pattern_header(self, offset: int) -> tuple[bool, int, int, int]:
         """Return a single pattern header.
 
         Parameters

@@ -15,16 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Tuple, Union
-
 import numpy as np
 
 
 def grid_indices(
-    grid_shape: Union[Tuple[int, int], int],
-    nav_shape: Union[Tuple[int, int], int],
+    grid_shape: tuple[int, int] | int,
+    nav_shape: tuple[int, int] | int,
     return_spacing: bool = False,
-) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
     """Return indices of a grid evenly spaced in a larger grid of max.
     two dimensions.
 

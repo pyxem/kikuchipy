@@ -18,7 +18,6 @@
 """Reader of EBSD data from a Bruker Nano h5ebsd file."""
 
 from pathlib import Path
-from typing import List, Union
 
 import h5py
 import numpy as np
@@ -67,7 +66,7 @@ class BrukerH5EBSDReader(H5EBSDReader):
         Keyword arguments passed to :class:`h5py.File`.
     """
 
-    def __init__(self, filename: str, **kwargs):
+    def __init__(self, filename: str, **kwargs) -> None:
         super().__init__(filename, **kwargs)
 
     def scan2dict(self, group: h5py.Group, lazy: bool = False) -> dict:
@@ -198,10 +197,10 @@ class BrukerH5EBSDReader(H5EBSDReader):
         return scan_dict
 
 
-def _bruker_roi_is_rectangular(iy, ix):
+def _bruker_roi_is_rectangular(iy: int, ix: int) -> tuple[int, int, bool]:
     iy_unique, iy_unique_counts = np.unique(iy, return_counts=True)
     ix_unique, ix_unique_counts = np.unique(ix, return_counts=True)
-    is_rectangular = (
+    is_rectangular = bool(
         np.all(np.diff(np.sort(iy_unique)) == 1)
         and np.all(np.diff(np.sort(ix_unique)) == 1)
         and np.unique(iy_unique_counts).size == 1
@@ -213,11 +212,11 @@ def _bruker_roi_is_rectangular(iy, ix):
 
 
 def file_reader(
-    filename: Union[str, Path],
-    scan_group_names: Union[None, str, List[str]] = None,
+    filename: str | Path,
+    scan_group_names: str | list[str] | None = None,
     lazy: bool = False,
     **kwargs,
-) -> List[dict]:
+) -> list[dict]:
     """Read electron backscatter diffraction patterns, a crystal map,
     and an EBSD detector from a Bruker h5ebsd file
     :cite:`jackson2014h5ebsd`.

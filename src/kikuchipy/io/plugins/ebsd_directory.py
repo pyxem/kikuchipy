@@ -22,7 +22,6 @@ import logging
 import os
 from pathlib import Path
 import re
-from typing import Dict, List, Optional, Union
 import warnings
 
 import dask
@@ -50,11 +49,11 @@ writes = False
 
 
 def file_reader(
-    filename: Union[str, Path],
-    xy_pattern: Optional[str] = None,
-    show_progressbar: Optional[bool] = None,
+    filename: str | Path,
+    xy_pattern: str | None = None,
+    show_progressbar: bool | None = None,
     lazy: bool = False,
-) -> List[Dict]:
+) -> list[dict]:
     r"""Read all images in a directory, assuming they are electron
     backscatter diffraction (EBSD) patterns of equal shape and data
     type.

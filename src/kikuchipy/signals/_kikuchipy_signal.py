@@ -20,7 +20,7 @@ import gc
 import logging
 import numbers
 import os
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any
 import warnings
 
 import dask.array as da
@@ -78,16 +78,16 @@ class KikuchipySignal2D(Signal2D):
     def rescale_intensity(
         self,
         relative: bool = False,
-        in_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        out_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        dtype_out: Union[
-            str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
-        ] = None,
-        percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        show_progressbar: Optional[bool] = None,
+        in_range: tuple[int, int] | tuple[float, float] | None = None,
+        out_range: tuple[int, int] | tuple[float, float] | None = None,
+        dtype_out: (
+            str | np.dtype | type | tuple[int, int] | tuple[float, float] | None
+        ) = None,
+        percentiles: tuple[int, int] | tuple[float, float] | None = None,
+        show_progressbar: bool | None = None,
         inplace: bool = True,
-        lazy_output: Optional[bool] = None,
-    ) -> Union[None, Any]:
+        lazy_output: bool | None = None,
+    ) -> Any | None:
         """Rescale image intensities.
 
         Output min./max. intensity is determined from ``out_range`` or
@@ -237,11 +237,11 @@ class KikuchipySignal2D(Signal2D):
         self,
         num_std: int = 1,
         divide_by_square_root: bool = False,
-        dtype_out: Union[str, np.dtype, type, None] = None,
-        show_progressbar: Optional[bool] = None,
+        dtype_out: str | np.dtype | type | None = None,
+        show_progressbar: bool | None = None,
         inplace: bool = True,
-        lazy_output: Optional[bool] = None,
-    ) -> Union[None, Any]:
+        lazy_output: bool | None = None,
+    ) -> Any | None:
         """Normalize image intensities to a mean of zero with a given
         standard deviation.
 
@@ -329,13 +329,13 @@ class KikuchipySignal2D(Signal2D):
 
     def adaptive_histogram_equalization(
         self,
-        kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
-        clip_limit: Union[int, float] = 0,
+        kernel_size: tuple[int, int] | list[int] | None = None,
+        clip_limit: int | float = 0.0,
         nbins: int = 128,
-        show_progressbar: Optional[bool] = None,
+        show_progressbar: bool | None = None,
         inplace: bool = True,
-        lazy_output: Optional[bool] = None,
-    ) -> Union[None, Any]:
+        lazy_output: bool | None = None,
+    ) -> Any | None:
         """Enhance the local contrast using adaptive histogram
         equalization.
 
@@ -504,7 +504,7 @@ class KikuchipySignal2D(Signal2D):
         make_deepcopy: bool = False,
         make_lazy: bool = False,
         unmake_lazy: bool = False,
-    ):
+    ) -> None:
         """Set custom attributes not in ``Signal2D``.
 
         This is a quick way to set all custom attributes of a class
@@ -578,7 +578,7 @@ class KikuchipySignal2D(Signal2D):
 
         return s_new
 
-    def _assign_subclass(self):
+    def _assign_subclass(self) -> None:
         attrs = self._custom_attributes
 
         super()._assign_subclass()
