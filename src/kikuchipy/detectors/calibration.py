@@ -18,7 +18,6 @@
 """Calibration of the EBSD projection/pattern center."""
 
 from itertools import combinations
-from typing import List, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -77,13 +76,13 @@ class PCCalibrationMovingScreen:
         self,
         pattern_in: np.ndarray,
         pattern_out: np.ndarray,
-        points_in: Union[np.ndarray, List[Tuple[float]]],
-        points_out: Union[np.ndarray, List[Tuple[float]]],
+        points_in: np.ndarray | list[tuple[float]],
+        points_out: np.ndarray | list[tuple[float]],
         delta_z: float = 1.0,
-        px_size: Optional[float] = None,
+        px_size: float | None = None,
         binning: int = 1,
         convention: str = "tsl",
-    ):
+    ) -> None:
         """Create an instance storing the PC estimates, the average PC,
         and other parameters relevant for the estimation.
         """
@@ -98,7 +97,7 @@ class PCCalibrationMovingScreen:
         self.make_lines()
 
     @property
-    def shape(self) -> Tuple[int, int]:
+    def shape(self) -> tuple[int, int]:
         """Return the detector shape, (nrows, ncols)."""
         return self.patterns[0].shape
 
@@ -253,13 +252,13 @@ class PCCalibrationMovingScreen:
 
     def plot(
         self,
-        pattern_kwargs: dict = dict(cmap="gray"),
-        line_kwargs: dict = dict(linewidth=2, zorder=1),
-        scatter_kwargs: dict = dict(zorder=2),
-        pc_kwargs: dict = dict(marker="*", s=300, facecolor="gold", edgecolor="k"),
+        pattern_kwargs: dict | None = None,
+        line_kwargs: dict | None = None,
+        scatter_kwargs: dict | None = None,
+        pc_kwargs: dict | None = None,
         return_figure: bool = False,
         **kwargs: dict,
-    ) -> Union[None, Tuple[plt.Figure, List[plt.Axes]]]:
+    ) -> None | tuple[plt.Figure, list[plt.Axes]]:
         """A convenience method of three images, the first two with the
         patterns with points and lines annotated, and the third with the
         calibration results.
@@ -289,6 +288,15 @@ class PCCalibrationMovingScreen:
         fig
             Figure, returned if ``return_figure=True``.
         """
+        if pattern_kwargs is None:
+            pattern_kwargs = {"cmap": "gray"}
+        if line_kwargs is None:
+            line_kwargs = {"linewidth": 2, "zorder": 1}
+        if scatter_kwargs is None:
+            scatter_kwargs = {"zorder": 2}
+        if pc_kwargs is None:
+            pc_kwargs = {"marker": "*", "s": 300, "facecolor": "gold", "edgecolor": "k"}
+
         pat1, pat2 = self.patterns
         points1, points2 = self.points
         px = self.pxy[0]
@@ -335,7 +343,7 @@ class PCCalibrationMovingScreen:
         if return_figure:
             return fig
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         name = self.__class__.__name__
         points = np.array_str(self.points, precision=0)
         pcx, pcy, pcz = self.pc
@@ -346,9 +354,8 @@ class PCCalibrationMovingScreen:
 
 
 def _get_intersection_from_lines(
-    line1: Union[List[int], np.ndarray],
-    line2: Union[List[int], np.ndarray],
-) -> Tuple[float, float]:
+    line1: list[int] | np.ndarray, line2: list[int] | np.ndarray
+) -> tuple[float, float]:
     """line: [x1, y1, x2, y2]"""
     x1, y1, x2, y2 = line1
     x3, y3, x4, y4 = line2

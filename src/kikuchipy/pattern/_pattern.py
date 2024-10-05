@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable
 
 from numba import njit
 import numpy as np
@@ -30,10 +30,10 @@ from kikuchipy.filters.window import Window
 
 def rescale_intensity(
     pattern: np.ndarray,
-    in_range: Optional[Tuple[Union[int, float], ...]] = None,
-    out_range: Optional[Tuple[Union[int, float], ...]] = None,
-    dtype_out: Union[str, np.dtype, type, None] = None,
-    percentiles: Union[None, Tuple[int, int], Tuple[float, float]] = None,
+    in_range: tuple[int | float, ...] | None = None,
+    out_range: tuple[int | float, ...] | None = None,
+    dtype_out: str | np.dtype | type | None = None,
+    percentiles: tuple[int, int] | tuple[float, float] | None = None,
 ) -> np.ndarray:
     """Rescale intensities in an EBSD pattern.
 
@@ -96,10 +96,10 @@ def rescale_intensity(
 @njit(cache=True, nogil=True, fastmath=True)
 def _rescale_with_min_max(
     pattern: np.ndarray,
-    imin: Union[int, float],
-    imax: Union[int, float],
-    omin: Union[int, float],
-    omax: Union[int, float],
+    imin: int | float,
+    imax: int | float,
+    omin: int | float,
+    omax: int | float,
 ) -> np.ndarray:
     """Rescale a pattern to a certain intensity range.
 
@@ -134,17 +134,17 @@ def _rescale_without_min_max_1d_float32(pattern: np.ndarray) -> np.ndarray:
 
 
 @njit("Tuple((float32[:], float32))(float32[:])", cache=True, nogil=True, fastmath=True)
-def _zero_mean_sum_square_1d_float32(pattern: np.ndarray) -> Tuple[np.ndarray, float]:
+def _zero_mean_sum_square_1d_float32(pattern: np.ndarray) -> tuple[np.ndarray, float]:
     pattern -= np.mean(pattern)
     return pattern, np.square(pattern).sum()
 
 
-def _zero_mean(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
+def _zero_mean(patterns: np.ndarray, axis: int | tuple[int, ...]) -> np.ndarray:
     patterns_mean = np.nanmean(patterns, axis=axis, keepdims=True)
     return patterns - patterns_mean
 
 
-def _normalize(patterns: np.ndarray, axis: Union[int, tuple]) -> np.ndarray:
+def _normalize(patterns: np.ndarray, axis: int | tuple[int, ...]) -> np.ndarray:
     patterns_squared = patterns**2
     patterns_norm = np.nansum(patterns_squared, axis=axis, keepdims=True)
     patterns_norm_squared = patterns_norm**0.5
@@ -155,7 +155,7 @@ def normalize_intensity(
     pattern: np.ndarray,
     num_std: int = 1,
     divide_by_square_root: bool = False,
-    dtype_out: Union[type, None] = None,
+    dtype_out: type | None = None,
 ) -> np.ndarray:
     """Normalize image intensities to a mean of zero and a given
     standard deviation.
@@ -212,7 +212,7 @@ def _normalize_intensity(
 
 def fft(
     pattern: np.ndarray,
-    apodization_window: Union[None, np.ndarray, Window] = None,
+    apodization_window: np.ndarray | Window | None = None,
     shift: bool = False,
     real_fft_only: bool = False,
     **kwargs,
@@ -311,8 +311,8 @@ def ifft(
 
 def fft_filter(
     pattern: np.ndarray,
-    transfer_function: Union[np.ndarray, Window],
-    apodization_window: Union[None, np.ndarray, Window] = None,
+    transfer_function: np.ndarray | Window,
+    apodization_window: np.ndarray | Window | None = None,
     shift: bool = False,
 ) -> np.ndarray:
     """Filter an EBSD patterns in the frequency domain.
@@ -362,7 +362,7 @@ def fft_spectrum(fft_pattern: np.ndarray) -> np.ndarray:
     return np.sqrt(fft_pattern.real**2 + fft_pattern.imag**2)
 
 
-def fft_frequency_vectors(shape: Tuple[int, int]) -> np.ndarray:
+def fft_frequency_vectors(shape: tuple[int, int]) -> np.ndarray:
     """Get the frequency vectors in a Fourier Transform spectrum.
 
     Parameters
@@ -394,8 +394,8 @@ def _remove_static_background_subtract(
     pattern: np.ndarray,
     static_bg: np.ndarray,
     dtype_out: np.dtype,
-    omin: Union[int, float],
-    omax: Union[int, float],
+    omin: int | float,
+    omax: int | float,
     scale_bg: bool,
 ) -> np.ndarray:
     """Remove static background from a pattern by subtraction."""
@@ -417,8 +417,8 @@ def _remove_static_background_divide(
     pattern: np.ndarray,
     static_bg: np.ndarray,
     dtype_out: np.dtype,
-    omin: Union[int, float],
-    omax: Union[int, float],
+    omin: int | float,
+    omax: int | float,
     scale_bg: bool,
 ) -> np.ndarray:
     """Remove static background from a pattern by division."""
@@ -440,8 +440,8 @@ def _remove_dynamic_background(
     filter_func: Callable,
     operation: str,
     dtype_out: np.dtype,
-    omin: Union[int, float],
-    omax: Union[int, float],
+    omin: int | float,
+    omax: int | float,
     **kwargs,
 ) -> np.ndarray:
     """Remove dynamic background from a pattern.
@@ -485,8 +485,8 @@ def _remove_dynamic_background(
 def _remove_background_subtract(
     pattern: np.ndarray,
     background: np.ndarray,
-    omin: Union[int, float],
-    omax: Union[int, float],
+    omin: int | float,
+    omax: int | float,
 ) -> np.ndarray:
     """Remove background from pattern by subtraction and rescale."""
     pattern -= background
@@ -499,8 +499,8 @@ def _remove_background_subtract(
 def _remove_background_divide(
     pattern: np.ndarray,
     background: np.ndarray,
-    omin: Union[int, float],
-    omax: Union[int, float],
+    omin: int | float,
+    omax: int | float,
 ) -> np.ndarray:
     """Remove background from pattern by division and rescale."""
     pattern /= background
@@ -513,11 +513,11 @@ def remove_dynamic_background(
     pattern: np.ndarray,
     operation: str = "subtract",
     filter_domain: str = "frequency",
-    std: Union[None, int, float] = None,
-    truncate: Union[int, float] = 4.0,
-    dtype_out: Union[
-        str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
-    ] = None,
+    std: int | float | None = None,
+    truncate: int | float = 4.0,
+    dtype_out: (
+        str | np.dtype | type | tuple[int, int] | tuple[float, float] | None
+    ) = None,
 ) -> np.ndarray:
     """Remove the dynamic background in an EBSD pattern.
 
@@ -602,11 +602,11 @@ def remove_dynamic_background(
 
 
 def _dynamic_background_frequency_space_setup(
-    pattern_shape: Union[List[int], Tuple[int, int]],
-    std: Union[int, float],
-    truncate: Union[int, float],
-) -> Tuple[
-    Tuple[int, int], Tuple[int, int], np.ndarray, Tuple[int, int], Tuple[int, int]
+    pattern_shape: list[int] | tuple[int, int],
+    std: int | float,
+    truncate: int | float,
+) -> tuple[
+    tuple[int, int], tuple[int, int], np.ndarray, tuple[int, int], tuple[int, int]
 ]:
     # Get Gaussian filtering window
     shape = (int(truncate * std),) * 2
@@ -634,8 +634,8 @@ def _dynamic_background_frequency_space_setup(
 def get_dynamic_background(
     pattern: np.ndarray,
     filter_domain: str = "frequency",
-    std: Union[None, int, float] = None,
-    truncate: Union[int, float] = 4.0,
+    std: int | float | None = None,
+    truncate: int | float = 4.0,
 ) -> np.ndarray:
     """Get the dynamic background in an EBSD pattern.
 
@@ -698,8 +698,8 @@ def get_dynamic_background(
 def get_image_quality(
     pattern: np.ndarray,
     normalize: bool = True,
-    frequency_vectors: Optional[np.ndarray] = None,
-    inertia_max: Union[None, int, float] = None,
+    frequency_vectors: np.ndarray | None = None,
+    inertia_max: int | float | None = None,
 ) -> float:
     """Return the image quality of an EBSD pattern.
 
@@ -795,8 +795,8 @@ def _bin2d(pattern: np.ndarray, factor: int) -> np.ndarray:
 def _downsample2d(
     pattern: np.ndarray,
     factor: int,
-    omin: Union[int, float],
-    omax: Union[int, float],
+    omin: int | float,
+    omax: int | float,
     dtype_out: np.dtype,
 ) -> np.ndarray:
     pattern = pattern.astype(np.float32)
@@ -809,8 +809,8 @@ def _downsample2d(
 
 def _adaptive_histogram_equalization(
     image: np.ndarray,
-    kernel_size: Union[Tuple[int, int], List[int]],
-    clip_limit: Union[int, float] = 0,
+    kernel_size: tuple[int, int] | list[int],
+    clip_limit: int | float = 0,
     nbins: int = 128,
 ) -> np.ndarray:
     """Local contrast enhancement with adaptive histogram equalization.

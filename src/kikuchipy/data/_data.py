@@ -17,7 +17,6 @@
 
 import os
 from pathlib import Path
-from typing import Optional, Union
 
 import hyperspy.api as hs
 import pooch
@@ -75,7 +74,7 @@ def nickel_ebsd_small(**kwargs) -> EBSD:
 
 
 def nickel_ebsd_large(
-    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
+    allow_download: bool = False, show_progressbar: bool | None = None, **kwargs
 ) -> EBSD:
     """4125 EBSD patterns in a (55, 75) navigation shape of (60, 60)
     pixels from nickel, acquired on a NORDIF UF-1100 detector
@@ -123,7 +122,7 @@ def nickel_ebsd_large(
 def ni_gain(
     number: int = 1,
     allow_download: bool = False,
-    show_progressbar: Optional[bool] = None,
+    show_progressbar: bool | None = None,
     **kwargs,
 ) -> EBSD:
     """EBSD dataset of (149, 200) patterns of (60, 60) pixels from
@@ -189,7 +188,7 @@ def ni_gain(
 def ni_gain_calibration(
     number: int = 1,
     allow_download: bool = False,
-    show_progressbar: Optional[bool] = None,
+    show_progressbar: bool | None = None,
     **kwargs,
 ) -> EBSD:
     """A few EBSD calibration patterns of (480, 480) pixels from
@@ -251,13 +250,13 @@ def ni_gain_calibration(
     )
     file_path = NiGainCalibration.fetch_file_path(allow_download, show_progressbar)
 
-    return load(file_path, **kwargs)  # pragma: no cover
+    return load(file_path, **kwargs)
 
 
 def si_ebsd_moving_screen(
     distance: int = 0,
     allow_download: bool = False,
-    show_progressbar: Optional[bool] = None,
+    show_progressbar: bool | None = None,
     **kwargs,
 ) -> EBSD:
     """One EBSD pattern of (480, 480) pixels from a single crystal
@@ -322,7 +321,7 @@ def si_ebsd_moving_screen(
 
 
 def si_wafer(
-    allow_download: bool = False, show_progressbar: Optional[bool] = None, **kwargs
+    allow_download: bool = False, show_progressbar: bool | None = None, **kwargs
 ) -> EBSD:
     """EBSD dataset of (50, 50) patterns of (480, 480) pixels from a
     single crystal silicon wafer, acquired on a NORDIF UF-420 detector
@@ -375,7 +374,7 @@ def si_wafer(
     """
     SiWafer = Dataset("si_wafer/Pattern.dat", collection_name="ebsd_si_wafer.zip")
     file_path = SiWafer.fetch_file_path(allow_download, show_progressbar)
-    return load(file_path, **kwargs)  # pragma: no cover
+    return load(file_path, **kwargs)
 
 
 # ---------------------------- Simulations --------------------------- #
@@ -446,7 +445,7 @@ def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
 def ebsd_master_pattern(
     phase: str,
     allow_download: bool = False,
-    show_progressbar: Optional[bool] = None,
+    show_progressbar: bool | None = None,
     **kwargs,
 ) -> EBSDMasterPattern:
     r"""EBSD master pattern of an available phase of (1001, 1001) pixel
@@ -522,7 +521,7 @@ def ebsd_master_pattern(
     dset = Dataset("ebsd_master_pattern/" + datasets[phase.lower()])
     file_path = dset.fetch_file_path(allow_download, show_progressbar)
 
-    return load(file_path, **kwargs)  # pragma: no cover
+    return load(file_path, **kwargs)
 
 
 class Dataset:
@@ -530,12 +529,12 @@ class Dataset:
     file_package_path: Path
     file_cache_path: Path
     expected_md5_hash: str = ""
-    collection_name: Optional[str] = None
+    collection_name: str | None = None
 
     def __init__(
         self,
-        file_relpath: Union[Path, str],
-        collection_name: Optional[str] = None,
+        file_relpath: Path | str,
+        collection_name: str | None = None,
     ) -> None:
         if isinstance(file_relpath, str):
             file_relpath = Path(file_relpath)
@@ -581,28 +580,28 @@ class Dataset:
         return self.file_path.as_posix()
 
     @property
-    def md5_hash(self) -> Union[str, None]:
+    def md5_hash(self) -> str | None:
         if self.file_path.exists():
             return pooch.file_hash(self.file_path_str, alg="md5")
         else:
-            return None
+            return
 
     @property
     def has_correct_hash(self) -> bool:
         return self.md5_hash == self.expected_md5_hash.split(":")[1]
 
     @property
-    def url(self) -> Union[str, None]:
+    def url(self) -> str | None:
         if self.file_relpath_str in registry_urls:
             return registry_urls[self.file_relpath_str]
         elif self.is_in_collection and "data/" + self.collection_name in registry_urls:
             return registry_urls["data/" + self.collection_name]
         else:
-            return None
+            return
 
     def fetch_file_path_from_collection(
         self, downloader: pooch.HTTPDownloader
-    ) -> file_path:  # pragma: no cover
+    ) -> file_path:
         file_paths = marshall.fetch(
             "data/" + self.collection_name,
             downloader=downloader,
@@ -627,7 +626,7 @@ class Dataset:
         return self.file_relpath_str
 
     def fetch_file_path(
-        self, allow_download: bool = False, show_progressbar: Optional[bool] = None
+        self, allow_download: bool = False, show_progressbar: bool | None = None
     ) -> str:
         if show_progressbar is None:
             show_progressbar = hs.preferences.General.show_progressbar
@@ -637,7 +636,7 @@ class Dataset:
             if self.has_correct_hash:
                 # Bypass pooch since the file is not in the cache
                 return self.file_path_str
-            else:  # pragma: no cover
+            else:
                 raise AttributeError(
                     f"File {self.file_path_str} has incorrect MD5 hash {self.md5_hash}"
                     f", while {self.expected_md5_hash.split(':')[1]} was expected. This"
@@ -647,19 +646,19 @@ class Dataset:
         elif self.is_in_cache:
             if self.has_correct_hash:
                 file_path = self.file_relpath_str
-            elif allow_download:  # pragma: no cover
+            elif allow_download:
                 if self.is_in_collection:
                     file_path = self.fetch_file_path_from_collection(downloader)
                 else:
                     file_path = self.file_relpath_str
-            else:  # pragma: no cover
+            else:
                 raise ValueError(
                     f"File {self.file_path_str} must be re-downloaded from the "
                     f"repository file {self.url} to your local cache {marshall.path}. "
                     "Pass `allow_download=True` to allow this re-download."
                 )
         else:
-            if allow_download:  # pragma: no cover
+            if allow_download:
                 if self.is_in_collection:
                     file_path = self.fetch_file_path_from_collection(downloader)
                 else:

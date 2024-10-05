@@ -16,7 +16,6 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 from math import copysign
-from typing import List, Optional, Union
 import warnings
 
 import numpy as np
@@ -27,12 +26,12 @@ from kikuchipy.signals.util._crystal_map import _equal_phase
 
 
 def merge_crystal_maps(
-    crystal_maps: List[CrystalMap],
+    crystal_maps: list[CrystalMap],
     mean_n_best: int = 1,
-    greater_is_better: Optional[int] = None,
+    greater_is_better: int | None = None,
     scores_prop: str = "scores",
-    simulation_indices_prop: Optional[str] = None,
-    navigation_masks: Optional[List[Union[None, np.ndarray]]] = None,
+    simulation_indices_prop: str | None = None,
+    navigation_masks: list[np.ndarray | None] | None = None,
 ) -> CrystalMap:
     """Return a multi phase :class:`~orix.crystal_map.CrystalMap` by
     merging maps of 1D or 2D navigation shape based on scores.

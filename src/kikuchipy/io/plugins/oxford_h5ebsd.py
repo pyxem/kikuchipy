@@ -20,7 +20,6 @@
 
 import logging
 from pathlib import Path
-from typing import List, Union
 
 import h5py
 import numpy as np
@@ -68,7 +67,7 @@ class OxfordH5EBSDReader(H5EBSDReader):
         Keyword arguments passed to :class:`h5py.File`.
     """
 
-    def __init__(self, filename: str, **kwargs):
+    def __init__(self, filename: str | Path, **kwargs) -> None:
         super().__init__(filename, **kwargs)
 
     def scan2dict(self, group: h5py.Group, lazy: bool = False) -> dict:
@@ -173,11 +172,11 @@ class OxfordH5EBSDReader(H5EBSDReader):
 
 
 def file_reader(
-    filename: Union[str, Path],
-    scan_group_names: Union[None, str, List[str]] = None,
+    filename: str | Path,
+    scan_group_names: str | list[str] | None = None,
     lazy: bool = False,
     **kwargs,
-) -> List[dict]:
+) -> list[dict]:
     """Read electron backscatter diffraction patterns, a crystal map,
     and an EBSD detector from an Oxford Instruments h5ebsd (H5OINA) file
     :cite:`jackson2014h5ebsd`.

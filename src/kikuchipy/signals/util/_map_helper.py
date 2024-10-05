@@ -19,7 +19,7 @@
 and their neighbours in a map of a 1D or 2D navigation shape.
 """
 
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable
 
 import numpy as np
 from scipy.ndimage import generic_filter
@@ -35,9 +35,9 @@ from kikuchipy.pattern._pattern import _normalize, _zero_mean
 def _map_helper(
     patterns: np.ndarray,
     map_function: Callable,
-    window: Union[np.ndarray, Window],
+    window: np.ndarray | Window,
     nav_shape: tuple,
-    dtype_out: np.dtype = np.float32,
+    dtype_out: np.dtype | type = np.float32,
     **kwargs,
 ) -> np.ndarray:
     """Return output of :func:`scipy.ndimage.generic_filter` after
@@ -102,9 +102,9 @@ def _neighbour_dot_products(
     center_index: int,
     zero_mean: bool,
     normalize: bool,
-    flat_window_truthy_indices: Optional[np.ndarray] = None,
-    output: Optional[np.ndarray] = None,
-) -> Union[float, int, np.ndarray]:
+    flat_window_truthy_indices: np.ndarray | None = None,
+    output: np.ndarray | None = None,
+) -> float | int | np.ndarray:
     """Return either an average of a dot product matrix between a
     pattern and it's neighbours, or the matrix.
 
@@ -308,7 +308,7 @@ def _get_average_dot_product_map(
     return adp
 
 
-def _setup_window_indices(window: Window) -> Tuple[np.ndarray, np.ndarray, int]:
+def _setup_window_indices(window: Window) -> tuple[np.ndarray, np.ndarray, int]:
     # Index of window origin in flattened window
     flat_window_origin = np.ravel_multi_index(window.origin, window.shape)
 

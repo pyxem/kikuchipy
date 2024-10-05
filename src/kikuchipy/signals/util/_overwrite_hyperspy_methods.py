@@ -20,12 +20,12 @@
 import functools
 import inspect
 import re
-from typing import Callable, List, Union
+from typing import Callable
 
 
 def get_parameters(
-    method: Callable, params_of_interest: List[str], args: tuple, kwargs: dict
-) -> Union[dict, None]:
+    method: Callable, params_of_interest: list[str], args: tuple, kwargs: dict
+) -> dict | None:
     sig = inspect.signature(method)
 
     params = {}
@@ -73,12 +73,12 @@ class insert_doc_disclaimer:
         Method, e.g. rebin.
     """
 
-    def __init__(self, cls, meth):
+    def __init__(self, cls, meth: Callable) -> None:
         self.cls_name = cls.__name__
         self.doc = meth.__doc__
         self.name = meth.__name__
 
-    def __call__(self, func):
+    def __call__(self, func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             return func(*args, **kwargs)
@@ -86,7 +86,7 @@ class insert_doc_disclaimer:
         wrapper.__doc__ = self._insert_doc_disclaimer()
         return wrapper
 
-    def _insert_doc_disclaimer(self):
+    def _insert_doc_disclaimer(self) -> str | None:
         doc = self.doc
         if doc is None:
             return doc

@@ -58,7 +58,7 @@
 patterns into a detector.
 """
 
-from typing import TYPE_CHECKING, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 
 import numba as nb
 from numba import njit
@@ -79,7 +79,7 @@ TWO_OVER_SQRT_PI = 2 / SQRT_PI
 
 
 def _get_direction_cosines_from_detector(
-    detector: "EBSDDetector", signal_mask: Optional[np.ndarray] = None
+    detector: "EBSDDetector", signal_mask: np.ndarray | None = None
 ) -> np.ndarray:
     """Return direction cosines for one or more projection centers
     (PCs).
@@ -131,7 +131,7 @@ def _get_direction_cosines_from_detector(
 )
 def _get_cosine_sine_of_alpha_and_azimuthal(
     sample_tilt: float, tilt: float, azimuthal: float
-) -> Tuple[float, float, float, float]:
+) -> tuple[float, float, float, float]:
     alpha = (np.pi / 2) - np.deg2rad(sample_tilt) + np.deg2rad(tilt)
     azimuthal = np.deg2rad(azimuthal)
     return np.cos(alpha), np.sin(alpha), np.cos(azimuthal), np.sin(azimuthal)
@@ -352,9 +352,9 @@ def _project_patterns_from_master_pattern_with_fixed_pc(
     npy: int,
     scale: float,
     rescale: bool,
-    out_min: Union[int, float],
-    out_max: Union[int, float],
-    dtype_out: Optional[type] = np.float32,
+    out_min: int | float,
+    out_max: int | float,
+    dtype_out: np.dtype | type | None = np.float32,
 ) -> np.ndarray:
     """Return one or more simulated EBSD patterns projected from a
     master pattern with a fixed projection center (PC).
@@ -427,9 +427,9 @@ def _project_patterns_from_master_pattern_with_varying_pc(
     npy: int,
     scale: float,
     rescale: bool,
-    out_min: Union[int, float],
-    out_max: Union[int, float],
-    dtype_out: Optional[type] = np.float32,
+    out_min: int | float,
+    out_max: int | float,
+    dtype_out: np.dtype | type | None = np.float32,
 ) -> np.ndarray:
     """Return simulated EBSD patterns projected from a master pattern
     with varying projection centers (PCs).
@@ -502,8 +502,8 @@ def _project_single_pattern_from_master_pattern(
     npy: int,
     scale: float,
     rescale: bool,
-    out_min: Union[int, float],
-    out_max: Union[int, float],
+    out_min: int | float,
+    out_max: int | float,
     dtype_out: type,
 ) -> np.ndarray:
     """Return a single 1D EBSD pattern projected from a master pattern.
@@ -629,7 +629,7 @@ def _get_lambert_interpolation_parameters(
     npx: int,
     npy: int,
     scale: float,
-) -> Tuple[
+) -> tuple[
     np.ndarray,
     np.ndarray,
     np.ndarray,

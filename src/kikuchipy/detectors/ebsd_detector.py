@@ -22,8 +22,9 @@ from datetime import datetime
 import logging
 from pathlib import Path
 import re
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 
+from diffsims.crystallography import ReciprocalLatticeVector
 from matplotlib.figure import Figure
 from matplotlib.markers import MarkerStyle
 import matplotlib.patches as mpatches
@@ -42,18 +43,22 @@ from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
 
 if TYPE_CHECKING:  # pragma: no cover
     from diffsims.crystallography import ReciprocalLatticeVector
-    from pyebsdindex import EBSDIndexer
+
+    from kikuchipy.constants import installed
+
+    if installed["pyebsdindex"]:
+        from pyebsdindex.ebsd_index import EBSDIndexer
 
 
 _logger = logging.getLogger(__name__)
 
-CONVENTION_ALIAS = {
+CONVENTION_ALIAS: dict[str, list[str]] = {
     "bruker": ["bruker"],
     "tsl": ["edax", "tsl", "amatek"],
     "oxford": ["oxford", "aztec"],
     "emsoft": ["emsoft", "emsoft4", "emsoft5"],
 }
-CONVENTION_ALIAS_ALL = list(np.concatenate(list(CONVENTION_ALIAS.values())))
+CONVENTION_ALIAS_ALL: list = list(np.concatenate(list(CONVENTION_ALIAS.values())))
 
 
 class EBSDDetector:
@@ -194,14 +199,14 @@ class EBSDDetector:
 
     def __init__(
         self,
-        shape: Tuple[int, int] = (1, 1),
-        px_size: float = 1,
+        shape: tuple[int, int] = (1, 1),
+        px_size: float = 1.0,
         binning: int = 1,
-        tilt: float = 0,
-        azimuthal: float = 0,
-        sample_tilt: float = 70,
-        pc: Union[np.ndarray, list, tuple] = (0.5, 0.5, 0.5),
-        convention: Optional[str] = None,
+        tilt: float = 0.0,
+        azimuthal: float = 0.0,
+        sample_tilt: float = 70.0,
+        pc: np.ndarray | list | tuple = (0.5, 0.5, 0.5),
+        convention: str | None = None,
     ) -> None:
         """Create an EBSD detector with a shape, pixel size, binning
         factor, sample and detector tilt about the detector X axis,
@@ -210,7 +215,7 @@ class EBSDDetector:
         """
         self.shape = shape
         self.px_size = float(px_size)
-        self.binning = float(binning)
+        self.binning: float = float(binning)
         self.tilt = float(tilt)
         self.azimuthal = float(azimuthal)
         self.sample_tilt = float(sample_tilt)
@@ -238,7 +243,7 @@ class EBSDDetector:
         )
 
     @property
-    def specimen_scintillator_distance(self) -> float:
+    def specimen_scintillator_distance(self) -> np.ndarray:
         """Return the specimen to scintillator distance, known in EMsoft
         as :math:`L`.
         """
@@ -275,7 +280,7 @@ class EBSDDetector:
         return self.ncols / self.nrows
 
     @property
-    def unbinned_shape(self) -> Tuple[int, int]:
+    def unbinned_shape(self) -> tuple[int, int]:
         """Return the unbinned detector shape in pixels."""
         return tuple(np.array(self.shape) * self.binning)
 
@@ -298,7 +303,7 @@ class EBSDDetector:
         return self._pc
 
     @pc.setter
-    def pc(self, value: Union[np.ndarray, List, Tuple]):
+    def pc(self, value: np.ndarray | list | tuple) -> None:
         """Set all projection center coordinates, assuming Bruker's
         convention.
         """
@@ -325,7 +330,7 @@ class EBSDDetector:
         return self.pc[..., 0]
 
     @pcx.setter
-    def pcx(self, value: Union[np.ndarray, list, tuple, float]):
+    def pcx(self, value: np.ndarray | list | tuple | float):
         """Set the x projection center coordinates."""
         self._pc[..., 0] = np.atleast_2d(value).astype(float)
 
@@ -343,7 +348,7 @@ class EBSDDetector:
         return self.pc[..., 1]
 
     @pcy.setter
-    def pcy(self, value: Union[np.ndarray, list, tuple, float]):
+    def pcy(self, value: np.ndarray | list | tuple | float):
         """Set y projection center coordinates."""
         self._pc[..., 1] = np.atleast_2d(value).astype(float)
 
@@ -361,7 +366,7 @@ class EBSDDetector:
         return self.pc[..., 2]
 
     @pcz.setter
-    def pcz(self, value: Union[np.ndarray, list, tuple, float]):
+    def pcz(self, value: np.ndarray | list | tuple | float):
         """Set z projection center coordinates."""
         self._pc[..., 2] = np.atleast_2d(value).astype(float)
 
@@ -417,12 +422,12 @@ class EBSDDetector:
         return np.array([0, self.ncols - 1, 0, self.nrows - 1])
 
     @property
-    def x_min(self) -> Union[np.ndarray, float]:
+    def x_min(self) -> np.ndarray | float:
         """Return the left bound of detector in gnomonic coordinates."""
         return -self.aspect_ratio * (self.pcx / self.pcz)
 
     @property
-    def x_max(self) -> Union[np.ndarray, float]:
+    def x_max(self) -> np.ndarray | float:
         """Return the right bound of detector in gnomonic coordinates."""
         return self.aspect_ratio * (1 - self.pcx) / self.pcz
 
@@ -432,12 +437,12 @@ class EBSDDetector:
         return np.dstack((self.x_min, self.x_max)).reshape(self.navigation_shape + (2,))
 
     @property
-    def y_min(self) -> Union[np.ndarray, float]:
+    def y_min(self) -> np.ndarray | float:
         """Return the top bound of detector in gnomonic coordinates."""
         return -(1 - self.pcy) / self.pcz
 
     @property
-    def y_max(self) -> Union[np.ndarray, float]:
+    def y_max(self) -> np.ndarray | float:
         """Return the bottom bound of detector in gnomonic coordinates."""
         return self.pcy / self.pcz
 
@@ -490,7 +495,7 @@ class EBSDDetector:
         return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
 
     @classmethod
-    def load(cls, fname: Union[Path, str]) -> EBSDDetector:
+    def load(cls, fname: Path | str) -> EBSDDetector:
         """Return an EBSD detector loaded from a text file saved with
         :meth:`save`.
 
@@ -517,7 +522,7 @@ class EBSDDetector:
             "navigation_shape",
         ]
 
-        detector_kw = dict(zip(keys, [None] * len(keys)))
+        detector_kw: dict = dict(zip(keys, [None] * len(keys)))
         with open(fname, mode="r") as f:
             header = []
             for line in f.readlines():
@@ -552,7 +557,7 @@ class EBSDDetector:
 
         return cls(pc=pc, **detector_kw)
 
-    def crop(self, extent: Union[Tuple[int, int, int, int], List[int]]) -> EBSDDetector:
+    def crop(self, extent: tuple[int, int, int, int] | list[int]) -> EBSDDetector:
         """Return a new detector with its :attr:`shape` cropped and
         :attr:`pc` values updated accordingly.
 
@@ -607,12 +612,12 @@ class EBSDDetector:
         pcy_new = (self.pcy * ny - top) / ny_new
         pcz_new = self.pcz * ny / ny_new
 
-        return EBSDDetector(
+        return self.__class__(
             shape=(ny_new, nx_new),
             pc=np.dstack((pcx_new, pcy_new, pcz_new)),
             tilt=self.tilt,
             sample_tilt=self.sample_tilt,
-            binning=self.binning,
+            binning=int(self.binning),
             px_size=self.px_size,
             azimuthal=self.azimuthal,
         )
@@ -634,13 +639,13 @@ class EBSDDetector:
         degrees: bool = False,
         return_figure: bool = False,
         return_outliers: bool = False,
-        figure_kwargs: Optional[dict] = None,
-    ) -> Union[
-        float,
-        Tuple[float, np.ndarray],
-        Tuple[float, plt.Figure],
-        Tuple[float, np.ndarray, plt.Figure],
-    ]:
+        figure_kwargs: dict | None = None,
+    ) -> (
+        float
+        | tuple[float, np.ndarray]
+        | tuple[float, Figure]
+        | tuple[float, np.ndarray, Figure]
+    ):
         r"""Estimate the tilt about the detector :math:`X_d` axis.
 
         This tilt is assumed to bring the sample plane normal into
@@ -772,8 +777,8 @@ class EBSDDetector:
     def estimate_xtilt_ztilt(
         self,
         degrees: bool = False,
-        is_outlier: Optional[Union[list, tuple, np.ndarray]] = None,
-    ) -> Union[float, Tuple[float, float]]:
+        is_outlier: list | tuple | np.ndarray | None = None,
+    ) -> float | tuple[float, float]:
         r"""Estimate the tilts about the detector :math:`X_d` and
         :math:`Z_d` axes.
 
@@ -840,14 +845,14 @@ class EBSDDetector:
 
     def extrapolate_pc(
         self,
-        pc_indices: Union[tuple, list, np.ndarray],
+        pc_indices: tuple | list | np.ndarray,
         navigation_shape: tuple,
         step_sizes: tuple,
-        shape: Optional[tuple] = None,
-        px_size: float = None,
-        binning: int = None,
-        is_outlier: Optional[Union[tuple, list, np.ndarray]] = None,
-    ):
+        shape: tuple | None = None,
+        px_size: float | None = None,
+        binning: int | None = None,
+        is_outlier: tuple | list | np.ndarray | None = None,
+    ) -> EBSDDetector:
         r"""Return a new detector with projection centers (PCs) in a 2D
         map extrapolated from an average PC.
 
@@ -947,14 +952,14 @@ class EBSDDetector:
 
     def fit_pc(
         self,
-        pc_indices: Union[list, tuple, np.ndarray],
-        map_indices: Union[list, tuple, np.ndarray],
+        pc_indices: list | tuple | np.ndarray,
+        map_indices: list | tuple | np.ndarray,
         transformation: str = "projective",
-        is_outlier: Optional[np.ndarray] = None,
+        is_outlier: np.ndarray | None = None,
         plot: bool = True,
         return_figure: bool = False,
-        figure_kwargs: Optional[dict] = None,
-    ) -> Union[EBSDDetector, Tuple[EBSDDetector, plt.Figure]]:
+        figure_kwargs: dict | None = None,
+    ) -> EBSDDetector | tuple[EBSDDetector, Figure]:
         """Return a new detector with interpolated projection centers
         (PCs) for all points in a map by fitting a plane to :attr:`pc`
         :cite:`winkelmann2020refined`.
@@ -1121,9 +1126,9 @@ class EBSDDetector:
     def get_indexer(
         self,
         phase_list: PhaseList,
-        reflectors: Optional[
-            List[Union["ReciprocalLatticeVector", np.ndarray, list, tuple, None]]
-        ] = None,
+        reflectors: (
+            list[ReciprocalLatticeVector | np.ndarray | list | tuple | None] | None
+        ) = None,
         **kwargs,
     ) -> "EBSDIndexer":
         r"""Return a PyEBSDIndex EBSD indexer.
@@ -1291,15 +1296,15 @@ class EBSDDetector:
         self,
         coordinates: str = "detector",
         show_pc: bool = True,
-        pc_kwargs: Optional[dict] = None,
-        pattern: Optional[np.ndarray] = None,
-        pattern_kwargs: Optional[dict] = None,
+        pc_kwargs: dict | None = None,
+        pattern: np.ndarray | None = None,
+        pattern_kwargs: dict | None = None,
         draw_gnomonic_circles: bool = False,
-        gnomonic_angles: Union[None, list, np.ndarray] = None,
-        gnomonic_circles_kwargs: Optional[dict] = None,
-        zoom: float = 1,
+        gnomonic_angles: np.ndarray | list | None = None,
+        gnomonic_circles_kwargs: dict | None = None,
+        zoom: float = 1.0,
         return_figure: bool = False,
-    ) -> Union[None, Figure]:
+    ) -> None | Figure:
         """Plot the detector screen viewed from the detector towards the
         sample.
 
@@ -1460,9 +1465,9 @@ class EBSDDetector:
         return_figure: bool = False,
         orientation: str = "horizontal",
         annotate: bool = False,
-        figure_kwargs: Optional[dict] = None,
+        figure_kwargs: dict | None = None,
         **kwargs,
-    ) -> Union[None, plt.Figure]:
+    ) -> None | Figure:
         """Plot all projection centers (PCs).
 
         Parameters
@@ -1618,7 +1623,7 @@ class EBSDDetector:
         if return_figure:
             return fig
 
-    def save(self, filename: str, convention: str = "Bruker", **kwargs) -> None:
+    def save(self, filename: str | Path, convention: str = "Bruker", **kwargs) -> None:
         """Save detector in a text file with projection centers (PCs) in
         the given convention.
 
@@ -1781,7 +1786,7 @@ class EBSDDetector:
 
 def _fit_hyperplane(
     pc_centered: np.ndarray,
-) -> Tuple[float, float, Rotation, Rotation, np.ndarray]:
+) -> tuple[float, float, Rotation, Rotation, np.ndarray]:
     # Hyperplane fit
     pc_trim_mean = scs.trim_mean(pc_centered, proportiontocut=0.1)
     pc_trim_centered = pc_centered - pc_trim_mean[np.newaxis, :]
@@ -1822,7 +1827,7 @@ def _fit_pc_projective(
     pc_centered_flat: np.ndarray,
     pc_indices_flat: np.ndarray,
     map_indices_flat: np.ndarray,
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     *_, rot_xtilt, rot_ztilt, pc_trim_mean = _fit_hyperplane(pc_centered_flat)
 
     v_pc_centered = Vector3d(pc_centered_flat)
@@ -1854,7 +1859,7 @@ def _fit_pc_projective(
 
 def _fit_pc_affine(
     pc_flat: np.ndarray, pc_indices_flat: np.ndarray, map_indices_flat: np.ndarray
-) -> Tuple[np.array, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     # Solve the least squares problem X * A = Y
     # Source: https://stackoverflow.com/a/20555267/3228100
     matrix, res, *_ = np.linalg.lstsq(pc_indices_flat, pc_flat, rcond=None)
@@ -1873,7 +1878,7 @@ def _plot_pc_fit(
     fit_slope: float,
     figure_kwargs: dict,
     return_figure: bool = False,
-) -> Union[None, plt.Figure]:
+) -> None | Figure:
     pcx, pcy, pcz = pc.T
     pcx_fit_2d, pcy_fit_2d, pcz_fit_2d = pc_fit.T
     pcx_fit = pcx_fit_2d.ravel()

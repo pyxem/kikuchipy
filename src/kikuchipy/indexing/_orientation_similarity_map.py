@@ -22,8 +22,6 @@ is compared to the corresponding lists in the nearest neighbour points.
 
 # TODO: Consider moving to orix.
 
-from typing import Optional
-
 import numpy as np
 from orix.crystal_map import CrystalMap
 from scipy.ndimage import generic_filter
@@ -31,11 +29,11 @@ from scipy.ndimage import generic_filter
 
 def orientation_similarity_map(
     xmap: CrystalMap,
-    n_best: Optional[int] = None,
+    n_best: int | None = None,
     simulation_indices_prop: str = "simulation_indices",
     normalize: bool = False,
-    from_n_best: Optional[int] = None,
-    footprint: Optional[np.ndarray] = None,
+    from_n_best: int | None = None,
+    footprint: np.ndarray | None = None,
     center_index: int = 2,
 ) -> np.ndarray:
     r"""Compute an orientation similarity map (OSM) where the ranked
@@ -146,9 +144,9 @@ def _orientation_similarity_per_pixel(
         for mi in match_indices[neighbours]
     ]
 
-    os = np.nanmean(number_of_equal_matches_to_its_neighbours)
+    os_i = np.nanmean(number_of_equal_matches_to_its_neighbours)
 
     if normalize:
-        os /= n
+        os_i /= n
 
-    return os
+    return os_i

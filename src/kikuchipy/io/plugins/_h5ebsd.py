@@ -19,7 +19,7 @@
 
 import abc
 import os
-from typing import List, Optional, Tuple, Union
+from pathlib import Path
 import warnings
 
 import dask.array as da
@@ -31,9 +31,9 @@ __all__ = ["_dict2hdf5group", "_hdf5group2dict", "H5EBSDReader"]
 
 def _hdf5group2dict(
     group: h5py.Group,
-    dictionary: Union[None, dict] = None,
+    dictionary: dict | None = None,
     recursive: bool = False,
-    data_dset_names: Optional[list] = None,
+    data_dset_names: list | None = None,
 ) -> dict:
     """Return a dictionary with values from datasets in a group.
 
@@ -83,7 +83,7 @@ def _hdf5group2dict(
     return dictionary
 
 
-def _dict2hdf5group(dictionary: dict, group: h5py.Group, **kwargs):
+def _dict2hdf5group(dictionary: dict, group: h5py.Group, **kwargs) -> None:
     """Write a dictionary to datasets in a new group in an opened HDF5
     file format.
 
@@ -144,23 +144,23 @@ class H5EBSDReader(abc.ABC):
         "oxford instruments": "Processed Patterns",
     }
 
-    def __init__(self, filename: str, **kwargs):
-        self.filename = filename
+    def __init__(self, filename: str | Path, **kwargs) -> None:
+        self.filename = str(filename)
         self.file = h5py.File(filename, **kwargs)
         self.scan_groups = self.get_scan_groups()
         self.manufacturer, self.version = self.get_manufacturer_version()
         self.check_file()
         self.patterns_name = self.manufacturer_patterns[self.manufacturer]
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__} ({self.version}): {self.filename}"
 
     @property
-    def scan_group_names(self) -> List[str]:
+    def scan_group_names(self) -> list[str]:
         """Return a list of available scan group names."""
         return [group.name.lstrip("/") for group in self.scan_groups]
 
-    def check_file(self):
+    def check_file(self) -> None:
         """Check if the file is a valid h5ebsd file by searching for
         datasets containing manufacturer, version and scans in the top
         group.
@@ -185,7 +185,7 @@ class H5EBSDReader(abc.ABC):
                 "no top groups with subgroup name 'EBSD' with subgroups 'Data' and "
                 "'Header' were found"
             )
-        man, ver = self.get_manufacturer_version()
+        man, _ = self.get_manufacturer_version()
         man = man.lower()
         supported_manufacturers = list(self.manufacturer_patterns.keys())
         if man not in supported_manufacturers and error is None:
@@ -196,7 +196,7 @@ class H5EBSDReader(abc.ABC):
         if error is not None:
             raise IOError(f"{self.filename} is not a supported h5ebsd file, as {error}")
 
-    def get_manufacturer_version(self) -> Tuple[str, str]:
+    def get_manufacturer_version(self) -> tuple[str | None, str | None]:
         """Get manufacturer and version from the top group.
 
         Returns
@@ -215,7 +215,7 @@ class H5EBSDReader(abc.ABC):
                 version = val.lower()
         return manufacturer, version
 
-    def get_scan_groups(self) -> List[h5py.Group]:
+    def get_scan_groups(self) -> list[h5py.Group]:
         """Return a list of the groups with scans.
 
         Assumes all top groups contain a scan.
@@ -232,8 +232,8 @@ class H5EBSDReader(abc.ABC):
         return scan_groups
 
     def get_desired_scan_groups(
-        self, group_names: Union[None, str, List[str]] = None
-    ) -> List[h5py.Group]:
+        self, group_names: str | list[str] | None = None
+    ) -> list[h5py.Group]:
         """Return a list of the desired group(s) with scan(s).
 
         Parameters
@@ -277,8 +277,8 @@ class H5EBSDReader(abc.ABC):
         group: h5py.Group,
         data_shape: tuple,
         lazy: bool = False,
-        indices: Optional[np.ndarray] = None,
-    ) -> Union[np.ndarray, da.Array]:
+        indices: np.ndarray | None = None,
+    ) -> np.ndarray | da.Array:
         """Read and return patterns from file as a NumPy or Dask array.
 
         Parameters
@@ -353,7 +353,9 @@ class H5EBSDReader(abc.ABC):
         return data
 
     @staticmethod
-    def get_axes_list(data_shape: tuple, data_scale: tuple) -> List[dict]:
+    def get_axes_list(
+        data_shape: tuple[int, ...], data_scale: tuple[int, ...]
+    ) -> list[dict]:
         """Return a description of each data axis.
 
         Parameters
@@ -414,7 +416,7 @@ class H5EBSDReader(abc.ABC):
 
         return axes_list
 
-    def get_metadata_filename_title(self, group_name: str) -> Tuple[str, str]:
+    def get_metadata_filename_title(self, group_name: str) -> tuple[str, str]:
         """Return filename without full path and a scan title for the
         signal metadata.
 
@@ -438,9 +440,9 @@ class H5EBSDReader(abc.ABC):
 
     def read(
         self,
-        group_names: Union[None, str, List[str]] = None,
+        group_names: str | list[str] | None = None,
         lazy: bool = False,
-    ) -> List[dict]:
+    ) -> list[dict]:
         """Return a list of dictionaries which can be used to create
         :class:`~kikuchipy.signals.EBSD` signals.
 

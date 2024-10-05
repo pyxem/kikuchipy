@@ -24,7 +24,7 @@ The decorator should be placed right above the object signature to be deprecated
 Parameters can be deprecated as well::
 
     @deprecate_argument(name="n", since=0.8, removal=0.9, alternative="m")
-    def foo(self, n: Optional[int] = None, m: int: Optional[int] = None) -> int:
+    def foo(self, n: int | None = None, m: int: int | None = None) -> int:
         if m is None:
             m = n
         return m + 1

@@ -17,14 +17,13 @@
 
 from copy import deepcopy
 import re
-from typing import List, Optional, Union
 
 from diffsims.crystallography import ReciprocalLatticeVector
 from hyperspy.drawing.marker import MarkerBase
 from hyperspy.utils.markers import line_segment, point, text
 import matplotlib.collections as mcollections
+import matplotlib.figure as mfigure
 import matplotlib.path as mpath
-import matplotlib.pyplot as plt
 import matplotlib.text as mtext
 import numpy as np
 from orix.quaternion import Rotation
@@ -67,7 +66,7 @@ class GeometricalKikuchiPatternSimulation:
         reflectors: ReciprocalLatticeVector,
         lines: KikuchiPatternLine,
         zone_axes: KikuchiPatternZoneAxis,
-    ):
+    ) -> None:
         self._detector = detector.deepcopy()
         self._rotations = deepcopy(rotations)
         self._reflectors = reflectors.deepcopy()
@@ -113,14 +112,14 @@ class GeometricalKikuchiPatternSimulation:
 
     def as_collections(
         self,
-        index: Union[int, tuple, None] = None,
+        index: int | tuple[int, ...] | None = None,
         coordinates: str = "detector",
         lines: bool = True,
         zone_axes: bool = False,
         zone_axes_labels: bool = False,
-        lines_kwargs: dict = None,
-        zone_axes_kwargs: dict = None,
-        zone_axes_labels_kwargs: dict = None,
+        lines_kwargs: dict | None = None,
+        zone_axes_kwargs: dict | None = None,
+        zone_axes_labels_kwargs: dict | None = None,
     ) -> list:
         """Get a single simulation as a list of Matplotlib objects.
 
@@ -196,11 +195,11 @@ class GeometricalKikuchiPatternSimulation:
         zone_axes: bool = False,
         zone_axes_labels: bool = False,
         pc: bool = False,
-        lines_kwargs: Optional[dict] = None,
-        zone_axes_kwargs: Optional[dict] = None,
-        zone_axes_labels_kwargs: Optional[dict] = None,
-        pc_kwargs: Optional[dict] = None,
-    ) -> List[MarkerBase]:
+        lines_kwargs: dict | None = None,
+        zone_axes_kwargs: dict | None = None,
+        zone_axes_labels_kwargs: dict | None = None,
+        pc_kwargs: dict | None = None,
+    ) -> list[MarkerBase]:
         """Return a list of simulation markers.
 
         Parameters
@@ -258,7 +257,7 @@ class GeometricalKikuchiPatternSimulation:
 
     def lines_coordinates(
         self,
-        index: Union[int, tuple, None] = None,
+        index: int | tuple | None = None,
         coordinates: str = "detector",
         exclude_nan: bool = True,
     ) -> np.ndarray:
@@ -299,20 +298,20 @@ class GeometricalKikuchiPatternSimulation:
 
     def plot(
         self,
-        index: Union[int, tuple, None] = None,
+        index: int | tuple | None = None,
         coordinates: str = "detector",
-        pattern: Optional[np.ndarray] = None,
+        pattern: np.ndarray | None = None,
         lines: bool = True,
         zone_axes: bool = True,
         zone_axes_labels: bool = True,
         pc: bool = True,
-        pattern_kwargs: Optional[dict] = None,
-        lines_kwargs: Optional[dict] = None,
-        zone_axes_kwargs: Optional[dict] = None,
-        zone_axes_labels_kwargs: Optional[dict] = None,
-        pc_kwargs: Optional[dict] = None,
+        pattern_kwargs: dict | None = None,
+        lines_kwargs: dict | None = None,
+        zone_axes_kwargs: dict | None = None,
+        zone_axes_labels_kwargs: dict | None = None,
+        pc_kwargs: dict | None = None,
         return_figure: bool = False,
-    ) -> plt.Figure:
+    ) -> mfigure.Figure | None:
         """Plot a single simulation on the detector.
 
         Parameters
@@ -396,7 +395,7 @@ class GeometricalKikuchiPatternSimulation:
 
     def zone_axes_coordinates(
         self,
-        index: Union[int, tuple, None] = None,
+        index: int | tuple | None = None,
         coordinates: str = "detector",
         exclude_nan: bool = True,
     ) -> np.ndarray:
@@ -436,7 +435,7 @@ class GeometricalKikuchiPatternSimulation:
         return coords.copy()
 
     def _lines_as_collection(
-        self, index: Union[int, tuple], coordinates: str, **kwargs
+        self, index: int | tuple[int, ...], coordinates: str, **kwargs
     ) -> mcollections.LineCollection:
         """Get Kikuchi lines as a Matplotlib collection.
 
@@ -470,7 +469,7 @@ class GeometricalKikuchiPatternSimulation:
         kw.update(kwargs)
         return mcollections.LineCollection(segments=list(coords), **kw)
 
-    def _lines_as_markers(self, **kwargs) -> List[line_segment]:
+    def _lines_as_markers(self, **kwargs) -> list[line_segment]:
         """Get Kikuchi lines as a list of HyperSpy markers.
 
         Parameters
@@ -611,7 +610,7 @@ class GeometricalKikuchiPatternSimulation:
         self._zone_axes_detector_coordinates = coords_d
 
     def _zone_axes_as_collection(
-        self, index: Union[int, tuple], coordinates: str, **kwargs
+        self, index: int | tuple[int, ...], coordinates: str, **kwargs
     ) -> mcollections.PathCollection:
         """Get zone axes as a Matplotlib collection.
 
@@ -646,7 +645,7 @@ class GeometricalKikuchiPatternSimulation:
         return mcollections.PathCollection(circles, **kw)
 
     def _zone_axes_labels_as_list(
-        self, index: Union[int, tuple], coordinates: str, **kwargs
+        self, index: int | tuple[int, ...], coordinates: str, **kwargs
     ) -> list:
         """Get zone axes labels as a list of texts.
 

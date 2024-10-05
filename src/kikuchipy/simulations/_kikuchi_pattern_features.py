@@ -25,8 +25,8 @@ class KikuchiPatternFeature:
         vector: Miller,
         vector_detector: Vector3d,
         in_pattern: np.ndarray,
-        max_r_gnomonic: float = 10,
-    ):
+        max_r_gnomonic: float = 10.0,
+    ) -> None:
         self.vector = vector
         self.vector_detector = vector_detector
         self.in_pattern = np.atleast_2d(in_pattern)
@@ -57,8 +57,8 @@ class KikuchiPatternLine(KikuchiPatternFeature):
         hkl: Miller,
         hkl_detector: Vector3d,
         in_pattern: np.ndarray,
-        max_r_gnomonic: float = 10,
-    ):
+        max_r_gnomonic: float = 10.0,
+    ) -> None:
         super().__init__(hkl, hkl_detector, in_pattern, max_r_gnomonic)
         self._set_hesse_distance()
         self._set_within_r_gnomonic(np.abs(self.hesse_distance))
@@ -78,16 +78,16 @@ class KikuchiPatternLine(KikuchiPatternFeature):
         """x0, y0, x1, y1"""
         return self._plane_trace_coordinates
 
-    def _set_hesse_distance(self):
+    def _set_hesse_distance(self) -> None:
         hesse_distance = np.tan(0.5 * np.pi - self.vector_detector.polar)
         self._hesse_distance = np.atleast_2d(hesse_distance)
 
-    def _set_hesse_alpha(self):
+    def _set_hesse_alpha(self) -> None:
         hesse_distance = self.hesse_distance
         hesse_distance[~self.within_r_gnomonic] = np.nan
         self._hesse_alpha = np.arccos(hesse_distance / self.max_r_gnomonic)
 
-    def _set_plane_trace_coordinates(self):
+    def _set_plane_trace_coordinates(self) -> None:
         # Get alpha1 and alpha2 angles (NaN for bands outside gnomonic radius)
         azimuth = np.atleast_2d(self.vector_detector.azimuth)
         hesse_alpha = self.hesse_alpha
@@ -108,8 +108,8 @@ class KikuchiPatternZoneAxis(KikuchiPatternFeature):
         uvw: Miller,
         uvw_detector: Vector3d,
         in_pattern: np.ndarray,
-        max_r_gnomonic: float = 10,
-    ):
+        max_r_gnomonic: float = 10.0,
+    ) -> None:
         super().__init__(uvw, uvw_detector, in_pattern, max_r_gnomonic)
         self._set_r_gnomonic()
         self._set_within_r_gnomonic(self.r_gnomonic)
@@ -119,10 +119,10 @@ class KikuchiPatternZoneAxis(KikuchiPatternFeature):
     def r_gnomonic(self) -> np.ndarray:
         return self._r_gnomonic
 
-    def _set_r_gnomonic(self):
+    def _set_r_gnomonic(self) -> None:
         self._r_gnomonic = np.sqrt(self.x_gnomonic**2 + self.y_gnomonic**2)
 
-    def _set_xy_within_r_gnomonic(self):
+    def _set_xy_within_r_gnomonic(self) -> None:
         xy = np.stack((self.x_gnomonic, self.y_gnomonic))
         xy = np.moveaxis(xy, 0, -1)
         xy[~self.within_r_gnomonic] = np.nan

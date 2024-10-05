@@ -30,7 +30,7 @@ PURPLE = (0.5, 0, 0.5)
 DARK_GREEN = (0, 0.5, 0)
 DARKER_GREEN = (0, 0.5, 0.5)
 DARK_BLUE = (0, 0, 0.5)
-TSL_COLORS = [
+TSL_COLORS: list[tuple] = [
     RED,
     YELLOW,
     GREEN,

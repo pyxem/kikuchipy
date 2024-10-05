@@ -21,7 +21,7 @@ import logging
 import os
 from pathlib import Path
 import re
-from typing import Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 import warnings
 
 from matplotlib.pyplot import imread
@@ -29,6 +29,9 @@ import numpy as np
 from orix.crystal_map import CrystalMap
 
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
+
+if TYPE_CHECKING:  # pragma: no cover
+    from kikuchipy.signals.ebsd import EBSD, LazyEBSD
 
 __all__ = ["file_reader", "file_writer"]
 
@@ -47,13 +50,13 @@ writes = [(2, 2), (2, 1), (2, 0)]
 
 
 def file_reader(
-    filename: Union[str, Path],
-    mmap_mode: Optional[str] = None,
-    scan_size: Union[None, int, Tuple[int, ...]] = None,
-    pattern_size: Optional[Tuple[int, ...]] = None,
-    setting_file: Optional[str] = None,
+    filename: str | Path,
+    mmap_mode: str | None = None,
+    scan_size: int | tuple[int, ...] | None = None,
+    pattern_size: tuple[int, ...] | None = None,
+    setting_file: str | None = None,
     lazy: bool = False,
-) -> List[Dict]:
+) -> list[dict]:
     """Read electron backscatter patterns from a NORDIF data file.
 
     Not meant to be used directly; use :func:`~kikuchipy.load`.
@@ -213,7 +216,7 @@ def file_reader(
 
 def _get_settings_from_file(
     filename: str, pattern_type: str = "acquisition"
-) -> Tuple[dict, dict, dict, dict]:
+) -> tuple[dict, dict, dict, dict]:
     """Return metadata with parameters from NORDIF setting file.
 
     Parameters
@@ -235,7 +238,7 @@ def _get_settings_from_file(
     detector
         Dictionary for creating an EBSD detector.
     """
-    f = open(filename, "r", encoding="latin-1")  # Avoid byte strings
+    f = open(filename, encoding="latin-1")  # Avoid byte strings
     content = f.read().splitlines()
 
     # Get line numbers of setting blocks
@@ -439,7 +442,7 @@ def _get_calibration_pattern_settings(
     return omd
 
 
-def file_writer(filename: str, signal: Union["EBSD", "LazyEBSD"]):
+def file_writer(filename: str, signal: "EBSD | LazyEBSD") -> None:
     """Write an :class:`~kikuchipy.signals.EBSD` or
     :class:`~kikuchipy.signals.LazyEBSD` instance to a NORDIF binary
     file.

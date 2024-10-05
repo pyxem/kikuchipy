@@ -22,7 +22,7 @@ patterns.
 
 import sys
 from time import time
-from typing import Callable, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Callable
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
@@ -44,12 +44,20 @@ from kikuchipy.pattern import rescale_intensity
 from kikuchipy.signals.util._crystal_map import _get_indexed_points_in_data_in_xmap
 from kikuchipy.signals.util._master_pattern import _get_direction_cosines_from_detector
 
+if TYPE_CHECKING:  # pragma: no cover
+    from kikuchipy.constants import installed
+    from kikuchipy.detectors.ebsd_detector import EBSDDetector
+    from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
+
+    if installed["nlopt"]:
+        import nlopt
+
 
 def compute_refine_orientation_results(
     results: da.Array,
     xmap: CrystalMap,
     master_pattern: "EBSDMasterPattern",
-    navigation_mask: Optional[np.ndarray] = None,
+    navigation_mask: np.ndarray | None = None,
     pseudo_symmetry_checked: bool = False,
 ) -> CrystalMap:
     """Compute the results from
@@ -124,8 +132,8 @@ def compute_refine_projection_center_results(
     results: da.Array,
     detector: "EBSDDetector",
     xmap: CrystalMap,
-    navigation_mask: Optional[np.ndarray] = None,
-) -> Tuple[np.ndarray, "EBSDDetector", np.ndarray]:
+    navigation_mask: np.ndarray | None = None,
+) -> tuple[np.ndarray, "EBSDDetector", np.ndarray]:
     """Compute the results from
     :meth:`~kikuchipy.signals.EBSD.refine_projection_center` and return
     the score array, :class:`~kikuchipy.detectors.EBSDDetector` and
@@ -191,9 +199,9 @@ def compute_refine_orientation_projection_center_results(
     detector: "EBSDDetector",
     xmap: CrystalMap,
     master_pattern: "EBSDMasterPattern",
-    navigation_mask: Optional[np.ndarray] = None,
+    navigation_mask: np.ndarray | None = None,
     pseudo_symmetry_checked: bool = False,
-) -> Tuple[CrystalMap, "EBSDDetector"]:
+) -> tuple[CrystalMap, "EBSDDetector"]:
     """Compute the results from
     :meth:`~kikuchipy.signals.EBSD.refine_orientation_projection_center`
     and return the :class:`~orix.crystal_map.CrystalMap` and
@@ -331,20 +339,20 @@ def _refine_orientation(
     xmap: CrystalMap,
     detector,
     master_pattern,
-    energy: Union[int, float],
-    patterns: Union[np.ndarray, da.Array],
+    energy: int | float,
+    patterns: np.ndarray | da.Array,
     points_to_refine: np.ndarray,
     signal_mask: np.ndarray,
-    trust_region: Union[tuple, list, np.ndarray, None],
+    trust_region: np.ndarray | list | tuple | None,
     rtol: float,
-    pseudo_symmetry_ops: Optional[Rotation] = None,
-    method: Optional[str] = None,
-    method_kwargs: Optional[dict] = None,
-    initial_step: Optional[float] = None,
-    maxeval: Optional[int] = None,
+    pseudo_symmetry_ops: Rotation | None = None,
+    method: str | None = None,
+    method_kwargs: dict | None = None,
+    initial_step: float | None = None,
+    maxeval: int | None = None,
     compute: bool = True,
-    navigation_mask: Optional[np.ndarray] = None,
-):
+    navigation_mask: np.ndarray | None = None,
+) -> CrystalMap:
     ref = _RefinementSetup(
         mode="ori",
         xmap=xmap,
@@ -435,17 +443,17 @@ def _refine_orientation_chunk_scipy(
     rotations: np.ndarray,
     lower_bounds: np.ndarray,
     upper_bounds: np.ndarray,
-    pcx: Optional[np.ndarray] = None,
-    pcy: Optional[np.ndarray] = None,
-    pcz: Optional[np.ndarray] = None,
-    signal_mask: Optional[np.ndarray] = None,
-    solver_kwargs: Optional[dict] = None,
-    direction_cosines: Optional[np.ndarray] = None,
-    nrows: Optional[int] = None,
-    ncols: Optional[int] = None,
-    tilt: Optional[float] = None,
-    azimuthal: Optional[float] = None,
-    sample_tilt: Optional[float] = None,
+    pcx: np.ndarray | None = None,
+    pcy: np.ndarray | None = None,
+    pcz: np.ndarray | None = None,
+    signal_mask: np.ndarray | None = None,
+    solver_kwargs: dict | None = None,
+    direction_cosines: np.ndarray | None = None,
+    nrows: int | None = None,
+    ncols: int | None = None,
+    tilt: float | None = None,
+    azimuthal: float | None = None,
+    sample_tilt: float | None = None,
     n_pseudo_symmetry_ops: int = 0,
 ):
     """Refine orientations from patterns in one dask array chunk using
@@ -502,18 +510,18 @@ def _refine_orientation_chunk_nlopt(
     rotations: np.ndarray,
     lower_bounds: np.ndarray,
     upper_bounds: np.ndarray,
-    pcx: Optional[np.ndarray] = None,
-    pcy: Optional[np.ndarray] = None,
-    pcz: Optional[np.ndarray] = None,
-    opt: "nlopt.opt" = None,
-    signal_mask: Optional[np.ndarray] = None,
-    solver_kwargs: Optional[dict] = None,
-    direction_cosines: Optional[np.ndarray] = None,
-    nrows: Optional[int] = None,
-    ncols: Optional[int] = None,
-    tilt: Optional[float] = None,
-    azimuthal: Optional[float] = None,
-    sample_tilt: Optional[float] = None,
+    pcx: np.ndarray | None = None,
+    pcy: np.ndarray | None = None,
+    pcz: np.ndarray | None = None,
+    opt: "nlopt.opt | None" = None,
+    signal_mask: np.ndarray | None = None,
+    solver_kwargs: dict | None = None,
+    direction_cosines: np.ndarray | None = None,
+    nrows: int | None = None,
+    ncols: int | None = None,
+    tilt: float | None = None,
+    azimuthal: float | None = None,
+    sample_tilt: float | None = None,
     n_pseudo_symmetry_ops: int = 0,
 ):
     """Refine orientations from patterns in one dask array chunk using
@@ -578,20 +586,20 @@ def _refine_pc(
     xmap: CrystalMap,
     detector,
     master_pattern,
-    energy: Union[int, float],
-    patterns: Union[np.ndarray, da.Array],
+    energy: int | float,
+    patterns: np.ndarray | da.Array,
     points_to_refine: np.ndarray,
     signal_mask: np.ndarray,
-    trust_region: Union[tuple, list, np.ndarray, None],
+    trust_region: np.ndarray | list | tuple | None,
     rtol: float,
-    rotations_ps: Optional[Rotation] = None,
-    method: Optional[str] = None,
-    method_kwargs: Optional[dict] = None,
-    initial_step: Optional[float] = None,
-    maxeval: Optional[int] = None,
+    rotations_ps: Rotation | None = None,
+    method: str | None = None,
+    method_kwargs: dict | None = None,
+    initial_step: float | None = None,
+    maxeval: int | None = None,
     compute: bool = True,
-    navigation_mask: Optional[np.ndarray] = None,
-):
+    navigation_mask: np.ndarray | None = None,
+) -> tuple[np.ndarray, "EBSDDetector", np.ndarray]:
     ref = _RefinementSetup(
         mode="pc",
         xmap=xmap,
@@ -646,7 +654,7 @@ def _refine_pc_chunk_scipy(
     lower_bounds: np.ndarray,
     upper_bounds: np.ndarray,
     solver_kwargs: dict,
-):
+) -> np.ndarray:
     """Refine projection centers using patterns in one dask array chunk."""
 
     nav_size = patterns.shape[0]
@@ -674,8 +682,8 @@ def _refine_pc_chunk_nlopt(
     lower_bounds: np.ndarray,
     upper_bounds: np.ndarray,
     solver_kwargs: dict,
-    opt: "nlopt.opt" = None,
-):
+    opt: "nlopt.opt | None" = None,
+) -> np.ndarray:
     """Refine projection centers using patterns in one dask array chunk."""
     # Copy optimizer
     import nlopt
@@ -706,20 +714,20 @@ def _refine_orientation_pc(
     xmap: CrystalMap,
     detector,
     master_pattern,
-    energy: Union[int, float],
-    patterns: Union[np.ndarray, da.Array],
+    energy: int | float,
+    patterns: np.ndarray | da.Array,
     points_to_refine: np.ndarray,
     signal_mask: np.ndarray,
-    trust_region: Union[tuple, list, np.ndarray, None],
+    trust_region: np.ndarray | list | tuple | None,
     rtol: float,
-    pseudo_symmetry_ops: Optional[Rotation] = None,
-    method: Optional[str] = None,
-    method_kwargs: Optional[dict] = None,
-    initial_step: Union[tuple, list, np.ndarray, None] = None,
-    maxeval: Optional[int] = None,
+    pseudo_symmetry_ops: Rotation | None = None,
+    method: str | None = None,
+    method_kwargs: dict | None = None,
+    initial_step: np.ndarray | list | tuple | None = None,
+    maxeval: int | None = None,
     compute: bool = True,
-    navigation_mask: Optional[np.ndarray] = None,
-) -> tuple:
+    navigation_mask: np.ndarray | None = None,
+) -> tuple[CrystalMap, "EBSDDetector"]:
     """See the docstring of
     :meth:`kikuchipy.signals.EBSD.refine_orientation_projection_center`.
     """
@@ -781,9 +789,9 @@ def _refine_orientation_pc_chunk_scipy(
     rot_pc: np.ndarray,
     lower_bounds: np.ndarray,
     upper_bounds: np.ndarray,
-    solver_kwargs: Optional[dict] = None,
+    solver_kwargs: dict | None = None,
     n_pseudo_symmetry_ops: int = 0,
-):
+) -> np.ndarray:
     """Refine orientations and projection centers using all patterns in
     one dask array chunk using *SciPy*.
     """
@@ -813,10 +821,10 @@ def _refine_orientation_pc_chunk_nlopt(
     rot_pc: np.ndarray,
     lower_bounds: np.ndarray,
     upper_bounds: np.ndarray,
-    solver_kwargs: Optional[dict] = None,
-    opt: "nlopt.opt" = None,
+    solver_kwargs: dict | None = None,
+    opt: "nlopt.opt | None" = None,
     n_pseudo_symmetry_ops: int = 0,
-):
+) -> np.ndarray:
     """Refine orientations and projection centers using all patterns in
     one dask array chunk using *NLopt*.
     """
@@ -903,10 +911,10 @@ class _RefinementSetup:
     nav_size: int
     n_pseudo_symmetry_ops: int = 0
     rotations_array: da.Array
-    rotations_pc_array: Optional[da.Array] = None
+    rotations_pc_array: da.Array | None = None
     # Optimization parameters
-    initial_step: Optional[list] = None
-    maxeval: Optional[int] = None
+    initial_step: list | None = None
+    maxeval: int | None = None
     method_name: str
     optimization_type: str
     package: str
@@ -924,16 +932,16 @@ class _RefinementSetup:
         xmap: CrystalMap,
         detector: "EBSDDetector",
         master_pattern: "EBSDMasterPattern",
-        energy: Union[int, float],
-        patterns: Union[np.ndarray, da.Array],
+        energy: int | float,
+        patterns: np.ndarray | da.Array,
         points_to_refine: np.ndarray,
         rtol: float,
         method: str,
-        method_kwargs: Optional[dict] = None,
-        initial_step: Optional[float] = None,
-        maxeval: Optional[int] = None,
-        signal_mask: Optional[np.ndarray] = None,
-        pseudo_symmetry_ops: Optional[Rotation] = None,
+        method_kwargs: dict | None = None,
+        initial_step: float | None = None,
+        maxeval: int | None = None,
+        signal_mask: np.ndarray | None = None,
+        pseudo_symmetry_ops: Rotation | None = None,
     ):
         """Set up EBSD refinement."""
         self.mode = mode
@@ -1054,9 +1062,9 @@ class _RefinementSetup:
         self,
         rtol: float,
         method: str,
-        method_kwargs: Optional[dict] = None,
-        initial_step: Union[float, int, Tuple[float, float], None] = None,
-        maxeval: Optional[int] = None,
+        method_kwargs: dict | None = None,
+        initial_step: float | int | tuple[float, float] | None = None,
+        maxeval: int | None = None,
     ) -> None:
         """Set *NLopt* or *SciPy* optimization parameters.
 
@@ -1148,8 +1156,8 @@ class _RefinementSetup:
         self,
         detector: "EBSDDetector",
         master_pattern: "EBSDMasterPattern",
-        energy: Union[int, float],
-        signal_mask: Optional[np.ndarray] = None,
+        energy: int | float,
+        signal_mask: np.ndarray | None = None,
     ) -> None:
         """Set fixed parameters to pass to the objective function.
 
@@ -1184,8 +1192,9 @@ class _RefinementSetup:
         self.fixed_parameters = params
 
     def get_bound_constraints(
-        self, trust_region: Union[tuple, list, np.ndarray, None]
-    ) -> Tuple[da.Array, da.Array]:
+        self,
+        trust_region: np.ndarray | list | tuple | None,
+    ) -> tuple[da.Array, da.Array]:
         """Return the bound constraints on the control variables.
 
         Parameters
@@ -1248,7 +1257,7 @@ class _RefinementSetup:
 
         return lower_bounds, upper_bounds
 
-    def get_info_message(self, trust_region) -> str:
+    def get_info_message(self, trust_region: np.ndarray | list | tuple | None) -> str:
         """Return a string with important refinement information to
         display to the user.
 
@@ -1293,8 +1302,8 @@ class _RefinementSetup:
 
 
 def _get_master_pattern_data(
-    master_pattern: "EBSDMasterPattern", energy: Union[int, float]
-) -> Tuple[np.ndarray, np.ndarray, int, int, float]:
+    master_pattern: "EBSDMasterPattern", energy: int | float
+) -> tuple[np.ndarray, np.ndarray, int, int, float]:
     """Return the upper and lower hemispheres along with their shape.
 
     Parameters

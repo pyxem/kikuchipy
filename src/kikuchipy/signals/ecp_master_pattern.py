@@ -17,13 +17,16 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 
 import numpy as np
 from orix.crystal_map import Phase
 
 from kikuchipy.signals._kikuchi_master_pattern import KikuchiMasterPattern
 from kikuchipy.signals._kikuchipy_signal import LazyKikuchipySignal2D
+
+if TYPE_CHECKING:  # pragma: no cover
+    from pyvista import Plotter
 
 
 class ECPMasterPattern(KikuchiMasterPattern):
@@ -70,7 +73,7 @@ class ECPMasterPattern(KikuchiMasterPattern):
         return super().hemisphere
 
     @hemisphere.setter
-    def hemisphere(self, value: str):
+    def hemisphere(self, value: str) -> None:
         super(ECPMasterPattern, type(self)).hemisphere.fset(self, value)
 
     @property
@@ -78,7 +81,7 @@ class ECPMasterPattern(KikuchiMasterPattern):
         return super().phase
 
     @phase.setter
-    def phase(self, value: Phase):
+    def phase(self, value: Phase) -> None:
         super(ECPMasterPattern, type(self)).phase.fset(self, value)
 
     @property
@@ -86,20 +89,20 @@ class ECPMasterPattern(KikuchiMasterPattern):
         return super().projection
 
     @projection.setter
-    def projection(self, value: str):
+    def projection(self, value: str) -> None:
         super(ECPMasterPattern, type(self)).projection.fset(self, value)
 
-    def as_lambert(self, show_progressbar: Optional[bool] = None) -> ECPMasterPattern:
+    def as_lambert(self, show_progressbar: bool | None = None) -> ECPMasterPattern:
         return super().as_lambert(show_progressbar=show_progressbar)
 
     def plot_spherical(
         self,
-        energy: Union[int, float, None] = None,
+        energy: int | float | None = None,
         return_figure: bool = False,
         style: str = "surface",
-        plotter_kwargs: Union[dict] = None,
-        show_kwargs: Union[dict] = None,
-    ) -> "pyvista.Plotter":
+        plotter_kwargs: dict | None = None,
+        show_kwargs: dict | None = None,
+    ) -> "Plotter | None":
         return super().plot_spherical(
             energy=energy,
             return_figure=return_figure,
@@ -116,11 +119,11 @@ class ECPMasterPattern(KikuchiMasterPattern):
         self,
         num_std: int = 1,
         divide_by_square_root: bool = False,
-        dtype_out: Union[str, np.dtype, type, None] = None,
-        show_progressbar: Optional[bool] = None,
+        dtype_out: str | np.dtype | type | None = None,
+        show_progressbar: bool | None = None,
         inplace: bool = True,
-        lazy_output: Optional[bool] = None,
-    ) -> Union[None, ECPMasterPattern, LazyECPMasterPattern]:
+        lazy_output: bool | None = None,
+    ) -> ECPMasterPattern | LazyECPMasterPattern | None:
         return super().normalize_intensity(
             num_std=num_std,
             divide_by_square_root=divide_by_square_root,
@@ -133,16 +136,16 @@ class ECPMasterPattern(KikuchiMasterPattern):
     def rescale_intensity(
         self,
         relative: bool = False,
-        in_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        out_range: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        dtype_out: Union[
-            str, np.dtype, type, Tuple[int, int], Tuple[float, float], None
-        ] = None,
-        percentiles: Union[Tuple[int, int], Tuple[float, float], None] = None,
-        show_progressbar: Optional[bool] = None,
+        in_range: tuple[int, int] | tuple[float, float] | None = None,
+        out_range: tuple[int, int] | tuple[float, float] | None = None,
+        dtype_out: (
+            str | np.dtype | type | tuple[int, int] | tuple[float, float] | None
+        ) = None,
+        percentiles: tuple[int, int] | tuple[float, float] | None = None,
+        show_progressbar: bool | None = None,
         inplace: bool = True,
-        lazy_output: Optional[bool] = None,
-    ) -> Union[None, ECPMasterPattern, LazyECPMasterPattern]:
+        lazy_output: bool | None = None,
+    ) -> ECPMasterPattern | LazyECPMasterPattern | None:
         return super().rescale_intensity(
             relative=relative,
             in_range=in_range,
@@ -156,13 +159,13 @@ class ECPMasterPattern(KikuchiMasterPattern):
 
     def adaptive_histogram_equalization(
         self,
-        kernel_size: Optional[Union[Tuple[int, int], List[int]]] = None,
-        clip_limit: Union[int, float] = 0,
+        kernel_size: tuple[int, int] | list[int] | None = None,
+        clip_limit: int | float = 0.0,
         nbins: int = 128,
-        show_progressbar: Optional[bool] = None,
+        show_progressbar: bool | None = None,
         inplace: bool = True,
-        lazy_output: Optional[bool] = None,
-    ) -> Union[None, ECPMasterPattern, LazyECPMasterPattern]:
+        lazy_output: bool | None = None,
+    ) -> ECPMasterPattern | LazyECPMasterPattern | None:
         return super().adaptive_histogram_equalization(
             kernel_size,
             clip_limit,

@@ -17,7 +17,7 @@
 
 from copy import deepcopy
 import logging
-from typing import TYPE_CHECKING, Any, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any
 from warnings import warn
 
 import hyperspy.api as hs
@@ -64,7 +64,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
 
     _custom_attributes = ["hemisphere", "phase", "projection"]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._hemisphere = kwargs.get("hemisphere")
         self._phase = kwargs.get("phase", Phase())
@@ -88,7 +88,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         return self._hemisphere
 
     @hemisphere.setter
-    def hemisphere(self, value: str):
+    def hemisphere(self, value: str) -> None:
         self._hemisphere = value
 
     @property
@@ -104,7 +104,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         return self._phase
 
     @phase.setter
-    def phase(self, value: Phase):
+    def phase(self, value: Phase) -> None:
         self._phase = value
 
     @property
@@ -120,10 +120,10 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         return self._projection
 
     @projection.setter
-    def projection(self, value: str):
+    def projection(self, value: str) -> None:
         self._projection = value
 
-    def as_lambert(self, show_progressbar: Optional[bool] = None) -> Any:
+    def as_lambert(self, show_progressbar: bool | None = None) -> Any:
         """Return a new master pattern in the Lambert projection
         :cite:`callahan2013dynamical`.
 
@@ -205,12 +205,12 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
 
     def plot_spherical(
         self,
-        energy: Union[int, float, None] = None,
+        energy: int | float | None = None,
         return_figure: bool = False,
         style: str = "surface",
-        plotter_kwargs: Union[dict] = None,
-        show_kwargs: Union[dict] = None,
-    ) -> "Plotter":
+        plotter_kwargs: dict | None = None,
+        show_kwargs: dict | None = None,
+    ) -> "Plotter | None":
         """Plot the master pattern sphere.
 
         This requires the master pattern to be in the stereographic
@@ -310,8 +310,8 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
             pl.show(**show_kwargs)
 
     def _get_master_pattern_arrays_from_energy(
-        self, energy: Union[int, float, None] = None
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        self, energy: int | float | None = None
+    ) -> tuple[np.ndarray, np.ndarray]:
         """Return upper and lower master patterns created with a single,
         given energy.
 

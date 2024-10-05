@@ -55,12 +55,13 @@
 # ######################################################################
 
 import sys
-from typing import Optional, Union
+from typing import TYPE_CHECKING
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
 from diffsims.crystallography import ReciprocalLatticeVector
 import matplotlib.colors as mcolors
+import matplotlib.figure as mfigure
 import matplotlib.pyplot as plt
 import numpy as np
 from orix import projections
@@ -80,6 +81,9 @@ from kikuchipy.simulations._kikuchi_pattern_simulation import (
     GeometricalKikuchiPatternSimulation,
 )
 
+if TYPE_CHECKING:  # pragma: no cover
+    from pyvista import Plotter
+
 
 class KikuchiPatternSimulator:
     """Setup and calculation of geometrical or kinematical Kikuchi
@@ -92,7 +96,7 @@ class KikuchiPatternSimulator:
         dimension.
     """
 
-    def __init__(self, reflectors: ReciprocalLatticeVector):
+    def __init__(self, reflectors: ReciprocalLatticeVector) -> None:
         self._reflectors = reflectors.deepcopy().flatten()
 
     @property
@@ -111,9 +115,9 @@ class KikuchiPatternSimulator:
 
     def calculate_master_pattern(
         self,
-        half_size: Optional[int] = 500,
-        hemisphere: Optional[str] = "upper",
-        scaling: Optional[str] = "linear",
+        half_size: int = 500,
+        hemisphere: str = "upper",
+        scaling: str | None = "linear",
     ) -> EBSDMasterPattern:
         r"""Calculate a kinematical master pattern in the stereographic
         projection.
@@ -137,8 +141,7 @@ class KikuchiPatternSimulator:
         scaling
             Intensity scaling of the band kinematical intensities,
             either ``"linear"`` (default), :math:`|F|`, ``"square"``,
-            :math:`|F|^2`, or ``"None"``, giving all bands an intensity
-            of ``1``.
+            :math:`|F|^2`, or None, giving all bands an intensity of 1.
 
         Returns
         -------
@@ -418,17 +421,17 @@ class KikuchiPatternSimulator:
 
     def plot(
         self,
-        projection: Optional[str] = "stereographic",
-        mode: Optional[str] = "lines",
-        hemisphere: Optional[str] = "upper",
-        scaling: Optional[str] = "linear",
-        figure: Union[None, plt.Figure, "pyvista.Plotter"] = None,
+        projection: str | None = "stereographic",
+        mode: str | None = "lines",
+        hemisphere: str | None = "upper",
+        scaling: str | None = "linear",
+        figure: "mfigure.Figure | Plotter | None" = None,
         return_figure: bool = False,
         backend: str = "matplotlib",
         show_plotter: bool = True,
         color: str = "k",
         **kwargs,
-    ) -> Union[plt.Figure, "pyvista.Plotter"]:
+    ) -> "mfigure.Figure | Plotter | None":
         """Plot reflectors as lines or bands in the stereographic or
         spherical projection.
 
@@ -631,11 +634,11 @@ def _plot_spherical(
     ref: ReciprocalLatticeVector,
     color: np.ndarray,
     backend: str,
-    figure,
+    figure: "mfigure.Figure | Plotter | None",
     show_plotter: bool,
     scaling_title: str,
     intensity: np.ndarray,
-):
+) -> None:
     v = Vector3d(ref).unit
 
     steps = 101

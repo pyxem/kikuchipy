@@ -22,7 +22,7 @@ Most of these tools are private and not meant to be used by users.
 """
 
 from time import time
-from typing import List, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 
 import dask.array as da
 from diffsims.crystallography import ReciprocalLatticeVector
@@ -32,13 +32,20 @@ from orix.quaternion import Rotation
 
 from kikuchipy.constants import installed
 
+if TYPE_CHECKING:
+    from kikuchipy.constants import installed
+
+    if installed["pyebsdindex"]:
+        from pyebsdindex.ebsd_index import EBSDIndexer
+        from pyebsdindex.tripletvote import BandIndexer
+
 
 def xmap_from_hough_indexing_data(
     data: np.ndarray,
     phase_list: PhaseList,
     data_index: int = -1,
-    navigation_shape: Optional[tuple] = None,
-    step_sizes: Optional[tuple] = None,
+    navigation_shape: tuple | None = None,
+    step_sizes: tuple | None = None,
     scan_unit: str = "px",
 ) -> CrystalMap:
     """Convert Hough indexing result array from :mod:`pyebsdindex` to a
@@ -117,9 +124,9 @@ def _get_indexer_from_detector(
     pc: np.ndarray,
     sample_tilt: float,
     tilt: float,
-    reflectors: Optional[
-        List[Union[ReciprocalLatticeVector, np.ndarray, list, tuple, None]]
-    ] = None,
+    reflectors: (
+        list[ReciprocalLatticeVector | np.ndarray | list | tuple | None] | None
+    ) = None,
     **kwargs,
 ) -> "EBSDIndexer":
     r"""Return a PyEBSDIndex EBSD indexer.
@@ -182,14 +189,14 @@ def _get_indexer_from_detector(
 
 
 def _hough_indexing(
-    patterns: Union[np.ndarray, da.Array],
+    patterns: np.ndarray | da.Array,
     phase_list: PhaseList,
     nav_shape: tuple,
     step_sizes: tuple,
-    indexer,
+    indexer: "EBSDIndexer",
     chunksize: int,
     verbose: int,
-) -> Tuple[CrystalMap, np.ndarray, np.ndarray]:
+) -> tuple[CrystalMap, np.ndarray, np.ndarray]:
     """Perform Hough indexing with PyEBSDIndex.
 
     Requires PyEBSDIndex to be installed.
@@ -205,7 +212,7 @@ def _hough_indexing(
         Navigation shape.
     step_sizes
         Navigation step sizes.
-    indexer : pyebsdindex.ebsd_index.EBSDIndexer
+    indexer
         Indexer instance.
     verbose
         Whether to print indexing information. 0 - no output, 1 -
@@ -250,10 +257,10 @@ def _hough_indexing(
 
 def _get_pyebsdindex_phaselist(
     phase_list: PhaseList,
-    reflectors: Optional[
-        List[Union[ReciprocalLatticeVector, np.ndarray, list, tuple, None]]
-    ] = None,
-) -> List["BandIndexer"]:
+    reflectors: (
+        list[ReciprocalLatticeVector | np.ndarray | list | tuple | None] | None
+    ) = None,
+) -> list["BandIndexer"]:
     r"""Return a phase list compatible with PyEBSDIndex from an orix
     phase list.
 
@@ -336,7 +343,7 @@ def _get_pyebsdindex_phaselist(
 def _indexer_is_compatible_with_kikuchipy(
     indexer,
     sig_shape: tuple,
-    nav_size: Optional[int] = None,
+    nav_size: int | None = None,
     check_pc: bool = True,
     raise_if_not: bool = False,
 ) -> bool:
@@ -405,7 +412,7 @@ def _indexer_is_compatible_with_kikuchipy(
 
 def _phase_lists_are_compatible(
     phase_list: PhaseList,
-    indexer,
+    indexer: "EBSDIndexer",
     raise_if_not: bool = False,
 ) -> bool:
     """Check whether phase lists made with orix and PyEBSDIndex are
@@ -421,7 +428,7 @@ def _phase_lists_are_compatible(
     ----------
     phase_list
         Phase list made with orix.
-    indexer : pyebsdindex.ebsd_index.EBSDIndexer
+    indexer
         EBSD indexer with a phase list from PyEBSDIndex.
     raise_if_not
         Whether to raise a ``ValueError`` if the phase lists are
@@ -510,8 +517,8 @@ def _get_info_message(nav_size: int, chunksize: int, indexer: "EBSDIndexer") -> 
 
 
 def _optimize_pc(
-    pc0: List[float],
-    patterns: Union[np.ndarray, da.Array],
+    pc0: list[float],
+    patterns: np.ndarray | da.Array,
     indexer: "EBSDIndexer",
     batch: bool,
     method: str,

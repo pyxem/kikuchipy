@@ -21,7 +21,7 @@ The reader is adapted from the EDAX UP1/2 reader in PyEBSDIndex.
 """
 
 from pathlib import Path
-from typing import BinaryIO, Dict, List, Optional, Tuple, Union
+from typing import BinaryIO
 import warnings
 
 import dask.array as da
@@ -49,10 +49,10 @@ writes = False
 
 
 def file_reader(
-    filename: Union[str, Path],
-    nav_shape: Optional[Tuple[int, int]] = None,
+    filename: str | Path,
+    nav_shape: tuple[int, int] | None = None,
     lazy: bool = False,
-) -> List[dict]:
+) -> list[dict]:
     """Read EBSD patterns from an EDAX binary UP1/2 file.
 
     Not meant to be used directly; use :func:`~kikuchipy.load`.
@@ -113,7 +113,7 @@ class EDAXBinaryFileReader:
         Open EDAX binary UP1/2 file with uncompressed patterns.
     """
 
-    def __init__(self, file: BinaryIO):
+    def __init__(self, file: BinaryIO) -> None:
         """Prepare to read EBSD patterns from an open EDAX UP1/2 file."""
         self.file = file
 
@@ -125,7 +125,7 @@ class EDAXBinaryFileReader:
         if self.version == 2:
             raise ValueError("Only files with version 1 or >= 3, not 2, can be read")
 
-    def read_header(self) -> Dict[str, int]:
+    def read_header(self) -> dict[str, int]:
         """Read and return header information.
 
         Returns
@@ -175,7 +175,7 @@ class EDAXBinaryFileReader:
         }
 
     def read_scan(
-        self, nav_shape: Optional[Tuple[int, int]] = None, lazy: bool = False
+        self, nav_shape: tuple[int, int] | None = None, lazy: bool = False
     ) -> dict:
         """Return a dictionary with scan information and patterns.
 

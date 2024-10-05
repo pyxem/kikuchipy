@@ -19,7 +19,7 @@
 
 import os
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import TYPE_CHECKING
 import warnings
 
 import h5py
@@ -37,6 +37,8 @@ from kikuchipy.signals.util._crystal_map import _xmap_is_compatible_with_signal
 
 __all__ = ["file_reader", "file_writer"]
 
+if TYPE_CHECKING:  # pragma: no cover
+    from kikuchipy.signals.ebsd import EBSD
 
 # Plugin characteristics
 # ----------------------
@@ -75,7 +77,7 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
         Keyword arguments passed to :class:`h5py.File`.
     """
 
-    def __init__(self, filename: str, **kwargs):
+    def __init__(self, filename: str, **kwargs) -> None:
         super().__init__(filename, **kwargs)
 
     def scan2dict(self, group: h5py.Group, lazy: bool = False) -> dict:
@@ -138,12 +140,7 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
             xmap_dict = _hdf5group2dict(
                 group["EBSD/CrystalMap/crystal_map"], recursive=True
             )
-            # TODO: Remove once orix v0.11.0 is released
-            with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore", "Argument `z`", np.VisibleDeprecationWarning
-                )
-                xmap = dict2crystalmap(xmap_dict)
+            xmap = dict2crystalmap(xmap_dict)
         else:
             xmap = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
         scan_dict["xmap"] = xmap
@@ -193,11 +190,11 @@ class KikuchipyH5EBSDReader(H5EBSDReader):
 
 
 def file_reader(
-    filename: Union[str, Path],
-    scan_group_names: Union[None, str, List[str]] = None,
+    filename: str | Path,
+    scan_group_names: str | list[str] | None = None,
     lazy: bool = False,
     **kwargs,
-) -> List[dict]:
+) -> list[dict]:
     """Read electron backscatter diffraction patterns, a crystal map,
     and an EBSD detector from a kikuchipy h5ebsd file
     :cite:`jackson2014h5ebsd`.
@@ -241,7 +238,7 @@ class KikuchipyH5EBSDWriter:
     ----------
     filename
         Full file path of the HDF5 file.
-    signal : kikuchipy.signals.EBSD
+    signal
         EBSD signal.
     add_scan
         Whether to add the signal to the file if it exists and is
@@ -250,8 +247,8 @@ class KikuchipyH5EBSDWriter:
     """
 
     def __init__(
-        self, filename: Union[str, Path], signal, add_scan: Optional[bool] = None
-    ):
+        self, filename: str | Path, signal: "EBSD", add_scan: bool | None = None
+    ) -> None:
         self.filename = filename
         self.signal = signal
         self.file_exists = os.path.isfile(filename)
@@ -272,11 +269,11 @@ class KikuchipyH5EBSDWriter:
         if self.file_exists:
             self.check_file()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}: {self.filename}"
 
     @property
-    def data_shape_scale(self) -> Tuple[tuple, tuple]:
+    def data_shape_scale(self) -> tuple[tuple, tuple]:
         """Return the shape and scale of the data to write to file."""
         data_shape = [1] * 4  # (ny, nx, sy, sx)
         data_scales = [1] * 3  # (dy, dx, px_size)
@@ -299,11 +296,11 @@ class KikuchipyH5EBSDWriter:
         return tuple(data_shape), tuple(data_scales)
 
     @property
-    def scan_group_names(self) -> List[str]:
+    def scan_group_names(self) -> list[str]:
         """Return a list of available scan group names."""
         return [group.name.lstrip("/") for group in self.scan_groups]
 
-    def check_file(self):
+    def check_file(self) -> None:
         """Check if the file, if it is old, is a valid kikuchipy h5ebsd
         file.
 
@@ -331,7 +328,7 @@ class KikuchipyH5EBSDWriter:
                 f"{self.filename} is not a supported kikuchipy h5ebsd file, as {error}"
             )
 
-    def get_scan_groups(self) -> list:
+    def get_scan_groups(self) -> list["EBSD"]:
         """Return a list of groups with scans."""
         scan_groups = []
         if self.file_exists:
@@ -381,7 +378,7 @@ class KikuchipyH5EBSDWriter:
             xmap = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
         return crystalmap2dict(xmap)
 
-    def write(self, scan_number: int = 1, **kwargs):
+    def write(self, scan_number: int = 1, **kwargs) -> None:
         """Write an :class:`~kikuchipy.signals.EBSD` to file.
 
         The file is closed after writing.
@@ -479,7 +476,7 @@ class KikuchipyH5EBSDWriter:
 def file_writer(
     filename: str,
     signal,
-    add_scan: Optional[bool] = None,
+    add_scan: bool | None = None,
     scan_number: int = 1,
     **kwargs,
 ):

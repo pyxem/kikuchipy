@@ -17,13 +17,11 @@
 
 """Creation of lists of HyperSpy markers."""
 
-from typing import Union
-
 from hyperspy.utils.markers import line_segment, point, text
 import numpy as np
 
 
-def get_line_segment_list(lines: Union[list, np.ndarray], **kwargs) -> list:
+def get_line_segment_list(lines: np.ndarray | list, **kwargs) -> list:
     """Return a list of line segment markers.
 
     Parameters
@@ -35,7 +33,7 @@ def get_line_segment_list(lines: Union[list, np.ndarray], **kwargs) -> list:
 
     Returns
     -------
-    marker_list : list
+    marker_list
         List of
         :class:`hyperspy.drawing._markers.line_segment.LineSegment`.
     """
@@ -54,7 +52,7 @@ def get_line_segment_list(lines: Union[list, np.ndarray], **kwargs) -> list:
     return marker_list
 
 
-def get_point_list(points: Union[list, np.ndarray], **kwargs) -> list:
+def get_point_list(points: np.ndarray | list, **kwargs) -> list:
     """Return a list of point markers.
 
     Parameters
@@ -66,7 +64,7 @@ def get_point_list(points: Union[list, np.ndarray], **kwargs) -> list:
 
     Returns
     -------
-    marker_list : list
+    marker_list
         List of :class:`hyperspy.drawing._markers.point.Point`.
     """
     points = np.asarray(points)
@@ -83,7 +81,7 @@ def get_point_list(points: Union[list, np.ndarray], **kwargs) -> list:
 
 
 def get_text_list(
-    texts: Union[list, np.ndarray], coordinates: Union[np.ndarray, list], **kwargs
+    texts: np.ndarray | list, coordinates: np.ndarray | list, **kwargs
 ) -> list:
     """Return a list of text markers.
 
@@ -98,7 +96,7 @@ def get_text_list(
 
     Returns
     -------
-    marker_list : list
+    marker_list
         List of :class:`hyperspy.drawing._markers.text.Text`.
     """
     coordinates = np.asarray(coordinates)

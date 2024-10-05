@@ -28,7 +28,7 @@ not for users.
 
 import functools
 import inspect
-from typing import Callable, Optional, Union
+from typing import Callable
 import warnings
 
 import numpy as np
@@ -47,11 +47,11 @@ class deprecated:
 
     def __init__(
         self,
-        since: Union[str, int, float],
-        alternative: Optional[str] = None,
+        since: str | int | float,
+        alternative: str | None = None,
         alternative_is_function: bool = True,
-        removal: Union[str, int, float, None] = None,
-    ):
+        removal: str | int | float | None = None,
+    ) -> None:
         """Visible deprecation warning.
 
         Parameters
@@ -71,7 +71,7 @@ class deprecated:
         self.alternative_is_function = alternative_is_function
         self.removal = removal
 
-    def __call__(self, func: Callable):
+    def __call__(self, func: Callable) -> None:
         # Wrap function to raise warning when called, and add warning to
         # docstring
         if self.alternative is not None:
@@ -91,7 +91,7 @@ class deprecated:
             msg = f"Attribute `{func.__name__}` is deprecated{rm_msg}.{alt_msg}"
 
         @functools.wraps(func)
-        def wrapped(*args, **kwargs):
+        def wrapped(*args, **kwargs) -> Callable:
             warnings.simplefilter(
                 action="always", category=np.VisibleDeprecationWarning, append=True
             )
@@ -126,13 +126,19 @@ class deprecated_argument:
     <https://github.com/scikit-image/scikit-image/blob/main/skimage/_shared/utils.py#L115>`_.
     """
 
-    def __init__(self, name, since, removal, alternative=None):
+    def __init__(
+        self,
+        name: str,
+        since: str | float,
+        removal: str | float,
+        alternative: str | None = None,
+    ) -> None:
         self.name = name
         self.since = since
         self.removal = removal
         self.alternative = alternative
 
-    def __call__(self, func):
+    def __call__(self, func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapped(*args, **kwargs):
             if self.name in kwargs.keys():

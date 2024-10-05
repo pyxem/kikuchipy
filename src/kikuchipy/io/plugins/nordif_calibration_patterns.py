@@ -19,7 +19,6 @@
 
 import os
 from pathlib import Path
-from typing import List, Tuple, Union
 import warnings
 
 from matplotlib.pyplot import imread
@@ -43,7 +42,7 @@ default_extension = 0
 writes = False
 
 
-def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
+def file_reader(filename: str | Path, lazy: bool = False) -> list[dict]:
     """Reader electron backscatter patterns from .bmp files stored in a
     NORDIF project directory, their filenames listed in a text file.
 
@@ -116,7 +115,7 @@ def file_reader(filename: Union[str, Path], lazy: bool = False) -> List[dict]:
     return [scan]
 
 
-def _get_patterns(dirname: str, coordinates: List[Tuple[int]]) -> np.ndarray:
+def _get_patterns(dirname: str, coordinates: list[tuple[int, int]]) -> np.ndarray:
     patterns = []
     for y, x in coordinates:
         fname_pattern = f"Calibration ({x},{y}).bmp"

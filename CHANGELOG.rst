@@ -21,6 +21,8 @@ Added
 
 Changed
 -------
+- Minimum Python version is now 3.10.
+  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
 
 Removed
 -------

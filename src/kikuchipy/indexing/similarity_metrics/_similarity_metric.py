@@ -16,7 +16,6 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import abc
-from typing import List, Optional, Union
 
 import numpy as np
 
@@ -64,18 +63,18 @@ class SimilarityMetric(abc.ABC):
         Default is ``False``.
     """
 
-    _allowed_dtypes: List[type] = []
-    _sign: Optional[int] = None
+    _allowed_dtypes: list[type] = []
+    _sign: int | None = None
 
     def __init__(
         self,
-        n_experimental_patterns: Optional[int] = None,
-        n_dictionary_patterns: Optional[int] = None,
-        navigation_mask: Optional[np.ndarray] = None,
-        signal_mask: Optional[np.ndarray] = None,
-        dtype: Union[str, np.dtype, type] = "float32",
+        n_experimental_patterns: int | None = None,
+        n_dictionary_patterns: int | None = None,
+        navigation_mask: np.ndarray | None = None,
+        signal_mask: np.ndarray | None = None,
+        dtype: str | np.dtype | type = "float32",
         rechunk: bool = False,
-    ):
+    ) -> None:
         """Create a similarity metric matching experimental and
         simulated EBSD patterns in a dictionary.
         """
@@ -86,7 +85,7 @@ class SimilarityMetric(abc.ABC):
         self._dtype = np.dtype(dtype)
         self._rechunk = rechunk
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         string = f"{self.__class__.__name__}: {np.dtype(self.dtype).name}, "
         sign_string = {1: "greater is better", -1: "lower is better"}
         string += sign_string[self.sign]
@@ -96,7 +95,7 @@ class SimilarityMetric(abc.ABC):
         return string
 
     @property
-    def allowed_dtypes(self) -> List[type]:
+    def allowed_dtypes(self) -> list[type]:
         """Return the list of allowed array data types used during
         matching.
         """
@@ -115,7 +114,7 @@ class SimilarityMetric(abc.ABC):
         return self._dtype
 
     @dtype.setter
-    def dtype(self, value: Union[str, np.dtype, type]):
+    def dtype(self, value: str | np.dtype | type) -> None:
         """Set which data type to cast the patterns to before
         matching.
         """
@@ -136,7 +135,7 @@ class SimilarityMetric(abc.ABC):
         return self._n_dictionary_patterns
 
     @n_dictionary_patterns.setter
-    def n_dictionary_patterns(self, value: int):
+    def n_dictionary_patterns(self, value: int) -> None:
         """Set the number of dictionary patterns to match."""
         self._n_dictionary_patterns = value
 
@@ -155,7 +154,7 @@ class SimilarityMetric(abc.ABC):
         return self._n_experimental_patterns
 
     @n_experimental_patterns.setter
-    def n_experimental_patterns(self, value: int):
+    def n_experimental_patterns(self, value: int) -> None:
         """Set the number of experimental patterns to match."""
         self._n_experimental_patterns = value
 
@@ -172,7 +171,7 @@ class SimilarityMetric(abc.ABC):
         return self._navigation_mask
 
     @navigation_mask.setter
-    def navigation_mask(self, value: np.ndarray):
+    def navigation_mask(self, value: np.ndarray) -> None:
         """Set the boolean mask of patterns to match, equal to the
         navigation (map) shape.
         """
@@ -191,7 +190,7 @@ class SimilarityMetric(abc.ABC):
         return self._signal_mask
 
     @signal_mask.setter
-    def signal_mask(self, value: np.ndarray):
+    def signal_mask(self, value: np.ndarray) -> None:
         """Set the boolean mask equal to the experimental patterns'
         detector shape ``(s rows, s columns)``.
         """
@@ -217,7 +216,7 @@ class SimilarityMetric(abc.ABC):
         return self._rechunk
 
     @rechunk.setter
-    def rechunk(self, value: bool):
+    def rechunk(self, value: bool) -> None:
         """Set whether to allow rechunking of arrays before matching."""
         self._rechunk = value
 
@@ -242,7 +241,7 @@ class SimilarityMetric(abc.ABC):
         """
         return NotImplemented  # pragma: no cover
 
-    def raise_error_if_invalid(self):
+    def raise_error_if_invalid(self) -> None:
         """Raise a ValueError if :attr:`dtype` is not among
         :attr:`allowed_dtypes` and the latter is not an empty list.
         """

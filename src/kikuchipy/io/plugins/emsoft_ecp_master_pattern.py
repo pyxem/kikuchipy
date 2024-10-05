@@ -19,7 +19,6 @@
 """
 
 from pathlib import Path
-from typing import List, Optional, Union
 
 from kikuchipy.io.plugins._emsoft_master_pattern import EMsoftMasterPatternReader
 
@@ -45,19 +44,27 @@ footprint = ["emdata/ecpmaster"]
 
 
 class EMsoftECPMasterPatternReader(EMsoftMasterPatternReader):
-    diffraction_type = "ECP"
-    cl_parameters_group_name = "MCCL"  # Monte Carlo openCL
-    energy_string = "EkeV"
+    @property
+    def diffraction_type(self) -> str:
+        return "ECP"
+
+    @property
+    def cl_parameters_group_name(self) -> str:
+        return "MCCL"  # Monte Carlo openCL
+
+    @property
+    def energy_string(self) -> str:
+        return "EkeV"
 
 
 def file_reader(
-    filename: Union[str, Path],
-    energy: Optional[range] = None,
+    filename: str | Path,
+    energy: range | None = None,
     projection: str = "stereographic",
     hemisphere: str = "upper",
     lazy: bool = False,
     **kwargs,
-) -> List[dict]:
+) -> list[dict]:
     """Read simulated electron channeling pattern (ECP) master patterns
     from EMsoft's HDF5 file format :cite:`callahan2013dynamical`.
 

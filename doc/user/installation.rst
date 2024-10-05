@@ -4,7 +4,7 @@ Installation
 
 kikuchipy can be installed with `pip <https://pypi.org/project/kikuchipy/>`__,
 `conda <https://anaconda.org/conda-forge/kikuchipy>`__, the
-:ref:`hyperspy:hyperspy-bundle`, or from source, and supports Python >= 3.8.
+:ref:`hyperspy:hyperspy-bundle`, or from source, and supports Python >= 3.10.
 All alternatives are available on Windows, macOS and Linux.
 
 .. _install-with-pip:

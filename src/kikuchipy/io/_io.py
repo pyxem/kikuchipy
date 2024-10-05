@@ -18,9 +18,9 @@
 import glob
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING
 
-from h5py import File, Group, is_hdf5
+import h5py
 from hyperspy.io_plugins import hspy
 from hyperspy.misc.io.tools import overwrite as overwrite_method
 from hyperspy.misc.utils import find_subclasses, strlist2enumeration
@@ -45,7 +45,7 @@ from kikuchipy.io.plugins import (
 )
 import kikuchipy.signals
 
-plugins = [
+plugins: list = [
     bruker_h5ebsd,
     ebsd_directory,
     edax_binary,
@@ -63,8 +63,11 @@ plugins = [
 ]
 
 if TYPE_CHECKING:  # pragma: no cover
-    from kikuchipy.signals.ebsd import EBSD
-    from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
+    from kikuchipy.signals.ebsd import EBSD, LazyEBSD
+    from kikuchipy.signals.ebsd_master_pattern import (
+        EBSDMasterPattern,
+        LazyEBSDMasterPattern,
+    )
     from kikuchipy.signals.ecp_master_pattern import ECPMasterPattern
 
 default_write_ext = set()
@@ -73,14 +76,9 @@ for plugin in plugins:
         default_write_ext.add(plugin.file_extensions[plugin.default_extension])
 
 
-def load(filename: Union[str, Path], lazy: bool = False, **kwargs) -> Union[
-    "EBSD",
-    "EBSDMasterPattern",
-    "ECPMasterPattern",
-    List["EBSD"],
-    List["EBSDMasterPattern"],
-    List["ECPMasterPattern"],
-]:
+def load(
+    filename: str | Path, lazy: bool = False, **kwargs
+) -> "EBSD | EBSDMasterPattern | ECPMasterPattern | list[EBSD] | list[EBSDMasterPattern] | list[ECPMasterPattern]":
     """Load an :class:`~kikuchipy.signals.EBSD`,
     :class:`~kikuchipy.signals.EBSDMasterPattern` or
     :class:`~kikuchipy.signals.ECPMasterPattern` signal from one of the
@@ -127,7 +125,7 @@ def load(filename: Union[str, Path], lazy: bool = False, **kwargs) -> Union[
         if len(filenames) > 0:
             is_wildcard = True
         if not is_wildcard:
-            raise IOError(f"No filename matches '{filename}'.")
+            raise IOError(f"No filename matches {filename!r}")
 
     # Find matching reader for file extension
     extension = os.path.splitext(filename)[1][1:]
@@ -137,10 +135,10 @@ def load(filename: Union[str, Path], lazy: bool = False, **kwargs) -> Union[
             readers.append(plugin)
     if len(readers) == 0:
         raise IOError(
-            f"Could not read '{filename}'. If the file format is supported, please "
+            f"Could not read {filename!r}. If the file format is supported, please "
             "report this error"
         )
-    elif len(readers) > 1 and is_hdf5(filename):
+    elif len(readers) > 1 and h5py.is_hdf5(filename):
         reader = _plugin_from_footprints(filename, plugins=readers)
     else:
         reader = readers[0]
@@ -163,7 +161,9 @@ def load(filename: Union[str, Path], lazy: bool = False, **kwargs) -> Union[
     return out
 
 
-def _dict2signal(signal_dict: dict, lazy: bool = False):
+def _dict2signal(
+    signal_dict: dict, lazy: bool = False
+) -> "EBSD | LazyEBSD | EBSDMasterPattern | LazyEBSDMasterPattern":
     """Create a signal instance from a dictionary.
 
     This function is a modified version :func:`hyperspy.io.dict2signal`.
@@ -180,7 +180,7 @@ def _dict2signal(signal_dict: dict, lazy: bool = False):
 
     Returns
     -------
-    signal : EBSD, LazyEBSD, EBSDMasterPattern or LazyEBSDMasterPattern
+    signal
         Signal instance with ``data``, ``metadata`` and
         ``original_metadata`` from dictionary.
     """
@@ -210,7 +210,7 @@ def _dict2signal(signal_dict: dict, lazy: bool = False):
     return signal
 
 
-def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
+def _plugin_from_footprints(filename: str, plugins) -> object:
     """Get HDF5 correct plugin from a list of potential plugins based on
     their unique footprints.
 
@@ -239,7 +239,7 @@ def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
         d = {}
         for key, val in group.items():
             key_lower = key.lstrip().lower()
-            if isinstance(val, Group):
+            if isinstance(val, h5py.Group):
                 d[key_lower] = _hdf5group2dict(val)
             elif key_lower == "manufacturer":
                 d[key_lower] = key
@@ -252,7 +252,7 @@ def _plugin_from_footprints(filename: str, plugins) -> Optional[object]:
         if key in obj:
             return _exists(obj[key], chain) if chain else obj[key]
 
-    with File(filename) as f:
+    with h5py.File(filename) as f:
         d = _hdf5group2dict(f["/"])
 
         plugins_with_footprints = [p for p in plugins if hasattr(p, "footprint")]
@@ -296,7 +296,7 @@ def _assign_signal_subclass(
     signal_dimension: int,
     signal_type: str = "",
     lazy: bool = False,
-):
+) -> "EBSD | EBSDMasterPattern | ECPMasterPattern":
     """Given ``record_by`` and ``signal_type`` return the matching
     signal subclass.
 
@@ -330,10 +330,10 @@ def _assign_signal_subclass(
     ):
         dtype = "real"
     else:
-        raise ValueError(f"Data type '{dtype.name}' not understood")
+        raise ValueError(f"Data type {dtype.name!r} not understood")
     if not isinstance(signal_dimension, int) or signal_dimension < 0:
         raise ValueError(
-            f"Signal dimension must be a positive integer and not '{signal_dimension}'"
+            f"Signal dimension must be a positive integer and not {signal_dimension!r}"
         )
 
     # Get possible signal classes
@@ -357,20 +357,20 @@ def _assign_signal_subclass(
         matches = dtype_dim_type_matches
     else:
         raise ValueError(
-            f"No kikuchipy signals match dtype '{dtype}', signal dimension "
-            f"'{signal_dimension}' and signal_type '{signal_type}'."
+            f"No kikuchipy signals match dtype {dtype!r}, signal dimension "
+            f"'{signal_dimension}' and signal_type {signal_type!r}"
         )
 
     return matches[0]
 
 
 def _save(
-    filename: Union[str, Path],
-    signal,
-    overwrite: Optional[bool] = None,
-    add_scan: Optional[bool] = None,
+    filename: str | Path,
+    signal: "EBSD | LazyEBSD",
+    overwrite: bool | None = None,
+    add_scan: bool | None = None,
     **kwargs,
-):
+) -> None:
     """Write signal to a file in a supported format.
 
     This function is a modified version of :func:`hyperspy.io.save`.
@@ -379,7 +379,7 @@ def _save(
     ----------
     filename
         File path including name of new file.
-    signal : EBSD or LazyEBSD
+    signal
         Signal instance.
     overwrite
         Whether to overwrite file or not if it already exists.
@@ -387,7 +387,7 @@ def _save(
         Whether to add the signal to an already existing h5ebsd file or
         not. If the file does not exist the signal is written to a new
         file.
-    **kwargs :
+    **kwargs
         Keyword arguments passed to the writer.
     """
     filename = str(filename)
@@ -405,8 +405,8 @@ def _save(
 
     if writer is None:
         raise ValueError(
-            f"'{ext}' does not correspond to any supported format. Supported file "
-            f"extensions are: '{strlist2enumeration(default_write_ext)}'"
+            f"{ext!r} does not correspond to any supported format. Supported file "
+            f"extensions are: {strlist2enumeration(default_write_ext)!r}"
         )
     else:
         sd = signal.axes_manager.signal_dimension
@@ -423,7 +423,7 @@ def _save(
                     writing_plugins.append(plugin)
             raise ValueError(
                 "This file format cannot write this data. The following formats can: "
-                f"{strlist2enumeration(writing_plugins)}"
+                f"{strlist2enumeration(writing_plugins)!r}"
             )
 
         _ensure_directory(filename)
@@ -436,7 +436,7 @@ def _save(
             and is_file
         ):
             if add_scan is None:
-                q = "Add scan to '{}' (y/n)?\n".format(filename)
+                q = f"Add scan to {filename!r} (y/n)?\n"
                 add_scan = _get_input_bool(q)
             if add_scan:
                 overwrite = True  # So that the 2nd statement below triggers

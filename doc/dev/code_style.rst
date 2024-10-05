@@ -34,7 +34,7 @@ Package imports should be structured into three blocks with blank lines between 
 We use type hints in the function definition without type duplication in the function
 docstring, for example::
 
-    def my_function(a: int, b: Optional[bool] = None) -> Tuple[float, np.ndarray]:
+    def my_function(a: int, b: bool | None = None) -> tuple[float, np.ndarray]:
         """This is a new function.
 
         Parameters
