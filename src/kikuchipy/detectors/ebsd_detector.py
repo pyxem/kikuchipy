@@ -232,6 +232,7 @@ class EBSDDetector:
         sample_tilt = np.round(self.sample_tilt, decimals)
         tilt = np.round(self.tilt, decimals)
         azimuthal = np.round(self.azimuthal, decimals)
+        euler = np.round(self.euler, decimals)
         px_size = np.round(self.px_size, decimals)
         return (
             f"{type(self).__name__}"
@@ -240,6 +241,7 @@ class EBSDDetector:
             f"sample_tilt={sample_tilt}, "
             f"tilt={tilt}, "
             f"azimuthal={azimuthal}, "
+            f"euler=({euler[0]}, {euler[1]}, {euler[2]}), "
             f"binning={self.binning}, "
             f"px_size={px_size} um)"
         )

@@ -116,7 +116,7 @@ class TestEBSDDetector:
         )
         assert repr(det) == (
             "EBSDDetector(shape=(1, 2), pc=(0.421, 0.779, 0.505), sample_tilt=70.0, "
-            "tilt=5.0, azimuthal=2.0, binning=4.0, px_size=3.0 um)"
+            "tilt=5.0, azimuthal=2.0, euler=(2.0, 95.0, 0.0), binning=4.0, px_size=3.0 um)"
         )
 
     def test_deepcopy(self, pc1):
