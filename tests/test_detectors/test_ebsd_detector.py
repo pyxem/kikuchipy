@@ -183,6 +183,70 @@ class TestEBSDDetector:
             detector.navigation_shape = (1, 2, 3)
 
     @pytest.mark.parametrize(
+        "tilt",
+        [-90.0, -10.3, -0.5, 0.0, 0.5, 5.7, 90.0],
+    )
+    def test_set_tilt(self, pc1, tilt):
+        """Set detector tilt and update euler angles."""
+        detector = kp.detectors.EBSDDetector(pc=pc1)
+        assert detector.tilt == 0
+        assert detector.euler[1] == 90
+
+        detector.tilt = tilt
+        assert detector.tilt == tilt
+        assert np.allclose(detector.euler[1] - 90, tilt)
+        assert np.allclose(detector.euler[0], 0)
+        assert np.allclose(detector.euler[2], 0)
+
+    @pytest.mark.parametrize(
+        "azimuthal",
+        [-90.0, -10.3, -0.5, 0.0, 0.5, 5.7, 90.0],
+    )
+    def test_set_azimuthal(self, pc1, azimuthal):
+        """Set detector azimuthal and update euler angles."""
+        detector = kp.detectors.EBSDDetector(pc=pc1)
+        assert detector.azimuthal == 0
+        assert detector.euler[0] == 0
+
+        detector.azimuthal = azimuthal
+        assert detector.azimuthal == azimuthal
+        assert detector.euler[0] == azimuthal
+        assert np.allclose(detector.euler[1], 90)
+        assert np.allclose(detector.euler[2], 0)
+
+    @pytest.mark.parametrize(
+        "euler",
+        [
+            ([0.0, 90.0, 0.0]),
+            ([0.0, 45.0, 0.0]),
+            ([0.0, 0.0, 0.0]),
+            ([0.0, 135.0, 0.0]),
+            ([0.0, 180.0, 0.0]),
+            ([-90.0, 90.0, 0.0]),
+            ([-10.3, 90.0, 0.0]),
+            ([-0.5, 90.0, 0.0]),
+            ([0.5, 90.0, 0.0]),
+            ([5.7, 90.0, 0.0]),
+            ([90.0, 90.0, 0.0]),
+            ([0.5, 90.0, 2.3]),
+            ([0.5, 90.0, -2.3]),
+            ([0.5, 90.0, 90.0]),
+            ([0.5, 90.0, -90.0]),
+        ],
+    )
+    def test_set_euler(self, pc1, euler):
+        """Set detector euler and update tilt and azimuthal angles."""
+        detector = kp.detectors.EBSDDetector(pc=pc1)
+        assert detector.azimuthal == 0
+        assert detector.tilt == 0
+        assert np.allclose(detector.euler, np.array([0.0, 90.0, 0.0]))
+
+        detector.euler = euler
+        assert np.allclose(detector.euler, euler)
+        assert detector.azimuthal == euler[0]
+        assert np.allclose(detector.tilt, euler[1] - 90)
+
+    @pytest.mark.parametrize(
         "shape, desired_x_range, desired_y_range",
         [
             ((60, 60), [-0.833828, 1.146762], [-0.436918, 1.543672]),
@@ -1133,6 +1197,7 @@ class TestSaveLoadDetector:
         assert np.isclose(det2.px_size, det1.px_size)
         assert det2.binning == det1.binning
         assert np.isclose(det2.azimuthal, det1.azimuthal)
+        assert np.allclose(det2.euler, det1.euler)
 
     def test_save_detector_raises(self, tmp_path):
         det = kp.detectors.EBSDDetector()
