@@ -123,20 +123,6 @@ def _get_direction_cosines_from_detector(
 
 
 @njit(
-    "Tuple((float64, float64, float64, float64))(float64, float64, float64)",
-    cache=True,
-    nogil=True,
-    fastmath=True,
-)
-def _get_cosine_sine_of_alpha_and_azimuthal(
-    sample_tilt: float, tilt: float, azimuthal: float
-) -> tuple[float, float, float, float]:
-    alpha = (np.pi / 2) - np.deg2rad(sample_tilt) + np.deg2rad(tilt)
-    azimuthal = np.deg2rad(azimuthal)
-    return np.cos(alpha), np.sin(alpha), np.cos(azimuthal), np.sin(azimuthal)
-
-
-@njit(
     ("float64[:, :]" "(float64[:], float64, int64, int64, float64[:, ::1], bool_[:])"),
     cache=True,
     nogil=True,

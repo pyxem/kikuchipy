@@ -25,7 +25,6 @@ import pytest
 
 import kikuchipy as kp
 from kikuchipy.signals.util._master_pattern import (
-    _get_cosine_sine_of_alpha_and_azimuthal,
     _get_direction_cosines_for_fixed_pc,
     _get_direction_cosines_for_varying_pc,
     _get_direction_cosines_from_detector,
@@ -491,13 +490,6 @@ class TestProjectFromLambert:
             mp, nii[0], nij[0], niip[0], nijp[0], di[0], dj[0], dim[0], djm[0]
         )
         assert np.isclose(value, 1)
-
-    def test_get_cosine_sine_of_alpha_and_azimuthal(self):
-        """Make sure the Numba function is covered."""
-        values = _get_cosine_sine_of_alpha_and_azimuthal.py_func(
-            sample_tilt=70, tilt=10, azimuthal=5
-        )
-        assert np.allclose(values, [0.866, 0.5, 0.996, 0.087], atol=1e-3)
 
     def test_get_direction_cosines_for_multiple_pcs(self):
         """Make sure the Numba function is covered."""
