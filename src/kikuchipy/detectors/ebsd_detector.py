@@ -240,6 +240,7 @@ class EBSDDetector:
             f"sample_tilt={sample_tilt}, "
             f"tilt={tilt}, "
             f"azimuthal={azimuthal}, "
+            f"euler={tuple(self.euler)}, "
             f"binning={self.binning}, "
             f"px_size={px_size} um)"
         )
