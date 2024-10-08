@@ -23,11 +23,12 @@ and simulated patterns.
 import numpy as np
 
 from kikuchipy._utils.numba import rotation_from_euler
+from kikuchipy.detectors import EBSDDetector
 from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
     _ncc_single_patterns_1d_float32_exp_centered,
 )
 from kikuchipy.signals.util._master_pattern import (
-    _get_direction_cosines_for_fixed_pc,
+    _get_direction_cosines_from_detector,
     _project_single_pattern_from_master_pattern,
 )
 
@@ -104,15 +105,16 @@ def _refine_pc_objective_function(x: np.ndarray, *args) -> float:
     -------
         Normalized cross-correlation score.
     """
-    dc = _get_direction_cosines_for_fixed_pc(
-        pcx=x[0],
-        pcy=x[1],
-        pcz=x[2],
-        nrows=args[8],
-        ncols=args[9],
+    det = EBSDDetector(
+        shape=(args[8], args[9]),
+        pc=(x[0], x[1], x[2]),
         tilt=args[10],
         azimuthal=args[11],
         sample_tilt=args[12],
+    )
+
+    dc = _get_direction_cosines_from_detector(
+        detector=det,
         signal_mask=args[7],
     )
     simulated = _project_single_pattern_from_master_pattern(
@@ -164,17 +166,19 @@ def _refine_orientation_pc_objective_function(x: np.ndarray, *args) -> float:
     -------
         normalized cross-correlation score.
     """
-    dc = _get_direction_cosines_for_fixed_pc(
-        pcx=x[3],
-        pcy=x[4],
-        pcz=x[5],
-        nrows=args[7],
-        ncols=args[8],
+    det = EBSDDetector(
+        shape=(args[7], args[8]),
+        pc=(x[3], x[4], x[5]),
         tilt=args[9],
         azimuthal=args[10],
         sample_tilt=args[11],
+    )
+
+    dc = _get_direction_cosines_from_detector(
+        detector=det,
         signal_mask=args[6],
     )
+
     simulated = _project_single_pattern_from_master_pattern(
         rotation=rotation_from_euler(*x[:3]),
         direction_cosines=dc,
