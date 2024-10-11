@@ -38,15 +38,13 @@ class TestRotationVectorTools:
         det = kp.detectors.EBSDDetector(
             shape=sig_shape, pc=(0.5, 0.5, 0.5), sample_tilt=70, tilt=10, azimuthal=0
         )
-        dc = (
-            _get_direction_cosines_for_fixed_pc.py_func(
-                gnomonic_bounds=det.gnomonic_bounds.squeeze().astype(np.float64),
-                pcz=det.pc.squeeze().astype(np.float64)[2],
-                nrows=det.nrows,
-                ncols=det.ncols,
-                u_s_inv=det.u_s_inv,
-                signal_mask=np.ones(sig_shape[0] * sig_shape[1], dtype=bool),
-            )
+        dc = _get_direction_cosines_for_fixed_pc.py_func(
+            gnomonic_bounds=det.gnomonic_bounds.squeeze().astype(np.float64),
+            pcz=det.pc.squeeze().astype(np.float64)[2],
+            nrows=det.nrows,
+            ncols=det.ncols,
+            u_s_inv=det.u_s_inv,
+            signal_mask=np.ones(sig_shape[0] * sig_shape[1], dtype=bool),
         )
 
         rot_orix = Rotation(rot)
