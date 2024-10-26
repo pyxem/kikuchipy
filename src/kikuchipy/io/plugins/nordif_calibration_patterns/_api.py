@@ -25,28 +25,14 @@ from matplotlib.pyplot import imread
 import numpy as np
 
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
-from kikuchipy.io.plugins.nordif import _get_settings_from_file
-
-__all__ = ["file_reader"]
-
-
-# Plugin characteristics
-# ----------------------
-format_name = "NORDIF calibration patterns"
-description = "Read support for NORDIF's calibration patterns"
-full_support = False
-# Recognised file extension
-file_extensions = ["txt"]
-default_extension = 0
-# Writing capabilities (signal dimensions, navigation dimensions)
-writes = False
+from kikuchipy.io.plugins.nordif._api import _get_settings_from_file
 
 
 def file_reader(filename: str | Path, lazy: bool = False) -> list[dict]:
-    """Reader electron backscatter patterns from .bmp files stored in a
-    NORDIF project directory, their filenames listed in a text file.
+    """Return NORDIF calibration electron backscatter diffraction
+    patterns in a directory with a settings text file.
 
-    Not meant to be used directly; use :func:`~kikuchipy.load`.
+    Not meant to be used directly; use :func:`~kikuchipy.load` instead.
 
     Parameters
     ----------
@@ -58,10 +44,12 @@ def file_reader(filename: str | Path, lazy: bool = False) -> list[dict]:
     Returns
     -------
     scan
-        Data, axes, metadata and original metadata.
+        Data, axes, metadata, and original metadata.
     """
     # Get metadata from setting file
-    md, omd, _, detector = _get_settings_from_file(filename, pattern_type="calibration")
+    metadata, orig_metadata, _, detector = _get_settings_from_file(
+        str(filename), pattern_type="calibration"
+    )
     dirname = os.path.dirname(filename)
 
     scan = {}
@@ -73,12 +61,12 @@ def file_reader(filename: str | Path, lazy: bool = False) -> list[dict]:
     except FileNotFoundError:
         scan["static_background"] = None
         warnings.warn(
-            f"Could not read static background pattern '{static_bg_file}', however it "
+            f"Could not read static background pattern {static_bg_file!r}, however it "
             "can be set as 'EBSD.static_background'"
         )
 
     # Set required and other parameters in metadata
-    md.update(
+    metadata.update(
         {
             "General": {
                 "original_filename": filename,
@@ -87,12 +75,12 @@ def file_reader(filename: str | Path, lazy: bool = False) -> list[dict]:
             "Signal": {"signal_type": "EBSD", "record_by": "image"},
         }
     )
-    scan["metadata"] = md
-    scan["original_metadata"] = omd
+    scan["metadata"] = metadata
+    scan["original_metadata"] = orig_metadata
 
     scan["detector"] = EBSDDetector(**detector)
 
-    yx = omd["calibration_patterns"]["indices"]
+    yx = orig_metadata["calibration_patterns"]["indices"]
 
     data = _get_patterns(dirname=dirname, coordinates=yx)
     scan["data"] = data
@@ -100,17 +88,19 @@ def file_reader(filename: str | Path, lazy: bool = False) -> list[dict]:
     units = ["um"] * 3
     names = ["x", "dy", "dx"]
     scales = np.ones(3)
-    scan["axes"] = [
-        {
-            "size": data.shape[i],
-            "index_in_array": i,
-            "name": names[i],
-            "scale": scales[i],
-            "offset": 0,
-            "units": units[i],
-        }
-        for i in range(data.ndim)
-    ]
+    axes = []
+    for i in range(data.ndim):
+        axes.append(
+            {
+                "size": data.shape[i],
+                "index_in_array": i,
+                "name": names[i],
+                "scale": scales[i],
+                "offset": 0,
+                "units": units[i],
+            }
+        )
+    scan["axes"] = axes
 
     return [scan]
 
