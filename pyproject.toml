@@ -2,6 +2,8 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# ----------------------------- Project ------------------------------ #
+
 [project]
 name = "kikuchipy"
 authors = [{name = "kikuchipy developers"}]
@@ -40,7 +42,8 @@ dependencies = [
     "dask[array]      >= 2021.8.1",
     "diffpy.structure >= 3",
     "diffsims         >= 0.5.2",
-    "hyperspy         >= 2",
+    # TODO: Replace with HyperSpy 2.2 once it's out
+    "hyperspy @ git+https://github.com/hyperspy/hyperspy.git@RELEASE_next_patch",
     "h5py             >= 2.10",
     "imageio",
     "lazy_loader",
@@ -56,16 +59,6 @@ dependencies = [
     "scipy            >= 1.7",
     "tqdm             >= 0.5.2",
 ]
-
-[project.entry-points."hyperspy.extensions"]
-kikuchipy = "kikuchipy"
-
-[project.urls]
-Documentation = "https://kikuchipy.org"
-Download = "https://pypi.python.org/pypi/kikuchipy"
-"Bug Tracker" = "https://github.com/pyxem/kikuchipy/issues"
-"Source Code" = "https://github.com/pyxem/kikuchipy"
-Changelog = "https://kikuchipy.org/en/stable/changelog.html"
 
 [project.optional-dependencies]
 all = [
@@ -108,18 +101,34 @@ dev = [
     "kikuchipy[doc,tests,coverage]",
 ]
 
+[project.entry-points."hyperspy.extensions"]
+kikuchipy = "src/kikuchipy"
+
+[project.urls]
+Documentation = "https://kikuchipy.org"
+Download = "https://pypi.python.org/pypi/kikuchipy"
+"Bug Tracker" = "https://github.com/pyxem/kikuchipy/issues"
+"Source Code" = "https://github.com/pyxem/kikuchipy"
+Changelog = "https://kikuchipy.org/en/stable/changelog.html"
+
+# ------------------------------- Tool ------------------------------- #
+
 [tool.hatch.version]
 path = "src/kikuchipy/__init__.py"
 
 # https://github.com/pypa/hatch/discussions/427
 # https://github.com/pypa/hatch/issues/492
 [tool.hatch.build.targets.wheel.sources]
-"src" = ""
+src = ""
 
 [tool.hatch.build.targets.wheel]
 include = [
     "src/kikuchipy",
 ]
+
+# TODO: Remove once HyperSpy is not installed from a direct reference (GitHub)
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.coverage.report]
 precision = 2
