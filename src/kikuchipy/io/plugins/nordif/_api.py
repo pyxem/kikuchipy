@@ -17,6 +17,7 @@
 
 """Reader and writer of EBSD patterns from a NORDIF binary file."""
 
+from io import TextIOWrapper
 import logging
 import os
 from pathlib import Path
@@ -28,25 +29,13 @@ from matplotlib.pyplot import imread
 import numpy as np
 from orix.crystal_map import CrystalMap
 
+from kikuchipy.constants import VisibleDeprecationWarning
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 
 if TYPE_CHECKING:  # pragma: no cover
     from kikuchipy.signals.ebsd import EBSD, LazyEBSD
 
-__all__ = ["file_reader", "file_writer"]
-
 _logger = logging.getLogger(__name__)
-
-# Plugin characteristics
-# ----------------------
-format_name = "NORDIF"
-description = "Read/write support for NORDIF pattern and setting files"
-full_support = False
-# Recognised file extension
-file_extensions = ["dat"]
-default_extension = 0
-# Writing capabilities (signal dimensions, navigation dimensions)
-writes = [(2, 2), (2, 1), (2, 0)]
 
 
 def file_reader(
@@ -59,26 +48,26 @@ def file_reader(
 ) -> list[dict]:
     """Read electron backscatter patterns from a NORDIF data file.
 
-    Not meant to be used directly; use :func:`~kikuchipy.load`.
+    Not meant to be used directly; use :func:`~kikuchipy.load` instead.
 
     Parameters
     ----------
     filename
         File path to NORDIF data file.
     mmap_mode
-        Memory map mode. If not given, ``"r"`` is used unless
-        ``lazy=True``, in which case ``"c"`` is used.
+        Memory map mode. If not given, "r" is used unless *lazy* is
+        True, in which case "c" is used.
     scan_size
         Scan size in number of patterns in width and height.
     pattern_size
         Pattern size in detector pixels in width and height.
     setting_file
-        File path to NORDIF setting file (default is `Setting.txt` in
-        same directory as ``filename``).
+        File path to NORDIF setting file (default is "Setting.txt" in
+        same directory as *filename*).
     lazy
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
-        is ``False``.
+        is False.
 
     Returns
     -------
@@ -86,7 +75,10 @@ def file_reader(
         Data, axes, metadata and original metadata.
     """
     if mmap_mode is None:
-        mmap_mode = "r" if lazy else "c"
+        if lazy:
+            mmap_mode = "r"
+        else:
+            mmap_mode = "c"
 
     scan = {}
 
@@ -94,9 +86,9 @@ def file_reader(
     if "+" in mmap_mode or ("write" in mmap_mode and "copyonwrite" != mmap_mode):
         if lazy:
             raise ValueError("Lazy loading does not support in-place writing")
-        f = open(filename, mode="r+b")
+        file = open(filename, mode="r+b")
     else:
-        f = open(filename, mode="rb")
+        file = open(filename, mode="rb")
 
     # Get metadata from setting file
     folder, _ = os.path.split(filename)
@@ -115,7 +107,7 @@ def file_reader(
                 "No setting file found and no scan_size or pattern_size detected in "
                 "input arguments. These must be set if no setting file is provided"
             )
-        warnings.filterwarnings("ignore", category=np.VisibleDeprecationWarning)
+        warnings.filterwarnings("ignore", category=VisibleDeprecationWarning)
         md = {}
         omd = {}
         detector_dict = None
@@ -127,7 +119,7 @@ def file_reader(
     except FileNotFoundError:
         scan["static_background"] = None
         warnings.warn(
-            f"Could not read static background pattern '{static_bg_file}', however it "
+            f"Could not read static background pattern {static_bg_file!r}, however it "
             "can be set as 'EBSD.static_background'"
         )
 
@@ -155,10 +147,10 @@ def file_reader(
     # Read data from file
     data_size = ny * nx * sy * sx
     if not lazy:
-        f.seek(0)
-        data = np.fromfile(f, dtype="uint8", count=data_size)
+        file.seek(0)
+        data = np.fromfile(file, dtype="uint8", count=data_size)
     else:
-        data = np.memmap(f.name, mode=mmap_mode, dtype="uint8")
+        data = np.memmap(file.name, mode=mmap_mode, dtype="uint8")
 
     try:
         data = data.reshape((ny, nx, sy, sx)).squeeze()
@@ -209,7 +201,7 @@ def file_reader(
     # --- Crystal map
     scan["xmap"] = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
 
-    f.close()
+    file.close()
 
     return [scan]
 
@@ -224,8 +216,8 @@ def _get_settings_from_file(
     filename
         File path of NORDIF setting file.
     pattern_type
-        Whether to read the ``"acquisition"`` (default) or
-        ``"calibration"`` settings.
+        Whether to read the "acquisition" (default) or "calibration"
+        settings.
 
     Returns
     -------
@@ -317,7 +309,9 @@ def _get_settings_from_file(
     return md, omd, scan_size, detector
 
 
-def _get_string(content: list, expression: str, line_no: int, file) -> str:
+def _get_string(
+    content: list, expression: str, line_no: int, file: TextIOWrapper
+) -> str:
     """Get relevant part of string using regular expression.
 
     Parameters
@@ -328,7 +322,7 @@ def _get_string(content: list, expression: str, line_no: int, file) -> str:
         Regular expression.
     line_no
         Line number to search in.
-    file : file instance
+    file
         File handle of open setting file.
 
     Returns
@@ -339,8 +333,8 @@ def _get_string(content: list, expression: str, line_no: int, file) -> str:
     match = re.search(expression, content[line_no])
     if match is None:
         warnings.warn(
-            f"Failed to read line {line_no - 1} in settings file '{file.name}' using "
-            f"regular expression '{expression}'"
+            f"Failed to read line {line_no - 1} in settings file {file.name!r} using "
+            f"regular expression {expression!r}"
         )
         return ""
     else:
@@ -443,9 +437,7 @@ def _get_calibration_pattern_settings(
 
 
 def file_writer(filename: str, signal: "EBSD | LazyEBSD") -> None:
-    """Write an :class:`~kikuchipy.signals.EBSD` or
-    :class:`~kikuchipy.signals.LazyEBSD` instance to a NORDIF binary
-    file.
+    """Write an EBSD signal to a NORDIF binary file.
 
     Parameters
     ----------
@@ -454,10 +446,10 @@ def file_writer(filename: str, signal: "EBSD | LazyEBSD") -> None:
     signal
         Signal instance.
     """
-    with open(filename, "wb") as f:
+    with open(filename, "wb") as file:
         if signal._lazy:
             for pattern in signal._iterate_signal():
-                np.array(pattern.flatten()).tofile(f)
+                np.array(pattern.flatten()).tofile(file)
         else:
             for pattern in signal._iterate_signal():
-                pattern.flatten().tofile(f)
+                pattern.flatten().tofile(file)
