@@ -226,7 +226,7 @@ class EBSDDetector:
 
     def __repr__(self) -> str:
         decimals = 3
-        pc_average = tuple(self.pc_average.round(decimals))
+        pc_average = tuple(map(float, self.pc_average.round(decimals)))
         sample_tilt = np.round(self.sample_tilt, decimals)
         tilt = np.round(self.tilt, decimals)
         azimuthal = np.round(self.azimuthal, decimals)
@@ -234,7 +234,7 @@ class EBSDDetector:
         return (
             f"{type(self).__name__}"
             f"(shape={self.shape}, "
-            f"pc={pc_average!r}, "
+            f"pc={pc_average}, "
             f"sample_tilt={sample_tilt}, "
             f"tilt={tilt}, "
             f"azimuthal={azimuthal}, "
