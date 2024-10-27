@@ -40,7 +40,7 @@ class TestIO:
                 _ = kp.load(new_file_path)
 
     def test_dict2signal(self, kikuchipy_h5ebsd_path):
-        scan_dict = kp.io.plugins.kikuchipy_h5ebsd.file_reader(
+        scan_dict = kp.io.plugins._api.file_reader(
             kikuchipy_h5ebsd_path / "patterns.h5"
         )[0]
         scan_dict["metadata"]["Signal"]["record_by"] = "not-image"

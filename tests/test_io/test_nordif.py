@@ -32,7 +32,7 @@ from orix.crystal_map import CrystalMap
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.io.plugins.nordif import _get_settings_from_file, _get_string
+from kikuchipy.io.plugins.nordif._api import _get_settings_from_file, _get_string
 
 # Settings content
 METADATA = {

@@ -110,5 +110,5 @@ class TestOxfordBinaryReader:
         the file works.
         """
         with open(oxford_binary_file.name, mode="rb") as f:
-            fox = kp.io.plugins.oxford_binary.OxfordBinaryFileReader(f)
+            fox = kp.io.plugins._api.OxfordBinaryFileReader(f)
             assert fox.n_patterns == n_patterns
