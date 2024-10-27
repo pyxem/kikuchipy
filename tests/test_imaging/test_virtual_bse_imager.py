@@ -28,7 +28,7 @@ class TestVirtualBSEImager:
         vbse_imager = kp.imaging.VirtualBSEImager(dummy_signal)
 
         assert isinstance(vbse_imager.signal, kp.signals.EBSD)
-        assert vbse_imager.grid_shape == (5, 5)
+        assert vbse_imager.grid_shape == (3, 3)
 
     def test_init_lazy(self, dummy_signal):
         lazy_signal = dummy_signal.as_lazy()
