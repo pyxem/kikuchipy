@@ -17,7 +17,7 @@
 
 import shutil
 
-from h5py import File
+import h5py
 import pytest
 
 import kikuchipy as kp
@@ -36,13 +36,13 @@ class TestEDAXH5EBSD:
         # No 'SEM-PRIAS' group available
         tmp_file = tmp_path / file.name
         shutil.copy(file, tmp_file)
-        with File(tmp_file, mode="r+") as f:
+        with h5py.File(tmp_file, mode="r+") as f:
             f["Scan 1"].move("SEM-PRIAS Images", "SSEM-PRIAS Images")
         s2 = kp.load(tmp_file)
         assert s2.metadata.Acquisition_instrument.SEM.magnification != mag
 
         # Not a square grid
-        with File(tmp_file, mode="r+") as f:
+        with h5py.File(tmp_file, mode="r+") as f:
             grid = f["Scan 1/EBSD/Header/Grid Type"]
             grid[()] = "HexGrid".encode()
         with pytest.raises(IOError, match="Only square grids are"):
@@ -51,5 +51,7 @@ class TestEDAXH5EBSD:
     def test_save_error(self, edax_h5ebsd_path):
         file = edax_h5ebsd_path / "patterns.h5"
         s = kp.load(file)
-        with pytest.raises(OSError, match="(.*) is not a supported kikuchipy"):
+        with pytest.raises(
+            ValueError, match="Chosen IO plugin 'kikuchipy_h5ebsd' cannot write this "
+        ):
             s.save(file, add_scan=True)

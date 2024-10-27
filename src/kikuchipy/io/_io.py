@@ -379,6 +379,15 @@ def _save(
     **kwargs
         Keyword arguments passed to the writer.
 
+    Raises
+    ------
+    ValueError
+        If file extension does not correspond to any supported format.
+    ValueError
+        If the file format cannot write the signal data.
+    ValueError
+        If the overwrite parameter is invalid.
+
     Notes
     -----
     This function is a modified version of :func:`hyperspy.io.save`.
@@ -404,7 +413,7 @@ def _save(
     else:
         sig_dim = signal.axes_manager.signal_dimension
         nav_dim = signal.axes_manager.navigation_dimension
-        if writer.writes is not True and (sig_dim, nav_dim) not in writer["writes"]:
+        if writer["writes"] is not True and (sig_dim, nav_dim) not in writer["writes"]:
             # Get writers that can write this data
             writing_plugins = []
             for plugin in PLUGINS:
@@ -414,9 +423,10 @@ def _save(
                     and (sig_dim, nav_dim) in plugin["writes"]
                 ):
                     writing_plugins.append(plugin)
+            writing_plugins_list = map(lambda d: d["name"], writing_plugins)
             raise ValueError(
-                "This file format cannot write this data. The following formats can: "
-                f"{strlist2enumeration(writing_plugins)!r}"
+                f"Chosen IO plugin {writer["name"]!r} cannot write this data. The "
+                f"following plugins can: {strlist2enumeration(writing_plugins_list)}"
             )
 
         _ensure_directory(filename)
