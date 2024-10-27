@@ -22,25 +22,16 @@ from pathlib import Path
 
 from kikuchipy.io.plugins._emsoft_master_pattern import EMsoftMasterPatternReader
 
-__all__ = ["file_reader"]
-
-
-# Plugin characteristics
-# ----------------------
-format_name = "emsoft_ebsd_master_pattern"
-description = (
-    "Read support for simulated electron backscatter diffraction (EBSD)"
-    "master patterns stored in an EMsoft HDF5 file."
-)
-full_support = False
-# Recognised file extension
-file_extensions = ["h5", "hdf5"]
-default_extension = 0
-# Writing capabilities
-writes = False
-
-# Unique HDF5 footprint
-footprint = ["emdata/ebsdmaster"]
+ENERGY_ARG = """Desired beam energy or energy range. If not given (default), all
+        available energies are read.
+"""
+PROJECTION_ARG = """Projection(s) to read. Options are "stereographic" (default) or
+        "lambert".
+"""
+HEMISPHERE_ARG = """Projection hemisphere(s) to read. Options are "upper" (default),
+        "lower", or "both". If "both", these will be stacked in the
+        vertical navigation axis.
+"""
 
 
 class EMsoftEBSDMasterPatternReader(EMsoftMasterPatternReader):
@@ -50,7 +41,7 @@ class EMsoftEBSDMasterPatternReader(EMsoftMasterPatternReader):
 
     @property
     def cl_parameters_group_name(self) -> str:
-        return "MCCL"  # Monte Carlo openCL
+        return "MCCL"  # Monte Carlo OpenCL
 
     @property
     def energy_string(self) -> str:
@@ -73,28 +64,24 @@ def file_reader(
     Parameters
     ----------
     filename
-        Full file path of the HDF file.
+        Full file path of the HDF5 file.
     energy
-        Desired beam energy or energy range. If not given (default), all
-        available energies are read.
+        %s
     projection
-        Projection(s) to read. Options are ``"stereographic"`` (default)
-        or ``"lambert"``.
+        %s
     hemisphere
-        Projection hemisphere(s) to read. Options are ``"upper"``
-        (default), ``"lower"`` or ``"both"``. If ``"both"``, these will
-        be stacked in the vertical navigation axis.
+        %s
     lazy
         Open the data lazily without actually reading the data from disk
         until requested. Allows opening datasets larger than available
-        memory. Default is ``False``.
+        memory. Default is False.
     **kwargs
         Keyword arguments passed to :class:`h5py.File`.
 
     Returns
     -------
     signal_dict_list
-        Data, axes, metadata and original metadata.
+        Data, axes, metadata, and original metadata.
     """
     reader = EMsoftEBSDMasterPatternReader(
         filename=filename,
@@ -104,3 +91,6 @@ def file_reader(
         lazy=lazy,
     )
     return reader.read(**kwargs)
+
+
+file_reader.__doc__ %= (ENERGY_ARG, PROJECTION_ARG, HEMISPHERE_ARG)
