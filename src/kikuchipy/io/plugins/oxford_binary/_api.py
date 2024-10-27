@@ -34,20 +34,7 @@ import numpy as np
 
 from kikuchipy.signals.util._dask import get_chunking
 
-__all__ = ["file_reader"]
-
 _logger = logging.getLogger(__name__)
-
-# Plugin characteristics
-# ----------------------
-format_name = "Oxford binary"
-description = "Read support for Oxford Instruments' binary .ebsp file."
-full_support = False
-# Recognised file extension
-file_extensions = ["ebsp"]
-default_extension = 0
-# Writing capabilities (signal dimensions, navigation dimensions)
-writes = False
 
 
 def file_reader(filename: str | Path, lazy: bool = False) -> list[dict]:
@@ -64,7 +51,7 @@ def file_reader(filename: str | Path, lazy: bool = False) -> list[dict]:
         File path to .ebsp file.
     lazy
         Read the data lazily without actually reading the data from disk
-        until required. Default is ``False``.
+        until required. Default is False.
 
     Returns
     -------
@@ -192,7 +179,7 @@ class OxfordBinaryFileReader:
     def pattern_is_present(self) -> np.ndarray:
         """Boolean array indicating whether a pattern listed in the file
         header is present in the file or not. If not, its
-        `pattern_starts` entry is zero.
+        :attr:`pattern_starts` entry is zero.
         """
         return self.pattern_starts != 0
 
@@ -335,7 +322,7 @@ class OxfordBinaryFileReader:
         footer_dtype
             Format of each pattern footer as a list of tuples with a
             field name, data type and size. The format depends on the
-            :attr:`~self.version`.
+            :attr:`version`.
         """
         self.file.seek(offset + self.pattern_header_size + self.n_bytes)
         footer_dtype = ()
