@@ -29,24 +29,6 @@ import numpy as np
 
 from kikuchipy.signals.util._dask import get_chunking
 
-__all__ = ["file_reader"]
-
-
-# Plugin characteristics
-# ----------------------
-format_name = "EDAX binary"
-description = (
-    "Read support for electron backscatter diffraction patterns stored "
-    "in a binary EDAX TSL's UP1/UP2 file extension '.up1' or '.up2'. "
-    "The reader is adapted from the EDAX UP1/2 reader in PyEBSDIndex."
-)
-full_support = False
-# Recognised file extension
-file_extensions = ["up1", "up2"]
-default_extension = 0
-# Writing capabilities (signal dimensions, navigation dimensions)
-writes = False
-
 
 def file_reader(
     filename: str | Path,
@@ -60,7 +42,7 @@ def file_reader(
     Parameters
     ----------
     filename
-        File path to UP1/2 file with ``"up1"`` or ``"up2"`` extension.
+        File path to UP1/2 file with .up1 or .up2 extension.
     nav_shape
         Navigation shape, as (n map rows, n map columns), of the
         returned :class:`~kikuchipy.signals.EBSD` signal, matching the
@@ -84,15 +66,15 @@ def file_reader(
     ValueError
         If file version is 2, since only version 1 or >= 3 is supported.
     ValueError
-        If ``nav_shape`` does not match the number of patterns in
-        the file.
+        If *nav_shape* does not match the number of patterns in the
+        file.
 
     Warns
     -----
     UserWarning
         If patterns were acquired in an hexagonal grid, since then the
         returned signal will have only one navigation dimension, even
-        though ``nav_shape`` is given.
+        though *nav_shape* is given.
 
     Notes
     -----
@@ -126,12 +108,7 @@ class EDAXBinaryFileReader:
             raise ValueError("Only files with version 1 or >= 3, not 2, can be read")
 
     def read_header(self) -> dict[str, int]:
-        """Read and return header information.
-
-        Returns
-        -------
-        dictionary
-        """
+        """Return read header information."""
         self.file.seek(4)
         sx, sy, pattern_offset = np.fromfile(self.file, "uint32", count=3)
         file_size = Path(self.file.name).stat().st_size
@@ -230,8 +207,9 @@ class EDAXBinaryFileReader:
         units = ["um"] * ndim
         scales = [header["dy"], header["dx"]] + [1, 1][:nav_dim]
         axes_names = ["y", "x"][-nav_dim:] + ["dy", "dx"]
-        axes = [
-            {
+        axes: list[dict] = []
+        for i in range(ndim):
+            axis = {
                 "size": data.shape[i],
                 "index_in_array": i,
                 "name": axes_names[i],
@@ -239,8 +217,7 @@ class EDAXBinaryFileReader:
                 "offset": 0.0,
                 "units": units[i],
             }
-            for i in range(ndim)
-        ]
+            axes.append(axis)
         fname = self.file.name
         metadata = {
             "General": {
