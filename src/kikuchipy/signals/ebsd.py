@@ -505,7 +505,7 @@ class EBSD(KikuchipySignal2D):
         array.
         """
         if lazy_output and inplace:
-            raise ValueError("`lazy_output=True` requires `inplace=False`")
+            raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         dtype = np.float32  # During processing
         dtype_out = self.data.dtype.type
@@ -632,7 +632,7 @@ class EBSD(KikuchipySignal2D):
         >>> s.remove_dynamic_background(operation="divide", std=5)
         """
         if lazy_output and inplace:
-            raise ValueError("`lazy_output=True` requires `inplace=False`")
+            raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         if std is None:
             std = self.axes_manager.signal_shape[0] / 8
@@ -867,7 +867,7 @@ class EBSD(KikuchipySignal2D):
         ... )
         """
         if lazy_output and inplace:
-            raise ValueError("`lazy_output=True` requires `inplace=False`")
+            raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         dtype_out = self.data.dtype.type
         dtype = np.float32
@@ -994,7 +994,7 @@ class EBSD(KikuchipySignal2D):
         scipy.ndimage.correlate
         """
         if lazy_output and inplace:
-            raise ValueError("`lazy_output=True` requires `inplace=False`")
+            raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         if isinstance(window, Window) and window.is_valid:
             averaging_window = copy.copy(window)
@@ -1151,7 +1151,7 @@ class EBSD(KikuchipySignal2D):
         rescaling is undesirable, use :meth:`rebin` instead.
         """
         if lazy_output and inplace:
-            raise ValueError("`lazy_output=True` requires `inplace=False`")
+            raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         if not isinstance(factor, int) or factor <= 1:
             raise ValueError(f"Binning `factor` {factor} must be an integer > 1")
@@ -1189,7 +1189,6 @@ class EBSD(KikuchipySignal2D):
 
         map_kw = {
             "show_progressbar": show_progressbar,
-            "parallel": True,
             "output_dtype": dtype_out,
             "factor": factor,
             "omin": omin,
@@ -2709,7 +2708,7 @@ class EBSD(KikuchipySignal2D):
 
     @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.crop)
     def crop(self, *args, **kwargs):
-        # This method is called by crop_image(), so attributes are
+        # This method is called by crop_signal(), so attributes are
         # handled correctly by that method as well
 
         old_shape = self.data.shape

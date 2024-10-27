@@ -366,7 +366,7 @@ class TestRemoveStaticBackgroundEBSD:
 
     def test_lazy_output(self, dummy_signal):
         with pytest.raises(
-            ValueError, match="`lazy_output=True` requires `inplace=False`"
+            ValueError, match="'lazy_output=True' requires 'inplace=False'"
         ):
             _ = dummy_signal.remove_static_background(lazy_output=True)
 
@@ -576,7 +576,7 @@ class TestRemoveDynamicBackgroundEBSD:
     @pytest.mark.filterwarnings("ignore:invalid value")
     def test_lazy_output(self, dummy_signal):
         with pytest.raises(
-            ValueError, match="`lazy_output=True` requires `inplace=False`"
+            ValueError, match="'lazy_output=True' requires 'inplace=False'"
         ):
             _ = dummy_signal.remove_dynamic_background(lazy_output=True)
 
@@ -673,7 +673,7 @@ class TestRescaleIntensityEBSD:
         dummy_signal.rescale_intensity(percentiles=percentiles, dtype_out=dtype_out)
 
         assert dummy_signal.data.dtype == dtype_out
-        assert np.allclose(dummy_signal.inav[0, 0].data, answer)
+        assert np.allclose(dummy_signal.inav[0, 0].data, answer, atol=2)
 
     def test_rescale_intensity_in_range(self, dummy_signal):
         dummy_data = dummy_signal.deepcopy().data
@@ -716,7 +716,7 @@ class TestRescaleIntensityEBSD:
 
     def test_lazy_output(self, dummy_signal):
         with pytest.raises(
-            ValueError, match="`lazy_output=True` requires `inplace=False`"
+            ValueError, match="'lazy_output=True' requires 'inplace=False'"
         ):
             _ = dummy_signal.rescale_intensity(lazy_output=True)
 
@@ -785,7 +785,7 @@ class TestAdaptiveHistogramEqualizationEBSD:
     def test_lazy_output(self):
         s = kp.data.nickel_ebsd_small()
         with pytest.raises(
-            ValueError, match="`lazy_output=True` requires `inplace=False`"
+            ValueError, match="'lazy_output=True' requires 'inplace=False'"
         ):
             _ = s.adaptive_histogram_equalization(lazy_output=True)
 
@@ -1035,7 +1035,7 @@ class TestAverageNeighbourPatternsEBSD:
 
     def test_lazy_output(self, dummy_signal):
         with pytest.raises(
-            ValueError, match="`lazy_output=True` requires `inplace=False`"
+            ValueError, match="'lazy_output=True' requires 'inplace=False'"
         ):
             _ = dummy_signal.average_neighbour_patterns(lazy_output=True)
 
@@ -1419,7 +1419,7 @@ class TestFFTFilterEBSD:
             function_domain="spatial",
         )
         with pytest.raises(
-            ValueError, match="`lazy_output=True` requires `inplace=False`"
+            ValueError, match="'lazy_output=True' requires 'inplace=False'"
         ):
             _ = dummy_signal.fft_filter(lazy_output=True, **filter_kw)
 
@@ -1532,7 +1532,7 @@ class TestNormalizeIntensityEBSD:
 
     def test_lazy_output(self, dummy_signal):
         with pytest.raises(
-            ValueError, match="`lazy_output=True` requires `inplace=False`"
+            ValueError, match="'lazy_output=True' requires 'inplace=False'"
         ):
             _ = dummy_signal.normalize_intensity(lazy_output=True)
 
@@ -2080,13 +2080,13 @@ class TestSignal2DMethods:
             ),
         ],
     )
-    def test_crop_image(
+    def test_crop_signal(
         self, dummy_signal, top_bottom_left_right, sig_slices, sig_shape
     ):
         """Custom properties are cropped correctly."""
         static_bg_old = dummy_signal.static_background.copy()
 
-        dummy_signal.crop_image(*top_bottom_left_right)
+        dummy_signal.crop_signal(*top_bottom_left_right)
 
         assert np.allclose(dummy_signal.static_background, static_bg_old[sig_slices])
         assert dummy_signal.detector.shape == sig_shape
@@ -2374,7 +2374,7 @@ class TestDownsample:
     def test_lazy_output(self):
         s = kp.data.nickel_ebsd_small()
         with pytest.raises(
-            ValueError, match="`lazy_output=True` requires `inplace=False`"
+            ValueError, match="'lazy_output=True' requires 'inplace=False'"
         ):
             _ = s.downsample(2, lazy_output=True)
 

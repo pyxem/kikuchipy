@@ -440,7 +440,6 @@ class KikuchipySignal2D(Signal2D):
 
         map_kw = {
             "show_progressbar": show_progressbar,
-            "parallel": True,
             "output_dtype": dtype_out,
             "kernel_size": kernel_size,
             "clip_limit": clip_limit,
