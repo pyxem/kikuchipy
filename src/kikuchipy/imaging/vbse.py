@@ -17,10 +17,6 @@
 
 from dask.array import Array
 from hyperspy._signals.signal2d import Signal2D
-from hyperspy.drawing._markers.horizontal_line import HorizontalLine
-from hyperspy.drawing._markers.rectangle import Rectangle
-from hyperspy.drawing._markers.text import Text
-from hyperspy.drawing._markers.vertical_line import VerticalLine
 from hyperspy.roi import BaseInteractiveROI, RectangularROI
 import numpy as np
 
