@@ -39,7 +39,7 @@ specification_paths = list(Path(__file__).parent.rglob("specification.yaml"))
 for path in specification_paths:
     with open(path) as file:
         spec = yaml.safe_load(file)
-        spec["api"] = f"kikuchipy.io.plugins.{path.parts[-2]}"
+        spec["api"] = ".".join(path.parts[-5:-1])
         PLUGINS.append(spec)
         if spec["writes"]:
             for ext in spec["file_extensions"]:
