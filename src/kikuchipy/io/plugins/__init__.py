@@ -17,7 +17,7 @@
 
 """Input/output plugins.
 
-.. currentmodule:: kikuchipy.io.plugins
+.. currentmodule:: kikuchipy.io
 
 .. rubric:: Modules
 
@@ -25,19 +25,7 @@
     :toctree: ../generated/
     :template: custom-module-template.rst
 
-    bruker_h5ebsd
-    ebsd_directory
-    edax_binary
-    edax_h5ebsd
-    emsoft_ebsd
-    emsoft_ebsd_master_pattern
-    emsoft_ecp_master_pattern
-    emsoft_tkd_master_pattern
-    kikuchipy_h5ebsd
-    nordif
-    nordif_calibration_patterns
-    oxford_binary
-    oxford_h5ebsd
+    plugins
 """
 
 import lazy_loader

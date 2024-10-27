@@ -33,20 +33,20 @@ import yaml
 from kikuchipy.io._util import _ensure_directory, _get_input_bool
 import kikuchipy.signals
 
-plugins: list = []
+PLUGINS: list = []
 write_extensions = []
 specification_paths = list(Path(__file__).parent.rglob("specification.yaml"))
 for path in specification_paths:
     with open(path) as file:
         spec = yaml.safe_load(file)
         spec["api"] = f"kikuchipy.io.plugins.{path.parts[-2]}"
-        plugins.append(spec)
+        PLUGINS.append(spec)
         if spec["writes"]:
             for ext in spec["file_extensions"]:
                 write_extensions.append(ext)
 for plugin in IO_PLUGINS:
     if plugin["name"].lower() in ["hspy", "zspy"]:
-        plugins.append("plugin")
+        PLUGINS.append(plugin)
 
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -112,7 +112,7 @@ def load(
     # Find matching reader for file extension
     extension = os.path.splitext(filename)[1][1:]
     readers = []
-    for plugin in plugins:
+    for plugin in PLUGINS:
         if extension.lower() in plugin["file_extensions"]:
             readers.append(plugin)
 
@@ -391,7 +391,7 @@ def _save(
         filename += "." + ext
 
     writer = None
-    for plugin in plugins:
+    for plugin in PLUGINS:
         if ext.lower() in plugin["file_extensions"] and plugin["writes"]:
             writer = plugin
             break
@@ -407,7 +407,7 @@ def _save(
         if writer.writes is not True and (sig_dim, nav_dim) not in writer["writes"]:
             # Get writers that can write this data
             writing_plugins = []
-            for plugin in plugins:
+            for plugin in PLUGINS:
                 if (
                     plugin["writes"] is True
                     or plugin["writes"] is not False
