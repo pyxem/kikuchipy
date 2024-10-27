@@ -320,7 +320,7 @@ class TestKikuchipyH5EBSD:
 
         # Maintain axis name
         s_y_only2.axes_manager["y"].name = "x"
-        with pytest.warns(UserWarning, match=r"Crystal map step size\(s\) \[0\] and "):
+        with pytest.warns(UserWarning, match=r"Crystal map step size\(s\) \[0.0\] and"):
             s_y_only2.save(save_path_hdf5, overwrite=True)
         s_x_only3 = kp.load(save_path_hdf5)
         assert s_x_only3.data.shape == desired_shape
