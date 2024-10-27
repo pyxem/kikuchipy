@@ -16,7 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import dask.array as da
-from h5py import File
+import h5py
 import numpy as np
 from orix.crystal_map import CrystalMap
 import pytest
@@ -57,7 +57,7 @@ class TestEMsoftEBSDReader:
 
     def test_check_file_format(self, save_path_hdf5):
         """Wrong file format raises an error."""
-        with File(save_path_hdf5, mode="w") as f:
+        with h5py.File(save_path_hdf5, mode="w") as f:
             g1 = f.create_group("EMheader")
             g2 = g1.create_group("EBSD")
             g2.create_dataset(
@@ -68,7 +68,7 @@ class TestEMsoftEBSDReader:
 
     def test_crystaldata2phase(self, emsoft_ebsd_path):
         """A Phase object is correctly returned."""
-        with File(emsoft_ebsd_path / "simulated_ebsd.h5") as f:
+        with h5py.File(emsoft_ebsd_path / "simulated_ebsd.h5") as f:
             xtal_dict = _hdf5group2dict(f["CrystalData"])
         phase = _crystaldata2phase(xtal_dict)
 
@@ -85,15 +85,13 @@ class TestEMsoftEBSDReader:
         )
         assert np.allclose(structure.occupancy, [1, 1])
         assert np.allclose(structure.Bisoequiv, [0.5] * 2)
-        assert np.compare_chararrays(
-            structure.element, np.array(["13", "29"], dtype="|S2"), "==", rstrip=False
-        ).all()
+        assert structure.element.tolist() == [b"13", b"29"]
 
     def test_crystaldata2phase_single_atom(self, emsoft_ebsd_path):
         """A Phase object is correctly returned when there is only one
         atom present.
         """
-        with File(emsoft_ebsd_path / "simulated_ebsd.h5") as f:
+        with h5py.File(emsoft_ebsd_path / "simulated_ebsd.h5") as f:
             xtal_dict = _hdf5group2dict(f["CrystalData"])
         xtal_dict["Natomtypes"] = 1
         xtal_dict["AtomData"] = xtal_dict["AtomData"][:, 0][..., np.newaxis]

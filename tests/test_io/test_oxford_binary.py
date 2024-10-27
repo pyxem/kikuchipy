@@ -20,6 +20,7 @@ import numpy as np
 import pytest
 
 import kikuchipy as kp
+from kikuchipy.io.plugins.oxford_binary._api import OxfordBinaryFileReader
 
 
 class TestOxfordBinaryReader:
@@ -110,5 +111,5 @@ class TestOxfordBinaryReader:
         the file works.
         """
         with open(oxford_binary_file.name, mode="rb") as f:
-            fox = kp.io.plugins._api.OxfordBinaryFileReader(f)
+            fox = OxfordBinaryFileReader(f)
             assert fox.n_patterns == n_patterns

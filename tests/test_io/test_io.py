@@ -22,27 +22,27 @@ import pytest
 
 import kikuchipy as kp
 from kikuchipy.io._io import _assign_signal_subclass, _dict2signal
+from kikuchipy.io.plugins.kikuchipy_h5ebsd._api import (
+    file_reader as kp_h5ebsd_file_reader,
+)
 
 
 class TestIO:
-    @pytest.mark.parametrize("filename", ("im_not_here.h5", "unsupported.h4"))
-    def test_load(self, kikuchipy_h5ebsd_path, tmpdir, filename):
-        if filename == "im_not_here.h5":
-            with pytest.raises(IOError, match="No filename matches"):
-                _ = kp.load(filename)
-        else:
-            s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
-            file_path = tmpdir / "supported.h5"
-            s.save(file_path)
-            new_file_path = tmpdir / filename
-            file_path.rename(new_file_path)
-            with pytest.raises(IOError, match="Could not read"):
-                _ = kp.load(new_file_path)
+    def test_load_unsupported_extension(self, kikuchipy_h5ebsd_path, tmpdir):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
+        file_path = tmpdir / "supported.h5"
+        s.save(file_path)
+        new_file_path = tmpdir / "unsupported.h4"
+        file_path.rename(new_file_path)
+        with pytest.raises(IOError, match="Could not read"):
+            kp.load(new_file_path)
+
+    def test_load_missing_file(self, kikuchipy_h5ebsd_path, tmpdir):
+        with pytest.raises(IOError, match="No filename matches"):
+            kp.load("im_not_here.h5")
 
     def test_dict2signal(self, kikuchipy_h5ebsd_path):
-        scan_dict = kp.io.plugins._api.file_reader(
-            kikuchipy_h5ebsd_path / "patterns.h5"
-        )[0]
+        scan_dict, *_ = kp_h5ebsd_file_reader(kikuchipy_h5ebsd_path / "patterns.h5")
         scan_dict["metadata"]["Signal"]["record_by"] = "not-image"
         with pytest.raises(ValueError, match="kikuchipy only supports"):
             _ = _dict2signal(scan_dict)
@@ -105,12 +105,10 @@ class TestIO:
             with pytest.raises(ValueError, match="'h4' does not"):
                 s.save(file_path)
 
-    @pytest.mark.filterwarnings("ignore:Using `set_signal_dimension`")
-    def test_save_data_dimensions(self, kikuchipy_h5ebsd_path):
-        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
-        s.axes_manager.set_signal_dimension(3)
-        with pytest.raises(ValueError, match="This file format cannot write"):
-            s.save()
+    def test_save_data_dimensions(self, tmpdir):
+        s = kp.signals.EBSD(np.zeros((2, 3, 4, 5, 6)))
+        with pytest.raises(ValueError, match="Chosen IO plugin 'kikuchipy_h5ebsd' "):
+            s.save(tmpdir / "test.h5")
 
     def test_save_to_existing_file(self, save_path_hdf5, kikuchipy_h5ebsd_path):
         s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
