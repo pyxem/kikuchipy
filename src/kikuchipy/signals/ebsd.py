@@ -541,16 +541,15 @@ class EBSD(KikuchipySignal2D):
         else:
             operation_func = _remove_static_background_divide
 
-        map_kw = dict(
-            show_progressbar=show_progressbar,
-            parallel=True,
-            output_dtype=dtype_out,
-            static_bg=static_bg,
-            dtype_out=dtype_out,
-            omin=omin,
-            omax=omax,
-            scale_bg=scale_bg,
-        )
+        map_kw = {
+            "show_progressbar": show_progressbar,
+            "output_dtype": dtype_out,
+            "static_bg": static_bg,
+            "dtype_out": dtype_out,
+            "omin": omin,
+            "omax": omax,
+            "scale_bg": scale_bg,
+        }
         attrs = self._get_custom_attributes()
         if inplace:
             self.map(operation_func, inplace=True, **map_kw)
@@ -666,17 +665,16 @@ class EBSD(KikuchipySignal2D):
         dtype_out = self.data.dtype.type
         omin, omax = dtype_range[dtype_out]
 
-        map_kw = dict(
-            show_progressbar=show_progressbar,
-            parallel=True,
-            output_dtype=dtype_out,
-            filter_func=filter_func,
-            operation=operation,
-            dtype_out=dtype_out,
-            omin=omin,
-            omax=omax,
+        map_kw = {
+            "show_progressbar": show_progressbar,
+            "output_dtype": dtype_out,
+            "filter_func": filter_func,
+            "operation": operation,
+            "dtype_out": dtype_out,
+            "omin": omin,
+            "omax": omax,
             **kwargs,
-        )
+        }
         attrs = self._get_custom_attributes()
         if inplace:
             self.map(map_func, inplace=True, **map_kw)
@@ -1355,7 +1353,6 @@ class EBSD(KikuchipySignal2D):
         image_quality_map = self.map(
             _get_image_quality,
             show_progressbar=show_progressbar,
-            parallel=True,
             inplace=False,
             output_dtype=np.float32,
             normalize=normalize,

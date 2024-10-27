@@ -25,9 +25,9 @@ import warnings
 
 import dask.array as da
 from hyperspy._lazy_signals import LazySignal2D
-from hyperspy.misc.rgb_tools import rgb_dtypes
 from hyperspy.signals import Signal2D
 import numpy as np
+from rsciio.utils.rgb_tools import rgb_dtypes
 from skimage.util.dtype import dtype_range
 import yaml
 
@@ -57,7 +57,7 @@ with open(os.path.join(DIR_PATH, "../hyperspy_extension.yaml")) as f:
 class KikuchipySignal2D(Signal2D):
     """General class for image signals in kikuchipy, extending
     HyperSpy's Signal2D class with some methods for carrying over custom
-    properties and some methods for intensity manipulation.
+    properties and others for manipulation of image intensities.
 
     Not meant to be used directly, see derived classes like
     :class:`~kikuchipy.signals.EBSD`.
@@ -90,60 +90,57 @@ class KikuchipySignal2D(Signal2D):
     ) -> Any | None:
         """Rescale image intensities.
 
-        Output min./max. intensity is determined from ``out_range`` or
+        Output min./max. intensity is determined from *out_range* or
         the data type range of the :class:`numpy.dtype` passed to
-        ``dtype_out`` if ``out_range`` is ``None``.
-
-        This method is based on
-        :func:`skimage.exposure.rescale_intensity`.
+        *dtype_out* if *out_range* is None.
 
         Parameters
         ----------
         relative
-            Whether to keep relative intensities between images (default
-            is ``False``). If ``True``, ``in_range`` must be ``None``,
-            because ``in_range`` is in this case set to the global
-            min./max. intensity. Use with care, as this requires the
-            computation of the min./max. intensity of the signal before
-            rescaling.
+            Whether to keep relative intensities between images. Default
+            is False. If True, *in_range* must be None, because
+            *in_range* is in this case set to the global min./max.
+            intensity. Use with care, as this requires the computation
+            of the min./max. intensity of the signal before rescaling.
         in_range
             Min./max. intensity of input images. If not given,
-            ``in_range`` is set to pattern min./max intensity. Contrast
-            stretching is performed when ``in_range`` is set to a
-            narrower intensity range than the input patterns. Must be
-            ``None`` if ``relative=True`` or ``percentiles`` are passed.
+            *in_range* is set to pattern min./max intensity. Contrast
+            stretching is performed when *in_range* is set to a narrower
+            intensity range than the input patterns. Must be None if
+            *relative* is True or *percentiles* are given.
         out_range
             Min./max. intensity of output images. If not given,
-            ``out_range`` is set to ``dtype_out`` min./max according to
-            ``skimage.util.dtype.dtype_range``.
+            *out_range* is set to *dtype_out* min./max according to
+            :func:`skimage.util.dtype.dtype_range`.
         dtype_out
-            Data type of rescaled images, default is input images' data
+            Data type of rescaled images. Default is input images' data
             type.
         percentiles
             Disregard intensities outside these percentiles. Calculated
-            per image. Must be ``None`` if ``in_range`` or ``relative``
-            is passed. Default is ``None``.
+            per image. Must be None if *in_range* or *relative*
+            is passed. Default is None.
         show_progressbar
             Whether to show a progressbar. If not given, the value of
             :obj:`hyperspy.api.preferences.General.show_progressbar`
             is used.
         inplace
             Whether to operate on the current signal or return a new
-            one. Default is ``True``.
+            one. Default is True.
         lazy_output
             Whether the returned signal is lazy. If not given this
-            follows from the current signal. Can only be ``True`` if
-            ``inplace=False``.
+            follows from the current signal. Can only be True if
+            *inplace* is False.
 
         Returns
         -------
         s_out
-            Rescaled signal, returned if ``inplace=False``. Whether
-            it is lazy is determined from ``lazy_output``.
+            Rescaled signal, returned if *inplace* is False. Whether
+            it is lazy is determined from *lazy_output*.
 
         See Also
         --------
-        :func:`skimage.exposure.rescale_intensity`
+        :func:`skimage.exposure.rescale_intensity` :
+            This method is based on this function.
 
         Notes
         -----
@@ -158,8 +155,8 @@ class KikuchipySignal2D(Signal2D):
 
         Image intensities are stretched to fill the available grey
         levels in the input images' data type range or any data type
-        range passed to ``dtype_out``, either keeping relative
-        intensities between images or not
+        range passed to *dtype_out*, either keeping relative intensities
+        between images or not
 
         >>> print(
         ...     s.data.dtype, s.data.min(), s.data.max(),
@@ -186,21 +183,21 @@ class KikuchipySignal2D(Signal2D):
 
         Here, the darkest and brightest pixels within the 1% percentile
         are set to the ends of the data type range, e.g. 0 and 255
-        respectively for images of ``uint8`` data type.
+        respectively for images of "uint8" data type.
         """
         if lazy_output and inplace:
-            raise ValueError("`lazy_output=True` requires `inplace=False`")
+            raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         if self.data.dtype in rgb_dtypes.values():
             raise NotImplementedError(
-                "Use RGB channel normalization when creating the image instead."
+                "Use RGB channel normalization when creating the image instead"
             )
 
         # Determine min./max. intensity of input image to rescale to
         if in_range is not None and percentiles is not None:
-            raise ValueError("'percentiles' must be None if 'in_range' is not None.")
+            raise ValueError("'percentiles' must be None if 'in_range' is not None")
         elif relative is True and in_range is not None:
-            raise ValueError("'in_range' must be None if 'relative' is True.")
+            raise ValueError("'in_range' must be None if 'relative' is True")
         elif relative:  # Scale relative to min./max. intensity in images
             in_range = (self.data.min(), self.data.max())
             in_range = tuple(da.compute(in_range)[0])
@@ -213,15 +210,14 @@ class KikuchipySignal2D(Signal2D):
         if out_range is None:
             out_range = dtype_range[dtype_out.type]
 
-        map_kw = dict(
-            show_progressbar=show_progressbar,
-            parallel=True,
-            output_dtype=dtype_out,
-            in_range=in_range,
-            out_range=out_range,
-            dtype_out=dtype_out,
-            percentiles=percentiles,
-        )
+        map_kw = {
+            "show_progressbar": show_progressbar,
+            "output_dtype": dtype_out,
+            "in_range": in_range,
+            "out_range": out_range,
+            "dtype_out": dtype_out,
+            "percentiles": percentiles,
+        }
         attrs = self._get_custom_attributes()
         if inplace:
             self.map(rescale_intensity, inplace=True, **map_kw)
@@ -249,10 +245,10 @@ class KikuchipySignal2D(Signal2D):
         ----------
         num_std
             Number of standard deviations of the output intensities.
-            Default is ``1``.
+            Default is 1.
         divide_by_square_root
             Whether to divide output intensities by the square root of
-            the signal dimension size. Default is ``False``.
+            the signal dimension size. Default is False.
         dtype_out
             Data type of normalized images. If not given, the input
             images' data type is used.
@@ -262,24 +258,23 @@ class KikuchipySignal2D(Signal2D):
             is used.
         inplace
             Whether to operate on the current signal or return a new
-            one. Default is ``True``.
+            one. Default is True.
         lazy_output
             Whether the returned signal is lazy. If not given this
-            follows from the current signal. Can only be ``True`` if
-            ``inplace=False``.
+            follows from the current signal. Can only be True if
+            *inplace* is False.
 
         Returns
         -------
         s_out
-            Normalized signal, returned if ``inplace=False``. Whether
-            it is lazy is determined from ``lazy_output``.
+            Normalized signal, returned if *inplace* is False. Whether
+            it is lazy is determined from *lazy_output*.
 
         Notes
         -----
         Data type should always be changed to floating point, e.g.
-        ``float32`` with
-        :meth:`~hyperspy.signal.BaseSignal.change_dtype`, before
-        normalizing the intensities.
+        "float32" with :meth:`~hyperspy.signal.BaseSignal.change_dtype`,
+        before normalizing the intensities.
 
         Rescaling RGB images is not possible. Use RGB channel
         normalization when creating the image instead.
@@ -296,11 +291,11 @@ class KikuchipySignal2D(Signal2D):
         0.0
         """
         if lazy_output and inplace:
-            raise ValueError("`lazy_output=True` requires `inplace=False`")
+            raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         if self.data.dtype in rgb_dtypes.values():
             raise NotImplementedError(
-                "Use RGB channel normalization when creating the image instead."
+                "Use RGB channel normalization when creating the image instead"
             )
 
         if dtype_out is None:
@@ -308,14 +303,13 @@ class KikuchipySignal2D(Signal2D):
         else:
             dtype_out = np.dtype(dtype_out)
 
-        map_kw = dict(
-            show_progressbar=show_progressbar,
-            parallel=True,
-            output_dtype=dtype_out,
-            num_std=num_std,
-            divide_by_square_root=divide_by_square_root,
-            dtype_out=dtype_out,
-        )
+        map_kw = {
+            "show_progressbar": show_progressbar,
+            "output_dtype": dtype_out,
+            "num_std": num_std,
+            "divide_by_square_root": divide_by_square_root,
+            "dtype_out": dtype_out,
+        }
         attrs = self._get_custom_attributes()
         if inplace:
             self.map(normalize_intensity, inplace=True, **map_kw)
@@ -349,27 +343,27 @@ class KikuchipySignal2D(Signal2D):
             image width.
         clip_limit
             Clipping limit, normalized between 0 and 1 (higher values
-            give more contrast). Default is ``0``.
+            give more contrast). Default is 0.
         nbins
             Number of gray bins for histogram ("data range"), default is
-            ``128``.
+            128.
         show_progressbar
             Whether to show a progressbar. If not given, the value of
             :obj:`hyperspy.api.preferences.General.show_progressbar`
             is used.
         inplace
             Whether to operate on the current signal or return a new
-            one. Default is ``True``.
+            one. Default is True.
         lazy_output
             Whether the returned signal is lazy. If not given this
-            follows from the current signal. Can only be ``True`` if
-            ``inplace=False``.
+            follows from the current signal. Can only be True if
+            *inplace* is False.
 
         Returns
         -------
         s_out
-            Equalized signal, returned if ``inplace=False``. Whether it
-            is lazy is determined from ``lazy_output``.
+            Equalized signal, returned if *inplace* is False. Whether it
+            is lazy is determined from *lazy_output*.
 
         See Also
         --------
@@ -413,7 +407,7 @@ class KikuchipySignal2D(Signal2D):
         >>> _ = ax3.plot(hist2)
         """
         if lazy_output and inplace:
-            raise ValueError("`lazy_output=True` requires `inplace=False`")
+            raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         dtype_out = self.data.dtype
         if np.issubdtype(dtype_out, np.floating):
@@ -444,14 +438,14 @@ class KikuchipySignal2D(Signal2D):
             raise ValueError(f"Incorrect value of `shape`: {kernel_size}")
         kernel_size = [int(k) for k in kernel_size]
 
-        map_kw = dict(
-            show_progressbar=show_progressbar,
-            parallel=True,
-            output_dtype=dtype_out,
-            kernel_size=kernel_size,
-            clip_limit=clip_limit,
-            nbins=nbins,
-        )
+        map_kw = {
+            "show_progressbar": show_progressbar,
+            "parallel": True,
+            "output_dtype": dtype_out,
+            "kernel_size": kernel_size,
+            "clip_limit": clip_limit,
+            "nbins": nbins,
+        }
         attrs = self._get_custom_attributes()
         if inplace:
             self.map(_adaptive_histogram_equalization, inplace=True, **map_kw)
@@ -478,7 +472,7 @@ class KikuchipySignal2D(Signal2D):
         ----------
         make_deepcopy
             Whether the returned dictionary should contain deep copies
-            of each attribute. Default is ``False``.
+            of each attribute. Default is False.
 
         Returns
         -------
@@ -518,16 +512,16 @@ class KikuchipySignal2D(Signal2D):
             Dictionary of custom attributes.
         make_deepcopy
             Whether to make a deepcopy of all attributes before setting
-            them in this instance. Default is ``False``.
+            them in this instance. Default is False.
         make_lazy
             Whether to cast attributes which are
             :class:`~numpy.ndarray` to :class:`~dask.array.Array` before
-            setting them. Default is ``False``.
+            setting them. Default is False.
         unmake_lazy
             Whether to cast attributes which are
             :class:`~dask.array.Array` to :class:`~numpy.ndarray` before
-            setting them. Default is ``False``. Ignored if both this and
-            ``make_lazy`` are ``True``.
+            setting them. Default is False. Ignored if both this and
+            *make_lazy* are True.
         """
         for name, value in attributes.items():
             if name in self._custom_attributes:
