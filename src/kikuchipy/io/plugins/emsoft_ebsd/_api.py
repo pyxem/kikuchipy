@@ -30,27 +30,6 @@ from orix.quaternion import Rotation
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
 
-__all__ = ["file_reader"]
-
-
-# Plugin characteristics
-# ----------------------
-format_name = "emsoft_ebsd"
-description = (
-    "Read support for dynamically simulated electron backscatter "
-    "diffraction patterns stored in EMsoft's HDF5 file format produced "
-    "by their EMEBSD.f90 program."
-)
-full_support = False
-# Recognised file extension
-file_extensions = ["h5", "hdf5"]
-default_extension = 0
-# Writing capabilities
-writes = False
-
-# Unique HDF5 footprint
-footprint = ["emdata/ebsd/ebsdpatterns"]
-
 
 def file_reader(
     filename: str | Path,
@@ -72,23 +51,23 @@ def file_reader(
     lazy
         Open the data lazily without actually reading the data from disk
         until requested. Allows opening datasets larger than available
-        memory. Default is ``False``.
+        memory. Default is False.
     **kwargs
         Keyword arguments passed to :class:`h5py.File`.
 
     Returns
     -------
     signal_dict_list
-        Data, axes, metadata and original metadata.
+        Data, axes, metadata, and original metadata.
     """
     mode = kwargs.pop("mode", "r")
-    f = h5py.File(filename, mode=mode, **kwargs)
+    file = h5py.File(filename, mode=mode, **kwargs)
 
-    _check_file_format(f)
+    _check_file_format(file)
 
-    group = f["/"]
-    hd = _hdf5group2dict(group, data_dset_names=["EBSDPatterns"], recursive=True)
-    nml_dict = hd["NMLparameters"]["EBSDNameList"]
+    group = file["/"]
+    header = _hdf5group2dict(group, data_dset_names=["EBSDPatterns"], recursive=True)
+    nml_dict = header["NMLparameters"]["EBSDNameList"]
 
     # --- Metadata
     fname = os.path.basename(filename).split(".")[0]
@@ -99,10 +78,10 @@ def file_reader(
         "General": {"original_filename": fname, "title": fname},
         "Signal": {"signal_type": "EBSD", "record_by": "image"},
     }
-    scan = {"metadata": metadata, "original_metadata": hd}
+    scan = {"metadata": metadata, "original_metadata": header}
 
     # --- Data
-    dataset = f["EMData/EBSD/EBSDPatterns"]
+    dataset = file["EMData/EBSD/EBSDPatterns"]
     if lazy:
         chunks = "auto" if dataset.chunks is None else dataset.chunks
         data = da.from_array(dataset, chunks=chunks)
@@ -128,8 +107,9 @@ def file_reader(
         units = ["px"] + units
         names = ["y"] + names
         scales = np.append([1], scales)
-    scan["axes"] = [
-        {
+    axes = []
+    for i in range(data.ndim):
+        axis = {
             "size": data.shape[i],
             "index_in_array": i,
             "name": names[i],
@@ -137,15 +117,15 @@ def file_reader(
             "offset": 0,
             "units": units[i],
         }
-        for i in range(data.ndim)
-    ]
+        axes.append(axis)
+    scan["axes"] = axes
 
     # --- Crystal map
-    phase = _crystaldata2phase(_hdf5group2dict(f["CrystalData"]))
-    xtal_fname = f["EMData/EBSD/xtalname"][()][0].decode().split("/")[-1]
+    phase = _crystaldata2phase(_hdf5group2dict(file["CrystalData"]))
+    xtal_fname = file["EMData/EBSD/xtalname"][()][0].decode().split("/")[-1]
     phase.name, _ = os.path.splitext(xtal_fname)
     scan["xmap"] = CrystalMap(
-        rotations=Rotation.from_euler(f["EMData/EBSD/EulerAngles"][()]),
+        rotations=Rotation.from_euler(file["EMData/EBSD/EulerAngles"][()]),
         phase_list=PhaseList(phase),
     )
 
@@ -160,32 +140,27 @@ def file_reader(
     )
 
     if not lazy:
-        f.close()
+        file.close()
 
     return [scan]
 
 
 def _check_file_format(file: h5py.File) -> None:
-    """Return whether the HDF file is in EMsoft's format.
-
-    Parameters
-    ----------
-    file: h5py:File
-    """
+    """Return whether the HDF file is in EMsoft's format."""
     try:
         program_name = file["EMheader/EBSD/ProgramName"][:][0].decode()
         if program_name != "EMEBSD.f90":
             raise KeyError
     except KeyError:
         raise IOError(
-            f"'{file.filename}' is not in EMsoft's format returned by their EMEBSD.f90 "
+            f"{file.filename!r} is not in EMsoft's format returned by their EMEBSD.f90 "
             "program."
         )
 
 
 def _crystaldata2phase(dictionary: dict) -> Phase:
-    """Return a :class:`~orix.crystal_map.Phase` object from a
-    dictionary with EMsoft CrystalData group content.
+    """Return a phase from a dictionary with EMsoft CrystalData group
+    content.
 
     Parameters
     ----------
