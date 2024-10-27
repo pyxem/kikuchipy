@@ -15,9 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from hyperspy.misc.rgb_tools import rgb8, rgb16
 import matplotlib.pyplot as plt
 import numpy as np
+from rsciio.utils.rgb_tools import rgb8, rgb16
 
 import kikuchipy as kp
 
