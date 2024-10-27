@@ -125,7 +125,7 @@ class TestECPMasterPattern:
     def test_rescale_intensity_lazy_output(self, emsoft_ecp_master_pattern_file):
         mp = kp.load(emsoft_ecp_master_pattern_file)
         with pytest.raises(
-            ValueError, match="`lazy_output=True` requires `inplace=False`"
+            ValueError, match="'lazy_output=True' requires 'inplace=False'"
         ):
             mp.normalize_intensity(lazy_output=True)
 
@@ -159,7 +159,7 @@ class TestECPMasterPattern:
     def test_normalize_intensity_lazy_output(self, emsoft_ecp_master_pattern_file):
         mp = kp.load(emsoft_ecp_master_pattern_file)
         with pytest.raises(
-            ValueError, match="`lazy_output=True` requires `inplace=False`"
+            ValueError, match="'lazy_output=True' requires 'inplace=False'"
         ):
             mp.normalize_intensity(lazy_output=True)
 
