@@ -28,35 +28,13 @@ from orix.crystal_map import CrystalMap
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import H5EBSDReader, _hdf5group2dict
 
-__all__ = ["file_reader"]
-
 _logger = logging.getLogger(__name__)
-
-
-# Plugin characteristics
-# ----------------------
-format_name = "oxford_h5ebsd"
-description = (
-    "Read support for electron backscatter diffraction patterns stored "
-    "in an HDF5 file formatted in Oxford Instruments' h5ebsd format, "
-    "named H5OINA. The format is similar to the format described in "
-    "Jackson et al.: h5ebsd: an archival data format for electron "
-    "back-scatter diffraction data sets. Integrating Materials and "
-    "Manufacturing Innovation 2014 3:4, doi: "
-    "https://dx.doi.org/10.1186/2193-9772-3-4."
-)
-full_support = False
-# Recognised file extension
-file_extensions = ["h5oina"]
-default_extension = 0
-# Writing capabilities (signal dimensions, navigation dimensions)
-writes = False
 
 
 class OxfordH5EBSDReader(H5EBSDReader):
     """Oxford Instruments h5ebsd (H5OINA) file reader.
 
-    The file contents are ment to be used for initializing a
+    The file contents are meant to be used for initializing a
     :class:`~kikuchipy.signals.EBSD` signal.
 
     Parameters
@@ -78,7 +56,7 @@ class OxfordH5EBSDReader(H5EBSDReader):
         group
             Group with patterns.
         lazy
-            Whether to read dataset lazily (default is False).
+            Whether to read dataset lazily. Default is False.
 
         Returns
         -------
@@ -93,13 +71,15 @@ class OxfordH5EBSDReader(H5EBSDReader):
         IOError
             If patterns are not acquired in a square grid.
         """
-        hd = _hdf5group2dict(group["EBSD/Header"], recursive=True)
-        dd = _hdf5group2dict(group["EBSD/Data"], data_dset_names=self.patterns_name)
+        header_group = _hdf5group2dict(group["EBSD/Header"], recursive=True)
+        data_group = _hdf5group2dict(
+            group["EBSD/Data"], data_dset_names=[self.patterns_name]
+        )
 
         # Get data shapes
-        ny, nx = hd["Y Cells"], hd["X Cells"]
-        sy, sx = hd["Pattern Height"], hd["Pattern Width"]
-        dy, dx = hd.get("Y Step", 1), hd.get("X Step", 1)
+        ny, nx = header_group["Y Cells"], header_group["X Cells"]
+        sy, sx = header_group["Pattern Height"], header_group["Pattern Width"]
+        dy, dx = header_group.get("Y Step", 1), header_group.get("X Step", 1)
         px_size = 1.0
 
         # --- Metadata
@@ -107,9 +87,9 @@ class OxfordH5EBSDReader(H5EBSDReader):
         metadata = {
             "Acquisition_instrument": {
                 "SEM": {
-                    "beam_energy": hd.get("Beam Voltage"),
-                    "magnification": hd.get("Magnification"),
-                    "working_distance": hd.get("Working Distance"),
+                    "beam_energy": header_group.get("Beam Voltage"),
+                    "magnification": header_group.get("Magnification"),
+                    "working_distance": header_group.get("Working Distance"),
                 },
             },
             "General": {"original_filename": fname, "title": title},
@@ -129,7 +109,7 @@ class OxfordH5EBSDReader(H5EBSDReader):
             "manufacturer": self.manufacturer,
             "version": self.version,
         }
-        scan_dict["original_metadata"].update(hd)
+        scan_dict["original_metadata"].update(header_group)
 
         # --- Crystal map
         # TODO: Implement reader of Oxford Instruments h5ebsd crystal
@@ -138,14 +118,14 @@ class OxfordH5EBSDReader(H5EBSDReader):
         scan_dict["xmap"] = xmap
 
         # --- Static background
-        scan_dict["static_background"] = hd.get("Processed Static Background")
+        scan_dict["static_background"] = header_group.get("Processed Static Background")
 
         # --- Detector
         pc = np.column_stack(
             (
-                dd.get("Pattern Center X", 0.5),
-                dd.get("Pattern Center Y", 0.5),
-                dd.get("Detector Distance", 0.5),
+                data_group.get("Pattern Center X", 0.5),
+                data_group.get("Pattern Center Y", 0.5),
+                data_group.get("Detector Distance", 0.5),
             )
         )
         if pc.size > 3:
@@ -153,15 +133,15 @@ class OxfordH5EBSDReader(H5EBSDReader):
         detector_kw = dict(
             shape=(sy, sx),
             pc=pc,
-            sample_tilt=np.rad2deg(hd.get("Tilt Angle", np.deg2rad(70))),
+            sample_tilt=np.rad2deg(header_group.get("Tilt Angle", np.deg2rad(70))),
             convention="oxford",
         )
-        detector_tilt_euler = hd.get("Detector Orientation Euler")
+        detector_tilt_euler = header_group.get("Detector Orientation Euler")
         try:
             detector_kw["tilt"] = np.rad2deg(detector_tilt_euler[1]) - 90
         except (IndexError, TypeError):  # pragma: no cover
             _logger.debug("Could not read detector tilt")
-        binning_str = hd.get("Camera Binning Mode")
+        binning_str = header_group.get("Camera Binning Mode")
         try:
             detector_kw["binning"] = int(binning_str.split("x")[0])
         except (IndexError, ValueError):  # pragma: no cover
