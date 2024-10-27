@@ -137,7 +137,7 @@ class TestGetImagesFromGrid:
 
     def test_get_images_lazy(self, dummy_signal):
         vbse_imager = kp.imaging.VirtualBSEImager(dummy_signal.as_lazy())
-        vbse_img = vbse_imager.get_images_from_grid()
+        _ = vbse_imager.get_images_from_grid()
 
 
 class TestGetRGBImage:
