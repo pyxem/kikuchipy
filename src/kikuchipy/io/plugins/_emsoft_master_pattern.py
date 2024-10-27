@@ -311,24 +311,29 @@ def _get_datasets(
     -------
     datasets
         List of HDF5 data sets.
+
+    Raises
+    ------
+    ValueError
+        If *projection* or *hemisphere* is not among the options.
     """
-    hemisphere = hemisphere.lower()
     projection = projection.lower()
-
     projections = {"stereographic": "masterSP", "lambert": "mLP"}
-    hemispheres = {"upper": "NH", "lower": "SH"}
-
     if projection not in projections:
         raise ValueError(
             f"'projection' value {projection!r} must be one of {list(projections)}"
         )
 
+    hemisphere = hemisphere.lower()
+    hemispheres = {"upper": "NH", "lower": "SH"}
+
+    projection_label = projections[projection]
     if hemisphere == "both":
         datasets = []
-        for proj_label, hemi_label in zip(projections.values(), hemispheres.values()):
-            datasets.append(data_group[proj_label + hemi_label])
+        for hemi_label in hemispheres.values():
+            datasets.append(data_group[projection_label + hemi_label])
     elif hemisphere in hemispheres:
-        dset_name = projections[projection] + hemispheres[hemisphere]
+        dset_name = projection_label + hemispheres[hemisphere]
         datasets = [data_group[dset_name]]
     else:
         raise ValueError(
