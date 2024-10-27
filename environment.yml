@@ -4,6 +4,5 @@ channels:
 dependencies:
   - python=3.11
   - pip
-  - ipykernel
   - pip:
       - --editable .[doc,all]
