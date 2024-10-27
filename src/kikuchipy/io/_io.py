@@ -413,20 +413,18 @@ def _save(
     else:
         sig_dim = signal.axes_manager.signal_dimension
         nav_dim = signal.axes_manager.navigation_dimension
-        if writer["writes"] is not True and (sig_dim, nav_dim) not in writer["writes"]:
-            # Get writers that can write this data
-            writing_plugins = []
+        if writer["writes"] is not True and [sig_dim, nav_dim] not in writer["writes"]:
+            compatible_plugin_names = []
             for plugin in PLUGINS:
                 if (
                     plugin["writes"] is True
                     or plugin["writes"] is not False
-                    and (sig_dim, nav_dim) in plugin["writes"]
+                    and [sig_dim, nav_dim] in plugin["writes"]
                 ):
-                    writing_plugins.append(plugin)
-            writing_plugins_list = map(lambda d: d["name"], writing_plugins)
+                    compatible_plugin_names.append(plugin["name"])
             raise ValueError(
                 f"Chosen IO plugin {writer["name"]!r} cannot write this data. The "
-                f"following plugins can: {strlist2enumeration(writing_plugins_list)}"
+                f"following plugins can: {strlist2enumeration(compatible_plugin_names)}"
             )
 
         _ensure_directory(filename)
