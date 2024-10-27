@@ -30,22 +30,7 @@ from dask.diagnostics import ProgressBar
 import imageio.v3 as iio
 import numpy as np
 
-__all__ = ["file_reader"]
-
-
 _logger = logging.getLogger(__name__)
-
-
-# Plugin characteristics
-# ----------------------
-format_name = "Directory of EBSD patterns"
-description = "Read support for patterns in image files in a directory"
-full_support = False
-# Recognised file extension
-file_extensions = ["tif", "tiff", "bmp", "png"]
-default_extension = 0
-# Writing capabilities (signal dimensions, navigation dimensions)
-writes = False
 
 
 def file_reader(
@@ -68,17 +53,17 @@ def file_reader(
         Regular expression to extract map coordinates from the
         filenames. If not given, two regular expressions will be tried:
         assuming (x, y) = (5, 10), "_x5y10.tif" or "-5-10.bmp".
-        Valid ``xy_pattern`` equal to these are ``r"_x(\d+)y(\d+).tif"``
+        Valid *xy_pattern* equal to these are ``r"_x(\d+)y(\d+).tif"``
         and ``r"-(\d+)-(\d+).bmp"``, respectively. If none of these
         expressions match the first file's name in the directory, a
         warning is printed and the returned signal will have only one
         navigation dimension.
     show_progressbar
         Whether to show a progressbar when reading the signal into
-        memory when ``lazy=False``.
+        memory when *lazy* is False.
     lazy
         Read the patterns lazily without actually reading them from disk
-        until required. Default is ``False``.
+        until required. Default is False.
 
     Returns
     -------
@@ -119,7 +104,7 @@ def file_reader(
         nav_shape = (n_patterns,)
     else:
         # Read coordinates of each file
-        fn_idx_sets = dict()
+        fn_idx_sets = {}
         xy_coords = np.zeros((n_patterns, 2), dtype=int)
         for j, fn in enumerate(filenames):
             for i, idx in enumerate(re.search(xy_pattern, fn).groups()):
@@ -135,7 +120,7 @@ def file_reader(
             warnings.warn(
                 "Returned signal will have one navigation dimension as the number of "
                 f"patterns found in the directory, {n_patterns}, does not match the "
-                f"navigation shape determined from the filenames, {nav_shape}."
+                f"navigation shape determined from the filenames, {nav_shape}"
             )
             nav_shape = (n_patterns,)
 
@@ -180,8 +165,9 @@ def file_reader(
     units = ["um"] * ndim
     scales = [1] * ndim
     axes_names = ["y", "x"][-nav_dim:] + ["dy", "dx"]
-    axes = [
-        {
+    axes = []
+    for i in range(ndim):
+        axis = {
             "size": data.shape[i],
             "index_in_array": i,
             "name": axes_names[i],
@@ -189,10 +175,9 @@ def file_reader(
             "offset": 0.0,
             "units": units[i],
         }
-        for i in range(ndim)
-    ]
-    metadata = dict(Signal=dict(signal_type="EBSD", record_by="image"))
+        axes.append(axis)
+    metadata = {"Signal": {"signal_type": "EBSD", "record_by": "image"}}
 
-    scan = dict(axes=axes, data=data, metadata=metadata)
+    scan = {"axes": axes, "data": data, "metadata": metadata}
 
     return [scan]
