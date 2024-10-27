@@ -421,9 +421,10 @@ def _get_calibration_pattern_settings(
             omd["area"]["shape_scaled"] = scale(omd["area"]["shape"], True)
 
         if omd["roi"]["shape_scaled"] != (ny, nx):
+            n_samples_calculated = tuple(int(i) for i in omd["roi"]["shape_scaled"])
             _logger.debug(
                 f"Number of samples {(ny, nx)} differs from the one calculated from "
-                f"area/ROI shapes {omd['roi']['shape_scaled']}"
+                f"area/ROI shapes {n_samples_calculated}"
             )
 
     # Try to read area overview image
@@ -448,8 +449,8 @@ def file_writer(filename: str, signal: "EBSD | LazyEBSD") -> None:
     """
     with open(filename, "wb") as file:
         if signal._lazy:
-            for pattern in signal._iterate_signal():
+            for pattern in signal._iterate_signal(iterpath="flyback"):
                 np.array(pattern.flatten()).tofile(file)
         else:
-            for pattern in signal._iterate_signal():
+            for pattern in signal._iterate_signal(iterpath="flyback"):
                 pattern.flatten().tofile(file)

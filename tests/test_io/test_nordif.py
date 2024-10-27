@@ -20,9 +20,6 @@
 # blob/RELEASE_next_minor/hyperspy/tests/io/test_blockfile.py
 
 import datetime
-import gc
-import os
-import tempfile
 import time
 
 import dask.array as da
@@ -184,14 +181,6 @@ AXES_MANAGER = {
 }
 
 
-@pytest.fixture()
-def save_path_nordif():
-    with tempfile.TemporaryDirectory() as tmp:
-        file_path = os.path.join(tmp, "nordif", "save_temp.dat")
-        yield file_path
-        gc.collect()
-
-
 class TestNORDIF:
     def test_get_settings_from_file(self, nordif_path):
         settings = _get_settings_from_file(nordif_path / "Setting.txt")
@@ -270,12 +259,11 @@ class TestNORDIF:
         )
         assert s.metadata.General.title == "Pattern"
 
-        s.save(save_path_nordif, overwrite=True)
+        s.save(save_path_nordif)
         with pytest.warns(UserWarning):  # No background pattern in directory
             s_reload = kp.load(
                 save_path_nordif, setting_file=nordif_path / "Setting.txt"
             )
-
         assert np.allclose(s.data, s_reload.data)
 
         # Add static background and change filename to make metadata equal

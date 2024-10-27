@@ -18,7 +18,7 @@
 import os
 
 import dask.array as da
-from h5py import Dataset, File
+import h5py
 from hyperspy.api import load as hs_load
 import numpy as np
 from orix.quaternion import Rotation
@@ -42,21 +42,21 @@ class TestH5EBSD:
         assert repr_str_list[2][-11:] == "patterns.h5"
 
     def test_check_file_invalid_version(self, save_path_hdf5):
-        f = File(save_path_hdf5, mode="w")
+        f = h5py.File(save_path_hdf5, mode="w")
         _dict2hdf5group({"manufacturer": "kikuchipy", "versionn": "0.1"}, f["/"])
         f.close()
-        with pytest.raises(IOError, match="(.*) as manufacturer"):
+        with pytest.raises(IOError, match="Could not find 'version' key in '(.*)'"):
             _ = KikuchipyH5EBSDReader(save_path_hdf5)
 
     def test_check_file_no_scan_groups(self, save_path_hdf5):
-        f = File(save_path_hdf5, mode="w")
+        f = h5py.File(save_path_hdf5, mode="w")
         _dict2hdf5group({"manufacturer": "kikuchipy", "version": "0.1"}, f["/"])
         f.close()
         with pytest.raises(IOError, match="(.*) as no top groups"):
             _ = KikuchipyH5EBSDReader(save_path_hdf5)
 
     def test_dict2hdf5roup(self, save_path_hdf5):
-        with File(save_path_hdf5, mode="w") as f:
+        with h5py.File(save_path_hdf5, mode="w") as f:
             with pytest.warns(UserWarning, match="(c, set())"):
                 _dict2hdf5group({"a": [np.array(24.5)], "c": set()}, f["/"])
 
@@ -97,20 +97,20 @@ class TestKikuchipyH5EBSD:
         s.save(save_path_hdf5)
 
         # Change manufacturer
-        with File(save_path_hdf5, mode="r+") as f:
+        with h5py.File(save_path_hdf5, mode="r+") as f:
             manufacturer = f["manufacturer"]
             manufacturer[()] = "Nope".encode()
 
         with pytest.raises(
             OSError,
-            match="(.*) is not a supported h5ebsd file, as 'nope' is not among ",
+            match="Could not read (.*). If the file format is supported, ",
         ):
             _ = kp.load(save_path_hdf5)
 
     def test_read_patterns(self, save_path_hdf5):
         s = kp.signals.EBSD((255 * np.random.rand(10, 3, 5, 5)).astype(np.uint8))
         s.save(save_path_hdf5)
-        with File(save_path_hdf5, mode="r+") as f:
+        with h5py.File(save_path_hdf5, mode="r+") as f:
             del f["Scan 1/EBSD/Data/patterns"]
             with pytest.raises(KeyError, match="Could not find patterns"):
                 _ = kp.load(save_path_hdf5)
@@ -128,7 +128,7 @@ class TestKikuchipyH5EBSD:
         s.save(save_path_hdf5)
 
         new_n_columns = 4
-        with File(save_path_hdf5, mode="r+") as f:
+        with h5py.File(save_path_hdf5, mode="r+") as f:
             f["Scan 1/EBSD/Header/n_columns"][()] = new_n_columns
 
         with pytest.warns(UserWarning) as warninfo:
@@ -242,7 +242,7 @@ class TestKikuchipyH5EBSD:
             )
         )
         mm = s.data.dask[k]
-        assert isinstance(mm, Dataset)
+        assert isinstance(mm, h5py.Dataset)
 
     def test_save_fresh(self, save_path_hdf5, tmp_path):
         scan_size = (10, 3)
@@ -280,13 +280,13 @@ class TestKikuchipyH5EBSD:
 
     def test_read_lazily_no_chunks(self, kikuchipy_h5ebsd_path):
         fname = kikuchipy_h5ebsd_path / "patterns_nochunks.h5"
-        # First, make sure the data image dataset is not actually chunked
-        f = File(fname)
-        data_dset = f["Scan 1/EBSD/Data/patterns"]
+        # Make sure the data image dataset is not actually chunked
+        file = h5py.File(fname)
+        data_dset = file["Scan 1/EBSD/Data/patterns"]
         assert data_dset.chunks is None
-        f.close()
+        file.close()
 
-        # Then, make sure it can be read correctly
+        # Make sure it can be read correctly
         s = kp.load(fname, lazy=True)
         assert s.data.chunks == ((60,), (60,))
 
@@ -354,7 +354,7 @@ class TestKikuchipyH5EBSD:
 
     def test_writer_check_file(self, save_path_hdf5):
         s = kp.data.nickel_ebsd_small(lazy=True)
-        f = File(save_path_hdf5, mode="w")
+        f = h5py.File(save_path_hdf5, mode="w")
         _dict2hdf5group({"manufacturer": "kikuchipy", "version": "0.1"}, f["/"])
         f.close()
         with pytest.raises(IOError, match="(.*) as no top groups"):

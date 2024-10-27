@@ -51,7 +51,5 @@ class TestEDAXH5EBSD:
     def test_save_error(self, edax_h5ebsd_path):
         file = edax_h5ebsd_path / "patterns.h5"
         s = kp.load(file)
-        with pytest.raises(
-            ValueError, match="Chosen IO plugin 'kikuchipy_h5ebsd' cannot write this "
-        ):
+        with pytest.raises(OSError, match="(.*) is not a supported kikuchipy h5ebsd "):
             s.save(file, add_scan=True)
