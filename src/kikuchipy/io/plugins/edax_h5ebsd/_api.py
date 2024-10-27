@@ -25,31 +25,6 @@ from orix.crystal_map import CrystalMap
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import H5EBSDReader, _hdf5group2dict
 
-__all__ = ["file_reader"]
-
-
-# Plugin characteristics
-# ----------------------
-format_name = "edax_h5ebsd"
-description = (
-    "Read support for electron backscatter diffraction patterns stored "
-    "in an HDF5 file formatted in EDAX TSL's h5ebsd format, similar to "
-    "the format described in Jackson et al.: h5ebsd: an archival data "
-    "format for electron back-scatter diffraction data sets. "
-    "Integrating Materials and Manufacturing Innovation 2014 3:4, doi: "
-    "https://dx.doi.org/10.1186/2193-9772-3-4."
-)
-full_support = False
-# Recognised file extension
-file_extensions = ["h5", "hdf5", "h5ebsd"]
-default_extension = 0
-# Writing capabilities (signal dimensions, navigation dimensions)
-writes = False
-
-# Unique HDF5 footprint
-footprint = ["manufacturer", "version"]
-manufacturer = "edax"
-
 
 class EDAXH5EBSDReader(H5EBSDReader):
     """EDAX TSL h5ebsd file reader.
@@ -76,16 +51,15 @@ class EDAXH5EBSDReader(H5EBSDReader):
         group
             Group with patterns.
         lazy
-            Whether to read dataset lazily (default is ``False``).
+            Whether to read dataset lazily. Default is False.
 
         Returns
         -------
         scan_dict
-            Dictionary with keys ``"axes"``, ``"data"``, ``"metadata"``,
-            ``"original_metadata"``, ``"detector"``,
-            ``"static_background"``, and ``"xmap"``. This dictionary can
-             be passed as keyword arguments to create an
-             :class:`~kikuchipy.signals.EBSD` signal.
+            Dictionary with keys "axes", "data", "metadata",
+            "original_metadata", "detector", "static_background", and
+            "xmap". This dictionary can be passed as keyword arguments
+            to create an :class:`~kikuchipy.signals.EBSD` signal.
 
         Raises
         ------
@@ -146,9 +120,9 @@ class EDAXH5EBSDReader(H5EBSDReader):
         scan_dict["detector"] = EBSDDetector(
             shape=(sy, sx),
             px_size=px_size,
-            tilt=hd.get("Camera Elevation Angle", 0),
-            azimuthal=hd.get("Camera Azimuthal Angle", 0),
-            sample_tilt=hd.get("Sample Tilt", 70),
+            tilt=hd.get("Camera Elevation Angle", 0.0),
+            azimuthal=hd.get("Camera Azimuthal Angle", 0.0),
+            sample_tilt=hd.get("Sample Tilt", 70.0),
             pc=(
                 hd.get("Pattern Center Calibration", {}).get("x-star", 0.5),
                 hd.get("Pattern Center Calibration", {}).get("y-star", 0.5),
@@ -183,16 +157,15 @@ def file_reader(
     lazy
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
-        is ``False``.
+        is False.
     **kwargs
         Keyword arguments passed to :class:`h5py.File`.
 
     Returns
     -------
     scan_dict_list
-        List of one or more dictionaries with the keys ``"axes"``,
-        ``"data"``, ``"metadata"``, ``"original_metadata"``,
-        ``"detector"``, and ``"xmap"``. This
+        List of one or more dictionaries with the keys "axes", "data",
+        "metadata", "original_metadata", "detector", and "xmap". This
         dictionary can be passed as keyword arguments to create an
         :class:`~kikuchipy.signals.EBSD` signal.
     """
