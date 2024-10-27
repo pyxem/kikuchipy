@@ -423,7 +423,7 @@ def _save(
                 ):
                     compatible_plugin_names.append(plugin["name"])
             raise ValueError(
-                f"Chosen IO plugin {writer["name"]!r} cannot write this data. The "
+                f"Chosen IO plugin {writer['name']!r} cannot write this data. The "
                 f"following plugins can: {strlist2enumeration(compatible_plugin_names)}"
             )
 
