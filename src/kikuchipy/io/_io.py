@@ -31,7 +31,7 @@ from kikuchipy.io._util import _ensure_directory, _get_input_bool, _overwrite
 import kikuchipy.signals
 
 PLUGINS: list = []
-write_extensions = []
+WRITE_EXTENSIONS = []
 specification_paths = list(Path(__file__).parent.rglob("specification.yaml"))
 for path in specification_paths:
     with open(path) as file:
@@ -40,7 +40,7 @@ for path in specification_paths:
         PLUGINS.append(spec)
         if spec["writes"]:
             for ext in spec["file_extensions"]:
-                write_extensions.append(ext)
+                WRITE_EXTENSIONS.append(ext)
 
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -399,17 +399,10 @@ def _save(
             writer = plugin
             break
 
-    if writer is None and ext.lower() in ["hspy", "zspy"]:
-        try:
-            super(type(signal), signal).save(filename, overwrite=overwrite, **kwargs)
-            return
-        except () as e:
-            raise ValueError("Attempt to write with HyperSpy failed:") from e
-
     if writer is None:
         raise ValueError(
             f"{ext!r} does not correspond to any supported format. Supported file "
-            f"extensions are: {write_extensions!r}"
+            f"extensions are: {WRITE_EXTENSIONS!r}"
         )
     else:
         sig_dim = signal.axes_manager.signal_dimension

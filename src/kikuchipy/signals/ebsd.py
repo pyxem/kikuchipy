@@ -2604,8 +2604,7 @@ class EBSD(KikuchipySignal2D):
         filename
             If not given and 'tmp_parameters.filename' and
             'tmp_parameters.folder' are defined in signal metadata, the
-            filename and path will be taken from there. Alternatively,
-            the extension can be passed to *extension*.
+            filename and path will be taken from there.
         overwrite
             If not given and the file exists, it will query the user. If
             True (False) it (does not) overwrite the file if it exists.
@@ -2637,19 +2636,25 @@ class EBSD(KikuchipySignal2D):
         This method is a modified version of HyperSpy's function
         :meth:`hyperspy.signal.BaseSignal.save`.
         """
-        if filename is None:
+        if filename is not None:
+            fname = Path(filename)
+        else:
             tmp_params = self.tmp_parameters
             if tmp_params.has_item("filename") and tmp_params.has_item("folder"):
-                filename = os.path.join(tmp_params.folder, tmp_params.filename)
+                fname = Path(tmp_params.folder) / tmp_params.filename
                 extension = tmp_params.extension if not extension else extension
             elif self.metadata.has_item("General.original_filename"):
-                filename = self.metadata.General.original_filename
+                fname = Path(self.metadata.General.original_filename)
             else:
-                raise ValueError("Filename not defined")
+                raise ValueError("filename not given")
         if extension is not None:
-            basename, _ = os.path.splitext(filename)
-            filename = basename + "." + extension
-        _save(filename, self, overwrite=overwrite, **kwargs)
+            ext = extension
+        else:
+            ext = fname.suffix[1:]
+        if ext.lower() in ["hspy", "zspy"]:
+            super().save(filename, overwrite=overwrite, **kwargs)
+            return
+        _save(fname, self, overwrite=overwrite, **kwargs)
 
     def get_decomposition_model(
         self,

@@ -17,6 +17,7 @@
 
 import os
 
+import hyperspy.api as hs
 import numpy as np
 import pytest
 
@@ -120,3 +121,12 @@ class TestIO:
         s.save(save_path_hdf5, scan_number=2, overwrite=False, add_scan=False)
         with pytest.raises(OSError, match="Scan 'Scan 2' is not among the"):
             _ = kp.load(save_path_hdf5, scan_group_names="Scan 2")
+
+
+class TestHSPYWrite:
+    def test_hspy_write(self, tmpdir, dummy_signal):
+        file_path = str(tmpdir / "test.hspy")
+        s = dummy_signal.as_lazy()
+        s.save(file_path)
+        s2 = hs.load(file_path, signal_type="EBSD")
+        assert np.allclose(dummy_signal.data, s2.data)

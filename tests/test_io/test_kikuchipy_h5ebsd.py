@@ -19,7 +19,7 @@ import os
 
 import dask.array as da
 import h5py
-from hyperspy.api import load as hs_load
+import hyperspy.api as hs
 import numpy as np
 from orix.quaternion import Rotation
 import pytest
@@ -174,8 +174,7 @@ class TestKikuchipyH5EBSD:
         s.save(file)
 
         # Reload data and use HyperSpy's set_signal_type function
-        s_reload = hs_load(file)
-        s_reload.set_signal_type("EBSD")
+        s_reload = hs.load(file, signal_type="EBSD")
 
         # Check signal type, patterns and learning results
         assert isinstance(s_reload, kp.signals.EBSD)
@@ -255,7 +254,7 @@ class TestKikuchipyH5EBSD:
 
         # Test writing of signal to file when no file name is passed to save()
         del s.tmp_parameters.filename
-        with pytest.raises(ValueError, match="Filename not defined"):
+        with pytest.raises(ValueError, match="filename not given"):
             s.save(overwrite=True)
 
         s.metadata.General.original_filename = "an_original_filename"
