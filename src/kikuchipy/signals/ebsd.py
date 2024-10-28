@@ -22,6 +22,7 @@ import datetime
 import gc
 import logging
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Iterable
 import warnings
 
@@ -2588,49 +2589,53 @@ class EBSD(KikuchipySignal2D):
 
     def save(
         self,
-        filename: str | None = None,
+        filename: Path | str | None = None,
         overwrite: bool | None = None,
         extension: str | None = None,
         **kwargs,
     ) -> None:
         """Write the signal to file in the specified format.
 
-        The function gets the format from the extension: ``h5``,
-        ``hdf5`` or ``h5ebsd`` for kikuchipy's specification of the
-        h5ebsd format, ``dat`` for the NORDIF binary format or ``hspy``
-        for HyperSpy's HDF5 specification. If no extension is provided
-        the signal is written to a file in kikuchipy's h5ebsd format.
-        Each format accepts a different set of parameters.
-
-        This method is a modified version of HyperSpy's function
-        :meth:`hyperspy.signal.BaseSignal.save`.
+        If no extension is given, the signal is written to a file in
+        kikuchipy's h5ebsd format.
 
         Parameters
         ----------
         filename
-            If not given and ``tmp_parameters.filename`` and
-            ``tmp_parameters.folder`` in signal metadata are defined,
-            the filename and path will be taken from there. A valid
-            extension can be provided e.g. ``"data.h5"``, see
-            ``extension``.
+            If not given and 'tmp_parameters.filename' and
+            'tmp_parameters.folder' are defined in signal metadata, the
+            filename and path will be taken from there. Alternatively,
+            the extension can be passed to *extension*.
         overwrite
             If not given and the file exists, it will query the user. If
-            ``True`` (``False``) it (does not) overwrite the file if it
-            exists.
+            True (False) it (does not) overwrite the file if it exists.
         extension
             Extension of the file that defines the file format. Options
-            are ``"h5"``, ``"hdf5"``, ``"h5ebsd"``, ``"dat"``,
-            ``"hspy"``. ``"h5"``, ``"hdf5"``, and ``"h5ebsd"`` are
-            equivalent. If not given, the extension is determined from
-            the following list in this order: i) the filename, ii)
-            ``tmp_parameters.extension`` or iii) ``"h5"`` (kikuchipy's
-            h5ebsd format).
+            are:
+
+            * h5, hdf5, or h5ebsd: kikuchipy's specification of the
+              h5ebsd format
+            * dat: NORDIF's binary format
+            * hspy: HyperSpy's HDF5 format
+            * zspy: HyperSpy's zarr format
+
+            Each format accepts different parameters.
+
+            If not given, the extension is determined from the following
+            list in this order: i) the filename, ii)
+            'tmp_parameters.extension' or iii) 'h5' (kikuchipy's h5ebsd
+            format).
         **kwargs
-            Keyword arguments passed to the writer.
+            Keyword arguments passed to the corresponding writer.
 
         See Also
         --------
         kikuchipy.io.plugins
+
+        Notes
+        -----
+        This method is a modified version of HyperSpy's function
+        :meth:`hyperspy.signal.BaseSignal.save`.
         """
         if filename is None:
             tmp_params = self.tmp_parameters
