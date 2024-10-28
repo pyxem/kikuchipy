@@ -22,15 +22,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import h5py
-from hyperspy.misc.utils import find_subclasses, strlist2enumeration
+from hyperspy.misc.utils import find_subclasses
 from hyperspy.signal import BaseSignal
 import numpy as np
-from rsciio import IO_PLUGINS
-from rsciio.utils.tools import get_object_package_info
-from rsciio.utils.tools import overwrite as overwrite_method
 import yaml
 
-from kikuchipy.io._util import _ensure_directory, _get_input_bool
+from kikuchipy.io._util import _ensure_directory, _get_input_bool, _overwrite
 import kikuchipy.signals
 
 PLUGINS: list = []
@@ -44,9 +41,6 @@ for path in specification_paths:
         if spec["writes"]:
             for ext in spec["file_extensions"]:
                 write_extensions.append(ext)
-for plugin in IO_PLUGINS:
-    if plugin["name"].lower() in ["hspy", "zspy"]:
-        PLUGINS.append(plugin)
 
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -405,6 +399,13 @@ def _save(
             writer = plugin
             break
 
+    if writer is None and ext.lower() in ["hspy", "zspy"]:
+        try:
+            super(type(signal), signal).save(filename, overwrite=overwrite, **kwargs)
+            return
+        except () as e:
+            raise ValueError("Attempt to write with HyperSpy failed:") from e
+
     if writer is None:
         raise ValueError(
             f"{ext!r} does not correspond to any supported format. Supported file "
@@ -424,7 +425,7 @@ def _save(
                     compatible_plugin_names.append(plugin["name"])
             raise ValueError(
                 f"Chosen IO plugin {writer['name']!r} cannot write this data. The "
-                f"following plugins can: {strlist2enumeration(compatible_plugin_names)}"
+                f"following plugins can: {compatible_plugin_names}"
             )
 
         _ensure_directory(filename)
@@ -433,8 +434,13 @@ def _save(
         # Check if we are to add signal to an already existing h5ebsd file
         if writer["name"] == "kikuchipy_h5ebsd" and overwrite is not True and is_file:
             if add_scan is None:
-                question = f"Add scan to {filename!r} (y/n)?\n"
-                add_scan = _get_input_bool(question)
+                add_scan = _get_input_bool(
+                    f"Add scan to {filename!r} (y/n)?\n",
+                    (
+                        "Your terminal does not support raw input. Not adding scan. To "
+                        "add the scan, pass 'add_scan=True'"
+                    ),
+                )
             if add_scan:
                 # So that the 2nd statement below triggers
                 overwrite = True
@@ -442,7 +448,7 @@ def _save(
 
         # Determine if signal is to be written to file or not
         if overwrite is None:
-            write = overwrite_method(filename)  # Ask what to do
+            write = _overwrite(filename)  # Ask what to do
         elif overwrite is True or (overwrite is False and not is_file):
             write = True
         elif overwrite is False and is_file:
@@ -454,16 +460,8 @@ def _save(
             )
 
         if write:
-            if writer["name"].lower() in ["hspy", "zspy"]:
-                signal_dict = signal._to_dictionary(add_models=True)
-                signal_dict["package_info"] = get_object_package_info(signal)
-                kwargs["signal"] = signal_dict
-            else:
-                kwargs["signal"] = signal
-
             file_writer = importlib.import_module(writer["api"]).file_writer
-            file_writer(filename, **kwargs)
-
+            file_writer(filename, signal, **kwargs)
             directory, filename = os.path.split(os.path.abspath(filename))
             signal.tmp_parameters.set_item("folder", directory)
             signal.tmp_parameters.set_item("filename", os.path.splitext(filename)[0])
