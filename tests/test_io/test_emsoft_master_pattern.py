@@ -121,8 +121,8 @@ class TestEMsoftEBSDMasterPatternReader:
     @pytest.mark.parametrize(
         "projection, hemisphere, error_msg",
         [
-            ("stereographicl", "upper", "'projection' value stereographicl "),
-            ("lambert", "east", "'hemisphere' value east "),
+            ("stereographicl", "upper", "'projection' value 'stereographicl' "),
+            ("lambert", "east", "'hemisphere' value 'east' "),
         ],
     )
     def test_get_datasets_raises(

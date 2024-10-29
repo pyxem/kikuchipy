@@ -1,0 +1,10 @@
+name: edax_binary
+description: >
+  Read support for electron backscatter diffraction patterns stored in a
+  binary EDAX TSL's UP1/UP2 file extension '.up1' or '.up2'. The reader
+  is adapted from the EDAX UP1/2 reader in PyEBSDIndex.
+file_extensions: ['up1', 'up2']
+default_extension: 0
+writes: False
+manufacturer: edax
+footprints: []

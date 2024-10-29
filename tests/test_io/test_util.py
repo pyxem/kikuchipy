@@ -41,11 +41,11 @@ class TestIO:
         if answer == "m":
             with replace_stdin(io.StringIO(answer)):
                 with pytest.raises(EOFError):
-                    _ = _get_input_bool(question)
+                    _get_input_bool(question, "")
             return
         else:
             with replace_stdin(io.StringIO(answer)):
-                returns = _get_input_bool(question)
+                returns = _get_input_bool(question, "")
         assert returns == should_return
 
     @pytest.mark.parametrize("var_type", (int, 1))

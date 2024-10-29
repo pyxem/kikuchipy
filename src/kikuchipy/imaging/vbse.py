@@ -17,10 +17,6 @@
 
 from dask.array import Array
 from hyperspy._signals.signal2d import Signal2D
-from hyperspy.drawing._markers.horizontal_line import HorizontalLine
-from hyperspy.drawing._markers.rectangle import Rectangle
-from hyperspy.drawing._markers.text import Text
-from hyperspy.drawing._markers.vertical_line import VerticalLine
 from hyperspy.roi import BaseInteractiveROI, RectangularROI
 import numpy as np
 
@@ -48,7 +44,11 @@ class VirtualBSEImager:
 
     def __init__(self, signal: EBSD | LazyEBSD) -> None:
         self.signal = signal
-        self._grid_shape = (5, 5)
+        sig_shape = signal._signal_shape_rc
+        grid_shape = ()
+        for axis_length in sig_shape:
+            grid_shape += (min(5, axis_length),)
+        self.grid_shape = grid_shape
 
     def __repr__(self) -> str:
         return self.__class__.__name__ + " for " + repr(self.signal)
@@ -70,20 +70,36 @@ class VirtualBSEImager:
         return np.linspace(0, sx, gx + 1)
 
     @property
-    def grid_shape(self) -> tuple:
+    def grid_shape(self) -> tuple[int, int]:
         """Return or set the generator grid shape.
 
         Parameters
         ----------
         shape : tuple or list of int
-            Generator grid shape.
+            Generator grid shape (n rows, n cols). Must correspond to a
+            tuple of length equal to the number of signal dimensions of
+            :attr:`signal`. Cannot be greater than signal shape of
+            :attr:`signal`.
         """
         return self._grid_shape
 
     @grid_shape.setter
     def grid_shape(self, shape: tuple[int, int] | list[int]) -> None:
         """Set the generator grid shape."""
-        self._grid_shape = tuple(shape)
+        shape = tuple(shape)
+        ndim_sig = self.signal.axes_manager.signal_dimension
+        if len(shape) != ndim_sig:
+            raise ValueError(
+                "Grid shape must have the same length as number of signal dimensions "
+                f"{ndim_sig}"
+            )
+        sig_shape_rc = self.signal._signal_shape_rc
+        if any(i > j for i, j in zip(shape, self.signal._signal_shape_rc)):
+            raise ValueError(
+                f"Grid shape (n rows, n cols) = {shape} cannot be greater than signal "
+                f"shape {sig_shape_rc}"
+            )
+        self._grid_shape = shape
 
     def get_rgb_image(
         self,

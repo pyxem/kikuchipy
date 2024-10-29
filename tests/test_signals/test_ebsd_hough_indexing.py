@@ -146,7 +146,7 @@ class TestHoughIndexing:
         # Vendor
         indexer.vendor = "EDAX"
         assert not _indexer_is_compatible_with_kikuchipy(indexer, (60, 60), 9)
-        with pytest.raises(ValueError, match="`indexer.vendor` must be 'kikuchipy', "):
+        with pytest.raises(ValueError, match="'indexer.vendor' must be 'kikuchipy', "):
             _indexer_is_compatible_with_kikuchipy(indexer, (60, 60), raise_if_not=True)
         indexer.vendor = "kikuchipy"
 

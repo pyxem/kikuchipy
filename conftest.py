@@ -298,6 +298,11 @@ def save_path_hdf5(request, tmpdir) -> Generator[Path, None, None]:
     yield Path(tmpdir / f"patterns.{ext}")
 
 
+@pytest.fixture()
+def save_path_nordif(tmpdir) -> Generator[Path, None, None]:
+    yield Path(tmpdir / "nordif/save_temp.dat")
+
+
 @pytest.fixture
 def ni_small_axes_manager() -> Generator[dict, None, None]:
     """Axes manager for :func:`kikuchipy.data.nickel_ebsd_small`."""

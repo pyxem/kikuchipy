@@ -65,7 +65,7 @@ class TestVirtualBSEImage:
         vbse_img = vbse_gen.get_images_from_grid()
 
         with pytest.raises(
-            ValueError, match="`lazy_output=True` requires `inplace=False`"
+            ValueError, match="'lazy_output=True' requires 'inplace=False'"
         ):
             vbse_img.normalize_intensity(lazy_output=True)
 
@@ -103,7 +103,7 @@ class TestVirtualBSEImage:
         vbse_gen.grid_shape = (3, 3)
         vbse_img = vbse_gen.get_images_from_grid()
         with pytest.raises(
-            ValueError, match="`lazy_output=True` requires `inplace=False`"
+            ValueError, match="'lazy_output=True' requires 'inplace=False'"
         ):
             vbse_img.normalize_intensity(lazy_output=True)
 

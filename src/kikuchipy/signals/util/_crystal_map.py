@@ -40,21 +40,22 @@ def _xmap_is_compatible_with_signal(
         warnings.warn(
             "Signal navigation axes must be named 'x' and/or 'y' in order to compare "
             "the signal navigation scales to the crystal map step sizes 'dx' and 'dy' "
-            "(see `EBSD.axes_manager`)"
+            "(see EBSD.axes_manager)"
         )
         xmap_scale = list(xmap._step_sizes.values())[-len(navigation_axes) :]
 
     compatible = xmap.shape == nav_shape
     if compatible and not np.allclose(xmap_scale, nav_scale, atol=1e-6):
+        xmap_scale2 = list(map(float, xmap_scale))
         warnings.warn(
-            f"Crystal map step size(s) {xmap_scale} and signal's step size(s) "
-            f"{nav_scale} must be the same (see `EBSD.axes_manager`)"
+            f"Crystal map step size(s) {xmap_scale2} and signal's step size(s) "
+            f"{nav_scale} must be the same (see EBSD.axes_manager)"
         )
 
     if not compatible and raise_if_not:
         raise ValueError(
             f"Crystal map shape {xmap.shape} and signal's navigation shape {nav_shape} "
-            "must be the same (see `EBSD.axes_manager`)"
+            "must be the same (see EBSD.axes_manager)"
         )
     else:
         return compatible

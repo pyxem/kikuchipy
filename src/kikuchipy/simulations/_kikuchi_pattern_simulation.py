@@ -19,8 +19,7 @@ from copy import deepcopy
 import re
 
 from diffsims.crystallography import ReciprocalLatticeVector
-from hyperspy.drawing.marker import MarkerBase
-from hyperspy.utils.markers import line_segment, point, text
+import hyperspy.api as hs
 import matplotlib.collections as mcollections
 import matplotlib.figure as mfigure
 import matplotlib.path as mpath
@@ -199,7 +198,7 @@ class GeometricalKikuchiPatternSimulation:
         zone_axes_kwargs: dict | None = None,
         zone_axes_labels_kwargs: dict | None = None,
         pc_kwargs: dict | None = None,
-    ) -> list[MarkerBase]:
+    ) -> list:
         """Return a list of simulation markers.
 
         Parameters
@@ -469,7 +468,7 @@ class GeometricalKikuchiPatternSimulation:
         kw.update(kwargs)
         return mcollections.LineCollection(segments=list(coords), **kw)
 
-    def _lines_as_markers(self, **kwargs) -> list[line_segment]:
+    def _lines_as_markers(self, **kwargs) -> list[hs.plot.markers.Lines]:
         """Get Kikuchi lines as a list of HyperSpy markers.
 
         Parameters
@@ -496,7 +495,7 @@ class GeometricalKikuchiPatternSimulation:
                 y1 = line[..., 1].squeeze()
                 x2 = line[..., 2].squeeze()
                 y2 = line[..., 3].squeeze()
-                marker = line_segment(x1=x1, y1=y1, x2=x2, y2=y2, **kw)
+                marker = hs.plot.markers.Lines([[[x1, y1], [x2, y2]]], **kw)
                 lines_list.append(marker)
 
         return lines_list
