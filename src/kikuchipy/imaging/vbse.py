@@ -17,7 +17,8 @@
 
 from dask.array import Array
 from hyperspy._signals.signal2d import Signal2D
-from hyperspy.roi import BaseInteractiveROI, RectangularROI
+import hyperspy.api as hs
+from hyperspy.roi import BaseInteractiveROI
 import numpy as np
 
 from kikuchipy._util._transfer_axes import _transfer_navigation_axes_to_signal_axes
@@ -251,7 +252,7 @@ class VirtualBSEImager:
 
         return vbse_images
 
-    def roi_from_grid(self, index: tuple | list[tuple]) -> RectangularROI:
+    def roi_from_grid(self, index: tuple | list[tuple]) -> hs.roi.RectangularROI:
         """Return a rectangular region of interest (ROI) on the EBSD
         detector from one or multiple grid tile indices as row(s) and
         column(s).
@@ -280,7 +281,9 @@ class VirtualBSEImager:
         min_row = rows[min(index[:, 0])] * dr
         max_row = (rows[max(index[:, 0])] + rows[1]) * dr
 
-        return RectangularROI(left=min_col, top=min_row, right=max_col, bottom=max_row)
+        return hs.roi.RectangularROI(
+            left=min_col, top=min_row, right=max_col, bottom=max_row
+        )
 
     def plot_grid(
         self,
@@ -303,10 +306,10 @@ class VirtualBSEImager:
             tiles which edges to color red, green and blue. If not given
             (default), no tiles' edges are colored.
         visible_indices
-            Whether to show grid indices. Default is ``True``.
+            Whether to show grid indices. Default is True.
         **kwargs
             Keyword arguments passed to
-            :func:`matplotlib.pyplot.axhline` and ``axvline``, used by
+            :func:`matplotlib.pyplot.axhline` and ``axvline()``, used by
             HyperSpy to draw lines.
 
         Returns
@@ -321,42 +324,43 @@ class VirtualBSEImager:
         rows = self.grid_rows
         cols = self.grid_cols
 
-        # Set grid tile indices
         markers = []
+
+        # Grid lines
+        kwargs.setdefault("ec", "w")
+        markers.append(hs.plot.markers.HorizontalLines((rows - 0.5) * dr, **kwargs))
+        markers.append(hs.plot.markers.VerticalLines((cols - 0.5) * dc, **kwargs))
+
+        # Grid tile indices
         if visible_indices:
             color = kwargs.pop("color", "r")
-            for row, col in np.ndindex(*self.grid_shape):
-                markers.append(
-                    Text(
-                        x=cols[col] * dc,
-                        y=(rows[row] + (0.1 * rows[1])) * dr,
-                        text=f"{row,col}",
-                        color=color,
-                    )
+            for row, col in np.ndindex(self.grid_shape):
+                marker = hs.plot.markers.Texts(
+                    offsets=[cols[col], rows[row]],
+                    texts=[f"({row}, {col})"],
+                    color=color,
+                    horizontalalignment="left",
+                    verticalalignment="top",
                 )
-
-        # Set lines
-        kwargs.setdefault("color", "w")
-        markers += [HorizontalLine((i - 0.5) * dr, **kwargs) for i in rows]
-        markers += [VerticalLine((j - 0.5) * dc, **kwargs) for j in cols]
+                markers.append(marker)
 
         # Color RGB tiles
         if rgb_channels is not None:
             for channels, color in zip(rgb_channels, ["r", "g", "b"]):
                 if isinstance(channels, tuple):
                     channels = (channels,)
+                kwargs.update({"ec": color, "fc": "none", "zorder": 3, "linewidth": 2})
                 for row, col in channels:
-                    kwargs.update({"color": color, "zorder": 3, "linewidth": 2})
                     roi = self.roi_from_grid((row, col))
-                    markers += [
-                        Rectangle(
-                            x1=(roi.left - 0.5) * dc,
-                            y1=(roi.top - 0.5) * dc,
-                            x2=(roi.right - 0.5) * dr,
-                            y2=(roi.bottom - 0.5) * dr,
-                            **kwargs,
-                        )
-                    ]
+                    width = roi.right - roi.left
+                    height = roi.bottom - roi.top
+                    marker = hs.plot.markers.Rectangles(
+                        [roi.left - 0.5 + width / 2, roi.top - 0.5 + height / 2],
+                        width,
+                        height,
+                        **kwargs,
+                    )
+                    markers.append(marker)
 
         # Get pattern and add list of markers
         if pattern_idx is None:
