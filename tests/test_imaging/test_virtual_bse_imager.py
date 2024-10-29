@@ -71,7 +71,7 @@ class TestVirtualBSEImager:
 
     @pytest.mark.parametrize(
         "grid_shape, desired_n_markers",
-        [((3, 3), 9 + 3 + 8), ((1, 1), 1 + 3 + 4), ((2, 3), 6 + 3 + 7)],
+        [((3, 3), 1 + 1 + 3 + 9), ((1, 1), 1 + 1 + 3 + 1), ((2, 3), 1 + 1 + 3 + 6)],
     )
     def test_plot_grid(self, kikuchipy_h5ebsd_path, grid_shape, desired_n_markers):
         s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
@@ -89,10 +89,10 @@ class TestVirtualBSEImager:
 
         # Check markers
         assert len(p.metadata.Markers) == desired_n_markers
-        assert p.metadata.Markers.has_item("text")
-        assert p.metadata.Markers["text"].marker._color == "r"
-        assert p.metadata.Markers["horizontal_line"].marker._color == "w"
-        assert p.metadata.Markers["rectangle"].marker._edgecolor == (1, 0, 0, 1)
+        assert p.metadata.Markers.has_item("Texts")
+        assert p.metadata.Markers.Texts.kwargs["color"] == ("r",)
+        assert p.metadata.Markers.HorizontalLines.kwargs["ec"] == "w"
+        assert p.metadata.Markers.Rectangles.kwargs["ec"] == "r"
 
         plt.close("all")
 
@@ -102,7 +102,7 @@ class TestVirtualBSEImager:
         vbse_imager = kp.imaging.VirtualBSEImager(s)
         p = vbse_imager.plot_grid(color=color)
 
-        assert p.metadata.Markers["text"].marker._color == color
+        assert p.metadata.Markers.Texts.kwargs["color"] == (color,)
 
         plt.close("all")
 
@@ -135,8 +135,9 @@ class TestGetImagesFromGrid:
         assert all([vbse_sig_axes[i].name == s_nav_axes[i].name for i in range(2)])
         assert all([vbse_sig_axes[i].units == s_nav_axes[i].units for i in range(2)])
 
-    def test_get_images_lazy(self, dummy_signal):
-        vbse_imager = kp.imaging.VirtualBSEImager(dummy_signal.as_lazy())
+    def test_get_images_lazy(self, kikuchipy_h5ebsd_path):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5", lazy=True)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
         _ = vbse_imager.get_images_from_grid()
 
 
