@@ -108,6 +108,7 @@ This is a list of core package dependencies:
 * `pyyaml <https://pyyaml.org/>`__: Parcing of YAML files
 * :doc:`scikit-image <skimage:index>`: Image processing like adaptive histogram
   equalization
+* :doc:`rosettasciio <rosettasciio:index>`: Read/write of some file formats
 * `scikit-learn <https://scikit-learn.org/stable/>`__: Multivariate analysis
 * :doc:`scipy <scipy:index>`: Optimization algorithms, filtering and more
 * `tqdm <https://tqdm.github.io/>`__: Progressbars
