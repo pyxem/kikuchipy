@@ -399,7 +399,8 @@ class VirtualBSEImager:
                 channel_coords = [channel_coords]
             channel_coord_arr = np.stack(channel_coords, axis=1)
             try:
-                channel_tile_coords = tile_coords[*channel_coord_arr]
+                r_coords, c_coords = channel_coord_arr
+                channel_tile_coords = tile_coords[r_coords, c_coords]
             except IndexError as e:
                 channels = ["Red", "Green", "Blue"]
                 raise ValueError(
