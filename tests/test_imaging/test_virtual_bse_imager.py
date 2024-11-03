@@ -96,7 +96,8 @@ class TestVirtualBSEImager:
         s = kp.signals.EBSD(np.zeros((60, 60)))
         vbse_imager = kp.imaging.VirtualBSEImager(s)
         vbse_imager.grid_shape = (1, 1)
-        with pytest.raises(ValueError, match="Green channel tile coordinate cannot be"):
+
+        with pytest.raises(ValueError, match="Green channel tile coordinates cannot "):
             _ = vbse_imager.plot_grid(rgb_channels=[(0, 0), (1, 0), (0, 1)])
 
     @pytest.mark.parametrize("color", ["c", "m", "k"])

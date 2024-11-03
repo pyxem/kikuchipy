@@ -20,6 +20,7 @@ from hyperspy._signals.signal2d import Signal2D
 import hyperspy.api as hs
 from hyperspy.roi import BaseInteractiveROI
 import numpy as np
+from numpy.typing import NDArray
 
 from kikuchipy._util._transfer_axes import _transfer_navigation_axes_to_signal_axes
 from kikuchipy.pattern._pattern import rescale_intensity
@@ -50,21 +51,21 @@ class VirtualBSEImager:
     # -------------------------- Properties -------------------------- #
 
     @property
-    def grid_rows(self) -> np.ndarray:
+    def grid_rows(self) -> NDArray[np.int64]:
         """Return the detector grid rows, defined by :attr:`grid_shape`."""
         gy = self.grid_shape[0]
         sy = self._signal.axes_manager.signal_shape[1]
-        rows = np.linspace(0, sy, gy + 1)
+        rows = np.linspace(0, sy, gy + 1, dtype=np.int64)
         return rows
 
     @property
-    def grid_cols(self) -> np.ndarray:
+    def grid_cols(self) -> NDArray[np.int64]:
         """Return the detector grid columns, defined by
         :attr:`grid_shape`.
         """
         gx = self.grid_shape[1]
         sx = self._signal.axes_manager.signal_shape[0]
-        cols = np.linspace(0, sx, gx + 1)
+        cols = np.linspace(0, sx, gx + 1, dtype=np.int64)
         return cols
 
     @property
@@ -101,18 +102,18 @@ class VirtualBSEImager:
         return self._signal
 
     @property
-    def _tile_coordinates(self) -> np.ndarray:
+    def _tile_coordinates(self) -> NDArray[np.float64]:
         tile_coords = np.meshgrid(self.grid_cols[:-1], self.grid_rows[:-1])
         tile_coords = np.stack(tile_coords, axis=2)
         return tile_coords
 
     @property
-    def _flat_tile_coordinates(self) -> np.ndarray:
+    def _flat_tile_coordinates(self) -> NDArray[np.float64]:
         tile_coords_flat = self._tile_coordinates.reshape(-1, 2)
         return tile_coords_flat
 
     @property
-    def _tile_labels(self) -> np.ndarray:
+    def _tile_labels(self) -> NDArray[np.str_]:
         tile_labels = []
         for row, col in np.ndindex(self.grid_shape):
             tile_labels.append(f"({row}, {col})")
@@ -389,7 +390,7 @@ class VirtualBSEImager:
 
     def _get_rgb_tile_coordinates(
         self, rgb_channels: list[tuple] | list[list[tuple]]
-    ) -> np.ndarray:
+    ) -> NDArray[np.float64]:
         tile_coords = self._tile_coordinates
         tile_height, tile_width = self._tile_shape
         offset = -0.5 + np.array([tile_height, tile_width]) / 2
@@ -398,14 +399,14 @@ class VirtualBSEImager:
             if isinstance(channel_coords, tuple):
                 channel_coords = [channel_coords]
             channel_coord_arr = np.stack(channel_coords, axis=1)
+            r_coords, c_coords = channel_coord_arr
             try:
-                r_coords, c_coords = channel_coord_arr
                 channel_tile_coords = tile_coords[r_coords, c_coords]
             except IndexError as e:
-                channels = ["Red", "Green", "Blue"]
+                color = ["Red", "Green", "Blue"][i]
                 raise ValueError(
                     (
-                        f"{channels[i]} channel tile coordinate cannot be greater than "
+                        f"{color} channel tile coordinates cannot be greater than "
                         f"detector grid shape {self.grid_shape}"
                     )
                 ) from e

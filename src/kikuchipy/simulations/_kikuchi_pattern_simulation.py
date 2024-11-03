@@ -239,16 +239,15 @@ class GeometricalKikuchiPatternSimulation:
         if lines:
             if lines_kwargs is None:
                 lines_kwargs = {}
-            #            markers += self._lines_as_markers(**lines_kwargs)
-            markers.append(self._lines_as_markers2(**lines_kwargs))
+            markers.append(self._lines_as_markers(**lines_kwargs))
         if zone_axes:
             if zone_axes_kwargs is None:
                 zone_axes_kwargs = {}
-            markers += self._zone_axes_as_markers(**zone_axes_kwargs)
+            markers.append(self._zone_axes_as_markers(**zone_axes_kwargs))
         if zone_axes_labels:
             if zone_axes_labels_kwargs is None:
                 zone_axes_labels_kwargs = {}
-            markers += self._zone_axes_labels_as_markers(**zone_axes_labels_kwargs)
+            markers.append(self._zone_axes_labels_as_markers(**zone_axes_labels_kwargs))
         if pc:
             if pc_kwargs is None:
                 pc_kwargs = {}
@@ -469,50 +468,17 @@ class GeometricalKikuchiPatternSimulation:
         kw.update(kwargs)
         return mcollections.LineCollection(segments=list(coords), **kw)
 
-    def _lines_as_markers(self, **kwargs) -> list[hs.plot.markers.Lines]:
-        """Get Kikuchi lines as a list of HyperSpy markers.
-
-        Parameters
-        ----------
-        **kwargs
-            Keyword arguments passed to
-            :func:`~matplotlib.pyplot.axvline` to format the lines.
-
-        Returns
-        -------
-        lines_list
-            List with line segment markers.
-        """
-        coords = self.lines_coordinates(index=(), exclude_nan=False)
-        lines_list = []
-        kw = {"color": "r", "zorder": 1}
-        kw.update(kwargs)
-
-        for i in range(self._lines.vector.size):
-            line = coords[..., i, :]
-            if not np.all(np.isnan(line)):
-                # TODO: Inefficient, squeeze before the loop if possible
-                x1 = line[..., 0].squeeze()
-                y1 = line[..., 1].squeeze()
-                x2 = line[..., 2].squeeze()
-                y2 = line[..., 3].squeeze()
-                marker = hs.plot.markers.Lines([[[x1, y1], [x2, y2]]], **kw)
-                lines_list.append(marker)
-
-        return lines_list
-
-    def _lines_as_markers2(self, **kwargs) -> hs.plot.markers.Lines:
+    def _lines_as_markers(self, **kwargs) -> hs.plot.markers.Lines:
         coords = self.lines_coordinates(index=(), exclude_nan=False)
         nav_shape = self.navigation_shape
         coords = coords.reshape(*nav_shape, -1, 2, 2)
-        # TODO: Split into two methods
         # TODO: Consider removing NaNs
         if nav_shape == (1,):
             lines = coords.reshape(-1, 2, 2)
         else:
-            lines = np.empty(nav_shape, dtype=object)
-            for idx in np.ndindex(nav_shape):
-                lines[idx] = coords[idx]
+            lines = np.empty(nav_shape[::-1], dtype=object)
+            for idx in np.ndindex(lines.shape):
+                lines[idx] = coords[idx[::-1]]
         kw = {"colors": "r", "zorder": 1}
         kw.update(kwargs)
         markers = hs.plot.markers.Lines(lines, **kw)
@@ -704,55 +670,26 @@ class GeometricalKikuchiPatternSimulation:
                 texts.append(text_i)
         return texts
 
-    def _zone_axes_as_markers(self, **kwargs) -> list:
-        """Return a list of zone axes point markers.
-
-        Parameters
-        ----------
-        **kwargs
-            Keyword arguments passed to
-            :func:`~matplotlib.pyplot.scatter` to format the markers.
-
-        Returns
-        -------
-        zone_axes_list
-            List with zone axes markers.
-        """
+    def _zone_axes_as_markers(self, **kwargs) -> hs.plot.markers.Lines:
         coords = self.zone_axes_coordinates(index=(), exclude_nan=False)
-        zone_axes_list = []
-
-        kw = {"ec": "none", "zorder": 2}
+        nav_shape = self.navigation_shape
+        # TODO: Consider removing NaNs
+        if nav_shape == (1,):
+            zone_axes = coords.reshape(-1, 2)
+        else:
+            zone_axes = np.empty(nav_shape[::-1], dtype=object)
+            for idx in np.ndindex(zone_axes.shape):
+                zone_axes[idx] = coords[idx[::-1]]
+        kw = {"fc": "k", "ec": "none", "zorder": 2}
         kw.update(kwargs)
+        markers = hs.plot.markers.Points(zone_axes, **kw)
+        return markers
 
-        for i in range(self._zone_axes.vector.size):
-            # TODO: Inefficient, squeeze before the loop if possible
-            zone_axis = coords[..., i, :].squeeze()
-            if not np.all(np.isnan(zone_axis)):
-                marker = hs.plot.markers.Points(zone_axis, **kw)
-                zone_axes_list.append(marker)
-
-        return zone_axes_list
-
-    def _zone_axes_labels_as_markers(self, **kwargs) -> list:
-        """Return a list of zone axes label text markers.
-
-        Parameters
-        ----------
-        **kwargs
-            Keyword arguments passed to :func:`~matplotlib.text.Text` to
-            format the labels.
-
-        Returns
-        -------
-        zone_axes_label_list
-            List of text markers.
-        """
+    def _zone_axes_labels_as_markers(self, **kwargs) -> hs.plot.markers.Texts:
         coords = self.zone_axes_coordinates(index=(), exclude_nan=False)
-
         zone_axes = self._zone_axes.vector.coordinates.round().astype(np.int64)
         array_str = np.array2string(zone_axes, threshold=zone_axes.size)
         texts = re.sub("[][ ]", "", array_str).split("\n")
-
         kw = {
             "color": "k",
             "zorder": 3,
@@ -762,21 +699,13 @@ class GeometricalKikuchiPatternSimulation:
             # "bbox": {"fc": "w", "ec": "k", "boxstyle": "square", "pad": 0.2},
         }
         kw.update(kwargs)
-
-        zone_axes_label_list = []
-        is_finite = np.isfinite(coords)[..., 0]
-        coords[~is_finite] = -1
-
-        for i in range(zone_axes.shape[0]):
-            if not np.allclose(coords[..., i, :], -1):  # All NaNs
-                x = coords[..., i, 0]
-                y = coords[..., i, 1]
-                x[~is_finite[..., i]] = np.nan
-                y[~is_finite[..., i]] = np.nan
-                # TODO: Inefficient, squeeze before the loop if possible
-                x = x.squeeze()
-                y = y.squeeze()
-                text_marker = hs.plot.markers.Texts([x, y], texts=texts[i], **kwargs)
-                zone_axes_label_list.append(text_marker)
-
-        return zone_axes_label_list
+        nav_shape = self.navigation_shape
+        # TODO: Consider removing NaNs
+        if nav_shape == (1,):
+            zone_axes = coords.reshape(-1, 2)
+        else:
+            zone_axes = np.empty(nav_shape[::-1], dtype=object)
+            for idx in np.ndindex(zone_axes.shape):
+                zone_axes[idx] = coords[idx[::-1]]
+        marker = hs.plot.markers.Texts(zone_axes, texts=texts, **kw)
+        return marker

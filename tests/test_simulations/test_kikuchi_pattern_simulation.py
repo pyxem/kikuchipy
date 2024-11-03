@@ -280,7 +280,7 @@ class TestAsMarkers:
         # Third line [0-20] is not present in the first two patterns
         line_segments = markers[0].kwargs["segments"]
         assert np.all(np.isnan(line_segments[0, 0][2]))
-        assert np.all(np.isnan(line_segments[0, 1][2]))
+        assert np.all(np.isnan(line_segments[1, 0][2]))
 
     def test_add_markers(self):
         hkl_sets = self.reflectors.get_hkl_sets()
