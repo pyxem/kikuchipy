@@ -44,22 +44,18 @@ class VirtualBSEImager:
     """
 
     def __init__(self, signal: EBSD | LazyEBSD) -> None:
-        self.signal = signal
-        sig_shape = signal._signal_shape_rc
-        grid_shape = ()
-        for axis_length in sig_shape:
-            grid_shape += (min(5, axis_length),)
-        self.grid_shape = grid_shape
+        self._signal = signal
+        self.grid_shape = tuple((min(5, size) for size in signal._signal_shape_rc))
 
-    def __repr__(self) -> str:
-        return self.__class__.__name__ + " for " + repr(self.signal)
+    # -------------------------- Properties -------------------------- #
 
     @property
     def grid_rows(self) -> np.ndarray:
         """Return the detector grid rows, defined by :attr:`grid_shape`."""
         gy = self.grid_shape[0]
-        sy = self.signal.axes_manager.signal_shape[1]
-        return np.linspace(0, sy, gy + 1)
+        sy = self._signal.axes_manager.signal_shape[1]
+        rows = np.linspace(0, sy, gy + 1)
+        return rows
 
     @property
     def grid_cols(self) -> np.ndarray:
@@ -67,40 +63,75 @@ class VirtualBSEImager:
         :attr:`grid_shape`.
         """
         gx = self.grid_shape[1]
-        sx = self.signal.axes_manager.signal_shape[0]
-        return np.linspace(0, sx, gx + 1)
+        sx = self._signal.axes_manager.signal_shape[0]
+        cols = np.linspace(0, sx, gx + 1)
+        return cols
 
     @property
-    def grid_shape(self) -> tuple[int, int]:
-        """Return or set the generator grid shape.
+    def grid_shape(self) -> tuple[int, int] | tuple[int]:
+        """Return or set the detector grid shape.
 
         Parameters
         ----------
         shape : tuple or list of int
-            Generator grid shape (n rows, n cols). Must correspond to a
-            tuple of length equal to the number of signal dimensions of
-            :attr:`signal`. Cannot be greater than signal shape of
-            :attr:`signal`.
+            Integer number of rows and columns of the detector grid.
+            Cannot be greater than signal shape of :attr:`signal`.
         """
         return self._grid_shape
 
     @grid_shape.setter
-    def grid_shape(self, shape: tuple[int, int] | list[int]) -> None:
-        """Set the generator grid shape."""
-        shape = tuple(shape)
-        ndim_sig = self.signal.axes_manager.signal_dimension
+    def grid_shape(self, shape: tuple[int, int] | tuple[int]) -> None:
+        ndim_sig = self._signal.axes_manager.signal_dimension
         if len(shape) != ndim_sig:
             raise ValueError(
                 "Grid shape must have the same length as number of signal dimensions "
                 f"{ndim_sig}"
             )
-        sig_shape_rc = self.signal._signal_shape_rc
-        if any(i > j for i, j in zip(shape, self.signal._signal_shape_rc)):
+        sig_shape_rc = self._signal._signal_shape_rc
+        if any(i > j for i, j in zip(shape, self._signal._signal_shape_rc)):
             raise ValueError(
                 f"Grid shape (n rows, n cols) = {shape} cannot be greater than signal "
                 f"shape {sig_shape_rc}"
             )
         self._grid_shape = shape
+
+    @property
+    def signal(self) -> EBSD | LazyEBSD:
+        """Return the associated EBSD signal."""
+        return self._signal
+
+    @property
+    def _tile_coordinates(self) -> np.ndarray:
+        tile_coords = np.meshgrid(self.grid_cols[:-1], self.grid_rows[:-1])
+        tile_coords = np.stack(tile_coords, axis=2)
+        return tile_coords
+
+    @property
+    def _flat_tile_coordinates(self) -> np.ndarray:
+        tile_coords_flat = self._tile_coordinates.reshape(-1, 2)
+        return tile_coords_flat
+
+    @property
+    def _tile_labels(self) -> np.ndarray:
+        tile_labels = []
+        for row, col in np.ndindex(self.grid_shape):
+            tile_labels.append(f"({row}, {col})")
+        tile_labels_arr = np.array(tile_labels)
+        return tile_labels_arr
+
+    @property
+    def _tile_shape(self) -> tuple[int, int]:
+        signal_shape_arr = np.array(self._signal._signal_shape_rc)
+        grid_shape_arr = np.array(self.grid_shape)
+        tile_shape = tuple(signal_shape_arr // grid_shape_arr)
+        return tile_shape
+
+    # ------------------------ Dunder methods ------------------------ #
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__} for " + repr(self._signal)
+
+    # ---------------------------- Methods --------------------------- #
 
     def get_rgb_image(
         self,
@@ -169,11 +200,11 @@ class VirtualBSEImager:
             if isinstance(rois, tuple) or hasattr(rois, "__iter__") is False:
                 rois = (rois,)
 
-            image = np.zeros(self.signal._navigation_shape_rc, dtype=np.float64)
+            image = np.zeros(self._signal._navigation_shape_rc, dtype=np.float64)
             for roi in rois:
                 if isinstance(roi, tuple):
                     roi = self.roi_from_grid(roi)
-                roi_image = self.signal.get_virtual_bse_intensity(roi).data
+                roi_image = self._signal.get_virtual_bse_intensity(roi).data
                 if isinstance(roi_image, Array):
                     roi_image = roi_image.compute()
                 image += roi_image
@@ -201,7 +232,7 @@ class VirtualBSEImager:
         vbse_rgb_image.change_dtype(dtype_rgb)
 
         vbse_rgb_image.axes_manager = _transfer_navigation_axes_to_signal_axes(
-            new_axes=vbse_rgb_image.axes_manager, old_axes=self.signal.axes_manager
+            new_axes=vbse_rgb_image.axes_manager, old_axes=self._signal.axes_manager
         )
 
         return vbse_rgb_image
@@ -239,20 +270,22 @@ class VirtualBSEImager:
         dtype_out = np.dtype(dtype_out)
 
         grid_shape = self.grid_shape
-        new_shape = grid_shape + self.signal.axes_manager.navigation_shape[::-1]
+        new_shape = grid_shape + self._signal.axes_manager.navigation_shape[::-1]
         images = np.zeros(new_shape, dtype=dtype_out)
         for row, col in np.ndindex(*grid_shape):
             roi = self.roi_from_grid((row, col))
-            images[row, col] = self.signal.get_virtual_bse_intensity(roi).data
+            images[row, col] = self._signal.get_virtual_bse_intensity(roi).data
 
         vbse_images = VirtualBSEImage(images)
         vbse_images.axes_manager = _transfer_navigation_axes_to_signal_axes(
-            new_axes=vbse_images.axes_manager, old_axes=self.signal.axes_manager
+            new_axes=vbse_images.axes_manager, old_axes=self._signal.axes_manager
         )
 
         return vbse_images
 
-    def roi_from_grid(self, index: tuple | list[tuple]) -> hs.roi.RectangularROI:
+    def roi_from_grid(
+        self, index: tuple[int, int] | list[tuple[int, int]]
+    ) -> hs.roi.RectangularROI:
         """Return a rectangular region of interest (ROI) on the EBSD
         detector from one or multiple grid tile indices as row(s) and
         column(s).
@@ -270,16 +303,16 @@ class VirtualBSEImager:
         """
         rows = self.grid_rows
         cols = self.grid_cols
-        dc, dr = [i.scale for i in self.signal.axes_manager.signal_axes]
+        dc, dr = [i.scale for i in self._signal.axes_manager.signal_axes]
 
         if isinstance(index, tuple):
-            index = (index,)
-        index = np.array(index)
+            index = [index]
+        index_arr = np.array(index)
 
-        min_col = cols[min(index[:, 1])] * dc
-        max_col = (cols[max(index[:, 1])] + cols[1]) * dc
-        min_row = rows[min(index[:, 0])] * dr
-        max_row = (rows[max(index[:, 0])] + rows[1]) * dr
+        min_col = cols[min(index_arr[:, 1])] * dc
+        max_col = (cols[max(index_arr[:, 1])] + cols[1]) * dc
+        min_row = rows[min(index_arr[:, 0])] * dr
+        max_row = (rows[max(index_arr[:, 0])] + rows[1]) * dr
 
         return hs.roi.RectangularROI(
             left=min_col, top=min_row, right=max_col, bottom=max_row
@@ -315,60 +348,69 @@ class VirtualBSEImager:
         Returns
         -------
         pattern
-            A signal with a single pattern with the markers added.
+            A single pattern with the markers added.
         """
-        # Get detector scales (column, row)
-        axes_manager = self.signal.axes_manager
+        axes_manager = self._signal.axes_manager
         dc, dr = [i.scale for i in axes_manager.signal_axes]
-
         rows = self.grid_rows
         cols = self.grid_cols
-
-        markers = []
-
-        # Grid lines
         kwargs.setdefault("ec", "w")
+        markers = []
         markers.append(hs.plot.markers.HorizontalLines((rows - 0.5) * dr, **kwargs))
         markers.append(hs.plot.markers.VerticalLines((cols - 0.5) * dc, **kwargs))
 
-        # Grid tile indices
         if visible_indices:
-            color = kwargs.pop("color", "r")
-            for row, col in np.ndindex(self.grid_shape):
-                marker = hs.plot.markers.Texts(
-                    offsets=[cols[col], rows[row]],
-                    texts=[f"({row}, {col})"],
-                    color=color,
-                    horizontalalignment="left",
-                    verticalalignment="top",
+            text_markers = hs.plot.markers.Texts(
+                self._flat_tile_coordinates,
+                texts=self._tile_labels,
+                horizontalalignment="left",
+                verticalalignment="top",
+                facecolors=kwargs.pop("color", "r"),
+            )
+            markers.append(text_markers)
+
+        if rgb_channels is not None:
+            rgb_tile_coords = self._get_rgb_tile_coordinates(rgb_channels)
+            tile_height, tile_width = self._tile_shape
+            kwargs.update({"fc": "none", "zorder": 3, "linewidth": 2})
+            for i, color in enumerate(["r", "g", "b"]):
+                kwargs["ec"] = color
+                marker = hs.plot.markers.Rectangles(
+                    rgb_tile_coords[i], tile_width, tile_height, **kwargs
                 )
                 markers.append(marker)
 
-        # Color RGB tiles
-        if rgb_channels is not None:
-            for channels, color in zip(rgb_channels, ["r", "g", "b"]):
-                if isinstance(channels, tuple):
-                    channels = (channels,)
-                kwargs.update({"ec": color, "fc": "none", "zorder": 3, "linewidth": 2})
-                for row, col in channels:
-                    roi = self.roi_from_grid((row, col))
-                    width = roi.right - roi.left
-                    height = roi.bottom - roi.top
-                    marker = hs.plot.markers.Rectangles(
-                        [roi.left - 0.5 + width / 2, roi.top - 0.5 + height / 2],
-                        width,
-                        height,
-                        **kwargs,
-                    )
-                    markers.append(marker)
-
-        # Get pattern and add list of markers
         if pattern_idx is None:
             pattern_idx = (0,) * axes_manager.navigation_dimension
-        pattern = self.signal.inav[pattern_idx]
+        pattern = self._signal.inav[pattern_idx]
         pattern.add_marker(markers, permanent=True)
 
         return pattern
+
+    def _get_rgb_tile_coordinates(
+        self, rgb_channels: list[tuple] | list[list[tuple]]
+    ) -> np.ndarray:
+        tile_coords = self._tile_coordinates
+        tile_height, tile_width = self._tile_shape
+        offset = -0.5 + np.array([tile_height, tile_width]) / 2
+        rbg_tile_coords = np.zeros(3, dtype=object)
+        for i, channel_coords in enumerate(rgb_channels):
+            if isinstance(channel_coords, tuple):
+                channel_coords = [channel_coords]
+            channel_coord_arr = np.stack(channel_coords, axis=1)
+            try:
+                channel_tile_coords = tile_coords[*channel_coord_arr]
+            except IndexError as e:
+                channels = ["Red", "Green", "Blue"]
+                raise ValueError(
+                    (
+                        f"{channels[i]} channel tile coordinate cannot be greater than "
+                        f"detector grid shape {self.grid_shape}"
+                    )
+                ) from e
+            channel_tile_coords += offset
+            rbg_tile_coords[i] = channel_tile_coords
+        return rbg_tile_coords
 
 
 def _normalize_image(
@@ -467,14 +509,12 @@ def _get_rgb_image(
             )
         rgb_image[..., i] = channel
 
-    # Apply alpha channel if desired
     if alpha is not None:
         alpha_min = np.nanmin(alpha)
         rescaled_alpha = (alpha - alpha_min) / (np.nanmax(alpha) - alpha_min)
         for i in range(n_channels):
             rgb_image[..., i] *= rescaled_alpha
 
-    # Rescale to fit data type range
     if percentiles is not None:
         in_range = tuple(np.percentile(rgb_image, q=percentiles))
     else:
