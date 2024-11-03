@@ -494,7 +494,7 @@ class KikuchiPatternSimulator:
             and backend == "pyvista"
             and not installed["pyvista"]
         ):  # pragma: no cover
-            raise ImportError("Pyvista is not installed")
+            raise ImportError("PyVista is not installed")
 
         ref = self._reflectors
 
