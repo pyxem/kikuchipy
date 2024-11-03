@@ -239,7 +239,8 @@ class GeometricalKikuchiPatternSimulation:
         if lines:
             if lines_kwargs is None:
                 lines_kwargs = {}
-            markers += self._lines_as_markers(**lines_kwargs)
+            #            markers += self._lines_as_markers(**lines_kwargs)
+            markers.append(self._lines_as_markers2(**lines_kwargs))
         if zone_axes:
             if zone_axes_kwargs is None:
                 zone_axes_kwargs = {}
@@ -500,6 +501,23 @@ class GeometricalKikuchiPatternSimulation:
 
         return lines_list
 
+    def _lines_as_markers2(self, **kwargs) -> hs.plot.markers.Lines:
+        coords = self.lines_coordinates(index=(), exclude_nan=False)
+        nav_shape = self.navigation_shape
+        coords = coords.reshape(*nav_shape, -1, 2, 2)
+        # TODO: Split into two methods
+        # TODO: Consider removing NaNs
+        if nav_shape == (1,):
+            lines = coords.reshape(-1, 2, 2)
+        else:
+            lines = np.empty(nav_shape, dtype=object)
+            for idx in np.ndindex(nav_shape):
+                lines[idx] = coords[idx]
+        kw = {"colors": "r", "zorder": 1}
+        kw.update(kwargs)
+        markers = hs.plot.markers.Lines(lines, **kw)
+        return markers
+
     def _pc_as_markers(self, **kwargs) -> list:
         """Return a list of projection center (PC) point markers.
 
@@ -533,10 +551,10 @@ class GeometricalKikuchiPatternSimulation:
         if ncols > 1:
             pcx *= ncols - 1
 
-        kw = {"size": 300, "marker": "*", "fc": "gold", "ec": "k", "zorder": 4}
+        kw = {"sizes": 300, "hatch": "*", "fc": "gold", "ec": "k", "zorder": 4}
         kw.update(kwargs)
 
-        pc_marker = point(x=pcx, y=pcy, **kw)
+        pc_marker = hs.plot.markers.Points([pcx, pcy], **kw)
 
         return [pc_marker]
 
@@ -645,7 +663,7 @@ class GeometricalKikuchiPatternSimulation:
 
     def _zone_axes_labels_as_list(
         self, index: int | tuple[int, ...], coordinates: str, **kwargs
-    ) -> list:
+    ) -> list[mtext.Text]:
         """Get zone axes labels as a list of texts.
 
         Parameters
@@ -674,7 +692,10 @@ class GeometricalKikuchiPatternSimulation:
             xy[..., 1] -= 0.03 * self.detector.nrows
         else:  # gnomonic
             xy[..., 1] += 0.03 * np.diff(self.detector.y_range)[0]
-        kw = {"ha": "center", "bbox": {"boxstyle": "square", "fc": "w", "pad": 0.1}}
+        kw = {
+            "horizontalalignment": "center",
+            "bbox": {"boxstyle": "square", "fc": "w", "pad": 0.1},
+        }
         kw.update(kwargs)
         texts = []
         for (x, y), label in zip(xy, za_labels_list):
@@ -707,7 +728,7 @@ class GeometricalKikuchiPatternSimulation:
             # TODO: Inefficient, squeeze before the loop if possible
             zone_axis = coords[..., i, :].squeeze()
             if not np.all(np.isnan(zone_axis)):
-                marker = point(x=zone_axis[..., 0], y=zone_axis[..., 1], **kw)
+                marker = hs.plot.markers.Points(zone_axis, **kw)
                 zone_axes_list.append(marker)
 
         return zone_axes_list
@@ -735,9 +756,10 @@ class GeometricalKikuchiPatternSimulation:
         kw = {
             "color": "k",
             "zorder": 3,
-            "ha": "center",
-            "va": "bottom",
-            "bbox": {"fc": "w", "ec": "k", "boxstyle": "square", "pad": 0.2},
+            "horizontalalignment": "center",
+            "verticalalignment": "bottom",
+            # TODO: Uncomment once supported by HyperSpy again
+            # "bbox": {"fc": "w", "ec": "k", "boxstyle": "square", "pad": 0.2},
         }
         kw.update(kwargs)
 
@@ -754,7 +776,7 @@ class GeometricalKikuchiPatternSimulation:
                 # TODO: Inefficient, squeeze before the loop if possible
                 x = x.squeeze()
                 y = y.squeeze()
-                text_marker = text(x=x, y=y, text=texts[i], **kw)
+                text_marker = hs.plot.markers.Texts([x, y], texts=texts[i], **kwargs)
                 zone_axes_label_list.append(text_marker)
 
         return zone_axes_label_list

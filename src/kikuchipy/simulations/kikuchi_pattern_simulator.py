@@ -534,14 +534,14 @@ class KikuchiPatternSimulator:
         else:
             intensity_scaled = intensity.copy()
         rgb = np.full((ref.size, 3), color_rgb)  # RGB
-        color = np.column_stack((rgb, intensity_scaled[:, np.newaxis]))  # RGBA
+        color_rgba = np.column_stack((rgb, intensity_scaled[:, np.newaxis]))
 
         # Sort reflectors so that weakest are plotted first
         ref = ref[order].deepcopy()
-        color = color[order]
+        color_rgba = color_rgba[order]
 
         if projection == "stereographic":
-            kwargs.setdefault("color", color)
+            kwargs.setdefault("color", color_rgba)
             if all(i not in kwargs for i in ["linewidth", "lw"]):
                 kwargs.setdefault("linewidth", 0.5)
 
@@ -571,7 +571,7 @@ class KikuchiPatternSimulator:
             figure = _plot_spherical(
                 mode,
                 ref,
-                color,
+                color_rgba,
                 backend,
                 figure,
                 show_plotter,

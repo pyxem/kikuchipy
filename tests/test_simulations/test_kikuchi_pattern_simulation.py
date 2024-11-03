@@ -260,24 +260,27 @@ class TestAsMarkers:
 
         # Default
         markers0 = sim.as_markers()
-        assert len(markers0) == 3
+        assert len(markers0) == 1
 
         markers = sim.as_markers(
             zone_axes=True,
             zone_axes_labels=True,
             pc=True,
-            lines_kwargs=dict(color="b"),
-            zone_axes_kwargs=dict(color="g"),
-            zone_axes_labels_kwargs=dict(color="y"),
-            pc_kwargs=dict(color="r"),
+            lines_kwargs={"colors": "b"},
+            zone_axes_kwargs={"color": "g"},
+            zone_axes_labels_kwargs={"color": "y"},
+            pc_kwargs={"color": "r"},
         )
         assert isinstance(markers, list)
-        assert len(markers) == 6
-        for marker, color in zip(markers, ["b", "b", "b", "g", "y", "r"]):
-            assert marker.marker_properties["color"] == color
+        assert len(markers) == 4
+        assert markers[0].kwargs["colors"] == "b"
+        for marker, color in zip(markers[1:], ["g", "y", "r"]):
+            assert marker.kwargs["color"] == (color,)
 
         # Third line [0-20] is not present in the first two patterns
-        assert np.all(np.isnan(markers[2].data["x1"][()][0]))
+        line_segments = markers[0].kwargs["segments"]
+        assert np.all(np.isnan(line_segments[0, 0][2]))
+        assert np.all(np.isnan(line_segments[0, 1][2]))
 
     def test_add_markers(self):
         hkl_sets = self.reflectors.get_hkl_sets()
@@ -288,12 +291,9 @@ class TestAsMarkers:
         s = kp.signals.EBSD(
             np.random.random(self.detector.size).reshape(self.detector.shape)
         )
-        s.add_marker(
-            sim1d.as_markers(zone_axes=True, zone_axes_labels=True, pc=True),
-            plot_marker=False,
-            permanent=True,
-        )
-        assert len(s.metadata.Markers) == 5
+        markers1 = sim1d.as_markers(zone_axes=True, zone_axes_labels=True, pc=True)
+        s.add_marker(markers1, plot_marker=False, permanent=True)
+        assert len(s.metadata.Markers) == 4
         s.plot()
 
         sim2d = simulator.on_detector(self.detector, self.rotations)
@@ -302,8 +302,9 @@ class TestAsMarkers:
             sim2d.navigation_shape + self.detector.shape
         )
         s2 = kp.signals.EBSD(data2d)
-        s2.add_marker(sim2d.as_markers(), plot_marker=False, permanent=True)
-        assert len(s2.metadata.Markers) == 3
+        markers2 = sim2d.as_markers()
+        s2.add_marker(markers2, plot_marker=False, permanent=True)
+        assert len(s2.metadata.Markers) == 1
         s2.plot()
 
         plt.close("all")
