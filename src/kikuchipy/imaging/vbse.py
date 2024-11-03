@@ -51,21 +51,19 @@ class VirtualBSEImager:
     # -------------------------- Properties -------------------------- #
 
     @property
-    def grid_rows(self) -> NDArray[np.int64]:
-        """Return the detector grid rows, defined by :attr:`grid_shape`."""
+    def grid_rows(self) -> NDArray[np.float64]:
+        """Return the detector grid rows given by :attr:`grid_shape`."""
         gy = self.grid_shape[0]
         sy = self._signal.axes_manager.signal_shape[1]
-        rows = np.linspace(0, sy, gy + 1, dtype=np.int64)
+        rows = np.linspace(0, sy, gy + 1, dtype=np.float64)
         return rows
 
     @property
-    def grid_cols(self) -> NDArray[np.int64]:
-        """Return the detector grid columns, defined by
-        :attr:`grid_shape`.
-        """
+    def grid_cols(self) -> NDArray[np.float64]:
+        """Return the detector grid columns given by :attr:`grid_shape`."""
         gx = self.grid_shape[1]
         sx = self._signal.axes_manager.signal_shape[0]
-        cols = np.linspace(0, sx, gx + 1, dtype=np.int64)
+        cols = np.linspace(0, sx, gx + 1, dtype=np.float64)
         return cols
 
     @property
