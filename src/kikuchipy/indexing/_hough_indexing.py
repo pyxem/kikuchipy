@@ -32,9 +32,7 @@ from orix.quaternion import Rotation
 
 from kikuchipy.constants import installed
 
-if TYPE_CHECKING:
-    from kikuchipy.constants import installed
-
+if TYPE_CHECKING:  # pragma: no cover
     if installed["pyebsdindex"]:
         from pyebsdindex.ebsd_index import EBSDIndexer
         from pyebsdindex.tripletvote import BandIndexer
