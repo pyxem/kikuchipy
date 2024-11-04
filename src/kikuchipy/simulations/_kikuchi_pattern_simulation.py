@@ -17,6 +17,7 @@
 
 from copy import deepcopy
 import re
+from typing import Literal
 
 from diffsims.crystallography import ReciprocalLatticeVector
 import hyperspy.api as hs
@@ -121,7 +122,7 @@ class GeometricalKikuchiPatternSimulation:
     def as_collections(
         self,
         index: int | tuple[int, ...] | None = None,
-        coordinates: str = "detector",
+        coordinates: Literal["detector", "gnomonic"] = "detector",
         lines: bool = True,
         zone_axes: bool = False,
         zone_axes_labels: bool = False,
@@ -129,39 +130,39 @@ class GeometricalKikuchiPatternSimulation:
         zone_axes_kwargs: dict | None = None,
         zone_axes_labels_kwargs: dict | None = None,
     ) -> list:
-        """Get a single simulation as a list of Matplotlib objects.
+        """Return a list of Matplotlib collections for a single
+        simulation.
 
         Parameters
         ----------
         index
-            Index of the simulation to get collections from. If not
-            given, this is the first simulation.
+            Index of the simulation to get collections from. This is the
+            first simulation if not given.
         coordinates
-            The coordinates of the plot axes, either ``"detector"``
-            (default) or ``"gnomonic"``.
+            Coordinate space for the plot axes, either "detector"
+            (default) or "gnomonic".
         lines
             Whether to get the collection of Kikuchi lines. Default is
-            ``True``. These are returned as
+            True. Returned as
             :class:`matplotlib.collections.LineCollection`.
         zone_axes
             Whether to get the collection of zone axes. Default is
-            ``False``. These are returned as
+            False. Returned as
             :class:`matplotlib.collections.PathCollection`.
         zone_axes_labels
             Whether to get the collection of zone axes labels. Default
-            is ``False``. These are returned as a class:`list` of
-            :class:`matplotlib.text.Text`.
+            is False. Return as a list of :class:`matplotlib.text.Text`.
         lines_kwargs
             Keyword arguments passed to
             :class:`matplotlib.collections.LineCollection` to format
-            Kikuchi lines if ``lines=True``.
+            Kikuchi lines if *lines* True.
         zone_axes_kwargs
             Keyword arguments passed to
             :class:`matplotlib.collections.PathCollection` to format
-            zone axes if ``zone_axes=True``.
+            zone axes if *zone_axes* True.
         zone_axes_labels_kwargs
             Keyword arguments passed to :class:`matplotlib.text.Text` to
-            format zone axes labels if ``zone_axes_labels=True``.
+            format zone axes labels if *zone_axes_labels* True.
 
         Returns
         -------
@@ -213,27 +214,27 @@ class GeometricalKikuchiPatternSimulation:
         Parameters
         ----------
         lines
-            Whether to return Kikuchi line markers. Default is ``True``.
+            Whether to return Kikuchi line markers. Default is True.
         zone_axes
-            Whether to return zone axes markers. Default is ``False``.
+            Whether to return zone axes markers. Default is False.
         zone_axes_labels
-            Whether to return zone axes label markers. Default is
-            ``False``.
+            Whether to return zone axes label markers. Default is False.
         pc
             Whether to return projection center (PC) markers. Default is
-            ``False``.
+            False.
         lines_kwargs
             Keyword arguments passed to
             :func:`~matplotlib.pyplot.axvline` to format the lines.
         zone_axes_kwargs
             Keyword arguments passed to
-            :func:`~matplotlib.pyplot.scatter` to format the markers.
+            :func:`~matplotlib.pyplot.scatter` to format the zone axes
+            markers.
         zone_axes_labels_kwargs
             Keyword arguments passed to :func:`~matplotlib.text.Text` to
-            format the labels.
+            format the zone axes labels.
         pc_kwargs
             Keyword arguments passed to
-            :func:`~matplotlib.pyplot.scatter` to format the markers.
+            :func:`~matplotlib.pyplot.scatter` to format the PC markers.
 
         Returns
         -------
@@ -260,30 +261,28 @@ class GeometricalKikuchiPatternSimulation:
         if pc:
             if pc_kwargs is None:
                 pc_kwargs = {}
-            markers += self._pc_as_markers(**pc_kwargs)
+            markers.append(self._pc_as_markers(**pc_kwargs))
         return markers
 
     def lines_coordinates(
         self,
         index: int | tuple | None = None,
-        coordinates: str = "detector",
+        coordinates: Literal["detector", "gnomonic"] = "detector",
         exclude_nan: bool = True,
     ) -> np.ndarray:
-        """Get Kikuchi line coordinates of a single simulation.
+        """Return Kikuchi line coordinates for a single simulation.
 
         Parameters
         ----------
         index
-            Index of the simulation to get line coordinates for. If not
-            given, this is the first simulation.
+            Index of the simulation to get line coordinates for. This is
+            the first simulation if not given.
         coordinates
-            The type of coordinates, either ``"detector"`` (default) or
-            ``"gnomonic"``.
+            Coordinate space, either "detector" (default) or "gnomonic".
         exclude_nan
             Whether to exclude coordinates of Kikuchi lines not present
-            in the pattern. Default is ``True``. By passing ``False``,
-            all simulations (by varying ``index``) returns an array of
-            the same shape.
+            in the pattern. Default is True. If False, all simulations
+            (by varying *index*) return an array of the same shape.
 
         Returns
         -------
@@ -307,7 +306,7 @@ class GeometricalKikuchiPatternSimulation:
     def plot(
         self,
         index: int | tuple | None = None,
-        coordinates: str = "detector",
+        coordinates: Literal["detector", "gnomonic"] = "detector",
         pattern: np.ndarray | None = None,
         lines: bool = True,
         zone_axes: bool = True,
@@ -325,49 +324,48 @@ class GeometricalKikuchiPatternSimulation:
         Parameters
         ----------
         index
-            Index of the simulation to plot. If not given, this is the
-            first simulation. If :attr:`navigation_shape` is 2D, and
-            ``index`` is passed, it must be a 2-tuple.
+            Index of the simulation to plot. This is the first
+            simulation if not given. Must be a 2-tuple if
+            :attr:`navigation_shape` is 2D.
         coordinates
-            The coordinates of the plot axes, either ``"detector"``
-            (default) or ``"gnomonic"``.
+            Coordinate space of the plot axes, either "detector"
+            (default) or "gnomonic".
         pattern
-            A pattern to plot the simulation onto. If not given, the
-            simulation is plotted on a gray background.
+            Pattern to plot the simulation onto. The simulation is
+            plotted on a gray background if not given.
         lines
-            Whether to show Kikuchi lines. Default is ``True``.
+            Whether to show Kikuchi lines. Default is True.
         zone_axes
-            Whether to show zone axes. Default is ``True``.
+            Whether to show zone axes. Default is True.
         zone_axes_labels
-            Whether to show zone axes labels. Default is ``True``.
+            Whether to show zone axes labels. Default is True.
         pc
             Whether to show the projection/pattern centre (PC). Default
-            is ``True``.
+            is True.
         pattern_kwargs
             Keyword arguments passed to
-            :meth:`matplotlib.axes.Axes.imshow` if ``pattern`` is given.
+            :meth:`matplotlib.axes.Axes.imshow` if a *pattern* is given.
         lines_kwargs
             Keyword arguments passed to
-            :class:`matplotlib.collections.LineCollection` to format
-            Kikuchi lines if ``lines=True``.
+            :class:`matplotlib.collections.LineCollection` if *lines* is
+            True.
         zone_axes_kwargs
             Keyword arguments passed to
-            :class:`matplotlib.collections.PathCollection` to format
-            zone axes if ``zone_axes=True``.
+            :class:`matplotlib.collections.PathCollection` if
+            *zone_axes* is True.
         zone_axes_labels_kwargs
-            Keyword arguments passed to :class:`matplotlib.text.Text` to
-            format zone axes labels if ``zone_axes_labels=True``.
+            Keyword arguments passed to :class:`matplotlib.text.Text` if
+            *zone_axes_labels* is True.
         pc_kwargs
             Keyword arguments passed to
-            :meth:`matplotlib.axes.Axes.scatter` to format the PC if
-            ``pc=True``.
+            :meth:`matplotlib.axes.Axes.scatter` if *pc* is True.
         return_figure
-            Whether to return the figure. Default is ``False``.
+            Whether to return the figure. Default is False.
 
         Returns
         -------
         fig
-            Returned if ``return_figure=True``.
+            Returned if *return_figure* is True.
 
         See Also
         --------
@@ -404,29 +402,27 @@ class GeometricalKikuchiPatternSimulation:
     def zone_axes_coordinates(
         self,
         index: int | tuple | None = None,
-        coordinates: str = "detector",
+        coordinates: Literal["detector", "gnomonic"] = "detector",
         exclude_nan: bool = True,
     ) -> np.ndarray:
-        """Get zone axis coordinates of a single simulation.
+        """Return zone axes coordinates for a single simulation.
 
         Parameters
         ----------
         index
-            Index of the simulation to get zone axis coordinates for. If
-            not given, this is the first simulation.
+            Index of the simulation to get zone axis coordinates for.
+            This is the first simulation if not given.
         coordinates
-            The type of coordinates, either ``"detector"`` (default) or
-            ``"gnomonic"``.
+            Coordinate space, either "detector" (default) or "gnomonic".
         exclude_nan
             Whether to exclude coordinates of zone axes not present in
-            the pattern. Default is ``True``. By passing ``False``, all
-            simulations (by varying ``index``) returns an array of
-            the same shape.
+            the pattern. Default is True. If False, all simulations (by
+            varying *index*) return an array of the same shape.
 
         Returns
         -------
         coords
-            Zone axis coordinates.
+            Zone axes coordinates.
 
         See Also
         --------
@@ -513,27 +509,11 @@ class GeometricalKikuchiPatternSimulation:
         self._zone_axes_detector_coordinates = coords_d
 
     def _lines_as_collection(
-        self, index: int | tuple[int, ...], coordinates: str, **kwargs
+        self,
+        index: int | tuple[int, ...] | None,
+        coordinates: Literal["detector", "gnomonic"],
+        **kwargs,
     ) -> mcollections.LineCollection:
-        """Return Kikuchi lines as a Matplotlib collection.
-
-        Parameters
-        ----------
-        index
-            Index of the simulation to get collections from. This is the
-            first simulation if not given.
-        coordinates
-            Coordinate space of the lines, either "detector" (default)
-            or "gnomonic".
-        **kwargs
-            Keyword arguments passed to
-            :class:`~matplotlib.collections.LineCollection`.
-
-        Returns
-        -------
-        collection
-            Line collection of Kikuchi lines.
-        """
         coords = self.lines_coordinates(index, coordinates)
         coords = coords.reshape((coords.shape[0], 2, 2))
         kw = {
@@ -547,30 +527,14 @@ class GeometricalKikuchiPatternSimulation:
         return mcollections.LineCollection(segments=coords, **kw)
 
     def _zone_axes_as_collection(
-        self, index: int | tuple[int, ...], coordinates: str, **kwargs
+        self,
+        index: int | tuple[int, ...] | None,
+        coordinate_fmt: Literal["detector", "gnomonic"],
+        **kwargs,
     ) -> mcollections.PathCollection:
-        """Return zone axes as a Matplotlib collection.
-
-        Parameters
-        ----------
-        index
-            Index of the simulation to get collections from. This is the
-            first simulation if not given.
-        coordinates
-            Coordinate space of the plot axes, either "detector"
-            (default) or "gnomonic".
-        **kwargs
-            Keyword arguments passed to
-            :class:`~matplotlib.collections.PathCollection`.
-
-        Returns
-        -------
-        collection
-            Path collection of zone axes.
-        """
-        coords = self.zone_axes_coordinates(index, coordinates)
+        coords = self.zone_axes_coordinates(index, coordinate_fmt)
         offset = 0.01
-        if coordinates == "detector":
+        if coordinate_fmt == "detector":
             scatter_size = offset * self.detector.nrows
         else:  # gnomonic
             scatter_size = offset * np.diff(self.detector.x_range)[0]
@@ -583,26 +547,11 @@ class GeometricalKikuchiPatternSimulation:
         return mcollections.PathCollection(circles, **kw)
 
     def _zone_axes_labels_as_list(
-        self, index: int | tuple[int, ...], coordinates: str, **kwargs
+        self,
+        index: int | tuple[int, ...] | None,
+        coordinates: Literal["detector", "gnomonic"],
+        **kwargs,
     ) -> list[mtext.Text]:
-        """Return zone axes labels as a Matplotlib text list.
-
-        Parameters
-        ----------
-        index
-            Index of the simulation to get labels from. This is the
-            first simulation if not given.
-        coordinates
-            Coordinate space of the zone axes labels, either "detector"
-            (default) or "gnomonic".
-        **kwargs
-            Keyword arguments passed to :class:`~matplotlib.text.Text`.
-
-        Returns
-        -------
-        texts
-            List of zone axes labels as Matplotlib texts.
-        """
         labels = self._zone_axes_labels_as_array().tolist()
         coords = self.zone_axes_coordinates(index, coordinates, exclude_nan=False)
         y_offset = 0.03
@@ -640,45 +589,39 @@ class GeometricalKikuchiPatternSimulation:
         markers = hs.plot.markers.Lines(segments, **kw)
         return markers
 
-    def _pc_as_markers(self, **kwargs) -> list:
-        """Return a list of projection center (PC) point markers.
-
-        Parameters
-        ----------
-        **kwargs
-            Keyword arguments passed to
-            :func:`~matplotlib.pyplot.scatter` to format the markers.
-
-        Returns
-        -------
-        pc_marker
-            List with a single PC marker.
-        """
-        det = self.detector
-        if det.navigation_shape == self.navigation_shape:
-            pcx = det.pc[..., 0]
-            pcy = det.pc[..., 1]
-        else:
-            pcx1, pcy1 = det.pc_average[:2]
-            pcx = np.full(self.navigation_shape, pcx1)
-            pcy = np.full(self.navigation_shape, pcy1)
-
-        if pcx.shape[0] == 1:
-            pcx = pcx.squeeze()
-            pcy = pcy.squeeze()
-
-        nrows, ncols = det.shape
-        if nrows > 1:
-            pcy *= nrows - 1
-        if ncols > 1:
-            pcx *= ncols - 1
-
-        kw = {"sizes": 300, "hatch": "*", "fc": "gold", "ec": "k", "zorder": 4}
+    def _pc_as_markers(self, **kwargs) -> hs.plot.markers.Markers:
+        kw = {"sizes": 300, "fc": "gold", "ec": "k", "zorder": 4}
         kw.update(kwargs)
+        marker = hs.plot.markers.Markers(
+            collection=mcollections.StarPolygonCollection,
+            offsets=self._pc_xy_offsets(),
+            numsides=5,
+            **kw,
+        )
+        return marker
 
-        pc_marker = hs.plot.markers.Points([pcx, pcy], **kw)
+    def _pc_xy_offsets(self) -> np.ndarray:
+        if self.detector.navigation_shape == self.navigation_shape != (1,):
+            return self._pc_xy_offsets_multiple()
+        else:
+            return self._pc_xy_offsets_single()
 
-        return [pc_marker]
+    def _pc_xy_offsets_single(self) -> np.ndarray:
+        pc = self.detector.pc_average[:2].copy()
+        for i, shape in enumerate(self.detector.shape[::-1]):
+            if shape > 1:
+                pc[..., i] *= shape - 1
+        return pc
+
+    def _pc_xy_offsets_multiple(self) -> np.ndarray:
+        pc = self.detector.pc[..., :2].copy()
+        for i, shape in enumerate(self.detector.shape[::-1]):
+            if shape > 1:
+                pc[..., i] *= shape - 1
+        pc_object_arr = np.empty(self.navigation_shape[::-1], dtype=object)
+        for idx in np.ndindex(pc_object_arr.shape):
+            pc_object_arr[idx] = pc[idx[::-1]]
+        return pc_object_arr
 
     def _zone_axes_as_markers(self, **kwargs) -> hs.plot.markers.Lines:
         coords = self.zone_axes_coordinates(index=(), exclude_nan=False)
