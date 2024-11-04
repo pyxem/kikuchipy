@@ -277,10 +277,10 @@ class TestAsMarkers:
         for marker, color in zip(markers[1:], ["g", "y", "r"]):
             assert marker.kwargs["color"] == (color,)
 
-        # Third line [0-20] is not present in the first two patterns
         line_segments = markers[0].kwargs["segments"]
-        assert np.all(np.isnan(line_segments[0, 0][2]))
-        assert np.all(np.isnan(line_segments[1, 0][2]))
+        assert line_segments.shape == (2, 2)
+        for idx in np.ndindex(sim.navigation_shape):
+            assert line_segments[idx].shape == (2, 2, 2)
 
     def test_add_markers(self):
         hkl_sets = self.reflectors.get_hkl_sets()
