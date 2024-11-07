@@ -29,7 +29,7 @@ from orix.quaternion import Rotation
 import kikuchipy as kp
 
 
-def setup_reflectors():
+def setup_reflectors() -> ReciprocalLatticeVector:
     """Return simulator used in `setup_method` of multiple test classes."""
     phase = Phase(
         name="al",
@@ -39,14 +39,12 @@ def setup_reflectors():
             lattice=Lattice(4.05, 4.05, 4.05, 90, 90, 90),
         ),
     )
-    ref = ReciprocalLatticeVector(
-        phase, hkl=((1, 1, 1), (2, 0, 0), (2, 2, 0), (3, 1, 1))
-    )
-    ref.sanitise_phase()
-    ref = ref.symmetrise()
-    ref.calculate_structure_factor()
-    ref.calculate_theta(20e3)
-    return ref
+    g = ReciprocalLatticeVector(phase, hkl=((1, 1, 1), (2, 0, 0), (2, 2, 0), (3, 1, 1)))
+    g.sanitise_phase()
+    g = g.symmetrise()
+    g.calculate_structure_factor()
+    g.calculate_theta(20e3)
+    return g
 
 
 class TestGeometricalKikuchiPatternSimulation:
@@ -260,24 +258,27 @@ class TestAsMarkers:
 
         # Default
         markers0 = sim.as_markers()
-        assert len(markers0) == 3
+        assert len(markers0) == 1
 
         markers = sim.as_markers(
             zone_axes=True,
             zone_axes_labels=True,
             pc=True,
-            lines_kwargs=dict(color="b"),
-            zone_axes_kwargs=dict(color="g"),
-            zone_axes_labels_kwargs=dict(color="y"),
-            pc_kwargs=dict(color="r"),
+            lines_kwargs={"colors": "b"},
+            zone_axes_kwargs={"color": "g"},
+            zone_axes_labels_kwargs={"color": "y"},
+            pc_kwargs={"color": "r"},
         )
         assert isinstance(markers, list)
-        assert len(markers) == 6
-        for marker, color in zip(markers, ["b", "b", "b", "g", "y", "r"]):
-            assert marker.marker_properties["color"] == color
+        assert len(markers) == 4
+        assert markers[0].kwargs["colors"] == "b"
+        for marker, color in zip(markers[1:], ["g", "y", "r"]):
+            assert marker.kwargs["color"] == (color,)
 
-        # Third line [0-20] is not present in the first two patterns
-        assert np.all(np.isnan(markers[2].data["x1"][()][0]))
+        line_segments = markers[0].kwargs["segments"]
+        assert line_segments.shape == (2, 2)
+        for idx in np.ndindex(sim.navigation_shape):
+            assert line_segments[idx].shape == (2, 2, 2)
 
     def test_add_markers(self):
         hkl_sets = self.reflectors.get_hkl_sets()
@@ -288,12 +289,10 @@ class TestAsMarkers:
         s = kp.signals.EBSD(
             np.random.random(self.detector.size).reshape(self.detector.shape)
         )
-        s.add_marker(
-            sim1d.as_markers(zone_axes=True, zone_axes_labels=True, pc=True),
-            plot_marker=False,
-            permanent=True,
-        )
-        assert len(s.metadata.Markers) == 5
+        markers1 = sim1d.as_markers(zone_axes=True, zone_axes_labels=True, pc=True)
+        print(markers1[3].kwargs["offsets"].shape)
+        s.add_marker(markers1, plot_marker=False, permanent=True)
+        assert len(s.metadata.Markers) == 4
         s.plot()
 
         sim2d = simulator.on_detector(self.detector, self.rotations)
@@ -302,8 +301,35 @@ class TestAsMarkers:
             sim2d.navigation_shape + self.detector.shape
         )
         s2 = kp.signals.EBSD(data2d)
-        s2.add_marker(sim2d.as_markers(), plot_marker=False, permanent=True)
-        assert len(s2.metadata.Markers) == 3
+        markers2 = sim2d.as_markers()
+        s2.add_marker(markers2, plot_marker=False, permanent=True)
+        assert len(s2.metadata.Markers) == 1
         s2.plot()
 
         plt.close("all")
+
+    def test_pc_xy_offsets_single(self):
+        simulator = kp.simulations.KikuchiPatternSimulator(self.reflectors)
+        R = self.rotations
+        det_shape_factor = np.array(self.detector.shape[::-1]) - 1
+
+        sim = simulator.on_detector(self.detector, R)
+        pc_offsets = sim._pc_xy_offsets()
+        assert pc_offsets.shape == (2,)
+        pc_expected = self.detector.pc_average[:2] * det_shape_factor
+        assert np.allclose(pc_offsets, pc_expected)
+
+    def test_pc_xy_offsets_multiple(self):
+        simulator = kp.simulations.KikuchiPatternSimulator(self.reflectors)
+        R = self.rotations
+        det_shape_factor = np.array(self.detector.shape[::-1]) - 1
+
+        det = self.detector.deepcopy()
+        pc = np.arange(R.size * 3).reshape(*R.shape, 3)
+        det.pc = pc
+        sim = simulator.on_detector(det, R)
+        pc_offsets = sim._pc_xy_offsets()
+        assert pc_offsets.shape == det.navigation_shape
+        for idx in np.ndindex(det.navigation_shape):
+            idx_xy = idx[::-1]
+            assert np.allclose(pc_offsets[idx_xy], pc[idx][:2] * det_shape_factor)
