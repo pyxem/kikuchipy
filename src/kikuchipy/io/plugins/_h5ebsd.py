@@ -33,7 +33,7 @@ def _hdf5group2dict(
     group: h5py.Group,
     dictionary: dict | None = None,
     recursive: bool = False,
-    data_dset_names: list | None = None,
+    data_dset_names: list[str] | None = None,
 ) -> dict:
     """Return a dictionary with values from datasets in a group.
 
@@ -44,14 +44,14 @@ def _hdf5group2dict(
     dictionary
         To fill dataset values into.
     recursive
-        Whether to add subgroups to ``dictionary`` (default is False).
+        Whether to add subgroups to *dictionary*. Default is False.
     data_dset_names
         List of names of HDF5 data sets with data to not read.
 
     Returns
     -------
     dictionary
-        Dataset values in group (and subgroups if ``recursive=True``).
+        Dataset values in group (and subgroups if *recursive* is True).
     """
     if data_dset_names is None:
         data_dset_names = []
@@ -137,7 +137,7 @@ class H5EBSDReader(abc.ABC):
         Keyword arguments passed to :class:`h5py.File`.
     """
 
-    manufacturer_patterns = {
+    manufacturer_patterns: dict[str, str] = {
         "bruker nano": "RawPatterns",
         "edax": "Pattern",
         "kikuchipy": "patterns",
@@ -158,7 +158,12 @@ class H5EBSDReader(abc.ABC):
     @property
     def scan_group_names(self) -> list[str]:
         """Return a list of available scan group names."""
-        return [group.name.lstrip("/") for group in self.scan_groups]
+        names = []
+        for group in self.scan_groups:
+            # Fails if group is anynomous, with None as name
+            name = group.name.lstrip("/")
+            names.append(name)
+        return names
 
     def check_file(self) -> None:
         """Check if the file is a valid h5ebsd file by searching for
@@ -196,8 +201,8 @@ class H5EBSDReader(abc.ABC):
         if error is not None:
             raise IOError(f"{self.filename} is not a supported h5ebsd file, as {error}")
 
-    def get_manufacturer_version(self) -> tuple[str | None, str | None]:
-        """Get manufacturer and version from the top group.
+    def get_manufacturer_version(self) -> tuple[str, str]:
+        """Return manufacturer and version, read from the top group.
 
         Returns
         -------
@@ -205,6 +210,12 @@ class H5EBSDReader(abc.ABC):
             File manufacturer.
         version
             File version.
+
+        Raises
+        ------
+        IOError
+            If either 'manufacturer' or 'version' datasets could not be
+            found in the top group.
         """
         manufacturer = None
         version = None
@@ -213,6 +224,10 @@ class H5EBSDReader(abc.ABC):
                 manufacturer = val.lower()
             elif key.lower() in ["version", "format version"]:
                 version = val.lower()
+        if manufacturer is None:
+            raise IOError(f"Could not find 'manufacturer' key in {self.filename!r}")
+        elif version is None:
+            raise IOError(f"Could not find 'version' key in {self.filename!r}")
         return manufacturer, version
 
     def get_scan_groups(self) -> list[h5py.Group]:
@@ -246,6 +261,11 @@ class H5EBSDReader(abc.ABC):
         -------
         scan_groups
             A list of the desired scan group(s).
+
+        Raises
+        ------
+        IOError
+            If the desired scan group is not among the available scans.
         """
         # Get desired scan groups
         scan_groups = []
@@ -263,8 +283,8 @@ class H5EBSDReader(abc.ABC):
                         break
                 if not scan_is_here:
                     error_str = (
-                        f"Scan '{desired_name}' is not among the available scans "
-                        f"{self.scan_group_names} in '{self.filename}'."
+                        f"Scan {desired_name!r} is not among the available scans "
+                        f"{self.scan_group_names} in {self.filename!r}"
                     )
                     if len(group_names) == 1:
                         raise IOError(error_str)
@@ -446,7 +466,7 @@ class H5EBSDReader(abc.ABC):
         """Return a list of dictionaries which can be used to create
         :class:`~kikuchipy.signals.EBSD` signals.
 
-        The file is closed after reading if ``lazy=False``.
+        The file is closed after reading if *lazy* is False.
 
         Parameters
         ----------
@@ -454,8 +474,8 @@ class H5EBSDReader(abc.ABC):
             Name or a list of names of the desired top HDF5 group(s). If
             not given, the first scan group is returned.
         lazy
-            Read dataset lazily (default is False). If False, the file
-            is closed after reading.
+            Read dataset lazily. Default is False. If False, the file is
+            closed after reading.
 
         Returns
         -------

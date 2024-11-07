@@ -15,34 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from . import (
-    bruker_h5ebsd,
-    ebsd_directory,
-    edax_binary,
-    edax_h5ebsd,
-    emsoft_ebsd,
-    emsoft_ebsd_master_pattern,
-    emsoft_ecp_master_pattern,
-    emsoft_tkd_master_pattern,
-    kikuchipy_h5ebsd,
-    nordif,
-    nordif_calibration_patterns,
-    oxford_binary,
-    oxford_h5ebsd,
-)
+from . import plugins
 
-__all__ = [
-    "bruker_h5ebsd",
-    "ebsd_directory",
-    "edax_binary",
-    "edax_h5ebsd",
-    "emsoft_ebsd",
-    "emsoft_ebsd_master_pattern",
-    "emsoft_ecp_master_pattern",
-    "emsoft_tkd_master_pattern",
-    "kikuchipy_h5ebsd",
-    "nordif",
-    "nordif_calibration_patterns",
-    "oxford_binary",
-    "oxford_h5ebsd",
-]
+__all__ = ["plugins"]

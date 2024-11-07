@@ -24,7 +24,7 @@ import h5py
 import numpy as np
 
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
-from kikuchipy.io.plugins.emsoft_ebsd import _crystaldata2phase
+from kikuchipy.io.plugins.emsoft_ebsd._api import _crystaldata2phase
 
 
 class EMsoftMasterPatternReader(abc.ABC):
@@ -77,9 +77,9 @@ class EMsoftMasterPatternReader(abc.ABC):
         fpath = Path(self.filename)
 
         mode = kwargs.pop("mode", "r")
-        f = h5py.File(fpath, mode=mode, **kwargs)
+        file = h5py.File(fpath, mode, **kwargs)
 
-        _check_file_format(f, self.diffraction_type)
+        _check_file_format(file, self.diffraction_type)
 
         # Set data group names
         diff_type = self.diffraction_type
@@ -97,11 +97,11 @@ class EMsoftMasterPatternReader(abc.ABC):
                 "original_filename": fpath.name,
             },
         }
-        nml_params = _hdf5group2dict(f["NMLparameters"], recursive=True)
+        nml_params = _hdf5group2dict(file["NMLparameters"], recursive=True)
 
         # Get phase information and add it to both the original metadata
         # and a Phase object
-        crystal_data = _hdf5group2dict(f["CrystalData"])
+        crystal_data = _hdf5group2dict(file["CrystalData"])
         nml_params["CrystalData"] = crystal_data
         phase = _crystaldata2phase(crystal_data)
 
@@ -114,7 +114,7 @@ class EMsoftMasterPatternReader(abc.ABC):
                 phase.name = None
 
         # Get data shape and slices
-        data_group = f[data_group_path]
+        data_group = file[data_group_path]
         energies = data_group[self.energy_string][()]
         data_shape, data_slices = _get_data_shape_slices(
             npx=nml_params[name_list_name]["npx"], energies=energies, energy=self.energy
@@ -192,8 +192,9 @@ class EMsoftMasterPatternReader(abc.ABC):
         dim_idx += [2, 3]
 
         # Create axis object
-        axes = [
-            {
+        axes = []
+        for i, j in zip(range(data.ndim), dim_idx):
+            axis = {
                 "size": data.shape[i],
                 "index_in_array": i,
                 "name": names[j],
@@ -201,8 +202,7 @@ class EMsoftMasterPatternReader(abc.ABC):
                 "offset": offsets[j],
                 "units": units[j],
             }
-            for i, j in zip(range(data.ndim), dim_idx)
-        ]
+            axes.append(axis)
 
         output = {
             "axes": axes,
@@ -215,7 +215,7 @@ class EMsoftMasterPatternReader(abc.ABC):
         }
 
         if not self.lazy:
-            f.close()
+            file.close()
 
         return [output]
 
@@ -229,13 +229,13 @@ def _check_file_format(file: h5py.File, diffraction_type: str) -> None:
     file
         HDF5 file.
     diffraction_type
-        ``"EBSD"``, ``"TKD"`` or ``"ECP"``.
+        "EBSD", "TKD", or "ECP".
 
     Raises
     ------
     KeyError
         If the program that created the file is not named
-        ``"EM<diffraction_type>master.f90"``.
+        "EM<diffraction_type>master.f90".
     IOError
         If the file is not in the EMsoft master pattern file format.
     """
@@ -245,7 +245,7 @@ def _check_file_format(file: h5py.File, diffraction_type: str) -> None:
         if program_name != f"EM{diffraction_type}master.f90":
             raise KeyError
     except KeyError:
-        raise IOError(f"'{file.filename}' is not in EMsoft's master pattern format")
+        raise IOError(f"{file.filename!r} is not in EMsoft's master pattern format")
 
 
 def _get_data_shape_slices(
@@ -273,7 +273,7 @@ def _get_data_shape_slices(
     data_shape
         Shape of data.
     data_slices
-        Data to get, determined from ``energy``.
+        Data to get, determined from *energy*.
     """
     data_shape = (npx * 2 + 1,) * 2
     data_slices = (slice(None, None),) * 2
@@ -303,37 +303,41 @@ def _get_datasets(
     data_group
         HDF5 data group with data sets.
     projection
-        ``"stereographic"`` or ``"lambert"`` projection.
+        "stereographic" or "lambert" projection.
     hemisphere
-        ``"upper"``, ``"lower"`` or ``"both"`` hemisphere(s).
+        "upper", "lower", or "both" hemisphere(s).
 
     Returns
     -------
     datasets
         List of HDF5 data sets.
+
+    Raises
+    ------
+    ValueError
+        If *projection* or *hemisphere* is not among the options.
     """
-    hemisphere = hemisphere.lower()
     projection = projection.lower()
-
     projections = {"stereographic": "masterSP", "lambert": "mLP"}
-    hemispheres = {"upper": "NH", "lower": "SH"}
-
-    if projection not in projections.keys():
+    if projection not in projections:
         raise ValueError(
-            f"'projection' value {projection} must be one of {list(projections.keys())}"
+            f"'projection' value {projection!r} must be one of {list(projections)}"
         )
 
+    hemisphere = hemisphere.lower()
+    hemispheres = {"upper": "NH", "lower": "SH"}
+
+    projection_label = projections[projection]
     if hemisphere == "both":
-        dset_names = [
-            projections[projection] + hemispheres[h] for h in hemispheres.keys()
-        ]
-        datasets = [data_group[n] for n in dset_names]
+        datasets = []
+        for hemi_label in hemispheres.values():
+            datasets.append(data_group[projection_label + hemi_label])
     elif hemisphere in hemispheres:
-        dset_name = projections[projection] + hemispheres[hemisphere]
+        dset_name = projection_label + hemispheres[hemisphere]
         datasets = [data_group[dset_name]]
     else:
         raise ValueError(
-            f"'hemisphere' value {hemisphere} must be one of {list(hemispheres.keys())}"
+            f"'hemisphere' value {hemisphere!r} must be one of {list(hemispheres)}"
         )
 
     return datasets

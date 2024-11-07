@@ -28,6 +28,7 @@ from packaging.version import Version
 import pytest
 
 import kikuchipy as kp
+from kikuchipy.constants import installed
 
 
 def setup_method():
@@ -294,9 +295,7 @@ class TestPlot:
 
         plt.close("all")
 
-    @pytest.mark.skipif(
-        not kp.constants.installed["pyvista"], reason="Pyvista is not installed"
-    )
+    @pytest.mark.skipif(not installed["pyvista"], reason="PyVista is not installed")
     def test_spherical_pyvista(self):
         """Spherical plot with PyVista."""
         import pyvista as pv
@@ -333,14 +332,12 @@ class TestPlot:
 
         plt.close("all")
 
-    @pytest.mark.skipif(
-        kp.constants.installed["pyvista"], reason="Pyvista is installed"
-    )
+    @pytest.mark.skipif(installed["pyvista"], reason="PyVista is installed")
     def test_spherical_pyvista_raises(self):
         """Appropriate error message is raised when PyVista is
         unavailable.
         """
-        with pytest.raises(ImportError, match="Pyvista is not installed"):
+        with pytest.raises(ImportError, match="PyVista is not installed"):
             _ = self.simulator.plot("spherical", backend="pyvista")
 
     def test_plot_scaling(self):

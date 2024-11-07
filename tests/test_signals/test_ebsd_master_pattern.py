@@ -663,7 +663,7 @@ class TestIntensityScaling:
     def test_rescale_intensity_lazy_output(self):
         mp = kp.data.nickel_ebsd_master_pattern_small()
         with pytest.raises(
-            ValueError, match="`lazy_output=True` requires `inplace=False`"
+            ValueError, match="'lazy_output=True' requires 'inplace=False'"
         ):
             _ = mp.normalize_intensity(lazy_output=True)
 
@@ -697,7 +697,7 @@ class TestIntensityScaling:
     def test_normalize_intensity_lazy_output(self):
         mp = kp.data.nickel_ebsd_master_pattern_small()
         with pytest.raises(
-            ValueError, match="`lazy_output=True` requires `inplace=False`"
+            ValueError, match="'lazy_output=True' requires 'inplace=False'"
         ):
             _ = mp.normalize_intensity(lazy_output=True)
 

@@ -32,9 +32,7 @@ from orix.quaternion import Rotation
 
 from kikuchipy.constants import installed
 
-if TYPE_CHECKING:
-    from kikuchipy.constants import installed
-
+if TYPE_CHECKING:  # pragma: no cover
     if installed["pyebsdindex"]:
         from pyebsdindex.ebsd_index import EBSDIndexer
         from pyebsdindex.tripletvote import BandIndexer
@@ -378,10 +376,10 @@ def _indexer_is_compatible_with_kikuchipy(
     # PC and orientation convention
     if indexer.vendor.lower() != "kikuchipy":
         compatible = False
-        error_msg = f"`indexer.vendor` must be 'kikuchipy', but was {indexer.vendor}."
+        error_msg = f"'indexer.vendor' must be 'kikuchipy', but was {indexer.vendor}"
 
     # Detector shape
-    sig_shape_indexer = tuple(indexer.bandDetectPlan.patDim)
+    sig_shape_indexer = tuple(map(int, indexer.bandDetectPlan.patDim))
     if compatible and sig_shape != sig_shape_indexer:
         compatible = False
         error_msg = (
@@ -508,10 +506,8 @@ def _get_info_message(nav_size: int, chunksize: int, indexer: "EBSDIndexer") -> 
     if pc.size > 3:
         pc = pc.mean(0)
         info += ", mean"
-    pc = pc.round(4)
-    info += (
-        f"): {tuple(pc)}\n" f"  Indexing {nav_size} pattern(s) in {n_chunks} chunk(s)"
-    )
+    pc = tuple(map(float, pc.round(4)))
+    info += f"): {pc}\n" f"  Indexing {nav_size} pattern(s) in {n_chunks} chunk(s)"
 
     return info
 

@@ -2,6 +2,8 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# ----------------------------- Project ------------------------------ #
+
 [project]
 name = "kikuchipy"
 authors = [{name = "kikuchipy developers"}]
@@ -40,35 +42,23 @@ dependencies = [
     "dask[array]      >= 2021.8.1",
     "diffpy.structure >= 3",
     "diffsims         >= 0.5.2",
-    # TODO: Remove python_version once HyperSpy 2.0 is supported
-    "hyperspy         >= 1.7.3, < 2; python_version < '3.12'",
-    "hyperspy         == 1.7.6; python_version >= '3.12'",
+    # TODO: Replace with HyperSpy 2.2 once it's out
+    "hyperspy @ git+https://github.com/hyperspy/hyperspy.git@RELEASE_next_patch",
     "h5py             >= 2.10",
     "imageio",
     "lazy_loader",
     "matplotlib       >= 3.5",
     "numba            >= 0.57",
-    # TODO: Remove pinning of NumPy <2 once HyperSpy 2.0 is supported
-    "numpy            >= 1.23.0, <2",
+    "numpy            >= 1.23.0",
     "orix             >= 0.12.1",
     "pooch            >= 1.3.0",
     "pyyaml",
-    "tqdm             >= 0.5.2",
+    "rosettasciio",
     "scikit-image     >= 0.16.2",
     "scikit-learn",
-    # TODO: Remove < 1.14 once HyperSpy 2.0 is supported
-    "scipy            >= 1.7, < 1.14",
+    "scipy            >= 1.7",
+    "tqdm             >= 0.5.2",
 ]
-
-[project.entry-points."hyperspy.extensions"]
-kikuchipy = "kikuchipy"
-
-[project.urls]
-Documentation = "https://kikuchipy.org"
-Download = "https://pypi.python.org/pypi/kikuchipy"
-"Bug Tracker" = "https://github.com/pyxem/kikuchipy/issues"
-"Source Code" = "https://github.com/pyxem/kikuchipy"
-Changelog = "https://kikuchipy.org/en/stable/changelog.html"
 
 [project.optional-dependencies]
 all = [
@@ -85,7 +75,7 @@ doc = [
     "pyebsdindex                  ~= 0.2",
     "pyvista",
     "sphinx                       >= 3.0.2",
-    "sphinx-codeautolink[ipython] < 0.14",
+    "sphinx-codeautolink[ipython] <  0.14",
     "sphinx-copybutton            >= 0.2.5",
     "sphinx-design",
     "sphinx-gallery",
@@ -111,22 +101,34 @@ dev = [
     "kikuchipy[doc,tests,coverage]",
 ]
 
+[project.entry-points."hyperspy.extensions"]
+kikuchipy = "kikuchipy"
+
+[project.urls]
+Documentation = "https://kikuchipy.org"
+Download = "https://pypi.python.org/pypi/kikuchipy"
+"Bug Tracker" = "https://github.com/pyxem/kikuchipy/issues"
+"Source Code" = "https://github.com/pyxem/kikuchipy"
+Changelog = "https://kikuchipy.org/en/stable/changelog.html"
+
+# ------------------------------- Tool ------------------------------- #
+
 [tool.hatch.version]
 path = "src/kikuchipy/__init__.py"
 
-# TODO: Remove this section and the duplicated file when HS 2.0 is
-# supported
-[tool.hatch.build.force-include]
-"hyperspy_extension.yaml" = "hyperspy_extension.yaml"
-
 # https://github.com/pypa/hatch/discussions/427
 # https://github.com/pypa/hatch/issues/492
+[tool.hatch.build.targets.wheel.sources]
+src = ""
+
 [tool.hatch.build.targets.wheel]
 include = [
     "src/kikuchipy",
 ]
-[tool.hatch.build.targets.wheel.sources]
-"src" = ""
+
+# TODO: Remove once HyperSpy is not installed from a direct reference (GitHub)
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.coverage.report]
 precision = 2

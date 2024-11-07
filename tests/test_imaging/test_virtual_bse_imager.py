@@ -27,14 +27,14 @@ class TestVirtualBSEImager:
     def test_init(self, dummy_signal):
         vbse_imager = kp.imaging.VirtualBSEImager(dummy_signal)
 
-        assert isinstance(vbse_imager.signal, kp.signals.EBSD)
-        assert vbse_imager.grid_shape == (5, 5)
+        assert isinstance(vbse_imager._signal, kp.signals.EBSD)
+        assert vbse_imager.grid_shape == (3, 3)
 
     def test_init_lazy(self, dummy_signal):
         lazy_signal = dummy_signal.as_lazy()
         vbse_imager = kp.imaging.VirtualBSEImager(lazy_signal)
 
-        assert isinstance(vbse_imager.signal, kp.signals.LazyEBSD)
+        assert isinstance(vbse_imager._signal, kp.signals.LazyEBSD)
 
     @pytest.mark.parametrize(
         "grid_shape, desired_rows, desired_cols",
@@ -69,11 +69,8 @@ class TestVirtualBSEImager:
             "VirtualBSEImager for <EBSD, title: , dimensions: (3, 3|3, 3)>"
         )
 
-    @pytest.mark.parametrize(
-        "grid_shape, desired_n_markers",
-        [((3, 3), 9 + 3 + 8), ((1, 1), 1 + 3 + 4), ((2, 3), 6 + 3 + 7)],
-    )
-    def test_plot_grid(self, kikuchipy_h5ebsd_path, grid_shape, desired_n_markers):
+    @pytest.mark.parametrize("grid_shape", [(3, 3), (2, 3)])
+    def test_plot_grid(self, kikuchipy_h5ebsd_path, grid_shape):
         s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5")
         vbse_imager = kp.imaging.VirtualBSEImager(s)
         vbse_imager.grid_shape = grid_shape
@@ -82,19 +79,26 @@ class TestVirtualBSEImager:
         p = vbse_imager.plot_grid(pattern_idx=pattern_idx, rgb_channels=rgb_channels)
         p2 = vbse_imager.plot_grid()
 
-        # Check data type and values
         assert isinstance(p, kp.signals.EBSD)
         assert np.allclose(p.data, s.inav[pattern_idx].data)
         assert np.allclose(p2.data, s.inav[0, 0].data)
 
-        # Check markers
-        assert len(p.metadata.Markers) == desired_n_markers
-        assert p.metadata.Markers.has_item("text")
-        assert p.metadata.Markers["text"].marker._color == "r"
-        assert p.metadata.Markers["horizontal_line"].marker._color == "w"
-        assert p.metadata.Markers["rectangle"].marker._edgecolor == (1, 0, 0, 1)
+        markers = p.metadata.Markers
+        assert len(markers) == 6
+        assert markers.Texts.kwargs["offsets"].shape == (int(np.prod(grid_shape)), 2)
+        assert markers.Texts.kwargs["facecolors"] == "r"
+        assert markers.HorizontalLines.kwargs["ec"] == "w"
+        assert markers.Rectangles.kwargs["ec"] == "r"
 
         plt.close("all")
+
+    def test_plot_grid_raises(self):
+        s = kp.signals.EBSD(np.zeros((60, 60)))
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
+        vbse_imager.grid_shape = (1, 1)
+
+        with pytest.raises(ValueError, match="Green channel tile coordinates cannot "):
+            _ = vbse_imager.plot_grid(rgb_channels=[(0, 0), (1, 0), (0, 1)])
 
     @pytest.mark.parametrize("color", ["c", "m", "k"])
     def test_plot_grid_text_color(self, kikuchipy_h5ebsd_path, color):
@@ -102,7 +106,7 @@ class TestVirtualBSEImager:
         vbse_imager = kp.imaging.VirtualBSEImager(s)
         p = vbse_imager.plot_grid(color=color)
 
-        assert p.metadata.Markers["text"].marker._color == color
+        assert p.metadata.Markers.Texts.kwargs["facecolors"] == color
 
         plt.close("all")
 
@@ -135,9 +139,10 @@ class TestGetImagesFromGrid:
         assert all([vbse_sig_axes[i].name == s_nav_axes[i].name for i in range(2)])
         assert all([vbse_sig_axes[i].units == s_nav_axes[i].units for i in range(2)])
 
-    def test_get_images_lazy(self, dummy_signal):
-        vbse_imager = kp.imaging.VirtualBSEImager(dummy_signal.as_lazy())
-        vbse_img = vbse_imager.get_images_from_grid()
+    def test_get_images_lazy(self, kikuchipy_h5ebsd_path):
+        s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5", lazy=True)
+        vbse_imager = kp.imaging.VirtualBSEImager(s)
+        _ = vbse_imager.get_images_from_grid()
 
 
 class TestGetRGBImage:
@@ -231,7 +236,7 @@ class TestGetRGBImage:
         s = kp.load(kikuchipy_h5ebsd_path / "patterns.h5", lazy=True)
         vbse_imager = kp.imaging.VirtualBSEImager(s)
 
-        assert isinstance(vbse_imager.signal, kp.signals.LazyEBSD)
+        assert isinstance(vbse_imager._signal, kp.signals.LazyEBSD)
 
         vbse_rgb_img = vbse_imager.get_rgb_image(r=(0, 0), g=(0, 1), b=(0, 2))
 

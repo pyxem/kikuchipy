@@ -16,17 +16,20 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+from pathlib import Path
 from typing import Any
 import warnings
 
 
-def _get_input_bool(question: str) -> bool | None:
+def _get_input_bool(question: str, warning: str) -> bool:
     """Get input from user on boolean choice, returning the answer.
 
     Parameters
     ----------
     question
         Question to ask user.
+    warning
+        Warning to display if no good answer was given.
     """
     try:
         answer = input(question)
@@ -39,11 +42,21 @@ def _get_input_bool(question: str) -> bool | None:
         elif answer.lower() == "n":
             return False
     except OSError:
-        warnings.warn(
-            "Your terminal does not support raw input. Not adding scan. To add the scan"
-            " use `add_scan=True`"
+        warnings.warn(warning)
+    return False
+
+
+def _overwrite(fname: Path | str) -> bool:
+    if Path(fname).is_file():
+        return _get_input_bool(
+            f"Overwrite {fname!r} (y/n)?\n",
+            (
+                "Your terminal does not support raw input. Not overwriting. To "
+                "overwrite the file, pass overwrite=True."
+            ),
         )
-        return False
+    else:
+        return True
 
 
 def _get_input_variable(question: str, var_type: Any) -> Any | None:

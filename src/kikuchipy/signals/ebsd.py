@@ -22,6 +22,7 @@ import datetime
 import gc
 import logging
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Iterable
 import warnings
 
@@ -505,7 +506,7 @@ class EBSD(KikuchipySignal2D):
         array.
         """
         if lazy_output and inplace:
-            raise ValueError("`lazy_output=True` requires `inplace=False`")
+            raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         dtype = np.float32  # During processing
         dtype_out = self.data.dtype.type
@@ -541,16 +542,15 @@ class EBSD(KikuchipySignal2D):
         else:
             operation_func = _remove_static_background_divide
 
-        map_kw = dict(
-            show_progressbar=show_progressbar,
-            parallel=True,
-            output_dtype=dtype_out,
-            static_bg=static_bg,
-            dtype_out=dtype_out,
-            omin=omin,
-            omax=omax,
-            scale_bg=scale_bg,
-        )
+        map_kw = {
+            "show_progressbar": show_progressbar,
+            "output_dtype": dtype_out,
+            "static_bg": static_bg,
+            "dtype_out": dtype_out,
+            "omin": omin,
+            "omax": omax,
+            "scale_bg": scale_bg,
+        }
         attrs = self._get_custom_attributes()
         if inplace:
             self.map(operation_func, inplace=True, **map_kw)
@@ -633,7 +633,7 @@ class EBSD(KikuchipySignal2D):
         >>> s.remove_dynamic_background(operation="divide", std=5)
         """
         if lazy_output and inplace:
-            raise ValueError("`lazy_output=True` requires `inplace=False`")
+            raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         if std is None:
             std = self.axes_manager.signal_shape[0] / 8
@@ -666,17 +666,16 @@ class EBSD(KikuchipySignal2D):
         dtype_out = self.data.dtype.type
         omin, omax = dtype_range[dtype_out]
 
-        map_kw = dict(
-            show_progressbar=show_progressbar,
-            parallel=True,
-            output_dtype=dtype_out,
-            filter_func=filter_func,
-            operation=operation,
-            dtype_out=dtype_out,
-            omin=omin,
-            omax=omax,
+        map_kw = {
+            "show_progressbar": show_progressbar,
+            "output_dtype": dtype_out,
+            "filter_func": filter_func,
+            "operation": operation,
+            "dtype_out": dtype_out,
+            "omin": omin,
+            "omax": omax,
             **kwargs,
-        )
+        }
         attrs = self._get_custom_attributes()
         if inplace:
             self.map(map_func, inplace=True, **map_kw)
@@ -869,7 +868,7 @@ class EBSD(KikuchipySignal2D):
         ... )
         """
         if lazy_output and inplace:
-            raise ValueError("`lazy_output=True` requires `inplace=False`")
+            raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         dtype_out = self.data.dtype.type
         dtype = np.float32
@@ -996,7 +995,7 @@ class EBSD(KikuchipySignal2D):
         scipy.ndimage.correlate
         """
         if lazy_output and inplace:
-            raise ValueError("`lazy_output=True` requires `inplace=False`")
+            raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         if isinstance(window, Window) and window.is_valid:
             averaging_window = copy.copy(window)
@@ -1153,7 +1152,7 @@ class EBSD(KikuchipySignal2D):
         rescaling is undesirable, use :meth:`rebin` instead.
         """
         if lazy_output and inplace:
-            raise ValueError("`lazy_output=True` requires `inplace=False`")
+            raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
         if not isinstance(factor, int) or factor <= 1:
             raise ValueError(f"Binning `factor` {factor} must be an integer > 1")
@@ -1191,7 +1190,6 @@ class EBSD(KikuchipySignal2D):
 
         map_kw = {
             "show_progressbar": show_progressbar,
-            "parallel": True,
             "output_dtype": dtype_out,
             "factor": factor,
             "omin": omin,
@@ -1355,7 +1353,6 @@ class EBSD(KikuchipySignal2D):
         image_quality_map = self.map(
             _get_image_quality,
             show_progressbar=show_progressbar,
-            parallel=True,
             inplace=False,
             output_dtype=np.float32,
             normalize=normalize,
@@ -2592,63 +2589,72 @@ class EBSD(KikuchipySignal2D):
 
     def save(
         self,
-        filename: str | None = None,
+        filename: Path | str | None = None,
         overwrite: bool | None = None,
         extension: str | None = None,
         **kwargs,
     ) -> None:
         """Write the signal to file in the specified format.
 
-        The function gets the format from the extension: ``h5``,
-        ``hdf5`` or ``h5ebsd`` for kikuchipy's specification of the
-        h5ebsd format, ``dat`` for the NORDIF binary format or ``hspy``
-        for HyperSpy's HDF5 specification. If no extension is provided
-        the signal is written to a file in kikuchipy's h5ebsd format.
-        Each format accepts a different set of parameters.
-
-        This method is a modified version of HyperSpy's function
-        :meth:`hyperspy.signal.BaseSignal.save`.
+        If no extension is given, the signal is written to a file in
+        kikuchipy's h5ebsd format.
 
         Parameters
         ----------
         filename
-            If not given and ``tmp_parameters.filename`` and
-            ``tmp_parameters.folder`` in signal metadata are defined,
-            the filename and path will be taken from there. A valid
-            extension can be provided e.g. ``"data.h5"``, see
-            ``extension``.
+            If not given and 'tmp_parameters.filename' and
+            'tmp_parameters.folder' are defined in signal metadata, the
+            filename and path will be taken from there.
         overwrite
             If not given and the file exists, it will query the user. If
-            ``True`` (``False``) it (does not) overwrite the file if it
-            exists.
+            True (False) it (does not) overwrite the file if it exists.
         extension
             Extension of the file that defines the file format. Options
-            are ``"h5"``, ``"hdf5"``, ``"h5ebsd"``, ``"dat"``,
-            ``"hspy"``. ``"h5"``, ``"hdf5"``, and ``"h5ebsd"`` are
-            equivalent. If not given, the extension is determined from
-            the following list in this order: i) the filename, ii)
-            ``tmp_parameters.extension`` or iii) ``"h5"`` (kikuchipy's
-            h5ebsd format).
+            are:
+
+            * h5, hdf5, or h5ebsd: kikuchipy's specification of the
+              h5ebsd format
+            * dat: NORDIF's binary format
+            * hspy: HyperSpy's HDF5 format
+            * zspy: HyperSpy's zarr format
+
+            Each format accepts different parameters.
+
+            If not given, the extension is determined from the following
+            list in this order: i) the filename, ii)
+            'tmp_parameters.extension' or iii) 'h5' (kikuchipy's h5ebsd
+            format).
         **kwargs
-            Keyword arguments passed to the writer.
+            Keyword arguments passed to the corresponding writer.
 
         See Also
         --------
         kikuchipy.io.plugins
+
+        Notes
+        -----
+        This method is a modified version of HyperSpy's function
+        :meth:`hyperspy.signal.BaseSignal.save`.
         """
-        if filename is None:
+        if filename is not None:
+            fname = Path(filename)
+        else:
             tmp_params = self.tmp_parameters
             if tmp_params.has_item("filename") and tmp_params.has_item("folder"):
-                filename = os.path.join(tmp_params.folder, tmp_params.filename)
+                fname = Path(tmp_params.folder) / tmp_params.filename
                 extension = tmp_params.extension if not extension else extension
             elif self.metadata.has_item("General.original_filename"):
-                filename = self.metadata.General.original_filename
+                fname = Path(self.metadata.General.original_filename)
             else:
-                raise ValueError("Filename not defined")
+                raise ValueError("filename not given")
         if extension is not None:
-            basename, _ = os.path.splitext(filename)
-            filename = basename + "." + extension
-        _save(filename, self, overwrite=overwrite, **kwargs)
+            ext = extension
+        else:
+            ext = fname.suffix[1:]
+        if ext.lower() in ["hspy", "zspy"]:
+            super().save(filename, overwrite=overwrite, **kwargs)
+            return
+        _save(fname, self, overwrite=overwrite, **kwargs)
 
     def get_decomposition_model(
         self,
@@ -2712,7 +2718,7 @@ class EBSD(KikuchipySignal2D):
 
     @insert_doc_disclaimer(cls=Signal2D, meth=Signal2D.crop)
     def crop(self, *args, **kwargs):
-        # This method is called by crop_image(), so attributes are
+        # This method is called by crop_signal(), so attributes are
         # handled correctly by that method as well
 
         old_shape = self.data.shape

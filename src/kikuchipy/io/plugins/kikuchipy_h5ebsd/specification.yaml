@@ -1,0 +1,13 @@
+name: kikuchipy_h5ebsd
+description: >
+  Read/write support for electron backscatter diffraction patterns
+  stored in an HDF5 file formatted in kikuchipy's h5ebsd format, similar
+  to the format described in Jackson et al.: h5ebsd: an archival data
+  format for electron back-scatter diffraction data sets. Integrating
+  Materials and Manufacturing Innovation 2014 3:4,
+  doi: https://dx.doi.org/10.1186/2193-9772-3-4.
+file_extensions: ['h5', 'hdf5', 'h5ebsd']
+default_extension: 1
+writes: [[2, 2], [2, 1], [2, 0]]
+manufacturer: kikuchipy
+footprints: ['manufacturer', 'version']
