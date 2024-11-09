@@ -44,6 +44,7 @@ jobs:
       continue-on-error: true
       with:
         repository-url: https://test.pypi.org/legacy/
+        attestations: false
 
     - name: Publish package to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
