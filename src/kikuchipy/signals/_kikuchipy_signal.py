@@ -409,23 +409,16 @@ class KikuchipySignal2D(Signal2D):
         if lazy_output and inplace:
             raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
-        dtype_out = self.data.dtype
-        if np.issubdtype(dtype_out, np.floating):
-            warnings.warn(
-                (
-                    "Equalization of signals with floating point data type has been "
-                    "shown to give bad results. Rescaling intensities to integer "
-                    "intensities is recommended."
-                ),
-                UserWarning,
-            )
         if not self._lazy and np.isnan(self.data).any():
             warnings.warn(
-                (
-                    "Equalization of signals with NaN data has been shown to give bad "
-                    "results"
-                ),
-                UserWarning,
+                "Equalization of signals with NaN data has been shown to give bad "
+                "results"
+            )
+        elif np.issubdtype(self.data.dtype, np.floating):
+            warnings.warn(
+                "Equalization of signals with floating point data type has been shown "
+                "to give bad results. Rescaling intensities to integer intensities is "
+                "recommended."
             )
 
         # Determine window size (shape of contextual region)
@@ -440,7 +433,7 @@ class KikuchipySignal2D(Signal2D):
 
         map_kw = {
             "show_progressbar": show_progressbar,
-            "output_dtype": dtype_out,
+            "output_dtype": self.data.dtype,
             "kernel_size": kernel_size,
             "clip_limit": clip_limit,
             "nbins": nbins,

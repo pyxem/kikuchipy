@@ -708,6 +708,7 @@ class TestIntensityScaling:
         mp4 = mp3.normalize_intensity(inplace=False, lazy_output=False)
         assert isinstance(mp4, kp.signals.EBSDMasterPattern)
 
+    @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
     def test_adaptive_histogram_equalization(self):
         mp_sp = kp.data.nickel_ebsd_master_pattern_small()
 
