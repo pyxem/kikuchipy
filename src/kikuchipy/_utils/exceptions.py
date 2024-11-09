@@ -15,9 +15,22 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from ._deprecated import deprecated, deprecated_argument
+from typing import Any
 
-__all__ = [
-    "deprecated",
-    "deprecated_argument",
-]
+
+class UnknownHemisphereError(ValueError):
+    def __init__(self, given: Any = None, *args: object) -> None:
+        msg = "Unknown hemisphere"
+        if given is not None:
+            msg += f" {given!r}"
+        msg += ", options are 'upper', 'lower', or 'both'"
+        super().__init__(msg, *args)
+
+
+class UnknownProjectionError(ValueError):
+    def __init__(self, given: Any = None, *args: object) -> None:
+        msg = "Unknown projection"
+        if given is not None:
+            msg += f" {given!r}"
+        msg += ", options are 'stereographic' and 'lambert'"
+        super().__init__(msg, *args)

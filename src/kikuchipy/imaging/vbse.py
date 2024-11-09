@@ -22,7 +22,7 @@ from hyperspy.roi import BaseInteractiveROI
 import numpy as np
 from numpy.typing import NDArray
 
-from kikuchipy._util._transfer_axes import _transfer_navigation_axes_to_signal_axes
+from kikuchipy._utils._transfer_axes import _transfer_navigation_axes_to_signal_axes
 from kikuchipy.pattern._pattern import rescale_intensity
 from kikuchipy.signals.ebsd import EBSD, LazyEBSD
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage

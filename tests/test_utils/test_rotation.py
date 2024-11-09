@@ -20,6 +20,12 @@ from orix.quaternion import Rotation
 from orix.vector import Vector3d
 
 import kikuchipy as kp
+from kikuchipy._utils.numba import (
+    rotate_vector,
+    rotation_from_euler,
+    rotation_from_rodrigues,
+)
+from kikuchipy.signals.util._master_pattern import _get_direction_cosines_for_fixed_pc
 
 
 class TestRotationVectorTools:
@@ -29,26 +35,24 @@ class TestRotationVectorTools:
         """
         rot = np.array([0.7071, 0.7071, 0, 0])
         sig_shape = (20, 30)
-        dc = (
-            kp.signals.util._master_pattern._get_direction_cosines_for_fixed_pc.py_func(
-                pcx=0.5,
-                pcy=0.5,
-                pcz=0.5,
-                nrows=sig_shape[0],
-                ncols=sig_shape[1],
-                tilt=10,
-                azimuthal=0,
-                sample_tilt=70,
-                signal_mask=np.ones(sig_shape[0] * sig_shape[1], dtype=bool),
-            )
+        dc = _get_direction_cosines_for_fixed_pc.py_func(
+            pcx=0.5,
+            pcy=0.5,
+            pcz=0.5,
+            nrows=sig_shape[0],
+            ncols=sig_shape[1],
+            tilt=10,
+            azimuthal=0,
+            sample_tilt=70,
+            signal_mask=np.ones(sig_shape[0] * sig_shape[1], dtype=bool),
         )
 
         rot_orix = Rotation(rot)
         dc_orix = Vector3d(dc)
         rotated_dc_orix = rot_orix * dc_orix
 
-        rotated_dc = kp._rotation._rotate_vector(rot, dc)
-        rotated_dc_py = kp._rotation._rotate_vector.py_func(rot, dc)
+        rotated_dc = rotate_vector(rot, dc)
+        rotated_dc_py = rotate_vector.py_func(rot, dc)
 
         assert np.allclose(rotated_dc, rotated_dc_py, atol=1e-3)
         assert np.allclose(rotated_dc_py, rotated_dc_orix.data, atol=1e-3)
@@ -56,8 +60,8 @@ class TestRotationVectorTools:
     def test_rotation_from_euler(self):
         euler = np.array([1, 2, 3])
         rot_orix = Rotation.from_euler(euler).data
-        rot_numba = kp._rotation._rotation_from_euler(*euler)
-        rot_numba_py = kp._rotation._rotation_from_euler.py_func(*euler)
+        rot_numba = rotation_from_euler(*euler)
+        rot_numba_py = rotation_from_euler.py_func(*euler)
 
         assert np.allclose(rot_numba, rot_numba_py)
         assert np.allclose(rot_numba_py, rot_orix)
@@ -65,8 +69,8 @@ class TestRotationVectorTools:
     def test_rotation_from_rodrigues(self):
         rod = np.array([1, 2, 3])
         rot_orix = Rotation.from_rodrigues(rod).data
-        rot_numba = kp._rotation._rotation_from_rodrigues(*rod)
-        rot_numba_py = kp._rotation._rotation_from_rodrigues.py_func(*rod)
+        rot_numba = rotation_from_rodrigues(*rod)
+        rot_numba_py = rotation_from_rodrigues.py_func(*rod)
 
         assert np.allclose(rot_numba, rot_numba_py)
         assert np.allclose(rot_numba_py, rot_orix)
