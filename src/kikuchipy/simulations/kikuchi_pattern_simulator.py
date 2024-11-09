@@ -174,7 +174,7 @@ class KikuchiPatternSimulator:
                 intensity = np.ones(self.reflectors.size)
             case _:
                 raise ValueError(
-                    f"Unknown scaling {scaling!r}, options are 'linear', 'square' or "
+                    f"Unknown scaling {scaling!r}, options are 'linear', 'square', or "
                     "None"
                 )
 
@@ -187,7 +187,7 @@ class KikuchiPatternSimulator:
         n_poles = len(poles)
         patterns = np.empty((n_poles, size * size), dtype=np.float64)
 
-        for i in tqdm(range(n_poles)):
+        for i in tqdm(range(n_poles), ncols=80):
             stereo2sphere = projections.InverseStereographicProjection(poles[i])
             v_hemi = stereo2sphere.xy2vector(X.ravel(), Y.ravel())
             xyz_hemi = v_hemi.data
