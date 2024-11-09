@@ -23,6 +23,12 @@ import dask.array as da
 import h5py
 import numpy as np
 
+from kikuchipy._utils.vector import (
+    ValidHemispheres,
+    ValidProjections,
+    parse_hemisphere,
+    parse_projection,
+)
 from kikuchipy.io.plugins._h5ebsd import _hdf5group2dict
 from kikuchipy.io.plugins.emsoft_ebsd._api import _crystaldata2phase
 
@@ -36,14 +42,14 @@ class EMsoftMasterPatternReader(abc.ABC):
         self,
         filename: str | Path,
         energy: range | None = None,
-        projection: str = "stereographic",
-        hemisphere: "str" = "upper",
+        projection: ValidProjections = "stereographic",
+        hemisphere: ValidHemispheres = "upper",
         lazy: bool = False,
     ) -> None:
         self.filename = filename
         self.energy = energy
-        self.projection = projection.lower()
-        self.hemisphere = hemisphere.lower()
+        self.projection = parse_projection(projection)
+        self.hemisphere = parse_hemisphere(hemisphere)
         self.lazy = lazy
 
     @property
@@ -79,7 +85,7 @@ class EMsoftMasterPatternReader(abc.ABC):
         mode = kwargs.pop("mode", "r")
         file = h5py.File(fpath, mode, **kwargs)
 
-        _check_file_format(file, self.diffraction_type)
+        check_file_format(file, self.diffraction_type)
 
         # Set data group names
         diff_type = self.diffraction_type
@@ -116,8 +122,8 @@ class EMsoftMasterPatternReader(abc.ABC):
         # Get data shape and slices
         data_group = file[data_group_path]
         energies = data_group[self.energy_string][()]
-        data_shape, data_slices = _get_data_shape_slices(
-            npx=nml_params[name_list_name]["npx"], energies=energies, energy=self.energy
+        data_shape, data_slices = get_data_shape_slices(
+            nml_params[name_list_name]["npx"], energies, self.energy
         )
         i_min = data_slices[0].start
         i_min = 0 if i_min is None else i_min
@@ -126,10 +132,7 @@ class EMsoftMasterPatternReader(abc.ABC):
         projection = self.projection
         hemisphere = self.hemisphere
 
-        # Get HDF5 data sets
-        datasets = _get_datasets(
-            data_group=data_group, projection=projection, hemisphere=hemisphere
-        )
+        datasets = get_datasets(data_group, projection, hemisphere)
 
         # TODO: Take EMsoft NML file parameter combinesites into account
         dataset_shape = data_shape
@@ -220,7 +223,7 @@ class EMsoftMasterPatternReader(abc.ABC):
         return [output]
 
 
-def _check_file_format(file: h5py.File, diffraction_type: str) -> None:
+def check_file_format(file: h5py.File, diffraction_type: str) -> None:
     """Raise an error if the HDF5 file is not in EMsoft's master
     pattern file format.
 
@@ -248,7 +251,7 @@ def _check_file_format(file: h5py.File, diffraction_type: str) -> None:
         raise IOError(f"{file.filename!r} is not in EMsoft's master pattern format")
 
 
-def _get_data_shape_slices(
+def get_data_shape_slices(
     npx: int,
     energies: np.ndarray,
     energy: tuple | None = None,
@@ -293,51 +296,20 @@ def _get_data_shape_slices(
     return data_shape, data_slices
 
 
-def _get_datasets(
-    data_group: h5py.Group, projection: str, hemisphere: str
+def get_datasets(
+    data_group: h5py.Group, projection: ValidProjections, hemisphere: ValidHemispheres
 ) -> list[h5py.Dataset]:
-    """Return datasets from projection and hemisphere.
-
-    Parameters
-    ----------
-    data_group
-        HDF5 data group with data sets.
-    projection
-        "stereographic" or "lambert" projection.
-    hemisphere
-        "upper", "lower", or "both" hemisphere(s).
-
-    Returns
-    -------
-    datasets
-        List of HDF5 data sets.
-
-    Raises
-    ------
-    ValueError
-        If *projection* or *hemisphere* is not among the options.
-    """
-    projection = projection.lower()
-    projections = {"stereographic": "masterSP", "lambert": "mLP"}
-    if projection not in projections:
-        raise ValueError(
-            f"'projection' value {projection!r} must be one of {list(projections)}"
-        )
-
-    hemisphere = hemisphere.lower()
-    hemispheres = {"upper": "NH", "lower": "SH"}
-
-    projection_label = projections[projection]
-    if hemisphere == "both":
-        datasets = []
-        for hemi_label in hemispheres.values():
-            datasets.append(data_group[projection_label + hemi_label])
-    elif hemisphere in hemispheres:
-        dset_name = projection_label + hemispheres[hemisphere]
-        datasets = [data_group[dset_name]]
+    proj = parse_projection(projection)
+    hemi = parse_hemisphere(hemisphere)
+    if proj == "stereographic":
+        proj_label = "masterSP"
     else:
-        raise ValueError(
-            f"'hemisphere' value {hemisphere!r} must be one of {list(hemispheres)}"
-        )
-
+        proj_label = "mLP"
+    hemispheres = {"upper": "NH", "lower": "SH"}
+    datasets = []
+    if hemi == "both":
+        datasets.append(data_group[f"{proj_label}NH"])
+        datasets.append(data_group[f"{proj_label}SH"])
+    else:
+        datasets.append(data_group[f"{proj_label}{hemispheres[hemi]}"])
     return datasets

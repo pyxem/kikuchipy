@@ -20,6 +20,7 @@
 
 from pathlib import Path
 
+from kikuchipy._utils.vector import ValidHemispheres, ValidProjections
 from kikuchipy.io.plugins._emsoft_master_pattern import EMsoftMasterPatternReader
 
 ENERGY_ARG = """Desired beam energy or energy range. If not given (default), all
@@ -51,8 +52,8 @@ class EMsoftEBSDMasterPatternReader(EMsoftMasterPatternReader):
 def file_reader(
     filename: str | Path,
     energy: range | None = None,
-    projection: str = "stereographic",
-    hemisphere: str = "upper",
+    projection: ValidProjections = "stereographic",
+    hemisphere: ValidHemispheres = "upper",
     lazy: bool = False,
     **kwargs,
 ) -> list[dict]:
@@ -84,11 +85,7 @@ def file_reader(
         Data, axes, metadata, and original metadata.
     """
     reader = EMsoftEBSDMasterPatternReader(
-        filename=filename,
-        energy=energy,
-        projection=projection,
-        hemisphere=hemisphere,
-        lazy=lazy,
+        filename, energy, projection, hemisphere, lazy
     )
     return reader.read(**kwargs)
 

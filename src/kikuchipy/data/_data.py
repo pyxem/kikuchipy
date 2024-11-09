@@ -382,7 +382,7 @@ def si_wafer(
 
 def nickel_ebsd_master_pattern_small(**kwargs) -> EBSDMasterPattern:
     """(401, 401) ``uint8`` square Lambert or stereographic projection
-    of the northern and southern hemisphere of a nickel master pattern
+    of the upper and lower hemisphere of a nickel master pattern
     at 20 keV accelerating voltage.
 
     The master pattern was simulated with *EMsoft*

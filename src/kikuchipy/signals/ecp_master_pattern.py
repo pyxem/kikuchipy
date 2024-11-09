@@ -44,14 +44,14 @@ class ECPMasterPattern(KikuchiMasterPattern):
     *args
         See :class:`~hyperspy._signals.signal2d.Signal2D`.
     hemisphere : str
-        Which hemisphere the data contains, either ``"upper"``,
-        ``"lower"``, or ``"both"``.
+        Which hemisphere the data contains, either "upper", "lower", or
+        "both".
     phase : ~orix.crystal_map.Phase
         The phase describing the crystal structure used in the master
         pattern simulation.
     projection : str
-        Which projection the pattern is in, ``"stereographic"`` or
-        ``"lambert"``.
+        Which projection the pattern is in, "stereographic" or
+        "lambert".
     **kwargs
         See :class:`~hyperspy._signals.signal2d.Signal2D`.
     """
