@@ -236,7 +236,7 @@ class TestWindow:
         w = Window()
         w._name = 1
         assert not w.is_valid
-        with pytest.raises(ValueError, match="Window is invalid."):
+        with pytest.raises(ValueError, match="Window is invalid"):
             w.plot()
 
     @pytest.mark.parametrize(

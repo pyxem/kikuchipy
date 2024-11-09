@@ -28,6 +28,12 @@ from orix.vector import Vector3d
 from scipy.interpolate import interpn
 from tqdm import tqdm
 
+from kikuchipy._utils.vector import (
+    ValidHemispheres,
+    ValidProjections,
+    parse_hemisphere,
+    parse_projection,
+)
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D
 from kikuchipy.signals.util._master_pattern import _lambert2vector
 from kikuchipy.signals.util._overwrite_hyperspy_methods import insert_doc_disclaimer
@@ -50,14 +56,14 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
     *args
         See :class:`~hyperspy._signals.signal2d.Signal2D`.
     hemisphere : str
-        Which hemisphere the data contains, either ``"upper"``,
-        ``"lower"``, or ``"both"``.
+        Which hemisphere the data contains, either "upper", "lower", or
+        "both".
     phase : ~orix.crystal_map.Phase
         The phase describing the crystal structure used in the master
         pattern simulation.
     projection : str
-        Which projection the pattern is in, ``"stereographic"`` or
-        ``"lambert"``.
+        Which projection the pattern is in, "stereographic" or
+        "lambert".
     **kwargs
         See :class:`~hyperspy._signals.signal2d.Signal2D`.
     """
@@ -78,7 +84,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
     def hemisphere(self) -> str:
         """Return or set which hemisphere(s) the signal contains.
 
-        Options are ``"upper"``, ``"lower"`` or ``"both"``.
+        Options are "upper", "lower", or "both".
 
         Parameters
         ----------
@@ -88,8 +94,8 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         return self._hemisphere
 
     @hemisphere.setter
-    def hemisphere(self, value: str) -> None:
-        self._hemisphere = value
+    def hemisphere(self, value: ValidHemispheres) -> None:
+        self._hemisphere = parse_hemisphere(value)
 
     @property
     def phase(self) -> Phase:
@@ -114,14 +120,14 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         Parameters
         ----------
         value : str
-            Which projection the pattern is in, either
-            ``"stereographic"`` or ``"lambert"``.
+            Which projection the pattern is in, either "stereographic"
+            or "lambert".
         """
         return self._projection
 
     @projection.setter
-    def projection(self, value: str) -> None:
-        self._projection = value
+    def projection(self, value: ValidProjections) -> None:
+        self._projection = parse_projection(value)
 
     def as_lambert(self, show_progressbar: bool | None = None) -> Any:
         """Return a new master pattern in the Lambert projection
@@ -223,25 +229,25 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
             pattern to plot. If not given, the highest energy is used.
         return_figure
             Whether to return the :class:`pyvista.Plotter` instance for
-            further modification and then plotting. Default is
-            ``False``. If ``True``, the figure is not plotted.
+            further modification and then plotting. Default is False. If
+            True, the figure is not plotted.
         style
-            Visualization style of the mesh, either ``"surface"``
-            (default), ``"wireframe"`` or ``"points"``. In general,
-            ``"surface"`` is recommended when zoomed out, while
-            ``"points"`` is recommended when zoomed in. See
-            :meth:`pyvista.Plotter.add_mesh` for details.
+            Visualization style of the mesh, either "surface" (default),
+            "wireframe" or "points". In general, "surface" is
+            recommended when zoomed out, while "points" is recommended
+            when zoomed in. See :meth:`pyvista.Plotter.add_mesh` for
+            details.
         plotter_kwargs
             Dictionary of keyword arguments passed to
             :class:`pyvista.Plotter`.
         show_kwargs
             Dictionary of keyword arguments passed to
-            :meth:`pyvista.Plotter.show` if ``return_figure=False``.
+            :meth:`pyvista.Plotter.show` if *return_figure* is False.
 
         Returns
         -------
         pl
-            Only returned if ``return_figure=True``.
+            Only returned if *return_figure* is True.
 
         Notes
         -----

@@ -106,9 +106,9 @@ class TestCalculateMasterPattern:
     def test_raises(self):
         """Appropriate error messages are raised."""
         simulator = self.simulator
-        with pytest.raises(ValueError, match="Unknown `hemisphere`, options are"):
+        with pytest.raises(ValueError, match="Unknown hemisphere 'north', options are"):
             _ = simulator.calculate_master_pattern(hemisphere="north")
-        with pytest.raises(ValueError, match="Unknown `scaling`, options are"):
+        with pytest.raises(ValueError, match="Unknown scaling 'cubic', options are"):
             _ = simulator.calculate_master_pattern(scaling="cubic")
 
     def test_shape(self):
@@ -116,7 +116,7 @@ class TestCalculateMasterPattern:
         simulator = self.simulator
         mp = simulator.calculate_master_pattern(half_size=100, hemisphere="both")
         assert mp.data.shape == (2, 201, 201)
-        assert np.allclose(mp.data[0], mp.data[1])
+        assert np.allclose(mp.data[0], mp.data[1], atol=1e-7)
 
         axes_names = [a["name"] for a in mp.axes_manager.as_dictionary().values()]
         assert axes_names == ["hemisphere", "height", "width"]

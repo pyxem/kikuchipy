@@ -64,7 +64,7 @@ import numba as nb
 from numba import njit
 import numpy as np
 
-from kikuchipy._rotation import _rotate_vector
+from kikuchipy._utils.numba import rotate_vector
 from kikuchipy.pattern._pattern import _rescale_with_min_max
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -542,7 +542,7 @@ def _project_single_pattern_from_master_pattern(
     array shapes and data types.
     """
     # Rotate the detector's view of the crystal
-    dc_rotated = _rotate_vector(rotation, direction_cosines)
+    dc_rotated = rotate_vector(rotation, direction_cosines)
 
     (nii, nij, niip, nijp, di, dj, dim, djm) = _get_lambert_interpolation_parameters(
         v=dc_rotated, npx=npx, npy=npy, scale=scale

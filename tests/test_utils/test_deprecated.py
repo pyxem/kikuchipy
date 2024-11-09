@@ -19,7 +19,7 @@ import warnings
 
 import pytest
 
-from kikuchipy._util import deprecated, deprecated_argument
+from kikuchipy._utils import deprecated, deprecated_argument
 from kikuchipy.constants import VisibleDeprecationWarning
 
 

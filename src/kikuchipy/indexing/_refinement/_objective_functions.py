@@ -22,7 +22,7 @@ and simulated patterns.
 
 import numpy as np
 
-from kikuchipy._rotation import _rotation_from_euler
+from kikuchipy._utils.numba import rotation_from_euler
 from kikuchipy.indexing.similarity_metrics._normalized_cross_correlation import (
     _ncc_single_patterns_1d_float32_exp_centered,
 )
@@ -45,8 +45,8 @@ def _refine_orientation_objective_function(x: np.ndarray, *args) -> float:
         function. The expected contents are:
             0. 1D centered experimental pattern of 32-bit floats
             1. 1D direction cosines
-            2. 2D northern hemisphere of master pattern of 32-bit floats
-            3. 2D southern hemisphere of master pattern of 32-bit floats
+            2. 2D upper hemisphere of master pattern of 32-bit floats
+            3. 2D lower hemisphere of master pattern of 32-bit floats
             4. Number of master pattern columns
             5. Number of master pattern rows
             6. Master pattern scale
@@ -58,7 +58,7 @@ def _refine_orientation_objective_function(x: np.ndarray, *args) -> float:
         Normalized cross-correlation score.
     """
     simulated = _project_single_pattern_from_master_pattern(
-        rotation=_rotation_from_euler(*x),
+        rotation=rotation_from_euler(*x),
         direction_cosines=args[1],
         master_upper=args[2],
         master_lower=args[3],
@@ -86,8 +86,8 @@ def _refine_pc_objective_function(x: np.ndarray, *args) -> float:
         function. The expected contents are:
             0. 1D centered experimental pattern of 32-bit floats
             1. 1D quaternion
-            2. 2D northern hemisphere of master pattern of 32-bit floats
-            3. 2D southern hemisphere of master pattern of 32-bit floats
+            2. 2D upper hemisphere of master pattern of 32-bit floats
+            3. 2D lower hemisphere of master pattern of 32-bit floats
             4. Number of master pattern columns
             5. Number of master pattern rows
             6. Master pattern scale
@@ -146,8 +146,8 @@ def _refine_orientation_pc_objective_function(x: np.ndarray, *args) -> float:
         Tuple of fixed parameters needed to completely specify the
         function. The expected contents are:
             0. 1D experimental pattern of 32-bit floats
-            1. 2D northern hemisphere of master pattern of 32-bit floats
-            2. 2D southern hemisphere of master pattern of 32-bit floats
+            1. 2D upper hemisphere of master pattern of 32-bit floats
+            2. 2D lower hemisphere of master pattern of 32-bit floats
             3. Number of master pattern columns
             4. Number of master pattern rows
             5. Master pattern scale
@@ -176,7 +176,7 @@ def _refine_orientation_pc_objective_function(x: np.ndarray, *args) -> float:
         signal_mask=args[6],
     )
     simulated = _project_single_pattern_from_master_pattern(
-        rotation=_rotation_from_euler(*x[:3]),
+        rotation=rotation_from_euler(*x[:3]),
         direction_cosines=dc,
         master_upper=args[1],
         master_lower=args[2],

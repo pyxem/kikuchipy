@@ -18,22 +18,44 @@ Unreleased
 
 Added
 -----
-- Dependency on RosettaSciIO for read/write of some file formats.
-  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+
+Changed
+-------
+
+Removed
+-------
+
+Deprecated
+----------
+
+Fixed
+-----
+
+0.11.0 (2024-11-10)
+===================
+
+Added
+-----
+- HyperSpy 2.0 compatibility. (`#695 <https://github.com/pyxem/kikuchipy/pull/695>`_)
+- Dependency on RosettaSciIO for read/write of HyperSpy's HDF5 and zarr files.
+  (`#694 <https://github.com/pyxem/kikuchipy/pull/694>`_)
 
 Changed
 -------
 - Minimum Python version is now 3.10.
   (`#689 <https://github.com/pyxem/kikuchipy/pull/689>`_)
+- Minimum HyperSpy version is now 2.2.
+  (`#695 <https://github.com/pyxem/kikuchipy/pull/695>`_)
+- Markers returned from geometrical simulations and the virtual backscatter electron
+  imager use the new HyperSpy 2.0 markers.
+  (`#695 <https://github.com/pyxem/kikuchipy/pull/695>`_)
+- Progressbar when calculating kinematical master pattern shows progress per pole.
 
 Removed
 -------
-
-Fixed
------
-
-Deprecated
-----------
+- Contrasting background bounding box for zone axes labels returned as HyperSpy
+  markers. They are not supported by HyperSpy 2.0.
+  (`#695 <https://github.com/pyxem/kikuchipy/pull/695>`_)
 
 0.10.0 (2024-06-02)
 ===================
@@ -64,7 +86,7 @@ Fixed
   ``downsample()``, was previously previously incorrect, (n columns, n rows). This is
   now correct, (n rows, n columns).
   (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
-  
+
 0.9.0 (2023-11-03)
 ==================
 

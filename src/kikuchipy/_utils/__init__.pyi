@@ -15,19 +15,9 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Helper functions and classes for managing kikuchipy.
+from .deprecated import deprecated, deprecated_argument
 
-This module and documentation is only relevant for kikuchipy developers,
-not for users.
-
-.. warning:
-    This module and its submodules are for internal use only.  Do not
-    use them in your own code. We may change the API at any time with no
-    warning.
-"""
-
-import lazy_loader
-
-__getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
-
-del lazy_loader
+__all__ = [
+    "deprecated",
+    "deprecated_argument",
+]

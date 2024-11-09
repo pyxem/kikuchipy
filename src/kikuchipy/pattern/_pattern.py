@@ -815,7 +815,8 @@ def _adaptive_histogram_equalization(
 ) -> np.ndarray:
     """Local contrast enhancement with adaptive histogram equalization.
 
-    This method makes use of :func:`skimage.exposure.equalize_adapthist`.
+    This method makes use of
+    :func:`skimage.exposure.equalize_adapthist`.
 
     Parameters
     ----------
@@ -834,15 +835,6 @@ def _adaptive_histogram_equalization(
     image_eq
         Image with enhanced contrast.
     """
-    dtype_in = image.dtype.type
-
-    image_eq = equalize_adapthist(
-        image,
-        kernel_size=kernel_size,
-        clip_limit=clip_limit,
-        nbins=nbins,
-    )
-
-    image_eq = rescale_intensity(image_eq, dtype_out=dtype_in)
-
+    image_eq = equalize_adapthist(image, kernel_size, clip_limit, nbins)
+    image_eq = rescale_intensity(image_eq, dtype_out=image.dtype.type)
     return image_eq

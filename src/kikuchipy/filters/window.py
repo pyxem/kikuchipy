@@ -43,18 +43,18 @@ class Window(np.ndarray):
     window
         Window type to create. Available types are listed in
         :func:`scipy.signal.windows.get_window` and includes
-        ``"rectangular"`` and ``"gaussian"``, in addition to a
-        ``"circular"`` window (default) filled with ones in which corner
-        data are set to zero, a ``"modified_hann"`` window and
-        ``"lowpass"`` and ``"highpass"`` FFT windows. A window element
-        is considered to be in a corner if its radial distance to the
-        origin (window center) is shorter or equal to the half width of
-        the windows's longest axis. A 1D or 2D :class:`numpy.ndarray` or
-        :class:`dask.array.Array` can also be passed.
+        "rectangular" and "gaussian", in addition to a "circular" window
+        (default) filled with ones in which corner data are set to zero,
+        a "modified_hann" window and "lowpass" and "highpass" FFT
+        windows. A window element is considered to be in a corner if its
+        radial distance to the origin (window center) is shorter or
+        equal to the half width of the windows's longest axis. A 1D or
+        2D :class:`numpy.ndarray` or :class:`dask.array.Array` can also
+        be passed.
     shape
         Shape of the window. Not used if a custom window is passed to
-        ``window``. This can be either 1D or 2D, and can be
-        asymmetrical. Default is ``(3, 3)``.
+        *window*. This can be either 1D or 2D, and can be asymmetrical.
+        Default is (3, 3).
     **kwargs
         Required keyword arguments passed to the window type.
 
@@ -127,9 +127,9 @@ class Window(np.ndarray):
             shape = (3, 3)
         elif "Nx" in kwargs.keys():
             shape = (kwargs.pop("Nx"),)
-        else:  # Ensure valid shape tuple
-            shape = tuple(shape)
+        else:
             try:
+                shape = tuple(shape)
                 if any(np.array(shape) < 1):
                     raise ValueError(f"All window axes {shape} must be > 0.")
                 if any(isinstance(i, float) for i in np.array(shape)):
@@ -143,14 +143,12 @@ class Window(np.ndarray):
             data = window
         elif isinstance(window, str):
             window_kwargs = {}
-
             if window == "modified_hann":
                 name = window
                 window_func = modified_hann
                 window_kwargs["Nx"] = shape[0]
             elif window in ["lowpass", "highpass"]:
                 name = window
-
                 if window == "lowpass":
                     window_func = lowpass_fft_filter
                 else:
@@ -165,45 +163,42 @@ class Window(np.ndarray):
                 if window == "circular":
                     exclude_window_corners = True
                     window = "rectangular"
-
                 name = window
                 window_func = get_window
                 window_kwargs["fftbins"] = kwargs.pop("fftbins", False)
                 window_kwargs["Nx"] = kwargs.pop("Nx", shape[0])
                 window_kwargs["window"] = (window,) + tuple(kwargs.values())
-
             data = window_func(**window_kwargs)
-
-            # Add second axis to window if shape has two axes
             if len(shape) == 2 and data.ndim == 1:
                 window_kwargs["Nx"] = shape[1]
                 data = np.outer(data, window_func(**window_kwargs))
         else:
             raise ValueError(
                 f"Window {type(window)} must be of type numpy.ndarray, "
-                "dask.array.Array or a valid string."
+                "dask.array.Array, or a valid string"
             )
 
-        # Create object
         obj = np.asarray(data).view(cls)
         obj._name = name
 
-        if exclude_window_corners:  # Exclude window corners
+        if exclude_window_corners:
             obj.make_circular()
 
         return obj
 
-    def __array_finalize__(self, obj: Self | None) -> None:
+    def __array_finalize__(self, obj) -> None:
         if obj is None:
             return
         self._name = getattr(obj, "_name", None)
         self._circular = getattr(obj, "_circular", False)
 
-    def __array_wrap__(self, obj: Self) -> Window | np.ndarray:
+    def __array_wrap__(
+        self, obj, context=None, return_scalar=False
+    ) -> Window | np.ndarray:
         if obj.shape == ():
             return obj[()]
         else:
-            return np.ndarray.__array_wrap__(self, obj)
+            return np.ndarray.__array_wrap__(self, obj, context, return_scalar)
 
     def __repr__(self) -> str:
         cls = self.__class__.__name__
@@ -227,7 +222,6 @@ class Window(np.ndarray):
     @property
     def is_valid(self) -> bool:
         """Return whether the window is in a valid state."""
-
         return (
             isinstance(self.name, str)
             and (isinstance(self, np.ndarray) or isinstance(self, Array))
@@ -248,7 +242,7 @@ class Window(np.ndarray):
         return self._name
 
     @property
-    def origin(self) -> tuple:
+    def origin(self) -> tuple[int, ...]:
         """Return the window origin."""
         return tuple(i // 2 for i in self.shape)
 
@@ -288,17 +282,10 @@ class Window(np.ndarray):
         is_compatible
             Whether the window shape is compatible with another shape.
         """
-        # Number of window dimensions cannot be greater than data
-        # dimensions, and a window axis cannot be greater than the
-        # corresponding data axis
-        window_shape = self.shape
-        if len(window_shape) > len(shape) or any(
-            np.array(window_shape) > np.array(shape)
-        ):
-            is_compatible = False
+        if len(self.shape) > len(shape) or any(np.array(self.shape) > np.array(shape)):
+            return False
         else:
-            is_compatible = True
-        return is_compatible
+            return True
 
     def plot(
         self,
@@ -321,9 +308,9 @@ class Window(np.ndarray):
             Whether to show values as text in centre of element. Default
             is True.
         textcolors
-            A list of two color specifications. The first is used for
-            values below a threshold, the second for those above. If
-            not given (default), this is set to ["white", "black"].
+            A list of two colors. The first is used for values below a
+            threshold, the second for those above. If not given
+            (default), this is set to ["white", "black"].
         cmap
             A colormap to color data with, available in
             :class:`matplotlib.colors.ListedColormap`. Default is
@@ -352,12 +339,10 @@ class Window(np.ndarray):
         >>> fig.savefig('my_kernel.png')
         """
         if not self.is_valid:
-            raise ValueError("Window is invalid.")
+            raise ValueError("Window is invalid")
 
-        # Copy and use this object
-        w = copy(self)
+        w = self.copy()
 
-        # Add axis if 1D
         if w.ndim == 1:
             w = np.expand_dims(w, axis=w.ndim)
 
@@ -421,14 +406,12 @@ def distance_to_origin(
     """
     if origin is None:
         origin = tuple(i // 2 for i in shape)
-
     coordinates = np.ogrid[tuple(slice(None, i) for i in shape)]
     if len(origin) == 2:
         squared = [(i - o) ** 2 for i, o in zip(coordinates, origin)]
         distance = np.sqrt(np.add.outer(*squared).squeeze())
     else:
         distance = abs(coordinates[0] - origin[0])
-
     return distance
 
 
@@ -592,12 +575,9 @@ def highpass_fft_filter(
     True
     """
     r = distance_to_origin(shape)
-
     if cutoff_width is None:
         cutoff_width = cutoff / 2
-
     window = np.exp(-(((cutoff - r) / (np.sqrt(2) * cutoff_width / 2)) ** 2))
     window[r < (cutoff - (2 * cutoff_width))] = 0
     window[r > cutoff] = 1
-
     return window

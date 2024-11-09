@@ -45,18 +45,12 @@ class TestECPMasterPattern:
 
     def test_set_custom_properties(self, emsoft_ecp_master_pattern_file):
         s = kp.load(emsoft_ecp_master_pattern_file)
-
-        # phase
         s.phase = Phase("b")
         assert s.phase.name == "b"
-
-        # projection
-        s.projection = "spherical"
-        assert s.projection == "spherical"
-
-        # hemisphere
-        s.hemisphere = "east"
-        assert s.hemisphere == "east"
+        with pytest.raises(ValueError):
+            s.projection = "spherical"
+        with pytest.raises(ValueError):
+            s.hemisphere = "east"
 
     def test_get_master_pattern_arrays_from_energy(self):
         """Get upper and lower hemisphere of master pattern of the

@@ -168,12 +168,12 @@ class TestProperties:
         mp2 = mp.deepcopy()
 
         assert mp2.projection == projection
-        mp2.projection = "gnomonic"
-        assert mp2.projection != projection
+        with pytest.raises(ValueError, match="Unknown projection 'gnomonic'"):
+            mp2.projection = "gnomonic"
 
         assert mp2.hemisphere == hemisphere
-        mp2.hemisphere = "west"
-        assert mp2.hemisphere != hemisphere
+        with pytest.raises(ValueError, match="Unknown hemisphere 'west'"):
+            mp2.hemisphere = "west"
 
         assert mp2.phase.point_group.name == mp.phase.point_group.name
         mp2.phase.space_group = 220
@@ -708,6 +708,7 @@ class TestIntensityScaling:
         mp4 = mp3.normalize_intensity(inplace=False, lazy_output=False)
         assert isinstance(mp4, kp.signals.EBSDMasterPattern)
 
+    @pytest.mark.filterwarnings("ignore:invalid value encountered in cast")
     def test_adaptive_histogram_equalization(self):
         mp_sp = kp.data.nickel_ebsd_master_pattern_small()
 

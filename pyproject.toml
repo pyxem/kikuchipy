@@ -42,8 +42,7 @@ dependencies = [
     "dask[array]      >= 2021.8.1",
     "diffpy.structure >= 3",
     "diffsims         >= 0.5.2",
-    # TODO: Replace with HyperSpy 2.2 once it's out
-    "hyperspy @ git+https://github.com/hyperspy/hyperspy.git@RELEASE_next_patch",
+    "hyperspy         >= 2.2",
     "h5py             >= 2.10",
     "imageio",
     "lazy_loader",
@@ -122,13 +121,7 @@ path = "src/kikuchipy/__init__.py"
 src = ""
 
 [tool.hatch.build.targets.wheel]
-include = [
-    "src/kikuchipy",
-]
-
-# TODO: Remove once HyperSpy is not installed from a direct reference (GitHub)
-[tool.hatch.metadata]
-allow-direct-references = true
+include = ["src/kikuchipy"]
 
 [tool.coverage.report]
 precision = 2

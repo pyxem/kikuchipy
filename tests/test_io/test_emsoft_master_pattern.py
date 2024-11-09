@@ -20,9 +20,9 @@ import numpy as np
 import pytest
 
 from kikuchipy.io.plugins._emsoft_master_pattern import (
-    _check_file_format,
-    _get_data_shape_slices,
-    _get_datasets,
+    check_file_format,
+    get_data_shape_slices,
+    get_datasets,
 )
 
 
@@ -35,7 +35,7 @@ class TestEMsoftEBSDMasterPatternReader:
                 "ProgramName", data=np.array([b"EMEBSDmasterr.f90"], dtype="S17")
             )
             with pytest.raises(IOError, match=".* is not in EMsoft's master "):
-                _check_file_format(f, "EBSD")
+                check_file_format(f, "EBSD")
 
     @pytest.mark.parametrize(
         (
@@ -86,7 +86,7 @@ class TestEMsoftEBSDMasterPatternReader:
         expected_slices,
         expected_min_max_energy,
     ):
-        data_shape, data_slices = _get_data_shape_slices(
+        data_shape, data_slices = get_data_shape_slices(
             npx=npx, energies=energies, energy=energy
         )
 
@@ -111,7 +111,7 @@ class TestEMsoftEBSDMasterPatternReader:
         self, emsoft_ebsd_master_pattern_file, projection, hemisphere, dataset_names
     ):
         with File(emsoft_ebsd_master_pattern_file) as f:
-            datasets = _get_datasets(
+            datasets = get_datasets(
                 data_group=f["EMData/EBSDmaster"],
                 projection=projection,
                 hemisphere=hemisphere,
@@ -121,8 +121,8 @@ class TestEMsoftEBSDMasterPatternReader:
     @pytest.mark.parametrize(
         "projection, hemisphere, error_msg",
         [
-            ("stereographicl", "upper", "'projection' value 'stereographicl' "),
-            ("lambert", "east", "'hemisphere' value 'east' "),
+            ("stereographicl", "upper", "Unknown projection 'stereographicl',"),
+            ("lambert", "east", "Unknown hemisphere 'east',"),
         ],
     )
     def test_get_datasets_raises(
@@ -130,7 +130,7 @@ class TestEMsoftEBSDMasterPatternReader:
     ):
         with File(emsoft_ebsd_master_pattern_file) as f:
             with pytest.raises(ValueError, match=error_msg):
-                _ = _get_datasets(
+                _ = get_datasets(
                     data_group=f["EMData/EBSDmaster"],
                     projection=projection,
                     hemisphere=hemisphere,

@@ -123,15 +123,15 @@ class EBSD(KikuchipySignal2D):
     ----------
     *args
         See :class:`~hyperspy._signals.signal2d.Signal2D`.
-    detector : EBSDDetector, optional
+    detector : :class:`~kikuchipy.detectors.EBSDDetector`, optional
         Detector describing the EBSD detector-sample geometry. If not
-        given, this is a default detector (see :class:`EBSDDetector`).
-    static_background : ~numpy.ndarray or ~dask.array.Array, optional
-        Static background pattern. If not given, this is ``None``.
+        given, this is a default detector.
+    static_background : numpy.ndarray or dask.array.Array, optional
+        Static background pattern. If not given, this is None.
     xmap : ~orix.crystal_map.CrystalMap
         Crystal map containing the phases, unit cell rotations and
         auxiliary properties of the EBSD dataset. If not given, this is
-        ``None``.
+        None.
     **kwargs
         See :class:`~hyperspy._signals.signal2d.Signal2D`.
 
@@ -141,12 +141,8 @@ class EBSD(KikuchipySignal2D):
         An EBSD signal with ``(3, 3)`` experimental nickel patterns.
     kikuchipy.data.nickel_ebsd_large :
         An EBSD signal with ``(55, 75)`` experimental nickel patterns.
-    kikuchipy.data.silicon_ebsd_moving_screen_in :
-        An EBSD signal with one experimental silicon pattern.
-    kikuchipy.data.silicon_ebsd_moving_screen_out5mm :
-        An EBSD signal with one experimental silicon pattern.
-    kikuchipy.data.silicon_ebsd_moving_screen_out10mm :
-        An EBSD signal with one experimental silicon pattern.
+    kikuchipy.data.si_ebsd_moving_screen :
+        An EBSD signal with experimental silicon patterns.
 
     Examples
     --------
