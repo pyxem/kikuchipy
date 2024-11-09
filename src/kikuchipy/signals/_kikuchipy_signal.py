@@ -285,10 +285,10 @@ class KikuchipySignal2D(Signal2D):
         >>> import kikuchipy as kp
         >>> s = kp.data.nickel_ebsd_small()
         >>> np.mean(s.data)
-        146.0670987654321
+        np.float64(146.0670987654321)
         >>> s.normalize_intensity(dtype_out=np.float32)
         >>> np.mean(s.data)
-        0.0
+        np.float32(0.0)
         """
         if lazy_output and inplace:
             raise ValueError("'lazy_output=True' requires 'inplace=False'")
