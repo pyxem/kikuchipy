@@ -55,7 +55,7 @@
 # ######################################################################
 
 import sys
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 import dask.array as da
 from dask.diagnostics import ProgressBar
@@ -63,13 +63,17 @@ from diffsims.crystallography import ReciprocalLatticeVector
 import matplotlib.colors as mcolors
 import matplotlib.figure as mfigure
 import matplotlib.pyplot as plt
+import numba as nb
 import numpy as np
 from orix import projections
 from orix.crystal_map import Phase
 from orix.plot._util import Arrow3D
 from orix.quaternion import Rotation
 from orix.vector import Vector3d
+from tqdm import tqdm
 
+from kikuchipy._utils.numba import vec_dot
+from kikuchipy._utils.vector import ValidHemispheres, poles_from_hemisphere
 from kikuchipy.constants import installed
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
@@ -116,13 +120,13 @@ class KikuchiPatternSimulator:
     def calculate_master_pattern(
         self,
         half_size: int = 500,
-        hemisphere: str = "upper",
-        scaling: str | None = "linear",
+        hemisphere: ValidHemispheres = "upper",
+        scaling: Literal["linear", "square"] | None = "linear",
     ) -> EBSDMasterPattern:
-        r"""Calculate a kinematical master pattern in the stereographic
+        r"""Return a kinematical master pattern in the stereographic
         projection.
 
-        Requires that the :attr:`reflectors` have structure factors
+        Requires that :attr:`reflectors` have structure factors
         (:attr:`~diffsims.crystallography.ReciprocalLatticeVector.structure_factor`)
         and Bragg angles
         (:attr:`~diffsims.crystallography.ReciprocalLatticeVector.theta`)
@@ -132,15 +136,15 @@ class KikuchiPatternSimulator:
         ----------
         half_size
             Number of pixels along the x-direction of the square master
-            pattern. Default is ``500``. The full size will be
-            ``2 * half_size + 1``, given a master pattern of shape
-            ``(1001, 1001)`` for the default value.
+            pattern. Default is 500. The full size will be 2 * half_size
+            + 1, given a master pattern of shape (1001, 1001) for the
+            default value.
         hemisphere
-            Which hemisphere(s) to calculate. Options are ``"upper"``
-            (default), ``"lower"`` or ``"both"``.
+            Which hemisphere(s) to calculate. Options are "upper"
+            (default), "lower", or "both".
         scaling
             Intensity scaling of the band kinematical intensities,
-            either ``"linear"`` (default), :math:`|F|`, ``"square"``,
+            either "linear" (default), :math:`|F|`, "square",
             :math:`|F|^2`, or None, giving all bands an intensity of 1.
 
         Returns
@@ -158,80 +162,39 @@ class KikuchiPatternSimulator:
 
         size = int(2 * half_size + 1)
 
-        # Which hemisphere(s) to calculate
-        if hemisphere == "both":
-            poles = [-1, 1]
-        elif hemisphere == "upper":
-            poles = [-1]
-        elif hemisphere == "lower":
-            poles = [1]
-        else:
-            raise ValueError(
-                "Unknown `hemisphere`, options are 'upper', 'lower' or 'both'"
-            )
+        poles = poles_from_hemisphere(hemisphere)
 
-        if scaling == "linear":
-            intensity = abs(self.reflectors.structure_factor)
-        elif scaling == "square":
-            factor = self.reflectors.structure_factor
-            intensity = abs(factor * factor.conjugate())
-        elif scaling is None:
-            intensity = np.ones(self.reflectors.size)
-        else:
-            raise ValueError(
-                "Unknown `scaling`, options are 'linear', 'square' or None"
-            )
+        match scaling:
+            case "linear":
+                intensity = abs(self.reflectors.structure_factor)
+            case "square":
+                factor = self.reflectors.structure_factor
+                intensity = abs(factor * factor.conjugate())
+            case None:
+                intensity = np.ones(self.reflectors.size)
+            case _:
+                raise ValueError(
+                    f"Unknown scaling {scaling!r}, options are 'linear', 'square' or "
+                    "None"
+                )
 
-        # Get Dask arrays of reflector information
-        intensity = da.from_array(intensity).astype(np.float64)
-        theta1 = da.from_array((np.pi / 2) - self.reflectors.theta)
-        theta2 = da.from_array(np.pi / 2)
-        xyz_ref = da.from_array(Vector3d(self.reflectors).unit.data)
-
-        # Stereographic coordinates (X, Y) for a square encompassing the
-        # stereographic projection and outside (in the corners)
+        xyz_reflector = Vector3d(self.reflectors).unit.data
+        theta_reflector = self.reflectors.theta
         arr = np.linspace(-1, 1, size)
-        x, y = np.meshgrid(arr, arr)
+        X, Y = np.meshgrid(arr, arr)
+        X = X.ravel()
+        Y = Y.ravel()
+        n_poles = len(poles)
+        patterns = np.empty((n_poles, size * size), dtype=np.float64)
 
-        # Loop over hemisphere(s)
-        master_pattern_da = []
-        for i in range(len(poles)):
-            # 3D coordinates (x, y, z) of unit vectors on the
-            # half-sphere
+        for i in tqdm(range(n_poles)):
             stereo2sphere = projections.InverseStereographicProjection(poles[i])
-            v_hemi = stereo2sphere.xy2vector(x.ravel(), y.ravel()).flatten()
-            xyz_hemi = da.from_array(v_hemi.data.squeeze(), chunks=(half_size, -1))
-
-            # Angles between vectors and Kikuchi lines
-            dp = da.einsum("ij,kj->ik", xyz_hemi, xyz_ref)
-            angles = da.arccos(da.round(dp, 12))  # Avoid invalid values
-
-            # Exclude Kikuchi bands with:
-            #   1. Dot products lower than a threshold
-            #   2. Angles outside a vector
-            mask1 = da.absolute(dp) <= 1e-7
-            mask2 = da.logical_and(
-                da.logical_and(angles >= theta1, angles <= theta2), ~mask1
+            v_hemi = stereo2sphere.xy2vector(X.ravel(), Y.ravel())
+            xyz_hemi = v_hemi.data
+            patterns[i] = get_pattern(
+                intensity, xyz_hemi, xyz_reflector, theta_reflector
             )
-
-            # Generate master pattern on this hemisphere, chunk by chunk
-            pattern = da.map_blocks(
-                _get_pattern, intensity, mask1, mask2, drop_axis=1, dtype=np.float64
-            )
-            master_pattern_da.append(pattern)
-
-        if hemisphere == "both":
-            master_pattern = np.zeros((2, size * size))
-            shape_out = (2, size, size)
-        else:
-            master_pattern_da = master_pattern_da[0]
-            master_pattern = np.zeros((size * size,))
-            shape_out = (size, size)
-
-        with ProgressBar():
-            da.store(master_pattern_da, master_pattern)
-
-        master_pattern = master_pattern.reshape(shape_out)
+        patterns = patterns.reshape(-1, size, size).squeeze()
 
         if hemisphere == "both":
             axes = [{"size": 2, "name": "hemisphere"}]
@@ -242,7 +205,7 @@ class KikuchiPatternSimulator:
             axes.append(axis)
 
         return EBSDMasterPattern(
-            master_pattern,
+            patterns,
             axes=axes,
             phase=self.phase,
             hemisphere=hemisphere,
@@ -602,33 +565,6 @@ class KikuchiPatternSimulator:
             )
 
 
-def _get_pattern(
-    intensity: np.ndarray, mask1: np.ndarray, mask2: np.ndarray
-) -> np.ndarray:
-    """Generate part of a master pattern by summing intensities from
-    reflectors.
-
-    Used in :meth:`calculate_master_pattern`.
-
-    Parameters
-    ----------
-    intensity
-        Reflector intensities.
-    mask1, mask2
-        Boolean arrays with ``True`` for reflectors to include the
-        intensity from in each pattern coordinate.
-
-    Returns
-    -------
-    part
-        Master pattern part.
-    """
-    intensity_part = np.full(mask1.shape, intensity)
-    part = 0.5 * np.sum(intensity_part, where=mask1, axis=1)
-    part += np.sum(intensity_part, where=mask2, axis=1)
-    return part
-
-
 def _plot_spherical(
     mode: str,
     ref: ReciprocalLatticeVector,
@@ -741,3 +677,34 @@ def _plot_spherical(
             figure.show()
 
     return figure
+
+
+# ------------------- Numba-accelerated functions -------------------- #
+
+
+@nb.njit(
+    "float64[:](float64[:], float64[:, :], float64[:, :], float64[:])",
+    cache=True,
+    parallel=True,
+    fastmath=True,
+    nogil=True,
+)
+def get_pattern(intensity, xyz_hemi, xyz_reflector, theta_reflector):
+    theta2 = np.pi / 2
+    theta1 = theta2 - theta_reflector
+    n = xyz_hemi.shape[0]
+    m = xyz_reflector.shape[0]
+    pattern = np.empty(n, dtype=np.float64)
+    for i in nb.prange(n):
+        intensity_i = 0.0
+        for j in range(m):
+            intensity_j = intensity[j]
+            D = vec_dot(xyz_hemi[i], xyz_reflector[j])
+            angle = np.arccos(D)
+            D = np.abs(D)
+            if D <= 1e-7:
+                intensity_i += 0.5 * intensity_j
+            elif angle <= theta2 and angle >= theta1[j]:
+                intensity_i += intensity_j
+        pattern[i] = intensity_i
+    return pattern

@@ -106,9 +106,9 @@ class TestCalculateMasterPattern:
     def test_raises(self):
         """Appropriate error messages are raised."""
         simulator = self.simulator
-        with pytest.raises(ValueError, match="Unknown `hemisphere`, options are"):
+        with pytest.raises(ValueError, match="Unknown hemisphere 'north', options are"):
             _ = simulator.calculate_master_pattern(hemisphere="north")
-        with pytest.raises(ValueError, match="Unknown `scaling`, options are"):
+        with pytest.raises(ValueError, match="Unknown scaling 'cubic', options are"):
             _ = simulator.calculate_master_pattern(scaling="cubic")
 
     def test_shape(self):

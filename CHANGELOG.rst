@@ -31,6 +31,7 @@ Changed
 - Markers returned from geometrical simulations and the virtual backscatter electron
   imager use the new HyperSpy 2.0 markers.
   (`#695 <https://github.com/pyxem/kikuchipy/pull/695>`_)
+- Progressbar when calculating kinematical master pattern shows progress per pole.
 
 Removed
 -------
