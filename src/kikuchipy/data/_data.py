@@ -353,8 +353,7 @@ def si_wafer(
 
     See Also
     --------
-    silicon_ebsd_moving_screen_in, silicon_ebsd_moving_screen_out5mm,
-    silicon_ebsd_moving_screen_out10mm
+    silicon_ebsd_moving_screen
 
     Notes
     -----

@@ -145,7 +145,7 @@ class EBSDDetector:
 
         x_B^* &= x_T^*,\\
         y_B^* &= 1 - y_T^*,\\
-        z_B^* &= \frac{min(N_x, N_y)}{N_y} z_T^*.
+        z_B^* &= \frac{\min(N_x, N_y)}{N_y} z_T^*.
 
     The conversion from Oxford Instruments to Bruker is given as
 
