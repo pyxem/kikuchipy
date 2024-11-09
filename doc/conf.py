@@ -18,14 +18,14 @@ import kikuchipy as kp
 # directory, add these directories to sys.path here. If the directory
 # is relative to the documentation root, use os.path.abspath to make it
 # absolute, like shown here.
-sys.path.append("../")
+sys.path.append(os.path.abspath("."))
+sys.path.append(".")
 
 # Project information
 project = "kikuchipy"
-copyright = f"2019-{datetime.now().year}, {kp.release.author}"
-author = kp.release.author
-version = kp.release.version
-release = kp.release.version
+author = "kikuchipy developers"
+copyright = f"2019-{datetime.now().year}, {author}"
+release = kp.__version__
 
 master_doc = "index"
 
@@ -55,7 +55,7 @@ extensions = [
 intersphinx_mapping = {
     # Package
     "black": ("https://black.readthedocs.io/en/stable", None),
-    "conda": ("https://conda.io/projects/conda/en/latest", None),
+    "conda": ("https://docs.conda.io/projects/conda/en/latest", None),
     "coverage": ("https://coverage.readthedocs.io/en/latest", None),
     "dask": ("https://docs.dask.org/en/stable", None),
     "defdap": ("https://defdap.readthedocs.io/en/latest", None),
@@ -65,7 +65,7 @@ intersphinx_mapping = {
     "h5py": ("https://docs.h5py.org/en/stable", None),
     "imageio": ("https://imageio.readthedocs.io/en/stable", None),
     "matplotlib": ("https://matplotlib.org/stable", None),
-    "numba": ("https://numba.pydata.org/numba-doc/latest", None),
+    "numba": ("https://numba.readthedocs.io/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable", None),
     "nbsphinx": ("https://nbsphinx.readthedocs.io/en/latest", None),
     "nbval": ("https://nbval.readthedocs.io/en/latest", None),
@@ -73,12 +73,13 @@ intersphinx_mapping = {
     "orix": ("https://orix.readthedocs.io/en/stable", None),
     "pooch": ("https://www.fatiando.org/pooch/latest", None),
     "pyebsdindex": ("https://pyebsdindex.readthedocs.io/en/stable", None),
-    "pyopencl": ("https://documen.tician.de/pyopencl/", None),
+    "pyopencl": ("https://documen.tician.de/pyopencl", None),
     "pytest": ("https://docs.pytest.org/en/stable", None),
     "python": ("https://docs.python.org/3", None),
     "pyvista": ("https://docs.pyvista.org", None),
     "pyxem": ("https://pyxem.readthedocs.io/en/latest", None),
     "readthedocs": ("https://docs.readthedocs.io/en/stable", None),
+    "rosettasciio": ("https://rosettasciio.readthedocs.io/en/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "skimage": ("https://scikit-image.org/docs/stable", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
@@ -94,7 +95,7 @@ templates_path = ["_templates"]
 # directories to ignore when looking for source files. This image also
 # affects html_static_path and html_extra_path.
 exclude_patterns = [
-    "build",
+    "_build",
     "_static/logo/*.ipynb",
     # Suppress warnings from Sphinx regarding "duplicate source files":
     # https://github.com/executablebooks/MyST-NB/issues/363#issuecomment-1682540222
@@ -148,10 +149,10 @@ nbsphinx_execute_arguments = [
 # modifications to point nbviewer and Binder to the GitHub develop
 # branch links when the documentation is launched from a kikuchipy
 # version with "dev" in the version
-if "dev" in version:
+if "dev" in release:
     release_version = "develop"
 else:
-    release_version = "v" + version
+    release_version = "v" + release
 nbsphinx_prolog = (
     r"""
 {% set docname = 'doc/' + env.doc2path(env.docname, base=None)[:-6] + '.ipynb' %}
@@ -246,14 +247,14 @@ def linkcode_resolve(domain, info):
     fn = relpath(fn, start=startdir).replace(os.path.sep, "/")
 
     if fn.startswith("kikuchipy/"):
-        m = re.match(r"^.*dev0\+([a-f0-9]+)$", version)
+        m = re.match(r"^.*dev0\+([a-f0-9]+)$", release)
         pre_link = "https://github.com/pyxem/kikuchipy/blob/"
         if m:
             return pre_link + "%s/%s%s" % (m.group(1), fn, linespec)
-        elif "dev" in version:
+        elif "dev" in release:
             return pre_link + "develop/%s%s" % (fn, linespec)
         else:
-            return pre_link + "v%s/%s%s" % (version, fn, linespec)
+            return pre_link + "v%s/%s%s" % (release, fn, linespec)
     else:
         return None
 
@@ -265,7 +266,10 @@ pv.global_theme.window_size = [600, 600]
 # Use static display until trame works with nbsphinx:
 # https://github.com/pyvista/pyvista/discussions/4809
 pv.set_jupyter_backend("static")
-pv.start_xvfb()
+try:
+    pv.start_xvfb()
+except:
+    pass
 
 # -- Copy button customization (taken from PyVista)
 # Exclude traditional Python prompts from the copied code

@@ -19,9 +19,6 @@ how best to contribute.
     That said, our contributing workflow is typical for Python projects, so reading this
     guide can make contributing to similar projects in the future much smoother!
 
-This project follows the `all-contributors
-<https://github.com/all-contributors/all-contributors>`__ specification.
-
 kikuchipy has a :doc:`Code of conduct <code_of_conduct>` that should be honoured by
 everyone who participates in the kikuchipy community.
 

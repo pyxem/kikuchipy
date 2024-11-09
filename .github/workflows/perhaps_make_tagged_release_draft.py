@@ -19,9 +19,9 @@ import re
 
 from outdated import check_outdated
 
-with open("../../kikuchipy/release.py") as fid:
+with open("../../src/kikuchipy/__init__.py") as fid:
     for line in fid:
-        if line.startswith("version"):
+        if line.startswith("__version__"):
             branch_version = line.strip().split(" = ")[-1][1:-1]
 
 # Within a try/except because we don't want to throw the error if a new

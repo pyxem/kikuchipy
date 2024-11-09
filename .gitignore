@@ -62,7 +62,7 @@ instance/
 .scrapy
 
 # Sphinx documentation
-doc/build/
+doc/_build/
 doc/reference/generated/
 doc/examples/
 sg_execution_times.rst
@@ -105,15 +105,9 @@ ENV/
 
 # Auto changing files
 build/
-src/
 
 # Backport
 .backportrc.json
-
-# All Contributors CLI
-node_modules/
-package.json
-package-lock.json
 
 # Dask
 dask-worker-space

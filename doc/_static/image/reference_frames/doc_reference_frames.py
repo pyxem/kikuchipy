@@ -15,26 +15,23 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 
-from kikuchipy import load
-from kikuchipy.detectors import EBSDDetector
+import kikuchipy as kp
 
-data = "/home/hakon/kode/kikuchipy/kikuchipy/data/kikuchipy_h5ebsd/patterns.h5"
-outdir = "/home/hakon/kode/kikuchipy/doc/_static/image"
-refframe_dir = os.path.join(outdir, "reference_frames")
+doc_path = Path(__file__).parent.parent.parent.parent
+data = doc_path / "../src/kikuchipy/data/kikuchipy_h5ebsd/patterns.h5"
+ref_frame_path = doc_path / "_static/image/reference_frames"
 
-datadir, fname = os.path.split(data)
-fname, ext = os.path.splitext(fname)
-s = load(data)
+s = kp.load(data)
 
 s.remove_static_background()
 s.remove_dynamic_background()
 s.rescale_intensity(percentiles=(0.5, 99.5))
 
-det = EBSDDetector(shape=(60, 60), pc=[0.4210, 0.2206, 0.5049])
+det = kp.detectors.EBSDDetector(shape=(60, 60), pc=[0.4210, 0.2206, 0.5049])
 fig = det.plot(
     coordinates="detector", pattern=s.inav[0, 0].data, show_pc=True, return_figure=True
 )
@@ -56,7 +53,7 @@ ax.set_ylabel(ax.get_ylabel(), color=y_color)
 ax.arrow(dx=arrow_length, dy=0, fc=x_color, ec=x_color, **arrow_dict1)
 ax.arrow(dx=0, dy=arrow_length, fc=y_color, ec=y_color, **arrow_dict1)
 fig.savefig(
-    os.path.join(refframe_dir, "detector_coordinates.png"),
+    ref_frame_path / "detector_coordinates.png",
     bbox_inches="tight",
     pad_inches=0,
     transparent=True,
@@ -87,7 +84,7 @@ ax2.set_ylabel(ax2.get_ylabel(), color=y_color)
 ax2.arrow(x=0, y=0, dx=arrow_length, dy=0, fc=x_color, ec=x_color, **arrow_dict)
 ax2.arrow(x=0, y=0, dx=0, dy=arrow_length, fc=y_color, ec=y_color, **arrow_dict)
 fig2.savefig(
-    os.path.join(refframe_dir, "gnomonic_coordinates.png"),
+    ref_frame_path / "gnomonic_coordinates.png",
     bbox_inches="tight",
     pad_inches=0,
     transparent=True,
