@@ -422,12 +422,12 @@ class OxfordBinaryFileReader:
             Number of pattern bytes.
         """
         self.file.seek(offset)
-        header = np.fromfile(self.file, dtype=self.pattern_header_dtype, count=1)
+        header = np.fromfile(self.file, dtype=self.pattern_header_dtype, count=1)[0]
         return (
             bool(header["is_compressed"][0]),
-            int(header["nrows"]),
-            int(header["ncols"]),
-            int(header["n_bytes"]),
+            int(header["nrows"][0]),
+            int(header["ncols"][0]),
+            int(header["n_bytes"][0]),
         )
 
     def get_version(self) -> int:
