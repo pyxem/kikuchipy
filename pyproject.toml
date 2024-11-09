@@ -121,13 +121,7 @@ path = "src/kikuchipy/__init__.py"
 src = ""
 
 [tool.hatch.build.targets.wheel]
-include = [
-    "src/kikuchipy",
-]
-
-# TODO: Remove once HyperSpy is not installed from a direct reference (GitHub)
-[tool.hatch.metadata]
-allow-direct-references = true
+include = ["src/kikuchipy"]
 
 [tool.coverage.report]
 precision = 2
