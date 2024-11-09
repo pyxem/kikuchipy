@@ -29,7 +29,6 @@ from matplotlib.pyplot import imread
 import numpy as np
 from orix.crystal_map import CrystalMap
 
-from kikuchipy.constants import VisibleDeprecationWarning
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -107,7 +106,6 @@ def file_reader(
                 "No setting file found and no scan_size or pattern_size detected in "
                 "input arguments. These must be set if no setting file is provided"
             )
-        warnings.filterwarnings("ignore", category=VisibleDeprecationWarning)
         md = {}
         omd = {}
         detector_dict = None
