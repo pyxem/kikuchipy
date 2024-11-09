@@ -683,7 +683,7 @@ def _plot_spherical(
 
 
 @nb.njit(
-    "float64[:](float64[:], float64[:, :], float64[:, :], float64[:])",
+    nb.float64[:](nb.float64[:], nb.float64[:, :], nb.float64[:, :], nb.float64[:]),
     cache=True,
     parallel=True,
     fastmath=True,
@@ -694,17 +694,14 @@ def get_pattern(intensity, xyz_hemi, xyz_reflector, theta_reflector):
     theta1 = theta2 - theta_reflector
     n = xyz_hemi.shape[0]
     m = xyz_reflector.shape[0]
-    pattern = np.empty(n, dtype=np.float64)
-    for i in nb.prange(n):
-        intensity_i = 0.0
-        for j in range(m):
-            intensity_j = intensity[j]
-            D = vec_dot(xyz_hemi[i], xyz_reflector[j])
-            angle = np.arccos(D)
-            D = np.abs(D)
-            if D <= 1e-7:
-                intensity_i += 0.5 * intensity_j
-            elif angle <= theta2 and angle >= theta1[j]:
-                intensity_i += intensity_j
-        pattern[i] = intensity_i
+    pattern = np.zeros(n, dtype=np.float64)
+    for i in nb.prange(m):
+        for j in range(n):
+            D = vec_dot(xyz_reflector[i], xyz_hemi[j])
+            if np.abs(D) <= 1e-7:
+                pattern[j] = pattern[j] + 0.5 * intensity[i]
+            else:
+                angle = np.arccos(D)
+                if angle <= theta2 and angle >= theta1[i]:
+                    pattern[j] = pattern[j] + intensity[i]
     return pattern
