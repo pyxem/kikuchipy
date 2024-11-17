@@ -51,6 +51,7 @@ if constants.installed["pyvista"]:
 
 
 DATA_PATH = Path(__file__).parent / "src/kikuchipy/data"
+DATA_PATH = DATA_PATH.resolve()
 
 # ------------------------------ Setup ------------------------------ #
 
