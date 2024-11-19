@@ -512,6 +512,9 @@ def oxford_binary_file(tmpdir, request) -> Generator[TextIOWrapper, None, None]:
 
     for i in new_order:
         r, c = np.unravel_index(i, (nr, nc))
+        if ver > 4:
+            extra_pattern_header = np.array([c, r], dtype=np.int32)
+            extra_pattern_header.tofile(f)
         pattern_header.tofile(f)
         data[r, c].tofile(f)
         if ver > 1:
