@@ -13,23 +13,13 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
-Unreleased
-==========
-
-Added
------
-
-Changed
--------
-
-Removed
--------
-
-Deprecated
-----------
+0.11.1 (2024-11-24)
+===================
 
 Fixed
 -----
+- Reading of Oxford binary `*.ebsp` files with version 6.
+ (`#700 <https://github.com/pyxem/kikuchipy/pull/700>`_)
 
 0.11.0 (2024-11-10)
 ===================
