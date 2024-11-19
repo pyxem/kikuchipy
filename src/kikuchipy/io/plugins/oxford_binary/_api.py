@@ -230,6 +230,12 @@ class OxfordBinaryFileReader:
             size += np.dtype(dtype).itemsize
         return size
 
+    def get_pattern_footer_size(self):
+        size = 0
+        for _, dtype, _ in self.get_pattern_footer_dtype(self.first_pattern_position):
+            size += np.dtype(dtype).itemsize
+        return size
+
     def get_memmap(self) -> np.memmap:
         """Return a memory map of the pattern header, actual patterns,
         and a potential pattern footer.
@@ -326,7 +332,9 @@ class OxfordBinaryFileReader:
         self.file.seek(self.pattern_starts_byte_position)
         return np.fromfile(self.file, dtype=np.int64, count=self.n_patterns)
 
-    def get_pattern_footer_dtype(self, offset: int) -> list[tuple]:
+    def get_pattern_footer_dtype(
+        self, offset: int
+    ) -> list[tuple[str, type, tuple[int]]]:
         """Return the pattern footer data types to be used when memory
         mapping.
 
@@ -489,30 +497,34 @@ class OxfordBinaryFileReader:
             for i in range(data.ndim)
         ]
         fname = self.file.name
-        metadata = dict(
-            General=dict(
-                original_filename=fname,
-                title=os.path.splitext(os.path.split(fname)[1])[0],
-            ),
-            Signal=dict(signal_type="EBSD", record_by="image"),
-        )
+        metadata = {
+            "General": {
+                "original_filename": fname,
+                "title": os.path.splitext(os.path.split(fname)[1])[0],
+            },
+            "Signal": {"signal_type": "EBSD", "record_by": "image"},
+        }
 
         order = self.pattern_order[self.pattern_is_present]
-        om = dict(
-            map1d_id=np.arange(self.n_patterns)[self.pattern_is_present],
-            file_order=order,
-        )
+        om = {
+            "map1d_id": np.arange(self.n_patterns)[self.pattern_is_present],
+            "file_order": order,
+        }
         if "beam_y" in self.memmap.dtype.names:
             om["beam_y"] = self.memmap["beam_y"][..., 0][order]
         if "beam_x" in self.memmap.dtype.names:
             om["beam_x"] = self.memmap["beam_x"][..., 0][order]
+        if "map_x" in self.memmap.dtype.names:
+            om["map_x"] = self.memmap["map_x"][..., 0][order]
+        if "map_y" in self.memmap.dtype.names:
+            om["map_y"] = self.memmap["map_y"][..., 0][order]
 
-        scan = dict(
-            axes=axes,
-            data=data,
-            metadata=metadata,
-            original_metadata=om,
-        )
+        scan = {
+            "axes": axes,
+            "data": data,
+            "metadata": metadata,
+            "original_metadata": om,
+        }
 
         return scan
 
@@ -563,3 +575,11 @@ class OxfordBinaryFileReader:
         _logger.debug(f"Guessed number of patterns: {n_patterns}")
 
         return n_patterns
+
+    def get_estimated_file_size(self) -> int:
+        n = self.n_patterns
+        file_header_size = self.pattern_starts_byte_position + n * 8
+        pattern_header_size = self.get_pattern_header_size()
+        pattern_footer_size = self.get_pattern_footer_size()
+        pattern_section_size = pattern_header_size + self.n_bytes + pattern_footer_size
+        return file_header_size + n * pattern_section_size
