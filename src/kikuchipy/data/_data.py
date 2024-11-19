@@ -629,7 +629,9 @@ class Dataset:
     ) -> str:
         if show_progressbar is None:
             show_progressbar = hs.preferences.General.show_progressbar
-        downloader = pooch.HTTPDownloader(progressbar=show_progressbar)
+        downloader = pooch.HTTPDownloader(
+            progressbar=show_progressbar, headers={"User-Agent": "agent"}
+        )
 
         if self.is_in_package:
             if self.has_correct_hash:
