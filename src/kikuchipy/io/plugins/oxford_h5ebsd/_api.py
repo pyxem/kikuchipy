@@ -199,7 +199,7 @@ def file_reader(
 
     Raises
     ------
-    ValueError
+    KeyError
         If *processed* is False and unprocessed patterns are not
         available.
     """
