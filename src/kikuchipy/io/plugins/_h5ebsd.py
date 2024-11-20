@@ -137,12 +137,7 @@ class H5EBSDReader(abc.ABC):
         Keyword arguments passed to :class:`h5py.File`.
     """
 
-    manufacturer_patterns: dict[str, str] = {
-        "bruker nano": "RawPatterns",
-        "edax": "Pattern",
-        "kikuchipy": "patterns",
-        "oxford instruments": "Processed Patterns",
-    }
+    supported_manufacturers = ["bruker nano", "edax", "kikuchipy", "oxford instruments"]
 
     def __init__(self, filename: str | Path, **kwargs) -> None:
         self.filename = str(filename)
@@ -150,10 +145,8 @@ class H5EBSDReader(abc.ABC):
         self.scan_groups = self.get_scan_groups()
         self.manufacturer, self.version = self.get_manufacturer_version()
         self.check_file()
-        self.patterns_name = self.manufacturer_patterns[self.manufacturer]
 
-    def __repr__(self) -> str:
-        return f"{self.__class__.__name__} ({self.version}): {self.filename}"
+    # -------------------------- Properties -------------------------- #
 
     @property
     def scan_group_names(self) -> list[str]:
@@ -164,6 +157,18 @@ class H5EBSDReader(abc.ABC):
             name = group.name.lstrip("/")
             names.append(name)
         return names
+
+    @property
+    @abc.abstractmethod
+    def patterns_name(self) -> str:
+        return NotImplemented  # pragma: no cover
+
+    # ------------------------ Dunder methods ------------------------ #
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__} ({self.version}): {self.filename}"
+
+    # ---------------------------- Methods --------------------------- #
 
     def check_file(self) -> None:
         """Check if the file is a valid h5ebsd file by searching for
@@ -192,11 +197,10 @@ class H5EBSDReader(abc.ABC):
             )
         man, _ = self.get_manufacturer_version()
         man = man.lower()
-        supported_manufacturers = list(self.manufacturer_patterns.keys())
-        if man not in supported_manufacturers and error is None:
+        if man not in self.supported_manufacturers and error is None:
             error = (
-                f"'{man}' is not among supported manufacturers "
-                f"{supported_manufacturers}"
+                f"{man!r} is not among supported manufacturers "
+                f"{self.supported_manufacturers}"
             )
         if error is not None:
             raise IOError(f"{self.filename} is not a supported h5ebsd file, as {error}")

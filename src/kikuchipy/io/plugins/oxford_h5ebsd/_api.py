@@ -47,6 +47,11 @@ class OxfordH5EBSDReader(H5EBSDReader):
 
     def __init__(self, filename: str | Path, **kwargs) -> None:
         super().__init__(filename, **kwargs)
+        self._patterns_name = "Processed Patterns"
+
+    @property
+    def patterns_name(self) -> str:
+        return self._patterns_name
 
     def scan2dict(self, group: h5py.Group, lazy: bool = False) -> dict:
         """Read (possibly lazily) patterns from group.
