@@ -88,15 +88,6 @@ class OxfordBinaryFileReader:
         patterns.
     """
 
-    # Header for each pattern in the file
-    pattern_header_size: int = 16
-    pattern_header_dtype: list = [
-        ("is_compressed", np.int32, (1,)),
-        ("nrows", np.int32, (1,)),
-        ("ncols", np.int32, (1,)),
-        ("n_bytes", np.int32, (1,)),
-    ]
-
     def __init__(self, file: BinaryIO) -> None:
         """Prepare to read EBSD patterns from an open Oxford
         Instruments' binary .ebsp file.
@@ -106,12 +97,14 @@ class OxfordBinaryFileReader:
         self.version = self.get_version()
         _logger.debug(f"Reading Oxford binary file of version {self.version}")
 
+        self.pattern_header_size = self.get_pattern_header_size()
+
         # If version > 3, read in the extra byte after file version and
         # add it to the debug log
         if self.version > 3:  # pragma: no cover
             self.file.seek(self.pattern_starts_byte_position - 1)
             unknown_byte = np.fromfile(self.file, dtype=np.uint8, count=1)[0]
-            _logger.debug(f"Unknown byte (uint8) in file of version 4: {unknown_byte}")
+            _logger.debug(f"Unknown byte (uint8) in file of version>3: {unknown_byte}")
 
         # Number of patterns in the file is not known, so this is
         # guessed from the file header where the file byte positions of
@@ -121,16 +114,14 @@ class OxfordBinaryFileReader:
 
         # Determine whether we can read the file, signal shape, and data
         # type
-        is_compressed, nrows, ncols, n_bytes = self.get_single_pattern_header(
-            self.first_pattern_position
-        )
-        if is_compressed:
+        header = self.get_single_pattern_header(self.first_pattern_position)
+        if header["is_compressed"][0]:
             raise NotImplementedError(
-                f"Cannot read compressed EBSD patterns from {self.file.name}"
+                f"Cannot read compressed EBSD patterns from {self.file.name!r}"
             )
-        self.signal_shape = (nrows, ncols)
-        self.n_bytes = n_bytes
-        if n_bytes == np.prod(self.signal_shape):
+        self.signal_shape = (header["nrows"][0], header["ncols"][0])
+        self.n_bytes = header["n_bytes"][0]
+        if self.n_bytes == np.prod(self.signal_shape):
             self.dtype = np.uint8
         else:
             self.dtype = np.uint16
@@ -138,9 +129,9 @@ class OxfordBinaryFileReader:
         # While the pattern header is always in the same format across
         # .ebsp file versions, this is not the case for the pattern
         # footer. Here we determine it's format.
-        self.pattern_footer_dtype = self.get_pattern_footer_dtype(
-            self.first_pattern_position
-        )
+        pos = self.first_pattern_position
+        _logger.debug(f"First pattern byte position: {pos}")
+        self.pattern_footer_dtype = self.get_pattern_footer_dtype(pos)
 
         # Allow for reading of files where only non-indexed patterns are
         # stored in the file
@@ -157,6 +148,8 @@ class OxfordBinaryFileReader:
             self.scan_unit = "um"
 
         self.memmap = self.get_memmap()
+
+    # -------------------------- Properties -------------------------- #
 
     @property
     def all_patterns_present(self) -> bool:
@@ -213,6 +206,36 @@ class OxfordBinaryFileReader:
         else:
             return 8
 
+    @property
+    def pattern_header_dtype(self) -> list[tuple[str, type, tuple[int]]]:
+        dtypes = [
+            ("map_x", np.int32, (1,)),
+            ("map_y", np.int32, (1,)),
+            ("is_compressed", np.int32, (1,)),
+            ("nrows", np.int32, (1,)),
+            ("ncols", np.int32, (1,)),
+            ("n_bytes", np.int32, (1,)),
+        ]
+        if self.version < 5:
+            # Remove map_x and map_y
+            _ = dtypes.pop(0)
+            _ = dtypes.pop(0)
+        return dtypes
+
+    # --------------------------- Methods ---------------------------- #
+
+    def get_pattern_header_size(self):
+        size = 0
+        for _, dtype, _ in self.pattern_header_dtype:
+            size += np.dtype(dtype).itemsize
+        return size
+
+    def get_pattern_footer_size(self):
+        size = 0
+        for _, dtype, _ in self.get_pattern_footer_dtype(self.first_pattern_position):
+            size += np.dtype(dtype).itemsize
+        return size
+
     def get_memmap(self) -> np.memmap:
         """Return a memory map of the pattern header, actual patterns,
         and a potential pattern footer.
@@ -221,11 +244,13 @@ class OxfordBinaryFileReader:
         patterns have the correct signal shape (n rows, n columns).
 
         If the pattern footer is available, the memory map has these
-        fields:
+        fields (some are new in version 5 of the *.ebsp file format):
 
-        ============= =============== ===================
-        Name          Data type       Shape
-        ============= =============== ===================
+        ============= =============== =================== ================
+        Name          Data type       Shape               New in version 5
+        ============= =============== =================== ================
+        map_x         int32           (1,)                x
+        map_y         int32           (1,)                x
         is_compressed int32           (1,)
         nrows         int32           (1,)
         ncols         int32           (1,)
@@ -235,7 +260,7 @@ class OxfordBinaryFileReader:
         beam_x        float64         (1,)
         has_beam_y    bool            (1,)
         beam_y        float64         (1,)
-        ============= =============== ===================
+        ============= =============== =================== ================
 
         Returns
         -------
@@ -246,7 +271,6 @@ class OxfordBinaryFileReader:
         file_dtype = self.pattern_header_dtype + [pattern_dtype]
         if len(footer_dtype) != 0:
             file_dtype += footer_dtype
-
         return np.memmap(
             self.file.name,
             dtype=file_dtype,
@@ -308,7 +332,9 @@ class OxfordBinaryFileReader:
         self.file.seek(self.pattern_starts_byte_position)
         return np.fromfile(self.file, dtype=np.int64, count=self.n_patterns)
 
-    def get_pattern_footer_dtype(self, offset: int) -> list[tuple]:
+    def get_pattern_footer_dtype(
+        self, offset: int
+    ) -> list[tuple[str, type, tuple[int]]]:
         """Return the pattern footer data types to be used when memory
         mapping.
 
@@ -402,7 +428,7 @@ class OxfordBinaryFileReader:
         self.file.seek(offset + self.pattern_header_size + self.n_bytes)
         return np.fromfile(self.file, dtype=self.pattern_footer_dtype, count=1)
 
-    def get_single_pattern_header(self, offset: int) -> tuple[bool, int, int, int]:
+    def get_single_pattern_header(self, offset: int) -> np.ndarray:
         """Return a single pattern header.
 
         Parameters
@@ -412,23 +438,12 @@ class OxfordBinaryFileReader:
 
         Returns
         -------
-        is_compressed
-            Whether the pattern is compressed.
-        nrows
-            Number of signal (detector) rows.
-        ncols
-            Number of signal (detector) columns.
-        n_bytes
-            Number of pattern bytes.
+        header
+            The format of this depends on the file :attr:`version`. See
+            :attr:`pattern_header_dtype` for details.
         """
         self.file.seek(offset)
-        header = np.fromfile(self.file, dtype=self.pattern_header_dtype, count=1)[0]
-        return (
-            bool(header["is_compressed"][0]),
-            int(header["nrows"][0]),
-            int(header["ncols"][0]),
-            int(header["n_bytes"][0]),
-        )
+        return np.fromfile(self.file, dtype=self.pattern_header_dtype, count=1)[0]
 
     def get_version(self) -> int:
         """Return the .ebsp file version.
@@ -482,30 +497,34 @@ class OxfordBinaryFileReader:
             for i in range(data.ndim)
         ]
         fname = self.file.name
-        metadata = dict(
-            General=dict(
-                original_filename=fname,
-                title=os.path.splitext(os.path.split(fname)[1])[0],
-            ),
-            Signal=dict(signal_type="EBSD", record_by="image"),
-        )
+        metadata = {
+            "General": {
+                "original_filename": fname,
+                "title": os.path.splitext(os.path.split(fname)[1])[0],
+            },
+            "Signal": {"signal_type": "EBSD", "record_by": "image"},
+        }
 
         order = self.pattern_order[self.pattern_is_present]
-        om = dict(
-            map1d_id=np.arange(self.n_patterns)[self.pattern_is_present],
-            file_order=order,
-        )
+        om = {
+            "map1d_id": np.arange(self.n_patterns)[self.pattern_is_present],
+            "file_order": order,
+        }
         if "beam_y" in self.memmap.dtype.names:
             om["beam_y"] = self.memmap["beam_y"][..., 0][order]
         if "beam_x" in self.memmap.dtype.names:
             om["beam_x"] = self.memmap["beam_x"][..., 0][order]
+        if "map_x" in self.memmap.dtype.names:
+            om["map_x"] = self.memmap["map_x"][..., 0][order]
+        if "map_y" in self.memmap.dtype.names:
+            om["map_y"] = self.memmap["map_y"][..., 0][order]
 
-        scan = dict(
-            axes=axes,
-            data=data,
-            metadata=metadata,
-            original_metadata=om,
-        )
+        scan = {
+            "axes": axes,
+            "data": data,
+            "metadata": metadata,
+            "original_metadata": om,
+        }
 
         return scan
 
@@ -539,7 +558,7 @@ class OxfordBinaryFileReader:
         # It is assumed that a jump in bytes from one pattern position
         # to the next does not exceed a number of maximum bytes one
         # pattern can take up in the file. The array index where
-        # this happens (plus 2) is assumed to be the number of patterns
+        # this happens (plus 1) is assumed to be the number of patterns
         # in the file.
         diff_pattern_starts = np.diff(assumed_pattern_starts)
         max_assumed_n_pixels = 1024 * 1344
@@ -547,6 +566,20 @@ class OxfordBinaryFileReader:
         max_assumed_pattern_size = max_assumed_n_pixels * 2 + self.pattern_header_size
         # 20x is chosen as a sufficiently high jump in bytes
         pattern_start = abs(diff_pattern_starts) > 20 * max_assumed_pattern_size
-        n_patterns = np.nonzero(pattern_start)[0][0] + 1
+        n_patterns = np.nonzero(pattern_start)[0][0]
+
+        # Not sure why this is needed only for these versions...
+        if self.version < 5:
+            n_patterns += 1
+
+        _logger.debug(f"Guessed number of patterns: {n_patterns}")
 
         return n_patterns
+
+    def get_estimated_file_size(self) -> int:
+        n = self.n_patterns
+        file_header_size = self.pattern_starts_byte_position + n * 8
+        pattern_header_size = self.get_pattern_header_size()
+        pattern_footer_size = self.get_pattern_footer_size()
+        pattern_section_size = pattern_header_size + self.n_bytes + pattern_footer_size
+        return file_header_size + n * pattern_section_size

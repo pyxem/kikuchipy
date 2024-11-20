@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+import os
+
 import dask.array as da
 import numpy as np
 import pytest
@@ -113,3 +115,30 @@ class TestOxfordBinaryReader:
         with open(oxford_binary_file.name, mode="rb") as f:
             fox = OxfordBinaryFileReader(f)
             assert fox.n_patterns == n_patterns
+
+    @pytest.mark.parametrize(
+        "oxford_binary_file",
+        [
+            ((2, 3), (50, 50), np.uint8, 5, False, True),
+            ((2, 3), (50, 50), np.uint8, 6, False, True),
+        ],
+        indirect=["oxford_binary_file"],
+    )
+    def test_version_5(self, oxford_binary_file):
+        with open(oxford_binary_file.name, mode="rb") as f:
+            fox = OxfordBinaryFileReader(f)
+            assert fox.n_patterns == 6
+
+    @pytest.mark.parametrize(
+        "oxford_binary_file, file_size",
+        [
+            (((2, 3), (50, 50), np.uint8, 5, False, True), 15309),
+            (((2, 3), (50, 50), np.uint8, 4, False, True), 15261),
+        ],
+        indirect=["oxford_binary_file"],
+    )
+    def test_estimated_file_size(self, oxford_binary_file, file_size):
+        with open(oxford_binary_file.name, mode="rb") as f:
+            fox = OxfordBinaryFileReader(f)
+            assert fox.get_estimated_file_size() == file_size
+            assert os.path.getsize(oxford_binary_file.name) == file_size
