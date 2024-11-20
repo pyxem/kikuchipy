@@ -22,9 +22,9 @@ import kikuchipy as kp
 
 class TestOxfordH5EBSD:
     def test_load(
-        self, oxford_h5ebsd_path, ni_small_axes_manager, assert_dictionary_func
+        self, oxford_h5ebsd_file, ni_small_axes_manager, assert_dictionary_func
     ):
-        s = kp.load(oxford_h5ebsd_path / "patterns.h5oina")
+        s = kp.load(oxford_h5ebsd_file)
         assert s.data.shape == (3, 3, 60, 60)
         assert_dictionary_func(s.axes_manager.as_dictionary(), ni_small_axes_manager)
         assert s.metadata.Acquisition_instrument.SEM.beam_energy == 20
@@ -40,3 +40,8 @@ class TestOxfordH5EBSD:
         assert np.isclose(det.sample_tilt, 69.9, atol=0.1)
         assert det.binning == 8
         assert np.isclose(det.tilt, 1.5)
+
+    def test_load_unprocessed_patterns(self, oxford_h5ebsd_file):
+        s1 = kp.load(oxford_h5ebsd_file)
+        s2 = kp.load(oxford_h5ebsd_file, processed=False)
+        assert np.allclose(s1.data + 1, s2.data)
