@@ -316,7 +316,7 @@ class TestPCOptimization:
         assert np.isclose(det.tilt, det0.tilt)
         assert np.isclose(det.px_size, det0.px_size)
 
-    @pytest.mark.flaky(reruns=5)
+    @pytest.mark.flaky(reruns=3)
     def test_optimize_pc_pso(self, worker_id):
         det0 = self.signal.detector
 

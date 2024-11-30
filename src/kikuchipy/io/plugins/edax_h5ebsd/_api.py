@@ -43,6 +43,10 @@ class EDAXH5EBSDReader(H5EBSDReader):
     def __init__(self, filename: str, **kwargs) -> None:
         super().__init__(filename, **kwargs)
 
+    @property
+    def patterns_name(self) -> str:
+        return "Pattern"
+
     def scan2dict(self, group: h5py.Group, lazy: bool = False) -> dict:
         """Read (possibly lazily) patterns from group.
 

@@ -25,11 +25,26 @@ Changed
 Removed
 -------
 
+Fixed
+-----
+
 Deprecated
 ----------
 
+0.11.1 (2024-11-30)
+===================
+
+Added
+-----
+- Reading of unprocessed patterns from H5OINA files is now possible.
+  (`#701 <https://github.com/pyxem/kikuchipy/pull/701>`_)
+
 Fixed
 -----
+- Reading of Oxford binary `*.ebsp` files with version 6.
+  (`#700 <https://github.com/pyxem/kikuchipy/pull/700>`_)
+- Unnecessary reading of unprocessed patterns from H5OINA files into the EBSD original
+  metadata. (`#701 <https://github.com/pyxem/kikuchipy/pull/701>`_)
 
 0.11.0 (2024-11-10)
 ===================
