@@ -123,6 +123,10 @@ src = ""
 [tool.hatch.build.targets.wheel]
 include = ["src/kikuchipy"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"tests/" = "kikuchipy/tests"
+"conftest.py" = "kikuchipy/conftest.py"
+
 [tool.coverage.report]
 precision = 2
 
