@@ -55,8 +55,7 @@ if constants.installed["pyvista"]:
     pv.global_theme.interactive = False
 
 
-DATA_PATH = Path(__file__).parent / "src/kikuchipy/data"
-DATA_PATH = DATA_PATH.resolve()
+DATA_PATH = Path(kp.data.__file__).parent.resolve()
 
 # ------------------------------ Setup ------------------------------ #
 
