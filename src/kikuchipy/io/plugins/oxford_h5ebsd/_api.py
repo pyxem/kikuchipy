@@ -45,8 +45,15 @@ class OxfordH5EBSDReader(H5EBSDReader):
         Keyword arguments passed to :class:`h5py.File`.
     """
 
-    def __init__(self, filename: str | Path, **kwargs) -> None:
+    pattern_dataset_names = ["Unprocessed Patterns", "Processed Patterns"]
+
+    def __init__(self, filename: str | Path, processed: bool, **kwargs) -> None:
         super().__init__(filename, **kwargs)
+        self._patterns_name = self.pattern_dataset_names[int(processed)]
+
+    @property
+    def patterns_name(self) -> str:
+        return self._patterns_name
 
     def scan2dict(self, group: h5py.Group, lazy: bool = False) -> dict:
         """Read (possibly lazily) patterns from group.
@@ -73,7 +80,7 @@ class OxfordH5EBSDReader(H5EBSDReader):
         """
         header_group = _hdf5group2dict(group["EBSD/Header"], recursive=True)
         data_group = _hdf5group2dict(
-            group["EBSD/Data"], data_dset_names=[self.patterns_name]
+            group["EBSD/Data"], data_dset_names=self.pattern_dataset_names
         )
 
         # Get data shapes
@@ -155,6 +162,7 @@ def file_reader(
     filename: str | Path,
     scan_group_names: str | list[str] | None = None,
     lazy: bool = False,
+    processed: bool = True,
     **kwargs,
 ) -> list[dict]:
     """Read electron backscatter diffraction patterns, a crystal map,
@@ -175,6 +183,9 @@ def file_reader(
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
         is False.
+    processed
+        Whether to read processed patterns. Default is True. If False,
+        try to read unprocessed patterns if available.
     **kwargs
         Keyword arguments passed to :class:`h5py.File`.
 
@@ -185,6 +196,12 @@ def file_reader(
         "metadata", "original_metadata", "detector", and "xmap". This
         dictionary can be passed as keyword arguments to create an
         :class:`~kikuchipy.signals.EBSD` signal.
+
+    Raises
+    ------
+    KeyError
+        If *processed* is False and unprocessed patterns are not
+        available.
     """
-    reader = OxfordH5EBSDReader(filename, **kwargs)
+    reader = OxfordH5EBSDReader(filename, processed, **kwargs)
     return reader.read(scan_group_names, lazy)

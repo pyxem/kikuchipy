@@ -6,8 +6,10 @@ from datetime import datetime
 import inspect
 import os
 from os.path import dirname, relpath
+from pathlib import Path
 import re
 import sys
+import warnings
 
 from numpydoc.docscrape_sphinx import SphinxDocString
 import pyvista as pv
@@ -53,7 +55,6 @@ extensions = [
 # Create links to references within kikuchipy's documentation to these
 # packages
 intersphinx_mapping = {
-    # Package
     "black": ("https://black.readthedocs.io/en/stable", None),
     "conda": ("https://docs.conda.io/projects/conda/en/latest", None),
     "coverage": ("https://coverage.readthedocs.io/en/latest", None),
@@ -358,7 +359,15 @@ sphinx_gallery_conf = {
 }
 autosummary_generate = True
 
-# Download example datasets prior to building the docs
-print("[kikuchipy] Downloading example datasets (if not found in cache)")
-_ = kp.data.nickel_ebsd_large(allow_download=True)
-_ = kp.data.si_ebsd_moving_screen(0, allow_download=True)
+
+def custom_setup():
+    """Download files used in the documentation."""
+    print("[kikuchipy] Downloading example datasets (if not found in cache)")
+    try:
+        _ = kp.data.nickel_ebsd_large(allow_download=True)
+        _ = kp.data.si_ebsd_moving_screen(0, allow_download=True)
+    except () as e:
+        warnings.warn(f"Download failed. Error: {e}")
+
+
+custom_setup()
