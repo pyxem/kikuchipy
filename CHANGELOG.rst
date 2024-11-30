@@ -13,7 +13,7 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
-0.11.1 (2024-11-24)
+0.11.1 (2024-11-30)
 ===================
 
 Added
