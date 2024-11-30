@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Callable
 from numba import njit
 import numpy as np
 
+from kikuchipy.detectors import EBSDDetector
 from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.indexing._refinement._objective_functions import (
     _refine_orientation_objective_function,
@@ -35,7 +36,7 @@ from kikuchipy.pattern._pattern import (
     _rescale_without_min_max_1d_float32,
     _zero_mean_sum_square_1d_float32,
 )
-from kikuchipy.signals.util._master_pattern import _get_direction_cosines_for_fixed_pc
+from kikuchipy.signals.util._master_pattern import _get_direction_cosines_from_detector
 
 if TYPE_CHECKING:  # pragma: no cover
     from kikuchipy.constants import installed
@@ -163,15 +164,16 @@ def _refine_orientation_solver_scipy(
     pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
     if direction_cosines is None:
-        direction_cosines = _get_direction_cosines_for_fixed_pc(
-            pcx=pcx,
-            pcy=pcy,
-            pcz=pcz,
-            nrows=nrows,
-            ncols=ncols,
+        det = EBSDDetector(
+            shape=(nrows, ncols),
+            pc=(pcx, pcy, pcz),
             tilt=tilt,
             azimuthal=azimuthal,
             sample_tilt=sample_tilt,
+        )
+
+        direction_cosines = _get_direction_cosines_from_detector(
+            detector=det,
             signal_mask=signal_mask,
         )
 
@@ -489,15 +491,16 @@ def _refine_orientation_solver_nlopt(
 
     # Get direction cosines if a unique PC per pattern is used
     if direction_cosines is None:
-        direction_cosines = _get_direction_cosines_for_fixed_pc(
-            pcx=pcx,
-            pcy=pcy,
-            pcz=pcz,
-            nrows=nrows,
-            ncols=ncols,
+        det = EBSDDetector(
+            shape=(nrows, ncols),
+            pc=(pcx, pcy, pcz),
             tilt=tilt,
             azimuthal=azimuthal,
             sample_tilt=sample_tilt,
+        )
+
+        direction_cosines = _get_direction_cosines_from_detector(
+            detector=det,
             signal_mask=signal_mask,
         )
 

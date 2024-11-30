@@ -22,7 +22,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 from diffsims.crystallography import ReciprocalLatticeVector
 from matplotlib.figure import Figure
@@ -215,10 +215,11 @@ class EBSDDetector:
         """
         self.shape = shape
         self.px_size = float(px_size)
-        self.binning: float = float(binning)
-        self.tilt = float(tilt)
-        self.azimuthal = float(azimuthal)
+        self.binning = float(binning)
+        self._tilt = float(tilt)
+        self._azimuthal = float(azimuthal)
         self.sample_tilt = float(sample_tilt)
+        self._euler = np.array([self.azimuthal, 90.0 + self.tilt, 0.0]).astype(float)
         self.pc = pc
         if convention is None:
             convention = "bruker"
@@ -231,6 +232,7 @@ class EBSDDetector:
         sample_tilt = np.round(self.sample_tilt, decimals)
         tilt = np.round(self.tilt, decimals)
         azimuthal = np.round(self.azimuthal, decimals)
+        euler = np.round(self.euler, decimals)
         px_size = np.round(self.px_size, decimals)
         return (
             f"{type(self).__name__}"
@@ -239,9 +241,95 @@ class EBSDDetector:
             f"sample_tilt={sample_tilt}, "
             f"tilt={tilt}, "
             f"azimuthal={azimuthal}, "
+            f"euler=({euler[0]}, {euler[1]}, {euler[2]}), "
             f"binning={self.binning}, "
             f"px_size={px_size} um)"
         )
+
+    @property
+    def tilt(self) -> float:
+        """Return or set the detector tilt angle in degrees.
+
+        When setting:
+            if self.tilt != self.detector_euler[1] - 90,
+            self.euler[1] will be updated for
+            consistency with self.tilt.
+
+        Parameters
+        ----------
+        value : float
+            The desired detector tilt angle in degrees.
+        """
+        return self._tilt
+
+    @tilt.setter
+    def tilt(self, value: float):
+        """Set the detector tilt angle in degrees, if
+        necessary updating self.euler[1]. to
+        ensure consistency.
+        """
+        self._tilt = float(value)
+
+        if not self.euler[1] - 90 == self.tilt:
+            self._euler[1] = self.tilt + 90
+
+    @property
+    def azimuthal(self) -> float:
+        """Return or set the detector azimuthal angle in degrees.
+
+        When setting:
+            if self.azimuthal != self.euler[0],
+            self.euler[0] will be updated for
+            consistency with self.azimuthal.
+
+        Parameters
+        ----------
+        value : float
+            The desired detector azimuthal angle in degrees.
+        """
+        return self._azimuthal
+
+    @azimuthal.setter
+    def azimuthal(self, value: float):
+        """Set the detector azimuthal angle in degrees, if
+        necessary updating self.euler[0] to
+        ensure consistency.
+        """
+        self._azimuthal = float(value)
+
+        if not self.euler[0] == self.azimuthal:
+            self._euler[0] = self.azimuthal
+
+    @property
+    def euler(self) -> np.ndarray:
+        """Return or set the detector Euler angles in degrees.
+
+        When setting:
+            if self.tilt != euler[1] - 90, self.tilt
+            will be updated for consistency with euler.
+
+            if self.azimuthal != euler[0], self.azimuthal
+            will be updated for consistency with euler.
+
+        Parameters
+        ----------
+        value : np.ndarray, list or tuple of three floats
+            The desired values of the detector Euler angles in degrees.
+        """
+        return self._euler
+
+    @euler.setter
+    def euler(self, value: Union[np.ndarray, list, tuple]):
+        """Set the detector Euler angles in degrees, if necessary
+        updating self.tilt and self.azimuthal to ensure consistency.
+        """
+        self._euler = np.array(value).astype(float)
+
+        if not self.euler[1] - 90 == self.tilt:
+            self._tilt = self.euler[1] - 90
+
+        if not self.euler[0] == self.azimuthal:
+            self._azimuthal = self.euler[0]
 
     @property
     def specimen_scintillator_distance(self) -> np.ndarray:
@@ -495,6 +583,30 @@ class EBSDDetector:
         corners[..., 3] = self.x_min**2 + self.y_min**2  # Lo. left
         return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
 
+    @property
+    def u_s(self) -> np.ndarray:
+        """Return the orientation matrix, u_s, which transforms
+        vectors in the sample reference frame, CSs, to the
+        detector reference frame, CSd.
+        """
+        u_sample = Rotation.from_euler([0, self.sample_tilt, 0], degrees=True)
+        u_d = Rotation.from_euler(self.euler, degrees=True)
+        u_d_g = u_d.to_matrix().squeeze()
+        u_detector = Rotation.from_matrix(u_d_g.T)
+        u_s_bruker = u_sample * u_detector
+        u_s_rot = Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
+        u_s = u_s_rot.to_matrix().squeeze()
+        return u_s
+
+    @property
+    def u_s_inv(self) -> np.ndarray:
+        """Return the orientation matrix, u_s_inv, which transforms
+        vectors in the detector reference frame, CSd, to the
+        sample reference frame, CSs, i.e. the inverse of u_s,
+        providing the opposite rotation.
+        """
+        return np.linalg.inv(self.u_s)
+
     @classmethod
     def load(cls, fname: Path | str) -> EBSDDetector:
         """Return an EBSD detector loaded from a text file saved with
@@ -518,6 +630,7 @@ class EBSDDetector:
             "binning",
             "tilt",
             "azimuthal",
+            "euler",
             "sample_tilt",
             "convention",
             "navigation_shape",
@@ -551,12 +664,25 @@ class EBSDDetector:
                 detector_kw[k] = float(value)
             except ():  # pragma: no cover
                 detector_kw[k] = None
+        for k in ["euler"]:
+            euler = detector_kw[k].rstrip(" deg")
+            try:
+                detector_kw[k] = np.array([float(i) for i in euler[1:-1].split(", ")])
+            except ():  # pragma: no cover
+                detector_kw[k] = None
 
         nav_shape = detector_kw.pop("navigation_shape")
         if isinstance(nav_shape, tuple):
             pc = pc.reshape(nav_shape + (3,))
 
-        return cls(pc=pc, **detector_kw)
+        euler = detector_kw.pop("euler")
+
+        det = cls(pc=pc, **detector_kw)
+
+        if not isinstance(euler, type(None)):
+            det.euler = euler
+
+        return det
 
     def crop(self, extent: tuple[int, int, int, int] | list[int]) -> EBSDDetector:
         """Return a new detector with its :attr:`shape` cropped and
@@ -1658,6 +1784,7 @@ class EBSDDetector:
                 f"  binning: {self.binning}\n"
                 f"  tilt: {self.tilt} deg\n"
                 f"  azimuthal: {self.azimuthal} deg\n"
+                f"  euler: ({self.euler[0]}, {self.euler[1]}, {self.euler[2]}) deg\n"
                 f"  sample_tilt: {self.sample_tilt} deg\n"
                 f"  convention: {convention}\n"
                 f"  navigation_shape: {self.navigation_shape}\n\n"
