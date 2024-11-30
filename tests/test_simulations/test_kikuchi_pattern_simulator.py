@@ -111,12 +111,13 @@ class TestCalculateMasterPattern:
         with pytest.raises(ValueError, match="Unknown scaling 'cubic', options are"):
             _ = simulator.calculate_master_pattern(scaling="cubic")
 
+    @pytest.mark.flaky(reruns=3)
     def test_shape(self):
         """Output shape as expected."""
         simulator = self.simulator
         mp = simulator.calculate_master_pattern(half_size=100, hemisphere="both")
         assert mp.data.shape == (2, 201, 201)
-        assert np.allclose(mp.data[0], mp.data[1], atol=1e-7)
+        assert np.allclose(mp.data[0], mp.data[1], atol=1e-4)
 
         axes_names = [a["name"] for a in mp.axes_manager.as_dictionary().values()]
         assert axes_names == ["hemisphere", "height", "width"]

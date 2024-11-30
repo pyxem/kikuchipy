@@ -192,10 +192,7 @@ class TestProjectFromLambert:
     def test_get_direction_cosines(self):
         det = self.detector
         dc = _get_direction_cosines_from_detector(det)
-        assert dc.shape == (
-            det.size,
-            3,
-        )
+        assert dc.shape == (det.size, 3)
         assert np.max(dc) <= 1
 
         dc2 = _get_direction_cosines_for_fixed_pc.py_func(
@@ -493,7 +490,7 @@ class TestProjectFromLambert:
         value = _get_pixel_from_master_pattern.py_func(
             mp, nii[0], nij[0], niip[0], nijp[0], di[0], dj[0], dim[0], djm[0]
         )
-        assert value == 1.0
+        assert np.isclose(value, 1)
 
     def test_get_cosine_sine_of_alpha_and_azimuthal(self):
         """Make sure the Numba function is covered."""
