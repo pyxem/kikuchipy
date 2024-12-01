@@ -174,7 +174,7 @@ def _dict2signal(
             record_by = md["Signal"]["record_by"]
             if record_by != "image":
                 raise ValueError(
-                    "kikuchipy only supports `record_by = image`, not " f"{record_by}"
+                    f"kikuchipy only supports `record_by = image`, not {record_by}"
                 )
             del md["Signal"]["record_by"]
         if "Signal" in md and "signal_type" in md["Signal"]:
