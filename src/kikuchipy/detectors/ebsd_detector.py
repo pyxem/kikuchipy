@@ -22,7 +22,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 from diffsims.crystallography import ReciprocalLatticeVector
 from matplotlib.figure import Figure
@@ -90,6 +90,9 @@ class EBSDDetector:
         Sample tilt about the sample RD (downwards) axis. A positive
         angle means the sample normal moves towards the right looking
         from the sample to the detector. Default is 0.
+    twist
+        Rotation angle of the detector about the normal to
+        the detector screen, Zd. Default is 0.
     sample_tilt
         Sample tilt from horizontal in degrees. Default is 70.
     pc
@@ -204,20 +207,23 @@ class EBSDDetector:
         binning: int = 1,
         tilt: float = 0.0,
         azimuthal: float = 0.0,
+        twist: float = 0.0,
         sample_tilt: float = 70.0,
         pc: np.ndarray | list | tuple = (0.5, 0.5, 0.5),
         convention: str | None = None,
     ) -> None:
         """Create an EBSD detector with a shape, pixel size, binning
         factor, sample and detector tilt about the detector X axis,
-        azimuthal tilt about the detector Y axis and one or more
-        projection/pattern centers (PCs).
+        azimuthal tilt about the detector Y axis, twist about the
+        detector Z axis and one or more projection/pattern
+        centers (PCs).
         """
         self.shape = shape
         self.px_size = float(px_size)
-        self.binning: float = float(binning)
+        self.binning = float(binning)
         self.tilt = float(tilt)
         self.azimuthal = float(azimuthal)
+        self.twist = float(twist)
         self.sample_tilt = float(sample_tilt)
         self.pc = pc
         if convention is None:
@@ -242,6 +248,11 @@ class EBSDDetector:
             f"binning={self.binning}, "
             f"px_size={px_size} um)"
         )
+
+    @property
+    def euler(self) -> np.ndarray:
+        """Return the detector Euler angles (Bunge convention: ZXZ) in degrees."""
+        return np.array([self.azimuthal, 90.0 + self.tilt, self.twist], dtype=float)
 
     @property
     def specimen_scintillator_distance(self) -> np.ndarray:
@@ -518,6 +529,7 @@ class EBSDDetector:
             "binning",
             "tilt",
             "azimuthal",
+            "twist",
             "sample_tilt",
             "convention",
             "navigation_shape",
@@ -545,7 +557,7 @@ class EBSDDetector:
                 detector_kw[k] = tuple(int(i) for i in shape[1:-1].split(","))
             except ValueError:  # pragma: no cover
                 detector_kw[k] = None
-        for k in ["px_size", "binning", "tilt", "azimuthal", "sample_tilt"]:
+        for k in ["px_size", "binning", "tilt", "azimuthal", "twist", "sample_tilt"]:
             value = detector_kw[k].rstrip(" deg")
             try:
                 detector_kw[k] = float(value)
@@ -556,7 +568,9 @@ class EBSDDetector:
         if isinstance(nav_shape, tuple):
             pc = pc.reshape(nav_shape + (3,))
 
-        return cls(pc=pc, **detector_kw)
+        det = cls(pc=pc, **detector_kw)
+
+        return det
 
     def crop(self, extent: tuple[int, int, int, int] | list[int]) -> EBSDDetector:
         """Return a new detector with its :attr:`shape` cropped and
@@ -1658,6 +1672,7 @@ class EBSDDetector:
                 f"  binning: {self.binning}\n"
                 f"  tilt: {self.tilt} deg\n"
                 f"  azimuthal: {self.azimuthal} deg\n"
+                f"  twist: {self.twist} deg\n"
                 f"  sample_tilt: {self.sample_tilt} deg\n"
                 f"  convention: {convention}\n"
                 f"  navigation_shape: {self.navigation_shape}\n\n"

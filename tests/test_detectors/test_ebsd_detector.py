@@ -1084,12 +1084,12 @@ class TestGetIndexer:
 
 class TestSaveLoadDetector:
     @pytest.mark.parametrize(
-        "nav_shape, shape, convention, sample_tilt, tilt, px_size, binning, azimuthal",
+        "nav_shape, shape, convention, sample_tilt, tilt, px_size, binning, azimuthal, twist",
         [
-            ((3, 4), (10, 20), "bruker", 70, 0, 70, 1, 0),
-            ((1, 5), (5, 5), "tsl", 69.5, 3.14, 57.2, 2, 3.7),
-            ((4, 3), (6, 7), "emsoft", -69.5, -3.14, 57.2, 2, -3.7),
-            ((3, 2), (5, 7), "oxford", 71.3, 1.2, 90.3, 3, 0.1),
+            ((3, 4), (10, 20), "bruker", 70, 0, 70, 1, 0, 0),
+            ((1, 5), (5, 5), "tsl", 69.5, 3.14, 57.2, 2, 3.7, 0.003),
+            ((4, 3), (6, 7), "emsoft", -69.5, -3.14, 57.2, 2, -3.7, -1.23),
+            ((3, 2), (5, 7), "oxford", 71.3, 1.2, 90.3, 3, 0.1, 0.0465),
         ],
     )
     def test_save_load_detector(
@@ -1103,6 +1103,7 @@ class TestSaveLoadDetector:
         px_size,
         binning,
         azimuthal,
+        twist,
     ):
         det0 = kp.detectors.EBSDDetector(
             shape=shape,
@@ -1112,6 +1113,7 @@ class TestSaveLoadDetector:
             px_size=px_size,
             binning=binning,
             azimuthal=azimuthal,
+            twist=twist,
             convention=convention,
         )
         det1 = det0.extrapolate_pc(
@@ -1133,6 +1135,7 @@ class TestSaveLoadDetector:
         assert np.isclose(det2.px_size, det1.px_size)
         assert det2.binning == det1.binning
         assert np.isclose(det2.azimuthal, det1.azimuthal)
+        assert np.isclose(det2.twist, det1.twist)
 
     def test_save_detector_raises(self, tmp_path):
         det = kp.detectors.EBSDDetector()
