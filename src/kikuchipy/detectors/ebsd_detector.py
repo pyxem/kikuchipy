@@ -237,6 +237,7 @@ class EBSDDetector:
         sample_tilt = np.round(self.sample_tilt, decimals)
         tilt = np.round(self.tilt, decimals)
         azimuthal = np.round(self.azimuthal, decimals)
+        twist = np.round(self.twist, decimals)
         px_size = np.round(self.px_size, decimals)
         return (
             f"{type(self).__name__}"
@@ -245,6 +246,7 @@ class EBSDDetector:
             f"sample_tilt={sample_tilt}, "
             f"tilt={tilt}, "
             f"azimuthal={azimuthal}, "
+            f"twist={twist}, "
             f"binning={self.binning}, "
             f"px_size={px_size} um)"
         )
@@ -537,15 +539,6 @@ class EBSDDetector:
             Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
         )
         return sample_to_detector
-
-    @property
-    def u_s_inv(self) -> np.ndarray:
-        """Return the orientation matrix, u_s_inv, which transforms
-        vectors in the detector reference frame, CSd, to the
-        sample reference frame, CSs, i.e. the inverse of u_s,
-        providing the opposite rotation.
-        """
-        return np.linalg.inv(self.u_s)
 
     @classmethod
     def load(cls, fname: Path | str) -> EBSDDetector:

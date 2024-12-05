@@ -112,11 +112,11 @@ class TestEBSDDetector:
     def test_repr(self, pc1):
         """Expected string representation."""
         det = kp.detectors.EBSDDetector(
-            shape=(1, 2), px_size=3, binning=4, tilt=5, azimuthal=2, pc=pc1
+            shape=(1, 2), px_size=3, binning=4, tilt=5, azimuthal=2, twist=1.02, pc=pc1
         )
         assert repr(det) == (
             "EBSDDetector(shape=(1, 2), pc=(0.421, 0.779, 0.505), sample_tilt=70.0, "
-            "tilt=5.0, azimuthal=2.0, binning=4.0, px_size=3.0 um)"
+            "tilt=5.0, azimuthal=2.0, twist=1.02, binning=4.0, px_size=3.0 um)"
         )
 
     def test_deepcopy(self, pc1):
