@@ -73,7 +73,7 @@ def get_coordinate_conversions(gnomonic_bounds: np.ndarray, bounds: np.ndarray) 
 
     >>> import numpy as np
     >>> import kikuchipy as kp
-    >>> from kp._utils._detector_coordinates import get_coordinate_conversions
+    >>> from kikuchipy._utils._detector_coordinates import get_coordinate_conversions
     >>> det = kp.detectors.EBSDDetector(
     ...     shape=(60, 60),
     ...     pc=np.ones((10, 20, 3)) * (0.421, 0.779, 0.505),
@@ -190,7 +190,7 @@ def convert_coordinates(
 
     >>> import numpy as np
     >>> import kikuchipy as kp
-    >>> from kp._utils._detector_coordinates import (get_coordinate_conversions, convert_coordinates)
+    >>> from kikuchipy._utils._detector_coordinates import (get_coordinate_conversions, convert_coordinates)
     >>> s = kp.data.nickel_ebsd_small()
     >>> det = s.detector
     >>> det.navigation_shape
@@ -207,7 +207,7 @@ def convert_coordinates(
 
     >>> import numpy as np
     >>> import kikuchipy as kp
-    >>> from kp._utils._detector_coordinates import (get_coordinate_conversions, convert_coordinates)
+    >>> from kikuchipy._utils._detector_coordinates import (get_coordinate_conversions, convert_coordinates)
     >>> s = kp.data.nickel_ebsd_small()
     >>> det = s.detector
     >>> det.navigation_shape
@@ -224,7 +224,7 @@ def convert_coordinates(
 
     >>> import numpy as np
     >>> import kikuchipy as kp
-    >>> from kp._utils._detector_coordinates import (get_coordinate_conversions, convert_coordinates)
+    >>> from kikuchipy._utils._detector_coordinates import (get_coordinate_conversions, convert_coordinates)
     >>> s = kp.data.nickel_ebsd_small()
     >>> det = s.detector
     >>> det.navigation_shape
@@ -241,7 +241,7 @@ def convert_coordinates(
 
     >>> import numpy as np
     >>> import kikuchipy as kp
-    >>> from kp._utils._detector_coordinates import (get_coordinate_conversions, convert_coordinates)
+    >>> from kikuchipy._utils._detector_coordinates import (get_coordinate_conversions, convert_coordinates)
     >>> s = kp.data.nickel_ebsd_small()
     >>> det = s.detector
     >>> det.navigation_shape

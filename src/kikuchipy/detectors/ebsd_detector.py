@@ -189,7 +189,7 @@ class EBSDDetector:
     ...     sample_tilt=70,
     ... )
     >>> det
-    EBSDDetector(shape=(60, 60), pc=(0.421, 0.221, 0.505), sample_tilt=70.0, tilt=5.0, azimuthal=0.0, binning=8.0, px_size=70.0 um)
+    EBSDDetector(shape=(60, 60), pc=(0.421, 0.221, 0.505), sample_tilt=70.0, tilt=5.0, azimuthal=0.0, twist=0.0, binning=8.0, px_size=70.0 um)
     >>> det.navigation_shape
     (10, 20)
     >>> det.bounds
@@ -689,11 +689,11 @@ class EBSDDetector:
         array([[[ 0.36223464,  0.00664684],
                 [ 0.35762801, -0.00304659],
                 [ 0.35361398, -0.00042112]],
-
+        <BLANKLINE>
                [[ 0.36432453,  0.00973461],
                 [ 0.35219231,  0.00567801],
                 [ 0.34417285,  0.00404584]],
-
+        <BLANKLINE>
                [[ 0.36296371,  0.00072557],
                 [ 0.34447751,  0.00538137],
                 [ 0.36136688,  0.00180754]]])
@@ -743,9 +743,9 @@ class EBSDDetector:
         >>> import kikuchipy as kp
         >>> det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
         >>> det
-        EBSDDetector(shape=(6, 6), pc=(0.5, 0.333, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=1.0, px_size=1.0 um)
+        EBSDDetector(shape=(6, 6), pc=(0.5, 0.333, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, twist=0.0, binning=1.0, px_size=1.0 um)
         >>> det.crop((1, 5, 2, 6))
-        EBSDDetector(shape=(4, 4), pc=(0.25, 0.25, 0.75), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=1.0, px_size=1.0 um)
+        EBSDDetector(shape=(4, 4), pc=(0.25, 0.25, 0.75), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, twist=0.0, binning=1.0, px_size=1.0 um)
 
         Plot a cropped detector with the PC on a cropped pattern
 
@@ -1681,12 +1681,12 @@ class EBSDDetector:
         ... shape=(480, 640), pc=(0.4, 0.3, 0.5), px_size=70, sample_tilt=70
         ... )
         >>> det0
-        EBSDDetector(shape=(480, 640), pc=(0.4, 0.3, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=1.0, px_size=70.0 um)
+        EBSDDetector(shape=(480, 640), pc=(0.4, 0.3, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, twist=0.0, binning=1.0, px_size=70.0 um)
         >>> det = det0.extrapolate_pc(
         ... pc_indices=[0, 0], navigation_shape=(5, 10), step_sizes=(20, 20)
         ... )
         >>> det
-        EBSDDetector(shape=(480, 640), pc=(0.398, 0.299, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=1.0, px_size=70.0 um)
+        EBSDDetector(shape=(480, 640), pc=(0.398, 0.299, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, twist=0.0, binning=1.0, px_size=70.0 um)
 
         Plot PC values in maps
 
