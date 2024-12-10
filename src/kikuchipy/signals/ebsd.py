@@ -153,7 +153,7 @@ class EBSD(KikuchipySignal2D):
     >>> s
     <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
     >>> s.detector
-    EBSDDetector(shape=(60, 60), pc=(0.425, 0.213, 0.501), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=8.0, px_size=1.0 um)
+    EBSDDetector(shape=(60, 60), pc=(0.425, 0.213, 0.501), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, twist=0.0, binning=8.0, px_size=1.0 um)
     >>> s.static_background
     array([[84, 87, 90, ..., 27, 29, 30],
            [87, 90, 93, ..., 27, 28, 30],

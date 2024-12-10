@@ -16,6 +16,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import dask.array as da
+from diffsims.crystallography import ReciprocalLatticeVector
 from hyperspy._signals.signal2d import Signal2D
 import hyperspy.api as hs
 import numpy as np
@@ -24,8 +25,12 @@ from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
+from kikuchipy._utils._detector_coordinates import (
+    convert_coordinates,
+    get_coordinate_conversions,
+)
+from kikuchipy._utils.numba import rotate_vector
 from kikuchipy.signals.util._master_pattern import (
-    _get_cosine_sine_of_alpha_and_azimuthal,
     _get_direction_cosines_for_fixed_pc,
     _get_direction_cosines_for_varying_pc,
     _get_direction_cosines_from_detector,
@@ -190,23 +195,31 @@ class TestProjectFromLambert:
     )
 
     def test_get_direction_cosines(self):
+        """Make sure the Numba function is covered."""
         det = self.detector
         dc = _get_direction_cosines_from_detector(det)
         assert dc.shape == (det.size, 3)
         assert np.max(dc) <= 1
 
         dc2 = _get_direction_cosines_for_fixed_pc.py_func(
-            pcx=det.pcx,
-            pcy=det.pcy,
-            pcz=det.pcz,
+            gnomonic_bounds=det.gnomonic_bounds.squeeze().astype(np.float64),
+            pcz=det.pc.squeeze().astype(np.float64)[2],
             nrows=det.nrows,
             ncols=det.ncols,
-            tilt=det.tilt,
-            azimuthal=det.azimuthal,
-            sample_tilt=det.sample_tilt,
+            om_detector_to_sample=(~det.sample_to_detector).to_matrix().squeeze(),
+            signal_mask=np.ones(det.size, dtype=bool),
+        )
+
+        dc3 = _get_direction_cosines_for_fixed_pc(
+            gnomonic_bounds=det.gnomonic_bounds.squeeze().astype(np.float64),
+            pcz=det.pc.squeeze().astype(np.float64)[2],
+            nrows=det.nrows,
+            ncols=det.ncols,
+            om_detector_to_sample=(~det.sample_to_detector).to_matrix().squeeze(),
             signal_mask=np.ones(det.size, dtype=bool),
         )
         assert np.allclose(dc, dc2)
+        assert np.allclose(dc2, dc3)
 
     def test_get_patterns(self, emsoft_ebsd_file):
         emsoft_key = kp.load(emsoft_ebsd_file)
@@ -384,8 +397,8 @@ class TestProjectFromLambert:
         sim3 = mp.get_patterns(detector=det3, **kwargs)
 
         assert not np.allclose(sim1.data, sim2.data)
-        assert np.allclose(sim2.data.mean(), 43.56, atol=1e-2)
-        assert np.allclose(sim3.data.mean(), 43.39, atol=1e-2)
+        assert np.allclose(sim2.data.mean(), 43.51, atol=1e-2)
+        assert np.allclose(sim3.data.mean(), 43.30, atol=1e-2)
 
     def test_project_patterns_from_master_pattern(self):
         """Cover the Numba functions."""
@@ -492,34 +505,41 @@ class TestProjectFromLambert:
         )
         assert np.isclose(value, 1)
 
-    def test_get_cosine_sine_of_alpha_and_azimuthal(self):
-        """Make sure the Numba function is covered."""
-        values = _get_cosine_sine_of_alpha_and_azimuthal.py_func(
-            sample_tilt=70, tilt=10, azimuthal=5
-        )
-        assert np.allclose(values, [0.866, 0.5, 0.996, 0.087], atol=1e-3)
-
     def test_get_direction_cosines_for_multiple_pcs(self):
         """Make sure the Numba function is covered."""
         det = self.detector
         dc0 = _get_direction_cosines_from_detector(det)
+
         nav_shape = (2, 3)
         det.pc = np.full(nav_shape + (3,), det.pc)
         nrows, ncols = det.shape
-        dc = _get_direction_cosines_for_varying_pc.py_func(
-            pcx=det.pcx.ravel(),
-            pcy=det.pcy.ravel(),
-            pcz=det.pcz.ravel(),
-            nrows=nrows,
-            ncols=ncols,
-            tilt=det.tilt,
-            azimuthal=det.azimuthal,
-            sample_tilt=det.sample_tilt,
+
+        gnomonic_bounds = det.gnomonic_bounds.reshape(
+            (np.prod(det.navigation_shape), 4)
+        ).astype(np.float64)
+        pcz = det.pc_flattened.T.astype(np.float64)[2]
+
+        dc1 = _get_direction_cosines_for_varying_pc.py_func(
+            gnomonic_bounds=gnomonic_bounds,
+            pcz=pcz,
+            nrows=det.nrows,
+            ncols=det.ncols,
+            om_detector_to_sample=(~det.sample_to_detector).to_matrix().squeeze(),
             signal_mask=np.ones(det.size, dtype=bool),
         )
 
-        assert np.allclose(dc0, dc[0])
-        assert dc.shape == (np.prod(nav_shape), nrows * ncols, 3)
+        dc2 = _get_direction_cosines_for_varying_pc(
+            gnomonic_bounds=gnomonic_bounds,
+            pcz=pcz,
+            nrows=det.nrows,
+            ncols=det.ncols,
+            om_detector_to_sample=(~det.sample_to_detector).to_matrix().squeeze(),
+            signal_mask=np.ones(det.size, dtype=bool),
+        )
+
+        assert np.allclose(dc0, dc1[0])
+        assert np.allclose(dc1[0], dc2[0])
+        assert dc1.shape == (np.prod(nav_shape), nrows * ncols, 3)
 
 
 class TestMasterPatternPlotting:
@@ -755,3 +775,388 @@ class TestLambertProjection:
         ]
         assert np.allclose(_vector2lambert.py_func(xyz), lambert_xy)
         assert np.allclose(_vector2lambert(xyz), lambert_xy)
+
+
+class TestFitPatternDetectorOrientation:
+    """
+    Test the fit between an EBSD pattern generated
+    from a master pattern and an associated
+    GeometricalKikuchiPatternSimulation for different
+    detector orientations.
+    """
+
+    detector = kp.detectors.EBSDDetector(
+        shape=(480, 640), px_size=50, pc=(20, 20, 15000), convention="emsoft4"
+    )
+
+    phase = kp.data.nickel_ebsd_master_pattern_small().phase
+
+    hkl = [(1, 1, 1), (2, 0, 0), (2, 2, 0), (3, 1, 1)]
+
+    ref = ReciprocalLatticeVector(phase=phase, hkl=hkl)
+    ref = ref.symmetrise()
+
+    simulator = kp.simulations.KikuchiPatternSimulator(ref)
+
+    rotations = Rotation.from_euler([23, 14, 5], degrees=True)
+
+    # Transformation from CSs to cartesian crystal reference frame CSc
+    u_o = rotations.to_matrix().squeeze()
+
+    # Transformation from CSc to direct crystal reference frame CSk
+    u_a = phase.structure.lattice.base
+
+    def setup_detector_sim_and_u_os(self, tilt, azimuthal, twist):
+        det = self.detector.deepcopy()
+        det.tilt = tilt
+        det.azimuthal = azimuthal
+        det.twist = twist
+
+        sim_lines = self.simulator.on_detector(det, self.rotations)
+
+        u_os = np.matmul(self.u_o, det.sample_to_detector.to_matrix().squeeze())
+
+        return det, sim_lines, u_os
+
+    def setup_za_and_cds(self, zone_axes, sim_lines, det):
+        """Find the indices of the zone_axes in the
+        GeometricalKikuchiPatternSimulation (sim_lines).
+        Find the gnomonic coordinates of these zone axes.
+        Then obtain convert these into pixel coordinates
+        on the detector and round to the nearest pixel.
+        Return the indices of the zone axes, the
+        conversion dict from pix to gn and back, and
+        the coordinates of the nearest detector pixels
+        to the three zone axes.
+        """
+        za_idx = [
+            index_row_in_array(sim_lines._zone_axes.vector.uvw, i) for i in zone_axes
+        ]
+
+        x_gn = sim_lines._zone_axes.x_gnomonic[0, za_idx]
+        y_gn = sim_lines._zone_axes.y_gnomonic[0, za_idx]
+        cds_gn = np.stack((x_gn, y_gn), axis=1)
+
+        conversions = get_coordinate_conversions(det.gnomonic_bounds, det.bounds)
+        cds_px = convert_coordinates(cds_gn, "gn_to_pix", conversions)
+
+        cds_px_int = np.squeeze(np.around(cds_px, decimals=0).astype(int))
+
+        return za_idx, conversions, cds_px_int
+
+    def get_a_angles(self, sim_lines, za_idx, u_os):
+        """Check that the GeometricalKikuchiPatternSimulation
+        is self-consistent. We do this by taking the vectors
+        in the detector reference frame of 3 zone axes in
+        the simulation, transforming these vectors from CSd
+        to the cartesian crystal reference frame, CSc, and
+        measuring the angle between these and vectors
+        transformed from the uvw indices of the zone axes
+        into the cartesian crystal reference frame
+        i.e. CSk to CSc. These angles (a_ang) should all be
+        zero if the GeometricalKikuchiPatternSimulation is
+        self-consistent. This is tested later.
+        The a_ang are returned.
+        """
+        # CSk to CSc:
+        uvw = sim_lines._zone_axes.vector.uvw[za_idx]
+        d_vec = np.matmul(uvw, self.u_a)
+        N1 = np.sqrt(np.sum(np.square(d_vec), axis=1))
+        d_vec_n = d_vec / np.expand_dims(N1, 1)
+
+        # CSd to CSc:
+        za_vec = sim_lines._zone_axes.vector_detector[0, za_idx].data
+        za_vec_trans = np.matmul(za_vec, np.linalg.inv(u_os)).squeeze()
+        N2 = np.sqrt(np.sum(np.square(za_vec_trans), axis=1))
+        za_vec_trans_n = za_vec_trans / np.expand_dims(N2, 1)
+
+        # angles between the two sets of vectors:
+        a_ang = np.array(
+            [
+                np.rad2deg(
+                    np.arccos(
+                        np.around(
+                            np.dot(za_vec_trans_n[i, :], d_vec_n[i, :]), decimals=8
+                        )
+                    )
+                )
+                for i in range(3)
+            ]
+        )
+
+        return a_ang, d_vec_n
+
+    def get_d_ang(self, cds_px_int, conversions, u_os, d_vec_n, det):
+        """Find the gnomonic coordinates of the nearest
+        pixel centre to each of the 3 zone axes. Turn them
+        into vectors and transform them from CSd to CSc using
+        the same transformation as the
+        GeometricalKikuchiPatternSimulation. Then
+        calculate the angles (d_ang) between these vectors
+        and the vectors representing the zone axes in CSc but
+        calculated from CSk to CSc (d_vec_n).
+        """
+        # Here we add 0.5 because pixel centres are used by the direction
+        # cosines method and we need to take the same coords for this
+        # alternative approach.
+        cds_gn_int = np.squeeze(
+            convert_coordinates(cds_px_int + 0.5, "pix_to_gn", conversions)
+        )
+
+        vecs = np.hstack(
+            (
+                cds_gn_int * det.pcz,
+                np.repeat(np.atleast_2d(det.pcz), cds_gn_int.shape[0], axis=0),
+            )
+        )
+        N3 = np.sqrt(np.sum(np.square(vecs), axis=1))
+        vecs_n = vecs / np.expand_dims(N3, 1)
+
+        # CSd to CSc:
+        dddd = np.matmul(vecs_n, np.linalg.inv(u_os)).squeeze()
+
+        d_ang = np.array(
+            [
+                np.rad2deg(
+                    np.arccos(np.around(np.dot(dddd[i, :], d_vec_n[i, :]), decimals=8))
+                )
+                for i in range(3)
+            ]
+        )
+
+        return d_ang, dddd
+
+    def get_r_ang_and_n_ang(self, cds_px_int, det, d_vec_n, dddd):
+        """Calculate the direction cosines of all the
+        detector pixels then rotate them to account
+        for the crystal orientation. The resulting
+        vectors are in CSc. Select the vectors
+        corresponding to the pixel centres representing the 3
+        zone axes. Then calculate the angles (r_ang) between
+        these vectors and the vectors representing the
+        zone axes in CSc but calculated from CSk to CSc
+        (d_vec_n). Finally calculate the angles (n_ang) between
+        the two sets of vectors representing the centres of the
+        nearest pixels to the zone axes (one set is from the direction
+        cosines of the detecotr, the other is from the
+        GeometricalKikuchiPatternSimulation). The angles are
+        zero if the transformations used for the direction
+        cosines and for the GeometricalKikuchiPatternSimulation
+        are the same (this is tested later).
+        """
+        # swap columns for i,j array indexing:
+        cds_px_int_ij = cds_px_int[:, ::-1]
+
+        # all detector pixels:
+        r_g_array = _get_direction_cosines_from_detector(det)
+        r_g_array_rot = rotate_vector(self.rotations.data[0], r_g_array)
+        rgarrrot_reshaped = r_g_array_rot.reshape((*self.detector.shape, 3))
+
+        # select vectors corresponding to the nearest pixels to the chosen zone axes
+        rgrar_vec = rgarrrot_reshaped[cds_px_int_ij[:, 0], cds_px_int_ij[:, 1]]
+
+        r_ang = np.array(
+            [
+                np.rad2deg(
+                    np.arccos(
+                        np.around(np.dot(d_vec_n[i, :], rgrar_vec[i, :]), decimals=8)
+                    )
+                )
+                for i in range(3)
+            ]
+        )
+
+        n_ang = np.array(
+            [
+                np.rad2deg(
+                    np.arccos(
+                        np.around(np.dot(dddd[i, :], rgrar_vec[i, :]), decimals=8)
+                    )
+                )
+                for i in range(3)
+            ]
+        )
+
+        return r_ang, n_ang
+
+    def calculate_fit(self, tilt, azimuthal, twist, zone_axes):
+        """
+         Calculates four sets of angles with which the fit
+         between the EBSD pattern simulated from a master
+         pattern, and the GeometricalKikuchiPatternSimulation
+         generated using the same parameters, can be evaluated.
+         The function can be tested with different values of
+         the detector tilt, azimuthal and euler_2 angles and
+         appropriate zone axes (indices uvw) which appear on
+         the pattern under those conditions.
+
+         The approach has several steps:
+
+         1. Check that the GeometricalKikuchiPatternSimulation
+         is self-consistent. We do this by taking the vectors
+         in the detector reference frame of 3 zone axes in
+         the simulation, transforming these vectors from CSd
+         to the cartesian crystal reference frame, CSc, and
+         measuring the angle between these and vectors
+         transformed from the uvw indices of the zone axes
+         into the cartesian crystal reference frame
+         i.e. CSk to CSc. These angles (a_ang) should all be
+         zero if the GeometricalKikuchiPatternSimulation is
+         self-consistent.
+
+         2. Find the gnomonic coordinates of the nearest
+         pixel centre to the 3 zone axes. This enables us
+         to check the vectors corresponding to the detector
+         pixels. We do two things with these coordinates.
+         a) turn them into vectors and transform them
+         from CSd to CSc using the same transformation as
+         the GeometricalKikuchiPatternSimulation. Then
+         calculate the angles (d_ang) between these vectors
+         and the vectors representing the zone axes in CSc.
+         b) calculate the direction cosines of all the
+         detector pixels then rotate them to account
+         for the crystal orientation. The resulting
+         vectors are in CSc but calculated using
+         different functions. Select the vectors
+         corresponding to the pixels representing the 3
+         zone axes. Then calculate the angles (r_ang) between
+         these vectors and the vectors representing the
+         zone axes in CSc.
+         These angles should be the same for a) and b),
+         meaning that the angle between the zone axes
+         and the centre of the nearest pixel is the
+         same for both transformation routes.
+
+         3. Finally calculate the angles (n_ang) between the two
+         sets of vectors representing the centres of the
+         nearest pixels to the zone axes. The angles are
+         zero if the transformations used for the direction
+         cosines and for the GeometricalKikuchiPatternSimulation
+         are the same.
+
+
+         Parameters
+         ----------
+         tilt : Float
+             The detector tilt angle in degrees (i.e. detector.tilt).
+             Detector Euler angle PHI (EBSDDetector.euler[1]) == 90 + tilt
+         azimuthal : Float
+             The detector azimuthal angle in degrees (i.e. detector.azimuthal).
+             Detector Euler angle phi1 (EBSDDetector.euler[0]) == azimuthal
+        twist : Float
+             The detector twist angle (EBSDDetector.euler[2]) in deg.
+         zone_axes : List or np.ndarray
+             List/array containing three lists, each containing a set
+             of uvw indices describing a zone axis on the pattern,
+             e.g. [[0,0,1], [1,1,0], [1,2,3]].
+
+         Returns
+         -------
+         a_ang : np.ndarray
+             The angles in degrees, between vectors in CSc calculated
+             1) from uvw indeces in CSk and 2) from vectors in CSd.
+             These should all be zero for self-consistency of
+             the GeometricalKikuchiPatternSimulation.
+         d_ang : np.ndarray
+             The angles in degrees, between vectors representing
+             3 zone axes on the pattern and vectors representing
+             the nearest pixel centres to the same zone axes.
+             Both sets of vectors are transformed into CSc.
+             The transformation for both sets was the one used
+             by the GeometricalKikuchiPatternSimulation.
+         r_ang : np.ndarray
+             The angles in degrees, between vectors representing
+             3 zone axes on the pattern and vectors representing
+             the nearest pixel centres to the same zone axes but
+             this time, the pixel centre vectors use the
+             transformation of the direction cosines of the
+             detector pixels.
+         n_ang : np.ndarray
+             The angles in degrees between the two sets of vectors
+             representing the centres of the nearest pixels to 3
+             zone axes on the pattern. Both sets of vectors are
+             in CSc. The transformation for one set was the one
+             used by the GeometricalKikuchiPatternSimulation,
+             and the one used by the other set was for the
+             direction cosines of the detector. These angles
+             should all be zero if the pattern and simulation
+             match.
+        """
+        det, sim_lines, u_os = self.setup_detector_sim_and_u_os(tilt, azimuthal, twist)
+        za_idx, conversions, cds_px_int = self.setup_za_and_cds(
+            zone_axes, sim_lines, det
+        )
+        a_ang, d_vec_n = self.get_a_angles(sim_lines, za_idx, u_os)
+        d_ang, dddd = self.get_d_ang(cds_px_int, conversions, u_os, d_vec_n, det)
+        r_ang, n_ang = self.get_r_ang_and_n_ang(cds_px_int, det, d_vec_n, dddd)
+
+        return a_ang, d_ang, r_ang, n_ang
+
+    @pytest.mark.parametrize(
+        "tilt, azimuthal, twist, zone_axes",
+        [
+            (0.0, 0.0, 0.0, [[1, 0, 1], [0, 0, 1], [1, 1, 2]]),
+            (0.0, 0.0, 1.2, [[1, 0, 1], [0, 0, 1], [1, 1, 2]]),
+            (40.0, 0.0, 0.0, [[1, 0, 1], [1, 0, 0], [1, -2, 1]]),
+            (40.0, 0.0, 1.2, [[1, 0, 1], [1, 0, 0], [1, -2, 1]]),
+            (0.0, 40.0, 0.0, [[1, 0, 1], [1, 1, 0], [1, 2, 1]]),
+            (0.0, 40.0, 1.2, [[1, 0, 1], [1, 1, 0], [1, 2, 1]]),
+            (40.0, 40.0, 0.0, [[1, 0, 1], [1, 0, 0], [3, 1, 0]]),
+            (40.0, 40.0, 1.2, [[1, 0, 1], [1, 0, 0], [3, 1, 0]]),
+        ],
+    )
+    def test_fit_detector_orientation(self, tilt, azimuthal, twist, zone_axes):
+        """
+        Check that the EBSD pattern simulated from a master
+        pattern and the associated
+        GeometricalKikuchiPatternSimulation match perfectly,
+        for various detector orientations.
+
+        4 sets of angles are returned by self.calculate_fit().
+        See the doctstring of that function for details.
+
+        Here we assert that the first set of angles are all
+        zero, that the second and third sets are equal, and
+        that the fourth set are all zero. If these conditions
+        are all met, the GeometricalKikuchiPatternSimulation
+        should match the EBSD pattern simulated from a
+        master pattern perfectly for the given detector
+        orientations.
+
+
+        Parameters
+        ----------
+        tilt : Float
+            The detector tilt angle in degrees (i.e. detector.tilt).
+            Detector Euler angle PHI (EBSDDetector.euler[1]) == 90 + tilt
+        azimuthal : Float
+            The detector azimuthal angle in degrees (i.e. detector.azimuthal).
+            Detector Euler angle phi1 (EBSDDetector.euler[0]) == azimuthal
+        twist : Float
+            The detector twist angle (EBSDDetector.euler[2]) in deg.
+        zone_axes : List or np.ndarray
+            List/array containing three lists, each containing a set
+            of uvw indices describing a zone axis on the pattern,
+            e.g. [[0,0,1], [1,1,0], [1,2,3]].
+
+        Returns
+        -------
+        None.
+
+        """
+        angles = self.calculate_fit(tilt, azimuthal, twist, zone_axes)
+
+        assert np.allclose(angles[0], 0.0)
+        assert np.allclose(angles[1], angles[2])
+        assert np.allclose(angles[3], 0.0)
+
+
+def index_row_in_array(myarray, myrow):
+    """Check if the row "myrow" is present in the array "myarray".
+    If it is, return an int containing the row index of the first
+    occurrence. If the row is not present, return None.
+    """
+    loc = np.where((myarray == myrow).all(-1))[0]
+    if len(loc) > 0:
+        return loc[0]
+    return None
