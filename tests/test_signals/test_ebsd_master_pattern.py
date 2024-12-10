@@ -189,23 +189,31 @@ class TestProjectFromLambert:
     )
 
     def test_get_direction_cosines(self):
+        """Make sure the Numba function is covered."""
         det = self.detector
         dc = _get_direction_cosines_from_detector(det)
         assert dc.shape == (det.size, 3)
         assert np.max(dc) <= 1
 
         dc2 = _get_direction_cosines_for_fixed_pc.py_func(
-            pcx=det.pcx,
-            pcy=det.pcy,
-            pcz=det.pcz,
+            gnomonic_bounds=det.gnomonic_bounds.squeeze().astype(np.float64),
+            pcz=det.pc.squeeze().astype(np.float64)[2],
             nrows=det.nrows,
             ncols=det.ncols,
-            tilt=det.tilt,
-            azimuthal=det.azimuthal,
-            sample_tilt=det.sample_tilt,
+            om_detector_to_sample=(~det.sample_to_detector).to_matrix().squeeze(),
+            signal_mask=np.ones(det.size, dtype=bool),
+        )
+
+        dc3 = _get_direction_cosines_for_fixed_pc(
+            gnomonic_bounds=det.gnomonic_bounds.squeeze().astype(np.float64),
+            pcz=det.pc.squeeze().astype(np.float64)[2],
+            nrows=det.nrows,
+            ncols=det.ncols,
+            om_detector_to_sample=(~det.sample_to_detector).to_matrix().squeeze(),
             signal_mask=np.ones(det.size, dtype=bool),
         )
         assert np.allclose(dc, dc2)
+        assert np.allclose(dc2, dc3)
 
     def test_get_patterns(self, emsoft_ebsd_file):
         emsoft_key = kp.load(emsoft_ebsd_file)
@@ -383,8 +391,8 @@ class TestProjectFromLambert:
         sim3 = mp.get_patterns(detector=det3, **kwargs)
 
         assert not np.allclose(sim1.data, sim2.data)
-        assert np.allclose(sim2.data.mean(), 43.56, atol=1e-2)
-        assert np.allclose(sim3.data.mean(), 43.39, atol=1e-2)
+        assert np.allclose(sim2.data.mean(), 43.51, atol=1e-2)
+        assert np.allclose(sim3.data.mean(), 43.30, atol=1e-2)
 
     def test_project_patterns_from_master_pattern(self):
         """Cover the Numba functions."""
@@ -495,23 +503,37 @@ class TestProjectFromLambert:
         """Make sure the Numba function is covered."""
         det = self.detector
         dc0 = _get_direction_cosines_from_detector(det)
+
         nav_shape = (2, 3)
         det.pc = np.full(nav_shape + (3,), det.pc)
         nrows, ncols = det.shape
-        dc = _get_direction_cosines_for_varying_pc.py_func(
-            pcx=det.pcx.ravel(),
-            pcy=det.pcy.ravel(),
-            pcz=det.pcz.ravel(),
-            nrows=nrows,
-            ncols=ncols,
-            tilt=det.tilt,
-            azimuthal=det.azimuthal,
-            sample_tilt=det.sample_tilt,
+
+        gnomonic_bounds = det.gnomonic_bounds.reshape(
+            (np.prod(det.navigation_shape), 4)
+        ).astype(np.float64)
+        pcz = det.pc_flattened.T.astype(np.float64)[2]
+
+        dc1 = _get_direction_cosines_for_varying_pc.py_func(
+            gnomonic_bounds=gnomonic_bounds,
+            pcz=pcz,
+            nrows=det.nrows,
+            ncols=det.ncols,
+            om_detector_to_sample=(~det.sample_to_detector).to_matrix().squeeze(),
             signal_mask=np.ones(det.size, dtype=bool),
         )
 
-        assert np.allclose(dc0, dc[0])
-        assert dc.shape == (np.prod(nav_shape), nrows * ncols, 3)
+        dc2 = _get_direction_cosines_for_varying_pc(
+            gnomonic_bounds=gnomonic_bounds,
+            pcz=pcz,
+            nrows=det.nrows,
+            ncols=det.ncols,
+            om_detector_to_sample=(~det.sample_to_detector).to_matrix().squeeze(),
+            signal_mask=np.ones(det.size, dtype=bool),
+        )
+
+        assert np.allclose(dc0, dc1[0])
+        assert np.allclose(dc1[0], dc2[0])
+        assert dc1.shape == (np.prod(nav_shape), nrows * ncols, 3)
 
 
 class TestMasterPatternPlotting:
