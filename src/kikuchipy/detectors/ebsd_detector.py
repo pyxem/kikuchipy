@@ -22,7 +22,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 from diffsims.crystallography import ReciprocalLatticeVector
 from matplotlib.figure import Figure
@@ -39,6 +39,10 @@ from skimage.transform import ProjectiveTransform
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 
 from kikuchipy import __version__
+from kikuchipy._utils._detector_coordinates import (
+    convert_coordinates,
+    get_coordinate_conversions,
+)
 from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -509,6 +513,28 @@ class EBSDDetector:
         return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
 
     @property
+    def coordinate_conversion_factors(self) -> dict:
+        """Return factors for converting coordinates on the detector
+        from pixel units to gnomonic units or vice versa.
+
+        The dict returned contains the keys "pix_to_gn",
+        containing factors for converting pixel to gnomonic
+        coordinates, and "gn_to_pix", containing factors for
+        converting gnomonic to pixel coordinates.
+        Under each of these keys is a further dict with the
+        keys: "m_x", "c_x", "m_y" and "c_y". These are the
+        slope (m) and y-intercept (c) corresponding to
+        y = mx + c, which describes the linear conversion
+        of the coordinates. A (different) linear relationship
+        is required for x (column) and y(row) coordinates,
+        hence the two sets of m and c parameters.
+        The shape of each array of conversion factors
+        typically corresponds to the navigation shape
+        of an EBSDDetector.
+        """
+        return get_coordinate_conversions(self.gnomonic_bounds, self.bounds)
+
+    @property
     def sample_to_detector(self) -> Rotation:
         """Return the orientation matrix which transforms
         vectors in the sample reference frame, CSs, to the
@@ -605,6 +631,98 @@ class EBSDDetector:
         det = cls(pc=pc, **detector_kw)
 
         return det
+
+    def convert_detector_coordinates(
+        self,
+        coords: np.ndarray,
+        direction: str,
+        detector_index: Union[None, int, tuple] = None,
+    ) -> np.ndarray:
+        """Convert between gnomonic and pixel coordinates on the detector screen.
+
+
+        Parameters
+        ----------
+        coords
+            A 2D array of coordinates of any shape whereby the
+            x and y coordinates to be converted are stored in
+            the last axis.
+        direction
+            Either "pix_to_gn" or "gn_to_pix", depending on the
+            direction of conversion needed.
+        detector_index
+            Index showing which conversion factors in *conversions[direction]*
+            should be applied to *coords*.
+            If None, **all** conversion factors in *conversions[direction]*
+            are applied to *coords*.
+            If an int is supplied, this refers to an index in a 1D dataset.
+            A 1D tuple *e.g.* (3,) can also be passed for a 1D dataset.
+            A 2D index can be specified by supplying a tuple *e.g.* (2, 3).
+            The default value is None
+
+        Returns
+        -------
+        coords_out
+            Array of coords but with values converted as specified
+            by direction. The shape is either the same as the input
+            or is the navigation shape then the shape of the input.
+
+        Examples
+        --------
+
+        Convert a single point on the detector in pixel coordinates into
+        gnomonic coordinates for all patterns in the dataset.
+
+        >>> import numpy as np
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> det = s.detector
+        >>> det.navigation_shape
+        (3, 3)
+        >>> coords = np.array([[36.2, 12.7]])
+        >>> coords.shape
+        (1, 2)
+        >>> coords_out = det.convert_detector_coordinates(coords, "pix_to_gn", None)
+        >>> coords_out.shape
+        (3, 3, 1, 2)
+        >>> coords_out.squeeze()
+        array([[[ 0.36223464,  0.00664684],
+                [ 0.35762801, -0.00304659],
+                [ 0.35361398, -0.00042112]],
+
+               [[ 0.36432453,  0.00973461],
+                [ 0.35219231,  0.00567801],
+                [ 0.34417285,  0.00404584]],
+
+               [[ 0.36296371,  0.00072557],
+                [ 0.34447751,  0.00538137],
+                [ 0.36136688,  0.00180754]]])
+
+        Convert three points on the detector in pixel coordinates into
+        gnomonic coordinates for the pattern at navigation index (1, 2)
+        in the dataset.
+
+        >>> import numpy as np
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> det = s.detector
+        >>> det.navigation_shape
+        (3, 3)
+        >>> coords = np.array([[36.2, 12.7], [2.5, 43.7], [8.2, 27.7]])
+        >>> coords.shape
+        (3, 2)
+        >>> coords_out = det.convert_detector_coordinates(coords, "pix_to_gn", (1, 2))
+        >>> coords_out.shape
+        (3, 2)
+        >>> coords_out
+        array([[ 0.34417285,  0.00404584],
+               [-0.77639565, -1.02674418],
+               [-0.58686329, -0.49472353]])
+        """
+        coords_out = convert_coordinates(
+            coords, direction, self.coordinate_conversion_factors, detector_index
+        )
+        return coords_out
 
     def crop(self, extent: tuple[int, int, int, int] | list[int]) -> EBSDDetector:
         """Return a new detector with its :attr:`shape` cropped and
