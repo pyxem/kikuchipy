@@ -1220,6 +1220,7 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         # Global: Differential evolution
         _, _ = s.refine_orientation_projection_center(
             method="differential_evolution",
+            trust_region=[2, 2, 2, 0.05, 0.05, 0.05],
             navigation_mask=nav_mask,
             **ref_kw,
         )
