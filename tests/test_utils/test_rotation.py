@@ -35,15 +35,15 @@ class TestRotationVectorTools:
         """
         rot = np.array([0.7071, 0.7071, 0, 0])
         sig_shape = (20, 30)
+        det = kp.detectors.EBSDDetector(
+            shape=sig_shape, pc=(0.5, 0.5, 0.5), sample_tilt=70, tilt=10, azimuthal=0
+        )
         dc = _get_direction_cosines_for_fixed_pc.py_func(
-            pcx=0.5,
-            pcy=0.5,
-            pcz=0.5,
-            nrows=sig_shape[0],
-            ncols=sig_shape[1],
-            tilt=10,
-            azimuthal=0,
-            sample_tilt=70,
+            gnomonic_bounds=det.gnomonic_bounds.squeeze().astype(np.float64),
+            pcz=det.pc.squeeze().astype(np.float64)[2],
+            nrows=det.nrows,
+            ncols=det.ncols,
+            om_detector_to_sample=(~det.sample_to_detector).to_matrix().squeeze(),
             signal_mask=np.ones(sig_shape[0] * sig_shape[1], dtype=bool),
         )
 
