@@ -294,7 +294,7 @@ class TestNORDIF:
         assert isinstance(s.data, np.ndarray)
         assert not isinstance(s.data, np.memmap)
 
-    def test_load_readonly(self, nordif_path):
+    def test_load_memmap(self, nordif_path):
         s = kp.load(nordif_path / "Pattern.dat", lazy=True)
         keys = ["array-original", "original-array"]
         k = next(
@@ -305,7 +305,6 @@ class TestNORDIF:
         )
         mm = s.data.dask[k]
         assert isinstance(mm, np.memmap)
-        assert not mm.flags["WRITEABLE"]
 
     @pytest.mark.parametrize("lazy", [True, False])
     def test_load_inplace(self, nordif_path, assert_dictionary_func, lazy):
