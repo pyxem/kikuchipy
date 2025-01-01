@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -13,7 +14,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.#
 
 from __future__ import annotations
 
@@ -75,9 +76,8 @@ from kikuchipy.pattern._pattern import (
     fft_filter,
     fft_frequency_vectors,
 )
-from kikuchipy.pattern.chunk import _average_neighbour_patterns
+from kikuchipy.pattern.chunk import _average_neighbour_patterns, get_dynamic_background
 from kikuchipy.pattern.chunk import fft_filter as fft_filter_chunk
-from kikuchipy.pattern.chunk import get_dynamic_background
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
 from kikuchipy.signals.util._crystal_map import (
     _equal_phase,
