@@ -16,29 +16,19 @@
 ## You should have received a copy of the GNU General Public License
 ## along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.##
 repos:
-  # # https://docs.astral.sh/ruff/configuration
-  # - repo: https://github.com/astral-sh/ruff-pre-commit
-  #   rev: v0.6.8
-  #   hooks:
-  #     - id: ruff
-  #       args: [ --fix ]
-  #     - id: ruff-format
+  # https://docs.astral.sh/ruff/configuration
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.8
+    hooks:
+      - id: ruff
+      - id: ruff-format
   # https://black.readthedocs.io/en/stable/index.html
   - repo: https://github.com/psf/black-pre-commit-mirror
     rev: 24.10.0
     hooks:
-    - id: black
     - id: black-jupyter
       files: \.ipynb
       args: [--line-length=77]
-  # https://pycqa.github.io/isort/
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        name: isort (python)
-        args:
-          [--profile=black, --filter-files, --force-sort-within-sections]
   - repo: https://github.com/johann-petrak/licenseheaders.git
     rev: 'v0.8.8'
     hooks:

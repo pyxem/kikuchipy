@@ -180,4 +180,6 @@ select = [
     # isort
     "I"
 ]
-extend-ignore = ["E501"]
+
+[tool.ruff.format]
+exclude = ["*.ipynb"]
