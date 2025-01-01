@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -9,11 +10,11 @@
 #
 # kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.#
 
 from __future__ import annotations
 
@@ -1760,8 +1761,8 @@ class EBSDDetector:
                 axes[i].scatter(x_coord, y_coord, **kwargs)
                 axes[i].set(xlabel=labels[j], ylabel=labels[k], aspect="equal")
                 if annotate:
-                    for l, (x, y) in enumerate(zip(x_coord, y_coord)):
-                        axes[i].text(x, y, l, ha="left", va="bottom")
+                    for num, (x, y) in enumerate(zip(x_coord, y_coord)):
+                        axes[i].text(x, y, num, ha="left", va="bottom")
             axes[0].invert_xaxis()
             axes[1].invert_xaxis()
             axes[1].invert_yaxis()

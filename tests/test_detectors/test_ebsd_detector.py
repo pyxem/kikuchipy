@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -9,11 +10,11 @@
 #
 # kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.#
 
 from copy import deepcopy
 
@@ -774,12 +775,11 @@ class TestPlotPC:
         figsize = fig.get_size_inches()
         assert (figsize[0] / figsize[1]) > 1
 
-        ax = fig.axes
-        assert len(ax) == 6
-        assert all([a.get_xlabel() == "Column" for a in ax[:3]])
-        assert all(
-            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "y", "z"])]
-        )
+        axes = fig.axes
+        assert len(axes) == 6
+        assert all([ax.get_xlabel() == "Column" for ax in axes[:3]])
+        for ax, label in zip(axes[3:], ["x", "y", "z"]):
+            assert ax.get_ylabel() == f"PC{label}"
 
         plt.close(fig)
 
@@ -789,12 +789,11 @@ class TestPlotPC:
         figsize = fig.get_size_inches()
         assert (figsize[0] / figsize[1]) < 1
 
-        ax = fig.axes
-        assert len(ax) == 6
-        assert all([a.get_xlabel() == "Column" for a in ax[:3]])
-        assert all(
-            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "y", "z"])]
-        )
+        axes = fig.axes
+        assert len(axes) == 6
+        assert all([ax.get_xlabel() == "Column" for ax in axes[:3]])
+        for ax, label in zip(axes[3:], ["x", "y", "z"]):
+            assert ax.get_ylabel() == f"PC{label}"
 
         plt.close(fig)
 
@@ -804,16 +803,13 @@ class TestPlotPC:
         figsize = fig.get_size_inches()
         assert (figsize[0] / figsize[1]) > 1
 
-        ax = fig.axes
-        assert len(ax) == 3
-        assert all(
-            [a.get_xlabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "x", "z"])]
-        )
-        assert all(
-            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["y", "z", "y"])]
-        )
+        axes = fig.axes
+        assert len(axes) == 3
+        for ax, label in zip(axes[3:], ["x", "y", "z"]):
+            assert ax.get_xlabel() == f"PC{label}"
+            assert ax.get_ylabel() == f"PC{label}"
 
-        texts = ax[0].texts
+        texts = axes[0].texts
         assert len(texts) == self.det.navigation_size
         assert texts[0].get_text() == "0"
         assert texts[-1].get_text() == "599"
@@ -826,14 +822,11 @@ class TestPlotPC:
         figsize = fig.get_size_inches()
         assert (figsize[0] / figsize[1]) < 1
 
-        ax = fig.axes
-        assert len(ax) == 3
-        assert all(
-            [a.get_xlabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "x", "z"])]
-        )
-        assert all(
-            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["y", "z", "y"])]
-        )
+        axes = fig.axes
+        assert len(axes) == 3
+        for ax, label in zip(axes[3:], ["x", "y", "z"]):
+            assert ax.get_xlabel() == f"PC{label}"
+            assert ax.get_ylabel() == f"PC{label}"
 
         plt.close(fig)
 
