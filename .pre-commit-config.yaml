@@ -16,6 +16,13 @@
 ## You should have received a copy of the GNU General Public License
 ## along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.##
 repos:
+  # # https://docs.astral.sh/ruff/configuration
+  # - repo: https://github.com/astral-sh/ruff-pre-commit
+  #   rev: v0.6.8
+  #   hooks:
+  #     - id: ruff
+  #       args: [ --fix ]
+  #     - id: ruff-format
   # https://black.readthedocs.io/en/stable/index.html
   - repo: https://github.com/psf/black-pre-commit-mirror
     rev: 24.10.0
