@@ -26,15 +26,16 @@ repos:
   - repo: https://github.com/psf/black-pre-commit-mirror
     rev: 24.10.0
     hooks:
-    - id: black-jupyter
-      files: \.ipynb
-      args: [--line-length=77]
+      - id: black-jupyter
+        files: \.ipynb
+        args: [--line-length=77]
   - repo: https://github.com/johann-petrak/licenseheaders.git
     rev: v0.8.8
     hooks:
-        - id: licenseheaders
-          args: ["-t", ".license.tmpl", "-cy", "-n", "kikuchipy", "-f"]
+      - id: licenseheaders
+        args: ["-t", ".license.tmpl", "-cy", "-n", "kikuchipy", "-f"]
 
 # https://pre-commit.ci/#configuration
 ci:
   autofix_prs: false
+  skip: [licenseheaders]
