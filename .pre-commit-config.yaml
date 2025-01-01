@@ -38,6 +38,6 @@ repos:
         - id: licenseheaders
           args: ["-t", ".license.tmpl", "-cy", "-n", "kikuchipy", "-f"]
 
-# https://pre-commit.ci
+# https://pre-commit.ci/#configuration
 ci:
   autofix_prs: false
