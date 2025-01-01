@@ -38,4 +38,5 @@ repos:
 # https://pre-commit.ci/#configuration
 ci:
   autofix_prs: false
+  # TODO: Remove skip once (nearly) all files are formatted with the license template
   skip: [licenseheaders]
