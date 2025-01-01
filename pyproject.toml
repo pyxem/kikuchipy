@@ -97,6 +97,7 @@ dev = [
     "isort",
     "outdated",
     "pre-commit                   >= 1.16",
+    "ruff",
     "kikuchipy[doc,tests,coverage]",
 ]
 
