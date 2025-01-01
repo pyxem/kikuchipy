@@ -169,10 +169,13 @@ filterwarnings = [
 [tool.ruff.lint]
 exclude = ["*.ipynb"]
 select = [
-    "F",  # Pyflakes
-    "W",  # Pycodestyle
+    "F",  # pyflakes
+    "E",  # pycodestyle
+    "W",  # pycodestyle
     "I",  # isort
 ]
+# https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+extend-ignore = ["E501"]
 # https://docs.astral.sh/ruff/settings/#lintisort
 [tool.ruff.lint.isort]
 force-sort-within-sections = true
