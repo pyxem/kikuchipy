@@ -14,7 +14,8 @@
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.##
+## along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+##
 name: Tests
 
 on:
@@ -33,7 +34,7 @@ jobs:
     timeout-minutes: 15
     env:
       MPLBACKEND: agg
-      PYTEST_ARGS: --reruns 2 -n 2 --cov=kikuchipy
+      PYTEST_ARGS: --cov-branch --cov-report=xml --reruns 2 -n 2 --cov=kikuchipy
     strategy:
       fail-fast: false
       matrix:
@@ -113,13 +114,13 @@ jobs:
       - name: Run tests on Windows or macOS
         if: ${{ matrix.os != 'ubuntu-latest' }}
         run: |
-          pytest ${{ env.PYTEST_ARGS }} --cov-branch --cov-report=xml
+          pytest ${{ env.PYTEST_ARGS }}
 
       - name: Generate line coverage
         run: |
           coverage report --show-missing
 
       - name: Upload coverage reports to Codecov
-          uses: codecov/codecov-action@v5
-          with:
-            token: ${{ secrets.CODECOV_TOKEN }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
