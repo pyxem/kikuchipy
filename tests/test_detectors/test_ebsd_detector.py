@@ -10,11 +10,11 @@
 #
 # kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.#
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.#
 
 from copy import deepcopy
 
@@ -231,7 +231,8 @@ class TestEBSDDetector:
         assert np.allclose(detector.y_scale, desired_y_scale, atol=1e-6)
 
     @pytest.mark.parametrize(
-        "tilt, azimuthal, twist, sample_tilt, expected_angle, expected_axis, expected_rotation",
+        "tilt, azimuthal, twist, sample_tilt, expected_angle, expected_axis, "
+        "expected_rotation",
         [
             (
                 0,
@@ -1220,7 +1221,8 @@ class TestGetIndexer:
 
 class TestSaveLoadDetector:
     @pytest.mark.parametrize(
-        "nav_shape, shape, convention, sample_tilt, tilt, px_size, binning, azimuthal, twist",
+        "nav_shape, shape, convention, sample_tilt, tilt, px_size, binning, azimuthal, "
+        "twist",
         [
             ((3, 4), (10, 20), "bruker", 70, 0, 70, 1, 0, 0),
             ((1, 5), (5, 5), "tsl", 69.5, 3.14, 57.2, 2, 3.7, 0.003),

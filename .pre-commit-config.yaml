@@ -10,11 +10,11 @@
 ##
 ## kikuchipy is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.##
+## along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.##
 repos:
   # https://docs.astral.sh/ruff/configuration
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -30,7 +30,7 @@ repos:
       files: \.ipynb
       args: [--line-length=77]
   - repo: https://github.com/johann-petrak/licenseheaders.git
-    rev: 'v0.8.8'
+    rev: v0.8.8
     hooks:
         - id: licenseheaders
           args: ["-t", ".license.tmpl", "-cy", "-n", "kikuchipy", "-f"]
