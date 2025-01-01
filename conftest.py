@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -9,11 +10,11 @@
 #
 # kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.#
 
 # Why is this file located in the top directory and not in tests/?
 # Because if it was, running "pytest --doctest-modules src" wouldn't
@@ -153,11 +154,13 @@ def dummy_signal(
     s.xmap = CrystalMap(
         rotations=Rotation.identity((nav_size,)),
         # fmt: off
-        phase_id=np.array([
-            [0, 0, 1],
-            [1, 1, 0],
-            [0, 1, 0],
-        ]).ravel(),
+        phase_id=np.array(
+            [
+                [0, 0, 1],
+                [1, 1, 0],
+                [0, 1, 0],
+            ]
+        ).ravel(),
         # fmt: on
         phase_list=phase_list,
         x=x.ravel(),

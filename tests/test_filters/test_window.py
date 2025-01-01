@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -9,11 +10,11 @@
 #
 # kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.#
 
 import os
 
@@ -286,13 +287,15 @@ class TestWindow:
                 1,
                 1,
                 # fmt: off
-                np.array([
-                    [0.0012, 0.0470, 0.1353, 0.0470, 0.0012],
-                    [0.0470, 0.7095, 1., 0.7095, 0.0470],
-                    [0.1353, 1., 1., 1., 0.1353],
-                    [0.0470, 0.7095, 1., 0.7095, 0.0470],
-                    [0.0012, 0.0470, 0.1353, 0.0470, 0.0012],
-                ])
+                np.array(
+                    [
+                        [0.0012, 0.0470, 0.1353, 0.0470, 0.0012],
+                        [0.0470, 0.7095, 1.0, 0.7095, 0.0470],
+                        [0.1353, 1.0, 1.0, 1.0, 0.1353],
+                        [0.0470, 0.7095, 1.0, 0.7095, 0.0470],
+                        [0.0012, 0.0470, 0.1353, 0.0470, 0.0012],
+                    ]
+                ),
                 # fmt: on
             ),
             (
@@ -300,14 +303,16 @@ class TestWindow:
                 2,
                 1,
                 # fmt: off
-                    np.array([
+                np.array(
+                    [
                         [0.0057, 0.0670, 0.1353, 0.0670, 0.0057],
-                        [0.2534, 0.8945, 1., 0.8945, 0.2534],
-                        [0.8945, 1., 1., 1., 0.8945],
-                        [1., 1., 1., 1., 1.],
-                        [0.8945, 1., 1., 1., 0.8945],
-                        [0.2534, 0.8945, 1., 0.8945, 0.2534],
-                    ])
+                        [0.2534, 0.8945, 1.0, 0.8945, 0.2534],
+                        [0.8945, 1.0, 1.0, 1.0, 0.8945],
+                        [1.0, 1.0, 1.0, 1.0, 1.0],
+                        [0.8945, 1.0, 1.0, 1.0, 0.8945],
+                        [0.2534, 0.8945, 1.0, 0.8945, 0.2534],
+                    ]
+                ),
                 # fmt: on
             ),
         ],
@@ -335,13 +340,15 @@ class TestWindow:
                 2,
                 2,
                 # fmt: off
-                np.array([
-                    [1, 1, 1, 1, 1],
-                    [1, 0.8423, 0.6065, 0.8423, 1],
-                    [1, 0.6065, 0.1353, 0.6065, 1],
-                    [1, 0.8423, 0.6065, 0.8423, 1],
-                    [1, 1, 1, 1, 1],
-                ])
+                np.array(
+                    [
+                        [1, 1, 1, 1, 1],
+                        [1, 0.8423, 0.6065, 0.8423, 1],
+                        [1, 0.6065, 0.1353, 0.6065, 1],
+                        [1, 0.8423, 0.6065, 0.8423, 1],
+                        [1, 1, 1, 1, 1],
+                    ]
+                ),
                 # fmt: on
             ),
             (
@@ -349,14 +356,16 @@ class TestWindow:
                 2,
                 1,
                 # fmt: off
-                    np.array([
+                np.array(
+                    [
                         [1, 1, 1, 1, 1],
                         [1, 1, 1, 1, 1],
                         [1, 0.5034, 0.1353, 0.5034, 1],
                         [1, 0.1353, 0.0003, 0.1353, 1],
                         [1, 0.5034, 0.1353, 0.5034, 1],
                         [1, 1, 1, 1, 1],
-                    ])
+                    ]
+                ),
                 # fmt: on
             ),
         ],
@@ -381,12 +390,24 @@ class TestWindow:
         [
             (3, np.array([0.5, 1, 0.5])),
             # fmt: off
-            (11, np.array(
-                [
-                    0.1423, 0.4154, 0.6548, 0.8412, 0.9594, 1., 0.9594, 0.8412,
-                    0.6548, 0.4154, 0.1423
-                ])
-             ),
+            (
+                11,
+                np.array(
+                    [
+                        0.1423,
+                        0.4154,
+                        0.6548,
+                        0.8412,
+                        0.9594,
+                        1.0,
+                        0.9594,
+                        0.8412,
+                        0.6548,
+                        0.4154,
+                        0.1423,
+                    ]
+                ),
+            ),
             # fmt: on
         ],
     )
