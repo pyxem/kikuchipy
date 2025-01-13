@@ -223,7 +223,7 @@ def _dictionary_indexing_info_message(
     msg
         Message with useful dictionary indexing information.
     """
-    info = "Dictionary indexing information:\n" f"  Phase name: {phase_name}\n"
+    info = f"Dictionary indexing information:\n  Phase name: {phase_name}\n"
     if n_experimental is not None and n_experimental != n_experimental_all:
         info += (
             f"  Matching {n_experimental}/{n_experimental_all} experimental pattern(s)"

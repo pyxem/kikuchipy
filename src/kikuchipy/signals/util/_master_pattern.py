@@ -123,7 +123,7 @@ def _get_direction_cosines_from_detector(
 
 
 @njit(
-    ("float64[:, :]" "(float64[:], float64, int64, int64, float64[:, ::1], bool_[:])"),
+    ("float64[:, :](float64[:], float64, int64, int64, float64[:, ::1], bool_[:])"),
     cache=True,
     nogil=True,
     fastmath=True,
