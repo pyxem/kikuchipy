@@ -507,7 +507,7 @@ def _get_info_message(nav_size: int, chunksize: int, indexer: "EBSDIndexer") -> 
         pc = pc.mean(0)
         info += ", mean"
     pc = tuple(map(float, pc.round(4)))
-    info += f"): {pc}\n" f"  Indexing {nav_size} pattern(s) in {n_chunks} chunk(s)"
+    info += f"): {pc}\n  Indexing {nav_size} pattern(s) in {n_chunks} chunk(s)"
 
     return info
 
