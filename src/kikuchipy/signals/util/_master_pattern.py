@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 # The following copyright notice is included because the following
 # functionality in this file is derived and adapted from EMsoft:
@@ -668,9 +670,9 @@ def _get_lambert_interpolation_parameters(
         nij_i = dtype(j_this + scale)
         niip_i = nii_i + 1
         nijp_i = nij_i + 1
-        if niip_i > npx:
+        if niip_i >= npx:
             niip_i = nii_i  # pragma: no cover
-        if nijp_i > npy:
+        if nijp_i >= npy:
             nijp_i = nij_i  # pragma: no cover
         if nii_i < 0:
             nii_i = niip_i  # pragma: no cover
