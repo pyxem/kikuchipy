@@ -1,0 +1,9 @@
+name: oxford_master_pattern
+description: >
+  Read support for simulated electron backscatter diffraction (EBSD)
+  master patterns stored in an Oxford Instruments *.sdf5 (HDF5) file.
+file_extensions: ['sdf5']
+default_extension: 0
+writes: False
+manufacturer: oxford
+footprints: ['Proprietary/Source Info']
