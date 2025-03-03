@@ -564,10 +564,10 @@ class KikuchipySignal2D(Signal2D):
 
         return s_new
 
-    def _assign_subclass(self) -> None:
+    def _assign_subclass(self, chunks=False) -> None:
         attrs = self._custom_attributes
 
-        super()._assign_subclass()
+        super()._assign_subclass(chunks=chunks)
 
         if self._signal_type not in SIGNAL_TYPES:
             for name in attrs:
