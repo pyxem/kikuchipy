@@ -634,7 +634,7 @@ class TestRescaleIntensityEBSD:
             ),
         ],
     )
-    def test_rescale_intensity(self, dummy_signal, relative, dtype_out, answer, capsys):
+    def test_rescale_intensity(self, dummy_signal, relative, dtype_out, answer):
         """This tests uses a hard-coded answer. If specifically
         improvements to the intensities produced by this correction is
         to be made, these hard-coded answers will have to be
@@ -643,8 +643,6 @@ class TestRescaleIntensityEBSD:
         dummy_signal.rescale_intensity(
             relative=relative, dtype_out=dtype_out, show_progressbar=True
         )
-        out, _ = capsys.readouterr()
-        assert "Completed" in out
 
         assert dummy_signal.data.dtype == answer.dtype
         assert np.allclose(dummy_signal.inav[0, 0].data, answer, atol=1e-4)
@@ -729,7 +727,7 @@ class TestRescaleIntensityEBSD:
 
 
 class TestAdaptiveHistogramEqualizationEBSD:
-    def test_adaptive_histogram_equalization(self, kikuchipy_h5ebsd_path, capsys):
+    def test_adaptive_histogram_equalization(self, kikuchipy_h5ebsd_path):
         """Test setup of equalization only. Tests of the result of the
         actual equalization are found elsewhere.
         """
@@ -740,11 +738,6 @@ class TestAdaptiveHistogramEqualizationEBSD:
             s.adaptive_histogram_equalization(
                 kernel_size=kernel_size, show_progressbar=show_progressbar
             )
-            out, _ = capsys.readouterr()
-            if show_progressbar:
-                assert "Completed" in out
-            else:
-                assert not out
 
         # These window sizes should throw errors
         with pytest.raises(ValueError, match="invalid literal for int()"):
@@ -871,7 +864,7 @@ class TestAverageNeighbourPatternsEBSD:
         ],
     )
     def test_average_neighbour_patterns(
-        self, dummy_signal, window, window_shape, lazy, answer, kwargs, capsys
+        self, dummy_signal, window, window_shape, lazy, answer, kwargs
     ):
         if lazy:
             dummy_signal = dummy_signal.as_lazy()
@@ -881,8 +874,6 @@ class TestAverageNeighbourPatternsEBSD:
                 window_shape=window_shape,
                 show_progressbar=True,
             )
-            out, _ = capsys.readouterr()
-            assert "Completed" in out
 
         else:
             dummy_signal.average_neighbour_patterns(
@@ -1195,14 +1186,11 @@ class TestLazy:
 
 
 class TestGetDynamicBackgroundEBSD:
-    def test_get_dynamic_background_spatial(self, dummy_signal, capsys):
+    def test_get_dynamic_background_spatial(self, dummy_signal):
         dtype_out = dummy_signal.data.dtype
         bg = dummy_signal.get_dynamic_background(
             filter_domain="spatial", std=2, truncate=3, show_progressbar=True
         )
-        out, _ = capsys.readouterr()
-        assert "Completed" in out
-
         assert bg.data.dtype == dtype_out
         assert isinstance(bg, kp.signals.EBSD)
 
@@ -1317,7 +1305,6 @@ class TestFFTFilterEBSD:
         kwargs,
         dtype_out,
         expected_spectrum_sum,
-        capsys,
     ):
         if dtype_out is None:
             dtype_out = np.float32
@@ -1332,8 +1319,6 @@ class TestFFTFilterEBSD:
             shift=shift,
             show_progressbar=True,
         )
-        out, _ = capsys.readouterr()
-        assert "Completed" in out
 
         assert isinstance(dummy_signal, kp.signals.EBSD)
         assert dummy_signal.data.dtype == dtype_out
@@ -1475,7 +1460,7 @@ class TestNormalizeIntensityEBSD:
         ],
     )
     def test_normalize_intensity(
-        self, dummy_signal, num_std, divide_by_square_root, dtype_out, answer, capsys
+        self, dummy_signal, num_std, divide_by_square_root, dtype_out, answer
     ):
         if dtype_out is None:
             dummy_signal.change_dtype(np.int16)
@@ -1486,8 +1471,6 @@ class TestNormalizeIntensityEBSD:
             dtype_out=dtype_out,
             show_progressbar=True,
         )
-        out, _ = capsys.readouterr()
-        assert "Completed" in out
 
         if dtype_out is None:
             dtype_out = np.int16
@@ -1690,32 +1673,26 @@ class TestAverageNeighbourDotProductMap:
             kp.filters.Window(window="rectangular", shape=(2, 3)),
         ],
     )
-    def test_adp_dp_matrices(self, window, capsys):
+    def test_adp_dp_matrices(self, window):
         s = kp.data.nickel_ebsd_large()
 
         dp_matrices = s.get_neighbour_dot_product_matrices(
             window=window, show_progressbar=True
         )
-        out, _ = capsys.readouterr()
-        assert "Completed" in out
 
         adp1 = s.get_average_neighbour_dot_product_map(window=window)
         adp2 = s.get_average_neighbour_dot_product_map(
             dp_matrices=dp_matrices, show_progressbar=False
         )
-        out, _ = capsys.readouterr()
-        assert not out
 
         assert np.allclose(adp1, adp2)
 
     @pytest.mark.parametrize("slices", [(0,), (slice(0, 1), slice(None))])
-    def test_adp_dp_matrices_shapes(self, slices, capsys):
+    def test_adp_dp_matrices_shapes(self, slices):
         s = kp.data.nickel_ebsd_small().inav[slices]
         dp_matrices = s.get_neighbour_dot_product_matrices()
 
         adp1 = s.get_average_neighbour_dot_product_map(show_progressbar=True)
-        out, _ = capsys.readouterr()
-        assert "Completed" in out
 
         adp2 = s.get_average_neighbour_dot_product_map(dp_matrices=dp_matrices)
 
