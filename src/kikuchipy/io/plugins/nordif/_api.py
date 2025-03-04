@@ -28,6 +28,7 @@ import warnings
 from matplotlib.pyplot import imread
 import numpy as np
 from orix.crystal_map import CrystalMap
+from rsciio.utils.distributed import memmap_distributed
 
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 
@@ -39,11 +40,11 @@ _logger = logging.getLogger(__name__)
 
 def file_reader(
     filename: str | Path,
-    mmap_mode: str | None = None,
     scan_size: int | tuple[int, ...] | None = None,
     pattern_size: tuple[int, ...] | None = None,
     setting_file: str | None = None,
     lazy: bool = False,
+    chunks: tuple[int, ...] | dict | str = "auto",
 ) -> list[dict]:
     """Read electron backscatter patterns from a NORDIF data file.
 
@@ -53,9 +54,6 @@ def file_reader(
     ----------
     filename
         File path to NORDIF data file.
-    mmap_mode
-        Memory map mode. If not given, "r" is used unless *lazy* is
-        True, in which case "c" is used.
     scan_size
         Scan size in number of patterns in width and height.
     pattern_size
@@ -67,27 +65,18 @@ def file_reader(
         Open the data lazily without actually reading the data from disk
         until required. Allows opening arbitrary sized datasets. Default
         is False.
+    chunks
+        The chunks used when reading the data lazily. This argument is passed
+        to :func:`dask.array.core.normalize_chunks` function.
 
     Returns
     -------
     scan
         Data, axes, metadata and original metadata.
     """
-    if mmap_mode is None:
-        if lazy:
-            mmap_mode = "r"
-        else:
-            mmap_mode = "c"
+    file = open(filename, mode="rb")
 
     scan = {}
-
-    # Make sure we open in correct mode
-    if "+" in mmap_mode or ("write" in mmap_mode and "copyonwrite" != mmap_mode):
-        if lazy:
-            raise ValueError("Lazy loading does not support in-place writing")
-        file = open(filename, mode="r+b")
-    else:
-        file = open(filename, mode="rb")
 
     # Get metadata from setting file
     folder, _ = os.path.split(filename)
@@ -147,20 +136,25 @@ def file_reader(
     if not lazy:
         file.seek(0)
         data = np.fromfile(file, dtype="uint8", count=data_size)
+        try:
+            data = data.reshape((ny, nx, sy, sx)).squeeze()
+        except ValueError:
+            warnings.warn(
+                "Pattern size and scan size larger than file size! Will attempt to "
+                "load by zero padding incomplete frames."
+            )
+            # Data is stored image by image
+            pw = [(0, ny * nx * sy * sx - data.size)]
+            data = np.pad(data, pw)
+            data = data.reshape((ny, nx, sy, sx))
     else:
-        data = np.memmap(file.name, mode=mmap_mode, dtype="uint8")
-
-    try:
-        data = data.reshape((ny, nx, sy, sx)).squeeze()
-    except ValueError:
-        warnings.warn(
-            "Pattern size and scan size larger than file size! Will attempt to "
-            "load by zero padding incomplete frames."
+        data = memmap_distributed(
+            filename=file.name,
+            chunks=chunks,
+            shape=(ny, nx, sy, sx),
+            dtype=np.dtype("uint8"),
         )
-        # Data is stored image by image
-        pw = [(0, ny * nx * sy * sx - data.size)]
-        data = np.pad(data, pw)
-        data = data.reshape((ny, nx, sy, sx))
+
     scan["data"] = data
 
     units = ["um"] * 4
@@ -199,7 +193,8 @@ def file_reader(
     # --- Crystal map
     scan["xmap"] = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
 
-    file.close()
+    if not lazy:
+        file.close()
 
     return [scan]
 

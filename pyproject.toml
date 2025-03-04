@@ -52,7 +52,7 @@ dependencies = [
     "orix             >= 0.12.1",
     "pooch            >= 1.3.0",
     "pyyaml",
-    "rosettasciio",
+    "rosettasciio     >= 0.3.0",
     "scikit-image     >= 0.16.2",
     "scikit-learn",
     "scipy            >= 1.7",
