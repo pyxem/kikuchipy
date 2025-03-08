@@ -27,6 +27,9 @@ Removed
 
 Fixed
 -----
+- Removed possibility for a silent out-of-bounds array indexing with Numba when
+  projecting a single pattern from a master pattern in the Lambert projection to the
+  detector. (`#718 <https://github.com/pyxem/kikuchipy/pull/718>`_)
 
 Deprecated
 ----------
