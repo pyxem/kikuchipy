@@ -42,7 +42,7 @@ dependencies = [
     "dask[array]      >= 2021.8.1",
     "diffpy.structure >= 3",
     "diffsims         >= 0.5.2",
-    "hyperspy         >= 2.2",
+    "hyperspy         >= 2.2, < 2.3",
     "h5py             >= 2.10",
     "imageio",
     "lazy_loader",
