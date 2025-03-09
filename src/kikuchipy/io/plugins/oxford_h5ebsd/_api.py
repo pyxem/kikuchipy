@@ -15,8 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-"""Reader of EBSD data from an Oxford Instruments h5ebsd (H5OINA) file.
-"""
+"""Reader of EBSD data from an Oxford Instruments h5ebsd (H5OINA) file."""
 
 import logging
 from pathlib import Path

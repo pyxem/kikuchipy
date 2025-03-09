@@ -188,7 +188,7 @@ def _dict2signal(
     )(**signal_dict)
 
     if signal._lazy:
-        signal._make_lazy()
+        signal.data = signal._lazy_data()
 
     return signal
 

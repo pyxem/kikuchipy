@@ -38,9 +38,9 @@ from kikuchipy.pattern._pattern import (
 from kikuchipy.signals.util._master_pattern import _get_direction_cosines_for_fixed_pc
 
 if TYPE_CHECKING:  # pragma: no cover
-    from kikuchipy.constants import installed
+    from kikuchipy.constants import dependency_version
 
-    if installed["nlopt"]:
+    if dependency_version["nlopt"] is not None:
         import nlopt
 
 

@@ -24,6 +24,7 @@ from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
+from kikuchipy.constants import dependency_version
 from kikuchipy.indexing._refinement._solvers import _prepare_pattern
 from kikuchipy.signals.util._crystal_map import _equal_phase
 
@@ -209,7 +210,9 @@ class TestEBSDRefine(EBSDRefineTestSetup):
         )
         assert dask_arr.chunksize == chunksize
 
-    @pytest.mark.skipif(kp.constants.installed["nlopt"], reason="NLopt is installed")
+    @pytest.mark.skipif(
+        dependency_version["nlopt"] is not None, reason="NLopt is installed"
+    )
     def test_refine_raises_nlopt_import_error(
         self, dummy_signal, get_single_phase_xmap
     ):
@@ -232,7 +235,7 @@ class TestEBSDRefine(EBSDRefineTestSetup):
             )
 
     @pytest.mark.skipif(
-        not kp.constants.installed["nlopt"], reason="NLopt is not installed"
+        dependency_version["nlopt"] is None, reason="NLopt is not installed"
     )
     def test_refine_raises_initial_step_nlopt(
         self, dummy_signal, get_single_phase_xmap
@@ -443,7 +446,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         indirect=["ebsd_with_axes_and_random_data", "detector"],
     )
     @pytest.mark.skipif(
-        not kp.constants.installed["nlopt"], reason="NLopt is not installed"
+        dependency_version["nlopt"] is None, reason="NLopt is not installed"
     )
     def test_refine_orientation_local_nlopt(
         self,
@@ -570,7 +573,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         assert np.allclose(xmap_ref.scores, s.xmap.scores, atol=1e-3)
 
     @pytest.mark.skipif(
-        not kp.constants.installed["nlopt"], reason="NLopt is not installed"
+        dependency_version["nlopt"] is None, reason="NLopt is not installed"
     )
     def test_refine_orientation_nickel_ebsd_small_nlopt(self):
         """Refine already refined orientations with NLopt, which should
@@ -597,7 +600,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         assert xmap_ref.scores.mean() > s.xmap.scores.mean()
 
     @pytest.mark.skipif(
-        not kp.constants.installed["nlopt"], reason="NLopt is not installed"
+        dependency_version["nlopt"] is None, reason="NLopt is not installed"
     )
     def test_refine_orientation_pseudo_symmetry_nlopt(self):
         s = self.nickel_ebsd_small
@@ -862,7 +865,7 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
         indirect=["ebsd_with_axes_and_random_data", "detector"],
     )
     @pytest.mark.skipif(
-        not kp.constants.installed["nlopt"], reason="NLopt is not installed"
+        dependency_version["nlopt"] is None, reason="NLopt is not installed"
     )
     def test_refine_projection_center_local_nlopt(
         self,
@@ -1029,7 +1032,7 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         ],
     )
     @pytest.mark.skipif(
-        not kp.constants.installed["nlopt"], reason="NLopt is not installed"
+        dependency_version["nlopt"] is None, reason="NLopt is not installed"
     )
     def test_refine_orientation_projection_center_local_nlopt(
         self,
@@ -1143,7 +1146,7 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         assert dask_array.shape == (9, 1)
 
     @pytest.mark.skipif(
-        not kp.constants.installed["nlopt"], reason="NLopt is not installed"
+        dependency_version["nlopt"] is None, reason="NLopt is not installed"
     )
     def test_refine_orientation_pc_pseudo_symmetry_nlopt(self):
         s = self.nickel_ebsd_small

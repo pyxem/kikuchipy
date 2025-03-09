@@ -25,6 +25,7 @@ from orix.crystal_map import PhaseList
 import pytest
 
 import kikuchipy as kp
+from kikuchipy.constants import dependency_version
 
 
 class TestEBSDDetector:
@@ -1041,7 +1042,7 @@ class TestGetIndexer:
         self.det = det
 
     @pytest.mark.skipif(
-        kp.constants.installed["pyebsdindex"], reason="pyebsdindex is installed"
+        dependency_version["pyebsdindex"] is not None, reason="pyebsdindex is installed"
     )
     def test_get_indexer_raises(self):
         pl = PhaseList(names=["al", "si"], space_groups=[225, 227])
@@ -1049,7 +1050,7 @@ class TestGetIndexer:
             _ = self.det.get_indexer(pl)
 
     @pytest.mark.skipif(
-        not kp.constants.installed["pyebsdindex"], reason="pyebsdindex is not installed"
+        dependency_version["pyebsdindex"] is None, reason="pyebsdindex is not installed"
     )
     def test_get_indexer_invalid_phase_lists(self):
         # Not all phases have space groups
@@ -1059,7 +1060,7 @@ class TestGetIndexer:
             _ = self.det.get_indexer(pl)
 
     @pytest.mark.skipif(
-        not kp.constants.installed["pyebsdindex"], reason="pyebsdindex is not installed"
+        dependency_version["pyebsdindex"] is None, reason="pyebsdindex is not installed"
     )
     def test_get_indexer(self):
         # fmt: off

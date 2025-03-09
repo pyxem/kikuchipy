@@ -260,11 +260,11 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         >>> mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
         >>> mp.plot_spherical()
         """
-        from kikuchipy.constants import installed
+        from kikuchipy.constants import dependency_version
 
-        if not installed["pyvista"]:  # pragma: no cover
+        if dependency_version["pyvista"] is None:  # pragma: no cover
             raise ImportError(
-                "`pyvista` is required, see the installation guide for more information"
+                "PyVista is required, see the installation guide for more information"
             )
         else:
             from orix.projections import InverseStereographicProjection

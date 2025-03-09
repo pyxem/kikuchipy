@@ -74,7 +74,7 @@ from tqdm import tqdm
 
 from kikuchipy._utils.numba import vec_dot
 from kikuchipy._utils.vector import ValidHemispheres, poles_from_hemisphere
-from kikuchipy.constants import installed
+from kikuchipy.constants import dependency_version
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 from kikuchipy.simulations._kikuchi_pattern_features import (
@@ -455,7 +455,7 @@ class KikuchiPatternSimulator:
         if (
             projection == "spherical"
             and backend == "pyvista"
-            and not installed["pyvista"]
+            and dependency_version["pyvista"] is None
         ):  # pragma: no cover
             raise ImportError("PyVista is not installed")
 

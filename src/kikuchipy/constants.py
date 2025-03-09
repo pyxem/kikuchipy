@@ -19,19 +19,26 @@
 
 from importlib.metadata import version
 
-# NB! Update project config file if this list is updated!
-optional_deps: list[str] = [
-    "pyvista",
+from packaging.version import Version
+
+deps_for_version_check = [
+    # Core
+    "hyperspy",
+    "matplotlib",
+    "numpy",
+    # Optional
     "nlopt",
+    "pyvista",
     "pyebsdindex",
 ]
-installed: dict[str, bool] = {}
-for pkg in optional_deps:
+dependency_version: dict[str, Version | None] = {}
+for dep in deps_for_version_check:
     try:
-        _ = version(pkg)
-        installed[pkg] = True
+        dep_version = Version(version(dep))
     except ImportError:  # pragma: no cover
-        installed[pkg] = False
+        dep_version = None
+    dependency_version[dep] = dep_version
+
 
 # PyOpenCL context available for use with PyEBSDIndex? Required for
 # Hough indexing of Dask arrays.
@@ -62,4 +69,4 @@ except ImportError:  # pragma: no cover
     # Removed in NumPy 2.0.0
     from numpy import VisibleDeprecationWarning
 
-del optional_deps, version
+del dep_version, deps_for_version_check, version

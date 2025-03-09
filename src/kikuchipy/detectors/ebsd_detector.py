@@ -44,9 +44,9 @@ from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
 if TYPE_CHECKING:  # pragma: no cover
     from diffsims.crystallography import ReciprocalLatticeVector
 
-    from kikuchipy.constants import installed
+    from kikuchipy.constants import dependency_version
 
-    if installed["pyebsdindex"]:
+    if dependency_version["pyebsdindex"] is not None:
         from pyebsdindex.ebsd_index import EBSDIndexer
 
 
