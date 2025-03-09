@@ -28,6 +28,7 @@ from packaging.version import Version
 import pytest
 
 import kikuchipy as kp
+from kikuchipy.constants import dependency_version
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
 from kikuchipy.io.plugins.kikuchipy_h5ebsd._api import (
     KikuchipyH5EBSDReader,
@@ -331,7 +332,7 @@ class TestKikuchipyH5EBSD:
 
     # TODO: Remove this skip once issue is resolved
     @pytest.mark.skipif(
-        Version(np.__version__) >= Version("2.1"), reason="Fails with NumPy >= 2.1"
+        dependency_version["numpy"] >= Version("2.1"), reason="Fails with NumPy >= 2.1"
     )
     def test_save_load_0d_nav(self, save_path_hdf5):
         """Save-load cycle of a signal with no navigation dimension."""

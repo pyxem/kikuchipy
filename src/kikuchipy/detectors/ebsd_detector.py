@@ -10,11 +10,12 @@
 #
 # kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.#
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from __future__ import annotations
 
@@ -49,9 +50,9 @@ from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
 if TYPE_CHECKING:  # pragma: no cover
     from diffsims.crystallography import ReciprocalLatticeVector
 
-    from kikuchipy.constants import installed
+    from kikuchipy.constants import dependency_version
 
-    if installed["pyebsdindex"]:
+    if dependency_version["pyebsdindex"] is not None:
         from pyebsdindex.ebsd_index import EBSDIndexer
 
 

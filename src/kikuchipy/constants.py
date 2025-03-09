@@ -10,29 +10,37 @@
 #
 # kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.#
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Constants and such useful across modules."""
 
 from importlib.metadata import version
 
-# NB! Update project config file if this list is updated!
-optional_deps: list[str] = [
-    "pyvista",
+from packaging.version import Version
+
+deps_for_version_check = [
+    # Core
+    "hyperspy",
+    "matplotlib",
+    "numpy",
+    # Optional
     "nlopt",
+    "pyvista",
     "pyebsdindex",
 ]
-installed: dict[str, bool] = {}
-for pkg in optional_deps:
+dependency_version: dict[str, Version | None] = {}
+for dep in deps_for_version_check:
     try:
-        _ = version(pkg)
-        installed[pkg] = True
+        dep_version = Version(version(dep))
     except ImportError:  # pragma: no cover
-        installed[pkg] = False
+        dep_version = None
+    dependency_version[dep] = dep_version
+
 
 # PyOpenCL context available for use with PyEBSDIndex? Required for
 # Hough indexing of Dask arrays.
@@ -63,4 +71,4 @@ except ImportError:  # pragma: no cover
     # Removed in NumPy 2.0.0
     from numpy import VisibleDeprecationWarning  # noqa: F401
 
-del optional_deps, version
+del dep_version, deps_for_version_check, version

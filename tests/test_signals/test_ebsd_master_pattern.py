@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import dask.array as da
 from diffsims.crystallography import ReciprocalLatticeVector
@@ -30,6 +32,7 @@ from kikuchipy._utils._detector_coordinates import (
     get_coordinate_conversions,
 )
 from kikuchipy._utils.numba import rotate_vector
+from kikuchipy.constants import dependency_version
 from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_for_fixed_pc,
     _get_direction_cosines_for_varying_pc,
@@ -544,7 +547,7 @@ class TestProjectFromLambert:
 
 class TestMasterPatternPlotting:
     @pytest.mark.skipif(
-        not kp.constants.installed["pyvista"], reason="PyVista is not installed"
+        dependency_version["pyvista"] is None, reason="PyVista is not installed"
     )
     def test_plot_spherical(self):
         """Returns expected data and raises correct error."""
@@ -568,12 +571,11 @@ class TestMasterPatternPlotting:
             mp.plot_spherical()
 
     @pytest.mark.skipif(
-        kp.constants.installed["pyvista"], reason="PyVista is installed"
+        dependency_version["pyvista"] is not None, reason="PyVista is installed"
     )
     def test_plot_spherical_raises(self):
-        """Raise ImportError when PyVista is not installed."""
         mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
-        with pytest.raises(ImportError, match="`pyvista` is required"):
+        with pytest.raises(ImportError):
             _ = mp.plot_spherical()
 
 

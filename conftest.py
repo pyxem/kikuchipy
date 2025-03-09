@@ -10,11 +10,12 @@
 #
 # kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.#
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 # Why is this file located in the top directory and not in tests/?
 # Because if it was, running "pytest --doctest-modules src" wouldn't
@@ -39,7 +40,7 @@ from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
-from kikuchipy import constants
+from kikuchipy.constants import dependency_version
 from kikuchipy.data._data import marshall
 from kikuchipy.data._dummy_files.bruker_h5ebsd import (
     create_dummy_bruker_h5ebsd_file,
@@ -49,7 +50,7 @@ from kikuchipy.data._dummy_files.bruker_h5ebsd import (
 from kikuchipy.data._dummy_files.oxford_h5ebsd import create_dummy_oxford_h5ebsd_file
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
 
-if constants.installed["pyvista"]:
+if dependency_version["pyvista"] is not None:
     import pyvista as pv
 
     pv.OFF_SCREEN = True

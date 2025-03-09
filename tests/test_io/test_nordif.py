@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 # Many of these tests are inspired by the tests written for the block_file
 # reader/writer available in HyperSpy: https://github.com/hyperspy/hyperspy/
@@ -289,31 +291,13 @@ class TestNORDIF:
             )
         assert s.data.shape == s_reload.data.shape
 
-    def test_load_to_memory(self, nordif_path):
+        s2 = kp.load(nordif_path / "Pattern.dat", lazy=False)
+        s.compute()
+        assert np.allclose(s2.data, s.data)
+
+    def test_load_inplace(self, nordif_path, assert_dictionary_func):
         s = kp.load(nordif_path / "Pattern.dat")
-        assert isinstance(s.data, np.ndarray)
-        assert not isinstance(s.data, np.memmap)
-
-    def test_load_memmap(self, nordif_path):
-        s = kp.load(nordif_path / "Pattern.dat", lazy=True)
-        keys = ["array-original", "original-array"]
-        k = next(
-            filter(
-                lambda x: isinstance(x, str) and any([x.startswith(j) for j in keys]),
-                s.data.dask.keys(),
-            )
-        )
-        mm = s.data.dask[k]
-        assert isinstance(mm, np.memmap)
-
-    @pytest.mark.parametrize("lazy", [True, False])
-    def test_load_inplace(self, nordif_path, assert_dictionary_func, lazy):
-        if lazy:
-            with pytest.raises(ValueError):
-                _ = kp.load(nordif_path / "Pattern.dat", lazy=lazy, mmap_mode="r+")
-        else:
-            s = kp.load(nordif_path / "Pattern.dat", lazy=lazy, mmap_mode="r+")
-            assert_dictionary_func(s.axes_manager.as_dictionary(), AXES_MANAGER)
+        assert_dictionary_func(s.axes_manager.as_dictionary(), AXES_MANAGER)
 
     def test_save_fresh(self, save_path_nordif):
         scan_size = (10, 3)

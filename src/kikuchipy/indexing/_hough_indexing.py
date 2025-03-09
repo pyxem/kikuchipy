@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Wrapping of PyEBSDIndex functionality for Hough indexing of
 EBSD patterns.
@@ -30,10 +32,10 @@ import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList, create_coordinate_arrays
 from orix.quaternion import Rotation
 
-from kikuchipy.constants import installed
+from kikuchipy.constants import dependency_version
 
 if TYPE_CHECKING:  # pragma: no cover
-    if installed["pyebsdindex"]:
+    if dependency_version["pyebsdindex"] is not None:
         from pyebsdindex.ebsd_index import EBSDIndexer
         from pyebsdindex.tripletvote import BandIndexer
 
@@ -163,7 +165,7 @@ def _get_indexer_from_detector(
     Requires that :mod:`pyebsdindex` is installed, which is an optional
     dependency of kikuchipy. See :ref:`dependencies` for details.
     """
-    if not installed["pyebsdindex"]:  # pragma: no cover
+    if dependency_version["pyebsdindex"] is None:  # pragma: no cover
         raise ValueError(
             "pyebsdindex must be installed. Install with pip install pyebsdindex. "
             "See https://kikuchipy.org/en/stable/user/installation.html for details."

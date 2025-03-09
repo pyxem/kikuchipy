@@ -34,6 +34,14 @@ Fixed
 Deprecated
 ----------
 
+0.11.2 (2025-03-09)
+===================
+
+Fixed
+-----
+- Compatibility with HyperSpy 2.3.
+  (`#723 <https://github.com/pyxem/kikuchipy/pull/723>`_)
+
 0.11.1 (2024-11-30)
 ===================
 

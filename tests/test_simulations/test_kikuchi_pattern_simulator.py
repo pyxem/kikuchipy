@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,10 +15,10 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from diffpy.structure import Atom, Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticeVector
-import matplotlib
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,7 +29,7 @@ from packaging.version import Version
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.constants import installed
+from kikuchipy.constants import dependency_version
 
 
 def setup_method():
@@ -289,14 +290,16 @@ class TestPlot:
 
         simulator.plot("spherical", figure=fig2)
         assert len(ax2.lines) == simulator.reflectors.size * 3
-        if Version(matplotlib.__version__) < Version("3.5.0"):
+        if dependency_version["matplotlib"] < Version("3.5.0"):
             assert len(ax2.artists) == 6
         else:
             assert len(ax2.patches) == 6  # Reference frame arrows added twice...
 
         plt.close("all")
 
-    @pytest.mark.skipif(not installed["pyvista"], reason="PyVista is not installed")
+    @pytest.mark.skipif(
+        dependency_version["pyvista"] is None, reason="PyVista is not installed"
+    )
     def test_spherical_pyvista(self):
         """Spherical plot with PyVista."""
         import pyvista as pv
@@ -333,7 +336,9 @@ class TestPlot:
 
         plt.close("all")
 
-    @pytest.mark.skipif(installed["pyvista"], reason="PyVista is installed")
+    @pytest.mark.skipif(
+        dependency_version["pyvista"] is not None, reason="PyVista is installed"
+    )
     def test_spherical_pyvista_raises(self):
         """Appropriate error message is raised when PyVista is
         unavailable.

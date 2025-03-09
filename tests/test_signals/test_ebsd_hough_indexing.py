@@ -14,7 +14,8 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.#
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from diffpy.structure import Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticeVector
@@ -23,6 +24,7 @@ from orix.crystal_map import CrystalMap, Phase, PhaseList
 import pytest
 
 import kikuchipy as kp
+from kikuchipy.constants import dependency_version, pyopencl_context_available
 from kikuchipy.indexing._hough_indexing import (
     _get_info_message,
     _indexer_is_compatible_with_kikuchipy,
@@ -31,7 +33,7 @@ from kikuchipy.indexing._hough_indexing import (
 
 
 @pytest.mark.skipif(
-    not kp.constants.installed["pyebsdindex"], reason="pyebsdindex is not installed"
+    dependency_version["pyebsdindex"] is None, reason="pyebsdindex is not installed"
 )
 class TestHoughIndexing:
     def setup_method(self):
@@ -88,7 +90,7 @@ class TestHoughIndexing:
         s = self.signal.as_lazy()
 
         phase_list = self.signal.xmap.phases
-        if kp.constants.pyopencl_context_available:
+        if pyopencl_context_available:
             xmap1 = s.hough_indexing(phase_list, self.indexer)
             xmap2 = self.signal.hough_indexing(phase_list, self.indexer)
             assert np.allclose(xmap1.rotations.data, xmap2.rotations.data)
@@ -290,7 +292,7 @@ class TestHoughIndexing:
 
 
 @pytest.mark.skipif(
-    not kp.constants.installed["pyebsdindex"], reason="pyebsdindex is not installed"
+    dependency_version["pyebsdindex"] is None, reason="pyebsdindex is not installed"
 )
 class TestPCOptimization:
     def setup_method(self):
@@ -357,7 +359,7 @@ class TestPCOptimization:
         s = self.signal.as_lazy()
         det = self.signal.detector
 
-        if kp.constants.pyopencl_context_available:
+        if pyopencl_context_available:
             det = s.hough_indexing_optimize_pc(det.pc_average, self.indexer)
             assert np.allclose(det.pc_average, det.pc_average, atol=1e-2)
         else:
@@ -366,7 +368,7 @@ class TestPCOptimization:
 
 
 @pytest.mark.skipif(
-    kp.constants.installed["pyebsdindex"], reason="pyebsdindex is installed"
+    dependency_version["pyebsdindex"] is not None, reason="pyebsdindex is installed"
 )
 class TestHoughIndexingNoPyEBSDIndex:
     def setup_method(self):

@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 # The following copyright notice is included because a part of the
 # calculation of kinematical master patterns in the stereographic
@@ -74,7 +76,7 @@ from tqdm import tqdm
 
 from kikuchipy._utils.numba import vec_dot
 from kikuchipy._utils.vector import ValidHemispheres, poles_from_hemisphere
-from kikuchipy.constants import installed
+from kikuchipy.constants import dependency_version
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 from kikuchipy.simulations._kikuchi_pattern_features import (
@@ -458,7 +460,7 @@ class KikuchiPatternSimulator:
         if (
             projection == "spherical"
             and backend == "pyvista"
-            and not installed["pyvista"]
+            and dependency_version["pyvista"] is None
         ):  # pragma: no cover
             raise ImportError("PyVista is not installed")
 

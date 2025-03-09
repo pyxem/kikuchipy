@@ -21,6 +21,7 @@ from orix.crystal_map import Phase
 import pytest
 
 import kikuchipy as kp
+from kikuchipy.constants import dependency_version
 
 
 class TestECPMasterPattern:
@@ -71,7 +72,7 @@ class TestECPMasterPattern:
         assert np.allclose(mp_lower, data[1])
 
     @pytest.mark.skipif(
-        not kp.constants.installed["pyvista"], reason="PyVista is not installed"
+        dependency_version["pyvista"] is None, reason="PyVista is not installed"
     )
     def test_plot_spherical(self, emsoft_ecp_master_pattern_file):
         """Cover inherited method only included for documentation

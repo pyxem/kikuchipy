@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from copy import deepcopy
 import gc
@@ -27,10 +29,12 @@ import dask.array as da
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.signals import Signal2D
 import numpy as np
+from packaging.version import Version
 from rsciio.utils.rgb_tools import rgb_dtypes
 from skimage.util.dtype import dtype_range
 import yaml
 
+from kikuchipy.constants import dependency_version
 from kikuchipy.pattern._pattern import (
     _adaptive_histogram_equalization,
     normalize_intensity,
@@ -564,10 +568,14 @@ class KikuchipySignal2D(Signal2D):
 
         return s_new
 
-    def _assign_subclass(self) -> None:
+    def _assign_subclass(self, chunks: bool = False) -> None:
         attrs = self._custom_attributes
 
-        super()._assign_subclass()
+        kw = {}
+        if dependency_version["hyperspy"] >= Version("2.3"):
+            kw["chunks"] = chunks
+
+        super()._assign_subclass(**kw)
 
         if self._signal_type not in SIGNAL_TYPES:
             for name in attrs:

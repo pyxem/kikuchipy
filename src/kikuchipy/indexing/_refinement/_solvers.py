@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Solvers for the refinement of crystal orientations and projection
 centers by optimizing the similarity between experimental and simulated
@@ -39,9 +41,9 @@ from kikuchipy.pattern._pattern import (
 from kikuchipy.signals.util._master_pattern import _get_direction_cosines_for_fixed_pc
 
 if TYPE_CHECKING:  # pragma: no cover
-    from kikuchipy.constants import installed
+    from kikuchipy.constants import dependency_version
 
-    if installed["nlopt"]:
+    if dependency_version["nlopt"] is not None:
         import nlopt
 
 
