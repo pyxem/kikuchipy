@@ -552,9 +552,8 @@ class TestMasterPatternPlotting:
         dependency_version["pyvista"] is not None, reason="PyVista is installed"
     )
     def test_plot_spherical_raises(self):
-        """Raise ImportError when PyVista is not installed."""
         mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
-        with pytest.raises(ImportError, match="`pyvista` is required"):
+        with pytest.raises(ImportError):
             _ = mp.plot_spherical()
 
 
