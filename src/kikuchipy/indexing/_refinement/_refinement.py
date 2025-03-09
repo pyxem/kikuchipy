@@ -45,11 +45,11 @@ from kikuchipy.signals.util._crystal_map import _get_indexed_points_in_data_in_x
 from kikuchipy.signals.util._master_pattern import _get_direction_cosines_from_detector
 
 if TYPE_CHECKING:  # pragma: no cover
-    from kikuchipy.constants import installed
+    from kikuchipy.constants import dependency_version
     from kikuchipy.detectors.ebsd_detector import EBSDDetector
     from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 
-    if installed["nlopt"]:
+    if dependency_version["nlopt"] is not None:
         import nlopt
 
 
@@ -1101,10 +1101,10 @@ class _RefinementSetup:
         self.package = method_dict["package"]
 
         if self.package == "nlopt":
-            from kikuchipy.constants import installed
+            from kikuchipy.constants import dependency_version
 
             method_upper = method.upper()
-            if not installed["nlopt"]:
+            if dependency_version["nlopt"] is None:
                 raise ImportError(  # pragma: no cover
                     f"Package `nlopt`, required for method {method_upper}, is not "
                     "installed"

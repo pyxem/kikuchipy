@@ -28,7 +28,7 @@ from packaging.version import Version
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.constants import installed
+from kikuchipy.constants import dependency_version
 
 
 def setup_method():
@@ -289,14 +289,16 @@ class TestPlot:
 
         simulator.plot("spherical", figure=fig2)
         assert len(ax2.lines) == simulator.reflectors.size * 3
-        if Version(matplotlib.__version__) < Version("3.5.0"):
+        if dependency_version["matplotlib"] < Version("3.5.0"):
             assert len(ax2.artists) == 6
         else:
             assert len(ax2.patches) == 6  # Reference frame arrows added twice...
 
         plt.close("all")
 
-    @pytest.mark.skipif(not installed["pyvista"], reason="PyVista is not installed")
+    @pytest.mark.skipif(
+        dependency_version["pyvista"] is None, reason="PyVista is not installed"
+    )
     def test_spherical_pyvista(self):
         """Spherical plot with PyVista."""
         import pyvista as pv
@@ -333,7 +335,9 @@ class TestPlot:
 
         plt.close("all")
 
-    @pytest.mark.skipif(installed["pyvista"], reason="PyVista is installed")
+    @pytest.mark.skipif(
+        dependency_version["pyvista"] is not None, reason="PyVista is installed"
+    )
     def test_spherical_pyvista_raises(self):
         """Appropriate error message is raised when PyVista is
         unavailable.

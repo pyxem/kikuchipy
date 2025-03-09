@@ -41,7 +41,7 @@ from orix.quaternion import Rotation
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
-from kikuchipy.constants import installed, pyopencl_context_available
+from kikuchipy.constants import dependency_version, pyopencl_context_available
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
@@ -104,7 +104,10 @@ from kikuchipy.signals.util.array_tools import grid_indices
 from kikuchipy.signals.virtual_bse_image import VirtualBSEImage
 
 if TYPE_CHECKING:  # pragma: no cover
-    from pyebsdindex.ebsd_index import EBSDIndexer
+    try:
+        from pyebsdindex.ebsd_index import EBSDIndexer
+    except ImportError:
+        pass
 
     from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 
@@ -1654,7 +1657,7 @@ class EBSD(KikuchipySignal2D):
         uses a single thread. If you need the fastest indexing, refer to
         the PyEBSDIndex documentation for multi-threading and more.
         """
-        if not installed["pyebsdindex"]:  # pragma: no cover
+        if dependency_version["pyebsdindex"] is None:  # pragma: no cover
             raise ValueError(
                 "Hough indexing requires pyebsdindex to be installed. Install it with "
                 "pip install pyebsdindex. See "
@@ -1752,7 +1755,7 @@ class EBSD(KikuchipySignal2D):
         Requires :mod:`pyebsdindex` to be installed. See
         :ref:`dependencies` for further details.
         """
-        if not installed["pyebsdindex"]:  # pragma: no cover
+        if dependency_version["pyebsdindex"] is None:  # pragma: no cover
             raise ValueError(
                 "Hough indexing requires pyebsdindex to be installed. Install it with "
                 "pip install pyebsdindex. See "
