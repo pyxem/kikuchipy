@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import dask
 import dask.array as da
@@ -1223,6 +1225,7 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         # Global: Differential evolution
         _, _ = s.refine_orientation_projection_center(
             method="differential_evolution",
+            trust_region=[2, 2, 2, 0.05, 0.05, 0.05],
             navigation_mask=nav_mask,
             **ref_kw,
         )

@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from copy import deepcopy
 
@@ -22,6 +24,7 @@ import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import PhaseList
+from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
@@ -75,12 +78,28 @@ class TestEBSDDetector:
             ((60, 60), 70, 8, [1, 1, 0.5], 16800, 33600, 33600, 3600, (480, 480), 560),
             ((60, 60), 70, 8, [1, 1, 0.7], 23520, 33600, 33600, 3600, (480, 480), 560),
             (
-                (480, 460), 70, 0.5, [1, 1, 0.7], 11760, 16100, 16800, 220800,
-                (240, 230), 35,
+                (480, 460),
+                70,
+                0.5,
+                [1, 1, 0.7],
+                11760,
+                16100,
+                16800,
+                220800,
+                (240, 230),
+                35,
             ),
             (
-                (340, 680), 40, 2, [1, 1, 0.7], 19040, 54400, 27200, 231200,
-                (680, 1360), 80,
+                (340, 680),
+                40,
+                2,
+                [1, 1, 0.7],
+                19040,
+                54400,
+                27200,
+                231200,
+                (680, 1360),
+                80,
             ),
             # fmt: on
         ],
@@ -113,11 +132,11 @@ class TestEBSDDetector:
     def test_repr(self, pc1):
         """Expected string representation."""
         det = kp.detectors.EBSDDetector(
-            shape=(1, 2), px_size=3, binning=4, tilt=5, azimuthal=2, pc=pc1
+            shape=(1, 2), px_size=3, binning=4, tilt=5, azimuthal=2, twist=1.02, pc=pc1
         )
         assert repr(det) == (
             "EBSDDetector(shape=(1, 2), pc=(0.421, 0.779, 0.505), sample_tilt=70.0, "
-            "tilt=5.0, azimuthal=2.0, binning=4.0, px_size=3.0 um)"
+            "tilt=5.0, azimuthal=2.0, twist=1.02, binning=4.0, px_size=3.0 um)"
         )
 
     def test_deepcopy(self, pc1):
@@ -212,6 +231,133 @@ class TestEBSDDetector:
         detector = kp.detectors.EBSDDetector(shape=shape, pc=pc1)
         assert np.allclose(detector.x_scale, desired_x_scale, atol=1e-6)
         assert np.allclose(detector.y_scale, desired_y_scale, atol=1e-6)
+
+    @pytest.mark.parametrize(
+        "tilt, azimuthal, twist, sample_tilt, expected_angle, expected_axis, "
+        "expected_rotation",
+        [
+            (
+                0,
+                0,
+                0,
+                90,
+                90.0,
+                np.array([0.0, 0.0, 1.0]),
+                np.array([[0.70710678, 0.0, 0.0, 0.70710678]]),
+            ),
+            (
+                0,
+                0,
+                0,
+                70,
+                91.7279410723505,
+                np.array([0.17108787, 0.17108787, 0.97028753]),
+                np.array([[0.69636424, 0.1227878, 0.1227878, 0.69636424]]),
+            ),
+            (
+                8.3,
+                4.7,
+                1.02,
+                70,
+                94.94104636971042,
+                np.array([0.19765823, 0.27176174, 0.94184754]),
+                np.array([[0.67596942, 0.14566022, 0.20026929, 0.69407539]]),
+            ),
+        ],
+    )
+    def test_sample_to_detector(
+        self,
+        tilt,
+        azimuthal,
+        twist,
+        sample_tilt,
+        expected_angle,
+        expected_axis,
+        expected_rotation,
+    ):
+        """Check the Rotation sample_to_detector has the correct type and values."""
+        detector = kp.detectors.EBSDDetector(
+            tilt=tilt, azimuthal=azimuthal, twist=twist, sample_tilt=sample_tilt
+        )
+        smpl_to_det = detector.sample_to_detector
+
+        assert isinstance(smpl_to_det, Rotation)
+        assert np.allclose(np.rad2deg(smpl_to_det.angle)[0], expected_angle)
+        assert np.allclose(smpl_to_det.axis.data.squeeze(), expected_axis)
+        assert np.allclose(smpl_to_det.data, expected_rotation)
+
+    def test_coordinate_conversion_factors(self):
+        """Factors for converting between pixel and gonomic coords."""
+        s = kp.data.nickel_ebsd_small()
+        det_1d = kp.detectors.EBSDDetector(shape=(60, 60), pc=s.detector.pc[0,])
+        conv_1d = det_1d.coordinate_conversion_factors
+
+        exp_res_1d = {
+            "pix_to_gn": {
+                "m_x": np.array([0.03319923, 0.03326385, 0.03330547]),
+                "c_x": np.array([-0.83957734, -0.84652344, -0.85204404]),
+                "m_y": np.array([-0.03319923, -0.03326385, -0.03330547]),
+                "c_y": np.array([0.42827701, 0.41940433, 0.42255835]),
+            },
+            "gn_to_pix": {
+                "m_x": np.array([30.12118421, 30.06266362, 30.02509794]),
+                "c_x": np.array([25.28906376, 25.4487495, 25.58270568]),
+                "m_y": np.array([-30.12118421, -30.06266362, -30.02509794]),
+                "c_y": np.array([12.90021062, 12.60841133, 12.6873559]),
+            },
+        }
+
+        for i in ["pix_to_gn", "gn_to_pix"]:
+            for j in ["m_x", "c_x", "m_y", "c_y"]:
+                assert np.allclose(conv_1d[i][j], exp_res_1d[i][j])
+
+    @pytest.mark.parametrize(
+        "coords, detector_index, desired_coords",
+        [
+            (
+                np.array([[36.2, 12.7]]),
+                None,
+                np.array(
+                    [
+                        [[[0.36223463, 0.00664684]], [[0.357628, -0.00304659]]],
+                        [[[0.36432453, 0.00973462]], [[0.35219232, 0.00567801]]],
+                    ]
+                ),
+            ),
+            (
+                np.array([[36.2, 12.7], [2.5, 43.7], [8.2, 27.7]]),
+                (0, 1),
+                np.array(
+                    [
+                        [0.35762801, -0.00304659],
+                        [-0.76336381, -1.03422601],
+                        [-0.57375985, -0.50200438],
+                    ]
+                ),
+            ),
+        ],
+    )
+    def test_coordinate_conversions(self, coords, detector_index, desired_coords):
+        """Converting from pixel to gnomonic coords and back."""
+        pc = np.array(
+            [
+                [
+                    [0.4214844, 0.21500351, 0.50201974],
+                    [0.42414583, 0.21014019, 0.50104439],
+                ],
+                [
+                    [0.42088203, 0.2165417, 0.50079336],
+                    [0.42725023, 0.21450546, 0.49996293],
+                ],
+            ]
+        )
+        det = kp.detectors.EBSDDetector(shape=(60, 60), pc=pc)
+        cds_out = det.convert_detector_coordinates(coords, "pix_to_gn", detector_index)
+        cds_back = det.convert_detector_coordinates(
+            cds_out, "gn_to_pix", detector_index
+        )
+        assert np.allclose(cds_out, desired_coords)
+        assert np.allclose(cds_back[..., :], coords[..., :])
 
     @pytest.mark.parametrize(
         "shape, pc, px_size, binning, version, desired_pc",
@@ -648,12 +794,11 @@ class TestPlotPC:
         figsize = fig.get_size_inches()
         assert (figsize[0] / figsize[1]) > 1
 
-        ax = fig.axes
-        assert len(ax) == 6
-        assert all([a.get_xlabel() == "Column" for a in ax[:3]])
-        assert all(
-            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "y", "z"])]
-        )
+        axes = fig.axes
+        assert len(axes) == 6
+        assert all([ax.get_xlabel() == "Column" for ax in axes[:3]])
+        for ax, label in zip(axes[3:], ["x", "y", "z"]):
+            assert ax.get_ylabel() == f"PC{label}"
 
         plt.close(fig)
 
@@ -663,12 +808,11 @@ class TestPlotPC:
         figsize = fig.get_size_inches()
         assert (figsize[0] / figsize[1]) < 1
 
-        ax = fig.axes
-        assert len(ax) == 6
-        assert all([a.get_xlabel() == "Column" for a in ax[:3]])
-        assert all(
-            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "y", "z"])]
-        )
+        axes = fig.axes
+        assert len(axes) == 6
+        assert all([ax.get_xlabel() == "Column" for ax in axes[:3]])
+        for ax, label in zip(axes[3:], ["x", "y", "z"]):
+            assert ax.get_ylabel() == f"PC{label}"
 
         plt.close(fig)
 
@@ -678,16 +822,13 @@ class TestPlotPC:
         figsize = fig.get_size_inches()
         assert (figsize[0] / figsize[1]) > 1
 
-        ax = fig.axes
-        assert len(ax) == 3
-        assert all(
-            [a.get_xlabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "x", "z"])]
-        )
-        assert all(
-            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["y", "z", "y"])]
-        )
+        axes = fig.axes
+        assert len(axes) == 3
+        for ax, label in zip(axes[3:], ["x", "y", "z"]):
+            assert ax.get_xlabel() == f"PC{label}"
+            assert ax.get_ylabel() == f"PC{label}"
 
-        texts = ax[0].texts
+        texts = axes[0].texts
         assert len(texts) == self.det.navigation_size
         assert texts[0].get_text() == "0"
         assert texts[-1].get_text() == "599"
@@ -700,14 +841,11 @@ class TestPlotPC:
         figsize = fig.get_size_inches()
         assert (figsize[0] / figsize[1]) < 1
 
-        ax = fig.axes
-        assert len(ax) == 3
-        assert all(
-            [a.get_xlabel() == f"PC{l}" for a, l in zip(ax[3:], ["x", "x", "z"])]
-        )
-        assert all(
-            [a.get_ylabel() == f"PC{l}" for a, l in zip(ax[3:], ["y", "z", "y"])]
-        )
+        axes = fig.axes
+        assert len(axes) == 3
+        for ax, label in zip(axes[3:], ["x", "y", "z"]):
+            assert ax.get_xlabel() == f"PC{label}"
+            assert ax.get_ylabel() == f"PC{label}"
 
         plt.close(fig)
 
@@ -1085,12 +1223,13 @@ class TestGetIndexer:
 
 class TestSaveLoadDetector:
     @pytest.mark.parametrize(
-        "nav_shape, shape, convention, sample_tilt, tilt, px_size, binning, azimuthal",
+        "nav_shape, shape, convention, sample_tilt, tilt, px_size, binning, azimuthal, "
+        "twist",
         [
-            ((3, 4), (10, 20), "bruker", 70, 0, 70, 1, 0),
-            ((1, 5), (5, 5), "tsl", 69.5, 3.14, 57.2, 2, 3.7),
-            ((4, 3), (6, 7), "emsoft", -69.5, -3.14, 57.2, 2, -3.7),
-            ((3, 2), (5, 7), "oxford", 71.3, 1.2, 90.3, 3, 0.1),
+            ((3, 4), (10, 20), "bruker", 70, 0, 70, 1, 0, 0),
+            ((1, 5), (5, 5), "tsl", 69.5, 3.14, 57.2, 2, 3.7, 0.003),
+            ((4, 3), (6, 7), "emsoft", -69.5, -3.14, 57.2, 2, -3.7, -1.23),
+            ((3, 2), (5, 7), "oxford", 71.3, 1.2, 90.3, 3, 0.1, 0.0465),
         ],
     )
     def test_save_load_detector(
@@ -1104,6 +1243,7 @@ class TestSaveLoadDetector:
         px_size,
         binning,
         azimuthal,
+        twist,
     ):
         det0 = kp.detectors.EBSDDetector(
             shape=shape,
@@ -1113,6 +1253,7 @@ class TestSaveLoadDetector:
             px_size=px_size,
             binning=binning,
             azimuthal=azimuthal,
+            twist=twist,
             convention=convention,
         )
         det1 = det0.extrapolate_pc(
@@ -1134,6 +1275,7 @@ class TestSaveLoadDetector:
         assert np.isclose(det2.px_size, det1.px_size)
         assert det2.binning == det1.binning
         assert np.isclose(det2.azimuthal, det1.azimuthal)
+        assert np.isclose(det2.twist, det1.twist)
 
     def test_save_detector_raises(self, tmp_path):
         det = kp.detectors.EBSDDetector()

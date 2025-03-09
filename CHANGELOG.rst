@@ -13,6 +13,27 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+Unreleased
+==========
+
+Added
+-----
+
+Changed
+-------
+
+Removed
+-------
+
+Fixed
+-----
+- Removed possibility for a silent out-of-bounds array indexing with Numba when
+  projecting a single pattern from a master pattern in the Lambert projection to the
+  detector. (`#718 <https://github.com/pyxem/kikuchipy/pull/718>`_)
+
+Deprecated
+----------
+
 0.11.2 (2025-03-09)
 ===================
 

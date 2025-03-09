@@ -42,7 +42,7 @@ dependencies = [
     "dask[array]      >= 2021.8.1",
     "diffpy.structure >= 3",
     "diffsims         >= 0.5.2",
-    "hyperspy         >= 2.2",
+    "hyperspy         >= 2.2, < 2.3",
     "h5py             >= 2.10",
     "imageio",
     "lazy_loader",
@@ -97,6 +97,7 @@ dev = [
     "isort",
     "outdated",
     "pre-commit                   >= 1.16",
+    "ruff",
     "kikuchipy[doc,tests,coverage]",
 ]
 
@@ -165,7 +166,20 @@ filterwarnings = [
     "ignore:Unable to import recommended hash 'siphash24.siphash13'",
 ]
 
-[tool.isort]
-profile = "black"
-filter_files = true
-force_sort_within_sections = true
+# https://docs.astral.sh/ruff/configuration
+[tool.ruff.lint]
+exclude = ["*.ipynb"]
+select = [
+    "F",  # pyflakes
+    "E",  # pycodestyle
+    "W",  # pycodestyle
+    "I",  # isort
+]
+# https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
+extend-ignore = ["E501"]
+# https://docs.astral.sh/ruff/settings/#lintisort
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+
+[tool.ruff.format]
+exclude = ["*.ipynb"]

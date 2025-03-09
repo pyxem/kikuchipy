@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from __future__ import annotations
 
@@ -22,7 +24,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 from diffsims.crystallography import ReciprocalLatticeVector
 from matplotlib.figure import Figure
@@ -39,6 +41,10 @@ from skimage.transform import ProjectiveTransform
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 
 from kikuchipy import __version__
+from kikuchipy._utils._detector_coordinates import (
+    convert_coordinates,
+    get_coordinate_conversions,
+)
 from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -90,6 +96,9 @@ class EBSDDetector:
         Sample tilt about the sample RD (downwards) axis. A positive
         angle means the sample normal moves towards the right looking
         from the sample to the detector. Default is 0.
+    twist
+        Rotation angle of the detector about the normal to
+        the detector screen, Zd. Default is 0.
     sample_tilt
         Sample tilt from horizontal in degrees. Default is 70.
     pc
@@ -182,7 +191,7 @@ class EBSDDetector:
     ...     sample_tilt=70,
     ... )
     >>> det
-    EBSDDetector(shape=(60, 60), pc=(0.421, 0.221, 0.505), sample_tilt=70.0, tilt=5.0, azimuthal=0.0, binning=8.0, px_size=70.0 um)
+    EBSDDetector(shape=(60, 60), pc=(0.421, 0.221, 0.505), sample_tilt=70.0, tilt=5.0, azimuthal=0.0, twist=0.0, binning=8.0, px_size=70.0 um)
     >>> det.navigation_shape
     (10, 20)
     >>> det.bounds
@@ -204,20 +213,23 @@ class EBSDDetector:
         binning: int = 1,
         tilt: float = 0.0,
         azimuthal: float = 0.0,
+        twist: float = 0.0,
         sample_tilt: float = 70.0,
         pc: np.ndarray | list | tuple = (0.5, 0.5, 0.5),
         convention: str | None = None,
     ) -> None:
         """Create an EBSD detector with a shape, pixel size, binning
         factor, sample and detector tilt about the detector X axis,
-        azimuthal tilt about the detector Y axis and one or more
-        projection/pattern centers (PCs).
+        azimuthal tilt about the detector Y axis, twist about the
+        detector Z axis and one or more projection/pattern
+        centers (PCs).
         """
         self.shape = shape
         self.px_size = float(px_size)
-        self.binning: float = float(binning)
+        self.binning = float(binning)
         self.tilt = float(tilt)
         self.azimuthal = float(azimuthal)
+        self.twist = float(twist)
         self.sample_tilt = float(sample_tilt)
         self.pc = pc
         if convention is None:
@@ -231,6 +243,7 @@ class EBSDDetector:
         sample_tilt = np.round(self.sample_tilt, decimals)
         tilt = np.round(self.tilt, decimals)
         azimuthal = np.round(self.azimuthal, decimals)
+        twist = np.round(self.twist, decimals)
         px_size = np.round(self.px_size, decimals)
         return (
             f"{type(self).__name__}"
@@ -239,9 +252,15 @@ class EBSDDetector:
             f"sample_tilt={sample_tilt}, "
             f"tilt={tilt}, "
             f"azimuthal={azimuthal}, "
+            f"twist={twist}, "
             f"binning={self.binning}, "
             f"px_size={px_size} um)"
         )
+
+    @property
+    def euler(self) -> np.ndarray:
+        """Return the detector Euler angles (Bunge convention: ZXZ) in degrees."""
+        return np.array([self.azimuthal, 90.0 + self.tilt, self.twist], dtype=float)
 
     @property
     def specimen_scintillator_distance(self) -> np.ndarray:
@@ -495,6 +514,60 @@ class EBSDDetector:
         corners[..., 3] = self.x_min**2 + self.y_min**2  # Lo. left
         return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
 
+    @property
+    def coordinate_conversion_factors(self) -> dict:
+        """Return factors for converting coordinates on the detector
+        from pixel units to gnomonic units or vice versa.
+
+        The dict returned contains the keys "pix_to_gn",
+        containing factors for converting pixel to gnomonic
+        coordinates, and "gn_to_pix", containing factors for
+        converting gnomonic to pixel coordinates.
+        Under each of these keys is a further dict with the
+        keys: "m_x", "c_x", "m_y" and "c_y". These are the
+        slope (m) and y-intercept (c) corresponding to
+        y = mx + c, which describes the linear conversion
+        of the coordinates. A (different) linear relationship
+        is required for x (column) and y(row) coordinates,
+        hence the two sets of m and c parameters.
+        The shape of each array of conversion factors
+        typically corresponds to the navigation shape
+        of an EBSDDetector.
+        """
+        return get_coordinate_conversions(self.gnomonic_bounds, self.bounds)
+
+    @property
+    def sample_to_detector(self) -> Rotation:
+        """Return the orientation matrix which transforms
+        vectors in the sample reference frame, CSs, to the
+        detector reference frame, CSd.
+
+        Notes
+        -----
+
+        This is the matrix U_s as defined in the paper by
+        Britton et al. :cite:`britton2016tutorial`.
+
+        The return value has type orix.quaternion.Rotation.
+        To obtain a np.ndarray from this, call
+        u_s_rot.to_matrix(), or u_s_rot.to_matrix().squeeze(),
+        to obtain a 2D, 3x3 array.
+
+        The matrix describing the reverse transformation, i.e.
+        from the detector reference frame, CSd, to the sample
+        reference frame, CSs, can be obtained like this:
+        ~EBSDDetector.sample_to_detector
+        """
+        u_sample = Rotation.from_euler([0, self.sample_tilt, 0], degrees=True)
+        u_d = Rotation.from_euler(self.euler, degrees=True)
+        u_d_g = u_d.to_matrix().squeeze()
+        u_detector = Rotation.from_matrix(u_d_g.T)
+        u_s_bruker = u_sample * u_detector
+        sample_to_detector = (
+            Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
+        )
+        return sample_to_detector
+
     @classmethod
     def load(cls, fname: Path | str) -> EBSDDetector:
         """Return an EBSD detector loaded from a text file saved with
@@ -518,6 +591,7 @@ class EBSDDetector:
             "binning",
             "tilt",
             "azimuthal",
+            "twist",
             "sample_tilt",
             "convention",
             "navigation_shape",
@@ -545,7 +619,7 @@ class EBSDDetector:
                 detector_kw[k] = tuple(int(i) for i in shape[1:-1].split(","))
             except ValueError:  # pragma: no cover
                 detector_kw[k] = None
-        for k in ["px_size", "binning", "tilt", "azimuthal", "sample_tilt"]:
+        for k in ["px_size", "binning", "tilt", "azimuthal", "twist", "sample_tilt"]:
             value = detector_kw[k].rstrip(" deg")
             try:
                 detector_kw[k] = float(value)
@@ -556,7 +630,101 @@ class EBSDDetector:
         if isinstance(nav_shape, tuple):
             pc = pc.reshape(nav_shape + (3,))
 
-        return cls(pc=pc, **detector_kw)
+        det = cls(pc=pc, **detector_kw)
+
+        return det
+
+    def convert_detector_coordinates(
+        self,
+        coords: np.ndarray,
+        direction: str,
+        detector_index: Union[None, int, tuple] = None,
+    ) -> np.ndarray:
+        """Convert between gnomonic and pixel coordinates on the detector screen.
+
+
+        Parameters
+        ----------
+        coords
+            A 2D array of coordinates of any shape whereby the
+            x and y coordinates to be converted are stored in
+            the last axis.
+        direction
+            Either "pix_to_gn" or "gn_to_pix", depending on the
+            direction of conversion needed.
+        detector_index
+            Index showing which conversion factors in *conversions[direction]*
+            should be applied to *coords*.
+            If None, **all** conversion factors in *conversions[direction]*
+            are applied to *coords*.
+            If an int is supplied, this refers to an index in a 1D dataset.
+            A 1D tuple *e.g.* (3,) can also be passed for a 1D dataset.
+            A 2D index can be specified by supplying a tuple *e.g.* (2, 3).
+            The default value is None
+
+        Returns
+        -------
+        coords_out
+            Array of coords but with values converted as specified
+            by direction. The shape is either the same as the input
+            or is the navigation shape then the shape of the input.
+
+        Examples
+        --------
+
+        Convert a single point on the detector in pixel coordinates into
+        gnomonic coordinates for all patterns in the dataset.
+
+        >>> import numpy as np
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> det = s.detector
+        >>> det.navigation_shape
+        (3, 3)
+        >>> coords = np.array([[36.2, 12.7]])
+        >>> coords.shape
+        (1, 2)
+        >>> coords_out = det.convert_detector_coordinates(coords, "pix_to_gn", None)
+        >>> coords_out.shape
+        (3, 3, 1, 2)
+        >>> coords_out.squeeze()
+        array([[[ 0.36223464,  0.00664684],
+                [ 0.35762801, -0.00304659],
+                [ 0.35361398, -0.00042112]],
+        <BLANKLINE>
+               [[ 0.36432453,  0.00973461],
+                [ 0.35219231,  0.00567801],
+                [ 0.34417285,  0.00404584]],
+        <BLANKLINE>
+               [[ 0.36296371,  0.00072557],
+                [ 0.34447751,  0.00538137],
+                [ 0.36136688,  0.00180754]]])
+
+        Convert three points on the detector in pixel coordinates into
+        gnomonic coordinates for the pattern at navigation index (1, 2)
+        in the dataset.
+
+        >>> import numpy as np
+        >>> import kikuchipy as kp
+        >>> s = kp.data.nickel_ebsd_small()
+        >>> det = s.detector
+        >>> det.navigation_shape
+        (3, 3)
+        >>> coords = np.array([[36.2, 12.7], [2.5, 43.7], [8.2, 27.7]])
+        >>> coords.shape
+        (3, 2)
+        >>> coords_out = det.convert_detector_coordinates(coords, "pix_to_gn", (1, 2))
+        >>> coords_out.shape
+        (3, 2)
+        >>> coords_out
+        array([[ 0.34417285,  0.00404584],
+               [-0.77639565, -1.02674418],
+               [-0.58686329, -0.49472353]])
+        """
+        coords_out = convert_coordinates(
+            coords, direction, self.coordinate_conversion_factors, detector_index
+        )
+        return coords_out
 
     def crop(self, extent: tuple[int, int, int, int] | list[int]) -> EBSDDetector:
         """Return a new detector with its :attr:`shape` cropped and
@@ -577,9 +745,9 @@ class EBSDDetector:
         >>> import kikuchipy as kp
         >>> det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
         >>> det
-        EBSDDetector(shape=(6, 6), pc=(0.5, 0.333, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=1.0, px_size=1.0 um)
+        EBSDDetector(shape=(6, 6), pc=(0.5, 0.333, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, twist=0.0, binning=1.0, px_size=1.0 um)
         >>> det.crop((1, 5, 2, 6))
-        EBSDDetector(shape=(4, 4), pc=(0.25, 0.25, 0.75), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=1.0, px_size=1.0 um)
+        EBSDDetector(shape=(4, 4), pc=(0.25, 0.25, 0.75), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, twist=0.0, binning=1.0, px_size=1.0 um)
 
         Plot a cropped detector with the PC on a cropped pattern
 
@@ -1515,12 +1683,12 @@ class EBSDDetector:
         ... shape=(480, 640), pc=(0.4, 0.3, 0.5), px_size=70, sample_tilt=70
         ... )
         >>> det0
-        EBSDDetector(shape=(480, 640), pc=(0.4, 0.3, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=1.0, px_size=70.0 um)
+        EBSDDetector(shape=(480, 640), pc=(0.4, 0.3, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, twist=0.0, binning=1.0, px_size=70.0 um)
         >>> det = det0.extrapolate_pc(
         ... pc_indices=[0, 0], navigation_shape=(5, 10), step_sizes=(20, 20)
         ... )
         >>> det
-        EBSDDetector(shape=(480, 640), pc=(0.398, 0.299, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=1.0, px_size=70.0 um)
+        EBSDDetector(shape=(480, 640), pc=(0.398, 0.299, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, twist=0.0, binning=1.0, px_size=70.0 um)
 
         Plot PC values in maps
 
@@ -1594,8 +1762,8 @@ class EBSDDetector:
                 axes[i].scatter(x_coord, y_coord, **kwargs)
                 axes[i].set(xlabel=labels[j], ylabel=labels[k], aspect="equal")
                 if annotate:
-                    for l, (x, y) in enumerate(zip(x_coord, y_coord)):
-                        axes[i].text(x, y, l, ha="left", va="bottom")
+                    for num, (x, y) in enumerate(zip(x_coord, y_coord)):
+                        axes[i].text(x, y, num, ha="left", va="bottom")
             axes[0].invert_xaxis()
             axes[1].invert_xaxis()
             axes[1].invert_yaxis()
@@ -1658,6 +1826,7 @@ class EBSDDetector:
                 f"  binning: {self.binning}\n"
                 f"  tilt: {self.tilt} deg\n"
                 f"  azimuthal: {self.azimuthal} deg\n"
+                f"  twist: {self.twist} deg\n"
                 f"  sample_tilt: {self.sample_tilt} deg\n"
                 f"  convention: {convention}\n"
                 f"  navigation_shape: {self.navigation_shape}\n\n"

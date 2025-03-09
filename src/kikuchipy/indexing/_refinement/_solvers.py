@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Solvers for the refinement of crystal orientations and projection
 centers by optimizing the similarity between experimental and simulated
@@ -25,6 +27,7 @@ from typing import TYPE_CHECKING, Callable
 from numba import njit
 import numpy as np
 
+from kikuchipy._utils._gnonomic_bounds import get_gnomonic_bounds
 from kikuchipy.indexing._refinement import SUPPORTED_OPTIMIZATION_METHODS
 from kikuchipy.indexing._refinement._objective_functions import (
     _refine_orientation_objective_function,
@@ -88,9 +91,7 @@ def _refine_orientation_solver_scipy(
     pcz: float | None = None,
     nrows: int | None = None,
     ncols: int | None = None,
-    tilt: float | None = None,
-    azimuthal: float | None = None,
-    sample_tilt: float | None = None,
+    om_detector_to_sample: np.ndarray | None = None,
     n_pseudo_symmetry_ops: int = 0,
 ) -> (
     tuple[float, int, float, float, float] | tuple[float, int, int, float, float, float]
@@ -139,15 +140,12 @@ def _refine_orientation_solver_scipy(
     ncols
         Number of detector columns. Must be passed if
         ``direction_cosines`` is not given.
-    tilt
-        Detector tilt from horizontal in degrees. Must be passed if
-        ``direction_cosines`` is not given.
-    azimuthal
-        Sample tilt about the sample RD axis in degrees. Must be passed
+    om_detector_to_sample
+        Orientation matrix used for transforming from the detector
+        reference frame to the sample reference frame. This is the
+        inverse of EBSDDetector.sample_to_detector expressed as a
+        3x3 numpy array rather than an orix Rotation. Must be passed
         if ``direction_cosines`` is not given.
-    sample_tilt
-        Sample tilt from horizontal in degrees. Must be passed if
-        ``direction_cosines`` is not given.
     n_pseudo_symmetry_ops
         Number of pseudo-symmetry operators. Default is 0.
 
@@ -163,15 +161,14 @@ def _refine_orientation_solver_scipy(
     pattern, squared_norm = _prepare_pattern(pattern, rescale)
 
     if direction_cosines is None:
+        gn_bds = get_gnomonic_bounds(nrows, ncols, pcx, pcy, pcz)
+
         direction_cosines = _get_direction_cosines_for_fixed_pc(
-            pcx=pcx,
-            pcy=pcy,
+            gnomonic_bounds=gn_bds,
             pcz=pcz,
             nrows=nrows,
             ncols=ncols,
-            tilt=tilt,
-            azimuthal=azimuthal,
-            sample_tilt=sample_tilt,
+            om_detector_to_sample=om_detector_to_sample,
             signal_mask=signal_mask,
         )
 
@@ -478,9 +475,7 @@ def _refine_orientation_solver_nlopt(
     pcz: float | None = None,
     nrows: int | None = None,
     ncols: int | None = None,
-    tilt: float | None = None,
-    azimuthal: float | None = None,
-    sample_tilt: float | None = None,
+    om_detector_to_sample: np.ndarray | None = None,
     n_pseudo_symmetry_ops: int = 0,
 ) -> (
     tuple[float, int, float, float, float] | tuple[float, int, int, float, float, float]
@@ -489,15 +484,14 @@ def _refine_orientation_solver_nlopt(
 
     # Get direction cosines if a unique PC per pattern is used
     if direction_cosines is None:
+        gn_bds = get_gnomonic_bounds(nrows, ncols, pcx, pcy, pcz)
+
         direction_cosines = _get_direction_cosines_for_fixed_pc(
-            pcx=pcx,
-            pcy=pcy,
+            gnomonic_bounds=gn_bds,
             pcz=pcz,
             nrows=nrows,
             ncols=ncols,
-            tilt=tilt,
-            azimuthal=azimuthal,
-            sample_tilt=sample_tilt,
+            om_detector_to_sample=om_detector_to_sample,
             signal_mask=signal_mask,
         )
 

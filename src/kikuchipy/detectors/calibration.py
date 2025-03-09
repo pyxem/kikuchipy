@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -9,11 +10,11 @@
 #
 # kikuchipy is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+# along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.#
 
 """Calibration of the EBSD projection/pattern center."""
 
@@ -175,10 +176,15 @@ class PCCalibrationMovingScreen:
         return self.lines_out_in[:, 2:]
 
     @property
-    def _pxy_all(self) -> np.array:
-        l_iter = combinations(range(self.n_points), 2)
-        l = self.lines_out_in
-        return np.array([_get_intersection_from_lines(l[i], l[j]) for i, j in l_iter])
+    def _pxy_all(self) -> np.ndarray:
+        lines_iter = combinations(range(self.n_points), 2)
+        pxy_list = []
+        for i, j in lines_iter:
+            line1 = self.lines_out_in[i]
+            line2 = self.lines_out_in[j]
+            pxy_list.append(_get_intersection_from_lines(line1, line2))
+        pxy = np.array(pxy_list)
+        return pxy
 
     @property
     def pxy_within_detector(self) -> np.ndarray:

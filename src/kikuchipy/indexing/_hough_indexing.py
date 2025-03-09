@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Wrapping of PyEBSDIndex functionality for Hough indexing of
 EBSD patterns.
@@ -507,7 +509,7 @@ def _get_info_message(nav_size: int, chunksize: int, indexer: "EBSDIndexer") -> 
         pc = pc.mean(0)
         info += ", mean"
     pc = tuple(map(float, pc.round(4)))
-    info += f"): {pc}\n" f"  Indexing {nav_size} pattern(s) in {n_chunks} chunk(s)"
+    info += f"): {pc}\n  Indexing {nav_size} pattern(s) in {n_chunks} chunk(s)"
 
     return info
 

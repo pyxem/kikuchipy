@@ -22,8 +22,8 @@ library.
 .. |python| image:: https://img.shields.io/badge/python-3.10+-blue.svg
    :target: https://www.python.org/downloads/
 
-.. |Coveralls| image:: https://coveralls.io/repos/github/pyxem/kikuchipy/badge.svg?branch=develop
-   :target: https://coveralls.io/github/pyxem/kikuchipy?branch=develop
+.. |coverage| image:: https://codecov.io/github/hakonanes/kikuchipy/graph/badge.svg?token=tyF8x9nJKC
+   :target: https://codecov.io/github/pyxem/kikuchipy
 
 .. |pypi_downloads| image:: https://img.shields.io/pypi/dm/kikuchipy.svg?label=pypi%20downloads
    :target: https://pypi.org/project/kikuchipy
@@ -54,7 +54,7 @@ library.
 +----------------------+------------------------------------------------+
 | Build status         | |tests_status| |docs| |python|                 |
 +----------------------+------------------------------------------------+
-| Metrics              | |Coveralls|                                    |
+| Metrics              | |coverage|                                     |
 +----------------------+------------------------------------------------+
 | Activity             | |pypi_downloads| |conda_downloads|             |
 +----------------------+------------------------------------------------+
