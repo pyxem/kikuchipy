@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from copy import deepcopy
 import re
@@ -537,7 +539,11 @@ class GeometricalKikuchiPatternSimulation:
         if coordinate_fmt == "detector":
             scatter_size = offset * self.detector.nrows
         else:  # gnomonic
-            scatter_size = offset * np.diff(self.detector.x_range)[0]
+            if self.detector.navigation_shape == (1,):
+                idx = (0,)
+            else:
+                idx = index
+            scatter_size = offset * np.diff(self.detector.x_range)[idx][0]
         circles = []
         for x, y in coords:
             circle = mpath.Path.circle((x, y), scatter_size)
@@ -558,7 +564,11 @@ class GeometricalKikuchiPatternSimulation:
         if coordinates == "detector":
             coords[..., 1] -= y_offset * self.detector.nrows
         else:  # gnomonic
-            coords[..., 1] += y_offset * np.diff(self.detector.y_range)[0]
+            if self.detector.navigation_shape == (1,):
+                idx = (0,)
+            else:
+                idx = index
+            coords[..., 1] += y_offset * np.diff(self.detector.y_range)[idx][0]
         kw = {
             "color": ZONE_AXES_LABEL_COLOR,
             "horizontalalignment": "center",
