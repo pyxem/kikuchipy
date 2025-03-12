@@ -245,7 +245,7 @@ def check_file_format(file: h5py.File, diffraction_type: str) -> None:
     try:
         program_name_path = f"EMheader/{diffraction_type}master/ProgramName"
         program_name = file[program_name_path][:][0].decode()
-        if program_name != f"EM{diffraction_type}master.f90":
+        if program_name != f"EM{diffraction_type}master.f90" and program_name != f"EM{diffraction_type}masterOpenCL.f90":
             raise KeyError
     except KeyError:
         raise IOError(f"{file.filename!r} is not in EMsoft's master pattern format")
