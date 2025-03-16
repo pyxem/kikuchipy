@@ -32,6 +32,7 @@ credits = [
     "Zhou Xu",
     "Carter Francis",
     "Magnus Nord",
+    "Tijmen Vermeij",
 ]
 __version__ = "0.12.dev2"
 
