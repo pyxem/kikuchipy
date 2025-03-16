@@ -106,7 +106,7 @@ class GeometricalKikuchiPatternSimulation:
         return self._reflectors
 
     @property
-    def navigation_shape(self) -> tuple:
+    def navigation_shape(self) -> tuple[int, ...]:
         """Return the navigation shape of the simulations, equal to the
         shape of :attr:`rotations`.
         """
@@ -535,21 +535,25 @@ class GeometricalKikuchiPatternSimulation:
         **kwargs,
     ) -> mcollections.PathCollection:
         coords = self.zone_axes_coordinates(index, coordinate_fmt)
-        offset = 0.01
+
         if coordinate_fmt == "detector":
-            scatter_size = offset * self.detector.nrows
+            nrows = self.detector.nrows
         else:  # gnomonic
             if self.detector.navigation_shape == (1,):
                 idx = (0,)
             else:
                 idx = index
-            scatter_size = offset * np.diff(self.detector.x_range)[idx][0]
+            nrows = np.diff(self.detector.x_range)[idx][0]
+        scatter_size = 0.01 * nrows
+
         circles = []
         for x, y in coords:
             circle = mpath.Path.circle((x, y), scatter_size)
             circles.append(circle)
+
         kw = {"ec": "k", "fc": ZONE_AXES_COLOR, "zorder": 1, "label": "zone_axes"}
         kw.update(kwargs)
+
         return mcollections.PathCollection(circles, **kw)
 
     def _zone_axes_labels_as_list(
@@ -560,6 +564,7 @@ class GeometricalKikuchiPatternSimulation:
     ) -> list[mtext.Text]:
         labels = self._zone_axes_labels_as_array().tolist()
         coords = self.zone_axes_coordinates(index, coordinates, exclude_nan=False)
+
         y_offset = 0.03
         if coordinates == "detector":
             coords[..., 1] -= y_offset * self.detector.nrows
@@ -569,17 +574,20 @@ class GeometricalKikuchiPatternSimulation:
             else:
                 idx = index
             coords[..., 1] += y_offset * np.diff(self.detector.y_range)[idx][0]
+
         kw = {
             "color": ZONE_AXES_LABEL_COLOR,
             "horizontalalignment": "center",
             "bbox": {"boxstyle": "square", "fc": "w", "pad": 0.1},
         }
         kw.update(kwargs)
+
         texts = []
         for (x, y), label in zip(coords, labels):
             if ~np.isnan(x):
                 text_i = mtext.Text(x, y, label, **kw)
                 texts.append(text_i)
+
         return texts
 
     def _lines_as_markers(self, **kwargs) -> hs.plot.markers.Lines:
