@@ -240,7 +240,8 @@ def check_file_format(file: h5py.File, diffraction_type: str) -> None:
     ------
     KeyError
         If the program that created the file is not named
-        "EM<diffraction_type>master.f90".
+        "EM<diffraction_type>master.f90" or
+        "EM<diffraction_type>masterOpenCL.f90".
     IOError
         If the file is not in the EMsoft master pattern file format.
     """
