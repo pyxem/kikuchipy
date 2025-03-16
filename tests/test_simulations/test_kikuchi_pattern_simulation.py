@@ -237,6 +237,17 @@ class TestAsCollections:
         za_labels_coords2 = coll2[2][0]
         assert np.allclose(za_labels_coords2.get_position(), [0, 0.42], atol=0.01)
 
+    def test_as_collections_gnomonic_2d(self):
+        s = kp.data.nickel_ebsd_small()
+        g = ReciprocalLatticeVector(s.xmap.phases[0], [[1, 1, 1]])
+        g = g.symmetrise()
+        simulator = kp.simulations.KikuchiPatternSimulator(g)
+        rot = s.xmap.rotations.reshape(*s.xmap.shape)
+        sim = simulator.on_detector(s.detector, rot)
+        coll = sim.as_collections(
+            (0, 1), "gnomonic", zone_axes=True, zone_axes_labels=True
+        )
+
 
 class TestAsMarkers:
     """Getting lines, zone axes, zone axes labels and PC as HyperSpy
