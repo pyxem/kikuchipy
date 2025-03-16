@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import abc
 import os
@@ -245,10 +247,16 @@ def check_file_format(file: h5py.File, diffraction_type: str) -> None:
     try:
         program_name_path = f"EMheader/{diffraction_type}master/ProgramName"
         program_name = file[program_name_path][:][0].decode()
-        if program_name != f"EM{diffraction_type}master.f90" and program_name != f"EM{diffraction_type}masterOpenCL.f90":
+        if program_name not in [
+            f"EM{diffraction_type}master.f90",
+            f"EM{diffraction_type}masterOpenCL.f90",
+        ]:
             raise KeyError
     except KeyError:
-        raise IOError(f"{file.filename!r} is not in EMsoft's master pattern format")
+        raise IOError(
+            f"File {file.filename!r} is not created with one of the supported EMsoft "
+            "programs"
+        )
 
 
 def get_data_shape_slices(
