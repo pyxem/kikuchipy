@@ -30,6 +30,9 @@ Fixed
 - Removed possibility for a silent out-of-bounds array indexing with Numba when
   projecting a single pattern from a master pattern in the Lambert projection to the
   detector. (`#718 <https://github.com/pyxem/kikuchipy/pull/718>`_)
+- Getting Matplotlib collections of zone axes and zone axes labels in geometrical EBSD
+  simulations with a 2D navigation shape.
+  (`#720 <https://github.com/pyxem/kikuchipy/pull/720>`_)
 
 Deprecated
 ----------
@@ -821,9 +824,9 @@ Deprecated
 
 Removed
 -------
-- *make_similarity_metric()* function is replaced by the need to create a class inheriting
-  from a new abstract *SimilarityMetric* class, which provides more freedom over
-  preparations of arrays before dictionary indexing.
+- *make_similarity_metric()* function is replaced by the need to create a class
+  inheriting from a new abstract *SimilarityMetric* class, which provides more freedom
+  over preparations of arrays before dictionary indexing.
   (`#419 <https://github.com/pyxem/kikuchipy/pull/419>`_)
 - *EBSD.match_patterns()* is removed, use *EBSD.dictionary_indexing()* instead.
   (`#419 <https://github.com/pyxem/kikuchipy/pull/419>`_)
