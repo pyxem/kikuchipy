@@ -543,7 +543,7 @@ class GeometricalKikuchiPatternSimulation:
                 idx = (0,)
             else:
                 idx = index
-            nrows = np.diff(self.detector.x_range)[idx][0]
+            nrows = np.diff(self.detector.x_range[idx])[0]
         scatter_size = 0.01 * nrows
 
         circles = []
@@ -573,7 +573,7 @@ class GeometricalKikuchiPatternSimulation:
                 idx = (0,)
             else:
                 idx = index
-            coords[..., 1] += y_offset * np.diff(self.detector.y_range)[idx][0]
+            coords[..., 1] += y_offset * np.diff(self.detector.y_range[idx])[0]
 
         kw = {
             "color": ZONE_AXES_LABEL_COLOR,
