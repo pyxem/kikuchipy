@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import logging
 
@@ -140,6 +142,28 @@ class TestGeometricalKikuchiPatternSimulation:
         filters = logging.getLogger("matplotlib.text").filters
         assert filters == [kp.simulations.DisableMatplotlibWarningFilter]
 
+    def test_as_collections_gnomonic(self):
+        s = kp.data.nickel_ebsd_small()
+
+        g = ReciprocalLatticeVector(s.xmap.phases[0], [[1, 1, 1]])
+        g = g.symmetrise()
+        simulator = kp.simulations.KikuchiPatternSimulator(g)
+
+        rot = s.xmap.rotations.reshape(*s.xmap.shape)
+
+        det_2d = s.detector
+        det_single = det_2d.deepcopy()
+        det_single.pc = det_2d.pc[0, 1]
+
+        sim_single = simulator.on_detector(det_single, rot[0, 1])
+        sim_single_rot_2d = simulator.on_detector(det_single, rot)
+
+        za_coords_single = sim_single.zone_axes_coordinates(coordinates="gnomonic")
+        za_coords_single_rot_2d = sim_single_rot_2d.zone_axes_coordinates(
+            (0, 1), coordinates="gnomonic"
+        )
+        assert np.all(np.isin(za_coords_single, za_coords_single_rot_2d))
+
 
 class TestAsCollections:
     """Getting lines, zone axes, zone axes labels and PC as Matplotlib
@@ -236,6 +260,54 @@ class TestAsCollections:
         assert np.allclose(za_coords2.mean(axis=0), [0, 0.36], atol=0.01)
         za_labels_coords2 = coll2[2][0]
         assert np.allclose(za_labels_coords2.get_position(), [0, 0.42], atol=0.01)
+
+    def test_zone_axes_as_collections_gnomonic(self):
+        s = kp.data.nickel_ebsd_small()
+
+        # Indices into zone axes paths later on depend on reflectors and
+        # their order!
+        g = ReciprocalLatticeVector(s.xmap.phases[0], [[1, 1, 1]])
+        g = g.symmetrise()
+        simulator = kp.simulations.KikuchiPatternSimulator(g)
+
+        rot = s.xmap.rotations.reshape(*s.xmap.shape)
+
+        idx = (0, 1)
+        idx_single = 0
+        idx_2d = 3
+
+        det_2d = s.detector
+        det_single = det_2d.deepcopy()
+        det_single.pc = det_2d.pc[idx]
+
+        sim_2d = simulator.on_detector(det_2d, rot)
+        sim_single = simulator.on_detector(det_single, rot[idx])
+        sim_single_rot_2d = simulator.on_detector(det_single, rot)
+
+        kw = {
+            "coordinates": "gnomonic",
+            "lines": False,
+            "zone_axes": True,
+            "zone_axes_labels": True,
+        }
+
+        coll_2d = sim_2d.as_collections(idx, **kw)
+        coll_single = sim_single.as_collections((0,), **kw)
+        coll_single_rot_2d = sim_single_rot_2d.as_collections(idx, **kw)
+
+        # Zone axes labels
+        za_labels_2d = [label.get_text() for label in coll_2d[1]]
+        za_labels_single = [label.get_text() for label in coll_single[1]]
+        za_labels_single_rot_2d = [label.get_text() for label in coll_single_rot_2d[1]]
+        assert np.all(za_labels_2d == za_labels_single_rot_2d)
+        assert np.all(za_labels_2d[2:][::-1] == za_labels_single)
+
+        # Zone axes
+        za_2d_scatter_verts = coll_2d[0].get_paths()[idx_2d].vertices
+        za_single_verts = coll_single[0].get_paths()[idx_single].vertices
+        za_single_rot_2d_verts = coll_single_rot_2d[0].get_paths()[idx_2d].vertices
+        assert np.allclose(za_2d_scatter_verts, za_single_verts)
+        assert np.allclose(za_single_verts, za_single_rot_2d_verts)
 
 
 class TestAsMarkers:
