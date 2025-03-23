@@ -68,51 +68,51 @@ CONVENTION_ALIAS_ALL: list = list(np.concatenate(list(CONVENTION_ALIAS.values())
 
 
 class EBSDDetector:
-    r"""An EBSD detector class storing its shape, pixel size, binning
-    factor, detector tilt, sample tilt and projection center (PC) per
-    pattern. Given one or multiple PCs, the detector's gnomonic
-    coordinates are calculated. Uses of these include projecting Kikuchi
-    bands, given a unit cell, unit cell orientation and family of
-    planes, onto the detector.
+    r"""An EBSD detector defining the detector's view of the sample.
 
-    Calculation of gnomonic coordinates is based on the work by Aimo
-    Winkelmann in the supplementary material to
-    :cite:`britton2016tutorial`.
+    The detector stores information of the detector shape, pixel size,
+    binning factor, tilt, azimuthal, and twist, the sample tilt, and
+    the projection/pattern center (PC) per beam position.
+
+    Given one or multiple PCs, the detector's gnomonic coordinates are
+    calculated.
+
+    Uses of these include projecting Kikuchi bands onto the detector,
+    given a crystal, a crystal rotation, and a reflector list.
 
     Parameters
     ----------
     shape
-        Number of detector rows and columns in pixels. Default is
+        Number of detector rows and columns, in pixels. Default is
         (1, 1).
     px_size
-        Size of unbinned detector pixel in um, assuming a square pixel
-        shape. Default is 1.
+        Size of the square unbinned detector pixel, in microns. Default
+        is 1.
     binning
-        Detector binning, i.e. how many pixels are binned into one.
-        Default is 1, i.e. no binning.
+        Detector binning factor, i.e. how many pixels are binned into
+        one. Default is 1, meaning no binning.
     tilt
-        Detector tilt from horizontal in degrees. Default is 0.
+        Detector tilt from *vertical*, in degrees. Default is 0.
     azimuthal
-        Sample tilt about the sample RD (downwards) axis. A positive
-        angle means the sample normal moves towards the right looking
-        from the sample to the detector. Default is 0.
+        Sample tilt about the sample RD (downwards) axis, in degrees. A
+        positive angle means the sample normal moves towards the right
+        looking from the sample to the detector. Default is 0.
     twist
-        Rotation angle of the detector about the normal to
-        the detector screen, Zd. Default is 0.
+        Rotation angle of the detector about the normal to the detector
+        screen, in degrees. Default is 0.
     sample_tilt
-        Sample tilt from horizontal in degrees. Default is 70.
+        Sample tilt from *horizontal*, in degrees. Default is 70.
     pc
-        X, Y and Z coordinates of the projection/pattern centers (PCs),
-        describing the location of the beam on the sample measured
-        relative to the detection screen. PCs are stored and used in
-        Bruker's convention. See *Notes* for the definition and
-        conversions between conventions. If multiple PCs are passed,
-        they are assumed to be on the form
-        [[x0, y0, z0], [x1, y1, z1], ...]. Default is [0.5, 0.5, 0.5].
+        X, Y, and Z coordinates of the projection centers (PCs) in the
+        given *convention*. Default is [0.5, 0.5, 0.5]. The PC describes
+        the location of the beam on the sample surface measured relative
+        to the detection screen. See *Notes* for the definition and
+        conversions between conventions. If multiple PCs are given, they
+        are assumed to be on the form [[x0, y0, z0], [x1, y1, z1], ...].
     convention
-        Convention of input PC, to determine which conversion to
-        Bruker's definition to use. If not given, Bruker's convention is
-        assumed. Options are "tsl"/"edax"/"amatek", "oxford"/"aztec",
+        Convention of the given *pc*. Default is Bruker's convention.
+        This determines how to convert *pc* to the internal (Bruker's)
+        definition. Options are "edax"/"tsl"/"amatek", "oxford"/"aztec",
         "bruker", "emsoft", "emsoft4", and "emsoft5". "emsoft" and
         "emsoft5" is the same convention. See *Notes* for conversions
         between conventions.
@@ -121,34 +121,24 @@ class EBSDDetector:
     -----
     The pattern on the detector is always viewed *from* the detector
     *towards* the sample. Pattern width and height is here given as
-    :math:`N_x` and :math:`N_y` (possibly binned). PCs are stored and
-    used in Bruker's convention.
+    :math:`N_x` and :math:`N_y`, respectively (possibly binned). PCs are
+    stored and used internally in Bruker's convention.
 
     The Bruker PC coordinates :math:`(x_B^*, y_B^*, z_B^*)` are defined
     in fractions of :math:`N_x`, :math:`N_y`, and :math:`N_y`,
-    respectively, with :math:`x_B^*` and :math:`y_B^*` defined with
-    respect to the upper left corner of the detector. These coordinates
-    are used internally, called :math:`(PC_x, PC_y, PC_z)` in the rest
-    of the documentation when there is no reference to Bruker
-    specifically.
+    respectively. :math:`x_B^*` and :math:`y_B^*` are defined with
+    respect to the upper left corner of the detector. The Bruker PC
+    coordinates are used internally, called :math:`(PC_x, PC_y, PC_z)`
+    in the rest of the documentation when there is no reference to
+    Bruker specifically.
 
     The EDAX TSL PC coordinates :math:`(x_T^*, y_T^*, z_T^*)` are
-    defined in fractions of :math:`(N_x, N_y, min(N_x, N_y))` with
-    respect to the lower left corner of the detector.
+    defined in fractions of :math:`N_x`, :math:`N_y`, and
+    :math:`\min(N_x, N_y)` with respect to the lower left corner of the
+    detector, respectively.
 
-    The Oxford Instruments PC coordinates :math:`(x_O^*, y_O^*, z_O^*)`
-    are defined in fractions of :math:`N_x` with respect to the lower
-    left corner of the detector.
-
-    The EMsoft PC coordinates :math:`(x_{pc}, y_{pc})` are defined as
-    number of pixels (subpixel accuracy) with respect to the center of
-    the detector, with :math:`x_{pc}` towards the right and
-    :math:`y_{pc}` upwards. The final PC coordinate :math:`L` is the
-    detector distance in microns. Note that prior to EMsoft v5.0,
-    :math:`x_{pc}` was defined towards the left.
-
-    Given these definitions, the following is the conversion from EDAX
-    TSL to Bruker
+    Given these definitions, the following is the conversion from a PC
+    in EDAX TSL's convention to a PC in Bruker's convention
 
     .. math::
 
@@ -156,7 +146,10 @@ class EBSDDetector:
         y_B^* &= 1 - y_T^*,\\
         z_B^* &= \frac{\min(N_x, N_y)}{N_y} z_T^*.
 
-    The conversion from Oxford Instruments to Bruker is given as
+    The Oxford Instruments PC coordinates :math:`(x_O^*, y_O^*, z_O^*)`
+    are defined in fractions of :math:`N_x` with respect to the lower
+    left corner of the detector. The conversion from Oxford Instruments
+    to Bruker is therefore given as
 
     .. math::
 
@@ -164,7 +157,13 @@ class EBSDDetector:
         y_B^* &= 1 - y_O^* \frac{N_x}{N_y},\\
         z_B^* &= \frac{N_x}{N_y} z_O^*.
 
-    The conversion from EMsoft to Bruker is given as
+    The EMsoft PC coordinates :math:`(x_{pc}, y_{pc})` are defined as
+    the number of pixels (with subpixel accuracy) with respect to the
+    center of the detector. :math:`x_{pc}` points towards the right and
+    :math:`y_{pc}` points upwards. The final PC coordinate, :math:`L`,
+    is the detector distance, in microns. Note that prior to EMsoft
+    v5.0, :math:`x_{pc}` was defined towards the left. The conversion
+    from EMsoft to Bruker is then, finally, given as
 
     .. math::
 
@@ -172,8 +171,11 @@ class EBSDDetector:
         y_B^* &= \frac{1}{2} - \frac{y_{pc}}{N_y b},\\
         z_B^* &= \frac{L}{N_y b \delta},
 
-    where :math:`\delta` is the unbinned detector pixel size in
-    microns, and :math:`b` is the binning factor.
+    where :math:`\delta` is the unbinned detector pixel size in microns
+    and :math:`b` is the binning factor.
+
+    The calculation of gnomonic coordinates is based on the
+    supplementary material to :cite:`britton2016tutorial`.
 
     Examples
     --------
@@ -181,9 +183,10 @@ class EBSDDetector:
 
     >>> import numpy as np
     >>> import kikuchipy as kp
+    >>> pc = np.full((10, 20, 3), (0.421, 0.779, 0.505))
     >>> det = kp.detectors.EBSDDetector(
     ...     shape=(60, 60),
-    ...     pc=np.ones((10, 20, 3)) * (0.421, 0.779, 0.505),
+    ...     pc=pc,
     ...     convention="edax",
     ...     px_size=70,
     ...     binning=8,
@@ -218,13 +221,7 @@ class EBSDDetector:
         pc: np.ndarray | list | tuple = (0.5, 0.5, 0.5),
         convention: str | None = None,
     ) -> None:
-        """Create an EBSD detector with a shape, pixel size, binning
-        factor, sample and detector tilt about the detector X axis,
-        azimuthal tilt about the detector Y axis, twist about the
-        detector Z axis and one or more projection/pattern
-        centers (PCs).
-        """
-        self.shape = shape
+        self._shape = shape
         self.px_size = float(px_size)
         self.binning = float(binning)
         self.tilt = float(tilt)
@@ -256,6 +253,11 @@ class EBSDDetector:
             f"binning={self.binning}, "
             f"px_size={px_size} um)"
         )
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        """Return the number of detector rows and columns, in pixels."""
+        return self._shape
 
     @property
     def euler(self) -> np.ndarray:
@@ -302,7 +304,7 @@ class EBSDDetector:
     @property
     def unbinned_shape(self) -> tuple[int, int]:
         """Return the unbinned detector shape in pixels."""
-        return tuple(np.array(self.shape) * self.binning)
+        return tuple(np.array(self.shape, dtype=int) * self.binning)
 
     @property
     def px_size_binned(self) -> float:
@@ -311,88 +313,113 @@ class EBSDDetector:
 
     @property
     def pc(self) -> np.ndarray:
-        """Return or set all projection center coordinates.
+        """Return or set all projection center (PC) coordinates.
 
         Parameters
         ----------
         value : numpy.ndarray, list or tuple
-            Projection center coordinates. If multiple PCs are passed,
-            they are assumed to be on the form [[x0, y0, z0],
-            [x1, y1, z1], ...]. Default is [[0.5, 0.5, 0.5]].
+            PC coordinates. If multiple PCs are passed, they are assumed
+            to be on the form [[x0, y0, z0], [x1, y1, z1], ...]. Default
+            is [[0.5, 0.5, 0.5]].
+
+        Notes
+        -----
+        The PC coordinates are stored in Bruker's convention. See the
+        *Notes* in :class:`EBSDDetector` for more information.
         """
         return self._pc
 
     @pc.setter
     def pc(self, value: np.ndarray | list | tuple) -> None:
-        """Set all projection center coordinates, assuming Bruker's
-        convention.
-        """
         self._pc = np.atleast_2d(value).astype(float)
 
     @property
     def pc_flattened(self) -> np.ndarray:
         """Return flattened array of projection center coordinates of
         shape (:attr:`navigation_size`, 3).
+
+        Notes
+        -----
+        The PC coordinates are stored in Bruker's convention. See the
+        *Notes* in :class:`EBSDDetector` for more information.
         """
         return self.pc.reshape((-1, 3))
 
     @property
     def pcx(self) -> np.ndarray:
-        """Return or set the projection center x coordinates.
+        """Return or set the projection center (PC) x coordinates.
 
         Parameters
         ----------
         value : numpy.ndarray, list, tuple or float
-            Projection center x coordinates in Bruker's convention. If
-            multiple x coordinates are passed, they are assumed to be on
-            the form [x0, x1,...].
+            PC x coordinates in Bruker's convention. If multiple x
+            coordinates are passed, they are assumed to be on the form
+            [x0, x1,...].
+
+        Notes
+        -----
+        The PC coordinates are stored in Bruker's convention. See the
+        *Notes* in :class:`EBSDDetector` for more information.
         """
         return self.pc[..., 0]
 
     @pcx.setter
     def pcx(self, value: np.ndarray | list | tuple | float):
-        """Set the x projection center coordinates."""
         self._pc[..., 0] = np.atleast_2d(value).astype(float)
 
     @property
     def pcy(self) -> np.ndarray:
-        """Return or set the projection center y coordinates.
+        """Return or set the projection center (PC) y coordinates.
 
         Parameters
         ----------
         value : numpy.ndarray, list, tuple or float
-            Projection center y coordinates in Bruker's convention. If
-            multiple y coordinates are passed, they are assumed to be on
-            the form [y0, y1,...].
+            PC y coordinates in Bruker's convention. If multiple y
+            coordinates are passed, they are assumed to be on the form
+            [y0, y1,...].
+
+        Notes
+        -----
+        The PC coordinates are stored in Bruker's convention. See the
+        *Notes* in :class:`EBSDDetector` for more information.
         """
         return self.pc[..., 1]
 
     @pcy.setter
     def pcy(self, value: np.ndarray | list | tuple | float):
-        """Set y projection center coordinates."""
         self._pc[..., 1] = np.atleast_2d(value).astype(float)
 
     @property
     def pcz(self) -> np.ndarray:
-        """Return or set the projection center z coordinates.
+        """Return or set the projection center (PC) z coordinates.
 
         Parameters
         ----------
         value : numpy.ndarray, list, tuple or float
-            Projection center z coordinates in Bruker's convention. If
-            multiple z coordinates are passed, they are assumed to be on
-            the form [z0, z1,...].
+            PC z coordinates in Bruker's convention. If multiple z
+            coordinates are passed, they are assumed to be on the form
+            [z0, z1,...].
+
+        Notes
+        -----
+        The PC coordinates are stored in Bruker's convention. See the
+        *Notes* in :class:`EBSDDetector` for more information.
         """
         return self.pc[..., 2]
 
     @pcz.setter
     def pcz(self, value: np.ndarray | list | tuple | float):
-        """Set z projection center coordinates."""
         self._pc[..., 2] = np.atleast_2d(value).astype(float)
 
     @property
     def pc_average(self) -> np.ndarray:
-        """Return the overall average projection center."""
+        """Return the overall average projection center.
+
+        Notes
+        -----
+        The PC coordinates are stored in Bruker's convention. See the
+        *Notes* in :class:`EBSDDetector` for more information.
+        """
         ndim = self.pc.ndim
         axis = ()
         if ndim == 2:
@@ -415,7 +442,6 @@ class EBSDDetector:
 
     @navigation_shape.setter
     def navigation_shape(self, value: tuple):
-        """Set the navigation shape of the projection center array."""
         ndim = len(value)
         if ndim > 2:
             raise ValueError(f"A maximum dimension of 2 is allowed, 2 < {ndim}")
@@ -425,7 +451,7 @@ class EBSDDetector:
     @property
     def navigation_dimension(self) -> int:
         """Return the number of navigation dimensions of the projection
-        center array (a maximum of 2).
+        center array.
         """
         return len(self.navigation_shape)
 
@@ -443,38 +469,65 @@ class EBSDDetector:
 
     @property
     def x_min(self) -> np.ndarray | float:
-        """Return the left bound of detector in gnomonic coordinates."""
+        """Return the left bound of detector in gnomonic coordinates.
+
+        The calculation of gnomonic coordinates is based on the
+        supplementary material to :cite:`britton2016tutorial`.
+        """
         return -self.aspect_ratio * (self.pcx / self.pcz)
 
     @property
     def x_max(self) -> np.ndarray | float:
-        """Return the right bound of detector in gnomonic coordinates."""
+        """Return the right bound of detector in gnomonic coordinates.
+
+        The calculation of gnomonic coordinates is based on the
+        supplementary material to :cite:`britton2016tutorial`.
+        """
         return self.aspect_ratio * (1 - self.pcx) / self.pcz
 
     @property
     def x_range(self) -> np.ndarray:
-        """Return the x detector limits in gnomonic coordinates."""
+        """Return the x detector limits in gnomonic coordinates.
+
+        The calculation of gnomonic coordinates is based on the
+        supplementary material to :cite:`britton2016tutorial`.
+        """
         return np.dstack((self.x_min, self.x_max)).reshape(self.navigation_shape + (2,))
 
     @property
     def y_min(self) -> np.ndarray | float:
-        """Return the top bound of detector in gnomonic coordinates."""
+        """Return the top bound of detector in gnomonic coordinates.
+
+        The calculation of gnomonic coordinates is based on the
+        supplementary material to :cite:`britton2016tutorial`.
+        """
         return -(1 - self.pcy) / self.pcz
 
     @property
     def y_max(self) -> np.ndarray | float:
-        """Return the bottom bound of detector in gnomonic coordinates."""
+        """Return the bottom bound of detector in gnomonic coordinates.
+
+        The calculation of gnomonic coordinates is based on the
+        supplementary material to :cite:`britton2016tutorial`.
+        """
         return self.pcy / self.pcz
 
     @property
     def y_range(self) -> np.ndarray:
-        """Return the y detector limits in gnomonic coordinates."""
+        """Return the y detector limits in gnomonic coordinates.
+
+        The calculation of gnomonic coordinates is based on the
+        supplementary material to :cite:`britton2016tutorial`.
+        """
         return np.dstack((self.y_min, self.y_max)).reshape(self.navigation_shape + (2,))
 
     @property
     def gnomonic_bounds(self) -> np.ndarray:
         """Return the detector bounds [x0, x1, y0, y1] in gnomonic
         coordinates.
+
+        The calculation of gnomonic coordinates is based on the
+        supplementary material to :cite:`britton2016tutorial`.
         """
         return np.concatenate((self.x_range, self.y_range), axis=-1)
 
@@ -486,7 +539,11 @@ class EBSDDetector:
 
     @property
     def x_scale(self) -> np.ndarray:
-        """Return the width of a pixel in gnomonic coordinates."""
+        """Return the width of a pixel in gnomonic coordinates.
+
+        The calculation of gnomonic coordinates is based on the
+        supplementary material to :cite:`britton2016tutorial`.
+        """
         if self.ncols == 1:
             x_scale = np.diff(self.x_range)
         else:
@@ -495,7 +552,11 @@ class EBSDDetector:
 
     @property
     def y_scale(self) -> np.ndarray:
-        """Return the height of a pixel in gnomonic coordinates."""
+        """Return the height of a pixel in gnomonic coordinates.
+
+        The calculation of gnomonic coordinates is based on the
+        supplementary material to :cite:`britton2016tutorial`.
+        """
         if self.nrows == 1:
             y_scale = np.diff(self.y_range)
         else:
@@ -506,6 +567,9 @@ class EBSDDetector:
     def r_max(self) -> np.ndarray:
         """Return the maximum distance from PC to detector edge in
         gnomonic coordinates.
+
+        The calculation of gnomonic coordinates is based on the
+        supplementary material to :cite:`britton2016tutorial`.
         """
         corners = np.zeros(self.navigation_shape + (4,))
         corners[..., 0] = self.x_min**2 + self.y_min**2  # Up. left
@@ -733,7 +797,8 @@ class EBSDDetector:
         Parameters
         ----------
         extent
-            Tuple with four integers: (top, bottom, left, right).
+            The (top, bottom, left, right) pixels giving the extent of
+            the cropped detector.
 
         Returns
         -------
@@ -773,7 +838,7 @@ class EBSDDetector:
             [not isinstance(e, int) for e in extent]
         ):
             raise ValueError(
-                "`extent` (top, bottom, left, right) must be integers and given so that"
+                "Extent (top, bottom, left, right) must be integers and given so that"
                 " bottom > top and right > left"
             )
 
@@ -815,15 +880,17 @@ class EBSDDetector:
         | tuple[float, Figure]
         | tuple[float, np.ndarray, Figure]
     ):
-        r"""Estimate the tilt about the detector :math:`X_d` axis.
+        r"""Return an estimate of the tilt about the detector
+        :math:`X_d` axis.
 
-        This tilt is assumed to bring the sample plane normal into
+        The tilt is assumed to bring the sample plane normal into
         coincidence with the detector plane normal (but in the opposite
-        direction) :cite:`winkelmann2020refined`.
+        direction). See :cite:`winkelmann2020refined` for further
+        details.
 
         See the :ref:`reference frame tutorial
         </tutorials/reference_frames.ipynb>` for details on the
-        detector sample geometry.
+        detector-sample geometry.
 
         An estimate is found by linear regression of :attr:`pcz` vs.
         :attr:`pcy`.
@@ -831,37 +898,36 @@ class EBSDDetector:
         Parameters
         ----------
         detect_outliers
-            Whether to attempt to detect outliers. If ``False``
-            (default), a linear fit to all points is performed. If
-            ``True``, a robust fit using the RANSAC algorithm is
-            performed instead, which also detects outliers.
+            Whether to attempt to detect outliers. If False (default), a
+            linear fit to all points is performed. If True, a robust fit
+            using the RANSAC algorithm is performed instead, which also
+            detects outliers.
         plot
             Whether to plot data points and the estimated line. Default
-            is ``True``.
+            is True.
         degrees
-            Whether to return the estimated tilt in radians (``False``,
-            default) or degrees (``True``).
+            Whether to return the estimated tilt in degrees, radians
+            otherwise.
         return_figure
-            Whether to return the plotted figure. Default is ``False``.
+            Whether to return the plotted figure. Default is False.
         return_outliers
-            Whether to return a mask with ``True`` for PC values
-            considered outliers. Default is ``False``. If ``True``,
-            ``detect_outliers`` is assumed to be ``True`` and the value
-            passed is not considered.
+            Whether to return a mask with True for PC values considered
+            outliers. Default is False. If True, *detect_outliers* is
+            assumed to be True and the value passed is not considered.
         figure_kwargs
             Keyword arguments passed to
-            :func:`matplotlib.pyplot.Figure` if ``plot=True``.
+            :func:`matplotlib.pyplot.Figure` if *plot* is True.
 
         Returns
         -------
         x_tilt
-            Estimated tilt about detector :math:`X_d` in radians
-            (``degrees=False``) or degrees (``degrees=True``).
+            Estimated tilt about detector :math:`X_d` in radians, unless
+            *degrees* is True.
         outliers
-            Returned if ``return_outliers=True``, in the shape of
+            Returned if *return_outliers* is True, in the shape of
             :attr:`navigation_shape`.
         fig
-            Returned if ``plot=True`` and ``return_figure=True``.
+            Returned if *plot* is True and *return_figure* is True.
 
         Notes
         -----
@@ -882,7 +948,6 @@ class EBSDDetector:
         if return_outliers:
             detect_outliers = True
 
-        # Get regressor
         if detect_outliers:
             regressor = RANSACRegressor()
         else:
@@ -948,16 +1013,16 @@ class EBSDDetector:
         degrees: bool = False,
         is_outlier: list | tuple | np.ndarray | None = None,
     ) -> float | tuple[float, float]:
-        r"""Estimate the tilts about the detector :math:`X_d` and
+        r"""Return estimated tilts about the detector :math:`X_d` and
         :math:`Z_d` axes.
 
         These tilts bring the sample plane normal into coincidence with
-        the detector plane normal (but in the opposite direction)
-        :cite:`winkelmann2020refined`.
+        the detector plane normal (but in the opposite direction). See
+        :cite:`winkelmann2020refined` for further details.
 
         See the :ref:`reference frame tutorial
         </tutorials/reference_frames.ipynb>` for details on the
-        detector sample geometry.
+        detector-sample geometry.
 
         Estimates are found by fitting a hyperplane to :attr:`pc` using
         singular value decomposition.
@@ -965,21 +1030,21 @@ class EBSDDetector:
         Parameters
         ----------
         degrees
-            Whether to return the estimated tilts in radians (``False``,
-            default) or degrees (``True``).
+            Whether to return the estimated tilt in degrees, radians
+            otherwise.
         is_outlier
-            Boolean array with ``True`` for PCs to not include in the
-            fit. If not given, all PCs are used. Must be of
+            Boolean array with True for PCs to not include in the fit.
+            If not given, all PCs are used. Must be of
             :attr:`navigation_shape`.
 
         Returns
         -------
         x_tilt
-            Estimated tilt about detector :math:`X_d` in radians
-            (``degrees=False``) or degrees (``degrees=True``).
+            Estimated tilt about detector :math:`X_d` in radians, unless
+            *degrees* is True.
         z_tilt
-            Estimated tilt about detector :math:`Z_d` in radians
-            (``degrees=False``) or degrees (``degrees=True``).
+            Estimated tilt about detector :math:`Z_d` in radians, unless
+            *degrees* is True.
 
         Notes
         -----
@@ -987,8 +1052,8 @@ class EBSDDetector:
         ``fit_plane()`` in the *xcdskd* Python package. Its use is
         described in :cite:`winkelmann2020refined`.
 
-        Winkelmann refers to Gander & Hrebicek, "Solving Problems in
-        Scientific Computing", 3rd Ed., Chapter 6, p. 97 for the
+        Winkelmann et al. refers to Gander & Hrebicek, "Solving Problems
+        in Scientific Computing", 3rd Ed., Chapter 6, p. 97 for the
         implementation of the hyperplane fitting.
 
         See Also
@@ -1019,38 +1084,17 @@ class EBSDDetector:
         step_sizes: tuple,
         shape: tuple | None = None,
         px_size: float | None = None,
-        binning: int | None = None,
+        binning: int | float | None = None,
         is_outlier: tuple | list | np.ndarray | None = None,
     ) -> EBSDDetector:
         r"""Return a new detector with projection centers (PCs) in a 2D
         map extrapolated from an average PC.
 
-        The average PC :math:`\bar{PC}` is calculated from :attr:`pc`,
-        possibly excluding some PCs based on the ``is_outlier`` mask.
-        The sample position having this PC, :math:`(\bar{x}, \bar{y})`,
-        is assumed to be the one obtained by averaging ``pc_indices``.
-        All other PCs :math:`(PC_x, PC_y, PC_z)` in positions
-        :math:`(x, y)` are then extrapolated based on the following
-        equations given in appendix A in :cite:`singh2017application`:
-
-        .. math::
-            PC_x &= \bar{PC_x} + (\bar{x} - x) \cdot \Delta x / (\delta \cdot N_x \cdot b),\\
-            PC_y &= \bar{PC_y} + (\bar{y} - y) \cdot \Delta y \cdot \cos{\alpha} / (\delta \cdot N_y \cdot b),\\
-            PC_z &= \bar{PC_z} - (\bar{y} - y) \cdot \Delta y \cdot \sin{\alpha} / (\delta \cdot N_y \cdot b),\\
-
-        where :math:`(\Delta y, \Delta x)` are the vertical and
-        horizontal step sizes, respectively, :math:`(N_y, N_x)` are the
-        number of binned detector rows and columns, respectively, the
-        angle :math:`\alpha = 90^{\circ} - \sigma + \theta`, where
-        :math:`\sigma` is the sample tilt and :math:`\theta` is the
-        detector tilt, :math:`\delta` is the unbinned detector pixel
-        size and :math:`b` is the binning factor.
-
         Parameters
         ----------
         pc_indices
             2D map pixel coordinates (row, column) of each :attr:`pc`,
-            possibly outside ``navigation_shape``. Must be a flattened
+            possibly outside *navigation_shape*. Must be a flattened
             array of shape (2,) + :attr:`navigation_size`.
         navigation_shape
             Shape of the output PC array (n rows, n columns).
@@ -1066,26 +1110,48 @@ class EBSDDetector:
             Detector binning factor. If not given, :attr:`binning` is
             used.
         is_outlier
-            Boolean array with ``True`` for PCs to not include in the
-            fit. If not given, all PCs are used. Must be of
+            Boolean array with *True* for PCs to not include in the fit.
+            If not given, all PCs are used. Must be of
             :attr:`navigation_shape`.
 
         Returns
         -------
         new_detector
-            Detector with :attr:`navigation_shape` given by
-            input ``navigation_shape``.
+            Detector with :attr:`navigation_shape` given by input
+            *navigation_shape*.
+
+        Notes
+        -----
+        The average PC :math:`\bar{PC}` is calculated from :attr:`pc`,
+        possibly excluding some PCs based on the *is_outlier* mask. The
+        sample position having this PC, :math:`(\bar{x}, \bar{y})`, is
+        assumed to be the one obtained by averaging *pc_indices*. All
+        other PCs :math:`(PC_x, PC_y, PC_z)` in positions :math:`(x, y)`
+        are then extrapolated based on the following equations given in
+        appendix A in :cite:`singh2017application`:
+
+        .. math::
+            PC_x &= \bar{PC_x} + (\bar{x} - x) \cdot \Delta x / (\delta \cdot N_x \cdot b),\\
+            PC_y &= \bar{PC_y} + (\bar{y} - y) \cdot \Delta y \cdot \cos{\alpha} / (\delta \cdot N_y \cdot b),\\
+            PC_z &= \bar{PC_z} - (\bar{y} - y) \cdot \Delta y \cdot \sin{\alpha} / (\delta \cdot N_y \cdot b),\\
+
+        where :math:`(\Delta y, \Delta x)` are the vertical and
+        horizontal step sizes, respectively, :math:`(N_y, N_x)` are the
+        number of binned detector rows and columns, respectively, the
+        angle :math:`\alpha = 90^{\circ} - \sigma + \theta`, where
+        :math:`\sigma` is the sample tilt and :math:`\theta` is the
+        detector tilt, :math:`\delta` is the unbinned detector pixel
+        size and :math:`b` is the binning factor.
         """
-        # Parse input parameters
         dy, dx = step_sizes
         pc_indices = np.atleast_2d(pc_indices).T
         ny, nx = navigation_shape
-        if not shape:
+        if shape is None:
             shape = self.shape
         nrows, ncols = shape
-        if not px_size:
+        if px_size is None:
             px_size = self.px_size
-        if not binning:
+        if binning is None:
             binning = self.binning
 
         pc = self.pc_flattened
@@ -1112,8 +1178,8 @@ class EBSDDetector:
         pcz = pc_mean[2] - d_pcz
 
         new_detector = self.deepcopy()
+        new_detector._shape = shape
         new_detector.pc = np.stack((pcx, pcy, pcz), axis=2)
-        new_detector.shape = shape
         new_detector.px_size = px_size
         new_detector.binning = binning
 
@@ -1130,55 +1196,56 @@ class EBSDDetector:
         figure_kwargs: dict | None = None,
     ) -> EBSDDetector | tuple[EBSDDetector, Figure]:
         """Return a new detector with interpolated projection centers
-        (PCs) for all points in a map by fitting a plane to :attr:`pc`
-        :cite:`winkelmann2020refined`.
+        (PCs) for all points in a map by fitting a plane to :attr:`pc`.
+
+        See :cite:`winkelmann2020refined` for further details.
 
         Parameters
         ----------
         pc_indices
             2D coordinates (row, column) of each :attr:`pc` in
-            ``map_coordinates``. Must be a flattened array of shape
-            (2,) + :attr:`navigation_shape`.
+            *map_indices*. Must be a flattened array of shape (2,) +
+            :attr:`navigation_shape`.
         map_indices
             2D coordinates (row, column) of all map points in a regular
             grid to interpolate PCs for. Must be a flattened array of
-            shape ``(2,) + map_shape``.
+            shape (2,) + :attr:`navigation_shape`.
         transformation
             Which transformation function to use when fitting PCs,
-            either ``"projective"`` (default) or ``"affine"``. Both
+            either "projective" (default) or "affine". Both
             transformations perserve co-planarity of map points, while
             the projective transformation allows parallel lines in the
             map point grid to become non-parallel within the sample
             plane.
         is_outlier
-            Boolean array with ``True`` for PCs to not include in the
-            fit. If not given, all PCs are used. Must be of
+            Boolean array with True for PCs to not include in the fit.
+            If not given, all PCs are used. Must be of
             :attr:`navigation_shape`.
         plot
             Whether to plot the experimental and estimated PCs (default
-            is ``True``).
+            is True).
         return_figure
-            Whether to return the figure if ``plot=True`` (default is
-            ``False``).
+            Whether to return the figure if *plot* is True (default is
+            False).
         figure_kwargs
             Keyword arguments passed to
-            :func:`matplotlib.pyplot.Figure` if ``plot=True``.
+            :func:`matplotlib.pyplot.Figure` if *plot* is True.
 
         Returns
         -------
         new_detector
             New detector with as many interpolated PCs as indices given
-            in ``map_indices`` and an estimated sample tilt. The
-            detector tilt is assumed to be constant.
+            in *map_indices* and an estimated sample tilt. The detector
+            tilt is assumed to be constant.
         fig
             Figure of experimental and estimated PCs, returned if
-            ``plot=True`` and ``return_figure=True``.
+            *plot* is True and *return_figure* is True.
 
         Raises
         ------
         ValueError
-            If :attr:`navigation_size` is 1 or if the ``pc_indices`` or
-            ``map_indices`` arrays have the incorrect shape.
+            If :attr:`navigation_size` is 1 or if the *pc_indices* or
+            *map_indices* arrays have the incorrect shape.
 
         See Also
         --------
@@ -1189,8 +1256,8 @@ class EBSDDetector:
         This method is adapted from Aimo Winkelmann's functions
         ``fit_affine()`` and ``fit_projective()`` in the *xcdskd* Python
         package. Their uses are described in
-        :cite:`winkelmann2020refined`. Winkelmann refers to a code
-        example from StackOverflow
+        :cite:`winkelmann2020refined`. Winkelmann et al. refers to a
+        code example from StackOverflow
         (https://stackoverflow.com/a/20555267/3228100) for the affine
         transformation.
         """
@@ -1352,7 +1419,8 @@ class EBSDDetector:
         )
 
     def pc_emsoft(self, version: int = 5) -> np.ndarray:
-        r"""Return PC in the EMsoft convention.
+        r"""Return the projection center(s) :attr:`pc` in the EMsoft
+        convention.
 
         Parameters
         ----------
@@ -1368,7 +1436,7 @@ class EBSDDetector:
         Notes
         -----
         The PC coordinate conventions of Bruker, EDAX TSL, Oxford
-        Instruments and EMsoft are given in the class description. The
+        Instruments, and EMsoft are given in :class:`EBSDDetector`. The
         PC is stored in the Bruker convention internally, so the
         conversion is
 
@@ -1458,6 +1526,11 @@ class EBSDDetector:
         -------
         new_pc
             PC in the Oxford convention.
+
+        Notes
+        -----
+        The PC coordinates are stored in Bruker's convention. See the
+        *Notes* in :class:`EBSDDetector` for more information.
         """
         return self._pc_bruker2oxford()
 
@@ -1484,31 +1557,31 @@ class EBSDDetector:
         Parameters
         ----------
         coordinates
-            Which coordinates to use, ``"detector"`` (default) or
-            ``"gnomonic"``.
+            Which coordinates to use, "detector" (default) or
+            "gnomonic".
         show_pc
             Show the average projection center in the Bruker convention.
-            Default is ``True``.
+            Default is True.
         pc_kwargs
-            A dictionary of keyword arguments passed to
+            Keyword arguments passed to
             :meth:`matplotlib.axes.Axes.scatter`.
         pattern
             A pattern to put on the detector. If not given, no pattern
             is displayed. The pattern array must have the same shape as
             the detector.
         pattern_kwargs
-            A dictionary of keyword arguments passed to
+            Keyword arguments passed to
             :meth:`matplotlib.axes.Axes.imshow`.
         draw_gnomonic_circles
             Draw circles for angular distances from pattern. Default is
-            ``False``. Circle positions are only correct when
-            ``coordinates="gnomonic"``.
+            False. Circle positions are only correct when *coordinates*
+            are gnomonic.
         gnomonic_angles
             Which angular distances to plot if
-            ``draw_gnomonic_circles=True``. Default is from 10 to 80 in
-            steps of 10.
+            *draw_gnomonic_circles* is True, in degrees. Default is from
+            10 to 80 degrees in steps of 10 degrees.
         gnomonic_circles_kwargs
-            A dictionary of keyword arguments passed to
+            Keyword arguments passed to
             :meth:`matplotlib.patches.Circle`.
         zoom
             Whether to zoom in/out from the detector, e.g. to show the
@@ -1520,7 +1593,7 @@ class EBSDDetector:
         Returns
         -------
         fig
-            Matplotlib figure instance, if `return_figure` is True.
+            Matplotlib figure instance, if *return_figure* is True.
 
         Examples
         --------
@@ -1642,34 +1715,35 @@ class EBSDDetector:
         Parameters
         ----------
         mode
-            String describing how to plot PCs. Options are ``"map"``
-            (default), ``"scatter"`` and ``"3d"``. If ``mode="map"``,
+            String describing how to plot PCs. Options are "map"
+            (default), "scatter" and "3d". If map mode,
             :attr:`navigation_dimension` must be 2.
         return_figure
-            Whether to return the figure (default is ``False``).
+            Whether to return the figure (default is False).
         orientation
-            Whether to align the plots in a ``"horizontal"`` (default)
-            or ``"vertical"`` orientation.
+            Whether to align the plots in a "horizontal" (default) or
+            "vertical" orientation.
         annotate
             Whether to label each pattern with its 1D index into
-            :attr:`pc_flattened` when ``mode="scatter"``. Default is
-            ``False``.
+            :attr:`pc_flattened` when *mode* is "scatter". Default is
+            False.
         figure_kwargs
             Keyword arguments to pass to
             :func:`matplotlib.pyplot.figure` upon figure creation. Note
             that ``layout="tight"`` is used by default unless another
-            layout is passed.
+            layout is given.
         **kwargs
             Keyword arguments passed to the plotting function, which is
-            :meth:`~matplotlib.axes.Axes.imshow` if ``mode="map"``,
-            :meth:`~matplotlib.axes.Axes.scatter` if ``mode="scatter"``
-            and :meth:`~mpl_toolkits.mplot3d.axes3d.Axes3D.scatter`
-            if ``mode="3d"``.
+            :meth:`~matplotlib.axes.Axes.imshow` if *mode* is "map",
+            :meth:`~matplotlib.axes.Axes.scatter` if *mode* is
+            "scatter", and
+            :meth:`~mpl_toolkits.mplot3d.axes3d.Axes3D.scatter` if
+            *mode* is "3d".
 
         Returns
         -------
         fig
-            Figure is returned if ``return_figure=True``.
+            Figure is returned if *return_figure* is True.
 
         Examples
         --------
@@ -1793,8 +1867,8 @@ class EBSDDetector:
             return fig
 
     def save(self, filename: str | Path, convention: str = "Bruker", **kwargs) -> None:
-        """Save detector in a text file with projection centers (PCs) in
-        the given convention.
+        """Save the detector in a text file with projection centers
+        (PCs) in the given convention.
 
         Parameters
         ----------

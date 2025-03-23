@@ -1185,7 +1185,7 @@ class EBSD(KikuchipySignal2D):
             static_bg_new = _downsample2d(static_bg, factor, omin, omax, dtype_out)
             attrs["static_background"] = static_bg_new
 
-        attrs["detector"].shape = sig_shape_new
+        attrs["detector"]._shape = sig_shape_new
         attrs["detector"].binning *= factor
 
         map_kw = {
@@ -2803,7 +2803,7 @@ class EBSD(KikuchipySignal2D):
             attrs["static_background"] = static_bg2
 
         # Update detector shape and binning factor
-        attrs["detector"].shape = sig_shape_new
+        attrs["detector"]._shape = sig_shape_new
         factors = np.array(sig_shape_old) / np.array(sig_shape_new)
         binning = attrs["detector"].binning * factors
         if binning[0] == binning[1] and np.allclose(binning, binning.round(0)):
