@@ -68,7 +68,8 @@ all = [
 doc = [
     "memory_profiler",
     "nbsphinx                     >= 0.7",
-    "numpydoc",
+    # Restriction due to https://github.com/pyxem/kikuchipy/issues/739
+    "numpydoc != 1.9.0",
     "nlopt",
     "pydata-sphinx-theme",
     "pyebsdindex                  ~= 0.2",
