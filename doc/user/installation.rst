@@ -7,6 +7,7 @@ kikuchipy can be installed with `pip <https://pypi.org/project/kikuchipy/>`__,
 :ref:`hyperspy:hyperspy-bundle`, or from source, and supports Python >= 3.10.
 All alternatives are available on Windows, macOS and Linux.
 
+
 .. _install-with-pip:
 
 With pip
@@ -25,6 +26,7 @@ To update kikuchipy to the latest release::
 To install a specific version of kikuchipy (say version 0.8.5)::
 
     pip install kikuchipy==0.8.5
+
 
 .. _install-with-anaconda:
 
@@ -54,6 +56,7 @@ To install a specific version of kikuchipy (say version 0.8.5)::
 
     conda install kikuchipy==0.8.5
 
+
 .. _install-with-hyperspy-bundle:
 
 With the HyperSpy Bundle
@@ -62,12 +65,6 @@ With the HyperSpy Bundle
 kikuchipy is available in the HyperSpy Bundle. See :ref:`hyperspy:hyperspy-bundle` for
 instructions.
 
-.. warning::
-
-    kikuchipy is updated more frequently than the HyperSpy Bundle, thus the installed
-    version of kikuchipy will most likely not be the latest version available. See the
-    `HyperSpy Bundle repository <https://github.com/hyperspy/hyperspy-bundle>`__ for how
-    to update packages in the bundle.
 
 .. _install-from-source:
 
@@ -83,6 +80,7 @@ To install kikuchipy from source, clone the repository from `GitHub
 
 See the contributing guide for :ref:`setting-up-a-development-installation` and keeping
 it up to date.
+
 
 .. _dependencies:
 
