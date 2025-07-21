@@ -80,7 +80,7 @@ class TestEBSDXmapProperty:
         assert np.allclose(xmap.rotations.data, xmap_lazy.rotations.data)
 
     def test_set_xmap(self, get_single_phase_xmap):
-        s = kp.data.nickel_ebsd_large(lazy=True)
+        s = kp.data.nickel_ebsd_large(allow_download=True, lazy=True)
         nav_shape = s._navigation_shape_rc
         step_sizes = (1.5, 1.5)
 
@@ -1656,7 +1656,7 @@ class TestAverageNeighbourDotProductMap:
         assert adp.dtype == np.float32
 
     def test_adp_lazy2(self):
-        s = kp.data.nickel_ebsd_large()
+        s = kp.data.nickel_ebsd_large(allow_download=True)
         s_lazy = s.as_lazy()
         adp = s.get_average_neighbour_dot_product_map()
         adp_lazy = s_lazy.get_average_neighbour_dot_product_map()
@@ -1674,7 +1674,7 @@ class TestAverageNeighbourDotProductMap:
         ],
     )
     def test_adp_dp_matrices(self, window):
-        s = kp.data.nickel_ebsd_large()
+        s = kp.data.nickel_ebsd_large(allow_download=True)
 
         dp_matrices = s.get_neighbour_dot_product_matrices(
             window=window, show_progressbar=True
@@ -1740,7 +1740,7 @@ class TestNeighbourDotProductMatrices:
         )
 
     def test_dp_matrices_lazy(self):
-        s = kp.data.nickel_ebsd_large()
+        s = kp.data.nickel_ebsd_large(allow_download=True)
         s_lazy = s.as_lazy()
         dp_matrices = s.get_neighbour_dot_product_matrices()
         dp_matrices_lazy = s_lazy.get_neighbour_dot_product_matrices()
@@ -2208,7 +2208,7 @@ class TestExtractGrid:
             _ = s.extract_grid(4)
 
     def test_extract_grid(self):
-        s = kp.data.nickel_ebsd_large()
+        s = kp.data.nickel_ebsd_large(allow_download=True)
         s2 = s.extract_grid((5, 4))
 
         assert s2.data.shape == (4, 5, 60, 60)
@@ -2238,7 +2238,7 @@ class TestExtractGrid:
         assert np.allclose(scales, desired_scales)
 
     def test_extract_grid_lazy(self):
-        s = kp.data.nickel_ebsd_large(lazy=True)
+        s = kp.data.nickel_ebsd_large(allow_download=True, lazy=True)
         s2, idx = s.extract_grid((2, 3), return_indices=True)
         assert isinstance(s2, kp.signals.LazyEBSD)
         assert np.allclose(
@@ -2254,7 +2254,7 @@ class TestExtractGrid:
         assert np.allclose(s2.detector.pc, 0.5)
 
     def test_extract_grid_1d(self):
-        s = kp.data.nickel_ebsd_large(lazy=True)
+        s = kp.data.nickel_ebsd_large(allow_download=True, lazy=True)
 
         s2 = s.inav[0]
         s3, idx3 = s2.extract_grid((3,), return_indices=True)
