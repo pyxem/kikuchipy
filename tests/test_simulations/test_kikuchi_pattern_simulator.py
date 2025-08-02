@@ -276,7 +276,7 @@ class TestPlot:
 
         plt.close("all")
 
-    def test_spherical(self):
+    def test_plot_spherical_matplotlib(self):
         """Spherical plot with Matplotlib."""
         simulator = self.simulator
         fig1 = simulator.plot("spherical", return_figure=True)
@@ -297,10 +297,7 @@ class TestPlot:
 
         plt.close("all")
 
-    @pytest.mark.skipif(
-        dependency_version["pyvista"] is None, reason="PyVista is not installed"
-    )
-    def test_spherical_pyvista(self):
+    def test_plot_spherical(self, skip_if_no_pyvista_or_no_display):
         """Spherical plot with PyVista."""
         import pyvista as pv
 

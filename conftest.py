@@ -50,6 +50,12 @@ from kikuchipy.data._dummy_files.bruker_h5ebsd import (
 from kikuchipy.data._dummy_files.oxford_h5ebsd import create_dummy_oxford_h5ebsd_file
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
 
+DATA_PATH = Path(kp.data.__file__).parent.resolve()
+
+
+# ----------------------------- pyvista ----------------------------- #
+
+
 if dependency_version["pyvista"] is not None:
     import pyvista as pv
 
@@ -57,7 +63,13 @@ if dependency_version["pyvista"] is not None:
     pv.global_theme.interactive = False
 
 
-DATA_PATH = Path(kp.data.__file__).parent.resolve()
+@pytest.fixture(autouse=False)
+def skip_if_no_pyvista_or_no_display():
+    if dependency_version["pyvista"] is None:
+        pytest.skip("Skipping test: pyvista not installed")
+    if "DISPLAY" not in os.environ:
+        pytest.skip("Skipping test: no DISPLAY environment variable set")
+
 
 # ------------------------------ Setup ------------------------------ #
 

@@ -546,10 +546,7 @@ class TestProjectFromLambert:
 
 
 class TestMasterPatternPlotting:
-    @pytest.mark.skipif(
-        dependency_version["pyvista"] is None, reason="PyVista is not installed"
-    )
-    def test_plot_spherical(self):
+    def test_plot_spherical(self, skip_if_no_pyvista_or_no_display):
         """Returns expected data and raises correct error."""
         import pyvista as pv
 
