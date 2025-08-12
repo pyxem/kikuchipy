@@ -297,7 +297,7 @@ class TestPlot:
 
         plt.close("all")
 
-    def test_plot_spherical(self, skip_if_no_pyvista_or_no_display):
+    def test_plot_spherical(self, skipif_no_vtk_support):
         """Spherical plot with PyVista."""
         import pyvista as pv
 

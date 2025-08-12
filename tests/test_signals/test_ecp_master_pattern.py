@@ -73,7 +73,7 @@ class TestECPMasterPattern:
         assert np.allclose(mp_lower, data[1])
 
     def test_plot_spherical(
-        self, emsoft_ecp_master_pattern_file, skip_if_no_pyvista_or_no_display
+        self, emsoft_ecp_master_pattern_file, skipif_no_vtk_support
     ):
         """Cover inherited method only included for documentation
         purposes (tested rigorously elsewhere).

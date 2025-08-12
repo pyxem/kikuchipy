@@ -546,14 +546,12 @@ class TestProjectFromLambert:
 
 
 class TestMasterPatternPlotting:
-    def test_plot_spherical(self, skip_if_no_pyvista_or_no_display):
+    def test_plot_spherical(self, skipif_no_vtk_support):
         """Returns expected data and raises correct error."""
         import pyvista as pv
 
         mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
-        pl = mp.plot_spherical(
-            plotter_kwargs={"off_screen": True}, return_figure=True, style="points"
-        )
+        pl = mp.plot_spherical(return_figure=True, style="points")
         assert isinstance(pl, pv.Plotter)
 
         # Number of points equal to points in the master pattern's
@@ -561,8 +559,7 @@ class TestMasterPatternPlotting:
         assert pl.mesh.n_points == 251242
 
         # Actual plot
-        # mp.plot_spherical(plotter_kwargs=dict(notebook=False))
-        mp.plot_spherical(plotter_kwargs={"off_screen": True})
+        mp.plot_spherical(plotter_kwargs=dict(notebook=False))
 
         # Raise error since only one hemisphere is available and the
         # phase is non-centrosymmetric
