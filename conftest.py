@@ -17,9 +17,13 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
+# ------------------- Explanation of file location ------------------- #
 # Why is this file located in the top directory and not in tests/?
 # Because if it was, running "pytest --doctest-modules src" wouldn't
 # discover this file.
+#
+# An unwanted side-effect of this is that test files cannot import
+# anything from the conftest file.
 
 from io import TextIOWrapper
 from numbers import Number
@@ -48,7 +52,14 @@ from kikuchipy.data._dummy_files.bruker_h5ebsd import (
     create_dummy_bruker_h5ebsd_roi_file,
 )
 from kikuchipy.data._dummy_files.oxford_h5ebsd import create_dummy_oxford_h5ebsd_file
+from kikuchipy.draw._vtk import system_supports_plotting
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
+
+DATA_PATH = Path(kp.data.__file__).parent.resolve()
+
+
+# ----------------------------- PyVista ------------------------------ #
+
 
 if dependency_version["pyvista"] is not None:
     import pyvista as pv
@@ -57,9 +68,13 @@ if dependency_version["pyvista"] is not None:
     pv.global_theme.interactive = False
 
 
-DATA_PATH = Path(kp.data.__file__).parent.resolve()
+@pytest.fixture(autouse=False)
+def skipif_no_vtk_support():
+    if not system_supports_plotting():
+        pytest.skip("System does not support VTK plotting")
 
-# ------------------------------ Setup ------------------------------ #
+
+# --------------------------- pytest hooks --------------------------- #
 
 
 def pytest_sessionstart(session):
