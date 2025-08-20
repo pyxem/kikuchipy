@@ -18,6 +18,7 @@ Unreleased
 
 Added
 -----
+- Download from conda-forge of ``kikuchipy-base`` without optional dependencies.
 - Can now read simulated master patterns from EMsoft's EMEBSDmasterOpenCL.f90 program.
   (`#730 <https://github.com/pyxem/kikuchipy/pull/730>`_)
 
