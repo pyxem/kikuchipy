@@ -71,41 +71,45 @@ class EBSDDetector:
 
     The detector stores information of the detector shape, pixel size,
     binning factor, tilt, azimuthal, and twist, the sample tilt, and
-    the projection/pattern center (PC) per beam position.
+    the projection/pattern center (PC) per beam position. Given one or
+    multiple PCs, the detector's gnomonic coordinates are calculated.
 
-    Given one or multiple PCs, the detector's gnomonic coordinates are
-    calculated.
-
-    Uses of these include projecting Kikuchi bands onto the detector,
-    given a crystal, a crystal rotation, and a reflector list.
+    A detector defines the transformations needed to project patterns
+    generated in the sample to the detector.
 
     Parameters
     ----------
     shape
-        Number of detector rows and columns, in pixels. Default is
-        (1, 1).
+        Number of detector rows :math:`N_y` and columns :math:`N_x`, in
+        pixels. Default is (1, 1).
     px_size
-        Size of the square unbinned detector pixel, in microns. Default
-        is 1.
+        Size of the square unbinned detector pixel :math:`\delta`, in
+        microns. Default is 1.0.
     binning
-        Detector binning factor, i.e. how many pixels are binned into
-        one. Default is 1, meaning no binning.
+        Detector binning factor :math:`b`, i.e. how many pixels are
+        binned into one. Default is 1, meaning no binning.
     tilt
-        Detector tilt from *vertical*, in degrees. Default is 0.
+        Detector tilt :math:`\theta` about the detector horizontal
+        :math:`X_d`, in degrees. Default is 0.0.
     azimuthal
-        Sample tilt about the sample RD (downwards) axis, in degrees. A
-        positive angle means the sample normal moves towards the right
-        looking from the sample to the detector. Default is 0.
+        Detector tilt :math:`\omega` about the detector vertical
+        :math:`Y_d`, pointing downwards, in degrees. Default is 0.0. A
+        positive angle means features on the detector moves towards the
+        left looking from the detector towards the sample.
     twist
-        Rotation angle of the detector about the normal to the detector
-        screen, in degrees. Default is 0.
+        Detector tilt :math:`\gamma` about the detector normal
+        :math:`Z_d`, pointing towards the sample, in degrees. Default is
+        0.0.
     sample_tilt
-        Sample tilt from *horizontal*, in degrees. Default is 70.
+        Sample tilt :math:`\sigma` about the sample horizontal,
+        :math:`Y_d`, in degrees. Default is 70.0. Note that the sample
+        horizontal :math:`Y_d` is parallel to the detector horizontal,
+        :math:`X_d`.
     pc
         X, Y, and Z coordinates of the projection centers (PCs) in the
         given *convention*. Default is [0.5, 0.5, 0.5]. The PC describes
         the location of the beam on the sample surface measured relative
-        to the detection screen. See *Notes* for the definition and
+        to the detector screen. See *Notes* for the definitions of and
         conversions between conventions. If multiple PCs are given, they
         are assumed to be on the form [[x0, y0, z0], [x1, y1, z1], ...].
     convention
@@ -118,10 +122,10 @@ class EBSDDetector:
 
     Notes
     -----
-    The pattern on the detector is always viewed *from* the detector
-    *towards* the sample. Pattern width and height is here given as
-    :math:`N_x` and :math:`N_y`, respectively (possibly binned). PCs are
-    stored and used internally in Bruker's convention.
+    The pattern on the detector is always viewed from the detector
+    towards the sample. Pattern width and height in pixels are here
+    given as :math:`N_x` and :math:`N_y`, respectively (possibly
+    binned). PCs are stored and used internally in Bruker's convention.
 
     The Bruker PC coordinates :math:`(x_B^*, y_B^*, z_B^*)` are defined
     in fractions of :math:`N_x`, :math:`N_y`, and :math:`N_y`,
@@ -182,10 +186,9 @@ class EBSDDetector:
 
     >>> import numpy as np
     >>> import kikuchipy as kp
-    >>> pc = np.full((10, 20, 3), (0.421, 0.779, 0.505))
     >>> det = kp.detectors.EBSDDetector(
     ...     shape=(60, 60),
-    ...     pc=pc,
+    ...     pc=np.full((10, 20, 3), (0.421, 0.779, 0.505)),
     ...     convention="edax",
     ...     px_size=70,
     ...     binning=8,
@@ -204,7 +207,7 @@ class EBSDDetector:
     >>> det.plot(
     ...     pattern=s.inav[0, 0].data,
     ...     coordinates="gnomonic",
-    ...     draw_gnomonic_circles=True
+    ...     draw_gnomonic_circles=True,
     ... )
     """
 
@@ -233,62 +236,95 @@ class EBSDDetector:
         self._set_pc_in_bruker_convention(convention)
 
     # -------------------------- Properties -------------------------- #
-
-    @property
-    def shape(self) -> tuple[int, int]:
-        """Return the number of detector rows and columns in pixels."""
-        return self._shape
-
-    @property
-    def euler(self) -> np.ndarray:
-        """Return the detector Euler angles (Bunge convention: ZXZ) in degrees."""
-        return np.array([self.azimuthal, 90.0 + self.tilt, self.twist], dtype=float)
-
-    @property
-    def specimen_scintillator_distance(self) -> np.ndarray:
-        """Return the specimen to scintillator distance, known in EMsoft
-        as :math:`L`.
-        """
-        return self.pcz * self.height
-
-    @property
-    def nrows(self) -> int:
-        """Return the number of detector pixel rows."""
-        return self.shape[0]
-
-    @property
-    def ncols(self) -> int:
-        """Return the number of detector pixel columns."""
-        return self.shape[1]
-
-    @property
-    def size(self) -> int:
-        """Return the number of detector pixels."""
-        return self.nrows * self.ncols
-
-    @property
-    def height(self) -> float:
-        """Return the detector height in microns."""
-        return self.nrows * self.px_size * self.binning
-
-    @property
-    def width(self) -> float:
-        """Return the detector width in microns."""
-        return self.ncols * self.px_size * self.binning
+    # Listed alphabetically
 
     @property
     def aspect_ratio(self) -> float:
-        """Return the number of detector columns divided by rows."""
+        """Return the number of detector columns :math:`N_x` divided by
+        the number of detector rows :math:`N_y`.
+        """
         return self.ncols / self.nrows
 
     @property
-    def unbinned_shape(self) -> tuple[int, int]:
-        """Return the unbinned detector shape in pixels."""
-        return tuple(np.array(self.shape, dtype=int) * self.binning)
+    def bounds(self) -> np.ndarray:
+        """Return the detector bounds :math:`(0, N_x - 1, 0, N_y - 1)`
+        in pixel coordinates.
+        """
+        return np.array([0, self.ncols - 1, 0, self.nrows - 1])
+
+    @property
+    def euler(self) -> np.ndarray:
+        """Return the detector Euler angles in the Bunge convention
+        (ZXZ) in degrees.
+        """
+        return np.array([self.azimuthal, 90.0 + self.tilt, self.twist], dtype=float)
+
+    @property
+    def gnomonic_bounds(self) -> np.ndarray:
+        """Return the detector bounds [x0, x1, y0, y1] in gnomonic
+        coordinates.
+
+        The calculation of gnomonic coordinates is based on the
+        supplementary material to :cite:`britton2016tutorial`.
+        """
+        return np.concatenate((self.x_range, self.y_range), axis=-1)
+
+    @property
+    def height(self) -> float:
+        r"""Return the detector height in microns.
+
+        This is given by :math:`N_y \delta b`.
+        """
+        return self.nrows * self.px_size * self.binning
+
+    @property
+    def navigation_dimension(self) -> int:
+        """Return the number of navigation dimensions of the projection
+        center array.
+        """
+        return len(self.navigation_shape)
+
+    @property
+    def navigation_shape(self) -> tuple:
+        """Return or set the navigation shape of the projection center
+        array.
+
+        Parameters
+        ----------
+        value : tuple
+            Navigation shape, with a maximum dimension of 2.
+        """
+        return self.pc.shape[: self.pc.ndim - 1]
+
+    @navigation_shape.setter
+    def navigation_shape(self, value: tuple[int] | tuple[int, int]) -> None:
+        ndim = len(value)
+        if ndim > 2:
+            raise ValueError(f"A maximum dimension of 2 is allowed, 2 < {ndim}")
+        else:
+            self.pc = self.pc.reshape(value + (3,))
+
+    @property
+    def navigation_size(self) -> int:
+        """Return the number of projection centers."""
+        return int(np.prod(self.navigation_shape))
+
+    @property
+    def ncols(self) -> int:
+        """Return the number of detector pixel columns :math:`N_x`."""
+        return self.shape[1]
+
+    @property
+    def nrows(self) -> int:
+        """Return the number of detector pixel rows :math:`N_y`."""
+        return self.shape[0]
 
     @property
     def px_size_binned(self) -> float:
-        """Return the binned pixel size in microns."""
+        r"""Return the binned pixel size in microns.
+
+        This is given by :math:`\delta b`.
+        """
         return self.px_size * self.binning
 
     @property
@@ -297,8 +333,8 @@ class EBSDDetector:
 
         Parameters
         ----------
-        value : numpy.ndarray, list or tuple
-            PC coordinates. If multiple PCs are passed, they are assumed
+        value : numpy.ndarray, list, or tuple
+            PC coordinates. If multiple PCs are given, they are assumed
             to be on the form [[x0, y0, z0], [x1, y1, z1], ...]. Default
             is [[0.5, 0.5, 0.5]].
 
@@ -314,8 +350,25 @@ class EBSDDetector:
         self._pc = np.atleast_2d(value).astype(float)
 
     @property
+    def pc_average(self) -> np.ndarray:
+        """Return the average projection center.
+
+        Notes
+        -----
+        The PC coordinates are stored in Bruker's convention. See the
+        *Notes* in :class:`EBSDDetector` for more information.
+        """
+        ndim = self.pc.ndim
+        axis = ()
+        if ndim == 2:
+            axis += (0,)
+        elif ndim == 3:
+            axis += (0, 1)
+        return np.nanmean(self.pc, axis=axis)
+
+    @property
     def pc_flattened(self) -> np.ndarray:
-        """Return flattened array of projection center coordinates of
+        """Return a flattened array of projection center coordinates of
         shape (:attr:`navigation_size`, 3).
 
         Notes
@@ -392,64 +445,62 @@ class EBSDDetector:
         self._pc[..., 2] = np.atleast_2d(value).astype(float)
 
     @property
-    def pc_average(self) -> np.ndarray:
-        """Return the overall average projection center.
+    def r_max(self) -> np.ndarray:
+        """Return the maximum distance from :attr:`pc` to the detector
+        edge in gnomonic coordinates.
 
-        Notes
-        -----
-        The PC coordinates are stored in Bruker's convention. See the
-        *Notes* in :class:`EBSDDetector` for more information.
+        The calculation of gnomonic coordinates is based on the
+        supplementary material to :cite:`britton2016tutorial`.
         """
-        ndim = self.pc.ndim
-        axis = ()
-        if ndim == 2:
-            axis += (0,)
-        elif ndim == 3:
-            axis += (0, 1)
-        return np.nanmean(self.pc, axis=axis)
+        corners = np.zeros(self.navigation_shape + (4,))
+        corners[..., 0] = self.x_min**2 + self.y_min**2  # Upper left
+        corners[..., 1] = self.x_max**2 + self.y_min**2  # Upper right
+        corners[..., 2] = self.x_max**2 + self.y_max**2  # Lower right
+        corners[..., 3] = self.x_min**2 + self.y_min**2  # Lower left
+        return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
 
     @property
-    def navigation_shape(self) -> tuple:
-        """Return or set the navigation shape of the projection center
-        array.
-
-        Parameters
-        ----------
-        value : tuple
-            Navigation shape, with a maximum dimension of 2.
+    def shape(self) -> tuple[int, int]:
+        """Return the number of detector rows :math:`N_y` and columns
+        :math:`N_x` in pixels.
         """
-        return self.pc.shape[: self.pc.ndim - 1]
+        return self._shape
 
-    @navigation_shape.setter
-    def navigation_shape(self, value: tuple):
-        ndim = len(value)
-        if ndim > 2:
-            raise ValueError(f"A maximum dimension of 2 is allowed, 2 < {ndim}")
-        else:
-            self.pc = self.pc.reshape(value + (3,))
+    @shape.setter
+    def shape(self, value: tuple[int, int]) -> None:
+        self._shape = value
 
     @property
-    def navigation_dimension(self) -> int:
-        """Return the number of navigation dimensions of the projection
-        center array.
-        """
-        return len(self.navigation_shape)
+    def size(self) -> int:
+        """Return the number of detector pixels :math:`N_x N_y`."""
+        return self.nrows * self.ncols
 
     @property
-    def navigation_size(self) -> int:
-        """Return the number of projection centers."""
-        return int(np.prod(self.navigation_shape))
+    def specimen_scintillator_distance(self) -> np.ndarray:
+        """Return the specimen-to-scintillator distance, known in EMsoft
+        as :math:`L`, given in microns.
+        """
+        return self.pcz * self.height
 
     @property
-    def bounds(self) -> np.ndarray:
-        """Return the detector bounds [x0, x1, y0, y1] in pixel
-        coordinates.
+    def unbinned_shape(self) -> tuple[int, int]:
+        """Return the unbinned detector shape in pixels.
+
+        This is given by :math:`(N_y b, N_x b)`.
         """
-        return np.array([0, self.ncols - 1, 0, self.nrows - 1])
+        return tuple(np.array(self.shape, dtype=int) * self.binning)
+
+    @property
+    def width(self) -> float:
+        r"""Return the detector width in microns.
+
+        This is given by :math:`N_x \delta b`.
+        """
+        return self.ncols * self.px_size * self.binning
 
     @property
     def x_min(self) -> np.ndarray | float:
-        """Return the left bound of detector in gnomonic coordinates.
+        """Return the left bound in gnomonic coordinates.
 
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
@@ -458,7 +509,7 @@ class EBSDDetector:
 
     @property
     def x_max(self) -> np.ndarray | float:
-        """Return the right bound of detector in gnomonic coordinates.
+        """Return the right bound in gnomonic coordinates.
 
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
@@ -467,7 +518,7 @@ class EBSDDetector:
 
     @property
     def x_range(self) -> np.ndarray:
-        """Return the x detector limits in gnomonic coordinates.
+        """Return the horizontal detector range in gnomonic coordinates.
 
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
@@ -476,7 +527,7 @@ class EBSDDetector:
 
     @property
     def y_min(self) -> np.ndarray | float:
-        """Return the top bound of detector in gnomonic coordinates.
+        """Return the upper bound in gnomonic coordinates.
 
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
@@ -485,7 +536,7 @@ class EBSDDetector:
 
     @property
     def y_max(self) -> np.ndarray | float:
-        """Return the bottom bound of detector in gnomonic coordinates.
+        """Return the lower bound in gnomonic coordinates.
 
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
@@ -494,28 +545,12 @@ class EBSDDetector:
 
     @property
     def y_range(self) -> np.ndarray:
-        """Return the y detector limits in gnomonic coordinates.
+        """Return the vertical detector range in gnomonic coordinates.
 
         The calculation of gnomonic coordinates is based on the
         supplementary material to :cite:`britton2016tutorial`.
         """
         return np.dstack((self.y_min, self.y_max)).reshape(self.navigation_shape + (2,))
-
-    @property
-    def gnomonic_bounds(self) -> np.ndarray:
-        """Return the detector bounds [x0, x1, y0, y1] in gnomonic
-        coordinates.
-
-        The calculation of gnomonic coordinates is based on the
-        supplementary material to :cite:`britton2016tutorial`.
-        """
-        return np.concatenate((self.x_range, self.y_range), axis=-1)
-
-    @property
-    def _average_gnomonic_bounds(self) -> np.ndarray:
-        return np.nanmean(
-            self.gnomonic_bounds, axis=(0, 1, 2)[: self.navigation_dimension]
-        )
 
     @property
     def x_scale(self) -> np.ndarray:
@@ -542,21 +577,6 @@ class EBSDDetector:
         else:
             y_scale = np.diff(self.y_range) / (self.nrows - 1)
         return y_scale.reshape(self.navigation_shape)
-
-    @property
-    def r_max(self) -> np.ndarray:
-        """Return the maximum distance from PC to detector edge in
-        gnomonic coordinates.
-
-        The calculation of gnomonic coordinates is based on the
-        supplementary material to :cite:`britton2016tutorial`.
-        """
-        corners = np.zeros(self.navigation_shape + (4,))
-        corners[..., 0] = self.x_min**2 + self.y_min**2  # Up. left
-        corners[..., 1] = self.x_max**2 + self.y_min**2  # Up. right
-        corners[..., 2] = self.x_max**2 + self.y_max**2  # Lo. right
-        corners[..., 3] = self.x_min**2 + self.y_min**2  # Lo. left
-        return np.atleast_2d(np.sqrt(np.max(corners, axis=-1)))
 
     @property
     def coordinate_conversion_factors(self) -> dict:
@@ -611,6 +631,12 @@ class EBSDDetector:
             Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
         )
         return sample_to_detector
+
+    @property
+    def _average_gnomonic_bounds(self) -> np.ndarray:
+        return np.nanmean(
+            self.gnomonic_bounds, axis=(0, 1, 2)[: self.navigation_dimension]
+        )
 
     # ------------------------ Dunder methods ------------------------ #
 
@@ -692,7 +718,7 @@ class EBSDDetector:
             value = detector_kw[k].rstrip(" deg")
             try:
                 detector_kw[k] = float(value)
-            except ():  # pragma: no cover
+            except Exception:  # pragma: no cover
                 detector_kw[k] = None
 
         nav_shape = detector_kw.pop("navigation_shape")
