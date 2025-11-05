@@ -10,11 +10,12 @@
 ##
 ## kikuchipy is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
-## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 ## GNU General Public License for more details.
 ##
 ## You should have received a copy of the GNU General Public License
-## along with kikuchipy.  If not, see <http://www.gnu.org/licenses/>.##
+## along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+##
 
 # To get started with Dependabot version updates, you'll need to specify which
 # package ecosystems to update and where the package manifests are located.
@@ -26,4 +27,9 @@ updates:
   - package-ecosystem: "github-actions" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    target-branch: "develop"
+    groups:
+      actions:
+        patterns:
+          - "*"
