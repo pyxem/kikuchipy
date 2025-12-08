@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from copy import deepcopy
 from datetime import datetime
 import logging
@@ -461,14 +462,26 @@ class EBSDDetector:
 
     @property
     def shape(self) -> tuple[int, int]:
-        """Return the number of detector rows :math:`N_y` and columns
-        :math:`N_x` in pixels.
+        """Return or set the number of detector rows :math:`N_y` and
+        columns :math:`N_x` in pixels.
+
+        Parameters
+        ----------
+        value
+            Two integers :math:`(N_y, N_x)`.
         """
         return self._shape
 
     @shape.setter
     def shape(self, value: tuple[int, int]) -> None:
-        self._shape = value
+        if (
+            not isinstance(value, Iterable)
+            or len(value) != 2
+            or not all(isinstance(ni, int) for ni in value)
+        ):
+            raise ValueError("Shape must be an iterable of two integers")
+        ny, nx = value
+        self._shape = (int(ny), int(nx))
 
     @property
     def size(self) -> int:
