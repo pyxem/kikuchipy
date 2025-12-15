@@ -13,6 +13,14 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+0.11.3 (2025-12-16)
+===================
+
+Fixed
+-----
+- Compatibility with Orix 0.14.3.
+
+
 0.11.2 (2025-03-09)
 ===================
 
@@ -20,6 +28,7 @@ Fixed
 -----
 - Compatibility with HyperSpy 2.3.
   (`#723 <https://github.com/pyxem/kikuchipy/pull/723>`_)
+
 
 0.11.1 (2024-11-30)
 ===================
@@ -35,6 +44,7 @@ Fixed
   (`#700 <https://github.com/pyxem/kikuchipy/pull/700>`_)
 - Unnecessary reading of unprocessed patterns from H5OINA files into the EBSD original
   metadata. (`#701 <https://github.com/pyxem/kikuchipy/pull/701>`_)
+
 
 0.11.0 (2024-11-10)
 ===================
@@ -61,6 +71,7 @@ Removed
 - Contrasting background bounding box for zone axes labels returned as HyperSpy
   markers. They are not supported by HyperSpy 2.0.
   (`#695 <https://github.com/pyxem/kikuchipy/pull/695>`_)
+
 
 0.10.0 (2024-06-02)
 ===================
@@ -91,6 +102,7 @@ Fixed
   ``downsample()``, was previously previously incorrect, (n columns, n rows). This is
   now correct, (n rows, n columns).
   (`#674 <https://github.com/pyxem/kikuchipy/pull/674>`_)
+
 
 0.9.0 (2023-11-03)
 ==================
@@ -149,6 +161,7 @@ Fixed
 - Downloading files in the ``data`` module to the local cache on Windows.
   (`#655 <https://github.com/pyxem/kikuchipy/pull/655>`_)
 
+
 0.8.7 (2023-07-24)
 ==================
 
@@ -157,6 +170,7 @@ Fixed
 - Passing a 3-component PC array with more than one dimension to
   ``EBSD.hough_indexing_optimize_pc()`` works.
   (`#647 <https://github.com/pyxem/kikuchipy/pull/647>`_)
+
 
 0.8.6 (2023-05-29)
 ==================
@@ -176,6 +190,7 @@ Fixed
   containing the detector binning.
   (`#641 <https://github.com/pyxem/kikuchipy/pull/641>`_)
 
+
 0.8.5 (2023-05-21)
 ==================
 
@@ -183,6 +198,7 @@ Fixed
 -----
 - Not-indexed points in crystal maps are handled correctly when merging.
   (`#639 <https://github.com/pyxem/kikuchipy/pull/639>`_)
+
 
 0.8.4 (2023-04-07)
 ==================
@@ -200,6 +216,7 @@ Changed
   it might not have a 2D navigation shape, even though the returned crystal map has.
   (`#632 <https://github.com/pyxem/kikuchipy/pull/632>`_)
 
+
 0.8.3 (2023-03-23)
 ==================
 
@@ -208,6 +225,7 @@ Changed
 - ``EBSD.hough_indexing()`` info message now informs that the given projection center is
   in Bruker's convention. (`#628 <https://github.com/pyxem/kikuchipy/pull/628>`_)
 
+
 0.8.2 (2023-03-14)
 ==================
 
@@ -215,6 +233,7 @@ Changed
 -------
 - Set minimal version of orix to >= 0.11.1.
   (`#623 <https://github.com/pyxem/kikuchipy/pull/623>`_)
+
 
 0.8.1 (2023-02-20)
 ==================
@@ -226,6 +245,7 @@ Fixed
   (`#615 <https://github.com/pyxem/kikuchipy/pull/615>`_)
 - Missing progressbars for ``EBSD`` methods ``average_neighbour_patterns()`` and
   ``fft_filter()`` reintroduced. (`#615 <https://github.com/pyxem/kikuchipy/pull/615>`_)
+
 
 0.8.0 (2023-02-11)
 ==================
@@ -410,6 +430,7 @@ Fixed
   (e.g. ``Scan 1/EBSD/Header/n_columns`` and ``n_rows``).
   (`#578 <https://github.com/pyxem/kikuchipy/pull/578>`_)
 
+
 0.7.0 (2022-10-29)
 ==================
 
@@ -521,6 +542,7 @@ Fixed
   or ``n_per_iteration`` parameters.
   (`#567 <https://github.com/pyxem/kikuchipy/pull/567>`_)
 
+
 0.6.1 (2022-06-17)
 ==================
 
@@ -532,6 +554,7 @@ Fixed
 -----
 - Incorrect filtering of zone axes labels in geometrical simulations.
   (`#544 <https://github.com/pyxem/kikuchipy/pull/544>`_)
+
 
 0.6.0 (2022-06-16)
 ==================
@@ -614,6 +637,7 @@ Fixed
 - Hopefully prevent EBSD refinement tests using random data to fail on Azure.
   (`#465 <https://github.com/pyxem/kikuchipy/pull/465>`_)
 
+
 0.5.8 (2022-05-16)
 ==================
 
@@ -631,6 +655,7 @@ Fixed
 - Internal use of ``orix.vector.Vector3d`` following ``orix``' 0.9.0 release.
   (`#520 <https://github.com/pyxem/kikuchipy/pull/520>`_)
 
+
 0.5.7 (2022-01-10)
 ==================
 
@@ -643,6 +668,7 @@ Fixed
 - EBSD orientation refinement on Windows producing garbage results due to unpredictable
   behaviour in Numba function which converts Euler triplet to quaternion.
   (`#495 <https://github.com/pyxem/kikuchipy/pull/495>`_)
+
 
 0.5.6 (2022-01-02)
 ==================
@@ -661,6 +687,7 @@ Changed
 - Pattern matching notebook to include orientation maps from orix.
   (`#491 <https://github.com/pyxem/kikuchipy/pull/491>`_)
 
+
 0.5.5 (2021-12-12)
 ==================
 
@@ -673,6 +700,7 @@ Fixed
 -----
 - Not flipping rows and columns when saving non-square patterns to kikuchipy's h5ebsd
   format. (`#486 <https://github.com/pyxem/kikuchipy/pull/486>`_)
+
 
 0.5.4 (2021-11-17)
 ==================
@@ -698,6 +726,7 @@ Fixed
 - Memory issue in EBSD refinement due to naive use of dask.delayed. Uses map_blocks()
   instead. (`#470 <https://github.com/pyxem/kikuchipy/pull/470>`_)
 
+
 0.5.3 (2021-11-02)
 ==================
 
@@ -720,6 +749,7 @@ Fixed
   Bruker conventions correctly uses detector aspect ratio.
   (`#455 <https://github.com/pyxem/kikuchipy/pull/455>`_)
 
+
 0.5.2 (2021-09-11)
 ==================
 
@@ -734,6 +764,7 @@ Changed
 - Restrict lowest supported version of orix to >= 0.7.
   (`#444 <https://github.com/pyxem/kikuchipy/pull/444>`_)
 
+
 0.5.1 (2021-09-01)
 ==================
 
@@ -745,6 +776,7 @@ Added
 -----
 - Automatic creation of a release using GitHub Actions, which will simplify and lead to
   more frequent patch releases. (`#433 <https://github.com/pyxem/kikuchipy/pull/433>`_)
+
 
 0.5.0 (2021-08-31)
 ==================
@@ -816,6 +848,7 @@ Fixed
 - Set newest supported version of Sphinx to 4.0.2 so that nbsphinx works.
   (`#403 <https://github.com/pyxem/kikuchipy/pull/403>`_)
 
+
 0.4.0 (2021-07-08)
 ==================
 
@@ -869,6 +902,7 @@ Fixed
 - Scaling of region of interest coordinates used in virtual backscatter electron imaging
   to physical coordinates. (`#349 <https://github.com/pyxem/kikuchipy/pull/349>`_)
 
+
 0.3.4 (2021-05-26)
 ==================
 
@@ -880,6 +914,7 @@ Added
 -----
 - Restricted newest version of dask<=2021.03.1 and pinned orix==0.6.0.
   (`#360 <https://github.com/pyxem/kikuchipy/pull/360>`_)
+
 
 0.3.3 (2021-04-18)
 ==================
@@ -902,6 +937,7 @@ Fixed
   non-square detector dataset works.
   (`#331 <https://github.com/pyxem/kikuchipy/pull/331>`_)
 
+
 0.3.2 (2021-02-01)
 ==================
 
@@ -916,6 +952,7 @@ Fixed
 - Pattern matching sometimes failing to generate a crystal map due to incorrect creation
   of spatial arrays. (`#307 <https://github.com/pyxem/kikuchipy/pull/307>`_)
 
+
 0.3.1 (2021-01-22)
 ==================
 
@@ -927,6 +964,7 @@ Fixed
 -----
 - Version link Binder uses to make the Jupyter Notebooks run in the browser.
   (`#301 <https://github.com/pyxem/kikuchipy/pull/301>`_)
+
 
 0.3.0 (2021-01-22)
 ==================
@@ -1044,6 +1082,7 @@ Fixed
 - NumPy array creation when calculating window pixel's distance to the origin is not
   ragged anymore. (`#221 <https://github.com/pyxem/kikuchipy/pull/221>`_)
 
+
 0.2.2 (2020-05-24)
 ==================
 
@@ -1059,6 +1098,7 @@ Fixed
 - Allow reading of EBSD patterns from h5ebsd files with arbitrary scan group names, not
   just "Scan 1", "Scan 2", etc., like was the case before.
   (`#188 <https://github.com/pyxem/kikuchipy/pull/188>`_)
+
 
 0.2.1 (2020-05-20)
 ==================
@@ -1080,6 +1120,7 @@ Fixed
 -----
 - With the change above, kikuchipy 0.2 should be installable from Anaconda and not just
   PyPI. (`#180 <https://github.com/pyxem/kikuchipy/pull/180>`_)
+
 
 0.2.0 (2020-05-19)
 ==================
@@ -1161,6 +1202,7 @@ Fixed
 - RtD builds documentation with Python 3.8 (fixed problem of missing .egg leading build
   to fail). (`#158 <https://github.com/pyxem/kikuchipy/pull/158>`_)
 
+
 0.1.3 (2020-05-11)
 ==================
 
@@ -1182,6 +1224,7 @@ Fixed
 - Chunking of static background pattern.
 - Chunking of patterns in the h5ebsd reader.
 
+
 0.1.2 (2020-01-09)
 ==================
 
@@ -1191,10 +1234,12 @@ backscatter diffraction patterns: https://kikuchipy.org.
 This is a bug-fix release that ensures, unlike the previous bug-fix release, that
 necessary files are downloaded when installing from PyPI.
 
+
 0.1.1 (2020-01-04)
 ==================
 
 This is a bug fix release that ensures that necessary files are uploaded to PyPI.
+
 
 0.1.0 (2020-01-04)
 ==================
