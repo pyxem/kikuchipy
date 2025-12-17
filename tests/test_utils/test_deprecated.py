@@ -84,10 +84,7 @@ class TestDeprecationWarning:
         )
         assert str(record[0].message) == desired_msg
         assert foo.__doc__ == (
-            "[*Deprecated*] \n"
-            "\nNotes\n-----\n"
-            ".. deprecated:: 0.7\n"
-            f"   {desired_msg}"
+            f"[*Deprecated*] \n\nNotes\n-----\n.. deprecated:: 0.7\n   {desired_msg}"
         )
 
     def test_deprecate_class_attribute(self):
@@ -106,10 +103,7 @@ class TestDeprecationWarning:
         desired_msg = "Attribute `b` is deprecated. Use `c` instead."
         assert str(record[0].message) == desired_msg
         assert Foo.b.__doc__ == (
-            "[*Deprecated*] \n"
-            "\nNotes\n-----\n"
-            ".. deprecated:: 0.7\n"
-            f"   {desired_msg}"
+            f"[*Deprecated*] \n\nNotes\n-----\n.. deprecated:: 0.7\n   {desired_msg}"
         )
 
 

@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from diffpy.structure import Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticeVector
@@ -53,10 +55,12 @@ class TestHoughIndexing:
         )
         info_list = info.split("\n")
         # fmt: off
-        assert info_list[0] ==     "Hough indexing with PyEBSDIndex information:"
+        assert info_list[0] == "Hough indexing with PyEBSDIndex information:"
         assert info_list[1][:12] == "  PyOpenCL: "
-        assert info_list[2] ==     "  Projection center (Bruker, mean): (0.4251, 0.2134, 0.5007)"
-        assert info_list[3] ==     "  Indexing 9 pattern(s) in 3 chunk(s)"
+        assert info_list[2] == (
+            "  Projection center (Bruker, mean): (0.4251, 0.2134, 0.5007)"
+        )
+        assert info_list[3] == "  Indexing 9 pattern(s) in 3 chunk(s)"
         # fmt: on
 
         det_pc_mean = det.deepcopy()
@@ -171,7 +175,9 @@ class TestHoughIndexing:
         assert not _indexer_is_compatible_with_kikuchipy(indexer, (60, 60), 8)
         with pytest.raises(
             ValueError,
-            match=r"`indexer.PC` must be an array of shape \(3,\) or \(8, 3\), but was ",
+            match=(
+                r"`indexer.PC` must be an array of shape \(3,\) or \(8, 3\), but was "
+            ),
         ):
             _indexer_is_compatible_with_kikuchipy(
                 indexer, (60, 60), 8, raise_if_not=True

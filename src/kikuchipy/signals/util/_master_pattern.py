@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 # The following copyright notice is included because the following
 # functionality in this file is derived and adapted from EMsoft:
@@ -99,9 +101,11 @@ def _get_direction_cosines_from_detector(
     """
     if detector.navigation_shape == (1,):
         pcx, pcy, pcz = detector.pc.squeeze().astype(np.float64)
+        gnomonic_bounds = detector.gnomonic_bounds.squeeze().astype(np.float64)
         func = _get_direction_cosines_for_fixed_pc
     else:
         pcx, pcy, pcz = detector.pc_flattened.T.astype(np.float64)
+        gnomonic_bounds = detector.gnomonic_bounds.reshape((-1, 4)).astype(np.float64)
         func = _get_direction_cosines_for_varying_pc
 
     if signal_mask is None:
@@ -109,14 +113,11 @@ def _get_direction_cosines_from_detector(
         signal_mask = np.ones(detector.size, dtype=bool)
 
     dc = func(
-        pcx=pcx,
-        pcy=pcy,
+        gnomonic_bounds=gnomonic_bounds,
         pcz=pcz,
         nrows=detector.nrows,
         ncols=detector.ncols,
-        tilt=detector.tilt,
-        azimuthal=detector.azimuthal,
-        sample_tilt=detector.sample_tilt,
+        om_detector_to_sample=(~detector.sample_to_detector).to_matrix().squeeze(),
         signal_mask=signal_mask,
     )
 
@@ -124,61 +125,39 @@ def _get_direction_cosines_from_detector(
 
 
 @njit(
-    "Tuple((float64, float64, float64, float64))(float64, float64, float64)",
-    cache=True,
-    nogil=True,
-    fastmath=True,
-)
-def _get_cosine_sine_of_alpha_and_azimuthal(
-    sample_tilt: float, tilt: float, azimuthal: float
-) -> tuple[float, float, float, float]:
-    alpha = (np.pi / 2) - np.deg2rad(sample_tilt) + np.deg2rad(tilt)
-    azimuthal = np.deg2rad(azimuthal)
-    return np.cos(alpha), np.sin(alpha), np.cos(azimuthal), np.sin(azimuthal)
-
-
-@njit(
-    (
-        "float64[:, :]"
-        "(float64, float64, float64, int64, int64, float64, float64, float64, bool_[:])"
-    ),
+    ("float64[:, :](float64[:], float64, int64, int64, float64[:, ::1], bool_[:])"),
     cache=True,
     nogil=True,
     fastmath=True,
 )
 def _get_direction_cosines_for_fixed_pc(
-    pcx: float,
-    pcy: float,
+    gnomonic_bounds: np.ndarray,
     pcz: float,
     nrows: int,
     ncols: int,
-    tilt: float,
-    azimuthal: float,
-    sample_tilt: float,
+    om_detector_to_sample: np.ndarray,
     signal_mask: np.ndarray,
 ) -> np.ndarray:
     """Return direction cosines for a single projection center (PC).
 
-    Algorithm adapted from EMsoft, see :cite:`callahan2013dynamical`.
+    Algorithm adapted from that used in :cite:`britton2016tutorial`.
 
     Parameters
     ----------
-    pcx
-        PC x coordinate.
-    pcy
-        PC y coordinate.
+    gnomonic_bounds
+        Bounds of the detector in gnomonic coordinates.
     pcz
         PC z coordinate.
     nrows
         Number of detector rows.
     ncols
         Number of detector columns.
-    tilt
-        Detector tilt from horizontal in degrees.
-    azimuthal
-        Sample tilt about the sample RD axis in degrees.
-    sample_tilt
-        Sample tilt from horizontal in degrees.
+    om_detector_to_sample
+        The orientation matrix which transforms
+        vectors in the detector reference frame, CSd,
+        to the sample reference frame, CSs. This is
+        the inverse rotation of the
+        EBSDDetector.sample_to_detector property.
     signal_mask
         1D signal mask with ``True`` values for pixels to get direction
         cosines for.
@@ -197,35 +176,33 @@ def _get_direction_cosines_for_fixed_pc(
     -----
     This function is optimized with Numba, so care must be taken with
     array shapes and data types.
+
+    A previous version of this algorithm was adapted from EMsoft,
+    see :cite:`callahan2013dynamical`.
     """
-    nrows_array = np.arange(nrows - 1, -1, -1)
-    ncols_array = np.arange(ncols)
+    x_scale = (gnomonic_bounds[1] - gnomonic_bounds[0]) / ncols
+    y_scale = (gnomonic_bounds[3] - gnomonic_bounds[2]) / nrows
 
-    # Bruker to EMsoft's v5 PC convention
-    xpc = ncols * (0.5 - pcx)
-    ypc = nrows * (0.5 - pcy)
-    zpc = nrows * pcz
+    det_gn_x = np.arange(gnomonic_bounds[0], gnomonic_bounds[1], x_scale)
 
-    det_x = xpc + (1 - ncols) * 0.5 + ncols_array
-    det_y = ypc - (1 - nrows) * 0.5 - nrows_array
-
-    ca, sa, cw, sw = _get_cosine_sine_of_alpha_and_azimuthal(
-        sample_tilt=sample_tilt,
-        tilt=tilt,
-        azimuthal=azimuthal,
-    )
-    Ls = -sw * det_x + zpc * cw
-    Lc = cw * det_x + zpc * sw
+    det_gn_y = np.arange(gnomonic_bounds[3], gnomonic_bounds[2], -y_scale)
 
     idx_1d = np.arange(nrows * ncols)[signal_mask]
     rows = idx_1d // ncols
     cols = np.mod(idx_1d, ncols)
+
     n_pixels = idx_1d.size
     r_g_array = np.zeros((n_pixels, 3), dtype=np.float64)
+
+    x_half_step = np.true_divide(x_scale, 2)
+    y_half_step = np.true_divide(y_scale, 2)
+
     for i in nb.prange(n_pixels):
-        r_g_array[i, 0] = det_y[rows[i]] * ca + sa * Ls[cols[i]]
-        r_g_array[i, 1] = Lc[cols[i]]
-        r_g_array[i, 2] = -sa * det_y[rows[i]] + ca * Ls[cols[i]]
+        r_g_array[i, 0] = (det_gn_x[cols[i]] + x_half_step) * pcz
+        r_g_array[i, 1] = (det_gn_y[rows[i]] - y_half_step) * pcz
+        r_g_array[i, 2] = pcz
+
+    r_g_array = np.dot(r_g_array, om_detector_to_sample)
 
     # Normalize
     norm = np.sqrt(np.sum(np.square(r_g_array), axis=-1))
@@ -238,46 +215,42 @@ def _get_direction_cosines_for_fixed_pc(
 @njit(
     (
         "float64[:, :, :]"
-        "(float64[:], float64[:], float64[:], int64, int64, float64, float64, float64, bool_[:])"
+        "(float64[:, :], float64[:], int64, int64, float64[:, ::1], bool_[:])"
     ),
     cache=True,
     nogil=True,
     fastmath=True,
 )
 def _get_direction_cosines_for_varying_pc(
-    pcx: np.ndarray,
-    pcy: np.ndarray,
+    gnomonic_bounds: np.ndarray,
     pcz: np.ndarray,
     nrows: int,
     ncols: int,
-    tilt: float,
-    azimuthal: float,
-    sample_tilt: float,
+    om_detector_to_sample: np.ndarray,
     signal_mask: np.ndarray,
 ) -> np.ndarray:
     """Return sets of direction cosines for varying projection centers
     (PCs).
 
-    Algorithm adapted from EMsoft, see :cite:`callahan2013dynamical`.
+    Algorithm adapted from that used in :cite:`britton2016tutorial`.
 
     Parameters
     ----------
-    pcx
-        PC x coordinates. Must be a 1D array.
-    pcy
-        PC y coordinates. Must be a 1D array.
+    gnomonic_bounds
+        Bounds of the detector in gnomonic coordinates, one for
+        each PC.
     pcz
-        PC z coordinates. Must be a 1D array.
+        PC z coordinate for each PC.
     nrows
         Number of detector rows.
     ncols
         Number of detector columns.
-    tilt
-        Detector tilt from horizontal in degrees.
-    azimuthal
-        Sample tilt about the sample RD axis in degrees.
-    sample_tilt
-        Sample tilt from horizontal in degrees.
+    om_detector_to_sample
+        The orientation matrix which transforms
+        vectors in the detector reference frame, CSd, to the
+        sample reference frame, CSs. One matrix valid for
+        ALL PCs. This is the inverse rotation of the
+        EBSDDetector.sample_to_detector property.
     signal_mask
         1D signal mask with ``True`` values for pixels to get direction
         cosines for.
@@ -297,42 +270,35 @@ def _get_direction_cosines_for_varying_pc(
     This function is optimized with Numba, so care must be taken with
     array shapes and data types.
     """
-    nrows_array = np.arange(nrows - 1, -1, -1)
-    ncols_array = np.arange(ncols)
-
-    ca, sa, cw, sw = _get_cosine_sine_of_alpha_and_azimuthal(
-        sample_tilt=sample_tilt,
-        tilt=tilt,
-        azimuthal=azimuthal,
-    )
-
-    det_x_factor = (1 - ncols) * 0.5
-    det_y_factor = (1 - nrows) * 0.5
-
     idx_1d = np.arange(nrows * ncols)[signal_mask]
     rows = idx_1d // ncols
     cols = np.mod(idx_1d, ncols)
 
-    n_pcs = pcx.size
+    n_pcs = pcz.size
     n_pixels = idx_1d.size
     r_g_array = np.zeros((n_pcs, n_pixels, 3), dtype=np.float64)
 
     for i in nb.prange(n_pcs):
-        # Bruker to EMsoft's v5 PC convention
-        xpc = ncols * (0.5 - pcx[i])
-        ypc = nrows * (0.5 - pcy[i])
-        zpc = nrows * pcz[i]
+        x_scale = (gnomonic_bounds[i, 1] - gnomonic_bounds[i, 0]) / ncols
+        y_scale = (gnomonic_bounds[i, 3] - gnomonic_bounds[i, 2]) / nrows
 
-        det_x = xpc + det_x_factor + ncols_array
-        det_y = ypc - det_y_factor - nrows_array
+        det_gn_x = np.arange(gnomonic_bounds[i, 0], gnomonic_bounds[i, 1], x_scale)
 
-        Ls = -sw * det_x + zpc * cw
-        Lc = cw * det_x + zpc * sw
+        det_gn_y = np.arange(gnomonic_bounds[i, 3], gnomonic_bounds[i, 2], -y_scale)
+
+        x_half_step = np.true_divide(x_scale, 2)
+        y_half_step = np.true_divide(y_scale, 2)
+
+        r_g_a = np.zeros((n_pixels, 3), dtype=np.float64)
 
         for j in nb.prange(n_pixels):
-            r_g_array[i, j, 0] = det_y[rows[j]] * ca + sa * Ls[cols[j]]
-            r_g_array[i, j, 1] = Lc[cols[j]]
-            r_g_array[i, j, 2] = -sa * det_y[rows[j]] + ca * Ls[cols[j]]
+            r_g_a[j, 0] = (det_gn_x[cols[j]] + x_half_step) * pcz[i]
+            r_g_a[j, 1] = (det_gn_y[rows[j]] - y_half_step) * pcz[i]
+            r_g_a[j, 2] = pcz[i]
+
+        r_g_a = np.dot(r_g_a, om_detector_to_sample)
+
+        r_g_array[i] = r_g_a
 
     # Normalize
     norm = np.sqrt(np.sum(np.square(r_g_array), axis=-1))
@@ -704,9 +670,9 @@ def _get_lambert_interpolation_parameters(
         nij_i = dtype(j_this + scale)
         niip_i = nii_i + 1
         nijp_i = nij_i + 1
-        if niip_i > npx:
+        if niip_i >= npx:
             niip_i = nii_i  # pragma: no cover
-        if nijp_i > npy:
+        if nijp_i >= npy:
             nijp_i = nij_i  # pragma: no cover
         if nii_i < 0:
             nii_i = niip_i  # pragma: no cover

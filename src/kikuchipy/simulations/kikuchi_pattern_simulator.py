@@ -1,4 +1,5 @@
-# Copyright 2019-2025 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 # The following copyright notice is included because a part of the
 # calculation of kinematical master patterns in the stereographic
@@ -255,8 +257,11 @@ class KikuchiPatternSimulator:
 
         # Transformation from detector reference frame CSd to sample
         # reference frame CSs
-        total_tilt = np.deg2rad(detector.sample_tilt - 90 - detector.tilt)
-        u_s_bruker = Rotation.from_axes_angles((-1, 0, 0), total_tilt)
+        u_sample = Rotation.from_euler([0, detector.sample_tilt, 0], degrees=True)
+        u_d = Rotation.from_euler(detector.euler, degrees=True)
+        u_d_g = u_d.to_matrix().squeeze()
+        u_detector = Rotation.from_matrix(u_d_g.T)
+        u_s_bruker = u_sample * u_detector
         u_s_rot = Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
         u_s = da.from_array(u_s_rot.to_matrix().squeeze())
 

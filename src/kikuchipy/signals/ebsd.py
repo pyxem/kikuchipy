@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from __future__ import annotations
 
@@ -75,9 +77,8 @@ from kikuchipy.pattern._pattern import (
     fft_filter,
     fft_frequency_vectors,
 )
-from kikuchipy.pattern.chunk import _average_neighbour_patterns
+from kikuchipy.pattern.chunk import _average_neighbour_patterns, get_dynamic_background
 from kikuchipy.pattern.chunk import fft_filter as fft_filter_chunk
-from kikuchipy.pattern.chunk import get_dynamic_background
 from kikuchipy.signals._kikuchipy_signal import KikuchipySignal2D, LazyKikuchipySignal2D
 from kikuchipy.signals.util._crystal_map import (
     _equal_phase,
@@ -156,7 +157,7 @@ class EBSD(KikuchipySignal2D):
     >>> s
     <EBSD, title: patterns Scan 1, dimensions: (3, 3|60, 60)>
     >>> s.detector
-    EBSDDetector(shape=(60, 60), pc=(0.425, 0.213, 0.501), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, binning=8.0, px_size=1.0 um)
+    EBSDDetector(shape=(60, 60), pc=(0.425, 0.213, 0.501), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, twist=0.0, binning=8.0, px_size=1.0 um)
     >>> s.static_background
     array([[84, 87, 90, ..., 27, 29, 30],
            [87, 90, 93, ..., 27, 28, 30],

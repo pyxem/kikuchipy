@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import glob
 import importlib
@@ -174,7 +176,7 @@ def _dict2signal(
             record_by = md["Signal"]["record_by"]
             if record_by != "image":
                 raise ValueError(
-                    "kikuchipy only supports `record_by = image`, not " f"{record_by}"
+                    f"kikuchipy only supports `record_by = image`, not {record_by}"
                 )
             del md["Signal"]["record_by"]
         if "Signal" in md and "signal_type" in md["Signal"]:

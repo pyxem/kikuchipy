@@ -13,6 +13,34 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+Unreleased
+==========
+
+Added
+-----
+- Download from conda-forge of ``kikuchipy-base`` without optional dependencies.
+- Can now read simulated master patterns from EMsoft's EMEBSDmasterOpenCL.f90 program.
+  (`#730 <https://github.com/pyxem/kikuchipy/pull/730>`_)
+
+Changed
+-------
+
+Removed
+-------
+
+Fixed
+-----
+- Removed possibility for a silent out-of-bounds array indexing with Numba when
+  projecting a single pattern from a master pattern in the Lambert projection to the
+  detector. (`#718 <https://github.com/pyxem/kikuchipy/pull/718>`_)
+- Getting Matplotlib collections of zone axes and zone axes labels in geometrical EBSD
+  simulations with a 2D navigation shape.
+  (`#720 <https://github.com/pyxem/kikuchipy/pull/720>`_)
+
+Deprecated
+----------
+
+
 0.11.3 (2025-12-17)
 ===================
 
@@ -833,9 +861,9 @@ Deprecated
 
 Removed
 -------
-- *make_similarity_metric()* function is replaced by the need to create a class inheriting
-  from a new abstract *SimilarityMetric* class, which provides more freedom over
-  preparations of arrays before dictionary indexing.
+- *make_similarity_metric()* function is replaced by the need to create a class
+  inheriting from a new abstract *SimilarityMetric* class, which provides more freedom
+  over preparations of arrays before dictionary indexing.
   (`#419 <https://github.com/pyxem/kikuchipy/pull/419>`_)
 - *EBSD.match_patterns()* is removed, use *EBSD.dictionary_indexing()* instead.
   (`#419 <https://github.com/pyxem/kikuchipy/pull/419>`_)

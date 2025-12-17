@@ -1,17 +1,44 @@
+##
+## Copyright 2019-2025 the kikuchipy developers
+##
+## This file is part of kikuchipy.
+##
+## kikuchipy is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## kikuchipy is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+##
 repos:
-    # https://black.readthedocs.io/en/stable/index.html
-    - repo: https://github.com/psf/black-pre-commit-mirror
-      rev: 25.1.0
-      hooks:
-      - id: black
+  # https://docs.astral.sh/ruff/configuration
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.7
+    hooks:
+      - id: ruff
+      - id: ruff-format
+  # https://black.readthedocs.io/en/stable/index.html
+  - repo: https://github.com/psf/black-pre-commit-mirror
+    rev: 25.11.0
+    hooks:
       - id: black-jupyter
         files: \.ipynb
         args: [--line-length=77]
-    # https://pycqa.github.io/isort/
-    - repo: https://github.com/pycqa/isort
-      rev: 6.0.1
-      hooks:
-        - id: isort
-          name: isort (python)
-          args:
-            [--profile=black, --filter-files, --force-sort-within-sections]
+  - repo: https://github.com/johann-petrak/licenseheaders.git
+    rev: v0.8.8
+    hooks:
+      - id: licenseheaders
+        args: ["-t", ".license.tmpl", "-cy", "-n", "kikuchipy", "-f"]
+
+# https://pre-commit.ci/#configuration
+ci:
+  autofix_prs: false
+  autoupdate_schedule: monthly
+  # TODO: Remove skip once (nearly) all files are formatted with the license template
+  skip: [licenseheaders]

@@ -1,64 +1,60 @@
+##
+## Copyright 2019-2025 the kikuchipy developers
+##
+## This file is part of kikuchipy.
+##
+## kikuchipy is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## kikuchipy is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+##
+
 name: Tests
 
 on:
   push:
-    branches:
-      - '*'
+    branches-ignore:
+      - "dependabot/**"
+      - "pre-commit-ci-update-config"
   pull_request:
     branches:
-      - '*'
+      - "*"
   workflow_dispatch:
 
 jobs:
-  code:
-    name: code style
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: psf/black@stable
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      
-      - uses: isort/isort-action@master
-        with:
-          configuration: --profile black --filter-files --force-sort-within-sections --check-only --diff
-
-      - name: Install Black with Jupyter extension
-        run: |
-          pip install black[jupyter]
-
-      - name: Check code style of Jupyter notebooks
-        run: |
-          black --diff --line-length 77 doc/tutorials/*.ipynb
-
   tests:
     name: ${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.LABEL }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 15
     env:
       MPLBACKEND: agg
-      PYTEST_ARGS: --reruns 2 -n 2 --cov=kikuchipy
+      PYTEST_ARGS: --cov-branch --cov-report=xml --reruns 2 -n 2 --cov=kikuchipy
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.11', '3.12']
+        python-version: ["3.11", "3.12"]
         include:
           - os: ubuntu-latest
-            python-version: '3.10'
-            DEPENDENCIES: dask==2021.8.1 diffsims==0.5.2 hyperspy>=2 matplotlib==3.5 numba==0.57 numpy==1.23.0 orix==0.12.1 pooch==1.3.0 pyebsdindex==0.2.0 scikit-image==0.21.0
+            python-version: "3.10"
+            DEPENDENCIES: dask==2021.8.1 diffsims==0.5.2 hyperspy>=2.2 matplotlib==3.5 numba==0.57 numpy==1.23.0 orix==0.12.1 pooch==1.3.0 pyebsdindex==0.2.0 scikit-image==0.21.0
             LABEL: -oldest
           - os: ubuntu-latest
-            python-version: '3.12'
+            python-version: "3.12"
             LABEL: -minimum_requirement
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -102,7 +98,7 @@ jobs:
 
       - name: Set up headless display necessary for PyVista on Windows
         if: ${{ matrix.os == 'windows-latest' }}
-        uses: pyvista/setup-headless-display-action@v1
+        uses: pyvista/setup-headless-display-action@v4
 
       - name: Run docstring tests
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -126,17 +122,8 @@ jobs:
         run: |
           coverage report --show-missing
 
-      - name: Upload coverage to Coveralls
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        uses: AndreMiras/coveralls-python-action@develop
+      - name: Upload coverage reports to Codecov
+        if: ${{ github.repository_owner == 'pyxem' }}
+        uses: codecov/codecov-action@v5
         with:
-          parallel: true
-
-  coveralls-finish:
-    needs: tests
-    runs-on: ubuntu-latest
-    steps:
-    - name: Coveralls finished
-      uses: AndreMiras/coveralls-python-action@develop
-      with:
-        parallel-finished: true
+          token: ${{ secrets.CODECOV_TOKEN }}

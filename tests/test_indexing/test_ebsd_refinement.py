@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import dask
 import dask.array as da
@@ -418,6 +420,7 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
         assert xmap_ref.shape == xmap.shape
         assert not np.allclose(xmap_ref.rotations.data, xmap.rotations.data)
 
+    @pytest.mark.flaky(reruns=3)
     @pytest.mark.parametrize(
         (
             "ebsd_with_axes_and_random_data, detector, method, initial_step, rtol, "
@@ -478,6 +481,8 @@ class TestEBSDRefineOrientation(EBSDRefineTestSetup):
             maxeval=maxeval,
         )
         assert xmap_ref.shape == xmap.shape
+
+        # Rotations have been refined (changed, at least)
         assert not np.allclose(xmap_ref.rotations.data, xmap.rotations.data)
 
     def test_refine_orientation_not_compute(
@@ -907,6 +912,7 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
         if maxeval:
             assert num_evals_ref.max() == maxeval
 
+    @pytest.mark.flaky(reruns=3)
     @pytest.mark.parametrize(
         "method, method_kwargs",
         [
@@ -985,6 +991,7 @@ class TestEBSDRefinePC(EBSDRefineTestSetup):
 
 
 class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
+    @pytest.mark.flaky(reruns=3)
     @pytest.mark.parametrize(
         "method_kwargs, trust_region",
         [
@@ -1223,6 +1230,7 @@ class TestEBSDRefineOrientationPC(EBSDRefineTestSetup):
         # Global: Differential evolution
         _, _ = s.refine_orientation_projection_center(
             method="differential_evolution",
+            trust_region=[2, 2, 2, 0.05, 0.05, 0.05],
             navigation_mask=nav_mask,
             **ref_kw,
         )

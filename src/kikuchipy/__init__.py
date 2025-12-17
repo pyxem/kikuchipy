@@ -1,4 +1,5 @@
-# Copyright 2019-2025 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 import lazy_loader
 
@@ -22,6 +24,7 @@ credits = [
     "Håkon Wiik Ånes",
     "Lars Andreas Hastad Lervik",
     "Ole Natlandsmyr",
+    "Thomas G. Woodcock",
     "Tina Bergh",
     "Eric Prestat",
     "Austin Gerlt",
@@ -30,8 +33,9 @@ credits = [
     "Zhou Xu",
     "Carter Francis",
     "Magnus Nord",
+    "Tijmen Vermeij",
 ]
-__version__ = "0.11.3"
+__version__ = "0.12.dev3"
 
 __getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
 

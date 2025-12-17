@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Setup of refinement refinement of crystal orientations and projection
 centers by optimizing the similarity between experimental and simulated
@@ -397,9 +399,7 @@ def _refine_orientation(
             pcz,
             nrows=detector.nrows,
             ncols=detector.ncols,
-            tilt=detector.tilt,
-            azimuthal=detector.azimuthal,
-            sample_tilt=detector.sample_tilt,
+            om_detector_to_sample=(~detector.sample_to_detector).to_matrix().squeeze(),
             signal_mask=signal_mask,
             solver_kwargs=ref.solver_kwargs,
             n_pseudo_symmetry_ops=ref.n_pseudo_symmetry_ops,
@@ -451,9 +451,7 @@ def _refine_orientation_chunk_scipy(
     direction_cosines: np.ndarray | None = None,
     nrows: int | None = None,
     ncols: int | None = None,
-    tilt: float | None = None,
-    azimuthal: float | None = None,
-    sample_tilt: float | None = None,
+    om_detector_to_sample: np.ndarray | None = None,
     n_pseudo_symmetry_ops: int = 0,
 ):
     """Refine orientations from patterns in one dask array chunk using
@@ -483,9 +481,7 @@ def _refine_orientation_chunk_scipy(
                 pcz=float(pcz[i, 0, 0]),
                 nrows=nrows,
                 ncols=ncols,
-                tilt=tilt,
-                azimuthal=azimuthal,
-                sample_tilt=sample_tilt,
+                om_detector_to_sample=om_detector_to_sample,
                 signal_mask=signal_mask,
                 n_pseudo_symmetry_ops=n_pseudo_symmetry_ops,
                 **solver_kwargs,
@@ -519,9 +515,7 @@ def _refine_orientation_chunk_nlopt(
     direction_cosines: np.ndarray | None = None,
     nrows: int | None = None,
     ncols: int | None = None,
-    tilt: float | None = None,
-    azimuthal: float | None = None,
-    sample_tilt: float | None = None,
+    om_detector_to_sample: np.ndarray | None = None,
     n_pseudo_symmetry_ops: int = 0,
 ):
     """Refine orientations from patterns in one dask array chunk using
@@ -556,9 +550,7 @@ def _refine_orientation_chunk_nlopt(
                 pcz=float(pcz[i, 0, 0]),
                 nrows=nrows,
                 ncols=ncols,
-                tilt=tilt,
-                azimuthal=azimuthal,
-                sample_tilt=sample_tilt,
+                om_detector_to_sample=om_detector_to_sample,
                 n_pseudo_symmetry_ops=n_pseudo_symmetry_ops,
                 **solver_kwargs,
             )
@@ -1184,9 +1176,7 @@ class _RefinementSetup:
                 signal_mask,
                 nrows,
                 ncols,
-                detector.tilt,
-                detector.azimuthal,
-                detector.sample_tilt,
+                (~detector.sample_to_detector).to_matrix().squeeze(),
             )
 
         self.fixed_parameters = params

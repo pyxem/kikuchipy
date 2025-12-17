@@ -14,12 +14,12 @@ jobs:
   make-tagged-release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - uses: r-lib/actions/setup-pandoc@v2
 
     - name: Set up Python ${{ runner.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.x'
 
@@ -43,7 +43,7 @@ jobs:
 
     - name: Make tagged release draft
       if: ${{ env.MAKE_RELEASE == 'true' }}
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
