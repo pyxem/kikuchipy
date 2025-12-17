@@ -1,4 +1,4 @@
-# Copyright 2019-2024 The kikuchipy developers
+# Copyright 2019-2025 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -24,13 +24,14 @@ credits = [
     "Ole Natlandsmyr",
     "Tina Bergh",
     "Eric Prestat",
+    "Austin Gerlt",
     "Andreas V. Bugten",
     "Erlend Mikkelsen Østvold",
     "Zhou Xu",
     "Carter Francis",
     "Magnus Nord",
 ]
-__version__ = "0.11.2"
+__version__ = "0.11.3"
 
 __getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
 
