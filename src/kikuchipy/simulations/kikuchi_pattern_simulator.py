@@ -1,4 +1,4 @@
-# Copyright 2019-2024 The kikuchipy developers
+# Copyright 2019-2025 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -62,15 +62,11 @@ from dask.diagnostics import ProgressBar
 from diffsims.crystallography import ReciprocalLatticeVector
 import matplotlib.colors as mcolors
 import matplotlib.figure as mfigure
-from matplotlib.patches import FancyArrowPatch
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import proj3d
 import numba as nb
 import numpy as np
 from orix import projections
 from orix.crystal_map import Phase
-
-# from orix.plot._util.arrow_3d import Arrow3D
 from orix.quaternion import Rotation
 from orix.vector import Vector3d
 from tqdm import tqdm
@@ -79,6 +75,7 @@ from kikuchipy._utils.numba import vec_dot
 from kikuchipy._utils.vector import ValidHemispheres, poles_from_hemisphere
 from kikuchipy.constants import dependency_version
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.draw._arrow_3d import Arrow3D
 from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 from kikuchipy.simulations._kikuchi_pattern_features import (
     KikuchiPatternLine,
@@ -566,24 +563,6 @@ class KikuchiPatternSimulator:
                 "`diffsims.crystallography.ReciprocalLatticeVector."
                 "calculate_structure_factor()`."
             )
-
-
-class Arrow3D(FancyArrowPatch):
-    """Matplotlib arrows in 3D with arrowheads.
-
-    Initially taken from this Stack Overflow answer by user CT Zhu
-    https://stackoverflow.com/a/22867877/12063126.
-    """
-
-    def __init__(self, xs, ys, zs, *args, **kwargs):
-        super().__init__((0, 0), (0, 0), *args, **kwargs)
-        self._verts3d = xs, ys, zs
-
-    def do_3d_projection(self, renderer=None):
-        xs3d, ys3d, zs3d = self._verts3d
-        xs, ys, zs = proj3d.proj_transform(xs3d, ys3d, zs3d, self.axes.M)
-        self.set_positions((xs[0], ys[0]), (xs[1], ys[1]))
-        return np.min(zs)
 
 
 def _plot_spherical(
