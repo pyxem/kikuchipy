@@ -24,6 +24,7 @@ credits = [
     "Ole Natlandsmyr",
     "Tina Bergh",
     "Eric Prestat",
+    "Austin Gerlt",
     "Andreas V. Bugten",
     "Erlend Mikkelsen Østvold",
     "Zhou Xu",
