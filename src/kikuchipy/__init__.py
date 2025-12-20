@@ -27,6 +27,7 @@ credits = [
     "Thomas G. Woodcock",
     "Tina Bergh",
     "Eric Prestat",
+    "Austin Gerlt",
     "Andreas V. Bugten",
     "Erlend Mikkelsen Østvold",
     "Zhou Xu",
@@ -34,7 +35,7 @@ credits = [
     "Magnus Nord",
     "Tijmen Vermeij",
 ]
-__version__ = "0.12.dev2"
+__version__ = "0.12.dev3"
 
 __getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
 
