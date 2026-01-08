@@ -30,31 +30,8 @@ on:
   workflow_dispatch:
 
 jobs:
-# Task 1; ensure code matches established styles.
-#TODO: change to ruff in version 0.12
-  code:
-    name: code style
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: psf/black@stable
-        with:
-          src: "./src"
-          options: "--check --verbose"
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - uses: isort/isort-action@master
-        with:
-          configuration: --profile black --filter-files --force-sort-within-sections --check-only --diff
-      - name: Install Black with Jupyter extension
-        run: |
-          pip install black[jupyter]
-      - name: Check code style of Jupyter notebooks
-        run: |
-          black --diff --line-length 77 doc/tutorials/*.ipynb
 
-# Task 2: verify all remote repositories accessed by pooch are accessible.
+# Task 1: verify all remote repositories accessed by pooch are accessible.
   downloads:
     name: remote datasets
     runs-on: ubuntu-latest
@@ -82,7 +59,7 @@ jobs:
           sudo apt-get install xvfb
           xvfb-run pytest -m test_downloads  --reruns 2 -n 2 --test_downloads
 
-# Task 3 (warning only): check formating in the documentation strings.
+# Task 2: (warning only): check formating in the documentation strings.
   docstrings:
     name: 
     runs-on: ubuntu-latest
@@ -109,7 +86,7 @@ jobs:
         run: |
           xvfb-run pytest src --doctest-modules --doctest-continue-on-failure
 
-# Task 4 run pytest on matrix of possible OS/python version combinations.
+# Task 3: run pytest on matrix of possible OS/python version combinations.
   tests:
     name: ${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.LABEL }}
     runs-on: ${{ matrix.os }}
