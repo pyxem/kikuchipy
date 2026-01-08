@@ -17,7 +17,15 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
-from rsciio.utils.rgb_tools import rgb8, rgb16
+from importlib.util import find_spec
+
+if find_spec("rsciio.utils.rgb") is not None:
+    from rsciio.utils.rgb import RGB_DTYPES
+
+    rgb8 = RGB_DTYPES["rgb8"]
+    rgb16 = RGB_DTYPES["rgb16"]
+else:
+    from rsciio.utils.rgb_tools import rgb8, rgb16
 
 import kikuchipy as kp
 
