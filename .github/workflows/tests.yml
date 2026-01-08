@@ -31,6 +31,7 @@ on:
 
 jobs:
 # Task 1; ensure code matches established styles.
+#TODO: change to ruff in version 0.12
   code:
     name: code style
     runs-on: ubuntu-latest
@@ -115,7 +116,7 @@ jobs:
     timeout-minutes: 15
     env:
       MPLBACKEND: agg
-      PYTEST_ARGS: --cov-branch --cov-report=xml --reruns 2 -n 2 --cov=kikuchipy
+      PYTEST_ARGS: --cov-branch --cov-report=xml --reruns 2 --cov=kikuchipy
     strategy:
       fail-fast: false
       matrix:
@@ -184,12 +185,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install xvfb
-          xvfb-run pytest ${{ env.PYTEST_ARGS }}
+          xvfb-run pytest ${{ env.PYTEST_ARGS }} -n 4
 
       - name: Run tests on Windows or macOS
         if: ${{ matrix.os != 'ubuntu-latest' }}
         run: |
-          pytest ${{ env.PYTEST_ARGS }}
+          pytest ${{ env.PYTEST_ARGS }} -n 2
 
       - name: Generate line coverage
         run: |

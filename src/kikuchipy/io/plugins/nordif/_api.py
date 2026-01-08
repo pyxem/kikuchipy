@@ -91,9 +91,7 @@ def file_reader(
         setting_file = os.path.join(folder, "Setting.txt")
     setting_file_exists = os.path.isfile(setting_file)
     if setting_file_exists:
-        md, omd, scan_size_file, detector_dict = _get_settings_from_file(
-            setting_file
-        )
+        md, omd, scan_size_file, detector_dict = _get_settings_from_file(setting_file)
         if not scan_size:
             scan_size = (scan_size_file["nx"], scan_size_file["ny"])
         if not pattern_size:
@@ -254,12 +252,8 @@ def _get_settings_from_file(
     l_area = blocks["[Area]"]
 
     # Create metadata and original metadata structures
-    beam_energy = _get_string(
-        content, "Accelerating voltage\t(.*)\tkV", l_mic + 5, f
-    )
-    mic_manufacturer = _get_string(
-        content, "Manufacturer\t(.*)\t", l_mic + 1, f
-    )
+    beam_energy = _get_string(content, "Accelerating voltage\t(.*)\tkV", l_mic + 5, f)
+    mic_manufacturer = _get_string(content, "Manufacturer\t(.*)\t", l_mic + 1, f)
     mic_model = _get_string(content, "Model\t(.*)\t", l_mic + 2, f)
     mag = _get_string(content, "Magnification\t(.*)\t#", l_mic + 3, f)
     wd = _get_string(content, "Working distance\t(.*)\tmm", l_mic + 6, f)
@@ -276,9 +270,7 @@ def _get_settings_from_file(
     omd = {"nordif_header": content}
 
     # Get scan size values
-    num_samp = _get_string(
-        content, "Number of samples\t(.*)\t#", l_area + 6, f
-    )
+    num_samp = _get_string(content, "Number of samples\t(.*)\t#", l_area + 6, f)
     ny, nx = [int(i) for i in num_samp.split("x")]
     pattern_size = _get_string(content, "Resolution\t(.*)\tpx", l_acq + 2, f)
     sx, sy = [int(i) for i in pattern_size.split("x")]
@@ -295,15 +287,9 @@ def _get_settings_from_file(
     # Detector
     detector = {
         "shape": (sy, sx),
-        "sample_tilt": float(
-            _get_string(content, "Tilt angle\t(.*)\t", l_mic + 7, f)
-        ),
-        "tilt": -float(
-            _get_string(content, "Elevation\t(.*)\t", l_ang + 5, f)
-        ),
-        "azimuthal": float(
-            _get_string(content, "Azimuthal\t(.*)\t", l_ang + 4, f)
-        ),
+        "sample_tilt": float(_get_string(content, "Tilt angle\t(.*)\t", l_mic + 7, f)),
+        "tilt": -float(_get_string(content, "Elevation\t(.*)\t", l_ang + 5, f)),
+        "azimuthal": float(_get_string(content, "Azimuthal\t(.*)\t", l_ang + 4, f)),
     }
     if np.isclose(detector["tilt"], 0):  # Avoid -0.0
         detector["tilt"] = -detector["tilt"]
@@ -435,9 +421,7 @@ def _get_calibration_pattern_settings(
             omd["area"]["shape_scaled"] = scale(omd["area"]["shape"], True)
 
         if omd["roi"]["shape_scaled"] != (ny, nx):
-            n_samples_calculated = tuple(
-                int(i) for i in omd["roi"]["shape_scaled"]
-            )
+            n_samples_calculated = tuple(int(i) for i in omd["roi"]["shape_scaled"])
             _logger.debug(
                 f"Number of samples {(ny, nx)} differs from the one calculated from "
                 f"area/ROI shapes {n_samples_calculated}"
