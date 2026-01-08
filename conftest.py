@@ -33,7 +33,12 @@ import hyperspy.api as hs
 import imageio.v3 as iio
 import matplotlib.pyplot as plt
 import numpy as np
-from orix.crystal_map import CrystalMap, Phase, PhaseList, create_coordinate_arrays
+from orix.crystal_map import (
+    CrystalMap,
+    Phase,
+    PhaseList,
+    create_coordinate_arrays,
+)
 from orix.quaternion import Rotation
 import pytest
 
@@ -45,7 +50,9 @@ from kikuchipy.data._dummy_files.bruker_h5ebsd import (
     create_dummy_bruker_h5ebsd_nonrectangular_roi_file,
     create_dummy_bruker_h5ebsd_roi_file,
 )
-from kikuchipy.data._dummy_files.oxford_h5ebsd import create_dummy_oxford_h5ebsd_file
+from kikuchipy.data._dummy_files.oxford_h5ebsd import (
+    create_dummy_oxford_h5ebsd_file,
+)
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
 
 if dependency_version["pyvista"] is not None:
@@ -63,6 +70,31 @@ DATA_PATH = Path(kp.data.__file__).parent.resolve()
 def pytest_sessionstart(session):
     _ = kp.data.nickel_ebsd_large(allow_download=True)
     plt.rcParams["backend"] = "agg"
+
+
+# -------------------- Control of test selection --------------------- #
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--test_downloads",
+        action="store_true",
+        default=False,
+        help="Run tests related to download validation. Default is True",
+    )
+
+
+# Markers are defined in package configuration
+MARKERS = ["test_downloads"]
+
+
+def pytest_runtest_setup(item):
+    # Skip certain tests when flag is missing:
+    # https://docs.pytest.org/en/stable/reference/reference.html#pytest.hookspec.pytest_runtest_setup
+    for marker in MARKERS:
+        marker_str = f"--{marker}"
+        if marker in item.keywords and not item.config.getoption(marker_str):
+            pytest.skip(f"Needs {marker_str} flag to run")
 
 
 # ---------------------- pytest doctest-modules ---------------------- #
@@ -105,7 +137,9 @@ def assert_dictionary_func() -> Callable:
             if isinstance(dict2[key], dict):
                 assert_dictionary(dict1[key], dict2[key])
             else:
-                if isinstance(dict2[key], list) or isinstance(dict1[key], list):
+                if isinstance(dict2[key], list) or isinstance(
+                    dict1[key], list
+                ):
                     dict2[key] = np.array(dict2[key])
                     dict1[key] = np.array(dict1[key])
                 if isinstance(dict2[key], (np.ndarray, Number)):
@@ -148,7 +182,9 @@ def dummy_signal(
     s.axes_manager.navigation_axes[0].name = "y"
 
     # Crystal map
-    phase_list = PhaseList([Phase("a", space_group=225), Phase("b", space_group=227)])
+    phase_list = PhaseList(
+        [Phase("a", space_group=225), Phase("b", space_group=227)]
+    )
     y, x = np.indices(nav_shape)
     s.xmap = CrystalMap(
         rotations=Rotation.identity((nav_size,)),
@@ -181,7 +217,9 @@ def dummy_background() -> Generator[np.ndarray, None, None]:
 
 
 @pytest.fixture(params=[[(3, 3), (3, 3), False, np.float32]])
-def ebsd_with_axes_and_random_data(request) -> Generator[kp.signals.EBSD, None, None]:
+def ebsd_with_axes_and_random_data(
+    request,
+) -> Generator[kp.signals.EBSD, None, None]:
     """EBSD signal with minimally defined axes and random data.
 
     Parameters expected in `request`
@@ -271,7 +309,9 @@ def get_single_phase_xmap(rotations) -> Generator[Callable, None, None]:
         phase_id=0,
         step_sizes=None,
     ):
-        d, map_size = create_coordinate_arrays(shape=nav_shape, step_sizes=step_sizes)
+        d, map_size = create_coordinate_arrays(
+            shape=nav_shape, step_sizes=step_sizes
+        )
         rot_idx = np.random.choice(
             np.arange(rotations.size), map_size * rotations_per_point
         )
@@ -448,7 +488,9 @@ def oxford_binary_path() -> Generator[Path, None, None]:
 
 
 @pytest.fixture(params=[((2, 3), (60, 60), np.uint8, 2, False, True)])
-def oxford_binary_file(tmpdir, request) -> Generator[TextIOWrapper, None, None]:
+def oxford_binary_file(
+    tmpdir, request
+) -> Generator[TextIOWrapper, None, None]:
     """Create a dummy Oxford Instruments' binary .ebsp file.
 
     The creation of a dummy .ebsp file is explained in more detail in
@@ -504,7 +546,9 @@ def oxford_binary_file(tmpdir, request) -> Generator[TextIOWrapper, None, None]:
     new_order = np.roll(np.arange(n_patterns), shift=-1)
 
     pattern_header = np.array([compressed, sr, sc, n_bytes], dtype=np.int32)
-    data = np.arange(n_patterns * n_pixels, dtype=dtype).reshape((nr, nc, sr, sc))
+    data = np.arange(n_patterns * n_pixels, dtype=dtype).reshape(
+        (nr, nc, sr, sc)
+    )
 
     if not all_present:
         new_order = new_order[1:]
@@ -565,7 +609,9 @@ def emsoft_ebsd_master_pattern_metadata() -> Generator[dict, None, None]:
 
 
 @pytest.fixture(params=[["hemisphere", "energy", "height", "width"]])
-def emsoft_ebsd_master_pattern_axes_manager(request) -> Generator[dict, None, None]:
+def emsoft_ebsd_master_pattern_axes_manager(
+    request,
+) -> Generator[dict, None, None]:
     axes = request.param
     am = {
         "hemisphere": {
@@ -619,9 +665,9 @@ def emsoft_ecp_master_pattern_file(tmpdir) -> Generator[Path, None, None]:
     energies = np.linspace(10, 20, 11, dtype=np.float32)
     data_shape = (len(energies),) + signal_shape
 
-    mp_lam_upper = np.ones((1,) + data_shape, dtype=np.float32) * energies.reshape(
-        (1, 11, 1, 1)
-    )
+    mp_lam_upper = np.ones(
+        (1,) + data_shape, dtype=np.float32
+    ) * energies.reshape((1, 11, 1, 1))
     mp_lam_lower = mp_lam_upper
     circle = kp.filters.Window(shape=signal_shape).astype(np.float32)
     mp_sph_upper = mp_lam_upper.squeeze() * circle
@@ -635,7 +681,9 @@ def emsoft_ecp_master_pattern_file(tmpdir) -> Generator[Path, None, None]:
             ),
             "Atomtypes": np.array([13, 29], dtype=np.int32),
             "CrystalSystem": 2,
-            "LatticeParameters": np.array([0.5949, 0.5949, 0.5821, 90, 90, 90]),
+            "LatticeParameters": np.array(
+                [0.5949, 0.5949, 0.5821, 90, 90, 90]
+            ),
             "Natomtypes": 2,
             "Source": "Su Y.C., Yan J., Lu P.T., Su J.T.: Thermodynamic...",
             "SpaceGroupNumber": 140,
@@ -670,14 +718,18 @@ def emsoft_ecp_master_pattern_file(tmpdir) -> Generator[Path, None, None]:
             "BetheList": {"c1": 4.0, "c2": 8.0, "c3": 50.0, "sgdbdiff": 1.0},
         },
         "EMheader": {
-            "ECPmaster": {"ProgramName": np.array([b"EMECPmaster.f90"], dtype="S15")},
+            "ECPmaster": {
+                "ProgramName": np.array([b"EMECPmaster.f90"], dtype="S15")
+            },
         },
     }
 
     _dict2hdf5group(dictionary=data, group=f["/"])
 
     # One chunked data set
-    f["EMData/ECPmaster"].create_dataset("mLPSH", data=mp_lam_lower, chunks=True)
+    f["EMData/ECPmaster"].create_dataset(
+        "mLPSH", data=mp_lam_lower, chunks=True
+    )
 
     # One byte string with latin-1 stuff
     creation_time = b"12:30:13.559 PM\xf0\x14\x1e\xc8\xbcU"
@@ -698,9 +750,9 @@ def emsoft_tkd_master_pattern_file(tmpdir) -> Generator[Path, None, None]:
     energies = np.linspace(10, 20, 11, dtype=np.float32)
     data_shape = (len(energies),) + signal_shape
 
-    mp_lam_upper = np.ones((1,) + data_shape, dtype=np.float32) * energies.reshape(
-        (1, 11, 1, 1)
-    )
+    mp_lam_upper = np.ones(
+        (1,) + data_shape, dtype=np.float32
+    ) * energies.reshape((1, 11, 1, 1))
     mp_lam_lower = mp_lam_upper
     circle = kp.filters.Window(shape=signal_shape).astype(np.float32)
     mp_sph_upper = mp_lam_upper.squeeze() * circle
@@ -714,7 +766,9 @@ def emsoft_tkd_master_pattern_file(tmpdir) -> Generator[Path, None, None]:
             ),
             "Atomtypes": np.array([13, 29], dtype=np.int32),
             "CrystalSystem": 2,
-            "LatticeParameters": np.array([0.5949, 0.5949, 0.5821, 90, 90, 90]),
+            "LatticeParameters": np.array(
+                [0.5949, 0.5949, 0.5821, 90, 90, 90]
+            ),
             "Natomtypes": 2,
             "Source": "Su Y.C., Yan J., Lu P.T., Su J.T.: Thermodynamic...",
             "SpaceGroupNumber": 140,
@@ -748,14 +802,18 @@ def emsoft_tkd_master_pattern_file(tmpdir) -> Generator[Path, None, None]:
             "BetheList": {"c1": 4.0, "c2": 8.0, "c3": 50.0, "sgdbdiff": 1.0},
         },
         "EMheader": {
-            "TKDmaster": {"ProgramName": np.array([b"EMTKDmaster.f90"], dtype="S15")},
+            "TKDmaster": {
+                "ProgramName": np.array([b"EMTKDmaster.f90"], dtype="S15")
+            },
         },
     }
 
     _dict2hdf5group(dictionary=data, group=f["/"])
 
     # One chunked data set
-    f["EMData/TKDmaster"].create_dataset("mLPSH", data=mp_lam_lower, chunks=True)
+    f["EMData/TKDmaster"].create_dataset(
+        "mLPSH", data=mp_lam_lower, chunks=True
+    )
 
     # One byte string with latin-1 stuff
     creation_time = b"12:30:13.559 PM\xf0\x14\x1e\xc8\xbcU"
@@ -812,7 +870,9 @@ def bruker_h5ebsd_roi_file(tmpdir) -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-def bruker_h5ebsd_nonrectangular_roi_file(tmpdir) -> Generator[Path, None, None]:
+def bruker_h5ebsd_nonrectangular_roi_file(
+    tmpdir,
+) -> Generator[Path, None, None]:
     """Bruker h5ebsd file with non-rectangular region of interest (and
     SEM group under EBSD group).
     """
