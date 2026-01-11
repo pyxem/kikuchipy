@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2025 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from pathlib import Path
 
@@ -236,11 +238,10 @@ class TestData:
             with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
                 _ = kp.data.ebsd_master_pattern(phase)
 
-    def test_dataset_availability(self):
-        """Ping registry URLs of remote repositories (GitHub and Zenodo)
-        to check dataset availability.
-        """
-        datasets = [
+    @pytest.mark.flaky(reruns=3)
+    @pytest.mark.parametrize(
+        "dataset",
+        [
             "nickel_ebsd_large/patterns.h5",
             "silicon_ebsd_moving_screen/si_in.h5",
             "silicon_ebsd_moving_screen/si_out5mm.h5",
@@ -263,6 +264,10 @@ class TestData:
             "ebsd_master_pattern/ferrite_mc_mp_20kv.h5",
             "ebsd_master_pattern/steel_chi_mc_mp_20kv.h5",
             "ebsd_master_pattern/steel_sigma_mc_mp_20kv.h5",
-        ]
-        for dset in datasets:
-            assert marshall.is_available(f"data/{dset}")
+        ],
+    )
+    def test_dataset_availability(self, dataset):
+        """Ping registry URLs of remote repositories (GitHub and Zenodo)
+        to check dataset availability.
+        """
+        assert marshall.is_available(f"data/{dataset}")

@@ -69,7 +69,6 @@ import numba as nb
 import numpy as np
 from orix import projections
 from orix.crystal_map import Phase
-from orix.plot._util import Arrow3D
 from orix.quaternion import Rotation
 from orix.vector import Vector3d
 from tqdm import tqdm
@@ -78,6 +77,7 @@ from kikuchipy._utils.numba import vec_dot
 from kikuchipy._utils.vector import ValidHemispheres, poles_from_hemisphere
 from kikuchipy.constants import dependency_version
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.draw._arrow_3d import Arrow3D
 from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 from kikuchipy.simulations._kikuchi_pattern_features import (
     KikuchiPatternLine,
