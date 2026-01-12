@@ -17,7 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
-name: Weekly documentation and coverage tests
+name: Weekly_Tests
 # NOTE: Unit tests to verify functionality are ran during every pull request
 # on a comprehensive matrix of python versions, dependencies, and operating
 # systems.
@@ -38,13 +38,9 @@ jobs:
 
 # Task 1: Run all tests, including the normally skipped tests (eg, downloads)
 # and report the results to coveralls.
-  downloads:
+  test-downloads:
     name: testing and coveralls report
     runs-on: ubuntu-latest
-    env:
-      MPLBACKEND: agg
-    strategy:
-      fail-fast: false
     steps:
       - uses: actions/checkout@v6
 
@@ -72,6 +68,8 @@ jobs:
       - name: Generate line coverage and report to Codecov
         run: |
           coverage report --show-missing
+         
+      - name: Upload coverage reports to Codecov
         if: ${{ github.repository_owner == 'pyxem' }}
         uses: codecov/codecov-action@v5
         with:
@@ -79,8 +77,8 @@ jobs:
 
 
 # Task 2: Build ReadtheDocs documentation, including jupyter notebooks.
-  documentation:
-      name: test documentation
+  test-documentation:
+    name: test documentation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
