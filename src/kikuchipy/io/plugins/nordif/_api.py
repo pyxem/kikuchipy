@@ -1,4 +1,4 @@
-# Copyright 2019-2024 The kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -17,6 +17,7 @@
 
 """Reader and writer of EBSD patterns from a NORDIF binary file."""
 
+from importlib.util import find_spec
 from io import TextIOWrapper
 import logging
 import os
@@ -28,14 +29,11 @@ import warnings
 from matplotlib.pyplot import imread
 import numpy as np
 from orix.crystal_map import CrystalMap
-from importlib.util import find_spec
-
 
 if find_spec("rsciio.utils.file") is not None:
     from rsciio.utils.file import memmap_distributed
 else:
     from rsciio.utils.distributed import memmap_distributed
-
 
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 

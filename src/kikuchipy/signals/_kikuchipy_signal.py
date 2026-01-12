@@ -19,6 +19,7 @@
 
 from copy import deepcopy
 import gc
+from importlib.util import find_spec
 import logging
 import numbers
 import os
@@ -28,7 +29,6 @@ import warnings
 import dask.array as da
 from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.signals import Signal2D
-from importlib.util import find_spec
 import numpy as np
 from packaging.version import Version
 from skimage.util.dtype import dtype_range
@@ -38,7 +38,6 @@ if find_spec("rsciio.utils.rgb") is not None:
     from rsciio.utils.rgb import RGB_DTYPES as rgb_dtypes
 else:
     from rsciio.utils.rgb_tools import rgb_dtypes
-
 
 from kikuchipy.constants import dependency_version
 from kikuchipy.pattern._pattern import (

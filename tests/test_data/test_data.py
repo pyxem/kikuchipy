@@ -18,11 +18,11 @@
 #
 
 from pathlib import Path
+import time
 
 from dask.array import Array
 import numpy as np
 import pytest
-import time
 
 import kikuchipy as kp
 from kikuchipy.data._data import Dataset, marshall
@@ -46,9 +46,7 @@ class TestData:
         assert dset.is_in_package
         assert not dset.is_in_cache
         assert not dset.is_in_collection
-        assert (
-            dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
-        )
+        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
         assert str(dset.file_directory) == file_path.split("/")[0]
         assert dset.md5_hash == "f5e24fc55befedd08ee1b5a507e413ad"
 
@@ -126,9 +124,7 @@ class TestData:
         assert not dset.is_in_package
         assert dset.is_in_collection
         assert dset.url is not None
-        assert (
-            dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
-        )
+        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
         assert str(dset.file_directory) == file_path.split("/")[0]
 
         if dset.file_path.exists():
@@ -136,9 +132,7 @@ class TestData:
             assert isinstance(s, kp.signals.LazyEBSD)
         else:
             assert dset.md5_hash is None
-            with pytest.raises(
-                ValueError, match=f"File data/{file_path} must be "
-            ):
+            with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
                 _ = kp.data.si_wafer()
 
     @pytest.mark.parametrize(
@@ -162,15 +156,11 @@ class TestData:
         """
         file_path = f"ni_gain/{number}/Pattern.dat"
 
-        dset = Dataset(
-            file_path, collection_name=f"scan{number}_gain{gain}db.zip"
-        )
+        dset = Dataset(file_path, collection_name=f"scan{number}_gain{gain}db.zip")
         assert not dset.is_in_package
         assert dset.is_in_collection
         assert dset.url is not None
-        assert (
-            dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
-        )
+        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
         assert str(dset.file_directory) == str(
             Path(file_path.split("/")[0]) / str(number)
         )
@@ -180,9 +170,7 @@ class TestData:
             assert isinstance(s, kp.signals.LazyEBSD)
         else:
             assert dset.md5_hash is None
-            with pytest.raises(
-                ValueError, match=f"File data/{file_path} must be "
-            ):
+            with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
                 _ = kp.data.ni_gain(number)
 
     @pytest.mark.parametrize(
@@ -206,15 +194,11 @@ class TestData:
         """
         file_path = f"ni_gain/{number}/Setting.txt"
 
-        dset = Dataset(
-            file_path, collection_name=f"scan{number}_gain{gain}db.zip"
-        )
+        dset = Dataset(file_path, collection_name=f"scan{number}_gain{gain}db.zip")
         assert not dset.is_in_package
         assert dset.is_in_collection
         assert dset.url is not None
-        assert (
-            dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
-        )
+        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
         assert str(dset.file_directory) == str(
             Path(file_path.split("/")[0]) / str(number)
         )
@@ -224,9 +208,7 @@ class TestData:
             assert isinstance(s, kp.signals.LazyEBSD)
         else:
             assert dset.md5_hash is None
-            with pytest.raises(
-                ValueError, match=f"File data/{file_path} must be "
-            ):
+            with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
                 _ = kp.data.ni_gain_calibration(number)
 
     @pytest.mark.parametrize(
@@ -249,9 +231,7 @@ class TestData:
         assert not dset.is_in_package
         assert not dset.is_in_collection
         assert dset.url is not None
-        assert (
-            dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
-        )
+        assert dset.file_relpath.resolve() == Path(f"data/{file_path}").resolve()
         assert str(dset.file_directory) == file_path.split("/")[0]
 
         if dset.file_path.exists():
@@ -259,9 +239,7 @@ class TestData:
             assert isinstance(s, kp.signals.LazyEBSDMasterPattern)
         else:
             assert dset.md5_hash is None
-            with pytest.raises(
-                ValueError, match=f"File data/{file_path} must be "
-            ):
+            with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
                 _ = kp.data.ebsd_master_pattern(phase)
 
     @pytest.mark.test_downloads
