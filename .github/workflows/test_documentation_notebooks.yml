@@ -1,4 +1,30 @@
-name: Test documentation notebooks
+#
+# Copyright 2019-2026 the kikuchipy developers
+#
+# This file is part of kikuchipy.
+#
+# kikuchipy is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# kikuchipy is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
+
+name: Weekly documentation and coverage tests
+# NOTE: Unit tests to verify functionality are ran during every pull request
+# on a comprehensive matrix of python versions, dependencies, and operating
+# systems.
+
+# These longer weekly tests are intented to validate and document additional
+# features beyond normal unit testing, such as external dataset access, current
+# code coverage, and validating the documentation.
 
 on:
   schedule:
@@ -9,12 +35,56 @@ env:
   MPLBACKEND: agg
 
 jobs:
-  test-documentation-notebooks:
+
+# Task 1: Run all tests, including the normally skipped tests (eg, downloads)
+# and report the results to coveralls.
+  downloads:
+    name: testing and coveralls report
+    runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: agg
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies and package
+        shell: bash
+        run: |
+          pip install wheel
+          pip install -U -e ".[tests,coverage,all]"
+          python -V
+          pip -V
+          pip list
+
+      - name: Run all tests in a virtual X server environment on Ubuntu
+        run: |
+          sudo apt-get update
+          sudo apt-get install xvfb
+          /sbin/ldconfig -p | grep stdc++ # Temporarily check location
+          xvfb-run pytest --reruns 2 -n 4 --test_downloads --cov-branch --cov-report=xml --cov=kikuchipy
+
+      - name: Generate line coverage and report to Codecov
+        run: |
+          coverage report --show-missing
+        if: ${{ github.repository_owner == 'pyxem' }}
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+
+# Task 2: Build ReadtheDocs documentation, including jupyter notebooks.
+  documentation:
+      name: test documentation
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

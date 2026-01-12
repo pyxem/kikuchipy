@@ -31,37 +31,9 @@ on:
 
 jobs:
 
-# Task 1: verify all remote repositories accessed by pooch are accessible.
-  downloads:
-    name: remote datasets
-    runs-on: ubuntu-latest
-    env:
-      MPLBACKEND: agg
-    strategy:
-      fail-fast: false
-    steps:
-      - uses: actions/checkout@v6
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-      - name: Install dependencies and package
-        shell: bash
-        run: |
-          pip install wheel
-          pip install -U -e ".[tests]"
-          python -V
-          pip -V
-          pip list
-      - name: Run only the tests that involve pinging or downloads
-        run: |
-          sudo apt-get update
-          sudo apt-get install xvfb
-          xvfb-run pytest -m test_downloads  --reruns 2 -n 2 --test_downloads
-
-# Task 2: (warning only): check formating in the documentation strings.
+# Task 1: (warning only): check formating in the documentation strings.
   docstrings:
-    name: 
+    name: check formatting
     runs-on: ubuntu-latest
     env:
       MPLBACKEND: agg
@@ -69,10 +41,12 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v6
+
       - name: Set up Python 3.12
         uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+
       - name: Install dependencies and package
         shell: bash
         run: |
@@ -81,12 +55,14 @@ jobs:
           python -V
           pip -V
           pip list
+
       - name: Run docstring tests
         continue-on-error: true
         run: |
           xvfb-run pytest src --doctest-modules --doctest-continue-on-failure
 
-# Task 3: run pytest on matrix of possible OS/python version combinations.
+
+# Task 2: run pytest on matrix of possible OS/python version combinations.
   tests:
     name: ${{ matrix.os }}-py${{ matrix.python-version }}${{ matrix.LABEL }}
     runs-on: ${{ matrix.os }}
@@ -172,9 +148,3 @@ jobs:
       - name: Generate line coverage
         run: |
           coverage report --show-missing
-
-      - name: Upload coverage reports to Codecov
-        if: ${{ github.repository_owner == 'pyxem' }}
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
