@@ -15,9 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
+from importlib.util import find_spec
+
 import matplotlib.pyplot as plt
 import numpy as np
-from importlib.util import find_spec
 
 if find_spec("rsciio.utils.rgb") is not None:
     from rsciio.utils.rgb import RGB_DTYPES
