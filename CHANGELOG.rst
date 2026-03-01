@@ -19,7 +19,13 @@ were listed in alphabetical order by first name until version 0.7.0.
 Added
 -----
 - Dependency on the ``packaging`` package.
-  (`#? <https://github.com/pyxem/kikuchipy/pull/?>`_)
+  (`#755 <https://github.com/pyxem/kikuchipy/pull/755>`_)
+
+Fixed
+-----
+- Reading detector binning factor from Oxford Instruments h5ebsd files (H5OINA) with
+  version v7.0 (AZtec v6.2) should now work.
+  (`#755 <https://github.com/pyxem/kikuchipy/pull/755>`_)
 
 
 0.11.3 (2025-12-17)
