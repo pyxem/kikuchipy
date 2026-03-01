@@ -200,7 +200,7 @@ def get_binning(
     binning_str = header_group[camera_mode_dataset_name]
 
     # Find detector shape using regular expression. Examples include:
-    # Speed 2 156x128 px)
+    # Speed 2 (156x128 px)
     # Sensitivity (622x512 px)
     regex_pattern = r"\((\d+)x(\d+) px\)"
 
