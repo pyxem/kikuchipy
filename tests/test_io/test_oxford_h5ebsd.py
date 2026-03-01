@@ -16,11 +16,17 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
+import pytest
 
 import kikuchipy as kp
 
 
 class TestOxfordH5EBSD:
+    @pytest.mark.parametrize(
+        "oxford_h5ebsd_file",
+        [("7.0",), ("6.0",)],
+        indirect=["oxford_h5ebsd_file"],
+    )
     def test_load(
         self, oxford_h5ebsd_file, ni_small_axes_manager, assert_dictionary_func
     ):

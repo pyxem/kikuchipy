@@ -1,4 +1,4 @@
-# Copyright 2019-2024 The kikuchipy developers
+# Copyright 2019-2026 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -20,6 +20,7 @@ documentation.
 """
 
 from pathlib import Path
+from typing import Literal
 
 import h5py
 import numpy as np
@@ -28,11 +29,17 @@ from orix.quaternion import Rotation
 from kikuchipy.data import nickel_ebsd_small
 
 
-def create_dummy_oxford_h5ebsd_file(path: Path) -> None:
+def create_dummy_oxford_h5ebsd_file(
+    path: Path, version: Literal["6.0", "7.0"] = "7.0"
+) -> None:
     """Create a dummy H5OINA file with the given path.
 
     Both processed and unprocessed patterns (processed + 1) are written
     to file.
+
+    Note that H5OINA *version* only changes some of the parameters
+    according to the specification, not all:
+    https://github.com/oinanoanalysis/h5oina/blob/master/H5OINAFile.md.
     """
     # Quaternions determined from indexing
     # fmt: off
@@ -133,6 +140,10 @@ def create_dummy_oxford_h5ebsd_file(path: Path) -> None:
     header.create_dataset(
         "Detector Orientation Euler", dtype="float32", data=np.deg2rad([0, 91.5, 0])
     )
-    header.create_dataset("Camera Binning Mode", data=b"8x8 (60x60 px)")
+    if version == "7.0":
+        camera_mode_dataset_name = "Camera Mode"
+    else:
+        camera_mode_dataset_name = "Camera Binning Mode"
+    header.create_dataset(camera_mode_dataset_name, data=b"8x8 (60x60 px)")
 
     f.close()

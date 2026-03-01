@@ -153,11 +153,13 @@ def dummy_signal(
     s.xmap = CrystalMap(
         rotations=Rotation.identity((nav_size,)),
         # fmt: off
-        phase_id=np.array([
-            [0, 0, 1],
-            [1, 1, 0],
-            [0, 1, 0],
-        ]).ravel(),
+        phase_id=np.array(
+            [
+                [0, 0, 1],
+                [1, 1, 0],
+                [0, 1, 0],
+            ]
+        ).ravel(),
         # fmt: on
         phase_list=phase_list,
         x=x.ravel(),
@@ -530,10 +532,17 @@ def oxford_binary_file(tmpdir, request) -> Generator[TextIOWrapper, None, None]:
     yield f
 
 
-@pytest.fixture()
-def oxford_h5ebsd_file(tmpdir) -> Generator[TextIOWrapper, None, None]:
+@pytest.fixture(params=[("7.0",)])
+def oxford_h5ebsd_file(tmpdir, request) -> Generator[TextIOWrapper, None, None]:
+    """Yield the file path to a temporary H5OINA file.
+
+    Parameters expected in `request`
+    -------------------------------
+    version : "6.0" or "7.0"
+    """
+    version = request.param
     fpath = tmpdir / "patterns.h5oina"
-    create_dummy_oxford_h5ebsd_file(fpath)
+    create_dummy_oxford_h5ebsd_file(fpath, version=version)
     yield fpath
 
 
