@@ -1,3 +1,20 @@
+# Copyright 2019-2026 The kikuchipy developers
+#
+# This file is part of kikuchipy.
+#
+# kikuchipy is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# kikuchipy is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+
 # Configuration file for the Sphinx documentation app.
 # See the documentation for a full list of configuration options:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
@@ -6,7 +23,6 @@ from datetime import datetime
 import inspect
 import os
 from os.path import dirname, relpath
-from pathlib import Path
 import re
 import sys
 import warnings
@@ -72,6 +88,7 @@ intersphinx_mapping = {
     "nbval": ("https://nbval.readthedocs.io/en/latest", None),
     "numpydoc": ("https://numpydoc.readthedocs.io/en/latest", None),
     "orix": ("https://orix.readthedocs.io/en/stable", None),
+    "packaging": ("https://packaging.python.org/en/latest", None),
     "pooch": ("https://www.fatiando.org/pooch/latest", None),
     "pyebsdindex": ("https://pyebsdindex.readthedocs.io/en/stable", None),
     "pyopencl": ("https://documen.tician.de/pyopencl", None),
