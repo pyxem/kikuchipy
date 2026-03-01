@@ -1,4 +1,4 @@
-# Copyright 2019-2024 The kikuchipy developers
+# Copyright 2019-2026 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -44,7 +44,7 @@ class TestOxfordH5EBSD:
         det = s.detector
         assert det.pc.shape == (3, 3, 3)
         assert np.isclose(det.sample_tilt, 69.9, atol=0.1)
-        assert det.binning == 8
+        assert det.binning == 1.0
         assert np.isclose(det.tilt, 1.5)
 
     def test_load_unprocessed_patterns(self, oxford_h5ebsd_file):

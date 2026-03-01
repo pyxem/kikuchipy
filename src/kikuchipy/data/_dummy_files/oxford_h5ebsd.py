@@ -144,6 +144,6 @@ def create_dummy_oxford_h5ebsd_file(
         camera_mode_dataset_name = "Camera Mode"
     else:
         camera_mode_dataset_name = "Camera Binning Mode"
-    header.create_dataset(camera_mode_dataset_name, data=b"8x8 (60x60 px)")
+    header.create_dataset(camera_mode_dataset_name, data=b"1x1 (60x60 px)")
 
     f.close()
