@@ -19,6 +19,7 @@
 
 import logging
 from pathlib import Path
+import re
 from typing import Any
 
 import h5py
@@ -172,28 +173,57 @@ class OxfordH5EBSDReader(H5EBSDReader):
         except (IndexError, TypeError):  # pragma: no cover
             _logger.debug("Could not read detector tilt")
 
-        if Version(self.version) < Version("7.0"):
-            camera_mode_dataset_name = "Camera Binning Mode"
-        else:
-            camera_mode_dataset_name = "Camera Mode"
-        msg = "Could not read detector binning"
-        try:
-            binning_str = header_group[camera_mode_dataset_name]
-            try:
-                detector_kw["binning"] = int(binning_str.split("x")[0])
-            except ValueError:
-                _logger.debug(
-                    msg + f" as the string value {binning_str!r} has an unexpected form"
-                )
-        except IndexError:
-            _logger.debug(
-                msg + "as header group did not contain the expected camera mode dataset"
-                f" name {camera_mode_dataset_name}"
-            )
+        binning = get_binning(header_group, version=self.version, sy=sy, sx=sx)
+        if binning is not None:
+            detector_kw["binning"] = binning
 
         detector = EBSDDetector(**detector_kw)
 
         return detector
+
+
+def get_binning(
+    header_group: dict[str, Any], version: str, sy: int, sx: int
+) -> int | None:
+    if Version(version) < Version("7.0"):
+        camera_mode_dataset_name = "Camera Binning Mode"
+    else:
+        camera_mode_dataset_name = "Camera Mode"
+
+    msg = "Could not read detector binning"
+    if camera_mode_dataset_name not in header_group:
+        _logger.debug(
+            msg + "as header group did not contain the expected camera mode dataset"
+            f" name {camera_mode_dataset_name}"
+        )
+        return
+    binning_str = header_group[camera_mode_dataset_name]
+
+    # Find detector shape using regular expression. Examples include:
+    # Speed 2 156x128 px)
+    # Sensitivity (622x512 px)
+    regex_pattern = r"\((\d+)x(\d+) px\)"
+
+    shape_strings = re.findall(regex_pattern, binning_str)
+    if len(shape_strings) != 1 or len(shape_strings[0]) != 2:
+        _logger.debug(
+            msg + f" as the string value {binning_str!r} has an unexpected form"
+        )
+        return
+    camera_mode_sx, camera_mode_sy = list(map(int, shape_strings[0]))
+
+    binning_sx = sx / camera_mode_sx
+    binning_sy = sy / camera_mode_sy
+    if not np.isclose(binning_sx, binning_sy):
+        _logger.debug(
+            msg + " as the horizontal and vertical binning factors are different, "
+            f"({binning_sx}, {binning_sy})"
+        )
+        return
+
+    binning_sx = int(np.round(binning_sx))
+
+    return binning_sx
 
 
 def file_reader(
