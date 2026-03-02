@@ -1,4 +1,4 @@
-# Copyright 2019-2024 The kikuchipy developers
+# Copyright 2019-2026 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -507,7 +507,7 @@ def _get_info_message(nav_size: int, chunksize: int, indexer: "EBSDIndexer") -> 
         pc = pc.mean(0)
         info += ", mean"
     pc = tuple(map(float, pc.round(4)))
-    info += f"): {pc}\n" f"  Indexing {nav_size} pattern(s) in {n_chunks} chunk(s)"
+    info += f"): {pc}\n  Indexing {nav_size} pattern(s) in {n_chunks} chunk(s)"
 
     return info
 
@@ -524,4 +524,5 @@ def _optimize_pc(
         from pyebsdindex.pcopt import optimize_pso as optimize_func
     else:
         from pyebsdindex.pcopt import optimize as optimize_func
-    return optimize_func(pats=patterns, indexer=indexer, PC0=pc0, batch=batch, **kwargs)
+    arr = optimize_func(pats=patterns, indexer=indexer, PC0=pc0, batch=batch, **kwargs)
+    return arr
