@@ -492,7 +492,10 @@ class H5EBSDReader(abc.ABC):
             "original_metadata", "detector", (possibly)
             "static_background", and "xmap".
         """
-        _logger.debug(f"Reading data from an {self.manufacturer} v{self.version} file")
+        _logger.debug(
+            f"Reading data from an {self.manufacturer} v{self.version} file "
+            f"{self.filename}"
+        )
 
         scan_dict_list = []
         for scan in self.get_desired_scan_groups(group_names):

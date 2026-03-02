@@ -173,7 +173,7 @@ class OxfordH5EBSDReader(H5EBSDReader):
         except (IndexError, TypeError):  # pragma: no cover
             _logger.debug("Could not read detector tilt")
 
-        binning = get_binning(header_group, version=self.version, sy=sy, sx=sx)
+        binning = get_binning(header_group, version=self.version)
         if binning is not None:
             detector_kw["binning"] = binning
 
@@ -182,13 +182,46 @@ class OxfordH5EBSDReader(H5EBSDReader):
         return detector
 
 
-def get_binning(
-    header_group: dict[str, Any], version: str, sy: int, sx: int
-) -> int | None:
-    if Version(version) < Version("7.0"):
-        camera_mode_dataset_name = "Camera Binning Mode"
-    else:
+def get_binning(header_group: dict[str, Any], version: str) -> int | None:
+    """Get binning factor from the camera mode.
+
+    Notes
+    -----
+    The assumptions here are based on a kindly sent response from Oxford
+    Instruments in the issue
+    https://github.com/oinanoanalysis/h5oina/issues/5:
+
+        Symmetry's resolution mode is 1244x1024 resolution, this is
+        effectively the unbinned pattern resolution.
+        The lowest resolution modes (Speed 2, 3, 4) are 156x128
+        resolution, which, as Hakon probably noticed doesn't quite
+        divide in to the full 1244x1024 resolution.
+        In this case, we do a little extra calculation which allows us
+        to bin a pattern by a factor of 8 (1244/8 = 155.5) and get 156
+        columns.
+        To calculate binning factor it's easiest to just use the pattern
+        height from the camera mode, which should always divide in to
+        the full unbinned resolution: (Binning factor) = 1024 / (pattern
+        height).
+        The only exception to this is the Speed 3 camera mode (156x88),
+        which is basically the Speed 2 camera mode with 20 rows from the
+        top and bottom of the pattern discarded.
+        So still binning factor 8.
+
+    Examples of camera modes:
+
+    8x8 (168x128 px)
+    Speed 2 (156x128 px)
+    Sensitivity (622x512 px)
+
+    We may just divide 1 024 / pattern height from the acquired
+    patterns, it seems. But, it seems best to document this here for
+    when things get more complicated in the future.
+    """
+    if Version(version) >= Version("7.0"):
         camera_mode_dataset_name = "Camera Mode"
+    else:
+        camera_mode_dataset_name = "Camera Binning Mode"
 
     msg = "Could not read detector binning"
     if camera_mode_dataset_name not in header_group:
@@ -199,9 +232,7 @@ def get_binning(
         return
     binning_str = header_group[camera_mode_dataset_name]
 
-    # Find detector shape using regular expression. Examples include:
-    # Speed 2 (156x128 px)
-    # Sensitivity (622x512 px)
+    # Find detector shape using regular expression
     regex_pattern = r"\((\d+)x(\d+) px\)"
 
     shape_strings = re.findall(regex_pattern, binning_str)
@@ -210,20 +241,11 @@ def get_binning(
             msg + f" as the string value {binning_str!r} has an unexpected form"
         )
         return
-    camera_mode_sx, camera_mode_sy = list(map(int, shape_strings[0]))
 
-    binning_sx = sx / camera_mode_sx
-    binning_sy = sy / camera_mode_sy
-    if not np.isclose(binning_sx, binning_sy):
-        _logger.debug(
-            msg + " as the horizontal and vertical binning factors are different, "
-            f"({binning_sx}, {binning_sy})"
-        )
-        return
+    sy = int(shape_strings[0][1])
+    binning = int(np.round(1_024 / sy))
 
-    binning_sx = int(np.round(binning_sx))
-
-    return binning_sx
+    return binning
 
 
 def file_reader(
