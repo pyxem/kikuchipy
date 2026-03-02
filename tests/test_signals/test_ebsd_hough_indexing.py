@@ -1,4 +1,4 @@
-# Copyright 2019-2024 The kikuchipy developers
+# Copyright 2019-2026 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -19,6 +19,7 @@ from diffpy.structure import Lattice, Structure
 from diffsims.crystallography import ReciprocalLatticeVector
 import numpy as np
 from orix.crystal_map import CrystalMap, Phase, PhaseList
+from packaging.version import Version
 import pytest
 
 import kikuchipy as kp
@@ -317,6 +318,12 @@ class TestPCOptimization:
         assert np.isclose(det.tilt, det0.tilt)
         assert np.isclose(det.px_size, det0.px_size)
 
+    # TODO: Remove xfail once a PyEBSDIndex release with a fix for this
+    # issue is available:
+    # https://github.com/USNavalResearchLaboratory/PyEBSDIndex/issues/77
+    @pytest.mark.xfail(
+        Version(np.__version__) >= Version("2.4"), reason="Bug in PyEBSDIndex"
+    )
     @pytest.mark.flaky(reruns=3)
     def test_optimize_pc_pso(self, worker_id):
         det0 = self.signal.detector
