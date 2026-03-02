@@ -19,6 +19,7 @@ import numpy as np
 import pytest
 
 import kikuchipy as kp
+from kikuchipy.io.plugins.oxford_h5ebsd._api import get_binning
 
 
 class TestOxfordH5EBSD:
@@ -44,10 +45,21 @@ class TestOxfordH5EBSD:
         det = s.detector
         assert det.pc.shape == (3, 3, 3)
         assert np.isclose(det.sample_tilt, 69.9, atol=0.1)
-        assert det.binning == 1.0
+        assert det.binning == 17.0
         assert np.isclose(det.tilt, 1.5)
 
     def test_load_unprocessed_patterns(self, oxford_h5ebsd_file):
         s1 = kp.load(oxford_h5ebsd_file)
         s2 = kp.load(oxford_h5ebsd_file, processed=False)
         assert np.allclose(s1.data + 1, s2.data)
+
+    @pytest.mark.parametrize(
+        ["version", "header_group", "binning"],
+        [
+            ("5.0", {"Camera Binning Mode": "8x8 (168x128 px)"}, 8),
+            ("6.0", {"Camera Binning Mode": "Speed 2 (156x128 px)"}, 8),
+            ("7.0", {"Camera Mode": "Sensitivity (622x512 px)"}, 2),
+        ],
+    )
+    def test_get_binning(self, version, header_group, binning):
+        assert get_binning(header_group, version) == binning
