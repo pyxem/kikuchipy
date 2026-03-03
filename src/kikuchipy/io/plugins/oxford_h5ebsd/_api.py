@@ -210,12 +210,19 @@ def get_binning(header_group: dict[str, Any], version: str) -> int | None:
 
     Examples of camera modes:
 
+    2x2 (622x512 px)
+    4x4 (311x256 px)
     8x8 (168x128 px)
-    Speed 2 (156x128 px)
+    10x10 (124x102 px)
+    Resolution (1244x1024 px)
     Sensitivity (622x512 px)
+    Speed 1 (622x512 px)
+    Speed 2 (156x128 px)
+    Speed 3 (156x88 px)
+    Speed 4 (156x128 px)
 
-    We may just divide 1 024 / pattern height from the acquired
-    patterns, it seems. But, it seems best to document this here for
+    We may just divide 1 024 by the pattern height from the acquired
+    patterns, it seems. But, it may be best to document this here for
     when things get more complicated in the future.
     """
     if Version(version) >= Version("7.0"):
