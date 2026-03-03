@@ -164,6 +164,12 @@ filterwarnings = [
     "ignore::pytest.PytestUnraisableExceptionWarning",
     # From pytools
     "ignore:Unable to import recommended hash 'siphash24.siphash13'",
+    # From HyperSpy
+    "ignore:This module has been deprecated and should now be imported as:FutureWarning",
+    "ignore:The private module `_lazy_signals` is deprecated",
+    "ignore:The module `rsciio.utils.rgb_tools` has been",
+    "ignore:The module `rsciio.utils.distributed` has been",
+    "ignore:memmap_distributed has been moved to",
 ]
 
 [tool.isort]
