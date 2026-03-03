@@ -276,7 +276,6 @@ class TestPlot:
 
         plt.close("all")
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="Skip on Windows")
     def test_spherical(self):
         """Spherical plot with Matplotlib."""
         simulator = self.simulator
@@ -298,6 +297,7 @@ class TestPlot:
 
         plt.close("all")
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="Skip on Windows")
     @pytest.mark.skipif(
         dependency_version["pyvista"] is None, reason="PyVista is not installed"
     )
