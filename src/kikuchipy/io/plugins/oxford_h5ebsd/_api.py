@@ -233,7 +233,7 @@ def get_binning(header_group: dict[str, Any], version: str) -> int | None:
     msg = "Could not read detector binning"
     if camera_mode_dataset_name not in header_group:
         _logger.debug(
-            msg + "as header group did not contain the expected camera mode dataset"
+            msg + " as header group did not contain the expected camera mode dataset"
             f" name {camera_mode_dataset_name}"
         )
         return
@@ -250,7 +250,11 @@ def get_binning(header_group: dict[str, Any], version: str) -> int | None:
         return
 
     sy = int(shape_strings[0][1])
-    binning = int(np.round(1_024 / sy))
+    if sy == 88:
+        # 20 rows are cropped from top and bottom: 1024 / (88 + 40)
+        binning = 8
+    else:
+        binning = int(np.round(1_024 / sy))
 
     return binning
 
