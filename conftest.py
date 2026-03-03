@@ -532,8 +532,8 @@ def oxford_binary_file(tmpdir, request) -> Generator[TextIOWrapper, None, None]:
     yield f
 
 
-@pytest.fixture(params=[("7.0",)])
-def oxford_h5ebsd_file(tmpdir, request) -> Generator[TextIOWrapper, None, None]:
+@pytest.fixture(params=["7.0"])
+def oxford_h5ebsd_file(tmpdir, request) -> Generator[Path, None, None]:
     """Yield the file path to a temporary H5OINA file.
 
     Parameters expected in `request`
