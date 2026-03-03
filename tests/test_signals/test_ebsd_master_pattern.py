@@ -1,4 +1,4 @@
-# Copyright 2019-2024 The kikuchipy developers
+# Copyright 2019-2026 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +14,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+
+import sys
 
 import dask.array as da
 from hyperspy._signals.signal2d import Signal2D
@@ -524,6 +526,7 @@ class TestProjectFromLambert:
 
 
 class TestMasterPatternPlotting:
+    @pytest.mark.skipif(sys.platform == "win32", reason="Skip on Windows")
     @pytest.mark.skipif(
         dependency_version["pyvista"] is None, reason="PyVista is not installed"
     )
