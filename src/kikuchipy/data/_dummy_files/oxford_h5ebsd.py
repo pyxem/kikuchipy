@@ -64,9 +64,10 @@ def create_dummy_oxford_h5ebsd_file(
     f = h5py.File(path, mode="w")
 
     # Top group
-    f.create_dataset("Format Version", data=b"5.0")
+    f.create_dataset("Format Version", data=version.encode())
     f.create_dataset("Index", data=b"1")
     f.create_dataset("Manufacturer", data=b"Oxford Instruments")
+    # May not be compatible with "Format Version"
     f.create_dataset("Software Version", data=b"6.0.8014.1")
     scan = f.create_group("1")
 
