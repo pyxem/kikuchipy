@@ -163,7 +163,7 @@ def compute_refine_projection_center_results(
     num_evals
         Number of function evaluations per pattern.
     """
-    (points_to_refine, *_, mask_shape) = _get_indexed_points_in_data_in_xmap(
+    points_to_refine, *_, mask_shape = _get_indexed_points_in_data_in_xmap(
         xmap, navigation_mask
     )
     nav_size_in_data = points_to_refine.sum()

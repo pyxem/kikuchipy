@@ -1,4 +1,4 @@
-# Copyright 2019-2024 The kikuchipy developers
+# Copyright 2019-2026 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -19,10 +19,13 @@
 
 import logging
 from pathlib import Path
+import re
+from typing import Any
 
 import h5py
 import numpy as np
 from orix.crystal_map import CrystalMap
+from packaging.version import Version
 
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.io.plugins._h5ebsd import H5EBSDReader, _hdf5group2dict
@@ -42,6 +45,13 @@ class OxfordH5EBSDReader(H5EBSDReader):
         Full file path of the HDF5 file.
     **kwargs
         Keyword arguments passed to :class:`h5py.File`.
+
+    Notes
+    -----
+    The H5OINA format is documented by Oxford Instruments on GitHub:
+    https://github.com/oinanoanalysis/h5oina/blob/master/H5OINAFile.md.
+
+    :attr:`version` refers to H5OINA, *not* AZtec.
     """
 
     pattern_dataset_names = ["Unprocessed Patterns", "Processed Patterns"]
@@ -50,9 +60,13 @@ class OxfordH5EBSDReader(H5EBSDReader):
         super().__init__(filename, **kwargs)
         self._patterns_name = self.pattern_dataset_names[int(processed)]
 
+    # -------------------------- Properties -------------------------- #
+
     @property
     def patterns_name(self) -> str:
         return self._patterns_name
+
+    # --------------------------- Methods ---------------------------- #
 
     def scan2dict(self, group: h5py.Group, lazy: bool = False) -> dict:
         """Read (possibly lazily) patterns from group.
@@ -88,7 +102,6 @@ class OxfordH5EBSDReader(H5EBSDReader):
         dy, dx = header_group.get("Y Step", 1), header_group.get("X Step", 1)
         px_size = 1.0
 
-        # --- Metadata
         fname, title = self.get_metadata_filename_title(group.name)
         metadata = {
             "Acquisition_instrument": {
@@ -101,32 +114,42 @@ class OxfordH5EBSDReader(H5EBSDReader):
             "General": {"original_filename": fname, "title": title},
             "Signal": {"signal_type": "EBSD", "record_by": "image"},
         }
-        scan_dict = {"metadata": metadata}
+        scan_dict: dict[str, Any] = {"metadata": metadata}
 
-        # --- Data
-        data = self.get_data(group, data_shape=(ny, nx, sy, sx), lazy=lazy)
-        scan_dict["data"] = data
-
-        # --- Axes
+        scan_dict["data"] = self.get_data(group, data_shape=(ny, nx, sy, sx), lazy=lazy)
         scan_dict["axes"] = self.get_axes_list((ny, nx, sy, sx), (dy, dx, px_size))
-
-        # --- Original metadata
         scan_dict["original_metadata"] = {
             "manufacturer": self.manufacturer,
             "version": self.version,
         }
         scan_dict["original_metadata"].update(header_group)
 
-        # --- Crystal map
         # TODO: Implement reader of Oxford Instruments h5ebsd crystal
         #  maps in orix
-        xmap = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
-        scan_dict["xmap"] = xmap
+        scan_dict["xmap"] = CrystalMap.empty(shape=(ny, nx), step_sizes=(dy, dx))
 
-        # --- Static background
         scan_dict["static_background"] = header_group.get("Processed Static Background")
 
-        # --- Detector
+        scan_dict["detector"] = self.get_detector(
+            data_group=data_group, header_group=header_group, ny=ny, nx=nx, sy=sy, sx=sx
+        )
+
+        return scan_dict
+
+    def get_detector(
+        self,
+        data_group: dict[str, Any],
+        header_group: dict[str, Any],
+        ny: int,
+        nx: int,
+        sy: int,
+        sx: int,
+    ) -> EBSDDetector:
+        """Return an EBSD detector.
+
+        Most relevant parameters are documented here:
+        https://github.com/oinanoanalysis/h5oina/blob/master/H5OINAFile.md#-header-group-specification.
+        """
         pc = np.column_stack(
             (
                 data_group.get("Pattern Center X", 0.5),
@@ -136,25 +159,104 @@ class OxfordH5EBSDReader(H5EBSDReader):
         )
         if pc.size > 3:
             pc = pc.reshape((ny, nx, 3))
-        detector_kw = dict(
-            shape=(sy, sx),
-            pc=pc,
-            sample_tilt=np.rad2deg(header_group.get("Tilt Angle", np.deg2rad(70))),
-            convention="oxford",
-        )
+
+        detector_kw = {
+            "shape": (sy, sx),
+            "pc": pc,
+            "sample_tilt": np.rad2deg(header_group.get("Tilt Angle", np.deg2rad(70))),
+            "convention": "oxford",
+        }
+
         detector_tilt_euler = header_group.get("Detector Orientation Euler")
         try:
             detector_kw["tilt"] = np.rad2deg(detector_tilt_euler[1]) - 90
         except (IndexError, TypeError):  # pragma: no cover
             _logger.debug("Could not read detector tilt")
-        binning_str = header_group.get("Camera Binning Mode")
-        try:
-            detector_kw["binning"] = int(binning_str.split("x")[0])
-        except (IndexError, ValueError):  # pragma: no cover
-            _logger.debug("Could not read detector binning")
-        scan_dict["detector"] = EBSDDetector(**detector_kw)
 
-        return scan_dict
+        binning = get_binning(header_group, version=self.version)
+        if binning is not None:
+            detector_kw["binning"] = binning
+
+        detector = EBSDDetector(**detector_kw)
+
+        return detector
+
+
+def get_binning(header_group: dict[str, Any], version: str) -> int | None:
+    """Get binning factor from the camera mode.
+
+    Notes
+    -----
+    The assumptions here are based on a kindly sent response from Oxford
+    Instruments in the issue
+    https://github.com/oinanoanalysis/h5oina/issues/5:
+
+        Symmetry's resolution mode is 1244x1024 resolution, this is
+        effectively the unbinned pattern resolution.
+        The lowest resolution modes (Speed 2, 3, 4) are 156x128
+        resolution, which, as Hakon probably noticed doesn't quite
+        divide in to the full 1244x1024 resolution.
+        In this case, we do a little extra calculation which allows us
+        to bin a pattern by a factor of 8 (1244/8 = 155.5) and get 156
+        columns.
+        To calculate binning factor it's easiest to just use the pattern
+        height from the camera mode, which should always divide in to
+        the full unbinned resolution: (Binning factor) = 1024 / (pattern
+        height).
+        The only exception to this is the Speed 3 camera mode (156x88),
+        which is basically the Speed 2 camera mode with 20 rows from the
+        top and bottom of the pattern discarded.
+        So still binning factor 8.
+
+    Examples of camera modes:
+
+    2x2 (622x512 px)
+    4x4 (311x256 px)
+    8x8 (168x128 px)
+    10x10 (124x102 px)
+    Resolution (1244x1024 px)
+    Sensitivity (622x512 px)
+    Speed 1 (622x512 px)
+    Speed 2 (156x128 px)
+    Speed 3 (156x88 px)
+    Speed 4 (156x128 px)
+
+    We may just divide 1 024 by the pattern height from the acquired
+    patterns, it seems. But, it may be best to document this here for
+    when things get more complicated in the future.
+    """
+    if Version(version) >= Version("7.0"):
+        camera_mode_dataset_name = "Camera Mode"
+    else:
+        camera_mode_dataset_name = "Camera Binning Mode"
+
+    msg = "Could not read detector binning"
+    if camera_mode_dataset_name not in header_group:
+        _logger.debug(
+            msg + " as header group did not contain the expected camera mode dataset"
+            f" name {camera_mode_dataset_name}"
+        )
+        return
+    binning_str = header_group[camera_mode_dataset_name]
+
+    # Find detector shape using regular expression
+    regex_pattern = r"\((\d+)x(\d+) px\)"
+
+    shape_strings = re.findall(regex_pattern, binning_str)
+    if len(shape_strings) != 1 or len(shape_strings[0]) != 2:
+        _logger.debug(
+            msg + f" as the string value {binning_str!r} has an unexpected form"
+        )
+        return
+
+    sy = int(shape_strings[0][1])
+    if sy == 88:
+        # 20 rows are cropped from top and bottom: 1024 / (88 + 40)
+        binning = 8
+    else:
+        binning = int(np.round(1_024 / sy))
+
+    return binning
 
 
 def file_reader(
