@@ -20,6 +20,8 @@ Added
 -----
 - Dependency on the ``packaging`` package.
   (`#755 <https://github.com/pyxem/kikuchipy/pull/755>`_)
+- Limit version of NumPy < 2.4 to avoid Hough indexing error.
+  (`#755 <https://github.com/pyxem/kikuchipy/pull/755>`_)
 
 Fixed
 -----
