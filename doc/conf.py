@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -90,6 +90,7 @@ intersphinx_mapping = {
     "nbval": ("https://nbval.readthedocs.io/en/latest", None),
     "numpydoc": ("https://numpydoc.readthedocs.io/en/latest", None),
     "orix": ("https://orix.readthedocs.io/en/stable", None),
+    "packaging": ("https://packaging.python.org/en/latest", None),
     "pooch": ("https://www.fatiando.org/pooch/latest", None),
     "pyebsdindex": ("https://pyebsdindex.readthedocs.io/en/stable", None),
     "pyopencl": ("https://documen.tician.de/pyopencl", None),

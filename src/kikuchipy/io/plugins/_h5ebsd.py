@@ -1,4 +1,4 @@
-# Copyright 2019-2024 The kikuchipy developers
+# Copyright 2019-2026 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -18,8 +18,10 @@
 """Generic, private parent class for all h5ebsd file plugins."""
 
 import abc
+import logging
 import os
 from pathlib import Path
+from typing import Any
 import warnings
 
 import dask.array as da
@@ -27,6 +29,8 @@ import h5py
 import numpy as np
 
 __all__ = ["_dict2hdf5group", "_hdf5group2dict", "H5EBSDReader"]
+
+_logger = logging.getLogger(__name__)
 
 
 def _hdf5group2dict(
@@ -378,15 +382,15 @@ class H5EBSDReader(abc.ABC):
 
     @staticmethod
     def get_axes_list(
-        data_shape: tuple[int, ...], data_scale: tuple[int, ...]
-    ) -> list[dict]:
+        data_shape: tuple[int, int, int, int], data_scale: tuple[int, int, float]
+    ) -> list[dict[str, Any]]:
         """Return a description of each data axis.
 
         Parameters
         ----------
         data_shape
-            4D shape of pattern array, (ny, nx, sy, sx) = ( map rows,
-            map columns, pattern rows, pattern columns).
+            4D shape of pattern array, (ny, nx, sy, sx) = (map rows, map
+            columns, pattern rows, pattern columns).
         data_scale
             Map scale and detector pixel size, (dy, dx, px_size).
 
@@ -395,7 +399,7 @@ class H5EBSDReader(abc.ABC):
         axes_list
             Description of each data axis as a list of dictionaries.
         """
-        ny, nx, sy, sx = data_shape
+        ny, nx, *_ = data_shape
         dy, dx, px_size = data_scale
 
         data_ndim = sum([ny != 1, nx != 1]) + 2
@@ -488,6 +492,11 @@ class H5EBSDReader(abc.ABC):
             "original_metadata", "detector", (possibly)
             "static_background", and "xmap".
         """
+        _logger.debug(
+            f"Reading data from an {self.manufacturer} v{self.version} file "
+            f"{self.filename}"
+        )
+
         scan_dict_list = []
         for scan in self.get_desired_scan_groups(group_names):
             scan_dict_list.append(self.scan2dict(scan, lazy))
@@ -496,6 +505,8 @@ class H5EBSDReader(abc.ABC):
             self.file.close()
 
         return scan_dict_list
+
+    # -------------------- Abstract class methods -------------------- #
 
     @abc.abstractmethod
     def scan2dict(self, group: h5py.Group, lazy: bool = False) -> dict:

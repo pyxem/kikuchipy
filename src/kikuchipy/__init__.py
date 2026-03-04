@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -35,7 +35,8 @@ credits = [
     "Magnus Nord",
     "Tijmen Vermeij",
 ]
-__version__ = "0.12.dev3"
+
+__version__ = "0.12.dev4"
 
 __getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
 

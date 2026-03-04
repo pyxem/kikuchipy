@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -112,7 +112,7 @@ class TestCalculateMasterPattern:
         with pytest.raises(ValueError, match="Unknown scaling 'cubic', options are"):
             _ = simulator.calculate_master_pattern(scaling="cubic")
 
-    @pytest.mark.flaky(reruns=3)
+    @pytest.mark.flaky(reruns=5)
     def test_shape(self):
         """Output shape as expected."""
         simulator = self.simulator

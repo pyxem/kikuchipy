@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -510,7 +510,7 @@ def _project_single_pattern_from_master_pattern(
     # Rotate the detector's view of the crystal
     dc_rotated = rotate_vector(rotation, direction_cosines)
 
-    (nii, nij, niip, nijp, di, dj, dim, djm) = _get_lambert_interpolation_parameters(
+    nii, nij, niip, nijp, di, dj, dim, djm = _get_lambert_interpolation_parameters(
         v=dc_rotated, npx=npx, npy=npy, scale=scale
     )
 

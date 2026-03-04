@@ -1,4 +1,4 @@
-# Copyright 2019-2024 The kikuchipy developers
+# Copyright 2019-2026 The kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -68,8 +68,8 @@ class TestMergeCrystalMaps:
             xmaps.append(xmap)
 
             desired_phase_ids[i] = i
-            desired_scores[i] = xmap[i].prop[scores_prop]
-            desired_idx[i] = xmap[i].prop[sim_idx_prop]
+            desired_scores[i] = xmap[i].prop[scores_prop].squeeze()
+            desired_idx[i] = xmap[i].prop[sim_idx_prop].squeeze()
 
             if i == 0:
                 desired_rot = xmap.rotations.data
@@ -140,7 +140,7 @@ class TestMergeCrystalMaps:
             prop_names=[scores_prop, sim_idx_prop],
         )
         phase_ids = np.arange(n_phases)
-        ny, nx = map_shape
+        nx = map_shape[1]
         for i in range(n_phases):
             xmap = get_single_phase_xmap(
                 name=phase_names[i], phase_id=phase_ids[i], **xmap_kw
@@ -153,8 +153,8 @@ class TestMergeCrystalMaps:
 
             j = i * (1 + nx)
             desired_phase_ids[j] = i
-            desired_scores[j] = xmap[idx].prop[scores_prop]
-            desired_idx[j] = xmap[idx].prop[sim_idx_prop]
+            desired_scores[j] = xmap[idx].prop[scores_prop].squeeze()
+            desired_idx[j] = xmap[idx].prop[sim_idx_prop].squeeze()
 
             if i == 0:
                 desired_rot = xmap.rotations.data

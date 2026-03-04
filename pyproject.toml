@@ -48,8 +48,11 @@ dependencies = [
     "lazy_loader",
     "matplotlib       >= 3.5",
     "numba            >= 0.57",
-    "numpy            >= 1.23.0",
+    # TODO: Remove upper restriction once a release for the following
+    # issue is made: https://github.com/USNavalResearchLaboratory/PyEBSDIndex/issues/77
+    "numpy            >= 1.23.0, < 2.4",
     "orix             >= 0.12.1",
+    "packaging",
     "pooch            >= 1.3.0",
     "pyyaml",
     "rosettasciio     >= 0.3.0",
@@ -165,6 +168,12 @@ filterwarnings = [
     "ignore::pytest.PytestUnraisableExceptionWarning",
     # From pytools
     "ignore:Unable to import recommended hash 'siphash24.siphash13'",
+    # From HyperSpy
+    "ignore:This module has been deprecated and should now be imported as:FutureWarning",
+    "ignore:The private module `_lazy_signals` is deprecated",
+    "ignore:The module `rsciio.utils.rgb_tools` has been",
+    "ignore:The module `rsciio.utils.distributed` has been",
+    "ignore:memmap_distributed has been moved to",
 ]
 
 # https://docs.astral.sh/ruff/configuration

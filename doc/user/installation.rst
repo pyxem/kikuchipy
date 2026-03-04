@@ -109,6 +109,7 @@ This is a list of core package dependencies:
 * :doc:`matplotlib <matplotlib:index>`: Visualization
 * :doc:`numba <numba:index>`: CPU acceleration via just-in-time compilation
 * :doc:`numpy <numpy:index>`: Handling of N-dimensional arrays
+* :doc:`packaging <packaging:index>`: Version comparison
 * :doc:`orix <orix:index>`: Handling of rotations and vectors using crystal symmetry
 * :doc:`pooch <pooch:api/index>`: Downloading and caching of datasets
 * `pyyaml <https://pyyaml.org/>`__: Parcing of YAML files

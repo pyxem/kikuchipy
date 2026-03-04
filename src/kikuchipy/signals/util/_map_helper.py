@@ -226,7 +226,7 @@ def _get_neighbour_dot_product_matrices(
     """
     # Get a flat boolean window, a boolean array with True for True
     # window coefficients, and the index of this window's origin
-    (boolean_window, flat_window_truthy_indices, center_index) = _setup_window_indices(
+    boolean_window, flat_window_truthy_indices, center_index = _setup_window_indices(
         window=window
     )
 

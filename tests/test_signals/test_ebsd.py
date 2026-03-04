@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -47,7 +47,7 @@ class TestEBSD:
         assert array1.shape == s1.axes_manager.shape
 
     def test_set_scan_calibration(self, dummy_signal):
-        (new_step_x, new_step_y) = (2, 3)
+        new_step_x, new_step_y = (2, 3)
         dummy_signal.set_scan_calibration(step_x=new_step_x, step_y=new_step_y)
         x, y = dummy_signal.axes_manager.navigation_axes
         assert (x.name, y.name) == ("x", "y")
