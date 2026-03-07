@@ -1,5 +1,6 @@
-How to make a new release of ``kikuchipy``
-==========================================
+======================================
+How to make a new release of kikuchipy
+======================================
 
 kikuchipy's branching model is similar to the Gitflow Workflow (`original blog post
 <https://nvie.com/posts/a-successful-git-branching-model/>`__).
@@ -9,8 +10,10 @@ kikuchipy versioning tries its best to adhere to `Semantic Versioning
 See the `Python Enhancement Proposal (PEP) 440 <https://peps.python.org/pep-0440/>`__
 for supported version identifiers.
 
+
 Preparation
------------
+===========
+
 - Locally, create a minor release branch from the ``develop`` branch when making a minor
   release, or create a patch release branch from the ``main`` branch when making a patch
   release. Ideally, a patch release is published immediately after a bug fix is merged
@@ -34,8 +37,10 @@ Preparation
   branch.
   Merge the branch onto ``main``.
 
+
 Tag and release
----------------
+===============
+
 - If the ``__version__`` in ``kikuchipy/__init__.py`` on ``main`` has changed in a new
   commit, a tagged, annotated release *draft* is automatically created.
   If ``__version__`` is now "0.42.0", the release name is "kikuchipy 0.42.0" and the
@@ -47,8 +52,27 @@ Tag and release
 
 - Monitor the publish workflow to ensure the release is successfully published to PyPI.
 
+If automatic creation of a tagged release draft fails, we can create it manually:
+
+- Go to our GitHub releases page and start drafting a new release.
+
+- Select to create a new tag, with the tag name given as described above.
+  The tag target is ``main``.
+
+- Set the release title as described above.
+
+- Copy the release body from a previous release.
+  Make sure the top release text states correctly whether the release is a patch, minor,
+  or major release.
+  Copy the changelog for this release from the changelog file and reformat it from
+  reStructuredText to Markdown.
+
+- Publish.
+
+
 Post-release action
--------------------
+===================
+
 - Monitor the `documentation build <https://readthedocs.org/projects/kikuchipy/builds>`__
   to ensure that the new stable documentation is successfully built from the release.
 

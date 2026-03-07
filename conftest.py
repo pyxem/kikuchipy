@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -549,10 +549,17 @@ def oxford_binary_file(tmpdir, request) -> Generator[TextIOWrapper, None, None]:
     yield f
 
 
-@pytest.fixture()
-def oxford_h5ebsd_file(tmpdir) -> Generator[TextIOWrapper, None, None]:
+@pytest.fixture(params=["7.0"])
+def oxford_h5ebsd_file(tmpdir, request) -> Generator[Path, None, None]:
+    """Yield the file path to a temporary H5OINA file.
+
+    Parameters expected in `request`
+    -------------------------------
+    version : "6.0" or "7.0"
+    """
+    version = request.param
     fpath = tmpdir / "patterns.h5oina"
-    create_dummy_oxford_h5ebsd_file(fpath)
+    create_dummy_oxford_h5ebsd_file(fpath, version=version)
     yield fpath
 
 

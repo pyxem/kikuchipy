@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -526,4 +526,5 @@ def _optimize_pc(
         from pyebsdindex.pcopt import optimize_pso as optimize_func
     else:
         from pyebsdindex.pcopt import optimize as optimize_func
-    return optimize_func(pats=patterns, indexer=indexer, PC0=pc0, batch=batch, **kwargs)
+    arr = optimize_func(pats=patterns, indexer=indexer, PC0=pc0, batch=batch, **kwargs)
+    return arr
