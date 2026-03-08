@@ -13,6 +13,22 @@ its best to adhere to `Semantic Versioning <https://semver.org/spec/v2.0.0.html>
 List entries are sorted in descending chronological order. Contributors to each release
 were listed in alphabetical order by first name until version 0.7.0.
 
+0.11.5 (2026-03-08)
+===================
+
+Added
+-----
+- Add lower version restriction for optional dependency PyEBSDIndex to 0.3.9.2.
+
+Changed
+-------
+- Increased lower version restriction for Matplotlib to 3.6.
+
+Removed
+-------
+- Remove upper version restriction for NumPy.
+
+
 0.11.4 (2026-03-04)
 ===================
 
