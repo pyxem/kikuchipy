@@ -31,7 +31,7 @@ credits = [
     "Carter Francis",
     "Magnus Nord",
 ]
-__version__ = "0.11.4"
+__version__ = "0.11.5"
 
 __getattr__, __dir__, __all__ = lazy_loader.attach_stub(__name__, __file__)
 
