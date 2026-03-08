@@ -25,6 +25,8 @@ Added
 
 Changed
 -------
+- Add lower version restriction for optional dependency PyEBSDIndex >= 0.3.9.2.
+- Remove upper version restriction for NumPy.
 
 Removed
 -------
