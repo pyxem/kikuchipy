@@ -18,7 +18,11 @@ were listed in alphabetical order by first name until version 0.7.0.
 
 Added
 -----
-- Add lower version restriction for optional dependency PyEBSDIndex >= 0.3.9.2.
+- Add lower version restriction for optional dependency PyEBSDIndex to 0.3.9.2.
+
+Changed
+-------
+- Increased lower version restriction for Matplotlib to 3.6.
 
 Removed
 -------
