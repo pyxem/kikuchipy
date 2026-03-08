@@ -42,6 +42,25 @@ Deprecated
 ----------
 
 
+0.11.5 (2026-03-08)
+===================
+
+Added
+-----
+- Add lower version restriction for optional dependency PyEBSDIndex to 0.3.9.2.
+  (`#782 <https://github.com/pyxem/kikuchipy/pull/782>`_)
+
+Changed
+-------
+- Increased lower version restriction for Matplotlib to 3.6.
+  (`#782 <https://github.com/pyxem/kikuchipy/pull/782>`_)
+
+Removed
+-------
+- Remove upper version restriction for NumPy.
+  (`#782 <https://github.com/pyxem/kikuchipy/pull/782>`_)
+
+
 0.11.4 (2026-03-04)
 ===================
 
