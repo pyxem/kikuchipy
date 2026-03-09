@@ -169,9 +169,6 @@ filterwarnings = [
     # From HyperSpy
     "ignore:This module has been deprecated and should now be imported as:FutureWarning",
     "ignore:The private module `_lazy_signals` is deprecated",
-    "ignore:The module `rsciio.utils.rgb_tools` has been",
-    "ignore:The module `rsciio.utils.distributed` has been",
-    "ignore:memmap_distributed has been moved to",
     # From NLopt
     "ignore:builtin type SwigPyPacked has no __module__ attribute",
     "ignore:builtin type SwigPyObject has no __module__ attribute",
