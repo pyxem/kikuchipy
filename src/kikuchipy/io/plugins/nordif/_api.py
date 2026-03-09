@@ -19,7 +19,6 @@
 
 """Reader and writer of EBSD patterns from a NORDIF binary file."""
 
-from importlib.util import find_spec
 from io import TextIOWrapper
 import logging
 import os
@@ -32,12 +31,7 @@ from matplotlib.pyplot import imread
 import numpy as np
 from orix.crystal_map import CrystalMap
 
-if find_spec("rsciio.utils.file") is not None:
-    from rsciio.utils.file import memmap_distributed
-else:
-    from rsciio.utils.distributed import memmap_distributed
-
-
+from kikuchipy._utils.rosettasciio import memmap_distributed
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 
 if TYPE_CHECKING:  # pragma: no cover

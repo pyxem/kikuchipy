@@ -34,7 +34,7 @@ from skimage.util.dtype import dtype_range
 import yaml
 
 from kikuchipy._constants import dependency_version
-from kikuchipy._utils.rosettasciio_utils import RGB_DTYPES
+from kikuchipy._utils.rosettasciio import RGB_DTYPES
 from kikuchipy.pattern._pattern import (
     _adaptive_histogram_equalization,
     normalize_intensity,

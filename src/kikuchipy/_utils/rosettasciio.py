@@ -22,18 +22,24 @@
 Used in at least the IO and signals modules.
 """
 
+from typing import Callable
+
 import numpy as np
 from packaging.version import Version
 
 from kikuchipy._constants import dependency_version
 
 if dependency_version["rosettasciio"] >= Version("0.12"):
+    from rsciio.utils.file import memmap_distributed
     from rsciio.utils.rgb import RGB_DTYPES
 else:
+    from rsciio.utils.distributed import memmap_distributed
     from rsciio.utils.rgb_tools import rgb_dtypes as RGB_DTYPES
 
 RGB_DTYPES: dict[str, np.dtype]
+memmap_distributed: Callable
 
 __all__ = [
     "RGB_DTYPES",
+    "memmap_distributed",
 ]
