@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -28,6 +28,7 @@ deps_for_version_check = [
     "hyperspy",
     "matplotlib",
     "numpy",
+    "rosettasciio",
     # Optional
     "nlopt",
     "pyvista",

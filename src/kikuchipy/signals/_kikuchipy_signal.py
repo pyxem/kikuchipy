@@ -40,7 +40,7 @@ else:
     from rsciio.utils.rgb_tools import rgb_dtypes
 
 
-from kikuchipy.constants import dependency_version
+from kikuchipy._constants import dependency_version
 from kikuchipy.pattern._pattern import (
     _adaptive_histogram_equalization,
     normalize_intensity,

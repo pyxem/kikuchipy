@@ -44,7 +44,7 @@ from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.constants import dependency_version
+from kikuchipy._constants import dependency_version
 from kikuchipy.data._data import marshall
 from kikuchipy.data._dummy_files.bruker_h5ebsd import (
     create_dummy_bruker_h5ebsd_file,

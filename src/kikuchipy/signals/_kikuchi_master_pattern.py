@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 from copy import deepcopy
 import logging
@@ -260,7 +262,7 @@ class KikuchiMasterPattern(KikuchipySignal2D, hs.signals.Signal2D):
         >>> mp = kp.data.nickel_ebsd_master_pattern_small(projection="stereographic")
         >>> mp.plot_spherical()
         """
-        from kikuchipy.constants import dependency_version
+        from kikuchipy._constants import dependency_version
 
         if dependency_version["pyvista"] is None:  # pragma: no cover
             raise ImportError(

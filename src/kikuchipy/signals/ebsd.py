@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -43,7 +43,7 @@ from orix.quaternion import Rotation
 from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
-from kikuchipy.constants import dependency_version, pyopencl_context_available
+from kikuchipy._constants import dependency_version, pyopencl_context_available
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window

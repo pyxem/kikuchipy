@@ -24,7 +24,7 @@ from orix.crystal_map import CrystalMap, Phase, PhaseList
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.constants import dependency_version, pyopencl_context_available
+from kikuchipy._constants import dependency_version, pyopencl_context_available
 from kikuchipy.indexing._hough_indexing import (
     _get_info_message,
     _indexer_is_compatible_with_kikuchipy,

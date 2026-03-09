@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -50,7 +50,7 @@ from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
 if TYPE_CHECKING:  # pragma: no cover
     from diffsims.crystallography import ReciprocalLatticeVector
 
-    from kikuchipy.constants import dependency_version
+    from kikuchipy._constants import dependency_version
 
     if dependency_version["pyebsdindex"] is not None:
         from pyebsdindex.ebsd_index import EBSDIndexer
