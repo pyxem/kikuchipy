@@ -19,7 +19,6 @@
 
 from copy import deepcopy
 import gc
-from importlib.util import find_spec
 import logging
 import numbers
 import os
@@ -34,13 +33,8 @@ from packaging.version import Version
 from skimage.util.dtype import dtype_range
 import yaml
 
-if find_spec("rsciio.utils.rgb") is not None:
-    from rsciio.utils.rgb import RGB_DTYPES as rgb_dtypes
-else:
-    from rsciio.utils.rgb_tools import rgb_dtypes
-
-
 from kikuchipy._constants import dependency_version
+from kikuchipy._utils.rosettasciio_utils import RGB_DTYPES
 from kikuchipy.pattern._pattern import (
     _adaptive_histogram_equalization,
     normalize_intensity,
@@ -200,7 +194,7 @@ class KikuchipySignal2D(Signal2D):
         if lazy_output and inplace:
             raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
-        if self.data.dtype in rgb_dtypes.values():
+        if self.data.dtype in RGB_DTYPES.values():
             raise NotImplementedError(
                 "Use RGB channel normalization when creating the image instead"
             )
@@ -308,7 +302,7 @@ class KikuchipySignal2D(Signal2D):
         if lazy_output and inplace:
             raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
-        if self.data.dtype in rgb_dtypes.values():
+        if self.data.dtype in RGB_DTYPES.values():
             raise NotImplementedError(
                 "Use RGB channel normalization when creating the image instead"
             )

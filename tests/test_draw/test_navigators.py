@@ -17,20 +17,11 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
-from importlib.util import find_spec
-
 import matplotlib.pyplot as plt
 import numpy as np
 
-if find_spec("rsciio.utils.rgb") is not None:
-    from rsciio.utils.rgb import RGB_DTYPES
-
-    rgb8 = RGB_DTYPES["rgb8"]
-    rgb16 = RGB_DTYPES["rgb16"]
-else:
-    from rsciio.utils.rgb_tools import rgb8, rgb16
-
 import kikuchipy as kp
+from kikuchipy._utils.rosettasciio_utils import RGB_DTYPES
 
 
 def test_get_rgb_navigator():
@@ -40,7 +31,7 @@ def test_get_rgb_navigator():
 
     s_rgb8 = kp.draw.get_rgb_navigator(image, dtype=np.uint8)
     rgb8_data = s_rgb8.data
-    assert np.issubdtype(rgb8_data.dtype, rgb8)
+    assert np.issubdtype(rgb8_data.dtype, RGB_DTYPES["rgb8"])
     assert rgb8_data.shape == nav_shape
     s.plot(navigator=s_rgb8)
 
@@ -48,6 +39,6 @@ def test_get_rgb_navigator():
     s_rgb16 = kp.draw.get_rgb_navigator(image, dtype=np.dtype("uint16"))
     rgb16_data = s_rgb16.data
     assert rgb16_data.shape == nav_shape
-    assert np.issubdtype(rgb16_data.dtype, rgb16)
+    assert np.issubdtype(rgb16_data.dtype, RGB_DTYPES["rgb16"])
 
     plt.close("all")
