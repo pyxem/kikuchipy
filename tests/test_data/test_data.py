@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -238,7 +238,7 @@ class TestData:
             with pytest.raises(ValueError, match=f"File data/{file_path} must be "):
                 _ = kp.data.ebsd_master_pattern(phase)
 
-    @pytest.mark.flaky(reruns=3)
+    @pytest.mark.weekly
     @pytest.mark.parametrize(
         "dataset",
         [

@@ -142,6 +142,7 @@ relative_files = true
 addopts = [
     "-ra",
     "--import-mode=importlib",
+    "--strict-markers",
     # Skip benchmarks, enable with --benchmark-enable or --benchmark-only
     # https://pytest-benchmark.readthedocs.io/en/stable/usage.html#commandline-options
     "--benchmark-skip",
@@ -174,6 +175,10 @@ filterwarnings = [
     "ignore:builtin type SwigPyObject has no __module__ attribute",
     "ignore:builtin type swigvarlink has no __module__ attribute",
 ]
+markers = [
+    "weekly: mark test as running only weekly on CI",
+]
+xfail_strict = true
 
 # https://docs.astral.sh/ruff/configuration
 [tool.ruff.lint]
