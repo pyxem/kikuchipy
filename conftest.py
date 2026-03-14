@@ -44,7 +44,7 @@ from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.constants import dependency_version
+from kikuchipy._constants import dependency_version
 from kikuchipy.data._data import marshall
 from kikuchipy.data._dummy_files.bruker_h5ebsd import (
     create_dummy_bruker_h5ebsd_file,
@@ -56,6 +56,31 @@ from kikuchipy.draw._vtk import system_supports_plotting
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
 
 DATA_PATH = Path(kp.data.__file__).parent.resolve()
+
+
+# ---------------------- Control test selection ---------------------- #
+
+
+def pytest_addoption(parser):
+    # Flags for optional markers. Markers requiring something (installed
+    # dependency, e.g.) should not have a flag to still run them.
+    parser.addoption(
+        "--weekly", action="store_true", help="Run tests that should run only weekly"
+    )
+
+
+MARKERS = [
+    "weekly",
+]
+
+
+def pytest_runtest_setup(item):
+    # Skip certain tests when flag is missing:
+    # https://docs.pytest.org/en/stable/reference/reference.html#pytest.hookspec.pytest_runtest_setup
+    for marker in MARKERS:
+        marker_str = f"--{marker}"
+        if marker in item.keywords and not item.config.getoption(marker_str):
+            pytest.skip(f"Needs {marker_str} flag to run")
 
 
 # ----------------------------- PyVista ------------------------------ #

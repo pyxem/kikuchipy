@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -30,17 +30,19 @@ from hyperspy._lazy_signals import LazySignal2D
 from hyperspy.signals import Signal2D
 import numpy as np
 from packaging.version import Version
-from rsciio.utils.rgb_tools import rgb_dtypes
 from skimage.util.dtype import dtype_range
 import yaml
 
-from kikuchipy.constants import dependency_version
+from kikuchipy._constants import dependency_version
+from kikuchipy._utils.rosettasciio import RGB_DTYPES
 from kikuchipy.pattern._pattern import (
     _adaptive_histogram_equalization,
     normalize_intensity,
     rescale_intensity,
 )
-from kikuchipy.signals.util._overwrite_hyperspy_methods import insert_doc_disclaimer
+from kikuchipy.signals.util._overwrite_hyperspy_methods import (
+    insert_doc_disclaimer,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -192,7 +194,7 @@ class KikuchipySignal2D(Signal2D):
         if lazy_output and inplace:
             raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
-        if self.data.dtype in rgb_dtypes.values():
+        if self.data.dtype in RGB_DTYPES.values():
             raise NotImplementedError(
                 "Use RGB channel normalization when creating the image instead"
             )
@@ -228,7 +230,10 @@ class KikuchipySignal2D(Signal2D):
             self._set_custom_attributes(attrs)
         else:
             s_out = self.map(
-                rescale_intensity, inplace=False, lazy_output=lazy_output, **map_kw
+                rescale_intensity,
+                inplace=False,
+                lazy_output=lazy_output,
+                **map_kw,
             )
             s_out._set_custom_attributes(attrs)
             return s_out
@@ -297,7 +302,7 @@ class KikuchipySignal2D(Signal2D):
         if lazy_output and inplace:
             raise ValueError("'lazy_output=True' requires 'inplace=False'")
 
-        if self.data.dtype in rgb_dtypes.values():
+        if self.data.dtype in RGB_DTYPES.values():
             raise NotImplementedError(
                 "Use RGB channel normalization when creating the image instead"
             )
@@ -320,7 +325,10 @@ class KikuchipySignal2D(Signal2D):
             self._set_custom_attributes(attrs)
         else:
             s_out = self.map(
-                normalize_intensity, inplace=False, lazy_output=lazy_output, **map_kw
+                normalize_intensity,
+                inplace=False,
+                lazy_output=lazy_output,
+                **map_kw,
             )
             s_out._set_custom_attributes(attrs)
             return s_out

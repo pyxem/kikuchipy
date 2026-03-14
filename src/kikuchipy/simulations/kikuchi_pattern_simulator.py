@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -73,9 +73,9 @@ from orix.quaternion import Rotation
 from orix.vector import Vector3d
 from tqdm import tqdm
 
+from kikuchipy._constants import dependency_version
 from kikuchipy._utils.numba import vec_dot
 from kikuchipy._utils.vector import ValidHemispheres, poles_from_hemisphere
-from kikuchipy.constants import dependency_version
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 from kikuchipy.draw._arrow_3d import Arrow3D
 from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern

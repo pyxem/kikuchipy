@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -41,7 +41,7 @@ from kikuchipy.pattern._pattern import (
 from kikuchipy.signals.util._master_pattern import _get_direction_cosines_for_fixed_pc
 
 if TYPE_CHECKING:  # pragma: no cover
-    from kikuchipy.constants import dependency_version
+    from kikuchipy._constants import dependency_version
 
     if dependency_version["nlopt"] is not None:
         import nlopt

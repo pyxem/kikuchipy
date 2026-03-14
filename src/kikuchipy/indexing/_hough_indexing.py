@@ -32,7 +32,7 @@ import numpy as np
 from orix.crystal_map import CrystalMap, PhaseList, create_coordinate_arrays
 from orix.quaternion import Rotation
 
-from kikuchipy.constants import dependency_version
+from kikuchipy._constants import dependency_version
 
 if TYPE_CHECKING:  # pragma: no cover
     if dependency_version["pyebsdindex"] is not None:
@@ -495,7 +495,7 @@ def _phase_lists_are_compatible(
 
 
 def _get_info_message(nav_size: int, chunksize: int, indexer: "EBSDIndexer") -> str:
-    from kikuchipy.constants import pyopencl_context_available
+    from kikuchipy._constants import pyopencl_context_available
 
     info = (
         "Hough indexing with PyEBSDIndex information:\n"

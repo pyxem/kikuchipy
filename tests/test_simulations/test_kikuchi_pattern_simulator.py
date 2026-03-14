@@ -29,7 +29,7 @@ from packaging.version import Version
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.constants import dependency_version
+from kikuchipy._constants import dependency_version
 
 
 def setup_method():

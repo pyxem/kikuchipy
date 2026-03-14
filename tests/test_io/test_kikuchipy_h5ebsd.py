@@ -1,5 +1,5 @@
 #
-# Copyright 2019-2025 the kikuchipy developers
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -28,7 +28,7 @@ from packaging.version import Version
 import pytest
 
 import kikuchipy as kp
-from kikuchipy.constants import dependency_version
+from kikuchipy._constants import dependency_version
 from kikuchipy.io.plugins._h5ebsd import _dict2hdf5group
 from kikuchipy.io.plugins.kikuchipy_h5ebsd._api import (
     KikuchipyH5EBSDReader,

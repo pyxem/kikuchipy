@@ -27,12 +27,12 @@ from orix.quaternion import Rotation
 import pytest
 
 import kikuchipy as kp
+from kikuchipy._constants import dependency_version
 from kikuchipy._utils._detector_coordinates import (
     convert_coordinates,
     get_coordinate_conversions,
 )
 from kikuchipy._utils.numba import rotate_vector
-from kikuchipy.constants import dependency_version
 from kikuchipy.signals.util._master_pattern import (
     _get_direction_cosines_for_fixed_pc,
     _get_direction_cosines_for_varying_pc,

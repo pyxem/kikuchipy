@@ -1,4 +1,5 @@
-# Copyright 2019-2024 The kikuchipy developers
+#
+# Copyright 2019-2026 the kikuchipy developers
 #
 # This file is part of kikuchipy.
 #
@@ -14,6 +15,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
+#
 
 """Reader and writer of EBSD patterns from a NORDIF binary file."""
 
@@ -28,8 +30,8 @@ import warnings
 from matplotlib.pyplot import imread
 import numpy as np
 from orix.crystal_map import CrystalMap
-from rsciio.utils.distributed import memmap_distributed
 
+from kikuchipy._utils.rosettasciio import memmap_distributed
 from kikuchipy.detectors.ebsd_detector import EBSDDetector
 
 if TYPE_CHECKING:  # pragma: no cover
