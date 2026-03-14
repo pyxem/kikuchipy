@@ -41,6 +41,7 @@ from skimage.transform import ProjectiveTransform
 from sklearn.linear_model import LinearRegression, RANSACRegressor
 
 from kikuchipy import __version__
+from kikuchipy._constants import dependency_version
 from kikuchipy._utils._detector_coordinates import (
     convert_coordinates,
     get_coordinate_conversions,
@@ -49,8 +50,6 @@ from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
 
 if TYPE_CHECKING:  # pragma: no cover
     from diffsims.crystallography import ReciprocalLatticeVector
-
-    from kikuchipy._constants import dependency_version
 
     if dependency_version["pyebsdindex"] is not None:
         from pyebsdindex.ebsd_index import EBSDIndexer
@@ -233,30 +232,11 @@ class EBSDDetector:
             convention = "bruker"
         self._set_pc_in_bruker_convention(convention)
 
-    def __repr__(self) -> str:
-        decimals = 3
-        pc_average = tuple(map(float, self.pc_average.round(decimals)))
-        shape = tuple(map(int, self.shape))
-        sample_tilt = np.round(self.sample_tilt, decimals)
-        tilt = np.round(self.tilt, decimals)
-        azimuthal = np.round(self.azimuthal, decimals)
-        twist = np.round(self.twist, decimals)
-        px_size = np.round(self.px_size, decimals)
-        return (
-            f"{type(self).__name__}"
-            f"(shape={shape}, "
-            f"pc={pc_average}, "
-            f"sample_tilt={sample_tilt}, "
-            f"tilt={tilt}, "
-            f"azimuthal={azimuthal}, "
-            f"twist={twist}, "
-            f"binning={self.binning}, "
-            f"px_size={px_size} um)"
-        )
+    # -------------------------- Properties -------------------------- #
 
     @property
     def shape(self) -> tuple[int, int]:
-        """Return the number of detector rows and columns, in pixels."""
+        """Return the number of detector rows and columns in pixels."""
         return self._shape
 
     @property
@@ -631,6 +611,31 @@ class EBSDDetector:
             Rotation.from_axes_angles((0, 0, -1), -np.pi / 2) * u_s_bruker
         )
         return sample_to_detector
+
+    # ------------------------ Dunder methods ------------------------ #
+
+    def __repr__(self) -> str:
+        decimals = 3
+        pc_average = tuple(map(float, self.pc_average.round(decimals)))
+        shape = tuple(map(int, self.shape))
+        sample_tilt = np.round(self.sample_tilt, decimals)
+        tilt = np.round(self.tilt, decimals)
+        azimuthal = np.round(self.azimuthal, decimals)
+        twist = np.round(self.twist, decimals)
+        px_size = np.round(self.px_size, decimals)
+        return (
+            f"{type(self).__name__}"
+            f"(shape={shape}, "
+            f"pc={pc_average}, "
+            f"sample_tilt={sample_tilt}, "
+            f"tilt={tilt}, "
+            f"azimuthal={azimuthal}, "
+            f"twist={twist}, "
+            f"binning={self.binning}, "
+            f"px_size={px_size} um)"
+        )
+
+    # ------------------------ Public methods ------------------------ #
 
     @classmethod
     def load(cls, fname: Path | str) -> EBSDDetector:
