@@ -47,6 +47,15 @@ class TestEBSDDetector:
         for attr in [det.sample_tilt, det.tilt, det.azimuthal, det.px_size]:
             assert type(attr) is float
 
+    def test_set_detector_shape(self):
+        det = kp.detectors.EBSDDetector()
+        with pytest.raises(ValueError, match="Invalid shape 2. Must be an iterable of"):
+            det.shape = 2
+        with pytest.raises(ValueError, match=r"Invalid shape \(2,\). Must be an "):
+            det.shape = (2,)
+        with pytest.raises(ValueError, match=r"Invalid shape \(2, 3.0\). Must be an "):
+            det.shape = (2, 3.0)
+
     @pytest.mark.parametrize(
         "nav_shape, desired_nav_shape, desired_nav_dim",
         [

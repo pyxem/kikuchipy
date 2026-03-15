@@ -479,7 +479,9 @@ class EBSDDetector:
             or len(value) != 2
             or not all(isinstance(ni, int) for ni in value)
         ):
-            raise ValueError("Shape must be an iterable of two integers")
+            raise ValueError(
+                f"Invalid shape {value}. Must be an iterable of two integers."
+            )
         ny, nx = value
         self._shape = (int(ny), int(nx))
 
