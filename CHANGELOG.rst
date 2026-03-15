@@ -22,9 +22,14 @@ Added
 - Download from conda-forge of ``kikuchipy-base`` without optional dependencies.
 - Can now read simulated master patterns from EMsoft's EMEBSDmasterOpenCL.f90 program.
   (`#730 <https://github.com/pyxem/kikuchipy/pull/730>`_)
+- Added error handling for setting various properties of the
+  ``kp.detectors.EBSDDetector``.
+  (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
 
 Changed
 -------
+- Made the string representation of the ``kp.detectors.EBSDDetector`` more informative.
+  (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
 
 Removed
 -------
