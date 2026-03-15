@@ -23,6 +23,7 @@ from collections.abc import Iterable
 from copy import deepcopy
 from datetime import datetime
 import logging
+from numbers import Number
 from pathlib import Path
 import re
 from typing import TYPE_CHECKING, Union
@@ -226,7 +227,11 @@ class EBSDDetector:
     ) -> None:
         self._shape = shape
         self.px_size = float(px_size)
-        self.binning = float(binning)
+
+        # .binning returns an integer, while ._binning should always be
+        # a float. Use the latter for any computation.
+        self._binning: float = float(binning)
+
         self.tilt = float(tilt)
         self.azimuthal = float(azimuthal)
         self.twist = float(twist)
@@ -245,6 +250,23 @@ class EBSDDetector:
         the number of detector rows :math:`N_y`.
         """
         return self.ncols / self.nrows
+
+    @property
+    def binning(self) -> int:
+        r"""Return or set the integer detector binning factor, :math:`b`.
+
+        Parameters
+        ----------
+        value : int
+            Detector binning factor.
+        """
+        return int(self._binning)
+
+    @binning.setter
+    def binning(self, value: int) -> None:
+        if not isinstance(value, Number):
+            raise ValueError(f"Invalid binning {value}. Must be an integer.")
+        self._binning = float(value)
 
     @property
     def bounds(self) -> np.ndarray:
@@ -276,7 +298,7 @@ class EBSDDetector:
 
         This is given by :math:`N_y \delta b`.
         """
-        return self.nrows * self.px_size * self.binning
+        return self.nrows * self.px_size * self._binning
 
     @property
     def navigation_dimension(self) -> int:
@@ -326,7 +348,7 @@ class EBSDDetector:
 
         This is given by :math:`\delta b`.
         """
-        return self.px_size * self.binning
+        return self.px_size * self._binning
 
     @property
     def pc(self) -> np.ndarray:
@@ -503,7 +525,7 @@ class EBSDDetector:
 
         This is given by :math:`(N_y b, N_x b)`.
         """
-        return tuple(np.array(self.shape, dtype=int) * self.binning)
+        return tuple(np.array(self.shape, dtype=int) * self._binning)
 
     @property
     def width(self) -> float:
@@ -511,7 +533,7 @@ class EBSDDetector:
 
         This is given by :math:`N_x \delta b`.
         """
-        return self.ncols * self.px_size * self.binning
+        return self.ncols * self.px_size * self._binning
 
     @property
     def x_min(self) -> np.ndarray | float:
@@ -659,22 +681,24 @@ class EBSDDetector:
         decimals = 3
         pc_average = tuple(map(float, self.pc_average.round(decimals)))
         shape = tuple(map(int, self.shape))
-        sample_tilt = np.round(self.sample_tilt, decimals)
-        tilt = np.round(self.tilt, decimals)
-        azimuthal = np.round(self.azimuthal, decimals)
-        twist = np.round(self.twist, decimals)
-        px_size = np.round(self.px_size, decimals)
-        return (
-            f"{type(self).__name__}"
-            f"(shape={shape}, "
-            f"pc={pc_average}, "
-            f"sample_tilt={sample_tilt}, "
-            f"tilt={tilt}, "
-            f"azimuthal={azimuthal}, "
-            f"twist={twist}, "
-            f"binning={self.binning}, "
-            f"px_size={px_size} um)"
-        )
+        sample_tilt = str(np.round(self.sample_tilt, decimals))
+        tilt = str(np.round(self.tilt, decimals))
+        azimuthal = str(np.round(self.azimuthal, decimals))
+        twist = str(np.round(self.twist, decimals))
+        px_size = str(np.round(self.px_size, decimals))
+        binning = str(self.binning)
+
+        s = f"{self.__class__.__name__}\n"
+        s += f"  shape (Ny, Nx):     {shape}\n"
+        s += f"  pc (PCx, PCy, PCz): {pc_average}\n"
+        s += f"  sample_tilt:        {sample_tilt} deg\n"
+        s += f"  tilt:               {tilt} deg\n"
+        s += f"  azimuthal:          {azimuthal} deg\n"
+        s += f"  twist:              {twist} deg\n"
+        s += f"  binning:            {binning}\n"
+        s += f"  px_size:            {px_size} um"
+
+        return s
 
     # ------------------------ Public methods ------------------------ #
 
@@ -897,7 +921,7 @@ class EBSDDetector:
             pc=np.dstack((pcx_new, pcy_new, pcz_new)),
             tilt=self.tilt,
             sample_tilt=self.sample_tilt,
-            binning=int(self.binning),
+            binning=int(self._binning),
             px_size=self.px_size,
             azimuthal=self.azimuthal,
         )
@@ -1198,7 +1222,7 @@ class EBSDDetector:
         if px_size is None:
             px_size = self.px_size
         if binning is None:
-            binning = self.binning
+            binning = float(self.binning)
 
         pc = self.pc_flattened
 
@@ -1227,7 +1251,7 @@ class EBSDDetector:
         new_detector._shape = shape
         new_detector.pc = np.stack((pcx, pcy, pcz), axis=2)
         new_detector.px_size = px_size
-        new_detector.binning = binning
+        new_detector.binning = int(binning)
 
         return new_detector
 
@@ -1943,7 +1967,7 @@ class EBSDDetector:
                 f"EBSDDetector\n"
                 f"  shape: {self.shape}\n"
                 f"  px_size: {self.px_size}\n"
-                f"  binning: {self.binning}\n"
+                f"  binning: {self._binning}\n"
                 f"  tilt: {self.tilt} deg\n"
                 f"  azimuthal: {self.azimuthal} deg\n"
                 f"  twist: {self.twist} deg\n"
@@ -2035,9 +2059,9 @@ class EBSDDetector:
         pcx = self.pcx
         if version < 5:
             pcx = -pcx
-        new_pc[..., 0] = 0.5 - (pcx / (self.ncols * self.binning))
-        new_pc[..., 1] = 0.5 - (self.pcy / (self.nrows * self.binning))
-        new_pc[..., 2] = self.pcz / (self.nrows * self.binning * self.px_size)
+        new_pc[..., 0] = 0.5 - (pcx / (self.ncols * self._binning))
+        new_pc[..., 1] = 0.5 - (self.pcy / (self.nrows * self._binning))
+        new_pc[..., 2] = self.pcz / (self.nrows * self._binning * self.px_size)
         return new_pc
 
     def _pc_tsl2bruker(self) -> np.ndarray:
@@ -2054,11 +2078,11 @@ class EBSDDetector:
 
     def _pc_bruker2emsoft(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc, dtype=float)
-        new_pc[..., 0] = (0.5 - self.pcx) * self.ncols * self.binning
+        new_pc[..., 0] = (0.5 - self.pcx) * self.ncols * self._binning
         if version < 5:
             new_pc[..., 0] = -new_pc[..., 0]
-        new_pc[..., 1] = (0.5 - self.pcy) * self.nrows * self.binning
-        new_pc[..., 2] = self.pcz * self.nrows * self.binning * self.px_size
+        new_pc[..., 1] = (0.5 - self.pcy) * self.nrows * self._binning
+        new_pc[..., 2] = self.pcz * self.nrows * self._binning * self.px_size
         return new_pc
 
     def _pc_bruker2tsl(self) -> np.ndarray:

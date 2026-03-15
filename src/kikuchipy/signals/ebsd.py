@@ -1186,7 +1186,7 @@ class EBSD(KikuchipySignal2D):
             attrs["static_background"] = static_bg_new
 
         attrs["detector"]._shape = sig_shape_new
-        attrs["detector"].binning *= factor
+        attrs["detector"]._binning *= factor
 
         map_kw = {
             "show_progressbar": show_progressbar,
@@ -2805,11 +2805,11 @@ class EBSD(KikuchipySignal2D):
         # Update detector shape and binning factor
         attrs["detector"]._shape = sig_shape_new
         factors = np.array(sig_shape_old) / np.array(sig_shape_new)
-        binning = attrs["detector"].binning * factors
+        binning = attrs["detector"]._binning * factors
         if binning[0] == binning[1] and np.allclose(binning, binning.round(0)):
-            attrs["detector"].binning = int(binning[0])
+            attrs["detector"]._binning = float(binning[0])
         else:
-            attrs["detector"].binning = 1
+            attrs["detector"]._binning = 1.0
 
         if nav_shape_new != nav_shape_old:
             attrs["xmap"] = None
@@ -3289,7 +3289,7 @@ def _update_custom_attributes(
     nav_slices: slice | tuple | None = None,
     sig_slices: slice | tuple | None = None,
     new_nav_shape: tuple[int, ...] | None = None,
-    new_sig_shape: tuple[int, ...] | None = None,
+    new_sig_shape: tuple[int, int] | None = None,
 ) -> dict:
     """Update dictionary of custom attributes after slicing the signal
     data.
