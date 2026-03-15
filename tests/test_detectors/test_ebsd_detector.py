@@ -138,14 +138,21 @@ class TestEBSDDetector:
         assert det.unbinned_shape == shape_unbinned
         assert det.px_size_binned == px_size_binned
 
-    def test_repr(self, pc1):
+    def test_detector_repr(self, pc1):
         """Expected string representation."""
         det = kp.detectors.EBSDDetector(
             shape=(1, 2), px_size=3, binning=4, tilt=5, azimuthal=2, twist=1.02, pc=pc1
         )
         assert repr(det) == (
-            "EBSDDetector(shape=(1, 2), pc=(0.421, 0.779, 0.505), sample_tilt=70.0, "
-            "tilt=5.0, azimuthal=2.0, twist=1.02, binning=4.0, px_size=3.0 um)"
+            "EBSDDetector\n"
+            "  shape (Ny, Nx):     (1, 2)\n"
+            "  pc (PCx, PCy, PCz): (0.421, 0.779, 0.505)\n"
+            "  sample_tilt:        70.0 deg\n"
+            "  tilt:               5.0 deg\n"
+            "  azimuthal:          2.0 deg\n"
+            "  twist:              1.02 deg\n"
+            "  binning:            4\n"
+            "  px_size:            3.0 um"
         )
 
     def test_deepcopy(self, pc1):
@@ -768,6 +775,11 @@ class TestEBSDDetector:
 
         assert np.allclose(sim2.data, sim1.isig[20:60, :50].data)
 
+    def test_set_detector_binning_raises(self):
+        det = kp.detectors.EBSDDetector()
+        with pytest.raises(ValueError, match=r"Invalid binning \(3, 4\). Must be an "):
+            det.binning = (3, 4)
+
 
 class TestPlotPC:
     det = kp.detectors.EBSDDetector(
@@ -907,7 +919,7 @@ class TestEstimateTilts:
         ax = plt.gca()
         assert not any(["Outliers" in t.get_text() for t in ax.get_legend().texts])
 
-        xtilt, is_outliers, fig = det.estimate_xtilt(
+        xtilt, is_outliers, _ = det.estimate_xtilt(
             return_outliers=True, return_figure=True
         )
         assert isinstance(is_outliers, np.ndarray)
@@ -923,7 +935,7 @@ class TestEstimateTilts:
         )
         det.pc[0, 0] = (0.5, 0.5, 0.5)
 
-        xtilt, is_outliers, fig = det.estimate_xtilt(
+        _, is_outliers, fig = det.estimate_xtilt(
             return_outliers=True, return_figure=True
         )
         assert isinstance(is_outliers, np.ndarray)
@@ -987,7 +999,7 @@ class TestExtrapolatePC:
                 self.det0.sample_tilt,
                 self.det0.tilt,
                 self.det0.px_size,
-                self.det0.binning,
+                self.det0._binning,
                 self.det0.azimuthal,
             ],
             [
@@ -996,7 +1008,7 @@ class TestExtrapolatePC:
                 det.sample_tilt,
                 det.tilt,
                 det.px_size,
-                det.binning,
+                det._binning,
                 det.azimuthal,
             ],
         )
@@ -1036,7 +1048,7 @@ class TestExtrapolatePC:
         )
         assert np.allclose(det1.pc_average, det3.pc_average, atol=1e-2)
         assert det3.shape == (60, 60)
-        assert det3.binning == 8
+        assert det3._binning == 8
         assert det3.px_size == 70 * 8
 
     def test_extrapolate_pc_outliers(self):
@@ -1282,7 +1294,7 @@ class TestSaveLoadDetector:
         assert np.isclose(det2.sample_tilt, det1.sample_tilt)
         assert np.isclose(det2.tilt, det1.tilt)
         assert np.isclose(det2.px_size, det1.px_size)
-        assert det2.binning == det1.binning
+        assert det2._binning == det1._binning
         assert np.isclose(det2.azimuthal, det1.azimuthal)
         assert np.isclose(det2.twist, det1.twist)
 
