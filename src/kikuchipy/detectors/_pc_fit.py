@@ -24,11 +24,12 @@ from orix.quaternion import Rotation
 from orix.vector import Vector3d
 import scipy.stats as scs
 from skimage.transform import ProjectiveTransform
+from sklearn.linear_model import LinearRegression, RANSACRegressor
 
 _logger = logging.getLogger(__name__)
 
 
-def _fit_hyperplane(
+def fit_hyperplane(
     pc_centered: np.ndarray,
 ) -> tuple[float, float, Rotation, Rotation, np.ndarray]:
     # Hyperplane fit
@@ -67,12 +68,12 @@ def _fit_hyperplane(
     return x_tilt, z_tilt, rot_xtilt, rot_ztilt, pc_trim_mean
 
 
-def _fit_pc_projective(
+def fit_pc_projective(
     pc_centered_flat: np.ndarray,
     pc_indices_flat: np.ndarray,
     map_indices_flat: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
-    *_, rot_xtilt, rot_ztilt, pc_trim_mean = _fit_hyperplane(pc_centered_flat)
+    *_, rot_xtilt, rot_ztilt, pc_trim_mean = fit_hyperplane(pc_centered_flat)
 
     v_pc_centered = Vector3d(pc_centered_flat)
     v_pc_trim_mean = Vector3d(pc_trim_mean)
@@ -101,7 +102,7 @@ def _fit_pc_projective(
     return v_pc_fit.data, v_pc_fit_map.data
 
 
-def _fit_pc_affine(
+def fit_pc_affine(
     pc_flat: np.ndarray, pc_indices_flat: np.ndarray, map_indices_flat: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
     # Solve the least squares problem X * A = Y
@@ -113,3 +114,30 @@ def _fit_pc_affine(
     pc_fit_map = np.dot(map_indices_flat, matrix)
 
     return pc_fit, pc_fit_map
+
+
+def estimate_xtilt_linear(
+    pcy: np.ndarray, pcz: np.ndarray
+) -> tuple[float, LinearRegression]:
+    """Return an estimated X tilt from (PCy, PCz) using a linear model."""
+    regressor = LinearRegression()
+    regressor.fit(pcz, pcy)
+    slope = regressor.coef_
+    slope = slope.squeeze()
+    x_tilt = float(np.pi / 2 + np.arctan(slope))
+    return x_tilt, regressor
+
+
+def estimate_xtilt_linear_robust(
+    pcy: np.ndarray, pcz: np.ndarray
+) -> tuple[float, RANSACRegressor, np.ndarray]:
+    """Return an estimated X tilt from (PCy, PCz) using a robust linear
+    model with detection of outliers.
+    """
+    regressor = RANSACRegressor()
+    regressor.fit(pcz, pcy)
+    slope = regressor.estimator_.coef_
+    slope = slope.squeeze()
+    x_tilt = float(np.pi / 2 + np.arctan(slope))
+    is_outlier = ~regressor.inlier_mask_
+    return x_tilt, regressor, is_outlier

@@ -26,19 +26,13 @@ import logging
 from numbers import Number
 from pathlib import Path
 import re
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Literal, overload
 
 from diffsims.crystallography import ReciprocalLatticeVector
-from matplotlib.figure import Figure
-from matplotlib.markers import MarkerStyle
-import matplotlib.patches as mpatches
-import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 from orix.crystal_map import PhaseList
 from orix.quaternion import Rotation
 import scipy.stats as scs
-from sklearn.linear_model import LinearRegression, RANSACRegressor
 
 from kikuchipy import __version__
 from kikuchipy._constants import dependency_version
@@ -47,14 +41,25 @@ from kikuchipy._utils._detector_coordinates import (
     get_coordinate_conversions,
 )
 from kikuchipy.detectors._pc_fit import (
-    _fit_hyperplane,
-    _fit_pc_affine,
-    _fit_pc_projective,
+    estimate_xtilt_linear,
+    estimate_xtilt_linear_robust,
+    fit_hyperplane,
+    fit_pc_affine,
+    fit_pc_projective,
+)
+from kikuchipy.draw._plot_ebsd_detector import (
+    DETECTOR_PLOT_FORMATS,
+    PROJECTION_CENTER_PLOT_MODES,
+    plot_all_projection_centers,
+    plot_ebsd_detector,
+    plot_projection_center_fit,
+    plot_xtilt_estimate,
 )
 from kikuchipy.indexing._hough_indexing import _get_indexer_from_detector
 
 if TYPE_CHECKING:  # pragma: no cover
     from diffsims.crystallography import ReciprocalLatticeVector
+    import matplotlib.figure as mfigure
 
     if dependency_version["pyebsdindex"] is not None:
         from pyebsdindex.ebsd_index import EBSDIndexer
@@ -775,7 +780,7 @@ class EBSDDetector:
         self,
         coords: np.ndarray,
         direction: str,
-        detector_index: Union[None, int, tuple] = None,
+        detector_index: int | tuple | None = None,
     ) -> np.ndarray:
         """Convert between gnomonic and pixel coordinates on the detector screen.
 
@@ -939,6 +944,72 @@ class EBSDDetector:
         """
         return deepcopy(self)
 
+    @overload
+    def estimate_xtilt(
+        self,
+        detect_outliers: bool = False,
+        plot: bool = True,
+        degrees: bool = False,
+        return_figure: Literal[False] = False,
+        return_outliers: Literal[False] = False,
+        figure_kwargs: dict | None = None,
+    ) -> float: ...
+
+    @overload
+    def estimate_xtilt(
+        self,
+        detect_outliers: bool = False,
+        plot: bool = True,
+        degrees: bool = False,
+        return_figure: Literal[False] = False,
+        return_outliers: Literal[True] = ...,
+        figure_kwargs: dict | None = None,
+    ) -> tuple[float, np.ndarray]: ...
+
+    @overload
+    def estimate_xtilt(
+        self,
+        detect_outliers: bool = False,
+        plot: Literal[True] = True,
+        degrees: bool = False,
+        return_figure: Literal[True] = ...,
+        return_outliers: Literal[False] = False,
+        figure_kwargs: dict | None = None,
+    ) -> "tuple[float, mfigure.Figure]": ...
+
+    @overload
+    def estimate_xtilt(
+        self,
+        detect_outliers: bool = False,
+        plot: Literal[True] = True,
+        degrees: bool = False,
+        return_figure: Literal[True] = ...,
+        return_outliers: Literal[True] = ...,
+        figure_kwargs: dict | None = None,
+    ) -> "tuple[float, np.ndarray, mfigure.Figure]": ...
+
+    @overload
+    def estimate_xtilt(
+        self,
+        detect_outliers: bool = False,
+        plot: Literal[False] = ...,
+        degrees: bool = False,
+        return_figure: Literal[True] = ...,
+        return_outliers: Literal[False] = False,
+        figure_kwargs: dict | None = None,
+    ) -> float: ...
+
+    @overload
+    def estimate_xtilt(
+        self,
+        detect_outliers: bool = False,
+        plot: Literal[False] = ...,
+        degrees: bool = False,
+        return_figure: Literal[True] = ...,
+        return_outliers: Literal[True] = ...,
+        figure_kwargs: dict | None = None,
+    ) -> tuple[float, np.ndarray]: ...
+
     def estimate_xtilt(
         self,
         detect_outliers: bool = False,
@@ -950,8 +1021,8 @@ class EBSDDetector:
     ) -> (
         float
         | tuple[float, np.ndarray]
-        | tuple[float, Figure]
-        | tuple[float, np.ndarray, Figure]
+        | "tuple[float, mfigure.Figure]"
+        | "tuple[float, np.ndarray, mfigure.Figure]"
     ):
         r"""Return an estimate of the tilt about the detector
         :math:`X_d` axis.
@@ -986,7 +1057,7 @@ class EBSDDetector:
         return_outliers
             Whether to return a mask with True for PC values considered
             outliers. Default is False. If True, *detect_outliers* is
-            assumed to be True and the value passed is not considered.
+            set to True.
         figure_kwargs
             Keyword arguments passed to
             :func:`matplotlib.pyplot.Figure` if *plot* is True.
@@ -1012,67 +1083,49 @@ class EBSDDetector:
         See Also
         --------
         sklearn.linear_model.LinearRegression,
-        sklearn.linear_model.RANSACRegressor, estimate_xtilt_ztilt,
+        sklearn.linear_model.RANSACRegressor,
+        estimate_xtilt_ztilt,
         fit_pc
         """
         if self.navigation_size == 1:
             raise ValueError("Estimation requires more than one projection center")
+        pcy = self.pcy.reshape((-1, 1))
+        pcz = self.pcz.reshape((-1, 1))
 
         if return_outliers:
             detect_outliers = True
 
         if detect_outliers:
-            regressor = RANSACRegressor()
+            x_tilt, regressor, is_outlier = estimate_xtilt_linear_robust(
+                pcy=pcy, pcz=pcz
+            )
         else:
-            regressor = LinearRegression()
-
-        # Estimate slope
-        pcy = self.pcy.reshape((-1, 1))
-        pcz = self.pcz.reshape((-1, 1))
-        regressor.fit(pcz, pcy)
-        if detect_outliers:
-            slope = regressor.estimator_.coef_
-        else:
-            slope = regressor.coef_
-        slope = slope.squeeze()
-
-        # Get tilt from estimated coefficient
-        x_tilt = np.pi / 2 + np.arctan(slope)
-
-        # Get outliers (if possible)
-        if detect_outliers:
-            is_outlier = ~regressor.inlier_mask_
-        else:
-            is_outlier = np.zeros(self.navigation_size)
-
-        # Predict data of estimated model
-        pcz_fit = np.linspace(np.min(pcz), np.max(pcz), 2)
-        pcy_fit = regressor.predict(pcz_fit[:, np.newaxis])
-
-        x_tilt_deg = np.rad2deg(x_tilt)
+            x_tilt, regressor = estimate_xtilt_linear(pcy=pcy, pcz=pcz)
+            is_outlier = None
 
         if degrees:
-            out = (x_tilt_deg,)
+            out = (float(np.rad2deg(x_tilt)),)
         else:
             out = (x_tilt,)
-        if return_outliers:
-            is_outlier2d = is_outlier.reshape(self.navigation_shape)
-            out += (is_outlier2d,)
+
+        if is_outlier is not None:
+            is_outlier_2d = is_outlier.reshape(self.navigation_shape)
+            out += (is_outlier_2d,)
 
         if plot:
+            pcz_fit = np.linspace(np.min(pcz), np.max(pcz), 2)
+            pcy_fit = regressor.predict(pcz_fit[:, np.newaxis])
             if figure_kwargs is None:
                 figure_kwargs = {}
-            figure_kwargs.setdefault("layout", "tight")
-            fig = plt.figure(**figure_kwargs)
-            ax = fig.add_subplot()
-            ax.scatter(pcz, pcy, c="yellowgreen", ec="k", label="Data")
-            if detect_outliers:
-                ax.scatter(pcz[is_outlier], pcy[is_outlier], c="gold", label="Outliers")
-            fit_label = "Fit, tilt = " + f"{x_tilt_deg:.2f}" + r"$^{\circ}$"
-            ax.plot(pcz_fit, pcy_fit, label=fit_label, c="C1")
-            ax.legend(bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
-            ax.set(aspect="equal", xlabel="PCz", ylabel="PCy")
-
+            fig = plot_xtilt_estimate(
+                pcy=pcy,
+                pcz=pcz,
+                pcy_fit=pcy_fit,
+                pcz_fit=pcz_fit,
+                x_tilt=x_tilt,
+                is_outlier=is_outlier,
+                **figure_kwargs,
+            )
             if return_figure:
                 out += (fig,)
 
@@ -1142,7 +1195,7 @@ class EBSDDetector:
         pc = pc.reshape((-1, 3))
 
         pc_centered = pc - pc.mean(axis=0)
-        x_tilt, z_tilt, *_ = _fit_hyperplane(pc_centered)
+        x_tilt, z_tilt, *_ = fit_hyperplane(pc_centered)
 
         if degrees:
             x_tilt = np.rad2deg(x_tilt)
@@ -1267,7 +1320,7 @@ class EBSDDetector:
         plot: bool = True,
         return_figure: bool = False,
         figure_kwargs: dict | None = None,
-    ) -> EBSDDetector | tuple[EBSDDetector, Figure]:
+    ) -> "EBSDDetector | tuple[EBSDDetector, mfigure.Figure]":
         """Return a new detector with interpolated projection centers
         (PCs) for all points in a map by fitting a plane to :attr:`pc`.
 
@@ -1384,7 +1437,7 @@ class EBSDDetector:
         if transformation == "projective":
             pc_average = np.mean(pc_flat, axis=0)
             pc_flat_centered = pc_flat - pc_average
-            pc_fit, pc_fit_map = _fit_pc_projective(
+            pc_fit, pc_fit_map = fit_pc_projective(
                 pc_flat_centered,
                 pc_indices_flat,
                 map_indices_flat,
@@ -1392,7 +1445,7 @@ class EBSDDetector:
             pc_fit += pc_average
             pc_fit_map += pc_average
         else:
-            pc_fit, pc_fit_map = _fit_pc_affine(
+            pc_fit, pc_fit_map = fit_pc_affine(
                 pc_flat, pc_indices_flat, map_indices_flat
             )
 
@@ -1400,8 +1453,8 @@ class EBSDDetector:
         _logger.debug(f"Max. error for (PCx, PCy, PCz): {max_err}")
 
         # Linear fit to YZ-plane to estimate tilt angle about detector X
-        slope, intercept, _, _, _ = scs.linregress(pc_fit[..., 2], pc_fit[..., 1])
-        x_tilt = np.pi / 2 + np.arctan(slope)
+        result = scs.linregress(pc_fit[..., 2], pc_fit[..., 1])
+        x_tilt = np.pi / 2 + np.arctan(result.slope)
         x_tilt_deg = np.rad2deg(x_tilt)
         _logger.debug(f"Estimated detector X tilt: {x_tilt_deg:.5f} deg")
 
@@ -1416,12 +1469,11 @@ class EBSDDetector:
             if figure_kwargs is None:
                 figure_kwargs = {}
             pc_fit_2d = pc_fit.reshape(nav_shape + (3,))
-            fig = _plot_pc_fit(
-                pc_flat,
-                pc_fit_2d,
-                intercept,
-                slope,
-                return_figure=return_figure,
+            fig = plot_projection_center_fit(
+                pc=pc_flat,
+                pc_fit=pc_fit_2d,
+                fit_intercept=result.intercept,
+                fit_slope=result.slope,
                 figure_kwargs=figure_kwargs,
             )
         else:
@@ -1607,9 +1659,39 @@ class EBSDDetector:
         """
         return self._pc_bruker2oxford()
 
+    @overload
     def plot(
         self,
-        coordinates: str = "detector",
+        coordinates: DETECTOR_PLOT_FORMATS = "detector",
+        show_pc: bool = ...,
+        pc_kwargs: dict | None = None,
+        pattern: np.ndarray | None = None,
+        pattern_kwargs: dict | None = None,
+        draw_gnomonic_circles: bool = False,
+        gnomonic_angles: np.ndarray | list | None = None,
+        gnomonic_circles_kwargs: dict | None = None,
+        zoom: float = ...,
+        return_figure: Literal[False] = ...,
+    ) -> None: ...
+
+    @overload
+    def plot(
+        self,
+        coordinates: DETECTOR_PLOT_FORMATS = "detector",
+        show_pc: bool = ...,
+        pc_kwargs: dict | None = None,
+        pattern: np.ndarray | None = None,
+        pattern_kwargs: dict | None = None,
+        draw_gnomonic_circles: bool = False,
+        gnomonic_angles: np.ndarray | list | None = None,
+        gnomonic_circles_kwargs: dict | None = None,
+        zoom: float = ...,
+        return_figure: Literal[True] = ...,
+    ) -> "None | mfigure.Figure": ...
+
+    def plot(
+        self,
+        coordinates: DETECTOR_PLOT_FORMATS = "detector",
         show_pc: bool = True,
         pc_kwargs: dict | None = None,
         pattern: np.ndarray | None = None,
@@ -1619,7 +1701,7 @@ class EBSDDetector:
         gnomonic_circles_kwargs: dict | None = None,
         zoom: float = 1.0,
         return_figure: bool = False,
-    ) -> None | Figure:
+    ) -> "None | mfigure.Figure":
         """Plot the detector screen viewed from the detector towards the
         sample.
 
@@ -1695,94 +1777,39 @@ class EBSDDetector:
         >>> s = kp.data.nickel_ebsd_small()
         >>> fig = det.plot(pattern=s.inav[0, 0].data, return_figure=True)
         """
-        sy, sx = self.shape
-        pcx, pcy = self.pc_average[:2]
-
-        if coordinates == "detector":
-            pcy *= sy - 1
-            pcx *= sx - 1
-            bounds = self.bounds
-            bounds[2:] = bounds[2:][::-1]
-            x_label = "x detector"
-            y_label = "y detector"
-        else:
-            pcy, pcx = (0, 0)
-            bounds = self._average_gnomonic_bounds
-            x_label = "x gnomonic"
-            y_label = "y gnomonic"
-
-        fig, ax = plt.subplots()
-        ax.axis(zoom * bounds)
-        ax.set(xlabel=x_label, ylabel=y_label, aspect="equal")
-
-        # Plot a pattern on the detector
-        if isinstance(pattern, np.ndarray):
-            if pattern.shape != (sy, sx):
-                raise ValueError(
-                    f"Pattern shape {pattern.shape} must equal the detector shape "
-                    f"{(sy, sx)}"
-                )
-            if pattern_kwargs is None:
-                pattern_kwargs = {}
-            pattern_kwargs.setdefault("cmap", "gray")
-            ax.imshow(pattern, extent=bounds, **pattern_kwargs)
-        else:
-            origin = (bounds[0], bounds[2])
-            width = np.diff(bounds[:2])[0]
-            height = np.diff(bounds[2:])[0]
-            ax.add_artist(
-                mpatches.Rectangle(origin, width, height, fc=(0.5,) * 3, zorder=-1)
-            )
-
-        # Show the projection center
-        if show_pc:
-            if pc_kwargs is None:
-                pc_kwargs = {}
-            default_params_pc = dict(
-                s=300,
-                facecolor="gold",
-                edgecolor="k",
-                marker=MarkerStyle(marker="*", fillstyle="full"),
-                zorder=10,
-            )
-            _ = [pc_kwargs.setdefault(k, v) for k, v in default_params_pc.items()]
-            ax.scatter(x=pcx, y=pcy, **pc_kwargs)
-
-        # Draw gnomonic circles centered on the projection center
-        if draw_gnomonic_circles:
-            if gnomonic_circles_kwargs is None:
-                gnomonic_circles_kwargs = {}
-            default_params_gnomonic = {
-                "alpha": 0.4,
-                "edgecolor": "k",
-                "facecolor": "None",
-                "linewidth": 3,
-            }
-            [
-                gnomonic_circles_kwargs.setdefault(k, v)
-                for k, v in default_params_gnomonic.items()
-            ]
-            if gnomonic_angles is None:
-                gnomonic_angles = np.arange(1, 9) * 10
-            for angle in gnomonic_angles:
-                ax.add_patch(
-                    plt.Circle(
-                        (pcx, pcy), np.tan(np.deg2rad(angle)), **gnomonic_circles_kwargs
-                    )
-                )
-
+        if pattern_kwargs is None:
+            pattern_kwargs = {}
+        if pc_kwargs is None:
+            pc_kwargs = {}
+        if gnomonic_circles_kwargs is None:
+            gnomonic_circles_kwargs = {}
+        fig = plot_ebsd_detector(
+            shape=self.shape,
+            pcxy=self.pc_average[:2],
+            bounds=self.bounds,
+            average_gnomonic_bounds=self._average_gnomonic_bounds,
+            coords_fmt=coordinates,
+            zoom=zoom,
+            show_pc=show_pc,
+            draw_gnomonic_circles=draw_gnomonic_circles,
+            pattern=pattern,
+            pattern_kwargs=pattern_kwargs,
+            pc_kwargs=pc_kwargs,
+            gnomonic_circles_kwargs=gnomonic_circles_kwargs,
+            gnomonic_angles=gnomonic_angles,
+        )
         if return_figure:
             return fig
 
     def plot_pc(
         self,
-        mode: str = "map",
+        mode: PROJECTION_CENTER_PLOT_MODES = "map",
         return_figure: bool = False,
-        orientation: str = "horizontal",
+        orientation: Literal["horiztonal", "vertical"] = "horizontal",
         annotate: bool = False,
         figure_kwargs: dict | None = None,
         **kwargs,
-    ) -> None | Figure:
+    ) -> "None | mfigure.Figure":
         """Plot all projection centers (PCs).
 
         Parameters
@@ -1865,76 +1892,22 @@ class EBSDDetector:
         modes = ["map", "scatter", "3d"]
         if not isinstance(mode, str) or mode.lower() not in modes:
             raise ValueError(
-                f"Plot mode '{mode}' must be one of the following strings {modes}"
+                f"Plot mode {mode!r} must be one of the following strings {modes}"
             )
         mode = mode.lower()
 
         if figure_kwargs is None:
             figure_kwargs = {}
-        figure_kwargs.setdefault("layout", "tight")
 
-        # Prepare keyword arguments common to at least two modes
-        if mode in ["map", "scatter"]:
-            w, h = plt.rcParams["figure.figsize"]
-            k = max(w, h) / 3
-            if orientation == "horizontal":
-                figure_kwargs.setdefault("figsize", (6 * k, 2 * k))
-                subplots_kw = dict(ncols=3)
-            else:
-                figure_kwargs.setdefault("figsize", (2 * k, 6 * k))
-                subplots_kw = dict(nrows=3)
-
-        if mode in ["scatter", "3d"]:
-            kwargs.setdefault("c", np.arange(self.navigation_size))
-            kwargs.setdefault("ec", "k")
-            kwargs.setdefault("clip_on", False)
-
-        fig = plt.figure(**figure_kwargs)
-
-        labels = ["PCx", "PCy", "PCz"]
-        if mode == "map":
-            axes = fig.subplots(**subplots_kw)
-            for i, ax in enumerate(axes):
-                ax.set(xlabel="Column", ylabel="Row", aspect="equal")
-                im = ax.imshow(self.pc[..., i], **kwargs)
-                divider = make_axes_locatable(ax)
-                cax = divider.append_axes(position="right", size="5%", pad=0.1)
-                fig.colorbar(im, cax=cax, label=labels[i])
-        elif mode == "scatter":
-            pc_flat = self.pc_flattened
-            axes = fig.subplots(**subplots_kw)
-            for i, (j, k) in enumerate([[0, 1], [0, 2], [2, 1]]):
-                x_coord = pc_flat[:, j]
-                y_coord = pc_flat[:, k]
-                axes[i].scatter(x_coord, y_coord, **kwargs)
-                axes[i].set(xlabel=labels[j], ylabel=labels[k], aspect="equal")
-                if annotate:
-                    for num, (x, y) in enumerate(zip(x_coord, y_coord)):
-                        axes[i].text(x, y, num, ha="left", va="bottom")
-            axes[0].invert_xaxis()
-            axes[1].invert_xaxis()
-            axes[1].invert_yaxis()
-        else:
-            ax = fig.add_subplot(projection="3d")
-
-            pcx, pcy, pcz = self.pc_flattened.T
-            ax.scatter(pcx, pcz, pcy, **kwargs)
-            nav_axes = tuple(np.arange(len(self.pc.shape))[: self.navigation_dimension])
-            extent_min = np.min(self.pc, axis=nav_axes)
-            extent_max = np.max(self.pc, axis=nav_axes)
-            ax.set(
-                xlabel=labels[0],
-                ylabel=labels[2],
-                zlabel=labels[1],
-                xlim=[extent_min[0], extent_max[0]],
-                ylim=[extent_min[2], extent_max[2]],
-                zlim=[extent_min[1], extent_max[1]],
-            )
-            ax.invert_zaxis()
-
-            if annotate:
-                for i, (x, z, y) in enumerate(zip(pcx, pcz, pcy)):
-                    ax.text(x, z, y, i)
+        fig = plot_all_projection_centers(
+            pc=self.pc,
+            navigation_size=self.navigation_size,
+            mode=mode,
+            orientation=orientation,
+            annotate=annotate,
+            figure_kwargs=figure_kwargs,
+            **kwargs,
+        )
 
         if return_figure:
             return fig
@@ -2099,71 +2072,3 @@ class EBSDDetector:
         new_pc[..., 1] = (1 - self.pcy) / self.aspect_ratio
         new_pc[..., 2] /= self.aspect_ratio
         return new_pc
-
-
-def _plot_pc_fit(
-    pc: np.ndarray,
-    pc_fit: np.ndarray,
-    fit_intercept: float,
-    fit_slope: float,
-    figure_kwargs: dict,
-    return_figure: bool = False,
-) -> None | Figure:
-    pcx, pcy, pcz = pc.T
-    pcx_fit_2d, pcy_fit_2d, pcz_fit_2d = pc_fit.T
-    pcx_fit = pcx_fit_2d.ravel()
-    pcy_fit = pcy_fit_2d.ravel()
-    pcz_fit = pcz_fit_2d.ravel()
-
-    pcy_fit_line = fit_intercept + fit_slope * pcz_fit
-
-    data_kw = dict(s=25, c="k")
-    fit_kw = dict(s=50, fc="gray", alpha=0.5, ec="k")
-
-    w, h = plt.rcParams["figure.figsize"]
-    figure_kwargs.setdefault("layout", "compressed")
-    figure_kwargs.setdefault("figsize", (w, h))
-
-    fig = plt.figure()
-    # PCx v PCy
-    ax0 = fig.add_subplot(221)
-    ax0.set(xlabel="PCx", ylabel="PCy", aspect="equal")
-    ax0.scatter(pcx_fit, pcy_fit, **fit_kw)
-    ax0.scatter(pcx, pcy, **data_kw)
-    ax0.invert_xaxis()
-    # PCx v PCz
-    ax1 = fig.add_subplot(222)
-    ax1.set(xlabel="PCx", ylabel="PCz", aspect="equal")
-    ax1.scatter(pcx, pcz, **data_kw)
-    ax1.scatter(pcx_fit, pcz_fit, **fit_kw)
-    ax1.invert_xaxis()
-    ax1.invert_yaxis()
-    # PCz v PCy
-    ax2 = fig.add_subplot(223)
-    ax2.set(xlabel="PCz", ylabel="PCy", aspect="equal")
-    ax2.scatter(pcz, pcy, label="Data", **data_kw)
-    ax2.scatter(pcz_fit, pcy_fit, label="Fit", **fit_kw)
-    ax2.plot(pcz_fit, pcy_fit_line, "r-", label="Linear fit")
-    ax2.legend(bbox_to_anchor=(1.05, 1), loc="upper left", borderaxespad=0.0)
-    # Plot PC values in 3D
-    ax3 = fig.add_subplot(224, projection="3d")
-    ax3.scatter(pcx, pcz, pcy, **data_kw)
-    ax3.scatter(pcx_fit, pcz_fit, pcy_fit, **fit_kw)
-    ax3.set(
-        xlabel="PCx",
-        ylabel="PCz",
-        zlabel="PCy",
-        xlim=[np.min([pcx, pcx_fit]), np.max([pcx, pcx_fit])],
-        ylim=[np.min([pcz, pcz_fit]), np.max([pcz, pcz_fit])],
-        zlim=[np.min([pcy, pcy_fit]), np.max([pcy, pcy_fit])],
-    )
-    ax3.invert_zaxis()
-
-    # Add 3D plane
-    if pcx_fit_2d.ndim == 2:
-        ax3.plot_surface(pcx_fit_2d, pcz_fit_2d, pcy_fit_2d, color="r", alpha=0.5)
-
-    fig.tight_layout()
-
-    if return_figure:
-        return fig
