@@ -22,9 +22,12 @@ import logging
 import numpy as np
 from orix.quaternion import Rotation
 from orix.vector import Vector3d
+from packaging.version import Version
 import scipy.stats as scs
 from skimage.transform import ProjectiveTransform
 from sklearn.linear_model import LinearRegression, RANSACRegressor
+
+from kikuchipy._constants import dependency_version
 
 _logger = logging.getLogger(__name__)
 
@@ -79,11 +82,9 @@ def fit_pc_projective(
     v_pc_trim_mean = Vector3d(pc_trim_mean)
     v_pc_plane = ~(rot_ztilt * rot_xtilt) * (v_pc_centered - v_pc_trim_mean)
 
-    # Get transformation matrix
-    tform = ProjectiveTransform()
-    status = tform.estimate(pc_indices_flat[:, :2], v_pc_plane.data[:, :2])
-    _logger.debug(f"Status of projective transformation: {status}")
-    matrix = tform.params.T
+    matrix = get_projective_transform_matrix(
+        pc_indices_flat[:, :2], v_pc_plane.data[:, :2]
+    )
 
     # PC coordinates projected from beam indices and tilt parameters
     pc_fit = np.dot(pc_indices_flat, matrix)
@@ -100,6 +101,21 @@ def fit_pc_projective(
     v_pc_fit_map += v_pc_trim_mean
 
     return v_pc_fit.data, v_pc_fit_map.data
+
+
+def get_projective_transform_matrix(src: np.ndarray, dst: np.ndarray) -> np.ndarray:
+    if dependency_version["scikit-image"] >= Version("0.26.0"):
+        tform = ProjectiveTransform().from_estimate(src=src, dst=dst)
+        if tform is None:
+            raise ValueError(f"PC fit using the projective transform failed: {tform}")
+        msg = "Success"
+    else:
+        # Deprecated since 0.26.0
+        tform = ProjectiveTransform()
+        msg = tform.estimate(src, dst)
+    _logger.debug(f"Status of projective transformation: {msg}")
+    matrix = tform.params.T
+    return matrix
 
 
 def fit_pc_affine(
