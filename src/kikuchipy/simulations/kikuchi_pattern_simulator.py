@@ -76,7 +76,7 @@ from tqdm import tqdm
 from kikuchipy._constants import dependency_version
 from kikuchipy._utils.numba import vec_dot
 from kikuchipy._utils.vector import ValidHemispheres, poles_from_hemisphere
-from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.detectors._ebsd_detector import EBSDDetector
 from kikuchipy.draw._arrow_3d import Arrow3D
 from kikuchipy.signals.ebsd_master_pattern import EBSDMasterPattern
 from kikuchipy.simulations._kikuchi_pattern_features import (

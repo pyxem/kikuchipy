@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 
-from .calibration import PCCalibrationMovingScreen
-from .ebsd_detector import EBSDDetector
+from ._calibration import PCCalibrationMovingScreen
+from ._ebsd_detector import EBSDDetector
 
 __all__ = [
     "EBSDDetector",

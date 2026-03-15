@@ -44,7 +44,7 @@ from scipy.ndimage import correlate, gaussian_filter
 from skimage.util.dtype import dtype_range
 
 from kikuchipy._constants import dependency_version, pyopencl_context_available
-from kikuchipy.detectors.ebsd_detector import EBSDDetector
+from kikuchipy.detectors._ebsd_detector import EBSDDetector
 from kikuchipy.filters.fft_barnes import _fft_filter, _fft_filter_setup
 from kikuchipy.filters.window import Window
 from kikuchipy.indexing._dictionary_indexing import _dictionary_indexing
