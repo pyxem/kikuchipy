@@ -98,13 +98,15 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "pyvista": ("https://docs.pyvista.org", None),
     "pyxem": ("https://pyxem.readthedocs.io/en/latest", None),
-    "readthedocs": ("https://docs.readthedocs.com/platform/stable/", None),
+    "readthedocs": ("https://docs.readthedocs.com/platform/stable", None),
     "rosettasciio": ("https://rosettasciio.readthedocs.io/en/stable", None),
     "scipy": ("https://docs.scipy.org/doc/scipy", None),
     "skimage": ("https://scikit-image.org/docs/stable", None),
     "sklearn": ("https://scikit-learn.org/stable", None),
     "sphinx": ("https://www.sphinx-doc.org/en/master", None),
     "sphinx-gallery": ("https://sphinx-gallery.github.io/stable", None),
+    # TODO: Remove once Python >= 3.11
+    "typing-extensions": ("https://typing-extensions.readthedocs.io/en/latest", None),
     "xcdskd": ("https://xcdskd.readthedocs.io/en/latest", None),
 }
 

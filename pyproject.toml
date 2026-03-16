@@ -58,6 +58,8 @@ dependencies = [
     "scikit-learn",
     "scipy            >= 1.7",
     "tqdm             >= 0.5.2",
+    # TODO: Remove once Python >= 3.11
+    "typing-extensions",
 ]
 
 [project.optional-dependencies]

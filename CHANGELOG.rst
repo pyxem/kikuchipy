@@ -23,12 +23,15 @@ Added
 - Can now read simulated master patterns from EMsoft's EMEBSDmasterOpenCL.f90 program.
   (`#730 <https://github.com/pyxem/kikuchipy/pull/730>`_)
 - Added error handling for setting various properties of the
-  ``kp.detectors.EBSDDetector``.
+  ``kikuchipy.detectors.EBSDDetector``.
+  (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
+- Dependency on typing-extensions for type hints only available from Python >= 3.11.
   (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
 
 Changed
 -------
-- Made the string representation of the ``kp.detectors.EBSDDetector`` more informative.
+- Made the string representation of the ``kikuchipy.detectors.EBSDDetector`` more
+  informative.
   (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
 
 Removed
@@ -38,7 +41,8 @@ Fixed
 -----
 - Removed possibility for a silent out-of-bounds array indexing with Numba when
   projecting a single pattern from a master pattern in the Lambert projection to the
-  detector. (`#718 <https://github.com/pyxem/kikuchipy/pull/718>`_)
+  detector.
+  (`#718 <https://github.com/pyxem/kikuchipy/pull/718>`_)
 - Getting Matplotlib collections of zone axes and zone axes labels in geometrical EBSD
   simulations with a 2D navigation shape.
   (`#720 <https://github.com/pyxem/kikuchipy/pull/720>`_)
