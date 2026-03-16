@@ -27,12 +27,14 @@ from numbers import Number
 from pathlib import Path
 import re
 from typing import TYPE_CHECKING, Literal, overload
+import warnings
 
 from diffsims.crystallography import ReciprocalLatticeVector
 import numpy as np
 from orix.crystal_map import PhaseList
 from orix.quaternion import Rotation
 import scipy.stats as scs
+from typing_extensions import Self, get_args
 
 from kikuchipy import __version__
 from kikuchipy._constants import dependency_version
@@ -40,6 +42,7 @@ from kikuchipy._utils._detector_coordinates import (
     convert_coordinates,
     get_coordinate_conversions,
 )
+from kikuchipy._utils.deprecated import VisibleDeprecationWarning
 from kikuchipy.detectors._pc_fit import (
     estimate_xtilt_linear,
     estimate_xtilt_linear_robust,
@@ -67,13 +70,27 @@ if TYPE_CHECKING:  # pragma: no cover
 
 _logger = logging.getLogger(__name__)
 
-CONVENTION_ALIAS: dict[str, list[str]] = {
+PC_CONVENTIONS = Literal[
+    "bruker",
+    # tsl
+    "tsl",
+    "edax",
+    "amatek",
+    # oxford
+    "oxford",
+    "aztec",
+    # emsoft
+    "emsoft",
+    "emsoft4",
+    "emsoft5",
+]
+PC_CONVENTIONS_SINGLE = Literal["bruker", "tsl", "oxford", "emsoft"]
+PC_CONVENTIONS_ALIASES: dict[PC_CONVENTIONS_SINGLE, list[PC_CONVENTIONS]] = {
     "bruker": ["bruker"],
-    "tsl": ["edax", "tsl", "amatek"],
+    "tsl": ["tsl", "edax", "amatek"],
     "oxford": ["oxford", "aztec"],
     "emsoft": ["emsoft", "emsoft4", "emsoft5"],
 }
-CONVENTION_ALIAS_ALL: list = list(np.concatenate(list(CONVENTION_ALIAS.values())))
 
 
 class EBSDDetector:
@@ -231,22 +248,34 @@ class EBSDDetector:
         twist: float = 0.0,
         sample_tilt: float = 70.0,
         pc: np.ndarray | list | tuple = (0.5, 0.5, 0.5),
-        convention: str | None = None,
+        convention: PC_CONVENTIONS | None = "bruker",
     ) -> None:
-        self._shape = shape
-        self.px_size = float(px_size)
+        self.shape = shape
+
+        self.px_size = px_size
 
         # .binning returns an integer, while ._binning should always be
         # a float. Use the latter for any computation.
-        self._binning: float = float(binning)
+        self.binning = binning
 
-        self.tilt = float(tilt)
-        self.azimuthal = float(azimuthal)
-        self.twist = float(twist)
-        self.sample_tilt = float(sample_tilt)
+        self.tilt = tilt
+        self.azimuthal = azimuthal
+        self.twist = twist
+        self.sample_tilt = sample_tilt
+
         self.pc = pc
         if convention is None:
+            # TODO: Remove option to pass None and this warning after
+            # 0.13 has been released.
+            warnings.warn(
+                message=(
+                    "Passing 'None' is deprecated and will give an error in version "
+                    "0.14. Pass the default value 'bruker' to avoid this warning."
+                ),
+                category=VisibleDeprecationWarning,
+            )
             convention = "bruker"
+
         self._set_pc_in_bruker_convention(convention)
 
     # -------------------------- Properties -------------------------- #
@@ -258,6 +287,16 @@ class EBSDDetector:
         the number of detector rows :math:`N_y`.
         """
         return self.ncols / self.nrows
+
+    @property
+    def azimuthal(self) -> float:
+        return self._azimuthal
+
+    @azimuthal.setter
+    def azimuthal(self, value: float) -> None:
+        if not isinstance(value, Number):
+            raise ValueError(f"Invalid azimuthal {value}. Must be a number.")
+        self._azimuthal = float(value)
 
     @property
     def binning(self) -> int:
@@ -316,13 +355,13 @@ class EBSDDetector:
         return len(self.navigation_shape)
 
     @property
-    def navigation_shape(self) -> tuple:
+    def navigation_shape(self) -> tuple[int] | tuple[int, int]:
         """Return or set the navigation shape of the projection center
         array.
 
         Parameters
         ----------
-        value : tuple
+        value : tuple[int] or tuple[int, int]
             Navigation shape, with a maximum dimension of 2.
         """
         return self.pc.shape[: self.pc.ndim - 1]
@@ -476,6 +515,25 @@ class EBSDDetector:
         self._pc[..., 2] = np.atleast_2d(value).astype(float)
 
     @property
+    def px_size(self) -> float:
+        r"""Return the pixel size.
+
+        This is the size of the square unbinned detector pixel
+        :math:`\delta`, in microns.
+
+        Parameters
+        ----------
+        value : float
+        """
+        return self._px_size
+
+    @px_size.setter
+    def px_size(self, value: float) -> None:
+        if not isinstance(value, Number):
+            raise ValueError(f"Invalid pixel size {value}. Must be a number.")
+        self._px_size = float(value)
+
+    @property
     def r_max(self) -> np.ndarray:
         """Return the maximum distance from :attr:`pc` to the detector
         edge in gnomonic coordinates.
@@ -497,23 +555,14 @@ class EBSDDetector:
 
         Parameters
         ----------
-        value
+        value : tuple[int, int]
             Two integers :math:`(N_y, N_x)`.
         """
         return self._shape
 
     @shape.setter
     def shape(self, value: tuple[int, int]) -> None:
-        if (
-            not isinstance(value, Iterable)
-            or len(value) != 2
-            or not all(isinstance(ni, int) for ni in value)
-        ):
-            raise ValueError(
-                f"Invalid shape {value}. Must be an iterable of two integers."
-            )
-        ny, nx = value
-        self._shape = (int(ny), int(nx))
+        self._shape = self._parse_valid_shape_or_raise(value)
 
     @property
     def size(self) -> int:
@@ -678,6 +727,61 @@ class EBSDDetector:
         return sample_to_detector
 
     @property
+    def sample_tilt(self) -> float:
+        r"""Return or set the sample tilt in degrees.
+
+        The sample tilt :math:`\sigma` is about the sample horizontal,
+        :math:`Y_d`. Note that the sample horizontal :math:`Y_d` is
+        parallel to the detector horizontal, :math:`X_d`.
+
+        Parameters
+        ----------
+        value : float
+        """
+        return self._sample_tilt
+
+    @sample_tilt.setter
+    def sample_tilt(self, value: float) -> None:
+        if not isinstance(value, Number):
+            raise ValueError(f"Invalid sample tilt {value}. Must be a number.")
+        self._sample_tilt = float(value)
+
+    @property
+    def tilt(self) -> float:
+        r"""Return or set the detector tilt :math:`\theta` about the
+        detector horizontal :math:`X_d`, in degrees.
+
+        Parameters
+        ----------
+        value : float
+        """
+        return self._tilt
+
+    @tilt.setter
+    def tilt(self, value: float) -> None:
+        if not isinstance(value, Number):
+            raise ValueError(f"Invalid detector tilt {value}. Must be a number.")
+        self._tilt = float(value)
+
+    @property
+    def twist(self) -> float:
+        r"""Return or set the detector twist :math:`\gamma` about the
+        detector normal :math:`Z_d`, pointing towards the sample, in
+        degrees.
+
+        Parameters
+        ----------
+        value : float
+        """
+        return self._twist
+
+    @twist.setter
+    def twist(self, value: float) -> None:
+        if not isinstance(value, Number):
+            raise ValueError(f"Invalid twist {value}. Must be a number.")
+        self._twist = float(value)
+
+    @property
     def _average_gnomonic_bounds(self) -> np.ndarray:
         return np.nanmean(
             self.gnomonic_bounds, axis=(0, 1, 2)[: self.navigation_dimension]
@@ -711,7 +815,7 @@ class EBSDDetector:
     # ------------------------ Public methods ------------------------ #
 
     @classmethod
-    def load(cls, fname: Path | str) -> EBSDDetector:
+    def load(cls, fname: Path | str) -> Self:
         """Return an EBSD detector loaded from a text file saved with
         :meth:`save`.
 
@@ -868,7 +972,7 @@ class EBSDDetector:
         )
         return coords_out
 
-    def crop(self, extent: tuple[int, int, int, int] | list[int]) -> EBSDDetector:
+    def crop(self, extent: tuple[int, int, int, int] | list[int]) -> Self:
         """Return a new detector with its :attr:`shape` cropped and
         :attr:`pc` values updated accordingly.
 
@@ -934,7 +1038,7 @@ class EBSDDetector:
             azimuthal=self.azimuthal,
         )
 
-    def deepcopy(self) -> EBSDDetector:
+    def deepcopy(self) -> Self:
         """Return a deep copy using :func:`copy.deepcopy`.
 
         Returns
@@ -1135,10 +1239,8 @@ class EBSDDetector:
         return out
 
     def estimate_xtilt_ztilt(
-        self,
-        degrees: bool = False,
-        is_outlier: list | tuple | np.ndarray | None = None,
-    ) -> float | tuple[float, float]:
+        self, degrees: bool = False, is_outlier: list | tuple | np.ndarray | None = None
+    ) -> tuple[float, float]:
         r"""Return estimated tilts about the detector :math:`X_d` and
         :math:`Z_d` axes.
 
@@ -1212,7 +1314,7 @@ class EBSDDetector:
         px_size: float | None = None,
         binning: int | float | None = None,
         is_outlier: tuple | list | np.ndarray | None = None,
-    ) -> EBSDDetector:
+    ) -> Self:
         r"""Return a new detector with projection centers (PCs) in a 2D
         map extrapolated from an average PC.
 
@@ -1311,16 +1413,40 @@ class EBSDDetector:
 
         return new_detector
 
+    @overload
     def fit_pc(
         self,
         pc_indices: list | tuple | np.ndarray,
         map_indices: list | tuple | np.ndarray,
-        transformation: str = "projective",
+        transformation: Literal["projective", "affine"] = ...,
+        is_outlier: np.ndarray | None = None,
+        plot: bool = True,
+        return_figure: Literal[False] = False,
+        figure_kwargs: dict | None = None,
+    ) -> Self: ...
+
+    @overload
+    def fit_pc(
+        self,
+        pc_indices: list | tuple | np.ndarray,
+        map_indices: list | tuple | np.ndarray,
+        transformation: Literal["projective", "affine"] = ...,
+        is_outlier: np.ndarray | None = None,
+        plot: bool = True,
+        return_figure: Literal[True] = True,
+        figure_kwargs: dict | None = None,
+    ) -> "tuple[Self, mfigure.Figure]": ...
+
+    def fit_pc(
+        self,
+        pc_indices: list | tuple | np.ndarray,
+        map_indices: list | tuple | np.ndarray,
+        transformation: Literal["projective", "affine"] = "projective",
         is_outlier: np.ndarray | None = None,
         plot: bool = True,
         return_figure: bool = False,
         figure_kwargs: dict | None = None,
-    ) -> "EBSDDetector | tuple[EBSDDetector, mfigure.Figure]":
+    ) -> "Self | tuple[Self, mfigure.Figure]":
         """Return a new detector with interpolated projection centers
         (PCs) for all points in a map by fitting a plane to :attr:`pc`.
 
@@ -1801,11 +1927,33 @@ class EBSDDetector:
         if return_figure:
             return fig
 
+    @overload
+    def plot_pc(
+        self,
+        mode: PROJECTION_CENTER_PLOT_MODES = "map",
+        return_figure: Literal[False] = False,
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
+        annotate: bool = False,
+        figure_kwargs: dict | None = None,
+        **kwargs,
+    ) -> None: ...
+
+    @overload
+    def plot_pc(
+        self,
+        mode: PROJECTION_CENTER_PLOT_MODES = ...,
+        return_figure: Literal[True] = True,
+        orientation: Literal["horizontal", "vertical"] = ...,
+        annotate: bool = ...,
+        figure_kwargs: dict | None = ...,
+        **kwargs,
+    ) -> "mfigure.Figure": ...
+
     def plot_pc(
         self,
         mode: PROJECTION_CENTER_PLOT_MODES = "map",
         return_figure: bool = False,
-        orientation: Literal["horiztonal", "vertical"] = "horizontal",
+        orientation: Literal["horizontal", "vertical"] = "horizontal",
         annotate: bool = False,
         figure_kwargs: dict | None = None,
         **kwargs,
@@ -1890,11 +2038,10 @@ class EBSDDetector:
 
         # Ensure mode is OK
         modes = ["map", "scatter", "3d"]
-        if not isinstance(mode, str) or mode.lower() not in modes:
+        if not isinstance(mode, str) or mode not in modes:
             raise ValueError(
                 f"Plot mode {mode!r} must be one of the following strings {modes}"
             )
-        mode = mode.lower()
 
         if figure_kwargs is None:
             figure_kwargs = {}
@@ -1912,7 +2059,9 @@ class EBSDDetector:
         if return_figure:
             return fig
 
-    def save(self, filename: str | Path, convention: str = "Bruker", **kwargs) -> None:
+    def save(
+        self, filename: str | Path, convention: PC_CONVENTIONS = "bruker", **kwargs
+    ) -> None:
         """Save the detector in a text file with projection centers
         (PCs) in the given convention.
 
@@ -1923,10 +2072,10 @@ class EBSDDetector:
             for supported file formats.
         convention
             PC convention. Default is Bruker's convention. Options are
-            "tsl"/"edax", "oxford", "bruker", "emsoft", "emsoft4", and
-            "emsoft5". "emsoft" and "emsoft5" is the same convention.
-            See *Notes* in :class:`EBSDDetector` for conversions between
-            conventions.
+            "tsl"/"edax"/"amatek", "oxford"/"aztec", "bruker", and
+            "emsoft"/"emsoft4"/"emsoft5". "emsoft" and "emsoft5" is the
+            same convention. See *Notes* in :class:`EBSDDetector` for
+            conversions between conventions.
         **kwargs
             Keyword arguments passed to :func:`~numpy.savetxt`, e.g.
             ``fmt="%.4f"`` to reduce the number of PC decimals from the
@@ -1960,7 +2109,9 @@ class EBSDDetector:
 
     # ------------------------ Private methods ----------------------- #
 
-    def _get_pc_in_bruker_convention(self, convention: str = "bruker") -> np.ndarray:
+    def _get_pc_in_bruker_convention(
+        self, convention: PC_CONVENTIONS = "bruker"
+    ) -> np.ndarray:
         """Convert current :attr:`pc` to Bruker's convention from
         another convention.
 
@@ -1974,29 +2125,28 @@ class EBSDDetector:
         pc
             PC array in Bruker's convention.
         """
-        conv = convention.lower()
-        if conv in CONVENTION_ALIAS["bruker"]:
-            return self.pc
-        elif conv in CONVENTION_ALIAS["tsl"]:
+        conv = self._get_pc_convention_or_raise(convention)
+        if conv == "tsl":
             return self._pc_tsl2bruker()
-        elif conv in CONVENTION_ALIAS["oxford"]:
+        elif conv == "oxford":
             return self._pc_oxford2bruker()
-        elif conv in CONVENTION_ALIAS["emsoft"]:
+        elif conv == "emsoft":
             try:
                 version = int(convention[-1])
             except ValueError:
                 version = 5
             return self._pc_emsoft2bruker(version)
         else:
-            raise ValueError(
-                f"Projection center convention '{convention}' not among the "
-                f"recognised conventions {CONVENTION_ALIAS_ALL}"
-            )
+            return self.pc
 
-    def _set_pc_in_bruker_convention(self, convention: str = "bruker"):
+    def _set_pc_in_bruker_convention(
+        self, convention: PC_CONVENTIONS = "bruker"
+    ) -> None:
         self.pc = self._get_pc_in_bruker_convention(convention)
 
-    def _get_pc_in_convention(self, convention: str = "bruker") -> np.ndarray:
+    def _get_pc_in_convention(
+        self, convention: PC_CONVENTIONS = "bruker"
+    ) -> np.ndarray:
         """Convert current :attr:`pc` from Bruker's convention to
         another convention.
 
@@ -2009,26 +2159,21 @@ class EBSDDetector:
         Returns
         -------
         pc
-            PC array in specified convention.
+            PC array in the given *convention*.
         """
-        conv = convention.lower()
-        if conv in CONVENTION_ALIAS["bruker"]:
-            return self.pc
-        elif conv in CONVENTION_ALIAS["tsl"]:
+        conv = self._get_pc_convention_or_raise(convention)
+        if conv == "tsl":
             return self._pc_bruker2tsl()
-        elif conv in CONVENTION_ALIAS["oxford"]:
+        elif conv == "oxford":
             return self._pc_bruker2oxford()
-        elif conv in CONVENTION_ALIAS["emsoft"]:
+        elif conv == "emsoft":
             try:
                 version = int(convention[-1])
             except ValueError:
                 version = 5
             return self._pc_bruker2emsoft(version)
         else:
-            raise ValueError(
-                f"Projection center convention '{convention}' not among the "
-                f"recognised conventions {CONVENTION_ALIAS_ALL}"
-            )
+            return self.pc
 
     def _pc_emsoft2bruker(self, version: int = 5) -> np.ndarray:
         new_pc = np.zeros_like(self.pc, dtype=float)
@@ -2072,3 +2217,31 @@ class EBSDDetector:
         new_pc[..., 1] = (1 - self.pcy) / self.aspect_ratio
         new_pc[..., 2] /= self.aspect_ratio
         return new_pc
+
+    @staticmethod
+    def _parse_valid_shape_or_raise(value: tuple[int, int]) -> tuple[int, int]:
+        if (
+            not isinstance(value, Iterable)
+            or len(value) != 2
+            or not all(isinstance(ni, Number) for ni in value)
+        ):
+            raise ValueError(
+                f"Invalid shape {value}. Must be an iterable of two integers."
+            )
+        ny, nx = value
+        shape = (int(ny), int(nx))
+        return shape
+
+    @staticmethod
+    def _get_pc_convention_or_raise(conv: PC_CONVENTIONS) -> PC_CONVENTIONS_SINGLE:
+        conv_lower = conv.lower()
+        for k, v in PC_CONVENTIONS_ALIASES.items():
+            if conv_lower in v:
+                return k
+        else:
+            options = get_args(PC_CONVENTIONS)
+            options_str = ", ".join(options)
+            raise ValueError(
+                f"Invalid projection/pattern center convention {conv!r}. Options are "
+                f"{options_str}."
+            )

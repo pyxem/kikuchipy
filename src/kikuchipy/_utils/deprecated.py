@@ -30,7 +30,7 @@ not for users.
 
 import functools
 import inspect
-from typing import Callable
+from typing import Any, Callable
 import warnings
 
 from kikuchipy._constants import VisibleDeprecationWarning
@@ -73,7 +73,7 @@ class deprecated:
         self.alternative_is_function = alternative_is_function
         self.removal = removal
 
-    def __call__(self, func: Callable) -> None:
+    def __call__(self, func: Callable) -> Any:
         # Wrap function to raise warning when called, and add warning to
         # docstring
         if self.alternative is not None:

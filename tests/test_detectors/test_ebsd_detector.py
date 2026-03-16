@@ -21,6 +21,7 @@ from copy import deepcopy
 
 import matplotlib.collections as mcollections
 import matplotlib.colors as mcolors
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 from orix.crystal_map import PhaseList
@@ -53,8 +54,8 @@ class TestEBSDDetector:
             det.shape = 2
         with pytest.raises(ValueError, match=r"Invalid shape \(2,\). Must be an "):
             det.shape = (2,)
-        with pytest.raises(ValueError, match=r"Invalid shape \(2, 3.0\). Must be an "):
-            det.shape = (2, 3.0)
+        with pytest.raises(ValueError, match=r"Invalid shape \(2, 'a'\). Must be an "):
+            det.shape = (2, "a")
 
     @pytest.mark.parametrize(
         "nav_shape, desired_nav_shape, desired_nav_dim",
@@ -516,8 +517,6 @@ class TestEBSDDetector:
     @pytest.mark.parametrize(
         "pc, convention",
         [
-            ([0.35, 1, 0.65], None),
-            ([0.25, 0, 0.75], None),
             ([0.1, 0.2, 0.3], "Bruker"),
             ([0.6, 0.6, 0.6], "bruker"),
         ],
@@ -529,7 +528,7 @@ class TestEBSDDetector:
 
     def test_set_pc_convention_raises(self, pc1):
         """Wrong convention raises."""
-        with pytest.raises(ValueError, match="Projection center convention "):
+        with pytest.raises(ValueError, match="Invalid projection/pattern center "):
             _ = kp.detectors.EBSDDetector(pc=pc1, convention="nordif")
 
     @pytest.mark.parametrize(
@@ -582,9 +581,9 @@ class TestEBSDDetector:
         num_circles = 0
         num_rectangles = 0
         for patch in ax.patches:
-            if isinstance(patch, plt.Circle):
+            if isinstance(patch, mpatches.Circle):
                 num_circles += 1
-            elif isinstance(patch, plt.Rectangle):
+            elif isinstance(patch, mpatches.Rectangle):
                 num_rectangles += 1
 
         if gnomonic_angles is None:
@@ -1300,5 +1299,5 @@ class TestSaveLoadDetector:
 
     def test_save_detector_raises(self, tmp_path):
         det = kp.detectors.EBSDDetector()
-        with pytest.raises(ValueError, match="Projection center convention 'EMsofts' "):
+        with pytest.raises(ValueError, match="Invalid projection/pattern center "):
             det.save(tmp_path / "det_temp.txt", convention="EMsofts")
