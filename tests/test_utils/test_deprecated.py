@@ -22,7 +22,7 @@ import warnings
 import pytest
 
 from kikuchipy._constants import VisibleDeprecationWarning
-from kikuchipy._utils import deprecated, deprecated_argument
+from kikuchipy._utils.deprecated import deprecated, deprecated_argument
 
 
 class TestDeprecationWarning:

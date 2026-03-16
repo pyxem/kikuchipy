@@ -17,16 +17,7 @@
 # along with kikuchipy. If not, see <http://www.gnu.org/licenses/>.
 #
 
-"""Helper functions and classes for managing kikuchipy.
-
-This module and documentation is only relevant for kikuchipy developers,
-not for users.
-
-.. warning:
-    This module and its submodules are for internal use only.  Do not
-    use them in your own code. We may change the API at any time with no
-    warning.
-"""
+"""Tools to handle deprecation of functions and arguments."""
 
 import functools
 import inspect
