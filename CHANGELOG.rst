@@ -49,6 +49,11 @@ Fixed
 
 Deprecated
 ----------
+- Option to pass ``EBSDDetector(..., convention=None)`` has been deprecated and will
+  emit a warning.
+  To avoid the warning, use the default value ``convention="bruker"`` instead.
+  The warning will change to an error in version 0.14.
+  (`#785 <https://github.com/pyxem/kikuchipy/pull/785>`_)
 
 
 0.11.5 (2026-03-08)
