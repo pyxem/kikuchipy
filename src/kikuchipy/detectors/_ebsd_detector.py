@@ -532,6 +532,7 @@ class EBSDDetector:
         Parameters
         ----------
         value : float
+            Pixel size.
         """
         return self._px_size
 
@@ -745,6 +746,7 @@ class EBSDDetector:
         Parameters
         ----------
         value : float
+            Sample tilt in degrees.
         """
         return self._sample_tilt
 
@@ -762,6 +764,7 @@ class EBSDDetector:
         Parameters
         ----------
         value : float
+            Detector tilt in degrees.
         """
         return self._tilt
 
@@ -780,6 +783,7 @@ class EBSDDetector:
         Parameters
         ----------
         value : float
+            Detector twist in degrees.
         """
         return self._twist
 

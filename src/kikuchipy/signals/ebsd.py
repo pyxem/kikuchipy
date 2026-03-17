@@ -173,7 +173,7 @@ class EBSD(KikuchipySignal2D):
            ...,
            [80, 82, 84, ..., 36, 30, 26],
            [79, 80, 82, ..., 28, 26, 26],
-           [76, 78, 80, ..., 26, 26, 25]], dtype=uint8)
+           [76, 78, 80, ..., 26, 26, 25]], shape=(60, 60), dtype=uint8)
     >>> s.xmap
     Phase  Orientations  Name  Space group  Point group  Proper point group     Color
         0    9 (100.0%)    ni        Fm-3m         m-3m                 432  tab:blue
@@ -502,7 +502,7 @@ class EBSD(KikuchipySignal2D):
                ...,
                [80, 82, 84, ..., 36, 30, 26],
                [79, 80, 82, ..., 28, 26, 26],
-               [76, 78, 80, ..., 26, 26, 25]], dtype=uint8)
+               [76, 78, 80, ..., 26, 26, 25]], shape=(60, 60), dtype=uint8)
 
         The static background can be removed by subtracting or dividing
         this background from each pattern:

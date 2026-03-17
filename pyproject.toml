@@ -176,6 +176,8 @@ filterwarnings = [
     "ignore:builtin type SwigPyPacked has no __module__ attribute",
     "ignore:builtin type SwigPyObject has no __module__ attribute",
     "ignore:builtin type swigvarlink has no __module__ attribute",
+    # Matplotlib
+    "ignore:FigureCanvasAgg is non-interactive, and thus cannot be shown:UserWarning",
 ]
 markers = [
     "weekly: mark test as running only weekly on CI",

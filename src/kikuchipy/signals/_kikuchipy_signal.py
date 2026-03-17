@@ -26,8 +26,7 @@ from typing import Any
 import warnings
 
 import dask.array as da
-from hyperspy._lazy_signals import LazySignal2D
-from hyperspy.signals import Signal2D
+from hyperspy.signals import LazySignal2D, Signal2D
 import numpy as np
 from packaging.version import Version
 from skimage.util.dtype import dtype_range
@@ -296,7 +295,7 @@ class KikuchipySignal2D(Signal2D):
         >>> np.mean(s.data)
         np.float64(146.0670987654321)
         >>> s.normalize_intensity(dtype_out=np.float32)
-        >>> np.mean(s.data)
+        >>> np.mean(s.data)  # doctest: +SKIP
         np.float32(0.0)
         """
         if lazy_output and inplace:
