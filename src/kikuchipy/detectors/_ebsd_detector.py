@@ -223,7 +223,15 @@ class EBSDDetector:
     ...     sample_tilt=70,
     ... )
     >>> det
-    EBSDDetector(shape=(60, 60), pc=(0.421, 0.221, 0.505), sample_tilt=70.0, tilt=5.0, azimuthal=0.0, twist=0.0, binning=8.0, px_size=70.0 um)
+    EBSDDetector
+      shape (Ny, Nx):     (60, 60)
+      pc (PCx, PCy, PCz): (0.421, 0.221, 0.505)
+      sample_tilt:        70.0 deg
+      tilt:               5.0 deg
+      azimuthal:          0.0 deg
+      twist:              0.0 deg
+      binning:            8
+      px_size:            70.0 um
     >>> det.navigation_shape
     (10, 20)
     >>> det.bounds
@@ -992,9 +1000,25 @@ class EBSDDetector:
         >>> import kikuchipy as kp
         >>> det = kp.detectors.EBSDDetector((6, 6), pc=[3 / 6, 2 / 6, 0.5])
         >>> det
-        EBSDDetector(shape=(6, 6), pc=(0.5, 0.333, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, twist=0.0, binning=1.0, px_size=1.0 um)
+        EBSDDetector
+          shape (Ny, Nx):     (6, 6)
+          pc (PCx, PCy, PCz): (0.5, 0.333, 0.5)
+          sample_tilt:        70.0 deg
+          tilt:               0.0 deg
+          azimuthal:          0.0 deg
+          twist:              0.0 deg
+          binning:            1
+          px_size:            1.0 um
         >>> det.crop((1, 5, 2, 6))
-        EBSDDetector(shape=(4, 4), pc=(0.25, 0.25, 0.75), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, twist=0.0, binning=1.0, px_size=1.0 um)
+        EBSDDetector
+          shape (Ny, Nx):     (4, 4)
+          pc (PCx, PCy, PCz): (0.25, 0.25, 0.75)
+          sample_tilt:        70.0 deg
+          tilt:               0.0 deg
+          azimuthal:          0.0 deg
+          twist:              0.0 deg
+          binning:            1
+          px_size:            1.0 um
 
         Plot a cropped detector with the PC on a cropped pattern
 
@@ -1638,8 +1662,8 @@ class EBSDDetector:
             Keyword arguments passed to
             :class:`~pyebsdindex.ebsd_index.EBSDIndexer`, except for the
             following arguments which cannot be passed since they are
-            determined from the detector or ``phase_list``:
-            ``phaselist`` (not to be confused with ``phase_list``),
+            determined from the detector or *phase_list*:
+            ``phaselist`` (not to be confused with *phase_list*),
             ``vendor``, ``PC``, ``sampleTilt``, ``camElev`` and
             ``patDim``.
 
@@ -2002,15 +2026,31 @@ class EBSDDetector:
         >>> import matplotlib.pyplot as plt
         >>> import kikuchipy as kp
         >>> det0 = kp.detectors.EBSDDetector(
-        ... shape=(480, 640), pc=(0.4, 0.3, 0.5), px_size=70, sample_tilt=70
+        ...     shape=(480, 640), pc=(0.4, 0.3, 0.5), px_size=70, sample_tilt=70
         ... )
         >>> det0
-        EBSDDetector(shape=(480, 640), pc=(0.4, 0.3, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, twist=0.0, binning=1.0, px_size=70.0 um)
+        EBSDDetector
+          shape (Ny, Nx):     (480, 640)
+          pc (PCx, PCy, PCz): (0.4, 0.3, 0.5)
+          sample_tilt:        70.0 deg
+          tilt:               0.0 deg
+          azimuthal:          0.0 deg
+          twist:              0.0 deg
+          binning:            1
+          px_size:            70.0 um
         >>> det = det0.extrapolate_pc(
-        ... pc_indices=[0, 0], navigation_shape=(5, 10), step_sizes=(20, 20)
+        ...     pc_indices=[0, 0], navigation_shape=(5, 10), step_sizes=(20, 20)
         ... )
         >>> det
-        EBSDDetector(shape=(480, 640), pc=(0.398, 0.299, 0.5), sample_tilt=70.0, tilt=0.0, azimuthal=0.0, twist=0.0, binning=1.0, px_size=70.0 um)
+        EBSDDetector
+          shape (Ny, Nx):     (480, 640)
+          pc (PCx, PCy, PCz): (0.398, 0.299, 0.5)
+          sample_tilt:        70.0 deg
+          tilt:               0.0 deg
+          azimuthal:          0.0 deg
+          twist:              0.0 deg
+          binning:            1
+          px_size:            70.0 um
 
         Plot PC values in maps
 
